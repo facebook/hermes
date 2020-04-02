@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -dump-ast --pretty-json %s | %FileCheck %s --match-full-lines
 
 // CHECK-LABEL: {
@@ -24,7 +26,8 @@ function *foo() {
 // CHECK-NEXT:         "body": []
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "returnType": null,
-// CHECK-NEXT:       "generator": true
+// CHECK-NEXT:       "generator": true,
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
 
 (function* bar() {
@@ -43,7 +46,8 @@ function *foo() {
 // CHECK-NEXT:           "type": "BlockStatement",
 // CHECK-NEXT:           "body": []
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "generator": true
+// CHECK-NEXT:         "generator": true,
+// CHECK-NEXT:         "async": false
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "directive": null
 // CHECK-NEXT:     },
@@ -119,7 +123,8 @@ function *foo() {
 // CHECK-NEXT:            }
 // CHECK-NEXT:          ]
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "generator": true
+// CHECK-NEXT:        "generator": true,
+// CHECK-NEXT:        "async": false
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "directive": null
 // CHECK-NEXT:    },
@@ -185,17 +190,20 @@ function *f1() {
 // CHECK-NEXT:                    "body": []
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "returnType": null,
-// CHECK-NEXT:                  "generator": true
+// CHECK-NEXT:                  "generator": true,
+// CHECK-NEXT:                  "async": false
 // CHECK-NEXT:                }
 // CHECK-NEXT:              ]
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "returnType": null,
-// CHECK-NEXT:            "generator": false
+// CHECK-NEXT:            "generator": false,
+// CHECK-NEXT:            "async": false
 // CHECK-NEXT:          }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "returnType": null,
-// CHECK-NEXT:      "generator": true
+// CHECK-NEXT:      "generator": true,
+// CHECK-NEXT:      "async": false
 // CHECK-NEXT:    },
 
 function *yieldInExpr() {
@@ -263,7 +271,8 @@ function *yieldInExpr() {
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "returnType": null,
-// CHECK-NEXT:       "generator": true
+// CHECK-NEXT:       "generator": true,
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
 
 function *hasYieldInside(){ var y = function yield(){}; }
@@ -296,7 +305,8 @@ function *hasYieldInside(){ var y = function yield(){}; }
 // CHECK-NEXT:                     "type": "BlockStatement",
 // CHECK-NEXT:                     "body": []
 // CHECK-NEXT:                   },
-// CHECK-NEXT:                   "generator": false
+// CHECK-NEXT:                   "generator": false,
+// CHECK-NEXT:                   "async": false
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "id": {
 // CHECK-NEXT:                   "type": "Identifier",
@@ -309,7 +319,8 @@ function *hasYieldInside(){ var y = function yield(){}; }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "returnType": null,
-// CHECK-NEXT:       "generator": true
+// CHECK-NEXT:       "generator": true,
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
 
 function *yield() {}
@@ -326,7 +337,8 @@ function *yield() {}
 // CHECK-NEXT:         "body": []
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "returnType": null,
-// CHECK-NEXT:       "generator": true
+// CHECK-NEXT:       "generator": true,
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]

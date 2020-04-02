@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_REGEX_REGEXBYTECODE_H
 #define HERMES_REGEX_REGEXBYTECODE_H
 
@@ -42,21 +43,40 @@ struct Insn {
 struct GoalInsn : public Insn {};
 struct LeftAnchorInsn : public Insn {};
 struct RightAnchorInsn : public Insn {};
+struct MatchAnyInsn : public Insn {};
+struct U16MatchAnyInsn : public Insn {};
 struct MatchAnyButNewlineInsn : public Insn {};
+struct U16MatchAnyButNewlineInsn : public Insn {};
 struct MatchChar8Insn : public Insn {
   char c;
 };
+
+// Matches a 16 bit character without attempting to interpret surrogate pairs.
 struct MatchChar16Insn : public Insn {
   char16_t c;
+};
+
+// Matches a code point, decoding a surrogate pair if necessary.
+struct U16MatchChar32Insn : public Insn {
+  uint32_t c;
 };
 
 // Instructions for case-insensitive matching. c is already case-folded.
 struct MatchCharICase8Insn : public Insn {
   char c;
 };
+
+// Matches a 16 bit character without attempting to interpret surrogate pairs.
 struct MatchCharICase16Insn : public Insn {
   char16_t c;
 };
+
+// Matches a code point (case insensitive), decoding a surrogate pair if
+// necessary.
+struct U16MatchCharICase32Insn : public Insn {
+  uint32_t c;
+};
+
 struct AlternationInsn : public Insn {
   /// The primary branch is the Insn following the alternation, while the
   /// secondary branch is at the secondaryBranch jump target. Both branches have
@@ -69,20 +89,21 @@ struct Jump32Insn : public Insn {
   JumpTarget32 target;
 };
 
-/// A BracketRange represents an inclusive range of characters in a bracket,
-/// such as /[a-z]/. Singletons like /[a]/ are represented as the range a-a.
-struct BracketRange16 {
-  char16_t start;
-  char16_t end;
-};
 struct BackRefInsn : public Insn {
   uint16_t mexp;
 };
 
+/// A BracketRange represents an inclusive range of characters in a bracket,
+/// such as /[a-z]/. Singletons like /[a]/ are represented as the range a-a.
+struct BracketRange32 {
+  uint32_t start;
+  uint32_t end;
+};
+
 /// BracketInsn is a variable-width instruction. Each BracketInsn is followed by
-/// a sequence of BracketRange16 in the bytecode stream.
+/// a sequence of BracketRange32 in the bytecode stream.
 struct BracketInsn : public Insn {
-  /// Number of BracketRange16s following this instruction.
+  /// Number of BracketRange32s following this instruction.
   uint32_t rangeCount;
   /// Whether the bracket is negated (leading ^).
   uint8_t negate : 1;
@@ -95,9 +116,13 @@ struct BracketInsn : public Insn {
 
   /// \return the width of this instruction plus its bracket ranges.
   uint32_t totalWidth() const {
-    return sizeof(*this) + rangeCount * sizeof(BracketRange16);
+    return sizeof(*this) + rangeCount * sizeof(BracketRange32);
   }
 };
+
+/// U16BracketInsn is a variant of BracketInsn used in Unicode regular
+/// expressions. It differs in that surrogate characters are decoded.
+struct U16BracketInsn : public BracketInsn {};
 
 struct MatchNChar8Insn : public Insn {
   // number of 8-byte char following this instruction.
@@ -139,11 +164,13 @@ struct EndMarkedSubexpressionInsn : public Insn {
   uint16_t mexp;
 };
 
-/// A LookaheadInsn is immediately followed by bytecode for its contained
+/// A LookaroundInsn is immediately followed by bytecode for its contained
 /// expression. It has a jump target to its continuation.
-struct LookaheadInsn : public Insn {
+struct LookaroundInsn : public Insn {
   /// Whether we are inverted: (?!...) instead of (?=...).
   bool invert;
+  /// Whether we are forwards: (?=...) instead of (?<=...).
+  bool forwards;
   /// Constraints on what can match the contained expression.
   MatchConstraintSet constraints;
   // The subexpression marked regions we want to be able to backtrack.
@@ -296,8 +323,8 @@ class RegexBytecodeStream {
     return InstructionWrapper<Instruction>(&bytes_, startSize);
   }
 
-  /// Emit a BracketRange16.
-  void emitBracketRange(BracketRange16 range) {
+  /// Emit a BracketRange32.
+  void emitBracketRange(BracketRange32 range) {
     const uint8_t *rangeBytes = reinterpret_cast<const uint8_t *>(&range);
     bytes_.insert(bytes_.end(), rangeBytes, rangeBytes + sizeof(range));
   }

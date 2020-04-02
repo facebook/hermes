@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_COMPILERDRIVER_COMPILERDRIVER_H
 #define HERMES_COMPILERDRIVER_COMPILERDRIVER_H
 
@@ -68,10 +69,6 @@ struct CompileResult {
   /// loaded from a file, that is, bytecodeProvider is a BCProviderFromBuffer.
   BytecodeBufferInfo bytecodeBufferInfo{};
 
-  /// The Context associated with compilation, if lazy compilation is enabled.
-  /// This field has no purpose except to extend the lifetime of Context.
-  std::shared_ptr<Context> context{};
-
   /* implicit */ CompileResult(CompileStatus status) : status(status) {}
 };
 
@@ -97,5 +94,6 @@ extern llvm::cl::opt<bool> BasicBlockProfiling;
 extern llvm::cl::opt<bool> EnableEval;
 extern llvm::cl::opt<bool> VerifyIR;
 extern llvm::cl::opt<bool> EmitAsyncBreakCheck;
+extern llvm::cl::opt<bool> AllowFunctionToString;
 } // namespace cl
 #endif

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 // This test uses NCGen files, so should only be enabled for that build.
 #ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 
@@ -248,7 +249,8 @@ TEST_F(GCSegmentAddressIndexDeathTest, RemoveUnsorted) {
   std::sort(del.begin(), del.end());
   std::reverse(del.begin(), del.end());
 
-  EXPECT_DEATH({ index.remove(del.begin(), del.end()); }, "Assertion");
+  EXPECT_DEATH_IF_SUPPORTED(
+      { index.remove(del.begin(), del.end()); }, "Assertion");
 }
 #endif // !NDEBUG
 
@@ -268,7 +270,7 @@ TEST_F(GCSegmentAddressIndexDeathTest, Consistency) {
   // the entry for address \c v.lowLim() still points to t, rather than v.  In
   // debug modes this should cause an assertion failure when we iterate over the
   // segments in the index.
-  EXPECT_DEATH(
+  EXPECT_DEATH_IF_SUPPORTED(
       {
         for (auto segment : index)
           (void)segment;

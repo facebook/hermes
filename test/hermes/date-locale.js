@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 /*
 RUN: TZ=EST+5 LC_ALL=en_US _HERMES_TEST_LOCALE=en_US %hermes -O -target=HBC %s \
 RUN:            | %FileCheck --match-full-lines -check-prefix US %s
@@ -12,6 +14,7 @@ RUN: TZ=EST+5 %hermes -O -target=HBC %s \
 RUN:            | %FileCheck --match-full-lines -check-prefix NO %s
 TODO(T53144040) Fix LIT tests on Windows
 XFAIL: windows
+UNSUPPORTED: ubsan
 */
 "use strict";
 

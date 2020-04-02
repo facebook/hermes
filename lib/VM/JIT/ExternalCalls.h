@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_JIT_EXTERNALCALLS_H
 #define HERMES_VM_JIT_EXTERNALCALLS_H
 
@@ -24,6 +25,10 @@ CallResult<HermesValue> slowPathToNumber(
 CallResult<HermesValue> slowPathAddEmptyString(
     Runtime *runtime,
     PinnedHermesValue *src);
+
+/// An external call invoked by JIT compiled code to convert \p val to a 32-bit
+/// signed integer.
+CallResult<HermesValue> externToInt32(Runtime *runtime, PinnedHermesValue *val);
 
 /// An external call invoked by JIT compiled code to declare a global variable
 /// by string table index.
@@ -241,6 +246,12 @@ CallResult<HermesValue> externDelByVal(
     Runtime *runtime,
     PinnedHermesValue *target,
     PinnedHermesValue *nameVal,
+    PropOpFlags flags);
+
+CallResult<HermesValue> externDelById(
+    Runtime *runtime,
+    PinnedHermesValue *target,
+    uint32_t sid,
     PropOpFlags flags);
 
 /// An external call invoked by JIT compiled code to store a value \p val to an

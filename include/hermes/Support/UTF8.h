@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_SUPPORT_UTF8_H
 #define HERMES_SUPPORT_UTF8_H
 
@@ -59,7 +60,7 @@ inline bool isAllASCII(const char *start, const char *end) {
 
 /// Decode a sequence of UTF8 encoded bytes when it is known that the first byte
 /// is a start of an UTF8 sequence.
-/// \param allowSurrogates when false, values in the surrogate range are
+/// \tparam allowSurrogates when false, values in the surrogate range are
 ///     reported as errors
 template <bool allowSurrogates, typename F>
 uint32_t _decodeUTF8SlowPath(const char *&from, F error) {
@@ -168,7 +169,7 @@ inline const char *previousUTF8Start(const char *ptr) {
 /// In case of decoding errors, the provided callback is invoked with an
 /// apropriate messsage and UNICODE_REPLACEMENT_CHARACTER is returned.
 ///
-/// \param allowSurrogates when false, values in the surrogate range are
+/// \tparam allowSurrogates when false, values in the surrogate range are
 ///     reported as errors
 /// \param error callback invoked with an error message
 /// \return the codepoint
@@ -233,6 +234,6 @@ bool convertUTF16ToUTF8WithReplacements(
     llvm::ArrayRef<char16_t> input,
     size_t maxCharacters = 0);
 
-}; // namespace hermes
+} // namespace hermes
 
 #endif // HERMES_SUPPORT_UTF8_H

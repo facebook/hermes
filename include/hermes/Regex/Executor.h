@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_REGEX_EXECUTOR_H
 #define HERMES_REGEX_EXECUTOR_H
 
@@ -24,47 +25,55 @@ enum class MatchRuntimeResult {
 
   /// Stack overflow during match attempt.
   StackOverflow,
-
 };
 
-template <class BidirectionalIterator>
-class SubMatch {
- public:
-  typedef typename iterator_traits<BidirectionalIterator>::value_type CharT;
-  typedef basic_string<CharT> StringT;
+/// A constant used inside a capture group to indicate that the capture group
+/// did not match.
+constexpr uint32_t kNotMatched = UINT32_MAX;
 
-  BidirectionalIterator first{};
-  BidirectionalIterator second{};
-  bool matched = false;
+/// The maximum number of times we will backtrack.
+constexpr uint32_t kBacktrackLimit = 1u << 30;
 
-  size_t length() const {
-    return matched ? distance(this->first, this->second) : 0;
-  }
-  StringT str() const {
-    return matched ? StringT(this->first, this->second) : StringT();
+/// A CapturedRange represents a range of the input string captured by a capture
+/// group. A CaptureGroup may also not have matched, in which case its start is
+/// set to kNotMatched. Note that an unmatched capture group is different than a
+/// capture group that matched an empty string.
+struct CapturedRange {
+  /// Index of the first captured character, or kNotMatched if not matched.
+  uint32_t start;
+
+  /// One past the index of the last captured character.
+  uint32_t end;
+
+  /// \return whether this range was a successful match.
+  bool matched() const {
+    return start != kNotMatched;
   }
 };
 
-/// Entry point for searching a string via regex compiled bytecode.
-/// Given the bytecode \p bytecode, search the range starting at \p first up to
-/// (not including) \p last with the flags \p matchFlags. If the search
-/// succeeds, poopulate MatchResults with the capture groups. \return true if
-/// some portion of the string matched the regex represented by the bytecode,
-/// false otherwise.
-/// char16_t overload.
+/// Given a string \p first with length \p length, look for regex matches
+/// starting at offset \p start. We must have 0 <= start <= length.
+/// Search using the compiled regex represented by \p bytecode with the flags \p
+/// matchFlags. If the search succeeds, populate \p captures with the capture
+/// groups.
+/// \return true if some portion of the string matched the regex represented by
+/// the bytecode, false otherwise.
+/// This is the char16_t overload.
 MatchRuntimeResult searchWithBytecode(
     llvm::ArrayRef<uint8_t> bytecode,
     const char16_t *first,
-    const char16_t *last,
-    MatchResults<const char16_t *> &m,
+    uint32_t start,
+    uint32_t length,
+    std::vector<CapturedRange> *captures,
     constants::MatchFlagType matchFlags);
 
-/// ASCII overload.
+/// This is the ASCII overload.
 MatchRuntimeResult searchWithBytecode(
     llvm::ArrayRef<uint8_t> bytecode,
     const char *first,
-    const char *last,
-    MatchResults<const char *> &m,
+    uint32_t start,
+    uint32_t length,
+    std::vector<CapturedRange> *captures,
     constants::MatchFlagType matchFlags);
 
 } // namespace regex

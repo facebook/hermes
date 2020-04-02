@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "TestFunctions.h"
 
 namespace facebook {
@@ -21,7 +22,8 @@ const char *dateAsFunctionTrace() {
     "callsToDateAsFunction": [
       "Thu Feb 28 2019 13:48:22 GMT-0800 (Pacific Standard Time)",
       "hello"
-    ]
+    ],
+    "callsToHermesInternalGetInstrumentedStats": [],
   },
   "trace": [
     {

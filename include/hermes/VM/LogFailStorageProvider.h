@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_LOGFAILSTORAGEPROVIDER_H
 #define HERMES_VM_LOGFAILSTORAGEPROVIDER_H
 
@@ -19,12 +20,12 @@ namespace vm {
 /// times allocation requests to its delegate have failed.  Note that this
 /// adapter does not manage the lifetime of its delegate.
 class LogFailStorageProvider final : public StorageProvider {
-  StorageProvider *delegate_;
+  std::shared_ptr<StorageProvider> delegate_;
   size_t numFailedAllocs_{0};
 
  public:
-  explicit LogFailStorageProvider(StorageProvider *provider)
-      : delegate_(provider) {}
+  explicit LogFailStorageProvider(std::shared_ptr<StorageProvider> provider)
+      : delegate_(std::move(provider)) {}
 
   inline size_t numFailedAllocs() const;
 

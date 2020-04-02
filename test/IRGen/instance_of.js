@@ -1,9 +1,11 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
-// RUN: %hermes -dump-ra %s | %FileCheck %s --match-full-lines
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// RUN: %hermes -dump-ra %s -O0 | %FileCheck %s --match-full-lines
 // RUN: %hermes -dump-ra %s -O
 
 //CHECK-LABEL:function simple_test0(x, y)

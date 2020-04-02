@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/AlignedHeapSegment.h"
 
 #include "hermes/Support/OSCompat.h"
@@ -16,7 +17,6 @@
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCBase.h"
-#include "hermes/VM/GCCell-inline.h"
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/GCGeneration.h"
 #include "hermes/VM/HiddenClass.h"
@@ -32,6 +32,17 @@ using namespace hermes;
 namespace hermes {
 namespace vm {
 
+void AlignedHeapSegment::Contents::protectGuardPage(
+    oscompat::ProtectMode mode) {
+  char *begin = guardPage_;
+  size_t size = sizeof(guardPage_);
+  size_t PS = oscompat::page_size();
+  // Only protect if the actual system page size matches expectations.
+  if (reinterpret_cast<uintptr_t>(begin) % PS == 0 && PS <= size) {
+    oscompat::vm_protect(begin, PS, mode);
+  }
+}
+
 AlignedHeapSegment::AlignedHeapSegment(
     AlignedStorage &&storage,
     GCGeneration *owner)
@@ -42,6 +53,7 @@ AlignedHeapSegment::AlignedHeapSegment(
       "storage end must be page-aligned");
   if (*this) {
     new (contents()) Contents();
+    contents()->protectGuardPage(oscompat::ProtectMode::None);
   }
 }
 
@@ -49,7 +61,7 @@ AlignedHeapSegment::~AlignedHeapSegment() {
   if (lowLim() == nullptr) {
     return;
   }
-
+  contents()->protectGuardPage(oscompat::ProtectMode::ReadWrite);
   contents()->~Contents();
   __asan_unpoison_memory_region(start(), end() - start());
 }
@@ -68,7 +80,12 @@ void AlignedHeapSegment::setLevel(char *lvl) {
       auto nextPageBefore = reinterpret_cast<char *>(
           llvm::alignTo(reinterpret_cast<uintptr_t>(level_), PS));
 
+      // Some kernels seems to require all pages in the mapping to have the same
+      // permissions for the advise to "take", so suspend guard page protection
+      // temporarily.
+      contents()->protectGuardPage(oscompat::ProtectMode::ReadWrite);
       storage_.markUnused(nextPageAfter, nextPageBefore);
+      contents()->protectGuardPage(oscompat::ProtectMode::None);
     }
 #endif
   }
@@ -82,6 +99,10 @@ template void AlignedHeapSegment::setLevel<AdviseUnused::No>(char *lvl);
 template <AdviseUnused MU>
 void AlignedHeapSegment::resetLevel() {
   setLevel<MU>(start());
+#ifdef HERMES_EXTRA_DEBUG
+  lastVTableSummaryLevel_ = start();
+  lastVTableSummary_ = 0;
+#endif
 }
 
 /// Explicit template instantiations for resetLevel
@@ -225,15 +246,8 @@ void AlignedHeapSegment::sweepAndInstallForwardingPointers(
       ptr = markBits.indexToAddress(ind);
       GCCell *cell = reinterpret_cast<GCCell *>(ptr);
       auto cellSize = cell->getAllocatedSize();
-      // TODO(T43077289): if we rehabilitate ArrayStorage trimming, reenable
-      // this code.
-#if 0
       auto trimmedSize = cell->getVT()->getTrimmedSize(cell, cellSize);
-
       auto res = allocator.alloc(trimmedSize);
-#else
-      auto res = allocator.alloc(cellSize);
-#endif
       if (!res.success) {
         // The current chunk is exhausted; must move on to the next.
         break;
@@ -273,14 +287,18 @@ void AlignedHeapSegment::sweepAndInstallForwardingPointers(
 }
 
 void AlignedHeapSegment::deleteDeadObjectIDs(GC *gc) {
-  GCBase::IDTracker &tracker = gc->getIDTracker();
-  if (tracker.isTrackingIDs()) {
+  GCBase::IDTracker &idTracker = gc->getIDTracker();
+  GCBase::AllocationLocationTracker &allocationLocationTracker =
+      gc->getAllocationLocationTracker();
+  if (idTracker.isTrackingIDs() || allocationLocationTracker.isEnabled()) {
     MarkBitArrayNC &markBits = markBitArray();
     // Separate out the delete tracking into a different loop in order to keep
     // the normal case fast.
-    forAllObjs([&markBits, &tracker](const GCCell *cell) {
+    forAllObjs([&markBits, &idTracker, &allocationLocationTracker](
+                   const GCCell *cell) {
       if (!markBits.at(markBits.addressToIndex(cell))) {
-        tracker.untrackObject(cell);
+        idTracker.untrackObject(cell);
+        allocationLocationTracker.freeAlloc(cell);
       }
     });
   }
@@ -289,8 +307,10 @@ void AlignedHeapSegment::deleteDeadObjectIDs(GC *gc) {
 void AlignedHeapSegment::updateObjectIDs(
     GC *gc,
     SweepResult::VTablesRemaining &vTables) {
-  GCBase::IDTracker &tracker = gc->getIDTracker();
-  if (!tracker.isTrackingIDs()) {
+  GCBase::IDTracker &idTracker = gc->getIDTracker();
+  GCBase::AllocationLocationTracker &allocationLocationTracker =
+      gc->getAllocationLocationTracker();
+  if (!idTracker.isTrackingIDs() && !allocationLocationTracker.isEnabled()) {
     // If ID tracking isn't on, there's nothing to do here.
     return;
   }
@@ -302,7 +322,8 @@ void AlignedHeapSegment::updateObjectIDs(
   while (ptr < level()) {
     if (markBits.at(ind)) {
       auto *cell = reinterpret_cast<GCCell *>(ptr);
-      tracker.moveObject(cell, cell->getForwardingPointer());
+      idTracker.moveObject(cell, cell->getForwardingPointer());
+      allocationLocationTracker.moveAlloc(cell, cell->getForwardingPointer());
       const VTable *vtp = vTablesCopy.next();
       auto cellSize = cell->getAllocatedSize(vtp);
       ptr += cellSize;
@@ -364,9 +385,6 @@ void AlignedHeapSegment::compact(SweepResult::VTablesRemaining &vTables) {
           "Cell was invalid after placing the vtable back in");
       // Must read this now, since the memmove below might overwrite it.
       auto cellSize = cell->getAllocatedSize();
-      // TODO(T43077289): if we rehabilitate ArrayStorage trimming, reenable
-      // this code.
-#if 0
       const bool canBeCompacted = cell->getVT()->canBeTrimmed();
       const auto trimmedSize = cell->getVT()->getTrimmedSize(cell, cellSize);
       if (newAddr != ptr) {
@@ -378,11 +396,6 @@ void AlignedHeapSegment::compact(SweepResult::VTablesRemaining &vTables) {
         newCell->setSizeDuringGCCompaction(trimmedSize);
         newCell->getVT()->trim(newCell);
       }
-#else
-      if (newAddr != ptr) {
-        std::memmove(newAddr, ptr, cellSize);
-      }
-#endif
 
       ptr += cellSize;
       ind += (cellSize >> LogHeapAlign);
@@ -397,7 +410,7 @@ void AlignedHeapSegment::compact(SweepResult::VTablesRemaining &vTables) {
 void AlignedHeapSegment::forObjsInRange(
     const std::function<void(GCCell *)> &callback,
     char *low,
-    char *high) {
+    const char *high) {
   assert(low >= start());
   assert(high <= effectiveEnd());
   char *ptr = low;
@@ -408,9 +421,34 @@ void AlignedHeapSegment::forObjsInRange(
   }
 }
 
+void AlignedHeapSegment::forObjsInRange(
+    const std::function<void(const GCCell *)> &callback,
+    const char *low,
+    const char *high) const {
+  assert(low >= start());
+  assert(high <= effectiveEnd());
+  const char *ptr = low;
+  while (ptr < high) {
+    const GCCell *cell = reinterpret_cast<const GCCell *>(ptr);
+    callback(cell);
+    ptr += cell->getAllocatedSize();
+  }
+}
+
 void AlignedHeapSegment::forAllObjs(
     const std::function<void(GCCell *)> &callback) {
   forObjsInRange(callback, start(), level());
+}
+
+void AlignedHeapSegment::forAllObjs(
+    const std::function<void(const GCCell *)> &callback) const {
+  forObjsInRange(callback, start(), level());
+}
+
+void AlignedHeapSegment::addExtentToString(char **buf, int *sz) {
+  int n = snprintf(*buf, *sz, "{lo: \"%p\", hi: \"%p\"}", lowLim(), hiLim());
+  *buf += n;
+  *sz -= n;
 }
 
 void AlignedHeapSegment::recreateCardTableBoundaries() {
@@ -431,6 +469,27 @@ void AlignedHeapSegment::recreateCardTableBoundaries() {
     ptr = nextPtr;
   }
 }
+
+#ifdef HERMES_EXTRA_DEBUG
+size_t AlignedHeapSegment::summarizeVTablesWork(const char *level) const {
+  std::hash<const void *> hash;
+  size_t res = 0;
+  forObjsInRange(
+      [&res, hash](const GCCell *cell) { res += hash(cell->getVT()); },
+      start(),
+      level);
+  return res;
+}
+
+void AlignedHeapSegment::summarizeVTables() {
+  lastVTableSummary_ = summarizeVTablesWork(level());
+  lastVTableSummaryLevel_ = level();
+}
+
+bool AlignedHeapSegment::checkSummarizedVTables() const {
+  return lastVTableSummary_ == summarizeVTablesWork(lastVTableSummaryLevel_);
+}
+#endif
 
 #ifndef NDEBUG
 bool AlignedHeapSegment::dbgContainsLevel(const void *lvl) const {

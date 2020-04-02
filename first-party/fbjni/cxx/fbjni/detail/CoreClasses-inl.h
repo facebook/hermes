@@ -1,5 +1,5 @@
-/**
- * Copyright 2018-present, Facebook, Inc.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -154,37 +154,14 @@ auto JavaClass<T, B, J>::self() const noexcept -> javaobject {
 
 // jclass //////////////////////////////////////////////////////////////////////////////////////////
 
-namespace detail {
-
-// This is not a real type.  It is used so people won't accidentally
-// use a void* to initialize a NativeMethod.
-struct NativeMethodWrapper;
-
-}
-
-struct NativeMethod {
-  const char* name;
-  std::string descriptor;
-  detail::NativeMethodWrapper* wrapper;
-};
 
 inline local_ref<JClass> JClass::getSuperclass() const noexcept {
   return adopt_local(Environment::current()->GetSuperclass(self()));
 }
 
-inline void JClass::registerNatives(std::initializer_list<NativeMethod> methods) {
+inline void JClass::registerNatives(std::initializer_list<JNINativeMethod> methods) {
   const auto env = Environment::current();
-
-  JNINativeMethod jnimethods[methods.size()];
-  size_t i = 0;
-  for (auto it = methods.begin(); it < methods.end(); ++it, ++i) {
-    // The JNI struct members are unnecessarily non-const.
-    jnimethods[i].name = const_cast<char*>(it->name);
-    jnimethods[i].signature = const_cast<char*>(it->descriptor.c_str());
-    jnimethods[i].fnPtr = reinterpret_cast<void*>(it->wrapper);
-  }
-
-  auto result = env->RegisterNatives(self(), jnimethods, static_cast<int>(methods.size()));
+  auto result = env->RegisterNatives(self(), methods.begin(), static_cast<int>(methods.size()));
   FACEBOOK_JNI_THROW_EXCEPTION_IF(result != JNI_OK);
 }
 
@@ -201,7 +178,7 @@ inline bool JClass::isAssignableFrom(alias_ref<JClass> other) const noexcept {
 
 template<typename F>
 inline JConstructor<F> JClass::getConstructor() const {
-  return getConstructor<F>(jmethod_traits_from_cxx<F>::constructor_descriptor().c_str());
+  return getConstructor<F>(jmethod_traits_from_cxx<F>::kConstructorDescriptor.c_str());
 }
 
 template<typename F>
@@ -212,7 +189,7 @@ inline JConstructor<F> JClass::getConstructor(const char* descriptor) const {
 
 template<typename F>
 inline JMethod<F> JClass::getMethod(const char* name) const {
-  return getMethod<F>(name, jmethod_traits_from_cxx<F>::descriptor().c_str());
+  return getMethod<F>(name, jmethod_traits_from_cxx<F>::kDescriptor.c_str());
 }
 
 template<typename F>
@@ -227,7 +204,7 @@ inline JMethod<F> JClass::getMethod(
 
 template<typename F>
 inline JStaticMethod<F> JClass::getStaticMethod(const char* name) const {
-  return getStaticMethod<F>(name, jmethod_traits_from_cxx<F>::descriptor().c_str());
+  return getStaticMethod<F>(name, jmethod_traits_from_cxx<F>::kDescriptor.c_str());
 }
 
 template<typename F>
@@ -242,7 +219,7 @@ inline JStaticMethod<F> JClass::getStaticMethod(
 
 template<typename F>
 inline JNonvirtualMethod<F> JClass::getNonvirtualMethod(const char* name) const {
-  return getNonvirtualMethod<F>(name, jmethod_traits_from_cxx<F>::descriptor().c_str());
+  return getNonvirtualMethod<F>(name, jmethod_traits_from_cxx<F>::kDescriptor.c_str());
 }
 
 template<typename F>
@@ -256,35 +233,35 @@ inline JNonvirtualMethod<F> JClass::getNonvirtualMethod(
 }
 
 template<typename T>
-inline JField<enable_if_t<IsJniScalar<T>(), T>>
+inline JField<PrimitiveOrJniType<T>>
 JClass::getField(const char* name) const {
-  return getField<T>(name, jtype_traits<T>::descriptor().c_str());
+  return getField<T>(name, jtype_traits<T>::kDescriptor.c_str());
 }
 
 template<typename T>
-inline JField<enable_if_t<IsJniScalar<T>(), T>> JClass::getField(
+inline JField<PrimitiveOrJniType<T>> JClass::getField(
     const char* name,
     const char* descriptor) const {
   const auto env = Environment::current();
   auto field = env->GetFieldID(self(), name, descriptor);
   FACEBOOK_JNI_THROW_EXCEPTION_IF(!field);
-  return JField<T>{field};
+  return JField<PrimitiveOrJniType<T>>{field};
 }
 
 template<typename T>
-inline JStaticField<enable_if_t<IsJniScalar<T>(), T>> JClass::getStaticField(
+inline JStaticField<PrimitiveOrJniType<T>> JClass::getStaticField(
     const char* name) const {
-  return getStaticField<T>(name, jtype_traits<T>::descriptor().c_str());
+  return getStaticField<T>(name, jtype_traits<T>::kDescriptor.c_str());
 }
 
 template<typename T>
-inline JStaticField<enable_if_t<IsJniScalar<T>(), T>> JClass::getStaticField(
+inline JStaticField<PrimitiveOrJniType<T>> JClass::getStaticField(
     const char* name,
     const char* descriptor) const {
   const auto env = Environment::current();
   auto field = env->GetStaticFieldID(self(), name, descriptor);
   FACEBOOK_JNI_THROW_EXCEPTION_IF(!field);
-  return JStaticField<T>{field};
+  return JStaticField<PrimitiveOrJniType<T>>{field};
 }
 
 template<typename T>
@@ -323,15 +300,15 @@ inline jclass JClass::self() const noexcept {
   return static_cast<jclass>(JObject::self());
 }
 
-inline void registerNatives(const char* name, std::initializer_list<NativeMethod> methods) {
+inline void registerNatives(const char* name, std::initializer_list<JNINativeMethod> methods) {
   findClassLocal(name)->registerNatives(methods);
 }
 
 
 // jstring /////////////////////////////////////////////////////////////////////////////////////////
 
-inline local_ref<JString> make_jstring(const std::string& modifiedUtf8) {
-  return make_jstring(modifiedUtf8.c_str());
+inline local_ref<JString> make_jstring(const std::string& utf8) {
+  return make_jstring(utf8.c_str());
 }
 
 namespace detail {
@@ -416,19 +393,9 @@ inline ElementProxy<Target>::ElementProxy::operator local_ref<T> () {
 }
 }
 
-template <typename T>
-std::string JArrayClass<T>::get_instantiated_java_descriptor() {
-  return "[" + jtype_traits<T>::descriptor();
-};
-
-template <typename T>
-std::string JArrayClass<T>::get_instantiated_base_name() {
-  return get_instantiated_java_descriptor();
-};
-
 template<typename T>
 auto JArrayClass<T>::newArray(size_t size) -> local_ref<javaobject> {
-  static const auto elementClass = findClassStatic(jtype_traits<T>::base_name().c_str());
+  static const auto elementClass = findClassStatic(jtype_traits<T>::kBaseName.c_str());
   const auto env = Environment::current();
   auto rawArray = env->NewObjectArray(size, elementClass.get(), nullptr);
   FACEBOOK_JNI_THROW_EXCEPTION_IF(!rawArray);
@@ -436,16 +403,16 @@ auto JArrayClass<T>::newArray(size_t size) -> local_ref<javaobject> {
 }
 
 template<typename T>
-inline void JArrayClass<T>::setElement(size_t idx, const T& value) {
+inline void JArrayClass<T>::setElement(size_t idx, T value) {
   const auto env = Environment::current();
-  env->SetObjectArrayElement(this->self(), idx, value);
+  env->SetObjectArrayElement(this->self(), idx, detail::toPlainJniReference(value));
 }
 
 template<typename T>
 inline local_ref<T> JArrayClass<T>::getElement(size_t idx) {
   const auto env = Environment::current();
   auto rawElement = env->GetObjectArrayElement(this->self(), idx);
-  return adopt_local(static_cast<T>(rawElement));
+  return adopt_local(static_cast<JniType<T>>(rawElement));
 }
 
 template<typename T>
@@ -466,15 +433,6 @@ auto JPrimitiveArray<JArrayType>::getRegion(jsize start, jsize length)
   auto buf = std::unique_ptr<T[]>{new T[length]};
   getRegion(start, length, buf.get());
   return buf;
-}
-
-template <typename JArrayType>
-std::string JPrimitiveArray<JArrayType>::get_instantiated_java_descriptor() {
-  return jtype_traits<JArrayType>::descriptor();
-}
-template <typename JArrayType>
-std::string JPrimitiveArray<JArrayType>::get_instantiated_base_name() {
-  return JPrimitiveArray::get_instantiated_java_descriptor();
 }
 
 template <typename JArrayType>
@@ -674,13 +632,13 @@ inline PinnedPrimitiveArray<T, Alloc>::PinnedPrimitiveArray(alias_ref<typename j
 
 template<typename T, typename Base, typename JType>
 inline alias_ref<JClass> JavaClass<T, Base, JType>::javaClassStatic() {
-  static auto cls = findClassStatic(jtype_traits<typename T::javaobject>::base_name().c_str());
+  static auto cls = findClassStatic(jtype_traits<typename T::javaobject>::kBaseName.c_str());
   return cls;
 }
 
 template<typename T, typename Base, typename JType>
 inline local_ref<JClass> JavaClass<T, Base, JType>::javaClassLocal() {
-  std::string className(jtype_traits<typename T::javaobject>::base_name().c_str());
+  std::string className(jtype_traits<typename T::javaobject>::kBaseName.c_str());
   return findClassLocal(className.c_str());
 }
 

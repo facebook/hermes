@@ -1,14 +1,16 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_INSTRUMENTATION_PAGEACCESSTRACKERWINDOWS_H
 #define HERMES_VM_INSTRUMENTATION_PAGEACCESSTRACKERWINDOWS_H
 
 #include <memory>
 #include <vector>
+#include "hermes/Support/JSONEmitter.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace hermes {
@@ -32,6 +34,10 @@ class PageAccessTracker {
 
   bool printStats(llvm::raw_ostream &OS, bool json) volatile {
     return false;
+  }
+
+  void getJSONStats(JSONEmitter &json) volatile {
+    json.emitNullValue();
   }
 
   bool printPageAccessedOrder(llvm::raw_ostream &OS, bool json) volatile {

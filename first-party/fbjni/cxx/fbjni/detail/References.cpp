@@ -1,5 +1,5 @@
-/**
- * Copyright 2018-present, Facebook, Inc.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ int32_t getAndroidApiLevel() {
   JNIEnv* env = Environment::current();
   jclass cls = detail::findClass(env, "android/os/Build$VERSION");
   jfieldID field = env->GetStaticFieldID(cls, "SDK_INT",
-                                         jtype_traits<jint>::descriptor().c_str());
+                                         jtype_traits<jint>::kDescriptor.c_str());
   if (!field) {
     env->DeleteLocalRef(cls);
   }

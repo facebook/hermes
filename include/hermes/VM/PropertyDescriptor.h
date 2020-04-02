@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_PROPERTYDESCRIPTOR_H
 #define HERMES_VM_PROPERTYDESCRIPTOR_H
 
@@ -57,6 +58,11 @@ struct PropertyFlags {
       /// accessed by the CallBuiltin instruction. The property is made
       /// read-only and is not allowed to be overriden.
       uint16_t staticBuiltin : 1;
+      /// This flag indicates this is a proxy exotic Object.  This flag
+      /// should only be used as a marker for certain temporary
+      /// descriptors synthesized by get*Descriptor methods, and never
+      /// set in descriptors stored persistently.
+      uint16_t proxyObject : 1;
     };
 
     uint16_t _flags;

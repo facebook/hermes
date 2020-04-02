@@ -1,14 +1,15 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 
 #include "hermes/BCGen/HBC/Bytecode.h"
 #include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
-#include "hermes/Inst/Builtins.h"
+#include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/Support/JenkinsHash.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/RegExpSerialization.h"
@@ -104,8 +105,6 @@ const char *stringKindTag(StringKind::Kind kind) {
       return "s";
     case StringKind::Identifier:
       return "i";
-    case StringKind::Predefined:
-      return "p";
   }
 
   llvm_unreachable("Unrecognised String Kind.");
@@ -177,9 +176,6 @@ void BytecodeDisassembler::disassembleStringStorage(raw_ostream &OS) {
           OS << " #"
              << llvm::format_hex_no_prefix(
                     translations[trnID++], 8, /* Upper */ true);
-          break;
-        case StringKind::Predefined:
-          OS << " @" << translations[trnID++];
           break;
 
         default:
@@ -634,7 +630,7 @@ void PrettyDisassembleVisitor::visitOperand(
   if (operandIndex == 1 && opcode_ == inst::OpCode::CallBuiltin) {
     uint8_t builtinIndex;
     decodeOperand(operandBuf, &builtinIndex);
-    os_ << '"' << inst::getBuiltinMethodName(builtinIndex) << '"';
+    os_ << '"' << getBuiltinMethodName(builtinIndex) << '"';
     return;
   }
 
@@ -1002,9 +998,21 @@ void BytecodeDisassembler::disassemble(raw_ostream &OS) {
 
     auto *funcDebugOffsets = bcProvider_->getDebugOffsets(funcId);
     if (functionHeader.flags().hasDebugInfo && funcDebugOffsets != nullptr) {
-      OS << "Offset in debug table: src "
-         << llvm::format_hex(funcDebugOffsets->sourceLocations, 2) << ", vars "
-         << llvm::format_hex(funcDebugOffsets->lexicalData, 2) << '\n';
+      OS << "Offset in debug table: source ";
+      uint32_t debugSourceOffset = funcDebugOffsets->sourceLocations;
+      if (debugSourceOffset == DebugOffsets::NO_OFFSET) {
+        OS << "none";
+      } else {
+        OS << llvm::format_hex(debugSourceOffset, 6);
+      }
+      OS << ", lexical ";
+      uint32_t debugLexicalOffset = funcDebugOffsets->lexicalData;
+      if (debugLexicalOffset == DebugOffsets::NO_OFFSET) {
+        OS << "none";
+      } else {
+        OS << llvm::format_hex(debugLexicalOffset, 6);
+      }
+      OS << '\n';
     }
     disassembleFunction(funcId, OS);
   }

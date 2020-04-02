@@ -1,12 +1,14 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -dump-bytecode -target=HBC %s -O -g | %FileCheck %s --match-full-lines
 
 //CHECK-LABEL:Function<global>{{.*}}:
-//CHECK-NEXT:Offset in debug table: src 0x0, vars 0x0
+//CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 //CHECK-NEXT:    DeclareGlobalVar  "test1"
 //CHECK-NEXT:    CreateEnvironment r0
 //CHECK-NEXT:    CreateClosure     r1, r0, 1

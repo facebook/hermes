@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 //===----------------------------------------------------------------------===//
 /// \file
 /// ES5.1 15.12 Populate the JSON object.
@@ -58,7 +59,7 @@ CallResult<HermesValue> jsonParse(void *, Runtime *runtime, NativeArgs args) {
   }
   return runtimeJSONParse(
       runtime,
-      toHandle(runtime, std::move(*res)),
+      runtime->makeHandle(std::move(*res)),
       Handle<Callable>::dyn_vmcast(args.getArgHandle(1)));
 }
 

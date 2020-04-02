@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 //===----------------------------------------------------------------------===//
 /// \file
 /// ES6.0 19.4 Initialize the Symbol constructor.
@@ -189,7 +190,7 @@ CallResult<HermesValue> symbolFor(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto key = toHandle(runtime, std::move(*cr));
+  auto key = runtime->makeHandle(std::move(*cr));
 
   auto symbolRes = runtime->getSymbolRegistry().getSymbolForKey(runtime, key);
   if (LLVM_UNLIKELY(symbolRes == ExecutionStatus::EXCEPTION)) {

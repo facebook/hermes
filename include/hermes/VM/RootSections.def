@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef ROOT_SECTION
 #define ROOT_SECTION(name)
 #endif
@@ -21,6 +22,7 @@ ROOT_SECTION(GCScopes)
 ROOT_SECTION(WeakRefs)
 ROOT_SECTION(SymbolRegistry)
 ROOT_SECTION(SamplingProfiler)
+ROOT_SECTION(CodeCoverageProfiler)
 ROOT_SECTION(Custom)
 
 #undef ROOT_SECTION

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 //===----------------------------------------------------------------------===//
 /// \file
 /// ES5.1 15.3 Initialize the Function constructor.
@@ -12,10 +13,13 @@
 
 #include "hermes/Regex/Executor.h"
 #include "hermes/Regex/RegexTraits.h"
+#include "hermes/VM/ArrayLike.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringView.h"
+
+#include "llvm/Support/ConvertUTF.h"
 
 namespace hermes {
 namespace vm {
@@ -27,13 +31,12 @@ Handle<JSObject> createFunctionConstructor(Runtime *runtime) {
   auto functionPrototype =
       Handle<Callable>::vmcast(&runtime->functionPrototype);
 
-  auto cons = defineSystemConstructor(
+  auto cons = defineSystemConstructor<JSFunction>(
       runtime,
       Predefined::getSymbolID(Predefined::Function),
       functionConstructor,
       functionPrototype,
       1,
-      JSFunction::createWithNewDomain,
       CellKind::FunctionKind);
 
   // Function.prototype.xxx() methods.
@@ -98,6 +101,36 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
         "Can't call Function.prototype.toString() on non-callable");
   }
 
+#ifndef HERMESVM_LEAN
+  JSFunction *jsFunc;
+  if (runtime->getAllowFunctionToStringWithRuntimeSource() &&
+      (jsFunc = dyn_vmcast<JSFunction>(*func)) &&
+      jsFunc->getCodeBlock()->hasFunctionSource()) {
+    auto code = jsFunc->getCodeBlock()->getFunctionSource();
+    if (isAllASCII(std::begin(code), std::end(code))) {
+      return vm::StringPrimitive::createEfficient(
+          runtime, llvm::makeArrayRef(std::begin(code), std::end(code)));
+    }
+    std::u16string out;
+    out.resize(code.size());
+    const llvm::UTF8 *sourceStart = (const llvm::UTF8 *)code.data();
+    const llvm::UTF8 *sourceEnd = sourceStart + code.size();
+    llvm::UTF16 *targetStart = (llvm::UTF16 *)&out[0];
+    llvm::UTF16 *targetEnd = targetStart + out.size();
+    auto cRes = ConvertUTF8toUTF16(
+        &sourceStart,
+        sourceEnd,
+        &targetStart,
+        targetEnd,
+        llvm::lenientConversion);
+    (void)cRes;
+    assert(
+        cRes != llvm::ConversionResult::targetExhausted &&
+        "not enough space allocated for UTF16 conversion");
+    return vm::StringPrimitive::createEfficient(runtime, std::move(out));
+  }
+#endif
+
   SmallU16String<64> strBuf{};
   strBuf.append("function ");
 
@@ -121,7 +154,7 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   strBuf.append('(');
 
   // Extract ".length".
-  auto lengthProp = Callable::extractOwnLengthProperty(func, runtime);
+  auto lengthProp = Callable::extractOwnLengthProperty_RJS(func, runtime);
   if (lengthProp == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
 
@@ -151,7 +184,7 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
 
   // Finally allocate a StringPrimitive.
   return StringPrimitive::create(runtime, strBuf);
-}
+} // namespace vm
 
 CallResult<HermesValue>
 functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {
@@ -175,66 +208,12 @@ functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {
         "Can't apply() with non-object arguments list");
   }
 
-  auto propRes = JSObject::getNamed_RJS(
-      argObj, runtime, Predefined::getSymbolID(Predefined::length));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(*propRes));
-  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  uint32_t n = intRes->getNumber();
-
-  ScopedNativeCallFrame newFrame{runtime, n, *func, false, args.getArg(0)};
-  if (LLVM_UNLIKELY(newFrame.overflowed()))
-    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
-
-  // Initialize the arguments to undefined because we might allocate and cause
-  // a gc while populating them.
-  // TODO: look into doing this lazily.
-  newFrame.fillArguments(n, HermesValue::encodeUndefinedValue());
-
-  Handle<ArrayImpl> argArray = Handle<ArrayImpl>::dyn_vmcast(argObj);
-  MutableHandle<> iHandle{runtime, HermesValue::encodeNumberValue(0)};
-  auto marker = gcScope.createMarker();
-  if (LLVM_LIKELY(argArray)) {
-    // Fast path: we already have an array, so try and bypass the getComputed
-    // checks and the handle loads & stores. Directly call ArrayImpl::at,
-    // and only call getComputed if the element is empty.
-    for (uint32_t argIdx = 0; argIdx < n; ++argIdx) {
-      HermesValue arg = argArray->at(runtime, argIdx);
-      if (LLVM_LIKELY(!arg.isEmpty())) {
-        newFrame->getArgRef(argIdx) = arg;
-        continue;
-      }
-      // Slow path fallback: the actual getComputed on this,
-      // because the real value could be up the prototype chain.
-      iHandle = HermesValue::encodeDoubleValue(argIdx);
-      gcScope.flushToMarker(marker);
-      if (LLVM_UNLIKELY(
-              (propRes = JSObject::getComputed_RJS(argObj, runtime, iHandle)) ==
-              ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      newFrame->getArgRef(argIdx) = *propRes;
-    }
-  } else {
-    // Not an array. Use this slow path.
-    for (uint32_t argIdx = 0; argIdx < n; ++argIdx) {
-      iHandle = HermesValue::encodeNumberValue(argIdx);
-      gcScope.flushToMarker(marker);
-      if (LLVM_UNLIKELY(
-              (propRes = JSObject::getComputed_RJS(argObj, runtime, iHandle)) ==
-              ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      newFrame->getArgRef(argIdx) = *propRes;
-    }
-  }
-
-  gcScope.flushToMarker(marker);
-  return Callable::call(func, runtime);
+  return Callable::executeCall(
+      func,
+      runtime,
+      Runtime::getUndefinedValue(),
+      args.getArgHandle(0),
+      argObj);
 }
 
 CallResult<HermesValue>

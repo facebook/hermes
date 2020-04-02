@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_METADATA_H
 #define HERMES_VM_METADATA_H
 
@@ -17,6 +18,7 @@
 #include <cstdint>
 #include <map>
 #include <utility>
+#include <vector>
 
 namespace hermes {
 namespace vm {
@@ -123,6 +125,27 @@ struct Metadata final {
         const SizeType *lengthLocation,
         std::size_t stride);
 
+    /// Should be called first when building metadata for a JSObject subclass.
+    /// Records how many property slots are unused due to overlap.
+    void addJSObjectOverlapSlots(unsigned num) {
+      if (!jsObjectOverlapSlots_) {
+        jsObjectOverlapSlots_ = num;
+      } else {
+        // Subsequent calls do nothing but assert that order of calls is sane.
+        assert(
+            num <= *jsObjectOverlapSlots_ &&
+            "most derived class should call this method first");
+      }
+    }
+
+    /// The number of initial direct property slots to exclude in the metadata
+    /// for a JSObject subclass.
+    unsigned getJSObjectOverlapSlots() const {
+      assert(
+          jsObjectOverlapSlots_ && "missing call to addJSObjectOverlapSlots");
+      return *jsObjectOverlapSlots_;
+    }
+
     /// Build creates a Metadata, and destroys this builder.
     Metadata build();
 
@@ -133,8 +156,16 @@ struct Metadata final {
     std::map<offset_t, std::pair<const char *, size_t>> pointers_;
     std::map<offset_t, std::pair<const char *, size_t>> values_;
     std::map<offset_t, std::pair<const char *, size_t>> symbols_;
+#ifndef NDEBUG
+    /// True if [offset, offset + size) overlaps any previously added field.
+    bool fieldConflicts(offset_t offset, size_t size);
+    std::vector<bool> coveredOffsets_;
+#endif
     /// An optional array for an object to contain.
     OptValue<ArrayData> array_;
+
+    /// For subclasses of JSObject, the number of unused direct property slots.
+    OptValue<unsigned> jsObjectOverlapSlots_;
 
     friend Metadata;
   };

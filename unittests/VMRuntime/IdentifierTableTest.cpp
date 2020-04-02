@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/Support/UTF8.h"
 #include "hermes/VM/StringPrimitive.h"
@@ -116,13 +117,12 @@ TEST_F(IdentifierTableTest, LazyExternalSymbolTooBig) {
   // A string of this size is definitely too big to be allocated.
   ASSERT_FALSE(runtime->getHeap().canAllocExternalMemory(extSize));
 
-  auto buf = reinterpret_cast<char *>(malloc(extSize));
-  ASSERT_NE(nullptr, buf);
-  ASCIIRef ref{buf, extSize};
+  std::string buf(extSize, '\0');
+  ASCIIRef ref{buf.data(), extSize};
 
   SymbolID symbol = idTable.registerLazyIdentifier(ref);
 
-  EXPECT_DEATH(
+  EXPECT_DEATH_IF_SUPPORTED(
       { idTable.getStringPrim(runtime, symbol); },
       "Unhandled out of memory exception");
 }

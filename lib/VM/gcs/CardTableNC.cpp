@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #define DEBUG_TYPE "gc"
 
 #include "hermes/VM/CardTableNC.h"
@@ -36,7 +37,7 @@ OptValue<size_t> CardTable::findNextCardWithStatus(
 }
 
 void CardTable::clear() {
-  cleanRange(0, kValidIndices - 1);
+  cleanRange(kFirstUsedIndex, kValidIndices - 1);
 }
 
 void CardTable::updateAfterCompaction(const void *newLevel) {
@@ -55,7 +56,7 @@ void CardTable::updateAfterCompaction(const void *newLevel) {
 
   // Dirty the occupied cards (below the level), and clean the cards above the
   // level.
-  dirtyRange(0, lastDirtyCardIndex);
+  dirtyRange(kFirstUsedIndex, lastDirtyCardIndex);
   cleanRange(lastDirtyCardIndex + 1, kValidIndices - 1);
 }
 

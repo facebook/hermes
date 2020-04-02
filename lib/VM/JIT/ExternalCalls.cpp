@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "ExternalCalls.h"
 
 #include "hermes/VM/JSArray.h"
@@ -20,6 +21,13 @@ CallResult<HermesValue> slowPathToNumber(
     PinnedHermesValue *src) {
   GCScopeMarkerRAII marker{runtime};
   return toNumber_RJS(runtime, Handle<>(src));
+}
+
+CallResult<HermesValue> externToInt32(
+    Runtime *runtime,
+    PinnedHermesValue *val) {
+  GCScopeMarkerRAII marker{runtime};
+  return toInt32_RJS(runtime, Handle<>(val));
 }
 
 CallResult<HermesValue> slowPathAddEmptyString(
@@ -85,11 +93,12 @@ CallResult<HermesValue> externCreateClosure(
   GCScopeMarkerRAII marker{runtime};
 
   return JSFunction::create(
-      runtime,
-      codeBlock->getRuntimeModule()->getDomain(runtime),
-      Handle<JSObject>::vmcast(&runtime->functionPrototype),
-      Handle<Environment>::vmcast(env),
-      codeBlock);
+             runtime,
+             codeBlock->getRuntimeModule()->getDomain(runtime),
+             Handle<JSObject>::vmcast(&runtime->functionPrototype),
+             Handle<Environment>::vmcast(env),
+             codeBlock)
+      .getHermesValue();
 }
 
 ExecutionStatus externPutById(
@@ -105,16 +114,17 @@ ExecutionStatus externPutById(
 
   if (LLVM_LIKELY(target->isObject())) {
     auto *obj = vmcast<JSObject>(*target);
-    auto *clazz = obj->getClass(runtime);
+    auto clazzGCPtr = obj->getClassGCPtr();
     auto *cacheEntry = codeBlock->getWriteCacheEntry(cacheIdx);
 
     // If we have a cache hit, reuse the cached offset and immediately
     // return the property.
-    if (LLVM_LIKELY(cacheEntry->clazz == clazz)) {
+    if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr.getStorageType())) {
       JSObject::setNamedSlotValue<PropStorage::Inline::Yes>(
           obj, runtime, cacheEntry->slot, *prop);
       return ExecutionStatus::RETURNED;
     }
+    auto *clazz = clazzGCPtr.getNonNull(runtime);
     auto id = SymbolID::unsafeCreate(sid);
     NamedPropertyDescriptor desc;
     if (LLVM_LIKELY(
@@ -126,7 +136,7 @@ ExecutionStatus externPutById(
       if (LLVM_LIKELY(!clazz->isDictionary()) &&
           LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
         // Cache the class and property slot.
-        cacheEntry->clazz = clazz;
+        cacheEntry->clazz = clazzGCPtr.getStorageType();
         cacheEntry->slot = desc.slot;
       }
 
@@ -162,12 +172,12 @@ CallResult<HermesValue> externGetById(
 
   if (LLVM_LIKELY(target->isObject())) {
     auto *obj = vmcast<JSObject>(*target);
-    auto *clazz = obj->getClass(runtime);
+    auto clazzGCPtr = obj->getClassGCPtr();
     auto *cacheEntry = codeBlock->getReadCacheEntry(cacheIdx);
 
     // If we have a cache hit, reuse the cached offset and immediately
     // return the property.
-    if (LLVM_LIKELY(cacheEntry->clazz == clazz)) {
+    if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr.getStorageType())) {
       return JSObject::getNamedSlotValue<PropStorage::Inline::Yes>(
           obj, runtime, cacheEntry->slot);
     }
@@ -175,6 +185,7 @@ CallResult<HermesValue> externGetById(
     NamedPropertyDescriptor desc;
     OptValue<bool> fastPathResult =
         JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, id, desc);
+    auto *clazz = clazzGCPtr.getNonNull(runtime);
     if (LLVM_LIKELY(fastPathResult.hasValue() && fastPathResult.getValue()) &&
         !desc.flags.accessor) {
       // cacheIdx == 0 indicates no caching so don't update the cache in
@@ -182,7 +193,7 @@ CallResult<HermesValue> externGetById(
       if (LLVM_LIKELY(!clazz->isDictionary()) &&
           LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
         // Cache the class, id and property slot.
-        cacheEntry->clazz = clazz;
+        cacheEntry->clazz = clazzGCPtr.getStorageType();
         cacheEntry->slot = desc.slot;
       }
 
@@ -192,13 +203,15 @@ CallResult<HermesValue> externGetById(
     // The cache may also be populated via the prototype of the object.
     // This value is only reliable if the fast path was a definite
     // not-found.
-    if (fastPathResult.hasValue() && !fastPathResult.getValue()) {
+    if (fastPathResult.hasValue() && !fastPathResult.getValue() &&
+        !obj->isProxyObject()) {
       JSObject *parent = obj->getParent(runtime);
       // TODO: This isLazy check is because a lazy object is reported as
       // having no properties and therefore cannot contain the property.
       // This check does not belong here, it should be merged into
       // tryGetOwnNamedDescriptorFast().
-      if (parent && cacheEntry->clazz == parent->getClass(runtime) &&
+      if (parent &&
+          cacheEntry->clazz == parent->getClassGCPtr().getStorageType() &&
           LLVM_LIKELY(!obj->isLazy())) {
         return JSObject::getNamedSlotValue(parent, runtime, cacheEntry->slot);
       }
@@ -239,9 +252,8 @@ CallResult<HermesValue> externCall(
       argCount - 1,
       *callable,
       HermesValue::encodeUndefinedValue());
-  runtime->storeCallerIP(ip);
+  runtime->setCurrentIP(ip);
   auto res = Callable::call(Handle<Callable>::vmcast(callable), runtime);
-  runtime->clearCallerIP();
   return res;
 }
 
@@ -271,9 +283,8 @@ CallResult<HermesValue> externConstruct(
       argCount - 1,
       *callable,
       *callable);
-  runtime->storeCallerIP(ip);
+  runtime->setCurrentIP(ip);
   auto res = Callable::call(Handle<Callable>::vmcast(callable), runtime);
-  runtime->clearCallerIP();
   return res;
 }
 
@@ -311,12 +322,11 @@ HermesValue externLoadConstStringMayAllocate(
 
 HermesValue externTypeOf(Runtime *runtime, PinnedHermesValue *src) {
   switch (src->getTag()) {
-    case UndefinedTag:
+    case UndefinedNullTag:
       return HermesValue::encodeStringValue(
-          runtime->getPredefinedString(Predefined::undefined));
-    case NullTag:
-      return HermesValue::encodeStringValue(
-          runtime->getPredefinedString(Predefined::object));
+          src->isUndefined()
+              ? runtime->getPredefinedString(Predefined::undefined)
+              : runtime->getPredefinedString(Predefined::object));
     case StrTag:
       return HermesValue::encodeStringValue(
           runtime->getPredefinedString(Predefined::string));
@@ -529,10 +539,54 @@ CallResult<HermesValue> externDelByVal(
     scratch = res.getValue();
     auto delRes = JSObject::deleteComputed(
         Handle<JSObject>::vmcast(&scratch), runtime, Handle<>(nameVal), flags);
+    scratch = HermesValue::encodeUndefinedValue();
     if (LLVM_UNLIKELY(delRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     return HermesValue::encodeBoolValue(*delRes);
+  }
+}
+
+CallResult<HermesValue> externDelById(
+    Runtime *runtime,
+    PinnedHermesValue *target,
+    uint32_t sid,
+    PropOpFlags flags) {
+  GCScopeMarkerRAII marker{runtime};
+
+  if (LLVM_LIKELY(target->isObject())) {
+    auto status = JSObject::deleteNamed(
+        Handle<JSObject>::vmcast(target),
+        runtime,
+        SymbolID::unsafeCreate(sid),
+        flags);
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return HermesValue::encodeBoolValue(*status);
+  } else {
+    // This is the "slow path".
+    auto res = toObject(runtime, Handle<>(target));
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      // If an exception is thrown, likely we are trying to convert
+      // undefined/null to an object. Passing over the name of the property
+      // so that we could emit more meaningful error messages.
+      (void)amendPropAccessErrorMsgWithPropName(
+          runtime, Handle<>(target), "delete", SymbolID::unsafeCreate(sid));
+      return ExecutionStatus::EXCEPTION;
+    }
+    PinnedHermesValue &scratch = runtime->getCurrentFrame().getScratchRef();
+    scratch = res.getValue();
+    auto status = JSObject::deleteNamed(
+        Handle<JSObject>::vmcast(&scratch),
+        runtime,
+        SymbolID::unsafeCreate(sid),
+        flags);
+    scratch = HermesValue::encodeUndefinedValue();
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return HermesValue::encodeBoolValue(status.getValue());
   }
 }
 
@@ -712,9 +766,10 @@ HermesValue externGetNextPName(
     PinnedHermesValue *sizeReg) {
   GCScopeMarkerRAII marker{runtime};
 
-  assert(vmisa<JSArray>(*arrReg) && "GetNextPName's second op must be JSArray");
+  assert(
+      vmisa<BigStorage>(*arrReg) && "GetNextPName's second op must be JSArray");
   auto obj = Handle<JSObject>::vmcast(objReg);
-  auto arr = Handle<JSArray>::vmcast(arrReg);
+  auto arr = Handle<BigStorage>::vmcast(arrReg);
   uint32_t idx = iterReg->getNumber();
   uint32_t size = sizeReg->getNumber();
   PinnedHermesValue *scratch = &runtime->getCurrentFrame().getScratchRef();
@@ -722,7 +777,7 @@ HermesValue externGetNextPName(
 
   // Loop until we find a property which is present.
   while (idx < size) {
-    *scratch = arr->at(runtime, idx);
+    *scratch = arr->at(idx);
     ComputedPropertyDescriptor desc;
     JSObject::getComputedPrimitiveDescriptor(
         obj, runtime, Handle<>(scratch), propObj, desc);
@@ -811,18 +866,14 @@ CallResult<HermesValue> externIsIn(
     return runtime->raiseTypeError("right operand of 'in' is not an object");
   }
 
-  MutableHandle<JSObject> inObject{runtime};
-  ComputedPropertyDescriptor desc;
-  if (JSObject::getComputedDescriptor(
-          Handle<JSObject>::vmcast(obj),
-          runtime,
-          Handle<>(propName),
-          inObject,
-          desc) == ExecutionStatus::EXCEPTION) {
+  CallResult<bool> resultRes = JSObject::hasComputed(
+      Handle<JSObject>::vmcast(obj), runtime, Handle<>(propName));
+
+  if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  return HermesValue::encodeBoolValue(!!inObject);
+  return HermesValue::encodeBoolValue(*resultRes);
 }
 
 CallResult<HermesValue> externInstanceOf(
@@ -848,12 +899,8 @@ CallResult<HermesValue> externCreateRegExpMayAllocate(
   GCScopeMarkerRAII marker{runtime};
 
   // Create the RegExp object.
-  auto regRes = JSRegExp::create(
+  Handle<JSRegExp> re = JSRegExp::create(
       runtime, Handle<JSObject>::vmcast(&runtime->regExpPrototype));
-  if (regRes == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto re = runtime->makeHandle<JSRegExp>(*regRes);
   // Initialize the regexp.
   auto pattern = runtime->makeHandle(
       codeBlock->getRuntimeModule()->getStringPrimFromStringIDMayAllocate(

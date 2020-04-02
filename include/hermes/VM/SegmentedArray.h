@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_SEGMENTEDARRAY_H
 #define HERMES_VM_SEGMENTEDARRAY_H
 
@@ -42,6 +43,7 @@ namespace vm {
 class SegmentedArray final
     : public VariableSizeRuntimeCell,
       private llvm::TrailingObjects<SegmentedArray, GCHermesValue> {
+ public:
   /// A segment is just a blob of raw memory with a fixed size.
   class Segment final : public GCCell {
    public:
@@ -106,7 +108,6 @@ class SegmentedArray final
         : GCCell(&runtime->getHeap(), &vt), length_(0) {}
   };
 
- public:
   using size_type = uint32_t;
 
   /// The threshold at which the storage changes from values to pointers to
@@ -167,6 +168,8 @@ class SegmentedArray final
           index_ <= owner_->size() &&
           "Cannot make an iterator that points outside of the storage");
     }
+
+    iterator(const iterator &) = default;
 
     iterator &operator=(const iterator &that) {
       assert(
@@ -240,13 +243,15 @@ class SegmentedArray final
 
   /// Creates a new SegmentedArray that has space for at least the requested \p
   /// capacity number of elements, and has size 0.
-  static CallResult<HermesValue> create(Runtime *runtime, size_type capacity);
-  static CallResult<HermesValue> createLongLived(
+  static CallResult<PseudoHandle<SegmentedArray>> create(
+      Runtime *runtime,
+      size_type capacity);
+  static CallResult<PseudoHandle<SegmentedArray>> createLongLived(
       Runtime *runtime,
       size_type capacity);
   /// Same as \c create(runtime, capacity) except fills in the first \p size
   /// elements with \p fill, and sets the size to \p size.
-  static CallResult<HermesValue>
+  static CallResult<PseudoHandle<SegmentedArray>>
   create(Runtime *runtime, size_type capacity, size_type size);
 
   /// Gets the element located at \p index.
@@ -289,15 +294,12 @@ class SegmentedArray final
   }
 
   /// Gets the total number of elements that could fit in the SegmentedArray
-  /// before a new SegmentedArray will be allocated.
-  size_type capacity() const {
-    if (slotCapacity_ <= kValueToSegmentThreshold) {
-      return slotCapacity_;
-    } else {
-      return kValueToSegmentThreshold +
-          (slotCapacity_ - kValueToSegmentThreshold) * Segment::kMaxLength;
-    }
-  }
+  /// before any allocations are required.
+  size_type capacity() const;
+
+  /// The total number of elements that can fit in this SegmentedArray if
+  /// allocations of new segments are allowed.
+  size_type totalCapacityOfSpine() const;
 
   /// Gets the amount of memory used by this object (just the spine, not
   /// including any segments) for a given capacity.
@@ -332,12 +334,8 @@ class SegmentedArray final
 
   /// Set the size to a value <= the capacity. This is a special
   /// case of resize() but has a simpler interface since we know that it doesn't
-  /// need to reallocate.  If the \p fill parameter is an Object pointer value,
-  /// then \p gc must be non-null.
-  static void resizeWithinCapacity(
-      PseudoHandle<SegmentedArray> self,
-      Runtime *runtime,
-      size_type newSize);
+  /// need to reallocate.
+  static void resizeWithinCapacity(SegmentedArray *self, size_type newSize);
 
   /// Decrease the size to zero.
   void clear() {
@@ -550,15 +548,6 @@ class SegmentedArray final
       Runtime *runtime,
       size_type amount);
 
-  /// Same as \p growRight except the size + \p amount is guaranteed to be less
-  /// than the capacity, so the SegmentedArray will not be re-allocated.
-  /// NOTE: A Handle is still taken because the segments might need to be
-  /// allocated.
-  static void growRightWithinCapacity(
-      Runtime *runtime,
-      PseudoHandle<SegmentedArray> self,
-      size_type amount);
-
   /// Same as \c growRightWithinCapacity except it fills from the left.
   static void growLeftWithinCapacity(
       Runtime *runtime,
@@ -573,6 +562,10 @@ class SegmentedArray final
   /// \p pre amount <= size().
   void shrinkLeft(Runtime *runtime, size_type amount);
 
+  /// Increases the size by \p amount, without doing any allocation.
+  /// \param fill If true, fill the newly usable space with empty HermesValues.
+  void increaseSizeWithinCapacity(size_type amount, bool fill);
+
   /// Increases the size by \p amount, and adjusts segment sizes
   /// accordingly.
   /// NOTE: increasing size can potentially allocate new segments.
@@ -581,6 +574,7 @@ class SegmentedArray final
       Runtime *runtime,
       PseudoHandle<SegmentedArray> self,
       size_type amount);
+
   /// Decreases the size by \p amount, and no longer tracks the elements past
   /// the new size limit.
   void decreaseSize(size_type amount);
@@ -621,8 +615,6 @@ SegmentedArray::maxNumSegmentsWithoutOverflow() {
       Segment::kMaxLength);
 }
 
-template <>
-struct IsGCObject<SegmentedArray> : public std::true_type {};
 template <>
 struct IsGCObject<SegmentedArray::Segment> : public std::true_type {};
 

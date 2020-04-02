@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -non-strict -O -target=HBC %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -non-strict -O -target=HBC -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
 
@@ -76,6 +78,10 @@ Object.defineProperty(obj, "prop", {
 });
 print(obj.prop);
 //CHECK: undefined
+obj = { get x() { return 87; } };
+Object.defineProperty(obj, "x", { writable: false });
+print(obj.x);
+//CHECK: undefined
 
 print('getOwnPropertyDescriptor');
 // CHECK-LABEL: getOwnPropertyDescriptor
@@ -126,6 +132,12 @@ print(obj.hasOwnProperty(5));
 print([1, 2].hasOwnProperty(0));
 //CHECK: true
 print([1, 2].hasOwnProperty(2));
+//CHECK: false
+
+var child = Object.create(obj);
+print(child.hasOwnProperty('newprop'));
+//CHECK: false
+print(child.hasOwnProperty(5));
 //CHECK: false
 
 print('defineProperties');
@@ -189,6 +201,30 @@ print(e.length)
 // CHECK-NEXT: 2
 print(e[0], e[1]);
 // CHECK-NEXT: a,1 c,3
+
+print('fromEntries');
+// CHECK-LABEL: fromEntries
+try {
+  Object.fromEntries(null);
+} catch(e) {
+  print('caught', e.name);
+}
+// CHECK-NEXT: caught TypeError
+var obj = Object.fromEntries([['a', 1], ['b', 2]]);
+print(Object.entries(obj));
+// CHECK-NEXT: a,1,b,2
+var desc = Object.getOwnPropertyDescriptor(obj, 'a');
+print(desc.enumerable, desc.configurable, desc.writable);
+// CHECK-NEXT: true true true
+function* gen(x) {
+  yield ['a', x];
+  yield {0: 'b', 1: x+10};
+}
+var obj = Object.fromEntries(gen(4));
+print(Object.entries(obj));
+// CHECK-NEXT: a,4,b,14
+print(Object.entries(Object.fromEntries([])).length);
+// CHECK-NEXT: 0
 
 function testGetOwnPropertyNames() {
   var obj = {a: 0, b: 1};
@@ -410,6 +446,28 @@ function testObjectAssignPrimitives() {
 testObjectAssignPrimitives()
 //CHECK-NEXT: {"0":"g","1":"r","2":"e","3":"n","4":"d","5":"e","6":"l"}
 
+function testObjectSymbolKeys() {
+  var obj = Object.assign({}, {[Symbol.for('akey')]:'avalue'});
+  // Define a props object with a single non-enumerable property whose
+  // key is a symbol and value is not a valid properties object.
+  var props = Object.create({}, {
+    [Symbol.for('bkey')]: {
+      value: "bvalue",
+      writable: false,
+      enumerable: false,
+      configurable: true,
+    },
+  });
+  // Should include non-enumerable symbol key
+  print (Object.getOwnPropertySymbols(props).length)
+  // Now, assign those properties to obj.  This should be a noop, as there
+  // are no enumerable properties in props.
+  Object.defineProperties(obj, props);
+  print (Object.getOwnPropertySymbols(obj).length);
+}
+testObjectSymbolKeys()
+//CHECK-NEXT: 1
+//CHECK-NEXT: 1
 
 function testObjectAssignExceptions() {
     var obj = Object.defineProperty({}, 'whytho', {

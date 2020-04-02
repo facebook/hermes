@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "ProfileAnalyzer.h"
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 #include "hermes/BCGen/HBC/BytecodeStream.h"
@@ -266,7 +267,7 @@ class InstructionSummaryVisitor : public hermes::hbc::BytecodeVisitor {
 
 void ProfileAnalyzer::dumpInstructionStats() {
   if (!profileDataOpt_.hasValue()) {
-    os_ << "This command requires trace profile to run.\n";
+    os_ << "This command requires trace profile to run (-profile-file).\n";
     return;
   }
 
@@ -310,7 +311,7 @@ void ProfileAnalyzer::reportUnmatchedChecksums() {
 
 void ProfileAnalyzer::dumpFunctionStats() {
   if (!profileDataOpt_.hasValue()) {
-    os_ << "This command requires trace profile to run.\n";
+    os_ << "This command requires trace profile to run (-profile-file).\n";
     return;
   }
   buildFunctionRuntimeStatisticsMapIfNeeded();
@@ -388,6 +389,19 @@ void ProfileAnalyzer::dumpFunctionStats() {
       os_ << formatString("%s(%d)", funcNameStr.c_str(), funcId);
     }
     os_ << "\n";
+  }
+}
+
+void ProfileAnalyzer::dumpUsedFunctionIDs() {
+  if (!profileDataOpt_.hasValue()) {
+    os_ << "This command requires trace profile to run (-profile-file).\n";
+    return;
+  }
+  buildFunctionRuntimeStatisticsMapIfNeeded();
+  reportUnmatchedChecksums();
+
+  for (const auto &entry : funcRuntimeStats_) {
+    os_ << entry.first << "\n";
   }
 }
 
@@ -487,7 +501,7 @@ class FunctionBasicBlockStatsVisitor : public hbc::PrettyDisassembleVisitor {
 
 void ProfileAnalyzer::dumpFunctionBasicBlockStat(unsigned funcId) {
   if (!profileDataOpt_.hasValue()) {
-    os_ << "This command requires trace profile to run.\n";
+    os_ << "This command requires trace profile to run (-profile-file).\n";
     return;
   }
   assertTraceAvailable();
@@ -522,7 +536,7 @@ void ProfileAnalyzer::dumpFunctionBasicBlockStat(unsigned funcId) {
 
 void ProfileAnalyzer::dumpBasicBlockStats() {
   if (!profileDataOpt_.hasValue()) {
-    os_ << "This command requires trace profile to run.\n";
+    os_ << "This command requires trace profile to run (-profile-file).\n";
     return;
   }
   struct BasicBlockRuntimeStatistics {
@@ -631,7 +645,7 @@ void ProfileAnalyzer::dumpBasicBlockStats() {
 
 void ProfileAnalyzer::dumpIO() {
   if (!profileDataOpt_.hasValue()) {
-    os_ << "This command requires trace profile to run.\n";
+    os_ << "This command requires trace profile to run (-profile-file).\n";
     return;
   }
   uint32_t pageSize = profileDataOpt_.getValue().pageSize;
@@ -704,7 +718,7 @@ void ProfileAnalyzer::dumpEpilogue() {
 
 void ProfileAnalyzer::dumpSummary() {
   if (!profileDataOpt_.hasValue()) {
-    os_ << "This command requires trace profile to run.\n";
+    os_ << "This command requires trace profile to run (-profile-file).\n";
     return;
   }
 
@@ -821,35 +835,58 @@ void ProfileAnalyzer::dumpSummary() {
       << "\n";
 }
 
-void ProfileAnalyzer::dumpFunctionOffsets(
-    uint32_t funcId,
-    StructuredPrinter &printer) {
+void ProfileAnalyzer::dumpFunctionInfo(uint32_t funcId, JSONEmitter &json) {
   auto bcProvider = hbcParser_.getBCProvider();
   if (funcId >= bcProvider->getFunctionCount()) {
     os_ << "FunctionID " << funcId << " is invalid.\n";
     return;
   }
 
-  printer.openDict();
+  json.openDict();
 
   auto header = bcProvider->getFunctionHeader(funcId);
-  printer.emitKeyValue("FunctionID", funcId);
-  printer.emitKeyValue("Offset", header.offset());
-  printer.emitKeyValue(
+  json.emitKeyValue("FunctionID", funcId);
+  json.emitKeyValue("Offset", header.offset());
+  json.emitKeyValue(
       "VirtualOffset", bcProvider->getVirtualOffsetForFunction(funcId));
-  printer.emitKeyValue("Size", header.bytecodeSizeInBytes());
+  json.emitKeyValue("Size", header.bytecodeSizeInBytes());
+  json.emitKeyValue(
+      "Name", bcProvider->getStringRefFromID(header.functionName()));
 
   auto dbg = bcProvider->getDebugOffsets(funcId);
   if (dbg) {
     if (dbg->sourceLocations != DebugOffsets::NO_OFFSET) {
-      printer.emitKeyValue("DebugSourceLocation: ", dbg->sourceLocations);
+      json.emitKeyValue("DebugSourceLocation: ", dbg->sourceLocations);
     }
     if (dbg->lexicalData != DebugOffsets::NO_OFFSET) {
-      printer.emitKeyValue("DebugLexicalData: ", dbg->lexicalData);
+      json.emitKeyValue("DebugLexicalData: ", dbg->lexicalData);
     }
   }
 
-  printer.closeDict();
+  llvm::Optional<SourceMapTextLocation> sourceLocOpt =
+      bcProvider->getLocationForAddress(funcId, /* offsetInFunction */ 0);
+  if (sourceLocOpt.hasValue()) {
+    json.emitKey("FinalSourceLocation");
+    json.openDict();
+    json.emitKeyValue("Source", sourceLocOpt->fileName);
+    json.emitKeyValue("Line", sourceLocOpt->line);
+    json.emitKeyValue("Column", sourceLocOpt->column);
+    json.closeDict();
+    if (sourceMap_) {
+      auto originalSourceLoc = sourceMap_->getLocationForAddress(
+          sourceLocOpt->line, sourceLocOpt->column);
+      if (originalSourceLoc.hasValue()) {
+        json.emitKey("OriginalSourceLocation");
+        json.openDict();
+        json.emitKeyValue("Source", originalSourceLoc->fileName);
+        json.emitKeyValue("Line", originalSourceLoc->line);
+        json.emitKeyValue("Column", originalSourceLoc->column);
+        json.closeDict();
+      }
+    }
+  }
+
+  json.closeDict();
 }
 
 llvm::Optional<uint32_t> ProfileAnalyzer::getFunctionFromVirtualOffset(

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_IR_IR_H
 #define HERMES_IR_IR_H
 
@@ -198,7 +199,7 @@ class Type {
 #undef BIT_TO_VAL
 #undef IS_VAL
 
-  /// \returns true if this type is a subset of \param t.
+  /// \returns true if this type is a subset of \p t.
   constexpr bool isSubsetOf(Type t) const {
     return !(bitmask_ & ~t.bitmask_);
   }
@@ -255,7 +256,7 @@ class Type {
     return canBeType(Type::createRegExp());
   }
 
-  /// Return true if this type is a proper subset of \param t. A "proper subset"
+  /// Return true if this type is a proper subset of \p t. A "proper subset"
   /// means that it is a subset bit is not equal.
   constexpr bool isProperSubsetOf(Type t) const {
     return bitmask_ != t.bitmask_ && !(bitmask_ & ~t.bitmask_);
@@ -919,18 +920,6 @@ class Instruction : public ilist_node_with_parent<Instruction, BasicBlock>,
   unsigned getNumOperands() const;
   void removeOperand(unsigned index);
 
-  /// Check if setOperand(val, index) is valid where val->getKind() == kind.
-  /// \param kind ValueKind of the new value.
-  /// \param index Index of the operand to replace.
-  /// \return True if \p index is in range and \p kind is valid for that index.
-  ///
-  /// NOTE: When defining canSetOperandImpl in derived classes, keep in mind
-  /// that the restrictions it imposes must be respected *everywhere* in the
-  /// lowering/optimization pipeline. For example, an operand should never be
-  /// restricted to a specific kind of instruction because the SpillRegisters
-  /// pass could change it.
-  bool canSetOperand(ValueKind kind, unsigned index) const;
-
   /// Returns a vector of flags indicating which operands the instruction writes
   /// to.
   WordBitSet<> getChangedOperands();
@@ -1248,15 +1237,14 @@ class VariableScope : public Value {
 /// i.e. upvars from an enclosing scope. These variables are stored at a given
 /// depth in the scope chain.
 class ExternalScope : public VariableScope {
-  /// The scope depth represented by this external scope, a negative value.
+  /// The scope depth represented by this external scope
   const int32_t depth_ = 0;
 
  public:
   ExternalScope(Function *function, int32_t depth);
 
-  /// \return the scope depth, a negative value.
+  /// \return the scope depth
   int32_t getDepth() const {
-    assert(depth_ < 0 && "Invalid scope depth");
     return depth_;
   }
 
@@ -1854,10 +1842,15 @@ class Module : public Value {
   }
 
   /// Add a new CJS module entry, given the function representing the module.
-  void addCJSModule(Identifier name, Function *function) {
-    uint32_t id = cjsModules_.size();
-    cjsModules_.push_back(CJSModule{id, name, function});
-    auto &module = cjsModules_.back();
+  void addCJSModule(uint32_t id, Identifier name, Function *function) {
+    if (cjsModules_.size() <= id) {
+      cjsModules_.resize(id + 1);
+    }
+    CJSModule &module = cjsModules_[id];
+    assert(module.function == nullptr && "duplicate IDs in addCJSModule");
+    module.id = id;
+    module.filename = name;
+    module.function = function;
     {
       auto result = cjsModuleFilenameMap_.try_emplace(name, &module);
       (void)result;

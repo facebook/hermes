@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_JSTYPEDARRAY_H
 #define HERMES_VM_JSTYPEDARRAY_H
 
@@ -225,7 +226,10 @@ class JSTypedArrayBase : public JSObject {
       JSObject *selfObj,
       Runtime *runtime,
       uint32_t index);
-
+  static bool _deleteOwnIndexedImpl(
+      Handle<JSObject> selfHandle,
+      Runtime *runtime,
+      uint32_t index);
   /// Check whether all indexed properties satisfy the requirement specified by
   /// \p mode. Either whether they are all non-configurable, or whether they are
   /// all both non-configurable and non-writable.
@@ -255,7 +259,7 @@ class JSTypedArray final : public JSTypedArrayBase {
     return cell->getKind() == C;
   }
 
-  static CallResult<HermesValue> create(
+  static PseudoHandle<JSTypedArray<T, C>> create(
       Runtime *runtime,
       Handle<JSObject> prototype);
 
@@ -311,6 +315,9 @@ class JSTypedArray final : public JSTypedArrayBase {
       Handle<> value);
 
  private:
+  // NOTE: If any fields are ever added beyond the base class, then the
+  // *BuildMeta functions must be updated to call addJSObjectOverlapSlots.
+
 #ifdef HERMESVM_SERIALIZE
   explicit JSTypedArray(Deserializer &d);
 

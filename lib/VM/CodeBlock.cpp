@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #define DEBUG_TYPE "codeblock"
 
 #include "hermes/VM/CodeBlock.h"
@@ -14,6 +15,8 @@
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PerfSection.h"
+#include "hermes/VM/Debugger/Debugger.h"
+#include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/RuntimeModule.h"
 #include "hermes/VM/SerializedLiteralParser.h"
@@ -30,7 +33,7 @@ using llvm::ArrayRef;
 using llvm::StringRef;
 using SLP = SerializedLiteralParser;
 
-#ifndef NDEBUG
+#ifdef HERMES_SLOW_DEBUG
 
 static void validateInstructions(ArrayRef<uint8_t> list, unsigned frameSize) {
   const OperandAddr32 listSize = (OperandAddr32)list.size();
@@ -126,7 +129,7 @@ CodeBlock *CodeBlock::createCodeBlock(
     hbc::RuntimeFunctionHeader header,
     const uint8_t *bytecode,
     uint32_t functionID) {
-#ifndef NDEBUG
+#ifdef HERMES_SLOW_DEBUG
   validateInstructions(
       {bytecode, header.bytecodeSizeInBytes()}, header.frameSize());
 #endif
@@ -190,14 +193,13 @@ SymbolID CodeBlock::getNameMayAllocate() const {
       functionHeader_.functionName());
 }
 
-bool CodeBlock::getNameString(Runtime *runtime, std::string &res) const {
+std::string CodeBlock::getNameString(GCBase::GCCallbacks *runtime) const {
 #ifndef HERMESVM_LEAN
   if (isLazy()) {
-    return runtimeModule_->getLazyNameString(runtime, res);
+    return runtime->convertSymbolToUTF8(runtimeModule_->getLazyName());
   }
 #endif
-  return runtimeModule_->getStringFromStringID(
-      functionHeader_.functionName(), res);
+  return runtimeModule_->getStringFromStringID(functionHeader_.functionName());
 }
 
 OptValue<uint32_t> CodeBlock::getDebugSourceLocationsOffset() const {
@@ -209,6 +211,44 @@ OptValue<uint32_t> CodeBlock::getDebugSourceLocationsOffset() const {
   if (ret == hbc::DebugOffsets::NO_OFFSET)
     return llvm::None;
   return ret;
+}
+
+OptValue<hbc::DebugSourceLocation> CodeBlock::getSourceLocation(
+    uint32_t offset) const {
+#ifndef HERMESVM_LEAN
+  if (LLVM_UNLIKELY(isLazy())) {
+    assert(offset == 0 && "Function is lazy, but debug offset >0 specified");
+
+    auto *provider = (hbc::BCProviderLazy *)getRuntimeModule()->getBytecode();
+    auto bcModule = provider->getBytecodeModule();
+    auto sourceLoc = bcModule->getFunctionSourceRange(functionID_).Start;
+
+    SourceErrorManager::SourceCoords coords;
+    if (!bcModule->getContext()->getSourceErrorManager().findBufferLineAndLoc(
+            sourceLoc, coords)) {
+      return llvm::None;
+    }
+
+    hbc::DebugSourceLocation location;
+    location.line = coords.line;
+    location.column = coords.col;
+    // We don't actually have a filename table, so we can't really provide
+    // this. Fortunately the location of uncompiled codeblocks is primarily
+    // used by heap snapshots, which substitutes it for the SourceID anyways.
+    location.filenameId = facebook::hermes::debugger::kInvalidLocation;
+    return location;
+  }
+#endif
+
+  auto debugLocsOffset = getDebugSourceLocationsOffset();
+  if (!debugLocsOffset) {
+    return llvm::None;
+  }
+
+  return getRuntimeModule()
+      ->getBytecode()
+      ->getDebugInfo()
+      ->getLocationForAddress(*debugLocsOffset, offset);
 }
 
 OptValue<uint32_t> CodeBlock::getDebugLexicalDataOffset() const {
@@ -227,29 +267,53 @@ SourceErrorManager::SourceCoords CodeBlock::getLazyFunctionLoc(
   assert(isLazy() && "Function must be lazy");
   SourceErrorManager::SourceCoords coords;
 #ifndef HERMESVM_LEAN
-  auto *func = ((hbc::BCProviderLazy *)runtimeModule_->getBytecode())
-                   ->getBytecodeFunction();
-  auto *lazyData = func->getLazyCompilationData();
-  lazyData->context->getSourceErrorManager().findBufferLineAndLoc(
-      start ? lazyData->span.Start : lazyData->span.End, coords);
+  auto provider = (hbc::BCProviderLazy *)runtimeModule_->getBytecode();
+  auto sourceRange =
+      provider->getBytecodeModule()->getFunctionSourceRange(functionID_);
+  assert(sourceRange.isValid() && "Source not available for function");
+  provider->getBytecodeModule()
+      ->getContext()
+      ->getSourceErrorManager()
+      .findBufferLineAndLoc(
+          start ? sourceRange.Start : sourceRange.End, coords);
 #endif
   return coords;
 }
 
 #ifndef HERMESVM_LEAN
+bool CodeBlock::hasFunctionSource() const {
+  return runtimeModule_->getBytecode()
+      ->getFunctionSourceRange(functionID_)
+      .isValid();
+}
+
+llvm::StringRef CodeBlock::getFunctionSource() const {
+  auto sourceRange =
+      runtimeModule_->getBytecode()->getFunctionSourceRange(functionID_);
+  assert(sourceRange.isValid() && "Function does not have source available");
+  const auto sourceStart = sourceRange.Start.getPointer();
+  return {sourceStart, (size_t)(sourceRange.End.getPointer() - sourceStart)};
+}
+#endif
+
+#ifndef HERMESVM_LEAN
 namespace {
 std::unique_ptr<hbc::BytecodeModule> compileLazyFunction(
-    hbc::LazyCompilationData *lazyData) {
-  assert(lazyData);
+    std::shared_ptr<Context> context,
+    hbc::BytecodeFunction *func,
+    llvm::SMRange sourceRange) {
+  assert(func);
   LLVM_DEBUG(
-      llvm::dbgs() << "Compiling lazy function " << lazyData->originalName
-                   << "\n");
+      llvm::dbgs() << "Compiling lazy function "
+                   << func->getLazyCompilationData()->originalName << "\n");
 
-  Module M{lazyData->context};
-  Function *entryPoint = hermes::generateLazyFunctionIR(lazyData, &M);
+  Module M{context};
+  auto pair = hermes::generateLazyFunctionIR(func, &M, sourceRange);
+  Function *entryPoint = pair.first;
+  Function *lexicalRoot = pair.second;
 
   auto bytecodeModule = hbc::generateBytecodeModule(
-      &M, entryPoint, BytecodeGenerationOptions::defaults());
+      &M, lexicalRoot, entryPoint, BytecodeGenerationOptions::defaults());
 
   return bytecodeModule;
 }
@@ -258,9 +322,12 @@ std::unique_ptr<hbc::BytecodeModule> compileLazyFunction(
 void CodeBlock::lazyCompileImpl(Runtime *runtime) {
   assert(isLazy() && "Laziness has not been checked");
   PerfSection perf("Lazy function compilation");
-  auto *func = ((hbc::BCProviderLazy *)runtimeModule_->getBytecode())
-                   ->getBytecodeFunction();
-  auto bcMod = compileLazyFunction(func->getLazyCompilationData());
+  auto provider = (hbc::BCProviderLazy *)runtimeModule_->getBytecode();
+  auto func = provider->getBytecodeFunction();
+  auto sourceRange =
+      provider->getBytecodeModule()->getFunctionSourceRange(functionID_);
+  auto bcMod = compileLazyFunction(
+      provider->getBytecodeModule()->getContext(), func, sourceRange);
   runtimeModule_->initializeLazyMayAllocate(
       hbc::BCProviderFromSrc::createBCProviderFromSrc(std::move(bcMod)));
   // Reset all meta data of the CodeBlock to point to the newly
@@ -272,11 +339,13 @@ void CodeBlock::lazyCompileImpl(Runtime *runtime) {
 }
 #endif // HERMESVM_LEAN
 
-void CodeBlock::markCachedHiddenClasses(WeakRootAcceptor &acceptor) {
+void CodeBlock::markCachedHiddenClasses(
+    Runtime *runtime,
+    WeakRootAcceptor &acceptor) {
   for (auto &prop :
        llvm::makeMutableArrayRef(propertyCache(), propertyCacheSize_)) {
     if (prop.clazz) {
-      acceptor.acceptWeak(reinterpret_cast<void *&>(prop.clazz));
+      acceptor.acceptWeak(prop.clazz);
     }
   }
 }

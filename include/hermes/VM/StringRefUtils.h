@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_UTF16REF_H
 #define HERMES_VM_UTF16REF_H
 
@@ -40,7 +41,7 @@ bool stringRefEquals(llvm::ArrayRef<T1> str1, llvm::ArrayRef<T2> str2) {
     return false;
   }
   return std::equal(str1.begin(), str1.end(), str2.begin());
-};
+}
 
 /// Compare two ArrayRef, \return +1 if str1 > str2, -1 if str1 < str2, 0
 /// otherwise.
@@ -71,7 +72,7 @@ int stringRefCompare(llvm::ArrayRef<T1> str1, llvm::ArrayRef<T2> str2) {
   }
   // Found a different character, return based on which is bigger.
   return *pos.first > *pos.second ? +1 : -1;
-};
+}
 
 } // namespace vm
 } // namespace hermes

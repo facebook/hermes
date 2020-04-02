@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_SUPPORT_STATSACCUMULATOR_H
 #define HERMES_SUPPORT_STATSACCUMULATOR_H
 
@@ -22,7 +23,7 @@ class StatsAccumulator {
  public:
   StatsAccumulator() = default;
 
-  /// Update the summary stats with the addition of a new \param value.
+  /// Update the summary stats with the addition of a new \p value.
   inline void record(T value) {
     if (n_ == 0) {
       min_ = value;

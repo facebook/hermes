@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/ArrayStorage.h"
 
 #include "TestHelpers.h"
@@ -21,8 +22,8 @@ TEST_F(ArrayTest, CppAPITest) {
   GCScope scope(runtime, "ArrayTest.CppAPITest", 128);
 
   CallResult<PseudoHandle<JSArray>> arrayRes = JSArray::create(runtime, 1, 0);
-  ASSERT_EQ(arrayRes.getStatus(), ExecutionStatus::RETURNED);
-  auto array = toHandle(runtime, std::move(*arrayRes));
+  ASSERT_FALSE(isException(arrayRes));
+  auto array = runtime->makeHandle(std::move(*arrayRes));
 
   // Make sure the beginning is at 0.
   ASSERT_EQ(0u, array->getBeginIndex());
@@ -32,25 +33,30 @@ TEST_F(ArrayTest, CppAPITest) {
   // Call haveOwnIndexed() and getOwnIndexed() on a element not in the array.
   ComputedPropertyDescriptor desc;
   ASSERT_FALSE(*array->getOwnComputedPrimitiveDescriptor(
-      array, runtime, runtime->makeHandle(100.0_hd), desc));
+      array,
+      runtime,
+      runtime->makeHandle(100.0_hd),
+      JSObject::IgnoreProxy::No,
+      desc));
   EXPECT_CALLRESULT_UNDEFINED(
       array->getComputed_RJS(array, runtime, runtime->makeHandle(100.0_hd)));
 
 // Obtain the value a couple of different ways and check its value.
-#define EXPECT_INDEX_VALUE(value, array, index)                               \
-  EXPECT_EQ(value, array->at(runtime, index));                                \
-  ASSERT_TRUE(*array->getOwnComputedDescriptor(                               \
-      array,                                                                  \
-      runtime,                                                                \
-      runtime->makeHandle(HermesValue::encodeDoubleValue(index)),             \
-      desc));                                                                 \
-  EXPECT_CALLRESULT_VALUE(                                                    \
-      value, JSArray::getComputedPropertyValue(array, runtime, array, desc)); \
-  EXPECT_CALLRESULT_VALUE(                                                    \
-      value,                                                                  \
-      array->getComputed_RJS(                                                 \
-          array,                                                              \
-          runtime,                                                            \
+#define EXPECT_INDEX_VALUE(value, array, index)                            \
+  EXPECT_EQ(value, array->at(runtime, index));                             \
+  ASSERT_TRUE(*array->getOwnComputedDescriptor(                            \
+      array,                                                               \
+      runtime,                                                             \
+      runtime->makeHandle(HermesValue::encodeDoubleValue(index)),          \
+      desc));                                                              \
+  EXPECT_CALLRESULT_VALUE(                                                 \
+      value,                                                               \
+      JSArray::getComputedPropertyValue_RJS(array, runtime, array, desc)); \
+  EXPECT_CALLRESULT_VALUE(                                                 \
+      value,                                                               \
+      array->getComputed_RJS(                                              \
+          array,                                                           \
+          runtime,                                                         \
           runtime->makeHandle(HermesValue::encodeDoubleValue(index))));
 
   // array[100] = 50. This will case a reallocation.
@@ -96,7 +102,11 @@ TEST_F(ArrayTest, CppAPITest) {
   EXPECT_INDEX_VALUE(51.0_hd, array, 100);
   EXPECT_INDEX_VALUE(60.0_hd, array, 105);
   ASSERT_FALSE(*array->getOwnComputedPrimitiveDescriptor(
-      array, runtime, runtime->makeHandle(106.0_hd), desc));
+      array,
+      runtime,
+      runtime->makeHandle(106.0_hd),
+      JSObject::IgnoreProxy::No,
+      desc));
   EXPECT_CALLRESULT_UNDEFINED(
       array->getComputed_RJS(array, runtime, runtime->makeHandle(106.0_hd)));
 
@@ -107,7 +117,11 @@ TEST_F(ArrayTest, CppAPITest) {
   EXPECT_INDEX_VALUE(51.0_hd, array, 100);
   EXPECT_INDEX_VALUE(60.0_hd, array, 105);
   ASSERT_FALSE(*array->getOwnComputedPrimitiveDescriptor(
-      array, runtime, runtime->makeHandle(106.0_hd), desc));
+      array,
+      runtime,
+      runtime->makeHandle(106.0_hd),
+      JSObject::IgnoreProxy::No,
+      desc));
   EXPECT_CALLRESULT_UNDEFINED(
       array->getComputed_RJS(array, runtime, runtime->makeHandle(106.0_hd)));
 
@@ -125,8 +139,8 @@ TEST_F(ArrayTest, CppAPITest) {
 TEST_F(ArrayTest, TestLength) {
   auto lengthID = Predefined::getSymbolID(Predefined::length);
   auto arrayRes = JSArray::create(runtime, 10, 10);
-  ASSERT_EQ(arrayRes.getStatus(), ExecutionStatus::RETURNED);
-  auto array = toHandle(runtime, std::move(*arrayRes));
+  ASSERT_FALSE(isException(arrayRes));
+  auto array = runtime->makeHandle(std::move(*arrayRes));
 
   // Make sure the length is 10.
   ASSERT_EQ(10u, JSArray::getLength(array.get()));
@@ -144,7 +158,7 @@ TEST_F(ArrayTest, TestLength) {
   {
     auto res = JSObject::putNamed_RJS(
         array, runtime, lengthID, runtime->makeHandle(5.1_hd));
-    ASSERT_TRUE(res == ExecutionStatus::EXCEPTION);
+    ASSERT_TRUE(isException(res));
     runtime->clearThrownValue();
   }
 

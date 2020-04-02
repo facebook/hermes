@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_SERIALIZER_H
 #define HERMES_VM_SERIALIZER_H
 
@@ -208,7 +209,9 @@ class Serializer {
 
   /// Replace pointer in \p hv with the relocation id.
   HermesValue updateRelocationID(HermesValue hv, uint32_t id) {
-    return HermesValue(id, hv.getTag());
+    hv.unsafeUpdatePointer(
+        reinterpret_cast<void *>(static_cast<uintptr_t>(id)));
+    return hv;
   }
 
   /// Write string buffers and their sizes to the stream.

@@ -1,13 +1,14 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
-# This source code is licensed under the MIT license found in the LICENSE
-# file in the root directory of this source tree.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 
 find_library(LIBREADLINE_FOUND readline)
+find_library(LIBTINFO_FOUND tinfo)
 
-if(LIBREADLINE_FOUND)
+if(LIBREADLINE_FOUND AND LIBTINFO_FOUND)
   set(HAVE_LIBREADLINE 1)
-  set(LIBREADLINE ${LIBREADLINE_FOUND})
+  set(LIBREADLINE ${LIBREADLINE_FOUND} ${LIBTINFO_FOUND})
 endif()
 
 configure_file(ReplConfig.h.in ${CMAKE_CURRENT_BINARY_DIR}/ReplConfig.h
@@ -15,13 +16,9 @@ configure_file(ReplConfig.h.in ${CMAKE_CURRENT_BINARY_DIR}/ReplConfig.h
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-set(LLVM_LINK_COMPONENTS
-  Analysis
-  Core
-  Support
-  )
+set(HERMES_LINK_COMPONENTS LLVHSupport)
 
-add_llvm_tool(hermes-repl
+add_hermes_tool(hermes-repl
   repl.cpp
   ${ALL_HEADER_FILES}
   )

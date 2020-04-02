@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/WeakValueMap.h"
 
 #include "hermes/VM/PrimitiveBox.h"
@@ -31,10 +32,9 @@ TEST_F(WeakValueMapTest, SmokeTest) {
       [&](GC *, WeakRefAcceptor &acceptor) { wvp.markWeakRefs(acceptor); });
 
   auto makeNumber = [&](int n) -> JSNumber * {
-    auto numRes = JSNumber::create(
-        runtime, (double)n, Runtime::makeNullHandle<JSObject>());
-    assert(numRes != ExecutionStatus::EXCEPTION);
-    return (JSNumber *)numRes->getPointer();
+    return JSNumber::create(
+               runtime, (double)n, Runtime::makeNullHandle<JSObject>())
+        .get();
   };
 
   MutableHandle<JSNumber> h1{runtime};

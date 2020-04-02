@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_API_SYNTHTEST_TESTS_TESTFUNCTIONS
 #define HERMES_API_SYNTHTEST_TESTS_TESTFUNCTIONS
 
@@ -12,6 +13,8 @@
   F(dateAsFunction)                  \
   F(dateAsNew)                       \
   F(dateNow)                         \
+  F(getInstrumentedStats)            \
+  F(getInstrumentedStatsAllowsEmpty) \
   F(globalReturnObject)              \
   F(getPropertyNames)                \
   F(hostCallsJS)                     \
@@ -21,12 +24,15 @@
   F(hostFunctionCreatesObjects)      \
   F(hostFunctionMutatesGlobalObject) \
   F(hostFunctionMutatesObject)       \
+  F(hostFunctionNameAndParams)       \
   F(hostFunctionReturn)              \
   F(hostFunctionReturnArgument)      \
   F(hostGlobalObject)                \
   F(mathRandom)                      \
+  F(nativePropertyNames)             \
   F(nativeSetsConstant)              \
-  F(parseGCConfig)
+  F(parseGCConfig)                   \
+  F(surrogatePairString)
 
 #define TEST_FUNC_FORWARD_DECL(name) \
   const char *name##Trace();         \

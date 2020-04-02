@@ -3,19 +3,6 @@
 These are informal instructions for cross-compiling a "standalone" build of
 Hermes (one that doesn't use Java).
 
-## Cross-compile LLVM
-
-1. Compile LLVM for host.
-2. Patch LLVM with the supplied patch `llvm.patch`.
-3. Edit the paths in `config-llvm.sh`.
-3. Cross-compile LLVM for android:
-```
-mkdir llvm_arm && cd llvm_arm
-# Change this to config-llvm-clang.sh to use Clang instead of GCC
-$path_to_this_directory/config-llvm.sh
-ninja
-```
-
 ## Cross-compile ICU
 
 1. Make sure that:

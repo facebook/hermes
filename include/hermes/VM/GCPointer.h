@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_GCPOINTER_H
 #define HERMES_VM_GCPOINTER_H
 
@@ -31,17 +32,7 @@ class GCPointerBase {
   StorageType ptr_;
 
   explicit GCPointerBase(std::nullptr_t) : ptr_() {}
-  GCPointerBase(PointerBase *base, void *ptr)
-      : ptr_(
-#ifdef HERMESVM_COMPRESSED_POINTERS
-            base->pointerToBased(ptr)
-#else
-            ptr
-#endif
-        ) {
-    // In some build configurations this parameter is unused.
-    (void)base;
-  }
+  inline GCPointerBase(PointerBase *base, void *ptr);
 
  public:
   // These classes are used as arguments to GCPointer constructors, to
@@ -50,35 +41,24 @@ class GCPointerBase {
   class NoBarriers : public std::false_type {};
   class YesBarriers : public std::true_type {};
 
-  void *get(PointerBase *base) const {
-#ifdef HERMESVM_COMPRESSED_POINTERS
-    return base->basedToPointer(ptr_);
-#else
-    (void)base;
-    return ptr_;
-#endif
-  }
+  void *get(PointerBase *base) const;
 
-  void *getNonNull(PointerBase *base) const {
-#ifdef HERMESVM_COMPRESSED_POINTERS
-    return base->basedToPointerNonNull(ptr_);
-#else
-    (void)base;
-    return ptr_;
-#endif
-  }
+  void *getNonNull(PointerBase *base) const;
 
   /// This must be used to assign a new value to this GCPointer.
   /// \param ptr The memory being pointed to.
   /// \param base The base of ptr.
   /// \param gc Used for write barriers.
-  inline void set(PointerBase *base, void *ptr, GC *gc);
+  void set(PointerBase *base, void *ptr, GC *gc);
+
+  /// Get the underlying StorageType representation.
+  StorageType getStorageType() const;
 
   /// Get the location of the pointer. Should only be used within the
   /// implementation of garbage collection.
   /// \param gc Used to assert that this is only used within the implementation
   ///   of garbage collection.
-  inline StorageType &getLoc(GC *gc);
+  StorageType &getLoc(GC *gc);
 
   explicit operator bool() const {
     return static_cast<bool>(ptr_);
@@ -90,6 +70,14 @@ class GCPointerBase {
 
   bool operator!=(const GCPointerBase &other) const {
     return !(*this == other);
+  }
+
+  static void *storageTypeToPointer(StorageType st, PointerBase *base) {
+#ifdef HERMESVM_COMPRESSED_POINTERS
+    return base->basedToPointer(st);
+#else
+    return st;
+#endif
   }
 };
 
@@ -108,7 +96,7 @@ class GCPointer : public GCPointerBase {
   /// this argument is unused, but its type's boolean value constant indicates
   /// whether barriers are required.)
   template <typename NeedsBarriers>
-  inline GCPointer(
+  GCPointer(
       PointerBase *base,
       T *ptr,
       GC *gc,
@@ -123,6 +111,7 @@ class GCPointer : public GCPointerBase {
   /// We are not allowed to copy-construct or assign GCPointers.
   GCPointer(const GCPointerBase &) = delete;
   GCPointer &operator=(const GCPointerBase &) = delete;
+  GCPointer &operator=(const GCPointer<T> &) = delete;
 
   /// We can assign null without a barrier.  NB: this is true for the
   /// generational collection remembered-set write barrier.  It may not be

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_COMPLETEMARKSTATE_INLINE_H
 #define HERMES_VM_COMPLETEMARKSTATE_INLINE_H
 
@@ -11,7 +12,7 @@
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HermesValue-inline.h"
-#include "hermes/VM/SlotAcceptorDefault.h"
+#include "hermes/VM/SlotAcceptorDefault-inline.h"
 
 namespace hermes {
 namespace vm {
@@ -46,9 +47,13 @@ struct CompleteMarkState::FullMSCMarkTransitiveAcceptor final
 /// This acceptor is used for updating pointers via forwarding pointers
 /// in mark/sweep/compact.
 struct FullMSCUpdateAcceptor final : public SlotAcceptorDefault,
-                                     public WeakRootAcceptor {
+                                     public WeakRootAcceptorDefault {
   using SlotAcceptorDefault::accept;
-  using SlotAcceptorDefault::SlotAcceptorDefault;
+  using WeakRootAcceptorDefault::acceptWeak;
+
+  FullMSCUpdateAcceptor(GC &gc)
+      : SlotAcceptorDefault(gc), WeakRootAcceptorDefault(gc) {}
+
   void accept(void *&ptr) override {
     if (ptr) {
       assert(gc.dbgContains(ptr) && "ptr not in heap");
@@ -82,7 +87,10 @@ struct FullMSCUpdateAcceptor final : public SlotAcceptorDefault,
   void accept(WeakRefBase &wr) override {
     // This acceptor is used once it is known where all live data is, so now is
     // the time to mark whether a weak ref is known.
-    gc.markWeakRef(wr);
+    assert(
+        wr.unsafeGetSlot()->state() != WeakSlotState::Free &&
+        "marking a freed weak ref slot");
+    wr.unsafeGetSlot()->mark();
   }
 };
 

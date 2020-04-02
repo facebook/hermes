@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: LANG=en_US.UTF-8 %hermes -O -emit-binary -target=HBC -out=%T/base.hbc %S/Inputs/string-functions-base.js.in && LANG=en_US.UTF-8 %hermes -emit-binary -target=HBC -O -base-bytecode %T/base.hbc -out %T/update.hbc %s && LANG=en_US.UTF-8 %hermes -b %T/update.hbc | %FileCheck --match-full-lines %s
 
 // This test is used for verifying the correct behavior of the bytecode compiled with the delta optimizing mode.

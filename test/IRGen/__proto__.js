@@ -1,9 +1,11 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
-// RUN: %hermesc -dump-ir %s | %FileCheck --match-full-lines %s
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// RUN: %hermesc -O0 -dump-ir %s | %FileCheck --match-full-lines %s
 
 // Ensure that __proto__ is not set as an "own" property.
 
@@ -70,7 +72,5 @@ function protoIsDynamic(func, getParent) {
 //CHECK-NEXT:  %6 = StoreNewOwnPropertyInst 10 : number, %2 : object, "b" : string, true : boolean
 //CHECK-NEXT:  %7 = LoadFrameInst [getParent]
 //CHECK-NEXT:  %8 = CallInst %7, undefined : undefined
-//CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
-//CHECK-NEXT:  %10 = LoadPropertyInst %9, "silentSetPrototypeOf" : string
-//CHECK-NEXT:  %11 = CallInst %10, undefined : undefined, %2 : object, %8
-//CHECK-NEXT:  %12 = ReturnInst %2 : object
+//CHECK-NEXT:  %9 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, undefined : undefined, %2 : object, %8
+//CHECK-NEXT:  %10 = ReturnInst %2 : object

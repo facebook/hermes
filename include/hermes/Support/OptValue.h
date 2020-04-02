@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 //===----------------------------------------------------------------------===//
 /// \file
 /// A simple replacement of llvm::Optional<> to be used with trivially copyable
@@ -116,7 +117,7 @@ template <typename T, typename U>
 bool operator!=(const OptValue<T> &a, const OptValue<U> &b) {
   return !(a == b);
 }
-}; // namespace hermes
+} // namespace hermes
 
 namespace llvm {
 template <typename T>

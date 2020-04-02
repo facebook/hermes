@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_BCGEN_HBC_BYTECODEDATAPROVIDER_H
 #define HERMES_BCGEN_HBC_BYTECODEDATAPROVIDER_H
 
@@ -272,6 +273,10 @@ class BCProviderBase {
   /// soon.  Only forwards this information to the OS for buffers.
   virtual void willNeedStringTable() {}
 
+  /// Advise the provider that identifier translations are no longer needed.
+  /// Only forwards this information to the OS for buffers.
+  virtual void dontNeedIdentifierTranslations() {}
+
   /// Start tracking I/O (only implemented for buffers). Any access before this
   /// call (e.g. reading header to construct the provider) will not be recorded.
   virtual void startPageAccessTracker() {}
@@ -302,6 +307,16 @@ class BCProviderBase {
 #ifdef HERMESVM_SERIALIZE
   /// Serialize this BCProvider.
   virtual void serialize(vm::Serializer &s) const = 0;
+#endif
+
+#ifndef HERMESVM_LEAN
+  /// Return a reference to the source code for a function. In general this will
+  /// NOT be available, however it may be when compiling from source at
+  /// run-time, and lazy compilation or Function.toString() returning soruce is
+  /// enabled.
+  virtual llvm::SMRange getFunctionSourceRange(uint32_t functionID) const {
+    return {};
+  }
 #endif
 };
 
@@ -338,10 +353,15 @@ class BCProviderFromBuffer final : public BCProviderBase {
 
   std::unique_ptr<volatile PageAccessTracker> tracker_;
 
+  /// End of the bytecode file.
+  const uint8_t *end_;
+
   /// Tells any running warmup thread to abort and then joins that thread.
   void stopWarmup();
 
-  explicit BCProviderFromBuffer(std::unique_ptr<const Buffer> buffer);
+  explicit BCProviderFromBuffer(
+      std::unique_ptr<const Buffer> buffer,
+      BytecodeForm form);
 
   void createDebugInfo() override;
 
@@ -355,9 +375,11 @@ class BCProviderFromBuffer final : public BCProviderBase {
 
  public:
   static std::pair<std::unique_ptr<BCProviderFromBuffer>, std::string>
-  createBCProviderFromBuffer(std::unique_ptr<const Buffer> buffer) {
+  createBCProviderFromBuffer(
+      std::unique_ptr<const Buffer> buffer,
+      BytecodeForm form = BytecodeForm::Execution) {
     auto ret = std::unique_ptr<BCProviderFromBuffer>(
-        new BCProviderFromBuffer(std::move(buffer)));
+        new BCProviderFromBuffer(std::move(buffer), form));
     auto errstr = ret->getErrorStr();
     return {errstr.empty() ? std::move(ret) : nullptr, errstr};
   }
@@ -461,6 +483,7 @@ class BCProviderFromBuffer final : public BCProviderBase {
   void adviseStringTableSequential() override;
   void adviseStringTableRandom() override;
   void willNeedStringTable() override;
+  void dontNeedIdentifierTranslations() override;
 
   void startPageAccessTracker() override;
 

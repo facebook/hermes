@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_DEBUGGER_DEBUGGER_H
 #define HERMES_VM_DEBUGGER_DEBUGGER_H
 
@@ -17,6 +18,7 @@
 #include "hermes/VM/Debugger/DebugCommand.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/InterpreterState.h"
+#include "hermes/VM/RuntimeModule.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 
@@ -25,11 +27,14 @@
 
 namespace hermes {
 namespace vm {
-
 class HermesValue;
 class CodeBlock;
 class Runtime;
-class RuntimeModule;
+} // namespace vm
+} // namespace hermes
+
+namespace hermes {
+namespace vm {
 
 /// Main debugger object that receives commands from an external source,
 /// and passes them back to the interpreter loop, which handles them.
@@ -62,12 +67,9 @@ class Debugger {
   using String = ::facebook::hermes::debugger::String;
   using LexicalInfo = ::facebook::hermes::debugger::LexicalInfo;
   using ScriptID = ::facebook::hermes::debugger::ScriptID;
+  using AsyncPauseKind = ::facebook::hermes::debugger::AsyncPauseKind;
 
   Runtime *const runtime_;
-
-  /// Table to keep track of IDs for given file names.
-  llvm::StringMap<ScriptID> scriptTable_{};
-  ScriptID nextScriptId_{1};
 
   /// Function handling pauses.
   DidPauseCallback didPauseCallback_;
@@ -198,8 +200,14 @@ class Debugger {
     /// The Interpreter hit an exception.
     Exception,
 
-    /// The Interpreter is reacting to an async break request.
-    AsyncBreak,
+    /// The Interpreter is reacting to an async break request from the user.
+    /// Any current stepping state should be cleared.
+    AsyncBreakExplicit,
+
+    /// The Interpreter is reacting to an async break request from the
+    /// inspector.
+    /// Any current stepping state should be *preserved*.
+    AsyncBreakImplicit,
   };
 
   /// An EvalResultMetadata is a subset of EvalResult in DebuggerAPI.h, lacking
@@ -282,7 +290,7 @@ class Debugger {
 
   /// Request an async pause. This may be called from any thread, or a signal
   /// handler.
-  void triggerAsyncPause();
+  void triggerAsyncPause(AsyncPauseKind kind);
 
   /// Creates a user breakpoint given filename, line, and column.
   /// \param loc the location to set the breakpoint.
@@ -303,7 +311,7 @@ class Debugger {
 
   /// Enables/disables the breakpoint given.
   /// \param id the id of the breakpoint to edit.
-  /// \param enabled if true, enable breakpoint \p id.
+  /// \param enable if true, enable breakpoint \p id.
   void setBreakpointEnabled(BreakpointID id, bool enable);
 
   /// \return the breakpoint information for breakpoint \p id.
@@ -360,6 +368,10 @@ class Debugger {
   /// module. The debugger may propagate a pause to the client.
   void willExecuteModule(RuntimeModule *module, CodeBlock *codeBlock);
 
+  /// Report to the debugger that the runtime will unload a RuntimeModule.
+  /// The debugger should unresolve breakpoints in that module.
+  void willUnloadModule(RuntimeModule *module);
+
   /// Report to the debugger that the runtime will execute a codeBlock given by
   /// \p codeBlock.
   /// For example, this is used to set up the codeBlock while stepping.
@@ -382,6 +394,11 @@ class Debugger {
   /// handler and the offset of its frame.
   llvm::Optional<std::pair<InterpreterState, uint32_t>> findCatchTarget(
       const InterpreterState &state) const;
+
+  /// Attempt to resolve the \p filenameId to a script ID based on the table.
+  /// \return the ScriptID of the given filenameId.
+  ScriptID resolveScriptId(RuntimeModule *runtimeModule, uint32_t filenameId)
+      const;
 
  private:
   /// The primary debugger command loop.
@@ -510,14 +527,8 @@ class Debugger {
 
   OptValue<hbc::DebugSourceLocation> getLocationForState(
       const InterpreterState &state) const {
-    return getSourceLocation(state.codeBlock, state.offset);
+    return state.codeBlock->getSourceLocation(state.offset);
   }
-
-  /// \return the source location of the given instruction offset \p offset in
-  /// the code block \p codeBlock.
-  OptValue<hbc::DebugSourceLocation> getSourceLocation(
-      const CodeBlock *codeBlock,
-      uint32_t offset) const;
 
   /// Attempt to resolve the requestedLocation in \p breakpoint.
   /// If successful, sets breakpoint.resolvedLocation to the resolved location.
@@ -525,19 +536,16 @@ class Debugger {
   /// \return true if the breakpoint is successfully resolved.
   bool resolveBreakpointLocation(Breakpoint &breakpoint) const;
 
-  /// Attempt to resolve the \p filenameId to a script ID based on the table.
-  /// \return the ScriptID of the given filenameId.
-  ScriptID resolveScriptId(RuntimeModule *runtimeModule, uint32_t filenameId)
-      const;
+  /// Unresolves the breakpoint.
+  void unresolveBreakpointLocation(Breakpoint &breakpoint);
 
   /// \return a CallFrameInfo for a given code block \p codeBlock and IP offset
   /// into it \p ipOffset.
   CallFrameInfo getCallFrameInfo(const CodeBlock *codeBlock, uint32_t offset)
       const;
 
-  /// If the current instruction is a jump instruction, set a breakpoint at
-  /// the jump target.
-  void breakAtJumpTarget(InterpreterState &state);
+  /// Get the jump target for an instruction (if it is a jump).
+  llvm::Optional<uint32_t> findJumpTarget(CodeBlock *block, uint32_t offset);
 
   /// Set breakpoints at all possible next instructions after the current one.
   void breakAtPossibleNextInstructions(InterpreterState &state);

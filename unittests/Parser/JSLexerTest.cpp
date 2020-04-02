@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/Parser/JSLexer.h"
 
 #include "DiagContext.h"
@@ -139,9 +140,9 @@ TEST(JSLexerTest, NumberTest) {
   JSLexer::Allocator alloc;
   SourceErrorManager sm;
 
-#define _GEN_TESTS(flt, dec)                                            \
-  flt(0) dec(0x10) flt(1.2) dec(055) flt(.1) flt(1.) flt(1e2) flt(5e+3) \
-      flt(4e-3) flt(.1e-3) flt(12.34e+5)
+#define _GEN_TESTS(flt, dec)                                              \
+  flt(1235) flt(1234567890123) flt(0) dec(0x10) flt(1.2) dec(055) flt(.1) \
+      flt(1.) flt(1e2) flt(5e+3) flt(4e-3) flt(.1e-3) flt(12.34e+5)
 
 #define _MK_STR(num) " " #num
 
@@ -758,6 +759,25 @@ TEST(JSLexerTest, SourceMappingUrl) {
     lex.advance();
     ASSERT_EQ("url2", sm.getSourceMappingUrl(4));
   }
+}
+
+TEST(JSLexerTest, RegressConsumeBadHexTest) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext diag(sm);
+
+  // Test a hex escape where the two following characters are ('5' & ~32).
+  // This catches a bug where we were or-ing 32 before checking whether the
+  // character is a digit.
+  JSLexer lex("'\\x\x15\x15'", sm, alloc);
+
+  ASSERT_EQ(TokenKind::string_literal, lex.advance()->getKind());
+  ASSERT_EQ(1, diag.getErrCountClear());
+
+  ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+  ASSERT_FALSE(lex.isNewLineBeforeCurrentToken());
+
+  ASSERT_EQ(0, diag.getErrCountClear());
 }
 
 } // namespace

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_IRGEN_IRGEN_H
 #define HERMES_IRGEN_IRGEN_H
 
@@ -24,10 +25,9 @@ using DeclarationFileListTy = std::vector<ESTree::ProgramNode *>;
 
 namespace hbc {
 
-struct LazyCompilationData {
-  /// The context used by IRGen.
-  std::shared_ptr<Context> context;
+class BytecodeFunction;
 
+struct LazyCompilationData {
   /// The variables in scope at the point where the function is defined.
   std::shared_ptr<SerializedScope> parentScope;
 
@@ -42,8 +42,7 @@ struct LazyCompilationData {
 
   /// The source buffer ID in which we can find the function source.
   uint32_t bufferId;
-  /// The source span of the function.
-  SMRange span;
+
   /// The type of function, e.g. statement or expression.
   ESTree::NodeKind nodeKind;
 
@@ -64,9 +63,12 @@ bool generateIRFromESTree(
 
 /// Lowers an ESTree program into Hermes IR in \p M without a top-level
 /// function, so that it can be used as a CommonJS module.
+/// \param id the ID assigned to the CommonJS module when added to the IR
+///           (index when reading filenames for the first time)
 /// \param filename the relative filename to the CommonJS module.
 void generateIRForCJSModule(
     ESTree::FunctionExpressionNode *node,
+    uint32_t id,
     llvm::StringRef filename,
     Module *M,
     Function *topLevelFunction,
@@ -75,8 +77,11 @@ void generateIRForCJSModule(
 /// Generate IR from the AST of a previously pre-parsed "lazy" function by
 /// parsing it again and validating it. On error, a stub function which throws
 /// a SyntaxError will be emitted instead.
-/// \return the newly generated function IR
-Function *generateLazyFunctionIR(hbc::LazyCompilationData *lazyData, Module *M);
+/// \return the newly generated function IR and lexical scope root
+std::pair<Function *, Function *> generateLazyFunctionIR(
+    hbc::BytecodeFunction *bcFunction,
+    Module *M,
+    llvm::SMRange sourceRange);
 
 } // namespace hermes
 

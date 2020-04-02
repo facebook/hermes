@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/RuntimeModule.h"
 
 #include "hermes/Support/PerfSection.h"
@@ -23,16 +24,21 @@ RuntimeModule::RuntimeModule(
     Runtime *runtime,
     Handle<Domain> domain,
     RuntimeModuleFlags flags,
-    llvm::StringRef sourceURL)
+    llvm::StringRef sourceURL,
+    facebook::hermes::debugger::ScriptID scriptID)
     : runtime_(runtime),
       domain_(&runtime->getHeap(), domain),
       flags_(flags),
-      sourceURL_(sourceURL) {
+      sourceURL_(sourceURL),
+      scriptID_(scriptID) {
   assert(
       domain_.isValid() && vmisa<Domain>(domain_.unsafeGetHermesValue()) &&
       "initialized with invalid domain");
   runtime_->addRuntimeModule(this);
   Domain::addRuntimeModule(domain, runtime, this);
+#ifndef HERMESVM_LEAN
+  lazyRoot_ = this;
+#endif
 }
 
 SymbolID RuntimeModule::createSymbolFromStringIDMayAllocate(
@@ -81,10 +87,11 @@ void RuntimeModule::prepareForRuntimeShutdown() {
 CallResult<RuntimeModule *> RuntimeModule::create(
     Runtime *runtime,
     Handle<Domain> domain,
+    facebook::hermes::debugger::ScriptID scriptID,
     std::shared_ptr<hbc::BCProvider> &&bytecode,
     RuntimeModuleFlags flags,
     llvm::StringRef sourceURL) {
-  auto *result = new RuntimeModule(runtime, domain, flags, sourceURL);
+  auto *result = new RuntimeModule(runtime, domain, flags, sourceURL, scriptID);
   if (bytecode) {
     if (result->initializeMayAllocate(std::move(bytecode)) ==
         ExecutionStatus::EXCEPTION) {
@@ -135,15 +142,19 @@ RuntimeModule *RuntimeModule::createLazyModule(
     RuntimeModule *parent,
     uint32_t functionID) {
   auto RM = createUninitialized(runtime, domain);
+  RM->lazyRoot_ = parent->lazyRoot_;
+  // Copy the lazy root's script ID for lazy modules.
+  RM->scriptID_ = RM->lazyRoot_->scriptID_;
+
   // Set the bcProvider's BytecodeModule to point to the parent's.
   assert(parent->isInitialized() && "Parent module must have been initialized");
 
-  hbc::BytecodeFunction *bcFunction =
-      &((hbc::BCProviderFromSrc *)parent->getBytecode())
-           ->getBytecodeModule()
-           ->getFunction(functionID);
+  auto bcModule =
+      ((hbc::BCProviderFromSrc *)parent->getBytecode())->getBytecodeModule();
+  auto bcFunction = &bcModule->getFunction(functionID);
 
-  RM->bcProvider_ = hbc::BCProviderLazy::createBCProviderLazy(bcFunction);
+  RM->bcProvider_ =
+      hbc::BCProviderLazy::createBCProviderLazy(bcModule, bcFunction);
 
   // We don't know which function index this block will eventually represent,
   // so just add it as 0 to ensure ownership. We'll move it later in
@@ -165,21 +176,6 @@ SymbolID RuntimeModule::getLazyName() {
   assert(stringIDMap_.size() == 1 && "Missing lazy function name symbol");
   assert(this->stringIDMap_[0].isValid() && "Invalid function name symbol");
   return this->stringIDMap_[0];
-}
-
-bool RuntimeModule::getLazyNameString(Runtime *runtime, std::string &res)
-    const {
-  assert(functionMap_.size() == 1 && "Not a lazy module?");
-  assert(stringIDMap_.size() == 1 && "Missing lazy function name symbol");
-  assert(this->stringIDMap_[0].isValid() && "Invalid function name symbol");
-  StringView strView = runtime->getIdentifierTable().getStringView(
-      runtime, this->stringIDMap_[0]);
-  if (strView.isASCII()) {
-    res = std::string(strView.begin(), strView.end());
-    return true;
-  } else {
-    return false;
-  }
 }
 
 void RuntimeModule::initializeLazyMayAllocate(
@@ -260,12 +256,6 @@ void RuntimeModule::importStringIDMapMayAllocate() {
                 translations[trnID]);
           }
           break;
-
-        case StringKind::Predefined:
-          for (uint32_t i = 0; i < entry.count(); ++i, ++strID, ++trnID) {
-            mapPredefined(strID, translations[trnID]);
-          }
-          break;
       }
     }
 
@@ -291,6 +281,9 @@ void RuntimeModule::importStringIDMapMayAllocate() {
     stringIDMap_.push_back({});
     mapStringMayAllocate(s, 0, hashString(s));
   }
+
+  // Done with translations, so advise them out if possible.
+  bcProvider_->dontNeedIdentifierTranslations();
 }
 
 void RuntimeModule::initializeFunctionMap() {
@@ -313,16 +306,19 @@ StringPrimitive *RuntimeModule::getStringPrimFromStringIDMayAllocate(
       getSymbolIDFromStringIDMayAllocate(stringID));
 }
 
-bool RuntimeModule::getStringFromStringID(StringID stringID, std::string &res) {
+std::string RuntimeModule::getStringFromStringID(StringID stringID) {
   auto entry = bcProvider_->getStringTableEntry(stringID);
+  auto strStorage = bcProvider_->getStringStorage();
   if (entry.isUTF16()) {
-    return false;
+    const char16_t *s =
+        (const char16_t *)(strStorage.begin() + entry.getOffset());
+    std::string out;
+    convertUTF16ToUTF8WithReplacements(out, UTF16Ref{s, entry.getLength()});
+    return out;
   } else {
     // ASCII.
-    auto strStorage = bcProvider_->getStringStorage();
     const char *s = strStorage.begin() + entry.getOffset();
-    res = std::string{s, entry.getLength()};
-    return true;
+    return std::string{s, entry.getLength()};
   }
 }
 
@@ -360,14 +356,6 @@ SymbolID RuntimeModule::mapStringMayAllocate(
   return id;
 }
 
-SymbolID RuntimeModule::mapPredefined(StringID stringID, uint32_t rawSymbolID) {
-  SymbolID id = SymbolID::unsafeCreate(rawSymbolID);
-  assert(Predefined::isPredefined(id));
-
-  stringIDMap_[stringID] = id;
-  return id;
-}
-
 void RuntimeModule::markRoots(SlotAcceptor &acceptor, bool markLongLived) {
   for (auto &it : templateMap_) {
     acceptor.acceptPtr(it.second);
@@ -387,7 +375,7 @@ void RuntimeModule::markWeakRoots(WeakRootAcceptor &acceptor) {
     // Only mark a CodeBlock is its non-null, and has not been scanned
     // previously in this top-level markRoots invocation.
     if (cbPtr != nullptr && cbPtr->getRuntimeModule() == this) {
-      cbPtr->markCachedHiddenClasses(acceptor);
+      cbPtr->markCachedHiddenClasses(runtime_, acceptor);
     }
   }
   for (auto &entry : objectLiteralHiddenClasses_) {

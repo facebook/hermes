@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/Support/MemoryBuffer.h"
 #include "hermes/VM/Runtime.h"
@@ -54,7 +55,7 @@ static void verifyAllBuiltinsFrozen(Runtime *runtime) {
     auto methodID = Predefined::getSymbolID(Predefined::method);      \
     EXPECT_PROPERTY_FROZEN_AND_MARKED_AS_STATIC(objHandle, methodID); \
   }
-#include "hermes/Inst/Builtins.def"
+#include "hermes/FrontEndDefs/Builtins.def"
 }
 
 class StaticBuiltinsTest : public RuntimeTestFixture {

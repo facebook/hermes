@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_GCCELL_H
 #define HERMES_VM_GCCELL_H
 
@@ -17,6 +18,24 @@
 
 namespace hermes {
 namespace vm {
+
+template <typename T>
+class ExternalStringPrimitive;
+class VariableSizeRuntimeCell;
+
+/// Return the allocation size for a fixed-size cell corresponding to class C.
+/// This must be used instead of the builtin sizeof operator, since classes
+/// further down the GCCell hirerarchy may add (fixed-size) trailing objects and
+/// redefine this method. Example usage:
+///
+/// CallResult<HermesValue> MyCell::create(Runtime *runtime, ...) {
+///   void *mem = runtime->alloc(cellSize<MyCell>());
+///   ...
+template <class C>
+static constexpr uint32_t cellSize() {
+  static_assert(HeapAlign % alignof(C) == 0, "insufficient heap alignment");
+  return C::template cellSizeImpl<C>();
+}
 
 /// This include file defines a GCCell that allows forward heap
 /// traversal in a contiguous space: given a pointer to the head, you
@@ -60,6 +79,20 @@ class GCCell {
   /// and store it elsewhere, but still need to find the object size
   /// when vtp is incorrect.)
   uint32_t getAllocatedSize(const VTable *vtp) const;
+
+  /// Implementation of cellSize. Do not use this directly.
+  template <class C>
+  static constexpr uint32_t cellSizeImpl() {
+    static_assert(std::is_convertible<C *, GCCell *>::value, "must be a cell");
+    // ExternalStringPrimitive<T> is special: it extends VariableSizeRuntimeCell
+    // but it's actually fixed-size.
+    static_assert(
+        !std::is_convertible<C *, VariableSizeRuntimeCell *>::value ||
+            std::is_same<C, ExternalStringPrimitive<char>>::value ||
+            std::is_same<C, ExternalStringPrimitive<char16_t>>::value,
+        "must be fixed-size");
+    return sizeof(C);
+  }
 
   /// Is true if the cell has a variable size, false if it has a fixed size.
   bool isVariableSize() const {
@@ -204,7 +237,9 @@ class GCCell {
 
   /// If the cell has any associated external memory, return the size (in bytes)
   /// of that external memory, else zero.
-  inline uint32_t externalMemorySize() const;
+  inline gcheapsize_t externalMemorySize() const {
+    return getVT()->externalMemorySize(this);
+  }
 
  protected:
   /// Emit allocation event to memory profiler if it is enabled.

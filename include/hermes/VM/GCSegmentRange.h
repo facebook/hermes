@@ -1,13 +1,14 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_GCSEGMENTRANGE_H
 #define HERMES_VM_GCSEGMENTRANGE_H
 
-#include "hermes/Support/ConsumableRange.h"
+#include "hermes/ADT/ConsumableRange.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"

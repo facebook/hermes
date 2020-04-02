@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_VTABLE_H
 #define HERMES_VM_VTABLE_H
 
@@ -34,6 +35,7 @@ struct VTable {
     using NameCallback = std::string(GCCell *, GC *);
     using AddEdgesCallback = void(GCCell *, GC *, HeapSnapshot &);
     using AddNodesCallback = void(GCCell *, GC *, HeapSnapshot &);
+    using AddLocationsCallback = void(GCCell *, GC *, HeapSnapshot &);
 
    public:
     /// Construct a HeapSnapshotMetadata, that is used by the GC to decide how
@@ -44,29 +46,41 @@ struct VTable {
     ///   based on the cell kind will be used instead.
     /// \param addEdges Adds any non-internal edges to this node. Can be used to
     ///   add custom edges that aren't well-represented by internal pointers, or
-    ///   should be user-visible.
+    ///   should be user-visible. Can also point to nodes created via the \p
+    ///   addNodes parameter.
+    /// \param addNodes Adds any nodes that are pointed to by this GCCell. Can
+    ///   be used to add nodes for memory that isn't on the JS heap.
+    ///   NOTE: Despite the name, edges sometimes also need to be added in
+    ///   this callback (for example, if a native node points to another native
+    ///   node).
     constexpr explicit HeapSnapshotMetadata(
         HeapSnapshot::NodeType nodeType,
         NameCallback *name,
         AddEdgesCallback *addEdges,
-        AddNodesCallback *addNodes)
+        AddNodesCallback *addNodes,
+        AddLocationsCallback *addLocations)
         : nodeType_(nodeType),
           name_(name),
           addEdges_(addEdges),
-          addNodes_(addNodes) {}
+          addNodes_(addNodes),
+          addLocations_(addLocations) {}
 
     HeapSnapshot::NodeType nodeType() const {
       return nodeType_;
     }
     std::string nameForNode(GCCell *cell, GC *gc) const;
+    /// Get the default name for the node, without any custom behavior.
+    std::string defaultNameForNode(GCCell *cell) const;
     void addEdges(GCCell *cell, GC *gc, HeapSnapshot &snap) const;
     void addNodes(GCCell *cell, GC *gc, HeapSnapshot &snap) const;
+    void addLocations(GCCell *cell, GC *gc, HeapSnapshot &snap) const;
 
    private:
     const HeapSnapshot::NodeType nodeType_;
     NameCallback *const name_;
     AddEdgesCallback *const addEdges_;
     AddNodesCallback *const addNodes_;
+    AddLocationsCallback *const addLocations_;
   };
 
   // Value is 64 bits to make sure it can be used as a pointer in both 32 and
@@ -111,6 +125,10 @@ struct VTable {
   /// Trim the cell, decreasing any size-related fields inside the cell.
   using TrimCallback = void(GCCell *);
   TrimCallback *const trim_;
+  /// Calculate the external memory size.
+  using ExternalMemorySize = gcheapsize_t(const GCCell *);
+  ExternalMemorySize *const externalMemorySize_;
+
   /// Any metadata associated with heap snapshots.
   const HeapSnapshotMetadata snapshotMetaData;
 
@@ -122,8 +140,10 @@ struct VTable {
       MallocSizeCallback *mallocSize = nullptr,
       TrimSizeCallback *trimSize = nullptr,
       TrimCallback *trim = nullptr,
+      ExternalMemorySize *externalMemorySize = nullptr,
       HeapSnapshotMetadata snapshotMetaData =
           HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
+                               nullptr,
                                nullptr,
                                nullptr,
                                nullptr})
@@ -134,6 +154,7 @@ struct VTable {
         mallocSize_(mallocSize),
         trimSize_(trimSize),
         trim_(trim),
+        externalMemorySize_(externalMemorySize),
         snapshotMetaData(snapshotMetaData) {}
 
   bool isVariableSize() const {
@@ -182,6 +203,12 @@ struct VTable {
   void trim(GCCell *cell) const {
     assert(isValid());
     trim_(cell);
+  }
+
+  /// If the cell has any associated external memory, return the size (in bytes)
+  /// of that external memory, else zero.
+  gcheapsize_t externalMemorySize(const GCCell *cell) const {
+    return externalMemorySize_ ? (*externalMemorySize_)(cell) : 0;
   }
 
   /// \return true iff this VTable is valid.

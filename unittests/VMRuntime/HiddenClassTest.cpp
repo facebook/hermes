@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/HiddenClass.h"
 
 #include "hermes/VM/ArrayStorage.h"
@@ -217,11 +218,6 @@ TEST_F(HiddenClassTest, SmokeTest) {
   ASSERT_EQ(*y1, *y3);
 
   // Turn x into a dictionary by erasing x.a
-  // We need to allocate fake property storage.
-  auto arrRes =
-      runtime->ignoreAllocationFailure(PropStorage::create(runtime, 10));
-  auto xStorage = runtime->makeHandle<PropStorage>(arrRes);
-  PropStorage::resizeWithinCapacity(xStorage, runtime, x->getNumProperties());
 
   {
     auto found = HiddenClass::findProperty(
@@ -311,7 +307,7 @@ TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
       y, runtime, clearFlags, setFlags, llvm::None);
   ASSERT_NE(*y, *yClone);
   ASSERT_EQ(y->getNumProperties(), yClone->getNumProperties());
-  ASSERT_FALSE(yClone->isDictionary());
+  ASSERT_TRUE(yClone->isDictionary());
   // Check each property
   auto found = HiddenClass::findProperty(
       yClone, runtime, *aHnd, PropertyFlags::invalid(), desc);
@@ -365,7 +361,7 @@ TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
 
   ASSERT_NE(*y, *partlyFrozenSingleton);
   ASSERT_EQ(y->getNumProperties(), partlyFrozenSingleton->getNumProperties());
-  ASSERT_FALSE(partlyFrozenSingleton->isDictionary());
+  ASSERT_TRUE(partlyFrozenSingleton->isDictionary());
   // Check each property
   found = HiddenClass::findProperty(
       partlyFrozenSingleton, runtime, *aHnd, PropertyFlags::invalid(), desc);
@@ -396,7 +392,7 @@ TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
       PropertyFlags::defaultNewNamedPropertyFlags());
   ASSERT_RETURNED(addRes);
   ASSERT_EQ(3u, addRes->second);
-  ASSERT_NE(*addRes->first, *partlyFrozenSingleton);
+  ASSERT_EQ(*addRes->first, *partlyFrozenSingleton);
   ASSERT_EQ(addRes->first->getNumProperties(), 4);
 }
 
@@ -451,6 +447,21 @@ TEST_F(HiddenClassTest, ForEachProperty) {
         propertiesNoAlloc.emplace_back(id, desc);
       });
   EXPECT_EQ(expectedProperties, propertiesNoAlloc);
+}
+
+TEST_F(HiddenClassTest, ReservedSlots) {
+  auto aHnd = *runtime->getIdentifierTable().getSymbolHandle(
+      runtime, createUTF16Ref(u"a"));
+  for (unsigned i = 0; i <= InternalProperty::NumInternalProperties; ++i) {
+    Handle<HiddenClass> clazz{
+        runtime,
+        runtime->getHiddenClassForPrototypeRaw(*runtime->getGlobal(), i)};
+    EXPECT_FALSE(clazz->isDictionary());
+    auto addRes = HiddenClass::addProperty(
+        clazz, runtime, *aHnd, PropertyFlags::defaultNewNamedPropertyFlags());
+    ASSERT_RETURNED(addRes);
+    EXPECT_EQ(i, addRes->second);
+  }
 }
 
 } // namespace

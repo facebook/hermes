@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "ESTreeIRGen.h"
 
 namespace hermes {
@@ -147,7 +148,8 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
     genFinallyBeforeControlChange(
         curFunction()->surroundingTry,
         label.surroundingTry,
-        ControlFlowChange::Continue);
+        ControlFlowChange::Continue,
+        label.continueTarget);
     Builder.createBranchInst(label.continueTarget);
 
     // Continue code generation for stuff that comes after the break statement
@@ -245,7 +247,7 @@ void ESTreeIRGen::genIfStatement(ESTree::IfStatementNode *IfStmt) {
   auto ElseBlock = Builder.createBasicBlock(Parent);
   auto ContinueBlock = Builder.createBasicBlock(Parent);
 
-  genExpressionBranch(IfStmt->_test, ThenBlock, ElseBlock);
+  genExpressionBranch(IfStmt->_test, ThenBlock, ElseBlock, nullptr);
 
   // IRGen the Then:
   Builder.setInsertionBlock(ThenBlock);
@@ -315,7 +317,7 @@ void ESTreeIRGen::genForWhileLoops(
 
   // Branch out of the loop if the condition is false.
   if (preTest)
-    genExpressionBranch(preTest, bodyBlock, exitBlock);
+    genExpressionBranch(preTest, bodyBlock, exitBlock, nullptr);
   else
     Builder.createBranchInst(bodyBlock);
 
@@ -331,7 +333,7 @@ void ESTreeIRGen::genForWhileLoops(
 
   // Branch out of the loop if the condition is false.
   if (postTest)
-    genExpressionBranch(postTest, bodyBlock, exitBlock);
+    genExpressionBranch(postTest, bodyBlock, exitBlock, nullptr);
   else
     Builder.createBranchInst(bodyBlock);
 
@@ -465,34 +467,43 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
   curFunction()->initLabel(forOfStmt, exitBlock, getNextBlock);
 
   auto *exprValue = genExpression(forOfStmt->_right);
-  auto iteratorRecord = emitGetIterator(exprValue);
+  const IteratorRecord iteratorRecord = emitGetIterator(exprValue);
 
   Builder.createBranchInst(getNextBlock);
 
+  // Attempt to retrieve the next value. If iteration is complete, finish the
+  // loop. This stays outside the SurroundingTry below because exceptions in
+  // `.next()` should not call `.return()` on the iterator.
   Builder.setInsertionBlock(getNextBlock);
-  auto *nextResult = emitIteratorNext(iteratorRecord);
-  auto *done = emitIteratorComplete(nextResult);
+  auto *nextValue = emitIteratorNext(iteratorRecord);
+  auto *done = emitIteratorComplete(iteratorRecord);
   Builder.createCondBranchInst(done, exitBlock, bodyBlock);
 
   Builder.setInsertionBlock(bodyBlock);
 
-  auto *nextValue = emitIteratorValue(nextResult);
-
   emitTryCatchScaffolding(
       getNextBlock,
       // emitBody.
-      [this, forOfStmt, nextValue, &iteratorRecord]() {
+      [this, forOfStmt, nextValue, &iteratorRecord, getNextBlock]() {
         // Generate IR for the body of Try
-        SurroundingTry thisTry{
-            curFunction(),
-            forOfStmt,
-            {},
-            [this, &iteratorRecord](ESTree::Node *, ControlFlowChange cfc) {
-              if (cfc == ControlFlowChange::Break)
-                emitIteratorClose(iteratorRecord, false);
-            }};
+        SurroundingTry thisTry{curFunction(),
+                               forOfStmt,
+                               {},
+                               [this, &iteratorRecord, getNextBlock](
+                                   ESTree::Node *,
+                                   ControlFlowChange cfc,
+                                   BasicBlock *continueTarget) {
+                                 // Only emit the iteratorClose if this is a
+                                 // 'break' or if the target of the control flow
+                                 // change is outside the current loop. If
+                                 // continuing the existing loop, do not close
+                                 // the iterator.
+                                 if (cfc == ControlFlowChange::Break ||
+                                     continueTarget != getNextBlock)
+                                   emitIteratorClose(iteratorRecord, false);
+                               }};
 
-        // Note: obtaing the value is not protected, but storing it is.
+        // Note: obtaining the value is not protected, but storing it is.
         createLRef(forOfStmt->_left, false).emitStore(nextValue);
 
         genStatement(forOfStmt->_body);
@@ -875,8 +886,7 @@ void ESTreeIRGen::genExportAllDeclaration(
       Builder.getLiteralUndefined(),
       {genExpression(exportDecl->_source)});
   // Copy all the re-exported properties from the source to the exports object.
-  genHermesInternalCall(
-      "exportAll", Builder.getLiteralUndefined(), {exports, source});
+  genBuiltinCall(BuiltinMethod::HermesBuiltin_exportAll, {exports, source});
 }
 
 } // namespace irgen

@@ -1,15 +1,18 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/StringPrimitive.h"
 
 #include "hermes/Support/Algorithms.h"
 #include "hermes/Support/UTF8.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/FillerCell.h"
+#include "hermes/VM/GCPointer-inline.h"
+#include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringView.h"
 
@@ -29,10 +32,12 @@ template <typename T, bool Uniqued>
 void serializeDynamicStringImpl(Serializer &s, const GCCell *cell) {
   const auto *self = vmcast<const DynamicStringPrimitive<T, Uniqued>>(cell);
   // Write string length.
-  s.writeInt<uint32_t>(self->getStringLength());
+  s.writeInt<uint32_t>(self->lengthAndUniquedFlag_);
   if (Uniqued) {
     // If isUniqued, also writes SymbolID.
-    s.writeInt<uint32_t>(self->getUniqueID().unsafeGetRaw());
+    s.writeInt<uint32_t>(
+        (self->isUniqued() ? self->getUniqueID() : SymbolID::empty())
+            .unsafeGetRaw());
   }
   // Writes the actual string.
   s.writeData(self->getRawPointer(), self->getStringLength() * sizeof(T));
@@ -41,17 +46,22 @@ void serializeDynamicStringImpl(Serializer &s, const GCCell *cell) {
 
 template <typename T, bool Uniqued>
 void deserializeDynamicStringImpl(Deserializer &d) {
-  uint32_t length = d.readInt<uint32_t>();
+  uint32_t lengthAndUniquedFlag = d.readInt<uint32_t>();
+  uint32_t length = lengthAndUniquedFlag &
+      ~DynamicStringPrimitive<T, Uniqued>::LENGTH_FLAG_UNIQUED;
+  bool uniqued = lengthAndUniquedFlag &
+      DynamicStringPrimitive<T, Uniqued>::LENGTH_FLAG_UNIQUED;
   SymbolID uniqueID{};
   if (Uniqued) {
-    auto rawUniqueID = d.readInt<uint32_t>();
-    uniqueID = SymbolID::unsafeCreate(rawUniqueID);
+    uniqueID = SymbolID::unsafeCreate(d.readInt<uint32_t>());
   }
 
   void *mem = d.getRuntime()->alloc</*fixedSize*/ false>(
       DynamicStringPrimitive<T, Uniqued>::allocationSize(length));
-  auto *cell = new (mem)
-      DynamicStringPrimitive<T, Uniqued>(d.getRuntime(), length, uniqueID);
+  auto *cell =
+      new (mem) DynamicStringPrimitive<T, Uniqued>(d.getRuntime(), length);
+  if (uniqued)
+    cell->convertToUniqued(uniqueID);
   d.readData(cell->getRawPointerForWrite(), length * sizeof(T));
 
   d.endObject(cell);
@@ -110,48 +120,30 @@ void DynamicUniquedUTF16StringPrimitiveDeserialize(
 }
 #endif
 
-/// There is no SymbolStringPrimitiveCellKind, but we factor this into a
-/// function so that the subclasses can share it and so only one friend
-/// declaration is required.
-void symbolStringPrimitiveBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  const auto *self = static_cast<const SymbolStringPrimitive *>(cell);
-  mb.addField("uniqueID", &self->uniqueID_);
-}
-
 void DynamicUniquedASCIIStringPrimitiveBuildMeta(
     const GCCell *cell,
-    Metadata::Builder &mb) {
-  symbolStringPrimitiveBuildMeta(cell, mb);
-}
+    Metadata::Builder &mb) {}
 
 void DynamicUniquedUTF16StringPrimitiveBuildMeta(
     const GCCell *cell,
-    Metadata::Builder &mb) {
-  symbolStringPrimitiveBuildMeta(cell, mb);
-}
+    Metadata::Builder &mb) {}
 
 void ExternalASCIIStringPrimitiveBuildMeta(
     const GCCell *cell,
-    Metadata::Builder &mb) {
-  symbolStringPrimitiveBuildMeta(cell, mb);
-}
+    Metadata::Builder &mb) {}
 
 void ExternalUTF16StringPrimitiveBuildMeta(
     const GCCell *cell,
-    Metadata::Builder &mb) {
-  symbolStringPrimitiveBuildMeta(cell, mb);
-}
+    Metadata::Builder &mb) {}
 
 #ifdef HERMESVM_SERIALIZE
 template <typename T>
 void serializeExternalStringImpl(Serializer &s, const GCCell *cell) {
   const auto *self = vmcast<const ExternalStringPrimitive<T>>(cell);
-  s.writeInt<uint32_t>(self->getStringLength());
-  s.writeInt<uint8_t>(self->isUniqued());
-  if (self->isUniqued()) {
-    // If isUniqued, also writes SymbolID.
-    s.writeInt<uint32_t>(self->getUniqueID().unsafeGetRaw());
-  }
+  s.writeInt<uint32_t>(self->lengthAndUniquedFlag_);
+  s.writeInt<uint32_t>(
+      (self->isUniqued() ? self->getUniqueID() : SymbolID::empty())
+          .unsafeGetRaw());
   // Writes the actual string.
   s.writeData(self->getRawPointer(), self->getStringLength() * sizeof(T));
   // contents_.data() is tracked by IDTracker for heapsnapshot. We should do
@@ -164,9 +156,12 @@ void serializeExternalStringImpl(Serializer &s, const GCCell *cell) {
 template <typename T>
 void deserializeExternalStringImpl(Deserializer &d) {
   // Deserialize the data.
-  uint32_t length = d.readInt<uint32_t>();
+  uint32_t lengthAndUniquedFlag = d.readInt<uint32_t>();
+  uint32_t length =
+      lengthAndUniquedFlag & ~ExternalStringPrimitive<T>::LENGTH_FLAG_UNIQUED;
+  bool uniqued = length & ExternalStringPrimitive<T>::LENGTH_FLAG_UNIQUED;
   assert(
-      ExternalStringPrimitive<T>::isExternalLength(length) &&
+      ExternalStringPrimitive<T>::isSafeExternalLength(length) &&
       "length should be external");
   if (LLVM_UNLIKELY(length > ExternalStringPrimitive<T>::MAX_STRING_LENGTH))
     hermes_fatal("String length exceeds limit");
@@ -176,27 +171,24 @@ void deserializeExternalStringImpl(Deserializer &d) {
     hermes_fatal("Cannot allocate an external string primitive.");
   }
 
-  bool uniqued = d.readInt<uint8_t>();
-  SymbolID uniqueID{};
-  if (uniqued) {
-    auto rawUniqueID = d.readInt<uint32_t>();
-    uniqueID = SymbolID::unsafeCreate(rawUniqueID);
-  }
+  auto uniqueID = SymbolID::unsafeCreate(d.readInt<uint32_t>());
   std::basic_string<T> contents(length, '\0');
   d.readData(&contents[0], length * sizeof(T));
 
   // Construct an ExternalStringPrimitive from what we deserialized.
   void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      sizeof(ExternalStringPrimitive<T>));
-  auto *cell = new (mem)
-      ExternalStringPrimitive<T>(d.getRuntime(), std::move(contents), uniqued);
+      cellSize<ExternalStringPrimitive<T>>());
+  auto *cell =
+      new (mem) ExternalStringPrimitive<T>(d.getRuntime(), std::move(contents));
+  if (uniqued)
+    cell->convertToUniqued(uniqueID);
 
   // contents_.data() is tracked by IDTracker for heapsnapshot. We should do
   // relocation for it.
   d.endObject((void *)cell->contents_.data());
 
   d.getRuntime()->getHeap().creditExternalMemory(
-      cell, cell->getStringLength() * sizeof(T));
+      cell, cell->calcExternalMemorySize());
   d.endObject(cell);
 }
 
@@ -362,8 +354,11 @@ CallResult<HermesValue> StringPrimitive::concat(
     Runtime *runtime,
     Handle<StringPrimitive> xHandle,
     Handle<StringPrimitive> yHandle) {
-  auto xLen = xHandle->getStringLength();
-  auto yLen = yHandle->getStringLength();
+  auto *xPtr = xHandle.get();
+  auto *yPtr = yHandle.get();
+
+  auto xLen = xPtr->getStringLength();
+  auto yLen = yPtr->getStringLength();
   if (!xLen) {
     // x is the empty string, just return y.
     return yHandle.getHermesValue();
@@ -375,9 +370,23 @@ CallResult<HermesValue> StringPrimitive::concat(
 
   SafeUInt32 xyLen(xLen);
   xyLen.add(yLen);
+  if (xyLen.isOverflowed() || xyLen.get() > MAX_STRING_LENGTH) {
+    return runtime->raiseRangeError("String length exceeds limit");
+  }
+
+  if (xyLen.get() >= CONCAT_STRING_MIN_SIZE ||
+      isBufferedStringPrimitive(xPtr)) {
+    if (LLVM_UNLIKELY(
+            !runtime->getHeap().canAllocExternalMemory(xyLen.get()))) {
+      return runtime->raiseRangeError(
+          "Cannot allocate an external string primitive.");
+    }
+    return internalConcatStringPrimitives(runtime, xHandle, yHandle)
+        .getHermesValue();
+  }
 
   auto builder = StringBuilder::createStringBuilder(
-      runtime, xyLen, xHandle->isASCII() && yHandle->isASCII());
+      runtime, xyLen, xPtr->isASCII() && yPtr->isASCII());
   if (builder == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -513,60 +522,66 @@ template class DynamicStringPrimitive<char, true /* Uniqued */>;
 template class DynamicStringPrimitive<char16_t, false /* not Uniqued */>;
 template class DynamicStringPrimitive<char, false /* not Uniqued */>;
 
+// NOTE: this is a template method in a template class, thus the two separate
+// template<> lines.
 template <typename T>
+template <class BasicString>
 ExternalStringPrimitive<T>::ExternalStringPrimitive(
     Runtime *runtime,
-    StdString &&contents)
-    : ExternalStringPrimitive(
+    BasicString &&contents)
+    : SymbolStringPrimitive(
           runtime,
-          std::move(contents),
-          false /* not uniqued */) {}
-
-template <typename T>
-ExternalStringPrimitive<T>::ExternalStringPrimitive(
-    Runtime *runtime,
-    StdString &&contents,
-    SymbolID uniqueID)
-    : ExternalStringPrimitive(
-          runtime,
-          std::move(contents),
-          true /* uniqued */) {
-  updateUniqueID(uniqueID);
+          &vt,
+          cellSize<ExternalStringPrimitive<T>>(),
+          contents.size()),
+      contents_(std::forward<BasicString>(contents)) {
+  static_assert(
+      std::is_same<T, typename BasicString::value_type>::value,
+      "ExternalStringPrimitive mismatched char type");
+  assert(
+      getStringLength() >= EXTERNAL_STRING_MIN_SIZE &&
+      "ExternalStringPrimitive length must be at least EXTERNAL_STRING_MIN_SIZE");
 }
 
+// NOTE: this is a template method in a template class, thus the two separate
+// template<> lines.
 template <typename T>
+template <class BasicString>
 CallResult<HermesValue> ExternalStringPrimitive<T>::create(
     Runtime *runtime,
-    StdString &&str) {
+    BasicString &&str) {
+  static_assert(
+      std::is_same<T, typename BasicString::value_type>::value,
+      "ExternalStringPrimitive mismatched char type");
   if (LLVM_UNLIKELY(str.size() > MAX_STRING_LENGTH))
     return runtime->raiseRangeError("String length exceeds limit");
-  uint32_t allocSize = str.size() * sizeof(T);
   void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      sizeof(ExternalStringPrimitive<T>));
-  auto res = HermesValue::encodeStringValue(
-      (new (mem) ExternalStringPrimitive<T>(runtime, std::move(str))));
-  runtime->getHeap().creditExternalMemory(res.getString(), allocSize);
+      cellSize<ExternalStringPrimitive<T>>());
+  auto *extStr = new (mem)
+      ExternalStringPrimitive<T>(runtime, std::forward<BasicString>(str));
+  runtime->getHeap().creditExternalMemory(
+      extStr, extStr->calcExternalMemorySize());
+  auto res = HermesValue::encodeStringValue(extStr);
   return res;
 }
 
 template <typename T>
 CallResult<HermesValue> ExternalStringPrimitive<T>::createLongLived(
     Runtime *runtime,
-    StdString &&str,
-    SymbolID uniqueID) {
+    StdString &&str) {
   if (LLVM_UNLIKELY(str.size() > MAX_STRING_LENGTH))
     return runtime->raiseRangeError("String length exceeds limit");
-  uint32_t allocSize = str.size() * sizeof(T);
-  if (LLVM_UNLIKELY(!runtime->getHeap().canAllocExternalMemory(allocSize))) {
+  if (LLVM_UNLIKELY(!runtime->getHeap().canAllocExternalMemory(
+          str.capacity() * sizeof(T)))) {
     return runtime->raiseRangeError(
         "Cannot allocate an external string primitive.");
   }
   void *mem = runtime->allocLongLived<HasFinalizer::Yes>(
-      sizeof(ExternalStringPrimitive<T>));
-  auto res = HermesValue::encodeStringValue((
-      new (mem) ExternalStringPrimitive<T>(runtime, std::move(str), uniqueID)));
-  runtime->getHeap().creditExternalMemory(res.getString(), allocSize);
-  return res;
+      cellSize<ExternalStringPrimitive<T>>());
+  auto *extStr = new (mem) ExternalStringPrimitive<T>(runtime, std::move(str));
+  runtime->getHeap().creditExternalMemory(
+      extStr, extStr->calcExternalMemorySize());
+  return HermesValue::encodeStringValue(extStr);
 }
 
 template <typename T>
@@ -590,14 +605,21 @@ void ExternalStringPrimitive<T>::_finalizeImpl(GCCell *cell, GC *gc) {
   // Remove the external string from the snapshot tracking system if it's being
   // tracked.
   gc->getIDTracker().untrackNative(self->contents_.data());
-  gc->debitExternalMemory(self, self->getStringByteSize());
+  gc->debitExternalMemory(self, self->calcExternalMemorySize());
   self->~ExternalStringPrimitive<T>();
 }
 
 template <typename T>
 size_t ExternalStringPrimitive<T>::_mallocSizeImpl(GCCell *cell) {
   ExternalStringPrimitive<T> *self = vmcast<ExternalStringPrimitive<T>>(cell);
-  return self->getStringByteSize();
+  return self->calcExternalMemorySize();
+}
+
+template <typename T>
+gcheapsize_t ExternalStringPrimitive<T>::_externalMemorySizeImpl(
+    hermes::vm::GCCell const *cell) {
+  auto *self = vmcast<ExternalStringPrimitive<T>>(cell);
+  return self->calcExternalMemorySize();
 }
 
 template <typename T>
@@ -619,15 +641,217 @@ void ExternalStringPrimitive<T>::_snapshotAddNodesImpl(
     HeapSnapshot &snap) {
   auto *const self = vmcast<ExternalStringPrimitive<T>>(cell);
   snap.beginNode();
+  auto &allocationLocationTracker = gc->getAllocationLocationTracker();
   snap.endNode(
       HeapSnapshot::NodeType::Native,
       "ExternalStringPrimitive",
       gc->getNativeID(self->contents_.data()),
-      self->contents_.size());
+      self->contents_.size(),
+      allocationLocationTracker.isEnabled()
+          ? allocationLocationTracker
+                .getStackTracesTreeNodeForAlloc(self->contents_.data())
+                ->id
+          : 0);
 }
 
 template class ExternalStringPrimitive<char16_t>;
 template class ExternalStringPrimitive<char>;
 
+//===----------------------------------------------------------------------===//
+// BufferedStringPrimitive<T>
+
+void BufferedASCIIStringPrimitiveBuildMeta(
+    const GCCell *cell,
+    Metadata::Builder &mb) {
+  const auto *self = static_cast<const BufferedASCIIStringPrimitive *>(cell);
+  mb.addField("storage", &self->concatBufferHV_);
+}
+void BufferedUTF16StringPrimitiveBuildMeta(
+    const GCCell *cell,
+    Metadata::Builder &mb) {
+  const auto *self = static_cast<const BufferedUTF16StringPrimitive *>(cell);
+  mb.addField("storage", &self->concatBufferHV_);
+}
+
+template <typename T>
+PseudoHandle<StringPrimitive> BufferedStringPrimitive<T>::create(
+    Runtime *runtime,
+    uint32_t length,
+    Handle<ExternalStringPrimitive<T>> storage) {
+  void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::No>(
+      sizeof(BufferedStringPrimitive<T>));
+  return createPseudoHandle<StringPrimitive>(
+      new (mem) BufferedStringPrimitive<T>(runtime, length, storage.get()));
+}
+
+#ifndef NDEBUG
+/// Assert the the combined length of the two strings is valid.
+static void assertValidLength(StringPrimitive *a, StringPrimitive *b) {
+  SafeUInt32 len(a->getStringLength());
+  len.add(b->getStringLength());
+  assert(
+      !len.isOverflowed() && len.get() <= StringPrimitive::MAX_STRING_LENGTH &&
+      "length must have been validated");
+}
+#else
+static inline void assertValidLength(StringPrimitive *a, StringPrimitive *b) {}
+#endif
+
+template <>
+void BufferedStringPrimitive<char>::appendToCopyableString(
+    CopyableBasicString<char> &res,
+    const StringPrimitive *str) {
+  auto it = str->castToASCIIPointer();
+  res.append(it, it + str->getStringLength());
+}
+template <>
+void BufferedStringPrimitive<char16_t>::appendToCopyableString(
+    CopyableBasicString<char16_t> &res,
+    const StringPrimitive *str) {
+  if (str->isASCII()) {
+    auto it = (const uint8_t *)str->castToASCIIPointer();
+    res.append(it, it + str->getStringLength());
+  } else {
+    auto it = str->castToUTF16Pointer();
+    res.append(it, it + str->getStringLength());
+  }
+}
+
+template <typename T>
+PseudoHandle<StringPrimitive> BufferedStringPrimitive<T>::create(
+    Runtime *runtime,
+    Handle<StringPrimitive> leftHnd,
+    Handle<StringPrimitive> rightHnd) {
+  typename ExternalStringPrimitive<T>::CopyableStdString contents{};
+  uint32_t len;
+
+  {
+    NoAllocScope noAlloc{runtime};
+    auto *left = leftHnd.get();
+    auto *right = rightHnd.get();
+
+    assertValidLength(left, right);
+    len = left->getStringLength() + right->getStringLength();
+
+    contents.reserve(len);
+    appendToCopyableString(contents, left);
+    appendToCopyableString(contents, right);
+  }
+
+  auto storageHnd = runtime->makeHandle<ExternalStringPrimitive<T>>(
+      runtime->ignoreAllocationFailure(
+          ExternalStringPrimitive<T>::create(runtime, std::move(contents))));
+
+  return create(runtime, len, storageHnd);
+}
+
+template <typename T>
+PseudoHandle<StringPrimitive> BufferedStringPrimitive<T>::append(
+    Handle<BufferedStringPrimitive<T>> selfHnd,
+    Runtime *runtime,
+    Handle<StringPrimitive> rightHnd) {
+  NoAllocScope noAlloc{runtime};
+  auto *self = selfHnd.get();
+  auto *right = rightHnd.get();
+  ExternalStringPrimitive<T> *storage = self->getConcatBuffer();
+
+  assertValidLength(self, right);
+  assert(
+      (std::is_same<T, char16_t>::value || right->isASCII()) &&
+      "cannot append UTF16 to ASCII");
+
+  // Can't append if this is not the end of the string.
+  if (self->getStringLength() != storage->contents_.size()) {
+    noAlloc.release();
+    return BufferedStringPrimitive<T>::create(runtime, selfHnd, rightHnd);
+  }
+
+  auto oldExternalMem = storage->calcExternalMemorySize();
+  appendToCopyableString(storage->contents_, right);
+  runtime->getHeap().creditExternalMemory(
+      storage, storage->calcExternalMemorySize() - oldExternalMem);
+
+  noAlloc.release();
+  return BufferedStringPrimitive<T>::create(
+      runtime, storage->contents_.size(), runtime->makeHandle(storage));
+}
+
+PseudoHandle<StringPrimitive> internalConcatStringPrimitives(
+    Runtime *runtime,
+    Handle<StringPrimitive> leftHnd,
+    Handle<StringPrimitive> rightHnd) {
+  auto *left = leftHnd.get();
+  auto *right = rightHnd.get();
+
+  assertValidLength(left, right);
+
+  if (left->isASCII() && right->isASCII()) {
+    if (auto *bufLeft = dyn_vmcast<BufferedASCIIStringPrimitive>(left)) {
+      if (bufLeft->getStringLength() ==
+          bufLeft->getConcatBuffer()->contents_.size())
+        return BufferedASCIIStringPrimitive::append(
+            Handle<BufferedASCIIStringPrimitive>::vmcast(leftHnd),
+            runtime,
+            rightHnd);
+    }
+    return BufferedASCIIStringPrimitive::create(runtime, leftHnd, rightHnd);
+  } else {
+    if (auto *bufLeft = dyn_vmcast<BufferedUTF16StringPrimitive>(left)) {
+      if (bufLeft->getStringLength() ==
+          bufLeft->getConcatBuffer()->contents_.size()) {
+        return BufferedUTF16StringPrimitive::append(
+            Handle<BufferedUTF16StringPrimitive>::vmcast(leftHnd),
+            runtime,
+            rightHnd);
+      }
+    }
+    return BufferedUTF16StringPrimitive::create(runtime, leftHnd, rightHnd);
+  }
+}
+
+#ifdef HERMESVM_SERIALIZE
+template <typename T>
+void serializeConcatStringImpl(Serializer &s, const GCCell *cell) {}
+
+template <typename T>
+void deserializeConcatStringImpl(Deserializer &d) {}
+
+void BufferedASCIIStringPrimitiveSerialize(Serializer &s, const GCCell *cell) {
+  serializeConcatStringImpl<char>(s, cell);
+}
+
+void BufferedUTF16StringPrimitiveSerialize(Serializer &s, const GCCell *cell) {
+  serializeConcatStringImpl<char16_t>(s, cell);
+}
+
+void BufferedASCIIStringPrimitiveDeserialize(Deserializer &d, CellKind kind) {
+  assert(
+      kind == CellKind::BufferedASCIIStringPrimitiveKind &&
+      "Expected BufferedASCIIStringPrimitive");
+  deserializeConcatStringImpl<char>(d);
+}
+
+void BufferedUTF16StringPrimitiveDeserialize(Deserializer &d, CellKind kind) {
+  assert(
+      kind == CellKind::BufferedUTF16StringPrimitiveKind &&
+      "Expected BufferedUTF16StringPrimitive");
+  deserializeConcatStringImpl<char16_t>(d);
+}
+#endif
+
+template <typename T>
+void BufferedStringPrimitive<T>::_snapshotAddEdgesImpl(
+    GCCell *cell,
+    GC *gc,
+    HeapSnapshot &snap) {}
+
+template <typename T>
+void BufferedStringPrimitive<T>::_snapshotAddNodesImpl(
+    GCCell *cell,
+    GC *gc,
+    HeapSnapshot &snap) {}
+
+template class BufferedStringPrimitive<char16_t>;
+template class BufferedStringPrimitive<char>;
 } // namespace vm
 } // namespace hermes

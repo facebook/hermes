@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #define DEBUG_TYPE "gc"
 #include "hermes/VM/OldGenNC.h"
 
@@ -17,6 +18,7 @@
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/GCSegmentRange-inline.h"
 #include "hermes/VM/GCSegmentRange.h"
+#include "hermes/VM/PointerBase.h"
 #include "hermes/VM/YoungGenNC-inline.h"
 
 #include "llvm/Support/Debug.h"
@@ -88,6 +90,11 @@ OldGen::OldGen(GenGC *gc, Size sz, bool releaseUnused)
     gc_->oom(result.getError());
   }
   exchangeActiveSegment({std::move(result.get()), this});
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  // The initial active segment gets the first OG index.
+  gc->pointerBase_->setSegment(
+      PointerBase::kFirstOGSegmentIndex, activeSegment().lowLim());
+#endif
   // Record the initial level, as if we had done a GC before starting.
   didFinishGC();
   updateCardTableBoundary();
@@ -318,6 +325,7 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
                    ->isCardForAddressDirty(locPtr));
       }
     }
+#ifdef HERMESVM_COMPRESSED_POINTERS
     void accept(BasedPointer &ptr) override {
       // Don't use the default from SlotAcceptorDefault since the address of the
       // reference is used.
@@ -330,6 +338,7 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
                    ->isCardForAddressDirty(locPtr));
       }
     }
+#endif
     void accept(HermesValue &hv) override {
       if (!hv.isPointer()) {
         return;
@@ -712,6 +721,11 @@ bool OldGen::materializeNextSegment() {
     exchangeActiveSegment({std::move(result.get()), this}, filledSegSlot);
     activeSegment().growToLimit();
   }
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  gc_->pointerBase_->setSegment(
+      filledSegments_.size() + PointerBase::kFirstOGSegmentIndex,
+      activeSegment().lowLim());
+#endif
 
   // The active segment has changed, so we need to update the next card table
   // boundary to align with the start of its allocation region.
@@ -729,6 +743,9 @@ bool OldGen::materializeNextSegment() {
   // external memory as if it fills in such fragmentation losses.  So update
   // the effective end of the generation.
   updateEffectiveEndForExternalMemory();
+
+  /// Update the old-gen segment extents recorded in the crash manager.
+  updateCrashManagerHeapExtents(gc_->name_, gc_->crashMgr_.get());
 
   return true;
 }
@@ -894,8 +911,124 @@ void OldGen::unprotectActiveSegCardTableBoundaries() {
 }
 #endif
 
+#ifdef HERMES_EXTRA_DEBUG
+void OldGen::summarizeOldGenVTables() {
+  forUsedSegments(
+      [](AlignedHeapSegment &segment) { segment.summarizeVTables(); });
+}
+
+void OldGen::checkSummarizedOldGenVTables(unsigned fullGCNum) {
+  forUsedSegments([this, fullGCNum](const AlignedHeapSegment &segment) {
+    if (!segment.checkSummarizedVTables()) {
+      numVTableSummaryErrors_++;
+      char detailBuffer[100];
+      snprintf(
+          detailBuffer,
+          sizeof(detailBuffer),
+          "VTable summary changed since last GC for "
+          "[%p, %p).  (Full GC %d; last of %d errors)",
+          segment.lowLim(),
+          segment.hiLim(),
+          fullGCNum,
+          numVTableSummaryErrors_);
+      hermesLog("HermesGC", "Error: %s.", detailBuffer);
+      // Record the OOM custom data with the crash manager.
+      if (gc_->crashMgr_) {
+        gc_->crashMgr_->setCustomData(
+            "HermesVTableSummaryErrors", detailBuffer);
+      }
+    }
+  });
+}
+#endif
+
 void OldGen::didFinishGC() {
   levelAtEndOfLastGC_ = levelDirect();
+}
+
+void OldGen::updateCrashManagerHeapExtents(
+    const std::string &runtimeName,
+    CrashManager *crashMgr) {
+  if (!crashMgr) {
+    return;
+  }
+  /// The number of segments we describe with a single key.
+  constexpr unsigned kSegmentsPerKey = 10;
+  constexpr unsigned N = 1000;
+  char keyBuffer[N];
+  char valueBuffer[N];
+  /// +1 for the active segment.
+  unsigned numCurSegments = filledSegments_.size() + 1;
+
+  const char *kOgKeyFormat = "%s:HeapSegments_OG:%d";
+
+  // First erase any keys that are no longer necessary, if the old gen shrank.
+  // (This will only happen after a full GC, and the segments that
+  // remain will retain their recorded extents.)
+  if (numCurSegments < crashMgrRecordedSegments_) {
+    for (unsigned toDel = llvm::alignTo(numCurSegments, kSegmentsPerKey);
+         toDel < crashMgrRecordedSegments_;
+         toDel += kSegmentsPerKey) {
+      (void)snprintf(keyBuffer, N, kOgKeyFormat, runtimeName.c_str(), toDel);
+      crashMgr->removeCustomData(keyBuffer);
+#ifdef HERMESVM_PLATFORM_LOGGING
+      hermesLog("HermesGC", "Removed OG heap extents for %d", toDel);
+#endif
+    }
+  }
+
+  // Now redo any keys whose segment sequences might have changed.
+  // (They might have gotten smaller, because of GC, or larger, because
+  // of segment allocation.)
+  const unsigned firstKeyWithPossiblyChangedSegments = llvm::alignDown(
+      std::min(numCurSegments, crashMgrRecordedSegments_), kSegmentsPerKey);
+  for (unsigned toRedo = firstKeyWithPossiblyChangedSegments;
+       toRedo < numCurSegments;
+       toRedo += kSegmentsPerKey) {
+    (void)snprintf(keyBuffer, N, kOgKeyFormat, runtimeName.c_str(), toRedo);
+    char *buf = valueBuffer;
+    buf[0] = '\0';
+    int sz = N;
+    bool first = true;
+    {
+      int n = snprintf(buf, sz, "[");
+      buf += n;
+      sz -= n;
+    }
+    for (unsigned segIndex = toRedo;
+         segIndex < std::min(numCurSegments, toRedo + kSegmentsPerKey);
+         segIndex++) {
+      if (first) {
+        first = false;
+      } else {
+        int n = snprintf(buf, sz, ",");
+        buf += n;
+        sz -= n;
+      }
+      if (segIndex < filledSegments_.size()) {
+        filledSegments_[segIndex].addExtentToString(&buf, &sz);
+      } else {
+        assert(
+            segIndex == filledSegments_.size() &&
+            "segIndex should only go one past filledSegments_, to activeSegment()");
+        activeSegment().addExtentToString(&buf, &sz);
+      }
+    }
+    {
+      int n = snprintf(buf, sz, "]");
+      buf += n;
+      sz -= n;
+    }
+    crashMgr->setCustomData(keyBuffer, valueBuffer);
+#ifdef HERMESVM_PLATFORM_LOGGING
+    hermesLog(
+        "HermesGC",
+        "Added OG heap extent: %s = %s",
+        &keyBuffer[0],
+        &valueBuffer[0]);
+#endif
+  }
+  crashMgrRecordedSegments_ = numCurSegments;
 }
 
 } // namespace vm

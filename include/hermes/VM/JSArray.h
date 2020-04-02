@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_JSARRAY_H
 #define HERMES_VM_JSARRAY_H
 
@@ -23,7 +24,8 @@ class ArrayImpl : public JSObject {
 #ifdef HERMESVM_SERIALIZE
   ArrayImpl(Deserializer &d, const VTable *vt);
 
-  friend void serializeArrayImpl(Serializer &s, const GCCell *cell);
+  friend void
+  serializeArrayImpl(Serializer &s, const GCCell *cell, unsigned overlapSlots);
 #endif
 
   static bool classof(const GCCell *cell) {
@@ -117,6 +119,11 @@ class ArrayImpl : public JSObject {
   Handle<> handleAt(Runtime *runtime, size_type index) const {
     return runtime->makeHandle(at(runtime, index));
   }
+
+  const GCPointer<StorageType> &getIndexedStorage() const {
+    return indexedStorage_;
+  }
+
   /// @}
 
  protected:
@@ -125,7 +132,7 @@ class ArrayImpl : public JSObject {
   ///   nullptr, which implies capacity and size of 0. We rely on this when
   ///   constructing array objects using the JavaScript Array() constructor,
   ///   since we don't know the length in advance.
-  /// \param needsBarrier indicates whether write barriers are needed
+  /// \tparam NeedsBarriers indicates whether write barriers are needed
   ///   for initializating writes in the constructor.  (In debug builds,
   ///   a claim that they are not necessary is checked dynamically,
   ///   which should find any incorrect specifications.)
@@ -241,8 +248,8 @@ class Arguments final : public ArrayImpl {
   static ObjectVTable vt;
 
   // We need one more slot for the '.length' property.
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      Super::NEEDED_PROPERTY_SLOTS + 1;
+  static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
+      Super::NAMED_PROPERTY_SLOTS + 1;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::ArgumentsKind;
@@ -250,7 +257,7 @@ class Arguments final : public ArrayImpl {
 
   /// Create an instance of Arguments, with size and capacity equal to \p length
   /// and a property "length" initialized to that value.
-  static CallResult<HermesValue> create(
+  static CallResult<Handle<Arguments>> create(
       Runtime *runtime,
       size_type length,
       Handle<Callable> curFunction,
@@ -284,8 +291,8 @@ class JSArray final : public ArrayImpl {
   static ObjectVTable vt;
 
   // We need one more slot for the '.length' property.
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      Super::NEEDED_PROPERTY_SLOTS + 1;
+  static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
+      Super::NAMED_PROPERTY_SLOTS + 1;
 
   /// Construct an instance of the hidden class describing the layout of JSArray
   /// instances.
@@ -304,14 +311,14 @@ class JSArray final : public ArrayImpl {
   /// Create an instance of Array, with [[Prototype]] initialized with
   /// \p prototypeHandle, with capacity for \p capacity elements and actual size
   /// \p length.
-  static CallResult<HermesValue> create(
+  static CallResult<PseudoHandle<JSArray>> create(
       Runtime *runtime,
       Handle<JSObject> prototypeHandle,
       Handle<HiddenClass> classHandle,
       size_type capacity = 0,
       size_type length = 0);
 
-  static CallResult<HermesValue> create(
+  static CallResult<PseudoHandle<JSArray>> create(
       Runtime *runtime,
       Handle<JSObject> prototypeHandle,
       size_type capacity,
@@ -325,7 +332,7 @@ class JSArray final : public ArrayImpl {
         capacity,
         length);
   }
-  static CallResult<HermesValue> create(
+  static CallResult<PseudoHandle<JSArray>> create(
       Runtime *runtime,
       Handle<JSObject> prototypeHandle) {
     return create(runtime, prototypeHandle, 0, 0);
@@ -357,7 +364,14 @@ class JSArray final : public ArrayImpl {
   // Object needs to be able to call setLength.
   friend class JSObject;
 
-  enum : SlotIndex { LengthPropIndex = 0, JSArrayPropertyCount = 1 };
+  static constexpr SlotIndex jsArrayPropertyCount() {
+    return numOverlapSlots<JSArray>() + ANONYMOUS_PROPERTY_SLOTS +
+        NAMED_PROPERTY_SLOTS;
+  }
+
+  static constexpr inline SlotIndex lengthPropIndex() {
+    return jsArrayPropertyCount() - 1;
+  }
 
   /// A copy of the ".length" property. We compare every putComputed()
   /// index against ".length", and extracting it from property storage every
@@ -383,7 +397,7 @@ class JSArray final : public ArrayImpl {
   static void putLength(JSArray *self, Runtime *runtime, uint32_t newLength) {
     self->shadowLength_ = newLength;
 
-    namedSlotRef(self, runtime, LengthPropIndex)
+    namedSlotRef(self, runtime, lengthPropIndex())
         .setNonPtr(HermesValue::encodeNumberValue(newLength));
   }
 
@@ -421,7 +435,7 @@ class JSArrayIterator : public JSObject {
     return cell->getKind() == CellKind::ArrayIteratorKind;
   }
 
-  static CallResult<HermesValue>
+  static PseudoHandle<JSArrayIterator>
   create(Runtime *runtime, Handle<JSObject> array, IterationKind iterationKind);
 
   /// Iterate to the next element and return.

@@ -1,12 +1,14 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_GCBASE_H
 #define HERMES_VM_GCBASE_H
 
+#include "hermes/Inst/Inst.h"
 #include "hermes/Platform/Logging.h"
 #include "hermes/Public/CrashManager.h"
 #include "hermes/Public/GCConfig.h"
@@ -26,11 +28,13 @@
 #include "hermes/VM/SerializeHeader.h"
 #include "hermes/VM/SlotAcceptor.h"
 #include "hermes/VM/SlotVisitor.h"
+#include "hermes/VM/StackTracesTree-NoRuntime.h"
 #include "hermes/VM/StorageProvider.h"
 #include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/VTable.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #include <cassert>
@@ -38,12 +42,21 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <list>
 #include <random>
 #include <system_error>
 #include <vector>
 
 namespace hermes {
 namespace vm {
+
+/// Forward declarations;
+namespace detail {
+struct WeakRefKey;
+}
+template <CellKind C>
+class JSWeakMapImpl;
+using JSWeakMap = JSWeakMapImpl<CellKind::WeakMapKind>;
 
 class GCCell;
 #ifdef HERMESVM_SERIALIZE
@@ -119,8 +132,8 @@ class Deserializer;
 /// Mark a GCPointer<T>, which must be within the heap.
 ///   void mark(GCPointer<T> &ptr, Name name);
 ///
-/// \return true if a GC cycle is currently in progress.
-/// \post If false, all objects in the heap have a valid VTable.
+/// Return true if a GC cycle is currently in progress.
+/// If false, all objects in the heap have a valid VTable.
 ///   bool inGC() const;
 ///
 /// Various forms of write barriers: these can have empty implementations
@@ -137,11 +150,11 @@ class Deserializer;
 ///   We copied HermesValues into the given region.  Note that \p numHVs is
 ///   the number of HermesValues in the the range, not the char length.
 ///   Do any necessary barriers.
-///      void writeBarrierRange(HermesValue* start, uint32_t numHVs);
+///      void writeBarrierRange(GCHermesValue* start, uint32_t numHVs);
 ///
 ///   We filled numHVs slots starting at start with the given value.
 ///   Do any necessary barriers.
-///      void writeBarrierRangeFill(HermesValue* start, uint32_t numHVs,
+///      void writeBarrierRangeFill(GCHermesValue* start, uint32_t numHVs,
 ///                                 HermesValue value);
 ///
 ///   In debug builds: is a write barrier necessary for a write of the given
@@ -225,6 +238,24 @@ class GCBase {
     /// Returns the current stack as a string. This function will not cause
     /// any allocs in the GC.
     virtual std::string getCallStackNoAlloc() = 0;
+
+    /// This is called with CollectionStart at the start of each GC, and with
+    /// CollectionEnd at the end.
+    /// \param extraInfo contains more detailed extra info for specific GC.
+    virtual void onGCEvent(GCEventKind kind, const std::string &extraInfo) = 0;
+
+    /// Return the current VM instruction pointer which can be used to derive
+    /// the current VM stack-trace. It's "slow" because it's virtual.
+    virtual const inst::Inst *getCurrentIPSlow() const = 0;
+
+    /// Return a \c StackTracesTreeNode representing the current VM stack-trace
+    /// at this point.
+    virtual StackTracesTreeNode *getCurrentStackTracesTreeNode(
+        const inst::Inst *ip) = 0;
+
+    /// Get a StackTraceTree which can be used to recover stack-traces from \c
+    /// StackTraceTreeNode() as returned by \c getCurrentStackTracesTreeNode() .
+    virtual StackTracesTree *getStackTracesTree() = 0;
   };
 
   /// Struct that keeps a reference to a GC.  Useful, for example, as a base
@@ -245,13 +276,19 @@ class GCBase {
     StatsAccumulator<double> gcCPUTime;
 
     gcheapsize_t finalHeapSize{0};
+
+    /// Bytes allocated just before a collection.
+    StatsAccumulator<gcheapsize_t, uint64_t> usedBefore;
+
+    /// Bytes alive after a collection.
+    StatsAccumulator<gcheapsize_t, uint64_t> usedAfter;
   };
 
   struct HeapInfo {
     /// Number of garbage collections (of any kind) since creation.
     unsigned numCollections{0};
     /// Total (cumulative) bytes allocated within the JS heap since creation.
-    unsigned totalAllocatedBytes{0};
+    uint64_t totalAllocatedBytes{0};
     /// Number of currently allocated bytes within the JS heap. Some may be
     /// in unreachable objects (unless a full collection just occurred).
     gcheapsize_t allocatedBytes{0};
@@ -263,6 +300,9 @@ class GCBase {
     unsigned mallocSizeEstimate{0};
     /// The total amount of Virtual Address space (VA) that the GC is using.
     uint64_t va{0};
+    /// Cumulative number of mark stack overflows in full collections
+    /// (zero if non-generational GC).
+    unsigned numMarkStackOverflows{0};
     /// Stats for full collections (zeroes if non-generational GC).
     CumulativeHeapStats fullStats;
     /// Stats for collections in the young generation (zeroes if
@@ -294,6 +334,48 @@ class GCBase {
   };
 #endif
 
+  /// When enabled, the AllocationLocationTracker attaches a stack-trace to
+  /// every allocation. When disabled old allocations continue to be tracked but
+  /// no new allocations get a stack-trace.
+  struct AllocationLocationTracker final {
+    explicit inline AllocationLocationTracker(GCBase *gc);
+
+    /// Returns true if tracking is enabled for new allocations.
+    inline bool isEnabled() const;
+    /// Must be called by GC implementations whenever a new allocation is made.
+    inline void newAlloc(const void *ptr);
+    /// Must be called by GC implementations whenever an allocation is moved.
+    inline void moveAlloc(const void *oldPtr, const void *newPtr);
+    /// Must be called by GC implementations whenever an allocation is freed.
+    inline void freeAlloc(const void *ptr);
+    /// Returns data needed to reconstruct the JS stack used to create the
+    /// specified allocation.
+    inline StackTracesTreeNode *getStackTracesTreeNodeForAlloc(
+        const void *ptr) const;
+
+    /// Enable location tracking.
+    inline void enable();
+
+    /// Disable location tracking - turns \c newAlloc() into a no-op. Existing
+    /// allocations continue to be tracked.
+    inline void disable();
+
+#ifdef HERMESVM_SERIALIZE
+    void serialize(Serializer &s) const;
+    void deserialize(Deserializer &d);
+#endif
+
+   private:
+    /// Associates allocations at their current location with their stack trace
+    /// data.
+    llvm::DenseMap<const void *, StackTracesTreeNode *> stackMap_;
+    /// We need access to the GCBase to collect the current stack when nodes are
+    /// allocated.
+    const GCBase *gc_;
+    /// Indicates if tracking of new allocations is enabled.
+    bool enabled_{false};
+  };
+
   class IDTracker final {
    public:
     /// These are IDs that are reserved for special objects.
@@ -304,10 +386,42 @@ class GCBase {
       Root,
 #define ROOT_SECTION(name) name,
 #include "hermes/VM/RootSections.def"
+      Undefined,
+      Null,
+      True,
+      False,
       FirstNonReservedID,
     };
 
-    explicit IDTracker() = default;
+    /// A comparator for doubles that allows NaN.
+    struct DoubleComparator {
+      static double getEmptyKey() {
+        // Use a non-canonical NaN value as an empty value, which should never
+        // occur naturally.
+        // NOTE: HermesValue uses NaN tagging internally so we can use that to
+        // get the encoding.
+        return ::hermes::safeTypeCast<uint64_t, double>(
+            HermesValue::encodeUndefinedValue().getRaw());
+      }
+      static double getTombstoneKey() {
+        // Use a non-canonical NaN value as the tombstone, which should never
+        // occur naturally.
+        // NOTE: HermesValue uses NaN tagging internally so we can use that to
+        // get the encoding.
+        return ::hermes::safeTypeCast<uint64_t, double>(
+            HermesValue::encodeNullValue().getRaw());
+      }
+      static unsigned getHashValue(double val) {
+        return std::hash<uint64_t>{}(
+            ::hermes::safeTypeCast<double, uint64_t>(val));
+      }
+      static bool isEqual(double LHS, double RHS) {
+        return ::hermes::safeTypeCast<double, uint64_t>(LHS) ==
+            ::hermes::safeTypeCast<double, uint64_t>(RHS);
+      }
+    };
+
+    explicit IDTracker();
 
     /// Return true if IDs are being tracked.
     inline bool isTrackingIDs() const;
@@ -315,9 +429,14 @@ class GCBase {
     /// Get the unique object id of the given object.
     /// If one does not yet exist, start tracking it.
     inline HeapSnapshot::NodeID getObjectID(const void *cell);
+
     /// Get the unique object id of the given native memory (non-JS-heap).
     /// If one does not yet exist, start tracking it.
     inline HeapSnapshot::NodeID getNativeID(const void *mem);
+
+    /// Assign a unique ID to a literal number value that occurs in the heap.
+    /// Can be used to make fake nodes that will display their numeric value.
+    HeapSnapshot::NodeID getNumberID(double num);
 
     /// Tell the tracker that an object has moved locations.
     /// This must be called in a safe order, if A moves to B, and C moves to A,
@@ -329,8 +448,16 @@ class GCBase {
     inline void untrackObject(const void *cell);
 
     /// Remove the native memory from being tracked. This should be done to keep
-    /// the tracking working set small.
+    /// the tracking working set small. It is also required to be done when
+    /// malloc'ed memory is freed, since addresses can be re-used by future
+    /// allocations.
     inline void untrackNative(const void *mem);
+
+    /// Execute a callback on each pair of pointer and ID.
+    /// \param callback A function whose signature should be
+    ///   void(const void *, HeapSnapshot::NodeID).
+    template <typename F>
+    inline void forEachID(F callback);
 
 #ifdef HERMESVM_SERIALIZE
     /// Serialize this IDTracker to the output stream.
@@ -345,19 +472,20 @@ class GCBase {
     inline HeapSnapshot::NodeID nextObjectID();
     /// Get the next unique native ID for a chunk of native memory.
     inline HeapSnapshot::NodeID nextNativeID();
+    /// Get the next unique number ID for a number.
+    inline HeapSnapshot::NodeID nextNumberID();
 
-    /// JS heap nodes are represented by even-numbered IDs, while native nodes
-    /// are represented with odd-numbered IDs. This is not a guarantee of the
-    /// system, but an implementation detail.
+    /// JS heap nodes are represented by odd-numbered IDs, while native nodes
+    /// are represented with even-numbered IDs. This requirement is enforced by
+    /// the Chrome snapshot viewer.
     static constexpr HeapSnapshot::NodeID kIDStep = 2;
 
     /// The next available ID to assign to an object. Object IDs are not
     /// recycled so that snapshots don't confuse two objects with each other.
-    /// NOTE: Need to ensure that this starts on an even number, so check if
-    /// the first non-reserved ID is even, if not add one.
+    /// NOTE: Need to ensure that this starts on an odd number, so check if
+    /// the first non-reserved ID is odd, if not add one.
     uint64_t nextID_{
-        static_cast<uint64_t>(ReservedObjectID::FirstNonReservedID) +
-        static_cast<uint64_t>(ReservedObjectID::FirstNonReservedID) % 2};
+        static_cast<uint64_t>(ReservedObjectID::FirstNonReservedID) | 1};
     /// The next available native ID to assign to a chunk of native memory.
     HeapSnapshot::NodeID nextNativeID_{nextID_ + 1};
 
@@ -366,15 +494,25 @@ class GCBase {
     /// on.
     /// NOTE: The same map is used for both JS heap and native heap IDs.
     llvm::DenseMap<const void *, HeapSnapshot::NodeID> objectIDMap_;
+
+    /// Map of numeric values to IDs. Used to give numbers in the heap a unique
+    /// node.
+    llvm::DenseMap<double, HeapSnapshot::NodeID, DoubleComparator> numberIDMap_;
   };
+
+#ifndef NDEBUG
+  /// Whether the last allocation was fixed size.  For long-lived
+  /// allocations, we do not declare whether they are fixed size;
+  /// Unknown is used in that case.
+  enum class FixedSizeValue { Yes, No, Unknown };
+#endif
 
   GCBase(
       MetadataTable metaTable,
       GCCallbacks *gcCallbacks,
       PointerBase *pointerBase,
       const GCConfig &gcConfig,
-      std::shared_ptr<CrashManager> crashMgr,
-      StorageProvider *provider);
+      std::shared_ptr<CrashManager> crashMgr);
 
   virtual ~GCBase() {}
 
@@ -394,6 +532,17 @@ class GCBase {
     return randomizeAllocSpace_;
   }
 
+#ifndef NDEBUG
+  /// Returns whether the most-recently allocated object was specified as
+  /// fixed-size in the the allocation.  (FixedSizeValue is a trinary type,
+  /// defined above: Yes, No, or Unknown.)
+  virtual FixedSizeValue lastAllocationWasFixedSize() const {
+    // The default implementation returns Unknown.  This makes sense for GC
+    // implementations that don't care about FixedSize.
+    return FixedSizeValue::Unknown;
+  }
+#endif
+
   /// Name to indentify this heap in logs.
   const std::string &getName() const {
     return name_;
@@ -405,6 +554,10 @@ class GCBase {
   /// Runtime. In those cases use this function.
   PointerBase *getPointerBase() const {
     return pointerBase_;
+  }
+
+  GCCallbacks *getCallbacks() const {
+    return gcCallbacks_;
   }
 
   /// Forwards to the GC callback \p convertSymbolToUTF8, see documentation
@@ -444,6 +597,18 @@ class GCBase {
     return cumStats_.gcCPUTime.sum();
   }
 
+  GCCallbacks *getGCCallbacks() const {
+    return gcCallbacks_;
+  }
+
+  /// Cumulative stats over time so far.
+  virtual size_t getPeakAllocatedBytes() const {
+    return cumStats_.usedBefore.max();
+  }
+  virtual size_t getPeakLiveAfterGC() const {
+    return cumStats_.usedAfter.max();
+  }
+
   /// Populate \p info with information about the heap.
   virtual void getHeapInfo(HeapInfo &info);
   /// Same as \c getHeapInfo, and it adds the amount of malloc memory in use.
@@ -466,13 +631,12 @@ class GCBase {
   LLVM_ATTRIBUTE_NORETURN void oom(std::error_code reason);
 
   /// Creates a snapshot of the heap and writes it to the given \p fileName.
-  /// \p compact whether to write a compact version or a pretty human-readable
-  ///   version.
-  /// \return true on success, false on failure.
-  bool createSnapshotToFile(const std::string &fileName, bool compact);
+  /// \return An error code on failure, else an empty error code.
+  std::error_code createSnapshotToFile(const std::string &fileName);
+
   /// Creates a snapshot of the heap, which includes information about what
   /// objects exist, their sizes, and what they point to.
-  virtual void createSnapshot(llvm::raw_ostream &os, bool compact) = 0;
+  virtual void createSnapshot(llvm::raw_ostream &os) = 0;
 
 #ifdef HERMESVM_SERIALIZE
   /// Serialize WeakRefs.
@@ -503,9 +667,9 @@ class GCBase {
   /// Default implementations for write barriers: do nothing.
   inline void writeBarrier(void *loc, HermesValue value) {}
   inline void writeBarrier(void *loc, void *value) {}
-  inline void writeBarrierRange(HermesValue *start, uint32_t numHVs) {}
+  inline void writeBarrierRange(GCHermesValue *start, uint32_t numHVs) {}
   inline void writeBarrierRangeFill(
-      HermesValue *start,
+      GCHermesValue *start,
       uint32_t numHVs,
       HermesValue value) {}
 #ifndef NDEBUG
@@ -557,6 +721,113 @@ class GCBase {
       GCCell *cell,
       GC *gc);
 
+  /// Utilities for WeakMap marking.
+
+  /// \return a list of pointers to all the WeakRefKeys in \p weakMap.
+  /// The \p gc argument is passed to methods that verify they're only
+  /// called during GC.
+  static std::list<detail::WeakRefKey *> buildKeyList(
+      GC *gc,
+      JSWeakMap *weakMap);
+
+  /// For all non-null keys in \p weakMap that are unreachable, clear
+  /// the key (clear the pointer in the WeakRefSlot) and value (set it
+  /// to undefined).
+  template <typename KeyReachableFunc>
+  static void clearEntriesWithUnreachableKeys(
+      GC *gc,
+      JSWeakMap *weakMap,
+      KeyReachableFunc keyReachable);
+
+  /// For all reachable keys in \p weakMap, mark from the
+  /// corresponding value using the given \p acceptor, reaching a
+  /// transitive closure.  The acceptor is required to have a property
+  /// we don't normally require: it must be idempotent.  I.e., it must
+  /// function properly when applied multiple times to the same
+  /// pointer slot during a collection.  "Mark-in-place" acceptors
+  /// will generally have this property.  Uses \p objIsMarked to
+  /// determine whether an object is marked, and, for entries whose
+  /// keys are marked, invokes \p checkValIsMarked on the
+  /// corresponding value.  These have the following specs:
+  ///
+  ///  * objIsMarked: (GCCell*) ==> bool
+  ///    Returns whether a GCCell is marked.
+  ///
+  ///  * markFromVal: GCCell *cell, GCHermesValue &cellRef) ==> bool
+  ///    If the argument is unmarked, mark it, schedule for scanning.
+  ///    Returns whether the object was newly marked.
+  ///
+  /// If the \p unreachableKeys map has an entry for \p weakMap, assumes the
+  /// list of WeakRefKeys contains all possibly-unreachable keys; any
+  /// other keys are assumed to have already been found reachable.
+  /// Ensures that \p unreachableKeys has an accurate value for \p
+  /// weakMap before return.  \return whether any previously-unmarked
+  /// values were marked.
+  template <
+      typename Acceptor,
+      typename ObjIsMarkedFunc,
+      typename MarkFromValFunc>
+  static bool markFromReachableWeakMapKeys(
+      GC *gc,
+      JSWeakMap *weakMap,
+      Acceptor &acceptor,
+      llvm::DenseMap<JSWeakMap *, std::list<detail::WeakRefKey *>>
+          *unreachableKeys,
+      ObjIsMarkedFunc objIsMarked,
+      MarkFromValFunc markFromVal);
+
+  /// Assumes that all known reachable WeakMaps have been collected in
+  /// \p reachableWeakMaps.  For all these WeakMaps, find all
+  /// reachable keys and mark from the corresponding value using the given \p
+  /// acceptor, reaching a transitive closure.
+  /// Do this until no newly reachable objects are found in a
+  /// traversal of the WeakMaps.  We assume that WeakMaps found newly
+  /// reachable are added to \p reachableWeakMaps, and do not assume
+  /// we've reached transitive closure until all maps are scanned.
+  /// Uses \p objIsMarked to determine whether an object is marked,
+  /// and, for entries whose keys are marked, invokes \p
+  /// checkValIsMarked on the corresponding value.  Used \p
+  /// drainMarkStack to ensure that the transitive closure of what's
+  /// currently on the mark stack is marked.  Requires \p acceptor
+  /// to be idempotent: it must be legal to apply the acceptor
+  /// multiple times to the same slot.  The function arguments have
+  /// the following specs:
+  ///
+  ///  * objIsMarked: (GCCell *) ==> bool
+  ///    Returns whether a GCCell is marked.
+  ///
+  ///  * markFromVal: (GCCell *cell, HermesValue &cellRef) ==> bool
+  ///    Requires that \p cell is non-null, and the value of \p
+  ///    cellRef.  If the argument is unmarked, ensure that its
+  ///    transitive closure is marked.  Returns whether the object was
+  ///    newly marked.
+  ///
+  ///  * drainMarkStack: (Acceptor &acceptor) ==> void
+  ///    Ensures that the mark stack used by the collector is empty;
+  ///    the transitive closure of the original contents is marked.
+  ///
+  ///  * checkMarkStackOverflow: () ==> bool
+  ///    Returns whether mark stack overflow has occurred.
+  ///
+  /// Some collectors compute the allocated bytes during GC.  If this
+  /// is done in \p drainMarkStack, that will cover all objects except
+  /// WeakWaps, which are never pushed on the mark stack.  Thus:
+  /// \return the total size of reachable WeakMaps.
+  template <
+      typename Acceptor,
+      typename ObjIsMarkedFunc,
+      typename MarkFromValFunc,
+      typename DrainMarkStackFunc,
+      typename CheckMarkStackOverflowFunc>
+  static gcheapsize_t completeWeakMapMarking(
+      GC *gc,
+      Acceptor &acceptor,
+      std::vector<JSWeakMap *> &reachableWeakMaps,
+      ObjIsMarkedFunc objIsMarked,
+      MarkFromValFunc markFromVal,
+      DrainMarkStackFunc drainMarkStack,
+      CheckMarkStackOverflowFunc checkMarkStackOverflow);
+
   /// @}
 
   bool inGC() const {
@@ -567,9 +838,16 @@ class GCBase {
     return idTracker_;
   }
 
+  AllocationLocationTracker &getAllocationLocationTracker() {
+    return allocationLocationTracker_;
+  }
+
   inline HeapSnapshot::NodeID getObjectID(const void *cell);
   inline HeapSnapshot::NodeID getObjectID(const GCPointerBase &cell);
   inline HeapSnapshot::NodeID getNativeID(const void *mem);
+  /// \return The ID for the given value. If the value cannot be represented
+  ///   with an ID, returns None.
+  llvm::Optional<HeapSnapshot::NodeID> getSnapshotID(HermesValue val);
 
 #ifndef NDEBUG
   /// \return The next debug allocation ID for embedding directly into a GCCell.
@@ -612,9 +890,7 @@ class GCBase {
   /// function checks these parameters against the limits set at initialisation.
   /// If the conditions are met, the tripwire is triggered and tripwireCallback_
   /// is called.
-  void checkTripwire(
-      size_t dataSize,
-      std::chrono::time_point<std::chrono::steady_clock> now);
+  void checkTripwire(size_t dataSize);
 
   // Visibility here is public for unit_tests and protected otherwise
 
@@ -623,11 +899,20 @@ class GCBase {
   /// active.
   class GCCycle final {
    public:
-    GCCycle(GCBase *gc);
+    GCCycle(
+        GCBase *gc,
+        OptValue<GCCallbacks *> gcCallbacksOpt = llvm::None,
+        std::string extraInfo = "");
     ~GCCycle();
+
+    const std::string &extraInfo() {
+      return extraInfo_;
+    }
 
    private:
     GCBase *const gc_;
+    OptValue<GCCallbacks *> gcCallbacksOpt_;
+    std::string extraInfo_;
   };
 
   /// Returns the number of bytes allocated allocated since the last GC.
@@ -667,13 +952,19 @@ class GCBase {
       double wallTime,
       double cpuTime,
       gcheapsize_t finalHeapSize,
+      gcheapsize_t usedBefore,
+      gcheapsize_t usedAfter,
       CumulativeHeapStats *stats);
 
   /// Record statistics from a single GC, which took \p wallTime seconds wall
   /// time and \p cpuTime seconds CPU time to run the gc and left the heap size
   /// at the given \p finalHeapSize, in the overall cumulative stats struct.
-  void
-  recordGCStats(double wallTime, double cpuTime, gcheapsize_t finalHeapSize);
+  void recordGCStats(
+      double wallTime,
+      double cpuTime,
+      gcheapsize_t finalHeapSize,
+      gcheapsize_t usedBefore,
+      gcheapsize_t usedAfter);
 
   /// Do any additional GC-specific logging that is useful before dying with
   /// out-of-memory.
@@ -765,11 +1056,23 @@ class GCBase {
   /// A place to log crash data if a crash is about to occur.
   std::shared_ptr<CrashManager> crashMgr_;
 
+  /// Callback called once for each GC event that wants to be logged. Can be
+  /// null if no analytics are requested.
+  std::function<void(const GCAnalyticsEvent &)> analyticsCallback_;
+
   /// Whether to output GC statistics at the end of execution.
   bool recordGcStats_{false};
 
   /// Whether or not a GC cycle is currently occurring.
   bool inGC_;
+
+  /// The block of fields below records values of various metrics at
+  /// the start of execution, so that we can get the values at the end
+  /// and subtract.  The "runtimeWillExecute" method is called at
+  /// first bytecode execution, but also when executing the bodies of
+  /// other bundles.  We want to record these at the first such call.
+  /// This field tells whether these values have been recorded yet.
+  bool execStartTimeRecorded_{false};
 
   /// Time at which execution of the Hermes VM began.
   std::chrono::time_point<std::chrono::steady_clock> execStartTime_;
@@ -777,6 +1080,7 @@ class GCBase {
   /// Number of context switches before execution of the Hermes VM began.
   long startNumVoluntaryContextSwitches_{0};
   long startNumInvoluntaryContextSwitches_{0};
+
   // The cumulative GC stats.
   CumulativeHeapStats cumStats_;
 
@@ -787,29 +1091,31 @@ class GCBase {
   /// snapshots and the memory profiler.
   IDTracker idTracker_;
 
+  /// Attaches stack-traces to objects when enabled.
+  AllocationLocationTracker allocationLocationTracker_;
+
+#ifndef NDEBUG
+  /// The number of reasons why no allocation is allowed in this heap right
+  /// now.
+  uint32_t noAllocLevel_{0};
+
+  friend class NoAllocScope;
+#endif
+
  private:
 #ifdef HERMESVM_MEMORY_PROFILER
   /// Memory event tracker for the memory profiler
   std::shared_ptr<MemoryEventTracker> memEventTracker_;
 #endif
 
-  /// Callback called if it's not null when the Live Data Tripwire is triggered
+  /// Callback called if it's not null when the Live Data Tripwire is triggered.
   std::function<void(GCTripwireContext &)> tripwireCallback_;
 
-  /// Maximum size limit before the heap size tripwire will trigger
+  /// Maximum size limit before the heap size tripwire will trigger.
   gcheapsize_t tripwireLimit_;
 
-  /// Time in hours before the tripwire can trigger again after it is
-  /// triggered
-  std::chrono::hours tripwireCooldown_;
-
-  /// Time when the tripwire can be activated again
-  std::chrono::time_point<std::chrono::steady_clock> nextTripwireMinTime_{
-      std::chrono::steady_clock::now()};
-
-  /// Variable that saves whether the callback for the live data tripwire is
-  /// already running
-  bool liveDataTripwireCallbackRunning_{false};
+  /// True if the tripwire has already been called on this heap.
+  bool tripwireCalled_{false};
 
 #ifdef HERMESVM_SANITIZE_HANDLES
   /// Whether to keep moving the heap around to detect unsanitary GC handles.
@@ -1186,6 +1492,13 @@ inline void GCBase::IDTracker::untrackNative(const void *mem) {
   untrackObject(mem);
 }
 
+template <typename F>
+inline void GCBase::IDTracker::forEachID(F callback) {
+  for (auto &p : objectIDMap_) {
+    callback(p.first, p.second);
+  }
+}
+
 inline HeapSnapshot::NodeID GCBase::IDTracker::nextObjectID() {
   // This must be unique for most features that rely on it, check for overflow.
   if (LLVM_UNLIKELY(
@@ -1204,6 +1517,69 @@ inline HeapSnapshot::NodeID GCBase::IDTracker::nextNativeID() {
     hermes_fatal("Ran out of native IDs");
   }
   return nextNativeID_ += kIDStep;
+}
+
+inline HeapSnapshot::NodeID GCBase::IDTracker::nextNumberID() {
+  // Numbers will all be considered JS memory, not native memory.
+  return nextObjectID();
+}
+
+GCBase::AllocationLocationTracker::AllocationLocationTracker(GCBase *gc)
+    : gc_(gc) {}
+
+inline bool GCBase::AllocationLocationTracker::isEnabled() const {
+  return enabled_;
+}
+
+inline void GCBase::AllocationLocationTracker::newAlloc(const void *ptr) {
+  // Note we always get the current IP even if allocation tracking is not
+  // enabled as it allows us to assert this feature works across many tests.
+  // Note it's not very slow, it's slower than the non-virtual version
+  // in Runtime though.
+  const auto *ip = gc_->gcCallbacks_->getCurrentIPSlow();
+  if (enabled_) {
+    if (auto node = gc_->gcCallbacks_->getCurrentStackTracesTreeNode(ip)) {
+      stackMap_.try_emplace(ptr, node);
+    }
+  }
+}
+
+inline void GCBase::AllocationLocationTracker::moveAlloc(
+    const void *oldPtr,
+    const void *newPtr) {
+  if (oldPtr == newPtr) {
+    // This can happen in old generations when compacting to the same location.
+    return;
+  }
+  auto oldIt = stackMap_.find(oldPtr);
+  if (oldIt == stackMap_.end()) {
+    return;
+  }
+  const auto oldStackTracesTreeNode = oldIt->second;
+  assert(
+      stackMap_.count(newPtr) == 0 &&
+      "Moving to a location that is already tracked");
+  stackMap_.erase(oldIt);
+  stackMap_[newPtr] = oldStackTracesTreeNode;
+}
+
+inline void GCBase::AllocationLocationTracker::freeAlloc(const void *ptr) {
+  stackMap_.erase(ptr);
+}
+
+inline StackTracesTreeNode *
+GCBase::AllocationLocationTracker::getStackTracesTreeNodeForAlloc(
+    const void *ptr) const {
+  auto mapIt = stackMap_.find(ptr);
+  return mapIt == stackMap_.end() ? nullptr : mapIt->second;
+}
+
+inline void GCBase::AllocationLocationTracker::enable() {
+  enabled_ = true;
+}
+
+inline void GCBase::AllocationLocationTracker::disable() {
+  enabled_ = false;
 }
 
 } // namespace vm

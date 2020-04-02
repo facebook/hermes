@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/BCGen/HBC/ISel.h"
 
 #include "hermes/BCGen/BCOpt.h"
@@ -281,11 +282,6 @@ void HBCISel::addDebugLexicalInfo() {
   if (F_->getContext().getDebugInfoSetting() != DebugInfoSetting::ALL)
     return;
 
-  // Don't emit variables for top level function, its variables are all global.
-  // Also don't set a lexical parent for it since it has none.
-  if (F_->isGlobalScope())
-    return;
-
   // Set the lexical parent.
   Function *parent = scopeAnalysis_.getLexicalParent(F_);
   if (parent)
@@ -355,7 +351,7 @@ void HBCISel::verifyCall(CallInst *Inst) {
   const auto lastArgReg = RA_.getLastRegister().getIndex() -
       HVMRegisterAllocator::CALL_EXTRA_REGISTERS;
 
-  const bool isBuiltin = isa<HBCCallBuiltinInst>(Inst);
+  const bool isBuiltin = isa<CallBuiltinInst>(Inst);
   const bool isCallN = isa<HBCCallNInst>(Inst);
 
   for (unsigned i = 0, max = Inst->getNumArguments(); i < max; i++) {
@@ -1177,9 +1173,7 @@ void HBCISel::generateConstructInst(ConstructInst *Inst, BasicBlock *next) {
   llvm_unreachable("ConstructInst should have been lowered");
 }
 
-void HBCISel::generateHBCCallBuiltinInst(
-    HBCCallBuiltinInst *Inst,
-    BasicBlock *next) {
+void HBCISel::generateCallBuiltinInst(CallBuiltinInst *Inst, BasicBlock *next) {
   auto output = encodeValue(Inst);
   verifyCall(Inst);
 
@@ -1428,6 +1422,31 @@ void HBCISel::generateUnreachableInst(
     hermes::UnreachableInst *Inst,
     hermes::BasicBlock *next) {
   emitUnreachableIfDebug();
+}
+
+void HBCISel::generateIteratorBeginInst(
+    hermes::IteratorBeginInst *Inst,
+    hermes::BasicBlock *next) {
+  auto iter = encodeValue(Inst);
+  auto src = encodeValue(Inst->getSourceOrNext());
+  BCFGen_->emitIteratorBegin(iter, src);
+}
+
+void HBCISel::generateIteratorNextInst(
+    hermes::IteratorNextInst *Inst,
+    hermes::BasicBlock *next) {
+  auto dst = encodeValue(Inst);
+  auto iter = encodeValue(Inst->getIterator());
+  auto src = encodeValue(Inst->getSourceOrNext());
+  BCFGen_->emitIteratorNext(dst, iter, src);
+}
+
+void HBCISel::generateIteratorCloseInst(
+    hermes::IteratorCloseInst *Inst,
+    hermes::BasicBlock *next) {
+  auto iter = encodeValue(Inst->getIterator());
+  bool ignoreInnerException = Inst->getIgnoreInnerException();
+  BCFGen_->emitIteratorClose(iter, ignoreInnerException);
 }
 
 void HBCISel::generateSwitchImmInst(

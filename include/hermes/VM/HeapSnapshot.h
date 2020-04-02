@@ -1,12 +1,14 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_HEAPSNAPSHOT_H
 #define HERMES_VM_HEAPSNAPSHOT_H
 
+#include "hermes/Public/DebuggerTypes.h"
 #include "hermes/Public/GCConfig.h"
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/Support/StringSetVector.h"
@@ -26,6 +28,7 @@ namespace vm {
 
 using HeapSizeType = uint32_t;
 class StringPrimitive;
+struct StackTracesTree;
 
 /// @name Converters from arbitrary types to string
 /// @{
@@ -78,11 +81,16 @@ class HeapSnapshot {
 #include "hermes/VM/HeapSnapshot.def"
       ;
 
+  static constexpr uint32_t V8_SNAPSHOT_LOCATION_FIELD_COUNT = 0
+#define V8_LOCATION_FIELD(label) +1
+#include "hermes/VM/HeapSnapshot.def"
+      ;
+
   using NodeID = uint64_t;
   using NodeIndex = uint32_t;
   using EdgeIndex = uint32_t;
 
-  explicit HeapSnapshot(JSONEmitter &json);
+  HeapSnapshot(JSONEmitter &json, StackTracesTree *stackTracesTree);
 
   /// NOTE: this destructor writes to \p json.
   ~HeapSnapshot();
@@ -109,32 +117,63 @@ class HeapSnapshot {
       llvm::StringRef name,
       NodeID id,
       HeapSizeType selfSize,
-      HeapSizeType traceNodeID = 0);
+      HeapSizeType traceNodeID);
 
   void addNamedEdge(EdgeType type, llvm::StringRef name, NodeID toNode);
   void addIndexedEdge(EdgeType type, EdgeIndex index, NodeID toNode);
 
+  /// Adds a location for the given node. This will identify a source location
+  /// for a node when it is viewed in a heap snapshot visualizer.
+  /// This is not a stack trace where the object was allocated, but a static
+  /// location. For example, functions use their source location as their
+  /// location. User-defined objects have the constructor function.
+  /// NOTE: If a script ID is not available (for example if the debugger isn't
+  ///   on), don't call this function.
+  /// \param id The object to attach a location to.
+  /// \param script The ID of the script in which this location resides.
+  /// \param line The 1-based line in \p script.
+  /// \param column The 1-based column in \p script.
+  void addLocation(
+      NodeID id,
+      ::facebook::hermes::debugger::ScriptID script,
+      uint32_t line,
+      uint32_t column);
+
+  static const char *nodeTypeToName(NodeType type);
+
+  static const char *edgeTypeToName(EdgeType type);
+
+  void emitAllocationTraceInfo();
+
  private:
   void emitMeta();
+  size_t countFunctionTraceInfos();
   void emitStrings();
 
-  /// The next section to be closed.  This class guarantees that all previous
-  /// sections will have been written to the JSON emitter.
+  /// The next section to be closed.  This class guarantees that all
+  /// previous sections will have been written to the JSON emitter.
   Section nextSection_{Section::Nodes};
 
   /// Whether the nextSection_ has been opened already.
   bool sectionOpened_{false};
 
   JSONEmitter &json_;
+  StackTracesTree *stackTracesTree_;
   llvm::DenseMap<NodeID, NodeIndex> nodeToIndex_;
-  StringSetVector stringTable_;
+  std::shared_ptr<StringSetVector> stringTable_;
   NodeIndex nodeCount_{0};
   HeapSizeType currEdgeCount_{0};
+  struct TraceNodeStats {
+    HeapSizeType count{0};
+    HeapSizeType size{0};
+  };
+  llvm::DenseMap<HeapSizeType, TraceNodeStats> traceNodeStats_;
+
 #ifndef NDEBUG
   /// How many edges have currently been added.
   EdgeIndex edgeCount_{0};
-  /// How many edges there are expected to be. Used for checking the correctness
-  /// of the snapshot.
+  /// How many edges there are expected to be. Used for checking the
+  /// correctness of the snapshot.
   EdgeIndex expectedEdges_{0};
 #endif
 };

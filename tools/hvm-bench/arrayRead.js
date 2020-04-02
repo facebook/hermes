@@ -1,10 +1,11 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
-// This benchmark tests the speed of array reads for a small array.
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 
+// This benchmark tests the speed of array reads for a small array.
 function sum(array) {
     var sum = 0;
     var i = 0;

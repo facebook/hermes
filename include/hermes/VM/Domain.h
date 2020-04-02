@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_DOMAIN_H
 #define HERMES_VM_DOMAIN_H
 
@@ -214,9 +215,7 @@ class Domain final : public GCCell {
 
   /// \return the throwing require function with require.context bound to a
   /// context for this domain.
-  PseudoHandle<NativeFunction> getThrowingRequire(Runtime *runtime) const {
-    return createPseudoHandle(throwingRequire_.get(runtime));
-  }
+  PseudoHandle<NativeFunction> getThrowingRequire(Runtime *runtime) const;
 
  private:
   /// Create a domain with no associated RuntimeModules.
@@ -252,11 +251,19 @@ class RequireContext final : public JSObject {
       const GCCell *cell,
       Metadata::Builder &mb);
 
-  // We need two slots for the domain and dirname.
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      Super::NEEDED_PROPERTY_SLOTS + 2;
-
  public:
+  // We need two anonymous slots for the domain and dirname.
+  static const PropStorage::size_type ANONYMOUS_PROPERTY_SLOTS =
+      Super::ANONYMOUS_PROPERTY_SLOTS + 2;
+
+  static constexpr SlotIndex domainPropIndex() {
+    return numOverlapSlots<RequireContext>() + ANONYMOUS_PROPERTY_SLOTS - 2;
+  }
+
+  static constexpr SlotIndex dirnamePropIndex() {
+    return numOverlapSlots<RequireContext>() + ANONYMOUS_PROPERTY_SLOTS - 1;
+  }
+
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::RequireContextKind;
   }
@@ -269,13 +276,14 @@ class RequireContext final : public JSObject {
 
   /// \return the domain for this require context.
   static Domain *getDomain(Runtime *runtime, RequireContext *self) {
-    return vmcast<Domain>(JSObject::getInternalProperty(self, runtime, 0));
+    return vmcast<Domain>(
+        JSObject::getInternalProperty(self, runtime, domainPropIndex()));
   }
 
   /// \return the current dirname for this require context.
   static StringPrimitive *getDirname(Runtime *runtime, RequireContext *self) {
     return vmcast<StringPrimitive>(
-        JSObject::getInternalProperty(self, runtime, 1));
+        JSObject::getInternalProperty(self, runtime, dirnamePropIndex()));
   }
 
  private:

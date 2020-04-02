@@ -1,5 +1,5 @@
-/**
- * Copyright 2018-present, Facebook, Inc.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
 #pragma once
 
 #include <jni.h>
+
+#include <fbjni/detail/SimpleFixedString.h>
 
 #include "Common.h"
 #include "Exceptions.h"
@@ -48,7 +50,7 @@ struct ArgsArraySetter;
 
 template <int idx, typename Arg, typename... Args>
 struct ArgsArraySetter<idx, Arg, Args...> {
-  static void set(alias_ref<JArrayClass<jobject>::javaobject> array, Arg arg0, Args... args) {
+  static void set(alias_ref<JArrayClass<jobject>> array, Arg arg0, Args... args) {
     // TODO(xxxxxxxx): Use Convert<Args>... to do conversions like the fast path.
     (*array)[idx] = autobox(arg0);
     ArgsArraySetter<idx + 1, Args...>::set(array, args...);
@@ -57,13 +59,13 @@ struct ArgsArraySetter<idx, Arg, Args...> {
 
 template <int idx>
 struct ArgsArraySetter<idx> {
-  static void set(alias_ref<JArrayClass<jobject>::javaobject> array) {
+  static void set(alias_ref<JArrayClass<jobject>> array) {
     (void)array;
   }
 };
 
 template <typename... Args>
-local_ref<JArrayClass<jobject>::javaobject> makeArgsArray(Args... args) {
+local_ref<JArrayClass<jobject>> makeArgsArray(Args... args) {
   auto arr = JArrayClass<jobject>::newArray(sizeof...(args));
   ArgsArraySetter<0, Args...>::set(arr, args...);
   return arr;
@@ -111,7 +113,9 @@ class JMethod<R(Args...)> : public JMethodBase {
  public:
    // TODO: static_assert is jobject-derived or local_ref jobject
   using JniRet = typename detail::Convert<typename std::decay<R>::type>::jniType;
-  static_assert(IsPlainJniReference<JniRet>(), "JniRet must be a JNI reference");
+  static_assert(
+      IsPlainJniReference<JniRet>() || detail::IsJavaClassType<JniRet>(),
+      "Return type must be a JNI reference or JavaClass type.");
   using JMethodBase::JMethodBase;
   JMethod() noexcept {};
   JMethod(const JMethod& other) noexcept = default;
@@ -130,7 +134,7 @@ inline auto JMethod<R(Args...)>::operator()(alias_ref<jobject> self, Args... arg
       getId(),
       detail::callToJni(detail::Convert<typename std::decay<Args>::type>::toCall(args))...);
   FACEBOOK_JNI_THROW_PENDING_EXCEPTION();
-  return adopt_local(static_cast<JniRet>(result));
+  return adopt_local(static_cast<JniType<JniRet>>(result));
 }
 
 template<typename... Args>
@@ -173,7 +177,9 @@ class JStaticMethod<R(Args...)> : public JMethodBase {
 
  public:
   using JniRet = typename detail::Convert<typename std::decay<R>::type>::jniType;
-  static_assert(IsPlainJniReference<JniRet>(), "T* must be a JNI reference");
+  static_assert(
+      IsPlainJniReference<JniRet>() || detail::IsJavaClassType<JniRet>(),
+      "Return type must be a JNI reference or JavaClass type.");
   using JMethodBase::JMethodBase;
   JStaticMethod() noexcept {};
   JStaticMethod(const JStaticMethod& other) noexcept = default;
@@ -186,7 +192,7 @@ class JStaticMethod<R(Args...)> : public JMethodBase {
           getId(),
           detail::callToJni(detail::Convert<typename std::decay<Args>::type>::toCall(args))...);
     FACEBOOK_JNI_THROW_PENDING_EXCEPTION();
-    return adopt_local(static_cast<JniRet>(result));
+    return adopt_local(static_cast<JniType<JniRet>>(result));
   }
 
   friend class JClass;
@@ -235,7 +241,9 @@ template<typename R, typename... Args>
 class JNonvirtualMethod<R(Args...)> : public JMethodBase {
  public:
   using JniRet = typename detail::Convert<typename std::decay<R>::type>::jniType;
-  static_assert(IsPlainJniReference<JniRet>(), "T* must be a JNI reference");
+  static_assert(
+      IsPlainJniReference<JniRet>() || detail::IsJavaClassType<JniRet>(),
+      "Return type must be a JNI reference or JavaClass type.");
   using JMethodBase::JMethodBase;
   JNonvirtualMethod() noexcept {};
   JNonvirtualMethod(const JNonvirtualMethod& other) noexcept = default;
@@ -249,7 +257,7 @@ class JNonvirtualMethod<R(Args...)> : public JMethodBase {
           getId(),
           detail::callToJni(detail::Convert<typename std::decay<Args>::type>::toCall(args))...);
     FACEBOOK_JNI_THROW_PENDING_EXCEPTION();
-    return adopt_local(static_cast<JniRet>(result));
+    return adopt_local(static_cast<JniType<JniRet>>(result));
   }
 
   friend class JClass;
@@ -381,35 +389,24 @@ inline void JStaticField<T>::set(jclass jcls, T value) noexcept {
 namespace internal {
 
 template<typename Head>
-inline std::string JavaDescriptor() {
-  return jtype_traits<Head>::descriptor();
+constexpr auto /* detail::SimpleFixedString<_> */ JavaDescriptor() {
+  return jtype_traits<Head>::kDescriptor;
 }
 
 template<typename Head, typename Elem, typename... Tail>
-inline std::string JavaDescriptor() {
+constexpr auto /* detail::SimpleFixedString<_> */ JavaDescriptor() {
   return JavaDescriptor<Head>() + JavaDescriptor<Elem, Tail...>();
 }
 
 template<typename R, typename Arg1, typename... Args>
-inline std::string JMethodDescriptor() {
+constexpr auto /* detail::SimpleFixedString<_> */ JMethodDescriptor() {
   return "(" + JavaDescriptor<Arg1, Args...>() + ")" + JavaDescriptor<R>();
 }
 
 template<typename R>
-inline std::string JMethodDescriptor() {
+constexpr auto /* detail::SimpleFixedString<_> */  JMethodDescriptor() {
   return "()" + JavaDescriptor<R>();
 }
 
 } // internal
-
-template<typename R, typename... Args>
-inline std::string jmethod_traits<R(Args...)>::descriptor() {
-  return internal::JMethodDescriptor<R, Args...>();
-}
-
-template<typename R, typename... Args>
-inline std::string jmethod_traits<R(Args...)>::constructor_descriptor() {
-  return internal::JMethodDescriptor<void, Args...>();
-}
-
 }}

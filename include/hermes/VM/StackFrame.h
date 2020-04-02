@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_STACKFRAME_H
 #define HERMES_VM_STACKFRAME_H
 
@@ -214,8 +215,8 @@ class StackFramePtrT {
   }
 
   /// Initialize a new frame with the supplied values.
-  /// \param calleeClosure a HermesValue which may not neccessarily be of the
-  ///   correct type. We use this occasionally when we want to initialize a
+  /// \param calleeClosureOrCB a HermesValue which may not neccessarily be of
+  ///   the correct type. We use this occasionally when we want to initialize a
   ///   frame but delay the error checking. We never execute a frame with
   ///   the wrong type of callee though.
   /// \param newTarget `undefined` or the callable of the constructor being

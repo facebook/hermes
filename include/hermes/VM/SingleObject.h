@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_SINGLEOBJECT_H
 #define HERMES_VM_SINGLEOBJECT_H
 
@@ -31,13 +32,13 @@ class SingleObject final : public JSObject {
   static CallResult<HermesValue> create(
       Runtime *runtime,
       Handle<JSObject> parentHandle) {
-    void *mem = runtime->alloc(sizeof(SingleObject));
-    return HermesValue::encodeObjectValue(
-        JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
-            new (mem) SingleObject(
-                runtime,
-                *parentHandle,
-                runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
+    JSObjectAlloc<SingleObject> mem{runtime};
+    return mem.initToHermesValue(new (mem) SingleObject(
+        runtime,
+        *parentHandle,
+        runtime->getHiddenClassForPrototypeRaw(
+            *parentHandle,
+            numOverlapSlots<SingleObject>() + ANONYMOUS_PROPERTY_SLOTS)));
   }
 
  protected:
@@ -52,7 +53,7 @@ struct IsGCObject<SingleObject<kind>> {
 
 template <CellKind kind>
 const ObjectVTable SingleObject<kind>::vt = {
-    VTable(kind, sizeof(SingleObject<kind>), nullptr, nullptr),
+    VTable(kind, cellSize<SingleObject<kind>>(), nullptr, nullptr),
     SingleObject::_getOwnIndexedRangeImpl,
     SingleObject::_haveOwnIndexedImpl,
     SingleObject::_getOwnIndexedPropertyFlagsImpl,

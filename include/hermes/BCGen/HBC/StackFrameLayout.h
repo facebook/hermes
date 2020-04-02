@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 //===----------------------------------------------------------------------===//
 /// \file
 /// This file defines the standard layout of the HermesVM stack frame. It must
@@ -54,7 +55,7 @@ namespace hbc {
 ///
 /// Each function is responsible for allocating enough space in its own frame by
 /// manipulating the stack pointer. So, to make a call, the caller must have
-/// ensured enough registers at the top of its frame for the for the metadata
+/// ensured enough registers at the top of its frame for the metadata
 /// [previousFrame..calleeClosureOrCB] and the arguments [this, arg0..argN].
 ///
 /// This is the sequence of events when performing a call:
@@ -99,6 +100,10 @@ struct StackFrameLayout {
     /// Saved caller instruction pointer.
     SavedIP = 1,
     /// Saved caller CodeBlock.
+    /// NOTE: If SavedCodeBlock is null but SavedIP is non-null, the current
+    /// frame is the result of a bound function call - the SavedCodeBlock can be
+    /// found using CalleeClosureOrCB on the previous call frame, but the
+    /// SavedIP should have been saved by the bound call in the current frame.
     SavedCodeBlock = 2,
     /// Number of JavaScript arguments passed to the callee excluding "this".
     ArgCount = 3,

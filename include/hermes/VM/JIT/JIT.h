@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_JIT_JIT_H
 #define HERMES_VM_JIT_JIT_H
 
@@ -34,7 +35,7 @@ class JITContext {
   /// \param enable whether JIT is enabled.
   /// \param blockSize the size of individual blocks of executable memory to be
   ///     allocated.
-  /// \param maximum amount of executable memory that can be allocated by the
+  /// \param maxMemory amount of executable memory that can be allocated by the
   ///     JIT.
   JITContext(bool enable, size_t blockSize, size_t maxMemory) {}
   ~JITContext() = default;

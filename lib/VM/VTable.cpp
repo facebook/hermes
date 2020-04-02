@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/VTable.h"
 
 #include "hermes/VM/GCCell.h"
@@ -13,9 +14,18 @@ namespace vm {
 
 std::string VTable::HeapSnapshotMetadata::nameForNode(GCCell *cell, GC *gc)
     const {
+  std::string name;
   if (name_) {
-    return name_(cell, gc);
+    name = name_(cell, gc);
   }
+  if (!name.empty()) {
+    return name;
+  }
+  return defaultNameForNode(cell);
+}
+
+std::string VTable::HeapSnapshotMetadata::defaultNameForNode(
+    GCCell *cell) const {
   return cellKindStr(cell->getKind());
 }
 
@@ -34,6 +44,15 @@ void VTable::HeapSnapshotMetadata::addNodes(
     HeapSnapshot &snap) const {
   if (addNodes_) {
     addNodes_(cell, gc, snap);
+  }
+}
+
+void VTable::HeapSnapshotMetadata::addLocations(
+    GCCell *cell,
+    GC *gc,
+    HeapSnapshot &snap) const {
+  if (addLocations_) {
+    addLocations_(cell, gc, snap);
   }
 }
 

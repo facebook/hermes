@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_AST_RECURSIVEVISITOR_H
 #define HERMES_AST_RECURSIVEVISITOR_H
 
@@ -88,6 +89,7 @@ struct RecursiveVisitorDispatch {
 #define ESTREE_NODE_3_ARGS(NAME, ...) VISIT(NAME)
 #define ESTREE_NODE_4_ARGS(NAME, ...) VISIT(NAME)
 #define ESTREE_NODE_5_ARGS(NAME, ...) VISIT(NAME)
+#define ESTREE_NODE_6_ARGS(NAME, ...) VISIT(NAME)
 
 #include "hermes/AST/ESTree.def"
 
@@ -123,6 +125,7 @@ struct RecursiveVisitorDispatch {
 #define ESTREE_NODE_3_ARGS(NAME, ...) VISIT(NAME)
 #define ESTREE_NODE_4_ARGS(NAME, ...) VISIT(NAME)
 #define ESTREE_NODE_5_ARGS(NAME, ...) VISIT(NAME)
+#define ESTREE_NODE_6_ARGS(NAME, ...) VISIT(NAME)
 
 #include "hermes/AST/ESTree.def"
 
@@ -212,6 +215,35 @@ struct RecursiveVisitorDispatch {
     visit(v, node->_##ARG4NM, node);                        \
   }
 
+#define ESTREE_NODE_6_ARGS(                                 \
+    NAME,                                                   \
+    BASE,                                                   \
+    ARG0TY,                                                 \
+    ARG0NM,                                                 \
+    ARG0OPT,                                                \
+    ARG1TY,                                                 \
+    ARG1NM,                                                 \
+    ARG1OPT,                                                \
+    ARG2TY,                                                 \
+    ARG2NM,                                                 \
+    ARG2OPT,                                                \
+    ARG3TY,                                                 \
+    ARG3NM,                                                 \
+    ARG3OPT,                                                \
+    ARG4TY,                                                 \
+    ARG4NM,                                                 \
+    ARG4OPT,                                                \
+    ARG5TY,                                                 \
+    ARG5NM,                                                 \
+    ARG5OPT)                                                \
+  static void visitChildren(Visitor &v, NAME##Node *node) { \
+    visit(v, node->_##ARG0NM, node);                        \
+    visit(v, node->_##ARG1NM, node);                        \
+    visit(v, node->_##ARG2NM, node);                        \
+    visit(v, node->_##ARG3NM, node);                        \
+    visit(v, node->_##ARG4NM, node);                        \
+    visit(v, node->_##ARG5NM, node);                        \
+  }
 #include "hermes/AST/ESTree.def"
 };
 

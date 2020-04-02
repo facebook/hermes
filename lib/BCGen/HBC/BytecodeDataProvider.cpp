@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/BCGen/HBC/BytecodeDataProvider.h"
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/Support/ErrorHandling.h"
@@ -68,6 +69,12 @@ static bool sanityCheck(
     }
     return false;
   }
+  if (aref.size() < header->fileLength) {
+    if (errorMessage) {
+      *errorMessage = "Buffer too small";
+    }
+    return false;
+  }
   return true;
 }
 
@@ -115,18 +122,25 @@ T *castData(uint8_t *&buf) {
 }
 
 /// Cast the pointer at \p buf to an array of type T, with \p size.
+/// Fatals if the end of the array extends past \p end.
 /// Increment \p buf by the total size of the array.
 template <typename T>
-llvm::ArrayRef<T> castArrayRef(const uint8_t *&buf, size_t size) {
+llvm::ArrayRef<T>
+castArrayRef(const uint8_t *&buf, size_t size, const uint8_t *end) {
   auto ptr = alignCheckCast<T>(buf);
+  if (LLVM_UNLIKELY(buf > end || size > (end - buf) / sizeof(T)))
+    hermes_fatal("overflow past end of bytecode");
   buf += size * sizeof(T);
   return {ptr, size};
 }
 
 /// Variant of castArrayRef() for non-const pointers.
 template <typename T>
-llvm::MutableArrayRef<T> castArrayRef(uint8_t *&buf, size_t size) {
+llvm::MutableArrayRef<T>
+castArrayRef(uint8_t *&buf, size_t size, const uint8_t *end) {
   auto ptr = alignCheckCast<T>(buf);
+  if (LLVM_UNLIKELY(buf > end || size > (end - buf) / sizeof(T)))
+    hermes_fatal("overflow past end of bytecode");
   buf += size * sizeof(T);
   return {ptr, size};
 }
@@ -165,81 +179,90 @@ bool BytecodeFileFields<Mutable>::populateFromBuffer(
     /// A pointer to the bytecode file header.
     const BytecodeFileHeader *h;
 
+    /// End of buffer.
+    const uint8_t *end;
+
     BytecodeFileFieldsPopulator(
         BytecodeFileFields &fields,
-        Pointer<uint8_t> buffer)
-        : f(fields), buf(buffer) {
+        Pointer<uint8_t> buffer,
+        const uint8_t *bufEnd)
+        : f(fields), buf(buffer), end(bufEnd) {
       f.header = castData<BytecodeFileHeader>(buf);
       h = f.header;
     }
 
     void visitFunctionHeaders() {
       align(buf);
-      f.functionHeaders = castArrayRef<SmallFuncHeader>(buf, h->functionCount);
+      f.functionHeaders =
+          castArrayRef<SmallFuncHeader>(buf, h->functionCount, end);
     }
 
     void visitStringKinds() {
       align(buf);
-      f.stringKinds = castArrayRef<StringKind::Entry>(buf, h->stringKindCount);
+      f.stringKinds =
+          castArrayRef<StringKind::Entry>(buf, h->stringKindCount, end);
     }
 
     void visitIdentifierTranslations() {
       align(buf);
       f.identifierTranslations =
-          castArrayRef<uint32_t>(buf, h->identifierCount);
+          castArrayRef<uint32_t>(buf, h->identifierCount, end);
     }
 
     void visitSmallStringTable() {
       align(buf);
       f.stringTableEntries =
-          castArrayRef<SmallStringTableEntry>(buf, h->stringCount);
+          castArrayRef<SmallStringTableEntry>(buf, h->stringCount, end);
     }
 
     void visitOverflowStringTable() {
       align(buf);
-      f.stringTableOverflowEntries =
-          castArrayRef<OverflowStringTableEntry>(buf, h->overflowStringCount);
+      f.stringTableOverflowEntries = castArrayRef<OverflowStringTableEntry>(
+          buf, h->overflowStringCount, end);
     }
 
     void visitStringStorage() {
       align(buf);
-      f.stringStorage = castArrayRef<char>(buf, h->stringStorageSize);
+      f.stringStorage = castArrayRef<char>(buf, h->stringStorageSize, end);
     }
     void visitArrayBuffer() {
       align(buf);
-      f.arrayBuffer = castArrayRef<unsigned char>(buf, h->arrayBufferSize);
+      f.arrayBuffer = castArrayRef<unsigned char>(buf, h->arrayBufferSize, end);
     }
     void visitObjectKeyBuffer() {
       align(buf);
-      f.objKeyBuffer = castArrayRef<unsigned char>(buf, h->objKeyBufferSize);
+      f.objKeyBuffer =
+          castArrayRef<unsigned char>(buf, h->objKeyBufferSize, end);
     }
     void visitObjectValueBuffer() {
       align(buf);
       f.objValueBuffer =
-          castArrayRef<unsigned char>(buf, h->objValueBufferSize);
+          castArrayRef<unsigned char>(buf, h->objValueBufferSize, end);
     }
     void visitRegExpTable() {
       align(buf);
-      f.regExpTable = castArrayRef<RegExpTableEntry>(buf, h->regExpCount);
+      f.regExpTable = castArrayRef<RegExpTableEntry>(buf, h->regExpCount, end);
     }
     void visitRegExpStorage() {
       align(buf);
-      f.regExpStorage = castArrayRef<unsigned char>(buf, h->regExpStorageSize);
+      f.regExpStorage =
+          castArrayRef<unsigned char>(buf, h->regExpStorageSize, end);
     }
     void visitCJSModuleTable() {
       align(buf);
       if (h->options.cjsModulesStaticallyResolved) {
         // Modules have been statically resolved.
-        f.cjsModuleTableStatic = castArrayRef<uint32_t>(buf, h->cjsModuleCount);
+        f.cjsModuleTableStatic =
+            castArrayRef<uint32_t>(buf, h->cjsModuleCount, end);
       } else {
         // Modules are not resolved, use the filename -> function ID mapping.
-        f.cjsModuleTable =
-            castArrayRef<std::pair<uint32_t, uint32_t>>(buf, h->cjsModuleCount);
+        f.cjsModuleTable = castArrayRef<std::pair<uint32_t, uint32_t>>(
+            buf, h->cjsModuleCount, end);
       }
     }
   };
 
-  BytecodeFileFieldsPopulator populator{*this, buffer.data()};
+  BytecodeFileFieldsPopulator populator{*this, buffer.data(), buffer.end()};
   visitBytecodeSegmentsInOrder(populator);
   return true;
 }
@@ -461,6 +484,17 @@ void BCProviderFromBuffer::willNeedStringTable() {
   oscompat::vm_prefetch(start, prefetchLength);
 }
 
+void BCProviderFromBuffer::dontNeedIdentifierTranslations() {
+  auto start = reinterpret_cast<uintptr_t>(identifierTranslations_.begin());
+  auto end = reinterpret_cast<uintptr_t>(identifierTranslations_.end());
+  const size_t PS = oscompat::page_size();
+  start = llvm::alignTo(start, PS);
+  end = llvm::alignDown(end, PS);
+  if (start < end) {
+    oscompat::vm_unused(reinterpret_cast<void *>(start), end - start);
+  }
+}
+
 #undef ASSERT_BOUNDED
 #undef ASSERT_TOTAL_ARRAY_LEN
 
@@ -472,10 +506,15 @@ void BCProviderFromBuffer::startPageAccessTracker() {
   }
 }
 
-BCProviderFromBuffer::BCProviderFromBuffer(std::unique_ptr<const Buffer> buffer)
-    : buffer_(std::move(buffer)), bufferPtr_(buffer_->data()) {
+BCProviderFromBuffer::BCProviderFromBuffer(
+    std::unique_ptr<const Buffer> buffer,
+    BytecodeForm form)
+    : buffer_(std::move(buffer)),
+      bufferPtr_(buffer_->data()),
+      end_(bufferPtr_ + buffer_->size()) {
   ConstBytecodeFileFields fields;
-  if (!fields.populateFromBuffer({bufferPtr_, buffer_->size()}, &errstr_)) {
+  if (!fields.populateFromBuffer(
+          {bufferPtr_, buffer_->size()}, &errstr_, form)) {
     return;
   }
   const auto *fileHeader = fields.header;
@@ -536,8 +575,9 @@ void BCProviderFromBuffer::createDebugInfo() {
   const auto *header = castData<hbc::DebugInfoHeader>(buf);
 
   auto filenameTable =
-      castArrayRef<StringTableEntry>(buf, header->filenameCount);
-  auto filenameStorage = castArrayRef<char>(buf, header->filenameStorageSize);
+      castArrayRef<StringTableEntry>(buf, header->filenameCount, end_);
+  auto filenameStorage =
+      castArrayRef<char>(buf, header->filenameStorageSize, end_);
 
   hbc::DebugInfo::DebugFileRegionList files;
   for (unsigned i = 0; i < header->fileRegionCount; i++) {
@@ -576,8 +616,8 @@ BCProviderFromBuffer::getExceptionTableAndDebugOffsets(
     align(buf);
     const auto *exceptionHeader =
         castData<hbc::ExceptionHandlerTableHeader>(buf);
-    exceptionTable =
-        castArrayRef<hbc::HBCExceptionHandlerInfo>(buf, exceptionHeader->count);
+    exceptionTable = castArrayRef<hbc::HBCExceptionHandlerInfo>(
+        buf, exceptionHeader->count, end_);
   }
 
   // Deserialize debug offsets.

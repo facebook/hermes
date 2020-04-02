@@ -1,13 +1,14 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_SWEEPRESULTNC_H
 #define HERMES_VM_SWEEPRESULTNC_H
 
-#include "hermes/Support/ConsumableRange.h"
+#include "hermes/ADT/ConsumableRange.h"
 #include "hermes/VM/CompactionResult.h"
 #include "hermes/VM/VTable.h"
 

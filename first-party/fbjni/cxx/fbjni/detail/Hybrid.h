@@ -1,5 +1,5 @@
-/**
- * Copyright 2018-present, Facebook, Inc.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@
 
 #include <memory>
 #include <type_traits>
+
+#include <fbjni/detail/SimpleFixedString.h>
 
 #include "CoreClasses.h"
 
@@ -46,18 +48,37 @@ class HybridDestructor : public JavaClass<HybridDestructor> {
 };
 
 template<typename T>
-detail::BaseHybridClass* getNativePointer(T t) {
+detail::BaseHybridClass* getNativePointer(const T* t) {
   return getHolder(t)->getNativePointer();
 }
 
 template<typename T>
-void setNativePointer(T t, std::unique_ptr<detail::BaseHybridClass> new_value) {
+void setNativePointer(const T* t, std::unique_ptr<detail::BaseHybridClass> new_value) {
   getHolder(t)->setNativePointer(std::move(new_value));
 }
 
+// Save space: use unified getHolder implementation.
+template<typename T, typename Alloc>
+void setNativePointer(basic_strong_ref<T, Alloc> t, std::unique_ptr<detail::BaseHybridClass> new_value) {
+  getHolder(&*t)->setNativePointer(std::move(new_value));
+}
+
+// Save space: use unified getHolder implementation.
 template<typename T>
-local_ref<HybridDestructor> getHolder(T t) {
-  static auto holderField = t->getClass()->template getField<HybridDestructor::javaobject>("mDestructor");
+void setNativePointer(alias_ref<T> t, std::unique_ptr<detail::BaseHybridClass> new_value) {
+  getHolder(&*t)->setNativePointer(std::move(new_value));
+}
+
+// Inline rather than in cpp file so that consumers can call into
+// their own copy directly rather than into the DSO containing fbjni,
+// saving space for the symbol table.
+inline JField<HybridDestructor::javaobject> getDestructorField(const local_ref<JClass>& c) {
+  return c->template getField<HybridDestructor::javaobject>("mDestructor");
+}
+
+template<typename T>
+local_ref<HybridDestructor::javaobject> getHolder(const T* t) {
+  static auto holderField = getDestructorField(t->getClass());
   return t->getFieldValue(holderField);
 }
 
@@ -136,8 +157,8 @@ public:
     // T::kJavaDescriptor directly. jtype_traits support this escape hatch for
     // such a case.
     static constexpr const char* kJavaDescriptor = nullptr;
-    static std::string get_instantiated_java_descriptor();
-    static std::string get_instantiated_base_name();
+    static constexpr auto /* detail::SimpleFixedString<_> */ get_instantiated_java_descriptor();
+    static constexpr auto /* detail::SimpleFixedString<_> */ get_instantiated_base_name();
 
     using HybridType = T;
 
@@ -170,7 +191,7 @@ protected:
   // own public ctor, or change the accessibility of this to public.
   using detail::HybridTraits<Base>::CxxBase::CxxBase;
 
-  static void registerHybrid(std::initializer_list<NativeMethod> methods) {
+  static void registerHybrid(std::initializer_list<JNINativeMethod> methods) {
     javaClassLocal()->registerNatives(methods);
   }
 
@@ -249,36 +270,60 @@ public:
   }
 };
 
+[[noreturn]] inline void throwNPE() {
+  throwNewJavaException("java/lang/NullPointerException", "java.lang.NullPointerException");
+}
+
+// Detect whether the given class is a hybrid. If not, grab its
+// mHybridData field.
+// Returns a null field if the class is a hybrid, the ID of the mHybridData field if not.
+template<typename T, typename B>
+inline JField<detail::HybridData::javaobject> detectHybrid(alias_ref<jclass> jclass) {
+  bool isHybrid = detail::HybridClassBase::isHybridClassBase(jclass);
+  if (isHybrid) {
+    return JField<detail::HybridData::javaobject>(nullptr);
+  } else {
+    auto result = HybridClass<T, B>::JavaPart::javaClassStatic()->template getField<detail::HybridData::javaobject>("mHybridData");
+    if (!result) {
+      throwNPE();
+    }
+    return result;
+  }
+}
+
+inline detail::BaseHybridClass* getHybridDataFromField(const JObject* self, const JField<detail::HybridData::javaobject>& field) {
+  const bool isHybrid = !field;
+  if (isHybrid) {
+    return getNativePointer(self);
+  } else {
+    auto hybridData = self->getFieldValue(field);
+    if (!hybridData) {
+      throwNPE();
+    }
+    return getNativePointer(&*hybridData);
+  }
+}
+
 template <typename T, typename B>
 inline T* HybridClass<T, B>::JavaPart::cthis() const {
-  detail::BaseHybridClass* result = 0;
-  static bool isHybrid = detail::HybridClassBase::isHybridClassBase(this->getClass());
-  if (isHybrid) {
-    result = getNativePointer(this);
-  } else {
-    static auto field =
-      HybridClass<T, B>::JavaPart::javaClassStatic()->template getField<detail::HybridData::javaobject>("mHybridData");
-    auto hybridData = this->getFieldValue(field);
-    if (!hybridData) {
-      throwNewJavaException("java/lang/NullPointerException", "java.lang.NullPointerException");
-    }
-
-    result = getNativePointer(hybridData);
-  }
+  detail::BaseHybridClass* result = nullptr;
+  static const auto hybridDataField = detectHybrid<T, B>(this->getClass());
+  result = getHybridDataFromField(this, hybridDataField);
 
   // I'd like to use dynamic_cast here, but -fno-rtti is the default.
   return static_cast<T*>(result);
 };
 
 template <typename T, typename B>
-/* static */ inline std::string HybridClass<T, B>::JavaPart::get_instantiated_java_descriptor() {
-  return T::kJavaDescriptor;
+constexpr auto /* detail::SimpleFixedString<_> */ HybridClass<T, B>::JavaPart::get_instantiated_java_descriptor() {
+  constexpr auto len = detail::constexpr_strlen(T::kJavaDescriptor);
+  return detail::SimpleFixedString<len>(T::kJavaDescriptor, len);
 }
 
 template <typename T, typename B>
-/* static */ inline std::string HybridClass<T, B>::JavaPart::get_instantiated_base_name() {
-  auto name = get_instantiated_java_descriptor();
-  return name.substr(1, name.size() - 2);
+/* static */ constexpr auto /* detail::SimpleFixedString<_> */ HybridClass<T, B>::JavaPart::get_instantiated_base_name() {
+  constexpr auto len = detail::constexpr_strlen(T::kJavaDescriptor);
+  return detail::SimpleFixedString<len>(T::kJavaDescriptor + 1, len - 2);
 }
 
 // Given a *_ref object which refers to a hybrid class, this will reach inside

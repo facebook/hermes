@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/ArrayStorage.h"
 
 #include "hermes/Support/Algorithms.h"
@@ -22,7 +23,9 @@ VTable ArrayStorage::vt(
     nullptr,
     _trimSizeCallback,
     _trimCallback,
+    nullptr,
     VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Array,
+                                 nullptr,
                                  nullptr,
                                  nullptr,
                                  nullptr});
@@ -141,6 +144,20 @@ ExecutionStatus ArrayStorage::reallocateToLarger(
   selfHandle = newSelfHandle.get();
 
   return ExecutionStatus::RETURNED;
+}
+
+void ArrayStorage::resizeWithinCapacity(ArrayStorage *self, size_type newSize) {
+  assert(
+      newSize <= self->capacity_ &&
+      "newSize must be <= capacity in resizeWithinCapacity()");
+  // If enlarging, clear the new elements.
+  if (newSize > self->size_) {
+    GCHermesValue::fill(
+        self->data() + self->size_,
+        self->data() + newSize,
+        HermesValue::encodeEmptyValue());
+  }
+  self->size_ = newSize;
 }
 
 ExecutionStatus ArrayStorage::shift(

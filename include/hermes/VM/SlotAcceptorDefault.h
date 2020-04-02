@@ -1,14 +1,15 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_SLOTACCEPTORDEFAULT_H
 #define HERMES_VM_SLOTACCEPTORDEFAULT_H
 
 #include "hermes/VM/GC.h"
-#include "hermes/VM/GCPointer-inline.h"
+#include "hermes/VM/PointerBase.h"
 #include "hermes/VM/SlotAcceptor.h"
 
 namespace hermes {
@@ -22,18 +23,9 @@ struct SlotAcceptorDefault : public SlotAcceptor {
 
   using SlotAcceptor::accept;
 
-  void accept(BasedPointer &ptr) override {
-    if (!ptr) {
-      return;
-    }
-    // accept takes an l-value reference and potentially writes to it.
-    // Write the value back out to the BasedPointer.
-    PointerBase *const base = gc.getPointerBase();
-    void *actualizedPointer = base->basedToPointerNonNull(ptr);
-    accept(actualizedPointer);
-    // Assign back to the based pointer.
-    ptr = base->pointerToBasedNonNull(actualizedPointer);
-  }
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  void accept(BasedPointer &ptr) override;
+#endif
 
   void accept(GCPointerBase &ptr) override final {
     accept(ptr.getLoc(&gc));
@@ -54,6 +46,7 @@ struct SlotAcceptorWithNamesDefault : public RootAcceptor {
 
   using SlotAcceptorWithNames::accept;
 
+#ifdef HERMESVM_COMPRESSED_POINTERS
   void accept(BasedPointer &ptr, const char *name) override {
     // See comments in SlotAcceptorDefault::accept(BasedPointer &) for
     // explanation.
@@ -65,6 +58,7 @@ struct SlotAcceptorWithNamesDefault : public RootAcceptor {
     accept(actualizedPointer, name);
     ptr = base->pointerToBasedNonNull(actualizedPointer);
   }
+#endif
 
   void accept(GCPointerBase &ptr, const char *name) override final {
     accept(ptr.getLoc(&gc), name);
@@ -75,6 +69,20 @@ struct SlotAcceptorWithNamesDefault : public RootAcceptor {
     // need to override it.
     // Not final because sometimes custom behavior is desired.
   }
+};
+
+struct WeakRootAcceptorDefault : public WeakRootAcceptor {
+  GC &gcForWeakRootDefault;
+
+  WeakRootAcceptorDefault(GC &gc) : gcForWeakRootDefault(gc) {}
+
+  using WeakRootAcceptor::acceptWeak;
+
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  /// This gets a default implementation: extract the real pointer to a local,
+  /// call acceptWeak on that, write the result back as a BasedPointer.
+  void acceptWeak(BasedPointer &ptr) override;
+#endif
 };
 
 } // namespace vm

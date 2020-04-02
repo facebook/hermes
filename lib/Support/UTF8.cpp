@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/Support/UTF8.h"
 
 namespace hermes {
@@ -66,14 +67,6 @@ bool convertUTF16ToUTF8WithReplacements(
     std::string &out,
     llvm::ArrayRef<char16_t> input,
     size_t maxCharacters) {
-  auto isHighSurrogate = [](char16_t c) {
-    return UNICODE_SURROGATE_FIRST <= c && c < UTF16_LOW_SURROGATE;
-  };
-
-  auto isLowSurrogate = [](char16_t c) {
-    return UTF16_LOW_SURROGATE <= c && c <= UNICODE_SURROGATE_LAST;
-  };
-
   out.clear();
   out.reserve(input.size());
   // Stop early if we've reached currNumCharacters worth of UTF-8 characters.
@@ -103,8 +96,7 @@ bool convertUTF16ToUTF8WithReplacements(
         c32 = UNICODE_REPLACEMENT_CHARACTER;
       } else {
         // Decode surrogate pair and increment, because we consumed two chars.
-        c32 = cur[0] - UTF16_HIGH_SURROGATE;
-        c32 = (c32 << 10) + (cur[1] - UTF16_LOW_SURROGATE) + 0x010000;
+        c32 = decodeSurrogatePair(cur[0], cur[1]);
         ++cur;
       }
     } else {
@@ -177,4 +169,4 @@ bool isAllASCII(const uint8_t *start, const uint8_t *end) {
   return true;
 }
 
-}; // namespace hermes
+} // namespace hermes

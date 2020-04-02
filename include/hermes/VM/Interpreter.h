@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_INTERPRETER_H
 #define HERMES_VM_INTERPRETER_H
 #include <cstdint>
@@ -200,6 +201,15 @@ class Interpreter {
       const inst::Inst *ip);
 
   static ExecutionStatus casePutOwnGetterSetterByVal(
+      Runtime *runtime,
+      PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
+
+  static ExecutionStatus caseIteratorBegin(
+      Runtime *runtime,
+      PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
+  static ExecutionStatus caseIteratorNext(
       Runtime *runtime,
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);

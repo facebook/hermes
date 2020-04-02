@@ -1,16 +1,20 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include <hermes/ConsoleHost/RuntimeFlags.h>
+#include <hermes/Support/Algorithms.h>
 #include <hermes/Support/MemoryBuffer.h>
 #include <hermes/TraceInterpreter.h>
 #include <hermes/hermes.h>
 
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
 
 #include <iostream>
 #include <tuple>
@@ -19,6 +23,8 @@ namespace cl {
 
 using llvm::cl::desc;
 using llvm::cl::init;
+using llvm::cl::list;
+using llvm::cl::OneOrMore;
 using llvm::cl::opt;
 using llvm::cl::Positional;
 using llvm::cl::Required;
@@ -29,8 +35,8 @@ using llvm::cl::Required;
 static opt<std::string>
     TraceFile(desc("input trace file"), Positional, Required);
 
-static opt<std::string>
-    BytecodeFile(desc("input bytecode file"), Positional, Required);
+static list<std::string>
+    BytecodeFiles(desc("input bytecode files"), Positional, OneOrMore);
 
 static opt<std::string> Marker("marker", desc("marker to stop at"), init(""));
 static llvm::cl::alias
@@ -40,6 +46,13 @@ static opt<std::string> SnapshotMarker(
     "snapshot-at-marker",
     desc("Take a snapshot at the given marker"),
     init(""));
+
+static opt<bool> UseTraceConfig(
+    "use-trace-config",
+    desc("Controls what RuntimeConfig as the default that the various config "
+         "modify.  True says to use the recorded config of the trace, false "
+         "means start from the default config."),
+    init(false));
 
 static opt<std::string> Trace(
     "trace",
@@ -121,12 +134,42 @@ static opt<::hermes::vm::ReleaseUnused> ShouldReleaseUnused(
 
 } // namespace cl
 
+// Helper functions.
+template <typename T>
+static llvm::Optional<T> execOption(const cl::opt<T> &clOpt) {
+  if (clOpt.getNumOccurrences() > 0) {
+    return static_cast<T>(clOpt);
+  } else {
+    return llvm::None;
+  }
+}
+
+// Must do this special case explicitly, because of the MemorySizeParser.
+static llvm::Optional<::hermes::vm::gcheapsize_t> execOption(
+    const cl::opt<cl::MemorySize, false, cl::MemorySizeParser> &clOpt) {
+  if (clOpt.getNumOccurrences() > 0) {
+    return clOpt.bytes;
+  } else {
+    return llvm::None;
+  }
+}
+
 int main(int argc, char **argv) {
+  // Print a stack trace if we signal out.
+  llvm::sys::PrintStackTraceOnErrorSignal("Hermes synth");
+  llvm::PrettyStackTraceProgram X(argc, argv);
+  // Call llvm_shutdown() on exit to print stats and free memory.
+  llvm::llvm_shutdown_obj Y;
   llvm::cl::ParseCommandLineOptions(argc, argv, "Hermes synth trace driver\n");
 
   using namespace facebook::hermes::tracing;
   try {
     TraceInterpreter::ExecuteOptions options;
+
+    // These are not config parameters: just set them according to the
+    // runtime flag.
+    options.useTraceConfig = cl::UseTraceConfig;
+    options.reps = cl::Reps;
     options.marker = cl::Marker;
     std::string snapshotMarkerFileName;
     if (!cl::SnapshotMarker.empty()) {
@@ -137,39 +180,65 @@ int main(int argc, char **argv) {
       options.snapshotMarker = cl::SnapshotMarker;
       options.snapshotMarkerFileName = snapshotMarkerFileName;
     }
-    options.reps = cl::Reps;
-    options.minHeapSize = cl::MinHeapSize.bytes;
-    options.maxHeapSize = cl::MaxHeapSize.bytes;
-    options.occupancyTarget = cl::OccupancyTarget;
-    options.shouldReleaseUnused = cl::ShouldReleaseUnused;
-    options.allocInYoung = cl::GCAllocYoung;
-    options.revertToYGAtTTI = cl::GCRevertToYGAtTTI;
     options.forceGCBeforeStats = cl::GCBeforeStats;
-    options.shouldPrintGCStats = cl::GCPrintStats || cl::GCBeforeStats;
-    options.shouldTrackIO = cl::TrackBytecodeIO;
-    options.bytecodeWarmupPercent = cl::BytecodeWarmupPercent;
-    options.sanitizeRate = cl::GCSanitizeRate;
-    options.sanitizeRandomSeed = cl::GCSanitizeRandomSeed;
+    options.stabilizeInstructionCount = cl::StableInstructionCount;
+
+    // These are the config parameters.
+
+    // We want to print the GC stats by default.  We won't print them
+    // if -gc-print-stats is specified false explicitly, and
+    // -gc-before-stats is also false, or if we're trying to get
+    // a stable instruction count.
+    options.shouldPrintGCStats = true;
+    if (cl::GCPrintStats.getNumOccurrences() > 0) {
+      options.shouldPrintGCStats = (cl::GCPrintStats || cl::GCBeforeStats) &&
+          !cl::StableInstructionCount;
+    }
+    options.shouldPrintGCStats =
+        options.shouldPrintGCStats && !cl::StableInstructionCount;
+
+    options.minHeapSize = execOption(cl::MinHeapSize);
+    options.initHeapSize = execOption(cl::InitHeapSize);
+    options.maxHeapSize = execOption(cl::MaxHeapSize);
+    options.occupancyTarget = execOption(cl::OccupancyTarget);
+    options.shouldReleaseUnused = execOption(cl::ShouldReleaseUnused);
+    options.allocInYoung = execOption(cl::GCAllocYoung);
+    options.revertToYGAtTTI = execOption(cl::GCRevertToYGAtTTI);
+    options.shouldTrackIO = execOption(cl::TrackBytecodeIO);
+    options.bytecodeWarmupPercent = execOption(cl::BytecodeWarmupPercent);
+    options.sanitizeRate = execOption(cl::GCSanitizeRate);
+    // The type of this case is complicated, so just do it explicitly.
+    if (cl::GCSanitizeRandomSeed) {
+      options.sanitizeRandomSeed = cl::GCSanitizeRandomSeed;
+    }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
     if (cl::PrintStats)
       llvm::EnableStatistics();
 #endif
 
+    std::vector<std::string> bytecodeFiles{cl::BytecodeFiles.begin(),
+                                           cl::BytecodeFiles.end()};
     if (!cl::Trace.empty()) {
       // If this is tracing mode, get the trace instead of the stats.
       options.shouldPrintGCStats = false;
       options.shouldTrackIO = false;
       std::error_code ec;
-      llvm::raw_fd_ostream os(cl::Trace.c_str(), ec, llvm::sys::fs::F_Text);
+      auto os = ::hermes::make_unique<llvm::raw_fd_ostream>(
+          cl::Trace.c_str(),
+          ec,
+          llvm::sys::fs::CD_CreateAlways,
+          llvm::sys::fs::FA_Write,
+          llvm::sys::fs::OF_Text);
       if (ec) {
         throw std::system_error(ec);
       }
       TraceInterpreter::execAndTrace(
-          cl::TraceFile, cl::BytecodeFile, options, os);
+          cl::TraceFile, bytecodeFiles, options, std::move(os));
       llvm::outs() << "\nWrote output trace to: " << cl::Trace << "\n";
     } else {
       llvm::outs() << TraceInterpreter::execAndGetStats(
-                          cl::TraceFile, cl::BytecodeFile, options)
+                          cl::TraceFile, bytecodeFiles, options)
                    << "\n";
     }
 

@@ -14,7 +14,7 @@ with the help of [many contributors](https://github.com/jquery/esprima/contribut
 
 - Full support for ECMAScript 2017 ([ECMA-262 8th Edition](http://www.ecma-international.org/publications/standards/Ecma-262.htm))
 - Sensible [syntax tree format](https://github.com/estree/estree/blob/master/es5.md) as standardized by [ESTree project](https://github.com/estree/estree)
-- Experimental support for [JSX](https://facebook.github.io/jsx/), a syntax extension for [React](https://facebook.github.io/react/)
+- Experimental support for [JSX](https://facebook.github.io/jsx/), a syntax extension for [React](https://reactjs.org/)
 - Optional tracking of syntax node location (index-based and line-column)
 - [Heavily tested](http://esprima.org/test/ci.html) (~1500 [unit tests](https://github.com/jquery/esprima/tree/master/test/fixtures) with [full code coverage](https://codecov.io/github/jquery/esprima))
 

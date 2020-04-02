@@ -1,13 +1,18 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
+#ifdef HERMESVM_API_TRACE
+
 #include "SynthTrace.h"
 
+#include "hermes/Support/Algorithms.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/JSONEmitter.h"
+#include "hermes/Support/OSCompat.h"
 #include "hermes/Support/UTF8.h"
 #include "hermes/VM/MockedEnvironment.h"
 
@@ -25,6 +30,9 @@ namespace {
 
 using RecordType = SynthTrace::RecordType;
 using JSONEmitter = ::hermes::JSONEmitter;
+using ::hermes::parser::JSONArray;
+using ::hermes::parser::JSONObject;
+using ::hermes::parser::JSONValue;
 
 double decodeNumber(const std::string &numberAsString) {
   // Assume the original platform and the current platform are both little
@@ -63,6 +71,54 @@ std::string doublePrinter(double x) {
 }
 
 } // namespace
+
+SynthTrace::SynthTrace(
+    ObjectID globalObjID,
+    const ::hermes::vm::RuntimeConfig &conf,
+    std::unique_ptr<llvm::raw_ostream> traceStream)
+    : traceStream_(std::move(traceStream)), globalObjID_(globalObjID) {
+  if (traceStream_) {
+    json_ = std::make_unique<JSONEmitter>(*traceStream_, /*pretty*/ true);
+    json_->openDict();
+    json_->emitKeyValue("version", synthVersion());
+    json_->emitKeyValue("globalObjID", globalObjID_);
+
+    // RuntimeConfig section.
+    json_->emitKey("runtimeConfig");
+    json_->openDict();
+    {
+      json_->emitKey("gcConfig");
+      json_->openDict();
+      json_->emitKeyValue("minHeapSize", conf.getGCConfig().getMinHeapSize());
+      json_->emitKeyValue("initHeapSize", conf.getGCConfig().getInitHeapSize());
+      json_->emitKeyValue("maxHeapSize", conf.getGCConfig().getMaxHeapSize());
+      json_->emitKeyValue(
+          "occupancyTarget", conf.getGCConfig().getOccupancyTarget());
+      json_->emitKeyValue(
+          "effectiveOOMThreshold",
+          conf.getGCConfig().getEffectiveOOMThreshold());
+      json_->emitKeyValue(
+          "shouldReleaseUnused",
+          nameFromReleaseUnused(conf.getGCConfig().getShouldReleaseUnused()));
+      json_->emitKeyValue("name", conf.getGCConfig().getName());
+      json_->emitKeyValue("allocInYoung", conf.getGCConfig().getAllocInYoung());
+      json_->emitKeyValue(
+          "revertToYGAtTTI", conf.getGCConfig().getRevertToYGAtTTI());
+      json_->closeDict();
+    }
+    json_->emitKeyValue("maxNumRegisters", conf.getMaxNumRegisters());
+    json_->emitKeyValue("ES6Proxy", conf.getES6Proxy());
+    json_->emitKeyValue("ES6Symbol", conf.getES6Symbol());
+    json_->emitKeyValue("enableSampledStats", conf.getEnableSampledStats());
+    json_->emitKeyValue("vmExperimentFlags", conf.getVMExperimentFlags());
+    json_->closeDict();
+
+    // Both the top-level dict and the trace array remain open.  The latter is
+    // added to during execution.  Both are closed by flushAndDisable.
+    json_->emitKey("trace");
+    json_->openArray();
+  }
+}
 
 SynthTrace::TraceValue SynthTrace::encodeUndefined() {
   return TraceValue::encodeUndefinedValue();
@@ -181,6 +237,16 @@ bool SynthTrace::CreateObjectRecord::operator==(const Record &that) const {
   return objID_ == thatCasted.objID_;
 }
 
+bool SynthTrace::CreateHostFunctionRecord::operator==(
+    const Record &that) const {
+  if (!CreateObjectRecord::operator==(that)) {
+    return false;
+  }
+  auto thatCasted = dynamic_cast<const CreateHostFunctionRecord &>(that);
+  return functionName_ == thatCasted.functionName_ &&
+      paramCount_ == thatCasted.paramCount_;
+}
+
 bool SynthTrace::GetOrSetPropertyRecord::operator==(const Record &that) const {
   if (!Record::operator==(that)) {
     return false;
@@ -287,6 +353,25 @@ bool SynthTrace::SetPropertyNativeRecord::operator==(const Record &that) const {
       propName_ == thatCasted.propName_ && equal(value_, thatCasted.value_);
 }
 
+bool SynthTrace::GetNativePropertyNamesRecord::operator==(
+    const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  auto &thatCasted = dynamic_cast<const GetNativePropertyNamesRecord &>(that);
+  return hostObjectID_ == thatCasted.hostObjectID_;
+}
+
+bool SynthTrace::GetNativePropertyNamesReturnRecord::operator==(
+    const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  auto &thatCasted =
+      dynamic_cast<const GetNativePropertyNamesReturnRecord &>(that);
+  return propNames_ == thatCasted.propNames_;
+}
+
 void SynthTrace::Record::toJSONInternal(JSONEmitter &json, const SynthTrace &)
     const {
   std::string storage;
@@ -312,6 +397,14 @@ void SynthTrace::CreateObjectRecord::toJSONInternal(
   json.emitKeyValue("objID", objID_);
 }
 
+void SynthTrace::CreateHostFunctionRecord::toJSONInternal(
+    JSONEmitter &json,
+    const SynthTrace &trace) const {
+  CreateObjectRecord::toJSONInternal(json, trace);
+  json.emitKeyValue("functionName", functionName_);
+  json.emitKeyValue("parameterCount", paramCount_);
+}
+
 void SynthTrace::GetOrSetPropertyRecord::toJSONInternal(
     JSONEmitter &json,
     const SynthTrace &trace) const {
@@ -325,6 +418,7 @@ void SynthTrace::HasPropertyRecord::toJSONInternal(
     JSONEmitter &json,
     const SynthTrace &trace) const {
   Record::toJSONInternal(json, trace);
+  json.emitKeyValue("objID", objID_);
   json.emitKeyValue("propName", propName_);
 }
 
@@ -365,6 +459,14 @@ void SynthTrace::CallRecord::toJSONInternal(
     json.emitValue(trace.encode(arg));
   }
   json.closeArray();
+}
+
+void SynthTrace::BeginExecJSRecord::toJSONInternal(
+    ::hermes::JSONEmitter &json,
+    const SynthTrace &trace) const {
+  Record::toJSONInternal(json, trace);
+  json.emitKeyValue("sourceURL", sourceURL_);
+  json.emitKeyValue("sourceHash", ::hermes::hashAsString(sourceHash_));
 }
 
 void SynthTrace::ReturnMixin::toJSONInternal(
@@ -416,86 +518,131 @@ void SynthTrace::SetPropertyNativeRecord::toJSONInternal(
   json.emitKeyValue("value", trace.encode(value_));
 }
 
-llvm::raw_ostream &operator<<(
-    llvm::raw_ostream &os,
-    const SynthTrace::Printable &tracePrinter) {
-  // Don't need to emit start time, since each time is output with respect to
-  // the start time.
+void SynthTrace::GetNativePropertyNamesRecord::toJSONInternal(
+    JSONEmitter &json,
+    const SynthTrace &trace) const {
+  Record::toJSONInternal(json, trace);
+  json.emitKeyValue("hostObjectID", hostObjectID_);
+}
 
-  JSONEmitter json{os};
-  {
-    // Global section.
-    json.openDict();
-    json.emitKeyValue("version", tracePrinter.trace.synthVersion());
-    json.emitKeyValue("globalObjID", tracePrinter.trace.globalObjID());
-    json.emitKeyValue(
-        "sourceHash", ::hermes::hashAsString(tracePrinter.trace.sourceHash()));
-
-    // RuntimeConfig section.
-    {
-      json.emitKey("runtimeConfig");
-      json.openDict();
-      {
-        json.emitKey("gcConfig");
-        json.openDict();
-        json.emitKeyValue(
-            "minHeapSize", tracePrinter.conf.getGCConfig().getMinHeapSize());
-        json.emitKeyValue(
-            "initHeapSize", tracePrinter.conf.getGCConfig().getInitHeapSize());
-        json.emitKeyValue(
-            "maxHeapSize", tracePrinter.conf.getGCConfig().getMaxHeapSize());
-        json.closeDict();
-      }
-      json.emitKeyValue(
-          "enableSampledStats", tracePrinter.conf.getEnableSampledStats());
-      json.closeDict();
-    }
-
-    {
-      // Environment section.
-      json.emitKey("env");
-      json.openDict();
-      json.emitKeyValue("mathRandomSeed", tracePrinter.env.mathRandomSeed);
-
-      json.emitKey("callsToDateNow");
-      json.openArray();
-      for (uint64_t dateNow : tracePrinter.env.callsToDateNow) {
-        json.emitValue(dateNow);
-      }
-      json.closeArray();
-
-      json.emitKey("callsToNewDate");
-      json.openArray();
-      for (uint64_t newDate : tracePrinter.env.callsToNewDate) {
-        json.emitValue(newDate);
-      }
-      json.closeArray();
-
-      json.emitKey("callsToDateAsFunction");
-      json.openArray();
-      for (const std::string &dateAsFunc :
-           tracePrinter.env.callsToDateAsFunction) {
-        json.emitValue(dateAsFunc);
-      }
-      json.closeArray();
-
-      json.closeDict();
-    }
-
-    {
-      // Records section.
-      json.emitKey("trace");
-      json.openArray();
-      for (const std::unique_ptr<SynthTrace::Record> &rec :
-           tracePrinter.trace.records()) {
-        rec->toJSON(json, tracePrinter.trace);
-      }
-      json.closeArray();
-    }
-
-    json.closeDict();
+void SynthTrace::GetNativePropertyNamesReturnRecord::toJSONInternal(
+    JSONEmitter &json,
+    const SynthTrace &trace) const {
+  Record::toJSONInternal(json, trace);
+  json.emitKey("properties");
+  json.openArray();
+  for (const auto &prop : propNames_) {
+    json.emitValue(prop);
   }
-  return os;
+  json.closeArray();
+}
+
+const char *SynthTrace::nameFromReleaseUnused(::hermes::vm::ReleaseUnused ru) {
+  switch (ru) {
+    case ::hermes::vm::ReleaseUnused::kReleaseUnusedNone:
+      return "none";
+    case ::hermes::vm::ReleaseUnused::kReleaseUnusedOld:
+      return "old";
+    case ::hermes::vm::ReleaseUnused::kReleaseUnusedYoungOnFull:
+      return "youngOnFull";
+    case ::hermes::vm::ReleaseUnused::kReleaseUnusedYoungAlways:
+      return "youngAlways";
+  }
+}
+
+::hermes::vm::ReleaseUnused SynthTrace::releaseUnusedFromName(
+    const char *rawName) {
+  std::string name{rawName};
+  if (name == "none") {
+    return ::hermes::vm::ReleaseUnused::kReleaseUnusedNone;
+  }
+  if (name == "old") {
+    return ::hermes::vm::ReleaseUnused::kReleaseUnusedOld;
+  }
+  if (name == "youngOnFull") {
+    return ::hermes::vm::ReleaseUnused::kReleaseUnusedYoungOnFull;
+  }
+  if (name == "youngAlways") {
+    return ::hermes::vm::ReleaseUnused::kReleaseUnusedYoungAlways;
+  }
+  throw std::invalid_argument("Name for RelaseUnused not recognized");
+}
+
+void SynthTrace::flushRecordsIfNecessary() {
+  if (!json_ || records_.size() < kTraceRecordsToFlush) {
+    return;
+  }
+  flushRecords();
+}
+
+void SynthTrace::flushRecords() {
+  for (const std::unique_ptr<SynthTrace::Record> &rec : records_) {
+    rec->toJSON(*json_, *this);
+  }
+  records_.clear();
+}
+
+void SynthTrace::flushAndDisable(const ::hermes::vm::MockedEnvironment &env) {
+  if (!json_) {
+    return;
+  }
+
+  // First, flush any buffered records, and close the still-open "trace" array.
+  flushRecords();
+  json_->closeArray();
+
+  // Env section.
+  json_->emitKey("env");
+  json_->openDict();
+  json_->emitKeyValue("mathRandomSeed", env.mathRandomSeed);
+
+  json_->emitKey("callsToDateNow");
+  json_->openArray();
+  for (uint64_t dateNow : env.callsToDateNow) {
+    json_->emitValue(dateNow);
+  }
+  json_->closeArray();
+
+  json_->emitKey("callsToNewDate");
+  json_->openArray();
+  for (uint64_t newDate : env.callsToNewDate) {
+    json_->emitValue(newDate);
+  }
+  json_->closeArray();
+
+  json_->emitKey("callsToDateAsFunction");
+  json_->openArray();
+  for (const std::string &dateAsFunc : env.callsToDateAsFunction) {
+    json_->emitValue(dateAsFunc);
+  }
+  json_->closeArray();
+
+  json_->emitKey("callsToHermesInternalGetInstrumentedStats");
+  json_->openArray();
+  for (const ::hermes::vm::MockedEnvironment::StatsTable &call :
+       env.callsToHermesInternalGetInstrumentedStats) {
+    json_->openDict();
+    for (const auto &key : call.keys()) {
+      auto val = call.lookup(key);
+      if (val.isNum()) {
+        json_->emitKeyValue(key, val.num());
+      } else {
+        json_->emitKeyValue(key, val.str());
+      }
+    }
+    json_->closeDict();
+  }
+  json_->closeArray();
+  json_->closeDict();
+
+  // Close the top level dictionary (the one opened in the ctor).
+  json_->closeDict();
+
+  // Now flush the stream, and reset the fields: further tracing doesn't make
+  // sense.
+  os().flush();
+  json_.reset();
+  traceStream_.reset();
 }
 
 llvm::raw_ostream &operator<<(
@@ -527,6 +674,8 @@ llvm::raw_ostream &operator<<(
     CASE(GetPropertyNativeReturn);
     CASE(SetPropertyNative);
     CASE(SetPropertyNativeReturn);
+    CASE(GetNativePropertyNames);
+    CASE(GetNativePropertyNamesReturn);
   }
 #undef CASE
   // This only exists to appease gcc.
@@ -565,6 +714,8 @@ std::istream &operator>>(std::istream &is, SynthTrace::RecordType &type) {
   CASE(GetPropertyNativeReturn)
   CASE(SetPropertyNative)
   CASE(SetPropertyNativeReturn)
+  CASE(GetNativePropertyNames)
+  CASE(GetNativePropertyNamesReturn)
 #undef CASE
   return is;
 }
@@ -572,3 +723,5 @@ std::istream &operator>>(std::istream &is, SynthTrace::RecordType &type) {
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
+
+#endif

@@ -1,12 +1,14 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "JSLibInternal.h"
 
 #include "hermes/Support/UTF8.h"
+#include "hermes/VM/Domain.h"
 #include "hermes/VM/Handle.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/Operations.h"
@@ -35,15 +37,15 @@ CallResult<HermesValue> runRequireCall(
     assert(module.get() != nullptr);
     // Still initializing, so return the current state of module.exports.
     return JSObject::getNamed_RJS(
-        toHandle(runtime, std::move(module)),
+        runtime->makeHandle(std::move(module)),
         runtime,
         Predefined::getSymbolID(Predefined::exports));
   }
 
   GCScope gcScope{runtime};
   // If not initialized yet, start initializing and set the module object.
-  Handle<JSObject> module = toHandle(runtime, JSObject::create(runtime));
-  Handle<JSObject> exports = toHandle(runtime, JSObject::create(runtime));
+  Handle<JSObject> module = runtime->makeHandle(JSObject::create(runtime));
+  Handle<JSObject> exports = runtime->makeHandle(JSObject::create(runtime));
   if (LLVM_UNLIKELY(
           JSObject::putNamed_RJS(
               module,
@@ -95,16 +97,12 @@ CallResult<HermesValue> runRequireCall(
                              ->getCodeBlockMayAllocate(domain->getFunctionIndex(
                                  runtime, cjsModuleOffset));
 
-  auto funcRes = JSFunction::create(
+  Handle<JSFunction> func = runtime->makeHandle(JSFunction::create(
       runtime,
       domain,
       Handle<JSObject>::vmcast(&runtime->functionPrototype),
       Runtime::makeNullHandle<Environment>(),
-      codeBlock);
-  if (LLVM_UNLIKELY(funcRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto func = runtime->makeHandle<JSFunction>(*funcRes);
+      codeBlock));
 
   if (LLVM_UNLIKELY(
           JSFunction::executeCall3(
@@ -205,7 +203,7 @@ CallResult<HermesValue> require(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(targetRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto target = toHandle(runtime, std::move(*targetRes));
+  auto target = runtime->makeHandle(std::move(*targetRes));
 
   auto canonicalPath = canonicalizePath(runtime, dirname, target);
 

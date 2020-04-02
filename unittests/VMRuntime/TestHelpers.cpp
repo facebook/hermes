@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "TestHelpers.h"
 
 #include "hermes/Support/Compiler.h"
@@ -11,69 +12,48 @@
 namespace hermes {
 namespace vm {
 
+::testing::AssertionResult isException(
+    Runtime *runtime,
+    ExecutionStatus status) {
+  if (status == ExecutionStatus::EXCEPTION) {
+    std::string s;
+    llvm::raw_string_ostream os(s);
+    runtime->printException(os, runtime->makeHandle(runtime->getThrownValue()));
+    os.flush();
+    return ::testing::AssertionSuccess() << "An exception occurred: " << s;
+  }
+  return ::testing::AssertionFailure();
+}
+
 DummyRuntime::DummyRuntime(
     MetadataTableForTests metaTable,
     const GCConfig &gcConfig,
-    std::shared_ptr<StorageProvider> storageProvider)
+    std::shared_ptr<StorageProvider> storageProvider,
+    std::shared_ptr<CrashManager> crashMgr)
     : gc{metaTable,
          this,
          this,
          gcConfig,
-         std::shared_ptr<CrashManager>(new NopCrashManager),
-         storageProvider.get()} {}
-
-std::shared_ptr<DummyRuntime> DummyRuntime::create(
-    MetadataTableForTests metaTable,
-    const GCConfig &gcConfig) {
-  return create(metaTable, gcConfig, defaultProvider(gcConfig));
-}
+         crashMgr,
+         std::move(storageProvider)} {}
 
 std::shared_ptr<DummyRuntime> DummyRuntime::create(
     MetadataTableForTests metaTable,
     const GCConfig &gcConfig,
-    std::shared_ptr<StorageProvider> provider) {
-  // This should mimic the structure of Runtime::create if compressed pointers
-  // are active.
-#ifdef HERMESVM_COMPRESSED_POINTERS
-  auto storage = provider->newStorage();
-  if (LLVM_UNLIKELY(!storage)) {
-    hermes_fatal(
-        (llvm::Twine("Could not allocate initial storage for Runtime: ") +
-         convert_error_to_message(storage.getError()))
-            .str());
-  }
-  DummyRuntime *rt =
-      new (storage.get()) DummyRuntime(metaTable, gcConfig, provider);
-  return std::shared_ptr<DummyRuntime>{rt, [provider](DummyRuntime *dr) {
-                                         dr->~DummyRuntime();
-                                         provider->deleteStorage(dr);
-                                       }};
-#else
-  DummyRuntime *rt = new DummyRuntime(metaTable, gcConfig, provider);
-  return std::shared_ptr<DummyRuntime>{
-      rt, [provider](DummyRuntime *runtime) { delete runtime; }};
-#endif
+    std::shared_ptr<StorageProvider> provider,
+    std::shared_ptr<CrashManager> crashMgr) {
+  DummyRuntime *rt = new DummyRuntime(metaTable, gcConfig, provider, crashMgr);
+  return std::shared_ptr<DummyRuntime>{rt};
 }
 
-std::unique_ptr<StorageProvider> DummyRuntime::defaultProvider(
+std::shared_ptr<DummyRuntime> DummyRuntime::create(
+    MetadataTableForTests metaTable,
     const GCConfig &gcConfig) {
-  const GC::Size gcSize{gcConfig.getMinHeapSize(), gcConfig.getMaxHeapSize()};
-#ifdef HERMESVM_COMPRESSED_POINTERS
-  auto result = StorageProvider::preAllocatedProvider(
-      gcSize.storageFootprint(),
-      gcSize.minStorageFootprint(),
-      sizeof(DummyRuntime));
-  if (!result) {
-    hermes_fatal((llvm::Twine("Could not allocate provider: ") +
-                  convert_error_to_message(result.getError()))
-                     .str());
-  }
-  return std::move(result.get());
-#else
-  // Sizes aren't necessary without compressed pointers.
-  (void)gcSize;
+  return create(metaTable, gcConfig, defaultProvider());
+}
+
+std::unique_ptr<StorageProvider> DummyRuntime::defaultProvider() {
   return StorageProvider::mmapProvider();
-#endif
 }
 
 void DummyRuntime::markRoots(RootAcceptor &acceptor, bool) {

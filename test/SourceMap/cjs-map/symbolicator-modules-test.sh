@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
-# This source code is licensed under the MIT license found in the LICENSE
-# file in the root directory of this source tree.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 
 # RUN: bash %s %S %T %hermes | %FileCheck %s
 # shellcheck shell=bash disable=SC2086
@@ -31,6 +31,6 @@ SYM_TRACE="$TMPDIR/symbolicated_trace.txt"
 
 cat "$SYM_TRACE"
 # CHECK: Error: ERROR_FOR_TESTING
-# CHECK:     at mod2fun ({{.*}}cjs-subdir-2.js:8:13)
-# CHECK:     at run ({{.*}}cjs-subdir-unminified.js:9:20)
-# CHECK:     at cjs_module ({{.*}}cjs-subdir-main.js:8:7)
+# CHECK:     at mod2fun ({{.*}}cjs-subdir-2.js:10:13)
+# CHECK:     at run ({{.*}}cjs-subdir-unminified.js:11:20)
+# CHECK:     at cjs_module ({{.*}}cjs-subdir-main.js:10:7)

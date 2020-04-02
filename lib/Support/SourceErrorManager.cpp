@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/Support/SourceErrorManager.h"
 #include "hermes/Support/UTF8.h"
 
@@ -430,9 +431,13 @@ bool SourceErrorManager::findBufferLineAndLoc(
   return true;
 }
 
+uint32_t SourceErrorManager::findBufferIdForLoc(SMLoc loc) const {
+  return sm_.FindBufferContainingLoc(loc);
+}
+
 const llvm::MemoryBuffer *SourceErrorManager::findBufferForLoc(
     SMLoc loc) const {
-  uint32_t bufID = sm_.FindBufferContainingLoc(loc);
+  uint32_t bufID = findBufferIdForLoc(loc);
   if (bufID == 0) {
     return nullptr;
   }

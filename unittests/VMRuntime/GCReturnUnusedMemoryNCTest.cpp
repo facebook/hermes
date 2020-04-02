@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #if defined(HERMESVM_GC_NONCONTIG_GENERATIONAL) && defined(NDEBUG)
 
 #include "gtest/gtest.h"
@@ -64,7 +65,6 @@ TEST(GCReturnUnusedMemoryNCTest, CollectReturnsFreeMemory) {
   auto &gc = rt.gc;
 
   using HalfCell = EmptyCell<AlignedHeapSegment::maxSize() / 2>;
-  ASSERT_EQ(0, HalfCell::size() % kPageSize);
 
   // Allocate cells directly in the old generation.
   auto *cell1 = HalfCell::createLongLived(rt);

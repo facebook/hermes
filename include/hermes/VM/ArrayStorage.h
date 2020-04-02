@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_ARRAYSTORAGE_H
 #define HERMES_VM_ARRAYSTORAGE_H
 
@@ -68,8 +69,8 @@ class ArrayStorage final
       return throwExcessiveCapacityError(runtime, capacity);
     }
     void *mem = runtime->alloc</*fixedSize*/ false>(allocationSize(capacity));
-    return GCHermesValue::encodeObjectValue(
-        new (mem) ArrayStorage(runtime, capacity));
+    return HermesValue::encodeObjectValue(new (mem)
+                                              ArrayStorage(runtime, capacity));
   }
 
   /// Create a new long-lived instance with specified capacity.
@@ -80,8 +81,8 @@ class ArrayStorage final
       return throwExcessiveCapacityError(runtime, capacity);
     }
     void *mem = runtime->allocLongLived(allocationSize(capacity));
-    return GCHermesValue::encodeObjectValue(
-        new (mem) ArrayStorage(runtime, capacity));
+    return HermesValue::encodeObjectValue(new (mem)
+                                              ArrayStorage(runtime, capacity));
   }
 
   /// Create a new instance with specified capacity and size.
@@ -93,8 +94,7 @@ class ArrayStorage final
       return ExecutionStatus::EXCEPTION;
     }
 
-    ArrayStorage::resizeWithinCapacity(
-        createPseudoHandle(vmcast<ArrayStorage>(*arrRes)), runtime, size);
+    ArrayStorage::resizeWithinCapacity(vmcast<ArrayStorage>(*arrRes), size);
     return arrRes;
   }
 
@@ -184,22 +184,7 @@ class ArrayStorage final
   /// Set the size to a value <= the capacity. This is a special
   /// case of resize() but has a simpler interface since we know that it doesn't
   /// need to reallocate.
-  static void resizeWithinCapacity(
-      PseudoHandle<ArrayStorage> self,
-      Runtime *,
-      size_type newSize) {
-    assert(
-        newSize <= self->capacity_ &&
-        "newSize must be <= capacity in resizeWithinCapacity()");
-    // If enlarging, clear the new elements.
-    if (newSize > self->size_) {
-      GCHermesValue::fill(
-          self->data() + self->size_,
-          self->data() + newSize,
-          HermesValue::encodeEmptyValue());
-    }
-    self->size_ = newSize;
-  }
+  static void resizeWithinCapacity(ArrayStorage *self, size_type newSize);
 
  private:
   /// The capacity is the maximum number of elements this array can ever

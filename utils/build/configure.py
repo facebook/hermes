@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
-# This source code is licensed under the MIT license found in the LICENSE
-# file in the root directory of this source tree.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
@@ -10,14 +10,19 @@ import os
 import platform
 import subprocess
 
-from common import build_dir_suffix, get_parser, is_visual_studio, run_command, which
+from common import (
+    build_dir_suffix,
+    common_cmake_flags,
+    get_parser,
+    is_visual_studio,
+    run_command,
+    which,
+)
 
 
 def parse_args():
     parser = get_parser()
     parser.add_argument("hermes_build_dir", type=str, nargs="?", default="build")
-    parser.add_argument("llvm_build_dir", type=str, nargs="?", default="llvm_build")
-    parser.add_argument("llvm_src_dir", type=str, nargs="?", default="llvm")
     parser.add_argument("--icu", type=str, dest="icu_root", default="")
     parser.add_argument("--fbsource", type=str, dest="fbsource_dir", default="")
     parser.add_argument("--opcode-stats", dest="opcode_stats", action="store_true")
@@ -28,19 +33,49 @@ def parse_args():
         "--warnings-as-errors", dest="warnings_as_errors", action="store_true"
     )
     parser.add_argument("--static-link", dest="static_link", action="store_true")
+    parser.add_argument(
+        "--wasm",
+        action="store_true",
+        help="Build Hermes as WebAssembly instead of a native binary",
+    )
+    parser.add_argument(
+        "--emscripten-root",
+        dest="emscripten_root",
+        help="Path to the root of emscripten. Use emsdk to download",
+    )
+    parser.add_argument(
+        "--emscripten-platform",
+        dest="emscripten_platform",
+        choices=("upstream", "fastcomp"),
+        default="fastcomp",
+        help="Use either the upstream emscripten backend based on LLVM or the "
+        "fastcomp backend",
+    )
     args = parser.parse_args()
     args.hermes_build_dir = os.path.realpath(args.hermes_build_dir)
-    args.llvm_build_dir = os.path.realpath(args.llvm_build_dir)
-    args.llvm_src_dir = os.path.realpath(args.llvm_src_dir)
     if args.icu_root:
         args.icu_root = os.path.realpath(args.icu_root)
     if args.fbsource_dir:
         args.fbsource_dir = os.path.realpath(args.fbsource_dir)
+    if args.emscripten_root:
+        args.emscripten_root = os.path.realpath(args.emscripten_root)
+    if args.wasm:
+        # Check that if wasm is specified, that emscripten_root is also specified.
+        if not args.emscripten_root:
+            raise ValueError("WASM build requested, but emscripten-root not given")
+        if not os.path.exists(args.emscripten_root):
+            raise ValueError(
+                "WASM build requested, but emscripten-root doesn't exist: "
+                + args.emscripten_root
+            )
 
-    args.build_type = args.build_type or ("MinSizeRel" if args.distribute else "Debug")
-    suffix = build_dir_suffix(args)
-    args.hermes_build_dir += suffix
-    args.llvm_build_dir += suffix
+    if not args.build_type:
+        if args.distribute:
+            # WASM doesn't need to be built to be small.
+            args.build_type = "Release" if args.wasm else "MinSizeRel"
+        else:
+            args.build_type = "Debug"
+    args.hermes_build_dir += build_dir_suffix(args)
     # Guess the ICU directory based on platform.
     if not args.icu_root and platform.system() == "Linux":
         icu_prefs = [
@@ -68,13 +103,11 @@ def main():
         # It's alright if the file already exists.
         pass
 
-    cmake_flags = args.cmake_flags.split() + [
-        "-DLLVM_BUILD_DIR=" + args.llvm_build_dir,
-        "-DLLVM_SRC_DIR=" + args.llvm_src_dir,
-        "-DCMAKE_BUILD_TYPE=" + args.build_type,
-    ]
-    if args.is_32_bit:
-        cmake_flags += ["-DLLVM_BUILD_32_BITS=On"]
+    cmake_flags = (
+        args.cmake_flags.split()
+        + common_cmake_flags()
+        + ["-DCMAKE_BUILD_TYPE=" + args.build_type]
+    )
 
     if (
         platform.system() == "Windows"
@@ -82,10 +115,6 @@ def main():
         and is_visual_studio(args.build_system)
     ):
         cmake_flags += ["-Thost=x64"]
-    if not args.distribute:
-        cmake_flags += ["-DLLVM_ENABLE_ASSERTIONS=On"]
-    if args.enable_asan:
-        cmake_flags += ["-DLLVM_USE_SANITIZER=Address"]
     if args.opcode_stats:
         cmake_flags += ["-DHERMESVM_PROFILER_OPCODE=On"]
     if args.basic_block_profiler:
@@ -96,13 +125,29 @@ def main():
         cmake_flags += ["-DHERMES_STATIC_LINK=On"]
     if args.fbsource_dir:
         cmake_flags += ["-DFBSOURCE_DIR=" + args.fbsource_dir]
+    if args.wasm:
+        cmake_flags += [
+            "-DCMAKE_TOOLCHAIN_FILE={}".format(
+                os.path.join(
+                    args.emscripten_root,
+                    "cmake",
+                    "Modules",
+                    "Platform",
+                    "Emscripten.cmake",
+                )
+            ),
+            "-DCMAKE_EXE_LINKER_FLAGS="
+            "-s NODERAWFS=1 -s WASM=1 -s ALLOW_MEMORY_GROWTH=1",
+        ]
+        if args.emscripten_platform == "fastcomp":
+            cmake_flags += ["-DEMSCRIPTEN_FASTCOMP=1"]
 
     if args.icu_root:
         cmake_flags += ["-DICU_ROOT=" + args.icu_root]
-    elif (
-        os.environ.get("SANDCASTLE")
-        and platform.system() != "macos"
-        and platform.system() != "Windows"
+    elif os.environ.get("SANDCASTLE") and platform.system() not in (
+        "macos",
+        "Darwin",
+        "Windows",
     ):
         raise Exception("No ICU path provided on sandcastle")
 

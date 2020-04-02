@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -hermes-parser -dump-ir %s     -O | %FileCheck %s --match-full-lines
 
 
@@ -15,7 +17,7 @@ function foo () {
   return;
   var a;
   for(;;)
-    ++a; 
+    ++a;
 }
 
 //CHECK-LABEL:function bar() : undefined

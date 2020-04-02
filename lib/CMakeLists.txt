@@ -1,11 +1,11 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
-# This source code is licensed under the MIT license found in the LICENSE
-# file in the root directory of this source tree.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 
-set(LLVM_LINK_COMPONENTS support)
+set(HERMES_LINK_COMPONENTS LLVHSupport)
 
-add_llvm_library(hermesOptimizer
+add_hermes_library(hermesOptimizer
   STATIC
   Optimizer/PassManager/Pipeline.cpp
   Optimizer/Scalar/SimplifyCFG.cpp
@@ -31,7 +31,7 @@ add_llvm_library(hermesOptimizer
   IR/IREval.cpp
 )
 
-add_llvm_library(hermesFrontend
+add_hermes_library(hermesFrontend
   STATIC
   IRGen/IRGen.cpp
   IRGen/ESTreeIRGen.cpp IRGen/ESTreeIRGen.h
@@ -39,18 +39,21 @@ add_llvm_library(hermesFrontend
   IRGen/ESTreeIRGen-stmt.cpp
   IRGen/ESTreeIRGen-func.cpp
   IRGen/ESTreeIRGen-except.cpp
+  IRGen/IRInstrument.cpp
   IR/IR.cpp
   IR/CFG.cpp
   IR/IRBuilder.cpp
   IR/IRVerifier.cpp
   IR/Instrs.cpp
   Utils/Dumper.cpp
-  LINK_LIBS hermesSupport hermesInst hermesAST
+  LINK_LIBS hermesSupport hermesFrontEndDefs hermesAST
 )
 
 add_subdirectory(VM)
 add_subdirectory(Inst)
+add_subdirectory(FrontEndDefs)
 add_subdirectory(CompilerDriver)
+add_subdirectory(ADT)
 add_subdirectory(AST)
 add_subdirectory(FlowParser)
 add_subdirectory(Parser)
@@ -60,3 +63,6 @@ add_subdirectory(BCGen)
 add_subdirectory(ConsoleHost)
 add_subdirectory(Regex)
 add_subdirectory(Platform)
+#if(HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION)
+#  add_subdirectory(InternalBytecode)
+#endif()

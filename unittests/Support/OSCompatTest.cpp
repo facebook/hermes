@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/Support/OSCompat.h"
 #include "gtest/gtest.h"
 
@@ -49,4 +50,22 @@ TEST(OSCompatTest, CurrentRSS) {
   // isn't tracked with fine granularity.
   EXPECT_GE(oscompat::current_rss(), beginRSS);
 }
+
+#ifdef __linux__
+TEST(OSCompatTest, Scheduling) {
+  // At least one CPU should be set.
+  std::vector<bool> mask = oscompat::sched_getaffinity();
+  EXPECT_GE(mask.size(), 1u);
+  unsigned count = 0;
+  for (auto b : mask)
+    if (b)
+      ++count;
+  EXPECT_GE(count, 1u);
+
+  int cpu = oscompat::sched_getcpu();
+  ASSERT_GE(cpu, 0);
+  ASSERT_LE(cpu, (int)mask.size());
+  EXPECT_TRUE(mask[cpu]);
+}
+#endif
 } // namespace

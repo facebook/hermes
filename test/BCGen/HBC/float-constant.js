@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -target=HBC -dump-bytecode -pretty-disassemble=true -O %s | %FileCheck --match-full-lines %s
 
 var w = 3.14;
@@ -11,7 +13,7 @@ var y = 12345670.89;
 var z = 0.0;
 
 //CHECK-LABEL:Function<global>{{.*}}:
-//CHECK-NEXT:Offset in debug table: src 0x0, vars 0x0
+//CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 //CHECK-NEXT:    DeclareGlobalVar  "w"
 //CHECK-NEXT:    DeclareGlobalVar  "x"
 //CHECK-NEXT:    DeclareGlobalVar  "y"

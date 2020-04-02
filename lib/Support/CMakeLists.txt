@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
-# This source code is licensed under the MIT license found in the LICENSE
-# file in the root directory of this source tree.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 
 set(link_libs
     dtoa
@@ -12,14 +12,14 @@ if (ANDROID)
   list(APPEND link_libs log)
 endif()
 
-add_llvm_library(hermesSupport
+add_hermes_library(hermesSupport
         Allocator.cpp
         Base64vlq.cpp
         CheckedMalloc.cpp
-        CompactArray.cpp
         Conversions.cpp
         ErrorHandling.cpp
         JSONEmitter.cpp
+        OSCompatEmscripten.cpp
         OSCompatPosix.cpp
         OSCompatWindows.cpp
         PageAccessTrackerPosix.cpp
@@ -33,6 +33,7 @@ add_llvm_library(hermesSupport
         StringKind.cpp
         StringTable.cpp
         UTF8.cpp
+        UTF16Stream.cpp
         LEB128.cpp
         LINK_LIBS ${link_libs}
 )

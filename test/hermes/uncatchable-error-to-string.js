@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: (! %hermes -O -target=HBC %s 2>&1 ) | %FileCheck %s
 // RUN: %hermes -O -target=HBC -emit-binary -out %t.hbc %s && (! %hermes %t.hbc 2>&1 ) | %FileCheck %s
 

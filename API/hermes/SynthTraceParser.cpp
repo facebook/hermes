@@ -1,9 +1,12 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
+#ifdef HERMESVM_API_TRACE
+
 #include "hermes/SynthTraceParser.h"
 
 #include "hermes/Parser/JSLexer.h"
@@ -19,7 +22,7 @@ using namespace ::hermes::parser;
 namespace {
 
 ::hermes::SHA1 parseHashStrAsNumber(llvm::StringRef hashStr) {
-  ::hermes::SHA1 sourceHash;
+  ::hermes::SHA1 sourceHash{};
   // Each byte is 2 characters.
   if (hashStr.size() != 2 * sourceHash.size()) {
     throw std::runtime_error("sourceHash is not the right length");
@@ -36,7 +39,8 @@ JSONObject *parseJSON(
     std::unique_ptr<llvm::MemoryBuffer> stream) {
   JSONFactory factory(alloc);
   ::hermes::SourceErrorManager sm;
-  JSONParser parser(factory, std::move(stream), sm);
+  // Convert surrogates, since JSI deals in UTF-8.
+  JSONParser parser(factory, std::move(stream), sm, /*convertSurrogates*/ true);
   auto rootObj = parser.parse();
   if (!rootObj) {
     // The source error manager will print to stderr.
@@ -71,6 +75,8 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
 }
 
 ::hermes::vm::GCConfig getGCConfig(JSONObject *rtConfig) {
+  // This function should extract all fields from GCConfig that can affect
+  // performance metrics. Configs for debugging can be ignored.
   ::hermes::vm::GCConfig::Builder gcconf;
   auto *val = rtConfig->get("gcConfig");
   if (!val) {
@@ -89,6 +95,26 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
   if (auto *sz = gcConfig->get("maxHeapSize")) {
     gcconf.withMaxHeapSize(getNumberAs<::hermes::vm::gcheapsize_t>(sz));
   }
+  if (auto *occupancy = gcConfig->get("occupancyTarget")) {
+    gcconf.withOccupancyTarget(getNumberAs<double>(occupancy));
+  }
+  if (auto *threshold = gcConfig->get("effectiveOOMThreshold")) {
+    gcconf.withEffectiveOOMThreshold(getNumberAs<unsigned>(threshold));
+  }
+  if (auto *shouldRelease = gcConfig->get("shouldReleaseUnused")) {
+    gcconf.withShouldReleaseUnused(SynthTrace::releaseUnusedFromName(
+        llvm::cast<JSONString>(shouldRelease)->c_str()));
+  }
+  if (auto *name = gcConfig->get("name")) {
+    gcconf.withName(llvm::cast<JSONString>(name)->str());
+  }
+  if (auto *allocInYoung = gcConfig->get("allocInYoung")) {
+    gcconf.withAllocInYoung(llvm::cast<JSONBoolean>(allocInYoung)->getValue());
+  }
+  if (auto *revertAtTTI = gcConfig->get("revertToYGAtTTI")) {
+    gcconf.withRevertToYGAtTTI(
+        llvm::cast<JSONBoolean>(revertAtTTI)->getValue());
+  }
   return gcconf.build();
 }
 
@@ -106,18 +132,80 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
 
   conf.withGCConfig(getGCConfig(rtConfig));
 
-  val = rtConfig->get("enableSampledStats");
-  if (!val) {
-    // Default to false if it isn't specified.
-    conf.withEnableSampledStats(false);
-  } else {
-    if (val->getKind() != JSONKind::Boolean) {
-      throw std::invalid_argument("enableSampledStats should be a boolean");
-    }
-    conf.withEnableSampledStats(llvm::cast<JSONBoolean>(val)->getValue());
+  if (auto *maxNumRegisters = rtConfig->get("maxNumRegisters")) {
+    conf.withMaxNumRegisters(getNumberAs<unsigned>(maxNumRegisters));
+  }
+  if (auto *symbol = rtConfig->get("ES6Symbol")) {
+    conf.withES6Symbol(llvm::cast<JSONBoolean>(symbol)->getValue());
+  }
+  if (auto *enableSampledStats = rtConfig->get("enableSampledStats")) {
+    conf.withEnableSampledStats(
+        llvm::cast<JSONBoolean>(enableSampledStats)->getValue());
+  }
+  if (auto *vmExperimentFlags = rtConfig->get("vmExperimentFlags")) {
+    conf.withVMExperimentFlags(getNumberAs<uint32_t>(vmExperimentFlags));
   }
 
   return conf.build();
+}
+
+template <template <typename, typename> class Collection>
+Collection<std::string, std::allocator<std::string>> getListOfStrings(
+    JSONArray *array) {
+  Collection<std::string, std::allocator<std::string>> strings;
+  std::transform(
+      array->begin(),
+      array->end(),
+      std::back_inserter(strings),
+      [](const JSONValue *value) -> std::string {
+        if (value->getKind() != JSONKind::String) {
+          throw std::invalid_argument("Array should contain only strings");
+        }
+        return std::string(llvm::cast<JSONString>(value)->c_str());
+      });
+  return strings;
+}
+
+template <template <typename, typename> class Collection>
+Collection<
+    ::hermes::vm::MockedEnvironment::StatsTable,
+    std::allocator<::hermes::vm::MockedEnvironment::StatsTable>>
+getListOfStatsTable(JSONArray *array) {
+  Collection<
+      ::hermes::vm::MockedEnvironment::StatsTable,
+      std::allocator<::hermes::vm::MockedEnvironment::StatsTable>>
+      calls;
+  if (!array) {
+    return calls;
+  }
+  std::transform(
+      array->begin(),
+      array->end(),
+      std::back_inserter(calls),
+      [](const JSONValue *value)
+          -> ::hermes::vm::MockedEnvironment::StatsTable {
+        if (value->getKind() != JSONKind::Object) {
+          throw std::invalid_argument("Stats table JSON rep is not object");
+        }
+        const JSONObject *obj = llvm::cast<JSONObject>(value);
+        ::hermes::vm::MockedEnvironment::StatsTable result;
+        for (auto name : *obj->getHiddenClass()) {
+          auto valForName = obj->at(name->str());
+          if (valForName->getKind() == JSONKind::Number) {
+            result.try_emplace(
+                name->str(), llvm::cast<JSONNumber>(valForName)->getValue());
+          } else if (valForName->getKind() == JSONKind::String) {
+            result.try_emplace(
+                name->str(),
+                std::string(llvm::cast<JSONString>(valForName)->c_str()));
+          } else {
+            throw std::invalid_argument(
+                "Stats table kind is not num or string.");
+          }
+        }
+        return result;
+      });
+  return calls;
 }
 
 ::hermes::vm::MockedEnvironment getMockedEnvironment(JSONObject *env) {
@@ -130,20 +218,6 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
         [](const JSONValue *value) { return getNumberAs<uint64_t>(value); });
     return calls;
   };
-  auto getListOfStrings = [](JSONArray *array) -> std::deque<std::string> {
-    std::deque<std::string> calls;
-    std::transform(
-        array->begin(),
-        array->end(),
-        std::back_inserter(calls),
-        [](const JSONValue *value) -> std::string {
-          if (value->getKind() != JSONKind::String) {
-            throw std::invalid_argument("Array should contain only strings");
-          }
-          return std::string(llvm::cast<JSONString>(value)->c_str());
-        });
-    return calls;
-  };
 
   if (!llvm::dyn_cast_or_null<JSONNumber>(env->get("mathRandomSeed"))) {
     throw std::invalid_argument("env.mathRandomSeed is not a number");
@@ -154,19 +228,22 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
       getListOfNumbers(llvm::cast<JSONArray>(env->at("callsToDateNow")));
   auto callsToNewDate =
       getListOfNumbers(llvm::cast<JSONArray>(env->at("callsToNewDate")));
-  auto callsToDateAsFunction =
-      getListOfStrings(llvm::cast<JSONArray>(env->at("callsToDateAsFunction")));
+  auto callsToDateAsFunction = getListOfStrings<std::deque>(
+      llvm::cast<JSONArray>(env->at("callsToDateAsFunction")));
+  auto callsToHermesInternalGetInstrumentedStats =
+      getListOfStatsTable<std::deque>(llvm::cast_or_null<JSONArray>(
+          env->get("callsToHermesInternalGetInstrumentedStats")));
   return ::hermes::vm::MockedEnvironment{
-      mathRandomSeed, callsToDateNow, callsToNewDate, callsToDateAsFunction};
+      mathRandomSeed,
+      callsToDateNow,
+      callsToNewDate,
+      callsToDateAsFunction,
+      callsToHermesInternalGetInstrumentedStats};
 }
 
-SynthTrace getTrace(
-    JSONArray *array,
-    SynthTrace::ObjectID globalObjID,
-    const ::hermes::SHA1 &sourceHash) {
+SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
   using RecordType = SynthTrace::RecordType;
-  SynthTrace trace(globalObjID);
-  trace.setSourceHash(sourceHash);
+  SynthTrace trace(globalObjID, ::hermes::vm::RuntimeConfig());
   auto getListOfTraceValues =
       [](JSONArray *array,
          SynthTrace &trace) -> std::vector<SynthTrace::TraceValue> {
@@ -204,9 +281,21 @@ SynthTrace getTrace(
     auto *thisArg = llvm::dyn_cast_or_null<JSONString>(obj->get("thisArg"));
     auto *retval = llvm::dyn_cast_or_null<JSONString>(obj->get("retval"));
     switch (kind) {
-      case RecordType::BeginExecJS:
-        trace.emplace_back<SynthTrace::BeginExecJSRecord>(timeFromStart);
+      case RecordType::BeginExecJS: {
+        std::string sourceURL;
+        ::hermes::SHA1 hash{};
+        if (JSONString *sourceURLJSON =
+                llvm::dyn_cast_or_null<JSONString>(obj->get("sourceURL"))) {
+          sourceURL = sourceURLJSON->str();
+        }
+        if (JSONString *sourceHash =
+                llvm::dyn_cast_or_null<JSONString>(obj->get("sourceHash"))) {
+          hash = parseHashStrAsNumber(sourceHash->str());
+        }
+        trace.emplace_back<SynthTrace::BeginExecJSRecord>(
+            timeFromStart, std::move(sourceURL), std::move(hash));
         break;
+      }
       case RecordType::EndExecJS:
         trace.emplace_back<SynthTrace::EndExecJSRecord>(
             timeFromStart, trace.decode(retval->c_str()));
@@ -223,10 +312,21 @@ SynthTrace getTrace(
         trace.emplace_back<SynthTrace::CreateHostObjectRecord>(
             timeFromStart, objID->getValue());
         break;
-      case RecordType::CreateHostFunction:
+      case RecordType::CreateHostFunction: {
+        std::string functionName;
+        unsigned paramCount = 0;
+        if (JSONString *jsonFunctionName =
+                llvm::dyn_cast_or_null<JSONString>(obj->get("functionName"))) {
+          functionName = jsonFunctionName->str();
+        }
+        if (JSONNumber *jsonParamCount = llvm::dyn_cast_or_null<JSONNumber>(
+                obj->get("parameterCount"))) {
+          paramCount = jsonParamCount->getValue();
+        }
         trace.emplace_back<SynthTrace::CreateHostFunctionRecord>(
-            timeFromStart, objID->getValue());
+            timeFromStart, objID->getValue(), functionName, paramCount);
         break;
+      }
       case RecordType::GetProperty:
         trace.emplace_back<SynthTrace::GetPropertyRecord>(
             timeFromStart,
@@ -319,8 +419,16 @@ SynthTrace getTrace(
         trace.emplace_back<SynthTrace::SetPropertyNativeReturnRecord>(
             timeFromStart);
         break;
-      default:
-        llvm_unreachable("Not a valid record type");
+      case RecordType::GetNativePropertyNames:
+        trace.emplace_back<SynthTrace::GetNativePropertyNamesRecord>(
+            timeFromStart, hostObjID->getValue());
+        break;
+      case RecordType::GetNativePropertyNamesReturn:
+        trace.emplace_back<SynthTrace::GetNativePropertyNamesReturnRecord>(
+            timeFromStart,
+            getListOfStrings<std::vector>(
+                llvm::cast<JSONArray>(obj->get("properties"))));
+        break;
     }
   }
   return trace;
@@ -365,18 +473,11 @@ parseSynthTrace(std::unique_ptr<llvm::MemoryBuffer> trace) {
   // Else, for backwards compatibility, allow no version to be specified, which
   // will imply "latest version".
 
-  ::hermes::SHA1 hash{};
-  if (auto *sourceHashAsStr =
-          llvm::dyn_cast_or_null<JSONString>(root->get("sourceHash"))) {
-    llvm::StringRef hashStr = sourceHashAsStr->str();
-    hash = parseHashStrAsNumber(hashStr);
-  }
-
   auto globalObjID =
       getNumberAs<SynthTrace::ObjectID>(root->get("globalObjID"));
   // Get and parse the records list.
   return std::make_tuple(
-      getTrace(llvm::cast<JSONArray>(root->at("trace")), globalObjID, hash),
+      getTrace(llvm::cast<JSONArray>(root->at("trace")), globalObjID),
       getRuntimeConfig(root),
       getMockedEnvironment(llvm::cast<JSONObject>(root->at("env"))));
 }
@@ -393,3 +494,5 @@ parseSynthTrace(const std::string &tracefile) {
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
+
+#endif

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_OPTIMIZER_PASSMANAGER_PASSMANAGER_H
 #define HERMES_OPTIMIZER_PASSMANAGER_PASSMANAGER_H
 
@@ -104,7 +105,7 @@ class PassManager {
     llvm::SmallVector<Timer, 32> timers;
     std::unique_ptr<TimerGroup> timerGroup{nullptr};
     if (AreStatisticsEnabled()) {
-      timerGroup.reset(new TimerGroup("PassManager Timers", ""));
+      timerGroup.reset(new TimerGroup("", "PassManager Timers"));
     }
 
     // Optionally dump the IR after every pass if the flag is set.
@@ -128,7 +129,7 @@ class PassManager {
       dumpLastPass(P);
 
       TimeRegion timeRegion(
-          timerGroup ? timers.emplace_back(P->getName(), "", *timerGroup),
+          timerGroup ? timers.emplace_back("", P->getName(), *timerGroup),
           &timers.back()
                      : nullptr);
 

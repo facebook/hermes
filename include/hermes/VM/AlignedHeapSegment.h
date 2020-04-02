@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_SEGMENT_H
 #define HERMES_VM_SEGMENT_H
 
@@ -18,6 +19,7 @@
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/HeapAlign.h"
 #include "hermes/VM/MarkBitArrayNC.h"
+#include "hermes/VM/PointerBase.h"
 #include "hermes/VM/SweepResultNC.h"
 
 #include "llvm/Support/MathExtras.h"
@@ -73,6 +75,14 @@ class AlignedHeapSegment final {
 
   ~AlignedHeapSegment();
 
+  /// The very beginning of a segment contains this small structure, which can
+  /// contain segment-specific information.
+  struct SegmentInfo {
+#ifdef HERMESVM_COMPRESSED_POINTERS
+    unsigned index;
+#endif
+  };
+
   /// Contents of the memory region managed by this segment.
   class Contents {
     friend class AlignedHeapSegment;
@@ -80,9 +90,16 @@ class AlignedHeapSegment final {
     CardTable cardTable_;
     MarkBitArrayNC markBitArray_;
 
+    /// Memory made inaccessible through protectGuardPage, for security and
+    /// earlier detection of corruption.
+    char guardPage_[pagesize::kExpectedPageSize];
+
     /// The first byte of the allocation region, which extends past the "end" of
     /// the struct, to the end of the memory region that contains it.
     char allocRegion_[1];
+
+    /// Set the protection mode of guardPage_ (if system page size allows it).
+    void protectGuardPage(oscompat::ProtectMode mode);
   };
 
   /// The offset from the beginning of a segment of the allocatable region.
@@ -91,6 +108,10 @@ class AlignedHeapSegment final {
   static_assert(
       isSizeHeapAligned(offsetOfAllocRegion),
       "Allocation region must start at a heap aligned offset");
+
+  static_assert(
+      offsetof(Contents, guardPage_) % sizeof(Contents::guardPage_) == 0,
+      "Guard page must be aligned to likely page size");
 
   /// Attempt an allocation of the given size in the segment.  If there is
   /// sufficent space, cast the space as a GCCell, and returns an uninitialized
@@ -110,6 +131,13 @@ class AlignedHeapSegment final {
   /// a pointer to the AlignedHeapSegment::Contents laid out in that storage,
   /// assuming it exists.
   inline static Contents *contents(void *lowLim);
+  inline static const Contents *contents(const void *lowLim);
+
+  /// Given the \p lowLim of some valid AlignedStorage's memory region, returns
+  /// a pointer to the AlignedHeapSegment::SegmentInfo laid out in that storage,
+  /// assuming it exists.
+  inline static SegmentInfo *segmentInfo(void *lowLim);
+  inline static const SegmentInfo *segmentInfo(const void *lowLim);
 
   /// Given a \p ptr into the memory region of some valid AlignedStorage \c s,
   /// returns a pointer to the CardTable covering the segment containing the
@@ -117,6 +145,20 @@ class AlignedHeapSegment final {
   ///
   /// \pre There exists a currently alive heap that claims to contain \c ptr.
   inline static CardTable *cardTableCovering(const void *ptr);
+
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  /// Returns the index of the segment containing \p ptr.
+  inline static unsigned segmentIndex(const void *ptr);
+
+  /// Returns the index of the segment containing \p ptr, which is required to
+  /// be the start of its containing segment.  (This can allow extra efficiency,
+  /// in cases where the segment start has already been computed.)
+  inline static unsigned segmentIndexFromStart(const void *ptr);
+
+  /// Requires that \p segStart is the start address of a segment, and sets
+  /// that segment's index to \p index.
+  inline static void setSegmentIndexFromStart(void *segStart, unsigned index);
+#endif // HERMESVM_COMPRESSED_POINTERS
 
   /// Given a \p ptr into the memory region of some valid AlignedStorage \c s,
   /// returns a pointer to the MarkBitArrayNC covering the segment containing
@@ -294,10 +336,22 @@ class AlignedHeapSegment final {
   void forObjsInRange(
       const std::function<void(GCCell *)> &callback,
       char *low,
-      char *high);
+      const char *high);
+  void forObjsInRange(
+      const std::function<void(const GCCell *)> &callback,
+      const char *low,
+      const char *high) const;
 
   /// Call \p callback on every cell allocated in this segment.
   void forAllObjs(const std::function<void(GCCell *)> &callback);
+  void forAllObjs(const std::function<void(const GCCell *)> &callback) const;
+
+  /// Adds a representation of segments address range to *\p buf,
+  /// ensuring that we don't write more than \p sz characters.  Writes
+  /// min(*sz, <length of string for seg>) characters.  Updates buf to
+  /// point after the last character written, and decreases *\p sz by the
+  /// number of chars written.
+  void addExtentToString(char **buf, int *sz);
 
 #ifndef NDEBUG
   /// Returns true iff \p lvl could refer to a level within this segment.
@@ -324,6 +378,21 @@ class AlignedHeapSegment final {
   void checkWellFormed(const GC *gc, uint64_t *externalMemory = nullptr) const;
 #endif
 
+#ifdef HERMES_EXTRA_DEBUG
+  /// Extra debugging: at the end of GC we "summarize" the vtable pointers of
+  /// old-gen objects.  Conceptually, this means treat them as if they
+  /// were concatenated, and take the hash of a string form.
+  /// TODO(T56364255): remove these when the problem is diagnosed.
+
+  /// Summarize the vtables of objects in the segment, and record the results
+  /// (including the address after the last object summarized).
+  void summarizeVTables();
+
+  /// Resummarize the vtables of the old-gen objects, and return whether the
+  /// result is the same as the last summary.
+  bool checkSummarizedVTables() const;
+#endif
+
  private:
   /// Return a pointer to the contents of the memory region managed by this
   /// segment.
@@ -331,6 +400,14 @@ class AlignedHeapSegment final {
 
   void deleteDeadObjectIDs(GC *gc);
   void updateObjectIDs(GC *gc, SweepResult::VTablesRemaining &vTables);
+
+#ifdef HERMES_EXTRA_DEBUG
+  /// TODO(T56364255): remove these when the problem is diagnosed.
+
+  /// Summarize the vtables of objects in the segment, up to but not
+  /// including \p level.
+  size_t summarizeVTablesWork(const char *level) const;
+#endif
 
   AlignedStorage storage_;
 
@@ -347,6 +424,17 @@ class AlignedHeapSegment final {
 
   /// Pointer to the generation that owns this segment.
   GCGeneration *generation_{nullptr};
+
+#ifdef HERMES_EXTRA_DEBUG
+  /// Support summarization of the vtables in the segment.
+  /// TODO(T56364255): remove this when the problem is diagnosed.
+
+  /// The level at the time we last summarized, or start(), if we
+  /// haven't previously summarized.
+  char *lastVTableSummaryLevel_{start()};
+  /// The value of the last summary, or else 0 if there has been no summary.
+  size_t lastVTableSummary_{0};
+#endif
 };
 
 AllocResult AlignedHeapSegment::alloc(uint32_t size) {
@@ -409,9 +497,46 @@ bool AlignedHeapSegment::getCellMarkBit(const GCCell *cell) {
   return reinterpret_cast<Contents *>(lowLim);
 }
 
+/* static */ const AlignedHeapSegment::Contents *AlignedHeapSegment::contents(
+    const void *lowLim) {
+  return reinterpret_cast<const Contents *>(lowLim);
+}
+
+/* static */ AlignedHeapSegment::SegmentInfo *AlignedHeapSegment::segmentInfo(
+    void *lowLim) {
+  static_assert(
+      sizeof(SegmentInfo) < CardTable::kUnusedPrefixSize,
+      "SegmentInfo does not fit in available unused CardTable space.");
+  return reinterpret_cast<SegmentInfo *>(lowLim);
+}
+
+/* static */ const AlignedHeapSegment::SegmentInfo *
+AlignedHeapSegment::segmentInfo(const void *lowLim) {
+  return reinterpret_cast<const SegmentInfo *>(lowLim);
+}
+
 /* static */ CardTable *AlignedHeapSegment::cardTableCovering(const void *ptr) {
   return &AlignedHeapSegment::contents(AlignedStorage::start(ptr))->cardTable_;
 }
+
+#ifdef HERMESVM_COMPRESSED_POINTERS
+/* static */ unsigned AlignedHeapSegment::segmentIndex(const void *ptr) {
+  return segmentIndexFromStart(AlignedStorage::start(ptr));
+}
+
+/* static */ unsigned AlignedHeapSegment::segmentIndexFromStart(
+    const void *ptr) {
+  assert(ptr == AlignedStorage::start(ptr) && "Precondition.");
+  return AlignedHeapSegment::segmentInfo(ptr)->index;
+}
+
+/* static */ void AlignedHeapSegment::setSegmentIndexFromStart(
+    void *segStart,
+    unsigned index) {
+  assert(segStart == AlignedStorage::start(segStart) && "Precondition.");
+  AlignedHeapSegment::segmentInfo(segStart)->index = index;
+}
+#endif // HERMESVM_COMPRESSED_POINTERS
 
 /* static */ constexpr size_t AlignedHeapSegment::maxSize() {
   return AlignedStorage::size() - offsetof(Contents, allocRegion_);

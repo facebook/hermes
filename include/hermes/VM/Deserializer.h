@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_DESERIALIZER_H
 #define HERMES_VM_DESERIALIZER_H
 
@@ -216,7 +217,7 @@ class Deserializer {
     assert(
         buffer_->getBufferStart() + offset_ + size < buffer_->getBufferEnd() &&
         "Deserialize read out of range");
-    auto resPtr = std::make_unique<const BufferFromSharedBuffer>(
+    auto resPtr = llvm::make_unique<const BufferFromSharedBuffer>(
         reinterpret_cast<const uint8_t *>(buffer_->getBufferStart()) + offset_,
         size,
         buffer_);

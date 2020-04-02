@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_NATIVEARGS_H
 #define HERMES_VM_NATIVEARGS_H
 
@@ -34,7 +35,7 @@ class NativeArgs final {
     return thisArg_ + index + 1;
   }
 
-  /// \param points to "this", "arg0", ... "argN").
+  /// \param thisArg points to ("this", "arg0", ... "argN").
   /// \param argCount number of JavaScript arguments excluding 'this'
   /// \param newTarget points to the value of \c new.target in the stack.
   NativeArgs(

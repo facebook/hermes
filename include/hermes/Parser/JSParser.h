@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_PARSER_JSPARSER_H
 #define HERMES_PARSER_JSPARSER_H
 
@@ -87,7 +88,7 @@ class JSParser {
   std::unique_ptr<detail::JSParserImpl> const impl_;
 };
 
-}; // namespace parser
-}; // namespace hermes
+} // namespace parser
+} // namespace hermes
 
 #endif // HERMES_PARSER_JSPARSER_H

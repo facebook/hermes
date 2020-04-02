@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_ENABLE_DEBUGGER
 
 #include <iostream>
@@ -55,7 +56,7 @@ static const std::map<std::string, std::string> commandToHelpText = {
      "<line> <column>\n\t"
      "<filename> <line> <column>\n"
      "Optionally a conditional breakpoint can be specified as: if <condition>\n\n"
-     "USAGE: break <filename> <line> <column> <condition>\n"},
+     "USAGE: break <filename> <line> [<column>] [if <condition>]\n"},
     {"delete",
      "Deletes all or specified breakpoints.\n\n"
      "USAGE: delete [all/<breakpoint_id>]\n"},
@@ -101,7 +102,7 @@ static const std::string topLevelHelpText =
     "Type `help name' to find out more about the function `name'.\n\n"
     "frame [frame_id]\n"
     "set pauseOnThrow [on/uncaught/off]\n"
-    "break <filename> <line> <column> <condition>\n"
+    "break <filename> <line> [<column>] [if <condition>]\n"
     "delete [all/<breakpoint_id>]\n"
     "enable <breakpoint_id>\n"
     "disable <breakpoint_id>\n"
@@ -193,7 +194,7 @@ debugger::Debugger *volatile gDebugger = nullptr;
 // A signal handler that triggers an async pause in the debugger.
 void triggerAsyncPause(int sig) {
   if (gDebugger)
-    gDebugger->triggerAsyncPause();
+    gDebugger->triggerAsyncPause(debugger::AsyncPauseKind::Explicit);
 }
 
 /// Control whether a SIGINT (aka control-C) should result in an async pause
@@ -207,11 +208,11 @@ void setSIGINTShouldPause(bool flag) {
 void schedulePause(double delaySecs) {
   assert(delaySecs >= 0 && std::isfinite(delaySecs) && "Invalid delay");
   if (delaySecs == 0) {
-    gDebugger->triggerAsyncPause();
+    gDebugger->triggerAsyncPause(debugger::AsyncPauseKind::Explicit);
   } else {
     std::thread t([=] {
       std::this_thread::sleep_for(std::chrono::duration<double>(delaySecs));
-      gDebugger->triggerAsyncPause();
+      gDebugger->triggerAsyncPause(debugger::AsyncPauseKind::Explicit);
     });
     t.detach();
   }
@@ -463,6 +464,11 @@ struct HDBDebugger : public debugger::EventObserver {
         }
       } else if (request == "variables" || request == "v") {
         printVariables(debugger.getProgramState());
+      } else {
+        std::cout << "Not a valid info sub-command. See below for list of"
+                  << "info sub-commands.\n\n"
+                  << "info breakpoints\n"
+                  << "info variables\n";
       }
     } else if (command == "backtrace" || command == "bt") {
       printStackTrace(debugger.getProgramState().getStackTrace(), frame_);

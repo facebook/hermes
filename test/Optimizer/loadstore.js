@@ -1,10 +1,12 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -hermes-parser -strict -dump-ir %s     -O  | %FileCheck %s --match-full-lines --check-prefix=OPT-CHECK
-// RUN: %hermes -hermes-parser -strict -dump-ir %s         | %FileCheck %s --match-full-lines
+// RUN: %hermes -hermes-parser -strict -dump-ir %s     -O0 | %FileCheck %s --match-full-lines
 
 // Unoptimized:
 //CHECK-LABEL:function foo(p1)

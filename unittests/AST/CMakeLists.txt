@@ -1,11 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
-# This source code is licensed under the MIT license found in the LICENSE
-# file in the root directory of this source tree.
-
-set(LLVM_LINK_COMPONENTS
-  Core
-  )
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 
 set(ASTSources
   JSONTest.cpp

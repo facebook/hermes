@@ -1,10 +1,13 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/SegmentedArray.h"
+#include "hermes/VM/Casting.h"
+#include "hermes/VM/HermesValueTraits.h"
 
 #include "TestHelpers.h"
 
@@ -54,6 +57,28 @@ TEST_F(SegmentedArrayTest, AllocLargeArrayThrowsRangeError) {
       vmcast<JSObject>(hv)->getParent(runtime),
       vmcast<JSObject>(runtime->RangeErrorPrototype))
       << "Exception thrown was not a RangeError";
+}
+
+TEST_F(SegmentedArrayTest, AllowTrimming) {
+  MutableHandle<SegmentedArray> array(runtime);
+  constexpr SegmentedArray::size_type originalCapacity = 4;
+  // Create an array and put in an element so its size is 1 and its capacity
+  // is 4.
+  array = std::move(*SegmentedArray::create(runtime, originalCapacity));
+  // The capacity is not guaranteed to match the input parameter, it is taken
+  // as a hint, so check for <=.
+  EXPECT_LE(array->capacity(), originalCapacity);
+  ASSERT_RETURNED(
+      SegmentedArray::push_back(array, runtime, runtime->makeHandle(0.0_hd)));
+  EXPECT_EQ(1, array->size());
+
+  // Now force some GCs to happen.
+  for (auto i = 0; i < 2; i++) {
+    runtime->collect();
+  }
+
+  // The array should be trimmed.
+  EXPECT_EQ(array->size(), array->capacity());
 }
 
 } // namespace

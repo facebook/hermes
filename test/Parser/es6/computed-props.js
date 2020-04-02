@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -dump-ast --pretty-json %s | %FileCheck %s --match-full-lines
 
 // CHECK-LABEL: {
@@ -161,7 +163,8 @@ var {['x']: z} = {x: 3};
 // CHECK-NEXT:                 "type": "BlockStatement",
 // CHECK-NEXT:                 "body": []
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "get",
 // CHECK-NEXT:             "computed": true
@@ -191,7 +194,8 @@ var {['x']: z} = {x: 3};
 // CHECK-NEXT:                 "type": "BlockStatement",
 // CHECK-NEXT:                 "body": []
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "set",
 // CHECK-NEXT:             "computed": true

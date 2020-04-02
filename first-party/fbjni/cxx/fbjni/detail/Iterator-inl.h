@@ -1,5 +1,5 @@
-/**
- * Copyright 2018-present, Facebook, Inc.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ struct IteratorHelper : public JavaClass<IteratorHelper<E>> {
   value_type next() {
     static auto elementField =
       JavaBase_::javaClassStatic()->template getField<jobject>("mElement");
-    return dynamic_ref_cast<JniType<E>>(JavaBase_::getFieldValue(elementField));
+    return dynamic_ref_cast<E>(JavaBase_::getFieldValue(elementField));
   }
 
   static void reset(value_type& v) {
@@ -120,7 +120,7 @@ class Iterator {
     return ret;
   }
 
-  global_ref<typename T::javaobject> helper_;
+  global_ref<T> helper_;
   // set to -1 at end
   std::ptrdiff_t i_;
   value_type entry_;

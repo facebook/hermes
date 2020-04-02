@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_OLDGEN_H
 #define HERMES_VM_OLDGEN_H
 
@@ -171,6 +172,23 @@ class OldGen : public GCGeneration {
   void forObjsAllocatedSinceGC(const std::function<void(GCCell *)> &callback);
 #endif
 
+#ifdef HERMES_EXTRA_DEBUG
+  /// Extra debugging: at the end of GC we "summarize" the vtable pointers of
+  /// old-gen objects.  Conceptually, this means treat them as if they
+  /// were concatenated, and take the has of a string form.
+  /// TODO(T56364255): remove these when the problem is diagnosed.
+
+  /// Summarize the vtables of old-gen objects, and record the results
+  /// (including the last object summarized).
+  void summarizeOldGenVTables();
+
+  /// Resummarize the vtables of the old-gen objects, and check whether the
+  /// result is the same as the last summary.  Does logging and/or adds
+  /// CrashManager custom breakpad data, if it is not.  The \p fullGCNum is
+  /// the ordinal number of the full GC that is doing the check (at its start).
+  void checkSummarizedOldGenVTables(unsigned fullGCNum);
+#endif
+
   /// @}
 
   /// Assumes the generation owns its allocation context.  Attempts to allocate
@@ -312,6 +330,12 @@ class OldGen : public GCGeneration {
   /// allocated directly in the OldGen.
   void didFinishGC();
 
+  /// Update the extents of the old-gen segments with \p crashMgr.  Labels
+  /// the crash manager key with the given \p runtimeName.
+  void updateCrashManagerHeapExtents(
+      const std::string &runtimeName,
+      CrashManager *crashMgr);
+
  private:
   friend class OldGenFilledSegmentRange;
   friend class OldGenMaterializingRange;
@@ -426,11 +450,20 @@ class OldGen : public GCGeneration {
   /// Whether to return unused memory to OS.
   bool releaseUnused_;
 
+  /// The number of old-gen segments recorded with the crash manager.
+  unsigned crashMgrRecordedSegments_{0};
+
 #ifdef HERMES_EXTRA_DEBUG
   /// The set of addresses of card tables whose boundary tables have been
   /// protected.
   /// TODO(T48709128): remove this when the problem is diagnosed.
   llvm::DenseSet<void *> protectedCardTables_;
+#endif
+
+#ifdef HERMES_EXTRA_DEBUG
+  /// The number of vtable summary errors detected so far.
+  /// TODO(T56364255): remove these when the problem is diagnosed.
+  unsigned numVTableSummaryErrors_{0};
 #endif
 };
 

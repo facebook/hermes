@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_GENGC_H
 #define HERMES_VM_GENGC_H
 
@@ -116,7 +117,9 @@ class GenGC final : public GCBase {
       PointerBase *pointerBase,
       const GCConfig &gcConfig,
       std::shared_ptr<CrashManager> crashMgr,
-      StorageProvider *provider);
+      std::shared_ptr<StorageProvider> provider);
+
+  ~GenGC();
 
   /// Allocate a new cell of the specified size \p size.
   /// If necessary perform a GC cycle, which may potentially move allocated
@@ -127,6 +130,9 @@ class GenGC final : public GCBase {
   /// being allocated will have a finalizer.
   template <bool fixedSize = true, HasFinalizer hasFinalizer = HasFinalizer::No>
   inline void *alloc(uint32_t sz);
+
+  template <bool fixedSize = true, HasFinalizer hasFinalizer = HasFinalizer::No>
+  inline void *allocImpl(uint32_t sz);
 
 #ifndef NDEBUG
   /// Allocation path we use in debug builds, where we potentially follow
@@ -145,6 +151,9 @@ class GenGC final : public GCBase {
   /// necessary to create room).
   template <HasFinalizer hasFinalizer = HasFinalizer::No>
   inline void *allocLongLived(uint32_t size);
+
+  template <HasFinalizer hasFinalizer = HasFinalizer::No>
+  inline void *allocLongLivedImpl(uint32_t size);
 
   /// Returns whether an external allocation of the given \p size fits
   /// within the maximum heap size.  (Note that this does not guarantee that the
@@ -220,15 +229,17 @@ class GenGC final : public GCBase {
   ///
   /// \pre The range described must be wholly contained within one segment of
   ///     the heap.
-  void writeBarrierRange(HermesValue *start, uint32_t numHVs);
+  void writeBarrierRange(GCHermesValue *start, uint32_t numHVs);
 
   /// We filled numHVs slots starting at start with the given value.
   /// Do any necessary barriers.
   ///
   /// \pre The range described must be wholly contained within one segment of
   ///     the heap.
-  void
-  writeBarrierRangeFill(HermesValue *start, uint32_t numHVs, HermesValue value);
+  void writeBarrierRangeFill(
+      GCHermesValue *start,
+      uint32_t numHVs,
+      HermesValue value);
 
   /// Inform the GC that TTI has been reached.
   void ttiReached();
@@ -268,6 +279,12 @@ class GenGC final : public GCBase {
 
   /// Returns true if \p cell is the most-recently allocated finalizable object.
   bool isMostRecentFinalizableObj(const GCCell *cell) const;
+
+  /// Whether the last allocation was fixed size.  Used to check that the
+  /// FixedSize parameter used in allocation matches the fixed-size attribute of
+  /// the object constructed on the allocated memory.  For long-lived
+  /// allocations, we do not declare whether they are fixed size.
+  inline FixedSizeValue lastAllocationWasFixedSize() const override;
 #endif
 
   /// \return true if \p is in the young generation.
@@ -290,13 +307,14 @@ class GenGC final : public GCBase {
   /// The largest the size of this heap could ever grow to.
   inline size_t maxSize() const;
 
-  /// Mark a weak reference as being used.
-  void markWeakRef(WeakRefBase &wr);
 #ifndef NDEBUG
   /// \return Number of weak ref slots currently in use.
   /// Inefficient. For testing/debugging.
   size_t countUsedWeakRefs() const;
 #endif
+
+  /// Cumulative stats over time so far.
+  size_t getPeakLiveAfterGC() const override;
 
   /// Populate \p info with information about the heap.
   void getHeapInfo(HeapInfo &info) override;
@@ -316,7 +334,7 @@ class GenGC final : public GCBase {
 
   /// Creates a snapshot of the heap, which includes information about what
   /// objects exist, their sizes, and what they point to.
-  virtual void createSnapshot(llvm::raw_ostream &os, bool compact) override;
+  virtual void createSnapshot(llvm::raw_ostream &os) override;
 
 #ifdef HERMESVM_SERIALIZE
   /// Serialize WeakRefs.
@@ -559,7 +577,10 @@ class GenGC final : public GCBase {
   /// RAII class managing the actions that need to be performed immediately
   /// before and immediately after every garbage collection.
   struct CollectionSection : public PerfSection {
-    CollectionSection(GenGC *gc, const char *name);
+    CollectionSection(
+        GenGC *gc,
+        const char *name,
+        OptValue<GCCallbacks *> gcCallbacksOpt = llvm::None);
     ~CollectionSection();
 
     /// Update the cumulative GC statistics held for all GCs, and the statistics
@@ -567,15 +588,28 @@ class GenGC final : public GCBase {
     /// for young gen collections, and the entire heap for full collections).
     ///
     /// \p regionSize The size of the region after the last GC.
+    /// \p usedBefore The number of bytes allocated just before the GC.
+    /// \p usedAfter The number of bytes live after the GC.
     /// \p regionStats A pointer to the cumulative statistics struct for the
     ///     region.
-    void recordGCStats(size_t regionSize, CumulativeHeapStats *regionStats);
+    void recordGCStats(
+        size_t regionSize,
+        size_t usedBefore,
+        size_t sizeBefore,
+        size_t usedAfter,
+        size_t sizeAfter,
+        CumulativeHeapStats *regionStats);
 
    private:
     GenGC *gc_;
     GCCycle cycle_;
     TimePoint wallStart_;
     std::chrono::microseconds cpuStart_;
+    size_t gcUsedBefore_;
+    size_t usedBefore_;
+    size_t sizeBefore_;
+    size_t usedAfter_;
+    size_t sizeAfter_;
     // Initial value indicates unset.
     double wallElapsedSecs_{-1.0};
     double cpuElapsedSecs_{-1.0};
@@ -645,6 +679,18 @@ class GenGC final : public GCBase {
   /// bits of objects directly reachable from the roots, transitively
   /// close the mark bits.
   void completeMarking();
+
+  /// In the first phase of marking, before this is called, we treat
+  /// JSWeakMaps specially: when we mark a reachable JSWeakMap, we do
+  /// not mark from it, but rather save a pointer to it in a vector.
+  /// Then we call this method, which finds the keys that are
+  /// reachable, and marks transitively from the corresponding value.
+  /// This is done carefully, to reach a correct global transitive
+  /// closure, in cases where keys are reachable only via values of
+  /// other keys.  When this marking is done, entries with unreachable
+  /// keys are cleared.  Normal WeakRef processing at the end of GC
+  /// will delete the cleared entries from the map.
+  void completeWeakMapMarking();
 
   /// Does any work necessary for GC stats at the end of collection.
   /// Returns the number of allocated objects before collection starts.
@@ -737,6 +783,9 @@ class GenGC final : public GCBase {
   /// The generation from which the alloc context is claimed, as a
   /// GCGeneration*.
   inline GCGeneration *targetGeneration();
+
+  /// Change the heap extents recorded via the crash manager's custom data.
+  void updateCrashManagerHeapExtents();
 
   template <class T>
   friend class WeakRef;
@@ -847,6 +896,20 @@ class GenGC final : public GCBase {
   /// full collections.
   gcheapsize_t cumPreBytes_ = 0;
   gcheapsize_t cumPostBytes_ = 0;
+
+#ifdef HERMES_SLOW_DEBUG
+  /// We increment this on every (SLOW_DEBUG) allocation.  The purpose is to
+  // double-check our more-efficient (per YG GC) allocated bytes calculation.
+  uint64_t totalAllocatedBytesDebug_ = 0;
+#endif
+#ifndef NDEBUG
+  /// Whether the last allocation was fixed size (if we know).  Used
+  /// to check that the FixedSize parameter used in allocation matches
+  /// the fixed-size attribute of the object constructed on the
+  /// allocated memory.  (Initial value doesn't matter, since it
+  /// should not be referenced before being set explicitly.)
+  FixedSizeValue lastAllocWasFixedSize_;
+#endif
 };
 
 // A special vmcast implementation used during GC.  At some points
@@ -865,6 +928,27 @@ ToType *vmcast_during_gc(GCCell *cell, GC *gc) {
 
 template <bool fixedSize, HasFinalizer hasFinalizer>
 inline void *GenGC::alloc(uint32_t sz) {
+  auto ptr = allocImpl<fixedSize, hasFinalizer>(sz);
+#if !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && !defined(NDEBUG)
+  // If allocation location tracking is enabled we implicitly call
+  // getCurrentIP() via newAlloc() below. Even if this isn't enabled, we
+  // always call getCurrentIPSlow() in a debug build as this has the effect of
+  // asserting the IP is correctly set (not invalidated) at this point. This
+  // allows us to leverage our whole test-suite to find missing cases of
+  // CAPTURE_IP* macros in the interpreter loop.
+  (void)gcCallbacks_->getCurrentIPSlow();
+#endif
+#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+  getAllocationLocationTracker().newAlloc(ptr);
+#endif
+  return ptr;
+}
+
+template <bool fixedSize, HasFinalizer hasFinalizer>
+inline void *GenGC::allocImpl(uint32_t sz) {
+#ifndef NDEBUG
+  lastAllocWasFixedSize_ = fixedSize ? FixedSizeValue::Yes : FixedSizeValue::No;
+#endif
   if (shouldSanitizeHandles()) {
     // In order to get the maximum benefit of sanitization, the entire heap
     // should be moved and poisoned with ASAN to force errors to occur.
@@ -877,11 +961,17 @@ inline void *GenGC::alloc(uint32_t sz) {
 #ifdef HERMESVM_GC_GENERATIONAL_MARKSWEEPCOMPACT
   AllocResult res = oldGen_.alloc(sz, hasFinalizer);
   assert(res.success && "Should never fail to allocate at the top level");
+#ifdef HERMES_SLOW_DEBUG
+  totalAllocatedBytesDebug_ += heapAlignSize(sz);
+#endif
   return res.ptr;
 #else
 #ifndef NDEBUG
   AllocResult res = debugAlloc(sz, hasFinalizer, fixedSize);
   assert(res.success && "Should never fail to allocate at the top level");
+#ifdef HERMES_SLOW_DEBUG
+  totalAllocatedBytesDebug_ += heapAlignSize(sz);
+#endif
   return res.ptr;
 #else
   // We repeat this in opt, to ensure that the AllocResult is only
@@ -891,12 +981,34 @@ inline void *GenGC::alloc(uint32_t sz) {
     return res.ptr;
   }
   return allocSlow(sz, fixedSize, hasFinalizer);
+
 #endif // NDEBUG
 #endif // HERMESVM_GC_GENERATIONAL_MARKSWEEPCOMPACT
 }
 
 template <HasFinalizer hasFinalizer>
 inline void *GenGC::allocLongLived(uint32_t size) {
+  auto ptr = allocLongLivedImpl<hasFinalizer>(size);
+#if !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && !defined(NDEBUG)
+  // If allocation location tracking is enabled we implicitly call
+  // getCurrentIP() via newAlloc() below. Even if this isn't enabled, we always
+  // call getCurrentIPSlow() in a debug build as this has the effect of
+  // asserting the IP is correctly set (not invalidated) at this point. This
+  // allows us to leverage our whole test-suite to find missing cases of
+  // CAPTURE_IP* macros in the interpreter loop.
+  (void)gcCallbacks_->getCurrentIPSlow();
+#endif
+#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+  getAllocationLocationTracker().newAlloc(ptr);
+#endif
+  return ptr;
+}
+
+template <HasFinalizer hasFinalizer>
+inline void *GenGC::allocLongLivedImpl(uint32_t size) {
+#ifndef NDEBUG
+  lastAllocWasFixedSize_ = FixedSizeValue::Unknown;
+#endif
   if (shouldSanitizeHandles()) {
     // In order to get the maximum benefit of sanitization, the entire heap
     // should be moved and poisoned with ASAN to force errors to occur.
@@ -909,15 +1021,24 @@ inline void *GenGC::allocLongLived(uint32_t size) {
   if (allocContextFromYG_) {
     res = oldGen_.alloc(size, hasFinalizer);
     assert(res.success && "Should never fail to allocate at the top level");
+#ifdef HERMES_SLOW_DEBUG
+    totalAllocatedBytesDebug_ += heapAlignSize(size);
+#endif
     return res.ptr;
   } else {
     res = allocContext_.alloc(size, hasFinalizer);
     if (LLVM_LIKELY(res.success)) {
+#ifdef HERMES_SLOW_DEBUG
+      totalAllocatedBytesDebug_ += heapAlignSize(size);
+#endif
       return res.ptr;
     } else {
       AllocContextYieldThenClaim yielder(this);
       res = oldGen_.alloc(size, hasFinalizer);
       assert(res.success && "Should never fail to allocate at the top level");
+#ifdef HERMES_SLOW_DEBUG
+      totalAllocatedBytesDebug_ += heapAlignSize(size);
+#endif
       return res.ptr;
     }
   }
@@ -961,6 +1082,12 @@ inline size_t GenGC::numFullGCs() const {
 inline size_t GenGC::numFailedSegmentMaterializations() const {
   return storageProvider_.numFailedAllocs();
 }
+
+#ifndef NDEBUG
+inline GenGC::FixedSizeValue GenGC::lastAllocationWasFixedSize() const {
+  return lastAllocWasFixedSize_;
+}
+#endif
 
 #ifdef UNIT_TEST
 const GCSegmentAddressIndex &GenGC::segmentIndex() const {

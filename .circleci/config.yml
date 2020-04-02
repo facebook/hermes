@@ -1,5 +1,15 @@
 version: 2.1
 
+# The Linux jobs include hacks and flags that restricts parallelism, and re-try
+# with less parallelism on failure.
+#
+# This is because CircleCI Linux jobs have 2 CPUs and 4GB RAM allocated via
+# cgroups, but run on machines that advertise 36 CPUs and 68GB RAM. This means
+# that most build tools will spawn 36 jobs and quickly choke to death. Even
+# with just 4 jobs, 4GB may be too little, so we retry serially on failure.
+#
+# Comments saying "see top comment" refer to this.
+
 orbs:
   win: circleci/windows-tools@0.0.4
 
@@ -17,6 +27,11 @@ workflows:
             - linux
             - macos
             - windows
+      - test-linux
+      - test-macos
+      - test-e2e:
+          requires:
+            - npm
 
 jobs:
   android:
@@ -35,25 +50,20 @@ jobs:
             mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
             ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
             sudo apt-get update
-            sudo apt-get install -y cmake ninja-build
+            sudo apt-get install -y cmake ninja-build libicu-dev
             wait
-            # CircleCI machines advertise 36 cores but restrict memory.  It's
-            # annoying to configure each 'ninja' invocation, so just create a
-            # wrapper:
             sudo cp /usr/bin/ninja /usr/bin/ninja.real
-            printf '%s\n' '#!/bin/sh' 'exec ninja.real -j4 "$@"' | sudo tee /usr/bin/ninja
+            # See top comment
+            printf '%s\n' '#!/bin/sh' 'ninja.real -j4 "$@" || ninja.real -j1 "$@"' | sudo tee /usr/bin/ninja
             ln -sf /usr/bin/ninja /opt/android/sdk/cmake/3.6.4111459/bin/ninja
       - run:
-          name: Build LLVM
+          name: Build Hermes Compiler
           command: |
             cd "$HERMES_WS_DIR"
-            hermes/utils/build/build_llvm.py --target llvm-tblgen llvm llvm_build
-      - run:
-          name: Crosscompile LLVM
-          command: |
-            export ANDROID_SDK="$ANDROID_HOME"
-            export ANDROID_NDK="$ANDROID_HOME/ndk-bundle"
-            cd "$HERMES_WS_DIR" && hermes/utils/crosscompile_llvm.sh
+            hermes/utils/build/configure.py ./build
+            # Build the Hermes compiler so that the cross compiler build can
+            # access it to build the VM
+            cmake --build ./build --target hermesc
       - run:
           name: Build Hermes for Android
           command: |
@@ -100,21 +110,14 @@ jobs:
           command: |
             mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
             ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
-            # CircleCI machines advertise 36 cores but restrict memory.  It's
-            # annoying to configure each 'ninja' invocation, so just create a
-            # wrapper:
             sudo cp /usr/bin/ninja /usr/bin/ninja.real
-            printf '%s\n' '#!/bin/sh' 'exec ninja.real -j4 "$@"' | sudo tee /usr/bin/ninja
-      - run:
-          name: Build LLVM
-          command: |
-            cd "$HERMES_WS_DIR"
-            hermes/utils/build/build_llvm.py --distribute llvm llvm_build
+            # See top comment
+            printf '%s\n' '#!/bin/sh' 'ninja.real -j4 "$@" || ninja.real -j1 "$@"' | sudo tee /usr/bin/ninja
       - run:
           name: Build Hermes for Linux
           command: |
             cd "$HERMES_WS_DIR"
-            hermes/utils/build/configure.py --static-link --distribute
+            hermes/utils/build/configure.py --static-link --distribute --cmake-flags="-DCMAKE_CXX_FLAGS=-s"
             cd build_release
             ninja github-cli-release
       - run:
@@ -137,12 +140,49 @@ jobs:
           paths:
             - .
 
+  test-linux:
+    # execution-time-limit.js and sampling-profiler.js segfault in statically
+    # linked release mode, so this job is just a duplicate of the Linux job
+    # that builds in dynamically linked debug mode
+    docker:
+      - image: debian:stretch
+    environment:
+      - HERMES_WS_DIR: /tmp/hermes
+      - TERM: dumb
+    steps:
+      - run:
+          name: Install dependencies
+          command: |
+            apt-get update
+            apt-get install -y \
+                sudo git openssh-client cmake ninja-build python \
+                build-essential libreadline-dev libicu-dev zip python3
+      - checkout
+      - run:
+          name: Set up workspace
+          command: |
+            mkdir -p "$HERMES_WS_DIR"
+            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
+            sudo cp /usr/bin/ninja /usr/bin/ninja.real
+            # See top comment
+            printf '%s\n' '#!/bin/sh' 'ninja.real -j4 "$@" || ninja.real -j1 "$@"' | sudo tee /usr/bin/ninja
+      - run:
+          name: Run Hermes regression tests
+          command: |
+            cd "$HERMES_WS_DIR"
+            hermes/utils/build/configure.py
+            cd build
+            ninja check-hermes
+
   macos:
     macos:
       xcode: "10.0.0"
     environment:
       - HERMES_WS_DIR: /tmp/hermes
       - TERM: dumb
+      # Homebrew currently breaks while updating:
+      # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
+      - HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
       - checkout
       - run:
@@ -155,17 +195,11 @@ jobs:
             mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
             ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
       - run:
-          name: Build LLVM
-          command: |
-            cd "$HERMES_WS_DIR"
-            hermes/utils/build/build_llvm.py --distribute llvm llvm_build
-      - run:
           name: Build Hermes for macOS
           command: |
             cd "$HERMES_WS_DIR"
             hermes/utils/build/configure.py --distribute
-            cd build_release
-            ninja github-cli-release
+            cmake --build ./build_release --target github-cli-release
       - run:
           name: Copy artifacts
           command: |
@@ -185,6 +219,34 @@ jobs:
           root: /tmp/hermes/output/
           paths:
             - .
+
+  test-macos:
+    # CheckedMalloc.Death fails in release mode, so build a debug version
+    macos:
+      xcode: "10.0.0"
+    environment:
+      - HERMES_WS_DIR: /tmp/hermes
+      - TERM: dumb
+      # Homebrew currently breaks while updating:
+      # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
+      - HOMEBREW_NO_AUTO_UPDATE: 1
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            brew install cmake ninja
+      - run:
+          name: Set up workspace
+          command: |
+            mkdir -p "$HERMES_WS_DIR"
+            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
+      - run:
+          name: Run MacOS regression tests in debug mode
+          command: |
+            cd "$HERMES_WS_DIR"
+            hermes/utils/build/configure.py
+            cmake --build ./build --target check-hermes
 
   windows:
     executor:
@@ -235,7 +297,7 @@ jobs:
             $install = Start-Job {
               choco install visualstudio2019buildtools --package-parameters "--allWorkloads --includeRecommended --passive --locale en-US"
             }
-            $eta = 12
+            $eta = 15
             while ($install.State -eq "Running") {
                 Write-Host "Waiting for visualstudio2019buildtools. ETA $eta minutes..."
                 $install | Wait-Job -timeout 60
@@ -247,18 +309,13 @@ jobs:
             if (-not $?) { throw "Failed to install visualstudio2019-workload-vctools" }
 
       - run:
-          name: Build LLVM
-          command: |
-            $Env:PATH += ";$Env:CMAKE_DIR;$Env:MSBUILD_DIR"
-            cd $Env:HERMES_WS_DIR
-            hermes\utils\build\build_llvm.py --build-system='Visual Studio 16 2019' --distribute llvm llvm_build
-            if (-not $?) { throw "Failed to build LLVM" }
-
-      - run:
           name: Assemble Windows runtime dependencies
           command: |
             cd $Env:HERMES_WS_DIR
             Copy-Item -Path "icu\bin64\icu*.dll" -Destination "deps"
+            # Include MSVC++ 2015 redistributables
+            Copy-Item -Path "c:\windows\system32\msvcp140.dll" -Destination "deps"
+            Copy-Item -Path "c:\windows\system32\vcruntime140.dll" -Destination "deps"
 
       - run:
           name: Build Hermes for Windows
@@ -266,7 +323,7 @@ jobs:
             $Env:PATH += ";$Env:CMAKE_DIR;$Env:MSBUILD_DIR"
             $Env:ICU_ROOT = "$Env:HERMES_WS_DIR\icu"
             cd $Env:HERMES_WS_DIR
-            hermes\utils\build\configure.py --build-system='Visual Studio 16 2019' --cmake-flags="-DLLVM_ENABLE_LTO=OFF -DHERMES_ENABLE_WIN10_ICU_FALLBACK=OFF -DHERMES_GITHUB_RESOURCE_DIR=$Env:HERMES_WS_DIR\deps" --distribute
+            hermes\utils\build\configure.py --build-system='Visual Studio 16 2019' --cmake-flags="-DHERMES_ENABLE_WIN10_ICU_FALLBACK=OFF -DHERMES_GITHUB_RESOURCE_DIR=$Env:HERMES_WS_DIR\deps" --distribute
             if (-not $?) { throw "Failed to configure Hermes" }
             cd build_release
             cmake --build . --target github-cli-release --config Release
@@ -340,6 +397,9 @@ jobs:
           command: |
             cd npm
             cp hermes-engine-*.tgz /tmp/hermes/output
+            # Also copy the other packages for the sole purpose of not having
+            # to visit multiple jobs pages to download all release artifacts
+            cp /tmp/hermes/input/*.tar.gz /tmp/hermes/output
 
       - run:
           name: Checksum artifacts
@@ -357,3 +417,69 @@ jobs:
           root: /tmp/hermes/output
           paths:
             - .
+  test-e2e:
+    # For now we run E2E tests on MacOS as running an Android emulator on Linux is
+    # not supported with Circle CI:
+    # https://support.circleci.com/hc/en-us/articles/360000028928-Testing-with-Android-emulator-on-CircleCI-2-0
+    # Windows is another option, but I came across a convenient Mac OS example first:
+    # https://gist.github.com/DoguD/58b4b86a5d892130af84074078581b87
+    macos:
+      xcode: "10.0.0"
+    environment:
+      - TERM: dumb
+      # Homebrew currently breaks while updating:
+      # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
+      - HOMEBREW_NO_AUTO_UPDATE: 1
+      - JVM_OPTS: -Xmx3200m
+      - ANDROID_HOME: /usr/local/share/android-sdk
+      - ANDROID_SDK_HOME: /usr/local/share/android-sdk
+      - ANDROID_SDK_ROOT: /usr/local/share/android-sdk
+      - QEMU_AUDIO_DRV: none
+      - JAVA_HOME: /Library/Java/Home
+    steps:
+      - run:
+          name: Setup dependencies
+          command: |
+            # Node some version greater than 11 is needed by one of the app dependencies
+            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.1/install.sh | bash
+            NVM_DIR="$HOME/.nvm"
+            . "$NVM_DIR/nvm.sh"
+            echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
+            echo '. "$NVM_DIR/nvm.sh"' >> $BASH_ENV
+            nvm install 12
+            nvm use 12
+            brew install gnu-sed
+            brew install md5sha1sum
+            brew tap homebrew/cask
+            brew cask install android-sdk
+            echo 'export PATH="/usr/local/share/android-sdk/platform-tools:/usr/local/share/android-sdk/tools/bin:$PATH"' >> $BASH_ENV
+            # At some point, adb ended up in platform-tools/platform-tools. Work around that.
+            echo 'export PATH="/usr/local/share/android-sdk/platform-tools/platform-tools:$PATH"' >> $BASH_ENV
+      - run:
+          name: Install emulator dependencies
+          command: (yes | sdkmanager "platform-tools" "platforms;android-26" "extras;intel;Hardware_Accelerated_Execution_Manager" "build-tools;26.0.0" "system-images;android-26;google_apis;x86" "emulator" --verbose) || true
+      - run:
+          name: Create emulator definition
+          command: |
+            avdmanager create avd -n Pixel_2_API_26 -k "system-images;android-26;google_apis;x86" -g google_apis -d "Nexus 5"
+      - run:
+          name: Run emulator in background
+          command: /usr/local/share/android-sdk/emulator/emulator @Pixel_2_API_26 -memory 2048 -noaudio
+          background: true
+      - checkout
+      - attach_workspace:
+          at: /tmp/hermes/input
+      - run:
+          # For now we're not testing with RN from master because it's broken.
+          # If RN master + Hermes becoms stable we can pass --react-native-master to
+          # run.sh, or run it again as another step/job.
+          name: Run E2E test with master Hermes and Release React Native
+          command: |
+            cd test/circleci-e2e
+            ./run.sh --hermes-npm-package /tmp/hermes/input/hermes-engine-*.tgz
+          # The react-native setup tool takes AGES "Installing CocoaPods dependencies"
+          no_output_timeout: 45m
+      - store_artifacts:
+          path: /tmp/screencap.mp4
+      - store_artifacts:
+          path: /tmp/app-release.apk

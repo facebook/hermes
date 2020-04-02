@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -dump-bytecode -target=HBC -non-strict %s | %FileCheck --match-full-lines %s
 
 print(/a\x01\u017f/i);
@@ -39,11 +41,11 @@ print(/^a|b/);
 print(/[a-z][^A-Z0-9_\d][\s][abc]/);
 // CHECK:       3: /[a-z][^A-Z0-9_\d][\s][abc]/
 // CHECK-NEXT:    Header: marked: 0 loops: 0 flags: 0 constraints: 4
-// CHECK-NEXT:    0000  Bracket: [a-z]
-// CHECK-NEXT:    000a  Bracket: [^\dA-Z0-9_]
-// CHECK-NEXT:    001c  Bracket: [\s]
-// CHECK-NEXT:    0022  Bracket: [abc]
-// CHECK-NEXT:    0034  Goal
+// CHECK-NEXT:  0000  Bracket: [a-z]
+// CHECK-NEXT:  000e  Bracket: [^\d0-9A-Z_]
+// CHECK-NEXT:  002c  Bracket: [\s]
+// CHECK-NEXT:  0032  Bracket: [a-c]
+// CHECK-NEXT:  0040  Goal
 
 print(/a(b(c)(d))e\1\2/);
 // CHECK:       4: /a(b(c)(d))e\1\2/
@@ -73,13 +75,13 @@ print(/\b\B/);
 print(/abc(?=^)(?!def)/i);
 // CHECK: Header: marked: 0 loops: 0 flags: 1 constraints: 6
 // CHECK-NEXT: 0000  MatchNCharICase8: 'ABC'
-// CHECK-NEXT: 0005  Lookahead: = (constraints: 2, marked expressions=[0,0), continuation 0x12)
-// CHECK-NEXT: 0010  LeftAnchor
-// CHECK-NEXT: 0011  Goal
-// CHECK-NEXT: 0012  Lookahead: ! (constraints: 4, marked expressions=[0,0), continuation 0x23)
-// CHECK-NEXT: 001d  MatchNCharICase8: 'DEF'
-// CHECK-NEXT: 0022  Goal
-// CHECK-NEXT: 0023  Goal
+// CHECK-NEXT: 0005  Lookaround: = (constraints: 2, marked expressions=[0,0), continuation 0x13)
+// CHECK-NEXT: 0011  LeftAnchor
+// CHECK-NEXT: 0012  Goal
+// CHECK-NEXT: 0013  Lookaround: ! (constraints: 4, marked expressions=[0,0), continuation 0x25)
+// CHECK-NEXT: 001f  MatchNCharICase8: 'DEF'
+// CHECK-NEXT: 0024  Goal
+// CHECK-NEXT: 0025  Goal
 
 print(/ab*c+d{3,5}/);
 // CHECK:        7: /ab*c+d{3,5}/
@@ -129,7 +131,7 @@ print(/[\u017f]/i);
 // CHECK:        10: /[\u017f]/i
 // CHECK-NEXT:    Header: marked: 0 loops: 0 flags: 1 constraints: 5
 // CHECK-NEXT:     0000  Bracket: [0x17f]
-// CHECK-NEXT:     000a  Goal
+// CHECK-NEXT:     000e  Goal
 
 print(/a*/);
 // CHECK:        11: /a*/
@@ -167,8 +169,8 @@ print(/[a-zA-Z]*/);
 // CHECK:        15: /[a-zA-Z]*/
 // CHECK-NEXT:    Header: marked: 0 loops: 1 flags: 0 constraints: 0
 // CHECK-NEXT:     0000  Width1Loop: 0 greedy {0, 4294967295}
-// CHECK-NEXT:     0012  Bracket: [a-zA-Z]
-// CHECK-NEXT:     0020  Goal
+// CHECK-NEXT:     0012  Bracket: [A-Za-z]
+// CHECK-NEXT:     0028  Goal
 
 print(/.*/);
 // CHECK:        16: /.*/
@@ -190,24 +192,62 @@ print(/(a)(?=(.))/i);
 // CHECK-NEXT:   0000  BeginMarkedSubexpression: 1
 // CHECK-NEXT:   0003  MatchCharICase8: 'A'
 // CHECK-NEXT:   0005  EndMarkedSubexpression: 1
-// CHECK-NEXT:   0008  Lookahead: = (constraints: 4, marked expressions=[1,2), continuation 0x1b)
-// CHECK-NEXT:   0013  BeginMarkedSubexpression: 2
-// CHECK-NEXT:   0016  MatchAnyButNewline
-// CHECK-NEXT:   0017  EndMarkedSubexpression: 2
-// CHECK-NEXT:   001a  Goal
+// CHECK-NEXT:   0008  Lookaround: = (constraints: 4, marked expressions=[1,2), continuation 0x1c)
+// CHECK-NEXT:   0014  BeginMarkedSubexpression: 2
+// CHECK-NEXT:   0017  MatchAnyButNewline
+// CHECK-NEXT:   0018  EndMarkedSubexpression: 2
 // CHECK-NEXT:   001b  Goal
+// CHECK-NEXT:   001c  Goal
+
+print(/(a)(?<!(.))/i);
+// CHECK:        19: /(a)(?<!(.))/i
+// CHECK-NEXT:   Header: marked: 2 loops: 0 flags: 1 constraints: 4
+// CHECK-NEXT:   0000  BeginMarkedSubexpression: 1
+// CHECK-NEXT:   0003  MatchCharICase8: 'A'
+// CHECK-NEXT:   0005  EndMarkedSubexpression: 1
+// CHECK-NEXT:   0008  Lookaround: <! (constraints: 4, marked expressions=[1,2), continuation 0x1c)
+// CHECK-NEXT:   0014  BeginMarkedSubexpression: 2
+// CHECK-NEXT:   0017  MatchAnyButNewline
+// CHECK-NEXT:   0018  EndMarkedSubexpression: 2
+// CHECK-NEXT:   001b  Goal
+// CHECK-NEXT:   001c  Goal
+
 
 // There are 255 'a's here.
 print(/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaoverflow/);
-// CHECK:        19: /{{a{255}overflow}}/
+// CHECK:        20: /{{a{255}overflow}}/
 // CHECK-NEXT:   Header: marked: 0 loops: 0 flags: 0 constraints: 4
 // CHECK-NEXT:   0000  MatchNChar8: {{'a{255}'}}
 // CHECK-NEXT:   0101  MatchNChar8: 'overflow'
 // CHECK-NEXT:   010b  Goal
 
 print(/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaoverflow/i);
-// CHECK:        20: /{{a{255}overflow}}/i
+// CHECK:        21: /{{a{255}overflow}}/i
 // CHECK-NEXT:   Header: marked: 0 loops: 0 flags: 1 constraints: 4
 // CHECK-NEXT:   0000  MatchNCharICase8: {{'A{255}'}}
 // CHECK-NEXT:   0101  MatchNCharICase8: 'OVERFLOW'
 // CHECK-NEXT:   010b  Goal
+
+print(/./);
+// CHECK-LABEL: 22: /./
+// CHECK-NEXT:   Header: marked: 0 loops: 0 flags: 0 constraints: 4
+// CHECK-NEXT:   0000  MatchAnyButNewline
+// CHECK-NEXT:   0001  Goal
+
+print(/./u);
+// CHECK-LABEL: 23: /./u
+// CHECK-NEXT:   Header: marked: 0 loops: 0 flags: 8 constraints: 4
+// CHECK-NEXT:   0000  U16MatchAnyButNewline
+// CHECK-NEXT:   0001  Goal
+
+print(/./s);
+// CHECK-LABEL: 24: /./s
+// CHECK-NEXT:   Header: marked: 0 loops: 0 flags: 16 constraints: 4
+// CHECK-NEXT:   0000  MatchAny
+// CHECK-NEXT:   0001  Goal
+
+print(/./us);
+// CHECK-LABEL: 25: /./us
+// CHECK-NEXT:   Header: marked: 0 loops: 0 flags: 24 constraints: 4
+// CHECK-NEXT:   0000  U16MatchAny
+// CHECK-NEXT:   0001  Goal

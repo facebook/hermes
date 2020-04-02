@@ -1,5 +1,5 @@
-/**
- * Copyright 2018-present, Facebook, Inc.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,13 +27,13 @@ class AContext : public JavaClass<AContext> {
   static constexpr const char* kJavaDescriptor = "Landroid/content/Context;";
 
   // Define a method that calls into the represented Java class
-  local_ref<JFile::javaobject> getCacheDir() {
-    static const auto method = getClass()->getMethod<JFile::javaobject()>("getCacheDir");
+  local_ref<JFile> getCacheDir() {
+    static const auto method = getClass()->getMethod<JFile()>("getCacheDir");
     return method(self());
   }
 
-  local_ref<JFile::javaobject> getFilesDir() {
-    static const auto method = getClass()->getMethod<JFile::javaobject()>("getFilesDir");
+  local_ref<JFile> getFilesDir() {
+    static const auto method = getClass()->getMethod<JFile()>("getFilesDir");
     return method(self());
   }
 };

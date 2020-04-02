@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_GCGENERATION_H
 #define HERMES_VM_GCGENERATION_H
 
@@ -124,9 +125,9 @@ class GenGC;
 ///   void shrinkTo(size_t size);
 ///
 /// Ensure that the generation has enough available space to accommodate an \p
-/// amount byte allocation, by potentially increasing its size. \return true if
+/// amount byte allocation, by potentially increasing its size. return true if
 /// and only if a call to this->allocRaw(amount) will succeed immediately
-/// following this call, and \return false whilst leaving the bounds of the
+/// following this call, and return false whilst leaving the bounds of the
 /// generation unchanged otherwise.
 ///   bool growToFit(size_t amount);
 ///
@@ -300,6 +301,9 @@ class GCGeneration {
   /// finalizer list (GCCell asserts this). Iterates over that list, summing
   /// and returning the malloc memory.
   uint64_t mallocSizeFromFinalizerList() const;
+
+  /// For each unmarked HiddenClass, reset its property map if possible.
+  void clearUnmarkedPropertyMaps();
 
   /// Returns a reference to the generation's allocation context.
   inline AllocContext &allocContext();

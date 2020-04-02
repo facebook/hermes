@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 // -*- C++ -*-
 //===--------------------------- regex ------------------------------------===//
 //
@@ -17,12 +18,16 @@
 #ifndef HERMES_REGEX_COMPILER_H
 #define HERMES_REGEX_COMPILER_H
 
+#include "hermes/Platform/Unicode/CharacterProperties.h"
+#include "hermes/Platform/Unicode/CodePointSet.h"
 #include "hermes/Support/Compiler.h"
 
 #include "hermes/Regex/RegexBytecode.h"
 
+#include "hermes/Platform/Unicode/CharacterProperties.h"
+#include "hermes/Platform/Unicode/CodePointSet.h"
+
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <initializer_list>
@@ -38,11 +43,13 @@ using namespace std;
 namespace constants {
 
 // SyntaxFlags
-
+// Note these are encoded into bytecode files, so changing their values is a
+// breaking change.
 enum SyntaxFlags : uint8_t {
   icase = 1 << 0,
-  nosubs = 1 << 1,
-  multiline = 1 << 2
+  multiline = 1 << 2,
+  unicode = 1 << 3,
+  dotAll = 1 << 4,
 };
 
 inline constexpr SyntaxFlags operator~(SyntaxFlags x) {
@@ -88,11 +95,11 @@ enum MatchFlagType {
   /// $ anchors should not treat the input end as a line end.
   matchNotEndOfLine = 1 << 1,
 
-  /// Indicate that the previous character is available, for evaluating anchors.
-  matchPreviousCharAvailable = 1 << 2,
-
   /// Hint that the input is composed entirely of ASCII characters.
-  matchInputAllAscii = 1 << 3
+  matchInputAllAscii = 1 << 2,
+
+  /// Do not search for a match past the search start location.
+  matchOnlyAtStart = 1 << 3,
 };
 
 inline constexpr MatchFlagType operator~(MatchFlagType x) {
@@ -136,6 +143,9 @@ enum class ErrorType {
   /// incomplete escape: new RegExp("\\")
   EscapeIncomplete,
 
+  /// Invalid escape: new RegExp("\\123", "u")
+  EscapeInvalid,
+
   /// Mismatched [ and ].
   UnbalancedBracket,
 
@@ -147,6 +157,9 @@ enum class ErrorType {
 
   /// Invalid character range, such as [b-a].
   CharacterRange,
+
+  /// A lone { or } was found.
+  InvalidQuantifierBracket,
 
   /// One of *?+{ was not preceded by a valid regular expression.
   InvalidRepeat,
@@ -162,6 +175,8 @@ inline const char *messageForError(ErrorType error) {
       return "Escaped value too large";
     case ErrorType::EscapeIncomplete:
       return "Incomplete escape";
+    case ErrorType::EscapeInvalid:
+      return "Invalid escape";
     case ErrorType::UnbalancedBracket:
       return "Character class not closed";
     case ErrorType::UnbalancedParenthesis:
@@ -170,6 +185,8 @@ inline const char *messageForError(ErrorType error) {
       return "Quantifier range out of order";
     case ErrorType::CharacterRange:
       return "Character class range out of order";
+    case ErrorType::InvalidQuantifierBracket:
+      return "Invalid quantifier bracket";
     case ErrorType::InvalidRepeat:
       return "Quantifier has nothing to repeat";
     case ErrorType::PatternExceedsParseLimits:
@@ -206,8 +223,8 @@ enum MatchConstraintFlags : uint8_t {
   MatchConstraintNonEmpty = 1 << 2,
 };
 
-/// \return whether a character \p c is ASCII.
-inline bool isASCII(char16_t c) {
+/// \return whether a code point \p cp is ASCII.
+inline bool isASCII(uint32_t c) {
   return c <= 127;
 }
 
@@ -225,34 +242,7 @@ struct CharacterClass {
   CharacterClass(Type type, bool invert) : type_(type), inverted_(invert) {}
 };
 
-template <typename T>
-class ParseResult : public llvm::ErrorOr<T> {
-  using Super = llvm::ErrorOr<T>;
-
- public:
-  // Construct from a T.
-  /* implicit */ ParseResult(T v) : Super(std::move(v)) {}
-
-  // Construct a failing result from an error code.
-  /* implicit */ ParseResult(constants::ErrorType err)
-      : Super(std::error_code(static_cast<int>(err), std::generic_category())) {
-  }
-
-  // \p return the error code, or None if no error.
-  constants::ErrorType regexError() const {
-    if (*this)
-      return constants::ErrorType::None;
-    return static_cast<constants::ErrorType>(Super::getError().value());
-  }
-} HERMES_ATTRIBUTE_WARN_UNUSED_RESULT_TYPE;
-
 class Node;
-
-template <class BidirectionalIterator>
-class SubMatch;
-
-template <class BidirectionalIterator>
-using MatchResults = std::vector<SubMatch<BidirectionalIterator>>;
 
 /// A NodeList is list of owned Nodes. Note it is move-only.
 using NodeList = std::vector<std::unique_ptr<Node>>;
@@ -271,8 +261,8 @@ class Node {
   Node(Node &&) = delete;
   Node &operator=(Node &&) = delete;
 
-  using CharT = char16_t;
-  using CharListT = llvm::SmallVector<CharT, 5>;
+  using CodePoint = uint32_t;
+  using CodePointList = llvm::SmallVector<CodePoint, 5>;
 
   /// Default constructor and destructor.
   Node() = default;
@@ -294,6 +284,10 @@ class Node {
     return result;
   }
 
+  /// Reverse the order of the node list \p nodes, and recursively ask each node
+  /// to reverse the order of its children.
+  inline static void reverseNodeList(NodeList &nodes);
+
   /// Perform optimizations on the given node list \p nodes, subject to the
   /// given \p flags.
   inline static void optimizeNodeList(
@@ -311,7 +305,7 @@ class Node {
   /// If this Node can be coalesced into a single MatchCharNode,
   /// then add the node's characters to \p output and \return true.
   /// Otherwise \return false.
-  virtual bool tryCoalesceCharacters(CharListT *output) const {
+  virtual bool tryCoalesceCharacters(CodePointList *output) const {
     return false;
   }
 
@@ -322,6 +316,16 @@ class Node {
   virtual MatchConstraintSet matchConstraints() const {
     return 0;
   }
+
+  /// \return whether this is a goal node.
+  virtual bool isGoal() const {
+    return false;
+  }
+
+  /// Reverse the order of children of this node. The default implementation
+  /// does nothing, but nodes which store a child list should reverse the order
+  /// of that list and then recurse.
+  virtual void reverseChildren() {}
 
   /// Emit this node into the bytecode compiler \p bcs. This is an overrideable
   /// function - subclasses should override this to emit node-specific bytecode.
@@ -334,6 +338,11 @@ class GoalNode final : public Node {
  public:
   void emit(RegexBytecodeStream &bcs) const override {
     bcs.emit<GoalInsn>();
+  }
+
+ protected:
+  bool isGoal() const override {
+    return true;
   }
 };
 
@@ -403,6 +412,11 @@ class LoopNode final : public Node {
 
   virtual void optimizeNodeContents(constants::SyntaxFlags flags) override {
     optimizeNodeList(loopee_, flags);
+  }
+
+ protected:
+  void reverseChildren() override {
+    reverseNodeList(loopee_);
   }
 
  private:
@@ -522,39 +536,50 @@ class AlternationNode final : public Node {
     compile(second_, bcs);
     firstBranchCont->target = bcs.currentOffset();
   }
-};
 
-/// BeginMarkedSubexpression is the entry point for a capture group.
-class BeginMarkedSubexpressionNode final : public Node {
-  using Super = Node;
-
-  // The index of the marked subexpression.
-  unsigned mexp_;
-
- public:
-  explicit BeginMarkedSubexpressionNode(unsigned mexp) : mexp_(mexp) {}
-
-  virtual void emit(RegexBytecodeStream &bcs) const override {
-    assert(static_cast<uint16_t>(mexp_) == mexp_ && "Subexpression too large");
-    bcs.emit<BeginMarkedSubexpressionInsn>()->mexp =
-        static_cast<uint16_t>(mexp_);
+  void reverseChildren() override {
+    reverseNodeList(first_);
+    reverseNodeList(second_);
   }
 };
 
-/// EndMarkedSubexpression is the exit point for a capture group.
-/// It updates the captured value for a State.
-class EndMarkedSubexpressionNode final : public Node {
+/// MarkedSubexpressionNode is a capture group.
+class MarkedSubexpressionNode final : public Node {
   using Super = Node;
 
+  // The contents of our expression.
+  NodeList contents_;
+
+  // Match constraints for our contents.
+  MatchConstraintSet contentsConstraints_;
+
   // The index of the marked subexpression.
-  unsigned mexp_;
+  uint32_t mexp_;
 
  public:
-  explicit EndMarkedSubexpressionNode(unsigned mexp) : mexp_(mexp) {}
+  explicit MarkedSubexpressionNode(NodeList contents, uint32_t mexp)
+      : contents_(std::move(contents)),
+        contentsConstraints_(matchConstraintsForList(contents_)),
+        mexp_(mexp) {}
 
   virtual void emit(RegexBytecodeStream &bcs) const override {
-    assert(static_cast<uint16_t>(mexp_) == mexp_ && "Subexpression too large");
-    bcs.emit<EndMarkedSubexpressionInsn>()->mexp = static_cast<uint16_t>(mexp_);
+    uint16_t mexp16 = static_cast<uint16_t>(mexp_);
+    assert(mexp16 == mexp_ && "Subexpression too large");
+    bcs.emit<BeginMarkedSubexpressionInsn>()->mexp = mexp16;
+    compile(contents_, bcs);
+    bcs.emit<EndMarkedSubexpressionInsn>()->mexp = mexp16;
+  }
+
+  void reverseChildren() override {
+    reverseNodeList(contents_);
+  }
+
+  virtual void optimizeNodeContents(constants::SyntaxFlags flags) override {
+    optimizeNodeList(contents_, flags);
+  }
+
+  virtual MatchConstraintSet matchConstraints() const override {
+    return contentsConstraints_ | Super::matchConstraints();
   }
 };
 
@@ -624,29 +649,54 @@ class RightAnchorNode : public Node {
   }
 };
 
-/// MatchAnyButNewlineNode is a .: matches any character except a newline.
-class MatchAnyButNewlineNode final : public Node {
+/// MatchAny is a .: matches any character (including newlines iff the dotAll
+/// flag is set).
+class MatchAnyNode final : public Node {
   using Super = Node;
 
  public:
+  /// Construct a MatchAny.
+  /// If \p unicode is set, emit bytecode that treats surrogate pairs as a
+  /// single character.
+  /// If \p dotAll is set, match newlines. Otherwise, don't match newlines.
+  explicit MatchAnyNode(bool unicode, bool dotAll)
+      : unicode_(unicode), dotAll_(dotAll) {}
+
   virtual MatchConstraintSet matchConstraints() const override {
     return MatchConstraintNonEmpty | Super::matchConstraints();
   }
 
   void emit(RegexBytecodeStream &bcs) const override {
-    bcs.emit<MatchAnyButNewlineInsn>();
+    if (unicode_) {
+      if (dotAll_) {
+        bcs.emit<U16MatchAnyInsn>();
+      } else {
+        bcs.emit<U16MatchAnyButNewlineInsn>();
+      }
+    } else {
+      if (dotAll_) {
+        bcs.emit<MatchAnyInsn>();
+      } else {
+        bcs.emit<MatchAnyButNewlineInsn>();
+      }
+    }
   }
 
   virtual bool matchesExactlyOneCharacter() const override {
-    return true;
+    // In Unicode we may match a surrogate pair.
+    return !unicode_;
   }
+
+ private:
+  bool unicode_;
+  bool dotAll_;
 };
 
 /// MatchChar matches one or more characters, specified as a parameter to the
 /// constructor.
 class MatchCharNode final : public Node {
   using Super = Node;
-  using Super::CharListT;
+  using Super::CodePointList;
 
   /// The minimum number of characters we will output in a MatchCharN
   /// instruction.
@@ -656,8 +706,10 @@ class MatchCharNode final : public Node {
   static constexpr size_t kMaxMatchCharNCount = UINT8_MAX;
 
  public:
-  MatchCharNode(CharListT chars, bool icase)
-      : chars_(std::move(chars)), icase_(icase) {}
+  MatchCharNode(CodePointList chars, constants::SyntaxFlags flags)
+      : chars_(std::move(chars)),
+        icase_(flags & constants::icase),
+        unicode_(flags & constants::unicode) {}
 
   virtual MatchConstraintSet matchConstraints() const override {
     MatchConstraintSet result = MatchConstraintNonEmpty;
@@ -669,32 +721,55 @@ class MatchCharNode final : public Node {
   }
 
   void emit(RegexBytecodeStream &bcs) const override {
-    llvm::ArrayRef<char16_t> remaining{chars_};
+    llvm::ArrayRef<CodePoint> remaining{chars_};
     while (!remaining.empty()) {
       // Output any run (possibly empty) of ASCII chars.
       auto asciis = remaining.take_while(isASCII);
       emitASCIIList(asciis, bcs);
       remaining = remaining.drop_front(asciis.size());
 
-      // Output any run (possibly empty) of non-ASCII char16.
-      auto char16s = remaining.take_until(isASCII);
-      emitChar16List(char16s, bcs);
-      remaining = remaining.drop_front(char16s.size());
+      // Output any run (possibly empty) of non-ASCII chars.
+      auto nonAsciis = remaining.take_until(isASCII);
+      emitNonASCIIList(nonAsciis, bcs);
+      remaining = remaining.drop_front(nonAsciis.size());
     }
   }
 
-  bool tryCoalesceCharacters(CharListT *output) const override {
+  void reverseChildren() override {
+    std::reverse(chars_.begin(), chars_.end());
+  }
+
+  bool tryCoalesceCharacters(CodePointList *output) const override {
     output->append(chars_.begin(), chars_.end());
     return true;
   }
 
+  /// \return whether matching the code point \p cp may require
+  /// decoding a surrogate pair from the input string.
+  bool mayRequireDecodingSurrogatePair(uint32_t cp) const {
+    if (!isMemberOfBMP(cp)) {
+      return true;
+    }
+    if (unicode_ && (isHighSurrogate(cp) || isLowSurrogate(cp))) {
+      // We have been asked to emit a literal surrogate into a Unicode string.
+      // This can only match against an unpaired surrogate in the input string.
+      // Thus ensure we emit a full 32 bit match, so that we decode surrogate
+      // pairs from the input.
+      return true;
+    }
+    return false;
+  }
+
  protected:
   virtual bool matchesExactlyOneCharacter() const override {
-    return chars_.size() == 1;
+    // If our character is astral it will need to match a surrogate pair, which
+    // requires two characters.
+    return chars_.size() == 1 &&
+        !mayRequireDecodingSurrogatePair(chars_.front());
   }
 
   /// Emit a list of ASCII characters into bytecode stream \p bcs.
-  void emitASCIIList(llvm::ArrayRef<char16_t> chars, RegexBytecodeStream &bcs)
+  void emitASCIIList(llvm::ArrayRef<CodePoint> chars, RegexBytecodeStream &bcs)
       const {
     assert(
         std::all_of(chars.begin(), chars.end(), isASCII) &&
@@ -719,7 +794,7 @@ class MatchCharNode final : public Node {
     }
 
     // Output any remaining as individual characters.
-    for (char16_t c : remaining) {
+    for (CodePoint c : remaining) {
       if (icase_) {
         bcs.emit<MatchCharICase8Insn>()->c = c;
       } else {
@@ -728,53 +803,68 @@ class MatchCharNode final : public Node {
     }
   }
 
-  /// Emit a list of 16 bit characters into bytecode stream \p
-  /// bcs.
-  void emitChar16List(llvm::ArrayRef<char16_t> chars, RegexBytecodeStream &bcs)
-      const {
-    for (char16_t c : chars) {
-      if (icase_) {
-        bcs.emit<MatchCharICase16Insn>()->c = c;
+  /// Emit a list of non-ASCII characters into bytecode stream \p bcs.
+  void emitNonASCIIList(
+      llvm::ArrayRef<CodePoint> chars,
+      RegexBytecodeStream &bcs) const {
+    for (uint32_t c : chars) {
+      if (mayRequireDecodingSurrogatePair(c)) {
+        if (icase_) {
+          bcs.emit<U16MatchCharICase32Insn>()->c = c;
+        } else {
+          bcs.emit<U16MatchChar32Insn>()->c = c;
+        }
       } else {
-        bcs.emit<MatchChar16Insn>()->c = c;
+        if (icase_) {
+          bcs.emit<MatchCharICase16Insn>()->c = c;
+        } else {
+          bcs.emit<MatchChar16Insn>()->c = c;
+        }
       }
     }
   }
 
  private:
-  // The character literals we wish to match against.
-  const CharListT chars_;
+  // The code points we wish to match against.
+  CodePointList chars_;
 
-  /// /// Whether we are case insensitive (true) or case sensitive (false).
+  /// Whether we are case insensitive (true) or case sensitive (false).
   const bool icase_;
+
+  /// Whether the unicode flag is set.
+  const bool unicode_;
 };
 
 // BracketNode represents a character class: /[a-zA-Z]/...
 template <class Traits>
 class BracketNode : public Node {
   using Super = Node;
-  using CharT = typename Super::CharT;
+  using Super::CodePoint;
 
   const Traits &traits_;
-  vector<char16_t> chars_;
-  vector<std::pair<char16_t, char16_t>> ranges_;
+  CodePointSet codePointSet_;
   vector<CharacterClass> classes_;
   bool negate_;
   bool icase_;
+  bool unicode_;
 
   /// \return whether this bracket can match an ASCII character.
   bool canMatchASCII() const {
     // Note we don't have to be concerned with case-insensitive ranges here,
-    // because the ES canonicalize() function disallows non-ASCII characters
+    // except in the Unicode path.
+    // The ES canonicalize() function disallows non-ASCII characters
     // from being canonicalized to ASCII. That is, a non-ASCII character in a
     // regexp may never match an ASCII input character even in a
-    // case-insensitive regex.
+    // case-insensitive regex, unless the unicode flag is set.
+    // If we are case-sensitive and unicode, just pessimistically return true.
+    if (icase_ && unicode_)
+      return true;
 
     // If we are negated, look only for the range [0, 127] in ranges. We don't
     // bother to check for the more elaborate cases.
     if (negate_) {
-      for (const std::pair<char16_t, char16_t> &range : ranges_) {
-        if (range.first == 0 && range.second >= 127) {
+      for (const CodePointRange &range : codePointSet_.ranges()) {
+        if (range.first == 0 && range.length > 127) {
           // We are an inverted class containing the range [0, 127] or a
           // super-range; we cannot match ASCII.
           return false;
@@ -788,14 +878,10 @@ class BracketNode : public Node {
       if (!classes_.empty())
         return true;
 
-      // See if we have any ASCII singletons.
-      if (std::any_of(chars_.begin(), chars_.end(), isASCII))
-        return true;
-
       // Check ranges. It is sufficient to check the start of the range; the end
       // is necessarily larger than the start, so the end cannot be ASCII unless
       // the start is.
-      for (const std::pair<char16_t, char16_t> &range : ranges_) {
+      for (const CodePointRange &range : codePointSet_.ranges()) {
         if (isASCII(range.first))
           return true;
       }
@@ -805,20 +891,47 @@ class BracketNode : public Node {
     }
   }
 
- public:
-  BracketNode(const Traits &traits, bool negate, bool icase)
-      : traits_(traits), negate_(negate), icase_(icase) {}
+  /// Helper implementation of emit(). Given that we have emitted an instruction
+  /// \p insn (which is either BracketInsn or U16BracketInsn), emit our bracket
+  /// ranges and populate the instruction's fields.
+  template <typename Insn>
+  void populateInstruction(RegexBytecodeStream &bcs, Insn insn) const {
+    insn->negate = negate_;
+    for (CharacterClass cc : classes_) {
+      if (!cc.inverted_) {
+        insn->positiveCharClasses |= cc.type_;
+      } else {
+        insn->negativeCharClasses |= cc.type_;
+      }
+    }
 
-  void addChar(char16_t c) {
-    if (icase_)
-      chars_.push_back(traits_.caseFold(c));
-    else
-      chars_.push_back(c);
+    // Canonicalize our code point set if needed.
+    CodePointSet cps = icase_
+        ? makeCanonicallyEquivalent(codePointSet_, unicode_)
+        : codePointSet_;
+    for (const CodePointRange &range : cps.ranges()) {
+      assert(range.length > 0 && "Ranges should never be empty");
+      bcs.emitBracketRange(
+          BracketRange32{range.first, range.first + range.length - 1});
+    }
+    insn->rangeCount = cps.ranges().size();
   }
 
-  void addRange(char16_t a, char16_t b) {
+ public:
+  BracketNode(const Traits &traits, bool negate, constants::SyntaxFlags flags)
+      : traits_(traits),
+        negate_(negate),
+        icase_(flags & constants::SyntaxFlags::icase),
+        unicode_(flags & constants::SyntaxFlags::unicode) {}
+
+  void addChar(CodePoint c) {
+    codePointSet_.add(c);
+  }
+
+  void addRange(CodePoint a, CodePoint b) {
     assert(a <= b && "Invalid range");
-    ranges_.push_back(std::make_pair(a, b));
+    uint32_t length = b - a + 1;
+    codePointSet_.add(CodePointRange{a, length});
   }
 
   void addClass(CharacterClass cls) {
@@ -830,33 +943,23 @@ class BracketNode : public Node {
     if (!canMatchASCII())
       result |= MatchConstraintNonASCII;
 
-    if (!(ranges_.empty() && chars_.empty() && classes_.empty()))
+    if (!(codePointSet_.ranges().empty() && classes_.empty()))
       result |= MatchConstraintNonEmpty;
 
     return result | Super::matchConstraints();
   }
 
   virtual void emit(RegexBytecodeStream &bcs) const override {
-    auto insn = bcs.emit<BracketInsn>();
-    insn->negate = negate_;
-    for (CharacterClass cc : classes_) {
-      if (!cc.inverted_) {
-        insn->positiveCharClasses |= cc.type_;
-      } else {
-        insn->negativeCharClasses |= cc.type_;
-      }
+    if (unicode_) {
+      populateInstruction(bcs, bcs.emit<U16BracketInsn>());
+    } else {
+      populateInstruction(bcs, bcs.emit<BracketInsn>());
     }
-    for (const std::pair<char16_t, char16_t> &range : ranges_) {
-      bcs.emitBracketRange(BracketRange16{range.first, range.second});
-    }
-    for (char16_t singleton : chars_) {
-      bcs.emitBracketRange(BracketRange16{singleton, singleton});
-    }
-    insn->rangeCount = ranges_.size() + chars_.size();
   }
 
   virtual bool matchesExactlyOneCharacter() const override {
-    return true;
+    // A unicode bracket may match a surrogate pair.
+    return !unicode_;
   }
 };
 
@@ -870,8 +973,10 @@ class Regex {
   template <class A, class B>
   friend class Parser;
 
-  using CharT = typename Traits::char_type;
+  using CharT = typename Traits::CodeUnit;
+  using CodePoint = typename Traits::CodePoint;
   using Node = regex::Node;
+  using BracketNode = regex::BracketNode<Traits>;
 
  private:
   Traits traits_;
@@ -921,6 +1026,11 @@ class Regex {
     return markedCount_;
   }
 
+  /// \increment the number of marked subexpressions and return the value.
+  uint32_t incrementMarkedCount() {
+    return ++markedCount_;
+  }
+
   /// Given that the node \p splicePoint is in our node list, remove all nodes
   /// after it. \return a list of the removed nodes.
   NodeList spliceOut(Node *splicePoint) {
@@ -967,7 +1077,7 @@ class Regex {
 
   Regex(const CharT *first, const CharT *last, constants::SyntaxFlags f = {})
       : flags_(f) {
-    error_ = parse(first, last).regexError();
+    error_ = parse(first, last);
   }
 
   // Disallow copy-assignment and copy-construction.
@@ -1003,81 +1113,90 @@ class Regex {
 
  private:
   template <class ForwardIterator>
-  ParseResult<ForwardIterator> parse(
-      ForwardIterator first,
-      ForwardIterator last);
+  constants::ErrorType parse(ForwardIterator first, ForwardIterator last);
 
   /// Attempt to parse the regex from the range [\p first, \p last), using
   /// \p backRefLimit as the maximum decimal escape to interpret as a
   /// backreference.  The maximum backreference that was in fact encountered
   /// is returned by reference in \p out_max_back_ref, if that is larger than
-  /// its current value. \return a ParseResult containing the new position, or
-  /// error.
+  /// its current value. \return an error code.
   template <class ForwardIterator>
-  ParseResult<ForwardIterator> parseWithBackRefLimit(
+  constants::ErrorType parseWithBackRefLimit(
       ForwardIterator first,
       ForwardIterator last,
       uint32_t backRefLimit,
       uint32_t *outMaxBackRef);
   void pushLeftAnchor();
   void pushRightAnchor();
-  void pushMatchAnyButNewline();
+  void pushMatchAny();
   void pushLoop(
       uint32_t min,
       uint32_t max,
       NodeList loopedList,
       uint32_t mexp_begin,
       bool greedy);
-  BracketNode<Traits> *startBracketList(bool negate);
-  void pushChar(CharT c);
+  BracketNode *startBracketList(bool negate);
+  void pushChar(CodePoint c);
   void pushCharClass(CharacterClass c);
   void pushBackRef(uint32_t i);
   void pushAlternation(NodeList left, NodeList right);
-  void pushBeginMarkedSubexpression();
-  void pushEndMarkedSubexpression(unsigned);
+  void pushMarkedSubexpression(NodeList, uint32_t mexp);
   void pushWordBoundary(bool);
-  void pushLookahead(NodeList, uint16_t, uint16_t, bool);
-
- public:
-  bool search(
-      const CharT *first,
-      const CharT *last,
-      MatchResults<const CharT *> &m,
-      constants::MatchFlagType flags) const;
+  void pushLookaround(NodeList, uint16_t, uint16_t, bool, bool);
 };
 
-/// Node for lookahead assertions like (?=...) and (?!...)
-class LookaheadNode : public Node {
+/// Node for lookaround assertions like (?=...) and (?!...)
+class LookaroundNode : public Node {
   using Super = Node;
 
-  /// The contained expression representing our lookahead assertion.
+  /// The contained expression representing our lookaround assertion.
   NodeList exp_;
 
   /// Match constraints for our contained expression.
   MatchConstraintSet expConstraints_;
 
-  /// Whether the lookahead assertion is negative (?!) or positive (?=).
-  bool invert_;
+  /// Whether the lookaround assertion is negative (?!) or positive (?=).
+  const bool invert_;
 
-  /// The marked subexpressions contained within this lookahead
+  /// Whether the lookaround is forwards (true) or backwards (false).
+  const bool forwards_;
+
+  /// The marked subexpressions contained within this lookaround.
   uint16_t mexpBegin_;
   uint16_t mexpEnd_;
 
  public:
-  LookaheadNode(NodeList exp, uint32_t mexpBegin, uint32_t mexpEnd, bool invert)
+  LookaroundNode(
+      NodeList exp,
+      uint32_t mexpBegin,
+      uint32_t mexpEnd,
+      bool invert,
+      bool forwards)
       : exp_(move(exp)),
         expConstraints_(matchConstraintsForList(exp_)),
         invert_(invert),
+        forwards_(forwards),
         mexpBegin_(mexpBegin),
-        mexpEnd_(mexpEnd) {}
+        mexpEnd_(mexpEnd) {
+    // Clear AnchoredAtStart for lookbehind assertions.
+    // For example:
+    //    /(?<=^abc)def/.exec("abcdef")
+    // this matches the substring "def", even though that substring is not
+    // anchored at the start.
+    if (!forwards_) {
+      expConstraints_ &= ~MatchConstraintAnchoredAtStart;
+    }
+  }
 
   virtual MatchConstraintSet matchConstraints() const override {
-    // Positive lookaheads apply their match constraints.
+    // Positive lookarounds apply their match constraints.
     // e.g. if our assertion is anchored at the start, so are we.
     MatchConstraintSet result = 0;
     if (!invert_) {
       result |= expConstraints_;
     }
+    // Lookarounds match an empty string even if their contents do not.
+    result &= ~MatchConstraintNonEmpty;
     return result | Super::matchConstraints();
   }
 
@@ -1087,27 +1206,29 @@ class LookaheadNode : public Node {
 
   // Override emit() to compile our lookahead expression.
   virtual void emit(RegexBytecodeStream &bcs) const override {
-    auto lookahead = bcs.emit<LookaheadInsn>();
-    lookahead->invert = invert_;
-    lookahead->constraints = expConstraints_;
-    lookahead->mexpBegin = mexpBegin_;
-    lookahead->mexpEnd = mexpEnd_;
+    auto lookaround = bcs.emit<LookaroundInsn>();
+    lookaround->invert = invert_;
+    lookaround->forwards = forwards_;
+    lookaround->constraints = expConstraints_;
+    lookaround->mexpBegin = mexpBegin_;
+    lookaround->mexpEnd = mexpEnd_;
     compile(exp_, bcs);
-    lookahead->continuation = bcs.currentOffset();
+    lookaround->continuation = bcs.currentOffset();
   }
 };
 
 template <typename Receiver>
-ParseResult<const char16_t *> parseRegex(
+constants::ErrorType parseRegex(
     const char16_t *start,
     const char16_t *end,
     Receiver *receiver,
+    constants::SyntaxFlags flags,
     uint32_t backRefLimit,
     uint32_t *outMaxBackRef);
 
 template <class Traits>
 template <class ForwardIterator>
-ParseResult<ForwardIterator> Regex<Traits>::parse(
+constants::ErrorType Regex<Traits>::parse(
     ForwardIterator first,
     ForwardIterator last) {
   uint32_t maxBackRef = 0;
@@ -1125,9 +1246,13 @@ ParseResult<ForwardIterator> Regex<Traits>::parse(
   // the limit. Now we know that we wrongly interpreted a decimal escape as a
   // backreference. See ES6 Annex B.1.4 DecimalEscape "but only if the integer
   // value DecimalEscape is <= NCapturingParens". Now that we know the true
-  // capture group count, re-parse with that as the limit so overlarge decimal
-  // escapes will be ignored.
-  if (result && maxBackRef > markedCount_) {
+  // capture group count, either produce an error (if Unicode) or re-parse with
+  // that as the limit so overlarge decimal escapes will be ignored.
+  if (result == constants::ErrorType::None && maxBackRef > markedCount_) {
+    if (flags_ & constants::SyntaxFlags::unicode) {
+      return constants::ErrorType::EscapeInvalid;
+    }
+
     uint32_t backRefLimit = markedCount_;
     uint32_t reparsedMaxBackRef = 0;
     loopCount_ = 0;
@@ -1136,7 +1261,7 @@ ParseResult<ForwardIterator> Regex<Traits>::parse(
     result =
         parseWithBackRefLimit(first, last, backRefLimit, &reparsedMaxBackRef);
     assert(
-        result &&
+        result == constants::ErrorType::None &&
         "regex reparsing should never fail if the first parse succeeded");
     assert(
         reparsedMaxBackRef <= backRefLimit &&
@@ -1148,7 +1273,7 @@ ParseResult<ForwardIterator> Regex<Traits>::parse(
 
 template <class Traits>
 template <class ForwardIterator>
-ParseResult<ForwardIterator> Regex<Traits>::parseWithBackRefLimit(
+constants::ErrorType Regex<Traits>::parseWithBackRefLimit(
     ForwardIterator first,
     ForwardIterator last,
     uint32_t backRefLimit,
@@ -1156,11 +1281,12 @@ ParseResult<ForwardIterator> Regex<Traits>::parseWithBackRefLimit(
   // Initialize our node list with a single no-op node (it must never be empty.)
   nodes_.clear();
   nodes_.push_back(make_unique<Node>());
-  auto result = parseRegex(first, last, this, backRefLimit, outMaxBackRef);
+  auto result =
+      parseRegex(first, last, this, flags_, backRefLimit, outMaxBackRef);
 
   // If we succeeded, add a goal node as the last node and perform optimizations
   // on the list.
-  if (result) {
+  if (result == constants::ErrorType::None) {
     nodes_.push_back(make_unique<GoalNode>());
     Node::optimizeNodeList(nodes_, flags_);
   }
@@ -1189,11 +1315,11 @@ void Regex<Traits>::pushLoop(
 }
 
 template <class Traits>
-void Regex<Traits>::pushChar(CharT c) {
+void Regex<Traits>::pushChar(CodePoint c) {
   bool icase = flags() & constants::icase;
   if (icase)
-    c = traits_.caseFold(c);
-  appendNode<MatchCharNode>(Node::CharListT{c}, icase);
+    c = traits_.canonicalize(c, flags() & constants::unicode);
+  appendNode<MatchCharNode>(Node::CodePointList{c}, flags());
 }
 
 template <class Traits>
@@ -1203,15 +1329,8 @@ void Regex<Traits>::pushCharClass(CharacterClass c) {
 }
 
 template <class Traits>
-void Regex<Traits>::pushBeginMarkedSubexpression() {
-  if (!(flags_ & constants::nosubs))
-    appendNode<BeginMarkedSubexpressionNode>(++markedCount_);
-}
-
-template <class Traits>
-void Regex<Traits>::pushEndMarkedSubexpression(unsigned sub) {
-  if (!(flags_ & constants::nosubs))
-    appendNode<EndMarkedSubexpressionNode>(sub);
+void Regex<Traits>::pushMarkedSubexpression(NodeList nodes, uint32_t mexp) {
+  appendNode<MarkedSubexpressionNode>(std::move(nodes), mexp);
 }
 
 template <class Traits>
@@ -1225,8 +1344,9 @@ void Regex<Traits>::pushRightAnchor() {
 }
 
 template <class Traits>
-void Regex<Traits>::pushMatchAnyButNewline() {
-  appendNode<MatchAnyButNewlineNode>();
+void Regex<Traits>::pushMatchAny() {
+  appendNode<MatchAnyNode>(
+      flags_ & constants::unicode, flags_ & constants::dotAll);
 }
 
 template <class Traits>
@@ -1246,18 +1366,43 @@ void Regex<Traits>::pushAlternation(NodeList left, NodeList right) {
 
 template <class Traits>
 BracketNode<Traits> *Regex<Traits>::startBracketList(bool negate) {
-  return appendNode<BracketNode<Traits>>(
-      traits_, negate, flags() & constants::icase);
+  return appendNode<BracketNode>(traits_, negate, flags_);
 }
 
 template <class Traits>
-void Regex<Traits>::pushLookahead(
+void Regex<Traits>::pushLookaround(
     NodeList exp,
     uint16_t mexpBegin,
     uint16_t mexpEnd,
-    bool invert) {
+    bool invert,
+    bool forwards) {
+  if (!forwards) {
+    Node::reverseNodeList(exp);
+  }
   exp.push_back(make_unique<GoalNode>());
-  appendNode<LookaheadNode>(move(exp), mexpBegin, mexpEnd, invert);
+  appendNode<LookaroundNode>(move(exp), mexpBegin, mexpEnd, invert, forwards);
+}
+
+void Node::reverseNodeList(NodeList &nodes) {
+  // If we have a goal node it must come at the end.
+#ifndef NDEBUG
+  for (const auto &node : nodes) {
+    assert(
+        (!node->isGoal() || (node == nodes.back())) &&
+        "Goal node should only be at end");
+  }
+#endif
+
+  // Reverse this list, excluding any terminating goal.
+  if (!nodes.empty()) {
+    bool hasGoal = nodes.back()->isGoal();
+    std::reverse(nodes.begin(), nodes.end() - (hasGoal ? 1 : 0));
+  }
+
+  // Recursively reverse child nodes.
+  for (auto &node : nodes) {
+    node->reverseChildren();
+  }
 }
 
 void Node::optimizeNodeList(NodeList &nodes, constants::SyntaxFlags flags) {
@@ -1271,7 +1416,7 @@ void Node::optimizeNodeList(NodeList &nodes, constants::SyntaxFlags flags) {
   // [CharNode('abc')].
   for (size_t idx = 0, max = nodes.size(); idx < max; idx++) {
     // Get the range of nodes that can be successfully coalesced.
-    Node::CharListT chars;
+    Node::CodePointList chars;
     size_t rangeStart = idx;
     size_t rangeEnd = idx;
     for (; rangeEnd < max; rangeEnd++) {
@@ -1282,9 +1427,8 @@ void Node::optimizeNodeList(NodeList &nodes, constants::SyntaxFlags flags) {
     if (rangeEnd - rangeStart >= 3) {
       // We successfully coalesced some nodes.
       // Replace the range with a new node.
-      bool icase = flags & constants::icase;
       nodes[rangeStart] =
-          unique_ptr<MatchCharNode>(new MatchCharNode(std::move(chars), icase));
+          unique_ptr<MatchCharNode>(new MatchCharNode(std::move(chars), flags));
       // Fill the remainder of the range with null (we'll clean them up after
       // the loop) and skip to the end of the range.
       // Note that rangeEnd may be one past the last valid element.

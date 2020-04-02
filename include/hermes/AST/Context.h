@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_AST_CONTEXT_H
 #define HERMES_AST_CONTEXT_H
 
@@ -16,7 +17,7 @@ namespace hermes {
 
 namespace hbc {
 class BackendContext;
-};
+}
 
 /// Choices for bundling format, applicable to cross module opts
 enum class BundlerKind { none, metromin };
@@ -36,6 +37,8 @@ struct CodeGenerationSettings {
   bool dumpUseList{false};
   /// Dump IR after every pass.
   bool dumpIRBetweenPasses{false};
+  /// Instrument IR for dynamic checking (if support is compiled in).
+  bool instrumentIR{false};
 };
 
 struct OutliningSettings {
@@ -160,6 +163,11 @@ class Context {
   /// If true, every function will be compiled lazily when invoked for the
   /// first time.
   bool lazyCompilation_{false};
+
+  /// Allows Function.toString() to return original source code. As with lazy
+  /// compilation this requires source buffers, and hence this Context instance
+  /// to be retained after compilation.
+  bool allowFunctionToStringWithRuntimeSource_{false};
 
   /// If true, wrap each file in the CommonJS module wrapper function,
   /// and use that for requiring modules.
@@ -299,6 +307,14 @@ class Context {
     lazyCompilation_ = lazyCompilation;
   }
 
+  bool allowFunctionToStringWithRuntimeSource() const {
+    return allowFunctionToStringWithRuntimeSource_;
+  }
+
+  void setAllowFunctionToStringWithRuntimeSource(bool v) {
+    allowFunctionToStringWithRuntimeSource_ = v;
+  }
+
   void setStaticBuiltinOptimization(bool staticBuiltins) {
     optimizationSettings_.staticBuiltins = staticBuiltins;
   }
@@ -335,6 +351,6 @@ class Context {
   }
 };
 
-}; // namespace hermes
+} // namespace hermes
 
 #endif // HERMES_AST_CONTEXT_H

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 /// This file defines the ESTree nodes, which are documented in:
 /// https://github.com/estree/estree/blob/master/spec.md
 ///
@@ -27,25 +28,28 @@ ESTREE_NODE_0_ARGS(Metadata, Base)
 ESTREE_FIRST(FunctionLike, Base)
 ESTREE_NODE_1_ARGS(Program, FunctionLike,
     NodeList, body, false)
-ESTREE_NODE_4_ARGS(
+ESTREE_NODE_5_ARGS(
     FunctionExpression, FunctionLike,
     NodePtr, id, true,
     NodeList, params, false,
     NodePtr, body, false,
-    NodeBoolean, generator, false)
-ESTREE_NODE_4_ARGS(
+    NodeBoolean, generator, false,
+    NodeBoolean, async, false)
+ESTREE_NODE_5_ARGS(
     ArrowFunctionExpression, FunctionLike,
     NodePtr, id, true,
     NodeList, params, false,
     NodePtr, body, false,
-    NodeBoolean, expression, false)
-ESTREE_NODE_5_ARGS(
+    NodeBoolean, expression, false,
+    NodeBoolean, async, false)
+ESTREE_NODE_6_ARGS(
     FunctionDeclaration, FunctionLike,
     NodePtr, id, true,
     NodeList, params, false,
     NodePtr, body, false,
     NodePtr, returnType, true,
-    NodeBoolean, generator, false)
+    NodeBoolean, generator, false,
+    NodeBoolean, async, false)
 ESTREE_LAST(FunctionLike)
 
 ESTREE_FIRST(Statement, Base)
@@ -224,16 +228,22 @@ ESTREE_NODE_2_ARGS(
     YieldExpression, Base,
     NodePtr, argument, true,
     NodeBoolean, delegate, true)
+ESTREE_NODE_1_ARGS(
+    AwaitExpression, Base,
+    NodePtr, argument, false)
 
+ESTREE_FIRST(CallExpressionLike, Base)
 ESTREE_NODE_2_ARGS(
-    CallExpression,
-    Base,
-    NodePtr,
-    callee,
-    false,
-    NodeList,
-    arguments,
-    false)
+    CallExpression, CallExpressionLike,
+    NodePtr, callee, false,
+    NodeList, arguments, false)
+
+ESTREE_NODE_3_ARGS(
+    OptionalCallExpression, CallExpressionLike,
+    NodePtr, callee, false,
+    NodeList, arguments, false,
+    NodeBoolean, optional, false)
+ESTREE_LAST(CallExpressionLike)
 
 ESTREE_NODE_3_ARGS(
     AssignmentExpression,
@@ -274,18 +284,20 @@ ESTREE_NODE_3_ARGS(
     prefix,
     false)
 
+ESTREE_FIRST(MemberExpressionLike, Base)
 ESTREE_NODE_3_ARGS(
-    MemberExpression,
-    Base,
-    NodePtr,
-    object,
-    false,
-    NodePtr,
-    property,
-    false,
-    NodeBoolean,
-    computed,
-    false)
+    MemberExpression, MemberExpressionLike,
+    NodePtr, object, false,
+    NodePtr, property, false,
+    NodeBoolean, computed, false)
+
+ESTREE_NODE_4_ARGS(
+    OptionalMemberExpression, MemberExpressionLike,
+    NodePtr, object, false,
+    NodePtr, property, false,
+    NodeBoolean, computed, false,
+    NodeBoolean, optional, false)
+ESTREE_LAST(MemberExpressionLike)
 
 ESTREE_NODE_3_ARGS(
     LogicalExpression,
@@ -373,7 +385,7 @@ ESTREE_NODE_2_ARGS(
     Base,
     NodePtr,
     param,
-    false,
+    true,
     NodePtr,
     body,
     false)
@@ -549,3 +561,4 @@ ESTREE_LAST(Cover)
 #undef ESTREE_NODE_3_ARGS
 #undef ESTREE_NODE_4_ARGS
 #undef ESTREE_NODE_5_ARGS
+#undef ESTREE_NODE_6_ARGS

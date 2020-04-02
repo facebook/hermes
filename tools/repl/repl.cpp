@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -20,6 +21,7 @@
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/JSError.h"
+#include "hermes/VM/JSObject.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/SmallXString.h"
@@ -270,7 +272,11 @@ int main(int argc, char **argv) {
                                     .build())
                             .withShouldRecordStats(GCPrintStats)
                             .build())
+          .withES6Proxy(cl::ES6Proxy)
           .withES6Symbol(cl::ES6Symbol)
+          .withEnableHermesInternal(true)
+          .withEnableHermesInternalTestMethods(true)
+          .withAllowFunctionToStringWithRuntimeSource(cl::AllowFunctionToString)
           .build());
 
   vm::GCScope gcScope(runtime.get());

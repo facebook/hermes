@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -O -commonjs -dump-bytecode %s | %FileCheck --match-full-lines %s
 
 var x = encodeURIComponent('asdf');
@@ -25,7 +27,7 @@ foo();
 // CHECK-NEXT:   s2[ASCII, {{.*}}]: cjs-dce.js
 // CHECK-NEXT:   s3[ASCII, {{.*}}]: cjs_module
 // CHECK-NEXT:   s4[ASCII, {{.*}}]: global
-// CHECK-NEXT:   p5[ASCII, {{.*}}] @{{[0-9]+}}: encodeURIComponent
+// CHECK-NEXT:   i5[ASCII, {{.*}}] #{{[0-9A-F]+}}: encodeURIComponent
 
 // CHECK: CommonJS Modules:
 // CHECK-NEXT:   File ID 2 -> function ID 1
@@ -35,7 +37,7 @@ foo();
 // CHECK-NEXT:     Ret               r0
 
 //CHECK:Function<cjs_module>(4 params, 13 registers, 1 symbols):
-//CHECK-NEXT:Offset in debug table: src 0x0, vars 0x0
+//CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 //CHECK-NEXT:    CreateEnvironment r3
 //CHECK-NEXT:    CreateClosure     r1, r3, 2
 //CHECK-NEXT:    GetGlobalObject   r0

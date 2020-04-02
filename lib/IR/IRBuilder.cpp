@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -90,7 +91,6 @@ GeneratorInnerFunction *IRBuilder::createGeneratorInnerFunction(
 ExternalScope *IRBuilder::createExternalScope(
     Function *function,
     int32_t depth) {
-  assert(depth < 0 && "Invalid external scope depth");
   return new ExternalScope(function, depth);
 }
 
@@ -817,10 +817,10 @@ HBCProfilePointInst *IRBuilder::createHBCProfilePointInst(uint16_t pointIndex) {
   return inst;
 }
 
-HBCCallBuiltinInst *IRBuilder::createHBCCallBuiltinInst(
-    int builtinIndex,
+CallBuiltinInst *IRBuilder::createCallBuiltinInst(
+    BuiltinMethod::Enum builtinIndex,
     ArrayRef<Value *> arguments) {
-  auto *inst = new HBCCallBuiltinInst(
+  auto *inst = new CallBuiltinInst(
       getLiteralNumber(builtinIndex), getLiteralUndefined(), arguments);
   insert(inst);
   return inst;
@@ -876,6 +876,30 @@ CompareBranchInst *IRBuilder::createCompareBranchInst(
       new CompareBranchInst(left, right, opKind, trueBlock, falseBlock);
   insert(inst);
   return inst;
+}
+
+IteratorBeginInst *IRBuilder::createIteratorBeginInst(
+    AllocStackInst *sourceOrNext) {
+  auto *I = new IteratorBeginInst(sourceOrNext);
+  insert(I);
+  return I;
+}
+
+IteratorNextInst *IRBuilder::createIteratorNextInst(
+    AllocStackInst *iterator,
+    AllocStackInst *sourceOrNext) {
+  auto *I = new IteratorNextInst(iterator, sourceOrNext);
+  insert(I);
+  return I;
+}
+
+IteratorCloseInst *IRBuilder::createIteratorCloseInst(
+    AllocStackInst *iterator,
+    bool ignoreInnerException) {
+  auto *I =
+      new IteratorCloseInst(iterator, getLiteralBool(ignoreInnerException));
+  insert(I);
+  return I;
 }
 
 UnreachableInst *IRBuilder::createUnreachableInst() {

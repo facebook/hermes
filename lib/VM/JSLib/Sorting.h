@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_JSLIB_SORTING_H
 #define HERMES_VM_JSLIB_SORTING_H
 
@@ -20,8 +21,11 @@
 namespace hermes {
 namespace vm {
 
-/// Abstraction to define a comparison-based sorting routine.
-/// The SortModel has two operations: swap and compare.
+/// Abstraction to define a comparison-based sorting routine.  The
+/// SortModel has two operations: swap and compare.  Note that some
+/// implementation of \c swap and \c less can call property accessors
+/// which evaluate JavaScript.  For now, we don't rename these
+/// methods.
 class SortModel {
  public:
   // Swap elements at indices a and b.

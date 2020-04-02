@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 //===----------------------------------------------------------------------===//
 /// \file
 /// ES6.0 25.2.1 The GeneratorFunction constructor.
@@ -16,16 +17,14 @@ namespace vm {
 Handle<JSObject> createGeneratorFunctionConstructor(Runtime *runtime) {
   auto proto = Handle<JSObject>::vmcast(&runtime->generatorFunctionPrototype);
 
-  auto cons = toHandle(
+  auto cons = runtime->makeHandle(NativeConstructor::create(
       runtime,
-      NativeConstructor::create(
-          runtime,
-          Handle<JSObject>::vmcast(&runtime->functionPrototype),
-          nullptr,
-          generatorFunctionConstructor,
-          1,
-          JSGeneratorFunction::createWithNewDomain,
-          CellKind::GeneratorFunctionKind));
+      Handle<JSObject>::vmcast(&runtime->functionPrototype),
+      nullptr,
+      generatorFunctionConstructor,
+      1,
+      NativeConstructor::creatorFunction<JSGeneratorFunction>,
+      CellKind::GeneratorFunctionKind));
 
   auto st = Callable::defineNameLengthAndPrototype(
       cons,

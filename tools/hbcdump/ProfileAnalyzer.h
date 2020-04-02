@@ -1,14 +1,16 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_TOOLS_HBCDUMP_PROFILEANALYZER_H
 #define HERMES_TOOLS_HBCDUMP_PROFILEANALYZER_H
 
 #include "HBCParser.h"
-#include "StructuredPrinter.h"
+
+#include "hermes/SourceMap/SourceMapParser.h"
 
 #include "llvm/Support/raw_ostream.h"
 
@@ -54,6 +56,7 @@ class ProfileAnalyzer {
   std::unordered_map<unsigned, FunctionRuntimeStatistics> funcRuntimeStats_;
   // Caches any unused function checksums in profile trace.
   std::unordered_set<std::string> unusedChecksumsInTrace_;
+  std::unique_ptr<SourceMap> sourceMap_;
 
   ProfileData deserializeTrace(
       std::unique_ptr<llvm::MemoryBuffer> profileBuffer);
@@ -114,8 +117,11 @@ class ProfileAnalyzer {
   ProfileAnalyzer(
       llvm::raw_ostream &os,
       std::shared_ptr<hbc::BCProvider> bcProvider,
-      llvm::Optional<std::unique_ptr<llvm::MemoryBuffer>> profileBufferOpt)
-      : os_(os), hbcParser_(std::move(bcProvider)) {
+      llvm::Optional<std::unique_ptr<llvm::MemoryBuffer>> profileBufferOpt,
+      std::unique_ptr<SourceMap> &&sourceMap)
+      : os_(os),
+        hbcParser_(std::move(bcProvider)),
+        sourceMap_(std::move(sourceMap)) {
     if (profileBufferOpt.hasValue()) {
       profileDataOpt_ =
           deserializeTrace(std::move(profileBufferOpt.getValue()));
@@ -129,6 +135,8 @@ class ProfileAnalyzer {
   void dumpBasicBlockStats();
   // Print top K functions' runtime statistics.
   void dumpFunctionStats();
+  // Print all used function IDs, one per line.
+  void dumpUsedFunctionIDs();
   // Print a single function's detailed basic block view for \p funcId.
   void dumpFunctionBasicBlockStat(unsigned funcId);
   // Print page I/O access information.
@@ -147,17 +155,17 @@ class ProfileAnalyzer {
   void dumpEpilogue();
   // Print a high-level summary for the profile trace.
   void dumpSummary();
-  // Print offsets of a function.
-  void dumpFunctionOffsets(uint32_t funcId, StructuredPrinter &printer);
-  // Print offsets for all functions in bundle.
-  void dumpAllFunctionOffsets(StructuredPrinter &printer) {
-    printer.openArray();
+  // Print meta-data for functions e.g. offset, source-location, etc.
+  void dumpFunctionInfo(uint32_t funcId, JSONEmitter &json);
+  // Print meta-data for all functions in bundle.
+  void dumpAllFunctionInfo(JSONEmitter &json) {
+    json.openArray();
     for (uint32_t i = 0, e = hbcParser_.getBCProvider()->getFunctionCount();
          i < e;
          i++) {
-      dumpFunctionOffsets(i, printer);
+      dumpFunctionInfo(i, json);
     }
-    printer.closeArray();
+    json.closeArray();
   }
   // Return the ID of the function, if any, found at a given virtual offset.
   llvm::Optional<uint32_t> getFunctionFromVirtualOffset(uint32_t virtualOffset);

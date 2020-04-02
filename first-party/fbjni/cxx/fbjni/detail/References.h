@@ -1,5 +1,5 @@
-/**
- * Copyright 2018-present, Facebook, Inc.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -135,6 +135,11 @@ class JClass;
 
 namespace detail {
 
+template<typename T>
+constexpr bool IsJavaClassType() {
+  return std::is_base_of<JObject, T>::value;
+}
+
 template <typename T, typename Enable = void>
 struct HasJniRefRepr : std::false_type {};
 
@@ -145,17 +150,18 @@ struct HasJniRefRepr<T, typename std::enable_if<!std::is_same<typename T::JniRef
 
 template <typename T>
 struct RefReprType<T*> {
-  using type = typename std::conditional<HasJniRefRepr<T>::value, typename HasJniRefRepr<T>::type, JObjectWrapper<T*>>::type;
-  static_assert(std::is_base_of<JObject, type>::value,
+  static_assert(HasJniRefRepr<T>::value, "Repr type missing JniRefRepr.");
+  using type = typename HasJniRefRepr<T>::type;
+  static_assert(IsJavaClassType<type>(),
       "Repr type missing JObject base.");
   static_assert(std::is_same<type, typename RefReprType<type>::type>::value,
       "RefReprType<T> not idempotent");
 };
 
 template <typename T>
-struct RefReprType<T, typename std::enable_if<std::is_base_of<JObject, T>::value, void>::type> {
+struct RefReprType<T, typename std::enable_if<IsJavaClassType<T>(), void>::type> {
   using type = T;
-  static_assert(std::is_base_of<JObject, type>::value,
+  static_assert(IsJavaClassType<type>(),
       "Repr type missing JObject base.");
   static_assert(std::is_same<type, typename RefReprType<type>::type>::value,
       "RefReprType<T> not idempotent");
@@ -171,8 +177,8 @@ struct JavaObjectType {
 };
 
 template <typename T>
-struct JavaObjectType<JObjectWrapper<T>> {
-  using type = T;
+struct JavaObjectType<T*> {
+  using type = T*;
   static_assert(IsPlainJniReference<type>(),
       "JavaObjectType<T> not a plain jni reference");
   static_assert(std::is_same<type, typename JavaObjectType<type>::type>::value,
@@ -180,12 +186,30 @@ struct JavaObjectType<JObjectWrapper<T>> {
 };
 
 template <typename T>
-struct JavaObjectType<T*> {
-  using type = T*;
+struct PrimitiveOrJavaObjectType<T, enable_if_t<IsJniPrimitive<T>(), void>> {
+  using type = T;
+  static_assert(IsJniPrimitive<type>(),
+      "PrimitiveOrJavaObjectType<T> not a jni primitive");
+  static_assert(std::is_same<type, typename PrimitiveOrJavaObjectType<type>::type>::value,
+      "PrimitiveOrJavaObjectType<T> not idempotent");
+};
+
+template <typename T>
+struct PrimitiveOrJavaObjectType<T, enable_if_t<IsPlainJniReference<T>(), void>> {
+  using type = T;
   static_assert(IsPlainJniReference<type>(),
-      "JavaObjectType<T> not a plain jni reference");
-  static_assert(std::is_same<type, typename JavaObjectType<type>::type>::value,
-      "JavaObjectType<T> not idempotent");
+      "PrimitiveOrJavaObjectType<T> not a plain jni reference");
+  static_assert(std::is_same<type, typename PrimitiveOrJavaObjectType<type>::type>::value,
+      "PrimitiveOrJavaObjectType<T> not idempotent");
+};
+
+template <typename T>
+struct PrimitiveOrJavaObjectType<T, enable_if_t<IsJavaClassType<T>(), void>> {
+  using type = JniType<T>;
+  static_assert(IsPlainJniReference<type>(),
+      "PrimitiveOrJavaObjectType<T> not a plain jni reference");
+  static_assert(std::is_same<type, typename PrimitiveOrJavaObjectType<type>::type>::value,
+      "PrimitiveOrJavaObjectType<T> not idempotent");
 };
 
 template <typename Repr>
@@ -199,13 +223,14 @@ struct ReprStorage {
   JniType<Repr> jobj() const noexcept;
 
   void swap(ReprStorage& other) noexcept;
- private:
+
   ReprStorage() = delete;
   ReprStorage(const ReprStorage&) = delete;
   ReprStorage(ReprStorage&&) = delete;
   ReprStorage& operator=(const ReprStorage&) = delete;
   ReprStorage& operator=(ReprStorage&&) = delete;
 
+ private:
   using Storage = typename std::aligned_storage<sizeof(JObjectBase), alignof(JObjectBase)>::type;
   Storage storage_;
 };
@@ -381,6 +406,10 @@ class weak_ref : public base_owned_ref<T, WeakGlobalReferenceAllocator> {
   weak_ref(weak_ref&& other) noexcept
     : base_owned_ref<T, Allocator>{std::move(other)} {}
 
+  // Move from ref to compatible type.
+  template<typename U>
+  weak_ref(weak_ref<U>&& other)
+      : base_owned_ref<T, Allocator>{std::move(other)} {}
 
   /// Assignment operator (note creates a new reference)
   weak_ref& operator=(const weak_ref& other);
@@ -446,6 +475,11 @@ class basic_strong_ref : public base_owned_ref<T, Alloc> {
   basic_strong_ref(const basic_strong_ref<U, Alloc>& other)
     : base_owned_ref<T, Alloc>{other} {}
 
+  // Move from ref to compatible type.
+  template<typename U>
+  basic_strong_ref(basic_strong_ref<U, Alloc>&& other)
+    : base_owned_ref<T, Alloc>{std::move(other)} {}
+
   /// Transfers ownership of an underlying reference from one unique reference to another
   basic_strong_ref(basic_strong_ref&& other) noexcept
     : base_owned_ref<T, Alloc>{std::move(other)} {}
@@ -504,11 +538,10 @@ template<typename T>
 void swap(alias_ref<T>& a, alias_ref<T>& b) noexcept;
 
 /**
- * A non-owning variant of the smart references (a dumb reference). These references still provide
- * access to the functionality of the @ref JObjectWrapper specializations including exception
- * handling and ease of use. Use this representation when you don't want to claim ownership of the
- * underlying reference (compare to using raw pointers instead of smart pointers.) For symmetry use
- * @ref alias_ref instead of this class.
+ * A non-owning variant of the smart references (a dumb
+ * reference). Use this representation when you don't want to claim
+ * ownership of the underlying reference (compare to using raw
+ * pointers instead of smart pointers.)
  */
 template<typename T>
 class alias_ref {
@@ -593,20 +626,20 @@ private:
 };
 
 template<typename T, typename U>
-enable_if_t<IsPlainJniReference<T>(), local_ref<T>>
+enable_if_t<IsPlainJniReference<JniType<T>>(), local_ref<T>>
 static_ref_cast(const local_ref<U>& ref) noexcept;
 
 template<typename T, typename U>
-enable_if_t<IsPlainJniReference<T>(), global_ref<T>>
+enable_if_t<IsPlainJniReference<JniType<T>>(), global_ref<T>>
 static_ref_cast(const global_ref<U>& ref) noexcept;
 
 template<typename T, typename U>
-enable_if_t<IsPlainJniReference<T>(), alias_ref<T>>
+enable_if_t<IsPlainJniReference<JniType<T>>(), alias_ref<T>>
 static_ref_cast(const alias_ref<U>& ref) noexcept;
 
 template<typename T, typename RefType>
 auto dynamic_ref_cast(const RefType& ref) ->
-enable_if_t<IsPlainJniReference<T>(), decltype(static_ref_cast<T>(ref))> ;
+enable_if_t<IsPlainJniReference<JniType<T>>(), decltype(static_ref_cast<T>(ref))> ;
 
 }}
 

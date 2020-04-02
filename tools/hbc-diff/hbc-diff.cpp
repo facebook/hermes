@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include <unordered_map>
 
 #include "hermes/BCGen/HBC/BytecodeDataProvider.h"
@@ -156,7 +157,11 @@ static ExecutionStatus diffFiles(
   for (uint32_t j = 0; j < sectionNames.size(); ++j) {
     llvm::outs() << sectionNames[j] << ": ";
     printBytes(fileSizes[1][j] - fileSizes[0][j], llvm::outs(), humanize);
-    llvm::outs() << '\n';
+    llvm::outs() << "  (";
+    printBytes(fileSizes[0][j], llvm::outs(), humanize);
+    llvm::outs() << " -> ";
+    printBytes(fileSizes[1][j], llvm::outs(), humanize);
+    llvm::outs() << ")\n";
   }
 
   auto &before = funcHashToSize[0];

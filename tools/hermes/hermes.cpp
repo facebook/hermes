@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/CompilerDriver/CompilerDriver.h"
 #include "hermes/ConsoleHost/ConsoleHost.h"
 #include "hermes/ConsoleHost/RuntimeFlags.h"
@@ -89,6 +90,8 @@ static opt<unsigned> ExecutionTimeLimit(
 static int executeHBCBytecodeFromCL(
     std::unique_ptr<hbc::BCProvider> bytecode,
     const driver::BytecodeBufferInfo &info) {
+  auto recStats =
+      (cl::GCPrintStats || cl::GCBeforeStats) && !cl::StableInstructionCount;
   ExecuteOptions options;
   options.runtimeConfig =
       vm::RuntimeConfig::Builder()
@@ -104,7 +107,7 @@ static int executeHBCBytecodeFromCL(
                           .withRandomSeed(cl::GCSanitizeRandomSeed)
                           .build())
                   .withShouldRandomizeAllocSpace(cl::GCRandomizeAllocSpace)
-                  .withShouldRecordStats(cl::GCPrintStats || cl::GCBeforeStats)
+                  .withShouldRecordStats(recStats)
                   .withShouldReleaseUnused(vm::kReleaseUnusedNone)
                   .withAllocInYoung(cl::GCAllocYoung)
                   .withRevertToYGAtTTI(cl::GCRevertToYGAtTTI)
@@ -113,10 +116,15 @@ static int executeHBCBytecodeFromCL(
           .withEnableEval(cl::EnableEval)
           .withVerifyEvalIR(cl::VerifyIR)
           .withVMExperimentFlags(cl::VMExperimentFlags)
+          .withES6Proxy(cl::ES6Proxy)
           .withES6Symbol(cl::ES6Symbol)
           .withEnableSampleProfiling(cl::SampleProfiling)
           .withRandomizeMemoryLayout(cl::RandomizeMemoryLayout)
           .withTrackIO(cl::TrackBytecodeIO)
+          .withEnableHermesInternal(cl::EnableHermesInternal)
+          .withEnableHermesInternalTestMethods(
+              cl::EnableHermesInternalTestMethods)
+          .withAllowFunctionToStringWithRuntimeSource(cl::AllowFunctionToString)
           .build();
 
   options.basicBlockProfiling = cl::BasicBlockProfiling;
@@ -131,6 +139,7 @@ static int executeHBCBytecodeFromCL(
   options.jitCrashOnError = cl::JITCrashOnError;
   options.stopAfterInit = cl::StopAfterInit;
   options.forceGCBeforeStats = cl::GCBeforeStats;
+  options.stabilizeInstructionCount = cl::StableInstructionCount;
 #ifdef HERMESVM_SERIALIZE
   options.SerializeAfterInitFile = cl::SerializeAfterInitFile;
   options.DeserializeFile = cl::DeserializeFile;

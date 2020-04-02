@@ -1,13 +1,14 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/Parser/JSLexer.h"
 
+#include "dtoa/dtoa.h"
 #include "hermes/Support/Conversions.h"
-#include "hermes/dtoa/dtoa.h"
 
 #include "llvm/ADT/StringSwitch.h"
 
@@ -52,12 +53,14 @@ JSLexer::JSLexer(
     SourceErrorManager &sm,
     Allocator &allocator,
     StringTable *strTab,
-    bool strictMode)
+    bool strictMode,
+    bool convertSurrogates)
     : sm_(sm),
       allocator_(allocator),
       ownStrTab_(strTab ? nullptr : new StringTable(allocator_)),
       strTab_(strTab ? *strTab : *ownStrTab_),
-      strictMode_(strictMode) {
+      strictMode_(strictMode),
+      convertSurrogates_(convertSurrogates) {
   initializeWithBufferId(bufId);
   initializeReservedIdentifiers();
 }
@@ -67,12 +70,14 @@ JSLexer::JSLexer(
     SourceErrorManager &sm,
     Allocator &allocator,
     StringTable *strTab,
-    bool strictMode)
+    bool strictMode,
+    bool convertSurrogates)
     : sm_(sm),
       allocator_(allocator),
       ownStrTab_(strTab ? nullptr : new StringTable(allocator_)),
       strTab_(strTab ? *strTab : *ownStrTab_),
-      strictMode_(strictMode) {
+      strictMode_(strictMode),
+      convertSurrogates_(convertSurrogates) {
   auto bufId = sm_.addNewSourceBuffer(std::move(input));
   initializeWithBufferId(bufId);
   initializeReservedIdentifiers();
@@ -174,7 +179,6 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       PUNC_L1_1(';', TokenKind::semi);
       PUNC_L1_1(',', TokenKind::comma);
       PUNC_L1_1('~', TokenKind::tilde);
-      PUNC_L1_1('?', TokenKind::question);
       PUNC_L1_1(':', TokenKind::colon);
 
       // = => == ===
@@ -206,6 +210,25 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       PUNC_L2_3('-', TokenKind::minus, '-', TokenKind::minusminus, '=', TokenKind::minusequal);
       PUNC_L2_3('&', TokenKind::amp,   '&', TokenKind::ampamp,     '=', TokenKind::ampequal);
       PUNC_L2_3('|', TokenKind::pipe,  '|', TokenKind::pipepipe,   '=', TokenKind::pipeequal);
+
+      // ? ?? ?.
+      case '?':
+        token_.setStart(curCharPtr_);
+        if (curCharPtr_[1] == '.' && !isdigit(curCharPtr_[2])) {
+          // OptionalChainingPunctuator ::
+          // ?. [lookahead does not contain DecimalDigit]
+          // This is done to prevent `x?.3:y` from being recognized
+          // as `x ?. 3 : y` instead of `x ? .3 : y`.
+          token_.setPunctuator(TokenKind::questiondot);
+          curCharPtr_ += 2;
+        } else if (curCharPtr_[1] == '?') {
+          token_.setPunctuator(TokenKind::questionquestion);
+          curCharPtr_ += 2;
+        } else {
+          token_.setPunctuator(TokenKind::question);
+          curCharPtr_ += 1;
+        }
+        break;
 
       // * *= ** **=
       case '*':
@@ -375,7 +398,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
         }
         break;
 
-      // clang-format off
+        // clang-format off
       case '0': case '1': case '2': case '3': case '4':
       case '5': case '6': case '7': case '8': case '9':
         // clang-format on
@@ -383,7 +406,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
         scanNumber();
         break;
 
-      // clang-format off
+        // clang-format off
       case '_': case '$':
       case 'a': case 'b': case 'c': case 'd': case 'e': case 'f': case 'g':
       case 'h': case 'i': case 'j': case 'k': case 'l': case 'm': case 'n':
@@ -584,6 +607,38 @@ const Token *JSLexer::rescanRBraceInTemplateLiteral() {
   return &token_;
 }
 
+OptValue<TokenKind> JSLexer::lookaheadAfterAsync(
+    OptValue<TokenKind> expectedToken) {
+  assert(
+      token_.getKind() == TokenKind::identifier &&
+      token_.getIdentifier()->str() == "async" &&
+      "current token must be 'async'");
+  UniqueString *savedIdent = token_.getIdentifier();
+  SMLoc start = token_.getStartLoc();
+  SMLoc end = token_.getEndLoc();
+  const char *cur = curCharPtr_;
+  SourceErrorManager::SaveAndSuppressMessages suppress(&sm_);
+
+  advance();
+  TokenKind kind = token_.getKind();
+  if (isNewLineBeforeCurrentToken()) {
+    // Disregard anything after LineTerminator.
+    return llvm::None;
+  }
+
+  if (expectedToken.hasValue() && expectedToken.getValue() == kind) {
+    // Do not move the cursor back.
+    return kind;
+  }
+
+  token_.setStart(start.getPointer());
+  token_.setEnd(end.getPointer());
+  token_.setIdentifier(savedIdent);
+  seek(SMLoc::getFromPointer(cur));
+
+  return kind;
+}
+
 uint32_t JSLexer::consumeUnicodeEscape() {
   assert(*curCharPtr_ == '\\');
   ++curCharPtr_;
@@ -756,16 +811,20 @@ llvm::Optional<uint32_t> JSLexer::consumeHex(
     bool errorOnFail) {
   uint32_t cp = 0;
   for (unsigned i = 0; i != requiredLen; ++i) {
-    int ch = *curCharPtr_ | 32;
-    if (ch >= '0' && ch <= '9')
+    unsigned ch = *curCharPtr_;
+    if (ch >= '0' && ch <= '9') {
       ch -= '0';
-    else if (ch >= 'a' && ch <= 'f')
-      ch -= 'a' - 10;
-    else {
-      if (errorOnFail) {
-        error(SMLoc::getFromPointer(curCharPtr_), "invalid hex number");
+    } else {
+      // Now that we know it is not a digit, it is safe to lowercase.
+      ch |= 32;
+      if (ch >= 'a' && ch <= 'f') {
+        ch -= 'a' - 10;
+      } else {
+        if (errorOnFail) {
+          error(SMLoc::getFromPointer(curCharPtr_), "invalid hex number");
+        }
+        return llvm::None;
       }
-      return llvm::None;
     }
     cp = (cp << 4) + ch;
     ++curCharPtr_;
@@ -1051,6 +1110,13 @@ end:
   if (!ok) {
     error(token_.getSourceRange(), "invalid numeric literal");
     val = std::numeric_limits<double>::quiet_NaN();
+  } else if (!real && radix == 10 && curCharPtr_ - start <= 9) {
+    // If this is a decimal integer of at most 9 digits (log10(2**31-1), it can
+    // fit in a 32-bit integer. Use a faster conversion.
+    int32_t ival = *start - '0';
+    while (++start != curCharPtr_)
+      ival = ival * 10 + (*start - '0');
+    val = ival;
   } else if (real || radix == 10) {
     // We need a zero-terminated buffer for hermes_g_strtod().
     llvm::SmallString<32> buf;
@@ -1354,7 +1420,7 @@ void JSLexer::scanTemplateLiteral() {
   // Store the Template Raw Value (TRV) in the rawStorage_.
   rawStorage_.clear();
 
-  /// \return the Template Raw Value (TRV) of character \p c.
+  /// Return the Template Raw Value (TRV) of character \p c.
   /// The only time the TRV is different from c is when c is a <CR>.
   /// In that case, this function will return 0x0a (LINE FEED).
   const auto trv = [](char c) -> char {
@@ -1512,10 +1578,13 @@ void JSLexer::scanTemplateLiteral() {
 
         default:
           if (LLVM_UNLIKELY(isUTF8Start(*curCharPtr_))) {
-            const char *start = curCharPtr_ + 1;
             uint32_t codepoint = _decodeUTF8SlowPath(curCharPtr_);
             appendUnicodeToStorage(codepoint);
-            rawStorage_.append({start, (size_t)(curCharPtr_ - start)});
+            // Remove the last byte from rawStorage_ and then append the
+            // unicode codepoint to it. The already inserted byte will change
+            // if this codepoint is in Supplementary Planes.
+            rawStorage_.pop_back();
+            appendUnicodeToStorage(codepoint, rawStorage_);
           } else {
             // The TV of EscapeSequence is the SV of EscapeSequence.
             tmpStorage_.push_back((unsigned char)*curCharPtr_++);
@@ -1653,22 +1722,46 @@ exitLoop:
   UniqueString *body = getStringLiteral(tmpStorage_.str());
 
   // Scan the flags. We must not interpret escape sequences.
-  // ES 5.1 7.8.5: "The Strings of characters comprising the
+  // E6 5.1 7.8.5: "The Strings of characters comprising the
   // RegularExpressionBody and the RegularExpressionFlags are passed
   // uninterpreted to the regular expression constructor"
   tmpStorage_.clear();
+  bool escapingBackslash = false;
   for (;;) {
-    if (consumeOneIdentifierPartNoEscape())
+    if (consumeOneIdentifierPartNoEscape()) {
+      escapingBackslash = false;
       continue;
-    else if (*curCharPtr_ == '\\')
+    } else if (*curCharPtr_ == '\\') {
       tmpStorage_.push_back(*curCharPtr_++);
-    else
+
+      // ES6 11.8.5.1: It is a Syntax Error if IdentifierPart contains a Unicode
+      // escape sequence.
+      escapingBackslash = !escapingBackslash;
+      if (escapingBackslash && *curCharPtr_ == 'u') {
+        error(
+            SMLoc::getFromPointer(curCharPtr_),
+            "Unicode escape sequences are not allowed in regular expression flags");
+      }
+    } else {
       break;
+    }
   }
+
   UniqueString *flags = getStringLiteral(tmpStorage_.str());
 
   token_.setRegExpLiteral(new (allocator_.Allocate<RegExpLiteral>(1))
                               RegExpLiteral(body, flags));
+}
+
+UniqueString *JSLexer::convertSurrogatesInString(StringRef str) {
+  llvm::SmallVector<char16_t, 8> ustr;
+  ustr.reserve(str.size());
+  char16_t *ustrEnd =
+      convertUTF8WithSurrogatesToUTF16(ustr.data(), str.begin(), str.end());
+  std::string output;
+  convertUTF16ToUTF8WithReplacements(
+      output, llvm::makeArrayRef(ustr.data(), ustrEnd));
+  return strTab_.getString(output);
 }
 
 bool JSLexer::error(llvm::SMLoc loc, const llvm::Twine &msg) {
@@ -1698,5 +1791,5 @@ bool JSLexer::error(
   return false;
 }
 
-}; // namespace parser
-}; // namespace hermes
+} // namespace parser
+} // namespace hermes

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/SourceMap/SourceMapGenerator.h"
 
 #include "hermes/Support/Base64vlq.h"
@@ -184,7 +185,7 @@ SourceMapGenerator SourceMapGenerator::mergedWithInputSourceMaps() const {
 
     merged.addMappingsLine(std::move(newLine), i);
   }
-
+  merged.functionOffsets_ = functionOffsets_;
   return merged;
 }
 
@@ -225,13 +226,15 @@ void SourceMapGenerator::outputAsJSONImpl(llvm::raw_ostream &OS) const {
 
   if (!functionOffsets_.empty()) {
     json.emitKey("x_hermes_function_offsets");
-    json.openArray();
-    for (const auto &segmentFunctionOffsets : functionOffsets_) {
+    json.openDict();
+    for (const auto &entry : functionOffsets_) {
+      const auto &segmentFunctionOffsets = entry.second;
+      json.emitKey(oscompat::to_string(entry.first));
       json.openArray();
       json.emitValues((llvm::ArrayRef<uint32_t>)segmentFunctionOffsets);
       json.closeArray();
     }
-    json.closeArray();
+    json.closeDict();
   }
   json.closeDict();
   OS.flush();
@@ -240,10 +243,8 @@ void SourceMapGenerator::outputAsJSONImpl(llvm::raw_ostream &OS) const {
 void SourceMapGenerator::addFunctionOffsets(
     std::vector<uint32_t> &&functionOffsets,
     uint32_t cjsModuleOffset) {
-  if (cjsModuleOffset >= functionOffsets_.size()) {
-    functionOffsets_.resize(cjsModuleOffset + 1);
-  }
-  functionOffsets_.at(cjsModuleOffset) = std::move(functionOffsets);
+  assert(functionOffsets.size() > 0 && "functionOffsets can not be empty");
+  functionOffsets_[cjsModuleOffset] = std::move(functionOffsets);
 }
 
 } // namespace hermes

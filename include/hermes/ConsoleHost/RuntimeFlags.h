@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_RUNTIMEFLAGS_H
 #define HERMES_VM_RUNTIMEFLAGS_H
 
@@ -37,6 +38,10 @@ using hermes::vm::RuntimeConfig;
 static OptionCategory GCCategory(
     "Garbage Collector Options",
     "These control various parts of the GC.");
+
+static OptionCategory RuntimeCategory(
+    "Runtime Options",
+    "These control aspects of the VM when it is being run.");
 
 static opt<double> GCSanitizeRate(
     "gc-sanitize-handles",
@@ -95,23 +100,27 @@ static opt<double> OccupancyTarget(
 static opt<bool> SampleProfiling(
     "sample-profiling",
     init(false),
-    desc("Enable sampling profiler"));
+    desc("Enable sampling profiler"),
+    cat(RuntimeCategory));
 
 #ifdef HERMESVM_SERIALIZE
 static opt<std::string> SerializeAfterInitFile(
     "serialize-after-init-file",
     desc("Serialize vm status after initialization, output to file"),
-    init(""));
+    init(""),
+    cat(RuntimeCategory));
 
 static opt<std::string> DeserializeFile(
     "deserialize-file",
     desc("Deserialize vm from a previous serialized file"),
-    init(""));
+    init(""),
+    cat(RuntimeCategory));
 
 static opt<std::string> SerializeVMPath(
     "serializevm-path",
     desc("Path to serialize VM state to when serializeVM() is called"),
-    init(""));
+    init(""),
+    cat(RuntimeCategory));
 #endif // HERMESVM_SERIALIZE
 
 static opt<MemorySize, false, MemorySizeParser> MaxHeapSize(
@@ -125,34 +134,63 @@ static opt<bool> PatchProfilerSymbols(
     "patch-profiler-symbols",
     desc("Patch profiler symbols in the executable at exit, "
          "instead of writing to symbol_dump.map file."),
-    init(false));
+    init(false),
+    cat(RuntimeCategory));
 
 static opt<std::string> ProfilerSymbolsFile(
     "profiler-symbols-file",
     desc("Dump profiler symbols in specified file at exit, "
          "instead of writing the symbol_dump.map file."),
-    init("symbol_dump.map"));
+    init("symbol_dump.map"),
+    cat(RuntimeCategory));
 #endif
+
+static opt<bool> ES6Proxy(
+    "Xes6-proxy",
+    desc("Enable support for ES6 Proxy"),
+    init(RuntimeConfig::getDefaultES6Proxy()),
+    cat(RuntimeCategory));
 
 static opt<bool> ES6Symbol(
     "Xes6-symbol",
     desc("Enable support for ES6 Symbol"),
-    init(RuntimeConfig::getDefaultES6Symbol()));
+    init(RuntimeConfig::getDefaultES6Symbol()),
+    cat(RuntimeCategory));
 
 static llvm::cl::opt<bool> StopAfterInit(
     "stop-after-module-init",
     llvm::cl::desc("Exit once module loading is finished. Useful "
-                   "to measure module initialization time"));
+                   "to measure module initialization time"),
+    cat(RuntimeCategory));
 
 static opt<bool> TrackBytecodeIO(
     "track-io",
     desc(
-        "Track bytecode I/O when executing bytecode. Only works with bytecode mode"));
+        "Track bytecode I/O when executing bytecode. Only works with bytecode mode"),
+    cat(RuntimeCategory));
+
+static opt<bool> StableInstructionCount(
+    "Xstable-instruction-count",
+    init(false),
+    Hidden,
+    desc("For CPU instructions debugging: fix random seed, silence logging"),
+    cat(RuntimeCategory));
 
 static opt<uint32_t> VMExperimentFlags(
     "Xvm-experiment-flags",
     llvm::cl::desc("VM experiment flags."),
     llvm::cl::init(0),
+    llvm::cl::Hidden,
+    cat(RuntimeCategory));
+
+static opt<bool> EnableHermesInternal(
+    "enable-hermes-internal",
+    llvm::cl::desc("Enable the HermesInternal object."),
+    llvm::cl::init(RuntimeConfig::getDefaultEnableHermesInternal()));
+static opt<bool> EnableHermesInternalTestMethods(
+    "Xhermes-internal-test-methods",
+    llvm::cl::desc("Enable the HermesInternal test methods."),
+    llvm::cl::init(RuntimeConfig::getDefaultEnableHermesInternalTestMethods()),
     llvm::cl::Hidden);
 
 } // namespace cl

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 //===----------------------------------------------------------------------===//
 /// \file
 /// ES6 24.1 ArrayBuffer
@@ -186,12 +187,8 @@ arrayBufferPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
   // 15. Let new be Construct(ctor, «newLen»).
   // 16. ReturnIfAbrupt(new).
 
-  auto arrRes = JSArrayBuffer::create(
-      runtime, Handle<JSObject>::vmcast(&runtime->arrayBufferPrototype));
-  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto newBuf = runtime->makeHandle<JSArrayBuffer>(*arrRes);
+  auto newBuf = runtime->makeHandle(JSArrayBuffer::create(
+      runtime, Handle<JSObject>::vmcast(&runtime->arrayBufferPrototype)));
 
   if (newBuf->createDataBlock(runtime, newLen_int) ==
       ExecutionStatus::EXCEPTION) {

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 // The only user of Semaphore.h is SamplingProfiler, which is stubbed out
 // in Windows. As a result, it is unnecessary to implement Semaphore on Windows.
 #ifndef _WINDOWS

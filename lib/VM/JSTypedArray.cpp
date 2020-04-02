@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/JSTypedArray.h"
 
 #include "hermes/VM/BuildMetadata.h"
@@ -33,6 +34,7 @@ JSTypedArrayBase::JSTypedArrayBase(
 }
 
 void TypedArrayBaseBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSTypedArrayBase>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSTypedArrayBase *>(cell);
   mb.addField("buffer", &self->buffer_);
@@ -56,7 +58,8 @@ JSTypedArrayBase::JSTypedArrayBase(Deserializer &d, const VTable *vt)
 
 void serializeTypedArrayBase(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const JSTypedArrayBase>(cell);
-  JSObject::serializeObjectImpl(s, cell);
+  JSObject::serializeObjectImpl(
+      s, cell, JSObject::numOverlapSlots<JSTypedArrayBase>());
   s.writeRelocation(self->buffer_.get(s.getRuntime()));
   s.writeInt<JSTypedArrayBase::size_type>(self->length_);
   s.writeInt<uint8_t>(self->byteWidth_);
@@ -64,8 +67,13 @@ void serializeTypedArrayBase(Serializer &s, const GCCell *cell) {
 }
 #endif
 
-bool JSTypedArrayBase::_haveOwnIndexedImpl(JSObject *, Runtime *, uint32_t) {
-  return true;
+bool JSTypedArrayBase::_haveOwnIndexedImpl(
+    JSObject *selfObj,
+    Runtime *,
+    uint32_t index) {
+  auto *self = vmcast<JSTypedArrayBase>(selfObj);
+  // Check whether the index is within the storage.
+  return index < self->getLength();
 }
 
 OptValue<PropertyFlags> JSTypedArrayBase::_getOwnIndexedPropertyFlagsImpl(
@@ -89,6 +97,18 @@ OptValue<PropertyFlags> JSTypedArrayBase::_getOwnIndexedPropertyFlagsImpl(
   }
 
   return indexedElementFlags;
+}
+
+bool JSTypedArrayBase::_deleteOwnIndexedImpl(
+    Handle<JSObject> selfHandle,
+    Runtime *runtime,
+    uint32_t index) {
+  // Opposite of _haveOwnIndexedImpl.  This is not specified as such,
+  // but is a consequence of 9.1.10.1 OrdinaryDelete on TypedArrays.
+  // Informally, because elements of typed arrays are
+  // non-configurable, delete never changes anything, and returns true
+  // if the element does not exist, and false if it does.
+  return !_haveOwnIndexedImpl(*selfHandle, runtime, index);
 }
 
 bool JSTypedArrayBase::_checkAllOwnIndexedImpl(
@@ -151,12 +171,8 @@ ExecutionStatus JSTypedArrayBase::createBuffer(
     size_type length) {
   assert(runtime && selfObj);
 
-  auto arrRes = JSArrayBuffer::create(
-      runtime, Handle<JSObject>::vmcast(&runtime->arrayBufferPrototype));
-  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto tmpbuf = runtime->makeHandle<JSArrayBuffer>(*arrRes);
+  auto tmpbuf = runtime->makeHandle(JSArrayBuffer::create(
+      runtime, Handle<JSObject>::vmcast(&runtime->arrayBufferPrototype)));
 
   auto bufferSize = length * selfObj->getByteWidth();
   if (tmpbuf->createDataBlock(runtime, bufferSize) ==
@@ -273,7 +289,7 @@ void JSTypedArrayBase::setBuffer(
 template <typename T, CellKind C>
 JSTypedArrayBase::JSTypedArrayVTable JSTypedArray<T, C>::vt{
     {
-        VTable(C, sizeof(JSTypedArray<T, C>)),
+        VTable(C, cellSize<JSTypedArray<T, C>>()),
         _getOwnIndexedRangeImpl,
         _haveOwnIndexedImpl,
         _getOwnIndexedPropertyFlagsImpl,
@@ -292,7 +308,7 @@ JSTypedArray<T, C>::JSTypedArray(Deserializer &d)
 
 template <typename T, CellKind C>
 void deserializeTypedArray(Deserializer &d, CellKind kind) {
-  void *mem = d.getRuntime()->alloc(sizeof(JSTypedArray<T, C>));
+  void *mem = d.getRuntime()->alloc(cellSize<JSTypedArray<T, C>>());
   auto *cell = new (mem) JSTypedArray<T, C>(d);
   d.endObject(cell);
 }
@@ -320,17 +336,14 @@ template <typename T, CellKind C>
 CallResult<Handle<JSTypedArrayBase>> JSTypedArray<T, C>::allocate(
     Runtime *runtime,
     size_type length) {
-  auto arrRes = JSTypedArray<T, C>::create(
-      runtime, JSTypedArray<T, C>::getPrototype(runtime));
-  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto ta = Handle<JSTypedArrayBase>::vmcast(runtime->makeHandle(*arrRes));
+  Handle<JSTypedArray<T, C>> ta =
+      runtime->makeHandle<JSTypedArray<T, C>>(JSTypedArray<T, C>::create(
+          runtime, JSTypedArray<T, C>::getPrototype(runtime)));
   if (JSTypedArrayBase::createBuffer(runtime, ta, length) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  return ta;
+  return Handle<JSTypedArrayBase>::vmcast(ta);
 }
 
 template <typename T, CellKind C>
@@ -360,16 +373,21 @@ CallResult<Handle<JSTypedArrayBase>> JSTypedArray<T, C>::_allocateSpeciesImpl(
 }
 
 template <typename T, CellKind C>
-CallResult<HermesValue> JSTypedArray<T, C>::create(
+PseudoHandle<JSTypedArray<T, C>> JSTypedArray<T, C>::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  void *mem = runtime->alloc(sizeof(JSTypedArray<T, C>));
-  return HermesValue::encodeObjectValue(
-      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
-          new (mem) JSTypedArray<T, C>(
-              runtime,
-              *parentHandle,
-              runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
+  JSObjectAlloc<JSTypedArray<T, C>> mem{runtime};
+  return mem.initToPseudoHandle(new (mem) JSTypedArray<T, C>(
+      runtime,
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(
+          *parentHandle,
+          numOverlapSlots<JSTypedArray>() + ANONYMOUS_PROPERTY_SLOTS)));
+  // NOTE: If any fields are ever added beyond the base class, then the
+  // *BuildMeta functions must be updated to call addJSObjectOverlapSlots.
+  static_assert(
+      sizeof(JSTypedArray<T, C>) == sizeof(JSTypedArrayBase),
+      "must update BuildMeta");
 }
 
 /// @name Specializations for specific types

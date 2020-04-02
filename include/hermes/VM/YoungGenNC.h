@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_YOUNGGENNC_H
 #define HERMES_VM_YOUNGGENNC_H
 
@@ -174,8 +175,14 @@ class YoungGen : public GCGeneration {
   void printStats(llvm::raw_ostream &os, bool trailingComma) const;
 
   /// Fixup the tracked IDs of objects that were moved or deleted.
-  void fixupTrackedObjects();
+  void updateIDTracker();
+  void updateAllocationLocationTracker();
 
+ private:
+  template <bool updateIDTracker, bool updateAllocationLocationTracker>
+  void updateTrackers();
+
+ public:
   /// Finalizes all unreachable cells with finalizers. If the cell was moved to
   /// the old generation, moves a reference to the cell from a list containing
   /// references to cells with finalizers in the young gen to a list containing
@@ -192,6 +199,12 @@ class YoungGen : public GCGeneration {
   /// This function assumes that \p gc is a valid pointer to this space's owning
   /// GC.
   void moveHeap(GC *gc, ptrdiff_t moveHeapDelta);
+
+  /// Update the extents of the young-gen segments with \p crashMgr.  Labels
+  /// the crash manager key with the given \p runtimeName.
+  void updateCrashManagerHeapExtents(
+      const std::string &runtimeName,
+      CrashManager *crashMgr);
 
   /// Forward declaration of the acceptor used to evacuate the young generation.
   struct EvacAcceptor;
@@ -267,6 +280,10 @@ class YoungGen : public GCGeneration {
   /// the former will yield the survival rate.
   gcheapsize_t cumPreBytes_ = 0;
   gcheapsize_t cumPromotedBytes_ = 0;
+
+  /// The number of young-gen segments recorded with the crash
+  /// manager.  (Will only ever be 0 or 1.)
+  unsigned crashMgrRecordedSegments_{0};
 };
 
 size_t YoungGen::size() const {

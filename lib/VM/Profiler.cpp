@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #if defined(HERMESVM_PROFILER_EXTERN)
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -23,7 +24,6 @@ namespace vm {
 
 void dumpProfilerSymbolMap(Runtime *runtime, const std::string &fileOut) {
   auto fp = fopen(fileOut.c_str(), "w");
-  SmallU16String<16> str; // Necessary to read the UTF16Ref
 
   GCScope gcScope{runtime};
   for (auto &funcInfo : runtime->functionInfo) {
@@ -32,10 +32,7 @@ void dumpProfilerSymbolMap(Runtime *runtime, const std::string &fileOut) {
     for (int j = 0; j < PROFILER_SYMBOL_SUFFIX_LENGTH; ++j)
       fputc('x', fp);
 
-    str.clear();
-    auto ref = runtime->getIdentifierTable()
-                   .getStringView(runtime, funcInfo.functionName)
-                   .getUTF16Ref(str);
+    auto ref = funcInfo.functionName;
     if (ref.size()) {
       fputc(' ', fp);
       for (unsigned i = 0; i < ref.size(); ++i) {
@@ -90,7 +87,6 @@ void patchProfilerSymbols(Runtime *runtime) {
   const int lenPrefix = strlen(prefix);
   const int lenDigits = NUM_PROFILER_SYMBOLS_DIGITS;
   const int lenSuffix = PROFILER_SYMBOL_SUFFIX_LENGTH;
-  SmallU16String<16> str;
   GCScope gcScope{runtime};
   while ((cur = (char *)memmem(cur, end - cur, prefix, lenPrefix))) {
     gcScope.clearAllHandles();
@@ -115,10 +111,7 @@ void patchProfilerSymbols(Runtime *runtime) {
     if (!profilerFunctionInfo)
       continue;
 
-    str.clear();
-    auto ref = runtime->getIdentifierTable()
-                   .getStringView(runtime, profilerFunctionInfo->functionName)
-                   .getUTF16Ref(str);
+    auto ref = profilerFunctionInfo->functionName;
     for (unsigned i = 0; i < lenSuffix; ++i) {
       *cur++ = i < ref.size() ? (char)ref[i] : '_';
     }

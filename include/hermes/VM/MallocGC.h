@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_MALLOCGC_H
 #define HERMES_VM_MALLOCGC_H
 
@@ -17,7 +18,6 @@
 
 #include <deque>
 #include <limits>
-#include <unordered_set>
 #include <vector>
 
 namespace hermes {
@@ -154,7 +154,7 @@ class MallocGC final : public GCBase {
       PointerBase *pointerBase,
       const GCConfig &gcConfig,
       std::shared_ptr<CrashManager> crashMgr,
-      StorageProvider *provider);
+      std::shared_ptr<StorageProvider> provider);
 
   ~MallocGC();
 
@@ -211,7 +211,7 @@ class MallocGC final : public GCBase {
 #endif
 
   /// Same as in superclass GCBase.
-  virtual void createSnapshot(llvm::raw_ostream &os, bool compact) override;
+  virtual void createSnapshot(llvm::raw_ostream &os) override;
 
 #ifdef HERMESVM_SERIALIZE
   /// Same as in superclass GCBase.
@@ -244,8 +244,6 @@ class MallocGC final : public GCBase {
   /// \pre \p init should not be empty or a native value.
   WeakRefSlot *allocWeakSlot(HermesValue init);
 
-  /// Marks a weak reference as being in use.
-  void markWeakRef(WeakRefBase &wr);
 #ifndef NDEBUG
   /// \return Number of weak ref slots currently in use.
   /// Inefficient. For testing/debugging.
@@ -257,11 +255,15 @@ class MallocGC final : public GCBase {
     return maxSize_;
   }
 
+  /// For testing purposes the ability to iterate over all objects in the heap.
+  void forAllObjs(const std::function<void(GCCell *)> &callback);
+
   /// @}
 
  private:
 #ifdef HERMES_SLOW_DEBUG
   void checkWellFormed();
+  void clearUnmarkedPropertyMaps();
 #endif
 
   /// Initialize a cell with the required basic data for any cell.
@@ -280,7 +282,25 @@ class MallocGC final : public GCBase {
   void resetWeakReferences();
 
   struct MarkingAcceptor;
+  class SkipWeakRefsMarkingAcceptor;
   struct FullMSCUpdateWeakRootsAcceptor;
+
+  /// Continually pops elements from the mark stack of \p acceptor and
+  /// scans their pointer fields.  If such a field points to an
+  /// unmarked object, mark it and push it on the mark stack.
+  void drainMarkStack(MarkingAcceptor &acceptor);
+
+  /// In the first phase of marking, before this is called, we treat
+  /// JSWeakMaps specially: when we mark a reachable JSWeakMap, we do
+  /// not mark from it, but rather save a pointer to it in a vector.
+  /// Then we call this method, which finds the keys that are
+  /// reachable, and marks transitively from the corresponding value.
+  /// This is done carefully, to reach a correct global transitive
+  /// closure, in cases where keys are reachable only via values of
+  /// other keys.  When this marking is done, entries with unreachable
+  /// keys are cleared.  Normal WeakRef processing at the end of GC
+  /// will delete the cleared entries from the map.
+  void completeWeakMapMarking(MarkingAcceptor &acceptor);
 
   /// Update all of the weak references and invalidate the ones that point to
   /// dead objects.
@@ -302,6 +322,7 @@ ToType *vmcast_during_gc(GCCell *cell, GC *gc) {
 
 template <bool fixedSizeIgnored, HasFinalizer hasFinalizer>
 inline void *MallocGC::alloc(uint32_t size) {
+  assert(noAllocLevel_ == 0 && "no alloc allowed right now");
   size = heapAlignSize(size);
   // Use subtraction to prevent overflow.
   if (LLVM_UNLIKELY(
@@ -318,6 +339,18 @@ inline void *MallocGC::alloc(uint32_t size) {
   totalAllocatedBytes_ += size;
 #ifndef NDEBUG
   ++numAllocatedObjects_;
+#endif
+#if !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && !defined(NDEBUG)
+  // If allocation location tracking is enabled we implicitly call
+  // getCurrentIP() via newAlloc() below. Even if this isn't enabled, we always
+  // call getCurrentIPSlow() in a debug build as this has the effect of
+  // asserting the IP is correctly set (not invalidated) at this point. This
+  // allows us to leverage our whole test-suite to find missing cases of
+  // CAPTURE_IP* macros in the interpreter loop.
+  (void)gcCallbacks_->getCurrentIPSlow();
+#endif
+#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+  getAllocationLocationTracker().newAlloc(mem);
 #endif
   return mem;
 }

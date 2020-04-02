@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermesc -dump-transformed-ast -pretty-json %s | %FileCheck --match-full-lines %s
 
 // Transform [a, ...[b]] into [a, b]
@@ -31,16 +33,24 @@
 //CHECK-NEXT:                 "typeAnnotation": null
 //CHECK-NEXT:               },
 //CHECK-NEXT:               {
-//CHECK-NEXT:                 "type": "Identifier",
-//CHECK-NEXT:                 "name": "c",
-//CHECK-NEXT:                 "typeAnnotation": null
-//CHECK-NEXT:               },
-//CHECK-NEXT:               {
 //CHECK-NEXT:                 "type": "RestElement",
 //CHECK-NEXT:                 "argument": {
-//CHECK-NEXT:                   "type": "Identifier",
-//CHECK-NEXT:                   "name": "d",
-//CHECK-NEXT:                   "typeAnnotation": null
+//CHECK-NEXT:                   "type": "ArrayPattern",
+//CHECK-NEXT:                   "elements": [
+//CHECK-NEXT:                     {
+//CHECK-NEXT:                       "type": "Identifier",
+//CHECK-NEXT:                       "name": "c",
+//CHECK-NEXT:                       "typeAnnotation": null
+//CHECK-NEXT:                     },
+//CHECK-NEXT:                     {
+//CHECK-NEXT:                       "type": "RestElement",
+//CHECK-NEXT:                       "argument": {
+//CHECK-NEXT:                         "type": "Identifier",
+//CHECK-NEXT:                         "name": "d",
+//CHECK-NEXT:                         "typeAnnotation": null
+//CHECK-NEXT:                       }
+//CHECK-NEXT:                     }
+//CHECK-NEXT:                   ]
 //CHECK-NEXT:                 }
 //CHECK-NEXT:               }
 //CHECK-NEXT:             ]

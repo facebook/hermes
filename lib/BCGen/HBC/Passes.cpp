@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/BCGen/HBC/Passes.h"
 
 #include "hermes/BCGen/BCOpt.h"
@@ -182,10 +183,15 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
     return true;
 
   /// CallBuiltin's callee and "this" should always be literals.
-  if (isa<HBCCallBuiltinInst>(Inst) &&
-      (opIndex == HBCCallBuiltinInst::CalleeIdx ||
-       opIndex == HBCCallBuiltinInst::ThisIdx))
+  if (isa<CallBuiltinInst>(Inst) &&
+      (opIndex == CallBuiltinInst::CalleeIdx ||
+       opIndex == CallBuiltinInst::ThisIdx))
     return true;
+
+  if (isa<IteratorCloseInst>(Inst) &&
+      opIndex == IteratorCloseInst::IgnoreInnerExceptionIdx) {
+    return true;
+  }
 
   return false;
 }
@@ -258,7 +264,7 @@ bool LoadParameters::runOnFunction(Function *F) {
 
   // Lower accesses to "this".
   auto *thisParam = F->getThisParameter();
-  if (thisParam->hasUsers()) {
+  if (thisParam && thisParam->hasUsers()) {
     // In strict mode just use param 0 directly. In non-strict, we must coerce
     // it to an object.
     Value *getThisInst = F->isStrictMode()
@@ -584,17 +590,14 @@ bool LowerCalls::runOnFunction(Function *F) {
           HVMRegisterAllocator::CALL_EXTRA_REGISTERS;
 
       for (int i = 0, e = call->getNumArguments(); i < e; i++, --reg) {
-        // If this is a CallBuiltin, we don't want to load the "this" register.
-        // explicitly. It is always undefined.
-        if (i == 0 && isa<HBCCallBuiltinInst>(call))
-          continue;
-
         // If this is a Call instruction, emit explicit Movs to the argument
         // registers. If this is a CallN instruction, emit ImplicitMovs
         // instead, to express that these registers get written to by the CallN,
         // even though they are not the destination.
+        // Lastly, if this is argument 0 of CallBuiltinInst, emit ImplicitMov
+        // to encode that the "this" register is implicitly set to undefined.
         Value *arg = call->getArgument(i);
-        if (isa<HBCCallNInst>(call)) {
+        if (isa<HBCCallNInst>(call) || (i == 0 && isa<CallBuiltinInst>(call))) {
           auto *imov = builder.createImplicitMovInst(arg);
           RA_.updateRegister(imov, Register(reg));
         } else {
@@ -754,8 +757,8 @@ bool SpillRegisters::requiresShortOperand(Instruction *I, int op) {
       return false;
     case ValueKind::CallInstKind:
     case ValueKind::ConstructInstKind:
+    case ValueKind::CallBuiltinInstKind:
     case ValueKind::HBCConstructInstKind:
-    case ValueKind::HBCCallBuiltinInstKind:
     case ValueKind::HBCCallDirectInstKind:
       return op == 0;
     default:

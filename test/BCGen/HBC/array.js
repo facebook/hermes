@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -target=HBC -dump-bytecode -pretty-disassemble=true -O %s | %FileCheck --match-full-lines %s
 
 var x = [true, false, 0, 1, undefined, null];
@@ -13,10 +15,11 @@ var z = [{}];
 //CHECK-NEXT:  s0[ASCII, {{[0-9]+\.\.[0-9]+}}]: bar
 //CHECK-NEXT:  s1[ASCII, {{[0-9]+\.\.[0-9]+}}]: foo
 //CHECK-NEXT:  s2[ASCII, {{[0-9]+\.\.[0-9]+}}]: global
-//CHECK-NEXT:  i3[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: x
-//CHECK-NEXT:  i4[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: y
-//CHECK-NEXT:  i5[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: z
-//CHECK-NEXT:  p6[ASCII, {{[0-9]+\.\.[0-9]+}}] @{{[0-9]+}}: length
+//CHECK-NEXT:  i3[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: length
+//CHECK-NEXT:  i4[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: x
+//CHECK-NEXT:  i5[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: y
+//CHECK-NEXT:  i6[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: z
+
 
 //CHECK-LABEL:Array Buffer:
 //CHECK-NEXT:true
@@ -28,7 +31,7 @@ var z = [{}];
 //CHECK-NEXT:[String 0]
 
 //CHECK-LABEL:Function<global>{{.*}}:
-//CHECK-NEXT:Offset in debug table: src 0x0, vars 0x0
+//CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 //CHECK-NEXT:    DeclareGlobalVar  "x"
 //CHECK-NEXT:    DeclareGlobalVar  "y"
 //CHECK-NEXT:    DeclareGlobalVar  "z"

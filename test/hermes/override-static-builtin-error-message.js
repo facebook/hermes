@@ -1,16 +1,11 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
-// RUN: %hermes -O -fstatic-builtins -Xvm-experiment-flags=1 -target=HBC %s | %FileCheck --match-full-lines %s
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 
-try {
-  HermesInternal.getEpilogues = 1;
-} catch (e) {
-  print(e.toString());
-}
-// CHECK: TypeError: Attempting to override read-only builtin method 'getEpilogues'
+// RUN: %hermes -O -fstatic-builtins %s | %FileCheck --match-full-lines %s
 
 try {
   Math.sin = 2;

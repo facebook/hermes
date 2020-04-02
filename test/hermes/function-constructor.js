@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -O -Wno-direct-eval %s | %FileCheck --match-full-lines %s
 "use strict";
 
@@ -126,12 +128,16 @@ print((Function('a,b', 'if (a) {return b} else {return 0}'))(true, 3));
 // CHECK-NEXT: 3
 print((Function('a,b', 'if (a) {return b} else {return 0}'))(false, 3));
 // CHECK-NEXT: 0
+print(Function("return this").length);
+// CHECK-NEXT: 0
 print(Function("return this")());
 // CHECK-NEXT: [object global]
 print(Function("return this;")());
 // CHECK-NEXT: [object global]
 print(Function("return\nthis")());
 // CHECK-NEXT: undefined
+print(Function("return this").__proto__ === Function.prototype);
+// CHECK-NEXT: true
 try {Function('a)', 'print(1);')} catch (e) {print('caught', e.name, e.message)}
 // CHECK-NEXT: caught SyntaxError {{.*}}
 try {Function('});print(1);({')} catch (e) {print('caught', e.name, e.message)}

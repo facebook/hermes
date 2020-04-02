@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 //===----------------------------------------------------------------------===//
 /// \file
 /// The x86-64 binary instruction emitter.
@@ -694,6 +695,14 @@ class Emitter {
 
     _opImmToRm<s, scale, 0xF6, 0>(imm, dstBase, dstIndex, dstOffset);
   }
+  template <S s, unsigned scale = 0>
+  void cmpRmToReg(Reg srcBase, Reg srcIndex, int32_t srcOffset, Reg dst) {
+    _opRMToReg<s, scale, 0x3A>(srcBase, srcIndex, srcOffset, dst);
+  };
+  template <S s, unsigned scale = 0>
+  void cmpRegToReg(Reg src, Reg dst) {
+    cmpRmToReg<s, ScaleRegAccess>(src, Reg::NoIndex, 0, dst);
+  };
 
   template <S s, unsigned scale = 0>
   void testRmToReg(Reg srcBase, Reg srcIndex, int32_t srcOffset, Reg dst) {
@@ -766,6 +775,14 @@ class Emitter {
   template <S s>
   void orRegToReg(Reg src, Reg dst) {
     _opRegToRM<s, ScaleRegAccess, 0x08>(src, dst, Reg::NoIndex, 0);
+  }
+  template <S s, unsigned scale = 0>
+  void andRmToReg(Reg srcBase, Reg srcIndex, int32_t srcOffset, Reg dst) {
+    _opRMToReg<s, scale, 0x22>(srcBase, srcIndex, srcOffset, dst);
+  }
+  template <S s>
+  void andRegToReg(Reg src, Reg dst) {
+    _opRegToRM<s, ScaleRegAccess, 0x20>(src, dst, Reg::NoIndex, 0);
   }
   // r/m64 AND imm32 sign extended to 64-bits if s = S::L and reg is 64 bits
   template <S s>

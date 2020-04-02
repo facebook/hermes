@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hdb < %s.debug %s | %FileCheck --match-full-lines %s
 // RUN: %hdb --lazy < %s.debug %s | %FileCheck --match-full-lines %s
 // REQUIRES: debugger
@@ -27,9 +29,9 @@ print('finished');
 
 // CHECK-NEXT: foo1
 // CHECK-NEXT: bar1
-// CHECK-NEXT: Break on 'debugger' statement in bar: {{.*}}:15:3
+// CHECK-NEXT: Break on 'debugger' statement in bar: {{.*}}:17:3
 // CHECK-NEXT: bar2
-// CHECK-NEXT: Stepped to foo: {{.*}}:22:3
+// CHECK-NEXT: Stepped to foo: {{.*}}:24:3
 // CHECK-NEXT: foo2
-// CHECK-NEXT: Stepped to global: {{.*}}:25:4
+// CHECK-NEXT: Stepped to global: {{.*}}:27:4
 // CHECK-NEXT: finished

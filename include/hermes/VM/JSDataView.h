@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_JSDATAVIEW_H
 #define HERMES_VM_JSDATAVIEW_H
 
@@ -29,7 +30,7 @@ class JSDataView final : public JSObject {
     return cell->getKind() == CellKind::DataViewKind;
   }
 
-  static CallResult<HermesValue> create(
+  static PseudoHandle<JSDataView> create(
       Runtime *runtime,
       Handle<JSObject> prototype);
 

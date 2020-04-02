@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/JSError.h"
 
 #include "hermes/BCGen/HBC/DebugInfo.h"
@@ -22,7 +23,7 @@ namespace vm {
 ObjectVTable JSError::vt{
     VTable(
         CellKind::ErrorKind,
-        sizeof(JSError),
+        cellSize<JSError>(),
         JSError::_finalizeImpl,
         nullptr,
         JSError::_mallocSizeImpl),
@@ -36,6 +37,7 @@ ObjectVTable JSError::vt{
 };
 
 void ErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSError>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSError *>(cell);
   mb.addField("funcNames", &self->funcNames_);
@@ -44,7 +46,7 @@ void ErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 #ifdef HERMESVM_SERIALIZE
 void ErrorSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(s, cell);
+  JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSError>());
   // TODO: Finish serialize/deserialize stacktrace if we want to
   // serialize/deserialize after user code.
 
@@ -72,7 +74,7 @@ void ErrorSerialize(Serializer &s, const GCCell *cell) {
 void ErrorDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::ErrorKind && "Expected JSError");
   void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      sizeof(JSError));
+      cellSize<JSError>());
 
   auto *cell = new (mem) JSError(d);
   d.endObject(cell);
@@ -140,9 +142,7 @@ errorStackGetter(void *, Runtime *runtime, NativeArgs args) {
     stacktraceStr = *strRes;
   }
 
-  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
-  dpf.setEnumerable = 1;
-  dpf.enumerable = 0;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
   if (JSObject::defineOwnProperty(
           selfHandle,
           runtime,
@@ -170,9 +170,7 @@ errorStackSetter(void *, Runtime *runtime, NativeArgs args) {
   auto selfHandle = runtime->makeHandle<JSObject>(res.getValue());
 
   // Redefines the stack property to a regular property.
-  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
-  dpf.setEnumerable = 1;
-  dpf.enumerable = 0;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
   if (JSObject::defineOwnProperty(
           selfHandle,
           runtime,
@@ -185,31 +183,29 @@ errorStackSetter(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-CallResult<HermesValue> JSError::create(
+PseudoHandle<JSError> JSError::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
   return create(runtime, parentHandle, /*catchable*/ true);
 }
 
-CallResult<HermesValue> JSError::createUncatchable(
+PseudoHandle<JSError> JSError::createUncatchable(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
   return create(runtime, parentHandle, /*catchable*/ false);
 }
 
-CallResult<HermesValue> JSError::create(
+PseudoHandle<JSError> JSError::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle,
     bool catchable) {
-  void *mem =
-      runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(sizeof(JSError));
-  return HermesValue::encodeObjectValue(
-      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
-          new (mem) JSError(
-              runtime,
-              *parentHandle,
-              runtime->getHiddenClassForPrototypeRaw(*parentHandle),
-              catchable)));
+  JSObjectAlloc<JSError, HasFinalizer::Yes> mem{runtime};
+  return mem.initToPseudoHandle(new (mem) JSError(
+      runtime,
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(
+          *parentHandle, numOverlapSlots<JSError>() + ANONYMOUS_PROPERTY_SLOTS),
+      catchable));
 }
 
 ExecutionStatus JSError::setupStack(
@@ -226,7 +222,7 @@ ExecutionStatus JSError::setupStack(
         Handle<JSObject>::vmcast(&runtime->functionPrototype),
         nullptr,
         errorStackGetter,
-        SymbolID{},
+        Predefined::getSymbolID(Predefined::emptyString),
         0,
         Runtime::makeNullHandle<JSObject>());
 
@@ -235,7 +231,7 @@ ExecutionStatus JSError::setupStack(
         Handle<JSObject>::vmcast(&runtime->functionPrototype),
         nullptr,
         errorStackSetter,
-        SymbolID{},
+        Predefined::getSymbolID(Predefined::emptyString),
         1,
         Runtime::makeNullHandle<JSObject>());
 
@@ -281,12 +277,10 @@ ExecutionStatus JSError::setMessage(
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    stringMessage = toHandle(runtime, std::move(*strRes));
+    stringMessage = runtime->makeHandle(std::move(*strRes));
   }
 
-  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
-  dpf.setEnumerable = 1;
-  dpf.enumerable = 0;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
   return JSObject::defineOwnProperty(
              selfHandle,
              runtime,
@@ -333,8 +327,12 @@ static Handle<PropStorage> getCallStackFunctionNames(
           runtime,
           Predefined::getSymbolID(Predefined::name),
           desc);
-      if (propObj && !desc.flags.accessor)
+      if (propObj && !desc.flags.accessor && !desc.flags.proxyObject) {
         name = JSObject::getNamedSlotValue(propObj, runtime, desc);
+      } else if (desc.flags.proxyObject) {
+        name = HermesValue::encodeStringValue(
+            runtime->getPredefinedString(Predefined::proxyTrap));
+      }
     } else if (cf.getCalleeClosureOrCBRef().isNativeValue()) {
       auto *cb =
           cf.getCalleeClosureOrCBRef().getNativePointer<const CodeBlock>();
@@ -408,18 +406,31 @@ ExecutionStatus JSError::recordStackTrace(
     }
   }
 
+  const StackFramePtr framesEnd = *runtime->getStackFrames().end();
+
   // Fill in the call stack.
   // Each stack frame tracks information about the caller.
   for (StackFramePtr cf : runtime->getStackFrames()) {
-    auto *savedCodeBlock = cf.getSavedCodeBlock();
-    stack->emplace_back(
-        savedCodeBlock,
-        savedCodeBlock ? savedCodeBlock->getOffsetOf(cf.getSavedIP()) : 0);
-    if (savedCodeBlock) {
+    CodeBlock *savedCodeBlock = cf.getSavedCodeBlock();
+    const Inst *const savedIP = cf.getSavedIP();
+    // Go up one frame and get the callee code block but use the current
+    // frame's saved IP. This also allows us to account for bound functions,
+    // which have savedCodeBlock == nullptr in order to allow proper returns in
+    // the interpreter.
+    StackFramePtr prev = cf->getPreviousFrame();
+    if (prev && prev != framesEnd) {
+      if (CodeBlock *parentCB = prev->getCalleeCodeBlock()) {
+        savedCodeBlock = parentCB;
+      }
+    }
+    if (savedCodeBlock && savedIP) {
+      stack->emplace_back(savedCodeBlock, savedCodeBlock->getOffsetOf(savedIP));
       if (LLVM_UNLIKELY(
               addDomain(savedCodeBlock) == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
+    } else {
+      stack->emplace_back(nullptr, 0);
     }
   }
   selfHandle->domains_.set(runtime, domains.get(), &runtime->getHeap());

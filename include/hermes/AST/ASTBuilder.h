@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_AST_ASTBUILDER_H
 #define HERMES_AST_ASTBUILDER_H
 
@@ -26,8 +27,7 @@ using Allocator = llvm::BumpPtrAllocator;
 
 /// Deserialize the ESTree from the input JSON. Reports an error and fails the
 /// Optional result on error.
-/// \param allocator used to allocate the ESTree nodes
-/// \param sm        used to report errors
+/// \param context   used to allocate the ESTree nodes
 /// \param node      the JSON tree to deserialize from.
 /// \param jsSource  an optional buffer containing the input JavaScript source
 ///     for the ESTree. It is used for correlating source locations.

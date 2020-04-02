@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: LC_ALL=en_US.UTF-8 %hermes -non-strict -O -target=HBC %s | %FileCheck --match-full-lines %s
 
 print('RegExp');
@@ -23,6 +25,8 @@ print((new RegExp("abc", "mg")).toString());
 // CHECK-NEXT: /abc/gm
 print((new RegExp("abc", "mig")).toString());
 // CHECK-NEXT: /abc/gim
+print((new RegExp("abc", "yi")).toString());
+// CHECK-NEXT: /abc/iy
 try { RegExp.prototype.toString.call(undefined); } catch (err) { print(err.name); }
 // CHECK-NEXT: TypeError
 print(RegExp.prototype.toString.call({source: "lol"}));
@@ -124,16 +128,6 @@ print(RegExp(123).exec('789123456'));
 print(JSON.stringify(/[\3]/.exec("abc\3def")));
 // CHECK-NEXT: ["\u0003"]
 
-// Verify that an extremely long (but flat) regexp can be parsed and match.
-var longString = "x";
-for (var i=0; i < 22; i++) longString += longString;
-print(RegExp(longString).test(longString));
-// CHECK-NEXT: true
-
-// Verify that extremely long ranges can be parsed.
-print(RegExp("[" + longString + "]").exec("x"));
-// CHECK-NEXT: x
-
 // Check lastIndex handling
 var re = RegExp("a", "g");
 print(re.lastIndex);
@@ -153,7 +147,7 @@ print(re.lastIndex);
 re.lastIndex = -1000;
 re.exec("aab");
 print(re.lastIndex);
-// CHECK-NEXT: 0
+// CHECK-NEXT: 1
 re.lastIndex = 1;
 re.exec("aab");
 print(re.lastIndex);
@@ -187,19 +181,21 @@ print(re.lastIndex);
 (function() {
 "use strict";
 re = RegExp("abc", "")
-print(re.global, re.ignoreCase, re.multiline, re.lastIndex);
-// CHECK-NEXT: false false false 0
-re = RegExp("abc", "igm")
-print(re.global, re.ignoreCase, re.multiline, re.lastIndex);
-// CHECK-NEXT: true true true 0
+print(re.global, re.ignoreCase, re.multiline, re.sticky, re.lastIndex);
+// CHECK-NEXT: false false false false 0
+re = RegExp("abc", "igym")
+print(re.global, re.ignoreCase, re.multiline, re.sticky, re.lastIndex);
+// CHECK-NEXT: true true true true 0
 re = RegExp("abc", "gi")
-print(re.global, re.ignoreCase, re.multiline, re.lastIndex);
-// CHECK-NEXT: true true false 0
+print(re.global, re.ignoreCase, re.multiline, re.sticky, re.lastIndex);
+// CHECK-NEXT: true true false false 0
 try { re.global = false; } catch (err) { print(err.name); } // not writable
 // CHECK-NEXT: TypeError
 try { re.ignoreCase = false; } catch (err) { print(err.name); } // not writable
 // CHECK-NEXT: TypeError
 try { re.multiline = false; } catch (err) { print(err.name); } // not writable
+// CHECK-NEXT: TypeError
+try { re.sticky = false; } catch (err) { print(err.name); } // not writable
 // CHECK-NEXT: TypeError
 re.lastIndex = 42; // yes writable
 print(re.global, re.ignoreCase, re.multiline, re.lastIndex);
@@ -209,11 +205,17 @@ print(re.global, re.ignoreCase, re.multiline, re.lastIndex);
 var globalGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'global').get;
 var ignoreCaseGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'ignoreCase').get;
 var multilineGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'multiline').get;
+var stickyGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'sticky').get;
+var dotAllGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'dotAll').get;
 print(globalGetter.call(/abc/g), globalGetter.call(/abc/), globalGetter.call(RegExp.prototype));
 // CHECK-NEXT: true false undefined
 print(ignoreCaseGetter.call(/abc/i), ignoreCaseGetter.call(/abc/), ignoreCaseGetter.call(RegExp.prototype));
 // CHECK-NEXT: true false undefined
 print(multilineGetter.call(/abc/m), multilineGetter.call(/abc/), multilineGetter.call(RegExp.prototype));
+// CHECK-NEXT: true false undefined
+print(stickyGetter.call(/abc/y), stickyGetter.call(/abc/), stickyGetter.call(RegExp.prototype));
+// CHECK-NEXT: true false undefined
+print(dotAllGetter.call(/abc/s), dotAllGetter.call(/abc/), dotAllGetter.call(RegExp.prototype));
 // CHECK-NEXT: true false undefined
 try { multilineGetter.call({}); } catch (err) { print(err.name); }
 // CHECK-NEXT: TypeError
@@ -224,8 +226,10 @@ try { multilineGetter.call(undefined); } catch (err) { print(err.name); }
 // Flags accessor support
 print(/aaa/.flags.length);
 // CHECK-NEXT: 0
-print(/aaa/mi.flags, /aaa/im.flags, /aaa/ig.flags, /aaa/gi.flags, /aaa/gim.flags, /aaa/mgi.flags, /aaa/m.flags, /aaa/g.flags, /aaa/i.flags);
-// CHECK-NEXT: im im gi gi gim gim m g i
+print(/aaa/mi.flags, /aaa/im.flags, /aaa/ig.flags, /aaa/gi.flags, /aaa/gim.flags, /aaa/mgi.flags, /aaa/m.flags, /aaa/g.flags, /aaa/i.flags, /aaa/y.flags, /aaa/s.flags);
+// CHECK-NEXT: im im gi gi gim gim m g i y s
+print(/aaa/igsmyu.flags);
+// CHECK-NEXT: gimsuy
 
 var flagsGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'flags').get;
 print(flagsGetter.call({multiline: 1, global: 0, ignoreCase: "yep"}));
@@ -301,6 +305,46 @@ print('hello world'.replace(/\B/g, '!'));
 // CHECK-NEXT: h!e!l!l!o w!o!r!l!d
 print('hello world'.replace(/\B|\b/g, '!'));
 // CHECK-NEXT: !h!e!l!l!o! !w!o!r!l!d!
+
+// Lookbehind assertions.
+print(/(?<=efg)../.exec("abcdefghijk123456"))
+// CHECK-NEXT: hi
+print(/(?<=\d{3}).*/.exec("abcdefghijk123456"))
+// CHECK-NEXT: 456
+print(!! /(?<=\d{3}.*)/.exec("abcdefghijk123456"))
+// CHECK-NEXT: true
+print(/(?<![a-z])../.exec("abcdefghijk123456"))
+// CHECK-NEXT: ab
+print(/(?<![a-z])\d{2}/.exec("abcdefghijk123456"))
+// CHECK-NEXT: 23
+print(/(?<=x{3,4})\d/.exec("1yxx2xxx3xxxx4xxxxx5xxxxxx6xxxxxxx7xxxxxxxx8"));
+// CHECK-NEXT: 3
+print(/(?<=(?:xx){3})\d/.exec("1yxx2xxx3xxxx4xxxxx5xxxxxx6xxxxxxx7xxxxxxxx8"));
+// CHECK-NEXT: 6
+print(/(?<=(x*))\1$/.exec("xxxxxxxx"));
+// CHECK-NEXT: xxxx,xxxx
+print(/(?<!(x*))\1$/.exec("xxxxxxxx"));
+// CHECK-NEXT: null
+print(/(?<!$ab)\d/.exec("ab1ab2"));
+// CHECK-NEXT: 1
+print(/(?<!^ab)\d/.exec("ab1ab2"));
+// CHECK-NEXT: 2
+
+// Sticky support
+print(/abc/y.exec("abc"));
+// CHECK-NEXT: abc
+print(/abc/y.exec("dabc"));
+// CHECK-NEXT: null
+
+// dotAll support
+print(/.*/.exec("abc\ndef")[0], "DONE");
+// CHECK-NEXT: abc DONE
+print(/.*/s.exec("abc\ndef")[0], "DONE");
+// CHECK-NEXT: abc
+// CHECK-NEXT: def DONE
+print(/.*/su.exec("abc\ndef")[0], "DONE");
+// CHECK-NEXT: abc
+// CHECK-NEXT: def DONE
 
 print((new RegExp("5{").exec("abc5{,}def")));
 // CHECK-NEXT: 5{
@@ -403,12 +447,6 @@ try { new RegExp("["); } catch (e) { print(e.message); }
 // CHECK-NEXT: Invalid RegExp pattern: Character class not closed
 try { new RegExp("\\"); } catch (e) { print(e.message); }
 // CHECK-NEXT: Invalid RegExp pattern: Incomplete escape
-try {
-  var r = /(?:(?:\\2|\\3*)*|(?=\\B)+|.(?:$)){68719476736}/g;
-  var s = "";
-  print(r.test(s));
-} catch (e) { print(e.message); }
-// CHECK-NEXT: Maximum regex stack depth reached
 
 print("RegExp.prototype[Symbol.match]");
 // CHECK-LABEL: RegExp.prototype[Symbol.match]

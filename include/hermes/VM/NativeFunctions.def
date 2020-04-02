@@ -1,11 +1,12 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
-// NATIVE_FUNCTION_VERSION = 1. Updated July 29th, 2019
-// Bump this version in SerializeHeader.h whenever we change this file.
+
+// Updated Jan 28, 2019
+#define NATIVE_FUNCTION_VERSION_VALUE 8
 
 #ifndef NATIVE_FUNCTION
 #define NATIVE_FUNCTION(func)
@@ -34,36 +35,42 @@ NATIVE_FUNCTION(arrayBufferPrototypeByteLength)
 NATIVE_FUNCTION(arrayBufferPrototypeSlice)
 
 NATIVE_FUNCTION(arrayConstructor)
-NATIVE_FUNCTION(arrayFrom)
 NATIVE_FUNCTION(arrayIsArray)
 NATIVE_FUNCTION(arrayIteratorPrototypeNext)
-NATIVE_FUNCTION(arrayOf)
 NATIVE_FUNCTION(arrayPrototypeConcat)
+NATIVE_FUNCTION(arrayPrototypeForEach)
+NATIVE_FUNCTION(arrayPrototypeIterator)
+NATIVE_FUNCTION(arrayPrototypeJoin)
+NATIVE_FUNCTION(arrayPrototypePush)
+NATIVE_FUNCTION(arrayPrototypeSort)
+NATIVE_FUNCTION(arrayPrototypeFlat)
+NATIVE_FUNCTION(arrayPrototypeFlatMap)
+NATIVE_FUNCTION(arrayPrototypeToLocaleString)
+NATIVE_FUNCTION(arrayPrototypeToString)
+
+#ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+NATIVE_FUNCTION(arrayFrom)
+NATIVE_FUNCTION(arrayOf)
 NATIVE_FUNCTION(arrayPrototypeCopyWithin)
 NATIVE_FUNCTION(arrayPrototypeEvery)
 NATIVE_FUNCTION(arrayPrototypeFill)
 NATIVE_FUNCTION(arrayPrototypeFilter)
 NATIVE_FUNCTION(arrayPrototypeFind)
-NATIVE_FUNCTION(arrayPrototypeForEach)
 NATIVE_FUNCTION(arrayPrototypeIncludes)
 NATIVE_FUNCTION(arrayPrototypeIndexOf)
-NATIVE_FUNCTION(arrayPrototypeIterator)
-NATIVE_FUNCTION(arrayPrototypeJoin)
 NATIVE_FUNCTION(arrayPrototypeLastIndexOf)
 NATIVE_FUNCTION(arrayPrototypeMap)
 NATIVE_FUNCTION(arrayPrototypePop)
-NATIVE_FUNCTION(arrayPrototypePush)
 NATIVE_FUNCTION(arrayPrototypeReduce)
 NATIVE_FUNCTION(arrayPrototypeReduceRight)
 NATIVE_FUNCTION(arrayPrototypeReverse)
 NATIVE_FUNCTION(arrayPrototypeShift)
 NATIVE_FUNCTION(arrayPrototypeSlice)
 NATIVE_FUNCTION(arrayPrototypeSome)
-NATIVE_FUNCTION(arrayPrototypeSort)
-NATIVE_FUNCTION(arrayPrototypeSplice)
-NATIVE_FUNCTION(arrayPrototypeToLocaleString)
-NATIVE_FUNCTION(arrayPrototypeToString)
 NATIVE_FUNCTION(arrayPrototypeUnshift)
+NATIVE_FUNCTION(arrayPrototypeSplice)
+#endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+
 NATIVE_FUNCTION(booleanConstructor)
 NATIVE_FUNCTION(booleanPrototypeToString)
 NATIVE_FUNCTION(booleanPrototypeValueOf)
@@ -125,23 +132,44 @@ NATIVE_FUNCTION(gc)
 NATIVE_FUNCTION(generatorFunctionConstructor)
 NATIVE_FUNCTION(generatorPrototypeNext)
 NATIVE_FUNCTION(generatorPrototypeReturnOrThrow)
-NATIVE_FUNCTION(hermesInternalCopyDataProperties)
-NATIVE_FUNCTION(hermesInternalCopyRestArgs)
-NATIVE_FUNCTION(hermesInternalDetachArrayBuffer)
-NATIVE_FUNCTION(hermesInternalEnsureObject)
-NATIVE_FUNCTION(hermesInternalExportAll)
+NATIVE_FUNCTION(hermesBuiltinCopyDataProperties)
+NATIVE_FUNCTION(hermesBuiltinCopyRestArgs)
+NATIVE_FUNCTION(hermesBuiltinArraySpread)
+NATIVE_FUNCTION(hermesBuiltinApply)
+NATIVE_FUNCTION(hermesBuiltinEnsureObject)
+NATIVE_FUNCTION(hermesBuiltinExportAll)
+NATIVE_FUNCTION(hermesBuiltinThrowTypeError)
+NATIVE_FUNCTION(hermesBuiltinGeneratorSetDelegated)
+NATIVE_FUNCTION(hermesBuiltinGetTemplateObject)
 
 #ifdef HERMESVM_EXCEPTION_ON_OOM
 NATIVE_FUNCTION(hermesInternalGetCallStack)
 #endif // HERMESVM_EXCEPTION_ON_OOM
 
+NATIVE_FUNCTION(hermesInternalDetachArrayBuffer)
 NATIVE_FUNCTION(hermesInternalGetEpilogues)
+NATIVE_FUNCTION(hermesInternalGetFunctionLocation)
 NATIVE_FUNCTION(hermesInternalGetInstrumentedStats)
 NATIVE_FUNCTION(hermesInternalGetRuntimeProperties)
-NATIVE_FUNCTION(hermesInternalGetTemplateObject)
 NATIVE_FUNCTION(hermesInternalGetWeakSize)
+NATIVE_FUNCTION(hermesInternalIsProxy)
 NATIVE_FUNCTION(hermesInternalTTIReached)
 NATIVE_FUNCTION(hermesInternalTTRCReached)
+
+#ifdef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+NATIVE_FUNCTION(hermesInternalExecuteCall)
+NATIVE_FUNCTION(hermesInternalGetSubstitution)
+NATIVE_FUNCTION(hermesInternalIsConstructor)
+NATIVE_FUNCTION(hermesInternalIsRegExp)
+NATIVE_FUNCTION(hermesInternalJSArraySetElementAt)
+NATIVE_FUNCTION(hermesInternalRegExpCreate)
+NATIVE_FUNCTION(hermesInternalRegExpExec)
+NATIVE_FUNCTION(hermesInternalSearchString)
+NATIVE_FUNCTION(hermesInternalToInteger)
+NATIVE_FUNCTION(hermesInternalToLength)
+NATIVE_FUNCTION(hermesInternalToObject)
+NATIVE_FUNCTION(hermesInternalToString)
+#endif
 
 #ifdef HERMES_ENABLE_DEBUGGER
 NATIVE_FUNCTION(isDebuggerAttached)
@@ -194,6 +222,7 @@ NATIVE_FUNCTION(objectDefineProperties)
 NATIVE_FUNCTION(objectDefineProperty)
 NATIVE_FUNCTION(objectEntries)
 NATIVE_FUNCTION(objectFreeze)
+NATIVE_FUNCTION(objectFromEntries)
 NATIVE_FUNCTION(objectGetOwnPropertyDescriptor)
 NATIVE_FUNCTION(objectGetOwnPropertyNames)
 NATIVE_FUNCTION(objectGetOwnPropertySymbols)
@@ -222,23 +251,43 @@ NATIVE_FUNCTION(objectValues)
 NATIVE_FUNCTION(parseFloat)
 NATIVE_FUNCTION(parseInt)
 NATIVE_FUNCTION(print)
+NATIVE_FUNCTION(proxyConstructor)
+NATIVE_FUNCTION(proxyRevocationSteps)
+NATIVE_FUNCTION(proxyRevocable)
+NATIVE_FUNCTION(reflectApply)
+NATIVE_FUNCTION(reflectConstruct)
+NATIVE_FUNCTION(reflectDefineProperty)
+NATIVE_FUNCTION(reflectDeleteProperty)
+NATIVE_FUNCTION(reflectGet)
+NATIVE_FUNCTION(reflectGetOwnPropertyDescriptor)
+NATIVE_FUNCTION(reflectGetPrototypeOf)
+NATIVE_FUNCTION(reflectHas)
+NATIVE_FUNCTION(reflectIsExtensible)
+NATIVE_FUNCTION(reflectOwnKeys)
+NATIVE_FUNCTION(reflectPreventExtensions)
+NATIVE_FUNCTION(reflectSet)
+NATIVE_FUNCTION(reflectSetPrototypeOf)
 NATIVE_FUNCTION(regExpConstructor)
 NATIVE_FUNCTION(regExpDollarNumberGetter)
 NATIVE_FUNCTION(regExpFlagPropertyGetter)
-NATIVE_FUNCTION(regExpFlagsGetter)
 NATIVE_FUNCTION(regExpInputGetter)
 NATIVE_FUNCTION(regExpLastMatchGetter)
 NATIVE_FUNCTION(regExpLastParenGetter)
 NATIVE_FUNCTION(regExpLeftContextGetter)
 NATIVE_FUNCTION(regExpPrototypeExec)
+NATIVE_FUNCTION(regExpPrototypeTest)
+NATIVE_FUNCTION(regExpRightContextGetter)
+NATIVE_FUNCTION(regExpSourceGetter)
+
+#ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+NATIVE_FUNCTION(regExpFlagsGetter)
 NATIVE_FUNCTION(regExpPrototypeSymbolMatch)
 NATIVE_FUNCTION(regExpPrototypeSymbolReplace)
 NATIVE_FUNCTION(regExpPrototypeSymbolSearch)
 NATIVE_FUNCTION(regExpPrototypeSymbolSplit)
-NATIVE_FUNCTION(regExpPrototypeTest)
 NATIVE_FUNCTION(regExpPrototypeToString)
-NATIVE_FUNCTION(regExpRightContextGetter)
-NATIVE_FUNCTION(regExpSourceGetter)
+#endif
+
 NATIVE_FUNCTION(require)
 NATIVE_FUNCTION(requireFast)
 NATIVE_FUNCTION(runContextFunc1Arg)
@@ -258,23 +307,12 @@ NATIVE_FUNCTION(stringConstructor)
 NATIVE_FUNCTION(stringFromCharCode)
 NATIVE_FUNCTION(stringFromCodePoint)
 NATIVE_FUNCTION(stringIteratorPrototypeNext)
-NATIVE_FUNCTION(stringPrototypeCharAt)
 NATIVE_FUNCTION(stringPrototypeCharCodeAt)
 NATIVE_FUNCTION(stringPrototypeCodePointAt)
 NATIVE_FUNCTION(stringPrototypeConcat)
-NATIVE_FUNCTION(stringPrototypeEndsWith)
-NATIVE_FUNCTION(stringPrototypeIncludesOrStartsWith)
-NATIVE_FUNCTION(stringPrototypeIndexOf)
-NATIVE_FUNCTION(stringPrototypeLastIndexOf)
 NATIVE_FUNCTION(stringPrototypeLocaleCompare)
-NATIVE_FUNCTION(stringPrototypeMatch)
 NATIVE_FUNCTION(stringPrototypeNormalize)
-NATIVE_FUNCTION(stringPrototypePad)
 NATIVE_FUNCTION(stringPrototypeRepeat)
-NATIVE_FUNCTION(stringPrototypeReplace)
-NATIVE_FUNCTION(stringPrototypeSearch)
-NATIVE_FUNCTION(stringPrototypeSlice)
-NATIVE_FUNCTION(stringPrototypeSplit)
 NATIVE_FUNCTION(stringPrototypeSubstr)
 NATIVE_FUNCTION(stringPrototypeSubstring)
 NATIVE_FUNCTION(stringPrototypeSymbolIterator)
@@ -284,9 +322,24 @@ NATIVE_FUNCTION(stringPrototypeToLowerCase)
 NATIVE_FUNCTION(stringPrototypeToString)
 NATIVE_FUNCTION(stringPrototypeToUpperCase)
 NATIVE_FUNCTION(stringPrototypeTrim)
-NATIVE_FUNCTION(stringPrototypeTrimLeft)
-NATIVE_FUNCTION(stringPrototypeTrimRight)
+NATIVE_FUNCTION(stringPrototypeTrimEnd)
+NATIVE_FUNCTION(stringPrototypeTrimStart)
 NATIVE_FUNCTION(stringRaw)
+
+#ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+NATIVE_FUNCTION(stringPrototypeCharAt)
+NATIVE_FUNCTION(stringPrototypeEndsWith)
+NATIVE_FUNCTION(stringPrototypeIncludesOrStartsWith)
+NATIVE_FUNCTION(stringPrototypeIndexOf)
+NATIVE_FUNCTION(stringPrototypeLastIndexOf)
+NATIVE_FUNCTION(stringPrototypeMatch)
+NATIVE_FUNCTION(stringPrototypePad)
+NATIVE_FUNCTION(stringPrototypeReplace)
+NATIVE_FUNCTION(stringPrototypeSearch)
+NATIVE_FUNCTION(stringPrototypeSlice)
+NATIVE_FUNCTION(stringPrototypeSplit)
+#endif
+
 NATIVE_FUNCTION(symbolConstructor)
 NATIVE_FUNCTION(symbolFor)
 NATIVE_FUNCTION(symbolKeyFor)
@@ -328,35 +381,43 @@ NATIVE_FUNCTION(weakSetPrototypeAdd)
 NATIVE_FUNCTION(weakSetPrototypeDelete)
 NATIVE_FUNCTION(weakSetPrototypeHas)
 
+#ifdef HERMES_ENABLE_IR_INSTRUMENTATION
+NATIVE_FUNCTION(instrumentDoNothing)
+NATIVE_FUNCTION(instrumentReturnNth)
+#endif
+
 #define ALL_ERROR_TYPE(name) NATIVE_FUNCTION(name##Constructor)
 #include "hermes/VM/NativeErrorTypes.def"
 #undef ALL_ERROR_TYPE
 
 // NativeConstructor
 
-// creator funcitons
-NATIVE_CONSTRUCTOR(JSObject::createWithException)
-NATIVE_CONSTRUCTOR(JSFunction::createWithNewDomain)
+// Creator functions
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSObject>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSFunction>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSArray>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSArrayBuffer>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSBoolean>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSDataView>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSDate>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSError>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSMap>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSNumber>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSProxy>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSRegExp>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSSet>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSString>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSSymbol>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSWeakMap>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSWeakSet>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSGeneratorFunction>)
 
-// NativeClass::create
-NATIVE_CONSTRUCTOR(JSArrayBuffer::create)
-NATIVE_CONSTRUCTOR(JSError::create)
-NATIVE_CONSTRUCTOR(JSBoolean::create)
-NATIVE_CONSTRUCTOR(JSMap::create)
-NATIVE_CONSTRUCTOR(JSArray::create)
-NATIVE_CONSTRUCTOR(JSNumber::create)
-NATIVE_CONSTRUCTOR(JSSet::create)
-NATIVE_CONSTRUCTOR(JSDate::create)
-NATIVE_CONSTRUCTOR(JSRegExp::create)
-NATIVE_CONSTRUCTOR(JSWeakMap::create)
-NATIVE_CONSTRUCTOR(JSSymbol::create)
-NATIVE_CONSTRUCTOR(JSString::create)
-NATIVE_CONSTRUCTOR(JSDataView::create)
-NATIVE_CONSTRUCTOR(JSWeakSet::create)
-
-#define TYPED_ARRAY(name, type) \
-  NATIVE_CONSTRUCTOR_TYPED(     \
-      JSTypedArray, type, CellKind::name##ArrayKind, create)
+#define TYPED_ARRAY(name, type)  \
+  NATIVE_CONSTRUCTOR_TYPED(      \
+      JSTypedArray,              \
+      type,                      \
+      CellKind::name##ArrayKind, \
+      NativeConstructor::creatorFunction)
 #include "hermes/VM/TypedArrays.def"
 #undef TYPED_ARRAY
 

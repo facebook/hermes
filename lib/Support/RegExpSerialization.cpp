@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/Support/RegExpSerialization.h"
 #include "hermes/Regex/Compiler.h"
 #include "hermes/Regex/RegexTraits.h"
@@ -55,6 +56,12 @@ uint32_t instructionWidth<regex::BracketInsn>(const regex::BracketInsn *insn) {
 }
 
 template <>
+uint32_t instructionWidth<regex::U16BracketInsn>(
+    const regex::U16BracketInsn *insn) {
+  return insn->totalWidth();
+}
+
+template <>
 uint32_t instructionWidth<regex::MatchNChar8Insn>(
     const regex::MatchNChar8Insn *insn) {
   return insn->totalWidth();
@@ -79,8 +86,16 @@ void dumpInstruction(
     const regex::MatchChar16Insn *insn,
     llvm::raw_ostream &OS) {
   OS << "MatchChar16: ";
-  char16_t c = insn->c;
+  char32_t c = insn->c;
   OS << llvm::format_hex(c, 4);
+}
+
+void dumpInstruction(
+    const regex::U16MatchChar32Insn *insn,
+    llvm::raw_ostream &OS) {
+  OS << "U16MatchChar32: ";
+  uint32_t c = insn->c;
+  OS << llvm::format_hex(c, 6);
 }
 
 void dumpInstruction(
@@ -132,8 +147,16 @@ void dumpInstruction(
     const regex::MatchCharICase16Insn *insn,
     llvm::raw_ostream &OS) {
   OS << "MatchCharICase16: ";
-  char16_t c = insn->c;
+  char32_t c = insn->c;
   OS << llvm::format_hex(c, 4);
+}
+
+void dumpInstruction(
+    const regex::U16MatchCharICase32Insn *insn,
+    llvm::raw_ostream &OS) {
+  OS << "U16MatchCharICase32: ";
+  uint32_t c = insn->c;
+  OS << llvm::format_hex(c, 6);
 }
 
 void dumpInstruction(const regex::Jump32Insn *insn, llvm::raw_ostream &OS) {
@@ -150,7 +173,8 @@ void dumpInstruction(
 
 void dumpInstruction(const regex::BracketInsn *insn, llvm::raw_ostream &OS) {
   using namespace regex;
-  OS << "Bracket: [";
+  OS << (insn->opcode == Opcode::U16Bracket ? "U16Bracket" : "Bracket")
+     << ": [";
   if (insn->negate)
     OS << '^';
   if (insn->positiveCharClasses & CharacterClass::Digits)
@@ -166,15 +190,15 @@ void dumpInstruction(const regex::BracketInsn *insn, llvm::raw_ostream &OS) {
   if (insn->negativeCharClasses & CharacterClass::Words)
     OS << "\\W";
 
-  auto output1Char = [&OS](char16_t c) {
+  auto output1Char = [&OS](uint32_t c) {
     if (c <= 127 && std::isprint(c))
       OS << char(c);
     else
       OS << llvm::format_hex(c, 4);
   };
-  // BracketRanges16 immediately follow insn.
-  const BracketRange16 *range =
-      reinterpret_cast<const BracketRange16 *>(1 + insn);
+  // BracketRange32 immediately follow insn.
+  const BracketRange32 *range =
+      reinterpret_cast<const BracketRange32 *>(1 + insn);
   for (uint32_t i = 0; i < insn->rangeCount; i++) {
     output1Char(range->start);
     if (range->end > range->start) {
@@ -208,8 +232,9 @@ void dumpInstruction(const regex::BackRefInsn *insn, llvm::raw_ostream &OS) {
   OS << "BackRefInsn: " << insn->mexp;
 }
 
-void dumpInstruction(const regex::LookaheadInsn *insn, llvm::raw_ostream &OS) {
-  OS << "Lookahead: " << (insn->invert ? '!' : '=')
+void dumpInstruction(const regex::LookaroundInsn *insn, llvm::raw_ostream &OS) {
+  OS << "Lookaround: " << (insn->forwards ? "" : "<")
+     << (insn->invert ? '!' : '=')
      << " (constraints: " << unsigned(insn->constraints)
      << ", marked expressions=[" << insn->mexpBegin << "," << insn->mexpEnd
      << "), continuation " << llvm::format_hex(insn->continuation, 4) << ')';
@@ -320,10 +345,14 @@ llvm::Optional<CompiledRegExp> CompiledRegExp::tryCompile(
     sflags |= icase;
   if (flags.contains('m'))
     sflags |= multiline;
+  if (flags.contains('u'))
+    sflags |= unicode;
+  if (flags.contains('s'))
+    sflags |= dotAll;
 
   // Build and compile the regexp.
   auto re =
-      regex::Regex<regex::U16RegexTraits>(re16.begin(), re16.end(), sflags);
+      regex::Regex<regex::UTF16RegexTraits>(re16.begin(), re16.end(), sflags);
   if (!re.valid()) {
     if (outError)
       *outError = messageForError(re.getError());

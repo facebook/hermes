@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/HostModel.h"
 
 #include "hermes/VM/BuildMetadata.h"
@@ -21,7 +22,7 @@ CallableVTable FinalizableNativeFunction::vt{
     {
         VTable(
             CellKind::FinalizableNativeFunctionKind,
-            sizeof(FinalizableNativeFunction),
+            cellSize<FinalizableNativeFunction>(),
             FinalizableNativeFunction::_finalizeImpl),
         FinalizableNativeFunction::_getOwnIndexedRangeImpl,
         FinalizableNativeFunction::_haveOwnIndexedImpl,
@@ -37,6 +38,8 @@ CallableVTable FinalizableNativeFunction::vt{
 void FinalizableNativeFunctionBuildMeta(
     const GCCell *cell,
     Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(
+      JSObject::numOverlapSlots<FinalizableNativeFunction>());
   NativeFunctionBuildMeta(cell, mb);
 }
 
@@ -61,12 +64,14 @@ CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
     unsigned paramCount) {
   auto parentHandle = Handle<JSObject>::vmcast(&runtime->functionPrototype);
 
-  void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      sizeof(FinalizableNativeFunction));
-  auto selfHandle = runtime->makeHandle(new (mem) FinalizableNativeFunction(
+  JSObjectAlloc<FinalizableNativeFunction, HasFinalizer::Yes> mem{runtime};
+  auto selfHandle = mem.initToHandle(new (mem) FinalizableNativeFunction(
       runtime,
       parentHandle,
-      runtime->getHiddenClassForPrototype(parentHandle),
+      createPseudoHandle(runtime->getHiddenClassForPrototypeRaw(
+          *parentHandle,
+          numOverlapSlots<FinalizableNativeFunction>() +
+              ANONYMOUS_PROPERTY_SLOTS)),
       context,
       functionPtr,
       finalizePtr));
@@ -93,7 +98,7 @@ HostObjectProxy::~HostObjectProxy() {}
 ObjectVTable HostObject::vt{
     VTable(
         CellKind::HostObjectKind,
-        sizeof(HostObject),
+        cellSize<HostObject>(),
         HostObject::_finalizeImpl),
     HostObject::_getOwnIndexedRangeImpl,
     HostObject::_haveOwnIndexedImpl,
@@ -105,6 +110,7 @@ ObjectVTable HostObject::vt{
 };
 
 void HostObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<HostObject>());
   ObjectBuildMeta(cell, mb);
 }
 
@@ -125,17 +131,18 @@ CallResult<HermesValue> HostObject::createWithoutPrototype(
     std::shared_ptr<HostObjectProxy> proxy) {
   auto parentHandle = Handle<JSObject>::vmcast(&runtime->objectPrototype);
 
-  void *mem =
-      runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(sizeof(HostObject));
+  JSObjectAlloc<HostObject, HasFinalizer::Yes> mem{runtime};
   HostObject *hostObj = new (mem) HostObject(
       runtime,
       *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
+      runtime->getHiddenClassForPrototypeRaw(
+          *parentHandle,
+          numOverlapSlots<HostObject>() + ANONYMOUS_PROPERTY_SLOTS),
       proxy);
 
   hostObj->flags_.hostObject = true;
 
-  return HermesValue::encodeObjectValue(hostObj);
+  return mem.initToHermesValue(hostObj);
 }
 
 void HostObject::_finalizeImpl(GCCell *cell, GC *) {

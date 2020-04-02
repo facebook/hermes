@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_SUPPORT_PERFSECTION_H
 #define HERMES_SUPPORT_PERFSECTION_H
 
@@ -46,6 +47,8 @@ class PerfSection {
   const char *name_;
   const char *category_;
 #endif
+  /// Whether any tracing output is enabled.
+  bool enabled_{false};
 
  private:
   /// We want ArgValue to be able to hold arguments of various types,

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_STRINGVIEW_H
 #define HERMES_VM_STRINGVIEW_H
 
@@ -220,6 +221,17 @@ class StringView {
       new (strPrim_.buffer) Handle<StringPrimitive>(other.strPrim());
   }
 
+  StringView &operator=(const StringView &other) {
+    if (this != &other) {
+      if (isHandle_)
+        strPrim().~Handle<StringPrimitive>();
+      ::memcpy(this, &other, sizeof(*this));
+      if (isHandle_)
+        new (strPrim_.buffer) Handle<StringPrimitive>(other.strPrim());
+    }
+    return *this;
+  }
+
   ~StringView() {
     if (isHandle_)
       strPrim().~Handle<StringPrimitive>();
@@ -228,6 +240,8 @@ class StringView {
   StringView(const StringView &other) = default;
   ~StringView() = default;
 #endif
+
+  StringView(const char *ptr) : StringView(ASCIIRef(ptr, strlen(ptr))) {}
 
   /// \return an iterator pointing at the beginning of the string.
   const_iterator begin() const {

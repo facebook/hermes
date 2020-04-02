@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
-# This source code is licensed under the MIT license found in the LICENSE
-# file in the root directory of this source tree.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 
 if(NOT HERMES_IS_ANDROID)
   # We need FindICU from 3.7
@@ -17,21 +17,57 @@ if (POLICY CMP0048)
   cmake_policy(SET CMP0048 NEW)
 endif()
 
+# find_package uses <PackageName>_ROOT variables.
+if (POLICY CMP0074)
+  cmake_policy(SET CMP0074 NEW)
+endif()
 # Include file check macros honor CMAKE_REQUIRED_LIBRARIES.
 if (POLICY CMP0075)
   cmake_policy(SET CMP0075 NEW)
 endif()
 
+# Only interpret if() arguments as variables or keywords when unquoted.
+# CMake emits a warning if this is not set.
+if (POLICY CMP0054)
+  cmake_policy(SET CMP0054 NEW)
+endif()
+
+# Pick up a workaround for a CMake problem from LLVM r282552.
+if(POLICY CMP0057)
+  cmake_policy(SET CMP0057 NEW)
+endif()
+
+# Enable transitive library dependencies
+if(POLICY CMP0022)
+  cmake_policy(SET CMP0022 NEW)
+endif()
+
+# Don't complain about mixing plain and keyword target_link_libraries commands.
+# Keyword style is when you specify whether library symbols are re-exported,
+# e.g. target_link_libraries(target PRIVATE lib).
+# LLVM currently uses plain-style target_link_libraries calls so we must
+# allow mixing.
+if (POLICY CMP0023)
+  cmake_policy(SET CMP0023 OLD)
+endif()
+
+
 # This must be consistent with the release_version in
 # android/build.gradle and npm/package.json
 project(Hermes
-        VERSION 0.2.1
+        VERSION 0.4.0
         LANGUAGES C CXX)
+# Optional suffix like "-rc3"
+set(VERSION_SUFFIX "")
 
-include(CheckCXXCompilerFlag)
-include(CheckCXXSourceCompiles)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/")
 
-set(HERMES_RELEASE_VERSION ${PROJECT_VERSION})
+set(LLVH_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/llvh)
+
+include(Hermes)
+include(Lit)
+
+set(HERMES_RELEASE_VERSION ${PROJECT_VERSION}${VERSION_SUFFIX})
 
 # Project options.
 set(HERMESVM_GCKIND NONCONTIG_GENERATIONAL
@@ -66,6 +102,9 @@ set(HERMESVM_INDIRECT_THREADING ${DEFAULT_INTERPRETER_THREADING} CACHE BOOL
 set(HERMESVM_ALLOW_COMPRESSED_POINTERS ON CACHE BOOL
   "Enable compressed pointers. If this is on and the target is a 64-bit build, compressed pointers will be used.")
 
+set(HERMESVM_API_TRACE OFF CACHE BOOL
+  "Enable tracing interactions via the API")
+
 # Hermes VM Handle sanitization (moving the heap after every alloc)
 set(HERMESVM_SANITIZE_HANDLES OFF CACHE BOOL
   "Enable Handle sanitization")
@@ -83,6 +122,9 @@ set(HERMES_STATIC_LINK OFF CACHE BOOL
 set(HERMES_ENABLE_DEBUGGER OFF CACHE BOOL
   "Build with debugger support")
 
+set(HERMES_ENABLE_IR_INSTRUMENTATION OFF CACHE BOOL
+    "Build IR instrumentation support")
+
 set(HERMES_FACEBOOK_BUILD OFF CACHE BOOL
     "Build Facebook (rather than open-source) version of Hermes")
 
@@ -95,11 +137,17 @@ set(HERMESVM_PLATFORM_LOGGING OFF CACHE BOOL
 set(HERMESVM_JIT OFF CACHE BOOL
   "Enable the JIT")
 
+set(HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION OFF CACHE BOOL
+  "Enable using JS to implement parts of Hermes")
+
 set(HERMESVM_JIT_DISASSEMBLER OFF CACHE BOOL
   "Enable the JIT disassembler")
 
 set(HERMES_USE_FLOWPARSER OFF CACHE BOOL
   "Use libflowparser for parsing es6")
+
+set(HERMES_IS_MOBILE_BUILD OFF CACHE BOOL
+  "Building for a mobile device")
 
 set(HERMES_IS_ANDROID OFF CACHE BOOL
   "Building for Android")
@@ -117,11 +165,15 @@ set(ANDROID_LINUX_PERF_PATH ""
   CACHE STRING
   "If buildling for Android, full path to <linux/perf_events.h>")
 
-# On Android we need an ABI specific version of LLVM.
-# Unfortunately, the build system doesn't allow setting the
-# LLVM_BUILD_DIR per ABI, so we do it here instead.
+set(HERMES_MSVC_MP ON CACHE STRING
+  "Enable /MP in MSVC for parallel builds")
+
+set(EMSCRIPTEN_FASTCOMP ON CACHE BOOL
+  "Emscripten is using the fastcomp backend instead of the LLVM one")
+
 if (HERMES_IS_ANDROID)
-  set(LLVM_BUILD_DIR "${LLVM_BUILD_BASE}-${ANDROID_ABI}")
+  set(HERMES_IS_MOBILE_BUILD TRUE)
+
   add_definitions(-DHERMES_PLATFORM_UNICODE=HERMES_PLATFORM_UNICODE_JAVA)
 
   # The toolchain passes -Wa,--noexecstack which is valid for compiling
@@ -142,14 +194,9 @@ if (HERMES_IS_ANDROID)
   endif()
 endif()
 
-# The hermes project is built using CMake and the LLVM's build system.
-# It expects LLVM_SRC_DIR and LLVM_BUILD_DIR to be set. For example:
-#
-# cmake -G Ninja -DLLVM_BUILD_DIR=$XXX -DLLVM_SRC_DIR=$YYY
-#
-file(TO_CMAKE_PATH "${LLVM_BUILD_DIR}" LLVM_BUILD_DIR)
-file(TO_CMAKE_PATH "${LLVM_SRC_DIR}" LLVM_SRC_DIR)
-list(APPEND CMAKE_MODULE_PATH "${LLVM_BUILD_DIR}/lib/cmake/llvm/")
+if (HERMES_IS_MOBILE_BUILD)
+  add_definitions(-DHERMES_IS_MOBILE_BUILD)
+endif()
 
 # Enable debug mode by default
 if ((NOT GENERATOR_IS_MULTI_CONFIG) AND CMAKE_BUILD_TYPE STREQUAL "")
@@ -188,6 +235,10 @@ endif()
 # Make the HERMES_RELEASE_VERSION accessible for version printing in C++.
 add_definitions(-DHERMES_RELEASE_VERSION="${HERMES_RELEASE_VERSION}")
 
+if(HERMES_ENABLE_IR_INSTRUMENTATION)
+    add_definitions(-DHERMES_ENABLE_IR_INSTRUMENTATION)
+endif()
+
 add_definitions(-DHERMESVM_GC_${HERMESVM_GCKIND})
 if(HERMESVM_GC_GENERATIONAL_MARKSWEEPCOMPACT)
     add_definitions(-DHERMESVM_GC_GENERATIONAL_MARKSWEEPCOMPACT)
@@ -210,11 +261,17 @@ if(HERMESVM_PROFILER_NATIVECALL)
     add_definitions(-DHERMESVM_PROFILER_NATIVECALL)
     set(HERMES_PROFILER_MODE_IN_LIT_TEST "EXTERN")
 endif()
+if(HERMESVM_SERIALIZE)
+  add_definitions(-DHERMESVM_SERIALIZE)
+endif()
 if(HERMESVM_INDIRECT_THREADING)
     add_definitions(-DHERMESVM_INDIRECT_THREADING)
 endif()
 if(HERMESVM_ALLOW_COMPRESSED_POINTERS)
     add_definitions(-DHERMESVM_ALLOW_COMPRESSED_POINTERS)
+endif()
+if(HERMESVM_API_TRACE)
+    add_definitions(-DHERMESVM_API_TRACE)
 endif()
 if(HERMESVM_SANITIZE_HANDLES)
     add_definitions(-DHERMESVM_SANITIZE_HANDLES)
@@ -234,52 +291,22 @@ endif()
 if(HERMESVM_JIT_DISASSEMBLER)
   add_definitions(-DHERMESVM_JIT_DISASSEMBLER)
 endif()
+if(HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION)
+  add_definitions(-DHERMESVM_USE_JS_LIBRARY_IMPLEMENTATION)
+endif()
 if (NOT (ANDROID_LINUX_PERF_PATH STREQUAL ""))
   add_definitions(-DANDROID_LINUX_PERF_PATH="${ANDROID_LINUX_PERF_PATH}")
 endif()
 
-# Build the hermes compiler by default.
-set(LLVM_BUILD_TOOLS ON)
-# Enable warnings.
-set(LLVM_ENABLE_WARNINGS ON)
-
-# Only interpret if() arguments as variables or keywords when unquoted.
-# CMake emits a warning if this is not set.
-if (POLICY CMP0054)
-  cmake_policy(SET CMP0054 NEW)
-endif()
-
 if (HERMES_ENABLE_WERROR)
-  # Turn all warnings into errors on some compilers:
-  if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-    set(LLVM_ENABLE_WERROR ON)
-  elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-    set(LLVM_ENABLE_WERROR ON)
-  elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
-    # Warn.
+  # Turn all warnings into errors on GCC-compatible compilers.
+  if (GCC_COMPATIBLE)
+    append("-Werror" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
   endif()
 endif()
 
 # Collect all header files and add them to the IDE.
 file(GLOB_RECURSE ALL_HEADER_FILES "*.h")
-
-# Pick up a workaround for a CMake problem from LLVM r282552.
-if(POLICY CMP0057)
-  cmake_policy(SET CMP0057 NEW)
-endif()
-# Enable transitive library dependencies
-if(POLICY CMP0022)
-    cmake_policy(SET CMP0022 NEW)
-endif()
-
-# Don't complain about mixing plain and keyword target_link_libraries commands.
-# Keyword style is when you specify whether library symbols are re-exported,
-# e.g. target_link_libraries(target PRIVATE lib).
-# LLVM currently uses plain-style target_link_libraries calls so we must
-# allow mixing.
-if (POLICY CMP0023)
-  cmake_policy(SET CMP0023 OLD)
-endif()
 
 if(HERMES_SLOW_DEBUG)
   # Enable HERMES_SLOW_DEBUG in Debug mode
@@ -297,38 +324,33 @@ if (NOT (GENERATOR_IS_MULTI_CONFIG OR CMAKE_BUILD_TYPE STREQUAL Debug OR CMAKE_C
     # Enable LTO if we are not multi config generator and not a DEBUG build
     # and not GCC
     # GCC currently fails to link Hermes with LTO (see t16557748)
-    option(LLVM_ENABLE_LTO "Build Hermes with LTO" ON)
+    option(HERMES_ENABLE_LTO "Build Hermes with LTO" ON)
 endif()
 
-if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR
-    "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-  # Superss warnings about unknown warnings
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-warning-option")
-  # Suppress an uninteresting warning about C++17 name mangling changes.
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-noexcept-type")
+if (GCC_COMPATIBLE)
+  # Suppress uninteresting warnings about initializing ArrayRef from initializer lists.
+  check_cxx_compiler_flag("-Winit-list-lifetime" INIT_LIST_LIFETIME_FLAG)
+  append_if(INIT_LIST_LIFETIME_FLAG "-Wno-init-list-lifetime" CMAKE_CXX_FLAGS)
   # Don't export symbols unless we explicitly say so
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
   # C4068 unknown pragma
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4068")
+  # C4200 nonstandard extension used: zero-sized array in struct/union
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4200")
   # C4201 nonstandard extension used: nameless struct/union
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4201")
+  # C4530 C++ exception handler used, but unwind semantics are not enabled
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4530")
+  # Parallelize build
+  if (HERMES_MSVC_MP)
+    add_definitions( /MP )
+  endif()
 endif()
 
 # Export a JSON file with the compilation commands that external tools can use
 # to analyze the source code of the project.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-set(LLVM_MAIN_SRC_DIR ${LLVM_SRC_DIR})
-include(LLVMConfig)
-include(AddLLVM)
-include(HandleLLVMOptions)
-
-include_directories("${LLVM_SRC_DIR}/include"
-                    "${LLVM_BUILD_DIR}/include")
-
-link_directories("${LLVM_SRC_DIR}/lib"
-                 "${LLVM_BUILD_DIR}/${CMAKE_CFG_INTDIR}/lib")
 
 # Attempt to use system ICU first, if none specified.
 # Don't need ICU on Apple systems.
@@ -339,6 +361,9 @@ if (APPLE)
     icucore
   )
   include_directories(${ICU_INCLUDE_DIRS})
+elseif(EMSCRIPTEN)
+  # Just ignore ICU on Emiscripten. For now.
+  set(ICU_FOUND 1)
 endif()
 
 if (NOT ICU_FOUND)
@@ -348,7 +373,7 @@ if (NOT ICU_FOUND)
 
   # FindICU uses ICU_ROOT variable as a hint
   # Include 'uc' twice for static libraries that depend on each other.
-  find_package(ICU 52 COMPONENTS uc i18n data uc)
+  find_global_package(ICU 52 COMPONENTS uc i18n data uc)
 
   if (ICU_FOUND)
     foreach(LIB_FILE ${ICU_LIBRARIES})
@@ -387,7 +412,7 @@ endif()
 function(hermes_link_icu target_name)
   get_target_property(target_type ${target_name} TYPE)
   target_link_libraries(${target_name} PRIVATE ${ICU_LIBRARIES})
-  if (HERMES_STATIC_LINK AND target_type MATCHES "EXECUTABLE|STATIC_LIBRARY")
+  if ((NOT EMSCRIPTEN) AND HERMES_STATIC_LINK AND target_type MATCHES "EXECUTABLE|STATIC_LIBRARY")
     target_link_libraries(${target_name} PRIVATE dl pthread)
   endif()
 
@@ -405,13 +430,15 @@ else()
   set(CORE_FOUNDATION "")
 endif()
 
-if (CMAKE_SYSTEM_NAME STREQUAL Darwin AND NOT LLVM_BUILD_32_BITS)
-  set(LIBFLOWPARSER ${CMAKE_CURRENT_SOURCE_DIR}/external/flowparser/libflowparser-mac.a)
-elseif (CMAKE_SYSTEM_NAME STREQUAL Linux AND NOT LLVM_BUILD_32_BITS)
-  set(LIBFLOWPARSER ${CMAKE_CURRENT_SOURCE_DIR}/external/flowparser/libflowparser-linux.a)
-else()
-  set(LIBFLOWPARSER "")
-  set(HERMES_USE_FLOWPARSER OFF)
+if (HERMES_USE_FLOWPARSER)
+  if (CMAKE_SYSTEM_NAME STREQUAL Darwin AND NOT HERMES_BUILD_32_BITS)
+    set(LIBFLOWPARSER ${CMAKE_CURRENT_SOURCE_DIR}/external/flowparser/libflowparser-mac.a)
+  elseif (CMAKE_SYSTEM_NAME STREQUAL Linux AND NOT HERMES_BUILD_32_BITS)
+    set(LIBFLOWPARSER ${CMAKE_CURRENT_SOURCE_DIR}/external/flowparser/libflowparser-linux.a)
+  else()
+    set(LIBFLOWPARSER "")
+    set(HERMES_USE_FLOWPARSER OFF)
+  endif()
 endif()
 
 if (HERMES_USE_FLOWPARSER)
@@ -427,14 +454,6 @@ set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++11")
 set(HERMES_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(HERMES_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-# Tell LLVM where to place the compiled binaries.
-#
-# NOTE: LLVM also uses this variable to find its own binaries, which can create
-# problems. For now the only LLVM tool we need is llvm-lit, so our short term
-# solution is to just hack that special case (the long term solution would be
-# to stop using add_llvm_tool() for our own tools).
-set(LLVM_RUNTIME_OUTPUT_INTDIR ${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin)
-
 if(EXISTS ${HERMES_SOURCE_DIR}/API/jsi)
   set(HERMES_JSI_DIR ${HERMES_SOURCE_DIR}/API/jsi)
 elseif(EXISTS ${FBSOURCE_DIR}/xplat/jsi)
@@ -444,6 +463,12 @@ elseif(EXISTS ${HERMES_SOURCE_DIR}/../jsi)
 else()
   message(FATAL_ERROR "Unable to find jsi.")
 endif()
+
+include_directories(
+  external/llvh/include
+  external/llvh/gen/include
+  ${CMAKE_CURRENT_BINARY_DIR}/external/llvh/include
+)
 
 include_directories(BEFORE
   ${CMAKE_CURRENT_BINARY_DIR}/include
@@ -459,7 +484,7 @@ if(HERMES_IS_ANDROID)
   elseif(EXISTS ${FBSOURCE_DIR}/fbandroid/libraries/fbjni/cxx)
     set(FBJNI_PATH ${FBSOURCE_DIR}/fbandroid/libraries/fbjni)
   elseif(EXISTS ${HERMES_SOURCE_DIR}/../../fbandroid/libraries/fbjni/cxx)
-    set(FBJNI_PATH ${HERMES_SOURCE_DIR}/../../fbandroid/libraries/fbjni/cxx)
+    set(FBJNI_PATH ${HERMES_SOURCE_DIR}/../../fbandroid/libraries/fbjni)
   else()
     message(FATAL_ERROR "Unable to find fbjni.")
   endif()
@@ -470,13 +495,28 @@ if(HERMES_IS_ANDROID)
   set(OPTIONAL_JNI_ONLOAD "-Wl,--undefined=JNI_OnLoad")
 endif()
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+add_subdirectory(external/llvh)
+add_subdirectory(utils/hermes-lit)
 add_subdirectory(tools)
 add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(external)
 add_subdirectory(unittests)
-add_subdirectory(${HERMES_JSI_DIR}/jsi ${CMAKE_CURRENT_BINARY_DIR}/jsi)
 add_subdirectory(API)
+
+# Make sure JSI is compiled with PIC
+set(save_CMAKE_POSITION_INDEPENDENT_CODE ${CMAKE_POSITION_INDEPENDENT_CODE})
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+add_subdirectory(${HERMES_JSI_DIR}/jsi ${CMAKE_CURRENT_BINARY_DIR}/jsi)
+set(CMAKE_POSITION_INDEPENDENT_CODE ${save_CMAKE_POSITION_INDEPENDENT_CODE})
+
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/facebook)
+    add_subdirectory(facebook)
+endif()
 
 # Configure the test suites
 #
@@ -492,7 +532,6 @@ list(APPEND HERMES_TEST_DEPS
   hbc-attribute
   hbc-deltaprep
   hbc-diff
-  llvm-config
   )
 
 set(HERMES_LIT_TEST_PARAMS
@@ -502,26 +541,26 @@ set(HERMES_LIT_TEST_PARAMS
   use_flowparser=${HERMES_USE_FLOWPARSER}
   jit_enabled=${HERMESVM_JIT}
   jit_disassembler_enabled=${HERMESVM_JIT_DISASSEMBLER}
-  hbc_deltaprep=${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/hbc-deltaprep
-  FileCheck=${LLVM_BUILD_DIR}/${CMAKE_CFG_INTDIR}/bin/FileCheck
-  hermes=${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/hermes
-  hermesc=${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/hermesc
-  hdb=${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/hdb
-  hbcdump=${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/hbcdump
-  repl=${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/hermes-repl
-  hbc-deltaprep=${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/hbc-deltaprep
-  hbc_diff=${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/hbc-diff
+  hbc_deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
+  FileCheck=${HERMES_TOOLS_OUTPUT_DIR}//FileCheck
+  hermes=${HERMES_TOOLS_OUTPUT_DIR}/hermes
+  hermesc=${HERMES_TOOLS_OUTPUT_DIR}/hermesc
+  hdb=${HERMES_TOOLS_OUTPUT_DIR}/hdb
+  hbcdump=${HERMES_TOOLS_OUTPUT_DIR}/hbcdump
+  repl=${HERMES_TOOLS_OUTPUT_DIR}/hermes-repl
+  hbc-deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
+  hbc_diff=${HERMES_TOOLS_OUTPUT_DIR}/hbc-diff
   build_mode=${HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST}
   exception_on_oom_enabled=${HERMESVM_EXCEPTION_ON_OOM}
   serialize_enabled=${HERMESVM_SERIALIZE}
   profiler=${HERMES_PROFILER_MODE_IN_LIT_TEST}
+  use_js_library_implementation=${HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION}
+  gc=${HERMESVM_GCKIND}
+  # TODO: Figure out how to tell if CMake is doing a UBSAN build.
+  ubsan=OFF
   )
 
-set(LLVM_LIT_ARGS "-sv")
-
-# This is a hack to help LLVM find its own llvm-lit tool, since we had to set
-# LLVM_RUNTIME_OUTPUT_INTDIR to our own build dir.
-set(LLVM_LIT_OUTPUT_DIR ${LLVM_BUILD_DIR}/${CMAKE_CFG_INTDIR}/bin)
+set(LLVH_LIT_ARGS "-sv")
 
 add_lit_testsuite(check-hermes "Running the Hermes regression tests"
   ${HERMES_SOURCE_DIR}/test

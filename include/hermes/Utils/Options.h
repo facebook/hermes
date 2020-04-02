@@ -1,16 +1,16 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_UTILS_OPTIONS_H
 #define HERMES_UTILS_OPTIONS_H
 
 namespace hermes {
 
 enum OutputFormatKind {
-  None = 0,
   DumpAST,
   DumpTransformedAST,
   ViewCFG,
@@ -20,13 +20,14 @@ enum OutputFormatKind {
   DumpLRA,
   DumpPostRA,
   DumpBytecode,
-  EmitBundle
+  EmitBundle,
+  Execute,
 };
 
 /// Options controlling the type of output to generate.
 struct BytecodeGenerationOptions {
   /// The format of the output.
-  OutputFormatKind format = None;
+  OutputFormatKind format = Execute;
 
   /// Whether optimizations are enabled.
   bool optimizationEnabled = false;
@@ -57,7 +58,7 @@ struct BytecodeGenerationOptions {
       : format(format) {}
 
   static BytecodeGenerationOptions defaults() {
-    return {None};
+    return {Execute};
   }
 };
 

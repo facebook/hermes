@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_JSMAPIMPL_H
 #define HERMES_VM_JSMAPIMPL_H
 
@@ -36,7 +37,7 @@ class JSMapImpl final : public JSObject {
     return cell->getKind() == C;
   }
 
-  static CallResult<HermesValue> create(
+  static PseudoHandle<JSMapImpl<C>> create(
       Runtime *runtime,
       Handle<JSObject> parentHandle);
 
@@ -182,7 +183,7 @@ class JSMapIteratorImpl final : public JSObject {
   }
 
   /// Create a handle of JSMapIterator.
-  static CallResult<HermesValue> create(
+  static PseudoHandle<JSMapIteratorImpl<C>> create(
       Runtime *runtime,
       Handle<JSObject> prototype);
 
@@ -234,7 +235,7 @@ class JSMapIteratorImpl final : public JSObject {
             if (arrRes == ExecutionStatus::EXCEPTION) {
               return ExecutionStatus::EXCEPTION;
             }
-            auto arrHandle = toHandle(runtime, std::move(*arrRes));
+            auto arrHandle = runtime->makeHandle(std::move(*arrRes));
             value = self->itr_.get(runtime)->key;
             JSArray::setElementAt(arrHandle, runtime, 0, value);
             value = self->itr_.get(runtime)->value;

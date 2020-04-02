@@ -1,12 +1,20 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
+#ifdef HERMESVM_API_TRACE
 #include "TracingRuntime.h"
 
+#include <hermes/Platform/Logging.h>
+#include <hermes/Support/Algorithms.h>
+#include <hermes/Support/JSONEmitter.h>
+
+#include <llvm/Support/raw_ostream.h>
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/SHA1.h"
 
 namespace facebook {
 namespace hermes {
@@ -14,15 +22,26 @@ namespace tracing {
 
 TracingRuntime::TracingRuntime(
     std::unique_ptr<jsi::Runtime> runtime,
-    uint64_t globalID)
+    uint64_t globalID,
+    const ::hermes::vm::RuntimeConfig &conf,
+    std::unique_ptr<llvm::raw_ostream> traceStream)
     : RuntimeDecorator<jsi::Runtime>(*runtime),
       runtime_(std::move(runtime)),
-      trace_(globalID) {}
+      trace_(globalID, conf, std::move(traceStream)) {}
 
 jsi::Value TracingRuntime::evaluateJavaScript(
     const std::shared_ptr<const jsi::Buffer> &buffer,
     const std::string &sourceURL) {
-  trace_.emplace_back<SynthTrace::BeginExecJSRecord>(getTimeSinceStart());
+  ::hermes::SHA1 sourceHash{};
+  if (HermesRuntime::isHermesBytecode(buffer->data(), buffer->size())) {
+    sourceHash = ::hermes::hbc::BCProviderFromBuffer::getSourceHashFromBytecode(
+        llvm::makeArrayRef(buffer->data(), buffer->size()));
+  } else {
+    sourceHash =
+        llvm::SHA1::hash(llvm::makeArrayRef(buffer->data(), buffer->size()));
+  }
+  trace_.emplace_back<SynthTrace::BeginExecJSRecord>(
+      getTimeSinceStart(), sourceURL, sourceHash);
   auto res = RD::evaluateJavaScript(buffer, sourceURL);
   trace_.emplace_back<SynthTrace::EndExecJSRecord>(
       getTimeSinceStart(), toTraceValue(res));
@@ -42,12 +61,14 @@ jsi::Object TracingRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
     using jsi::DecoratedHostObject::DecoratedHostObject;
 
     jsi::Value get(jsi::Runtime &rt, const jsi::PropNameID &name) override {
-      TracingRuntime &trt = static_cast<TracingRuntime &>(rt);
-
+      TracingRuntime &trt = tracingRuntime();
       trt.trace_.emplace_back<SynthTrace::GetPropertyNativeRecord>(
           trt.getTimeSinceStart(), objID_, name.utf8(rt));
 
       try {
+        // Note that this ignores the "rt" argument, passing the
+        // DHO's cached decoratedRuntime() to the underlying HostObject's get.
+        // In this case, that will be a TracingRuntime.
         auto ret = DecoratedHostObject::get(rt, name);
 
         trt.trace_.emplace_back<SynthTrace::GetPropertyNativeReturnRecord>(
@@ -66,8 +87,7 @@ jsi::Object TracingRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
         jsi::Runtime &rt,
         const jsi::PropNameID &name,
         const jsi::Value &value) override {
-      TracingRuntime &trt = static_cast<TracingRuntime &>(rt);
-
+      TracingRuntime &trt = tracingRuntime();
       trt.trace_.emplace_back<SynthTrace::SetPropertyNativeRecord>(
           trt.getTimeSinceStart(),
           objID_,
@@ -75,6 +95,9 @@ jsi::Object TracingRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
           trt.toTraceValue(value));
 
       try {
+        // Note that this ignores the "rt" argument, passing the
+        // DHO's cached decoratedRuntime() to the underlying HostObject's set.
+        // In this case, that will be a TracingRuntime.
         DecoratedHostObject::set(rt, name, value);
       } catch (...) {
         // TODO(T28293178): The trace currently has no way to model
@@ -87,19 +110,58 @@ jsi::Object TracingRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
           trt.getTimeSinceStart());
     }
 
-    // TODO(T31386973): getPropertyNames() is not implemented.
+    std::vector<jsi::PropNameID> getPropertyNames(jsi::Runtime &rt) override {
+      TracingRuntime &trt = tracingRuntime();
+      trt.trace_.emplace_back<SynthTrace::GetNativePropertyNamesRecord>(
+          trt.getTimeSinceStart(), objID_);
+      std::vector<jsi::PropNameID> props;
+      try {
+        // Note that this ignores the "rt" argument, passing the
+        // DHO's cached decoratedRuntime() to the underlying HostObject's
+        // getProprtyNames.  In this case, that will be a TracingRuntime.
+        props = DecoratedHostObject::getPropertyNames(rt);
+      } catch (...) {
+        // TODO(T28293178): The trace currently has no way to model
+        // exceptions thrown from C++ code.
+        ::hermes::hermes_fatal(
+            "Exception happened in native code during trace");
+      }
+      std::vector<std::string> names;
+      names.reserve(props.size());
+      for (const jsi::PropNameID &prop : props) {
+        names.emplace_back(prop.utf8(rt));
+      }
+
+      trt.trace_.emplace_back<SynthTrace::GetNativePropertyNamesReturnRecord>(
+          trt.getTimeSinceStart(), names);
+      return props;
+    }
 
     void setObjectID(SynthTrace::ObjectID id) {
       objID_ = id;
     }
 
    private:
+    /// The TracingRuntime used when the TracingHostObject was created.
+    TracingRuntime &tracingRuntime() {
+      // A TracingHostObject is always created with a TracingRuntime,
+      // so this cast is safe.
+      return static_cast<TracingRuntime &>(decoratedRuntime());
+    }
     /// The object id of the host object that this is attached to.
     SynthTrace::ObjectID objID_;
   };
 
+  // These next two lines are very similar to the body of
+  // RD::createObject:
+  // return plain_.createObject(
+  //     std::make_shared<DecoratedHostObject>(*this, std::move(ho)));
+  // but (a) using the TracingHostObject subtype of
+  // DecoratedHostObject, and (b) using createFromHostObject, because
+  // createObject is protected, and is thus inaccessible here.
   auto tracer = std::make_shared<TracingHostObject>(*this, ho);
-  auto obj = RD::createObject(tracer);
+  auto obj = jsi::Object::createFromHostObject(plain(), tracer);
+
   tracer->setObjectID(getUniqueID(obj));
   trace_.emplace_back<SynthTrace::CreateHostObjectRecord>(
       getTimeSinceStart(), getUniqueID(obj));
@@ -265,10 +327,11 @@ jsi::Function TracingRuntime::createFunctionFromHostFunction(
   auto tracer = TracingHostFunction(*this, func);
   auto tfunc =
       RD::createFunctionFromHostFunction(name, paramCount, std::move(tracer));
+  const auto funcID = getUniqueID(tfunc);
   RD::getHostFunction(tfunc).target<TracingHostFunction>()->setFunctionID(
-      getUniqueID(tfunc));
+      funcID);
   trace_.emplace_back<SynthTrace::CreateHostFunctionRecord>(
-      getTimeSinceStart(), getUniqueID(tfunc));
+      getTimeSinceStart(), funcID, name.utf8(*this), paramCount);
   return tfunc;
 }
 
@@ -349,43 +412,74 @@ SynthTrace::TimeSinceStart TracingRuntime::getTimeSinceStart() const {
 
 TracingHermesRuntime::TracingHermesRuntime(
     std::unique_ptr<HermesRuntime> runtime,
-    const ::hermes::vm::RuntimeConfig &runtimeConfig)
+    const ::hermes::vm::RuntimeConfig &runtimeConfig,
+    std::unique_ptr<llvm::raw_ostream> traceStream,
+    const std::string &traceFilename)
     : TracingHermesRuntime(
           runtime,
           runtime->getUniqueID(runtime->global()),
-          runtimeConfig) {}
+          runtimeConfig,
+          std::move(traceStream),
+          traceFilename) {}
+
+TracingHermesRuntime::~TracingHermesRuntime() {
+  if (crashCallbackKey_) {
+    conf_.getCrashMgr()->unregisterCallback(*crashCallbackKey_);
+  }
+  // Make sure the trace is flushed.
+  flushAndDisableTrace();
+}
 
 TracingHermesRuntime::TracingHermesRuntime(
     std::unique_ptr<HermesRuntime> &runtime,
     uint64_t globalID,
-    const ::hermes::vm::RuntimeConfig &runtimeConfig)
-    : TracingRuntime(std::move(runtime), globalID), conf_(runtimeConfig) {}
+    const ::hermes::vm::RuntimeConfig &runtimeConfig,
+    std::unique_ptr<llvm::raw_ostream> traceStream,
+    const std::string &traceFilename)
+    : TracingRuntime(
+          std::move(runtime),
+          globalID,
+          runtimeConfig,
+          std::move(traceStream)),
+      conf_(runtimeConfig),
+      traceFilename_(traceFilename),
+      crashCallbackKey_(
+          conf_.getCrashMgr()
+              ? llvm::Optional<::hermes::vm::CrashManager::CallbackKey>(
+                    conf_.getCrashMgr()->registerCallback(
+                        [this](int fd) { crashCallback(fd); }))
+              : llvm::None) {}
 
-void TracingHermesRuntime::writeTrace(llvm::raw_ostream &os) const {
-  os << SynthTrace::Printable(
-      trace(), hermesRuntime().getMockedEnvironment(), conf_);
+void TracingHermesRuntime::flushAndDisableTrace() {
+  (void)flushAndDisableBridgeTrafficTrace();
 }
 
-void TracingHermesRuntime::writeBridgeTrafficTraceToFile(
-    const std::string &fileName) const {
-  std::error_code ec;
-  llvm::raw_fd_ostream fs{fileName.c_str(), ec, llvm::sys::fs::F_Text};
-  if (ec) {
-    throw std::system_error(ec);
-  }
-
-  writeTrace(fs);
+std::string TracingHermesRuntime::flushAndDisableBridgeTrafficTrace() {
+  trace().flushAndDisable(hermesRuntime().getMockedEnvironment());
+  return traceFilename_;
 }
 
 jsi::Value TracingHermesRuntime::evaluateJavaScript(
     const std::shared_ptr<const jsi::Buffer> &buffer,
     const std::string &sourceURL) {
-  if (HermesRuntime::isHermesBytecode(buffer->data(), buffer->size())) {
-    trace().setSourceHash(
-        ::hermes::hbc::BCProviderFromBuffer::getSourceHashFromBytecode(
-            llvm::makeArrayRef(buffer->data(), buffer->size())));
-  }
   return TracingRuntime::evaluateJavaScript(buffer, sourceURL);
+}
+
+void TracingHermesRuntime::crashCallback(int fd) {
+  llvm::raw_fd_ostream jsonStream(fd, false);
+  ::hermes::JSONEmitter json(jsonStream);
+  json.openDict();
+  json.emitKeyValue("type", "tracing");
+  json.emitKeyValue("fileName", traceFilename_);
+  try {
+    flushAndDisableBridgeTrafficTrace();
+    json.emitKeyValue("completed", true);
+    json.closeDict();
+  } catch (...) {
+    json.emitKeyValue("completed", false);
+    json.closeDict();
+    throw;
+  }
 }
 
 namespace {
@@ -393,17 +487,17 @@ namespace {
 void addRecordMarker(TracingRuntime &tracingRuntime) {
   jsi::Runtime &rt = tracingRuntime.plain();
   const char *funcName = "__nativeRecordTraceMarker";
-  if (rt.global().hasProperty(rt, funcName)) {
+  if (tracingRuntime.global().hasProperty(tracingRuntime, funcName)) {
     // If this function is already defined, throw.
     throw jsi::JSINativeException(
         std::string("global.") + funcName +
         " already exists, won't overwrite it");
   }
   rt.global().setProperty(
-      rt,
+      tracingRuntime,
       funcName,
       jsi::Function::createFromHostFunction(
-          rt,
+          tracingRuntime,
           jsi::PropNameID::forAscii(rt, funcName),
           0,
           [funcName, &tracingRuntime](
@@ -424,13 +518,26 @@ void addRecordMarker(TracingRuntime &tracingRuntime) {
 
 std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
     std::unique_ptr<HermesRuntime> hermesRuntime,
-    const ::hermes::vm::RuntimeConfig &runtimeConfig) {
+    const ::hermes::vm::RuntimeConfig &runtimeConfig,
+    std::unique_ptr<llvm::raw_ostream> traceStream,
+    const std::string &traceFilename,
+    bool forReplay) {
+  ::hermes::hermesLog("Hermes", "Creating TracingHermesRuntime.");
   auto ret = std::make_unique<TracingHermesRuntime>(
-      std::move(hermesRuntime), runtimeConfig);
-  addRecordMarker(*ret);
+      std::move(hermesRuntime),
+      runtimeConfig,
+      std::move(traceStream),
+      traceFilename);
+  // In non-replay executions, add the __nativeRecordTraceMarker function.
+  // In replay executions, this will be simulated from the trace.
+  if (!forReplay) {
+    addRecordMarker(*ret);
+  }
   return ret;
 }
 
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
+
+#endif

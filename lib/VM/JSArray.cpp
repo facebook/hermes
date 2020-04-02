@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/JSArray.h"
 
 #include "hermes/VM/BuildMetadata.h"
@@ -22,6 +23,7 @@ namespace vm {
 // class ArrayImpl
 
 void ArrayImplBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<ArrayImpl>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const ArrayImpl *>(cell);
   // This edge has to be called "elements" in order for Chrome to attribute
@@ -44,13 +46,11 @@ void ArrayImpl::_snapshotAddEdgesImpl(
   const auto len = self->endIndex_ - self->beginIndex_;
   for (uint32_t i = 0; i < len; i++) {
     const auto &elem = indexedStorage->at(i);
-    if (!elem.isPointer()) {
+    const llvm::Optional<HeapSnapshot::NodeID> elemID = gc->getSnapshotID(elem);
+    if (!elemID) {
       continue;
     }
-    if (auto *p = elem.getPointer()) {
-      snap.addIndexedEdge(
-          HeapSnapshot::EdgeType::Element, i, gc->getObjectID(p));
-    }
+    snap.addIndexedEdge(HeapSnapshot::EdgeType::Element, i, elemID.getValue());
   }
 }
 
@@ -61,9 +61,12 @@ ArrayImpl::ArrayImpl(Deserializer &d, const VTable *vt) : JSObject(d, vt) {
   d.readRelocation(&indexedStorage_, RelocationKind::GCPointer);
 }
 
-void serializeArrayImpl(Serializer &s, const GCCell *cell) {
+void serializeArrayImpl(
+    Serializer &s,
+    const GCCell *cell,
+    unsigned overlapSlots) {
   auto *self = vmcast<const ArrayImpl>(cell);
-  JSObject::serializeObjectImpl(s, cell);
+  JSObject::serializeObjectImpl(s, cell, overlapSlots);
   s.writeInt<uint32_t>(self->beginIndex_);
   s.writeInt<uint32_t>(self->endIndex_);
   s.writeRelocation(self->indexedStorage_.get(s.getRuntime()));
@@ -145,7 +148,7 @@ ExecutionStatus ArrayImpl::setStorageEndIndex(
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto newStorage = runtime->makeHandle<StorageType>(*arrRes);
+    auto newStorage = runtime->makeHandle<StorageType>(std::move(*arrRes));
     selfHandle->indexedStorage_.set(
         runtime, newStorage.get(), &runtime->getHeap());
     selfHandle->beginIndex_ = 0;
@@ -155,35 +158,32 @@ ExecutionStatus ArrayImpl::setStorageEndIndex(
 
   auto beginIndex = self->beginIndex_;
 
-  /// resizeWithinCapacity can allocate, wrap the indexedStorage in a handle.
-  auto indexedStorage =
-      createPseudoHandle(selfHandle->indexedStorage_.getNonNull(runtime));
+  {
+    NoAllocScope scope{runtime};
+    auto *const indexedStorage = self->indexedStorage_.getNonNull(runtime);
 
-  if (newLength < beginIndex) {
-    // the new length is prior to beginIndex, clearing the storage.
-    selfHandle->endIndex_ = beginIndex;
-    StorageType::resizeWithinCapacity(std::move(indexedStorage), runtime, 0);
-    return ExecutionStatus::RETURNED;
-  } else if (
-      newLength - beginIndex <=
-      self->indexedStorage_.getNonNull(runtime)->capacity()) {
-    selfHandle->endIndex_ = newLength;
-    StorageType::resizeWithinCapacity(
-        std::move(indexedStorage), runtime, newLength - beginIndex);
-    return ExecutionStatus::RETURNED;
+    if (newLength <= beginIndex) {
+      // the new length is prior to beginIndex, clearing the storage.
+      selfHandle->endIndex_ = beginIndex;
+      // Remove the storage. If this array grows again it can be re-allocated.
+      self->indexedStorage_ = nullptr;
+      return ExecutionStatus::RETURNED;
+    } else if (newLength - beginIndex <= indexedStorage->capacity()) {
+      selfHandle->endIndex_ = newLength;
+      StorageType::resizeWithinCapacity(indexedStorage, newLength - beginIndex);
+      return ExecutionStatus::RETURNED;
+    }
   }
 
-  auto indexedStorageHandle =
-      runtime->makeMutableHandle(selfHandle->indexedStorage_);
+  auto indexedStorage = runtime->makeMutableHandle(selfHandle->indexedStorage_);
 
-  if (StorageType::resize(
-          indexedStorageHandle, runtime, newLength - beginIndex) ==
+  if (StorageType::resize(indexedStorage, runtime, newLength - beginIndex) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   selfHandle->endIndex_ = newLength;
   selfHandle->indexedStorage_.set(
-      runtime, indexedStorageHandle.get(), &runtime->getHeap());
+      runtime, indexedStorage.get(), &runtime->getHeap());
   return ExecutionStatus::RETURNED;
 }
 
@@ -214,7 +214,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto newStorage = runtime->makeHandle<StorageType>(*arrRes);
+    auto newStorage = runtime->makeHandle<StorageType>(std::move(*arrRes));
 
     self = vmcast<ArrayImpl>(selfHandle.get());
 
@@ -225,20 +225,19 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     return true;
   }
 
-  auto indexedStorage =
-      createPseudoHandle(self->indexedStorage_.getNonNull(runtime));
+  {
+    NoAllocScope scope{runtime};
+    auto *const indexedStorage = self->indexedStorage_.getNonNull(runtime);
 
-  // Can we do it without reallocation for sure?
-  if (index >= endIndex && index - beginIndex < indexedStorage->capacity()) {
-    self->endIndex_ = index + 1;
-    StorageType::resizeWithinCapacity(
-        std::move(indexedStorage), runtime, index - beginIndex + 1);
-    // Go from selfHandle because the indexedStorage may have changed.
-    self = vmcast<ArrayImpl>(selfHandle.get());
-    self->indexedStorage_.getNonNull(runtime)
-        ->at(index - beginIndex)
-        .set(value.get(), &runtime->getHeap());
-    return true;
+    // Can we do it without reallocation for sure?
+    if (index >= endIndex && index - beginIndex < indexedStorage->capacity()) {
+      self->endIndex_ = index + 1;
+      StorageType::resizeWithinCapacity(indexedStorage, index - beginIndex + 1);
+      // self shouldn't have moved since there haven't been any allocations.
+      indexedStorage->at(index - beginIndex)
+          .set(value.get(), &runtime->getHeap());
+      return true;
+    }
   }
 
   auto indexedStorageHandle = runtime->makeMutableHandle(self->indexedStorage_);
@@ -357,15 +356,17 @@ bool ArrayImpl::_checkAllOwnIndexedImpl(
 ObjectVTable Arguments::vt{
     VTable(
         CellKind::ArgumentsKind,
-        sizeof(Arguments),
+        cellSize<Arguments>(),
         nullptr,
         nullptr,
         nullptr,
         nullptr,
         nullptr,
+        nullptr, // externalMemorySize
         VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
                                      nullptr,
                                      Arguments::_snapshotAddEdgesImpl,
+                                     nullptr,
                                      nullptr}),
     Arguments::_getOwnIndexedRangeImpl,
     Arguments::_haveOwnIndexedImpl,
@@ -377,6 +378,7 @@ ObjectVTable Arguments::vt{
 };
 
 void ArgumentsBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<Arguments>());
   ArrayImplBuildMeta(cell, mb);
 }
 
@@ -384,40 +386,37 @@ void ArgumentsBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 Arguments::Arguments(Deserializer &d) : ArrayImpl(d, &vt.base) {}
 
 void ArgumentsSerialize(Serializer &s, const GCCell *cell) {
-  serializeArrayImpl(s, cell);
+  serializeArrayImpl(s, cell, JSObject::numOverlapSlots<Arguments>());
   s.endObject(cell);
 }
 
 void ArgumentsDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::ArgumentsKind && "Expected Arguments");
-  void *mem = d.getRuntime()->alloc(sizeof(Arguments));
+  void *mem = d.getRuntime()->alloc(cellSize<Arguments>());
   auto *cell = new (mem) Arguments(d);
   d.endObject(cell);
 }
 #endif
 
-CallResult<HermesValue> Arguments::create(
+CallResult<Handle<Arguments>> Arguments::create(
     Runtime *runtime,
     size_type length,
     Handle<Callable> curFunction,
     bool strictMode) {
-  CallResult<HermesValue> arrRes{ExecutionStatus::EXCEPTION};
-  if (LLVM_UNLIKELY(
-          (arrRes = StorageType::create(runtime, length)) ==
-          ExecutionStatus::EXCEPTION)) {
+  auto arrRes = StorageType::create(runtime, length);
+  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto indexedStorage = runtime->makeHandle<StorageType>(*arrRes);
+  auto indexedStorage = runtime->makeHandle<StorageType>(std::move(*arrRes));
 
-  void *mem = runtime->alloc(sizeof(Arguments));
-  auto selfHandle = runtime->makeHandle(
-      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
-          new (mem) Arguments(
-              runtime,
-              runtime->objectPrototypeRawPtr,
-              runtime->getHiddenClassForPrototypeRaw(
-                  runtime->objectPrototypeRawPtr),
-              *indexedStorage)));
+  JSObjectAlloc<Arguments> mem{runtime};
+  auto selfHandle = mem.initToHandle(new (mem) Arguments(
+      runtime,
+      runtime->objectPrototypeRawPtr,
+      runtime->getHiddenClassForPrototypeRaw(
+          runtime->objectPrototypeRawPtr,
+          numOverlapSlots<Arguments>() + ANONYMOUS_PROPERTY_SLOTS),
+      *indexedStorage));
 
   Arguments::setStorageEndIndex(selfHandle, runtime, length);
 
@@ -478,7 +477,7 @@ CallResult<HermesValue> Arguments::create(
     DEFINE_PROP(selfHandle, P::callee, curFunction);
   }
 
-  return selfHandle.getHermesValue();
+  return selfHandle;
 
 #undef DEFINE_PROP
 }
@@ -489,15 +488,17 @@ CallResult<HermesValue> Arguments::create(
 ObjectVTable JSArray::vt{
     VTable(
         CellKind::ArrayKind,
-        sizeof(JSArray),
+        cellSize<JSArray>(),
         nullptr,
         nullptr,
         nullptr,
         nullptr,
         nullptr,
+        nullptr, // externalMemorySize
         VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
                                      nullptr,
                                      JSArray::_snapshotAddEdgesImpl,
+                                     nullptr,
                                      nullptr}),
     JSArray::_getOwnIndexedRangeImpl,
     JSArray::_haveOwnIndexedImpl,
@@ -509,6 +510,7 @@ ObjectVTable JSArray::vt{
 };
 
 void ArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSArray>());
   ArrayImplBuildMeta(cell, mb);
 }
 
@@ -519,14 +521,14 @@ JSArray::JSArray(Deserializer &d, const VTable *vt) : ArrayImpl(d, vt) {
 
 void ArraySerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const JSArray>(cell);
-  serializeArrayImpl(s, cell);
+  serializeArrayImpl(s, cell, JSObject::numOverlapSlots<JSArray>());
   s.writeInt<uint32_t>(self->shadowLength_);
   s.endObject(cell);
 }
 
 void ArrayDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::ArrayKind && "Expected Array");
-  void *mem = d.getRuntime()->alloc(sizeof(JSArray));
+  void *mem = d.getRuntime()->alloc(cellSize<JSArray>());
   auto *cell = new (mem) JSArray(d, &JSArray::vt.base);
   d.endObject(cell);
 }
@@ -535,8 +537,11 @@ void ArrayDeserialize(Deserializer &d, CellKind kind) {
 Handle<HiddenClass> JSArray::createClass(
     Runtime *runtime,
     Handle<JSObject> prototypeHandle) {
-  Handle<HiddenClass> classHandle =
-      runtime->getHiddenClassForPrototype(prototypeHandle);
+  Handle<HiddenClass> classHandle{
+      runtime,
+      runtime->getHiddenClassForPrototypeRaw(
+          *prototypeHandle,
+          numOverlapSlots<JSArray>() + ANONYMOUS_PROPERTY_SLOTS)};
 
   PropertyFlags pf{};
   pf.enumerable = 0;
@@ -550,17 +555,17 @@ Handle<HiddenClass> JSArray::createClass(
       added != ExecutionStatus::EXCEPTION &&
       "Adding the first properties shouldn't cause overflow");
   assert(
-      added->second == LengthPropIndex && "JSArray.length has invalid index");
+      added->second == lengthPropIndex() && "JSArray.length has invalid index");
   classHandle = added->first;
 
   assert(
-      classHandle->getNumProperties() == JSArrayPropertyCount &&
+      classHandle->getNumProperties() == jsArrayPropertyCount() &&
       "JSArray class defined with incorrect number of properties");
 
   return classHandle;
 }
 
-CallResult<HermesValue> JSArray::create(
+CallResult<PseudoHandle<JSArray>> JSArray::create(
     Runtime *runtime,
     Handle<JSObject> prototypeHandle,
     Handle<HiddenClass> classHandle,
@@ -571,7 +576,7 @@ CallResult<HermesValue> JSArray::create(
   // Allocate property storage with size corresponding to number of properties
   // in the hidden class.
   assert(
-      classHandle->getNumProperties() == JSArrayPropertyCount &&
+      classHandle->getNumProperties() == jsArrayPropertyCount() &&
       "invalid number of properties in JSArray hidden class");
 
   // Only allocate the storage if capacity is not zero.
@@ -583,34 +588,29 @@ CallResult<HermesValue> JSArray::create(
     if (arrRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    indexedStorage = vmcast<StorageType>(*arrRes);
+    indexedStorage = std::move(*arrRes);
   }
 
-  void *mem = runtime->alloc(sizeof(JSArray));
-  JSArray *self = JSObject::allocateSmallPropStorage<JSArrayPropertyCount>(
-      new (mem) JSArray(
-          runtime,
-          *prototypeHandle,
-          *classHandle,
-          *indexedStorage,
-          GCPointerBase::NoBarriers()));
+  JSObjectAlloc<JSArray> mem{runtime};
+  auto self = mem.initToPseudoHandle(new (mem) JSArray(
+      runtime,
+      *prototypeHandle,
+      *classHandle,
+      *indexedStorage,
+      GCPointerBase::NoBarriers()));
+  putLength(self.get(), runtime, length);
 
-  putLength(self, runtime, length);
-
-  return HermesValue::encodeObjectValue(self);
+  return self;
 }
 
 CallResult<PseudoHandle<JSArray>>
 JSArray::create(Runtime *runtime, size_type capacity, size_type length) {
-  auto res = JSArray::create(
+  return JSArray::create(
       runtime,
       Handle<JSObject>::vmcast(&runtime->arrayPrototype),
       Handle<HiddenClass>::vmcast(&runtime->arrayClass),
       capacity,
       length);
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
-    return ExecutionStatus::EXCEPTION;
-  return PseudoHandle<JSArray>::create(vmcast<JSArray>(*res));
 }
 
 CallResult<bool> JSArray::setLength(
@@ -757,7 +757,7 @@ CallResult<bool> JSArray::setLength(
 // class JSArrayIterator
 
 ObjectVTable JSArrayIterator::vt{
-    VTable(CellKind::ArrayIteratorKind, sizeof(JSArrayIterator)),
+    VTable(CellKind::ArrayIteratorKind, cellSize<JSArrayIterator>()),
     JSArrayIterator::_getOwnIndexedRangeImpl,
     JSArrayIterator::_haveOwnIndexedImpl,
     JSArrayIterator::_getOwnIndexedPropertyFlagsImpl,
@@ -768,6 +768,7 @@ ObjectVTable JSArrayIterator::vt{
 };
 
 void ArrayIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSArrayIterator>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSArrayIterator *>(cell);
   mb.addField("iteratedObject", &self->iteratedObject_);
@@ -782,7 +783,8 @@ JSArrayIterator::JSArrayIterator(Deserializer &d) : JSObject(d, &vt.base) {
 
 void ArrayIteratorSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const JSArrayIterator>(cell);
-  JSObject::serializeObjectImpl(s, cell);
+  JSObject::serializeObjectImpl(
+      s, cell, JSObject::numOverlapSlots<JSArrayIterator>());
   s.writeRelocation(self->iteratedObject_.get(s.getRuntime()));
   s.writeInt<uint64_t>(self->nextIndex_);
   s.writeInt<uint8_t>((uint8_t)self->iterationKind_);
@@ -791,27 +793,27 @@ void ArrayIteratorSerialize(Serializer &s, const GCCell *cell) {
 
 void ArrayIteratorDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::ArrayIteratorKind && "Expected ArrayIterator");
-  void *mem = d.getRuntime()->alloc(sizeof(JSArrayIterator));
+  void *mem = d.getRuntime()->alloc(cellSize<JSArrayIterator>());
   auto *cell = new (mem) JSArrayIterator(d);
   d.endObject(cell);
 }
 #endif
 
-CallResult<HermesValue> JSArrayIterator::create(
+PseudoHandle<JSArrayIterator> JSArrayIterator::create(
     Runtime *runtime,
     Handle<JSObject> array,
     IterationKind iterationKind) {
   auto proto = Handle<JSObject>::vmcast(&runtime->arrayIteratorPrototype);
 
-  void *mem = runtime->alloc(sizeof(JSArrayIterator));
-  auto *self = JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
-      new (mem) JSArrayIterator(
-          runtime,
+  JSObjectAlloc<JSArrayIterator> mem{runtime};
+  return mem.initToPseudoHandle(new (mem) JSArrayIterator(
+      runtime,
+      *proto,
+      runtime->getHiddenClassForPrototypeRaw(
           *proto,
-          runtime->getHiddenClassForPrototypeRaw(*proto),
-          *array,
-          iterationKind));
-  return HermesValue::encodeObjectValue(self);
+          numOverlapSlots<JSArrayIterator>() + ANONYMOUS_PROPERTY_SLOTS),
+      *array,
+      iterationKind));
 }
 
 /// Iterate to the next element and return.
@@ -898,7 +900,7 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
       if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      Handle<JSArray> result = toHandle(runtime, std::move(*resultRes));
+      Handle<JSArray> result = runtime->makeHandle(std::move(*resultRes));
       JSArray::setElementAt(result, runtime, 0, indexHandle);
       JSArray::setElementAt(result, runtime, 1, valueHandle);
       // 18. Return CreateIterResultObject(result, false).

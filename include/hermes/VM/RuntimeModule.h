@@ -1,16 +1,19 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_RUNTIMEMODULE_H
 #define HERMES_VM_RUNTIMEMODULE_H
 
 #include "hermes/BCGen/HBC/BytecodeDataProvider.h"
+#include "hermes/Public/DebuggerTypes.h"
 #include "hermes/Support/HashString.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/IdentifierTable.h"
+
 #include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/WeakRef.h"
 
@@ -103,6 +106,11 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// The sourceURL set explicitly for the module, or empty if none.
   std::string sourceURL_{};
 
+  /// The scriptID assigned to this RuntimeModule.
+  /// If this RuntimeModule is lazy, its scriptID matches its lazy root's
+  /// scriptID.
+  facebook::hermes::debugger::ScriptID scriptID_;
+
   /// A map from NewObjectWithBuffer's <keyBufferIndex, numLiterals> tuple to
   /// its shared hidden class.
   /// During hashing, keyBufferIndex takes the top 24bits while numLiterals
@@ -113,14 +121,17 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// A map from template object ids to template objects.
   llvm::DenseMap<uint32_t, JSObject *> templateMap_;
 
-  /// Registers the created RuntimeModule with \param domain, resulting in
-  /// \param domain owning it. The RuntimeModule will be freed when the
+  /// Registers the created RuntimeModule with \p domain, resulting in
+  /// \p domain owning it. The RuntimeModule will be freed when the
   /// domain is collected..
   explicit RuntimeModule(
       Runtime *runtime,
       Handle<Domain> domain,
       RuntimeModuleFlags flags,
-      llvm::StringRef sourceURL);
+      llvm::StringRef sourceURL,
+      facebook::hermes::debugger::ScriptID scriptID);
+
+  CodeBlock *getCodeBlockSlowPath(unsigned index);
 
 #ifdef HERMESVM_SERIALIZE
   /// Constructor used when deserializing.
@@ -133,7 +144,11 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   explicit RuntimeModule(Runtime *runtime, WeakRefSlot *domainRef);
 #endif
 
-  CodeBlock *getCodeBlockSlowPath(unsigned index);
+#ifndef HERMESVM_LEAN
+  /// For a lazy module, this is the RuntimeModule that ultimately spawned it
+  // (the global function of the loaded file).
+  RuntimeModule *lazyRoot_;
+#endif
 
  public:
   ~RuntimeModule();
@@ -147,6 +162,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   static CallResult<RuntimeModule *> create(
       Runtime *runtime,
       Handle<Domain> domain,
+      facebook::hermes::debugger::ScriptID scriptID,
       std::shared_ptr<hbc::BCProvider> &&bytecode = nullptr,
       RuntimeModuleFlags flags = {},
       llvm::StringRef sourceURL = {});
@@ -158,8 +174,10 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   static RuntimeModule *createUninitialized(
       Runtime *runtime,
       Handle<Domain> domain,
-      RuntimeModuleFlags flags = {}) {
-    return new RuntimeModule(runtime, domain, flags, "");
+      RuntimeModuleFlags flags = {},
+      facebook::hermes::debugger::ScriptID scriptID =
+          facebook::hermes::debugger::kInvalidLocation) {
+    return new RuntimeModule(runtime, domain, flags, "", scriptID);
   }
 
 #ifndef HERMESVM_LEAN
@@ -182,16 +200,23 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// Get the name symbol ID associated with the getOnlyLazyCodeBlock().
   SymbolID getLazyName();
 
-  /// If the name associated with the getOnlyLazyCodeBlock() is an
-  /// ASCII string, sets res to that string, and returns true.
-  /// Otherwise returns false.  Does no JS heap allocation.
-  bool getLazyNameString(Runtime *runtime, std::string &res) const;
-
   /// Initialize lazy modules created with \p createUninitialized.
   /// Calls `initialize` and does a bit of extra work.
   /// \param bytecode the bytecode data to initialize it with.
   void initializeLazyMayAllocate(std::unique_ptr<hbc::BCProvider> bytecode);
 #endif
+
+  /// If this function was lazily compiled, return the RuntimeModule with the
+  /// file's global function (i.e. the first RM created when we started
+  /// interpreting and lazily compiling the source code). For other RMs,
+  /// e.g. those loaded from precompiled bytecode, this is just itself.
+  RuntimeModule *getLazyRootModule() {
+#ifdef HERMESVM_LEAN
+    return this;
+#else
+    return lazyRoot_;
+#endif
+  }
 
   /// Initialize modules created with \p createUninitialized,
   /// but do not import the CJS module table, allowing us to always succeed.
@@ -239,10 +264,9 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// \return the StringPrimitive for a string by string index.
   StringPrimitive *getStringPrimFromStringIDMayAllocate(StringID stringID);
 
-  /// If the given \p stringID represents an ASCII string, return true
-  /// ands set res to that string.  Otherwise, return false.  Does no
-  /// JS heap allocation.
-  bool getStringFromStringID(StringID stringID, std::string &res);
+  /// \return the UTF-8 encoded string represented by stringID.
+  /// Does no JS heap allocation.
+  std::string getStringFromStringID(StringID stringID);
 
   /// \return the RegExp bytecode for a given regexp ID.
   llvm::ArrayRef<uint8_t> getRegExpBytecodeFromRegExpID(
@@ -296,6 +320,11 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// \return a raw pointer to the domain which owns this RuntimeModule.
   inline Domain *getDomainUnsafe();
 
+  /// \return the Runtime of this module.
+  Runtime *getRuntime() {
+    return runtime_;
+  }
+
   /// \return a constant reference to the function map.
   const std::vector<CodeBlock *> &getFunctionMap() {
     return functionMap_;
@@ -315,6 +344,10 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// \return any trailing data after the real bytecode.
   llvm::ArrayRef<uint8_t> getEpilogue() const {
     return bcProvider_->getEpilogue();
+  }
+
+  facebook::hermes::debugger::ScriptID getScriptID() const {
+    return scriptID_;
   }
 
   /// Mark the non-weak roots owned by this RuntimeModule.
@@ -401,11 +434,6 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   SymbolID
   mapStringMayAllocate(llvm::ArrayRef<T> str, StringID stringID, uint32_t hash);
 
-  /// Map the string at id \p stringID in the bytecode to \p rawSymbolID -- the
-  /// ID for a predefined string.  If the symbol ID does not correspond to a
-  /// predefined string, an assertion will be triggered (if they are enabled).
-  SymbolID mapPredefined(StringID stringID, uint32_t rawSymbolID);
-
   /// Create a symbol from a given \p stringID, which is an index to the
   /// string table, corresponding to the entry \p entry. If \p mhash is not
   /// None, use it as the hash; otherwise compute the hash from the string
@@ -431,8 +459,6 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
 
   /// \return whether tuple <keyBufferIndex, numLiterals> can generate a
   /// hidden class literal cache hash key or not.
-  /// \param keyBufferIndex value of NewObjectWithBuffer instruction; it must
-  /// be less than 2^24 to be used as a cache key.
   /// \param keyBufferIndex value of NewObjectWithBuffer instruction. it must
   /// be less than 256 to be used as a cache key.
   static bool canGenerateLiteralHiddenClassCacheKey(

@@ -1,15 +1,17 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_OPERATIONS_H
 #define HERMES_VM_OPERATIONS_H
 
 #include "hermes/VM/CallResult.h"
 #include "hermes/VM/InternalProperty.h"
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/SymbolID.h"
 
 #include "llvm/ADT/SmallVector.h"
@@ -17,6 +19,7 @@
 namespace hermes {
 namespace vm {
 
+union DefinePropertyFlags;
 class Runtime;
 
 /// ES6.0 7.1.1
@@ -84,6 +87,32 @@ CallResult<PseudoHandle<StringPrimitive>> toString_RJS(
     Runtime *runtime,
     Handle<> valueHandle);
 
+/// ES9 7.2.7
+inline bool isPropertyKey(Handle<> valueHandle) {
+  return valueHandle->isString() || valueHandle->isSymbol();
+}
+
+/// ES9 7.1.14
+inline CallResult<Handle<>> toPropertyKey(
+    Runtime *runtime,
+    Handle<> valueHandle) {
+  CallResult<HermesValue> primRes =
+      toPrimitive_RJS(runtime, valueHandle, PreferredType::STRING);
+  if (LLVM_UNLIKELY(primRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  Handle<> prim = runtime->makeHandle(*primRes);
+  if (prim->isSymbol()) {
+    return prim;
+  }
+  CallResult<PseudoHandle<StringPrimitive>> strRes =
+      toString_RJS(runtime, prim);
+  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return Handle<>::vmcast(runtime->makeHandle(std::move(*strRes)));
+}
+
 /// This function is used to convert a property to property key if it's an
 /// object. Check if \p nameValHandle is an object, if so, convert it to a
 /// key which may have side-effects. Otherwise just return the original
@@ -94,19 +123,7 @@ inline CallResult<Handle<>> toPropertyKeyIfObject(
     Runtime *runtime,
     Handle<> valueHandle) {
   if (LLVM_UNLIKELY(valueHandle->isObject())) {
-    auto primRes = toPrimitive_RJS(runtime, valueHandle, PreferredType::STRING);
-    if (LLVM_UNLIKELY(primRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    auto prim = runtime->makeHandle(*primRes);
-    if (prim->isSymbol()) {
-      return prim;
-    }
-    auto res = toString_RJS(runtime, prim);
-    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    return Handle<>::vmcast(toHandle(runtime, std::move(*res)));
+    return toPropertyKey(runtime, valueHandle);
   }
   return valueHandle;
 }
@@ -325,7 +342,14 @@ CallResult<Handle<Callable>> speciesConstructor(
     Handle<Callable> defaultConstructor);
 
 /// ES7 7.2.4
-bool isConstructor(Runtime *runtime, HermesValue x);
+/// Returns true if the \c value is a constructor.  The value can be
+/// Anything.
+bool isConstructor(Runtime *runtime, HermesValue value);
+
+/// ES7 7.2.4
+/// Returns true if \c callable is a constructor.  Passing \c nullptr
+/// is allowed, and returns false.
+bool isConstructor(Runtime *runtime, Callable *callable);
 
 /// ES6.0 7.2.8
 /// Returns true if the object is a JSRegExp or has a Symbol.match property that
@@ -384,6 +408,9 @@ CallResult<Handle<StringPrimitive>> symbolDescriptiveString(
     Runtime *runtime,
     Handle<SymbolID> sym);
 
+/// ES9 7.2.2
+CallResult<bool> isArray(Runtime *runtime, JSObject *obj);
+
 /// ES6.0 22.1.3.1.1
 CallResult<bool> isConcatSpreadable(Runtime *runtime, Handle<> value);
 
@@ -398,6 +425,20 @@ constexpr bool isSymbolPrimitive(SymbolID id) {
 constexpr bool isPropertyNamePrimitive(SymbolID id) {
   return id.isUniqued();
 }
+
+/// ES5.1 8.10.5. toPropertyDescriptor(O). The result is written into
+/// \p flags and \p valueOrAccessor together to represent a descriptor.
+ExecutionStatus toPropertyDescriptor(
+    Handle<> obj,
+    Runtime *runtime,
+    DefinePropertyFlags &flags,
+    MutableHandle<> &valueOrAccessor);
+
+/// ES9 6.2.5.4 FromPropertyDescriptor
+CallResult<HermesValue> objectFromPropertyDescriptor(
+    Runtime *runtime,
+    ComputedPropertyDescriptor desc,
+    Handle<> valueOrAccessor);
 
 } // namespace vm
 } // namespace hermes

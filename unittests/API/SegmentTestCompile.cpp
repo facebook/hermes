@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "SegmentTestCompile.h"
 
 #include "hermes/AST/CommonJS.h"
@@ -59,19 +60,21 @@ std::pair<std::string, std::string> genSplitCode(
   generateIRFromESTree(globalAST, &M, declFileList, {});
   auto *topLevelFunction = M.getTopLevelFunction();
 
-  auto genModule = [&](std::unique_ptr<llvm::MemoryBuffer> fileBuf) {
+  auto genModule = [&](uint32_t id,
+                       std::unique_ptr<llvm::MemoryBuffer> fileBuf) {
     llvm::StringRef filename = fileBuf->getBufferIdentifier();
     auto *ast = parseJS(std::move(fileBuf), true);
     generateIRForCJSModule(
         cast<hermes::ESTree::FunctionExpressionNode>(ast),
+        id,
         filename,
         &M,
         topLevelFunction,
         declFileList);
   };
 
-  genModule(llvm::MemoryBuffer::getMemBufferCopy(mainCode, "main.js"));
-  genModule(llvm::MemoryBuffer::getMemBufferCopy(segmentCode, "foo.js"));
+  genModule(0, llvm::MemoryBuffer::getMemBufferCopy(mainCode, "main.js"));
+  genModule(1, llvm::MemoryBuffer::getMemBufferCopy(segmentCode, "foo.js"));
 
   hermes::BytecodeGenerationOptions genOpts{hermes::EmitBundle};
   hermes::SHA1 sourceHash;

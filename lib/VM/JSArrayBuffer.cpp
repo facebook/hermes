@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/JSArrayBuffer.h"
 
 #include "hermes/VM/BuildMetadata.h"
@@ -20,16 +21,18 @@ namespace vm {
 ObjectVTable JSArrayBuffer::vt{
     VTable(
         CellKind::ArrayBufferKind,
-        sizeof(JSArrayBuffer),
+        cellSize<JSArrayBuffer>(),
         _finalizeImpl,
         nullptr,
         _mallocSizeImpl,
         nullptr,
         nullptr,
+        _externalMemorySizeImpl, // externalMemorySize
         VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
                                      nullptr,
                                      _snapshotAddEdgesImpl,
-                                     _snapshotAddNodesImpl}),
+                                     _snapshotAddNodesImpl,
+                                     nullptr}),
     _getOwnIndexedRangeImpl,
     _haveOwnIndexedImpl,
     _getOwnIndexedPropertyFlagsImpl,
@@ -40,6 +43,7 @@ ObjectVTable JSArrayBuffer::vt{
 };
 
 void ArrayBufferBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSArrayBuffer>());
   ObjectBuildMeta(cell, mb);
 }
 
@@ -68,7 +72,8 @@ JSArrayBuffer::JSArrayBuffer(Deserializer &d)
 
 void ArrayBufferSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const JSArrayBuffer>(cell);
-  JSObject::serializeObjectImpl(s, cell);
+  JSObject::serializeObjectImpl(
+      s, cell, JSObject::numOverlapSlots<JSArrayBuffer>());
   s.writeInt<JSArrayBuffer::size_type>(self->size_);
   s.writeInt<uint8_t>((uint8_t)self->attached_);
   // Only serialize data_ when attached_.
@@ -84,23 +89,22 @@ void ArrayBufferSerialize(Serializer &s, const GCCell *cell) {
 
 void ArrayBufferDeserialize(Deserializer &d, CellKind kind) {
   void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      sizeof(JSArrayBuffer));
+      cellSize<JSArrayBuffer>());
   auto *cell = new (mem) JSArrayBuffer(d);
   d.endObject(cell);
 }
 #endif
 
-CallResult<HermesValue> JSArrayBuffer::create(
+PseudoHandle<JSArrayBuffer> JSArrayBuffer::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      sizeof(JSArrayBuffer));
-  auto *self = new (mem) JSArrayBuffer(
+  JSObjectAlloc<JSArrayBuffer, HasFinalizer::Yes> mem{runtime};
+  return mem.initToPseudoHandle(new (mem) JSArrayBuffer(
       runtime,
       *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(*parentHandle));
-  return HermesValue::encodeObjectValue(
-      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(self));
+      runtime->getHiddenClassForPrototypeRaw(
+          *parentHandle,
+          numOverlapSlots<JSArrayBuffer>() + ANONYMOUS_PROPERTY_SLOTS)));
 }
 
 CallResult<Handle<JSArrayBuffer>> JSArrayBuffer::clone(
@@ -112,12 +116,8 @@ CallResult<Handle<JSArrayBuffer>> JSArrayBuffer::clone(
     return runtime->raiseTypeError("Cannot clone from a detached buffer");
   }
 
-  auto arrRes = JSArrayBuffer::create(
-      runtime, Handle<JSObject>::vmcast(&runtime->arrayBufferPrototype));
-  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto arr = runtime->makeHandle<JSArrayBuffer>(*arrRes);
+  auto arr = runtime->makeHandle(JSArrayBuffer::create(
+      runtime, Handle<JSObject>::vmcast(&runtime->arrayBufferPrototype)));
 
   // Don't need to zero out the data since we'll be copying into it immediately.
   if (arr->createDataBlock(runtime, srcSize, false) ==
@@ -179,7 +179,13 @@ void JSArrayBuffer::_finalizeImpl(GCCell *cell, GC *gc) {
 }
 
 size_t JSArrayBuffer::_mallocSizeImpl(GCCell *cell) {
-  const auto *buffer = static_cast<JSArrayBuffer *>(cell);
+  const auto *buffer = vmcast<JSArrayBuffer>(cell);
+  return buffer->size_;
+}
+
+gcheapsize_t JSArrayBuffer::_externalMemorySizeImpl(
+    hermes::vm::GCCell const *cell) {
+  const auto *buffer = vmcast<JSArrayBuffer>(cell);
   return buffer->size_;
 }
 
@@ -210,11 +216,17 @@ void JSArrayBuffer::_snapshotAddNodesImpl(
   }
   // Add the native node before the JSArrayBuffer node.
   snap.beginNode();
+  auto &allocationLocationTracker = gc->getAllocationLocationTracker();
   snap.endNode(
       HeapSnapshot::NodeType::Native,
       "JSArrayBufferData",
       gc->getNativeID(self->data_),
-      self->size_);
+      self->size_,
+      allocationLocationTracker.isEnabled()
+          ? allocationLocationTracker
+                .getStackTracesTreeNodeForAlloc(self->data_)
+                ->id
+          : 0);
 }
 
 void JSArrayBuffer::detach(GC *gc) {
@@ -242,7 +254,9 @@ JSArrayBuffer::createDataBlock(Runtime *runtime, size_type size, bool zero) {
   }
   // If an external allocation of this size would exceed the GC heap size,
   // raise RangeError.
-  if (LLVM_UNLIKELY(!runtime->getHeap().canAllocExternalMemory(size))) {
+  if (LLVM_UNLIKELY(
+          size > std::numeric_limits<uint32_t>::max() ||
+          !runtime->getHeap().canAllocExternalMemory(size))) {
     return runtime->raiseRangeError(
         "Cannot allocate a data block for the ArrayBuffer");
   }

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "TestHelpers.h"
 
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
@@ -79,7 +80,7 @@ print(void *, Runtime *runtime, NativeArgs args) {
       llvm::outs() << " ";
     SmallU16String<32> tmp;
     llvm::outs() << StringPrimitive::createStringView(
-                        runtime, toHandle(runtime, std::move(*res)))
+                        runtime, runtime->makeHandle(std::move(*res)))
                         .getUTF16Ref(tmp);
     first = false;
   }
@@ -101,7 +102,7 @@ class InterpreterFunctionTest : public RuntimeTestFixture {
 
   InterpreterFunctionTest()
       : RuntimeTestFixture(),
-        domain(toHandle(runtime, Domain::create(runtime))),
+        domain(runtime->makeHandle(Domain::create(runtime))),
         runtimeModule(RuntimeModule::createUninitialized(runtime, domain)) {
     BFG = BytecodeFunctionGenerator::create(BMG, 1);
   }
@@ -116,6 +117,7 @@ class InterpreterFunctionTest : public RuntimeTestFixture {
         HermesValue::encodeNativePointer(codeBlock),
         HermesValue::encodeUndefinedValue(),
         HermesValue::encodeUndefinedValue());
+    assert(!frame.overflowed());
     result = runtime->interpretFunction(codeBlock);
 
     hasRun = true;
@@ -186,7 +188,11 @@ TEST_F(InterpreterTest, SimpleSmokeTest) {
 
   auto printFn = runtime->makeHandle<NativeFunction>(
       *NativeFunction::createWithoutPrototype(
-          runtime, nullptr, print, SymbolID{}, 0));
+          runtime,
+          nullptr,
+          print,
+          Predefined::getSymbolID(Predefined::emptyString),
+          0));
 
   // Define the 'print' function.
   (void)JSObject::putNamed_RJS(
@@ -199,6 +205,7 @@ TEST_F(InterpreterTest, SimpleSmokeTest) {
   {
     ScopedNativeCallFrame frame(
         runtime, 0, nullptr, false, HermesValue::encodeUndefinedValue());
+    ASSERT_FALSE(frame.overflowed());
     status = runtime->interpretFunction(codeBlock);
   }
 
@@ -260,6 +267,7 @@ L2:
   {
     ScopedNativeCallFrame newFrame(
         runtime, 1, nullptr, false, HermesValue::encodeUndefinedValue());
+    ASSERT_FALSE(newFrame.overflowed());
     newFrame->getArgRef(0) = HermesValue::encodeDoubleValue(5);
     status = runtime->interpretFunction(codeBlock);
   }
@@ -330,7 +338,7 @@ L1:
   BFG->bytecodeGenerationComplete();
   auto codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
 
-  auto factFn = runtime->makeHandle<JSFunction>(*JSFunction::create(
+  Handle<JSFunction> factFn = runtime->makeHandle(JSFunction::create(
       runtime,
       runtimeModule->getDomain(runtime),
       Handle<JSObject>(runtime),
@@ -349,6 +357,7 @@ L1:
     {
       ScopedNativeCallFrame newFrame(
           runtime, 1, nullptr, false, HermesValue::encodeUndefinedValue());
+      ASSERT_FALSE(newFrame.overflowed());
       newFrame->getArgRef(0) = HermesValue::encodeDoubleValue(2);
       status = runtime->interpretFunction(codeBlock);
     }
@@ -366,6 +375,7 @@ L1:
     {
       ScopedNativeCallFrame newFrame(
           runtime, 1, nullptr, false, HermesValue::encodeUndefinedValue());
+      ASSERT_FALSE(newFrame.overflowed());
       newFrame->getArgRef(0) = HermesValue::encodeDoubleValue(5);
       status = runtime->interpretFunction(codeBlock);
     }
@@ -411,7 +421,8 @@ TEST_F(InterpreterFunctionTest, TestToString) {
   ASSERT_EQ(createUTF16Ref(u"false"), tmp.arrayRef());
 }
 
-#if defined(NDEBUG) && !defined(HERMES_UBSAN)
+#if defined(NDEBUG) && !defined(HERMES_UBSAN) && \
+    !LLVM_THREAD_SANITIZER_BUILD && !LLVM_ADDRESS_SANITIZER_BUILD
 // Returns the native stack pointer of the callee frame.
 static CallResult<HermesValue>
 getSP(void *, Runtime *runtime, NativeArgs args) {
@@ -455,7 +466,11 @@ TEST_F(InterpreterTest, FrameSizeTest) {
 
   auto getSPFn = runtime->makeHandle<NativeFunction>(
       *NativeFunction::createWithoutPrototype(
-          runtime, nullptr, getSP, SymbolID{}, 0));
+          runtime,
+          nullptr,
+          getSP,
+          Predefined::getSymbolID(Predefined::emptyString),
+          0));
 
   // Define the 'getSP' function.
   (void)JSObject::putNamed_RJS(
@@ -466,6 +481,7 @@ TEST_F(InterpreterTest, FrameSizeTest) {
 
   ScopedNativeCallFrame frame(
       runtime, 0, nullptr, false, HermesValue::encodeUndefinedValue());
+  ASSERT_FALSE(frame.overflowed());
 
   // Check that inner and outer stack pointer differ by at most a set threshold.
   int dummy;

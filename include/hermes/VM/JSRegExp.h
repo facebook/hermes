@@ -1,13 +1,13 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_JSREGEXP_H
 #define HERMES_VM_JSREGEXP_H
 
-#include "hermes/VM/CopyableVector.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/RegExpMatch.h"
 #include "hermes/VM/SmallXString.h"
@@ -31,19 +31,28 @@ class JSRegExp final : public JSObject {
     uint8_t ignoreCase : 1;
     uint8_t multiline : 1;
     uint8_t global : 1;
+    uint8_t sticky : 1;
+    uint8_t unicode : 1;
+    uint8_t dotAll : 1;
 
     /// \return a string representing the flags
-    /// The characters are returned in the order given in ES 5.1 15.10.6.4
-    /// (specifically global, ignoreCase, multiline)
+    /// The characters are returned in the order given in ES 6 21.2.5.3
+    /// (specifically global, ignoreCase, multiline, unicode, sticky)
     /// Note this may differ in order from the string passed in construction
-    llvm::SmallString<3> toString() const {
-      llvm::SmallString<3> result;
+    llvm::SmallString<5> toString() const {
+      llvm::SmallString<5> result;
       if (global)
         result.push_back('g');
       if (ignoreCase)
         result.push_back('i');
       if (multiline)
         result.push_back('m');
+      if (unicode)
+        result.push_back('u');
+      if (sticky)
+        result.push_back('y');
+      if (dotAll)
+        result.push_back('s');
       return result;
     }
 
@@ -54,9 +63,7 @@ class JSRegExp final : public JSObject {
   };
 
   /// Create a JSRegExp, with the empty string for pattern and flags
-  static CallResult<HermesValue> create(
-      Runtime *runtime,
-      Handle<JSObject> prototype);
+  static Handle<JSRegExp> create(Runtime *runtime, Handle<JSObject> prototype);
 
   /// Perform validation of the pattern and flags and throw \c SyntaxError on
   /// error. If valid, set the source and flags to the given strings, and set
@@ -116,7 +123,15 @@ class JSRegExp final : public JSObject {
   JSRegExp(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
       : JSObject(runtime, &vt.base, parent, clazz) {}
 
-  CopyableVector<uint8_t> bytecode_;
+  ~JSRegExp();
+
+  /// Store a copy of the \p bytecode array.
+  ExecutionStatus initializeBytecode(
+      llvm::ArrayRef<uint8_t> bytecode,
+      Runtime *runtime);
+
+  uint8_t *bytecode_{};
+  uint32_t bytecodeSize_{0};
 
   FlagBits flagBits_ = {};
 
@@ -129,10 +144,18 @@ class JSRegExp final : public JSObject {
   static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
 
   // Property storage slots.
-  enum RegExpSlotIndexes { pattern, lastIndex, COUNT };
-  static constexpr SlotIndex sourceValueIndex = 0;
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      Super::NEEDED_PROPERTY_SLOTS + RegExpSlotIndexes::COUNT;
+  static constexpr inline SlotIndex patternPropIndex() {
+    return numOverlapSlots<JSRegExp>() + ANONYMOUS_PROPERTY_SLOTS - 1;
+  }
+
+ public:
+  // pattern
+  static const PropStorage::size_type ANONYMOUS_PROPERTY_SLOTS =
+      Super::ANONYMOUS_PROPERTY_SLOTS + 1;
+
+  // lastIndex
+  static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
+      Super::NAMED_PROPERTY_SLOTS + 1;
 };
 
 } // namespace vm

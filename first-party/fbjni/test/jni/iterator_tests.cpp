@@ -1,4 +1,18 @@
-// Copyright 2004-present Facebook. All Rights Reserved.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #include <algorithm>
 #include <unordered_map>
@@ -22,7 +36,7 @@ struct JHashMap : public JavaClass<JHashMap<K,V>, JMap<K,V>> {
 
 jboolean nativeTestListIterator(
     alias_ref<jclass>,
-    alias_ref<JList<jstring>::javaobject> jlist) {
+    alias_ref<JList<jstring>> jlist) {
   EXPECT(jlist);
 
   EXPECT(jlist->size() == 3);
@@ -48,7 +62,7 @@ jboolean nativeTestListIterator(
   EXPECT(vs1 == vs3);
 
   static auto iteratorMethod =
-    JIterable<jstring>::javaClassStatic()->getMethod<JIterator<jstring>::javaobject()>("iterator");
+    JIterable<jstring>::javaClassStatic()->getMethod<JIterator<jstring>()>("iterator");
   auto iter = iteratorMethod(jlist);
 
   EXPECT(std::equal(iter->begin(), iter->end(), jlist->begin()));
@@ -62,7 +76,7 @@ jboolean nativeTestListIterator(
 
 jboolean nativeTestMapIterator(
     alias_ref<jclass>,
-    alias_ref<JMap<jstring, JInteger::javaobject>::javaobject> jmap) {
+    alias_ref<JMap<jstring, JInteger>> jmap) {
   EXPECT(jmap);
 
   EXPECT(jmap->size() == 3);
@@ -98,7 +112,7 @@ jboolean nativeTestMapIterator(
 
 jboolean nativeTestIterateWrongType(
     alias_ref<jclass>,
-    alias_ref<JMap<jstring, JInteger::javaobject>::javaobject> jmap) {
+    alias_ref<JMap<jstring, JInteger::javaobject>> jmap) {
   EXPECT(jmap);
 
   EXPECT(jmap->size() == 3);
@@ -115,7 +129,7 @@ jboolean nativeTestIterateWrongType(
 
 jboolean nativeTestIterateNullKey(
     alias_ref<jclass>,
-    alias_ref<JMap<jstring, JInteger::javaobject>::javaobject> jmap) {
+    alias_ref<JMap<jstring, JInteger>> jmap) {
   EXPECT(jmap);
 
   EXPECT(jmap->size() == 3);
@@ -144,7 +158,7 @@ jboolean nativeTestIterateNullKey(
 
 jboolean nativeTestLargeMapIteration(
     alias_ref<jclass>,
-    alias_ref<JMap<jstring, jstring>::javaobject> jmap) {
+    alias_ref<JMap<jstring, jstring>> jmap) {
   EXPECT(jmap);
   EXPECT(jmap->size() == 3000);
 

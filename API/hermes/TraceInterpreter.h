@@ -1,18 +1,23 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #pragma once
 
+#ifdef HERMESVM_API_TRACE
+
 #include <hermes/Public/RuntimeConfig.h>
+#include <hermes/Support/SHA1.h>
 #include <hermes/SynthTrace.h>
 
 #include <jsi/jsi.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/raw_ostream.h>
 
+#include <map>
 #include <unordered_map>
 #include <vector>
 
@@ -70,17 +75,30 @@ class TraceInterpreter final {
   /// ordered by invocation (the 0th element is the 1st call).
   using HostFunctionToCalls =
       std::unordered_map<SynthTrace::ObjectID, std::vector<Call>>;
+
   /// A PropNameToCalls is a mapping from property names to a list of
   /// calls on that property. The calls are ordered by invocation (the 0th
   /// element is the 1st call).
   using PropNameToCalls = std::unordered_map<std::string, std::vector<Call>>;
+
+  struct HostObjectInfo final {
+    explicit HostObjectInfo() = default;
+
+    PropNameToCalls propNameToCalls;
+    std::vector<Call> callsToGetPropertyNames;
+    std::vector<std::vector<std::string>> resultsOfGetPropertyNames;
+  };
+
   /// A HostObjectToCalls is a mapping from a host object id to the
   /// mapping of property names to calls associated with accessing properties of
-  /// that host object.
+  /// that host object and the list of calls associated with getPropertyNames.
   using HostObjectToCalls =
-      std::unordered_map<SynthTrace::ObjectID, PropNameToCalls>;
+      std::unordered_map<SynthTrace::ObjectID, HostObjectInfo>;
 
   /// Options for executing the trace.
+  /// \param useTraceConfig If true, command-line options override the
+  /// config options recorded in the trace.  If false, start from the default
+  /// config.
   /// \param snapshotMarker If the given marker is seen, take a heap snapshot.
   /// \param snapshotMarkerFileName If the marker given in snapshotMarker
   ///   is seen, write the heap snapshot out to this file.
@@ -96,95 +114,105 @@ class TraceInterpreter final {
   /// \param revertToYGAtTTI: if true, and if the GC was not allocating in the
   ///   young generation, change back to young-gen allocation at TTI.
   struct ExecuteOptions {
+    // These are not config params.
+    bool useTraceConfig{false};
+    int warmupReps{0};
+    int reps{1};
+    bool forceGCBeforeStats{false};
+    bool stabilizeInstructionCount{false};
     std::string marker;
     std::string snapshotMarker;
     std::string snapshotMarkerFileName;
-    int warmupReps{0};
-    int reps{1};
-    ::hermes::vm::gcheapsize_t minHeapSize{0};
-    ::hermes::vm::gcheapsize_t maxHeapSize{0};
-    double occupancyTarget{::hermes::vm::GCConfig::getDefaultOccupancyTarget()};
-    ::hermes::vm::ReleaseUnused shouldReleaseUnused{
-        ::hermes::vm::GCConfig::getDefaultShouldReleaseUnused()};
-    bool allocInYoung{true};
-    bool revertToYGAtTTI{true};
-    bool forceGCBeforeStats{false};
-    bool shouldPrintGCStats{false};
-    bool shouldTrackIO{false};
-    uint8_t bytecodeWarmupPercent{0};
-    double sanitizeRate{0.0};
-    int64_t sanitizeRandomSeed{-1};
+
+    // These are the config parameters.  We wrap them in llvm::Optional
+    // to indicate whether the corresponding command line flag was set
+    // explicitly.  We override the trace's config only when that is true.
+    llvm::Optional<bool> shouldPrintGCStats;
+    llvm::Optional<::hermes::vm::gcheapsize_t> minHeapSize;
+    llvm::Optional<::hermes::vm::gcheapsize_t> initHeapSize;
+    llvm::Optional<::hermes::vm::gcheapsize_t> maxHeapSize;
+    llvm::Optional<double> occupancyTarget;
+    llvm::Optional<::hermes::vm::ReleaseUnused> shouldReleaseUnused;
+    llvm::Optional<bool> allocInYoung;
+    llvm::Optional<bool> revertToYGAtTTI;
+    llvm::Optional<bool> shouldTrackIO;
+    llvm::Optional<unsigned> bytecodeWarmupPercent;
+    llvm::Optional<double> sanitizeRate;
+    llvm::Optional<int64_t> sanitizeRandomSeed;
   };
 
  private:
-  jsi::Runtime &rt;
-  ExecuteOptions options;
-  llvm::raw_ostream *outTrace;
-  std::unique_ptr<const jsi::Buffer> bundle;
-  const SynthTrace &trace;
-  const std::unordered_map<SynthTrace::ObjectID, DefAndUse> &globalDefsAndUses;
-  const HostFunctionToCalls &hostFunctionCalls;
-  const HostObjectToCalls &hostObjectCalls;
-  std::unordered_map<SynthTrace::ObjectID, jsi::Function> hostFunctions;
-  std::unordered_map<SynthTrace::ObjectID, uint64_t> hostFunctionsCallCount;
+  jsi::Runtime &rt_;
+  ExecuteOptions options_;
+  llvm::raw_ostream *traceStream_;
+  // Map from source hash to source file to run.
+  std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles_;
+  const SynthTrace &trace_;
+  const std::unordered_map<SynthTrace::ObjectID, DefAndUse> &globalDefsAndUses_;
+  const HostFunctionToCalls &hostFunctionCalls_;
+  const HostObjectToCalls &hostObjectCalls_;
+  std::unordered_map<SynthTrace::ObjectID, jsi::Function> hostFunctions_;
+  std::unordered_map<SynthTrace::ObjectID, uint64_t> hostFunctionsCallCount_;
   // NOTE: Theoretically a host object property can have both a getter and a
   // setter. Since this doesn't occur in practice currently, this
   // implementation will ignore it. If it does happen, the value of the
   // interior map should turn into a pair of functions, and a pair of function
   // counts.
-  std::unordered_map<SynthTrace::ObjectID, jsi::Object> hostObjects;
+  std::unordered_map<SynthTrace::ObjectID, jsi::Object> hostObjects_;
   std::unordered_map<
       SynthTrace::ObjectID,
       std::unordered_map<std::string, uint64_t>>
-      hostObjectsCallCount;
-  std::unordered_map<SynthTrace::ObjectID, jsi::Object> gom;
-  std::string stats;
+      hostObjectsCallCount_;
+  std::unordered_map<SynthTrace::ObjectID, uint64_t>
+      hostObjectsPropertyNamesCallCount_;
+  std::unordered_map<SynthTrace::ObjectID, jsi::Object> gom_;
+  std::string stats_;
   /// Whether the marker was reached.
-  bool markerFound{false};
+  bool markerFound_{false};
   /// Whether the snapshot marker was reached.
-  bool snapshotMarkerFound{false};
+  bool snapshotMarkerFound_{false};
   /// Depth in the execution stack. Zero is the outermost function.
-  uint64_t depth{0};
+  uint64_t depth_{0};
 
  public:
   /// Execute the trace given by \p traceFile, that was the trace of executing
   /// the bundle given by \p bytecodeFile.
   static void exec(
       const std::string &traceFile,
-      const std::string &bytecodeFile,
+      const std::vector<std::string> &bytecodeFiles,
       const ExecuteOptions &options);
 
   /// Same as exec, except it prints out the stats of a run.
   /// \return The stats collected by the runtime about times and memory usage.
   static std::string execAndGetStats(
       const std::string &traceFile,
-      const std::string &bytecodeFile,
+      const std::vector<std::string> &bytecodeFiles,
       const ExecuteOptions &options);
 
   /// Same as exec, except it additionally traces the execution of the
-  /// interpreter. This trace can be compared to the original to detect
+  /// interpreter, to \p *traceStream.  (Requires \p traceStream to be
+  /// non-null.)  This trace can be compared to the original to detect
   /// correctness issues.
   static void execAndTrace(
       const std::string &traceFile,
-      const std::string &bytecodeFile,
+      const std::vector<std::string> &bytecodeFiles,
       const ExecuteOptions &options,
-      llvm::raw_ostream &outTrace);
+      std::unique_ptr<llvm::raw_ostream> traceStream);
 
-  /// \param outTrace If non-null, write a trace of the execution into this
+  /// \param traceStream If non-null, write a trace of the execution into this
   /// stream.
   static std::string execFromMemoryBuffer(
       std::unique_ptr<llvm::MemoryBuffer> traceBuf,
-      std::unique_ptr<llvm::MemoryBuffer> codeBuf,
+      std::vector<std::unique_ptr<llvm::MemoryBuffer>> codeBufs,
       const ExecuteOptions &options,
-      llvm::raw_ostream *outTrace);
+      std::unique_ptr<llvm::raw_ostream> traceStream);
 
  private:
   TraceInterpreter(
       jsi::Runtime &rt,
       const ExecuteOptions &options,
-      llvm::raw_ostream *outTrace,
       const SynthTrace &trace,
-      std::unique_ptr<const jsi::Buffer> bundle,
+      std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles,
       const std::unordered_map<SynthTrace::ObjectID, DefAndUse>
           &globalDefsAndUses,
       const HostFunctionToCalls &hostFunctionCalls,
@@ -192,24 +220,20 @@ class TraceInterpreter final {
 
   static std::string execFromFileNames(
       const std::string &traceFile,
-      const std::string &bytecodeFile,
+      const std::vector<std::string> &bytecodeFiles,
       const ExecuteOptions &options,
-      llvm::raw_ostream *outTrace);
+      std::unique_ptr<llvm::raw_ostream> traceStream);
 
   static std::string exec(
       jsi::Runtime &rt,
       const ExecuteOptions &options,
       const SynthTrace &trace,
-      std::unique_ptr<const jsi::Buffer> bundle,
-      llvm::raw_ostream *outTrace);
+      std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles);
 
   jsi::Function createHostFunction(
-      SynthTrace::ObjectID funcID,
-      const std::vector<Call> &calls);
+      const SynthTrace::CreateHostFunctionRecord &rec);
 
-  jsi::Object createHostObject(
-      SynthTrace::ObjectID objID,
-      const PropNameToCalls &propToCalls);
+  jsi::Object createHostObject(SynthTrace::ObjectID objID);
 
   std::string execEntryFunction(const Call &entryFunc);
 
@@ -238,8 +262,14 @@ class TraceInterpreter final {
       std::unordered_map<SynthTrace::ObjectID, jsi::Object> &locals);
 
   std::string printStats();
+
+  LLVM_ATTRIBUTE_NORETURN void crashOnException(
+      const std::exception &e,
+      ::hermes::OptValue<uint64_t> globalRecordNum);
 };
 
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
+
+#endif

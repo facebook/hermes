@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/BCGen/HBC/HBC.h"
 
 #include "hermes/BCGen/BCOpt.h"
@@ -143,6 +144,24 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
     OptValue<Context::SegmentRange> range,
     SourceMapGenerator *sourceMapGen,
     std::unique_ptr<BCProviderBase> baseBCProvider) {
+  return generateBytecodeModule(
+      M,
+      entryPoint,
+      entryPoint,
+      options,
+      range,
+      sourceMapGen,
+      std::move(baseBCProvider));
+}
+
+std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
+    Module *M,
+    Function *lexicalTopLevel,
+    Function *entryPoint,
+    const BytecodeGenerationOptions &options,
+    OptValue<Context::SegmentRange> range,
+    SourceMapGenerator *sourceMapGen,
+    std::unique_ptr<BCProviderBase> baseBCProvider) {
   PerfSection perf("Bytecode Generation");
   lowerIR(M, options);
 
@@ -224,7 +243,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
   assert(BMGen.getEntryPointIndex() != -1 && "Entry point not added");
 
   // Construct the relative function scope depth map.
-  FunctionScopeAnalysis scopeAnalysis{entryPoint};
+  FunctionScopeAnalysis scopeAnalysis{lexicalTopLevel};
   // Bytecode generation for each function.
   for (auto &F : *M) {
     if (!shouldGenerate(&F)) {

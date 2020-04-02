@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -O %s | %FileCheck --match-full-lines %s
 
 // Check iterator closing in the presence of breaks and exceptions.
@@ -15,7 +17,7 @@ var throwInNext = false;
 var throwInReturn = false;
 var returnNonObject = false;
 
-o[Symbol.iterator] = function() { 
+o[Symbol.iterator] = function() {
     var cnt = 0;
     var iter = {
         next: (arg) => {
@@ -101,7 +103,7 @@ try {
 //CHECK-NEXT: next() called
 //CHECK-NEXT: 12
 //CHECK-NEXT: return() called
-//CHECK-NEXT: caught TypeError: iterator.close() did not return an object
+//CHECK-NEXT: caught TypeError: iterator.return() did not return an object
 
 
 // Try leaving the loop with an exception.
@@ -240,3 +242,23 @@ try {
 //CHECK-NEXT: next() called
 //CHECK-NEXT: 14
 //CHECK-NEXT: next() called
+
+// Check that continue with label works fine.
+throwInNext = false;
+print("\ntest10");
+try {
+  LABEL: do {
+      for(let i of o) {
+          print(i);
+          if (i & 1)
+              continue LABEL;
+      }
+  } while (false);
+} catch (e) {
+  print("caught", e);
+}
+//CHECK-LABEL: test10
+//CHECK-NEXT: next() called
+//CHECK-NEXT: 11
+//CHECK-NEXT: return() called
+//CHECK-NEXT: caught TypeError: iterator.return() did not return an object

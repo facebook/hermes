@@ -1,15 +1,16 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #define DEBUG_TYPE "builtins"
 #include "hermes/BCGen/HBC/Passes/LowerBuiltinCalls.h"
 
 #include "hermes/BCGen/HBC/BackendContext.h"
+#include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/IR/IRBuilder.h"
-#include "hermes/Inst/Builtins.h"
 #include "hermes/Support/Statistic.h"
 #include "hermes/Support/StringTable.h"
 
@@ -35,7 +36,7 @@ class LowerBuiltinCallsContext {
   }
 
   /// Look for a builtin method \c object.method.
-  hermes::OptValue<int> findBuiltinMethod(
+  hermes::OptValue<BuiltinMethod::Enum> findBuiltinMethod(
       Identifier objectName,
       Identifier methodName);
 
@@ -52,7 +53,7 @@ class LowerBuiltinCallsContext {
 
   /// Map from "object index":identifier to a "method index".
   /// We are avoiding allocating a DenseMap per object.
-  llvm::DenseMap<std::pair<int, Identifier>, int> methods_;
+  llvm::DenseMap<std::pair<int, Identifier>, BuiltinMethod::Enum> methods_;
 };
 
 LowerBuiltinCallsContext::LowerBuiltinCallsContext(StringTable &strTab) {
@@ -61,18 +62,19 @@ LowerBuiltinCallsContext::LowerBuiltinCallsContext(StringTable &strTab) {
   // First insert all objects.
   int objIndex = 0;
 #define BUILTIN_OBJECT(name) objects_[strTab.getIdentifier(#name)] = objIndex++;
-#include "hermes/Inst/Builtins.def"
+#include "hermes/FrontEndDefs/Builtins.def"
 
   // Now insert all methods.
   int methodIndex = 0;
 #define BUILTIN_METHOD(object, name)                                           \
   methods_[std::make_pair(                                                     \
       objects_[strTab.getIdentifier(#object)], strTab.getIdentifier(#name))] = \
-      methodIndex++;
-#include "hermes/Inst/Builtins.def"
+      (BuiltinMethod::Enum)(methodIndex++);
+#include "hermes/FrontEndDefs/Builtins.def"
 }
 
-hermes::OptValue<int> LowerBuiltinCallsContext::findBuiltinMethod(
+hermes::OptValue<BuiltinMethod::Enum>
+LowerBuiltinCallsContext::findBuiltinMethod(
     Identifier objectName,
     Identifier methodName) {
   auto objIt = objects_.find(objectName);
@@ -135,12 +137,12 @@ static bool run(Function *F) {
       if (!builtinIndex)
         continue;
       // Too many arguments?
-      if (callInst->getNumArguments() > HBCCallBuiltinInst::MAX_ARGUMENTS)
+      if (callInst->getNumArguments() > CallBuiltinInst::MAX_ARGUMENTS)
         continue;
 
       LLVM_DEBUG(
-          llvm::dbgs() << "Found builtin [" << *builtinIndex << "] "
-                       << inst::getBuiltinMethodName(*builtinIndex) << "()\n");
+          llvm::dbgs() << "Found builtin [" << (int)*builtinIndex << "] "
+                       << getBuiltinMethodName(*builtinIndex) << "()\n");
 
       // Always lower HermesInternal.xxx() calls, but only lower the rest if
       // -fstatic-builtins is enabled.
@@ -159,7 +161,7 @@ static bool run(Function *F) {
       for (unsigned i = 0; i < numArgsExcludingThis; ++i)
         args.push_back(callInst->getArgument(i + 1));
 
-      auto *callBuiltin = builder.createHBCCallBuiltinInst(*builtinIndex, args);
+      auto *callBuiltin = builder.createCallBuiltinInst(*builtinIndex, args);
       callInst->replaceAllUsesWith(callBuiltin);
       callInst->eraseFromParent();
 

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "TestHelpers.h"
 
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
@@ -37,7 +38,7 @@ static inline Handle<Callable> makeSimpleJSFunction(
     BFG->emitRet(0);
     codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
   }
-  return runtime->makeHandle<JSFunction>(*JSFunction::create(
+  return runtime->makeHandle<JSFunction>(JSFunction::create(
       runtime,
       runtimeModule->getDomain(runtime),
       Handle<JSObject>(runtime),
@@ -65,7 +66,7 @@ TEST_F(ObjectModelTest, SmokeTest) {
       runtime, createUTF16Ref(u"prop2"));
 
   Handle<JSObject> nullObj(runtime, nullptr);
-  auto obj1 = toHandle(runtime, JSObject::create(runtime, nullObj));
+  auto obj1 = runtime->makeHandle(JSObject::create(runtime, nullObj));
 
   // Try to get a property which hasn't been defined and expect undefined.
   EXPECT_CALLRESULT_UNDEFINED(JSObject::getNamed_RJS(obj1, runtime, *prop1ID));
@@ -110,7 +111,7 @@ TEST_F(ObjectModelTest, SimplePrototypeTest) {
 
   // Create and populate a prototype object.
   Handle<JSObject> nullObj(runtime, nullptr);
-  auto prototypeObj = toHandle(runtime, JSObject::create(runtime, nullObj));
+  auto prototypeObj = runtime->makeHandle(JSObject::create(runtime, nullObj));
 
   // prototypeObj.prop1 = 10;
   ASSERT_TRUE(*JSObject::putNamed_RJS(
@@ -126,7 +127,7 @@ TEST_F(ObjectModelTest, SimplePrototypeTest) {
       runtime->makeHandle(HermesValue::encodeDoubleValue(20.0))));
 
   // Create a child object.
-  auto obj = toHandle(runtime, JSObject::create(runtime, prototypeObj));
+  auto obj = runtime->makeHandle(JSObject::create(runtime, prototypeObj));
 
   // Read the inherited properties.
   EXPECT_CALLRESULT_DOUBLE(
@@ -163,7 +164,7 @@ TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
 
   {
     // Empty flags.
-    auto obj = toHandle(runtime, JSObject::create(runtime, nullObj));
+    auto obj = runtime->makeHandle(JSObject::create(runtime, nullObj));
     DefinePropertyFlags dpf{};
     ASSERT_TRUE(*JSObject::defineOwnProperty(
         obj, runtime, *prop1ID, dpf, Runtime::getUndefinedValue()));
@@ -175,7 +176,7 @@ TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
 
   {
     // Writable property, prevent extensions.
-    auto obj = toHandle(runtime, JSObject::create(runtime, nullObj));
+    auto obj = runtime->makeHandle(JSObject::create(runtime, nullObj));
     DefinePropertyFlags dpf{};
     dpf.setValue = 1;
     dpf.setWritable = 1;
@@ -210,7 +211,7 @@ TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
 
   {
     // Configurable property, change writable.
-    auto obj = toHandle(runtime, JSObject::create(runtime, nullObj));
+    auto obj = runtime->makeHandle(JSObject::create(runtime, nullObj));
     DefinePropertyFlags dpf{};
     dpf.setValue = 1;
     dpf.setWritable = 1;
@@ -247,7 +248,7 @@ TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
 
   {
     // Accessor property
-    auto obj = toHandle(runtime, JSObject::create(runtime, nullObj));
+    auto obj = runtime->makeHandle(JSObject::create(runtime, nullObj));
     DefinePropertyFlags dpf{};
     dpf.setGetter = 1;
     dpf.setSetter = 1;
@@ -273,7 +274,7 @@ TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
 
   {
     // Non-configurable property.
-    auto obj = toHandle(runtime, JSObject::create(runtime, nullObj));
+    auto obj = runtime->makeHandle(JSObject::create(runtime, nullObj));
     DefinePropertyFlags dpf{};
     dpf.setValue = 1;
     dpf.setConfigurable = 1;
@@ -356,7 +357,7 @@ TEST_F(ObjectModelTest, SimpleReadOnlyTest) {
       runtime, createUTF16Ref(u"prop2"));
 
   Handle<JSObject> nullObj(runtime, nullptr);
-  auto obj = toHandle(runtime, JSObject::create(runtime, nullObj));
+  auto obj = runtime->makeHandle(JSObject::create(runtime, nullObj));
 
   // Define a read-only property.
   DefinePropertyFlags dpFlags1{};
@@ -450,7 +451,7 @@ TEST_F(ObjectModelTest, SimpleDeleteTest) {
       runtime, createUTF16Ref(u"prop4"));
 
   Handle<JSObject> nullObj(runtime, nullptr);
-  auto obj = toHandle(runtime, JSObject::create(runtime, nullObj));
+  auto obj = runtime->makeHandle(JSObject::create(runtime, nullObj));
 
   // Attempt to delete a nonexistent property.
   ASSERT_TRUE(*JSObject::deleteNamed(obj, runtime, *prop1ID));
@@ -545,16 +546,15 @@ TEST_F(ObjectModelTest, EnvironmentSmokeTest) {
 }
 
 TEST_F(ObjectModelTest, NativeConstructorTest) {
-  auto dateCons = toHandle(
+  auto dateCons = runtime->makeHandle(NativeConstructor::create(
       runtime,
-      NativeConstructor::create(
-          runtime,
-          Runtime::makeNullHandle<JSObject>(),
-          nullptr,
-          nullptr,
-          0,
-          JSDate::create,
-          CellKind::FunctionKind));
+      Runtime::makeNullHandle<JSObject>(),
+      nullptr,
+      nullptr,
+      0,
+      (NativeConstructor::CreatorFunction *)
+          NativeConstructor::creatorFunction<JSDate>,
+      CellKind::FunctionKind));
   auto crtRes = dateCons->newObject(
       dateCons, runtime, Runtime::makeNullHandle<JSObject>());
   ASSERT_EQ(ExecutionStatus::RETURNED, crtRes.getStatus());
@@ -579,7 +579,7 @@ TEST_F(ObjectModelTest, NonArrayComputedTest) {
 
   Handle<JSObject> nullObj(runtime, nullptr);
 
-  auto obj1 = toHandle(runtime, JSObject::create(runtime, nullObj));
+  auto obj1 = runtime->makeHandle(JSObject::create(runtime, nullObj));
 
   DefinePropertyFlags dpf{};
   dpf.setEnumerable = 1;
@@ -670,11 +670,11 @@ TEST_F(ObjectModelTest, NamedOrIndexed) {
       runtime, createUTF16Ref(u"100000000"));
 
   Handle<JSObject> nullObj(runtime, nullptr);
-  auto nonIndexObj = toHandle(runtime, JSObject::create(runtime, nullObj));
+  auto nonIndexObj = runtime->makeHandle(JSObject::create(runtime, nullObj));
 
   auto indexObjRes = JSArray::create(runtime, 10, 0);
   ASSERT_EQ(indexObjRes.getStatus(), ExecutionStatus::RETURNED);
-  auto indexObj = toHandle(runtime, std::move(*indexObjRes));
+  auto indexObj = runtime->makeHandle(std::move(*indexObjRes));
 
   auto value1 = runtime->makeHandle(HermesValue::encodeDoubleValue(101));
   auto value2 = runtime->makeHandle(HermesValue::encodeDoubleValue(102));
@@ -768,35 +768,35 @@ TEST_F(ObjectModelTest, HasProperty) {
       runtime, createUTF16Ref(u"10"));
   auto indexID2Num = runtime->makeHandle(HermesValue::encodeNumberValue(10));
 
-  auto self = toHandle(runtime, std::move(*JSArray::create(runtime, 0, 0)));
+  auto self = runtime->makeHandle(std::move(*JSArray::create(runtime, 0, 0)));
 
   ASSERT_FALSE(*JSObject::hasComputed(self, runtime, nonIndexIDString));
   ASSERT_FALSE(*JSObject::hasComputed(self, runtime, indexIDNum));
   ASSERT_FALSE(*JSObject::hasComputed(self, runtime, indexID2Num));
-  ASSERT_FALSE(JSObject::hasNamedOrIndexed(self, runtime, *nonIndexID));
-  ASSERT_FALSE(JSObject::hasNamedOrIndexed(self, runtime, *indexID));
-  ASSERT_FALSE(JSObject::hasNamedOrIndexed(self, runtime, *indexID2));
-  ASSERT_FALSE(JSObject::hasNamed(self, runtime, *nonIndexID));
+  ASSERT_FALSE(*JSObject::hasNamedOrIndexed(self, runtime, *nonIndexID));
+  ASSERT_FALSE(*JSObject::hasNamedOrIndexed(self, runtime, *indexID));
+  ASSERT_FALSE(*JSObject::hasNamedOrIndexed(self, runtime, *indexID2));
+  ASSERT_FALSE(*JSObject::hasNamed(self, runtime, *nonIndexID));
 
   ASSERT_TRUE(*JSObject::putNamedOrIndexed(self, runtime, *nonIndexID, self));
 
   ASSERT_TRUE(*JSObject::hasComputed(self, runtime, nonIndexIDString));
   ASSERT_FALSE(*JSObject::hasComputed(self, runtime, indexIDNum));
   ASSERT_FALSE(*JSObject::hasComputed(self, runtime, indexID2Num));
-  ASSERT_TRUE(JSObject::hasNamedOrIndexed(self, runtime, *nonIndexID));
-  ASSERT_FALSE(JSObject::hasNamedOrIndexed(self, runtime, *indexID));
-  ASSERT_FALSE(JSObject::hasNamedOrIndexed(self, runtime, *indexID2));
-  ASSERT_TRUE(JSObject::hasNamed(self, runtime, *nonIndexID));
+  ASSERT_TRUE(*JSObject::hasNamedOrIndexed(self, runtime, *nonIndexID));
+  ASSERT_FALSE(*JSObject::hasNamedOrIndexed(self, runtime, *indexID));
+  ASSERT_FALSE(*JSObject::hasNamedOrIndexed(self, runtime, *indexID2));
+  ASSERT_TRUE(*JSObject::hasNamed(self, runtime, *nonIndexID));
 
   ASSERT_TRUE(*JSObject::putNamedOrIndexed(self, runtime, *indexID, self));
 
   ASSERT_TRUE(*JSObject::hasComputed(self, runtime, nonIndexIDString));
   ASSERT_TRUE(*JSObject::hasComputed(self, runtime, indexIDNum));
   ASSERT_FALSE(*JSObject::hasComputed(self, runtime, indexID2Num));
-  ASSERT_TRUE(JSObject::hasNamedOrIndexed(self, runtime, *nonIndexID));
-  ASSERT_TRUE(JSObject::hasNamedOrIndexed(self, runtime, *indexID));
-  ASSERT_FALSE(JSObject::hasNamedOrIndexed(self, runtime, *indexID2));
-  ASSERT_TRUE(JSObject::hasNamed(self, runtime, *nonIndexID));
+  ASSERT_TRUE(*JSObject::hasNamedOrIndexed(self, runtime, *nonIndexID));
+  ASSERT_TRUE(*JSObject::hasNamedOrIndexed(self, runtime, *indexID));
+  ASSERT_FALSE(*JSObject::hasNamedOrIndexed(self, runtime, *indexID2));
+  ASSERT_TRUE(*JSObject::hasNamed(self, runtime, *nonIndexID));
 
   DefinePropertyFlags dpf{};
   ASSERT_TRUE(*JSObject::defineOwnProperty(
@@ -805,10 +805,10 @@ TEST_F(ObjectModelTest, HasProperty) {
   ASSERT_TRUE(*JSObject::hasComputed(self, runtime, nonIndexIDString));
   ASSERT_TRUE(*JSObject::hasComputed(self, runtime, indexIDNum));
   ASSERT_TRUE(*JSObject::hasComputed(self, runtime, indexID2Num));
-  ASSERT_TRUE(JSObject::hasNamedOrIndexed(self, runtime, *nonIndexID));
-  ASSERT_TRUE(JSObject::hasNamedOrIndexed(self, runtime, *indexID));
-  ASSERT_TRUE(JSObject::hasNamedOrIndexed(self, runtime, *indexID2));
-  ASSERT_TRUE(JSObject::hasNamed(self, runtime, *nonIndexID));
+  ASSERT_TRUE(*JSObject::hasNamedOrIndexed(self, runtime, *nonIndexID));
+  ASSERT_TRUE(*JSObject::hasNamedOrIndexed(self, runtime, *indexID));
+  ASSERT_TRUE(*JSObject::hasNamedOrIndexed(self, runtime, *indexID2));
+  ASSERT_TRUE(*JSObject::hasNamed(self, runtime, *nonIndexID));
 }
 
 TEST_F(ObjectModelTest, UpdatePropertyFlagsWithoutTransitionsTest) {
@@ -822,7 +822,7 @@ TEST_F(ObjectModelTest, UpdatePropertyFlagsWithoutTransitionsTest) {
       runtime, createUTF16Ref(u"c"));
 
   Handle<JSObject> nullObj(runtime, nullptr);
-  auto obj = toHandle(runtime, JSObject::create(runtime, nullObj));
+  auto obj = runtime->makeHandle(JSObject::create(runtime, nullObj));
   ASSERT_TRUE(*JSObject::defineOwnProperty(
       obj,
       runtime,
@@ -896,7 +896,7 @@ struct ObjectModelLargeHeapTest : public RuntimeTestFixtureBase {
 
 // This test will OOM before it throws on non-NC GCs.
 TEST_F(ObjectModelLargeHeapTest, LargeObjectThrowsRangeError) {
-  Handle<JSObject> obj = toHandle(runtime, JSObject::create(runtime));
+  Handle<JSObject> obj = runtime->makeHandle(JSObject::create(runtime));
   MutableHandle<> i{runtime, HermesValue::encodeNumberValue(0)};
   while (true) {
     GCScopeMarkerRAII marker{gcScope};

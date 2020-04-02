@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_JSNATIVEFUNCTIONS
 #define HERMES_VM_JSNATIVEFUNCTIONS
 
@@ -25,10 +26,9 @@ namespace vm {
   CallResult<HermesValue> func(void *, Runtime *, NativeArgs);
 #include "hermes/VM/NativeFunctions.def"
 
-using CreatorFunction = CallResult<HermesValue>(Runtime *, Handle<JSObject>);
 /// Get a human-readable name of a native function.
 const char *getFunctionName(NativeFunctionPtr);
-const char *getFunctionName(CreatorFunction *);
+const char *getFunctionName(NativeConstructor::CreatorFunction *);
 
 } // namespace vm
 } // namespace hermes

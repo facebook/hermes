@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -dump-ast --pretty-json %s | %FileCheck %s --match-full-lines
 
 // CHECK-LABEL: {
@@ -52,7 +54,8 @@
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 ]
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": false
@@ -73,7 +76,8 @@
 // CHECK-NEXT:                 "type": "BlockStatement",
 // CHECK-NEXT:                 "body": []
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": true
@@ -94,7 +98,8 @@
 // CHECK-NEXT:                 "type": "BlockStatement",
 // CHECK-NEXT:                 "body": []
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": false
@@ -116,7 +121,8 @@
 // CHECK-NEXT:                 "type": "BlockStatement",
 // CHECK-NEXT:                 "body": []
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": false
@@ -152,7 +158,8 @@
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 ]
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": true
+// CHECK-NEXT:               "generator": true,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": false
@@ -174,7 +181,8 @@
 // CHECK-NEXT:                 "type": "BlockStatement",
 // CHECK-NEXT:                 "body": []
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": false
@@ -196,9 +204,47 @@
 // CHECK-NEXT:                 "type": "BlockStatement",
 // CHECK-NEXT:                 "body": []
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
+// CHECK-NEXT:             "computed": false
+// CHECK-NEXT:           },
+
+  set mySetter(x = 10) {},
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "Property",
+// CHECK-NEXT:             "key": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "mySetter",
+// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "value": {
+// CHECK-NEXT:               "type": "FunctionExpression",
+// CHECK-NEXT:               "id": null,
+// CHECK-NEXT:               "params": [
+// CHECK-NEXT:                 {
+// CHECK-NEXT:                   "type": "AssignmentPattern",
+// CHECK-NEXT:                   "left": {
+// CHECK-NEXT:                     "type": "Identifier",
+// CHECK-NEXT:                     "name": "x",
+// CHECK-NEXT:                     "typeAnnotation": null
+// CHECK-NEXT:                   },
+// CHECK-NEXT:                   "right": {
+// CHECK-NEXT:                     "type": "NumericLiteral",
+// CHECK-NEXT:                     "value": 10,
+// CHECK-NEXT:                     "raw": "10"
+// CHECK-NEXT:                   }
+// CHECK-NEXT:                 }
+// CHECK-NEXT:               ],
+// CHECK-NEXT:               "body": {
+// CHECK-NEXT:                 "type": "BlockStatement",
+// CHECK-NEXT:                 "body": []
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "kind": "set",
 // CHECK-NEXT:             "computed": false
 // CHECK-NEXT:           },
 
@@ -232,7 +278,8 @@
 // CHECK-NEXT:                 "type": "BlockStatement",
 // CHECK-NEXT:                 "body": []
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": false

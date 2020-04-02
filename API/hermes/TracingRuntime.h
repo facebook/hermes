@@ -1,16 +1,20 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_TRACINGRUNTIME_H
 #define HERMES_TRACINGRUNTIME_H
+
+#ifdef HERMESVM_API_TRACE
 
 #include "SynthTrace.h"
 
 #include <hermes/hermes.h>
 #include <jsi/decorator.h>
+#include "llvm/Support/raw_ostream.h"
 
 namespace facebook {
 namespace hermes {
@@ -20,11 +24,15 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
  public:
   using RD = RuntimeDecorator<jsi::Runtime>;
 
-  TracingRuntime(std::unique_ptr<jsi::Runtime> runtime, uint64_t globalID);
+  TracingRuntime(
+      std::unique_ptr<jsi::Runtime> runtime,
+      uint64_t globalID,
+      const ::hermes::vm::RuntimeConfig &conf,
+      std::unique_ptr<llvm::raw_ostream> traceStream);
 
   virtual SynthTrace::ObjectID getUniqueID(const jsi::Object &o) = 0;
 
-  virtual void writeTrace(llvm::raw_ostream &os) const = 0;
+  virtual void flushAndDisableTrace() = 0;
 
   /// @name jsi::Runtime methods.
   /// @{
@@ -120,16 +128,19 @@ class TracingHermesRuntime final : public TracingRuntime {
  public:
   TracingHermesRuntime(
       std::unique_ptr<HermesRuntime> runtime,
-      const ::hermes::vm::RuntimeConfig &runtimeConfig);
+      const ::hermes::vm::RuntimeConfig &runtimeConfig,
+      std::unique_ptr<llvm::raw_ostream> traceStream,
+      const std::string &traceFilename);
+
+  ~TracingHermesRuntime();
 
   SynthTrace::ObjectID getUniqueID(const jsi::Object &o) override {
     return static_cast<SynthTrace::ObjectID>(hermesRuntime().getUniqueID(o));
   }
 
-  void writeTrace(llvm::raw_ostream &os) const override;
+  void flushAndDisableTrace() override;
 
-  void writeBridgeTrafficTraceToFile(
-      const std::string &fileName) const override;
+  std::string flushAndDisableBridgeTrafficTrace() override;
 
   jsi::Value evaluateJavaScript(
       const std::shared_ptr<const jsi::Buffer> &buffer,
@@ -154,17 +165,34 @@ class TracingHermesRuntime final : public TracingRuntime {
   TracingHermesRuntime(
       std::unique_ptr<HermesRuntime> &runtime,
       uint64_t globalID,
-      const ::hermes::vm::RuntimeConfig &runtimeConfig);
+      const ::hermes::vm::RuntimeConfig &runtimeConfig,
+      std::unique_ptr<llvm::raw_ostream> traceStream,
+      const std::string &traceFilename);
+
+  void crashCallback(int fd);
 
   const ::hermes::vm::RuntimeConfig conf_;
+  const std::string traceFilename_;
+  const llvm::Optional<::hermes::vm::CrashManager::CallbackKey>
+      crashCallbackKey_;
 };
 
+/// Creates and returns a HermesRuntime that traces JSI interactions.
+/// If \p traceStream is non-null, writes the trace to \p traceStream.
+/// If non-empty, \p traceFilename is the file to which \p traceStream writes.
+/// The \p forReplay parameter indicates whether the runtime is being used
+/// in trace replay.  (Its behavior can differ slightly in that case.)
 std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
     std::unique_ptr<HermesRuntime> hermesRuntime,
-    const ::hermes::vm::RuntimeConfig &runtimeConfig);
+    const ::hermes::vm::RuntimeConfig &runtimeConfig,
+    std::unique_ptr<llvm::raw_ostream> traceStream = nullptr,
+    const std::string &traceFilename = "",
+    bool forReplay = false);
 
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
 
-#endif
+#endif // HERMESVM_API_TRACE
+
+#endif // HERMES_TRACINGRUNTIME_H

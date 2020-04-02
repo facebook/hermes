@@ -1,13 +1,9 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
-# This source code is licensed under the MIT license found in the LICENSE
-# file in the root directory of this source tree.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 
-set(LLVM_LINK_COMPONENTS
-  Analysis
-  Core
-  Support
-  )
+set(HERMES_LINK_COMPONENTS LLVHSupport)
 
 set(RTSources
   AlignedHeapSegmentTest.cpp
@@ -19,6 +15,7 @@ set(RTSources
   CardObjectBoundaryNCTest.cpp
   CardTableNCTest.cpp
   CastingTest.cpp
+  CodeCoverageProfilerTest.cpp
   CopyableVectorTest.cpp
   DateUtilTest.cpp
   DictPropertyMapTest.cpp
@@ -28,8 +25,10 @@ set(RTSources
   GCBasicsTest.cpp
   GCFinalizerTest.cpp
   GCFragmentationNCTest.cpp
+  GCGuardPageNCTest.cpp
   GCInitTest.cpp
   GCLazySegmentNCTest.cpp
+  GCHeapExtentsInCrashManagerTest.cpp
   GCMarkWeakTest.cpp
   GCObjectIterationTest.cpp
   GCOOMNCTest.cpp
@@ -43,7 +42,9 @@ set(RTSources
   HiddenClassTest.cpp
   IdentifierTableTest.cpp
   InstrumentationAPITest.cpp
+  InternalPropertiesTest.cpp
   InterpreterTest.cpp
+  IRInstrumentationTest.cpp
   JSLibTest.cpp
   LogSuccessStorageProvider.cpp
   NativeFrameTest.cpp
@@ -53,7 +54,6 @@ set(RTSources
   ObjectBufferTest.cpp
   ObjectModelTest.cpp
   OperationsTest.cpp
-  PredefinedStrings.lock
   PredefinedStringsTest.cpp
   HandleTest.cpp
   RuntimeConfigTest.cpp

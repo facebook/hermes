@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
-# This source code is licensed under the MIT license found in the LICENSE
-# file in the root directory of this source tree.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
@@ -12,6 +12,8 @@ import platform
 import shutil
 import subprocess
 import sys
+import time
+import warnings
 
 
 def get_parser():
@@ -72,7 +74,21 @@ def is_visual_studio(build_system):
 
 def run_command(cmd, **kwargs):
     print("+ " + " ".join(cmd))
-    return subprocess.check_call(cmd, stdout=sys.stdout, stderr=sys.stderr, **kwargs)
+    retries = kwargs.pop("retries", 0)
+    seconds_between_retries = kwargs.pop("seconds_between_retries", 10)
+
+    while True:
+        try:
+            return subprocess.check_call(
+                cmd, stdout=sys.stdout, stderr=sys.stderr, **kwargs
+            )
+        except subprocess.CalledProcessError as e:
+            if retries == 0:
+                raise
+            retries -= 1
+            print("Command failed, retrying soon: " + str(e))
+            time.sleep(seconds_between_retries)
+            print("Retrying...")
 
 
 def which(cmd):
@@ -102,11 +118,22 @@ def which(cmd):
 
 
 def build_dir_suffix(args):
-    build_dir_suffix = ""
+    suffices = []
     if args.enable_asan:
-        build_dir_suffix += "_asan"
+        suffices += ["asan"]
     if args.distribute:
-        build_dir_suffix += "_release"
+        suffices += ["release"]
     if args.is_32_bit:
-        build_dir_suffix += "_32"
-    return build_dir_suffix
+        suffices += ["32"]
+    if args.wasm:
+        suffices += ["wasm", args.emscripten_platform]
+    return ("_" + "_".join(suffices)) if suffices else ""
+
+
+def common_cmake_flags():
+    if sys.executable and sys.version_info.major < 3:
+        warnings.warn(
+            "Configuring CMake with Python2. "
+            "Python3 is recommended for the configuration of the Hermes build"
+        )
+    return ["-DPYTHON_EXECUTABLE={}".format(sys.executable or which("python"))]

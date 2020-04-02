@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifdef HERMES_ENABLE_DEBUGGER
 
 #include "hermes/VM/Debugger/Debugger.h"
@@ -52,7 +53,7 @@ static std::string getFileNameAsUTF8(
 }
 
 /// \return a scope chain containing the block and all its lexical parents,
-/// excluding the global scope.
+/// including the global scope.
 /// \return none if the scope chain is unavailable.
 static llvm::Optional<ScopeChain> scopeChainForBlock(
     Runtime *runtime,
@@ -77,42 +78,52 @@ static llvm::Optional<ScopeChain> scopeChainForBlock(
     // Get the parent item.
     // Stop at the global block.
     auto parentId = debugInfo->getParentFunctionId(*lexicalDataOffset);
-    if (!parentId || *parentId == bytecode->getGlobalFunctionIndex())
+    if (!parentId)
       break;
 
     lexicalDataOffset = runtimeModule->getCodeBlockMayAllocate(*parentId)
                             ->getDebugLexicalDataOffset();
+
+    if (!lexicalDataOffset) {
+      // The function has a parent, but the parent doesn't have debug info.
+      // This could happen when the parent is global.
+      // "global" doesn't have a lexical parent.
+      // "global" may have 0 variables, and may have no lexical info
+      // (which is the case for synthesized parent scopes in lazy compilation).
+      // In such case, BytecodeFunctionGenerator::hasDebugInfo returns false,
+      // resulting in no debug offset for global in the bytecode.
+      // Note that assert "*parentId == bytecode->getGlobalFunctionIndex()"
+      // will fail because the getGlobalFunctionIndex() function returns
+      // the entry point instead of the global function. The entry point
+      // is not the same as the global function in the context of
+      // lazy compilation.
+      scopeChain.functions.emplace_back();
+    }
   }
   return {std::move(scopeChain)};
 }
 
-void Debugger::triggerAsyncPause() {
-  runtime_->triggerDebuggerAsyncBreak();
+void Debugger::triggerAsyncPause(AsyncPauseKind kind) {
+  runtime_->triggerDebuggerAsyncBreak(kind);
 }
 
-void Debugger::breakAtJumpTarget(InterpreterState &state) {
-  const Inst *ip = state.codeBlock->getOffsetPtr(state.offset);
+llvm::Optional<uint32_t> Debugger::findJumpTarget(
+    CodeBlock *block,
+    uint32_t offset) {
+  const Inst *ip = block->getOffsetPtr(offset);
 
 #define DEFINE_JUMP_LONG_VARIANT(name, nameLong) \
   case OpCode::name: {                           \
-    setStepBreakpoint(                           \
-        state.codeBlock,                         \
-        state.offset + ip->i##name.op1,          \
-        runtime_->getCurrentFrameOffset());      \
-    return;                                      \
+    return offset + ip->i##name.op1;             \
   }                                              \
   case OpCode::nameLong: {                       \
-    setStepBreakpoint(                           \
-        state.codeBlock,                         \
-        state.offset + ip->i##nameLong.op1,      \
-        runtime_->getCurrentFrameOffset());      \
-    return;                                      \
+    return offset + ip->i##nameLong.op1;         \
   }
 
   switch (ip->opCode) {
 #include "hermes/BCGen/HBC/BytecodeList.def"
     default:
-      return;
+      return llvm::None;
   }
 #undef DEFINE_JUMP_LONG_VARIANT
 }
@@ -128,8 +139,18 @@ void Debugger::breakAtPossibleNextInstructions(InterpreterState &state) {
   // If the instruction is a jump, set a break point at the possible
   // jump target; otherwise, only break at the next instruction.
   // This instruction could jump to itself, so this step should be after the
-  // previous step.
-  breakAtJumpTarget(state);
+  // previous step (otherwise the Jmp will have been overwritten by a Debugger
+  // inst, and we won't be able to find the target).
+  //
+  // Since we've already set a breakpoint on the next instruction, we can
+  // skip the case where that is also the jump target.
+  auto jumpTarget = findJumpTarget(state.codeBlock, state.offset);
+  if (jumpTarget.hasValue() && jumpTarget.getValue() != nextOffset) {
+    setStepBreakpoint(
+        state.codeBlock,
+        jumpTarget.getValue(),
+        runtime_->getCurrentFrameOffset());
+  }
 }
 
 ExecutionStatus Debugger::runDebugger(
@@ -156,7 +177,21 @@ ExecutionStatus Debugger::runDebugger(
     isUnwindingException_ = true;
     clearTempBreakpoints();
     pauseReason = PauseReason::Exception;
-  } else if (runReason == RunReason::AsyncBreak) {
+  } else if (runReason == RunReason::AsyncBreakImplicit) {
+    if (curStepMode_.hasValue()) {
+      // Avoid draining the queue or corrupting step state.
+      isDebugging_ = false;
+      return ExecutionStatus::RETURNED;
+    }
+    pauseReason = PauseReason::AsyncTrigger;
+  } else if (runReason == RunReason::AsyncBreakExplicit) {
+    // The user requested an async break, so we can clear stepping state
+    // with the knowledge that the inspector isn't sending an immediate
+    // continue.
+    if (curStepMode_) {
+      clearTempBreakpoints();
+      curStepMode_ = llvm::None;
+    }
     pauseReason = PauseReason::AsyncTrigger;
   } else {
     assert(runReason == RunReason::Opcode && "Unknown run reason");
@@ -243,11 +278,13 @@ ExecutionStatus Debugger::runDebugger(
         // and no allocations should occur until then.
         HermesValue conditionResult =
             evalInFrame(args, condition, state, &metadata);
+        NoAllocScope noAlloc(runtime_);
         if (metadata.isException) {
           // Ignore exceptions.
           // Cleanup is done by evalInFrame.
           return false;
         }
+        noAlloc.release();
         return toBoolean(conditionResult);
       };
 
@@ -415,16 +452,11 @@ ExecutionStatus Debugger::debuggerLoop(
 }
 
 void Debugger::willExecuteModule(RuntimeModule *module, CodeBlock *codeBlock) {
-  auto locationOpt = getSourceLocation(codeBlock, 0);
-  if (locationOpt) {
-    std::string fileName =
-        getFileNameAsUTF8(runtime_, module, locationOpt->filenameId);
-    ScriptID result = nextScriptId_;
-    auto isNewFile = scriptTable_.try_emplace(fileName, result).second;
-    if (isNewFile) {
-      ++nextScriptId_;
-    }
-  }
+  // This function should only be called on the main RuntimeModule and not on
+  // any "child" RuntimeModules it may create through lazy compilation.
+  assert(
+      module == module->getLazyRootModule() &&
+      "Expected to only run on lazy root module");
 
   if (!getShouldPauseOnScriptLoad())
     return;
@@ -433,6 +465,47 @@ void Debugger::willExecuteModule(RuntimeModule *module, CodeBlock *codeBlock) {
   auto globalFunctionIndex = module->getBytecode()->getGlobalFunctionIndex();
   auto globalCode = module->getCodeBlockMayAllocate(globalFunctionIndex);
   setOnLoadBreakpoint(globalCode, 0);
+}
+
+void Debugger::willUnloadModule(RuntimeModule *module) {
+  if (tempBreakpoints_.size() == 0 && userBreakpoints_.size() == 0) {
+    return;
+  }
+
+  llvm::DenseSet<CodeBlock *> unloadingBlocks;
+  for (auto *block : module->getFunctionMap()) {
+    if (block) {
+      unloadingBlocks.insert(block);
+    }
+  }
+
+  for (auto &bp : userBreakpoints_) {
+    if (unloadingBlocks.count(bp.second.codeBlock)) {
+      unresolveBreakpointLocation(bp.second);
+    }
+  }
+
+  auto cleanTempBreakpoint = [&](Breakpoint &bp) {
+    if (!unloadingBlocks.count(bp.codeBlock))
+      return false;
+
+    auto *ptr = bp.codeBlock->getOffsetPtr(bp.offset);
+    auto it = breakpointLocations_.find(ptr);
+    if (it != breakpointLocations_.end()) {
+      auto &location = it->second;
+      assert(!location.user.hasValue() && "Unexpected user breakpoint");
+      bp.codeBlock->uninstallBreakpointAtOffset(bp.offset, location.opCode);
+      breakpointLocations_.erase(it);
+    }
+    return true;
+  };
+
+  tempBreakpoints_.erase(
+      std::remove_if(
+          tempBreakpoints_.begin(),
+          tempBreakpoints_.end(),
+          cleanTempBreakpoint),
+      tempBreakpoints_.end());
 }
 
 void Debugger::resolveBreakpoints(CodeBlock *codeBlock) {
@@ -465,7 +538,7 @@ auto Debugger::getCallFrameInfo(const CodeBlock *codeBlock, uint32_t ipOffset)
     UTF16Ref functionName =
         getFunctionName(runtime_, codeBlock).getUTF16Ref(storage);
     convertUTF16ToUTF8WithReplacements(frameInfo.functionName, functionName);
-    auto locationOpt = getSourceLocation(codeBlock, ipOffset);
+    auto locationOpt = codeBlock->getSourceLocation(ipOffset);
     if (locationOpt) {
       frameInfo.location.line = locationOpt->line;
       frameInfo.location.column = locationOpt->column;
@@ -489,8 +562,21 @@ auto Debugger::getStackTrace(InterpreterState state) const -> StackTrace {
   uint32_t ipOffset = state.offset;
   for (auto cf : runtime_->getStackFrames()) {
     frames.push_back(getCallFrameInfo(codeBlock, ipOffset));
+
     codeBlock = cf.getSavedCodeBlock();
-    ipOffset = codeBlock ? codeBlock->getOffsetOf(cf->getSavedIP()) : 0;
+    const Inst *const savedIP = cf.getSavedIP();
+    if (!codeBlock && savedIP) {
+      // If we have a saved IP but no saved code block, this was a bound call.
+      // Go up one frame and get the callee code block but use the current
+      // frame's saved IP.
+      StackFramePtr prev = cf->getPreviousFrame();
+      assert(prev && "bound function calls must have a caller");
+      if (CodeBlock *parentCB = prev->getCalleeCodeBlock()) {
+        codeBlock = parentCB;
+      }
+    }
+
+    ipOffset = (codeBlock && savedIP) ? codeBlock->getOffsetOf(savedIP) : 0;
   }
   return StackTrace(std::move(frames));
 }
@@ -696,10 +782,12 @@ void Debugger::breakpointCaller() {
   // If the ip was saved in the stack frame, the caller is the function
   // that we want to return to. The code block might not be saved in this
   // frame, so we need to find that in the frame below.
-  frameIt++;
-  assert(
-      frameIt != callFrames.end() &&
-      "The frame that has saved ip cannot be the bottom frame");
+  do {
+    frameIt++;
+    assert(
+        frameIt != callFrames.end() &&
+        "The frame that has saved ip cannot be the bottom frame");
+  } while (!frameIt->getCalleeCodeBlock());
   // In the frame below, the 'calleeClosureORCB' register contains
   // the code block we need.
   CodeBlock *codeBlock = frameIt->getCalleeCodeBlock();
@@ -800,8 +888,6 @@ auto Debugger::getLexicalInfoInFrame(uint32_t frame) const -> LexicalInfo {
   for (const auto &func : scopeChain->functions) {
     result.variableCountsByScope_.push_back(func.variables.size());
   }
-  // Add entry for global scope.
-  result.variableCountsByScope_.push_back(0);
   return result;
 }
 
@@ -929,6 +1015,11 @@ HermesValue Debugger::evalInFrame(
     return HermesValue::encodeUndefinedValue();
   }
 
+  // Interpreting code requires that the `thrownValue_` is empty.
+  // Save it temporarily so we can restore it after the evalInEnvironment.
+  Handle<> savedThrownValue = runtime_->makeHandle(runtime_->getThrownValue());
+  runtime_->clearThrownValue();
+
   CallResult<HermesValue> result = evalInEnvironment(
       runtime_,
       src,
@@ -938,13 +1029,16 @@ HermesValue Debugger::evalInFrame(
       singleFunction);
 
   // Check if an exception was thrown.
-  if (result.getStatus() == ExecutionStatus::EXCEPTION)
-    return getExceptionAsEvalResult(outMetadata);
-  assert(
-      !result->isEmpty() &&
-      "eval result should not be empty unless exception was thrown");
+  if (result.getStatus() == ExecutionStatus::EXCEPTION) {
+    resultHandle = getExceptionAsEvalResult(outMetadata);
+  } else {
+    assert(
+        !result->isEmpty() &&
+        "eval result should not be empty unless exception was thrown");
+    resultHandle = *result;
+  }
 
-  resultHandle = *result;
+  runtime_->setThrownValue(savedThrownValue.getHermesValue());
   return *resultHandle;
 }
 
@@ -968,21 +1062,6 @@ llvm::Optional<std::pair<InterpreterState, uint32_t>> Debugger::findCatchTarget(
     }
   }
   return llvm::None;
-}
-
-OptValue<hbc::DebugSourceLocation> Debugger::getSourceLocation(
-    const CodeBlock *codeBlock,
-    uint32_t offset) const {
-  assert(codeBlock && "Null code block");
-  auto debugLocsOffset = codeBlock->getDebugSourceLocationsOffset();
-  if (!debugLocsOffset) {
-    return llvm::None;
-  }
-
-  return codeBlock->getRuntimeModule()
-      ->getBytecode()
-      ->getDebugInfo()
-      ->getLocationForAddress(*debugLocsOffset, offset);
 }
 
 bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
@@ -1056,7 +1135,15 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
   }
 #endif
 
-  for (auto &runtimeModule : runtime_->getRuntimeModules()) {
+  // Iterate backwards through runtime modules, under the assumption that
+  // modules at the end of the list were added more recently, and are more
+  // likely to match the user's intention.
+  // Specifically, this will check any user source before runtime modules loaded
+  // by the VM.
+  for (auto it = runtime_->getRuntimeModules().rbegin();
+       it != runtime_->getRuntimeModules().rend();
+       ++it) {
+    auto &runtimeModule = *it;
     GCScope gcScope{runtime_};
 
     if (!runtimeModule.isInitialized()) {
@@ -1092,6 +1179,7 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
       for (const auto &region : fileRegions) {
         if (resolveScriptId(&runtimeModule, region.filenameId) ==
             breakpoint.requestedLocation.fileId) {
+          resolvedFileId = region.filenameId;
           resolvedFileName =
               getFileNameAsUTF8(runtime_, &runtimeModule, resolvedFileId);
           break;
@@ -1134,6 +1222,16 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
   return false;
 }
 
+void Debugger::unresolveBreakpointLocation(Breakpoint &breakpoint) {
+  assert(breakpoint.isResolved() && "Breakpoint already unresolved");
+  if (breakpoint.enabled) {
+    unsetUserBreakpoint(breakpoint);
+  }
+  breakpoint.resolvedLocation.reset();
+  breakpoint.codeBlock = nullptr;
+  breakpoint.offset = -1;
+}
+
 auto Debugger::getSourceMappingUrl(ScriptID scriptId) const -> String {
   for (auto &runtimeModule : runtime_->getRuntimeModules()) {
     if (!runtimeModule.isInitialized()) {
@@ -1164,10 +1262,10 @@ auto Debugger::getSourceMappingUrl(ScriptID scriptId) const -> String {
 auto Debugger::resolveScriptId(
     RuntimeModule *runtimeModule,
     uint32_t filenameId) const -> ScriptID {
-  std::string storage = getFileNameAsUTF8(runtime_, runtimeModule, filenameId);
-  auto it = scriptTable_.find(storage);
-  assert(it != scriptTable_.end() && "unknown file name");
-  return it->second;
+  // We don't yet have a convincing story for debugging CommonJS, so for
+  // now just assert that we're still living in the one-file-per-RM world.
+  assert(filenameId == 0 && "Unexpected multiple filenames per RM");
+  return runtimeModule->getScriptID();
 }
 
 } // namespace vm

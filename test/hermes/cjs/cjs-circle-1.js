@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -commonjs %S/cjs-circle-1.js %S/cjs-circle-2.js %S/cjs-circle-3.js | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -commonjs %S/cjs-circle-1.js %S/cjs-circle-2.js %S/cjs-circle-3.js | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -fstatic-builtins -fstatic-require -commonjs %S/cjs-circle-1.js %S/cjs-circle-2.js %S/cjs-circle-3.js | %FileCheck --match-full-lines %s

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include <gtest/gtest.h>
 
 #include "hermes/Support/StringKind.h"
@@ -18,13 +19,11 @@ TEST(StringKindTest, Accumulator) {
   acc.push_back(StringKind::String);
   acc.push_back(StringKind::String);
   acc.push_back(StringKind::String);
-  acc.push_back(StringKind::Predefined);
   acc.push_back(StringKind::Identifier);
   acc.push_back(StringKind::Identifier);
 
   std::vector<StringKind::Entry> expected{
       {StringKind::String, 3},
-      {StringKind::Predefined, 1},
       {StringKind::Identifier, 2},
   };
 

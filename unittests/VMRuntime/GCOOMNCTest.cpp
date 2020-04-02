@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 #include "gtest/gtest.h"
 
@@ -30,13 +31,13 @@ MetadataTableForTests getMetadataTable() {
 /// requirements on the size of the GC's young generation. So that when we try
 /// and request the young gen be half the size of this cell, we have a
 /// reasonably good chance that the the young gen ends up smaller than the cell.
-static constexpr size_t kCellSize = 64 * 1024;
+static constexpr size_t kCellSize = 256 * 1024;
 
 /// Allocating a fixed size cell that is too big for the young gen should cause
 /// an OOM
 TEST(GCOOMFixedSizeDeathTest, Test) {
   const size_t kHeapSizeHint = kCellSize * GC::kYoungGenFractionDenom / 2;
-  using FixedCell = EmptyCell<kCellSize, /* FixedSize */ true>;
+  using FixedCell = EmptyCell<kCellSize>;
 
   auto runtime = DummyRuntime::create(
       getMetadataTable(), TestGCConfigFixedSize(kHeapSizeHint));
@@ -57,7 +58,7 @@ TEST(GCOOMFixedSizeDeathTest, Test) {
 // in the old gen) should be fine.
 TEST(GCOOMVarSizeTest, Test) {
   const size_t kHeapSizeHint = kCellSize * GC::kYoungGenFractionDenom / 2;
-  using VarCell = EmptyCell<kCellSize, /* FixedSize */ false>;
+  using VarCell = VarSizedEmptyCell<kCellSize>;
 
   auto runtime = DummyRuntime::create(
       getMetadataTable(), TestGCConfigFixedSize(kHeapSizeHint));
@@ -80,8 +81,7 @@ TEST(GCOOMFragmentationDeathTest, Test) {
       AlignedHeapSegment::maxSize() * GC::kYoungGenFractionDenom;
   // Only one of these cells will fit into a segment, with the maximum amount of
   // space wasted in the segment.
-  using AwkwardCell =
-      EmptyCell<AlignedHeapSegment::maxSize() / 2 + 1, /* FixedSize */ false>;
+  using AwkwardCell = EmptyCell<AlignedHeapSegment::maxSize() / 2 + 1>;
 
   auto runtime = DummyRuntime::create(
       getMetadataTable(), TestGCConfigFixedSize(kHeapSizeHint));
@@ -193,21 +193,9 @@ TEST(GCOOMVALimitFullGCTest, Test) {
 
   const GCConfig config = TestGCConfigFixedSize(kHeapSizeHint);
 
-  constexpr size_t kExtraSegments =
-#ifdef HERMESVM_COMPRESSED_POINTERS
-      // Allow one extra segment for compressed pointers cases.
-      // This is a hack, LimitedStorageProvider doesn't know if its underlying
-      // StorageProvider needs some excess storage for the runtime.
-      1
-#else
-      0
-#endif
-      ;
-
   // Only space for two segments.
   auto provider = llvm::make_unique<LimitedStorageProvider>(
-      DummyRuntime::defaultProvider(config),
-      AlignedStorage::size() * (2 + kExtraSegments));
+      DummyRuntime::defaultProvider(), AlignedStorage::size() * 2);
 
   auto runtime =
       DummyRuntime::create(getMetadataTable(), config, std::move(provider));

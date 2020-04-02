@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_INTERNALPROPERTY_H
 #define HERMES_VM_INTERNALPROPERTY_H
 
@@ -13,12 +14,21 @@
 namespace hermes {
 namespace vm {
 
-/// Anonymous internal propertes. Not part of the object map.
+/// Named or anonymous internal properties. These are filtered so the user never
+/// sees them.
 namespace InternalProperty {
 
 /// Number of InternalPropertyX symbols defined.
 #define PROP(i) +1
+#define NAMED_PROP(name) +1
 constexpr unsigned NumInternalProperties = 0
+#include "hermes/VM/InternalProperties.def"
+    ;
+
+/// Number of anonymous InternalPropertyX symbols defined.
+#define PROP(i) +1
+#define NAMED_PROP(name) +0
+constexpr unsigned NumAnonymousInternalProperties = 0
 #include "hermes/VM/InternalProperties.def"
     ;
 

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 
 #include "hermes/AST/SemValidate.h"
@@ -28,6 +29,25 @@ namespace hermes {
 namespace hbc {
 
 #ifndef HERMESVM_LEAN
+namespace {
+bool isSingleFunctionExpression(ESTree::NodePtr ast) {
+  auto *prog = dyn_cast<ESTree::ProgramNode>(ast);
+  if (!prog) {
+    return false;
+  }
+  ESTree::NodeList &body = prog->_body;
+  if (body.size() != 1) {
+    return false;
+  }
+  auto *exprStatement =
+      dyn_cast<ESTree::ExpressionStatementNode>(&body.front());
+  if (!exprStatement) {
+    return false;
+  }
+  return isa<ESTree::FunctionExpressionNode>(exprStatement->_expression) ||
+      isa<ESTree::ArrowFunctionExpressionNode>(exprStatement->_expression);
+}
+} // namespace
 
 BCProviderFromSrc::BCProviderFromSrc(
     std::unique_ptr<hbc::BytecodeModule> module)
@@ -77,6 +97,17 @@ BCProviderFromSrc::createBCProviderFromSrc(
     llvm::StringRef sourceURL,
     std::unique_ptr<SourceMap> sourceMap,
     const CompileFlags &compileFlags) {
+  return createBCProviderFromSrc(
+      std::move(buffer), sourceURL, std::move(sourceMap), compileFlags, {});
+}
+
+std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
+BCProviderFromSrc::createBCProviderFromSrc(
+    std::unique_ptr<Buffer> buffer,
+    llvm::StringRef sourceURL,
+    std::unique_ptr<SourceMap> sourceMap,
+    const CompileFlags &compileFlags,
+    const ScopeChain &scopeChain) {
   using llvm::Twine;
 
   assert(
@@ -85,6 +116,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
 
   CodeGenerationSettings codeGenOpts{};
   codeGenOpts.unlimitedRegisters = false;
+  codeGenOpts.instrumentIR = compileFlags.instrumentIR;
 
   OptimizationSettings optSettings;
   // If the optional value is not set, the parser will automatically detect
@@ -104,6 +136,8 @@ BCProviderFromSrc::createBCProviderFromSrc(
   context->setStrictMode(compileFlags.strict);
   context->setEnableEval(true);
   context->setLazyCompilation(compileFlags.lazy);
+  context->setAllowFunctionToStringWithRuntimeSource(
+      compileFlags.allowFunctionToStringWithRuntimeSource);
 #ifdef HERMES_ENABLE_DEBUGGER
   context->setDebugInfoSetting(
       compileFlags.debug ? DebugInfoSetting::ALL : DebugInfoSetting::THROWING);
@@ -114,11 +148,13 @@ BCProviderFromSrc::createBCProviderFromSrc(
 
   // Populate the declFileList.
   DeclarationFileListTy declFileList;
-  auto libBuffer = llvm::MemoryBuffer::getMemBuffer(libhermes);
-  parser::JSParser libParser(*context, std::move(libBuffer));
-  auto libParsed = libParser.parse();
-  assert(libParsed && "Libhermes failed to parse");
-  declFileList.push_back(libParsed.getValue());
+  if (compileFlags.includeLibHermes) {
+    auto libBuffer = llvm::MemoryBuffer::getMemBuffer(libhermes);
+    parser::JSParser libParser(*context, std::move(libBuffer));
+    auto libParsed = libParser.parse();
+    assert(libParsed && "Libhermes failed to parse");
+    declFileList.push_back(libParsed.getValue());
+  }
 
   int fileBufId = context->getSourceErrorManager().addNewSourceBuffer(
       llvm::make_unique<HermesLLVMMemoryBuffer>(std::move(buffer), sourceURL));
@@ -157,7 +193,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
   }
 
   Module M(context);
-  hermes::generateIRFromESTree(parsed.getValue(), &M, declFileList, {});
+  hermes::generateIRFromESTree(parsed.getValue(), &M, declFileList, scopeChain);
   if (context->getSourceErrorManager().getErrorCount() > 0) {
     return {nullptr, outputManager.getErrorString()};
   }
@@ -174,18 +210,21 @@ BCProviderFromSrc::createBCProviderFromSrc(
   }
 #endif
 
-  BytecodeGenerationOptions opts{OutputFormatKind::None};
+  BytecodeGenerationOptions opts{OutputFormatKind::Execute};
   opts.optimizationEnabled = compileFlags.optimize;
   opts.staticBuiltinsEnabled =
       context->getOptimizationSettings().staticBuiltins;
   opts.verifyIR = compileFlags.verifyIR;
   auto bytecode = createBCProviderFromSrc(
       hbc::generateBytecodeModule(&M, M.getTopLevelFunction(), opts));
+  bytecode->singleFunction_ = isSingleFunctionExpression(parsed.getValue());
   return {std::move(bytecode), std::string{}};
 }
 
-BCProviderLazy::BCProviderLazy(hbc::BytecodeFunction *bytecodeFunction)
-    : bytecodeFunction_(bytecodeFunction) {
+BCProviderLazy::BCProviderLazy(
+    hbc::BytecodeModule *bytecodeModule,
+    hbc::BytecodeFunction *bytecodeFunction)
+    : bytecodeModule_(bytecodeModule), bytecodeFunction_(bytecodeFunction) {
   // Lazy module should always contain one function to begin with.
   functionCount_ = 1;
 }

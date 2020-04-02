@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "JSLibInternal.h"
 
 #include "hermes/VM/CellKind.h"
@@ -142,7 +143,8 @@ weakSetPrototypeAdd(void *, Runtime *runtime, NativeArgs args) {
   }
 
   if (LLVM_UNLIKELY(
-          JSWeakSet::setValue(M, runtime, key, args.getArgHandle(1)) ==
+          JSWeakSet::setValue(
+              M, runtime, key, HandleRootOwner::getUndefinedValue()) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

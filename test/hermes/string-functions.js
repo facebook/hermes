@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: LANG=en_US.UTF-8 %hermes -O -target=HBC %s | %FileCheck --match-full-lines %s
 "use strict";
 
@@ -31,6 +33,10 @@ print('fromCharCode');
 // CHECK-LABEL: fromCharCode
 print('empty', String.fromCharCode());
 // CHECK-NEXT: empty
+print(String.fromCharCode(97));
+// CHECK-NEXT: a
+print(String.fromCharCode(0xff0041));
+// CHECK-NEXT: A
 print(String.fromCharCode(0xff0048, 0xe8, 114, 109, 101, 115));
 // CHECK-NEXT: Hèrmes
 
@@ -213,6 +219,12 @@ print(JSON.stringify(result));
 print(result[1], result[7]);
 // CHECK-NEXT: ["A",null,"B","bold","/","B","and",null,"CODE","coded","/","CODE",""]
 // CHECK-NEXT: undefined undefined
+
+// Ensure we step over surrogate pairs iff Unicode is set.
+print("\u{12345}".split(/(?:)/u).length);
+// CHECK-NEXT: 1
+print("\u{12345}".split(/(?:)/).length);
+// CHECK-NEXT: 2
 
 // test ES6 specific implementation
 // borrowed from mjsunit/es6/string-split.js
@@ -401,37 +413,41 @@ for (var i = 0; i < 10; ++i) {
 print(s.trim());
 // CHECK-NEXT: aaaaaaaaaa
 
-print('trimLeft');
-// CHECK-LABEL: trimLeft
-print(String.prototype.trimLeft.length);
+print('trimStart');
+// CHECK-LABEL: trimStart
+print(String.prototype.trimStart.length);
 // CHECK-NEXT: 0
-print('abc'.trimLeft());
+print('abc'.trimStart());
 // CHECK-NEXT: abc
-var res = ' abc '.trimLeft();
+var res = ' abc '.trimStart();
 print(res, res.length);
 // CHECK-NEXT: abc  4
-var res = '\ufeff\n abc '.trimLeft();
+var res = '\ufeff\n abc '.trimStart();
 print(res, res.length);
 // CHECK-NEXT: abc  4
-var res = '  '.trimLeft();
+var res = '  '.trimStart();
 print('empty', res, res.length);
 // CHECK-NEXT: empty  0
+print(String.prototype.trimStart === String.prototype.trimLeft);
+// CHECK-NEXT: true
 
-print('trimRight');
-// CHECK-LABEL: trimRight
-print(String.prototype.trimRight.length);
+print('trimEnd');
+// CHECK-LABEL: trimEnd
+print(String.prototype.trimEnd.length);
 // CHECK-NEXT: 0
-print('abc'.trimRight());
+print('abc'.trimEnd());
 // CHECK-NEXT: abc
-var res = ' abc '.trimRight();
+var res = ' abc '.trimEnd();
 print(res, res.length);
 // CHECK-NEXT: abc  4
-var res = ' abc \n\ufeff'.trimRight();
+var res = ' abc \n\ufeff'.trimEnd();
 print(res, res.length);
 // CHECK-NEXT:  abc 4
-var res = '  '.trimRight();
+var res = '  '.trimEnd();
 print('empty', res, res.length);
 // CHECK-NEXT: empty  0
+print(String.prototype.trimEnd === String.prototype.trimRight);
+// CHECK-NEXT: true
 
 print('indexOf');
 // CHECK-LABEL: indexOf

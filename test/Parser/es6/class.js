@@ -1,9 +1,11 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
-// RUN: (! %hermesc -dump-ast -pretty-json %s 2>/dev/null ) | %FileCheck %s --match-full-lines
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// RUN: %hermesc -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
 
 // CHECK-LABEL: {
 // CHECK-NEXT:   "type": "Program",
@@ -47,7 +49,8 @@
 // CHECK-NEXT:                   "type": "BlockStatement",
 // CHECK-NEXT:                   "body": []
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:                 "generator": false,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "constructor",
 // CHECK-NEXT:               "computed": false,
@@ -77,7 +80,8 @@
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                   ]
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:                 "generator": false,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "method",
 // CHECK-NEXT:               "computed": false,
@@ -108,7 +112,8 @@
 // CHECK-NEXT:                   "type": "BlockStatement",
 // CHECK-NEXT:                   "body": []
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:                 "generator": false,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "method",
 // CHECK-NEXT:               "computed": true,
@@ -138,7 +143,8 @@
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                   ]
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:                 "generator": false,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "method",
 // CHECK-NEXT:               "computed": false,
@@ -168,7 +174,8 @@
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                   ]
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:                 "generator": false,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "get",
 // CHECK-NEXT:               "computed": false,
@@ -189,7 +196,8 @@
 // CHECK-NEXT:                   "type": "BlockStatement",
 // CHECK-NEXT:                   "body": []
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": true
+// CHECK-NEXT:                 "generator": true,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "method",
 // CHECK-NEXT:               "computed": false,
@@ -210,7 +218,8 @@
 // CHECK-NEXT:                   "type": "BlockStatement",
 // CHECK-NEXT:                   "body": []
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:                 "generator": false,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "method",
 // CHECK-NEXT:               "computed": false,
@@ -245,7 +254,8 @@
 // CHECK-NEXT:                   "type": "BlockStatement",
 // CHECK-NEXT:                   "body": []
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:                 "generator": false,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "method",
 // CHECK-NEXT:               "computed": false,
@@ -309,7 +319,8 @@ class UseSuperProps {
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 ]
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "constructor",
 // CHECK-NEXT:             "computed": false,
@@ -355,7 +366,8 @@ class UseSuperProps {
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 ]
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "method",
 // CHECK-NEXT:             "computed": false,
@@ -391,7 +403,8 @@ class UseSuperProps {
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 ]
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "method",
 // CHECK-NEXT:             "computed": false,
@@ -451,7 +464,8 @@ class UseSuperProps {
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                   ]
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": true
+// CHECK-NEXT:                 "generator": true,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "method",
 // CHECK-NEXT:               "computed": false,
@@ -486,7 +500,8 @@ class UseSuperProps {
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                   ]
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": true
+// CHECK-NEXT:                 "generator": true,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "method",
 // CHECK-NEXT:               "computed": false,
@@ -531,7 +546,8 @@ class UseSuperProps {
 // CHECK-NEXT:                   "type": "BlockStatement",
 // CHECK-NEXT:                   "body": []
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:                 "generator": false,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "get",
 // CHECK-NEXT:               "computed": true,
@@ -557,7 +573,8 @@ class UseSuperProps {
 // CHECK-NEXT:                   "type": "BlockStatement",
 // CHECK-NEXT:                   "body": []
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:                 "generator": false,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "set",
 // CHECK-NEXT:               "computed": true,
@@ -578,7 +595,8 @@ class UseSuperProps {
 // CHECK-NEXT:                   "type": "BlockStatement",
 // CHECK-NEXT:                   "body": []
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:                 "generator": false,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "method",
 // CHECK-NEXT:               "computed": false,
@@ -599,7 +617,8 @@ class UseSuperProps {
 // CHECK-NEXT:                   "type": "BlockStatement",
 // CHECK-NEXT:                   "body": []
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:                 "generator": false,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "method",
 // CHECK-NEXT:               "computed": false,
@@ -642,7 +661,8 @@ class SemiClass {
 // CHECK-NEXT:                 "type": "BlockStatement",
 // CHECK-NEXT:                 "body": []
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "method",
 // CHECK-NEXT:             "computed": false,
@@ -681,7 +701,8 @@ class DeclClass {
 // CHECK-NEXT:                 "type": "BlockStatement",
 // CHECK-NEXT:                 "body": []
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "method",
 // CHECK-NEXT:             "computed": false,

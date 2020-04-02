@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include <gtest/gtest.h>
 #include <hermes/CompileJS.h>
 #include <hermes/hermes.h>
@@ -27,9 +28,10 @@ struct HermesTestHelper {
 
 namespace {
 
-class HermesRuntimeTest : public ::testing::Test {
+class HermesRuntimeTestBase : public ::testing::Test {
  public:
-  HermesRuntimeTest() : rt(makeHermesRuntime()) {}
+  HermesRuntimeTestBase(::hermes::vm::RuntimeConfig runtimeConfig)
+      : rt(makeHermesRuntime(runtimeConfig)) {}
 
  protected:
   Value eval(const char *code) {
@@ -37,6 +39,14 @@ class HermesRuntimeTest : public ::testing::Test {
   }
 
   std::shared_ptr<HermesRuntime> rt;
+};
+
+class HermesRuntimeTest : public HermesRuntimeTestBase {
+ public:
+  HermesRuntimeTest()
+      : HermesRuntimeTestBase(
+            ::hermes::vm::RuntimeConfig::Builder().withES6Proxy(true).build()) {
+  }
 };
 
 using HermesRuntimeDeathTest = HermesRuntimeTest;
@@ -59,6 +69,19 @@ TEST_F(HermesRuntimeTest, StrictHostFunctionBindTest) {
                    "  return coolify.bind(undefined)();"
                    "})()")
                   .getBool());
+}
+
+TEST_F(HermesRuntimeTest, DescriptionTest) {
+  // Minimally, if the description doesn't include "Hermes", something
+  // is wrong.
+  EXPECT_NE(rt->description().find("Hermes"), std::string::npos);
+
+  std::shared_ptr<facebook::jsi::Runtime> rt2 = makeHermesRuntime(
+      ::hermes::vm::RuntimeConfig::Builder()
+          .withGCConfig(
+              ::hermes::vm::GCConfig::Builder().withName("ForTesting").build())
+          .build());
+  EXPECT_NE(rt2->description().find("Hermes"), std::string::npos);
 }
 
 TEST_F(HermesRuntimeTest, ArrayBufferTest) {
@@ -369,11 +392,75 @@ TEST_F(HermesRuntimeTest, HostObjectAsParentTest) {
       eval("var subClass = {__proto__: ho}; subClass.prop1 == 10;").getBool());
 }
 
+TEST_F(HermesRuntimeTest, HasComputedTest) {
+  // The only use of JSObject::hasComputed() is in HermesRuntimeImpl,
+  // so we test its Proxy support here, instead of from JS.
+
+  EXPECT_FALSE(eval("'prop' in new Proxy({}, {})").getBool());
+  EXPECT_TRUE(eval("'prop' in new Proxy({prop:1}, {})").getBool());
+  EXPECT_FALSE(
+      eval("'prop' in new Proxy({}, {has() { return false; }})").getBool());
+  EXPECT_TRUE(
+      eval("'prop' in new Proxy({}, {has() { return true; }})").getBool());
+
+  // While we're here, test that a HostFunction can be used as a proxy
+  // trap.  This could be very powerful in the right hands.
+  Function returnTrue = Function::createFromHostFunction(
+      *rt,
+      PropNameID::forAscii(*rt, "returnTrue"),
+      0,
+      [](Runtime &rt, const Value &, const Value *args, size_t count) {
+        EXPECT_EQ(count, 2);
+        EXPECT_EQ(args[1].toString(rt).utf8(rt), "prop");
+        return true;
+      });
+  rt->global().setProperty(*rt, "returnTrue", returnTrue);
+  EXPECT_TRUE(eval("'prop' in new Proxy({}, {has: returnTrue})").getBool());
+}
+
 TEST_F(HermesRuntimeTest, GlobalObjectTest) {
   rt->global().setProperty(*rt, "a", 5);
   eval("f = function(b) { return a + b; }");
   eval("gc()");
   EXPECT_EQ(eval("f(10)").getNumber(), 15);
+}
+
+TEST_F(HermesRuntimeTest, WithoutAllowFunctionToString) {
+  std::string fooFuncDef = "function foo() { 'bar'; }";
+  eval(fooFuncDef.c_str());
+  EXPECT_EQ(
+      eval("foo.toString()").getString(*rt).utf8(*rt),
+      "function foo() { [bytecode] }");
+
+  std::string fooLazyFuncDef =
+      "function fooLazy() { '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'; }";
+  eval(fooLazyFuncDef.c_str());
+  EXPECT_EQ(
+      eval("fooLazy.toString()").getString(*rt).utf8(*rt),
+      "function fooLazy() { [bytecode] }");
+}
+
+class HermesRuntimeTestWithAllowFunctionToString
+    : public HermesRuntimeTestBase {
+ public:
+  HermesRuntimeTestWithAllowFunctionToString()
+      : HermesRuntimeTestBase(
+            ::hermes::vm::RuntimeConfig::Builder()
+                .withES6Proxy(true)
+                .withAllowFunctionToStringWithRuntimeSource(true)
+                .build()) {}
+};
+
+TEST_F(HermesRuntimeTestWithAllowFunctionToString, WithAllowFunctionToString) {
+  std::string fooFuncDef = "function foo() { 'bar'; }";
+  eval(fooFuncDef.c_str());
+  EXPECT_EQ(eval("foo.toString()").getString(*rt).utf8(*rt), fooFuncDef);
+
+  std::string fooLazyFuncDef =
+      "function fooLazy() { '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'; }";
+  eval(fooLazyFuncDef.c_str());
+  EXPECT_EQ(
+      eval("fooLazy.toString()").getString(*rt).utf8(*rt), fooLazyFuncDef);
 }
 
 } // namespace

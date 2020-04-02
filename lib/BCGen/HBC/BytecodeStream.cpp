@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 
 using namespace hermes;
@@ -189,11 +190,11 @@ void BytecodeSerializer::serializeFunctionsBytecode(BytecodeModule &BM) {
     // Serialize opcodes.
     writeBinaryArray(entry->getOpcodeArray());
 
-    // Serialize the jump table after the opcode block.
-    pad(sizeof(uint32_t));
-
-    writeBinaryArray(entry->getJumpTables());
-
+    // Serialize any jump table after the opcode block.
+    if (!entry->getJumpTables().empty()) {
+      pad(sizeof(uint32_t));
+      writeBinaryArray(entry->getJumpTables());
+    }
     if (options_.padFunctionBodiesPercent) {
       size_t size = entry->getOpcodeArray().size();
       size = (size * options_.padFunctionBodiesPercent) / 100;

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 //===----------------------------------------------------------------------===//
 /// \file
 /// This benchmark is intended to measure the pure instruction dispatch
@@ -55,7 +56,7 @@ namespace {
 
 Handle<StringPrimitive>
 benchmark(Runtime *runtime, double loopc, double factc) {
-  auto domain = toHandle(runtime, Domain::create(runtime));
+  auto domain = runtime->makeHandle(Domain::create(runtime));
   auto *runtimeModule = RuntimeModule::createUninitialized(runtime, domain);
 
   std::map<int, int> labels{};

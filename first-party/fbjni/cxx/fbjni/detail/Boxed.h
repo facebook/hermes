@@ -1,5 +1,5 @@
-/**
- * Copyright 2018-present, Facebook, Inc.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ struct JPrimitive : JavaClass<T> {
       return value();                                                \
     }                                                                \
   };                                                                 \
-  inline local_ref<jobject> autobox(j ## LITTLE val) {               \
+  inline local_ref<J ## BIG::javaobject> autobox(j ## LITTLE val) {  \
     return J ## BIG::valueOf(val);                                   \
   }
 

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
 
 #include "hermes/VM/GC.h"
@@ -12,6 +13,9 @@ namespace hermes {
 namespace vm {
 
 #ifdef HERMES_SLOW_DEBUG
+
+CheckHeapWellFormedAcceptor::CheckHeapWellFormedAcceptor(GC &gc)
+    : SlotAcceptorDefault(gc), WeakRootAcceptorDefault(gc) {}
 
 void CheckHeapWellFormedAcceptor::accept(void *&ptr) {
   assert(

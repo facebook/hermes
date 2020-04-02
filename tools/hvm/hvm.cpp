@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
@@ -114,14 +115,20 @@ int main(int argc, char **argv) {
                           .withRandomSeed(cl::GCSanitizeRandomSeed)
                           .build())
                   .withShouldRandomizeAllocSpace(cl::GCRandomizeAllocSpace)
-                  .withShouldRecordStats(GCPrintStats)
+                  .withShouldRecordStats(
+                      GCPrintStats && !cl::StableInstructionCount)
                   .withShouldReleaseUnused(vm::kReleaseUnusedNone)
                   .withName("hvm")
                   .build())
+          .withES6Proxy(cl::ES6Proxy)
           .withES6Symbol(cl::ES6Symbol)
           .withTrackIO(cl::TrackBytecodeIO)
+          .withEnableHermesInternal(cl::EnableHermesInternal)
+          .withEnableHermesInternalTestMethods(
+              cl::EnableHermesInternalTestMethods)
           .build();
 
+  options.stabilizeInstructionCount = cl::StableInstructionCount;
   options.stopAfterInit = cl::StopAfterInit;
 #ifdef HERMESVM_PROFILER_EXTERN
   options.patchProfilerSymbols = cl::PatchProfilerSymbols;

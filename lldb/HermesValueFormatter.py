@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
-# This source code is licensed under the MIT license found in the LICENSE
-# file in the root directory of this source tree.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 
 """HermesValueFormatter contains the code used for decoding a HermesValue in the
 lldb debugger"""
@@ -46,7 +46,7 @@ POINTER_TAGS = [NATIVE_VALUE_TAG, STR_TAG, OBJECT_TAG]
 def __lldb_init_module(debugger, _):
     """Installs a new debugger handle for formatting hermes values"""
     debugger.HandleCommand(
-        b'type summary add "hermes::vm::HermesValue" -w hermes -F HermesValueFormatter.hv_format'
+        'type summary add "hermes::vm::HermesValue" "hermes::vm::PinnedHermesValue" "hermes::vm::GCHermesValue" -w hermes -F HermesValueFormatter.hv_format'
     )
 
 

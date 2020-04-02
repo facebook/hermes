@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 //===----------------------------------------------------------------------===//
 /// \file
 /// Initialize the global object ES5.1 15.1
@@ -15,7 +16,8 @@
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/StringView.h"
-#include "hermes/dtoa/dtoa.h"
+
+#include "dtoa/dtoa.h"
 
 #include "JSLibInternal.h"
 
@@ -63,7 +65,7 @@ CallResult<HermesValue> parseInt(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto str = toHandle(runtime, std::move(*strRes));
+  auto str = runtime->makeHandle(std::move(*strRes));
 
   int radix = 10;
   bool stripPrefix = true;
@@ -151,7 +153,7 @@ CallResult<HermesValue> parseFloat(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  auto strHandle = toHandle(runtime, std::move(*res));
+  auto strHandle = runtime->makeHandle(std::move(*res));
   auto origStr = StringPrimitive::createStringView(runtime, strHandle);
 
   auto &idTable = runtime->getIdentifierTable();
@@ -255,28 +257,19 @@ throwTypeError(void *ctx, Runtime *runtime, NativeArgs) {
 
 // NOTE: when declaring more global symbols, don't forget to update
 // "Libhermes.h".
-void initGlobalObject(Runtime *runtime) {
-  GCScope gcScope{runtime, "initGlobalObject", 256};
+void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
+  GCScope gcScope{runtime, "initGlobalObject", 288};
 
   // Not enumerable, not writable, not configurable.
-  DefinePropertyFlags constantDPF{};
-  constantDPF.setEnumerable = 1;
-  constantDPF.setWritable = 1;
-  constantDPF.setConfigurable = 1;
-  constantDPF.setValue = 1;
+  DefinePropertyFlags constantDPF =
+      DefinePropertyFlags::getDefaultNewPropertyFlags();
   constantDPF.enumerable = 0;
   constantDPF.writable = 0;
   constantDPF.configurable = 0;
 
   // Not enumerable, but writable and configurable.
-  DefinePropertyFlags normalDPF{};
-  normalDPF.setEnumerable = 1;
-  normalDPF.setWritable = 1;
-  normalDPF.setConfigurable = 1;
-  normalDPF.setValue = 1;
-  normalDPF.enumerable = 0;
-  normalDPF.writable = 1;
-  normalDPF.configurable = 1;
+  DefinePropertyFlags normalDPF =
+      DefinePropertyFlags::getNewNonEnumerableFlags();
 
   /// Clear the configurable flag.
   DefinePropertyFlags clearConfigurableDPF{};
@@ -331,8 +324,10 @@ void initGlobalObject(Runtime *runtime) {
 
   // "Forward declaration" of Error.prototype. Its properties will be populated
   // later.
-  runtime->ErrorPrototype = runtime->ignoreAllocationFailure(JSError::create(
-      runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype)));
+  runtime->ErrorPrototype =
+      JSError::create(
+          runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype))
+          .getHermesValue();
 
 // "Forward declaration" of the prototype for native error types. Their
 // properties will be populated later.
@@ -350,7 +345,7 @@ void initGlobalObject(Runtime *runtime) {
       Handle<JSObject>::vmcast(&runtime->objectPrototype),
       nullptr,
       emptyFunction,
-      SymbolID{},
+      Predefined::getSymbolID(Predefined::emptyString),
       0,
       Runtime::makeNullHandle<JSObject>());
   runtime->functionPrototype = funcRes.getHermesValue();
@@ -395,21 +390,27 @@ void initGlobalObject(Runtime *runtime) {
 
   // "Forward declaration" of String.prototype. Its properties will be
   // populated later.
-  runtime->stringPrototype = runtime->ignoreAllocationFailure(JSString::create(
-      runtime,
-      runtime->getPredefinedStringHandle(Predefined::emptyString),
-      Handle<JSObject>::vmcast(&runtime->objectPrototype)));
+  runtime->stringPrototype =
+      runtime
+          ->ignoreAllocationFailure(JSString::create(
+              runtime,
+              runtime->getPredefinedStringHandle(Predefined::emptyString),
+              Handle<JSObject>::vmcast(&runtime->objectPrototype)))
+          .getHermesValue();
 
   // "Forward declaration" of Number.prototype. Its properties will be
   // populated later.
-  runtime->numberPrototype = runtime->ignoreAllocationFailure(JSNumber::create(
-      runtime, +0.0, Handle<JSObject>::vmcast(&runtime->objectPrototype)));
+  runtime->numberPrototype =
+      JSNumber::create(
+          runtime, +0.0, Handle<JSObject>::vmcast(&runtime->objectPrototype))
+          .getHermesValue();
 
   // "Forward declaration" of Boolean.prototype. Its properties will be
   // populated later.
   runtime->booleanPrototype =
-      runtime->ignoreAllocationFailure(JSBoolean::create(
-          runtime, false, Handle<JSObject>::vmcast(&runtime->objectPrototype)));
+      JSBoolean::create(
+          runtime, false, Handle<JSObject>::vmcast(&runtime->objectPrototype))
+          .getHermesValue();
 
   // "Forward declaration" of Symbol.prototype. Its properties will be
   // populated later.
@@ -427,22 +428,22 @@ void initGlobalObject(Runtime *runtime) {
 
   // "Forward declaration" of Array.prototype. Its properties will be
   // populated later.
-  auto arrRes = runtime->ignoreAllocationFailure(JSArray::create(
-      runtime,
-      Handle<JSObject>::vmcast(&runtime->objectPrototype),
-      JSArray::createClass(
-          runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype)),
-      0,
-      0));
-  runtime->arrayPrototype = arrRes;
-  runtime->arrayPrototypeRawPtr = vmcast<JSObject>(runtime->arrayPrototype);
+  runtime->arrayPrototype =
+      runtime
+          ->ignoreAllocationFailure(JSArray::create(
+              runtime,
+              Handle<JSObject>::vmcast(&runtime->objectPrototype),
+              JSArray::createClass(
+                  runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype)),
+              0,
+              0))
+          .getHermesValue();
 
   // Declare the array class.
   runtime->arrayClass =
       JSArray::createClass(
           runtime, Handle<JSObject>::vmcast(&runtime->arrayPrototype))
           .getHermesValue();
-  runtime->arrayClassRawPtr = vmcast<HiddenClass>(runtime->arrayClass);
 
   // "Forward declaration" of ArrayBuffer.prototype. Its properties will be
   // populated later.
@@ -477,16 +478,20 @@ void initGlobalObject(Runtime *runtime) {
 
   // "Forward declaration" of Set.prototype. Its properties will be
   // populated later.
-  runtime->setPrototype = runtime->ignoreAllocationFailure(JSSet::create(
-      runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype)));
+  runtime->setPrototype =
+      JSSet::create(
+          runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype))
+          .getHermesValue();
 
   runtime->setIteratorPrototype =
       createSetIteratorPrototype(runtime).getHermesValue();
 
   // "Forward declaration" of Map.prototype. Its properties will be
   // populated later.
-  runtime->mapPrototype = runtime->ignoreAllocationFailure(JSMap::create(
-      runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype)));
+  runtime->mapPrototype =
+      JSMap::create(
+          runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype))
+          .getHermesValue();
 
   runtime->mapIteratorPrototype =
       createMapIteratorPrototype(runtime).getHermesValue();
@@ -612,6 +617,11 @@ void initGlobalObject(Runtime *runtime) {
   // %GeneratorPrototype%.
   populateGeneratorPrototype(runtime);
 
+  // Proxy constructor.
+  if (LLVM_UNLIKELY(runtime->hasES6Proxy())) {
+    createProxyConstructor(runtime);
+  }
+
   // Define the global Math object
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       runtime->getGlobal(),
@@ -628,13 +638,23 @@ void initGlobalObject(Runtime *runtime) {
       normalDPF,
       createJSONObject(runtime)));
 
+  if (LLVM_UNLIKELY(runtime->hasES6Proxy())) {
+    // Define the global Reflect object
+    runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
+        runtime->getGlobal(),
+        runtime,
+        Predefined::getSymbolID(Predefined::Reflect),
+        normalDPF,
+        createReflectObject(runtime)));
+  }
+
   // Define the global %HermesInternal object.
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       runtime->getGlobal(),
       runtime,
       Predefined::getSymbolID(Predefined::HermesInternal),
       constantDPF,
-      createHermesInternalObject(runtime)));
+      createHermesInternalObject(runtime, jsLibFlags)));
 
 #ifdef HERMES_ENABLE_DEBUGGER
 
@@ -709,6 +729,17 @@ void initGlobalObject(Runtime *runtime) {
 
   // Define the 'gc' function.
   defineGlobalFunc(Predefined::getSymbolID(Predefined::gc), gc, 0);
+
+#ifdef HERMES_ENABLE_IR_INSTRUMENTATION
+  // Define the global __instrument object
+  runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
+      runtime->getGlobal(),
+      runtime,
+      runtime->getIdentifierTable().registerLazyIdentifier(
+          createASCIIRef("__instrument")),
+      normalDPF,
+      createInstrumentObject(runtime)));
+#endif
 }
 
 } // namespace vm

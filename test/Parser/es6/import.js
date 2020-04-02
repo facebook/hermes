@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermesc -commonjs -dump-ast -pretty-json %s | %FileCheck --match-full-lines %s
 
 // CHECK-LABEL:   "body": {
@@ -208,5 +210,6 @@ import defaultBar, * as Bar from 'bar.js';
 
 // CHECK-NEXT:     ]
 // CHECK-NEXT:   },
-// CHECK-NEXT:   "generator": false
+// CHECK-NEXT:   "generator": false,
+// CHECK-NEXT:   "async": false
 // CHECK-NEXT: }

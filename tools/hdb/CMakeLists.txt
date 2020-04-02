@@ -1,13 +1,13 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
-# This source code is licensed under the MIT license found in the LICENSE
-# file in the root directory of this source tree.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 
 include_directories(${HERMES_SOURCE_DIR}/API)
 include_directories(${HERMES_JSI_DIR})
-set(LLVM_REQUIRES_EH ON)
-set(LLVM_REQUIRES_RTTI ON)
-add_llvm_tool(hdb
+set(HERMES_ENABLE_EH ON)
+set(HERMES_ENABLE_RTTI ON)
+add_hermes_tool(hdb
   hdb.cpp
   ${ALL_HEADER_FILES}
   )

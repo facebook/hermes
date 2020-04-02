@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_BCGEN_HBC_HBC_H
 #define HERMES_BCGEN_HBC_HBC_H
 
@@ -35,6 +36,15 @@ using llvm::raw_ostream;
 /// \returns a pointer to the BytecodeModule.
 std::unique_ptr<BytecodeModule> generateBytecodeModule(
     Module *M,
+    Function *entryPoint,
+    const BytecodeGenerationOptions &options,
+    OptValue<Context::SegmentRange> range = llvm::None,
+    SourceMapGenerator *sourceMap = nullptr,
+    std::unique_ptr<BCProviderBase> baseBCProvider = nullptr);
+
+std::unique_ptr<BytecodeModule> generateBytecodeModule(
+    Module *M,
+    Function *lexicalTopLevel,
     Function *entryPoint,
     const BytecodeGenerationOptions &options,
     OptValue<Context::SegmentRange> range = llvm::None,

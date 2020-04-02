@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/JSLib/DateUtil.h"
 
 #include "hermes/Platform/Unicode/PlatformUnicode.h"
@@ -709,7 +710,7 @@ static inline bool isDigit(char16_t c) {
 
 /// Read a number from the iterator at \p it into \p x.
 /// Can read integers that consist entirely of digits.
-/// \param[in][out] is modified to the new start point of the scan if
+/// \param[in,out] it is modified to the new start point of the scan if
 /// successful.
 /// \param end the end of the string.
 /// \param[out] x modified to contain the scanned integer.
@@ -862,8 +863,8 @@ static double parseESDate(StringView str) {
   auto end = str.end();
 
   /// Read a string starting at `it` into `tok`.
-  /// \param len the number of characters to scan in the string.
-  /// \return true if successful, false if failed.
+  /// \p len the number of characters to scan in the string.
+  /// Return true if successful, false if failed.
   auto scanStr = [&str, &tok, &it](int32_t len) -> bool {
     if (it + len > str.end()) {
       return false;
@@ -949,19 +950,51 @@ static double parseESDate(StringView str) {
   if (!scanInt(it, end, s))
     return nan;
 
-  // Space and "GMT".
+  // Space and time zone.
+  if (it == end)
+    goto complete;
   if (!consume(' '))
     return nan;
-  if (*it == 'G') {
-    // "GMT" is optional, but if there is a G, it is the only option.
+  if (it == end)
+    goto complete;
+
+  struct KnownTZ {
+    const char *tz;
+    int32_t tzh;
+  };
+
+  // Known time zones per RFC 2822.
+  // All other obsolete time zones that aren't in this array treated as +00:00.
+  static constexpr KnownTZ knownTZs[] = {
+      {"GMT", 0},
+      {"EDT", -4},
+      {"EST", -5},
+      {"CDT", -5},
+      {"CST", -6},
+      {"MDT", -6},
+      {"MST", -7},
+      {"PDT", -7},
+      {"PST", -8},
+  };
+
+  // TZ name is optional, but if there is a letter, it is the only option.
+  if ('A' <= *it && *it <= 'Z') {
     if (!scanStr(3))
       return nan;
-    if (!tok.equals(llvm::arrayRefFromStringRef("GMT")))
-      return nan;
+    for (const KnownTZ &knownTZ : knownTZs) {
+      if (tok.equals(llvm::arrayRefFromStringRef(knownTZ.tz))) {
+        tzh = knownTZ.tzh;
+        break;
+      }
+    }
   }
 
   if (it == end)
     goto complete;
+
+  // Prevent "CDT+0700", for example.
+  if (tzh != 0 && it != end)
+    return nan;
 
   // Sign of the timezone adjustment.
   if (consume('+'))

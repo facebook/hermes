@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "JSLibInternal.h"
 
 #include "hermes/Regex/Executor.h"
@@ -25,16 +26,14 @@ Handle<NativeConstructor> defineSystemConstructor(
     unsigned paramCount,
     NativeConstructor::CreatorFunction *creator,
     CellKind targetKind) {
-  auto constructor = toHandle(
+  auto constructor = runtime->makeHandle(NativeConstructor::create(
       runtime,
-      NativeConstructor::create(
-          runtime,
-          constructorProtoObjectHandle,
-          nullptr,
-          nativeFunctionPtr,
-          paramCount,
-          creator,
-          targetKind));
+      constructorProtoObjectHandle,
+      nullptr,
+      nativeFunctionPtr,
+      paramCount,
+      creator,
+      targetKind));
 
   auto st = Callable::defineNameLengthAndPrototype(
       constructor,
@@ -49,15 +48,7 @@ Handle<NativeConstructor> defineSystemConstructor(
       st != ExecutionStatus::EXCEPTION && "defineLengthAndPrototype() failed");
 
   // Define the global.
-  DefinePropertyFlags dpf{};
-
-  dpf.setEnumerable = 1;
-  dpf.setWritable = 1;
-  dpf.setConfigurable = 1;
-  dpf.setValue = 1;
-  dpf.enumerable = 0;
-  dpf.writable = 1;
-  dpf.configurable = 1;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
   auto res = JSObject::defineOwnProperty(
       runtime->getGlobal(), runtime, name, dpf, constructor);
@@ -125,14 +116,7 @@ void defineMethod(
     void *context,
     NativeFunctionPtr nativeFunctionPtr,
     unsigned paramCount) {
-  DefinePropertyFlags dpf{};
-  dpf.setEnumerable = 1;
-  dpf.setWritable = 1;
-  dpf.setConfigurable = 1;
-  dpf.setValue = 1;
-  dpf.enumerable = 0;
-  dpf.writable = 1;
-  dpf.configurable = 1;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
   (void)defineMethod(
       runtime, objectHandle, name, context, nativeFunctionPtr, paramCount, dpf);
 }
@@ -254,14 +238,7 @@ void defineProperty(
     Handle<JSObject> objectHandle,
     SymbolID name,
     Handle<> value) {
-  DefinePropertyFlags dpf{};
-  dpf.setEnumerable = 1;
-  dpf.enumerable = 0;
-  dpf.setConfigurable = 1;
-  dpf.configurable = 1;
-  dpf.setWritable = 1;
-  dpf.writable = 1;
-  dpf.setValue = 1;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
   return defineProperty(runtime, objectHandle, name, value, dpf);
 }
@@ -286,7 +263,7 @@ ExecutionStatus iteratorCloseAndRethrow(
 static std::vector<uint8_t> getReturnThisRegexBytecode() {
   const char16_t *returnThisRE = uR"X(^\s*return[ \t]+this\s*;?\s*$)X";
   regex::constants::SyntaxFlags nativeFlags = {};
-  return regex::Regex<regex::U16RegexTraits>(returnThisRE, nativeFlags)
+  return regex::Regex<regex::UTF16RegexTraits>(returnThisRE, nativeFlags)
       .compile();
 }
 
@@ -303,21 +280,23 @@ static bool isReturnThis(Handle<StringPrimitive> str, Runtime *runtime) {
   static auto bytecode = getReturnThisRegexBytecode();
   auto result = regex::MatchRuntimeResult::NoMatch;
   if (input.isASCII()) {
-    regex::MatchResults<const char *> results;
     const char *begin = input.castToCharPtr();
-    const char *end = begin + input.length();
     result = regex::searchWithBytecode(
         bytecode,
         begin,
-        end,
-        results,
+        0,
+        input.length(),
+        nullptr,
         regex::constants::matchDefault | regex::constants::matchInputAllAscii);
   } else {
-    regex::MatchResults<const char16_t *> results;
     const char16_t *begin = input.castToChar16Ptr();
-    const char16_t *end = begin + input.length();
     result = regex::searchWithBytecode(
-        bytecode, begin, end, results, regex::constants::matchDefault);
+        bytecode,
+        begin,
+        0,
+        input.length(),
+        nullptr,
+        regex::constants::matchDefault);
   }
   return result == regex::MatchRuntimeResult::Match;
 }
@@ -339,7 +318,7 @@ CallResult<HermesValue> createDynamicFunction(
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto params = toHandle(runtime, std::move(*arrRes));
+  auto params = runtime->makeHandle(std::move(*arrRes));
 
   // Body of the resultant function.
   MutableHandle<StringPrimitive> body{runtime};
@@ -348,6 +327,16 @@ CallResult<HermesValue> createDynamicFunction(
   // Account for commas in the argument list initially.
   // If at least two arguments to the function (3 in total), there's a comma.
   SafeUInt32 size{paramCount > 0 ? paramCount - 1 : 0};
+
+  // Use the parent of the 'this' value passed by the caller as the parent.
+  // This will usually be the functionPrototype or generatorFunctionPrototype,
+  // but if this is called from reflectConstruct, it might be something else.
+  Handle<JSObject> parent = vmisa<JSObject>(args.getThisArg())
+      ? runtime->makeHandle(
+            vmcast<JSObject>(args.getThisArg())->getParent(runtime))
+      : (isGeneratorFunction
+             ? Handle<JSObject>::vmcast(&runtime->generatorFunctionPrototype)
+             : Handle<JSObject>::vmcast(&runtime->functionPrototype));
 
   if (argCount == 0) {
     // No arguments, just set body to be the empty string.
@@ -361,7 +350,7 @@ CallResult<HermesValue> createDynamicFunction(
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      auto param = toHandle(runtime, std::move(*strRes));
+      auto param = runtime->makeHandle(std::move(*strRes));
       JSArray::setElementAt(params, runtime, i, param);
       size.add(param->getStringLength());
     }
@@ -377,11 +366,12 @@ CallResult<HermesValue> createDynamicFunction(
     if (!isGeneratorFunction && argCount == 1 && isReturnThis(body, runtime)) {
       // If this raises an exception, we still return immediately.
       return JSFunction::create(
-          runtime,
-          toHandle(runtime, Domain::create(runtime)),
-          Handle<JSObject>(runtime, nullptr),
-          Handle<Environment>(runtime, nullptr),
-          runtime->getReturnThisCodeBlock());
+                 runtime,
+                 runtime->makeHandle(Domain::create(runtime)),
+                 parent,
+                 Handle<Environment>(runtime, nullptr),
+                 runtime->getReturnThisCodeBlock())
+          .getHermesValue();
     }
   }
 
@@ -429,15 +419,9 @@ CallResult<HermesValue> createDynamicFunction(
   Handle<JSFunction> function =
       runtime->makeHandle(vmcast<JSFunction>(evalRes.getValue()));
 
-  DefinePropertyFlags dpf{};
-  dpf.clear();
-  dpf.setValue = 1;
-  dpf.setEnumerable = 1;
-  dpf.setWritable = 1;
-  dpf.setConfigurable = 1;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.enumerable = 0;
   dpf.writable = 0;
-  dpf.configurable = 1;
 
   // Define the `name` correctly.
   if (JSObject::defineOwnProperty(
@@ -450,6 +434,17 @@ CallResult<HermesValue> createDynamicFunction(
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
+
+  // Set the parent.  This could be done by threading the argument
+  // through to Runtime::runBytecode where the object is actually
+  // created, but this is the only place we need to do this so it
+  // keeps the code simpler.
+  CallResult<bool> parentRes = JSObject::setParent(*function, runtime, *parent);
+  if (LLVM_UNLIKELY(parentRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  assert(
+      *parentRes && "Setting prototype on new dynamic function returned false");
 
   return function.getHermesValue();
 }

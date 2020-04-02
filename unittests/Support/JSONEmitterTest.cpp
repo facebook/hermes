@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/Support/JSONEmitter.h"
 
 #include "gtest/gtest.h"
@@ -192,6 +193,20 @@ TEST(JSONEmitterTest, NonFinite) {
   // This intermediate variable is necessary because
   // MSVC's macro preprocessor does not behave as expected with R-literals.
   const char *expected = R"#([null,null,null])#";
+  EXPECT_EQ(OS.str(), expected);
+}
+
+TEST(JSONEmitterTest, EmitGroupsOfForwardSlashes) {
+  std::string storage;
+  llvm::raw_string_ostream OS(storage);
+  JSONEmitter json(OS);
+
+  json.openDict();
+  json.emitKeyValue("url", "http://www.example.com");
+  json.closeDict();
+
+  // Expect escaped forward slashes.
+  const char *expected = R"#({"url":"http:\/\/www.example.com"})#";
   EXPECT_EQ(OS.str(), expected);
 }
 }; // anonymous namespace

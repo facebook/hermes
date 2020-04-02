@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -O -target=HBC %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -target=HBC -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
 // Make sure RegExp literals.
@@ -23,7 +25,3 @@ print(/\w (\d+)/.exec("abc def"));
 // CHECK-NEXT: null
 print(/\w (\d+)/.exec("abc 1234"));
 // CHECK-NEXT: c 1234,1234
-
-// Ensure that escapes are not interpreted in regexp flags.
-try { print(/a/\u0067); } catch(e) { print('Caught', e.name); }
-// CHECK-NEXT: Caught SyntaxError

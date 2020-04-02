@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 //===----------------------------------------------------------------------===//
 /// \file
 /// ES6.0 23.2 Initialize the Set constructor.
@@ -86,14 +87,7 @@ Handle<JSObject> createSetConstructor(Runtime *runtime) {
       setPrototypeValues,
       0);
 
-  DefinePropertyFlags dpf{};
-  dpf.setEnumerable = 1;
-  dpf.setWritable = 1;
-  dpf.setConfigurable = 1;
-  dpf.setValue = 1;
-  dpf.enumerable = 0;
-  dpf.writable = 1;
-  dpf.configurable = 1;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
   // Use the same valuesMethod for both keys() and values().
   auto propValue = runtime->makeHandle<NativeFunction>(
@@ -261,12 +255,8 @@ setPrototypeEntries(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Method Set.prototype.entries called on incompatible receiver");
   }
-  auto mapRes = JSSetIterator::create(
-      runtime, Handle<JSObject>::vmcast(&runtime->setIteratorPrototype));
-  if (LLVM_UNLIKELY(mapRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto iterator = runtime->makeHandle<JSSetIterator>(*mapRes);
+  auto iterator = runtime->makeHandle(JSSetIterator::create(
+      runtime, Handle<JSObject>::vmcast(&runtime->setIteratorPrototype)));
   iterator->initializeIterator(runtime, selfHandle, IterationKind::Entry);
   return iterator.getHermesValue();
 }
@@ -335,21 +325,15 @@ setPrototypeValues(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Method Set.prototype.values called on incompatible receiver");
   }
-  auto mapRes = JSSetIterator::create(
-      runtime, Handle<JSObject>::vmcast(&runtime->setIteratorPrototype));
-  if (LLVM_UNLIKELY(mapRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto iterator = runtime->makeHandle<JSSetIterator>(*mapRes);
+  auto iterator = runtime->makeHandle(JSSetIterator::create(
+      runtime, Handle<JSObject>::vmcast(&runtime->setIteratorPrototype)));
   iterator->initializeIterator(runtime, selfHandle, IterationKind::Value);
   return iterator.getHermesValue();
 }
 
 Handle<JSObject> createSetIteratorPrototype(Runtime *runtime) {
-  auto parentHandle = toHandle(
-      runtime,
-      JSObject::create(
-          runtime, Handle<JSObject>::vmcast(&runtime->iteratorPrototype)));
+  auto parentHandle = runtime->makeHandle(JSObject::create(
+      runtime, Handle<JSObject>::vmcast(&runtime->iteratorPrototype)));
   defineMethod(
       runtime,
       parentHandle,

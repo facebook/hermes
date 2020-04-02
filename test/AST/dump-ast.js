@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -dump-ast %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -dump-ast -pretty-json %s | %FileCheck --match-full-lines %s --check-prefix=CHECK-PRETTY
 // RUN: %hermes -dump-ast -dump-source-location -pretty-json %s | %FileCheck --match-full-lines %s --check-prefix=CHECK-SOURCE-LOC
@@ -22,7 +24,7 @@ switch (foo()) {
     print(foo());
 }
 
-// CHECK: {"type":"Program","body":[{"type":"FunctionDeclaration","id":{"type":"Identifier","name":"foo","typeAnnotation":null},"params":[],"body":{"type":"BlockStatement","body":[{"type":"ReturnStatement","argument":{"type":"CallExpression","callee":{"type":"MemberExpression","object":{"type":"Identifier","name":"Math","typeAnnotation":null},"property":{"type":"Identifier","name":"random","typeAnnotation":null},"computed":false},"arguments":[]}}]},"returnType":null,"generator":false},{"type":"SwitchStatement","discriminant":{"type":"CallExpression","callee":{"type":"Identifier","name":"foo","typeAnnotation":null},"arguments":[]},"cases":[{"type":"SwitchCase","test":{"type":"NumericLiteral","value":3,"raw":"3"},"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"StringLiteral","value":"fizz"}]},"directive":null},{"type":"BreakStatement","label":null}]},{"type":"SwitchCase","test":{"type":"NumericLiteral","value":5,"raw":"5"},"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"StringLiteral","value":"buzz"}]},"directive":null},{"type":"BreakStatement","label":null}]},{"type":"SwitchCase","test":null,"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"CallExpression","callee":{"type":"Identifier","name":"foo","typeAnnotation":null},"arguments":[]}]},"directive":null}]}]}]}
+// CHECK: {"type":"Program","body":[{"type":"FunctionDeclaration","id":{"type":"Identifier","name":"foo","typeAnnotation":null},"params":[],"body":{"type":"BlockStatement","body":[{"type":"ReturnStatement","argument":{"type":"CallExpression","callee":{"type":"MemberExpression","object":{"type":"Identifier","name":"Math","typeAnnotation":null},"property":{"type":"Identifier","name":"random","typeAnnotation":null},"computed":false},"arguments":[]}}]},"returnType":null,"generator":false,"async":false},{"type":"SwitchStatement","discriminant":{"type":"CallExpression","callee":{"type":"Identifier","name":"foo","typeAnnotation":null},"arguments":[]},"cases":[{"type":"SwitchCase","test":{"type":"NumericLiteral","value":3,"raw":"3"},"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"StringLiteral","value":"fizz"}]},"directive":null},{"type":"BreakStatement","label":null}]},{"type":"SwitchCase","test":{"type":"NumericLiteral","value":5,"raw":"5"},"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"StringLiteral","value":"buzz"}]},"directive":null},{"type":"BreakStatement","label":null}]},{"type":"SwitchCase","test":null,"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"CallExpression","callee":{"type":"Identifier","name":"foo","typeAnnotation":null},"arguments":[]}]},"directive":null}]}]}]}
 
 // CHECK-PRETTY:   {
 // CHECK-PRETTY:     "type": "Program",
@@ -62,7 +64,8 @@ switch (foo()) {
 // CHECK-PRETTY:           ]
 // CHECK-PRETTY:         },
 // CHECK-PRETTY:         "returnType": null,
-// CHECK-PRETTY:         "generator": false
+// CHECK-PRETTY:         "generator": false,
+// CHECK-PRETTY:         "async": false
 // CHECK-PRETTY:       },
 // CHECK-PRETTY:       {
 // CHECK-PRETTY:         "type": "SwitchStatement",
@@ -185,17 +188,17 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:           "typeAnnotation": null,
 // CHECK-SOURCE-LOC:           "loc": {
 // CHECK-SOURCE-LOC:             "start": {
-// CHECK-SOURCE-LOC:               "line": 10,
+// CHECK-SOURCE-LOC:               "line": 12,
 // CHECK-SOURCE-LOC:               "column": 10
 // CHECK-SOURCE-LOC:             },
 // CHECK-SOURCE-LOC:             "end": {
-// CHECK-SOURCE-LOC:               "line": 10,
+// CHECK-SOURCE-LOC:               "line": 12,
 // CHECK-SOURCE-LOC:               "column": 13
 // CHECK-SOURCE-LOC:             }
 // CHECK-SOURCE-LOC:           },
 // CHECK-SOURCE-LOC:           "range": [
-// CHECK-SOURCE-LOC:             494,
-// CHECK-SOURCE-LOC:             497
+// CHECK-SOURCE-LOC:             500,
+// CHECK-SOURCE-LOC:             503
 // CHECK-SOURCE-LOC:           ]
 // CHECK-SOURCE-LOC:         },
 // CHECK-SOURCE-LOC:         "params": [],
@@ -214,17 +217,17 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                     "typeAnnotation": null,
 // CHECK-SOURCE-LOC:                     "loc": {
 // CHECK-SOURCE-LOC:                       "start": {
-// CHECK-SOURCE-LOC:                         "line": 11,
+// CHECK-SOURCE-LOC:                         "line": 13,
 // CHECK-SOURCE-LOC:                         "column": 10
 // CHECK-SOURCE-LOC:                       },
 // CHECK-SOURCE-LOC:                       "end": {
-// CHECK-SOURCE-LOC:                         "line": 11,
+// CHECK-SOURCE-LOC:                         "line": 13,
 // CHECK-SOURCE-LOC:                         "column": 14
 // CHECK-SOURCE-LOC:                       }
 // CHECK-SOURCE-LOC:                     },
 // CHECK-SOURCE-LOC:                     "range": [
-// CHECK-SOURCE-LOC:                       511,
-// CHECK-SOURCE-LOC:                       515
+// CHECK-SOURCE-LOC:                       517,
+// CHECK-SOURCE-LOC:                       521
 // CHECK-SOURCE-LOC:                     ]
 // CHECK-SOURCE-LOC:                   },
 // CHECK-SOURCE-LOC:                   "property": {
@@ -233,97 +236,98 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                     "typeAnnotation": null,
 // CHECK-SOURCE-LOC:                     "loc": {
 // CHECK-SOURCE-LOC:                       "start": {
-// CHECK-SOURCE-LOC:                         "line": 11,
+// CHECK-SOURCE-LOC:                         "line": 13,
 // CHECK-SOURCE-LOC:                         "column": 15
 // CHECK-SOURCE-LOC:                       },
 // CHECK-SOURCE-LOC:                       "end": {
-// CHECK-SOURCE-LOC:                         "line": 11,
+// CHECK-SOURCE-LOC:                         "line": 13,
 // CHECK-SOURCE-LOC:                         "column": 21
 // CHECK-SOURCE-LOC:                       }
 // CHECK-SOURCE-LOC:                     },
 // CHECK-SOURCE-LOC:                     "range": [
-// CHECK-SOURCE-LOC:                       516,
-// CHECK-SOURCE-LOC:                       522
+// CHECK-SOURCE-LOC:                       522,
+// CHECK-SOURCE-LOC:                       528
 // CHECK-SOURCE-LOC:                     ]
 // CHECK-SOURCE-LOC:                   },
 // CHECK-SOURCE-LOC:                   "computed": false,
 // CHECK-SOURCE-LOC:                   "loc": {
 // CHECK-SOURCE-LOC:                     "start": {
-// CHECK-SOURCE-LOC:                       "line": 11,
+// CHECK-SOURCE-LOC:                       "line": 13,
 // CHECK-SOURCE-LOC:                       "column": 10
 // CHECK-SOURCE-LOC:                     },
 // CHECK-SOURCE-LOC:                     "end": {
-// CHECK-SOURCE-LOC:                       "line": 11,
+// CHECK-SOURCE-LOC:                       "line": 13,
 // CHECK-SOURCE-LOC:                       "column": 21
 // CHECK-SOURCE-LOC:                     }
 // CHECK-SOURCE-LOC:                   },
 // CHECK-SOURCE-LOC:                   "range": [
-// CHECK-SOURCE-LOC:                     511,
-// CHECK-SOURCE-LOC:                     522
+// CHECK-SOURCE-LOC:                     517,
+// CHECK-SOURCE-LOC:                     528
 // CHECK-SOURCE-LOC:                   ]
 // CHECK-SOURCE-LOC:                 },
 // CHECK-SOURCE-LOC:                 "arguments": [],
 // CHECK-SOURCE-LOC:                 "loc": {
 // CHECK-SOURCE-LOC:                   "start": {
-// CHECK-SOURCE-LOC:                     "line": 11,
+// CHECK-SOURCE-LOC:                     "line": 13,
 // CHECK-SOURCE-LOC:                     "column": 10
 // CHECK-SOURCE-LOC:                   },
 // CHECK-SOURCE-LOC:                   "end": {
-// CHECK-SOURCE-LOC:                     "line": 11,
+// CHECK-SOURCE-LOC:                     "line": 13,
 // CHECK-SOURCE-LOC:                     "column": 23
 // CHECK-SOURCE-LOC:                   }
 // CHECK-SOURCE-LOC:                 },
 // CHECK-SOURCE-LOC:                 "range": [
-// CHECK-SOURCE-LOC:                   511,
-// CHECK-SOURCE-LOC:                   524
+// CHECK-SOURCE-LOC:                   517,
+// CHECK-SOURCE-LOC:                   530
 // CHECK-SOURCE-LOC:                 ]
 // CHECK-SOURCE-LOC:               },
 // CHECK-SOURCE-LOC:               "loc": {
 // CHECK-SOURCE-LOC:                 "start": {
-// CHECK-SOURCE-LOC:                   "line": 11,
+// CHECK-SOURCE-LOC:                   "line": 13,
 // CHECK-SOURCE-LOC:                   "column": 3
 // CHECK-SOURCE-LOC:                 },
 // CHECK-SOURCE-LOC:                 "end": {
-// CHECK-SOURCE-LOC:                   "line": 11,
+// CHECK-SOURCE-LOC:                   "line": 13,
 // CHECK-SOURCE-LOC:                   "column": 24
 // CHECK-SOURCE-LOC:                 }
 // CHECK-SOURCE-LOC:               },
 // CHECK-SOURCE-LOC:               "range": [
-// CHECK-SOURCE-LOC:                 504,
-// CHECK-SOURCE-LOC:                 525
+// CHECK-SOURCE-LOC:                 510,
+// CHECK-SOURCE-LOC:                 531
 // CHECK-SOURCE-LOC:               ]
 // CHECK-SOURCE-LOC:             }
 // CHECK-SOURCE-LOC:           ],
 // CHECK-SOURCE-LOC:           "loc": {
 // CHECK-SOURCE-LOC:             "start": {
-// CHECK-SOURCE-LOC:               "line": 10,
+// CHECK-SOURCE-LOC:               "line": 12,
 // CHECK-SOURCE-LOC:               "column": 16
 // CHECK-SOURCE-LOC:             },
 // CHECK-SOURCE-LOC:             "end": {
-// CHECK-SOURCE-LOC:               "line": 12,
+// CHECK-SOURCE-LOC:               "line": 14,
 // CHECK-SOURCE-LOC:               "column": 2
 // CHECK-SOURCE-LOC:             }
 // CHECK-SOURCE-LOC:           },
 // CHECK-SOURCE-LOC:           "range": [
-// CHECK-SOURCE-LOC:             500,
-// CHECK-SOURCE-LOC:             527
+// CHECK-SOURCE-LOC:             506,
+// CHECK-SOURCE-LOC:             533
 // CHECK-SOURCE-LOC:           ]
 // CHECK-SOURCE-LOC:         },
 // CHECK-SOURCE-LOC:         "returnType": null,
 // CHECK-SOURCE-LOC:         "generator": false,
+// CHECK-SOURCE-LOC:         "async": false,
 // CHECK-SOURCE-LOC:         "loc": {
 // CHECK-SOURCE-LOC:           "start": {
-// CHECK-SOURCE-LOC:             "line": 10,
+// CHECK-SOURCE-LOC:             "line": 12,
 // CHECK-SOURCE-LOC:             "column": 1
 // CHECK-SOURCE-LOC:           },
 // CHECK-SOURCE-LOC:           "end": {
-// CHECK-SOURCE-LOC:             "line": 12,
+// CHECK-SOURCE-LOC:             "line": 14,
 // CHECK-SOURCE-LOC:             "column": 2
 // CHECK-SOURCE-LOC:           }
 // CHECK-SOURCE-LOC:         },
 // CHECK-SOURCE-LOC:         "range": [
-// CHECK-SOURCE-LOC:           485,
-// CHECK-SOURCE-LOC:           527
+// CHECK-SOURCE-LOC:           491,
+// CHECK-SOURCE-LOC:           533
 // CHECK-SOURCE-LOC:         ]
 // CHECK-SOURCE-LOC:       },
 // CHECK-SOURCE-LOC:       {
@@ -336,33 +340,33 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:             "typeAnnotation": null,
 // CHECK-SOURCE-LOC:             "loc": {
 // CHECK-SOURCE-LOC:               "start": {
-// CHECK-SOURCE-LOC:                 "line": 14,
+// CHECK-SOURCE-LOC:                 "line": 16,
 // CHECK-SOURCE-LOC:                 "column": 9
 // CHECK-SOURCE-LOC:               },
 // CHECK-SOURCE-LOC:               "end": {
-// CHECK-SOURCE-LOC:                 "line": 14,
+// CHECK-SOURCE-LOC:                 "line": 16,
 // CHECK-SOURCE-LOC:                 "column": 12
 // CHECK-SOURCE-LOC:               }
 // CHECK-SOURCE-LOC:             },
 // CHECK-SOURCE-LOC:             "range": [
-// CHECK-SOURCE-LOC:               537,
-// CHECK-SOURCE-LOC:               540
+// CHECK-SOURCE-LOC:               543,
+// CHECK-SOURCE-LOC:               546
 // CHECK-SOURCE-LOC:             ]
 // CHECK-SOURCE-LOC:           },
 // CHECK-SOURCE-LOC:           "arguments": [],
 // CHECK-SOURCE-LOC:           "loc": {
 // CHECK-SOURCE-LOC:             "start": {
-// CHECK-SOURCE-LOC:               "line": 14,
+// CHECK-SOURCE-LOC:               "line": 16,
 // CHECK-SOURCE-LOC:               "column": 9
 // CHECK-SOURCE-LOC:             },
 // CHECK-SOURCE-LOC:             "end": {
-// CHECK-SOURCE-LOC:               "line": 14,
+// CHECK-SOURCE-LOC:               "line": 16,
 // CHECK-SOURCE-LOC:               "column": 14
 // CHECK-SOURCE-LOC:             }
 // CHECK-SOURCE-LOC:           },
 // CHECK-SOURCE-LOC:           "range": [
-// CHECK-SOURCE-LOC:             537,
-// CHECK-SOURCE-LOC:             542
+// CHECK-SOURCE-LOC:             543,
+// CHECK-SOURCE-LOC:             548
 // CHECK-SOURCE-LOC:           ]
 // CHECK-SOURCE-LOC:         },
 // CHECK-SOURCE-LOC:         "cases": [
@@ -374,17 +378,17 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:               "raw": "3",
 // CHECK-SOURCE-LOC:               "loc": {
 // CHECK-SOURCE-LOC:                 "start": {
-// CHECK-SOURCE-LOC:                   "line": 15,
+// CHECK-SOURCE-LOC:                   "line": 17,
 // CHECK-SOURCE-LOC:                   "column": 8
 // CHECK-SOURCE-LOC:                 },
 // CHECK-SOURCE-LOC:                 "end": {
-// CHECK-SOURCE-LOC:                   "line": 15,
+// CHECK-SOURCE-LOC:                   "line": 17,
 // CHECK-SOURCE-LOC:                   "column": 9
 // CHECK-SOURCE-LOC:                 }
 // CHECK-SOURCE-LOC:               },
 // CHECK-SOURCE-LOC:               "range": [
-// CHECK-SOURCE-LOC:                 553,
-// CHECK-SOURCE-LOC:                 554
+// CHECK-SOURCE-LOC:                 559,
+// CHECK-SOURCE-LOC:                 560
 // CHECK-SOURCE-LOC:               ]
 // CHECK-SOURCE-LOC:             },
 // CHECK-SOURCE-LOC:             "consequent": [
@@ -398,17 +402,17 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                     "typeAnnotation": null,
 // CHECK-SOURCE-LOC:                     "loc": {
 // CHECK-SOURCE-LOC:                       "start": {
-// CHECK-SOURCE-LOC:                         "line": 16,
+// CHECK-SOURCE-LOC:                         "line": 18,
 // CHECK-SOURCE-LOC:                         "column": 5
 // CHECK-SOURCE-LOC:                       },
 // CHECK-SOURCE-LOC:                       "end": {
-// CHECK-SOURCE-LOC:                         "line": 16,
+// CHECK-SOURCE-LOC:                         "line": 18,
 // CHECK-SOURCE-LOC:                         "column": 10
 // CHECK-SOURCE-LOC:                       }
 // CHECK-SOURCE-LOC:                     },
 // CHECK-SOURCE-LOC:                     "range": [
-// CHECK-SOURCE-LOC:                       560,
-// CHECK-SOURCE-LOC:                       565
+// CHECK-SOURCE-LOC:                       566,
+// CHECK-SOURCE-LOC:                       571
 // CHECK-SOURCE-LOC:                     ]
 // CHECK-SOURCE-LOC:                   },
 // CHECK-SOURCE-LOC:                   "arguments": [
@@ -417,49 +421,49 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                       "value": "fizz",
 // CHECK-SOURCE-LOC:                       "loc": {
 // CHECK-SOURCE-LOC:                         "start": {
-// CHECK-SOURCE-LOC:                           "line": 16,
+// CHECK-SOURCE-LOC:                           "line": 18,
 // CHECK-SOURCE-LOC:                           "column": 11
 // CHECK-SOURCE-LOC:                         },
 // CHECK-SOURCE-LOC:                         "end": {
-// CHECK-SOURCE-LOC:                           "line": 16,
+// CHECK-SOURCE-LOC:                           "line": 18,
 // CHECK-SOURCE-LOC:                           "column": 17
 // CHECK-SOURCE-LOC:                         }
 // CHECK-SOURCE-LOC:                       },
 // CHECK-SOURCE-LOC:                       "range": [
-// CHECK-SOURCE-LOC:                         566,
-// CHECK-SOURCE-LOC:                         572
+// CHECK-SOURCE-LOC:                         572,
+// CHECK-SOURCE-LOC:                         578
 // CHECK-SOURCE-LOC:                       ]
 // CHECK-SOURCE-LOC:                     }
 // CHECK-SOURCE-LOC:                   ],
 // CHECK-SOURCE-LOC:                   "loc": {
 // CHECK-SOURCE-LOC:                     "start": {
-// CHECK-SOURCE-LOC:                       "line": 16,
+// CHECK-SOURCE-LOC:                       "line": 18,
 // CHECK-SOURCE-LOC:                       "column": 5
 // CHECK-SOURCE-LOC:                     },
 // CHECK-SOURCE-LOC:                     "end": {
-// CHECK-SOURCE-LOC:                       "line": 16,
+// CHECK-SOURCE-LOC:                       "line": 18,
 // CHECK-SOURCE-LOC:                       "column": 18
 // CHECK-SOURCE-LOC:                     }
 // CHECK-SOURCE-LOC:                   },
 // CHECK-SOURCE-LOC:                   "range": [
-// CHECK-SOURCE-LOC:                     560,
-// CHECK-SOURCE-LOC:                     573
+// CHECK-SOURCE-LOC:                     566,
+// CHECK-SOURCE-LOC:                     579
 // CHECK-SOURCE-LOC:                   ]
 // CHECK-SOURCE-LOC:                 },
 // CHECK-SOURCE-LOC:                 "directive": null,
 // CHECK-SOURCE-LOC:                 "loc": {
 // CHECK-SOURCE-LOC:                   "start": {
-// CHECK-SOURCE-LOC:                     "line": 16,
+// CHECK-SOURCE-LOC:                     "line": 18,
 // CHECK-SOURCE-LOC:                     "column": 5
 // CHECK-SOURCE-LOC:                   },
 // CHECK-SOURCE-LOC:                   "end": {
-// CHECK-SOURCE-LOC:                     "line": 16,
+// CHECK-SOURCE-LOC:                     "line": 18,
 // CHECK-SOURCE-LOC:                     "column": 19
 // CHECK-SOURCE-LOC:                   }
 // CHECK-SOURCE-LOC:                 },
 // CHECK-SOURCE-LOC:                 "range": [
-// CHECK-SOURCE-LOC:                   560,
-// CHECK-SOURCE-LOC:                   574
+// CHECK-SOURCE-LOC:                   566,
+// CHECK-SOURCE-LOC:                   580
 // CHECK-SOURCE-LOC:                 ]
 // CHECK-SOURCE-LOC:               },
 // CHECK-SOURCE-LOC:               {
@@ -467,33 +471,33 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                 "label": null,
 // CHECK-SOURCE-LOC:                 "loc": {
 // CHECK-SOURCE-LOC:                   "start": {
-// CHECK-SOURCE-LOC:                     "line": 17,
+// CHECK-SOURCE-LOC:                     "line": 19,
 // CHECK-SOURCE-LOC:                     "column": 5
 // CHECK-SOURCE-LOC:                   },
 // CHECK-SOURCE-LOC:                   "end": {
-// CHECK-SOURCE-LOC:                     "line": 17,
+// CHECK-SOURCE-LOC:                     "line": 19,
 // CHECK-SOURCE-LOC:                     "column": 11
 // CHECK-SOURCE-LOC:                   }
 // CHECK-SOURCE-LOC:                 },
 // CHECK-SOURCE-LOC:                 "range": [
-// CHECK-SOURCE-LOC:                   579,
-// CHECK-SOURCE-LOC:                   585
+// CHECK-SOURCE-LOC:                   585,
+// CHECK-SOURCE-LOC:                   591
 // CHECK-SOURCE-LOC:                 ]
 // CHECK-SOURCE-LOC:               }
 // CHECK-SOURCE-LOC:             ],
 // CHECK-SOURCE-LOC:             "loc": {
 // CHECK-SOURCE-LOC:               "start": {
-// CHECK-SOURCE-LOC:                 "line": 15,
+// CHECK-SOURCE-LOC:                 "line": 17,
 // CHECK-SOURCE-LOC:                 "column": 3
 // CHECK-SOURCE-LOC:               },
 // CHECK-SOURCE-LOC:               "end": {
-// CHECK-SOURCE-LOC:                 "line": 17,
+// CHECK-SOURCE-LOC:                 "line": 19,
 // CHECK-SOURCE-LOC:                 "column": 11
 // CHECK-SOURCE-LOC:               }
 // CHECK-SOURCE-LOC:             },
 // CHECK-SOURCE-LOC:             "range": [
-// CHECK-SOURCE-LOC:               548,
-// CHECK-SOURCE-LOC:               585
+// CHECK-SOURCE-LOC:               554,
+// CHECK-SOURCE-LOC:               591
 // CHECK-SOURCE-LOC:             ]
 // CHECK-SOURCE-LOC:           },
 // CHECK-SOURCE-LOC:           {
@@ -504,17 +508,17 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:               "raw": "5",
 // CHECK-SOURCE-LOC:               "loc": {
 // CHECK-SOURCE-LOC:                 "start": {
-// CHECK-SOURCE-LOC:                   "line": 18,
+// CHECK-SOURCE-LOC:                   "line": 20,
 // CHECK-SOURCE-LOC:                   "column": 8
 // CHECK-SOURCE-LOC:                 },
 // CHECK-SOURCE-LOC:                 "end": {
-// CHECK-SOURCE-LOC:                   "line": 18,
+// CHECK-SOURCE-LOC:                   "line": 20,
 // CHECK-SOURCE-LOC:                   "column": 9
 // CHECK-SOURCE-LOC:                 }
 // CHECK-SOURCE-LOC:               },
 // CHECK-SOURCE-LOC:               "range": [
-// CHECK-SOURCE-LOC:                 593,
-// CHECK-SOURCE-LOC:                 594
+// CHECK-SOURCE-LOC:                 599,
+// CHECK-SOURCE-LOC:                 600
 // CHECK-SOURCE-LOC:               ]
 // CHECK-SOURCE-LOC:             },
 // CHECK-SOURCE-LOC:             "consequent": [
@@ -528,17 +532,17 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                     "typeAnnotation": null,
 // CHECK-SOURCE-LOC:                     "loc": {
 // CHECK-SOURCE-LOC:                       "start": {
-// CHECK-SOURCE-LOC:                         "line": 19,
+// CHECK-SOURCE-LOC:                         "line": 21,
 // CHECK-SOURCE-LOC:                         "column": 5
 // CHECK-SOURCE-LOC:                       },
 // CHECK-SOURCE-LOC:                       "end": {
-// CHECK-SOURCE-LOC:                         "line": 19,
+// CHECK-SOURCE-LOC:                         "line": 21,
 // CHECK-SOURCE-LOC:                         "column": 10
 // CHECK-SOURCE-LOC:                       }
 // CHECK-SOURCE-LOC:                     },
 // CHECK-SOURCE-LOC:                     "range": [
-// CHECK-SOURCE-LOC:                       600,
-// CHECK-SOURCE-LOC:                       605
+// CHECK-SOURCE-LOC:                       606,
+// CHECK-SOURCE-LOC:                       611
 // CHECK-SOURCE-LOC:                     ]
 // CHECK-SOURCE-LOC:                   },
 // CHECK-SOURCE-LOC:                   "arguments": [
@@ -547,49 +551,49 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                       "value": "buzz",
 // CHECK-SOURCE-LOC:                       "loc": {
 // CHECK-SOURCE-LOC:                         "start": {
-// CHECK-SOURCE-LOC:                           "line": 19,
+// CHECK-SOURCE-LOC:                           "line": 21,
 // CHECK-SOURCE-LOC:                           "column": 11
 // CHECK-SOURCE-LOC:                         },
 // CHECK-SOURCE-LOC:                         "end": {
-// CHECK-SOURCE-LOC:                           "line": 19,
+// CHECK-SOURCE-LOC:                           "line": 21,
 // CHECK-SOURCE-LOC:                           "column": 17
 // CHECK-SOURCE-LOC:                         }
 // CHECK-SOURCE-LOC:                       },
 // CHECK-SOURCE-LOC:                       "range": [
-// CHECK-SOURCE-LOC:                         606,
-// CHECK-SOURCE-LOC:                         612
+// CHECK-SOURCE-LOC:                         612,
+// CHECK-SOURCE-LOC:                         618
 // CHECK-SOURCE-LOC:                       ]
 // CHECK-SOURCE-LOC:                     }
 // CHECK-SOURCE-LOC:                   ],
 // CHECK-SOURCE-LOC:                   "loc": {
 // CHECK-SOURCE-LOC:                     "start": {
-// CHECK-SOURCE-LOC:                       "line": 19,
+// CHECK-SOURCE-LOC:                       "line": 21,
 // CHECK-SOURCE-LOC:                       "column": 5
 // CHECK-SOURCE-LOC:                     },
 // CHECK-SOURCE-LOC:                     "end": {
-// CHECK-SOURCE-LOC:                       "line": 19,
+// CHECK-SOURCE-LOC:                       "line": 21,
 // CHECK-SOURCE-LOC:                       "column": 18
 // CHECK-SOURCE-LOC:                     }
 // CHECK-SOURCE-LOC:                   },
 // CHECK-SOURCE-LOC:                   "range": [
-// CHECK-SOURCE-LOC:                     600,
-// CHECK-SOURCE-LOC:                     613
+// CHECK-SOURCE-LOC:                     606,
+// CHECK-SOURCE-LOC:                     619
 // CHECK-SOURCE-LOC:                   ]
 // CHECK-SOURCE-LOC:                 },
 // CHECK-SOURCE-LOC:                 "directive": null,
 // CHECK-SOURCE-LOC:                 "loc": {
 // CHECK-SOURCE-LOC:                   "start": {
-// CHECK-SOURCE-LOC:                     "line": 19,
+// CHECK-SOURCE-LOC:                     "line": 21,
 // CHECK-SOURCE-LOC:                     "column": 5
 // CHECK-SOURCE-LOC:                   },
 // CHECK-SOURCE-LOC:                   "end": {
-// CHECK-SOURCE-LOC:                     "line": 19,
+// CHECK-SOURCE-LOC:                     "line": 21,
 // CHECK-SOURCE-LOC:                     "column": 19
 // CHECK-SOURCE-LOC:                   }
 // CHECK-SOURCE-LOC:                 },
 // CHECK-SOURCE-LOC:                 "range": [
-// CHECK-SOURCE-LOC:                   600,
-// CHECK-SOURCE-LOC:                   614
+// CHECK-SOURCE-LOC:                   606,
+// CHECK-SOURCE-LOC:                   620
 // CHECK-SOURCE-LOC:                 ]
 // CHECK-SOURCE-LOC:               },
 // CHECK-SOURCE-LOC:               {
@@ -597,33 +601,33 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                 "label": null,
 // CHECK-SOURCE-LOC:                 "loc": {
 // CHECK-SOURCE-LOC:                   "start": {
-// CHECK-SOURCE-LOC:                     "line": 20,
+// CHECK-SOURCE-LOC:                     "line": 22,
 // CHECK-SOURCE-LOC:                     "column": 5
 // CHECK-SOURCE-LOC:                   },
 // CHECK-SOURCE-LOC:                   "end": {
-// CHECK-SOURCE-LOC:                     "line": 20,
+// CHECK-SOURCE-LOC:                     "line": 22,
 // CHECK-SOURCE-LOC:                     "column": 11
 // CHECK-SOURCE-LOC:                   }
 // CHECK-SOURCE-LOC:                 },
 // CHECK-SOURCE-LOC:                 "range": [
-// CHECK-SOURCE-LOC:                   619,
-// CHECK-SOURCE-LOC:                   625
+// CHECK-SOURCE-LOC:                   625,
+// CHECK-SOURCE-LOC:                   631
 // CHECK-SOURCE-LOC:                 ]
 // CHECK-SOURCE-LOC:               }
 // CHECK-SOURCE-LOC:             ],
 // CHECK-SOURCE-LOC:             "loc": {
 // CHECK-SOURCE-LOC:               "start": {
-// CHECK-SOURCE-LOC:                 "line": 18,
+// CHECK-SOURCE-LOC:                 "line": 20,
 // CHECK-SOURCE-LOC:                 "column": 3
 // CHECK-SOURCE-LOC:               },
 // CHECK-SOURCE-LOC:               "end": {
-// CHECK-SOURCE-LOC:                 "line": 20,
+// CHECK-SOURCE-LOC:                 "line": 22,
 // CHECK-SOURCE-LOC:                 "column": 11
 // CHECK-SOURCE-LOC:               }
 // CHECK-SOURCE-LOC:             },
 // CHECK-SOURCE-LOC:             "range": [
-// CHECK-SOURCE-LOC:               588,
-// CHECK-SOURCE-LOC:               625
+// CHECK-SOURCE-LOC:               594,
+// CHECK-SOURCE-LOC:               631
 // CHECK-SOURCE-LOC:             ]
 // CHECK-SOURCE-LOC:           },
 // CHECK-SOURCE-LOC:           {
@@ -640,17 +644,17 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                     "typeAnnotation": null,
 // CHECK-SOURCE-LOC:                     "loc": {
 // CHECK-SOURCE-LOC:                       "start": {
-// CHECK-SOURCE-LOC:                         "line": 22,
+// CHECK-SOURCE-LOC:                         "line": 24,
 // CHECK-SOURCE-LOC:                         "column": 5
 // CHECK-SOURCE-LOC:                       },
 // CHECK-SOURCE-LOC:                       "end": {
-// CHECK-SOURCE-LOC:                         "line": 22,
+// CHECK-SOURCE-LOC:                         "line": 24,
 // CHECK-SOURCE-LOC:                         "column": 10
 // CHECK-SOURCE-LOC:                       }
 // CHECK-SOURCE-LOC:                     },
 // CHECK-SOURCE-LOC:                     "range": [
-// CHECK-SOURCE-LOC:                       641,
-// CHECK-SOURCE-LOC:                       646
+// CHECK-SOURCE-LOC:                       647,
+// CHECK-SOURCE-LOC:                       652
 // CHECK-SOURCE-LOC:                     ]
 // CHECK-SOURCE-LOC:                   },
 // CHECK-SOURCE-LOC:                   "arguments": [
@@ -662,112 +666,112 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                         "typeAnnotation": null,
 // CHECK-SOURCE-LOC:                         "loc": {
 // CHECK-SOURCE-LOC:                           "start": {
-// CHECK-SOURCE-LOC:                             "line": 22,
+// CHECK-SOURCE-LOC:                             "line": 24,
 // CHECK-SOURCE-LOC:                             "column": 11
 // CHECK-SOURCE-LOC:                           },
 // CHECK-SOURCE-LOC:                           "end": {
-// CHECK-SOURCE-LOC:                             "line": 22,
+// CHECK-SOURCE-LOC:                             "line": 24,
 // CHECK-SOURCE-LOC:                             "column": 14
 // CHECK-SOURCE-LOC:                           }
 // CHECK-SOURCE-LOC:                         },
 // CHECK-SOURCE-LOC:                         "range": [
-// CHECK-SOURCE-LOC:                           647,
-// CHECK-SOURCE-LOC:                           650
+// CHECK-SOURCE-LOC:                           653,
+// CHECK-SOURCE-LOC:                           656
 // CHECK-SOURCE-LOC:                         ]
 // CHECK-SOURCE-LOC:                       },
 // CHECK-SOURCE-LOC:                       "arguments": [],
 // CHECK-SOURCE-LOC:                       "loc": {
 // CHECK-SOURCE-LOC:                         "start": {
-// CHECK-SOURCE-LOC:                           "line": 22,
+// CHECK-SOURCE-LOC:                           "line": 24,
 // CHECK-SOURCE-LOC:                           "column": 11
 // CHECK-SOURCE-LOC:                         },
 // CHECK-SOURCE-LOC:                         "end": {
-// CHECK-SOURCE-LOC:                           "line": 22,
+// CHECK-SOURCE-LOC:                           "line": 24,
 // CHECK-SOURCE-LOC:                           "column": 16
 // CHECK-SOURCE-LOC:                         }
 // CHECK-SOURCE-LOC:                       },
 // CHECK-SOURCE-LOC:                       "range": [
-// CHECK-SOURCE-LOC:                         647,
-// CHECK-SOURCE-LOC:                         652
+// CHECK-SOURCE-LOC:                         653,
+// CHECK-SOURCE-LOC:                         658
 // CHECK-SOURCE-LOC:                       ]
 // CHECK-SOURCE-LOC:                     }
 // CHECK-SOURCE-LOC:                   ],
 // CHECK-SOURCE-LOC:                   "loc": {
 // CHECK-SOURCE-LOC:                     "start": {
-// CHECK-SOURCE-LOC:                       "line": 22,
+// CHECK-SOURCE-LOC:                       "line": 24,
 // CHECK-SOURCE-LOC:                       "column": 5
 // CHECK-SOURCE-LOC:                     },
 // CHECK-SOURCE-LOC:                     "end": {
-// CHECK-SOURCE-LOC:                       "line": 22,
+// CHECK-SOURCE-LOC:                       "line": 24,
 // CHECK-SOURCE-LOC:                       "column": 17
 // CHECK-SOURCE-LOC:                     }
 // CHECK-SOURCE-LOC:                   },
 // CHECK-SOURCE-LOC:                   "range": [
-// CHECK-SOURCE-LOC:                     641,
-// CHECK-SOURCE-LOC:                     653
+// CHECK-SOURCE-LOC:                     647,
+// CHECK-SOURCE-LOC:                     659
 // CHECK-SOURCE-LOC:                   ]
 // CHECK-SOURCE-LOC:                 },
 // CHECK-SOURCE-LOC:                 "directive": null,
 // CHECK-SOURCE-LOC:                 "loc": {
 // CHECK-SOURCE-LOC:                   "start": {
-// CHECK-SOURCE-LOC:                     "line": 22,
+// CHECK-SOURCE-LOC:                     "line": 24,
 // CHECK-SOURCE-LOC:                     "column": 5
 // CHECK-SOURCE-LOC:                   },
 // CHECK-SOURCE-LOC:                   "end": {
-// CHECK-SOURCE-LOC:                     "line": 22,
+// CHECK-SOURCE-LOC:                     "line": 24,
 // CHECK-SOURCE-LOC:                     "column": 18
 // CHECK-SOURCE-LOC:                   }
 // CHECK-SOURCE-LOC:                 },
 // CHECK-SOURCE-LOC:                 "range": [
-// CHECK-SOURCE-LOC:                   641,
-// CHECK-SOURCE-LOC:                   654
+// CHECK-SOURCE-LOC:                   647,
+// CHECK-SOURCE-LOC:                   660
 // CHECK-SOURCE-LOC:                 ]
 // CHECK-SOURCE-LOC:               }
 // CHECK-SOURCE-LOC:             ],
 // CHECK-SOURCE-LOC:             "loc": {
 // CHECK-SOURCE-LOC:               "start": {
-// CHECK-SOURCE-LOC:                 "line": 21,
+// CHECK-SOURCE-LOC:                 "line": 23,
 // CHECK-SOURCE-LOC:                 "column": 3
 // CHECK-SOURCE-LOC:               },
 // CHECK-SOURCE-LOC:               "end": {
-// CHECK-SOURCE-LOC:                 "line": 22,
+// CHECK-SOURCE-LOC:                 "line": 24,
 // CHECK-SOURCE-LOC:                 "column": 18
 // CHECK-SOURCE-LOC:               }
 // CHECK-SOURCE-LOC:             },
 // CHECK-SOURCE-LOC:             "range": [
-// CHECK-SOURCE-LOC:               628,
-// CHECK-SOURCE-LOC:               654
+// CHECK-SOURCE-LOC:               634,
+// CHECK-SOURCE-LOC:               660
 // CHECK-SOURCE-LOC:             ]
 // CHECK-SOURCE-LOC:           }
 // CHECK-SOURCE-LOC:         ],
 // CHECK-SOURCE-LOC:         "loc": {
 // CHECK-SOURCE-LOC:           "start": {
-// CHECK-SOURCE-LOC:             "line": 14,
+// CHECK-SOURCE-LOC:             "line": 16,
 // CHECK-SOURCE-LOC:             "column": 1
 // CHECK-SOURCE-LOC:           },
 // CHECK-SOURCE-LOC:           "end": {
-// CHECK-SOURCE-LOC:             "line": 23,
+// CHECK-SOURCE-LOC:             "line": 25,
 // CHECK-SOURCE-LOC:             "column": 2
 // CHECK-SOURCE-LOC:           }
 // CHECK-SOURCE-LOC:         },
 // CHECK-SOURCE-LOC:         "range": [
-// CHECK-SOURCE-LOC:           529,
-// CHECK-SOURCE-LOC:           656
+// CHECK-SOURCE-LOC:           535,
+// CHECK-SOURCE-LOC:           662
 // CHECK-SOURCE-LOC:         ]
 // CHECK-SOURCE-LOC:       }
 // CHECK-SOURCE-LOC:     ],
 // CHECK-SOURCE-LOC:     "loc": {
 // CHECK-SOURCE-LOC:       "start": {
-// CHECK-SOURCE-LOC:         "line": 10,
+// CHECK-SOURCE-LOC:         "line": 12,
 // CHECK-SOURCE-LOC:         "column": 1
 // CHECK-SOURCE-LOC:       },
 // CHECK-SOURCE-LOC:       "end": {
-// CHECK-SOURCE-LOC:         "line": 23,
+// CHECK-SOURCE-LOC:         "line": 25,
 // CHECK-SOURCE-LOC:         "column": 2
 // CHECK-SOURCE-LOC:       }
 // CHECK-SOURCE-LOC:     },
 // CHECK-SOURCE-LOC:     "range": [
-// CHECK-SOURCE-LOC:       485,
-// CHECK-SOURCE-LOC:       656
+// CHECK-SOURCE-LOC:       491,
+// CHECK-SOURCE-LOC:       662
 // CHECK-SOURCE-LOC:     ]
 // CHECK-SOURCE-LOC:   }

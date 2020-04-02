@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "gtest/gtest.h"
 
 #include "LogSuccessStorageProvider.h"
@@ -149,10 +150,11 @@ TEST(StorageProviderTest, LimitedStorageProviderDeleteNull) {
 
 TEST(StorageProviderTest, LogFailStorageProvider) {
   constexpr size_t LIM = 2;
-  LimitedStorageProvider delegate{StorageProvider::mmapProvider(),
-                                  AlignedStorage::size() * LIM};
+  auto delegate =
+      std::unique_ptr<LimitedStorageProvider>{new LimitedStorageProvider{
+          StorageProvider::mmapProvider(), AlignedStorage::size() * LIM}};
 
-  LogFailStorageProvider provider{&delegate};
+  LogFailStorageProvider provider{std::move(delegate)};
 
   constexpr size_t FAILS = 3;
   void *storages[LIM];
@@ -192,18 +194,6 @@ class StorageGuard final {
   std::shared_ptr<StorageProvider> provider_;
   void *storage_;
 };
-
-TEST(StorageProviderTest, WithExcess) {
-  auto result = StorageProvider::preAllocatedProvider(0, 0, 100);
-  ASSERT_TRUE(result);
-  std::shared_ptr<StorageProvider> provider{std::move(result.get())};
-  // This should succeed even though the maxAmount is 0.
-  // The excess bytes requested should be rounded up to give an extra storage
-  // allocation.
-  StorageGuard storage{provider, provider->newStorage().get()};
-  EXPECT_TRUE(storage.raw());
-  // A request for a second storage *can* fail, but is not required to.
-}
 
 #ifndef NDEBUG
 

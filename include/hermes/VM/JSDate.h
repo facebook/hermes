@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_JSDATE_H
 #define HERMES_VM_JSDATE_H
 
@@ -19,20 +20,18 @@ class JSDate final : public JSObject {
  public:
   static ObjectVTable vt;
 
-  /// Number of property slots the class reserves for itself. Child classes
-  /// should override this value by adding to it and defining a constant with
-  /// the same name.
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      Super::NEEDED_PROPERTY_SLOTS + 1;
+  /// Need one anonymous slot for the [[PrimitiveValue]] internal property.
+  static const PropStorage::size_type ANONYMOUS_PROPERTY_SLOTS =
+      Super::ANONYMOUS_PROPERTY_SLOTS + 1;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::DateKind;
   }
 
-  static CallResult<HermesValue>
+  static PseudoHandle<JSDate>
   create(Runtime *runtime, double value, Handle<JSObject> prototype);
 
-  static CallResult<HermesValue> create(
+  static PseudoHandle<JSDate> create(
       Runtime *runtime,
       Handle<JSObject> prototype) {
     return create(runtime, std::numeric_limits<double>::quiet_NaN(), prototype);
@@ -41,14 +40,14 @@ class JSDate final : public JSObject {
   /// \return the [[PrimitiveValue]] internal property.
   static HermesValue getPrimitiveValue(JSObject *self, Runtime *runtime) {
     return JSObject::getInternalProperty(
-        self, runtime, JSDate::primitiveValueIndex);
+        self, runtime, JSDate::primitiveValuePropIndex());
   }
 
   /// Set the [[PrimitiveValue]] internal property.
   static void
   setPrimitiveValue(JSObject *self, Runtime *runtime, HermesValue value) {
     return JSObject::setInternalProperty(
-        self, runtime, JSDate::primitiveValueIndex, value);
+        self, runtime, JSDate::primitiveValuePropIndex(), value);
   }
 
  protected:
@@ -62,7 +61,9 @@ class JSDate final : public JSObject {
       : JSObject(runtime, &vt.base, parent, clazz) {}
 
  protected:
-  static const SlotIndex primitiveValueIndex = 0;
+  static constexpr SlotIndex primitiveValuePropIndex() {
+    return numOverlapSlots<JSDate>() + ANONYMOUS_PROPERTY_SLOTS - 1;
+  }
 };
 
 } // namespace vm

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_COMPLETEMARKSTATE_H
 #define HERMES_VM_COMPLETEMARKSTATE_H
 
@@ -11,12 +12,18 @@
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/MarkBitArrayNC.h"
 
+#include <list>
 #include <vector>
 
 namespace hermes {
 namespace vm {
 
+/// Forward declartions.
 struct FullMSCUpdateAcceptor;
+
+template <CellKind>
+class JSWeakMapImpl;
+using JSWeakMap = JSWeakMapImpl<CellKind::WeakMapKind>;
 
 /// Intermediate state from marking.
 struct CompleteMarkState {
@@ -30,6 +37,10 @@ struct CompleteMarkState {
   /// is not guaranteed to be visited on the current mark bit array
   /// traversal).
   void markTransitive(void *ptr);
+
+  /// The pointer \p cell is assumed to point to a reachable object.
+  /// Push it on the appropriate markStack.
+  void pushCell(GCCell *cell);
 
   /// Continually pops elements from the mark stack and scans their pointer
   /// fields.  If such a field points to an unmarked object, mark it and push it
@@ -78,9 +89,21 @@ struct CompleteMarkState {
   /// mark-bit-map traversal was started.
   bool markStackOverflow_ = false;
 
+  /// Whether to do "proper" weak map marking. Under control of this boolean
+  /// because there have been bugs, so we want, at least for a while,
+  /// to be able to turn this off with a GK, reverting to the
+  /// previous, non-spec-compliant, behavior.
+  bool properWeakMapMarking_;
+
+  /// The total number of mark stack overflows that have occurred.
+  unsigned numMarkStackOverflows_{0};
+
   /// Stores the current object whose fields are being scanned
   /// to be marked if needed.
   GCCell *currentParPointer = nullptr;
+
+  /// The WeakMap objects that have been discovered to be reachable.
+  std::vector<JSWeakMap *> reachableWeakMaps_;
 };
 
 /// Returns a heap acceptor for mark-sweep-compact pointer update.

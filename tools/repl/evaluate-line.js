@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 /// Line evaluator for the REPL.
 /// Runs a line of JS input and pretty-prints the output.
 /// This is included into C++ file as a string literal at compilation time.
@@ -186,7 +188,7 @@ C_STRING((function() {
         elements.push(prettyPrintProp(value, prop, visited));
       }
     }
-    if (value.constructor.name && value.constructor.name !== "Object") {
+    if (value.constructor && value.constructor.name && value.constructor.name !== "Object") {
       return value.constructor.name + ' { ' + elements.join(', ') + ' }';
     } else {
       return '{ ' + elements.join(', ') + ' }';
@@ -217,17 +219,19 @@ C_STRING((function() {
       // Input consists only of a comment, return early.
       return undefined;
     }
+    // Use (1, eval) to run indirect eval (global eval) and allow
+    // var declaration.
     if (trimmed[0] === '{' && trimmed[trimmed.length - 1] === '}') {
       try {
         // The input starts with { and ends with }, so try wrap with ( and ).
-        output = eval('(' + input + ')');
+        output = (1, eval)('(' + input + ')');
       } catch (e) {
         // Wrapping the input failed, so just fall back to regular eval.
-        output = eval(input);
+        output = (1, eval)(input);
       }
     } else {
       // Can't be mistaken for a block, so just use regular eval.
-      output = eval(input);
+      output = (1, eval)(input);
     }
 
     // Otherwise, just run eval directly.

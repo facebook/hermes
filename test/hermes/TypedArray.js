@@ -1,11 +1,16 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
-// RUN: %hermes -target=HBC -O -gc-sanitize-handles=0 %s
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// RUN: %hermes -Xhermes-internal-test-methods -Xes6-proxy -O -gc-sanitize-handles=0 %s | %FileCheck %s
 
 'use strict';
+
+print("START");
+//CHECK:START
 
 function isLittleEndian() {
   var uint16 = new Uint16Array(1);
@@ -407,6 +412,27 @@ cons.forEach(function(TypedArray) {
   a[0] = -0;
   assert.equal(1 / a[0], -Infinity);
 })();
+
+/// @name %TypedArray% in and delete
+/// @{
+cons.forEach(function(TA) {
+  var ta = new TA([1,2,3,4,5]);
+  assert.equal(false, -1 in ta);
+  assert.equal(true, 0 in ta);
+  assert.equal(true, 4 in ta);
+  assert.equal(false, 5 in ta);
+
+  assert.equal(true, delete ta[-1]);
+  assert.throws(_ => delete ta[0], TypeError);
+  assert.throws(_ => delete ta[4], TypeError);
+  assert.equal(true, delete ta[5]);
+
+  assert.equal(true, Reflect.deleteProperty(ta, -1));
+  assert.equal(false, Reflect.deleteProperty(ta, 0));
+  assert.equal(false, Reflect.deleteProperty(ta, 4));
+  assert.equal(true, Reflect.deleteProperty(ta, 5));
+});
+/// @}
 
 /// @name %TypedArray%.prototype.buffer
 /// @{
@@ -934,6 +960,14 @@ cons.forEach(function(ta) {
     });
   }, TypeError);
 });
+
+(function negativeZeroSort() {
+  var x = new Float64Array([+0, -0]);
+  x.sort();
+  assert.equal(1 / x[0], -Infinity);
+  assert.equal(1 / x[1], +Infinity);
+})();
+
 /// @}
 
 /// @name TypedArray.prototype.set
@@ -1345,3 +1379,6 @@ assert.throws(function() {
 }, ReferenceError);
 
 /// @}
+
+print("OK");
+//CHECK-NEXT:OK

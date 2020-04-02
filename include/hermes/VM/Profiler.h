@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_PROFILER_H
 #define HERMES_VM_PROFILER_H
 
@@ -75,12 +76,12 @@ constexpr ProfilerID NO_PROFILER_ID = UINT32_MAX;
 /// thus we store the ID to calculate the offset at symbol dump time.
 struct ProfilerFunctionInfo {
   ProfilerID profilerId;
-  SymbolID functionName;
+  std::string functionName;
   uint32_t functionID;
   std::shared_ptr<hbc::BCProvider> bytecode;
   ProfilerFunctionInfo(
       ProfilerID id,
-      SymbolID name,
+      std::string name,
       uint32_t fid,
       std::shared_ptr<hbc::BCProvider> bc)
       : profilerId(id),

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_SUPPORT_OSCOMPAT_H
 #define HERMES_SUPPORT_OSCOMPAT_H
 
@@ -27,6 +28,7 @@
 #include <sstream>
 #include <string>
 #include <system_error>
+#include <vector>
 
 // This file defines cross-os APIs for functionality provided by our target
 // operating systems.
@@ -100,9 +102,10 @@ enum class ProtectMode { ReadWrite, None };
 /// false on error.
 bool vm_protect(void *p, size_t sz, ProtectMode mode);
 
+enum class MAdvice { Random, Sequential };
+
 /// Issue an madvise() call.
 /// \return true on success, false on error.
-enum class MAdvice { Random, Sequential };
 bool vm_madvise(void *p, size_t sz, MAdvice advice);
 
 /// Return the number of pages in the given region that are currently in RAM.
@@ -148,6 +151,14 @@ bool thread_page_fault_count(int64_t *outMinorFaults, int64_t *outMajorFaults);
 
 /// \return name of current thread.
 std::string thread_name();
+
+/// \return mask of all CPU cores on which this thread may be scheduled,
+/// or an empty vector on error.
+std::vector<bool> sched_getaffinity();
+
+/// \return the CPU core where this thread is currently scheduled,
+/// or -1 on error.
+int sched_getcpu();
 
 /// Converts a value to its string representation.  Only works for
 /// numeric values, e.g. 0 becomes "0", not '\0'.

@@ -1,10 +1,12 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
-// RUN: %hermesc -dump-ir %s | %FileCheck %s --match-full-lines
-// RUN: %hermesc -dump-bytecode %s
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// RUN: %hermesc -O0 -dump-ir %s | %FileCheck %s --match-full-lines
+// RUN: %hermesc -O0 -dump-bytecode %s
 
 // Ensure that the "break" in the finally handler exits the correct
 // loop.

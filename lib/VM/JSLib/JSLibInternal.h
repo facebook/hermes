@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_JSLIB_JSLIBINTERNAL_H
 #define HERMES_VM_JSLIB_JSLIBINTERNAL_H
 
@@ -12,6 +13,7 @@
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSMapImpl.h"
 #include "hermes/VM/JSNativeFunctions.h"
+#include "hermes/VM/JSProxy.h"
 #include "hermes/VM/JSRegExp.h"
 
 namespace hermes {
@@ -70,7 +72,7 @@ Handle<NativeConstructor> defineSystemConstructor(
       nativeFunctionPtr,
       prototypeObjectHandle,
       paramCount,
-      NativeClass::create,
+      NativeConstructor::creatorFunction<NativeClass>,
       targetKind);
 }
 
@@ -132,7 +134,6 @@ inline CallResult<HermesValue> defineMethod(
 /// \param context the context to pass to the native function.
 /// \param nativeFunctionPtr the native function implementing the method.
 /// \param paramCount the number of declared method parameters
-///  \return the new NativeFunction.
 void defineMethod(
     Runtime *runtime,
     Handle<JSObject> objectHandle,
@@ -261,9 +262,18 @@ Handle<JSObject> createDateConstructor(Runtime *runtime);
 /// and function properties.
 Handle<JSObject> createMathObject(Runtime *runtime);
 
+/// Create and initialize the global Proxy constructor, populating its methods.
+/// \return the global Proxy constructor.
+Handle<JSObject> createProxyConstructor(Runtime *runtime);
+
+// Forward declaration.
+class JSLibFlags;
+
 /// Create and initialize the global %HermesInternal object, populating its
 /// value and function properties.
-Handle<JSObject> createHermesInternalObject(Runtime *runtime);
+Handle<JSObject> createHermesInternalObject(
+    Runtime *runtime,
+    const JSLibFlags &jsLibFlags);
 
 #ifdef HERMES_ENABLE_DEBUGGER
 
@@ -277,6 +287,10 @@ Handle<JSObject> createDebuggerInternalObject(Runtime *runtime);
 /// and function properties.
 Handle<JSObject> createJSONObject(Runtime *runtime);
 
+/// Create and initialize the global Reflect object, populating its value
+/// and function properties.
+Handle<JSObject> createReflectObject(Runtime *runtime);
+
 /// Create and initialize the global RegExp constructor. Populate the methods
 /// of RegExp and RegExp.prototype.
 /// \return the global RegExp constructor.
@@ -286,6 +300,11 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime);
 /// Creates a new RegExp with provided pattern \p P, and flags \p F.
 CallResult<Handle<JSRegExp>>
 regExpCreate(Runtime *runtime, Handle<> P, Handle<> F);
+
+/// ES6.0 21.2.5.2.1
+/// Implemented in RegExp.cpp
+CallResult<HermesValue>
+regExpExec(Runtime *runtime, Handle<JSObject> R, Handle<StringPrimitive> S);
 
 /// Runs the RegExp.prototype.exec() function (ES5.1 15.10.6.2)
 /// with a this value of \p regexp, with the argument \p S.
@@ -314,6 +333,13 @@ CallResult<HermesValue> splitInternal(
     Handle<> string,
     Handle<> limit,
     Handle<> separator);
+
+/// ES6.0 21.2.5.2.3
+/// If \p unicode is set and the character at \p index in \S is the start of a
+/// surrogate pair, \return index + 2. Otherwise \return index + 1.
+/// Note that this function does not allocate.
+uint64_t
+advanceStringIndex(const StringPrimitive *S, uint64_t index, bool unicode);
 
 /// Create and initialize the global Function constructor. Populate the methods
 /// of Function and Function.prototype.
@@ -380,6 +406,101 @@ CallResult<HermesValue> directEval(
     Handle<StringPrimitive> str,
     const ScopeChain &scopeChain,
     bool singleFunction = false);
+
+/// ES10 23.1.1.2 AddEntriesFromIterable
+/// Calls a callback with each pair of [key, value] from an iterable.
+/// \param target the object to which to add the entries
+/// \param iterable iterable which contains pairs of [key, value].
+///     Must not be undefined or null.
+/// \param adder the callback for actually adding properties, with signature:
+///     ExecutionStatus adder(Runtime *runtime, Handle<> key, Handle<> value);
+template <typename AdderCB>
+CallResult<HermesValue> addEntriesFromIterable(
+    Runtime *runtime,
+    Handle<JSObject> target,
+    Handle<> iterable,
+    AdderCB adder) {
+  GCScope gcScope{runtime};
+  // 2. Assert: iterable is present, and is neither undefined nor null.
+  assert(
+      !iterable->isUndefined() && !iterable->isNull() &&
+      "iterable cannot be undefined or null");
+  // 3. Let iteratorRecord be ? GetIterator(iterable).
+  CallResult<IteratorRecord> iterRes = getIterator(runtime, iterable);
+  if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto iteratorRecord = *iterRes;
+
+  MutableHandle<JSObject> nextItem{runtime};
+  MutableHandle<> key{runtime};
+  MutableHandle<> value{runtime};
+  Handle<> zero{runtime, HermesValue::encodeNumberValue(0)};
+  Handle<> one{runtime, HermesValue::encodeNumberValue(1)};
+  auto marker = gcScope.createMarker();
+
+  // 4. Repeat,
+  for (;; gcScope.flushToMarker(marker)) {
+    // a. Let next be ? IteratorStep(iteratorRecord).
+    auto nextRes = iteratorStep(runtime, iteratorRecord);
+    if (LLVM_UNLIKELY(nextRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (!*nextRes) {
+      // b. If next is false, return target.
+      return target.getHermesValue();
+    }
+    // c. Let nextItem be ? IteratorValue(next).
+    nextItem = vmcast<JSObject>(nextRes->getHermesValue());
+    auto nextItemRes = JSObject::getNamed_RJS(
+        nextItem, runtime, Predefined::getSymbolID(Predefined::value));
+    if (LLVM_UNLIKELY(nextItemRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (!vmisa<JSObject>(*nextItemRes)) {
+      // d. If Type(nextItem) is not Object, then
+      // i.     Let error be ThrowCompletion(a newly created TypeError object).
+      // ii.     Return ? IteratorClose(iteratorRecord, error).
+      runtime->raiseTypeError("Iterator value must be an object");
+      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
+    }
+    nextItem = vmcast<JSObject>(*nextItemRes);
+
+    // e. Let k be Get(nextItem, "0").
+    auto keyRes = JSObject::getComputed_RJS(nextItem, runtime, zero);
+    if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION)) {
+      // f. If k is an abrupt completion,
+      //    return ? IteratorClose(iteratorRecord, k).
+      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
+    }
+    key = *keyRes;
+
+    // g. Let v be Get(nextItem, "1").
+    auto valueRes = JSObject::getComputed_RJS(nextItem, runtime, one);
+    if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
+      // h. If v is an abrupt completion,
+      //    return ? IteratorClose(iteratorRecord, v).
+      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
+    }
+    value = *valueRes;
+
+    // i. Let status be Call(adder, target, « k.[[Value]], v.[[Value]] »).
+    if (LLVM_UNLIKELY(
+            adder(runtime, key, value) == ExecutionStatus::EXCEPTION)) {
+      // j. If status is an abrupt completion,
+      //    return ? IteratorClose(iteratorRecord, status).
+      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
+    }
+  }
+
+  llvm_unreachable(
+      "loop must terminate with 'return' when iteration is complete");
+}
+
+#ifdef HERMES_ENABLE_IR_INSTRUMENTATION
+/// Default no-op IR instrumentation hooks (__instrument).
+Handle<JSObject> createInstrumentObject(Runtime *runtime);
+#endif
 
 } // namespace vm
 } // namespace hermes

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_CONSOLEHOST_CONSOLEHOST_H
 #define HERMES_CONSOLEHOST_CONSOLEHOST_H
 
@@ -70,6 +71,10 @@ struct ExecuteOptions {
 
   /// Perform a full GC just before printing any statistics.
   bool forceGCBeforeStats{false};
+
+  /// Try to execute the same number of CPU instructions
+  /// across repeated invocations of the same JS.
+  bool stabilizeInstructionCount{false};
 
 #ifdef HERMESVM_SERIALIZE
   /// Serialize VM state after global object initialization to file.

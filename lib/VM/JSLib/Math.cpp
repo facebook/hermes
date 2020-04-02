@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 //===----------------------------------------------------------------------===//
 /// \file
 /// ES5.1 15.8 Populate the Math object.
@@ -202,8 +203,16 @@ CallResult<HermesValue> mathPow(void *, Runtime *runtime, NativeArgs args) {
 CallResult<HermesValue> mathRandom(void *, Runtime *runtime, NativeArgs) {
   RuntimeCommonStorage *storage = runtime->getCommonStorage();
   if (!storage->randomEngineSeeded_) {
-    std::minstd_rand::result_type seed =
-        storage->env ? storage->env->mathRandomSeed : std::random_device()();
+    std::minstd_rand::result_type seed;
+    if (storage->env) {
+      if (storage->env->mathRandomSeed == 0) {
+        return runtime->raiseTypeError(
+            "Replay of Math.random() without a traced seed set");
+      }
+      seed = storage->env->mathRandomSeed;
+    } else {
+      seed = std::random_device()();
+    }
     storage->randomEngine_.seed(seed);
     storage->randomEngineSeeded_ = true;
     if (LLVM_UNLIKELY(storage->shouldTrace)) {
@@ -217,7 +226,9 @@ CallResult<HermesValue> mathRandom(void *, Runtime *runtime, NativeArgs) {
 }
 
 CallResult<HermesValue> mathFround(void *, Runtime *runtime, NativeArgs args)
-    LLVM_NO_SANITIZE("float-cast-overflow") {
+    LLVM_NO_SANITIZE("float-cast-overflow");
+
+CallResult<HermesValue> mathFround(void *, Runtime *runtime, NativeArgs args) {
   auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -351,23 +362,19 @@ Handle<JSObject> createMathObject(Runtime *runtime) {
   assert(objRes != ExecutionStatus::EXCEPTION && "unable to define Math");
   auto math = runtime->makeHandle<JSMath>(*objRes);
 
-  DefinePropertyFlags constantDPF{};
-  constantDPF.setEnumerable = 1;
-  constantDPF.setWritable = 1;
-  constantDPF.setConfigurable = 1;
-  constantDPF.setValue = 1;
+  DefinePropertyFlags constantDPF =
+      DefinePropertyFlags::getDefaultNewPropertyFlags();
   constantDPF.enumerable = 0;
   constantDPF.writable = 0;
   constantDPF.configurable = 0;
 
+  MutableHandle<> numberHandle{runtime};
+
   // ES5.1 15.8.1, Math value properties
   auto setMathValueProperty = [&](SymbolID name, double value) {
+    numberHandle = HermesValue::encodeNumberValue(value);
     auto result = JSObject::defineOwnProperty(
-        math,
-        runtime,
-        name,
-        constantDPF,
-        runtime->makeHandle(HermesValue::encodeDoubleValue(value)));
+        math, runtime, name, constantDPF, numberHandle);
     assert(
         result != ExecutionStatus::EXCEPTION &&
         "defineOwnProperty() failed on a new object");

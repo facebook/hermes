@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_HOST_MODEL_H
 #define HERMES_VM_HOST_MODEL_H
 
@@ -48,16 +49,16 @@ class FinalizableNativeFunction final : public NativeFunction {
  protected:
   FinalizableNativeFunction(
       Runtime *runtime,
-      Handle<JSObject> parent,
-      Handle<HiddenClass> clazz,
+      PseudoHandle<JSObject> parent,
+      PseudoHandle<HiddenClass> clazz,
       void *context,
       NativeFunctionPtr functionPtr,
       FinalizeNativeFunctionPtr finalizePtr)
       : NativeFunction(
             runtime,
             &vt.base.base,
-            *parent,
-            *clazz,
+            parent.get(),
+            clazz.get(),
             context,
             functionPtr),
         finalizePtr_(finalizePtr) {}
@@ -96,9 +97,6 @@ class HostObjectProxy {
 class HostObject final : public JSObject {
  public:
   static ObjectVTable vt;
-
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      JSObject::NEEDED_PROPERTY_SLOTS;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::HostObjectKind;

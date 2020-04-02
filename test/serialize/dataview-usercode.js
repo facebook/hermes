@@ -1,10 +1,12 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
-// RUN: %hermes -O -target=HBC -serializevm-path=%t %s
-// RUN: %hermes -O -deserialize-file=%t -target=HBC %s | %FileCheck --match-full-lines %s
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// RUN: %hermes -O -Xhermes-internal-test-methods -serializevm-path=%t %s
+// RUN: %hermes -O -Xhermes-internal-test-methods -deserialize-file=%t -target=HBC %s | %FileCheck --match-full-lines %s
 // REQUIRES: serializer
 
 var view = new DataView(new ArrayBuffer(8));

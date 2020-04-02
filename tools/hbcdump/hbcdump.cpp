@@ -1,16 +1,16 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "HBCParser.h"
 #include "ProfileAnalyzer.h"
-#include "StructuredPrinter.h"
 
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 #include "hermes/Public/Buffer.h"
-#include "hermes/SourceMap/SourceMapGenerator.h"
+#include "hermes/SourceMap/SourceMapParser.h"
 #include "hermes/Support/MemoryBuffer.h"
 
 #include "llvm/ADT/SmallVector.h"
@@ -21,10 +21,6 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
-
-#ifdef HERMES_HAS_JSBIGSTRING
-#include <cxxreact/JSBigString.h>
-#endif
 
 #include <iostream>
 #include <map>
@@ -43,6 +39,10 @@ static llvm::cl::opt<std::string> InputFilename(
 static llvm::cl::opt<std::string> DumpOutputFilename(
     "out",
     llvm::cl::desc("Output file name"));
+
+static llvm::cl::opt<std::string> SourceMapFilename(
+    "source-map",
+    llvm::cl::desc("Optional source-map file name, used by function-info"));
 
 static llvm::cl::opt<std::string> StartupCommands(
     "c",
@@ -109,10 +109,11 @@ static void printHelp(llvm::Optional<llvm::StringRef> command = llvm::None) {
       {"function",
        "'function': Compute the runtime instruction frequency "
        "for each function and display in desceding order."
-       "Each function name is displayed together with its source code line number .\n"
+       "Each function name is displayed together with its source code line number.\n\n"
        "'function <FUNC_ID>': Dump basic block stats for function with id <FUNC_ID>.\n\n"
-       "USAGE: function <FUNC_ID>\n"
-       "       func <FUNC_ID>\n"},
+       "'function -used': List all invoked function IDs, one per line.\n\n"
+       "USAGE: function [<FUNC_ID> | -used]\n"
+       "       fun [<FUNC_ID> | -used]\n"},
       {"instruction",
        "Computes the runtime instruction frequency for each instruction"
        "and displays it in descending order.\n\n"
@@ -136,11 +137,24 @@ static void printHelp(llvm::Optional<llvm::StringRef> command = llvm::None) {
        "USAGE: block\n"},
       {"at-virtual",
        "Display information about the function at a given virtual offset.\n\n"
-       "USAGE: at-virtual <OFFSET> [-json]\n"},
+       "USAGE: at-virtual <OFFSET>\n"},
       {"help",
        "Help instructions for hbcdump tool commands.\n\n"
        "USAGE: help <COMMAND>\n"
        "       h <COMMAND>\n"},
+      {"function-info",
+       "Display info about a specific function, or all functions\n\n"
+       "USAGE: function-info [<FUNC_ID>]\n"
+       "NOTE: Virtual offset is the offset from the beginning of the segment\n"},
+      {"string",
+       "Display string for ID\n\n"
+       "USAGE: string <STRING_ID>\n"},
+      {"filename",
+       "Display file name for ID\n\n"
+       "USAGE: filename <FILENAME_ID>\n"},
+      {"epilogue",
+       "Dump the epilogue.\n\n"
+       "USAGE: epilogue\n"},
   };
 
   if (command.hasValue() && !command->empty()) {
@@ -166,6 +180,7 @@ static void enterCommandLoop(
     llvm::raw_ostream &os,
     std::shared_ptr<hbc::BCProvider> bcProvider,
     llvm::Optional<std::unique_ptr<llvm::MemoryBuffer>> profileBufferOpt,
+    std::unique_ptr<SourceMap> &&sourceMap,
     const std::vector<std::string> &startupCommands) {
   BytecodeDisassembler disassembler(bcProvider);
 
@@ -182,7 +197,8 @@ static void enterCommandLoop(
       profileBufferOpt.hasValue()
           ? llvm::Optional<std::unique_ptr<llvm::MemoryBuffer>>(
                 std::move(profileBufferOpt.getValue()))
-          : llvm::None);
+          : llvm::None,
+      std::move(sourceMap));
 
   // Process startup commands.
   bool terminateLoop = false;
@@ -250,7 +266,9 @@ static bool executeCommand(
 
   const llvm::StringRef command = commandTokens[0];
   if (command == "function" || command == "fun") {
-    if (commandTokens.size() == 1) {
+    if (findAndRemoveOne(commandTokens, "-used")) {
+      analyzer.dumpUsedFunctionIDs();
+    } else if (commandTokens.size() == 1) {
       analyzer.dumpFunctionStats();
     } else if (commandTokens.size() == 2) {
       uint32_t funcId;
@@ -284,12 +302,20 @@ static bool executeCommand(
         os << "Error: cannot parse func_id as integer.\n";
         return false;
       }
+      if (funcId >= disassembler.getFunctionCount()) {
+        os << "Error: no function with id: " << funcId << " exists.\n";
+        return false;
+      }
       disassembler.disassembleFunction(funcId, os);
     } else {
       printHelp(command);
       return false;
     }
   } else if (command == "string" || command == "str") {
+    if (commandTokens.size() != 2) {
+      printHelp(command);
+      return false;
+    }
     uint32_t stringId;
     if (commandTokens[1].getAsInteger(0, stringId)) {
       os << "Error: cannot parse string_id as integer.\n";
@@ -297,27 +323,30 @@ static bool executeCommand(
     }
     analyzer.dumpString(stringId);
   } else if (command == "filename") {
+    if (commandTokens.size() != 2) {
+      printHelp(command);
+      return false;
+    }
     uint32_t filenameId;
     if (commandTokens[1].getAsInteger(0, filenameId)) {
       os << "Error: cannot parse filename_id as integer.\n";
       return false;
     }
     analyzer.dumpFileName(filenameId);
-  } else if (command == "offset" || command == "offsets") {
-    bool json = findAndRemoveOne(commandTokens, "-json");
-    std::unique_ptr<StructuredPrinter> printer =
-        StructuredPrinter::create(os, json);
+  } else if (command == "function-info") {
+    JSONEmitter json(os, /* pretty */ true);
     if (commandTokens.size() == 1) {
-      analyzer.dumpAllFunctionOffsets(*printer);
+      analyzer.dumpAllFunctionInfo(json);
     } else if (commandTokens.size() == 2) {
       uint32_t funcId;
       if (commandTokens[1].getAsInteger(0, funcId)) {
         os << "Error: cannot parse func_id as integer.\n";
         return false;
       }
-      analyzer.dumpFunctionOffsets(funcId, *printer);
+      analyzer.dumpFunctionInfo(funcId, json);
     } else {
-      os << "Usage: offsets [funcId]\n";
+      printHelp(command);
+      return false;
     }
   } else if (command == "io") {
     analyzer.dumpIO();
@@ -326,9 +355,7 @@ static bool executeCommand(
   } else if (command == "block") {
     analyzer.dumpBasicBlockStats();
   } else if (command == "at_virtual" || command == "at-virtual") {
-    bool json = findAndRemoveOne(commandTokens, "-json");
-    std::unique_ptr<StructuredPrinter> printer =
-        StructuredPrinter::create(os, json);
+    JSONEmitter json(os, /* pretty */ true);
     if (commandTokens.size() == 2) {
       uint32_t virtualOffset;
       if (commandTokens[1].getAsInteger(0, virtualOffset)) {
@@ -337,7 +364,7 @@ static bool executeCommand(
       }
       auto funcId = analyzer.getFunctionFromVirtualOffset(virtualOffset);
       if (funcId.hasValue()) {
-        analyzer.dumpFunctionOffsets(*funcId, *printer);
+        analyzer.dumpFunctionInfo(*funcId, json);
       } else {
         os << "Virtual offset " << virtualOffset << " is invalid.\n";
       }
@@ -374,17 +401,8 @@ int main(int argc, char **argv) {
   llvm::llvm_shutdown_obj Y;
   llvm::cl::ParseCommandLineOptions(argc, argv, "Hermes bytecode dump tool\n");
 
-#ifdef HERMES_HAS_JSBIGSTRING
-  auto jsBFS = facebook::react::JSBigFileString::fromPath(InputFilename);
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> fileBufOrErr =
-      llvm::MemoryBuffer::getMemBuffer(
-          llvm::StringRef(jsBFS->c_str(), jsBFS->size()),
-          "",
-          /* RequiresNullTerminator = */ false);
-#else
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> fileBufOrErr =
       llvm::MemoryBuffer::getFile(InputFilename);
-#endif // HERMES_HAS_JSBIGSTRING
 
   if (!fileBufOrErr) {
     llvm::errs() << "Error: fail to open file: " << InputFilename << ": "
@@ -424,13 +442,33 @@ int main(int argc, char **argv) {
   }
   auto &output = fileOS ? *fileOS : llvm::outs();
 
+  std::unique_ptr<SourceMap> sourceMap;
+  if (!SourceMapFilename.empty()) {
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> sourceMapBufOrErr =
+        llvm::MemoryBuffer::getFile(SourceMapFilename);
+    if (!sourceMapBufOrErr) {
+      llvm::errs() << "Error: fail to open file: " << SourceMapFilename << ": "
+                   << sourceMapBufOrErr.getError().message() << "\n";
+      return -1;
+    }
+    sourceMap = SourceMapParser::parse(*sourceMapBufOrErr.get().get());
+    if (!sourceMap) {
+      llvm::errs() << "Error loading source map: " << SourceMapFilename << "\n";
+      return -1;
+    }
+  }
+
   if (ProfileFile.empty()) {
     if (ShowSectionRanges) {
       BytecodeSectionWalker walker(bytecodeStart, std::move(ret.first), output);
       walker.printSectionRanges(HumanizeSectionRanges);
     } else {
       enterCommandLoop(
-          output, std::move(ret.first), llvm::None, startupCommands);
+          output,
+          std::move(ret.first),
+          llvm::None,
+          std::move(sourceMap),
+          startupCommands);
     }
   } else {
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> profileBuffer =
@@ -444,6 +482,7 @@ int main(int argc, char **argv) {
         output,
         std::move(ret.first),
         std::move(profileBuffer.get()),
+        std::move(sourceMap),
         startupCommands);
   }
 

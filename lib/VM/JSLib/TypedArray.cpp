@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 //===----------------------------------------------------------------------===//
 /// \file
 /// ES7 22.2 TypedArray
@@ -323,7 +324,14 @@ class TypedArraySortModel : public SortModel {
     HermesValue aVal = JSObject::getOwnIndexed(*self_, runtime_, a);
     HermesValue bVal = JSObject::getOwnIndexed(*self_, runtime_, b);
     if (!WithCompareFn) {
-      return aVal.getNumber() < bVal.getNumber();
+      double a = aVal.getNumber();
+      double b = bVal.getNumber();
+      if (LLVM_UNLIKELY(a == 0) && LLVM_UNLIKELY(b == 0) &&
+          LLVM_UNLIKELY(std::signbit(a)) && LLVM_UNLIKELY(!std::signbit(b))) {
+        // -0 < +0, according to the spec.
+        return true;
+      }
+      return a < b;
     }
     assert(compareFn_ && "Cannot use this version if the compareFn is null");
     // ES7 22.2.3.26 2a.
@@ -1044,7 +1052,7 @@ typedArrayPrototypeIterator(void *ctx, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto self = args.vmcastThis<JSTypedArrayBase>();
-  return JSArrayIterator::create(runtime, self, kind);
+  return JSArrayIterator::create(runtime, self, kind).getHermesValue();
 }
 
 CallResult<HermesValue>
@@ -1069,7 +1077,7 @@ typedArrayPrototypeMapFilter(void *ctx, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto values = toHandle(runtime, std::move(*arrRes));
+  auto values = runtime->makeHandle(std::move(*arrRes));
   JSTypedArrayBase::size_type insert = 0;
   CallResult<HermesValue> res{ExecutionStatus::EXCEPTION};
   if (map) {
@@ -1134,7 +1142,7 @@ typedArrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto sep = toHandle(runtime, std::move(*res));
+  auto sep = runtime->makeHandle(std::move(*res));
   if (len == 0) {
     // Quick exit for empty arrays to avoid allocations.
     // NOTE: this needs to come after the `toString` call on the separator
@@ -1160,7 +1168,7 @@ typedArrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strings = toHandle(runtime, std::move(*arrRes));
+  auto strings = runtime->makeHandle(std::move(*arrRes));
 
   // Call toString on all the elements of the array.
   {
@@ -1174,7 +1182,7 @@ typedArrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
       if (LLVM_UNLIKELY(res2 == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      auto S = toHandle(runtime, std::move(*res2));
+      auto S = runtime->makeHandle(std::move(*res2));
       size.add(S->getStringLength());
       JSArray::setElementAt(strings, runtime, i, S);
     }
@@ -1482,7 +1490,7 @@ typedArrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strings = toHandle(runtime, std::move(*arrRes));
+  auto strings = runtime->makeHandle(std::move(*arrRes));
 
   // Index into the array.
   MutableHandle<> storage(runtime);
@@ -1514,7 +1522,7 @@ typedArrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      auto elementStr = toHandle(runtime, std::move(*strRes));
+      auto elementStr = runtime->makeHandle(std::move(*strRes));
       JSArray::setElementAt(strings, runtime, i, elementStr);
       size.add(elementStr->getStringLength());
     } else {
@@ -1546,16 +1554,14 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
   // Create NativeConstructor manually to avoid global object assignment.
   // Use NativeConstructor because %TypedArray% is supposed to be
   // a constructor function object, but must not be called directly with "new".
-  auto cons = toHandle(
+  auto cons = runtime->makeHandle(NativeConstructor::create(
       runtime,
-      NativeConstructor::create(
-          runtime,
-          Handle<JSObject>::vmcast(&runtime->functionPrototype),
-          nullptr,
-          typedArrayBaseConstructor,
-          0,
-          JSObject::createWithException,
-          CellKind::ObjectKind));
+      Handle<JSObject>::vmcast(&runtime->functionPrototype),
+      nullptr,
+      typedArrayBaseConstructor,
+      0,
+      NativeConstructor::creatorFunction<JSObject>,
+      CellKind::ObjectKind));
 
   // Define %TypedArray%.prototype to be proto.
   auto st = Callable::defineNameLengthAndPrototype(
@@ -1783,14 +1789,7 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
       typedArrayPrototypeIterator,
       0);
 
-  DefinePropertyFlags dpf{};
-  dpf.setEnumerable = 1;
-  dpf.setWritable = 1;
-  dpf.setConfigurable = 1;
-  dpf.enumerable = 0;
-  dpf.writable = 1;
-  dpf.configurable = 1;
-  dpf.setValue = 1;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
   // Use the same valuesMethod for Symbol.iterator.
   {
@@ -1857,17 +1856,13 @@ Handle<JSObject> createTypedArrayConstructor(Runtime *runtime) {
       proto,
       Handle<JSObject>::vmcast(&runtime->typedArrayBaseConstructor),
       3,
-      TA::create,
+      NativeConstructor::creatorFunction<TA>,
       C);
 
-  DefinePropertyFlags dpf{};
-  dpf.setEnumerable = 1;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.enumerable = 0;
-  dpf.setConfigurable = 1;
   dpf.configurable = 0;
-  dpf.setWritable = 1;
   dpf.writable = 0;
-  dpf.setValue = 1;
 
   auto bytesPerElement =
       runtime->makeHandle(HermesValue::encodeNumberValue(sizeof(T)));

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_HANDLEROOTOWNER_H
 #define HERMES_VM_HANDLEROOTOWNER_H
 
@@ -67,6 +68,14 @@ class HandleRootOwner {
   /// Convenience function to create a Handle<SymbolID>.
   Handle<SymbolID> makeHandle(SymbolID value);
 
+  /// Create a Handle from a valid PseudoHandle and invalidate the latter.
+  template <class T>
+  Handle<T> makeHandle(PseudoHandle<T> &&pseudo) {
+    Handle<T> res{this, pseudo.get()};
+    pseudo.invalidate();
+    return res;
+  }
+
   /// Convenience function to create a MutableHandle.
   MutableHandle<HermesValue> makeMutableHandle(HermesValue value);
   /// Convenience function to create a MutableHandle from a pointer.
@@ -83,6 +92,9 @@ class HandleRootOwner {
 
   /// An efficient way to pass null to a function accepting Handle.
   static Handle<HermesValue> getNullValue();
+
+  /// An efficient way to pass empty to a function accepting Handle.
+  static Handle<HermesValue> getEmptyValue();
 
   /// An efficient way to pass bools to a function accepting Handle.
   static Handle<HermesValue> getBoolValue(bool b);
@@ -113,6 +125,8 @@ class HandleRootOwner {
   static PinnedHermesValue undefinedValue_;
   /// Used for efficient construction of Handle(null).
   static PinnedHermesValue nullValue_;
+  /// Used for efficient construction of Handle(empty).
+  static PinnedHermesValue emptyValue_;
   /// Used for efficient construction of Handle(bool).
   static PinnedHermesValue trueValue_;
   static PinnedHermesValue falseValue_;
@@ -232,20 +246,18 @@ class GCScope : public GCScopeDebugBase {
   GCScope *const prevScope_;
 
   /// Inline storage for data to be used initially until it is exhausted.
-  llvm::AlignedCharArray<
-      alignof(PinnedHermesValue),
-      sizeof(PinnedHermesValue) * CHUNK_SIZE>
-      inlineStorage_;
+  alignas(PinnedHermesValue) char inlineStorage_
+      [sizeof(PinnedHermesValue) * CHUNK_SIZE];
 
   /// When the inline storage is exhausted, new storage chunks are allocated
   /// here.
   llvm::SmallVector<PinnedHermesValue *, 4> chunks_;
 
   /// Next handle to be allocated in the current chunk.
-  PinnedHermesValue *next_ = (PinnedHermesValue *)inlineStorage_.buffer;
+  PinnedHermesValue *next_ = (PinnedHermesValue *)inlineStorage_;
   /// End of the storage chunk. When we reach it, we must allocate a new one.
   PinnedHermesValue *curChunkEnd_ =
-      (PinnedHermesValue *)inlineStorage_.buffer + CHUNK_SIZE;
+      (PinnedHermesValue *)inlineStorage_ + CHUNK_SIZE;
 
   /// Index of the current chunk in 'chunks_'.
   unsigned curChunkIndex_{0};
@@ -276,7 +288,7 @@ class GCScope : public GCScopeDebugBase {
         name_(name),
 #endif
         prevScope_(runtime->topGCScope_),
-        chunks_({(PinnedHermesValue *)inlineStorage_.buffer}) {
+        chunks_({(PinnedHermesValue *)inlineStorage_}) {
     runtime->topGCScope_ = this;
   }
 
@@ -291,7 +303,7 @@ class GCScope : public GCScopeDebugBase {
   /// \return true if there are no handles in the scope
   bool isEmpty() const {
     return curChunkIndex_ == 0 &&
-        next_ == (const PinnedHermesValue *)inlineStorage_.buffer;
+        next_ == (const PinnedHermesValue *)inlineStorage_;
   }
 
 #ifndef NDEBUG
@@ -375,7 +387,7 @@ class GCScope : public GCScopeDebugBase {
         numHandlesToPreserve <= getHandleCountDbg() &&
         "numHandles exceeds the actual number of handles");
 
-    auto *chunk = (PinnedHermesValue *)inlineStorage_.buffer;
+    auto *chunk = (PinnedHermesValue *)inlineStorage_;
     // Write empty values into the soon-to-be invalid chunk slots to catch bugs.
     invalidateFreedHandleValues(0, chunk + numHandlesToPreserve);
     next_ = chunk + numHandlesToPreserve;
@@ -411,6 +423,12 @@ class GCScope : public GCScopeDebugBase {
     assert(
         getHandleCountDbg() < handlesLimit_ &&
         "Too many handles allocated in GCScope");
+    // We currently only allocate handles in the top scope, although there is no
+    // current design constraint why we must. This assert serves to detect bugs
+    // early, and can be removed if we ever want to violate this invariant.
+    assert(
+        runtime_->getTopGCScope() == this &&
+        "Expect allocation only in top scope");
 
     setHandleCountDbg(getHandleCountDbg() + 1);
 #ifdef HERMESVM_DEBUG_TRACK_GCSCOPE_HANDLES

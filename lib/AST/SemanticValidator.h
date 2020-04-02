@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_AST_SEMANTICVALIDATOR_H
 #define HERMES_AST_SEMANTICVALIDATOR_H
 
@@ -215,10 +216,6 @@ class SemanticValidator {
 
   /// Get the LabelDecorationBase depending on the node type.
   static LabelDecorationBase *getLabelDecorationBase(StatementNode *node);
-
-  /// Collapse array pattern rest elements into their parent:
-  /// [a, ...[b, c]] => [a, b, c].
-  static void collapseNestedAP(NodeList &elements);
 
   /// Visit the parameters and body of \p node, setting isFormalParams_
   /// correctly.

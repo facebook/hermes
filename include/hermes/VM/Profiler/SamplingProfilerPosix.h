@@ -1,14 +1,16 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_PROFILER_SAMPLINGPROFILERPOSIX_H
 #define HERMES_VM_PROFILER_SAMPLINGPROFILERPOSIX_H
 
 #include "hermes/Support/Semaphore.h"
 #include "hermes/Support/ThreadLocal.h"
+#include "hermes/VM/Callable.h"
 #include "hermes/VM/Runtime.h"
 
 #include "llvm/ADT/DenseMap.h"
@@ -22,6 +24,7 @@
 #include <chrono>
 #include <mutex>
 #include <thread>
+#include <unordered_set>
 #include <vector>
 
 #if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
@@ -42,8 +45,8 @@ class SamplingProfiler {
       llvm::DenseMap<SamplingProfiler::ThreadId, std::string>;
 
   /// Captured JSFunction stack frame information for symbolication.
-  // TODO: consolidate the stack frame struct with other function/extern
-  // profilers.
+  /// TODO: consolidate the stack frame struct with other function/extern
+  /// profilers.
   struct JSFunctionFrameInfo {
     // RuntimeModule this function is associated with.
     RuntimeModule *module;
@@ -53,7 +56,12 @@ class SamplingProfiler {
     uint32_t offset;
   };
   /// Captured NativeFunction frame information for symbolication.
-  using NativeFunctionFrameInfo = uintptr_t;
+  using NativeFunctionFrameInfo = NativeFunctionPtr;
+  /// Captured FinalizableNativeFunction frame information for symbolication.
+  using FinalizableNativeFunctionFrameInfo = NativeFunctionPtr;
+  /// GC frame info. Pointing to string in gcEventExtraInfoSet_.
+  /// gcEventExtraInfoSet_ is structured to never invalidate this pointer.
+  using GCFrameInfo = const std::string *;
 
   // This will break with more than one RuntimeModule(like FB4a, eval() call or
   // lazy compilation etc...). It is simply a temporary thing to get started.
@@ -63,15 +71,25 @@ class SamplingProfiler {
     enum class FrameKind {
       JSFunction,
       NativeFunction,
+      FinalizableNativeFunction,
+      GCFrame,
     };
 
     // TODO: figure out how to store BoundFunction.
     // TODO: Should we do something special for NativeConstructor?
     union {
-      // Pure JS function frame info.
+      /// Pure JS function frame info.
       JSFunctionFrameInfo jsFrame;
-      // Native function frame info.
+      /// Native function frame info.
       NativeFunctionFrameInfo nativeFrame;
+      /// Host function frame info.
+      FinalizableNativeFunctionFrameInfo finalizableNativeFrame;
+      /// GC frame info. Pointing to string
+      /// in gcEventExtraInfoSet_; it is optionally and
+      /// can be null to indicate no extra info.
+      /// We can't directly use std::string here because it is
+      /// inside a union.
+      GCFrameInfo gcFrame;
     };
     FrameKind kind;
   };
@@ -85,8 +103,8 @@ class SamplingProfiler {
     /// Captured stack frames.
     std::vector<StackFrame> stack;
 
-    StackTrace(uint32_t preallocatedSize) : stack(preallocatedSize) {}
-    StackTrace(
+    explicit StackTrace(uint32_t preallocatedSize) : stack(preallocatedSize) {}
+    explicit StackTrace(
         ThreadId tid,
         TimeStampType ts,
         const std::vector<StackFrame>::iterator stackStart,
@@ -135,8 +153,22 @@ class SamplingProfiler {
   /// it is serialized by samplingDoneSem_.
   StackTrace sampleStorage_{kMaxStackDepth};
 
+  /// Threading: preGCStackDepth_/preGCStackStorage_ are only accessed from
+  /// interpreter thread.
+  /// The actual sampled stack depth in \p preGCStackStorage_.
+  /// It resets to zero at the end of young and full GCs so that we can verify
+  /// that there aren't two nesting preGC stack walking.
+  uint32_t preGCStackDepth_{0};
+  /// JS stack captured at time of GC.
+  StackTrace preGCStackStorage_{kMaxStackDepth};
+
   /// Prellocated map that contains thread names mapping.
   ThreadNamesMap threadNames_;
+
+  /// Unique GC event extra info strings container.
+  /// GCFrameInfo pointer to item in this container will always be valid
+  /// because this container never rehashes.
+  std::unordered_set<std::string> gcEventExtraInfoSet_;
 
   /// Domains to be kept alive for sampled RuntimeModules.
   /// Its storage size is increased/decreased by
@@ -150,7 +182,7 @@ class SamplingProfiler {
   std::vector<Domain *> domains_;
 
  private:
-  SamplingProfiler();
+  explicit SamplingProfiler();
 
   /// invoke sigaction() posix API to register \p handler.
   /// \return what sigaction() returns: 0 to indicate success.
@@ -181,7 +213,16 @@ class SamplingProfiler {
   /// Walk runtime stack frames and store in \p sampleStorage.
   /// This function is called from signal handler so should obey all
   /// rules of signal handler(no lock, no memory allocation etc...)
-  uint32_t walkRuntimeStack(const Runtime *runtime, StackTrace &sampleStorage);
+  /// \param startIndex specifies the start index in \p sampleStorage to fill.
+  /// \return total number of stack frames captured in \p sampleStorage
+  /// including existing frames before \p startIndex.
+  uint32_t walkRuntimeStack(
+      const Runtime *runtime,
+      StackTrace &sampleStorage,
+      uint32_t startIndex = 0);
+
+  /// Record JS stack at time of the GC.
+  void recordPreGCStack(Runtime *runtime, const std::string &extraInfo);
 
 #if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
   /// Registered loom callback for collecting stack frames.
@@ -231,6 +272,10 @@ class SamplingProfiler {
 
   /// Disable and stop profiling.
   bool disable();
+
+  /// Called for various GC events.
+  void
+  onGCEvent(Runtime *runtime, GCEventKind kind, const std::string &extraInfo);
 };
 
 bool operator==(

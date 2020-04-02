@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "TestHelpers.h"
 
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
@@ -455,13 +456,13 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
     BFG->emitLoadConstDouble(0, 18);
     BFG->emitRet(0);
     auto codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
-    auto getter = runtime->makeHandle<JSFunction>(*JSFunction::create(
+    auto getter = runtime->makeHandle<JSFunction>(JSFunction::create(
         runtime,
         runtimeModule->getDomain(runtime),
         Handle<JSObject>(runtime),
         Handle<Environment>(runtime),
         codeBlock));
-    auto setter = runtime->makeHandle<JSFunction>(*JSFunction::create(
+    auto setter = runtime->makeHandle<JSFunction>(JSFunction::create(
         runtime,
         runtimeModule->getDomain(runtime),
         Handle<JSObject>(runtime),
@@ -936,6 +937,7 @@ class JSLibMockedEnvironmentTest : public RuntimeTestFixtureBase {
       : RuntimeTestFixtureBase(RuntimeConfig::Builder()
                                    .withGCConfig(kTestGCConfig)
                                    .withTraceEnvironmentInteractions(true)
+                                   .withEnableSampledStats(true)
                                    .build()) {}
 };
 
@@ -958,8 +960,26 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
   const std::deque<uint64_t> newDateColl{newDate};
   const std::deque<std::string> dateAsFuncColl{dateAsFunc};
 
-  runtime->setMockedEnvironment(hermes::vm::MockedEnvironment{
-      mathRandomSeed, dateNowColl, newDateColl, dateAsFuncColl});
+  std::string affinityMaskKey{"js_threadAffinityMask"};
+  std::string affinityMaskValue{"<affinity mask>"};
+  std::string totalAllocBytesKey{"js_totalAllocatedBytes"};
+  double totalAllocBytesValue = 2222.0;
+  MockedEnvironment::StatsTable statsTable{
+      std::make_pair(
+          affinityMaskKey,
+          MockedEnvironment::StatsTableValue(affinityMaskValue)),
+      std::make_pair(
+          totalAllocBytesKey,
+          MockedEnvironment::StatsTableValue(totalAllocBytesValue))};
+
+  const std::deque<MockedEnvironment::StatsTable> instrumentedStats{statsTable};
+
+  runtime->setMockedEnvironment(
+      hermes::vm::MockedEnvironment{mathRandomSeed,
+                                    dateNowColl,
+                                    newDateColl,
+                                    dateAsFuncColl,
+                                    instrumentedStats});
 
   {
     // Call Math.random() and check that its output matches the one given.
@@ -1012,13 +1032,6 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
     ASSERT_NE(val, ExecutionStatus::EXCEPTION)
         << "Exception executing the call on Date.now()";
     EXPECT_EQ(val.getValue().getNumberAs<uint64_t>(), dateNow);
-    // Call a second time, which will fall back to the original implementation.
-    val =
-        Callable::executeCall0(nowFunc, runtime, Runtime::getUndefinedValue());
-    ASSERT_NE(val, ExecutionStatus::EXCEPTION)
-        << "Exception executing the call on Date.now()";
-    // Store that in the calls list for a comparison.
-    dateNowColl.push_back(val.getValue().getNumberAs<uint64_t>());
 
     // Call new Date()
     val = Callable::executeConstruct0(dateFunc, runtime);
@@ -1041,6 +1054,77 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
     EXPECT_EQ(str, dateAsFuncU16);
   }
 
+#ifndef _WINDOWS
+  // TODO(T62209287): For unknown reasons, this doesn't work on Windows.
+  // When we figure out why, and fix, it remove the #ifndef.
+  {
+    // Call HermesInternal.getInstrumentedStats() and check that the values
+    // we've set are what we recorded.
+    auto hermesInternalRes = JSObject::getNamed_RJS(
+        runtime->getGlobal(),
+        runtime,
+        Predefined::getSymbolID(Predefined::HermesInternal));
+    ASSERT_NE(hermesInternalRes, ExecutionStatus::EXCEPTION)
+        << "Exception accessing HermesInternal on the global object";
+    ASSERT_TRUE(hermesInternalRes->isObject())
+        << "HermesInternal is not an object.";
+    auto hermesInternal =
+        runtime->makeHandle(vmcast<JSObject>(hermesInternalRes.getValue()));
+    auto propRes = JSObject::getNamed_RJS(
+        hermesInternal,
+        runtime,
+        Predefined::getSymbolID(Predefined::getInstrumentedStats));
+    ASSERT_NE(propRes, ExecutionStatus::EXCEPTION)
+        << "Exception accessing getInstrumentedStats on the "
+        << "HermesInternal object";
+    auto getInstrumentedStatsFunc =
+        runtime->makeHandle(vmcast<Callable>(propRes.getValue()));
+    auto statsObjRes = Callable::executeCall0(
+        getInstrumentedStatsFunc, runtime, Runtime::getUndefinedValue());
+    ASSERT_NE(statsObjRes, ExecutionStatus::EXCEPTION)
+        << "Exception executing the call on "
+        << "HermesInternal.getInstrumentedStats";
+    ASSERT_TRUE(statsObjRes->isObject())
+        << "HermesInternal.getInstrumentedStats result is not an object.";
+    auto statsObj =
+        runtime->makeHandle(vmcast<JSObject>(statsObjRes.getValue()));
+
+    auto affinityMaskSymHandleRes =
+        runtime->getIdentifierTable().getSymbolHandle(
+            runtime, ASCIIRef(affinityMaskKey.c_str(), affinityMaskKey.size()));
+    ASSERT_NE(affinityMaskSymHandleRes, ExecutionStatus::EXCEPTION)
+        << "Exception accessing creating symbol for 'js_threadAffinityMask'";
+    auto affinityMaskVal2Res =
+        JSObject::getNamed_RJS(statsObj, runtime, **affinityMaskSymHandleRes);
+    ASSERT_NE(affinityMaskVal2Res, ExecutionStatus::EXCEPTION)
+        << "Exception accessing 'js_threadAffinityMask' in stats object";
+    ASSERT_TRUE(affinityMaskVal2Res->isString())
+        << "Value of 'js_threadAffinityMask' in stats object is not a string";
+    auto affinityMaskVal2ResStringRef =
+        affinityMaskVal2Res->getString()->getStringRef<char>();
+    ASSERT_EQ(
+        affinityMaskValue,
+        std::string(
+            affinityMaskVal2ResStringRef.data(),
+            affinityMaskVal2ResStringRef.size()));
+
+    auto totalAllocBytesSymHandleRes =
+        runtime->getIdentifierTable().getSymbolHandle(
+            runtime,
+            ASCIIRef(totalAllocBytesKey.c_str(), totalAllocBytesKey.size()));
+    ASSERT_NE(totalAllocBytesSymHandleRes, ExecutionStatus::EXCEPTION)
+        << "Exception accessing creating symbol for 'js_totalAllocatedBytes'";
+    auto totalAllocBytesVal2Res = JSObject::getNamed_RJS(
+        statsObj, runtime, **totalAllocBytesSymHandleRes);
+    ASSERT_NE(totalAllocBytesVal2Res, ExecutionStatus::EXCEPTION)
+        << "Exception accessing 'js_totalAllocatedBytes' in stats object";
+    ASSERT_TRUE(totalAllocBytesVal2Res->isNumber())
+        << "Value of 'js_totalAllocatedBytes' in stats object is not a number";
+    double totalAllocBytesVal2 = totalAllocBytesVal2Res->getNumber();
+    ASSERT_EQ(totalAllocBytesVal2, 2222.0);
+  }
+#endif
+
   // If the tracing mode is also engaged, ensure that the same values were
   // traced as well.
   auto *storage = runtime->getCommonStorage();
@@ -1048,6 +1132,27 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
   EXPECT_EQ(dateNowColl, storage->tracedEnv.callsToDateNow);
   EXPECT_EQ(newDateColl, storage->tracedEnv.callsToNewDate);
   EXPECT_EQ(dateAsFuncColl, storage->tracedEnv.callsToDateAsFunction);
+  EXPECT_EQ(dateAsFuncColl, storage->tracedEnv.callsToDateAsFunction);
+#ifndef _WINDOWS
+  // TODO(T62209287): For unknown reasons, this doesn't work on Windows.
+  // When we figure out why, and fix, it remove the #ifndef.
+  EXPECT_EQ(
+      instrumentedStats.size(),
+      storage->tracedEnv.callsToHermesInternalGetInstrumentedStats.size());
+  auto &callToHermesInternalGetInstrumentedStats =
+      storage->tracedEnv.callsToHermesInternalGetInstrumentedStats.at(0);
+  EXPECT_EQ(
+      affinityMaskValue,
+      callToHermesInternalGetInstrumentedStats
+          [llvm::StringRef(affinityMaskKey.c_str(), affinityMaskKey.size())]
+              .str());
+  EXPECT_EQ(
+      totalAllocBytesValue,
+      callToHermesInternalGetInstrumentedStats[llvm::StringRef(
+                                                   totalAllocBytesKey.c_str(),
+                                                   totalAllocBytesKey.size())]
+          .num());
+#endif
 }
 
 } // anonymous namespace

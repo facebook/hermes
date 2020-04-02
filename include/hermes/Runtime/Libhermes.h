@@ -1,35 +1,39 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_RUNTIME_LIBHERMES_H
 #define HERMES_RUNTIME_LIBHERMES_H
 
 // This is a list of built-in symbols declared by the HermesVM runtime.
 // clang-format off
 const char libhermes[] =
-"var Object;"
-"var Function;"
 "var Array;"
-"var String;"
 "var Boolean;"
-"var Number;"
-"var Math;"
 "var Date;"
-"var RegExp;"
 "var Error;"
-"var JSON;"
+"var Function;"
 "var HermesInternal;"
-"var Symbol;"
+"var JSON;"
 "var Map;"
+"var Math;"
+"var Number;"
+"var Object;"
+"var Proxy;"
+"var Reflect;"
+"var RegExp;"
 "var Set;"
+"var String;"
+"var Symbol;"
 "var WeakMap;"
 "var WeakSet;"
 ""
 "var Infinity;"
 "var NaN;"
+"var globalThis;"
 "var undefined;"
 ""
 "function Error() {}"

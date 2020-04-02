@@ -1,14 +1,16 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_STRINGPRIMITIVE_H
 #define HERMES_VM_STRINGPRIMITIVE_H
 
 #include "hermes/Support/CheckedMalloc.h"
 #include "hermes/Support/ErrorHandling.h"
+#include "hermes/VM/CopyableBasicString.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCBase.h"
 #include "hermes/VM/Runtime.h"
@@ -31,6 +33,8 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   friend class IdentifierTable;
   friend class StringBuilder;
   friend class StringView;
+  template <typename T>
+  friend class BufferedStringPrimitive;
 
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &OS,
@@ -72,19 +76,27 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   }
 
  protected:
+  /// Flag set in the \c length field to indicate that this string was
+  /// "uniqued", that is, inserted into the identifier hash table and the
+  /// associated SymbolID was stored in the string.
+  /// Not all StringPrimitive subclasses support this and it usually happens on
+  /// construction.
+  /// This flag is automatically cleared by the identifier table when the
+  /// associated SymbolID is garbage collected.
+  static constexpr uint32_t LENGTH_FLAG_UNIQUED = uint32_t(1) << 31;
+
   /// Length of the string in 16-bit characters. The highest bit is set to 1
   /// if the string has been uniqued.
-  uint32_t const length;
+  uint32_t lengthAndUniquedFlag_;
 
   /// Super constructor to set the length properly.
   explicit StringPrimitive(
       Runtime *runtime,
       const VTable *vt,
       uint32_t cellSize,
-      uint32_t length,
-      bool uniqued)
+      uint32_t length)
       : VariableSizeRuntimeCell(&runtime->getHeap(), vt, cellSize),
-        length(length | (uniqued ? (1u << 31) : 0)) {}
+        lengthAndUniquedFlag_(length) {}
 
   /// Returns true if a string of the given \p length should be allocated as an
   /// external string, outside the JS heap. Note that some external strings may
@@ -93,23 +105,38 @@ class StringPrimitive : public VariableSizeRuntimeCell {
     return length >= EXTERNAL_STRING_THRESHOLD;
   }
 
+  /// Returns true if a string is safe to allocate externally (strings that are
+  /// too small are not safe).
+  static bool isSafeExternalLength(uint32_t length) {
+    return length >= EXTERNAL_STRING_MIN_SIZE;
+  }
+
  public:
   /// No string with length exceeding this constant can be allocated.
   static constexpr uint32_t MAX_STRING_LENGTH = 256 * 1024 * 1024;
 
-  // Strings whose length is at least this size are always allocated as
-  // "external" strings, outside the JS heap. Note that there may be external
-  // strings smaller than this length.
+  /// Strings whose length is at least this size are always allocated as
+  /// "external" strings, outside the JS heap. Note that there may be external
+  /// strings smaller than this length.
   static constexpr uint32_t EXTERNAL_STRING_THRESHOLD = 64 * 1024;
 
-  // Strings whose length is smaller than this will never be externally
-  // allocated. This is to protect against a small string optimization which may
-  // use interior pointers, which would break when memcpy'd by the GC.
-  // This is also the size at which StringPrimitive will acquire an std::string
-  // via ownership transfer. This is advantageous in that it reduces the amount
-  // of copying from the malloc heap to the GC heap. However it should not be
-  // too small, because the std::string itself imposes a space overhead.
-  static constexpr uint32_t EXTERNAL_STRING_MIN_SIZE = 128;
+  /// Strings whose length is smaller than this will never be externally
+  /// allocated. This is to protect against a small string optimization which
+  /// may use interior pointers, which would break when memcpy'd by the GC. This
+  /// is also the size at which StringPrimitive will acquire an std::string via
+  /// ownership transfer. This is advantageous in that it reduces the amount of
+  /// copying from the malloc heap to the GC heap. However it should not be too
+  /// small, because the std::string itself imposes a space overhead.
+  static constexpr uint32_t EXTERNAL_STRING_MIN_SIZE =
+      COPYABLE_BASIC_STRING_MIN_LENGTH;
+
+  /// Concatenation resulting in this size or larger will use
+  /// BufferedStringPrimitive. We want to ensure that they satisfy the
+  /// requirements for external strings.
+  /// NOTE: we want to use std::max(256, EXTERNAL_STRING_MIN_SIZE) here, but it
+  /// is not constexpr yet in C++11.
+  static constexpr uint32_t CONCAT_STRING_MIN_SIZE =
+      256 > EXTERNAL_STRING_MIN_SIZE ? 256 : EXTERNAL_STRING_MIN_SIZE;
 
   static bool classof(const GCCell *cell) {
     return kindInRange(
@@ -179,12 +206,12 @@ class StringPrimitive : public VariableSizeRuntimeCell {
 
   /// \return the length of string in 16-bit characters.
   uint32_t getStringLength() const {
-    return length & ~(1u << 31);
+    return lengthAndUniquedFlag_ & ~LENGTH_FLAG_UNIQUED;
   }
 
   /// \return whether the string is uniqued.
   bool isUniqued() const {
-    return (length & (1u << 31)) != 0;
+    return (lengthAndUniquedFlag_ & LENGTH_FLAG_UNIQUED) != 0;
   }
 
   /// Compare a part of this string to \p other for equality.
@@ -260,11 +287,9 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// Get a StringRef of T. T must be char or char16_t corresponding to whether
   /// this string is ASCII or UTF-16.
   template <typename T>
-  inline ArrayRef<T> getStringRef() const;
-
-  /// If the given cell has is an ExternalStringPrimitive, returns the
-  /// size of its associated external memory (in bytes), else zero.
-  inline static uint32_t externalMemorySize(const GCCell *cell);
+  ArrayRef<T> getStringRef() const {
+    return ArrayRef<T>{castToPointer<T>(), getStringLength()};
+  }
 
  private:
   /// Similar to copyUTF16String(SmallVectorImpl), copy the string into
@@ -277,6 +302,11 @@ class StringPrimitive : public VariableSizeRuntimeCell {
 
   /// Get a read-only raw char16_t pointer, assert that this is UTF16 string.
   const char16_t *castToUTF16Pointer() const;
+
+  /// Get a read-only pointer to char or char16_t. Assert this is a string of
+  /// the correct type.
+  template <typename T>
+  inline const T *castToPointer() const;
 
   /// Get a writable raw char pointer, assert that this is ASCII string.
   char *castToASCIIPointerForWrite();
@@ -307,13 +337,23 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   static StringView createStringViewMustBeFlat(Handle<StringPrimitive> self);
 
  protected:
-  /// Set the unique id. This should normally only be done immediately after
-  /// construction. This requires and asserts that the string is uniqued.
-  void updateUniqueID(SymbolID id);
+  /// \return whether the StringPrimitive can be converted from non-uniqued to
+  /// uniqued without reallocating.
+  inline bool canBeUniqued() const;
+
+  /// Convert a non-uniqued StringPrimitive to a unique one.
+  /// \pre \c canBeUniqued() returns \c true.
+  inline void convertToUniqued(SymbolID uniqueID);
 
   /// \return the unique id.
   /// This requires and asserts that the string is uniqued.
   SymbolID getUniqueID() const;
+
+  /// Mark this string as not uniqued. This is used by IdentifierTable when
+  /// the associated SymbolID is garbage collected.
+  void clearUniquedBit() {
+    lengthAndUniquedFlag_ &= ~LENGTH_FLAG_UNIQUED;
+  }
 
   static std::string _snapshotNameImpl(GCCell *cell, GC *gc);
 };
@@ -323,11 +363,15 @@ class StringPrimitive : public VariableSizeRuntimeCell {
 /// All ExternalStringPrimitives store a Symbol, but only those marked as
 /// uniqued will use it.
 class SymbolStringPrimitive : public StringPrimitive {
-  SymbolID uniqueID_{};
-
-  friend void symbolStringPrimitiveBuildMeta(
-      const GCCell *cell,
-      Metadata::Builder &mb);
+  /// The SymbolID that was assigned to this StringPrimitive when it was
+  /// "uniqued" - inserted into the identifier table.
+  /// This field is *only* valid if \c isUniqued() returns \c true. Otherwise
+  /// its value must be ignored (even though the field itself might not be
+  /// cleared).
+  /// If the associated SymbolID is garbage collected, the uniqued flag will
+  /// be cleared and this field becomes invalid (but won't actually be cleared,
+  /// for performance reasons).
+  SymbolID weakUniqueID_{};
 
  public:
   using StringPrimitive::StringPrimitive;
@@ -346,17 +390,20 @@ class SymbolStringPrimitive : public StringPrimitive {
         CellKind::ExternalASCIIStringPrimitiveKind);
   }
 
+ protected:
+  friend class StringPrimitive;
+
   /// Set the unique id. This should normally only be done immediately after
   /// construction.
   void updateUniqueID(SymbolID id) {
     assert(isUniqued() && "StringPrimitive is not uniqued");
-    uniqueID_ = id;
+    weakUniqueID_ = id;
   }
 
   /// \return the unique id.
   SymbolID getUniqueID() const {
     assert(isUniqued() && "StringPrimitive is not uniqued");
-    return uniqueID_;
+    return weakUniqueID_;
   }
 };
 
@@ -408,24 +455,13 @@ class DynamicStringPrimitive final
 
   /// Construct from a DynamicStringPrimitive, perhaps with a SymbolID.
   /// If a non-empty SymbolID is provided, we must be a Uniqued string.
-  explicit DynamicStringPrimitive(
-      Runtime *runtime,
-      uint32_t length,
-      SymbolID id = {})
+  explicit DynamicStringPrimitive(Runtime *runtime, uint32_t length)
       : OptSymbolStringPrimitive<Uniqued>(
             runtime,
             &vt,
             allocationSize(length),
-            length,
-            Uniqued) {
+            length) {
     assert(!isExternalLength(length) && "length should not be external");
-    if (Uniqued) {
-      this->updateUniqueID(id);
-    } else {
-      assert(
-          id == SymbolID::empty() &&
-          "Non-Uniqued string passed a valid SymbolID");
-    }
   }
 
   explicit DynamicStringPrimitive(Runtime *runtime, Ref src);
@@ -462,10 +498,6 @@ class DynamicStringPrimitive final
   T *getRawPointerForWrite() {
     return this->template getTrailingObjects<T>();
   }
-
-  Ref getStringRef() const {
-    return Ref(getRawPointer(), getStringLength());
-  }
 };
 
 /// An immutable JavaScript primitive string consisting of length and a pointer
@@ -479,6 +511,14 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   friend class IdentifierTable;
   friend class StringBuilder;
   friend class StringPrimitive;
+  // BufferedStringPrimitive uses this class for storage and needs to be able
+  // to append to the contents.
+  template <typename U>
+  friend class BufferedStringPrimitive;
+  friend PseudoHandle<StringPrimitive> internalConcatStringPrimitives(
+      Runtime *runtime,
+      Handle<StringPrimitive> leftHnd,
+      Handle<StringPrimitive> rightHnd);
 
 #ifdef UNIT_TEST
   // Test version needs access.
@@ -487,6 +527,7 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
 
   using Ref = llvm::ArrayRef<T>;
   using StdString = std::basic_string<T>;
+  using CopyableStdString = CopyableBasicString<T>;
 
   /// \return the cell kind for this string.
   static constexpr CellKind getCellKind() {
@@ -511,42 +552,22 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
  private:
   static const VTable vt;
 
-  size_t getStringByteSize() const {
-    return getStringLength() * sizeof(T);
-  }
-
-  /// Construct an ExternalStringPrimitive from the given string \p contents,
-  /// optionally uniqued according to \p uniqued.
-  ExternalStringPrimitive(Runtime *runtime, StdString &&contents, bool uniqued)
-      : SymbolStringPrimitive(
-            runtime,
-            &vt,
-            sizeof(ExternalStringPrimitive<T>),
-            contents.size(),
-            uniqued),
-        contents_(std::move(contents)) {
-    assert(
-        getStringLength() >= EXTERNAL_STRING_MIN_SIZE &&
-        "ExternalStringPrimitive length must be at least EXTERNAL_STRING_MIN_SIZE");
+  size_t calcExternalMemorySize() const {
+    return contents_.capacity() * sizeof(T);
   }
 
   /// Construct an ExternalStringPrimitive from the given string \p contents,
   /// non-uniqued.
-  ExternalStringPrimitive(Runtime *runtime, StdString &&contents);
-
-  /// Construct an ExternalStringPrimitive from the given string \p contents,
-  /// uniqued via the given symbol \p uniqueID.
-  ExternalStringPrimitive(
-      Runtime *runtime,
-      StdString &&contents,
-      SymbolID uniqueID);
+  template <class BasicString>
+  ExternalStringPrimitive(Runtime *runtime, BasicString &&contents);
 
   /// Destructor deallocates the contents_ string.
   ~ExternalStringPrimitive() = default;
 
   /// Transfer ownership of an std::string into a new StringPrim. Throw \c
   /// RangeError if the string is longer than \c MAX_STRING_LENGTH characters.
-  static CallResult<HermesValue> create(Runtime *runtime, StdString &&str);
+  template <class BasicString>
+  static CallResult<HermesValue> create(Runtime *runtime, BasicString &&str);
 
   /// Like the above, but the created StringPrimitive will be allocated in a
   /// "long-lived" area of the heap (if the GC supports that concept).  Note
@@ -554,8 +575,7 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   /// allocated outside the JS heap in either case.
   static CallResult<HermesValue> createLongLived(
       Runtime *runtime,
-      StdString &&str,
-      SymbolID uniqueID = SymbolID::empty());
+      StdString &&str);
 
   /// Create a StringPrim object with a specified capacity \p length in
   /// 16-bit characters. Throw \c RangeError if the string is longer than
@@ -577,10 +597,6 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
     return &contents_[0];
   }
 
-  Ref getStringRef() const {
-    return Ref(getRawPointer(), getStringLength());
-  }
-
   // Finalizer to clean up the malloc'ed string.
   static void _finalizeImpl(GCCell *cell, GC *gc);
 
@@ -588,13 +604,188 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   /// assumed to be an ExternalStringPrimitive.
   static size_t _mallocSizeImpl(GCCell *cell);
 
+  /// \return the size of the external memory credited to the cell.
+  static gcheapsize_t _externalMemorySizeImpl(const GCCell *cell);
+
   static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
   static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
 
   /// The backing storage of this string. Note that the string's length is fixed
   /// and must always be equal to StringPrimitive::getStringLength().
-  StdString contents_{};
+  CopyableStdString contents_{};
 };
+
+/// An immutable JavaScript primitive consisting of a pointer to an
+/// ExternalStringPrimitive and a length. This is the result of a concatenation
+/// operation, where the referenced ExternalStringPrimitive contains a growing
+/// std::string. Each subsequent concatenation appends data to the std::string
+/// and allocates a new BufferedStringPrimitive referring to a prefix of it.
+///
+/// A degenerate case could result from code that keeps a reference only to an
+/// early stage in the "concatenation chain", because it would keep the whole
+/// large string alive. Something like this:
+/// \code
+///    globalThis.prop = x + " ";
+///    print(globalThis.prop + largeString);
+/// \endcode
+/// \c globalThis.prop will keep the whole string alive, even though we no
+/// longer need the \c largeString suffix.
+///
+/// The probability of this happening is not high, but it is possible. One way
+/// to adress this in the future is to create new ExternalStringPrimitive after
+/// a  certain amount of resizing. In this way each stage of the concatenation
+/// has an upper bound of the amount of extra memory it can keep alive.
+template <typename T>
+class BufferedStringPrimitive final : public StringPrimitive {
+  friend class IdentifierTable;
+  friend class StringBuilder;
+  friend class StringPrimitive;
+  friend PseudoHandle<StringPrimitive> internalConcatStringPrimitives(
+      Runtime *runtime,
+      Handle<StringPrimitive> leftHnd,
+      Handle<StringPrimitive> rightHnd);
+  friend void BufferedASCIIStringPrimitiveBuildMeta(
+      const GCCell *cell,
+      Metadata::Builder &mb);
+  friend void BufferedUTF16StringPrimitiveBuildMeta(
+      const GCCell *cell,
+      Metadata::Builder &mb);
+
+  using Ref = llvm::ArrayRef<T>;
+  using StdString = std::basic_string<T>;
+
+  /// \return the cell kind for this string.
+  static constexpr CellKind getCellKind() {
+    return std::is_same<T, char16_t>::value
+        ? CellKind::BufferedUTF16StringPrimitiveKind
+        : CellKind::BufferedASCIIStringPrimitiveKind;
+  }
+
+ public:
+#ifdef HERMESVM_SERIALIZE
+  template <typename>
+  friend void serializeConcatStringImpl(Serializer &s, const GCCell *cell);
+
+  template <typename>
+  friend void deserializeConcatStringImpl(Deserializer &d);
+#endif
+
+  static bool classof(const GCCell *cell) {
+    return cell->getKind() == BufferedStringPrimitive::getCellKind();
+  }
+
+#ifdef UNIT_TEST
+  /// Expose the concatenation buffer for unit tests.
+  ExternalStringPrimitive<T> *testGetConcatBuffer() const {
+    return vmcast<ExternalStringPrimitive<T>>(concatBufferHV_);
+  }
+#endif
+
+ private:
+  static const VTable vt;
+
+  /// Construct a BufferedStringPrimitive with the specified length \p length
+  /// and the associated concatenation buffer \p storage. Note that the length
+  /// of the primitive may be smaller than the length of the buffer.
+  BufferedStringPrimitive(
+      Runtime *runtime,
+      uint32_t length,
+      ExternalStringPrimitive<T> *concatBuffer)
+      : StringPrimitive(
+            runtime,
+            &vt,
+            sizeof(BufferedStringPrimitive<T>),
+            length) {
+    concatBufferHV_.set(
+        HermesValue::encodeObjectValue(concatBuffer), &runtime->getHeap());
+    assert(
+        concatBuffer->contents_.size() >= length &&
+        "length exceeds size of concatenation buffer");
+  }
+
+  /// Allocate a BufferedStringPrimitive with the specified length \p length
+  /// and the associated concatenation buffer \p storage. Note that the length
+  /// of the primitive may be smaller than the length of the buffer.
+  static PseudoHandle<StringPrimitive> create(
+      Runtime *runtime,
+      uint32_t length,
+      Handle<ExternalStringPrimitive<T>> storage);
+
+  /// Append a new string to the concatenation buffer and allocate a new
+  /// BufferedStringPrimitive representing the result.
+  /// \pre The types must be compatible (cannot append UTF16 to ASCII) and the
+  /// combined length must have been validated.
+  /// \return the new BufferedStringPrimitive representing the result.
+  static PseudoHandle<StringPrimitive> append(
+      Handle<BufferedStringPrimitive<T>> selfHnd,
+      Runtime *runtime,
+      Handle<StringPrimitive> rightHnd);
+
+  /// Create a new concatenation buffer of type T (the type parameter of this
+  /// template clases), initialize it with the concatenation of \p leftHnd and
+  /// \p rightHnd and allocate a new BufferedStringPrimitive to represent the
+  /// result.
+  /// \pre The types must be compatible with respect to T (cannot append UTF16
+  /// to ASCII) and the combined length must have been validated.
+  /// \return a new BufferedStringPrimitive representing the result.
+  static PseudoHandle<StringPrimitive> create(
+      Runtime *runtime,
+      Handle<StringPrimitive> leftHnd,
+      Handle<StringPrimitive> rightHnd);
+
+  /// Append a string primitive to the StdString \p res, performing an ASCII to
+  /// UTF16 conversion if necessary.
+  /// \pre cannot append UTF16 to ASCII.
+  static void appendToCopyableString(
+      CopyableBasicString<T> &res,
+      const StringPrimitive *str);
+
+  /// \return a const pointer to the first character of the string.
+  const T *getRawPointer() const {
+    return getConcatBuffer()->getRawPointer();
+  }
+
+  /// A helper to cast \c concatBufferHV_ to a typed pointer to
+  /// \c ExternalStringPrimitive.
+  /// \return the ExternalStringPrimitive used as a concatenation buffer.
+  ExternalStringPrimitive<T> *getConcatBuffer() const {
+    return vmcast<ExternalStringPrimitive<T>>(concatBufferHV_);
+  }
+
+  static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
+  static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
+
+  /// Reference to an ExternalStringPrimitive used as a concatenation buffer.
+  /// Every concatenation appends to it and allocates a new
+  /// BufferedStringPrimitive.
+  /// For now we are using a GCHermesValue instead of GCPointer to avoid
+  /// refactoring around compressed pointers, which require PointerBase to be
+  /// passed to functions which didn't previously need it.
+  GCHermesValue concatBufferHV_;
+};
+
+/// \return true if this is one of the BufferedStringPrimitive classes.
+inline bool isBufferedStringPrimitive(const GCCell *cell) {
+  return cell->getKind() == CellKind::BufferedUTF16StringPrimitiveKind ||
+      cell->getKind() == CellKind::BufferedASCIIStringPrimitiveKind;
+}
+
+/// This function is not part of the API and is not supposed to be called
+/// directly. It is used internally by StringPrimitive::concat. It is used
+/// to handle the case when the result string exceeds the minimal length for
+/// buffered concatenation, or when the left string is already a
+/// BufferedStringPrimitive. Internally it does the right thing by either
+/// appending to an existing concatenation buffer, if it can, or by allocating a
+/// new one.
+/// Some cases where it needs to allocate a new buffer include:
+/// - the left string is not a BufferedStringPrimitive
+/// - appending UTF16 to ASCII
+/// - appending to the middle of the concatenation chain.
+/// \pre The combined length must have been validated by the caller.
+PseudoHandle<StringPrimitive> internalConcatStringPrimitives(
+    Runtime *runtime,
+    Handle<StringPrimitive> leftHnd,
+    Handle<StringPrimitive> rightHnd);
 
 template <typename T, bool Uniqued>
 const VTable DynamicStringPrimitive<T, Uniqued>::vt = VTable(
@@ -605,9 +796,11 @@ const VTable DynamicStringPrimitive<T, Uniqued>::vt = VTable(
     nullptr,
     nullptr,
     nullptr,
+    nullptr,
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::String,
         DynamicStringPrimitive<T, Uniqued>::_snapshotNameImpl,
+        nullptr,
         nullptr,
         nullptr});
 
@@ -623,20 +816,42 @@ using DynamicUniquedASCIIStringPrimitive =
 template <typename T>
 const VTable ExternalStringPrimitive<T>::vt = VTable(
     ExternalStringPrimitive<T>::getCellKind(),
-    sizeof(ExternalStringPrimitive<T>),
+    cellSize<ExternalStringPrimitive<T>>(),
     ExternalStringPrimitive<T>::_finalizeImpl,
     nullptr, // markWeak.
     ExternalStringPrimitive<T>::_mallocSizeImpl,
     nullptr,
     nullptr,
+    ExternalStringPrimitive<T>::_externalMemorySizeImpl,
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::String,
         ExternalStringPrimitive<T>::_snapshotNameImpl,
         ExternalStringPrimitive<T>::_snapshotAddEdgesImpl,
-        ExternalStringPrimitive<T>::_snapshotAddNodesImpl});
+        ExternalStringPrimitive<T>::_snapshotAddNodesImpl,
+        nullptr});
 
 using ExternalUTF16StringPrimitive = ExternalStringPrimitive<char16_t>;
 using ExternalASCIIStringPrimitive = ExternalStringPrimitive<char>;
+
+template <typename T>
+const VTable BufferedStringPrimitive<T>::vt = VTable(
+    BufferedStringPrimitive<T>::getCellKind(),
+    sizeof(BufferedStringPrimitive<T>),
+    nullptr, // finalize.
+    nullptr, // markWeak.
+    nullptr, // mallocSize
+    nullptr,
+    nullptr,
+    nullptr, // externalMemorySize
+    VTable::HeapSnapshotMetadata{
+        HeapSnapshot::NodeType::String,
+        BufferedStringPrimitive<T>::_snapshotNameImpl,
+        BufferedStringPrimitive<T>::_snapshotAddEdgesImpl,
+        BufferedStringPrimitive<T>::_snapshotAddNodesImpl,
+        nullptr});
+
+using BufferedUTF16StringPrimitive = BufferedStringPrimitive<char16_t>;
+using BufferedASCIIStringPrimitive = BufferedStringPrimitive<char>;
 
 //===----------------------------------------------------------------------===//
 // StringPrimitive inline methods.
@@ -745,30 +960,57 @@ inline CallResult<HermesValue> StringPrimitive::createLongLived(
   }
 }
 
+inline bool StringPrimitive::canBeUniqued() const {
+  return isa<SymbolStringPrimitive>(this);
+}
+
+inline void StringPrimitive::convertToUniqued(hermes::vm::SymbolID uniqueID) {
+  assert(canBeUniqued() && "StringPrimitive cannot be uniqued");
+  assert(!isUniqued() && "StringPrimitive is already uniqued");
+  assert(
+      uniqueID.isValid() && uniqueID.isUniqued() &&
+      "uniqueID SymbolID is not valid and uniqued");
+  this->lengthAndUniquedFlag_ |= LENGTH_FLAG_UNIQUED;
+  vmcast<SymbolStringPrimitive>(this)->updateUniqueID(uniqueID);
+}
+
+template <>
+inline const char *StringPrimitive::castToPointer<char>() const {
+  return castToASCIIPointer();
+}
+template <>
+inline const char16_t *StringPrimitive::castToPointer<char16_t>() const {
+  return castToUTF16Pointer();
+}
+
 inline const char *StringPrimitive::castToASCIIPointer() const {
   if (LLVM_UNLIKELY(isExternal())) {
     return vmcast<ExternalASCIIStringPrimitive>(this)->getRawPointer();
-  } else if (isUniqued()) {
+  } else if (isa<DynamicUniquedASCIIStringPrimitive>(this)) {
     return vmcast<DynamicUniquedASCIIStringPrimitive>(this)->getRawPointer();
-  } else {
+  } else if (isa<DynamicASCIIStringPrimitive>(this)) {
     return vmcast<DynamicASCIIStringPrimitive>(this)->getRawPointer();
+  } else {
+    return vmcast<BufferedASCIIStringPrimitive>(this)->getRawPointer();
   }
 }
 
 inline const char16_t *StringPrimitive::castToUTF16Pointer() const {
   if (LLVM_UNLIKELY(isExternal())) {
     return vmcast<ExternalUTF16StringPrimitive>(this)->getRawPointer();
-  } else if (isUniqued()) {
+  } else if (isa<DynamicUniquedUTF16StringPrimitive>(this)) {
     return vmcast<DynamicUniquedUTF16StringPrimitive>(this)->getRawPointer();
-  } else {
+  } else if (isa<DynamicUTF16StringPrimitive>(this)) {
     return vmcast<DynamicUTF16StringPrimitive>(this)->getRawPointer();
+  } else {
+    return vmcast<BufferedUTF16StringPrimitive>(this)->getRawPointer();
   }
 }
 
 inline char *StringPrimitive::castToASCIIPointerForWrite() {
   if (LLVM_UNLIKELY(isExternal())) {
     return vmcast<ExternalASCIIStringPrimitive>(this)->getRawPointerForWrite();
-  } else if (isUniqued()) {
+  } else if (isa<DynamicUniquedASCIIStringPrimitive>(this)) {
     return vmcast<DynamicUniquedASCIIStringPrimitive>(this)
         ->getRawPointerForWrite();
   } else {
@@ -779,7 +1021,7 @@ inline char *StringPrimitive::castToASCIIPointerForWrite() {
 inline char16_t *StringPrimitive::castToUTF16PointerForWrite() {
   if (LLVM_UNLIKELY(isExternal())) {
     return vmcast<ExternalUTF16StringPrimitive>(this)->getRawPointerForWrite();
-  } else if (isUniqued()) {
+  } else if (isa<DynamicUniquedUTF16StringPrimitive>(this)) {
     return vmcast<DynamicUniquedUTF16StringPrimitive>(this)
         ->getRawPointerForWrite();
   } else {
@@ -790,11 +1032,6 @@ inline char16_t *StringPrimitive::castToUTF16PointerForWrite() {
 inline SymbolID StringPrimitive::getUniqueID() const {
   assert(this->isUniqued() && "StringPrimitive is not uniqued");
   return vmcast<SymbolStringPrimitive>(this)->getUniqueID();
-}
-
-inline void StringPrimitive::updateUniqueID(SymbolID id) {
-  assert(this->isUniqued() && "String is not uniqued");
-  vmcast<SymbolStringPrimitive>(this)->updateUniqueID(id);
 }
 
 inline char16_t StringPrimitive::at(uint32_t index) const {
@@ -818,6 +1055,8 @@ inline bool StringPrimitive::isASCII() const {
       cellKindsContiguousAscending(
           CellKind::DynamicUTF16StringPrimitiveKind,
           CellKind::DynamicASCIIStringPrimitiveKind,
+          CellKind::BufferedUTF16StringPrimitiveKind,
+          CellKind::BufferedASCIIStringPrimitiveKind,
           CellKind::DynamicUniquedUTF16StringPrimitiveKind,
           CellKind::DynamicUniquedASCIIStringPrimitiveKind,
           CellKind::ExternalUTF16StringPrimitiveKind,
@@ -835,39 +1074,14 @@ inline bool StringPrimitive::isExternal() const {
       cellKindsContiguousAscending(
           CellKind::DynamicUTF16StringPrimitiveKind,
           CellKind::DynamicASCIIStringPrimitiveKind,
+          CellKind::BufferedUTF16StringPrimitiveKind,
+          CellKind::BufferedASCIIStringPrimitiveKind,
           CellKind::DynamicUniquedUTF16StringPrimitiveKind,
           CellKind::DynamicUniquedASCIIStringPrimitiveKind,
           CellKind::ExternalUTF16StringPrimitiveKind,
           CellKind::ExternalASCIIStringPrimitiveKind),
       "Cell kinds in unexpected order");
   return getKind() >= CellKind::ExternalUTF16StringPrimitiveKind;
-}
-
-template <typename T>
-inline ArrayRef<T> StringPrimitive::getStringRef() const {
-  if (isExternal()) {
-    return vmcast<ExternalStringPrimitive<T>>(this)->getStringRef();
-  } else if (isUniqued()) {
-    return vmcast<DynamicStringPrimitive<T, true /* Uniqued */>>(this)
-        ->getStringRef();
-  } else {
-    return vmcast<DynamicStringPrimitive<T, false /* not Uniqued */>>(this)
-        ->getStringRef();
-  }
-}
-
-/*static*/
-inline uint32_t StringPrimitive::externalMemorySize(const GCCell *cell) {
-  // TODO (T27363944): a more general way of doing this, if we ever have more
-  // gc kinds with external memory charges.
-  if (const auto asExtAscii = dyn_vmcast<ExternalASCIIStringPrimitive>(cell)) {
-    return asExtAscii->getStringByteSize();
-  } else if (
-      const auto asExtUTF16 = dyn_vmcast<ExternalUTF16StringPrimitive>(cell)) {
-    return asExtUTF16->getStringByteSize();
-  } else {
-    return 0;
-  }
 }
 
 } // namespace vm

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_SUPPORT_PAGEACCESSTRACKERPOSIX_H
 #define HERMES_SUPPORT_PAGEACCESSTRACKERPOSIX_H
 
@@ -13,6 +14,8 @@
 #include <vector>
 
 #include "llvm/Support/raw_ostream.h"
+
+#include "hermes/Support/JSONEmitter.h"
 
 namespace hermes {
 
@@ -60,6 +63,11 @@ class PageAccessTracker {
   void printStats(llvm::raw_ostream &OS);
   void printStatsJSON(llvm::raw_ostream &OS);
 
+  /// Get the tracked stats, including page size, total number of pages,
+  /// number of pages accessed, page ids in the accessed order, and microseconds
+  /// needed to access.
+  void getJSONStats(JSONEmitter &json);
+
   /// Print only the page ids in the accessed order.
   void printPageAccessedOrder(llvm::raw_ostream &OS);
   void printPageAccessedOrderJSON(llvm::raw_ostream &OS);
@@ -83,8 +91,8 @@ class PageAccessTracker {
   /// Create a new PageAccessTracker, mark the whole address range unreadable.
   /// Note if the beginning or end of the buffer is not on the page boundary,
   /// the first page or last page the buffer actually covers won't be tracked.
-  /// \param bufStart, pointer to the start of the buffer.
-  /// \param bufSize, the size of the buffer.
+  /// \param bufStart pointer to the start of the buffer.
+  /// \param bufSize the size of the buffer.
   /// \return The new object, or nullptr if creation failed.
   static std::unique_ptr<volatile PageAccessTracker> create(
       void *bufStart,
@@ -102,6 +110,9 @@ class PageAccessTracker {
   /// format.
   /// \return true if function completed successfully, false on failure.
   bool printStats(llvm::raw_ostream &OS, bool json) volatile;
+
+  /// Public wrapper around the non-volatile version of this method.
+  void getJSONStats(JSONEmitter &json) volatile;
 
   /// Print only the page ids in the accessed order.
   /// \param json If true, print in json format, otherwise in a more readable

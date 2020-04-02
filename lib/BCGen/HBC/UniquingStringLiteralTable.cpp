@@ -1,11 +1,11 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
-#include "hermes/BCGen/HBC/PredefinedStringIDs.h"
 
 #include <cassert>
 
@@ -17,9 +17,7 @@ namespace {
 /// Works out the String Kind for the string \p str depending on whether it
 /// \p isIdentifier or not.
 StringKind::Kind kind(llvm::StringRef str, bool isIdentifier) {
-  if (isIdentifier && getPredefinedStringID(str)) {
-    return StringKind::Predefined;
-  } else if (isIdentifier) {
+  if (isIdentifier) {
     return StringKind::Identifier;
   } else {
     return StringKind::String;
@@ -50,12 +48,7 @@ std::vector<uint32_t> StringLiteralTable::getIdentifierTranslations() const {
     if (!isIdentifier_[i]) {
       continue;
     }
-
-    if (auto sym = getPredefinedStringID(strings_[i])) {
-      result.push_back(sym->unsafeGetRaw());
-    } else {
-      result.push_back(storage_.getEntryHash(i));
-    }
+    result.push_back(storage_.getEntryHash(i));
   }
 
   return result;

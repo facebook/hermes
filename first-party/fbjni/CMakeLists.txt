@@ -1,9 +1,12 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
-# This source code is licensed under the MIT license found in the LICENSE
-# file in the root directory of this source tree.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 
 project(hermesfbjni CXX)
+
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(fbjni_SOURCES
   ${FBJNI_PATH}/cxx/fbjni/ByteBuffer.cpp
@@ -13,6 +16,7 @@ set(fbjni_SOURCES
   ${FBJNI_PATH}/cxx/fbjni/detail/Environment.cpp
   ${FBJNI_PATH}/cxx/fbjni/detail/Exceptions.cpp
   ${FBJNI_PATH}/cxx/fbjni/detail/Hybrid.cpp
+  ${FBJNI_PATH}/cxx/fbjni/detail/Meta.cpp
   ${FBJNI_PATH}/cxx/fbjni/detail/References.cpp
   ${FBJNI_PATH}/cxx/fbjni/detail/utf8.cpp
   ${FBJNI_PATH}/cxx/lyra/cxa_throw.cpp
@@ -30,7 +34,6 @@ target_compile_options(hermesfbjni PRIVATE
   -fexceptions
   -O3
   -Wall
-  -std=c++11
   -frtti
   -ffunction-sections
   -DDISABLE_CPUCAP

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #define DEBUG_TYPE "mem2reg"
 
 #include "hermes/Optimizer/Scalar/Mem2Reg.h"
@@ -153,6 +154,16 @@ static bool promoteLoads(BasicBlock *BB) {
       // Record the value stored to the frame:
       knownFrameValues[var] = SF->getValue();
       continue;
+    }
+
+    // If the instructions writes to memory and one of its operands is
+    // an alloca (any alloca), remove that alloca from the known stack
+    // values.
+    if (II->mayWriteMemory()) {
+      for (unsigned i = 0, e = II->getNumOperands(); i != e; ++i) {
+        if (auto *ASI = dyn_cast<AllocStackInst>(II->getOperand(i)))
+          knownStackValues.erase(ASI);
+      }
     }
 
     // Try to replace the LoadStack with a recently saved value.

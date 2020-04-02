@@ -1,5 +1,5 @@
-/**
- * Copyright 2018-present, Facebook, Inc.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,12 +38,12 @@ class JThread : public JavaClass<JThread> {
 
   static local_ref<JThread> create(std::function<void()>&& runnable) {
     auto jrunnable = JNativeRunnable::newObjectCxxArgs(std::move(runnable));
-    return newInstance(static_ref_cast<JRunnable::javaobject>(jrunnable));
+    return newInstance(static_ref_cast<JRunnable>(jrunnable));
   }
 
   static local_ref<JThread> create(std::function<void()>&& runnable, std::string&& name) {
     auto jrunnable = JNativeRunnable::newObjectCxxArgs(std::move(runnable));
-    return newInstance(static_ref_cast<JRunnable::javaobject>(jrunnable), make_jstring(std::move(name)));
+    return newInstance(static_ref_cast<JRunnable>(jrunnable), make_jstring(std::move(name)));
   }
 
   static local_ref<JThread> getCurrent() {

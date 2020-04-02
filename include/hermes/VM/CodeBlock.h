@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_CODEBLOCK_H
 #define HERMES_VM_CODEBLOCK_H
 
@@ -12,7 +13,6 @@
 #include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/Inst/Inst.h"
 #include "hermes/Support/SourceErrorManager.h"
-#include "hermes/VM/Debugger/Debugger.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/Profiler.h"
@@ -191,10 +191,9 @@ class CodeBlock final
 
   SymbolID getNameMayAllocate() const;
 
-  /// If the name of the code  block is an ASCII string, sets res to
-  /// that string, and returns true.  Otherwise, returns false.  Does
-  /// no JS heap allocation.
-  bool getNameString(Runtime *runtime, std::string &res) const;
+  /// \return The name of this code block, as a UTF-8 encoded string.
+  /// Does no JS heap allocation.
+  std::string getNameString(GCBase::GCCallbacks *runtime) const;
 
   const_iterator begin() const {
     return bytecode_;
@@ -207,6 +206,11 @@ class CodeBlock final
   }
 
   OptValue<uint32_t> getDebugSourceLocationsOffset() const;
+
+  /// \return the source location of the given instruction offset \p offset in
+  /// the code block \p codeBlock.
+  OptValue<hbc::DebugSourceLocation> getSourceLocation(
+      uint32_t offset = 0) const;
 
   OptValue<uint32_t> getDebugLexicalDataOffset() const;
 
@@ -334,7 +338,7 @@ class CodeBlock final
   }
 
   // Mark all hidden classes in the property cache as roots.
-  void markCachedHiddenClasses(WeakRootAcceptor &acceptor);
+  void markCachedHiddenClasses(Runtime *runtime, WeakRootAcceptor &acceptor);
 
   static CodeBlock *createCodeBlock(
       RuntimeModule *runtimeModule,
@@ -382,6 +386,17 @@ class CodeBlock final
   /// the result must be deallocated via delete, which is overridden.
   /// \param runtimeModule The RuntimeModule the CodeBlock belongs to.
   static CodeBlock *deserialize(Deserializer &d, RuntimeModule *runtimeModule);
+#endif
+
+#ifndef HERMESVM_LEAN
+  /// Returns true if source code is available for the function backing this
+  /// CodeBlock. This will only be the case if the function is lazily compiled,
+  /// or we've enabled Function.toString() to return source and compilation was
+  /// done at run-time.
+  llvm::StringRef getFunctionSource() const;
+
+  /// Returns true if \c getFunctionSource() above will return function source.
+  bool hasFunctionSource() const;
 #endif
 };
 

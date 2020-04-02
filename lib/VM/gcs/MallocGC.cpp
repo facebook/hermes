@@ -1,16 +1,20 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/Support/CheckedMalloc.h"
 #include "hermes/Support/ErrorHandling.h"
+#include "hermes/Support/SlowAssert.h"
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HermesValue-inline.h"
+#include "hermes/VM/HiddenClass.h"
+#include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/SlotAcceptorDefault.h"
 
 #include "llvm/Support/Debug.h"
@@ -25,6 +29,9 @@ namespace vm {
 struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
                                          public WeakRootAcceptor {
   std::vector<CellHeader *> worklist_;
+
+  /// The WeakMap objects that have been discovered to be reachable.
+  std::vector<JSWeakMap *> reachableWeakMaps_;
 
   /// markedSymbols_ represents which symbols have been proven live so far in
   /// a collection. True means that it is live, false means that it could
@@ -43,34 +50,65 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
       return;
     }
     GCCell *&cell = reinterpret_cast<GCCell *&>(ptr);
-    assert(
+    HERMES_SLOW_ASSERT(
         gc.validPointer(cell) &&
         "Marked a pointer that the GC didn't allocate");
     CellHeader *header = CellHeader::from(cell);
 #ifdef HERMESVM_SANITIZE_HANDLES
+    /// Make the acceptor idempotent: allow it to be called multiple
+    /// times on the same slot during a collection.  Do this by
+    /// recognizing when the pointer is already a "new" pointer.
+    if (gc.newPointers_.count(header)) {
+      return;
+    }
     // With handle-san on, handle moving pointers here.
     if (header->isMarked()) {
       cell = header->getForwardingPointer()->data();
     } else {
       // It hasn't been seen before, move it.
+      // At this point, also trim the object.
+      const bool canBeTrimmed = cell->getVT()->canBeTrimmed();
+      const gcheapsize_t trimmedSize =
+          cell->getVT()->getTrimmedSize(cell, cell->getAllocatedSize());
       auto *newLocation =
-          new (checkedMalloc(cell->getAllocatedSize() + sizeof(CellHeader)))
-              CellHeader();
+          new (checkedMalloc(trimmedSize + sizeof(CellHeader))) CellHeader();
       newLocation->mark();
-      memcpy(newLocation->data(), cell, cell->getAllocatedSize());
+      memcpy(newLocation->data(), cell, trimmedSize);
+      if (canBeTrimmed) {
+        auto *newVarCell =
+            reinterpret_cast<VariableSizeRuntimeCell *>(newLocation->data());
+        newVarCell->setSizeDuringGCCompaction(trimmedSize);
+        newVarCell->getVT()->trim(newVarCell);
+      }
       // Make sure to put an element on the worklist that is at the updated
       // location. Don't update the stale address that is about to be free'd.
       header->markWithForwardingPointer(newLocation);
-      worklist_.push_back(newLocation);
+      auto *newCell = newLocation->data();
+      if (newCell->getKind() == CellKind::WeakMapKind) {
+        reachableWeakMaps_.push_back(vmcast<JSWeakMap>(newCell));
+      } else {
+        worklist_.push_back(newLocation);
+      }
       gc.newPointers_.insert(newLocation);
-      gc.idTracker_.moveObject(cell, newLocation->data());
+      if (gc.idTracker_.isTrackingIDs()) {
+        gc.idTracker_.moveObject(cell, newLocation->data());
+      }
       cell = newLocation->data();
     }
 #else
     if (!header->isMarked()) {
       // Only add to the worklist if it hasn't been marked yet.
       header->mark();
-      worklist_.push_back(header);
+      // Trim the cell. This is fine to do with malloc'ed memory because the
+      // original size is retained by malloc.
+      if (cell->getVT()->canBeTrimmed()) {
+        cell->getVT()->trim(cell);
+      }
+      if (cell->getKind() == CellKind::WeakMapKind) {
+        reachableWeakMaps_.push_back(vmcast<JSWeakMap>(cell));
+      } else {
+        worklist_.push_back(header);
+      }
       // Move the pointer from the old pointers to the new pointers.
       gc.pointers_.erase(header);
       gc.newPointers_.insert(header);
@@ -116,7 +154,7 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
   }
 
   void accept(WeakRefBase &wr) override {
-    gc.markWeakRef(wr);
+    wr.unsafeGetSlot()->mark();
   }
 };
 
@@ -136,14 +174,13 @@ MallocGC::MallocGC(
     PointerBase *pointerBase,
     const GCConfig &gcConfig,
     std::shared_ptr<CrashManager> crashMgr,
-    StorageProvider *provider)
+    std::shared_ptr<StorageProvider> provider)
     : GCBase(
           metaTable,
           gcCallbacks,
           pointerBase,
           gcConfig,
-          std::move(crashMgr),
-          provider),
+          std::move(crashMgr)),
       pointers_(),
       weakPointers_(),
       maxSize_(Size(gcConfig).max()),
@@ -204,9 +241,17 @@ void MallocGC::checkWellFormed() {
     GCBase::markCell(cell, this, acceptor);
   }
 }
+
+void MallocGC::clearUnmarkedPropertyMaps() {
+  for (CellHeader *header : pointers_)
+    if (!header->isMarked())
+      if (auto hc = dyn_vmcast<HiddenClass>(header->data()))
+        hc->clearPropertyMap();
+}
 #endif
 
 void MallocGC::collect() {
+  assert(noAllocLevel_ == 0 && "no GC allowed right now");
   using std::chrono::steady_clock;
   LLVM_DEBUG(llvm::dbgs() << "Beginning collection");
 #ifdef HERMES_SLOW_DEBUG
@@ -214,25 +259,24 @@ void MallocGC::collect() {
 #endif
   const auto wallStart = steady_clock::now();
   const auto cpuStart = oscompat::thread_cpu_time();
+  auto allocatedBefore = allocatedBytes_;
 
   resetStats();
 
   // Begin the collection phases.
   {
-    GCCycle cycle{this};
+    GCCycle cycle{this, gcCallbacks_, "Full collection"};
     MarkingAcceptor acceptor(*this);
     DroppingAcceptor<MarkingAcceptor> nameAcceptor{acceptor};
     markRoots(nameAcceptor, true);
-    while (!acceptor.worklist_.empty()) {
-      CellHeader *header = acceptor.worklist_.back();
-      acceptor.worklist_.pop_back();
-      assert(header->isMarked() && "Pointer on the worklist isn't marked");
-      GCCell *cell = header->data();
-      // Since `markCell` adds onto worklist_, this cannot be expressed as a
-      // normal loop.
-      GCBase::markCell(cell, this, acceptor);
-      allocatedBytes_ += cell->getAllocatedSize();
-    }
+#ifdef HERMES_SLOW_DEBUG
+    clearUnmarkedPropertyMaps();
+#endif
+    drainMarkStack(acceptor);
+
+    // The marking loop above will have accumulated WeakMaps;
+    // find things reachable from values of reachable keys.
+    completeWeakMapMarking(acceptor);
 
     // Update weak roots references.
     markWeakRoots(acceptor);
@@ -263,7 +307,12 @@ void MallocGC::collect() {
         }
 #endif
       }
-      idTracker_.untrackObject(cell);
+      if (idTracker_.isTrackingIDs()) {
+        idTracker_.untrackObject(cell);
+      }
+      if (allocationLocationTracker_.isEnabled()) {
+        allocationLocationTracker_.freeAlloc(cell);
+      }
 #ifndef NDEBUG
       // Before free'ing, fill with a dead value for debugging
       std::fill_n(reinterpret_cast<char *>(cell), freedSize, kInvalidHeapValue);
@@ -314,8 +363,59 @@ void MallocGC::collect() {
 
   double wallElapsedSecs = GCBase::clockDiffSeconds(wallStart, wallEnd);
   double cpuElapsedSecs = GCBase::clockDiffSeconds(cpuStart, cpuEnd);
-  recordGCStats(wallElapsedSecs, cpuElapsedSecs, allocatedBytes_);
-  checkTripwire(allocatedBytes_, wallEnd);
+  recordGCStats(
+      wallElapsedSecs,
+      cpuElapsedSecs,
+      allocatedBytes_,
+      allocatedBefore,
+      allocatedBytes_);
+  checkTripwire(allocatedBytes_);
+}
+
+void MallocGC::drainMarkStack(MarkingAcceptor &acceptor) {
+  while (!acceptor.worklist_.empty()) {
+    CellHeader *header = acceptor.worklist_.back();
+    acceptor.worklist_.pop_back();
+    assert(header->isMarked() && "Pointer on the worklist isn't marked");
+    GCCell *cell = header->data();
+    GCBase::markCell(cell, this, acceptor);
+    allocatedBytes_ += cell->getAllocatedSize();
+  }
+}
+
+void MallocGC::completeWeakMapMarking(MarkingAcceptor &acceptor) {
+  gcheapsize_t weakMapAllocBytes = GCBase::completeWeakMapMarking(
+      this,
+      acceptor,
+      acceptor.reachableWeakMaps_,
+      /*objIsMarked*/
+      [](GCCell *cell) { return CellHeader::from(cell)->isMarked(); },
+      /*markFromVal*/
+      [this, &acceptor](GCCell *valCell, HermesValue &valRef) {
+        CellHeader *valHeader = CellHeader::from(valCell);
+        if (valHeader->isMarked()) {
+#ifdef HERMESVM_SANITIZE_HANDLES
+          valRef.setInGC(
+              HermesValue::encodeObjectValue(
+                  valHeader->getForwardingPointer()->data()),
+              this);
+#endif
+          return false;
+        }
+        acceptor.accept(valRef);
+        drainMarkStack(acceptor);
+        return true;
+      },
+      /*drainMarkStack*/
+      [this](MarkingAcceptor &acceptor) { drainMarkStack(acceptor); },
+      /*checkMarkStackOverflow (MallocGC does not have mark stack overflow)*/
+      []() { return false; });
+
+  acceptor.reachableWeakMaps_.clear();
+  // drainMarkStack will have added the size of every object popped
+  // from the mark stack.  WeakMaps are never pushed on that stack,
+  // but the call above returns their total size.  So add that.
+  allocatedBytes_ += weakMapAllocBytes;
 }
 
 void MallocGC::finalizeAll() {
@@ -387,6 +487,12 @@ size_t MallocGC::countUsedWeakRefs() const {
 }
 #endif
 
+void MallocGC::forAllObjs(const std::function<void(GCCell *)> &callback) {
+  for (auto *ptr : pointers_) {
+    callback(ptr->data());
+  }
+}
+
 void MallocGC::resetWeakReferences() {
   for (auto &slot : weakPointers_) {
     // Set all allocated slots to unmarked.
@@ -409,7 +515,7 @@ void MallocGC::updateWeakReferences() {
           break;
         }
         auto *cell = reinterpret_cast<GCCell *>(slot.getPointer());
-        assert(
+        HERMES_SLOW_ASSERT(
             validPointer(cell) &&
             "Got a pointer out of a weak reference slot that is not owned by "
             "the GC");
@@ -421,7 +527,7 @@ void MallocGC::updateWeakReferences() {
 #ifdef HERMESVM_SANITIZE_HANDLES
           // Update the value to point to the new location
           GCCell *nextCell = header->getForwardingPointer()->data();
-          assert(
+          HERMES_SLOW_ASSERT(
               validPointer(cell) &&
               "Forwarding weak ref must be to a valid cell");
           slot.setPointer(nextCell);
@@ -435,10 +541,6 @@ void MallocGC::updateWeakReferences() {
 WeakRefSlot *MallocGC::allocWeakSlot(HermesValue init) {
   weakPointers_.push_back({init});
   return &weakPointers_.back();
-}
-
-void MallocGC::markWeakRef(WeakRefBase &wr) {
-  wr.unsafeGetSlot()->mark();
 }
 
 void MallocGC::freeWeakSlot(WeakRefSlot *slot) {
@@ -463,7 +565,7 @@ bool MallocGC::isMostRecentFinalizableObj(const GCCell *cell) const {
 }
 #endif
 
-void MallocGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
+void MallocGC::createSnapshot(llvm::raw_ostream &os) {
   hermes_fatal("No snapshots allowed with MallocGC");
 }
 

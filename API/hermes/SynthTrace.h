@@ -1,11 +1,14 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_SYNTHTRACE_H
 #define HERMES_SYNTHTRACE_H
+
+#ifdef HERMESVM_API_TRACE
 
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/Support/JSONEmitter.h"
@@ -15,6 +18,7 @@
 #include "hermes/VM/Operations.h"
 
 #include <chrono>
+#include <cstdlib>
 #include <memory>
 #include <string>
 #include <vector>
@@ -33,19 +37,6 @@ namespace tracing {
 /// It can be serialized into JSON and written to a llvm::raw_ostream.
 class SynthTrace {
  public:
-  struct Printable final {
-    const SynthTrace &trace;
-    /// References to the vectors stored by the Runtime.
-    const ::hermes::vm::MockedEnvironment &env;
-    const ::hermes::vm::RuntimeConfig &conf;
-
-    Printable(
-        const SynthTrace &trace,
-        const ::hermes::vm::MockedEnvironment &env,
-        const ::hermes::vm::RuntimeConfig &conf)
-        : trace(trace), env(env), conf(conf) {}
-  };
-
   using ObjectID = uint64_t;
   /// A tagged union representing different types available in the trace.
   /// HermesValue doesn't have to be used, but it is an efficient way
@@ -85,6 +76,8 @@ class SynthTrace {
     GetPropertyNativeReturn,
     SetPropertyNative,
     SetPropertyNativeReturn,
+    GetNativePropertyNames,
+    GetNativePropertyNamesReturn,
   };
 
   /// A Record is one element of a trace.
@@ -135,12 +128,17 @@ class SynthTrace {
         const SynthTrace &trace) const;
   };
 
-  explicit SynthTrace(ObjectID globalObjID)
-      : globalObjID_(globalObjID), sourceHash_() {}
+  /// If \p traceStream is non-null, the trace will be written to that
+  /// stream.  Otherwise, no trace is written.
+  explicit SynthTrace(
+      ObjectID globalObjID,
+      const ::hermes::vm::RuntimeConfig &conf,
+      std::unique_ptr<llvm::raw_ostream> traceStream = nullptr);
 
   template <typename T, typename... Args>
   void emplace_back(Args &&... args) {
     records_.emplace_back(new T(std::forward<Args>(args)...));
+    flushRecordsIfNecessary();
   }
 
   const std::vector<std::unique_ptr<Record>> &records() const {
@@ -149,14 +147,6 @@ class SynthTrace {
 
   ObjectID globalObjID() const {
     return globalObjID_;
-  }
-
-  const ::hermes::SHA1 &sourceHash() const {
-    return sourceHash_;
-  }
-
-  void setSourceHash(const ::hermes::SHA1 &sourceHash) {
-    sourceHash_ = sourceHash;
   }
 
   /// Given a trace value, turn it into its typed string.
@@ -196,12 +186,38 @@ class SynthTrace {
     return 2;
   }
 
+  static const char *nameFromReleaseUnused(::hermes::vm::ReleaseUnused ru);
+  static ::hermes::vm::ReleaseUnused releaseUnusedFromName(const char *name);
+
  private:
+  llvm::raw_ostream &os() const {
+    return (*traceStream_);
+  }
+
+  /// If we're tracing to a file, and the number of accumulated
+  /// records has reached the limit kTraceRecordsToFlush, below,
+  /// flush the records to the file, and reset the accumulated records
+  /// to be empty.
+  void flushRecordsIfNecessary();
+
+  /// Assumes we're tracing to a file; flush accumulated records to
+  /// the file, and reset the accumulated records to be empty.
+  void flushRecords();
+
+  static constexpr unsigned kTraceRecordsToFlush = 100;
+
+  /// If we're tracing to a file, pointer to a stream onto
+  /// traceFilename_.  Null otherwise.
+  std::unique_ptr<llvm::raw_ostream> traceStream_;
+  /// If we're tracing to a file, pointer to a JSONEmitter writting
+  /// into *traceStream_.  Null otherwise.
+  std::unique_ptr<::hermes::JSONEmitter> json_;
+  /// The records currently being accumulated in the trace.  If we are
+  /// tracing to a file, these will be only the records not yet
+  /// written to the file.
   std::vector<std::unique_ptr<Record>> records_;
   /// The id of the global object.
   const ObjectID globalObjID_;
-  /// A hash of the source that was executed in this trace.
-  ::hermes::SHA1 sourceHash_;
   /// A table of strings to avoid repeated strings taking up memory. Similar to
   /// the IdentifierTable, except it doesn't need to be collected (it stores
   /// strings forever).
@@ -235,10 +251,38 @@ class SynthTrace {
   /// inject values into the VM before any source code is run.
   struct BeginExecJSRecord final : public Record {
     static constexpr RecordType type{RecordType::BeginExecJS};
-    using Record::Record;
+    explicit BeginExecJSRecord(
+        TimeSinceStart time,
+        std::string sourceURL,
+        ::hermes::SHA1 sourceHash)
+        : Record(time),
+          sourceURL_(std::move(sourceURL)),
+          sourceHash_(std::move(sourceHash)) {}
+
     RecordType getType() const override {
       return type;
     }
+
+    const std::string &sourceURL() const {
+      return sourceURL_;
+    }
+
+    const ::hermes::SHA1 &sourceHash() const {
+      return sourceHash_;
+    }
+
+   private:
+    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
+        const override;
+
+    /// The URL providing the source file mapping for the file being executed.
+    /// Can be empty.
+    std::string sourceURL_;
+
+    /// A hash of the source that was executed. The source hash must match up
+    /// when the file is replayed.
+    /// The hash is optional, and will be all zeros if not provided.
+    ::hermes::SHA1 sourceHash_;
   };
 
   struct ReturnMixin {
@@ -287,7 +331,7 @@ class SynthTrace {
     explicit CreateObjectRecord(TimeSinceStart time, ObjectID objID)
         : Record(time), objID_(objID) {}
 
-    bool operator==(const Record &that) const final;
+    bool operator==(const Record &that) const override;
 
     void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
         const override;
@@ -314,7 +358,23 @@ class SynthTrace {
 
   struct CreateHostFunctionRecord final : public CreateObjectRecord {
     static constexpr RecordType type{RecordType::CreateHostFunction};
-    using CreateObjectRecord::CreateObjectRecord;
+    const std::string functionName_;
+    const unsigned paramCount_;
+
+    CreateHostFunctionRecord(
+        TimeSinceStart time,
+        ObjectID objID,
+        std::string functionName,
+        unsigned paramCount)
+        : CreateObjectRecord(time, objID),
+          functionName_(std::move(functionName)),
+          paramCount_(paramCount) {}
+
+    bool operator==(const Record &that) const override;
+
+    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
+        const override;
+
     RecordType getType() const override {
       return type;
     }
@@ -376,8 +436,9 @@ class SynthTrace {
     }
   };
 
-  /// A HasPropertyRecord is an event where native code queries is a property
-  /// exists on an object.
+  /// A HasPropertyRecord is an event where native code queries whether a
+  /// property exists on an object.  (We don't care about the result because
+  /// it cannot influence the trace.)
   struct HasPropertyRecord final : public Record {
     static constexpr RecordType type{RecordType::HasProperty};
     const ObjectID objID_;
@@ -737,15 +798,59 @@ class SynthTrace {
     }
   };
 
-  /// @}
-  friend llvm::raw_ostream &operator<<(
-      llvm::raw_ostream &os,
-      const SynthTrace::Printable &trace);
+  /// A GetNativePropertyNamesRecord records an event where JS asked for a list
+  /// of property names available on a host object. It records the object, and
+  /// the returned list of property names.
+  struct GetNativePropertyNamesRecord : public Record {
+    static constexpr RecordType type{RecordType::GetNativePropertyNames};
+    const ObjectID hostObjectID_;
+
+    explicit GetNativePropertyNamesRecord(
+        TimeSinceStart time,
+        ObjectID hostObjectID)
+        : Record(time), hostObjectID_(hostObjectID) {}
+
+    RecordType getType() const override {
+      return type;
+    }
+
+    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
+        const override;
+
+    std::vector<ObjectID> uses() const override {
+      return {hostObjectID_};
+    }
+
+    bool operator==(const Record &that) const override;
+  };
+
+  /// A GetNativePropertyNamesReturnRecord records what property names were
+  /// returned by the GetNativePropertyNames query.
+  struct GetNativePropertyNamesReturnRecord final : public Record {
+    static constexpr RecordType type{RecordType::GetNativePropertyNamesReturn};
+    const std::vector<std::string> propNames_;
+
+    explicit GetNativePropertyNamesReturnRecord(
+        TimeSinceStart time,
+        const std::vector<std::string> &propNames)
+        : Record(time), propNames_(propNames) {}
+
+    RecordType getType() const override {
+      return type;
+    }
+
+    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
+        const override;
+
+    bool operator==(const Record &that) const override;
+  };
+
+  /// Completes writing of the trace to the trace stream.  If writing
+  /// to a file, disables further writing to the file, or accumulation
+  /// of data.
+  void flushAndDisable(const ::hermes::vm::MockedEnvironment &env);
 };
 
-llvm::raw_ostream &operator<<(
-    llvm::raw_ostream &os,
-    const SynthTrace::Printable &trace);
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os,
     SynthTrace::RecordType type);
@@ -755,4 +860,6 @@ std::istream &operator>>(std::istream &is, SynthTrace::RecordType &type);
 } // namespace hermes
 } // namespace facebook
 
-#endif
+#endif // HERMESVM_API_TRACE
+
+#endif // HERMES_SYNTHTRACE_H

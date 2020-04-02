@@ -1,13 +1,15 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_PUBLIC_GCTRIPWIRECONTEXT_H
 #define HERMES_PUBLIC_GCTRIPWIRECONTEXT_H
 
 #include <string>
+#include <system_error>
 
 namespace hermes {
 namespace vm {
@@ -21,10 +23,9 @@ class GCTripwireContext {
   ///
   /// \param path to save the heap capture
   ///
-  /// \param compact Whether the JSON should be compact or pretty
-  ///
-  /// \return true iff the heap capture succeeded
-  virtual bool createSnapshotToFile(const std::string &path, bool compact) = 0;
+  /// \return Empty error code if the heap capture succeeded, else a real error
+  ///   code.
+  virtual std::error_code createSnapshotToFile(const std::string &path) = 0;
 };
 
 } // namespace vm

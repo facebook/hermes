@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/DictPropertyMap.h"
 
 #include "TestHelpers.h"
@@ -25,7 +26,7 @@ TEST_F(DictPropertyMapTest, SmokeTest) {
   NamedPropertyDescriptor desc1{};
 
   auto res = DictPropertyMap::create(runtime, 2);
-  ASSERT_RETURNED(res);
+  ASSERT_FALSE(isException(res));
   MutableHandle<DictPropertyMap> map{runtime, res->get()};
   auto saveMap = map.get();
 

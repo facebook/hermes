@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
-# This source code is licensed under the MIT license found in the LICENSE
-# file in the root directory of this source tree.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 
 import argparse
 import enum
@@ -38,6 +38,9 @@ ESPRIMA_OMITTED_KEYS_COMMON = {"loc", "range", "errors"}
 HERMES_OMITTED_KEYS = {
     "FunctionDeclaration": {"returnType"},
     "ArrayExpression": {"trailingComma"},
+    # Some literals support "raw" and others don't.
+    # ESPrima doesn't distinguish.
+    "Literal": {"raw"},
 }
 ESPRIMA_OMITTED_KEYS = {
     "Program": {"tokens", "sourceType", "comments"},
@@ -45,9 +48,9 @@ ESPRIMA_OMITTED_KEYS = {
     # ES6+ specific enhancement to the ESTree original definitions that Hermes
     # does not support yet.
     # TODO: remember to update or remove them once we update the parser.
-    "FunctionDeclaration": {"async", "expression"},
-    "FunctionExpression": {"async", "expression"},
-    "ArrowFunctionExpression": {"async", "generator"},
+    "FunctionDeclaration": {"expression"},
+    "FunctionExpression": {"expression"},
+    "ArrowFunctionExpression": {"generator"},
     "Property": {"method", "shorthand"},
     "ForInStatement": {"each"},
 }

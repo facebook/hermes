@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/AST/CommonJS.h"
 
 namespace hermes {
@@ -30,7 +31,7 @@ ESTree::FunctionExpressionNode *wrapCJSModule(
   argNames.push_back(*module);
 
   auto *wrappedFn = new (*context) ESTree::FunctionExpressionNode(
-      nullptr, std::move(argNames), moduleBlock, false);
+      nullptr, std::move(argNames), moduleBlock, false, false);
   wrappedFn->strictness = ESTree::Strictness::NonStrictMode;
   wrappedFn->setSourceRange(program->getSourceRange());
   wrappedFn->setDebugLoc(program->getDebugLoc());

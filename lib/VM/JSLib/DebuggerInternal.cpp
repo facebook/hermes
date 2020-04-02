@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifdef HERMES_ENABLE_DEBUGGER
 
 #include "JSLibInternal.h"
@@ -14,7 +15,7 @@ namespace vm {
 #ifdef HERMES_ENABLE_DEBUGGER
 
 Handle<JSObject> createDebuggerInternalObject(Runtime *runtime) {
-  Handle<JSObject> intern = toHandle(runtime, JSObject::create(runtime));
+  Handle<JSObject> intern = runtime->makeHandle(JSObject::create(runtime));
 
   // Configurable property stored in the Debugger
   // To be used when a debugger transitions to an attached state.

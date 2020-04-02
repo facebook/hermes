@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_PROFILER_CHROMETRACESERIALIZERPOSIX_H
 #define HERMES_VM_PROFILER_CHROMETRACESERIALIZERPOSIX_H
 
@@ -63,7 +64,7 @@ class ChromeStackFrameNode {
   }
 
  public:
-  ChromeStackFrameNode(
+  explicit ChromeStackFrameNode(
       uint32_t nextFrameId,
       const SamplingProfiler::StackFrame &frame)
       : id_(nextFrameId), frameInfo_(frame) {}
@@ -102,7 +103,7 @@ class ChromeSampleEvent {
   std::shared_ptr<ChromeStackFrameNode> leafNode_;
 
  public:
-  ChromeSampleEvent(
+  explicit ChromeSampleEvent(
       SamplingProfiler::ThreadId tid,
       SamplingProfiler::TimeStampType timeStamp,
       std::shared_ptr<ChromeStackFrameNode> leaf)
@@ -150,7 +151,7 @@ class ChromeTraceFormat {
   std::vector<ChromeSampleEvent> sampleEvents_;
 
  private:
-  ChromeTraceFormat(
+  explicit ChromeTraceFormat(
       uint32_t pid,
       const SamplingProfiler::ThreadNamesMap &threadNames)
       : pid_(pid), threadNames_(threadNames) {}

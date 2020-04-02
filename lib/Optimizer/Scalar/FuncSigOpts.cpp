@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #define DEBUG_TYPE "funcsigopts"
 
 #include "hermes/Optimizer/Scalar/FuncSigOpts.h"
@@ -33,6 +34,10 @@ static bool capturesArgumentVector(Function *F) {
     for (auto &I : BB) {
       if (llvm::isa<CreateArgumentsInst>(I))
         return true;
+      if (auto *CB = llvm::dyn_cast<CallBuiltinInst>(&I)) {
+        if (CB->getBuiltinIndex() == BuiltinMethod::HermesBuiltin_copyRestArgs)
+          return true;
+      }
     }
   }
 

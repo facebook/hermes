@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/CellKind.h"
 
 #include <cassert>
@@ -24,5 +25,5 @@ const char *cellKindStr(CellKind kind) {
   return cellKinds[static_cast<size_t>(kind)];
 }
 
-}; // namespace vm
+} // namespace vm
 } // namespace hermes

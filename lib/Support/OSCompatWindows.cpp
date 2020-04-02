@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifdef _WINDOWS
 
 #include "hermes/Support/ErrorHandling.h"
@@ -383,6 +384,16 @@ std::string thread_name() {
   // Prior to that, the concept of thread names only exists when
   // a Visual Studio debugger is attached.
   return "";
+}
+
+std::vector<bool> sched_getaffinity() {
+  // Not yet supported.
+  return std::vector<bool>();
+}
+
+int sched_getcpu() {
+  // Not yet supported.
+  return -1;
 }
 
 bool set_env(const char *name, const char *value) {

@@ -1,12 +1,14 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_PARSER_JSONLEXER_H
 #define HERMES_PARSER_JSONLEXER_H
 
+#include "hermes/Support/UTF16Stream.h"
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/SmallXString.h"
@@ -45,8 +47,8 @@ class JSONToken {
   double numberValue_{};
   MutableHandle<StringPrimitive> stringValue_;
 
-  /// The starting location of this token.
-  const char16_t *loc_{};
+  /// The starting character of this token.
+  char16_t firstChar_{};
 
   JSONToken(const JSONToken &) = delete;
   const JSONToken &operator=(const JSONToken &) = delete;
@@ -68,11 +70,11 @@ class JSONToken {
     return stringValue_;
   }
 
-  const char16_t *getLoc() const {
-    return loc_;
+  char16_t getFirstChar() const {
+    return firstChar_;
   }
-  void setLoc(const char16_t *loc) {
-    loc_ = loc;
+  void setFirstChar(char16_t firstChar) {
+    firstChar_ = firstChar;
   }
 
   void setPunctuator(JSONTokenKind kind) {
@@ -80,7 +82,7 @@ class JSONToken {
   }
   void setEof() {
     kind_ = JSONTokenKind::Eof;
-    loc_ = nullptr;
+    firstChar_ = 0;
   }
   void invalidate() {
     kind_ = JSONTokenKind::None;
@@ -98,20 +100,15 @@ class JSONToken {
 
 class JSONLexer {
  private:
-  const char16_t *curCharPtr_{nullptr};
-
-  const char16_t *bufferEnd_{nullptr};
+  UTF16Stream curCharPtr_;
 
   Runtime *runtime_;
 
   JSONToken token_;
 
  public:
-  JSONLexer(Runtime *runtime, UTF16Ref buffer)
-      : runtime_(runtime), token_(runtime) {
-    curCharPtr_ = buffer.data();
-    bufferEnd_ = buffer.data() + buffer.size();
-  }
+  JSONLexer(Runtime *runtime, UTF16Stream &&stream)
+      : curCharPtr_(std::move(stream)), runtime_(runtime), token_(runtime) {}
 
   /// \return the current token.
   const JSONToken *getCurToken() const {
@@ -156,7 +153,7 @@ class JSONLexer {
   CallResult<char16_t> consumeUnicode();
 };
 
-}; // namespace vm
-}; // namespace hermes
+} // namespace vm
+} // namespace hermes
 
 #endif // HERMES_PARSER_JSONLEXER_H

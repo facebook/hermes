@@ -1,11 +1,16 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
+#ifdef HERMESVM_API_TRACE
+
 #include <hermes/SynthTrace.h>
 #include <hermes/Parser/JSONParser.h>
+#include <hermes/Support/Algorithms.h>
+#include <hermes/SynthTraceParser.h>
 #include <hermes/TracingRuntime.h>
 
 #include <gmock/gmock.h>
@@ -32,7 +37,15 @@ struct SynthTraceTest : public ::testing::Test {
   SynthTrace::TimeSinceStart dummyTime{SynthTrace::TimeSinceStart::zero()};
 
   SynthTraceTest()
-      : rt(makeTracingHermesRuntime(makeHermesRuntime(config), config)) {}
+      // We pass "forReplay = true" below, to prevent the TracingHermesRuntime
+      // from interactions it does automatically on non-replay runs.
+      // We don't need those for these tests.
+      : rt(makeTracingHermesRuntime(
+            makeHermesRuntime(config),
+            config,
+            /* traceStream */ nullptr,
+            /* traceFilename */ "",
+            /* forReplay */ true)) {}
 
   template <typename T>
   void expectEqual(
@@ -122,7 +135,7 @@ TEST_F(SynthTraceTest, CallToNative) {
       return jsi::Value(rt, args[0].asNumber() + 100);
     };
     auto func = jsi::Function::createFromHostFunction(
-        *rt, jsi::PropNameID::forAscii(*rt, "foo"), 0, undefined);
+        *rt, jsi::PropNameID::forAscii(*rt, "foo"), 1, undefined);
     functionID = rt->getUniqueID(func);
     auto ret = func.call(*rt, {jsi::Value(arg)});
     ASSERT_EQ(arg + 100, ret.asNumber());
@@ -132,7 +145,7 @@ TEST_F(SynthTraceTest, CallToNative) {
   // The function is called from native, and is defined in native, so it
   // trampolines through the VM.
   EXPECT_EQ_RECORD(
-      SynthTrace::CreateHostFunctionRecord(dummyTime, functionID),
+      SynthTrace::CreateHostFunctionRecord(dummyTime, functionID, "foo", 1),
       *records.at(0));
   EXPECT_EQ_RECORD(
       SynthTrace::CallFromNativeRecord(
@@ -290,7 +303,8 @@ TEST_F(SynthTraceTest, CallObjectGetProp) {
   EXPECT_EQ(7, records.size());
   // The function was called with one argument, the object.
   EXPECT_EQ_RECORD(
-      SynthTrace::CreateHostFunctionRecord(dummyTime, functionID),
+      SynthTrace::CreateHostFunctionRecord(
+          dummyTime, functionID, "getObjectProp", 1),
       *records.at(0));
   EXPECT_EQ_RECORD(
       SynthTrace::CreateObjectRecord(dummyTime, objID), *records.at(1));
@@ -337,6 +351,8 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
       TestHostObject(jsi::Runtime &rt)
           : x(0.0), propName(jsi::PropNameID::forAscii(rt, "x")) {}
       jsi::Value get(jsi::Runtime &rt, const jsi::PropNameID &name) override {
+        // Do an operation with the runtime, to ensure that it is traced.
+        rt.global().setProperty(rt, "getHappened", jsi::Value(true));
         if (jsi::PropNameID::compare(rt, name, propName)) {
           return jsi::Value(x);
         } else {
@@ -347,11 +363,16 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
           jsi::Runtime &rt,
           const jsi::PropNameID &name,
           const jsi::Value &value) override {
+        // Do an operation with the runtime, to ensure that it is traced.
+        rt.global().setProperty(rt, "setHappened", jsi::Value(true));
         if (jsi::PropNameID::compare(rt, name, propName)) {
           x = value.asNumber();
         }
       }
       std::vector<jsi::PropNameID> getPropertyNames(jsi::Runtime &rt) override {
+        // Do an operation with the runtime, to ensure that it is traced.
+        rt.global().setProperty(
+            rt, "getPropertyNamesHappened", jsi::Value(true));
         // Can't re-use propName due to deleted copy constructor.
         return jsi::PropNameID::names(rt, "x");
       }
@@ -368,7 +389,8 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
     ASSERT_EQ(insertValue, ho.getProperty(*rt, "x").asNumber());
   }
   const auto &records = rt->trace().records();
-  EXPECT_EQ(10, records.size());
+  auto globID = rt->getUniqueID(rt->global());
+  EXPECT_EQ(13, records.size());
   // Created a proxy host object.
   EXPECT_EQ_RECORD(
       SynthTrace::CreateHostObjectRecord(dummyTime, objID), *records.at(0));
@@ -378,40 +400,52 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
       SynthTrace::GetPropertyNativeRecord(dummyTime, objID, "x"),
       *records.at(1));
   EXPECT_EQ_RECORD(
+      SynthTrace::SetPropertyRecord(
+          dummyTime, globID, "getHappened", SynthTrace::encodeBool(true)),
+      *records.at(2));
+  EXPECT_EQ_RECORD(
       SynthTrace::GetPropertyNativeReturnRecord(
           dummyTime, SynthTrace::encodeNumber(0)),
-      *records.at(2));
+      *records.at(3));
   EXPECT_EQ_RECORD(
       SynthTrace::GetPropertyRecord(
           dummyTime, objID, "x", SynthTrace::encodeNumber(0)),
-      *records.at(3));
+      *records.at(4));
   // Called setProperty on the proxy.
   EXPECT_EQ_RECORD(
       SynthTrace::SetPropertyRecord(
           dummyTime, objID, "x", SynthTrace::encodeNumber(insertValue)),
-      *records.at(4));
+      *records.at(5));
   EXPECT_EQ_RECORD(
       SynthTrace::SetPropertyNativeRecord(
           dummyTime, objID, "x", SynthTrace::encodeNumber(insertValue)),
-      *records.at(5));
+      *records.at(6));
   EXPECT_EQ_RECORD(
-      SynthTrace::SetPropertyNativeReturnRecord(dummyTime), *records.at(6));
+      SynthTrace::SetPropertyRecord(
+          dummyTime, globID, "setHappened", SynthTrace::encodeBool(true)),
+      *records.at(7));
+  EXPECT_EQ_RECORD(
+      SynthTrace::SetPropertyNativeReturnRecord(dummyTime), *records.at(8));
   // Called getProperty one last time.
   EXPECT_EQ_RECORD(
       SynthTrace::GetPropertyNativeRecord(dummyTime, objID, "x"),
-      *records.at(7));
+      *records.at(9));
+  EXPECT_EQ_RECORD(
+      SynthTrace::SetPropertyRecord(
+          dummyTime, globID, "getHappened", SynthTrace::encodeBool(true)),
+      *records.at(10));
   EXPECT_EQ_RECORD(
       SynthTrace::GetPropertyNativeReturnRecord(
           dummyTime, SynthTrace::encodeNumber(insertValue)),
-      *records.at(8));
+      *records.at(11));
   EXPECT_EQ_RECORD(
       SynthTrace::GetPropertyRecord(
           dummyTime, objID, "x", SynthTrace::encodeNumber(insertValue)),
-      *records.at(9));
+      *records.at(12));
 }
 
 // These tests fail on Windows.
-#if defined(EXPECT_DEATH) && !defined(_WINDOWS)
+#if defined(EXPECT_DEATH_IF_SUPPORTED) && !defined(_WINDOWS)
 TEST_F(SynthTraceTest, HostFunctionThrowsExceptionFails) {
   // TODO (T28293178) Remove this once exceptions are supported.
   jsi::Function throwingFunc = jsi::Function::createFromHostFunction(
@@ -424,7 +458,7 @@ TEST_F(SynthTraceTest, HostFunctionThrowsExceptionFails) {
          size_t count) -> jsi::Value {
         throw std::runtime_error("Cannot call");
       });
-  EXPECT_DEATH({ throwingFunc.call(*rt); }, "");
+  EXPECT_DEATH_IF_SUPPORTED({ throwingFunc.call(*rt); }, "");
 }
 
 TEST_F(SynthTraceTest, HostObjectThrowsExceptionFails) {
@@ -445,8 +479,9 @@ TEST_F(SynthTraceTest, HostObjectThrowsExceptionFails) {
   jsi::Object thro = jsi::Object::createFromHostObject(
       *rt, std::make_shared<ThrowingHostObject>());
   ASSERT_TRUE(thro.isHostObject(*rt));
-  EXPECT_DEATH({ thro.getProperty(*rt, "foo"); }, "");
-  EXPECT_DEATH({ thro.setProperty(*rt, "foo", jsi::Value::undefined()); }, "");
+  EXPECT_DEATH_IF_SUPPORTED({ thro.getProperty(*rt, "foo"); }, "");
+  EXPECT_DEATH_IF_SUPPORTED(
+      { thro.setProperty(*rt, "foo", jsi::Value::undefined()); }, "");
 }
 #endif
 
@@ -455,8 +490,9 @@ TEST_F(SynthTraceTest, HostObjectThrowsExceptionFails) {
 /// @name Serialization tests
 /// @{
 
-struct SynthTraceSerializationTest : public ::testing::Test {
-  SynthTrace trace{0};
+class SynthTraceSerializationTest : public ::testing::Test {
+ protected:
+  SynthTrace trace{0, ::hermes::vm::RuntimeConfig()};
   SynthTrace::TimeSinceStart dummyTime{SynthTrace::TimeSinceStart::zero()};
 
   std::string to_string(const SynthTrace::Record &rec) {
@@ -467,6 +503,9 @@ struct SynthTraceSerializationTest : public ::testing::Test {
     resultStream.flush();
     return result;
   }
+
+ private:
+  std::string traceFilename_;
 };
 
 TEST_F(SynthTraceSerializationTest, EncodeNumber) {
@@ -576,6 +615,12 @@ TEST_F(SynthTraceSerializationTest, SetProperty) {
           dummyTime, 1, "a", trace.encodeString("b"))));
 }
 
+TEST_F(SynthTraceSerializationTest, HasProperty) {
+  EXPECT_EQ(
+      R"({"type":"HasPropertyRecord","time":0,"objID":1,"propName":"a"})",
+      to_string(SynthTrace::HasPropertyRecord(dummyTime, 1, "a")));
+}
+
 TEST_F(SynthTraceSerializationTest, GetPropertyNames) {
   EXPECT_EQ(
       R"({"type":"GetPropertyNamesRecord","time":0,"objID":1,"propNamesID":2})",
@@ -625,9 +670,14 @@ TEST_F(SynthTraceSerializationTest, SetPropertyNativeReturn) {
 }
 
 TEST_F(SynthTraceSerializationTest, TimeIsPrinted) {
+  hermes::SHA1 hash{{0x64, 0x40, 0xb5, 0x37, 0xaf, 0x26, 0x79,
+                     0x5e, 0x5f, 0x45, 0x2b, 0xcd, 0x32, 0x0f,
+                     0xac, 0xcb, 0x02, 0x05, 0x5a, 0x4f}};
+  // JSON emitters escape forward slashes.
   EXPECT_EQ(
-      R"({"type":"BeginExecJSRecord","time":100})",
-      to_string(SynthTrace::BeginExecJSRecord(std::chrono::milliseconds(100))));
+      R"({"type":"BeginExecJSRecord","time":100,"sourceURL":"file:\/\/\/file.js","sourceHash":"6440b537af26795e5f452bcd320faccb02055a4f"})",
+      to_string(SynthTrace::BeginExecJSRecord(
+          std::chrono::milliseconds(100), "file:///file.js", hash)));
 }
 
 TEST_F(SynthTraceSerializationTest, EndExecHasRetval) {
@@ -637,12 +687,90 @@ TEST_F(SynthTraceSerializationTest, EndExecHasRetval) {
           SynthTrace::EndExecJSRecord(dummyTime, SynthTrace::encodeNull())));
 }
 
-TEST_F(SynthTraceSerializationTest, FullTrace) {
+TEST_F(SynthTraceSerializationTest, TraceHeader) {
+  std::string result;
+  auto resultStream = ::hermes::make_unique<llvm::raw_string_ostream>(result);
   const ::hermes::vm::RuntimeConfig conf;
-  std::unique_ptr<TracingHermesRuntime> rt(
-      makeTracingHermesRuntime(makeHermesRuntime(conf), conf));
+  std::unique_ptr<TracingHermesRuntime> rt(makeTracingHermesRuntime(
+      makeHermesRuntime(conf), conf, std::move(resultStream)));
 
   SynthTrace::ObjectID globalObjID = rt->getUniqueID(rt->global());
+
+  rt->flushAndDisableTrace();
+
+  JSONFactory::Allocator alloc;
+  JSONFactory jsonFactory{alloc};
+  hermes::SourceErrorManager sm;
+  JSONParser parser{jsonFactory, result, sm};
+  auto optTrace = parser.parse();
+  ASSERT_TRUE(optTrace) << "Trace file is not valid JSON:\n" << result << "\n";
+
+  JSONObject *root = llvm::cast<JSONObject>(optTrace.getValue());
+  EXPECT_EQ(
+      SynthTrace::synthVersion(),
+      llvm::cast<JSONNumber>(root->at("version"))->getValue());
+  EXPECT_EQ(
+      globalObjID, llvm::cast<JSONNumber>(root->at("globalObjID"))->getValue());
+
+  JSONObject *rtConfig = llvm::cast<JSONObject>(root->at("runtimeConfig"));
+
+  JSONObject *gcConfig = llvm::cast<JSONObject>(rtConfig->at("gcConfig"));
+  EXPECT_EQ(
+      conf.getGCConfig().getMinHeapSize(),
+      llvm::cast<JSONNumber>(gcConfig->at("minHeapSize"))->getValue());
+  EXPECT_EQ(
+      conf.getGCConfig().getInitHeapSize(),
+      llvm::cast<JSONNumber>(gcConfig->at("initHeapSize"))->getValue());
+  EXPECT_EQ(
+      conf.getGCConfig().getMaxHeapSize(),
+      llvm::cast<JSONNumber>(gcConfig->at("maxHeapSize"))->getValue());
+  EXPECT_EQ(
+      conf.getGCConfig().getOccupancyTarget(),
+      llvm::cast<JSONNumber>(gcConfig->at("occupancyTarget"))->getValue());
+  EXPECT_EQ(
+      conf.getGCConfig().getEffectiveOOMThreshold(),
+      llvm::cast<JSONNumber>(gcConfig->at("effectiveOOMThreshold"))
+          ->getValue());
+  EXPECT_EQ(
+      conf.getGCConfig().getShouldReleaseUnused(),
+      SynthTrace::releaseUnusedFromName(
+          llvm::cast<JSONString>(gcConfig->at("shouldReleaseUnused"))
+              ->c_str()));
+  EXPECT_EQ(
+      conf.getGCConfig().getName(),
+      llvm::cast<JSONString>(gcConfig->at("name"))->str());
+  EXPECT_EQ(
+      conf.getGCConfig().getAllocInYoung(),
+      llvm::cast<JSONBoolean>(gcConfig->at("allocInYoung"))->getValue());
+
+  EXPECT_EQ(
+      conf.getMaxNumRegisters(),
+      llvm::cast<JSONNumber>(rtConfig->at("maxNumRegisters"))->getValue());
+  EXPECT_EQ(
+      conf.getES6Proxy(),
+      llvm::cast<JSONBoolean>(rtConfig->at("ES6Proxy"))->getValue());
+  EXPECT_EQ(
+      conf.getES6Symbol(),
+      llvm::cast<JSONBoolean>(rtConfig->at("ES6Symbol"))->getValue());
+  EXPECT_EQ(
+      conf.getEnableSampledStats(),
+      llvm::cast<JSONBoolean>(rtConfig->at("enableSampledStats"))->getValue());
+  EXPECT_EQ(
+      conf.getVMExperimentFlags(),
+      llvm::cast<JSONNumber>(rtConfig->at("vmExperimentFlags"))->getValue());
+}
+
+TEST_F(SynthTraceSerializationTest, FullTrace) {
+  std::string result;
+  auto resultStream = ::hermes::make_unique<llvm::raw_string_ostream>(result);
+  const ::hermes::vm::RuntimeConfig conf;
+  std::unique_ptr<TracingHermesRuntime> rt(makeTracingHermesRuntime(
+      makeHermesRuntime(conf),
+      conf,
+      std::move(resultStream),
+      /* traceFilename */ "",
+      /* forReplay */ true));
+
   SynthTrace::ObjectID objID;
   {
     auto obj = jsi::Object(*rt);
@@ -653,10 +781,7 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
     ASSERT_TRUE(value.isUndefined());
   }
 
-  std::string result;
-  llvm::raw_string_ostream resultStream{result};
-  rt->writeTrace(resultStream);
-  resultStream.flush();
+  rt->flushAndDisableTrace();
 
   JSONFactory::Allocator alloc;
   JSONFactory jsonFactory{alloc};
@@ -667,22 +792,6 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
 
   // Too verbose to check every key, so let llvm::cast do the checks.
   JSONObject *root = llvm::cast<JSONObject>(optTrace.getValue());
-  EXPECT_EQ(2, llvm::cast<JSONNumber>(root->at("version"))->getValue());
-  EXPECT_EQ(
-      globalObjID, llvm::cast<JSONNumber>(root->at("globalObjID"))->getValue());
-  // SHA-1 should be 40 characters long, and only hex digits.
-  std::string sourceHash =
-      llvm::cast<JSONString>(root->at("sourceHash"))->str();
-  EXPECT_EQ(sourceHash.length(), 40);
-  for (auto c : sourceHash) {
-    EXPECT_TRUE(hermes::oscompat::isxdigit(c));
-  }
-
-  JSONObject *rtConfig = llvm::cast<JSONObject>(root->at("runtimeConfig"));
-  JSONObject *gcConfig = llvm::cast<JSONObject>(rtConfig->at("gcConfig"));
-  EXPECT_TRUE(llvm::isa<JSONNumber>(gcConfig->at("minHeapSize")));
-  EXPECT_TRUE(llvm::isa<JSONNumber>(gcConfig->at("initHeapSize")));
-  EXPECT_TRUE(llvm::isa<JSONNumber>(gcConfig->at("maxHeapSize")));
 
   JSONObject *environment = llvm::cast<JSONObject>(root->at("env"));
   EXPECT_TRUE(llvm::isa<JSONNumber>(environment->at("mathRandomSeed")));
@@ -716,10 +825,11 @@ TEST_F(SynthTraceSerializationTest, FullTraceWithDateAndMath) {
       ::hermes::vm::RuntimeConfig::Builder()
           .withTraceEnvironmentInteractions(true)
           .build();
-  std::unique_ptr<TracingHermesRuntime> rt(
-      makeTracingHermesRuntime(makeHermesRuntime(conf), conf));
+  std::string result;
+  auto resultStream = ::hermes::make_unique<llvm::raw_string_ostream>(result);
+  std::unique_ptr<TracingHermesRuntime> rt(makeTracingHermesRuntime(
+      makeHermesRuntime(conf), conf, std::move(resultStream)));
 
-  SynthTrace::ObjectID globalObjID = rt->getUniqueID(rt->global());
   uint64_t dateNow = 0;
   uint64_t newDate = 0;
   std::string dateAsFunc;
@@ -737,10 +847,7 @@ TEST_F(SynthTraceSerializationTest, FullTraceWithDateAndMath) {
     dateAsFunc = dateFunc.call(*rt).asString(*rt).utf8(*rt);
   }
 
-  std::string result;
-  llvm::raw_string_ostream resultStream{result};
-  rt->writeTrace(resultStream);
-  resultStream.flush();
+  rt->flushAndDisableTrace();
 
   JSONFactory::Allocator alloc;
   JSONFactory jsonFactory{alloc};
@@ -751,28 +858,6 @@ TEST_F(SynthTraceSerializationTest, FullTraceWithDateAndMath) {
 
   // Too verbose to check every key, so let llvm::cast do the checks.
   JSONObject *root = llvm::cast<JSONObject>(optTrace.getValue());
-  EXPECT_EQ(2, llvm::cast<JSONNumber>(root->at("version"))->getValue());
-  EXPECT_EQ(
-      globalObjID, llvm::cast<JSONNumber>(root->at("globalObjID"))->getValue());
-  // SHA-1 should be 40 characters long, and only hex digits.
-  std::string sourceHash =
-      llvm::cast<JSONString>(root->at("sourceHash"))->str();
-  EXPECT_EQ(sourceHash.length(), 40);
-  for (auto c : sourceHash) {
-    EXPECT_TRUE(hermes::oscompat::isxdigit(c));
-  }
-
-  JSONObject *rtConfig = llvm::cast<JSONObject>(root->at("runtimeConfig"));
-  JSONObject *gcConfig = llvm::cast<JSONObject>(rtConfig->at("gcConfig"));
-  EXPECT_EQ(
-      conf.getGCConfig().getMinHeapSize(),
-      llvm::cast<JSONNumber>(gcConfig->at("minHeapSize"))->getValue());
-  EXPECT_EQ(
-      conf.getGCConfig().getInitHeapSize(),
-      llvm::cast<JSONNumber>(gcConfig->at("initHeapSize"))->getValue());
-  EXPECT_EQ(
-      conf.getGCConfig().getMaxHeapSize(),
-      llvm::cast<JSONNumber>(gcConfig->at("maxHeapSize"))->getValue());
 
   JSONObject *environment = llvm::cast<JSONObject>(root->at("env"));
   EXPECT_TRUE(llvm::isa<JSONNumber>(environment->at("mathRandomSeed")));
@@ -795,3 +880,5 @@ TEST_F(SynthTraceSerializationTest, FullTraceWithDateAndMath) {
 /// @}
 
 } // namespace
+
+#endif

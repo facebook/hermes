@@ -1,12 +1,14 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_RUNTIME_H
 #define HERMES_VM_RUNTIME_H
 
+#include "hermes/Public/DebuggerTypes.h"
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/Support/Compiler.h"
 #include "hermes/Support/ErrorHandling.h"
@@ -22,6 +24,7 @@
 #include "hermes/VM/HandleRootOwner-inline.h"
 #include "hermes/VM/HasFinalizer.h"
 #include "hermes/VM/IdentifierTable.h"
+#include "hermes/VM/InternalProperty.h"
 #include "hermes/VM/InterpreterState.h"
 #include "hermes/VM/JIT/JIT.h"
 #include "hermes/VM/MockedEnvironment.h"
@@ -35,6 +38,7 @@
 #include "hermes/VM/RuntimeStats.h"
 #include "hermes/VM/Serializer.h"
 #include "hermes/VM/StackFrame.h"
+#include "hermes/VM/StackTracesTree.h"
 #include "hermes/VM/SymbolRegistry.h"
 #include "hermes/VM/TwineChar16.h"
 
@@ -74,9 +78,11 @@ class JSObject;
 class PropertyAccessor;
 struct RuntimeCommonStorage;
 struct RuntimeOffsets;
+class ScopedNativeDepthReducer;
 class ScopedNativeDepthTracker;
 class ScopedNativeCallFrame;
 class SamplingProfiler;
+class CodeCoverageProfiler;
 
 #ifdef HERMESVM_PROFILER_BB
 class JSArray;
@@ -150,7 +156,7 @@ class Runtime : public HandleRootOwner,
   CallResult<HermesValue> run(
       llvm::StringRef code,
       llvm::StringRef sourceURL,
-      const hbc::CompileFlags &compileFlags);
+      hbc::CompileFlags compileFlags);
 
   /// Runs the given UTF-8 \p code in a new RuntimeModule as top-level code.
   /// \param sourceURL the location of the source that's being run.
@@ -159,7 +165,7 @@ class Runtime : public HandleRootOwner,
   CallResult<HermesValue> run(
       std::unique_ptr<Buffer> code,
       llvm::StringRef sourceURL,
-      const hbc::CompileFlags &compileFlags);
+      hbc::CompileFlags compileFlags);
 
   /// Runs the given \p bytecode with the given \p runtimeModuleFlags. The \p
   /// sourceURL, if not empty, is reported as the file name in backtraces. If \p
@@ -198,6 +204,9 @@ class Runtime : public HandleRootOwner,
       std::shared_ptr<hbc::BCProvider> &&bytecode,
       Handle<RequireContext> requireContext,
       RuntimeModuleFlags flags = {});
+
+  /// Runs the internal bytecode. This is called once during initialization.
+  void runInternalBytecode();
 
   /// A convenience function to print an exception to a stream.
   void printException(llvm::raw_ostream &os, Handle<> valueHandle);
@@ -378,7 +387,6 @@ class Runtime : public HandleRootOwner,
   ///   stackPointer_, but it is more efficient to pass it in if it already
   ///   is in a register. It also provides some additional error checking in
   ///   debug builds, ensuring that the stack hasn't changed unexpectedly.
-  /// \return the new value of the current frame pointer.
   inline void setCurrentFrameToTopOfStack(StackFramePtr topFrame);
 
   /// Set the current frame pointer to the current top of the stack and return
@@ -428,21 +436,19 @@ class Runtime : public HandleRootOwner,
   /// Set `thrownValue` to empty.
   void clearThrownValue();
 
-  /// Return a hidden class corresponding to the specified prototype object.
-  /// For now we always return the same one.
-  Handle<HiddenClass> getHiddenClassForPrototype(Handle<JSObject> proto);
-
-  /// Return a hidden class corresponding to the specified prototype object.
-  /// For now we always return the same one.  This version takes and
-  /// returns raw pointers: standard warnings apply!
-  inline HiddenClass *getHiddenClassForPrototypeRaw(JSObject *proto) {
-    return rootClazzRawPtr_;
+  /// Return a hidden class corresponding to the specified prototype object
+  /// and number of reserved slots. For now we only use the latter.
+  /// Takes and returns raw pointers: standard warnings apply!
+  inline HiddenClass *getHiddenClassForPrototypeRaw(
+      JSObject *proto,
+      unsigned reservedSlots) {
+    assert(
+        reservedSlots <= InternalProperty::NumInternalProperties &&
+        "out of bounds");
+    auto *clazz = rootClazzRawPtr_[reservedSlots];
+    assert(clazz && "must initialize root classes before use");
+    return clazz;
   }
-
-  /// Return a hidden class corresponding to the specified prototype object.
-  /// For now we always return the same one.
-  /// This is a convenience wrapper that casts the PinnedHermesValue.
-  Handle<HiddenClass> getHiddenClassForPrototype(PinnedHermesValue *proto);
 
   /// Return the global object.
   Handle<JSObject> getGlobal();
@@ -462,6 +468,18 @@ class Runtime : public HandleRootOwner,
   /// Print the heap and other misc. stats to the given stream.
   void printHeapStats(llvm::raw_ostream &os);
 
+  /// Write IO tracking (aka HBC page access) info to the supplied
+  /// stream as JSON. There will only be useful data for RuntimeModules
+  /// backed by mmap'ed bytecode, and there will only be any data at all if
+  /// RuntimeConfig::withTrackIO() has been set, and IO tracking is available on
+  /// the current platform.
+  void getIOTrackingInfoJSON(llvm::raw_ostream &os);
+
+#ifndef NDEBUG
+  /// Iterate over all arrays in the heap and print their sizes and capacities.
+  void printArrayCensus(llvm::raw_ostream &os);
+#endif
+
   /// Returns the common storage object.
   RuntimeCommonStorage *getCommonStorage() {
     return commonStorage_.get();
@@ -471,8 +489,12 @@ class Runtime : public HandleRootOwner,
   /// Request the interpreter loop to take an asynchronous break at a convenient
   /// point due to debugger UI request. This may be called from any thread, or a
   /// signal handler.
-  void triggerDebuggerAsyncBreak() {
-    triggerAsyncBreak(AsyncBreakReasonBits::Debugger);
+  void triggerDebuggerAsyncBreak(
+      ::facebook::hermes::debugger::AsyncPauseKind kind) {
+    triggerAsyncBreak(
+        kind == ::facebook::hermes::debugger::AsyncPauseKind::Explicit
+            ? AsyncBreakReasonBits::DebuggerExplicit
+            : AsyncBreakReasonBits::DebuggerImplicit);
   }
 #endif
 
@@ -524,9 +546,20 @@ class Runtime : public HandleRootOwner,
   ExecutionStatus raiseTypeError(const TwineChar16 &msg);
 
   /// Flag the interpreter that a type error must be thrown when execution
-  /// resumes. The string thrown concatenates the type of \p value with \p msg.
+  /// resumes. The string thrown concatenates a description of \p value
+  /// with \p msg.
   /// \return ExecutionResult::EXCEPTION
-  ExecutionStatus raiseTypeErrorForValue(Handle<> value, llvm::StringRef msg);
+  ExecutionStatus raiseTypeErrorForValue(Handle<> value, llvm::StringRef msg) {
+    return raiseTypeErrorForValue("", value, msg);
+  }
+
+  /// Flag the interpreter that a type error must be thrown when execution
+  /// resumes. The string thrown concatenates \p msg1, a description of \p
+  /// value, and \p msg2. \return ExecutionResult::EXCEPTION
+  ExecutionStatus raiseTypeErrorForValue(
+      llvm::StringRef msg1,
+      Handle<> value,
+      llvm::StringRef msg2);
 
   /// Flag the interpreter that a syntax error must be thrown.
   /// \return ExecutionStatus::EXCEPTION
@@ -547,10 +580,6 @@ class Runtime : public HandleRootOwner,
   /// \return ExecutionStatus::EXCEPTION
   ExecutionStatus raiseURIError(const TwineChar16 &msg);
 
-  /// Raise a stack overflow exception. This is special because constructing
-  /// the object must not execute any custom or JavaScript code.  The
-  /// argument influences the exception's message, to aid debugging.
-  /// \return ExecutionStatus::EXCEPTION
   enum class StackOverflowKind {
     // The JS register stack was exhausted.
     JSRegisterStack,
@@ -561,7 +590,14 @@ class Runtime : public HandleRootOwner,
     // RuntimeJSONParser has a maximum number of "nesting levels", and
     // calls raiseStackOverflow if that is exceeded.
     JSONParser,
+    // JSONStringifyer has the same limit as JSONParser.
+    JSONStringify,
   };
+
+  /// Raise a stack overflow exception. This is special because constructing
+  /// the object must not execute any custom or JavaScript code.  The
+  /// argument influences the exception's message, to aid debugging.
+  /// \return ExecutionStatus::EXCEPTION
   ExecutionStatus raiseStackOverflow(StackOverflowKind kind);
 
   /// Raise an error for the quit function. This error is not catchable.
@@ -571,7 +607,9 @@ class Runtime : public HandleRootOwner,
   ExecutionStatus raiseTimeoutError();
 
   /// Utility function to raise a catchable JS error with \p errMessage.
-  ExecutionStatus raiseUncatchableError(llvm::StringRef errMessage);
+  ExecutionStatus raiseUncatchableError(
+      Handle<JSObject> prototype,
+      llvm::StringRef errMessage);
 
   /// Interpret the current function until it returns or throws and return
   /// CallResult<HermesValue> or the thrown object in 'thrownObject'.
@@ -613,11 +651,7 @@ class Runtime : public HandleRootOwner,
 
   JSObject *functionPrototypeRawPtr{};
 
-  JSObject *arrayPrototypeRawPtr{};
-
   RegExpMatch regExpLastMatch{};
-
-  HiddenClass *arrayClassRawPtr{};
 
   /// Whether to allow eval and Function ctor.
   const bool enableEval;
@@ -669,6 +703,10 @@ class Runtime : public HandleRootOwner,
   void dumpBasicBlockProfileTrace(llvm::raw_ostream &OS);
 #endif
 
+  CodeCoverageProfiler &getCodeCoverageProfiler() {
+    return *codeCoverageProfiler_;
+  }
+
 #ifdef HERMESVM_PROFILER_NATIVECALL
   /// Dump statistics about native calls.
   void dumpNativeCallStats(llvm::raw_ostream &OS);
@@ -684,6 +722,10 @@ class Runtime : public HandleRootOwner,
     return runtimeModuleList_;
   }
 
+  bool hasES6Proxy() const {
+    return hasES6Proxy_;
+  }
+
   bool hasES6Symbol() const {
     return hasES6Symbol_;
   }
@@ -691,6 +733,8 @@ class Runtime : public HandleRootOwner,
   bool builtinsAreFrozen() const {
     return builtinsFrozen_;
   }
+
+  bool shouldStabilizeInstructionCount();
 
   experiments::VMExperimentFlags getVMExperimentFlags() const {
     return vmExperimentFlags_;
@@ -711,6 +755,9 @@ class Runtime : public HandleRootOwner,
   std::string getCallStackNoAlloc() override {
     return getCallStackNoAlloc(nullptr);
   }
+
+  /// Called when various GC events(e.g. collection start/end) happen.
+  void onGCEvent(GCEventKind kind, const std::string &extraInfo) override;
 
 #ifdef HERMESVM_SERIALIZE
   /// Fill the header with current Runtime config
@@ -765,7 +812,7 @@ class Runtime : public HandleRootOwner,
   /// NOTE: This should only be used by StackRuntime. All other uses should use
   /// Runtime::create.
   explicit Runtime(
-      StorageProvider *provider,
+      std::shared_ptr<StorageProvider> provider,
       const RuntimeConfig &runtimeConfig);
 
 /// @}
@@ -834,20 +881,22 @@ class Runtime : public HandleRootOwner,
   /// character.
   void initCharacterStrings();
 
-  /// Enumerate the builtin methods, and invoke the callback on each method.
-  /// The parameters for the callback are:
   /// \param methodIndex is the index of the method in the table that lists
-  /// all the builtin methods, which is what we are iterating over.
+  ///   all the builtin methods, which is what we are iterating over.
   /// \param objectName is the id for the name of the object in the list of the
-  /// predefined strings.
+  ///   predefined strings.
   /// \param object is the object where the builtin method is defined as a
-  /// property.
+  ///   property.
   /// \param methodID is the SymbolID for the name of the method.
-  ExecutionStatus forEachBuiltin(const std::function<ExecutionStatus(
-                                     unsigned methodIndex,
-                                     Predefined::Str objectName,
-                                     Handle<JSObject> &object,
-                                     SymbolID methodID)> &callback);
+  using ForEachBuiltinCallback = ExecutionStatus(
+      unsigned methodIndex,
+      Predefined::Str objectName,
+      Handle<JSObject> &object,
+      SymbolID methodID);
+
+  /// Enumerate the builtin methods, and invoke the callback on each method.
+  ExecutionStatus forEachBuiltin(
+      const std::function<ForEachBuiltinCallback> &callback);
 
   /// Populate the builtins table by extracting the values from the global
   /// object.
@@ -872,9 +921,7 @@ class Runtime : public HandleRootOwner,
   }
 
   /// Remove a \c RuntimeModule \p rm from the runtime module list.
-  void removeRuntimeModule(RuntimeModule *rm) {
-    runtimeModuleList_.remove(*rm);
-  }
+  void removeRuntimeModule(RuntimeModule *rm);
 
   /// Called by CrashManager on the event of a crash to produce a stream of data
   /// to crash log. Output should be a JSON object. This is the central point
@@ -911,6 +958,9 @@ class Runtime : public HandleRootOwner,
   /// All state related to JIT compilation.
   JITContext jitContext_;
 
+  /// Set to true if we should enable ES6 Proxy.
+  const bool hasES6Proxy_;
+
   /// Set to true if we should enable ES6 Symbol.
   const bool hasES6Symbol_;
 
@@ -938,6 +988,7 @@ class Runtime : public HandleRootOwner,
   friend class MarkRootsPhaseTimer;
   friend struct RuntimeOffsets;
   friend class JITContext;
+  friend class ScopedNativeDepthReducer;
   friend class ScopedNativeDepthTracker;
   friend class ScopedNativeCallFrame;
 
@@ -1005,20 +1056,33 @@ class Runtime : public HandleRootOwner,
   /// calls.
   unsigned nativeCallFrameDepth_{0};
 
+ public:
   /// A stack overflow exception is thrown when \c nativeCallFrameDepth_ exceeds
-  /// this threshold.  (This depth limit was originally 256, and we
-  /// increased when an app violated it.  The new depth is 128
-  /// larger.  See T46966147 for measurements/calculations indicating
-  /// that this limit should still insulate us from native stack overflow.)
-  static constexpr unsigned MAX_NATIVE_CALL_FRAME_DEPTH = 384;
+  /// this threshold.
+  static constexpr unsigned MAX_NATIVE_CALL_FRAME_DEPTH =
+#ifdef HERMES_LIMIT_STACK_DEPTH
+      // UBSAN builds will hit a native stack overflow much earlier, so make
+      // this limit dramatically lower.
+      30
+#elif defined(_WINDOWS) && defined(HERMES_SLOW_DEBUG)
+      // On windows in dbg mode builds, stack frames are bigger, and a depth
+      // limit of 384 results in a C++ stack overflow in testing.
+      128
+#elif defined(_WINDOWS) && !NDEBUG
+      192
+#else
+      /// This depth limit was originally 256, and we
+      /// increased when an app violated it.  The new depth is 128
+      /// larger.  See T46966147 for measurements/calculations indicating
+      /// that this limit should still insulate us from native stack overflow.)
+      384
+#endif
+      ;
 
-  /// Raw pointer to the root of all hidden classes.
-  /// TODO: the intention is to get to a state in which we only have
-  /// raw-pointer versions of this.
-  /// It's both more specific -- this only holds a pointer value, not
-  /// arbitrary JS values -- and more efficient, since no translation
-  /// from the encoded form is required when accessing their value.
-  HiddenClass *rootClazzRawPtr_{};
+  /// rootClazzRawPtr_[i] is a raw pointer to a hidden class with its i first
+  /// slots pre-reserved.
+  HiddenClass *rootClazzRawPtr_[InternalProperty::NumInternalProperties + 1] = {
+      nullptr};
 
   /// Cache for property lookups in non-JS code.
   PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];
@@ -1041,6 +1105,9 @@ class Runtime : public HandleRootOwner,
   InlineCacheProfiler inlineCacheProfiler_;
 #endif
 
+  /// ScriptIDs to use for new RuntimeModules coming in.
+  facebook::hermes::debugger::ScriptID nextScriptId_{1};
+
   /// Store a key for the function that is executed if a crash occurs.
   /// This key will be unregistered in the destructor.
   const CrashManager::CallbackKey crashCallbackKey_;
@@ -1049,13 +1116,17 @@ class Runtime : public HandleRootOwner,
   /// we are sure it's safe to unregisterRuntime in destructor.
   std::shared_ptr<SamplingProfiler> samplingProfiler_;
 
+  /// Reference to the code coverage profiler.
+  std::shared_ptr<CodeCoverageProfiler> codeCoverageProfiler_;
+
   /// A list of callbacks to call before runtime destruction.
   std::vector<DestructionCallback> destructionCallbacks_;
 
   /// Bit flags for async break request reasons.
   enum class AsyncBreakReasonBits : uint8_t {
-    Debugger = 0x1,
-    Timeout = 0x2,
+    DebuggerExplicit = 0x1,
+    DebuggerImplicit = 0x2,
+    Timeout = 0x4,
   };
 
   /// An atomic flag set when an async pause is requested.
@@ -1065,10 +1136,13 @@ class Runtime : public HandleRootOwner,
   std::atomic<uint8_t> asyncBreakRequestFlag_{0};
 
 #if defined(HERMES_ENABLE_DEBUGGER)
-  /// \return zero if no debugger async pause was requested, nonzero if an async
-  /// pause was requested. If nonzero is returned, the flag is reset to 0.
-  bool testAndClearDebuggerAsyncBreakRequest() {
-    return testAndClearAsyncBreakRequest(AsyncBreakReasonBits::Debugger);
+  /// \return zero if no debugger async pause was requested, the old nonzero
+  /// async flags if an async pause was requested. If nonzero is returned, the
+  /// flag is reset to 0.
+  uint8_t testAndClearDebuggerAsyncBreakRequest() {
+    return testAndClearAsyncBreakRequest(
+        (uint8_t)AsyncBreakReasonBits::DebuggerExplicit |
+        (uint8_t)AsyncBreakReasonBits::DebuggerImplicit);
   }
 
   Debugger debugger_{this};
@@ -1079,29 +1153,29 @@ class Runtime : public HandleRootOwner,
     return asyncBreakRequestFlag_.load(std::memory_order_relaxed) != 0;
   }
 
-  /// \return whether async break was requested or not for \p reasonBit. Clear
+  /// \return whether async break was requested or not for \p reasonBits. Clear
   /// \p reasonBit request bit afterward.
-  bool testAndClearAsyncBreakRequest(AsyncBreakReasonBits reasonBit) {
+  uint8_t testAndClearAsyncBreakRequest(uint8_t reasonBits) {
     /// Note that while the triggerTimeoutAsyncBreak() function may be called
     /// from any thread, this one may only be called from within the Interpreter
     /// loop.
     uint8_t flag = asyncBreakRequestFlag_.load(std::memory_order_relaxed);
-    if (LLVM_LIKELY((flag & (uint8_t)reasonBit) == 0)) {
+    if (LLVM_LIKELY((flag & (uint8_t)reasonBits) == 0)) {
       // Fast path.
       return false;
     }
     // Clear the flag using CAS.
     uint8_t oldFlag = asyncBreakRequestFlag_.fetch_and(
-        ~(uint8_t)reasonBit, std::memory_order_relaxed);
+        ~(uint8_t)reasonBits, std::memory_order_relaxed);
     assert(oldFlag != 0 && "Why is oldFlag zero?");
-    (void)oldFlag;
-    return true;
+    return oldFlag;
   }
 
   /// \return whether timeout async break was requsted or not. Clear the
   /// timeout request bit afterward.
   bool testAndClearTimeoutAsyncBreakRequest() {
-    return testAndClearAsyncBreakRequest(AsyncBreakReasonBits::Timeout);
+    return testAndClearAsyncBreakRequest(
+        (uint8_t)AsyncBreakReasonBits::Timeout);
   }
 
   /// Request the interpreter loop to take an asynchronous break
@@ -1118,53 +1192,141 @@ class Runtime : public HandleRootOwner,
   /// into bytecode, and so memory backing these must be preserved.
   std::vector<std::shared_ptr<hbc::BCProvider>> persistentBCProviders_;
 
-#ifdef HERMES_ENABLE_DEBUGGER
+  /// Config-provided callback for GC events.
+  std::function<void(GCEventKind, const char *)> gcEventCallback_;
+
+  /// Set from RuntimeConfig.
+  bool allowFunctionToStringWithRuntimeSource_;
+
  private:
-  /// This is used to store the last IP in the interpreter before making a call.
-  const inst::Inst *savedIP_{nullptr};
+#ifdef NDEBUG
+  /// See \c ::setCurrentIP() and \c ::getCurrentIP() .
+  const inst::Inst *currentIP_{nullptr};
+#else
+  /// When assertions are enabled we track whether \c currentIP_ is "valid" by
+  /// making it optional. If this is accessed when the optional value is cleared
+  /// (the invalid state) we assert.
+  llvm::Optional<const inst::Inst *> currentIP_{(const inst::Inst *)nullptr};
+#endif
 
  public:
-  /// Store the caller's IP before (possibly) making a call.
-  /// This should be called at every place that we could make a call.
-  void storeCallerIP(const inst::Inst *ip) {
-    savedIP_ = ip;
+  /// Set the value of the current Instruction Pointer (IP). Generally this is
+  /// called by the interpeter before it makes any major calls out of its main
+  /// loop. However, the interpeter also reads the value held here back after
+  /// major calls return so this can also be called by other code which wants to
+  /// return to the interpreter at a different IP. This allows things external
+  /// to the interpreter loop to affect the flow of bytecode execution.
+  inline void setCurrentIP(const inst::Inst *ip) {
+    currentIP_ = ip;
   }
 
-  /// Clear the caller's return address. This needs to be called after
-  /// returning a call.
-  void clearCallerIP() {
-#ifndef NDEBUG
-    savedIP_ = nullptr;
+  /// Get the current Instruction Pointer (IP). This can be used to find out
+  /// the last bytecode executed if we're currently in the interpeter loop. If
+  /// we are not in the interpeter loop (i.e. we've made it into the VM
+  /// internals via a native call), this this will return nullptr.
+  inline const inst::Inst *getCurrentIP() const {
+#ifdef NDEBUG
+    return currentIP_;
+#else
+    assert(
+        currentIP_.hasValue() &&
+        "Current IP unknown - this probably means a CAPTURE_IP_* is missing in the interpreter.");
+    return *currentIP_;
 #endif
   }
+
+  /// This is slow compared to \c getCurrentIP() as it's virtual.
+  inline const inst::Inst *getCurrentIPSlow() const override {
+    return getCurrentIP();
+  }
+
+#ifdef NDEBUG
+  void invalidateCurrentIP() {}
+#else
+  void invalidateCurrentIP() {
+    currentIP_.reset();
+  }
+#endif
 
   /// Save the return address in the caller in the stack frame.
   /// This needs to be called at the beginning of a function call, after the
   /// stack frame is set up.
   void saveCallerIPInStackFrame() {
+#ifndef NDEBUG
     assert(
-        !currentFrame_.getSavedIP() ||
-        currentFrame_.getSavedIP() == savedIP_ &&
-            "The ip should either be null or already have the expected value");
-    currentFrame_.getSavedIPRef() = HermesValue::encodeNativePointer(savedIP_);
-    savedIP_ = nullptr;
+        (!currentFrame_.getSavedIP() ||
+         (currentIP_.hasValue() && currentFrame_.getSavedIP() == currentIP_)) &&
+        "The ip should either be null or already have the expected value");
+#endif
+    currentFrame_.getSavedIPRef() =
+        HermesValue::encodeNativePointer(getCurrentIP());
   }
 
-  /// Restore the caller's IP from the stack frame to savedIP_.
-  /// This needs to be called when a function returns.
-  void restoreCallerIPFromStackFrame() {
-    savedIP_ = getCurrentFrame().getSavedIP();
+  void setAllowFunctionToStringWithRuntimeSource(bool v) {
+    allowFunctionToStringWithRuntimeSource_ = v;
   }
-#else
+
+  bool getAllowFunctionToStringWithRuntimeSource() const {
+    return allowFunctionToStringWithRuntimeSource_;
+  }
+
+ private:
+  /// Given the current last known IP used in the interpreter loop, returns the
+  /// last known CodeBlock and IP combination. IP must not be null as this
+  /// suggests we're not in the interpter loop, and there will be no CodeBlock
+  /// to find.
+  std::pair<const CodeBlock *, const inst::Inst *>
+  getCurrentInterpreterLocation(const inst::Inst *initialSearchIP) const;
+
  public:
-  void storeCallerIP(const inst::Inst *ip) {}
+  /// Return a StackTraceTreeNode for the last known interpreter bytecode
+  /// location. Returns nullptr if we're not in the interpeter loop, or
+  /// allocation location tracking is not enabled. For this to function it
+  /// needs to be passed the current IP from getCurrentIP(). We do not call
+  /// this internally because it should always be called prior even if we
+  /// do not really want a stack-traces node. This means we can leverage our
+  /// library of tests to assert getCurrentIP() would return the right value
+  /// at this point without actually collecting stack-trace data.
+  StackTracesTreeNode *getCurrentStackTracesTreeNode(
+      const inst::Inst *ip) override;
 
-  void clearCallerIP() {}
+  /// Return the current StackTracesTree or nullptr if it's not available.
+  StackTracesTree *getStackTracesTree() override {
+    return stackTracesTree_.get();
+  }
 
-  void saveCallerIPInStackFrame() {}
+  /// To facilitate allocation location tracking this must be called by the
+  /// interpeter:
+  /// * Just before we enter a new CodeBlock
+  /// * At the entry point of a CodeBlock if this is the first entry into the
+  ///   interpter loop.
+  inline void pushCallStack(const CodeBlock *codeBlock, const inst::Inst *ip) {
+    if (stackTracesTree_) {
+      pushCallStackImpl(codeBlock, ip);
+    }
+  }
 
-  void restoreCallerIPFromStackFrame() {}
-#endif // HERMES_ENABLE_DEBUGGER
+  /// Must pair up with every call to \c pushCallStack .
+  inline void popCallStack() {
+    if (stackTracesTree_) {
+      popCallStackImpl();
+    }
+  }
+
+  /// Enable allocation location tracking. Only works with
+  /// HERMES_ENABLE_ALLOCATION_LOCATION_TRACES.
+  void enableAllocationLocationTracker();
+
+  /// Disable allocation location tracking for new objects. Old objects tagged
+  /// with stack traces continue to be tracked until they are freed.
+  /// \param clearExistingTree is for use by tests and in general will break
+  /// because old objects would end up with dead pointers to stack-trace nodes.
+  void disableAllocationLocationTracker(bool clearExistingTree = false);
+
+ private:
+  void popCallStackImpl();
+  void pushCallStackImpl(const CodeBlock *codeBlock, const inst::Inst *ip);
+  std::unique_ptr<StackTracesTree> stackTracesTree_;
 };
 
 /// StackRuntime is meant to be used whenever a Runtime should be allocated on
@@ -1172,7 +1334,10 @@ class Runtime : public HandleRootOwner,
 /// default creator.
 class StackRuntime final : public Runtime {
  public:
-  StackRuntime(StorageProvider *provider, const RuntimeConfig &config);
+  StackRuntime(const RuntimeConfig &config);
+  StackRuntime(
+      std::shared_ptr<StorageProvider> provider,
+      const RuntimeConfig &config);
 
   // A dummy virtual destructor to avoid problems when StackRuntime is used
   // in compilation units compiled with RTTI.
@@ -1198,6 +1363,30 @@ class ScopedNativeDepthTracker {
   }
 };
 
+/// An RAII class which creates a little headroom in the native depth
+/// tracking.  This is used when calling into JSError to extract the
+/// stack, as the error may represent an overflow.  Without this, a
+/// cascade of exceptions could occur, overflowing the C++ stack.
+class ScopedNativeDepthReducer {
+  Runtime *const runtime_;
+  bool undo = false;
+  // This is empirically good enough.
+  static constexpr int kDepthAdjustment = 2;
+
+ public:
+  explicit ScopedNativeDepthReducer(Runtime *runtime) : runtime_(runtime) {
+    if (runtime->nativeCallFrameDepth_ >= kDepthAdjustment) {
+      runtime->nativeCallFrameDepth_ -= kDepthAdjustment;
+      undo = true;
+    }
+  }
+  ~ScopedNativeDepthReducer() {
+    if (undo) {
+      runtime_->nativeCallFrameDepth_ += kDepthAdjustment;
+    }
+  }
+};
+
 /// A ScopedNativeCallFrame is an RAII class that manipulates the Runtime
 /// stack and depth counter, and holds a stack frame. The stack frame contents
 /// may be accessed (as StackFramePtr) via ->. Note that constructing this may
@@ -1219,6 +1408,11 @@ class ScopedNativeCallFrame {
 
   /// Whether this call frame overflowed.
   bool overflowed_;
+
+#ifndef NDEBUG
+  /// Whether the user has called overflowed() with a false result.
+  mutable bool overflowHasBeenChecked_{false};
+#endif
 
   /// \return whether the runtime can allocate a new frame with the given number
   /// of registers. This may fail if we've overflowed our register stack, or
@@ -1271,7 +1465,11 @@ class ScopedNativeCallFrame {
 #if HERMES_SLOW_DEBUG
     // Poison the initial arguments to ensure the caller sets all of them before
     // a GC.
+    assert(!overflowed_ && "Overflow should return early");
+    overflowHasBeenChecked_ = true;
     fillArguments(argCount, HermesValue::encodeInvalidValue());
+    // We still want the user to check for overflow.
+    overflowHasBeenChecked_ = false;
 #endif
   }
 
@@ -1308,21 +1506,55 @@ class ScopedNativeCallFrame {
 
   /// Fill \p argCount arguments with the given value \p fillValue.
   void fillArguments(uint32_t argCount, HermesValue fillValue) {
-    assert(!overflowed() && "ScopedNativeCallFrame overflowed");
+    assert(overflowHasBeenChecked_ && "ScopedNativeCallFrame could overflow");
     assert(argCount == frame_.getArgCount() && "Arg count mismatch.");
     std::uninitialized_fill_n(&frame_.getArgRefUnsafe(0), argCount, fillValue);
   }
 
   /// \return whether the stack frame overflowed.
   bool overflowed() const {
+#ifndef NDEBUG
+    overflowHasBeenChecked_ = !overflowed_;
+#endif
     return overflowed_;
   }
 
   /// Access the stack frame contents via ->.
   StackFramePtr operator->() {
-    assert(!overflowed() && "ScopedNativeCallFrame overflowed");
+    assert(overflowHasBeenChecked_ && "ScopedNativeCallFrame could overflow");
     return frame_;
   }
+};
+
+/// RAII class to temporarily disallow allocation.
+/// Enforced by the GC in slow debug mode only.
+class NoAllocScope {
+ public:
+#ifdef NDEBUG
+  explicit NoAllocScope(Runtime *runtime) {}
+  void release() {}
+#else
+  explicit NoAllocScope(Runtime *runtime)
+      : noAllocLevel_(&runtime->getHeap().noAllocLevel_) {
+    ++*noAllocLevel_;
+  }
+
+  ~NoAllocScope() {
+    if (noAllocLevel_)
+      release();
+  }
+
+  /// End this scope early. May only be called once.
+  void release() {
+    assert(noAllocLevel_ && "already released");
+    assert(*noAllocLevel_ > 0 && "unbalanced no alloc");
+    --*noAllocLevel_;
+    noAllocLevel_ = nullptr;
+  }
+
+ private:
+  uint32_t *noAllocLevel_;
+#endif
 };
 
 //===----------------------------------------------------------------------===//

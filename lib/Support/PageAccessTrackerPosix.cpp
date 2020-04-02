@@ -1,14 +1,13 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
-#if defined(HERMES_FACEBOOK_BUILD) && defined(__linux__)
 
 #include "hermes/Support/PageAccessTracker.h"
 
-#include "hermes/Support/JSONEmitter.h"
+#ifdef HERMES_HAS_REAL_PAGE_TRACKER
 
 #include <stdint.h>
 #include <stdio.h>
@@ -174,6 +173,10 @@ void PageAccessTracker::printStats(llvm::raw_ostream &OS) {
 
 void PageAccessTracker::printStatsJSON(llvm::raw_ostream &OS) {
   JSONEmitter json(OS);
+  getJSONStats(json);
+}
+
+void PageAccessTracker::getJSONStats(JSONEmitter &json) {
   json.openDict();
   json.emitKeyValue("page_size", pageSize_);
   json.emitKeyValue("total_pages", totalPages_);
@@ -241,6 +244,12 @@ bool PageAccessTracker::printStats(llvm::raw_ostream &OS, bool json) volatile {
   return true;
 }
 
+void PageAccessTracker::getJSONStats(JSONEmitter &json) volatile {
+  auto tracker = uninstall();
+  tracker->getJSONStats(json);
+  tracker->install();
+}
+
 bool PageAccessTracker::printPageAccessedOrder(
     llvm::raw_ostream &OS,
     bool json) volatile {
@@ -254,4 +263,4 @@ bool PageAccessTracker::printPageAccessedOrder(
   return true;
 }
 
-#endif // HERMES_FACEBOOK_BUILD and __linux__
+#endif // HERMES_HAS_REAL_PAGE_TRACKER

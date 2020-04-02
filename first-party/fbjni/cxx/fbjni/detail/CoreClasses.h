@@ -1,5 +1,5 @@
-/**
- * Copyright 2018-present, Facebook, Inc.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,8 @@
 #include <memory>
 
 #include <jni.h>
+
+#include <fbjni/detail/SimpleFixedString.h>
 
 namespace facebook {
 namespace jni {
@@ -75,8 +77,8 @@ bool isSameObject(alias_ref<JObject> lhs, alias_ref<JObject> rhs) noexcept;
 //   constexpr static auto kJavaDescriptor = "Lcom/example/package/MyClass;";
 // };
 //
-// Then, an alias_ref<MyClass::javaobject> will be backed by an instance of
-// MyClass. JavaClass provides a convenient way to add functionality to these
+// Then, an alias_ref<MyClass> will be backed by an instance of MyClass.
+// JavaClass provides a convenient way to add functionality to these
 // smart references.
 //
 // For example:
@@ -113,8 +115,8 @@ class JObject : detail::JObjectBase {
 public:
   static constexpr auto kJavaDescriptor = "Ljava/lang/Object;";
 
-  static constexpr const char* get_instantiated_java_descriptor() { return nullptr; }
-  static constexpr const char* get_instantiated_base_name() { return nullptr; }
+  static constexpr detail::SimpleFixedString<0> get_instantiated_java_descriptor() { return ""; }
+  static constexpr detail::SimpleFixedString<0> get_instantiated_base_name() { return ""; }
 
   /// Get a @ref local_ref of the object's class
   local_ref<JClass> getClass() const noexcept;
@@ -154,18 +156,7 @@ private:
   friend struct detail::ReprAccess;
   template<typename, typename, typename>
   friend class JavaClass;
-
-  template <typename, typename>
-  friend class JObjectWrapper;
 };
-
-// This is only to maintain backwards compatibility with things that are
-// already providing a specialization of JObjectWrapper. Any such instances
-// should be updated to use a JavaClass.
-template<>
-class JObjectWrapper<jobject> : public JObject {
-};
-
 
 namespace detail {
 template <typename, typename Base, typename JType>
@@ -197,7 +188,7 @@ struct JTypeFor<T, Base, void> {
 //   static constexpr auto kJavaDescriptor = "Lcom/example/package/Foo;";
 // };
 // fbjni can determine the java type/method signatures for Foo::javaobject and
-// smart refs (like alias_ref<Foo::javaobject>) will hold an instance of Foo
+// smart refs (like alias_ref<Foo>) will hold an instance of Foo
 // and provide access to it through the -> and * operators.
 //
 // The "Base" template argument can be used to specify the JavaClass superclass
@@ -233,8 +224,6 @@ protected:
 };
 
 /// Wrapper to provide functionality to jclass references
-struct NativeMethod;
-
 class JClass : public JavaClass<JClass, JObject, jclass> {
  public:
   /// Java type descriptor
@@ -263,7 +252,7 @@ class JClass : public JavaClass<JClass, JObject, jclass> {
   /// exception is crashing out of the JNI method, declare the method noexcept.
   /// This does NOT apply to critical native methods, where exceptions causes
   /// a crash.
-  void registerNatives(std::initializer_list<NativeMethod> methods);
+  void registerNatives(std::initializer_list<JNINativeMethod> methods);
 
   /// Check to see if the class is assignable from another class
   /// @pre cls != nullptr
@@ -288,19 +277,19 @@ class JClass : public JavaClass<JClass, JObject, jclass> {
 
   /// Lookup the field with the given name and deduced descriptor
   template<typename T>
-  JField<enable_if_t<IsJniScalar<T>(), T>> getField(const char* name) const;
+  JField<PrimitiveOrJniType<T>> getField(const char* name) const;
 
   /// Lookup the field with the given name and descriptor
   template<typename T>
-  JField<enable_if_t<IsJniScalar<T>(), T>> getField(const char* name, const char* descriptor) const;
+  JField<PrimitiveOrJniType<T>> getField(const char* name, const char* descriptor) const;
 
   /// Lookup the static field with the given name and deduced descriptor
   template<typename T>
-  JStaticField<enable_if_t<IsJniScalar<T>(), T>> getStaticField(const char* name) const;
+  JStaticField<PrimitiveOrJniType<T>> getStaticField(const char* name) const;
 
   /// Lookup the static field with the given name and descriptor
   template<typename T>
-  JStaticField<enable_if_t<IsJniScalar<T>(), T>> getStaticField(
+  JStaticField<PrimitiveOrJniType<T>> getStaticField(
       const char* name,
       const char* descriptor) const;
 
@@ -346,7 +335,7 @@ private:
 
 // Convenience method to register methods on a class without holding
 // onto the class object.
-void registerNatives(const char* name, std::initializer_list<NativeMethod> methods);
+void registerNatives(const char* name, std::initializer_list<JNINativeMethod> methods);
 
 /// Wrapper to provide functionality to jstring references
 class JString : public JavaClass<JString, JObject, jstring> {
@@ -363,8 +352,8 @@ class JString : public JavaClass<JString, JObject, jstring> {
 
 /// Convenience functions to convert a const char*, std::string, or std::u16string
 /// into a @ref local_ref to a jstring.
-local_ref<JString> make_jstring(const char* modifiedUtf8);
-local_ref<JString> make_jstring(const std::string& modifiedUtf8);
+local_ref<JString> make_jstring(const char* utf8);
+local_ref<JString> make_jstring(const std::string& utf8);
 local_ref<JString> make_jstring(const std::u16string& utf16);
 
 namespace detail {
@@ -377,6 +366,8 @@ class ElementProxy {
  public:
   using T = typename Target::javaentry;
   ElementProxy(Target* target, size_t idx);
+
+  ElementProxy(const ElementProxy&) noexcept = default;
 
   ElementProxy& operator=(const T& o);
 
@@ -415,14 +406,21 @@ class JTypeArray : public JavaClass<JTypeArray, JArray, jobjectArray> {
 template<typename T>
 class JArrayClass : public JavaClass<JArrayClass<T>, detail::JTypeArray> {
  public:
-  static_assert(is_plain_jni_reference<T>(), "");
-  // javaentry is the jni type of an entry in the array (i.e. jint).
+  static_assert(
+      IsPlainJniReference<JniType<T>>(),
+      "Element type must be a JNI reference or JavaClass type.");
+  // javaentry is the jni type of an entry in the array (i.e. JObject).
   using javaentry = T;
   // javaobject is the jni type of the array.
   using javaobject = typename JavaClass<JArrayClass<T>, detail::JTypeArray>::javaobject;
   static constexpr const char* kJavaDescriptor = nullptr;
-  static std::string get_instantiated_java_descriptor();
-  static std::string get_instantiated_base_name();
+  static constexpr auto /* detail::SimpleFixedString<_> */ get_instantiated_java_descriptor() {
+    return "[" + jtype_traits<T>::kDescriptor;
+  }
+
+  static constexpr auto /* detail::SimpleFixedString<_> */ get_instantiated_base_name() {
+    return get_instantiated_java_descriptor();
+  }
 
   /// Allocate a new array from Java heap, for passing as a JNI parameter or return value.
   /// NOTE: if using as a return value, you want to call release() instead of get() on the
@@ -431,7 +429,7 @@ class JArrayClass : public JavaClass<JArrayClass<T>, detail::JTypeArray> {
 
   /// Assign an object to the array.
   /// Typically you will use the shorthand (*ref)[idx]=value;
-  void setElement(size_t idx, const T& value);
+  void setElement(size_t idx, T value);
 
   /// Read an object from the array.
   /// Typically you will use the shorthand
@@ -478,8 +476,12 @@ class JPrimitiveArray :
   static_assert(is_jni_primitive_array<JArrayType>(), "");
  public:
   static constexpr const char* kJavaDescriptor = nullptr;
-  static std::string get_instantiated_java_descriptor();
-  static std::string get_instantiated_base_name();
+  static constexpr auto /* detail::SimpleFixedString<_> */ get_instantiated_java_descriptor() {
+    return jtype_traits<JArrayType>::kDescriptor;
+  }
+  static constexpr auto /* detail::SimpleFixedString<_> */ get_instantiated_base_name() {
+    return JPrimitiveArray::get_instantiated_java_descriptor();
+  }
 
   using T = typename jtype_traits<JArrayType>::entry_type;
 

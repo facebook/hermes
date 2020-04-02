@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 //===----------------------------------------------------------------------===//
 #ifndef HERMES_VM_WEAKVALUEMAP_H
 #define HERMES_VM_WEAKVALUEMAP_H
@@ -131,7 +132,7 @@ class WeakValueMap {
   }
 
   /// This method should be invoked during garbage collection. It calls
-  /// gc->markWeakRef() with every valid WeakRef in the map.
+  /// the acceptor with every valid WeakRef in the map.
   void markWeakRefs(WeakRefAcceptor &acceptor) {
     for (auto it = map_.begin(), e = map_.end(); it != e; ++it) {
       if (it->second.isValid())

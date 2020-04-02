@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/JSDataView.h"
 
 #include "hermes/VM/BuildMetadata.h"
@@ -15,7 +16,7 @@ namespace hermes {
 namespace vm {
 
 ObjectVTable JSDataView::vt{
-    VTable(CellKind::DataViewKind, sizeof(JSDataView)),
+    VTable(CellKind::DataViewKind, cellSize<JSDataView>()),
     JSDataView::_getOwnIndexedRangeImpl,
     JSDataView::_haveOwnIndexedImpl,
     JSDataView::_getOwnIndexedPropertyFlagsImpl,
@@ -26,6 +27,7 @@ ObjectVTable JSDataView::vt{
 };
 
 void DataViewBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSDataView>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSDataView *>(cell);
   mb.addField("buffer", &self->buffer_);
@@ -40,7 +42,8 @@ JSDataView::JSDataView(Deserializer &d) : JSObject(d, &vt.base) {
 
 void DataViewSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const JSDataView>(cell);
-  JSObject::serializeObjectImpl(s, cell);
+  JSObject::serializeObjectImpl(
+      s, cell, JSObject::numOverlapSlots<JSDataView>());
   s.writeRelocation(self->buffer_.get(s.getRuntime()));
   s.writeInt<JSDataView::size_type>(self->offset_);
   s.writeInt<JSDataView::size_type>(self->length_);
@@ -50,22 +53,22 @@ void DataViewSerialize(Serializer &s, const GCCell *cell) {
 
 void DataViewDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::DataViewKind && "Expected DataView");
-  void *mem = d.getRuntime()->alloc(sizeof(JSDataView));
+  void *mem = d.getRuntime()->alloc(cellSize<JSDataView>());
   auto *cell = new (mem) JSDataView(d);
   d.endObject(cell);
 }
 #endif
 
-CallResult<HermesValue> JSDataView::create(
+PseudoHandle<JSDataView> JSDataView::create(
     Runtime *runtime,
     Handle<JSObject> prototype) {
-  void *mem = runtime->alloc(sizeof(JSDataView));
-  return HermesValue::encodeObjectValue(
-      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
-          new (mem) JSDataView(
-              runtime,
-              *prototype,
-              runtime->getHiddenClassForPrototypeRaw(*prototype))));
+  JSObjectAlloc<JSDataView> mem{runtime};
+  return mem.initToPseudoHandle(new (mem) JSDataView(
+      runtime,
+      *prototype,
+      runtime->getHiddenClassForPrototypeRaw(
+          *prototype,
+          numOverlapSlots<JSDataView>() + ANONYMOUS_PROPERTY_SLOTS)));
 }
 
 JSDataView::JSDataView(Runtime *runtime, JSObject *parent, HiddenClass *clazz)

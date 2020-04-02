@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/CallResult.h"
 #include "hermes/VM/Runtime.h"
 
@@ -58,7 +59,7 @@ using CallResultRuntimeTest = RuntimeTestFixture;
 
 TEST_F(CallResultRuntimeTest, HandleTest) {
   PseudoHandle<JSObject> pseudo = JSObject::create(runtime);
-  Handle<JSObject> handle = toHandle(runtime, std::move(pseudo));
+  Handle<JSObject> handle = runtime->makeHandle(std::move(pseudo));
   CallResult<Handle<JSObject>> cr(handle);
   EXPECT_EQ(ExecutionStatus::RETURNED, cr.getStatus());
   EXPECT_TRUE(strictEqualityTest(

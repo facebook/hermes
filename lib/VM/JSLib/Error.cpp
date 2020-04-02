@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 //===----------------------------------------------------------------------===//
 /// \file
 /// ES5.1 15.11 Initialize the Error constructor.
@@ -81,7 +82,7 @@ Handle<JSObject> createErrorConstructor(Runtime *runtime) {
         errorPrototype,                                                      \
         Handle<JSObject>::vmcast(&runtime->errorConstructor),                \
         1,                                                                   \
-        JSError::create,                                                     \
+        NativeConstructor::creatorFunction<JSError>,                         \
         CellKind::ErrorKind);                                                \
   }
 #include "hermes/VM/NativeErrorTypes.def"
@@ -97,11 +98,7 @@ static CallResult<HermesValue> constructErrorObject(
   if (args.isConstructorCall()) {
     selfHandle = vmcast<JSError>(args.getThisArg());
   } else {
-    auto errRes = JSError::create(runtime, prototype);
-    if (LLVM_UNLIKELY(errRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    selfHandle = vmcast<JSError>(*errRes);
+    selfHandle = JSError::create(runtime, prototype).get();
   }
 
   // Record the stack trace, skipping this entry.

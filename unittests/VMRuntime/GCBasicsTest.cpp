@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "Array.h"
 #include "EmptyCell.h"
 #include "TestHelpers.h"
@@ -23,7 +24,7 @@ using namespace hermes::unittest;
 namespace {
 
 #ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
-using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize(), true>;
+using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
 #endif
 
 struct Dummy final : public GCCell {
@@ -455,6 +456,18 @@ TEST_F(GCBasicsTest, TestIDPersistsAcrossCollections) {
   rt.getHeap().collect();
   const auto idAfter = rt.getHeap().getObjectID(*handle);
   EXPECT_EQ(idBefore, idAfter);
+}
+
+TEST(GCCallbackTest, TestCallbackInvoked) {
+  std::vector<GCEventKind> ev;
+  auto cb = [&ev](GCEventKind kind, const char *) { ev.push_back(kind); };
+  GCConfig config = GCConfig::Builder().withCallback(cb).build();
+  auto rt =
+      Runtime::create(RuntimeConfig::Builder().withGCConfig(config).build());
+  rt->collect();
+  EXPECT_EQ(2, ev.size());
+  EXPECT_EQ(GCEventKind::CollectionStart, ev[0]);
+  EXPECT_EQ(GCEventKind::CollectionEnd, ev[1]);
 }
 
 #ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL

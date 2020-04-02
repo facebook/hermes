@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermesc -commonjs -dump-ast -pretty-json %s | %FileCheck --match-full-lines %s
 
 // CHECK-LABEL:   "body": {
@@ -43,7 +45,8 @@ export default function myFun() { return 3; }
 // CHECK-NEXT:             ]
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "returnType": null,
-// CHECK-NEXT:           "generator": false
+// CHECK-NEXT:           "generator": false,
+// CHECK-NEXT:           "async": false
 // CHECK-NEXT:         }
 // CHECK-NEXT:       },
 
@@ -89,7 +92,8 @@ export function funDecl() {}
 // CHECK-NEXT:             "body": []
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "returnType": null,
-// CHECK-NEXT:           "generator": false
+// CHECK-NEXT:           "generator": false,
+// CHECK-NEXT:           "async": false
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "specifiers": [],
 // CHECK-NEXT:         "source": null

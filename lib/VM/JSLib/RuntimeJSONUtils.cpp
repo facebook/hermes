@@ -1,15 +1,22 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/JSLib/RuntimeJSONUtils.h"
 
+#include "Object.h"
+
+#include "hermes/Support/Compiler.h"
 #include "hermes/Support/JSON.h"
+#include "hermes/Support/UTF16Stream.h"
+#include "hermes/VM/ArrayLike.h"
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/JSArray.h"
+#include "hermes/VM/JSProxy.h"
 #include "hermes/VM/PrimitiveBox.h"
 
 #include "JSONLexer.h"
@@ -26,6 +33,15 @@ namespace {
 /// a VM runtime value. It expects a UTF8 string as input, and returns a
 /// HermesValue when parse is called.
 class RuntimeJSONParser {
+ public:
+  static constexpr int32_t MAX_RECURSION_DEPTH =
+#ifndef HERMES_LIMIT_STACK_DEPTH
+      512
+#else
+      100
+#endif
+      ;
+
  private:
   /// The VM runtime.
   Runtime *runtime_;
@@ -45,15 +61,15 @@ class RuntimeJSONParser {
   /// Decremented every time a nested level is started,
   /// and incremented again when leaving the nest.
   /// If it drops below 0 while parsing, raise a stack overflow.
-  int32_t remainingDepth_{512};
+  int32_t remainingDepth_{MAX_RECURSION_DEPTH};
 
  public:
   explicit RuntimeJSONParser(
       Runtime *runtime,
-      UTF16Ref jsonString,
+      UTF16Stream &&jsonString,
       Handle<Callable> reviver)
       : runtime_(runtime),
-        lexer_(runtime, jsonString),
+        lexer_(runtime, std::move(jsonString)),
         reviver_(reviver),
         tmpHandle_(runtime) {}
 
@@ -138,9 +154,15 @@ class JSONStringifyer {
   /// each time we are calling operationStr.
   MutableHandle<JSObject> operationStrHolder_;
 
-  /// The current indent, used at runtime by operationJA and operationJO for
-  /// recursions. We track it using the number of gaps in the indent.
-  uint32_t indentGapCount_{0};
+  /// The current depth of recursion, used at runtime by operationJA and
+  /// operationJO. This is used as a stack overflow guard in stringifying. It
+  /// also doubles as an indent counter for prettified JS.
+  uint32_t depthCount_{0};
+
+  /// The max amount that depthCount_ is allowed to reach. Once it's reached, an
+  /// exception will be thrown.
+  static constexpr uint32_t MAX_RECURSION_DEPTH{
+      RuntimeJSONParser::MAX_RECURSION_DEPTH};
 
   /// The output buffer. The serialization process will append into it.
   llvm::SmallVector<char16_t, 32> output_{};
@@ -215,7 +237,7 @@ class JSONStringifyer {
   ExecutionStatus operationJO();
 
   /// Append '\n' and indent to output_.
-  /// The indent is constructed according to indentGapCount_.
+  /// The indent is constructed according to depthCount_.
   void indent();
 
   /// Push a value to stack when traversing the object recursively.
@@ -248,7 +270,7 @@ CallResult<HermesValue> RuntimeJSONParser::parse() {
   // Make sure the next token must be EOF.
   if (LLVM_UNLIKELY(lexer_.getCurToken()->getKind() != JSONTokenKind::Eof)) {
     return lexer_.errorWithChar(
-        "Unexpected token: ", *lexer_.getCurToken()->getLoc());
+        "Unexpected token: ", lexer_.getCurToken()->getFirstChar());
   }
 
   if (reviver_.get()) {
@@ -306,7 +328,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseValue() {
         return lexer_.error("Unexpected end of input");
       }
       return lexer_.errorWithChar(
-          "Unexpected token: ", *lexer_.getCurToken()->getLoc());
+          "Unexpected token: ", lexer_.getCurToken()->getFirstChar());
   }
 
   if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
@@ -324,7 +346,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseArray() {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto array = toHandle(runtime_, std::move(*arrRes));
+  auto array = runtime_->makeHandle(std::move(*arrRes));
 
   if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -373,7 +395,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseObject() {
   assert(
       lexer_.getCurToken()->getKind() == JSONTokenKind::LBrace &&
       "Wrong entrance to parseObject");
-  auto object = toHandle(runtime_, JSObject::create(runtime_));
+  auto object = runtime_->makeHandle(JSObject::create(runtime_));
 
   if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -435,7 +457,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseObject() {
 }
 
 CallResult<HermesValue> RuntimeJSONParser::revive(Handle<> value) {
-  auto root = toHandle(runtime_, JSObject::create(runtime_));
+  auto root = runtime_->makeHandle(JSObject::create(runtime_));
   auto status = JSObject::defineOwnProperty(
       root,
       runtime_,
@@ -466,16 +488,24 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto valHandle = runtime_->makeHandle(*propRes);
   MutableHandle<> tmpHandle{runtime_};
-  if (auto scopedArray = Handle<JSArray>::dyn_vmcast(valHandle)) {
-    for (uint32_t index = 0, e = JSArray::getLength(scopedArray.get());
-         index < e;
-         ++index) {
+  CallResult<bool> isArrayRes =
+      isArray(runtime_, dyn_vmcast<JSObject>(*propRes));
+  if (LLVM_UNLIKELY(isArrayRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto valHandle = runtime_->makeHandle(*propRes);
+  if (*isArrayRes) {
+    Handle<JSObject> objHandle = Handle<JSObject>::vmcast(valHandle);
+    CallResult<uint64_t> lenRes = getArrayLikeLength(objHandle, runtime_);
+    if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    for (uint64_t index = 0, e = *lenRes; index < e; ++index) {
       tmpHandle = HermesValue::encodeDoubleValue(index);
       // Note that deleting elements doesn't affect array length.
       if (LLVM_UNLIKELY(
-              filter(scopedArray, tmpHandle) == ExecutionStatus::EXCEPTION)) {
+              filter(objHandle, tmpHandle) == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
     }
@@ -547,12 +577,16 @@ CallResult<HermesValue> runtimeJSONParse(
         .copyUTF16String(storage);
     ref = storage;
   }
-  RuntimeJSONParser parser{runtime, ref, reviver};
+
+  RuntimeJSONParser parser{runtime, UTF16Stream(ref), reviver};
   return parser.parse();
 }
 
-CallResult<HermesValue> runtimeJSONParseRef(Runtime *runtime, UTF16Ref ref) {
-  RuntimeJSONParser parser{runtime, ref, Runtime::makeNullHandle<Callable>()};
+CallResult<HermesValue> runtimeJSONParseRef(
+    Runtime *runtime,
+    UTF16Stream &&stream) {
+  RuntimeJSONParser parser{
+      runtime, std::move(stream), Runtime::makeNullHandle<Callable>()};
   return parser.parse();
 }
 
@@ -565,28 +599,25 @@ ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
     return ExecutionStatus::RETURNED;
   // replacer is not a callable.
 
-  auto replacerArray = Handle<JSArray>::dyn_vmcast(replacer);
-  if (!replacerArray)
-    return ExecutionStatus::RETURNED;
-  // replacer is an array.
-
-  // Get all properties from replacer.
-  auto cr = JSObject::getOwnPropertyNames(replacerArray, runtime_, false);
-  if (cr == ExecutionStatus::EXCEPTION) {
+  auto replacerArray = Handle<JSObject>::dyn_vmcast(replacer);
+  CallResult<bool> isArrayRes =
+      isArray(runtime_, dyn_vmcast<JSObject>(*replacerArray));
+  if (LLVM_UNLIKELY(isArrayRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto arrayProperties = *cr;
-  // We need to get all index-like properties in ascending order.
-  // getOwnPropertyNames will do that for us.
-  llvm::SmallVector<uint32_t, 16> indexes;
-  for (uint32_t i = 0, e = arrayProperties->getEndIndex(); i < e; ++i) {
-    auto index = arrayProperties->at(runtime_, i);
-    if (index.isNumber()) {
-      indexes.push_back(static_cast<uint32_t>(index.getNumber()));
-    }
-  }
+  if (!*isArrayRes)
+    return ExecutionStatus::RETURNED;
+  // replacer is arrayish
 
-  auto arrRes = JSArray::create(runtime_, 4, 0);
+  CallResult<uint64_t> lenRes = getArrayLikeLength(replacerArray, runtime_);
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (*lenRes > UINT32_MAX) {
+    return runtime_->raiseRangeError("replacer array is too large");
+  }
+  uint32_t len = static_cast<uint32_t>(*lenRes);
+  auto arrRes = JSArray::create(runtime_, len, 0);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -595,11 +626,11 @@ ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
   // Iterate through all indexes, in ascending order.
   GCScope gcScope{runtime_};
   auto marker = gcScope.createMarker();
-  for (uint32_t index : indexes) {
+  for (uint64_t i = 0, e = *lenRes; i < e; ++i) {
     gcScope.flushToMarker(marker);
 
     // Get the property value.
-    tmpHandle_ = HermesValue::encodeDoubleValue(index);
+    tmpHandle_ = HermesValue::encodeDoubleValue(i);
     auto propRes =
         JSObject::getComputed_RJS(replacerArray, runtime_, tmpHandle_);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
@@ -825,7 +856,6 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
   // Str.10.
   if (vmisa<JSObject>(*operationStrValue_) &&
       !vmisa<Callable>(*operationStrValue_)) {
-    ExecutionStatus status;
     auto cr = pushValueToStack(*operationStrValue_);
 
     if (cr == ExecutionStatus::EXCEPTION) {
@@ -837,11 +867,12 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
     // Flush just before the recursive call (pushValueToStack can create
     // handles).
     marker.flush();
-    if (vmisa<JSArray>(*operationStrValue_)) {
-      status = operationJA();
-    } else {
-      status = operationJO();
+    CallResult<bool> isArrayRes =
+        isArray(runtime_, vmcast<JSObject>(*operationStrValue_));
+    if (LLVM_UNLIKELY(isArrayRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
     }
+    ExecutionStatus status = *isArrayRes ? operationJA() : operationJO();
     popValueFromStack();
     if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -861,18 +892,27 @@ ExecutionStatus JSONStringifyer::operationJA() {
   GCScopeMarkerRAII marker{runtime_};
 
   // JA.3.
-  auto stepBack = indentGapCount_;
+  auto stepBack = depthCount_;
   // JA.4.
-  indentGapCount_++;
+  if (depthCount_ + 1 >= MAX_RECURSION_DEPTH) {
+    return runtime_->raiseStackOverflow(
+        Runtime::StackOverflowKind::JSONStringify);
+  }
+  depthCount_++;
   output_.push_back(u'[');
-  uint32_t len = JSArray::getLength(
-      vmcast<JSArray>(stackValue_->at(stackValue_->size() - 1)));
-  if (len > 0) {
+  CallResult<uint64_t> lenRes = getArrayLikeLength(
+      runtime_->makeHandle(
+          vmcast<JSObject>(stackValue_->at(stackValue_->size() - 1))),
+      runtime_);
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (*lenRes > 0) {
     // If array is not empty, we need to lead with an indent.
     indent();
   }
   // JA.5, 6, 7, 8.
-  for (uint32_t index = 0; index < len; ++index) {
+  for (uint64_t index = 0; index < *lenRes; ++index) {
     if (index > 0) {
       // JA.10.
       output_.push_back(u',');
@@ -892,9 +932,9 @@ ExecutionStatus JSONStringifyer::operationJA() {
       appendToOutput(Predefined::getSymbolID(Predefined::null));
     }
   }
-  indentGapCount_ = stepBack;
+  depthCount_ = stepBack;
 
-  if (len > 0) {
+  if (*lenRes > 0) {
     indent();
   }
   output_.push_back(u']');
@@ -918,9 +958,13 @@ ExecutionStatus JSONStringifyer::operationJO() {
   GCScopeMarkerRAII marker{runtime_};
 
   // JO.3.
-  auto stepBack = indentGapCount_;
+  auto stepBack = depthCount_;
   // JO.4.
-  indentGapCount_++;
+  if (depthCount_ + 1 >= MAX_RECURSION_DEPTH) {
+    return runtime_->raiseStackOverflow(
+        Runtime::StackOverflowKind::JSONStringify);
+  }
+  depthCount_++;
   output_.push_back(u'{');
   auto beginningLoc = output_.size();
   indent();
@@ -931,12 +975,27 @@ ExecutionStatus JSONStringifyer::operationJO() {
   } else {
     // JO.6.
     tmpHandle_ = stackValue_->at(stackValue_->size() - 1);
-    auto cr = JSObject::getOwnPropertyNames(
-        Handle<JSObject>::vmcast(tmpHandle_), runtime_, true);
-    if (cr == ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
+    if (LLVM_LIKELY(!Handle<JSObject>::vmcast(tmpHandle_)->isProxyObject())) {
+      // enumerableOwnProperties_RJS is the spec definition, and is
+      // used below on proxies so the correct traps get called.  In
+      // the common case of a non-proxy object, we can do less work by
+      // calling getOwnPropertyNames.
+      auto cr = JSObject::getOwnPropertyNames(
+          Handle<JSObject>::vmcast(tmpHandle_), runtime_, true);
+      if (cr == ExecutionStatus::EXCEPTION) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      operationJOK_ = **cr;
+    } else {
+      CallResult<HermesValue> ownPropRes = enumerableOwnProperties_RJS(
+          runtime_,
+          Handle<JSObject>::vmcast(tmpHandle_),
+          EnumerableOwnPropertiesKind::Key);
+      if (ownPropRes == ExecutionStatus::EXCEPTION) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      operationJOK_ = vmcast<JSArray>(*ownPropRes);
     }
-    operationJOK_ = **cr;
   }
 
   marker.flush();
@@ -998,7 +1057,7 @@ ExecutionStatus JSONStringifyer::operationJO() {
 
     operationJOK_ = vmcast<JSArray>(stackJO_->at(stackJO_->size() - 1));
     assert(stackJO_->size() && "Cannot pop from an empty stack");
-    PropStorage::resizeWithinCapacity(stackJO_, runtime_, stackJO_->size() - 1);
+    stackJO_->pop_back();
 
     if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1011,9 +1070,9 @@ ExecutionStatus JSONStringifyer::operationJO() {
       hasElement = true;
     }
   }
-  // It's important to reset indentGapCount_ first, because the last
+  // It's important to reset depthCount_ first, because the last
   // indent before } should be the old indent.
-  indentGapCount_ = stepBack;
+  depthCount_ = stepBack;
 
   if (hasElement) {
     indent();
@@ -1028,7 +1087,7 @@ ExecutionStatus JSONStringifyer::operationJO() {
 void JSONStringifyer::indent() {
   if (gap_.get()) {
     output_.push_back(u'\n');
-    for (uint32_t i = 0; i < indentGapCount_; ++i) {
+    for (uint32_t i = 0; i < depthCount_; ++i) {
       appendToOutput(gap_.get());
     }
   }
@@ -1053,8 +1112,7 @@ CallResult<bool> JSONStringifyer::pushValueToStack(HermesValue value) {
 
 void JSONStringifyer::popValueFromStack() {
   assert(stackValue_->size() && "Cannot pop from an empty stack");
-  PropStorage::resizeWithinCapacity(
-      stackValue_, runtime_, stackValue_->size() - 1);
+  stackValue_->pop_back();
 }
 
 void JSONStringifyer::appendToOutput(SymbolID identifierID) {

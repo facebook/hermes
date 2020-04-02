@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "ESTreeIRGen.h"
 
 namespace hermes {
@@ -68,6 +69,11 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
     return genCallExpr(call);
   }
 
+  // Handle Call expressions.
+  if (auto *call = dyn_cast<ESTree::OptionalCallExpressionNode>(expr)) {
+    return genOptionalCallExpr(call, nullptr);
+  }
+
   // Handle the 'new' expressions.
   if (auto *newExp = dyn_cast<ESTree::NewExpressionNode>(expr)) {
     return genNewExpr(newExp);
@@ -75,8 +81,14 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
 
   // Handle MemberExpression expressions for access property.
   if (auto *Mem = dyn_cast<ESTree::MemberExpressionNode>(expr)) {
-    LReference lref = createLRef(Mem, false);
-    return lref.emitLoad();
+    return genMemberExpression(Mem, MemberExpressionOperation::Load).result;
+  }
+
+  // Handle MemberExpression expressions for access property.
+  if (auto *mem = dyn_cast<ESTree::OptionalMemberExpressionNode>(expr)) {
+    return genOptionalMemberExpression(
+               mem, nullptr, MemberExpressionOperation::Load)
+        .result;
   }
 
   // Handle Array expressions (syntax: [1,2,3]).
@@ -98,10 +110,13 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
   if (auto *Bin = dyn_cast<ESTree::BinaryExpressionNode>(expr)) {
     Value *LHS = genExpression(Bin->_left);
     Value *RHS = genExpression(Bin->_right);
+    auto cookie = instrumentIR_.preBinaryExpression(Bin, LHS, RHS);
 
     auto Kind = BinaryOperatorInst::parseOperator(Bin->_operator->str());
 
-    return Builder.createBinaryOperatorInst(LHS, RHS, Kind);
+    BinaryOperatorInst *result =
+        Builder.createBinaryOperatorInst(LHS, RHS, Kind);
+    return instrumentIR_.postBinaryExpression(Bin, cookie, result, LHS, RHS);
   }
 
   // Handle Unary operator Expressions.
@@ -155,7 +170,7 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
   }
 
   if (auto *Y = dyn_cast<ESTree::YieldExpressionNode>(expr)) {
-    return genYieldExpr(Y);
+    return Y->_delegate ? genYieldStarExpr(Y) : genYieldExpr(Y);
   }
 
   Builder.getModule()->getContext().getSourceErrorManager().error(
@@ -166,17 +181,22 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
 void ESTreeIRGen::genExpressionBranch(
     ESTree::Node *expr,
     BasicBlock *onTrue,
-    BasicBlock *onFalse) {
+    BasicBlock *onFalse,
+    BasicBlock *onNullish) {
   switch (expr->getKind()) {
     case ESTree::NodeKind::LogicalExpression:
       return genLogicalExpressionBranch(
-          cast<ESTree::LogicalExpressionNode>(expr), onTrue, onFalse);
+          cast<ESTree::LogicalExpressionNode>(expr),
+          onTrue,
+          onFalse,
+          onNullish);
 
     case ESTree::NodeKind::UnaryExpression: {
       auto *e = cast<ESTree::UnaryExpressionNode>(expr);
       switch (UnaryOperatorInst::parseOperator(e->_operator->str())) {
         case UnaryOperatorInst::OpKind::BangKind:
-          return genExpressionBranch(e->_argument, onFalse, onTrue);
+          // Do not propagate onNullish here because !expr cannot be nullish.
+          return genExpressionBranch(e->_argument, onFalse, onTrue, nullptr);
         default:
           break;
       }
@@ -194,7 +214,7 @@ void ESTreeIRGen::genExpressionBranch(
         last = &ex;
       }
       if (last)
-        genExpressionBranch(last, onTrue, onFalse);
+        genExpressionBranch(last, onTrue, onFalse, onNullish);
       return;
     }
 
@@ -203,36 +223,88 @@ void ESTreeIRGen::genExpressionBranch(
   }
 
   Value *condVal = genExpression(expr);
+  if (onNullish) {
+    Value *isNullish = Builder.createBinaryOperatorInst(
+        condVal,
+        Builder.getLiteralNull(),
+        BinaryOperatorInst::OpKind::EqualKind);
+    BasicBlock *notNullishBB = Builder.createBasicBlock(Builder.getFunction());
+    Builder.createCondBranchInst(isNullish, onNullish, notNullishBB);
+    Builder.setInsertionBlock(notNullishBB);
+  }
   Builder.createCondBranchInst(condVal, onTrue, onFalse);
 }
 
-Value *ESTreeIRGen::genArrayExpr(ESTree::ArrayExpressionNode *Expr) {
+Value *ESTreeIRGen::genArrayFromElements(ESTree::NodeList &list) {
   LLVM_DEBUG(dbgs() << "Initializing a new array\n");
   AllocArrayInst::ArrayValueList elements;
+
+  // Precalculate the minimum number of elements in case we need to call
+  // AllocArrayInst at some point, as well as find out whether we have a spread
+  // element (which will result in the final array having variable length).
+  unsigned minElements = 0;
+  bool variableLength = false;
+  for (auto &E : list) {
+    if (isa<ESTree::SpreadElementNode>(&E)) {
+      variableLength = true;
+      continue;
+    }
+    ++minElements;
+  }
 
   // We store consecutive elements until we encounter elision,
   // or we enounter a non-literal in limited-register mode.
   // The rest of them has to be initialized through property sets.
+
+  // If we have a variable length array, then we store the next index in
+  // a stack location `nextIndex`, to be updated when we encounter spread
+  // elements. Otherwise, we simply count them in `count`.
   unsigned count = 0;
+  AllocStackInst *nextIndex = nullptr;
+  if (variableLength) {
+    // Avoid emitting the extra instructions unless we actually need to,
+    // to simplify tests and because it's easy.
+    nextIndex = Builder.createAllocStackInst("nextIndex");
+    Builder.createStoreStackInst(Builder.getLiteralPositiveZero(), nextIndex);
+  }
+
   bool consecutive = true;
   auto codeGenOpts = Mod->getContext().getCodeGenerationSettings();
   AllocArrayInst *allocArrayInst = nullptr;
-  for (auto &E : Expr->_elements) {
+  for (auto &E : list) {
     Value *value{nullptr};
+    bool isSpread = false;
     if (!isa<ESTree::EmptyNode>(&E)) {
-      value = genExpression(&E);
+      if (auto *spread = dyn_cast<ESTree::SpreadElementNode>(&E)) {
+        isSpread = true;
+        value = genExpression(spread->_argument);
+      } else {
+        value = genExpression(&E);
+      }
     }
-    if (!value || (!isa<Literal>(value) && !codeGenOpts.unlimitedRegisters)) {
+    if (!value || (!isa<Literal>(value) && !codeGenOpts.unlimitedRegisters) ||
+        isSpread) {
       // This is either an elision,
-      // or a non-literal in limited-register mode.
+      // or a non-literal in limited-register mode,
+      // or a spread element.
       if (consecutive) {
         // So far we have been storing elements consecutively,
         // but not anymore, time to create the array.
-        allocArrayInst =
-            Builder.createAllocArrayInst(elements, Expr->_elements.size());
+        allocArrayInst = Builder.createAllocArrayInst(elements, minElements);
         consecutive = false;
       }
     }
+    if (isSpread) {
+      // Spread the SpreadElement argument into the array.
+      // HermesInternal.arraySpread returns the new value of nextIndex,
+      // so update nextIndex accordingly and finish this iteration of the loop.
+      auto *newNextIndex = genBuiltinCall(
+          BuiltinMethod::HermesBuiltin_arraySpread,
+          {allocArrayInst, value, Builder.createLoadStackInst(nextIndex)});
+      Builder.createStoreStackInst(newNextIndex, nextIndex);
+      continue;
+    }
+    // The element is not a spread element, so perform the store here.
     if (value) {
       if (consecutive) {
         elements.push_back(value);
@@ -240,24 +312,45 @@ Value *ESTreeIRGen::genArrayExpr(ESTree::ArrayExpressionNode *Expr) {
         Builder.createStoreOwnPropertyInst(
             value,
             allocArrayInst,
-            Builder.getLiteralNumber(count),
+            variableLength ? cast<Value>(Builder.createLoadStackInst(nextIndex))
+                           : cast<Value>(Builder.getLiteralNumber(count)),
             IRBuilder::PropEnumerable::Yes);
       }
     }
-    count++;
+    // Update the next index or the count depending on if it's a variable length
+    // array.
+    if (variableLength) {
+      // We perform this update on any leading elements before the first spread
+      // element as well, but the optimizer will eliminate the extra adds
+      // because we know the initial value (0) and how incrementing works.
+      Builder.createStoreStackInst(
+          Builder.createBinaryOperatorInst(
+              Builder.createLoadStackInst(nextIndex),
+              Builder.getLiteralNumber(1),
+              BinaryOperatorInst::OpKind::AddKind),
+          nextIndex);
+    } else {
+      count++;
+    }
   }
 
   if (!allocArrayInst) {
-    allocArrayInst =
-        Builder.createAllocArrayInst(elements, Expr->_elements.size());
+    assert(
+        !variableLength &&
+        "variable length arrays must allocate their own arrays");
+    allocArrayInst = Builder.createAllocArrayInst(elements, list.size());
   }
-  if (count > 0 && isa<ESTree::EmptyNode>(&Expr->_elements.back())) {
+  if (count > 0 && isa<ESTree::EmptyNode>(&list.back())) {
     // Last element is an elision, VM cannot derive the length properly.
     // We have to explicitly set it.
     Builder.createStorePropertyInst(
         Builder.getLiteralNumber(count), allocArrayInst, StringRef("length"));
   }
   return allocArrayInst;
+}
+
+Value *ESTreeIRGen::genArrayExpr(ESTree::ArrayExpressionNode *Expr) {
+  return genArrayFromElements(Expr->_elements);
 }
 
 Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
@@ -277,23 +370,246 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
 
   // Handle MemberExpression expression calls that sets the 'this' property.
   if (auto *Mem = dyn_cast<ESTree::MemberExpressionNode>(call->_callee)) {
-    Value *obj = genExpression(Mem->_object);
-    Value *prop = genMemberExpressionProperty(Mem);
+    MemberExpressionResult memResult =
+        genMemberExpression(Mem, MemberExpressionOperation::Load);
 
     // Call the callee with obj as the 'this' pointer.
-    thisVal = obj;
-    callee = Builder.createLoadPropertyInst(obj, prop);
+    thisVal = memResult.base;
+    callee = memResult.result;
+  } else if (
+      auto *Mem =
+          dyn_cast<ESTree::OptionalMemberExpressionNode>(call->_callee)) {
+    MemberExpressionResult memResult = genOptionalMemberExpression(
+        Mem, nullptr, MemberExpressionOperation::Load);
+
+    // Call the callee with obj as the 'this' pointer.
+    thisVal = memResult.base;
+    callee = memResult.result;
   } else {
     thisVal = Builder.getLiteralUndefined();
     callee = genExpression(call->_callee);
   }
 
-  CallInst::ArgumentList args;
-  for (auto &arg : call->_arguments) {
-    args.push_back(genExpression(&arg));
+  return emitCall(call, callee, thisVal);
+}
+
+Value *ESTreeIRGen::genOptionalCallExpr(
+    ESTree::OptionalCallExpressionNode *call,
+    BasicBlock *shortCircuitBB) {
+  PhiInst::ValueListType values;
+  PhiInst::BasicBlockListType blocks;
+
+  // true when this is the genOptionalCallExpr call containing
+  // the logic for shortCircuitBB.
+  bool isFirstOptional = shortCircuitBB == nullptr;
+
+  // If isFirstOptional, the final result will be computed in continueBB and
+  // returned.
+  BasicBlock *continueBB = nullptr;
+
+  if (!shortCircuitBB) {
+    // If shortCircuitBB is null, then this is the outermost in the optional
+    // chain, so we must create it here and pass it through to every other
+    // OptionalCallExpression and OptionalMemberExpression in the chain.
+    continueBB = Builder.createBasicBlock(Builder.getFunction());
+    auto *insertionBB = Builder.getInsertionBlock();
+    shortCircuitBB = Builder.createBasicBlock(Builder.getFunction());
+    Builder.setInsertionBlock(shortCircuitBB);
+    values.push_back(Builder.getLiteralUndefined());
+    blocks.push_back(shortCircuitBB);
+    Builder.createBranchInst(continueBB);
+    Builder.setInsertionBlock(insertionBB);
   }
 
-  return Builder.createCallInst(callee, thisVal, args);
+  Value *thisVal;
+  Value *callee;
+
+  // Handle MemberExpression expression calls that sets the 'this' property.
+  if (auto *me = dyn_cast<ESTree::MemberExpressionNode>(call->_callee)) {
+    MemberExpressionResult memResult =
+        genMemberExpression(me, MemberExpressionOperation::Load);
+
+    // Call the callee with obj as the 'this' pointer.
+    thisVal = memResult.base;
+    callee = memResult.result;
+  } else if (
+      auto *ome =
+          dyn_cast<ESTree::OptionalMemberExpressionNode>(call->_callee)) {
+    MemberExpressionResult memResult = genOptionalMemberExpression(
+        ome, shortCircuitBB, MemberExpressionOperation::Load);
+
+    // Call the callee with obj as the 'this' pointer.
+    thisVal = memResult.base;
+    callee = memResult.result;
+  } else if (
+      auto *oce = dyn_cast<ESTree::OptionalCallExpressionNode>(call->_callee)) {
+    thisVal = Builder.getLiteralUndefined();
+    callee = genOptionalCallExpr(oce, shortCircuitBB);
+  } else {
+    thisVal = Builder.getLiteralUndefined();
+    callee = genExpression(getCallee(call));
+  }
+
+  if (call->_optional) {
+    BasicBlock *evalRHSBB = Builder.createBasicBlock(Builder.getFunction());
+
+    // If callee is undefined or null, then return undefined.
+    // NOTE: We use `obj == null` to account for both null and undefined.
+    Builder.createCondBranchInst(
+        Builder.createBinaryOperatorInst(
+            callee,
+            Builder.getLiteralNull(),
+            BinaryOperatorInst::OpKind::EqualKind),
+        shortCircuitBB,
+        evalRHSBB);
+
+    // baseValue is not undefined or null.
+    Builder.setInsertionBlock(evalRHSBB);
+  }
+
+  Value *callResult = emitCall(call, callee, thisVal);
+
+  if (isFirstOptional) {
+    values.push_back(callResult);
+    blocks.push_back(Builder.getInsertionBlock());
+    Builder.createBranchInst(continueBB);
+
+    Builder.setInsertionBlock(continueBB);
+    return Builder.createPhiInst(values, blocks);
+  }
+
+  // If this isn't the first optional, no Phi needed, just return the
+  // callResult.
+  return callResult;
+}
+
+Value *ESTreeIRGen::emitCall(
+    ESTree::CallExpressionLikeNode *call,
+    Value *callee,
+    Value *thisVal) {
+  bool hasSpread = false;
+  for (auto &arg : getArguments(call)) {
+    if (isa<ESTree::SpreadElementNode>(&arg)) {
+      hasSpread = true;
+    }
+  }
+
+  if (!hasSpread) {
+    CallInst::ArgumentList args;
+    for (auto &arg : getArguments(call)) {
+      args.push_back(genExpression(&arg));
+    }
+
+    return Builder.createCallInst(callee, thisVal, args);
+  }
+
+  // Otherwise, there exists a spread argument, so the number of arguments
+  // is variable.
+  // Generate IR for this by creating an array and populating it with the
+  // arguments, then calling HermesInternal.apply.
+  auto *args = genArrayFromElements(getArguments(call));
+  return genBuiltinCall(
+      BuiltinMethod::HermesBuiltin_apply, {callee, args, thisVal});
+}
+
+ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
+    ESTree::MemberExpressionNode *mem,
+    MemberExpressionOperation op) {
+  Value *baseValue = genExpression(mem->_object);
+  Value *prop = genMemberExpressionProperty(mem);
+  switch (op) {
+    case MemberExpressionOperation::Load:
+      return MemberExpressionResult{
+          Builder.createLoadPropertyInst(baseValue, prop), baseValue};
+    case MemberExpressionOperation::Delete:
+      return MemberExpressionResult{
+          Builder.createDeletePropertyInst(baseValue, prop), baseValue};
+  }
+}
+
+ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genOptionalMemberExpression(
+    ESTree::OptionalMemberExpressionNode *mem,
+    BasicBlock *shortCircuitBB,
+    MemberExpressionOperation op) {
+  PhiInst::ValueListType values;
+  PhiInst::BasicBlockListType blocks;
+
+  // true when this is the genOptionalMemberExpression call containing
+  // the logic for shortCircuitBB.
+  bool isFirstOptional = shortCircuitBB == nullptr;
+
+  // If isFirstOptional, the final result will be computed in continueBB and
+  // returned.
+  BasicBlock *continueBB = nullptr;
+
+  if (isFirstOptional) {
+    // If shortCircuitBB is null, then this is the outermost in the optional
+    // chain, so we must create it here and pass it through to every other
+    // OptionalCallExpression and OptionalMemberExpression in the chain.
+    continueBB = Builder.createBasicBlock(Builder.getFunction());
+    auto *insertionBB = Builder.getInsertionBlock();
+    shortCircuitBB = Builder.createBasicBlock(Builder.getFunction());
+    Builder.setInsertionBlock(shortCircuitBB);
+    values.push_back(Builder.getLiteralUndefined());
+    blocks.push_back(shortCircuitBB);
+    Builder.createBranchInst(continueBB);
+    Builder.setInsertionBlock(insertionBB);
+  }
+
+  Value *baseValue = nullptr;
+  if (ESTree::OptionalMemberExpressionNode *ome =
+          dyn_cast<ESTree::OptionalMemberExpressionNode>(mem->_object)) {
+    baseValue = genOptionalMemberExpression(
+                    ome, shortCircuitBB, MemberExpressionOperation::Load)
+                    .result;
+  } else if (
+      ESTree::OptionalCallExpressionNode *oce =
+          dyn_cast<ESTree::OptionalCallExpressionNode>(mem->_object)) {
+    baseValue = genOptionalCallExpr(oce, shortCircuitBB);
+  } else {
+    baseValue = genExpression(mem->_object);
+  }
+
+  if (mem->_optional) {
+    BasicBlock *evalRHSBB = Builder.createBasicBlock(Builder.getFunction());
+
+    // If baseValue is undefined or null, then return undefined.
+    // NOTE: We use `obj == null` to account for both null and undefined.
+    Builder.createCondBranchInst(
+        Builder.createBinaryOperatorInst(
+            baseValue,
+            Builder.getLiteralNull(),
+            BinaryOperatorInst::OpKind::EqualKind),
+        shortCircuitBB,
+        evalRHSBB);
+
+    // baseValue is not undefined, look up the property properly.
+    Builder.setInsertionBlock(evalRHSBB);
+  }
+
+  Value *prop = genMemberExpressionProperty(mem);
+  Value *result = nullptr;
+  switch (op) {
+    case MemberExpressionOperation::Load:
+      result = Builder.createLoadPropertyInst(baseValue, prop);
+      break;
+    case MemberExpressionOperation::Delete:
+      result = Builder.createDeletePropertyInst(baseValue, prop);
+      break;
+  }
+  assert(result && "result must be set");
+
+  if (isFirstOptional) {
+    values.push_back(result);
+    blocks.push_back(Builder.getInsertionBlock());
+    Builder.createBranchInst(continueBB);
+
+    Builder.setInsertionBlock(continueBB);
+    return {Builder.createPhiInst(values, blocks), baseValue};
+  }
+
+  // If this isn't the first optional, no Phi needed, just return the result.
+  return {result, baseValue};
 }
 
 Value *ESTreeIRGen::genCallEvalExpr(ESTree::CallExpressionNode *call) {
@@ -483,10 +799,10 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
   // has no side effects.
   for (auto &P : Expr->_properties) {
     if (auto *spread = dyn_cast<ESTree::SpreadElementNode>(&P)) {
-      genHermesInternalCall(
-          "copyDataProperties",
-          Builder.getLiteralUndefined(),
+      genBuiltinCall(
+          BuiltinMethod::HermesBuiltin_copyDataProperties,
           {Obj, genExpression(spread->_argument)});
+      haveSeenComputedProp = true;
       continue;
     }
 
@@ -589,9 +905,8 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
             IRBuilder::SaveRestore saveState{Builder};
             Builder.setLocation(prop->_key->getDebugLoc());
 
-            genHermesInternalCall(
-                "silentSetPrototypeOf",
-                Builder.getLiteralUndefined(),
+            genBuiltinCall(
+                BuiltinMethod::HermesBuiltin_silentSetPrototypeOf,
                 {Obj, parent});
           }
         } else {
@@ -651,6 +966,8 @@ Value *ESTreeIRGen::genSequenceExpr(ESTree::SequenceExpressionNode *Sq) {
 }
 
 Value *ESTreeIRGen::genYieldExpr(ESTree::YieldExpressionNode *Y) {
+  assert(!Y->_delegate && "must use genYieldStarExpr for yield*");
+
   auto *bb = Builder.getInsertionBlock();
   auto *next = Builder.createBasicBlock(bb->getParent());
   Value *value = Y->_argument ? genExpression(Y->_argument)
@@ -665,19 +982,271 @@ Value *ESTreeIRGen::genYieldExpr(ESTree::YieldExpressionNode *Y) {
       Y, resumeIsReturn, Builder.createBasicBlock(bb->getParent()));
 }
 
+/// Generate the code for `yield* value`.
+/// We use some stack locations to store state while iterating:
+/// - received (the value passed by the user to .next(), etc)
+/// - result (the final result of the yield* expression)
+///
+/// iteratorRecord stores the iterator which we are iterating over.
+///
+/// Final IR has the following basic blocks for normal control flow:
+///
+/// getNext: Get the next value from the iterator.
+/// - Call next() on the iteratorRecord and stores to `result`
+/// - If done, go to exit
+/// - Otherwise, go to body
+///
+/// resume: Runs the ResumeGenerator instruction.
+/// - Code for `finally` is also emitted here.
+///
+/// body: Yield the result of the next() call
+/// - Calls HermesInternal.generatorSetDelegated so that the result is not
+///   wrapped by the VM in an IterResult object.
+///
+/// exit: Returns `result` which should have the final results stored in it.
+///
+/// When the user calls `.return`, the finalizer is executed to call
+/// `iteratorRecord.return` if it exists. The code for that is contained within
+/// the SurroundingTry. If the .return function is defined, it is called and the
+/// 'done' property of the result of the call is used to either branch back to
+/// the 'resume' block or to propagate the return.
+///
+/// When the user calls '.throw', the code in emitHandler is executed. All
+/// generators used as delegates must have a .throw() method, so that is checked
+/// for and called. The result is then used to either resume if not done, or to
+/// return immediately by branching to the 'exit' block.
+Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
+  assert(Y->_delegate && "must use genYieldExpr for yield");
+  auto *function = Builder.getInsertionBlock()->getParent();
+  auto *getNextBlock = Builder.createBasicBlock(function);
+  auto *bodyBlock = Builder.createBasicBlock(function);
+  auto *exitBlock = Builder.createBasicBlock(function);
+
+  // Calls ResumeGenerator and returns or throws if requested.
+  auto *resumeBB = Builder.createBasicBlock(function);
+
+  auto *exprValue = genExpression(Y->_argument);
+  IteratorRecordSlow iteratorRecord = emitGetIteratorSlow(exprValue);
+
+  // The "received" value when the user resumes the generator.
+  // Initialized to undefined on the first run, then stored to immediately
+  // following any genResumeGenerator.
+  auto *received =
+      Builder.createAllocStackInst(genAnonymousLabelName("received"));
+  Builder.createStoreStackInst(Builder.getLiteralUndefined(), received);
+
+  // The "isReturn" value when the user resumes the generator.
+  // Stored to immediately following any genResumeGenerator.
+  auto *resumeIsReturn =
+      Builder.createAllocStackInst(genAnonymousLabelName("isReturn"));
+
+  // The final result of the `yield*` expression.
+  // This can be set from either the body or the handler, so it is placed
+  // in the stack to allow populating it from anywhere.
+  auto *result = Builder.createAllocStackInst(genAnonymousLabelName("result"));
+
+  Builder.createBranchInst(getNextBlock);
+
+  // 7.a.i.  Let innerResult be ? Call(
+  //   iteratorRecord.[[NextMethod]],
+  //   iteratorRecord.[[Iterator]],
+  //   <received.[[Value]]>
+  // )
+  // Avoid using emitIteratorNext here because the spec does not.
+  Builder.setInsertionBlock(getNextBlock);
+  auto *nextResult = Builder.createCallInst(
+      iteratorRecord.nextMethod,
+      iteratorRecord.iterator,
+      {Builder.createLoadStackInst(received)});
+  emitEnsureObject(nextResult, "iterator.next() did not return an object");
+
+  Builder.createStoreStackInst(nextResult, result);
+  auto *done = emitIteratorCompleteSlow(nextResult);
+  Builder.createCondBranchInst(done, exitBlock, bodyBlock);
+
+  Builder.setInsertionBlock(bodyBlock);
+
+  emitTryCatchScaffolding(
+      getNextBlock,
+      // emitBody.
+      [this,
+       Y,
+       resumeIsReturn,
+       getNextBlock,
+       resumeBB,
+       nextResult,
+       received,
+       &iteratorRecord]() {
+        // Generate IR for the body of Try
+        SurroundingTry thisTry{
+            curFunction(),
+            Y,
+            {},
+            [this, resumeBB, received, &iteratorRecord](
+                ESTree::Node *, ControlFlowChange cfc, BasicBlock *) {
+              if (cfc == ControlFlowChange::Break) {
+                // This finalizer block is executed upon early return during
+                // the yield*, which happens when the user requests a .return().
+                auto *function = Builder.getFunction();
+                auto *haveReturnBB = Builder.createBasicBlock(function);
+                auto *noReturnBB = Builder.createBasicBlock(function);
+                auto *isDoneBB = Builder.createBasicBlock(function);
+                auto *isNotDoneBB = Builder.createBasicBlock(function);
+
+                // Check if "returnMethod" is undefined.
+                auto *returnMethod = Builder.createLoadPropertyInst(
+                    iteratorRecord.iterator, "return");
+                Builder.createCompareBranchInst(
+                    returnMethod,
+                    Builder.getLiteralUndefined(),
+                    BinaryOperatorInst::OpKind::StrictlyEqualKind,
+                    noReturnBB,
+                    haveReturnBB);
+
+                Builder.setInsertionBlock(haveReturnBB);
+                // iv. Let innerReturnResult be
+                // ? Call(return, iterator, received.[[Value]]).
+                auto *innerReturnResult = Builder.createCallInst(
+                    returnMethod,
+                    iteratorRecord.iterator,
+                    {Builder.createLoadStackInst(received)});
+                // vi. If Type(innerReturnResult) is not Object,
+                // throw a TypeError exception.
+                emitEnsureObject(
+                    innerReturnResult,
+                    "iterator.return() did not return an object");
+                // vii. Let done be ? IteratorComplete(innerReturnResult).
+                auto *done = emitIteratorCompleteSlow(innerReturnResult);
+                Builder.createCondBranchInst(done, isDoneBB, isNotDoneBB);
+
+                Builder.setInsertionBlock(isDoneBB);
+                // viii. 1. Let value be ? IteratorValue(innerReturnResult).
+                auto *value = emitIteratorValueSlow(innerReturnResult);
+                genFinallyBeforeControlChange(
+                    curFunction()->surroundingTry,
+                    nullptr,
+                    ControlFlowChange::Break);
+                // viii. 2. Return Completion
+                // { [[Type]]: return, [[Value]]: value, [[Target]]: empty }.
+                Builder.createReturnInst(value);
+
+                // x. Else, set received to GeneratorYield(innerReturnResult).
+                Builder.setInsertionBlock(isNotDoneBB);
+                genBuiltinCall(
+                    BuiltinMethod::HermesBuiltin_generatorSetDelegated, {});
+                Builder.createSaveAndYieldInst(innerReturnResult, resumeBB);
+
+                // If return is undefined, return Completion(received).
+                Builder.setInsertionBlock(noReturnBB);
+              }
+            }};
+
+        // The primary call path for yielding the next result.
+        genBuiltinCall(BuiltinMethod::HermesBuiltin_generatorSetDelegated, {});
+        Builder.createSaveAndYieldInst(nextResult, resumeBB);
+
+        // Note that resumeBB was created above to allow all SaveAndYield insts
+        // to have the same resume point (including SaveAndYield in the catch
+        // handler), but we must populate it inside the scaffolding so that the
+        // SurroundingTry is correct for the genFinallyBeforeControlChange
+        // call emitted by genResumeGenerator.
+        Builder.setInsertionBlock(resumeBB);
+        genResumeGenerator(Y, resumeIsReturn, getNextBlock, received);
+
+        // SaveAndYieldInst is a Terminator, but emitTryCatchScaffolding
+        // needs a block from which to Branch to the TryEnd instruction.
+        // Make a dummy block which can do that.
+        Builder.setInsertionBlock(
+            Builder.createBasicBlock(Builder.getFunction()));
+      },
+      // emitNormalCleanup.
+      []() {},
+      // emitHandler.
+      [this, resumeBB, exitBlock, result, &iteratorRecord](
+          BasicBlock *getNextBlock) {
+        auto *catchReg = Builder.createCatchInst();
+
+        auto *function = Builder.getFunction();
+        auto *hasThrowMethodBB = Builder.createBasicBlock(function);
+        auto *noThrowMethodBB = Builder.createBasicBlock(function);
+        auto *isDoneBB = Builder.createBasicBlock(function);
+        auto *isNotDoneBB = Builder.createBasicBlock(function);
+
+        // b.i. Let throw be ? GetMethod(iterator, "throw").
+        auto *throwMethod =
+            Builder.createLoadPropertyInst(iteratorRecord.iterator, "throw");
+        Builder.createCompareBranchInst(
+            throwMethod,
+            Builder.getLiteralUndefined(),
+            BinaryOperatorInst::OpKind::StrictlyEqualKind,
+            noThrowMethodBB,
+            hasThrowMethodBB);
+
+        // ii. If throw is not undefined, then
+        Builder.setInsertionBlock(hasThrowMethodBB);
+        // ii. 1. Let innerResult be
+        //        ? Call(throw, iterator, « received.[[Value]] »).
+        // ii. 3. NOTE: Exceptions from the inner iterator throw method are
+        // propagated. Normal completions from an inner throw method are
+        // processed similarly to an inner next.
+        auto *innerResult = Builder.createCallInst(
+            throwMethod, iteratorRecord.iterator, {catchReg});
+        // ii. 4. If Type(innerResult) is not Object,
+        //        throw a TypeError exception.
+        emitEnsureObject(
+            innerResult, "iterator.throw() did not return an object");
+        // ii. 5. Let done be ? IteratorComplete(innerResult).
+        auto *done = emitIteratorCompleteSlow(innerResult);
+        Builder.createCondBranchInst(done, isDoneBB, isNotDoneBB);
+
+        // ii. 6. If done is true, then return ? IteratorValue(innerResult).
+        Builder.setInsertionBlock(isDoneBB);
+        Builder.createStoreStackInst(innerResult, result);
+        Builder.createBranchInst(exitBlock);
+
+        // ii. 8. Else, set received to GeneratorYield(innerResult).
+        Builder.setInsertionBlock(isNotDoneBB);
+        genBuiltinCall(BuiltinMethod::HermesBuiltin_generatorSetDelegated, {});
+        Builder.createSaveAndYieldInst(innerResult, resumeBB);
+
+        // NOTE: If iterator does not have a throw method, this throw is
+        // going to terminate the yield* loop. But first we need to give
+        // iterator a chance to clean up.
+        Builder.setInsertionBlock(noThrowMethodBB);
+        emitIteratorCloseSlow(iteratorRecord, false);
+        genBuiltinCall(
+            BuiltinMethod::HermesBuiltin_throwTypeError,
+            {Builder.getLiteralString(
+                "yield* delegate must have a .throw() method")});
+        // HermesInternal.throwTypeError will necessarily throw, but we need to
+        // have a terminator on this BB to allow proper optimization.
+        Builder.createReturnInst(Builder.getLiteralUndefined());
+      });
+
+  Builder.setInsertionBlock(exitBlock);
+
+  return emitIteratorValueSlow(Builder.createLoadStackInst(result));
+}
+
 Value *ESTreeIRGen::genResumeGenerator(
     ESTree::YieldExpressionNode *yield,
     AllocStackInst *isReturn,
-    BasicBlock *nextBB) {
+    BasicBlock *nextBB,
+    AllocStackInst *received) {
   auto *resume = Builder.createResumeGeneratorInst(isReturn);
-  auto *function = Builder.getInsertionBlock()->getParent();
-
-  auto *retBB = Builder.createBasicBlock(function);
+  if (received) {
+    Builder.createStoreStackInst(resume, received);
+  }
+  auto *retBB =
+      Builder.createBasicBlock(Builder.getInsertionBlock()->getParent());
 
   Builder.createCondBranchInst(
       Builder.createLoadStackInst(isReturn), retBB, nextBB);
 
   Builder.setInsertionBlock(retBB);
+  if (received) {
+    Builder.createStoreStackInst(resume, received);
+  }
   if (yield) {
     genFinallyBeforeControlChange(
         curFunction()->surroundingTry, nullptr, ControlFlowChange::Break);
@@ -697,12 +1266,17 @@ Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
             dyn_cast<ESTree::MemberExpressionNode>(U->_argument)) {
       LLVM_DEBUG(dbgs() << "IRGen delete member expression.\n");
 
-      Value *obj = genExpression(memberExpr->_object);
-      Value *prop = genMemberExpressionProperty(memberExpr);
+      return genMemberExpression(memberExpr, MemberExpressionOperation::Delete)
+          .result;
+    }
 
-      // If this assignment is not the identity assignment ('=') then emit a
-      // load-operation-store sequence.
-      return Builder.createDeletePropertyInst(obj, prop);
+    if (auto *memberExpr =
+            dyn_cast<ESTree::OptionalMemberExpressionNode>(U->_argument)) {
+      LLVM_DEBUG(dbgs() << "IRGen delete optional member expression.\n");
+
+      return genOptionalMemberExpression(
+                 memberExpr, nullptr, MemberExpressionOperation::Delete)
+          .result;
     }
 
     // Check for "delete identifier". Note that deleting unqualified identifiers
@@ -745,12 +1319,14 @@ Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
 
   // Generate the unary operand:
   Value *argument = genExpression(U->_argument);
+  auto *cookie = instrumentIR_.preUnaryExpression(U, argument);
 
-  if (kind == UnaryOperatorInst::OpKind::PlusKind) {
-    return Builder.createAsNumberInst(argument);
-  }
-
-  return Builder.createUnaryOperatorInst(argument, kind);
+  Value *result;
+  if (kind == UnaryOperatorInst::OpKind::PlusKind)
+    result = Builder.createAsNumberInst(argument);
+  else
+    result = Builder.createUnaryOperatorInst(argument, kind);
+  return instrumentIR_.postUnaryExpression(U, cookie, result, argument);
 }
 
 Value *ESTreeIRGen::genUpdateExpr(ESTree::UpdateExpressionNode *updateExpr) {
@@ -797,7 +1373,6 @@ Value *ESTreeIRGen::genAssignmentExpr(ESTree::AssignmentExpressionNode *AE) {
   auto AssignmentKind = BinaryOperatorInst::parseAssignmentOperator(opStr);
 
   LReference lref = createLRef(AE->_left, false);
-  Value *RHS = nullptr;
 
   Identifier nameHint{};
   if (auto *var = lref.castAsVariable()) {
@@ -806,22 +1381,27 @@ Value *ESTreeIRGen::genAssignmentExpr(ESTree::AssignmentExpressionNode *AE) {
     nameHint = globProp->getName()->getValue();
   }
 
+  Value *result;
   if (AssignmentKind != BinaryOperatorInst::OpKind::IdentityKind) {
     // Section 11.13.1 specifies that we should first load the
     // LHS before materializing the RHS. Unlike in C, this
     // code is well defined: "x+= x++".
     // https://es5.github.io/#x11.13.1
     auto V = lref.emitLoad();
-    RHS = genExpression(AE->_right, nameHint);
-    RHS = Builder.createBinaryOperatorInst(V, RHS, AssignmentKind);
+    auto *RHS = genExpression(AE->_right, nameHint);
+    auto *cookie = instrumentIR_.preAssignment(AE, V, RHS);
+    result = Builder.createBinaryOperatorInst(V, RHS, AssignmentKind);
+    result = instrumentIR_.postAssignment(AE, cookie, result, V, RHS);
   } else {
-    RHS = genExpression(AE->_right, nameHint);
+    auto *RHS = genExpression(AE->_right, nameHint);
+    auto *cookie = instrumentIR_.preAssignment(AE, nullptr, RHS);
+    result = instrumentIR_.postAssignment(AE, cookie, RHS, nullptr, RHS);
   }
 
-  lref.emitStore(RHS);
+  lref.emitStore(result);
 
   // Return the value that we stored as the result of the expression.
-  return RHS;
+  return result;
 }
 
 Value *ESTreeIRGen::genConditionalExpr(ESTree::ConditionalExpressionNode *C) {
@@ -836,7 +1416,7 @@ Value *ESTreeIRGen::genConditionalExpr(ESTree::ConditionalExpressionNode *C) {
 
   // Implement the ternary operator using control flow. We must use control
   // flow because the expressions may have side effects.
-  genExpressionBranch(C->_test, consequentBlock, alternateBlock);
+  genExpressionBranch(C->_test, consequentBlock, alternateBlock, nullptr);
 
   // The 'then' side:
   Builder.setInsertionBlock(consequentBlock);
@@ -927,17 +1507,31 @@ Value *ESTreeIRGen::genMetaProperty(ESTree::MetaPropertyNode *MP) {
 Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
   LLVM_DEBUG(dbgs() << "IRGen 'new' statement/expression.\n");
 
-  // Implement the new operator.
-  // http://www.ecma-international.org/ecma-262/7.0/index.html#sec-new-operator
-
   Value *callee = genExpression(N->_callee);
 
-  ConstructInst::ArgumentList args;
+  bool hasSpread = false;
   for (auto &arg : N->_arguments) {
-    args.push_back(genExpression(&arg));
+    if (isa<ESTree::SpreadElementNode>(&arg)) {
+      hasSpread = true;
+    }
   }
 
-  return Builder.createConstructInst(callee, args);
+  if (!hasSpread) {
+    ConstructInst::ArgumentList args;
+    for (auto &arg : N->_arguments) {
+      args.push_back(genExpression(&arg));
+    }
+
+    return Builder.createConstructInst(callee, args);
+  }
+
+  // Otherwise, there exists a spread argument, so the number of arguments
+  // is variable.
+  // Generate IR for this by creating an array and populating it with the
+  // arguments, then calling HermesInternal.apply.
+  auto *args = genArrayFromElements(N->_arguments);
+
+  return genBuiltinCall(BuiltinMethod::HermesBuiltin_apply, {callee, args});
 }
 
 Value *ESTreeIRGen::genLogicalExpression(
@@ -945,13 +1539,20 @@ Value *ESTreeIRGen::genLogicalExpression(
   auto opStr = logical->_operator->str();
   LLVM_DEBUG(dbgs() << "IRGen of short circuiting: " << opStr << ".\n");
 
-  // True if the operand is And (&&) or False if the operand is Or (||).
-  bool isAnd = false;
+  enum class Kind {
+    And, // &&
+    Or, // ||
+    Coalesce, // ??
+  };
+
+  Kind kind;
 
   if (opStr == "&&") {
-    isAnd = true;
+    kind = Kind::And;
   } else if (opStr == "||") {
-    isAnd = false;
+    kind = Kind::Or;
+  } else if (opStr == "??") {
+    kind = Kind::Coalesce;
   } else {
     llvm_unreachable("Invalid update operator");
   }
@@ -967,18 +1568,34 @@ Value *ESTreeIRGen::genLogicalExpression(
   auto LHS = genExpression(logical->_left);
 
   // Store the LHS value of the expression in preparation for the case where we
-  // won't need to evaluate the RHS side of the expression.
+  // won't need to evaluate the RHS side of the expression. In that case, we
+  // jump to continueBlock, which returns tempVar.
   Builder.createStoreStackInst(LHS, tempVar);
 
-  // Don't continue if the value is evaluated to true for '&&' or false for
-  // '||'. Notice that instead of negating the condition we swap the operands of
-  // the branch.
-  BasicBlock *T = continueBlock;
-  BasicBlock *F = evalRHSBlock;
-  if (isAnd) {
-    std::swap(T, F);
+  // Notice that instead of negating the condition we swap the operands of the
+  // branch.
+  switch (kind) {
+    case Kind::And:
+      // Evaluate RHS only when the LHS is true.
+      Builder.createCondBranchInst(LHS, evalRHSBlock, continueBlock);
+      break;
+    case Kind::Or:
+      // Evaluate RHS only when the LHS is false.
+      Builder.createCondBranchInst(LHS, continueBlock, evalRHSBlock);
+      break;
+    case Kind::Coalesce:
+      // Evaluate RHS only if the value is undefined or null.
+      // Use == instead of === to account for both values at once.
+      Builder.createCondBranchInst(
+          Builder.createBinaryOperatorInst(
+              LHS,
+              Builder.getLiteralNull(),
+              BinaryOperatorInst::OpKind::EqualKind),
+          evalRHSBlock,
+          continueBlock);
+
+      break;
   }
-  Builder.createCondBranchInst(LHS, T, F);
 
   // Continue the evaluation of the right-hand-side of the expression.
   Builder.setInsertionBlock(evalRHSBlock);
@@ -998,23 +1615,25 @@ Value *ESTreeIRGen::genLogicalExpression(
 void ESTreeIRGen::genLogicalExpressionBranch(
     ESTree::LogicalExpressionNode *logical,
     BasicBlock *onTrue,
-    BasicBlock *onFalse) {
+    BasicBlock *onFalse,
+    BasicBlock *onNullish) {
   auto opStr = logical->_operator->str();
   LLVM_DEBUG(dbgs() << "IRGen of short circuiting: " << opStr << " branch.\n");
 
   auto parentFunc = Builder.getInsertionBlock()->getParent();
-  auto block = Builder.createBasicBlock(parentFunc);
+  auto *block = Builder.createBasicBlock(parentFunc);
 
   if (opStr == "&&") {
-    genExpressionBranch(logical->_left, block, onFalse);
+    genExpressionBranch(logical->_left, block, onFalse, onNullish);
   } else if (opStr == "||") {
-    genExpressionBranch(logical->_left, onTrue, block);
+    genExpressionBranch(logical->_left, onTrue, block, onNullish);
   } else {
-    llvm_unreachable("Invalid update operator");
+    assert(opStr == "??" && "invalid logical operator");
+    genExpressionBranch(logical->_left, onTrue, onFalse, block);
   }
 
   Builder.setInsertionBlock(block);
-  genExpressionBranch(logical->_right, onTrue, onFalse);
+  genExpressionBranch(logical->_right, onTrue, onFalse, onNullish);
 }
 
 Value *ESTreeIRGen::genTemplateLiteralExpr(ESTree::TemplateLiteralNode *Expr) {
@@ -1113,8 +1732,8 @@ Value *ESTreeIRGen::genTaggedTemplateExpr(
 
   // Generate a function call to HermesInternal.getTemplateObject() with these
   // arguments.
-  auto *templateObj = genHermesInternalCall(
-      "getTemplateObject", Builder.getLiteralUndefined() /* this */, argList);
+  auto *templateObj =
+      genBuiltinCall(BuiltinMethod::HermesBuiltin_getTemplateObject, argList);
 
   // Step 2: call the tag function, passing the template object followed by a
   // list of substitutions as arguments.

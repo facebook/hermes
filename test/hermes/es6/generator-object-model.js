@@ -1,10 +1,11 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
-// RUN: %hermes -Xflow-parser -O %s | %FileCheck --match-full-lines %s
-// REQUIRES: flowparser
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// RUN: %hermes -O %s | %FileCheck --match-full-lines %s
 
 // Testing the chart in ES6.0 25.2.
 // Make sure Generators and the functions which surround them have the proper
@@ -30,6 +31,14 @@ print(3, f instanceof GeneratorFunction);
 // CHECK-NEXT: 3 true
 print(4, Object.getPrototypeOf(Generator) === Function.prototype);
 // CHECK-NEXT: 4 true
+
+var instance = GeneratorFunction();
+print(5, typeof instance.prototype);
+// CHECK-NEXT: 5 object
+print(6,
+  Object.getPrototypeOf(instance.prototype) ===
+  Object.getPrototypeOf(instance).prototype);
+// CHECK-NEXT: 6 true
 
 var GeneratorPrototype = Object.getPrototypeOf(
   Object.getPrototypeOf(f())

@@ -1,0 +1,61 @@
+add_hermes_library(LLVHSupport
+    APFloat.cpp
+    APInt.cpp
+    circular_raw_ostream.cpp
+    CommandLine.cpp
+    ConvertUTF.cpp
+    ConvertUTFWrapper.cpp
+    Debug.cpp
+    Errno.cpp
+    Error.cpp
+    ErrorHandling.cpp
+    FileCheck.cpp
+    FoldingSet.cpp
+    GraphWriter.cpp
+    Hashing.cpp
+    Host.cpp
+    InitLLVM.cpp
+    LineIterator.cpp
+    Locale.cpp
+    ManagedStatic.cpp
+    MD5.cpp
+    Memory.cpp
+    MemoryBuffer.cpp
+    Mutex.cpp
+    NativeFormatting.cpp
+    Path.cpp
+    PrettyStackTrace.cpp
+    Process.cpp
+    Program.cpp
+    raw_ostream.cpp
+    raw_os_ostream.cpp
+    regcomp.c
+    regerror.c
+    regfree.c
+    Regex.cpp
+    regexec.c
+    regstrlcpy.c
+    SHA1.cpp
+    Signals.cpp
+    SmallVector.cpp
+    SmallPtrSet.cpp
+    SourceMgr.cpp
+    Statistic.cpp
+    StringExtras.cpp
+    StringMap.cpp
+    StringRef.cpp
+    StringSaver.cpp
+    TargetParser.cpp
+    Threading.cpp
+    Timer.cpp
+    Triple.cpp
+    Twine.cpp
+    Unicode.cpp
+    Valgrind.cpp
+    Watchdog.cpp
+    LINK_LIBS LLVHDemangle ${TERMINFO_LIBS}
+)
+
+if (LLVM_PTHREAD_LIB)
+    target_link_libraries(LLVHSupport ${LLVM_PTHREAD_LIB})
+endif()

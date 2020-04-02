@@ -1,5 +1,5 @@
-/**
- * Copyright 2018-present, Facebook, Inc.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,17 +51,17 @@ struct CreateDefault<void> {
 template <typename R>
 using Converter = Convert<typename std::decay<R>::type>;
 
-template <typename F, F func, typename R, typename... Args>
-struct WrapForVoidReturn {
-  static typename Converter<R>::jniType call(Args&&... args) {
-    return Converter<R>::toJniRet(func(std::forward<Args>(args)...));
+template <typename F, typename R, typename C, typename... Args>
+struct CallWithJniConversions {
+  static typename Converter<R>::jniType call(JniType<C> obj, typename Converter<Args>::jniType... args, F func) {
+    return Converter<R>::toJniRet(func(obj, Converter<Args>::fromJni(args)...));
   }
 };
 
-template <typename F, F func, typename... Args>
-struct WrapForVoidReturn<F, func, void, Args...> {
-  static void call(Args&&... args) {
-    func(std::forward<Args>(args)...);
+template <typename F, typename C, typename... Args>
+struct CallWithJniConversions<F, void, C, Args...> {
+  static void call(JniType<C> obj, typename Converter<Args>::jniType... args, F func) {
+    func(obj, Converter<Args>::fromJni(args)...);
   }
 };
 
@@ -80,18 +80,31 @@ struct BareJniWrapper {
 };
 
 // registration wrappers for functions, with autoconversion of arguments.
-template<typename F, F func, typename C, typename R, typename... Args>
+template<typename F, typename C, typename R, typename... Args>
 struct FunctionWrapper {
   using jniRet = typename Converter<R>::jniType;
-  JNI_ENTRY_POINT static jniRet call(JNIEnv* env, jobject obj, typename Converter<Args>::jniType... args) {
+  static jniRet call(JNIEnv* env, jobject obj, typename Converter<Args>::jniType... args, F funcPtr) {
     detail::JniEnvCacher jec(env);
     try {
-      return WrapForVoidReturn<F, func, R, JniType<C>, Args...>::call(
-          static_cast<JniType<C>>(obj), Converter<Args>::fromJni(args)...);
+      return CallWithJniConversions<F, R, JniType<C>, Args...>::call(
+          static_cast<JniType<C>>(obj), args..., funcPtr);
     } catch (...) {
       translatePendingCppExceptionToJavaException();
       return CreateDefault<jniRet>::create();
     }
+  }
+};
+
+// registration wrappers for functions, with autoconversion of arguments.
+// This is a separate class from FunctionWrapper because
+// MethodWrapper::call does not want FunctionWrapper::call to be a
+// JNI_ENTRY_POINT and thus not inlinable. However, we still want a
+// JNI_ENTRY_POINT for top-level functions.
+template<typename F, F func, typename C, typename R, typename... Args>
+struct FunctionWrapperWithJniEntryPoint {
+  using jniRet = typename FunctionWrapper<F, C, R, Args...>::jniRet;
+  JNI_ENTRY_POINT static jniRet call(JNIEnv* env, jobject obj, typename Converter<Args>::jniType... args) {
+    return FunctionWrapper<F, C, R, Args...>::call(env, obj, args..., func);
   }
 };
 
@@ -114,42 +127,42 @@ struct MethodWrapper {
 
   JNI_ENTRY_POINT static typename Converter<R>::jniType call(
       JNIEnv* env, jobject obj, typename Converter<Args>::jniType... args) {
-    return FunctionWrapper<R(*)(alias_ref<jhybrid>, Args&&...), dispatch, jhybrid, R, Args...>::call(env, obj, args...);
+    return FunctionWrapper<R(*)(alias_ref<jhybrid>, Args&&...), jhybrid, R, Args...>::call(env, obj, args..., dispatch);
   }
 };
 
 template<typename F, F func, typename C, typename R, typename... Args>
-inline NativeMethodWrapper* exceptionWrapJNIMethod(R (*)(JNIEnv*, C, Args... args)) {
+constexpr inline void* exceptionWrapJNIMethod(R (*)(JNIEnv*, C, Args... args)) {
   // This intentionally erases the real type; JNI will do it anyway
-  return reinterpret_cast<NativeMethodWrapper*>(&(BareJniWrapper<F, func, C, R, Args...>::call));
+  return (void*)(&(BareJniWrapper<F, func, C, R, Args...>::call));
 }
 
 template<typename F, F func, typename C, typename R, typename... Args>
-inline NativeMethodWrapper* exceptionWrapJNIMethod(R (*)(alias_ref<C>, Args... args)) {
+constexpr inline void* exceptionWrapJNIMethod(R (*)(alias_ref<C>, Args... args)) {
   // This intentionally erases the real type; JNI will do it anyway
-  return reinterpret_cast<NativeMethodWrapper*>(&(FunctionWrapper<F, func, C, R, Args...>::call));
+  return (void*)(&(FunctionWrapperWithJniEntryPoint<F, func, C, R, Args...>::call));
 }
 
 template<typename M, M method, typename C, typename R, typename... Args>
-inline NativeMethodWrapper* exceptionWrapJNIMethod(R (C::*method0)(Args... args)) {
+constexpr inline void* exceptionWrapJNIMethod(R (C::*method0)(Args... args)) {
   (void)method0;
   // This intentionally erases the real type; JNI will do it anyway
-  return reinterpret_cast<NativeMethodWrapper*>(&(MethodWrapper<M, method, C, R, Args...>::call));
+  return (void*)(&(MethodWrapper<M, method, C, R, Args...>::call));
 }
 
 template<typename R, typename C, typename... Args>
-inline std::string makeDescriptor(R (*)(JNIEnv*, C, Args... args)) {
-  return jmethod_traits<R(Args...)>::descriptor();
+inline constexpr const auto& /* detail::SimpleFixedString<_> */ makeDescriptor(R (*)(JNIEnv*, C, Args... args)) {
+  return jmethod_traits<R(Args...)>::kDescriptor;
 }
 
 template<typename R, typename C, typename... Args>
-inline std::string makeDescriptor(R (*)(alias_ref<C>, Args... args)) {
-  return jmethod_traits_from_cxx<R(Args...)>::descriptor();
+inline constexpr const auto& /* detail::SimpleFixedString<_> */ makeDescriptor(R (*)(alias_ref<C>, Args... args)) {
+  return jmethod_traits_from_cxx<R(Args...)>::kDescriptor;
 }
 
 template<typename R, typename C, typename... Args>
-inline std::string makeDescriptor(R (C::*)(Args... args)) {
-  return jmethod_traits_from_cxx<R(Args...)>::descriptor();
+inline constexpr const auto& /* detail::SimpleFixedString<_> */ makeDescriptor(R (C::*)(Args... args)) {
+  return jmethod_traits_from_cxx<R(Args...)>::kDescriptor;
 }
 
 template<typename R, typename ...Args>
@@ -167,7 +180,7 @@ JNI_ENTRY_POINT R CriticalMethod<R(*)(Args...)>::call(alias_ref<jclass>, Args...
 
 template<typename R, typename ...Args>
 template<R(*func)(Args...)>
-inline std::string CriticalMethod<R(*)(Args...)>::desc() {
+inline constexpr auto CriticalMethod<R(*)(Args...)>::desc() {
   return makeDescriptor(call<func>);
 }
 

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_IR_IRBUILDER_H
 #define HERMES_IR_IRBUILDER_H
 
@@ -13,6 +14,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 #include "hermes/AST/Context.h"
+#include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/Instrs.h"
 
@@ -479,8 +481,8 @@ class IRBuilder {
       HBCConstructInst *constructorReturnValue);
   HBCProfilePointInst *createHBCProfilePointInst(uint16_t pointIndex);
 
-  HBCCallBuiltinInst *createHBCCallBuiltinInst(
-      int builtinIndex,
+  CallBuiltinInst *createCallBuiltinInst(
+      BuiltinMethod::Enum builtinIndex,
       ArrayRef<Value *> arguments);
   HBCCallDirectInst *createHBCCallDirectInst(
       Function *callee,
@@ -506,6 +508,16 @@ class IRBuilder {
       BinaryOperatorInst::OpKind opKind,
       BasicBlock *trueBlock,
       BasicBlock *falseBlock);
+
+  IteratorBeginInst *createIteratorBeginInst(AllocStackInst *sourceOrNext);
+
+  IteratorNextInst *createIteratorNextInst(
+      AllocStackInst *iterator,
+      AllocStackInst *sourceOrNext);
+
+  IteratorCloseInst *createIteratorCloseInst(
+      AllocStackInst *iterator,
+      bool ignoreInnerException);
 
   UnreachableInst *createUnreachableInst();
 

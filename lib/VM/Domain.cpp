@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/Domain.h"
 
 #include "hermes/VM/Callable.h"
@@ -18,7 +19,7 @@ namespace hermes {
 namespace vm {
 
 VTable Domain::vt{CellKind::DomainKind,
-                  sizeof(Domain),
+                  cellSize<Domain>(),
                   _finalizeImpl,
                   _markWeakImpl,
                   _mallocSizeImpl};
@@ -93,7 +94,7 @@ void DomainSerialize(Serializer &s, const GCCell *cell) {
 void DomainDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::DomainKind && "Expected Domain");
   void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      sizeof(Domain));
+      cellSize<Domain>());
   auto *cell = new (mem) Domain(d);
   auto &samplingProfiler = SamplingProfiler::getInstance();
   samplingProfiler->increaseDomainCount();
@@ -138,7 +139,7 @@ ArrayStorage *Domain::deserializeArrayStorage(Deserializer &d) {
 
 PseudoHandle<Domain> Domain::create(Runtime *runtime) {
   void *mem =
-      runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(sizeof(Domain));
+      runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(cellSize<Domain>());
   auto self = createPseudoHandle(new (mem) Domain(runtime));
   auto &samplingProfiler = SamplingProfiler::getInstance();
   samplingProfiler->increaseDomainCount();
@@ -156,6 +157,11 @@ Domain::~Domain() {
   for (RuntimeModule *rm : runtimeModules_) {
     delete rm;
   }
+}
+
+PseudoHandle<NativeFunction> Domain::getThrowingRequire(
+    Runtime *runtime) const {
+  return createPseudoHandle(throwingRequire_.get(runtime));
 }
 
 void Domain::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
@@ -299,7 +305,7 @@ ExecutionStatus Domain::importCJSModuleTable(
 }
 
 ObjectVTable RequireContext::vt{
-    VTable(CellKind::RequireContextKind, sizeof(RequireContext)),
+    VTable(CellKind::RequireContextKind, cellSize<RequireContext>()),
     RequireContext::_getOwnIndexedRangeImpl,
     RequireContext::_haveOwnIndexedImpl,
     RequireContext::_getOwnIndexedPropertyFlagsImpl,
@@ -310,6 +316,7 @@ ObjectVTable RequireContext::vt{
 };
 
 void RequireContextBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<RequireContext>());
   ObjectBuildMeta(cell, mb);
 }
 
@@ -317,14 +324,15 @@ void RequireContextBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 RequireContext::RequireContext(Deserializer &d) : JSObject(d, &vt.base) {}
 
 void RequireContextSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(s, cell);
+  JSObject::serializeObjectImpl(
+      s, cell, JSObject::numOverlapSlots<RequireContext>());
   s.endObject(cell);
 }
 
 void RequireContextDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::RequireContextKind && "Expected RequireContext");
   void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::No>(
-      sizeof(RequireContext));
+      cellSize<RequireContext>());
   auto *cell = new (mem) RequireContext(d);
   d.endObject(cell);
 }
@@ -334,18 +342,18 @@ Handle<RequireContext> RequireContext::create(
     Runtime *runtime,
     Handle<Domain> domain,
     Handle<StringPrimitive> dirname) {
-  void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::No>(
-      sizeof(RequireContext));
-  auto self = runtime->makeHandle(
-      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
-          new (mem) RequireContext(
-              runtime,
-              vmcast<JSObject>(runtime->objectPrototype),
-              runtime->getHiddenClassForPrototypeRaw(
-                  vmcast<JSObject>(runtime->objectPrototype)))));
+  JSObjectAlloc<RequireContext> mem{runtime};
+  auto self = mem.initToHandle(new (mem) RequireContext(
+      runtime,
+      vmcast<JSObject>(runtime->objectPrototype),
+      runtime->getHiddenClassForPrototypeRaw(
+          vmcast<JSObject>(runtime->objectPrototype),
+          ANONYMOUS_PROPERTY_SLOTS)));
 
-  JSObject::addInternalProperties(self, runtime, 2, domain);
-  JSObject::setInternalProperty(*self, runtime, 1, dirname.getHermesValue());
+  JSObject::setInternalProperty(
+      *self, runtime, domainPropIndex(), domain.getHermesValue());
+  JSObject::setInternalProperty(
+      *self, runtime, dirnamePropIndex(), dirname.getHermesValue());
 
   return self;
 }

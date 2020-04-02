@@ -4,9 +4,9 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/facebook/hermes/blob/master/CONTRIBUTING.md)
 <img src="./website/static/img/logo.svg" alt="Hermes logo - large H with wings" align="right" width="20%"/>
 
-Hermes is a JavaScript engine optimized for fast startup of [React Native](https://facebook.github.io/react-native/) apps on Android. It features ahead-of-time static optimization and compact bytecode.
+Hermes is a JavaScript engine optimized for fast startup of [React Native](https://reactnative.dev/) apps on Android. It features ahead-of-time static optimization and compact bytecode.
 
-If you're only interested in using pre-built Hermes in a new or existing React Native app, you do not need to follow this guide or have direct access to the Hermes source. Instead, just follow [these instructions to enable Hermes](https://facebook.github.io/react-native/docs/hermes).
+If you're only interested in using pre-built Hermes in a new or existing React Native app, you do not need to follow this guide or have direct access to the Hermes source. Instead, just follow [these instructions to enable Hermes](https://reactnative.dev/docs/hermes).
 
 If you want to know how to build and hack on Hermes directly, and/or integrate Hermes built from source into a React Native app then read on.
 
@@ -21,7 +21,6 @@ To build a local debug version of the Hermes CLI tools the following steps shoul
 mkdir hermes_workingdir
 cd hermes_workingdir
 git clone https://github.com/facebook/hermes.git
-hermes/utils/build/build_llvm.py
 hermes/utils/build/configure.py
 cd build
 ninja
@@ -33,8 +32,7 @@ Or if you're using Windows, the following should get you going in a Git Bash she
 mkdir hermes_workingdir
 cd hermes_workingdir
 git -c core.autocrlf=false clone https://github.com/facebook/hermes.git
-hermes/utils/build/build_llvm.py --build-system='Visual Studio 16 2019' --cmake-flags='-A x64' --distribute
-hermes/utils/build/configure.py --build-system='Visual Studio 16 2019' --cmake-flags='-A x64 -DLLVM_ENABLE_LTO=OFF' --distribute
+hermes/utils/build/configure.py --build-system='Visual Studio 16 2019' --cmake-flags='-A x64 --distribute
 cd build
 MSBuild.exe ALL_BUILD.vcxproj /p:Configuration=Release
 ```

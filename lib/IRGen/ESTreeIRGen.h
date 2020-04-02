@@ -1,12 +1,14 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_IRGEN_ESTREEIRGEN_H
 #define HERMES_IRGEN_ESTREEIRGEN_H
 
+#include "IRInstrument.h"
 #include "hermes/ADT/ScopedHashTable.h"
 #include "hermes/AST/SemValidate.h"
 #include "hermes/IR/IRBuilder.h"
@@ -207,8 +209,11 @@ class SurroundingTry {
   /// Optional debug location to be used for the TryEnd instruction.
   SMLoc const tryEndLoc{};
 
-  using GenFinalizerCB =
-      std::function<void(ESTree::Node *, ControlFlowChange cfc)>;
+  /// \param continueTarget if cfc is Continue, then the target of that
+  /// continue, which is used to determine whether to emit 'finally' code in
+  /// certain cases such as for-of.
+  using GenFinalizerCB = std::function<
+      void(ESTree::Node *, ControlFlowChange cfc, BasicBlock *continueTarget)>;
 
   /// An optional callback that will be invoked to generate the code for the
   /// finalizer.
@@ -333,6 +338,8 @@ class ESTreeIRGen {
   Module *Mod;
   /// The IRBuilder we use to construct the module.
   IRBuilder Builder;
+  /// Optional instrumentation
+  IRInstrument instrumentIR_;
   /// The root of the ESTree.
   ESTree::Node *Root;
   /// This is a list of parsed global property declaration files.
@@ -386,11 +393,13 @@ class ESTreeIRGen {
   void doCJSModule(
       Function *topLevelFunction,
       sem::FunctionInfo *semInfo,
+      uint32_t id,
       llvm::StringRef filename);
 
   /// Perform IR generation for a lazy function.
-  /// \return the newly allocated generated Function IR.
-  Function *doLazyFunction(hbc::LazyCompilationData *lazyData);
+  /// \return the newly allocated generated Function IR and lexical root
+  std::pair<Function *, Function *> doLazyFunction(
+      hbc::LazyCompilationData *lazyData);
 
   /// Generate a function which immediately throws the specified SyntaxError
   /// message.
@@ -477,15 +486,75 @@ class ESTreeIRGen {
   Value *genExpression(ESTree::Node *expr, Identifier nameHint = Identifier{});
 
   /// Generate an expression and perform a conditional branch depending on
-  /// whether the expression evaluates to true or false.
+  /// whether it evaluates to true or false (or optionally, nullish).
+  /// \param onNullish when not nullptr, the block to branch to if expr
+  ///   is nullish (undefined or null). Note that this supersedes `onFalse` when
+  ///   provided. If onNullish is nullptr, then `onFalse` will be branched to
+  ///   when expr is nullish, by virtue of boolean coercion.
   void genExpressionBranch(
       ESTree::Node *expr,
       BasicBlock *onTrue,
-      BasicBlock *onFalse);
+      BasicBlock *onFalse,
+      BasicBlock *onNullish);
+
+  /// Convert the \p input into an array, spreading SpreadElements
+  /// using for-or iteration semantics.
+  /// Allows sharing spread code between genArrayExpr and genCallExpr.
+  Value *genArrayFromElements(ESTree::NodeList &list);
 
   Value *genObjectExpr(ESTree::ObjectExpressionNode *Expr);
   Value *genArrayExpr(ESTree::ArrayExpressionNode *Expr);
   Value *genCallExpr(ESTree::CallExpressionNode *call);
+
+  /// Generates a call expression in an optional chain.
+  /// \param shortCircuitBB the block to jump to upon short circuiting,
+  ///    when the `?.` operator is used. If null, this is the outermost
+  ///    optional expression in the chain, and will create its own
+  ///    shortCircuitBB.
+  Value *genOptionalCallExpr(
+      ESTree::OptionalCallExpressionNode *call,
+      BasicBlock *shortCircuitBB);
+
+  /// Emits the actual call for \p call, and is used as a helper function for
+  /// genCallExpr and genOptionalCallExpr.
+  /// \return the result value of the call.
+  Value *
+  emitCall(ESTree::CallExpressionLikeNode *call, Value *callee, Value *thisVal);
+
+  struct MemberExpressionResult {
+    /// Value of the looked up property.
+    Value *result;
+    /// Object the property is being looked up on.
+    Value *base;
+  };
+
+  enum class MemberExpressionOperation {
+    Load,
+    Delete,
+  };
+
+  /// Generate IR for a member expression.
+  /// \param op the operation to perform on the property if it exists.
+  ///    If Load, the result is set to the value of the property.
+  ///    If Delete, the result is the result of DeletePropertyInst.
+  /// \return both the result and the base object.
+  MemberExpressionResult genMemberExpression(
+      ESTree::MemberExpressionNode *Mem,
+      MemberExpressionOperation op);
+
+  /// Generate IR for a member expression in the middle of an optional chain.
+  /// \param shortCircuitBB the block to jump to upon short circuiting,
+  ///    when the `?.` operator is used. If null, this is the outermost
+  ///    optional expression in the chain, and will create its own
+  ///    shortCircuitBB.
+  /// \param op the operation to perform on the property if it exists.
+  ///    If Load, the result is set to the value of the property.
+  ///    If Delete, the result is the result of DeletePropertyInst.
+  /// \return both the result and the base object.
+  MemberExpressionResult genOptionalMemberExpression(
+      ESTree::OptionalMemberExpressionNode *mem,
+      BasicBlock *shortCircuitBB,
+      MemberExpressionOperation op);
 
   /// Generate IR for a direct call to eval(). This is invoked from
   /// genCallExpr().
@@ -496,6 +565,7 @@ class ESTreeIRGen {
   Value *genConditionalExpr(ESTree::ConditionalExpressionNode *C);
   Value *genSequenceExpr(ESTree::SequenceExpressionNode *Sq);
   Value *genYieldExpr(ESTree::YieldExpressionNode *Y);
+  Value *genYieldStarExpr(ESTree::YieldExpressionNode *Y);
   Value *genUnaryExpression(ESTree::UnaryExpressionNode *U);
   Value *genUpdateExpr(ESTree::UpdateExpressionNode *updateExpr);
   Value *genLogicalExpression(ESTree::LogicalExpressionNode *logical);
@@ -505,7 +575,8 @@ class ESTreeIRGen {
   void genLogicalExpressionBranch(
       ESTree::LogicalExpressionNode *logical,
       BasicBlock *onTrue,
-      BasicBlock *onFalse);
+      BasicBlock *onFalse,
+      BasicBlock *onNullish);
 
   /// Generate IR for the identifier expression.
   /// We need to know whether it's after typeof (\p afterTypeOf),
@@ -531,10 +602,13 @@ class ESTreeIRGen {
   /// \param isReturn the slot indicating whether the user requested a return.
   /// \param nextBB the next BasicBlock to run if the user did not request a
   ///   return.
+  /// \param received if non-null, the stack location at which to store the
+  ///   value received from the user as the arg to next(), throw(), or return().
   Value *genResumeGenerator(
       ESTree::YieldExpressionNode *yield,
       AllocStackInst *isReturn,
-      BasicBlock *nextBB);
+      BasicBlock *nextBB,
+      AllocStackInst *received = nullptr);
 
   /// @}
 
@@ -556,7 +630,7 @@ class ESTreeIRGen {
   ///     normally (neither through an exception nor break/return/continue). It
   ///     executes outside of the exception scope (exceptions here will not be
   ///     caught by the handler).
-  /// \param emitHandler(BasicBlock *nextBlock) emits the code to execute when
+  /// \param emitHandler emits the code to execute when
   ///     the exception is caught. It must emit a CatchInstu to clear the active
   ///     exception, even if it ignores it. \p nextBlock is passed as a
   ///     parameter.
@@ -568,7 +642,9 @@ class ESTreeIRGen {
       EF emitNormalCleanup,
       EH emitHandler);
 
-  /// Generate IR "catch (e)".
+  /// \param catchParam is not null, create the required variable binding
+  ///     for the catch parameter and emit the store.
+  /// \return the CatchInst.
   CatchInst *prepareCatch(ESTree::NodePtr catchParam);
 
   /// When we see a control change such as return, break, continue,
@@ -578,10 +654,13 @@ class ESTreeIRGen {
   ///   the goto (break, continue, return)
   /// \param targetTry  the try statement surrounding the AST node of the label.
   /// \param cfc indicates whether this is "continue" or "break".
+  /// \param continueTarget when cfc == Continue, the target of the branch of
+  /// the continue.
   void genFinallyBeforeControlChange(
       SurroundingTry *sourceTry,
       SurroundingTry *targetTry,
-      ControlFlowChange cfc);
+      ControlFlowChange cfc,
+      BasicBlock *continueTarget = nullptr);
 
   /// @}
 
@@ -645,6 +724,8 @@ class ESTreeIRGen {
 
   enum class InitES5CaptureState { No, Yes };
 
+  enum class DoEmitParameters { No, Yes };
+
   /// Emit the function prologue for the current function, consisting of the
   /// following things:
   /// - a next block, so we can append instructions to it to generate the actual
@@ -658,10 +739,14 @@ class ESTreeIRGen {
   /// \param entry the unpopulated entry block for the function
   /// \param doInitES5CaptureState initialize the capture state for ES5
   ///     functions.
+  /// \param doEmitParameters run code to initialize parameters in the function.
+  ///     When "No", only set the .length of the resultant function.
+  ///     Used for the outer function of generator functions, e.g.
   void emitFunctionPrologue(
       ESTree::FunctionLikeNode *funcNode,
       BasicBlock *entry,
-      InitES5CaptureState doInitES5CaptureState);
+      InitES5CaptureState doInitES5CaptureState,
+      DoEmitParameters doEmitParameters);
 
   /// Emit the loading and initialization of parameters in the function
   /// prologue.
@@ -719,7 +804,7 @@ class ESTreeIRGen {
 
   /// Generate the IR for the property field of the MemberExpressionNode.
   /// The property field may be a string literal or some computed expression.
-  Value *genMemberExpressionProperty(ESTree::MemberExpressionNode *Mem);
+  Value *genMemberExpressionProperty(ESTree::MemberExpressionLikeNode *Mem);
 
   /// Check whether we know that an LReference to the specified AST node can
   /// be created without any side effects, including throwing. This is not
@@ -729,16 +814,21 @@ class ESTreeIRGen {
 
   /// Generates a left hand side reference from valid estree nodes
   /// that can be translated to lref.
-  /// \param init indicates whether this reference is a declaration
+  /// \param declInit indicates whether this reference is a declaration
   ///     initialization, in which case the TDZ check on store should be
   ///     omitted.
   LReference createLRef(ESTree::Node *node, bool declInit);
 
-  /// Generate a call to a method of HermesInterna with the specified name \p
+  /// Generate a call to a method of HermesInternal with the specified name \p
   /// name.
   Value *genHermesInternalCall(
       StringRef name,
       Value *thisValue,
+      ArrayRef<Value *> args);
+
+  /// Generate a builtin call.
+  Value *genBuiltinCall(
+      BuiltinMethod::Enum builtinIndex,
       ArrayRef<Value *> args);
 
   /// Generate code to ensure that \p value is an object and it it isn't, throw
@@ -746,10 +836,10 @@ class ESTreeIRGen {
   void emitEnsureObject(Value *value, StringRef message);
 
   /// \return the internal value @@iterator
-  Value *emitIterarorSymbol();
+  Value *emitIteratorSymbol();
 
   /// IteratorRecord as defined in ES2018 7.4.1 GetIterator
-  struct IteratorRecord {
+  struct IteratorRecordSlow {
     Value *iterator;
     Value *nextMethod;
   };
@@ -760,8 +850,11 @@ class ESTreeIRGen {
   /// Call obj[@@iterator], which should return an iterator, and return the
   /// iterator itself and its \c next() method.
   ///
+  /// NOTE: This API is slow and should only be used if it is necessary to
+  /// provide a value to the `next()` method on the iterator.
+  ///
   /// \return (iterator, nextMethod)
-  IteratorRecord emitGetIterator(Value *obj);
+  IteratorRecordSlow emitGetIteratorSlow(Value *obj);
 
   /// ES2018 7.4.2 IteratorNext
   /// https://www.ecma-international.org/ecma-262/9.0/index.html#sec-iteratornext
@@ -770,19 +863,19 @@ class ESTreeIRGen {
   /// object.
   ///
   /// \return the result object.
-  Value *emitIteratorNext(IteratorRecord iteratorRecord);
+  Value *emitIteratorNextSlow(IteratorRecordSlow iteratorRecord);
 
   /// ES2018 7.4.3 IteratorComplete
   /// https://www.ecma-international.org/ecma-262/9.0/index.html#sec-iteratorcomplete
   ///
   /// \return \c iterResult.done
-  Value *emitIteratorComplete(Value *iterResult);
+  Value *emitIteratorCompleteSlow(Value *iterResult);
 
   /// ES2018 7.4.4 IteratorValue
   /// https://www.ecma-international.org/ecma-262/9.0/index.html#sec-iteratorvalue
   ///
   /// \return \c iterResult.value
-  Value *emitIteratorValue(Value *iterResult);
+  Value *emitIteratorValueSlow(Value *iterResult);
 
   /// ES2018 7.4.6 IteratorClose
   /// https://www.ecma-international.org/ecma-262/9.0/index.html#sec-iteratorclose
@@ -790,9 +883,50 @@ class ESTreeIRGen {
   /// \param ignoreInnerException if set, exceptions thrown by the \c
   ///     iterator.return() method will be ignored and its result will not be
   ///     checked whether it is an object.
-  void emitIteratorClose(
-      IteratorRecord iteratorRecord,
+  void emitIteratorCloseSlow(
+      IteratorRecordSlow iteratorRecord,
       bool ignoreInnerException);
+
+  /// Used as the stack storages needed for fast iteration.
+  struct IteratorRecord {
+    /// Storage for the iterator or the index.
+    /// Set to undefined if iteration is complete.
+    AllocStackInst *iterStorage;
+    /// If this is an array being iterated by index, stores the source.
+    /// Otherwise, stores the `iterator.next` method.
+    AllocStackInst *sourceOrNext;
+  };
+
+  /// Emit the IteratorBeginInst for \p obj, which allows us to iterate arrays
+  /// efficiently.
+  IteratorRecord emitGetIterator(Value *obj);
+
+  /// Emit the IteratorNextInst for \p iteratorRecord, which may alter the
+  /// iteratorRecord to indicate completion.
+  Value *emitIteratorNext(IteratorRecord iteratorRecord) {
+    return Builder.createIteratorNextInst(
+        iteratorRecord.iterStorage, iteratorRecord.sourceOrNext);
+  }
+
+  /// If iteratorRecord.iterStorage is undefined, then iteration is complete
+  /// and the user of the iterator may want to branch to an exit code path.
+  /// \return iteratorRecord.iterStorage === undefined
+  Value *emitIteratorComplete(IteratorRecord iteratorRecord) {
+    return Builder.createBinaryOperatorInst(
+        Builder.createLoadStackInst(iteratorRecord.iterStorage),
+        Builder.getLiteralUndefined(),
+        BinaryOperatorInst::OpKind::StrictlyEqualKind);
+  }
+
+  /// Emit the IteratorCloseInst, which will close the iterator if it was
+  /// opened by IteratorBeginInst.
+  /// \param ignoreInnerException ignore any exceptions thrown by `.return()`.
+  Value *emitIteratorClose(
+      IteratorRecord iteratorRecord,
+      bool ignoreInnerException) {
+    return Builder.createIteratorCloseInst(
+        iteratorRecord.iterStorage, ignoreInnerException);
+  }
 
   /// Generate code for destructuring assignment to ArrayPattern or
   /// ObjectPattern.
@@ -848,7 +982,11 @@ class ESTreeIRGen {
   /// If the initializer \p init is nullptr, just return \p value.
   /// Otherwise emit code to check whether \p value equals \c undefined, and
   /// evaluate and return the initializer in that case.
-  Value *emitOptionalInitialization(Value *value, ESTree::Node *init);
+  /// \param nameHint used to provide names for anonymous functions.
+  Value *emitOptionalInitialization(
+      Value *value,
+      ESTree::Node *init,
+      Identifier nameHint);
 
  private:
   /// "Converts" a ScopeChain into a SerializedScope by resolving the
@@ -861,6 +999,12 @@ class ESTreeIRGen {
       Function *wrapperFunction,
       const std::shared_ptr<const SerializedScope> &scope,
       int depth);
+
+  /// Add dummy functions for lexical scope debug info
+  void addLexicalDebugInfo(
+      Function *child,
+      Function *global,
+      const std::shared_ptr<const SerializedScope> &scope);
 
   /// Save all variables currently in scope, for lazy compilation.
   std::shared_ptr<SerializedScope> saveCurrentScope();

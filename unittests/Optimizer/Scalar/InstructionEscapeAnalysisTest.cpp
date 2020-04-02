@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/Optimizer/Scalar/InstructionEscapeAnalysis.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
@@ -289,11 +290,11 @@ TEST_F(InstructionEscapeAnalysisTest, AddRemoveInverseTest) {
 using InstructionEscapeAnalysisDeathTest = InstructionEscapeAnalysisTest;
 
 TEST_F(InstructionEscapeAnalysisDeathTest, CannotAnalyzeEmptyRangeTest) {
-  EXPECT_DEATH(addRange(), "Assertion.*nonempty");
+  EXPECT_DEATH_IF_SUPPORTED(addRange(), "Assertion.*nonempty");
 }
 
 TEST_F(InstructionEscapeAnalysisDeathTest, CannotRemoveBeforeAddTest) {
-  EXPECT_DEATH(removeLastRange(), "Assertion.*add");
+  EXPECT_DEATH_IF_SUPPORTED(removeLastRange(), "Assertion.*add");
 }
 
 TEST_F(InstructionEscapeAnalysisDeathTest, CannotRemoveTwiceInARowTest) {
@@ -301,11 +302,11 @@ TEST_F(InstructionEscapeAnalysisDeathTest, CannotRemoveTwiceInARowTest) {
   addRange();
   addRange();
   removeLastRange();
-  EXPECT_DEATH(removeLastRange(), "Assertion.*once");
+  EXPECT_DEATH_IF_SUPPORTED(removeLastRange(), "Assertion.*once");
 }
 
 TEST_F(InstructionEscapeAnalysisDeathTest, CannotGetPrefixBeforeAddRangeTest) {
-  EXPECT_DEATH(longestPrefix(), "Assertion.*add");
+  EXPECT_DEATH_IF_SUPPORTED(longestPrefix(), "Assertion.*add");
 }
 
 #endif // !NDEBUG

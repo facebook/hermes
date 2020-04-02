@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 //===----------------------------------------------------------------------===//
 /// \file
 /// ES6.0 25.3.1 The %GeneratorPrototype% Object
@@ -99,6 +100,10 @@ static CallResult<Handle<JSObject>> generatorResume(
     generator->setState(GeneratorInnerFunction::State::Completed);
     return ExecutionStatus::EXCEPTION;
   }
+  if (LLVM_UNLIKELY(generator->isDelegated())) {
+    generator->setIsDelegated(false);
+    return Handle<JSObject>::vmcast(runtime->makeHandle(*valueRes));
+  }
   return createIterResultObject(
       runtime,
       runtime->makeHandle(*valueRes),
@@ -114,8 +119,8 @@ generatorPrototypeNext(void *, Runtime *runtime, NativeArgs args) {
 
   auto result = generatorResume(
       runtime,
-      toHandle(
-          runtime, JSGenerator::getInnerFunction(runtime, generatorRes->get())),
+      runtime->makeHandle(
+          JSGenerator::getInnerFunction(runtime, generatorRes->get())),
       args.getArgHandle(0));
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -158,6 +163,10 @@ static CallResult<Handle<JSObject>> generatorResumeAbrupt(
     generator->setState(GeneratorInnerFunction::State::Completed);
     return ExecutionStatus::EXCEPTION;
   }
+  if (LLVM_UNLIKELY(generator->isDelegated())) {
+    generator->setIsDelegated(false);
+    return Handle<JSObject>::vmcast(runtime->makeHandle(*valueRes));
+  }
   return createIterResultObject(
       runtime,
       runtime->makeHandle(*valueRes),
@@ -175,8 +184,8 @@ generatorPrototypeReturnOrThrow(void *ctx, Runtime *runtime, NativeArgs args) {
 
   auto result = generatorResumeAbrupt(
       runtime,
-      toHandle(
-          runtime, JSGenerator::getInnerFunction(runtime, generatorRes->get())),
+      runtime->makeHandle(
+          JSGenerator::getInnerFunction(runtime, generatorRes->get())),
       args.getArgHandle(0),
       isThrow);
   if (result == ExecutionStatus::EXCEPTION) {

@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
-# This source code is licensed under the MIT license found in the LICENSE
-# file in the root directory of this source tree.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 
 # RUN: bash %s %S %T %hermes
 # shellcheck shell=bash disable=SC2086
@@ -47,7 +47,7 @@ run_1_test() {
   # 2. Ignore column number: Uglifyjs generated source map does not have full fidelity range mapping
   #   for every single tokens so if a generated line/column is in the middle of a mapping range the symbolicated
   #   trace will report the beginning of the range in original source most likely diff in column numbers.
-  python "$SRCDIR/stacktrace_diff.py" "$ORIG_TRACE" "$SYM_TRACE"
+  python3 "$SRCDIR/stacktrace_diff.py" "$ORIG_TRACE" "$SYM_TRACE"
 }
 
 # -gc-sanitize-handles=0 because ASAN build is far too slow without it.

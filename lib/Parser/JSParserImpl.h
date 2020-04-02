@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_PARSER_JSPARSERIMPL_H
 #define HERMES_PARSER_JSPARSERIMPL_H
 
@@ -12,6 +13,7 @@
 #include "hermes/Parser/JSLexer.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Parser/PreParser.h"
+#include "hermes/Support/Compiler.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -169,7 +171,17 @@ class JSParserImpl {
   unsigned recursionDepth_{0};
 
   /// Self-explanatory: the maximum depth of parser recursion.
-  static constexpr unsigned MAX_RECURSION_DEPTH = 1024;
+  static constexpr unsigned MAX_RECURSION_DEPTH =
+#ifdef HERMES_LIMIT_STACK_DEPTH
+      128
+#elif defined(_WINDOWS) && defined(HERMES_SLOW_DEBUG)
+      256
+#elif defined(_WINDOWS)
+      512
+#else
+      1024
+#endif
+      ;
 
   /// Set when the parser sees the 'use static builtin' directive in any scope.
   bool useStaticBuiltin_{false};
@@ -177,6 +189,10 @@ class JSParserImpl {
   /// Set when the parser is inside a generator function.
   /// This is used when checking if `yield` is a valid Identifier name.
   bool paramYield_{false};
+
+  /// Set when the parser is inside an async function.
+  /// This is used when checking if `await` is a valid Identifier name.
+  bool paramAwait_{false};
 
   // Certain known identifiers which we need to use when constructing the
   // ESTree or when parsing;
@@ -201,6 +217,8 @@ class JSParserImpl {
   UniqueString *yieldIdent_;
   UniqueString *newIdent_;
   UniqueString *targetIdent_;
+  UniqueString *asyncIdent_;
+  UniqueString *awaitIdent_;
   /// String representation of all tokens.
   UniqueString *tokenIdent_[NUM_JS_TOKENS];
 
@@ -360,12 +378,13 @@ class JSParserImpl {
   bool checkAssign() const;
 
   /// Check whether the current token begins a Declaration.
-  bool checkDeclaration() const {
+  bool checkDeclaration() {
     return checkN(
-        TokenKind::rw_function,
-        letIdent_,
-        TokenKind::rw_const,
-        TokenKind::rw_class);
+               TokenKind::rw_function,
+               letIdent_,
+               TokenKind::rw_const,
+               TokenKind::rw_class) ||
+        (check(asyncIdent_) && checkAsyncFunction());
   }
 
   /// Check whether the current token begins a template literal.
@@ -376,6 +395,10 @@ class JSParserImpl {
   /// Check whether the current token can be the token after the end of an
   /// AssignmentExpression.
   bool checkEndAssignmentExpression() const;
+
+  /// Check whether we match 'async [no LineTerminator here] function'.
+  /// \pre the current token is 'async'.
+  bool checkAsyncFunction();
 
   /// Performs automatic semicolon insertion and optionally reports an error
   /// if a semicolon is missing and cannot be inserted.
@@ -391,6 +414,18 @@ class JSParserImpl {
 
   /// Check whether the recursion depth has been exceeded, and if so generate
   /// and error and return true.
+  /// If the depth has not been exceeded return false.
+  /// NOTE: This is intended to stay inline to avoid a function call unless the
+  /// depth was actually exceeded.
+  inline bool recursionDepthCheck() {
+    if (LLVM_LIKELY(recursionDepth_ < MAX_RECURSION_DEPTH)) {
+      return false;
+    }
+    return recursionDepthExceeded();
+  }
+
+  /// Assert that the recursion depth has been exceeded, generate an error
+  /// and return true.
   bool recursionDepthExceeded();
 
   // Parser functions. All of these correspond more or less directly to grammar
@@ -479,10 +514,15 @@ class JSParserImpl {
   /// Can be used to validate identifiers after we've passed lexing them.
   /// The caller must report any errors if this function returns false.
   /// \param param [Yield]
+  /// \param range the source range of the identifier to validate.
   /// \param id the string to be validated.
   /// \param kind the TokenKind provided when the string was lexed.
-  /// \return true if \param id is a valid binding identifier.
-  bool validateBindingIdentifier(Param param, UniqueString *id, TokenKind kind);
+  /// \return true if \p id is a valid binding identifier.
+  bool validateBindingIdentifier(
+      Param param,
+      SMRange range,
+      UniqueString *id,
+      TokenKind kind);
 
   /// ES 2015 12.1
   /// Does not generate an error. It is expected that the caller will do it.
@@ -490,12 +530,10 @@ class JSParserImpl {
   Optional<ESTree::IdentifierNode *> parseBindingIdentifier(Param param);
   /// Parse a VariableStatement or LexicalDeclaration.
   /// \param param [In, Yield]
-  /// \param declLoc the location of the let/const for error messages.
   Optional<ESTree::VariableDeclarationNode *> parseLexicalDeclaration(
       Param param);
   /// Parse a VariableStatement or LexicalDeclaration.
   /// \param param [Yield]
-  /// \param declLoc the location of the let/const for error messages.
   Optional<ESTree::VariableDeclarationNode *> parseVariableStatement(
       Param param);
 
@@ -575,8 +613,23 @@ class JSParserImpl {
   Optional<ESTree::FunctionExpressionNode *> parseFunctionExpression(
       bool forceEagerly = false);
 
-  /// Parse MemberExpression except the production starting with "new".
-  Optional<ESTree::Node *> parseMemberExpressionExceptNew();
+  /// Indicates whether certain functions should recognize `?.` as a chaining
+  /// operator. `?.` is not allowed in a NewExpression, for example.
+  enum class IsConstructorCall { No, Yes };
+
+  /// Parse OptionalExpression except the MemberExpression production starting
+  /// with "new".
+  Optional<ESTree::Node *> parseOptionalExpressionExceptNew(
+      IsConstructorCall isConstructorCall);
+
+  /// The "tail" of \c parseOptionalExpressionExceptNew(). It parses the
+  /// optional MemberExpression following the base PrimaryExpression. It is
+  /// ordinarily called by \c parseOptionalExpressionExceptNew(), but we need
+  /// to call it explicitly after parsing "new.target".
+  Optional<ESTree::Node *> parseOptionalExpressionExceptNew_tail(
+      IsConstructorCall isConstructorCall,
+      SMLoc objectLoc,
+      ESTree::Node *expr);
 
   /// Returns a dummy Optional<> just to indicate success or failure like all
   /// other functions.
@@ -586,17 +639,25 @@ class JSParserImpl {
 
   /// \param objectLoc the location of the object part of the expression and is
   ///     used for error display.
+  /// \param seenOptionalChain true if there was a ?. leading up to the
+  ///     member select (set by parseOptionalExpressionExceptNew)
   Optional<ESTree::Node *> parseMemberSelect(
       SMLoc objectLoc,
-      ESTree::NodePtr expr);
+      ESTree::NodePtr expr,
+      bool seenOptionalChain);
 
   /// \param startLoc the start location of the expression, used for error
   ///     display.
+  /// \param seenOptionalChain true when `?.` is used in the chain leading
+  ///     to this call expression
+  /// \param optional true when `?.` is used immediately prior to the Arguments.
   Optional<ESTree::Node *> parseCallExpression(
       SMLoc startLoc,
-      ESTree::NodePtr expr);
+      ESTree::NodePtr expr,
+      bool seenOptionalChain,
+      bool optional);
 
-  /// Parse a \c NewExpression or a \c MemberExpression.
+  /// Parse a \c NewExpression or a \c OptionalExpression.
   /// After we have recognized "new", there is an apparent ambiguity in the
   /// grammar between \c NewExpression and \c MemberExpression:
   ///
@@ -611,7 +672,12 @@ class JSParserImpl {
   ///
   /// The difference is that in the first case there are no arguments to the
   /// constructor.
-  Optional<ESTree::Node *> parseNewExpressionOrMemberExpression();
+  /// \param isConstructorCall is Yes when we have already recognized a "new".
+  ///     This is used because we must disallow the ?. token before the
+  ///     arguments to a constructor call only when "new" is used. For example,
+  ///     the code `new a?.b()` is not valid.
+  Optional<ESTree::Node *> parseNewExpressionOrOptionalExpression(
+      IsConstructorCall isConstructorCall);
   Optional<ESTree::Node *> parseLeftHandSideExpression();
   Optional<ESTree::Node *> parsePostfixExpression();
   Optional<ESTree::Node *> parseUnaryExpression();
@@ -639,11 +705,21 @@ class JSParserImpl {
   /// Reparse the specified node as arrow function parameter list and store the
   /// parameter list in \p paramList. Print an error and return false on error,
   /// otherwise return true.
-  bool reparseArrowParameters(ESTree::Node *node, ESTree::NodeList &paramList);
+  /// \param[out] reparsedAsync set to true when the params indicate an async
+  /// function, false otherwise.
+  bool reparseArrowParameters(
+      ESTree::Node *node,
+      ESTree::NodeList &paramList,
+      bool &reparsedAsync);
 
+  /// \param forceAsync set to true when it is already known that the arrow
+  ///   function expression is 'async'. This occurs when there are no parens
+  ///   around the argument list.
   Optional<ESTree::Node *> parseArrowFunctionExpression(
       Param param,
-      ESTree::Node *leftExpr);
+      ESTree::Node *leftExpr,
+      SMLoc startLoc,
+      bool forceAsync);
 
   /// Reparse an ArrayExpression into an ArrayPattern.
   /// \param inDecl whether this is a declaration context or assignment.
@@ -701,23 +777,6 @@ class JSParserImpl {
   ///    null if it isn't.
   ESTree::ExpressionStatementNode *parseDirective();
 
-  /// Allocate a binary expression node with the specified children and
-  /// operator.
-  inline ESTree::NodePtr
-  newBinNode(ESTree::NodePtr left, TokenKind opKind, ESTree::NodePtr right) {
-    UniqueString *opIdent = getTokenIdent(opKind);
-    if (opKind == TokenKind::ampamp || opKind == TokenKind::pipepipe)
-      return setLocation(
-          left,
-          right,
-          new (context_) ESTree::LogicalExpressionNode(left, right, opIdent));
-    else
-      return setLocation(
-          left,
-          right,
-          new (context_) ESTree::BinaryExpressionNode(left, right, opIdent));
-  }
-
   /// RAII to save and restore the current setting of "strict mode".
   class SaveStrictMode {
     JSParserImpl *const parser_;
@@ -745,8 +804,8 @@ class JSParserImpl {
   };
 };
 
-}; // namespace detail
-}; // namespace parser
-}; // namespace hermes
+} // namespace detail
+} // namespace parser
+} // namespace hermes
 
 #endif // HERMES_PARSER_JSPARSERIMPL_H

@@ -1,5 +1,5 @@
-/**
- * Copyright 2004-present, Facebook, Inc.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,16 @@ inline T callToJni(T&& t) {
 template <typename T>
 inline JniType<T> callToJni(local_ref<T>&& sref) {
   return sref.get();
+}
+
+template<typename T>
+enable_if_t<IsPlainJniReference<T>(), T> toPlainJniReference(T obj) {
+  return obj;
+}
+
+template<typename T>
+enable_if_t<IsJavaClassType<T>(), JniType<T>> toPlainJniReference(T repr) {
+  return ReprAccess<T>::get(repr);
 }
 
 // Normally, pass through types unmolested.

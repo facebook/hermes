@@ -1,9 +1,11 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
-// RUN: %hermes -hermes-parser -dump-ir -non-strict %s | %FileCheck %s --match-full-lines
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// RUN: %hermes -hermes-parser -dump-ir -non-strict %s -O0 | %FileCheck %s --match-full-lines
 // RUN: %hermes -hermes-parser -dump-ir -non-strict %s -O
 
 // Code that doesn't require creation of the expensive object.

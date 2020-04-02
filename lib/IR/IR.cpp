@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Casting.h"
@@ -153,7 +154,6 @@ bool VariableScope::isGlobalScope() const {
 
 ExternalScope::ExternalScope(Function *function, int32_t depth)
     : VariableScope(ValueKind::ExternalScopeKind, function), depth_(depth) {
-  assert(depth < 0 && "Invalid external scope depth");
   function->addExternalScope(this);
 }
 
@@ -253,17 +253,6 @@ void Instruction::pushOperand(Value *Val) {
   setOperand(Val, getNumOperands() - 1);
 }
 
-bool Instruction::canSetOperand(ValueKind kind, unsigned index) const {
-  switch (getKind()) {
-    default:
-      llvm_unreachable("Invalid kind");
-#define DEF_VALUE(XX, PARENT) \
-  case ValueKind::XX##Kind:   \
-    return cast<XX>(this)->canSetOperandImpl(kind, index);
-#include "hermes/IR/Instrs.def"
-  }
-}
-
 void Instruction::setOperand(Value *Val, unsigned Index) {
   assert(Index < Operands.size() && "Not all operands have been pushed!");
 
@@ -282,7 +271,6 @@ void Instruction::setOperand(Value *Val, unsigned Index) {
 
   // Register this instruction as a user of the new value and set the operand.
   if (Val) {
-    assert(canSetOperand(Val->getKind(), Index) && "Unsupported operand kind!");
     Operands[Index] = Val->addUser(this);
   } else {
     Operands[Index] = {nullptr, 0};

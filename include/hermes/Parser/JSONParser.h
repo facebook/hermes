@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_PARSER_JSONPARSER_H
 #define HERMES_PARSER_JSONPARSER_H
 
@@ -629,19 +630,26 @@ class JSONParser {
   JSONParser(
       JSONFactory &factory,
       std::unique_ptr<llvm::MemoryBuffer> input,
-      SourceErrorManager &sm);
+      SourceErrorManager &sm,
+      bool convertSurrogates = false);
 
-  JSONParser(JSONFactory &factory, StringRef input, SourceErrorManager &sm)
+  JSONParser(
+      JSONFactory &factory,
+      StringRef input,
+      SourceErrorManager &sm,
+      bool convertSurrogates = false)
       : JSONParser(
             factory,
             llvm::MemoryBuffer::getMemBuffer(input, "json"),
-            sm) {}
+            sm,
+            convertSurrogates) {}
 
   JSONParser(
       JSONFactory &factory,
       llvm::MemoryBufferRef input,
       SourceErrorManager &sm,
-      bool showColors = true)
+      bool showColors = true,
+      bool convertSurrogates = false)
       : JSONParser(factory, llvm::MemoryBuffer::getMemBuffer(input), sm) {}
 
   /// Parse the supplied input. On error the result will be empty and the error
@@ -678,7 +686,7 @@ class JSONSharedValue {
   }
 };
 
-}; // namespace parser
-}; // namespace hermes
+} // namespace parser
+} // namespace hermes
 
 #endif // HERMES_PARSER_JSONPARSER_H

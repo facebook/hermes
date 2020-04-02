@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include <cctype>
 #include <string>
 
@@ -16,11 +17,11 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include "hermes/AST/Context.h"
+#include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRVisitor.h"
 #include "hermes/IR/Instrs.h"
-#include "hermes/Inst/Builtins.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/Statistic.h"
 #include "hermes/Utils/Dumper.h"
@@ -102,10 +103,9 @@ void IRPrinter::printTypeLabel(Type T) {
 
 void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
   auto &ctx = I->getContext();
-  if (isa<HBCCallBuiltinInst>(I) && opIndex == 0) {
+  if (isa<CallBuiltinInst>(I) && opIndex == 0) {
     os << "["
-       << inst::getBuiltinMethodName(
-              cast<HBCCallBuiltinInst>(I)->getBuiltinIndex())
+       << getBuiltinMethodName(cast<CallBuiltinInst>(I)->getBuiltinIndex())
        << "]";
   } else if (auto LS = dyn_cast<LiteralString>(V)) {
     os << escapeStr(ctx.toString(LS->getValue()));

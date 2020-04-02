@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_SUPPORT_SOURCEERRORMANAGER_H
 #define HERMES_SUPPORT_SOURCEERRORMANAGER_H
 
@@ -316,6 +317,9 @@ class SourceErrorManager {
     sourceUrls_[bufId] = url;
   }
 
+  /// Find the bufferId of the specified location \p loc.
+  uint32_t findBufferIdForLoc(SMLoc loc) const;
+
   /// Find the bufferId, line and column of the specified location \p loc.
   /// \return true on success, false if could not be found, in which case
   ///     result.isValid() would also return false.
@@ -474,6 +478,6 @@ class SourceErrorManager {
   void doPrintMessage(DiagKind dk, SMLoc loc, SMRange sm, const Twine &msg);
 };
 
-}; // namespace hermes
+} // namespace hermes
 
 #endif // HERMES_SUPPORT_SOURCEERRORMANAGER_H

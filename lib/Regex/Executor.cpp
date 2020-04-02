@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/Regex/Executor.h"
 #include "hermes/Regex/RegexTraits.h"
 
@@ -17,22 +18,6 @@ namespace regex {
 
 template <class Traits>
 struct State;
-
-/// \return whether a regex match performed using the given \p flags can
-/// possibly match the given \p constraints.
-inline bool flagsSatisfyConstraints(
-    constants::MatchFlagType flags,
-    MatchConstraintSet constraints) {
-  if ((constraints & MatchConstraintNonASCII) &&
-      (flags & constants::matchInputAllAscii))
-    return false;
-
-  if ((constraints & MatchConstraintAnchoredAtStart) &&
-      (flags & constants::matchPreviousCharAvailable))
-    return false;
-
-  return true;
-}
 
 /// The kind of error that occurred when trying to find a match.
 enum class MatchRuntimeErrorType {
@@ -53,21 +38,9 @@ enum class Width1Opcode : uint8_t {
   MatchChar16 = (uint8_t)Opcode::MatchChar16,
   MatchCharICase8 = (uint8_t)Opcode::MatchCharICase8,
   MatchCharICase16 = (uint8_t)Opcode::MatchCharICase16,
+  MatchAny = (uint8_t)Opcode::MatchAny,
   MatchAnyButNewline = (uint8_t)Opcode::MatchAnyButNewline,
   Bracket = (uint8_t)Opcode::Bracket,
-};
-
-/// A CapturedRange represents a range of the input string captured by a capture
-/// group. A CaptureGroup may also not have matched, in which case its start is
-/// set to kNotMatched. Note that an unmatched capture group is different than a
-/// capture group that matched an empty string.
-static constexpr uint32_t kNotMatched = UINT32_MAX;
-struct CapturedRange {
-  /// Index of the first captured character, or kNotMatched if not matched.
-  uint32_t start;
-
-  /// One past the index of the last captured character.
-  uint32_t end;
 };
 
 /// LoopData tracks information about a loop during a match attempt. Each State
@@ -80,10 +53,160 @@ struct LoopData {
   uint32_t entryPosition;
 };
 
+/// Cursor is a lightweight value type which allows tracking a character pointer
+/// 'current' within a range 'first' to 'last'.
+/// A cursor may either be forwards, in which case it proceeds from 'first' to
+/// 'last'. It may also (in the case of lookbehind assertions) be backwards, in
+/// which case the cursor proceeds from 'last' to 'first'. The terms "begin" and
+/// "end" denote tracking in the direction of the cursor, while "left" and
+/// "right" are direction independent.
+template <class Traits>
+class Cursor {
+  using CodeUnit = typename Traits::CodeUnit;
+  using CodePoint = typename Traits::CodePoint;
+
+ public:
+  /// Construct with the range \p first and \p last, setting the current
+  /// position to \p first. Note that the \p last is one past the last valid
+  /// character. \p forwards decides whether the current pointer advances
+  /// towards last_ (true) or first_ (false).
+  Cursor(
+      const CodeUnit *first,
+      const CodeUnit *current,
+      const CodeUnit *last,
+      bool forwards)
+      : first_(first),
+        last_(last),
+        current_(current),
+        end_(forwards ? last : first),
+        forwards_(forwards) {
+    assert(first_ <= last_ && "first and last out of order");
+    assert(
+        first_ <= current_ && current <= last_ &&
+        "current pointer not in range");
+  }
+
+  /// \return whether this cursor advances forwards.
+  bool forwards() const {
+    return forwards_;
+  }
+
+  /// Set whether this cursor advances forwards to \p flag.
+  void setForwards(bool flag) {
+    forwards_ = flag;
+    end_ = forwards_ ? last_ : first_;
+  }
+
+  /// \return the number of code units remaining.
+  uint32_t remaining() const {
+    return forwards_ ? last_ - current_ : current_ - first_;
+  }
+
+  /// \return whether we are at the end of the range.
+  bool atEnd() const {
+    return current_ == end_;
+  }
+
+  /// \return the number of code units consumed from the leftmost character.
+  /// This is called "offsetFromLeft" and not "offsetFromStart" to indicate that
+  /// it does not change under backwards tracking.
+  uint32_t offsetFromLeft() const {
+    return current_ - first_;
+  }
+
+  /// \return whether we are at the leftmost position.
+  /// This does not change under backwards tracking.
+  bool atLeft() const {
+    return current_ == first_;
+  }
+
+  /// \return whether we are at the rightmost position.
+  /// This does not change under backwards tracking.
+  bool atRight() const {
+    return current_ == last_;
+  }
+
+  /// \return the current code unit.
+  CodeUnit current() const {
+    // Access the character at index 0 if forwards, -1 if backwards.
+    assert(!atEnd() && "Cursor is at end");
+    return current_[(int)forwards_ - 1];
+  }
+
+  /// \return the current cursor position.
+  const CodeUnit *currentPointer() const {
+    return current_;
+  }
+
+  /// Set the current cursor position to \p current.
+  void setCurrentPointer(const CodeUnit *current) {
+    assert(first_ <= current && current <= last_ && "Current not in range");
+    current_ = current;
+  }
+
+  /// \return the current code unit, advancing the cursor by 1.
+  CodeUnit consume() {
+    CodeUnit result = current();
+    current_ += forwards_ ? 1 : -1;
+    return result;
+  }
+
+  /// \return a code point decoded from the code units under the cursor,
+  /// possibly by decoding surrogates. Advances the cursor by the number of code
+  /// units consumed.
+  CodePoint consumeUTF16() {
+    assert(!atEnd() && "At end");
+
+    // In ASCII we have no surrogates.
+    if (sizeof(CodeUnit) >= 2 && remaining() >= 2) {
+      CodeUnit hi = forwards_ ? current_[0] : current_[-2];
+      CodeUnit lo = forwards_ ? current_[1] : current_[-1];
+      if (isHighSurrogate(hi) && isLowSurrogate(lo)) {
+        current_ += forwards_ ? 2 : -2;
+        return decodeSurrogatePair(hi, lo);
+      }
+    }
+    return consume();
+  }
+
+  /// \return whether a regex match performed using the given \p flags can
+  /// possibly match the given \p constraints.
+  bool satisfiesConstraints(
+      constants::MatchFlagType flags,
+      MatchConstraintSet constraints) const {
+    if ((constraints & MatchConstraintNonASCII) &&
+        (flags & constants::matchInputAllAscii))
+      return false;
+    if ((constraints & MatchConstraintAnchoredAtStart) && current_ != first_)
+      return false;
+    return true;
+  }
+
+ private:
+  // The first code unit in the string.
+  const CodeUnit *first_;
+
+  // One past the last code unit in the string.
+  const CodeUnit *last_;
+
+  // Our position between first_ and last_.
+  // If we are forwards, then the current character is current_[0].
+  // If we are backwards, then the current character is current_[-1].
+  const CodeUnit *current_;
+
+  // A pointer to the end. This is either last (if forwards) or first (if not
+  // forwards). If our current cursor reaches this value, we are done.
+  const CodeUnit *end_;
+
+  // Whether we are tracking forwards or backwards.
+  bool forwards_;
+};
+
 /// A Context records global information about a match attempt.
 template <class Traits>
 struct Context {
-  using CharT = typename Traits::char_type;
+  using CodeUnit = typename Traits::CodeUnit;
+  using CodePoint = typename Traits::CodePoint;
 
   /// The set of backtracking opcodes. These are interpreted by the backtrack()
   /// function.
@@ -136,7 +259,7 @@ struct Context {
     struct {
       BacktrackOp op;
       uint32_t ip; /// Instruction pointer to set.
-      const CharT *value; /// Input string position to set.
+      const CodeUnit *value; /// Input string position to set.
     } setPosition;
 
     /// Fields used by EnterNonGreedyLoop instruction.
@@ -151,8 +274,8 @@ struct Context {
     struct {
       BacktrackOp op; /// The opcode.
       uint32_t continuation; /// The ip for the not-taken branch of the loop.
-      const CharT *min; /// The minimum possible match position.
-      const CharT *max; /// The maximum possible match position.
+      const CodeUnit *min; /// The minimum possible match position.
+      const CodeUnit *max; /// The maximum possible match position.
     } width1Loop;
 
     /* implicit */ BacktrackInsn(BacktrackOp op) : op(op) {}
@@ -176,7 +299,9 @@ struct Context {
     }
 
     /// \return a SetPosition instruction.
-    static BacktrackInsn makeSetPosition(uint32_t ip, const CharT *inputPos) {
+    static BacktrackInsn makeSetPosition(
+        uint32_t ip,
+        const CodeUnit *inputPos) {
       BacktrackInsn result = BacktrackOp::SetPosition;
       result.setPosition.ip = ip;
       result.setPosition.value = inputPos;
@@ -213,10 +338,10 @@ struct Context {
   constants::SyntaxFlags syntaxFlags_;
 
   /// The first character in the input string.
-  const CharT *first_;
+  const CodeUnit *first_;
 
   /// The end of the input string (one-past the last).
-  const CharT *last_;
+  const CodeUnit *last_;
 
   /// Count of submatches.
   uint32_t markedCount_;
@@ -227,6 +352,10 @@ struct Context {
   /// Traits used for canonicalization.
   Traits traits_;
 
+  /// The remaining number of times we will attempt to backtrack.
+  /// This is effectively a timeout on the regexp execution.
+  uint32_t backtracksRemaining_ = kBacktrackLimit;
+
   /// Whether an error occurred during the regex matching.
   MatchRuntimeErrorType error_ = MatchRuntimeErrorType::None;
 
@@ -234,8 +363,8 @@ struct Context {
       llvm::ArrayRef<uint8_t> bytecodeStream,
       constants::MatchFlagType flags,
       constants::SyntaxFlags syntaxFlags,
-      const CharT *first,
-      const CharT *last,
+      const CodeUnit *first,
+      const CodeUnit *last,
       uint32_t markedCount,
       uint32_t loopCount)
       : bytecodeStream_(bytecodeStream),
@@ -246,15 +375,16 @@ struct Context {
         markedCount_(markedCount),
         loopCount_(loopCount) {}
 
-  /// Run the given State \p state, by starting at \p pos and acting on its
+  /// Run the given State \p state, by starting at its cursor and acting on its
   /// ip_ until the match succeeds or fails. If \p onlyAtStart is set, only
   /// test the match at \pos; otherwise test all successive input positions from
   /// pos_ through last_.
   /// \return a pointer to the start of the match if the match succeeds, nullptr
   /// if it fails. If the match succeeds, populates \p state with the state of
   /// the successful match; on failure the state's contents are undefined.
-  /// Note the end of the match can be recovered as state->current_.
-  const CharT *match(State<Traits> *state, const CharT *pos, bool onlyAtStart);
+  /// Note the end of the match can be recovered as
+  /// state->cursor_.currentPointer().
+  const CodeUnit *match(State<Traits> *state, bool onlyAtStart);
 
   /// Backtrack the given state \p s with the backtrack stack \p bts.
   /// \return true if we backatracked, false if we exhausted the stack.
@@ -273,10 +403,12 @@ struct Context {
   /// \return true on success, false if we overflow.
   bool pushBacktrack(BacktrackStack &bts, BacktrackInsn insn) {
     bts.push_back(insn);
-    if (bts.size() > kMaxBacktrackDepth) {
+    if (LLVM_UNLIKELY(bts.size() > kMaxBacktrackDepth) ||
+        LLVM_UNLIKELY(backtracksRemaining_ == 0)) {
       error_ = MatchRuntimeErrorType::MaxStackDepth;
       return false;
     }
+    backtracksRemaining_--;
     return true;
   }
 
@@ -301,7 +433,8 @@ struct Context {
   /// Given a Width1Opcode \p w1opcode, return true if the given char \p c
   /// matches the instruction \p insn (with that opcode).
   template <Width1Opcode w1opcode>
-  inline bool matchWidth1(const Insn *insn, CharT c) const;
+  inline bool matchWidth1(const Insn *insn, CodeUnit c) const;
+
   /// \return true if all chars, stored in contiguous memory after \p insn,
   /// match the chars in state \p s in the same order, case insensitive. Note
   /// the count of chars is given in \p insn.
@@ -309,11 +442,21 @@ struct Context {
       const MatchNCharICase8Insn *insn,
       State<Traits> &s);
 
-  /// Execute the given Width1 instruction \p loopBody on string \p pos up to \p
+  /// Execute the given Width1 instruction \p loopBody on cursor \p c up to \p
   /// max times. \return the number of matches made, not to exceed \p max.
+  /// Note we deliberately accept \p c by value.
   template <Width1Opcode w1opcode>
   inline uint32_t
-  matchWidth1LoopBody(const Insn *loopBody, const CharT *pos, uint32_t max);
+  matchWidth1LoopBody(const Insn *loopBody, Cursor<Traits> c, uint32_t max);
+
+  /// ES6 21.2.5.2.3 AdvanceStringIndex.
+  /// Return the index of the next character to check.
+  /// This is typically just the index + 1, except if Unicode is enabled we need
+  /// to skip surrogate pairs.
+  inline size_t advanceStringIndex(
+      const CodeUnit *start,
+      size_t index,
+      size_t lastIndex) const;
 };
 
 /// We store loop and captured range data contiguously in a single allocation at
@@ -328,10 +471,10 @@ union LoopOrCapturedRange {
 /// with the IP and input position.
 template <typename Traits>
 struct State {
-  using CharT = typename Traits::char_type;
+  using CharT = typename Traits::CodeUnit;
 
-  /// The current character in the input string.
-  const CharT *current_ = nullptr;
+  /// The cursor in the input string.
+  Cursor<Traits> cursor_;
 
   /// The instruction pointer position in the bytecode stream.
   uint32_t ip_ = 0;
@@ -357,10 +500,11 @@ struct State {
     return capturedRanges_[idx];
   }
 
-  /// Construct a state that can hold \p markedCount submatches and \p loopCount
-  /// loop datas.
-  State(uint32_t markedCount, uint32_t loopCount)
-      : capturedRanges_(markedCount, {kNotMatched, kNotMatched}),
+  /// Construct a state which with the given \p cursor, which can hold \p
+  /// markedCount submatches and \p loopCount loop datas.
+  State(Cursor<Traits> cursor, uint32_t markedCount, uint32_t loopCount)
+      : cursor_(cursor),
+        capturedRanges_(markedCount, {kNotMatched, kNotMatched}),
         loopDatas_(loopCount, {0, 0}) {}
 
   State(const State &) = default;
@@ -378,15 +522,13 @@ bool isLineTerminator(CharT c) {
 template <class Traits>
 bool matchesLeftAnchor(Context<Traits> &ctx, State<Traits> &s) {
   bool matchesAnchor = false;
-  if (s.current_ == ctx.first_ &&
-      !(ctx.flags_ & constants::matchPreviousCharAvailable)) {
+  const Cursor<Traits> &c = s.cursor_;
+  if (c.atLeft()) {
     // Beginning of text.
     matchesAnchor = true;
   } else if (
-      (ctx.syntaxFlags_ & constants::multiline) &&
-      (s.current_ > ctx.first_ ||
-       (ctx.flags_ & constants::matchPreviousCharAvailable)) &&
-      isLineTerminator(s.current_[-1])) {
+      (ctx.syntaxFlags_ & constants::multiline) && !c.atLeft() &&
+      isLineTerminator(c.currentPointer()[-1])) {
     // Multiline and after line terminator.
     matchesAnchor = true;
   }
@@ -396,11 +538,12 @@ bool matchesLeftAnchor(Context<Traits> &ctx, State<Traits> &s) {
 template <class Traits>
 bool matchesRightAnchor(Context<Traits> &ctx, State<Traits> &s) {
   bool matchesAnchor = false;
-  if (s.current_ == ctx.last_ && !(ctx.flags_ & constants::matchNotEndOfLine)) {
+  const Cursor<Traits> &c = s.cursor_;
+  if (c.atRight() && !(ctx.flags_ & constants::matchNotEndOfLine)) {
     matchesAnchor = true;
   } else if (
-      (ctx.syntaxFlags_ & constants::multiline) && (s.current_ < ctx.last_) &&
-      isLineTerminator(s.current_[0])) {
+      (ctx.syntaxFlags_ & constants::multiline) && (!c.atRight()) &&
+      isLineTerminator(c.currentPointer()[0])) {
     matchesAnchor = true;
   }
   return matchesAnchor;
@@ -411,10 +554,11 @@ bool matchesRightAnchor(Context<Traits> &ctx, State<Traits> &s) {
 /// is given in \p insn.
 template <class Traits>
 bool matchesNChar8(const MatchNChar8Insn *insn, State<Traits> &s) {
+  Cursor<Traits> &c = s.cursor_;
   auto insnCharPtr = reinterpret_cast<const char *>(insn + 1);
   auto charCount = insn->charCount;
-  for (int offset = 0; offset < charCount; offset++) {
-    if (s.current_[offset] != insnCharPtr[offset]) {
+  for (int idx = 0; idx < charCount; idx++) {
+    if (c.consume() != insnCharPtr[idx]) {
       return false;
     }
   }
@@ -425,12 +569,15 @@ template <class Traits>
 bool Context<Traits>::matchesNCharICase8(
     const MatchNCharICase8Insn *insn,
     State<Traits> &s) {
+  Cursor<Traits> &c = s.cursor_;
   auto insnCharPtr = reinterpret_cast<const char *>(insn + 1);
   auto charCount = insn->charCount;
-  for (int offset = 0; offset < charCount; offset++) {
-    char c = s.current_[offset];
-    char instC = insnCharPtr[offset];
-    if (c != instC && traits_.caseFold(c) != instC) {
+  bool unicode = syntaxFlags_ & constants::unicode;
+  for (int idx = 0; idx < charCount; idx++) {
+    auto c1 = c.consume();
+    char instC = insnCharPtr[idx];
+    if (c1 != instC &&
+        (char32_t)traits_.canonicalize(c1, unicode) != (char32_t)instC) {
       return false;
     }
   }
@@ -440,12 +587,12 @@ bool Context<Traits>::matchesNCharICase8(
 /// \return true if the character \p ch matches a bracket instruction \p insn,
 /// containing the bracket ranges \p ranges. Note the count of ranges is given
 /// in \p insn.
-template <class Traits, bool ICase>
+template <class Traits>
 bool bracketMatchesChar(
     const Context<Traits> &ctx,
     const BracketInsn *insn,
-    const BracketRange16 *ranges,
-    char16_t ch) {
+    const BracketRange32 *ranges,
+    typename Traits::CodePoint ch) {
   const auto &traits = ctx.traits_;
   // Note that if the bracket is negated /[^abc]/, we want to return true if we
   // do not match, false if we do. Implement this by xor with the negate flag.
@@ -467,8 +614,8 @@ bool bracketMatchesChar(
     }
   }
 
-  bool contained = traits.template rangesContain<ICase>(
-      llvm::makeArrayRef(ranges, insn->rangeCount), ch);
+  bool contained =
+      traits.rangesContain(llvm::makeArrayRef(ranges, insn->rangeCount), ch);
   return contained ^ insn->negate;
 }
 
@@ -487,7 +634,7 @@ bool Context<Traits>::prepareToEnterLoopBody(
     return false;
   }
   loopData.iterations++;
-  loopData.entryPosition = s->current_ - first_;
+  loopData.entryPosition = s->cursor_.offsetFromLeft();
 
   // Backtrack and reset contained capture groups.
   for (uint32_t mexp = loop->mexpBegin; mexp != loop->mexpEnd; mexp++) {
@@ -514,7 +661,7 @@ bool Context<Traits>::performEnterNonGreedyLoop(
   // Set the IP and input position, and initialize the state for entering the
   // loop.
   s->ip_ = bodyIp;
-  s->current_ = first_ + loopData.entryPosition;
+  s->cursor_.setCurrentPointer(first_ + loopData.entryPosition);
   prepareToEnterLoopBody(s, loop, backtrackStack);
   return true;
 }
@@ -536,7 +683,7 @@ bool Context<Traits>::backtrack(BacktrackStack &bts, State<Traits> *s) {
         break;
 
       case BacktrackOp::SetPosition:
-        s->current_ = binsn.setPosition.value;
+        s->cursor_.setCurrentPointer(binsn.setPosition.value);
         s->ip_ = binsn.setPosition.ip;
         bts.pop_back();
         return true;
@@ -556,21 +703,25 @@ bool Context<Traits>::backtrack(BacktrackStack &bts, State<Traits> *s) {
         // (if we are greedy) or the min location (nongreedy). Backtrack by
         // decrementing the max (incrementing the min) if we are greedy
         // (nongreedy), setting the IP to that location, and jumping to the loop
-        // exit.
+        // exit. Note that if we are tracking backwards (lookbehind assertion)
+        // our maximum is before our minimum, so we have to reverse the
+        // direction of increment/decrement.
+        bool forwards = s->cursor_.forwards();
         assert(
-            binsn.width1Loop.min <= binsn.width1Loop.max &&
-            "Loop min should be <= max");
+            (forwards ? binsn.width1Loop.min <= binsn.width1Loop.max
+                      : binsn.width1Loop.min >= binsn.width1Loop.max) &&
+            "Loop min should be <= max (or >= max if backwards)");
         if (binsn.width1Loop.min == binsn.width1Loop.max) {
           // We have backtracked as far as possible. Give up.
           bts.pop_back();
           break;
         }
         if (binsn.op == BacktrackOp::GreedyWidth1Loop) {
-          binsn.width1Loop.max--;
-          s->current_ = binsn.width1Loop.max;
+          binsn.width1Loop.max += forwards ? -1 : 1;
+          s->cursor_.setCurrentPointer(binsn.width1Loop.max);
         } else {
-          binsn.width1Loop.min++;
-          s->current_ = binsn.width1Loop.min;
+          binsn.width1Loop.min += forwards ? 1 : -1;
+          s->cursor_.setCurrentPointer(binsn.width1Loop.min);
         }
         s->ip_ = binsn.width1Loop.continuation;
         return true;
@@ -583,7 +734,7 @@ bool Context<Traits>::backtrack(BacktrackStack &bts, State<Traits> *s) {
 
 template <class Traits>
 template <Width1Opcode w1opcode>
-bool Context<Traits>::matchWidth1(const Insn *base, CharT c) const {
+bool Context<Traits>::matchWidth1(const Insn *base, CodeUnit c) const {
   // Note this switch should resolve at compile time.
   assert(
       base->opcode == static_cast<Opcode>(w1opcode) &&
@@ -601,28 +752,33 @@ bool Context<Traits>::matchWidth1(const Insn *base, CharT c) const {
 
     case Width1Opcode::MatchCharICase8: {
       const auto *insn = llvm::cast<MatchCharICase8Insn>(base);
-      return c == insn->c || traits_.caseFold(c) == insn->c;
+      return c == (CodePoint)insn->c ||
+          (CodePoint)traits_.canonicalize(
+              c, syntaxFlags_ & constants::unicode) == (CodePoint)insn->c;
     }
 
     case Width1Opcode::MatchCharICase16: {
       const auto *insn = llvm::cast<MatchCharICase16Insn>(base);
-      return c == insn->c || traits_.caseFold(c) == insn->c;
+      return c == insn->c ||
+          (char32_t)traits_.canonicalize(
+              c, syntaxFlags_ & constants::unicode) == (char32_t)insn->c;
     }
+
+    case Width1Opcode::MatchAny:
+      return true;
 
     case Width1Opcode::MatchAnyButNewline:
       return !isLineTerminator(c);
 
     case Width1Opcode::Bracket: {
-      // BracketInsn is followed by a list of BracketRange16s.
+      // BracketInsn is followed by a list of BracketRange32s.
+      assert(
+          !(syntaxFlags_ & constants::unicode) &&
+          "Unicode should not be set for Width 1 brackets");
       const BracketInsn *insn = llvm::cast<BracketInsn>(base);
-      const BracketRange16 *ranges =
-          reinterpret_cast<const BracketRange16 *>(insn + 1);
-      bool icase = syntaxFlags_ & constants::icase;
-      if (icase) {
-        return bracketMatchesChar<Traits, true>(*this, insn, ranges, c);
-      } else {
-        return bracketMatchesChar<Traits, false>(*this, insn, ranges, c);
-      }
+      const BracketRange32 *ranges =
+          reinterpret_cast<const BracketRange32 *>(insn + 1);
+      return bracketMatchesChar<Traits>(*this, insn, ranges, c);
     }
   }
   llvm_unreachable("Invalid width 1 opcode");
@@ -632,11 +788,11 @@ template <class Traits>
 template <Width1Opcode w1opcode>
 uint32_t Context<Traits>::matchWidth1LoopBody(
     const Insn *insn,
-    const CharT *pos,
+    Cursor<Traits> c,
     uint32_t max) {
   uint32_t iters = 0;
   for (; iters < max; iters++) {
-    if (!matchWidth1<w1opcode>(insn, pos[iters]))
+    if (!matchWidth1<w1opcode>(insn, c.consume()))
       break;
   }
   return iters;
@@ -647,14 +803,14 @@ bool Context<Traits>::matchWidth1Loop(
     const Width1LoopInsn *insn,
     State<Traits> *s,
     BacktrackStack &bts) {
-  const CharT *pos = s->current_;
+  // Note we copy the cursor here.
+  Cursor<Traits> c = s->cursor_;
   uint32_t matched = 0, minMatch = insn->min, maxMatch = insn->max;
 
   // Limit our max to the smaller of the maximum in the loop and number of
   // number of characters remaining. This allows us to avoid having to test for
   // end of input in the loop body.
-  uint32_t remaining = last_ - pos;
-  maxMatch = std::min(remaining, maxMatch);
+  maxMatch = std::min(c.remaining(), maxMatch);
 
   // The loop body follows the loop instruction.
   const Insn *body = static_cast<const Insn *>(&insn[1]);
@@ -665,23 +821,25 @@ bool Context<Traits>::matchWidth1Loop(
   using W1 = Width1Opcode;
   switch (static_cast<Width1Opcode>(body->opcode)) {
     case W1::MatchChar8:
-      matched = matchWidth1LoopBody<W1::MatchChar8>(body, pos, maxMatch);
+      matched = matchWidth1LoopBody<W1::MatchChar8>(body, c, maxMatch);
       break;
     case W1::MatchChar16:
-      matched = matchWidth1LoopBody<W1::MatchChar16>(body, pos, maxMatch);
+      matched = matchWidth1LoopBody<W1::MatchChar16>(body, c, maxMatch);
       break;
     case W1::MatchCharICase8:
-      matched = matchWidth1LoopBody<W1::MatchCharICase8>(body, pos, maxMatch);
+      matched = matchWidth1LoopBody<W1::MatchCharICase8>(body, c, maxMatch);
       break;
     case W1::MatchCharICase16:
-      matched = matchWidth1LoopBody<W1::MatchCharICase16>(body, pos, maxMatch);
+      matched = matchWidth1LoopBody<W1::MatchCharICase16>(body, c, maxMatch);
+      break;
+    case W1::MatchAny:
+      matched = matchWidth1LoopBody<W1::MatchAny>(body, c, maxMatch);
       break;
     case W1::MatchAnyButNewline:
-      matched =
-          matchWidth1LoopBody<W1::MatchAnyButNewline>(body, pos, maxMatch);
+      matched = matchWidth1LoopBody<W1::MatchAnyButNewline>(body, c, maxMatch);
       break;
     case W1::Bracket:
-      matched = matchWidth1LoopBody<W1::Bracket>(body, pos, maxMatch);
+      matched = matchWidth1LoopBody<W1::Bracket>(body, c, maxMatch);
       break;
   }
 
@@ -695,12 +853,14 @@ bool Context<Traits>::matchWidth1Loop(
 
   // Now we know the valid match range.
   // Compute the beginning and end pointers in this range.
-  const CharT *minPos = pos + minMatch;
-  const CharT *maxPos = pos + matched;
+  bool forwards = s->cursor_.forwards();
+  const CodeUnit *pos = s->cursor_.currentPointer();
+  const CodeUnit *minPos = forwards ? pos + minMatch : pos - minMatch;
+  const CodeUnit *maxPos = forwards ? pos + matched : pos - matched;
 
   // If min == max (e.g. /a{3}/) then no backtracking is possible. If min < max,
   // backtracking is possible and we need to add a backtracking instruction.
-  if (minPos < maxPos) {
+  if (minMatch < matched) {
     BacktrackInsn backtrack{insn->greedy ? BacktrackOp::GreedyWidth1Loop
                                          : BacktrackOp::NongreedyWidth1Loop};
     backtrack.width1Loop.continuation = insn->notTakenTarget;
@@ -712,18 +872,50 @@ bool Context<Traits>::matchWidth1Loop(
   }
   // Set the state's current position to either the minimum or maximum location,
   // and point it to the exit of the loop.
-  s->current_ = insn->greedy ? maxPos : minPos;
+  s->cursor_.setCurrentPointer(insn->greedy ? maxPos : minPos);
   s->ip_ = insn->notTakenTarget;
   return true;
 }
 
+/// ES6 21.2.5.2.3. Effectively this skips surrogate pairs if the regexp has the
+/// Unicode flag set.
 template <class Traits>
-auto Context<Traits>::match(
-    State<Traits> *s,
-    const CharT *startLoc,
-    bool onlyAtStart) -> const CharT * {
+inline size_t Context<Traits>::advanceStringIndex(
+    const CodeUnit *start,
+    size_t index,
+    size_t lastIndex) const {
+  if (sizeof(CodeUnit) == 1) {
+    // The input string is ASCII and therefore cannot have surrogate pairs.
+    return index + 1;
+  }
+  // "If unicode is false, return index+1."
+  // "If index+1 >= length, return index+1."
+  if (LLVM_LIKELY(!(syntaxFlags_ & constants::unicode)) ||
+      (index + 1 >= lastIndex))
+    return index + 1;
+
+  // Let first be the code unit value at index index in S
+  // If first < 0xD800 or first > 0xDBFF, return index+1
+  // Let second be the code unit value at index index+1 in S.
+  // If second < 0xDC00 or second > 0xDFFF, return index+1.
+  CodeUnit first = start[index];
+  CodeUnit second = start[index + 1];
+  if (LLVM_LIKELY(!isHighSurrogate(first)) ||
+      LLVM_LIKELY(!isLowSurrogate(second))) {
+    return index + 1;
+  }
+  // Return index+2.
+  return index + 2;
+}
+
+template <class Traits>
+auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
+    -> const CodeUnit * {
   using State = State<Traits>;
   BacktrackStack backtrackStack;
+
+  // We'll refer to the cursor often.
+  Cursor<Traits> &c = s->cursor_;
 
   // Pull out the instruction portion of the bytecode, following the header.
   const uint8_t *const bytecode = &bytecodeStream_[sizeof(RegexBytecodeHeader)];
@@ -731,9 +923,18 @@ auto Context<Traits>::match(
   // Save the incoming IP in case we have to loop.
   const auto startIp = s->ip_;
 
-  // Check how many locations we'll need to check.
-  // Note that we do want to check the empty range [last_, last_)
-  const size_t locsToCheckCount = onlyAtStart ? 1 : 1 + (last_ - startLoc);
+  const CodeUnit *const startLoc = c.currentPointer();
+
+  // Decide how many locations we'll need to check.
+  // Note that we do want to check the empty range at the end, so add one to
+  // remaining().
+  const size_t locsToCheckCount = onlyAtStart ? 1 : 1 + c.remaining();
+
+  // If we are tracking backwards, we should only ever have one potential match
+  // location. This is because advanceStringIndex only ever tracks forwards.
+  assert(
+      (c.forwards() || locsToCheckCount == 1) &&
+      "Can only check one location when cursor is backwards");
 
   // Macro used when a state fails to match.
 #define BACKTRACK()                   \
@@ -743,9 +944,10 @@ auto Context<Traits>::match(
     goto backtrackingExhausted;       \
   } while (0)
 
-  for (size_t locIndex = 0; locIndex < locsToCheckCount; locIndex++) {
-    const CharT *potentialMatchLocation = startLoc + locIndex;
-    s->current_ = potentialMatchLocation;
+  for (size_t locIndex = 0; locIndex < locsToCheckCount;
+       locIndex = advanceStringIndex(startLoc, locIndex, locsToCheckCount)) {
+    const CodeUnit *potentialMatchLocation = startLoc + locIndex;
+    c.setCurrentPointer(potentialMatchLocation);
     s->ip_ = startIp;
   backtrackingSucceeded:
     for (;;) {
@@ -766,68 +968,101 @@ auto Context<Traits>::match(
           s->ip_ += sizeof(RightAnchorInsn);
           break;
 
-        case Opcode::MatchAnyButNewline:
-          if (s->current_ == last_ ||
-              !matchWidth1<Width1Opcode::MatchAnyButNewline>(
-                  base, *s->current_))
+        case Opcode::MatchAny:
+          if (c.atEnd() ||
+              !matchWidth1<Width1Opcode::MatchAny>(base, c.consume()))
             BACKTRACK();
-          s->current_++;
+          s->ip_ += sizeof(MatchAnyInsn);
+          break;
+
+        case Opcode::U16MatchAny:
+          if (c.atEnd())
+            BACKTRACK();
+          c.consumeUTF16();
+          s->ip_ += sizeof(U16MatchAnyInsn);
+          break;
+
+        case Opcode::MatchAnyButNewline:
+          if (c.atEnd() ||
+              !matchWidth1<Width1Opcode::MatchAnyButNewline>(base, c.consume()))
+            BACKTRACK();
           s->ip_ += sizeof(MatchAnyButNewlineInsn);
           break;
 
-        case Opcode::MatchChar8: {
-          if (s->current_ == last_ ||
-              !matchWidth1<Width1Opcode::MatchChar8>(base, *s->current_))
+        case Opcode::U16MatchAnyButNewline:
+          if (c.atEnd() || isLineTerminator(c.consumeUTF16()))
             BACKTRACK();
-          s->current_++;
+          s->ip_ += sizeof(U16MatchAnyButNewlineInsn);
+          break;
+
+        case Opcode::MatchChar8: {
+          if (c.atEnd() ||
+              !matchWidth1<Width1Opcode::MatchChar8>(base, c.consume()))
+            BACKTRACK();
           s->ip_ += sizeof(MatchChar8Insn);
           break;
         }
 
         case Opcode::MatchChar16: {
-          if (s->current_ == last_ ||
-              !matchWidth1<Width1Opcode::MatchChar16>(base, *s->current_))
+          if (c.atEnd() ||
+              !matchWidth1<Width1Opcode::MatchChar16>(base, c.consume()))
             BACKTRACK();
-          s->current_++;
           s->ip_ += sizeof(MatchChar16Insn);
           break;
         }
 
-        case Opcode::MatchCharICase8: {
-          if (s->current_ == last_ ||
-              !matchWidth1<Width1Opcode::MatchCharICase8>(base, *s->current_))
+        case Opcode::U16MatchChar32: {
+          const auto *insn = llvm::cast<U16MatchChar32Insn>(base);
+          if (c.atEnd() || c.consumeUTF16() != (CodePoint)insn->c)
             BACKTRACK();
-          s->current_++;
+          s->ip_ += sizeof(U16MatchChar32Insn);
+          break;
+        }
+
+        case Opcode::MatchCharICase8: {
+          if (c.atEnd() ||
+              !matchWidth1<Width1Opcode::MatchCharICase8>(base, c.consume()))
+            BACKTRACK();
           s->ip_ += sizeof(MatchCharICase8Insn);
           break;
         }
 
         case Opcode::MatchCharICase16: {
-          if (s->current_ == last_ ||
-              !matchWidth1<Width1Opcode::MatchCharICase16>(base, *s->current_))
+          if (c.atEnd() ||
+              !matchWidth1<Width1Opcode::MatchCharICase16>(base, c.consume()))
             BACKTRACK();
-          s->current_++;
           s->ip_ += sizeof(MatchCharICase16Insn);
+          break;
+        }
+
+        case Opcode::U16MatchCharICase32: {
+          const auto *insn = llvm::cast<U16MatchCharICase32Insn>(base);
+          assert(insn->c >= 0x010000 && "Character should be astral");
+          bool matched = false;
+          if (!c.atEnd()) {
+            CodePoint cp = c.consumeUTF16();
+            matched =
+                (cp == (CodePoint)insn->c ||
+                 traits_.canonicalize(cp, true) == (CodePoint)insn->c);
+          }
+          if (!matched)
+            BACKTRACK();
+          s->ip_ += sizeof(U16MatchCharICase32Insn);
           break;
         }
 
         case Opcode::MatchNChar8: {
           const auto *insn = llvm::cast<MatchNChar8Insn>(base);
-
-          if (last_ - s->current_ < insn->charCount || !matchesNChar8(insn, *s))
+          if (c.remaining() < insn->charCount || !matchesNChar8(insn, *s))
             BACKTRACK();
-          s->current_ += insn->charCount;
           s->ip_ += insn->totalWidth();
           break;
         }
 
         case Opcode::MatchNCharICase8: {
           const auto *insn = llvm::cast<MatchNCharICase8Insn>(base);
-
-          if (last_ - s->current_ < insn->charCount ||
-              !matchesNCharICase8(insn, *s))
+          if (c.remaining() < insn->charCount || !matchesNCharICase8(insn, *s))
             BACKTRACK();
-          s->current_ += insn->charCount;
           s->ip_ += insn->totalWidth();
           break;
         }
@@ -837,9 +1072,9 @@ auto Context<Traits>::match(
           // branches are viable. If both are, we have to split our state.
           const AlternationInsn *alt = llvm::cast<AlternationInsn>(base);
           bool primaryViable =
-              flagsSatisfyConstraints(flags_, alt->primaryConstraints);
+              c.satisfiesConstraints(flags_, alt->primaryConstraints);
           bool secondaryViable =
-              flagsSatisfyConstraints(flags_, alt->secondaryConstraints);
+              c.satisfiesConstraints(flags_, alt->secondaryConstraints);
           if (primaryViable && secondaryViable) {
             // We need to explore both branches. Explore the primary branch
             // first, backtrack to the secondary one.
@@ -847,7 +1082,7 @@ auto Context<Traits>::match(
             if (!pushBacktrack(
                     backtrackStack,
                     BacktrackInsn::makeSetPosition(
-                        alt->secondaryBranch, s->current_))) {
+                        alt->secondaryBranch, c.currentPointer()))) {
               return nullptr;
             }
           } else if (primaryViable) {
@@ -865,26 +1100,40 @@ auto Context<Traits>::match(
           break;
 
         case Opcode::Bracket: {
-          if (s->current_ == last_ ||
-              !matchWidth1<Width1Opcode::Bracket>(base, *s->current_))
+          if (c.atEnd() ||
+              !matchWidth1<Width1Opcode::Bracket>(base, c.consume()))
             BACKTRACK();
-          s->current_++;
           s->ip_ += llvm::cast<BracketInsn>(base)->totalWidth();
+          break;
+        }
+
+        case Opcode::U16Bracket: {
+          const U16BracketInsn *insn = llvm::cast<U16BracketInsn>(base);
+          // U16BracketInsn is followed by a list of BracketRange32s.
+          const BracketRange32 *ranges =
+              reinterpret_cast<const BracketRange32 *>(insn + 1);
+          if (c.atEnd() ||
+              !bracketMatchesChar<Traits>(
+                  *this, insn, ranges, c.consumeUTF16()))
+            BACKTRACK();
+          s->ip_ += insn->totalWidth();
           break;
         }
 
         case Opcode::WordBoundary: {
           const WordBoundaryInsn *insn = llvm::cast<WordBoundaryInsn>(base);
+          const auto *charPointer = c.currentPointer();
+
           bool prevIsWordchar = false;
-          if (s->current_ != first_ ||
-              (flags_ & constants::matchPreviousCharAvailable))
+          if (!c.atLeft())
             prevIsWordchar = traits_.characterHasType(
-                s->current_[-1], CharacterClass::Words);
+                charPointer[-1], CharacterClass::Words);
 
           bool currentIsWordchar = false;
-          if (s->current_ != last_)
+          if (!c.atRight())
             currentIsWordchar =
-                traits_.characterHasType(s->current_[0], CharacterClass::Words);
+                traits_.characterHasType(charPointer[0], CharacterClass::Words);
+
           bool isWordBoundary = (prevIsWordchar != currentIsWordchar);
           if (isWordBoundary ^ insn->invert)
             s->ip_ += sizeof(WordBoundaryInsn);
@@ -901,14 +1150,30 @@ auto Context<Traits>::match(
                       insn->mexp - 1, {kNotMatched, kNotMatched}))) {
             return nullptr;
           }
-          s->getCapturedRange(insn->mexp - 1).start = s->current_ - first_;
+          // When tracking backwards (in a lookbehind assertion) we traverse our
+          // input backwards, so set the end before the start.
+          auto &range = s->getCapturedRange(insn->mexp - 1);
+          if (c.forwards()) {
+            range.start = c.offsetFromLeft();
+          } else {
+            range.end = c.offsetFromLeft();
+          }
           s->ip_ += sizeof(BeginMarkedSubexpressionInsn);
           break;
         }
 
         case Opcode::EndMarkedSubexpression: {
           const auto *insn = llvm::cast<EndMarkedSubexpressionInsn>(base);
-          s->getCapturedRange(insn->mexp - 1).end = s->current_ - first_;
+          auto &range = s->getCapturedRange(insn->mexp - 1);
+          if (c.forwards()) {
+            assert(
+                range.start != kNotMatched && "Capture group was not entered");
+            range.end = c.offsetFromLeft();
+          } else {
+            assert(range.end != kNotMatched && "Capture group was not entered");
+            range.start = c.offsetFromLeft();
+          }
+          assert(range.start <= range.end && "Captured range end before start");
           s->ip_ += sizeof(EndMarkedSubexpressionInsn);
           break;
         }
@@ -929,56 +1194,77 @@ auto Context<Traits>::match(
           assert(
               cr.start != kNotMatched &&
               "capture group exited but not entered");
-          // Check to see if we have enough space left in the string.
-          const uint32_t length = cr.end - cr.start;
-          if (uint32_t(last_ - s->current_) < length)
-            BACKTRACK();
-
-          // Check to see if the captured input string matches the current
-          // string.
-          bool matches;
-          if (syntaxFlags_ & constants::icase) {
-            // Case-insensitive comparison.
-            matches = std::equal(
-                first_ + cr.start,
-                first_ + cr.end,
-                s->current_,
-                [&](CharT a, CharT b) {
-                  return traits_.caseFold(a) == traits_.caseFold(b);
-                });
-          } else {
-            // Direct comparison.
-            matches =
-                std::equal(first_ + cr.start, first_ + cr.end, s->current_);
+          // TODO: this can be optimized by hoisting the branches out of the
+          // loop.
+          bool icase = syntaxFlags_ & constants::icase;
+          bool unicode = syntaxFlags_ & constants::unicode;
+          auto capturedStart = first_ + cr.start;
+          auto capturedEnd = first_ + cr.end;
+          Cursor<Traits> cursor2(
+              capturedStart,
+              c.forwards() ? capturedStart : capturedEnd,
+              capturedEnd,
+              c.forwards());
+          Cursor<Traits> cursor1 = c;
+          bool matched = true;
+          while (matched && !cursor2.atEnd()) {
+            if (cursor1.atEnd()) {
+              matched = false;
+            } else if (!icase) {
+              // Direct comparison. Here we don't need to decode surrogate
+              // pairs.
+              matched = (cursor1.consume() == cursor2.consume());
+            } else if (!unicode) {
+              // Case-insensitive non-Unicode comparison, no decoding of
+              // surrogate pairs.
+              auto c1 = cursor1.consume();
+              auto c2 = cursor2.consume();
+              matched =
+                  (c1 == c2 ||
+                   traits_.canonicalize(c1, unicode) ==
+                       traits_.canonicalize(c2, unicode));
+            } else {
+              // Unicode: we do need to decode surrogate pairs.
+              auto cp1 = cursor1.consumeUTF16();
+              auto cp2 = cursor2.consumeUTF16();
+              matched =
+                  (cp1 == cp2 ||
+                   traits_.canonicalize(cp1, unicode) ==
+                       traits_.canonicalize(cp2, unicode));
+            }
           }
-          if (!matches)
+          if (!matched) {
             BACKTRACK();
-
+          }
           s->ip_ += sizeof(BackRefInsn);
-          s->current_ += length;
+          c.setCurrentPointer(cursor1.currentPointer());
           break;
         }
 
-        case Opcode::Lookahead: {
-          const LookaheadInsn *insn = llvm::cast<LookaheadInsn>(base);
+        case Opcode::Lookaround: {
+          const LookaroundInsn *insn = llvm::cast<LookaroundInsn>(base);
           bool matched = false;
-          if (flagsSatisfyConstraints(flags_, insn->constraints)) {
+          if (c.satisfiesConstraints(flags_, insn->constraints)) {
             // Copy the state. This is because if the match fails (or if we are
             // inverted) we need to restore its capture groups.
             State savedState{*s};
 
+            // Set the direction of the cursor.
+            c.setForwards(insn->forwards);
+
             // Invoke match() recursively with our expression.
             // Save and restore the position because lookaheads do not consume
             // anything.
-            s->ip_ += sizeof(LookaheadInsn);
-            matched = this->match(s, s->current_, true /* onlyAtStart */);
-            s->current_ = savedState.current_;
+            s->ip_ += sizeof(LookaroundInsn);
+            matched = this->match(s, true /* onlyAtStart */);
+            c.setCurrentPointer(savedState.cursor_.currentPointer());
+            c.setForwards(savedState.cursor_.forwards());
 
-            // Restore capture groups unless we are a positive lookahead that
+            // Restore capture groups unless we are a positive lookaround that
             // successfully matched. If we are a successfully matching positive
-            // lookahead, set up backtracking to reset the capture groups. Note
+            // lookaround, set up backtracking to reset the capture groups. Note
             // we never backtrack INTO a successfully matched lookahead:
-            // once a lookahead finds a match it forgets all other ways it Could
+            // once a lookahead finds a match it forgets all other ways it could
             // have matched. (ES 5.1 15.10.2.8 Note 2).
             if (matched && !insn->invert) {
               // Backtrack capture groups in the lookahead expression.
@@ -1021,7 +1307,7 @@ auto Context<Traits>::match(
           // just skip to the not-taken target. Note that this is a static
           // property of the loop so we don't need to check it on every
           // iteration, only the first one.
-          if (!flagsSatisfyConstraints(flags_, loop->loopeeConstraints)) {
+          if (!c.satisfiesConstraints(flags_, loop->loopeeConstraints)) {
             if (loop->min > 0) {
               BACKTRACK();
             } else {
@@ -1057,7 +1343,7 @@ auto Context<Traits>::match(
           // expansions of Atom that match the empty character sequence are
           // not considered for further repetitions."
           if (iteration > loop->min &&
-              first_ + loopData.entryPosition == s->current_)
+              loopData.entryPosition == c.offsetFromLeft())
             BACKTRACK();
 
           if (!doLoopBody && !doNotTaken) {
@@ -1074,7 +1360,7 @@ auto Context<Traits>::match(
                 "Must be exploring loop not taken and body");
             if (!loop->greedy) {
               // Backtrack by entering this non-greedy loop.
-              loopData.entryPosition = s->current_ - first_;
+              loopData.entryPosition = c.offsetFromLeft();
               if (!pushBacktrack(
                       backtrackStack,
                       BacktrackInsn::makeEnterNonGreedyLoop(
@@ -1088,7 +1374,7 @@ auto Context<Traits>::match(
               if (!pushBacktrack(
                       backtrackStack,
                       BacktrackInsn::makeSetPosition(
-                          loopNotTakenIp, s->current_))) {
+                          loopNotTakenIp, c.currentPointer()))) {
                 error_ = MatchRuntimeErrorType::MaxStackDepth;
                 return nullptr;
               }
@@ -1105,7 +1391,7 @@ auto Context<Traits>::match(
           const BeginSimpleLoopInsn *loop =
               llvm::cast<BeginSimpleLoopInsn>(base);
 
-          if (!flagsSatisfyConstraints(flags_, loop->loopeeConstraints)) {
+          if (!c.satisfiesConstraints(flags_, loop->loopeeConstraints)) {
             s->ip_ = loop->notTakenTarget;
             break;
           }
@@ -1124,8 +1410,12 @@ auto Context<Traits>::match(
           // Since this is a simple loop, we'll always need to explore both
           // exiting the loop at this point and continuing to loop.
           // Note simple loops are always greedy.
-          backtrackStack.push_back(BacktrackInsn::makeSetPosition(
-              loop->notTakenTarget, s->current_));
+          if (!pushBacktrack(
+                  backtrackStack,
+                  BacktrackInsn::makeSetPosition(
+                      loop->notTakenTarget, c.currentPointer()))) {
+            return nullptr;
+          }
           s->ip_ += sizeof(BeginSimpleLoopInsn);
           break;
         }
@@ -1156,16 +1446,20 @@ template <typename CharT, class Traits>
 MatchRuntimeResult searchWithBytecodeImpl(
     llvm::ArrayRef<uint8_t> bytecode,
     const CharT *first,
-    const CharT *last,
-    MatchResults<const CharT *> &m,
+    uint32_t start,
+    uint32_t length,
+    std::vector<CapturedRange> *m,
     constants::MatchFlagType matchFlags) {
   assert(
       bytecode.size() >= sizeof(RegexBytecodeHeader) && "Bytecode too small");
   auto header = reinterpret_cast<const RegexBytecodeHeader *>(bytecode.data());
 
   // Check for match impossibility before doing anything else.
-  if (!flagsSatisfyConstraints(matchFlags, header->constraints))
+  Cursor<Traits> cursor{
+      first, first + start, first + length, true /* forwards */};
+  if (!cursor.satisfiesConstraints(matchFlags, header->constraints))
     return MatchRuntimeResult::NoMatch;
+
   auto markedCount = header->markedCount;
   auto loopCount = header->loopCount;
 
@@ -1174,24 +1468,28 @@ MatchRuntimeResult searchWithBytecodeImpl(
       matchFlags,
       static_cast<constants::SyntaxFlags>(header->syntaxFlags),
       first,
-      last,
+      first + length,
       header->markedCount,
       header->loopCount);
-  State<Traits> state{markedCount, loopCount};
-  bool onlyAtStart = header->constraints & MatchConstraintAnchoredAtStart;
+  State<Traits> state{cursor, markedCount, loopCount};
+
+  // We check only one location if either the regex pattern constrains us to, or
+  // the flags request it (via the sticky flag 'y').
+  bool onlyAtStart = (header->constraints & MatchConstraintAnchoredAtStart) ||
+      (matchFlags & constants::matchOnlyAtStart);
+
   auto result = MatchRuntimeResult::NoMatch;
-  if (const CharT *matchStartLoc = ctx.match(&state, ctx.first_, onlyAtStart)) {
-    // Match succeeded.
-    m.resize(1 + markedCount);
-    m[0].first = matchStartLoc;
-    m[0].second = state.current_;
-    m[0].matched = true;
-    for (uint32_t idx = 0; idx < markedCount; idx++) {
-      CapturedRange cr = state.getCapturedRange(idx);
-      bool matched = (cr.start != kNotMatched);
-      m[idx + 1].first = matched ? ctx.first_ + cr.start : ctx.last_;
-      m[idx + 1].second = matched ? ctx.first_ + cr.end : ctx.last_;
-      m[idx + 1].matched = matched;
+  if (const CharT *matchStartLoc = ctx.match(&state, onlyAtStart)) {
+    // Match succeeded. Return captured ranges. The first range is the total
+    // match, followed by any capture groups.
+    if (m != nullptr) {
+      uint32_t totalStart = static_cast<uint32_t>(matchStartLoc - first);
+      uint32_t totalEnd =
+          static_cast<uint32_t>(state.cursor_.currentPointer() - first);
+      m->clear();
+      m->push_back(CapturedRange{totalStart, totalEnd});
+      std::copy_n(
+          state.capturedRanges_.begin(), markedCount, std::back_inserter(*m));
     }
     result = MatchRuntimeResult::Match;
   }
@@ -1206,21 +1504,23 @@ MatchRuntimeResult searchWithBytecodeImpl(
 MatchRuntimeResult searchWithBytecode(
     llvm::ArrayRef<uint8_t> bytecode,
     const char16_t *first,
-    const char16_t *last,
-    MatchResults<const char16_t *> &m,
+    uint32_t start,
+    uint32_t length,
+    std::vector<CapturedRange> *m,
     constants::MatchFlagType matchFlags) {
-  return searchWithBytecodeImpl<char16_t, U16RegexTraits>(
-      bytecode, first, last, m, matchFlags);
+  return searchWithBytecodeImpl<char16_t, UTF16RegexTraits>(
+      bytecode, first, start, length, m, matchFlags);
 }
 
 MatchRuntimeResult searchWithBytecode(
     llvm::ArrayRef<uint8_t> bytecode,
     const char *first,
-    const char *last,
-    MatchResults<const char *> &m,
+    uint32_t start,
+    uint32_t length,
+    std::vector<CapturedRange> *m,
     constants::MatchFlagType matchFlags) {
   return searchWithBytecodeImpl<char, ASCIIRegexTraits>(
-      bytecode, first, last, m, matchFlags);
+      bytecode, first, start, length, m, matchFlags);
 }
 
 } // namespace regex

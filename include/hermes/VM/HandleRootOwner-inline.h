@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_HANDLEROOTOWNER_INLINE_H
 #define HERMES_VM_HANDLEROOTOWNER_INLINE_H
 
@@ -47,6 +48,10 @@ inline Handle<HermesValue> HandleRootOwner::getUndefinedValue() {
 
 inline Handle<HermesValue> HandleRootOwner::getNullValue() {
   return Handle<HermesValue>(&nullValue_);
+}
+
+inline Handle<HermesValue> HandleRootOwner::getEmptyValue() {
+  return Handle<HermesValue>(&emptyValue_);
 }
 
 inline Handle<HermesValue> HandleRootOwner::getBoolValue(bool b) {

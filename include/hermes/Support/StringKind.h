@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_SUPPORT_STRINGKIND_H
 #define HERMES_SUPPORT_STRINGKIND_H
 
@@ -20,7 +21,7 @@ namespace hermes {
 class StringKind {
   /// The largest run of equal kinds that can be represented by a single
   /// instance of StringKind::Entry.
-  static constexpr uint32_t CountBits = 30;
+  static constexpr uint32_t CountBits = 31;
   static constexpr uint32_t MaxCount = (1u << CountBits) - 1;
 
  public:
@@ -32,11 +33,8 @@ class StringKind {
     /// Not been used as an identifer.
     String = 0u << CountBits,
 
-    /// Used as an identifier, but is not predefined in the VM.
+    /// Used as an identifier.
     Identifier = 1u << CountBits,
-
-    /// An identifier that is predefined in the VM.
-    Predefined = 2u << CountBits
   };
 
   struct Accumulator;

@@ -1,6 +1,6 @@
-break print-breakpoints.js 13 3
-break print-breakpoints.js 14
-break 15 3
+break print-breakpoints.js 15 3
+break print-breakpoints.js 16
+break 17 3
 disable 1
 disable 2
 info breakpoints

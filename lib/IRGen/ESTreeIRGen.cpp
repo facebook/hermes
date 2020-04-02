@@ -1,11 +1,14 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "ESTreeIRGen.h"
 
+#include "llvm/ADT/StringSet.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/SaveAndRestore.h"
 
 namespace hermes {
@@ -150,6 +153,7 @@ ESTreeIRGen::ESTreeIRGen(
     const ScopeChain &scopeChain)
     : Mod(M),
       Builder(Mod),
+      instrumentIR_(M, Builder),
       Root(root),
       DeclarationFileList(declFileList),
       lexicalScopeChain(resolveScopeIdentifiers(scopeChain)),
@@ -200,7 +204,7 @@ void ESTreeIRGen::doIt() {
     genDummyFunction(wrapperFunction);
 
     // Restore the previously saved parent scopes.
-    materializeScopesInChain(wrapperFunction, lexicalScopeChain, 1);
+    materializeScopesInChain(wrapperFunction, lexicalScopeChain, -1);
 
     // Finally create the function which will actually be executed.
     topLevelFunction = Builder.createFunction(
@@ -238,7 +242,8 @@ void ESTreeIRGen::doIt() {
   emitFunctionPrologue(
       Program,
       Builder.createBasicBlock(topLevelFunction),
-      InitES5CaptureState::Yes);
+      InitES5CaptureState::Yes,
+      DoEmitParameters::Yes);
 
   Value *retVal;
   {
@@ -260,6 +265,7 @@ void ESTreeIRGen::doIt() {
 void ESTreeIRGen::doCJSModule(
     Function *topLevelFunction,
     sem::FunctionInfo *semInfo,
+    uint32_t id,
     llvm::StringRef filename) {
   assert(Root && "no root in ESTreeIRGen");
   auto *func = cast<ESTree::FunctionExpressionNode>(Root);
@@ -282,14 +288,25 @@ void ESTreeIRGen::doCJSModule(
   Function *newFunc = genES5Function(functionName, nullptr, func);
 
   Builder.getModule()->addCJSModule(
-      Builder.createIdentifier(filename), newFunc);
+      id, Builder.createIdentifier(filename), newFunc);
 }
 
-Function *ESTreeIRGen::doLazyFunction(hbc::LazyCompilationData *lazyData) {
-  // Create a dummy top level function so IRGen doesn't think our lazyFunction
-  // is in global scope.
+static int getDepth(const std::shared_ptr<SerializedScope> chain) {
+  int depth = 0;
+  const SerializedScope *current = chain.get();
+  while (current) {
+    depth += 1;
+    current = current->parentScope.get();
+  }
+  return depth;
+}
+
+std::pair<Function *, Function *> ESTreeIRGen::doLazyFunction(
+    hbc::LazyCompilationData *lazyData) {
+  // Create a top level function that will never be executed, because:
+  // 1. IRGen assumes the first function always has global scope
+  // 2. It serves as the root for dummy functions for lexical data
   Function *topLevel = Builder.createTopLevelFunction(lazyData->strictMode, {});
-  genDummyFunction(topLevel);
 
   FunctionContext topLevelFunctionContext{this, topLevel, nullptr};
 
@@ -300,9 +317,16 @@ Function *ESTreeIRGen::doLazyFunction(hbc::LazyCompilationData *lazyData) {
 
   auto *node = cast<ESTree::FunctionLikeNode>(Root);
 
-  // Restore the previously saved parent scopes.
+  // We restore scoping information in two separate ways:
+  // 1. By adding them to ExternalScopes for resolution here
+  // 2. By adding dummy functions for lexical scoping debug info later
+  //
+  // Instruction selection determines the delta between the ExternalScope
+  // and the dummy function chain, so we add the ExternalScopes with
+  // positive depth.
   lexicalScopeChain = lazyData->parentScope;
-  materializeScopesInChain(topLevel, lexicalScopeChain, 1);
+  materializeScopesInChain(
+      topLevel, lexicalScopeChain, getDepth(lexicalScopeChain) - 1);
 
   // If lazyData->closureAlias is specified, we must create an alias binding
   // between originalName (which must be valid) and the variable identified by
@@ -325,7 +349,9 @@ Function *ESTreeIRGen::doLazyFunction(hbc::LazyCompilationData *lazyData) {
       !isa<ESTree::ArrowFunctionExpressionNode>(node) &&
       "lazy compilation not supported for arrow functions");
 
-  return genES5Function(lazyData->originalName, parentVar, node);
+  auto *func = genES5Function(lazyData->originalName, parentVar, node);
+  addLexicalDebugInfo(func, topLevel, lexicalScopeChain);
+  return {func, topLevel};
 }
 
 std::pair<Value *, bool> ESTreeIRGen::declareVariableOrGlobalProperty(
@@ -490,7 +516,7 @@ Value *ESTreeIRGen::ensureVariableExists(ESTree::IdentifierNode *id) {
 }
 
 Value *ESTreeIRGen::genMemberExpressionProperty(
-    ESTree::MemberExpressionNode *Mem) {
+    ESTree::MemberExpressionLikeNode *Mem) {
   // If computed is true, the node corresponds to a computed (a[b]) member
   // lookup and '_property' is an Expression. Otherwise, the node
   // corresponds to a static (a.b) member lookup and '_property' is an
@@ -498,17 +524,17 @@ Value *ESTreeIRGen::genMemberExpressionProperty(
   // Details of the computed field are available here:
   // https://github.com/estree/estree/blob/master/spec.md#memberexpression
 
-  if (Mem->_computed) {
-    return genExpression(Mem->_property);
+  if (getComputed(Mem)) {
+    return genExpression(getProperty(Mem));
   }
 
   // Arrays and objects may be accessed with integer indices.
-  if (auto N = dyn_cast<ESTree::NumericLiteralNode>(Mem->_property)) {
+  if (auto N = dyn_cast<ESTree::NumericLiteralNode>(getProperty(Mem))) {
     return Builder.getLiteralNumber(N->_value);
   }
 
   // ESTree encodes property access as MemberExpression -> Identifier.
-  auto Id = cast<ESTree::IdentifierNode>(Mem->_property);
+  auto Id = cast<ESTree::IdentifierNode>(getProperty(Mem));
 
   Identifier fieldName = getNameFieldFromID(Id);
   LLVM_DEBUG(
@@ -592,23 +618,28 @@ Value *ESTreeIRGen::genHermesInternalCall(
       args);
 }
 
+Value *ESTreeIRGen::genBuiltinCall(
+    hermes::BuiltinMethod::Enum builtinIndex,
+    ArrayRef<Value *> args) {
+  return Builder.createCallBuiltinInst(builtinIndex, args);
+}
+
 void ESTreeIRGen::emitEnsureObject(Value *value, StringRef message) {
-  // TODO: use "thisArg" when builts get fixed to support it.
-  genHermesInternalCall(
-      "ensureObject",
-      Builder.getLiteralUndefined(),
+  // TODO: use "thisArg" when builtins get fixed to support it.
+  genBuiltinCall(
+      BuiltinMethod::HermesBuiltin_ensureObject,
       {value, Builder.getLiteralString(message)});
 }
 
-Value *ESTreeIRGen::emitIterarorSymbol() {
-  // FIXME: use the builtin value of @@iteraror. Symbol could have been
+Value *ESTreeIRGen::emitIteratorSymbol() {
+  // FIXME: use the builtin value of @@iterator. Symbol could have been
   // overridden.
   return Builder.createLoadPropertyInst(
       Builder.createTryLoadGlobalPropertyInst("Symbol"), "iterator");
 }
 
-ESTreeIRGen::IteratorRecord ESTreeIRGen::emitGetIterator(Value *obj) {
-  auto *method = Builder.createLoadPropertyInst(obj, emitIterarorSymbol());
+ESTreeIRGen::IteratorRecordSlow ESTreeIRGen::emitGetIteratorSlow(Value *obj) {
+  auto *method = Builder.createLoadPropertyInst(obj, emitIteratorSymbol());
   auto *iterator = Builder.createCallInst(method, obj, {});
 
   emitEnsureObject(iterator, "iterator is not an object");
@@ -617,23 +648,23 @@ ESTreeIRGen::IteratorRecord ESTreeIRGen::emitGetIterator(Value *obj) {
   return {iterator, nextMethod};
 }
 
-Value *ESTreeIRGen::emitIteratorNext(IteratorRecord iteratorRecord) {
+Value *ESTreeIRGen::emitIteratorNextSlow(IteratorRecordSlow iteratorRecord) {
   auto *nextResult = Builder.createCallInst(
       iteratorRecord.nextMethod, iteratorRecord.iterator, {});
   emitEnsureObject(nextResult, "iterator.next() did not return an object");
   return nextResult;
 }
 
-Value *ESTreeIRGen::emitIteratorComplete(Value *iterResult) {
+Value *ESTreeIRGen::emitIteratorCompleteSlow(Value *iterResult) {
   return Builder.createLoadPropertyInst(iterResult, "done");
 }
 
-Value *ESTreeIRGen::emitIteratorValue(Value *iterResult) {
+Value *ESTreeIRGen::emitIteratorValueSlow(Value *iterResult) {
   return Builder.createLoadPropertyInst(iterResult, "value");
 }
 
-void ESTreeIRGen::emitIteratorClose(
-    hermes::irgen::ESTreeIRGen::IteratorRecord iteratorRecord,
+void ESTreeIRGen::emitIteratorCloseSlow(
+    hermes::irgen::ESTreeIRGen::IteratorRecordSlow iteratorRecord,
     bool ignoreInnerException) {
   auto *haveReturn = Builder.createBasicBlock(Builder.getFunction());
   auto *noReturn = Builder.createBasicBlock(Builder.getFunction());
@@ -666,11 +697,23 @@ void ESTreeIRGen::emitIteratorClose(
   } else {
     auto *innerResult =
         Builder.createCallInst(returnMethod, iteratorRecord.iterator, {});
-    emitEnsureObject(innerResult, "iterator.close() did not return an object");
+    emitEnsureObject(innerResult, "iterator.return() did not return an object");
     Builder.createBranchInst(noReturn);
   }
 
   Builder.setInsertionBlock(noReturn);
+}
+
+ESTreeIRGen::IteratorRecord ESTreeIRGen::emitGetIterator(Value *obj) {
+  // Each of these will be modified by "next", so we use a stack storage.
+  auto *iterStorage =
+      Builder.createAllocStackInst(genAnonymousLabelName("iter"));
+  auto *sourceOrNext =
+      Builder.createAllocStackInst(genAnonymousLabelName("sourceOrNext"));
+  Builder.createStoreStackInst(obj, sourceOrNext);
+  auto *iter = Builder.createIteratorBeginInst(sourceOrNext);
+  Builder.createStoreStackInst(iter, iterStorage);
+  return IteratorRecord{iterStorage, sourceOrNext};
 }
 
 void ESTreeIRGen::emitDestructuringAssignment(
@@ -691,7 +734,7 @@ void ESTreeIRGen::emitDestructuringArray(
     bool declInit,
     ESTree::ArrayPatternNode *targetPat,
     Value *source) {
-  auto iteratorRecord = emitGetIterator(source);
+  const IteratorRecord iteratorRecord = emitGetIterator(source);
 
   /// iteratorDone = undefined.
   auto *iteratorDone =
@@ -808,15 +851,14 @@ void ESTreeIRGen::emitDestructuringArray(
 
     // notDoneBlock:
     Builder.setInsertionBlock(notDoneBlock);
-    auto *stepResult = emitIteratorNext(iteratorRecord);
-    auto *stepDone = emitIteratorComplete(stepResult);
+    auto *stepValue = emitIteratorNext(iteratorRecord);
+    auto *stepDone = emitIteratorComplete(iteratorRecord);
     Builder.createStoreStackInst(stepDone, iteratorDone);
     Builder.createCondBranchInst(
         stepDone, init ? getDefaultBlock : nextBlock, newValueBlock);
 
     // newValueBlock:
     Builder.setInsertionBlock(newValueBlock);
-    auto *stepValue = emitIteratorValue(stepResult);
     Builder.createStoreStackInst(stepValue, value);
     Builder.createBranchInst(nextBlock);
 
@@ -837,9 +879,13 @@ void ESTreeIRGen::emitDestructuringArray(
           storeBlock,
           getDefaultBlock);
 
+      Identifier nameHint = isa<ESTree::IdentifierNode>(target)
+          ? getNameFieldFromID(target)
+          : Identifier{};
+
       // getDefaultBlock:
       Builder.setInsertionBlock(getDefaultBlock);
-      Builder.createStoreStackInst(genExpression(init), value);
+      Builder.createStoreStackInst(genExpression(init, nameHint), value);
       Builder.createBranchInst(storeBlock);
 
       // storeBlock:
@@ -929,14 +975,13 @@ void ESTreeIRGen::emitRestElement(
 
   // notDoneBlock:
   Builder.setInsertionBlock(notDoneBlock);
-  auto *stepResult = emitIteratorNext(iteratorRecord);
-  auto *stepDone = emitIteratorComplete(stepResult);
+  auto *stepValue = emitIteratorNext(iteratorRecord);
+  auto *stepDone = emitIteratorComplete(iteratorRecord);
   Builder.createStoreStackInst(stepDone, iteratorDone);
   Builder.createCondBranchInst(stepDone, doneBlock, newValueBlock);
 
   // newValueBlock:
   Builder.setInsertionBlock(newValueBlock);
-  auto *stepValue = emitIteratorValue(stepResult);
   auto *nVal = Builder.createLoadStackInst(n);
   nVal->setType(Type::createNumber());
   // A[n] = stepValue;
@@ -971,6 +1016,41 @@ void ESTreeIRGen::emitDestructuringObject(
   // Keep track of which keys have been destructured.
   llvm::SmallVector<Value *, 4> excludedItems{};
 
+  if (target->_properties.empty() ||
+      isa<ESTree::RestElementNode>(target->_properties.front())) {
+    // ES10.0 13.3.3.5
+    // 1. Perform ? RequireObjectCoercible(value).
+
+    // The extremely unlikely case that the user is attempting to destructure
+    // into {} or {...rest}. Any other object destructuring will fail upon
+    // attempting to retrieve a real property from `source`.
+    // We must check that the source can be destructured,
+    // and the only time this will throw is if source is undefined or null.
+    auto *throwBB = Builder.createBasicBlock(Builder.getFunction());
+    auto *doneBB = Builder.createBasicBlock(Builder.getFunction());
+
+    // Use == instead of === to account for both undefined and null.
+    Builder.createCondBranchInst(
+        Builder.createBinaryOperatorInst(
+            source,
+            Builder.getLiteralNull(),
+            BinaryOperatorInst::OpKind::EqualKind),
+        throwBB,
+        doneBB);
+
+    Builder.setInsertionBlock(throwBB);
+    genBuiltinCall(
+        BuiltinMethod::HermesBuiltin_throwTypeError,
+        {source,
+         Builder.getLiteralString(
+             "Cannot destructure 'undefined' or 'null'.")});
+    // throwTypeError will always throw.
+    // This return is here to ensure well-formed IR, and will not run.
+    Builder.createReturnInst(Builder.getLiteralUndefined());
+
+    Builder.setInsertionBlock(doneBB);
+  }
+
   for (auto &elem : target->_properties) {
     if (auto *rest = dyn_cast<ESTree::RestElementNode>(&elem)) {
       emitRestProperty(declInit, rest, excludedItems, source);
@@ -987,18 +1067,22 @@ void ESTreeIRGen::emitDestructuringObject(
       init = assign->_right;
     }
 
+    Identifier nameHint = isa<ESTree::IdentifierNode>(valueNode)
+        ? getNameFieldFromID(valueNode)
+        : Identifier{};
+
     if (isa<ESTree::IdentifierNode>(propNode->_key) && !propNode->_computed) {
       Identifier key = getNameFieldFromID(propNode->_key);
       excludedItems.push_back(Builder.getLiteralString(key));
       auto *loadedValue = Builder.createLoadPropertyInst(source, key);
       createLRef(valueNode, declInit)
-          .emitStore(emitOptionalInitialization(loadedValue, init));
+          .emitStore(emitOptionalInitialization(loadedValue, init, nameHint));
     } else {
       Value *key = genExpression(propNode->_key);
       excludedItems.push_back(key);
       auto *loadedValue = Builder.createLoadPropertyInst(source, key);
       createLRef(valueNode, declInit)
-          .emitStore(emitOptionalInitialization(loadedValue, init));
+          .emitStore(emitOptionalInitialization(loadedValue, init, nameHint));
     }
   }
 }
@@ -1013,13 +1097,18 @@ void ESTreeIRGen::emitRestProperty(
   // Construct the excluded items.
   HBCAllocObjectFromBufferInst::ObjectPropertyMap exMap{};
   llvm::SmallVector<Value *, 4> computedExcludedItems{};
+  // Keys need de-duping so we don't create a dummy exclusion object with
+  // duplicate keys.
+  llvm::DenseSet<Literal *> keyDeDupeSet;
   auto *zeroValue = Builder.getLiteralPositiveZero();
 
   for (Value *key : excludedItems) {
     if (auto *lit = dyn_cast<Literal>(key)) {
       // If the key is a literal, we can place it in the
       // HBCAllocObjectFromBufferInst buffer.
-      exMap.emplace_back(std::make_pair(lit, zeroValue));
+      if (keyDeDupeSet.insert(lit).second) {
+        exMap.emplace_back(std::make_pair(lit, zeroValue));
+      }
     } else {
       // If the key is not a literal, then we have to dynamically populate the
       // excluded object with it after creation from the buffer.
@@ -1031,20 +1120,22 @@ void ESTreeIRGen::emitRestProperty(
   if (excludedItems.empty()) {
     excludedObj = Builder.getLiteralUndefined();
   } else {
+    // This size is only a hint as the true size may change if there are
+    // duplicates when computedExcludedItems is processed at run-time.
+    auto excludedSizeHint = exMap.size() + computedExcludedItems.size();
     if (exMap.empty()) {
-      excludedObj = Builder.createAllocObjectInst(excludedItems.size());
+      excludedObj = Builder.createAllocObjectInst(excludedSizeHint);
     } else {
-      excludedObj = Builder.createHBCAllocObjectFromBufferInst(
-          exMap, excludedItems.size());
+      excludedObj =
+          Builder.createHBCAllocObjectFromBufferInst(exMap, excludedSizeHint);
     }
     for (Value *key : computedExcludedItems) {
       Builder.createStorePropertyInst(zeroValue, excludedObj, key);
     }
   }
 
-  auto *restValue = genHermesInternalCall(
-      "copyDataProperties",
-      Builder.getLiteralUndefined(),
+  auto *restValue = genBuiltinCall(
+      BuiltinMethod::HermesBuiltin_copyDataProperties,
       {Builder.createAllocObjectInst(0), source, excludedObj});
 
   lref.emitStore(restValue);
@@ -1052,7 +1143,8 @@ void ESTreeIRGen::emitRestProperty(
 
 Value *ESTreeIRGen::emitOptionalInitialization(
     Value *value,
-    ESTree::Node *init) {
+    ESTree::Node *init,
+    Identifier nameHint) {
   if (!init)
     return value;
 
@@ -1073,7 +1165,7 @@ Value *ESTreeIRGen::emitOptionalInitialization(
 
   // getDefaultBlock:
   Builder.setInsertionBlock(getDefaultBlock);
-  auto *defaultValue = genExpression(init);
+  auto *defaultValue = genExpression(init, nameHint);
   auto *defaultResultBlock = Builder.getInsertionBlock();
   Builder.createBranchInst(storeBlock);
 
@@ -1109,7 +1201,7 @@ void ESTreeIRGen::materializeScopesInChain(
   assert(depth < 1000 && "Excessive scope depth");
 
   // First materialize parent scopes.
-  materializeScopesInChain(wrapperFunction, scope->parentScope, depth + 1);
+  materializeScopesInChain(wrapperFunction, scope->parentScope, depth - 1);
 
   // If scope->closureAlias is specified, we must create an alias binding
   // between originalName (which must be valid) and the variable identified by
@@ -1132,12 +1224,56 @@ void ESTreeIRGen::materializeScopesInChain(
   }
 
   // Create an external scope.
-  ExternalScope *ES = Builder.createExternalScope(wrapperFunction, -depth);
+  ExternalScope *ES = Builder.createExternalScope(wrapperFunction, depth);
   for (auto variableId : scope->variables) {
     auto *variable =
         Builder.createVariable(ES, Variable::DeclKind::Var, variableId);
     nameTable_.insert(variableId, variable);
   }
+}
+
+namespace {
+void buildDummyLexicalParent(
+    IRBuilder &builder,
+    Function *parent,
+    Function *child) {
+  // FunctionScopeAnalysis works through CreateFunctionInsts, so we have to add
+  // that even though these functions are never invoked.
+  auto *block = builder.createBasicBlock(parent);
+  builder.setInsertionBlock(block);
+  builder.createUnreachableInst();
+  auto *inst = builder.createCreateFunctionInst(child);
+  builder.createReturnInst(inst);
+}
+} // namespace
+
+/// Add dummy functions for lexical scope debug info.
+// They are never executed and serve no purpose other than filling in debug
+// info. This is currently necessary because we can't rely on parent bytecode
+// modules for lexical scoping data.
+void ESTreeIRGen::addLexicalDebugInfo(
+    Function *child,
+    Function *global,
+    const std::shared_ptr<const SerializedScope> &scope) {
+  if (!scope || !scope->parentScope) {
+    buildDummyLexicalParent(Builder, global, child);
+    return;
+  }
+
+  auto *current = Builder.createFunction(
+      scope->originalName,
+      Function::DefinitionKind::ES5Function,
+      false,
+      {},
+      false);
+
+  for (auto &var : scope->variables) {
+    Builder.createVariable(
+        current->getFunctionScope(), Variable::DeclKind::Var, var);
+  }
+
+  buildDummyLexicalParent(Builder, current, child);
+  addLexicalDebugInfo(current, global, scope->parentScope);
 }
 
 #ifndef HERMESVM_LEAN

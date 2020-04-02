@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_ADT_HALFPAIRITERATOR_H
 #define HERMES_ADT_HALFPAIRITERATOR_H
 
@@ -59,6 +60,6 @@ HERMES_DECLARE_PARTIAL_ITERATOR(First, first);
 /// PairSecondIterator: iterate over pair::second.
 HERMES_DECLARE_PARTIAL_ITERATOR(Second, second);
 
-}; // namespace hermes
+} // namespace hermes
 
 #endif // HERMES_ADT_HALFPAIRITERATOR_H

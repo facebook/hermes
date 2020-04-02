@@ -1,5 +1,5 @@
-/**
- * Copyright 2018-present, Facebook, Inc.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,16 @@
 
 #include <fbjni/fbjni.h>
 
+#ifdef __ANDROID__
+#include <sys/prctl.h>
+#endif // __ANDROID__
+
 #include <functional>
+#ifndef _WIN32
 #include <pthread.h>
+#else
+#include <windows.h>
+#endif
 
 namespace facebook {
 namespace jni {
@@ -61,8 +69,33 @@ struct AttachTraits<jint(JavaVM::*)(void**, void*)> {
   using EnvType = void*;
 };
 
+std::string getThreadName() {
+#ifdef _WIN32
+  return "";
+#else // _WIN32
+  constexpr int kMaxThreadNameSize = 100;
+  int ret = 0;
+  char threadName[kMaxThreadNameSize];
+#ifdef __ANDROID__
+  ret = prctl(PR_GET_NAME, threadName);
+#else
+  ret = pthread_getname_np(pthread_self(), threadName, sizeof(threadName));
+#endif
+  if (ret != 0) {
+    return "";
+  }
+  return threadName;
+#endif // _WIN32
+}
+
 JNIEnv* attachCurrentThread() {
   JavaVMAttachArgs args{JNI_VERSION_1_6, nullptr, nullptr};
+
+  const auto threadName = getThreadName();
+  if (threadName.size()) {
+    args.name = threadName.c_str();
+  }
+
   using AttachEnvType =
       typename AttachTraits<decltype(&JavaVM::AttachCurrentThread)>::EnvType;
   AttachEnvType env;
@@ -80,30 +113,56 @@ void Environment::initialize(JavaVM* vm) {
 
 namespace {
 
-pthread_key_t makeKey() {
-  pthread_key_t key;
+#ifndef _WIN32
+typedef pthread_key_t tls_key_t;
+#else
+typedef DWORD tls_key_t;
+#endif
+
+tls_key_t makeKey() {
+  tls_key_t key;
+#ifndef _WIN32
   int ret = pthread_key_create(&key, nullptr);
   if (ret != 0) {
     FBJNI_LOGF("pthread_key_create failed: %d", ret);
   }
+#else
+  key = TlsAlloc();
+  if (key == TLS_OUT_OF_INDEXES) {
+    FBJNI_LOGF("TlsAlloc failed");
+  }
+#endif
   return key;
 }
 
-pthread_key_t getTLKey() {
-  static pthread_key_t key = makeKey();
+tls_key_t getTLKey() {
+  static tls_key_t key = makeKey();
   return key;
 }
 
-inline detail::TLData* getTLData(pthread_key_t key) {
-  return reinterpret_cast<detail::TLData*>(pthread_getspecific(key));
+inline detail::TLData* getTLData(tls_key_t key) {
+#ifndef _WIN32
+  void* raw_data = pthread_getspecific(key);
+#else
+  LPVOID raw_data = TlsGetValue(key);
+  // TODO: Maybe check for errors here?
+#endif
+  return reinterpret_cast<detail::TLData*>(raw_data);
 }
 
-inline void setTLData(pthread_key_t key, detail::TLData* data) {
+inline void setTLData(tls_key_t key, detail::TLData* data) {
+#ifndef _WIN32
   int ret = pthread_setspecific(key, data);
   if (ret != 0) {
     (void) ret;
     FBJNI_LOGF("pthread_setspecific failed: %d", ret);
   }
+#else
+  BOOL ret = TlsSetValue(key, data);
+  if (!ret) {
+    FBJNI_LOGF("TlsSetValue failed: %d", GetLastError());
+  }
+#endif
 }
 
 // This returns non-nullptr iff the env was cached from java.  So it
@@ -154,7 +213,7 @@ JniEnvCacher::JniEnvCacher(JNIEnv* env)
 {
   FBJNI_ASSERT(env);
 
-  pthread_key_t key = getTLKey();
+  tls_key_t key = getTLKey();
   detail::TLData* pdata = getTLData(key);
   if (pdata && pdata->env) {
     return;
@@ -178,7 +237,7 @@ JniEnvCacher::~JniEnvCacher() {
     return;
   }
 
-  pthread_key_t key = getTLKey();
+  tls_key_t key = getTLKey();
   TLData* pdata = getTLData(key);
   FBJNI_ASSERT(pdata);
   FBJNI_ASSERT(pdata->env != nullptr);
@@ -209,7 +268,7 @@ ThreadScope::ThreadScope()
   // cached, or we would have returned already.  So there better not
   // be TLData.
 
-  pthread_key_t key = getTLKey();
+  tls_key_t key = getTLKey();
   detail::TLData* pdata = getTLData(key);
   FBJNI_ASSERT(pdata == nullptr);
   setTLData(key, &data_);
@@ -227,7 +286,7 @@ ThreadScope::~ThreadScope() {
     return;
   }
 
-  pthread_key_t key = getTLKey();
+  tls_key_t key = getTLKey();
   detail::TLData* pdata = getTLData(key);
   FBJNI_ASSERT(pdata);
   FBJNI_ASSERT(pdata->env == nullptr);

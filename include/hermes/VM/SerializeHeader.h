@@ -1,15 +1,17 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_SERIALIZEHEADER_H
 #define HERMES_VM_SERIALIZEHEADER_H
 
 #ifdef HERMESVM_SERIALIZE
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/Support/Compiler.h"
+#include "hermes/VM/NativeFunctions.def"
 
 namespace hermes {
 namespace vm {
@@ -19,10 +21,9 @@ enum class RelocationKind { NativePointer, GCPointer, HermesValue };
 
 constexpr uint32_t SD_MAGIC = 0xad082463;
 
-constexpr uint32_t SD_HEADER_VERSION = 1;
+constexpr uint32_t SD_HEADER_VERSION = 2;
 
-/// Bump this version number up whenever NativeFunctions.def is changed.
-constexpr uint32_t NATIVE_FUNCTION_VERSION = 1;
+constexpr uint32_t NATIVE_FUNCTION_VERSION = NATIVE_FUNCTION_VERSION_VALUE;
 
 /// Serialize data header. Used to sanity check serialize data and make sure
 /// that serializer and deserializer are consistent.
@@ -41,6 +42,7 @@ struct SerializeHeader {
   /// Runtime has the same runtime config as the Deserialize system. Write those
   /// flags that affects S/D in the header so we can check them too.
   bool enableEval;
+  bool hasES6Proxy;
   bool hasES6Symbol;
   uint8_t bytecodeWarmupPercent;
   bool trackIO;

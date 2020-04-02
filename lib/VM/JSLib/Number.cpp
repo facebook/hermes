@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 //===----------------------------------------------------------------------===//
 /// \file
 /// ES5.1 15.7 Initialize the Number constructor.
@@ -15,7 +16,8 @@
 #include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/SmallXString.h"
 #include "hermes/VM/StringPrimitive.h"
-#include "hermes/dtoa/dtoa.h"
+
+#include "dtoa/dtoa.h"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Format.h"
@@ -77,11 +79,8 @@ Handle<JSObject> createNumberConstructor(Runtime *runtime) {
       numberPrototypeToPrecision,
       1);
 
-  DefinePropertyFlags constantDPF{};
-  constantDPF.setEnumerable = 1;
-  constantDPF.setWritable = 1;
-  constantDPF.setConfigurable = 1;
-  constantDPF.setValue = 1;
+  DefinePropertyFlags constantDPF =
+      DefinePropertyFlags::getDefaultNewPropertyFlags();
   constantDPF.enumerable = 0;
   constantDPF.writable = 0;
   constantDPF.configurable = 0;
@@ -116,6 +115,7 @@ Handle<JSObject> createNumberConstructor(Runtime *runtime) {
   setNumberValueProperty(
       Predefined::getSymbolID(Predefined::EPSILON),
       std::numeric_limits<double>::epsilon());
+#ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
   // ES6.0 20.1.2.6
   constexpr double kMaxSafeInteger = 9007199254740991;
   setNumberValueProperty(
@@ -123,6 +123,7 @@ Handle<JSObject> createNumberConstructor(Runtime *runtime) {
   // ES6.0 20.1.2.8
   setNumberValueProperty(
       Predefined::getSymbolID(Predefined::MIN_SAFE_INTEGER), -kMaxSafeInteger);
+#endif
 
   defineMethod(
       runtime,
@@ -162,7 +163,6 @@ Handle<JSObject> createNumberConstructor(Runtime *runtime) {
       cons,
       Predefined::getSymbolID(Predefined::parseFloat),
       Handle<>(&runtime->parseFloatFunction));
-
   return cons;
 }
 
@@ -421,9 +421,13 @@ numberPrototypeToFixed(void *, Runtime *runtime, NativeArgs args) {
   // Let n be an integer such that n/(10^f) - x is close to 0.
   // Store the string representation of n, as provided by dtoa.
   // Use mode=3 and precision=f for the dtoa call (fixed precision dtoa).
-  char *s = ::dtoa_fixedpoint(x, 3, f, &decPt, &sign, &sEnd);
-  llvm::SmallString<32> n{s, sEnd};
-  ::freedtoa_fixedpoint(s);
+  llvm::SmallString<32> n;
+  {
+    DtoaAllocator<> dalloc{};
+    char *s = ::dtoa_fixedpoint(dalloc, x, 3, f, &decPt, &sign, &sEnd);
+    n.append(s, sEnd);
+    ::g_freedtoa(dalloc, s);
+  }
 
   // Minimum number of digits required by the specified fixed-point length.
   size_t minNLen = decPt + f;
@@ -548,13 +552,14 @@ numberPrototypeToExponential(void *, Runtime *runtime, NativeArgs args) {
     // Points to the end of the string s after it's populated.
     char *sEnd;
 
+    DtoaAllocator<> dalloc{};
     if (!args.getArg(0).isUndefined()) {
       // Store the string representation of n, as provided by dtoa.
       // Use mode=2 and precision=f+1 for the dtoa call (precision dtoa).
       // Precision is f+1 to account for digit in front of the decimal point.
-      char *s = ::dtoa_fixedpoint(x, 2, f + 1, &decPt, &sign, &sEnd);
+      char *s = ::dtoa_fixedpoint(dalloc, x, 2, f + 1, &decPt, &sign, &sEnd);
       n.append(s, sEnd);
-      ::freedtoa_fixedpoint(s);
+      ::g_freedtoa(dalloc, s);
 
       // Minimum length of the string should be enough to account for
       // f digits after the decimal point, and 1 digit before it.
@@ -566,9 +571,9 @@ numberPrototypeToExponential(void *, Runtime *runtime, NativeArgs args) {
       // Store the string representation of n, as provided by dtoa.
       // We use the default version of dtoa, so we get the shortest string.
       // mode=0 and precision=0 give the shortest string.
-      char *s = ::g_dtoa(x, 0, 0, &decPt, &sign, &sEnd);
+      char *s = ::g_dtoa(dalloc, x, 0, 0, &decPt, &sign, &sEnd);
       n.append(s, sEnd);
-      ::g_freedtoa(s);
+      ::g_freedtoa(dalloc, s);
 
       // All but the first digit of n will be after the decimal point.
       f = n.size() - 1;
@@ -680,9 +685,12 @@ numberPrototypeToPrecision(void *, Runtime *runtime, NativeArgs args) {
 
     // Store the string representation of n, as provided by dtoa.
     // Use mode=2 and precision=p for the dtoa call (precision dtoa).
-    char *s = ::dtoa_fixedpoint(x, 2, p, &decPt, &sign, &sEnd);
-    n.append(s, sEnd);
-    ::freedtoa_fixedpoint(s);
+    {
+      DtoaAllocator<> dalloc{};
+      char *s = ::dtoa_fixedpoint(dalloc, x, 2, p, &decPt, &sign, &sEnd);
+      n.append(s, sEnd);
+      ::g_freedtoa(dalloc, s);
+    }
 
     // Minimum length of the string should be enough to account for
     // p significant digits.

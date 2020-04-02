@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_UNITTESTS_VMRUNTIME_TESTHELPERS_H
 #define HERMES_UNITTESTS_VMRUNTIME_TESTHELPERS_H
 
@@ -35,22 +36,25 @@ static constexpr uint32_t kMaxHeapSize = 1 << 19;
 static constexpr uint32_t kInitHeapLarge = 1 << 20;
 static constexpr uint32_t kMaxHeapLarge = 1 << 24;
 
-static const GCConfig::Builder kTestGCConfigBuilder =
+static const GCConfig::Builder kTestGCConfigBaseBuilder =
     GCConfig::Builder()
         .withSanitizeConfig(
             vm::GCSanitizeConfig::Builder().withSanitizeRate(0.0).build())
         .withShouldRandomizeAllocSpace(false);
 
 static const GCConfig kTestGCConfigSmall =
-    GCConfig::Builder(kTestGCConfigBuilder)
+    GCConfig::Builder(kTestGCConfigBaseBuilder)
         .withInitHeapSize(kInitHeapSmall)
         .withMaxHeapSize(kMaxHeapSmall)
         .build();
 
-static const GCConfig kTestGCConfig = GCConfig::Builder(kTestGCConfigBuilder)
-                                          .withInitHeapSize(kInitHeapSize)
-                                          .withMaxHeapSize(kMaxHeapSize)
-                                          .build();
+static const GCConfig::Builder kTestGCConfigBuilder =
+    GCConfig::Builder(kTestGCConfigBaseBuilder)
+        .withInitHeapSize(kInitHeapSize)
+        .withMaxHeapSize(kMaxHeapSize);
+
+static const GCConfig kTestGCConfig =
+    GCConfig::Builder(kTestGCConfigBuilder).build();
 
 static const GCConfig kTestGCConfigLarge =
     GCConfig::Builder(kTestGCConfigBuilder)
@@ -61,11 +65,25 @@ static const GCConfig kTestGCConfigLarge =
 static const RuntimeConfig kTestRTConfigSmallHeap =
     RuntimeConfig::Builder().withGCConfig(kTestGCConfigSmall).build();
 
+static const RuntimeConfig::Builder kTestRTConfigBuilder =
+    RuntimeConfig::Builder().withGCConfig(kTestGCConfig);
+
 static const RuntimeConfig kTestRTConfig =
-    RuntimeConfig::Builder().withGCConfig(kTestGCConfig).build();
+    RuntimeConfig::Builder(kTestRTConfigBuilder).build();
 
 static const RuntimeConfig kTestRTConfigLargeHeap =
     RuntimeConfig::Builder().withGCConfig(kTestGCConfigLarge).build();
+
+template <typename T>
+::testing::AssertionResult isException(
+    Runtime *runtime,
+    const CallResult<T> &res) {
+  return isException(runtime, res.getStatus());
+}
+
+::testing::AssertionResult isException(
+    Runtime *runtime,
+    ExecutionStatus status);
 
 /// A RuntimeTestFixture should be used by any test that requires a Runtime.
 /// For different heap sizes, use the different subclasses.
@@ -84,10 +102,19 @@ class RuntimeTestFixtureBase : public ::testing::Test {
       : rt(Runtime::create(runtimeConfig)),
         runtime(rt.get()),
         gcScope(runtime),
-        domain(toHandle(runtime, Domain::create(runtime))) {}
+        domain(runtime->makeHandle(Domain::create(runtime))) {}
 
   /// Can't copy due to internal pointer.
   RuntimeTestFixtureBase(const RuntimeTestFixtureBase &) = delete;
+
+  template <typename T>
+  ::testing::AssertionResult isException(const CallResult<T> &res) {
+    return isException(res.getStatus());
+  }
+
+  ::testing::AssertionResult isException(ExecutionStatus status) {
+    return ::hermes::vm::isException(runtime, status);
+  }
 };
 
 class RuntimeTestFixture : public RuntimeTestFixtureBase {
@@ -188,7 +215,7 @@ inline const GCConfig TestGCConfigFixedSize(
     EXPECT_TRUE(exThrown);                  \
   }
 #else
-#define EXPECT_OOM(exp) EXPECT_DEATH({ exp; }, "OOM")
+#define EXPECT_OOM(exp) EXPECT_DEATH_IF_SUPPORTED({ exp; }, "OOM")
 #endif
 
 /// Get a named value from an object.
@@ -232,19 +259,21 @@ struct DummyRuntime final : public HandleRootOwner,
       MetadataTableForTests metaTable,
       const GCConfig &gcConfig);
 
-  /// Use a custom storage provider.
+  /// Use a custom storage provider and/or a custom crash manager.
   /// \param provider A pointer to a StorageProvider. It *must* use
   ///   StorageProvider::defaultProvider eventually or the test will fail.
+  /// \param crashMgr
   static std::shared_ptr<DummyRuntime> create(
       MetadataTableForTests metaTable,
       const GCConfig &gcConfig,
-      std::shared_ptr<StorageProvider> provider);
+      std::shared_ptr<StorageProvider> provider,
+      std::shared_ptr<CrashManager> crashMgr =
+          std::make_shared<NopCrashManager>());
 
   /// Provide the correct storage provider based on build modes.
   /// All decorator StorageProviders must wrap the one returned from this
   /// function.
-  static std::unique_ptr<StorageProvider> defaultProvider(
-      const GCConfig &gcConfig);
+  static std::unique_ptr<StorageProvider> defaultProvider();
 
   ~DummyRuntime() override {
     gc.finalizeAll();
@@ -291,16 +320,32 @@ struct DummyRuntime final : public HandleRootOwner,
     return "<dummy runtime has no call stack>";
   }
 
+  void onGCEvent(GCEventKind, const std::string &) override {}
+
   /// It's a unit test, it doesn't care about reporting how much memory it uses.
   size_t mallocSize() const override {
     return 0;
+  }
+
+  const inst::Inst *getCurrentIPSlow() const override {
+    return nullptr;
+  }
+
+  StackTracesTreeNode *getCurrentStackTracesTreeNode(
+      const inst::Inst *ip) override {
+    return nullptr;
+  }
+
+  StackTracesTree *getStackTracesTree() override {
+    return nullptr;
   }
 
  private:
   DummyRuntime(
       MetadataTableForTests metaTable,
       const GCConfig &gcConfig,
-      std::shared_ptr<StorageProvider> storageProvider);
+      std::shared_ptr<StorageProvider> storageProvider,
+      std::shared_ptr<CrashManager> crashMgr);
 };
 
 /// A DummyRuntimeTestFixtureBase should be used by any test that requires a

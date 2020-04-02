@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
-# This source code is licensed under the MIT license found in the LICENSE
-# file in the root directory of this source tree.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 
 set(source_files
   ArrayStorage.cpp
@@ -25,11 +25,13 @@ set(source_files
   Interpreter.cpp InstLayout.inc Interpreter-slowpaths.cpp
   JSArray.cpp
   JSArrayBuffer.cpp
+  JSCallableProxy.cpp
   JSDataView.cpp
   JSDate.cpp
   JSError.cpp
   JSGenerator.cpp
   JSObject.cpp
+  JSProxy.cpp
   JSRegExp.cpp
   JSMapImpl.cpp
   JSNativeFunctions.cpp
@@ -39,20 +41,23 @@ set(source_files
   LogFailStorageProvider.cpp
   HostModel.cpp
   Operations.cpp
+  PredefinedStringIDs.cpp
   PrimitiveBox.cpp
   Profiler.cpp
   Runtime.cpp Runtime-profilers.cpp
   RuntimeModule.cpp
   RuntimeStats.cpp
   Profiler/ChromeTraceSerializerPosix.cpp
+  Profiler/CodeCoverageProfiler.cpp
   Profiler/InlineCacheProfiler.cpp
-  Profiler/SamplingProfilerWindows.cpp
+  Profiler/SamplingProfilerStub.cpp
   Profiler/SamplingProfilerPosix.cpp
   Serializer.cpp
   SegmentedArray.cpp
   SerializedLiteralParser.cpp
   SingleObject.cpp
   StackFrame.cpp
+  StackTracesTree.cpp
   StorageProvider.cpp
   StringPrimitive.cpp
   StringView.cpp
@@ -76,6 +81,7 @@ set(source_files
   JSLib/GlobalObject.cpp
   JSLib/IteratorPrototype.cpp
   JSLib/HermesInternal.cpp
+  JSLib/HermesBuiltin.cpp
   JSLib/JSLibInternal.cpp JSLib/JSLibInternal.h
   JSLib/RuntimeCommonStorage.cpp
   JSLib/Map.cpp
@@ -84,6 +90,8 @@ set(source_files
   JSLib/RuntimeJSONUtils.cpp
   JSLib/JSONLexer.cpp
   JSLib/Object.cpp
+  JSLib/Proxy.cpp
+  JSLib/Reflect.cpp
   JSLib/Set.cpp
   JSLib/String.cpp
   JSLib/StringIterator.cpp
@@ -114,7 +122,7 @@ set(jit_files
   JIT/ExternalCalls.cpp JIT/ExternalCalls.h
   )
 
-set(LLVM_OPTIONAL_SOURCES
+set(HERMES_OPTIONAL_SOURCES
   gcs/FillerCell.cpp
   gcs/GenGC.cpp
   gcs/MallocGC.cpp
@@ -157,7 +165,23 @@ list(APPEND source_files
 # This can be (and is) implemented by code which uses rtti, and
 # therefore expects the base class to have typeinfo, so
 # HostModel.cpp must be compiled -frtti, unlike most of the VM.
-set_source_files_properties(HostModel.cpp PROPERTIES COMPILE_FLAGS -frtti)
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR
+    "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+  set_source_files_properties(HostModel.cpp PROPERTIES COMPILE_FLAGS -frtti)
+elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
+  set_source_files_properties(HostModel.cpp PROPERTIES COMPILE_FLAGS /GR)
+endif()
+
+set(link_libs
+  hermesADT
+  hermesInst
+  hermesSupport
+  hermesParser
+  hermesPlatform
+  hermesHBCBackend
+  dtoa
+  ${CORE_FOUNDATION}
+)
 
 if(HERMESVM_JIT)
   list(APPEND source_files ${jit_files})
@@ -173,15 +197,13 @@ if(HERMESVM_JIT)
   )
 endif()
 
-add_llvm_library(hermesVMRuntime STATIC ${source_files}
+if(HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION)
+  list(APPEND link_libs hermesInternalBytecode)
+endif()
+
+add_hermes_library(hermesVMRuntime STATIC ${source_files}
     LINK_LIBS
-    hermesInst
-    hermesSupport
-    hermesParser
-    hermesPlatform
-    hermesHBCBackend
-    dtoa
-    ${CORE_FOUNDATION}
+    ${link_libs}
 )
 
 hermes_link_icu(hermesVMRuntime)

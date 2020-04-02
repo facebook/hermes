@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 // This file defines all possible kinds of objects that are known to the
 // garbage collector.
 
@@ -29,6 +30,8 @@ CELL_KIND(Uninitialized)
 CELL_KIND(FillerCell)
 CELL_KIND(DynamicUTF16StringPrimitive)
 CELL_KIND(DynamicASCIIStringPrimitive)
+CELL_KIND(BufferedUTF16StringPrimitive)
+CELL_KIND(BufferedASCIIStringPrimitive)
 CELL_KIND(DynamicUniquedUTF16StringPrimitive)
 CELL_KIND(DynamicUniquedASCIIStringPrimitive)
 CELL_KIND(ExternalUTF16StringPrimitive)
@@ -44,8 +47,7 @@ CELL_KIND(Environment)
 CELL_KIND(HashMapEntry)
 CELL_KIND(OrderedHashMap)
 
-CELL_JS_NAME(Object, "Object")
-CELL_KIND(Object)
+CELL_CLASS(Object, "Object")
 CELL_KIND(HostObject)
 
 CELL_CLASS(Error, "Error")
@@ -73,15 +75,16 @@ CELL_CLASS(Date, "Date")
 CELL_CLASS(RegExp, "RegExp")
 CELL_CLASS(RequireContext, "RequireContext")
 CELL_CLASS(Generator, "Generator")
+CELL_CLASS(Proxy, "Proxy")
 
-CELL_JS_NAME(Function, "Function")
 CELL_KIND(BoundFunction)
 CELL_KIND(NativeFunction)
 CELL_KIND(NativeConstructor)
+CELL_CLASS(CallableProxy, "CallableProxy")
 CELL_KIND(FinalizableNativeFunction)
 CELL_KIND(GeneratorFunction)
 CELL_KIND(GeneratorInnerFunction)
-CELL_KIND(Function)
+CELL_CLASS(Function, "Function")
 
 // Update AllCells, below, if new CellKinds are added.
 // (AllCells is useful for checking that a CellKind is valid.)

@@ -1,15 +1,17 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_IR_INSTRS_H
 #define HERMES_IR_INSTRS_H
 
 #include <string>
 #include <utility>
 
+#include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/IR/IR.h"
 
 #include "llvm/ADT/SmallVector.h"
@@ -62,10 +64,6 @@ class SingleOperandInst : public Instruction {
     llvm_unreachable("SingleOperandInst must be inherited.");
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    llvm_unreachable("SingleOperandInst must be inherited.");
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::SingleOperandInstKind);
   }
@@ -95,10 +93,6 @@ class TerminatorInst : public Instruction {
   }
 
   WordBitSet<> getChangedOperandsImpl() {
-    llvm_unreachable("TerminatorInst must be inherited.");
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
     llvm_unreachable("TerminatorInst must be inherited.");
   }
 
@@ -161,10 +155,6 @@ class BranchInst : public TerminatorInst {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return index == BranchDestIdx && kindIsA(kind, ValueKind::BasicBlockKind);
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::BranchInstKind);
   }
@@ -204,10 +194,6 @@ class AddEmptyStringInst : public SingleOperandInst {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return index == SingleOperandIdx;
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::AddEmptyStringInstKind);
   }
@@ -235,10 +221,6 @@ class AsNumberInst : public SingleOperandInst {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return index == SingleOperandIdx;
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::AsNumberInstKind);
   }
@@ -262,10 +244,6 @@ class AsInt32Inst : public SingleOperandInst {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return index == SingleOperandIdx;
   }
 
   static bool classof(const Value *V) {
@@ -313,18 +291,6 @@ class CondBranchInst : public TerminatorInst {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case ConditionIdx:
-        return true;
-      case TrueBlockIdx:
-      case FalseBlockIdx:
-        return kindIsA(kind, ValueKind::BasicBlockKind);
-      default:
-        return false;
-    }
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::CondBranchInstKind);
   }
@@ -368,10 +334,6 @@ class ReturnInst : public TerminatorInst {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return index == ReturnValueIdx;
   }
 
   static bool classof(const Value *V) {
@@ -422,10 +384,6 @@ class AllocStackInst : public Instruction {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return index == VariableNameIdx && kindIsA(kind, ValueKind::LabelKind);
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::AllocStackInstKind);
   }
@@ -453,10 +411,6 @@ class LoadStackInst : public SingleOperandInst {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return index == SingleOperandIdx;
   }
 
   static bool classof(const Value *V) {
@@ -496,16 +450,6 @@ class StoreStackInst : public Instruction {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case StoredValueIdx:
-      case PtrIdx:
-        return true;
-      default:
-        return false;
-    }
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::StoreStackInstKind);
   }
@@ -533,10 +477,6 @@ class LoadFrameInst : public SingleOperandInst {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return index == SingleOperandIdx && kindIsA(kind, ValueKind::VariableKind);
   }
 
   static bool classof(const Value *V) {
@@ -576,17 +516,6 @@ class StoreFrameInst : public Instruction {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case StoredValueIdx:
-        return true;
-      case VariableIdx:
-        return kindIsA(kind, ValueKind::VariableKind);
-      default:
-        return false;
-    }
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::StoreFrameInstKind);
   }
@@ -621,10 +550,6 @@ class CreateFunctionInst : public Instruction {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return index == FunctionCodeIdx && kindIsA(kind, ValueKind::FunctionKind);
   }
 
   static bool classof(const Value *V) {
@@ -684,10 +609,6 @@ class CallInst : public Instruction {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return true;
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::CallInstKind);
   }
@@ -714,17 +635,43 @@ class ConstructInst : public CallInst {
       llvm::ArrayRef<Value *> operands)
       : CallInst(src, operands) {}
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case CallInst::ThisIdx:
-        return kindIsA(kind, ValueKind::LiteralUndefinedKind);
-      default:
-        return true;
-    }
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::ConstructInstKind);
+  }
+};
+
+/// Call a VM builtin with the specified number and undefined as the "this"
+/// parameter.
+class CallBuiltinInst : public CallInst {
+  CallBuiltinInst(const CallBuiltinInst &) = delete;
+  void operator=(const CallBuiltinInst &) = delete;
+
+ public:
+  static constexpr unsigned MAX_ARGUMENTS = UINT8_MAX;
+
+  explicit CallBuiltinInst(
+      LiteralNumber *callee,
+      LiteralUndefined *thisValue,
+      ArrayRef<Value *> args)
+      : CallInst(ValueKind::CallBuiltinInstKind, callee, thisValue, args) {
+    assert(
+        getNumArguments() <= MAX_ARGUMENTS &&
+        "Too many arguments to CallBuiltin");
+    assert(
+        callee->getValue() == (int)callee->getValue() &&
+        callee->getValue() < BuiltinMethod::_count && "invalid builtin call");
+  }
+  explicit CallBuiltinInst(
+      const CallBuiltinInst *src,
+      llvm::ArrayRef<Value *> operands)
+      : CallInst(src, operands) {}
+
+  BuiltinMethod::Enum getBuiltinIndex() const {
+    return (BuiltinMethod::Enum)cast<LiteralNumber>(getCallee())->asInt32();
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::ConstructInstKind);
+    return kindIsA(V->getKind(), ValueKind::CallBuiltinInstKind);
   }
 };
 
@@ -776,10 +723,6 @@ class HBCGetGlobalObjectInst : public Instruction {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return false;
   }
 
   static bool classof(const Value *V) {
@@ -835,17 +778,6 @@ class StorePropertyInst : public Instruction {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case StoredValueIdx:
-      case ObjectIdx:
-      case PropertyIdx:
-        return true;
-      default:
-        return false;
-    }
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::StorePropertyInstKind);
   }
@@ -885,18 +817,6 @@ class TryStoreGlobalPropertyInst : public StorePropertyInst {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case StoredValueIdx:
-      case ObjectIdx:
-        return true;
-      case PropertyIdx:
-        return kindIsA(kind, ValueKind::LiteralStringKind);
-      default:
-        return false;
-    }
   }
 
   static bool classof(const Value *V) {
@@ -963,19 +883,6 @@ class StoreOwnPropertyInst : public Instruction {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case StoredValueIdx:
-      case ObjectIdx:
-      case PropertyIdx:
-        return true;
-      case IsEnumerableIdx:
-        return kindIsA(kind, ValueKind::LiteralBoolKind);
-      default:
-        return false;
-    }
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::StoreOwnPropertyInstKind);
   }
@@ -1010,12 +917,6 @@ class StoreNewOwnPropertyInst : public StoreOwnPropertyInst {
       const StoreNewOwnPropertyInst *src,
       llvm::ArrayRef<Value *> operands)
       : StoreOwnPropertyInst(src, operands) {}
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    if (index == PropertyIdx)
-      return kindIsA(kind, ValueKind::LiteralStringKind);
-    return StoreOwnPropertyInst::canSetOperandImpl(kind, index);
-  }
 
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::StoreNewOwnPropertyInstKind);
@@ -1077,20 +978,6 @@ class StoreGetterSetterInst : public Instruction {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case StoredGetterIdx:
-      case StoredSetterIdx:
-      case ObjectIdx:
-      case PropertyIdx:
-        return true;
-      case IsEnumerableIdx:
-        return kindIsA(kind, ValueKind::LiteralBoolKind);
-      default:
-        return false;
-    }
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::StoreGetterSetterInstKind);
   }
@@ -1126,16 +1013,6 @@ class DeletePropertyInst : public Instruction {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case ObjectIdx:
-      case PropertyIdx:
-        return true;
-      default:
-        return false;
-    }
   }
 
   static bool classof(const Value *V) {
@@ -1179,16 +1056,6 @@ class LoadPropertyInst : public Instruction {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case ObjectIdx:
-      case PropertyIdx:
-        return true;
-      default:
-        return false;
-    }
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::LoadPropertyInstKind);
   }
@@ -1226,17 +1093,6 @@ class TryLoadGlobalPropertyInst : public LoadPropertyInst {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case ObjectIdx:
-        return true;
-      case PropertyIdx:
-        return kindIsA(kind, ValueKind::LiteralStringKind);
-      default:
-        return false;
-    }
   }
 
   static bool classof(const Value *V) {
@@ -1277,15 +1133,6 @@ class AllocObjectInst : public Instruction {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case SizeIdx:
-        return kindIsA(kind, ValueKind::LiteralNumberKind);
-      default:
-        return true;
-    }
   }
 
   static bool classof(const Value *V) {
@@ -1329,15 +1176,6 @@ class HBCAllocObjectFromBufferInst : public Instruction {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case SizeIdx:
-        return kindIsA(kind, ValueKind::LiteralNumberKind);
-      default:
-        return kindIsA(kind, ValueKind::LiteralKind);
-    }
   }
 
   /// Number of consecutive literal key/value pairs in the object.
@@ -1423,10 +1261,6 @@ class AllocArrayInst : public Instruction {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return true;
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::AllocArrayInstKind);
   }
@@ -1452,10 +1286,6 @@ class CreateArgumentsInst : public Instruction {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return false;
   }
 
   static bool classof(const Value *V) {
@@ -1494,16 +1324,6 @@ class CreateRegExpInst : public Instruction {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case PatternIdx:
-      case FlagsIdx:
-        return kindIsA(kind, ValueKind::LiteralStringKind);
-      default:
-        return false;
-    }
   }
 
   static bool classof(const Value *V) {
@@ -1563,10 +1383,6 @@ class UnaryOperatorInst : public SingleOperandInst {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return index == SingleOperandIdx;
   }
 
   static bool classof(const Value *V) {
@@ -1672,16 +1488,6 @@ class BinaryOperatorInst : public Instruction {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case LeftHandSideIdx:
-      case RightHandSideIdx:
-        return true;
-      default:
-        return false;
-    }
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::BinaryOperatorInstKind);
   }
@@ -1709,10 +1515,6 @@ class CatchInst : public Instruction {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return false;
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::CatchInstKind);
   }
@@ -1738,10 +1540,6 @@ class ThrowInst : public TerminatorInst {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return index == ThrownValueIdx;
   }
 
   Value *getThrownValue() const {
@@ -1800,18 +1598,6 @@ class SwitchInst : public TerminatorInst {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case InputIdx:
-        return true;
-      case DefaultBlockIdx:
-        return kindIsA(kind, ValueKind::BasicBlockKind);
-      default:
-        return !(index & 1) ? kindIsA(kind, ValueKind::LiteralKind)
-                            : kindIsA(kind, ValueKind::BasicBlockKind);
-    }
   }
 
   static bool classof(const Value *V) {
@@ -1874,21 +1660,6 @@ class GetPNamesInst : public TerminatorInst {
         .set(BaseIdx)
         .set(IndexIdx)
         .set(SizeIdx);
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case IteratorIdx:
-      case BaseIdx:
-      case IndexIdx:
-      case SizeIdx:
-        return true;
-      case OnEmptyIdx:
-      case OnSomeIdx:
-        return kindIsA(kind, ValueKind::BasicBlockKind);
-      default:
-        return false;
-    }
   }
 
   static bool classof(const Value *V) {
@@ -1954,22 +1725,6 @@ class GetNextPNameInst : public TerminatorInst {
         .set(IndexIdx)
         .set(SizeIdx)
         .set(PropertyIdx);
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case PropertyIdx:
-      case BaseIdx:
-      case IndexIdx:
-      case SizeIdx:
-      case IteratorIdx:
-        return true;
-      case OnLastIdx:
-      case OnSomeIdx:
-        return kindIsA(kind, ValueKind::BasicBlockKind);
-      default:
-        return false;
-    }
   }
 
   static bool classof(const Value *V) {
@@ -2050,20 +1805,6 @@ class CheckHasInstanceInst : public TerminatorInst {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case ResultIdx:
-      case LeftIdx:
-      case RightIdx:
-        return true;
-      case OnTrueIdx:
-      case OnFalseIdx:
-        return kindIsA(kind, ValueKind::BasicBlockKind);
-      default:
-        return false;
-    }
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::CheckHasInstanceInstKind);
   }
@@ -2137,16 +1878,6 @@ class TryStartInst : public TerminatorInst {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case CatchTargetBlockIdx:
-      case TryBodyBlockIdx:
-        return kindIsA(kind, ValueKind::BasicBlockKind);
-      default:
-        return false;
-    }
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::TryStartInstKind);
   }
@@ -2177,10 +1908,6 @@ class TryEndInst : public Instruction {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return false;
   }
 
   static bool classof(const Value *V) {
@@ -2231,10 +1958,6 @@ class PhiInst : public Instruction {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return !(index & 1) ? true : kindIsA(kind, ValueKind::BasicBlockKind);
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::PhiInstKind);
   }
@@ -2258,10 +1981,6 @@ class MovInst : public SingleOperandInst {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return index == SingleOperandIdx;
   }
 
   static bool classof(const Value *V) {
@@ -2293,10 +2012,6 @@ class ImplicitMovInst : public SingleOperandInst {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return index == SingleOperandIdx;
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::ImplicitMovInstKind);
   }
@@ -2324,10 +2039,6 @@ class CoerceThisNSInst : public SingleOperandInst {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return index == SingleOperandIdx;
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::CoerceThisNSInstKind);
   }
@@ -2352,10 +2063,6 @@ class DebuggerInst : public Instruction {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return false;
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::DebuggerInstKind);
   }
@@ -2378,10 +2085,6 @@ class GetNewTargetInst : public Instruction {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return false;
   }
 
   static bool classof(const Value *V) {
@@ -2418,10 +2121,6 @@ class ThrowIfUndefinedInst : public Instruction {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return index == CheckedValueIdx;
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::ThrowIfUndefinedInstKind);
   }
@@ -2449,11 +2148,6 @@ class HBCResolveEnvironment : public SingleOperandInst {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return index == SingleOperandIdx &&
-        kindIsA(kind, ValueKind::VariableScopeKind);
   }
 
   static bool classof(const Value *V) {
@@ -2497,18 +2191,6 @@ class HBCStoreToEnvironmentInst : public Instruction {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case EnvIdx:
-      case ValueIdx:
-        return true;
-      case NameIdx:
-        return kindIsA(kind, ValueKind::VariableKind);
-      default:
-        return false;
-    }
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::HBCStoreToEnvironmentInstKind);
   }
@@ -2544,17 +2226,6 @@ class HBCLoadFromEnvironmentInst : public Instruction {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case EnvIdx:
-        return true;
-      case NameIdx:
-        return kindIsA(kind, ValueKind::VariableKind);
-      default:
-        return false;
-    }
   }
 
   static bool classof(const Value *V) {
@@ -2633,21 +2304,6 @@ class SwitchImmInst : public TerminatorInst {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case InputIdx:
-        return true;
-      case DefaultBlockIdx:
-        return kindIsA(kind, ValueKind::BasicBlockKind);
-      case MinValueIdx:
-      case SizeIdx:
-        return kindIsA(kind, ValueKind::LiteralNumberKind);
-      default:
-        return !(index & 1) ? kindIsA(kind, ValueKind::LiteralNumberKind)
-                            : kindIsA(kind, ValueKind::BasicBlockKind);
-    }
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::SwitchImmInstKind);
   }
@@ -2701,17 +2357,6 @@ class SaveAndYieldInst : public TerminatorInst {
     return getNextBlock();
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case ResultIdx:
-        return true;
-      case NextBlockIdx:
-        return kindIsA(kind, ValueKind::BasicBlockKind);
-      default:
-        return false;
-    }
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::SaveAndYieldInstKind);
   }
@@ -2737,10 +2382,6 @@ class DirectEvalInst : public SingleOperandInst {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return index == SingleOperandIdx;
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::DirectEvalInstKind);
   }
@@ -2764,10 +2405,6 @@ class HBCCreateEnvironmentInst : public Instruction {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return false;
   }
 
   static bool classof(const Value *V) {
@@ -2797,10 +2434,6 @@ class HBCProfilePointInst : public Instruction {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return false;
   }
 
   static bool classof(const Value *V) {
@@ -2838,10 +2471,6 @@ class HBCLoadConstInst : public SingleOperandInst {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return index == SingleOperandIdx && kindIsA(kind, ValueKind::LiteralKind);
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::HBCLoadConstInstKind);
   }
@@ -2873,11 +2502,6 @@ class HBCLoadParamInst : public SingleOperandInst {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return index == SingleOperandIdx &&
-        kindIsA(kind, ValueKind::LiteralNumberKind);
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::HBCLoadParamInstKind);
   }
@@ -2903,10 +2527,6 @@ class HBCGetThisNSInst : public Instruction {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return false;
   }
 
   static bool classof(const Value *V) {
@@ -2937,10 +2557,6 @@ class HBCGetArgumentsLengthInst : public SingleOperandInst {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return index == SingleOperandIdx;
   }
 
   static bool classof(const Value *V) {
@@ -2981,16 +2597,6 @@ class HBCGetArgumentsPropByValInst : public Instruction {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case IndexIdx:
-      case LazyRegisterIdx:
-        return true;
-      default:
-        return false;
-    }
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::HBCGetArgumentsPropByValInstKind);
   }
@@ -3020,10 +2626,6 @@ class HBCReifyArgumentsInst : public SingleOperandInst {
 
   WordBitSet<> getChangedOperandsImpl() {
     return WordBitSet<>{}.set(0);
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return index == SingleOperandIdx;
   }
 
   static bool classof(const Value *V) {
@@ -3062,16 +2664,6 @@ class HBCCreateThisInst : public Instruction {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case PrototypeIdx:
-      case ClosureIdx:
-        return true;
-      default:
-        return false;
-    }
   }
 
   static bool classof(const Value *V) {
@@ -3137,61 +2729,8 @@ class HBCGetConstructedObjectInst : public Instruction {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case ThisValueIdx:
-      case ConstructorReturnValueIdx:
-        return true;
-      default:
-        return false;
-    }
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::HBCGetConstructedObjectInstKind);
-  }
-};
-
-/// Call a VM builtin with the specified number and undefined as the "this"
-/// parameter.
-class HBCCallBuiltinInst : public CallInst {
-  HBCCallBuiltinInst(const HBCCallBuiltinInst &) = delete;
-  void operator=(const HBCCallBuiltinInst &) = delete;
-
- public:
-  static constexpr unsigned MAX_ARGUMENTS = UINT8_MAX;
-
-  explicit HBCCallBuiltinInst(
-      LiteralNumber *callee,
-      LiteralUndefined *thisValue,
-      ArrayRef<Value *> args)
-      : CallInst(ValueKind::HBCCallBuiltinInstKind, callee, thisValue, args) {
-    assert(
-        getNumArguments() <= MAX_ARGUMENTS &&
-        "Too many arguments to HBCCallBuiltin");
-  }
-  explicit HBCCallBuiltinInst(
-      const HBCCallBuiltinInst *src,
-      llvm::ArrayRef<Value *> operands)
-      : CallInst(src, operands) {}
-
-  int getBuiltinIndex() const {
-    return cast<LiteralNumber>(getCallee())->asInt32();
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case CallInst::CalleeIdx:
-        return kindIsA(kind, ValueKind::LiteralNumberKind);
-      case CallInst::ThisIdx:
-        return kindIsA(kind, ValueKind::LiteralUndefinedKind);
-      default:
-        return index < CallInst::ThisIdx + MAX_ARGUMENTS;
-    }
-  }
-
-  static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::HBCCallBuiltinInstKind);
   }
 };
 
@@ -3246,17 +2785,6 @@ class HBCCreateFunctionInst : public CreateFunctionInst {
     return getOperand(EnvIdx);
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case CreateFunctionInst::FunctionCodeIdx:
-        return kindIsA(kind, ValueKind::FunctionKind);
-      case EnvIdx:
-        return true;
-      default:
-        return false;
-    }
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::HBCCreateFunctionInstKind);
   }
@@ -3286,11 +2814,6 @@ class HBCSpillMovInst : public SingleOperandInst {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return index == SingleOperandIdx &&
-        kindIsA(kind, ValueKind::InstructionKind);
   }
 
   static bool classof(const Value *V) {
@@ -3357,19 +2880,6 @@ class CompareBranchInst : public TerminatorInst {
     return {};
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case LeftHandSideIdx:
-      case RightHandSideIdx:
-        return true;
-      case TrueBlockIdx:
-      case FalseBlockIdx:
-        return kindIsA(kind, ValueKind::BasicBlockKind);
-      default:
-        return false;
-    }
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::CompareBranchInstKind);
   }
@@ -3432,17 +2942,6 @@ class HBCCreateGeneratorInst : public CreateGeneratorInst {
     return getOperand(EnvIdx);
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case CreateGeneratorInst::FunctionCodeIdx:
-        return kindIsA(kind, ValueKind::FunctionKind);
-      case EnvIdx:
-        return true;
-      default:
-        return false;
-    }
-  }
-
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::HBCCreateGeneratorInstKind);
   }
@@ -3466,10 +2965,6 @@ class StartGeneratorInst : public Instruction {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return false;
   }
 
   static bool classof(const Value *V) {
@@ -3505,17 +3000,122 @@ class ResumeGeneratorInst : public Instruction {
     return getOperand(IsReturnIdx);
   }
 
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case IsReturnIdx:
-        return true;
-      default:
-        return false;
-    }
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::ResumeGeneratorInstKind);
+  }
+};
+
+class IteratorBeginInst : public Instruction {
+  IteratorBeginInst(const IteratorBeginInst &) = delete;
+  void operator=(const IteratorBeginInst &) = delete;
+
+ public:
+  enum { SourceOrNextIdx };
+
+  explicit IteratorBeginInst(AllocStackInst *sourceOrNext)
+      : Instruction(ValueKind::IteratorBeginInstKind) {
+    pushOperand(sourceOrNext);
+  }
+  explicit IteratorBeginInst(
+      const IteratorBeginInst *src,
+      llvm::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  SideEffectKind getSideEffect() const {
+    return SideEffectKind::Unknown;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return WordBitSet<>{}.set(SourceOrNextIdx);
+  }
+
+  Value *getSourceOrNext() const {
+    return getOperand(SourceOrNextIdx);
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::ResumeGeneratorInstKind);
+    return kindIsA(V->getKind(), ValueKind::IteratorBeginInstKind);
+  }
+};
+
+class IteratorNextInst : public Instruction {
+  IteratorNextInst(const IteratorNextInst &) = delete;
+  void operator=(const IteratorNextInst &) = delete;
+
+ public:
+  enum { IteratorIdx, SourceOrNextIdx };
+
+  explicit IteratorNextInst(
+      AllocStackInst *iterator,
+      AllocStackInst *sourceOrNext)
+      : Instruction(ValueKind::IteratorNextInstKind) {
+    pushOperand(iterator);
+    pushOperand(sourceOrNext);
+  }
+  explicit IteratorNextInst(
+      const IteratorNextInst *src,
+      llvm::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  SideEffectKind getSideEffect() const {
+    return SideEffectKind::Unknown;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return WordBitSet<>{}.set(IteratorIdx);
+  }
+
+  Value *getIterator() const {
+    return getOperand(IteratorIdx);
+  }
+  Value *getSourceOrNext() const {
+    return getOperand(SourceOrNextIdx);
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::IteratorNextInstKind);
+  }
+};
+
+class IteratorCloseInst : public Instruction {
+  IteratorCloseInst(const IteratorCloseInst &) = delete;
+  void operator=(const IteratorCloseInst &) = delete;
+
+ public:
+  enum { IteratorIdx, IgnoreInnerExceptionIdx };
+
+  using TargetList = llvm::SmallVector<Value *, 2>;
+
+  explicit IteratorCloseInst(
+      AllocStackInst *iterator,
+      LiteralBool *ignoreInnerException)
+      : Instruction(ValueKind::IteratorCloseInstKind) {
+    pushOperand(iterator);
+    pushOperand(ignoreInnerException);
+  }
+  explicit IteratorCloseInst(
+      const IteratorCloseInst *src,
+      llvm::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  SideEffectKind getSideEffect() const {
+    return SideEffectKind::Unknown;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  Value *getIterator() const {
+    return getOperand(IteratorIdx);
+  }
+
+  bool getIgnoreInnerException() const {
+    return cast<LiteralBool>(getOperand(IgnoreInnerExceptionIdx))->getValue();
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::IteratorCloseInstKind);
   }
 };
 
@@ -3537,10 +3137,6 @@ class UnreachableInst : public Instruction {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return false;
   }
 
   static bool classof(const Value *V) {

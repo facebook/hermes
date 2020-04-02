@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_PRIMITIVEBOX_H
 #define HERMES_VM_PRIMITIVEBOX_H
 
@@ -22,8 +23,8 @@ class PrimitiveBox : public JSObject {
 #endif
 
   // We need one slot for the boxed value.
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      Super::NEEDED_PROPERTY_SLOTS + 1;
+  static const PropStorage::size_type ANONYMOUS_PROPERTY_SLOTS =
+      Super::ANONYMOUS_PROPERTY_SLOTS + 1;
 
   static bool classof(const GCCell *cell) {
     return kindInRange(
@@ -35,14 +36,14 @@ class PrimitiveBox : public JSObject {
   /// \return the [[PrimitiveValue]] internal property.
   static HermesValue getPrimitiveValue(JSObject *self, Runtime *runtime) {
     return JSObject::getInternalProperty(
-        self, runtime, PrimitiveBox::primitiveValueIndex);
+        self, runtime, PrimitiveBox::primitiveValuePropIndex());
   }
 
   /// Set the [[PrimitiveValue]] internal property.
   static void
   setPrimitiveValue(JSObject *self, Runtime *runtime, HermesValue value) {
     return JSObject::setInternalProperty(
-        self, runtime, PrimitiveBox::primitiveValueIndex, value);
+        self, runtime, PrimitiveBox::primitiveValuePropIndex(), value);
   }
 
  protected:
@@ -53,7 +54,9 @@ class PrimitiveBox : public JSObject {
       HiddenClass *clazz)
       : JSObject(runtime, vt, parent, clazz) {}
 
-  static const SlotIndex primitiveValueIndex = 0;
+  static constexpr SlotIndex primitiveValuePropIndex() {
+    return numOverlapSlots<PrimitiveBox>() + ANONYMOUS_PROPERTY_SLOTS - 1;
+  }
 };
 
 /// String object.
@@ -66,20 +69,20 @@ class JSString final : public PrimitiveBox {
 #endif
 
   // We need one more slot for the length property.
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      Super::NEEDED_PROPERTY_SLOTS + 1;
+  static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
+      Super::NAMED_PROPERTY_SLOTS + 1;
   static ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::StringObjectKind;
   }
 
-  static CallResult<HermesValue> create(
+  static CallResult<Handle<JSString>> create(
       Runtime *runtime,
       Handle<StringPrimitive> value,
       Handle<JSObject> prototype);
 
-  static CallResult<HermesValue> create(
+  static CallResult<Handle<JSString>> create(
       Runtime *runtime,
       Handle<JSObject> prototype) {
     return create(
@@ -90,7 +93,7 @@ class JSString final : public PrimitiveBox {
 
   /// Set the [[PrimitiveValue]] internal property from a string.
   static void setPrimitiveString(
-      Handle<JSObject> selfHandle,
+      Handle<JSString> selfHandle,
       Runtime *runtime,
       Handle<StringPrimitive> string);
 
@@ -165,10 +168,6 @@ class JSStringIterator : public JSObject {
  public:
   static ObjectVTable vt;
 
-  // We need one more slot for the [[IteratedString]] property.
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      Super::NEEDED_PROPERTY_SLOTS + 1;
-
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::StringIteratorKind;
   }
@@ -220,10 +219,10 @@ class JSNumber final : public PrimitiveBox {
     return cell->getKind() == CellKind::NumberObjectKind;
   }
 
-  static CallResult<HermesValue>
+  static PseudoHandle<JSNumber>
   create(Runtime *runtime, double value, Handle<JSObject> prototype);
 
-  static CallResult<HermesValue> create(
+  static PseudoHandle<JSNumber> create(
       Runtime *runtime,
       Handle<JSObject> prototype) {
     return create(runtime, 0.0, prototype);
@@ -247,10 +246,10 @@ class JSBoolean final : public PrimitiveBox {
     return cell->getKind() == CellKind::BooleanObjectKind;
   }
 
-  static CallResult<HermesValue>
+  static PseudoHandle<JSBoolean>
   create(Runtime *runtime, bool value, Handle<JSObject> prototype);
 
-  static CallResult<HermesValue> create(
+  static PseudoHandle<JSBoolean> create(
       Runtime *runtime,
       Handle<JSObject> prototype) {
     return create(runtime, false, prototype);
@@ -270,10 +269,10 @@ class JSSymbol final : public PrimitiveBox {
     return cell->getKind() == CellKind::SymbolObjectKind;
   }
 
-  static CallResult<HermesValue>
+  static PseudoHandle<JSSymbol>
   create(Runtime *runtime, SymbolID value, Handle<JSObject> prototype);
 
-  static CallResult<HermesValue> create(
+  static PseudoHandle<JSSymbol> create(
       Runtime *runtime,
       Handle<JSObject> prototype) {
     return create(runtime, SymbolID{}, prototype);

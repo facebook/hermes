@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_JIT_X86_64_FASTJIT_H
 #define HERMES_VM_JIT_X86_64_FASTJIT_H
 
@@ -127,6 +128,14 @@ class FastJIT {
     return sizeof(HermesValue) * StackFrameLayout::localOffset(regIndex);
   }
 
+  /// \return the offset in bytes from Frame to access the specified
+  ///   Hermes argument by \p argIndex.
+  /// \param argIndex 0-based index into the arguments region in
+  /// StackFrameLayout.h. "this" argument has the index -1.
+  static inline int32_t hermesArgByteOffset(int32_t argIndex) {
+    return sizeof(HermesValue) * StackFrameLayout::argOffset(argIndex);
+  }
+
 #ifndef NDEBUG
   /// Add a descriptor for the last emitted section in the slow path, so it
   /// can be disassembled correctly.
@@ -206,6 +215,15 @@ class FastJIT {
   template <bool fp = false>
   Emitter
   movHermesRegToNativeReg(Emitter emit, OperandReg32 hermesReg, Reg nativeReg);
+
+  /// Used by CallN instruction to move the specified hermes register \p
+  /// hermesReg to callee's arguments slot in \p argIndex.
+  /// \param argIndex 0-based index into the arguments region in
+  /// StackFrameLayout.h. "this" argument has the index -1.
+  Emitter movHermesRegToCalleeArg(
+      Emitter emit,
+      OperandReg32 hermesReg,
+      int32_t argIndex);
 
   /// Move hermes reg \p src to hermes reg \p dst.
   Emitter
@@ -293,6 +311,7 @@ class FastJIT {
   getByIdHelper(Emitters emit, const Inst *ip, bool tryProp, uint32_t idVal);
   Emitters
   putByIdHelper(Emitters emit, const Inst *ip, bool tryProp, uint32_t idVal);
+  Emitters delByIdHelper(Emitters emit, const Inst *ip, uint32_t idVal);
   Emitters callHelper(
       Emitters emit,
       const Inst *ip,
@@ -365,6 +384,14 @@ class FastJIT {
   Emitters compileTryPutById(Emitters emit, const Inst *ip);
   Emitters compileTryPutByIdLong(Emitters emit, const Inst *ip);
 
+  Emitters compileDelById(Emitters emit, const Inst *ip);
+  Emitters compileDelByIdLong(Emitters emit, const Inst *ip);
+
+  Emitters compileCall1(Emitters emit, const Inst *ip);
+  Emitters compileCall2(Emitters emit, const Inst *ip);
+  Emitters compileCall3(Emitters emit, const Inst *ip);
+  Emitters compileCall4(Emitters emit, const Inst *ip);
+
   Emitters compileCall(Emitters emit, const Inst *ip);
   Emitters compileCallLong(Emitters emit, const Inst *ip);
   Emitters compileConstruct(Emitters emit, const Inst *ip);
@@ -382,7 +409,16 @@ class FastJIT {
   /// register \p regIndex and the given \p tag. The given \p tag could only be
   /// a non-pointer tag. The comparison instruction will set the flag registers
   /// based on the result, and the caller could then perform accordingly.
-  Emitter cmpSomeNPTag(Emitter emit, uint32_t regIndex, uint32_t tag);
+  template <TagKind tag>
+  Emitter cmpSomeNPTag(Emitter emit, uint32_t regIndex);
+
+  /// Emit a comparison between the higher 32 bits of the value in the Hermes
+  /// register \p regIndex and the given \p etag. The given \p etag could only
+  /// be a non-pointer tag. The comparison instruction will set the flag
+  /// registers based on the result, and the caller could then perform
+  /// accordingly.
+  template <ETag etag>
+  Emitter cmpSomeNPETag(Emitter emit, uint32_t regIndex);
 
   /// Load the HermesValue in \p regIndex to a temporary register i.e. %rax,
   /// right shift %rax by HermesValue::kNumDataBits bits, then emit a comparison
@@ -417,6 +453,7 @@ class FastJIT {
   Emitters compileMov(Emitters emit, const Inst *ip);
   Emitters compileMovLong(Emitters emit, const Inst *ip);
   Emitters compileToNumber(Emitters emit, const Inst *ip);
+  Emitters compileToInt32(Emitters emit, const Inst *ip);
   Emitters compileAddEmptyString(Emitters emit, const Inst *ip);
   Emitters compileRet(Emitters emit, const Inst *ip);
   Emitters compileCondJumpN(

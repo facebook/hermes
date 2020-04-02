@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
@@ -67,7 +68,7 @@ using SLG = hermes::hbc::SerializedLiteralGenerator;
  * If you have added or modified sections, make sure they're counted properly.
  */
 static_assert(
-    BYTECODE_VERSION == 63,
+    BYTECODE_VERSION == 74,
     "Bytecode version changed. Please verify that hbc-attribute counts correctly..");
 
 static llvm::cl::opt<std::string> InputFilename(

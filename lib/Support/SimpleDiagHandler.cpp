@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/Support/SimpleDiagHandler.h"
 
 #include "llvm/ADT/Twine.h"
@@ -27,7 +28,7 @@ void SimpleDiagHandler::handler(const llvm::SMDiagnostic &msg, void *ctx) {
 
 std::string SimpleDiagHandler::getErrorString() const {
   const auto &msg = getFirstMessage();
-  return (Twine(msg.getLineNo()) + ":" + Twine(msg.getColumnNo()) + ":" +
+  return (Twine(msg.getLineNo()) + ":" + Twine(msg.getColumnNo() + 1) + ":" +
           msg.getMessage())
       .str();
 }

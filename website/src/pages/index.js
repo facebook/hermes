@@ -10,7 +10,7 @@ import classnames from 'classnames';
 import Layout from '@theme/Layout';
 import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
-import withBaseUrl from '@docusaurus/withBaseUrl';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 import styles from './styles.module.css';
 
 const features = [
@@ -64,7 +64,7 @@ function Home() {
                 'button button--secondary button--lg',
                 styles.getStarted,
               )}
-              to={'https://facebook.github.io/react-native/docs/hermes'}
+              to={'https://reactnative.dev/docs/hermes'}
             >
               Start Using Hermes
             </Link>
@@ -85,7 +85,7 @@ function Home() {
                       <div className="text--center margin-bottom--lg">
                         <img
                           className={styles.featureImage}
-                          src={withBaseUrl(imageUrl)}
+                          src={useBaseUrl(imageUrl)}
                           alt={title}
                         />
                       </div>

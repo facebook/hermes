@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_PUBLIC_GCCONFIG_H
 #define HERMES_PUBLIC_GCCONFIG_H
 
@@ -29,13 +30,23 @@ namespace vm {
 /// it 32-bit).
 using gcheapsize_t = uint32_t;
 
+struct GCAnalyticsEvent {
+  std::string runtimeDescription;
+  std::string gcKind;
+  std::string collectionType;
+  std::chrono::milliseconds duration;
+  std::chrono::milliseconds cpuDuration;
+  uint64_t preAllocated;
+  uint64_t preSize;
+  uint64_t postAllocated;
+  uint64_t postSize;
+  double survivalRatio;
+};
+
 /// Parameters to control a tripwire function called when the live set size
 /// surpasses a given threshold after collections.  Check documentation in
 /// README.md
 #define GC_TRIPWIRE_FIELDS(F)                                                  \
-  /* Minimum time to wait between tripwire trigger events. */                  \
-  F(constexpr, std::chrono::hours, Cooldown, 24)                               \
-                                                                               \
   /* If the heap size is above this threshold after a collection, the tripwire \
    * is triggered. */                                                          \
   F(constexpr, gcheapsize_t, Limit, std::numeric_limits<gcheapsize_t>::max())  \
@@ -73,6 +84,11 @@ enum ReleaseUnused {
   kReleaseUnusedYoungAlways /// Also young gen, also on young gen collections.
 };
 
+enum class GCEventKind {
+  CollectionStart,
+  CollectionEnd,
+};
+
 /// Parameters for GC Initialisation.  Check documentation in README.md
 /// constexpr indicates that the default value is constexpr.
 #define GC_FIELDS(F)                                                      \
@@ -107,7 +123,7 @@ enum ReleaseUnused {
   F(constexpr, ReleaseUnused, ShouldReleaseUnused, kReleaseUnusedOld)     \
                                                                           \
   /* Name for this heap in logs. */                                       \
-  F(HERMES_NON_CONSTEXPR, std::string, Name, "HermesRuntime")             \
+  F(HERMES_NON_CONSTEXPR, std::string, Name, "")                          \
                                                                           \
   /* Configuration for the Heap Tripwire. */                              \
   F(HERMES_NON_CONSTEXPR, GCTripwireConfig, TripwireConfig)               \
@@ -122,10 +138,27 @@ enum ReleaseUnused {
   /* Whether to use mprotect on GC metadata between GCs. */               \
   F(constexpr, bool, ProtectMetadata, false)                              \
                                                                           \
+  /* Whether to track allocation traces starting in the Runtime ctor. */  \
+  F(constexpr, bool, AllocationLocationTrackerFromStart, false)           \
+                                                                          \
   /* Pointer to the memory profiler (Memory Event Tracker). */            \
   F(HERMES_NON_CONSTEXPR,                                                 \
     std::shared_ptr<MemoryEventTracker>,                                  \
     MemEventTracker,                                                      \
+    nullptr)                                                              \
+                                                                          \
+  /* Callout for an analytics event. */                                   \
+  F(HERMES_NON_CONSTEXPR,                                                 \
+    std::function<void(const GCAnalyticsEvent &)>,                        \
+    AnalyticsCallback,                                                    \
+    nullptr)                                                              \
+                                                                          \
+  /* Called at GC events (see GCEventKind enum for the list). The */      \
+  /* second argument contains human-readable details about the event. */  \
+  /* NOTE: The function MUST NOT invoke any methods on the Runtime. */    \
+  F(HERMES_NON_CONSTEXPR,                                                 \
+    std::function<void(GCEventKind, const char *)>,                       \
+    Callback,                                                             \
     nullptr)                                                              \
   /* GC_FIELDS END */
 

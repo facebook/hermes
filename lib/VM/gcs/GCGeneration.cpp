@@ -1,13 +1,15 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/GCGeneration.h"
 
 #include "hermes/Public/GCConfig.h"
-#include "hermes/VM/GCCell-inline.h"
+#include "hermes/VM/GC.h"
+#include "hermes/VM/HiddenClass.h"
 
 #include <memory>
 
@@ -54,6 +56,13 @@ uint64_t GCGeneration::mallocSizeFromFinalizerList() const {
     mallocSize += cell->getVT()->getMallocSize(cell);
   }
   return mallocSize;
+}
+
+void GCGeneration::clearUnmarkedPropertyMaps() {
+  for (auto cell : cellsWithFinalizers())
+    if (!AlignedHeapSegment::getCellMarkBit(cell))
+      if (auto hc = dyn_vmcast<HiddenClass>(cell))
+        hc->clearPropertyMap();
 }
 
 #ifdef HERMES_SLOW_DEBUG

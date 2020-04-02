@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 /// Describes the structure of various parts of the V8 Heap Snapshot format
 
 #ifndef V8_SNAPSHOT_SECTION
@@ -25,6 +26,19 @@
 #ifndef V8_EDGE_FIELD
 #define V8_EDGE_FIELD(label, type)
 #endif
+
+#ifndef V8_LOCATION_FIELD
+#define V8_LOCATION_FIELD(label)
+#endif
+
+#ifndef V8_TRACE_FUNCTION_INFO_FIELD
+#define V8_TRACE_FUNCTION_INFO_FIELD(name)
+#endif
+
+#ifndef V8_TRACE_NODE_FIELD
+#define V8_TRACE_NODE_FIELD(name)
+#endif
+
 
 /// V8 Heap Snapshots look like JSON, but the parser expects fields in a
 /// specific order.  They are also all expected to exist, whether not they
@@ -85,8 +99,31 @@ V8_EDGE_TYPE(Weak, "weak")
 V8_EDGE_FIELD(name_or_index, string_or_number)
 V8_EDGE_FIELD(to_node, node)
 
+// Fields associated with a location record. Locations don't have an associated
+// type.
+V8_LOCATION_FIELD(object_index)
+V8_LOCATION_FIELD(script_id)
+V8_LOCATION_FIELD(line)
+V8_LOCATION_FIELD(column)
+
+V8_TRACE_FUNCTION_INFO_FIELD(function_id)
+V8_TRACE_FUNCTION_INFO_FIELD(name)
+V8_TRACE_FUNCTION_INFO_FIELD(script_name)
+V8_TRACE_FUNCTION_INFO_FIELD(script_id)
+V8_TRACE_FUNCTION_INFO_FIELD(line)
+V8_TRACE_FUNCTION_INFO_FIELD(column)
+
+V8_TRACE_NODE_FIELD(id)
+V8_TRACE_NODE_FIELD(function_info_index)
+V8_TRACE_NODE_FIELD(count)
+V8_TRACE_NODE_FIELD(size)
+V8_TRACE_NODE_FIELD(children)
+
 #undef V8_SNAPSHOT_SECTION
 #undef V8_NODE_TYPE
 #undef V8_NODE_FIELD
 #undef V8_EDGE_TYPE
 #undef V8_EDGE_FIELD
+#undef V8_TRACE_FUNCTION_INFO_FIELD
+#undef V8_TRACE_NODE_FIELD
+#undef V8_LOCATION_FIELD

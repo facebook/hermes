@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/HandleRootOwner.h"
 
 #include "hermes/Support/CheckedMalloc.h"
@@ -21,6 +22,7 @@ PinnedHermesValue HandleRootOwner::nullPointer_{
 PinnedHermesValue HandleRootOwner::undefinedValue_{
     HermesValue::encodeUndefinedValue()};
 PinnedHermesValue HandleRootOwner::nullValue_{HermesValue::encodeNullValue()};
+PinnedHermesValue HandleRootOwner::emptyValue_{HermesValue::encodeEmptyValue()};
 PinnedHermesValue HandleRootOwner::trueValue_{
     HermesValue::encodeBoolValue(true)};
 PinnedHermesValue HandleRootOwner::falseValue_{

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/BCGen/HBC/DebugInfo.h"
 
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
@@ -223,73 +224,79 @@ void DebugInfo::disassembleFilenames(llvm::raw_ostream &os) const {
   for (uint32_t i = 0, e = filenameTable_.size(); i < e; ++i) {
     os << "  " << i << ": " << getFilenameByID(i) << '\n';
   }
+  if (filenameTable_.empty()) {
+    os << "  (none)\n";
+  }
   os << '\n';
 }
 
 void DebugInfo::disassembleFilesAndOffsets(llvm::raw_ostream &OS) const {
   OS << "Debug file table:\n";
   for (int i = 0, e = files_.size(); i < e; i++) {
-    OS << "  Debug offset " << files_[i].fromAddress << ": string id "
-       << files_[i].filenameId << "\n";
+    OS << "  source table offset " << llvm::format_hex(files_[i].fromAddress, 6)
+       << ": filename id " << files_[i].filenameId << "\n";
   }
-  if (!files_.size()) {
-    OS << "(none)\n";
+  if (files_.empty()) {
+    OS << "  (none)\n";
   }
   OS << "\n";
 
-  OS << "Debug data table:\n";
+  OS << "Debug source table:\n";
 
   uint32_t offset = 0;
   llvm::ArrayRef<uint8_t> locsData = sourceLocationsData();
   while (offset < locsData.size()) {
     FunctionDebugInfoDeserializer fdid(locsData, offset);
-    OS << "  DebugOffset " << llvm::format_hex(offset, 2);
-    OS << " for function at " << fdid.getFunctionIndex();
-    OS << " starts at line=" << fdid.getCurrent().line
-       << ", col=" << fdid.getCurrent().column;
-    OS << " and emits locations for ";
+    OS << "  " << llvm::format_hex(offset, 6);
+    OS << "  function idx " << fdid.getFunctionIndex();
+    OS << ", starts at line " << fdid.getCurrent().line << " col "
+       << fdid.getCurrent().column << "\n";
     uint32_t count = 0;
     while (auto loc = fdid.next()) {
-      OS << loc->address << " ";
+      OS << "    bc " << loc->address << ": line " << loc->line << " col "
+         << loc->column << "\n";
       count++;
     }
-    OS << " (" << count << " in total).\n";
+    if (count == 0) {
+      OS << "    (none)\n";
+    }
     offset = fdid.getOffset();
   }
-  OS << "  Debug table ends at debugOffset " << llvm::format_hex(offset, 2)
-     << "\n";
+  OS << "  " << llvm::format_hex(offset, 6)
+     << "  end of debug source table\n\n";
 }
 
 void DebugInfo::disassembleLexicalData(llvm::raw_ostream &OS) const {
   uint32_t offset = 0;
   llvm::ArrayRef<uint8_t> lexData = lexicalData();
 
-  OS << "Debug variables table:\n";
+  OS << "Debug lexical table:\n";
   auto next = [&]() {
     int64_t result;
     offset += readSignedLEB128(lexData, offset, &result);
     return (int32_t)result;
   };
   while (offset < lexData.size()) {
-    OS << "  Offset: " << llvm::format_hex(offset, 2);
+    OS << "  " << llvm::format_hex(offset, 6);
     int64_t parentId = next();
     int64_t varNamesCount = next();
-    OS << ", vars count: " << varNamesCount << ", lexical parent: ";
+    OS << "  lexical parent: ";
     if (parentId < 0) {
       OS << "none";
     } else {
       OS << parentId;
     }
+    OS << ", variable count: " << varNamesCount;
     OS << '\n';
     for (int64_t i = 0; i < varNamesCount; i++) {
-      const auto startOffset = offset;
       StringRef name = decodeString(&offset, lexData);
-      OS << "    " << llvm::format_hex(startOffset, 6) << ": ";
-      OS << '"';
+      OS << "    \"";
       OS.write_escaped(name);
       OS << '"' << '\n';
     }
   }
+  assert(offset == lexData.size());
+  OS << "  " << llvm::format_hex(offset, 6) << "  end of debug lexical table\n";
 }
 
 #ifndef HERMESVM_LEAN
@@ -344,11 +351,12 @@ uint32_t DebugInfoGenerator::appendSourceLocations(
   // so require that statement = 0 for the start debug value.
   assert(start.statement == 0 && "function must start at statement 0");
 
+  if (offsets.empty()) {
+    return DebugOffsets::NO_OFFSET;
+  }
   const uint32_t startOffset = sourcesData_.size();
-  if (offsets.empty())
-    return startOffset;
 
-  if (!files_.size() || files_.back().filenameId != start.filenameId) {
+  if (files_.empty() || files_.back().filenameId != start.filenameId) {
     files_.push_back(DebugFileRegion{
         startOffset, start.filenameId, start.sourceMappingUrlId});
   }
@@ -392,7 +400,7 @@ uint32_t DebugInfoGenerator::appendSourceLocations(
 DebugInfoGenerator::DebugInfoGenerator(UniquingFilenameTable &&filenameTable)
     : filenameStrings_(
           UniquingFilenameTable::toStorage(std::move(filenameTable))) {
-  // Initialize the empty lexical data.
+  // Initialize the empty data entry in debug lexical table.
   assert(
       lexicalData_.size() == kEmptyLexicalDataOffset &&
       "Lexical data should initially be kEmptyLexicalDataOffset");

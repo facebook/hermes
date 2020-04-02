@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "SemanticValidator.h"
 
 #include "hermes/Support/RegExpSerialization.h"
@@ -128,16 +129,25 @@ void SemanticValidator::visit(IdentifierNode *identifier) {
 
 /// Process a function declaration by creating a new FunctionContext.
 void SemanticValidator::visit(FunctionDeclarationNode *funcDecl) {
+  if (funcDecl->_async) {
+    sm_.error(funcDecl->getStartLoc(), "async functions are unsupported");
+  }
   curFunction()->semInfo->closures.push_back(funcDecl);
   visitFunction(funcDecl, funcDecl->_id, funcDecl->_params, funcDecl->_body);
 }
 
 /// Process a function expression by creating a new FunctionContext.
 void SemanticValidator::visit(FunctionExpressionNode *funcExpr) {
+  if (funcExpr->_async) {
+    sm_.error(funcExpr->getStartLoc(), "async functions are unsupported");
+  }
   visitFunction(funcExpr, funcExpr->_id, funcExpr->_params, funcExpr->_body);
 }
 
 void SemanticValidator::visit(ArrowFunctionExpressionNode *arrowFunc) {
+  if (arrowFunc->_async) {
+    sm_.error(arrowFunc->getStartLoc(), "async functions are unsupported");
+  }
   // Convert expression functions to a full-body to simplify IRGen.
   if (arrowFunc->_expression) {
     auto *retStmt = new (astContext_) ReturnStatementNode(arrowFunc->_body);
@@ -453,12 +463,14 @@ void SemanticValidator::visit(UnaryExpressionNode *unaryExpr) {
 }
 
 void SemanticValidator::visit(ArrayPatternNode *AP) {
-  collapseNestedAP(AP->_elements);
   visitESTreeChildren(*this, AP);
 }
 
 void SemanticValidator::visit(SpreadElementNode *S, Node *parent) {
-  if (!isa<ESTree::ObjectExpressionNode>(parent))
+  if (!isa<ESTree::ObjectExpressionNode>(parent) &&
+      !isa<ESTree::ArrayExpressionNode>(parent) &&
+      !isa<ESTree::CallExpressionNode>(parent) &&
+      !isa<ESTree::NewExpressionNode>(parent))
     sm_.error(S->getSourceRange(), "spread operator is not supported");
   visitESTreeChildren(*this, S);
 }
@@ -540,7 +552,8 @@ void SemanticValidator::visit(ExportDefaultDeclarationNode *exportDecl) {
               funcDecl->_id,
               std::move(funcDecl->_params),
               funcDecl->_body,
-              funcDecl->_generator);
+              funcDecl->_generator,
+              /* async */ false);
       exportDecl->_declaration->copyLocationFrom(funcDecl);
     }
   }
@@ -631,8 +644,6 @@ void SemanticValidator::visitFunction(
       }
     }
   }
-
-  collapseNestedAP(params);
 
   visitParamsAndBody(node);
 }
@@ -857,26 +868,6 @@ LabelDecorationBase *SemanticValidator::getLabelDecorationBase(
     return LabS;
   llvm_unreachable("invalid node type");
   return nullptr;
-}
-
-/// Collapse array pattern rest elements into their parent:
-/// [a, ...[b, c]] => [a, b, c].
-void SemanticValidator::collapseNestedAP(NodeList &elements) {
-  if (elements.empty())
-    return;
-  auto *restElement = dyn_cast<RestElementNode>(&elements.back());
-  if (!restElement)
-    return;
-  auto *nestedAP = dyn_cast<ArrayPatternNode>(restElement->_argument);
-  if (!nestedAP)
-    return;
-
-  elements.pop_back();
-  while (!nestedAP->_elements.empty()) {
-    auto *elem = &nestedAP->_elements.front();
-    nestedAP->_elements.pop_front();
-    elements.push_back(*elem);
-  }
 }
 
 //===----------------------------------------------------------------------===//

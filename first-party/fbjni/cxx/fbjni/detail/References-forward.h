@@ -1,5 +1,5 @@
-/**
- * Copyright 2018-present, Facebook, Inc.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,6 @@
 namespace facebook {
 namespace jni {
 
-template<typename T, typename Enable = void>
-class JObjectWrapper;
-
 namespace detail {
 struct JObjectBase {
   jobject get() const noexcept;
@@ -40,6 +37,9 @@ struct JavaObjectType;
 
 template <typename T>
 struct ReprAccess;
+
+template <typename T, typename Enable = void>
+struct PrimitiveOrJavaObjectType;
 }
 
 // Given T, either a jobject-like type or a JavaClass-derived type, ReprType<T>
@@ -50,6 +50,9 @@ using ReprType = typename detail::RefReprType<T>::type;
 
 template <typename T>
 using JniType = typename detail::JavaObjectType<T>::type;
+
+template <typename T>
+using PrimitiveOrJniType = typename detail::PrimitiveOrJavaObjectType<T>::type;
 
 template<typename T, typename Alloc>
 class base_owned_ref;

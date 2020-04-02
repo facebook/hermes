@@ -1,5 +1,5 @@
-/**
- * Copyright 2004-present, Facebook, Inc.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,23 +31,15 @@ using namespace detail;
 namespace {
 std::terminate_handler gTerminateHandler;
 
-const ExceptionTraceHolder* getExceptionTraceHolder(std::exception_ptr ptr) {
-  try {
-    std::rethrow_exception(ptr);
-  } catch (const ExceptionTraceHolder& holder) {
-    return &holder;
-  } catch (...) {
-    return nullptr;
-  }
-}
-
 void logExceptionAndAbort() {
   if (auto ptr = std::current_exception()) {
     FBJNI_LOGE("Uncaught exception: %s", toString(ptr).c_str());
+#ifndef _WIN32
     auto trace = getExceptionTraceHolder(ptr);
     if (trace) {
       logStackTrace(getStackTraceSymbols(trace->stackTrace_));
     }
+#endif
   }
   if (gTerminateHandler) {
     gTerminateHandler();
@@ -74,8 +66,12 @@ void ensureRegisteredTerminateHandler() {
 }
 
 const std::vector<InstructionPointer>& getExceptionTrace(std::exception_ptr ptr) {
+#ifndef _WIN32
   auto holder = getExceptionTraceHolder(ptr);
   return holder ? holder->stackTrace_ : emptyTrace;
+#else
+  return emptyTrace;
+#endif
 }
 
 std::string toString(std::exception_ptr ptr) {

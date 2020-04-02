@@ -1,10 +1,12 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/IRGen/IRGen.h"
+#include "hermes/BCGen/HBC/Bytecode.h"
 
 #include "ESTreeIRGen.h"
 
@@ -31,19 +33,23 @@ bool generateIRFromESTree(
 
 void generateIRForCJSModule(
     ESTree::FunctionExpressionNode *node,
+    uint32_t id,
     llvm::StringRef filename,
     Module *M,
     Function *topLevelFunction,
     const DeclarationFileListTy &declFileList) {
   // Generate IR into the module M.
   ESTreeIRGen generator(node, declFileList, M, {});
-  return generator.doCJSModule(topLevelFunction, node->getSemInfo(), filename);
+  return generator.doCJSModule(
+      topLevelFunction, node->getSemInfo(), id, filename);
 }
 
-Function *generateLazyFunctionIR(
-    hbc::LazyCompilationData *lazyData,
-    Module *M) {
+std::pair<Function *, Function *> generateLazyFunctionIR(
+    hbc::BytecodeFunction *bcFunction,
+    Module *M,
+    llvm::SMRange sourceRange) {
   auto &context = M->getContext();
+  auto lazyData = bcFunction->getLazyCompilationData();
   SimpleDiagHandlerRAII diagHandler{context.getSourceErrorManager()};
 
   AllocationScope alloc(context.getAllocator());
@@ -57,20 +63,20 @@ Function *generateLazyFunctionIR(
   parser.setStrictMode(lazyData->strictMode);
 
   auto parsed = parser.parseLazyFunction(
-      (ESTree::NodeKind)lazyData->nodeKind, lazyData->span.Start);
+      (ESTree::NodeKind)lazyData->nodeKind, sourceRange.Start);
 
-  // In case of error, generate a function just throws a SyntaxError.
+  // In case of error, generate a function that just throws a SyntaxError.
   if (!parsed ||
       !sem::validateFunctionAST(
           context, semCtx, *parsed, lazyData->strictMode)) {
     LLVM_DEBUG(
         llvm::dbgs() << "Lazy AST parsing/validation failed with error: "
                      << diagHandler.getErrorString());
-    return ESTreeIRGen::genSyntaxErrorFunction(
-        M,
-        lazyData->originalName,
-        lazyData->span,
-        diagHandler.getErrorString());
+
+    auto *error = ESTreeIRGen::genSyntaxErrorFunction(
+        M, lazyData->originalName, sourceRange, diagHandler.getErrorString());
+
+    return {error, error};
   }
 
   ESTreeIRGen generator{parsed.getValue(), {}, M, {}};

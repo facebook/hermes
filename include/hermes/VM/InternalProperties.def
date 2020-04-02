@@ -1,17 +1,27 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef PROP
 #define PROP(i)
 #endif
 
-/// Anonymous internal propertes. Not part of the object map.
+#ifndef NAMED_PROP
+#define NAMED_PROP(name)
+#endif
+
+/// Anonymous internal properties
 PROP(0)
 PROP(1)
 PROP(2)
 PROP(3)
 
+/// Named internal properties
+/// NOTE: All named properties must be defined after all anonymous properties.
+NAMED_PROP(NamedPropForUnitTestOnly)
+
 #undef PROP
+#undef NAMED_PROP

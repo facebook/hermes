@@ -17,6 +17,8 @@
  *
  ***************************************************************/
 
+#include "dtoa.h"
+
 /* Please send bug reports to David M. Gay (dmg at acm dot org,
  * with " at " changed at "@" and " dot " changed to ".").	*/
 
@@ -116,17 +118,6 @@
  *	name of the alternate routine.  (FREE or free is only called in
  *	pathological cases, e.g., in a dtoa call after a dtoa return in
  *	mode 3 with thousands of digits requested.)
- * #define Omit_Private_Memory to omit logic (added Jan. 1998) for making
- *	memory allocations from a private pool of memory when possible.
- *	When used, the private pool is PRIVATE_MEM bytes long:  2304 bytes,
- *	unless #defined to be a different length.  This default length
- *	suffices to get rid of MALLOC calls except for unusual cases,
- *	such as decimal-to-binary conversion of a very long string of
- *	digits.  The longest string dtoa can return is about 751 bytes
- *	long.  For conversions by strtod of strings of 800 digits and
- *	all dtoa conversions in single-threaded executions with 8-byte
- *	pointers, PRIVATE_MEM >= 7400 appears to suffice; with 4-byte
- *	pointers, PRIVATE_MEM >= 7112 appears adequate.
  * #define NO_INFNAN_CHECK if you do not wish to have INFNAN_CHECK
  *	#defined automatically on IEEE systems.  On such systems,
  *	when INFNAN_CHECK is #defined, strtod checks
@@ -200,6 +191,7 @@ typedef unsigned Long ULong;
 
 #include "stdlib.h"
 #include "string.h"
+#include "assert.h"
 
 #ifdef USE_LOCALE
 #include "locale.h"
@@ -221,13 +213,10 @@ extern void *MALLOC(size_t);
 #define MALLOC malloc
 #endif
 
-#ifndef Omit_Private_Memory
 #ifndef PRIVATE_MEM
 #define PRIVATE_MEM 2304
 #endif
 #define PRIVATE_mem ((PRIVATE_MEM+sizeof(double)-1)/sizeof(double))
-static double private_mem[PRIVATE_mem], *pmem_next = private_mem;
-#endif
 
 #undef IEEE_Arith
 #undef Avoid_Underflow
@@ -507,7 +496,7 @@ BCinfo { int dp0, dp1, dplen, dsign, e0, inexact, nd, nd0, rounding, scale, uflc
  * slower.  Hence the default is now to store 32 bits per Long.
  */
 #endif
-#else	/* long long available */
+#else  /* long long available */
 #ifndef Llong
 #define Llong long long
 #endif
@@ -541,45 +530,93 @@ Bigint {
 
  typedef struct Bigint Bigint;
 
- static Bigint *freelist[Kmax+1];
+struct dtoa_alloc {
+	int pmem_len;	/* length of private_mem in doubles */
+	int used_heap;	/* heap allocation was performed */
+	double *pmem_next;
+	Bigint *freelist[Kmax+1];
+	double private_mem[1];
+};
+typedef struct dtoa_alloc dtoa_alloc;
 
- static Bigint *
+#define DECL_DALLOC(name, len) \
+	struct { \
+		dtoa_alloc h; \
+		double mem[(len)-1]; \
+	} name
+
+static void dalloc_init(dtoa_alloc *dalloc, int pmem_len) {
+	memset(dalloc, 0, sizeof(dtoa_alloc));
+	dalloc->pmem_len = pmem_len;
+	dalloc->pmem_next = dalloc->private_mem;
+}
+
+static void dalloc_done(dtoa_alloc *dalloc) {
+	char *pmem, *pmem_end;
+
+	if (!dalloc->used_heap)
+		return;
+
+	pmem = (char *)dalloc->private_mem;
+	pmem_end = (char *)(dalloc->private_mem + dalloc->pmem_len);
+
+	for(int i = 0; i < Kmax+1; ++i) {
+		Bigint *p = dalloc->freelist[i];
+		while (p) {
+			char *tf = (char *)p;
+			p = p->next;
+			if (tf >= pmem && tf < pmem_end)
+				continue;
+#ifdef FREE
+			FREE((void*)tf);
+#else
+			free((void*)tf);
+#endif
+		}
+	}
+}
+
+dtoa_alloc *dtoa_alloc_init(void *mem, int bytelen) {
+	dtoa_alloc *dalloc = (dtoa_alloc *)mem;
+	int pmem_len = (bytelen - sizeof(dtoa_alloc)) / sizeof(double) + 1;
+	assert(pmem_len > 0 && "dtoa_alloc_init bytelen is too small");
+	dalloc_init(dalloc, pmem_len);
+	return dalloc;
+}
+
+void dtoa_alloc_done(dtoa_alloc *dalloc) {
+	dalloc_done(dalloc);
+}
+
+static Bigint *
 Balloc
 #ifdef KR_headers
-	(k) int k;
+	(dalloc, k) dtoa_alloc *dalloc; int k;
 #else
-	(int k)
+	(dtoa_alloc *dalloc, int k)
 #endif
 {
 	int x;
 	Bigint *rv;
-#ifndef Omit_Private_Memory
 	unsigned int len;
-#endif
 
-	ACQUIRE_DTOA_LOCK(0);
-	/* The k > Kmax case does not need ACQUIRE_DTOA_LOCK(0), */
-	/* but this case seems very unlikely. */
-	if (k <= Kmax && (rv = freelist[k]))
-		freelist[k] = rv->next;
+	if (k <= Kmax && (rv = dalloc->freelist[k]))
+		dalloc->freelist[k] = rv->next;
 	else {
 		x = 1 << k;
-#ifdef Omit_Private_Memory
-		rv = (Bigint *)MALLOC(sizeof(Bigint) + (x-1)*sizeof(ULong));
-#else
 		len = (sizeof(Bigint) + (x-1)*sizeof(ULong) + sizeof(double) - 1)
 			/sizeof(double);
-		if (k <= Kmax && pmem_next - private_mem + len <= PRIVATE_mem) {
-			rv = (Bigint*)pmem_next;
-			pmem_next += len;
+		if (k <= Kmax && dalloc->pmem_next - dalloc->private_mem + len <= dalloc->pmem_len) {
+			rv = (Bigint*)dalloc->pmem_next;
+			dalloc->pmem_next += len;
 			}
-		else
+		else {
 			rv = (Bigint*)MALLOC(len*sizeof(double));
-#endif
+			dalloc->used_heap = 1;
+						}
 		rv->k = k;
 		rv->maxwds = x;
 		}
-	FREE_DTOA_LOCK(0);
 	rv->sign = rv->wds = 0;
 	return rv;
 	}
@@ -587,9 +624,9 @@ Balloc
  static void
 Bfree
 #ifdef KR_headers
-	(v) Bigint *v;
+	(dalloc, v) dtoa_alloc *dalloc; Bigint *v;
 #else
-	(Bigint *v)
+	(dtoa_alloc *dalloc, Bigint *v)
 #endif
 {
 	if (v) {
@@ -600,10 +637,8 @@ Bfree
 			free((void*)v);
 #endif
 		else {
-			ACQUIRE_DTOA_LOCK(0);
-			v->next = freelist[v->k];
-			freelist[v->k] = v;
-			FREE_DTOA_LOCK(0);
+			v->next = dalloc->freelist[v->k];
+			dalloc->freelist[v->k] = v;
 			}
 		}
 	}
@@ -614,9 +649,9 @@ y->wds*sizeof(Long) + 2*sizeof(int))
  static Bigint *
 multadd
 #ifdef KR_headers
-	(b, m, a) Bigint *b; int m, a;
+	(dalloc, b, m, a) dtoa_alloc *dalloc; Bigint *b; int m, a;
 #else
-	(Bigint *b, int m, int a)	/* multiply by m and add a */
+	(dtoa_alloc *dalloc, Bigint *b, int m, int a)	/* multiply by m and add a */
 #endif
 {
 	int i, wds;
@@ -657,9 +692,9 @@ multadd
 		while(++i < wds);
 	if (carry) {
 		if (wds >= b->maxwds) {
-			b1 = Balloc(b->k+1);
+			b1 = Balloc(dalloc, b->k+1);
 			Bcopy(b1, b);
-			Bfree(b);
+			Bfree(dalloc, b);
 			b = b1;
 			}
 		b->x[wds++] = carry;
@@ -671,9 +706,9 @@ multadd
  static Bigint *
 s2b
 #ifdef KR_headers
-	(s, nd0, nd, y9, dplen) CONST char *s; int nd0, nd, dplen; ULong y9;
+	(dalloc, s, nd0, nd, y9, dplen) dtoa_alloc *dalloc; CONST char *s; int nd0, nd, dplen; ULong y9;
 #else
-	(const char *s, int nd0, int nd, ULong y9, int dplen)
+	(dtoa_alloc *dalloc, const char *s, int nd0, int nd, ULong y9, int dplen)
 #endif
 {
 	Bigint *b;
@@ -683,7 +718,7 @@ s2b
 	x = (nd + 8) / 9;
 	for(k = 0, y = 1; x > y; y <<= 1, k++) ;
 #ifdef Pack_32
-	b = Balloc(k);
+	b = Balloc(dalloc, k);
 	b->x[0] = y9;
 	b->wds = 1;
 #else
@@ -695,14 +730,14 @@ s2b
 	i = 9;
 	if (9 < nd0) {
 		s += 9;
-		do b = multadd(b, 10, *s++ - '0');
+		do b = multadd(dalloc, b, 10, *s++ - '0');
 			while(++i < nd0);
 		s += dplen;
 		}
 	else
 		s += dplen + 9;
 	for(; i < nd; i++)
-		b = multadd(b, 10, *s++ - '0');
+		b = multadd(dalloc, b, 10, *s++ - '0');
 	return b;
 	}
 
@@ -791,14 +826,14 @@ lo0bits
  static Bigint *
 i2b
 #ifdef KR_headers
-	(i) int i;
+	(dalloc, i) dtoa_alloc *dalloc; int i;
 #else
-	(int i)
+	(dtoa_alloc *dalloc, int i)
 #endif
 {
 	Bigint *b;
 
-	b = Balloc(1);
+	b = Balloc(dalloc, 1);
 	b->x[0] = i;
 	b->wds = 1;
 	return b;
@@ -807,9 +842,9 @@ i2b
  static Bigint *
 mult
 #ifdef KR_headers
-	(a, b) Bigint *a, *b;
+	(dalloc, a, b) dtoa_alloc *dalloc; Bigint *a, *b;
 #else
-	(Bigint *a, Bigint *b)
+	(dtoa_alloc *dalloc, Bigint *a, Bigint *b)
 #endif
 {
 	Bigint *c;
@@ -836,7 +871,7 @@ mult
 	wc = wa + wb;
 	if (wc > a->maxwds)
 		k++;
-	c = Balloc(k);
+	c = Balloc(dalloc, k);
 	for(x = c->x, xa = x + wc; x < xa; x++)
 		*x = 0;
 	xa = a->x;
@@ -914,14 +949,16 @@ mult
 	return c;
 	}
 
- static Bigint *p5s;
+/* used only for static cahing of powers of 5 */
+static DECL_DALLOC(cache, PRIVATE_mem);
+static Bigint *p5s;
 
  static Bigint *
 pow5mult
 #ifdef KR_headers
-	(b, k) Bigint *b; int k;
+	(dalloc, b, k) dtoa_alloc *dalloc; Bigint *b; int k;
 #else
-	(Bigint *b, int k)
+	(dtoa_alloc *dalloc, Bigint *b, int k)
 #endif
 {
 	Bigint *b1, *p5, *p51;
@@ -929,7 +966,7 @@ pow5mult
 	static int p05[3] = { 5, 25, 125 };
 
 	if ((i = k & 3))
-		b = multadd(b, p05[i-1], 0);
+		b = multadd(dalloc, b, p05[i-1], 0);
 
 	if (!(k >>= 2))
 		return b;
@@ -938,19 +975,21 @@ pow5mult
 #ifdef MULTIPLE_THREADS
 		ACQUIRE_DTOA_LOCK(1);
 		if (!(p5 = p5s)) {
-			p5 = p5s = i2b(625);
+			dalloc_init(&cache.h, PRIVATE_MEM);
+			p5 = p5s = i2b(&cache.h, 625);
 			p5->next = 0;
 			}
 		FREE_DTOA_LOCK(1);
 #else
-		p5 = p5s = i2b(625);
+		dalloc_init(&cache.h, PRIVATE_MEM);
+		p5 = p5s = i2b(&cache.h, 625);
 		p5->next = 0;
 #endif
 		}
 	for(;;) {
 		if (k & 1) {
-			b1 = mult(b, p5);
-			Bfree(b);
+			b1 = mult(dalloc, b, p5);
+			Bfree(dalloc, b);
 			b = b1;
 			}
 		if (!(k >>= 1))
@@ -959,12 +998,12 @@ pow5mult
 #ifdef MULTIPLE_THREADS
 			ACQUIRE_DTOA_LOCK(1);
 			if (!(p51 = p5->next)) {
-				p51 = p5->next = mult(p5,p5);
+				p51 = p5->next = mult(&cache.h,p5,p5);
 				p51->next = 0;
 				}
 			FREE_DTOA_LOCK(1);
 #else
-			p51 = p5->next = mult(p5,p5);
+			p51 = p5->next = mult(&cache.h,p5,p5);
 			p51->next = 0;
 #endif
 			}
@@ -976,9 +1015,9 @@ pow5mult
  static Bigint *
 lshift
 #ifdef KR_headers
-	(b, k) Bigint *b; int k;
+	(dalloc, b, k) dtoa_alloc *dalloc; Bigint *b; int k;
 #else
-	(Bigint *b, int k)
+	(dtoa_alloc *dalloc, Bigint *b, int k)
 #endif
 {
 	int i, k1, n, n1;
@@ -994,7 +1033,7 @@ lshift
 	n1 = n + b->wds + 1;
 	for(i = b->maxwds; n1 > i; i <<= 1)
 		k1++;
-	b1 = Balloc(k1);
+	b1 = Balloc(dalloc, k1);
 	x1 = b1->x;
 	for(i = 0; i < n; i++)
 		*x1++ = 0;
@@ -1029,7 +1068,7 @@ lshift
 		*x1++ = *x++;
 		while(x < xe);
 	b1->wds = n1 - 1;
-	Bfree(b);
+	Bfree(dalloc, b);
 	return b1;
 	}
 
@@ -1070,9 +1109,9 @@ cmp
  static Bigint *
 diff
 #ifdef KR_headers
-	(a, b) Bigint *a, *b;
+	(dalloc, a, b) dtoa_alloc *dalloc; Bigint *a, *b;
 #else
-	(Bigint *a, Bigint *b)
+	(dtoa_alloc *dalloc, Bigint *a, Bigint *b)
 #endif
 {
 	Bigint *c;
@@ -1089,7 +1128,7 @@ diff
 
 	i = cmp(a,b);
 	if (!i) {
-		c = Balloc(0);
+		c = Balloc(dalloc, 0);
 		c->wds = 1;
 		c->x[0] = 0;
 		return c;
@@ -1102,7 +1141,7 @@ diff
 		}
 	else
 		i = 0;
-	c = Balloc(a->k);
+	c = Balloc(dalloc, a->k);
 	c->sign = i;
 	wa = a->wds;
 	xa = a->x;
@@ -1276,9 +1315,9 @@ b2d
  static Bigint *
 d2b
 #ifdef KR_headers
-	(d, e, bits) U *d; int *e, *bits;
+	(dalloc, d, e, bits) dtoa_alloc *dalloc; U *d; int *e, *bits;
 #else
-	(U *d, int *e, int *bits)
+	(dtoa_alloc *dalloc, U *d, int *e, int *bits)
 #endif
 {
 	Bigint *b;
@@ -1297,9 +1336,9 @@ d2b
 #endif
 
 #ifdef Pack_32
-	b = Balloc(1);
+	b = Balloc(dalloc, 1);
 #else
-	b = Balloc(2);
+	b = Balloc(dalloc, 2);
 #endif
 	x = b->x;
 
@@ -1333,7 +1372,7 @@ d2b
 #ifndef Sudden_Underflow
 		i =
 #endif
-		    b->wds = 1;
+			b->wds = 1;
 		k += 32;
 		}
 #else
@@ -2282,10 +2321,10 @@ sulp
  static void
 bigcomp
 #ifdef KR_headers
-	(rv, s0, bc)
-	U *rv; CONST char *s0; BCinfo *bc;
+	(dalloc, rv, s0, bc)
+	dtoa_alloc *stat; U *rv; CONST char *s0; BCinfo *bc;
 #else
-	(U *rv, const char *s0, BCinfo *bc)
+	(dtoa_alloc *dalloc, U *rv, const char *s0, BCinfo *bc)
 #endif
 {
 	Bigint *b, *d;
@@ -2299,7 +2338,7 @@ bigcomp
 #ifndef Sudden_Underflow
 	if (rv->d == 0.) {	/* special case: value near underflow-to-zero */
 				/* threshold was rounded to zero */
-		b = i2b(1);
+		b = i2b(dalloc, 1);
 		p2 = Emin - P + 1;
 		bbits = 1;
 #ifdef Avoid_Underflow
@@ -2320,7 +2359,7 @@ bigcomp
 		}
 	else
 #endif
-		b = d2b(rv, &p2, &bbits);
+		b = d2b(dalloc, rv, &p2, &bbits);
 #ifdef Avoid_Underflow
 	p2 -= bc->scale;
 #endif
@@ -2353,21 +2392,21 @@ bigcomp
 	else
 #endif
 		{
-		b = lshift(b, ++i);
+		b = lshift(dalloc, b, ++i);
 		b->x[0] |= 1;
 		}
 #ifndef Sudden_Underflow
  have_i:
 #endif
 	p2 -= p5 + i;
-	d = i2b(1);
+	d = i2b(dalloc, 1);
 	/* Arrange for convenient computation of quotients:
 	 * shift left if necessary so divisor has 4 leading 0 bits.
 	 */
 	if (p5 > 0)
-		d = pow5mult(d, p5);
+		d = pow5mult(dalloc, d, p5);
 	else if (p5 < 0)
-		b = pow5mult(b, -p5);
+		b = pow5mult(dalloc, b, -p5);
 	if (p2 > 0) {
 		b2 = p2;
 		d2 = 0;
@@ -2378,15 +2417,15 @@ bigcomp
 		}
 	i = dshift(d, d2);
 	if ((b2 += i) > 0)
-		b = lshift(b, b2);
+		b = lshift(dalloc, b, b2);
 	if ((d2 += i) > 0)
-		d = lshift(d, d2);
+		d = lshift(dalloc, d, d2);
 
 	/* Now b/d = exactly half-way between the two floating-point values */
 	/* on either side of the input string.  Compute first digit of b/d. */
 
 	if (!(dig = quorem(b,d))) {
-		b = multadd(b, 10, 0);	/* very unlikely */
+		b = multadd(dalloc, b, 10, 0);	/* very unlikely */
 		dig = quorem(b,d);
 		}
 
@@ -2400,7 +2439,7 @@ bigcomp
 				dd = 1;
 			goto ret;
 			}
-		b = multadd(b, 10, 0);
+		b = multadd(dalloc, b, 10, 0);
 		dig = quorem(b,d);
 		}
 	for(j = bc->dp1; i++ < nd;) {
@@ -2411,14 +2450,14 @@ bigcomp
 				dd = 1;
 			goto ret;
 			}
-		b = multadd(b, 10, 0);
+		b = multadd(dalloc, b, 10, 0);
 		dig = quorem(b,d);
 		}
 	if (dig > 0 || b->x[0] || b->wds > 1)
 		dd = -1;
  ret:
-	Bfree(b);
-	Bfree(d);
+	Bfree(dalloc, b);
+	Bfree(dalloc, d);
 #ifdef Honor_FLT_ROUNDS
 	if (bc->rounding != 1) {
 		if (dd < 0) {
@@ -2488,12 +2527,12 @@ retlow1:
 	}
 #endif /* NO_STRTOD_BIGCOMP */
 
- double
-hermes_g_strtod
+static double
+_hermes_g_strtod
 #ifdef KR_headers
-	(s00, se) CONST char *s00; char **se;
+	(dalloc, s00, se) dtoa_alloc *dalloc; CONST char *s00; char **se;
 #else
-	(const char *s00, char **se)
+	(dtoa_alloc *dalloc, const char *s00, char **se)
 #endif
 {
 	int bb2, bb5, bbe, bd2, bd5, bbbits, bs2, c, e, e1;
@@ -2860,11 +2899,11 @@ hermes_g_strtod
 #endif /*IEEE_Arith*/
  range_err:
 				if (bd0) {
-					Bfree(bb);
-					Bfree(bd);
-					Bfree(bs);
-					Bfree(bd0);
-					Bfree(delta);
+					Bfree(dalloc, bb);
+					Bfree(dalloc, bd);
+					Bfree(dalloc, bs);
+					Bfree(dalloc, bd0);
+					Bfree(dalloc, delta);
 					}
 #ifndef NO_ERRNO
 				errno = ERANGE;
@@ -2982,13 +3021,13 @@ hermes_g_strtod
 			}
 		}
 #endif
-	bd0 = s2b(s0, nd0, nd, y, bc.dplen);
+	bd0 = s2b(dalloc, s0, nd0, nd, y, bc.dplen);
 
 	for(;;) {
-		bd = Balloc(bd0->k);
+		bd = Balloc(dalloc, bd0->k);
 		Bcopy(bd, bd0);
-		bb = d2b(&rv, &bbe, &bbbits);	/* rv = bb * 2^bbe */
-		bs = i2b(1);
+		bb = d2b(dalloc, &rv, &bbe, &bbbits);	/* rv = bb * 2^bbe */
+		bs = i2b(dalloc, 1);
 
 		if (e >= 0) {
 			bb2 = bb5 = 0;
@@ -3053,20 +3092,20 @@ hermes_g_strtod
 			bs2 -= i;
 			}
 		if (bb5 > 0) {
-			bs = pow5mult(bs, bb5);
-			bb1 = mult(bs, bb);
-			Bfree(bb);
+			bs = pow5mult(dalloc, bs, bb5);
+			bb1 = mult(dalloc, bs, bb);
+			Bfree(dalloc, bb);
 			bb = bb1;
 			}
 		if (bb2 > 0)
-			bb = lshift(bb, bb2);
+			bb = lshift(dalloc, bb, bb2);
 		if (bd5 > 0)
-			bd = pow5mult(bd, bd5);
+			bd = pow5mult(dalloc, bd, bd5);
 		if (bd2 > 0)
-			bd = lshift(bd, bd2);
+			bd = lshift(dalloc, bd, bd2);
 		if (bs2 > 0)
-			bs = lshift(bs, bs2);
-		delta = diff(bb, bd);
+			bs = lshift(dalloc, bs, bs2);
+		delta = diff(dalloc, bb, bd);
 		bc.dsign = delta->sign;
 		delta->sign = 0;
 		i = cmp(delta, bs);
@@ -3209,7 +3248,7 @@ hermes_g_strtod
 #endif
 				break;
 				}
-			delta = lshift(delta,Log2P);
+			delta = lshift(dalloc,delta,Log2P);
 			if (cmp(delta, bs) > 0)
 				goto drop_down;
 			break;
@@ -3499,21 +3538,21 @@ hermes_g_strtod
 		}
 #endif
  cont:
-		Bfree(bb);
-		Bfree(bd);
-		Bfree(bs);
-		Bfree(delta);
+		Bfree(dalloc, bb);
+		Bfree(dalloc, bd);
+		Bfree(dalloc, bs);
+		Bfree(dalloc, delta);
 		}
-	Bfree(bb);
-	Bfree(bd);
-	Bfree(bs);
-	Bfree(bd0);
-	Bfree(delta);
+	Bfree(dalloc, bb);
+	Bfree(dalloc, bd);
+	Bfree(dalloc, bs);
+	Bfree(dalloc, bd0);
+	Bfree(dalloc, delta);
 #ifndef NO_STRTOD_BIGCOMP
 	if (req_bigcomp) {
 		bd0 = 0;
 		bc.e0 += nz1;
-		bigcomp(&rv, s0, &bc);
+		bigcomp(dalloc, &rv, s0, &bc);
 		y = word0(&rv) & Exp_mask;
 		if (y == Exp_mask)
 			goto ovfl;
@@ -3561,15 +3600,30 @@ hermes_g_strtod
 	return sign ? -dval(&rv) : dval(&rv);
 	}
 
+ double
+hermes_g_strtod
+#ifdef KR_headers
+	(s00, se) CONST char *s00; char **se;
+#else
+	(const char *s00, char **se)
+#endif
+{
+	DECL_DALLOC(dalloc, PRIVATE_mem);
+	dalloc_init(&dalloc.h, PRIVATE_mem);
+	double res = _hermes_g_strtod(&dalloc.h, s00, se);
+	dalloc_done(&dalloc.h);
+	return res;
+}
+
 #ifndef MULTIPLE_THREADS
  static char *dtoa_result;
 #endif
 
  static char *
 #ifdef KR_headers
-rv_alloc(i) int i;
+rv_alloc(dalloc, i) dtoa_alloc *dalloc; int i;
 #else
-rv_alloc(int i)
+rv_alloc(dtoa_alloc *dalloc, int i)
 #endif
 {
 	int j, k, *r;
@@ -3579,7 +3633,7 @@ rv_alloc(int i)
 		sizeof(Bigint) - sizeof(ULong) - sizeof(int) + j <= i;
 		j <<= 1)
 			k++;
-	r = (int*)Balloc(k);
+	r = (int*)Balloc(dalloc, k);
 	*r = k;
 	return
 #ifndef MULTIPLE_THREADS
@@ -3590,14 +3644,14 @@ rv_alloc(int i)
 
  static char *
 #ifdef KR_headers
-nrv_alloc(s, rve, n) char *s, **rve; int n;
+nrv_alloc(dalloc, s, rve, n) dtoa_alloc *dalloc; char *s, **rve; int n;
 #else
-nrv_alloc(const char *s, char **rve, int n)
+nrv_alloc(dtoa_alloc *dalloc, const char *s, char **rve, int n)
 #endif
 {
 	char *rv, *t;
 
-	t = rv = rv_alloc(n);
+	t = rv = rv_alloc(dalloc, n);
 	while((*t = *s++)) t++;
 	if (rve)
 		*rve = t;
@@ -3612,763 +3666,35 @@ nrv_alloc(const char *s, char **rve, int n)
 
  void
 #ifdef KR_headers
-g_freedtoa(s) char *s;
+g_freedtoa(dalloc, s) dtoa_alloc *dalloc; char *s;
 #else
-g_freedtoa(char *s)
+g_freedtoa(dtoa_alloc *dalloc, char *s)
 #endif
 {
 	Bigint *b = (Bigint *)((int *)s - 1);
 	b->maxwds = 1 << (b->k = *(int*)b);
-	Bfree(b);
+	Bfree(dalloc, b);
 #ifndef MULTIPLE_THREADS
 	if (s == dtoa_result)
 		dtoa_result = 0;
 #endif
 	}
 
-/* dtoa for IEEE arithmetic (dmg): convert double to ASCII string.
- *
- * Inspired by "How to Print Floating-Point Numbers Accurately" by
- * Guy L. Steele, Jr. and Jon L. White [Proc. ACM SIGPLAN '90, pp. 112-126].
- *
- * Modifications:
- *	1. Rather than iterating, we use a simple numeric overestimate
- *	   to determine k = floor(log10(d)).  We scale relevant
- *	   quantities using O(log2(k)) rather than O(k) multiplications.
- *	2. For some modes > 2 (corresponding to ecvt and fcvt), we don't
- *	   try to generate digits strictly left to right.  Instead, we
- *	   compute with fewer bits and propagate the carry if necessary
- *	   when rounding the final digit up.  This is often faster.
- *	3. Under the assumption that input will be rounded nearest,
- *	   mode 0 renders 1e23 as 1e23 rather than 9.999999999999999e22.
- *	   That is, we allow equality in stopping tests when the
- *	   round-nearest rule will give the same floating-point value
- *	   as would satisfaction of the stopping test with strict
- *	   inequality.
- *	4. We remove common factors of powers of 2 from relevant
- *	   quantities.
- *	5. When converting floating-point integers less than 1e16,
- *	   we use floating-point arithmetic rather than resorting
- *	   to multiple-precision integers.
- *	6. When asked to produce fewer than 15 digits, we first try
- *	   to get by with floating-point arithmetic; we resort to
- *	   multiple-precision integer arithmetic only if we cannot
- *	   guarantee that the floating-point calculation has given
- *	   the correctly rounded result.  For k requested digits and
- *	   "uniformly" distributed input, the probability is
- *	   something like 10^(k-15) that we must resort to the Long
- *	   calculation.
- */
+#include "dtoa.inc"
 
- char *
-g_dtoa
-#ifdef KR_headers
-	(dd, mode, ndigits, decpt, sign, rve)
-	double dd; int mode, ndigits, *decpt, *sign; char **rve;
-#else
-	(double dd, int mode, int ndigits, int *decpt, int *sign, char **rve)
-#endif
-{
- /*	Arguments ndigits, decpt, sign are similar to those
-	of ecvt and fcvt; trailing zeros are suppressed from
-	the returned string.  If not null, *rve is set to point
-	to the end of the return value.  If d is +-Infinity or NaN,
-	then *decpt is set to 9999.
+// Create a second version of g_dtoa for fixed point.
+// Same as dtoa, but #defines ROUND_BIASED, which enables the mode which is
+// used for getting results with a fixed number of digits after the decimal.
+// It also modifies a check in dtoa depending on HERMNES_FIXEDPOINT_HACK
+// which ensures that 0.5 does not get flushed to 0, but rather rounds up to 1.
+// A separate function is necessary because dtoa needs compilation flags
+// to change options and provides no runtime means of doing so,
+// and modification of the code was needed to ensure correctly biased rounding.
+#define ROUND_BIASED
+#define HERMES_FIXEDPOINT_HACK
+#define g_dtoa dtoa_fixedpoint
+#include "dtoa.inc"
 
-	mode:
-		0 ==> shortest string that yields d when read in
-			and rounded to nearest.
-		1 ==> like 0, but with Steele & White stopping rule;
-			e.g. with IEEE P754 arithmetic , mode 0 gives
-			1e23 whereas mode 1 gives 9.999999999999999e22.
-		2 ==> max(1,ndigits) significant digits.  This gives a
-			return value similar to that of ecvt, except
-			that trailing zeros are suppressed.
-		3 ==> through ndigits past the decimal point.  This
-			gives a return value similar to that from fcvt,
-			except that trailing zeros are suppressed, and
-			ndigits can be negative.
-		4,5 ==> similar to 2 and 3, respectively, but (in
-			round-nearest mode) with the tests of mode 0 to
-			possibly return a shorter string that rounds to d.
-			With IEEE arithmetic and compilation with
-			-DHonor_FLT_ROUNDS, modes 4 and 5 behave the same
-			as modes 2 and 3 when FLT_ROUNDS != 1.
-		6-9 ==> Debugging modes similar to mode - 4:  don't try
-			fast floating-point estimate (if applicable).
-
-		Values of mode other than 0-9 are treated as mode 0.
-
-		Sufficient space is allocated to the return value
-		to hold the suppressed trailing zeros.
-	*/
-
-	int bbits, b2, b5, be, dig, i, ieps, ilim, ilim0, ilim1,
-		j, j1 = 0, k, k0, k_check, leftright, m2, m5, s2, s5,
-		spec_case, try_quick;
-	Long L;
-#ifndef Sudden_Underflow
-	int denorm;
-	ULong x;
-#endif
-	Bigint *b, *b1, *delta, *mlo, *mhi, *S;
-	U d2, eps, u;
-	double ds;
-	char *s, *s0;
-#ifndef No_leftright
-#ifdef IEEE_Arith
-	U eps1;
-#endif
-#endif
-#ifdef SET_INEXACT
-	int inexact, oldinexact;
-#endif
-#ifdef Honor_FLT_ROUNDS /*{*/
-	int Rounding;
-#ifdef Trust_FLT_ROUNDS /*{{ only define this if FLT_ROUNDS really works! */
-	Rounding = Flt_Rounds;
-#else /*}{*/
-	Rounding = 1;
-	switch(fegetround()) {
-	  case FE_TOWARDZERO:	Rounding = 0; break;
-	  case FE_UPWARD:	Rounding = 2; break;
-	  case FE_DOWNWARD:	Rounding = 3;
-	  }
-#endif /*}}*/
-#endif /*}*/
-
-#ifndef MULTIPLE_THREADS
-	if (dtoa_result) {
-		g_freedtoa(dtoa_result);
-		dtoa_result = 0;
-		}
-#endif
-
-	u.d = dd;
-	if (word0(&u) & Sign_bit) {
-		/* set sign for everything, including 0's and NaNs */
-		*sign = 1;
-		word0(&u) &= ~Sign_bit;	/* clear sign bit */
-		}
-	else
-		*sign = 0;
-
-#if defined(IEEE_Arith) + defined(VAX)
-#ifdef IEEE_Arith
-	if ((word0(&u) & Exp_mask) == Exp_mask)
-#else
-	if (word0(&u)  == 0x8000)
-#endif
-		{
-		/* Infinity or NaN */
-		*decpt = 9999;
-#ifdef IEEE_Arith
-		if (!word1(&u) && !(word0(&u) & 0xfffff))
-			return nrv_alloc("Infinity", rve, 8);
-#endif
-		return nrv_alloc("NaN", rve, 3);
-		}
-#endif
-#ifdef IBM
-	dval(&u) += 0; /* normalize */
-#endif
-	if (!dval(&u)) {
-		*decpt = 1;
-		return nrv_alloc("0", rve, 1);
-		}
-
-#ifdef SET_INEXACT
-	try_quick = oldinexact = get_inexact();
-	inexact = 1;
-#endif
-#ifdef Honor_FLT_ROUNDS
-	if (Rounding >= 2) {
-		if (*sign)
-			Rounding = Rounding == 2 ? 0 : 2;
-		else
-			if (Rounding != 2)
-				Rounding = 0;
-		}
-#endif
-
-	b = d2b(&u, &be, &bbits);
-#ifdef Sudden_Underflow
-	i = (int)(word0(&u) >> Exp_shift1 & (Exp_mask>>Exp_shift1));
-#else
-	if ((i = (int)(word0(&u) >> Exp_shift1 & (Exp_mask>>Exp_shift1)))) {
-#endif
-		dval(&d2) = dval(&u);
-		word0(&d2) &= Frac_mask1;
-		word0(&d2) |= Exp_11;
-#ifdef IBM
-		if (j = 11 - hi0bits(word0(&d2) & Frac_mask))
-			dval(&d2) /= 1 << j;
-#endif
-
-		/* log(x)	~=~ log(1.5) + (x-1.5)/1.5
-		 * log10(x)	 =  log(x) / log(10)
-		 *		~=~ log(1.5)/log(10) + (x-1.5)/(1.5*log(10))
-		 * log10(d) = (i-Bias)*log(2)/log(10) + log10(d2)
-		 *
-		 * This suggests computing an approximation k to log10(d) by
-		 *
-		 * k = (i - Bias)*0.301029995663981
-		 *	+ ( (d2-1.5)*0.289529654602168 + 0.176091259055681 );
-		 *
-		 * We want k to be too large rather than too small.
-		 * The error in the first-order Taylor series approximation
-		 * is in our favor, so we just round up the constant enough
-		 * to compensate for any error in the multiplication of
-		 * (i - Bias) by 0.301029995663981; since |i - Bias| <= 1077,
-		 * and 1077 * 0.30103 * 2^-52 ~=~ 7.2e-14,
-		 * adding 1e-13 to the constant term more than suffices.
-		 * Hence we adjust the constant term to 0.1760912590558.
-		 * (We could get a more accurate k by invoking log10,
-		 *  but this is probably not worthwhile.)
-		 */
-
-		i -= Bias;
-#ifdef IBM
-		i <<= 2;
-		i += j;
-#endif
-#ifndef Sudden_Underflow
-		denorm = 0;
-		}
-	else {
-		/* d is denormalized */
-
-		i = bbits + be + (Bias + (P-1) - 1);
-		x = i > 32  ? word0(&u) << (64 - i) | word1(&u) >> (i - 32)
-			    : word1(&u) << (32 - i);
-		dval(&d2) = x;
-		word0(&d2) -= 31*Exp_msk1; /* adjust exponent */
-		i -= (Bias + (P-1) - 1) + 1;
-		denorm = 1;
-		}
-#endif
-	ds = (dval(&d2)-1.5)*0.289529654602168 + 0.1760912590558 + i*0.301029995663981;
-	k = (int)ds;
-	if (ds < 0. && ds != k)
-		k--;	/* want k = floor(ds) */
-	k_check = 1;
-	if (k >= 0 && k <= Ten_pmax) {
-		if (dval(&u) < tens[k])
-			k--;
-		k_check = 0;
-		}
-	j = bbits - i - 1;
-	if (j >= 0) {
-		b2 = 0;
-		s2 = j;
-		}
-	else {
-		b2 = -j;
-		s2 = 0;
-		}
-	if (k >= 0) {
-		b5 = 0;
-		s5 = k;
-		s2 += k;
-		}
-	else {
-		b2 -= k;
-		b5 = -k;
-		s5 = 0;
-		}
-	if (mode < 0 || mode > 9)
-		mode = 0;
-
-#ifndef SET_INEXACT
-#ifdef Check_FLT_ROUNDS
-	try_quick = Rounding == 1;
-#else
-	try_quick = 1;
-#endif
-#endif /*SET_INEXACT*/
-
-	if (mode > 5) {
-		mode -= 4;
-		try_quick = 0;
-		}
-	leftright = 1;
-	ilim = ilim1 = -1;	/* Values for cases 0 and 1; done here to */
-				/* silence erroneous "gcc -Wall" warning. */
-	switch(mode) {
-		case 0:
-		case 1:
-			i = 18;
-			ndigits = 0;
-			break;
-		case 2:
-			leftright = 0;
-			/* no break */
-		case 4:
-			if (ndigits <= 0)
-				ndigits = 1;
-			ilim = ilim1 = i = ndigits;
-			break;
-		case 3:
-			leftright = 0;
-			/* no break */
-		case 5:
-			i = ndigits + k + 1;
-			ilim = i;
-			ilim1 = i - 1;
-			if (i <= 0)
-				i = 1;
-		}
-	s = s0 = rv_alloc(i);
-
-#ifdef Honor_FLT_ROUNDS
-	if (mode > 1 && Rounding != 1)
-		leftright = 0;
-#endif
-
-	if (ilim >= 0 && ilim <= Quick_max && try_quick) {
-
-		/* Try to get by with floating-point arithmetic. */
-
-		i = 0;
-		dval(&d2) = dval(&u);
-		k0 = k;
-		ilim0 = ilim;
-		ieps = 2; /* conservative */
-		if (k > 0) {
-			ds = tens[k&0xf];
-			j = k >> 4;
-			if (j & Bletch) {
-				/* prevent overflows */
-				j &= Bletch - 1;
-				dval(&u) /= bigtens[n_bigtens-1];
-				ieps++;
-				}
-			for(; j; j >>= 1, i++)
-				if (j & 1) {
-					ieps++;
-					ds *= bigtens[i];
-					}
-			dval(&u) /= ds;
-			}
-		else if ((j1 = -k)) {
-			dval(&u) *= tens[j1 & 0xf];
-			for(j = j1 >> 4; j; j >>= 1, i++)
-				if (j & 1) {
-					ieps++;
-					dval(&u) *= bigtens[i];
-					}
-			}
-		if (k_check && dval(&u) < 1. && ilim > 0) {
-			if (ilim1 <= 0)
-				goto fast_failed;
-			ilim = ilim1;
-			k--;
-			dval(&u) *= 10.;
-			ieps++;
-			}
-		dval(&eps) = ieps*dval(&u) + 7.;
-		word0(&eps) -= (P-1)*Exp_msk1;
-		if (ilim == 0) {
-			S = mhi = 0;
-			dval(&u) -= 5.;
-			if (dval(&u) > dval(&eps))
-				goto one_digit;
-			if (dval(&u) < -dval(&eps))
-				goto no_digits;
-			goto fast_failed;
-			}
-#ifndef No_leftright
-		if (leftright) {
-			/* Use Steele & White method of only
-			 * generating digits needed.
-			 */
-			dval(&eps) = 0.5/tens[ilim-1] - dval(&eps);
-#ifdef IEEE_Arith
-			if (k0 < 0 && j1 >= 307) {
-				eps1.d = 1.01e256; /* 1.01 allows roundoff in the next few lines */
-				word0(&eps1) -= Exp_msk1 * (Bias+P-1);
-				dval(&eps1) *= tens[j1 & 0xf];
-				for(i = 0, j = (j1-256) >> 4; j; j >>= 1, i++)
-					if (j & 1)
-						dval(&eps1) *= bigtens[i];
-				if (eps.d < eps1.d)
-					eps.d = eps1.d;
-				}
-#endif
-			for(i = 0;;) {
-				L = dval(&u);
-				dval(&u) -= L;
-				*s++ = '0' + (int)L;
-				if (1. - dval(&u) < dval(&eps))
-					goto bump_up;
-				if (dval(&u) < dval(&eps))
-					goto ret1;
-				if (++i >= ilim)
-					break;
-				dval(&eps) *= 10.;
-				dval(&u) *= 10.;
-				}
-			}
-		else {
-#endif
-			/* Generate ilim digits, then fix them up. */
-			dval(&eps) *= tens[ilim-1];
-			for(i = 1;; i++, dval(&u) *= 10.) {
-				L = (Long)(dval(&u));
-				if (!(dval(&u) -= L))
-					ilim = i;
-				*s++ = '0' + (int)L;
-				if (i == ilim) {
-					if (dval(&u) > 0.5 + dval(&eps))
-						goto bump_up;
-					else if (dval(&u) < 0.5 - dval(&eps)) {
-						while(*--s == '0');
-						s++;
-						goto ret1;
-						}
-					break;
-					}
-				}
-#ifndef No_leftright
-			}
-#endif
- fast_failed:
-		s = s0;
-		dval(&u) = dval(&d2);
-		k = k0;
-		ilim = ilim0;
-		}
-
-	/* Do we have a "small" integer? */
-
-	if (be >= 0 && k <= Int_max) {
-		/* Yes. */
-		ds = tens[k];
-		if (ndigits < 0 && ilim <= 0) {
-			S = mhi = 0;
-			if (ilim < 0 || dval(&u) <= 5*ds)
-				goto no_digits;
-			goto one_digit;
-			}
-		for(i = 1;; i++, dval(&u) *= 10.) {
-			L = (Long)(dval(&u) / ds);
-			dval(&u) -= L*ds;
-#ifdef Check_FLT_ROUNDS
-			/* If FLT_ROUNDS == 2, L will usually be high by 1 */
-			if (dval(&u) < 0) {
-				L--;
-				dval(&u) += ds;
-				}
-#endif
-			*s++ = '0' + (int)L;
-			if (!dval(&u)) {
-#ifdef SET_INEXACT
-				inexact = 0;
-#endif
-				break;
-				}
-			if (i == ilim) {
-#ifdef Honor_FLT_ROUNDS
-				if (mode > 1)
-				switch(Rounding) {
-				  case 0: goto ret1;
-				  case 2: goto bump_up;
-				  }
-#endif
-				dval(&u) += dval(&u);
-#ifdef ROUND_BIASED
-				if (dval(&u) >= ds)
-#else
-				if (dval(&u) > ds || (dval(&u) == ds && L & 1))
-#endif
-					{
- bump_up:
-					while(*--s == '9')
-						if (s == s0) {
-							k++;
-							*s = '0';
-							break;
-							}
-					++*s++;
-					}
-				break;
-				}
-			}
-		goto ret1;
-		}
-
-	m2 = b2;
-	m5 = b5;
-	mhi = mlo = 0;
-	if (leftright) {
-		i =
-#ifndef Sudden_Underflow
-			denorm ? be + (Bias + (P-1) - 1 + 1) :
-#endif
-#ifdef IBM
-			1 + 4*P - 3 - bbits + ((bbits + be - 1) & 3);
-#else
-			1 + P - bbits;
-#endif
-		b2 += i;
-		s2 += i;
-		mhi = i2b(1);
-		}
-	if (m2 > 0 && s2 > 0) {
-		i = m2 < s2 ? m2 : s2;
-		b2 -= i;
-		m2 -= i;
-		s2 -= i;
-		}
-	if (b5 > 0) {
-		if (leftright) {
-			if (m5 > 0) {
-				mhi = pow5mult(mhi, m5);
-				b1 = mult(mhi, b);
-				Bfree(b);
-				b = b1;
-				}
-			if ((j = b5 - m5))
-				b = pow5mult(b, j);
-			}
-		else
-			b = pow5mult(b, b5);
-		}
-	S = i2b(1);
-	if (s5 > 0)
-		S = pow5mult(S, s5);
-
-	/* Check for special case that d is a normalized power of 2. */
-
-	spec_case = 0;
-	if ((mode < 2 || leftright)
-#ifdef Honor_FLT_ROUNDS
-			&& Rounding == 1
-#endif
-				) {
-		if (!word1(&u) && !(word0(&u) & Bndry_mask)
-#ifndef Sudden_Underflow
-		 && word0(&u) & (Exp_mask & ~Exp_msk1)
-#endif
-				) {
-			/* The special case */
-			b2 += Log2P;
-			s2 += Log2P;
-			spec_case = 1;
-			}
-		}
-
-	/* Arrange for convenient computation of quotients:
-	 * shift left if necessary so divisor has 4 leading 0 bits.
-	 *
-	 * Perhaps we should just compute leading 28 bits of S once
-	 * and for all and pass them and a shift to quorem, so it
-	 * can do shifts and ors to compute the numerator for q.
-	 */
-	i = dshift(S, s2);
-	b2 += i;
-	m2 += i;
-	s2 += i;
-	if (b2 > 0)
-		b = lshift(b, b2);
-	if (s2 > 0)
-		S = lshift(S, s2);
-	if (k_check) {
-		if (cmp(b,S) < 0) {
-			k--;
-			b = multadd(b, 10, 0);	/* we botched the k estimate */
-			if (leftright)
-				mhi = multadd(mhi, 10, 0);
-			ilim = ilim1;
-			}
-		}
-	if (ilim <= 0 && (mode == 3 || mode == 5)) {
-		if (ilim < 0 || cmp(b,S = multadd(S,5,0)) <= 0) {
-			/* no digits, fcvt style */
- no_digits:
-			k = -1 - ndigits;
-			goto ret;
-			}
- one_digit:
-		*s++ = '1';
-		k++;
-		goto ret;
-		}
-	if (leftright) {
-		if (m2 > 0)
-			mhi = lshift(mhi, m2);
-
-		/* Compute mlo -- check for special case
-		 * that d is a normalized power of 2.
-		 */
-
-		mlo = mhi;
-		if (spec_case) {
-			mhi = Balloc(mhi->k);
-			Bcopy(mhi, mlo);
-			mhi = lshift(mhi, Log2P);
-			}
-
-		for(i = 1;;i++) {
-			dig = quorem(b,S) + '0';
-			/* Do we yet have the shortest decimal string
-			 * that will round to d?
-			 */
-			j = cmp(b, mlo);
-			delta = diff(S, mhi);
-			j1 = delta->sign ? 1 : cmp(b, delta);
-			Bfree(delta);
-#ifndef ROUND_BIASED
-			if (j1 == 0 && mode != 1 && !(word1(&u) & 1)
-#ifdef Honor_FLT_ROUNDS
-				&& Rounding >= 1
-#endif
-								   ) {
-				if (dig == '9')
-					goto round_9_up;
-				if (j > 0)
-					dig++;
-#ifdef SET_INEXACT
-				else if (!b->x[0] && b->wds <= 1)
-					inexact = 0;
-#endif
-				*s++ = dig;
-				goto ret;
-				}
-#endif
-			if (j < 0 || (j == 0 && mode != 1
-#ifndef ROUND_BIASED
-							&& !(word1(&u) & 1)
-#endif
-					)) {
-				if (!b->x[0] && b->wds <= 1) {
-#ifdef SET_INEXACT
-					inexact = 0;
-#endif
-					goto accept_dig;
-					}
-#ifdef Honor_FLT_ROUNDS
-				if (mode > 1)
-				 switch(Rounding) {
-				  case 0: goto accept_dig;
-				  case 2: goto keep_dig;
-				  }
-#endif /*Honor_FLT_ROUNDS*/
-				if (j1 > 0) {
-					b = lshift(b, 1);
-					j1 = cmp(b, S);
-#ifdef ROUND_BIASED
-					if (j1 >= 0 /*)*/
-#else
-					if ((j1 > 0 || (j1 == 0 && dig & 1))
-#endif
-					&& dig++ == '9')
-						goto round_9_up;
-					}
- accept_dig:
-				*s++ = dig;
-				goto ret;
-				}
-			if (j1 > 0) {
-#ifdef Honor_FLT_ROUNDS
-				if (!Rounding)
-					goto accept_dig;
-#endif
-				if (dig == '9') { /* possible if i == 1 */
- round_9_up:
-					*s++ = '9';
-					goto roundoff;
-					}
-				*s++ = dig + 1;
-				goto ret;
-				}
-#ifdef Honor_FLT_ROUNDS
- keep_dig:
-#endif
-			*s++ = dig;
-			if (i == ilim)
-				break;
-			b = multadd(b, 10, 0);
-			if (mlo == mhi)
-				mlo = mhi = multadd(mhi, 10, 0);
-			else {
-				mlo = multadd(mlo, 10, 0);
-				mhi = multadd(mhi, 10, 0);
-				}
-			}
-		}
-	else
-		for(i = 1;; i++) {
-			*s++ = dig = quorem(b,S) + '0';
-			if (!b->x[0] && b->wds <= 1) {
-#ifdef SET_INEXACT
-				inexact = 0;
-#endif
-				goto ret;
-				}
-			if (i >= ilim)
-				break;
-			b = multadd(b, 10, 0);
-			}
-
-	/* Round off last digit */
-
-#ifdef Honor_FLT_ROUNDS
-	switch(Rounding) {
-	  case 0: goto trimzeros;
-	  case 2: goto roundoff;
-	  }
-#endif
-	b = lshift(b, 1);
-	j = cmp(b, S);
-#ifdef ROUND_BIASED
-	if (j >= 0)
-#else
-	if (j > 0 || (j == 0 && dig & 1))
-#endif
-		{
- roundoff:
-		while(*--s == '9')
-			if (s == s0) {
-				k++;
-				*s++ = '1';
-				goto ret;
-				}
-		++*s++;
-		}
-	else {
-#ifdef Honor_FLT_ROUNDS
- trimzeros:
-#endif
-		while(*--s == '0');
-		s++;
-		}
- ret:
-	Bfree(S);
-	if (mhi) {
-		if (mlo && mlo != mhi)
-			Bfree(mlo);
-		Bfree(mhi);
-		}
- ret1:
-#ifdef SET_INEXACT
-	if (inexact) {
-		if (!oldinexact) {
-			word0(&u) = Exp_1 + (70 << Exp_shift);
-			word1(&u) = 0;
-			dval(&u) += 1.;
-			}
-		}
-	else if (!oldinexact)
-		clear_inexact();
-#endif
-	Bfree(b);
-	*s = 0;
-	*decpt = k + 1;
-	if (rve)
-		*rve = s;
-	return s0;
-	}
 #ifdef __cplusplus
 }
 #endif

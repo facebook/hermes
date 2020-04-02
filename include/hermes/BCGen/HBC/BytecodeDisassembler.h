@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_BCGEN_HBC_BYTECODEDISASSEMBLER_H
 #define HERMES_BCGEN_HBC_BYTECODEDISASSEMBLER_H
 
@@ -337,6 +338,10 @@ class BytecodeDisassembler {
 
   /// Print the content of the bytecode list into the output stream \p OS.
   void disassemble(raw_ostream &OS);
+
+  uint32_t getFunctionCount() const {
+    return bcProvider_->getFunctionCount();
+  }
 
   /// Hash a function's bytecode in a way that ignores details like table
   /// indices that are easily disturbed by other functions being added/removed.

@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermesc -dump-ast -pretty-json %s | %FileCheck --match-full-lines %s
 
 // CHECK-LABEL: {
@@ -354,6 +356,32 @@ tag`\unicode`;
 // CHECK-NEXT:                "tail": true,
 // CHECK-NEXT:                "cooked": null,
 // CHECK-NEXT:                "raw": "\\unicode"
+// CHECK-NEXT:              }
+// CHECK-NEXT:            ],
+// CHECK-NEXT:            "expressions": []
+// CHECK-NEXT:          }
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "directive": null
+// CHECK-NEXT:      },
+
+tag`脸\书𐀀\𐀁`;
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "type": "ExpressionStatement",
+// CHECK-NEXT:        "expression": {
+// CHECK-NEXT:          "type": "TaggedTemplateExpression",
+// CHECK-NEXT:          "tag": {
+// CHECK-NEXT:            "type": "Identifier",
+// CHECK-NEXT:            "name": "tag",
+// CHECK-NEXT:            "typeAnnotation": null
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "quasi": {
+// CHECK-NEXT:            "type": "TemplateLiteral",
+// CHECK-NEXT:            "quasis": [
+// CHECK-NEXT:              {
+// CHECK-NEXT:                "type": "TemplateElement",
+// CHECK-NEXT:                "tail": true,
+// CHECK-NEXT:                "cooked": "\u8138\u4e66\ud800\udc00\ud800\udc01",
+// CHECK-NEXT:                "raw": "\u8138\\\u4e66\ud800\udc00\\\ud800\udc01"
 // CHECK-NEXT:              }
 // CHECK-NEXT:            ],
 // CHECK-NEXT:            "expressions": []

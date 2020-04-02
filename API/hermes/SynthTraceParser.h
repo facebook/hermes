@@ -1,9 +1,15 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
+#ifndef HERMES_SYNTHTRACEPARSER_H
+#define HERMES_SYNTHTRACEPARSER_H
+
+#ifdef HERMESVM_API_TRACE
+
 #include <tuple>
 
 #include "hermes/Public/RuntimeConfig.h"
@@ -31,3 +37,7 @@ parseSynthTrace(const std::string &tracefile);
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
+
+#endif // HERMESVM_API_TRACE
+
+#endif // HERMES_SYNTHTRACEPARSER_H

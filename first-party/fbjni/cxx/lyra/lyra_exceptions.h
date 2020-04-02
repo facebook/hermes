@@ -1,5 +1,5 @@
-/**
- * Copyright 2004-present, Facebook, Inc.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,8 @@ namespace detail {
   struct Holder<E, true> : E {
     Holder(E&& e) : E{std::forward<E>(e)} {}
   };
+
+  const ExceptionTraceHolder* getExceptionTraceHolder(std::exception_ptr ptr);
 }
 
 /**

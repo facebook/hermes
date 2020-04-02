@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/IR/IRVerifier.h"
 
 #include "hermes/IR/CFG.h"
@@ -248,7 +249,6 @@ void Verifier::beforeVisitInstruction(const Instruction &Inst) {
   for (unsigned i = 0; i < Inst.getNumOperands(); i++) {
     auto Operand = Inst.getOperand(i);
     Assert(Operand != nullptr, "Invalid operand");
-    Assert(Inst.canSetOperand(Operand->getKind(), i), "Invalid operand kind");
     Assert(
         getUsersSetForValue(Operand).count(&Inst) == 1,
         "This instruction is not in the User list of the operand");
@@ -265,7 +265,8 @@ void Verifier::beforeVisitInstruction(const Instruction &Inst) {
           isa<LoadStackInst>(Inst) || isa<StoreStackInst>(Inst) ||
               isa<CatchInst>(Inst) || isa<GetPNamesInst>(Inst) ||
               isa<CheckHasInstanceInst>(Inst) || isa<GetNextPNameInst>(Inst) ||
-              isa<ResumeGeneratorInst>(Inst) ||
+              isa<ResumeGeneratorInst>(Inst) || isa<IteratorBeginInst>(Inst) ||
+              isa<IteratorNextInst>(Inst) || isa<IteratorCloseInst>(Inst) ||
               isa<HBCGetArgumentsPropByValInst>(Inst) ||
               isa<HBCGetArgumentsLengthInst>(Inst) ||
               isa<HBCReifyArgumentsInst>(Inst),
@@ -439,10 +440,10 @@ void Verifier::visitHBCCallNInst(const HBCCallNInst &Inst) {
       "CallNInst has too many args");
 }
 
-void Verifier::visitHBCCallBuiltinInst(HBCCallBuiltinInst const &Inst) {
+void Verifier::visitCallBuiltinInst(CallBuiltinInst const &Inst) {
   Assert(
-      Inst.getNumArguments() <= HBCCallBuiltinInst::MAX_ARGUMENTS,
-      "HBCCallBuiltin too many arguments");
+      Inst.getNumArguments() <= CallBuiltinInst::MAX_ARGUMENTS,
+      "CallBuiltin too many arguments");
   visitCallInst(Inst);
 }
 void Verifier::visitHBCCallDirectInst(HBCCallDirectInst const &Inst) {
@@ -450,8 +451,8 @@ void Verifier::visitHBCCallDirectInst(HBCCallDirectInst const &Inst) {
       isa<Function>(Inst.getCallee()),
       "HBCCallDirect callee must be a Function");
   Assert(
-      Inst.getNumArguments() <= HBCCallBuiltinInst::MAX_ARGUMENTS,
-      "HBCCallBuiltin too many arguments");
+      Inst.getNumArguments() <= CallBuiltinInst::MAX_ARGUMENTS,
+      "CallBuiltin too many arguments");
   visitCallInst(Inst);
 }
 
@@ -795,6 +796,23 @@ void Verifier::visitHBCCreateFunctionInst(const HBCCreateFunctionInst &Inst) {
 }
 void Verifier::visitHBCSpillMovInst(const HBCSpillMovInst &Inst) {}
 void Verifier::visitUnreachableInst(const UnreachableInst &Inst) {}
+
+void Verifier::visitIteratorBeginInst(const IteratorBeginInst &Inst) {
+  Assert(
+      isa<AllocStackInst>(Inst.getSourceOrNext()),
+      "SourceOrNext must be an AllocStackInst");
+}
+void Verifier::visitIteratorNextInst(const IteratorNextInst &Inst) {
+  Assert(
+      isa<AllocStackInst>(Inst.getSourceOrNext()),
+      "SourceOrNext must be an AllocStackInst");
+}
+void Verifier::visitIteratorCloseInst(const IteratorCloseInst &Inst) {
+  Assert(
+      isa<LiteralBool>(
+          Inst.getOperand(IteratorCloseInst::IgnoreInnerExceptionIdx)),
+      "IgnoreInnerException must be a LiteralBool in IteratorCloseInst");
+}
 
 void Verifier::visitGetNewTargetInst(GetNewTargetInst const &Inst) {
   auto definitionKind = Inst.getParent()->getParent()->getDefinitionKind();

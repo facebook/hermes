@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/JSDate.h"
 
 #include "hermes/VM/BuildMetadata.h"
@@ -18,7 +19,7 @@ namespace vm {
 // class JSDate
 
 ObjectVTable JSDate::vt{
-    VTable(CellKind::DateKind, sizeof(JSDate)),
+    VTable(CellKind::DateKind, cellSize<JSDate>()),
     JSDate::_getOwnIndexedRangeImpl,
     JSDate::_haveOwnIndexedImpl,
     JSDate::_getOwnIndexedPropertyFlagsImpl,
@@ -29,6 +30,7 @@ ObjectVTable JSDate::vt{
 };
 
 void DateBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSDate>());
   ObjectBuildMeta(cell, mb);
 }
 
@@ -36,33 +38,27 @@ void DateBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 JSDate::JSDate(Deserializer &d) : JSObject(d, &vt.base) {}
 
 void DateSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(s, cell);
+  JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSDate>());
   s.endObject(cell);
 }
 
 void DateDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::DateKind && "Expected Date");
-  void *mem = d.getRuntime()->alloc(sizeof(JSDate));
+  void *mem = d.getRuntime()->alloc(cellSize<JSDate>());
   auto *cell = new (mem) JSDate(d);
   d.endObject(cell);
 }
 #endif
 
-CallResult<HermesValue>
+PseudoHandle<JSDate>
 JSDate::create(Runtime *runtime, double value, Handle<JSObject> parentHandle) {
-  void *mem = runtime->alloc(sizeof(JSDate));
-  auto selfHandle = runtime->makeHandle(
-      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
-          new (mem) JSDate(
-              runtime,
-              *parentHandle,
-              runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
-  JSObject::addInternalProperties(
-      selfHandle,
+  JSObjectAlloc<JSDate> mem{runtime};
+  return mem.initToPseudoHandle(new (mem) JSDate(
       runtime,
-      1,
-      runtime->makeHandle(HermesValue::encodeDoubleValue(value)));
-  return selfHandle.getHermesValue();
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(
+          *parentHandle,
+          numOverlapSlots<JSDate>() + ANONYMOUS_PROPERTY_SLOTS)));
 }
 
 } // namespace vm

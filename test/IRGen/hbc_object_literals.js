@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes --target=HBC -dump-lir -O %s | %FileCheck %s --match-full-lines --check-prefix=IRGEN
 // RUN: %hermes --target=HBC -dump-bytecode -O %s | %FileCheck %s --match-full-lines --check-prefix=BCGEN
 

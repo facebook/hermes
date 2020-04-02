@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_HIDDENCLASS_H
 #define HERMES_VM_HIDDENCLASS_H
 
@@ -222,6 +223,10 @@ class TransitionMap {
     }
   }
 
+  void snapshotAddNodes(GC *gc, HeapSnapshot &snap);
+  void snapshotAddEdges(GC *gc, HeapSnapshot &snap);
+  void snapshotUntrackMemory(GC *gc);
+
  private:
   /// Clean = no transition has been inserted since construction.
   bool isClean() const {
@@ -262,6 +267,7 @@ class TransitionMap {
 
 class HiddenClass final : public GCCell {
   friend void HiddenClassBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+
  public:
   using Transition = detail::Transition;
   /// Adding more than this number of properties will switch to "dictionary
@@ -323,6 +329,13 @@ class HiddenClass final : public GCCell {
 
   void clearForInCache() {
     forInCache_ = nullptr;
+  }
+
+  /// Reset the property map, unless this class is in dictionary mode.
+  /// May be called by the GC for any HiddenClass not in a Handle.
+  void clearPropertyMap() {
+    if (!isDictionary())
+      propertyMap_ = nullptr;
   }
 
   /// An opaque class representing a reference to a valid property in the
@@ -396,7 +409,7 @@ class HiddenClass final : public GCCell {
   /// map because doing so would change the behavior.
   /// \return true if the property is defined, false otherwise.
   static bool
-  debugIsPropertyDefined(HiddenClass *self, Runtime *runtime, SymbolID name);
+  debugIsPropertyDefined(HiddenClass *self, PointerBase *base, SymbolID name);
 
   /// Delete a property which we found earlier using \c findProperty.
   /// \return the resulting new class.
@@ -435,7 +448,7 @@ class HiddenClass final : public GCCell {
 
   /// Update the flags for the properties in the list \p props with \p
   /// flagsToClear and \p flagsToSet. If in dictionary mode, the properties are
-  /// updated on the hidden class directly; otherwise, create only one new
+  /// updated on the hidden class directly; otherwise, create a new dictionary
   /// hidden class as result. Updating the properties mutates the property map
   /// directly without creating transitions.
   /// \p flagsToClear and \p flagsToSet are masks for updating the property
@@ -451,6 +464,15 @@ class HiddenClass final : public GCCell {
       PropertyFlags flagsToClear,
       PropertyFlags flagsToSet,
       OptValue<llvm::ArrayRef<SymbolID>> props);
+
+  /// Create a new class where the next slot is reserved, by calling addProperty
+  /// with an internal property name. Only slots with index less than
+  /// InternalProperty::NumInternalProperties can be reserved.
+  /// \param selfHandle must not be in dictionary mode.
+  /// \return the resulting new class and the index of the reserved slot.
+  static CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> reserveSlot(
+      Handle<HiddenClass> selfHandle,
+      Runtime *runtime);
 
   /// \return true if all properties are non-configurable
   static bool areAllNonConfigurable(
@@ -533,6 +555,8 @@ class HiddenClass final : public GCCell {
   static size_t _mallocSizeImpl(GCCell *cell);
 
   static std::string _snapshotNameImpl(GCCell *cell, GC *gc);
+  static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
+  static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
 
 #ifdef HERMESVM_SERIALIZE
   friend void HiddenClassSerialize(Serializer &s, const GCCell *cell);
@@ -559,6 +583,8 @@ class HiddenClass final : public GCCell {
   /// parent_->parent_->symbolID_ and so on (in reverse order).
   /// It is constructed lazily when needed, or is "stolen" from the parent class
   /// when a transition is performed from the parent class to this one.
+  ///
+  /// NOTE: May be cleared by the GC for any HiddenClass not in a Handle.
   GCPointer<DictPropertyMap> propertyMap_{};
 
   /// This hash table encodes the transitions from this class to child classes

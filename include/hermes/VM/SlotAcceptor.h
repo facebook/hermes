@@ -1,13 +1,15 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_SLOTACCEPTOR_H
 #define HERMES_VM_SLOTACCEPTOR_H
 
 #include "hermes/VM/HermesValue.h"
+#include "hermes/VM/PointerBase.h"
 #include "hermes/VM/SymbolID.h"
 
 namespace hermes {
@@ -19,11 +21,17 @@ class WeakRefBase;
 /// the heap.
 /// An acceptor should accept all of the pointers and other markable fields in
 /// an object, and tell the GC that they exist, updating if necessary.
+/// (The accept methods should make no assumptions about the address of the
+/// slot; in some cases, an adaptor class may store a pointer in a local, call
+/// the acceptor on the local, and then write the local back into the
+/// pointer.  For example, if the pointer is in compressed form.)
 /// This is used by a visitor, see \c SlotVisitor.
 struct SlotAcceptor {
   virtual ~SlotAcceptor() {}
   virtual void accept(void *&ptr) = 0;
+#ifdef HERMESVM_COMPRESSED_POINTERS
   virtual void accept(BasedPointer &ptr) = 0;
+#endif
   virtual void accept(GCPointerBase &ptr) = 0;
   virtual void accept(HermesValue &hv) = 0;
   virtual void accept(SymbolID sym) = 0;
@@ -55,10 +63,12 @@ struct SlotAcceptorWithNames : public SlotAcceptor {
   }
   virtual void accept(void *&ptr, const char *name) = 0;
 
+#ifdef HERMESVM_COMPRESSED_POINTERS
   void accept(BasedPointer &ptr) override final {
     accept(ptr, nullptr);
   }
   virtual void accept(BasedPointer &ptr, const char *name) = 0;
+#endif
 
   void accept(GCPointerBase &ptr) override final {
     accept(ptr, nullptr);
@@ -103,6 +113,12 @@ struct WeakRootAcceptor : public WeakRefAcceptor, RootSectionAcceptor {
   /// NOTE: This is called acceptWeak in order to avoid clashing with \p
   /// accept(void *&) from SlotAcceptor, for classes that inherit from both.
   virtual void acceptWeak(void *&ptr) = 0;
+
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  /// This gets a default implementation: extract the real pointer to a local,
+  /// call acceptWeak on that, write the result back as a BasedPointer.
+  virtual void acceptWeak(BasedPointer &ptr) = 0;
+#endif
 };
 
 template <typename Acceptor>
@@ -120,9 +136,11 @@ struct DroppingAcceptor final : public RootAcceptor {
     acceptor.accept(ptr);
   }
 
+#ifdef HERMESVM_COMPRESSED_POINTERS
   void accept(BasedPointer &ptr, const char *) override {
     acceptor.accept(ptr);
   }
+#endif
 
   void accept(GCPointerBase &ptr, const char *) override {
     acceptor.accept(ptr);

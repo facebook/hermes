@@ -1,5 +1,5 @@
-/**
- * Copyright 2018-present, Facebook, Inc.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ struct ReprAccess {
     repr.JObjectBase::set(obj);
   }
   static javaobject get(const Repr& repr) {
-    return static_cast<javaobject>(repr.JObject::get());
+    return static_cast<javaobject>(repr.JObjectBase::get());
   }
 };
 
@@ -85,7 +85,6 @@ const Repr& ReprStorage<Repr>::get() const noexcept {
 
 template <typename Repr>
 JniType<Repr> ReprStorage<Repr>::jobj() const noexcept {
-  ReprAccess<Repr>::get(get());
   return ReprAccess<Repr>::get(get());
 }
 
@@ -491,42 +490,42 @@ inline void swap(alias_ref<T>& a, alias_ref<T>& b) noexcept {
 // template argument.  I'm not sure whether that would make the code
 // more maintainable (DRY), or less (too clever/confusing.).
 template<typename T, typename U>
-enable_if_t<IsPlainJniReference<T>(), local_ref<T>>
+enable_if_t<IsPlainJniReference<JniType<T>>(), local_ref<T>>
 static_ref_cast(const local_ref<U>& ref) noexcept
 {
-  T p = static_cast<T>(ref.get());
+  JniType<T> p = static_cast<JniType<T>>(ref.get());
   return make_local(p);
 }
 
 template<typename T, typename U>
-enable_if_t<IsPlainJniReference<T>(), global_ref<T>>
+enable_if_t<IsPlainJniReference<JniType<T>>(), global_ref<T>>
 static_ref_cast(const global_ref<U>& ref) noexcept
 {
-  T p = static_cast<T>(ref.get());
+  JniType<T> p = static_cast<JniType<T>>(ref.get());
   return make_global(p);
 }
 
 template<typename T, typename U>
-enable_if_t<IsPlainJniReference<T>(), alias_ref<T>>
+enable_if_t<IsPlainJniReference<JniType<T>>(), alias_ref<T>>
 static_ref_cast(const alias_ref<U>& ref) noexcept
 {
-  T p = static_cast<T>(ref.get());
+  JniType<T> p = static_cast<JniType<T>>(ref.get());
   return wrap_alias(p);
 }
 
 template<typename T, typename RefType>
 auto dynamic_ref_cast(const RefType& ref) ->
-enable_if_t<IsPlainJniReference<T>(), decltype(static_ref_cast<T>(ref))>
+enable_if_t<IsPlainJniReference<JniType<T>>(), decltype(static_ref_cast<T>(ref))>
 {
   if (!ref) {
     return decltype(static_ref_cast<T>(ref))();
   }
 
-  static alias_ref<jclass> target_class = findClassStatic(jtype_traits<T>::base_name().c_str());
+  static alias_ref<jclass> target_class = findClassStatic(jtype_traits<T>::kBaseName.c_str());
   if (!target_class) {
     throwNewJavaException("java/lang/ClassCastException",
                           "Could not find class %s.",
-                          jtype_traits<T>::base_name().c_str());
+                          jtype_traits<T>::kBaseName.c_str());
 
   }
 
@@ -536,7 +535,7 @@ enable_if_t<IsPlainJniReference<T>(), decltype(static_ref_cast<T>(ref))>
     throwNewJavaException("java/lang/ClassCastException",
                           "Tried to cast from %s to %s.",
                           source_class->toString().c_str(),
-                          jtype_traits<T>::base_name().c_str());
+                          jtype_traits<T>::kBaseName.c_str());
   }
 
   return static_ref_cast<T>(ref);

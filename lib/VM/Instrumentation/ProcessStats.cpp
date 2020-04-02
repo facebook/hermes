@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/VM/instrumentation/ProcessStats.h"
 
 #if defined(_WINDOWS)
@@ -66,9 +67,11 @@ ProcessStats::Info getProcessStatSnapshot() {
   const size_t PS = getpagesize();
   rss *= PS / 1024;
   va *= PS / 1024;
+#elif defined(__EMSCRIPTEN__)
+  rss = va = 0;
 #else
 #error "Unsupported platform"
-#endif // __MACH__, __linux__
+#endif
 
   ProcessStats::Info result;
   result.RSSkB = rss;

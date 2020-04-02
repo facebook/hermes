@@ -1,13 +1,15 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "JSONLexer.h"
 
 #include "hermes/VM/StringPrimitive.h"
-#include "hermes/dtoa/dtoa.h"
+
+#include "dtoa/dtoa.h"
 
 namespace hermes {
 namespace vm {
@@ -23,17 +25,17 @@ static bool isJSONWhiteSpace(char16_t ch) {
 
 ExecutionStatus JSONLexer::advance() {
   // Skip whitespaces.
-  while (curCharPtr_ < bufferEnd_ && isJSONWhiteSpace(*curCharPtr_)) {
-    curCharPtr_++;
+  while (curCharPtr_.hasChar() && isJSONWhiteSpace(*curCharPtr_)) {
+    ++curCharPtr_;
   }
 
   // End of buffer.
-  if (curCharPtr_ == bufferEnd_) {
+  if (!curCharPtr_.hasChar()) {
     token_.setEof();
     return ExecutionStatus::RETURNED;
   }
 
-  token_.setLoc(curCharPtr_);
+  token_.setFirstChar(*curCharPtr_);
 
 #define PUNC(ch, tok)          \
   case ch:                     \
@@ -74,7 +76,7 @@ ExecutionStatus JSONLexer::advance() {
 CallResult<char16_t> JSONLexer::consumeUnicode() {
   uint16_t val = 0;
   for (unsigned i = 0; i < 4; ++i) {
-    if (curCharPtr_ == bufferEnd_) {
+    if (!curCharPtr_.hasChar()) {
       return error("Unexpected end of input");
     }
     int ch = *curCharPtr_ | 32;
@@ -93,33 +95,30 @@ CallResult<char16_t> JSONLexer::consumeUnicode() {
 }
 
 ExecutionStatus JSONLexer::scanNumber() {
-  const char16_t *start = curCharPtr_;
-  while (curCharPtr_ < bufferEnd_) {
+  llvm::SmallVector<char, 32> str8;
+  while (curCharPtr_.hasChar()) {
     auto ch = *curCharPtr_;
     if (!(ch == u'-' || ch == u'+' || ch == u'.' || (ch | 32) == u'e' ||
           (ch >= u'0' && ch <= u'9'))) {
       break;
     }
-    curCharPtr_++;
+    str8.push_back(ch);
+    ++curCharPtr_;
   }
 
-  size_t len = curCharPtr_ - start;
-  if (*start == u'0' && len > 0 && *(start + 1) >= u'0' &&
-      *(start + 1) <= u'9') {
+  size_t len = str8.size();
+  assert(len > 0 && "scanNumber must be called on a number-looking char");
+  if (str8[0] == '0' && len > 1 && str8[1] >= '0' && str8[1] <= '9') {
     // The integer part cannot start with 0, unless it's 0.
-    return errorWithChar(u"Unexpected token in number: ", *(start + 1));
+    return errorWithChar(u"Unexpected token in number: ", str8[1]);
   }
 
-  // copy 16 bit chars into 8 bit chars and call hermes_g_strtod.
-  llvm::SmallVector<char, 32> str8;
-  str8.insert(str8.begin(), start, start + len);
   str8.push_back('\0');
 
   char *endPtr;
   double value = ::hermes_g_strtod(str8.data(), &endPtr);
   if (endPtr != str8.data() + len) {
-    return errorWithChar(
-        u"Unexpected token in number: ", *(start + (endPtr - str8.data())));
+    return errorWithChar(u"Unexpected token in number: ", *endPtr);
   }
   token_.setNumber(value);
   return ExecutionStatus::RETURNED;
@@ -130,29 +129,37 @@ ExecutionStatus JSONLexer::scanString() {
   ++curCharPtr_;
   SmallU16String<32> tmpStorage;
 
-  while (curCharPtr_ < bufferEnd_) {
+  while (curCharPtr_.hasChar()) {
     if (*curCharPtr_ == '"') {
       // End of string.
+      ++curCharPtr_;
+      // If the string exists in the identifier table, use that one.
+      if (auto existing =
+              runtime_->getIdentifierTable().getExistingStringPrimitiveOrNull(
+                  runtime_, tmpStorage.arrayRef())) {
+        token_.setString(runtime_->makeHandle<StringPrimitive>(existing));
+        return ExecutionStatus::RETURNED;
+      }
       auto strRes = StringPrimitive::create(runtime_, tmpStorage.arrayRef());
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       token_.setString(runtime_->makeHandle<StringPrimitive>(*strRes));
-      ++curCharPtr_;
       return ExecutionStatus::RETURNED;
     } else if (*curCharPtr_ <= '\u001F') {
       return error(u"U+0000 thru U+001F is not allowed in string");
     }
     if (*curCharPtr_ == u'\\') {
       ++curCharPtr_;
-      if (curCharPtr_ == bufferEnd_) {
+      if (!curCharPtr_.hasChar()) {
         return error("Unexpected end of input");
       }
       switch (*curCharPtr_) {
         case u'"':
         case u'/':
         case u'\\':
-          tmpStorage.push_back(*curCharPtr_++);
+          tmpStorage.push_back(*curCharPtr_);
+          ++curCharPtr_;
           break;
 
         case 'b':
@@ -190,14 +197,15 @@ ExecutionStatus JSONLexer::scanString() {
           return errorWithChar(u"Invalid escape sequence: ", *curCharPtr_);
       }
     } else {
-      tmpStorage.push_back(*curCharPtr_++);
+      tmpStorage.push_back(*curCharPtr_);
+      ++curCharPtr_;
     }
   }
   return error("Unexpected end of input");
 }
 
 ExecutionStatus JSONLexer::scanWord(const char *word, JSONTokenKind kind) {
-  while (*word && curCharPtr_ < bufferEnd_) {
+  while (*word && curCharPtr_.hasChar()) {
     if (*curCharPtr_ != *word) {
       return errorWithChar(u"Unexpected token: ", *curCharPtr_);
     }
@@ -211,5 +219,5 @@ ExecutionStatus JSONLexer::scanWord(const char *word, JSONTokenKind kind) {
   return ExecutionStatus::RETURNED;
 }
 
-}; // namespace vm
-}; // namespace hermes
+} // namespace vm
+} // namespace hermes

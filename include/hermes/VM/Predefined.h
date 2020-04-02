@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_PREDEFINED_H
 #define HERMES_VM_PREDEFINED_H
 
@@ -16,6 +17,7 @@ namespace Predefined {
 
 enum IProp {
 #define PROP(i) InternalProperty##i,
+#define NAMED_PROP(name) InternalProperty##name,
 #include "InternalProperties.def"
   _IPROP_AFTER_LAST
 };

@@ -1,5 +1,5 @@
-/**
- * Copyright 2018-present, Facebook, Inc.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@
 #include <new>
 #include <atomic>
 
+#include <fbjni/detail/FbjniApi.h>
 #include "Environment.h"
 
 namespace facebook {
@@ -36,7 +37,7 @@ struct ReferenceStats {
   void reset() noexcept;
 };
 
-extern ReferenceStats g_reference_stats;
+extern FBJNI_API ReferenceStats g_reference_stats;
 }
 /// @endcond
 

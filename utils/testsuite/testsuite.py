@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
-# This source code is licensed under the MIT license found in the LICENSE
-# file in the root directory of this source tree.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 
 import argparse
 import enum
@@ -14,7 +14,7 @@ import tempfile
 import textwrap
 import time
 from collections import namedtuple
-from multiprocessing.dummy import Lock, Pool
+from multiprocessing import Pool, Value
 from os.path import basename, isdir, isfile, join, splitext
 
 
@@ -333,27 +333,27 @@ def printVerbose(s):
 
 
 istty = sys.stdout.isatty()
-statusLock = Lock()
-completed = 0
+completed = Value("i", 0)
 ttyWidth = os.get_terminal_size().columns if istty else 0
 
 
 def showStatus(filename):
-    global completed, istty, verbose, count, statusLock
+    global completed, istty, verbose, count
     if istty and not verbose and count > 0:
-        with statusLock:
+        with completed.get_lock():
             record = ("\r{:" + str(ttyWidth) + "s}\n").format("Testing " + filename)
             status = "{:06.2f}% ({:d} / {:d})".format(
-                100.0 * completed / count, completed, count
+                100.0 * completed.value / count, completed.value, count
             )
             sys.stdout.write(record + status)
             sys.stdout.flush()
-            completed += 1
+            completed.value += 1
     else:
         print("Testing " + filename)
 
 
-es6_args = ["-Xes6-symbol"]
+es6_args = ["-Xes6-proxy", "-Xes6-symbol"]
+extra_run_args = ["-Xhermes-internal-test-methods"]
 
 extra_compile_flags = ["-fno-static-builtins"]
 
@@ -603,7 +603,11 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
                 )
                 if optEnabled:
                     args.append("-O")
-                if not strictEnabled:
+                else:
+                    args.append("-O0")
+                if strictEnabled:
+                    args.append("-strict")
+                else:
                     args.append("-non-strict")
                 subprocess.check_output(
                     args, timeout=TIMEOUT_COMPILER, stderr=subprocess.STDOUT
@@ -653,7 +657,11 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
                 try:
                     printVerbose("Running with HBC VM: {}".format(filename))
                     # Run the hermes vm.
-                    args = [os.path.join(binary_path, hvm), binfile.name] + es6_args
+                    args = (
+                        [os.path.join(binary_path, hvm), binfile.name]
+                        + es6_args
+                        + extra_run_args
+                    )
                     env = {"LC_ALL": "en_US.UTF-8"}
                     if sys.platform == "linux":
                         env["ICU_DATA"] = binary_path
@@ -729,6 +737,10 @@ def makeCalls(params, onlyfiles, rangeLeft, rangeRight):
     return calls
 
 
+def calcParams(params):
+    return (params[0], runTest(*params))
+
+
 def testLoop(calls, jobs, fail_fast, num_slowest_tests):
     results = []
 
@@ -746,9 +758,7 @@ def testLoop(calls, jobs, fail_fast, num_slowest_tests):
     slowest_tests = [("", 0)] * num_slowest_tests
 
     with Pool(processes=jobs) as pool:
-        for res in pool.imap_unordered(
-            lambda params: (params[0], runTest(*params)), calls, 1
-        ):
+        for res in pool.imap_unordered(calcParams, calls, 1):
             testname = res[0]
             results.append(res)
             (hermesStatus, errString, duration) = res[1]
@@ -774,6 +784,10 @@ def testLoop(calls, jobs, fail_fast, num_slowest_tests):
                 and hermesStatus != TestFlag.TEST_PERMANENTLY_SKIPPED
             ):
                 break
+    # Filter out missing test names in case there were fewer tests run than the top slowest tests.
+    slowest_tests = [
+        (testName, duration) for testName, duration in slowest_tests if testName
+    ]
     return results, resultsHist, slowest_tests
 
 
@@ -978,9 +992,9 @@ def run(
         if errString:
             print("{}".format(textwrap.indent(errString, "\t")))
 
-    if num_slowest_tests:
+    if slowest_tests:
         print()
-        print("Top {:d} slowest tests".format(num_slowest_tests))
+        print("Top {:d} slowest tests".format(len(slowest_tests)))
         maxNameWidth = 0
         maxNumWidth = 0
         for testName, duration in slowest_tests:

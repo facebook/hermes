@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_JIT_POOLHEAP_H
 #define HERMES_VM_JIT_POOLHEAP_H
 
@@ -26,8 +27,8 @@ class PoolHeap {
   PoolHeap(const PoolHeap &) = delete;
   PoolHeap &operator=(const PoolHeap &) = delete;
 
-  PoolHeap(PoolHeap &&) = default;
-  PoolHeap &operator=(PoolHeap &&) = default;
+  PoolHeap(PoolHeap &&) = delete;
+  PoolHeap &operator=(PoolHeap &&) = delete;
 
   /// \return true if the heap doesn't contain any allocated blocks.
   bool isEntirelyFree() const {

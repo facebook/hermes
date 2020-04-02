@@ -1,14 +1,16 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_JSWEAKMAPIMPL_H
 #define HERMES_VM_JSWEAKMAPIMPL_H
 
 #include "hermes/VM/CallResult.h"
 #include "hermes/VM/CellKind.h"
+#include "hermes/VM/GCPointer.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/WeakRef.h"
@@ -29,6 +31,11 @@ struct WeakRefKey {
   uint32_t hash;
 
   WeakRefKey(WeakRef<JSObject> ref, uint32_t hash) : ref(ref), hash(hash) {}
+
+  /// Returns the object reference of ref; returns null if ref is not valid.
+  /// Should only be called during GC; the \param gc argument is used only to
+  /// verify this.
+  JSObject *getObject(GC *gc) const;
 };
 
 /// Enable using WeakRef<JSObject> in DenseMap.
@@ -36,15 +43,15 @@ struct WeakRefInfo {
  public:
   /// \return Empty key which is simply null.
   static inline WeakRefKey getEmptyKey() {
-    return WeakRefKey{
-        WeakRef<JSObject>(reinterpret_cast<WeakRefSlot *>(kEmptyKey)),
-        kEmptyKey};
+    return WeakRefKey{WeakRef<JSObject>(reinterpret_cast<WeakRefSlot *>(
+                          static_cast<uintptr_t>(kEmptyKey))),
+                      kEmptyKey};
   }
   /// \return Empty key which is simply a pointer to 0x1 - don't dereference.
   static inline WeakRefKey getTombstoneKey() {
-    return WeakRefKey{
-        WeakRef<JSObject>(reinterpret_cast<WeakRefSlot *>(kTombstoneKey)),
-        kTombstoneKey};
+    return WeakRefKey{WeakRef<JSObject>(reinterpret_cast<WeakRefSlot *>(
+                          static_cast<uintptr_t>(kTombstoneKey))),
+                      kTombstoneKey};
   }
   /// \return the hash in \p key.
   static inline unsigned getHashValue(const WeakRefKey &key) {
@@ -152,12 +159,61 @@ class JSWeakMapImplBase : public JSObject {
       Runtime *runtime,
       Handle<JSObject> key);
 
-  /// \return the size of the internal map.
+  /// \return the size of the internal map, after freeing any freeable slots.
   /// Used for testing purposes.
-  /// Note: the returned value may differ from the number of reachable keys.
-  static uint32_t debugGetSize(JSWeakMapImplBase *self) {
-    return self->map_.size();
-  }
+  static uint32_t debugFreeSlotsAndGetSize(
+      PointerBase *base,
+      JSWeakMapImplBase *self);
+
+  /// An iterator over the keys of the map.
+  struct KeyIterator {
+    DenseMapT::iterator mapIter;
+
+    KeyIterator &operator++(int /*dummy*/) {
+      mapIter++;
+      return *this;
+    }
+
+    WeakRefKey &operator*() {
+      return mapIter->first;
+    }
+
+    WeakRefKey *operator->() {
+      return &mapIter->first;
+    }
+
+    bool operator!=(const KeyIterator &other) {
+      return mapIter != other.mapIter;
+    }
+  };
+
+  // Return begin and end iterators for the keys of the map.
+  KeyIterator keys_begin();
+  KeyIterator keys_end();
+
+  /// Returns a pointer to the HermesValue corresponding to the given \p key.
+  /// Returns nullptr if \p key is not in the map.  May only be
+  /// called during GC.  Note that this returns a pointer into the interior
+  /// of an object; must not be used in contexts where the object might move.
+  /// \param gc Used to verify that the call is during GC, and provides
+  /// a PointerBase.
+  GCHermesValue *getValueDirect(GC *gc, const WeakRefKey &key);
+
+  /// Return a reference to the slot that contains the pointer to the storage
+  /// for the values of the weak map.  Note that this returns a pointer into the
+  /// interior of an object; must not be used in contexts where the object might
+  /// move.
+  /// \param GC Used to verify that the call is during GC.
+  GCPointerBase::StorageType &getValueStorageRef(GC *GC);
+
+  /// If the given \p key is in the map, clears the entry
+  /// corresponding to \p key -- clears the slot of the WeakRef in
+  /// key, and sets the value to the empty HermesValue.  May only be
+  /// called during GC.
+  /// \param gc Used to verify that the call is during GC, and provides
+  /// a PointerBase.
+  /// \return whether the key was in the map.
+  bool clearEntryDirect(GC *gc, const WeakRefKey &key);
 
  protected:
   static void _finalizeImpl(GCCell *cell, GC *gc) {
@@ -255,7 +311,7 @@ class JSWeakMapImpl final : public JSWeakMapImplBase {
   }
 
   /// Create a new WeakMap with prototype property \p parentHandle.
-  static CallResult<HermesValue> create(
+  static CallResult<PseudoHandle<JSWeakMapImpl<C>>> create(
       Runtime *runtime,
       Handle<JSObject> parentHandle);
 

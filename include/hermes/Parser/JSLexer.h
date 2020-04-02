@@ -1,13 +1,15 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_PARSER_JSLEXER_H
 #define HERMES_PARSER_JSLEXER_H
 
 #include "hermes/Support/Allocator.h"
+#include "hermes/Support/OptValue.h"
 #include "hermes/Support/SourceErrorManager.h"
 #include "hermes/Support/StringTable.h"
 #include "hermes/Support/UTF8.h"
@@ -239,6 +241,11 @@ class JSLexer {
 
   bool strictMode_;
 
+  /// If true, when a surrogate pair sequence is encountered in a string literal
+  /// in the source, convert that string literal to its canonical UTF-8
+  /// sequence.
+  bool convertSurrogates_;
+
   Token token_;
 
   const char *bufferStart_;
@@ -263,45 +270,55 @@ class JSLexer {
   }
 
  public:
+  /// \param convertSurrogates See member variable \p convertSurrogates_.
   explicit JSLexer(
       std::unique_ptr<llvm::MemoryBuffer> input,
       SourceErrorManager &sm,
       Allocator &allocator,
       StringTable *strTab = nullptr,
-      bool strictMode = true);
+      bool strictMode = true,
+      bool convertSurrogates = false);
 
+  /// \param convertSurrogates See member variable \p convertSurrogates_.
   explicit JSLexer(
       uint32_t bufId,
       SourceErrorManager &sm,
       Allocator &allocator,
       StringTable *strTab = nullptr,
-      bool strictMode = true);
+      bool strictMode = true,
+      bool convertSurrogates = false);
 
+  /// \param convertSurrogates See member variable \p convertSurrogates_.
   JSLexer(
       StringRef input,
       SourceErrorManager &sm,
       Allocator &allocator,
       StringTable *strTab = nullptr,
-      bool strictMode = true)
+      bool strictMode = true,
+      bool convertSurrogates = false)
       : JSLexer(
             llvm::MemoryBuffer::getMemBuffer(input, "JavaScript"),
             sm,
             allocator,
             strTab,
-            strictMode) {}
+            strictMode,
+            convertSurrogates) {}
 
+  /// \param convertSurrogates See member variable \p convertSurrogates_.
   JSLexer(
       llvm::MemoryBufferRef input,
       SourceErrorManager &sm,
       Allocator &allocator,
       StringTable *strTab = nullptr,
-      bool strictMode = true)
+      bool strictMode = true,
+      bool convertSurrogates = false)
       : JSLexer(
             llvm::MemoryBuffer::getMemBuffer(input),
             sm,
             allocator,
             strTab,
-            strictMode) {}
+            strictMode,
+            convertSurrogates) {}
 
   SourceErrorManager &getSourceMgr() {
     return sm_;
@@ -364,6 +381,23 @@ class JSLexer {
   /// Should be called in the middle of parsing a template literal.
   const Token *rescanRBraceInTemplateLiteral();
 
+  /// Skip over any non-line-terminator whitespace and return the kind of
+  /// the next token if there was no LineTerminator before it.
+  /// Does not report any error messages during lookahead.
+  /// For example, this is used to determine whether we're in the
+  ///   async [no LineTerminator here] function
+  ///         ^
+  /// or the
+  ///   async [no LineTerminator here] ArrowFormalParameters
+  ///         ^
+  /// case for parsing async functions and arrow functions.
+  /// \pre the current token must be "async".
+  /// \param expectedToken if not None, then if the next token is expectedToken,
+  ///   the next token is scanned and the curCharPtr_ isn't reset to 'async'.
+  /// \return the kind of next token if there was no LineTerminator,
+  ///   otherwise return None.
+  OptValue<TokenKind> lookaheadAfterAsync(OptValue<TokenKind> expectedToken);
+
   /// Report an error for the range from startLoc to curCharPtr.
   bool errorRange(SMLoc startLoc, const llvm::Twine &msg) {
     return error({startLoc, SMLoc::getFromPointer(curCharPtr_)}, msg);
@@ -397,6 +431,9 @@ class JSLexer {
   }
 
   UniqueString *getStringLiteral(StringRef str) {
+    if (LLVM_UNLIKELY(convertSurrogates_)) {
+      return convertSurrogatesInString(str);
+    }
     return strTab_.getString(str);
   }
 
@@ -508,8 +545,9 @@ class JSLexer {
 
   /// Scan a hex number after the first character has been recognized but not
   /// consumed.
-  /// \param requireLen is the number of digits in the hex literal.
-  /// \param err if true, report an error on failing to recognize a hex number.
+  /// \param requiredLen is the number of digits in the hex literal.
+  /// \param errorOnFail if true, report an error on failing to recognize a hex
+  ///   number.
   llvm::Optional<uint32_t> consumeHex(
       unsigned requiredLen,
       bool errorOnFail = true);
@@ -553,6 +591,10 @@ class JSLexer {
 
   /// Attempt to scan a template literal starting at ` or at }.
   void scanTemplateLiteral();
+
+  /// Convert the surrogates into \p str into a valid UTF-8 sequence, and unique
+  /// it into the string table.
+  UniqueString *convertSurrogatesInString(StringRef str);
 
   /// Initialize the parser for a given source buffer id.
   void initializeWithBufferId(uint32_t bufId);
@@ -621,7 +663,7 @@ inline bool JSLexer::isUnicodeIdentifierPart(uint32_t ch) {
       ch == UNICODE_ZWNJ || ch == UNICODE_ZWJ;
 }
 
-}; // namespace parser
-}; // namespace hermes
+} // namespace parser
+} // namespace hermes
 
 #endif // HERMES_PARSER_JSLEXER_H

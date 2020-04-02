@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_JSGENERATOR_H
 #define HERMES_VM_JSGENERATOR_H
 
@@ -28,12 +29,6 @@ class JSGenerator final : public JSObject {
   const static ObjectVTable vt;
 
  public:
-  /// Number of property slots the class reserves for itself. Child classes
-  /// should override this value by adding to it and defining a constant with
-  /// the same name.
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      Super::NEEDED_PROPERTY_SLOTS;
-
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::GeneratorKind;
   }

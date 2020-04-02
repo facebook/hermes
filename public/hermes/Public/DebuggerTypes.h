@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_PUBLIC_DEBUGGERTYPES_H
 #define HERMES_PUBLIC_DEBUGGERTYPES_H
 
@@ -130,6 +131,19 @@ enum class PauseOnThrowMode {
   None, /// Never pause on exceptions.
   Uncaught, /// Only pause on uncaught exceptions.
   All, /// Pause any time an exception is thrown.
+};
+
+/// When requesting an async break, this specifies whether it was an implicit
+/// break from the inspector or a user-requested explicit break.
+enum class AsyncPauseKind {
+  /// Implicit pause to allow movement of jsi::Value types between threads.
+  /// The user will not be running commands and the inspector will immediately
+  /// request a Continue.
+  Implicit,
+
+  /// Explicit pause requested by the user.
+  /// Clears any stepping state and allows the user to run their own commands.
+  Explicit,
 };
 
 /// A type representing depth in a lexical scope chain.

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #define DEBUG_TYPE "gc"
 #include "hermes/VM/YoungGenNC.h"
 
@@ -19,7 +20,6 @@
 #include "hermes/VM/FillerCell.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCBase-inline.h"
-#include "hermes/VM/GCCell-inline.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/HiddenClass.h"
@@ -99,6 +99,10 @@ YoungGen::YoungGen(
 
   lowLim_ = activeSegment().lowLim();
   hiLim_ = activeSegment().hiLim();
+
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  gc_->pointerBase_->setSegment(PointerBase::kYGSegmentIndex, lowLim_);
+#endif
 
   // Record the initial level, as if we had done a GC before starting.
   didFinishGC();
@@ -282,7 +286,9 @@ AllocResult YoungGen::fullCollectThenAlloc(
 }
 
 void YoungGen::collect() {
-  GenGC::CollectionSection ygCollection(gc_, "YoungGen collection");
+  assert(gc_->noAllocLevel_ == 0 && "no GC allowed right now");
+  GenGC::CollectionSection ygCollection(
+      gc_, "YoungGen collection", gc_->getGCCallbacks());
 
 #ifdef HERMES_EXTRA_DEBUG
   /// Protect the card table boundary table, to detect corrupting mutator
@@ -304,7 +310,8 @@ void YoungGen::collect() {
   unsigned numAllocatedObjectsBefore = gc_->computeNumAllocatedObjects();
 #endif
   // Track the sum of the total pre-collection sizes of the young gens.
-  size_t youngGenUsedBefore = usedDirect();
+  const size_t youngGenUsedBefore = usedDirect();
+  const size_t youngGenSizeBefore = sizeDirect();
   ygCollection.addArg("ygUsedBefore", youngGenUsedBefore);
   ygCollection.addArg("ogUsedBefore", nextGen_->used());
   ygCollection.addArg("ogSize", nextGen_->size());
@@ -313,7 +320,7 @@ void YoungGen::collect() {
   cumPreBytes_ += youngGenUsedBefore;
 
   LLVM_DEBUG(
-      dbgs() << "\nStarting (young-gen, " << formatSize(sizeDirect())
+      dbgs() << "\nStarting (young-gen, " << formatSize(youngGenSizeBefore)
              << ") garbage collection; collection # " << gc_->numGCs() << "\n");
 
   // Remember the point in the older generation into which we started
@@ -344,8 +351,14 @@ void YoungGen::collect() {
   }
 
   if (gc_->getIDTracker().isTrackingIDs()) {
-    PerfSection fixupTrackedObjectsSystraceRegion("fixupTrackedObjects");
-    fixupTrackedObjects();
+    PerfSection fixupTrackedObjectsSystraceRegion("updateIDTracker");
+    updateIDTracker();
+  }
+
+  if (gc_->getAllocationLocationTracker().isEnabled()) {
+    PerfSection updateAllocationLocationTrackerSystraceRegion(
+        "updateAllocationLocationTracker");
+    updateAllocationLocationTracker();
   }
 
   // We've now determined reachability; find weak refs to young-gen
@@ -404,7 +417,26 @@ void YoungGen::collect() {
   resetNumAllHiddenClasses();
 #endif // !NDEBUG
 
-  ygCollection.recordGCStats(sizeDirect(), &gc_->youngGenCollectionCumStats_);
+  // Track the bytes of promoted objects.
+  const size_t promotedBytes = (nextGen_->used() - oldGenUsedBefore);
+  assert(
+      promotedBytes <= youngGenUsedBefore &&
+      "Can't have promoted more bytes than existed in the young gen before "
+      "the collection");
+  cumPromotedBytes_ += promotedBytes;
+
+  ygCollection.recordGCStats(
+      sizeDirect(),
+      youngGenUsedBefore,
+      youngGenSizeBefore,
+      // Post-allocated has an ambiguous meaning for a young-gen GC, since the
+      // young gen must be completely evacuated. Since zeros aren't really
+      // useful here, instead put the number of bytes that were promoted into
+      // old gen, which is the amount that survived the collection.
+      promotedBytes,
+      // In young-gen collections, the size never changes.
+      youngGenSizeBefore,
+      &gc_->youngGenCollectionCumStats_);
 
   markOldToYoungSecs_ +=
       GCBase::clockDiffSeconds(markOldToYoungStart, markRootsStart);
@@ -415,9 +447,6 @@ void YoungGen::collect() {
   updateWeakRefsSecs_ +=
       GCBase::clockDiffSeconds(updateWeakRefsStart, finalizersStart);
   finalizersSecs_ += GCBase::clockDiffSeconds(finalizersStart, finalizersEnd);
-  // Track the bytes of promoted objects.
-  size_t promotedBytes = (nextGen_->used() - oldGenUsedBefore);
-  cumPromotedBytes_ += promotedBytes;
   ygCollection.addArg("ygPromoted", promotedBytes);
   ygCollection.addArg("ogUsedAfter", nextGen_->used());
   ygCollection.addArg(
@@ -518,18 +547,37 @@ GCCell *YoungGen::forwardPointer(GCCell *ptr) {
   return newCell;
 }
 
-void YoungGen::fixupTrackedObjects() {
+void YoungGen::updateIDTracker() {
+  updateTrackers</* idTracker */ true, /* allocationLocationTracker */ false>();
+}
+
+void YoungGen::updateAllocationLocationTracker() {
+  updateTrackers</* idTracker */ false, /* allocationLocationTracker */ true>();
+}
+
+template <bool idTracker, bool allocationLocationTracker>
+void YoungGen::updateTrackers() {
   char *ptr = activeSegment().start();
   char *lvl = activeSegment().level();
   while (ptr < lvl) {
     GCCell *cell = reinterpret_cast<GCCell *>(ptr);
     if (cell->hasMarkedForwardingPointer()) {
       auto *fptr = cell->getMarkedForwardingPointer();
-      gc_->getIDTracker().moveObject(cell, fptr);
+      if (idTracker) {
+        gc_->getIDTracker().moveObject(cell, fptr);
+      }
+      if (allocationLocationTracker) {
+        gc_->getAllocationLocationTracker().moveAlloc(cell, fptr);
+      }
       ptr += reinterpret_cast<GCCell *>(fptr)->getAllocatedSize();
     } else {
       ptr += cell->getAllocatedSize();
-      gc_->getIDTracker().untrackObject(cell);
+      if (idTracker) {
+        gc_->getIDTracker().untrackObject(cell);
+      }
+      if (allocationLocationTracker) {
+        gc_->getAllocationLocationTracker().freeAlloc(cell);
+      }
     }
   }
 }
@@ -560,6 +608,30 @@ void YoungGen::finalizeUnreachableAndTransferReachableObjects() {
 void YoungGen::didFinishGC() {
   assert(ownsAllocContext());
   levelAtEndOfLastGC_ = activeSegment().level();
+}
+
+void YoungGen::updateCrashManagerHeapExtents(
+    const std::string &runtimeName,
+    CrashManager *crashMgr) {
+  if (!crashMgr) {
+    return;
+  }
+  if (crashMgrRecordedSegments_ == 1) {
+    return;
+  }
+
+  std::string key = runtimeName + ":HeapSegments_YG";
+  const unsigned N = 1000;
+  char valueBuffer[N];
+  char *buf = &valueBuffer[0];
+  int sz = N;
+  activeSegment().addExtentToString(&buf, &sz);
+  crashMgr->setCustomData(key.c_str(), valueBuffer);
+#ifdef HERMESVM_PLATFORM_LOGGING
+  hermesLog(
+      "HermesGC", "Added YG heap extent: %s = %s", key.c_str(), valueBuffer);
+#endif
+  crashMgrRecordedSegments_ = 1;
 }
 
 gcheapsize_t YoungGen::bytesAllocatedSinceLastGC() const {

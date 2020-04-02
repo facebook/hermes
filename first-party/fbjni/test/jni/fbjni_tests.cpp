@@ -1,4 +1,18 @@
-// Copyright 2004-present Facebook. All Rights Reserved.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #include <ios>
 #include <stdexcept>
@@ -62,32 +76,35 @@ jobject TestCreateInstanceOf(JNIEnv* env, jobject self, jstring class_name) {
 }
 
 jboolean TestTypeDescriptors(JNIEnv* env, jobject self) {
-  EXPECT(jtype_traits<jboolean>::descriptor() == "Z");
-  EXPECT(jtype_traits<jbyte>::descriptor() == "B");
-  EXPECT(jtype_traits<jchar>::descriptor() == "C");
-  EXPECT(jtype_traits<jdouble>::descriptor() == "D");
-  EXPECT(jtype_traits<jfloat>::descriptor() == "F");
-  EXPECT(jtype_traits<jint>::descriptor() == "I");
-  EXPECT(jtype_traits<jlong>::descriptor() == "J");
-  EXPECT(jtype_traits<jshort>::descriptor() == "S");
+#define FIXED_STRING_EXPECT_EQ(actual, expected)                        \
+  static_assert((actual) == (expected), "descriptor mismatch")
 
-  EXPECT(jtype_traits<jstring>::descriptor() == "Ljava/lang/String;");
-  EXPECT(jtype_traits<jobject>::descriptor() == "Ljava/lang/Object;");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jboolean>::kDescriptor, "Z");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jbyte>::kDescriptor, "B");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jchar>::kDescriptor, "C");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jdouble>::kDescriptor, "D");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jfloat>::kDescriptor, "F");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jint>::kDescriptor, "I");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jlong>::kDescriptor, "J");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jshort>::kDescriptor, "S");
 
-  EXPECT(jtype_traits<jintArray>::descriptor() == "[I");
-  EXPECT(jtype_traits<jtypeArray<jstring>>::descriptor() == "[Ljava/lang/String;");
-  EXPECT(jtype_traits<jtypeArray<jtypeArray<jstring>>>::descriptor()
-      == "[[Ljava/lang/String;");
-  EXPECT(jtype_traits<jtypeArray<jintArray>>::descriptor() == "[[I");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jstring>::kDescriptor, "Ljava/lang/String;");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jobject>::kDescriptor, "Ljava/lang/Object;");
+
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jintArray>::kDescriptor, "[I");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jtypeArray<jstring>>::kDescriptor, "[Ljava/lang/String;");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jtypeArray<jtypeArray<jstring>>>::kDescriptor
+     , "[[Ljava/lang/String;");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jtypeArray<jintArray>>::kDescriptor, "[[I");
 
   // base_name() is meaningless for primitive types.
-  EXPECT(jtype_traits<jstring>::base_name() == "java/lang/String");
-  EXPECT(jtype_traits<jobject>::base_name() == "java/lang/Object");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jstring>::kBaseName, "java/lang/String");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jobject>::kBaseName, "java/lang/Object");
 
-  EXPECT(jtype_traits<jintArray>::base_name() == "[I");
-  EXPECT(jtype_traits<jtypeArray<jstring>>::base_name() == "[Ljava/lang/String;");
-  EXPECT(jtype_traits<jtypeArray<jtypeArray<jstring>>>::base_name() == "[[Ljava/lang/String;");
-  EXPECT(jtype_traits<jtypeArray<jintArray>>::base_name() == "[[I");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jintArray>::kBaseName, "[I");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jtypeArray<jstring>>::kBaseName, "[Ljava/lang/String;");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jtypeArray<jtypeArray<jstring>>>::kBaseName, "[[Ljava/lang/String;");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jtypeArray<jintArray>>::kBaseName, "[[I");
 
   return JNI_TRUE;
 }
@@ -1146,44 +1163,65 @@ jboolean testAssignmentAndCopyCrossTypes(JNIEnv*, jobject self) {
 
   size_t locals = 0, globals = 0, weaks = 0;
   g_reference_stats.reset();
+#define VERIFY_REFERENCE_STATS() do {                                   \
+    bool referenceStatsMatch = g_reference_stats.locals_deleted == locals && \
+      g_reference_stats.globals_deleted == globals &&                   \
+      g_reference_stats.weaks_deleted == weaks;                         \
+    if (!referenceStatsMatch) {                                         \
+      FBJNI_LOGE("locals: %d, expected: %zd", g_reference_stats.locals_deleted.load(), locals); \
+      FBJNI_LOGE("globals: %d, expected: %zd", g_reference_stats.globals_deleted.load(), globals); \
+      FBJNI_LOGE("weaks: %d, expected: %zd", g_reference_stats.weaks_deleted.load(), weaks); \
+    }                                                                   \
+    EXPECT(referenceStatsMatch);                                        \
+  } while (0)
+
   {
+    VERIFY_REFERENCE_STATS();
+
     auto local = adopt_local(self);
-    locals += 1;
+    VERIFY_REFERENCE_STATS();
 
     EXPECT(copyAndVerifyCross<local_ref>(local));
     locals += 2;
+    VERIFY_REFERENCE_STATS();
 
     EXPECT(assignAndVerifyCross<local_ref>(local));
     locals += 2;
+    VERIFY_REFERENCE_STATS();
 
     EXPECT(verifyMakeCross<local_ref>(local));
     locals += 1;
-    locals += 6;
-    globals += 6;
-    weaks += 6;
+    locals += 4;
+    globals += 4;
+    weaks += 4;
+    VERIFY_REFERENCE_STATS();
 
     auto global = make_global(local);
-    globals += 1;
+    VERIFY_REFERENCE_STATS();
 
     EXPECT(copyAndVerifyCross<global_ref>(global));
     globals += 2;
+    VERIFY_REFERENCE_STATS();
 
     EXPECT(assignAndVerifyCross<global_ref>(global));
     globals += 2;
+    VERIFY_REFERENCE_STATS();
 
     auto weak = make_weak(local);
-    weaks += 1;
+    VERIFY_REFERENCE_STATS();
 
     weak_ref<JObject> weakCopy{weak};
-    weaks += 1;
+    VERIFY_REFERENCE_STATS();
 
     EXPECT(weak.lockGlobal() == weakCopy.lockGlobal());
-    globals += 3; // One extra required as the two globals are different types.
+    globals += 2;
+    VERIFY_REFERENCE_STATS();
 
     weakCopy = weak;
     weaks += 1;
     EXPECT(weak.lockGlobal() == weakCopy.lockGlobal());
-    globals += 3; // One extra required as the two globals are different types.
+    globals += 2;
+    VERIFY_REFERENCE_STATS();
 
     auto alias = alias_ref<jobject>{local};
     alias_ref<JObject>{local};
@@ -1198,15 +1236,14 @@ jboolean testAssignmentAndCopyCrossTypes(JNIEnv*, jobject self) {
     alias = self;
     alias = global;
     // alias = weak; // Should not compile
+
+    weaks += 1;   // `weakCopy` going out of scope
+    weaks += 1;   // `weak` going out of scope
+    globals += 1; // `global` going out of scope
+    locals += 1;  // `local` going out of scope
   }
 
-  FBJNI_LOGE("locals: %d, expected: %zd", g_reference_stats.locals_deleted.load(), locals);
-  FBJNI_LOGE("globals: %d, expected: %zd", g_reference_stats.globals_deleted.load(), globals);
-  FBJNI_LOGE("weaks: %d, expected: %zd", g_reference_stats.weaks_deleted.load(), weaks);
-
-  EXPECT(g_reference_stats.locals_deleted == locals &&
-        g_reference_stats.globals_deleted == globals &&
-        g_reference_stats.weaks_deleted == weaks);
+  VERIFY_REFERENCE_STATS();
 
   return JNI_TRUE;
 
@@ -1403,21 +1440,14 @@ void StaticAssertSame() {
 
 } // namespace
 
-namespace facebook {
-namespace jni {
-template<>
-class JObjectWrapper<jFakeClass> : public JObjectWrapper<jobject> {
-  static alias_ref<jFakeClass> create(local_ref<jFakeClass>) {
-    return alias_ref<jFakeClass>(nullptr);
-  }
-};
-}}
-
 void RegisterFbjniTests() {
-  StaticAssertSame<ReprType<jFakeClass>, JObjectWrapper<jFakeClass>>();
-  StaticAssertSame<ReprType<jFakeClass>, JObjectWrapper<jFakeClass>>();
   StaticAssertSame<JniType<jFakeClass>, jFakeClass>();
-  StaticAssertSame<JniType<JObjectWrapper<jFakeClass>>, jFakeClass>();
+
+  StaticAssertSame<PrimitiveOrJniType<JObject>, jobject>();
+  StaticAssertSame<PrimitiveOrJniType<JClass>, jclass>();
+  StaticAssertSame<PrimitiveOrJniType<JArrayInt>, jintArray>();
+  StaticAssertSame<PrimitiveOrJniType<jint>, jint>();
+  StaticAssertSame<PrimitiveOrJniType<TestThing>, TestThing::javaobject>();
 
   registerNatives(jaccess_class_name, {
       makeNativeMethod("nativeTestClassResolution", TestClassResolution),

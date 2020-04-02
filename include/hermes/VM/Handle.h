@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #ifndef HERMES_VM_HANDLE_H
 #define HERMES_VM_HANDLE_H
 
@@ -28,6 +29,128 @@ template <typename T>
 class Handle;
 template <typename T>
 class MutableHandle;
+
+/// This class is used in performance-sensitive context in situations where we
+/// want to encode in the function signature that allocations may be performed,
+/// potentially moving the object, but we don't want to incur the cost of
+/// always allocating a handle. The callee will allocate a handle internally if
+/// it needs to.
+///
+/// For example:
+/// \code
+///   bool checkFlag(PseudoHandle<Foo> foo, Runtime *runtime) {
+///     if (foo->cheapCheck())
+///       return true;
+///     auto fooHandle = runtime->makeHandle(std::move(foo));
+///     return expensiveCheck(fooHandle, runtime);
+///  }
+/// \endcode
+template <typename T = HermesValue>
+class PseudoHandle {
+  using traits_type = HermesValueTraits<T>;
+  using value_type = typename traits_type::value_type;
+  using arrow_type = typename traits_type::arrow_type;
+
+  template <class U>
+  friend class PseudoHandle;
+
+  value_type value_;
+#ifndef NDEBUG
+  bool valid_{true};
+#endif
+
+  explicit PseudoHandle(value_type value) : value_(value) {}
+
+ public:
+  PseudoHandle(const PseudoHandle &) = delete;
+  PseudoHandle &operator=(const PseudoHandle &) = delete;
+
+#ifndef NDEBUG
+  PseudoHandle(PseudoHandle &&hnd) : value_(hnd.value_), valid_(hnd.valid_) {
+    hnd.valid_ = false;
+  }
+  PseudoHandle &operator=(PseudoHandle &&hnd) {
+    value_ = hnd.value_;
+    valid_ = hnd.valid_;
+    hnd.valid_ = false;
+    return *this;
+  }
+#else
+  PseudoHandle(PseudoHandle &&) = default;
+  PseudoHandle &operator=(PseudoHandle &&) = default;
+#endif
+
+  ~PseudoHandle() = default;
+
+  constexpr PseudoHandle() : value_(traits_type::defaultValue()) {}
+  PseudoHandle(Handle<T> handle) : value_(*handle) {}
+
+  /// Conveniently construct PseudoHandle<HermesValue> from a PinnedHermesValue
+  /// pointer.
+  explicit PseudoHandle(PinnedHermesValue *pvalue) : value_(*pvalue) {
+    static_assert(
+        std::is_same<value_type, HermesValue>::value,
+        "This constructor can only be used for PseudoHandle<HermesValue>");
+  }
+
+  PseudoHandle &operator=(Handle<T> handle) {
+    value_ = *handle;
+#ifndef NDEBUG
+    valid_ = true;
+#endif
+    return *this;
+  }
+
+  /// Zero-cost conversion between compatible types.
+  template <
+      typename U,
+      typename = typename std::enable_if<std::is_convertible<
+          typename PseudoHandle<U>::value_type,
+          typename PseudoHandle<T>::value_type>::value>::type>
+  /* implicit */ PseudoHandle(PseudoHandle<U> &&other)
+      : value_(static_cast<value_type>(other.get())) {
+    other.invalidate();
+  }
+
+  void invalidate() {
+#ifndef NDEBUG
+    valid_ = false;
+#endif
+  }
+
+  value_type get() const {
+    assert(valid_ && "Pseudo handle has been invalidated");
+    return value_;
+  }
+
+  arrow_type operator->() const {
+    assert(valid_ && "Pseudo handle has been invalidated");
+    return traits_type::arrow(value_);
+  }
+
+  explicit operator bool() const {
+    assert(valid_ && "Pseudo handle has been invalidated");
+    return value_ != nullptr;
+  }
+
+  /// \return the value encoded as HermesValue
+  HermesValue getHermesValue() const {
+    assert(valid_ && "Pseudo handle has been invalidated");
+    return traits_type::encode(value_);
+  }
+
+  /// \return value_ directly without going through HermesValue.
+  /// Used if the raw value_ was directly specified.
+  /// In particular, used by CallResult to check if a value is exceptional.
+  value_type unsafeGetValue() const {
+    return value_;
+  }
+
+  /// Create a \c PseudoHandle from a value.
+  static PseudoHandle<T> create(value_type value) {
+    return PseudoHandle<T>(value);
+  }
+};
 
 /// A HermesValue in the current GCScope which is trackable by the GC and will
 /// be correctly marked and updated if objects are moved. The value is valid
@@ -210,7 +333,7 @@ class Handle : public HandleBase {
   Handle<T> &operator=(const Handle<U> &other) {
     HandleBase::operator=(other);
     return *this;
-  };
+  }
 
 #ifndef NDEBUG
   Handle<T> &operator=(const Handle<T> &other) {
@@ -323,6 +446,12 @@ class MutableHandle : public Handle<T> {
     return *this;
   }
 
+  MutableHandle &operator=(PseudoHandle<T> &&other) {
+    set(other.get());
+    other.invalidate();
+    return *this;
+  }
+
   MutableHandle &operator=(value_type value) {
     set(value);
     return *this;
@@ -358,122 +487,6 @@ static_assert(
     sizeof(MutableHandle<>) == sizeof(HandleBase),
     "MutableHandle must be a thin wrapper on top of Handle");
 
-/// This class is used in performance-sensitive context in situations where we
-/// want to encode in the function signature that allocations may be performed,
-/// potentially moving the object, but we don't want to incur the cost of
-/// always allocating a handle. The callee will allocate a handle internally if
-/// it needs to.
-///
-/// For example:
-/// \code
-///   bool checkFlag(PseudoHandle<Foo> foo, Runtime *runtime) {
-///     if (foo->cheapCheck())
-///       return true;
-///     auto fooHandle = toHandle(runtime, std::move(foo));
-///     return expensiveCheck(fooHandle, runtime);
-///  }
-/// \endcode
-template <typename T = HermesValue>
-class PseudoHandle {
-  using traits_type = HermesValueTraits<T>;
-  using value_type = typename traits_type::value_type;
-  using arrow_type = typename traits_type::arrow_type;
-
-  value_type value_;
-#ifndef NDEBUG
-  bool valid_{true};
-#endif
-
-  explicit PseudoHandle(value_type value) : value_(value) {}
-
- public:
-  PseudoHandle(const PseudoHandle &) = delete;
-  PseudoHandle &operator=(const PseudoHandle &) = delete;
-
-#ifndef NDEBUG
-  PseudoHandle(PseudoHandle &&hnd) : value_(hnd.value_), valid_(hnd.valid_) {
-    hnd.valid_ = false;
-  }
-  PseudoHandle &operator=(PseudoHandle &&hnd) {
-    value_ = hnd.value_;
-    valid_ = hnd.valid_;
-    hnd.valid_ = false;
-    return *this;
-  }
-#else
-  PseudoHandle(PseudoHandle &&) = default;
-  PseudoHandle &operator=(PseudoHandle &&) = default;
-#endif
-
-  ~PseudoHandle() = default;
-
-  PseudoHandle() : value_(traits_type::defaultValue()) {}
-  PseudoHandle(Handle<T> handle) : value_(*handle) {}
-
-  /// Conveniently construct PseudoHandle<HermesValue> from a PinnedHermesValue
-  /// pointer.
-  explicit PseudoHandle(PinnedHermesValue *pvalue) : value_(*pvalue) {
-    static_assert(
-        std::is_same<value_type, HermesValue>::value,
-        "This constructor can only be used for PseudoHandle<HermesValue>");
-  }
-
-  PseudoHandle &operator=(Handle<T> handle) {
-    value_ = *handle;
-#ifndef NDEBUG
-    valid_ = true;
-#endif
-    return *this;
-  }
-
-  void invalidate() {
-#ifndef NDEBUG
-    valid_ = false;
-#endif
-  }
-
-  value_type get() const {
-    return traits_type::decode(getHermesValue());
-  }
-
-  arrow_type operator->() const {
-    assert(valid_ && "Pseudo handle has been invalidated");
-    return traits_type::arrow(value_);
-  }
-
-  explicit operator bool() const {
-    assert(valid_ && "Pseudo handle has been invalidated");
-    return value_ != nullptr;
-  }
-
-  /// \return the value encoded as HermesValue
-  HermesValue getHermesValue() const {
-    assert(valid_ && "Pseudo handle has been invalidated");
-    return traits_type::encode(value_);
-  }
-
-  /// \return value_ directly without going through HermesValue.
-  /// Used if the raw value_ was directly specified.
-  /// In particular, used by CallResult to check if a value is exceptional.
-  value_type unsafeGetValue() const {
-    return value_;
-  }
-
-  /// Create a \c PseudoHandle from a value.
-  static PseudoHandle<T> create(value_type value) {
-    return PseudoHandle<T>(value);
-  }
-
-  /// Create a Handle from a PseudoHandle and destroy the latter.
-  static Handle<T> toHandle(
-      HandleRootOwner *runtime,
-      PseudoHandle<T> &&pseudo) {
-    Handle<T> res{runtime, pseudo.value_};
-    pseudo.invalidate();
-    return res;
-  }
-};
-
 /// Create a \c PseudoHandle from a pointer.
 template <typename T>
 inline PseudoHandle<T> createPseudoHandle(T *ptr) {
@@ -483,12 +496,6 @@ inline PseudoHandle<T> createPseudoHandle(T *ptr) {
 /// Create a \c PseudoHandle from a HermesValue.
 inline PseudoHandle<> createPseudoHandle(HermesValue value) {
   return PseudoHandle<>::create(value);
-}
-
-/// Create a Handle from a PseudoHandle and destroy the latter.
-template <typename T>
-Handle<T> toHandle(HandleRootOwner *runtime, PseudoHandle<T> &&pseudo) {
-  return PseudoHandle<T>::toHandle(runtime, std::move(pseudo));
 }
 
 } // namespace vm

@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 #define DEBUG_TYPE "gc"
 #include "hermes/VM/GC.h"
@@ -13,6 +13,7 @@
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/GCPointer-inline.h"
+#include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/VTable.h"
 
@@ -37,23 +38,22 @@ GCBase::GCBase(
     GCCallbacks *gcCallbacks,
     PointerBase *pointerBase,
     const GCConfig &gcConfig,
-    std::shared_ptr<CrashManager> crashMgr,
-    // Do nothing with this in the default case, only NCGen needs this.
-    StorageProvider *)
+    std::shared_ptr<CrashManager> crashMgr)
     : metaTable_(metaTable),
       gcCallbacks_(gcCallbacks),
       pointerBase_(pointerBase),
       crashMgr_(crashMgr),
+      analyticsCallback_(gcConfig.getAnalyticsCallback()),
       recordGcStats_(gcConfig.getShouldRecordStats()),
       // Start off not in GC.
       inGC_(false),
       name_(gcConfig.getName()),
+      allocationLocationTracker_(this),
 #ifdef HERMESVM_MEMORY_PROFILER
       memEventTracker_(gcConfig.getMemEventTracker()),
 #endif
       tripwireCallback_(gcConfig.getTripwireConfig().getCallback()),
-      tripwireLimit_(gcConfig.getTripwireConfig().getLimit()),
-      tripwireCooldown_(gcConfig.getTripwireConfig().getCooldown())
+      tripwireLimit_(gcConfig.getTripwireConfig().getLimit())
 #ifdef HERMESVM_SANITIZE_HANDLES
       ,
       sanitizeRate_(gcConfig.getSanitizeConfig().getSanitizeRate())
@@ -66,11 +66,10 @@ GCBase::GCBase(
 #ifdef HERMESVM_PLATFORM_LOGGING
   hermesLog(
       "HermesGC",
-      "Initialisation (Init: %dMB, Max: %dMB, Tripwire: %dMB/%" PRId64 "h)",
+      "Initialisation (Init: %dMB, Max: %dMB, Tripwire: %dMB)",
       gcConfig.getInitHeapSize() >> 20,
       gcConfig.getMaxHeapSize() >> 20,
-      gcConfig.getTripwireConfig().getLimit() >> 20,
-      static_cast<int64_t>(gcConfig.getTripwireConfig().getCooldown().count()));
+      gcConfig.getTripwireConfig().getLimit() >> 20);
 #endif // HERMESVM_PLATFORM_LOGGING
 #ifdef HERMESVM_SANITIZE_HANDLES
   const std::minstd_rand::result_type seed =
@@ -91,39 +90,51 @@ GCBase::GCBase(
 #endif
 }
 
-GCBase::GCCycle::GCCycle(GCBase *gc) : gc_(gc) {
+GCBase::GCCycle::GCCycle(
+    GCBase *gc,
+    OptValue<GCCallbacks *> gcCallbacksOpt,
+    std::string extraInfo)
+    : gc_(gc),
+      gcCallbacksOpt_(gcCallbacksOpt),
+      extraInfo_(std::move(extraInfo)) {
   gc_->inGC_ = true;
+  if (gcCallbacksOpt_.hasValue()) {
+    gcCallbacksOpt_.getValue()->onGCEvent(
+        GCEventKind::CollectionStart, extraInfo_);
+  }
 }
 
 GCBase::GCCycle::~GCCycle() {
+  if (gcCallbacksOpt_.hasValue()) {
+    gcCallbacksOpt_.getValue()->onGCEvent(
+        GCEventKind::CollectionEnd, extraInfo_);
+  }
   gc_->inGC_ = false;
 }
 
 void GCBase::runtimeWillExecute() {
-  if (recordGcStats_) {
+  if (recordGcStats_ && !execStartTimeRecorded_) {
     execStartTime_ = std::chrono::steady_clock::now();
     execStartCPUTime_ = oscompat::thread_cpu_time();
     oscompat::num_context_switches(
         startNumVoluntaryContextSwitches_, startNumInvoluntaryContextSwitches_);
+    execStartTimeRecorded_ = true;
   }
 }
 
-bool GCBase::createSnapshotToFile(const std::string &fileName, bool compact) {
+std::error_code GCBase::createSnapshotToFile(const std::string &fileName) {
   std::error_code code;
   llvm::raw_fd_ostream os(fileName, code, llvm::sys::fs::FileAccess::FA_Write);
   if (code) {
-    return false;
+    return code;
   }
-  createSnapshot(os, compact);
-  return true;
+  createSnapshot(os);
+  return std::error_code{};
 }
 
-void GCBase::checkTripwire(
-    size_t dataSize,
-    std::chrono::time_point<std::chrono::steady_clock> now) {
+void GCBase::checkTripwire(size_t dataSize) {
   if (LLVM_LIKELY(!tripwireCallback_) ||
-      LLVM_LIKELY(dataSize < tripwireLimit_) ||
-      LLVM_LIKELY(now < nextTripwireMinTime_)) {
+      LLVM_LIKELY(dataSize < tripwireLimit_) || tripwireCalled_) {
     return;
   }
 
@@ -131,17 +142,16 @@ void GCBase::checkTripwire(
    public:
     Ctx(GCBase *gc) : gc_(gc) {}
 
-    bool createSnapshotToFile(const std::string &path, bool compact) override {
-      return gc_->createSnapshotToFile(path, compact);
+    std::error_code createSnapshotToFile(const std::string &path) override {
+      return gc_->createSnapshotToFile(path);
     }
 
    private:
     GCBase *gc_;
   } ctx(this);
 
-  nextTripwireMinTime_ = std::chrono::steady_clock::time_point::max();
+  tripwireCalled_ = true;
   tripwireCallback_(ctx);
-  nextTripwireMinTime_ = now + tripwireCooldown_;
 }
 
 void GCBase::printAllCollectedStats(llvm::raw_ostream &os) {
@@ -259,6 +269,10 @@ void GCBase::printStats(llvm::raw_ostream &os, bool trailingComma) {
      << ",\n"
      << "\t\t\"finalHeapSize\": " << formatSize(cumStats_.finalHeapSize).bytes
      << ",\n"
+     << "\t\t\"peakAllocatedBytes\": "
+     << formatSize(getPeakAllocatedBytes()).bytes << ",\n"
+     << "\t\t\"peakLiveAfterGC\": " << formatSize(getPeakLiveAfterGC()).bytes
+     << ",\n"
      << "\t\t\"totalAllocatedBytes\": "
      << formatSize(info.totalAllocatedBytes).bytes << "\n"
      << "\t}";
@@ -273,18 +287,25 @@ void GCBase::recordGCStats(
     double wallTime,
     double cpuTime,
     gcheapsize_t finalHeapSize,
+    gcheapsize_t usedBefore,
+    gcheapsize_t usedAfter,
     CumulativeHeapStats *stats) {
   stats->gcWallTime.record(wallTime);
   stats->gcCPUTime.record(cpuTime);
   stats->finalHeapSize = finalHeapSize;
+  stats->usedBefore.record(usedBefore);
+  stats->usedAfter.record(usedAfter);
   stats->numCollections++;
 }
 
 void GCBase::recordGCStats(
     double wallTime,
     double cpuTime,
+    gcheapsize_t usedBefore,
+    gcheapsize_t usedAfter,
     gcheapsize_t finalHeapSize) {
-  recordGCStats(wallTime, cpuTime, finalHeapSize, &cumStats_);
+  recordGCStats(
+      wallTime, cpuTime, finalHeapSize, usedBefore, usedAfter, &cumStats_);
 }
 
 void GCBase::oom(std::error_code reason) {
@@ -315,7 +336,7 @@ void GCBase::oomDetail(std::error_code reason) {
   snprintf(
       detailBuffer,
       sizeof(detailBuffer),
-      "[%.20s] reason = %150s (%d from category: %50s), numCollections = %d, heapSize = %d, allocated = %d, va = %" PRIu64,
+      "[%.20s] reason = %.150s (%d from category: %.50s), numCollections = %d, heapSize = %d, allocated = %d, va = %" PRIu64,
       name_.c_str(),
       reason.message().c_str(),
       reason.value(),
@@ -344,6 +365,21 @@ bool GCBase::shouldSanitizeHandles() {
   return dist(randomEngine_) < sanitizeRate_;
 }
 #endif
+
+/*static*/
+std::list<detail::WeakRefKey *> GCBase::buildKeyList(
+    GC *gc,
+    JSWeakMap *weakMap) {
+  std::list<detail::WeakRefKey *> res;
+  for (auto iter = weakMap->keys_begin(), end = weakMap->keys_end();
+       iter != end;
+       iter++) {
+    if (iter->getObject(gc)) {
+      res.push_back(&(*iter));
+    }
+  }
+  return res;
+}
 
 /*static*/
 double GCBase::clockDiffSeconds(TimePoint start, TimePoint end) {
@@ -391,7 +427,26 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const SizeFormatObj &sfo) {
 
 GCBase::GCCallbacks::~GCCallbacks() {}
 
+GCBase::IDTracker::IDTracker() {
+  assert(nextID_ % 2 == 1 && "First JS object ID isn't odd");
+  assert(nextNativeID_ % 2 == 0 && "First native object ID isn't even");
+}
+
 #ifdef HERMESVM_SERIALIZE
+void GCBase::AllocationLocationTracker::serialize(Serializer &s) const {
+  if (enabled_) {
+    hermes_fatal(
+        "Serialization not supported when AllocationLocationTracker enabled");
+  }
+}
+
+void GCBase::AllocationLocationTracker::deserialize(Deserializer &d) {
+  if (enabled_) {
+    hermes_fatal(
+        "Deserialization not supported when AllocationLocationTracker enabled");
+  }
+}
+
 void GCBase::IDTracker::serialize(Serializer &s) const {
   s.writeInt<HeapSnapshot::NodeID>(nextID_);
   s.writeInt<HeapSnapshot::NodeID>(nextNativeID_);
@@ -417,6 +472,39 @@ void GCBase::IDTracker::deserialize(Deserializer &d) {
   }
 }
 #endif
+
+HeapSnapshot::NodeID GCBase::IDTracker::getNumberID(double num) {
+  auto &numberRef = numberIDMap_[num];
+  // If the entry didn't exist, the value was initialized to 0.
+  if (numberRef != 0) {
+    return numberRef;
+  }
+  // Else, it is a number that hasn't been seen before.
+  return numberRef = nextNumberID();
+}
+
+llvm::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
+  if (val.isPointer() && val.getPointer()) {
+    // Make nullptr HermesValue look like a JS null.
+    // This should be rare, but is occasionally used by some parts of the VM.
+    return val.getPointer()
+        ? getObjectID(val.getPointer())
+        : static_cast<HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::Null);
+  } else if (val.isNumber()) {
+    return idTracker_.getNumberID(val.getNumber());
+  } else if (val.isUndefined()) {
+    return static_cast<HeapSnapshot::NodeID>(
+        IDTracker::ReservedObjectID::Undefined);
+  } else if (val.isNull()) {
+    return static_cast<HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::Null);
+  } else if (val.isBool()) {
+    return static_cast<HeapSnapshot::NodeID>(
+        val.getBool() ? IDTracker::ReservedObjectID::True
+                      : IDTracker::ReservedObjectID::False);
+  } else {
+    return llvm::None;
+  }
+}
 
 } // namespace vm
 } // namespace hermes

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/BCGen/Lowering.h"
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/CFG.h"
@@ -711,11 +712,8 @@ bool LowerExponentiationOperator::lowerExponentiationOperator(
       "lowerExponentiationOperator must take a ** operator");
   // Replace a ** b with HermesInternal.exponentiationOperator(a, b)
   builder.setInsertionPoint(binOp);
-  auto *result = builder.createCallInst(
-      builder.createLoadPropertyInst(
-          builder.createTryLoadGlobalPropertyInst("HermesInternal"),
-          "exponentiationOperator"),
-      builder.getLiteralUndefined(),
+  auto *result = builder.createCallBuiltinInst(
+      BuiltinMethod::HermesBuiltin_exponentiationOperator,
       {binOp->getLeftHandSide(), binOp->getRightHandSide()});
   binOp->replaceAllUsesWith(result);
   binOp->eraseFromParent();

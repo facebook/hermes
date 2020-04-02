@@ -1,18 +1,22 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
-#ifndef _WINDOWS
 
 #include "hermes/VM/Profiler/SamplingProfiler.h"
 
+#ifdef HERMESVM_SAMPLING_PROFILER_POSIX
+
 #include "hermes/Support/ThreadLocal.h"
 #include "hermes/VM/Callable.h"
+#include "hermes/VM/HostModel.h"
 #include "hermes/VM/Profiler/ChromeTraceSerializerPosix.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
+
+#include "llvm/Support/Compiler.h"
 
 #include <assert.h>
 #include <fcntl.h>
@@ -29,6 +33,8 @@ namespace vm {
 
 /// Name of the semaphore.
 const char *const kSamplingDoneSemaphoreName = "/samplingDoneSem";
+/// Maximum allowed GC event extra info count.
+constexpr uint32_t kMaxGCEventExtraInfoCount = 10;
 
 volatile std::atomic<SamplingProfiler *> SamplingProfiler::sProfilerInstance_{
     nullptr};
@@ -126,49 +132,77 @@ bool SamplingProfiler::unregisterSignalHandler() {
 }
 
 void SamplingProfiler::profilingSignalHandler(int signo) {
+  // Avoid spoiling errno in a signal handler by storing the old version and
+  // re-assigning it.
+  auto oldErrno = errno;
   // Fetch runtime used by this sampling thread.
   auto profilerInstance = sProfilerInstance_.load();
   Runtime *curThreadRuntime = profilerInstance->threadLocalRuntime_.get();
   if (curThreadRuntime == nullptr) {
     // Runtime may have unregistered itself before signal.
+    errno = oldErrno;
     return;
   }
   // Sampling stack will touch GC objects(like closure) so
   // only do so if heap is valid.
-  if (!curThreadRuntime->getHeap().inGC()) {
+  if (LLVM_LIKELY(!curThreadRuntime->getHeap().inGC())) {
     assert(
         profilerInstance != nullptr &&
         "Why is sProfilerInstance_ not initialized yet?");
     profilerInstance->sampledStackDepth_ = profilerInstance->walkRuntimeStack(
         curThreadRuntime, profilerInstance->sampleStorage_);
   } else {
-    // TODO: log "GC in process" meta event.
-    profilerInstance->sampledStackDepth_ = 0;
+    // GC in process. Copy pre-captured stack instead.
+    if (profilerInstance->preGCStackDepth_ > 0) {
+      profilerInstance->sampleStorage_ = profilerInstance->preGCStackStorage_;
+      profilerInstance->sampledStackDepth_ = profilerInstance->preGCStackDepth_;
+    } else {
+      // This GC (like mallocGC) did not record JS stack.
+      // TODO: fix this for all GCs.
+      profilerInstance->sampledStackDepth_ = 0;
+    }
   }
   if (!profilerInstance->samplingDoneSem_.notifyOne()) {
+    errno = oldErrno;
     abort(); // Something is wrong.
   }
+  errno = oldErrno;
 }
 
 bool SamplingProfiler::sampleStack() {
-  std::lock_guard<std::mutex> lockGuard(profilerLock_);
+  std::unique_lock<std::mutex> uniqueLock(profilerLock_);
   // Check profiling stopping request.
   if (!enabled_) {
     return false;
   }
 
-  for (const auto &entry : activeRuntimeThreads_) {
+  // Make a copy of activeRuntimeThreads_ because it may be modified by
+  // runtime threads during enumeration.
+  auto activeRuntimeThreadsCopy = activeRuntimeThreads_;
+  for (const auto &entry : activeRuntimeThreadsCopy) {
     auto targetThreadId = entry.second;
     // Signal target runtime thread to sample stack.
     pthread_kill(targetThreadId, SIGPROF);
 
     // Threading: samplingDoneSem_ will synchronize with signal handler to
-    // to make sure there will NOT be two SIGPROF signals sent to the same
+    // to make sure there will NOT be two SIGPROF signals sent to the sameÍ
     // runtime thread at the same time which prevents signal coalescing.
+    // Also, release profilerLock_ before waiting because the runtime thread
+    // we try to signal may be trying to hold profilerLock_. Failing to unlock
+    // profilerLock_ may cause deadlock: timer thread waiting on
+    // samplingDoneSem_ while target runtime thread is waiting on timer thread
+    // to release profilerLock_.
+    uniqueLock.unlock();
     if (!samplingDoneSem_.wait()) {
       return false;
     }
-
+    // Reacquire profilerLock_ to protect the access to fields of
+    // SamplingProfiler.
+    // sampledStacks_/sampledStacks_/sampleStorage_ fields may be
+    // modified during the unlock peroid which is fine because,
+    // unlike activeRuntimeThreads_, their read/write operations
+    // do not overlap each other across unlock/lock boundary.
+    uniqueLock.lock();
     if (sampledStackDepth_ > 0) {
       assert(
           sampledStackDepth_ <= sampleStorage_.stack.size() &&
@@ -201,8 +235,9 @@ void SamplingProfiler::timerLoop() {
 
 uint32_t SamplingProfiler::walkRuntimeStack(
     const Runtime *runtime,
-    StackTrace &sampleStorage) {
-  unsigned count = 0;
+    StackTrace &sampleStorage,
+    uint32_t startIndex) {
+  unsigned count = startIndex;
 
   // TODO: capture leaf frame IP.
   const Inst *ip = nullptr;
@@ -225,9 +260,10 @@ uint32_t SamplingProfiler::walkRuntimeStack(
     } else {
       if (auto *nativeFunction =
               dyn_vmcast_or_null<NativeFunction>(frame.getCalleeClosure())) {
-        frameStorage.kind = StackFrame::FrameKind::NativeFunction;
-        frameStorage.nativeFrame =
-            reinterpret_cast<uintptr_t>(nativeFunction->getFunctionPtr());
+        frameStorage.kind = vmisa<FinalizableNativeFunction>(nativeFunction)
+            ? StackFrame::FrameKind::FinalizableNativeFunction
+            : StackFrame::FrameKind::NativeFunction;
+        frameStorage.nativeFrame = nativeFunction->getFunctionPtr();
       } else {
         // TODO: handle BoundFunction.
         capturedFrame = false;
@@ -285,28 +321,39 @@ uint32_t SamplingProfiler::walkRuntimeStack(
   //   1. Most significant bit of 64bits address is set for native frame.
   //   2. JS frame: module id in high 32 bits, address virtual offset in lower
   //   32 bits, with MSB unset.
-  //   3. Native frame: address returned with MSB set.
+  //   3. Native/Finalizable frame: address returned with MSB set.
   // TODO: enhance this when supporting more frame types.
   sampledStackDepth = std::min(sampledStackDepth, (uint32_t)max_depth);
   for (uint32_t i = 0; i < sampledStackDepth; ++i) {
     constexpr uint64_t kNativeFrameMask = ((uint64_t)1 << 63);
     const StackFrame &stackFrame = profilerInstance->sampleStorage_.stack[i];
-    if (stackFrame.kind == StackFrame::FrameKind::JSFunction) {
-      auto *bcProvider = stackFrame.jsFrame.module->getBytecode();
-      uint32_t virtualOffset = bcProvider->getVirtualOffsetForFunction(
-                                   stackFrame.jsFrame.functionId) +
-          stackFrame.jsFrame.offset;
+    switch (stackFrame.kind) {
+      case StackFrame::FrameKind::JSFunction: {
+        auto *bcProvider = stackFrame.jsFrame.module->getBytecode();
+        uint32_t virtualOffset = bcProvider->getVirtualOffsetForFunction(
+                                     stackFrame.jsFrame.functionId) +
+            stackFrame.jsFrame.offset;
 
-      uint32_t moduleId = bcProvider->getCJSModuleOffset();
-      uint64_t frameAddress = ((uint64_t)moduleId << 32) + virtualOffset;
-      assert(
-          (frameAddress & kNativeFrameMask) == 0 &&
-          "Module id should take less than 32 bits");
-      frames[i] = frameAddress;
-    } else if (stackFrame.kind == StackFrame::FrameKind::NativeFunction) {
-      frames[i] = ((uint64_t)stackFrame.nativeFrame | kNativeFrameMask);
-    } else {
-      llvm_unreachable("Unknown frame kind");
+        uint32_t moduleId = bcProvider->getCJSModuleOffset();
+        uint64_t frameAddress = ((uint64_t)moduleId << 32) + virtualOffset;
+        assert(
+            (frameAddress & kNativeFrameMask) == 0 &&
+            "Module id should take less than 32 bits");
+        frames[i] = frameAddress;
+        break;
+      }
+
+      case StackFrame::FrameKind::NativeFunction:
+        frames[i] = ((uint64_t)stackFrame.nativeFrame | kNativeFrameMask);
+        break;
+
+      case StackFrame::FrameKind::FinalizableNativeFunction:
+        frames[i] =
+            ((uint64_t)stackFrame.finalizableNativeFrame | kNativeFrameMask);
+        break;
+
+      default:
+        llvm_unreachable("Loom: unknown frame kind");
     }
   }
   *depth = sampledStackDepth;
@@ -323,6 +370,9 @@ SamplingProfiler::SamplingProfiler() : sampleStorage_(kMaxStackDepth) {
       TRACER_TYPE_JAVASCRIPT, collectStackForLoom);
 #endif
   sProfilerInstance_.store(this);
+  // Reserve max possible unique GC event extra info count to
+  // avoid rehashing.
+  gcEventExtraInfoSet_.reserve(kMaxGCEventExtraInfoCount);
 }
 
 void SamplingProfiler::dumpSampledStack(llvm::raw_ostream &OS) {
@@ -341,12 +391,22 @@ void SamplingProfiler::dumpSampledStack(llvm::raw_ostream &OS) {
     for (auto iter = sample.stack.rbegin(); iter != sample.stack.rend();
          ++iter) {
       const StackFrame &frame = *iter;
-      if (frame.kind == StackFrame::FrameKind::JSFunction) {
-        OS << "[JS]" << frame.jsFrame.functionId << ":" << frame.jsFrame.offset;
-      } else if (frame.kind == StackFrame::FrameKind::NativeFunction) {
-        OS << "[Native]" << frame.nativeFrame;
-      } else {
-        llvm_unreachable("Unknown frame kind");
+      switch (frame.kind) {
+        case StackFrame::FrameKind::JSFunction:
+          OS << "[JS] " << frame.jsFrame.functionId << ":"
+             << frame.jsFrame.offset;
+          break;
+
+        case StackFrame::FrameKind::NativeFunction:
+          OS << "[Native] " << reinterpret_cast<uintptr_t>(frame.nativeFrame);
+          break;
+
+        case StackFrame::FrameKind::FinalizableNativeFunction:
+          OS << "[HostFunction]";
+          break;
+
+        default:
+          llvm_unreachable("Unknown frame kind");
       }
       OS << " => ";
     }
@@ -409,24 +469,81 @@ void SamplingProfiler::clear() {
   threadNames_.clear();
 }
 
+void SamplingProfiler::onGCEvent(
+    Runtime *runtime,
+    GCEventKind kind,
+    const std::string &extraInfo) {
+  switch (kind) {
+    case GCEventKind::CollectionStart: {
+      assert(
+          preGCStackDepth_ == 0 && "preGCStackDepth_ is not reset after GC?");
+      std::lock_guard<std::mutex> lockGuard(profilerLock_);
+      if (LLVM_LIKELY(!enabled_)) {
+        return;
+      }
+      recordPreGCStack(runtime, extraInfo);
+      break;
+    }
+
+    case GCEventKind::CollectionEnd:
+      preGCStackDepth_ = 0;
+      break;
+
+    default:
+      llvm_unreachable("Unknown GC event");
+  }
+}
+
+void SamplingProfiler::recordPreGCStack(
+    Runtime *runtime,
+    const std::string &extraInfo) {
+  GCFrameInfo gcExtraInfo = nullptr;
+  // Only record extra info if not exceeding max allowed count to prevent
+  // rehash.
+  assert(
+      gcEventExtraInfoSet_.size() < kMaxGCEventExtraInfoCount &&
+      "Need to increase kMaxGCEventExtraInfoCount.");
+  if (!extraInfo.empty() &&
+      gcEventExtraInfoSet_.size() < kMaxGCEventExtraInfoCount) {
+    std::pair<std::unordered_set<std::string>::iterator, bool> retPair =
+        gcEventExtraInfoSet_.insert(extraInfo);
+    gcExtraInfo = &(*(retPair.first));
+  }
+
+  auto &leafFrame = preGCStackStorage_.stack[0];
+  leafFrame.kind = StackFrame::FrameKind::GCFrame;
+  leafFrame.gcFrame = gcExtraInfo;
+
+  // Leaf frame slot has been used, filling from index 1.
+  preGCStackDepth_ = walkRuntimeStack(runtime, preGCStackStorage_, 1);
+}
+
 bool operator==(
     const SamplingProfiler::StackFrame &left,
     const SamplingProfiler::StackFrame &right) {
   if (left.kind != right.kind) {
     return false;
   }
-  if (left.kind == SamplingProfiler::StackFrame::FrameKind::JSFunction) {
-    return left.jsFrame.functionId == right.jsFrame.functionId &&
-        left.jsFrame.offset == right.jsFrame.offset;
-  } else if (
-      left.kind == SamplingProfiler::StackFrame::FrameKind::NativeFunction) {
-    return left.nativeFrame == right.nativeFrame;
-  } else {
-    llvm_unreachable("Unknown frame kind");
+  switch (left.kind) {
+    case SamplingProfiler::StackFrame::FrameKind::JSFunction:
+      return left.jsFrame.functionId == right.jsFrame.functionId &&
+          left.jsFrame.offset == right.jsFrame.offset;
+
+    case SamplingProfiler::StackFrame::FrameKind::NativeFunction:
+      return left.nativeFrame == right.nativeFrame;
+
+    case SamplingProfiler::StackFrame::FrameKind::FinalizableNativeFunction:
+      return left.finalizableNativeFrame == right.finalizableNativeFrame;
+
+    case SamplingProfiler::StackFrame::FrameKind::GCFrame:
+      return left.gcFrame == right.gcFrame;
+
+    default:
+      llvm_unreachable("Unknown frame kind");
   }
 }
 
 } // namespace vm
 } // namespace hermes
 
-#endif // not _WINDOWS
+#endif // HERMESVM_SAMPLING_PROFILER_POSIX

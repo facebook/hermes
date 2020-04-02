@@ -1,10 +1,11 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
-// RUN: %hermes -Xflow-parser -O %s | %FileCheck --match-full-lines %s
-// REQUIRES: flowparser
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// RUN: %hermes -O %s | %FileCheck --match-full-lines %s
 
 var arrow1 = () => { print("in arrow"); }
 

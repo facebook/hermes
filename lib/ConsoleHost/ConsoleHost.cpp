@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "hermes/ConsoleHost/ConsoleHost.h"
 
 #include "hermes/CompilerDriver/CompilerDriver.h"
@@ -58,13 +59,13 @@ createHeapSnapshot(void *, vm::Runtime *runtime, vm::NativeArgs args) {
   } else if (!llvm::StringRef{fileName}.endswith(".heapsnapshot")) {
     return runtime->raiseTypeError("Filename must end in .heapsnapshot");
   }
-  bool compact = args.getArgCount() >= 2 ? toBoolean(args.getArg(1)) : true;
-  if (!runtime->getHeap().createSnapshotToFile(fileName, compact)) {
+  if (auto err = runtime->getHeap().createSnapshotToFile(fileName)) {
     // This isn't a TypeError, but no other built-in can express file errors,
     // so this will have to do.
     return runtime->raiseTypeError(
-        TwineChar16("Could not write out to the file located at ") +
-        llvm::StringRef(fileName));
+        TwineChar16("Could not write out to the file located at \"") +
+        llvm::StringRef(fileName) +
+        "\". System error: " + llvm::StringRef(err.message()));
   }
   return HermesValue::encodeUndefinedValue();
 }
@@ -127,7 +128,7 @@ serializeVM(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
     const auto *fileName = reinterpret_cast<std::string *>(ctx);
     std::error_code EC;
     serializeStream =
-        std::make_unique<llvm::raw_fd_ostream>(llvm::StringRef(*fileName), EC);
+        llvm::make_unique<llvm::raw_fd_ostream>(llvm::StringRef(*fileName), EC);
     if (EC) {
       return runtime->raiseTypeError(
           TwineChar16("Could not write to file located at ") +
@@ -152,7 +153,7 @@ serializeVM(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
     }
     std::error_code EC;
     serializeStream =
-        std::make_unique<llvm::raw_fd_ostream>(llvm::StringRef(fileName), EC);
+        llvm::make_unique<llvm::raw_fd_ostream>(llvm::StringRef(fileName), EC);
     if (EC) {
       return runtime->raiseTypeError(
           TwineChar16("Could not write to file located at ") +
@@ -186,14 +187,8 @@ void installConsoleBindings(
     const std::string *serializePath,
 #endif
     const std::string *filename) {
-  vm::DefinePropertyFlags normalDPF{};
-  normalDPF.setEnumerable = 1;
-  normalDPF.setWritable = 1;
-  normalDPF.setConfigurable = 1;
-  normalDPF.setValue = 1;
-  normalDPF.enumerable = 0;
-  normalDPF.writable = 1;
-  normalDPF.configurable = 1;
+  vm::DefinePropertyFlags normalDPF =
+      vm::DefinePropertyFlags::getNewNonEnumerableFlags();
 
 #if defined HERMESVM_SERIALIZE && !defined NDEBUG
   // Verify that all native pointers can be captured by getNativeFunctionPtrs.
@@ -227,7 +222,7 @@ void installConsoleBindings(
       vm::Predefined::getSymbolID(vm::Predefined::createHeapSnapshot),
       createHeapSnapshot,
       nullptr,
-      2);
+      1);
 #ifdef HERMESVM_SERIALIZE
   defineGlobalFunc(
       runtime
@@ -331,6 +326,14 @@ bool executeHBCBytecodeImpl(
 #endif
   runtime->getJITContext().setDumpJITCode(options.dumpJITCode);
   runtime->getJITContext().setCrashOnError(options.jitCrashOnError);
+  if (options.stabilizeInstructionCount) {
+    // Try to limit features that can introduce unpredictable CPU instruction
+    // behavior. Date is a potential cause, but is not handled currently.
+    vm::MockedEnvironment env;
+    env.mathRandomSeed = 0;
+    env.stabilizeInstructionCount = true;
+    runtime->setMockedEnvironment(env);
+  }
 
   if (options.timeLimit > 0) {
     vm::TimeLimitMonitor::getInstance().watchRuntime(
@@ -356,11 +359,14 @@ bool executeHBCBytecodeImpl(
 
   if (options.stopAfterInit) {
     vm::Handle<vm::Domain> domain =
-        vm::toHandle(runtime.get(), vm::Domain::create(runtime.get()));
+        runtime->makeHandle(vm::Domain::create(runtime.get()));
     if (LLVM_UNLIKELY(
             vm::RuntimeModule::create(
-                runtime.get(), domain, std::move(bytecode), flags) ==
-            vm::ExecutionStatus::EXCEPTION)) {
+                runtime.get(),
+                domain,
+                facebook::hermes::debugger::kInvalidLocation,
+                std::move(bytecode),
+                flags) == vm::ExecutionStatus::EXCEPTION)) {
       llvm::errs() << "Failed to initialize main RuntimeModule\n";
       return false;
     }

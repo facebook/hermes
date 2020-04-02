@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "FastJIT.h"
 
 #include "../ExternalCalls.h"
@@ -18,25 +19,6 @@ namespace hermes {
 namespace vm {
 namespace x86_64 {
 using hermes::inst::Inst;
-/// The original HermesValue tag is on the lower 17 bits of
-/// HermesValue::TagKind; while the tag here is on the higher 17 bits of a
-/// uint32_t in order to be compared directly with the higher 32 bits of a
-/// HermesValue
-/// e.g FirstTag is 0xfff88000 >> 15, while FirstTagHW is 0xfff88000.
-/// Only non-pointer HW could be compared with higher 32 bits of a HermesValue
-/// directly, since pointer HermesValue would have set some value to the non-tag
-/// 15 bits.
-/// Note that FirstTagHW could also be used to compare with a number
-/// HermesValue, because a number requires it's less than 0xfff88000 00000000,
-/// which equals to requiring its higher 32 bits are less than 0xfff88000
-static constexpr uint32_t FirstTagHW =
-    ((uint32_t)FirstTag << (HermesValue::kNumDataBits - 32));
-static constexpr uint32_t UndefinedTagHW =
-    ((uint32_t)UndefinedTag << (HermesValue::kNumDataBits - 32));
-static constexpr uint32_t NullTagHW =
-    ((uint32_t)NullTag << (HermesValue::kNumDataBits - 32));
-static constexpr uint32_t BoolTagHW =
-    ((uint32_t)BoolTag << (HermesValue::kNumDataBits - 32));
 
 FastJIT::FastJIT(JITContext *context, CodeBlock *codeBlock)
     : context_(context), codeBlock_(codeBlock) {}
@@ -470,6 +452,12 @@ Emitters FastJIT::compileBB(Emitters emit) {
       CASE(GetByIdShort);
       CASE(TryGetById);
       CASE(TryGetByIdLong);
+      CASE(DelById);
+      CASE(DelByIdLong);
+      CASE(Call1);
+      CASE(Call2);
+      CASE(Call3);
+      CASE(Call4);
       CASE(Call);
       CASE(CallLong);
       CASE(Construct);
@@ -490,6 +478,7 @@ Emitters FastJIT::compileBB(Emitters emit) {
       CASE(Mov);
       CASE(MovLong);
       CASE(ToNumber);
+      CASE(ToInt32);
       CASE(AddEmptyString);
       CASE(Ret);
 
@@ -833,6 +822,57 @@ Emitters FastJIT::callHelper(
   return emit;
 }
 
+inline Emitter FastJIT::movHermesRegToCalleeArg(
+    Emitter emit,
+    OperandReg32 hermesReg,
+    int32_t argIndex) {
+  const auto RegTemp = Reg::rcx;
+  emit = movHermesRegToNativeReg(emit, hermesReg, RegTemp);
+
+  // Load runtime->stackPointer_ into StackPointerReg.
+  // Since callee frame is not setup yet caller's stackPointer_ is
+  // used to represent callee frame pointer.
+  const auto StackPointerReg = Reg::rax;
+  emit.movRMToReg<S::Q>(
+      RegRuntime, Reg::NoIndex, RuntimeOffsets::stackPointer, StackPointerReg);
+
+  emit.movRegToRM<S::Q>(
+      RegTemp, StackPointerReg, Reg::NoIndex, hermesArgByteOffset(argIndex));
+  return emit;
+}
+
+Emitters FastJIT::compileCall1(Emitters emit, const Inst *ip) {
+  emit.fast =
+      movHermesRegToCalleeArg(emit.fast, ip->iCall1.op3, /*argIndex*/ -1);
+  return callHelper(emit, ip, 1, false);
+}
+Emitters FastJIT::compileCall2(Emitters emit, const Inst *ip) {
+  emit.fast =
+      movHermesRegToCalleeArg(emit.fast, ip->iCall2.op3, /*argIndex*/ -1);
+  emit.fast =
+      movHermesRegToCalleeArg(emit.fast, ip->iCall2.op4, /*argIndex*/ 0);
+  return callHelper(emit, ip, 2, false);
+}
+Emitters FastJIT::compileCall3(Emitters emit, const Inst *ip) {
+  emit.fast =
+      movHermesRegToCalleeArg(emit.fast, ip->iCall3.op3, /*argIndex*/ -1);
+  emit.fast =
+      movHermesRegToCalleeArg(emit.fast, ip->iCall3.op4, /*argIndex*/ 0);
+  emit.fast =
+      movHermesRegToCalleeArg(emit.fast, ip->iCall3.op5, /*argIndex*/ 1);
+  return callHelper(emit, ip, 3, false);
+}
+Emitters FastJIT::compileCall4(Emitters emit, const Inst *ip) {
+  emit.fast =
+      movHermesRegToCalleeArg(emit.fast, ip->iCall4.op3, /*argIndex*/ -1);
+  emit.fast =
+      movHermesRegToCalleeArg(emit.fast, ip->iCall4.op4, /*argIndex*/ 0);
+  emit.fast =
+      movHermesRegToCalleeArg(emit.fast, ip->iCall4.op5, /*argIndex*/ 1);
+  emit.fast =
+      movHermesRegToCalleeArg(emit.fast, ip->iCall4.op6, /*argIndex*/ 2);
+  return callHelper(emit, ip, 4, false);
+}
 Emitters FastJIT::compileCall(Emitters emit, const Inst *ip) {
   return callHelper(emit, ip, ip->iCall.op3, false);
 }
@@ -976,6 +1016,46 @@ Emitters FastJIT::compileTryGetById(Emitters emit, const Inst *ip) {
 }
 Emitters FastJIT::compileTryGetByIdLong(Emitters emit, const Inst *ip) {
   return getByIdHelper(emit, ip, true, ip->iTryGetByIdLong.op4);
+}
+
+Emitters FastJIT::delByIdHelper(
+    hermes::vm::x86_64::Emitters emit,
+    const Inst *ip,
+    uint32_t idVal) {
+  // PropOpFlags -> arg4
+  auto defaultPropOpFlags = codeBlock_->isStrictMode()
+      ? PropOpFlags().plusThrowOnError()
+      : PropOpFlags();
+  emit.fast.movImmToReg<S::L>(defaultPropOpFlags.getRaw(), Reg::ecx);
+
+  // target -> arg2
+  emit.fast = leaHermesReg(emit.fast, ip->iDelById.op2, Reg::rsi);
+  // IdentifierID (uint32_t) -> arg3
+  // The symbol must already exist in the string id map, so we could just pass
+  // the IdentifierID
+  emit.fast.movImmToReg<S::L>(
+      codeBlock_->getRuntimeModule()
+          ->getSymbolIDMustExist(idVal)
+          .unsafeGetIndex(),
+      Reg::edx);
+
+  uint8_t *constAddr;
+  emit.slow = getConstant(emit.slow, (void *)externDelById, constAddr);
+  emit.fast = callExternal(emit.fast, constAddr, ip->iDelById.op1, ip);
+
+  return emit;
+}
+
+Emitters FastJIT::compileDelById(
+    hermes::vm::x86_64::Emitters emit,
+    const Inst *ip) {
+  return delByIdHelper(emit, ip, ip->iDelById.op3);
+}
+
+Emitters FastJIT::compileDelByIdLong(
+    hermes::vm::x86_64::Emitters emit,
+    const Inst *ip) {
+  return delByIdHelper(emit, ip, ip->iDelByIdLong.op3);
 }
 
 inline Emitters FastJIT::putByIdHelper(
@@ -1211,7 +1291,7 @@ Emitters FastJIT::compileBoolJmp(
   uint8_t *slowPathAddr = emit.slow.current();
 
   // Fast path: the operand is a boolean
-  emit.fast = cmpSomeNPTag(emit.fast, regIdx, BoolTagHW);
+  emit.fast = cmpSomeNPTag<BoolTag>(emit.fast, regIdx);
   emit.fast.cjump<CCode::NE, OffsetType::Int32>(slowPathAddr);
 
   emit.fast.cmpImmToRM<S::B>(
@@ -1234,13 +1314,26 @@ Emitters FastJIT::compileBoolJmp(
   return emit;
 }
 
-inline Emitter
-FastJIT::cmpSomeNPTag(Emitter emit, uint32_t regIndex, uint32_t tag) {
-  assert(
-      tag <= (FirstPointerTag << (HermesValue::kNumDataBits - 32)) &&
+template <TagKind tag>
+inline Emitter FastJIT::cmpSomeNPTag(Emitter emit, uint32_t regIndex) {
+  static_assert(
+      tag < FirstPointerTag,
       "String or object tag could not be compared directly with a HermesValue's higher 32 bits.");
   emit.cmpImmToRM<S::L>(
-      tag,
+      tag << (32 - HermesValue::kTagWidth),
+      RegFrame,
+      Reg::NoIndex,
+      // Compare the higher 32 bits (tag) of the HermesValue
+      localHermesRegByteOffset(regIndex) + 4);
+  return emit;
+}
+template <ETag etag>
+inline Emitter FastJIT::cmpSomeNPETag(Emitter emit, uint32_t regIndex) {
+  static_assert(
+      etag < ETag::FirstPointer,
+      "String or object tag could not be compared directly with a HermesValue's higher 32 bits.");
+  emit.cmpImmToRM<S::L>(
+      (uint32_t)etag << (32 - HermesValue::kETagWidth),
       RegFrame,
       Reg::NoIndex,
       // Compare the higher 32 bits (tag) of the HermesValue
@@ -1252,7 +1345,7 @@ inline Emitters FastJIT::jmpUndefinedHelper(
     const Inst *ip,
     uint32_t ipOffset,
     uint32_t regIndex) {
-  emit.fast = cmpSomeNPTag(emit.fast, regIndex, UndefinedTagHW);
+  emit.fast = cmpSomeNPETag<ETag::Undefined>(emit.fast, regIndex);
   emit.fast = cjmpToBytecodeBB(
       emit.fast, CJumpOp<CCode::E>::OP, getBBIndex(ip, ipOffset));
   return emit;
@@ -1354,7 +1447,7 @@ Emitters FastJIT::compileDivN(Emitters emit, const Inst *ip) {
 
 Emitter FastJIT::isNumber(Emitter emit, uint32_t regIndex, uint8_t *callStub) {
   emit.cmpImmToRM<S::L>(
-      FirstTagHW,
+      FirstTag << (32 - HermesValue::kTagWidth),
       RegFrame,
       Reg::NoIndex,
       // Compare the higher 32 bits (tag) of the HermesValue
@@ -1420,6 +1513,16 @@ Emitters FastJIT::compileToNumber(Emitters emit, const Inst *ip) {
 
   describeSlowPathSection(emit.slow, false);
 
+  return emit;
+}
+
+Emitters FastJIT::compileToInt32(Emitters emit, const Inst *ip) {
+  // arg2
+  emit.fast = leaHermesReg(emit.fast, ip->iToInt32.op2, Reg::rsi);
+
+  uint8_t *externConstAddr;
+  emit.slow = getConstant(emit.slow, (void *)externToInt32, externConstAddr);
+  emit.fast = callExternal(emit.fast, externConstAddr, ip->iToInt32.op1, ip);
   return emit;
 }
 
@@ -1672,15 +1775,8 @@ Emitters FastJIT::compileCoerceThisNS(Emitters emit, const Inst *ip) {
   return coerceThisHelper(emit, ip, ip->iCoerceThisNS.op2);
 }
 
-Emitter FastJIT::cmpNullOrUndefinedTag(Emitter emit, uint32_t regIdx) {
-  constexpr uint16_t undefinedOrNullTag =
-      (uint16_t)((UndefinedTagHW & NullTagHW) >> 16);
-  emit.cmpImmToRM<S::W>(
-      undefinedOrNullTag,
-      RegFrame,
-      Reg::NoIndex,
-      localHermesRegByteOffset(regIdx) + 6);
-  return emit;
+inline Emitter FastJIT::cmpNullOrUndefinedTag(Emitter emit, uint32_t regIdx) {
+  return cmpSomeNPTag<UndefinedNullTag>(emit, regIdx);
 }
 
 Emitters
@@ -1810,7 +1906,7 @@ Emitters FastJIT::compileThrow(Emitters emit, const Inst *ip) {
 
   // return exception
   emit.fast.xorRegToReg<S::L>(Reg::eax, Reg::eax);
-  emit.fast = jmpToBytecodeBB(emit.fast, bcBasicBlocks_.size() - 1);
+  emit.fast = jmpToBytecodeBB(emit.fast, getCatchHandlerBBIndex(ip));
   return emit;
 }
 
@@ -1965,7 +2061,7 @@ Emitters FastJIT::compileNot(Emitters emit, const Inst *ip) {
   uint8_t *slowPathAddr = emit.slow.current();
 
   // Fast Path: check if op2 is a bool
-  emit.fast = cmpSomeNPTag(emit.fast, ip->iNot.op2, BoolTagHW);
+  emit.fast = cmpSomeNPTag<BoolTag>(emit.fast, ip->iNot.op2);
   emit.fast.cjump<CCode::NE, OffsetType::Int32>(slowPathAddr);
   uint8_t *jmpBacktoFp;
 
@@ -2023,16 +2119,18 @@ inline Emitters FastJIT::encodeBoolHVInNativeReg(Emitters emit, Reg nativeReg) {
 Emitters FastJIT::compileGetEnvironment(Emitters emit, const Inst *ip) {
   // TODO: emit sequential inline code when levels are small, e.g. 1-3;
   // TODO: otherwise emit a compact loop instead of external call
-  emit.fast.movRegToReg<S::Q>(RegFrame, Reg::rdi);
-  emit.fast.movImmToReg<S::L>(ip->iGetEnvironment.op2, Reg::rsi);
 
   uint8_t *constAddr;
   emit.slow = getConstant(emit.slow, (void *)externGetEnvironment, constAddr);
-  emit.fast.callRM<ScaleRIPAddr32>(Reg::none, Reg::NoIndex, 0);
-  applyRIP32Offset(emit.fast.current(), constAddr);
 
-  emit.fast =
-      movNativeRegToHermesReg(emit.fast, Reg::rax, ip->iGetEnvironment.op1);
+  // frame -> arg2
+  emit.fast.movRegToReg<S::Q>(RegFrame, Reg::rsi);
+  // numLevel -> arg3
+  emit.fast.movImmToReg<S::L>(ip->iGetEnvironment.op2, Reg::rdx);
+
+  emit.fast = callExternalWithReturnedVal(
+      emit.fast, constAddr, ip->iGetEnvironment.op1);
+
   return emit;
 }
 
@@ -2110,7 +2208,8 @@ Emitters FastJIT::compileReifyArguments(Emitters emit, const Inst *ip) {
       emit.slow, (void *)externSlowPathReifyArguments, externConstAddr);
   uint8_t *slowPathAddr = emit.slow.current();
 
-  emit.fast = cmpSomeNPTag(emit.fast, ip->iReifyArguments.op1, UndefinedTagHW);
+  emit.fast =
+      cmpSomeNPETag<ETag::Undefined>(emit.fast, ip->iReifyArguments.op1);
   emit.fast.cjump<CCode::E, OffsetType::Int32>(slowPathAddr);
   // Fast path: if the arguments object was already created, do nothing.
 
@@ -2179,7 +2278,7 @@ Emitters FastJIT::compileGetArgumentsLength(Emitters emit, const Inst *ip) {
 
   // Fast path: when op2 is undefined
   emit.fast =
-      cmpSomeNPTag(emit.fast, ip->iGetArgumentsLength.op2, UndefinedTagHW);
+      cmpSomeNPETag<ETag::Undefined>(emit.fast, ip->iGetArgumentsLength.op2);
   emit.fast.cjump<CCode::NE, OffsetType::Int32>(slowPathAddr);
   // We only load the lower 32 bits value which are the real arg count, while
   // the higher 32 bits are the native tag

@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #include "ESTreeIRGen.h"
 
 #include "llvm/Support/SaveAndRestore.h"
@@ -31,7 +32,7 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
               curFunction(),
               tryStmt,
               tryStmt->_finalizer->getDebugLoc(),
-              [this](ESTree::Node *node, ControlFlowChange) {
+              [this](ESTree::Node *node, ControlFlowChange, BasicBlock *) {
                 genStatement(cast<ESTree::TryStatementNode>(node)->_finalizer);
               });
         } else {
@@ -87,7 +88,12 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
 }
 
 CatchInst *ESTreeIRGen::prepareCatch(ESTree::NodePtr catchParam) {
-  auto catchInst = Builder.createCatchInst();
+  auto *catchInst = Builder.createCatchInst();
+
+  if (!catchParam) {
+    // Optional catch binding allows us to emit no extra code for the catch.
+    return catchInst;
+  }
 
   if (!isa<ESTree::IdentifierNode>(catchParam)) {
     Builder.getModule()->getContext().getSourceErrorManager().error(
@@ -125,7 +131,11 @@ CatchInst *ESTreeIRGen::prepareCatch(ESTree::NodePtr catchParam) {
 void ESTreeIRGen::genFinallyBeforeControlChange(
     SurroundingTry *sourceTry,
     SurroundingTry *targetTry,
-    ControlFlowChange cfc) {
+    ControlFlowChange cfc,
+    BasicBlock *continueTarget) {
+  assert(
+      (cfc == ControlFlowChange::Break || continueTarget != nullptr) &&
+      "Continue ControlFlowChange must have a target");
   // We walk the nested try statements starting from the source, until we reach
   // the target, generating the finally statements on the way.
   for (; sourceTry != targetTry; sourceTry = sourceTry->outer) {
@@ -149,7 +159,7 @@ void ESTreeIRGen::genFinallyBeforeControlChange(
       // Recreate the state of the try stack on entrance to the finally block.
       llvm::SaveAndRestore<SurroundingTry *> sr{curFunction()->surroundingTry,
                                                 sourceTry->outer};
-      sourceTry->genFinalizer(sourceTry->node, cfc);
+      sourceTry->genFinalizer(sourceTry->node, cfc, continueTarget);
     }
   }
 }
