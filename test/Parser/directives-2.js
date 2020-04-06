@@ -12,6 +12,6 @@
 "use the force"
 "use strict"
 010
-//CHECK: {{.*}}directives-2.js:14:1: error: Octal literals are not allowed in strict mode
+//CHECK: {{.*}}directives-2.js:14:1: error: Octal literals must use '0o' in strict mode
 //CHECK-NEXT: 010
 //CHECK-NEXT: ^~~

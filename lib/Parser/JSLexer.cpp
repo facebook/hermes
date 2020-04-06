@@ -1028,10 +1028,21 @@ void JSLexer::scanNumber() {
   bool ok = true;
   const char *start = curCharPtr_;
 
+  // True when we encounter a legacy octal number (starts with '0').
+  bool legacyOctal = false;
+
   // Detect the radix
   if (*curCharPtr_ == '0') {
     if ((curCharPtr_[1] | 32) == 'x') {
       radix = 16;
+      curCharPtr_ += 2;
+      start += 2;
+    } else if ((curCharPtr_[1] | 32) == 'o') {
+      radix = 8;
+      curCharPtr_ += 2;
+      start += 2;
+    } else if ((curCharPtr_[1] | 32) == 'b') {
+      radix = 2;
       curCharPtr_ += 2;
       start += 2;
     } else if (curCharPtr_[1] == '.') {
@@ -1042,6 +1053,7 @@ void JSLexer::scanNumber() {
       goto exponent;
     } else {
       radix = 8;
+      legacyOctal = true;
       ++curCharPtr_;
     }
   }
@@ -1130,10 +1142,10 @@ end:
       val = std::numeric_limits<double>::quiet_NaN();
     }
   } else {
-    if (radix == 8 && strictMode_ && curCharPtr_ - start > 1) {
+    if (legacyOctal && strictMode_ && curCharPtr_ - start > 1) {
       if (!error(
               token_.getSourceRange(),
-              "Octal literals are not allowed in strict mode")) {
+              "Octal literals must use '0o' in strict mode")) {
         val = std::numeric_limits<double>::quiet_NaN();
         goto done;
       }
@@ -1142,11 +1154,13 @@ end:
     // Handle the zero-radix case. This could only happen with radix 16 because
     // otherwise start wouldn't have been changed.
     if (curCharPtr_ == start) {
-      error(token_.getSourceRange(), "No hexadecimal digits after 0x");
+      error(
+          token_.getSourceRange(),
+          llvm::Twine("No digits after ") + StringRef(start - 2, 2));
       val = std::numeric_limits<double>::quiet_NaN();
     } else {
       // Parse the rest of the number:
-      if (radix == 8) {
+      if (legacyOctal) {
         // ES6.0 B.1.1
         // If we encounter a "legacy" octal number (starting with a '0') but it
         // contains '8' or '9' we interpret it as decimal.

@@ -10,4 +10,4 @@
 "use strict";
 0x
 
-//CHECK: No hexadecimal digits after 0x
+//CHECK: No digits after 0x

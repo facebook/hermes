@@ -434,6 +434,12 @@ static inline double stringToNumber(
     if (str16[0] == u'0' && letterToLower(str16[1]) == u'x') {
       return parseIntWithRadix(str16.slice(2), 16);
     }
+    if (str16[0] == u'0' && letterToLower(str16[1]) == u'o') {
+      return parseIntWithRadix(str16.slice(2), 8);
+    }
+    if (str16[0] == u'0' && letterToLower(str16[1]) == u'b') {
+      return parseIntWithRadix(str16.slice(2), 2);
+    }
   }
 
   // Finally, copy 16 bit chars into 8 bit chars and call dtoa.

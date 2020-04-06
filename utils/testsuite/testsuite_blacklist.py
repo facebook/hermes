@@ -196,8 +196,6 @@ BLACK_LIST = [
     "test262/test/language/expressions/new.target/",
     "test262/test/language/expressions/object/method-definition/",
     "test262/test/language/expressions/super/",
-    "test262/test/language/literals/numeric/binary.js",
-    "test262/test/language/literals/numeric/octal.js",
     "test262/test/language/module-code/",
     "test262/test/language/rest-parameters/",
     "test262/test/language/statements/async-function/",
@@ -557,9 +555,6 @@ BLACK_LIST = [
     # TODO(T60938585): Make these conditional on the choice of build.
     "test262/test/built-ins/decodeURI/S15.1.3.1_A2.5_T1.js",
     "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A2.5_T1.js",
-    # number literals
-    "test262/test/built-ins/Number/string-binary-literal.js",
-    "test262/test/built-ins/Number/string-octal-literal.js",
     # default arguments
     "esprima/test_fixtures/expression/primary/object/migrated_0038.js",
     "mjsunit/es6/default-parameters-debug.js",

@@ -268,7 +268,7 @@ TEST(JSLexerTest, OctalLiteralTest) {
   SourceErrorManager sm;
   DiagContext diag(sm);
 
-  JSLexer lex("01 010 09 019", sm, alloc);
+  JSLexer lex("01 010 09 019 0o11 0O11", sm, alloc);
 
   auto tok = lex.advance();
   ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
@@ -289,6 +289,36 @@ TEST(JSLexerTest, OctalLiteralTest) {
   ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
   ASSERT_EQ(tok->getNumericLiteral(), 19.0);
   ASSERT_EQ(diag.getWarnCountClear(), 1);
+
+  tok = lex.advance();
+  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+  ASSERT_EQ(tok->getNumericLiteral(), 9.0);
+
+  tok = lex.advance();
+  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+  ASSERT_EQ(tok->getNumericLiteral(), 9.0);
+
+  ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+}
+
+TEST(JSLexerTest, BinaryLiteralTest) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext diag(sm);
+
+  JSLexer lex("0b1 0B1 0b101", sm, alloc);
+
+  auto tok = lex.advance();
+  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+  ASSERT_EQ(tok->getNumericLiteral(), 1.0);
+
+  tok = lex.advance();
+  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+  ASSERT_EQ(tok->getNumericLiteral(), 1.0);
+
+  tok = lex.advance();
+  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+  ASSERT_EQ(tok->getNumericLiteral(), 5.0);
 
   ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
 }
