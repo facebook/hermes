@@ -1278,7 +1278,8 @@ HermesRuntimeImpl::prepareJavaScript(
 #endif
   }
   if (!bcErr.first) {
-    throw jsi::JSINativeException(std::move(bcErr.second));
+    throw jsi::JSINativeException(
+        "Compiling JS failed: \n" + std::move(bcErr.second));
   }
   return std::make_shared<const HermesPreparedJavaScript>(
       std::move(bcErr.first), runtimeFlags, std::move(sourceURL));
