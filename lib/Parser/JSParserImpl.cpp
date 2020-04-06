@@ -2225,6 +2225,19 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           identRng,
           identRng,
           new (context_) ESTree::IdentifierNode(ident, nullptr));
+    } else if (check(TokenKind::comma, TokenKind::r_brace)) {
+      // If the next token is "," or "}", this is a shorthand property
+      // definition.
+      key = setLocation(
+          identRng,
+          identRng,
+          new (context_) ESTree::IdentifierNode(ident, nullptr));
+      auto *value = setLocation(
+          key, key, new (context_) ESTree::IdentifierNode(ident, nullptr));
+      return setLocation(
+          startLoc,
+          value,
+          new (context_) ESTree::PropertyNode(key, value, initIdent_, false));
     } else {
       // A getter method.
       computed = check(TokenKind::l_square);
@@ -2279,6 +2292,19 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           identRng,
           identRng,
           new (context_) ESTree::IdentifierNode(ident, nullptr));
+    } else if (check(TokenKind::comma, TokenKind::r_brace)) {
+      // If the next token is "," or "}", this is a shorthand property
+      // definition.
+      key = setLocation(
+          identRng,
+          identRng,
+          new (context_) ESTree::IdentifierNode(ident, nullptr));
+      auto *value = setLocation(
+          key, key, new (context_) ESTree::IdentifierNode(ident, nullptr));
+      return setLocation(
+          startLoc,
+          value,
+          new (context_) ESTree::PropertyNode(key, value, initIdent_, false));
     } else {
       // A setter method.
       computed = check(TokenKind::l_square);
