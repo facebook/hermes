@@ -357,7 +357,7 @@ jobs:
     docker:
       - image: ubuntu:19.04
     environment:
-      - yarn: yarnpkg
+      - YARN: yarnpkg
       - TERM: dumb
     steps:
       - run:
@@ -389,14 +389,15 @@ jobs:
           command: |
             cd npm
             cp /tmp/hermes/input/* .
-            $yarn install
-            $yarn pack
+            $YARN install
+            $YARN unpack-builds
+            $YARN create-npms
 
       - run:
           name: Copy artifacts
           command: |
             cd npm
-            cp hermes-engine-*.tgz /tmp/hermes/output
+            cp *.tgz /tmp/hermes/output
             # Also copy the other packages for the sole purpose of not having
             # to visit multiple jobs pages to download all release artifacts
             cp /tmp/hermes/input/*.tar.gz /tmp/hermes/output
@@ -476,7 +477,7 @@ jobs:
           name: Run E2E test with master Hermes and Release React Native
           command: |
             cd test/circleci-e2e
-            ./run.sh --hermes-npm-package /tmp/hermes/input/hermes-engine-*.tgz
+            ./run.sh --hermes-npm-package /tmp/hermes/input/hermes-engine-v*.tgz
           # The react-native setup tool takes AGES "Installing CocoaPods dependencies"
           no_output_timeout: 45m
       - store_artifacts:

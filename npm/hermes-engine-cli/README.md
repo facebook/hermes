@@ -1,0 +1,13 @@
+## Hermes
+
+Hermes is a small and lightweight JavaScript VM optimized for running React
+Native apps on Android.  This package contains desktop binaries for testing and
+development purposes:
+
+* `hermes`, to run bytecode and run/compile source code
+* `hermes-repl`, a JavaScript REPL
+* `hdb`, a command line debugger
+* `hbcdump`, a low level bytecode inspection tool
+* `hermesc`, a subset of `hermes` that only compiles source code
+
+See [hermesengine.dev](https://hermesengine.dev) for more information.

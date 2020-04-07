@@ -598,11 +598,11 @@ add_custom_target(make_bundle_dir DEPENDS ${HERMES_GITHUB_BUNDLE_DIR})
 add_custom_command(
   OUTPUT ${HERMES_GITHUB_DIR}/${HERMES_CLI_GITHUB_FILE}
   WORKING_DIRECTORY ${HERMES_GITHUB_BUNDLE_DIR}
-  DEPENDS hermes hermes-repl make_bundle_dir
+  DEPENDS hermes hermesc hdb hbcdump hermes-repl make_bundle_dir
   VERBATIM
   COMMAND
     # We need bin/hermes or Release/bin/hermes.exe in a predictable location
-    ${CMAKE_COMMAND} -E copy $<TARGET_FILE:hermes> $<TARGET_FILE:hermes-repl> ${HERMES_GITHUB_EXTRAS} .
+    ${CMAKE_COMMAND} -E copy $<TARGET_FILE:hermes> $<TARGET_FILE:hermes-repl> $<TARGET_FILE:hermesc> $<TARGET_FILE:hdb> $<TARGET_FILE:hbcdump> ${HERMES_GITHUB_EXTRAS} .
   COMMAND
     ${CMAKE_COMMAND} -E tar zcf ${HERMES_GITHUB_DIR}/${HERMES_CLI_GITHUB_FILE} .
 )
