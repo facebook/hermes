@@ -39,6 +39,7 @@ set(source_files
   JSWeakMapImpl.cpp
   LimitedStorageProvider.cpp
   LogFailStorageProvider.cpp
+  DecoratedObject.cpp
   HostModel.cpp
   Operations.cpp
   PredefinedStringIDs.cpp
