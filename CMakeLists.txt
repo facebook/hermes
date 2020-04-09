@@ -55,7 +55,7 @@ endif()
 # This must be consistent with the release_version in
 # android/build.gradle and npm/package.json
 project(Hermes
-        VERSION 0.4.0
+        VERSION 0.5.0
         LANGUAGES C CXX)
 # Optional suffix like "-rc3"
 set(VERSION_SUFFIX "")
