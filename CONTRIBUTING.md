@@ -2,9 +2,13 @@
 We want to make contributing to this project simple and convenient.
 
 ## Code of Conduct
-Facebook has adopted a Code of Conduct that we expect project participants to
+Facebook has adopted a Code of Conduct that they expect project participants to
 adhere to. Please [read the full text](https://code.fb.com/codeofconduct/) so
 that you can understand what actions will and will not be tolerated.
+
+As an official Microsoft fork, this project has also adopted the Microsoft Open
+Source Code of Conduct available
+[here](https://opensource.microsoft.com/codeofconduct/).
 
 ## Our Development Process
 Facebook's internal repository remains the source of truth. It is
@@ -37,10 +41,15 @@ Copy and paste this to the top of your new file(s):
 ```
 
 ## Contributor License Agreement ("CLA")
-In order to accept your pull request, we need you to submit a CLA. You only need
-to do this once to work on any of Facebook's open source projects.
+This project welcomes contributions and suggestions.  Most contributions require
+you to agree to a Contributor License Agreement (CLA) declaring that you have
+the right to, and actually do, grant us the rights to use your contribution. For
+details, visit https://cla.opensource.microsoft.com.
 
-Complete your CLA here: <https://code.facebook.com/cla>
+When you submit a pull request, a CLA bot will automatically determine whether
+you need to provide a CLA and decorate the PR appropriately (e.g., status check,
+comment). Simply follow the instructions provided by the bot. You will only need
+to do this once across all repos using Microsoft's CLA.
 
 ## Issues
 We use GitHub issues to track public bugs. Please ensure your description is
@@ -49,6 +58,9 @@ clear and has sufficient instructions to be able to reproduce the issue.
 Facebook has a [bounty program](https://www.facebook.com/whitehat/) for the
 safe disclosure of security bugs. In those cases, please go through the process
 outlined on that page and do not file a public issue.
+
+Please see SECURITY.md for Microsoft's policies on reporting security
+vulnerabilities.
 
 ## Coding Style
 * The Hermes coding style is generally based on the
