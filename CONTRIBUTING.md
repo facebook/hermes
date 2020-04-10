@@ -33,6 +33,17 @@ Copy and paste this to the top of your new file(s):
 
 ```
 /**
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+```
+
+When contributing a new file back to facebook/hermes, change this header to:
+
+```
+/**
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
