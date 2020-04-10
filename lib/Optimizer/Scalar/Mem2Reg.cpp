@@ -48,7 +48,7 @@ static bool getSingleInitializer(Variable *V) {
   StoreFrameInst *singleStore = nullptr;
 
   for (auto *U : V->getUsers()) {
-    if (auto *S = dyn_cast<StoreFrameInst>(U)) {
+    if (auto *S = llvm::dyn_cast<StoreFrameInst>(U)) {
       // This is not the first store.
       if (singleStore)
         return false;
@@ -79,20 +79,20 @@ static void collectCapturedVariables(
 
       // Recursively check capturing functions by inspecting the created
       // closure.
-      if (auto *CF = dyn_cast<CreateFunctionInst>(II)) {
+      if (auto *CF = llvm::dyn_cast<CreateFunctionInst>(II)) {
         collectCapturedVariables(
             capturedLoads, capturedStores, CF->getFunctionCode());
         continue;
       }
 
-      if (auto *LF = dyn_cast<LoadFrameInst>(II)) {
+      if (auto *LF = llvm::dyn_cast<LoadFrameInst>(II)) {
         Variable *V = LF->getLoadVariable();
         if (V->getParent()->getFunction() != F) {
           capturedLoads.insert(V);
         }
       }
 
-      if (auto *SF = dyn_cast<StoreFrameInst>(II)) {
+      if (auto *SF = llvm::dyn_cast<StoreFrameInst>(II)) {
         auto *V = SF->getVariable();
         if (V->getParent()->getFunction() != F) {
           capturedStores.insert(V);
@@ -142,13 +142,13 @@ static bool promoteLoads(BasicBlock *BB) {
   for (auto &it : *BB) {
     Instruction *II = &it;
 
-    if (auto *SS = dyn_cast<StoreStackInst>(II)) {
+    if (auto *SS = llvm::dyn_cast<StoreStackInst>(II)) {
       // Record the value stored to the stack:
       knownStackValues[SS->getPtr()] = SS->getValue();
       continue;
     }
 
-    if (auto *SF = dyn_cast<StoreFrameInst>(II)) {
+    if (auto *SF = llvm::dyn_cast<StoreFrameInst>(II)) {
       Variable *var = SF->getVariable();
 
       // Record the value stored to the frame:
@@ -161,13 +161,13 @@ static bool promoteLoads(BasicBlock *BB) {
     // values.
     if (II->mayWriteMemory()) {
       for (unsigned i = 0, e = II->getNumOperands(); i != e; ++i) {
-        if (auto *ASI = dyn_cast<AllocStackInst>(II->getOperand(i)))
+        if (auto *ASI = llvm::dyn_cast<AllocStackInst>(II->getOperand(i)))
           knownStackValues.erase(ASI);
       }
     }
 
     // Try to replace the LoadStack with a recently saved value.
-    if (auto *LS = dyn_cast<LoadStackInst>(II)) {
+    if (auto *LS = llvm::dyn_cast<LoadStackInst>(II)) {
       AllocStackInst *dest = LS->getPtr();
       auto entry = knownStackValues.find(dest);
 
@@ -190,7 +190,7 @@ static bool promoteLoads(BasicBlock *BB) {
     }
 
     // Try to replace the LoadFrame with a recently saved value.
-    if (auto *LF = dyn_cast<LoadFrameInst>(II)) {
+    if (auto *LF = llvm::dyn_cast<LoadFrameInst>(II)) {
       Variable *dest = LF->getLoadVariable();
 
       // If this variable is known to be constant during the lifetime of the
@@ -235,7 +235,7 @@ static bool promoteLoads(BasicBlock *BB) {
       continue;
     }
 
-    if (auto *CF = dyn_cast<CreateFunctionInst>(II)) {
+    if (auto *CF = llvm::dyn_cast<CreateFunctionInst>(II)) {
       // Collect the captured variables.
       if (usePreciseCaptureAnalysis) {
         collectCapturedVariables(
@@ -299,7 +299,7 @@ static bool eliminateStores(
     Instruction *II = &it;
 
     // Try to delete the previous store based on the current store.
-    if (auto *SF = dyn_cast<StoreFrameInst>(II)) {
+    if (auto *SF = llvm::dyn_cast<StoreFrameInst>(II)) {
       auto *V = SF->getVariable();
       auto entry = prevStoreFrame.find(V);
 
@@ -320,7 +320,7 @@ static bool eliminateStores(
     }
 
     // Try to delete the previous store based on the current store.
-    if (auto *SS = dyn_cast<StoreStackInst>(II)) {
+    if (auto *SS = llvm::dyn_cast<StoreStackInst>(II)) {
       auto *AS = SS->getPtr();
       auto entry = prevStoreStack.find(AS);
 
@@ -341,14 +341,14 @@ static bool eliminateStores(
     }
 
     // Invalidate the frame store storage.
-    if (auto *LF = dyn_cast<LoadFrameInst>(II)) {
+    if (auto *LF = llvm::dyn_cast<LoadFrameInst>(II)) {
       auto *V = LF->getLoadVariable();
       prevStoreFrame[V] = nullptr;
       continue;
     }
 
     // Invalidate the stack store storage.
-    if (auto *LS = dyn_cast<LoadStackInst>(II)) {
+    if (auto *LS = llvm::dyn_cast<LoadStackInst>(II)) {
       AllocStackInst *AS = LS->getPtr();
       prevStoreStack[AS] = nullptr;
       continue;
@@ -383,7 +383,7 @@ static bool eliminateStores(
       }
     }
 
-    if (auto *CF = dyn_cast<CreateFunctionInst>(II)) {
+    if (auto *CF = llvm::dyn_cast<CreateFunctionInst>(II)) {
       // Collect the captured variables.
       if (usePreciseCaptureAnalysis) {
         collectCapturedVariables(
@@ -398,7 +398,7 @@ static bool eliminateStores(
 /// \returns true if the instruction has non-store uses, like loads.
 static bool hasNonStoreUses(AllocStackInst *ASI) {
   for (auto *U : ASI->getUsers()) {
-    if (!isa<StoreStackInst>(U))
+    if (!llvm::isa<StoreStackInst>(U))
       return true;
   }
 
@@ -410,7 +410,7 @@ static bool eliminateStoreOnlyLocations(BasicBlock *BB) {
   IRBuilder::InstructionDestroyer destroyer;
 
   for (auto &it : *BB) {
-    auto *ASI = dyn_cast<AllocStackInst>(&it);
+    auto *ASI = llvm::dyn_cast<AllocStackInst>(&it);
     if (!ASI)
       continue;
 
@@ -444,7 +444,7 @@ static bool isUnsafeStackLocation(
     BlockSet &exceptionHandlingBlocks) {
   // For all users of the stack allocation:
   for (auto *U : ASI->getUsers()) {
-    if (isa<LoadStackInst>(U) || isa<StoreStackInst>(U)) {
+    if (llvm::isa<LoadStackInst>(U) || llvm::isa<StoreStackInst>(U)) {
       // If the load/store is used inside of a catch block then we consider this
       // variable as captured.
       for (auto *BB : exceptionHandlingBlocks) {
@@ -474,7 +474,8 @@ static void collectStackAllocations(
   BlockSet exceptionHandlingBlocks;
   for (auto &BB : *F) {
     Instruction *I = &*BB.begin();
-    if (isa<TryStartInst>(BB.getTerminator()) || isa<CatchInst>(I)) {
+    if (llvm::isa<TryStartInst>(BB.getTerminator()) ||
+        llvm::isa<CatchInst>(I)) {
       exceptionHandlingBlocks.insert(&BB);
     }
   }
@@ -482,7 +483,7 @@ static void collectStackAllocations(
   // For each instruction in the basic block:
   for (auto &BB : *F) {
     for (auto &it : BB) {
-      auto *ASI = dyn_cast<AllocStackInst>(&it);
+      auto *ASI = llvm::dyn_cast<AllocStackInst>(&it);
       if (!ASI)
         continue;
 
@@ -606,7 +607,7 @@ static void promoteAllocStackToSSA(
   // most one store per block.
   for (auto *U : ASI->getUsers()) {
     // We need to place Phis for this block.
-    if (isa<StoreStackInst>(U)) {
+    if (llvm::isa<StoreStackInst>(U)) {
       // If the block is in the dom tree (dominated by the entry block).
       if (DomTreeNode *Node = DT.getNode(U->getParent()))
         PQ.push(std::make_pair(Node, domTreeLevels[Node]));
@@ -695,11 +696,11 @@ static void promoteAllocStackToSSA(
 
   // Collect all loads/stores for the ASI.
   for (auto *U : ASI->getUsers()) {
-    if (auto *L = dyn_cast<LoadStackInst>(U)) {
+    if (auto *L = llvm::dyn_cast<LoadStackInst>(U)) {
       loads.push_back(L);
       continue;
     }
-    if (auto *S = dyn_cast<StoreStackInst>(U)) {
+    if (auto *S = llvm::dyn_cast<StoreStackInst>(U)) {
       assert(!stores.count(S->getParent()) && "multiple stores per block!");
       stores[S->getParent()] = S;
       continue;

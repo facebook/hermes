@@ -111,19 +111,20 @@ static bool run(Function *F) {
       if (inst->getKind() != ValueKind::CallInstKind)
         continue;
       auto *callInst = cast<CallInst>(inst);
-      auto *loadProp = dyn_cast<LoadPropertyInst>(callInst->getCallee());
+      auto *loadProp = llvm::dyn_cast<LoadPropertyInst>(callInst->getCallee());
       if (!loadProp)
         continue;
-      auto propLit = dyn_cast<LiteralString>(loadProp->getProperty());
+      auto propLit = llvm::dyn_cast<LiteralString>(loadProp->getProperty());
       if (!propLit)
         continue;
-      auto *loadGlobalProp = dyn_cast<LoadPropertyInst>(loadProp->getObject());
+      auto *loadGlobalProp =
+          llvm::dyn_cast<LoadPropertyInst>(loadProp->getObject());
       if (!loadGlobalProp)
         continue;
-      if (!isa<GlobalObject>(loadGlobalProp->getObject()))
+      if (!llvm::isa<GlobalObject>(loadGlobalProp->getObject()))
         continue;
       LiteralString *objLit =
-          dyn_cast<LiteralString>(loadGlobalProp->getProperty());
+          llvm::dyn_cast<LiteralString>(loadGlobalProp->getProperty());
       if (!objLit)
         continue;
 

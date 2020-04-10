@@ -31,7 +31,7 @@ namespace hbc {
 #ifndef HERMESVM_LEAN
 namespace {
 bool isSingleFunctionExpression(ESTree::NodePtr ast) {
-  auto *prog = dyn_cast<ESTree::ProgramNode>(ast);
+  auto *prog = llvm::dyn_cast<ESTree::ProgramNode>(ast);
   if (!prog) {
     return false;
   }
@@ -40,12 +40,14 @@ bool isSingleFunctionExpression(ESTree::NodePtr ast) {
     return false;
   }
   auto *exprStatement =
-      dyn_cast<ESTree::ExpressionStatementNode>(&body.front());
+      llvm::dyn_cast<ESTree::ExpressionStatementNode>(&body.front());
   if (!exprStatement) {
     return false;
   }
-  return isa<ESTree::FunctionExpressionNode>(exprStatement->_expression) ||
-      isa<ESTree::ArrowFunctionExpressionNode>(exprStatement->_expression);
+  return llvm::isa<ESTree::FunctionExpressionNode>(
+             exprStatement->_expression) ||
+      llvm::isa<ESTree::ArrowFunctionExpressionNode>(
+             exprStatement->_expression);
 }
 } // namespace
 

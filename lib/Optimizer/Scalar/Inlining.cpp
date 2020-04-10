@@ -163,14 +163,14 @@ static Value *inlineFunction(
       Value *oldOp = I->getOperand(i);
       Value *newOp = nullptr;
 
-      if (isa<Instruction>(oldOp) || isa<Parameter>(oldOp) ||
-          isa<BasicBlock>(oldOp)) {
+      if (llvm::isa<Instruction>(oldOp) || llvm::isa<Parameter>(oldOp) ||
+          llvm::isa<BasicBlock>(oldOp)) {
         // Operands must already have been visited.
         newOp = operandMap[oldOp];
         assert(newOp && "operand not visited before instruction");
       } else if (
-          isa<Label>(oldOp) || isa<Literal>(oldOp) || isa<Variable>(oldOp) ||
-          isa<EmptySentinel>(oldOp)) {
+          llvm::isa<Label>(oldOp) || llvm::isa<Literal>(oldOp) ||
+          llvm::isa<Variable>(oldOp) || llvm::isa<EmptySentinel>(oldOp)) {
         // Labels, literals and variables are unchanged.
         newOp = oldOp;
       } else {
@@ -194,7 +194,7 @@ static Value *inlineFunction(
     for (auto &I : *oldBB) {
       // Translate the operands.
 
-      if (auto *phi = dyn_cast<PhiInst>(&I)) {
+      if (auto *phi = llvm::dyn_cast<PhiInst>(&I)) {
         // We cannot translate phi operands yet because the instruction is not
         // dominated by its operands (unlike all others). So, use empty
         // operands and save the Phi for later.
@@ -207,7 +207,7 @@ static Value *inlineFunction(
 
       Instruction *newInst;
 
-      if (isa<ReturnInst>(I)) {
+      if (llvm::isa<ReturnInst>(I)) {
         // Handle return by jumping to the return block and adjusting the phi.
         assert(
             translatedOperands.size() == 1 &&
@@ -269,7 +269,7 @@ bool Inlining::runOnModule(Module *M) {
 
   for (Function &F : *M) {
     for (Instruction *I : F.getUsers()) {
-      auto *CFI = dyn_cast<CreateFunctionInst>(I);
+      auto *CFI = llvm::dyn_cast<CreateFunctionInst>(I);
       if (!CFI)
         continue;
 

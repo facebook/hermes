@@ -32,8 +32,8 @@ void hermes::constructCatchMap(
   // TryStartInst can only show up at the end of a block.
   // Hence we process the block with the order:
   // TryEndInst => block body => TryStartInst => successors.
-  bool isTryStartBlock = isa<TryStartInst>(currentBlock->getTerminator());
-  bool isTryEndBlock = isa<TryEndInst>(&currentBlock->front());
+  bool isTryStartBlock = llvm::isa<TryStartInst>(currentBlock->getTerminator());
+  bool isTryEndBlock = llvm::isa<TryEndInst>(&currentBlock->front());
   CatchInst *currentCatch = nullptr;
 
   if (isTryEndBlock) {

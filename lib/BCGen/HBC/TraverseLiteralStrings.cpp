@@ -94,7 +94,7 @@ void traverseLiteralStrings(
       for (auto &I : BB) {
         for (int i = 0, e = I.getNumOperands(); i < e; i++) {
           auto *op = I.getOperand(i);
-          if (auto *str = dyn_cast<LiteralString>(op)) {
+          if (auto *str = llvm::dyn_cast<LiteralString>(op)) {
             traversal(str->getValue().str(), isIdOperand(&I, i));
           }
         }

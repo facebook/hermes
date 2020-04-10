@@ -61,8 +61,8 @@ static void promoteConstVariable(
   bool needToKeepStores = false;
 
   for (auto *U : V->getUsers()) {
-    if (auto *LF = dyn_cast<LoadFrameInst>(U)) {
-      if (auto *P = dyn_cast<Parameter>(val)) {
+    if (auto *LF = llvm::dyn_cast<LoadFrameInst>(U)) {
+      if (auto *P = llvm::dyn_cast<Parameter>(val)) {
         if (P->getParent() != LF->getParent()->getParent()) {
           needToKeepStores = true;
           continue;
@@ -74,14 +74,14 @@ static void promoteConstVariable(
         continue;
       }
 
-      if (isa<Literal>(val)) {
+      if (llvm::isa<Literal>(val)) {
         LF->replaceAllUsesWith(val);
         destroyer.add(LF);
         NumConstProm++;
         continue;
       }
 
-      if (auto *I = dyn_cast<Instruction>(val)) {
+      if (auto *I = llvm::dyn_cast<Instruction>(val)) {
         // If the stored value dominates the loads then we can use the original
         // stored value instead of the load.
         if (I->getParent() == LF->getParent() && DT.properlyDominates(I, LF)) {
@@ -97,7 +97,7 @@ static void promoteConstVariable(
       continue;
     }
 
-    if (isa<StoreFrameInst>(U))
+    if (llvm::isa<StoreFrameInst>(U))
       continue;
 
     llvm_unreachable("invalid user!");
@@ -106,10 +106,10 @@ static void promoteConstVariable(
   /// Delete the variable store if we were able to eliminate all loads.
   if (!needToKeepStores) {
     for (auto *U : V->getUsers()) {
-      if (isa<LoadFrameInst>(U))
+      if (llvm::isa<LoadFrameInst>(U))
         continue;
 
-      if (auto *SF = dyn_cast<StoreFrameInst>(U))
+      if (auto *SF = llvm::dyn_cast<StoreFrameInst>(U))
         destroyer.add(SF);
     }
   }
@@ -136,15 +136,15 @@ void collectCapturedVariables(
     Function *current) {
   for (auto &BB : *current) {
     for (auto &I : BB) {
-      if (auto *create = dyn_cast<CreateFunctionInst>(&I)) {
+      if (auto *create = llvm::dyn_cast<CreateFunctionInst>(&I)) {
         collectCapturedVariables(captured, base, create->getFunctionCode());
         continue;
       }
 
       Variable *var = nullptr;
-      if (auto *load = dyn_cast<LoadFrameInst>(&I)) {
+      if (auto *load = llvm::dyn_cast<LoadFrameInst>(&I)) {
         var = load->getLoadVariable();
-      } else if (auto *store = dyn_cast<StoreFrameInst>(&I)) {
+      } else if (auto *store = llvm::dyn_cast<StoreFrameInst>(&I)) {
         var = store->getVariable();
       }
       if (!var || var->getParent()->getFunction() != base)
@@ -169,7 +169,7 @@ void determineCapturedVariableUsage(
   llvm::DenseSet<BasicBlock *> toPropagate;
   for (auto &BB : *F) {
     for (auto &I : BB) {
-      auto *create = dyn_cast<CreateFunctionInst>(&I);
+      auto *create = llvm::dyn_cast<CreateFunctionInst>(&I);
       if (!create)
         continue;
 
@@ -281,7 +281,7 @@ bool promoteVariables(Function *F) {
 
         NumOpsPostponed++;
 
-        if (auto *LF = dyn_cast<LoadFrameInst>(U)) {
+        if (auto *LF = llvm::dyn_cast<LoadFrameInst>(U)) {
           builder.setInsertionPoint(LF);
           auto *LS = builder.createLoadStackInst(stackVar);
           LS->moveBefore(LF);
@@ -289,7 +289,7 @@ bool promoteVariables(Function *F) {
           destroyer.add(LF);
           continue;
         }
-        if (auto *SF = dyn_cast<StoreFrameInst>(U)) {
+        if (auto *SF = llvm::dyn_cast<StoreFrameInst>(U)) {
           builder.setInsertionPoint(SF);
           auto *SS = builder.createStoreStackInst(SF->getValue(), stackVar);
           SS->moveBefore(SF);
@@ -330,8 +330,9 @@ bool promoteVariables(Function *F) {
       continue;
 
     auto insertionPoint = BB.begin();
-    while (isa<TryEndInst>(*insertionPoint) ||
-           isa<CatchInst>(*insertionPoint) || isa<PhiInst>(*insertionPoint)) {
+    while (llvm::isa<TryEndInst>(*insertionPoint) ||
+           llvm::isa<CatchInst>(*insertionPoint) ||
+           llvm::isa<PhiInst>(*insertionPoint)) {
       insertionPoint++;
     }
     builder.setInsertionPoint(&*insertionPoint);

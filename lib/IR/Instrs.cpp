@@ -23,8 +23,8 @@ using namespace hermes;
 
 unsigned TerminatorInst::getNumSuccessors() const {
 #undef TERMINATOR
-#define TERMINATOR(CLASS, PARENT)     \
-  if (auto I = dyn_cast<CLASS>(this)) \
+#define TERMINATOR(CLASS, PARENT)           \
+  if (auto I = llvm::dyn_cast<CLASS>(this)) \
     return I->getNumSuccessors();
 #include "hermes/IR/Instrs.def"
   llvm_unreachable("not a terminator?!");
@@ -32,8 +32,8 @@ unsigned TerminatorInst::getNumSuccessors() const {
 
 BasicBlock *TerminatorInst::getSuccessor(unsigned idx) const {
 #undef TERMINATOR
-#define TERMINATOR(CLASS, PARENT)     \
-  if (auto I = dyn_cast<CLASS>(this)) \
+#define TERMINATOR(CLASS, PARENT)           \
+  if (auto I = llvm::dyn_cast<CLASS>(this)) \
     return I->getSuccessor(idx);
 #include "hermes/IR/Instrs.def"
   llvm_unreachable("not a terminator?!");
@@ -41,8 +41,8 @@ BasicBlock *TerminatorInst::getSuccessor(unsigned idx) const {
 
 void TerminatorInst::setSuccessor(unsigned idx, BasicBlock *B) {
 #undef TERMINATOR
-#define TERMINATOR(CLASS, PARENT)     \
-  if (auto I = dyn_cast<CLASS>(this)) \
+#define TERMINATOR(CLASS, PARENT)           \
+  if (auto I = llvm::dyn_cast<CLASS>(this)) \
     return I->setSuccessor(idx, B);
 #include "hermes/IR/Instrs.def"
   llvm_unreachable("not a terminator?!");

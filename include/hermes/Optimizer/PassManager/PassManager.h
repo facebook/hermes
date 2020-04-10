@@ -90,7 +90,7 @@ class PassManager {
     for (auto *P : pipeline) {
       dumpLastPass(P);
 
-      auto *FP = dyn_cast<FunctionPass>(P);
+      auto *FP = llvm::dyn_cast<FunctionPass>(P);
       assert(FP && "Invalid pass kind");
       LLVM_DEBUG(dbgs() << "Running the pass " << FP->getName() << "\n");
       LLVM_DEBUG(
@@ -134,7 +134,7 @@ class PassManager {
                      : nullptr);
 
       /// Handle function passes:
-      if (auto *FP = dyn_cast<FunctionPass>(P)) {
+      if (auto *FP = llvm::dyn_cast<FunctionPass>(P)) {
         LLVM_DEBUG(
             dbgs() << "Running the function pass " << FP->getName() << "\n");
 
@@ -153,7 +153,7 @@ class PassManager {
       }
 
       /// Handle module passes:
-      if (auto *MP = dyn_cast<ModulePass>(P)) {
+      if (auto *MP = llvm::dyn_cast<ModulePass>(P)) {
         LLVM_DEBUG(
             dbgs() << "Running the module pass " << MP->getName() << "\n");
         MP->runOnModule(M);

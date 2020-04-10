@@ -351,12 +351,13 @@ TEST(BuilderTest, LiteralConstructionTest) {
   }
 
   // Make sure that casting works.
-  EXPECT_TRUE(dyn_cast<LiteralNull>(Builder.getLiteralNull()));
-  EXPECT_TRUE(dyn_cast<LiteralUndefined>(Builder.getLiteralUndefined()));
-  EXPECT_TRUE(dyn_cast<LiteralBool>(Builder.getLiteralBool(true)));
-  EXPECT_TRUE(dyn_cast<LiteralBool>(Builder.getLiteralBool(false)));
-  EXPECT_TRUE(dyn_cast<LiteralString>(Builder.getLiteralString("hello world")));
-  EXPECT_TRUE(dyn_cast<LiteralNumber>(Builder.getLiteralNumber(10.23)));
+  EXPECT_TRUE(llvm::dyn_cast<LiteralNull>(Builder.getLiteralNull()));
+  EXPECT_TRUE(llvm::dyn_cast<LiteralUndefined>(Builder.getLiteralUndefined()));
+  EXPECT_TRUE(llvm::dyn_cast<LiteralBool>(Builder.getLiteralBool(true)));
+  EXPECT_TRUE(llvm::dyn_cast<LiteralBool>(Builder.getLiteralBool(false)));
+  EXPECT_TRUE(
+      llvm::dyn_cast<LiteralString>(Builder.getLiteralString("hello world")));
+  EXPECT_TRUE(llvm::dyn_cast<LiteralNumber>(Builder.getLiteralNumber(10.23)));
 }
 
 TEST(BuilderTest, PropertyTest) {
