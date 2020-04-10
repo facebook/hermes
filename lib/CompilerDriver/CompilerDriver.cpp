@@ -1858,6 +1858,9 @@ void printHermesCompilerVersion(llvm::raw_ostream &s) {
 void printHermesREPLVersion(llvm::raw_ostream &s) {
   printHermesVersion(s, " REPL", false);
 }
+OutputFormatKind outputFormatFromCommandLineOptions() {
+  return cl::DumpTarget;
+}
 
 CompileResult compileFromCommandLineOptions() {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)

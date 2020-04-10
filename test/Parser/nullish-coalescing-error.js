@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermesc %s 2>&1) | %FileCheck %s --match-full-lines
+// RUN: (! %hermesc -dump-ast %s 2>&1) | %FileCheck %s --match-full-lines
 
 a ?? b && c;
 // CHECK: {{.*}}:10:1: error: Mixing '??' with '&&' or '||' requires parentheses
