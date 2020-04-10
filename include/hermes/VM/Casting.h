@@ -105,6 +105,12 @@ bool vmisa(GCCell *cell) {
   return dyn_vmcast<ToType>(cell) != nullptr;
 }
 
+/// Const version of vmisa.
+template <class ToType>
+bool vmisa(const GCCell *cell) {
+  return dyn_vmcast<ToType>(cell) != nullptr;
+}
+
 /// Return true if the value, which could be nullptr, is an instance of ToType.
 template <class ToType>
 bool vmisa_or_null(HermesValue val) {

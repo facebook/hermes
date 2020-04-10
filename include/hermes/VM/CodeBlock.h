@@ -10,7 +10,6 @@
 
 #include "hermes/BCGen/HBC/BytecodeDataProvider.h"
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
-#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/Inst/Inst.h"
 #include "hermes/Support/SourceErrorManager.h"
 #include "hermes/VM/HermesValue.h"
@@ -399,13 +398,6 @@ class CodeBlock final
   bool hasFunctionSource() const;
 #endif
 };
-
-#ifndef HERMESVM_LEAN
-/// Compiles a lazy Function into a separate BytecodeModule. The module will
-/// in turn generate other lazy functions.
-std::unique_ptr<hbc::BytecodeModule> compileLazyFunction(
-    Function *lazyFunction);
-#endif
 
 } // namespace vm
 } // namespace hermes

@@ -8,6 +8,7 @@
 #include "hermes/VM/HeapSnapshot.h"
 
 #include "hermes/Support/Conversions.h"
+#include "hermes/Support/JSONEmitter.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/UTF8.h"
 #include "hermes/VM/StackTracesTree.h"

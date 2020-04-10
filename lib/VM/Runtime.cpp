@@ -9,20 +9,12 @@
 #include "hermes/VM/Runtime.h"
 
 #include "hermes/AST/SemValidate.h"
-#include "hermes/BCGen/HBC/Bytecode.h"
 #include "hermes/BCGen/HBC/BytecodeDataProvider.h"
-#include "hermes/BCGen/HBC/BytecodeGenerator.h"
-#include "hermes/BCGen/HBC/HBC.h"
+#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
 #include "hermes/FrontEndDefs/Builtins.h"
-#include "hermes/IR/IR.h"
-#include "hermes/IRGen/IRGen.h"
 #include "hermes/InternalBytecode/InternalBytecode.h"
-#include "hermes/Parser/JSParser.h"
 #include "hermes/Platform/Logging.h"
-#include "hermes/Runtime/Libhermes.h"
-#include "hermes/Support/CheckedMalloc.h"
-#include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PerfSection.h"
 #include "hermes/VM/AlignedStorage.h"
@@ -36,6 +28,7 @@
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/RuntimeCommonStorage.h"
+#include "hermes/VM/MockedEnvironment.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PointerBase.h"
 #include "hermes/VM/PredefinedStringIDs.h"
@@ -60,8 +53,6 @@
 #include "hermes/VM/Profiler/InlineCacheProfiler.h"
 #include "llvm/ADT/DenseMap.h"
 #endif
-
-#include <cstring>
 
 namespace hermes {
 namespace vm {

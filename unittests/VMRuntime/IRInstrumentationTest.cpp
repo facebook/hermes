@@ -7,6 +7,7 @@
 
 #ifdef HERMES_ENABLE_IR_INSTRUMENTATION
 
+#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/VM/Runtime.h"
 
 #include "gtest/gtest.h"

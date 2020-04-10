@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_JSLIB_JSLIBINTERNAL_H
 #define HERMES_VM_JSLIB_JSLIBINTERNAL_H
 
+#include "hermes/Support/ScopeChain.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/JSDate.h"
 #include "hermes/VM/JSError.h"

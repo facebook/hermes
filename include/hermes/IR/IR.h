@@ -8,6 +8,12 @@
 #ifndef HERMES_IR_IR_H
 #define HERMES_IR_IR_H
 
+#include "hermes/ADT/WordBitSet.h"
+#include "hermes/AST/Context.h"
+#include "hermes/AST/ESTree.h"
+#include "hermes/Support/Conversions.h"
+#include "hermes/Support/ScopeChain.h"
+
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -19,12 +25,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include "hermes/ADT/WordBitSet.h"
-#include "hermes/AST/Context.h"
-#include "hermes/AST/ESTree.h"
-#include "hermes/Support/Conversions.h"
-#include "hermes/Support/ScopeChain.h"
 
 #include <deque>
 #include <unordered_map>
