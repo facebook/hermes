@@ -9,6 +9,7 @@
 #include "TestHelpers.h"
 #include "gtest/gtest.h"
 #include "hermes/Parser/JSONParser.h"
+#include "hermes/Support/Algorithms.h"
 #include "hermes/Support/Allocator.h"
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/GC.h"
@@ -788,7 +789,7 @@ struct ChromeStackTreeNode {
           llvm::cast<JSONNumber>(traceNodes[i + 1])->getValue();
       auto children = llvm::cast<JSONArray>(traceNodes[i + 4]);
       auto treeNode =
-          std::make_unique<ChromeStackTreeNode>(parent, functionInfoIndex);
+          hermes::make_unique<ChromeStackTreeNode>(parent, functionInfoIndex);
       idNodeMap.emplace(id, treeNode.get());
       treeNode->children_ = parse(*children, treeNode.get(), idNodeMap);
       res.emplace_back(std::move(treeNode));
