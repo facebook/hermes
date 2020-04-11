@@ -7,7 +7,8 @@
 
 #include "hermes/VM/StackTracesTree-NoRuntime.h"
 
-#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+#if defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) and \
+    !defined(HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION)
 
 #include "TestHelpers.h"
 
