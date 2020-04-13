@@ -33,6 +33,7 @@
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSArrayBuffer.h"
+#include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/RuntimeCommonStorage.h"
@@ -590,6 +591,11 @@ class HermesRuntimeImpl final : public HermesRuntime,
     return ::hermes::vm::Handle<::hermes::vm::JSArrayBuffer>::vmcast(&phv(arr));
   }
 
+  static ::hermes::vm::Handle<::hermes::vm::JSTypedArrayBase> typedArrayHandle(
+      const jsi::TypedArrayBase &arr) {
+    return ::hermes::vm::Handle<::hermes::vm::JSTypedArrayBase>::vmcast(&phv(arr));
+  }
+
   static const ::hermes::vm::WeakRef<vm::HermesValue> &wrhv(
       const jsi::Pointer &pointer) {
     assert(
@@ -712,18 +718,25 @@ class HermesRuntimeImpl final : public HermesRuntime,
       const jsi::Value &value) override;
   bool isArray(const jsi::Object &) const override;
   bool isArrayBuffer(const jsi::Object &) const override;
+  bool isTypedArray(const jsi::Object &) const override;
   bool isFunction(const jsi::Object &) const override;
   bool isHostObject(const jsi::Object &) const override;
   bool isHostFunction(const jsi::Function &) const override;
+  jsi::TypedArrayKind getTypedArrayKind(const jsi::TypedArrayBase &) const override;
   jsi::Array getPropertyNames(const jsi::Object &) override;
 
   jsi::WeakObject createWeakObject(const jsi::Object &) override;
   jsi::Value lockWeakObject(const jsi::WeakObject &) override;
 
   jsi::Array createArray(size_t length) override;
+  jsi::TypedArrayBase createTypedArray(size_t length, jsi::TypedArrayKind kind) override;
   size_t size(const jsi::Array &) override;
   size_t size(const jsi::ArrayBuffer &) override;
+  size_t size(const jsi::TypedArrayBase &) override;
+  size_t byteOffset(const jsi::TypedArrayBase &) override;
   uint8_t *data(const jsi::ArrayBuffer &) override;
+  bool hasBuffer(const jsi::TypedArrayBase &) override;
+  jsi::ArrayBuffer getBuffer(const jsi::TypedArrayBase &) override;
   jsi::Value getValueAtIndex(const jsi::Array &, size_t i) override;
   void setValueAtIndexImpl(jsi::Array &, size_t i, const jsi::Value &value)
       override;
@@ -754,8 +767,10 @@ class HermesRuntimeImpl final : public HermesRuntime,
   void checkStatus(vm::ExecutionStatus);
   vm::HermesValue stringHVFromAscii(const char *ascii, size_t length);
   vm::HermesValue stringHVFromUtf8(const uint8_t *utf8, size_t length);
-  size_t getLength(vm::Handle<vm::ArrayImpl> arr);
-  size_t getByteLength(vm::Handle<vm::JSArrayBuffer> arr);
+  size_t getLength(vm::Handle<vm::JSObject> arr);
+  size_t getByteLength(vm::Handle<vm::JSObject> arr);
+  size_t getByteOffset(vm::Handle<vm::JSTypedArrayBase> arr);
+  template <jsi::TypedArrayKind T, vm::CellKind C> jsi::TypedArrayBase createTypedArraySpec(size_t length);
 
   struct JsiProxyBase : public vm::HostObjectProxy {
     JsiProxyBase(HermesRuntimeImpl &rt, std::shared_ptr<jsi::HostObject> ho)
@@ -1652,6 +1667,10 @@ bool HermesRuntimeImpl::isArrayBuffer(const jsi::Object &obj) const {
   return vm::vmisa<vm::JSArrayBuffer>(phv(obj));
 }
 
+bool HermesRuntimeImpl::isTypedArray(const jsi::Object &obj) const {
+  return vm::vmisa<vm::JSTypedArrayBase>(phv(obj));
+}
+
 bool HermesRuntimeImpl::isFunction(const jsi::Object &obj) const {
   return vm::vmisa<vm::Callable>(phv(obj));
 }
@@ -1662,6 +1681,20 @@ bool HermesRuntimeImpl::isHostObject(const jsi::Object &obj) const {
 
 bool HermesRuntimeImpl::isHostFunction(const jsi::Function &func) const {
   return vm::vmisa<vm::FinalizableNativeFunction>(phv(func));
+}
+
+jsi::TypedArrayKind HermesRuntimeImpl::getTypedArrayKind(const jsi::TypedArrayBase &arr) const {
+  return maybeRethrow([&] {
+    auto kind = vm::vmcast<vm::JSObject>(phv(arr))->getKind();
+    switch (kind) {
+      #define TYPED_ARRAY(name, content) \
+        case vm::CellKind::name##ArrayKind: return jsi::TypedArrayKind::name##Array;
+      #include "../jsi/jsi/TypedArrays.def"
+      #undef TYPED_ARRAY
+      default:
+        llvm_unreachable("Object is not a TypedArray");
+    }
+  });
 }
 
 jsi::Array HermesRuntimeImpl::getPropertyNames(const jsi::Object &obj) {
@@ -1722,6 +1755,29 @@ jsi::Array HermesRuntimeImpl::createArray(size_t length) {
   });
 }
 
+template <jsi::TypedArrayKind T, vm::CellKind C>
+jsi::TypedArrayBase HermesRuntimeImpl::createTypedArraySpec(size_t length) {
+  using ContentType = jsi::TypedArrayBase::ContentType<T>;
+  auto result = vm::JSTypedArray<ContentType, C>::allocate(&runtime_, length);
+  checkStatus(result.getStatus());
+  return add<jsi::Object>(result->getHermesValue()).getTypedArray(*this);
+}
+
+jsi::TypedArrayBase HermesRuntimeImpl::createTypedArray(size_t length, jsi::TypedArrayKind kind) {
+  return maybeRethrow([&] {
+    vm::GCScope gcScope(&runtime_);
+    switch (kind) {
+      #define TYPED_ARRAY(name, content)                                                            \
+        case jsi::TypedArrayKind::name##Array:                                                      \
+          return createTypedArraySpec<jsi::TypedArrayKind::name##Array, vm::CellKind::name##ArrayKind>(length);
+      #include "../jsi/jsi/TypedArrays.def"
+      #undef TYPED_ARRAY
+       default:
+         llvm_unreachable("Object is not a TypedArray");
+    }
+  });
+}
+
 size_t HermesRuntimeImpl::size(const jsi::Array &arr) {
   vm::GCScope gcScope(&runtime_);
   return getLength(arrayHandle(arr));
@@ -1732,8 +1788,35 @@ size_t HermesRuntimeImpl::size(const jsi::ArrayBuffer &arr) {
   return getByteLength(arrayBufferHandle(arr));
 }
 
+size_t HermesRuntimeImpl::size(const jsi::TypedArrayBase &arr) {
+  vm::GCScope gcScope(&runtime_);
+  return getLength(typedArrayHandle(arr));
+}
+
+size_t HermesRuntimeImpl::byteOffset(const jsi::TypedArrayBase &arr) {
+  vm::GCScope gcScope(&runtime_);
+  return getByteOffset(typedArrayHandle(arr));
+}
+
 uint8_t *HermesRuntimeImpl::data(const jsi::ArrayBuffer &arr) {
   return vm::vmcast<vm::JSArrayBuffer>(phv(arr))->getDataBlock();
+}
+
+bool HermesRuntimeImpl::hasBuffer(const jsi::TypedArrayBase &arr) {
+  vm::GCScope gcScope(&runtime_);
+  auto arrayBuffer = vm::vmcast<vm::JSTypedArrayBase>(phv(arr))->getBuffer(&runtime_);
+  return arrayBuffer != nullptr;
+}
+
+jsi::ArrayBuffer HermesRuntimeImpl::getBuffer(const jsi::TypedArrayBase &arr) {
+  vm::GCScope gcScope(&runtime_);
+  auto arrayBuffer = vm::vmcast<vm::JSTypedArrayBase>(phv(arr))->getBuffer(&runtime_);
+  if (arrayBuffer == nullptr) {
+    throw makeJSError(*this, "there is no ArrayBuffer attached to this TypedArray");
+  }
+  return valueFromHermesValue(runtime_.makeHandle<vm::JSArrayBuffer>(arrayBuffer).getHermesValue())
+      .getObject(*this)
+      .getArrayBuffer(*this);
 }
 
 jsi::Value HermesRuntimeImpl::getValueAtIndex(const jsi::Array &arr, size_t i) {
@@ -2027,7 +2110,7 @@ vm::HermesValue HermesRuntimeImpl::stringHVFromUtf8(
   return *strRes;
 }
 
-size_t HermesRuntimeImpl::getLength(vm::Handle<vm::ArrayImpl> arr) {
+size_t HermesRuntimeImpl::getLength(vm::Handle<vm::JSObject> arr) {
   return maybeRethrow([&] {
     auto res = vm::JSObject::getNamed_RJS(
         arr, &runtime_, vm::Predefined::getSymbolID(vm::Predefined::length));
@@ -2039,7 +2122,7 @@ size_t HermesRuntimeImpl::getLength(vm::Handle<vm::ArrayImpl> arr) {
   });
 }
 
-size_t HermesRuntimeImpl::getByteLength(vm::Handle<vm::JSArrayBuffer> arr) {
+size_t HermesRuntimeImpl::getByteLength(vm::Handle<vm::JSObject> arr) {
   return maybeRethrow([&] {
     auto res = vm::JSObject::getNamed_RJS(
         arr,
@@ -2049,6 +2132,21 @@ size_t HermesRuntimeImpl::getByteLength(vm::Handle<vm::JSArrayBuffer> arr) {
     if (!res->isNumber()) {
       throw jsi::JSError(
           *this, "getLength: property 'byteLength' is not a number");
+    }
+    return static_cast<size_t>(res->getDouble());
+  });
+}
+
+size_t HermesRuntimeImpl::getByteOffset(vm::Handle<vm::JSTypedArrayBase> arr) {
+  return maybeRethrow([&] {
+    auto res = vm::JSObject::getNamed_RJS(
+        arr,
+        &runtime_,
+        vm::Predefined::getSymbolID(vm::Predefined::byteOffset));
+    checkStatus(res.getStatus());
+    if (!res->isNumber()) {
+      throw jsi::JSError(
+          *this, "getLength: property 'byteOffset' is not a number");
     }
     return static_cast<size_t>(res->getDouble());
   });

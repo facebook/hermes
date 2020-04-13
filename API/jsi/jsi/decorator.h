@@ -240,6 +240,9 @@ class RuntimeDecorator : public Base, private jsi::Instrumentation {
   bool isArrayBuffer(const Object& o) const override {
     return plain_.isArrayBuffer(o);
   };
+  bool isTypedArray(const Object& o) const override {
+    return plain_.isTypedArray(o);
+  };
   bool isFunction(const Object& o) const override {
     return plain_.isFunction(o);
   };
@@ -249,6 +252,9 @@ class RuntimeDecorator : public Base, private jsi::Instrumentation {
   bool isHostFunction(const jsi::Function& f) const override {
     return plain_.isHostFunction(f);
   };
+  TypedArrayKind getTypedArrayKind(const TypedArrayBase& a) const override {
+    return plain_.getTypedArrayKind(a);
+  }
   Array getPropertyNames(const Object& o) override {
     return plain_.getPropertyNames(o);
   };
@@ -263,15 +269,30 @@ class RuntimeDecorator : public Base, private jsi::Instrumentation {
   Array createArray(size_t length) override {
     return plain_.createArray(length);
   };
+  TypedArrayBase createTypedArray(size_t length, TypedArrayKind kind) override {
+    return plain_.createTypedArray(length, kind);
+  }
   size_t size(const Array& a) override {
     return plain_.size(a);
   };
   size_t size(const ArrayBuffer& ab) override {
     return plain_.size(ab);
   };
+  size_t size(const TypedArrayBase& ta) override {
+    return plain_.size(ta);
+  }
+  size_t byteOffset(const TypedArrayBase& ta) override {
+    return plain_.byteOffset(ta);
+  }
   uint8_t* data(const ArrayBuffer& ab) override {
     return plain_.data(ab);
   };
+  bool hasBuffer(const TypedArrayBase& ta) override {
+    return plain_.hasBuffer(ta);
+  }
+  ArrayBuffer getBuffer(const TypedArrayBase& ta) override {
+    return plain_.getBuffer(ta);
+  }
   Value getValueAtIndex(const Array& a, size_t i) override {
     return plain_.getValueAtIndex(a, i);
   };
@@ -612,6 +633,10 @@ class WithRuntimeDecorator : public RuntimeDecorator<Plain, Base> {
     Around around{with_};
     return RD::isArrayBuffer(o);
   };
+  bool isTypedArray(const Object& o) const override {
+    Around around{with_};
+    return RD::isTypedArray(o);
+  };
   bool isFunction(const Object& o) const override {
     Around around{with_};
     return RD::isFunction(o);
@@ -624,6 +649,10 @@ class WithRuntimeDecorator : public RuntimeDecorator<Plain, Base> {
     Around around{with_};
     return RD::isHostFunction(f);
   };
+  TypedArrayKind getTypedArrayKind(const TypedArrayBase& a) const override {
+    Around around{with_};
+    return RD::getTypedArrayKind(a);
+  }
   Array getPropertyNames(const Object& o) override {
     Around around{with_};
     return RD::getPropertyNames(o);
@@ -642,6 +671,10 @@ class WithRuntimeDecorator : public RuntimeDecorator<Plain, Base> {
     Around around{with_};
     return RD::createArray(length);
   };
+  TypedArrayBase createTypedArray(size_t length, TypedArrayKind kind) override {
+    Around around{with_};
+    return RD::createTypedArray(length, kind);
+  }
   size_t size(const Array& a) override {
     Around around{with_};
     return RD::size(a);
@@ -650,10 +683,26 @@ class WithRuntimeDecorator : public RuntimeDecorator<Plain, Base> {
     Around around{with_};
     return RD::size(ab);
   };
+  size_t size(const TypedArrayBase& ta) override {
+    Around around{with_};
+    return RD::size(ta);
+  };
+  size_t byteOffset(const TypedArrayBase& ta) override {
+    Around around{with_};
+    return RD::byteOffset(ta);
+  };
   uint8_t* data(const ArrayBuffer& ab) override {
     Around around{with_};
     return RD::data(ab);
   };
+  bool hasBuffer(const TypedArrayBase& ta) override {
+    Around around{with_};
+    return RD::hasBuffer(ta);
+  }
+  ArrayBuffer getBuffer(const TypedArrayBase& ta) override {
+    Around around{with_};
+    return RD::getBuffer(ta);
+  }
   Value getValueAtIndex(const Array& a, size_t i) override {
     Around around{with_};
     return RD::getValueAtIndex(a, i);

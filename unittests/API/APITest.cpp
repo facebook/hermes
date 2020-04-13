@@ -86,7 +86,7 @@ TEST_F(HermesRuntimeTest, DescriptionTest) {
 
 TEST_F(HermesRuntimeTest, ArrayBufferTest) {
   eval(
-      "var buffer = new ArrayBuffer(16);\
+      "var buffer = new ArrayBuffer(8);\
         var int32View = new Int32Array(buffer);\
         int32View[0] = 1234;\
         int32View[1] = 5678;");
@@ -95,11 +95,65 @@ TEST_F(HermesRuntimeTest, ArrayBufferTest) {
   EXPECT_TRUE(object.isArrayBuffer(*rt));
 
   auto arrayBuffer = object.getArrayBuffer(*rt);
-  EXPECT_EQ(arrayBuffer.size(*rt), 16);
+  EXPECT_EQ(arrayBuffer.size(*rt), 8);
 
   int32_t *buffer = reinterpret_cast<int32_t *>(arrayBuffer.data(*rt));
   EXPECT_EQ(buffer[0], 1234);
   EXPECT_EQ(buffer[1], 5678);
+}
+
+TEST_F(HermesRuntimeTest, TypedArrayTest) {
+  eval(
+      "var int32View = new Int32Array(2);\
+        int32View[0] = 1234;\
+        int32View[1] = 5678;");
+
+  Object object = rt->global().getPropertyAsObject(*rt, "int32View");
+  EXPECT_TRUE(object.isTypedArray(*rt));
+
+  auto typedArray = object.getTypedArray(*rt);
+  EXPECT_EQ(typedArray.getKind(*rt), TypedArrayKind::Int32Array);
+
+  auto int32Array = typedArray.get<TypedArrayKind::Int32Array>(*rt);
+  EXPECT_EQ(int32Array.size(*rt), 2);
+  EXPECT_EQ(int32Array.getBuffer(*rt).size(*rt), 8);
+
+  auto data = int32Array.toVector(*rt);
+  EXPECT_EQ(data[0], 1234);
+  EXPECT_EQ(data[1], 5678);
+}
+
+TEST_F(HermesRuntimeTest, TypedArrayOffsetTest) {
+  eval(
+      "var buffer = new ArrayBuffer(12);\
+        var int32View = new Int32Array(buffer, 4);\
+        int32View[0] = 1234;\
+        int32View[1] = 5678;");
+
+  Object object = rt->global().getPropertyAsObject(*rt, "int32View");
+  EXPECT_TRUE(object.isTypedArray(*rt));
+
+  auto typedArray = object.getTypedArray(*rt);
+  EXPECT_EQ(typedArray.getKind(*rt), TypedArrayKind::Int32Array);
+
+  auto int32Array = typedArray.get<TypedArrayKind::Int32Array>(*rt);
+  EXPECT_EQ(int32Array.byteOffset(*rt), 4);
+  EXPECT_EQ(int32Array.size(*rt), 2);
+  EXPECT_EQ(int32Array.getBuffer(*rt).size(*rt), 12);
+
+  auto data = int32Array.toVector(*rt);
+  EXPECT_EQ(data[0], 1234);
+  EXPECT_EQ(data[1], 5678);
+}
+
+TEST_F(HermesRuntimeTest, CreateTypedArrayTest) {
+  auto float32Array = TypedArray<TypedArrayKind::Float32Array>(*rt, { 1234, 5678 });
+  auto data = float32Array.toVector(*rt);
+
+  EXPECT_EQ(data[0], 1234);
+  EXPECT_EQ(data[1], 5678);
+  EXPECT_EQ(float32Array.getBuffer(*rt).size(*rt), 8);
+  EXPECT_EQ(float32Array.byteOffset(*rt), 0);
 }
 
 TEST_F(HermesRuntimeTest, BytecodeTest) {
