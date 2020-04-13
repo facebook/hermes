@@ -398,12 +398,7 @@ inline CodeBlock *createCodeBlock(
           0));
   runtimeModule->initializeWithoutCJSModulesMayAllocate(
       hbc::BCProviderFromSrc::createBCProviderFromSrc(std::move(BM)));
-
-  return CodeBlock::createCodeBlock(
-      runtimeModule,
-      runtimeModule->getBytecode()->getFunctionHeader(0),
-      runtimeModule->getBytecode()->getBytecode(0),
-      0);
+  return runtimeModule->getCodeBlockMayAllocate(0);
 }
 
 } // namespace vm
