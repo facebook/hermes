@@ -83,6 +83,9 @@ class HermesRuntime : public jsi::Runtime {
   /// upper 32bit and function virtual offset in lower 32bit.
   static std::vector<int64_t> getExecutedFunctions();
 
+  /// \return whether code coverage profiler is enabled or not.
+  static bool isCodeCoverageProfilerEnabled();
+
   /// Enable code coverage profiler.
   static void enableCodeCoverageProfiler();
 

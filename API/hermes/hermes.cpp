@@ -1081,6 +1081,10 @@ void HermesRuntime::dumpSampledTraceToFile(const std::string &fileName) {
   return res;
 }
 
+/*static*/ bool HermesRuntime::isCodeCoverageProfilerEnabled() {
+  return ::hermes::vm::CodeCoverageProfiler::getInstance()->isEnabled();
+}
+
 /*static*/ void HermesRuntime::enableCodeCoverageProfiler() {
   ::hermes::vm::CodeCoverageProfiler::getInstance()->enable();
 }
