@@ -27,6 +27,9 @@ workflows:
             - linux
             - macos
             - windows
+          matrix:
+            parameters:
+              ubuntu-version: ["latest", "rolling"]
       - test-linux
       - test-macos
       - test-e2e:
@@ -355,7 +358,7 @@ jobs:
 
   npm:
     docker:
-      - image: ubuntu:19.10
+      - image: ubuntu:<< ubuntu-version >>
     environment:
       - YARN: yarnpkg
       - TERM: dumb
@@ -365,13 +368,6 @@ jobs:
           command: |
             apt-get update
             apt-get install -y ca-certificates
-
-      - run:
-          name: Temporarily work around CircleCI workspace attachment bug
-          command: |
-            # As of 2019-09-10, CircleCI fails to attach Windows workspaces without this hack
-            cp /usr/bin/tar /usr/bin/tar.real
-            printf '%s\n' '#!/bin/sh' 'exec tar.real --no-same-owner "$@"' > /usr/bin/tar
 
       - attach_workspace:
           at: /tmp/hermes/input
