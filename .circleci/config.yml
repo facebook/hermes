@@ -358,7 +358,7 @@ jobs:
 
   npm:
     docker:
-      - image: ubuntu:<< ubuntu-version >>
+      - image: ubuntu:<< matrix.ubuntu-version >>
     environment:
       - YARN: yarnpkg
       - TERM: dumb
