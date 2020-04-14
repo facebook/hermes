@@ -133,11 +133,11 @@ class CLFlag {
   }
 };
 
-static cl::OptionCategory CompilerCategory(
+static OptionCategory CompilerCategory(
     "Compiler Options",
     "These options change how JS is compiled.");
 
-static list<std::string> InputFilenames(desc("input file"), Positional);
+list<std::string> InputFilenames(desc("<file1> <file2>..."), Positional);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
 static opt<bool> PrintStats("print-stats", desc("Print statistics"));
