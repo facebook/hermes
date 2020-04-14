@@ -427,7 +427,7 @@ struct BytecodeFileFields {
   Array<hbc::OverflowStringTableEntry> stringTableOverflowEntries{};
 
   /// The character buffer used for string storage.
-  Array<char> stringStorage;
+  Array<uint8_t> stringStorage;
 
   /// Buffer for array literals.
   Array<uint8_t> arrayBuffer;

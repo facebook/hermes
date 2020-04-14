@@ -57,7 +57,7 @@ SymbolID RuntimeModule::createSymbolFromStringIDMayAllocate(
     return mapStringMayAllocate(str, stringID, hash);
   } else {
     // ASCII.
-    const char *s = strStorage.begin() + entry.getOffset();
+    const char *s = (const char *)strStorage.begin() + entry.getOffset();
     ASCIIRef str{s, entry.getLength()};
     uint32_t hash = mhash ? *mhash : hashString(str);
     return mapStringMayAllocate(str, stringID, hash);
@@ -327,7 +327,7 @@ std::string RuntimeModule::getStringFromStringID(StringID stringID) {
     return out;
   } else {
     // ASCII.
-    const char *s = strStorage.begin() + entry.getOffset();
+    const char *s = (const char *)strStorage.begin() + entry.getOffset();
     return std::string{s, entry.getLength()};
   }
 }

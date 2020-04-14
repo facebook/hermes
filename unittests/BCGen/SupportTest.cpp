@@ -92,7 +92,7 @@ TEST(StringStorageTest, PackingStringStorageTest) {
   std::vector<llvm::StringRef> strings{"phab", "alphabet", "soup", "ou"};
   hbc::ConsecutiveStringStorage storage(strings);
   const auto data = storage.acquireStringStorage();
-  llvm::StringRef dataAsStr(data.data(), data.size());
+  llvm::StringRef dataAsStr((const char *)data.data(), data.size());
   EXPECT_EQ(dataAsStr.str(), "phabalphabetsoupou");
 }
 
@@ -111,7 +111,7 @@ static void test1OptimizingStringStorage(
   hbc::ConsecutiveStringStorage storage(strings, true /* optimize */);
   auto index = storage.acquireStringTable();
   auto data = storage.acquireStringStorage();
-  llvm::StringRef dataAsString(data.data(), data.size());
+  llvm::StringRef dataAsString((const char *)data.data(), data.size());
   size_t idx = 0;
   for (const auto &p : index) {
     uint32_t offset = p.getOffset();
@@ -612,7 +612,7 @@ TEST(StringStorageTest, DeltaOptimizingModeTest) {
       "ecoc",        "octpeseta",  "nationachime", "ationremass"};
 
   auto baseTable = tableForStrings(baseStrings);
-  std::vector<char> baseBuffer = baseTable.acquireStringStorage();
+  std::vector<unsigned char> baseBuffer = baseTable.acquireStringStorage();
   std::vector<StringTableEntry> baseEntries = baseTable.acquireStringTable();
 
   // Create a new table starting with the base storage.
@@ -626,7 +626,7 @@ TEST(StringStorageTest, DeltaOptimizingModeTest) {
 
   hbc::UniquingStringLiteralAccumulator baseAccumulator{
       hbc::ConsecutiveStringStorage{std::vector<StringTableEntry>{baseEntries},
-                                    std::vector<char>{baseBuffer}},
+                                    std::vector<unsigned char>{baseBuffer}},
       std::vector<bool>(baseEntries.size(), false)};
 
   auto newTable = tableForStrings(newStrings, std::move(baseAccumulator));

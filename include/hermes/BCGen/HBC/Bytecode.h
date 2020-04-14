@@ -195,8 +195,8 @@ class BytecodeModule {
   /// each string in the string storage.
   std::vector<StringTableEntry> stringTable_;
 
-  /// The global string storage. A sequence of chars.
-  std::vector<char> stringStorage_;
+  /// The global string storage. A sequence of bytes.
+  std::vector<unsigned char> stringStorage_;
 
   /// The regexp bytecode buffer.
   std::vector<unsigned char> regExpStorage_;
@@ -253,7 +253,7 @@ class BytecodeModule {
       std::vector<StringKind::Entry> &&stringKinds,
       std::vector<uint32_t> &&identifierTranslations,
       std::vector<StringTableEntry> &&stringTable,
-      std::vector<char> &&stringStorage,
+      std::vector<unsigned char> &&stringStorage,
       std::vector<RegExpTableEntry> &&regExpTable,
       std::vector<unsigned char> &&regExpStorage,
       uint32_t globalFunctionIndex,

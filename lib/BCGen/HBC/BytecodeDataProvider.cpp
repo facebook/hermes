@@ -223,7 +223,7 @@ bool BytecodeFileFields<Mutable>::populateFromBuffer(
 
     void visitStringStorage() {
       align(buf);
-      f.stringStorage = castArrayRef<char>(buf, h->stringStorageSize, end);
+      f.stringStorage = castArrayRef<unsigned char>(buf, h->stringStorageSize, end);
     }
     void visitArrayBuffer() {
       align(buf);
@@ -577,7 +577,7 @@ void BCProviderFromBuffer::createDebugInfo() {
   auto filenameTable =
       castArrayRef<StringTableEntry>(buf, header->filenameCount, end_);
   auto filenameStorage =
-      castArrayRef<char>(buf, header->filenameStorageSize, end_);
+      castArrayRef<unsigned char>(buf, header->filenameStorageSize, end_);
 
   hbc::DebugInfo::DebugFileRegionList files;
   for (unsigned i = 0; i < header->fileRegionCount; i++) {

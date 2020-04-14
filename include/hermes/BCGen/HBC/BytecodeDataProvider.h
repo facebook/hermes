@@ -117,7 +117,7 @@ class BCProviderBase {
   uint32_t stringCount_{};
   llvm::ArrayRef<StringKind::Entry> stringKinds_{};
   llvm::ArrayRef<uint32_t> identifierTranslations_{};
-  llvm::ArrayRef<char> stringStorage_{};
+  llvm::ArrayRef<unsigned char> stringStorage_{};
 
   llvm::ArrayRef<unsigned char> arrayBuffer_{};
   llvm::ArrayRef<unsigned char> objKeyBuffer_{};
@@ -169,7 +169,7 @@ class BCProviderBase {
   llvm::ArrayRef<uint32_t> getIdentifierTranslations() const {
     return identifierTranslations_;
   }
-  llvm::ArrayRef<char> getStringStorage() const {
+  llvm::ArrayRef<unsigned char> getStringStorage() const {
     return stringStorage_;
   }
   llvm::ArrayRef<unsigned char> getArrayBuffer() const {
@@ -205,7 +205,8 @@ class BCProviderBase {
   llvm::StringRef getStringRefFromID(StringID stringID) const {
     auto entry = getStringTableEntry(stringID);
     return llvm::StringRef(
-        getStringStorage().begin() + entry.getOffset(), entry.getLength());
+        (const char *)getStringStorage().begin() + entry.getOffset(),
+        entry.getLength());
   }
 
   /// Get the global debug info, lazily create it.
