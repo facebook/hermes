@@ -27,9 +27,6 @@ workflows:
             - linux
             - macos
             - windows
-          matrix:
-            parameters:
-              ubuntu-version: ["latest", "rolling"]
       - test-linux
       - test-macos
       - test-e2e:
@@ -357,11 +354,8 @@ jobs:
             - .
 
   npm:
-    parameters:
-      ubuntu-version:
-        type: string
     docker:
-      - image: ubuntu:<< parameters.ubuntu-version >>
+      - image: ubuntu:rolling
     environment:
       - YARN: yarnpkg
       - TERM: dumb
