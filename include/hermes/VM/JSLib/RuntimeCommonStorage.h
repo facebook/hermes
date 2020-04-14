@@ -9,9 +9,6 @@
 #define HERMES_VM_JSLIB_RUNTIMECOMMONSTORAGE_H
 
 #include <random>
-#if __APPLE__
-#include <CoreFoundation/CoreFoundation.h>
-#endif
 #include "hermes/VM/MockedEnvironment.h"
 
 #include "llvm/ADT/Optional.h"
@@ -43,12 +40,6 @@ struct RuntimeCommonStorage {
   /// PRNG used by Math.random()
   std::minstd_rand randomEngine_;
   bool randomEngineSeeded_ = false;
-
-#if __APPLE__
-  /// \return a reference to the locale to use for collation, date formatting,
-  /// etc. The caller must CFRelease this.
-  static CFLocaleRef copyLocale();
-#endif
 };
 
 } // namespace vm
