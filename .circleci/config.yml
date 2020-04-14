@@ -357,8 +357,11 @@ jobs:
             - .
 
   npm:
+    parameters:
+      ubuntu-version:
+        type: string
     docker:
-      - image: ubuntu:<< matrix.ubuntu-version >>
+      - image: ubuntu:<< parameters.ubuntu-version >>
     environment:
       - YARN: yarnpkg
       - TERM: dumb
