@@ -355,7 +355,7 @@ jobs:
 
   npm:
     docker:
-      - image: ubuntu:19.04
+      - image: ubuntu:latest
     environment:
       - YARN: yarnpkg
       - TERM: dumb
