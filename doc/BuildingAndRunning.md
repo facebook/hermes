@@ -25,7 +25,7 @@ On Mac via Homebrew:
 
 ## Building on Linux and macOS
 
-Hermes will place its build files in the current directory by default. 
+Hermes will place its build files in the current directory by default.
 You can also give explicit source and build directories, use `--help` on the build scripts to see how.
 
 Create a base directory to work in, e.g. ~/workspace, and cd into it. Follow the steps below to generate the Hermes build system:
@@ -47,7 +47,7 @@ The Windows build depends on which particular combination of GitBash/Cygwin/WSL 
 
 ## Running Hermes
 
-The primary binary is the `hermes` tool, which will be found at `build/bin/hermes`. This tool compiles JavaScript to Hermes bytecode. It can also execute JavaScript, from source or bytecode.
+The primary binary is the `hermes` tool, which will be found at `build/bin/hermes`. This tool compiles JavaScript to Hermes bytecode. It can also execute JavaScript, from source or bytecode or be used as a REPL.
 
 ### Executing JavaScript with Hermes
 
@@ -78,7 +78,6 @@ The above instructions create an unoptimized debug build. The `--distribute` fla
 In addition to `hermes`, the following tools will be built:
 
 - `hdb`: JavaScript command line debugger
-- `hermes-repl`: JavaScript interactive REPL
 - `hbcdump`: Hermes bytecode disassembler
 - `hermesc`: Standalone Hermes compiler. This can compile JavaScript to Hermes bytecode, but does not support executing it.
 - `hvm`: Standalone Hermes VM. This can execute Hermes bytecode, but does not support compiling it.

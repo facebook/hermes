@@ -147,5 +147,5 @@ when they are constructed using their respective JS constructors.
 
 ## REPL
 
-The HermesVM provides a REPL in `bin/hermes-repl`,
+The HermesVM provides a REPL in `bin/hermes`,
 which calls through to the `eval()` global function in the `Runtime`.
