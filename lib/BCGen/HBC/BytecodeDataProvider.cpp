@@ -223,7 +223,8 @@ bool BytecodeFileFields<Mutable>::populateFromBuffer(
 
     void visitStringStorage() {
       align(buf);
-      f.stringStorage = castArrayRef<unsigned char>(buf, h->stringStorageSize, end);
+      f.stringStorage =
+          castArrayRef<unsigned char>(buf, h->stringStorageSize, end);
     }
     void visitArrayBuffer() {
       align(buf);
