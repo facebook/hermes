@@ -22,6 +22,8 @@
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/Signals.h"
 
+#include "repl.h"
+
 using namespace hermes;
 
 namespace cl {
@@ -166,6 +168,26 @@ static int executeHBCBytecodeFromCL(
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
+static vm::RuntimeConfig getReplRuntimeConfig() {
+  return vm::RuntimeConfig::Builder()
+      .withGCConfig(
+          vm::GCConfig::Builder()
+              .withInitHeapSize(cl::InitHeapSize.bytes)
+              .withMaxHeapSize(cl::MaxHeapSize.bytes)
+              .withSanitizeConfig(vm::GCSanitizeConfig::Builder()
+                                      .withSanitizeRate(cl::GCSanitizeRate)
+                                      .withRandomSeed(cl::GCSanitizeRandomSeed)
+                                      .build())
+              .withShouldRecordStats(cl::GCPrintStats)
+              .build())
+      .withES6Proxy(cl::ES6Proxy)
+      .withES6Symbol(cl::ES6Symbol)
+      .withEnableHermesInternal(true)
+      .withEnableHermesInternalTestMethods(true)
+      .withAllowFunctionToStringWithRuntimeSource(cl::AllowFunctionToString)
+      .build();
+}
+
 int main(int argc, char **argv) {
   // Normalize the arg vector.
   llvm::InitLLVM initLLVM(argc, argv);
@@ -179,9 +201,7 @@ int main(int argc, char **argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv, "Hermes driver\n");
 
   if (cl::InputFilenames.size() == 0) {
-    llvm::errs()
-        << "Please provide a filename or '-' to take input from stdin\n";
-    return 0;
+    return repl(getReplRuntimeConfig());
   }
 
   // Tell compiler to emit async break check if time-limit feature is enabled
