@@ -657,6 +657,14 @@ void ExternalStringPrimitive<T>::_snapshotAddNodesImpl(
 template class ExternalStringPrimitive<char16_t>;
 template class ExternalStringPrimitive<char>;
 
+template CallResult<HermesValue> ExternalStringPrimitive<char>::create<
+    std::basic_string<char>>(Runtime *runtime, std::basic_string<char> &&str);
+
+template CallResult<HermesValue>
+ExternalStringPrimitive<char16_t>::create<std::basic_string<char16_t>>(
+    Runtime *runtime,
+    std::basic_string<char16_t> &&str);
+
 //===----------------------------------------------------------------------===//
 // BufferedStringPrimitive<T>
 
