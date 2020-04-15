@@ -178,6 +178,12 @@ int main(int argc, char **argv) {
   llvm::cl::AddExtraVersionPrinter(driver::printHermesCompilerVMVersion);
   llvm::cl::ParseCommandLineOptions(argc, argv, "Hermes driver\n");
 
+  if (cl::InputFilenames.size() == 0) {
+    llvm::errs()
+        << "Please provide a filename or '-' to take input from stdin\n";
+    return 0;
+  }
+
   // Tell compiler to emit async break check if time-limit feature is enabled
   // so that user can turn on this feature with single ExecutionTimeLimit
   // option.
