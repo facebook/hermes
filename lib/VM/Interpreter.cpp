@@ -3589,8 +3589,10 @@ tailCall:
           // directly here in the interpreter.
           // Thus, the result state should be the same as the input state.
           InterpreterState tmpState{curCodeBlock, (uint32_t)CUROFFSET};
-          ExecutionStatus resultStatus = runtime->debugger_.runDebugger(
-              Debugger::RunReason::Exception, tmpState);
+          CAPTURE_IP_ASSIGN(
+              ExecutionStatus resultStatus,
+              runtime->debugger_.runDebugger(
+                  Debugger::RunReason::Exception, tmpState));
           (void)resultStatus;
           assert(
               tmpState == InterpreterState(curCodeBlock, CUROFFSET) &&
