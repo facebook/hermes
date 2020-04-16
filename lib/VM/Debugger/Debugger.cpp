@@ -562,7 +562,9 @@ auto Debugger::getStackTrace(InterpreterState state) const -> StackTrace {
   // one comes from the paused state.
   const CodeBlock *codeBlock = state.codeBlock;
   uint32_t ipOffset = state.offset;
+  GCScopeMarkerRAII marker2{runtime_};
   for (auto cf : runtime_->getStackFrames()) {
+    marker2.flush();
     CallFrameInfo frameInfo = getCallFrameInfo(codeBlock, ipOffset);
     if (auto callableHandle = Handle<Callable>::dyn_vmcast(
             Handle<>(&cf.getCalleeClosureOrCBRef()))) {
