@@ -206,7 +206,7 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
     pf.configurable = 0;
     DEFINE_PROP(selfHandle, P::prototype, prototypeObjectHandle);
 
-    if (!vmisa<JSGeneratorFunction>(*selfHandle)) {
+    if (LLVM_LIKELY(!vmisa<JSGeneratorFunction>(*selfHandle))) {
       // Set the 'constructor' property in the prototype object.
       // This must not be set for GeneratorFunctions, because
       // prototypes must not point back to their constructors.
