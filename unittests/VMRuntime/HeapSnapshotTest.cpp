@@ -741,6 +741,37 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionLocationAndNameTest) {
 #endif
 }
 
+TEST_F(HeapSnapshotRuntimeTest, FunctionDisplayNameTest) {
+  JSONFactory::Allocator alloc;
+  JSONFactory jsonFactory{alloc};
+  hbc::CompileFlags flags;
+  // Make sure that debug info is emitted for this source file when it's
+  // compiled.
+  flags.debug = true;
+  CallResult<HermesValue> res = runtime->run(
+      R"(function foo() {}; foo.displayName = "bar"; foo;)",
+      "file:///fake.js",
+      flags);
+  ASSERT_FALSE(isException(res));
+  Handle<JSFunction> func = runtime->makeHandle(vmcast<JSFunction>(*res));
+  const auto funcID = runtime->getHeap().getObjectID(func.get());
+
+  JSONObject *root = TAKE_SNAPSHOT(runtime->getHeap(), jsonFactory);
+  ASSERT_NE(root, nullptr);
+
+  const JSONArray &nodes = *llvm::cast<JSONArray>(root->at("nodes"));
+  const JSONArray &strings = *llvm::cast<JSONArray>(root->at("strings"));
+
+  auto node = FIND_NODE_FOR_ID(funcID, nodes, strings);
+  Node expected{HeapSnapshot::NodeType::Closure,
+                // Make sure the name that is reported is "bar", not "foo".
+                "bar",
+                funcID,
+                func->getAllocatedSize(),
+                11};
+  EXPECT_EQ(node, expected);
+}
+
 #ifdef HERMES_ENABLE_DEBUGGER
 
 static std::string functionInfoToString(
