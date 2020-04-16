@@ -2280,14 +2280,12 @@ std::string JSObject::getHeuristicTypeName(GC *gc) {
   PointerBase *const base = gc->getPointerBase();
   if (auto constructorVal = tryGetNamedNoAlloc(
           this, base, Predefined::getSymbolID(Predefined::constructor))) {
-    if (constructorVal->isObject()) {
-      if (auto *constructor = dyn_vmcast<JSObject>(*constructorVal)) {
-        auto name = constructor->getNameIfExists(base);
-        // If the constructor's name doesn't exist, or it is just the object
-        // constructor, attempt to find a different name.
-        if (!name.empty() && name != "Object")
-          return name;
-      }
+    if (auto *constructor = dyn_vmcast<JSObject>(*constructorVal)) {
+      auto name = constructor->getNameIfExists(base);
+      // If the constructor's name doesn't exist, or it is just the object
+      // constructor, attempt to find a different name.
+      if (!name.empty() && name != "Object")
+        return name;
     }
   }
 
@@ -2359,10 +2357,8 @@ std::string JSObject::getHeuristicTypeName(GC *gc) {
 std::string JSObject::getNameIfExists(PointerBase *base) {
   if (auto nameVal = tryGetNamedNoAlloc(
           this, base, Predefined::getSymbolID(Predefined::name))) {
-    if (nameVal->isString()) {
-      if (auto *name = dyn_vmcast<StringPrimitive>(*nameVal)) {
-        return converter(name);
-      }
+    if (auto *name = dyn_vmcast<StringPrimitive>(*nameVal)) {
+      return converter(name);
     }
   }
   // There is no other way to access the "name" property on an object.
