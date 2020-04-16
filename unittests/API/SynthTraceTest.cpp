@@ -42,7 +42,6 @@ struct SynthTraceTest : public ::testing::Test {
             makeHermesRuntime(config),
             config,
             /* traceStream */ nullptr,
-            /* traceFilename */ "",
             /* forReplay */ true)) {}
 
   template <typename T>
@@ -766,7 +765,6 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
       makeHermesRuntime(conf),
       conf,
       std::move(resultStream),
-      /* traceFilename */ "",
       /* forReplay */ true));
 
   SynthTrace::ObjectID objID;

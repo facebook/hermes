@@ -414,20 +414,26 @@ TracingHermesRuntime::TracingHermesRuntime(
     std::unique_ptr<HermesRuntime> runtime,
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
     std::unique_ptr<llvm::raw_ostream> traceStream,
-    const std::string &traceFilename)
+    std::function<std::string()> commitAction,
+    std::function<void()> rollbackAction)
     : TracingHermesRuntime(
           runtime,
           runtime->getUniqueID(runtime->global()),
           runtimeConfig,
           std::move(traceStream),
-          traceFilename) {}
+          std::move(commitAction),
+          std::move(rollbackAction)) {}
 
 TracingHermesRuntime::~TracingHermesRuntime() {
   if (crashCallbackKey_) {
     conf_.getCrashMgr()->unregisterCallback(*crashCallbackKey_);
   }
-  // Make sure the trace is flushed.
-  flushAndDisableTrace();
+  if (flushedAndDisabled_) {
+    // If the trace is not flushed and disabled, flush the trace and
+    // run rollback action (e.g. delete the in-progress trace)
+    flushAndDisableTrace();
+    rollbackAction_();
+  }
 }
 
 TracingHermesRuntime::TracingHermesRuntime(
@@ -435,14 +441,16 @@ TracingHermesRuntime::TracingHermesRuntime(
     uint64_t globalID,
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
     std::unique_ptr<llvm::raw_ostream> traceStream,
-    const std::string &traceFilename)
+    std::function<std::string()> commitAction,
+    std::function<void()> rollbackAction)
     : TracingRuntime(
           std::move(runtime),
           globalID,
           runtimeConfig,
           std::move(traceStream)),
       conf_(runtimeConfig),
-      traceFilename_(traceFilename),
+      commitAction_(std::move(commitAction)),
+      rollbackAction_(std::move(rollbackAction)),
       crashCallbackKey_(
           conf_.getCrashMgr()
               ? llvm::Optional<::hermes::vm::CrashManager::CallbackKey>(
@@ -455,8 +463,13 @@ void TracingHermesRuntime::flushAndDisableTrace() {
 }
 
 std::string TracingHermesRuntime::flushAndDisableBridgeTrafficTrace() {
+  if (flushedAndDisabled_) {
+    return committedTraceFilename_;
+  }
   trace().flushAndDisable(hermesRuntime().getMockedEnvironment());
-  return traceFilename_;
+  flushedAndDisabled_ = true;
+  committedTraceFilename_ = commitAction_();
+  return committedTraceFilename_;
 }
 
 jsi::Value TracingHermesRuntime::evaluateJavaScript(
@@ -466,20 +479,28 @@ jsi::Value TracingHermesRuntime::evaluateJavaScript(
 }
 
 void TracingHermesRuntime::crashCallback(int fd) {
+  if (flushedAndDisabled_) {
+    // The trace is disabled prior to the crash.
+    // As a result, this trace will likely not re-produce the crash.
+    return;
+  }
   llvm::raw_fd_ostream jsonStream(fd, false);
   ::hermes::JSONEmitter json(jsonStream);
   json.openDict();
   json.emitKeyValue("type", "tracing");
-  json.emitKeyValue("fileName", traceFilename_);
+  std::string status = "Failed to flush";
   try {
     flushAndDisableBridgeTrafficTrace();
-    json.emitKeyValue("completed", true);
-    json.closeDict();
+    status = "Completed";
+  } catch (std::exception &ex) {
+    ::hermes::hermesLog("Hermes", "Failed to flush trace: %s", ex.what());
+    // suppress; we're in a crash handler
   } catch (...) {
-    json.emitKeyValue("completed", false);
-    json.closeDict();
-    throw;
+    // suppress; we're in a crash handler
   }
+  json.emitKeyValue("status", status);
+  json.emitKeyValue("fileName", committedTraceFilename_);
+  json.closeDict();
 }
 
 namespace {
@@ -516,24 +537,98 @@ void addRecordMarker(TracingRuntime &tracingRuntime) {
 
 } // namespace
 
-std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
+static std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntimeImpl(
     std::unique_ptr<HermesRuntime> hermesRuntime,
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
     std::unique_ptr<llvm::raw_ostream> traceStream,
-    const std::string &traceFilename,
+    std::function<std::string()> commitAction,
+    std::function<void()> rollbackAction,
     bool forReplay) {
   ::hermes::hermesLog("Hermes", "Creating TracingHermesRuntime.");
+
   auto ret = std::make_unique<TracingHermesRuntime>(
       std::move(hermesRuntime),
       runtimeConfig,
       std::move(traceStream),
-      traceFilename);
+      commitAction,
+      rollbackAction);
   // In non-replay executions, add the __nativeRecordTraceMarker function.
   // In replay executions, this will be simulated from the trace.
   if (!forReplay) {
     addRecordMarker(*ret);
   }
   return ret;
+}
+
+std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
+    std::unique_ptr<HermesRuntime> hermesRuntime,
+    const ::hermes::vm::RuntimeConfig &runtimeConfig,
+    const std::string &traceScratchPath,
+    const std::string &traceResultPath,
+    std::function<bool()> traceCompletionCallback) {
+  std::error_code ec;
+  std::unique_ptr<llvm::raw_ostream> traceStream =
+      std::make_unique<llvm::raw_fd_ostream>(
+          traceScratchPath, ec, llvm::sys::fs::F_Text);
+  if (ec) {
+    ::hermes::hermesLog(
+        "Hermes",
+        "Failed to open file %s for tracing: %s",
+        traceScratchPath.c_str(),
+        ec.message().c_str());
+    return makeTracingHermesRuntime(
+        std::move(hermesRuntime), runtimeConfig, nullptr, "");
+  }
+
+  return makeTracingHermesRuntimeImpl(
+      std::move(hermesRuntime),
+      runtimeConfig,
+      std::move(traceStream),
+      [traceCompletionCallback, traceScratchPath, traceResultPath]() {
+        if (traceScratchPath != traceResultPath) {
+          std::error_code ec =
+              llvm::sys::fs::rename(traceScratchPath, traceResultPath);
+          if (ec) {
+            ::hermes::hermesLog(
+                "Hermes",
+                "Failed to rename tracing file from %s to %s: %s",
+                traceScratchPath.c_str(),
+                traceResultPath.c_str(),
+                ec.message().c_str());
+            return std::string();
+          }
+        }
+        bool success = traceCompletionCallback();
+        if (!success) {
+          ::hermes::hermesLog(
+              "Hermes",
+              "Failed to invoke completion callback for tracing file %s",
+              traceResultPath.c_str());
+          return std::string();
+        }
+        ::hermes::hermesLog(
+            "Hermes", "Completed tracing file at %s", traceResultPath.c_str());
+        return traceResultPath;
+      },
+      [traceScratchPath]() {
+        // Delete the in-progress trace
+        llvm::sys::fs::remove(traceScratchPath);
+      },
+      false);
+}
+
+std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
+    std::unique_ptr<HermesRuntime> hermesRuntime,
+    const ::hermes::vm::RuntimeConfig &runtimeConfig,
+    std::unique_ptr<llvm::raw_ostream> traceStream,
+    bool forReplay) {
+  return makeTracingHermesRuntimeImpl(
+      std::move(hermesRuntime),
+      runtimeConfig,
+      std::move(traceStream),
+      []() { return std::string(); },
+      []() {},
+      forReplay);
 }
 
 } // namespace tracing
