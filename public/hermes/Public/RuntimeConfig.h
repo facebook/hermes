@@ -59,8 +59,21 @@ class Deserializer;
   /* Support for ES6 Symbol. */                                                \
   F(constexpr, bool, ES6Symbol, true)                                          \
                                                                                \
-  /* Trace non-deterministic JS behavior */                                    \
-  F(constexpr, bool, TraceEnvironmentInteractions, false)                      \
+  /* Enable synth trace. */                                                    \
+  F(constexpr, bool, TraceEnabled, false)                                      \
+                                                                               \
+  /* Scratch path for synth trace. */                                          \
+  F(HERMES_NON_CONSTEXPR, std::string, TraceScratchPath, "")                   \
+                                                                               \
+  /* Result path for synth trace. */                                           \
+  F(HERMES_NON_CONSTEXPR, std::string, TraceResultPath, "")                    \
+                                                                               \
+  /* Callout to register an interesting (e.g. lead to crash) */                \
+  /* and completed trace. */                                                   \
+  F(HERMES_NON_CONSTEXPR,                                                      \
+    std::function<bool()>,                                                     \
+    TraceRegisterCallback,                                                     \
+    nullptr)                                                                   \
                                                                                \
   /* Enable sampling certain statistics. */                                    \
   F(constexpr, bool, EnableSampledStats, false)                                \

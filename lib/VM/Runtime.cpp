@@ -162,8 +162,8 @@ Runtime::Runtime(
       trackIO_(runtimeConfig.getTrackIO()),
       vmExperimentFlags_(runtimeConfig.getVMExperimentFlags()),
       runtimeStats_(runtimeConfig.getEnableSampledStats()),
-      commonStorage_(createRuntimeCommonStorage(
-          runtimeConfig.getTraceEnvironmentInteractions())),
+      commonStorage_(
+          createRuntimeCommonStorage(runtimeConfig.getTraceEnabled())),
       stackPointer_(),
       crashMgr_(runtimeConfig.getCrashMgr()),
       crashCallbackKey_(

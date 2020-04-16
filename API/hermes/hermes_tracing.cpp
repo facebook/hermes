@@ -24,7 +24,7 @@ std::unique_ptr<jsi::Runtime> makeTracingHermesRuntime(
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
     std::unique_ptr<llvm::raw_ostream> traceStream,
     const std::string &traceFilename) {
-  if (runtimeConfig.getTraceEnvironmentInteractions()) {
+  if (runtimeConfig.getTraceEnabled()) {
 #ifdef HERMESVM_API_TRACE
     return tracing::makeTracingHermesRuntime(
         std::move(hermesRuntime),
@@ -44,7 +44,7 @@ std::unique_ptr<jsi::Runtime> makeTracingHermesRuntime(
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
     int traceFileDescriptor,
     const std::string &traceFilename) {
-  if (runtimeConfig.getTraceEnvironmentInteractions()) {
+  if (runtimeConfig.getTraceEnabled()) {
 #ifdef HERMESVM_API_TRACE
     std::unique_ptr<llvm::raw_ostream> traceStream;
     if (traceFileDescriptor != -1) {

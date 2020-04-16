@@ -30,9 +30,7 @@ namespace {
 
 struct SynthTraceTest : public ::testing::Test {
   ::hermes::vm::RuntimeConfig config =
-      ::hermes::vm::RuntimeConfig::Builder()
-          .withTraceEnvironmentInteractions(true)
-          .build();
+      ::hermes::vm::RuntimeConfig::Builder().withTraceEnabled(true).build();
   std::unique_ptr<TracingHermesRuntime> rt;
   SynthTrace::TimeSinceStart dummyTime{SynthTrace::TimeSinceStart::zero()};
 
@@ -822,9 +820,7 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
 
 TEST_F(SynthTraceSerializationTest, FullTraceWithDateAndMath) {
   const ::hermes::vm::RuntimeConfig conf =
-      ::hermes::vm::RuntimeConfig::Builder()
-          .withTraceEnvironmentInteractions(true)
-          .build();
+      ::hermes::vm::RuntimeConfig::Builder().withTraceEnabled(true).build();
   std::string result;
   auto resultStream = ::hermes::make_unique<llvm::raw_string_ostream>(result);
   std::unique_ptr<TracingHermesRuntime> rt(makeTracingHermesRuntime(

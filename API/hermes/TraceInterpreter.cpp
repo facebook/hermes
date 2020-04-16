@@ -644,7 +644,7 @@ std::string TraceInterpreter::execFromMemoryBuffer(
 
   // If (and only if) an out trace is requested, turn on tracing in the VM
   // as well.
-  rtConfigBuilder.withTraceEnvironmentInteractions(traceStream != nullptr);
+  rtConfigBuilder.withTraceEnabled(traceStream != nullptr);
 
   // If aggregating multiple reps, randomize the placement of some data
   // structures in each rep, for a more robust time metric.
