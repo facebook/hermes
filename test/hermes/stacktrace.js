@@ -170,3 +170,56 @@ Object.defineProperty(func, 'name',
 runAndPrint(func)
 //CHECK-LABEL: Error: original2
 //CHECK-NEXT:    at original2 ({{.*}})
+
+function baz() {
+  throw new Error("oops");
+}
+baz.displayName = "MyComponent";
+
+try { baz(); } catch (e) { print(e.stack); }
+//CHECK-LABEL: Error: oops
+//CHECK-NEXT:     at MyComponent ({{.*}}stacktrace.js:175:18)
+
+// Empty strings should be ignored.
+function qux() {
+  throw new Error("oops");
+}
+qux.displayName = "";
+
+try { qux(); } catch (e) { print(e.stack); }
+//CHECK-LABEL: Error: oops
+//CHECK-NEXT:     at qux ({{.*}}stacktrace.js:185:18)
+
+// Non-strings should be ignored.
+function bop() {
+  throw new Error("oops");
+}
+bop.displayName = 123;
+
+try { bop(); } catch (e) { print(e.stack); }
+//CHECK-LABEL: Error: oops
+//CHECK-NEXT:     at bop ({{.*}}stacktrace.js:195:18)
+
+try {
+  Array.prototype.map = function() {
+    throw new Error("oops");
+  }
+  Array.prototype.map.displayName = "map2";
+  [].map();
+} catch (e) {
+  print(e.stack);
+}
+//CHECK-LABEL: Error: oops
+//CHECK-NEXT:     at map2 ({{.*}}stacktrace.js:205:20)
+
+let object = {
+  someMethod: function() {
+    throw new Error("oops");
+  }
+};
+
+object.someMethod.displayName = 'anotherMethod';
+
+try { object.someMethod(); } catch (e) { print(e.stack); }
+//CHECK-LABEL: Error: oops
+//CHECK-NEXT:     at anotherMethod ({{.*}}stacktrace.js:217:20)

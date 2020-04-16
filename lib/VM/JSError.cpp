@@ -291,10 +291,10 @@ ExecutionStatus JSError::setMessage(
 }
 
 /// \return a list of function names associated with the call stack \p frames.
-/// Function names are read out of the 'name' property of each Callable on the
-/// stack, except that accessors are skipped. If a Callable does not have a
-/// name, or if the name is an accessor, undefined is set. Names are returned in
-/// reverse order (topmost frame is first).
+/// Function names are first read out of 'displayName', followed by the 'name'
+/// property of each Callable on the stack. Accessors are skipped. If a
+/// Callable does not have a name, or if the name is an accessor, undefined is
+/// set. Names are returned in reverse order (topmost frame is first).
 /// In case of error returns a nullptr handle.
 /// \param skipTopFrame if true, skip the top frame.
 static Handle<PropStorage> getCallStackFunctionNames(
@@ -325,8 +325,17 @@ static Handle<PropStorage> getCallStackFunctionNames(
       JSObject *propObj = JSObject::getNamedDescriptor(
           callableHandle,
           runtime,
-          Predefined::getSymbolID(Predefined::name),
+          Predefined::getSymbolID(Predefined::displayName),
           desc);
+
+      if (!propObj) {
+        propObj = JSObject::getNamedDescriptor(
+            callableHandle,
+            runtime,
+            Predefined::getSymbolID(Predefined::name),
+            desc);
+      }
+
       if (propObj && !desc.flags.accessor && !desc.flags.proxyObject) {
         name = JSObject::getNamedSlotValue(propObj, runtime, desc);
       } else if (desc.flags.proxyObject) {
