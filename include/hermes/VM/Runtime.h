@@ -1533,10 +1533,11 @@ class NoAllocScope {
  public:
 #ifdef NDEBUG
   explicit NoAllocScope(Runtime *runtime) {}
+  explicit NoAllocScope(GC *gc) {}
   void release() {}
 #else
-  explicit NoAllocScope(Runtime *runtime)
-      : noAllocLevel_(&runtime->getHeap().noAllocLevel_) {
+  explicit NoAllocScope(Runtime *runtime) : NoAllocScope(&runtime->getHeap()) {}
+  explicit NoAllocScope(GC *gc) : noAllocLevel_(&gc->noAllocLevel_) {
     ++*noAllocLevel_;
   }
 

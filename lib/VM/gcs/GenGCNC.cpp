@@ -1574,6 +1574,9 @@ void GenGC::createSnapshot(llvm::raw_ostream &os) {
   // We'll say we're in GC even though we're not, to avoid assertion failures.
   GCCycle cycle{this};
 
+  // No allocations are allowed throughout the entire heap snapshot process.
+  NoAllocScope scope{this};
+
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormedHeap();
 #endif
