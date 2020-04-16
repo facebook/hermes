@@ -554,6 +554,8 @@ auto Debugger::getCallFrameInfo(const CodeBlock *codeBlock, uint32_t ipOffset)
 auto Debugger::getStackTrace(InterpreterState state) const -> StackTrace {
   using fhd::CallFrameInfo;
   GCScopeMarkerRAII marker{runtime_};
+  MutableHandle<> displayName{runtime_};
+  MutableHandle<JSObject> propObj{runtime_};
   std::vector<CallFrameInfo> frames;
   // Note that we are iterating backwards from the top.
   // Also note that each frame saves its caller's code block and IP. The initial
@@ -561,7 +563,26 @@ auto Debugger::getStackTrace(InterpreterState state) const -> StackTrace {
   const CodeBlock *codeBlock = state.codeBlock;
   uint32_t ipOffset = state.offset;
   for (auto cf : runtime_->getStackFrames()) {
-    frames.push_back(getCallFrameInfo(codeBlock, ipOffset));
+    CallFrameInfo frameInfo = getCallFrameInfo(codeBlock, ipOffset);
+    if (auto callableHandle = Handle<Callable>::dyn_vmcast(
+            Handle<>(&cf.getCalleeClosureOrCBRef()))) {
+      NamedPropertyDescriptor desc;
+      propObj = JSObject::getNamedDescriptor(
+          callableHandle,
+          runtime_,
+          Predefined::getSymbolID(Predefined::displayName),
+          desc);
+      if (propObj) {
+        displayName =
+            JSObject::getNamedSlotValue(propObj.get(), runtime_, desc);
+        if (displayName->isString()) {
+          llvm::SmallVector<char16_t, 64> storage;
+          displayName->getString()->copyUTF16String(storage);
+          convertUTF16ToUTF8WithReplacements(frameInfo.functionName, storage);
+        }
+      }
+    }
+    frames.push_back(frameInfo);
 
     codeBlock = cf.getSavedCodeBlock();
     const Inst *const savedIP = cf.getSavedIP();
