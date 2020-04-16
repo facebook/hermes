@@ -10,7 +10,6 @@
 #ifdef HERMESVM_API_TRACE
 #include <hermes/Support/Algorithms.h>
 #include <hermes/TracingRuntime.h>
-#include <llvm/Support/Process.h>
 #endif
 
 namespace facebook {
@@ -18,18 +17,15 @@ namespace hermes {
 
 std::unique_ptr<jsi::Runtime> makeTracingHermesRuntime(
     std::unique_ptr<HermesRuntime> hermesRuntime,
-    const ::hermes::vm::RuntimeConfig &runtimeConfig,
-    int traceFileDescriptor,
-    const std::string &traceFilename) {
+    const ::hermes::vm::RuntimeConfig &runtimeConfig) {
   if (runtimeConfig.getTraceEnabled()) {
 #ifdef HERMESVM_API_TRACE
-    llvm::sys::Process::SafelyCloseFileDescriptor(traceFileDescriptor);
     return tracing::makeTracingHermesRuntime(
         std::move(hermesRuntime),
         runtimeConfig,
-        traceFilename,
-        traceFilename,
-        []() { return true; });
+        runtimeConfig.getTraceScratchPath(),
+        runtimeConfig.getTraceResultPath(),
+        runtimeConfig.getTraceRegisterCallback());
 #endif
   }
   return hermesRuntime;
