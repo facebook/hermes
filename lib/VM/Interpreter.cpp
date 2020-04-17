@@ -2221,6 +2221,8 @@ tailCall:
         DefinePropertyFlags dpf =
             DefinePropertyFlags::getDefaultNewPropertyFlags();
         dpf.configurable = 0;
+        // Do not overwrite existing globals with undefined.
+        dpf.setValue = 0;
 
         CAPTURE_IP_ASSIGN(
             auto res,
