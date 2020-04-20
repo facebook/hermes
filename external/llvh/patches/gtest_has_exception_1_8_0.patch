@@ -1,0 +1,34 @@
+From 3498a1ac52deb83f30b8170c78bfba9dc6227198 Mon Sep 17 00:00:00 2001
+From: Peter Collingbourne <pcc@google.com>
+Date: Wed, 24 Jan 2018 17:15:18 -0800
+Subject: [PATCH] Use _CPPUNWIND instead of _HAS_EXCEPTIONS with MSVC.
+
+_HAS_EXCEPTIONS is specific to the MSVC STL and defining it to 0 causes
+problems with libc++, so libc++ users may leave it undefined. This can
+cause GTEST_HAS_EXCEPTIONS to be defined incorrectly if the user has
+disabled exceptions via the compiler, which can lead to build errors.
+
+_CPPUNWIND is a builtin macro provided by the compiler so it should
+work with both STLs.
+---
+ googletest/include/gtest/internal/gtest-port.h | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/googletest/include/gtest/internal/gtest-port.h b/googletest/include/gtest/internal/gtest-port.h
+index 01ad5dacc..1a1d9dd07 100644
+--- a/googletest/include/gtest/internal/gtest-port.h
++++ b/googletest/include/gtest/internal/gtest-port.h
+@@ -464,8 +464,11 @@ typedef struct _RTL_CRITICAL_SECTION GTEST_CRITICAL_SECTION;
+ #ifndef GTEST_HAS_EXCEPTIONS
+ // The user didn't tell us whether exceptions are enabled, so we need
+ // to figure it out.
+-# if defined(_MSC_VER) || defined(__BORLANDC__)
+-// MSVC's and C++Builder's implementations of the STL use the _HAS_EXCEPTIONS
++# if defined(_MSC_VER) && defined(_CPPUNWIND)
++// MSVC defines _CPPUNWIND to 1 iff exceptions are enabled.
++#  define GTEST_HAS_EXCEPTIONS 1
++# elif defined(__BORLANDC__)
++// C++Builder's implementation of the STL uses the _HAS_EXCEPTIONS
+ // macro to enable exceptions, so we'll do the same.
+ // Assumes that exceptions are enabled by default.
+ #  ifndef _HAS_EXCEPTIONS

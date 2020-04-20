@@ -2,6 +2,16 @@
 
 This is a copy of LLVM libraries and headers that are used by Hermes.
 
+## gtest patches
+
+There's a bug in googletest-1.8.0 when compiling on Windows, with clang,
+with exceptions disabled: `GTEST_HAS_EXCEPTIONS` isn't defined to the correct
+value.
+Pulled in this fix: https://github.com/google/googletest/commit/3498a1ac52deb83f30b8170c78bfba9dc6227198
+from googletest-1.10.0 into googletest-1.8.0.
+It only modifies `./utils/unittest/googletest/include/gtest/internal/gtest-port.h`
+
+
 ## LIT patches
 
 In order to fix some Windows python3 problems, it was necessary to pull in some
