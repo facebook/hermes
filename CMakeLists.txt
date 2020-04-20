@@ -467,8 +467,9 @@ endfunction()
 
 if (APPLE)
   find_library(CORE_FOUNDATION CoreFoundation)
-else()
-  set(CORE_FOUNDATION "")
+endif()
+if (NOT CORE_FOUNDATION)
+    set(CORE_FOUNDATION "")
 endif()
 
 if (HERMES_USE_FLOWPARSER)
