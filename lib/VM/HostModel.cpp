@@ -128,7 +128,7 @@ void HostObjectDeserialize(Deserializer &d, CellKind kind) {
 
 CallResult<HermesValue> HostObject::createWithoutPrototype(
     Runtime *runtime,
-    std::shared_ptr<HostObjectProxy> proxy) {
+    std::unique_ptr<HostObjectProxy> proxy) {
   auto parentHandle = Handle<JSObject>::vmcast(&runtime->objectPrototype);
 
   JSObjectAlloc<HostObject, HasFinalizer::Yes> mem{runtime};
@@ -138,7 +138,7 @@ CallResult<HermesValue> HostObject::createWithoutPrototype(
       runtime->getHiddenClassForPrototypeRaw(
           *parentHandle,
           numOverlapSlots<HostObject>() + ANONYMOUS_PROPERTY_SLOTS),
-      proxy);
+      std::move(proxy));
 
   hostObj->flags_.hostObject = true;
 

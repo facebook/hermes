@@ -105,7 +105,7 @@ class HostObject final : public JSObject {
   /// Create an instance of HostObject with no prototype.
   static CallResult<HermesValue> createWithoutPrototype(
       Runtime *runtime,
-      std::shared_ptr<HostObjectProxy> proxy);
+      std::unique_ptr<HostObjectProxy> proxy);
 
   CallResult<HermesValue> get(SymbolID name) {
     return proxy_->get(name);
@@ -119,7 +119,7 @@ class HostObject final : public JSObject {
     return proxy_->getHostPropertyNames();
   }
 
-  const std::shared_ptr<HostObjectProxy> &getProxy() const {
+  const std::unique_ptr<HostObjectProxy> &getProxy() const {
     return proxy_;
   }
 
@@ -128,12 +128,12 @@ class HostObject final : public JSObject {
       Runtime *runtime,
       JSObject *parent,
       HiddenClass *clazz,
-      std::shared_ptr<HostObjectProxy> proxy)
-      : JSObject(runtime, &vt.base, parent, clazz), proxy_(proxy) {}
+      std::unique_ptr<HostObjectProxy> proxy)
+      : JSObject(runtime, &vt.base, parent, clazz), proxy_(std::move(proxy)) {}
 
   static void _finalizeImpl(GCCell *cell, GC *gc);
 
-  std::shared_ptr<HostObjectProxy> proxy_;
+  std::unique_ptr<HostObjectProxy> proxy_;
 };
 
 } // namespace vm
