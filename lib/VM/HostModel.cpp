@@ -145,11 +145,5 @@ CallResult<HermesValue> HostObject::createWithoutPrototype(
   return mem.initToHermesValue(hostObj);
 }
 
-void HostObject::_finalizeImpl(GCCell *cell, GC *) {
-  auto *self = vmcast<HostObject>(cell);
-  // Destruct the object.
-  self->~HostObject();
-}
-
 } // namespace vm
 } // namespace hermes

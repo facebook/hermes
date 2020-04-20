@@ -1541,7 +1541,7 @@ jsi::Object HermesRuntimeImpl::createObject(
 std::shared_ptr<jsi::HostObject> HermesRuntimeImpl::getHostObject(
     const jsi::Object &obj) {
   const vm::HostObjectProxy *proxy =
-      vm::vmcast<vm::HostObject>(phv(obj))->getProxy().get();
+      vm::vmcast<vm::HostObject>(phv(obj))->getProxy();
   return static_cast<const JsiProxyBase *>(proxy)->ho_;
 }
 

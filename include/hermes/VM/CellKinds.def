@@ -93,6 +93,7 @@ CELL_CLASS(Function, "Function")
 // Define inheritance ranges.
 CELL_RANGE(AllCells, Uninitialized, Function)
 CELL_RANGE(Object, Object, Function)
+CELL_RANGE(DecoratedObject, DecoratedObject, HostObject)
 CELL_RANGE(ArrayImpl, Arguments, Array)
 CELL_RANGE(Callable, BoundFunction, Function)
 CELL_RANGE(CodeBlockFunction, GeneratorFunction, Function)
