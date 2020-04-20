@@ -123,6 +123,10 @@ def main():
         cmake_flags += ["-DHERMES_ENABLE_WERROR=On"]
     if args.static_link:
         cmake_flags += ["-DHERMES_STATIC_LINK=On"]
+    if args.enable_asan:
+        cmake_flags += ["-DHERMES_ENABLE_ADDRESS_SANITIZER=ON"]
+    if args.enable_ubsan:
+        cmake_flags += ["-DHERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER=ON"]
     if args.fbsource_dir:
         cmake_flags += ["-DFBSOURCE_DIR=" + args.fbsource_dir]
     if args.wasm:
