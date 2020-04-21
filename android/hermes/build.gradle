@@ -32,6 +32,7 @@ android {
     externalNativeBuild {
       cmake {
         arguments "-DHERMES_IS_ANDROID=True"
+        arguments "-DHERMES_PLATFORM_UNICODE_TYPE=JAVA"
         arguments "-DHERMES_FACEBOOK_BUILD=${facebookBuild}"
         arguments "-DANDROID_STL=c++_shared"
         arguments "-DANDROID_PIE=True"

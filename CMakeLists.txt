@@ -171,6 +171,9 @@ set(HERMES_USE_FLOWPARSER OFF CACHE BOOL
 set(HERMES_ENABLE_WERROR OFF CACHE BOOL
   "Whether the build should have -Werror enabled")
 
+set(HERMES_PLATFORM_UNICODE_TYPE "" CACHE STRING
+  "Unicode backend implementation. Options are JAVA, ICU, CF, and EMSCRIPTEN, or leave empty for default")
+
 set(HERMES_ENABLE_WIN10_ICU_FALLBACK ON CACHE BOOL
   "Whether to allow falling back on Win10 ICU")
 
@@ -195,10 +198,13 @@ macro(add_exported_compile_def value)
   list(APPEND HERMES_EXPORTED_COMPILE_DEFS ${value})
 endmacro()
 
+if (HERMES_PLATFORM_UNICODE_TYPE)
+  add_exported_compile_def(
+    HERMES_PLATFORM_UNICODE=HERMES_PLATFORM_UNICODE_${HERMES_PLATFORM_UNICODE_TYPE})
+endif()
+
 if (HERMES_IS_ANDROID)
   set(HERMES_IS_MOBILE_BUILD TRUE)
-
-  add_exported_compile_def(HERMES_PLATFORM_UNICODE=HERMES_PLATFORM_UNICODE_JAVA)
 
   # The toolchain passes -Wa,--noexecstack which is valid for compiling
   # but not for linking. Just ignore it.
