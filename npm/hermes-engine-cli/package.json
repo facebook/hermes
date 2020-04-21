@@ -13,12 +13,10 @@
     "linux64-bin/hbcdump",
     "linux64-bin/hdb",
     "linux64-bin/hermes",
-    "linux64-bin/hermes-repl",
     "linux64-bin/hermesc",
     "osx-bin/hbcdump",
     "osx-bin/hdb",
     "osx-bin/hermes",
-    "osx-bin/hermes-repl",
     "osx-bin/hermesc",
     "win64-bin/icudt64.dll",
     "win64-bin/icuin64.dll",
@@ -30,7 +28,6 @@
     "win64-bin/vcruntime140.dll",
     "win64-bin/hbcdump.exe",
     "win64-bin/hdb.exe",
-    "win64-bin/hermes-repl.exe",
     "win64-bin/hermes.exe",
     "win64-bin/hermesc.exe"
   ]

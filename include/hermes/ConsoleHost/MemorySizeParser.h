@@ -17,7 +17,7 @@
 
 /// This file defines flags that are specific to the Hermes runtime,
 /// independent of the Hermes compiler.  Such flags must be defined in the
-/// hermes, hvm, and repl binaries, so this file is included in all of those.
+/// hermes and hvm binaries, so this file is included in all of those.
 
 namespace cl {
 
