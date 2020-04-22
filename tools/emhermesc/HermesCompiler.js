@@ -48,9 +48,10 @@ function compile(source /*: string | Buffer*/, sourceURL /*: string*/) /*: Buffe
             }
             const bcAddr = hermesCompileResult_getBytecodeAddr(res);
             const bcSize = hermesCompileResult_getBytecodeSize(res);
-            const resBuf = Buffer.from(hermesc.HEAP8.buffer, bcAddr, bcSize);
-
-            return resBuf;
+            // This creates a view of the specified section of the buffer.
+            const resView = Buffer.from(hermesc.HEAP8.buffer, bcAddr, bcSize);
+            // This is the actual copy that we want to return.
+            return Buffer.from(resView);
         } finally {
             hermesCompileResult_free(res);
         }
