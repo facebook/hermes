@@ -116,6 +116,14 @@ set(HERMESVM_API_TRACE OFF CACHE BOOL
 set(HERMESVM_SANITIZE_HANDLES OFF CACHE BOOL
   "Enable Handle sanitization")
 
+# Enable Address Sanitizer
+set(HERMES_ENABLE_ADDRESS_SANITIZER OFF CACHE BOOL
+  "Enable -fsanitize=address")
+
+# Enable Undefined Behavior Sanitizer
+set(HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER OFF CACHE BOOL
+  "Enable -fsanitize=undefined")
+
 # Build with -DHERMES_SLOW_DEBUG for debug builds
 # This does not affect release builds
 set(HERMES_SLOW_DEBUG ON CACHE BOOL
@@ -280,6 +288,14 @@ if(HERMESVM_API_TRACE)
 endif()
 if(HERMESVM_SANITIZE_HANDLES)
     add_definitions(-DHERMESVM_SANITIZE_HANDLES)
+endif()
+if (HERMES_ENABLE_ADDRESS_SANITIZER)
+    append("-fsanitize=address" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
+endif()
+if (HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER)
+    add_definitions(-DHERMES_UBSAN)
+    # Do not enable the vptr sanitizer, as it requires RTTI.
+    append("-fsanitize=undefined -fno-sanitize=vptr -fno-sanitize-recover=all" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
 endif()
 if(HERMES_FACEBOOK_BUILD)
     add_definitions(-DHERMES_FACEBOOK_BUILD)
@@ -559,8 +575,7 @@ set(HERMES_LIT_TEST_PARAMS
   profiler=${HERMES_PROFILER_MODE_IN_LIT_TEST}
   use_js_library_implementation=${HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION}
   gc=${HERMESVM_GCKIND}
-  # TODO: Figure out how to tell if CMake is doing a UBSAN build.
-  ubsan=OFF
+  ubsan=${HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER}
   )
 
 set(LLVH_LIT_ARGS "-sv")

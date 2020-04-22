@@ -65,6 +65,7 @@ def get_parser():
     parser.add_argument("--distribute", action="store_true")
     parser.add_argument("--32-bit", dest="is_32_bit", action="store_true")
     parser.add_argument("--enable-asan", dest="enable_asan", action="store_true")
+    parser.add_argument("--enable-ubsan", dest="enable_ubsan", action="store_true")
     return parser
 
 
@@ -121,6 +122,8 @@ def build_dir_suffix(args):
     suffices = []
     if args.enable_asan:
         suffices += ["asan"]
+    if args.enable_ubsan:
+        suffices += ["ubsan"]
     if args.distribute:
         suffices += ["release"]
     if args.is_32_bit:
