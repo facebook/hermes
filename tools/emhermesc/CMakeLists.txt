@@ -15,7 +15,7 @@ if (EMSCRIPTEN)
   target_link_options(emhermesc PRIVATE "SHELL: -s NODERAWFS=0 -s WASM=1")
   target_link_options(emhermesc PRIVATE "SHELL: -s ALLOW_MEMORY_GROWTH=1")
   target_link_options(emhermesc PRIVATE
-    "SHELL: -s EXTRA_EXPORTED_RUNTIME_METHODS=[cwrap]")
+    "SHELL: -s EXTRA_EXPORTED_RUNTIME_METHODS=[cwrap,ccall]")
   target_link_options(emhermesc PRIVATE "SHELL: -s MODULARIZE=1")
   target_link_options(emhermesc PRIVATE "SHELL: -s EXPORT_NAME=createHermesc")
   target_link_options(emhermesc PRIVATE

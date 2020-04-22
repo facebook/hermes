@@ -24,6 +24,8 @@ const hermesCompileResult_getBytecodeSize = hermesc.cwrap("hermesCompileResult_g
 const hermesCompileResult_free = hermesc.cwrap("hermesCompileResult_free", "void",
     ["number"]);
 
+const hermesProps = JSON.parse(hermesc.ccall("hermesGetProperties", "string", [], []));
+
 function compile(source /*: string | Buffer*/, sourceURL /*: string*/) /*: Buffer*/ {
     // If the input is a string, convert it to a Buffer, otherwise assume it is a Buffer.
     const buffer =
@@ -60,4 +62,41 @@ function compile(source /*: string | Buffer*/, sourceURL /*: string*/) /*: Buffe
     }
 }
 
+/// Check whether there is a valid bytecode module at the specified offset of
+/// the input buffer.
+/// \return the size of the module
+/// \throw an error if the module is not valid.
+function validateBytecodeModule(bc /*: Buffer*/, offset /*: number*/) /*: number*/ {
+    // Check alignment.
+    if ((bc.byteOffset + offset) % hermesProps.BYTECODE_ALIGNMENT) {
+        throw Error("bytecode is not aligned to " + hermesProps.BYTECODE_ALIGNMENT);
+    }
+
+    // Check size.
+    if (bc.length - offset < hermesProps.HEADER_SIZE) {
+        throw Error("bytecode buffer is too small");
+    }
+
+    // Check magic.
+    if (bc.readUInt32LE(offset + 0) !== hermesProps.MAGIC[0] ||
+        bc.readUInt32LE(offset + 4) !== hermesProps.MAGIC[1]) {
+        throw Error("bytecode buffer missing magic value");
+    }
+
+    // Check version.
+    let version = bc.readUInt32LE(offset + 8);
+    if (version !== hermesProps.VERSION) {
+        throw Error("bytecode version is " + version + " but " + hermesProps.VERSION + " is required");
+    }
+
+    // Check reported size.
+    let fileLength = bc.readUInt32LE(offset + hermesProps.LENGTH_OFFSET);
+    if (bc.length - offset < fileLength) {
+        throw Error("bytecode buffer is too small");
+    }
+
+    return (fileLength + hermesProps.BYTECODE_ALIGNMENT - 1) % hermesProps.BYTECODE_ALIGNMENT;
+}
+
 exports.compile = compile;
+exports.validateBytecodeModule = validateBytecodeModule;
