@@ -110,6 +110,31 @@ BCProviderFromSrc::createBCProviderFromSrc(
     std::unique_ptr<SourceMap> sourceMap,
     const CompileFlags &compileFlags,
     const ScopeChain &scopeChain) {
+  std::function<void(Module &)> runOptimizationPasses{};
+#ifdef HERMESVM_ENABLE_OPTIMIZATION_AT_RUNTIME
+  if (compileFlags.optimize) {
+    runOptimizationPasses = runFullOptimizationPasses;
+  } else {
+    runOptimizationPasses = runNoOptimizationPasses;
+  }
+#endif
+  return createBCProviderFromSrc(
+      std::move(buffer),
+      sourceURL,
+      std::move(sourceMap),
+      compileFlags,
+      scopeChain,
+      runOptimizationPasses);
+}
+
+std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
+BCProviderFromSrc::createBCProviderFromSrc(
+    std::unique_ptr<Buffer> buffer,
+    llvm::StringRef sourceURL,
+    std::unique_ptr<SourceMap> sourceMap,
+    const CompileFlags &compileFlags,
+    const ScopeChain &scopeChain,
+    const std::function<void(Module &)> &runOptimizationPasses) {
   using llvm::Twine;
 
   assert(
@@ -204,13 +229,8 @@ BCProviderFromSrc::createBCProviderFromSrc(
       (compileFlags.optimize ? !compileFlags.lazy : true) &&
       "Can't optimize in lazy mode.");
 
-#ifdef HERMESVM_ENABLE_OPTIMIZATION_AT_RUNTIME
-  if (compileFlags.optimize) {
-    runFullOptimizationPasses(M);
-  } else {
-    runNoOptimizationPasses(M);
-  }
-#endif
+  if (compileFlags.optimize && runOptimizationPasses)
+    runOptimizationPasses(M);
 
   BytecodeGenerationOptions opts{OutputFormatKind::Execute};
   opts.optimizationEnabled = compileFlags.optimize;
