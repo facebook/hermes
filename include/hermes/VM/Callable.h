@@ -705,17 +705,24 @@ class NativeFunction : public Callable {
 /// Object.
 class NativeConstructor final : public NativeFunction {
  public:
-  using CreatorFunction =
-      CallResult<PseudoHandle<JSObject>>(Runtime *, Handle<JSObject>);
+  /// A CreatorFunction is responsible for creating the 'this' object that the
+  /// constructor function sees.
+  /// \p proto is the '.prototype' property of the constructor and should be set
+  /// as the __proto__ for the nascent object.
+  /// \p context is the context pointer provided to the NativeConstructor.
+  using CreatorFunction = CallResult<PseudoHandle<JSObject>>(
+      Runtime *,
+      Handle<JSObject> proto,
+      void *context);
 
   /// Unifies signatures of various GCCells so that they may be stored
   /// in the NativeConstructor.
   /// Delegates to toCallResultPseudoHandleJSObject to convert various
   /// types to CallResult<PseudoHandle<JSObject>>.
   template <class NativeClass>
-  static CallResult<PseudoHandle<JSObject>> creatorFunction(
-      Runtime *runtime,
-      Handle<JSObject> prototype) {
+  static CallResult<PseudoHandle<JSObject>>
+  creatorFunction(Runtime *runtime, Handle<JSObject> prototype, void *context) {
+    (void)context;
     return toCallResultPseudoHandleJSObject(
         NativeClass::create(runtime, prototype));
   }
@@ -738,9 +745,15 @@ class NativeConstructor final : public NativeFunction {
   }
 
   /// Create an instance of NativeConstructor.
-  /// \param context the context to be passed to the function
+  /// \param parentHandle the __proto__ of the resulting constructor. Note this
+  /// is NOT .prototype; use Callable::defineNameLengthAndPrototype to set that.
+  /// \param context the context pointer to be passed to the native function
   /// \param functionPtr the native function
   /// \param paramCount number of parameters (excluding `this`)
+  /// \param creator the function invoked to create the proposed 'this' object
+  /// passed to the constructor
+  /// \param targetKind the expected CellKind of objects produced by the
+  /// constructor
   static PseudoHandle<NativeConstructor> create(
       Runtime *runtime,
       Handle<JSObject> parentHandle,
@@ -850,7 +863,8 @@ class NativeConstructor final : public NativeFunction {
       Runtime *runtime,
       Handle<JSObject> parentHandle) {
     auto nativeConsHandle = Handle<NativeConstructor>::vmcast(selfHandle);
-    auto res = nativeConsHandle->creator_(runtime, parentHandle);
+    auto res = nativeConsHandle->creator_(
+        runtime, parentHandle, nativeConsHandle->getContext());
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
