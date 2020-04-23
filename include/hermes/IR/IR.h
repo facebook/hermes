@@ -10,9 +10,12 @@
 
 #include "hermes/ADT/WordBitSet.h"
 #include "hermes/AST/Context.h"
-#include "hermes/AST/ESTree.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/ScopeChain.h"
+
+#ifndef HERMESVM_LEAN
+#include "hermes/AST/ESTree.h"
+#endif
 
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
@@ -330,6 +333,7 @@ class SerializedScope {
   llvm::SmallVector<Identifier, 16> variables;
 };
 
+#ifndef HERMESVM_LEAN
 /// The source of a lazy AST node.
 struct LazySource {
   // The type of node (such as a FunctionDeclaration or FunctionExpression).
@@ -340,6 +344,7 @@ struct LazySource {
   /// just the lazily parsed body).
   SMRange functionRange;
 };
+#endif
 
 class Value {
  public:
