@@ -1532,7 +1532,7 @@ jsi::Object HermesRuntimeImpl::createObject(
     vm::GCScope gcScope(&runtime_);
 
     auto objRes = vm::HostObject::createWithoutPrototype(
-        &runtime_, std::make_shared<JsiProxy>(*this, ho));
+        &runtime_, std::make_unique<JsiProxy>(*this, ho));
     checkStatus(objRes.getStatus());
     return add<jsi::Object>(*objRes);
   });
@@ -1540,9 +1540,9 @@ jsi::Object HermesRuntimeImpl::createObject(
 
 std::shared_ptr<jsi::HostObject> HermesRuntimeImpl::getHostObject(
     const jsi::Object &obj) {
-  return std::static_pointer_cast<JsiProxyBase>(
-             vm::vmcast<vm::HostObject>(phv(obj))->getProxy())
-      ->ho_;
+  const vm::HostObjectProxy *proxy =
+      vm::vmcast<vm::HostObject>(phv(obj))->getProxy();
+  return static_cast<const JsiProxyBase *>(proxy)->ho_;
 }
 
 jsi::Value HermesRuntimeImpl::getProperty(

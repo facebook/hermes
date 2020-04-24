@@ -9,6 +9,7 @@
 #define HERMES_VM_HOST_MODEL_H
 
 #include "hermes/VM/Callable.h"
+#include "hermes/VM/DecoratedObject.h"
 
 namespace hermes {
 namespace vm {
@@ -76,7 +77,7 @@ class FinalizableNativeFunction final : public NativeFunction {
 
 /// When a HostObject is created, this proxy provides the business
 /// logic for the HostObject's implementation.
-class HostObjectProxy {
+class HostObjectProxy : public DecoratedObject::Decoration {
  public:
   // This is called when the object is finalized.
   virtual ~HostObjectProxy();
@@ -94,7 +95,7 @@ class HostObjectProxy {
   virtual CallResult<Handle<JSArray>> getHostPropertyNames() = 0;
 };
 
-class HostObject final : public JSObject {
+class HostObject final : public DecoratedObject {
  public:
   static ObjectVTable vt;
 
@@ -105,22 +106,26 @@ class HostObject final : public JSObject {
   /// Create an instance of HostObject with no prototype.
   static CallResult<HermesValue> createWithoutPrototype(
       Runtime *runtime,
-      std::shared_ptr<HostObjectProxy> proxy);
+      std::unique_ptr<HostObjectProxy> proxy);
 
   CallResult<HermesValue> get(SymbolID name) {
-    return proxy_->get(name);
+    return getProxy()->get(name);
   }
 
   CallResult<bool> set(SymbolID name, HermesValue value) {
-    return proxy_->set(name, value);
+    return getProxy()->set(name, value);
   }
 
   CallResult<Handle<JSArray>> getHostPropertyNames() {
-    return proxy_->getHostPropertyNames();
+    return getProxy()->getHostPropertyNames();
   }
 
-  const std::shared_ptr<HostObjectProxy> &getProxy() const {
-    return proxy_;
+  HostObjectProxy *getProxy() {
+    return static_cast<HostObjectProxy *>(this->getDecoration());
+  }
+
+  const HostObjectProxy *getProxy() const {
+    return static_cast<const HostObjectProxy *>(this->getDecoration());
   }
 
  private:
@@ -128,12 +133,8 @@ class HostObject final : public JSObject {
       Runtime *runtime,
       JSObject *parent,
       HiddenClass *clazz,
-      std::shared_ptr<HostObjectProxy> proxy)
-      : JSObject(runtime, &vt.base, parent, clazz), proxy_(proxy) {}
-
-  static void _finalizeImpl(GCCell *cell, GC *gc);
-
-  std::shared_ptr<HostObjectProxy> proxy_;
+      std::unique_ptr<HostObjectProxy> proxy)
+      : DecoratedObject(runtime, &vt, parent, clazz, std::move(proxy)) {}
 };
 
 } // namespace vm

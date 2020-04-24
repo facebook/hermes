@@ -18,6 +18,7 @@ set(RTSources
   CodeCoverageProfilerTest.cpp
   CopyableVectorTest.cpp
   DateUtilTest.cpp
+  DecoratedObjectTest.cpp
   DictPropertyMapTest.cpp
   ExtStringForTest.cpp
   ExternalMemAccountingTest.cpp
