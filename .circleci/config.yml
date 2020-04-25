@@ -359,6 +359,7 @@ jobs:
     environment:
       - YARN: yarnpkg
       - TERM: dumb
+      - DEBIAN_FRONTEND: noninteractive
     steps:
       - run:
           name: Install certificates required to attach workspace
