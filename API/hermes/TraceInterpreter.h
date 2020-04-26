@@ -202,10 +202,18 @@ class TraceInterpreter final {
   /// \param traceStream If non-null, write a trace of the execution into this
   /// stream.
   static std::string execFromMemoryBuffer(
-      std::unique_ptr<llvm::MemoryBuffer> traceBuf,
-      std::vector<std::unique_ptr<llvm::MemoryBuffer>> codeBufs,
+      std::unique_ptr<llvm::MemoryBuffer> &&traceBuf,
+      std::vector<std::unique_ptr<llvm::MemoryBuffer>> &&codeBufs,
       const ExecuteOptions &options,
       std::unique_ptr<llvm::raw_ostream> traceStream);
+
+  /// For test purposes, use the given runtime, execute once.
+  /// Otherwise like execFromMemoryBuffer above.
+  static std::string execFromMemoryBuffer(
+      std::unique_ptr<llvm::MemoryBuffer> &&traceBuf,
+      std::vector<std::unique_ptr<llvm::MemoryBuffer>> &&codeBufs,
+      jsi::Runtime &runtime,
+      const ExecuteOptions &options);
 
  private:
   TraceInterpreter(
@@ -229,6 +237,19 @@ class TraceInterpreter final {
       const ExecuteOptions &options,
       const SynthTrace &trace,
       std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles);
+
+  /// Requires \p codeBufs to be the memory buffers containing the code
+  /// referenced (via source hash) by the given \p trace.  Returns a map from
+  /// the source hash to the memory buffer.  In addition, if \p codeIsMmapped is
+  /// non-null, sets \p *codeIsMmapped to indicate whether all the code is
+  /// mmapped, and, if \p isBytecode is non-null, sets \p *isBytecode
+  /// to indicate whether all the code is bytecode.
+  static std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>>
+  getSourceHashToBundleMap(
+      std::vector<std::unique_ptr<llvm::MemoryBuffer>> &&codeBufs,
+      const SynthTrace &trace,
+      bool *codeIsMmapped = nullptr,
+      bool *isBytecode = nullptr);
 
   jsi::Function createHostFunction(
       const SynthTrace::CreateHostFunctionRecord &rec);

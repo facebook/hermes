@@ -551,19 +551,20 @@ std::string TraceInterpreter::execFromFileNames(
 }
 
 /* static */
-std::string TraceInterpreter::execFromMemoryBuffer(
-    std::unique_ptr<llvm::MemoryBuffer> traceBuf,
-    std::vector<std::unique_ptr<llvm::MemoryBuffer>> codeBufs,
-    const ExecuteOptions &options,
-    std::unique_ptr<llvm::raw_ostream> traceStream) {
-  auto traceAndConfigAndEnv = parseSynthTrace(std::move(traceBuf));
-  const auto &trace = std::get<0>(traceAndConfigAndEnv);
-  bool codeIsMmapped = true;
-  for (const auto &buf : codeBufs) {
-    if (buf->getBufferKind() != llvm::MemoryBuffer::MemoryBuffer_MMap) {
-      // If any of the buffers aren't mmapped, don't turn on I/O tracking.
-      codeIsMmapped = false;
-      break;
+std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>>
+TraceInterpreter::getSourceHashToBundleMap(
+    std::vector<std::unique_ptr<llvm::MemoryBuffer>> &&codeBufs,
+    const SynthTrace &trace,
+    bool *codeIsMmapped,
+    bool *isBytecode) {
+  if (codeIsMmapped) {
+    *codeIsMmapped = true;
+    for (const auto &buf : codeBufs) {
+      if (buf->getBufferKind() != llvm::MemoryBuffer::MemoryBuffer_MMap) {
+        // If any of the buffers aren't mmapped, don't turn on I/O tracking.
+        *codeIsMmapped = false;
+        break;
+      }
     }
   }
   std::vector<std::unique_ptr<const jsi::Buffer>> bundles;
@@ -571,14 +572,55 @@ std::string TraceInterpreter::execFromMemoryBuffer(
     bundles.emplace_back(bufConvert(std::move(buf)));
   }
 
-  bool isBytecode = true;
-  for (const auto &bundle : bundles) {
-    if (!HermesRuntime::isHermesBytecode(bundle->data(), bundle->size())) {
-      // If any of the buffers are source code, don't turn on I/O tracking.
-      isBytecode = false;
-      break;
+  if (isBytecode) {
+    *isBytecode = true;
+    for (const auto &bundle : bundles) {
+      if (!HermesRuntime::isHermesBytecode(bundle->data(), bundle->size())) {
+        // If any of the buffers are source code, don't turn on I/O tracking.
+        *isBytecode = false;
+        break;
+      }
     }
   }
+
+  // Map source hashes of files to their memory buffer.
+  std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>>
+      sourceHashToBundle;
+  for (auto &bundle : bundles) {
+    ::hermes::SHA1 sourceHash{};
+    if (HermesRuntime::isHermesBytecode(bundle->data(), bundle->size())) {
+      sourceHash =
+          ::hermes::hbc::BCProviderFromBuffer::getSourceHashFromBytecode(
+              llvm::makeArrayRef(bundle->data(), bundle->size()));
+    } else {
+      sourceHash =
+          llvm::SHA1::hash(llvm::makeArrayRef(bundle->data(), bundle->size()));
+    }
+    auto inserted = sourceHashToBundle.insert({sourceHash, std::move(bundle)});
+    assert(
+        inserted.second &&
+        "Duplicate source hash detected, files only need to be supplied once");
+    (void)inserted;
+  }
+
+  verifyBundlesExist(sourceHashToBundle, trace);
+
+  return sourceHashToBundle;
+}
+
+/* static */
+std::string TraceInterpreter::execFromMemoryBuffer(
+    std::unique_ptr<llvm::MemoryBuffer> &&traceBuf,
+    std::vector<std::unique_ptr<llvm::MemoryBuffer>> &&codeBufs,
+    const ExecuteOptions &options,
+    std::unique_ptr<llvm::raw_ostream> traceStream) {
+  auto traceAndConfigAndEnv = parseSynthTrace(std::move(traceBuf));
+  const auto &trace = std::get<0>(traceAndConfigAndEnv);
+  bool codeIsMmapped;
+  bool isBytecode;
+  std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>>
+      sourceHashToBundle = getSourceHashToBundleMap(
+          std::move(codeBufs), trace, &codeIsMmapped, &isBytecode);
 
   ::hermes::vm::RuntimeConfig defaultConfig;
   // Some portions of even the default config must agree with the trace config,
@@ -654,28 +696,6 @@ std::string TraceInterpreter::execFromMemoryBuffer(
   auto &rtConfig =
       rtConfigBuilder.withGCConfig(gcConfigBuilder.build()).build();
 
-  // Map source hashes of files to their memory buffer.
-  std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>>
-      sourceHashToBundle;
-  for (auto &bundle : bundles) {
-    ::hermes::SHA1 sourceHash{};
-    if (HermesRuntime::isHermesBytecode(bundle->data(), bundle->size())) {
-      sourceHash =
-          ::hermes::hbc::BCProviderFromBuffer::getSourceHashFromBytecode(
-              llvm::makeArrayRef(bundle->data(), bundle->size()));
-    } else {
-      sourceHash =
-          llvm::SHA1::hash(llvm::makeArrayRef(bundle->data(), bundle->size()));
-    }
-    auto inserted = sourceHashToBundle.insert({sourceHash, std::move(bundle)});
-    assert(
-        inserted.second &&
-        "Duplicate source hash detected, files only need to be supplied once");
-    (void)inserted;
-  }
-
-  verifyBundlesExist(sourceHashToBundle, trace);
-
   std::vector<std::string> repGCStats(options.reps);
   for (int rep = -options.warmupReps; rep < options.reps; ++rep) {
     ::hermes::vm::instrumentation::PerfEvents::begin();
@@ -711,6 +731,21 @@ std::string TraceInterpreter::execFromMemoryBuffer(
   return (options.shouldPrintGCStats && *options.shouldPrintGCStats)
       ? mergeGCStats(repGCStats)
       : "";
+}
+
+/* static */
+std::string TraceInterpreter::execFromMemoryBuffer(
+    std::unique_ptr<llvm::MemoryBuffer> &&traceBuf,
+    std::vector<std::unique_ptr<llvm::MemoryBuffer>> &&codeBufs,
+    jsi::Runtime &runtime,
+    const ExecuteOptions &options) {
+  auto traceAndConfigAndEnv = parseSynthTrace(std::move(traceBuf));
+  const auto &trace = std::get<0>(traceAndConfigAndEnv);
+  return exec(
+      runtime,
+      options,
+      trace,
+      getSourceHashToBundleMap(std::move(codeBufs), trace));
 }
 
 /* static */

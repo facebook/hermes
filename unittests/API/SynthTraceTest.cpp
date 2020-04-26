@@ -11,7 +11,9 @@
 #include <hermes/Parser/JSONParser.h>
 #include <hermes/Support/Algorithms.h>
 #include <hermes/SynthTraceParser.h>
+#include <hermes/TraceInterpreter.h>
 #include <hermes/TracingRuntime.h>
+#include <hermes/VM/HermesValue.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -869,6 +871,74 @@ TEST_F(SynthTraceSerializationTest, FullTraceWithDateAndMath) {
   EXPECT_EQ(
       dateAsFunc, llvm::cast<JSONString>(callsToDateAsFunction->at(0))->str());
   // Ignore the elements inside the trace, those are tested elsewhere.
+}
+
+TEST_F(SynthTraceSerializationTest, TracePreservesStringAllocs) {
+  const ::hermes::vm::RuntimeConfig conf =
+      ::hermes::vm::RuntimeConfig::Builder().withTraceEnabled(true).build();
+  std::string traceResult;
+  auto resultStream =
+      ::hermes::make_unique<llvm::raw_string_ostream>(traceResult);
+  std::unique_ptr<TracingHermesRuntime> rt(makeTracingHermesRuntime(
+      makeHermesRuntime(conf), conf, std::move(resultStream)));
+
+  std::string source = R"(
+var s1 = "a";
+var s2 = "b";
+var s3 = s1 + s2;
+function f(s) {
+  return s == s3;
+}
+)";
+
+  rt->evaluateJavaScript(std::make_unique<jsi::StringBuffer>(source), "source");
+  // Do get property to get "ab" in the string table.
+  auto s = rt->global().getProperty(*rt, "s3");
+
+  auto f = rt->global().getProperty(*rt, "f").asObject(*rt).getFunction(*rt);
+  auto res = f.call(*rt, {std::move(s)});
+  EXPECT_TRUE(res.getBool());
+
+  const auto &heapInfo = rt->instrumentation().getHeapInfo(false);
+  // This test is Hermes-specific -- return early if the heapInfo does
+  // not have the hermes keys we expect.
+  const std::string kNumAllocObjects{"hermes_numAllocatedObjects"};
+  auto iter = heapInfo.find(kNumAllocObjects);
+  if (iter == heapInfo.end()) {
+    return;
+  }
+  auto allocObjsOrig = iter->second;
+
+  rt->flushAndDisableTrace();
+
+  // Now replay the trace, see if we get extra allocations.
+  std::vector<std::unique_ptr<llvm::MemoryBuffer>> sources;
+  sources.emplace_back(llvm::MemoryBuffer::getMemBuffer(source));
+  tracing::TraceInterpreter::ExecuteOptions options;
+  std::string replayTraceStr;
+  auto replayTraceStream =
+      ::hermes::make_unique<llvm::raw_string_ostream>(replayTraceStr);
+  std::unique_ptr<TracingHermesRuntime> rt2(makeTracingHermesRuntime(
+      makeHermesRuntime(conf),
+      conf,
+      std::move(replayTraceStream),
+      /* forReplay */ true));
+
+  EXPECT_NO_THROW({
+    tracing::TraceInterpreter::execFromMemoryBuffer(
+        llvm::MemoryBuffer::getMemBuffer(traceResult),
+        std::move(sources),
+        *rt2,
+        options);
+  });
+  rt2->flushAndDisableTrace();
+
+  auto allocObjsFinal =
+      rt2->instrumentation().getHeapInfo(false).at(kNumAllocObjects);
+  // Will re-enable in the diff that makes this work.
+  (void)allocObjsOrig;
+  (void)allocObjsFinal;
+  // EXPECT_EQ(allocObjsOrig, allocObjsFinal);
 }
 
 /// @}
