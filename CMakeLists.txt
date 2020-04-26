@@ -112,6 +112,9 @@ set(HERMESVM_ALLOW_COMPRESSED_POINTERS ON CACHE BOOL
 set(HERMESVM_API_TRACE OFF CACHE BOOL
   "Enable tracing interactions via the API")
 
+set(HERMESVM_API_TRACE_ANDROID_REPLAY OFF CACHE BOOL
+  "Simulate Android config on Linux in API tracing.")
+
 # Hermes VM Handle sanitization (moving the heap after every alloc)
 set(HERMESVM_SANITIZE_HANDLES OFF CACHE BOOL
   "Enable Handle sanitization")
@@ -285,6 +288,9 @@ if(HERMESVM_ALLOW_COMPRESSED_POINTERS)
 endif()
 if(HERMESVM_API_TRACE)
     add_definitions(-DHERMESVM_API_TRACE)
+endif()
+if(HERMESVM_API_TRACE_ANDROID_REPLAY)
+    add_definitions(-DHERMESVM_API_TRACE_ANDROID_REPLAY)
 endif()
 if(HERMESVM_SANITIZE_HANDLES)
     add_definitions(-DHERMESVM_SANITIZE_HANDLES)

@@ -22,7 +22,14 @@ namespace vm {
 
 // _ITERATOR_DEBUG_LEVEL enables checked iterators in Microsoft STL,
 // which makes std::basic_string non-byte-copyable.
-#if !_ITERATOR_DEBUG_LEVEL
+// HERMESVM_API_TRACE_ANDROID_REPLAY means that we're trying to simulate
+// Android behavior on desktop linux; sizeof(std::basic_string<char>) is
+// 8 bytes in an optimized 64-bit build on device, but 32 on desktop.
+// So we use a pointer, which happens to be of the same size.  If
+// the size were different, say 16 bytes on android, we would add
+// a padding field to the CopyableBasicString class, under the
+// HERMESVM_API_TRACE_ANDROID_REPLAY preprocessor variable.
+#if !_ITERATOR_DEBUG_LEVEL && !defined(HERMESVM_API_TRACE_ANDROID_REPLAY)
 
 /// Strings whose length is smaller than this should never be stored in a
 /// CopyableBasicString. This is to protect against a small string optimization
