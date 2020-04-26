@@ -687,7 +687,9 @@ std::string TraceInterpreter::execFromMemoryBuffer(
       env.stabilizeInstructionCount = options.stabilizeInstructionCount;
       hermesRuntime->setMockedEnvironment(env);
     }
+    bool tracing = false;
     if (traceStream) {
+      tracing = true;
       rt = makeTracingHermesRuntime(
           std::move(hermesRuntime),
           rtConfig,
@@ -700,6 +702,10 @@ std::string TraceInterpreter::execFromMemoryBuffer(
     // If we're not warming up, save the stats.
     if (rep >= 0) {
       repGCStats[rep] = stats;
+    }
+    // If we're tracing, flush the trace.
+    if (tracing) {
+      (void)rt->instrumentation().flushAndDisableBridgeTrafficTrace();
     }
   }
   return (options.shouldPrintGCStats && *options.shouldPrintGCStats)
