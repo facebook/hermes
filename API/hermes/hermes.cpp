@@ -1136,6 +1136,14 @@ uint64_t HermesRuntime::getUniqueID(const jsi::Object &o) const {
   return impl(this)->runtime_.getHeap().getObjectID(
       static_cast<vm::GCCell *>(impl(this)->phv(o).getObject()));
 }
+uint64_t HermesRuntime::getUniqueID(const jsi::String &s) const {
+  return impl(this)->runtime_.getHeap().getObjectID(
+      static_cast<vm::GCCell *>(impl(this)->phv(s).getString()));
+}
+uint64_t HermesRuntime::getUniqueID(const jsi::PropNameID &pni) const {
+  return impl(this)->runtime_.getHeap().getObjectID(
+      impl(this)->phv(pni).getSymbol());
+}
 
 /// Get a structure representing the enviroment-dependent behavior, so
 /// it can be written into the trace for later replay.

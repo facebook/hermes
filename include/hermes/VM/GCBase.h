@@ -431,6 +431,10 @@ class GCBase {
     /// If one does not yet exist, start tracking it.
     inline HeapSnapshot::NodeID getObjectID(const void *cell);
 
+    /// Get the unique object id of the symbol with the given index \b
+    /// symIdx.  If one does not yet exist, start tracking it.
+    inline HeapSnapshot::NodeID getObjectID(uint32_t symIdx);
+
     /// Get the unique object id of the given native memory (non-JS-heap).
     /// If one does not yet exist, start tracking it.
     inline HeapSnapshot::NodeID getNativeID(const void *mem);
@@ -447,6 +451,11 @@ class GCBase {
     /// Remove the object from being tracked. This should be done to keep the
     /// tracking working set small.
     inline void untrackObject(const void *cell);
+
+    /// For a symbol index \p i, \p markedSymbols[i] indicates whether
+    /// the symbol was reachable in a GC.  Untrack all symbols whose
+    /// index is not marked.
+    void untrackUnmarkedSymbols(const std::vector<bool> &markedSymbols);
 
     /// Remove the native memory from being tracked. This should be done to keep
     /// the tracking working set small. It is also required to be done when
@@ -495,6 +504,10 @@ class GCBase {
     /// on.
     /// NOTE: The same map is used for both JS heap and native heap IDs.
     llvm::DenseMap<const void *, HeapSnapshot::NodeID> objectIDMap_;
+
+    /// Map from symbol indices to unique IDs.  Populated according to
+    /// the same rules as the objectIDMap_.
+    llvm::DenseMap<uint32_t, HeapSnapshot::NodeID> symbolIDMap_;
 
     /// Map of numeric values to IDs. Used to give numbers in the heap a unique
     /// node.
@@ -849,6 +862,7 @@ class GCBase {
 
   inline HeapSnapshot::NodeID getObjectID(const void *cell);
   inline HeapSnapshot::NodeID getObjectID(const GCPointerBase &cell);
+  inline HeapSnapshot::NodeID getObjectID(const SymbolID &sym);
   inline HeapSnapshot::NodeID getNativeID(const void *mem);
   /// \return The ID for the given value. If the value cannot be represented
   ///   with an ID, returns None.
@@ -1430,6 +1444,10 @@ inline HeapSnapshot::NodeID GCBase::getObjectID(const GCPointerBase &cell) {
   return getObjectID(cell.get(pointerBase_));
 }
 
+inline HeapSnapshot::NodeID GCBase::getObjectID(const SymbolID &sym) {
+  return idTracker_.getObjectID(sym.unsafeGetIndex());
+}
+
 inline HeapSnapshot::NodeID GCBase::getNativeID(const void *mem) {
   assert(mem && "Called getNativeID on a null pointer");
   return idTracker_.getNativeID(mem);
@@ -1454,6 +1472,17 @@ inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(const void *cell) {
   const auto objID = nextObjectID();
   objectIDMap_[cell] = objID;
   return objID;
+}
+
+inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(uint32_t symIdx) {
+  auto iter = symbolIDMap_.find(symIdx);
+  if (iter != symbolIDMap_.end()) {
+    return iter->second;
+  }
+  // Else, assume it is a symbol that needs to be tracked and give it a new ID.
+  const auto symID = nextObjectID();
+  symbolIDMap_[symIdx] = symID;
+  return symID;
 }
 
 inline HeapSnapshot::NodeID GCBase::IDTracker::getNativeID(const void *mem) {

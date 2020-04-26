@@ -31,6 +31,8 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
       std::unique_ptr<llvm::raw_ostream> traceStream);
 
   virtual SynthTrace::ObjectID getUniqueID(const jsi::Object &o) = 0;
+  virtual SynthTrace::ObjectID getUniqueID(const jsi::String &s) = 0;
+  virtual SynthTrace::ObjectID getUniqueID(const jsi::PropNameID &pni) = 0;
 
   virtual void flushAndDisableTrace() = 0;
 
@@ -149,7 +151,12 @@ class TracingHermesRuntime final : public TracingRuntime {
   SynthTrace::ObjectID getUniqueID(const jsi::Object &o) override {
     return static_cast<SynthTrace::ObjectID>(hermesRuntime().getUniqueID(o));
   }
-
+  SynthTrace::ObjectID getUniqueID(const jsi::String &s) override {
+    return static_cast<SynthTrace::ObjectID>(hermesRuntime().getUniqueID(s));
+  }
+  SynthTrace::ObjectID getUniqueID(const jsi::PropNameID &pni) override {
+    return static_cast<SynthTrace::ObjectID>(hermesRuntime().getUniqueID(pni));
+  }
   void flushAndDisableTrace() override;
 
   std::string flushAndDisableBridgeTrafficTrace() override;

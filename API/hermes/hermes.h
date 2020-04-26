@@ -106,9 +106,13 @@ class HermesRuntime : public jsi::Runtime {
       std::unique_ptr<const jsi::Buffer> buffer,
       const jsi::Value &context);
 
-  /// Gets a guaranteed unique id for an object, which is assigned at
-  /// allocation time and is static throughout that object's lifetime.
+  /// Gets a guaranteed unique id for an Object (or, respectively, String
+  /// or PropNameId), which is assigned at allocation time and is
+  /// static throughout that object's (or string's, or PropNameID's)
+  /// lifetime.
   uint64_t getUniqueID(const jsi::Object &o) const;
+  uint64_t getUniqueID(const jsi::String &s) const;
+  uint64_t getUniqueID(const jsi::PropNameID &pni) const;
 
   /// Get a structure representing the enviroment-dependent behavior, so
   /// it can be written into the trace for later replay.

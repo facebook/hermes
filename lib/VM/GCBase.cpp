@@ -473,6 +473,19 @@ void GCBase::IDTracker::deserialize(Deserializer &d) {
 }
 #endif
 
+void GCBase::IDTracker::untrackUnmarkedSymbols(
+    const std::vector<bool> &markedSymbols) {
+  std::vector<uint32_t> toUntrack;
+  for (const auto &pair : symbolIDMap_) {
+    if (!markedSymbols[pair.first]) {
+      toUntrack.push_back(pair.first);
+    }
+  }
+  for (uint32_t symIdx : toUntrack) {
+    symbolIDMap_.erase(symIdx);
+  }
+}
+
 HeapSnapshot::NodeID GCBase::IDTracker::getNumberID(double num) {
   auto &numberRef = numberIDMap_[num];
   // If the entry didn't exist, the value was initialized to 0.
