@@ -392,11 +392,7 @@ bool SynthTrace::GetOrSetPropertyNativeRecord::operator==(
 }
 
 bool SynthTrace::GetPropertyNativeRecord::operator==(const Record &that) const {
-  if (!Record::operator==(that)) {
-    return false;
-  }
-  auto thatCasted = dynamic_cast<const GetPropertyNativeRecord &>(that);
-  return GetOrSetPropertyNativeRecord::operator==(thatCasted);
+  return GetOrSetPropertyNativeRecord::operator==(that);
 }
 
 bool SynthTrace::GetPropertyNativeReturnRecord::operator==(
@@ -409,12 +405,8 @@ bool SynthTrace::GetPropertyNativeReturnRecord::operator==(
 }
 
 bool SynthTrace::SetPropertyNativeRecord::operator==(const Record &that) const {
-  if (!Record::operator==(that)) {
-    return false;
-  }
-  auto thatCasted = dynamic_cast<const SetPropertyNativeRecord &>(that);
-  return hostObjectID_ == thatCasted.hostObjectID_ &&
-      propName_ == thatCasted.propName_ && equal(value_, thatCasted.value_);
+  return GetOrSetPropertyNativeRecord::operator==(that) &&
+      equal(value_, dynamic_cast<const SetPropertyNativeRecord &>(that).value_);
 }
 
 bool SynthTrace::GetNativePropertyNamesRecord::operator==(
