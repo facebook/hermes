@@ -13,6 +13,7 @@
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/Support/StringSetVector.h"
+#include "hermes/VM/GCExecTrace.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/MockedEnvironment.h"
 #include "hermes/VM/Operations.h"
@@ -855,7 +856,9 @@ class SynthTrace {
   /// Completes writing of the trace to the trace stream.  If writing
   /// to a file, disables further writing to the file, or accumulation
   /// of data.
-  void flushAndDisable(const ::hermes::vm::MockedEnvironment &env);
+  void flushAndDisable(
+      const ::hermes::vm::MockedEnvironment &env,
+      const ::hermes::vm::GCExecTrace &gcTrace);
 };
 
 llvm::raw_ostream &operator<<(

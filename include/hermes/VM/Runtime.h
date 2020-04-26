@@ -486,6 +486,10 @@ class Runtime : public HandleRootOwner,
     return commonStorage_.get();
   }
 
+  const GCExecTrace &getGCExecTrace() {
+    return getHeap().getGCExecTrace();
+  }
+
 #if defined(HERMES_ENABLE_DEBUGGER)
   /// Request the interpreter loop to take an asynchronous break at a convenient
   /// point due to debugger UI request. This may be called from any thread, or a

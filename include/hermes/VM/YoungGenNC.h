@@ -247,6 +247,15 @@ class YoungGen : public GCGeneration {
   /// of the copied GCCell.
   GCCell *forwardPointer(GCCell *ptr);
 
+#ifdef HERMESVM_API_TRACE_DEBUG
+  // If we're doing trace debugging, we may want to record the sequence of
+  // young-gen allocations in the the trace.  This will return a tuple
+  // for each cell, with the kind, the allocated size, and if the cell
+  // is an ASCII string, the string it represents.
+  // (This could be const, if forAllObjs had a const variant.)
+  std::vector<std::tuple<CellKind, uint32_t, std::string>> recordAllocSizes();
+#endif
+
   /// The minimum and maximum size of this generation.
   const Size sz_;
 

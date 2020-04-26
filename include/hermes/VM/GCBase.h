@@ -20,6 +20,7 @@
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/GCDecl.h"
+#include "hermes/VM/GCExecTrace.h"
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/HasFinalizer.h"
 #include "hermes/VM/HeapAlign.h"
@@ -614,6 +615,10 @@ class GCBase {
   /// Same as \c getHeapInfo, and it adds the amount of malloc memory in use.
   virtual void getHeapInfoWithMallocSize(HeapInfo &info) = 0;
 
+  /// Return a reference to the GCExecTrace object, which is used if
+  /// we're keeping track of information about GCs, for tracing, for example.
+  inline const GCExecTrace &getGCExecTrace() const;
+
   /// Populate \p info with crash manager information about the heap
   virtual void getCrashManagerHeapInfo(CrashManager::HeapInformation &info) = 0;
 
@@ -1015,6 +1020,9 @@ class GCBase {
 
   /// The total number of bytes allocated in the execution.
   uint64_t totalAllocatedBytes_{0};
+
+  /// A trace of GC execution.
+  GCExecTrace execTrace_;
 
 /// These fields are not available in optimized builds.
 #ifndef NDEBUG
@@ -1490,6 +1498,10 @@ inline void GCBase::IDTracker::untrackNative(const void *mem) {
   // Since native memory and heap memory share the same map, this is the same
   // as untracking an object.
   untrackObject(mem);
+}
+
+inline const GCExecTrace &GCBase::getGCExecTrace() const {
+  return execTrace_;
 }
 
 template <typename F>

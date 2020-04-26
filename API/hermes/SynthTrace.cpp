@@ -647,7 +647,9 @@ void SynthTrace::flushRecords() {
   records_.clear();
 }
 
-void SynthTrace::flushAndDisable(const ::hermes::vm::MockedEnvironment &env) {
+void SynthTrace::flushAndDisable(
+    const ::hermes::vm::MockedEnvironment &env,
+    const ::hermes::vm::GCExecTrace &gcTrace) {
   if (!json_) {
     return;
   }
@@ -699,6 +701,9 @@ void SynthTrace::flushAndDisable(const ::hermes::vm::MockedEnvironment &env) {
   }
   json_->closeArray();
   json_->closeDict();
+
+  // Now emit the history information, if we're in trace debug mode.
+  gcTrace.emit(*json_);
 
   // Close the top level dictionary (the one opened in the ctor).
   json_->closeDict();

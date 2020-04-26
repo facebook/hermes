@@ -285,6 +285,24 @@ AllocResult YoungGen::fullCollectThenAlloc(
   gc_->oom(make_error_code(OOMError::MaxHeapReached));
 }
 
+#ifdef HERMESVM_API_TRACE_DEBUG
+std::vector<std::tuple<CellKind, uint32_t, std::string>>
+YoungGen::recordAllocSizes() {
+  std::vector<std::tuple<CellKind, uint32_t, std::string>> allocSizes;
+  forAllObjs([&allocSizes](GCCell *cell) {
+    std::string str;
+    auto stringPrim = dyn_vmcast_or_null<StringPrimitive>(cell);
+    if (stringPrim && stringPrim->isASCII()) {
+      auto strRef = stringPrim->getStringRef<char>();
+      str = std::string(strRef.data(), strRef.size());
+    }
+    allocSizes.push_back(
+        std::make_tuple(cell->getKind(), cell->getAllocatedSize(), str));
+  });
+  return allocSizes;
+}
+#endif
+
 void YoungGen::collect() {
   assert(gc_->noAllocLevel_ == 0 && "no GC allowed right now");
   GenGC::CollectionSection ygCollection(
@@ -297,8 +315,17 @@ void YoungGen::collect() {
   nextGen_->unprotectCardTableBoundaries();
 #endif
 
-  // Reset the number of consecutive full GCs, because we're about to do a young
-  // gen collection.
+  std::vector<std::tuple<CellKind, uint32_t, std::string>> allocSizes;
+#ifdef HERMESVM_API_TRACE_DEBUG
+  static unsigned gcNum = 0;
+  static const unsigned kGCsToRecordAllocsFor = 1;
+  if (gcNum++ < kGCsToRecordAllocsFor) {
+    allocSizes = recordAllocSizes();
+  }
+#endif
+
+  // Reset the number of consecutive full GCs, because we're about to do a
+  // young gen collection.
   gc_->consecFullGCs_ = 0;
 
 // Reset the number of reachable and finalized objects for the young gen.
@@ -451,6 +478,10 @@ void YoungGen::collect() {
   ygCollection.addArg("ogUsedAfter", nextGen_->used());
   ygCollection.addArg(
       "ygGCNum", gc_->youngGenCollectionCumStats_.numCollections);
+
+  // Add to the execution trace.
+  gc_->execTrace_.addYGGC(
+      allocSizes, youngGenUsedBefore, oldGenUsedBefore, nextGen_->used());
 
 #ifdef HERMES_SLOW_DEBUG
   GCBase::DebugHeapInfo info;

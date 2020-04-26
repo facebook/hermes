@@ -322,6 +322,8 @@ void GenGC::collect(bool canEffectiveOOM) {
   const size_t usedBefore = used();
   const size_t sizeBefore = size();
   cumPreBytes_ += used();
+  const size_t ygUsedBefore = youngGen_.used();
+  const size_t ogUsedBefore = oldGen_.used();
 
   // To be filled in after collection has happened.
   size_t usedAfter;
@@ -409,6 +411,9 @@ void GenGC::collect(bool canEffectiveOOM) {
     fullCollection.addArg("fullGCNum", fullCollectionCumStats_.numCollections);
 
     checkInvariants(numAllocatedObjectsBefore, usedBefore);
+
+    execTrace_.addFullGC(
+        ygUsedBefore, youngGen_.used(), ogUsedBefore, oldGen_.used());
   }
 
   /// Update the heap's segments extents in the crash manager data.
