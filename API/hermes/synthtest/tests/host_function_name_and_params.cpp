@@ -24,16 +24,30 @@ const char *hostFunctionNameAndParamsTrace() {
   },
   "trace": [
     {
+      "type": "CreatePropNameIDRecord",
+      "objID": 40,
+      "encoding": "ASCII",
+      "chars": "foo"
+    },
+    {
       "type": "CreateHostFunctionRecord",
       "time": 0,
       "objID": 10,
+      "propNameID": 40,
       "functionName": "foo",
       "parameterCount": 2
+    },
+    {
+      "type": "CreatePropNameRecord",
+      "objID": 22,
+      "encoding": "ASCII",
+      "chars": "foo"
     },
     {
       "type": "SetPropertyRecord",
       "time": 0,
       "objID": 1,
+      "propID": 22,
       "propName": "foo",
       "value": "object:10"
     },

@@ -17,6 +17,7 @@
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/MockedEnvironment.h"
 #include "hermes/VM/Operations.h"
+#include "hermes/VM/SymbolID.h"
 
 #include <chrono>
 #include <cstdlib>
@@ -39,12 +40,121 @@ namespace tracing {
 class SynthTrace {
  public:
   using ObjectID = uint64_t;
+
   /// A tagged union representing different types available in the trace.
-  /// HermesValue doesn't have to be used, but it is an efficient way
-  /// of encoding a type tag and a value. std::variant is another option.
-  /// NOTE: Since HermesValue can only store 64-bit values, strings need to be
-  /// changed into a table index.
-  using TraceValue = ::hermes::vm::HermesValue;
+  /// We use a an API very similar to HermesValue, but:
+  ///   a) also represent the JSI type PropNameID, and
+  ///   b) the "payloads" for some the types (Objects, Strings, and PropNameIDs)
+  ///      are unique ObjectIDs, rather than actual values.
+  /// (This could probably become a std::variant when we could use C++17.)
+  class TraceValue {
+   public:
+    bool isUndefined() const {
+      return tag_ == Tag::Undefined;
+    }
+
+    bool isNull() const {
+      return tag_ == Tag::Null;
+    }
+
+    bool isNumber() const {
+      return tag_ == Tag::Number;
+    }
+
+    bool isBool() const {
+      return tag_ == Tag::Bool;
+    }
+
+    bool isObject() const {
+      return tag_ == Tag::Object;
+    }
+
+    bool isString() const {
+      return tag_ == Tag::String;
+    }
+
+    bool isPropNameID() const {
+      return tag_ == Tag::PropNameID;
+    }
+
+    bool isUID() const {
+      return isObject() || isString() || isPropNameID();
+    }
+
+    static TraceValue encodeUndefinedValue() {
+      return TraceValue(Tag::Undefined);
+    }
+
+    static TraceValue encodeNullValue() {
+      return TraceValue(Tag::Null);
+    }
+
+    static TraceValue encodeBoolValue(bool value) {
+      return TraceValue(value);
+    }
+
+    static TraceValue encodeNumberValue(double value) {
+      return TraceValue(value);
+    }
+
+    static TraceValue encodeObjectValue(uint64_t uid) {
+      return TraceValue(Tag::Object, uid);
+    }
+
+    static TraceValue encodeStringValue(uint64_t uid) {
+      return TraceValue(Tag::String, uid);
+    }
+
+    static TraceValue encodePropNameIDValue(uint64_t uid) {
+      return TraceValue(Tag::PropNameID, uid);
+    }
+
+    bool operator==(const TraceValue &that) const;
+
+    ObjectID getUID() const {
+      assert(isUID());
+      return val_.uid;
+    }
+
+    bool getBool() const {
+      assert(isBool());
+      return val_.b;
+    }
+
+    double getNumber() const {
+      assert(isNumber());
+      return val_.n;
+    }
+
+   private:
+    enum class Tag {
+      Undefined,
+      Null,
+      Bool,
+      Number,
+      Object,
+      String,
+      PropNameID
+    };
+
+    explicit TraceValue(Tag tag) : tag_(tag) {}
+    TraceValue(bool b) : tag_(Tag::Bool) {
+      val_.b = b;
+    }
+    TraceValue(double n) : tag_(Tag::Number) {
+      val_.n = n;
+    }
+    TraceValue(Tag tag, uint64_t uid) : tag_(tag) {
+      val_.uid = uid;
+    }
+
+    Tag tag_;
+    union {
+      bool b;
+      double n;
+      ObjectID uid;
+    } val_;
+  };
 
   /// A TimePoint is a time when some event occurred.
   using TimePoint = std::chrono::steady_clock::time_point;
@@ -59,6 +169,8 @@ class SynthTrace {
     EndExecJS,
     Marker,
     CreateObject,
+    CreateString,
+    CreatePropNameID,
     CreateHostObject,
     CreateHostFunction,
     GetProperty,
@@ -95,21 +207,33 @@ class SynthTrace {
     /// Write out a serialization of this Record.
     /// \param json An emitter connected to an ostream which will write out
     ///   JSON.
-    void toJSON(::hermes::JSONEmitter &json, const SynthTrace &trace) const;
+    void toJSON(::hermes::JSONEmitter &json) const;
     virtual RecordType getType() const = 0;
 
+    // If \p val is an object (that is,  an Object or String), push its
+    // decoding onto objs.
+    static void pushIfTrackedValue(
+        const TraceValue &val,
+        std::vector<ObjectID> &objs) {
+      if (val.isUID()) {
+        objs.push_back(val.getUID());
+      }
+    }
+
     /// \return A list of object ids that are defined by this record.
-    /// Defined means that the record would produce that object as a locally
-    /// accessible value if it were executed.
+    /// Defined means that the record would produce that object,
+    /// string, or PropNameID as a locally accessible value if it were
+    /// executed.
     virtual std::vector<ObjectID> defs() const {
       return {};
     }
+
     /// \return A list of object ids that are used by this record.
-    /// Used means that the record would use that object as a value if it were
-    /// executed.
-    /// If a record uses an object, then some preceding record (either in the
-    /// same function invocation, or somewhere globally) must provide a
-    /// definition.
+    /// Used means that the record would use that object, string, or
+    /// PropNameID as a value if it were executed.
+    /// If a record uses an object id, then some preceding record
+    /// (either in the same function invocation, or somewhere
+    /// globally) must provide a definition.
     virtual std::vector<ObjectID> uses() const {
       return {};
     }
@@ -124,9 +248,7 @@ class SynthTrace {
     /// Emit JSON fields into \p os, excluding the closing curly brace.
     /// NOTE: This is overridable, and non-abstract children should call the
     /// parent.
-    virtual void toJSONInternal(
-        ::hermes::JSONEmitter &json,
-        const SynthTrace &trace) const;
+    virtual void toJSONInternal(::hermes::JSONEmitter &json) const;
   };
 
   /// If \p traceStream is non-null, the trace will be written to that
@@ -151,7 +273,7 @@ class SynthTrace {
   }
 
   /// Given a trace value, turn it into its typed string.
-  std::string encode(TraceValue value) const;
+  static std::string encode(TraceValue value);
   /// Encode an undefined JS value for the trace.
   static TraceValue encodeUndefined();
   /// Encode a null JS value for the trace.
@@ -162,29 +284,17 @@ class SynthTrace {
   static TraceValue encodeNumber(double value);
   /// Encodes an object for the trace as a unique id.
   static TraceValue encodeObject(ObjectID objID);
-  /// Encodes a string for the trace. Adds it to the string table if it hasn't
-  /// been seen before.
-  TraceValue encodeString(const std::string &value);
+  /// Encodes a string for the trace as a unique id.
+  static TraceValue encodeString(ObjectID objID);
+  /// Encodes a PropNameID for the trace as a unique id.
+  static TraceValue encodePropNameID(ObjectID objID);
 
-  /// Decodes a string into a trace value. It can add to the string table.
-  TraceValue decode(const std::string &);
-  /// Extracts an object ID from a trace value.
-  /// \pre The value must be an object.
-  static ObjectID decodeObject(TraceValue value);
-  /// Extracts a string from a trace value.
-  /// \pre The value must be a string.
-  const std::string &decodeString(TraceValue value) const;
-
-  static bool equal(TraceValue x, TraceValue y) {
-    // We are encoding random numbers into strings, and can't use the library
-    // functions.
-    // For now, ignore differences that result from NaN, +0/-0.
-    return x.getRaw() == y.getRaw();
-  }
+  /// Decodes a string into a trace value.
+  static TraceValue decode(const std::string &);
 
   /// The version of the Synth Benchmark
   constexpr static uint32_t synthVersion() {
-    return 2;
+    return 3;
   }
 
   static const char *nameFromReleaseUnused(::hermes::vm::ReleaseUnused ru);
@@ -219,11 +329,6 @@ class SynthTrace {
   std::vector<std::unique_ptr<Record>> records_;
   /// The id of the global object.
   const ObjectID globalObjID_;
-  /// A table of strings to avoid repeated strings taking up memory. Similar to
-  /// the IdentifierTable, except it doesn't need to be collected (it stores
-  /// strings forever).
-  /// Strings are stored in the trace objects as an index into this table.
-  ::hermes::StringSetVector stringTable_;
 
  public:
   /// @name Record classes
@@ -242,8 +347,7 @@ class SynthTrace {
     }
 
    protected:
-    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
-        const override;
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
     bool operator==(const Record &that) const override;
   };
 
@@ -274,11 +378,10 @@ class SynthTrace {
       return sourceHash_;
     }
 
-   private:
-    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
-        const override;
-
     bool operator==(const Record &that) const override;
+
+   private:
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
 
     /// The URL providing the source file mapping for the file being executed.
     /// Can be empty.
@@ -298,8 +401,7 @@ class SynthTrace {
 
     explicit ReturnMixin(TraceValue value) : retVal_(value) {}
 
-    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
-        const;
+    void toJSONInternal(::hermes::JSONEmitter &json) const;
     bool operator==(const ReturnMixin &that) const;
   };
 
@@ -318,14 +420,10 @@ class SynthTrace {
       return type;
     }
     bool operator==(const Record &that) const final;
-    virtual void toJSONInternal(
-        ::hermes::JSONEmitter &json,
-        const SynthTrace &trace) const final;
+    virtual void toJSONInternal(::hermes::JSONEmitter &json) const final;
     std::vector<ObjectID> defs() const override {
       auto defs = MarkerRecord::defs();
-      if (retVal_.isObject()) {
-        defs.push_back(decodeObject(retVal_));
-      }
+      pushIfTrackedValue(retVal_, defs);
       return defs;
     }
   };
@@ -341,14 +439,110 @@ class SynthTrace {
 
     bool operator==(const Record &that) const override;
 
-    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
-        const override;
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
     RecordType getType() const override {
       return type;
     }
 
     std::vector<ObjectID> defs() const override {
       return {objID_};
+    }
+
+    std::vector<ObjectID> uses() const override {
+      return {};
+    }
+  };
+
+  /// A CreateStringRecord is an event where a jsi::String (and thus a
+  /// Hermes StringPrimitive) is created by the native code.
+  struct CreateStringRecord : public Record {
+    static constexpr RecordType type{RecordType::CreateString};
+    const ObjectID objID_;
+    std::string chars_;
+    bool ascii_;
+
+    // General UTF-8.
+    CreateStringRecord(
+        TimeSinceStart time,
+        ObjectID objID,
+        const uint8_t *chars,
+        size_t length)
+        : Record(time),
+          objID_(objID),
+          chars_(reinterpret_cast<const char *>(chars), length),
+          ascii_(false) {}
+    // Ascii.
+    CreateStringRecord(
+        TimeSinceStart time,
+        ObjectID objID,
+        const char *chars,
+        size_t length)
+        : Record(time), objID_(objID), chars_(chars, length), ascii_(true) {}
+
+    bool operator==(const Record &that) const override;
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+    RecordType getType() const override {
+      return type;
+    }
+
+    std::vector<ObjectID> defs() const override {
+      return {objID_};
+    }
+
+    std::vector<ObjectID> uses() const override {
+      return {};
+    }
+  };
+
+  /// A CreatePropNameIDRecord is an event where a jsi::PropNameID is
+  /// created by the native code.
+  struct CreatePropNameIDRecord : public Record {
+    static constexpr RecordType type{RecordType::CreatePropNameID};
+    const ObjectID propNameID_;
+    std::string chars_;
+    bool ascii_;
+
+    // General UTF-8.
+    CreatePropNameIDRecord(
+        TimeSinceStart time,
+        ObjectID propNameID,
+        const uint8_t *chars,
+        size_t length)
+        : Record(time),
+          propNameID_(propNameID),
+          chars_(reinterpret_cast<const char *>(chars), length),
+          ascii_(false) {}
+    // Ascii.
+    CreatePropNameIDRecord(
+        TimeSinceStart time,
+        ObjectID propNameID,
+        const char *chars,
+        size_t length)
+        : Record(time),
+          propNameID_(propNameID),
+          chars_(chars, length),
+          ascii_(true) {}
+    // std::string
+    CreatePropNameIDRecord(
+        TimeSinceStart time,
+        ObjectID propNameID,
+        std::string &&chars,
+        bool isAscii)
+        : Record(time),
+          propNameID_(propNameID),
+          chars_(std::move(chars)),
+          ascii_(isAscii) {}
+
+    bool operator==(const Record &that) const override;
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+    RecordType getType() const override {
+      return type;
+    }
+
+    std::vector<ObjectID> defs() const override {
+      return {propNameID_};
     }
 
     std::vector<ObjectID> uses() const override {
@@ -366,48 +560,74 @@ class SynthTrace {
 
   struct CreateHostFunctionRecord final : public CreateObjectRecord {
     static constexpr RecordType type{RecordType::CreateHostFunction};
+    uint32_t propNameID_;
+#ifdef HERMESVM_API_TRACE_DEBUG
     const std::string functionName_;
+#endif
     const unsigned paramCount_;
 
     CreateHostFunctionRecord(
         TimeSinceStart time,
         ObjectID objID,
+        ObjectID propNameID,
+#ifdef HERMESVM_API_TRACE_DEBUG
         std::string functionName,
+#endif
         unsigned paramCount)
         : CreateObjectRecord(time, objID),
+          propNameID_(propNameID),
+#ifdef HERMESVM_API_TRACE_DEBUG
           functionName_(std::move(functionName)),
-          paramCount_(paramCount) {}
+#endif
+          paramCount_(paramCount) {
+    }
 
     bool operator==(const Record &that) const override;
 
-    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
-        const override;
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
 
     RecordType getType() const override {
       return type;
+    }
+
+    std::vector<ObjectID> uses() const override {
+      return {propNameID_};
     }
   };
 
   struct GetOrSetPropertyRecord : public Record {
     const ObjectID objID_;
-    const std::string propName_;
+    // This may be the ID of a String or a PropNameID.
+    const ObjectID propID_{0};
+#ifdef HERMESVM_API_TRACE_DEBUG
+    std::string propNameDbg_;
+#endif
     const TraceValue value_;
 
-    explicit GetOrSetPropertyRecord(
+    GetOrSetPropertyRecord(
         TimeSinceStart time,
         ObjectID objID,
-        const std::string &propName,
+        ObjectID propID,
+#ifdef HERMESVM_API_TRACE_DEBUG
+        const std::string &propNameDbg,
+#endif
         TraceValue value)
-        : Record(time), objID_(objID), propName_(propName), value_(value) {}
+        : Record(time),
+          objID_(objID),
+          propID_(propID),
+#ifdef HERMESVM_API_TRACE_DEBUG
+          propNameDbg_(propNameDbg),
+#endif
+          value_(value) {
+    }
 
     bool operator==(const Record &that) const final;
 
     std::vector<ObjectID> uses() const override {
-      return {objID_};
+      return {objID_, propID_};
     }
 
-    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
-        const override;
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
   };
 
   /// A GetPropertyRecord is an event where native code accesses the property
@@ -420,9 +640,7 @@ class SynthTrace {
     }
     std::vector<ObjectID> defs() const override {
       auto defs = GetOrSetPropertyRecord::defs();
-      if (value_.isObject()) {
-        defs.push_back(decodeObject(value_));
-      }
+      pushIfTrackedValue(value_, defs);
       return defs;
     }
   };
@@ -437,9 +655,7 @@ class SynthTrace {
     }
     std::vector<ObjectID> uses() const override {
       auto uses = GetOrSetPropertyRecord::uses();
-      if (value_.isObject()) {
-        uses.push_back(decodeObject(value_));
-      }
+      pushIfTrackedValue(value_, uses);
       return uses;
     }
   };
@@ -450,23 +666,37 @@ class SynthTrace {
   struct HasPropertyRecord final : public Record {
     static constexpr RecordType type{RecordType::HasProperty};
     const ObjectID objID_;
-    const std::string propName_;
+#ifdef HERMESVM_API_TRACE_DEBUG
+    std::string propNameDbg_;
+#endif
+    // This may be the ID of a String or a PropNameID.
+    const ObjectID propID_{0};
 
-    explicit HasPropertyRecord(
+    HasPropertyRecord(
         TimeSinceStart time,
         ObjectID objID,
-        const std::string &propName)
-        : Record(time), objID_(objID), propName_(propName) {}
+        ObjectID propID
+#ifdef HERMESVM_API_TRACE_DEBUG
+        ,
+        const std::string &propNameDbg
+#endif
+        )
+        : Record(time),
+          objID_(objID),
+#ifdef HERMESVM_API_TRACE_DEBUG
+          propNameDbg_(propNameDbg),
+#endif
+          propID_(propID) {
+    }
 
     bool operator==(const Record &that) const final;
 
-    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
-        const override;
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
     RecordType getType() const override {
       return type;
     }
     std::vector<ObjectID> uses() const override {
-      return {objID_};
+      return {objID_, propID_};
     }
   };
 
@@ -485,8 +715,7 @@ class SynthTrace {
 
     bool operator==(const Record &that) const final;
 
-    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
-        const override;
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
     RecordType getType() const override {
       return type;
     }
@@ -513,8 +742,7 @@ class SynthTrace {
 
     bool operator==(const Record &that) const final;
 
-    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
-        const override;
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
     RecordType getType() const override {
       return type;
     }
@@ -537,8 +765,7 @@ class SynthTrace {
 
     bool operator==(const Record &that) const final;
 
-    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
-        const override;
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
     std::vector<ObjectID> uses() const override {
       return {objID_};
     }
@@ -556,9 +783,7 @@ class SynthTrace {
     }
     std::vector<ObjectID> defs() const override {
       auto defs = ArrayReadOrWriteRecord::defs();
-      if (value_.isObject()) {
-        defs.push_back(decodeObject(value_));
-      }
+      pushIfTrackedValue(value_, defs);
       return defs;
     }
   };
@@ -573,9 +798,7 @@ class SynthTrace {
     }
     std::vector<ObjectID> uses() const override {
       auto uses = ArrayReadOrWriteRecord::uses();
-      if (value_.isObject()) {
-        uses.push_back(decodeObject(value_));
-      }
+      pushIfTrackedValue(value_, uses);
       return uses;
     }
   };
@@ -601,23 +824,18 @@ class SynthTrace {
 
     bool operator==(const Record &that) const final;
 
-    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
-        const override;
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
     std::vector<ObjectID> uses() const override {
       // The function is used regardless of direction.
       return {functionID_};
     }
 
    protected:
-    std::vector<ObjectID> getArgObjects() const {
+    std::vector<ObjectID> getArgTrackedIDs() const {
       std::vector<ObjectID> objs;
-      if (thisArg_.isObject()) {
-        objs.push_back(decodeObject(thisArg_));
-      }
+      pushIfTrackedValue(thisArg_, objs);
       for (const auto &arg : args_) {
-        if (arg.isObject()) {
-          objs.push_back(decodeObject(arg));
-        }
+        pushIfTrackedValue(arg, objs);
       }
       return objs;
     }
@@ -633,7 +851,7 @@ class SynthTrace {
     }
     std::vector<ObjectID> uses() const override {
       auto uses = CallRecord::uses();
-      auto objs = CallRecord::getArgObjects();
+      auto objs = CallRecord::getArgTrackedIDs();
       uses.insert(uses.end(), objs.begin(), objs.end());
       return uses;
     }
@@ -661,14 +879,11 @@ class SynthTrace {
     }
     std::vector<ObjectID> uses() const override {
       auto uses = Record::uses();
-      if (retVal_.isObject()) {
-        uses.push_back(decodeObject(retVal_));
-      }
+      pushIfTrackedValue(retVal_, uses);
       return uses;
     }
     bool operator==(const Record &that) const final;
-    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
-        const override;
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
   };
 
   /// A ReturnToNativeRecord is an event where a JS function returns to a native
@@ -683,14 +898,11 @@ class SynthTrace {
     }
     std::vector<ObjectID> defs() const override {
       auto defs = Record::defs();
-      if (retVal_.isObject()) {
-        defs.push_back(decodeObject(retVal_));
-      }
+      pushIfTrackedValue(retVal_, defs);
       return defs;
     }
     bool operator==(const Record &that) const final;
-    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
-        const override;
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
   };
 
   /// A CallToNativeRecord is an event where JS code calls into a natively
@@ -703,7 +915,7 @@ class SynthTrace {
     }
     std::vector<ObjectID> defs() const override {
       auto defs = CallRecord::defs();
-      auto objs = CallRecord::getArgObjects();
+      auto objs = CallRecord::getArgTrackedIDs();
       defs.insert(defs.end(), objs.begin(), objs.end());
       return defs;
     }
@@ -711,16 +923,23 @@ class SynthTrace {
 
   struct GetOrSetPropertyNativeRecord : public Record {
     const ObjectID hostObjectID_;
+    const ObjectID propNameID_;
     const std::string propName_;
 
-    explicit GetOrSetPropertyNativeRecord(
+    GetOrSetPropertyNativeRecord(
         TimeSinceStart time,
         ObjectID hostObjectID,
-        std::string propName)
-        : Record(time), hostObjectID_(hostObjectID), propName_(propName) {}
+        ObjectID propNameID,
+        const std::string &propName)
+        : Record(time),
+          hostObjectID_(hostObjectID),
+          propNameID_(propNameID),
+          propName_(propName) {}
 
-    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
-        const override;
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+    std::vector<ObjectID> defs() const override {
+      return {propNameID_};
+    }
     std::vector<ObjectID> uses() const override {
       return {hostObjectID_};
     }
@@ -752,16 +971,13 @@ class SynthTrace {
     }
     std::vector<ObjectID> uses() const override {
       auto uses = Record::uses();
-      if (retVal_.isObject()) {
-        uses.push_back(decodeObject(retVal_));
-      }
+      pushIfTrackedValue(retVal_, uses);
       return uses;
     }
     bool operator==(const Record &that) const final;
 
    protected:
-    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
-        const override;
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
   };
 
   /// A SetPropertyNativeRecord is an event where JS code writes to the property
@@ -771,24 +987,28 @@ class SynthTrace {
   struct SetPropertyNativeRecord final : public GetOrSetPropertyNativeRecord {
     static constexpr RecordType type{RecordType::SetPropertyNative};
     TraceValue value_;
-    explicit SetPropertyNativeRecord(
+
+    SetPropertyNativeRecord(
         TimeSinceStart time,
         ObjectID hostObjectID,
-        std::string propName,
+        ObjectID propNameID,
+        const std::string &propName,
         TraceValue value)
-        : GetOrSetPropertyNativeRecord(time, hostObjectID, propName),
+        : GetOrSetPropertyNativeRecord(
+              time,
+              hostObjectID,
+              propNameID,
+              propName),
           value_(value) {}
+
     bool operator==(const Record &that) const final;
-    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
-        const override;
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
     RecordType getType() const override {
       return type;
     }
     std::vector<ObjectID> defs() const override {
       auto defs = GetOrSetPropertyNativeRecord::defs();
-      if (value_.isObject()) {
-        defs.push_back(decodeObject(value_));
-      }
+      pushIfTrackedValue(value_, defs);
       return defs;
     }
   };
@@ -822,8 +1042,7 @@ class SynthTrace {
       return type;
     }
 
-    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
-        const override;
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
 
     std::vector<ObjectID> uses() const override {
       return {hostObjectID_};
@@ -847,8 +1066,7 @@ class SynthTrace {
       return type;
     }
 
-    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
-        const override;
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
 
     bool operator==(const Record &that) const override;
   };

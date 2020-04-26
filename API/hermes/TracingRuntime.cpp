@@ -65,7 +65,10 @@ jsi::Object TracingRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
     jsi::Value get(jsi::Runtime &rt, const jsi::PropNameID &name) override {
       TracingRuntime &trt = tracingRuntime();
       trt.trace_.emplace_back<SynthTrace::GetPropertyNativeRecord>(
-          trt.getTimeSinceStart(), objID_, name.utf8(rt));
+          trt.getTimeSinceStart(),
+          objID_,
+          trt.getUniqueID(name),
+          name.utf8(rt));
 
       try {
         // Note that this ignores the "rt" argument, passing the
@@ -93,6 +96,7 @@ jsi::Object TracingRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
       trt.trace_.emplace_back<SynthTrace::SetPropertyNativeRecord>(
           trt.getTimeSinceStart(),
           objID_,
+          trt.getUniqueID(name),
           name.utf8(rt),
           trt.toTraceValue(value));
 
@@ -170,12 +174,63 @@ jsi::Object TracingRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
   return obj;
 }
 
+jsi::String TracingRuntime::createStringFromAscii(
+    const char *str,
+    size_t length) {
+  jsi::String res = RD::createStringFromAscii(str, length);
+  trace_.emplace_back<SynthTrace::CreateStringRecord>(
+      getTimeSinceStart(), getUniqueID(res), str, length);
+  return res;
+};
+
+jsi::String TracingRuntime::createStringFromUtf8(
+    const uint8_t *utf8,
+    size_t length) {
+  jsi::String res = RD::createStringFromUtf8(utf8, length);
+  trace_.emplace_back<SynthTrace::CreateStringRecord>(
+      getTimeSinceStart(), getUniqueID(res), utf8, length);
+  return res;
+};
+
+jsi::PropNameID TracingRuntime::createPropNameIDFromAscii(
+    const char *str,
+    size_t length) {
+  jsi::PropNameID res = RD::createPropNameIDFromAscii(str, length);
+  trace_.emplace_back<SynthTrace::CreatePropNameIDRecord>(
+      getTimeSinceStart(), getUniqueID(res), str, length);
+  return res;
+}
+
+jsi::PropNameID TracingRuntime::createPropNameIDFromUtf8(
+    const uint8_t *utf8,
+    size_t length) {
+  jsi::PropNameID res = RD::createPropNameIDFromUtf8(utf8, length);
+  trace_.emplace_back<SynthTrace::CreatePropNameIDRecord>(
+      getTimeSinceStart(), getUniqueID(res), utf8, length);
+  return res;
+}
+
+jsi::PropNameID TracingRuntime::createPropNameIDFromString(
+    const jsi::String &str) {
+  std::string s = str.utf8(*this);
+  jsi::PropNameID res = RD::createPropNameIDFromString(str);
+  trace_.emplace_back<SynthTrace::CreatePropNameIDRecord>(
+      getTimeSinceStart(), getUniqueID(res), std::move(s), /* isAscii */ false);
+  return res;
+}
+
 jsi::Value TracingRuntime::getProperty(
     const jsi::Object &obj,
     const jsi::String &name) {
   auto value = RD::getProperty(obj, name);
   trace_.emplace_back<SynthTrace::GetPropertyRecord>(
-      getTimeSinceStart(), getUniqueID(obj), utf8(name), toTraceValue(value));
+      getTimeSinceStart(),
+      getUniqueID(obj),
+      getUniqueID(name),
+#ifdef HERMESVM_API_TRACE_DEBUG
+      name.utf8(*this),
+#endif
+      toTraceValue(value));
   return value;
 }
 
@@ -184,7 +239,13 @@ jsi::Value TracingRuntime::getProperty(
     const jsi::PropNameID &name) {
   auto value = RD::getProperty(obj, name);
   trace_.emplace_back<SynthTrace::GetPropertyRecord>(
-      getTimeSinceStart(), getUniqueID(obj), utf8(name), toTraceValue(value));
+      getTimeSinceStart(),
+      getUniqueID(obj),
+      getUniqueID(name),
+#ifdef HERMESVM_API_TRACE_DEBUG
+      name.utf8(*this),
+#endif
+      toTraceValue(value));
   return value;
 }
 
@@ -192,7 +253,14 @@ bool TracingRuntime::hasProperty(
     const jsi::Object &obj,
     const jsi::String &name) {
   trace_.emplace_back<SynthTrace::HasPropertyRecord>(
-      getTimeSinceStart(), getUniqueID(obj), utf8(name));
+      getTimeSinceStart(),
+      getUniqueID(obj),
+      getUniqueID(name)
+#ifdef HERMESVM_API_TRACE_DEBUG
+          ,
+      name.utf8(*this)
+#endif
+  );
   return RD::hasProperty(obj, name);
 }
 
@@ -200,7 +268,14 @@ bool TracingRuntime::hasProperty(
     const jsi::Object &obj,
     const jsi::PropNameID &name) {
   trace_.emplace_back<SynthTrace::HasPropertyRecord>(
-      getTimeSinceStart(), getUniqueID(obj), utf8(name));
+      getTimeSinceStart(),
+      getUniqueID(obj),
+      getUniqueID(name)
+#ifdef HERMESVM_API_TRACE_DEBUG
+          ,
+      name.utf8(*this)
+#endif
+  );
   return RD::hasProperty(obj, name);
 }
 
@@ -209,7 +284,13 @@ void TracingRuntime::setPropertyValue(
     const jsi::String &name,
     const jsi::Value &value) {
   trace_.emplace_back<SynthTrace::SetPropertyRecord>(
-      getTimeSinceStart(), getUniqueID(obj), utf8(name), toTraceValue(value));
+      getTimeSinceStart(),
+      getUniqueID(obj),
+      getUniqueID(name),
+#ifdef HERMESVM_API_TRACE_DEBUG
+      name.utf8(*this),
+#endif
+      toTraceValue(value));
   RD::setPropertyValue(obj, name, value);
 }
 
@@ -218,7 +299,13 @@ void TracingRuntime::setPropertyValue(
     const jsi::PropNameID &name,
     const jsi::Value &value) {
   trace_.emplace_back<SynthTrace::SetPropertyRecord>(
-      getTimeSinceStart(), getUniqueID(obj), utf8(name), toTraceValue(value));
+      getTimeSinceStart(),
+      getUniqueID(obj),
+      getUniqueID(name),
+#ifdef HERMESVM_API_TRACE_DEBUG
+      name.utf8(*this),
+#endif
+      toTraceValue(value));
   RD::setPropertyValue(obj, name, value);
 }
 
@@ -333,7 +420,13 @@ jsi::Function TracingRuntime::createFunctionFromHostFunction(
   RD::getHostFunction(tfunc).target<TracingHostFunction>()->setFunctionID(
       funcID);
   trace_.emplace_back<SynthTrace::CreateHostFunctionRecord>(
-      getTimeSinceStart(), funcID, name.utf8(*this), paramCount);
+      getTimeSinceStart(),
+      funcID,
+      getUniqueID(name),
+#ifdef HERMESVM_API_TRACE_DEBUG
+      name.utf8(*this),
+#endif
+      paramCount);
   return tfunc;
 }
 
@@ -397,7 +490,7 @@ SynthTrace::TraceValue TracingRuntime::toTraceValue(const jsi::Value &value) {
   } else if (value.isNumber()) {
     return SynthTrace::encodeNumber(value.getNumber());
   } else if (value.isString()) {
-    return trace_.encodeString(value.getString(*this).utf8(*this));
+    return trace_.encodeString(getUniqueID(value.getString(*this)));
   } else if (value.isObject()) {
     // Get a unique identifier from the object, and use that instead. This is
     // so that object identity is tracked.

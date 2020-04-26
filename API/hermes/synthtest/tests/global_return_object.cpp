@@ -33,9 +33,16 @@ const char *globalReturnObjectTrace() {
       "time": 0
     },
     {
+      "type": "CreatePropNameRecord",
+      "objID": 2,
+      "encoding": "ASCII",
+      "chars": "a"
+    },
+    {
       "type": "GetPropertyRecord",
       "time": 0,
       "objID": 10,
+      "propID": 2,
       "propName": "a",
       "value": "object:11"
     },

@@ -43,6 +43,7 @@
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
+#include "hermes/VM/SymbolID.h"
 #include "hermes/VM/TimeLimitMonitor.h"
 
 #include "llvm/Support/ConvertUTF.h"

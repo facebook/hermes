@@ -24,14 +24,29 @@ const char *getPropertyNamesTrace() {
   },
   "trace": [
     {
+      "type": "CreatePropNameIDRecord",
+      "objID": 40,
+      "encoding": "ASCII",
+      "chars": "HostFunction1"
+    },
+    {
       "type": "CreateHostFunctionRecord",
       "time": 0,
-      "objID": 10
+      "objID": 10,
+      "propNameID": 40,
+      "functionName": "HostFunction1"
+    },
+    {
+      "type": "CreatePropNameRecord",
+      "objID": 22,
+      "encoding": "ASCII",
+      "chars": "hostGetPropertyNamesOf"
     },
     {
       "type": "SetPropertyRecord",
       "time": 0,
       "objID": 1,
+      "propID": 22,
       "propName": "hostGetPropertyNamesOf",
       "value": "object:10"
     },

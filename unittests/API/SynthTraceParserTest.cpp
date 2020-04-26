@@ -24,7 +24,7 @@ struct SynthTraceParserTest : public ::testing::Test {
 TEST_F(SynthTraceParserTest, ParseHeader) {
   const char *src = R"(
 {
-  "version": 2,
+  "version": 3,
   "globalObjID": 258,
   "runtimeConfig": {
     "gcConfig": {
@@ -85,7 +85,7 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
 TEST_F(SynthTraceParserTest, RuntimeConfigDefaults) {
   const char *src = R"(
 {
-  "version": 2,
+  "version": 3,
   "globalObjID": 258,
   "runtimeConfig": {},
   "env": {

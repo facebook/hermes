@@ -501,7 +501,7 @@ class GCBase {
 
     /// Map of object pointers to IDs. Only populated once the first heap
     /// snapshot is requested, or the first time the memory profiler is turned
-    /// on.
+    /// on, or if JSI tracing is in effect.
     /// NOTE: The same map is used for both JS heap and native heap IDs.
     llvm::DenseMap<const void *, HeapSnapshot::NodeID> objectIDMap_;
 

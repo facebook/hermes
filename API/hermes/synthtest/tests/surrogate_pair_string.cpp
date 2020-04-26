@@ -24,16 +24,31 @@ const char *surrogatePairStringTrace() {
   },
   "trace": [
     {
-      "type": "CreateHostFunctionRecord",
-      "time": 0,
-      "objID": 10
+      "type": "CreatePropNameIDRecord",
+      "objID": 40,
+      "encoding": "ASCII",
+      "chars": "HostFunction1"
     },
     {
-        "type": "SetPropertyRecord",
-        "time": 0,
-        "objID": 1,
-        "propName": "foo",
-        "value": "object:10"
+      "type": "CreateHostFunctionRecord",
+      "time": 0,
+      "objID": 10,
+      "propNameID": 40,
+      "functionName": "HostFunction1"
+    },
+    {
+      "type": "CreatePropNameRecord",
+      "objID": 22,
+      "encoding": "ASCII",
+      "chars": "foo"
+    },
+    {
+      "type": "SetPropertyRecord",
+      "time": 0,
+      "objID": 1,
+      "propID": 22,
+      "propName": "foo",
+      "value": "object:10"
     },
     {
       "type": "BeginExecJSRecord",
@@ -47,16 +62,22 @@ const char *surrogatePairStringTrace() {
       "args": ["object:11"]
     },
     {
-        "type": "ArrayWriteRecord",
-        "time": 0,
-        "objID": 11,
-        "index": 0,
-        "value": "string:\ud83d\ude2c\ud801\udc37 abc \ud83e\ude00"
+      "type": "CreateStringRecord",
+      "objID": 23,
+      "encoding": "UTF-8",
+      "chars": "\ud83d\ude2c\ud801\udc37 abc \ud83e\ude00"
     },
     {
-        "type": "ReturnFromNativeRecord",
-        "time": 0,
-        "retval": "undefined:"
+      "type": "ArrayWriteRecord",
+      "time": 0,
+      "objID": 11,
+      "index": 0,
+      "value": "string:23"
+    },
+    {
+      "type": "ReturnFromNativeRecord",
+      "time": 0,
+      "retval": "undefined:"
     },
     {
       "type": "EndExecJSRecord",

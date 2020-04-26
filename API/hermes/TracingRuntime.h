@@ -46,6 +46,15 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
   jsi::Object createObject() override;
   jsi::Object createObject(std::shared_ptr<jsi::HostObject> ho) override;
 
+  jsi::String createStringFromAscii(const char *str, size_t length) override;
+  jsi::String createStringFromUtf8(const uint8_t *utf8, size_t length) override;
+
+  jsi::PropNameID createPropNameIDFromAscii(const char *str, size_t length)
+      override;
+  jsi::PropNameID createPropNameIDFromUtf8(const uint8_t *utf8, size_t length)
+      override;
+  jsi::PropNameID createPropNameIDFromString(const jsi::String &str) override;
+
   jsi::Value getProperty(const jsi::Object &obj, const jsi::String &name)
       override;
   jsi::Value getProperty(const jsi::Object &obj, const jsi::PropNameID &name)
@@ -157,6 +166,7 @@ class TracingHermesRuntime final : public TracingRuntime {
   SynthTrace::ObjectID getUniqueID(const jsi::PropNameID &pni) override {
     return static_cast<SynthTrace::ObjectID>(hermesRuntime().getUniqueID(pni));
   }
+
   void flushAndDisableTrace() override;
 
   std::string flushAndDisableBridgeTrafficTrace() override;

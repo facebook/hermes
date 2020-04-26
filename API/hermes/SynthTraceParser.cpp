@@ -274,6 +274,9 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
     auto *hostObjID =
         llvm::dyn_cast_or_null<JSONNumber>(obj->get("hostObjectID"));
     auto *funcID = llvm::dyn_cast_or_null<JSONNumber>(obj->get("functionID"));
+    auto *propID = llvm::dyn_cast_or_null<JSONNumber>(obj->get("propID"));
+    auto *propNameID =
+        llvm::dyn_cast_or_null<JSONNumber>(obj->get("propNameID"));
     auto *propName = llvm::dyn_cast_or_null<JSONString>(obj->get("propName"));
     auto *propValue = llvm::dyn_cast_or_null<JSONString>(obj->get("value"));
     auto *arrayIndex = llvm::dyn_cast_or_null<JSONNumber>(obj->get("index"));
@@ -317,42 +320,112 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
         trace.emplace_back<SynthTrace::CreateObjectRecord>(
             timeFromStart, objID->getValue());
         break;
+      case RecordType::CreateString: {
+        auto encoding =
+            llvm::dyn_cast_or_null<JSONString>(obj->get("encoding"));
+        bool isAscii = false;
+        if (encoding->str() == "ASCII") {
+          isAscii = true;
+        } else {
+          assert(encoding->str() == "UTF-8");
+        }
+        auto str = llvm::dyn_cast_or_null<JSONString>(obj->get("chars"));
+        if (isAscii) {
+          trace.emplace_back<SynthTrace::CreateStringRecord>(
+              timeFromStart,
+              objID->getValue(),
+              str->str().data(),
+              str->str().size());
+        } else {
+          trace.emplace_back<SynthTrace::CreateStringRecord>(
+              timeFromStart,
+              objID->getValue(),
+              reinterpret_cast<const uint8_t *>(str->str().data()),
+              str->str().size());
+        }
+        break;
+      }
+      case RecordType::CreatePropNameID: {
+        auto id = llvm::dyn_cast_or_null<JSONNumber>(obj->get("objID"));
+        auto encoding =
+            llvm::dyn_cast_or_null<JSONString>(obj->get("encoding"));
+        bool isAscii = false;
+        if (encoding->str() == "ASCII") {
+          isAscii = true;
+        } else {
+          assert(encoding->str() == "UTF-8");
+        }
+        auto str = llvm::dyn_cast_or_null<JSONString>(obj->get("chars"));
+        if (isAscii) {
+          trace.emplace_back<SynthTrace::CreatePropNameIDRecord>(
+              timeFromStart,
+              id->getValue(),
+              str->str().data(),
+              str->str().size());
+        } else {
+          trace.emplace_back<SynthTrace::CreatePropNameIDRecord>(
+              timeFromStart,
+              id->getValue(),
+              reinterpret_cast<const uint8_t *>(str->str().data()),
+              str->str().size());
+        }
+        break;
+      }
       case RecordType::CreateHostObject:
         trace.emplace_back<SynthTrace::CreateHostObjectRecord>(
             timeFromStart, objID->getValue());
         break;
       case RecordType::CreateHostFunction: {
-        std::string functionName;
         unsigned paramCount = 0;
-        if (JSONString *jsonFunctionName =
-                llvm::dyn_cast_or_null<JSONString>(obj->get("functionName"))) {
-          functionName = jsonFunctionName->str();
-        }
         if (JSONNumber *jsonParamCount = llvm::dyn_cast_or_null<JSONNumber>(
                 obj->get("parameterCount"))) {
           paramCount = jsonParamCount->getValue();
         }
+        std::string functionName;
+        if (JSONString *jsonFunctionName =
+                llvm::dyn_cast_or_null<JSONString>(obj->get("functionName"))) {
+          functionName = jsonFunctionName->str();
+        }
         trace.emplace_back<SynthTrace::CreateHostFunctionRecord>(
-            timeFromStart, objID->getValue(), functionName, paramCount);
+            timeFromStart,
+            objID->getValue(),
+            propNameID->getValue(),
+#ifdef HERMESVM_API_TRACE_DEBUG
+            functionName,
+#endif
+            paramCount);
         break;
       }
       case RecordType::GetProperty:
         trace.emplace_back<SynthTrace::GetPropertyRecord>(
             timeFromStart,
             objID->getValue(),
-            propName->c_str(),
+            propID->getValue(),
+#ifdef HERMESVM_API_TRACE_DEBUG
+            std::string(propName->c_str()),
+#endif
             trace.decode(propValue->c_str()));
         break;
       case RecordType::SetProperty:
         trace.emplace_back<SynthTrace::SetPropertyRecord>(
             timeFromStart,
             objID->getValue(),
-            propName->c_str(),
+            propID->getValue(),
+#ifdef HERMESVM_API_TRACE_DEBUG
+            std::string(propName->c_str()),
+#endif
             trace.decode(propValue->c_str()));
         break;
       case RecordType::HasProperty:
         trace.emplace_back<SynthTrace::HasPropertyRecord>(
-            timeFromStart, objID->getValue(), propName->c_str());
+            timeFromStart,
+            objID->getValue(),
+            propID->getValue()
+#ifdef HERMESVM_API_TRACE_DEBUG
+                ,
+            std::string(propName->c_str())
+#endif
+        );
         break;
       case RecordType::GetPropertyNames:
         trace.emplace_back<SynthTrace::GetPropertyNamesRecord>(
@@ -411,7 +484,10 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
         break;
       case RecordType::GetPropertyNative:
         trace.emplace_back<SynthTrace::GetPropertyNativeRecord>(
-            timeFromStart, hostObjID->getValue(), propName->c_str());
+            timeFromStart,
+            hostObjID->getValue(),
+            propNameID->getValue(),
+            propName->c_str());
         break;
       case RecordType::GetPropertyNativeReturn:
         trace.emplace_back<SynthTrace::GetPropertyNativeReturnRecord>(
@@ -421,6 +497,7 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
         trace.emplace_back<SynthTrace::SetPropertyNativeRecord>(
             timeFromStart,
             hostObjID->getValue(),
+            propNameID->getValue(),
             propName->c_str(),
             trace.decode(propValue->c_str()));
         break;

@@ -24,26 +24,56 @@ const char *hostCallsJSCallsHostTrace() {
   },
   "trace": [
     {
+      "type": "CreatePropNameIDRecord",
+      "objID": 40,
+      "encoding": "ASCII",
+      "chars": "HostFunction1"
+    },
+    {
       "type": "CreateHostFunctionRecord",
       "time": 0,
-      "objID": 10
+      "objID": 10,
+      "propNameID": 40,
+      "functionName": "HostFunction1"
+    },
+    {
+      "type": "CreatePropNameRecord",
+      "objID": 22,
+      "encoding": "ASCII",
+      "chars": "foo"
     },
     {
       "type": "SetPropertyRecord",
       "time": 0,
       "objID": 1,
+      "propID": 22,
       "propName": "foo",
       "value": "object:10"
     },
     {
+      "type": "CreatePropNameIDRecord",
+      "objID": 41,
+      "encoding": "ASCII",
+      "chars": "HostFunction2"
+    },
+    {
       "type": "CreateHostFunctionRecord",
       "time": 0,
-      "objID": 11
+      "objID": 11,
+      "propNameID": 41,
+      "functionName": "HostFunction2"
+    },
+    {
+      "type": "CreatePropNameRecord",
+      "objID": 23,
+      "encoding": "ASCII",
+      "chars": "bar"
     },
     {
       "type": "SetPropertyRecord",
       "time": 0,
       "objID": 1,
+      "propID": 23,
       "propName": "bar",
       "value": "object:11"
     },
@@ -59,9 +89,16 @@ const char *hostCallsJSCallsHostTrace() {
       "args": ["object:12"]
     },
     {
+      "type": "CreatePropNameRecord",
+      "objID": 24,
+      "encoding": "ASCII",
+      "chars": "f"
+    },
+    {
       "type": "GetPropertyRecord",
       "time": 0,
       "objID": 1,
+      "propID": 24,
       "propName": "f",
       "value": "object:13"
     },

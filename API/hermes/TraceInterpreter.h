@@ -165,7 +165,12 @@ class TraceInterpreter final {
       hostObjectsCallCount_;
   std::unordered_map<SynthTrace::ObjectID, uint64_t>
       hostObjectsPropertyNamesCallCount_;
-  std::unordered_map<SynthTrace::ObjectID, jsi::Object> gom_;
+
+  // Invariant: the value is either jsi::Object or jsi::String.
+  std::unordered_map<SynthTrace::ObjectID, jsi::Value> gom_;
+  // For the PropNameIDs, which are not representable as jsi::Value.
+  std::unordered_map<SynthTrace::ObjectID, jsi::PropNameID> gpnm_;
+
   std::string stats_;
   /// Whether the marker was reached.
   bool markerFound_{false};
@@ -252,35 +257,120 @@ class TraceInterpreter final {
       bool *isBytecode = nullptr);
 
   jsi::Function createHostFunction(
-      const SynthTrace::CreateHostFunctionRecord &rec);
+      const SynthTrace::CreateHostFunctionRecord &rec,
+      const jsi::PropNameID &propNameID);
 
   jsi::Object createHostObject(SynthTrace::ObjectID objID);
 
   std::string execEntryFunction(const Call &entryFunc);
 
+  // Execute \p entryFunc on the given \p thisVal and the \p count
+  // arguments \p args.  If the first record should be treated as a
+  // definition of a propNameID used in the function, \p
+  // nativePropNameToConsumeAsDef will be non-null, and will point to
+  // the jsi::PropNameID that is the runtime value for the prop name.
   jsi::Value execFunction(
       const Call &entryFunc,
       const jsi::Value &thisVal,
       const jsi::Value *args,
-      uint64_t count);
+      uint64_t count,
+      const jsi::PropNameID *nativePropNameToConsumeAsDef = nullptr);
 
-  /// Add \p obj, whose id is \p objID and occurs at \p globalRecordNum, to
-  /// either the globals or the \p locals depending on if it is used locally or
-  /// not.
-  void addObjectToDefs(
+  /// Requires that \p valID is the proper id for \p val, and that a
+  /// defining occurence of \p valID occurs at the given \p
+  /// globalRecordNum.  Decides whether the definition should be
+  /// recorded, locally in \p call, or globally, and, if so, adds the
+  /// association between \p valID and \p val to \p locals or \p
+  /// globals, as appropriate.
+  template <typename ValueType>
+  void addValueToDefs(
       const Call &call,
-      SynthTrace::ObjectID objID,
+      SynthTrace::ObjectID valID,
       uint64_t globalRecordNum,
-      const jsi::Object &obj,
-      std::unordered_map<SynthTrace::ObjectID, jsi::Object> &locals);
+      const ValueType &val,
+      std::unordered_map<SynthTrace::ObjectID, ValueType> &locals,
+      std::unordered_map<SynthTrace::ObjectID, ValueType> &globals);
 
   /// Same as above, except it avoids copies on temporary objects.
-  void addObjectToDefs(
+  template <typename ValueType>
+  void addValueToDefs(
       const Call &call,
-      SynthTrace::ObjectID objID,
+      SynthTrace::ObjectID valID,
       uint64_t globalRecordNum,
-      jsi::Object &&obj,
-      std::unordered_map<SynthTrace::ObjectID, jsi::Object> &locals);
+      ValueType &&val,
+      std::unordered_map<SynthTrace::ObjectID, ValueType> &locals,
+      std::unordered_map<SynthTrace::ObjectID, ValueType> &globals);
+
+  /// Requires that \p valID is the proper id for \p val, and that a
+  /// defining occurence of \p key occurs at the given \p
+  /// globalRecordNum.  Decides whether the definition should be
+  /// recorded, locally in \p call, or globally, and, if so, adds the
+  /// association between \p key and \p val to \p locals or \p
+  /// globals, as appropriate.
+  void addJSIValueToDefs(
+      const Call &call,
+      SynthTrace::ObjectID valID,
+      uint64_t globalRecordNum,
+      const jsi::Value &val,
+      std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals) {
+    addValueToDefs<jsi::Value>(call, valID, globalRecordNum, val, locals, gom_);
+  }
+
+  /// Same as above, except it avoids copies on temporary objects.
+  void addJSIValueToDefs(
+      const Call &call,
+      SynthTrace::ObjectID valID,
+      uint64_t globalRecordNum,
+      jsi::Value &&val,
+      std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals) {
+    addValueToDefs<jsi::Value>(call, valID, globalRecordNum, val, locals, gom_);
+  }
+
+  /// Requires that \p valID is the proper id for \p propNameID, and
+  /// that a defining occurence of \p propNameID occurs at the given
+  /// \p globalRecordNum.  Decides whether the definition should be
+  /// recorded, locally in \p call, or globally, and, if so, adds the
+  /// association between \p propNameID and \p val to \p locals or \p
+  /// globals, as appropriate.
+  void addPropNameIDToDefs(
+      const Call &call,
+      SynthTrace::ObjectID valID,
+      uint64_t globalRecordNum,
+      const jsi::PropNameID &propNameID,
+      std::unordered_map<SynthTrace::ObjectID, jsi::PropNameID> &locals) {
+    addValueToDefs<jsi::PropNameID>(
+        call, valID, globalRecordNum, propNameID, locals, gpnm_);
+  }
+
+  /// Same as above, except it avoids copies on temporary objects.
+  void addPropNameIDToDefs(
+      const Call &call,
+      SynthTrace::ObjectID valID,
+      uint64_t globalRecordNum,
+      jsi::PropNameID &&propNameID,
+      std::unordered_map<SynthTrace::ObjectID, jsi::PropNameID> &locals) {
+    addValueToDefs<jsi::PropNameID>(
+        call, valID, globalRecordNum, propNameID, locals, gpnm_);
+  }
+
+  /// If \p traceValue specifies an Object or String, requires \p
+  /// val to be of the corresponding runtime type.  Adds this
+  /// occurrence at \p globalRecordNum as a local or global definition
+  /// in \p locals or the global object map, respectively.
+  bool ifObjectAddToDefs(
+      const SynthTrace::TraceValue &traceValue,
+      const jsi::Value &val,
+      const Call &call,
+      uint64_t globalRecordNum,
+      std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals);
+
+  /// Same as above, except it avoids copies on temporary objects.
+  bool ifObjectAddToDefs(
+      const SynthTrace::TraceValue &traceValue,
+      jsi::Value &&val,
+      const Call &call,
+      uint64_t globalRecordNum,
+      std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals);
 
   std::string printStats();
 
