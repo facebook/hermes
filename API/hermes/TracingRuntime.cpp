@@ -33,15 +33,17 @@ jsi::Value TracingRuntime::evaluateJavaScript(
     const std::shared_ptr<const jsi::Buffer> &buffer,
     const std::string &sourceURL) {
   ::hermes::SHA1 sourceHash{};
+  bool sourceIsBytecode = false;
   if (HermesRuntime::isHermesBytecode(buffer->data(), buffer->size())) {
     sourceHash = ::hermes::hbc::BCProviderFromBuffer::getSourceHashFromBytecode(
         llvm::makeArrayRef(buffer->data(), buffer->size()));
+    sourceIsBytecode = true;
   } else {
     sourceHash =
         llvm::SHA1::hash(llvm::makeArrayRef(buffer->data(), buffer->size()));
   }
   trace_.emplace_back<SynthTrace::BeginExecJSRecord>(
-      getTimeSinceStart(), sourceURL, sourceHash);
+      getTimeSinceStart(), sourceURL, sourceHash, sourceIsBytecode);
   auto res = RD::evaluateJavaScript(buffer, sourceURL);
   trace_.emplace_back<SynthTrace::EndExecJSRecord>(
       getTimeSinceStart(), toTraceValue(res));

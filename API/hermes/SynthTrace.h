@@ -254,10 +254,12 @@ class SynthTrace {
     explicit BeginExecJSRecord(
         TimeSinceStart time,
         std::string sourceURL,
-        ::hermes::SHA1 sourceHash)
+        ::hermes::SHA1 sourceHash,
+        bool sourceIsBytecode)
         : Record(time),
           sourceURL_(std::move(sourceURL)),
-          sourceHash_(std::move(sourceHash)) {}
+          sourceHash_(std::move(sourceHash)),
+          sourceIsBytecode_(sourceIsBytecode) {}
 
     RecordType getType() const override {
       return type;
@@ -275,6 +277,8 @@ class SynthTrace {
     void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
         const override;
 
+    bool operator==(const Record &that) const override;
+
     /// The URL providing the source file mapping for the file being executed.
     /// Can be empty.
     std::string sourceURL_;
@@ -283,6 +287,9 @@ class SynthTrace {
     /// when the file is replayed.
     /// The hash is optional, and will be all zeros if not provided.
     ::hermes::SHA1 sourceHash_;
+
+    /// Whether the input file was source or bytecode.
+    bool sourceIsBytecode_;
   };
 
   struct ReturnMixin {

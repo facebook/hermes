@@ -220,6 +220,16 @@ bool SynthTrace::ReturnMixin::operator==(const ReturnMixin &that) const {
   return equal(retVal_, that.retVal_);
 }
 
+bool SynthTrace::BeginExecJSRecord::operator==(const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  auto thatCasted = dynamic_cast<const BeginExecJSRecord &>(that);
+  return sourceURL_ == thatCasted.sourceURL_ &&
+      sourceHash_ == thatCasted.sourceHash_ &&
+      sourceIsBytecode_ == thatCasted.sourceIsBytecode_;
+}
+
 bool SynthTrace::EndExecJSRecord::operator==(const Record &that) const {
   if (!Record::operator==(that)) {
     return false;
@@ -467,6 +477,7 @@ void SynthTrace::BeginExecJSRecord::toJSONInternal(
   Record::toJSONInternal(json, trace);
   json.emitKeyValue("sourceURL", sourceURL_);
   json.emitKeyValue("sourceHash", ::hermes::hashAsString(sourceHash_));
+  json.emitKeyValue("sourceIsBytecode", sourceIsBytecode_);
 }
 
 void SynthTrace::ReturnMixin::toJSONInternal(

@@ -284,6 +284,7 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
       case RecordType::BeginExecJS: {
         std::string sourceURL;
         ::hermes::SHA1 hash{};
+        bool sourceIsBytecode{false};
         if (JSONString *sourceURLJSON =
                 llvm::dyn_cast_or_null<JSONString>(obj->get("sourceURL"))) {
           sourceURL = sourceURLJSON->str();
@@ -292,8 +293,16 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
                 llvm::dyn_cast_or_null<JSONString>(obj->get("sourceHash"))) {
           hash = parseHashStrAsNumber(sourceHash->str());
         }
+        if (JSONBoolean *sourceIsBytecodeJson =
+                llvm::dyn_cast_or_null<JSONBoolean>(
+                    obj->get("sourceIsBytecode"))) {
+          sourceIsBytecode = sourceIsBytecodeJson->getValue();
+        }
         trace.emplace_back<SynthTrace::BeginExecJSRecord>(
-            timeFromStart, std::move(sourceURL), std::move(hash));
+            timeFromStart,
+            std::move(sourceURL),
+            std::move(hash),
+            sourceIsBytecode);
         break;
       }
       case RecordType::EndExecJS:
