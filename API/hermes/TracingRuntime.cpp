@@ -521,7 +521,7 @@ void addRecordMarker(TracingRuntime &tracingRuntime) {
       funcName,
       jsi::Function::createFromHostFunction(
           tracingRuntime,
-          jsi::PropNameID::forAscii(rt, funcName),
+          jsi::PropNameID::forAscii(tracingRuntime, funcName),
           0,
           [funcName, &tracingRuntime](
               jsi::Runtime &rt,
