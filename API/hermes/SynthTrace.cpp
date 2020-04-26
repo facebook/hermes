@@ -15,6 +15,7 @@
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/UTF8.h"
 #include "hermes/VM/MockedEnvironment.h"
+#include "hermes/VM/StringPrimitive.h"
 
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/NativeFormatting.h"
@@ -111,6 +112,59 @@ SynthTrace::SynthTrace(
     json_->emitKeyValue("ES6Symbol", conf.getES6Symbol());
     json_->emitKeyValue("enableSampledStats", conf.getEnableSampledStats());
     json_->emitKeyValue("vmExperimentFlags", conf.getVMExperimentFlags());
+    json_->closeDict();
+
+    // Build properties section
+    json_->emitKey("buildProperties");
+    json_->openDict();
+    json_->emitKeyValue("nativePointerSize", sizeof(void *));
+    json_->emitKeyValue(
+        "allowCompressedPointers",
+#ifdef HERMESVM_ALLOW_COMPRESSED_POINTERS
+        true
+#else
+        false
+#endif
+
+    );
+    json_->emitKeyValue(
+        "debugBuild",
+#ifdef NDEBUG
+        false
+#else
+        true
+#endif
+    );
+    json_->emitKeyValue(
+        "slowDebug",
+#ifdef HERMES_SLOW_DEBUG
+        true
+#else
+        false
+#endif
+    );
+    json_->emitKeyValue(
+        "enableDebugger",
+#ifdef HERMES_ENABLE_DEBUGGER
+        true
+#else
+        false
+#endif
+    );
+    json_->emitKeyValue(
+        "enableIRInstrumentation",
+#ifdef HERMES_ENABLE_IR_INSTRUMENTATION
+        true
+#else
+        false
+#endif
+    );
+    // The size of this type was a thing that varied between 64-bit Android and
+    // 64-bit desktop Linux builds.  A config flag now allows us to build on
+    // Linux desktop in a way that matches the sizes.
+    json_->emitKeyValue(
+        "sizeofExternalASCIIStringPrimitive",
+        sizeof(::hermes::vm::ExternalASCIIStringPrimitive));
     json_->closeDict();
 
     // Both the top-level dict and the trace array remain open.  The latter is
