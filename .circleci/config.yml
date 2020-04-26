@@ -40,6 +40,7 @@ jobs:
     environment:
       - HERMES_WS_DIR: /tmp/hermes
       - TERM: dumb
+      - DEBIAN_FRONTEND: noninteractive
     steps:
       - checkout
       - run:
@@ -96,6 +97,7 @@ jobs:
     environment:
       - HERMES_WS_DIR: /tmp/hermes
       - TERM: dumb
+      - DEBIAN_FRONTEND: noninteractive
     steps:
       - run:
           name: Install dependencies
@@ -149,6 +151,7 @@ jobs:
     environment:
       - HERMES_WS_DIR: /tmp/hermes
       - TERM: dumb
+      - DEBIAN_FRONTEND: noninteractive
     steps:
       - run:
           name: Install dependencies
