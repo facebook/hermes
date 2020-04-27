@@ -142,9 +142,8 @@ def main():
             ),
             "-DCMAKE_EXE_LINKER_FLAGS="
             "-s NODERAWFS=1 -s WASM=1 -s ALLOW_MEMORY_GROWTH=1",
+            "-DEMSCRIPTEN_FASTCOMP=" + str(int(args.emscripten_platform == "fastcomp")),
         ]
-        if args.emscripten_platform == "fastcomp":
-            cmake_flags += ["-DEMSCRIPTEN_FASTCOMP=1"]
 
     if args.icu_root:
         cmake_flags += ["-DICU_ROOT=" + args.icu_root]
