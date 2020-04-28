@@ -1068,6 +1068,10 @@ void HermesRuntime::dumpSampledTraceToFile(const std::string &fileName) {
   ::hermes::vm::SamplingProfiler::getInstance()->dumpChromeTrace(os);
 }
 
+void HermesRuntime::dumpSampledTraceToStream(llvm::raw_ostream &stream) {
+  ::hermes::vm::SamplingProfiler::getInstance()->dumpChromeTrace(stream);
+}
+
 /*static*/ std::vector<int64_t> HermesRuntime::getExecutedFunctions() {
   std::vector<::hermes::vm::CodeCoverageProfiler::FuncInfo> executedFuncs =
       ::hermes::vm::CodeCoverageProfiler::getInstance()->getExecutedFunctions();

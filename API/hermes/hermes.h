@@ -79,6 +79,9 @@ class HermesRuntime : public jsi::Runtime {
   /// Dump sampled stack trace to the given file name.
   static void dumpSampledTraceToFile(const std::string &fileName);
 
+  /// Dump sampled stack trace to the given stream.
+  static void dumpSampledTraceToStream(llvm::raw_ostream &stream);
+
   /// Return the executed JavaScript function info.
   /// Each function info is a 64bit integer with the module id encoded in
   /// upper 32bit and function virtual offset in lower 32bit.
