@@ -22,7 +22,7 @@ from common import (
 
 def parse_args():
     parser = get_parser()
-    parser.add_argument("hermes_build_dir", type=str, nargs="?", default="build")
+    parser.add_argument("hermes_build_dir", type=str, nargs="?", default=None)
     parser.add_argument("--icu", type=str, dest="icu_root", default="")
     parser.add_argument("--fbsource", type=str, dest="fbsource_dir", default="")
     parser.add_argument("--opcode-stats", dest="opcode_stats", action="store_true")
@@ -52,7 +52,6 @@ def parse_args():
         "fastcomp backend",
     )
     args = parser.parse_args()
-    args.hermes_build_dir = os.path.realpath(args.hermes_build_dir)
     if args.icu_root:
         args.icu_root = os.path.realpath(args.icu_root)
     if args.fbsource_dir:
@@ -75,7 +74,11 @@ def parse_args():
             args.build_type = "Release" if args.wasm else "MinSizeRel"
         else:
             args.build_type = "Debug"
-    args.hermes_build_dir += build_dir_suffix(args)
+
+    if not args.hermes_build_dir:
+        args.hermes_build_dir = "build" + build_dir_suffix(args)
+    args.hermes_build_dir = os.path.realpath(args.hermes_build_dir)
+
     # Guess the ICU directory based on platform.
     if not args.icu_root and platform.system() == "Linux":
         icu_prefs = [
