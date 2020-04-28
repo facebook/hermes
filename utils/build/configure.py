@@ -6,23 +6,66 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import argparse
 import os
 import platform
+import shutil
 import subprocess
+import sys
+import time
+import warnings
 
-from common import (
-    build_dir_suffix,
-    common_cmake_flags,
-    get_parser,
-    is_visual_studio,
-    run_command,
-    which,
-)
+
+def build_dir_suffix(args):
+    suffices = []
+    if args.enable_asan:
+        suffices += ["asan"]
+    if args.enable_ubsan:
+        suffices += ["ubsan"]
+    if args.distribute:
+        suffices += ["release"]
+    if args.is_32_bit:
+        suffices += ["32"]
+    if args.wasm:
+        suffices += ["wasm", args.emscripten_platform]
+    return ("_" + "_".join(suffices)) if suffices else ""
 
 
 def parse_args():
-    parser = get_parser()
+    parser = argparse.ArgumentParser()
     parser.add_argument("hermes_build_dir", type=str, nargs="?", default=None)
+    parser.add_argument(
+        "--build-system",
+        type=str,
+        dest="build_system",
+        default="Ninja",
+        help="Generator to pass into CMake",
+    )
+    parser.add_argument(
+        "--cmake-flags",
+        type=str,
+        dest="cmake_flags",
+        default="",
+        help="Additional flags to pass to CMake",
+    )
+    parser.add_argument(
+        "--build-type",
+        type=str,
+        dest="build_type",
+        choices=["MinSizeRel", "Debug"],
+        default=None,
+        help="Optimization level of build",
+    )
+    parser.add_argument(
+        "--http-proxy",
+        type=str,
+        dest="http_proxy",
+        default=os.environ.get("HTTP_PROXY", ""),
+    )
+    parser.add_argument("--distribute", action="store_true")
+    parser.add_argument("--32-bit", dest="is_32_bit", action="store_true")
+    parser.add_argument("--enable-asan", dest="enable_asan", action="store_true")
+    parser.add_argument("--enable-ubsan", dest="enable_ubsan", action="store_true")
     parser.add_argument("--icu", type=str, dest="icu_root", default="")
     parser.add_argument("--fbsource", type=str, dest="fbsource_dir", default="")
     parser.add_argument("--opcode-stats", dest="opcode_stats", action="store_true")
@@ -92,6 +135,60 @@ def parse_args():
     return args
 
 
+def run_command(cmd, **kwargs):
+    print("+ " + " ".join(cmd))
+    retries = kwargs.pop("retries", 0)
+    seconds_between_retries = kwargs.pop("seconds_between_retries", 10)
+
+    while True:
+        try:
+            return subprocess.check_call(
+                cmd, stdout=sys.stdout, stderr=sys.stderr, **kwargs
+            )
+        except subprocess.CalledProcessError as e:
+            if retries == 0:
+                raise
+            retries -= 1
+            print("Command failed, retrying soon: " + str(e))
+            time.sleep(seconds_between_retries)
+            print("Retrying...")
+
+
+def which(cmd):
+    if sys.version_info >= (3, 3):
+        # On Python 3.3 and above, use shutil.which for a quick error message.
+        resolved = shutil.which(cmd)
+        if not resolved:
+            raise Exception("{} not found on PATH".format(cmd))
+        return os.path.realpath(resolved)
+    else:
+        # Manually check PATH
+        for p in os.environ["PATH"].split(os.path.pathsep):
+            p = os.path.join(p, cmd)
+            if "PATHEXT" in os.environ:
+                # try out adding each extension to the PATH as well
+                for ext in os.environ["PATHEXT"].split(os.path.pathsep):
+                    # Add the extension.
+                    p_and_extension = p + ext
+                    if os.path.exists(p_and_extension) and os.access(
+                        p_and_extension, os.X_OK
+                    ):
+                        return os.path.realpath(p_and_extension)
+            else:
+                if os.path.isfile(p) and os.access(p, os.X_OK):
+                    return os.path.realpath(p)
+        raise Exception("{} not found on PATH".format(cmd))
+
+
+def python_executable_flag():
+    if sys.executable and sys.version_info.major < 3:
+        warnings.warn(
+            "Configuring CMake with Python2. "
+            "Python3 is recommended for the configuration of the Hermes build"
+        )
+    return ["-DPYTHON_EXECUTABLE={}".format(sys.executable or which("python"))]
+
+
 def main():
     args = parse_args()
     print(
@@ -108,24 +205,24 @@ def main():
 
     cmake_flags = (
         args.cmake_flags.split()
-        + common_cmake_flags()
+        + python_executable_flag()
         + ["-DCMAKE_BUILD_TYPE=" + args.build_type]
     )
 
     if (
         platform.system() == "Windows"
         and platform.machine().endswith("64")
-        and is_visual_studio(args.build_system)
+        and "Visual Studio" in args.build_system
     ):
         cmake_flags += ["-Thost=x64"]
     if args.opcode_stats:
-        cmake_flags += ["-DHERMESVM_PROFILER_OPCODE=On"]
+        cmake_flags += ["-DHERMESVM_PROFILER_OPCODE=ON"]
     if args.basic_block_profiler:
-        cmake_flags += ["-DHERMESVM_PROFILER_BB=On"]
+        cmake_flags += ["-DHERMESVM_PROFILER_BB=ON"]
     if args.warnings_as_errors:
-        cmake_flags += ["-DHERMES_ENABLE_WERROR=On"]
+        cmake_flags += ["-DHERMES_ENABLE_WERROR=ON"]
     if args.static_link:
-        cmake_flags += ["-DHERMES_STATIC_LINK=On"]
+        cmake_flags += ["-DHERMES_STATIC_LINK=ON"]
     if args.enable_asan:
         cmake_flags += ["-DHERMES_ENABLE_ADDRESS_SANITIZER=ON"]
     if args.enable_ubsan:
