@@ -15,7 +15,9 @@
  * HermesCompiler.js is a module exposing the compiler interface to JS.
  */
 
-#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
+#include "hermes/AST/SemValidate.h"
+#include "hermes/BCGen/HBC/HBC.h"
+#include "hermes/SourceMap/SourceMapParser.h"
 #include "hermes/Support/Algorithms.h"
 
 #include "llvm/Support/SHA1.h"
@@ -40,11 +42,15 @@ extern "C" {
 /// \param sourceSize the length of \c source in bytes, including the
 ///     terminating zero.
 /// \param sourceURL optional string containing the source URL.
+/// \param sourceMapData optional string containing a source map.
+/// \param sourceMapSize the length if \c sourceMapData, including nul
 /// \return a new instance of CompileResult.
 CompileResult *hermesCompileToBytecode(
     const char *source,
     size_t sourceSize,
-    const char *sourceURL);
+    const char *sourceURL,
+    const char *sourceMapData,
+    size_t sourceMapSize);
 
 /// Free the CompileResult allocated by \c hermesCompileToBytecode().
 void hermesCompileResult_free(CompileResult *res);
@@ -104,12 +110,28 @@ EMSCRIPTEN_KEEPALIVE
 extern "C" CompileResult *hermesCompileToBytecode(
     const char *source,
     size_t sourceSize,
-    const char *sourceURL) {
+    const char *sourceURL,
+    const char *sourceMapData,
+    size_t sourceMapSize) {
   auto compileRes = hermes::make_unique<CompileResult>();
+  std::unique_ptr<SourceMap> sourceMap;
 
   if (source[sourceSize - 1] != 0) {
     compileRes->error_ = "Input source must be zero-terminated";
     return compileRes.release();
+  }
+
+  if (sourceMapData != nullptr) {
+    if (sourceMapData[sourceMapSize - 1] != 0) {
+      compileRes->error_ = "Input sourcemap must be zero-terminated";
+      return compileRes.release();
+    }
+
+    sourceMap = SourceMapParser::parse({sourceMapData, sourceMapSize - 1});
+    if (!sourceMap) {
+      compileRes->error_ = "Failed to parse source map";
+      return compileRes.release();
+    }
   }
 
   hbc::CompileFlags flags{};
@@ -121,6 +143,7 @@ extern "C" CompileResult *hermesCompileToBytecode(
       hermes::make_unique<hermes::Buffer>(
           (const uint8_t *)source, sourceSize - 1),
       sourceURL ? sourceURL : "",
+      std::move(sourceMap),
       flags);
   if (!res.first) {
     if (!res.second.empty())
@@ -166,15 +189,29 @@ extern "C" const char *hermesGetProperties() {
 // This is just a dummy main routine to exercise the code. It won't actually
 // be called by JS.
 int main() {
+  const char map[] = R"(
+      {
+        "version": 3,
+        "file": "x.js",
+        "sourceRoot": "",
+        "sources": [
+          "test.js"
+        ],
+        "names": [],
+        "mappings": "AAKA,SAAS,OAAO,CAAC,MAAc;IAC3B,OAAO,SAAS,GAAG,MAAM,CAAC,SAAS,GAAG,GAAG,GAAG,MAAM,CAAC,QAAQ,CAAC;AAChE,CAAC;AAED,IAAI,IAAI,GAAG,EAAE,SAAS,EAAE,MAAM,EAAE,QAAQ,EAAE,MAAM,EAAE,CAAC;AACnD,OAAO,CAAC,GAAG,CAAC,OAAO,CAAC,IAAI,CAAC,CAAC,CAAC"
+      }
+    )";
   static const char src1[] = "var x = 1; print(x);";
-  auto *res1 = hermesCompileToBytecode(src1, sizeof(src1), "");
+  auto *res1 =
+      hermesCompileToBytecode(src1, sizeof(src1), "x.js", map, sizeof(map));
   assert(!hermesCompileResult_getError(res1) && "success expected");
   llvm::outs() << "Generated " << hermesCompileResult_getBytecodeSize(res1)
                << " bytecode bytes\n";
   hermesCompileResult_free(res1);
 
   static const char src2[] = "var x = 1 + ;";
-  auto *res2 = hermesCompileToBytecode(src2, sizeof(src2), "");
+  auto *res2 =
+      hermesCompileToBytecode(src2, sizeof(src2), "x.js", map, sizeof(map));
   assert(hermesCompileResult_getError(res2) && "error expected");
   llvm::outs() << "Error " << hermesCompileResult_getError(res2) << "\n";
   hermesCompileResult_free(res2);

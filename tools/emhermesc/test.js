@@ -12,7 +12,8 @@ const assert = require("assert");
 
 function compileOrError(str) {
     try {
-        let buffer = hc.compile(str);
+        let buffer = hc.compile(str, {});
+        console.log(JSON.stringify(buffer));
         console.log("bytecode buffer length", buffer.length)
     } catch (e) {
         console.error("Hermes error:", e.message);

@@ -14,7 +14,7 @@ const hermesc = require("./emhermesc.js")({
 });
 
 const hermesCompileToBytecode = hermesc.cwrap("hermesCompileToBytecode", "number",
-    ["number", "number", "string"]);
+    ["number", "number", "string", "number", "number"]);
 const hermesCompileResult_getError = hermesc.cwrap("hermesCompileResult_getError", "string",
     ["number"]);
 const hermesCompileResult_getBytecodeAddr = hermesc.cwrap("hermesCompileResult_getBytecodeAddr", "number",
@@ -26,7 +26,22 @@ const hermesCompileResult_free = hermesc.cwrap("hermesCompileResult_free", "void
 
 const hermesProps = JSON.parse(hermesc.ccall("hermesGetProperties", "string", [], []));
 
-function compile(source /*: string | Buffer*/, sourceURL /*: string*/) /*: Buffer*/ {
+function strdup(str /*: string*/) /*: number*/ {
+  var jsCopy = Buffer.from(str, 'utf8');
+  var size = jsCopy.length + 1;
+  var addr = hermesc._malloc(size);
+  if(!addr) {
+    throw new Error('hermesc string allocation error');
+  }
+  hermesc.HEAP8.set(jsCopy, addr);
+  hermesc.HEAP8[addr+jsCopy.length] = 0;
+  return { ptr: addr, size: size };
+}
+
+function compile(source /*: string | Buffer*/, options) /*: Buffer*/ {
+    const sourceURL = options.sourceURL || "";
+    const sourceMap = options.sourceMap || "";
+
     // If the input is a string, convert it to a Buffer, otherwise assume it is a Buffer.
     const buffer =
         typeof source === 'string' ? Buffer.from(source, 'utf8') : source;
@@ -42,7 +57,15 @@ function compile(source /*: string | Buffer*/, sourceURL /*: string*/) /*: Buffe
         // Zero terminate.
         hermesc.HEAP8[addr + buffer.length] = 0;
 
-        const res = hermesCompileToBytecode(addr, buffer.length + 1, sourceURL || "");
+        // Strings are passed on the stack by default. Explicitly pass the source map
+        // on the heap to avoid problems with large ones.
+        let map = strdup(sourceMap);
+        let res;
+        try {
+          res = hermesCompileToBytecode(addr, buffer.length + 1, sourceURL, map.ptr, map.size);
+        } finally {
+          hermesc._free(map.ptr);
+        }
         try {
             const err = hermesCompileResult_getError(res);
             if (err) {
