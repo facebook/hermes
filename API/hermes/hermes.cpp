@@ -1164,10 +1164,12 @@ void HermesRuntime::setMockedEnvironment(
   static_cast<HermesRuntimeImpl *>(this)->runtime_.setMockedEnvironment(env);
 }
 
+#ifdef HERMESVM_API_TRACE
 const ::hermes::vm::GCExecTrace &HermesRuntime::getGCExecTrace() const {
   return static_cast<const HermesRuntimeImpl *>(this)
       ->runtime_.getGCExecTrace();
 }
+#endif
 
 std::string HermesRuntime::getIOTrackingInfoJSON() {
   std::string buf;
