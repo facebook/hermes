@@ -113,6 +113,7 @@ static void handleSignal(int sig) {
 }
 
 static ReadResult readInputLine(const char *prompt, std::string &line) {
+#ifndef __EMSCRIPTEN__
   struct sigaction action;
   sigemptyset(&action.sa_mask);
   action.sa_flags = 0;
@@ -138,11 +139,17 @@ static ReadResult readInputLine(const char *prompt, std::string &line) {
     return ReadResult::SUCCESS;
   }
 #endif
+#else
+  // Avoid unused function warnings.
+  (void)handleSignal;
+#endif
   llvm::outs() << prompt;
   std::string current{};
   bool success = !!std::getline(std::cin, current);
+#ifndef __EMSCRIPTEN__
   action.sa_handler = oldAction.sa_handler;
   ::sigaction(SIGINT, &action, &oldAction);
+#endif
   if (!success) {
     return ReadResult::FAILURE;
   }
