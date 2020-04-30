@@ -174,9 +174,11 @@ class JSParserImpl {
   static constexpr unsigned MAX_RECURSION_DEPTH =
 #ifdef HERMES_LIMIT_STACK_DEPTH
       128
-#elif defined(_WINDOWS) && defined(HERMES_SLOW_DEBUG)
+#elif defined(_MSC_VER) && defined(__clang__) && defined(HERMES_SLOW_DEBUG)
+      128
+#elif defined(_MSC_VER) && defined(HERMES_SLOW_DEBUG)
       256
-#elif defined(_WINDOWS)
+#elif defined(_MSC_VER)
       512
 #else
       1024

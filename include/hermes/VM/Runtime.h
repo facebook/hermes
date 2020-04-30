@@ -1069,11 +1069,13 @@ class Runtime : public HandleRootOwner,
       // UBSAN builds will hit a native stack overflow much earlier, so make
       // this limit dramatically lower.
       30
-#elif defined(_WINDOWS) && defined(HERMES_SLOW_DEBUG)
+#elif defined(_MSC_VER) && defined(__clang__) && defined(HERMES_SLOW_DEBUG)
+      30
+#elif defined(_MSC_VER) && defined(HERMES_SLOW_DEBUG)
       // On windows in dbg mode builds, stack frames are bigger, and a depth
       // limit of 384 results in a C++ stack overflow in testing.
       128
-#elif defined(_WINDOWS) && !NDEBUG
+#elif defined(_MSC_VER) && !NDEBUG
       192
 #else
       /// This depth limit was originally 256, and we
