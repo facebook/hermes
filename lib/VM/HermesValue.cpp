@@ -69,7 +69,10 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HermesValue hv) {
       double num = hv.getDouble();
       // Is it representable as int64_t?
       if (num >= std::numeric_limits<int64_t>::lowest() &&
-          num <= std::numeric_limits<int64_t>::max() && (int64_t)num == num) {
+          // The cast is to ignore the following warning:
+          // implicit conversion from 'int64_t' to 'double' changes value.
+          num <= (double)std::numeric_limits<int64_t>::max() &&
+          (int64_t)num == num) {
         return OS << "[double " << (int64_t)num << "]";
       } else {
         return OS << "[double " << num << "]";

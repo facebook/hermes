@@ -418,7 +418,9 @@ class HermesValue {
     double num = getDouble();
     assert(
         num >= std::numeric_limits<T>::lowest() &&
-        num <= std::numeric_limits<T>::max() && (T)num == num &&
+        // The cast is to ignore the following warning:
+        // implicit conversion from 'int64_t' to 'double' changes value.
+        num <= (double)std::numeric_limits<T>::max() && (T)num == num &&
         "value not representable as type");
     return num;
   }
