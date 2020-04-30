@@ -13,6 +13,11 @@
 
 #include <string>
 
+#if defined(HERMES_FACEBOOK_BUILD) && !defined(_WINDOWS) && \
+    !defined(__EMSCRIPTEN__)
+#define HERMES_USE_FBSYSTRACE
+#endif
+
 namespace hermes {
 
 /// A class whose constructor/destructor delimit a region of code
@@ -22,8 +27,7 @@ namespace hermes {
 /// print statement to standard output.
 class PerfSection {
  public:
-#if (defined(HERMES_FACEBOOK_BUILD) && !defined(_WINDOWS)) || \
-    defined(HERMESVM_PLATFORM_LOGGING)
+#if defined(HERMES_USE_FBSYSTRACE) || defined(HERMESVM_PLATFORM_LOGGING)
   /// Start a section with the given name, and optional category, used in logs.
   PerfSection(const char *name, const char *category = nullptr);
 
