@@ -10,7 +10,6 @@
 
 #include "hermes/Public/CtorConfig.h"
 #include "hermes/Public/GCTripwireContext.h"
-#include "hermes/Public/MemoryEventTracker.h"
 
 #include <algorithm>
 #include <cassert>
@@ -140,12 +139,6 @@ enum class GCEventKind {
                                                                           \
   /* Whether to track allocation traces starting in the Runtime ctor. */  \
   F(constexpr, bool, AllocationLocationTrackerFromStart, false)           \
-                                                                          \
-  /* Pointer to the memory profiler (Memory Event Tracker). */            \
-  F(HERMES_NON_CONSTEXPR,                                                 \
-    std::shared_ptr<MemoryEventTracker>,                                  \
-    MemEventTracker,                                                      \
-    nullptr)                                                              \
                                                                           \
   /* Callout for an analytics event. */                                   \
   F(HERMES_NON_CONSTEXPR,                                                 \

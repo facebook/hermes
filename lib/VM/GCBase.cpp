@@ -49,9 +49,6 @@ GCBase::GCBase(
       inGC_(false),
       name_(gcConfig.getName()),
       allocationLocationTracker_(this),
-#ifdef HERMESVM_MEMORY_PROFILER
-      memEventTracker_(gcConfig.getMemEventTracker()),
-#endif
       tripwireCallback_(gcConfig.getTripwireConfig().getCallback()),
       tripwireLimit_(gcConfig.getTripwireConfig().getLimit())
 #ifdef HERMESVM_SANITIZE_HANDLES

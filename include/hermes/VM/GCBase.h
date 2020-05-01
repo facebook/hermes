@@ -13,7 +13,6 @@
 #include "hermes/Public/CrashManager.h"
 #include "hermes/Public/GCConfig.h"
 #include "hermes/Public/GCTripwireContext.h"
-#include "hermes/Public/MemoryEventTracker.h"
 #include "hermes/Support/CheckedMalloc.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/StatsAccumulator.h"
@@ -875,16 +874,6 @@ class GCBase {
   inline uint64_t nextObjectID();
 #endif
 
-  /// Get the instance of the memory event tracker. If memory
-  /// profiling is not enabled this should return nullptr.
-  inline MemoryEventTracker *memEventTracker() {
-#ifdef HERMESVM_MEMORY_PROFILER
-    return memEventTracker_.get();
-#else
-    return nullptr;
-#endif
-  }
-
   using TimePoint = std::chrono::steady_clock::time_point;
   /// Return the difference between the two time points (end - start)
   /// as a double representing the number of seconds in the duration.
@@ -1125,11 +1114,6 @@ class GCBase {
 #endif
 
  private:
-#ifdef HERMESVM_MEMORY_PROFILER
-  /// Memory event tracker for the memory profiler
-  std::shared_ptr<MemoryEventTracker> memEventTracker_;
-#endif
-
   /// Callback called if it's not null when the Live Data Tripwire is triggered.
   std::function<void(GCTripwireContext &)> tripwireCallback_;
 

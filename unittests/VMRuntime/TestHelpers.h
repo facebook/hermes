@@ -351,8 +351,7 @@ struct DummyRuntime final : public HandleRootOwner,
 
 /// A DummyRuntimeTestFixtureBase should be used by any test that requires a
 /// DummyRuntime. It takes a metadata table and a GCConfig, the latter can be
-/// used to specify heap size using the constants i.e kInitHeapSize and to
-/// specify a MemoryEventTracker implementation for testing memory profiling.
+/// used to specify heap size using the constants i.e kInitHeapSize.
 class DummyRuntimeTestFixtureBase : public ::testing::Test {
   std::shared_ptr<DummyRuntime> rt;
 
