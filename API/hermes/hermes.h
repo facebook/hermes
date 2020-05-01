@@ -14,7 +14,6 @@
 #include <string>
 
 #include <hermes/Public/RuntimeConfig.h>
-#include <hermes/VM/GCExecTrace.h>
 #include <jsi/jsi.h>
 
 struct HermesTestHelper;
@@ -25,6 +24,7 @@ class raw_ostream;
 
 namespace hermes {
 namespace vm {
+class GCExecTrace;
 struct MockedEnvironment;
 } // namespace vm
 } // namespace hermes
