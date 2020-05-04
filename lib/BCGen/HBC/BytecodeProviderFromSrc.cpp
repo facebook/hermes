@@ -61,7 +61,7 @@ BCProviderFromSrc::BCProviderFromSrc(
   globalFunctionIndex_ = module_->getGlobalFunctionIndex();
 
   stringKinds_ = module_->getStringKinds();
-  identifierTranslations_ = module_->getIdentifierTranslations();
+  identifierHashes_ = module_->getIdentifierHashes();
   stringCount_ = module_->getStringTable().size();
   stringStorage_ = module_->getStringStorage();
 

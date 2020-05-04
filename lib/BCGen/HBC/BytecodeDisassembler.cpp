@@ -139,10 +139,10 @@ void BytecodeDisassembler::disassembleBytecodeFileHeader(raw_ostream &OS) {
 
 void BytecodeDisassembler::disassembleStringStorage(raw_ostream &OS) {
   auto strStorage = bcProvider_->getStringStorage();
-  auto translations = bcProvider_->getIdentifierTranslations();
+  auto hashes = bcProvider_->getIdentifierHashes();
 
   const auto strCount = bcProvider_->getStringCount();
-  const auto trnCount = translations.size();
+  const auto hashCount = hashes.size();
 
   if (strCount == 0)
     return;
@@ -150,7 +150,7 @@ void BytecodeDisassembler::disassembleStringStorage(raw_ostream &OS) {
   auto kinds = bcProvider_->getStringKinds();
 
   uint32_t strID = 0;
-  uint32_t trnID = 0;
+  uint32_t hashID = 0;
 
   OS << "Global String Table:\n";
   const std::locale loc("C");
@@ -175,7 +175,7 @@ void BytecodeDisassembler::disassembleStringStorage(raw_ostream &OS) {
         case StringKind::Identifier:
           OS << " #"
              << llvm::format_hex_no_prefix(
-                    translations[trnID++], 8, /* Upper */ true);
+                    hashes[hashID++], 8, /* Upper */ true);
           break;
 
         default:
@@ -198,8 +198,8 @@ void BytecodeDisassembler::disassembleStringStorage(raw_ostream &OS) {
 
   assert(strID == strCount && "Visited all strings.");
   (void)strCount;
-  assert(trnID == trnCount && "Visited all translations.");
-  (void)trnCount;
+  assert(hashID == hashCount && "Visited all hashes.");
+  (void)hashCount;
 }
 
 /// NOTE: The output might not show the value of every literal used
@@ -757,9 +757,9 @@ BytecodeSectionWalker::BytecodeSectionWalker(
       bcProvider->getStringKinds().begin(),
       bcProvider->getStringKinds().end());
   addSection(
-      "Identifier translations",
-      bcProvider->getIdentifierTranslations().begin(),
-      bcProvider->getIdentifierTranslations().end());
+      "Identifier hashes",
+      bcProvider->getIdentifierHashes().begin(),
+      bcProvider->getIdentifierHashes().end());
   addSection(
       "String table",
       bcProvider->getSmallStringTableEntries().begin(),

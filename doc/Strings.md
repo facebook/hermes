@@ -20,7 +20,7 @@ The distinction between these is important during bytecode initialisation, parti
 In the Hermes bytecode format, the string table is split into the following consecutive sections of the file:
 
  1. String Kinds.  A sequence which describes the kinds of the strings in the table (as described in "Hermes Bytecode String Kinds").  Abstractly, the i-th element in the sequence is the kind of the i-th string in the table.  Represented as a run-length encoding.
- 2. Identifier Translations.  This sequence has an element corresponding to each identifier in the table (This includes Predefined strings).  The i-th element of this sequence corresponds to the i-th identifier in the table.  If the string is Predefined, the element contains the index in the Identifier Table where the that string is expected to be.  If the string is an Identifier but not Predefined, the element contains a hash of the identifier's string representation.
+ 2. Identifier Hashes.  This sequence has an element corresponding to each identifier in the table.  The i-th element of this sequence corresponds to the i-th identifier in the table.  If the string is an Identifier, the element contains a hash of the identifier's string representation.
  3. Small String Table.  The primary index into the string table.  When a bytecode instruction refers to a string by its index, it uses the offset into this data structure.  Represents the string with three pieces of information:
   - Whether it is UTF16 or not.
   - Its offset into the character storage.

@@ -213,7 +213,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
       "Missing functions.");
 
   auto kinds = stringTable_.getStringKinds();
-  auto hashes = stringTable_.getIdentifierTranslations();
+  auto hashes = stringTable_.getIdentifierHashes();
 
   BytecodeOptions bytecodeOptions;
   bytecodeOptions.staticBuiltins = options_.staticBuiltinsEnabled;

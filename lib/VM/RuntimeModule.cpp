@@ -236,21 +236,21 @@ void RuntimeModule::importStringIDMapMayAllocate() {
     bcProvider_->willNeedStringTable();
   }
 
-  // Get the array of pre-computed translations from identifiers in the bytecode
+  // Get the array of pre-computed hashes from identifiers in the bytecode
   // to their runtime representation as SymbolIDs.
   auto kinds = bcProvider_->getStringKinds();
-  auto translations = bcProvider_->getIdentifierTranslations();
+  auto hashes = bcProvider_->getIdentifierHashes();
   assert(
-      translations.size() <= strTableSize &&
+      hashes.size() <= strTableSize &&
       "Should not have more strings than identifiers");
 
   // Preallocate enough space to store all identifiers to prevent
   // unnecessary allocations. NOTE: If this module is not the first module,
   // then this is an underestimate.
-  runtime_->getIdentifierTable().reserve(translations.size());
+  runtime_->getIdentifierTable().reserve(hashes.size());
   {
     StringID strID = 0;
-    uint32_t trnID = 0;
+    uint32_t hashID = 0;
 
     for (auto entry : kinds) {
       switch (entry.kind()) {
@@ -259,18 +259,16 @@ void RuntimeModule::importStringIDMapMayAllocate() {
           break;
 
         case StringKind::Identifier:
-          for (uint32_t i = 0; i < entry.count(); ++i, ++strID, ++trnID) {
+          for (uint32_t i = 0; i < entry.count(); ++i, ++strID, ++hashID) {
             createSymbolFromStringIDMayAllocate(
-                strID,
-                bcProvider_->getStringTableEntry(strID),
-                translations[trnID]);
+                strID, bcProvider_->getStringTableEntry(strID), hashes[hashID]);
           }
           break;
       }
     }
 
     assert(strID == strTableSize && "Should map every string in the bytecode.");
-    assert(trnID == translations.size() && "Should translate all identifiers.");
+    assert(hashID == hashes.size() && "Should hash all identifiers.");
   }
 
   if (runtime_->getVMExperimentFlags() & experiments::MAdviseStringsRandom) {
@@ -292,8 +290,8 @@ void RuntimeModule::importStringIDMapMayAllocate() {
     mapStringMayAllocate(s, 0, hashString(s));
   }
 
-  // Done with translations, so advise them out if possible.
-  bcProvider_->dontNeedIdentifierTranslations();
+  // Done with hashes, so advise them out if possible.
+  bcProvider_->dontNeedIdentifierHashes();
 }
 
 void RuntimeModule::initializeFunctionMap() {

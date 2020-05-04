@@ -236,9 +236,9 @@ void BytecodeSerializer::visitStringKinds() {
   writeBinaryArray(bytecodeModule_->getStringKinds());
 }
 
-void BytecodeSerializer::visitIdentifierTranslations() {
+void BytecodeSerializer::visitIdentifierHashes() {
   pad(BYTECODE_ALIGNMENT);
-  writeBinaryArray(bytecodeModule_->getIdentifierTranslations());
+  writeBinaryArray(bytecodeModule_->getIdentifierHashes());
 }
 
 void BytecodeSerializer::visitSmallStringTable() {

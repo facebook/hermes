@@ -116,7 +116,7 @@ class BCProviderBase {
   /// Below are all the different global data tables/storage.
   uint32_t stringCount_{};
   llvm::ArrayRef<StringKind::Entry> stringKinds_{};
-  llvm::ArrayRef<uint32_t> identifierTranslations_{};
+  llvm::ArrayRef<uint32_t> identifierHashes_{};
   llvm::ArrayRef<unsigned char> stringStorage_{};
 
   llvm::ArrayRef<unsigned char> arrayBuffer_{};
@@ -166,8 +166,8 @@ class BCProviderBase {
   llvm::ArrayRef<StringKind::Entry> getStringKinds() const {
     return stringKinds_;
   }
-  llvm::ArrayRef<uint32_t> getIdentifierTranslations() const {
-    return identifierTranslations_;
+  llvm::ArrayRef<uint32_t> getIdentifierHashes() const {
+    return identifierHashes_;
   }
   llvm::ArrayRef<unsigned char> getStringStorage() const {
     return stringStorage_;
@@ -274,9 +274,9 @@ class BCProviderBase {
   /// soon.  Only forwards this information to the OS for buffers.
   virtual void willNeedStringTable() {}
 
-  /// Advise the provider that identifier translations are no longer needed.
+  /// Advise the provider that identifier hashes are no longer needed.
   /// Only forwards this information to the OS for buffers.
-  virtual void dontNeedIdentifierTranslations() {}
+  virtual void dontNeedIdentifierHashes() {}
 
   /// Start tracking I/O (only implemented for buffers). Any access before this
   /// call (e.g. reading header to construct the provider) will not be recorded.
@@ -484,7 +484,7 @@ class BCProviderFromBuffer final : public BCProviderBase {
   void adviseStringTableSequential() override;
   void adviseStringTableRandom() override;
   void willNeedStringTable() override;
-  void dontNeedIdentifierTranslations() override;
+  void dontNeedIdentifierHashes() override;
 
   void startPageAccessTracker() override;
 

@@ -380,7 +380,7 @@ template <typename Visitor>
 void visitBytecodeSegmentsInOrder(Visitor &visitor) {
   visitor.visitFunctionHeaders();
   visitor.visitStringKinds();
-  visitor.visitIdentifierTranslations();
+  visitor.visitIdentifierHashes();
   visitor.visitSmallStringTable();
   visitor.visitOverflowStringTable();
   visitor.visitStringStorage();
@@ -420,8 +420,8 @@ struct BytecodeFileFields {
   /// Run-length encoding representing the kinds of strings in the table.
   Array<StringKind::Entry> stringKinds{};
 
-  /// The list of identifier translations.
-  Array<uint32_t> identifierTranslations{};
+  /// The list of identifier hashes.
+  Array<uint32_t> identifierHashes{};
 
   /// The list of overflowed string table entries.
   Array<hbc::OverflowStringTableEntry> stringTableOverflowEntries{};

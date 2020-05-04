@@ -36,7 +36,7 @@ cat <<EOF > "$TMP/expected"
 <unknown>
 function-table
 string-kinds
-identifier-translations
+identifier-hashes
 string-table
 overflow-string-table
 string-storage
