@@ -12,6 +12,8 @@
 #include "hermes/VM/MallocGC.h"
 #elif defined(HERMESVM_GC_NONCONTIG_GENERATIONAL)
 #include "hermes/VM/GenGCNC.h"
+#elif defined(HERMESVM_GC_HADES)
+#include "hermes/VM/HadesGC.h"
 #else
 #error "Unsupported HermesVM GCKIND" #HERMESVM_GCKIND
 #endif
