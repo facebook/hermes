@@ -7,14 +7,12 @@
     "start": "docusaurus start",
     "build": "docusaurus build",
     "swizzle": "docusaurus swizzle",
-    "deploy": "docusaurus deploy",
-    "postbuild": "node postprocess"
+    "deploy": "docusaurus deploy"
   },
   "dependencies": {
-    "@docusaurus/core": "^2.0.0-alpha.43",
-    "@docusaurus/preset-classic": "^2.0.0-alpha.43",
+    "@docusaurus/core": "^2.0.0-alpha.54",
+    "@docusaurus/preset-classic": "^2.0.0-alpha.54",
     "classnames": "^2.2.6",
-    "loud-rejection": "^2.1.0",
     "monaco-editor": "^0.19.2",
     "react": "^16.8.4",
     "react-dom": "^16.8.4",
