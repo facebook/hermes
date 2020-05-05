@@ -26,15 +26,6 @@ const char *g_tokenStr[] = {
 
 const int UTF8_LINE_TERMINATOR_CHAR0 = 0xe2;
 
-inline bool matchUnicodeLineTerminator(const char *curCharPtr_) {
-  // Line separator \u2028 UTF8 encoded is      : e2 80 a8
-  // Paragraph separator \u2029 UTF8 encoded is: e2 80 a9
-  return (unsigned char)curCharPtr_[0] == UTF8_LINE_TERMINATOR_CHAR0 &&
-      (unsigned char)curCharPtr_[1] == 0x80 &&
-      ((unsigned char)curCharPtr_[2] == 0xa8 ||
-       (unsigned char)curCharPtr_[2] == 0xa9);
-}
-
 inline bool matchUnicodeLineTerminatorOffset1(const char *curCharPtr_) {
   // Line separator \u2028 UTF8 encoded is      : e2 80 a8
   // Paragraph separator \u2029 UTF8 encoded is: e2 80 a9
@@ -1385,9 +1376,7 @@ void JSLexer::scanString() {
             tmpStorage_.push_back((unsigned char)*curCharPtr_++);
           break;
       }
-    } else if (LLVM_UNLIKELY(
-                   *curCharPtr_ == '\n' || *curCharPtr_ == '\r' ||
-                   matchUnicodeLineTerminator(curCharPtr_))) {
+    } else if (LLVM_UNLIKELY(*curCharPtr_ == '\n' || *curCharPtr_ == '\r')) {
       error(SMLoc::getFromPointer(curCharPtr_), "non-terminated string");
       sm_.note(token_.getStartLoc(), "string started here");
       break;
