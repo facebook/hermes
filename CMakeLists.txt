@@ -545,6 +545,21 @@ if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/facebook)
     add_subdirectory(facebook)
 endif()
 
+# Configure install task
+#
+install(TARGETS libhermes hermes hermesc hdb hbcdump hvm
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+)
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/API/hermes" DESTINATION include
+  FILES_MATCHING PATTERN "*.h"
+  PATTERN "synthtest" EXCLUDE)
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/API/jsi/" DESTINATION include
+  FILES_MATCHING PATTERN "*.h"
+  PATTERN "test" EXCLUDE)
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/public/hermes/Public" DESTINATION include/hermes
+  FILES_MATCHING PATTERN "*.h")
+
 # Configure the test suites
 #
 list(APPEND HERMES_TEST_DEPS
