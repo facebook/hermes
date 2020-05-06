@@ -531,6 +531,7 @@ add_subdirectory(utils/hermes-lit)
 add_subdirectory(tools)
 add_subdirectory(include)
 add_subdirectory(lib)
+add_subdirectory(public)
 add_subdirectory(external)
 add_subdirectory(unittests)
 add_subdirectory(API)
@@ -544,21 +545,6 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ${save_CMAKE_POSITION_INDEPENDENT_CODE})
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/facebook)
     add_subdirectory(facebook)
 endif()
-
-# Configure install task
-#
-install(TARGETS libhermes hermes hermesc hdb hbcdump hvm
-  RUNTIME DESTINATION bin
-  LIBRARY DESTINATION lib
-)
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/API/hermes" DESTINATION include
-  FILES_MATCHING PATTERN "*.h"
-  PATTERN "synthtest" EXCLUDE)
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/API/jsi/" DESTINATION include
-  FILES_MATCHING PATTERN "*.h"
-  PATTERN "test" EXCLUDE)
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/public/hermes/Public" DESTINATION include/hermes
-  FILES_MATCHING PATTERN "*.h")
 
 # Configure the test suites
 #

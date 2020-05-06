@@ -20,3 +20,7 @@ set_target_properties(hdb PROPERTIES
 target_link_libraries(hdb
   hermesapi
 )
+
+install(TARGETS hdb
+  RUNTIME DESTINATION bin
+)
