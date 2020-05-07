@@ -139,10 +139,10 @@ void BytecodeDisassembler::disassembleBytecodeFileHeader(raw_ostream &OS) {
 
 void BytecodeDisassembler::disassembleStringStorage(raw_ostream &OS) {
   auto strStorage = bcProvider_->getStringStorage();
-  auto translations = bcProvider_->getIdentifierTranslations();
+  auto hashes = bcProvider_->getIdentifierHashes();
 
   const auto strCount = bcProvider_->getStringCount();
-  const auto trnCount = translations.size();
+  const auto hashCount = hashes.size();
 
   if (strCount == 0)
     return;
@@ -150,7 +150,7 @@ void BytecodeDisassembler::disassembleStringStorage(raw_ostream &OS) {
   auto kinds = bcProvider_->getStringKinds();
 
   uint32_t strID = 0;
-  uint32_t trnID = 0;
+  uint32_t hashID = 0;
 
   OS << "Global String Table:\n";
   const std::locale loc("C");
@@ -175,7 +175,7 @@ void BytecodeDisassembler::disassembleStringStorage(raw_ostream &OS) {
         case StringKind::Identifier:
           OS << " #"
              << llvm::format_hex_no_prefix(
-                    translations[trnID++], 8, /* Upper */ true);
+                    hashes[hashID++], 8, /* Upper */ true);
           break;
 
         default:
@@ -198,8 +198,8 @@ void BytecodeDisassembler::disassembleStringStorage(raw_ostream &OS) {
 
   assert(strID == strCount && "Visited all strings.");
   (void)strCount;
-  assert(trnID == trnCount && "Visited all translations.");
-  (void)trnCount;
+  assert(hashID == hashCount && "Visited all hashes.");
+  (void)hashCount;
 }
 
 /// NOTE: The output might not show the value of every literal used
@@ -757,9 +757,9 @@ BytecodeSectionWalker::BytecodeSectionWalker(
       bcProvider->getStringKinds().begin(),
       bcProvider->getStringKinds().end());
   addSection(
-      "Identifier translations",
-      bcProvider->getIdentifierTranslations().begin(),
-      bcProvider->getIdentifierTranslations().end());
+      "Identifier hashes",
+      bcProvider->getIdentifierHashes().begin(),
+      bcProvider->getIdentifierHashes().end());
   addSection(
       "String table",
       bcProvider->getSmallStringTableEntries().begin(),
@@ -957,7 +957,101 @@ void BytecodeDisassembler::disassembleRegexs(raw_ostream &OS) {
   OS << '\n';
 }
 
+/// Outputs disassembly in a format resembling that of the "objdump" tool.
+/// This is meant to be consumed by tools that expect such a format, not
+/// for humans to read.
+class ObjdumpDisassembleVisitor : public BytecodeVisitor {
+ private:
+  unsigned funcId_ = 0;
+  unsigned funcOffset_ = 0;
+  const uint8_t *bytecodeStart_ = nullptr;
+  raw_ostream &os_;
+
+  void beforeStart(unsigned funcId, const uint8_t *bytecodeStart) override {
+    funcId_ = funcId;
+    funcOffset_ = bcProvider_->getFunctionHeader(funcId).offset();
+    bytecodeStart_ = bytecodeStart;
+    os_ << "\n"
+        << llvm::format_hex_no_prefix(funcOffset_, 16) << " <_" << funcId
+        << ">:\n";
+  }
+
+  void preVisitInstruction(inst::OpCode opcode, const uint8_t *ip, int length)
+      override {
+    os_ << llvm::format_hex_no_prefix(ip - bytecodeStart_ + funcOffset_, 8)
+        << ":\t";
+    for (int i = 0; i < length; ++i)
+      os_ << llvm::format_hex_no_prefix(ip[i], 2) << " ";
+    // Align/justify to help any humans debugging the output.
+    for (int i = length; i < 20; ++i)
+      os_ << "   ";
+    os_ << llvm::left_justify(getOpCodeString(opcode), 32);
+  }
+
+  void postVisitInstruction(inst::OpCode opcode, const uint8_t *ip, int length)
+      override {
+    os_ << "\n";
+  }
+
+  void visitOperand(
+      const uint8_t *ip,
+      inst::OperandType operandType,
+      const uint8_t *operandBuf,
+      int operandIndex) override {
+    if (operandIndex) {
+      os_ << ",";
+    }
+    os_ << " ";
+
+    switch (operandType) {
+#define DEFINE_OPERAND_TYPE(name, ctype)                                     \
+  case OperandType::name: {                                                  \
+    ctype operandVal;                                                        \
+    decodeOperand(operandBuf, &operandVal);                                  \
+    if (operandType == OperandType::Addr8 ||                                 \
+        operandType == OperandType::Addr32) {                                \
+      /* operandVal is relative to current ip.*/                             \
+      os_ << llvm::format_hex_no_prefix(                                     \
+          ip + (int32_t)operandVal - bytecodeStart_ + funcOffset_, 8);       \
+    } else if (operandType == OperandType::Double) {                         \
+      uint64_t raw;                                                          \
+      memcpy(&raw, operandBuf, sizeof(raw));                                 \
+      os_ << "$" << llvm::format_hex(raw, sizeof(raw));                      \
+    } else if (                                                              \
+        operandType == OperandType::Reg8 ||                                  \
+        operandType == OperandType::Reg32) {                                 \
+      /* "+" is a trick to print out 1-byte value as int instead of char. */ \
+      os_ << "%r" << +operandVal;                                            \
+    } else {                                                                 \
+      os_ << "$"                                                             \
+          << llvm::format_hex(operandVal, getOperandSize(operandType) * 2);  \
+    }                                                                        \
+    break;                                                                   \
+  }
+#include "hermes/BCGen/HBC/BytecodeList.def"
+    }
+  }
+
+ public:
+  ObjdumpDisassembleVisitor(
+      std::shared_ptr<hbc::BCProvider> bcProvider,
+      raw_ostream &os)
+      : BytecodeVisitor(bcProvider), os_(os) {}
+};
+
 void BytecodeDisassembler::disassemble(raw_ostream &OS) {
+  if ((options_ & DisassemblyOptions::Objdump) == DisassemblyOptions::Objdump) {
+    OS << "\n" << hashAsString(bcProvider_->getSourceHash()) << ":     ";
+    OS << "file format HBC-" << hbc::BYTECODE_VERSION << "\n\n\n";
+    OS << "Disassembly of section .text:\n";
+    for (unsigned funcId = 0; funcId < bcProvider_->getFunctionCount();
+         ++funcId) {
+      ObjdumpDisassembleVisitor disassembleVisitor(bcProvider_, OS);
+      disassembleVisitor.visitInstructionsInFunction(funcId);
+    }
+    return;
+  }
+
   disassembleBytecodeFileHeader(OS);
   disassembleStringStorage(OS);
   disassembleArrayBuffer(OS);

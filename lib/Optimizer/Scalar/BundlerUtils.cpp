@@ -30,7 +30,7 @@ using llvm::dbgs;
 //    (StoredValue V)
 // )
 bool BundlerUtils::isJSModuleExportsMetroMin(Instruction *II, Value *&V) {
-  auto *SPI = dyn_cast<StorePropertyInst>(II);
+  auto *SPI = llvm::dyn_cast<StorePropertyInst>(II);
   if (!SPI)
     return false;
 
@@ -86,7 +86,7 @@ bool BundlerUtils::isJSModuleExports(Instruction *II, Value *&V) {
 bool BundlerUtils::isJSModuleRequiresMetroMin(
     Instruction *II,
     unsigned int &modId) { // TODO: Fix the scoping of ModuleID
-  auto *CI = dyn_cast<CallInst>(II);
+  auto *CI = llvm::dyn_cast<CallInst>(II);
   if (!CI)
     return false;
 
@@ -188,16 +188,16 @@ bool BundlerUtils::isJSModuleDefine(
   if (xmform_ != BundlerKind::metromin)
     return false;
 
-  auto *CI = dyn_cast<CallInst>(II);
+  auto *CI = llvm::dyn_cast<CallInst>(II);
   if (!CI)
     return false;
 
-  auto *LPI = dyn_cast<LoadPropertyInst>(CI->getCallee());
+  auto *LPI = llvm::dyn_cast<LoadPropertyInst>(CI->getCallee());
   if (!LPI)
     return false;
-  if (!isa<GlobalObject>(LPI->getObject()))
+  if (!llvm::isa<GlobalObject>(LPI->getObject()))
     return false;
-  LiteralString *PN = dyn_cast<LiteralString>(LPI->getProperty());
+  LiteralString *PN = llvm::dyn_cast<LiteralString>(LPI->getProperty());
   if (!PN)
     return false;
   if (PN->getValue().str().compare("__d") != 0)

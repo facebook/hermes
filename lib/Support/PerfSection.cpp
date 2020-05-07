@@ -7,10 +7,9 @@
 
 #include "hermes/Support/PerfSection.h"
 
-#if (defined(HERMES_FACEBOOK_BUILD) && !defined(_WINDOWS)) || \
-    defined(HERMESVM_PLATFORM_LOGGING)
+#if defined(HERMES_USE_FBSYSTRACE) || defined(HERMESVM_PLATFORM_LOGGING)
 
-#if defined(HERMES_FACEBOOK_BUILD) && !defined(_WINDOWS)
+#ifdef HERMES_USE_FBSYSTRACE
 #include "fbsystrace.h"
 #include "fbsystrace_tags.h"
 #endif
@@ -43,7 +42,7 @@ PerfSection::PerfSection(const char *name, const char *category)
     hermesLog("Hermes", "%s BEGIN.", name_);
   }
 #endif
-#if defined(HERMES_FACEBOOK_BUILD) && !defined(_WINDOWS)
+#ifdef HERMES_USE_FBSYSTRACE
   if (fbsystrace_is_tracing(TRACE_TAG_JS_VM)) {
     enabled_ = true;
     fbsystrace_begin_section(TRACE_TAG_JS_VM, name);
@@ -96,7 +95,7 @@ PerfSection::~PerfSection() {
   if (!enabled_)
     return;
   if (argValues_.empty()) {
-#if defined(HERMES_FACEBOOK_BUILD) && !defined(_WINDOWS)
+#ifdef HERMES_USE_FBSYSTRACE
     fbsystrace_end_section(TRACE_TAG_JS_VM);
 #endif
 #ifdef HERMESVM_PLATFORM_LOGGING
@@ -142,7 +141,7 @@ PerfSection::~PerfSection() {
             llvm_unreachable("Unhandled argtype");
         }
       });
-#if defined(HERMES_FACEBOOK_BUILD) && !defined(_WINDOWS)
+#ifdef HERMES_USE_FBSYSTRACE
   // To output via fbsystrace, we must further translate into
   // FBSystraceSectionArg format.
   auto argArr = std::unique_ptr<FbSystraceSectionArg[]>{

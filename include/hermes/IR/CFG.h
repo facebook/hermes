@@ -34,7 +34,7 @@ class PredIterator
 
   inline void advancePastNonTerminators() {
     // Loop to ignore non-terminator uses (for example BlockAddresses).
-    while (It != ItEnd && !dyn_cast<TerminatorInst>(*It))
+    while (It != ItEnd && !llvm::dyn_cast<TerminatorInst>(*It))
       ++It;
   }
 

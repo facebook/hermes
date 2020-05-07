@@ -87,7 +87,7 @@ void BytecodeSerializer::serializeDebugInfo(BytecodeModule &BM) {
 
   const llvm::ArrayRef<StringTableEntry> filenameTable =
       info.getFilenameTable();
-  const llvm::ArrayRef<char> filenameStorage = info.getFilenameStorage();
+  const auto filenameStorage = info.getFilenameStorage();
   const DebugInfo::DebugFileRegionList &files = info.viewFiles();
   const StreamVector<uint8_t> &data = info.viewData();
   uint32_t lexOffset = info.lexicalDataOffset();
@@ -236,9 +236,9 @@ void BytecodeSerializer::visitStringKinds() {
   writeBinaryArray(bytecodeModule_->getStringKinds());
 }
 
-void BytecodeSerializer::visitIdentifierTranslations() {
+void BytecodeSerializer::visitIdentifierHashes() {
   pad(BYTECODE_ALIGNMENT);
-  writeBinaryArray(bytecodeModule_->getIdentifierTranslations());
+  writeBinaryArray(bytecodeModule_->getIdentifierHashes());
 }
 
 void BytecodeSerializer::visitSmallStringTable() {

@@ -18,13 +18,7 @@ add_hermes_library(hermesInternalBytecode
     InternalBytecode.cpp
 )
 
-# Only enable optimized libraries if the Hermes debugger isn't on.
-# This allows the user to debug the JS libraries.
-if(HERMES_ENABLE_DEBUGGER)
-  set(JS_COMPILER_FLAGS "")
-else()
-  set(JS_COMPILER_FLAGS "-O")
-endif()
+set(JS_COMPILER_FLAGS "-O")
 
 # Concatenate all JS files into one source file for compilation.
 # This way there is only one RuntimeModule made for them.

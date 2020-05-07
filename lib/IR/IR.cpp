@@ -450,13 +450,13 @@ void BasicBlock::push_back(Instruction *I) {
 TerminatorInst *BasicBlock::getTerminator() {
   if (InstList.empty())
     return nullptr;
-  return dyn_cast<TerminatorInst>(&InstList.back());
+  return llvm::dyn_cast<TerminatorInst>(&InstList.back());
 }
 
 const TerminatorInst *BasicBlock::getTerminator() const {
   if (InstList.empty())
     return nullptr;
-  return dyn_cast<TerminatorInst>(&InstList.back());
+  return llvm::dyn_cast<TerminatorInst>(&InstList.back());
 }
 
 void BasicBlock::removeFromParent() {

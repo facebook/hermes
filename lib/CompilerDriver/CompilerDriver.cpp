@@ -133,11 +133,11 @@ class CLFlag {
   }
 };
 
-static cl::OptionCategory CompilerCategory(
+static OptionCategory CompilerCategory(
     "Compiler Options",
     "These options change how JS is compiled.");
 
-static list<std::string> InputFilenames(desc("input file"), Positional);
+list<std::string> InputFilenames(desc("<file1> <file2>..."), Positional);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
 static opt<bool> PrintStats("print-stats", desc("Print statistics"));
@@ -1855,8 +1855,9 @@ void printHermesCompilerVMVersion(llvm::raw_ostream &s) {
 void printHermesCompilerVersion(llvm::raw_ostream &s) {
   printHermesVersion(s);
 }
-void printHermesREPLVersion(llvm::raw_ostream &s) {
-  printHermesVersion(s, " REPL", false);
+
+OutputFormatKind outputFormatFromCommandLineOptions() {
+  return cl::DumpTarget;
 }
 
 CompileResult compileFromCommandLineOptions() {

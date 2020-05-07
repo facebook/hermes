@@ -67,6 +67,8 @@ HERMES_VM_GCOBJECT(JSArrayIterator);
 HERMES_VM_GCOBJECT(JSStringIterator);
 HERMES_VM_GCOBJECT(JSProxy);
 HERMES_VM_GCOBJECT(JSCallableProxy);
+HERMES_VM_GCOBJECT(DecoratedObject);
+HERMES_VM_GCOBJECT(HostObject);
 #ifdef UNIT_TEST
 HERMES_VM_GCOBJECT(TestCell);
 #endif
@@ -137,6 +139,12 @@ struct HermesValueTraits<HermesValue> {
   static const HermesValue *arrow(const HermesValue &value) {
     return &value;
   }
+
+ private:
+  // arrow() must be called with a reference to a non-temporary object, as it
+  // returns the address of its parameter. Forbid calls to arrow() with a
+  // temporary object through this unimplemented overload.
+  static void arrow(HermesValue &&value);
 };
 
 template <>

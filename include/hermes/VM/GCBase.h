@@ -8,17 +8,18 @@
 #ifndef HERMES_VM_GCBASE_H
 #define HERMES_VM_GCBASE_H
 
+#include "hermes/Inst/Inst.h"
 #include "hermes/Platform/Logging.h"
 #include "hermes/Public/CrashManager.h"
 #include "hermes/Public/GCConfig.h"
 #include "hermes/Public/GCTripwireContext.h"
-#include "hermes/Public/MemoryEventTracker.h"
 #include "hermes/Support/CheckedMalloc.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/StatsAccumulator.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/GCDecl.h"
+#include "hermes/VM/GCExecTrace.h"
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/HasFinalizer.h"
 #include "hermes/VM/HeapAlign.h"
@@ -27,6 +28,7 @@
 #include "hermes/VM/SerializeHeader.h"
 #include "hermes/VM/SlotAcceptor.h"
 #include "hermes/VM/SlotVisitor.h"
+#include "hermes/VM/StackTracesTree-NoRuntime.h"
 #include "hermes/VM/StorageProvider.h"
 #include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/VTable.h"
@@ -241,6 +243,19 @@ class GCBase {
     /// CollectionEnd at the end.
     /// \param extraInfo contains more detailed extra info for specific GC.
     virtual void onGCEvent(GCEventKind kind, const std::string &extraInfo) = 0;
+
+    /// Return the current VM instruction pointer which can be used to derive
+    /// the current VM stack-trace. It's "slow" because it's virtual.
+    virtual const inst::Inst *getCurrentIPSlow() const = 0;
+
+    /// Return a \c StackTracesTreeNode representing the current VM stack-trace
+    /// at this point.
+    virtual StackTracesTreeNode *getCurrentStackTracesTreeNode(
+        const inst::Inst *ip) = 0;
+
+    /// Get a StackTraceTree which can be used to recover stack-traces from \c
+    /// StackTraceTreeNode() as returned by \c getCurrentStackTracesTreeNode() .
+    virtual StackTracesTree *getStackTracesTree() = 0;
   };
 
   /// Struct that keeps a reference to a GC.  Useful, for example, as a base
@@ -319,6 +334,48 @@ class GCBase {
   };
 #endif
 
+  /// When enabled, the AllocationLocationTracker attaches a stack-trace to
+  /// every allocation. When disabled old allocations continue to be tracked but
+  /// no new allocations get a stack-trace.
+  struct AllocationLocationTracker final {
+    explicit inline AllocationLocationTracker(GCBase *gc);
+
+    /// Returns true if tracking is enabled for new allocations.
+    inline bool isEnabled() const;
+    /// Must be called by GC implementations whenever a new allocation is made.
+    inline void newAlloc(const void *ptr);
+    /// Must be called by GC implementations whenever an allocation is moved.
+    inline void moveAlloc(const void *oldPtr, const void *newPtr);
+    /// Must be called by GC implementations whenever an allocation is freed.
+    inline void freeAlloc(const void *ptr);
+    /// Returns data needed to reconstruct the JS stack used to create the
+    /// specified allocation.
+    inline StackTracesTreeNode *getStackTracesTreeNodeForAlloc(
+        const void *ptr) const;
+
+    /// Enable location tracking.
+    inline void enable();
+
+    /// Disable location tracking - turns \c newAlloc() into a no-op. Existing
+    /// allocations continue to be tracked.
+    inline void disable();
+
+#ifdef HERMESVM_SERIALIZE
+    void serialize(Serializer &s) const;
+    void deserialize(Deserializer &d);
+#endif
+
+   private:
+    /// Associates allocations at their current location with their stack trace
+    /// data.
+    llvm::DenseMap<const void *, StackTracesTreeNode *> stackMap_;
+    /// We need access to the GCBase to collect the current stack when nodes are
+    /// allocated.
+    const GCBase *gc_;
+    /// Indicates if tracking of new allocations is enabled.
+    bool enabled_{false};
+  };
+
   class IDTracker final {
    public:
     /// These are IDs that are reserved for special objects.
@@ -373,6 +430,10 @@ class GCBase {
     /// If one does not yet exist, start tracking it.
     inline HeapSnapshot::NodeID getObjectID(const void *cell);
 
+    /// Get the unique object id of the symbol with the given index \b
+    /// symIdx.  If one does not yet exist, start tracking it.
+    inline HeapSnapshot::NodeID getObjectID(uint32_t symIdx);
+
     /// Get the unique object id of the given native memory (non-JS-heap).
     /// If one does not yet exist, start tracking it.
     inline HeapSnapshot::NodeID getNativeID(const void *mem);
@@ -389,6 +450,11 @@ class GCBase {
     /// Remove the object from being tracked. This should be done to keep the
     /// tracking working set small.
     inline void untrackObject(const void *cell);
+
+    /// For a symbol index \p i, \p markedSymbols[i] indicates whether
+    /// the symbol was reachable in a GC.  Untrack all symbols whose
+    /// index is not marked.
+    void untrackUnmarkedSymbols(const std::vector<bool> &markedSymbols);
 
     /// Remove the native memory from being tracked. This should be done to keep
     /// the tracking working set small. It is also required to be done when
@@ -434,9 +500,13 @@ class GCBase {
 
     /// Map of object pointers to IDs. Only populated once the first heap
     /// snapshot is requested, or the first time the memory profiler is turned
-    /// on.
+    /// on, or if JSI tracing is in effect.
     /// NOTE: The same map is used for both JS heap and native heap IDs.
     llvm::DenseMap<const void *, HeapSnapshot::NodeID> objectIDMap_;
+
+    /// Map from symbol indices to unique IDs.  Populated according to
+    /// the same rules as the objectIDMap_.
+    llvm::DenseMap<uint32_t, HeapSnapshot::NodeID> symbolIDMap_;
 
     /// Map of numeric values to IDs. Used to give numbers in the heap a unique
     /// node.
@@ -556,6 +626,10 @@ class GCBase {
   virtual void getHeapInfo(HeapInfo &info);
   /// Same as \c getHeapInfo, and it adds the amount of malloc memory in use.
   virtual void getHeapInfoWithMallocSize(HeapInfo &info) = 0;
+
+  /// Return a reference to the GCExecTrace object, which is used if
+  /// we're keeping track of information about GCs, for tracing, for example.
+  inline const GCExecTrace &getGCExecTrace() const;
 
   /// Populate \p info with crash manager information about the heap
   virtual void getCrashManagerHeapInfo(CrashManager::HeapInformation &info) = 0;
@@ -781,8 +855,13 @@ class GCBase {
     return idTracker_;
   }
 
+  AllocationLocationTracker &getAllocationLocationTracker() {
+    return allocationLocationTracker_;
+  }
+
   inline HeapSnapshot::NodeID getObjectID(const void *cell);
   inline HeapSnapshot::NodeID getObjectID(const GCPointerBase &cell);
+  inline HeapSnapshot::NodeID getObjectID(const SymbolID &sym);
   inline HeapSnapshot::NodeID getNativeID(const void *mem);
   /// \return The ID for the given value. If the value cannot be represented
   ///   with an ID, returns None.
@@ -794,16 +873,6 @@ class GCBase {
   /// \p getObjectID for that.
   inline uint64_t nextObjectID();
 #endif
-
-  /// Get the instance of the memory event tracker. If memory
-  /// profiling is not enabled this should return nullptr.
-  inline MemoryEventTracker *memEventTracker() {
-#ifdef HERMESVM_MEMORY_PROFILER
-    return memEventTracker_.get();
-#else
-    return nullptr;
-#endif
-  }
 
   using TimePoint = std::chrono::steady_clock::time_point;
   /// Return the difference between the two time points (end - start)
@@ -955,6 +1024,9 @@ class GCBase {
   /// The total number of bytes allocated in the execution.
   uint64_t totalAllocatedBytes_{0};
 
+  /// A trace of GC execution.
+  GCExecTrace execTrace_;
+
 /// These fields are not available in optimized builds.
 #ifndef NDEBUG
   /// Number of currently allocated objects present in the heap before the start
@@ -1030,19 +1102,18 @@ class GCBase {
   /// snapshots and the memory profiler.
   IDTracker idTracker_;
 
+  /// Attaches stack-traces to objects when enabled.
+  AllocationLocationTracker allocationLocationTracker_;
+
 #ifndef NDEBUG
-  /// The number of reasons why no allocation is allowed in this heap right now.
+  /// The number of reasons why no allocation is allowed in this heap right
+  /// now.
   uint32_t noAllocLevel_{0};
 
   friend class NoAllocScope;
 #endif
 
  private:
-#ifdef HERMESVM_MEMORY_PROFILER
-  /// Memory event tracker for the memory profiler
-  std::shared_ptr<MemoryEventTracker> memEventTracker_;
-#endif
-
   /// Callback called if it's not null when the Live Data Tripwire is triggered.
   std::function<void(GCTripwireContext &)> tripwireCallback_;
 
@@ -1357,6 +1428,10 @@ inline HeapSnapshot::NodeID GCBase::getObjectID(const GCPointerBase &cell) {
   return getObjectID(cell.get(pointerBase_));
 }
 
+inline HeapSnapshot::NodeID GCBase::getObjectID(const SymbolID &sym) {
+  return idTracker_.getObjectID(sym.unsafeGetIndex());
+}
+
 inline HeapSnapshot::NodeID GCBase::getNativeID(const void *mem) {
   assert(mem && "Called getNativeID on a null pointer");
   return idTracker_.getNativeID(mem);
@@ -1381,6 +1456,17 @@ inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(const void *cell) {
   const auto objID = nextObjectID();
   objectIDMap_[cell] = objID;
   return objID;
+}
+
+inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(uint32_t symIdx) {
+  auto iter = symbolIDMap_.find(symIdx);
+  if (iter != symbolIDMap_.end()) {
+    return iter->second;
+  }
+  // Else, assume it is a symbol that needs to be tracked and give it a new ID.
+  const auto symID = nextObjectID();
+  symbolIDMap_[symIdx] = symID;
+  return symID;
 }
 
 inline HeapSnapshot::NodeID GCBase::IDTracker::getNativeID(const void *mem) {
@@ -1427,6 +1513,10 @@ inline void GCBase::IDTracker::untrackNative(const void *mem) {
   untrackObject(mem);
 }
 
+inline const GCExecTrace &GCBase::getGCExecTrace() const {
+  return execTrace_;
+}
+
 template <typename F>
 inline void GCBase::IDTracker::forEachID(F callback) {
   for (auto &p : objectIDMap_) {
@@ -1457,6 +1547,64 @@ inline HeapSnapshot::NodeID GCBase::IDTracker::nextNativeID() {
 inline HeapSnapshot::NodeID GCBase::IDTracker::nextNumberID() {
   // Numbers will all be considered JS memory, not native memory.
   return nextObjectID();
+}
+
+GCBase::AllocationLocationTracker::AllocationLocationTracker(GCBase *gc)
+    : gc_(gc) {}
+
+inline bool GCBase::AllocationLocationTracker::isEnabled() const {
+  return enabled_;
+}
+
+inline void GCBase::AllocationLocationTracker::newAlloc(const void *ptr) {
+  // Note we always get the current IP even if allocation tracking is not
+  // enabled as it allows us to assert this feature works across many tests.
+  // Note it's not very slow, it's slower than the non-virtual version
+  // in Runtime though.
+  const auto *ip = gc_->gcCallbacks_->getCurrentIPSlow();
+  if (enabled_) {
+    if (auto node = gc_->gcCallbacks_->getCurrentStackTracesTreeNode(ip)) {
+      stackMap_.try_emplace(ptr, node);
+    }
+  }
+}
+
+inline void GCBase::AllocationLocationTracker::moveAlloc(
+    const void *oldPtr,
+    const void *newPtr) {
+  if (oldPtr == newPtr) {
+    // This can happen in old generations when compacting to the same location.
+    return;
+  }
+  auto oldIt = stackMap_.find(oldPtr);
+  if (oldIt == stackMap_.end()) {
+    return;
+  }
+  const auto oldStackTracesTreeNode = oldIt->second;
+  assert(
+      stackMap_.count(newPtr) == 0 &&
+      "Moving to a location that is already tracked");
+  stackMap_.erase(oldIt);
+  stackMap_[newPtr] = oldStackTracesTreeNode;
+}
+
+inline void GCBase::AllocationLocationTracker::freeAlloc(const void *ptr) {
+  stackMap_.erase(ptr);
+}
+
+inline StackTracesTreeNode *
+GCBase::AllocationLocationTracker::getStackTracesTreeNodeForAlloc(
+    const void *ptr) const {
+  auto mapIt = stackMap_.find(ptr);
+  return mapIt == stackMap_.end() ? nullptr : mapIt->second;
+}
+
+inline void GCBase::AllocationLocationTracker::enable() {
+  enabled_ = true;
+}
+
+inline void GCBase::AllocationLocationTracker::disable() {
+  enabled_ = false;
 }
 
 } // namespace vm

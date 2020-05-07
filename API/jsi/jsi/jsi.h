@@ -188,9 +188,10 @@ class Runtime {
   /// \return the global object
   virtual Object global() = 0;
 
-  /// \return a short printable description of the instance.  This
-  /// should only be used by logging, debugging, and other
-  /// developer-facing callers.
+  /// \return a short printable description of the instance.  It should
+  /// at least include some human-readable indication of the runtime
+  /// implementation.  This should only be used by logging, debugging,
+  /// and other developer-facing callers.
   virtual std::string description() = 0;
 
   /// \return whether or not the underlying runtime supports debugging via the
@@ -1211,6 +1212,8 @@ class JSI_EXPORT JSIException : public std::exception {
     return what_.c_str();
   }
 
+  virtual ~JSIException();
+
  protected:
   std::string what_;
 };
@@ -1220,6 +1223,8 @@ class JSI_EXPORT JSIException : public std::exception {
 class JSI_EXPORT JSINativeException : public JSIException {
  public:
   JSINativeException(std::string what) : JSIException(std::move(what)) {}
+
+  virtual ~JSINativeException();
 };
 
 /// This exception will be thrown by API functions whenever a JS
@@ -1247,6 +1252,8 @@ class JSI_EXPORT JSError : public JSIException {
   /// set to provided message.  This argument order is a bit weird,
   /// but necessary to avoid ambiguity with the above.
   JSError(std::string what, Runtime& rt, Value&& value);
+
+  virtual ~JSError();
 
   const std::string& getStack() const {
     return stack_;

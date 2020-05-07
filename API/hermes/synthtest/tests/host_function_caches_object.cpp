@@ -24,14 +24,29 @@ const char *hostFunctionCachesObjectTrace() {
   },
   "trace": [
     {
+      "type": "CreatePropNameIDRecord",
+      "objID": 40,
+      "encoding": "ASCII",
+      "chars": "HostFunction1"
+    },
+    {
       "type": "CreateHostFunctionRecord",
       "time": 0,
-      "objID": 10
+      "objID": 10,
+      "propNameID": 40,
+      "functionName": "HostFunction1"
+    },
+    {
+      "type": "CreatePropNameRecord",
+      "objID": 22,
+      "encoding": "ASCII",
+      "chars": "foo"
     },
     {
       "type": "SetPropertyRecord",
       "time": 0,
       "objID": 1,
+      "propID": 22,
       "propName": "foo",
       "value": "object:10"
     },
@@ -52,9 +67,16 @@ const char *hostFunctionCachesObjectTrace() {
       "objID": 11
     },
     {
+      "type": "CreatePropNameRecord",
+      "objID": 23,
+      "encoding": "ASCII",
+      "chars": "a"
+    },
+    {
       "type": "SetPropertyRecord",
       "time": 0,
       "objID": 11,
+      "propID": 23,
       "propName": "a",
       "value": "undefined:"
     },
@@ -74,6 +96,7 @@ const char *hostFunctionCachesObjectTrace() {
       "type": "SetPropertyRecord",
       "time": 0,
       "objID": 11,
+      "propID": 23,
       "propName": "a",
       "value": "bool:true"
     },

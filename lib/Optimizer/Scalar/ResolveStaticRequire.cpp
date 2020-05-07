@@ -153,7 +153,7 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
   while (!workList.empty()) {
     Usage U = workList.pop_back_val();
 
-    if (auto *call = dyn_cast<CallInst>(U.I)) {
+    if (auto *call = llvm::dyn_cast<CallInst>(U.I)) {
       // Make sure require() doesn't escape as a parameter.
       bool fail = false;
       for (unsigned numArgs = call->getNumArguments(), arg = 0; arg != numArgs;
@@ -172,7 +172,7 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
       if (fail)
         continue;
 
-      if (isa<ConstructInst>(call) || isa<HBCConstructInst>(call)) {
+      if (llvm::isa<ConstructInst>(call) || llvm::isa<HBCConstructInst>(call)) {
         EM_.warning(call->getLocation(), "'require' used as a constructor");
         canResolve_ = false;
         continue;
@@ -182,7 +182,7 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
           call->getCallee() == U.V && "Value is not used at all in CallInst");
 
       resolveRequireCall(moduleFunction, call);
-    } else if (auto *SS = dyn_cast<StoreStackInst>(U.I)) {
+    } else if (auto *SS = llvm::dyn_cast<StoreStackInst>(U.I)) {
       // Storing "require" into a stack location.
 
       if (!isStoreOnceStackLocation(cast<AllocStackInst>(SS->getPtr()))) {
@@ -194,11 +194,11 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
       }
 
       addUsers(SS->getPtr());
-    } else if (auto *LS = dyn_cast<LoadStackInst>(U.I)) {
+    } else if (auto *LS = llvm::dyn_cast<LoadStackInst>(U.I)) {
       // Loading "require" from a stack location.
 
       addUsers(LS);
-    } else if (auto *SF = dyn_cast<StoreFrameInst>(U.I)) {
+    } else if (auto *SF = llvm::dyn_cast<StoreFrameInst>(U.I)) {
       // Storing "require" into a frame variable.
 
       if (!isStoreOnceVariable(SF->getVariable())) {
@@ -210,11 +210,11 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
       }
 
       addUsers(SF->getVariable());
-    } else if (auto *LF = dyn_cast<LoadFrameInst>(U.I)) {
+    } else if (auto *LF = llvm::dyn_cast<LoadFrameInst>(U.I)) {
       // Loading "require" from a frame variable.
 
       addUsers(LF);
-    } else if (auto *LPI = dyn_cast<LoadPropertyInst>(U.I)) {
+    } else if (auto *LPI = llvm::dyn_cast<LoadPropertyInst>(U.I)) {
       if (LPI->getProperty() == U.V) {
         // `require` must not be used as a key in a LoadPropertyInst,
         // because it could be used in a getter and escape.
@@ -249,14 +249,14 @@ void ResolveStaticRequireImpl::resolveRequireCall(
   }
 
   LiteralString *stringTarget = nullptr;
-  if (auto *lit = dyn_cast<Literal>(call->getArgument(1)))
+  if (auto *lit = llvm::dyn_cast<Literal>(call->getArgument(1)))
     stringTarget = evalToString(builder_, lit);
 
   if (!stringTarget) {
     EM_.warning(
         call->getLocation(),
         "require() argument cannot be coerced to constant string at compile time");
-    if (auto *inst = dyn_cast<Instruction>(call->getArgument(1)))
+    if (auto *inst = llvm::dyn_cast<Instruction>(call->getArgument(1)))
       if (inst->hasLocation())
         EM_.note(inst->getLocation(), "First argument of require()");
 

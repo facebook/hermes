@@ -15,7 +15,7 @@ namespace hermes {
 std::unique_ptr<jsi::Runtime> makeTracingHermesRuntime(
     std::unique_ptr<HermesRuntime> hermesRuntime,
     const ::hermes::vm::RuntimeConfig &runtimeConfig) {
-  if (!runtimeConfig.getTraceEnvironmentInteractions()) {
+  if (!runtimeConfig.getTraceEnabled()) {
     return hermesRuntime;
   }
   llvm_unreachable("Invoked compat makeTracingHermesRuntime!");

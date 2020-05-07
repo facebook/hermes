@@ -41,3 +41,12 @@ try { chain1.bind(null)() } catch (e) { print(e.stack) }
 // CHECK-NEXT:     at chain2 ({{.*}}/stacktrace-bound.js:34:18)
 // CHECK-NEXT:     at chain1 ({{.*}}/stacktrace-bound.js:30:14)
 // CHECK-NEXT:     at global ({{.*}}/stacktrace-bound.js:39:24)
+
+function bar() {
+  throw new Error("oops");
+}
+bar.displayName = "MyComponent";
+
+try { bar.bind(null)(); } catch (e) { print(e.stack); }
+//CHECK-LABEL: Error: oops
+//CHECK-NEXT:     at MyComponent ({{.*}}stacktrace-bound.js:46:18)

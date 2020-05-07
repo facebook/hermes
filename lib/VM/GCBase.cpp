@@ -48,9 +48,7 @@ GCBase::GCBase(
       // Start off not in GC.
       inGC_(false),
       name_(gcConfig.getName()),
-#ifdef HERMESVM_MEMORY_PROFILER
-      memEventTracker_(gcConfig.getMemEventTracker()),
-#endif
+      allocationLocationTracker_(this),
       tripwireCallback_(gcConfig.getTripwireConfig().getCallback()),
       tripwireLimit_(gcConfig.getTripwireConfig().getLimit())
 #ifdef HERMESVM_SANITIZE_HANDLES
@@ -432,6 +430,20 @@ GCBase::IDTracker::IDTracker() {
 }
 
 #ifdef HERMESVM_SERIALIZE
+void GCBase::AllocationLocationTracker::serialize(Serializer &s) const {
+  if (enabled_) {
+    hermes_fatal(
+        "Serialization not supported when AllocationLocationTracker enabled");
+  }
+}
+
+void GCBase::AllocationLocationTracker::deserialize(Deserializer &d) {
+  if (enabled_) {
+    hermes_fatal(
+        "Deserialization not supported when AllocationLocationTracker enabled");
+  }
+}
+
 void GCBase::IDTracker::serialize(Serializer &s) const {
   s.writeInt<HeapSnapshot::NodeID>(nextID_);
   s.writeInt<HeapSnapshot::NodeID>(nextNativeID_);
@@ -457,6 +469,19 @@ void GCBase::IDTracker::deserialize(Deserializer &d) {
   }
 }
 #endif
+
+void GCBase::IDTracker::untrackUnmarkedSymbols(
+    const std::vector<bool> &markedSymbols) {
+  std::vector<uint32_t> toUntrack;
+  for (const auto &pair : symbolIDMap_) {
+    if (!markedSymbols[pair.first]) {
+      toUntrack.push_back(pair.first);
+    }
+  }
+  for (uint32_t symIdx : toUntrack) {
+    symbolIDMap_.erase(symIdx);
+  }
+}
 
 HeapSnapshot::NodeID GCBase::IDTracker::getNumberID(double num) {
   auto &numberRef = numberIDMap_[num];

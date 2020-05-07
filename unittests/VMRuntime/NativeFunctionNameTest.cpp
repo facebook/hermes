@@ -17,6 +17,7 @@ using namespace hermes::vm;
 namespace {
 
 TEST(NativeFunctionNameTest, SmokeTest) {
+#ifdef HERMESVM_SERIALIZE
   EXPECT_STREQ("print", getFunctionName(print));
   EXPECT_STREQ(
       "dataViewPrototypeGet<int8_t>",
@@ -36,5 +37,6 @@ TEST(NativeFunctionNameTest, SmokeTest) {
       "NativeConstructor::creatorFunction"
       "<JSTypedArray<int16_t, CellKind::Int16ArrayKind>>",
       getFunctionName(func));
+#endif
 }
 } // namespace

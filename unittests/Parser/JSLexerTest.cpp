@@ -268,7 +268,7 @@ TEST(JSLexerTest, OctalLiteralTest) {
   SourceErrorManager sm;
   DiagContext diag(sm);
 
-  JSLexer lex("01 010 09 019", sm, alloc);
+  JSLexer lex("01 010 09 019 0o11 0O11", sm, alloc);
 
   auto tok = lex.advance();
   ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
@@ -289,6 +289,36 @@ TEST(JSLexerTest, OctalLiteralTest) {
   ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
   ASSERT_EQ(tok->getNumericLiteral(), 19.0);
   ASSERT_EQ(diag.getWarnCountClear(), 1);
+
+  tok = lex.advance();
+  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+  ASSERT_EQ(tok->getNumericLiteral(), 9.0);
+
+  tok = lex.advance();
+  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+  ASSERT_EQ(tok->getNumericLiteral(), 9.0);
+
+  ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+}
+
+TEST(JSLexerTest, BinaryLiteralTest) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext diag(sm);
+
+  JSLexer lex("0b1 0B1 0b101", sm, alloc);
+
+  auto tok = lex.advance();
+  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+  ASSERT_EQ(tok->getNumericLiteral(), 1.0);
+
+  tok = lex.advance();
+  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+  ASSERT_EQ(tok->getNumericLiteral(), 1.0);
+
+  tok = lex.advance();
+  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+  ASSERT_EQ(tok->getNumericLiteral(), 5.0);
 
   ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
 }
@@ -349,8 +379,7 @@ TEST(JSLexerTest, StringTest1) {
 
   JSLexer lex(
       "'aa' \"bb\" 'open1\n"
-      "'open2\xe2\x80\xa8"
-      "\"open3",
+      "\"open2",
       sm,
       alloc);
 
@@ -372,13 +401,42 @@ TEST(JSLexerTest, StringTest1) {
   EXPECT_STREQ("open2", lex.getCurToken()->getStringLiteral()->c_str());
   ASSERT_TRUE(lex.isNewLineBeforeCurrentToken());
 
-  ASSERT_EQ(TokenKind::string_literal, lex.advance()->getKind());
-  ASSERT_EQ(1, diag.getErrCountClear());
-  EXPECT_STREQ("open3", lex.getCurToken()->getStringLiteral()->c_str());
-  ASSERT_TRUE(lex.isNewLineBeforeCurrentToken());
-
   ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
   ASSERT_FALSE(lex.isNewLineBeforeCurrentToken());
+}
+
+TEST(JSLexerTest, StringLineParaSepTest) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext diag(sm);
+
+  // Test that Unicode line and paragraph separatot are valid in a string
+  // (since ES10).
+  JSLexer lex(
+      "'\xe2\x80\xa8' "
+      "'\xe2\x80\xa9' "
+      "'\\\xe2\x80\xa8' "
+      "'\\\xe2\x80\xa9' ",
+      sm,
+      alloc);
+
+  ASSERT_EQ(TokenKind::string_literal, lex.advance()->getKind());
+  ASSERT_EQ(0, diag.getErrCountClear());
+  EXPECT_STREQ("\xe2\x80\xa8", lex.getCurToken()->getStringLiteral()->c_str());
+
+  ASSERT_EQ(TokenKind::string_literal, lex.advance()->getKind());
+  ASSERT_EQ(0, diag.getErrCountClear());
+  EXPECT_STREQ("\xe2\x80\xa9", lex.getCurToken()->getStringLiteral()->c_str());
+
+  ASSERT_EQ(TokenKind::string_literal, lex.advance()->getKind());
+  ASSERT_EQ(0, diag.getErrCountClear());
+  EXPECT_STREQ("", lex.getCurToken()->getStringLiteral()->c_str());
+
+  ASSERT_EQ(TokenKind::string_literal, lex.advance()->getKind());
+  ASSERT_EQ(0, diag.getErrCountClear());
+  EXPECT_STREQ("", lex.getCurToken()->getStringLiteral()->c_str());
+
+  ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
 }
 
 TEST(JSLexerTest, StringTest2) {

@@ -936,7 +936,7 @@ class JSLibMockedEnvironmentTest : public RuntimeTestFixtureBase {
   JSLibMockedEnvironmentTest()
       : RuntimeTestFixtureBase(RuntimeConfig::Builder()
                                    .withGCConfig(kTestGCConfig)
-                                   .withTraceEnvironmentInteractions(true)
+                                   .withTraceEnabled(true)
                                    .withEnableSampledStats(true)
                                    .build()) {}
 };

@@ -31,6 +31,8 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
       std::unique_ptr<llvm::raw_ostream> traceStream);
 
   virtual SynthTrace::ObjectID getUniqueID(const jsi::Object &o) = 0;
+  virtual SynthTrace::ObjectID getUniqueID(const jsi::String &s) = 0;
+  virtual SynthTrace::ObjectID getUniqueID(const jsi::PropNameID &pni) = 0;
 
   virtual void flushAndDisableTrace() = 0;
 
@@ -43,6 +45,15 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
 
   jsi::Object createObject() override;
   jsi::Object createObject(std::shared_ptr<jsi::HostObject> ho) override;
+
+  jsi::String createStringFromAscii(const char *str, size_t length) override;
+  jsi::String createStringFromUtf8(const uint8_t *utf8, size_t length) override;
+
+  jsi::PropNameID createPropNameIDFromAscii(const char *str, size_t length)
+      override;
+  jsi::PropNameID createPropNameIDFromUtf8(const uint8_t *utf8, size_t length)
+      override;
+  jsi::PropNameID createPropNameIDFromString(const jsi::String &str) override;
 
   jsi::Value getProperty(const jsi::Object &obj, const jsi::String &name)
       override;
@@ -126,16 +137,34 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
 // vm-specific bits.  And, it's not a HermesRuntime, but it holds one.
 class TracingHermesRuntime final : public TracingRuntime {
  public:
+  /// This constructor is not intended to be invoked directly.
+  /// Use makeTracingHermesRuntime instead.
+  ///
+  /// \p traceStream  the stream to write trace to.
+  /// \p commitAction is invoked on completion of tracing.
+  /// Completion can be triggered implicitly by crash (if crash manager is
+  /// provided) or explicitly by invocation of flush. If the committed trace
+  /// can be found in a file, the callback returns the file name. Otherwise,
+  /// the callback returns empty.
+  /// \p rollbackAction is invoked if the runtime is destructed prior to
+  /// completion of tracing. It may or may not invoked if completion failed.
   TracingHermesRuntime(
       std::unique_ptr<HermesRuntime> runtime,
       const ::hermes::vm::RuntimeConfig &runtimeConfig,
       std::unique_ptr<llvm::raw_ostream> traceStream,
-      const std::string &traceFilename);
+      std::function<std::string()> commitAction,
+      std::function<void()> rollbackAction);
 
   ~TracingHermesRuntime();
 
   SynthTrace::ObjectID getUniqueID(const jsi::Object &o) override {
     return static_cast<SynthTrace::ObjectID>(hermesRuntime().getUniqueID(o));
+  }
+  SynthTrace::ObjectID getUniqueID(const jsi::String &s) override {
+    return static_cast<SynthTrace::ObjectID>(hermesRuntime().getUniqueID(s));
+  }
+  SynthTrace::ObjectID getUniqueID(const jsi::PropNameID &pni) override {
+    return static_cast<SynthTrace::ObjectID>(hermesRuntime().getUniqueID(pni));
   }
 
   void flushAndDisableTrace() override;
@@ -167,26 +196,46 @@ class TracingHermesRuntime final : public TracingRuntime {
       uint64_t globalID,
       const ::hermes::vm::RuntimeConfig &runtimeConfig,
       std::unique_ptr<llvm::raw_ostream> traceStream,
-      const std::string &traceFilename);
+      std::function<std::string()> commitAction,
+      std::function<void()> rollbackAction);
 
   void crashCallback(int fd);
 
   const ::hermes::vm::RuntimeConfig conf_;
-  const std::string traceFilename_;
+  const std::function<std::string()> commitAction_;
+  const std::function<void()> rollbackAction_;
   const llvm::Optional<::hermes::vm::CrashManager::CallbackKey>
       crashCallbackKey_;
+
+  bool flushedAndDisabled_{false};
+  std::string committedTraceFilename_;
 };
 
 /// Creates and returns a HermesRuntime that traces JSI interactions.
+/// The trace will be written to \p traceScratchPath incrementally.
+/// On completion, the file will be renamed to \p traceResultPath, and
+/// \p traceCompletionCallback (for post-processing) will be invoked.
+/// Completion can be triggered implicitly by crash (if crash manager is
+/// provided) or explicitly by invocation of flush.
+/// If the runtime is destructed without triggering trace completion,
+/// the file at \p traceScratchPath will be deleted.
+/// The return value of \p traceCompletionCallback indicates whether the
+/// invocation completed successfully.
+std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
+    std::unique_ptr<HermesRuntime> hermesRuntime,
+    const ::hermes::vm::RuntimeConfig &runtimeConfig,
+    const std::string &traceScratchPath,
+    const std::string &traceResultPath,
+    std::function<bool()> traceCompletionCallback);
+
+/// Creates and returns a HermesRuntime that traces JSI interactions.
 /// If \p traceStream is non-null, writes the trace to \p traceStream.
-/// If non-empty, \p traceFilename is the file to which \p traceStream writes.
 /// The \p forReplay parameter indicates whether the runtime is being used
 /// in trace replay.  (Its behavior can differ slightly in that case.)
 std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
     std::unique_ptr<HermesRuntime> hermesRuntime,
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
-    std::unique_ptr<llvm::raw_ostream> traceStream = nullptr,
-    const std::string &traceFilename = "",
+    std::unique_ptr<llvm::raw_ostream> traceStream,
     bool forReplay = false);
 
 } // namespace tracing

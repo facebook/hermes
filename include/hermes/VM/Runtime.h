@@ -12,7 +12,6 @@
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/Support/Compiler.h"
 #include "hermes/Support/ErrorHandling.h"
-#include "hermes/Support/JSONEmitter.h"
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/BasicBlockExecutionInfo.h"
 #include "hermes/VM/CallResult.h"
@@ -27,7 +26,6 @@
 #include "hermes/VM/InternalProperty.h"
 #include "hermes/VM/InterpreterState.h"
 #include "hermes/VM/JIT/JIT.h"
-#include "hermes/VM/MockedEnvironment.h"
 #include "hermes/VM/PointerBase.h"
 #include "hermes/VM/Predefined.h"
 #include "hermes/VM/Profiler.h"
@@ -38,6 +36,7 @@
 #include "hermes/VM/RuntimeStats.h"
 #include "hermes/VM/Serializer.h"
 #include "hermes/VM/StackFrame.h"
+#include "hermes/VM/StackTracesTree.h"
 #include "hermes/VM/SymbolRegistry.h"
 #include "hermes/VM/TwineChar16.h"
 
@@ -57,6 +56,8 @@
 
 namespace hermes {
 // Forward declaration.
+class JSONEmitter;
+
 namespace inst {
 struct Inst;
 }
@@ -82,6 +83,7 @@ class ScopedNativeDepthTracker;
 class ScopedNativeCallFrame;
 class SamplingProfiler;
 class CodeCoverageProfiler;
+struct MockedEnvironment;
 
 #ifdef HERMESVM_PROFILER_BB
 class JSArray;
@@ -482,6 +484,10 @@ class Runtime : public HandleRootOwner,
   /// Returns the common storage object.
   RuntimeCommonStorage *getCommonStorage() {
     return commonStorage_.get();
+  }
+
+  const GCExecTrace &getGCExecTrace() {
+    return getHeap().getGCExecTrace();
   }
 
 #if defined(HERMES_ENABLE_DEBUGGER)
@@ -1063,11 +1069,13 @@ class Runtime : public HandleRootOwner,
       // UBSAN builds will hit a native stack overflow much earlier, so make
       // this limit dramatically lower.
       30
-#elif defined(_WINDOWS) && defined(HERMES_SLOW_DEBUG)
+#elif defined(_MSC_VER) && defined(__clang__) && defined(HERMES_SLOW_DEBUG)
+      30
+#elif defined(_MSC_VER) && defined(HERMES_SLOW_DEBUG)
       // On windows in dbg mode builds, stack frames are bigger, and a depth
       // limit of 384 results in a C++ stack overflow in testing.
       128
-#elif defined(_WINDOWS) && !NDEBUG
+#elif defined(_MSC_VER) && !NDEBUG
       192
 #else
       /// This depth limit was originally 256, and we
@@ -1197,53 +1205,70 @@ class Runtime : public HandleRootOwner,
   /// Set from RuntimeConfig.
   bool allowFunctionToStringWithRuntimeSource_;
 
-#ifdef HERMES_ENABLE_DEBUGGER
  private:
-  /// This is used to store the last IP in the interpreter before making a call.
-  const inst::Inst *savedIP_{nullptr};
+#ifdef NDEBUG
+  /// See \c ::setCurrentIP() and \c ::getCurrentIP() .
+  const inst::Inst *currentIP_{nullptr};
+#else
+  /// When assertions are enabled we track whether \c currentIP_ is "valid" by
+  /// making it optional. If this is accessed when the optional value is cleared
+  /// (the invalid state) we assert.
+  llvm::Optional<const inst::Inst *> currentIP_{(const inst::Inst *)nullptr};
+#endif
 
  public:
-  /// Store the caller's IP before (possibly) making a call.
-  /// This should be called at every place that we could make a call.
-  void storeCallerIP(const inst::Inst *ip) {
-    savedIP_ = ip;
+  /// Set the value of the current Instruction Pointer (IP). Generally this is
+  /// called by the interpeter before it makes any major calls out of its main
+  /// loop. However, the interpeter also reads the value held here back after
+  /// major calls return so this can also be called by other code which wants to
+  /// return to the interpreter at a different IP. This allows things external
+  /// to the interpreter loop to affect the flow of bytecode execution.
+  inline void setCurrentIP(const inst::Inst *ip) {
+    currentIP_ = ip;
   }
 
-  /// Clear the caller's return address. This needs to be called after
-  /// returning a call.
-  void clearCallerIP() {
-#ifndef NDEBUG
-    savedIP_ = nullptr;
+  /// Get the current Instruction Pointer (IP). This can be used to find out
+  /// the last bytecode executed if we're currently in the interpeter loop. If
+  /// we are not in the interpeter loop (i.e. we've made it into the VM
+  /// internals via a native call), this this will return nullptr.
+  inline const inst::Inst *getCurrentIP() const {
+#ifdef NDEBUG
+    return currentIP_;
+#else
+    assert(
+        currentIP_.hasValue() &&
+        "Current IP unknown - this probably means a CAPTURE_IP_* is missing in the interpreter.");
+    return *currentIP_;
 #endif
   }
+
+  /// This is slow compared to \c getCurrentIP() as it's virtual.
+  inline const inst::Inst *getCurrentIPSlow() const override {
+    return getCurrentIP();
+  }
+
+#ifdef NDEBUG
+  void invalidateCurrentIP() {}
+#else
+  void invalidateCurrentIP() {
+    currentIP_.reset();
+  }
+#endif
 
   /// Save the return address in the caller in the stack frame.
   /// This needs to be called at the beginning of a function call, after the
   /// stack frame is set up.
   void saveCallerIPInStackFrame() {
+#ifndef NDEBUG
     assert(
-        !currentFrame_.getSavedIP() ||
-        currentFrame_.getSavedIP() == savedIP_ &&
-            "The ip should either be null or already have the expected value");
-    currentFrame_.getSavedIPRef() = HermesValue::encodeNativePointer(savedIP_);
-    savedIP_ = nullptr;
+        (!currentFrame_.getSavedIP() ||
+         (currentIP_.hasValue() && currentFrame_.getSavedIP() == currentIP_)) &&
+        "The ip should either be null or already have the expected value");
+#endif
+    currentFrame_.getSavedIPRef() =
+        HermesValue::encodeNativePointer(getCurrentIP());
   }
 
-  /// Restore the caller's IP from the stack frame to savedIP_.
-  /// This needs to be called when a function returns.
-  void restoreCallerIPFromStackFrame() {
-    savedIP_ = getCurrentFrame().getSavedIP();
-  }
-#else
- public:
-  void storeCallerIP(const inst::Inst *ip) {}
-
-  void clearCallerIP() {}
-
-  void saveCallerIPInStackFrame() {}
-
-  void restoreCallerIPFromStackFrame() {}
-#endif // HERMES_ENABLE_DEBUGGER
   void setAllowFunctionToStringWithRuntimeSource(bool v) {
     allowFunctionToStringWithRuntimeSource_ = v;
   }
@@ -1251,6 +1276,64 @@ class Runtime : public HandleRootOwner,
   bool getAllowFunctionToStringWithRuntimeSource() const {
     return allowFunctionToStringWithRuntimeSource_;
   }
+
+ private:
+  /// Given the current last known IP used in the interpreter loop, returns the
+  /// last known CodeBlock and IP combination. IP must not be null as this
+  /// suggests we're not in the interpter loop, and there will be no CodeBlock
+  /// to find.
+  std::pair<const CodeBlock *, const inst::Inst *>
+  getCurrentInterpreterLocation(const inst::Inst *initialSearchIP) const;
+
+ public:
+  /// Return a StackTraceTreeNode for the last known interpreter bytecode
+  /// location. Returns nullptr if we're not in the interpeter loop, or
+  /// allocation location tracking is not enabled. For this to function it
+  /// needs to be passed the current IP from getCurrentIP(). We do not call
+  /// this internally because it should always be called prior even if we
+  /// do not really want a stack-traces node. This means we can leverage our
+  /// library of tests to assert getCurrentIP() would return the right value
+  /// at this point without actually collecting stack-trace data.
+  StackTracesTreeNode *getCurrentStackTracesTreeNode(
+      const inst::Inst *ip) override;
+
+  /// Return the current StackTracesTree or nullptr if it's not available.
+  StackTracesTree *getStackTracesTree() override {
+    return stackTracesTree_.get();
+  }
+
+  /// To facilitate allocation location tracking this must be called by the
+  /// interpeter:
+  /// * Just before we enter a new CodeBlock
+  /// * At the entry point of a CodeBlock if this is the first entry into the
+  ///   interpter loop.
+  inline void pushCallStack(const CodeBlock *codeBlock, const inst::Inst *ip) {
+    if (stackTracesTree_) {
+      pushCallStackImpl(codeBlock, ip);
+    }
+  }
+
+  /// Must pair up with every call to \c pushCallStack .
+  inline void popCallStack() {
+    if (stackTracesTree_) {
+      popCallStackImpl();
+    }
+  }
+
+  /// Enable allocation location tracking. Only works with
+  /// HERMES_ENABLE_ALLOCATION_LOCATION_TRACES.
+  void enableAllocationLocationTracker();
+
+  /// Disable allocation location tracking for new objects. Old objects tagged
+  /// with stack traces continue to be tracked until they are freed.
+  /// \param clearExistingTree is for use by tests and in general will break
+  /// because old objects would end up with dead pointers to stack-trace nodes.
+  void disableAllocationLocationTracker(bool clearExistingTree = false);
+
+ private:
+  void popCallStackImpl();
+  void pushCallStackImpl(const CodeBlock *codeBlock, const inst::Inst *ip);
+  std::unique_ptr<StackTracesTree> stackTracesTree_;
 };
 
 /// StackRuntime is meant to be used whenever a Runtime should be allocated on
@@ -1456,10 +1539,11 @@ class NoAllocScope {
  public:
 #ifdef NDEBUG
   explicit NoAllocScope(Runtime *runtime) {}
+  explicit NoAllocScope(GC *gc) {}
   void release() {}
 #else
-  explicit NoAllocScope(Runtime *runtime)
-      : noAllocLevel_(&runtime->getHeap().noAllocLevel_) {
+  explicit NoAllocScope(Runtime *runtime) : NoAllocScope(&runtime->getHeap()) {}
+  explicit NoAllocScope(GC *gc) : noAllocLevel_(&gc->noAllocLevel_) {
     ++*noAllocLevel_;
   }
 

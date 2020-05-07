@@ -17,6 +17,9 @@ using GC = MallocGC;
 #elif defined(HERMESVM_GC_NONCONTIG_GENERATIONAL)
 class GenGC;
 using GC = GenGC;
+#elif defined(HERMESVM_GC_HADES)
+class HadesGC;
+using GC = HadesGC;
 #else
 #error "Unsupported HermesVM GCKIND" #HERMESVM_GCKIND
 #endif

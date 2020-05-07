@@ -33,9 +33,16 @@ const char *callbacksCallJSFunctionTrace() {
       "time": 0
     },
     {
+      "type": "CreatePropNameRecord",
+      "objID": 2,
+      "encoding": "ASCII",
+      "chars": "f"
+    },
+    {
       "type": "GetPropertyRecord",
       "time": 0,
       "objID": 1,
+      "propID": 2,
       "propName": "f",
       "value": "object:10"
     },

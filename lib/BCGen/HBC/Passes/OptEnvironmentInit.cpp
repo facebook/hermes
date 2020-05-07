@@ -39,14 +39,14 @@ bool OptEnvironmentInit::runOnFunction(Function *F) {
     for (auto &I : BB) {
       auto *inst = &I;
 
-      if (auto *CE = dyn_cast<HBCCreateEnvironmentInst>(inst)) {
+      if (auto *CE = llvm::dyn_cast<HBCCreateEnvironmentInst>(inst)) {
         createdEnvs.insert(CE);
         continue;
       }
 
       // Note that in practice we don't currently generate code to exercise
       // these checks below.
-      if (auto *SE = dyn_cast<HBCStoreToEnvironmentInst>(inst)) {
+      if (auto *SE = llvm::dyn_cast<HBCStoreToEnvironmentInst>(inst)) {
         // Are we storing in one of the environments created in this BB?
         // If not, we could be storing anywhere, including in the created
         // envs, so unfortunately we have to abort. This could happen if the
@@ -55,7 +55,7 @@ bool OptEnvironmentInit::runOnFunction(Function *F) {
           break;
 
         // If we are not storing undefined, mark the slot as written.
-        if (!isa<LiteralUndefined>(SE->getStoredValue())) {
+        if (!llvm::isa<LiteralUndefined>(SE->getStoredValue())) {
           writtenSlots.insert(SE->getResolvedName());
           continue;
         }

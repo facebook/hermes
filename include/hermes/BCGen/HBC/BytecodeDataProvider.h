@@ -116,8 +116,8 @@ class BCProviderBase {
   /// Below are all the different global data tables/storage.
   uint32_t stringCount_{};
   llvm::ArrayRef<StringKind::Entry> stringKinds_{};
-  llvm::ArrayRef<uint32_t> identifierTranslations_{};
-  llvm::ArrayRef<char> stringStorage_{};
+  llvm::ArrayRef<uint32_t> identifierHashes_{};
+  llvm::ArrayRef<unsigned char> stringStorage_{};
 
   llvm::ArrayRef<unsigned char> arrayBuffer_{};
   llvm::ArrayRef<unsigned char> objKeyBuffer_{};
@@ -166,10 +166,10 @@ class BCProviderBase {
   llvm::ArrayRef<StringKind::Entry> getStringKinds() const {
     return stringKinds_;
   }
-  llvm::ArrayRef<uint32_t> getIdentifierTranslations() const {
-    return identifierTranslations_;
+  llvm::ArrayRef<uint32_t> getIdentifierHashes() const {
+    return identifierHashes_;
   }
-  llvm::ArrayRef<char> getStringStorage() const {
+  llvm::ArrayRef<unsigned char> getStringStorage() const {
     return stringStorage_;
   }
   llvm::ArrayRef<unsigned char> getArrayBuffer() const {
@@ -205,7 +205,8 @@ class BCProviderBase {
   llvm::StringRef getStringRefFromID(StringID stringID) const {
     auto entry = getStringTableEntry(stringID);
     return llvm::StringRef(
-        getStringStorage().begin() + entry.getOffset(), entry.getLength());
+        (const char *)getStringStorage().begin() + entry.getOffset(),
+        entry.getLength());
   }
 
   /// Get the global debug info, lazily create it.
@@ -273,9 +274,9 @@ class BCProviderBase {
   /// soon.  Only forwards this information to the OS for buffers.
   virtual void willNeedStringTable() {}
 
-  /// Advise the provider that identifier translations are no longer needed.
+  /// Advise the provider that identifier hashes are no longer needed.
   /// Only forwards this information to the OS for buffers.
-  virtual void dontNeedIdentifierTranslations() {}
+  virtual void dontNeedIdentifierHashes() {}
 
   /// Start tracking I/O (only implemented for buffers). Any access before this
   /// call (e.g. reading header to construct the provider) will not be recorded.
@@ -352,6 +353,9 @@ class BCProviderFromBuffer final : public BCProviderBase {
   std::atomic<bool> warmupAbortFlag_;
 
   std::unique_ptr<volatile PageAccessTracker> tracker_;
+
+  /// End of the bytecode file.
+  const uint8_t *end_;
 
   /// Tells any running warmup thread to abort and then joins that thread.
   void stopWarmup();
@@ -480,7 +484,7 @@ class BCProviderFromBuffer final : public BCProviderBase {
   void adviseStringTableSequential() override;
   void adviseStringTableRandom() override;
   void willNeedStringTable() override;
-  void dontNeedIdentifierTranslations() override;
+  void dontNeedIdentifierHashes() override;
 
   void startPageAccessTracker() override;
 

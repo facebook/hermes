@@ -174,9 +174,11 @@ class JSParserImpl {
   static constexpr unsigned MAX_RECURSION_DEPTH =
 #ifdef HERMES_LIMIT_STACK_DEPTH
       128
-#elif defined(_WINDOWS) && defined(HERMES_SLOW_DEBUG)
+#elif defined(_MSC_VER) && defined(__clang__) && defined(HERMES_SLOW_DEBUG)
+      128
+#elif defined(_MSC_VER) && defined(HERMES_SLOW_DEBUG)
       256
-#elif defined(_WINDOWS)
+#elif defined(_MSC_VER)
       512
 #else
       1024
@@ -621,6 +623,15 @@ class JSParserImpl {
   /// with "new".
   Optional<ESTree::Node *> parseOptionalExpressionExceptNew(
       IsConstructorCall isConstructorCall);
+
+  /// The "tail" of \c parseOptionalExpressionExceptNew(). It parses the
+  /// optional MemberExpression following the base PrimaryExpression. It is
+  /// ordinarily called by \c parseOptionalExpressionExceptNew(), but we need
+  /// to call it explicitly after parsing "new.target".
+  Optional<ESTree::Node *> parseOptionalExpressionExceptNew_tail(
+      IsConstructorCall isConstructorCall,
+      SMLoc objectLoc,
+      ESTree::Node *expr);
 
   /// Returns a dummy Optional<> just to indicate success or failure like all
   /// other functions.

@@ -9,6 +9,7 @@
 #define HERMES_VM_HERMESVALUE_INLINE_H
 
 #include "hermes/Support/SlowAssert.h"
+#include "hermes/VM/Handle.h"
 #include "hermes/VM/HermesValue.h"
 
 #include "hermes/VM/GC.h"
@@ -19,6 +20,13 @@ namespace vm {
 void HermesValue::setInGC(HermesValue hv, GC *gc) {
   setNoBarrier(hv);
   assert(gc->inGC());
+}
+
+template <typename T>
+inline PinnedHermesValue &PinnedHermesValue::operator=(PseudoHandle<T> &&hv) {
+  setNoBarrier(hv.getHermesValue());
+  hv.invalidate();
+  return *this;
 }
 
 template <typename NeedsBarriers>

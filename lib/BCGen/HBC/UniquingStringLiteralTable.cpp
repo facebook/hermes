@@ -41,7 +41,7 @@ StringLiteralIDMapping::StringLiteralIDMapping(
   }
 }
 
-std::vector<uint32_t> StringLiteralTable::getIdentifierTranslations() const {
+std::vector<uint32_t> StringLiteralTable::getIdentifierHashes() const {
   std::vector<uint32_t> result;
   assert(strings_.size() == isIdentifier_.size());
   for (size_t i = 0; i < strings_.size(); ++i) {

@@ -22,6 +22,7 @@ namespace hermes {
 struct StringSetVector final {
   using iterator = std::deque<std::string>::iterator;
   using const_iterator = std::deque<std::string>::const_iterator;
+  using size_type = std::deque<std::string>::size_type;
 
   StringSetVector() = default;
 
@@ -35,7 +36,7 @@ struct StringSetVector final {
 
   /// Adds a string, \p str to the vector if it is not already present.
   /// \return the index of the string in the vector.
-  inline uint32_t insert(llvm::StringRef str);
+  inline size_type insert(llvm::StringRef str);
 
   /// Return an iterator \c it such that *it == str if such an iterator exists
   /// or end() otherwise.
@@ -44,9 +45,9 @@ struct StringSetVector final {
 
   /// Return a reference to the \p i'th string inserted into this set vector.
   /// Assumes \pre i < size().
-  inline const std::string &operator[](size_t i) const;
+  inline const std::string &operator[](size_type i) const;
 
-  inline size_t size() const;
+  inline size_type size() const;
   inline bool empty() const;
 
   inline iterator begin();
@@ -68,7 +69,7 @@ struct StringSetVector final {
   llvm::DenseMap<llvm::StringRef, uint32_t> stringsToIndex_;
 };
 
-inline uint32_t StringSetVector::insert(llvm::StringRef str) {
+inline StringSetVector::size_type StringSetVector::insert(llvm::StringRef str) {
   assert(stringsToIndex_.size() == stringsStorage_.size());
   auto it = stringsToIndex_.find(str);
   if (it != stringsToIndex_.end()) {

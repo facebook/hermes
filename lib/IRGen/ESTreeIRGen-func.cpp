@@ -190,7 +190,7 @@ Function *ESTreeIRGen::genES5Function(
 
   newFunction->setLazyClosureAlias(lazyClosureAlias);
 
-  if (auto *bodyBlock = dyn_cast<ESTree::BlockStatementNode>(body)) {
+  if (auto *bodyBlock = llvm::dyn_cast<ESTree::BlockStatementNode>(body)) {
     if (bodyBlock->isLazyFunctionBody) {
       // Set the AST position and variable context so we can continue later.
       newFunction->setLazyScope(saveCurrentScope());
@@ -378,7 +378,7 @@ void ESTreeIRGen::emitFunctionPrologue(
     auto res = declareVariableOrGlobalProperty(
         newFunc, decl.kind, getNameFieldFromID(decl.identifier));
     // If this is not a frame variable or it was already declared, skip.
-    auto *var = dyn_cast<Variable>(res.first);
+    auto *var = llvm::dyn_cast<Variable>(res.first);
     if (!var || !res.second)
       continue;
 
@@ -445,7 +445,7 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
     ESTree::Node *init = nullptr;
     ++paramIndex;
 
-    if (auto *rest = dyn_cast<ESTree::RestElementNode>(param)) {
+    if (auto *rest = llvm::dyn_cast<ESTree::RestElementNode>(param)) {
       createLRef(rest->_argument, true)
           .emitStore(genBuiltinCall(
               BuiltinMethod::HermesBuiltin_copyRestArgs,
@@ -454,12 +454,12 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
     }
 
     // Unpack the optional initialization.
-    if (auto *assign = dyn_cast<ESTree::AssignmentPatternNode>(param)) {
+    if (auto *assign = llvm::dyn_cast<ESTree::AssignmentPatternNode>(param)) {
       param = assign->_left;
       init = assign->_right;
     }
 
-    Identifier formalParamName = isa<ESTree::IdentifierNode>(param)
+    Identifier formalParamName = llvm::isa<ESTree::IdentifierNode>(param)
         ? getNameFieldFromID(param)
         : genAnonymousLabelName("param");
 

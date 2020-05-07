@@ -132,6 +132,7 @@ STR(bind, "bind")
 STR(gc, "gc")
 
 STR(name, "name")
+STR(displayName, "displayName")
 STR(message, "message")
 STR(stack, "stack")
 STR(stacktraceTooLong, "Stacktrace too long")

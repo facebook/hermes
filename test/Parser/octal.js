@@ -11,6 +11,6 @@
 
 "\001";  // this should be ok
 x = 010;
-//CHECK: {{.*}}octal.js:13:5: error: Octal literals are not allowed in strict mode
+//CHECK: {{.*}}octal.js:13:5: error: Octal literals must use '0o' in strict mode
 //CHECK-NEXT: x = 010;
 //CHECK-NEXT:     ^~~

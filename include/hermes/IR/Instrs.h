@@ -802,8 +802,8 @@ class TryStoreGlobalPropertyInst : public StorePropertyInst {
             globalObject,
             property) {
     assert(
-        (isa<GlobalObject>(globalObject) ||
-         isa<HBCGetGlobalObjectInst>(globalObject)) &&
+        (llvm::isa<GlobalObject>(globalObject) ||
+         llvm::isa<HBCGetGlobalObjectInst>(globalObject)) &&
         "globalObject must refer to the global object");
   }
   explicit TryStoreGlobalPropertyInst(
@@ -1078,8 +1078,8 @@ class TryLoadGlobalPropertyInst : public LoadPropertyInst {
             globalObject,
             property) {
     assert(
-        (isa<GlobalObject>(globalObject) ||
-         isa<HBCGetGlobalObjectInst>(globalObject)) &&
+        (llvm::isa<GlobalObject>(globalObject) ||
+         llvm::isa<HBCGetGlobalObjectInst>(globalObject)) &&
         "globalObject must refer to the global object");
   }
   explicit TryLoadGlobalPropertyInst(

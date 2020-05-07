@@ -43,6 +43,7 @@
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
+#include "hermes/VM/SymbolID.h"
 #include "hermes/VM/TimeLimitMonitor.h"
 
 #include "llvm/Support/ConvertUTF.h"
@@ -491,6 +492,16 @@ class HermesRuntimeImpl final : public HermesRuntime,
   }
 
   // Overridden from jsi::Instrumentation
+  void startTrackingHeapObjectStackTraces() override {
+    runtime_.enableAllocationLocationTracker();
+  }
+
+  // Overridden from jsi::Instrumentation
+  void stopTrackingHeapObjectStackTraces() override {
+    runtime_.disableAllocationLocationTracker();
+  }
+
+  // Overridden from jsi::Instrumentation
   void createSnapshotToFile(const std::string &path) override {
     std::error_code code;
     llvm::raw_fd_ostream os(path, code, llvm::sys::fs::FileAccess::FA_Write);
@@ -932,7 +943,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   template <typename T>
   struct ManagedValues {
 #ifdef ASSERT_ON_DANGLING_VM_REFS
-    // If we have active HermesValuePointers whhen deconstructing, these will
+    // If we have active HermesValuePointers when deconstructing, these will
     // now be dangling. We deliberately allocate and immediately leak heap
     // memory to hold the internal list. This keeps alive memory holding the
     // ref-count of the now dangling references, allowing them to detect the
@@ -1057,6 +1068,10 @@ void HermesRuntime::dumpSampledTraceToFile(const std::string &fileName) {
   ::hermes::vm::SamplingProfiler::getInstance()->dumpChromeTrace(os);
 }
 
+void HermesRuntime::dumpSampledTraceToStream(llvm::raw_ostream &stream) {
+  ::hermes::vm::SamplingProfiler::getInstance()->dumpChromeTrace(stream);
+}
+
 /*static*/ std::vector<int64_t> HermesRuntime::getExecutedFunctions() {
   std::vector<::hermes::vm::CodeCoverageProfiler::FuncInfo> executedFuncs =
       ::hermes::vm::CodeCoverageProfiler::getInstance()->getExecutedFunctions();
@@ -1069,6 +1084,10 @@ void HermesRuntime::dumpSampledTraceToFile(const std::string &fileName) {
         return ((int64_t)entry.moduleId << 32) + entry.funcVirtualOffset;
       });
   return res;
+}
+
+/*static*/ bool HermesRuntime::isCodeCoverageProfilerEnabled() {
+  return ::hermes::vm::CodeCoverageProfiler::getInstance()->isEnabled();
 }
 
 /*static*/ void HermesRuntime::enableCodeCoverageProfiler() {
@@ -1122,6 +1141,14 @@ uint64_t HermesRuntime::getUniqueID(const jsi::Object &o) const {
   return impl(this)->runtime_.getHeap().getObjectID(
       static_cast<vm::GCCell *>(impl(this)->phv(o).getObject()));
 }
+uint64_t HermesRuntime::getUniqueID(const jsi::String &s) const {
+  return impl(this)->runtime_.getHeap().getObjectID(
+      static_cast<vm::GCCell *>(impl(this)->phv(s).getString()));
+}
+uint64_t HermesRuntime::getUniqueID(const jsi::PropNameID &pni) const {
+  return impl(this)->runtime_.getHeap().getObjectID(
+      impl(this)->phv(pni).getSymbol());
+}
 
 /// Get a structure representing the enviroment-dependent behavior, so
 /// it can be written into the trace for later replay.
@@ -1135,6 +1162,11 @@ const ::hermes::vm::MockedEnvironment &HermesRuntime::getMockedEnvironment()
 void HermesRuntime::setMockedEnvironment(
     const ::hermes::vm::MockedEnvironment &env) {
   static_cast<HermesRuntimeImpl *>(this)->runtime_.setMockedEnvironment(env);
+}
+
+const ::hermes::vm::GCExecTrace &HermesRuntime::getGCExecTrace() const {
+  return static_cast<const HermesRuntimeImpl *>(this)
+      ->runtime_.getGCExecTrace();
 }
 
 std::string HermesRuntime::getIOTrackingInfoJSON() {
@@ -1268,7 +1300,8 @@ HermesRuntimeImpl::prepareJavaScript(
 #endif
   }
   if (!bcErr.first) {
-    throw jsi::JSINativeException(std::move(bcErr.second));
+    throw jsi::JSINativeException(
+        "Compiling JS failed: \n" + std::move(bcErr.second));
   }
   return std::make_shared<const HermesPreparedJavaScript>(
       std::move(bcErr.first), runtimeFlags, std::move(sourceURL));
@@ -1307,7 +1340,12 @@ jsi::Object HermesRuntimeImpl::global() {
 }
 
 std::string HermesRuntimeImpl::description() {
-  return runtime_.getHeap().getName();
+  std::string gcName = runtime_.getHeap().getName();
+  if (gcName.empty()) {
+    return "HermesRuntime";
+  } else {
+    return "HermesRuntime[" + gcName + "]";
+  }
 }
 
 bool HermesRuntimeImpl::isInspectable() {
@@ -1512,7 +1550,7 @@ jsi::Object HermesRuntimeImpl::createObject(
     vm::GCScope gcScope(&runtime_);
 
     auto objRes = vm::HostObject::createWithoutPrototype(
-        &runtime_, std::make_shared<JsiProxy>(*this, ho));
+        &runtime_, std::make_unique<JsiProxy>(*this, ho));
     checkStatus(objRes.getStatus());
     return add<jsi::Object>(*objRes);
   });
@@ -1520,9 +1558,9 @@ jsi::Object HermesRuntimeImpl::createObject(
 
 std::shared_ptr<jsi::HostObject> HermesRuntimeImpl::getHostObject(
     const jsi::Object &obj) {
-  return std::static_pointer_cast<JsiProxyBase>(
-             vm::vmcast<vm::HostObject>(phv(obj))->getProxy())
-      ->ho_;
+  const vm::HostObjectProxy *proxy =
+      vm::vmcast<vm::HostObject>(phv(obj))->getProxy();
+  return static_cast<const JsiProxyBase *>(proxy)->ho_;
 }
 
 jsi::Value HermesRuntimeImpl::getProperty(

@@ -18,14 +18,14 @@ namespace irgen {
 // Free standing helpers.
 
 Instruction *emitLoad(IRBuilder &builder, Value *from, bool inhibitThrow) {
-  if (auto *var = dyn_cast<Variable>(from)) {
+  if (auto *var = llvm::dyn_cast<Variable>(from)) {
     if (Variable::declKindNeedsTDZ(var->getDeclKind()) &&
         var->getRelatedVariable()) {
       builder.createThrowIfUndefinedInst(
           builder.createLoadFrameInst(var->getRelatedVariable()));
     }
     return builder.createLoadFrameInst(var);
-  } else if (auto *globalProp = dyn_cast<GlobalObjectProperty>(from)) {
+  } else if (auto *globalProp = llvm::dyn_cast<GlobalObjectProperty>(from)) {
     if (globalProp->isDeclared() || inhibitThrow)
       return builder.createLoadPropertyInst(
           builder.getGlobalObject(), globalProp->getName());
@@ -38,7 +38,7 @@ Instruction *emitLoad(IRBuilder &builder, Value *from, bool inhibitThrow) {
 
 Instruction *
 emitStore(IRBuilder &builder, Value *storedValue, Value *ptr, bool declInit) {
-  if (auto *var = dyn_cast<Variable>(ptr)) {
+  if (auto *var = llvm::dyn_cast<Variable>(ptr)) {
     if (!declInit && Variable::declKindNeedsTDZ(var->getDeclKind()) &&
         var->getRelatedVariable()) {
       // Must verify whether the variable is initialized.
@@ -53,7 +53,7 @@ emitStore(IRBuilder &builder, Value *storedValue, Value *ptr, bool declInit) {
     }
 
     return store;
-  } else if (auto *globalProp = dyn_cast<GlobalObjectProperty>(ptr)) {
+  } else if (auto *globalProp = llvm::dyn_cast<GlobalObjectProperty>(ptr)) {
     if (globalProp->isDeclared() || !builder.getFunction()->isStrictMode())
       return builder.createStorePropertyInst(
           storedValue, builder.getGlobalObject(), globalProp->getName());
@@ -130,7 +130,7 @@ void LReference::emitStore(Value *value) {
 }
 
 bool LReference::canStoreWithoutSideEffects() const {
-  return kind_ == Kind::VarOrGlobal && isa<Variable>(base_);
+  return kind_ == Kind::VarOrGlobal && llvm::isa<Variable>(base_);
 }
 
 Variable *LReference::castAsVariable() const {
@@ -166,7 +166,7 @@ void ESTreeIRGen::doIt() {
 
   ESTree::ProgramNode *Program;
 
-  Program = dyn_cast<ESTree::ProgramNode>(Root);
+  Program = llvm::dyn_cast<ESTree::ProgramNode>(Root);
 
   if (!Program) {
     Builder.getModule()->getContext().getSourceErrorManager().error(
@@ -346,7 +346,7 @@ std::pair<Function *, Function *> ESTreeIRGen::doLazyFunction(
   }
 
   assert(
-      !isa<ESTree::ArrowFunctionExpressionNode>(node) &&
+      !llvm::isa<ESTree::ArrowFunctionExpressionNode>(node) &&
       "lazy compilation not supported for arrow functions");
 
   auto *func = genES5Function(lazyData->originalName, parentVar, node);
@@ -363,12 +363,12 @@ std::pair<Value *, bool> ESTreeIRGen::declareVariableOrGlobalProperty(
   // If the variable is already declared in this scope, do not create a
   // second instance.
   if (found) {
-    if (auto *var = dyn_cast<Variable>(found)) {
+    if (auto *var = llvm::dyn_cast<Variable>(found)) {
       if (var->getParent()->getFunction() == inFunc)
         return {found, false};
     } else {
       assert(
-          isa<GlobalObjectProperty>(found) &&
+          llvm::isa<GlobalObjectProperty>(found) &&
           "Invalid value found in name table");
       if (inFunc->isGlobalScope())
         return {found, false};
@@ -448,11 +448,11 @@ struct DeclHoisting {
   /// The nodes that can define a new variable in the scope are:
   /// VariableDeclarator and FunctionDeclaration>
   void collectDecls(ESTree::Node *V) {
-    if (auto VD = dyn_cast<ESTree::VariableDeclaratorNode>(V)) {
+    if (auto VD = llvm::dyn_cast<ESTree::VariableDeclaratorNode>(V)) {
       return decls.push_back(VD);
     }
 
-    if (auto FD = dyn_cast<ESTree::FunctionDeclarationNode>(V)) {
+    if (auto FD = llvm::dyn_cast<ESTree::FunctionDeclarationNode>(V)) {
       return closures.push_back(FD);
     }
   }
@@ -463,9 +463,9 @@ struct DeclHoisting {
 
     // Do not descend to child closures because the variables they define are
     // not exposed to the outside function.
-    if (isa<ESTree::FunctionDeclarationNode>(V) ||
-        isa<ESTree::FunctionExpressionNode>(V) ||
-        isa<ESTree::ArrowFunctionExpressionNode>(V))
+    if (llvm::isa<ESTree::FunctionDeclarationNode>(V) ||
+        llvm::isa<ESTree::FunctionExpressionNode>(V) ||
+        llvm::isa<ESTree::ArrowFunctionExpressionNode>(V))
       return false;
     return true;
   }
@@ -529,7 +529,7 @@ Value *ESTreeIRGen::genMemberExpressionProperty(
   }
 
   // Arrays and objects may be accessed with integer indices.
-  if (auto N = dyn_cast<ESTree::NumericLiteralNode>(getProperty(Mem))) {
+  if (auto N = llvm::dyn_cast<ESTree::NumericLiteralNode>(getProperty(Mem))) {
     return Builder.getLiteralNumber(N->_value);
   }
 
@@ -546,7 +546,7 @@ Value *ESTreeIRGen::genMemberExpressionProperty(
 bool ESTreeIRGen::canCreateLRefWithoutSideEffects(
     hermes::ESTree::Node *target) {
   // Check for an identifier bound to an existing local variable.
-  if (auto *iden = dyn_cast<ESTree::IdentifierNode>(target)) {
+  if (auto *iden = llvm::dyn_cast<ESTree::IdentifierNode>(target)) {
     return dyn_cast_or_null<Variable>(
         nameTable_.lookup(getNameFieldFromID(iden)));
   }
@@ -558,14 +558,14 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node, bool declInit) {
   SMLoc sourceLoc = node->getDebugLoc();
   IRBuilder::ScopedLocationChange slc(Builder, sourceLoc);
 
-  if (isa<ESTree::EmptyNode>(node)) {
+  if (llvm::isa<ESTree::EmptyNode>(node)) {
     LLVM_DEBUG(dbgs() << "Creating an LRef for EmptyNode.\n");
     return LReference(
         LReference::Kind::Empty, this, false, nullptr, nullptr, sourceLoc);
   }
 
   /// Create lref for member expression (ex: o.f).
-  if (auto *ME = dyn_cast<ESTree::MemberExpressionNode>(node)) {
+  if (auto *ME = llvm::dyn_cast<ESTree::MemberExpressionNode>(node)) {
     LLVM_DEBUG(dbgs() << "Creating an LRef for member expression.\n");
     Value *obj = genExpression(ME->_object);
     Value *prop = genMemberExpressionProperty(ME);
@@ -574,7 +574,7 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node, bool declInit) {
   }
 
   /// Create lref for identifiers  (ex: a).
-  if (auto *iden = dyn_cast<ESTree::IdentifierNode>(node)) {
+  if (auto *iden = llvm::dyn_cast<ESTree::IdentifierNode>(node)) {
     LLVM_DEBUG(dbgs() << "Creating an LRef for identifier.\n");
     LLVM_DEBUG(
         dbgs() << "Looking for identifier \"" << getNameFieldFromID(iden)
@@ -585,7 +585,7 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node, bool declInit) {
   }
 
   /// Create lref for variable decls (ex: var a).
-  if (auto *V = dyn_cast<ESTree::VariableDeclarationNode>(node)) {
+  if (auto *V = llvm::dyn_cast<ESTree::VariableDeclarationNode>(node)) {
     LLVM_DEBUG(dbgs() << "Creating an LRef for variable declaration.\n");
 
     assert(V->_declarations.size() == 1 && "Malformed variable declaration");
@@ -596,7 +596,7 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node, bool declInit) {
   }
 
   // Destructuring assignment.
-  if (auto *pat = dyn_cast<ESTree::PatternNode>(node)) {
+  if (auto *pat = llvm::dyn_cast<ESTree::PatternNode>(node)) {
     return LReference(this, declInit, pat);
   }
 
@@ -720,9 +720,9 @@ void ESTreeIRGen::emitDestructuringAssignment(
     bool declInit,
     ESTree::PatternNode *target,
     Value *source) {
-  if (auto *APN = dyn_cast<ESTree::ArrayPatternNode>(target))
+  if (auto *APN = llvm::dyn_cast<ESTree::ArrayPatternNode>(target))
     return emitDestructuringArray(declInit, APN, source);
-  else if (auto *OPN = dyn_cast<ESTree::ObjectPatternNode>(target))
+  else if (auto *OPN = llvm::dyn_cast<ESTree::ObjectPatternNode>(target))
     return emitDestructuringObject(declInit, OPN, source);
   else {
     Mod->getContext().getSourceErrorManager().error(
@@ -776,7 +776,7 @@ void ESTreeIRGen::emitDestructuringArray(
     ESTree::Node *target = &elem;
     ESTree::Node *init = nullptr;
 
-    if (auto *rest = dyn_cast<ESTree::RestElementNode>(target)) {
+    if (auto *rest = llvm::dyn_cast<ESTree::RestElementNode>(target)) {
       storePreviousValue();
       emitRestElement(declInit, rest, iteratorRecord, iteratorDone, &handler);
       emittedRest = true;
@@ -784,7 +784,7 @@ void ESTreeIRGen::emitDestructuringArray(
     }
 
     // If we have an initializer, unwrap it.
-    if (auto *assign = dyn_cast<ESTree::AssignmentPatternNode>(target)) {
+    if (auto *assign = llvm::dyn_cast<ESTree::AssignmentPatternNode>(target)) {
       target = assign->_left;
       init = assign->_right;
     }
@@ -879,7 +879,7 @@ void ESTreeIRGen::emitDestructuringArray(
           storeBlock,
           getDefaultBlock);
 
-      Identifier nameHint = isa<ESTree::IdentifierNode>(target)
+      Identifier nameHint = llvm::isa<ESTree::IdentifierNode>(target)
           ? getNameFieldFromID(target)
           : Identifier{};
 
@@ -1017,7 +1017,7 @@ void ESTreeIRGen::emitDestructuringObject(
   llvm::SmallVector<Value *, 4> excludedItems{};
 
   if (target->_properties.empty() ||
-      isa<ESTree::RestElementNode>(target->_properties.front())) {
+      llvm::isa<ESTree::RestElementNode>(target->_properties.front())) {
     // ES10.0 13.3.3.5
     // 1. Perform ? RequireObjectCoercible(value).
 
@@ -1052,7 +1052,7 @@ void ESTreeIRGen::emitDestructuringObject(
   }
 
   for (auto &elem : target->_properties) {
-    if (auto *rest = dyn_cast<ESTree::RestElementNode>(&elem)) {
+    if (auto *rest = llvm::dyn_cast<ESTree::RestElementNode>(&elem)) {
       emitRestProperty(declInit, rest, excludedItems, source);
       break;
     }
@@ -1062,16 +1062,18 @@ void ESTreeIRGen::emitDestructuringObject(
     ESTree::Node *init = nullptr;
 
     // If we have an initializer, unwrap it.
-    if (auto *assign = dyn_cast<ESTree::AssignmentPatternNode>(valueNode)) {
+    if (auto *assign =
+            llvm::dyn_cast<ESTree::AssignmentPatternNode>(valueNode)) {
       valueNode = assign->_left;
       init = assign->_right;
     }
 
-    Identifier nameHint = isa<ESTree::IdentifierNode>(valueNode)
+    Identifier nameHint = llvm::isa<ESTree::IdentifierNode>(valueNode)
         ? getNameFieldFromID(valueNode)
         : Identifier{};
 
-    if (isa<ESTree::IdentifierNode>(propNode->_key) && !propNode->_computed) {
+    if (llvm::isa<ESTree::IdentifierNode>(propNode->_key) &&
+        !propNode->_computed) {
       Identifier key = getNameFieldFromID(propNode->_key);
       excludedItems.push_back(Builder.getLiteralString(key));
       auto *loadedValue = Builder.createLoadPropertyInst(source, key);
@@ -1103,7 +1105,7 @@ void ESTreeIRGen::emitRestProperty(
   auto *zeroValue = Builder.getLiteralPositiveZero();
 
   for (Value *key : excludedItems) {
-    if (auto *lit = dyn_cast<Literal>(key)) {
+    if (auto *lit = llvm::dyn_cast<Literal>(key)) {
       // If the key is a literal, we can place it in the
       // HBCAllocObjectFromBufferInst buffer.
       if (keyDeDupeSet.insert(lit).second) {

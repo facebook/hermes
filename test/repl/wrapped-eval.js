@@ -6,7 +6,7 @@
 // This source code is licensed under the MIT license found in the
 // LICENSE file in the root directory of this source tree.
 
-// RUN: cat %s | %repl -prompt "" | %FileCheck --match-full-lines %s
+// RUN: cat %s | %hermes -prompt="" | %FileCheck --match-full-lines %s
 
 "wrapped eval"
 // CHECK-LABEL: "wrapped eval"

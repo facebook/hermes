@@ -58,7 +58,7 @@ run_1_test() {
   ( python3 $SRCDIR/stringize.py SOURCEMAP < "$HBC_FILE.map" ;
     python3 $SRCDIR/stringize.py STACKTRACE < "$RAW_TRACE" ;
     cat $SRCDIR/symbolicator.js.in
-  ) | "$HERMES" -target=HBC -gc-sanitize-handles=0 > "$SYM_TRACE"
+  ) | "$HERMES" - -target=HBC -gc-sanitize-handles=0 > "$SYM_TRACE"
 
   # Ensure that the original and symbolicated stack trace are the same!
   if ! diff "$ORIG_TRACE" "$SYM_TRACE" ; then

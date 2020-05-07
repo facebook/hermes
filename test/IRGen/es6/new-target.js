@@ -118,3 +118,16 @@ function func3() {
 //CHECK-NEXT:%BB1:
 //CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 //CHECK-NEXT:function_end
+
+function func4() {
+    return new.target.prototype;
+}
+//CHECK-LABEL:function func4()
+//CHECK-NEXT:frame = []
+//CHECK-NEXT:%BB0:
+//CHECK-NEXT:  %0 = GetNewTargetInst
+//CHECK-NEXT:  %1 = LoadPropertyInst %0, "prototype" : string
+//CHECK-NEXT:  %2 = ReturnInst %1
+//CHECK-NEXT:%BB1:
+//CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+//CHECK-NEXT:function_end

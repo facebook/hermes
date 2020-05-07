@@ -56,7 +56,7 @@ static DenseSet<const BasicBlock *> basicBlocksWithBackwardSuccessors(
 }
 
 void HVMRegisterAllocator::handleInstruction(Instruction *I) {
-  if (auto *CI = dyn_cast<CallInst>(I)) {
+  if (auto *CI = llvm::dyn_cast<CallInst>(I)) {
     return allocateCallInst(CI);
   }
 }
@@ -70,9 +70,9 @@ void HVMRegisterAllocator::allocateCallInst(CallInst *I) {
 }
 
 unsigned HBCISel::encodeValue(Value *value) {
-  if (isa<Instruction>(value)) {
+  if (llvm::isa<Instruction>(value)) {
     return RA_.getRegister(value).getIndex();
-  } else if (auto *var = dyn_cast<Variable>(value)) {
+  } else if (auto *var = llvm::dyn_cast<Variable>(value)) {
     return var->getIndexInVariableList();
   } else {
     llvm_unreachable("Do not support other value types");
@@ -351,15 +351,15 @@ void HBCISel::verifyCall(CallInst *Inst) {
   const auto lastArgReg = RA_.getLastRegister().getIndex() -
       HVMRegisterAllocator::CALL_EXTRA_REGISTERS;
 
-  const bool isBuiltin = isa<CallBuiltinInst>(Inst);
-  const bool isCallN = isa<HBCCallNInst>(Inst);
+  const bool isBuiltin = llvm::isa<CallBuiltinInst>(Inst);
+  const bool isCallN = llvm::isa<HBCCallNInst>(Inst);
 
   for (unsigned i = 0, max = Inst->getNumArguments(); i < max; i++) {
     Value *argument = Inst->getArgument(i);
     // The first argument (thisArg) of CallBuiltin must be LiteralUndefined.
     if (isBuiltin && i == 0) {
       assert(
-          isa<LiteralUndefined>(argument) && !RA_.isAllocated(argument) &&
+          llvm::isa<LiteralUndefined>(argument) && !RA_.isAllocated(argument) &&
           "Register for 'this' argument is misallocated");
     } else if (isCallN) {
       // CallN may take arguments from anywhere except for the last N registers
@@ -367,13 +367,13 @@ void HBCISel::verifyCall(CallInst *Inst) {
       // registers. Note that <= is correct because lastArgReg is the index of
       // the last register, not the count of registers.
       assert(
-          isa<Instruction>(argument) &&
+          llvm::isa<Instruction>(argument) &&
           RA_.getRegister(argument).getIndex() <= lastArgReg - max);
     } else {
       // Calls require that the arguments be at the end of the frame, in reverse
       // order.
       assert(
-          isa<Instruction>(argument) &&
+          llvm::isa<Instruction>(argument) &&
           RA_.getRegister(argument).getIndex() == lastArgReg - i &&
           "Register is misallocated");
     }
@@ -547,7 +547,7 @@ void HBCISel::generateStorePropertyInst(
   auto objReg = encodeValue(Inst->getObject());
   auto prop = Inst->getProperty();
 
-  if (auto *Lit = dyn_cast<LiteralString>(prop)) {
+  if (auto *Lit = llvm::dyn_cast<LiteralString>(prop)) {
     // Property is a string
     auto id = BCFGen_->getIdentifierID(Lit);
     if (id <= UINT16_MAX)
@@ -593,7 +593,7 @@ void HBCISel::generateStoreOwnPropertyInst(
   // If the property is a LiteralNumber, the property is enumerable, and it is a
   // valid array index, it is coming from an array initialization and we will
   // emit it as PutByIndex.
-  auto *numProp = dyn_cast<LiteralNumber>(prop);
+  auto *numProp = llvm::dyn_cast<LiteralNumber>(prop);
   if (numProp && isEnumerable) {
     if (auto arrayIndex = numProp->convertToArrayIndex()) {
       uint32_t index = arrayIndex.getValue();
@@ -662,7 +662,7 @@ void HBCISel::generateDeletePropertyInst(
   auto resultReg = encodeValue(Inst);
   auto prop = Inst->getProperty();
 
-  if (auto *Lit = dyn_cast<LiteralString>(prop)) {
+  if (auto *Lit = llvm::dyn_cast<LiteralString>(prop)) {
     auto id = BCFGen_->getIdentifierID(Lit);
     if (id <= UINT16_MAX)
       BCFGen_->emitDelById(resultReg, objReg, id);
@@ -681,7 +681,7 @@ void HBCISel::generateLoadPropertyInst(
   auto objReg = encodeValue(Inst->getObject());
   auto prop = Inst->getProperty();
 
-  if (auto *Lit = dyn_cast<LiteralString>(prop)) {
+  if (auto *Lit = llvm::dyn_cast<LiteralString>(prop)) {
     auto id = BCFGen_->getIdentifierID(Lit);
     if (id > UINT16_MAX) {
       BCFGen_->emitGetByIdLong(
@@ -731,7 +731,7 @@ void HBCISel::generateAllocStackInst(AllocStackInst *Inst, BasicBlock *next) {
 void HBCISel::generateAllocObjectInst(AllocObjectInst *Inst, BasicBlock *next) {
   auto result = encodeValue(Inst);
   // TODO: Utilize sizeHint.
-  if (isa<EmptySentinel>(Inst->getParentObject())) {
+  if (llvm::isa<EmptySentinel>(Inst->getParentObject())) {
     BCFGen_->emitNewObject(result);
   } else {
     auto parentReg = encodeValue(Inst->getParentObject());
@@ -779,7 +779,7 @@ void HBCISel::generateHBCCreateFunctionInst(
   auto env = encodeValue(Inst->getEnvironment());
   auto output = encodeValue(Inst);
   auto code = BCFGen_->getFunctionID(Inst->getFunctionCode());
-  bool isGen = isa<GeneratorFunction>(Inst->getFunctionCode());
+  bool isGen = llvm::isa<GeneratorFunction>(Inst->getFunctionCode());
   if (LLVM_LIKELY(code <= UINT16_MAX)) {
     // Most of the cases, function index will be less than 2^16.
     if (isGen) {
@@ -872,7 +872,7 @@ void HBCISel::generateBranchInst(BranchInst *Inst, BasicBlock *next) {
 void HBCISel::generateReturnInst(ReturnInst *Inst, BasicBlock *next) {
   auto value = encodeValue(Inst->getValue());
   Function *F = Inst->getParent()->getParent();
-  if (isa<GeneratorInnerFunction>(F)) {
+  if (llvm::isa<GeneratorInnerFunction>(F)) {
     // Generator inner functions must complete before `return`,
     // unlike when they yield.
     BCFGen_->emitCompleteGenerator();

@@ -36,7 +36,7 @@ static Instruction *findIdenticalInWindow(
     Instruction *copy,
     unsigned searchBudget) {
   // Don't hoist terminators.
-  if (isa<TerminatorInst>(I) || isa<TerminatorInst>(copy))
+  if (llvm::isa<TerminatorInst>(I) || llvm::isa<TerminatorInst>(copy))
     return nullptr;
 
   while (searchBudget) {
@@ -51,7 +51,7 @@ static Instruction *findIdenticalInWindow(
     searchBudget--;
     copy = copy->getNextNode();
 
-    if (isa<TerminatorInst>(copy))
+    if (llvm::isa<TerminatorInst>(copy))
       return nullptr;
   }
 
@@ -79,7 +79,7 @@ static bool hoistCBI(CondBranchInst *CBI) {
     Instruction *I1 = &*BB1->begin();
 
     // Don't hoist terminators.
-    if (isa<TerminatorInst>(I0) || isa<TerminatorInst>(I1))
+    if (llvm::isa<TerminatorInst>(I0) || llvm::isa<TerminatorInst>(I1))
       return changed;
 
     Instruction *LHS;
@@ -121,7 +121,7 @@ static bool canHoistFromLoop(
     return false;
   }
   for (int i = 0, e = inst->getNumOperands(); i < e; ++i) {
-    auto *operand = dyn_cast<Instruction>(inst->getOperand(i));
+    auto *operand = llvm::dyn_cast<Instruction>(inst->getOperand(i));
     if (operand && !dominance.properlyDominates(operand, branchInst)) {
       return false;
     }
@@ -173,16 +173,17 @@ static bool sinkInstructionsInBlock(
   for (auto it = BB->rbegin(), e = BB->rend(); it != e; ++it) {
     Instruction *inst = &*it;
 
-    if (isa<PhiInst>(inst))
+    if (llvm::isa<PhiInst>(inst))
       continue;
 
     for (int i = 0, numOperands = inst->getNumOperands(); i < numOperands;
          i++) {
-      auto *I = dyn_cast<Instruction>(inst->getOperand(i));
+      auto *I = llvm::dyn_cast<Instruction>(inst->getOperand(i));
       // Don't touch non-instructions, special instructions, instructions that
       // have multiple uses or instructions with side effects.
-      if (!I || !I->hasOneUser() || I->hasSideEffect() || isa<PhiInst>(I) ||
-          isa<TerminatorInst>(I) || isa<CreateArgumentsInst>(I))
+      if (!I || !I->hasOneUser() || I->hasSideEffect() ||
+          llvm::isa<PhiInst>(I) || llvm::isa<TerminatorInst>(I) ||
+          llvm::isa<CreateArgumentsInst>(I))
         continue;
 
       // If block is in a loop, only sink instructions from the same loop.
@@ -207,7 +208,7 @@ bool CodeMotion::runOnFunction(Function *F) {
   for (auto &BB : PO) {
     auto *term = BB->getTerminator();
 
-    if (auto *CBI = dyn_cast<CondBranchInst>(term)) {
+    if (auto *CBI = llvm::dyn_cast<CondBranchInst>(term)) {
       changed |= hoistCBI(CBI);
     }
   }

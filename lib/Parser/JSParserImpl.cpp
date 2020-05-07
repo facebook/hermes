@@ -2225,6 +2225,19 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           identRng,
           identRng,
           new (context_) ESTree::IdentifierNode(ident, nullptr));
+    } else if (check(TokenKind::comma, TokenKind::r_brace)) {
+      // If the next token is "," or "}", this is a shorthand property
+      // definition.
+      key = setLocation(
+          identRng,
+          identRng,
+          new (context_) ESTree::IdentifierNode(ident, nullptr));
+      auto *value = setLocation(
+          key, key, new (context_) ESTree::IdentifierNode(ident, nullptr));
+      return setLocation(
+          startLoc,
+          value,
+          new (context_) ESTree::PropertyNode(key, value, initIdent_, false));
     } else {
       // A getter method.
       computed = check(TokenKind::l_square);
@@ -2279,6 +2292,19 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           identRng,
           identRng,
           new (context_) ESTree::IdentifierNode(ident, nullptr));
+    } else if (check(TokenKind::comma, TokenKind::r_brace)) {
+      // If the next token is "," or "}", this is a shorthand property
+      // definition.
+      key = setLocation(
+          identRng,
+          identRng,
+          new (context_) ESTree::IdentifierNode(ident, nullptr));
+      auto *value = setLocation(
+          key, key, new (context_) ESTree::IdentifierNode(ident, nullptr));
+      return setLocation(
+          startLoc,
+          value,
+          new (context_) ESTree::PropertyNode(key, value, initIdent_, false));
     } else {
       // A setter method.
       computed = check(TokenKind::l_square);
@@ -2619,8 +2645,6 @@ Optional<ESTree::Node *> JSParserImpl::parseOptionalExpressionExceptNew(
   SMLoc startLoc = tok_->getStartLoc();
 
   ESTree::NodePtr expr;
-  bool seenOptionalChain = false;
-
   if (check(TokenKind::rw_super)) {
     // SuperProperty can be used the same way as PrimaryExpression, but
     // must not have a TemplateLiteral immediately after the `super` keyword.
@@ -2633,7 +2657,15 @@ Optional<ESTree::Node *> JSParserImpl::parseOptionalExpressionExceptNew(
     expr = primExpr.getValue();
   }
 
-  SMLoc objectLoc = startLoc;
+  return parseOptionalExpressionExceptNew_tail(
+      isConstructorCall, startLoc, expr);
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseOptionalExpressionExceptNew_tail(
+    IsConstructorCall isConstructorCall,
+    SMLoc objectLoc,
+    ESTree::Node *expr) {
+  bool seenOptionalChain = false;
   while (
       checkN(TokenKind::l_square, TokenKind::period, TokenKind::questiondot) ||
       checkTemplateLiteral()) {
@@ -2942,8 +2974,10 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrOptionalExpression(
         tok_,
         new (context_) ESTree::IdentifierNode(targetIdent_, nullptr));
     advance();
-    return setLocation(
+    auto *expr = setLocation(
         meta, prop, new (context_) ESTree::MetaPropertyNode(meta, prop));
+    return parseOptionalExpressionExceptNew_tail(
+        isConstructorCall, newRange.Start, expr);
   }
 
   auto optExpr = parseNewExpressionOrOptionalExpression(IsConstructorCall::Yes);

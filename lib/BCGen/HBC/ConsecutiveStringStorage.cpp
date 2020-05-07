@@ -562,7 +562,7 @@ class StringTableBuilder {
 
  public:
   // Entries which are in ASCII.
-  std::vector<StringPacker<char>::StringEntry> asciiStrings_;
+  std::vector<StringPacker<unsigned char>::StringEntry> asciiStrings_;
 
   // Entries which contain non-ASCII characters.
   std::vector<StringPacker<char16_t>::StringEntry> u16Strings_;
@@ -583,15 +583,17 @@ class StringTableBuilder {
     uint32_t index = 0;
     for (auto it = begin; it != end; ++it) {
       auto &str = *it;
-      const char *begin = str.data();
-      const char *end = begin + str.size();
-      if (isAllASCII(str.begin(), str.end())) {
-        ArrayRef<char> astr(begin, end);
+      static_assert(sizeof(str.data()[0]) == 1, "strings must be UTF8");
+      const unsigned char *begin = (const unsigned char *)str.data();
+      const unsigned char *end = begin + str.size();
+      if (isAllASCII(begin, end)) {
+        ArrayRef<unsigned char> astr(begin, end);
         asciiStrings_.emplace_back(index, astr);
       } else {
         u16StringStorage_.emplace_back();
         std::vector<char16_t> &ustr = u16StringStorage_.back();
-        convertUTF8WithSurrogatesToUTF16(std::back_inserter(ustr), begin, end);
+        convertUTF8WithSurrogatesToUTF16(
+            std::back_inserter(ustr), (const char *)begin, (const char *)end);
         u16Strings_.emplace_back(index, ustr);
       }
       index++;
@@ -617,7 +619,7 @@ class StringTableBuilder {
   /// If \p optimize is set, attempt to find a more efficient packing by reusing
   /// substrings and prefix-suffix overlaps.
   void packIntoStorage(
-      std::vector<char> *asciiStorage,
+      std::vector<unsigned char> *asciiStorage,
       std::vector<char16_t> *u16Storage,
       bool optimize) {
     NamedRegionTimer timer(
@@ -628,16 +630,19 @@ class StringTableBuilder {
         AreStatisticsEnabled());
     // Note these assignments use efficient move-assignment, not copying.
     if (optimize) {
-      *asciiStorage = StringPacker<char>::optimizingPackStrings(asciiStrings_);
+      *asciiStorage =
+          StringPacker<unsigned char>::optimizingPackStrings(asciiStrings_);
       *u16Storage = StringPacker<char16_t>::optimizingPackStrings(u16Strings_);
     } else {
-      *asciiStorage = StringPacker<char>::fastPackStrings(asciiStrings_);
+      *asciiStorage =
+          StringPacker<unsigned char>::fastPackStrings(asciiStrings_);
       *u16Storage = StringPacker<char16_t>::fastPackStrings(u16Strings_);
     }
 
 #ifndef NDEBUG
     // Ensure that our packing was correct.
-    StringPacker<char>::validateStringPacking(asciiStrings_, *asciiStorage);
+    StringPacker<unsigned char>::validateStringPacking(
+        asciiStrings_, *asciiStorage);
     StringPacker<char16_t>::validateStringPacking(u16Strings_, *u16Storage);
 #endif
   }
@@ -650,7 +655,7 @@ class StringTableBuilder {
   /// negated to indicate they are Unicode. If a string is in the
   /// \p identifiers, we also mark the second most significant bit.
   std::vector<StringTableEntry> generateStringTable(
-      ArrayRef<char> storage,
+      ArrayRef<unsigned char> storage,
       size_t u16OffsetAdjust) {
     // Each of our StringEntries remembers its original index in the initial
     // array. Create a table large enough, and set the corresponding index in
@@ -678,7 +683,7 @@ class StringTableBuilder {
   /// \return the offset of the u16 storage in that byte array.
   static size_t appendU16Storage(
       ArrayRef<char16_t> u16Storage,
-      std::vector<char> *output) {
+      std::vector<unsigned char> *output) {
     using namespace llvm::support;
     static_assert(sizeof(char16_t) == 2, "sizeof char16_t unexpectedly not 2");
     if (u16Storage.empty()) {
@@ -694,7 +699,7 @@ class StringTableBuilder {
     // Make space, and write as little endian.
     size_t offset = output->size();
     output->resize(output->size() + sizeof(char16_t) * u16Storage.size());
-    char *cursor = &output->at(offset);
+    unsigned char *cursor = &output->at(offset);
     for (char16_t s : u16Storage) {
       endian::write<char16_t, little, 0>(cursor, s);
       cursor += sizeof(s);
@@ -716,7 +721,7 @@ ConsecutiveStringStorage::ConsecutiveStringStorage(
   // Prepare to build our string table.
   // Generate storage for our ASCII and u16 strings.
   StringTableBuilder builder(begin, end);
-  std::vector<char> asciiStorage;
+  std::vector<unsigned char> asciiStorage;
   std::vector<char16_t> u16Storage;
   builder.packIntoStorage(&asciiStorage, &u16Storage, optimize);
 
@@ -753,13 +758,13 @@ uint32_t ConsecutiveStringStorage::getEntryHash(size_t i) const {
   ensureStorageValid();
 
   auto &entry = strTable_[i];
-  const char *data = &storage_[entry.getOffset()];
+  const unsigned char *data = &storage_[entry.getOffset()];
   uint32_t length = entry.getLength();
   if (entry.isUTF16()) {
     const char16_t *u16data = reinterpret_cast<const char16_t *>(data);
     return hermes::hashString(ArrayRef<char16_t>{u16data, length});
   } else {
-    return hermes::hashString(ArrayRef<char>{data, length});
+    return hermes::hashString(ArrayRef<char>{(const char *)data, length});
   }
 }
 
@@ -795,7 +800,7 @@ llvm::StringRef ConsecutiveStringStorage::getStringAtIndex(
 
 llvm::StringRef getStringFromEntry(
     const StringTableEntry &entry,
-    llvm::ArrayRef<char> storage,
+    llvm::ArrayRef<unsigned char> storage,
     std::string &utf8ConversionStorage) {
   uint32_t offset = entry.getOffset();
   uint32_t length = entry.getLength();
@@ -803,7 +808,7 @@ llvm::StringRef getStringFromEntry(
       offset + length <= storage.size() && offset + length >= offset &&
       "Invalid entry");
   if (!entry.isUTF16()) {
-    return StringRef{storage.data() + offset, length};
+    return StringRef{(const char *)storage.data() + offset, length};
   } else {
     const char16_t *s =
         reinterpret_cast<const char16_t *>(storage.data() + offset);

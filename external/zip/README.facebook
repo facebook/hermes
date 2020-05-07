@@ -6,3 +6,12 @@ Delete the line in `zip.c`:
 ```
 int symlink(const char *target, const char *linkpath); // needed on Linux
 ```
+
+Change this line in `miniz.h`:
+```
+#if MINIZ_X86_OR_X64_CPU
+```
+to
+```
+#if MINIZ_X86_OR_X64_CPU && !defined(HERMES_UBSAN)
+```

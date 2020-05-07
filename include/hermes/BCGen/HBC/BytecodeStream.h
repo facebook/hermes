@@ -105,7 +105,7 @@ class BytecodeSerializer {
 
   void visitFunctionHeaders();
   void visitStringKinds();
-  void visitIdentifierTranslations();
+  void visitIdentifierHashes();
   void visitSmallStringTable();
   void visitOverflowStringTable();
   void visitStringStorage();

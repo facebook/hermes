@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermesc %s 2>&1 ) | %FileCheck --match-full-lines %s
+// RUN: (! %hermesc -dump-ast %s 2>&1 ) | %FileCheck --match-full-lines %s
 
 let let = 3;
 // CHECK: {{.*}}:10:5: error: 'let' is disallowed as a lexically bound name

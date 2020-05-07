@@ -204,3 +204,55 @@ var a2 = { x, async };
 // CHECK-NEXT:           }
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ]
+
+var getset = {
+  get,
+  set,
+};
+// CHECK:       "type": "VariableDeclaration",
+// CHECK-NEXT:       "kind": "var",
+// CHECK-NEXT:       "declarations": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:           "type": "VariableDeclarator",
+// CHECK-NEXT:           "init": {
+// CHECK-NEXT:             "type": "ObjectExpression",
+// CHECK-NEXT:             "properties": [
+// CHECK-NEXT:               {
+// CHECK-NEXT:                 "type": "Property",
+// CHECK-NEXT:                 "key": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "get",
+// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "value": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "get",
+// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "kind": "init",
+// CHECK-NEXT:                 "computed": false
+// CHECK-NEXT:               },
+// CHECK-NEXT:               {
+// CHECK-NEXT:                 "type": "Property",
+// CHECK-NEXT:                 "key": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "set",
+// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "value": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "set",
+// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "kind": "init",
+// CHECK-NEXT:                 "computed": false
+// CHECK-NEXT:               }
+// CHECK-NEXT:             ]
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "id": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "getset",
+// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
+// CHECK-NEXT:       ]

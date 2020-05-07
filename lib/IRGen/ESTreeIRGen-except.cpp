@@ -57,7 +57,7 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
         // If we have a catch block.
         if (tryStmt->_handler) {
           auto *catchClauseNode =
-              dyn_cast<ESTree::CatchClauseNode>(tryStmt->_handler);
+              llvm::dyn_cast<ESTree::CatchClauseNode>(tryStmt->_handler);
 
           // Catch takes a exception variable, hence we need to create a new
           // scope for it.
@@ -95,7 +95,7 @@ CatchInst *ESTreeIRGen::prepareCatch(ESTree::NodePtr catchParam) {
     return catchInst;
   }
 
-  if (!isa<ESTree::IdentifierNode>(catchParam)) {
+  if (!llvm::isa<ESTree::IdentifierNode>(catchParam)) {
     Builder.getModule()->getContext().getSourceErrorManager().error(
         catchParam->getSourceRange(),
         Twine("Destructuring in catch parameters is currently unsupported"));

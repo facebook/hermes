@@ -24,14 +24,29 @@ const char *hostFunctionMutatesGlobalObjectTrace() {
   },
   "trace": [
     {
+      "type": "CreatePropNameIDRecord",
+      "objID": 40,
+      "encoding": "ASCII",
+      "chars": "HostFunction1"
+    },
+    {
       "type": "CreateHostFunctionRecord",
       "time": 0,
-      "objID": 10
+      "objID": 10,
+      "propNameID": 40,
+      "functionName": "HostFunction1"
+    },
+    {
+      "type": "CreatePropNameRecord",
+      "objID": 22,
+      "encoding": "ASCII",
+      "chars": "foo"
     },
     {
       "type": "SetPropertyRecord",
       "time": 0,
       "objID": 1,
+      "propID": 22,
       "propName": "foo",
       "value": "object:10"
     },
@@ -47,23 +62,50 @@ const char *hostFunctionMutatesGlobalObjectTrace() {
       "args": []
     },
     {
+      "type": "CreatePropNameRecord",
+      "objID": 23,
+      "encoding": "ASCII",
+      "chars": "o"
+    },
+    {
       "type": "GetPropertyRecord",
       "time": 0,
       "objID": 1,
+      "propID": 23,
       "propName": "o",
       "value": "object:11"
     },
     {
-      "type": "SetPropertyRecord",
-      "time": 0,
-      "objID": 11,
-      "propName": "a",
-      "value": "string:hello"
+      "type": "CreatePropNameRecord",
+      "objID": 24,
+      "encoding": "ASCII",
+      "chars": "a"
+    },
+    {
+      "type": "CreateStringRecord",
+      "objID": 30,
+      "encoding": "ASCII",
+      "chars": "hello"
     },
     {
       "type": "SetPropertyRecord",
       "time": 0,
       "objID": 11,
+      "propID": 24,
+      "propName": "a",
+      "value": "string:30"
+    },
+    {
+      "type": "CreatePropNameRecord",
+      "objID": 25,
+      "encoding": "ASCII",
+      "chars": "b"
+    },
+    {
+      "type": "SetPropertyRecord",
+      "time": 0,
+      "objID": 11,
+      "propID": 25,
       "propName": "b",
       "value": "bool:true"
     },
@@ -83,20 +125,35 @@ const char *hostFunctionMutatesGlobalObjectTrace() {
       "type": "GetPropertyRecord",
       "time": 0,
       "objID": 1,
+      "propID": 23,
       "propName": "o",
       "value": "object:11"
     },
     {
-      "type": "SetPropertyRecord",
-      "time": 0,
-      "objID": 11,
-      "propName": "a",
-      "value": "string:bar"
+      "type": "CreateStringRecord",
+      "objID": 31,
+      "encoding": "ASCII",
+      "chars": "bar"
     },
     {
       "type": "SetPropertyRecord",
       "time": 0,
       "objID": 11,
+      "propID": 24,
+      "propName": "a",
+      "value": "string:31"
+    },
+    {
+      "type": "CreatePropNameRecord",
+      "objID": 26,
+      "encoding": "ASCII",
+      "chars": "c"
+    },
+    {
+      "type": "SetPropertyRecord",
+      "time": 0,
+      "objID": 11,
+      "propID": 26,
       "propName": "c",
       "value": "null:"
     },

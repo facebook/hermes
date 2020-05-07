@@ -27,7 +27,7 @@ bool SwitchLowering::runOnFunction(Function *F) {
   // Collect all switch instructions.
   for (BasicBlock &BB : *F)
     for (auto &it : BB) {
-      if (auto *S = dyn_cast<SwitchInst>(&it))
+      if (auto *S = llvm::dyn_cast<SwitchInst>(&it))
         switches.push_back(S);
     }
 
@@ -98,7 +98,7 @@ void SwitchLowering::copyPhiTarget(
     BasicBlock *previousBlock,
     BasicBlock *newBlock) {
   for (auto &inst : *block) {
-    auto *phi = dyn_cast<PhiInst>(&inst);
+    auto *phi = llvm::dyn_cast<PhiInst>(&inst);
     if (!phi)
       break; // Phi must be first, so we won't find any more.
 
@@ -119,7 +119,7 @@ void SwitchLowering::copyPhiTarget(
 
 void SwitchLowering::erasePhiTarget(BasicBlock *block, BasicBlock *toDelete) {
   for (auto &inst : *block) {
-    auto *phi = dyn_cast<PhiInst>(&inst);
+    auto *phi = llvm::dyn_cast<PhiInst>(&inst);
     if (!phi)
       break; // Phi must be first, so we won't find any more.
 
@@ -249,7 +249,7 @@ LowerAllocObjectFuncContext::collectInstructions() const {
         // I is not a user of allocInst_, ignore it.
         continue;
       }
-      auto *SI = dyn_cast<StoreOwnPropertyInst>(&I);
+      auto *SI = llvm::dyn_cast<StoreOwnPropertyInst>(&I);
       if (!SI) {
         // A user that's not a StoreOwnPropertyInst. We have to
         // stop processing here.
@@ -271,8 +271,8 @@ bool LowerAllocObject::runOnFunction(Function *F) {
   // Collect all AllocObject instructions.
   for (BasicBlock &BB : *F)
     for (auto &it : BB) {
-      if (auto *A = dyn_cast<AllocObjectInst>(&it))
-        if (isa<EmptySentinel>(A->getParentObject()))
+      if (auto *A = llvm::dyn_cast<AllocObjectInst>(&it))
+        if (llvm::isa<EmptySentinel>(A->getParentObject()))
           allocs.push_back(A);
     }
 
@@ -317,10 +317,10 @@ static bool canSerialize(Value *V) {
   if (!V) {
     return false;
   }
-  auto *L = dyn_cast<HBCLoadConstInst>(V);
+  auto *L = llvm::dyn_cast<HBCLoadConstInst>(V);
   // We also need to check undefined because we cannot encode undefined
   // in the object literal buffer.
-  return L && !isa<LiteralUndefined>(L->getConst());
+  return L && !llvm::isa<LiteralUndefined>(L->getConst());
 };
 
 uint32_t LowerAllocObject::estimateBestNumElemsToSerialize(
@@ -340,7 +340,7 @@ uint32_t LowerAllocObject::estimateBestNumElemsToSerialize(
   for (StoreOwnPropertyInst *I : users) {
     ++curSize;
     auto *prop = I->getProperty();
-    if (!isa<LiteralString>(prop) && !isa<LiteralNumber>(prop)) {
+    if (!llvm::isa<LiteralString>(prop) && !llvm::isa<LiteralNumber>(prop)) {
       // Computed property, stop here.
       break;
     }
@@ -354,7 +354,7 @@ uint32_t LowerAllocObject::estimateBestNumElemsToSerialize(
     } else {
       // Property Value is computed. we could try to store a null as
       // placeholder, and set the proper value latter.
-      if (isa<LiteralNumber>(I->getProperty())) {
+      if (llvm::isa<LiteralNumber>(I->getProperty())) {
         // If the key is a number, we can't set it latter with PutById, so
         // have to skip it. We only need to check if it's an instance of
         // LiteralNumber because LowerNumericProperties must have lowered any
@@ -392,7 +392,7 @@ bool LowerAllocObject::lowerAllocObjectBuffer(
     StoreOwnPropertyInst *I = users[i];
     Literal *propLiteral = nullptr;
     // Property name can be either a LiteralNumber or a LiteralString.
-    if (auto *LN = dyn_cast<LiteralNumber>(I->getProperty())) {
+    if (auto *LN = llvm::dyn_cast<LiteralNumber>(I->getProperty())) {
       assert(
           LN->convertToArrayIndex() &&
           "LiteralNumber can be a property name only if it can be converted to array index.");
@@ -401,14 +401,14 @@ bool LowerAllocObject::lowerAllocObjectBuffer(
       propLiteral = cast<LiteralString>(I->getProperty());
     }
 
-    auto *loadInst = dyn_cast<HBCLoadConstInst>(I->getStoredValue());
+    auto *loadInst = llvm::dyn_cast<HBCLoadConstInst>(I->getStoredValue());
     // Not counting undefined as literal since the parser doesn't
     // support it.
     if (canSerialize(loadInst)) {
       prop_map.push_back(
           std::pair<Literal *, Literal *>(propLiteral, loadInst->getConst()));
       I->eraseFromParent();
-    } else if (isa<LiteralString>(propLiteral)) {
+    } else if (llvm::isa<LiteralString>(propLiteral)) {
       // If prop is a literal number, there is no need to put it into the
       // buffer or change the instruction.
       // Otherwise, use null as placeholder, and
@@ -417,7 +417,7 @@ bool LowerAllocObject::lowerAllocObjectBuffer(
           propLiteral, builder.getLiteralNull()));
 
       assert(
-          isa<StoreOwnPropertyInst>(I) &&
+          llvm::isa<StoreOwnPropertyInst>(I) &&
           "Expecting a StoreOwnPropertyInst when storing a literal property.");
       // Since we will be defining this property twice, once in the buffer
       // once setting the correct value latter, we can no longer use
@@ -451,7 +451,7 @@ bool LowerStoreInstrs::runOnFunction(Function *F) {
   llvm::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
   for (auto *bbit : order) {
     for (auto &it : bbit->getInstList()) {
-      auto *SSI = dyn_cast<StoreStackInst>(&it);
+      auto *SSI = llvm::dyn_cast<StoreStackInst>(&it);
       if (!SSI)
         continue;
 
@@ -474,7 +474,7 @@ bool LowerNumericProperties::stringToNumericProperty(
     IRBuilder &builder,
     Instruction &Inst,
     unsigned operandIdx) {
-  auto strLit = dyn_cast<LiteralString>(Inst.getOperand(operandIdx));
+  auto strLit = llvm::dyn_cast<LiteralString>(Inst.getOperand(operandIdx));
   if (!strLit)
     return false;
 
@@ -544,7 +544,7 @@ bool LimitAllocArray::runOnFunction(Function *F) {
   for (BasicBlock &BB : *F) {
     for (Instruction &I : BB) {
       int totalElems = 0;
-      auto *inst = dyn_cast<AllocArrayInst>(&I);
+      auto *inst = llvm::dyn_cast<AllocArrayInst>(&I);
       if (!inst || inst->getElementCount() == 0)
         continue;
 
@@ -626,7 +626,7 @@ bool LowerCondBranch::runOnFunction(Function *F) {
     llvm::DenseMap<CondBranchInst *, CompareBranchInst *> condToCompMap;
 
     for (auto &I : BB) {
-      auto *cbInst = dyn_cast<CondBranchInst>(&I);
+      auto *cbInst = llvm::dyn_cast<CondBranchInst>(&I);
       // This also matches constructors.
       if (!cbInst)
         continue;
@@ -638,7 +638,7 @@ bool LowerCondBranch::runOnFunction(Function *F) {
         continue;
 
       // The condition must be a binary operator.
-      auto binopInst = dyn_cast<BinaryOperatorInst>(cond);
+      auto binopInst = llvm::dyn_cast<BinaryOperatorInst>(cond);
       if (!binopInst)
         continue;
 
@@ -670,7 +670,7 @@ bool LowerCondBranch::runOnFunction(Function *F) {
 
     for (const auto cbiter : condToCompMap) {
       auto binopInst =
-          dyn_cast<BinaryOperatorInst>(cbiter.first->getCondition());
+          llvm::dyn_cast<BinaryOperatorInst>(cbiter.first->getCondition());
 
       cbiter.first->replaceAllUsesWith(condToCompMap[cbiter.first]);
       cbiter.first->eraseFromParent();
@@ -691,7 +691,7 @@ bool LowerExponentiationOperator::runOnFunction(Function *F) {
       // Increment iterator before potentially erasing inst and invalidating
       // iteration.
       ++it;
-      if (auto *binOp = dyn_cast<BinaryOperatorInst>(inst)) {
+      if (auto *binOp = llvm::dyn_cast<BinaryOperatorInst>(inst)) {
         if (binOp->getOperatorKind() ==
             BinaryOperatorInst::OpKind::ExponentiationKind) {
           changed |= lowerExponentiationOperator(builder, binOp);

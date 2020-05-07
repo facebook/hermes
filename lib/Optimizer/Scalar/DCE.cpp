@@ -44,7 +44,7 @@ static bool performFunctionDCE(Function *F) {
       // If the instruction writes to memory then we can't remove it. Notice
       // that it is okay to delete instructions that only read memory and are
       // unused.
-      if (I->mayWriteMemory() || isa<TerminatorInst>(I))
+      if (I->mayWriteMemory() || llvm::isa<TerminatorInst>(I))
         continue;
 
       // If some other instruction is using the result of this instruction then
