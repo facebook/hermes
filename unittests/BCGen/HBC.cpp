@@ -373,7 +373,7 @@ TEST(SpillRegisterTest, SpillsParameters) {
 
   // Ensure that spilling takes care of that
   for (auto &inst : *BB) {
-    auto *load = dyn_cast<HBCLoadConstInst>(&inst);
+    auto *load = llvm::dyn_cast<HBCLoadConstInst>(&inst);
     if (!load)
       continue;
     EXPECT_LT(RA.getRegister(load).getIndex(), 256u);

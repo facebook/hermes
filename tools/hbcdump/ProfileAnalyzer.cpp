@@ -183,7 +183,7 @@ ProfileData ProfileAnalyzer::deserializeTrace(
   // TODO: share BASIC_BLOCK_STAT_VERSION with VM.
   const static int32_t BASIC_BLOCK_STAT_VERSION = 2;
   ProfileData profileData;
-  auto *version = dyn_cast<JSONNumber>(json->at("version"));
+  auto *version = llvm::dyn_cast<JSONNumber>(json->at("version"));
   checkInvalidTraceObjectAndExit(
       version, "fail to fetch 'version' entry from root object");
   profileData.version = (uint16_t)version->getValue();
@@ -194,33 +194,33 @@ ProfileData ProfileAnalyzer::deserializeTrace(
     exit(-3);
   }
 
-  auto *pageSize = dyn_cast<JSONNumber>(json->at("page_size"));
+  auto *pageSize = llvm::dyn_cast<JSONNumber>(json->at("page_size"));
   checkInvalidTraceObjectAndExit(
       pageSize, "fail to fetch 'page_size' entry from root object");
   profileData.pageSize = (uint32_t)pageSize->getValue();
 
-  auto *functions = dyn_cast<JSONArray>(json->at("functions"));
+  auto *functions = llvm::dyn_cast<JSONArray>(json->at("functions"));
   checkInvalidTraceObjectAndExit(
       functions, "fail to fetch 'functions' entry from root object");
 
   for (size_t i = 0; i < functions->size(); ++i) {
-    auto *func = dyn_cast<JSONObject>(functions->at(i));
+    auto *func = llvm::dyn_cast<JSONObject>(functions->at(i));
     checkInvalidTraceObjectAndExit(func, "fail to fetch function entry");
-    auto *checksum = dyn_cast<JSONString>(func->at("checksum"));
+    auto *checksum = llvm::dyn_cast<JSONString>(func->at("checksum"));
     checkInvalidTraceObjectAndExit(checksum, "fail to fetch 'checksum' field");
-    auto *basicBlocks = dyn_cast<JSONArray>(func->at("basic_blocks"));
+    auto *basicBlocks = llvm::dyn_cast<JSONArray>(func->at("basic_blocks"));
     checkInvalidTraceObjectAndExit(
         basicBlocks, "fail to fetch 'basic_blocks' field");
     for (size_t i = 0; i < basicBlocks->size(); ++i) {
-      auto *basicBlock = dyn_cast<JSONObject>(basicBlocks->at(i));
+      auto *basicBlock = llvm::dyn_cast<JSONObject>(basicBlocks->at(i));
       checkInvalidTraceObjectAndExit(
           basicBlock, "fail to fetch basic block entry");
       auto *profileIndex =
-          dyn_cast<JSONNumber>(basicBlock->at("profile_index"));
+          llvm::dyn_cast<JSONNumber>(basicBlock->at("profile_index"));
       checkInvalidTraceObjectAndExit(
           profileIndex, "fail to fetch 'profile_index' field");
       auto *executionCount =
-          dyn_cast<JSONNumber>(basicBlock->at("execution_count"));
+          llvm::dyn_cast<JSONNumber>(basicBlock->at("execution_count"));
       checkInvalidTraceObjectAndExit(
           executionCount, "fail to fetch 'execution_count' field");
       profileData

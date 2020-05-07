@@ -9,6 +9,7 @@
 #define HERMES_UNITTESTS_VMRUNTIME_TESTHELPERS_H
 
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
+#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/Public/GCConfig.h"
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/VM/Callable.h"
@@ -36,22 +37,25 @@ static constexpr uint32_t kMaxHeapSize = 1 << 19;
 static constexpr uint32_t kInitHeapLarge = 1 << 20;
 static constexpr uint32_t kMaxHeapLarge = 1 << 24;
 
-static const GCConfig::Builder kTestGCConfigBuilder =
+static const GCConfig::Builder kTestGCConfigBaseBuilder =
     GCConfig::Builder()
         .withSanitizeConfig(
             vm::GCSanitizeConfig::Builder().withSanitizeRate(0.0).build())
         .withShouldRandomizeAllocSpace(false);
 
 static const GCConfig kTestGCConfigSmall =
-    GCConfig::Builder(kTestGCConfigBuilder)
+    GCConfig::Builder(kTestGCConfigBaseBuilder)
         .withInitHeapSize(kInitHeapSmall)
         .withMaxHeapSize(kMaxHeapSmall)
         .build();
 
-static const GCConfig kTestGCConfig = GCConfig::Builder(kTestGCConfigBuilder)
-                                          .withInitHeapSize(kInitHeapSize)
-                                          .withMaxHeapSize(kMaxHeapSize)
-                                          .build();
+static const GCConfig::Builder kTestGCConfigBuilder =
+    GCConfig::Builder(kTestGCConfigBaseBuilder)
+        .withInitHeapSize(kInitHeapSize)
+        .withMaxHeapSize(kMaxHeapSize);
+
+static const GCConfig kTestGCConfig =
+    GCConfig::Builder(kTestGCConfigBuilder).build();
 
 static const GCConfig kTestGCConfigLarge =
     GCConfig::Builder(kTestGCConfigBuilder)
@@ -62,8 +66,11 @@ static const GCConfig kTestGCConfigLarge =
 static const RuntimeConfig kTestRTConfigSmallHeap =
     RuntimeConfig::Builder().withGCConfig(kTestGCConfigSmall).build();
 
+static const RuntimeConfig::Builder kTestRTConfigBuilder =
+    RuntimeConfig::Builder().withGCConfig(kTestGCConfig);
+
 static const RuntimeConfig kTestRTConfig =
-    RuntimeConfig::Builder().withGCConfig(kTestGCConfig).build();
+    RuntimeConfig::Builder(kTestRTConfigBuilder).build();
 
 static const RuntimeConfig kTestRTConfigLargeHeap =
     RuntimeConfig::Builder().withGCConfig(kTestGCConfigLarge).build();
@@ -321,6 +328,19 @@ struct DummyRuntime final : public HandleRootOwner,
     return 0;
   }
 
+  const inst::Inst *getCurrentIPSlow() const override {
+    return nullptr;
+  }
+
+  StackTracesTreeNode *getCurrentStackTracesTreeNode(
+      const inst::Inst *ip) override {
+    return nullptr;
+  }
+
+  StackTracesTree *getStackTracesTree() override {
+    return nullptr;
+  }
+
  private:
   DummyRuntime(
       MetadataTableForTests metaTable,
@@ -331,8 +351,7 @@ struct DummyRuntime final : public HandleRootOwner,
 
 /// A DummyRuntimeTestFixtureBase should be used by any test that requires a
 /// DummyRuntime. It takes a metadata table and a GCConfig, the latter can be
-/// used to specify heap size using the constants i.e kInitHeapSize and to
-/// specify a MemoryEventTracker implementation for testing memory profiling.
+/// used to specify heap size using the constants i.e kInitHeapSize.
 class DummyRuntimeTestFixtureBase : public ::testing::Test {
   std::shared_ptr<DummyRuntime> rt;
 
@@ -378,12 +397,7 @@ inline CodeBlock *createCodeBlock(
           0));
   runtimeModule->initializeWithoutCJSModulesMayAllocate(
       hbc::BCProviderFromSrc::createBCProviderFromSrc(std::move(BM)));
-
-  return CodeBlock::createCodeBlock(
-      runtimeModule,
-      runtimeModule->getBytecode()->getFunctionHeader(0),
-      runtimeModule->getBytecode()->getBytecode(0),
-      0);
+  return runtimeModule->getCodeBlockMayAllocate(0);
 }
 
 } // namespace vm

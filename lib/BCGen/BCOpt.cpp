@@ -58,12 +58,12 @@ bool MovElimination::runOnFunction(Function *F) {
       index++;
       Register dest = RA_.getRegister(&it);
 
-      if (auto *mov = dyn_cast<MovInst>(&it)) {
+      if (auto *mov = llvm::dyn_cast<MovInst>(&it)) {
         Value *op = mov->getSingleOperand();
         // If the operand is an instruction in the current basic block and it
         // has one user then maybe we can write it directly into the target
         // register.
-        auto *IOp = dyn_cast<Instruction>(op);
+        auto *IOp = llvm::dyn_cast<Instruction>(op);
 
         // Skip basic blocks with unallocated instructions.
         if (!RA_.isAllocated(op))
@@ -82,7 +82,8 @@ bool MovElimination::runOnFunction(Function *F) {
           // so we can't remove the MOV. Only if the dest was live before the
           // src can we remove it.
           // Additionally, dest must not have uses in the range (src..dest).
-          if (destIdx < srcIdx && !isa<PhiInst>(IOp) && destUseIdx <= srcIdx) {
+          if (destIdx < srcIdx && !llvm::isa<PhiInst>(IOp) &&
+              destUseIdx <= srcIdx) {
             RA_.updateRegister(op, dest);
             destroyer.add(mov);
             mov->replaceAllUsesWith(op);

@@ -99,6 +99,9 @@ Instrumentation& Runtime::instrumentation() {
 
     void collectGarbage() override {}
 
+    void startTrackingHeapObjectStackTraces() override {}
+    void stopTrackingHeapObjectStackTraces() override {}
+
     void createSnapshotToFile(const std::string&) override {
       throw JSINativeException(
           "Default instrumentation cannot create a heap snapshot");
@@ -446,6 +449,12 @@ void JSError::setValue(Runtime& rt, Value&& value) {
     what_ = "[Exception caught getting value fields]";
   }
 }
+
+JSIException::~JSIException() {}
+
+JSINativeException::~JSINativeException() {}
+
+JSError::~JSError() {}
 
 } // namespace jsi
 } // namespace facebook

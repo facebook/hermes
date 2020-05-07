@@ -29,9 +29,16 @@ const char *nativePropertyNamesTrace() {
       "objID": 10
     },
     {
+      "type": "CreatePropNameRecord",
+      "objID": 22,
+      "encoding": "ASCII",
+      "chars": "hostObj1"
+    },
+    {
       "type": "SetPropertyRecord",
       "time": 0,
       "objID": 1,
+      "propID": 22,
       "propName": "hostObj1",
       "value": "object:10"
     },
@@ -41,9 +48,16 @@ const char *nativePropertyNamesTrace() {
       "objID": 11
     },
     {
+      "type": "CreatePropNameRecord",
+      "objID": 23,
+      "encoding": "ASCII",
+      "chars": "hostObj2"
+    },
+    {
       "type": "SetPropertyRecord",
       "time": 0,
       "objID": 1,
+      "propID": 23,
       "propName": "hostObj2",
       "value": "object:11"
     },
@@ -57,9 +71,16 @@ const char *nativePropertyNamesTrace() {
       "hostObjectID": 10
     },
     {
+      "type": "CreatePropNameRecord",
+      "objID": 24,
+      "encoding": "ASCII",
+      "chars": "jsFunc"
+    },
+    {
       "type": "GetPropertyRecord",
       "time": 0,
       "objID": 1,
+      "propID": 24,
       "propName": "jsFunc",
       "value": "object:12"
     },

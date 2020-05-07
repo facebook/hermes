@@ -27,50 +27,50 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
 
   Builder.getFunction()->incrementStatementCount();
 
-  if (/* auto *FD = */ dyn_cast<ESTree::FunctionDeclarationNode>(stmt)) {
+  if (/* auto *FD = */ llvm::dyn_cast<ESTree::FunctionDeclarationNode>(stmt)) {
     // It has already been hoisted. Do nothing.  But, keep this to
     // match the AST structure, and we may want to do something in the
     // future.
     return;
   }
 
-  if (/* auto *IS = */ dyn_cast<ESTree::ImportDeclarationNode>(stmt)) {
+  if (/* auto *IS = */ llvm::dyn_cast<ESTree::ImportDeclarationNode>(stmt)) {
     // Import has already been hoisted. Do nothing. But, keep this to
     // match the AST structure, and we may want to do something in the
     // future.
     return;
   }
 
-  if (auto *IF = dyn_cast<ESTree::IfStatementNode>(stmt)) {
+  if (auto *IF = llvm::dyn_cast<ESTree::IfStatementNode>(stmt)) {
     return genIfStatement(IF);
   }
 
-  if (auto *FIS = dyn_cast<ESTree::ForInStatementNode>(stmt)) {
+  if (auto *FIS = llvm::dyn_cast<ESTree::ForInStatementNode>(stmt)) {
     return genForInStatement(FIS);
   }
 
-  if (auto *FOS = dyn_cast<ESTree::ForOfStatementNode>(stmt)) {
+  if (auto *FOS = llvm::dyn_cast<ESTree::ForOfStatementNode>(stmt)) {
     return genForOfStatement(FOS);
   }
 
-  if (auto *Ret = dyn_cast<ESTree::ReturnStatementNode>(stmt)) {
+  if (auto *Ret = llvm::dyn_cast<ESTree::ReturnStatementNode>(stmt)) {
     return genReturnStatement(Ret);
   }
 
-  if (auto *exprStmt = dyn_cast<ESTree::ExpressionStatementNode>(stmt)) {
+  if (auto *exprStmt = llvm::dyn_cast<ESTree::ExpressionStatementNode>(stmt)) {
     return genExpressionWrapper(exprStmt->_expression);
   }
 
-  if (auto *SW = dyn_cast<ESTree::SwitchStatementNode>(stmt)) {
+  if (auto *SW = llvm::dyn_cast<ESTree::SwitchStatementNode>(stmt)) {
     return genSwitchStatement(SW);
   }
 
-  if (auto *VDN = dyn_cast<ESTree::VariableDeclarationNode>(stmt)) {
+  if (auto *VDN = llvm::dyn_cast<ESTree::VariableDeclarationNode>(stmt)) {
     return genVariableDeclaration(VDN);
   }
 
   // IRGen the content of the block.
-  if (auto *BS = dyn_cast<ESTree::BlockStatementNode>(stmt)) {
+  if (auto *BS = llvm::dyn_cast<ESTree::BlockStatementNode>(stmt)) {
     for (auto &Node : BS->_body) {
       genStatement(&Node);
     }
@@ -78,7 +78,7 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
     return;
   }
 
-  if (auto *Label = dyn_cast<ESTree::LabeledStatementNode>(stmt)) {
+  if (auto *Label = llvm::dyn_cast<ESTree::LabeledStatementNode>(stmt)) {
     // Create a new basic block which is the continuation of the current block
     // and the jump target of the label.
     BasicBlock *next = Builder.createBasicBlock(curFunction()->function);
@@ -98,29 +98,29 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
 
   // Handle the call expression that could appear in the context of statement
   // expr without the ExpressionStatementNode wrapper.
-  if (auto *call = dyn_cast<ESTree::CallExpressionNode>(stmt)) {
+  if (auto *call = llvm::dyn_cast<ESTree::CallExpressionNode>(stmt)) {
     return genExpressionWrapper(call);
   }
 
-  if (auto *W = dyn_cast<ESTree::WhileStatementNode>(stmt)) {
+  if (auto *W = llvm::dyn_cast<ESTree::WhileStatementNode>(stmt)) {
     LLVM_DEBUG(dbgs() << "IRGen 'while' statement\n");
     genForWhileLoops(W, nullptr, W->_test, W->_test, nullptr, W->_body);
     return;
   }
 
-  if (auto *F = dyn_cast<ESTree::ForStatementNode>(stmt)) {
+  if (auto *F = llvm::dyn_cast<ESTree::ForStatementNode>(stmt)) {
     LLVM_DEBUG(dbgs() << "IRGen 'for' statement\n");
     genForWhileLoops(F, F->_init, F->_test, F->_test, F->_update, F->_body);
     return;
   }
 
-  if (auto *D = dyn_cast<ESTree::DoWhileStatementNode>(stmt)) {
+  if (auto *D = llvm::dyn_cast<ESTree::DoWhileStatementNode>(stmt)) {
     LLVM_DEBUG(dbgs() << "IRGen 'do..while' statement\n");
     genForWhileLoops(D, nullptr, nullptr, D->_test, nullptr, D->_body);
     return;
   }
 
-  if (auto *breakStmt = dyn_cast<ESTree::BreakStatementNode>(stmt)) {
+  if (auto *breakStmt = llvm::dyn_cast<ESTree::BreakStatementNode>(stmt)) {
     LLVM_DEBUG(dbgs() << "IRGen 'break' statement\n");
 
     auto &label = curFunction()->label(breakStmt);
@@ -139,7 +139,8 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
     return;
   }
 
-  if (auto *continueStmt = dyn_cast<ESTree::ContinueStatementNode>(stmt)) {
+  if (auto *continueStmt =
+          llvm::dyn_cast<ESTree::ContinueStatementNode>(stmt)) {
     LLVM_DEBUG(dbgs() << "IRGen 'continue' statement\n");
 
     auto &label = curFunction()->label(continueStmt);
@@ -159,12 +160,12 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
     return;
   }
 
-  if (auto *T = dyn_cast<ESTree::TryStatementNode>(stmt)) {
+  if (auto *T = llvm::dyn_cast<ESTree::TryStatementNode>(stmt)) {
     genTryStatement(T);
     return;
   }
 
-  if (auto *T = dyn_cast<ESTree::ThrowStatementNode>(stmt)) {
+  if (auto *T = llvm::dyn_cast<ESTree::ThrowStatementNode>(stmt)) {
     LLVM_DEBUG(dbgs() << "IRGen 'throw' statement\n");
     Value *rightHandVal = genExpression(T->_argument);
     Builder.createThrowInst(rightHandVal);
@@ -177,29 +178,32 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
   }
 
   // Handle empty statements.
-  if (isa<ESTree::EmptyStatementNode>(stmt)) {
+  if (llvm::isa<ESTree::EmptyStatementNode>(stmt)) {
     return;
   }
 
   // Handle debugger statements.
-  if (isa<ESTree::DebuggerStatementNode>(stmt)) {
+  if (llvm::isa<ESTree::DebuggerStatementNode>(stmt)) {
     Builder.createDebuggerInst();
     return;
   }
 
-  if (auto *importDecl = dyn_cast<ESTree::ImportDeclarationNode>(stmt)) {
+  if (auto *importDecl = llvm::dyn_cast<ESTree::ImportDeclarationNode>(stmt)) {
     return genImportDeclaration(importDecl);
   }
 
-  if (auto *exportDecl = dyn_cast<ESTree::ExportNamedDeclarationNode>(stmt)) {
+  if (auto *exportDecl =
+          llvm::dyn_cast<ESTree::ExportNamedDeclarationNode>(stmt)) {
     return genExportNamedDeclaration(exportDecl);
   }
 
-  if (auto *exportDecl = dyn_cast<ESTree::ExportDefaultDeclarationNode>(stmt)) {
+  if (auto *exportDecl =
+          llvm::dyn_cast<ESTree::ExportDefaultDeclarationNode>(stmt)) {
     return genExportDefaultDeclaration(exportDecl);
   }
 
-  if (auto *exportDecl = dyn_cast<ESTree::ExportAllDeclarationNode>(stmt)) {
+  if (auto *exportDecl =
+          llvm::dyn_cast<ESTree::ExportAllDeclarationNode>(stmt)) {
     return genExportAllDeclaration(exportDecl);
   }
 
@@ -230,7 +234,7 @@ void ESTreeIRGen::genVariableDeclarator(
   auto lref = createLRef(declarator->_id, true);
   if (declarator->_init) {
     Identifier nameHint{};
-    if (isa<ESTree::IdentifierNode>(declarator->_id))
+    if (llvm::isa<ESTree::IdentifierNode>(declarator->_id))
       nameHint = getNameFieldFromID(declarator->_id);
     lref.emitStore(genExpression(declarator->_init, nameHint));
   } else if (kind == identLet_.getUnderlyingPointer()) {
@@ -304,7 +308,7 @@ void ESTreeIRGen::genForWhileLoops(
   // The init field can be a variable declaration or any expression.
   // https://github.com/estree/estree/blob/master/spec.md#forstatement
   if (init) {
-    if (isa<ESTree::VariableDeclarationNode>(init)) {
+    if (llvm::isa<ESTree::VariableDeclarationNode>(init)) {
       genStatement(init);
     } else {
       genExpression(init);
@@ -363,7 +367,8 @@ void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
 
   // Check for the obscure case "for(var i = init in ....)". We need to
   // initialize the loop variable with the initializer.
-  if (auto *VD = dyn_cast<ESTree::VariableDeclarationNode>(ForInStmt->_left)) {
+  if (auto *VD =
+          llvm::dyn_cast<ESTree::VariableDeclarationNode>(ForInStmt->_left)) {
     assert(
         VD->_declarations.size() == 1 && "for-in must have a single binding");
     auto *declarator =
@@ -565,7 +570,7 @@ bool ESTreeIRGen::areAllCasesConstant(
     if (!isConstantExpr(caseStmt->_test))
       return false;
 
-    auto *lit = dyn_cast<Literal>(genExpression(caseStmt->_test));
+    auto *lit = llvm::dyn_cast<Literal>(genExpression(caseStmt->_test));
     assert(lit && "constant expression must compile to a literal");
     caseLiterals.push_back(lit);
   }
@@ -724,7 +729,7 @@ void ESTreeIRGen::genImportDeclaration(
       Builder.createCallInst(require, Builder.getLiteralUndefined(), {source});
   // An import declaration is a list of import specifiers.
   for (ESTree::Node &spec : importDecl->_specifiers) {
-    if (auto *ids = dyn_cast<ESTree::ImportDefaultSpecifierNode>(&spec)) {
+    if (auto *ids = llvm::dyn_cast<ESTree::ImportDefaultSpecifierNode>(&spec)) {
       // import defaultProperty from 'file.js';
       auto *local = nameTable_.lookup(getNameFieldFromID(ids->_local));
       assert(local && "imported name should have been hoisted");
@@ -734,7 +739,8 @@ void ESTreeIRGen::genImportDeclaration(
           local,
           true);
     } else if (
-        auto *ins = dyn_cast<ESTree::ImportNamespaceSpecifierNode>(&spec)) {
+        auto *ins =
+            llvm::dyn_cast<ESTree::ImportNamespaceSpecifierNode>(&spec)) {
       // import * as File from 'file.js';
       auto *local = nameTable_.lookup(getNameFieldFromID(ins->_local));
       assert(local && "imported name should have been hoisted");
@@ -786,7 +792,7 @@ void ESTreeIRGen::genExportNamedDeclaration(
     assert(
         exportDecl->_specifiers.empty() &&
         "ExportNamedDeclarationNode with Declaration cannot have specifiers");
-    if (auto *varDecl = dyn_cast<ESTree::VariableDeclarationNode>(decl)) {
+    if (auto *varDecl = llvm::dyn_cast<ESTree::VariableDeclarationNode>(decl)) {
       // export var x = 1, y = 2;
       for (auto &declarator : varDecl->_declarations) {
         auto *variableDeclarator =
@@ -797,14 +803,15 @@ void ESTreeIRGen::genExportNamedDeclaration(
         Builder.createStorePropertyInst(
             emitLoad(Builder, nameTable_.lookup(name)), exports, name);
       }
-    } else if (auto *classDecl = dyn_cast<ESTree::ClassDeclarationNode>(decl)) {
+    } else if (
+        auto *classDecl = llvm::dyn_cast<ESTree::ClassDeclarationNode>(decl)) {
       (void)classDecl;
       // TODO: Support class declarations once we support class IRGen.
       Builder.getModule()->getContext().getSourceErrorManager().error(
           exportDecl->getSourceRange(),
           Twine("class declaration exports are unsupported"));
     } else {
-      auto *funDecl = dyn_cast<ESTree::FunctionDeclarationNode>(decl);
+      auto *funDecl = llvm::dyn_cast<ESTree::FunctionDeclarationNode>(decl);
       // export function x() {}
       Identifier name = getNameFieldFromID(funDecl->_id);
       auto *fun = emitLoad(Builder, nameTable_.lookup(name));
@@ -843,7 +850,7 @@ void ESTreeIRGen::genExportDefaultDeclaration(
       exports->getName().str() == "exports" &&
       "CJS module first parameter must be 'exports'");
   auto *decl = exportDecl->_declaration;
-  if (auto *funDecl = dyn_cast<ESTree::FunctionDeclarationNode>(decl)) {
+  if (auto *funDecl = llvm::dyn_cast<ESTree::FunctionDeclarationNode>(decl)) {
     assert(
         funDecl->_id &&
         "SemanticValidator should change anonymous FunctionDeclaration");
@@ -853,7 +860,8 @@ void ESTreeIRGen::genExportDefaultDeclaration(
     Identifier name = getNameFieldFromID(funDecl->_id);
     auto *fun = emitLoad(Builder, nameTable_.lookup(name));
     Builder.createStorePropertyInst(fun, exports, name);
-  } else if (auto *classDecl = dyn_cast<ESTree::ClassDeclarationNode>(decl)) {
+  } else if (
+      auto *classDecl = llvm::dyn_cast<ESTree::ClassDeclarationNode>(decl)) {
     (void)classDecl;
     // TODO: Support default class declarations once we support class IRGen.
     Builder.getModule()->getContext().getSourceErrorManager().error(

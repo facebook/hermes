@@ -169,22 +169,41 @@ OptValue<DebugSearchResult> DebugInfo::getAddressForLocation(
 
   unsigned offset = start;
 
+  // We consider the best match for a location to be the first of:
+  // 1. Exact match
+  // 2. Exact line, largest column before the target
+  // 3. Exact line, any column
+  // If multiple, the lowest bytecode address wins in each category.
+  DebugSearchResult best(0, DebugOffsets::NO_OFFSET, 0, 0);
+
   while (offset < end) {
     FunctionDebugInfoDeserializer fdid(data_.getData(), offset);
     while (auto loc = fdid.next()) {
       uint32_t line = loc->line;
       uint32_t column = loc->column;
-      if (line == targetLine &&
-          (!targetColumn.hasValue() || column == *targetColumn)) {
-        // Short-circuit on a precise match.
-        return DebugSearchResult(
-            fdid.getFunctionIndex(), loc->address, line, column);
+      if (line == targetLine) {
+        if (!targetColumn.hasValue() || column == *targetColumn) {
+          // Short-circuit on a precise match.
+          return DebugSearchResult(
+              fdid.getFunctionIndex(), loc->address, line, column);
+        }
+
+        if (best.bytecodeOffset == DebugOffsets::NO_OFFSET ||
+            (column <= *targetColumn &&
+             (best.column > *targetColumn || column > best.column))) {
+          best = DebugSearchResult(
+              fdid.getFunctionIndex(), loc->address, line, column);
+        }
       }
     }
     offset = fdid.getOffset();
   }
 
-  return llvm::None;
+  if (best.bytecodeOffset == DebugOffsets::NO_OFFSET) {
+    return llvm::None;
+  }
+
+  return best;
 }
 
 /// Read \p count variable names from \p offset into the variable name section

@@ -39,6 +39,7 @@ set(source_files
   JSWeakMapImpl.cpp
   LimitedStorageProvider.cpp
   LogFailStorageProvider.cpp
+  DecoratedObject.cpp
   HostModel.cpp
   Operations.cpp
   PredefinedStringIDs.cpp
@@ -57,6 +58,7 @@ set(source_files
   SerializedLiteralParser.cpp
   SingleObject.cpp
   StackFrame.cpp
+  StackTracesTree.cpp
   StorageProvider.cpp
   StringPrimitive.cpp
   StringView.cpp
@@ -81,6 +83,7 @@ set(source_files
   JSLib/IteratorPrototype.cpp
   JSLib/HermesInternal.cpp
   JSLib/HermesBuiltin.cpp
+  JSLib/Instrument.cpp
   JSLib/JSLibInternal.cpp JSLib/JSLibInternal.h
   JSLib/RuntimeCommonStorage.cpp
   JSLib/Map.cpp
@@ -151,6 +154,8 @@ if (${HERMESVM_GCKIND} STREQUAL "NONCONTIG_GENERATIONAL")
                            gcs/OldGenSegmentRanges.cpp gcs/YoungGenNC.cpp)
 elseif (${HERMESVM_GCKIND} STREQUAL "MALLOC")
   list(APPEND source_files gcs/MallocGC.cpp gcs/FillerCell.cpp)
+elseif (${HERMESVM_GCKIND} STREQUAL "HADES")
+  list(APPEND source_files gcs/HadesGC.cpp gcs/FillerCell.cpp)
 else()
   message(WARNING "Not linking garbage collector")
 endif()
@@ -164,11 +169,13 @@ list(APPEND source_files
 # This can be (and is) implemented by code which uses rtti, and
 # therefore expects the base class to have typeinfo, so
 # HostModel.cpp must be compiled -frtti, unlike most of the VM.
+# DecoratedObject::Decoration requires it as well, as it is the
+# base class for HostObjectProxy.
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR
     "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-  set_source_files_properties(HostModel.cpp PROPERTIES COMPILE_FLAGS -frtti)
+  set_source_files_properties(DecoratedObject.cpp HostModel.cpp PROPERTIES COMPILE_FLAGS -frtti)
 elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
-  set_source_files_properties(HostModel.cpp PROPERTIES COMPILE_FLAGS /GR)
+  set_source_files_properties(DecoratedObject.cpp HostModel.cpp PROPERTIES COMPILE_FLAGS /GR)
 endif()
 
 set(link_libs

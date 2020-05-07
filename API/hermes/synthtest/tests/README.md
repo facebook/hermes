@@ -17,6 +17,14 @@ NOTE: The object ids used in the trace string is only meant to be used as a
 unique identifier, it doesn't have any special meaning. Most tests start at 10
 just because of convention. You can use object ids like 3, 400000, or 1345, as
 long as they are unique integers.
+NOTE: We use these test traces for two tests each: one uses Strings to
+represent property names, the other PropNameIDs.  To make this
+possible, we have a "fake" CreatePropNameRecord type.  The string
+substitution in Driver.cpp (where this convention is further
+explained) leaves changes CreatePropNameRecord into either
+CreateString or CreatePropNameID, depending on which test variant
+we're doing.  Note that there are CreateStringRecords for strings that
+are not used as property names; these are left unchanged.
 
 `testNameSource` is some JS source code that interacts with the native
 environment created by the trace. It should throw exceptions if the native code

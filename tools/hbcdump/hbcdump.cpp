@@ -52,10 +52,25 @@ static llvm::cl::opt<std::string> StartupCommands(
         "You can use this option to execute a bunch of commands "
         "without entering interactive mode, like -c \"cmd1;cmd2;quit\""));
 
-static llvm::cl::opt<bool> PrettyDisassemble(
-    "pretty-disassemble",
-    llvm::cl::init(true),
-    llvm::cl::desc("Pretty print the disassembled bytecode(true by default)"));
+enum class DisassemblyFormat {
+  Raw,
+  Pretty,
+  Objdump,
+};
+
+static llvm::cl::opt<DisassemblyFormat> DisassemblyOutputFormat(
+    llvm::cl::desc("Disassembly formatting:"),
+    llvm::cl::init(DisassemblyFormat::Pretty),
+    llvm::cl::values(
+        clEnumValN(DisassemblyFormat::Raw, "raw-disassemble", "Legacy format"),
+        clEnumValN(
+            DisassemblyFormat::Pretty,
+            "pretty-disassemble",
+            "Pretty print"),
+        clEnumValN(
+            DisassemblyFormat::Objdump,
+            "objdump-disassemble",
+            "Like objdump")));
 
 static llvm::cl::opt<std::string> AnalyzeMode(
     "mode",
@@ -187,8 +202,15 @@ static void enterCommandLoop(
   // Include source information and func IDs by default in disassembly output.
   DisassemblyOptions options = DisassemblyOptions::IncludeSource |
       DisassemblyOptions::IncludeFunctionIds;
-  if (PrettyDisassemble) {
-    options = options | DisassemblyOptions::Pretty;
+  switch (DisassemblyOutputFormat) {
+    case DisassemblyFormat::Raw:
+      break;
+    case DisassemblyFormat::Pretty:
+      options = options | DisassemblyOptions::Pretty;
+      break;
+    case DisassemblyFormat::Objdump:
+      options = options | DisassemblyOptions::Objdump;
+      break;
   }
   disassembler.setOptions(options);
   ProfileAnalyzer analyzer(

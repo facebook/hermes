@@ -190,7 +190,7 @@ static void collectPHIInputs(
 
     // Recursively inspect PHI node operands, and insert non-phis into the input
     // list.
-    if (auto *PN = dyn_cast<PhiInst>(E.first)) {
+    if (auto *PN = llvm::dyn_cast<PhiInst>(E.first)) {
       collectPHIInputs(visited, inputs, PN);
     } else {
       inputs.insert(E.first);
@@ -324,7 +324,7 @@ static bool inferFunctionReturnType(Function *F) {
   Type returnTy;
   bool first = true;
 
-  if (isa<GeneratorInnerFunction>(F)) {
+  if (llvm::isa<GeneratorInnerFunction>(F)) {
     // GeneratorInnerFunctions may be called with `.return()` at the start,
     // with any value of any type.
     return false;
@@ -333,7 +333,7 @@ static bool inferFunctionReturnType(Function *F) {
   for (auto &bbit : *F) {
     for (auto &it : bbit) {
       Instruction *I = &it;
-      if (auto *RI = dyn_cast<ReturnInst>(I)) {
+      if (auto *RI = llvm::dyn_cast<ReturnInst>(I)) {
         Type T = RI->getType();
         if (first) {
           returnTy = T;
@@ -498,7 +498,7 @@ static bool inferReturnInst(ReturnInst *RI) {
 /// Does a given prop belong in the owned set?
 static bool isOwnedProperty(AllocObjectInst *I, Value *prop) {
   for (auto *J : I->getUsers()) {
-    if (auto *SOPI = dyn_cast<StoreOwnPropertyInst>(J)) {
+    if (auto *SOPI = llvm::dyn_cast<StoreOwnPropertyInst>(J)) {
       if (SOPI->getObject() == I) {
         if (prop == SOPI->getProperty())
           return true;
@@ -521,7 +521,7 @@ bool TypeInferenceImpl::inferLoadPropertyInst(LoadPropertyInst *LPI) {
 
   // Go over each known receiver R (can be empty)
   for (auto *R : cgp_->getKnownReceivers(LPI)) {
-    assert(isa<AllocObjectInst>(R));
+    assert(llvm::isa<AllocObjectInst>(R));
     // Note: currently Array analysis is purposely disabled.
 
     // Bail out if there are unknown stores.
@@ -531,32 +531,34 @@ bool TypeInferenceImpl::inferLoadPropertyInst(LoadPropertyInst *LPI) {
     Value *prop = LPI->getProperty();
 
     // If the property being requested is NOT an owned prop, Bail out
-    if (isa<AllocObjectInst>(R)) {
+    if (llvm::isa<AllocObjectInst>(R)) {
       if (!isOwnedProperty(cast<AllocObjectInst>(R), prop))
         return false;
     }
 
     // Go over each store of R (can be empty)
     for (auto *S : cgp_->getKnownStores(R)) {
-      assert(isa<StoreOwnPropertyInst>(S) || isa<StorePropertyInst>(S));
+      assert(
+          llvm::isa<StoreOwnPropertyInst>(S) ||
+          llvm::isa<StorePropertyInst>(S));
       Value *storeVal = nullptr;
 
-      if (isa<AllocObjectInst>(R)) {
+      if (llvm::isa<AllocObjectInst>(R)) {
         // If the property in the store is what this LPI wants, skip the store.
-        if (auto *SS = dyn_cast<StoreOwnPropertyInst>(S)) {
+        if (auto *SS = llvm::dyn_cast<StoreOwnPropertyInst>(S)) {
           storeVal = SS->getStoredValue();
           if (prop != SS->getProperty())
             continue;
         }
-        if (auto *SS = dyn_cast<StorePropertyInst>(S)) {
+        if (auto *SS = llvm::dyn_cast<StorePropertyInst>(S)) {
           storeVal = SS->getStoredValue();
           if (prop != SS->getProperty())
             continue;
         }
       }
 
-      if (isa<AllocArrayInst>(R)) {
-        if (auto *SS = dyn_cast<StorePropertyInst>(S)) {
+      if (llvm::isa<AllocArrayInst>(R)) {
+        if (auto *SS = llvm::dyn_cast<StorePropertyInst>(S)) {
           storeVal =
               SS->getStoredValue(); // for arrays, no need to match prop name
         }

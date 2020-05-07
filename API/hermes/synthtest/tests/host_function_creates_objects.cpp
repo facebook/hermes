@@ -24,14 +24,29 @@ const char *hostFunctionCreatesObjectsTrace() {
   },
   "trace": [
     {
+      "type": "CreatePropNameIDRecord",
+      "objID": 40,
+      "encoding": "ASCII",
+      "chars": "HostFunction1"
+    },
+    {
       "type": "CreateHostFunctionRecord",
       "time": 0,
-      "objID": 10
+      "objID": 10,
+      "propNameID": 40,
+      "functionName": "HostFunction1"
+    },
+    {
+      "type": "CreatePropNameRecord",
+      "objID": 22,
+      "encoding": "ASCII",
+      "chars": "foo"
     },
     {
       "type": "SetPropertyRecord",
       "time": 0,
       "objID": 1,
+      "propID": 22,
       "propName": "foo",
       "value": "object:10"
     },
@@ -52,16 +67,36 @@ const char *hostFunctionCreatesObjectsTrace() {
       "objID": 11
     },
     {
-      "type": "SetPropertyRecord",
-      "time": 0,
-      "objID": 11,
-      "propName": "a",
-      "value": "string:hello"
+      "type": "CreatePropNameRecord",
+      "objID": 23,
+      "encoding": "ASCII",
+      "chars": "a"
+    },
+    {
+      "type": "CreateStringRecord",
+      "objID": 30,
+      "encoding": "ASCII",
+      "chars": "hello"
     },
     {
       "type": "SetPropertyRecord",
       "time": 0,
       "objID": 11,
+      "propID": 23,
+      "propName": "a",
+      "value": "string:30"
+    },
+    {
+      "type": "CreatePropNameRecord",
+      "objID": 24,
+      "encoding": "ASCII",
+      "chars": "b"
+    },
+    {
+      "type": "SetPropertyRecord",
+      "time": 0,
+      "objID": 11,
+      "propID": 24,
       "propName": "b",
       "value": "null:"
     },
@@ -86,6 +121,7 @@ const char *hostFunctionCreatesObjectsTrace() {
       "type": "SetPropertyRecord",
       "time": 0,
       "objID": 12,
+      "propID": 23,
       "propName": "a",
       "value": "null:"
     },
@@ -93,8 +129,9 @@ const char *hostFunctionCreatesObjectsTrace() {
       "type": "SetPropertyRecord",
       "time": 0,
       "objID": 12,
+      "propID": 24,
       "propName": "b",
-      "value": "string:hello"
+      "value": "string:30"
     },
     {
       "type": "ReturnFromNativeRecord",

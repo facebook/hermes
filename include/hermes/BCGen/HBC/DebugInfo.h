@@ -128,7 +128,7 @@ class DebugInfo {
   std::vector<StringTableEntry> filenameTable_{};
 
   /// String storage for filenames.
-  std::vector<char> filenameStorage_{};
+  std::vector<unsigned char> filenameStorage_{};
 
   DebugFileRegionList files_{};
   uint32_t lexicalDataOffset_ = 0;
@@ -154,7 +154,7 @@ class DebugInfo {
 
   explicit DebugInfo(
       std::vector<StringTableEntry> &&filenameStrings,
-      std::vector<char> &&filenameStorage,
+      std::vector<unsigned char> &&filenameStorage,
       DebugFileRegionList &&files,
       uint32_t lexicalDataOffset,
       StreamVector<uint8_t> &&data)
@@ -175,7 +175,7 @@ class DebugInfo {
   llvm::ArrayRef<StringTableEntry> getFilenameTable() const {
     return filenameTable_;
   }
-  llvm::ArrayRef<char> getFilenameStorage() const {
+  llvm::ArrayRef<unsigned char> getFilenameStorage() const {
     return filenameStorage_;
   }
 

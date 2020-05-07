@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermesc -commonjs -pretty-json %s 2>&1 ) | %FileCheck --match-full-lines %s
+// RUN: (! %hermesc -dump-ast -commonjs -pretty-json %s 2>&1 ) | %FileCheck --match-full-lines %s
 'use strict';
 import { foo , foo } from 'foo.js';
 // CHECK: {{.*}}/import-error.js:10:16: error: Duplicate entry in import declaration list

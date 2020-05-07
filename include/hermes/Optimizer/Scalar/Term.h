@@ -244,7 +244,7 @@ class LoadPropertyTerm : public Term {
   std::string getPrintStr() {
     std::string part1("Load(");
     StringRef printProp;
-    if (isa<LiteralString>(prop_))
+    if (llvm::isa<LiteralString>(prop_))
       printProp = ((LiteralString *)prop_)->getValue().str();
     else
       printProp = prop_->getKindStr();

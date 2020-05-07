@@ -40,6 +40,7 @@ jobs:
     environment:
       - HERMES_WS_DIR: /tmp/hermes
       - TERM: dumb
+      - DEBIAN_FRONTEND: noninteractive
     steps:
       - checkout
       - run:
@@ -96,6 +97,7 @@ jobs:
     environment:
       - HERMES_WS_DIR: /tmp/hermes
       - TERM: dumb
+      - DEBIAN_FRONTEND: noninteractive
     steps:
       - run:
           name: Install dependencies
@@ -149,6 +151,7 @@ jobs:
     environment:
       - HERMES_WS_DIR: /tmp/hermes
       - TERM: dumb
+      - DEBIAN_FRONTEND: noninteractive
     steps:
       - run:
           name: Install dependencies
@@ -355,23 +358,17 @@ jobs:
 
   npm:
     docker:
-      - image: ubuntu:19.04
+      - image: ubuntu:rolling
     environment:
-      - yarn: yarnpkg
+      - YARN: yarnpkg
       - TERM: dumb
+      - DEBIAN_FRONTEND: noninteractive
     steps:
       - run:
           name: Install certificates required to attach workspace
           command: |
             apt-get update
             apt-get install -y ca-certificates
-
-      - run:
-          name: Temporarily work around CircleCI workspace attachment bug
-          command: |
-            # As of 2019-09-10, CircleCI fails to attach Windows workspaces without this hack
-            cp /usr/bin/tar /usr/bin/tar.real
-            printf '%s\n' '#!/bin/sh' 'exec tar.real --no-same-owner "$@"' > /usr/bin/tar
 
       - attach_workspace:
           at: /tmp/hermes/input
@@ -389,14 +386,15 @@ jobs:
           command: |
             cd npm
             cp /tmp/hermes/input/* .
-            $yarn install
-            $yarn pack
+            $YARN install
+            $YARN unpack-builds
+            $YARN create-npms
 
       - run:
           name: Copy artifacts
           command: |
             cd npm
-            cp hermes-engine-*.tgz /tmp/hermes/output
+            cp *.tgz /tmp/hermes/output
             # Also copy the other packages for the sole purpose of not having
             # to visit multiple jobs pages to download all release artifacts
             cp /tmp/hermes/input/*.tar.gz /tmp/hermes/output
@@ -453,6 +451,8 @@ jobs:
             brew tap homebrew/cask
             brew cask install android-sdk
             echo 'export PATH="/usr/local/share/android-sdk/platform-tools:/usr/local/share/android-sdk/tools/bin:$PATH"' >> $BASH_ENV
+            # At some point, adb ended up in platform-tools/platform-tools. Work around that.
+            echo 'export PATH="/usr/local/share/android-sdk/platform-tools/platform-tools:$PATH"' >> $BASH_ENV
       - run:
           name: Install emulator dependencies
           command: (yes | sdkmanager "platform-tools" "platforms;android-26" "extras;intel;Hardware_Accelerated_Execution_Manager" "build-tools;26.0.0" "system-images;android-26;google_apis;x86" "emulator" --verbose) || true
@@ -474,7 +474,7 @@ jobs:
           name: Run E2E test with master Hermes and Release React Native
           command: |
             cd test/circleci-e2e
-            ./run.sh --hermes-npm-package /tmp/hermes/input/hermes-engine-*.tgz
+            ./run.sh --hermes-npm-package /tmp/hermes/input/hermes-engine-v*.tgz
           # The react-native setup tool takes AGES "Installing CocoaPods dependencies"
           no_output_timeout: 45m
       - store_artifacts:

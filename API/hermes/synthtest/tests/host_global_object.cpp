@@ -24,26 +24,56 @@ const char *hostGlobalObjectTrace() {
   },
   "trace": [
     {
-      "type": "CreateHostFunctionRecord",
-      "time": 0,
-      "objID": 10
+      "type": "CreatePropNameIDRecord",
+      "objID": 40,
+      "encoding": "ASCII",
+      "chars": "HostFunction1"
     },
     {
       "type": "CreateHostFunctionRecord",
       "time": 0,
-      "objID": 11
+      "objID": 10,
+      "propNameID": 40,
+      "functionName": "HostFunction1"
+    },
+    {
+      "type": "CreatePropNameIDRecord",
+      "objID": 41,
+      "encoding": "ASCII",
+      "chars": "HostFunction2"
+    },
+    {
+      "type": "CreateHostFunctionRecord",
+      "time": 0,
+      "objID": 11,
+      "propNameID": 41,
+      "functionName": "HostFunction2"
+    },
+    {
+      "type": "CreatePropNameRecord",
+      "objID": 22,
+      "encoding": "ASCII",
+      "chars": "foo"
     },
     {
       "type": "SetPropertyRecord",
       "time": 0,
       "objID": 1,
+      "propID": 22,
       "propName": "foo",
       "value": "object:10"
     },
     {
+      "type": "CreatePropNameRecord",
+      "objID": 23,
+      "encoding": "ASCII",
+      "chars": "baz"
+    },
+    {
       "type": "SetPropertyRecord",
       "time": 0,
       "objID": 1,
+      "propID": 23,
       "propName": "baz",
       "value": "object:11"
     },
@@ -59,9 +89,16 @@ const char *hostGlobalObjectTrace() {
       "args": []
     },
     {
+      "type": "CreatePropNameRecord",
+      "objID": 24,
+      "encoding": "ASCII",
+      "chars": "bar"
+    },
+    {
       "type": "GetPropertyRecord",
       "time": 0,
       "objID": 1,
+      "propID": 24,
       "propName": "bar",
       "value": "object:12"
     },
@@ -80,16 +117,30 @@ const char *hostGlobalObjectTrace() {
       "args": []
     },
     {
+      "type": "CreatePropNameRecord",
+      "objID": 25,
+      "encoding": "ASCII",
+      "chars": "quux"
+    },
+    {
       "type": "GetPropertyRecord",
       "time": 0,
       "objID": 1,
+      "propID": 25,
       "propName": "quux",
       "value": "object:13"
+    },
+    {
+      "type": "CreatePropNameRecord",
+      "objID": 26,
+      "encoding": "ASCII",
+      "chars": "b"
     },
     {
       "type": "GetPropertyRecord",
       "time": 0,
       "objID": 13,
+      "propID": 26,
       "propName": "b",
       "value": "bool:true"
     },
@@ -109,9 +160,16 @@ const char *hostGlobalObjectTrace() {
       "objID": 15
     },
     {
+      "type": "CreatePropNameRecord",
+      "objID": 27,
+      "encoding": "ASCII",
+      "chars": "a"
+    },
+    {
       "type": "SetPropertyRecord",
       "time": 0,
       "objID": 15,
+      "propID": 27,
       "propName": "a",
       "value": "null:"
     },

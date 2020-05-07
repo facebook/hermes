@@ -206,7 +206,7 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
     pf.configurable = 0;
     DEFINE_PROP(selfHandle, P::prototype, prototypeObjectHandle);
 
-    if (!vmisa<JSGeneratorFunction>(*selfHandle)) {
+    if (LLVM_LIKELY(!vmisa<JSGeneratorFunction>(*selfHandle))) {
       // Set the 'constructor' property in the prototype object.
       // This must not be set for GeneratorFunctions, because
       // prototypes must not point back to their constructors.
@@ -969,7 +969,13 @@ void NativeFunctionDeserialize(Deserializer &d, CellKind kind) {
 
 std::string NativeFunction::_snapshotNameImpl(GCCell *cell, GC *gc) {
   auto *const self = reinterpret_cast<NativeFunction *>(cell);
+#ifndef _MSC_VER
+  // TODO(T57439543): Disable using the native function name on Windows, as it
+  // is not guaranteed to match up perfectly with templated functions.
   return getFunctionName(self->functionPtr_);
+#else
+  return Callable::_snapshotNameImpl(self, gc);
+#endif
 }
 
 Handle<NativeFunction> NativeFunction::create(

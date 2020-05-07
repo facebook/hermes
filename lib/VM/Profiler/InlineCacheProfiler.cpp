@@ -8,6 +8,7 @@
 #ifdef HERMESVM_PROFILER_BB
 #ifndef INLINECACHE_PROFILER_H
 #include "hermes/VM/Profiler/InlineCacheProfiler.h"
+#include "hermes/Support/Algorithms.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/Handle.h"
 #include "hermes/VM/HiddenClass.h"
@@ -116,7 +117,7 @@ void InlineCacheProfiler::dumpHiddenClassProperties(
 std::unique_ptr<InlineCacheProfiler::ICMissList>
 InlineCacheProfiler::getRankedInlineCachingMisses() {
   std::unique_ptr<InlineCacheProfiler::ICMissList> icInfoList =
-      std::make_unique<InlineCacheProfiler::ICMissList>();
+      hermes::make_unique<InlineCacheProfiler::ICMissList>();
   // rank inline caching miss information
   for (auto itr = cacheMisses_.begin(); itr != cacheMisses_.end(); ++itr) {
     icInfoList->push_back(*itr);

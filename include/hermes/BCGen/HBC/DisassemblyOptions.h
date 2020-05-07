@@ -19,6 +19,7 @@ enum class DisassemblyOptions : uint32_t {
   IncludeSource = 2, // Include source lines in disassembly output.
   IncludeVirtualOffsets = 4, // Include virtual offsets in disassembly output.
   IncludeFunctionIds = 8,
+  Objdump = 16, // Output in objdump mode.
 };
 
 inline constexpr DisassemblyOptions operator|(

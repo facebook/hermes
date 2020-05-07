@@ -976,12 +976,12 @@ void IRBuilder::transferInstructionToCurrentBlock(Instruction *inst) {
   inst->setParent(Block);
   Block->getInstList().insert(InsertionPoint, inst);
 
-  if (oldBlock == Block || !isa<TerminatorInst>(inst))
+  if (oldBlock == Block || !llvm::isa<TerminatorInst>(inst))
     return;
 
   // If we moved the terminator, we want to update all successors' phi-nodes.
   for (auto *use : oldBlock->getUsers()) {
-    auto *phi = dyn_cast<PhiInst>(use);
+    auto *phi = llvm::dyn_cast<PhiInst>(use);
     if (!phi)
       continue;
     for (unsigned i = 0, e = phi->getNumOperands(); i != e; ++i) {

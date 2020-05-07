@@ -18,9 +18,7 @@ namespace hermes {
 /// the trace to a file.
 std::unique_ptr<jsi::Runtime> makeTracingHermesRuntime(
     std::unique_ptr<HermesRuntime> hermesRuntime,
-    const ::hermes::vm::RuntimeConfig &runtimeConfig,
-    int traceFileDescriptor,
-    const std::string &traceFilename);
+    const ::hermes::vm::RuntimeConfig &runtimeConfig);
 
 } // namespace hermes
 } // namespace facebook

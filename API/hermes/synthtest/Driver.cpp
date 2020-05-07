@@ -16,7 +16,9 @@
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/SHA1.h>
 
+#include <iterator>
 #include <memory>
+#include <regex>
 #include <string>
 #include <vector>
 
@@ -48,21 +50,54 @@ class SynthBenchmarkTestFixture : public ::testing::TestWithParam<ParamType> {
   const char *testName_;
   const char *trace_;
   const char *source_;
+
+  /// All of the tests provide a trace.  We run each test in two modes
+  /// -- specify property names as string IDs, or as PropNameIDs.
+  /// The traces use the convention of creating fake
+  /// "CreatePropNameRecords".  These are translated either into
+  /// CreateStringRecords or CreatePropeNameIDRecords, via regex
+  /// replacement.  The references to these are specified as StringIDs,
+  /// and are translated for the PropNameID case.  (We can't do this
+  /// trick for creation, because some CreateStringRecords should not
+  /// be translated to PropNameID.)
+  /// This method is then run on the translated trace.
+  void canRunWithoutException(const std::string &trace) {
+    tracing::TraceInterpreter::ExecuteOptions options;
+    std::vector<std::unique_ptr<llvm::MemoryBuffer>> sources;
+    sources.emplace_back(llvm::MemoryBuffer::getMemBuffer(source_));
+    EXPECT_NO_THROW({
+      tracing::TraceInterpreter::execFromMemoryBuffer(
+          llvm::MemoryBuffer::getMemBuffer(trace.c_str()),
+          std::move(sources),
+          options,
+          nullptr);
+    }) << "Failed on test: "
+       << testName_;
+  }
+
+  /// Substitute \p to for \p from in \p str, modifying \p str.
+  static void
+  subst(const std::string &from, const std::string &to, std::string &str) {
+    size_t pos = 0;
+    while ((pos = str.find(from, pos)) != std::string::npos) {
+      str.replace(pos, from.length(), to);
+      pos += to.length();
+    }
+  }
 };
 
-TEST_P(SynthBenchmarkTestFixture, CanRunWithoutException) {
-  tracing::TraceInterpreter::ExecuteOptions options;
-  // Use options from the trace.
-  std::vector<std::unique_ptr<llvm::MemoryBuffer>> sources;
-  sources.emplace_back(llvm::MemoryBuffer::getMemBuffer(source_));
-  EXPECT_NO_THROW({
-    tracing::TraceInterpreter::execFromMemoryBuffer(
-        llvm::MemoryBuffer::getMemBuffer(trace_),
-        std::move(sources),
-        options,
-        nullptr);
-  }) << "Failed on test: "
-     << testName_;
+TEST_P(SynthBenchmarkTestFixture, CanRunWithoutExceptionString) {
+  // Convert CreatePropNameRecords to CreateStringRecords.
+  std::string stringNameIDTrace{trace_};
+  subst("CreatePropNameRecord", "CreateStringRecord", stringNameIDTrace);
+  canRunWithoutException(stringNameIDTrace);
+}
+
+TEST_P(SynthBenchmarkTestFixture, CanRunWithoutExceptionPropNameID) {
+  // Convert CreatePropNameRecords to CreatePropNameIDRecords.
+  std::string propNameIDTrace{trace_};
+  subst("CreatePropNameRecord", "CreatePropNameIDRecord", propNameIDTrace);
+  canRunWithoutException(propNameIDTrace);
 }
 
 TEST(SynthBenchmark, RunMultipleSourceFiles) {
@@ -85,7 +120,7 @@ TEST(SynthBenchmark, RunMultipleSourceFiles) {
         },
         {
           "type": "EndExecJSRecord",
-          "retval": "string:hello",
+          "retval": "string:1111",
           "time": 0
         },
         {
@@ -95,7 +130,7 @@ TEST(SynthBenchmark, RunMultipleSourceFiles) {
         },
         {
           "type": "EndExecJSRecord",
-          "retval": "string:goodbye",
+          "retval": "string:1112",
           "time": 0
         }
       ]
@@ -133,6 +168,7 @@ TEST(SynthBenchmark, RunMultipleSourceFiles) {
 std::vector<ParamType> testGenerator() {
   return {FOREACH_TEST(TEST_FUNC_MAKE_TUPLE)};
 }
+
 INSTANTIATE_TEST_CASE_P(
     ExceptionTest,
     SynthBenchmarkTestFixture,

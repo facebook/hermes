@@ -180,11 +180,11 @@ void Verifier::visitFunction(const Function &F) {
     for (BasicBlock::const_iterator II = I.begin(); II != I.end(); II++) {
       // Check that incoming phi node values are dominated in their incoming
       // blocks.
-      if (auto *Phi = dyn_cast<PhiInst>(&*II)) {
+      if (auto *Phi = llvm::dyn_cast<PhiInst>(&*II)) {
         for (int i = 0, e = Phi->getNumEntries(); i < e; ++i) {
           auto pair = Phi->getEntry(i);
           BasicBlock *block = pair.second;
-          auto *inst = dyn_cast<Instruction>(pair.first);
+          auto *inst = llvm::dyn_cast<Instruction>(pair.first);
 
           // Non-instructions always dominate everything. Move on.
           if (!inst) {
@@ -202,7 +202,7 @@ void Verifier::visitFunction(const Function &F) {
       // Check that all instructions are dominated by their operands.
       for (unsigned i = 0; i < II->getNumOperands(); i++) {
         auto Operand = II->getOperand(i);
-        if (auto *InstOp = dyn_cast<Instruction>(Operand)) {
+        if (auto *InstOp = llvm::dyn_cast<Instruction>(Operand)) {
           Assert(
               seen.count(InstOp) || D.properlyDominates(InstOp, &*II),
               "Operand must dominates the Instruction");
@@ -252,30 +252,33 @@ void Verifier::beforeVisitInstruction(const Instruction &Inst) {
     Assert(
         getUsersSetForValue(Operand).count(&Inst) == 1,
         "This instruction is not in the User list of the operand");
-    if (isa<Variable>(Operand)) {
+    if (llvm::isa<Variable>(Operand)) {
       Assert(
-          isa<LoadFrameInst>(Inst) || isa<StoreFrameInst>(Inst) ||
-              isa<HBCLoadFromEnvironmentInst>(Inst) ||
-              isa<HBCStoreToEnvironmentInst>(Inst),
+          llvm::isa<LoadFrameInst>(Inst) || llvm::isa<StoreFrameInst>(Inst) ||
+              llvm::isa<HBCLoadFromEnvironmentInst>(Inst) ||
+              llvm::isa<HBCStoreToEnvironmentInst>(Inst),
           "Variable can only be accessed in "
           "LoadFrame/StoreFrame/HBCLoadFromEnvironmentInst/HBCStoreToEnvironmentInst Inst.");
     }
-    if (isa<AllocStackInst>(Operand)) {
+    if (llvm::isa<AllocStackInst>(Operand)) {
       Assert(
-          isa<LoadStackInst>(Inst) || isa<StoreStackInst>(Inst) ||
-              isa<CatchInst>(Inst) || isa<GetPNamesInst>(Inst) ||
-              isa<CheckHasInstanceInst>(Inst) || isa<GetNextPNameInst>(Inst) ||
-              isa<ResumeGeneratorInst>(Inst) || isa<IteratorBeginInst>(Inst) ||
-              isa<IteratorNextInst>(Inst) || isa<IteratorCloseInst>(Inst) ||
-              isa<HBCGetArgumentsPropByValInst>(Inst) ||
-              isa<HBCGetArgumentsLengthInst>(Inst) ||
-              isa<HBCReifyArgumentsInst>(Inst),
+          llvm::isa<LoadStackInst>(Inst) || llvm::isa<StoreStackInst>(Inst) ||
+              llvm::isa<CatchInst>(Inst) || llvm::isa<GetPNamesInst>(Inst) ||
+              llvm::isa<CheckHasInstanceInst>(Inst) ||
+              llvm::isa<GetNextPNameInst>(Inst) ||
+              llvm::isa<ResumeGeneratorInst>(Inst) ||
+              llvm::isa<IteratorBeginInst>(Inst) ||
+              llvm::isa<IteratorNextInst>(Inst) ||
+              llvm::isa<IteratorCloseInst>(Inst) ||
+              llvm::isa<HBCGetArgumentsPropByValInst>(Inst) ||
+              llvm::isa<HBCGetArgumentsLengthInst>(Inst) ||
+              llvm::isa<HBCReifyArgumentsInst>(Inst),
           "Stack variable can only be accessed in certain instructions.");
     }
   }
 
   // Verify that terminator instructions never need to return a value.
-  if (isa<TerminatorInst>(Inst)) {
+  if (llvm::isa<TerminatorInst>(Inst)) {
     Assert(Inst.getNumUsers() == 0, "Terminator Inst cannot return value.");
   }
 }
@@ -408,7 +411,7 @@ void Verifier::visitTryEndInst(const TryEndInst &Inst) {
 
 void Verifier::visitStoreStackInst(const StoreStackInst &Inst) {
   Assert(
-      !isa<AllocStackInst>(Inst.getValue()),
+      !llvm::isa<AllocStackInst>(Inst.getValue()),
       "Storing the address of stack location");
   Assert(!Inst.hasUsers(), "Store Instructions must not have users");
 }
@@ -448,7 +451,7 @@ void Verifier::visitCallBuiltinInst(CallBuiltinInst const &Inst) {
 }
 void Verifier::visitHBCCallDirectInst(HBCCallDirectInst const &Inst) {
   Assert(
-      isa<Function>(Inst.getCallee()),
+      llvm::isa<Function>(Inst.getCallee()),
       "HBCCallDirect callee must be a Function");
   Assert(
       Inst.getNumArguments() <= CallBuiltinInst::MAX_ARGUMENTS,
@@ -480,14 +483,16 @@ void Verifier::visitTryStoreGlobalPropertyInst(
 
 void Verifier::visitStoreOwnPropertyInst(const StoreOwnPropertyInst &Inst) {
   Assert(
-      isa<LiteralBool>(Inst.getOperand(StoreOwnPropertyInst::IsEnumerableIdx)),
+      llvm::isa<LiteralBool>(
+          Inst.getOperand(StoreOwnPropertyInst::IsEnumerableIdx)),
       "StoreOwnPropertyInst::IsEnumerable must be a boolean literal");
 }
 void Verifier::visitStoreNewOwnPropertyInst(
     const StoreNewOwnPropertyInst &Inst) {
   visitStoreOwnPropertyInst(Inst);
   Assert(
-      isa<LiteralString>(Inst.getOperand(StoreOwnPropertyInst::PropertyIdx)),
+      llvm::isa<LiteralString>(
+          Inst.getOperand(StoreOwnPropertyInst::PropertyIdx)),
       "StoreNewOwnPropertyInst::Property must be a string literal");
   Assert(
       Inst.getObject()->getType().isObjectType(),
@@ -496,7 +501,8 @@ void Verifier::visitStoreNewOwnPropertyInst(
 
 void Verifier::visitStoreGetterSetterInst(const StoreGetterSetterInst &Inst) {
   Assert(
-      isa<LiteralBool>(Inst.getOperand(StoreGetterSetterInst::IsEnumerableIdx)),
+      llvm::isa<LiteralBool>(
+          Inst.getOperand(StoreGetterSetterInst::IsEnumerableIdx)),
       "StoreGetterSetterInsr::IsEnumerable must be a boolean constant");
 }
 
@@ -523,7 +529,7 @@ void Verifier::visitCreateArgumentsInst(const CreateArgumentsInst &Inst) {
 
   BasicBlock *BB = Inst.getParent();
   Function *F = BB->getParent();
-  if (isa<GeneratorInnerFunction>(F)) {
+  if (llvm::isa<GeneratorInnerFunction>(F)) {
     auto secondBB = F->begin();
     ++secondBB;
     Assert(
@@ -799,17 +805,17 @@ void Verifier::visitUnreachableInst(const UnreachableInst &Inst) {}
 
 void Verifier::visitIteratorBeginInst(const IteratorBeginInst &Inst) {
   Assert(
-      isa<AllocStackInst>(Inst.getSourceOrNext()),
+      llvm::isa<AllocStackInst>(Inst.getSourceOrNext()),
       "SourceOrNext must be an AllocStackInst");
 }
 void Verifier::visitIteratorNextInst(const IteratorNextInst &Inst) {
   Assert(
-      isa<AllocStackInst>(Inst.getSourceOrNext()),
+      llvm::isa<AllocStackInst>(Inst.getSourceOrNext()),
       "SourceOrNext must be an AllocStackInst");
 }
 void Verifier::visitIteratorCloseInst(const IteratorCloseInst &Inst) {
   Assert(
-      isa<LiteralBool>(
+      llvm::isa<LiteralBool>(
           Inst.getOperand(IteratorCloseInst::IgnoreInnerExceptionIdx)),
       "IgnoreInnerException must be a LiteralBool in IteratorCloseInst");
 }

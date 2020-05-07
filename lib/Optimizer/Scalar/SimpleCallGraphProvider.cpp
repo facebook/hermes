@@ -38,16 +38,16 @@ static bool identifyCallees(CallInst *CI, llvm::DenseSet<Function *> &callees) {
         return false;
       }
       for (auto *U : V->getUsers()) {
-        if (isa<LoadFrameInst>(U)) {
+        if (llvm::isa<LoadFrameInst>(U)) {
           // Skip over a load frame using that address
           continue;
         }
-        auto *SF = dyn_cast<StoreFrameInst>(U);
+        auto *SF = llvm::dyn_cast<StoreFrameInst>(U);
         if (!SF) {
           // Unknown inst using that address ... bail out.
           return false;
         }
-        auto *CFI = dyn_cast<CreateFunctionInst>(SF->getValue());
+        auto *CFI = llvm::dyn_cast<CreateFunctionInst>(SF->getValue());
         if (!CFI) {
           // Currently look only direct stores of created functions.
           return false;
@@ -69,13 +69,13 @@ static bool identifyCallsites(
     Function *F,
     llvm::DenseSet<CallInst *> &callSites) {
   for (auto *CU : F->getUsers()) {
-    if (auto *CI = dyn_cast<CallInst>(CU)) {
+    if (auto *CI = llvm::dyn_cast<CallInst>(CU)) {
       if (!isDirectCallee(F, CI))
         return false;
       callSites.insert(CI);
-    } else if (auto *CFI = dyn_cast<CreateFunctionInst>(CU)) {
+    } else if (auto *CFI = llvm::dyn_cast<CreateFunctionInst>(CU)) {
       for (auto *CL : CFI->getUsers()) {
-        auto *CI = dyn_cast<CallInst>(CL);
+        auto *CI = llvm::dyn_cast<CallInst>(CL);
         if (!CI)
           return false;
 
@@ -103,7 +103,7 @@ void SimpleCallGraphProvider::initCallRelationships(Function *F) {
     for (auto &it : bbit) {
       Instruction *I = &it;
 
-      auto *CI = dyn_cast<CallInst>(I);
+      auto *CI = llvm::dyn_cast<CallInst>(I);
       if (!CI)
         continue;
 

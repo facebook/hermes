@@ -26,9 +26,22 @@ int main(int argc, char **argv) {
   llvm::llvm_shutdown_obj Y;
   llvm::cl::AddExtraVersionPrinter(driver::printHermesCompilerVersion);
   llvm::cl::ParseCommandLineOptions(argc, argv, "Hermes driver\n");
+
+  if (driver::outputFormatFromCommandLineOptions() ==
+      OutputFormatKind::Execute) {
+    // --help says "Choose output:" so mimic the wording here
+    llvm::errs()
+        << "Please choose output, e.g. -emit-binary. hermesc does not support -exec.\n";
+    llvm::errs() << "Example: hermesc -emit-binary -out myfile.hbc myfile.js\n";
+    return EXIT_FAILURE;
+  }
+
   driver::CompileResult res = driver::compileFromCommandLineOptions();
   if (res.bytecodeProvider) {
     llvm::errs() << "Execution not supported with hermesc\n";
+    assert(
+        false &&
+        "Execution mode was not checked prior to compileFromCommandLineOptions");
     return EXIT_FAILURE;
   }
   return res.status;

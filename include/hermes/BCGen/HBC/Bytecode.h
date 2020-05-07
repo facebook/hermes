@@ -187,16 +187,16 @@ class BytecodeModule {
   /// Run-length encoding representing the kinds of strings in the table.
   std::vector<StringKind::Entry> stringKinds_;
 
-  /// The list of identifier translations, corresponding to the string entries
+  /// The list of identifier hashes, corresponding to the string entries
   /// marked as identifiers, in order.
-  std::vector<uint32_t> identifierTranslations_;
+  std::vector<uint32_t> identifierHashes_;
 
   /// The global string table, a list of <offset, length> pair to represent
   /// each string in the string storage.
   std::vector<StringTableEntry> stringTable_;
 
-  /// The global string storage. A sequence of chars.
-  std::vector<char> stringStorage_;
+  /// The global string storage. A sequence of bytes.
+  std::vector<unsigned char> stringStorage_;
 
   /// The regexp bytecode buffer.
   std::vector<unsigned char> regExpStorage_;
@@ -251,9 +251,9 @@ class BytecodeModule {
   explicit BytecodeModule(
       uint32_t functionCount,
       std::vector<StringKind::Entry> &&stringKinds,
-      std::vector<uint32_t> &&identifierTranslations,
+      std::vector<uint32_t> &&identifierHashes,
       std::vector<StringTableEntry> &&stringTable,
-      std::vector<char> &&stringStorage,
+      std::vector<unsigned char> &&stringStorage,
       std::vector<RegExpTableEntry> &&regExpTable,
       std::vector<unsigned char> &&regExpStorage,
       uint32_t globalFunctionIndex,
@@ -266,7 +266,7 @@ class BytecodeModule {
       BytecodeOptions options)
       : globalFunctionIndex_(globalFunctionIndex),
         stringKinds_(std::move(stringKinds)),
-        identifierTranslations_(std::move(identifierTranslations)),
+        identifierHashes_(std::move(identifierHashes)),
         stringTable_(std::move(stringTable)),
         stringStorage_(std::move(stringStorage)),
         regExpStorage_(std::move(regExpStorage)),
@@ -312,11 +312,11 @@ class BytecodeModule {
 
   /// \return the number of identifiers.
   uint32_t getIdentifierCount() const {
-    return identifierTranslations_.size();
+    return identifierHashes_.size();
   }
 
-  llvm::ArrayRef<uint32_t> getIdentifierTranslations() const {
-    return identifierTranslations_;
+  llvm::ArrayRef<uint32_t> getIdentifierHashes() const {
+    return identifierHashes_;
   }
 
   uint32_t getStringTableSize() const {

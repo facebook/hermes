@@ -606,6 +606,15 @@ TEST_F(OperationsLargeHeapTest, ToNumberTest) {
     StringToNumberTest(1152921504606847200, u"0x1000000000000081");
     StringToNumberTest(1152921504606847200, u"0x1000000000000084");
     StringToNumberTest(1152921504606847000, u"0x1000000000000079");
+
+    // Octal
+    StringToNumberTest(0, u"0o0");
+    StringToNumberTest(9, u"0o11");
+
+    // Binary
+    StringToNumberTest(0, u"0b0");
+    StringToNumberTest(3, u"0b11");
+    StringToNumberTest(1024, u"0b10000000000");
   }
 
   // Big hex number

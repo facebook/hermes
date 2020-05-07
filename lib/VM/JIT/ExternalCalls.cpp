@@ -252,9 +252,8 @@ CallResult<HermesValue> externCall(
       argCount - 1,
       *callable,
       HermesValue::encodeUndefinedValue());
-  runtime->storeCallerIP(ip);
+  runtime->setCurrentIP(ip);
   auto res = Callable::call(Handle<Callable>::vmcast(callable), runtime);
-  runtime->clearCallerIP();
   return res;
 }
 
@@ -284,9 +283,8 @@ CallResult<HermesValue> externConstruct(
       argCount - 1,
       *callable,
       *callable);
-  runtime->storeCallerIP(ip);
+  runtime->setCurrentIP(ip);
   auto res = Callable::call(Handle<Callable>::vmcast(callable), runtime);
-  runtime->clearCallerIP();
   return res;
 }
 
@@ -324,12 +322,11 @@ HermesValue externLoadConstStringMayAllocate(
 
 HermesValue externTypeOf(Runtime *runtime, PinnedHermesValue *src) {
   switch (src->getTag()) {
-    case UndefinedTag:
+    case UndefinedNullTag:
       return HermesValue::encodeStringValue(
-          runtime->getPredefinedString(Predefined::undefined));
-    case NullTag:
-      return HermesValue::encodeStringValue(
-          runtime->getPredefinedString(Predefined::object));
+          src->isUndefined()
+              ? runtime->getPredefinedString(Predefined::undefined)
+              : runtime->getPredefinedString(Predefined::object));
     case StrTag:
       return HermesValue::encodeStringValue(
           runtime->getPredefinedString(Predefined::string));

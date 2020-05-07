@@ -23,29 +23,5 @@ RuntimeCommonStorage::RuntimeCommonStorage(bool shouldTrace)
     : shouldTrace(shouldTrace) {}
 RuntimeCommonStorage::~RuntimeCommonStorage() {}
 
-#ifdef __APPLE__
-/// Create the locale used for date formatting and collation. \return the
-/// locale, transferring ownership to the caller (the "create" rule).
-static CFLocaleRef createLocale() {
-  CFLocaleRef localeRef = nullptr;
-  // Look for our special environment variable. This is used for testing only.
-  const char *hermesLocale = std::getenv("_HERMES_TEST_LOCALE");
-  if (hermesLocale) {
-    CFStringRef localeName =
-        CFStringCreateWithCString(nullptr, hermesLocale, kCFStringEncodingUTF8);
-    localeRef = CFLocaleCreate(nullptr, localeName);
-    CFRelease(localeName);
-  }
-  if (!localeRef)
-    localeRef = CFLocaleCopyCurrent();
-  return localeRef;
-}
-
-CFLocaleRef RuntimeCommonStorage::copyLocale() {
-  static CFLocaleRef hermesLocale = createLocale();
-  return CFLocaleCreateCopy(nullptr, hermesLocale);
-}
-#endif
-
 } // namespace vm
 } // namespace hermes

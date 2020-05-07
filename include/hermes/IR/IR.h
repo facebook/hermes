@@ -8,6 +8,15 @@
 #ifndef HERMES_IR_IR_H
 #define HERMES_IR_IR_H
 
+#include "hermes/ADT/WordBitSet.h"
+#include "hermes/AST/Context.h"
+#include "hermes/Support/Conversions.h"
+#include "hermes/Support/ScopeChain.h"
+
+#ifndef HERMESVM_LEAN
+#include "hermes/AST/ESTree.h"
+#endif
+
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -19,12 +28,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include "hermes/ADT/WordBitSet.h"
-#include "hermes/AST/Context.h"
-#include "hermes/AST/ESTree.h"
-#include "hermes/Support/Conversions.h"
-#include "hermes/Support/ScopeChain.h"
 
 #include <deque>
 #include <unordered_map>
@@ -40,13 +43,6 @@ class Parameter;
 class Instruction;
 class Context;
 class TerminatorInst;
-
-using llvm::dyn_cast;
-using llvm::ilist_node_with_parent;
-using llvm::iplist;
-using llvm::isa;
-using llvm::StringRef;
-using llvm::Twine;
 
 /// This is an instance of a JavaScript type.
 class Type {
@@ -337,6 +333,7 @@ class SerializedScope {
   llvm::SmallVector<Identifier, 16> variables;
 };
 
+#ifndef HERMESVM_LEAN
 /// The source of a lazy AST node.
 struct LazySource {
   // The type of node (such as a FunctionDeclaration or FunctionExpression).
@@ -347,6 +344,7 @@ struct LazySource {
   /// just the lazily parsed body).
   SMRange functionRange;
 };
+#endif
 
 class Value {
  public:
@@ -879,8 +877,9 @@ class GlobalObjectProperty : public Value {
 };
 
 /// This is the base class for all instructions in the high-level IR.
-class Instruction : public ilist_node_with_parent<Instruction, BasicBlock>,
-                    public Value {
+class Instruction
+    : public llvm::ilist_node_with_parent<Instruction, BasicBlock>,
+      public Value {
   friend class Value;
   Instruction(const Instruction &) = delete;
   void operator=(const Instruction &) = delete;
@@ -1047,13 +1046,13 @@ struct ilist_alloc_traits<::hermes::Instruction> {
 
 namespace hermes {
 
-class BasicBlock : public ilist_node_with_parent<BasicBlock, Function>,
+class BasicBlock : public llvm::ilist_node_with_parent<BasicBlock, Function>,
                    public Value {
   BasicBlock(const BasicBlock &) = delete;
   void operator=(const BasicBlock &) = delete;
 
  public:
-  using InstListType = iplist<Instruction>;
+  using InstListType = llvm::iplist<Instruction>;
 
  private:
   InstListType InstList{};
@@ -1253,12 +1252,13 @@ class ExternalScope : public VariableScope {
   }
 };
 
-class Function : public ilist_node_with_parent<Function, Module>, public Value {
+class Function : public llvm::ilist_node_with_parent<Function, Module>,
+                 public Value {
   Function(const Function &) = delete;
   void operator=(const Function &) = delete;
 
  public:
-  using BasicBlockListType = iplist<BasicBlock>;
+  using BasicBlockListType = llvm::iplist<BasicBlock>;
   using ParameterListType = llvm::SmallVector<Parameter *, 8>;
 
   enum class DefinitionKind {
@@ -1660,7 +1660,7 @@ class Module : public Value {
   void operator=(const Module &) = delete;
 
  public:
-  using FunctionListType = iplist<Function>;
+  using FunctionListType = llvm::iplist<Function>;
 
   using RawStringList = std::vector<LiteralString *>;
 

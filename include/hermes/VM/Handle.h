@@ -48,9 +48,12 @@ class MutableHandle;
 template <typename T = HermesValue>
 class PseudoHandle {
   using traits_type = HermesValueTraits<T>;
+
+ public:
   using value_type = typename traits_type::value_type;
   using arrow_type = typename traits_type::arrow_type;
 
+ private:
   template <class U>
   friend class PseudoHandle;
 
@@ -70,7 +73,7 @@ class PseudoHandle {
     hnd.valid_ = false;
   }
   PseudoHandle &operator=(PseudoHandle &&hnd) {
-    value_ = hnd.value_;
+    value_ = std::move(hnd.value_);
     valid_ = hnd.valid_;
     hnd.valid_ = false;
     return *this;
@@ -150,6 +153,12 @@ class PseudoHandle {
   static PseudoHandle<T> create(value_type value) {
     return PseudoHandle<T>(value);
   }
+
+  template <typename U>
+  static inline PseudoHandle vmcast(PseudoHandle<U> &&other);
+
+  template <typename U>
+  static inline PseudoHandle dyn_vmcast(PseudoHandle<U> &&other);
 };
 
 /// A HermesValue in the current GCScope which is trackable by the GC and will

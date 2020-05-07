@@ -11,12 +11,14 @@
     "postbuild": "node postprocess"
   },
   "dependencies": {
-    "@docusaurus/core": "^2.0.0-alpha.19",
-    "@docusaurus/preset-classic": "^2.0.0-alpha.19",
+    "@docusaurus/core": "^2.0.0-alpha.43",
+    "@docusaurus/preset-classic": "^2.0.0-alpha.43",
     "classnames": "^2.2.6",
     "loud-rejection": "^2.1.0",
+    "monaco-editor": "^0.19.2",
     "react": "^16.8.4",
-    "react-dom": "^16.8.4"
+    "react-dom": "^16.8.4",
+    "react-monaco-editor": "^0.33.0"
   },
   "browserslist": {
     "production": [
@@ -29,5 +31,10 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "file-loader": "^5.0.2",
+    "monaco-editor-webpack-plugin": "^1.8.2",
+    "worker-loader": "^2.0.0"
   }
 }

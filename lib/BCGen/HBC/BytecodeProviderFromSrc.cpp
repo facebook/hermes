@@ -31,7 +31,7 @@ namespace hbc {
 #ifndef HERMESVM_LEAN
 namespace {
 bool isSingleFunctionExpression(ESTree::NodePtr ast) {
-  auto *prog = dyn_cast<ESTree::ProgramNode>(ast);
+  auto *prog = llvm::dyn_cast<ESTree::ProgramNode>(ast);
   if (!prog) {
     return false;
   }
@@ -40,12 +40,14 @@ bool isSingleFunctionExpression(ESTree::NodePtr ast) {
     return false;
   }
   auto *exprStatement =
-      dyn_cast<ESTree::ExpressionStatementNode>(&body.front());
+      llvm::dyn_cast<ESTree::ExpressionStatementNode>(&body.front());
   if (!exprStatement) {
     return false;
   }
-  return isa<ESTree::FunctionExpressionNode>(exprStatement->_expression) ||
-      isa<ESTree::ArrowFunctionExpressionNode>(exprStatement->_expression);
+  return llvm::isa<ESTree::FunctionExpressionNode>(
+             exprStatement->_expression) ||
+      llvm::isa<ESTree::ArrowFunctionExpressionNode>(
+             exprStatement->_expression);
 }
 } // namespace
 
@@ -59,7 +61,7 @@ BCProviderFromSrc::BCProviderFromSrc(
   globalFunctionIndex_ = module_->getGlobalFunctionIndex();
 
   stringKinds_ = module_->getStringKinds();
-  identifierTranslations_ = module_->getIdentifierTranslations();
+  identifierHashes_ = module_->getIdentifierHashes();
   stringCount_ = module_->getStringTable().size();
   stringStorage_ = module_->getStringStorage();
 
@@ -108,6 +110,31 @@ BCProviderFromSrc::createBCProviderFromSrc(
     std::unique_ptr<SourceMap> sourceMap,
     const CompileFlags &compileFlags,
     const ScopeChain &scopeChain) {
+  std::function<void(Module &)> runOptimizationPasses{};
+#ifdef HERMESVM_ENABLE_OPTIMIZATION_AT_RUNTIME
+  if (compileFlags.optimize) {
+    runOptimizationPasses = runFullOptimizationPasses;
+  } else {
+    runOptimizationPasses = runNoOptimizationPasses;
+  }
+#endif
+  return createBCProviderFromSrc(
+      std::move(buffer),
+      sourceURL,
+      std::move(sourceMap),
+      compileFlags,
+      scopeChain,
+      runOptimizationPasses);
+}
+
+std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
+BCProviderFromSrc::createBCProviderFromSrc(
+    std::unique_ptr<Buffer> buffer,
+    llvm::StringRef sourceURL,
+    std::unique_ptr<SourceMap> sourceMap,
+    const CompileFlags &compileFlags,
+    const ScopeChain &scopeChain,
+    const std::function<void(Module &)> &runOptimizationPasses) {
   using llvm::Twine;
 
   assert(
@@ -202,13 +229,8 @@ BCProviderFromSrc::createBCProviderFromSrc(
       (compileFlags.optimize ? !compileFlags.lazy : true) &&
       "Can't optimize in lazy mode.");
 
-#ifdef HERMESVM_ENABLE_OPTIMIZATION_AT_RUNTIME
-  if (compileFlags.optimize) {
-    runFullOptimizationPasses(M);
-  } else {
-    runNoOptimizationPasses(M);
-  }
-#endif
+  if (compileFlags.optimize && runOptimizationPasses)
+    runOptimizationPasses(M);
 
   BytecodeGenerationOptions opts{OutputFormatKind::Execute};
   opts.optimizationEnabled = compileFlags.optimize;

@@ -38,3 +38,28 @@ foo();
 // CHECK-NEXT:   2: foo: {{.*}}:22:6
 // CHECK-NEXT:   3: global: {{.*}}:25:4
 // CHECK-NEXT: Continuing execution
+
+function first() {
+  debugger;
+  return;
+}
+
+function second() {
+  first();
+}
+
+function third() {
+  second();
+}
+
+first.displayName = "1st";
+second.displayName = "2nd";
+third.displayName = "3rd";
+
+third();
+
+// CHECK: Break on 'debugger' statement in 1st: {{.*}}:43:3
+// CHECK-NEXT: > 0: 1st: {{.*}}:43:3
+// CHECK-NEXT:   1: 2nd: {{.*}}:48:8
+// CHECK-NEXT:   2: 3rd: {{.*}}:52:9
+// CHECK-NEXT:   3: global: {{.*}}:59:6

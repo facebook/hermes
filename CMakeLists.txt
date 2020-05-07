@@ -55,8 +55,10 @@ endif()
 # This must be consistent with the release_version in
 # android/build.gradle and npm/package.json
 project(Hermes
-        VERSION 0.4.0
+        VERSION 0.5.0
         LANGUAGES C CXX)
+# Optional suffix like "-rc3"
+set(VERSION_SUFFIX "")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/")
 
@@ -65,12 +67,19 @@ set(LLVH_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/llvh)
 include(Hermes)
 include(Lit)
 
-set(HERMES_RELEASE_VERSION ${PROJECT_VERSION})
+set(HERMES_RELEASE_VERSION ${PROJECT_VERSION}${VERSION_SUFFIX})
 
 # Project options.
+
+set(HERMES_IS_ANDROID OFF CACHE BOOL
+  "Building for Android")
+
+set(HERMES_IS_MOBILE_BUILD ${HERMES_IS_ANDROID} CACHE BOOL
+  "Building for a mobile device")
+
 set(HERMESVM_GCKIND NONCONTIG_GENERATIONAL
   CACHE STRING
-  "HermesVM GC type: either NONCONTIG_GENERATIONAL or MALLOC")
+  "HermesVM GC type: either NONCONTIG_GENERATIONAL, MALLOC, or HADES")
 set(HERMESVM_GC_GENERATIONAL_MARKSWEEPCOMPACT OFF
   CACHE BOOL
   "HermesVM GC: only allocate into the old generation, mimicking a Mark-Sweep-Compact collector")
@@ -103,9 +112,20 @@ set(HERMESVM_ALLOW_COMPRESSED_POINTERS ON CACHE BOOL
 set(HERMESVM_API_TRACE OFF CACHE BOOL
   "Enable tracing interactions via the API")
 
+set(HERMESVM_API_TRACE_ANDROID_REPLAY OFF CACHE BOOL
+  "Simulate Android config on Linux in API tracing.")
+
 # Hermes VM Handle sanitization (moving the heap after every alloc)
 set(HERMESVM_SANITIZE_HANDLES OFF CACHE BOOL
   "Enable Handle sanitization")
+
+# Enable Address Sanitizer
+set(HERMES_ENABLE_ADDRESS_SANITIZER OFF CACHE BOOL
+  "Enable -fsanitize=address")
+
+# Enable Undefined Behavior Sanitizer
+set(HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER OFF CACHE BOOL
+  "Enable -fsanitize=undefined")
 
 # Build with -DHERMES_SLOW_DEBUG for debug builds
 # This does not affect release builds
@@ -117,7 +137,11 @@ set(HERMES_SLOW_DEBUG ON CACHE BOOL
 set(HERMES_STATIC_LINK OFF CACHE BOOL
   "Link Hermes statically. May only work on GNU/Linux.")
 
-set(HERMES_ENABLE_DEBUGGER OFF CACHE BOOL
+set(HERMES_ENABLE_DEBUGGER_DEFAULT OFF)
+if (NOT HERMES_IS_MOBILE_BUILD)
+    set(HERMES_ENABLE_DEBUGGER_DEFAULT ON)
+endif()
+set(HERMES_ENABLE_DEBUGGER ${HERMES_ENABLE_DEBUGGER_DEFAULT} CACHE BOOL
   "Build with debugger support")
 
 set(HERMES_ENABLE_IR_INSTRUMENTATION OFF CACHE BOOL
@@ -143,12 +167,6 @@ set(HERMESVM_JIT_DISASSEMBLER OFF CACHE BOOL
 
 set(HERMES_USE_FLOWPARSER OFF CACHE BOOL
   "Use libflowparser for parsing es6")
-
-set(HERMES_IS_MOBILE_BUILD OFF CACHE BOOL
-  "Building for a mobile device")
-
-set(HERMES_IS_ANDROID OFF CACHE BOOL
-  "Building for Android")
 
 set(HERMES_ENABLE_WERROR OFF CACHE BOOL
   "Whether the build should have -Werror enabled")
@@ -271,8 +289,19 @@ endif()
 if(HERMESVM_API_TRACE)
     add_definitions(-DHERMESVM_API_TRACE)
 endif()
+if(HERMESVM_API_TRACE_ANDROID_REPLAY)
+    add_definitions(-DHERMESVM_API_TRACE_ANDROID_REPLAY)
+endif()
 if(HERMESVM_SANITIZE_HANDLES)
     add_definitions(-DHERMESVM_SANITIZE_HANDLES)
+endif()
+if (HERMES_ENABLE_ADDRESS_SANITIZER)
+    append("-fsanitize=address" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
+endif()
+if (HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER)
+    add_definitions(-DHERMES_UBSAN)
+    # Do not enable the vptr sanitizer, as it requires RTTI.
+    append("-fsanitize=undefined -fno-sanitize=vptr -fno-sanitize-recover=all" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
 endif()
 if(HERMES_FACEBOOK_BUILD)
     add_definitions(-DHERMES_FACEBOOK_BUILD)
@@ -526,7 +555,6 @@ list(APPEND HERMES_TEST_DEPS
   interp-dispatch-bench
   hdb
   hbcdump
-  hermes-repl
   hbc-attribute
   hbc-deltaprep
   hbc-diff
@@ -545,7 +573,6 @@ set(HERMES_LIT_TEST_PARAMS
   hermesc=${HERMES_TOOLS_OUTPUT_DIR}/hermesc
   hdb=${HERMES_TOOLS_OUTPUT_DIR}/hdb
   hbcdump=${HERMES_TOOLS_OUTPUT_DIR}/hbcdump
-  repl=${HERMES_TOOLS_OUTPUT_DIR}/hermes-repl
   hbc-deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
   hbc_diff=${HERMES_TOOLS_OUTPUT_DIR}/hbc-diff
   build_mode=${HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST}
@@ -554,8 +581,7 @@ set(HERMES_LIT_TEST_PARAMS
   profiler=${HERMES_PROFILER_MODE_IN_LIT_TEST}
   use_js_library_implementation=${HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION}
   gc=${HERMESVM_GCKIND}
-  # TODO: Figure out how to tell if CMake is doing a UBSAN build.
-  ubsan=OFF
+  ubsan=${HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER}
   )
 
 set(LLVH_LIT_ARGS "-sv")
@@ -596,11 +622,11 @@ add_custom_target(make_bundle_dir DEPENDS ${HERMES_GITHUB_BUNDLE_DIR})
 add_custom_command(
   OUTPUT ${HERMES_GITHUB_DIR}/${HERMES_CLI_GITHUB_FILE}
   WORKING_DIRECTORY ${HERMES_GITHUB_BUNDLE_DIR}
-  DEPENDS hermes hermes-repl make_bundle_dir
+  DEPENDS hermes hermesc hdb hbcdump make_bundle_dir
   VERBATIM
   COMMAND
     # We need bin/hermes or Release/bin/hermes.exe in a predictable location
-    ${CMAKE_COMMAND} -E copy $<TARGET_FILE:hermes> $<TARGET_FILE:hermes-repl> ${HERMES_GITHUB_EXTRAS} .
+    ${CMAKE_COMMAND} -E copy $<TARGET_FILE:hermes> $<TARGET_FILE:hermesc> $<TARGET_FILE:hdb> $<TARGET_FILE:hbcdump> ${HERMES_GITHUB_EXTRAS} .
   COMMAND
     ${CMAKE_COMMAND} -E tar zcf ${HERMES_GITHUB_DIR}/${HERMES_CLI_GITHUB_FILE} .
 )

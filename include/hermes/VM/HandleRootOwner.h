@@ -76,6 +76,14 @@ class HandleRootOwner {
     return res;
   }
 
+  /// Create a Handle from a valid PseudoHandle by vmcasting from HermesValue
+  /// and invalidate the PseudoHandle<HermesValue>.
+  template <class T>
+  Handle<T> makeHandle(PseudoHandle<HermesValue> &&pseudo) {
+    Handle<T> res{this, PseudoHandle<T>::vmcast(std::move(pseudo)).get()};
+    return res;
+  }
+
   /// Convenience function to create a MutableHandle.
   MutableHandle<HermesValue> makeMutableHandle(HermesValue value);
   /// Convenience function to create a MutableHandle from a pointer.

@@ -7,6 +7,7 @@
 
 #include "JSLibInternal.h"
 
+#include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/Support/Base64vlq.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/JSArray.h"

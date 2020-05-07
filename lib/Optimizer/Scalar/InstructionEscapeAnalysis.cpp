@@ -54,7 +54,7 @@ void InstructionEscapeAnalysis::addRange(BasicBlock::range range) {
     // longer considered escapes when the prefix is extended to include inst.
     for (unsigned i = 0, e = inst->getNumOperands(); i < e; ++i) {
       Value *op = inst->getOperand(i);
-      if (auto *opInst = dyn_cast<Instruction>(op)) {
+      if (auto *opInst = llvm::dyn_cast<Instruction>(op)) {
         const auto it = escapes.find(opInst);
         if (it != escapes.end()) {
           assert(it->second.numUsers >= 1 && "Invalid entry in escapes!");

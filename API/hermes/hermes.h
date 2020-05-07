@@ -24,6 +24,7 @@ class raw_ostream;
 
 namespace hermes {
 namespace vm {
+class GCExecTrace;
 struct MockedEnvironment;
 } // namespace vm
 } // namespace hermes
@@ -78,10 +79,16 @@ class HermesRuntime : public jsi::Runtime {
   /// Dump sampled stack trace to the given file name.
   static void dumpSampledTraceToFile(const std::string &fileName);
 
+  /// Dump sampled stack trace to the given stream.
+  static void dumpSampledTraceToStream(llvm::raw_ostream &stream);
+
   /// Return the executed JavaScript function info.
   /// Each function info is a 64bit integer with the module id encoded in
   /// upper 32bit and function virtual offset in lower 32bit.
   static std::vector<int64_t> getExecutedFunctions();
+
+  /// \return whether code coverage profiler is enabled or not.
+  static bool isCodeCoverageProfilerEnabled();
 
   /// Enable code coverage profiler.
   static void enableCodeCoverageProfiler();
@@ -102,13 +109,22 @@ class HermesRuntime : public jsi::Runtime {
       std::unique_ptr<const jsi::Buffer> buffer,
       const jsi::Value &context);
 
-  /// Gets a guaranteed unique id for an object, which is assigned at
-  /// allocation time and is static throughout that object's lifetime.
+  /// Gets a guaranteed unique id for an Object (or, respectively, String
+  /// or PropNameId), which is assigned at allocation time and is
+  /// static throughout that object's (or string's, or PropNameID's)
+  /// lifetime.
   uint64_t getUniqueID(const jsi::Object &o) const;
+  uint64_t getUniqueID(const jsi::String &s) const;
+  uint64_t getUniqueID(const jsi::PropNameID &pni) const;
 
   /// Get a structure representing the enviroment-dependent behavior, so
   /// it can be written into the trace for later replay.
   const ::hermes::vm::MockedEnvironment &getMockedEnvironment() const;
+
+  /// Get a structure representing the execution history (currently just of
+  /// GC, but will be generalized as necessary), to aid in debugging
+  /// non-deterministic execution.
+  const ::hermes::vm::GCExecTrace &getGCExecTrace() const;
 
   /// Make the runtime read from \p env to replay its environment-dependent
   /// behavior.

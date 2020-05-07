@@ -34,6 +34,7 @@
 /// optimizations.
 //===----------------------------------------------------------------------===//
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
+#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/Domain.h"
 #include "hermes/VM/Operations.h"

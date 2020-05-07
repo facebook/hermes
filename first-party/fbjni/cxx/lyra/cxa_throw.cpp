@@ -210,7 +210,9 @@ struct HijackedExceptionTypeInfo : public abi::__class_type_info {
     auto exc_ptr = reinterpret_cast<std::exception_ptr*>(&obj);
     auto info = reinterpret_cast<const::std::type_info*>(exc_ptr->__cxa_exception_type());
     auto mutable_info = static_cast<HijackedExceptionTypeInfo*>(const_cast<std::type_info*>(info));
-    mutable_info->orig_dest_(obj);
+    if (mutable_info->orig_dest_) {
+      mutable_info->orig_dest_(obj);
+    }
     delete mutable_info;
   }
 

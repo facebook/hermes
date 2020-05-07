@@ -6,24 +6,34 @@
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# When compiling multiple libraries, put this here so that we can use a file in
-# not all the libraries.
-set(HERMES_OPTIONAL_SOURCES
+set(APISources
   APITest.cpp
   APITestFactory.cpp
   APILeanTest.cpp
   DebuggerTest.cpp
   SegmentTest.cpp
+  TrackIOTest.cpp
+  )
+set(APISegmentTestCompileSources
   SegmentTestCompile.cpp
+  )
+set(APITraceSources
   SynthTraceTest.cpp
   SynthTraceParserTest.cpp
   TrackIOTest.cpp
+  )
+# When compiling multiple libraries, put this here so that we can use a file in
+# not all the libraries.
+set(HERMES_OPTIONAL_SOURCES
+  ${APISources}
+  ${APISegmentTestCompileSources}
+  ${APITraceSources}
   )
 
 set(HERMES_LINK_COMPONENTS LLVHSupport)
 
 # Build SegmentTestCompile without EH and RTTI
-add_hermes_library(SegmentTestCompile STATIC SegmentTestCompile.cpp)
+add_hermes_library(SegmentTestCompile STATIC ${APISegmentTestCompileSources})
 
 # Turn on EH and RTTI for APITests
 set(HERMES_ENABLE_EH ON)
@@ -32,14 +42,11 @@ set(HERMES_ENABLE_RTTI ON)
 # we need to set this one.
 set(LLVM_ENABLE_RTTI ON)
 
-add_hermes_unittest(APITests
-  APITest.cpp
-  APITestFactory.cpp
-  APILeanTest.cpp
-  DebuggerTest.cpp
-  SegmentTest.cpp
-  TrackIOTest.cpp
-)
+set(APITestsSources ${APISources})
+if (HERMESVM_API_TRACE)
+  list(APPEND APITestsSources ${APITraceSources})
+endif()
+add_hermes_unittest(APITests ${APITestsSources})
 
 include_directories(${HERMES_SOURCE_DIR}/API)
 include_directories(${HERMES_JSI_DIR})

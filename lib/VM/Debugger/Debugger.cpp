@@ -554,14 +554,37 @@ auto Debugger::getCallFrameInfo(const CodeBlock *codeBlock, uint32_t ipOffset)
 auto Debugger::getStackTrace(InterpreterState state) const -> StackTrace {
   using fhd::CallFrameInfo;
   GCScopeMarkerRAII marker{runtime_};
+  MutableHandle<> displayName{runtime_};
+  MutableHandle<JSObject> propObj{runtime_};
   std::vector<CallFrameInfo> frames;
   // Note that we are iterating backwards from the top.
   // Also note that each frame saves its caller's code block and IP. The initial
   // one comes from the paused state.
   const CodeBlock *codeBlock = state.codeBlock;
   uint32_t ipOffset = state.offset;
+  GCScopeMarkerRAII marker2{runtime_};
   for (auto cf : runtime_->getStackFrames()) {
-    frames.push_back(getCallFrameInfo(codeBlock, ipOffset));
+    marker2.flush();
+    CallFrameInfo frameInfo = getCallFrameInfo(codeBlock, ipOffset);
+    if (auto callableHandle = Handle<Callable>::dyn_vmcast(
+            Handle<>(&cf.getCalleeClosureOrCBRef()))) {
+      NamedPropertyDescriptor desc;
+      propObj = JSObject::getNamedDescriptor(
+          callableHandle,
+          runtime_,
+          Predefined::getSymbolID(Predefined::displayName),
+          desc);
+      if (propObj) {
+        displayName =
+            JSObject::getNamedSlotValue(propObj.get(), runtime_, desc);
+        if (displayName->isString()) {
+          llvm::SmallVector<char16_t, 64> storage;
+          displayName->getString()->copyUTF16String(storage);
+          convertUTF16ToUTF8WithReplacements(frameInfo.functionName, storage);
+        }
+      }
+    }
+    frames.push_back(frameInfo);
 
     codeBlock = cf.getSavedCodeBlock();
     const Inst *const savedIP = cf.getSavedIP();
@@ -782,10 +805,12 @@ void Debugger::breakpointCaller() {
   // If the ip was saved in the stack frame, the caller is the function
   // that we want to return to. The code block might not be saved in this
   // frame, so we need to find that in the frame below.
-  frameIt++;
-  assert(
-      frameIt != callFrames.end() &&
-      "The frame that has saved ip cannot be the bottom frame");
+  do {
+    frameIt++;
+    assert(
+        frameIt != callFrames.end() &&
+        "The frame that has saved ip cannot be the bottom frame");
+  } while (!frameIt->getCalleeCodeBlock());
   // In the frame below, the 'calleeClosureORCB' register contains
   // the code block we need.
   CodeBlock *codeBlock = frameIt->getCalleeCodeBlock();

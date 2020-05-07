@@ -5,6 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: echo "1" "**"{1..5000} | (! %hermes 2>&1 ) | %FileCheck --match-full-lines %s
+// RUN: echo "1" "**"{1..5000} | (! %hermes - 2>&1 ) | %FileCheck --match-full-lines %s
 
 // CHECK: <stdin>:1:{{.*}}: error: Too many nested expressions/statements/declarations

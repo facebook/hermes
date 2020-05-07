@@ -10,10 +10,27 @@
 
 #include "hermes/VM/Handle.h"
 
+#include "hermes/VM/Casting.h"
 #include "hermes/VM/HandleRootOwner.h"
 
 namespace hermes {
 namespace vm {
+
+template <typename T>
+template <typename U>
+inline PseudoHandle<T> PseudoHandle<T>::vmcast(PseudoHandle<U> &&other) {
+  auto result = PseudoHandle<T>::create(hermes::vm::vmcast<T>(other.get()));
+  other.invalidate();
+  return result;
+}
+
+template <typename T>
+template <typename U>
+inline PseudoHandle<T> PseudoHandle<T>::dyn_vmcast(PseudoHandle<U> &&other) {
+  auto result = PseudoHandle<T>::create(hermes::vm::dyn_vmcast<T>(other.get()));
+  other.invalidate();
+  return result;
+}
 
 /// Allocate a new handle in the current GCScope
 inline HandleBase::HandleBase(HandleRootOwner *runtime, HermesValue value)

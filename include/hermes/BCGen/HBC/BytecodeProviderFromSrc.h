@@ -128,6 +128,32 @@ class BCProviderFromSrc final : public BCProviderBase {
       const CompileFlags &compileFlags,
       const ScopeChain &scopeChain);
 
+  /// Creates a BCProviderFromSrc by compiling the given JavaScript and
+  /// optionally optimizing it with the supplied callback.
+  /// \param buffer the JavaScript source to compile, encoded in utf-8. It is
+  ///     required to have null termination ('\0') in the byte past the end,
+  ///     in other words `assert(buffer.data()[buffer.size()] == 0)`.
+  /// \param sourceURL this will be used as the "file name" of the buffer for
+  ///     errors, stack traces, etc.
+  /// \param sourceMap optional input source map for \p buffer.
+  /// \param compileFlags self explanatory
+  /// \param scopeChain a scope chain for local variable resolution
+  /// \param runOptimizationPasses if optimization is enabled in the settings
+  ///     and this is non-null, invoke this callback with the IR module to
+  ///     perform optimizations. This allows us to defer the decision of
+  ///     whether to link all optimizations to the caller.
+  ///
+  /// \return a BCProvider and an empty error, or a null BCProvider and an error
+  ///     message.
+  static std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
+  createBCProviderFromSrc(
+      std::unique_ptr<Buffer> buffer,
+      llvm::StringRef sourceURL,
+      std::unique_ptr<SourceMap> sourceMap,
+      const CompileFlags &compileFlags,
+      const ScopeChain &scopeChain,
+      const std::function<void(Module &)> &runOptimizationPasses);
+
   RuntimeFunctionHeader getFunctionHeader(uint32_t functionID) const override {
     return RuntimeFunctionHeader(&module_->getFunction(functionID).getHeader());
   }

@@ -214,9 +214,9 @@ FunctionScopeAnalysis::calculateFunctionScopeData(Function *F) {
     // will be 1 more than the scope depth of the CreateFunctionInst.
     const CreateFunctionInst *Inst = nullptr;
     for (auto *user : F->getUsers()) {
-      if (isa<CreateFunctionInst>(user)) {
+      if (llvm::isa<CreateFunctionInst>(user)) {
         assert(Inst == nullptr && "Function has multiple CreateFunctionInst");
-        Inst = dyn_cast<CreateFunctionInst>(user);
+        Inst = llvm::dyn_cast<CreateFunctionInst>(user);
       }
     }
     // Because the calculation is done lazily, any function requested
@@ -240,7 +240,7 @@ FunctionScopeAnalysis::calculateFunctionScopeData(Function *F) {
 }
 
 Optional<int32_t> FunctionScopeAnalysis::getScopeDepth(VariableScope *VS) {
-  if (ExternalScope *ES = dyn_cast<ExternalScope>(VS)) {
+  if (ExternalScope *ES = llvm::dyn_cast<ExternalScope>(VS)) {
     return ES->getDepth();
   } else {
     ScopeData sd = calculateFunctionScopeData(VS->getFunction());

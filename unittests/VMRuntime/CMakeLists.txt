@@ -18,6 +18,7 @@ set(RTSources
   CodeCoverageProfilerTest.cpp
   CopyableVectorTest.cpp
   DateUtilTest.cpp
+  DecoratedObjectTest.cpp
   DictPropertyMapTest.cpp
   ExtStringForTest.cpp
   ExternalMemAccountingTest.cpp
@@ -50,7 +51,6 @@ set(RTSources
   NativeFrameTest.cpp
   NativeFunctionNameTest.cpp
   MarkBitArrayNCTest.cpp
-  MemoryEventTrackerTest.cpp
   ObjectBufferTest.cpp
   ObjectModelTest.cpp
   OperationsTest.cpp

@@ -9,17 +9,13 @@
 #define HERMES_IRGEN_IRGEN_H
 
 #include "hermes/AST/Context.h"
+#include "hermes/AST/ESTree.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
 
 #include <vector>
 
 namespace hermes {
-
-namespace ESTree {
-class Node;
-using NodePtr = Node *;
-} // namespace ESTree
 
 using DeclarationFileListTy = std::vector<ESTree::ProgramNode *>;
 

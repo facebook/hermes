@@ -38,7 +38,7 @@ static bool isCrossCatchRegionBranch(BasicBlock *src, BasicBlock *dest) {
 /// \returns true if the block \b BB is an input to a PHI node.
 static bool isUsedInPhiNode(BasicBlock *BB) {
   for (auto use : BB->getUsers())
-    if (isa<PhiInst>(use))
+    if (llvm::isa<PhiInst>(use))
       return true;
 
   return false;
@@ -47,7 +47,7 @@ static bool isUsedInPhiNode(BasicBlock *BB) {
 static void removeEntryFromPhi(BasicBlock *BB, BasicBlock *edge) {
   // For all PHI nodes in block:
   for (auto &it : *BB) {
-    auto *P = dyn_cast<PhiInst>(&it);
+    auto *P = llvm::dyn_cast<PhiInst>(&it);
     if (!P)
       continue;
     // For each Phi entry:
@@ -128,7 +128,7 @@ static bool attemptBranchRemovalFromPhiNodes(BasicBlock *BB) {
 
   // Verify that we'll be able to rewrite all relevant Phi nodes.
   for (auto *user : BB->getUsers()) {
-    if (auto *phi = dyn_cast<PhiInst>(user)) {
+    if (auto *phi = llvm::dyn_cast<PhiInst>(user)) {
       if (phiBlock && phi->getParent() != phiBlock) {
         // We have PhiInsts in multiple blocks referencing BB, but BB is a
         // single static branch. This is invalid, but the bug is elsewhere.
@@ -182,7 +182,7 @@ static bool attemptBranchRemovalFromPhiNodes(BasicBlock *BB) {
 
   // This branch is removable. Start by rewriting the Phi nodes.
   for (auto *user : BB->getUsers()) {
-    if (auto *phi = dyn_cast<PhiInst>(user)) {
+    if (auto *phi = llvm::dyn_cast<PhiInst>(user)) {
       Value *ourValue = nullptr;
 
       const unsigned int numEntries = phi->getNumEntries();
@@ -223,7 +223,7 @@ static bool optimizeStaticBranches(Function *F) {
   // Remove conditional branches with a constant condition.
   for (auto &it : *F) {
     BasicBlock *BB = &it;
-    auto *cbr = dyn_cast<CondBranchInst>(BB->getTerminator());
+    auto *cbr = llvm::dyn_cast<CondBranchInst>(BB->getTerminator());
     if (!cbr)
       continue;
 
@@ -265,7 +265,7 @@ static bool optimizeStaticBranches(Function *F) {
   // block with the destination of this block.
   for (auto &it : *F) {
     BasicBlock *BB = &it;
-    auto *br = dyn_cast<BranchInst>(BB->getTerminator());
+    auto *br = llvm::dyn_cast<BranchInst>(BB->getTerminator());
     if (!br)
       continue;
 
@@ -339,7 +339,7 @@ static void deleteBasicBlock(BasicBlock *B) {
   // reachable blocks could end up with Phi instructions referring to
   // unreachable blocks.
   for (auto *I : users) {
-    if (auto *Phi = dyn_cast<PhiInst>(I)) {
+    if (auto *Phi = llvm::dyn_cast<PhiInst>(I)) {
       Phi->removeEntry(B);
       continue;
     }

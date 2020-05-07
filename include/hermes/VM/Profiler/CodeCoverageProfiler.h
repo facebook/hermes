@@ -38,6 +38,11 @@ class CodeCoverageProfiler {
   /// Return the singleton profiler instance.
   static std::shared_ptr<CodeCoverageProfiler> getInstance();
 
+  /// \return enabled state for profiler.
+  bool isEnabled() const {
+    return enabled_;
+  }
+
   /// Enable code coverage profiling.
   void enable() {
     enabled_ = true;

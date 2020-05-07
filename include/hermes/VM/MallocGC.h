@@ -340,6 +340,18 @@ inline void *MallocGC::alloc(uint32_t size) {
 #ifndef NDEBUG
   ++numAllocatedObjects_;
 #endif
+#if !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && !defined(NDEBUG)
+  // If allocation location tracking is enabled we implicitly call
+  // getCurrentIP() via newAlloc() below. Even if this isn't enabled, we always
+  // call getCurrentIPSlow() in a debug build as this has the effect of
+  // asserting the IP is correctly set (not invalidated) at this point. This
+  // allows us to leverage our whole test-suite to find missing cases of
+  // CAPTURE_IP* macros in the interpreter loop.
+  (void)gcCallbacks_->getCurrentIPSlow();
+#endif
+#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+  getAllocationLocationTracker().newAlloc(mem);
+#endif
   return mem;
 }
 

@@ -36,7 +36,8 @@ enum class CallResultSpecialize {
   Trivial,
   Pointer,
   Handle,
-  PseudoHandle,
+  PseudoHandleHV,
+  PseudoHandleCell,
 };
 
 template <typename T>
@@ -66,10 +67,16 @@ struct GetCallResultSpecialize<Handle<T>> {
   static constexpr CallResultSpecialize value = CallResultSpecialize::Handle;
 };
 
+template <>
+struct GetCallResultSpecialize<PseudoHandle<HermesValue>> {
+  static constexpr CallResultSpecialize value =
+      CallResultSpecialize::PseudoHandleHV;
+};
+
 template <typename T>
 struct GetCallResultSpecialize<PseudoHandle<T>> {
   static constexpr CallResultSpecialize value = HermesValueTraits<T>::is_cell
-      ? CallResultSpecialize::PseudoHandle
+      ? CallResultSpecialize::PseudoHandleCell
       : CallResultSpecialize::None;
 };
 
@@ -138,6 +145,8 @@ class CallResult<T, detail::CallResultSpecialize::Trivial> {
 
   static_assert(std::is_trivial<T>::value, "T is not actually trivial");
 
+  friend class CallResult<PseudoHandle<HermesValue>>;
+
  public:
   CallResult(const CallResult &cr) = default;
   CallResult &operator=(const CallResult &cr) {
@@ -169,6 +178,16 @@ class CallResult<T, detail::CallResultSpecialize::Trivial> {
   }
   const T *operator->() const {
     return &getValue();
+  }
+
+ private:
+  /// Private constructor meant to be used in converting
+  /// CallResult<PseudoHandle<HermesValue>> to CallResult<HermesValue>.
+  explicit CallResult(ExecutionStatus status, HermesValue value)
+      : status_(status), storage_(value) {
+    static_assert(
+        std::is_same<T, HermesValue>::value,
+        "private constructor is for constructing CallResult<HermesValue>");
   }
 } HERMES_ATTRIBUTE_WARN_UNUSED_RESULT_TYPE;
 
@@ -276,9 +295,67 @@ class CallResult<Handle<T>, detail::CallResultSpecialize::Handle> {
   }
 } HERMES_ATTRIBUTE_WARN_UNUSED_RESULT_TYPE;
 
-/// Specialization for PseudoHandle.
+/// Specialization for PseudoHandle<HermesValue>, which must use a separate
+/// EXCEPTION representation, because -1 is a valid number HermesValue.
+template <>
+class CallResult<
+    PseudoHandle<HermesValue>,
+    detail::CallResultSpecialize::PseudoHandleHV> {
+  // Storage method is similar to the Trivial implementation.
+  ExecutionStatus status_;
+  PseudoHandle<> storage_;
+
+ public:
+  CallResult(const CallResult &cr) = delete;
+  CallResult &operator=(const CallResult &cr) = delete;
+  CallResult(CallResult &&cr) = default;
+  CallResult &operator=(CallResult &&cr) = default;
+  ~CallResult() = default;
+
+  /* implicit */ CallResult(PseudoHandle<> &&value)
+      : status_(ExecutionStatus::RETURNED), storage_(std::move(value)) {}
+
+  /* implicit */ CallResult(ExecutionStatus status) : status_(status) {
+    assert(status != ExecutionStatus::RETURNED);
+  }
+
+  PseudoHandle<> &operator*() {
+    return getValue();
+  }
+  const PseudoHandle<> &operator*() const {
+    return getValue();
+  }
+
+  ExecutionStatus getStatus() const {
+    return status_;
+  }
+  PseudoHandle<> &getValue() {
+    assert(status_ == ExecutionStatus::RETURNED);
+    return storage_;
+  }
+  const PseudoHandle<> &getValue() const {
+    assert(status_ == ExecutionStatus::RETURNED);
+    return storage_;
+  }
+  const PseudoHandle<> *operator->() const {
+    return &getValue();
+  }
+  PseudoHandle<> *operator->() {
+    return &getValue();
+  }
+
+  CallResult<HermesValue> toCallResultHermesValue() const {
+    // Use a private constructor in CallResult<HermesValue> to convert
+    // without having to branch.
+    return CallResult<HermesValue>{status_, storage_.getHermesValue()};
+  }
+} HERMES_ATTRIBUTE_WARN_UNUSED_RESULT_TYPE;
+
+/// Specialization for PseudoHandle which uses -1 as the EXCEPTION value.
 template <typename T>
-class CallResult<PseudoHandle<T>, detail::CallResultSpecialize::PseudoHandle> {
+class CallResult<
+    PseudoHandle<T>,
+    detail::CallResultSpecialize::PseudoHandleCell> {
   PseudoHandle<T> valueOrStatus_;
 
 #if defined(NDEBUG) && !defined(_WINDOWS)

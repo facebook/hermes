@@ -32,7 +32,7 @@ namespace hbc {
 /// \return a StringRef of the string.
 llvm::StringRef getStringFromEntry(
     const StringTableEntry &entry,
-    llvm::ArrayRef<char> storage,
+    llvm::ArrayRef<unsigned char> storage,
     std::string &utf8ConversionStorage);
 
 /// A data structure for storing a serialized list of strings.
@@ -52,7 +52,7 @@ class ConsecutiveStringStorage {
   std::vector<StringTableEntry> strTable_{};
 
   /// A consecutive storage of char sequences.
-  std::vector<char> storage_{};
+  std::vector<unsigned char> storage_{};
 
   /// Whether the string table is still valid to use.
   bool isTableValid_{true};
@@ -86,7 +86,7 @@ class ConsecutiveStringStorage {
   /// Construct from a table and storage.
   ConsecutiveStringStorage(
       std::vector<StringTableEntry> &&table,
-      std::vector<char> &&storage)
+      std::vector<unsigned char> &&storage)
       : strTable_(std::move(table)), storage_(std::move(storage)) {}
 
   /// \returns a view to the current table.
@@ -118,7 +118,7 @@ class ConsecutiveStringStorage {
   /// \returns a reference to the string storage. Notice that whoever receives
   /// the table may temper, swap or destroy the content. Hence after this
   /// call, the string table is no longer valid to use.
-  std::vector<char> acquireStringStorage() {
+  std::vector<unsigned char> acquireStringStorage() {
     ensureStorageValid();
     isStorageValid_ = false;
     return std::move(storage_);

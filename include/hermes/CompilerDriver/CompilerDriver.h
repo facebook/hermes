@@ -72,6 +72,9 @@ struct CompileResult {
   /* implicit */ CompileResult(CompileStatus status) : status(status) {}
 };
 
+/// Return the type of operation we're about to perform.
+OutputFormatKind outputFormatFromCommandLineOptions();
+
 /// Drive the Hermes compiler according to the command line options.
 /// \return an exit status.
 CompileResult compileFromCommandLineOptions();
@@ -81,9 +84,6 @@ void printHermesCompilerVMVersion(llvm::raw_ostream &s);
 
 /// Print the Hermes version (without VM) to the given stream \p s.
 void printHermesCompilerVersion(llvm::raw_ostream &s);
-
-/// Print the Hermes version for the REPL to the given stream \p s.
-void printHermesREPLVersion(llvm::raw_ostream &s);
 
 } // namespace driver
 } // namespace hermes
@@ -95,5 +95,6 @@ extern llvm::cl::opt<bool> EnableEval;
 extern llvm::cl::opt<bool> VerifyIR;
 extern llvm::cl::opt<bool> EmitAsyncBreakCheck;
 extern llvm::cl::opt<bool> AllowFunctionToString;
+extern llvm::cl::list<std::string> InputFilenames;
 } // namespace cl
 #endif

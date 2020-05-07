@@ -18,8 +18,19 @@ set(HERMES_OPTIONAL_SOURCES
 set(api_sources
   hermes.cpp
   DebuggerAPI.cpp
-  hermes_tracing_compat.cpp
   )
+
+if (HERMESVM_API_TRACE)
+  list(APPEND api_sources
+    hermes_tracing.cpp
+    SynthTrace.cpp
+    SynthTraceParser.cpp
+    TraceInterpreter.cpp
+    TracingRuntime.cpp
+    )
+else()
+  list(APPEND api_sources hermes_tracing_compat.cpp)
+endif()
 
 add_hermes_library(hermesapi
         ${api_sources}

@@ -30,5 +30,5 @@ The libraries will be built in `./armeabi-v7a/`.
 ```
 mkdir hermes_arm && cd hermes_arm
 $path_to_this_directory/config-llvm.sh
-ninja hermes hvm hermes-repl
+ninja hermes hvm
 ```

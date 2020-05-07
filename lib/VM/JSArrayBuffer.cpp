@@ -216,11 +216,17 @@ void JSArrayBuffer::_snapshotAddNodesImpl(
   }
   // Add the native node before the JSArrayBuffer node.
   snap.beginNode();
+  auto &allocationLocationTracker = gc->getAllocationLocationTracker();
   snap.endNode(
       HeapSnapshot::NodeType::Native,
       "JSArrayBufferData",
       gc->getNativeID(self->data_),
-      self->size_);
+      self->size_,
+      allocationLocationTracker.isEnabled()
+          ? allocationLocationTracker
+                .getStackTracesTreeNodeForAlloc(self->data_)
+                ->id
+          : 0);
 }
 
 void JSArrayBuffer::detach(GC *gc) {

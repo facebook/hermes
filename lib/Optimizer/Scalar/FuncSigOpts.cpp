@@ -82,7 +82,7 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
       if (i < caller->getNumArguments() - 1)
         arg = caller->getArgument(i + 1);
 
-      auto *L = dyn_cast<Literal>(arg);
+      auto *L = llvm::dyn_cast<Literal>(arg);
       if (L) {
         LLVM_DEBUG(
             dbgs() << "-- Found literal for argument " << i << ": "
@@ -144,7 +144,7 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
   // Replace all unused arguments with undef.
   for (auto &arg : unusedParams) {
     auto *prevArg = arg.first->getOperand(arg.second + 1);
-    if (!isa<Literal>(prevArg))
+    if (!llvm::isa<Literal>(prevArg))
       toRedo.insert(arg.first->getParent()->getParent());
 
     arg.first->setOperand(undef, arg.second + 1);

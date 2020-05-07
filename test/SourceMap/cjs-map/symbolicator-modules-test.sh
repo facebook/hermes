@@ -27,7 +27,7 @@ SYM_TRACE="$TMPDIR/symbolicated_trace.txt"
 ( python3 "$SRCDIR/../stringize.py" SOURCEMAP < "$HBC_FILE.map" ;
   python3 "$SRCDIR/../stringize.py" STACKTRACE < "$RAW_TRACE" ;
   cat "$SRCDIR/../symbolicator.js.in"
-) | "$HERMES" -gc-sanitize-handles=0 > "$SYM_TRACE"
+) | "$HERMES" - -gc-sanitize-handles=0 > "$SYM_TRACE"
 
 cat "$SYM_TRACE"
 # CHECK: Error: ERROR_FOR_TESTING

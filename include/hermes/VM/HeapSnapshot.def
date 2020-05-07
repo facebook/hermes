@@ -31,6 +31,14 @@
 #define V8_LOCATION_FIELD(label)
 #endif
 
+#ifndef V8_TRACE_FUNCTION_INFO_FIELD
+#define V8_TRACE_FUNCTION_INFO_FIELD(name)
+#endif
+
+#ifndef V8_TRACE_NODE_FIELD
+#define V8_TRACE_NODE_FIELD(name)
+#endif
+
 
 /// V8 Heap Snapshots look like JSON, but the parser expects fields in a
 /// specific order.  They are also all expected to exist, whether not they
@@ -98,9 +106,24 @@ V8_LOCATION_FIELD(script_id)
 V8_LOCATION_FIELD(line)
 V8_LOCATION_FIELD(column)
 
+V8_TRACE_FUNCTION_INFO_FIELD(function_id)
+V8_TRACE_FUNCTION_INFO_FIELD(name)
+V8_TRACE_FUNCTION_INFO_FIELD(script_name)
+V8_TRACE_FUNCTION_INFO_FIELD(script_id)
+V8_TRACE_FUNCTION_INFO_FIELD(line)
+V8_TRACE_FUNCTION_INFO_FIELD(column)
+
+V8_TRACE_NODE_FIELD(id)
+V8_TRACE_NODE_FIELD(function_info_index)
+V8_TRACE_NODE_FIELD(count)
+V8_TRACE_NODE_FIELD(size)
+V8_TRACE_NODE_FIELD(children)
+
 #undef V8_SNAPSHOT_SECTION
 #undef V8_NODE_TYPE
 #undef V8_NODE_FIELD
 #undef V8_EDGE_TYPE
 #undef V8_EDGE_FIELD
+#undef V8_TRACE_FUNCTION_INFO_FIELD
+#undef V8_TRACE_NODE_FIELD
 #undef V8_LOCATION_FIELD
