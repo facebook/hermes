@@ -193,7 +193,11 @@ static bool needsAnotherLine(llvm::StringRef input) {
     }
   };
 
-  while (const parser::Token *token = lexer.advance()) {
+  // Use AllowDiv to not skip parens when using division.
+  // TODO: Find a way to use the correct GrammarContext and make this work
+  // for all REPL inputs.
+  while (const parser::Token *token =
+             lexer.advance(parser::JSLexer::GrammarContext::AllowDiv)) {
     if (token->getKind() == parser::TokenKind::eof) {
       break;
     }
