@@ -48,9 +48,12 @@ class MutableHandle;
 template <typename T = HermesValue>
 class PseudoHandle {
   using traits_type = HermesValueTraits<T>;
+
+ public:
   using value_type = typename traits_type::value_type;
   using arrow_type = typename traits_type::arrow_type;
 
+ private:
   template <class U>
   friend class PseudoHandle;
 
@@ -70,7 +73,7 @@ class PseudoHandle {
     hnd.valid_ = false;
   }
   PseudoHandle &operator=(PseudoHandle &&hnd) {
-    value_ = hnd.value_;
+    value_ = std::move(hnd.value_);
     valid_ = hnd.valid_;
     hnd.valid_ = false;
     return *this;

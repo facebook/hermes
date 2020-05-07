@@ -100,7 +100,10 @@ namespace vm {
 
 class StringPrimitive;
 
-// Tags are defined as 16-bit values positioned at the high bits of a 64-bit
+template <typename T>
+class PseudoHandle;
+
+// Tags are defined as 17-bit values positioned at the high bits of a 64-bit
 // word.
 
 using TagKind = uint32_t;
@@ -177,6 +180,11 @@ class HermesValue {
   using RawType = uint64_t;
 
   HermesValue() = default;
+  HermesValue(const HermesValue &) = default;
+#ifdef _MSC_VER
+  // As below, this is a workaround to ensure is_trivial is true in MSVC.
+  HermesValue(HermesValue &&) = default;
+#endif
 
   constexpr inline static HermesValue fromRaw(RawType raw) {
     return HermesValue(raw);
@@ -444,7 +452,9 @@ class HermesValue {
   /// HermesValue will not be considered trivial otherwise.)
   /// TODO(T40821815) Consider removing this workaround when updating MSVC
 #ifndef _MSC_VER
-  void operator=(const HermesValue &hv) = delete;
+  HermesValue &operator=(const HermesValue &hv) = delete;
+#else
+  HermesValue &operator=(const HermesValue &hv) = default;
 #endif
 
  protected:
@@ -465,9 +475,17 @@ class HermesValue {
   constexpr explicit HermesValue(uint64_t val, ETag etag)
       : raw_(val | ((uint64_t)etag << (kNumDataBits - 1))) {}
 
+  /// Default move assignment operator used by friends
+  /// (PseudoHandle<HermesValue>) in order to allow for move assignment in those
+  /// friends. We cannot use SFINAE in PseudoHandle<HermesValue> as that would
+  /// require making PseudoHandle<T> not TriviallyCopyable (because we would
+  /// have to template or handwrite the move assignment operator).
+  HermesValue &operator=(HermesValue &&) = default;
+
   // 64 raw bits stored and reinterpreted as necessary.
   uint64_t raw_;
 
+  friend class PseudoHandle<HermesValue>;
 }; // class HermesValue
 
 static_assert(
