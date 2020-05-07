@@ -2066,7 +2066,7 @@ class HermesMutex : public std::recursive_mutex {
 
 } // namespace
 
-std::unique_ptr<HermesRuntime> makeHermesRuntime(
+__declspec(dllexport) std::unique_ptr<HermesRuntime> makeHermesRuntime(
     const vm::RuntimeConfig &runtimeConfig) {
   // This is insurance against someone adding data members to
   // HermesRuntime.  If on some weird platform it fails, it can be
