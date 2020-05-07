@@ -99,6 +99,8 @@ namespace hermes {
 namespace vm {
 
 class StringPrimitive;
+template <typename T>
+class PseudoHandle;
 
 template <typename T>
 class PseudoHandle;
@@ -508,6 +510,8 @@ class PinnedHermesValue : public HermesValue {
     setNoBarrier(hv);
     return *this;
   }
+  template <typename T>
+  inline PinnedHermesValue &operator=(PseudoHandle<T> &&hv);
 } HERMES_ATTRIBUTE_WARN_UNUSED_VARIABLES;
 
 // All HermesValues stored in heap object should be of this

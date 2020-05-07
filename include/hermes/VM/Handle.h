@@ -153,6 +153,12 @@ class PseudoHandle {
   static PseudoHandle<T> create(value_type value) {
     return PseudoHandle<T>(value);
   }
+
+  template <typename U>
+  static inline PseudoHandle vmcast(PseudoHandle<U> &&other);
+
+  template <typename U>
+  static inline PseudoHandle dyn_vmcast(PseudoHandle<U> &&other);
 };
 
 /// A HermesValue in the current GCScope which is trackable by the GC and will
