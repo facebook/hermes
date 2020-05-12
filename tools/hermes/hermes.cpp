@@ -189,13 +189,17 @@ static vm::RuntimeConfig getReplRuntimeConfig() {
 }
 
 int main(int argc, char **argv) {
+#ifndef HERMES_FBCODE_BUILD
   // Normalize the arg vector.
   llvm::InitLLVM initLLVM(argc, argv);
-  // Print a stack trace if we signal out.
-  llvm::sys::PrintStackTraceOnErrorSignal("Hermes driver");
-  llvm::PrettyStackTraceProgram X(argc, argv);
-  // Call llvm_shutdown() on exit to print stats and free memory.
+#else
+  // When both HERMES_FBCODE_BUILD and sanitizers are enabled, InitLLVM may have
+  // been already created and destroyed before main() is invoked. This presents
+  // a problem because InitLLVM can't be instantiated more than once in the same
+  // process. The most important functionality InitLLVM provides is shutting
+  // down LLVM in its destructor. We can use "llvm_shutdown_obj" to do the same.
   llvm::llvm_shutdown_obj Y;
+#endif
 
   llvm::cl::AddExtraVersionPrinter(driver::printHermesCompilerVMVersion);
   llvm::cl::ParseCommandLineOptions(argc, argv, "Hermes driver\n");

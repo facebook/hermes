@@ -108,7 +108,16 @@ static void DumpCommandLine(int argc, char **argv) {
 }
 
 int main(int argc, char **argv) {
+#ifndef HERMES_FBCODE_BUILD
   InitLLVM X(argc, argv);
+#else
+  // When both HERMES_FBCODE_BUILD and sanitizers are enabled, InitLLVM may have
+  // been already created and destroyed before main() is invoked. This presents
+  // a problem because InitLLVM can't be instantiated more than once in the same
+  // process. The most important functionality InitLLVM provides is shutting
+  // down LLVM in its destructor. We can use "llvm_shutdown_obj" to do the same.
+  llvm::llvm_shutdown_obj Y;
+#endif
   cl::ParseCommandLineOptions(argc, argv);
 
   FileCheckRequest Req;
