@@ -68,9 +68,6 @@ module.exports = {
     [
       '@docusaurus/preset-classic',
       {
-        pages: {
-          path: 'src/pages',
-        },
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
         },
