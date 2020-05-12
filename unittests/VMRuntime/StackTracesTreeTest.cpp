@@ -102,7 +102,7 @@ static std::string stackTraceToJSON(StackTracesTree &tree) {
     json.emitKey("children");
     json.openArray();
     nodeStack.push_back(nullptr);
-    for (auto child : *curNode) {
+    for (auto child : curNode->getChildren()) {
       nodeStack.push_back(child);
     }
   }
@@ -149,13 +149,6 @@ global test.js:1:1
               "name": "foo",
               "scriptName": "test.js",
               "line": 1,
-              "col": 40,
-              "children": []
-            },
-            {
-              "name": "foo",
-              "scriptName": "test.js",
-              "line": 1,
               "col": 66,
               "children": [
                 {
@@ -173,6 +166,13 @@ global test.js:1:1
                   "children": []
                 }
               ]
+            },
+            {
+              "name": "foo",
+              "scriptName": "test.js",
+              "line": 1,
+              "col": 40,
+              "children": []
             }
           ]
         },
@@ -528,17 +528,17 @@ function baz() {
                   "children": []
                 },
                 {
-                  "name": "foo",
-                  "scriptName": "eval.js",
-                  "line": 4,
-                  "col": 20,
-                  "children": []
-                },
-                {
                   "name": "baz",
                   "scriptName": "eval.js",
                   "line": 11,
                   "col": 1,
+                  "children": []
+                },
+                {
+                  "name": "foo",
+                  "scriptName": "eval.js",
+                  "line": 4,
+                  "col": 20,
                   "children": []
                 },
                 {
@@ -570,7 +570,7 @@ function baz() {
           "name": "global",
           "scriptName": "eval.js",
           "line": 14,
-          "col": 3,
+          "col": 13,
           "children": []
         },
         {
@@ -584,7 +584,7 @@ function baz() {
           "name": "global",
           "scriptName": "eval.js",
           "line": 14,
-          "col": 13,
+          "col": 3,
           "children": []
         },
         {

@@ -907,8 +907,8 @@ baz();
       R"#(
 global(1) @ test.js(4):2:1
 global(2) @ test.js(4):11:4
-baz(3) @ test.js(4):9:19
-foo(4) @ test.js(4):3:20)#");
+baz(7) @ test.js(4):9:19
+foo(8) @ test.js(4):3:20)#");
 
   auto barAllocNode = FIND_NODE_FOR_ID(barObjID, nodes, strings);
   auto barStackTreeNode = idNodeMap.find(barAllocNode.traceNodeID);
@@ -920,8 +920,8 @@ foo(4) @ test.js(4):3:20)#");
       R"#(
 global(1) @ test.js(4):2:1
 global(2) @ test.js(4):11:4
-foo(1) @ test.js(4):2:1
-baz(5) @ test.js(4):9:31)#");
+baz(3) @ test.js(4):9:31
+bar(4) @ test.js(4):6:20)#");
 }
 #endif // HERMES_ENABLE_DEBUGGER
 

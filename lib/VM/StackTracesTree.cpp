@@ -26,19 +26,27 @@ StackTracesTreeNode *StackTracesTreeNode::findChild(
     auto matchingOffset =
         matchingCodeBlockChildren->getSecond().find(bytecodeOffset);
     if (matchingOffset != matchingCodeBlockChildren->getSecond().end()) {
-      return matchingOffset->getSecond();
+      return children_[matchingOffset->getSecond()];
     }
   }
   return nullptr;
 }
 
-StackTracesTreeNode *StackTracesTreeNode::findChild(
+OptValue<uint32_t> StackTracesTreeNode::findChildIndex(
     const SourceLoc &sourceLoc) const {
   auto matchingChild = sourceLocToChildMap_.find(sourceLoc);
   if (matchingChild != sourceLocToChildMap_.end()) {
     return matchingChild->getSecond();
   }
-  return nullptr;
+  return llvm::None;
+}
+
+StackTracesTreeNode *StackTracesTreeNode::findChild(
+    const SourceLoc &sourceLoc) const {
+  auto optIndex = findChildIndex(sourceLoc);
+  if (!optIndex.hasValue())
+    return nullptr;
+  return children_[*optIndex];
 }
 
 void StackTracesTreeNode::addChild(
@@ -46,20 +54,23 @@ void StackTracesTreeNode::addChild(
     const CodeBlock *codeBlock,
     uint32_t bytecodeOffset,
     SourceLoc sourceLoc) {
-  bool inserted = sourceLocToChildMap_.try_emplace(sourceLoc, child).second;
+  uint32_t childIndex = children_.size();
+  children_.push_back(child);
+  bool inserted =
+      sourceLocToChildMap_.try_emplace(sourceLoc, childIndex).second;
   (void)inserted;
   assert(inserted && "Tried to add a node for the same sourceLoc twice.");
-  addMapping(codeBlock, bytecodeOffset, child);
+  addMapping(codeBlock, bytecodeOffset, childIndex);
 }
 
 void StackTracesTreeNode::addMapping(
     const CodeBlock *codeBlock,
     uint32_t bytecodeOffset,
-    StackTracesTreeNode *node) {
+    uint32_t childIndex) {
   auto matchingCodeBlockChildren = codeBlockToChildMap_.find(codeBlock);
   if (matchingCodeBlockChildren == codeBlockToChildMap_.end()) {
-    llvm::DenseMap<uint32_t, StackTracesTreeNode *> newBytecodeMapping;
-    newBytecodeMapping.try_emplace(bytecodeOffset, node);
+    ChildBytecodeMap newBytecodeMapping;
+    newBytecodeMapping.try_emplace(bytecodeOffset, childIndex);
     codeBlockToChildMap_.try_emplace(
         (void *)codeBlock, std::move(newBytecodeMapping));
   } else {
@@ -67,7 +78,7 @@ void StackTracesTreeNode::addMapping(
     assert(
         bytecodeMapping.find(bytecodeOffset) == bytecodeMapping.end() &&
         "Tried to add a node for the same codeLoc twice");
-    bytecodeMapping.try_emplace(bytecodeOffset, node);
+    bytecodeMapping.try_emplace(bytecodeOffset, childIndex);
   }
 }
 
@@ -174,9 +185,11 @@ void StackTracesTree::pushCallStack(
   // codeBlock + ip. In this case we need to compute the SourceLoc and
   //  a mapping, but can return before we create a new tree node.
   auto sourceLoc = computeSourceLoc(runtime, codeBlock, bytecodeOffset);
-  if (auto existingNode = head_->findChild(sourceLoc)) {
+  if (OptValue<uint32_t> existingNodeIndex = head_->findChildIndex(sourceLoc)) {
+    auto existingNode = head_->children_[*existingNodeIndex];
     assert(existingNode->parent && "Stack trace tree node has no parent");
-    existingNode->parent->addMapping(codeBlock, bytecodeOffset, existingNode);
+    existingNode->parent->addMapping(
+        codeBlock, bytecodeOffset, *existingNodeIndex);
     head_ = existingNode;
     return;
   }

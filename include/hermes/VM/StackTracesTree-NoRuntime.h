@@ -21,11 +21,14 @@
 #define HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
 #endif
 
-#include <cstdint>
-#include <memory>
-
+#include "hermes/Support/OptValue.h"
 #include "hermes/Support/StringSetVector.h"
+
 #include "llvm/ADT/DenseMap.h"
+
+#include <cstdint>
+#include <map>
+#include <memory>
 
 namespace hermes {
 namespace vm {
@@ -74,44 +77,17 @@ struct StackTracesTreeNode {
     }
   };
 
-  using ChildBytecodeMap = llvm::DenseMap<uint32_t, StackTracesTreeNode *>;
+  /// Map to index of child in children_.
+  using ChildBytecodeMap = llvm::DenseMap<uint32_t, uint32_t>;
 
   // This is supposed to map a CodeBlock* to ChildBytecodeMap, but DenseMap
   // tries to do alignof() on CodeBlock* which isn't allowed on an incomplete
   // type. So I've worked around it by just using void* and casting as needed.
   using ChildCodeblockMap = llvm::DenseMap<void *, ChildBytecodeMap>;
 
+  /// Map to index of child in children_.
   using ChildSourceLocMap =
-      llvm::DenseMap<SourceLoc, StackTracesTreeNode *, SourceLocMapInfo>;
-
-  /// Utility class for iterating over children of this node.
-  struct ChildIterator
-      : public std::iterator<std::input_iterator_tag, StackTracesTreeNode> {
-    ChildIterator(ChildSourceLocMap::iterator sourceLocIt)
-        : sourceLocIt_(sourceLocIt) {}
-
-    ChildIterator &operator++() {
-      sourceLocIt_++;
-      return *this;
-    }
-    ChildIterator operator++(int) {
-      auto retval = *this;
-      ++(*this);
-      return retval;
-    }
-    bool operator==(ChildIterator other) const {
-      return sourceLocIt_ == other.sourceLocIt_;
-    }
-    bool operator!=(ChildIterator other) const {
-      return !(*this == other);
-    }
-    StackTracesTreeNode *operator*() const {
-      return sourceLocIt_->second;
-    }
-
-   private:
-    ChildSourceLocMap::iterator sourceLocIt_;
-  };
+      llvm::DenseMap<SourceLoc, uint32_t, SourceLocMapInfo>;
 
   StackTracesTreeNode(
       size_t id,
@@ -133,12 +109,8 @@ struct StackTracesTreeNode {
   const SourceLoc sourceLoc;
   const StringSetVector::size_type name;
 
-  ChildIterator begin() {
-    return {sourceLocToChildMap_.begin()};
-  }
-
-  ChildIterator end() {
-    return {sourceLocToChildMap_.end()};
+  llvm::ArrayRef<StackTracesTreeNode *> getChildren() const {
+    return children_;
   }
 
  private:
@@ -147,6 +119,8 @@ struct StackTracesTreeNode {
   StackTracesTreeNode *findChild(
       const CodeBlock *codeBlock,
       uint32_t bytecodeOffset) const;
+
+  OptValue<uint32_t> findChildIndex(const SourceLoc &sourceLoc) const;
 
   StackTracesTreeNode *findChild(const SourceLoc &sourceLoc) const;
 
@@ -159,7 +133,7 @@ struct StackTracesTreeNode {
   void addMapping(
       const CodeBlock *codeBlock,
       uint32_t bytecodeOffset,
-      StackTracesTreeNode *node);
+      uint32_t childIndex);
 
   // These fields are used only to stop us adding the same stack frame multiple
   // times. This can happen, for example, with bound-functions and in some other
@@ -181,6 +155,10 @@ struct StackTracesTreeNode {
   /// Cache of CodeBlock + IP to child to fast-path when the exact same bytecode
   /// location is used multiple times.
   ChildCodeblockMap codeBlockToChildMap_;
+
+  /// List of children registered to this node, indexed from DenseMaps in this
+  /// class.
+  std::vector<StackTracesTreeNode *> children_{};
 };
 
 } // namespace vm
