@@ -7,6 +7,7 @@
 
 #if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
 
+#include "hermes/Support/Compiler.h"
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/OSCompat.h"
 
@@ -50,9 +51,11 @@
 
 #endif // __linux__
 
-#ifdef __ANDROID__
+#if defined(__linux__) || defined(__ANDROID__)
 #include <sys/prctl.h>
+#endif
 
+#ifdef __ANDROID__
 #ifndef PR_SET_VMA
 #define PR_SET_VMA 0x53564d41
 #endif
@@ -417,6 +420,18 @@ uint64_t thread_id() {
 #else
 #error "Thread ID not supported on this platform"
 #endif
+
+void set_thread_name(const char *name) {
+  // Set the thread name for TSAN. It doesn't share the same name mapping as the
+  // OS does. This macro expands to nothing if TSAN isn't on.
+  TsanThreadName(name);
+#if defined(__linux__) || defined(__ANDROID__)
+  prctl(PR_SET_NAME, name);
+#elif defined(__APPLE__)
+  ::pthread_setname_np(name);
+#endif
+  // Do nothing if the platform doesn't support it.
+}
 
 // Platform-specific implementations of thread_cpu_time
 #if defined(__APPLE__) && defined(__MACH__)

@@ -141,6 +141,11 @@ bool num_context_switches(long &voluntary, long &involuntary);
 /// \return OS thread id of current thread.
 uint64_t thread_id();
 
+/// Set the thread name for the current thread. This can be viewed in various
+/// debuggers and profilers.
+/// NOTE: Is a no-op on some platforms.
+void set_thread_name(const char *name);
+
 /// \return the duration in microseconds the CPU has spent executing this thread
 /// upon success, or `std::chrono::microseconds::max()` on failure.
 std::chrono::microseconds thread_cpu_time();

@@ -7,6 +7,7 @@
 
 #ifdef _WINDOWS
 
+#include "hermes/Support/Compiler.h"
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/OSCompat.h"
 
@@ -346,6 +347,15 @@ bool num_context_switches(long &voluntary, long &involuntary) {
 
 uint64_t thread_id() {
   return GetCurrentThreadId();
+}
+
+void set_thread_name(const char *name) {
+  // Set the thread name for TSAN. It doesn't share the same name mapping as the
+  // OS does. This macro expands to nothing if TSAN isn't on.
+  TsanThreadName(name);
+  // SetThreadDescription is too new (since Windows 10 version 1607).
+  // Prior to that, the concept of thread names only exists when
+  // a Visual Studio debugger is attached.
 }
 
 static std::chrono::microseconds::rep fromFileTimeToMicros(
