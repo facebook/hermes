@@ -2666,9 +2666,15 @@ Optional<ESTree::Node *> JSParserImpl::parseOptionalExpressionExceptNew_tail(
     SMLoc objectLoc,
     ESTree::Node *expr) {
   bool seenOptionalChain = false;
+  llvm::SaveAndRestore<unsigned> savedRecursionDepth{recursionDepth_,
+                                                     recursionDepth_};
   while (
       checkN(TokenKind::l_square, TokenKind::period, TokenKind::questiondot) ||
       checkTemplateLiteral()) {
+    ++recursionDepth_;
+    if (LLVM_UNLIKELY(recursionDepthCheck())) {
+      return None;
+    }
     SMLoc nextObjectLoc = tok_->getStartLoc();
     if (checkN(
             TokenKind::l_square, TokenKind::period, TokenKind::questiondot)) {
