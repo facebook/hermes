@@ -108,6 +108,7 @@ TEST_F(ArrayStorageTest, PushBackTest) {
 }
 
 TEST_F(ArrayStorageTest, AllowTrimming) {
+#ifndef HERMESVM_GC_HADES
   MutableHandle<ArrayStorage> st(runtime);
   constexpr ArrayStorage::size_type originalCapacity = 4;
   // Create an array and put in an element so its size is 1 and its capacity
@@ -125,6 +126,7 @@ TEST_F(ArrayStorageTest, AllowTrimming) {
 
   // The array should be trimmed.
   EXPECT_EQ(st->size(), st->capacity());
+#endif
 }
 
 using ArrayStorageBigHeapTest = LargeHeapRuntimeTestFixture;

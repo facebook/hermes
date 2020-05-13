@@ -56,6 +56,12 @@ class GCCell {
  public:
   explicit GCCell(GC *gc, const VTable *vtp);
 
+  /// Makes a new GCCell with only a type and a size.
+  /// NOTE: This bypasses some debugging checks in the GCCell constructor taking
+  /// a GC parameter, so this should only be used in cases where the debug
+  /// checks will be wrong.
+  explicit GCCell(const VTable *vtp);
+
   // GCCell-s are not copyable (in the C++ sense).
   GCCell(const GCCell &) = delete;
   void operator=(const GCCell &) = delete;
@@ -262,6 +268,16 @@ class VariableSizeRuntimeCell : public GCCell {
         "the size of a cell");
   }
 
+  /// Makes a new VariableSizeRuntimeCell with only a type and a size.
+  VariableSizeRuntimeCell(const VTable *vtp, uint32_t size)
+      : GCCell(vtp), variableSize_(heapAlignSize(size)) {
+    // Need to align to the GC here, since the GC doesn't know about this field.
+    assert(
+        size >= sizeof(VariableSizeRuntimeCell) &&
+        "Should not allocate a VariableSizeRuntimeCell of size less than "
+        "the size of a cell");
+  }
+
  public:
   uint32_t getSize() const {
     return variableSize_;
@@ -289,6 +305,8 @@ static_assert(
 
 #ifdef NDEBUG
 inline GCCell::GCCell(GC *, const VTable *vtp) : vtp_(vtp) {}
+
+inline GCCell::GCCell(const VTable *vtp) : vtp_(vtp) {}
 #endif
 
 inline uint32_t GCCell::getAllocatedSize(const VTable *vtp) const {

@@ -233,7 +233,7 @@ std::string IdentifierTable::convertSymbolToUTF8(SymbolID id) {
 void IdentifierTable::markIdentifiers(SlotAcceptor &acceptor, GC *gc) {
   for (auto &vectorEntry : lookupVector_) {
     if (!vectorEntry.isFreeSlot() && vectorEntry.isStringPrim()) {
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
+#if defined(HERMESVM_GC_NONCONTIG_GENERATIONAL) || defined(HERMESVM_GC_HADES)
       assert(
           !gc->inYoungGen(vectorEntry.getStringPrimRef()) &&
           "Identifiers must be allocated in the old gen");
@@ -510,7 +510,7 @@ CallResult<SymbolID> IdentifierTable::createNotUniquedSymbol(
     Handle<StringPrimitive> desc) {
   uint32_t nextID = allocNextID();
 
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
+#if defined(HERMESVM_GC_NONCONTIG_GENERATIONAL) || defined(HERMESVM_GC_HADES)
   if (runtime->getHeap().inYoungGen(desc.get())) {
     // Need to reallocate in the old gen if the description is in the young gen.
     CallResult<PseudoHandle<StringPrimitive>> longLivedStr = desc->isASCII()

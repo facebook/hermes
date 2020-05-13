@@ -20,6 +20,9 @@ const VTable FillerCell::vt{CellKind::FillerCellKind, 0};
 // Empty to prevent linker errors, doesn't need to do anything.
 void UninitializedBuildMeta(const GCCell *, Metadata::Builder &) {}
 void FillerCellBuildMeta(const GCCell *, Metadata::Builder &) {}
+#ifndef HERMESVM_GC_HADES
+void FreelistBuildMeta(const GCCell *, Metadata::Builder &) {}
+#endif
 
 #ifdef HERMESVM_SERIALIZE
 void UninitializedSerialize(Serializer &s, const GCCell *cell) {
@@ -45,6 +48,19 @@ void FillerCellDeserialize(Deserializer &d, CellKind kind) {
   FillerCell *cell = FillerCell::create(d.getRuntime(), size);
   d.endObject((void *)cell);
 }
+
+#ifndef HERMESVM_GC_HADES
+void FreelistSerialize(Serializer &, const GCCell *) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Serialize function not implemented for FreelistCell\n");
+}
+
+void FreelistDeserialize(Deserializer &, CellKind) {
+  LLVM_DEBUG(
+      llvm::dbgs()
+      << "Deserialize function not implemented for FreelistCell\n");
+}
+#endif
 #endif
 
 } // namespace vm

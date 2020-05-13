@@ -55,7 +55,7 @@ class GCGeneration;
 ///
 /// The tables in (1), and (2) cover the contiguous allocation space (3)
 /// into which GCCells are bump allocated.
-class AlignedHeapSegment final {
+class AlignedHeapSegment {
   friend CompactionResult::Allocator;
   friend CompactionResult::Chunk;
 
@@ -88,6 +88,16 @@ class AlignedHeapSegment final {
     friend class AlignedHeapSegment;
 
     CardTable cardTable_;
+
+#ifdef HERMESVM_GC_HADES
+    // We use a MarkBitArray to mark the start of cells. Scan backwards from a
+    // card's address in this array to find a marked bit, then go from there to
+    // the actual cell that crosses the boundary.
+    // If every cell is alive after marking, then markBitArray_ has bitwise
+    // identical contents to startOfCells_.
+    MarkBitArrayNC startOfCells_;
+#endif
+
     MarkBitArrayNC markBitArray_;
 
     /// Memory made inaccessible through protectGuardPage, for security and
@@ -235,6 +245,18 @@ class AlignedHeapSegment final {
   /// Return a reference to the mark bit array covering the memory region
   /// managed by this segment.
   inline MarkBitArrayNC &markBitArray() const;
+
+#ifdef HERMESVM_GC_HADES
+  /// Return a reference to the heads of objects. This needs to be updated
+  /// whenever a new object is allocated.
+  MarkBitArrayNC &cellHeads() {
+    return contents()->startOfCells_;
+  }
+
+  const MarkBitArrayNC &cellHeads() const {
+    return contents()->startOfCells_;
+  }
+#endif
 
   explicit inline operator bool() const;
 

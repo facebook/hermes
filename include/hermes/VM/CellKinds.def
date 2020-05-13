@@ -28,6 +28,7 @@
 
 CELL_KIND(Uninitialized)
 CELL_KIND(FillerCell)
+CELL_KIND(Freelist)
 CELL_KIND(DynamicUTF16StringPrimitive)
 CELL_KIND(DynamicASCIIStringPrimitive)
 CELL_KIND(BufferedUTF16StringPrimitive)

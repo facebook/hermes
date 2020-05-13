@@ -12,6 +12,9 @@
 #include "hermes/VM/GCBase.h"
 
 #include <cstdint>
+#include <deque>
+#include <memory>
+#include <vector>
 
 namespace hermes {
 namespace vm {
@@ -55,6 +58,8 @@ class HadesGC final : public GCBase {
 
   ~HadesGC();
 
+  static uint32_t minAllocationSize();
+
   static constexpr uint32_t maxAllocationSize() {
     // The largest allocation allowable in Hades is the max size a single
     // segment supports.
@@ -64,9 +69,11 @@ class HadesGC final : public GCBase {
   /// \name GCBase overrides
   /// \{
 
+  void getHeapInfo(HeapInfo &info) override;
   void getHeapInfoWithMallocSize(HeapInfo &info) override;
   void getCrashManagerHeapInfo(CrashManager::HeapInformation &info) override;
   void createSnapshot(llvm::raw_ostream &os) override;
+  void printStats(llvm::raw_ostream &os, bool trailingComma) override;
 
   /// \}
 
@@ -89,7 +96,7 @@ class HadesGC final : public GCBase {
   /// \tparam hasFinalizer Indicates whether the object being allocated will
   ///   have a finalizer.
   template <HasFinalizer hasFinalizer = HasFinalizer::No>
-  inline void *allocLongLived(uint32_t size);
+  inline void *allocLongLived(uint32_t sz);
 
   /// Force a garbage collection cycle.
   /// (Part of general GC API defined in GCBase.h).
@@ -141,6 +148,9 @@ class HadesGC final : public GCBase {
 
   /// \}
 
+  /// \return true if the pointer lives in the young generation.
+  bool inYoungGen(const void *p) const;
+
 #ifndef NDEBUG
   /// \name Debug APIs
   /// \{
@@ -168,7 +178,137 @@ class HadesGC final : public GCBase {
   /// \}
 #endif
 
+  class HeapSegment;
+  class CollectionSection;
+  class EvacAcceptor;
+  class MarkAcceptor;
+  class WeakRootAcceptor;
+
  private:
+  const uint64_t maxHeapSize_;
+
+  /// Keeps the storage provider alive until after the GC is fully destructed.
+  std::shared_ptr<StorageProvider> provider_;
+
+  /// youngGen is a bump-pointer space, so it can re-use AlignedHeapSegment.
+  std::unique_ptr<HeapSegment> youngGen_;
+  /// List of cells in YG that have finalizers. Iterate through this to clean
+  /// them out.
+  std::vector<GCCell *> youngGenFinalizables_;
+
+  /// oldGen_ is a free list space, so it needs a different segment
+  /// representation.
+  std::vector<std::unique_ptr<HeapSegment>> oldGen_;
+
+  /// weakPointers_ is a list of all the weak pointers in the system. They are
+  /// invalidated if they point to an object that is dead, and do not count
+  /// towards whether an object is live or dead.
+  std::deque<WeakRefSlot> weakPointers_;
+
+  /// The main entrypoint for all allocations.
+  /// \param sz The size of allocation requested. This might be rounded up to
+  ///   fit heap alignment requirements.
+  /// \param longLived If true, allocate directly into OG, instead of YG.
+  /// \param fixedSize If true, the allocation is of a cell type that always has
+  ///   the same size. The requirement enforced by Hades is that all fixed-size
+  ///   allocations must go into YG, unless \p longLived is also true.
+  /// \param hasFinalizer If true, the cell about to be allocated into the
+  ///   requested space will have a finalizer that the GC will need to invoke.
+  void *allocWork(
+      uint32_t sz,
+      bool longLived,
+      bool fixedSize,
+      HasFinalizer hasFinalizer);
+
+  /// Allocate into OG. Returns a pointer to the newly allocated space. That
+  /// space must be filled immediately after this call completes.
+  /// \return A non-null pointer to memory in the old gen that should have a
+  ///   constructor run in immediately.
+  /// \post This function either successfully allocates, or reports OOM.
+  GCCell *oldGenAlloc(uint32_t sz);
+
+  /// Searches the OG for a space to allocate memory into.
+  /// \return A pointer to uninitialized memory that can be written into, null
+  ///   if no such space exists.
+  /// NOTE: oldGenAlloc should be called instead, which will try to do
+  /// collections until this function returns a non-null pointer.
+  GCCell *oldGenSearch(uint32_t sz);
+
+  /// Frees the weak slot, so it can be re-used by future WeakRef allocations.
+  void freeWeakSlot(WeakRefSlot *slot);
+
+  /// Perform a YG garbage collection. All live objects in YG will be evacuated
+  /// to the OG.
+  /// \post The YG is completely empty, and all bytes are available for new
+  ///   allocations.
+  void youngGenCollection(bool allowOGBegin);
+
+  /// Perform an OG garbage collection. All live objects in OG will be left
+  /// untouched, all unreachable objects will be placed into a free list that
+  /// can be used by \c oldGenAlloc.
+  void oldGenCollection();
+
+  /// Find all pointers from OG into YG during a YG collection. This is done
+  /// quickly through use of write barriers that detect the creation of OG-to-YG
+  /// pointers.
+  void scanDirtyCards(EvacAcceptor &acceptor);
+
+  /// Finalize all objects in YG that have finalizers.
+  void finalizeYoungGenObjects();
+
+  /// Update all of the weak references and invalidate the ones that point to
+  /// dead objects.
+  void updateWeakReferencesForYoungGen();
+
+  /// Update all of the weak references, invalidate the ones that point to
+  /// dead objects, and free the ones that were not marked at all.
+  void updateWeakReferencesForOldGen();
+
+  /// The WeakMap type in JS has special semantics for handling keys kept alive
+  /// by only their values. In between marking and sweeping, this function is
+  /// called to handle that special case.
+  void completeWeakMapMarking(MarkAcceptor &acceptor);
+
+  /// Sets all weak references to unmarked in preparation for a collection.
+  void resetWeakReferences();
+
+  /// Return the total number of bytes that are in use by the JS heap.
+  uint64_t allocatedBytes();
+
+  /// Return the total number of bytes that are in use by the OG section of the
+  /// JS heap.
+  uint64_t oldGenAllocatedBytes();
+
+  /// Accessor for the YG.
+  HeapSegment &youngGen();
+  const HeapSegment &youngGen() const;
+
+  /// Accessors for the segments of OG.
+  std::vector<std::unique_ptr<HeapSegment>>::iterator oldGenBegin();
+  std::vector<std::unique_ptr<HeapSegment>>::const_iterator oldGenBegin() const;
+
+  std::vector<std::unique_ptr<HeapSegment>>::iterator oldGenEnd();
+  std::vector<std::unique_ptr<HeapSegment>>::const_iterator oldGenEnd() const;
+
+  /// Create a new OG segment and attach it to the end of the OG segment vector.
+  /// \return a reference to the newly created segment.
+  HeapSegment &createOldGenSegment();
+
+  /// Searches the old gen for this pointer. This is O(number of OG segments).
+  /// NOTE: In any non-debug case, \c inYoungGen should be used instead, because
+  /// it is O(1).
+  /// \return true if the pointer is in the old gen.
+  bool inOldGen(const void *p) const;
+
+#ifdef HERMES_SLOW_DEBUG
+  /// Checks the heap to make sure all cells are valid.
+  void checkWellFormed();
+
+  /// Verify that the card table used to find pointers from OG into YG has the
+  /// correct cards dirtied, given the contents of the OG currently.
+  void verifyCardTable();
+  void verifyCardTableBoundaries() const;
+#endif
 };
 
 /// \name Inline implementations
@@ -176,12 +316,12 @@ class HadesGC final : public GCBase {
 
 template <bool fixedSize, HasFinalizer hasFinalizer>
 void *HadesGC::alloc(uint32_t sz) {
-  return nullptr;
+  return allocWork(sz, false, fixedSize, hasFinalizer);
 }
 
 template <HasFinalizer hasFinalizer>
-void *HadesGC::allocLongLived(uint32_t size) {
-  return nullptr;
+void *HadesGC::allocLongLived(uint32_t sz) {
+  return allocWork(sz, true, false, hasFinalizer);
 }
 
 /// \}

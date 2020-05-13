@@ -26,6 +26,7 @@ MetadataTableForTests getMetadataTable() {
       cellKindsContiguousAscending(
           CellKind::UninitializedKind,
           CellKind::FillerCellKind,
+          CellKind::FreelistKind,
           CellKind::DynamicUTF16StringPrimitiveKind,
           CellKind::DynamicASCIIStringPrimitiveKind,
           CellKind::BufferedUTF16StringPrimitiveKind,
@@ -38,6 +39,7 @@ MetadataTableForTests getMetadataTable() {
   static const Metadata storage[] = {
       Metadata(), // Uninitialized
       Metadata(), // FillerCell
+      Metadata(), // Freelist
       Metadata(), // DynamicUTF16StringPrimitive
       Metadata(), // DynamicASCIIStringPrimitive
       Metadata(), // BufferedUTF16StringPrimitive

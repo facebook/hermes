@@ -252,6 +252,11 @@ class GenGC final : public GCBase {
   ///     result of this collection.
   void collect(bool canEffectiveOOM = false);
 
+  static constexpr uint32_t minAllocationSize() {
+    // NCGen doesn't enforce a minimum allocation requirement.
+    return 0;
+  }
+
   static constexpr uint32_t maxAllocationSize() {
     // The largest allocation allowable in NCGen is the max size a single
     // segment supports.

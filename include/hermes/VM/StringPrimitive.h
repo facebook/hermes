@@ -484,7 +484,11 @@ class DynamicStringPrimitive final
   /// Calculate the allocation size of a StringPrimitive given character
   /// length.
   static uint32_t allocationSize(uint32_t length) {
-    return DynamicStringPrimitive::template totalSizeToAlloc<T>(length);
+    // In the future it would be better to have the GC return a new size
+    // instead of having the caller decide.
+    return std::max(
+        DynamicStringPrimitive::template totalSizeToAlloc<T>(length),
+        static_cast<size_t>(GC::minAllocationSize()));
   }
 
   const T *getRawPointer() const {

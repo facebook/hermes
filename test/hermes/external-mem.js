@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -gc-max-heap=4M %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -gc-max-heap=8M %s | %FileCheck --match-full-lines %s
 
 print('ArrayBuffer')
 // CHECK-LABEL: ArrayBuffer
@@ -23,7 +23,7 @@ a = null;
 
 // Larger than max heap fails
 try {
-    a = new ArrayBuffer(6000000);
+    a = new ArrayBuffer(12000000);
 } catch (x) {
     print(x)
     // CHECK-NEXT: RangeError: Cannot allocate a data block for the ArrayBuffer
@@ -73,4 +73,3 @@ try {
     print(x)
     // CHECK-NEXT: RangeError: Cannot allocate an external string primitive.
 }
-

@@ -187,6 +187,11 @@ class MallocGC final : public GCBase {
   /// weak pointers that point to dead objects.
   void collect();
 
+  static constexpr uint32_t minAllocationSize() {
+    // MallocGC imposes no limit on individual allocations.
+    return 0;
+  }
+
   static constexpr uint32_t maxAllocationSize() {
     // MallocGC imposes no limit on individual allocations.
     return std::numeric_limits<uint32_t>::max();

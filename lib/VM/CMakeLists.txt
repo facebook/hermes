@@ -155,7 +155,15 @@ if (${HERMESVM_GCKIND} STREQUAL "NONCONTIG_GENERATIONAL")
 elseif (${HERMESVM_GCKIND} STREQUAL "MALLOC")
   list(APPEND source_files gcs/MallocGC.cpp gcs/FillerCell.cpp)
 elseif (${HERMESVM_GCKIND} STREQUAL "HADES")
-  list(APPEND source_files gcs/HadesGC.cpp gcs/FillerCell.cpp)
+  list(APPEND source_files
+            gcs/AlignedStorage.cpp
+            gcs/AlignedHeapSegment.cpp
+            gcs/CardTableNC.cpp
+            gcs/CompleteMarkState.cpp
+            gcs/FillerCell.cpp
+            gcs/HadesGC.cpp
+            gcs/MarkBitArrayNC.cpp
+  )
 else()
   message(WARNING "Not linking garbage collector")
 endif()
