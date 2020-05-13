@@ -19,6 +19,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <cassert>
+#include <cctype>
 #include <cmath>
 #include <ctime>
 
@@ -708,6 +709,12 @@ static inline bool isDigit(char16_t c) {
   return u'0' <= c && c <= u'9';
 }
 
+/// \return true if c represents an alphabet letter.
+static inline bool isAlpha(char16_t c) {
+  c |= 'a' ^ 'A'; // Lowercase
+  return 'a' <= c && c <= 'z';
+}
+
 /// Read a number from the iterator at \p it into \p x.
 /// Can read integers that consist entirely of digits.
 /// \param[in,out] it is modified to the new start point of the scan if
@@ -864,13 +871,32 @@ static double parseESDate(StringView str) {
 
   /// Read a string starting at `it` into `tok`.
   /// \p len the number of characters to scan in the string.
-  /// Return true if successful, false if failed.
+  /// \return true if successful, false if failed.
   auto scanStr = [&str, &tok, &it](int32_t len) -> bool {
     if (it + len > str.end()) {
       return false;
     }
     tok = str.slice(it, it + len);
     it += len;
+    return true;
+  };
+
+  /// Reads the next \p len characters into `tok`,
+  /// but instead of consuming \p len chars, it consumes a single word
+  /// whatever how long it is (i.e. until a space is encountered).
+  /// e.g.
+  ///     &str ="Garbage G MayG"
+  ///     scanStr(3); consumeSpaces();  // &str="G MayG", &tok="Gar"
+  ///     scanStr(3); consumeSpaces();  // &str="MayG"  , &tok="G M"
+  ///     scanStr(3); consumeSpaces();  // &str=""      , &tok="May"
+  ///     scanStr(3);                   // -> false
+  /// \return true if successful, false if failed.
+  auto scanStrAndSkipWord = [&str, &tok, &it](int32_t len) -> bool {
+    if (it + len > str.end())
+      return false;
+    tok = str.slice(it, it + len);
+    while (it != str.end() && !std::isspace(*it))
+      it++;
     return true;
   };
 
@@ -882,7 +908,12 @@ static double parseESDate(StringView str) {
     return false;
   };
 
-  // Weekday, optional comma, and following space.
+  auto consumeSpaces = [&]() {
+    while (it != str.end() && std::isspace(*it))
+      ++it;
+  };
+
+  // Weekday
   if (!scanStr(3))
     return nan;
   bool foundWeekday = false;
@@ -894,51 +925,62 @@ static double parseESDate(StringView str) {
   }
   if (!foundWeekday)
     return nan;
-  consume(','); // Optional comma, disregard failure.
-  if (!consume(' '))
-    return nan;
+
+  /// If we found a valid Month string from the current `tok`.
+  auto tokIsMonth = [&]() -> bool {
+    for (uint32_t i = 0; i < sizeof(monthNames) / sizeof(monthNames[0]); ++i) {
+      if (tok.equals(llvm::arrayRefFromStringRef(monthNames[i]))) {
+        // m is 1-indexed.
+        m = i + 1;
+        return true;
+      }
+    }
+    return false;
+  };
 
   // Day Month Year
   // or
   // Month Day Year
-  if (scanInt(it, end, d)) {
-    // Day Month
-    if (!consume(' '))
-      return nan;
-    if (!scanStr(3))
-      return nan;
-  } else {
-    // Month Day
-    if (!scanStr(3))
-      return nan;
-    if (!consume(' '))
-      return nan;
-    if (!scanInt(it, end, d))
-      return nan;
-  }
-  // tok is now set to the Month string.
-  bool foundMonth = false;
-  for (uint32_t i = 0; i < sizeof(monthNames) / sizeof(monthNames[0]); ++i) {
-    if (tok.equals(llvm::arrayRefFromStringRef(monthNames[i]))) {
-      // m is 1-indexed.
-      m = i + 1;
-      foundMonth = true;
+  while (it != str.end()) {
+    if (isDigit(*it)) {
+      // Day
+      scanInt(it, end, d);
+      // Month
+      consumeSpaces();
+      // e.g. `Janwhatever` will get read as `Jan`
+      if (!scanStrAndSkipWord(3))
+        return nan;
+      // `tok` is now set to the Month candidate.
+      if (!tokIsMonth())
+        return nan;
       break;
     }
+    if (isAlpha(*it)) {
+      // try Month
+      if (!scanStrAndSkipWord(3))
+        return nan;
+      // `tok` is now set to the Month candidate.
+      if (tokIsMonth()) {
+        // Day
+        consumeSpaces();
+        if (!scanInt(it, end, d))
+          return nan;
+        break;
+      }
+      // Continue scanning for Month.
+      continue;
+    }
+    // Ignore any garbage.
+    ++it;
   }
-  if (!foundMonth)
-    return nan;
 
   // Year
-  if (!consume(' '))
-    return nan;
+  consumeSpaces();
   if (!scanInt(it, end, y))
     return nan;
 
-  if (!consume(' '))
-    return nan;
-
   // Hour:minute:second.
+  consumeSpaces();
   if (!scanInt(it, end, h))
     return nan;
   if (!consume(':'))
@@ -953,10 +995,7 @@ static double parseESDate(StringView str) {
   // Space and time zone.
   if (it == end)
     goto complete;
-  if (!consume(' '))
-    return nan;
-  if (it == end)
-    goto complete;
+  consumeSpaces();
 
   struct KnownTZ {
     const char *tz;
