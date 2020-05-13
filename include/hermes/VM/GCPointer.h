@@ -9,6 +9,7 @@
 #define HERMES_VM_GCPOINTER_H
 
 #include "hermes/Support/Compiler.h"
+#include "hermes/VM/Casting.h"
 #include "hermes/VM/GCDecl.h"
 #include "hermes/VM/PointerBase.h"
 
@@ -125,10 +126,10 @@ class GCPointer : public GCPointerBase {
   /// Get the raw pointer value.
   /// \param base The base of the address space that the GCPointer points into.
   T *get(PointerBase *base) const {
-    return static_cast<T *>(GCPointerBase::get(base));
+    return vmcast_or_null<T>(static_cast<GCCell *>(GCPointerBase::get(base)));
   }
   T *getNonNull(PointerBase *base) const {
-    return static_cast<T *>(GCPointerBase::getNonNull(base));
+    return vmcast<T>(static_cast<GCCell *>(GCPointerBase::getNonNull(base)));
   }
 
   /// Assign a new value to this GCPointer.

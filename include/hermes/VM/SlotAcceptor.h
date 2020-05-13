@@ -15,6 +15,7 @@
 namespace hermes {
 namespace vm {
 
+class GCPointerBase;
 class WeakRefBase;
 
 /// SlotAcceptor is an interface to be implemented by acceptors of objects in

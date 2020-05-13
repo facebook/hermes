@@ -8,7 +8,7 @@
 #ifndef HERMES_VM_CASTING_H
 #define HERMES_VM_CASTING_H
 
-#include "hermes/VM/GC.h"
+#include "hermes/VM/GCCell.h"
 #include "hermes/VM/HermesValue.h"
 
 #include "llvm/Support/Casting.h"
@@ -47,7 +47,12 @@ ToType *vmcast(HermesValue val) {
 /// Identical to vmcast() except a null pointer is allowed.
 template <class ToType>
 ToType *vmcast_or_null(GCCell *cell) {
+#ifndef NDEBUG
   return llvm::cast_or_null<ToType>(cell);
+#else
+  // In opt builds, avoid doing a branch for the null case.
+  return static_cast<ToType *>(cell);
+#endif
 }
 
 /// Identical to vmcast() except a null pointer is allowed.
