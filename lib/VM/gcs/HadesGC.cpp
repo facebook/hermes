@@ -115,6 +115,11 @@ HadesGC::HeapSegment::HeapSegment(AlignedStorage &&storage, bool bumpAllocMode)
   assert(freelistHead_->isValid() && "Invalid free list head");
 
   setCellHead(freelistHead_);
+  // Here, and in other places where FreelistCells are poisoned, use +1 on the
+  // pointer to skip towards the memory region directly after the FreelistCell
+  // header of a cell. This way the header is always intact and readable, and
+  // only the contents of the cell are poisoned.
+  __asan_poison_memory_region(freelistHead_ + 1, sz - sizeof(FreelistCell));
 }
 
 AllocResult HadesGC::HeapSegment::alloc(uint32_t sz) {
@@ -146,6 +151,8 @@ AllocResult HadesGC::HeapSegment::alloc(uint32_t sz) {
       // values like the size and the next pointer, copy the return path here.
       *prevLoc = cell->split(*this, sz);
       allocatedBytes_ += sz;
+      // Unpoison the memory so that the mutator can use it.
+      __asan_unpoison_memory_region(cell + 1, sz - sizeof(FreelistCell));
       return {cell, true};
     } else if (cell->getAllocatedSize() == sz) {
       // Exact match, take it.
@@ -176,6 +183,8 @@ AllocResult HadesGC::HeapSegment::alloc(uint32_t sz) {
   *prevLoc = cell->next_;
   // Track the number of allocated bytes in a segment.
   allocatedBytes_ += sz;
+  // Unpoison the memory so that the mutator can use it.
+  __asan_unpoison_memory_region(cell + 1, sz - sizeof(FreelistCell));
   // Could overwrite the VTable, but the allocator will write a new one in
   // anyway.
   return {cell, true};
@@ -206,6 +215,9 @@ void HadesGC::HeapSegment::addCellToFreelist(GCCell *cell) {
   freelistHead_ = newFreeCell;
   // We free'd this many bytes.
   allocatedBytes_ -= sz;
+  // In ASAN builds, poison the memory outside of the FreelistCell so that
+  // accesses are flagged as illegal.
+  __asan_poison_memory_region(newFreeCell + 1, sz - sizeof(FreelistCell));
 }
 
 void HadesGC::HeapSegment::setCellHead(const GCCell *cell) {
@@ -251,6 +263,9 @@ HadesGC::HeapSegment::FreelistCell *HadesGC::HeapSegment::FreelistCell::split(
       origSize >= sz + minAllocationSize() &&
       "Can't split if it would leave too small of a second cell");
   char *nextCellAddress = reinterpret_cast<char *>(this) + sz;
+  // We're about to touch some memory in the newly split cell.
+  // All other memory should remain poisoned.
+  __asan_unpoison_memory_region(nextCellAddress, sizeof(FreelistCell));
   // Construct a new FreelistCell in the empty space.
   FreelistCell *const newCell =
       new (nextCellAddress) FreelistCell(origSize - sz, next_);
