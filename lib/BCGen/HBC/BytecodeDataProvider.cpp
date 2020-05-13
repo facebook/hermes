@@ -31,7 +31,10 @@ static bool sanityCheck(
     std::string *errorMessage) {
   if (aref.size() < sizeof(hbc::BytecodeFileHeader)) {
     if (errorMessage) {
-      *errorMessage = "Buffer too small";
+      llvm::raw_string_ostream errs(*errorMessage);
+      errs << "Buffer smaller than a bytecode file header. Expected at least "
+           << sizeof(hbc::BytecodeFileHeader) << " bytes but got "
+           << aref.size() << " bytes";
     }
     return false;
   }
@@ -71,7 +74,10 @@ static bool sanityCheck(
   }
   if (aref.size() < header->fileLength) {
     if (errorMessage) {
-      *errorMessage = "Buffer too small";
+      llvm::raw_string_ostream errs(*errorMessage);
+      errs
+          << "Buffer is smaller than the size stated in the file header. Expected at least "
+          << header->fileLength << " bytes but got " << aref.size() << " bytes";
     }
     return false;
   }
