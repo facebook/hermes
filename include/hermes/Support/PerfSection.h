@@ -14,7 +14,7 @@
 #include <string>
 
 #if defined(HERMES_FACEBOOK_BUILD) && !defined(_WINDOWS) && \
-    !defined(__EMSCRIPTEN__)
+    !defined(__EMSCRIPTEN__) && !defined(HERMES_FBCODE_BUILD)
 #define HERMES_USE_FBSYSTRACE
 #endif
 

@@ -183,5 +183,5 @@ PerfSection::~PerfSection() {
 
 } // namespace hermes
 
-#endif // defined(HERMES_FACEBOOK_BUILD) ||
+#endif // defined(HERMES_USE_FBSYSTRACE) ||
        // defined(HERMESVM_PLATFORM_LOGGING)
