@@ -10,10 +10,6 @@
  * and scoped locally.
  */
 
-body > div {
-  overflow: hidden;
-}
-
 .headerContainer {
   display: flex;
   flex-wrap: wrap;
