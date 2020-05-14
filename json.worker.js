@@ -7264,18 +7264,328 @@ var TokenizationResult2 = /** @class */ (function () {
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 // THIS IS A GENERATED FILE. DO NOT EDIT DIRECTLY.
-var MarkerTag;
-(function (MarkerTag) {
-    MarkerTag[MarkerTag["Unnecessary"] = 1] = "Unnecessary";
-    MarkerTag[MarkerTag["Deprecated"] = 2] = "Deprecated";
-})(MarkerTag || (MarkerTag = {}));
-var MarkerSeverity;
-(function (MarkerSeverity) {
-    MarkerSeverity[MarkerSeverity["Hint"] = 1] = "Hint";
-    MarkerSeverity[MarkerSeverity["Info"] = 2] = "Info";
-    MarkerSeverity[MarkerSeverity["Warning"] = 4] = "Warning";
-    MarkerSeverity[MarkerSeverity["Error"] = 8] = "Error";
-})(MarkerSeverity || (MarkerSeverity = {}));
+var AccessibilitySupport;
+(function (AccessibilitySupport) {
+    /**
+     * This should be the browser case where it is not known if a screen reader is attached or no.
+     */
+    AccessibilitySupport[AccessibilitySupport["Unknown"] = 0] = "Unknown";
+    AccessibilitySupport[AccessibilitySupport["Disabled"] = 1] = "Disabled";
+    AccessibilitySupport[AccessibilitySupport["Enabled"] = 2] = "Enabled";
+})(AccessibilitySupport || (AccessibilitySupport = {}));
+var CompletionItemInsertTextRule;
+(function (CompletionItemInsertTextRule) {
+    /**
+     * Adjust whitespace/indentation of multiline insert texts to
+     * match the current line indentation.
+     */
+    CompletionItemInsertTextRule[CompletionItemInsertTextRule["KeepWhitespace"] = 1] = "KeepWhitespace";
+    /**
+     * `insertText` is a snippet.
+     */
+    CompletionItemInsertTextRule[CompletionItemInsertTextRule["InsertAsSnippet"] = 4] = "InsertAsSnippet";
+})(CompletionItemInsertTextRule || (CompletionItemInsertTextRule = {}));
+var CompletionItemKind;
+(function (CompletionItemKind) {
+    CompletionItemKind[CompletionItemKind["Method"] = 0] = "Method";
+    CompletionItemKind[CompletionItemKind["Function"] = 1] = "Function";
+    CompletionItemKind[CompletionItemKind["Constructor"] = 2] = "Constructor";
+    CompletionItemKind[CompletionItemKind["Field"] = 3] = "Field";
+    CompletionItemKind[CompletionItemKind["Variable"] = 4] = "Variable";
+    CompletionItemKind[CompletionItemKind["Class"] = 5] = "Class";
+    CompletionItemKind[CompletionItemKind["Struct"] = 6] = "Struct";
+    CompletionItemKind[CompletionItemKind["Interface"] = 7] = "Interface";
+    CompletionItemKind[CompletionItemKind["Module"] = 8] = "Module";
+    CompletionItemKind[CompletionItemKind["Property"] = 9] = "Property";
+    CompletionItemKind[CompletionItemKind["Event"] = 10] = "Event";
+    CompletionItemKind[CompletionItemKind["Operator"] = 11] = "Operator";
+    CompletionItemKind[CompletionItemKind["Unit"] = 12] = "Unit";
+    CompletionItemKind[CompletionItemKind["Value"] = 13] = "Value";
+    CompletionItemKind[CompletionItemKind["Constant"] = 14] = "Constant";
+    CompletionItemKind[CompletionItemKind["Enum"] = 15] = "Enum";
+    CompletionItemKind[CompletionItemKind["EnumMember"] = 16] = "EnumMember";
+    CompletionItemKind[CompletionItemKind["Keyword"] = 17] = "Keyword";
+    CompletionItemKind[CompletionItemKind["Text"] = 18] = "Text";
+    CompletionItemKind[CompletionItemKind["Color"] = 19] = "Color";
+    CompletionItemKind[CompletionItemKind["File"] = 20] = "File";
+    CompletionItemKind[CompletionItemKind["Reference"] = 21] = "Reference";
+    CompletionItemKind[CompletionItemKind["Customcolor"] = 22] = "Customcolor";
+    CompletionItemKind[CompletionItemKind["Folder"] = 23] = "Folder";
+    CompletionItemKind[CompletionItemKind["TypeParameter"] = 24] = "TypeParameter";
+    CompletionItemKind[CompletionItemKind["Snippet"] = 25] = "Snippet";
+})(CompletionItemKind || (CompletionItemKind = {}));
+var CompletionItemTag;
+(function (CompletionItemTag) {
+    CompletionItemTag[CompletionItemTag["Deprecated"] = 1] = "Deprecated";
+})(CompletionItemTag || (CompletionItemTag = {}));
+/**
+ * How a suggest provider was triggered.
+ */
+var CompletionTriggerKind;
+(function (CompletionTriggerKind) {
+    CompletionTriggerKind[CompletionTriggerKind["Invoke"] = 0] = "Invoke";
+    CompletionTriggerKind[CompletionTriggerKind["TriggerCharacter"] = 1] = "TriggerCharacter";
+    CompletionTriggerKind[CompletionTriggerKind["TriggerForIncompleteCompletions"] = 2] = "TriggerForIncompleteCompletions";
+})(CompletionTriggerKind || (CompletionTriggerKind = {}));
+/**
+ * A positioning preference for rendering content widgets.
+ */
+var ContentWidgetPositionPreference;
+(function (ContentWidgetPositionPreference) {
+    /**
+     * Place the content widget exactly at a position
+     */
+    ContentWidgetPositionPreference[ContentWidgetPositionPreference["EXACT"] = 0] = "EXACT";
+    /**
+     * Place the content widget above a position
+     */
+    ContentWidgetPositionPreference[ContentWidgetPositionPreference["ABOVE"] = 1] = "ABOVE";
+    /**
+     * Place the content widget below a position
+     */
+    ContentWidgetPositionPreference[ContentWidgetPositionPreference["BELOW"] = 2] = "BELOW";
+})(ContentWidgetPositionPreference || (ContentWidgetPositionPreference = {}));
+/**
+ * Describes the reason the cursor has changed its position.
+ */
+var CursorChangeReason;
+(function (CursorChangeReason) {
+    /**
+     * Unknown or not set.
+     */
+    CursorChangeReason[CursorChangeReason["NotSet"] = 0] = "NotSet";
+    /**
+     * A `model.setValue()` was called.
+     */
+    CursorChangeReason[CursorChangeReason["ContentFlush"] = 1] = "ContentFlush";
+    /**
+     * The `model` has been changed outside of this cursor and the cursor recovers its position from associated markers.
+     */
+    CursorChangeReason[CursorChangeReason["RecoverFromMarkers"] = 2] = "RecoverFromMarkers";
+    /**
+     * There was an explicit user gesture.
+     */
+    CursorChangeReason[CursorChangeReason["Explicit"] = 3] = "Explicit";
+    /**
+     * There was a Paste.
+     */
+    CursorChangeReason[CursorChangeReason["Paste"] = 4] = "Paste";
+    /**
+     * There was an Undo.
+     */
+    CursorChangeReason[CursorChangeReason["Undo"] = 5] = "Undo";
+    /**
+     * There was a Redo.
+     */
+    CursorChangeReason[CursorChangeReason["Redo"] = 6] = "Redo";
+})(CursorChangeReason || (CursorChangeReason = {}));
+/**
+ * The default end of line to use when instantiating models.
+ */
+var DefaultEndOfLine;
+(function (DefaultEndOfLine) {
+    /**
+     * Use line feed (\n) as the end of line character.
+     */
+    DefaultEndOfLine[DefaultEndOfLine["LF"] = 1] = "LF";
+    /**
+     * Use carriage return and line feed (\r\n) as the end of line character.
+     */
+    DefaultEndOfLine[DefaultEndOfLine["CRLF"] = 2] = "CRLF";
+})(DefaultEndOfLine || (DefaultEndOfLine = {}));
+/**
+ * A document highlight kind.
+ */
+var DocumentHighlightKind;
+(function (DocumentHighlightKind) {
+    /**
+     * A textual occurrence.
+     */
+    DocumentHighlightKind[DocumentHighlightKind["Text"] = 0] = "Text";
+    /**
+     * Read-access of a symbol, like reading a variable.
+     */
+    DocumentHighlightKind[DocumentHighlightKind["Read"] = 1] = "Read";
+    /**
+     * Write-access of a symbol, like writing to a variable.
+     */
+    DocumentHighlightKind[DocumentHighlightKind["Write"] = 2] = "Write";
+})(DocumentHighlightKind || (DocumentHighlightKind = {}));
+/**
+ * Configuration options for auto indentation in the editor
+ */
+var EditorAutoIndentStrategy;
+(function (EditorAutoIndentStrategy) {
+    EditorAutoIndentStrategy[EditorAutoIndentStrategy["None"] = 0] = "None";
+    EditorAutoIndentStrategy[EditorAutoIndentStrategy["Keep"] = 1] = "Keep";
+    EditorAutoIndentStrategy[EditorAutoIndentStrategy["Brackets"] = 2] = "Brackets";
+    EditorAutoIndentStrategy[EditorAutoIndentStrategy["Advanced"] = 3] = "Advanced";
+    EditorAutoIndentStrategy[EditorAutoIndentStrategy["Full"] = 4] = "Full";
+})(EditorAutoIndentStrategy || (EditorAutoIndentStrategy = {}));
+var EditorOption;
+(function (EditorOption) {
+    EditorOption[EditorOption["acceptSuggestionOnCommitCharacter"] = 0] = "acceptSuggestionOnCommitCharacter";
+    EditorOption[EditorOption["acceptSuggestionOnEnter"] = 1] = "acceptSuggestionOnEnter";
+    EditorOption[EditorOption["accessibilitySupport"] = 2] = "accessibilitySupport";
+    EditorOption[EditorOption["accessibilityPageSize"] = 3] = "accessibilityPageSize";
+    EditorOption[EditorOption["ariaLabel"] = 4] = "ariaLabel";
+    EditorOption[EditorOption["autoClosingBrackets"] = 5] = "autoClosingBrackets";
+    EditorOption[EditorOption["autoClosingOvertype"] = 6] = "autoClosingOvertype";
+    EditorOption[EditorOption["autoClosingQuotes"] = 7] = "autoClosingQuotes";
+    EditorOption[EditorOption["autoIndent"] = 8] = "autoIndent";
+    EditorOption[EditorOption["automaticLayout"] = 9] = "automaticLayout";
+    EditorOption[EditorOption["autoSurround"] = 10] = "autoSurround";
+    EditorOption[EditorOption["codeLens"] = 11] = "codeLens";
+    EditorOption[EditorOption["colorDecorators"] = 12] = "colorDecorators";
+    EditorOption[EditorOption["contextmenu"] = 13] = "contextmenu";
+    EditorOption[EditorOption["copyWithSyntaxHighlighting"] = 14] = "copyWithSyntaxHighlighting";
+    EditorOption[EditorOption["cursorBlinking"] = 15] = "cursorBlinking";
+    EditorOption[EditorOption["cursorSmoothCaretAnimation"] = 16] = "cursorSmoothCaretAnimation";
+    EditorOption[EditorOption["cursorStyle"] = 17] = "cursorStyle";
+    EditorOption[EditorOption["cursorSurroundingLines"] = 18] = "cursorSurroundingLines";
+    EditorOption[EditorOption["cursorSurroundingLinesStyle"] = 19] = "cursorSurroundingLinesStyle";
+    EditorOption[EditorOption["cursorWidth"] = 20] = "cursorWidth";
+    EditorOption[EditorOption["disableLayerHinting"] = 21] = "disableLayerHinting";
+    EditorOption[EditorOption["disableMonospaceOptimizations"] = 22] = "disableMonospaceOptimizations";
+    EditorOption[EditorOption["dragAndDrop"] = 23] = "dragAndDrop";
+    EditorOption[EditorOption["emptySelectionClipboard"] = 24] = "emptySelectionClipboard";
+    EditorOption[EditorOption["extraEditorClassName"] = 25] = "extraEditorClassName";
+    EditorOption[EditorOption["fastScrollSensitivity"] = 26] = "fastScrollSensitivity";
+    EditorOption[EditorOption["find"] = 27] = "find";
+    EditorOption[EditorOption["fixedOverflowWidgets"] = 28] = "fixedOverflowWidgets";
+    EditorOption[EditorOption["folding"] = 29] = "folding";
+    EditorOption[EditorOption["foldingStrategy"] = 30] = "foldingStrategy";
+    EditorOption[EditorOption["fontFamily"] = 31] = "fontFamily";
+    EditorOption[EditorOption["fontInfo"] = 32] = "fontInfo";
+    EditorOption[EditorOption["fontLigatures"] = 33] = "fontLigatures";
+    EditorOption[EditorOption["fontSize"] = 34] = "fontSize";
+    EditorOption[EditorOption["fontWeight"] = 35] = "fontWeight";
+    EditorOption[EditorOption["formatOnPaste"] = 36] = "formatOnPaste";
+    EditorOption[EditorOption["formatOnType"] = 37] = "formatOnType";
+    EditorOption[EditorOption["glyphMargin"] = 38] = "glyphMargin";
+    EditorOption[EditorOption["gotoLocation"] = 39] = "gotoLocation";
+    EditorOption[EditorOption["hideCursorInOverviewRuler"] = 40] = "hideCursorInOverviewRuler";
+    EditorOption[EditorOption["highlightActiveIndentGuide"] = 41] = "highlightActiveIndentGuide";
+    EditorOption[EditorOption["hover"] = 42] = "hover";
+    EditorOption[EditorOption["inDiffEditor"] = 43] = "inDiffEditor";
+    EditorOption[EditorOption["letterSpacing"] = 44] = "letterSpacing";
+    EditorOption[EditorOption["lightbulb"] = 45] = "lightbulb";
+    EditorOption[EditorOption["lineDecorationsWidth"] = 46] = "lineDecorationsWidth";
+    EditorOption[EditorOption["lineHeight"] = 47] = "lineHeight";
+    EditorOption[EditorOption["lineNumbers"] = 48] = "lineNumbers";
+    EditorOption[EditorOption["lineNumbersMinChars"] = 49] = "lineNumbersMinChars";
+    EditorOption[EditorOption["links"] = 50] = "links";
+    EditorOption[EditorOption["matchBrackets"] = 51] = "matchBrackets";
+    EditorOption[EditorOption["minimap"] = 52] = "minimap";
+    EditorOption[EditorOption["mouseStyle"] = 53] = "mouseStyle";
+    EditorOption[EditorOption["mouseWheelScrollSensitivity"] = 54] = "mouseWheelScrollSensitivity";
+    EditorOption[EditorOption["mouseWheelZoom"] = 55] = "mouseWheelZoom";
+    EditorOption[EditorOption["multiCursorMergeOverlapping"] = 56] = "multiCursorMergeOverlapping";
+    EditorOption[EditorOption["multiCursorModifier"] = 57] = "multiCursorModifier";
+    EditorOption[EditorOption["multiCursorPaste"] = 58] = "multiCursorPaste";
+    EditorOption[EditorOption["occurrencesHighlight"] = 59] = "occurrencesHighlight";
+    EditorOption[EditorOption["overviewRulerBorder"] = 60] = "overviewRulerBorder";
+    EditorOption[EditorOption["overviewRulerLanes"] = 61] = "overviewRulerLanes";
+    EditorOption[EditorOption["parameterHints"] = 62] = "parameterHints";
+    EditorOption[EditorOption["quickSuggestions"] = 63] = "quickSuggestions";
+    EditorOption[EditorOption["quickSuggestionsDelay"] = 64] = "quickSuggestionsDelay";
+    EditorOption[EditorOption["readOnly"] = 65] = "readOnly";
+    EditorOption[EditorOption["renderControlCharacters"] = 66] = "renderControlCharacters";
+    EditorOption[EditorOption["renderIndentGuides"] = 67] = "renderIndentGuides";
+    EditorOption[EditorOption["renderFinalNewline"] = 68] = "renderFinalNewline";
+    EditorOption[EditorOption["renderLineHighlight"] = 69] = "renderLineHighlight";
+    EditorOption[EditorOption["renderWhitespace"] = 70] = "renderWhitespace";
+    EditorOption[EditorOption["revealHorizontalRightPadding"] = 71] = "revealHorizontalRightPadding";
+    EditorOption[EditorOption["roundedSelection"] = 72] = "roundedSelection";
+    EditorOption[EditorOption["rulers"] = 73] = "rulers";
+    EditorOption[EditorOption["scrollbar"] = 74] = "scrollbar";
+    EditorOption[EditorOption["scrollBeyondLastColumn"] = 75] = "scrollBeyondLastColumn";
+    EditorOption[EditorOption["scrollBeyondLastLine"] = 76] = "scrollBeyondLastLine";
+    EditorOption[EditorOption["selectionClipboard"] = 77] = "selectionClipboard";
+    EditorOption[EditorOption["selectionHighlight"] = 78] = "selectionHighlight";
+    EditorOption[EditorOption["selectOnLineNumbers"] = 79] = "selectOnLineNumbers";
+    EditorOption[EditorOption["showFoldingControls"] = 80] = "showFoldingControls";
+    EditorOption[EditorOption["showUnused"] = 81] = "showUnused";
+    EditorOption[EditorOption["snippetSuggestions"] = 82] = "snippetSuggestions";
+    EditorOption[EditorOption["smoothScrolling"] = 83] = "smoothScrolling";
+    EditorOption[EditorOption["stopRenderingLineAfter"] = 84] = "stopRenderingLineAfter";
+    EditorOption[EditorOption["suggest"] = 85] = "suggest";
+    EditorOption[EditorOption["suggestFontSize"] = 86] = "suggestFontSize";
+    EditorOption[EditorOption["suggestLineHeight"] = 87] = "suggestLineHeight";
+    EditorOption[EditorOption["suggestOnTriggerCharacters"] = 88] = "suggestOnTriggerCharacters";
+    EditorOption[EditorOption["suggestSelection"] = 89] = "suggestSelection";
+    EditorOption[EditorOption["tabCompletion"] = 90] = "tabCompletion";
+    EditorOption[EditorOption["useTabStops"] = 91] = "useTabStops";
+    EditorOption[EditorOption["wordSeparators"] = 92] = "wordSeparators";
+    EditorOption[EditorOption["wordWrap"] = 93] = "wordWrap";
+    EditorOption[EditorOption["wordWrapBreakAfterCharacters"] = 94] = "wordWrapBreakAfterCharacters";
+    EditorOption[EditorOption["wordWrapBreakBeforeCharacters"] = 95] = "wordWrapBreakBeforeCharacters";
+    EditorOption[EditorOption["wordWrapBreakObtrusiveCharacters"] = 96] = "wordWrapBreakObtrusiveCharacters";
+    EditorOption[EditorOption["wordWrapColumn"] = 97] = "wordWrapColumn";
+    EditorOption[EditorOption["wordWrapMinified"] = 98] = "wordWrapMinified";
+    EditorOption[EditorOption["wrappingIndent"] = 99] = "wrappingIndent";
+    EditorOption[EditorOption["editorClassName"] = 100] = "editorClassName";
+    EditorOption[EditorOption["pixelRatio"] = 101] = "pixelRatio";
+    EditorOption[EditorOption["tabFocusMode"] = 102] = "tabFocusMode";
+    EditorOption[EditorOption["layoutInfo"] = 103] = "layoutInfo";
+    EditorOption[EditorOption["wrappingInfo"] = 104] = "wrappingInfo";
+})(EditorOption || (EditorOption = {}));
+/**
+ * End of line character preference.
+ */
+var EndOfLinePreference;
+(function (EndOfLinePreference) {
+    /**
+     * Use the end of line character identified in the text buffer.
+     */
+    EndOfLinePreference[EndOfLinePreference["TextDefined"] = 0] = "TextDefined";
+    /**
+     * Use line feed (\n) as the end of line character.
+     */
+    EndOfLinePreference[EndOfLinePreference["LF"] = 1] = "LF";
+    /**
+     * Use carriage return and line feed (\r\n) as the end of line character.
+     */
+    EndOfLinePreference[EndOfLinePreference["CRLF"] = 2] = "CRLF";
+})(EndOfLinePreference || (EndOfLinePreference = {}));
+/**
+ * End of line character preference.
+ */
+var EndOfLineSequence;
+(function (EndOfLineSequence) {
+    /**
+     * Use line feed (\n) as the end of line character.
+     */
+    EndOfLineSequence[EndOfLineSequence["LF"] = 0] = "LF";
+    /**
+     * Use carriage return and line feed (\r\n) as the end of line character.
+     */
+    EndOfLineSequence[EndOfLineSequence["CRLF"] = 1] = "CRLF";
+})(EndOfLineSequence || (EndOfLineSequence = {}));
+/**
+ * Describes what to do with the indentation when pressing Enter.
+ */
+var IndentAction;
+(function (IndentAction) {
+    /**
+     * Insert new line and copy the previous line's indentation.
+     */
+    IndentAction[IndentAction["None"] = 0] = "None";
+    /**
+     * Insert new line and indent once (relative to the previous line's indentation).
+     */
+    IndentAction[IndentAction["Indent"] = 1] = "Indent";
+    /**
+     * Insert two new lines:
+     *  - the first one indented which will hold the cursor
+     *  - the second one at the same indentation level
+     */
+    IndentAction[IndentAction["IndentOutdent"] = 2] = "IndentOutdent";
+    /**
+     * Insert new line and outdent once (relative to the previous line's indentation).
+     */
+    IndentAction[IndentAction["Outdent"] = 3] = "Outdent";
+})(IndentAction || (IndentAction = {}));
 /**
  * Virtual Key Codes, the value does not hold any inherent meaning.
  * Inspired somewhat from https://msdn.microsoft.com/en-us/library/windows/desktop/dd375731(v=vs.85).aspx
@@ -7457,36 +7767,18 @@ var KeyCode;
      */
     KeyCode[KeyCode["MAX_VALUE"] = 112] = "MAX_VALUE";
 })(KeyCode || (KeyCode = {}));
-/**
- * The direction of a selection.
- */
-var SelectionDirection;
-(function (SelectionDirection) {
-    /**
-     * The selection starts above where it ends.
-     */
-    SelectionDirection[SelectionDirection["LTR"] = 0] = "LTR";
-    /**
-     * The selection starts below where it ends.
-     */
-    SelectionDirection[SelectionDirection["RTL"] = 1] = "RTL";
-})(SelectionDirection || (SelectionDirection = {}));
-var ScrollbarVisibility;
-(function (ScrollbarVisibility) {
-    ScrollbarVisibility[ScrollbarVisibility["Auto"] = 1] = "Auto";
-    ScrollbarVisibility[ScrollbarVisibility["Hidden"] = 2] = "Hidden";
-    ScrollbarVisibility[ScrollbarVisibility["Visible"] = 3] = "Visible";
-})(ScrollbarVisibility || (ScrollbarVisibility = {}));
-/**
- * Vertical Lane in the overview ruler of the editor.
- */
-var OverviewRulerLane;
-(function (OverviewRulerLane) {
-    OverviewRulerLane[OverviewRulerLane["Left"] = 1] = "Left";
-    OverviewRulerLane[OverviewRulerLane["Center"] = 2] = "Center";
-    OverviewRulerLane[OverviewRulerLane["Right"] = 4] = "Right";
-    OverviewRulerLane[OverviewRulerLane["Full"] = 7] = "Full";
-})(OverviewRulerLane || (OverviewRulerLane = {}));
+var MarkerSeverity;
+(function (MarkerSeverity) {
+    MarkerSeverity[MarkerSeverity["Hint"] = 1] = "Hint";
+    MarkerSeverity[MarkerSeverity["Info"] = 2] = "Info";
+    MarkerSeverity[MarkerSeverity["Warning"] = 4] = "Warning";
+    MarkerSeverity[MarkerSeverity["Error"] = 8] = "Error";
+})(MarkerSeverity || (MarkerSeverity = {}));
+var MarkerTag;
+(function (MarkerTag) {
+    MarkerTag[MarkerTag["Unnecessary"] = 1] = "Unnecessary";
+    MarkerTag[MarkerTag["Deprecated"] = 2] = "Deprecated";
+})(MarkerTag || (MarkerTag = {}));
 /**
  * Position in the minimap to render the decoration.
  */
@@ -7495,144 +7787,6 @@ var MinimapPosition;
     MinimapPosition[MinimapPosition["Inline"] = 1] = "Inline";
     MinimapPosition[MinimapPosition["Gutter"] = 2] = "Gutter";
 })(MinimapPosition || (MinimapPosition = {}));
-/**
- * End of line character preference.
- */
-var EndOfLinePreference;
-(function (EndOfLinePreference) {
-    /**
-     * Use the end of line character identified in the text buffer.
-     */
-    EndOfLinePreference[EndOfLinePreference["TextDefined"] = 0] = "TextDefined";
-    /**
-     * Use line feed (\n) as the end of line character.
-     */
-    EndOfLinePreference[EndOfLinePreference["LF"] = 1] = "LF";
-    /**
-     * Use carriage return and line feed (\r\n) as the end of line character.
-     */
-    EndOfLinePreference[EndOfLinePreference["CRLF"] = 2] = "CRLF";
-})(EndOfLinePreference || (EndOfLinePreference = {}));
-/**
- * The default end of line to use when instantiating models.
- */
-var DefaultEndOfLine;
-(function (DefaultEndOfLine) {
-    /**
-     * Use line feed (\n) as the end of line character.
-     */
-    DefaultEndOfLine[DefaultEndOfLine["LF"] = 1] = "LF";
-    /**
-     * Use carriage return and line feed (\r\n) as the end of line character.
-     */
-    DefaultEndOfLine[DefaultEndOfLine["CRLF"] = 2] = "CRLF";
-})(DefaultEndOfLine || (DefaultEndOfLine = {}));
-/**
- * End of line character preference.
- */
-var EndOfLineSequence;
-(function (EndOfLineSequence) {
-    /**
-     * Use line feed (\n) as the end of line character.
-     */
-    EndOfLineSequence[EndOfLineSequence["LF"] = 0] = "LF";
-    /**
-     * Use carriage return and line feed (\r\n) as the end of line character.
-     */
-    EndOfLineSequence[EndOfLineSequence["CRLF"] = 1] = "CRLF";
-})(EndOfLineSequence || (EndOfLineSequence = {}));
-/**
- * Describes the behavior of decorations when typing/editing near their edges.
- * Note: Please do not edit the values, as they very carefully match `DecorationRangeBehavior`
- */
-var TrackedRangeStickiness;
-(function (TrackedRangeStickiness) {
-    TrackedRangeStickiness[TrackedRangeStickiness["AlwaysGrowsWhenTypingAtEdges"] = 0] = "AlwaysGrowsWhenTypingAtEdges";
-    TrackedRangeStickiness[TrackedRangeStickiness["NeverGrowsWhenTypingAtEdges"] = 1] = "NeverGrowsWhenTypingAtEdges";
-    TrackedRangeStickiness[TrackedRangeStickiness["GrowsOnlyWhenTypingBefore"] = 2] = "GrowsOnlyWhenTypingBefore";
-    TrackedRangeStickiness[TrackedRangeStickiness["GrowsOnlyWhenTypingAfter"] = 3] = "GrowsOnlyWhenTypingAfter";
-})(TrackedRangeStickiness || (TrackedRangeStickiness = {}));
-var ScrollType;
-(function (ScrollType) {
-    ScrollType[ScrollType["Smooth"] = 0] = "Smooth";
-    ScrollType[ScrollType["Immediate"] = 1] = "Immediate";
-})(ScrollType || (ScrollType = {}));
-/**
- * Describes the reason the cursor has changed its position.
- */
-var CursorChangeReason;
-(function (CursorChangeReason) {
-    /**
-     * Unknown or not set.
-     */
-    CursorChangeReason[CursorChangeReason["NotSet"] = 0] = "NotSet";
-    /**
-     * A `model.setValue()` was called.
-     */
-    CursorChangeReason[CursorChangeReason["ContentFlush"] = 1] = "ContentFlush";
-    /**
-     * The `model` has been changed outside of this cursor and the cursor recovers its position from associated markers.
-     */
-    CursorChangeReason[CursorChangeReason["RecoverFromMarkers"] = 2] = "RecoverFromMarkers";
-    /**
-     * There was an explicit user gesture.
-     */
-    CursorChangeReason[CursorChangeReason["Explicit"] = 3] = "Explicit";
-    /**
-     * There was a Paste.
-     */
-    CursorChangeReason[CursorChangeReason["Paste"] = 4] = "Paste";
-    /**
-     * There was an Undo.
-     */
-    CursorChangeReason[CursorChangeReason["Undo"] = 5] = "Undo";
-    /**
-     * There was a Redo.
-     */
-    CursorChangeReason[CursorChangeReason["Redo"] = 6] = "Redo";
-})(CursorChangeReason || (CursorChangeReason = {}));
-var RenderMinimap;
-(function (RenderMinimap) {
-    RenderMinimap[RenderMinimap["None"] = 0] = "None";
-    RenderMinimap[RenderMinimap["Text"] = 1] = "Text";
-    RenderMinimap[RenderMinimap["Blocks"] = 2] = "Blocks";
-})(RenderMinimap || (RenderMinimap = {}));
-/**
- * A positioning preference for rendering content widgets.
- */
-var ContentWidgetPositionPreference;
-(function (ContentWidgetPositionPreference) {
-    /**
-     * Place the content widget exactly at a position
-     */
-    ContentWidgetPositionPreference[ContentWidgetPositionPreference["EXACT"] = 0] = "EXACT";
-    /**
-     * Place the content widget above a position
-     */
-    ContentWidgetPositionPreference[ContentWidgetPositionPreference["ABOVE"] = 1] = "ABOVE";
-    /**
-     * Place the content widget below a position
-     */
-    ContentWidgetPositionPreference[ContentWidgetPositionPreference["BELOW"] = 2] = "BELOW";
-})(ContentWidgetPositionPreference || (ContentWidgetPositionPreference = {}));
-/**
- * A positioning preference for rendering overlay widgets.
- */
-var OverlayWidgetPositionPreference;
-(function (OverlayWidgetPositionPreference) {
-    /**
-     * Position the overlay widget in the top right corner
-     */
-    OverlayWidgetPositionPreference[OverlayWidgetPositionPreference["TOP_RIGHT_CORNER"] = 0] = "TOP_RIGHT_CORNER";
-    /**
-     * Position the overlay widget in the bottom right corner
-     */
-    OverlayWidgetPositionPreference[OverlayWidgetPositionPreference["BOTTOM_RIGHT_CORNER"] = 1] = "BOTTOM_RIGHT_CORNER";
-    /**
-     * Position the overlay widget in the top center
-     */
-    OverlayWidgetPositionPreference[OverlayWidgetPositionPreference["TOP_CENTER"] = 2] = "TOP_CENTER";
-})(OverlayWidgetPositionPreference || (OverlayWidgetPositionPreference = {}));
 /**
  * Type of hit element with the mouse in the editor.
  */
@@ -7696,107 +7850,78 @@ var MouseTargetType;
     MouseTargetType[MouseTargetType["OUTSIDE_EDITOR"] = 13] = "OUTSIDE_EDITOR";
 })(MouseTargetType || (MouseTargetType = {}));
 /**
- * Describes what to do with the indentation when pressing Enter.
+ * A positioning preference for rendering overlay widgets.
  */
-var IndentAction;
-(function (IndentAction) {
+var OverlayWidgetPositionPreference;
+(function (OverlayWidgetPositionPreference) {
     /**
-     * Insert new line and copy the previous line's indentation.
+     * Position the overlay widget in the top right corner
      */
-    IndentAction[IndentAction["None"] = 0] = "None";
+    OverlayWidgetPositionPreference[OverlayWidgetPositionPreference["TOP_RIGHT_CORNER"] = 0] = "TOP_RIGHT_CORNER";
     /**
-     * Insert new line and indent once (relative to the previous line's indentation).
+     * Position the overlay widget in the bottom right corner
      */
-    IndentAction[IndentAction["Indent"] = 1] = "Indent";
+    OverlayWidgetPositionPreference[OverlayWidgetPositionPreference["BOTTOM_RIGHT_CORNER"] = 1] = "BOTTOM_RIGHT_CORNER";
     /**
-     * Insert two new lines:
-     *  - the first one indented which will hold the cursor
-     *  - the second one at the same indentation level
+     * Position the overlay widget in the top center
      */
-    IndentAction[IndentAction["IndentOutdent"] = 2] = "IndentOutdent";
-    /**
-     * Insert new line and outdent once (relative to the previous line's indentation).
-     */
-    IndentAction[IndentAction["Outdent"] = 3] = "Outdent";
-})(IndentAction || (IndentAction = {}));
-var CompletionItemKind;
-(function (CompletionItemKind) {
-    CompletionItemKind[CompletionItemKind["Method"] = 0] = "Method";
-    CompletionItemKind[CompletionItemKind["Function"] = 1] = "Function";
-    CompletionItemKind[CompletionItemKind["Constructor"] = 2] = "Constructor";
-    CompletionItemKind[CompletionItemKind["Field"] = 3] = "Field";
-    CompletionItemKind[CompletionItemKind["Variable"] = 4] = "Variable";
-    CompletionItemKind[CompletionItemKind["Class"] = 5] = "Class";
-    CompletionItemKind[CompletionItemKind["Struct"] = 6] = "Struct";
-    CompletionItemKind[CompletionItemKind["Interface"] = 7] = "Interface";
-    CompletionItemKind[CompletionItemKind["Module"] = 8] = "Module";
-    CompletionItemKind[CompletionItemKind["Property"] = 9] = "Property";
-    CompletionItemKind[CompletionItemKind["Event"] = 10] = "Event";
-    CompletionItemKind[CompletionItemKind["Operator"] = 11] = "Operator";
-    CompletionItemKind[CompletionItemKind["Unit"] = 12] = "Unit";
-    CompletionItemKind[CompletionItemKind["Value"] = 13] = "Value";
-    CompletionItemKind[CompletionItemKind["Constant"] = 14] = "Constant";
-    CompletionItemKind[CompletionItemKind["Enum"] = 15] = "Enum";
-    CompletionItemKind[CompletionItemKind["EnumMember"] = 16] = "EnumMember";
-    CompletionItemKind[CompletionItemKind["Keyword"] = 17] = "Keyword";
-    CompletionItemKind[CompletionItemKind["Text"] = 18] = "Text";
-    CompletionItemKind[CompletionItemKind["Color"] = 19] = "Color";
-    CompletionItemKind[CompletionItemKind["File"] = 20] = "File";
-    CompletionItemKind[CompletionItemKind["Reference"] = 21] = "Reference";
-    CompletionItemKind[CompletionItemKind["Customcolor"] = 22] = "Customcolor";
-    CompletionItemKind[CompletionItemKind["Folder"] = 23] = "Folder";
-    CompletionItemKind[CompletionItemKind["TypeParameter"] = 24] = "TypeParameter";
-    CompletionItemKind[CompletionItemKind["Snippet"] = 25] = "Snippet";
-})(CompletionItemKind || (CompletionItemKind = {}));
-var CompletionItemTag;
-(function (CompletionItemTag) {
-    CompletionItemTag[CompletionItemTag["Deprecated"] = 1] = "Deprecated";
-})(CompletionItemTag || (CompletionItemTag = {}));
-var CompletionItemInsertTextRule;
-(function (CompletionItemInsertTextRule) {
-    /**
-     * Adjust whitespace/indentation of multiline insert texts to
-     * match the current line indentation.
-     */
-    CompletionItemInsertTextRule[CompletionItemInsertTextRule["KeepWhitespace"] = 1] = "KeepWhitespace";
-    /**
-     * `insertText` is a snippet.
-     */
-    CompletionItemInsertTextRule[CompletionItemInsertTextRule["InsertAsSnippet"] = 4] = "InsertAsSnippet";
-})(CompletionItemInsertTextRule || (CompletionItemInsertTextRule = {}));
+    OverlayWidgetPositionPreference[OverlayWidgetPositionPreference["TOP_CENTER"] = 2] = "TOP_CENTER";
+})(OverlayWidgetPositionPreference || (OverlayWidgetPositionPreference = {}));
 /**
- * How a suggest provider was triggered.
+ * Vertical Lane in the overview ruler of the editor.
  */
-var CompletionTriggerKind;
-(function (CompletionTriggerKind) {
-    CompletionTriggerKind[CompletionTriggerKind["Invoke"] = 0] = "Invoke";
-    CompletionTriggerKind[CompletionTriggerKind["TriggerCharacter"] = 1] = "TriggerCharacter";
-    CompletionTriggerKind[CompletionTriggerKind["TriggerForIncompleteCompletions"] = 2] = "TriggerForIncompleteCompletions";
-})(CompletionTriggerKind || (CompletionTriggerKind = {}));
+var OverviewRulerLane;
+(function (OverviewRulerLane) {
+    OverviewRulerLane[OverviewRulerLane["Left"] = 1] = "Left";
+    OverviewRulerLane[OverviewRulerLane["Center"] = 2] = "Center";
+    OverviewRulerLane[OverviewRulerLane["Right"] = 4] = "Right";
+    OverviewRulerLane[OverviewRulerLane["Full"] = 7] = "Full";
+})(OverviewRulerLane || (OverviewRulerLane = {}));
+var RenderLineNumbersType;
+(function (RenderLineNumbersType) {
+    RenderLineNumbersType[RenderLineNumbersType["Off"] = 0] = "Off";
+    RenderLineNumbersType[RenderLineNumbersType["On"] = 1] = "On";
+    RenderLineNumbersType[RenderLineNumbersType["Relative"] = 2] = "Relative";
+    RenderLineNumbersType[RenderLineNumbersType["Interval"] = 3] = "Interval";
+    RenderLineNumbersType[RenderLineNumbersType["Custom"] = 4] = "Custom";
+})(RenderLineNumbersType || (RenderLineNumbersType = {}));
+var RenderMinimap;
+(function (RenderMinimap) {
+    RenderMinimap[RenderMinimap["None"] = 0] = "None";
+    RenderMinimap[RenderMinimap["Text"] = 1] = "Text";
+    RenderMinimap[RenderMinimap["Blocks"] = 2] = "Blocks";
+})(RenderMinimap || (RenderMinimap = {}));
+var ScrollType;
+(function (ScrollType) {
+    ScrollType[ScrollType["Smooth"] = 0] = "Smooth";
+    ScrollType[ScrollType["Immediate"] = 1] = "Immediate";
+})(ScrollType || (ScrollType = {}));
+var ScrollbarVisibility;
+(function (ScrollbarVisibility) {
+    ScrollbarVisibility[ScrollbarVisibility["Auto"] = 1] = "Auto";
+    ScrollbarVisibility[ScrollbarVisibility["Hidden"] = 2] = "Hidden";
+    ScrollbarVisibility[ScrollbarVisibility["Visible"] = 3] = "Visible";
+})(ScrollbarVisibility || (ScrollbarVisibility = {}));
+/**
+ * The direction of a selection.
+ */
+var SelectionDirection;
+(function (SelectionDirection) {
+    /**
+     * The selection starts above where it ends.
+     */
+    SelectionDirection[SelectionDirection["LTR"] = 0] = "LTR";
+    /**
+     * The selection starts below where it ends.
+     */
+    SelectionDirection[SelectionDirection["RTL"] = 1] = "RTL";
+})(SelectionDirection || (SelectionDirection = {}));
 var SignatureHelpTriggerKind;
 (function (SignatureHelpTriggerKind) {
     SignatureHelpTriggerKind[SignatureHelpTriggerKind["Invoke"] = 1] = "Invoke";
     SignatureHelpTriggerKind[SignatureHelpTriggerKind["TriggerCharacter"] = 2] = "TriggerCharacter";
     SignatureHelpTriggerKind[SignatureHelpTriggerKind["ContentChange"] = 3] = "ContentChange";
 })(SignatureHelpTriggerKind || (SignatureHelpTriggerKind = {}));
-/**
- * A document highlight kind.
- */
-var DocumentHighlightKind;
-(function (DocumentHighlightKind) {
-    /**
-     * A textual occurrence.
-     */
-    DocumentHighlightKind[DocumentHighlightKind["Text"] = 0] = "Text";
-    /**
-     * Read-access of a symbol, like reading a variable.
-     */
-    DocumentHighlightKind[DocumentHighlightKind["Read"] = 1] = "Read";
-    /**
-     * Write-access of a symbol, like writing to a variable.
-     */
-    DocumentHighlightKind[DocumentHighlightKind["Write"] = 2] = "Write";
-})(DocumentHighlightKind || (DocumentHighlightKind = {}));
 /**
  * A symbol kind.
  */
@@ -7833,6 +7958,99 @@ var SymbolTag;
 (function (SymbolTag) {
     SymbolTag[SymbolTag["Deprecated"] = 1] = "Deprecated";
 })(SymbolTag || (SymbolTag = {}));
+/**
+ * The kind of animation in which the editor's cursor should be rendered.
+ */
+var TextEditorCursorBlinkingStyle;
+(function (TextEditorCursorBlinkingStyle) {
+    /**
+     * Hidden
+     */
+    TextEditorCursorBlinkingStyle[TextEditorCursorBlinkingStyle["Hidden"] = 0] = "Hidden";
+    /**
+     * Blinking
+     */
+    TextEditorCursorBlinkingStyle[TextEditorCursorBlinkingStyle["Blink"] = 1] = "Blink";
+    /**
+     * Blinking with smooth fading
+     */
+    TextEditorCursorBlinkingStyle[TextEditorCursorBlinkingStyle["Smooth"] = 2] = "Smooth";
+    /**
+     * Blinking with prolonged filled state and smooth fading
+     */
+    TextEditorCursorBlinkingStyle[TextEditorCursorBlinkingStyle["Phase"] = 3] = "Phase";
+    /**
+     * Expand collapse animation on the y axis
+     */
+    TextEditorCursorBlinkingStyle[TextEditorCursorBlinkingStyle["Expand"] = 4] = "Expand";
+    /**
+     * No-Blinking
+     */
+    TextEditorCursorBlinkingStyle[TextEditorCursorBlinkingStyle["Solid"] = 5] = "Solid";
+})(TextEditorCursorBlinkingStyle || (TextEditorCursorBlinkingStyle = {}));
+/**
+ * The style in which the editor's cursor should be rendered.
+ */
+var TextEditorCursorStyle;
+(function (TextEditorCursorStyle) {
+    /**
+     * As a vertical line (sitting between two characters).
+     */
+    TextEditorCursorStyle[TextEditorCursorStyle["Line"] = 1] = "Line";
+    /**
+     * As a block (sitting on top of a character).
+     */
+    TextEditorCursorStyle[TextEditorCursorStyle["Block"] = 2] = "Block";
+    /**
+     * As a horizontal line (sitting under a character).
+     */
+    TextEditorCursorStyle[TextEditorCursorStyle["Underline"] = 3] = "Underline";
+    /**
+     * As a thin vertical line (sitting between two characters).
+     */
+    TextEditorCursorStyle[TextEditorCursorStyle["LineThin"] = 4] = "LineThin";
+    /**
+     * As an outlined block (sitting on top of a character).
+     */
+    TextEditorCursorStyle[TextEditorCursorStyle["BlockOutline"] = 5] = "BlockOutline";
+    /**
+     * As a thin horizontal line (sitting under a character).
+     */
+    TextEditorCursorStyle[TextEditorCursorStyle["UnderlineThin"] = 6] = "UnderlineThin";
+})(TextEditorCursorStyle || (TextEditorCursorStyle = {}));
+/**
+ * Describes the behavior of decorations when typing/editing near their edges.
+ * Note: Please do not edit the values, as they very carefully match `DecorationRangeBehavior`
+ */
+var TrackedRangeStickiness;
+(function (TrackedRangeStickiness) {
+    TrackedRangeStickiness[TrackedRangeStickiness["AlwaysGrowsWhenTypingAtEdges"] = 0] = "AlwaysGrowsWhenTypingAtEdges";
+    TrackedRangeStickiness[TrackedRangeStickiness["NeverGrowsWhenTypingAtEdges"] = 1] = "NeverGrowsWhenTypingAtEdges";
+    TrackedRangeStickiness[TrackedRangeStickiness["GrowsOnlyWhenTypingBefore"] = 2] = "GrowsOnlyWhenTypingBefore";
+    TrackedRangeStickiness[TrackedRangeStickiness["GrowsOnlyWhenTypingAfter"] = 3] = "GrowsOnlyWhenTypingAfter";
+})(TrackedRangeStickiness || (TrackedRangeStickiness = {}));
+/**
+ * Describes how to indent wrapped lines.
+ */
+var WrappingIndent;
+(function (WrappingIndent) {
+    /**
+     * No indentation => wrapped lines begin at column 1.
+     */
+    WrappingIndent[WrappingIndent["None"] = 0] = "None";
+    /**
+     * Same => wrapped lines get the same indentation as the parent.
+     */
+    WrappingIndent[WrappingIndent["Same"] = 1] = "Same";
+    /**
+     * Indent => wrapped lines get +1 indentation toward the parent.
+     */
+    WrappingIndent[WrappingIndent["Indent"] = 2] = "Indent";
+    /**
+     * DeepIndent => wrapped lines get +2 indentation toward the parent.
+     */
+    WrappingIndent[WrappingIndent["DeepIndent"] = 3] = "DeepIndent";
+})(WrappingIndent || (WrappingIndent = {}));
 
 // CONCATENATED MODULE: ./node_modules/monaco-editor/esm/vs/editor/common/standalone/standaloneBase.js
 /*---------------------------------------------------------------------------------------------
