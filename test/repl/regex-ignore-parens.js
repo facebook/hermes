@@ -8,5 +8,26 @@
 
 // RUN: cat %s | %hermes -prompt="" -prompt2="" | %FileCheck --match-full-lines %s
 
+foo = 2;
+
+// The following statements use `/` as division.
 (1 / 2);
 // CHECK: 0.5
+x = (1 / (foo) / 1);
+// CHECK: 0.5
+(
+  1 / 2
+);
+// CHECK: 0.5
+
+// The following statements use `/` for a regex.
+(/foo()/);
+// CHECK: /foo()/
+r = /foo\(/;
+// CHECK: /foo\(/
+((/foo\(/));
+// CHECK: /foo\(/
+(
+  /foo\)/
+)
+// CHECK: /foo\)/

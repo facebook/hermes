@@ -193,11 +193,64 @@ static bool needsAnotherLine(llvm::StringRef input) {
     }
   };
 
-  // Use AllowDiv to not skip parens when using division.
-  // TODO: Find a way to use the correct GrammarContext and make this work
-  // for all REPL inputs.
-  while (const parser::Token *token =
-             lexer.advance(parser::JSLexer::GrammarContext::AllowDiv)) {
+  // Look at the previous token to see if the next token could possibly be the
+  // beginning of a regular expression.
+  // https://github.com/mikesamuel/es5-lexer/blob/master/src/guess_is_regexp.js
+  auto isRegexPossible = [](OptValue<parser::TokenKind> previousTokenKind) {
+    if (!previousTokenKind) {
+      return true;
+    }
+    switch (*previousTokenKind) {
+      case parser::TokenKind::rw_break:
+      case parser::TokenKind::rw_case:
+      case parser::TokenKind::rw_continue:
+      case parser::TokenKind::rw_delete:
+      case parser::TokenKind::rw_do:
+      case parser::TokenKind::rw_else:
+      case parser::TokenKind::rw_finally:
+      case parser::TokenKind::rw_in:
+      case parser::TokenKind::rw_instanceof:
+      case parser::TokenKind::rw_return:
+      case parser::TokenKind::rw_throw:
+      case parser::TokenKind::rw_try:
+      case parser::TokenKind::rw_typeof:
+      case parser::TokenKind::rw_void:
+      case parser::TokenKind::plus:
+      case parser::TokenKind::minus:
+      case parser::TokenKind::period:
+      case parser::TokenKind::slash:
+      case parser::TokenKind::comma:
+      case parser::TokenKind::star:
+      case parser::TokenKind::exclaim:
+      case parser::TokenKind::percent:
+      case parser::TokenKind::amp:
+      case parser::TokenKind::l_paren:
+      case parser::TokenKind::colon:
+      case parser::TokenKind::semi:
+      case parser::TokenKind::less:
+      case parser::TokenKind::equal:
+      case parser::TokenKind::greater:
+      case parser::TokenKind::question:
+      case parser::TokenKind::l_square:
+      case parser::TokenKind::caret:
+      case parser::TokenKind::l_brace:
+      case parser::TokenKind::pipe:
+      case parser::TokenKind::r_brace:
+      case parser::TokenKind::tilde:
+        return true;
+      default:
+        return false;
+    }
+  };
+
+  OptValue<parser::TokenKind> previousTokenKind;
+
+  // Use AllowRegExp when a regular expression is possible and use AllowDiv
+  // otherwise so that division is correctly parsed.
+  while (const parser::Token *token = lexer.advance(
+             isRegexPossible(previousTokenKind)
+                 ? parser::JSLexer::GrammarContext::AllowRegExp
+                 : parser::JSLexer::GrammarContext::AllowDiv)) {
     if (token->getKind() == parser::TokenKind::eof) {
       break;
     }
@@ -227,6 +280,7 @@ static bool needsAnotherLine(llvm::StringRef input) {
         // Do nothing for the other tokens.
         break;
     }
+    previousTokenKind = token->getKind();
   }
 
   // If the stack is empty, then we can't recover from the error,
