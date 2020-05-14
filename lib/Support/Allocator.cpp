@@ -20,7 +20,9 @@ void *BacktrackingBumpPtrAllocator::allocateNewSlab(
   state_->slab++;
   state_->offset = 0;
   if (state_->slab == slabs_.size()) {
-    slabs_.push_back(llvm::make_unique<Slab>());
+    // Use `new Slab` without parentheses to avoid zeroing out the memory
+    // for the new slab.
+    slabs_.push_back(std::unique_ptr<Slab>(new Slab));
   }
   auto currentSlab =
       reinterpret_cast<uintptr_t>(&slabs_[state_->slab].get()->data);
