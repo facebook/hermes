@@ -28,8 +28,11 @@ std::unique_ptr<SourceMap> SourceMapParser::parse(
 
   llvm::Optional<JSONValue *> parsedMap = jsonParser.parse();
   if (!parsedMap.hasValue()) {
+    // This does not need an error since `parse` should have emitted one.
     return nullptr;
   }
+
+  SMLoc genericLoc = SMLoc::getFromPointer(sourceMap.getBufferStart());
 
   // Parse for JavaScript version 3 source map https://sourcemaps.info/spec.html
   // Not yet implemented:
@@ -40,14 +43,17 @@ std::unique_ptr<SourceMap> SourceMapParser::parse(
   //  5. Facebook segments extension.
   auto *json = llvm::dyn_cast_or_null<JSONObject>(parsedMap.getValue());
   if (json == nullptr) {
+    sm.error(genericLoc, "Expected a source map object");
     return nullptr;
   }
 
   auto *version = llvm::dyn_cast_or_null<JSONNumber>(json->get("version"));
   if (version == nullptr) {
+    sm.error(genericLoc, "Source map does not contain a version field");
     return nullptr;
   }
   if ((uint64_t)version->getValue() != 3) {
+    sm.error(genericLoc, "Source map version != 3");
     return nullptr;
   }
 
@@ -61,6 +67,7 @@ std::unique_ptr<SourceMap> SourceMapParser::parse(
 
   auto *sourcesJson = llvm::dyn_cast_or_null<JSONArray>(json->get("sources"));
   if (sourcesJson == nullptr) {
+    sm.error(genericLoc, "'sources' key missing from source map");
     return nullptr;
   }
   auto *fbSourcesJson =
@@ -72,6 +79,10 @@ std::unique_ptr<SourceMap> SourceMapParser::parse(
   for (unsigned i = 0, e = sources.size(); i < e; ++i) {
     auto *file = llvm::dyn_cast_or_null<JSONString>(sourcesJson->at(i));
     if (file == nullptr) {
+      sm.error(
+          genericLoc,
+          "Source filename #" + oscompat::to_string(i) +
+              " not found or not string");
       return nullptr;
     }
     const JSONValue *metadata = nullptr;
@@ -84,12 +95,14 @@ std::unique_ptr<SourceMap> SourceMapParser::parse(
 
   auto *mappings = llvm::dyn_cast_or_null<JSONString>(json->get("mappings"));
   if (mappings == nullptr) {
+    sm.error(genericLoc, "'mappings' key missing from source map");
     return nullptr;
   }
 
   std::vector<SourceMap::SegmentList> lines;
   bool succeed = parseMappings(mappings->str(), lines);
   if (!succeed) {
+    sm.error(genericLoc, "Failed to parse source map mappings");
     return nullptr;
   }
   return llvm::make_unique<SourceMap>(
