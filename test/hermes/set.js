@@ -40,6 +40,11 @@ try {
 }
 //CHECK-NEXT: TypeError: Constructor Set requires 'new'
 
+var s = new Set([1, 2, 3, 4, 5]);
+s.forEach(Error);
+print(s.size);
+//CHECK-NEXT: 5
+
 // Make sure we can insert internal object ID into a frozen object.
 var fo = {};
 Object.freeze(fo);

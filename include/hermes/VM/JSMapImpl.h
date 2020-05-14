@@ -122,9 +122,11 @@ class JSMapImpl final : public JSObject {
       Handle<> thisArg) {
     self->assertInitialized();
     MutableHandle<HashMapEntry> entry{runtime};
+    GCScopeMarkerRAII marker{runtime};
     for (entry = self->storage_.get(runtime)->iteratorNext(runtime); entry;
          entry =
              self->storage_.get(runtime)->iteratorNext(runtime, entry.get())) {
+      marker.flush();
       HermesValue key = entry->key;
       HermesValue value = entry->value;
       assert(!key.isEmpty() && "Invalid key encountered");
