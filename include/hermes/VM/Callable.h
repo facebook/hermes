@@ -652,7 +652,7 @@ class NativeFunction : public Callable {
   /// \param index must be less than the \c additionalSlotCount passed to
   /// the create method.
   static void setAdditionalSlotValue(
-      JSObject *self,
+      NativeFunction *self,
       Runtime *runtime,
       unsigned index,
       HermesValue value) {
