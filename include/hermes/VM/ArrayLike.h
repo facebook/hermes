@@ -32,8 +32,9 @@ inline CallResult<uint64_t> getArrayLikeLength(
 /// ES9 7.3.17 CreateListFromArrayLike
 /// This will call ElementCB length times, once for each element,
 /// passing \c Runtime*, the \c uint64_t index, and \c PseudoHandle<>
-/// value.  ElementCB is permitted to allocate, or raise exceptions.
-
+/// value.  ElementCB is responsible for consuming the elements
+/// however it likes.  It is permitted to allocate, and it must return
+/// ExecutionStatus.
 template <typename ElementCB>
 ExecutionStatus createListFromArrayLike(
     Handle<JSObject> arrayLikeHandle,
