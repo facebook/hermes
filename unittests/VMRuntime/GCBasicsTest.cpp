@@ -29,6 +29,11 @@ using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
 
 struct Dummy final : public GCCell {
   static const VTable vt;
+#ifdef HERMESVM_GC_HADES
+  // Some padding to meet the minimum cell size.
+  uint64_t padding1_{0};
+  uint64_t padding2_{0};
+#endif
 
   static Dummy *create(DummyRuntime &runtime) {
     return new (runtime.allocWithFinalizer(sizeof(Dummy)))
@@ -95,7 +100,8 @@ struct GCBasicsTest : public ::testing::Test {
         rt(*runtime) {}
 };
 
-#ifndef NDEBUG
+// Hades doesn't report its stats the same way as other GCs.
+#if !defined(NDEBUG) && !defined(HERMESVM_GC_HADES)
 TEST_F(GCBasicsTest, SmokeTest) {
   auto &gc = rt.gc;
   GCBase::HeapInfo info;
@@ -407,7 +413,7 @@ TEST_F(GCBasicsTest, TestYoungGenStats) {
 }
 
 #endif // HERMES_GC_GENERATIONAL || HERMES_GC_NONCONTIG_GENERATIONAL
-#endif // !NDEBUG
+#endif // !NDEBUG && !HERMESVM_GC_HADES
 
 TEST_F(GCBasicsTest, VariableSizeRuntimeCellOffsetTest) {
   auto *cell = Array::create(rt, 1);
@@ -421,6 +427,8 @@ TEST_F(GCBasicsTest, TestFixedRuntimeCell) {
 
 /// Test that the extra bytes in the heap are reported correctly.
 TEST_F(GCBasicsTest, ExtraBytes) {
+  // Hades doesn't do malloc size reporting yet.
+#ifndef HERMESVM_GC_HADES
   auto &gc = rt.gc;
 
   {
@@ -438,8 +446,11 @@ TEST_F(GCBasicsTest, ExtraBytes) {
     gc.getHeapInfoWithMallocSize(info);
     EXPECT_EQ(info.mallocSizeEstimate, getExtraSize(nullptr) * 2);
   }
+#endif
 }
 
+// Hades doesn't do any ID tracking yet, or GCEventKind monitoring.
+#ifndef HERMESVM_GC_HADES
 /// Test that the id is set to a unique number for each allocated object.
 TEST_F(GCBasicsTest, TestIDIsUnique) {
   auto *cell = Dummy::create(rt);
@@ -469,6 +480,7 @@ TEST(GCCallbackTest, TestCallbackInvoked) {
   EXPECT_EQ(GCEventKind::CollectionStart, ev[0]);
   EXPECT_EQ(GCEventKind::CollectionEnd, ev[1]);
 }
+#endif
 
 #ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {

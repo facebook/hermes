@@ -156,8 +156,8 @@ elseif (${HERMESVM_GCKIND} STREQUAL "MALLOC")
   list(APPEND source_files gcs/MallocGC.cpp gcs/FillerCell.cpp)
 elseif (${HERMESVM_GCKIND} STREQUAL "HADES")
   list(APPEND source_files
-            gcs/AlignedStorage.cpp
             gcs/AlignedHeapSegment.cpp
+            gcs/AlignedStorage.cpp
             gcs/CardTableNC.cpp
             gcs/CompleteMarkState.cpp
             gcs/FillerCell.cpp

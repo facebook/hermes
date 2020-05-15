@@ -60,6 +60,8 @@ const VTable TestCell::vt{CellKind::FillerCellKind,
 
 namespace {
 
+// Hades doesn't call markWeak the same number of times as other GCs.
+#ifndef HERMESVM_GC_HADES
 MetadataTableForTests getMetadataTable() {
   // Nothing to mark for either of them, leave a blank metadata.
   static const Metadata storage[] = {Metadata(), Metadata()};
@@ -103,6 +105,7 @@ TEST(GCMarkWeakTest, MarkWeak) {
   EXPECT_EQ(1 + 3 * checkHeapOn, numMarkWeakCalls);
   EXPECT_EQ(initUsedWeak, gc.countUsedWeakRefs());
 }
+#endif
 
 } // namespace
 

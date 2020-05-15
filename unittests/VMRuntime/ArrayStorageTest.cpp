@@ -108,6 +108,7 @@ TEST_F(ArrayStorageTest, PushBackTest) {
 }
 
 TEST_F(ArrayStorageTest, AllowTrimming) {
+  // Hades doesn't trim arrays.
 #ifndef HERMESVM_GC_HADES
   MutableHandle<ArrayStorage> st(runtime);
   constexpr ArrayStorage::size_type originalCapacity = 4;

@@ -92,11 +92,14 @@ TEST_F(WeakValueMapTest, SmokeTest) {
   gcScope.flushToMarker(marker);
 
   runtime->collect();
+#ifndef HERMESVM_GC_HADES
+  // Hades doesn't support DebugHeapInfo yet.
   GCBase::DebugHeapInfo debugInfo;
   runtime->getHeap().getDebugHeapInfo(debugInfo);
   // We can't be sure how many cells precisely this will collect.
   ASSERT_TRUE(
       debugInfo.numCollectedObjects > 0 && debugInfo.numCollectedObjects <= 5);
+#endif
   // Make sure we can't find the collected value.
   ASSERT_TRUE(wvp.find(1) == wvp.end());
 
@@ -106,10 +109,13 @@ TEST_F(WeakValueMapTest, SmokeTest) {
   gcScope.flushToMarker(marker);
 
   runtime->collect();
+#ifndef HERMESVM_GC_HADES
+  // Hades doesn't support debugInfo yet.
   runtime->getHeap().getDebugHeapInfo(debugInfo);
   // We can't be sure how many cells precisely this will collect.
   ASSERT_TRUE(
       debugInfo.numCollectedObjects > 0 && debugInfo.numCollectedObjects <= 5);
+#endif
 
   it = wvp.begin();
   ASSERT_TRUE(it != wvp.end());

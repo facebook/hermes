@@ -106,6 +106,8 @@ TEST_F(IdentifierTableTest, NotUniquedSymbol) {
 }
 
 TEST_F(IdentifierTableTest, LazyExternalSymbolTooBig) {
+  // Hades doesn't handle external memory crediting/debiting yet.
+#ifndef HERMESVM_GC_HADES
   GCScope gcScope{runtime};
   auto &idTable = runtime->getIdentifierTable();
 
@@ -125,6 +127,7 @@ TEST_F(IdentifierTableTest, LazyExternalSymbolTooBig) {
   EXPECT_DEATH_IF_SUPPORTED(
       { idTable.getStringPrim(runtime, symbol); },
       "Unhandled out of memory exception");
+#endif
 }
 
 // Verifies that SymbolIDs are allocated consecutively, increasing from zero, as
