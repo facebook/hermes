@@ -58,7 +58,8 @@ void DecoratedObjectDeserialize(Deserializer &d, CellKind kind) {
 PseudoHandle<DecoratedObject> DecoratedObject::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle,
-    std::unique_ptr<Decoration> decoration) {
+    std::unique_ptr<Decoration> decoration,
+    unsigned int additionalSlotCount) {
   JSObjectAlloc<DecoratedObject, HasFinalizer::Yes> mem{runtime};
   return mem.initToPseudoHandle(new (mem) DecoratedObject(
       runtime,
@@ -66,7 +67,8 @@ PseudoHandle<DecoratedObject> DecoratedObject::create(
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(
           *parentHandle,
-          numOverlapSlots<DecoratedObject>() + ANONYMOUS_PROPERTY_SLOTS),
+          numOverlapSlots<DecoratedObject>() + ANONYMOUS_PROPERTY_SLOTS +
+              additionalSlotCount),
       std::move(decoration)));
 }
 

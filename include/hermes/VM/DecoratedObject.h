@@ -15,9 +15,11 @@
 namespace hermes {
 namespace vm {
 
-/// A DecoratedObject is a subclass of JSObject which owns a pointer to a native
-/// C++ object, called its Decoration.  (This has nothing to do with
-/// jsi::RuntimeDecoration or anything else in jsi/decorator.h.)
+/// A DecoratedObject is a subclass of JSObject which owns a pointer to a
+/// native C++ object, called its Decoration.  (This has nothing to do with
+/// jsi::RuntimeDecoration or anything else in jsi/decorator.h.)  It can also
+/// include additional internal slots, as in OrdinaryObjectCreate's
+/// additionalInternalSlotsList).
 class DecoratedObject : public JSObject {
  public:
   struct Decoration {
@@ -31,11 +33,17 @@ class DecoratedObject : public JSObject {
   };
 
   /// Allocate a DecoratedObject with the given prototype and decoration.
+
+  /// \param additionalSlotCount internal slots to reserve within the
+  /// object.  Only a small number of slots are available; this value
+  /// cannot be greater than InternalProperty::NumInternalProperties -
+  /// (numOverlaps + ANONYMOUS_PROPERTY_SLOTS), which is currently 3.
   /// If allocation fails, the GC declares an OOM.
   static PseudoHandle<DecoratedObject> create(
       Runtime *runtime,
       Handle<JSObject> parentHandle,
-      std::unique_ptr<Decoration> decoration);
+      std::unique_ptr<Decoration> decoration,
+      unsigned int additionalSlotCount = 0);
 
   /// Access the decoration.
   Decoration *getDecoration() {
@@ -50,6 +58,34 @@ class DecoratedObject : public JSObject {
   /// Set the decoration to a new value \p value.
   void setDecoration(std::unique_ptr<Decoration> val) {
     decoration_ = std::move(val);
+  }
+
+  /// \return the value in an additional slot.
+  /// \param index must be less than the \c additionalSlotCount passed to
+  /// the create method.
+  static HermesValue getAdditionalSlotValue(
+      DecoratedObject *self,
+      Runtime *runtime,
+      unsigned index) {
+    return JSObject::getInternalProperty(
+        self,
+        runtime,
+        numOverlapSlots<DecoratedObject>() + ANONYMOUS_PROPERTY_SLOTS + index);
+  }
+
+  /// Set the value in an additional slot.
+  /// \param index must be less than the \c additionalSlotCount passed to
+  /// the create method.
+  static void setAdditionalSlotValue(
+      DecoratedObject *self,
+      Runtime *runtime,
+      unsigned index,
+      HermesValue value) {
+    return JSObject::setInternalProperty(
+        self,
+        runtime,
+        numOverlapSlots<DecoratedObject>() + ANONYMOUS_PROPERTY_SLOTS + index,
+        value);
   }
 
   using Super = JSObject;
