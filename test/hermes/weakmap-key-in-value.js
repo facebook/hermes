@@ -8,7 +8,7 @@
 // RUN: %hermes -gc-init-heap=4M -O -Xhermes-internal-test-methods %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -emit-binary -out %t.hbc %s && %hermes -gc-init-heap=4M -Xhermes-internal-test-methods %t.hbc | %FileCheck --match-full-lines %s
 
-"use strict"
+"use strict";
 
 // When a key object is only reachable through a value of a WeakMap, it should
 // be removed.
@@ -53,7 +53,6 @@ outerMap = foo1();
 gc();
 // CHECK-NEXT: 0
 print(HermesInternal.getWeakSize(outerMap));
-
 
 // The value is a function capturing a field containing the key
 function foo2() {
@@ -168,3 +167,33 @@ var pair6 = foo6();
 gc();
 // CHECK-NEXT: 2
 print(HermesInternal.getWeakSize(pair6[1]));
+
+// This test ensures that if a WeakMap's key is cleared in a YG GC, during the
+// next OG GC the value is also cleared.
+function foo7() {
+  function createWeakMap() {
+    var v1 = {};
+    var wm1 = new WeakMap();
+    var v2 = {};
+    wm1.set(v2, v1);
+    var wm2 = new WeakMap();
+    v1.a = wm2;
+    // v2 will become unreachable after this function exits, and thus so will
+    // v1 and wm2.
+    return wm1;
+  }
+  var wm = createWeakMap();
+  var arr = [0];
+  for (var i = 0; i < 57; i++) {
+    wm.set(arr, 0);
+    arr = [0];
+    arr[3262] = 0;
+  }
+  gc();
+  // CHECK-NEXT: 1
+  print(HermesInternal.getWeakSize(wm));
+  // Make sure arr is used after the call to getWeakSize to ensure optimizations
+  // don't change what keys are alive.
+  return arr;
+}
+foo7();

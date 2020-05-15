@@ -83,7 +83,7 @@ void GCBase::clearEntriesWithUnreachableKeys(
        iter != end;
        iter++) {
     JSObject *keyObj = iter->getObject(gc);
-    if (keyObj && !objIsMarked(keyObj)) {
+    if (!keyObj || !objIsMarked(keyObj)) {
       weakMap->clearEntryDirect(gc, *iter);
     }
   }
@@ -227,6 +227,9 @@ gcheapsize_t GCBase::completeWeakMapMarking(
     return 0;
   }
 
+#ifndef NDEBUG
+  const auto numReachableWeakMaps = reachableWeakMaps.size();
+#endif
   for (auto *weakMap : reachableWeakMaps) {
     clearEntriesWithUnreachableKeys(gc, weakMap, objIsMarked);
     // Previously we scanned the weak map while its value storage was
@@ -247,6 +250,10 @@ gcheapsize_t GCBase::completeWeakMapMarking(
   // Because of the limited nature of the marking done above, we can
   // assert that overflow did not occur.
   assert(!checkMarkStackOverflow());
+  // Also ensure that no new WeakMaps were encountered during the final drains.
+  assert(
+      numReachableWeakMaps == reachableWeakMaps.size() &&
+      "A reachable weak map wasn't marked");
 
   return weakMapAllocBytes;
 }
