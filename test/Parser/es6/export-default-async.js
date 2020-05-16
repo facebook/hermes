@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermesc -commonjs -dump-ast -pretty-json %s 2>/dev/null ) | %FileCheck --match-full-lines %s
+// RUN: %hermesc -commonjs -dump-ast -pretty-json %s | %FileCheck --match-full-lines %s
 
 // CHECK-LABEL:   "body": {
 // CHECK-NEXT:     "type": "BlockStatement",

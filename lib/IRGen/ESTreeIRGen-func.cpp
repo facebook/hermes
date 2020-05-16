@@ -55,6 +55,12 @@ Identifier FunctionContext::genAnonymousLabelName(StringRef hint) {
 
 void ESTreeIRGen::genFunctionDeclaration(
     ESTree::FunctionDeclarationNode *func) {
+  if (func->_async) {
+    Builder.getModule()->getContext().getSourceErrorManager().error(
+        func->getSourceRange(), Twine("async functions are unsupported"));
+    return;
+  }
+
   // Find the name of the function.
   Identifier functionName = getNameFieldFromID(func->_id);
   LLVM_DEBUG(dbgs() << "IRGen function \"" << functionName << "\".\n");
@@ -76,6 +82,12 @@ void ESTreeIRGen::genFunctionDeclaration(
 Value *ESTreeIRGen::genFunctionExpression(
     ESTree::FunctionExpressionNode *FE,
     Identifier nameHint) {
+  if (FE->_async) {
+    Builder.getModule()->getContext().getSourceErrorManager().error(
+        FE->getSourceRange(), Twine("async functions are unsupported"));
+    return Builder.getLiteralUndefined();
+  }
+
   LLVM_DEBUG(
       dbgs() << "Creating anonymous closure. "
              << Builder.getInsertionBlock()->getParent()->getInternalName()
@@ -121,6 +133,12 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
       dbgs() << "Creating arrow function. "
              << Builder.getInsertionBlock()->getParent()->getInternalName()
              << ".\n");
+
+  if (AF->_async) {
+    Builder.getModule()->getContext().getSourceErrorManager().error(
+        AF->getSourceRange(), Twine("async functions are unsupported"));
+    return Builder.getLiteralUndefined();
+  }
 
   auto *newFunc = Builder.createFunction(
       nameHint,
