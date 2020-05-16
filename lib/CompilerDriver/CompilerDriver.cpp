@@ -1371,6 +1371,9 @@ bool generateIRForSourcesAsCJSModules(
       if (!ast) {
         return false;
       }
+      if (cl::DumpTarget < DumpIR) {
+        continue;
+      }
       generateIRForCJSModule(
           cast<ESTree::FunctionExpressionNode>(ast),
           moduleInSegment.id,
@@ -1616,6 +1619,9 @@ CompileResult processSourceFiles(
             std::move(fileBufs),
             sourceMapGen ? &*sourceMapGen : nullptr)) {
       return ParsingFailed;
+    }
+    if (cl::DumpTarget < DumpIR) {
+      return Success;
     }
   } else {
     if (sourceMapGen) {
