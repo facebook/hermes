@@ -10,6 +10,7 @@
 
 #include "hermes/AST/Context.h"
 #include "hermes/AST/ESTree.h"
+#include "hermes/Parser/Config.h"
 
 #include "llvm/ADT/Optional.h"
 

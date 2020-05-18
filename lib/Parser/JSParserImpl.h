@@ -196,6 +196,12 @@ class JSParserImpl {
   /// This is used when checking if `await` is a valid Identifier name.
   bool paramAwait_{false};
 
+#if HERMES_PARSE_JSX
+  /// Incremented when inside a JSX tag and decremented when leaving it.
+  /// Used to know whether to lex JS values or JSX text.
+  uint32_t jsxDepth_{0};
+#endif
+
   // Certain known identifiers which we need to use when constructing the
   // ESTree or when parsing;
   UniqueString *getIdent_;
@@ -345,10 +351,16 @@ class JSParserImpl {
 
   /// Check whether the current token is the specified one and consume it if so.
   /// \returns true if the token matched.
-  bool checkAndEat(TokenKind kind);
+  bool checkAndEat(
+      TokenKind kind,
+      JSLexer::GrammarContext grammarContext =
+          JSLexer::GrammarContext::AllowRegExp);
   /// Check whether the current token is the specified identifier and consume it
   /// if so. \returns true if the token matched.
-  bool checkAndEat(UniqueString *ident);
+  bool checkAndEat(
+      UniqueString *ident,
+      JSLexer::GrammarContext grammarContext =
+          JSLexer::GrammarContext::AllowRegExp);
   /// Check whether the current token is the specified one. \returns true if it
   /// is.
   bool check(TokenKind kind) const {
@@ -778,6 +790,31 @@ class JSParserImpl {
   /// \return the allocated directive statement if this is a directive, or
   ///    null if it isn't.
   ESTree::ExpressionStatementNode *parseDirective();
+
+#if HERMES_PARSE_JSX
+  Optional<ESTree::Node *> parseJSX();
+  Optional<ESTree::Node *> parseJSXElement(SMLoc start);
+  Optional<ESTree::Node *> parseJSXFragment(SMLoc start);
+
+  Optional<ESTree::JSXOpeningElementNode *> parseJSXOpeningElement(SMLoc start);
+  Optional<ESTree::Node *> parseJSXSpreadAttribute();
+  Optional<ESTree::Node *> parseJSXAttribute();
+
+  /// \param children populated with the JSX children.
+  /// \return the JSXClosingElement or JSXClosingFragment.
+  Optional<ESTree::Node *> parseJSXChildren(ESTree::NodeList &children);
+  Optional<ESTree::Node *> parseJSXChildExpression(SMLoc start);
+
+  /// Parse JSXClosingElement or JSXClosingFragment.
+  Optional<ESTree::Node *> parseJSXClosing(SMLoc start);
+
+  enum class AllowJSXMemberExpression { No, Yes };
+
+  /// \param allowMemberExpression whether JSXMemberExpression (foo.bar) is a
+  /// valid parse of the JSXElementName.
+  Optional<ESTree::Node *> parseJSXElementName(
+      AllowJSXMemberExpression allowJSXMemberExpression);
+#endif
 
   /// RAII to save and restore the current setting of "strict mode".
   class SaveStrictMode {

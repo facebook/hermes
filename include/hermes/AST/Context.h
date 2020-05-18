@@ -173,6 +173,9 @@ class Context {
   /// and use that for requiring modules.
   bool useCJSModules_{false};
 
+  /// If true, allow parsing JSX as a primary expression.
+  bool parseJSX_{false};
+
   /// If non-null, the resolution table which resolves static require().
   const std::unique_ptr<ResolutionTable> resolutionTable_;
 
@@ -297,6 +300,13 @@ class Context {
   }
   bool getUseCJSModules() const {
     return useCJSModules_;
+  }
+
+  void setParseJSX(bool parseJSX) {
+    parseJSX_ = parseJSX;
+  }
+  bool getParseJSX() const {
+    return parseJSX_;
   }
 
   bool isLazyCompilation() const {

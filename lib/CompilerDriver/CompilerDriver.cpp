@@ -407,6 +407,11 @@ static opt<bool> CommonJS(
     init(false),
     cat(CompilerCategory));
 
+#if HERMES_PARSE_JSX
+static opt<bool>
+    JSX("parse-jsx", desc("Parse JSX"), init(false), cat(CompilerCategory));
+#endif
+
 static CLFlag StaticRequire(
     'f',
     "static-require",
@@ -986,6 +991,12 @@ std::shared_ptr<Context> createContext(
   if (cl::CommonJS) {
     context->setUseCJSModules(true);
   }
+
+#if HERMES_PARSE_JSX
+  if (cl::JSX) {
+    context->setParseJSX(true);
+  }
+#endif
 
   if (cl::EmitDebugInfo) {
     context->setDebugInfoSetting(DebugInfoSetting::ALL);

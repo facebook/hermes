@@ -178,17 +178,21 @@ bool JSParserImpl::eat(
   return false;
 }
 
-bool JSParserImpl::checkAndEat(TokenKind kind) {
+bool JSParserImpl::checkAndEat(
+    TokenKind kind,
+    JSLexer::GrammarContext grammarContext) {
   if (tok_->getKind() == kind) {
-    advance();
+    advance(grammarContext);
     return true;
   }
   return false;
 }
 
-bool JSParserImpl::checkAndEat(UniqueString *ident) {
+bool JSParserImpl::checkAndEat(
+    UniqueString *ident,
+    JSLexer::GrammarContext grammarContext) {
   if (check(ident)) {
-    advance();
+    advance(grammarContext);
     return true;
   }
   return false;
@@ -2083,6 +2087,20 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
       }
       return optTemplate.getValue();
     }
+
+#if HERMES_PARSE_JSX
+    case TokenKind::less:
+      if (context_.getParseJSX()) {
+        auto optJSX = parseJSX();
+        if (!optJSX)
+          return None;
+        return optJSX.getValue();
+      }
+      lexer_.error(
+          tok_->getStartLoc(),
+          "invalid expression (possible JSX: pass -parse-jsx to parse)");
+      return None;
+#endif
 
     default:
       lexer_.error(tok_->getStartLoc(), "invalid expression");

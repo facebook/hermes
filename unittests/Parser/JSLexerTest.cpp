@@ -838,4 +838,23 @@ TEST(JSLexerTest, RegressConsumeBadHexTest) {
   ASSERT_EQ(0, diag.getErrCountClear());
 }
 
+TEST(JSLexerTest, JSXTest) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext diag(sm);
+
+  JSLexer lex("abc def{xyz<qwerty", sm, alloc);
+
+  ASSERT_EQ(TokenKind::jsx_text, lex.advanceInJSXChild()->getKind());
+  EXPECT_STREQ("abc def", lex.getCurToken()->getJSXTextRaw()->c_str());
+
+  ASSERT_EQ(TokenKind::l_brace, lex.advanceInJSXChild()->getKind());
+  ASSERT_EQ(TokenKind::jsx_text, lex.advanceInJSXChild()->getKind());
+  EXPECT_STREQ("xyz", lex.getCurToken()->getJSXTextRaw()->c_str());
+
+  ASSERT_EQ(TokenKind::less, lex.advanceInJSXChild()->getKind());
+  ASSERT_EQ(TokenKind::jsx_text, lex.advanceInJSXChild()->getKind());
+  EXPECT_STREQ("qwerty", lex.getCurToken()->getJSXTextRaw()->c_str());
+}
+
 } // namespace

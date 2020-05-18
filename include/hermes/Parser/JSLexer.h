@@ -8,6 +8,7 @@
 #ifndef HERMES_PARSER_JSLEXER_H
 #define HERMES_PARSER_JSLEXER_H
 
+#include "hermes/Parser/Config.h"
 #include "hermes/Support/Allocator.h"
 #include "hermes/Support/OptValue.h"
 #include "hermes/Support/SourceErrorManager.h"
@@ -74,9 +75,11 @@ class Token {
 
   RegExpLiteral *regExpLiteral_{nullptr};
 
-  /// The Template Raw Value (TRV) associated with the token if it represents
+  /// Representation of one these depending on the TokenKind:
+  /// - The Template Raw Value (TRV) associated with the token if it represents
   /// a part or whole of a template literal.
-  UniqueString *templateRawValue_{nullptr};
+  /// - The raw string of a JSXText.
+  UniqueString *rawString_{nullptr};
 
   /// If the current token is a string literal, this flag indicates whether it
   /// contains any escapes or new line continuations. We need this in order to
@@ -162,12 +165,22 @@ class Token {
 
   UniqueString *getTemplateRawValue() const {
     assert(isTemplateLiteral());
-    return templateRawValue_;
+    return rawString_;
   }
 
   RegExpLiteral *getRegExpLiteral() const {
     assert(getKind() == TokenKind::regexp_literal);
     return regExpLiteral_;
+  }
+
+  UniqueString *getJSXTextValue() const {
+    assert(getKind() == TokenKind::jsx_text);
+    return stringLiteral_;
+  }
+
+  UniqueString *getJSXTextRaw() const {
+    assert(getKind() == TokenKind::jsx_text);
+    return rawString_;
   }
 
  private:
@@ -216,7 +229,13 @@ class Token {
         kind == TokenKind::template_middle || kind == TokenKind::template_tail);
     kind_ = kind;
     stringLiteral_ = cooked;
-    templateRawValue_ = raw;
+    rawString_ = raw;
+  }
+
+  void setJSXText(UniqueString *value, UniqueString *raw) {
+    kind_ = TokenKind::jsx_text;
+    stringLiteral_ = value;
+    rawString_ = raw;
   }
 
   friend class JSLexer;
@@ -357,16 +376,22 @@ class JSLexer {
     curCharPtr_ = bufferEnd_;
   }
 
-  /// Grammar context to be passed to advance() determining whether "/" or
-  /// RegExp can follow at that point.
-  enum GrammarContext { AllowRegExp, AllowDiv };
+  /// Grammar context to be passed to advance().
+  /// - AllowRegExp: RegExp can follow
+  /// - AllowDiv: "/" can follow
+  /// - AllowJSXIdentifier: "/" can follow and "-" is part of identifiers.
+  enum GrammarContext { AllowRegExp, AllowDiv, AllowJSXIdentifier };
 
   /// Consume the current token and scan the next one, which becomes the new
   /// current token. All whitespace is skipped befire the new token and if
   /// a line terminator was encountered, the newLineBefireCurrentToken_ flag is
   /// set.
-  /// \param grammarContext enable recognizing either "/" and "/=", or a regexp.
+  /// \param grammarContext determines "/", "/=", regexp, and JSX identifiers.
   const Token *advance(GrammarContext grammarContext = AllowRegExp);
+
+  /// Consume the current token and scan a new one inside a JSX child.
+  /// This scans JSXText or one of the punctuators: {, <, >, }.
+  const Token *advanceInJSXChild();
 
   /// Check whether the current token is a directive, in other words is it a
   /// string literal without escapes or new line continuations, followed by
@@ -530,12 +555,14 @@ class JSLexer {
   bool consumeIdentifierStart();
 
   /// Decode a sequence (possibly empty) of IdentifierPart.
+  template <bool JSX>
   void consumeIdentifierParts();
 
   /// Decode an IdentifierPart per ES5.1 7.6 that does not begin with a
   /// backslash.
   /// \return true if an IdentifierPart was decoded, false if the current
   /// character was a backslash or not an IdentifierPart.
+  template <bool JSX>
   bool consumeOneIdentifierPartNoEscape();
 
   /// Scan an octal number after the first character has been recognized
@@ -584,9 +611,38 @@ class JSLexer {
   /// it into a temporary buffer. If an escape or UTF-8 character is
   /// encountered, add the currently scanned part to the storage and continue by
   /// invoking the slow path scanIdentifierParts().
+  template <bool JSX>
   void scanIdentifierFastPath(const char *start);
+  void scanIdentifierFastPathInContext(
+      const char *start,
+      GrammarContext grammarContext) {
+#if HERMES_PARSE_JSX
+    LLVM_UNLIKELY(grammarContext == GrammarContext::AllowJSXIdentifier)
+    ? scanIdentifierFastPath<true>(start) :
+#endif
+    scanIdentifierFastPath<false>(start);
+  }
+
+  template <bool JSX>
   void scanIdentifierParts();
+  void scanIdentifierPartsInContext(GrammarContext grammarContext) {
+#if HERMES_PARSE_JSX
+    LLVM_UNLIKELY(grammarContext == GrammarContext::AllowJSXIdentifier)
+    ? scanIdentifierParts<true>() :
+#endif
+    scanIdentifierParts<false>();
+  }
+
+  template <bool JSX>
   void scanString();
+  void scanStringInContext(GrammarContext grammarContext) {
+#if HERMES_PARSE_JSX
+    LLVM_UNLIKELY(grammarContext == GrammarContext::AllowJSXIdentifier)
+    ? scanString<true>() :
+#endif
+    scanString<false>();
+  }
+
   void scanRegExp();
 
   /// Attempt to scan a template literal starting at ` or at }.

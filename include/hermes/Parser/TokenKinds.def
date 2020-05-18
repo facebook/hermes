@@ -144,6 +144,7 @@ PUNCTUATOR(equalgreater,        "=>")
 TOK(numeric_literal, "number")
 TOK(string_literal, "string")
 TOK(regexp_literal, "regexp")
+TOK(jsx_text, "JSX text")
 
 TOK(no_substitution_template, "template literal")
 TOK(template_head, "template literal start")
