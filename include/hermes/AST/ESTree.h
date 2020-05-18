@@ -51,6 +51,8 @@ enum class NodeKind {
 #define ESTREE_NODE_4_ARGS(NAME, ...) NAME,
 #define ESTREE_NODE_5_ARGS(NAME, ...) NAME,
 #define ESTREE_NODE_6_ARGS(NAME, ...) NAME,
+#define ESTREE_NODE_7_ARGS(NAME, ...) NAME,
+#define ESTREE_NODE_8_ARGS(NAME, ...) NAME,
 #include "ESTree.def"
 };
 
@@ -139,6 +141,12 @@ class Node : public llvm::ilist_node<Node> {
 #define ESTREE_NODE_6_ARGS(NAME, ...) \
   case NodeKind::NAME:                \
     return #NAME;
+#define ESTREE_NODE_7_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
+    return #NAME;
+#define ESTREE_NODE_8_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
+    return #NAME;
 
 #include "ESTree.def"
     }
@@ -207,6 +215,8 @@ void ESTreeVisit(Visitor &V, NodeList &Lst) {
 #define ESTREE_NODE_4_ARGS(NAME, ...) class NAME##Node;
 #define ESTREE_NODE_5_ARGS(NAME, ...) class NAME##Node;
 #define ESTREE_NODE_6_ARGS(NAME, ...) class NAME##Node;
+#define ESTREE_NODE_7_ARGS(NAME, ...) class NAME##Node;
+#define ESTREE_NODE_8_ARGS(NAME, ...) class NAME##Node;
 
 #include "ESTree.def"
 
@@ -665,6 +675,156 @@ using BaseNode = Node;
       return V->getKind() == NodeKind::NAME;                           \
     }                                                                  \
   };
+
+#define ESTREE_NODE_7_ARGS(                                            \
+    NAME,                                                              \
+    BASE,                                                              \
+    ARG0TY,                                                            \
+    ARG0NM,                                                            \
+    ARG0OPT,                                                           \
+    ARG1TY,                                                            \
+    ARG1NM,                                                            \
+    ARG1OPT,                                                           \
+    ARG2TY,                                                            \
+    ARG2NM,                                                            \
+    ARG2OPT,                                                           \
+    ARG3TY,                                                            \
+    ARG3NM,                                                            \
+    ARG3OPT,                                                           \
+    ARG4TY,                                                            \
+    ARG4NM,                                                            \
+    ARG4OPT,                                                           \
+    ARG5TY,                                                            \
+    ARG5NM,                                                            \
+    ARG5OPT,                                                           \
+    ARG6TY,                                                            \
+    ARG6NM,                                                            \
+    ARG6OPT)                                                           \
+  class NAME##Node : public BASE##Node,                                \
+                     public detail::DecoratorTrait<NAME##Node>::Type { \
+   public:                                                             \
+    ARG0TY _##ARG0NM;                                                  \
+    ARG1TY _##ARG1NM;                                                  \
+    ARG2TY _##ARG2NM;                                                  \
+    ARG3TY _##ARG3NM;                                                  \
+    ARG4TY _##ARG4NM;                                                  \
+    ARG5TY _##ARG5NM;                                                  \
+    ARG6TY _##ARG6NM;                                                  \
+    explicit NAME##Node(                                               \
+        detail::ParamTrait<ARG0TY>::Type ARG0NM_,                      \
+        detail::ParamTrait<ARG1TY>::Type ARG1NM_,                      \
+        detail::ParamTrait<ARG2TY>::Type ARG2NM_,                      \
+        detail::ParamTrait<ARG3TY>::Type ARG3NM_,                      \
+        detail::ParamTrait<ARG4TY>::Type ARG4NM_,                      \
+        detail::ParamTrait<ARG5TY>::Type ARG5NM_,                      \
+        detail::ParamTrait<ARG6TY>::Type ARG6NM_)                      \
+        : BASE##Node(NodeKind::NAME),                                  \
+          _##ARG0NM(std::move(ARG0NM_)),                               \
+          _##ARG1NM(std::move(ARG1NM_)),                               \
+          _##ARG2NM(std::move(ARG2NM_)),                               \
+          _##ARG3NM(std::move(ARG3NM_)),                               \
+          _##ARG4NM(std::move(ARG4NM_)),                               \
+          _##ARG5NM(std::move(ARG5NM_)),                               \
+          _##ARG6NM(std::move(ARG6NM_)) {}                             \
+    template <class Visitor>                                           \
+    void visit(Visitor &V) {                                           \
+      if (!V.shouldVisit(this)) {                                      \
+        return;                                                        \
+      }                                                                \
+      V.enter(this);                                                   \
+      ESTreeVisit(V, _##ARG0NM);                                       \
+      ESTreeVisit(V, _##ARG1NM);                                       \
+      ESTreeVisit(V, _##ARG2NM);                                       \
+      ESTreeVisit(V, _##ARG3NM);                                       \
+      ESTreeVisit(V, _##ARG4NM);                                       \
+      ESTreeVisit(V, _##ARG5NM);                                       \
+      ESTreeVisit(V, _##ARG6NM);                                       \
+      V.leave(this);                                                   \
+    }                                                                  \
+                                                                       \
+    static bool classof(const Node *V) {                               \
+      return V->getKind() == NodeKind::NAME;                           \
+    }                                                                  \
+  };
+
+#define ESTREE_NODE_8_ARGS(                                            \
+    NAME,                                                              \
+    BASE,                                                              \
+    ARG0TY,                                                            \
+    ARG0NM,                                                            \
+    ARG0OPT,                                                           \
+    ARG1TY,                                                            \
+    ARG1NM,                                                            \
+    ARG1OPT,                                                           \
+    ARG2TY,                                                            \
+    ARG2NM,                                                            \
+    ARG2OPT,                                                           \
+    ARG3TY,                                                            \
+    ARG3NM,                                                            \
+    ARG3OPT,                                                           \
+    ARG4TY,                                                            \
+    ARG4NM,                                                            \
+    ARG4OPT,                                                           \
+    ARG5TY,                                                            \
+    ARG5NM,                                                            \
+    ARG5OPT,                                                           \
+    ARG6TY,                                                            \
+    ARG6NM,                                                            \
+    ARG6OPT,                                                           \
+    ARG7TY,                                                            \
+    ARG7NM,                                                            \
+    ARG7OPT)                                                           \
+  class NAME##Node : public BASE##Node,                                \
+                     public detail::DecoratorTrait<NAME##Node>::Type { \
+   public:                                                             \
+    ARG0TY _##ARG0NM;                                                  \
+    ARG1TY _##ARG1NM;                                                  \
+    ARG2TY _##ARG2NM;                                                  \
+    ARG3TY _##ARG3NM;                                                  \
+    ARG4TY _##ARG4NM;                                                  \
+    ARG5TY _##ARG5NM;                                                  \
+    ARG6TY _##ARG6NM;                                                  \
+    ARG7TY _##ARG7NM;                                                  \
+    explicit NAME##Node(                                               \
+        detail::ParamTrait<ARG0TY>::Type ARG0NM_,                      \
+        detail::ParamTrait<ARG1TY>::Type ARG1NM_,                      \
+        detail::ParamTrait<ARG2TY>::Type ARG2NM_,                      \
+        detail::ParamTrait<ARG3TY>::Type ARG3NM_,                      \
+        detail::ParamTrait<ARG4TY>::Type ARG4NM_,                      \
+        detail::ParamTrait<ARG5TY>::Type ARG5NM_,                      \
+        detail::ParamTrait<ARG6TY>::Type ARG6NM_,                      \
+        detail::ParamTrait<ARG7TY>::Type ARG7NM_)                      \
+        : BASE##Node(NodeKind::NAME),                                  \
+          _##ARG0NM(std::move(ARG0NM_)),                               \
+          _##ARG1NM(std::move(ARG1NM_)),                               \
+          _##ARG2NM(std::move(ARG2NM_)),                               \
+          _##ARG3NM(std::move(ARG3NM_)),                               \
+          _##ARG4NM(std::move(ARG4NM_)),                               \
+          _##ARG5NM(std::move(ARG5NM_)),                               \
+          _##ARG6NM(std::move(ARG6NM_)),                               \
+          _##ARG7NM(std::move(ARG7NM_)) {}                             \
+    template <class Visitor>                                           \
+    void visit(Visitor &V) {                                           \
+      if (!V.shouldVisit(this)) {                                      \
+        return;                                                        \
+      }                                                                \
+      V.enter(this);                                                   \
+      ESTreeVisit(V, _##ARG0NM);                                       \
+      ESTreeVisit(V, _##ARG1NM);                                       \
+      ESTreeVisit(V, _##ARG2NM);                                       \
+      ESTreeVisit(V, _##ARG3NM);                                       \
+      ESTreeVisit(V, _##ARG4NM);                                       \
+      ESTreeVisit(V, _##ARG5NM);                                       \
+      ESTreeVisit(V, _##ARG6NM);                                       \
+      ESTreeVisit(V, _##ARG7NM);                                       \
+      V.leave(this);                                                   \
+    }                                                                  \
+                                                                       \
+    static bool classof(const Node *V) {                               \
+      return V->getKind() == NodeKind::NAME;                           \
+    }                                                                  \
+  };
+
 #include "ESTree.def"
 
 // Visit nodes.
@@ -697,6 +857,12 @@ void ESTreeVisit(Visitor &V, NodePtr Node) {
   case NodeKind::NAME:                \
     return cast<NAME##Node>(Node)->visit(V);
 #define ESTREE_NODE_6_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
+    return cast<NAME##Node>(Node)->visit(V);
+#define ESTREE_NODE_7_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
+    return cast<NAME##Node>(Node)->visit(V);
+#define ESTREE_NODE_8_ARGS(NAME, ...) \
   case NodeKind::NAME:                \
     return cast<NAME##Node>(Node)->visit(V);
 

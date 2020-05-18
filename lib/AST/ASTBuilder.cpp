@@ -529,6 +529,155 @@ llvm::Optional<Node *> ASTBuilder::build(const JSONValue *node) {
         std::move(arg5));                                          \
   } else
 
+#define ESTREE_NODE_7_ARGS(                                        \
+    NAME,                                                          \
+    BASE,                                                          \
+    ARG0TY,                                                        \
+    ARG0NM,                                                        \
+    ARG0OPT,                                                       \
+    ARG1TY,                                                        \
+    ARG1NM,                                                        \
+    ARG1OPT,                                                       \
+    ARG2TY,                                                        \
+    ARG2NM,                                                        \
+    ARG2OPT,                                                       \
+    ARG3TY,                                                        \
+    ARG3NM,                                                        \
+    ARG3OPT,                                                       \
+    ARG4TY,                                                        \
+    ARG4NM,                                                        \
+    ARG4OPT,                                                       \
+    ARG5TY,                                                        \
+    ARG5NM,                                                        \
+    ARG5OPT,                                                       \
+    ARG6TY,                                                        \
+    ARG6NM,                                                        \
+    ARG6OPT)                                                       \
+  if (Typename == #NAME) {                                         \
+    ARG0TY arg0{};                                                 \
+    ARG1TY arg1{};                                                 \
+    ARG2TY arg2{};                                                 \
+    ARG3TY arg3{};                                                 \
+    ARG4TY arg4{};                                                 \
+    ARG5TY arg5{};                                                 \
+    ARG6TY arg6{};                                                 \
+    if (!extract##ARG0TY(jsObj, #ARG0NM, arg0) && !(ARG0OPT)) {    \
+      sm_.error(SMLoc{}, "Invalid field '" #ARG0NM "' in " #NAME); \
+      return None;                                                 \
+    }                                                              \
+    if (!extract##ARG1TY(jsObj, #ARG1NM, arg1) && !(ARG1OPT)) {    \
+      sm_.error(SMLoc{}, "Invalid field '" #ARG1NM "' in " #NAME); \
+      return None;                                                 \
+    }                                                              \
+    if (!extract##ARG2TY(jsObj, #ARG2NM, arg2) && !(ARG2OPT)) {    \
+      sm_.error(SMLoc{}, "Invalid field '" #ARG2NM "' in " #NAME); \
+      return None;                                                 \
+    }                                                              \
+    if (!extract##ARG3TY(jsObj, #ARG3NM, arg3) && !(ARG3OPT)) {    \
+      sm_.error(SMLoc{}, "Invalid field '" #ARG3NM "' in " #NAME); \
+      return None;                                                 \
+    }                                                              \
+    if (!extract##ARG4TY(jsObj, #ARG4NM, arg4) && !(ARG4OPT)) {    \
+      sm_.error(SMLoc{}, "Invalid field '" #ARG4NM "' in " #NAME); \
+      return None;                                                 \
+    }                                                              \
+    if (!extract##ARG5TY(jsObj, #ARG5NM, arg5) && !(ARG5OPT)) {    \
+      sm_.error(SMLoc{}, "Invalid field '" #ARG5NM "' in " #NAME); \
+      return None;                                                 \
+    }                                                              \
+    if (!extract##ARG6TY(jsObj, #ARG6NM, arg6) && !(ARG6OPT)) {    \
+      sm_.error(SMLoc{}, "Invalid field '" #ARG6NM "' in " #NAME); \
+      return None;                                                 \
+    }                                                              \
+    result = new (context_) NAME##Node(                            \
+        std::move(arg0),                                           \
+        std::move(arg1),                                           \
+        std::move(arg2),                                           \
+        std::move(arg3),                                           \
+        std::move(arg4),                                           \
+        std::move(arg5),                                           \
+        std::move(arg6));                                          \
+  } else
+
+#define ESTREE_NODE_8_ARGS(                                        \
+    NAME,                                                          \
+    BASE,                                                          \
+    ARG0TY,                                                        \
+    ARG0NM,                                                        \
+    ARG0OPT,                                                       \
+    ARG1TY,                                                        \
+    ARG1NM,                                                        \
+    ARG1OPT,                                                       \
+    ARG2TY,                                                        \
+    ARG2NM,                                                        \
+    ARG2OPT,                                                       \
+    ARG3TY,                                                        \
+    ARG3NM,                                                        \
+    ARG3OPT,                                                       \
+    ARG4TY,                                                        \
+    ARG4NM,                                                        \
+    ARG4OPT,                                                       \
+    ARG5TY,                                                        \
+    ARG5NM,                                                        \
+    ARG5OPT,                                                       \
+    ARG6TY,                                                        \
+    ARG6NM,                                                        \
+    ARG6OPT,                                                       \
+    ARG7TY,                                                        \
+    ARG7NM,                                                        \
+    ARG7OPT)                                                       \
+  if (Typename == #NAME) {                                         \
+    ARG0TY arg0{};                                                 \
+    ARG1TY arg1{};                                                 \
+    ARG2TY arg2{};                                                 \
+    ARG3TY arg3{};                                                 \
+    ARG4TY arg4{};                                                 \
+    ARG5TY arg5{};                                                 \
+    ARG6TY arg6{};                                                 \
+    ARG7TY arg7{};                                                 \
+    if (!extract##ARG0TY(jsObj, #ARG0NM, arg0) && !(ARG0OPT)) {    \
+      sm_.error(SMLoc{}, "Invalid field '" #ARG0NM "' in " #NAME); \
+      return None;                                                 \
+    }                                                              \
+    if (!extract##ARG1TY(jsObj, #ARG1NM, arg1) && !(ARG1OPT)) {    \
+      sm_.error(SMLoc{}, "Invalid field '" #ARG1NM "' in " #NAME); \
+      return None;                                                 \
+    }                                                              \
+    if (!extract##ARG2TY(jsObj, #ARG2NM, arg2) && !(ARG2OPT)) {    \
+      sm_.error(SMLoc{}, "Invalid field '" #ARG2NM "' in " #NAME); \
+      return None;                                                 \
+    }                                                              \
+    if (!extract##ARG3TY(jsObj, #ARG3NM, arg3) && !(ARG3OPT)) {    \
+      sm_.error(SMLoc{}, "Invalid field '" #ARG3NM "' in " #NAME); \
+      return None;                                                 \
+    }                                                              \
+    if (!extract##ARG4TY(jsObj, #ARG4NM, arg4) && !(ARG4OPT)) {    \
+      sm_.error(SMLoc{}, "Invalid field '" #ARG4NM "' in " #NAME); \
+      return None;                                                 \
+    }                                                              \
+    if (!extract##ARG5TY(jsObj, #ARG5NM, arg5) && !(ARG5OPT)) {    \
+      sm_.error(SMLoc{}, "Invalid field '" #ARG5NM "' in " #NAME); \
+      return None;                                                 \
+    }                                                              \
+    if (!extract##ARG6TY(jsObj, #ARG6NM, arg6) && !(ARG6OPT)) {    \
+      sm_.error(SMLoc{}, "Invalid field '" #ARG6NM "' in " #NAME); \
+      return None;                                                 \
+    }                                                              \
+    if (!extract##ARG7TY(jsObj, #ARG7NM, arg7) && !(ARG7OPT)) {    \
+      sm_.error(SMLoc{}, "Invalid field '" #ARG7NM "' in " #NAME); \
+      return None;                                                 \
+    }                                                              \
+    result = new (context_) NAME##Node(                            \
+        std::move(arg0),                                           \
+        std::move(arg1),                                           \
+        std::move(arg2),                                           \
+        std::move(arg3),                                           \
+        std::move(arg4),                                           \
+        std::move(arg5),                                           \
+        std::move(arg6),                                           \
+        std::move(arg7));                                          \
+  } else
+
 #include "hermes/AST/ESTree.def"
 
   {
