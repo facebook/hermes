@@ -619,17 +619,28 @@ bool JSParserImpl::parseStatementListItem(
 
     stmtList.push_back(*decl.getValue());
   } else if (tok_->getKind() == TokenKind::rw_import) {
-    auto importDecl = parseImportDeclaration();
-    if (!importDecl) {
-      return false;
-    }
+    // 'import' can indicate an import declaration, but it's also possible a
+    // Statement begins with a call to `import()`, so do a lookahead to see if
+    // the next token is '('.
+    auto optNext = lexer_.lookahead1(None);
+    if (optNext.hasValue() && *optNext == TokenKind::l_paren) {
+      auto stmt = parseStatement(param.get(ParamReturn));
+      if (!stmt)
+        return false;
 
-    if (allowImportExport == AllowImportExport::Yes) {
-      stmtList.push_back(*importDecl.getValue());
+      stmtList.push_back(*stmt.getValue());
     } else {
-      sm_.error(
-          importDecl.getValue()->getSourceRange(),
-          "import declaration must be at top level of module");
+      auto importDecl = parseImportDeclaration();
+      if (!importDecl) {
+        return false;
+      }
+
+      stmtList.push_back(*importDecl.getValue());
+      if (allowImportExport == AllowImportExport::No) {
+        sm_.error(
+            importDecl.getValue()->getSourceRange(),
+            "import declaration must be at top level of module");
+      }
     }
   } else if (tok_->getKind() == TokenKind::rw_export) {
     auto exportDecl = parseExportDeclaration();
@@ -3046,6 +3057,20 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrOptionalExpression(
 
 Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpression() {
   SMLoc startLoc = tok_->getStartLoc();
+
+  if (check(TokenKind::rw_import)) {
+    ESTree::Node *import =
+        setLocation(tok_, tok_, new (context_) ESTree::ImportNode());
+    advance();
+    if (!need(
+            TokenKind::l_paren,
+            "in import call",
+            "location of 'import'",
+            startLoc))
+      return None;
+
+    return parseCallExpression(startLoc, import, false, false);
+  }
 
   auto optExpr = parseNewExpressionOrOptionalExpression(IsConstructorCall::No);
   if (!optExpr)
