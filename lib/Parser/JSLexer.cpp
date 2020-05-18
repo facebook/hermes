@@ -639,13 +639,12 @@ const Token *JSLexer::rescanRBraceInTemplateLiteral() {
   return &token_;
 }
 
-OptValue<TokenKind> JSLexer::lookaheadAfterAsync(
-    OptValue<TokenKind> expectedToken) {
+OptValue<TokenKind> JSLexer::lookahead1(OptValue<TokenKind> expectedToken) {
   assert(
-      token_.getKind() == TokenKind::identifier &&
-      token_.getIdentifier()->str() == "async" &&
-      "current token must be 'async'");
-  UniqueString *savedIdent = token_.getIdentifier();
+      token_.getKind() == TokenKind::identifier ||
+      token_.isResWord() && "unsupported current token");
+  UniqueString *savedIdent = token_.getResWordOrIdentifier();
+  TokenKind savedKind = token_.getKind();
   SMLoc start = token_.getStartLoc();
   SMLoc end = token_.getEndLoc();
   const char *cur = curCharPtr_;
@@ -665,7 +664,11 @@ OptValue<TokenKind> JSLexer::lookaheadAfterAsync(
 
   token_.setStart(start.getPointer());
   token_.setEnd(end.getPointer());
-  token_.setIdentifier(savedIdent);
+  if (savedKind == TokenKind::identifier) {
+    token_.setIdentifier(savedIdent);
+  } else {
+    token_.setResWord(savedKind, savedIdent);
+  }
   seek(SMLoc::getFromPointer(cur));
 
   return kind;

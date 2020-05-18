@@ -239,7 +239,7 @@ bool JSParserImpl::checkAsyncFunction() {
   // This function must also be idempotent to allow for branching based on its
   // result in parseStatementListItem without having to store another flag,
   // for example.
-  OptValue<TokenKind> optNext = lexer_.lookaheadAfterAsync(llvm::None);
+  OptValue<TokenKind> optNext = lexer_.lookahead1(llvm::None);
   return optNext.hasValue() && *optNext == TokenKind::rw_function;
 }
 
@@ -4106,8 +4106,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(Param param) {
   SMLoc startLoc = tok_->getStartLoc();
   bool isAsync = false;
   if (check(asyncIdent_)) {
-    OptValue<TokenKind> optNext =
-        lexer_.lookaheadAfterAsync(TokenKind::identifier);
+    OptValue<TokenKind> optNext = lexer_.lookahead1(TokenKind::identifier);
     if (optNext.hasValue() && *optNext == TokenKind::identifier) {
       isAsync = true;
     }

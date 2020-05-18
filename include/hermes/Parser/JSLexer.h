@@ -416,12 +416,12 @@ class JSLexer {
   ///   async [no LineTerminator here] ArrowFormalParameters
   ///         ^
   /// case for parsing async functions and arrow functions.
-  /// \pre the current token must be "async".
+  /// \pre current token is an identifier or reserved word.
   /// \param expectedToken if not None, then if the next token is expectedToken,
-  ///   the next token is scanned and the curCharPtr_ isn't reset to 'async'.
+  ///   the next token is scanned and the curCharPtr_ isn't reset.
   /// \return the kind of next token if there was no LineTerminator,
   ///   otherwise return None.
-  OptValue<TokenKind> lookaheadAfterAsync(OptValue<TokenKind> expectedToken);
+  OptValue<TokenKind> lookahead1(OptValue<TokenKind> expectedToken);
 
   /// Report an error for the range from startLoc to curCharPtr.
   bool errorRange(SMLoc startLoc, const llvm::Twine &msg) {
