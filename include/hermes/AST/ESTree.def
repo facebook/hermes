@@ -523,6 +523,69 @@ ESTREE_NODE_2_ARGS(
 ESTREE_LAST(Pattern)
 // ================================================
 
+// JSX ============================================
+
+ESTREE_NODE_1_ARGS(
+    JSXIdentifier, Base,
+    NodeLabel, name, false)
+ESTREE_NODE_2_ARGS(
+    JSXMemberExpression, Base,
+    NodePtr, object, false,
+    NodePtr, property, false)
+ESTREE_NODE_2_ARGS(
+    JSXNamespacedName, Base,
+    NodePtr, namespace, false,
+    NodePtr, name, false)
+
+ESTREE_NODE_0_ARGS(
+    JSXEmptyExpression, Base)
+ESTREE_NODE_1_ARGS(
+    JSXExpressionContainer, Base,
+    NodePtr, expression, false)
+ESTREE_NODE_1_ARGS(
+    JSXSpreadChild, Base,
+    NodePtr, expression, false)
+
+ESTREE_NODE_3_ARGS(
+    JSXOpeningElement, Base,
+    NodePtr, name, false,
+    NodeList, attributes, false,
+    NodeBoolean, selfClosing, false)
+ESTREE_NODE_1_ARGS(
+    JSXClosingElement, Base,
+    NodePtr, name, false)
+
+ESTREE_NODE_2_ARGS(
+    JSXAttribute, Base,
+    NodePtr, name, false,
+    NodePtr, value, true)
+ESTREE_NODE_1_ARGS(
+    JSXSpreadAttribute, Base,
+    NodePtr, argument, false)
+
+ESTREE_NODE_2_ARGS(
+    JSXText, Base,
+    NodeLabel, value, false,
+    NodeLabel, raw, false)
+
+ESTREE_NODE_3_ARGS(
+    JSXElement, Base,
+    NodePtr, openingElement, false,
+    NodeList, children, false,
+    NodePtr, closingElement, true)
+
+ESTREE_NODE_3_ARGS(
+    JSXFragment, Base,
+    NodePtr, openingFragment, false,
+    NodeList, children, false,
+    NodePtr, closingFragment, false)
+ESTREE_NODE_0_ARGS(
+    JSXOpeningFragment, Base)
+ESTREE_NODE_0_ARGS(
+    JSXClosingFragment, Base)
+
+// ================================================
+
 ESTREE_FIRST(Cover, Base)
 
 // CoverParenthesizedExpressionAndArrowParameterList: "(" ")"
