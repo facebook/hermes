@@ -819,6 +819,49 @@ TEST(JSLexerTest, SourceMappingUrl) {
   }
 }
 
+TEST(JSLexerTest, LookaheadTest) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext diag(sm);
+
+  // Test the lookahead function which will not revert to the current
+  // token after lookahead if an optional expected token is provided.
+  JSLexer lex("function( foo,", sm, alloc);
+
+  ASSERT_EQ(TokenKind::rw_function, lex.advance()->getKind());
+
+  {
+    // Without the expected token, always revert.
+    auto optNext = lex.lookahead1(llvm::None);
+    ASSERT_TRUE(optNext.hasValue());
+    EXPECT_EQ(TokenKind::l_paren, optNext.getValue());
+  }
+
+  ASSERT_EQ(TokenKind::rw_function, lex.getCurToken()->getKind());
+  ASSERT_EQ(TokenKind::l_paren, lex.advance()->getKind());
+
+  // With the expected token, revert iff it doesn't match.
+  ASSERT_EQ(TokenKind::identifier, lex.advance()->getKind());
+
+  {
+    auto optNext = lex.lookahead1(TokenKind::plus);
+    ASSERT_TRUE(optNext.hasValue());
+    EXPECT_EQ(TokenKind::comma, optNext.getValue());
+    // Revert to original token.
+    ASSERT_EQ(TokenKind::identifier, lex.getCurToken()->getKind());
+  }
+
+  {
+    auto optNext = lex.lookahead1(TokenKind::comma);
+    ASSERT_TRUE(optNext.hasValue());
+    EXPECT_EQ(TokenKind::comma, optNext.getValue());
+    // Match with expected, keep the lookahead token.
+    ASSERT_EQ(TokenKind::comma, lex.getCurToken()->getKind());
+  }
+
+  ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+}
+
 TEST(JSLexerTest, RegressConsumeBadHexTest) {
   JSLexer::Allocator alloc;
   SourceErrorManager sm;
