@@ -121,7 +121,7 @@ extern "C" CompileResult *hermesCompileToBytecode(
     return compileRes.release();
   }
 
-  if (sourceMapData != nullptr) {
+  if (sourceMapData != nullptr && sourceMapData[0] != '\0') {
     if (sourceMapData[sourceMapSize - 1] != 0) {
       compileRes->error_ = "Input sourcemap must be zero-terminated";
       return compileRes.release();
