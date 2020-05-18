@@ -290,7 +290,7 @@ llvm::Optional<Node *> ASTBuilder::build(const JSONValue *node) {
     }
   }
 
-  Node *result;
+  Node *result = nullptr;
 
   // Some parsers (e.g. Flow) emit RestProperty instead of RestElement, so map
   // the former to the latter. Same for SpreadProperty and SpreadElement.
@@ -306,17 +306,26 @@ llvm::Optional<Node *> ASTBuilder::build(const JSONValue *node) {
     if (!lit)
       return None;
     result = *lit;
-  } else if (Typename == "TemplateElement") {
+    result->setSourceRange(sourceRng);
+    return result;
+  }
+
+  if (Typename == "TemplateElement") {
     auto templateElement = convertTemplateElement(jsObj);
     if (!templateElement) {
       return None;
     }
     result = *templateElement;
-  } else
+    result->setSourceRange(sourceRng);
+    return result;
+  }
+
 #define ESTREE_NODE_0_ARGS(NAME, BASE)    \
   if (Typename == #NAME) {                \
     result = new (context_) NAME##Node(); \
-  } else
+    result->setSourceRange(sourceRng);    \
+    return result;                        \
+  }
 
 #define ESTREE_NODE_1_ARGS(NAME, BASE, ARG0TY, ARG0NM, ARG0OPT)    \
   if (Typename == #NAME) {                                         \
@@ -326,7 +335,9 @@ llvm::Optional<Node *> ASTBuilder::build(const JSONValue *node) {
       return None;                                                 \
     }                                                              \
     result = new (context_) NAME##Node(std::move(arg0));           \
-  } else
+    result->setSourceRange(sourceRng);                             \
+    return result;                                                 \
+  }
 
 #define ESTREE_NODE_2_ARGS(                                               \
     NAME, BASE, ARG0TY, ARG0NM, ARG0OPT, ARG1TY, ARG1NM, ARG1OPT)         \
@@ -342,7 +353,9 @@ llvm::Optional<Node *> ASTBuilder::build(const JSONValue *node) {
       return None;                                                        \
     }                                                                     \
     result = new (context_) NAME##Node(std::move(arg0), std::move(arg1)); \
-  } else
+    result->setSourceRange(sourceRng);                                    \
+    return result;                                                        \
+  }
 
 #define ESTREE_NODE_3_ARGS(                                            \
     NAME,                                                              \
@@ -374,7 +387,9 @@ llvm::Optional<Node *> ASTBuilder::build(const JSONValue *node) {
     }                                                                  \
     result = new (context_)                                            \
         NAME##Node(std::move(arg0), std::move(arg1), std::move(arg2)); \
-  } else
+    result->setSourceRange(sourceRng);                                 \
+    return result;                                                     \
+  }
 
 #define ESTREE_NODE_4_ARGS(                                                  \
     NAME,                                                                    \
@@ -414,7 +429,9 @@ llvm::Optional<Node *> ASTBuilder::build(const JSONValue *node) {
     }                                                                        \
     result = new (context_) NAME##Node(                                      \
         std::move(arg0), std::move(arg1), std::move(arg2), std::move(arg3)); \
-  } else
+    result->setSourceRange(sourceRng);                                       \
+    return result;                                                           \
+  }
 
 #define ESTREE_NODE_5_ARGS(                                        \
     NAME,                                                          \
@@ -466,7 +483,9 @@ llvm::Optional<Node *> ASTBuilder::build(const JSONValue *node) {
         std::move(arg2),                                           \
         std::move(arg3),                                           \
         std::move(arg4));                                          \
-  } else
+    result->setSourceRange(sourceRng);                             \
+    return result;                                                 \
+  }
 
 #define ESTREE_NODE_6_ARGS(                                        \
     NAME,                                                          \
@@ -527,7 +546,9 @@ llvm::Optional<Node *> ASTBuilder::build(const JSONValue *node) {
         std::move(arg3),                                           \
         std::move(arg4),                                           \
         std::move(arg5));                                          \
-  } else
+    result->setSourceRange(sourceRng);                             \
+    return result;                                                 \
+  }
 
 #define ESTREE_NODE_7_ARGS(                                        \
     NAME,                                                          \
@@ -597,7 +618,9 @@ llvm::Optional<Node *> ASTBuilder::build(const JSONValue *node) {
         std::move(arg4),                                           \
         std::move(arg5),                                           \
         std::move(arg6));                                          \
-  } else
+    result->setSourceRange(sourceRng);                             \
+    return result;                                                 \
+  }
 
 #define ESTREE_NODE_8_ARGS(                                        \
     NAME,                                                          \
@@ -676,17 +699,15 @@ llvm::Optional<Node *> ASTBuilder::build(const JSONValue *node) {
         std::move(arg5),                                           \
         std::move(arg6),                                           \
         std::move(arg7));                                          \
-  } else
+    result->setSourceRange(sourceRng);                             \
+    return result;                                                 \
+  }
 
 #include "hermes/AST/ESTree.def"
 
-  {
-    sm_.error(SMLoc{}, Twine("Unknown node type '") + Typename + "'");
-    return None;
-  }
-
-  result->setSourceRange(sourceRng);
-  return result;
+  assert(result == nullptr && "result must be returned");
+  sm_.error(SMLoc{}, Twine("Unknown node type '") + Typename + "'");
+  return None;
 }
 
 /// Visits all the ast nodes and synthesizes debug info for each one.
