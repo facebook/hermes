@@ -7,12 +7,10 @@
 
 #include "gtest/gtest.h"
 
-#include "LogSuccessStorageProvider.h"
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/AlignedStorage.h"
 #include "hermes/VM/LimitedStorageProvider.h"
-#include "hermes/VM/LogFailStorageProvider.h"
 
 #include "llvm/ADT/STLExtras.h"
 
@@ -25,8 +23,9 @@ namespace {
 struct NullStorageProvider : public StorageProvider {
   static std::unique_ptr<NullStorageProvider> create();
 
-  llvm::ErrorOr<void *> newStorage(const char *) override;
-  void deleteStorage(void *) override;
+ protected:
+  llvm::ErrorOr<void *> newStorageImpl(const char *) override;
+  void deleteStorageImpl(void *) override;
 };
 
 /* static */
@@ -34,52 +33,53 @@ std::unique_ptr<NullStorageProvider> NullStorageProvider::create() {
   return llvm::make_unique<NullStorageProvider>();
 }
 
-llvm::ErrorOr<void *> NullStorageProvider::newStorage(const char *) {
+llvm::ErrorOr<void *> NullStorageProvider::newStorageImpl(const char *) {
   // Doesn't matter what code is returned here.
   return make_error_code(OOMError::TestVMLimitReached);
 }
 
-void NullStorageProvider::deleteStorage(void *) {}
+void NullStorageProvider::deleteStorageImpl(void *) {}
 
-TEST(StorageProviderTest, LogSuccessStorageProviderSuccess) {
-  LogSuccessStorageProvider provider{StorageProvider::mmapProvider()};
+TEST(StorageProviderTest, StorageProviderSucceededAllocsLogCount) {
+  auto provider{StorageProvider::mmapProvider()};
 
-  ASSERT_EQ(0, provider.numAllocated());
-  ASSERT_EQ(0, provider.numDeleted());
-  ASSERT_EQ(0, provider.numLive());
+  ASSERT_EQ(0, provider->numSucceededAllocs());
+  ASSERT_EQ(0, provider->numFailedAllocs());
+  ASSERT_EQ(0, provider->numDeletedAllocs());
+  ASSERT_EQ(0, provider->numLiveAllocs());
 
-  auto result = provider.newStorage("Test");
+  auto result = provider->newStorage("Test");
   ASSERT_TRUE(result);
   void *s = result.get();
 
-  EXPECT_EQ(1, provider.numAllocated());
-  EXPECT_EQ(0, provider.numDeleted());
-  EXPECT_EQ(1, provider.numLive());
+  EXPECT_EQ(1, provider->numSucceededAllocs());
+  EXPECT_EQ(0, provider->numFailedAllocs());
+  EXPECT_EQ(0, provider->numDeletedAllocs());
+  EXPECT_EQ(1, provider->numLiveAllocs());
 
-  provider.deleteStorage(s);
+  provider->deleteStorage(s);
 
-  EXPECT_EQ(1, provider.numAllocated());
-  EXPECT_EQ(1, provider.numDeleted());
-  EXPECT_EQ(0, provider.numLive());
+  EXPECT_EQ(1, provider->numSucceededAllocs());
+  EXPECT_EQ(0, provider->numFailedAllocs());
+  EXPECT_EQ(1, provider->numDeletedAllocs());
+  EXPECT_EQ(0, provider->numLiveAllocs());
 }
 
-TEST(StorageProviderTest, LogSuccessStorageProviderFail) {
-  LogSuccessStorageProvider provider{NullStorageProvider::create()};
+TEST(StorageProviderTest, StorageProviderFailedAllocsLogCount) {
+  auto provider{NullStorageProvider::create()};
 
-  ASSERT_EQ(0, provider.numAllocated());
-  ASSERT_EQ(0, provider.numDeleted());
-  ASSERT_EQ(0, provider.numLive());
+  ASSERT_EQ(0, provider->numSucceededAllocs());
+  ASSERT_EQ(0, provider->numFailedAllocs());
+  ASSERT_EQ(0, provider->numDeletedAllocs());
+  ASSERT_EQ(0, provider->numLiveAllocs());
 
-  auto result = provider.newStorage("Test");
+  auto result = provider->newStorage("Test");
   ASSERT_FALSE(result);
 
-  EXPECT_EQ(0, provider.numAllocated());
-  EXPECT_EQ(0, provider.numDeleted());
-  EXPECT_EQ(0, provider.numLive());
-
-  EXPECT_EQ(0, provider.numAllocated());
-  EXPECT_EQ(0, provider.numDeleted());
-  EXPECT_EQ(0, provider.numLive());
+  EXPECT_EQ(0, provider->numSucceededAllocs());
+  EXPECT_EQ(1, provider->numFailedAllocs());
+  EXPECT_EQ(0, provider->numDeletedAllocs());
+  EXPECT_EQ(0, provider->numLiveAllocs());
 }
 
 TEST(StorageProviderTest, LimitedStorageProviderEnforce) {
@@ -148,32 +148,37 @@ TEST(StorageProviderTest, LimitedStorageProviderDeleteNull) {
   }
 }
 
-TEST(StorageProviderTest, LogFailStorageProvider) {
+TEST(StorageProviderTest, StorageProviderAllocsCount) {
   constexpr size_t LIM = 2;
-  auto delegate =
+  auto provider =
       std::unique_ptr<LimitedStorageProvider>{new LimitedStorageProvider{
           StorageProvider::mmapProvider(), AlignedStorage::size() * LIM}};
-
-  LogFailStorageProvider provider{std::move(delegate)};
 
   constexpr size_t FAILS = 3;
   void *storages[LIM];
   for (size_t i = 0; i < LIM; ++i) {
-    auto result = provider.newStorage();
+    auto result = provider->newStorage();
     ASSERT_TRUE(result);
     storages[i] = result.get();
   }
+
+  EXPECT_EQ(LIM, provider->numSucceededAllocs());
+  EXPECT_EQ(LIM, provider->numLiveAllocs());
+
   for (size_t i = 0; i < FAILS; ++i) {
-    auto result = provider.newStorage();
+    auto result = provider->newStorage();
     ASSERT_FALSE(result);
   }
 
-  EXPECT_EQ(FAILS, provider.numFailedAllocs());
+  EXPECT_EQ(FAILS, provider->numFailedAllocs());
 
   // Clean-up
   for (auto s : storages) {
-    provider.deleteStorage(s);
+    provider->deleteStorage(s);
   }
+
+  EXPECT_EQ(0, provider->numLiveAllocs());
+  EXPECT_EQ(LIM, provider->numDeletedAllocs());
 }
 
 /// StorageGuard will free storage on scope exit.

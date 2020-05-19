@@ -89,8 +89,8 @@ YoungGen::YoungGen(
       sz_(sz),
       nextGen_(nextGen),
       releaseUnused_(releaseUnused) {
-  auto result =
-      AlignedStorage::create(&gc_->storageProvider_, "hermes-younggen-segment");
+  auto result = AlignedStorage::create(
+      gc_->storageProvider_.get(), "hermes-younggen-segment");
   if (!result) {
     gc_->oom(result.getError());
   }

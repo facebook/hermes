@@ -36,14 +36,14 @@ char *alignAlloc(void *p) {
 
 class VMAllocateStorageProvider final : public StorageProvider {
  public:
-  llvm::ErrorOr<void *> newStorage(const char *name) override;
-  void deleteStorage(void *storage) override;
+  llvm::ErrorOr<void *> newStorageImpl(const char *name) override;
+  void deleteStorageImpl(void *storage) override;
 };
 
 class MallocStorageProvider final : public StorageProvider {
  public:
-  llvm::ErrorOr<void *> newStorage(const char *name) override;
-  void deleteStorage(void *storage) override;
+  llvm::ErrorOr<void *> newStorageImpl(const char *name) override;
+  void deleteStorageImpl(void *storage) override;
 
  private:
   /// Map aligned starts to actual starts for freeing.
@@ -52,7 +52,8 @@ class MallocStorageProvider final : public StorageProvider {
   llvm::DenseMap<void *, void *> lowLimToAllocHandle_;
 };
 
-llvm::ErrorOr<void *> VMAllocateStorageProvider::newStorage(const char *name) {
+llvm::ErrorOr<void *> VMAllocateStorageProvider::newStorageImpl(
+    const char *name) {
   assert(AlignedStorage::size() % oscompat::page_size() == 0);
   // Allocate the space, hoping it will be the correct alignment.
   auto result = oscompat::vm_allocate_aligned(
@@ -69,14 +70,14 @@ llvm::ErrorOr<void *> VMAllocateStorageProvider::newStorage(const char *name) {
   return mem;
 }
 
-void VMAllocateStorageProvider::deleteStorage(void *storage) {
+void VMAllocateStorageProvider::deleteStorageImpl(void *storage) {
   if (!storage) {
     return;
   }
   oscompat::vm_free_aligned(storage, AlignedStorage::size());
 }
 
-llvm::ErrorOr<void *> MallocStorageProvider::newStorage(const char *name) {
+llvm::ErrorOr<void *> MallocStorageProvider::newStorageImpl(const char *name) {
   // name is unused, can't name malloc memory.
   (void)name;
   void *mem = checkedMalloc2(AlignedStorage::size(), 2u);
@@ -86,7 +87,7 @@ llvm::ErrorOr<void *> MallocStorageProvider::newStorage(const char *name) {
   return lowLim;
 }
 
-void MallocStorageProvider::deleteStorage(void *storage) {
+void MallocStorageProvider::deleteStorageImpl(void *storage) {
   if (!storage) {
     return;
   }
@@ -104,6 +105,27 @@ std::unique_ptr<StorageProvider> StorageProvider::mmapProvider() {
 /* static */
 std::unique_ptr<StorageProvider> StorageProvider::mallocProvider() {
   return std::unique_ptr<StorageProvider>(new MallocStorageProvider);
+}
+
+llvm::ErrorOr<void *> StorageProvider::newStorage(const char *name) {
+  auto res = newStorageImpl(name);
+
+  if (res) {
+    numSucceededAllocs_++;
+  } else {
+    numFailedAllocs_++;
+  }
+
+  return res;
+}
+
+void StorageProvider::deleteStorage(void *storage) {
+  if (!storage) {
+    return;
+  }
+
+  numDeletedAllocs_++;
+  deleteStorageImpl(storage);
 }
 
 llvm::ErrorOr<std::pair<void *, size_t>>
@@ -135,6 +157,22 @@ vmAllocateAllowLess(size_t sz, size_t minSz, size_t alignment) {
   }
   assert(!result && "Must be an error if none of the allocations succeeded");
   return result.getError();
+}
+
+size_t StorageProvider::numSucceededAllocs() const {
+  return numSucceededAllocs_;
+}
+
+size_t StorageProvider::numFailedAllocs() const {
+  return numFailedAllocs_;
+}
+
+size_t StorageProvider::numDeletedAllocs() const {
+  return numDeletedAllocs_;
+}
+
+size_t StorageProvider::numLiveAllocs() const {
+  return numSucceededAllocs_ - numDeletedAllocs_;
 }
 
 } // namespace vm

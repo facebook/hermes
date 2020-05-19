@@ -15,7 +15,6 @@
 #include "gtest/gtest.h"
 
 #include "EmptyCell.h"
-#include "LogSuccessStorageProvider.h"
 #include "TestHelpers.h"
 #include "hermes/Support/Compiler.h"
 #include "hermes/Support/OSCompat.h"

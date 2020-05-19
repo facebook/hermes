@@ -13,7 +13,7 @@
 namespace hermes {
 namespace vm {
 
-llvm::ErrorOr<void *> LimitedStorageProvider::newStorage(const char *name) {
+llvm::ErrorOr<void *> LimitedStorageProvider::newStorageImpl(const char *name) {
   if (limit_ < AlignedStorage::size()) {
     return make_error_code(OOMError::TestVMLimitReached);
   }
@@ -21,7 +21,7 @@ llvm::ErrorOr<void *> LimitedStorageProvider::newStorage(const char *name) {
   return delegate_->newStorage(name);
 }
 
-void LimitedStorageProvider::deleteStorage(void *storage) {
+void LimitedStorageProvider::deleteStorageImpl(void *storage) {
   if (!storage) {
     return;
   }

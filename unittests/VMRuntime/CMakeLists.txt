@@ -47,7 +47,6 @@ set(RTSources
   InterpreterTest.cpp
   IRInstrumentationTest.cpp
   JSLibTest.cpp
-  LogSuccessStorageProvider.cpp
   NativeFrameTest.cpp
   NativeFunctionNameTest.cpp
   MarkBitArrayNCTest.cpp

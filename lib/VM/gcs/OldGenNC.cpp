@@ -85,7 +85,8 @@ OldGen::Size::adjustSizeWithBounds(size_t desired, size_t min, size_t max) {
 
 OldGen::OldGen(GenGC *gc, Size sz, bool releaseUnused)
     : GCGeneration(gc), sz_(sz), releaseUnused_(releaseUnused) {
-  auto result = AlignedStorage::create(&gc_->storageProvider_, kSegmentName);
+  auto result =
+      AlignedStorage::create(gc_->storageProvider_.get(), kSegmentName);
   if (!result) {
     gc_->oom(result.getError());
   }
@@ -678,7 +679,8 @@ bool OldGen::seedSegmentCacheForSize(size_t size) {
 
   // Try and seed the segment cache with enough segments to fit the request.
   for (; segAlloc < segReq; ++segAlloc) {
-    auto result = AlignedStorage::create(&gc_->storageProvider_, kSegmentName);
+    auto result =
+        AlignedStorage::create(gc_->storageProvider_.get(), kSegmentName);
     if (!result) {
       // We could not allocate all the segments we needed, so give back the ones
       // we were able to allocate.
@@ -713,7 +715,8 @@ bool OldGen::materializeNextSegment() {
     exchangeActiveSegment(std::move(segmentCache_.back()), filledSegSlot);
     segmentCache_.pop_back();
   } else {
-    auto result = AlignedStorage::create(&gc_->storageProvider_, kSegmentName);
+    auto result =
+        AlignedStorage::create(gc_->storageProvider_.get(), kSegmentName);
     if (!result) {
       filledSegments_.pop_back();
       return false;

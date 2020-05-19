@@ -38,7 +38,6 @@ set(source_files
   JSTypedArray.cpp
   JSWeakMapImpl.cpp
   LimitedStorageProvider.cpp
-  LogFailStorageProvider.cpp
   DecoratedObject.cpp
   HostModel.cpp
   Operations.cpp
