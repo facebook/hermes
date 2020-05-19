@@ -329,6 +329,10 @@ numberPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 numberPrototypeToLocaleString(void *ctx, Runtime *runtime, NativeArgs args) {
+#ifdef HERMES_PLATFORM_INTL
+  return intlNumberPrototypeToLocaleString(/* unused */ ctx, runtime, args);
+#else
+
   double number;
 
   // Extract the number from this.
@@ -352,6 +356,7 @@ numberPrototypeToLocaleString(void *ctx, Runtime *runtime, NativeArgs args) {
   }
 
   return res->getHermesValue();
+#endif
 }
 
 CallResult<HermesValue>

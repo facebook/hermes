@@ -589,14 +589,31 @@ CallResult<HermesValue> datePrototypeToLocaleStringHelper(
     void *ctx,
     Runtime *runtime,
     NativeArgs args) {
+  assert(
+      (uint64_t)ctx < (uint64_t)ToLocaleStringKind::NumKinds &&
+      "dataPrototypeToLocaleString with wrong kind as context");
+#ifdef HERMES_PLATFORM_INTL
+  static NativeFunctionPtr toLocaleStringFunctions[] = {
+      intlDatePrototypeToLocaleString,
+      intlDatePrototypeToLocaleDateString,
+      intlDatePrototypeToLocaleTimeString,
+  };
+  assert(
+      sizeof(toLocaleStringFunctions) / sizeof(toLocaleStringFunctions[0]) ==
+          (size_t)ToLocaleStringKind::NumKinds &&
+      "toLocaleStringFunctions has wrong number of elements");
+  return toLocaleStringFunctions[(uint64_t)ctx](
+      /* unused */ ctx, runtime, args);
+#else
   static ToLocaleStringOptions toLocaleStringOptions[] = {
       {datetimeToLocaleString},
       {dateToLocaleString},
       {timeToLocaleString},
   };
   assert(
-      (uint64_t)ctx < (uint64_t)ToLocaleStringKind::NumKinds &&
-      "dataPrototypeToLocaleString with wrong kind as context");
+      sizeof(toLocaleStringOptions) / sizeof(toLocaleStringOptions[0]) ==
+          (size_t)ToLocaleStringKind::NumKinds &&
+      "toLocaleStringOptions has wrong number of elements");
   ToLocaleStringOptions *opts = &toLocaleStringOptions[(uint64_t)ctx];
   auto *date = dyn_vmcast<JSDate>(args.getThisArg());
   if (!date) {
@@ -613,6 +630,7 @@ CallResult<HermesValue> datePrototypeToLocaleStringHelper(
 
   opts->toStringFn(t, str);
   return StringPrimitive::create(runtime, str);
+#endif
 }
 
 CallResult<HermesValue>

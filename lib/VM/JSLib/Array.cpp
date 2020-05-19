@@ -495,7 +495,19 @@ arrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
       }
       if (auto func =
               Handle<Callable>::dyn_vmcast(runtime->makeHandle(*propRes))) {
-        auto callRes = Callable::executeCall0(func, runtime, elementObj);
+        // If ECMA 402 is implemented, it provides a superseding
+        // definition of Array.prototype.toLocaleString.  The only
+        // difference between these two definitions is that in ECMA
+        // 402, two arguments (locales and options), if provided, are
+        // passed on from this function to the element's
+        // "toLocaleString" method.
+        auto callRes =
+#ifdef HERMES_PLATFORM_INTL
+            Callable::executeCall2(
+                func, runtime, elementObj, args.getArg(0), args.getArg(1));
+#else
+            Callable::executeCall0(func, runtime, elementObj);
+#endif
         if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }

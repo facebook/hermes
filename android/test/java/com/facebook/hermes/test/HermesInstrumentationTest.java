@@ -28,6 +28,12 @@ public class HermesInstrumentationTest extends InstrumentationTestCase {
   @Test
   public void testLocaleCompare() {
     try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
+      /* Reenable this once Intl is capable enough */
+      rt.evaluateJavaScript("intlType = typeof Intl");
+      if (rt.getGlobalStringProperty("intlType").equals("object")) {
+        return;
+      }
+
       rt.evaluateJavaScript("compareResult1 = 'a'.localeCompare('a');");
       rt.evaluateJavaScript("compareResult2 = 'a'.localeCompare('b');");
       rt.evaluateJavaScript("compareResult3 = 'a'.localeCompare('A');");
@@ -59,6 +65,12 @@ public class HermesInstrumentationTest extends InstrumentationTestCase {
     TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 
     try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
+      /* Reenable this once Intl is capable enough */
+      rt.evaluateJavaScript("intlType = typeof Intl");
+      if (rt.getGlobalStringProperty("intlType").equals("object")) {
+        return;
+      }
+
       rt.evaluateJavaScript(
           new StringBuilder()
               .append("var date = new Date(Date.UTC(2012, 11, 20, 3, 0, 0));\n")

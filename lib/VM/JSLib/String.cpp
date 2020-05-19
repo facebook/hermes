@@ -1094,7 +1094,10 @@ stringPrototypeToLowerCase(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringPrototypeToLocaleLowerCase(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeToLocaleLowerCase(void *ctx, Runtime *runtime, NativeArgs args) {
+#ifdef HERMES_PLATFORM_INTL
+  return intlStringPrototypeToLocaleLowerCase(/* unused */ ctx, runtime, args);
+#else
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
           ExecutionStatus::EXCEPTION)) {
@@ -1106,6 +1109,7 @@ stringPrototypeToLocaleLowerCase(void *, Runtime *runtime, NativeArgs args) {
   }
   return convertCase(
       runtime, runtime->makeHandle(std::move(*res)), false, true);
+#endif
 }
 
 CallResult<HermesValue>
@@ -1124,7 +1128,10 @@ stringPrototypeToUpperCase(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringPrototypeToLocaleUpperCase(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeToLocaleUpperCase(void *ctx, Runtime *runtime, NativeArgs args) {
+#ifdef HERMES_PLATFORM_INTL
+  return intlStringPrototypeToLocaleUpperCase(/* unused */ ctx, runtime, args);
+#else
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
           ExecutionStatus::EXCEPTION)) {
@@ -1135,7 +1142,9 @@ stringPrototypeToLocaleUpperCase(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   return convertCase(runtime, runtime->makeHandle(std::move(*res)), true, true);
+#endif
 }
+
 CallResult<HermesValue>
 stringPrototypeSubstr(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(
@@ -1289,7 +1298,10 @@ stringPrototypeTrimEnd(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringPrototypeLocaleCompare(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeLocaleCompare(void *ctx, Runtime *runtime, NativeArgs args) {
+#ifdef HERMES_PLATFORM_INTL
+  return intlStringPrototypeLocaleCompare(/* unused */ ctx, runtime, args);
+#else
   auto thisValue = args.getThisHandle();
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, thisValue) ==
@@ -1317,6 +1329,7 @@ stringPrototypeLocaleCompare(void *, Runtime *runtime, NativeArgs args) {
   int comparisonResult = platform_unicode::localeCompare(left, right);
   assert(comparisonResult >= -1 && comparisonResult <= 1);
   return HermesValue::encodeNumberValue(comparisonResult);
+#endif
 }
 
 CallResult<HermesValue>
