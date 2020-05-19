@@ -199,7 +199,8 @@ void installConsoleBindings(
   auto defineGlobalFunc = [&](vm::SymbolID name,
                               vm::NativeFunctionPtr functionPtr,
                               void *context,
-                              unsigned paramCount) {
+                              unsigned paramCount) -> void {
+    vm::GCScopeMarkerRAII marker{runtime};
 #ifdef HERMESVM_SERIALIZE
     assert(
         (std::find(pointers.begin(), pointers.end(), (void *)functionPtr) !=
