@@ -154,7 +154,7 @@ function Playground() {
         </div>
       </div>
 
-      <div className={classnames(styles.row)}>
+      <div className={classnames([styles.row, styles.fixed])}>
         <Editor
           {...(windowSize.width > 600 ? editorLayout.lg : editorLayout.xs)}
           language="javascript"

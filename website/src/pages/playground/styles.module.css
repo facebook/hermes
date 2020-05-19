@@ -92,6 +92,10 @@ html[data-theme='dark'] .helperButton {
   flex-wrap: wrap;
 }
 
+.fixed {
+  position: fixed;
+}
+
 .spinner {
   animation: rotate 1.5s linear infinite;
 }
