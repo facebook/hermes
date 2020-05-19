@@ -442,6 +442,21 @@ STR(squareSymbolSearch, "[Symbol.search]")
 STR(squareSymbolReplace, "[Symbol.replace]")
 STR(squareSymbolSplit, "[Symbol.split]")
 
+#ifdef HERMES_PLATFORM_INTL
+// TODO T65916424: Consider how we can move these out of the
+// predefined strings table.
+STR(Collator, "Collator")
+STR(DateTimeFormat, "DateTimeFormat")
+STR(NumberFormat, "NumberFormat")
+STR(Intl, "Intl")
+STR(compare, "compare")
+STR(format, "format")
+STR(formatToParts, "formatToParts")
+STR(getCanonicalLocales, "getCanonicalLocales")
+STR(resolvedOptions, "resolvedOptions")
+STR(supportedLocalesOf, "supportedLocalesOf")
+#endif
+
 // Define strings like "[object Number]" for all classes.
 #define CELL_JS_NAME(name, jsClassName) \
   STR(squareObject_##name, "[object " jsClassName "]")

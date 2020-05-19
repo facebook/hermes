@@ -504,6 +504,16 @@ Handle<JSObject> createInstrumentObject(Runtime *runtime);
 #endif
 
 } // namespace vm
+
+#ifdef HERMES_PLATFORM_INTL
+namespace intl {
+
+// TODO T65916424: Consider how we can move this somewhere more modular.
+vm::Handle<vm::JSObject> createIntlObject(vm::Runtime *runtime);
+
+} // namespace intl
+#endif
+
 } // namespace hermes
 
 #endif // HERMES_VM_JSLIB_JSLIBINTERNAL_H

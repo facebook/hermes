@@ -9,6 +9,7 @@
 /// \file
 /// Initialize the global object ES5.1 15.1
 //===----------------------------------------------------------------------===//
+#include "hermes/Platform/Intl/PlatformIntl.h"
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSDataView.h"
 #include "hermes/VM/JSLib.h"
@@ -739,6 +740,17 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
           createASCIIRef("__instrument")),
       normalDPF,
       createInstrumentObject(runtime)));
+#endif
+
+#ifdef HERMES_PLATFORM_INTL
+  // Define the global Intl object
+  // TODO T65916424: Consider how we can move this somewhere more modular.
+  runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
+      runtime->getGlobal(),
+      runtime,
+      Predefined::getSymbolID(Predefined::Intl),
+      normalDPF,
+      intl::createIntlObject(runtime)));
 #endif
 }
 

@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// Updated Jan 28, 2019
-#define NATIVE_FUNCTION_VERSION_VALUE 8
+// Updated May 6, 2020
+#define NATIVE_FUNCTION_VERSION_VALUE 9
 
 #ifndef NATIVE_FUNCTION
 #define NATIVE_FUNCTION(func)
@@ -420,6 +420,39 @@ NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSGeneratorFunction>)
       NativeConstructor::creatorFunction)
 #include "hermes/VM/TypedArrays.def"
 #undef TYPED_ARRAY
+
+#ifdef HERMES_PLATFORM_INTL
+// TODO T65916424: Consider how we can move these somewhere more modular.
+// I would prefer these be in the ::hermes::intl namespace, but the current
+// macros make that difficult.
+NATIVE_FUNCTION(intlCollatorCompare)
+NATIVE_FUNCTION(intlCollatorConstructor)
+NATIVE_FUNCTION(intlCollatorSupportedLocalesOf)
+NATIVE_FUNCTION(intlCollatorPrototypeCompareGetter)
+NATIVE_FUNCTION(intlCollatorPrototypeResolvedOptions)
+
+NATIVE_FUNCTION(intlDateTimeFormatConstructor)
+NATIVE_FUNCTION(intlDateTimeFormatFormat)
+NATIVE_FUNCTION(intlDateTimeFormatSupportedLocalesOf)
+NATIVE_FUNCTION(intlDateTimeFormatPrototypeFormatGetter)
+NATIVE_FUNCTION(intlDateTimeFormatPrototypeFormatToParts)
+NATIVE_FUNCTION(intlDateTimeFormatPrototypeResolvedOptions)
+
+NATIVE_FUNCTION(intlNumberFormatConstructor)
+NATIVE_FUNCTION(intlNumberFormatFormat)
+NATIVE_FUNCTION(intlNumberFormatSupportedLocalesOf)
+NATIVE_FUNCTION(intlNumberFormatPrototypeFormatGetter)
+NATIVE_FUNCTION(intlNumberFormatPrototypeFormatToParts)
+NATIVE_FUNCTION(intlNumberFormatPrototypeResolvedOptions)
+
+NATIVE_FUNCTION(intlDatePrototypeToLocaleDateString)
+NATIVE_FUNCTION(intlDatePrototypeToLocaleString)
+NATIVE_FUNCTION(intlDatePrototypeToLocaleTimeString)
+NATIVE_FUNCTION(intlNumberPrototypeToLocaleString)
+NATIVE_FUNCTION(intlStringPrototypeLocaleCompare)
+NATIVE_FUNCTION(intlStringPrototypeToLocaleLowerCase)
+NATIVE_FUNCTION(intlStringPrototypeToLocaleUpperCase)
+#endif
 
 #undef NATIVE_FUNCTION
 #undef NATIVE_CONSTRUCTOR
