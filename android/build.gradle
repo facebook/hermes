@@ -48,13 +48,19 @@ task copyApiHeaders(type: Copy) {
   into "$outputDir/include/hermes"
 }
 
+task copyJsiHeaders(type: Copy) {
+  from "$projectDir/../API/jsi/jsi"
+  include '**/*.h'
+  into "$outputDir/include/jsi"
+}
+
 task copyPublicHeaders(type: Copy) {
   from "$projectDir/../public/hermes/Public"
   include '**/*.h'
   into "$outputDir/include/hermes/Public"
 }
 
-task githubRelease(dependsOn: ['hermes:build', 'cppruntime:build', 'copyApiHeaders', 'copyPublicHeaders'], type: Tar) {
+task githubRelease(dependsOn: ['hermes:build', 'cppruntime:build', 'copyApiHeaders', 'copyJsiHeaders', 'copyPublicHeaders'], type: Tar) {
   baseName = "hermes-runtime-android"
   version = "v" + release_version
   extension = "tar.gz"
