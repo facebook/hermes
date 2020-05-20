@@ -51,6 +51,11 @@ print(arr);
 // CHECK-NEXT: 1,in_proto,3
 delete arr0.__proto__[1];
 
+var arr0 = Array(1000);
+var arr = [...arr0];
+print(arr.length);
+// CHECK-NEXT: 1000
+
 var count = 4;
 var iterator = {
   [Symbol.iterator]() {

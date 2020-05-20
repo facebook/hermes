@@ -501,6 +501,7 @@ hermesBuiltinCopyRestArgs(void *, Runtime *runtime, NativeArgs args) {
 /// \return the next empty index in the array to use for additional properties.
 CallResult<HermesValue>
 hermesBuiltinArraySpread(void *, Runtime *runtime, NativeArgs args) {
+  GCScopeMarkerRAII topMarker{runtime};
   Handle<JSArray> target = args.dyncastArg<JSArray>(0);
   // To be safe, check for non-arrays.
   if (!target) {
@@ -530,13 +531,14 @@ hermesBuiltinArraySpread(void *, Runtime *runtime, NativeArgs args) {
         slotValue.invalidate();
         auto nextIndex = args.getArg(2).getNumberAs<JSArray::size_type>();
         MutableHandle<> idxHandle{runtime};
+        GCScopeMarkerRAII marker{runtime};
         for (JSArray::size_type i = 0; i < JSArray::getLength(*arr); ++i) {
+          marker.flush();
           // Fast path: look up the property in indexed storage.
           nextValue = arr->at(runtime, i);
           if (LLVM_UNLIKELY(nextValue->isEmpty())) {
             // Slow path, just run the full getComputed_RJS path.
             // Runs when there is a hole, accessor, non-regular property, etc.
-            GCScopeMarkerRAII marker{runtime};
             idxHandle = HermesValue::encodeNumberValue(i);
             CallResult<HermesValue> valueRes =
                 JSObject::getComputed_RJS(arr, runtime, idxHandle);
