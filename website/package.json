@@ -31,6 +31,7 @@
     ]
   },
   "devDependencies": {
+    "case-sensitive-paths-webpack-plugin": "^2.3.0",
     "file-loader": "^5.0.2",
     "monaco-editor-webpack-plugin": "^1.8.2",
     "worker-loader": "^2.0.0"

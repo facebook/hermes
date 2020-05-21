@@ -74,5 +74,8 @@ module.exports = {
       },
     ],
   ],
-  plugins: [path.join(__dirname, '/plugins/monaco-editor')],
+  plugins: [
+    path.join(__dirname, '/plugins/monaco-editor'),
+    path.join(__dirname, '/plugins/case-sensitive-paths')
+  ],
 };

@@ -3,14 +3,15 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
+ *
+ * @format
  */
 
-import React, { useEffect, useState, useReducer } from 'react';
-import classnames from 'classnames';
+import React, {useEffect, useState, useReducer, useCallback} from 'react';
 import Layout from '@theme/Layout';
 import Worker from 'worker-loader!@site/src/workers/hermes.js';
-import useWindowSize from '@site/src/hooks/useWindowSize';
-import Editor from '@site/src/components/Editor';
+import Code from '@site/src/components/Code';
+import Spinner from '@site/src/components/Spinner';
 import styles from './styles.module.css';
 
 let worker;
@@ -18,184 +19,97 @@ if (typeof window !== 'undefined') {
   worker = new Worker();
 }
 
+const initialState = {
+  runRequested: false,
+  output: '',
+  lastTime: undefined,
+  ellapsed: 0,
+};
+
 function reducer(state, action) {
-  switch (action.type) {
-    case 'request':
-      return { ...state, loading: true, lastTime: new Date() };
-    case 'success':
+  switch (action.tag) {
+    case 'RUN':
+      if (state.runRequested) return state;
+      const args = action.args.split(/\s+/).filter(x => x);
+      worker.postMessage(['run', args, action.source]);
+      return {...state, runRequested: true, lastTime: new Date()};
+    case 'RUN_COMPLETE':
       return {
         ...state,
-        loading: false,
+        runRequested: false,
         output: action.result,
-        ellapsed: new Date() - state.lastTime + ' ms',
+        ellapsed: new Date() - state.lastTime,
       };
   }
 }
 
-const initialState = {
-  loading: false,
-  output: '',
-  lastTime: undefined,
-  ellapsed: undefined,
-};
-
 function Playground() {
-  if (typeof window === 'undefined') {
-    return null;
-  }
+  if (typeof window === 'undefined') return null;
 
-  const [{ loading, ellapsed, output }, dispatch] = useReducer(
-    reducer,
-    initialState
-  );
-  const [input, setInput] = useState('const a = 1; \nprint(a);');
+  const [source, setSource] = useState('const a = 1; \nprint(a);');
   const [args, setArgs] = useState('-O -dump-bytecode');
-  const windowSize = useWindowSize();
+  const [state, dispatch] = useReducer(reducer, initialState);
 
-  const headerLayout = {
-    height: 100,
-  };
-
-  const editorLayout = {
-    xs: {
-      width: windowSize.width,
-      height: 200,
-    },
-    lg: {
-      width: (1 / 3) * windowSize.width,
-      height: windowSize.height - headerLayout.height,
-    },
-  };
-
-  const outputLayout = {
-    xs: {
-      width: windowSize.width,
-      height: windowSize.height - headerLayout.height - editorLayout.xs.height,
-    },
-    lg: {
-      width: (2 / 3) * windowSize.width,
-      height: windowSize.height,
-    },
-  };
+  const {runRequested, ellapsed, output} = state;
+  const run = args => dispatch({tag: 'RUN', args, source});
 
   useEffect(() => {
-    worker.onmessage = function(e) {
-      switch (e.data[0]) {
-        case 'result':
-          dispatch({
-            type: 'success',
-            result: e.data[1].result,
-          });
+    worker.onmessage = e => {
+      let [tag, payload] = e.data;
+      switch (tag) {
+        case 'runResult':
+          dispatch({tag: 'RUN_COMPLETE', result: payload});
           break;
+        default:
+          throw new Error('unknown message type from Hermes worker.');
       }
     };
-
-    run(args);
   }, []);
 
-  function run(args) {
-    if (loading) {
-      return;
-    }
-
-    const opts = args.split(/\s+/).filter(x => x);
-    dispatch({ type: 'request' });
-    worker.postMessage(['run', opts, input]);
-  }
-
-  function handleSubmit(e) {
+  const handleSubmit = e => {
     e.preventDefault();
     run(args);
-  }
-
-  function handleArgsChange(evt) {
-    setArgs(evt.target.value);
-  }
-
-  function handleClickRun() {
-    run(args);
-  }
-
-  function handleClickHelp() {
-    run('-help');
-  }
+  };
 
   return (
     <Layout title="Hermes" description="Hermes Playground" noFooter={true}>
-      <div className={classnames(styles.headerContainer)}>
-        <form
-          onSubmit={handleSubmit}
-          className={classnames(styles.argsInputContainer)}
-        >
-          <input
-            className={classnames(styles.argsInputField)}
-            name="args"
-            placeholder="args"
-            type="text"
-            value={args}
-            onChange={handleArgsChange}
-          />
-          <button
-            onClick={handleClickRun}
-            className={classnames(styles.argsIconContainer)}
-          >
-            <RunIcon loading={loading} />
-          </button>
-        </form>
-
-        <div>
-          <button
-            onClick={handleClickHelp}
-            className={classnames(styles.helperButton)}
-          >
-            ?
-          </button>
-          <span>{ellapsed}</span>
+      <form className={styles.driver} onSubmit={handleSubmit}>
+        <input
+          className={styles.argsInput}
+          name="args"
+          placeholder="args"
+          type="text"
+          value={args}
+          onChange={e => setArgs(e.target.value)}
+        />
+        <button className={styles.runBtn}>
+          <RunIcon isLoading={runRequested} />
+        </button>
+        <div className={styles.helpBtn} onClick={_ => run('-help')}>
+          ?
         </div>
-      </div>
+        <span className={styles.ellapsed}>{ellapsed} ms</span>
+      </form>
 
-      <div className={classnames([styles.row, styles.fixed])}>
-        <Editor
-          {...(windowSize.width > 600 ? editorLayout.lg : editorLayout.xs)}
-          language="javascript"
-          value={input}
-          onChange={setInput}
-          options={{ minimap: { enabled: false }, wordWrap: 'on' }}
-        />
-        <Editor
-          {...(windowSize.width > 600 ? outputLayout.lg : outputLayout.xs)}
-          language="json"
-          value={output}
-          options={{
-            readOnly: true,
-            minimap: { enabled: false },
-            wordWrap: 'on',
-          }}
-        />
+      <div className={styles.codeContainer}>
+        <div className={styles.sourceCode}>
+          <Code language="javascript" value={source} onChange={setSource} />
+        </div>
+        <div className={styles.outputCode}>
+          <Code
+            language="json"
+            value={output}
+            editorDidMount={useCallback(_ => run(args))}
+            options={{readOnly: true}}
+          />
+        </div>
       </div>
     </Layout>
   );
 }
 
-function RunIcon({ loading }) {
-  if (loading) {
-    return (
-      <i aria-label="icon: load">
-        <svg
-          viewBox="0 0 1024 1024"
-          data-icon="loading"
-          width="1.5em"
-          height="1.5em"
-          fill="currentColor"
-          aria-hidden="true"
-          className={classnames(styles.spinner)}
-        >
-          <path d="M988 548c-19.9 0-36-16.1-36-36 0-59.4-11.6-117-34.6-171.3a440.45 440.45 0 0 0-94.3-139.9 437.71 437.71 0 0 0-139.9-94.3C629 83.6 571.4 72 512 72c-19.9 0-36-16.1-36-36s16.1-36 36-36c69.1 0 136.2 13.5 199.3 40.3C772.3 66 827 103 874 150c47 47 83.9 101.8 109.7 162.7 26.7 63.1 40.2 130.2 40.2 199.3.1 19.9-16 36-35.9 36z"></path>
-        </svg>
-      </i>
-    );
-  }
-
+function RunIcon({isLoading}) {
+  if (isLoading) return <Spinner />;
   return (
     <i aria-label="icon: run">
       <svg
@@ -204,8 +118,7 @@ function RunIcon({ loading }) {
         width="1.5em"
         height="1.5em"
         fill="currentColor"
-        aria-hidden="true"
-      >
+        aria-hidden="true">
         <path d="M 600,1200 C 268.65,1200 0,931.35 0,600 0,268.65 268.65,0 600,0 c 331.35,0 600,268.65 600,600 0,331.35 -268.65,600 -600,600 z M 450,300.45 450,899.55 900,600 450,300.45 z" />
       </svg>
     </i>
