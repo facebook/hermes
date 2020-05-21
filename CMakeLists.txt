@@ -137,6 +137,9 @@ set(HERMES_SLOW_DEBUG ON CACHE BOOL
 set(HERMES_STATIC_LINK OFF CACHE BOOL
   "Link Hermes statically. May only work on GNU/Linux.")
 
+set(HERMES_USE_STATIC_ICU OFF CACHE BOOL
+  "Force static linking of ICU. May only work on GNU/Linux.")
+
 set(HERMES_ENABLE_DEBUGGER_DEFAULT OFF)
 if (NOT HERMES_IS_MOBILE_BUILD)
     set(HERMES_ENABLE_DEBUGGER_DEFAULT ON)
@@ -221,7 +224,8 @@ endif()
 
 if (HERMES_STATIC_LINK)
   set(CMAKE_EXE_LINKER_FLAGS "-static")
-  set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+  set(HERMES_USE_STATIC_ICU ON)
+  set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_STATIC_LIBRARY_SUFFIX}")
 endif()
 
 CHECK_CXX_SOURCE_COMPILES(
@@ -398,9 +402,17 @@ if (NOT ICU_FOUND)
   # CMake 3.8.0.  https://github.com/Kitware/CMake/commit/cdf7e5d8
   list(APPEND icu_include_suffixes "include")
 
+  set(CMAKE_FIND_LIBRARY_SUFFIXES_OLD "${CMAKE_FIND_LIBRARY_SUFFIXES}")
+  if (HERMES_USE_STATIC_ICU)
+    add_definitions(-DU_STATIC_IMPLEMENTATION)
+    set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  endif()
+
   # FindICU uses ICU_ROOT variable as a hint
   # Include 'uc' twice for static libraries that depend on each other.
   find_global_package(ICU 52 COMPONENTS uc i18n data uc)
+
+  set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_FIND_LIBRARY_SUFFIXES_OLD}")
 
   if (ICU_FOUND)
     foreach(LIB_FILE ${ICU_LIBRARIES})
@@ -439,8 +451,13 @@ endif()
 function(hermes_link_icu target_name)
   get_target_property(target_type ${target_name} TYPE)
   target_link_libraries(${target_name} PRIVATE ${ICU_LIBRARIES})
-  if ((NOT EMSCRIPTEN) AND HERMES_STATIC_LINK AND target_type MATCHES "EXECUTABLE|STATIC_LIBRARY")
-    target_link_libraries(${target_name} PRIVATE dl pthread)
+
+  if (HERMES_USE_STATIC_ICU)
+    if ((NOT EMSCRIPTEN) AND target_type MATCHES "EXECUTABLE|STATIC_LIBRARY")
+      target_link_libraries(${target_name} PRIVATE dl pthread)
+    elseif(target_type MATCHES "MODULE_LIBRARY|SHARED_LIBRARY")
+      message(WARNING "ICU cannot be statically linked against shared library target ${target_name}")
+    endif()
   endif()
 
   if (ICU_RPATH)
