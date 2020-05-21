@@ -15,14 +15,16 @@ import java.util.List;
 import java.util.Map;
 
 public class Intl {
+  // Implementer note: This method corresponds roughly to
+  // https://tc39.es/ecma402/#sec-canonicalizelocalelist
+  //
+  // Also see the implementer notes on DateTimeFormat#DateTimeFormat()
+  // for more discussion of locales and CanonicalizeLocaleList.
   public static List<String> getCanonicalLocales(List<String> locales)
     throws JSRangeErrorException
   {
-    // This implementation is incomplete.  It omits step 7.c.v of
-    // https://tc39.es/ecma402/#sec-canonicalizelocalelist and step 3
-    // of https://tc39.es/ecma402/#sec-canonicalizeunicodelocaleid.
-    // It may be missing other steps.  However, the impl does prove
-    // that the Android Java ICU methods can successfully be called.
+    // This implementation is incomplete.  However, it does show that
+    // the Android Java ICU methods can successfully be called.
 
     ArrayList<String> ret = new ArrayList<String>();
     for (String l : locales) {
@@ -34,11 +36,15 @@ public class Intl {
     return ret;
   }
 
+  // Implementer note: This method corresponds roughly to
+  // https://tc39.es/ecma402/#sup-string.prototype.tolocalelowercase
   public static String toLocaleLowerCase(List<String> locales, String str)
   {
     return "lowered";
   }
 
+  // Implementer note: This method corresponds roughly to
+  // https://tc39.es/ecma402/#sup-string.prototype.tolocaleuppercase
   public static String toLocaleUpperCase(List<String> locales, String str)
   {
     return "uppered";
