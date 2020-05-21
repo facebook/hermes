@@ -24,6 +24,7 @@ Hermes plans to target ECMAScript 2015 (ES6), with some carefully considered exc
 - Classes and method definitions
 - Computed property keys on object literals
 - ES modules (`import` and `export`)
+- `Intl` API glue for Android has been added, in order to enable community contribution of a complete, spec-compliant implementation.
 
 ## Excluded From Support
 
@@ -31,7 +32,6 @@ Hermes plans to target ECMAScript 2015 (ES6), with some carefully considered exc
 - Realms
 - `with` statements
 - Local mode `eval()` (use and introduce local variables)
-- `Intl` API
 - `Symbol.species` and its interactions with JS library functions
 - use of `constructor` property when creating new Arrays in Array.prototype methods
 - `Symbol.unscopables` (Hermes does not support `with`)
