@@ -602,10 +602,11 @@ void externStoreToEnvironment(
 void externStoreNPToEnvironment(
     PinnedHermesValue *env,
     uint32_t idx,
-    PinnedHermesValue *val) {
+    PinnedHermesValue *val,
+    Runtime *runtime) {
   // TODO: emit the value setting directly in fast path without emitting an
   // external call
-  vmcast<Environment>(*env)->slot(idx).setNonPtr(*val);
+  vmcast<Environment>(*env)->slot(idx).setNonPtr(*val, &runtime->getHeap());
 }
 
 HermesValue externLoadFromEnvironment(PinnedHermesValue *env, uint32_t idx) {

@@ -30,10 +30,25 @@ inline PinnedHermesValue &PinnedHermesValue::operator=(PseudoHandle<T> &&hv) {
 }
 
 template <typename NeedsBarriers>
+GCHermesValue::GCHermesValue(HermesValue hv, GC *gc) : HermesValue{hv} {
+  if (NeedsBarriers::value)
+    gc->constructorWriteBarrier(this, hv);
+}
+
+template <typename NeedsBarriers>
+GCHermesValue::GCHermesValue(HermesValue hv, GC *gc, std::nullptr_t)
+    : HermesValue{hv} {
+  assert(!hv.isPointer() || !hv.getPointer());
+#ifdef HERMESVM_GC_HADES
+  // Only Hades needs a write barrier for a non-pointer hv
+  if (NeedsBarriers::value)
+    gc->constructorWriteBarrier(this, hv);
+#endif
+}
+
+template <typename NeedsBarriers>
 inline void GCHermesValue::set(HermesValue hv, GC *gc) {
-  HERMES_SLOW_ASSERT(
-      gc &&
-      "Must pass a valid GC in case this is a pointer, if not use setNonPtr");
+  HERMES_SLOW_ASSERT(gc && "Need a GC parameter in case of a write barrier");
   if (hv.isPointer() && hv.getPointer()) {
     HERMES_SLOW_ASSERT(
         gc->validPointer(hv.getPointer()) &&
@@ -41,13 +56,18 @@ inline void GCHermesValue::set(HermesValue hv, GC *gc) {
     assert(
         NeedsBarriers::value || !gc->needsWriteBarrier(this, hv.getPointer()));
   }
-  setNoBarrier(hv);
   if (NeedsBarriers::value)
     gc->writeBarrier(this, hv);
+  setNoBarrier(hv);
 }
 
-void GCHermesValue::setNonPtr(HermesValue hv) {
+void GCHermesValue::setNonPtr(HermesValue hv, GC *gc) {
+  HERMES_SLOW_ASSERT(gc && "Need a GC parameter in case of a write barrier");
   assert(!hv.isPointer() || !hv.getPointer());
+#ifdef HERMESVM_GC_HADES
+  // Needs a write barrier in Hades in case the previous value was a pointer.
+  gc->writeBarrier(this, hv);
+#endif
   setNoBarrier(hv);
 }
 
@@ -55,14 +75,35 @@ void GCHermesValue::setNonPtr(HermesValue hv) {
 template <typename InputIt>
 inline void
 GCHermesValue::fill(InputIt start, InputIt end, HermesValue fill, GC *gc) {
+  HERMES_SLOW_ASSERT(gc && "Need a GC parameter in case of a write barrier");
   if (fill.isPointer()) {
-    assert(gc && "must provide GC for pointer fill.");
     for (auto cur = start; cur != end; ++cur) {
       cur->set(fill, gc);
     }
   } else {
     for (auto cur = start; cur != end; ++cur) {
-      cur->setNonPtr(fill);
+      cur->setNonPtr(fill, gc);
+    }
+  }
+}
+
+/*static*/
+template <typename InputIt>
+inline void GCHermesValue::uninitialized_fill(
+    InputIt start,
+    InputIt end,
+    HermesValue fill,
+    GC *gc) {
+  HERMES_SLOW_ASSERT(gc && "Need a GC parameter in case of a write barrier");
+  if (fill.isPointer()) {
+    for (auto cur = start; cur != end; ++cur) {
+      // Use the constructor write barrier. Assume it needs barriers.
+      new (&*cur) GCHermesValue(fill, gc);
+    }
+  } else {
+    for (auto cur = start; cur != end; ++cur) {
+      // Use a constructor that doesn't handle pointer values.
+      new (&*cur) GCHermesValue(fill, gc, nullptr);
     }
   }
 }
@@ -72,6 +113,18 @@ inline OutputIt
 GCHermesValue::copy(InputIt first, InputIt last, OutputIt result, GC *gc) {
   for (; first != last; ++first, (void)++result) {
     result->set(*first, gc);
+  }
+  return result;
+}
+
+template <typename InputIt, typename OutputIt>
+inline OutputIt GCHermesValue::uninitialized_copy(
+    InputIt first,
+    InputIt last,
+    OutputIt result,
+    GC *gc) {
+  for (; first != last; ++first, (void)++result) {
+    new (&*result) GCHermesValue(*first, gc);
   }
   return result;
 }
@@ -87,13 +140,29 @@ inline GCHermesValue *GCHermesValue::copy(
   // function like std::copy (or copy_backward) that respects
   // constructors and operator=.  For HermesValue, those require the
   // contents not to contain pointers.  The range write barrier
-  // after the the copies ensure that sufficient barriers are
+  // before the copies ensure that sufficient barriers are
   // performed.
+  gc->writeBarrierRange(result, last - first);
   std::memmove(
       reinterpret_cast<void *>(result),
       first,
       (last - first) * sizeof(GCHermesValue));
-  gc->writeBarrierRange(result, last - first);
+  return result + (last - first);
+}
+
+/// Specialization for raw pointers to do a ranged write barrier.
+template <>
+inline GCHermesValue *GCHermesValue::uninitialized_copy(
+    GCHermesValue *first,
+    GCHermesValue *last,
+    GCHermesValue *result,
+    GC *gc) {
+  gc->constructorWriteBarrierRange(result, last - first);
+  // memmove is fine for an uninitialized copy.
+  std::memmove(
+      reinterpret_cast<void *>(result),
+      first,
+      (last - first) * sizeof(GCHermesValue));
   return result + (last - first);
 }
 

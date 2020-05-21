@@ -152,11 +152,6 @@ class Deserializer;
 ///   Do any necessary barriers.
 ///      void writeBarrierRange(GCHermesValue* start, uint32_t numHVs);
 ///
-///   We filled numHVs slots starting at start with the given value.
-///   Do any necessary barriers.
-///      void writeBarrierRangeFill(GCHermesValue* start, uint32_t numHVs,
-///                                 HermesValue value);
-///
 ///   In debug builds: is a write barrier necessary for a write of the given
 ///   GC pointer \p value to the given \p loc?
 ///      bool needsWriteBarrier(void *loc, void *value);
@@ -684,11 +679,13 @@ class GCBase {
   /// Default implementations for write barriers: do nothing.
   inline void writeBarrier(void *loc, HermesValue value) {}
   inline void writeBarrier(void *loc, void *value) {}
+  inline void constructorWriteBarrier(void *loc, HermesValue value) {}
+  inline void constructorWriteBarrier(void *loc, void *value) {}
   inline void writeBarrierRange(GCHermesValue *start, uint32_t numHVs) {}
-  inline void writeBarrierRangeFill(
+  inline void constructorWriteBarrierRange(
       GCHermesValue *start,
-      uint32_t numHVs,
-      HermesValue value) {}
+      uint32_t numHVs) {}
+
 #ifndef NDEBUG
   bool needsWriteBarrier(void *loc, void *value) {
     return false;

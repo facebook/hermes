@@ -58,12 +58,12 @@ struct DummyObject final : public GCCell {
   GCHermesValue hvNull;
 
   DummyObject(GC *gc) : GCCell(gc, &vt), other(), x(1), y(2) {
-    hvBool.setNonPtr(HermesValue::encodeBoolValue(true));
-    hvDouble.setNonPtr(HermesValue::encodeNumberValue(3.14));
-    hvNative.setNonPtr(HermesValue::encodeNativeUInt32(0xE));
-    hvUndefined.setNonPtr(HermesValue::encodeUndefinedValue());
-    hvEmpty.setNonPtr(HermesValue::encodeEmptyValue());
-    hvNull.setNonPtr(HermesValue::encodeNullValue());
+    hvBool.setNonPtr(HermesValue::encodeBoolValue(true), gc);
+    hvDouble.setNonPtr(HermesValue::encodeNumberValue(3.14), gc);
+    hvNative.setNonPtr(HermesValue::encodeNativeUInt32(0xE), gc);
+    hvUndefined.setNonPtr(HermesValue::encodeUndefinedValue(), gc);
+    hvEmpty.setNonPtr(HermesValue::encodeEmptyValue(), gc);
+    hvNull.setNonPtr(HermesValue::encodeNullValue(), gc);
   }
 
   void setPointer(DummyRuntime &rt, DummyObject *obj) {

@@ -161,9 +161,8 @@ class JSWeakMapImplBase : public JSObject {
 
   /// \return the size of the internal map, after freeing any freeable slots.
   /// Used for testing purposes.
-  static uint32_t debugFreeSlotsAndGetSize(
-      PointerBase *base,
-      JSWeakMapImplBase *self);
+  static uint32_t
+  debugFreeSlotsAndGetSize(PointerBase *base, GC *gc, JSWeakMapImplBase *self);
 
   /// An iterator over the keys of the map.
   struct KeyIterator {
@@ -237,12 +236,12 @@ class JSWeakMapImplBase : public JSObject {
 
   /// Iterate the slots in map_ and call deleteInternal on any invalid
   /// references, adding all available slots to the free list.
-  void findAndDeleteFreeSlots(PointerBase *base);
+  void findAndDeleteFreeSlots(PointerBase *base, GC *gc);
 
   /// Erase the map entry and corresponding valueStorage entry
   /// pointed to by the iterator \p it.
   /// Add the newly opened valueStorage slot to the free list.
-  void deleteInternal(PointerBase *base, DenseMapT::iterator it);
+  void deleteInternal(PointerBase *base, GC *gc, DenseMapT::iterator it);
 
  private:
   /// Get the index to insert a new value into valueStorage_.

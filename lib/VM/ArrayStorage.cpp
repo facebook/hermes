@@ -119,23 +119,24 @@ ExecutionStatus ArrayStorage::reallocateToLarger(
   {
     GCHermesValue *from = self->data() + fromFirst;
     GCHermesValue *to = newSelf->data() + toFirst;
-    for (size_t n = 0; n < copySize; n++) {
-      to[n].set(from[n], &runtime->getHeap());
-    }
+    GCHermesValue::uninitialized_copy(
+        from, from + copySize, to, &runtime->getHeap());
   }
 
   // Initialize the elements before the first copied element.
-  GCHermesValue::fill(
+  GCHermesValue::uninitialized_fill(
       newSelf->data(),
       newSelf->data() + toFirst,
-      HermesValue::encodeEmptyValue());
+      HermesValue::encodeEmptyValue(),
+      &runtime->getHeap());
 
   // Initialize the elements after the last copied element and toLast.
   if (toFirst + copySize < toLast) {
-    GCHermesValue::fill(
+    GCHermesValue::uninitialized_fill(
         newSelf->data() + toFirst + copySize,
         newSelf->data() + toLast,
-        HermesValue::encodeEmptyValue());
+        HermesValue::encodeEmptyValue(),
+        &runtime->getHeap());
   }
 
   newSelf->size_ = toLast;
@@ -146,16 +147,26 @@ ExecutionStatus ArrayStorage::reallocateToLarger(
   return ExecutionStatus::RETURNED;
 }
 
-void ArrayStorage::resizeWithinCapacity(ArrayStorage *self, size_type newSize) {
+void ArrayStorage::resizeWithinCapacity(
+    ArrayStorage *self,
+    Runtime *runtime,
+    size_type newSize) {
   assert(
       newSize <= self->capacity_ &&
       "newSize must be <= capacity in resizeWithinCapacity()");
   // If enlarging, clear the new elements.
   if (newSize > self->size_) {
-    GCHermesValue::fill(
+    // Treat the memory as uninitialized when growing.
+    // This applies even in the case where the length has been decreased and
+    // increased again. When the length is decreased, it executes a write
+    // barrier to mark all of the values between the new length and the old
+    // length as unreachable. Since the GC will then be aware of those values,
+    // it doesn't matter if we overwrite them here again.
+    GCHermesValue::uninitialized_fill(
         self->data() + self->size_,
         self->data() + newSize,
-        HermesValue::encodeEmptyValue());
+        HermesValue::encodeEmptyValue(),
+        &runtime->getHeap());
   }
   self->size_ = newSize;
 }
@@ -181,14 +192,18 @@ ExecutionStatus ArrayStorage::shift(
         &runtime->getHeap());
     // Initialize the elements which were emptied in front.
     GCHermesValue::fill(
-        self->data(), self->data() + toFirst, HermesValue::encodeEmptyValue());
+        self->data(),
+        self->data() + toFirst,
+        HermesValue::encodeEmptyValue(),
+        &runtime->getHeap());
 
     // Initialize the elements between the last copied element and toLast.
     if (toFirst + copySize < toLast) {
       GCHermesValue::fill(
           self->data() + toFirst + copySize,
           self->data() + toLast,
-          HermesValue::encodeEmptyValue());
+          HermesValue::encodeEmptyValue(),
+          &runtime->getHeap());
     }
     self->size_ = toLast;
     return ExecutionStatus::RETURNED;

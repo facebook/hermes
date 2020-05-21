@@ -79,7 +79,7 @@ class SegmentedArray final
     /// Increases or decreases the length of the segment, up to a max of
     /// kMaxLength. If the length increases, it fills the newly used portion of
     /// the segment with empty values.
-    void setLength(uint32_t newLength);
+    void setLength(Runtime *runtime, uint32_t newLength);
 
     /// Same as above, except it doesn't fill with empty values.
     /// It is the caller's responsibility to ensure that the newly used portion
@@ -335,11 +335,14 @@ class SegmentedArray final
   /// Set the size to a value <= the capacity. This is a special
   /// case of resize() but has a simpler interface since we know that it doesn't
   /// need to reallocate.
-  static void resizeWithinCapacity(SegmentedArray *self, size_type newSize);
+  static void resizeWithinCapacity(
+      SegmentedArray *self,
+      Runtime *runtime,
+      size_type newSize);
 
   /// Decrease the size to zero.
-  void clear() {
-    shrinkRight(size());
+  void clear(Runtime *runtime) {
+    shrinkRight(runtime, size());
   }
 
   static bool classof(const GCCell *cell) {
@@ -556,7 +559,8 @@ class SegmentedArray final
 
   /// Shrink the array on the right hand side, removing the existing elements.
   /// \p pre amount <= size().
-  void shrinkRight(size_type amount);
+  void shrinkRight(Runtime *runtime, size_type amount);
+
   /// Shrink the array on the left hand side, removing the existing elements
   /// from the left.
   /// \p pre amount <= size().
@@ -564,7 +568,8 @@ class SegmentedArray final
 
   /// Increases the size by \p amount, without doing any allocation.
   /// \param fill If true, fill the newly usable space with empty HermesValues.
-  void increaseSizeWithinCapacity(size_type amount, bool fill);
+  void
+  increaseSizeWithinCapacity(Runtime *runtime, size_type amount, bool fill);
 
   /// Increases the size by \p amount, and adjusts segment sizes
   /// accordingly.
@@ -577,7 +582,7 @@ class SegmentedArray final
 
   /// Decreases the size by \p amount, and no longer tracks the elements past
   /// the new size limit.
-  void decreaseSize(size_type amount);
+  void decreaseSize(Runtime *runtime, size_type amount);
 
   /// @}
 

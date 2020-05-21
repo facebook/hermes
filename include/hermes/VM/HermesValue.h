@@ -521,6 +521,14 @@ class PinnedHermesValue : public HermesValue {
 class GCHermesValue : public HermesValue {
  public:
   GCHermesValue() : HermesValue(HermesValue::encodeUndefinedValue()) {}
+  /// Initialize a GCHermesValue from another HV. Performs a write barrier.
+  template <typename NeedsBarriers = std::true_type>
+  GCHermesValue(HermesValue hv, GC *gc);
+  /// Initialize a GCHermesValue from a non-pointer HV. Might perform a write
+  /// barrier, depending on the GC.
+  /// NOTE: The last parameter is unused, but acts as an overload selector.
+  template <typename NeedsBarriers = std::true_type>
+  GCHermesValue(HermesValue hv, GC *gc, std::nullptr_t);
   GCHermesValue(const GCHermesValue &) = delete;
 
   /// The HermesValue \p hv may be an object pointer.  Assign the
@@ -530,19 +538,34 @@ class GCHermesValue : public HermesValue {
 
   /// The HermesValue \p hv must not be an object pointer.  Assign the
   /// value.
-  inline void setNonPtr(HermesValue hv);
+  /// Some GCs still need to do a write barrier though, so pass a GC parameter.
+  inline void setNonPtr(HermesValue hv, GC *gc);
 
-  /// Fills a region of GCHermesValues defined by [\p from, \p to) with the
+  /// Fills a region of GCHermesValues defined by [\p first, \p last) with the
   /// value \p fill.  If the fill value is an object pointer, must
   /// provide a non-null \p gc argument, to perform write barriers.
   template <typename InputIt>
   static inline void
-  fill(InputIt first, InputIt last, HermesValue fill, GC *gc = nullptr);
+  fill(InputIt first, InputIt last, HermesValue fill, GC *gc);
+
+  /// Same as \p fill except the range expressed by  [\p first, \p last) has not
+  /// been previously initialized. Cannot use this on previously initialized
+  /// memory, as it will use an incorrect write barrier.
+  template <typename InputIt>
+  static inline void
+  uninitialized_fill(InputIt first, InputIt last, HermesValue fill, GC *gc);
 
   /// Copies a range of values and performs a write barrier on each.
   template <typename InputIt, typename OutputIt>
   static inline OutputIt
   copy(InputIt first, InputIt last, OutputIt result, GC *gc);
+
+  /// Same as \p copy, but the range [result, result + (last - first)) has not
+  /// been previously initialized. Cannot use this on previously initialized
+  /// memory, as it will use an incorrect write barrier.
+  template <typename InputIt, typename OutputIt>
+  static inline OutputIt
+  uninitialized_copy(InputIt first, InputIt last, OutputIt result, GC *gc);
 
   /// Copies a range of values and performs a write barrier on each.
   template <typename InputIt, typename OutputIt>

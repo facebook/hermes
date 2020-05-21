@@ -128,6 +128,16 @@ class HadesGC final : public GCBase {
   ///     the heap.
   void writeBarrierRange(GCHermesValue *start, uint32_t numHVs);
 
+  /// The given value is being written at the given loc (required to
+  /// be in the heap). If value is a pointer, execute a write barrier.
+  void constructorWriteBarrier(void *loc, HermesValue value);
+
+  /// The given pointer value is being written at the given loc (required to
+  /// be in the heap). The value is may be null. Execute a write barrier.
+  void constructorWriteBarrier(void *loc, void *value);
+
+  void constructorWriteBarrierRange(GCHermesValue *start, uint32_t numHVs);
+
   /// \}
 
   /// Returns whether an external allocation of the given \p size fits

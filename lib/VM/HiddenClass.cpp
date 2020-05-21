@@ -288,7 +288,7 @@ Handle<HiddenClass> HiddenClass::copyToNewDictionary(
 
   newClassHandle->propertyMap_.set(
       runtime, selfHandle->propertyMap_.get(runtime), &runtime->getHeap());
-  selfHandle->propertyMap_ = nullptr;
+  selfHandle->propertyMap_.setNull(&runtime->getHeap());
 
   LLVM_DEBUG(
       dbgs() << "Converted Class:" << selfHandle->getDebugAllocationId()
@@ -517,7 +517,7 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
     }
 
     // In any case, clear our own map.
-    selfHandle->propertyMap_ = nullptr;
+    selfHandle->propertyMap_.setNull(&runtime->getHeap());
 
     return std::make_pair(*optChildHandle, selfHandle->numProperties_);
   }
@@ -583,7 +583,7 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
     // Move the map to the child class.
     childHandle->propertyMap_.set(
         runtime, selfHandle->propertyMap_.get(runtime), &runtime->getHeap());
-    selfHandle->propertyMap_ = nullptr;
+    selfHandle->propertyMap_.setNull(&runtime->getHeap());
 
     if (LLVM_UNLIKELY(
             addToPropertyMap(
@@ -668,7 +668,7 @@ Handle<HiddenClass> HiddenClass::updateProperty(
     }
 
     // In any case, clear our own map.
-    selfHandle->propertyMap_ = nullptr;
+    selfHandle->propertyMap_.setNull(&runtime->getHeap());
 
     return *optChildHandle;
   }
@@ -704,7 +704,7 @@ Handle<HiddenClass> HiddenClass::updateProperty(
   // Move the updated map to the child class.
   childHandle->propertyMap_.set(
       runtime, selfHandle->propertyMap_.get(runtime), &runtime->getHeap());
-  selfHandle->propertyMap_ = nullptr;
+  selfHandle->propertyMap_.setNull(&runtime->getHeap());
 
   return childHandle;
 }
@@ -1010,7 +1010,7 @@ void HiddenClass::stealPropertyMapFromParent(
       runtime,
       self->parent_.get(runtime)->propertyMap_.get(runtime),
       &runtime->getHeap());
-  self->parent_.get(runtime)->propertyMap_ = nullptr;
+  self->parent_.get(runtime)->propertyMap_.setNull(&runtime->getHeap());
 
   // Does our class add a new property?
   if (LLVM_LIKELY(!self->propertyFlags_.flagsTransition)) {

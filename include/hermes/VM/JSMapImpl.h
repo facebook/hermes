@@ -253,7 +253,7 @@ class JSMapIteratorImpl final : public JSObject {
         // If the next element in the iterator is invalid, we have
         // reached the end.
         self->iterationFinished_ = true;
-        self->data_ = nullptr;
+        self->data_.setNull(&runtime->getHeap());
       }
     }
     return createIterResultObject(runtime, value, self->iterationFinished_)

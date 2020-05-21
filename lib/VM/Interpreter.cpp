@@ -1834,7 +1834,7 @@ tailCall:
         O1REG(ResumeGenerator) = innerFn->getResult();
         O2REG(ResumeGenerator) = HermesValue::encodeBoolValue(
             innerFn->getAction() == GeneratorInnerFunction::Action::Return);
-        innerFn->clearResult();
+        innerFn->clearResult(runtime);
         if (innerFn->getAction() == GeneratorInnerFunction::Action::Throw) {
           runtime->setThrownValue(O1REG(ResumeGenerator));
           goto exception;
@@ -2177,14 +2177,14 @@ tailCall:
       CASE(StoreNPToEnvironment) {
         vmcast<Environment>(O1REG(StoreNPToEnvironment))
             ->slot(ip->iStoreNPToEnvironment.op2)
-            .setNonPtr(O3REG(StoreNPToEnvironment));
+            .setNonPtr(O3REG(StoreNPToEnvironment), &runtime->getHeap());
         ip = NEXTINST(StoreNPToEnvironment);
         DISPATCH;
       }
       CASE(StoreNPToEnvironmentL) {
         vmcast<Environment>(O1REG(StoreNPToEnvironmentL))
             ->slot(ip->iStoreNPToEnvironmentL.op2)
-            .setNonPtr(O3REG(StoreNPToEnvironmentL));
+            .setNonPtr(O3REG(StoreNPToEnvironmentL), &runtime->getHeap());
         ip = NEXTINST(StoreNPToEnvironmentL);
         DISPATCH;
       }

@@ -327,15 +327,15 @@ class HiddenClass final : public GCCell {
     forInCache_.set(runtime, arr, &runtime->getHeap());
   }
 
-  void clearForInCache() {
-    forInCache_ = nullptr;
+  void clearForInCache(Runtime *runtime) {
+    forInCache_.setNull(&runtime->getHeap());
   }
 
   /// Reset the property map, unless this class is in dictionary mode.
   /// May be called by the GC for any HiddenClass not in a Handle.
-  void clearPropertyMap() {
+  void clearPropertyMap(GC *gc) {
     if (!isDictionary())
-      propertyMap_ = nullptr;
+      propertyMap_.setNull(gc);
   }
 
   /// An opaque class representing a reference to a valid property in the

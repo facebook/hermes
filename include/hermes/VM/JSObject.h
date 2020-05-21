@@ -415,7 +415,7 @@ class JSObject : public GCCell {
   /// direct property slots.
   /// \return a copy of self for convenience.
   template <typename T>
-  static inline T *initDirectPropStorage(T *self);
+  static inline T *initDirectPropStorage(Runtime *runtime, T *self);
 
   /// ES9 9.1 O.[[Extensible]] internal slot
   bool isExtensible() const {
@@ -1509,7 +1509,7 @@ class JSObjectAlloc {
     assert(JSObjectType::classof(obj) && "Mismatched CellKind");
 
     mem_ = nullptr;
-    return JSObjectType::initDirectPropStorage(obj);
+    return JSObjectType::initDirectPropStorage(runtime_, obj);
   }
 
   /// Runtime used for heap and handle allocation.
@@ -1583,16 +1583,17 @@ inline CallResult<PseudoHandle<JSObject>> JSObject::allocatePropStorage(
 }
 
 template <typename T>
-inline T *JSObject::initDirectPropStorage(T *self) {
+inline T *JSObject::initDirectPropStorage(Runtime *runtime, T *self) {
   constexpr auto count = numOverlapSlots<T>() + T::ANONYMOUS_PROPERTY_SLOTS +
       T::NAMED_PROPERTY_SLOTS;
   static_assert(
       count <= DIRECT_PROPERTY_SLOTS,
       "smallPropStorage size must fit in direct properties");
-  GCHermesValue::fill(
+  GCHermesValue::uninitialized_fill(
       self->directProps() + numOverlapSlots<T>(),
       self->directProps() + DIRECT_PROPERTY_SLOTS,
-      GCHermesValue());
+      GCHermesValue(),
+      &runtime->getHeap());
   return self;
 }
 

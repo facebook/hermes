@@ -52,6 +52,10 @@ class GCPointerBase {
   /// \param gc Used for write barriers.
   void set(PointerBase *base, void *ptr, GC *gc);
 
+  /// Set this pointer to null. This needs a write barrier in some types of
+  /// garbage collectors.
+  void setNull(GC *gc);
+
   /// Get the underlying StorageType representation.
   StorageType getStorageType() const;
 
@@ -73,13 +77,8 @@ class GCPointerBase {
     return !(*this == other);
   }
 
-  static void *storageTypeToPointer(StorageType st, PointerBase *base) {
-#ifdef HERMESVM_COMPRESSED_POINTERS
-    return base->basedToPointer(st);
-#else
-    return st;
-#endif
-  }
+  inline static void *storageTypeToPointer(StorageType st, PointerBase *base);
+  inline static StorageType pointerToStorageType(void *ptr, PointerBase *base);
 };
 
 /// A class to represent "raw" pointers to heap objects.  Disallows assignment,
@@ -113,15 +112,6 @@ class GCPointer : public GCPointerBase {
   GCPointer(const GCPointerBase &) = delete;
   GCPointer &operator=(const GCPointerBase &) = delete;
   GCPointer &operator=(const GCPointer<T> &) = delete;
-
-  /// We can assign null without a barrier.  NB: this is true for the
-  /// generational collection remembered-set write barrier.  It may not be
-  /// true for other possible collectors.  (For example, a
-  /// snapshot-at-the-beginning concurrent collector.)
-  GCPointer &operator=(std::nullptr_t) {
-    ptr_ = StorageType{};
-    return *this;
-  }
 
   /// Get the raw pointer value.
   /// \param base The base of the address space that the GCPointer points into.

@@ -94,7 +94,8 @@ class ArrayStorage final
       return ExecutionStatus::EXCEPTION;
     }
 
-    ArrayStorage::resizeWithinCapacity(vmcast<ArrayStorage>(*arrRes), size);
+    ArrayStorage::resizeWithinCapacity(
+        vmcast<ArrayStorage>(*arrRes), runtime, size);
     return arrRes;
   }
 
@@ -139,7 +140,10 @@ class ArrayStorage final
       Handle<> value) {
     auto *self = selfHandle.get();
     if (LLVM_LIKELY(self->size_ < self->capacity_)) {
-      self->data()[self->size_++].set(value.get(), &runtime->getHeap());
+      // Use the constructor of GCHermesValue to use the correct write barrier
+      // for uninitialized memory.
+      new (&self->data()[self->size_++])
+          GCHermesValue(value.get(), &runtime->getHeap());
       return ExecutionStatus::RETURNED;
     }
     return pushBackSlowPath(selfHandle, runtime, value);
@@ -184,7 +188,8 @@ class ArrayStorage final
   /// Set the size to a value <= the capacity. This is a special
   /// case of resize() but has a simpler interface since we know that it doesn't
   /// need to reallocate.
-  static void resizeWithinCapacity(ArrayStorage *self, size_type newSize);
+  static void
+  resizeWithinCapacity(ArrayStorage *self, Runtime *runtime, size_type newSize);
 
  private:
   /// The capacity is the maximum number of elements this array can ever

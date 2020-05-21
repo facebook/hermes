@@ -729,6 +729,24 @@ void HadesGC::writeBarrierRange(GCHermesValue *start, uint32_t numHVs) {
       firstPtr, lastPtr);
 }
 
+void HadesGC::constructorWriteBarrier(void *loc, HermesValue value) {
+  // For now, Hades doesn't do anything special with a constructor write
+  // barrier.
+  writeBarrier(loc, value);
+}
+
+void HadesGC::constructorWriteBarrier(void *loc, void *value) {
+  // For now, Hades doesn't do anything special with a constructor write
+  // barrier.
+  writeBarrier(loc, value);
+}
+
+void HadesGC::constructorWriteBarrierRange(
+    GCHermesValue *start,
+    uint32_t numHVs) {
+  writeBarrierRange(start, numHVs);
+}
+
 bool HadesGC::canAllocExternalMemory(uint32_t size) {
   return size <= maxHeapSize_;
 }

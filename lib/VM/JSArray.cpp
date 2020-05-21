@@ -166,11 +166,12 @@ ExecutionStatus ArrayImpl::setStorageEndIndex(
       // the new length is prior to beginIndex, clearing the storage.
       selfHandle->endIndex_ = beginIndex;
       // Remove the storage. If this array grows again it can be re-allocated.
-      self->indexedStorage_ = nullptr;
+      self->indexedStorage_.setNull(&runtime->getHeap());
       return ExecutionStatus::RETURNED;
     } else if (newLength - beginIndex <= indexedStorage->capacity()) {
       selfHandle->endIndex_ = newLength;
-      StorageType::resizeWithinCapacity(indexedStorage, newLength - beginIndex);
+      StorageType::resizeWithinCapacity(
+          indexedStorage, runtime, newLength - beginIndex);
       return ExecutionStatus::RETURNED;
     }
   }
@@ -232,7 +233,8 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     // Can we do it without reallocation for sure?
     if (index >= endIndex && index - beginIndex < indexedStorage->capacity()) {
       self->endIndex_ = index + 1;
-      StorageType::resizeWithinCapacity(indexedStorage, index - beginIndex + 1);
+      StorageType::resizeWithinCapacity(
+          indexedStorage, runtime, index - beginIndex + 1);
       // self shouldn't have moved since there haven't been any allocations.
       indexedStorage->at(index - beginIndex)
           .set(value.get(), &runtime->getHeap());
@@ -328,7 +330,7 @@ bool ArrayImpl::_deleteOwnIndexedImpl(
       if (!elem.isEmpty())
         return false;
 
-    elem.setNonPtr(HermesValue::encodeEmptyValue());
+    elem.setNonPtr(HermesValue::encodeEmptyValue(), &runtime->getHeap());
   }
 
   return true;
@@ -861,7 +863,7 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
     // 10. If index ≥ len, then
     // a. Set the value of the [[IteratedObject]] internal slot of O to
     // undefined.
-    self->iteratedObject_ = nullptr;
+    self->iteratedObject_.setNull(&runtime->getHeap());
     // b. Return CreateIterResultObject(undefined, true).
     return createIterResultObject(runtime, Runtime::getUndefinedValue(), true)
         .getHermesValue();

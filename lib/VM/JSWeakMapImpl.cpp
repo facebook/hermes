@@ -74,7 +74,7 @@ bool JSWeakMapImplBase::deleteValue(
   if (it == self->map_.end()) {
     return false;
   }
-  self->deleteInternal(runtime, it);
+  self->deleteInternal(runtime, &runtime->getHeap(), it);
   return true;
 }
 
@@ -88,7 +88,7 @@ bool JSWeakMapImplBase::clearEntryDirect(GC *gc, const WeakRefKey &key) {
   it->first.ref.clear();
   valueStorage_.get(gc->getPointerBase())
       ->at(it->second)
-      .setNonPtr(HermesValue::encodeEmptyValue());
+      .setInGC(HermesValue::encodeEmptyValue(), gc);
   return true;
 }
 
@@ -134,11 +134,12 @@ HermesValue JSWeakMapImplBase::getValue(
 
 uint32_t JSWeakMapImplBase::debugFreeSlotsAndGetSize(
     PointerBase *base,
+    GC *gc,
     JSWeakMapImplBase *self) {
   /// Free up any freeable slots, so the count is more accurate.
   if (self->hasFreeableSlots_) {
     // There are freeable slots: find and delete them.
-    self->findAndDeleteFreeSlots(base);
+    self->findAndDeleteFreeSlots(base, gc);
   }
   return self->map_.size();
 }
@@ -177,11 +178,11 @@ void JSWeakMapImplBase::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
 }
 
 /// Mark weak references and remove any invalid weak refs.
-void JSWeakMapImplBase::findAndDeleteFreeSlots(PointerBase *base) {
+void JSWeakMapImplBase::findAndDeleteFreeSlots(PointerBase *base, GC *gc) {
   for (auto it = map_.begin(); it != map_.end(); ++it) {
     if (!it->first.ref.isValid()) {
       // If invalid, clear the value and remove the key from the map.
-      deleteInternal(base, it);
+      deleteInternal(base, gc, it);
     }
   }
   hasFreeableSlots_ = false;
@@ -189,11 +190,12 @@ void JSWeakMapImplBase::findAndDeleteFreeSlots(PointerBase *base) {
 
 void JSWeakMapImplBase::deleteInternal(
     PointerBase *base,
+    GC *gc,
     JSWeakMapImplBase::DenseMapT::iterator it) {
   assert(it != map_.end() && "Invalid iterator to deleteInternal");
   valueStorage_.getNonNull(base)
       ->at(it->second)
-      .setNonPtr(HermesValue::encodeNativeUInt32(freeListHead_));
+      .setNonPtr(HermesValue::encodeNativeUInt32(freeListHead_), gc);
   freeListHead_ = it->second;
   map_.erase(it);
 }
@@ -204,7 +206,7 @@ CallResult<uint32_t> JSWeakMapImplBase::getFreeValueStorageIndex(
   if (self->freeListHead_ == kFreeListInvalid && self->hasFreeableSlots_) {
     // No elements in the free list and there are freeable slots.
     // Try to find some.
-    self->findAndDeleteFreeSlots(runtime);
+    self->findAndDeleteFreeSlots(runtime, &runtime->getHeap());
   }
 
   // Index in valueStorage_ in which to place the new element.

@@ -271,7 +271,7 @@ CallResult<HermesValue> JSStringIterator::nextElement(
   if (position >= len) {
     // 8a. Set the value of the [[IteratedString]] internal slot of O to
     // undefined.
-    self->iteratedString_ = nullptr;
+    self->iteratedString_.setNull(&runtime->getHeap());
     // 8b. Return CreateIterResultObject(undefined, true).
     return createIterResultObject(runtime, Runtime::getUndefinedValue(), true)
         .getHermesValue();

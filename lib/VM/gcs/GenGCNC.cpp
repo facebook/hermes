@@ -1117,6 +1117,18 @@ void GenGC::writeBarrier(void *loc, void *value) {
   writeBarrierImpl(loc, value, /*hv*/ false);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
+void GenGC::constructorWriteBarrier(void *loc, HermesValue value) {
+  // There's no difference for GenGC between the constructor and an assignment.
+  writeBarrier(loc, value);
+}
+
+LLVM_ATTRIBUTE_NOINLINE
+void GenGC::constructorWriteBarrier(void *loc, void *value) {
+  // There's no difference for GenGC between the constructor and an assignment.
+  writeBarrier(loc, value);
+}
+
 void GenGC::writeBarrierRange(GCHermesValue *start, uint32_t numHVs) {
   countRangeWriteBarrier();
 
@@ -1136,29 +1148,6 @@ void GenGC::writeBarrierRange(GCHermesValue *start, uint32_t numHVs) {
 
   AlignedHeapSegment::cardTableCovering(firstPtr)->dirtyCardsForAddressRange(
       firstPtr, lastPtr);
-}
-
-void GenGC::writeBarrierRangeFill(
-    GCHermesValue *start,
-    uint32_t numHVs,
-    HermesValue value) {
-  countRangeFillWriteBarrier();
-  if (!value.isPointer()) {
-    return;
-  }
-
-  char *firstPtr = reinterpret_cast<char *>(start);
-  char *lastPtr = reinterpret_cast<char *>(start + numHVs) - 1;
-  char *valuePtr = reinterpret_cast<char *>(value.getPointer());
-
-  assert(
-      AlignedStorage::start(firstPtr) == AlignedStorage::start(lastPtr) &&
-      "Range should be contained in the same segment");
-
-  if (youngGen_.contains(valuePtr)) {
-    AlignedHeapSegment::cardTableCovering(firstPtr)->dirtyCardsForAddressRange(
-        firstPtr, lastPtr);
-  }
 }
 
 size_t GenGC::getPeakLiveAfterGC() const {

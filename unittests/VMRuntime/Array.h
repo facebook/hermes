@@ -50,7 +50,8 @@ class Array final : public VariableSizeRuntimeCell,
     GCHermesValue::fill(
         self->values(),
         self->values() + length,
-        HermesValue::encodeEmptyValue());
+        HermesValue::encodeEmptyValue(),
+        &runtime.getHeap());
     return self;
   }
 

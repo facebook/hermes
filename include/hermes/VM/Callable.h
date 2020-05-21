@@ -89,8 +89,11 @@ class Environment final
             &runtime->getHeap()),
         size_(size) {
     // Initialize all slots to 'undefined'.
-    GCHermesValue::fill(
-        getSlots(), getSlots() + size, HermesValue::encodeUndefinedValue());
+    GCHermesValue::uninitialized_fill(
+        getSlots(),
+        getSlots() + size,
+        HermesValue::encodeUndefinedValue(),
+        &runtime->getHeap());
   }
 
 #ifdef HERMESVM_SERIALIZE
@@ -1202,8 +1205,8 @@ class GeneratorInnerFunction final : public JSFunction {
 
   /// Clear the stored result_ field to prevent memory leaks.
   /// Should be called after getResult() by the ResumeGenerator instruction.
-  void clearResult() {
-    result_.setNonPtr(HermesValue::encodeEmptyValue());
+  void clearResult(Runtime *runtime) {
+    result_.setNonPtr(HermesValue::encodeEmptyValue(), &runtime->getHeap());
   }
 
   HermesValue getResult() const {

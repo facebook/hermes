@@ -246,7 +246,7 @@ void MallocGC::clearUnmarkedPropertyMaps() {
   for (CellHeader *header : pointers_)
     if (!header->isMarked())
       if (auto hc = dyn_vmcast<HiddenClass>(header->data()))
-        hc->clearPropertyMap();
+        hc->clearPropertyMap(this);
 }
 #endif
 

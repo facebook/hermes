@@ -533,7 +533,8 @@ TEST_F(ObjectModelTest, EnvironmentSmokeTest) {
   ASSERT_TRUE(parentEnv->slot(0).isUndefined());
   ASSERT_TRUE(parentEnv->slot(1).isUndefined());
 
-  parentEnv->slot(0).setNonPtr(HermesValue::encodeBoolValue(true));
+  parentEnv->slot(0).setNonPtr(
+      HermesValue::encodeBoolValue(true), &runtime->getHeap());
   ASSERT_TRUE(parentEnv->slot(0).getBool());
 
   // Create a child environment.

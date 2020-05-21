@@ -72,11 +72,14 @@ PseudoHandle<SegmentedArray::Segment> SegmentedArray::Segment::create(
                                 Segment(runtime));
 }
 
-void SegmentedArray::Segment::setLength(uint32_t newLength) {
+void SegmentedArray::Segment::setLength(Runtime *runtime, uint32_t newLength) {
   if (newLength > length_) {
     // Length is increasing, fill with emptys.
-    GCHermesValue::fill(
-        data_ + length_, data_ + newLength, HermesValue::encodeEmptyValue());
+    GCHermesValue::uninitialized_fill(
+        data_ + length_,
+        data_ + newLength,
+        HermesValue::encodeEmptyValue(),
+        &runtime->getHeap());
   }
   // If length is decreasing nothing special needs to be done.
   setLengthWithoutFilling(newLength);
@@ -208,7 +211,7 @@ ExecutionStatus SegmentedArray::push_back(
     return ExecutionStatus::EXCEPTION;
   }
   auto &elm = self->at(oldSize);
-  elm.set(*value, &runtime->getHeap());
+  new (&elm) GCHermesValue(*value, &runtime->getHeap());
   return ExecutionStatus::RETURNED;
 }
 
@@ -219,7 +222,7 @@ ExecutionStatus SegmentedArray::resize(
   if (newSize > self->size()) {
     return growRight(self, runtime, newSize - self->size());
   } else if (newSize < self->size()) {
-    self->shrinkRight(self->size() - newSize);
+    self->shrinkRight(runtime, self->size() - newSize);
   }
   return ExecutionStatus::RETURNED;
 }
@@ -240,15 +243,17 @@ ExecutionStatus SegmentedArray::resizeLeft(
 
 void SegmentedArray::resizeWithinCapacity(
     SegmentedArray *self,
+    Runtime *runtime,
     size_type newSize) {
   const size_type currSize = self->size();
   assert(
       newSize <= self->capacity() &&
       "Cannot resizeWithinCapacity to a size not within capacity");
   if (newSize > currSize) {
-    self->increaseSizeWithinCapacity(newSize - currSize, /* Fill */ true);
+    self->increaseSizeWithinCapacity(
+        runtime, newSize - currSize, /* Fill */ true);
   } else if (newSize < currSize) {
-    self->shrinkRight(currSize - newSize);
+    self->shrinkRight(runtime, currSize - newSize);
   }
 }
 
@@ -293,7 +298,7 @@ ExecutionStatus SegmentedArray::growRight(
   PseudoHandle<SegmentedArray> newSegmentedArray = std::move(*arrRes);
   // Copy inline storage and segments over.
   // Do this with raw pointers so that the range write barrier occurs.
-  GCHermesValue::copy(
+  GCHermesValue::uninitialized_copy(
       self->inlineStorage(),
       self->inlineStorage() + self->numSlotsUsed_,
       newSegmentedArray->inlineStorage(),
@@ -325,14 +330,15 @@ ExecutionStatus SegmentedArray::growLeft(
   newSegmentedArray = increaseSize</*Fill*/ false>(
       runtime, std::move(newSegmentedArray), newSize);
   // Fill the beginning of the new array with empty values.
-  GCHermesValue::fill(
+  GCHermesValue::uninitialized_fill(
       newSegmentedArray->begin(),
       newSegmentedArray->begin() + amount,
-      HermesValue::encodeEmptyValue());
+      HermesValue::encodeEmptyValue(),
+      &runtime->getHeap());
   // Copy element-by-element, since a shift would need to happen anyway.
   // Since self and newSegmentedArray are distinct, don't need to worry about
   // order.
-  GCHermesValue::copy(
+  GCHermesValue::uninitialized_copy(
       self->begin(),
       self->end(),
       newSegmentedArray->begin() + amount,
@@ -349,28 +355,34 @@ void SegmentedArray::growLeftWithinCapacity(
   assert(
       self->size() + amount <= self->totalCapacityOfSpine() &&
       "Cannot grow higher than capacity");
-  // Don't fill with empty values since we will overwrite the end anyway.
-  self = increaseSize</*Fill*/ false>(runtime, std::move(self), amount);
+  // Fill with empty values at the end to simplify the write barrier.
+  self = increaseSize</*Fill*/ true>(runtime, std::move(self), amount);
   // Copy the range from the beginning to the end.
   GCHermesValue::copy_backward(
       self->begin(), self->end() - amount, self->end(), &runtime->getHeap());
   // Fill the beginning with empty values.
   GCHermesValue::fill(
-      self->begin(), self->begin() + amount, HermesValue::encodeEmptyValue());
+      self->begin(),
+      self->begin() + amount,
+      HermesValue::encodeEmptyValue(),
+      &runtime->getHeap());
 }
 
-void SegmentedArray::shrinkRight(size_type amount) {
-  decreaseSize(amount);
+void SegmentedArray::shrinkRight(Runtime *runtime, size_type amount) {
+  decreaseSize(runtime, amount);
 }
 
 void SegmentedArray::shrinkLeft(Runtime *runtime, size_type amount) {
   // Copy the end values leftwards to the beginning.
   GCHermesValue::copy(begin() + amount, end(), begin(), &runtime->getHeap());
   // Now that all the values are moved down, fill the end with empty values.
-  decreaseSize(amount);
+  decreaseSize(runtime, amount);
 }
 
-void SegmentedArray::increaseSizeWithinCapacity(size_type amount, bool fill) {
+void SegmentedArray::increaseSizeWithinCapacity(
+    Runtime *runtime,
+    size_type amount,
+    bool fill) {
   // This function has the same logic as increaseSize, but removes some
   // complexity from avoiding dealing with alllocations.
   const auto empty = HermesValue::encodeEmptyValue();
@@ -383,8 +395,11 @@ void SegmentedArray::increaseSizeWithinCapacity(size_type amount, bool fill) {
   if (finalSize <= kValueToSegmentThreshold) {
     // currSize and finalSize are inside inline storage, bump and fill.
     if (fill) {
-      GCHermesValue::fill(
-          inlineStorage() + currSize, inlineStorage() + finalSize, empty);
+      GCHermesValue::uninitialized_fill(
+          inlineStorage() + currSize,
+          inlineStorage() + finalSize,
+          empty,
+          &runtime->getHeap());
     }
     // Set the final size.
     numSlotsUsed_ = finalSize;
@@ -397,12 +412,13 @@ void SegmentedArray::increaseSizeWithinCapacity(size_type amount, bool fill) {
   if (fill) {
     // Fill the inline slots if necessary, and the single segment.
     if (currSize < kValueToSegmentThreshold) {
-      GCHermesValue::fill(
+      GCHermesValue::uninitialized_fill(
           inlineStorage() + currSize,
           inlineStorage() + kValueToSegmentThreshold,
-          empty);
+          empty,
+          &runtime->getHeap());
     }
-    segmentAt(segment)->setLength(segmentLength);
+    segmentAt(segment)->setLength(runtime, segmentLength);
   } else {
     segmentAt(segment)->setLengthWithoutFilling(segmentLength);
   }
@@ -418,7 +434,7 @@ PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
   const auto finalSize = currSize + amount;
 
   if (finalSize <= self->capacity()) {
-    self->increaseSizeWithinCapacity(amount, Fill);
+    self->increaseSizeWithinCapacity(runtime, amount, Fill);
     return self;
   }
 
@@ -426,10 +442,11 @@ PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
       finalSize <= kValueToSegmentThreshold) {
     // currSize and finalSize are inside inline storage, bump and fill.
     if (Fill) {
-      GCHermesValue::fill(
+      GCHermesValue::uninitialized_fill(
           self->inlineStorage() + currSize,
           self->inlineStorage() + finalSize,
-          empty);
+          empty,
+          &runtime->getHeap());
     }
     // Set the final size.
     self->numSlotsUsed_ = finalSize;
@@ -442,10 +459,11 @@ PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
   if (currSize <= kValueToSegmentThreshold) {
     // Segments will need to be allocated, if the old size didn't have the
     // inline storage filled up, fill it up now.
-    GCHermesValue::fill(
+    GCHermesValue::uninitialized_fill(
         self->inlineStorage() + currSize,
         self->inlineStorage() + kValueToSegmentThreshold,
-        empty);
+        empty,
+        &runtime->getHeap());
     // Set the size to the inline storage threshold.
     self->numSlotsUsed_ = kValueToSegmentThreshold;
   }
@@ -465,10 +483,11 @@ PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
   const auto newNumSlotsUsed = numSlotsForCapacity(finalSize);
   // Put empty values into all of the added slots so that the memory is not
   // uninitialized during marking.
-  GCHermesValue::fill(
+  GCHermesValue::uninitialized_fill(
       self->inlineStorage() + self->numSlotsUsed_,
       self->inlineStorage() + newNumSlotsUsed,
-      empty);
+      empty,
+      &runtime->getHeap());
   self->numSlotsUsed_ = newNumSlotsUsed;
 
   // Allocate a handle to track the current array.
@@ -493,7 +512,7 @@ PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
     const auto segmentLength =
         i == lastSegment ? toInterior(finalSize - 1) + 1 : Segment::kMaxLength;
     if (Fill) {
-      selfHandle->segmentAt(i)->setLength(segmentLength);
+      selfHandle->segmentAt(i)->setLength(runtime, segmentLength);
     } else {
       selfHandle->segmentAt(i)->setLengthWithoutFilling(segmentLength);
     }
@@ -502,7 +521,7 @@ PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
   return self;
 }
 
-void SegmentedArray::decreaseSize(size_type amount) {
+void SegmentedArray::decreaseSize(Runtime *runtime, size_type amount) {
   assert(amount <= size() && "Cannot decrease size past zero");
   const auto finalSize = size() - amount;
   if (finalSize <= kValueToSegmentThreshold) {
@@ -511,7 +530,8 @@ void SegmentedArray::decreaseSize(size_type amount) {
     return;
   }
   // Set the new last used segment's length to be the leftover.
-  segmentAt(toSegment(finalSize - 1))->setLength(toInterior(finalSize - 1) + 1);
+  segmentAt(toSegment(finalSize - 1))
+      ->setLength(runtime, toInterior(finalSize - 1) + 1);
   numSlotsUsed_ = numSlotsForCapacity(finalSize);
 }
 

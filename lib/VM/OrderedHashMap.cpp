@@ -158,7 +158,7 @@ void OrderedHashMap::removeLinkedListNode(
   if (entry == firstIterationEntry_.get(runtime)) {
     firstIterationEntry_.set(runtime, entry->nextIterationEntry, gc);
   }
-  entry->prevIterationEntry = nullptr;
+  entry->prevIterationEntry.setNull(&runtime->getHeap());
 }
 
 HashMapEntry *OrderedHashMap::lookupInBucket(
@@ -234,7 +234,7 @@ ExecutionStatus OrderedHashMap::rehashIfNecessary(
       oldNextInBucket = entry->nextEntryInBucket.get(runtime);
       if (newHashTable->at(bucket).isEmpty()) {
         // Empty bucket.
-        entry->nextEntryInBucket = nullptr;
+        entry->nextEntryInBucket.setNull(&runtime->getHeap());
       } else {
         // There are already a bucket head.
         entry->nextEntryInBucket.set(
@@ -376,7 +376,7 @@ bool OrderedHashMap::erase(
         &runtime->getHeap());
   }
 
-  entry->markDeleted();
+  entry->markDeleted(runtime);
   self->size_--;
 
   // Now delete the entry from the iteration linked list.
@@ -422,15 +422,16 @@ void OrderedHashMap::clear(Runtime *runtime) {
     auto entry = dyn_vmcast<HashMapEntry>(hashTable_.get(runtime)->at(i));
     // Delete every element reachable from the hash table.
     while (entry) {
-      entry->markDeleted();
+      entry->markDeleted(runtime);
       entry = entry->nextEntryInBucket.get(runtime);
     }
     // Clear every element in the hash table.
-    hashTable_.get(runtime)->at(i).setNonPtr(HermesValue::encodeEmptyValue());
+    hashTable_.get(runtime)->at(i).setNonPtr(
+        HermesValue::encodeEmptyValue(), &runtime->getHeap());
   }
   // Resize the hash table to the initial size.
   ArrayStorage::resizeWithinCapacity(
-      hashTable_.getNonNull(runtime), INITIAL_CAPACITY);
+      hashTable_.getNonNull(runtime), runtime, INITIAL_CAPACITY);
   capacity_ = INITIAL_CAPACITY;
 
   // After clearing, we will still keep the last deleted entry
@@ -438,7 +439,8 @@ void OrderedHashMap::clear(Runtime *runtime) {
   // pointing to the middle of the iteration chain. We need it to be
   // able to merge back eventually.
   firstIterationEntry_.set(runtime, lastIterationEntry_, &runtime->getHeap());
-  firstIterationEntry_.get(runtime)->prevIterationEntry = nullptr;
+  firstIterationEntry_.get(runtime)->prevIterationEntry.setNull(
+      &runtime->getHeap());
   size_ = 0;
 }
 

@@ -181,6 +181,16 @@ class GenGC final : public GCBase {
   /// be in the heap).  The value is may be null.  Execute a write barrier.
   void writeBarrier(void *loc, void *value);
 
+  /// The given value is being written at the given loc (required to
+  /// be in the heap).  If value is a pointer, execute a write barrier.
+  /// The memory pointed to by \p loc is guaranteed to not have a valid pointer.
+  void constructorWriteBarrier(void *loc, HermesValue value);
+
+  /// The given pointer value is being written at the given loc (required to
+  /// be in the heap).  The value is may be null.  Execute a write barrier.
+  /// The memory pointed to by \p loc is guaranteed to not have a valid pointer.
+  void constructorWriteBarrier(void *loc, void *value);
+
 #ifndef NDEBUG
   /// Count the number of barriers executed.
   /// numWriteBarriers_[false] counts void* write barriers,
@@ -230,15 +240,12 @@ class GenGC final : public GCBase {
   ///     the heap.
   void writeBarrierRange(GCHermesValue *start, uint32_t numHVs);
 
-  /// We filled numHVs slots starting at start with the given value.
-  /// Do any necessary barriers.
-  ///
-  /// \pre The range described must be wholly contained within one segment of
-  ///     the heap.
-  void writeBarrierRangeFill(
-      GCHermesValue *start,
-      uint32_t numHVs,
-      HermesValue value);
+  /// Same as \p writeBarrierRange, except this is for previously uninitialized
+  /// memory.
+  void constructorWriteBarrierRange(GCHermesValue *start, uint32_t numHVs) {
+    // GenGC doesn't do anything special for uninitialized memory.
+    writeBarrierRange(start, numHVs);
+  }
 
   /// Inform the GC that TTI has been reached.
   void ttiReached();

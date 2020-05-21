@@ -318,7 +318,7 @@ void JSObject::allocateNewSlotStorage(
       assert(
           newSlotIndex == propStorage->size() &&
           "allocated slot must be at end");
-      PropStorage::resizeWithinCapacity(propStorage, newSlotIndex + 1);
+      PropStorage::resizeWithinCapacity(propStorage, runtime, newSlotIndex + 1);
     }
     // If we don't need to resize, just store it directly.
     propStorage->at(newSlotIndex).set(*valueHandle, &runtime->getHeap());
@@ -3055,7 +3055,7 @@ ExecutionStatus setProtoClasses(
   // [class(proto(obj)), class(proto(proto(obj))), ..., null, prop0, prop1, ...]
 
   if (!obj->shouldCacheForIn(runtime)) {
-    arr->clear();
+    arr->clear(runtime);
     return ExecutionStatus::RETURNED;
   }
   MutableHandle<JSObject> head(runtime, obj->getParent(runtime));
@@ -3063,7 +3063,7 @@ ExecutionStatus setProtoClasses(
   GCScopeMarkerRAII marker{runtime};
   while (head.get()) {
     if (!head->shouldCacheForIn(runtime)) {
-      arr->clear();
+      arr->clear(runtime);
       return ExecutionStatus::RETURNED;
     }
     clazz = HermesValue::encodeObjectValue(head->getClass(runtime));
@@ -3128,7 +3128,7 @@ CallResult<Handle<BigStorage>> getForInPropertyNames(
     }
     // Invalid for this object. We choose to clear the cache since the
     // changes to the prototype chain probably affect other objects too.
-    clazz->clearForInCache();
+    clazz->clearForInCache(runtime);
     // Clear arr to slightly reduce risk of OOM from allocation below.
     arr = nullptr;
   }

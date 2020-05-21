@@ -85,16 +85,14 @@ hermesInternalGetEpilogues(void *, Runtime *runtime, NativeArgs args) {
 /// are in the given WeakMap or WeakSet.
 CallResult<HermesValue>
 hermesInternalGetWeakSize(void *, Runtime *runtime, NativeArgs args) {
-  auto M = args.dyncastArg<JSWeakMap>(0);
-  if (M) {
-    return HermesValue::encodeNumberValue(
-        JSWeakMap::debugFreeSlotsAndGetSize(runtime, *M));
+  if (auto M = args.dyncastArg<JSWeakMap>(0)) {
+    return HermesValue::encodeNumberValue(JSWeakMap::debugFreeSlotsAndGetSize(
+        static_cast<PointerBase *>(runtime), &runtime->getHeap(), *M));
   }
 
-  auto S = args.dyncastArg<JSWeakSet>(0);
-  if (S) {
-    return HermesValue::encodeNumberValue(
-        JSWeakSet::debugFreeSlotsAndGetSize(runtime, *S));
+  if (auto S = args.dyncastArg<JSWeakSet>(0)) {
+    return HermesValue::encodeNumberValue(JSWeakSet::debugFreeSlotsAndGetSize(
+        static_cast<PointerBase *>(runtime), &runtime->getHeap(), *S));
   }
 
   return runtime->raiseTypeError(
