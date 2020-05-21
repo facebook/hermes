@@ -14,6 +14,7 @@ add_subdirectory(hbc-deltaprep)
 add_subdirectory(hbc-attribute)
 add_subdirectory(jsi)
 add_subdirectory(emhermesc)
+add_subdirectory(fuzzers)
 
 if (HERMESVM_API_TRACE)
   add_subdirectory(synth)

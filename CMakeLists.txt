@@ -127,6 +127,10 @@ set(HERMES_ENABLE_ADDRESS_SANITIZER OFF CACHE BOOL
 set(HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER OFF CACHE BOOL
   "Enable -fsanitize=undefined")
 
+# Set linker flag for building the fuzzer
+set(HERMES_FUZZING_FLAG "-fsanitize=fuzzer" CACHE STRING
+  "Linker argument to link fuzz targets against a given fuzzer.")
+
 # Build with -DHERMES_SLOW_DEBUG for debug builds
 # This does not affect release builds
 set(HERMES_SLOW_DEBUG ON CACHE BOOL
@@ -305,7 +309,7 @@ endif()
 if (HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER)
     add_definitions(-DHERMES_UBSAN)
     # Do not enable the vptr sanitizer, as it requires RTTI.
-    append("-fsanitize=undefined -fno-sanitize=vptr -fno-sanitize-recover=all" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
+    append("-fsanitize=undefined -fno-sanitize=vptr -fno-sanitize-recover=undefined" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
 endif()
 if(HERMES_FACEBOOK_BUILD)
     add_definitions(-DHERMES_FACEBOOK_BUILD)
