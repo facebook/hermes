@@ -12,13 +12,13 @@
  * and scoped locally.
  */
 
-.driver{
+.driver {
   display: flex;
   flex-wrap: nowrap;
   position: fixed;
   width: 100%;
   height: 32px;
-  z-index: 1;   /* above editors */
+  z-index: 1; /* above editors */
   margin: 10px 0px;
   padding: 0px 10px;
   padding-left: 20px;
@@ -42,7 +42,7 @@
   padding: 10px;
   outline: none;
   font-size: 13px;
-  font-family: Menlo,Monaco,Consolas,"Courier New",monospace;
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
 html[data-theme='dark'] .argsInput {
@@ -99,7 +99,7 @@ html[data-theme='dark'] .helpBtn {
   flex-shrink: 0;
   line-height: 32px;
   font-size: 13px;
-  font-family: Menlo,Monaco,Consolas,"Courier New",monospace;
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
 .codeContainer {
@@ -128,7 +128,7 @@ html[data-theme='dark'] .helpBtn {
     flex-direction: column;
   }
 
-  .inputCode {
+  .sourceCode {
     width: 100%;
     height: 33%;
     min-height: 33%;
@@ -148,7 +148,21 @@ html[data-theme='dark'] .helpBtn {
     min-width: 38px;
   }
 
-  .helpBtn{
+  .helpBtn {
     margin: 0 6px;
   }
+}
+
+/* Reverting global styles conflicts with monaco */
+.codeContainer :global(.button),
+.codeContainer :global(.button:hover),
+.codeContainer :global(.contents),
+.codeContainer :global(.contents:hover) {
+  transition: inherit;
+  color: inherit;
+  border: inherit;
+  border-radius: inherit;
+  outline: inherit;
+  padding: inherit;
+  margin: inherit;
 }
