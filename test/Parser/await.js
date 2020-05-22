@@ -19,8 +19,7 @@ async function foo() {
 // CHECK-NEXT:       "type": "FunctionDeclaration",
 // CHECK-NEXT:       "id": {
 // CHECK-NEXT:         "type": "Identifier",
-// CHECK-NEXT:         "name": "foo",
-// CHECK-NEXT:         "typeAnnotation": null
+// CHECK-NEXT:         "name": "foo"
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "params": [],
 // CHECK-NEXT:       "body": {
@@ -40,7 +39,6 @@ async function foo() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "returnType": null,
 // CHECK-NEXT:       "generator": false,
 // CHECK-NEXT:       "async": true
 // CHECK-NEXT:     },
@@ -91,8 +89,7 @@ async function foo() {
 // CHECK-NEXT:             "type": "Property",
 // CHECK-NEXT:             "key": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "foo",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "foo"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionExpression",

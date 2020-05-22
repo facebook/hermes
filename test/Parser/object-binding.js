@@ -20,8 +20,7 @@ var {a} = x;
 //CHECK-NEXT:             "type": "VariableDeclarator",
 //CHECK-NEXT:             "init": {
 //CHECK-NEXT:               "type": "Identifier",
-//CHECK-NEXT:               "name": "x",
-//CHECK-NEXT:               "typeAnnotation": null
+//CHECK-NEXT:               "name": "x"
 //CHECK-NEXT:             },
 //CHECK-NEXT:             "id": {
 //CHECK-NEXT:               "type": "ObjectPattern",
@@ -30,13 +29,11 @@ var {a} = x;
 //CHECK-NEXT:                   "type": "Property",
 //CHECK-NEXT:                   "key": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "a",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "a"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "value": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "a",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "a"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "kind": "init",
 //CHECK-NEXT:                   "computed": false
@@ -56,8 +53,7 @@ var {a,} = x;
 //CHECK-NEXT:             "type": "VariableDeclarator",
 //CHECK-NEXT:             "init": {
 //CHECK-NEXT:               "type": "Identifier",
-//CHECK-NEXT:               "name": "x",
-//CHECK-NEXT:               "typeAnnotation": null
+//CHECK-NEXT:               "name": "x"
 //CHECK-NEXT:             },
 //CHECK-NEXT:             "id": {
 //CHECK-NEXT:               "type": "ObjectPattern",
@@ -66,13 +62,11 @@ var {a,} = x;
 //CHECK-NEXT:                   "type": "Property",
 //CHECK-NEXT:                   "key": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "a",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "a"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "value": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "a",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "a"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "kind": "init",
 //CHECK-NEXT:                   "computed": false
@@ -92,8 +86,7 @@ var {a, b} = x;
 //CHECK-NEXT:             "type": "VariableDeclarator",
 //CHECK-NEXT:             "init": {
 //CHECK-NEXT:               "type": "Identifier",
-//CHECK-NEXT:               "name": "x",
-//CHECK-NEXT:               "typeAnnotation": null
+//CHECK-NEXT:               "name": "x"
 //CHECK-NEXT:             },
 //CHECK-NEXT:             "id": {
 //CHECK-NEXT:               "type": "ObjectPattern",
@@ -102,13 +95,11 @@ var {a, b} = x;
 //CHECK-NEXT:                   "type": "Property",
 //CHECK-NEXT:                   "key": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "a",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "a"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "value": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "a",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "a"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "kind": "init",
 //CHECK-NEXT:                   "computed": false
@@ -117,13 +108,11 @@ var {a, b} = x;
 //CHECK-NEXT:                   "type": "Property",
 //CHECK-NEXT:                   "key": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "b",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "b"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "value": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "b",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "b"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "kind": "init",
 //CHECK-NEXT:                   "computed": false
@@ -143,8 +132,7 @@ var {a: b, c: d, } = x;
 //CHECK-NEXT:             "type": "VariableDeclarator",
 //CHECK-NEXT:             "init": {
 //CHECK-NEXT:               "type": "Identifier",
-//CHECK-NEXT:               "name": "x",
-//CHECK-NEXT:               "typeAnnotation": null
+//CHECK-NEXT:               "name": "x"
 //CHECK-NEXT:             },
 //CHECK-NEXT:             "id": {
 //CHECK-NEXT:               "type": "ObjectPattern",
@@ -153,13 +141,11 @@ var {a: b, c: d, } = x;
 //CHECK-NEXT:                   "type": "Property",
 //CHECK-NEXT:                   "key": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "a",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "a"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "value": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "b",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "b"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "kind": "init",
 //CHECK-NEXT:                   "computed": false
@@ -168,13 +154,11 @@ var {a: b, c: d, } = x;
 //CHECK-NEXT:                   "type": "Property",
 //CHECK-NEXT:                   "key": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "c",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "c"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "value": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "d",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "d"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "kind": "init",
 //CHECK-NEXT:                   "computed": false
@@ -194,8 +178,7 @@ var {a: b = 10} = x;
 //CHECK-NEXT:             "type": "VariableDeclarator",
 //CHECK-NEXT:             "init": {
 //CHECK-NEXT:               "type": "Identifier",
-//CHECK-NEXT:               "name": "x",
-//CHECK-NEXT:               "typeAnnotation": null
+//CHECK-NEXT:               "name": "x"
 //CHECK-NEXT:             },
 //CHECK-NEXT:             "id": {
 //CHECK-NEXT:               "type": "ObjectPattern",
@@ -204,15 +187,13 @@ var {a: b = 10} = x;
 //CHECK-NEXT:                   "type": "Property",
 //CHECK-NEXT:                   "key": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "a",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "a"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "value": {
 //CHECK-NEXT:                     "type": "AssignmentPattern",
 //CHECK-NEXT:                     "left": {
 //CHECK-NEXT:                       "type": "Identifier",
-//CHECK-NEXT:                       "name": "b",
-//CHECK-NEXT:                       "typeAnnotation": null
+//CHECK-NEXT:                       "name": "b"
 //CHECK-NEXT:                     },
 //CHECK-NEXT:                     "right": {
 //CHECK-NEXT:                       "type": "NumericLiteral",
@@ -238,8 +219,7 @@ var {a: [b]} = x;
 //CHECK-NEXT:             "type": "VariableDeclarator",
 //CHECK-NEXT:             "init": {
 //CHECK-NEXT:               "type": "Identifier",
-//CHECK-NEXT:               "name": "x",
-//CHECK-NEXT:               "typeAnnotation": null
+//CHECK-NEXT:               "name": "x"
 //CHECK-NEXT:             },
 //CHECK-NEXT:             "id": {
 //CHECK-NEXT:               "type": "ObjectPattern",
@@ -248,16 +228,14 @@ var {a: [b]} = x;
 //CHECK-NEXT:                   "type": "Property",
 //CHECK-NEXT:                   "key": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "a",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "a"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "value": {
 //CHECK-NEXT:                     "type": "ArrayPattern",
 //CHECK-NEXT:                     "elements": [
 //CHECK-NEXT:                       {
 //CHECK-NEXT:                         "type": "Identifier",
-//CHECK-NEXT:                         "name": "b",
-//CHECK-NEXT:                         "typeAnnotation": null
+//CHECK-NEXT:                         "name": "b"
 //CHECK-NEXT:                       }
 //CHECK-NEXT:                     ]
 //CHECK-NEXT:                   },
@@ -279,8 +257,7 @@ var {a: [b] = [1]} = x;
 //CHECK-NEXT:             "type": "VariableDeclarator",
 //CHECK-NEXT:             "init": {
 //CHECK-NEXT:               "type": "Identifier",
-//CHECK-NEXT:               "name": "x",
-//CHECK-NEXT:               "typeAnnotation": null
+//CHECK-NEXT:               "name": "x"
 //CHECK-NEXT:             },
 //CHECK-NEXT:             "id": {
 //CHECK-NEXT:               "type": "ObjectPattern",
@@ -289,8 +266,7 @@ var {a: [b] = [1]} = x;
 //CHECK-NEXT:                   "type": "Property",
 //CHECK-NEXT:                   "key": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "a",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "a"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "value": {
 //CHECK-NEXT:                     "type": "AssignmentPattern",
@@ -299,8 +275,7 @@ var {a: [b] = [1]} = x;
 //CHECK-NEXT:                       "elements": [
 //CHECK-NEXT:                         {
 //CHECK-NEXT:                           "type": "Identifier",
-//CHECK-NEXT:                           "name": "b",
-//CHECK-NEXT:                           "typeAnnotation": null
+//CHECK-NEXT:                           "name": "b"
 //CHECK-NEXT:                         }
 //CHECK-NEXT:                       ]
 //CHECK-NEXT:                     },
@@ -334,8 +309,7 @@ var {a: [b = 2] = [1]} = x;
 //CHECK-NEXT:             "type": "VariableDeclarator",
 //CHECK-NEXT:             "init": {
 //CHECK-NEXT:               "type": "Identifier",
-//CHECK-NEXT:               "name": "x",
-//CHECK-NEXT:               "typeAnnotation": null
+//CHECK-NEXT:               "name": "x"
 //CHECK-NEXT:             },
 //CHECK-NEXT:             "id": {
 //CHECK-NEXT:               "type": "ObjectPattern",
@@ -344,8 +318,7 @@ var {a: [b = 2] = [1]} = x;
 //CHECK-NEXT:                   "type": "Property",
 //CHECK-NEXT:                   "key": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "a",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "a"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "value": {
 //CHECK-NEXT:                     "type": "AssignmentPattern",
@@ -356,8 +329,7 @@ var {a: [b = 2] = [1]} = x;
 //CHECK-NEXT:                           "type": "AssignmentPattern",
 //CHECK-NEXT:                           "left": {
 //CHECK-NEXT:                             "type": "Identifier",
-//CHECK-NEXT:                             "name": "b",
-//CHECK-NEXT:                             "typeAnnotation": null
+//CHECK-NEXT:                             "name": "b"
 //CHECK-NEXT:                           },
 //CHECK-NEXT:                           "right": {
 //CHECK-NEXT:                             "type": "NumericLiteral",

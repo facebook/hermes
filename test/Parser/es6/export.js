@@ -27,8 +27,7 @@ export default function myFun() { return 3; }
 // CHECK-NEXT:           "type": "FunctionDeclaration",
 // CHECK-NEXT:           "id": {
 // CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "myFun",
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "name": "myFun"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "params": [],
 // CHECK-NEXT:           "body": {
@@ -44,7 +43,6 @@ export default function myFun() { return 3; }
 // CHECK-NEXT:               }
 // CHECK-NEXT:             ]
 // CHECK-NEXT:           },
-// CHECK-NEXT:           "returnType": null,
 // CHECK-NEXT:           "generator": false,
 // CHECK-NEXT:           "async": false
 // CHECK-NEXT:         }
@@ -66,8 +64,7 @@ export var abc = 3;
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "id": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "abc",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "abc"
 // CHECK-NEXT:               }
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ]
@@ -83,15 +80,13 @@ export function funDecl() {}
 // CHECK-NEXT:           "type": "FunctionDeclaration",
 // CHECK-NEXT:           "id": {
 // CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "funDecl",
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "name": "funDecl"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "params": [],
 // CHECK-NEXT:           "body": {
 // CHECK-NEXT:             "type": "BlockStatement",
 // CHECK-NEXT:             "body": []
 // CHECK-NEXT:           },
-// CHECK-NEXT:           "returnType": null,
 // CHECK-NEXT:           "generator": false,
 // CHECK-NEXT:           "async": false
 // CHECK-NEXT:         },
@@ -115,8 +110,7 @@ export let letValue = 123;
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "id": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "letValue",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "letValue"
 // CHECK-NEXT:               }
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ]
@@ -141,8 +135,7 @@ export const constValue = 321;
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "id": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "constValue",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "constValue"
 // CHECK-NEXT:               }
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ]
@@ -168,13 +161,11 @@ export { x };
 // CHECK-NEXT:             "type": "ExportSpecifier",
 // CHECK-NEXT:             "exported": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "x",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "x"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "local": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "x",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "x"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
@@ -190,13 +181,11 @@ export { y , };
 // CHECK-NEXT:             "type": "ExportSpecifier",
 // CHECK-NEXT:             "exported": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "y",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "y"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "local": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "y",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "y"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
@@ -212,39 +201,33 @@ export { a as b , c , last };
 // CHECK-NEXT:             "type": "ExportSpecifier",
 // CHECK-NEXT:             "exported": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "b",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "b"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "local": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "a",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "a"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "ExportSpecifier",
 // CHECK-NEXT:             "exported": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "c",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "c"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "local": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "c",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "c"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "ExportSpecifier",
 // CHECK-NEXT:             "exported": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "last",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "last"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "local": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "last",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "last"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],

@@ -255,8 +255,7 @@
 // CHECK-NEXT:               "type": "JSXSpreadAttribute",
 // CHECK-NEXT:               "argument": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "src",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "src"
 // CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             {
@@ -381,8 +380,7 @@
 // CHECK-NEXT:             "type": "JSXSpreadChild",
 // CHECK-NEXT:             "expression": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "b",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "b"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
@@ -494,8 +492,7 @@
 // CHECK-NEXT:                     "type": "Property",
 // CHECK-NEXT:                     "key": {
 // CHECK-NEXT:                       "type": "Identifier",
-// CHECK-NEXT:                       "name": "x",
-// CHECK-NEXT:                       "typeAnnotation": null
+// CHECK-NEXT:                       "name": "x"
 // CHECK-NEXT:                     },
 // CHECK-NEXT:                     "value": {
 // CHECK-NEXT:                       "type": "NumericLiteral",

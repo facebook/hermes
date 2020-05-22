@@ -22,6 +22,11 @@
 #define ESTREE_LAST(NAME)
 #endif
 
+// Ignores the given field if it is "empty" (e.g. nullptr, empty list).
+#ifndef ESTREE_IGNORE_IF_EMPTY
+#define ESTREE_IGNORE_IF_EMPTY(NODE, FIELD)
+#endif
+
 ESTREE_NODE_0_ARGS(Empty, Base)
 ESTREE_NODE_0_ARGS(Metadata, Base)
 
@@ -50,6 +55,7 @@ ESTREE_NODE_6_ARGS(
     NodePtr, returnType, true,
     NodeBoolean, generator, false,
     NodeBoolean, async, false)
+ESTREE_IGNORE_IF_EMPTY(FunctionDeclaration, returnType)
 ESTREE_LAST(FunctionLike)
 
 ESTREE_FIRST(Statement, Base)
@@ -360,6 +366,7 @@ ESTREE_NODE_2_ARGS(
     NodePtr,
     typeAnnotation,
     true)
+ESTREE_IGNORE_IF_EMPTY(Identifier, typeAnnotation)
 
 ESTREE_NODE_2_ARGS(
     MetaProperty,
@@ -618,6 +625,7 @@ ESTREE_LAST(Cover)
 #undef ESTREE_FIRST
 #undef ESTREE_LAST
 #undef ESTREE_WRAP
+#undef ESTREE_IGNORE_IF_EMPTY
 
 #undef ESTREE_NODE_0_ARGS
 #undef ESTREE_NODE_1_ARGS

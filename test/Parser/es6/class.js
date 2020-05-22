@@ -27,8 +27,7 @@
 // CHECK-NEXT:         "type": "ClassExpression",
 // CHECK-NEXT:         "id": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "Foo",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "Foo"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "superClass": null,
 // CHECK-NEXT:         "body": {
@@ -38,8 +37,7 @@
 // CHECK-NEXT:               "type": "MethodDefinition",
 // CHECK-NEXT:               "key": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "constructor",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "constructor"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
 // CHECK-NEXT:                 "type": "FunctionExpression",
@@ -60,8 +58,7 @@
 // CHECK-NEXT:               "type": "MethodDefinition",
 // CHECK-NEXT:               "key": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "bar",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "bar"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
 // CHECK-NEXT:                 "type": "FunctionExpression",
@@ -99,13 +96,11 @@
 // CHECK-NEXT:                 "params": [
 // CHECK-NEXT:                   {
 // CHECK-NEXT:                     "type": "Identifier",
-// CHECK-NEXT:                     "name": "x",
-// CHECK-NEXT:                     "typeAnnotation": null
+// CHECK-NEXT:                     "name": "x"
 // CHECK-NEXT:                   },
 // CHECK-NEXT:                   {
 // CHECK-NEXT:                     "type": "Identifier",
-// CHECK-NEXT:                     "name": "y",
-// CHECK-NEXT:                     "typeAnnotation": null
+// CHECK-NEXT:                     "name": "y"
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 ],
 // CHECK-NEXT:                 "body": {
@@ -123,8 +118,7 @@
 // CHECK-NEXT:               "type": "MethodDefinition",
 // CHECK-NEXT:               "key": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "sFun",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "sFun"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
 // CHECK-NEXT:                 "type": "FunctionExpression",
@@ -154,8 +148,7 @@
 // CHECK-NEXT:               "type": "MethodDefinition",
 // CHECK-NEXT:               "key": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "myGetter",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "myGetter"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
 // CHECK-NEXT:                 "type": "FunctionExpression",
@@ -185,8 +178,7 @@
 // CHECK-NEXT:               "type": "MethodDefinition",
 // CHECK-NEXT:               "key": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "gen",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "gen"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
 // CHECK-NEXT:                 "type": "FunctionExpression",
@@ -207,8 +199,7 @@
 // CHECK-NEXT:               "type": "MethodDefinition",
 // CHECK-NEXT:               "key": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "static",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "static"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
 // CHECK-NEXT:                 "type": "FunctionExpression",
@@ -229,8 +220,7 @@
 // CHECK-NEXT:               "type": "MethodDefinition",
 // CHECK-NEXT:               "key": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "rest",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "rest"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
 // CHECK-NEXT:                 "type": "FunctionExpression",
@@ -238,15 +228,13 @@
 // CHECK-NEXT:                 "params": [
 // CHECK-NEXT:                   {
 // CHECK-NEXT:                     "type": "Identifier",
-// CHECK-NEXT:                     "name": "a",
-// CHECK-NEXT:                     "typeAnnotation": null
+// CHECK-NEXT:                     "name": "a"
 // CHECK-NEXT:                   },
 // CHECK-NEXT:                   {
 // CHECK-NEXT:                     "type": "RestElement",
 // CHECK-NEXT:                     "argument": {
 // CHECK-NEXT:                       "type": "Identifier",
-// CHECK-NEXT:                       "name": "b",
-// CHECK-NEXT:                       "typeAnnotation": null
+// CHECK-NEXT:                       "name": "b"
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 ],
@@ -285,8 +273,7 @@ class UseSuperProps {
 // CHECK-NEXT:       "type": "ClassDeclaration",
 // CHECK-NEXT:       "id": {
 // CHECK-NEXT:         "type": "Identifier",
-// CHECK-NEXT:         "name": "UseSuperProps",
-// CHECK-NEXT:         "typeAnnotation": null
+// CHECK-NEXT:         "name": "UseSuperProps"
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "superClass": null,
 // CHECK-NEXT:       "body": {
@@ -296,8 +283,7 @@ class UseSuperProps {
 // CHECK-NEXT:             "type": "MethodDefinition",
 // CHECK-NEXT:             "key": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "constructor",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "constructor"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionExpression",
@@ -330,8 +316,7 @@ class UseSuperProps {
 // CHECK-NEXT:             "type": "MethodDefinition",
 // CHECK-NEXT:             "key": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "foo",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "foo"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionExpression",
@@ -351,15 +336,13 @@ class UseSuperProps {
 // CHECK-NEXT:                         },
 // CHECK-NEXT:                         "property": {
 // CHECK-NEXT:                           "type": "Identifier",
-// CHECK-NEXT:                           "name": "x",
-// CHECK-NEXT:                           "typeAnnotation": null
+// CHECK-NEXT:                           "name": "x"
 // CHECK-NEXT:                         },
 // CHECK-NEXT:                         "computed": false
 // CHECK-NEXT:                       },
 // CHECK-NEXT:                       "property": {
 // CHECK-NEXT:                         "type": "Identifier",
-// CHECK-NEXT:                         "name": "y",
-// CHECK-NEXT:                         "typeAnnotation": null
+// CHECK-NEXT:                         "name": "y"
 // CHECK-NEXT:                       },
 // CHECK-NEXT:                       "computed": false
 // CHECK-NEXT:                     }
@@ -377,8 +360,7 @@ class UseSuperProps {
 // CHECK-NEXT:             "type": "MethodDefinition",
 // CHECK-NEXT:             "key": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "bar",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "bar"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionExpression",
@@ -428,8 +410,7 @@ class UseSuperProps {
 // CHECK-NEXT:         "type": "ClassExpression",
 // CHECK-NEXT:         "id": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "Gens",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "Gens"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "superClass": null,
 // CHECK-NEXT:         "body": {
@@ -439,8 +420,7 @@ class UseSuperProps {
 // CHECK-NEXT:               "type": "MethodDefinition",
 // CHECK-NEXT:               "key": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "foo",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "foo"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
 // CHECK-NEXT:                 "type": "FunctionExpression",
@@ -475,8 +455,7 @@ class UseSuperProps {
 // CHECK-NEXT:               "type": "MethodDefinition",
 // CHECK-NEXT:               "key": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "bar",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "bar"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
 // CHECK-NEXT:                 "type": "FunctionExpression",
@@ -525,8 +504,7 @@ class UseSuperProps {
 // CHECK-NEXT:         "type": "ClassExpression",
 // CHECK-NEXT:         "id": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "ConsProperty",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "ConsProperty"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "superClass": null,
 // CHECK-NEXT:         "body": {
@@ -565,8 +543,7 @@ class UseSuperProps {
 // CHECK-NEXT:                 "params": [
 // CHECK-NEXT:                   {
 // CHECK-NEXT:                     "type": "Identifier",
-// CHECK-NEXT:                     "name": "val",
-// CHECK-NEXT:                     "typeAnnotation": null
+// CHECK-NEXT:                     "name": "val"
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 ],
 // CHECK-NEXT:                 "body": {
@@ -584,8 +561,7 @@ class UseSuperProps {
 // CHECK-NEXT:               "type": "MethodDefinition",
 // CHECK-NEXT:               "key": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "constructor",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "constructor"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
 // CHECK-NEXT:                 "type": "FunctionExpression",
@@ -606,8 +582,7 @@ class UseSuperProps {
 // CHECK-NEXT:               "type": "MethodDefinition",
 // CHECK-NEXT:               "key": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "constructor",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "constructor"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
 // CHECK-NEXT:                 "type": "FunctionExpression",
@@ -639,8 +614,7 @@ class SemiClass {
 // CHECK-NEXT:       "type": "ClassDeclaration",
 // CHECK-NEXT:       "id": {
 // CHECK-NEXT:         "type": "Identifier",
-// CHECK-NEXT:         "name": "SemiClass",
-// CHECK-NEXT:         "typeAnnotation": null
+// CHECK-NEXT:         "name": "SemiClass"
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "superClass": null,
 // CHECK-NEXT:       "body": {
@@ -650,8 +624,7 @@ class SemiClass {
 // CHECK-NEXT:             "type": "MethodDefinition",
 // CHECK-NEXT:             "key": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "foo",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "foo"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionExpression",
@@ -679,8 +652,7 @@ class DeclClass {
 // CHECK-NEXT:       "type": "ClassDeclaration",
 // CHECK-NEXT:       "id": {
 // CHECK-NEXT:         "type": "Identifier",
-// CHECK-NEXT:         "name": "DeclClass",
-// CHECK-NEXT:         "typeAnnotation": null
+// CHECK-NEXT:         "name": "DeclClass"
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "superClass": null,
 // CHECK-NEXT:       "body": {
@@ -690,8 +662,7 @@ class DeclClass {
 // CHECK-NEXT:             "type": "MethodDefinition",
 // CHECK-NEXT:             "key": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "foo",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "foo"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionExpression",

@@ -18,16 +18,14 @@ function foo(
 // CHECK-NEXT:       "type": "FunctionDeclaration",
 // CHECK-NEXT:       "id": {
 // CHECK-NEXT:         "type": "Identifier",
-// CHECK-NEXT:         "name": "foo",
-// CHECK-NEXT:         "typeAnnotation": null
+// CHECK-NEXT:         "name": "foo"
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "params": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "type": "AssignmentPattern",
 // CHECK-NEXT:           "left": {
 // CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "x",
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "name": "x"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "right": {
 // CHECK-NEXT:             "type": "FunctionExpression",
@@ -56,7 +54,6 @@ function foo(
 // CHECK-NEXT:         "type": "BlockStatement",
 // CHECK-NEXT:         "body": []
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "returnType": null,
 // CHECK-NEXT:       "generator": false,
 // CHECK-NEXT:       "async": false
 // CHECK-NEXT:     }

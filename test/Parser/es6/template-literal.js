@@ -230,8 +230,7 @@ def`;
 // CHECK-NEXT:          "expressions": [
 // CHECK-NEXT:            {
 // CHECK-NEXT:              "type": "Identifier",
-// CHECK-NEXT:              "name": "x",
-// CHECK-NEXT:              "typeAnnotation": null
+// CHECK-NEXT:              "name": "x"
 // CHECK-NEXT:            }
 // CHECK-NEXT:          ]
 // CHECK-NEXT:        },
@@ -245,8 +244,7 @@ tag`abc`;
 // CHECK-NEXT:          "type": "TaggedTemplateExpression",
 // CHECK-NEXT:          "tag": {
 // CHECK-NEXT:            "type": "Identifier",
-// CHECK-NEXT:            "name": "tag",
-// CHECK-NEXT:            "typeAnnotation": null
+// CHECK-NEXT:            "name": "tag"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "quasi": {
 // CHECK-NEXT:            "type": "TemplateLiteral",
@@ -273,8 +271,7 @@ new tag`abc`;
 // CHECK-NEXT:            "type": "TaggedTemplateExpression",
 // CHECK-NEXT:            "tag": {
 // CHECK-NEXT:              "type": "Identifier",
-// CHECK-NEXT:              "name": "tag",
-// CHECK-NEXT:              "typeAnnotation": null
+// CHECK-NEXT:              "name": "tag"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "quasi": {
 // CHECK-NEXT:              "type": "TemplateLiteral",
@@ -319,8 +316,7 @@ tag`\xyz`;
 // CHECK-NEXT:          "type": "TaggedTemplateExpression",
 // CHECK-NEXT:          "tag": {
 // CHECK-NEXT:            "type": "Identifier",
-// CHECK-NEXT:            "name": "tag",
-// CHECK-NEXT:            "typeAnnotation": null
+// CHECK-NEXT:            "name": "tag"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "quasi": {
 // CHECK-NEXT:            "type": "TemplateLiteral",
@@ -345,8 +341,7 @@ tag`\unicode`;
 // CHECK-NEXT:          "type": "TaggedTemplateExpression",
 // CHECK-NEXT:          "tag": {
 // CHECK-NEXT:            "type": "Identifier",
-// CHECK-NEXT:            "name": "tag",
-// CHECK-NEXT:            "typeAnnotation": null
+// CHECK-NEXT:            "name": "tag"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "quasi": {
 // CHECK-NEXT:            "type": "TemplateLiteral",
@@ -371,8 +366,7 @@ tag`脸\书𐀀\𐀁`;
 // CHECK-NEXT:          "type": "TaggedTemplateExpression",
 // CHECK-NEXT:          "tag": {
 // CHECK-NEXT:            "type": "Identifier",
-// CHECK-NEXT:            "name": "tag",
-// CHECK-NEXT:            "typeAnnotation": null
+// CHECK-NEXT:            "name": "tag"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "quasi": {
 // CHECK-NEXT:            "type": "TemplateLiteral",

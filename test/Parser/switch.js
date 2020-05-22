@@ -16,8 +16,7 @@ switch (x) {
 // CHECK-NEXT:       "type": "SwitchStatement",
 // CHECK-NEXT:       "discriminant": {
 // CHECK-NEXT:         "type": "Identifier",
-// CHECK-NEXT:         "name": "x",
-// CHECK-NEXT:         "typeAnnotation": null
+// CHECK-NEXT:         "name": "x"
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "cases": [
 
@@ -40,8 +39,7 @@ switch (x) {
 // CHECK-NEXT:                   "init": null,
 // CHECK-NEXT:                   "id": {
 // CHECK-NEXT:                     "type": "Identifier",
-// CHECK-NEXT:                     "name": "a",
-// CHECK-NEXT:                     "typeAnnotation": null
+// CHECK-NEXT:                     "name": "a"
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               ]
@@ -76,8 +74,7 @@ switch (x) {
 // CHECK-NEXT:                       },
 // CHECK-NEXT:                       "id": {
 // CHECK-NEXT:                         "type": "Identifier",
-// CHECK-NEXT:                         "name": "b",
-// CHECK-NEXT:                         "typeAnnotation": null
+// CHECK-NEXT:                         "name": "b"
 // CHECK-NEXT:                       }
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                   ]
@@ -106,8 +103,7 @@ switch (x) {
 // CHECK-NEXT:                   "init": null,
 // CHECK-NEXT:                   "id": {
 // CHECK-NEXT:                     "type": "Identifier",
-// CHECK-NEXT:                     "name": "c",
-// CHECK-NEXT:                     "typeAnnotation": null
+// CHECK-NEXT:                     "name": "c"
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               ]
@@ -131,8 +127,7 @@ switch (x) {
 // CHECK-NEXT:                   "init": null,
 // CHECK-NEXT:                   "id": {
 // CHECK-NEXT:                     "type": "Identifier",
-// CHECK-NEXT:                     "name": "d",
-// CHECK-NEXT:                     "typeAnnotation": null
+// CHECK-NEXT:                     "name": "d"
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               ]

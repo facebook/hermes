@@ -21,13 +21,11 @@
 //CHECK-NEXT:               "type": "Property",
 //CHECK-NEXT:               "key": {
 //CHECK-NEXT:                 "type": "Identifier",
-//CHECK-NEXT:                 "name": "a",
-//CHECK-NEXT:                 "typeAnnotation": null
+//CHECK-NEXT:                 "name": "a"
 //CHECK-NEXT:               },
 //CHECK-NEXT:               "value": {
 //CHECK-NEXT:                 "type": "Identifier",
-//CHECK-NEXT:                 "name": "a",
-//CHECK-NEXT:                 "typeAnnotation": null
+//CHECK-NEXT:                 "name": "a"
 //CHECK-NEXT:               },
 //CHECK-NEXT:               "kind": "init",
 //CHECK-NEXT:               "computed": false
@@ -38,8 +36,7 @@
 //CHECK-NEXT:                 "type": "CallExpression",
 //CHECK-NEXT:                 "callee": {
 //CHECK-NEXT:                   "type": "Identifier",
-//CHECK-NEXT:                   "name": "foo",
-//CHECK-NEXT:                   "typeAnnotation": null
+//CHECK-NEXT:                   "name": "foo"
 //CHECK-NEXT:                 },
 //CHECK-NEXT:                 "arguments": [
 //CHECK-NEXT:                   {
@@ -54,13 +51,11 @@
 //CHECK-NEXT:               "type": "Property",
 //CHECK-NEXT:               "key": {
 //CHECK-NEXT:                 "type": "Identifier",
-//CHECK-NEXT:                 "name": "b",
-//CHECK-NEXT:                 "typeAnnotation": null
+//CHECK-NEXT:                 "name": "b"
 //CHECK-NEXT:               },
 //CHECK-NEXT:               "value": {
 //CHECK-NEXT:                 "type": "Identifier",
-//CHECK-NEXT:                 "name": "b",
-//CHECK-NEXT:                 "typeAnnotation": null
+//CHECK-NEXT:                 "name": "b"
 //CHECK-NEXT:               },
 //CHECK-NEXT:               "kind": "init",
 //CHECK-NEXT:               "computed": false
@@ -69,8 +64,7 @@
 //CHECK-NEXT:               "type": "SpreadElement",
 //CHECK-NEXT:               "argument": {
 //CHECK-NEXT:                 "type": "Identifier",
-//CHECK-NEXT:                 "name": "d",
-//CHECK-NEXT:                 "typeAnnotation": null
+//CHECK-NEXT:                 "name": "d"
 //CHECK-NEXT:               }
 //CHECK-NEXT:             }
 //CHECK-NEXT:           ]

@@ -24,7 +24,7 @@ switch (foo()) {
     print(foo());
 }
 
-// CHECK: {"type":"Program","body":[{"type":"FunctionDeclaration","id":{"type":"Identifier","name":"foo","typeAnnotation":null},"params":[],"body":{"type":"BlockStatement","body":[{"type":"ReturnStatement","argument":{"type":"CallExpression","callee":{"type":"MemberExpression","object":{"type":"Identifier","name":"Math","typeAnnotation":null},"property":{"type":"Identifier","name":"random","typeAnnotation":null},"computed":false},"arguments":[]}}]},"returnType":null,"generator":false,"async":false},{"type":"SwitchStatement","discriminant":{"type":"CallExpression","callee":{"type":"Identifier","name":"foo","typeAnnotation":null},"arguments":[]},"cases":[{"type":"SwitchCase","test":{"type":"NumericLiteral","value":3,"raw":"3"},"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"StringLiteral","value":"fizz"}]},"directive":null},{"type":"BreakStatement","label":null}]},{"type":"SwitchCase","test":{"type":"NumericLiteral","value":5,"raw":"5"},"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"StringLiteral","value":"buzz"}]},"directive":null},{"type":"BreakStatement","label":null}]},{"type":"SwitchCase","test":null,"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"CallExpression","callee":{"type":"Identifier","name":"foo","typeAnnotation":null},"arguments":[]}]},"directive":null}]}]}]}
+// CHECK: {"type":"Program","body":[{"type":"FunctionDeclaration","id":{"type":"Identifier","name":"foo"},"params":[],"body":{"type":"BlockStatement","body":[{"type":"ReturnStatement","argument":{"type":"CallExpression","callee":{"type":"MemberExpression","object":{"type":"Identifier","name":"Math"},"property":{"type":"Identifier","name":"random"},"computed":false},"arguments":[]}}]},"generator":false,"async":false},{"type":"SwitchStatement","discriminant":{"type":"CallExpression","callee":{"type":"Identifier","name":"foo"},"arguments":[]},"cases":[{"type":"SwitchCase","test":{"type":"NumericLiteral","value":3,"raw":"3"},"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print"},"arguments":[{"type":"StringLiteral","value":"fizz"}]},"directive":null},{"type":"BreakStatement","label":null}]},{"type":"SwitchCase","test":{"type":"NumericLiteral","value":5,"raw":"5"},"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print"},"arguments":[{"type":"StringLiteral","value":"buzz"}]},"directive":null},{"type":"BreakStatement","label":null}]},{"type":"SwitchCase","test":null,"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print"},"arguments":[{"type":"CallExpression","callee":{"type":"Identifier","name":"foo"},"arguments":[]}]},"directive":null}]}]}]}
 
 // CHECK-PRETTY:   {
 // CHECK-PRETTY:     "type": "Program",
@@ -33,8 +33,7 @@ switch (foo()) {
 // CHECK-PRETTY:         "type": "FunctionDeclaration",
 // CHECK-PRETTY:         "id": {
 // CHECK-PRETTY:           "type": "Identifier",
-// CHECK-PRETTY:           "name": "foo",
-// CHECK-PRETTY:           "typeAnnotation": null
+// CHECK-PRETTY:           "name": "foo"
 // CHECK-PRETTY:         },
 // CHECK-PRETTY:         "params": [],
 // CHECK-PRETTY:         "body": {
@@ -48,13 +47,11 @@ switch (foo()) {
 // CHECK-PRETTY:                   "type": "MemberExpression",
 // CHECK-PRETTY:                   "object": {
 // CHECK-PRETTY:                     "type": "Identifier",
-// CHECK-PRETTY:                     "name": "Math",
-// CHECK-PRETTY:                     "typeAnnotation": null
+// CHECK-PRETTY:                     "name": "Math"
 // CHECK-PRETTY:                   },
 // CHECK-PRETTY:                   "property": {
 // CHECK-PRETTY:                     "type": "Identifier",
-// CHECK-PRETTY:                     "name": "random",
-// CHECK-PRETTY:                     "typeAnnotation": null
+// CHECK-PRETTY:                     "name": "random"
 // CHECK-PRETTY:                   },
 // CHECK-PRETTY:                   "computed": false
 // CHECK-PRETTY:                 },
@@ -63,7 +60,6 @@ switch (foo()) {
 // CHECK-PRETTY:             }
 // CHECK-PRETTY:           ]
 // CHECK-PRETTY:         },
-// CHECK-PRETTY:         "returnType": null,
 // CHECK-PRETTY:         "generator": false,
 // CHECK-PRETTY:         "async": false
 // CHECK-PRETTY:       },
@@ -73,8 +69,7 @@ switch (foo()) {
 // CHECK-PRETTY:           "type": "CallExpression",
 // CHECK-PRETTY:           "callee": {
 // CHECK-PRETTY:             "type": "Identifier",
-// CHECK-PRETTY:             "name": "foo",
-// CHECK-PRETTY:             "typeAnnotation": null
+// CHECK-PRETTY:             "name": "foo"
 // CHECK-PRETTY:           },
 // CHECK-PRETTY:           "arguments": []
 // CHECK-PRETTY:         },
@@ -93,8 +88,7 @@ switch (foo()) {
 // CHECK-PRETTY:                   "type": "CallExpression",
 // CHECK-PRETTY:                   "callee": {
 // CHECK-PRETTY:                     "type": "Identifier",
-// CHECK-PRETTY:                     "name": "print",
-// CHECK-PRETTY:                     "typeAnnotation": null
+// CHECK-PRETTY:                     "name": "print"
 // CHECK-PRETTY:                   },
 // CHECK-PRETTY:                   "arguments": [
 // CHECK-PRETTY:                     {
@@ -125,8 +119,7 @@ switch (foo()) {
 // CHECK-PRETTY:                   "type": "CallExpression",
 // CHECK-PRETTY:                   "callee": {
 // CHECK-PRETTY:                     "type": "Identifier",
-// CHECK-PRETTY:                     "name": "print",
-// CHECK-PRETTY:                     "typeAnnotation": null
+// CHECK-PRETTY:                     "name": "print"
 // CHECK-PRETTY:                   },
 // CHECK-PRETTY:                   "arguments": [
 // CHECK-PRETTY:                     {
@@ -153,16 +146,14 @@ switch (foo()) {
 // CHECK-PRETTY:                   "type": "CallExpression",
 // CHECK-PRETTY:                   "callee": {
 // CHECK-PRETTY:                     "type": "Identifier",
-// CHECK-PRETTY:                     "name": "print",
-// CHECK-PRETTY:                     "typeAnnotation": null
+// CHECK-PRETTY:                     "name": "print"
 // CHECK-PRETTY:                   },
 // CHECK-PRETTY:                   "arguments": [
 // CHECK-PRETTY:                     {
 // CHECK-PRETTY:                       "type": "CallExpression",
 // CHECK-PRETTY:                       "callee": {
 // CHECK-PRETTY:                         "type": "Identifier",
-// CHECK-PRETTY:                         "name": "foo",
-// CHECK-PRETTY:                         "typeAnnotation": null
+// CHECK-PRETTY:                         "name": "foo"
 // CHECK-PRETTY:                       },
 // CHECK-PRETTY:                       "arguments": []
 // CHECK-PRETTY:                     }
@@ -185,7 +176,6 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:         "id": {
 // CHECK-SOURCE-LOC:           "type": "Identifier",
 // CHECK-SOURCE-LOC:           "name": "foo",
-// CHECK-SOURCE-LOC:           "typeAnnotation": null,
 // CHECK-SOURCE-LOC:           "loc": {
 // CHECK-SOURCE-LOC:             "start": {
 // CHECK-SOURCE-LOC:               "line": 12,
@@ -214,7 +204,6 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                   "object": {
 // CHECK-SOURCE-LOC:                     "type": "Identifier",
 // CHECK-SOURCE-LOC:                     "name": "Math",
-// CHECK-SOURCE-LOC:                     "typeAnnotation": null,
 // CHECK-SOURCE-LOC:                     "loc": {
 // CHECK-SOURCE-LOC:                       "start": {
 // CHECK-SOURCE-LOC:                         "line": 13,
@@ -233,7 +222,6 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                   "property": {
 // CHECK-SOURCE-LOC:                     "type": "Identifier",
 // CHECK-SOURCE-LOC:                     "name": "random",
-// CHECK-SOURCE-LOC:                     "typeAnnotation": null,
 // CHECK-SOURCE-LOC:                     "loc": {
 // CHECK-SOURCE-LOC:                       "start": {
 // CHECK-SOURCE-LOC:                         "line": 13,
@@ -312,7 +300,6 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:             533
 // CHECK-SOURCE-LOC:           ]
 // CHECK-SOURCE-LOC:         },
-// CHECK-SOURCE-LOC:         "returnType": null,
 // CHECK-SOURCE-LOC:         "generator": false,
 // CHECK-SOURCE-LOC:         "async": false,
 // CHECK-SOURCE-LOC:         "loc": {
@@ -337,7 +324,6 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:           "callee": {
 // CHECK-SOURCE-LOC:             "type": "Identifier",
 // CHECK-SOURCE-LOC:             "name": "foo",
-// CHECK-SOURCE-LOC:             "typeAnnotation": null,
 // CHECK-SOURCE-LOC:             "loc": {
 // CHECK-SOURCE-LOC:               "start": {
 // CHECK-SOURCE-LOC:                 "line": 16,
@@ -399,7 +385,6 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                   "callee": {
 // CHECK-SOURCE-LOC:                     "type": "Identifier",
 // CHECK-SOURCE-LOC:                     "name": "print",
-// CHECK-SOURCE-LOC:                     "typeAnnotation": null,
 // CHECK-SOURCE-LOC:                     "loc": {
 // CHECK-SOURCE-LOC:                       "start": {
 // CHECK-SOURCE-LOC:                         "line": 18,
@@ -529,7 +514,6 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                   "callee": {
 // CHECK-SOURCE-LOC:                     "type": "Identifier",
 // CHECK-SOURCE-LOC:                     "name": "print",
-// CHECK-SOURCE-LOC:                     "typeAnnotation": null,
 // CHECK-SOURCE-LOC:                     "loc": {
 // CHECK-SOURCE-LOC:                       "start": {
 // CHECK-SOURCE-LOC:                         "line": 21,
@@ -641,7 +625,6 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                   "callee": {
 // CHECK-SOURCE-LOC:                     "type": "Identifier",
 // CHECK-SOURCE-LOC:                     "name": "print",
-// CHECK-SOURCE-LOC:                     "typeAnnotation": null,
 // CHECK-SOURCE-LOC:                     "loc": {
 // CHECK-SOURCE-LOC:                       "start": {
 // CHECK-SOURCE-LOC:                         "line": 24,
@@ -663,7 +646,6 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                       "callee": {
 // CHECK-SOURCE-LOC:                         "type": "Identifier",
 // CHECK-SOURCE-LOC:                         "name": "foo",
-// CHECK-SOURCE-LOC:                         "typeAnnotation": null,
 // CHECK-SOURCE-LOC:                         "loc": {
 // CHECK-SOURCE-LOC:                           "start": {
 // CHECK-SOURCE-LOC:                             "line": 24,

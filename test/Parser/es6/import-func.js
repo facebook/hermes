@@ -63,8 +63,7 @@ function func() {
 // CHECK-NEXT:         "type": "FunctionDeclaration",
 // CHECK-NEXT:         "id": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "func",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "func"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "params": [],
 // CHECK-NEXT:         "body": {
@@ -90,8 +89,7 @@ function func() {
 // CHECK-NEXT:                   },
 // CHECK-NEXT:                   "property": {
 // CHECK-NEXT:                     "type": "Identifier",
-// CHECK-NEXT:                     "name": "then",
-// CHECK-NEXT:                     "typeAnnotation": null
+// CHECK-NEXT:                     "name": "then"
 // CHECK-NEXT:                   },
 // CHECK-NEXT:                   "computed": false
 // CHECK-NEXT:                 },
@@ -101,7 +99,6 @@ function func() {
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "returnType": null,
 // CHECK-NEXT:         "generator": false,
 // CHECK-NEXT:         "async": false
 // CHECK-NEXT:       }

@@ -20,8 +20,7 @@ var [...a] = t;
 //CHECK-NEXT:             "type": "VariableDeclarator",
 //CHECK-NEXT:             "init": {
 //CHECK-NEXT:               "type": "Identifier",
-//CHECK-NEXT:               "name": "t",
-//CHECK-NEXT:               "typeAnnotation": null
+//CHECK-NEXT:               "name": "t"
 //CHECK-NEXT:             },
 //CHECK-NEXT:             "id": {
 //CHECK-NEXT:               "type": "ArrayPattern",
@@ -30,8 +29,7 @@ var [...a] = t;
 //CHECK-NEXT:                   "type": "RestElement",
 //CHECK-NEXT:                   "argument": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "a",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "a"
 //CHECK-NEXT:                   }
 //CHECK-NEXT:                 }
 //CHECK-NEXT:               ]
@@ -49,8 +47,7 @@ var [...[b, c]] = t;
 //CHECK-NEXT:             "type": "VariableDeclarator",
 //CHECK-NEXT:             "init": {
 //CHECK-NEXT:               "type": "Identifier",
-//CHECK-NEXT:               "name": "t",
-//CHECK-NEXT:               "typeAnnotation": null
+//CHECK-NEXT:               "name": "t"
 //CHECK-NEXT:             },
 //CHECK-NEXT:             "id": {
 //CHECK-NEXT:               "type": "ArrayPattern",
@@ -62,13 +59,11 @@ var [...[b, c]] = t;
 //CHECK-NEXT:                     "elements": [
 //CHECK-NEXT:                       {
 //CHECK-NEXT:                         "type": "Identifier",
-//CHECK-NEXT:                         "name": "b",
-//CHECK-NEXT:                         "typeAnnotation": null
+//CHECK-NEXT:                         "name": "b"
 //CHECK-NEXT:                       },
 //CHECK-NEXT:                       {
 //CHECK-NEXT:                         "type": "Identifier",
-//CHECK-NEXT:                         "name": "c",
-//CHECK-NEXT:                         "typeAnnotation": null
+//CHECK-NEXT:                         "name": "c"
 //CHECK-NEXT:                       }
 //CHECK-NEXT:                     ]
 //CHECK-NEXT:                   }
@@ -96,8 +91,7 @@ for(var[...d] in t);
 //CHECK-NEXT:                     "type": "RestElement",
 //CHECK-NEXT:                     "argument": {
 //CHECK-NEXT:                       "type": "Identifier",
-//CHECK-NEXT:                       "name": "d",
-//CHECK-NEXT:                       "typeAnnotation": null
+//CHECK-NEXT:                       "name": "d"
 //CHECK-NEXT:                     }
 //CHECK-NEXT:                   }
 //CHECK-NEXT:                 ]
@@ -107,8 +101,7 @@ for(var[...d] in t);
 //CHECK-NEXT:         },
 //CHECK-NEXT:         "right": {
 //CHECK-NEXT:           "type": "Identifier",
-//CHECK-NEXT:           "name": "t",
-//CHECK-NEXT:           "typeAnnotation": null
+//CHECK-NEXT:           "name": "t"
 //CHECK-NEXT:         },
 //CHECK-NEXT:         "body": {
 //CHECK-NEXT:           "type": "EmptyStatement"
@@ -126,8 +119,7 @@ for(var[...d] in t);
 //CHECK-NEXT:             "elements": [
 //CHECK-NEXT:               {
 //CHECK-NEXT:                 "type": "Identifier",
-//CHECK-NEXT:                 "name": "a",
-//CHECK-NEXT:                 "typeAnnotation": null
+//CHECK-NEXT:                 "name": "a"
 //CHECK-NEXT:               },
 //CHECK-NEXT:               {
 //CHECK-NEXT:                 "type": "RestElement",
@@ -136,8 +128,7 @@ for(var[...d] in t);
 //CHECK-NEXT:                   "elements": [
 //CHECK-NEXT:                     {
 //CHECK-NEXT:                       "type": "Identifier",
-//CHECK-NEXT:                       "name": "b",
-//CHECK-NEXT:                       "typeAnnotation": null
+//CHECK-NEXT:                       "name": "b"
 //CHECK-NEXT:                     }
 //CHECK-NEXT:                   ]
 //CHECK-NEXT:                 }
@@ -146,8 +137,7 @@ for(var[...d] in t);
 //CHECK-NEXT:           },
 //CHECK-NEXT:           "right": {
 //CHECK-NEXT:             "type": "Identifier",
-//CHECK-NEXT:             "name": "t",
-//CHECK-NEXT:             "typeAnnotation": null
+//CHECK-NEXT:             "name": "t"
 //CHECK-NEXT:           }
 //CHECK-NEXT:         },
 //CHECK-NEXT:         "directive": null

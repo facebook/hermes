@@ -18,13 +18,11 @@ a ?? b;
 // CHECK-NEXT:         "type": "LogicalExpression",
 // CHECK-NEXT:         "left": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "a",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "a"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "right": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "b",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "b"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "operator": "??"
 // CHECK-NEXT:       },
@@ -38,20 +36,17 @@ a ?? (b && c);
 // CHECK-NEXT:         "type": "LogicalExpression",
 // CHECK-NEXT:         "left": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "a",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "a"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "right": {
 // CHECK-NEXT:           "type": "LogicalExpression",
 // CHECK-NEXT:           "left": {
 // CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "b",
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "name": "b"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "right": {
 // CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "c",
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "name": "c"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "operator": "&&"
 // CHECK-NEXT:         },

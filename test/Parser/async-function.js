@@ -17,15 +17,13 @@ async function foo() {}
 // CHECK-NEXT:       "type": "FunctionDeclaration",
 // CHECK-NEXT:       "id": {
 // CHECK-NEXT:         "type": "Identifier",
-// CHECK-NEXT:         "name": "foo",
-// CHECK-NEXT:         "typeAnnotation": null
+// CHECK-NEXT:         "name": "foo"
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "params": [],
 // CHECK-NEXT:       "body": {
 // CHECK-NEXT:         "type": "BlockStatement",
 // CHECK-NEXT:         "body": []
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "returnType": null,
 // CHECK-NEXT:       "generator": false,
 // CHECK-NEXT:       "async": true
 // CHECK-NEXT:     },
@@ -51,8 +49,7 @@ var bar = async function() {}
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "id": {
 // CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "bar",
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "name": "bar"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ]
@@ -70,8 +67,7 @@ class Clazz {
 // CHECK-NEXT:       "type": "ClassDeclaration",
 // CHECK-NEXT:       "id": {
 // CHECK-NEXT:         "type": "Identifier",
-// CHECK-NEXT:         "name": "Clazz",
-// CHECK-NEXT:         "typeAnnotation": null
+// CHECK-NEXT:         "name": "Clazz"
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "superClass": null,
 // CHECK-NEXT:       "body": {
@@ -81,8 +77,7 @@ class Clazz {
 // CHECK-NEXT:             "type": "MethodDefinition",
 // CHECK-NEXT:             "key": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "async",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "async"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionExpression",
@@ -103,8 +98,7 @@ class Clazz {
 // CHECK-NEXT:             "type": "MethodDefinition",
 // CHECK-NEXT:             "key": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "f1",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "f1"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionExpression",
@@ -125,8 +119,7 @@ class Clazz {
 // CHECK-NEXT:             "type": "MethodDefinition",
 // CHECK-NEXT:             "key": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "f2",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "f2"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionExpression",
@@ -147,8 +140,7 @@ class Clazz {
 // CHECK-NEXT:             "type": "MethodDefinition",
 // CHECK-NEXT:             "key": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "f3",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "f3"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionExpression",
@@ -169,8 +161,7 @@ class Clazz {
 // CHECK-NEXT:             "type": "MethodDefinition",
 // CHECK-NEXT:             "key": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "f4",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "f4"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionExpression",
@@ -209,8 +200,7 @@ class Clazz {
 // CHECK-NEXT:             "type": "Property",
 // CHECK-NEXT:             "key": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "async",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "async"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionExpression",
@@ -251,8 +241,7 @@ class Clazz {
 // CHECK-NEXT:             "type": "Property",
 // CHECK-NEXT:             "key": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "f1",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "f1"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionExpression",
@@ -272,8 +261,7 @@ class Clazz {
 // CHECK-NEXT:             "type": "Property",
 // CHECK-NEXT:             "key": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "f2",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "f2"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionExpression",
@@ -293,8 +281,7 @@ class Clazz {
 // CHECK-NEXT:             "type": "Property",
 // CHECK-NEXT:             "key": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "f3",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "f3"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionExpression",
@@ -314,8 +301,7 @@ class Clazz {
 // CHECK-NEXT:             "type": "Property",
 // CHECK-NEXT:             "key": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "f4",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "f4"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionExpression",
@@ -363,8 +349,7 @@ class Clazz {
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "x",
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "name": "x"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "body": {
@@ -387,15 +372,13 @@ class Clazz {
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "x",
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "name": "x"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "RestElement",
 // CHECK-NEXT:             "argument": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "y",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "y"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
@@ -419,8 +402,7 @@ class Clazz {
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "x",
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "name": "x"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "body": {
@@ -442,8 +424,7 @@ async += 3;
 // CHECK-NEXT:         "operator": "+=",
 // CHECK-NEXT:         "left": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "async",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "async"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "right": {
 // CHECK-NEXT:           "type": "NumericLiteral",
@@ -461,14 +442,12 @@ async(await);
 // CHECK-NEXT:         "type": "CallExpression",
 // CHECK-NEXT:         "callee": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "async",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "async"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "arguments": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "await",
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "name": "await"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },

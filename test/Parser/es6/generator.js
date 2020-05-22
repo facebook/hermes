@@ -17,15 +17,13 @@ function *foo() {
 // CHECK-NEXT:       "type": "FunctionDeclaration",
 // CHECK-NEXT:       "id": {
 // CHECK-NEXT:         "type": "Identifier",
-// CHECK-NEXT:         "name": "foo",
-// CHECK-NEXT:         "typeAnnotation": null
+// CHECK-NEXT:         "name": "foo"
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "params": [],
 // CHECK-NEXT:       "body": {
 // CHECK-NEXT:         "type": "BlockStatement",
 // CHECK-NEXT:         "body": []
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "returnType": null,
 // CHECK-NEXT:       "generator": true,
 // CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
@@ -38,8 +36,7 @@ function *foo() {
 // CHECK-NEXT:         "type": "FunctionExpression",
 // CHECK-NEXT:         "id": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "bar",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "bar"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "params": [],
 // CHECK-NEXT:         "body": {
@@ -140,8 +137,7 @@ function *f1() {
 // CHECK-NEXT:      "type": "FunctionDeclaration",
 // CHECK-NEXT:      "id": {
 // CHECK-NEXT:        "type": "Identifier",
-// CHECK-NEXT:        "name": "f1",
-// CHECK-NEXT:        "typeAnnotation": null
+// CHECK-NEXT:        "name": "f1"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "params": [],
 // CHECK-NEXT:      "body": {
@@ -151,8 +147,7 @@ function *f1() {
 // CHECK-NEXT:            "type": "FunctionDeclaration",
 // CHECK-NEXT:            "id": {
 // CHECK-NEXT:              "type": "Identifier",
-// CHECK-NEXT:              "name": "f2",
-// CHECK-NEXT:              "typeAnnotation": null
+// CHECK-NEXT:              "name": "f2"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "params": [],
 // CHECK-NEXT:            "body": {
@@ -171,8 +166,7 @@ function *f1() {
 // CHECK-NEXT:                      },
 // CHECK-NEXT:                      "id": {
 // CHECK-NEXT:                        "type": "Identifier",
-// CHECK-NEXT:                        "name": "yield",
-// CHECK-NEXT:                        "typeAnnotation": null
+// CHECK-NEXT:                        "name": "yield"
 // CHECK-NEXT:                      }
 // CHECK-NEXT:                    }
 // CHECK-NEXT:                  ]
@@ -181,27 +175,23 @@ function *f1() {
 // CHECK-NEXT:                  "type": "FunctionDeclaration",
 // CHECK-NEXT:                  "id": {
 // CHECK-NEXT:                    "type": "Identifier",
-// CHECK-NEXT:                    "name": "f3",
-// CHECK-NEXT:                    "typeAnnotation": null
+// CHECK-NEXT:                    "name": "f3"
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "params": [],
 // CHECK-NEXT:                  "body": {
 // CHECK-NEXT:                    "type": "BlockStatement",
 // CHECK-NEXT:                    "body": []
 // CHECK-NEXT:                  },
-// CHECK-NEXT:                  "returnType": null,
 // CHECK-NEXT:                  "generator": true,
 // CHECK-NEXT:                  "async": false
 // CHECK-NEXT:                }
 // CHECK-NEXT:              ]
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "returnType": null,
 // CHECK-NEXT:            "generator": false,
 // CHECK-NEXT:            "async": false
 // CHECK-NEXT:          }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:      },
-// CHECK-NEXT:      "returnType": null,
 // CHECK-NEXT:      "generator": true,
 // CHECK-NEXT:      "async": false
 // CHECK-NEXT:    },
@@ -215,8 +205,7 @@ function *yieldInExpr() {
 // CHECK-NEXT:       "type": "FunctionDeclaration",
 // CHECK-NEXT:       "id": {
 // CHECK-NEXT:         "type": "Identifier",
-// CHECK-NEXT:         "name": "yieldInExpr",
-// CHECK-NEXT:         "typeAnnotation": null
+// CHECK-NEXT:         "name": "yieldInExpr"
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "params": [],
 // CHECK-NEXT:       "body": {
@@ -228,13 +217,11 @@ function *yieldInExpr() {
 // CHECK-NEXT:               "type": "ConditionalExpression",
 // CHECK-NEXT:               "test": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "x",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "x"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "alternate": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "y",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "y"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "consequent": {
 // CHECK-NEXT:                 "type": "YieldExpression",
@@ -270,7 +257,6 @@ function *yieldInExpr() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "returnType": null,
 // CHECK-NEXT:       "generator": true,
 // CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
@@ -280,8 +266,7 @@ function *hasYieldInside(){ var y = function yield(){}; }
 // CHECK-NEXT:       "type": "FunctionDeclaration",
 // CHECK-NEXT:       "id": {
 // CHECK-NEXT:         "type": "Identifier",
-// CHECK-NEXT:         "name": "hasYieldInside",
-// CHECK-NEXT:         "typeAnnotation": null
+// CHECK-NEXT:         "name": "hasYieldInside"
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "params": [],
 // CHECK-NEXT:       "body": {
@@ -297,8 +282,7 @@ function *hasYieldInside(){ var y = function yield(){}; }
 // CHECK-NEXT:                   "type": "FunctionExpression",
 // CHECK-NEXT:                   "id": {
 // CHECK-NEXT:                     "type": "Identifier",
-// CHECK-NEXT:                     "name": "yield",
-// CHECK-NEXT:                     "typeAnnotation": null
+// CHECK-NEXT:                     "name": "yield"
 // CHECK-NEXT:                   },
 // CHECK-NEXT:                   "params": [],
 // CHECK-NEXT:                   "body": {
@@ -310,15 +294,13 @@ function *hasYieldInside(){ var y = function yield(){}; }
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "id": {
 // CHECK-NEXT:                   "type": "Identifier",
-// CHECK-NEXT:                   "name": "y",
-// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                   "name": "y"
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               }
 // CHECK-NEXT:             ]
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "returnType": null,
 // CHECK-NEXT:       "generator": true,
 // CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
@@ -328,15 +310,13 @@ function *yield() {}
 // CHECK-NEXT:       "type": "FunctionDeclaration",
 // CHECK-NEXT:       "id": {
 // CHECK-NEXT:         "type": "Identifier",
-// CHECK-NEXT:         "name": "yield",
-// CHECK-NEXT:         "typeAnnotation": null
+// CHECK-NEXT:         "name": "yield"
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "params": [],
 // CHECK-NEXT:       "body": {
 // CHECK-NEXT:         "type": "BlockStatement",
 // CHECK-NEXT:         "body": []
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "returnType": null,
 // CHECK-NEXT:       "generator": true,
 // CHECK-NEXT:       "async": false
 // CHECK-NEXT:     }

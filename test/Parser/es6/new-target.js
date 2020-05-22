@@ -18,8 +18,7 @@ function foo() {
 // CHECK-NEXT:       "type": "FunctionDeclaration",
 // CHECK-NEXT:       "id": {
 // CHECK-NEXT:         "type": "Identifier",
-// CHECK-NEXT:         "name": "foo",
-// CHECK-NEXT:         "typeAnnotation": null
+// CHECK-NEXT:         "name": "foo"
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "params": [],
 // CHECK-NEXT:       "body": {
@@ -31,19 +30,16 @@ function foo() {
 // CHECK-NEXT:               "type": "MetaProperty",
 // CHECK-NEXT:               "meta": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "new",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "new"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "property": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "target",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "target"
 // CHECK-NEXT:               }
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "returnType": null,
 // CHECK-NEXT:       "generator": false,
 // CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
@@ -55,8 +51,7 @@ function bar() {
 // CHECK-NEXT:       "type": "FunctionDeclaration",
 // CHECK-NEXT:       "id": {
 // CHECK-NEXT:         "type": "Identifier",
-// CHECK-NEXT:         "name": "bar",
-// CHECK-NEXT:         "typeAnnotation": null
+// CHECK-NEXT:         "name": "bar"
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "params": [],
 // CHECK-NEXT:       "body": {
@@ -70,26 +65,22 @@ function bar() {
 // CHECK-NEXT:                 "type": "MetaProperty",
 // CHECK-NEXT:                 "meta": {
 // CHECK-NEXT:                   "type": "Identifier",
-// CHECK-NEXT:                   "name": "new",
-// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                   "name": "new"
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "property": {
 // CHECK-NEXT:                   "type": "Identifier",
-// CHECK-NEXT:                   "name": "target",
-// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                   "name": "target"
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "property": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "prop",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "prop"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "computed": false
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "returnType": null,
 // CHECK-NEXT:       "generator": false,
 // CHECK-NEXT:       "async": false
 // CHECK-NEXT:     }

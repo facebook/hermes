@@ -16,13 +16,11 @@ for(a1 of b);
 //CHECK-NEXT:        "type": "ForOfStatement",
 //CHECK-NEXT:        "left": {
 //CHECK-NEXT:          "type": "Identifier",
-//CHECK-NEXT:          "name": "a1",
-//CHECK-NEXT:          "typeAnnotation": null
+//CHECK-NEXT:          "name": "a1"
 //CHECK-NEXT:        },
 //CHECK-NEXT:        "right": {
 //CHECK-NEXT:          "type": "Identifier",
-//CHECK-NEXT:          "name": "b",
-//CHECK-NEXT:          "typeAnnotation": null
+//CHECK-NEXT:          "name": "b"
 //CHECK-NEXT:        },
 //CHECK-NEXT:        "body": {
 //CHECK-NEXT:          "type": "EmptyStatement"
@@ -41,16 +39,14 @@ for(var a2 of b);
 //CHECK-NEXT:              "init": null,
 //CHECK-NEXT:              "id": {
 //CHECK-NEXT:                "type": "Identifier",
-//CHECK-NEXT:                "name": "a2",
-//CHECK-NEXT:                "typeAnnotation": null
+//CHECK-NEXT:                "name": "a2"
 //CHECK-NEXT:              }
 //CHECK-NEXT:            }
 //CHECK-NEXT:          ]
 //CHECK-NEXT:        },
 //CHECK-NEXT:        "right": {
 //CHECK-NEXT:          "type": "Identifier",
-//CHECK-NEXT:          "name": "b",
-//CHECK-NEXT:          "typeAnnotation": null
+//CHECK-NEXT:          "name": "b"
 //CHECK-NEXT:        },
 //CHECK-NEXT:        "body": {
 //CHECK-NEXT:          "type": "EmptyStatement"
@@ -69,16 +65,14 @@ for(let a3 of b);
 //CHECK-NEXT:              "init": null,
 //CHECK-NEXT:              "id": {
 //CHECK-NEXT:                "type": "Identifier",
-//CHECK-NEXT:                "name": "a3",
-//CHECK-NEXT:                "typeAnnotation": null
+//CHECK-NEXT:                "name": "a3"
 //CHECK-NEXT:              }
 //CHECK-NEXT:            }
 //CHECK-NEXT:          ]
 //CHECK-NEXT:        },
 //CHECK-NEXT:        "right": {
 //CHECK-NEXT:          "type": "Identifier",
-//CHECK-NEXT:          "name": "b",
-//CHECK-NEXT:          "typeAnnotation": null
+//CHECK-NEXT:          "name": "b"
 //CHECK-NEXT:        },
 //CHECK-NEXT:        "body": {
 //CHECK-NEXT:          "type": "EmptyStatement"
@@ -97,16 +91,14 @@ for(const a4 of b);
 //CHECK-NEXT:              "init": null,
 //CHECK-NEXT:              "id": {
 //CHECK-NEXT:                "type": "Identifier",
-//CHECK-NEXT:                "name": "a4",
-//CHECK-NEXT:                "typeAnnotation": null
+//CHECK-NEXT:                "name": "a4"
 //CHECK-NEXT:              }
 //CHECK-NEXT:            }
 //CHECK-NEXT:          ]
 //CHECK-NEXT:        },
 //CHECK-NEXT:        "right": {
 //CHECK-NEXT:          "type": "Identifier",
-//CHECK-NEXT:          "name": "b",
-//CHECK-NEXT:          "typeAnnotation": null
+//CHECK-NEXT:          "name": "b"
 //CHECK-NEXT:        },
 //CHECK-NEXT:        "body": {
 //CHECK-NEXT:          "type": "EmptyStatement"
@@ -123,8 +115,7 @@ let a5, a6;
 //CHECK-NEXT:            "init": null,
 //CHECK-NEXT:            "id": {
 //CHECK-NEXT:              "type": "Identifier",
-//CHECK-NEXT:              "name": "a5",
-//CHECK-NEXT:              "typeAnnotation": null
+//CHECK-NEXT:              "name": "a5"
 //CHECK-NEXT:            }
 //CHECK-NEXT:          },
 //CHECK-NEXT:          {
@@ -132,8 +123,7 @@ let a5, a6;
 //CHECK-NEXT:            "init": null,
 //CHECK-NEXT:            "id": {
 //CHECK-NEXT:              "type": "Identifier",
-//CHECK-NEXT:              "name": "a6",
-//CHECK-NEXT:              "typeAnnotation": null
+//CHECK-NEXT:              "name": "a6"
 //CHECK-NEXT:            }
 //CHECK-NEXT:          }
 //CHECK-NEXT:        ]
@@ -153,8 +143,7 @@ const a7 = 1;
 //CHECK-NEXT:            },
 //CHECK-NEXT:            "id": {
 //CHECK-NEXT:              "type": "Identifier",
-//CHECK-NEXT:              "name": "a7",
-//CHECK-NEXT:              "typeAnnotation": null
+//CHECK-NEXT:              "name": "a7"
 //CHECK-NEXT:            }
 //CHECK-NEXT:          }
 //CHECK-NEXT:        ]
