@@ -299,7 +299,7 @@ Optional<ESTree::Node *> JSParserImpl::parseJSXSpreadAttribute() {
 
   if (!eat(
           TokenKind::r_brace,
-          JSLexer::GrammarContext::AllowDiv,
+          JSLexer::GrammarContext::AllowJSXIdentifier,
           "in JSX spread attribute",
           "location of attribute",
           start))

@@ -689,6 +689,45 @@
 // CHECK-NEXT:       "directive": null
 // CHECK-NEXT:     },
 
+<tag {...x} a-b="foo" />;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "JSXElement",
+// CHECK-NEXT:         "openingElement": {
+// CHECK-NEXT:           "type": "JSXOpeningElement",
+// CHECK-NEXT:           "name": {
+// CHECK-NEXT:             "type": "JSXIdentifier",
+// CHECK-NEXT:             "name": "tag"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "attributes": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "JSXSpreadAttribute",
+// CHECK-NEXT:               "argument": {
+// CHECK-NEXT:                 "type": "Identifier",
+// CHECK-NEXT:                 "name": "x"
+// CHECK-NEXT:               }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "JSXAttribute",
+// CHECK-NEXT:               "name": {
+// CHECK-NEXT:                 "type": "JSXIdentifier",
+// CHECK-NEXT:                 "name": "a-b"
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "value": {
+// CHECK-NEXT:                 "type": "StringLiteral",
+// CHECK-NEXT:                 "value": "foo"
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           ],
+// CHECK-NEXT:           "selfClosing": true
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "children": [],
+// CHECK-NEXT:         "closingElement": null
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
 <a foo="abc
   def" />;
 // CHECK-NEXT:     {
