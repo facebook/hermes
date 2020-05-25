@@ -651,13 +651,11 @@ OptValue<TokenKind> JSLexer::lookahead1(OptValue<TokenKind> expectedToken) {
   SourceErrorManager::SaveAndSuppressMessages suppress(&sm_);
 
   advance();
-  TokenKind kind = token_.getKind();
+  OptValue<TokenKind> kind = token_.getKind();
   if (isNewLineBeforeCurrentToken()) {
     // Disregard anything after LineTerminator.
-    return llvm::None;
-  }
-
-  if (expectedToken.hasValue() && expectedToken.getValue() == kind) {
+    kind = llvm::None;
+  } else if (expectedToken == kind) {
     // Do not move the cursor back.
     return kind;
   }
