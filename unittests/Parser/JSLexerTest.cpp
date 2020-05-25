@@ -819,6 +819,30 @@ TEST(JSLexerTest, SourceMappingUrl) {
   }
 }
 
+TEST(JSLexerTest, LookaheadNewlineTest) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext diag(sm);
+
+  // Test the lookahead function which will not revert to the current
+  // token after lookahead if an optional expected token is provided.
+  JSLexer lex("function\n(", sm, alloc);
+
+  ASSERT_EQ(TokenKind::rw_function, lex.advance()->getKind());
+
+  {
+    // Revert since there is no expected token
+    // Expect None returned since there is a newline before the next token
+    auto optNext = lex.lookahead1(llvm::None);
+    ASSERT_FALSE(optNext.hasValue());
+  }
+
+  ASSERT_EQ(TokenKind::rw_function, lex.getCurToken()->getKind());
+  ASSERT_EQ(TokenKind::l_paren, lex.advance()->getKind());
+
+  ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+}
+
 TEST(JSLexerTest, LookaheadTest) {
   JSLexer::Allocator alloc;
   SourceErrorManager sm;
