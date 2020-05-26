@@ -77,7 +77,7 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
 
   jsi::WeakObject createWeakObject(const jsi::Object &o) override;
 
-  jsi::Value lockWeakObject(const jsi::WeakObject &wo) override;
+  jsi::Value lockWeakObject(jsi::WeakObject &wo) override;
 
   jsi::Array createArray(size_t length) override;
 

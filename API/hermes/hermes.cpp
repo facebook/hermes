@@ -301,8 +301,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
             if (it->get() == 0) {
               it = weakHermesValues_->erase(it);
             } else {
-              acceptor.accept(
-                  const_cast<vm::WeakRef<vm::HermesValue> &>(it->wr));
+              acceptor.accept(it->wr);
               ++it;
             }
           }
@@ -383,9 +382,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   struct WeakRefPointerValue final : CountedPointerValue {
     WeakRefPointerValue(vm::WeakRef<vm::HermesValue> _wr) : wr(_wr) {}
 
-    // This should only ever be modified by the GC.  We const_cast the
-    // reference before passing it to the GC.
-    const vm::WeakRef<vm::HermesValue> wr;
+    vm::WeakRef<vm::HermesValue> wr;
   };
 
   HermesPointerValue *clone(const Runtime::PointerValue *pv) {
@@ -590,13 +587,11 @@ class HermesRuntimeImpl final : public HermesRuntime,
     return ::hermes::vm::Handle<::hermes::vm::JSArrayBuffer>::vmcast(&phv(arr));
   }
 
-  static const ::hermes::vm::WeakRef<vm::HermesValue> &wrhv(
-      const jsi::Pointer &pointer) {
+  static ::hermes::vm::WeakRef<vm::HermesValue> &wrhv(jsi::Pointer &pointer) {
     assert(
-        dynamic_cast<const WeakRefPointerValue *>(getPointerValue(pointer)) &&
+        dynamic_cast<WeakRefPointerValue *>(getPointerValue(pointer)) &&
         "Pointer does not contain a WeakRefPointerValue");
-    return static_cast<const WeakRefPointerValue *>(getPointerValue(pointer))
-        ->wr;
+    return static_cast<WeakRefPointerValue *>(getPointerValue(pointer))->wr;
   }
 
   // These helpers use public (mostly) interfaces on the runtime and
@@ -718,7 +713,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsi::Array getPropertyNames(const jsi::Object &) override;
 
   jsi::WeakObject createWeakObject(const jsi::Object &) override;
-  jsi::Value lockWeakObject(const jsi::WeakObject &) override;
+  jsi::Value lockWeakObject(jsi::WeakObject &) override;
 
   jsi::Array createArray(size_t length) override;
   size_t size(const jsi::Array &) override;
@@ -1702,7 +1697,7 @@ jsi::WeakObject HermesRuntimeImpl::createWeakObject(const jsi::Object &obj) {
   });
 }
 
-jsi::Value HermesRuntimeImpl::lockWeakObject(const jsi::WeakObject &wo) {
+jsi::Value HermesRuntimeImpl::lockWeakObject(jsi::WeakObject &wo) {
   const vm::WeakRef<vm::HermesValue> &wr = wrhv(wo);
   if (!wr.isValid()) {
     return jsi::Value();

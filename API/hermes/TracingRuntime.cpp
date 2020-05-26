@@ -322,7 +322,7 @@ jsi::WeakObject TracingRuntime::createWeakObject(const jsi::Object &o) {
   return wo;
 }
 
-jsi::Value TracingRuntime::lockWeakObject(const jsi::WeakObject &wo) {
+jsi::Value TracingRuntime::lockWeakObject(jsi::WeakObject &wo) {
   auto val = RD::lockWeakObject(wo);
   // TODO mhorowitz: add synthtrace support for WeakObject
   return val;
