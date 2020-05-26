@@ -74,6 +74,9 @@ module.exports = {
       },
     ],
   ],
+  stylesheets: [
+    require.resolve('./node_modules/normalize.css/normalize.css'),
+  ],
   plugins: [
     path.join(__dirname, '/plugins/monaco-editor'),
     path.join(__dirname, '/plugins/case-sensitive-paths')

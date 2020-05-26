@@ -14,6 +14,7 @@
     "@docusaurus/preset-classic": "^2.0.0-alpha.54",
     "classnames": "^2.2.6",
     "monaco-editor": "^0.19.2",
+    "normalize.css": "^8.0.1",
     "react": "^16.8.4",
     "react-dom": "^16.8.4",
     "react-monaco-editor": "^0.33.0"

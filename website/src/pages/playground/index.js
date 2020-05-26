@@ -8,6 +8,7 @@
  */
 
 import React, {useEffect, useState, useReducer, useCallback} from 'react';
+import Head from '@docusaurus/Head';
 import Layout from '@theme/Layout';
 import Worker from 'worker-loader!@site/src/workers/hermes.js';
 import Code from '@site/src/components/Code';
@@ -23,7 +24,7 @@ const initialState = {
   runRequested: false,
   output: '',
   lastTime: undefined,
-  ellapsed: 0,
+  elapsed: 0,
 };
 
 function reducer(state, action) {
@@ -38,7 +39,7 @@ function reducer(state, action) {
         ...state,
         runRequested: false,
         output: action.result,
-        ellapsed: new Date() - state.lastTime,
+        elapsed: new Date() - state.lastTime,
       };
   }
 }
@@ -50,7 +51,7 @@ function Playground() {
   const [args, setArgs] = useState('-O -dump-bytecode');
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  const {runRequested, ellapsed, output} = state;
+  const {runRequested, elapsed, output} = state;
   const run = args => dispatch({tag: 'RUN', args, source});
 
   useEffect(() => {
@@ -66,6 +67,18 @@ function Playground() {
     };
   }, []);
 
+  // A hack to completely disasble scrolling behaviors on mobile
+  // e.g. bounce effect on iOS, pull-to-refresh on Android.
+  //
+  // The reason to do it via effects on `html` is that docusaurus drawer
+  // will mutate `body`'s `overflow` and we have no way to override it.
+  useEffect(() => {
+    document.querySelector('html').style.overflow = 'hidden';
+    return () => {
+      document.querySelector('html').style.overflow = 'visible';
+    };
+  });
+
   const handleSubmit = e => {
     e.preventDefault();
     run(args);
@@ -73,6 +86,12 @@ function Playground() {
 
   return (
     <Layout title="Hermes" description="Hermes Playground" noFooter={true}>
+      <Head>
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+        />
+      </Head>
       <form className={styles.driver} onSubmit={handleSubmit}>
         <input
           className={styles.argsInput}
@@ -88,7 +107,7 @@ function Playground() {
         <div className={styles.helpBtn} onClick={_ => run('-help')}>
           ?
         </div>
-        <span className={styles.ellapsed}>{ellapsed} ms</span>
+        <span className={styles.elapsed}>{elapsed} ms</span>
       </form>
 
       <div className={styles.codeContainer}>

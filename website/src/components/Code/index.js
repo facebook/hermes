@@ -19,6 +19,8 @@ const defaultOptions = {
   fontSize: '13px',
   wordWrap: 'off',
   scrollBeyondLastLine: false,
+  smoothScrolling: true,
+  fontFamily: "Menlo, Monaco, Consolas, 'Courier New', monospace",
 };
 
 const registerTheme = monaco => {
