@@ -37,6 +37,14 @@ e = new Error('another-message');
 print(e);
 //CHECK: Error: another-message
 
+e = new Error(undefined);
+print(e);
+//CHECK: Error
+
+e = new Error('undefined');
+print(e);
+//CHECK: Error: undefined
+
 e = new TypeError();
 print(e);
 //CHECK: TypeError
