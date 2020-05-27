@@ -1763,7 +1763,7 @@ void JSLexer::scanRegExp() {
         error(
             SMLoc::getFromPointer(curCharPtr_),
             "non-terminated regular expression literal");
-        sm_.note(startLoc, "regular expresson started here");
+        sm_.note(startLoc, "regular expression started here");
         goto exitLoop;
     }
 
