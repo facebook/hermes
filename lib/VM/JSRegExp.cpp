@@ -376,17 +376,12 @@ void JSRegExp::_snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
     // Add a native node for regex bytecode, to account for native size directly
     // owned by the regex.
     snap.beginNode();
-    auto &allocationLocationTracker = gc->getAllocationLocationTracker();
     snap.endNode(
         HeapSnapshot::NodeType::Native,
         "RegExpBytecode",
         gc->getNativeID(self->bytecode_),
         self->bytecodeSize_,
-        allocationLocationTracker.isEnabled()
-            ? allocationLocationTracker
-                  .getStackTracesTreeNodeForAlloc(self->bytecode_)
-                  ->id
-            : 0);
+        0);
   }
 }
 
