@@ -317,6 +317,11 @@ JNIEnv* Environment::ensureCurrentThreadIsAttached() {
   return env;
 }
 
+/* static */
+bool Environment::isGlobalJvmAvailable() {
+  return g_vm != nullptr;
+}
+
 namespace {
 struct JThreadScopeSupport : JavaClass<JThreadScopeSupport> {
   static auto constexpr kJavaDescriptor = "Lcom/facebook/jni/ThreadScopeSupport;";
