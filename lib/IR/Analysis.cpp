@@ -26,28 +26,37 @@ using llvm::isa;
 using llvm::Optional;
 using llvm::outs;
 
-void PostOrderAnalysis::visitPostOrder(
-    BasicBlock *BB,
-    BlockList &order,
-    BlockSet &visited) {
-  if (!visited.insert(BB).second)
-    return;
+void PostOrderAnalysis::visitPostOrder(BasicBlock *BB, BlockList &order) {
+  struct State {
+    BasicBlock *BB;
+    succ_iterator cur, end;
+    explicit State(BasicBlock *BB)
+        : BB(BB), cur(succ_begin(BB)), end(succ_end(BB)) {}
+  };
 
-  for (auto I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
-    visitPostOrder(*I, order, visited);
-  }
+  llvm::SmallPtrSet<BasicBlock *, 16> visited{};
+  llvm::SmallVector<State, 32> stack{};
 
-  order.push_back(BB);
+  stack.emplace_back(BB);
+  do {
+    while (stack.back().cur != stack.back().end) {
+      BB = *stack.back().cur++;
+      if (visited.insert(BB).second)
+        stack.emplace_back(BB);
+    }
+
+    order.push_back(stack.back().BB);
+    stack.pop_back();
+  } while (!stack.empty());
 }
 
 PostOrderAnalysis::PostOrderAnalysis(Function *F) : ctx_(F->getContext()) {
-  BlockSet visited;
   assert(Order.empty() && "vector must be empty");
 
   BasicBlock *entry = &*F->begin();
 
   // Finally, do an PO scan from the entry block.
-  visitPostOrder(entry, Order, visited);
+  visitPostOrder(entry, Order);
 
   assert(
       !Order.empty() && Order[Order.size() - 1] == entry &&

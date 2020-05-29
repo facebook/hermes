@@ -24,7 +24,6 @@ namespace hermes {
 /// blocks. The analysis does not enumerate unreachable blocks.
 class PostOrderAnalysis {
   using BlockList = std::vector<BasicBlock *>;
-  using BlockSet = llvm::SmallPtrSet<BasicBlock *, 16>;
 
   /// The AST context, which here is only used by Dump().
   Context &ctx_;
@@ -34,9 +33,8 @@ class PostOrderAnalysis {
 
   /// This function does the recursive scan of the function. \p BB is the basic
   /// block that starts the scan. \p order is the ordered list of blocks, and
-  /// the output, and \p visited is a set of already visited blocks.
-  static void
-  visitPostOrder(BasicBlock *BB, BlockList &order, BlockSet &visited);
+  /// the output.
+  static void visitPostOrder(BasicBlock *BB, BlockList &order);
 
  public:
   explicit PostOrderAnalysis(Function *F);
