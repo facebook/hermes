@@ -33,6 +33,10 @@ e.name = '';
 print(e);
 //CHECK: random-message
 
+e = new Error(undefined);
+print(e.hasOwnProperty(e, 'message'));
+//CHECK: false
+
 e = new Error('another-message');
 print(e);
 //CHECK: Error: another-message

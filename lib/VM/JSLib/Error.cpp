@@ -107,7 +107,8 @@ static CallResult<HermesValue> constructErrorObject(
   JSError::setupStack(selfHandle, runtime);
 
   // new Error(message).
-  if (args.getArgCount() >= 1) {
+  // Only proceed when 'typeof message' isn't undefined.
+  if (!args.getArg(0).isUndefined()) {
     if (LLVM_UNLIKELY(
             JSError::setMessage(
                 selfHandle, runtime, runtime->makeHandle(args.getArg(0))) ==
