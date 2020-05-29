@@ -3337,6 +3337,8 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(Param param) {
   if (!checkAndEat(TokenKind::question))
     return optTest.getValue();
 
+  // parseAssignmentExpression may call parseConditionalExpression again.
+  CHECK_RECURSION;
   auto optConsequent = parseAssignmentExpression(ParamIn);
   if (!optConsequent)
     return None;
