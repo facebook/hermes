@@ -463,7 +463,7 @@ CallResult<HermesValue> stringRaw(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(getRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto rawRes = toObject(runtime, runtime->makeHandle(*getRes));
+  auto rawRes = toObject(runtime, runtime->makeHandle(std::move(*getRes)));
   if (LLVM_UNLIKELY(rawRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -475,7 +475,8 @@ CallResult<HermesValue> stringRaw(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(lengthRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto literalSegmentsRes = toLength(runtime, runtime->makeHandle(*lengthRes));
+  auto literalSegmentsRes =
+      toLength(runtime, runtime->makeHandle(std::move(*lengthRes)));
   if (LLVM_UNLIKELY(literalSegmentsRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -506,7 +507,7 @@ CallResult<HermesValue> stringRaw(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(nextSegPropRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    tmpHandle = *nextSegPropRes;
+    tmpHandle = std::move(*nextSegPropRes);
     auto nextSegRes = toString_RJS(runtime, tmpHandle);
     if (LLVM_UNLIKELY(nextSegRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1499,7 +1500,8 @@ stringPrototypeMatch(void *, Runtime *runtime, NativeArgs args) {
       Handle<Callable> matcher =
           Handle<Callable>::vmcast(runtime, methodRes->getHermesValue());
       return Callable::executeCall1(
-          matcher, runtime, regexp, O.getHermesValue());
+                 matcher, runtime, regexp, O.getHermesValue())
+          .toCallResultHermesValue();
     }
   }
   // 4. Let S be ToString(O).
@@ -1524,13 +1526,18 @@ stringPrototypeMatch(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto func = dyn_vmcast<Callable>(propRes.getValue());
+  PseudoHandle<Callable> func =
+      PseudoHandle<Callable>::dyn_vmcast(std::move(*propRes));
   if (LLVM_UNLIKELY(!func)) {
     return runtime->raiseTypeError(
         "RegExp.prototype[@@match] must be callable.");
   }
   return Callable::executeCall1(
-      runtime->makeHandle(func), runtime, rx, S.getHermesValue());
+             runtime->makeHandle(std::move(func)),
+             runtime,
+             rx,
+             S.getHermesValue())
+      .toCallResultHermesValue();
 }
 
 CallResult<HermesValue>
@@ -1671,11 +1678,12 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
       Handle<Callable> replacer =
           Handle<Callable>::vmcast(runtime, methodRes->getHermesValue());
       return Callable::executeCall2(
-          replacer,
-          runtime,
-          searchValue,
-          O.getHermesValue(),
-          replaceValue.getHermesValue());
+                 replacer,
+                 runtime,
+                 searchValue,
+                 O.getHermesValue(),
+                 replaceValue.getHermesValue())
+          .toCallResultHermesValue();
     }
   }
   // 4. Let string be ToString(O).
@@ -1744,7 +1752,7 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
     }
     // b. Let replStr be ToString(replValue).
     auto replStrRes =
-        toString_RJS(runtime, runtime->makeHandle(callRes.getValue()));
+        toString_RJS(runtime, runtime->makeHandle(std::move(*callRes)));
     // c. ReturnIfAbrupt(replStr).
     if (LLVM_UNLIKELY(replStrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1806,7 +1814,8 @@ stringPrototypeSearch(void *, Runtime *runtime, NativeArgs args) {
       Handle<Callable> searcher =
           Handle<Callable>::vmcast(runtime, methodRes->getHermesValue());
       return Callable::executeCall1(
-          searcher, runtime, regexp, O.getHermesValue());
+                 searcher, runtime, regexp, O.getHermesValue())
+          .toCallResultHermesValue();
     }
   }
   // 4. Let string be ToString(O).
@@ -1831,12 +1840,14 @@ stringPrototypeSearch(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  if (LLVM_UNLIKELY(!vmisa<Callable>(propRes.getValue()))) {
+  if (LLVM_UNLIKELY(!vmisa<Callable>(propRes->get()))) {
     return runtime->raiseTypeError(
         "RegExp.prototype[@@search] must be callable.");
   }
-  auto func = Handle<Callable>::vmcast(runtime, *propRes);
-  return Callable::executeCall1(func, runtime, rx, string.getHermesValue());
+  auto func =
+      Handle<Callable>::vmcast(runtime->makeHandle(std::move(*propRes)));
+  return Callable::executeCall1(func, runtime, rx, string.getHermesValue())
+      .toCallResultHermesValue();
 }
 
 CallResult<HermesValue>
@@ -2009,7 +2020,12 @@ stringPrototypeSplit(void *, Runtime *runtime, NativeArgs args) {
       Handle<Callable> splitter =
           Handle<Callable>::vmcast(runtime, methodRes->getHermesValue());
       return Callable::executeCall2(
-          splitter, runtime, separator, O.getHermesValue(), args.getArg(1));
+                 splitter,
+                 runtime,
+                 separator,
+                 O.getHermesValue(),
+                 args.getArg(1))
+          .toCallResultHermesValue();
     }
   }
   return splitInternal(

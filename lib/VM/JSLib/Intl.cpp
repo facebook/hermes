@@ -325,30 +325,32 @@ CallResult<platform_intl::Options> normalizeOptions(
     }
     name = *nameRes;
 
-    CallResult<HermesValue> valRes =
+    CallResult<PseudoHandle<>> valRes =
         JSObject::getComputed_RJS(optionsObj, runtime, name);
     if (LLVM_UNLIKELY(valRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
 
-    if (valRes->isUndefined()) {
+    if ((*valRes)->isUndefined()) {
       continue;
     }
 
     if (pod->kind == platform_intl::Option::Kind::Bool) {
-      ret.emplace(pod->name, platform_intl::Option(toBoolean(*valRes)));
+      ret.emplace(
+          pod->name,
+          platform_intl::Option(toBoolean(valRes->getHermesValue())));
     } else if (pod->kind == platform_intl::Option::Kind::Number) {
-      value = *valRes;
-      valRes = toNumber_RJS(runtime, value);
-      if (LLVM_UNLIKELY(valRes == ExecutionStatus::EXCEPTION)) {
+      value = std::move(*valRes);
+      CallResult<HermesValue> numRes = toNumber_RJS(runtime, value);
+      if (LLVM_UNLIKELY(numRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      ret.emplace(pod->name, platform_intl::Option(valRes->getNumber()));
+      ret.emplace(pod->name, platform_intl::Option(numRes->getNumber()));
     } else {
       assert(
           pod->kind == platform_intl::Option::Kind::String &&
           "Unknown option kind");
-      value = *valRes;
+      value = std::move(*valRes);
       CallResult<PseudoHandle<StringPrimitive>> strRes =
           toString_RJS(runtime, value);
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {

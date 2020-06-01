@@ -97,7 +97,8 @@ weakMapConstructor(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto adder = Handle<Callable>::dyn_vmcast(runtime->makeHandle(*propRes));
+  auto adder =
+      Handle<Callable>::dyn_vmcast(runtime->makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(!adder)) {
     return runtime->raiseTypeError(
         "Property 'set' for WeakMap is not callable");
@@ -130,21 +131,21 @@ weakMapConstructor(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(nextItemRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (!vmisa<JSObject>(*nextItemRes)) {
+    if (!vmisa<JSObject>(nextItemRes->get())) {
       runtime->raiseTypeError("WeakMap([iterable]) elements must be objects");
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
-    nextItem = vmcast<JSObject>(*nextItemRes);
+    nextItem = vmcast<JSObject>(std::move(nextItemRes->get()));
     auto keyRes = JSObject::getComputed_RJS(nextItem, runtime, zero);
     if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION)) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
-    keyHandle = *keyRes;
+    keyHandle = std::move(*keyRes);
     auto valueRes = JSObject::getComputed_RJS(nextItem, runtime, one);
     if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
-    valueHandle = *valueRes;
+    valueHandle = std::move(*valueRes);
     if (LLVM_UNLIKELY(
             Callable::executeCall2(
                 adder,

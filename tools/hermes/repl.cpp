@@ -327,7 +327,7 @@ int repl(const vm::RuntimeConfig &config) {
         llvm::outs(), runtime->makeHandle(runtime->getThrownValue()));
     return 1;
   }
-  auto evalFn = runtime->makeHandle<vm::Callable>(*propRes);
+  auto evalFn = runtime->makeHandle<vm::Callable>(std::move(*propRes));
 
   llvm::StringRef evaluateLineString =
 #include "evaluate-line.js"
@@ -352,7 +352,8 @@ int repl(const vm::RuntimeConfig &config) {
         outs, runtime->makeHandle(runtime->getThrownValue()));
     return 1;
   }
-  auto evaluateLineFn = runtime->makeHandle<vm::JSFunction>(*callRes);
+  auto evaluateLineFn =
+      runtime->makeHandle<vm::JSFunction>(std::move(*callRes));
 
   runtime->getHeap().runtimeWillExecute();
 
@@ -418,7 +419,7 @@ int repl(const vm::RuntimeConfig &config) {
       continue;
     }
 
-    if (callRes->isUndefined()) {
+    if ((*callRes)->isUndefined()) {
       code.clear();
       continue;
     }
@@ -430,7 +431,7 @@ int repl(const vm::RuntimeConfig &config) {
         vm::StringPrimitive::createStringView(
             runtime.get(),
             vm::Handle<vm::StringPrimitive>::vmcast(
-                runtime->makeHandle(*callRes)))
+                runtime->makeHandle(std::move(*callRes))))
             .getUTF16Ref(tmp))
         << "\n";
     code.clear();

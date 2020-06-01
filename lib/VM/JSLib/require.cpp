@@ -36,10 +36,14 @@ CallResult<HermesValue> runRequireCall(
   if (auto module = domain->getModule(runtime, cjsModuleOffset)) {
     assert(module.get() != nullptr);
     // Still initializing, so return the current state of module.exports.
-    return JSObject::getNamed_RJS(
+    auto res = JSObject::getNamed_RJS(
         runtime->makeHandle(std::move(module)),
         runtime,
         Predefined::getSymbolID(Predefined::exports));
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return res->get();
   }
 
   GCScope gcScope{runtime};
@@ -126,7 +130,7 @@ CallResult<HermesValue> runRequireCall(
   if (LLVM_UNLIKELY(exportsRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  domain->setCachedExports(cjsModuleOffset, runtime, *exportsRes);
+  domain->setCachedExports(cjsModuleOffset, runtime, exportsRes->get());
   return domain->getCachedExports(runtime, cjsModuleOffset).getHermesValue();
 }
 

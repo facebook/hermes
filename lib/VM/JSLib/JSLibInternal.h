@@ -458,14 +458,14 @@ CallResult<HermesValue> addEntriesFromIterable(
     if (LLVM_UNLIKELY(nextItemRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (!vmisa<JSObject>(*nextItemRes)) {
+    if (!vmisa<JSObject>(nextItemRes->get())) {
       // d. If Type(nextItem) is not Object, then
       // i.     Let error be ThrowCompletion(a newly created TypeError object).
       // ii.     Return ? IteratorClose(iteratorRecord, error).
       runtime->raiseTypeError("Iterator value must be an object");
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
-    nextItem = vmcast<JSObject>(*nextItemRes);
+    nextItem = PseudoHandle<JSObject>::vmcast(std::move(*nextItemRes));
 
     // e. Let k be Get(nextItem, "0").
     auto keyRes = JSObject::getComputed_RJS(nextItem, runtime, zero);
@@ -474,7 +474,7 @@ CallResult<HermesValue> addEntriesFromIterable(
       //    return ? IteratorClose(iteratorRecord, k).
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
-    key = *keyRes;
+    key = std::move(*keyRes);
 
     // g. Let v be Get(nextItem, "1").
     auto valueRes = JSObject::getComputed_RJS(nextItem, runtime, one);
@@ -483,7 +483,7 @@ CallResult<HermesValue> addEntriesFromIterable(
       //    return ? IteratorClose(iteratorRecord, v).
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
-    value = *valueRes;
+    value = std::move(*valueRes);
 
     // i. Let status be Call(adder, target, « k.[[Value]], v.[[Value]] »).
     if (LLVM_UNLIKELY(

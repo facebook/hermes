@@ -544,7 +544,7 @@ hermesInternalExecuteCall(void *, Runtime *runtime, NativeArgs args) {
   for (unsigned i = 0; i < numParam; i++) {
     newFrame->getArgRef(i) = args.getArg(i + offset);
   }
-  return Callable::call(func, runtime);
+  return Callable::call(func, runtime).toCallResultHermesValue();
 }
 
 ///   HermesInternal.getSubstitution
@@ -984,14 +984,14 @@ Handle<JSObject> createHermesInternalObject(
       runtime,
       Predefined::getSymbolID(Predefined::concat));
   assert(
-      propRes != ExecutionStatus::EXCEPTION && !propRes->isUndefined() &&
+      propRes != ExecutionStatus::EXCEPTION && !(*propRes)->isUndefined() &&
       "Failed to get String.prototype.concat.");
   auto putRes = JSObject::defineOwnProperty(
       intern,
       runtime,
       Predefined::getSymbolID(Predefined::concat),
       constantDPF,
-      runtime->makeHandle(*propRes));
+      runtime->makeHandle(std::move(*propRes)));
   assert(
       putRes != ExecutionStatus::EXCEPTION && *putRes &&
       "Failed to set HermesInternal.concat.");

@@ -26,7 +26,7 @@ inline CallResult<uint64_t> getArrayLikeLength(
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return toLengthU64(runtime, runtime->makeHandle(*propRes));
+  return toLengthU64(runtime, runtime->makeHandle(std::move(*propRes)));
 }
 
 /// ES9 7.3.17 CreateListFromArrayLike
@@ -63,13 +63,13 @@ ExecutionStatus createListFromArrayLike(
       // Slow path fallback: the actual getComputed on this,
       // because the real value could be up the prototype chain.
       iHandle = HermesValue::encodeNumberValue(elemIdx);
-      CallResult<HermesValue> propRes =
+      CallResult<PseudoHandle<>> propRes =
           JSObject::getComputed_RJS(arrayLikeHandle, runtime, iHandle);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       if (LLVM_UNLIKELY(
-              elementCB(runtime, elemIdx, createPseudoHandle(*propRes)) ==
+              elementCB(runtime, elemIdx, std::move(*propRes)) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -79,13 +79,13 @@ ExecutionStatus createListFromArrayLike(
     for (uint64_t elemIdx = 0; elemIdx < length; ++elemIdx) {
       gcScope.flushToMarker(marker);
       iHandle = HermesValue::encodeNumberValue(elemIdx);
-      CallResult<HermesValue> propRes =
+      CallResult<PseudoHandle<>> propRes =
           JSObject::getComputed_RJS(arrayLikeHandle, runtime, iHandle);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       if (LLVM_UNLIKELY(
-              elementCB(runtime, elemIdx, createPseudoHandle(*propRes)) ==
+              elementCB(runtime, elemIdx, std::move(*propRes)) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }

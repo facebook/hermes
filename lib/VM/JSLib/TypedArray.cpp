@@ -52,12 +52,13 @@ CallResult<Handle<JSTypedArrayBase>> typedArrayCreate(
   if (callRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto retval = *callRes;
-  if (!vmisa<JSTypedArrayBase>(retval)) {
+  PseudoHandle<> retval = std::move(*callRes);
+  if (!vmisa<JSTypedArrayBase>(retval.get())) {
     return runtime->raiseTypeError(
         "The constructor needs to construct a TypedArray");
   }
-  auto newTypedArray = Handle<JSTypedArrayBase>::vmcast(runtime, retval);
+  auto newTypedArray =
+      Handle<JSTypedArrayBase>::vmcast(runtime->makeHandle(std::move(retval)));
   // If `argumentList` is a single number, then
   if (LLVM_LIKELY(length.isNumber())) {
     // If the value of newTypedArray's [[ArrayLength]] internal slot <
@@ -186,7 +187,7 @@ CallResult<HermesValue> typedArrayConstructorFromObject(
   if (propRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLength(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLength(runtime, runtime->makeHandle(std::move(*propRes)));
   if (intRes == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
   uint64_t len = intRes->getNumberAs<uint64_t>();
@@ -210,7 +211,7 @@ CallResult<HermesValue> typedArrayConstructorFromObject(
     if ((propRes = JSObject::getComputed_RJS(arrayLike, runtime, i)) ==
             ExecutionStatus::EXCEPTION ||
         JSTypedArray<T, C>::putComputed_RJS(
-            self, runtime, i, runtime->makeHandle(*propRes)) ==
+            self, runtime, i, runtime->makeHandle(std::move(*propRes))) ==
             ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -253,9 +254,9 @@ CallResult<HermesValue> mapFilterLoop(
     }
     if (MapOrFilter) {
       // Map adds the result of the callback onto the array.
-      storage = *callRes;
+      storage = std::move(*callRes);
       JSArray::setElementAt(values, runtime, insert++, storage);
-    } else if (toBoolean(*callRes)) {
+    } else if (toBoolean(callRes->get())) {
       storage = val;
       JSArray::setElementAt(values, runtime, insert++, storage);
     }
@@ -341,7 +342,8 @@ class TypedArraySortModel : public SortModel {
     if (callRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto intRes = toNumber_RJS(runtime_, runtime_->makeHandle(*callRes));
+    auto intRes =
+        toNumber_RJS(runtime_, runtime_->makeHandle(std::move(*callRes)));
     if (intRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -371,7 +373,7 @@ CallResult<HermesValue> typedArrayPrototypeSetObject(
   if (propRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLength(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLength(runtime, runtime->makeHandle(std::move(*propRes)));
   if (intRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -393,7 +395,7 @@ CallResult<HermesValue> typedArrayPrototypeSetObject(
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto kValue = runtime->makeHandle(*propRes);
+    auto kValue = runtime->makeHandle(std::move(*propRes));
     if (JSObject::setOwnIndexed(self, runtime, offset++, kValue) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
@@ -546,7 +548,7 @@ typedArrayFrom(void *, Runtime *runtime, NativeArgs args) {
   if (propRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLength(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLength(runtime, runtime->makeHandle(std::move(*propRes)));
   if (intRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -571,16 +573,16 @@ typedArrayFrom(void *, Runtime *runtime, NativeArgs args) {
     if (mapfn) {
       // i. Let mappedValue be ? Call(mapfn, T, [kValue, k]).
       auto callRes = Callable::executeCall2(
-          mapfn, runtime, T, *propRes, k.getHermesValue());
+          mapfn, runtime, T, propRes->get(), k.getHermesValue());
       if (callRes == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
-      propRes = callRes;
+      propRes = std::move(callRes);
     }
     // NOTE: The returned value is either the same as the getComputed call, or
     // the call to the mapfn, so either way it is the correct value.
     // d. Else, let mappedValue be kValue (already done by initializer).
-    auto mappedValue = runtime->makeHandle(*propRes);
+    auto mappedValue = runtime->makeHandle(std::move(*propRes));
     // e. Perform ? Set(targetObj, Pk, mappedValue, true).
     if (JSObject::putComputed_RJS(*targetObj, runtime, k, mappedValue) ==
         ExecutionStatus::EXCEPTION) {
@@ -812,7 +814,7 @@ typedArrayPrototypeEverySome(void *ctx, Runtime *runtime, NativeArgs args) {
       return ExecutionStatus::EXCEPTION;
     }
     gcScope.flushToMarker(marker);
-    auto testResult = toBoolean(*callRes);
+    auto testResult = toBoolean(callRes->get());
     if (every && !testResult) {
       return HermesValue::encodeBoolValue(false);
     } else if (!every && testResult) {
@@ -924,7 +926,7 @@ typedArrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
     if (callRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (toBoolean(*callRes)) {
+    if (toBoolean(callRes->get())) {
       // Found one, return it.
       return index ? idx : val;
     }
@@ -1262,7 +1264,7 @@ typedArrayPrototypeReduce(void *ctx, Runtime *runtime, NativeArgs args) {
     if (callRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    accumulator = *callRes;
+    accumulator = std::move(*callRes);
     scope.flushToMarker(marker);
   }
   return accumulator.getHermesValue();
@@ -1512,13 +1514,14 @@ typedArrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (auto func =
-            Handle<Callable>::dyn_vmcast(runtime->makeHandle(*propRes))) {
+    if (auto func = Handle<Callable>::dyn_vmcast(
+            runtime->makeHandle(std::move(*propRes)))) {
       auto callRes = Callable::executeCall0(func, runtime, elementObj);
       if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      auto strRes = toString_RJS(runtime, runtime->makeHandle(*callRes));
+      auto strRes =
+          toString_RJS(runtime, runtime->makeHandle(std::move(*callRes)));
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -1800,7 +1803,7 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
         runtime,
         Predefined::getSymbolID(Predefined::SymbolIterator),
         dpf,
-        runtime->makeHandle<NativeFunction>(propValue)));
+        runtime->makeHandle<NativeFunction>(propValue.getHermesValue())));
   }
 
   {
@@ -1813,7 +1816,8 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
         runtime,
         Predefined::getSymbolID(Predefined::toString),
         dpf,
-        runtime->makeHandle<NativeFunction>(propValue)));
+        Handle<NativeFunction>::vmcast(
+            runtime->makeHandle(std::move(propValue)))));
   }
 
   defineMethod(

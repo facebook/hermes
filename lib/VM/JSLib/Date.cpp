@@ -1088,26 +1088,26 @@ datePrototypeToJSON(void *ctx, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
-  auto propRes = toPrimitive_RJS(runtime, O, PreferredType::NUMBER);
-  if (propRes == ExecutionStatus::EXCEPTION) {
+  auto tvRes = toPrimitive_RJS(runtime, O, PreferredType::NUMBER);
+  if (tvRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto tv = *propRes;
+  auto tv = *tvRes;
   if (tv.isNumber() && !std::isfinite(tv.getNumber())) {
     return HermesValue::encodeNullValue();
   }
-  if ((propRes = JSObject::getNamed_RJS(
-           O, runtime, Predefined::getSymbolID(Predefined::toISOString))) ==
-      ExecutionStatus::EXCEPTION) {
+  auto propRes = JSObject::getNamed_RJS(
+      O, runtime, Predefined::getSymbolID(Predefined::toISOString));
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   Handle<Callable> toISO =
-      Handle<Callable>::dyn_vmcast(runtime->makeHandle(*propRes));
+      Handle<Callable>::dyn_vmcast(runtime->makeHandle(std::move(*propRes)));
   if (!toISO.get()) {
     return runtime->raiseTypeError(
         "toISOString is not callable in Date.prototype.toJSON()");
   }
-  return Callable::executeCall0(toISO, runtime, O);
+  return Callable::executeCall0(toISO, runtime, O).toCallResultHermesValue();
 }
 
 CallResult<HermesValue>

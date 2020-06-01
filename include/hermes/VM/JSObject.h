@@ -629,7 +629,7 @@ class JSObject : public GCCell {
   /// \param propObj the object where the property was found (it could be
   ///   anywhere along the prototype chain).
   /// \param desc the property descriptor.
-  static CallResult<HermesValue> getNamedPropertyValue_RJS(
+  static CallResult<PseudoHandle<>> getNamedPropertyValue_RJS(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       Handle<JSObject> propObj,
@@ -663,7 +663,7 @@ class JSObject : public GCCell {
   /// \param propObj the object where the property was found (it could be
   ///   anywhere along the prototype chain).
   /// \param desc the property descriptor.
-  static CallResult<HermesValue> getComputedPropertyValue_RJS(
+  static CallResult<PseudoHandle<>> getComputedPropertyValue_RJS(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       Handle<JSObject> propObj,
@@ -676,7 +676,7 @@ class JSObject : public GCCell {
   /// trap.  If the has trap returns false, then this returns an empty
   /// HermesValue, otherwise, the get trap is called (also using \c
   /// nameValHandle) and its result is returned.
-  static CallResult<HermesValue> getComputedPropertyValue_RJS(
+  static CallResult<PseudoHandle<>> getComputedPropertyValue_RJS(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       Handle<JSObject> propObj,
@@ -815,7 +815,7 @@ class JSObject : public GCCell {
   /// it is statically known that the SymbolID is not index-like.
   /// If \p cacheEntry is not null, and the result is suitable for use in a
   /// property cache, populate the cache.
-  static CallResult<HermesValue> getNamed_RJS(
+  static CallResult<PseudoHandle<>> getNamed_RJS(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       SymbolID name,
@@ -828,7 +828,7 @@ class JSObject : public GCCell {
   /// function call.  If a proxy trap is called, \c receiver is passed
   /// to the trap function.  Normally, \c receiver is the same as \c
   /// selfHandle, but it can be different when using \c Reflect.
-  static CallResult<HermesValue> getNamedWithReceiver_RJS(
+  static CallResult<PseudoHandle<>> getNamedWithReceiver_RJS(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       SymbolID name,
@@ -838,7 +838,7 @@ class JSObject : public GCCell {
 
   // getNamedOrIndexed accesses a property with a SymbolIDs which may be
   // index-like.
-  static CallResult<HermesValue> getNamedOrIndexed(
+  static CallResult<PseudoHandle<>> getNamedOrIndexed(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       SymbolID name,
@@ -846,14 +846,14 @@ class JSObject : public GCCell {
 
   /// getComputed accesses a property with an arbitrary object key, implementing
   /// ES5.1 8.12.3 in full generality.
-  static CallResult<HermesValue> getComputed_RJS(
+  static CallResult<PseudoHandle<>> getComputed_RJS(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       Handle<> nameValHandle);
 
   /// getComputed accesses a property with an arbitrary object key and
   /// receiver value.
-  static CallResult<HermesValue> getComputedWithReceiver_RJS(
+  static CallResult<PseudoHandle<>> getComputedWithReceiver_RJS(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       Handle<> nameValHandle,
@@ -1700,7 +1700,7 @@ inline JSObject *JSObject::getNamedDescriptor(
       selfHandle, runtime, name, PropertyFlags::invalid(), desc);
 }
 
-inline CallResult<HermesValue> JSObject::getNamed_RJS(
+inline CallResult<PseudoHandle<>> JSObject::getNamed_RJS(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     SymbolID name,
@@ -1710,7 +1710,7 @@ inline CallResult<HermesValue> JSObject::getNamed_RJS(
       selfHandle, runtime, name, selfHandle, opFlags, cacheEntry);
 }
 
-inline CallResult<HermesValue> JSObject::getComputed_RJS(
+inline CallResult<PseudoHandle<>> JSObject::getComputed_RJS(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     Handle<> nameValHandle) {

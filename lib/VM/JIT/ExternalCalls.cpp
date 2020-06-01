@@ -218,11 +218,13 @@ CallResult<HermesValue> externGetById(
     }
 
     return JSObject::getNamed_RJS(
-        Handle<JSObject>::vmcast(target), runtime, id, opFlags);
+               Handle<JSObject>::vmcast(target), runtime, id, opFlags)
+        .toCallResultHermesValue();
   } else {
     /* Slow path. */
     return Interpreter::getByIdTransient_RJS(
-        runtime, Handle<>(target), SymbolID::unsafeCreate(sid));
+               runtime, Handle<>(target), SymbolID::unsafeCreate(sid))
+        .toCallResultHermesValue();
   }
 }
 
@@ -254,7 +256,7 @@ CallResult<HermesValue> externCall(
       HermesValue::encodeUndefinedValue());
   runtime->setCurrentIP(ip);
   auto res = Callable::call(Handle<Callable>::vmcast(callable), runtime);
-  return res;
+  return res.toCallResultHermesValue();
 }
 
 CallResult<HermesValue> externConstruct(
@@ -285,7 +287,7 @@ CallResult<HermesValue> externConstruct(
       *callable);
   runtime->setCurrentIP(ip);
   auto res = Callable::call(Handle<Callable>::vmcast(callable), runtime);
-  return res;
+  return res.toCallResultHermesValue();
 }
 
 /// Implement a slow path call for a binary operator.
@@ -389,11 +391,15 @@ CallResult<HermesValue> externCreateThis(
   if (LLVM_UNLIKELY(!vmisa<Callable>(*closure))) {
     return runtime->raiseTypeError("constructor is not callable");
   }
-  return Callable::newObject(
+  auto res = Callable::newObject(
       Handle<Callable>::vmcast(closure),
       runtime,
       Handle<JSObject>::vmcast(
           (*proto).isObject() ? proto : &runtime->objectPrototype));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return res->getHermesValue();
 }
 
 CallResult<HermesValue> externNewArray(Runtime *runtime, uint32_t size) {
@@ -480,11 +486,13 @@ CallResult<HermesValue> externGetByVal(
 
   if (LLVM_LIKELY(target->isObject())) {
     return JSObject::getComputed_RJS(
-        Handle<JSObject>::vmcast(target), runtime, Handle<>(nameVal));
+               Handle<JSObject>::vmcast(target), runtime, Handle<>(nameVal))
+        .toCallResultHermesValue();
   } else {
     // This is the "slow path".
     return Interpreter::getByValTransient_RJS(
-        runtime, Handle<>(target), Handle<>(nameVal));
+               runtime, Handle<>(target), Handle<>(nameVal))
+        .toCallResultHermesValue();
   }
 }
 
@@ -734,7 +742,8 @@ CallResult<HermesValue> externNewObjectWithBuffer(
     uint32_t valBufferIndex) {
   GCScopeMarkerRAII marker{runtime};
   return Interpreter::createObjectFromBuffer(
-      runtime, curCodeBlock, numLiterals, keyBufferIndex, valBufferIndex);
+             runtime, curCodeBlock, numLiterals, keyBufferIndex, valBufferIndex)
+      .toCallResultHermesValue();
 }
 
 CallResult<HermesValue> externNewArrayWithBuffer(
@@ -745,7 +754,8 @@ CallResult<HermesValue> externNewArrayWithBuffer(
     uint32_t bufferIndex) {
   GCScopeMarkerRAII marker{runtime};
   return Interpreter::createArrayFromBuffer(
-      runtime, curCodeBlock, numElements, numLiterals, bufferIndex);
+             runtime, curCodeBlock, numElements, numLiterals, bufferIndex)
+      .toCallResultHermesValue();
 }
 
 CallResult<HermesValue> slowPathNegate(
@@ -811,8 +821,12 @@ CallResult<HermesValue> externSlowPathReifyArguments(
 
   StackFramePtr frame(currentFrame);
 
-  return Interpreter::reifyArgumentsSlowPath(
+  auto res = Interpreter::reifyArgumentsSlowPath(
       runtime, frame.getCalleeClosureHandleUnsafe(), isStrict);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return res->getHermesValue();
 }
 
 CallResult<HermesValue> externSlowPathGetArgumentsPropByVal(
@@ -826,11 +840,12 @@ CallResult<HermesValue> externSlowPathGetArgumentsPropByVal(
   StackFramePtr frame(currentFrame);
 
   return Interpreter::getArgumentsPropByValSlowPath_RJS(
-      runtime,
-      lazyReg,
-      valueReg,
-      frame.getCalleeClosureHandleUnsafe(),
-      isStrict);
+             runtime,
+             lazyReg,
+             valueReg,
+             frame.getCalleeClosureHandleUnsafe(),
+             isStrict)
+      .toCallResultHermesValue();
 }
 
 CallResult<HermesValue> externSlowPathBitNot(
@@ -852,9 +867,10 @@ CallResult<HermesValue> slowPathGetArgumentsLength(
   GCScopeMarkerRAII marker{runtime};
   assert(obj->isObject() && "arguments lazy register is not an object");
   return JSObject::getNamed_RJS(
-      Handle<JSObject>::vmcast(obj),
-      runtime,
-      Predefined::getSymbolID(Predefined::length));
+             Handle<JSObject>::vmcast(obj),
+             runtime,
+             Predefined::getSymbolID(Predefined::length))
+      .toCallResultHermesValue();
 }
 
 CallResult<HermesValue> externIsIn(

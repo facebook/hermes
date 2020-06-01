@@ -28,11 +28,12 @@ reflectApply(void *, Runtime *runtime, NativeArgs args) {
   }
 
   return Callable::executeCall(
-      target,
-      runtime,
-      Runtime::getUndefinedValue(),
-      args.getArgHandle(1),
-      arguments);
+             target,
+             runtime,
+             Runtime::getUndefinedValue(),
+             args.getArgHandle(1),
+             arguments)
+      .toCallResultHermesValue();
 }
 
 CallResult<HermesValue>
@@ -62,12 +63,12 @@ reflectConstruct(void *, Runtime *runtime, NativeArgs args) {
   MutableHandle<JSObject> prototype{runtime};
 
   if (newTarget) {
-    CallResult<HermesValue> ntProtoRes = JSObject::getNamed_RJS(
+    CallResult<PseudoHandle<>> ntProtoRes = JSObject::getNamed_RJS(
         newTarget, runtime, Predefined::getSymbolID(Predefined::prototype));
     if (LLVM_UNLIKELY(ntProtoRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    prototype = dyn_vmcast<JSObject>(*ntProtoRes);
+    prototype = PseudoHandle<JSObject>::dyn_vmcast(std::move(*ntProtoRes));
   }
   if (!prototype) {
     // If newTarget.prototype is not an object, then we need to
@@ -79,31 +80,32 @@ reflectConstruct(void *, Runtime *runtime, NativeArgs args) {
     // in Callable::defineNameLengthAndPrototype).  So if
     // newTarget.prototype is not an object, we fall back to using
     // target.prototype.
-    CallResult<HermesValue> tProtoRes = JSObject::getNamed_RJS(
+    CallResult<PseudoHandle<>> tProtoRes = JSObject::getNamed_RJS(
         target, runtime, Predefined::getSymbolID(Predefined::prototype));
     if (LLVM_UNLIKELY(tProtoRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    prototype = dyn_vmcast<JSObject>(*tProtoRes);
+    prototype = PseudoHandle<JSObject>::dyn_vmcast(std::move(*tProtoRes));
     if (!prototype) {
       // If all else fails, use %ObjectPrototype%
       prototype = runtime->objectPrototypeRawPtr;
     }
   }
   assert(prototype && "prototype was never set");
-  CallResult<HermesValue> thisValRes =
+  CallResult<PseudoHandle<JSObject>> thisValRes =
       Callable::newObject(target, runtime, prototype);
   if (LLVM_UNLIKELY(thisValRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  Handle<> thisVal = runtime->makeHandle(*thisValRes);
-  CallResult<HermesValue> objRes = Callable::executeCall(
+  Handle<JSObject> thisVal = runtime->makeHandle(std::move(*thisValRes));
+  CallResult<PseudoHandle<>> objRes = Callable::executeCall(
       target, runtime, newTarget ? newTarget : target, thisVal, arguments);
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return objRes->isObject() ? objRes : *thisVal;
+  return (*objRes)->isObject() ? objRes.toCallResultHermesValue()
+                               : thisVal.getHermesValue();
 }
 
 namespace {
@@ -139,10 +141,11 @@ CallResult<HermesValue> reflectGet(void *, Runtime *runtime, NativeArgs args) {
   }
 
   return JSObject::getComputedWithReceiver_RJS(
-      target,
-      runtime,
-      args.getArgHandle(1),
-      (args.getArgCount() >= 3) ? args.getArgHandle(2) : target);
+             target,
+             runtime,
+             args.getArgHandle(1),
+             (args.getArgCount() >= 3) ? args.getArgHandle(2) : target)
+      .toCallResultHermesValue();
 }
 
 CallResult<HermesValue>

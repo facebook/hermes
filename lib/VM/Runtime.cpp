@@ -82,14 +82,15 @@ std::shared_ptr<Runtime> Runtime::create(const RuntimeConfig &runtimeConfig) {
       new Runtime(StorageProvider::mmapProvider(), runtimeConfig)};
 }
 
-CallResult<HermesValue> Runtime::getNamed(
+CallResult<PseudoHandle<>> Runtime::getNamed(
     Handle<JSObject> obj,
     PropCacheID id) {
   auto clazzGCPtr = obj->getClassGCPtr();
   auto *cacheEntry = &fixedPropCache_[static_cast<int>(id)];
   if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr.getStorageType())) {
-    return JSObject::getNamedSlotValue<PropStorage::Inline::Yes>(
-        *obj, this, cacheEntry->slot);
+    return createPseudoHandle(
+        JSObject::getNamedSlotValue<PropStorage::Inline::Yes>(
+            *obj, this, cacheEntry->slot));
   }
   auto sym = Predefined::getSymbolID(fixedPropCacheNames[static_cast<int>(id)]);
   NamedPropertyDescriptor desc;
@@ -105,7 +106,7 @@ CallResult<HermesValue> Runtime::getNamed(
       cacheEntry->clazz = clazzGCPtr.getStorageType();
       cacheEntry->slot = desc.slot;
     }
-    return JSObject::getNamedSlotValue(*obj, this, desc);
+    return createPseudoHandle(JSObject::getNamedSlotValue(*obj, this, desc));
   }
   return JSObject::getNamed_RJS(obj, this, sym);
 }
@@ -1015,7 +1016,7 @@ void Runtime::printException(llvm::raw_ostream &os, Handle<> valueHandle) {
   clearThrownValue();
 
   // Try to fetch the stack trace.
-  CallResult<HermesValue> propRes{ExecutionStatus::EXCEPTION};
+  CallResult<PseudoHandle<>> propRes{ExecutionStatus::EXCEPTION};
   if (auto objHandle = Handle<JSObject>::dyn_vmcast(valueHandle)) {
     if (LLVM_UNLIKELY(
             (propRes = JSObject::getNamed_RJS(
@@ -1029,7 +1030,7 @@ void Runtime::printException(llvm::raw_ostream &os, Handle<> valueHandle) {
   }
   SmallU16String<32> tmp;
   if (LLVM_UNLIKELY(
-          propRes == ExecutionStatus::EXCEPTION || propRes->isUndefined())) {
+          propRes == ExecutionStatus::EXCEPTION || (*propRes)->isUndefined())) {
     // If stack trace is unavailable, we just print error.toString.
     auto strRes = toString_RJS(this, valueHandle);
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
@@ -1042,7 +1043,7 @@ void Runtime::printException(llvm::raw_ostream &os, Handle<> valueHandle) {
     return;
   }
   // stack trace is available, try to convert it to string.
-  auto strRes = toString_RJS(this, makeHandle(*propRes));
+  auto strRes = toString_RJS(this, makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     os << "exception thrown in toString of stack trace\n";
     return;
@@ -1450,10 +1451,10 @@ ExecutionStatus Runtime::forEachBuiltin(const std::function<ExecutionStatus(
           cr.getStatus() != ExecutionStatus::EXCEPTION &&
           "getNamed() of builtin object failed");
       assert(
-          vmisa<JSObject>(cr.getValue()) &&
+          vmisa<JSObject>(cr->get()) &&
           "getNamed() of builtin object must be an object");
 
-      lastObject = vmcast<JSObject>(cr.getValue());
+      lastObject = vmcast<JSObject>(cr->get());
       lastObjectName = objectName;
     }
 
@@ -1485,9 +1486,9 @@ void Runtime::initBuiltinTable() {
         cr.getStatus() != ExecutionStatus::EXCEPTION &&
         "getNamed() of builtin method failed");
     assert(
-        vmisa<NativeFunction>(cr.getValue()) &&
+        vmisa<NativeFunction>(cr->get()) &&
         "getNamed() of builtin method must be a NativeFunction");
-    builtins_[methodIndex] = vmcast<NativeFunction>(cr.getValue());
+    builtins_[methodIndex] = vmcast<NativeFunction>(cr->get());
     return ExecutionStatus::RETURNED;
   });
 
@@ -1515,7 +1516,7 @@ ExecutionStatus Runtime::assertBuiltinsUnmodified() {
         cr.getStatus() != ExecutionStatus::EXCEPTION &&
         "getNamed() of builtin method failed");
     // Check if the builtin is overridden.
-    auto currentBuiltin = dyn_vmcast<NativeFunction>(cr.getValue());
+    auto currentBuiltin = dyn_vmcast<NativeFunction>(std::move(cr->get()));
     if (!currentBuiltin || currentBuiltin != builtins_[methodIndex]) {
       return raiseTypeError(
           "Cannot execute a bytecode compiled with -fstatic-builtins when builtin functions are overriden.");

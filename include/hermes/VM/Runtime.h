@@ -635,7 +635,7 @@ class Runtime : public HandleRootOwner,
   void removeVisitedObject(Handle<JSObject> obj);
 
   /// Like calling JSObject::getNamed, but uses this runtime's property cache.
-  CallResult<HermesValue> getNamed(Handle<JSObject> obj, PropCacheID id);
+  CallResult<PseudoHandle<>> getNamed(Handle<JSObject> obj, PropCacheID id);
 
   /// Like calling JSObject::putNamed with the ThrowOnError flag, but uses this
   /// runtime's property cache.

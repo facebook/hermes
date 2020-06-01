@@ -142,8 +142,9 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   }
 
   // Convert the name to string, unless it is undefined.
-  if (!propRes->isUndefined()) {
-    auto strRes = toString_RJS(runtime, runtime->makeHandle(*propRes));
+  if (!(*propRes)->isUndefined()) {
+    auto strRes =
+        toString_RJS(runtime, runtime->makeHandle(std::move(*propRes)));
     if (strRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -199,7 +200,7 @@ functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(newFrame.overflowed()))
       return runtime->raiseStackOverflow(
           Runtime::StackOverflowKind::NativeStack);
-    return Callable::call(func, runtime);
+    return Callable::call(func, runtime).toCallResultHermesValue();
   }
 
   auto argObj = Handle<JSObject>::dyn_vmcast(args.getArgHandle(1));
@@ -209,11 +210,12 @@ functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {
   }
 
   return Callable::executeCall(
-      func,
-      runtime,
-      Runtime::getUndefinedValue(),
-      args.getArgHandle(0),
-      argObj);
+             func,
+             runtime,
+             Runtime::getUndefinedValue(),
+             args.getArgHandle(0),
+             argObj)
+      .toCallResultHermesValue();
 }
 
 CallResult<HermesValue>
@@ -231,7 +233,11 @@ functionPrototypeCall(void *, Runtime *runtime, NativeArgs args) {
   for (uint32_t i = 1; i < argCount; ++i) {
     newFrame->getArgRef(i - 1) = args.getArg(i);
   }
-  return Callable::call(func, runtime);
+  auto res = Callable::call(func, runtime);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return res->getHermesValue();
 }
 
 CallResult<HermesValue>

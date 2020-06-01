@@ -325,7 +325,7 @@ void JSObject::allocateNewSlotStorage(
   }
 }
 
-CallResult<HermesValue> JSObject::getNamedPropertyValue_RJS(
+CallResult<PseudoHandle<>> JSObject::getNamedPropertyValue_RJS(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     Handle<JSObject> propObj,
@@ -335,19 +335,19 @@ CallResult<HermesValue> JSObject::getNamedPropertyValue_RJS(
       "getNamedPropertyValue_RJS cannot be used with proxy objects");
 
   if (LLVM_LIKELY(!desc.flags.accessor))
-    return getNamedSlotValue(propObj.get(), runtime, desc);
+    return createPseudoHandle(getNamedSlotValue(propObj.get(), runtime, desc));
 
   auto *accessor =
       vmcast<PropertyAccessor>(getNamedSlotValue(propObj.get(), runtime, desc));
   if (!accessor->getter)
-    return HermesValue::encodeUndefinedValue();
+    return createPseudoHandle(HermesValue::encodeUndefinedValue());
 
   // Execute the accessor on this object.
   return accessor->getter.get(runtime)->executeCall0(
       runtime->makeHandle(accessor->getter), runtime, selfHandle);
 }
 
-CallResult<HermesValue> JSObject::getComputedPropertyValue_RJS(
+CallResult<PseudoHandle<>> JSObject::getComputedPropertyValue_RJS(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     Handle<JSObject> propObj,
@@ -357,26 +357,27 @@ CallResult<HermesValue> JSObject::getComputedPropertyValue_RJS(
       "getComputedPropertyValue_RJS cannot be used with proxy objects");
 
   if (LLVM_LIKELY(!desc.flags.accessor))
-    return getComputedSlotValue(propObj.get(), runtime, desc);
+    return createPseudoHandle(
+        getComputedSlotValue(propObj.get(), runtime, desc));
 
   auto *accessor = vmcast<PropertyAccessor>(
       getComputedSlotValue(propObj.get(), runtime, desc));
   if (!accessor->getter)
-    return HermesValue::encodeUndefinedValue();
+    return createPseudoHandle(HermesValue::encodeUndefinedValue());
 
   // Execute the accessor on this object.
   return accessor->getter.get(runtime)->executeCall0(
       runtime->makeHandle(accessor->getter), runtime, selfHandle);
 }
 
-CallResult<HermesValue> JSObject::getComputedPropertyValue_RJS(
+CallResult<PseudoHandle<>> JSObject::getComputedPropertyValue_RJS(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     Handle<JSObject> propObj,
     ComputedPropertyDescriptor desc,
     Handle<> nameValHandle) {
   if (!propObj) {
-    return HermesValue::encodeEmptyValue();
+    return createPseudoHandle(HermesValue::encodeEmptyValue());
   }
 
   if (LLVM_LIKELY(!desc.flags.proxyObject)) {
@@ -393,7 +394,7 @@ CallResult<HermesValue> JSObject::getComputedPropertyValue_RJS(
     return ExecutionStatus::EXCEPTION;
   }
   if (!*hasRes) {
-    return HermesValue::encodeEmptyValue();
+    return createPseudoHandle(HermesValue::encodeEmptyValue());
   }
   return JSProxy::getComputed(propObj, runtime, *keyRes, selfHandle);
 }
@@ -1037,7 +1038,7 @@ ExecutionStatus JSObject::getComputedDescriptor(
       selfHandle, runtime, *converted, propObj, desc);
 }
 
-CallResult<HermesValue> JSObject::getNamedWithReceiver_RJS(
+CallResult<PseudoHandle<>> JSObject::getNamedWithReceiver_RJS(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     SymbolID name,
@@ -1055,7 +1056,7 @@ CallResult<HermesValue> JSObject::getNamedWithReceiver_RJS(
           runtime->getIdentifierTable().getStringViewForDev(runtime, name) +
           "' doesn't exist");
     }
-    return HermesValue::encodeUndefinedValue();
+    return createPseudoHandle(HermesValue::encodeUndefinedValue());
   }
 
   if (LLVM_LIKELY(
@@ -1066,20 +1067,24 @@ CallResult<HermesValue> JSObject::getNamedWithReceiver_RJS(
       cacheEntry->clazz = propObj->getClassGCPtr().getStorageType();
       cacheEntry->slot = desc.slot;
     }
-    return getNamedSlotValue(propObj, runtime, desc);
+    return createPseudoHandle(getNamedSlotValue(propObj, runtime, desc));
   }
 
   if (desc.flags.accessor) {
     auto *accessor =
         vmcast<PropertyAccessor>(getNamedSlotValue(propObj, runtime, desc));
     if (!accessor->getter)
-      return HermesValue::encodeUndefinedValue();
+      return createPseudoHandle(HermesValue::encodeUndefinedValue());
 
     // Execute the accessor on this object.
     return Callable::executeCall0(
         runtime->makeHandle(accessor->getter), runtime, receiver);
   } else if (desc.flags.hostObject) {
-    return vmcast<HostObject>(propObj)->get(name);
+    auto res = vmcast<HostObject>(propObj)->get(name);
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return createPseudoHandle(*res);
   } else {
     assert(desc.flags.proxyObject && "descriptor flags are impossible");
     return JSProxy::getNamed(
@@ -1087,7 +1092,7 @@ CallResult<HermesValue> JSObject::getNamedWithReceiver_RJS(
   }
 }
 
-CallResult<HermesValue> JSObject::getNamedOrIndexed(
+CallResult<PseudoHandle<>> JSObject::getNamedOrIndexed(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     SymbolID name,
@@ -1109,7 +1114,7 @@ CallResult<HermesValue> JSObject::getNamedOrIndexed(
   return getNamed_RJS(selfHandle, runtime, name, opFlags);
 }
 
-CallResult<HermesValue> JSObject::getComputedWithReceiver_RJS(
+CallResult<PseudoHandle<>> JSObject::getComputedWithReceiver_RJS(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     Handle<> nameValHandle,
@@ -1119,9 +1124,9 @@ CallResult<HermesValue> JSObject::getComputedWithReceiver_RJS(
   if (selfHandle->flags_.fastIndexProperties) {
     if (auto arrayIndex = toArrayIndexFastPath(*nameValHandle)) {
       // Do we have this value present in our array storage? If so, return it.
-      HermesValue ourValue =
-          getOwnIndexed(selfHandle.get(), runtime, *arrayIndex);
-      if (LLVM_LIKELY(!ourValue.isEmpty()))
+      PseudoHandle<> ourValue = createPseudoHandle(
+          getOwnIndexed(selfHandle.get(), runtime, *arrayIndex));
+      if (LLVM_LIKELY(!ourValue->isEmpty()))
         return ourValue;
     }
   }
@@ -1148,18 +1153,19 @@ CallResult<HermesValue> JSObject::getComputedWithReceiver_RJS(
   }
 
   if (!propObj)
-    return HermesValue::encodeUndefinedValue();
+    return createPseudoHandle(HermesValue::encodeUndefinedValue());
 
   if (LLVM_LIKELY(
           !desc.flags.accessor && !desc.flags.hostObject &&
           !desc.flags.proxyObject))
-    return getComputedSlotValue(propObj.get(), runtime, desc);
+    return createPseudoHandle(
+        getComputedSlotValue(propObj.get(), runtime, desc));
 
   if (desc.flags.accessor) {
     auto *accessor = vmcast<PropertyAccessor>(
         getComputedSlotValue(propObj.get(), runtime, desc));
     if (!accessor->getter)
-      return HermesValue::encodeUndefinedValue();
+      return createPseudoHandle(HermesValue::encodeUndefinedValue());
 
     // Execute the accessor on this object.
     return accessor->getter.get(runtime)->executeCall0(
@@ -1170,7 +1176,7 @@ CallResult<HermesValue> JSObject::getComputedWithReceiver_RJS(
     auto propRes = vmcast<HostObject>(selfHandle.get())->get(id);
     if (propRes == ExecutionStatus::EXCEPTION)
       return ExecutionStatus::EXCEPTION;
-    return propRes;
+    return createPseudoHandle(*propRes);
   } else {
     assert(desc.flags.proxyObject && "descriptor flags are impossible");
     CallResult<Handle<>> key = toPropertyKey(runtime, nameValPrimitiveHandle);

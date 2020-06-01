@@ -90,9 +90,12 @@ Handle<JSObject> createSetConstructor(Runtime *runtime) {
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
   // Use the same valuesMethod for both keys() and values().
-  auto propValue = runtime->makeHandle<NativeFunction>(
-      runtime->ignoreAllocationFailure(JSObject::getNamed_RJS(
-          setPrototype, runtime, Predefined::getSymbolID(Predefined::values))));
+  Handle<NativeFunction> propValue =
+      Handle<NativeFunction>::vmcast(runtime->makeHandle(
+          runtime->ignoreAllocationFailure(JSObject::getNamed_RJS(
+              setPrototype,
+              runtime,
+              Predefined::getSymbolID(Predefined::values)))));
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       setPrototype,
       runtime,
@@ -153,7 +156,8 @@ setConstructor(void *, Runtime *runtime, NativeArgs args) {
   }
 
   // ES6.0 23.2.1.1.7: Cache adder across all iterations of the loop.
-  auto adder = Handle<Callable>::dyn_vmcast(runtime->makeHandle(*propRes));
+  auto adder =
+      Handle<Callable>::dyn_vmcast(runtime->makeHandle(std::move(*propRes)));
   if (!adder) {
     return runtime->raiseTypeError("Property 'add' for Set is not callable");
   }
@@ -189,7 +193,8 @@ setConstructor(void *, Runtime *runtime, NativeArgs args) {
     }
 
     if (LLVM_UNLIKELY(
-            Callable::executeCall1(adder, runtime, selfHandle, *nextValueRes) ==
+            Callable::executeCall1(
+                adder, runtime, selfHandle, nextValueRes->get()) ==
             ExecutionStatus::EXCEPTION)) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }

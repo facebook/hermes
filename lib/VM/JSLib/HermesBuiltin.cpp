@@ -293,11 +293,11 @@ CallResult<HermesValue> copyDataPropertiesSlowPath_RJS(
     //   ii. If desc is not undefined and desc.[[Enumerable]] is true, then
     if (*crb && desc.flags.enumerable) {
       //     1. Let propValue be ? Get(from, nextKey).
-      CallResult<HermesValue> crv =
+      CallResult<PseudoHandle<>> crv =
           JSProxy::getComputed(from, runtime, nextKeyHandle, from);
       if (LLVM_UNLIKELY(crv == ExecutionStatus::EXCEPTION))
         return ExecutionStatus::EXCEPTION;
-      propValueHandle = *crv;
+      propValueHandle = std::move(*crv);
       //     2. Perform ! CreateDataProperty(target, nextKey, propValue).
       crb = JSObject::defineOwnComputed(
           target,
@@ -431,7 +431,7 @@ hermesBuiltinCopyDataProperties(void *, Runtime *runtime, NativeArgs args) {
         if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
           return false;
 
-        valueHandle = *cr;
+        valueHandle = std::move(*cr);
 
         if (LLVM_UNLIKELY(
                 JSObject::defineOwnProperty(
@@ -540,12 +540,12 @@ hermesBuiltinArraySpread(void *, Runtime *runtime, NativeArgs args) {
             // Slow path, just run the full getComputed_RJS path.
             // Runs when there is a hole, accessor, non-regular property, etc.
             idxHandle = HermesValue::encodeNumberValue(i);
-            CallResult<HermesValue> valueRes =
+            CallResult<PseudoHandle<>> valueRes =
                 JSObject::getComputed_RJS(arr, runtime, idxHandle);
             if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
               return ExecutionStatus::EXCEPTION;
             }
-            nextValue = *valueRes;
+            nextValue = std::move(*valueRes);
           }
           // It is valid to use setElementAt here because we know that
           // `target` was created immediately prior to running the spread
@@ -597,7 +597,7 @@ hermesBuiltinArraySpread(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(nextItemRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    nextValue = *nextItemRes;
+    nextValue = std::move(*nextItemRes);
 
     // d. Let status be CreateDataProperty(array,
     //    ToString(ToUint32(nextIndex)), nextValue).
@@ -649,7 +649,7 @@ hermesBuiltinApply(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(thisValRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    thisVal = *thisValRes;
+    thisVal = thisValRes->getHermesValue();
   } else {
     thisVal = args.getArg(2);
   }
@@ -662,8 +662,18 @@ hermesBuiltinApply(void *, Runtime *runtime, NativeArgs args) {
   for (uint32_t i = 0; i < len; ++i) {
     newFrame->getArgRef(i) = argArray->at(runtime, i);
   }
-  return isConstructor ? Callable::construct(fn, runtime, thisVal)
-                       : Callable::call(fn, runtime);
+  if (isConstructor) {
+    auto res = Callable::construct(fn, runtime, thisVal);
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return res->getHermesValue();
+  }
+  auto res = Callable::call(fn, runtime);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return res->getHermesValue();
 }
 
 /// HermesBuiltin.exportAll(exports, source) will copy exported named

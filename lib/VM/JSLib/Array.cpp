@@ -116,7 +116,7 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
 
   auto propValue = runtime->ignoreAllocationFailure(JSObject::getNamed_RJS(
       arrayPrototype, runtime, Predefined::getSymbolID(Predefined::values)));
-  runtime->arrayPrototypeValues = propValue;
+  runtime->arrayPrototypeValues = std::move(propValue);
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
@@ -406,14 +406,15 @@ arrayPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto func = Handle<Callable>::dyn_vmcast(runtime->makeHandle(*propRes));
+  auto func =
+      Handle<Callable>::dyn_vmcast(runtime->makeHandle(std::move(*propRes)));
 
   if (!func) {
     // If not callable, set func to be Object.prototype.toString.
     return directObjectPrototypeToString(runtime, array);
   }
 
-  return Callable::executeCall0(func, runtime, array);
+  return Callable::executeCall0(func, runtime, array).toCallResultHermesValue();
 }
 
 CallResult<HermesValue>
@@ -438,7 +439,7 @@ arrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -473,7 +474,7 @@ arrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto E = runtime->makeHandle(*propRes);
+    auto E = runtime->makeHandle(std::move(*propRes));
     if (E->isUndefined() || E->isNull()) {
       // Empty string for undefined or null element. No need to add to size.
       JSArray::setElementAt(strings, runtime, i->getNumber(), emptyString);
@@ -493,8 +494,8 @@ arrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      if (auto func =
-              Handle<Callable>::dyn_vmcast(runtime->makeHandle(*propRes))) {
+      if (auto func = Handle<Callable>::dyn_vmcast(
+              runtime->makeHandle(std::move(*propRes)))) {
         // If ECMA 402 is implemented, it provides a superseding
         // definition of Array.prototype.toLocaleString.  The only
         // difference between these two definitions is that in ECMA
@@ -511,7 +512,8 @@ arrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
         if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
-        auto strRes = toString_RJS(runtime, runtime->makeHandle(*callRes));
+        auto strRes =
+            toString_RJS(runtime, runtime->makeHandle(std::move(*callRes)));
         if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
@@ -620,13 +622,13 @@ arrayPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
         // Fast path: E is an array.
         len = JSArray::getLength(*arrHandle);
       } else {
-        CallResult<HermesValue> lengthRes = JSObject::getNamed_RJS(
+        CallResult<PseudoHandle<>> propRes = JSObject::getNamed_RJS(
             objHandle, runtime, Predefined::getSymbolID(Predefined::length));
-        if (LLVM_UNLIKELY(lengthRes == ExecutionStatus::EXCEPTION)) {
+        if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
-        tmpHandle = *lengthRes;
-        lengthRes = toLength(runtime, tmpHandle);
+        tmpHandle = std::move(*propRes);
+        auto lengthRes = toLength(runtime, tmpHandle);
         if (LLVM_UNLIKELY(lengthRes == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
@@ -671,14 +673,14 @@ arrayPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
           kHandle = HermesValue::encodeDoubleValue(k);
           JSObject::getComputedPrimitiveDescriptor(
               objHandle, runtime, kHandle, propObj, desc);
-          CallResult<HermesValue> propRes =
+          CallResult<PseudoHandle<>> propRes =
               JSObject::getComputedPropertyValue_RJS(
                   objHandle, runtime, propObj, desc, kHandle);
           if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
             return ExecutionStatus::EXCEPTION;
           }
-          if (LLVM_LIKELY(!propRes->isEmpty())) {
-            tmpHandle = *propRes;
+          if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
+            tmpHandle = std::move(*propRes);
             nHandle = HermesValue::encodeDoubleValue(n);
             auto cr = valueToSymbolID(runtime, nHandle);
             if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
@@ -761,7 +763,7 @@ arrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -812,7 +814,7 @@ arrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
       return ExecutionStatus::EXCEPTION;
     }
 
-    auto elem = runtime->makeHandle(*propRes);
+    auto elem = runtime->makeHandle(std::move(*propRes));
 
     if (elem->isUndefined() || elem->isNull()) {
       JSArray::setElementAt(strings, runtime, i->getNumber(), emptyString);
@@ -876,7 +878,7 @@ arrayPrototypePush(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto lenRes = toLength(runtime, runtime->makeHandle(*propRes));
+    auto lenRes = toLength(runtime, runtime->makeHandle(std::move(*propRes)));
     if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1018,8 +1020,8 @@ class StandardSortModel : public SortModel {
         if (res == ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
         }
-        if (LLVM_LIKELY(!res->isEmpty())) {
-          aValue_ = *res;
+        if (LLVM_LIKELY(!(*res)->isEmpty())) {
+          aValue_ = std::move(*res);
         }
       } else {
         auto keyRes = toPropertyKey(runtime_, aHandle_);
@@ -1037,7 +1039,7 @@ class StandardSortModel : public SortModel {
           if (res == ExecutionStatus::EXCEPTION) {
             return ExecutionStatus::EXCEPTION;
           }
-          aValue_ = *res;
+          aValue_ = std::move(*res);
           // signal later code
           aDescObjHandle_ = *obj_;
         } else {
@@ -1052,8 +1054,8 @@ class StandardSortModel : public SortModel {
         if (res == ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
         }
-        if (LLVM_LIKELY(!res->isEmpty())) {
-          bValue_ = *res;
+        if (LLVM_LIKELY(!(*res)->isEmpty())) {
+          bValue_ = std::move(*res);
         }
       } else {
         auto keyRes = toPropertyKey(runtime_, bHandle_);
@@ -1071,7 +1073,7 @@ class StandardSortModel : public SortModel {
           if (res == ExecutionStatus::EXCEPTION) {
             return ExecutionStatus::EXCEPTION;
           }
-          bValue_ = *res;
+          bValue_ = std::move(*res);
           // signal later code
           bDescObjHandle_ = *obj_;
         } else {
@@ -1135,16 +1137,16 @@ class StandardSortModel : public SortModel {
     ComputedPropertyDescriptor aDesc;
     JSObject::getComputedPrimitiveDescriptor(
         obj_, runtime_, aHandle_, aDescObjHandle_, aDesc);
-    auto propRes = JSObject::getComputedPropertyValue_RJS(
+    CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
         obj_, runtime_, aDescObjHandle_, aDesc, aHandle_);
     if (propRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (propRes->isEmpty()) {
+    if ((*propRes)->isEmpty()) {
       // Spec defines empty as greater than everything.
       return false;
     }
-    aValue_ = *propRes;
+    aValue_ = std::move(*propRes);
     assert(!aValue_->isEmpty());
 
     ComputedPropertyDescriptor bDesc;
@@ -1155,11 +1157,11 @@ class StandardSortModel : public SortModel {
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (propRes->isEmpty()) {
+    if ((*propRes)->isEmpty()) {
       // Spec defines empty as greater than everything.
       return true;
     }
-    bValue_ = *propRes;
+    bValue_ = std::move(*propRes);
     assert(!bValue_->isEmpty());
 
     if (aValue_->isUndefined()) {
@@ -1182,7 +1184,8 @@ class StandardSortModel : public SortModel {
       if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      auto intRes = toNumber_RJS(runtime_, runtime_->makeHandle(*callRes));
+      auto intRes =
+          toNumber_RJS(runtime_, runtime_->makeHandle(std::move(*callRes)));
       if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -1227,7 +1230,7 @@ arrayPrototypeSort(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1258,7 +1261,7 @@ arrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1284,19 +1287,19 @@ arrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
     ComputedPropertyDescriptor desc;
     JSObject::getComputedPrimitiveDescriptor(
         O, runtime, k, descObjHandle, desc);
-    CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
+    CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
         O, runtime, descObjHandle, desc, k);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (LLVM_LIKELY(!propRes->isEmpty())) {
-      auto kValue = *propRes;
+    if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
+      auto kValue = std::move(*propRes);
       if (LLVM_UNLIKELY(
               Callable::executeCall3(
                   callbackFn,
                   runtime,
                   args.getArgHandle(1),
-                  kValue,
+                  kValue.get(),
                   k.get(),
                   O.getHermesValue()) == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
@@ -1362,13 +1365,14 @@ static CallResult<uint64_t> flattenIntoArray(
     }
     // c. If exists is true, then
     // i. Let element be ? Get(source, P).
-    CallResult<HermesValue> elementRes = JSObject::getComputedPropertyValue_RJS(
-        source, runtime, propObj, desc, indexHandle);
+    CallResult<PseudoHandle<>> elementRes =
+        JSObject::getComputedPropertyValue_RJS(
+            source, runtime, propObj, desc, indexHandle);
     if (LLVM_UNLIKELY(elementRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (LLVM_LIKELY(!elementRes->isEmpty())) {
-      element = *elementRes;
+    if (LLVM_LIKELY(!(*elementRes)->isEmpty())) {
+      element = std::move(*elementRes);
 
       // ii. If mapperFunction is present, then
       if (mapperFunction) {
@@ -1386,7 +1390,7 @@ static CallResult<uint64_t> flattenIntoArray(
         if (LLVM_UNLIKELY(elementRes == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
-        element = *elementRes;
+        element = std::move(*elementRes);
       }
       // iii. Let shouldFlatten be false.
       bool shouldFlatten = false;
@@ -1406,14 +1410,14 @@ static CallResult<uint64_t> flattenIntoArray(
         // only true when `isArray(element)` is true.
         // v. If shouldFlatten is true, then
         // 1. Let elementLen be ? ToLength(? Get(element, "length")).
-        CallResult<HermesValue> lenRes = JSObject::getNamed_RJS(
+        CallResult<PseudoHandle<>> lenRes = JSObject::getNamed_RJS(
             Handle<JSObject>::vmcast(element),
             runtime,
             Predefined::getSymbolID(Predefined::length));
         if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
-        lenResHandle = *lenRes;
+        lenResHandle = std::move(*lenRes);
         CallResult<uint64_t> elementLenRes = toLengthU64(runtime, lenResHandle);
         if (LLVM_UNLIKELY(elementLenRes == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
@@ -1477,13 +1481,13 @@ arrayPrototypeFlat(void *ctx, Runtime *runtime, NativeArgs args) {
   auto O = runtime->makeHandle<JSObject>(*ORes);
 
   // 2. Let sourceLen be ? ToLength(? Get(O, "length")).
-  CallResult<HermesValue> lenRes = JSObject::getNamed_RJS(
+  CallResult<PseudoHandle<>> lenRes = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   CallResult<uint64_t> sourceLenRes =
-      toLengthU64(runtime, runtime->makeHandle(*lenRes));
+      toLengthU64(runtime, runtime->makeHandle(std::move(*lenRes)));
   if (LLVM_UNLIKELY(sourceLenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1535,13 +1539,13 @@ arrayPrototypeFlatMap(void *ctx, Runtime *runtime, NativeArgs args) {
   auto O = runtime->makeHandle<JSObject>(*ORes);
 
   // 2. Let sourceLen be ? ToLength(? Get(O, "length")).
-  CallResult<HermesValue> lenRes = JSObject::getNamed_RJS(
+  CallResult<PseudoHandle<>> lenRes = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   CallResult<uint64_t> sourceLenRes =
-      toLengthU64(runtime, runtime->makeHandle(*lenRes));
+      toLengthU64(runtime, runtime->makeHandle(std::move(*lenRes)));
   if (LLVM_UNLIKELY(sourceLenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1600,7 +1604,7 @@ arrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  auto lenRes = toLengthU64(runtime, runtime->makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1659,13 +1663,13 @@ arrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
     ComputedPropertyDescriptor desc;
     JSObject::getComputedPrimitiveDescriptor(
         O, runtime, k, descObjHandle, desc);
-    CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
+    CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
         O, runtime, descObjHandle, desc, k);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (LLVM_LIKELY(!propRes->isEmpty())) {
-      kValue = *propRes;
+    if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
+      kValue = std::move(*propRes);
       JSArray::setElementAt(A, runtime, n, kValue);
     }
     k = HermesValue::encodeDoubleValue(k->getNumber() + 1);
@@ -1695,7 +1699,7 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  auto lenRes = toLengthU64(runtime, runtime->makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1779,13 +1783,14 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
       ComputedPropertyDescriptor fromDesc;
       JSObject::getComputedPrimitiveDescriptor(
           O, runtime, from, fromDescObjHandle, fromDesc);
-      CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
-          O, runtime, fromDescObjHandle, fromDesc, from);
+      CallResult<PseudoHandle<>> propRes =
+          JSObject::getComputedPropertyValue_RJS(
+              O, runtime, fromDescObjHandle, fromDesc, from);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      if (LLVM_LIKELY(!propRes->isEmpty())) {
-        fromValue = *propRes;
+      if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
+        fromValue = std::move(*propRes);
         JSArray::setElementAt(A, runtime, j, fromValue);
       }
 
@@ -1826,13 +1831,14 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
       ComputedPropertyDescriptor fromDesc;
       JSObject::getComputedPrimitiveDescriptor(
           O, runtime, from, fromDescObjHandle, fromDesc);
-      CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
-          O, runtime, fromDescObjHandle, fromDesc, from);
+      CallResult<PseudoHandle<>> propRes =
+          JSObject::getComputedPropertyValue_RJS(
+              O, runtime, fromDescObjHandle, fromDesc, from);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      if (LLVM_LIKELY(!propRes->isEmpty())) {
-        fromValue = *propRes;
+      if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
+        fromValue = std::move(*propRes);
         if (LLVM_UNLIKELY(
                 JSObject::putComputed_RJS(
                     O,
@@ -1883,13 +1889,14 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
       ComputedPropertyDescriptor fromDesc;
       JSObject::getComputedPrimitiveDescriptor(
           O, runtime, from, fromDescObjHandle, fromDesc);
-      CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
-          O, runtime, fromDescObjHandle, fromDesc, from);
+      CallResult<PseudoHandle<>> propRes =
+          JSObject::getComputedPropertyValue_RJS(
+              O, runtime, fromDescObjHandle, fromDesc, from);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      if (LLVM_LIKELY(!propRes->isEmpty())) {
-        fromValue = *propRes;
+      if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
+        fromValue = std::move(*propRes);
         if (LLVM_UNLIKELY(
                 JSObject::putComputed_RJS(
                     O,
@@ -1971,7 +1978,7 @@ arrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  auto lenRes = toLengthU64(runtime, runtime->makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2061,16 +2068,17 @@ arrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    CallResult<HermesValue> fromValRes = JSObject::getComputedPropertyValue_RJS(
-        O, runtime, fromObj, fromDesc, fromHandle);
+    CallResult<PseudoHandle<>> fromValRes =
+        JSObject::getComputedPropertyValue_RJS(
+            O, runtime, fromObj, fromDesc, fromHandle);
     if (LLVM_UNLIKELY(fromValRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     // e. If fromPresent is true, then
-    if (LLVM_LIKELY(!fromValRes->isEmpty())) {
+    if (LLVM_LIKELY(!(*fromValRes)->isEmpty())) {
       // i. Let fromVal be Get(O, fromKey).
       // ii. ReturnIfAbrupt(fromVal).
-      fromVal = *fromValRes;
+      fromVal = std::move(*fromValRes);
 
       // iii. Let setStatus be Set(O, toKey, fromVal, true).
       // iv. ReturnIfAbrupt(setStatus).
@@ -2124,7 +2132,7 @@ arrayPrototypePop(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2149,7 +2157,7 @@ arrayPrototypePop(void *, Runtime *runtime, NativeArgs args) {
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto element = runtime->makeHandle(*propRes);
+  auto element = runtime->makeHandle(std::move(*propRes));
   if (LLVM_UNLIKELY(
           JSObject::deleteComputed(
               O, runtime, idxVal, PropOpFlags().plusThrowOnError()) ==
@@ -2182,7 +2190,7 @@ arrayPrototypeShift(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2206,7 +2214,7 @@ arrayPrototypeShift(void *, Runtime *runtime, NativeArgs args) {
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto first = runtime->makeHandle(*propRes);
+  auto first = runtime->makeHandle(std::move(*propRes));
 
   MutableHandle<> from{runtime, HermesValue::encodeDoubleValue(1)};
   MutableHandle<> to{runtime};
@@ -2225,15 +2233,15 @@ arrayPrototypeShift(void *, Runtime *runtime, NativeArgs args) {
     ComputedPropertyDescriptor fromDesc;
     JSObject::getComputedPrimitiveDescriptor(
         O, runtime, from, fromDescObjHandle, fromDesc);
-    CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
+    CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
         O, runtime, fromDescObjHandle, fromDesc, from);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
 
-    if (LLVM_LIKELY(!propRes->isEmpty())) {
+    if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
       // fromPresent is true, so read fromVal and set the "to" index.
-      fromVal = *propRes;
+      fromVal = std::move(*propRes);
       if (LLVM_UNLIKELY(
               JSObject::putComputed_RJS(
                   O, runtime, to, fromVal, PropOpFlags().plusThrowOnError()) ==
@@ -2292,7 +2300,7 @@ indexOfHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  auto lenRes = toLengthU64(runtime, runtime->makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2351,13 +2359,13 @@ indexOfHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
     ComputedPropertyDescriptor desc;
     JSObject::getComputedPrimitiveDescriptor(
         O, runtime, k, descObjHandle, desc);
-    CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
+    CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
         O, runtime, descObjHandle, desc, k);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (!propRes->isEmpty() &&
-        strictEqualityTest(searchElement.get(), *propRes)) {
+    if (!(*propRes)->isEmpty() &&
+        strictEqualityTest(searchElement.get(), propRes->get())) {
       return k.get();
     }
     // Update the index based on the direction of the search.
@@ -2382,7 +2390,7 @@ arrayPrototypeUnshift(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2420,14 +2428,15 @@ arrayPrototypeUnshift(void *, Runtime *runtime, NativeArgs args) {
       ComputedPropertyDescriptor fromDesc;
       JSObject::getComputedPrimitiveDescriptor(
           O, runtime, from, fromDescObjHandle, fromDesc);
-      CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
-          O, runtime, fromDescObjHandle, fromDesc, from);
+      CallResult<PseudoHandle<>> propRes =
+          JSObject::getComputedPropertyValue_RJS(
+              O, runtime, fromDescObjHandle, fromDesc, from);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
 
-      if (LLVM_LIKELY(!propRes->isEmpty())) {
-        fromValue = *propRes;
+      if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
+        fromValue = std::move(*propRes);
         if (LLVM_UNLIKELY(
                 JSObject::putComputed_RJS(
                     O,
@@ -2502,7 +2511,7 @@ everySomeHelper(Runtime *runtime, NativeArgs args, const bool every) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2529,14 +2538,14 @@ everySomeHelper(Runtime *runtime, NativeArgs args, const bool every) {
     ComputedPropertyDescriptor desc;
     JSObject::getComputedPrimitiveDescriptor(
         O, runtime, k, descObjHandle, desc);
-    CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
+    CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
         O, runtime, descObjHandle, desc, k);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (LLVM_LIKELY(!propRes->isEmpty())) {
+    if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
       // kPresent is true, call the callback on the kth element.
-      kValue = *propRes;
+      kValue = std::move(*propRes);
       auto callRes = Callable::executeCall3(
           callbackFn,
           runtime,
@@ -2547,15 +2556,15 @@ everySomeHelper(Runtime *runtime, NativeArgs args, const bool every) {
       if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      auto testResult = *callRes;
+      auto testResult = std::move(*callRes);
       if (every) {
         // Done if one is false.
-        if (!toBoolean(testResult)) {
+        if (!toBoolean(testResult.get())) {
           return HermesValue::encodeBoolValue(false);
         }
       } else {
         // Done if one is true.
-        if (toBoolean(testResult)) {
+        if (toBoolean(testResult.get())) {
           return HermesValue::encodeBoolValue(true);
         }
       }
@@ -2593,7 +2602,7 @@ arrayPrototypeMap(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2629,26 +2638,26 @@ arrayPrototypeMap(void *, Runtime *runtime, NativeArgs args) {
     ComputedPropertyDescriptor desc;
     JSObject::getComputedPrimitiveDescriptor(
         O, runtime, k, descObjHandle, desc);
-    CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
+    CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
         O, runtime, descObjHandle, desc, k);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (LLVM_LIKELY(!propRes->isEmpty())) {
+    if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
       // kPresent is true, execute callback and store result in A[k].
-      auto kValue = *propRes;
+      auto kValue = std::move(*propRes);
       auto callRes = Callable::executeCall3(
           callbackFn,
           runtime,
           args.getArgHandle(1),
-          kValue,
+          kValue.get(),
           k.get(),
           O.getHermesValue());
       if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       JSArray::setElementAt(
-          A, runtime, k->getDouble(), runtime->makeHandle(*callRes));
+          A, runtime, k->getDouble(), runtime->makeHandle(std::move(*callRes)));
     }
 
     k = HermesValue::encodeDoubleValue(k->getDouble() + 1);
@@ -2671,7 +2680,7 @@ arrayPrototypeFilter(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2708,13 +2717,13 @@ arrayPrototypeFilter(void *, Runtime *runtime, NativeArgs args) {
     ComputedPropertyDescriptor desc;
     JSObject::getComputedPrimitiveDescriptor(
         O, runtime, k, descObjHandle, desc);
-    CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
+    CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
         O, runtime, descObjHandle, desc, k);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (LLVM_LIKELY(!propRes->isEmpty())) {
-      kValue = *propRes;
+    if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
+      kValue = std::move(*propRes);
       // Call the callback.
       auto callRes = Callable::executeCall3(
           callbackFn,
@@ -2726,7 +2735,7 @@ arrayPrototypeFilter(void *, Runtime *runtime, NativeArgs args) {
       if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      if (toBoolean(*callRes)) {
+      if (toBoolean(callRes->get())) {
         // Add the element to the array if it passes the callback.
         JSArray::setElementAt(A, runtime, to, kValue);
         ++to;
@@ -2757,7 +2766,7 @@ arrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  auto lenRes = toLengthU64(runtime, runtime->makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2818,7 +2827,7 @@ arrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2842,7 +2851,7 @@ arrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    kValue = *propRes;
+    kValue = std::move(*propRes);
     auto callRes = Callable::executeCall3(
         predicate,
         runtime,
@@ -2853,7 +2862,7 @@ arrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    bool testResult = toBoolean(*callRes);
+    bool testResult = toBoolean(callRes->get());
     if (testResult) {
       // If this is Array.prototype.findIndex, then return the index k.
       // Else, return the value at the index k.
@@ -2884,7 +2893,7 @@ reduceHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2936,14 +2945,15 @@ reduceHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
       ComputedPropertyDescriptor kDesc;
       JSObject::getComputedPrimitiveDescriptor(
           O, runtime, k, kDescObjHandle, kDesc);
-      CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
-          O, runtime, kDescObjHandle, kDesc, k);
+      CallResult<PseudoHandle<>> propRes =
+          JSObject::getComputedPropertyValue_RJS(
+              O, runtime, kDescObjHandle, kDesc, k);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      if (LLVM_LIKELY(!propRes->isEmpty())) {
+      if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
         kPresent = true;
-        accumulator = *propRes;
+        accumulator = std::move(*propRes);
       }
       k = HermesValue::encodeDoubleValue(k->getDouble() + increment);
     }
@@ -2969,26 +2979,26 @@ reduceHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
     ComputedPropertyDescriptor kDesc;
     JSObject::getComputedPrimitiveDescriptor(
         O, runtime, k, kDescObjHandle, kDesc);
-    CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
+    CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
         O, runtime, kDescObjHandle, kDesc, k);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (LLVM_LIKELY(!propRes->isEmpty())) {
+    if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
       // kPresent is true, run the accumulation step.
-      auto kValue = *propRes;
+      auto kValue = std::move(*propRes);
       auto callRes = Callable::executeCall4(
           callbackFn,
           runtime,
           Runtime::getUndefinedValue(),
           accumulator.get(),
-          kValue,
+          kValue.get(),
           k.get(),
           O.getHermesValue());
       if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      accumulator = *callRes;
+      accumulator = std::move(*callRes);
     }
     k = HermesValue::encodeDoubleValue(k->getDouble() + increment);
   }
@@ -3030,7 +3040,7 @@ arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  auto lenRes = toLengthU64(runtime, runtime->makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -3048,12 +3058,12 @@ arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
       return ExecutionStatus::EXCEPTION;
     }
     if (*lowerExistsRes) {
-      CallResult<HermesValue> lowerValueRes =
+      CallResult<PseudoHandle<>> lowerValueRes =
           JSObject::getComputed_RJS(O, runtime, lower);
       if (LLVM_UNLIKELY(lowerValueRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      lowerValue = *lowerValueRes;
+      lowerValue = std::move(*lowerValueRes);
       gcScope.flushToMarker(marker);
     }
 
@@ -3062,12 +3072,12 @@ arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
       return ExecutionStatus::EXCEPTION;
     }
     if (*upperExistsRes) {
-      CallResult<HermesValue> upperValueRes =
+      CallResult<PseudoHandle<>> upperValueRes =
           JSObject::getComputed_RJS(O, runtime, upper);
       if (LLVM_UNLIKELY(upperValueRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      upperValue = *upperValueRes;
+      upperValue = std::move(*upperValueRes);
       gcScope.flushToMarker(marker);
     }
 
@@ -3152,7 +3162,8 @@ arrayPrototypeIncludes(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(lenPropRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*lenPropRes));
+  auto lenRes =
+      toLengthU64(runtime, runtime->makeHandle(std::move(*lenPropRes)));
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -3202,7 +3213,7 @@ arrayPrototypeIncludes(void *, Runtime *runtime, NativeArgs args) {
     }
 
     // 7b. If SameValueZero(searchElement, elementK) is true, return true.
-    if (isSameValueZero(args.getArg(0), *elementKRes)) {
+    if (isSameValueZero(args.getArg(0), elementKRes->get())) {
       return HermesValue::encodeBoolValue(true);
     }
 
@@ -3234,7 +3245,7 @@ CallResult<HermesValue> arrayOf(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(aRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    A = vmcast<JSObject>(*aRes);
+    A = PseudoHandle<JSObject>::vmcast(std::move(*aRes));
   } else {
     // 5. Else,
     // a. Let A be ArrayCreate(len).
@@ -3339,7 +3350,7 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
       if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      A = vmcast<JSObject>(callRes.getValue());
+      A = PseudoHandle<JSObject>::vmcast(std::move(*callRes));
     } else {
       // b. Else,
       //  i. Let A be ArrayCreate(0).
@@ -3401,7 +3412,7 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      auto nextValue = runtime->makeHandle(propRes.getValue());
+      auto nextValue = runtime->makeHandle(std::move(*propRes));
       // vii. If mapping is true, then
       if (mapfn) {
         // 1. Let mappedValue be Call(mapfn, T, «nextValue, k»).
@@ -3413,7 +3424,7 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
           return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
         }
         // 3. Let mappedValue be mappedValue.[[value]].
-        mappedValue = callRes.getValue();
+        mappedValue = std::move(*callRes);
       } else {
         // viii. Else, let mappedValue be nextValue.
         mappedValue = nextValue.getHermesValue();
@@ -3451,7 +3462,7 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto lengthRes = toLength(runtime, runtime->makeHandle(propRes.getValue()));
+  auto lengthRes = toLength(runtime, runtime->makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(lengthRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -3466,7 +3477,7 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    A = vmcast<JSObject>(callRes.getValue());
+    A = PseudoHandle<JSObject>::vmcast(std::move(*callRes));
   } else {
     // 13. Else,
     //  a. Let A be ArrayCreate(len).
@@ -3503,14 +3514,14 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
       // i. Let mappedValue be Call(mapfn, T, «kValue, k»).
       // ii. ReturnIfAbrupt(mappedValue).
       auto callRes = Callable::executeCall2(
-          mapfn, runtime, T, propRes.getValue(), k.getHermesValue());
+          mapfn, runtime, T, propRes->get(), k.getHermesValue());
       if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      mappedValue = callRes.getValue();
+      mappedValue = std::move(*callRes);
     } else {
       // e. Else, let mappedValue be kValue.
-      mappedValue = propRes.getValue();
+      mappedValue = std::move(*propRes);
     }
     // f. Let defineStatus be CreateDataPropertyOrThrow(A, Pk, mappedValue).
     // g. ReturnIfAbrupt(defineStatus).

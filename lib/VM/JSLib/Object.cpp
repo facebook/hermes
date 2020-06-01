@@ -350,7 +350,7 @@ CallResult<HermesValue> getOwnPropertyDescriptor(
     if (propRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    valueOrAccessor = *propRes;
+    valueOrAccessor = std::move(*propRes);
   }
 
   return objectFromPropertyDescriptor(runtime, desc, valueOrAccessor);
@@ -548,7 +548,7 @@ objectDefinePropertiesInternal(Runtime *runtime, Handle<> obj, Handle<> props) {
     if (LLVM_UNLIKELY(!*descRes || !desc.flags.enumerable)) {
       continue;
     }
-    CallResult<HermesValue> propRes = propsHandle->isProxyObject()
+    CallResult<PseudoHandle<>> propRes = propsHandle->isProxyObject()
         ? JSObject::getComputed_RJS(propsHandle, runtime, propName)
         : JSObject::getComputedPropertyValue_RJS(
               propsHandle, runtime, propsHandle, desc);
@@ -559,7 +559,7 @@ objectDefinePropertiesInternal(Runtime *runtime, Handle<> obj, Handle<> props) {
     MutableHandle<> valueOrAccessor{runtime};
     if (LLVM_UNLIKELY(
             toPropertyDescriptor(
-                runtime->makeHandle(*propRes),
+                runtime->makeHandle(std::move(*propRes)),
                 runtime,
                 flags,
                 valueOrAccessor) == ExecutionStatus::EXCEPTION)) {
@@ -772,7 +772,7 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
       if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      value = *valueRes;
+      value = std::move(*valueRes);
     } else if (!objHandle->isProxyObject()) {
       continue;
     } else {
@@ -795,7 +795,7 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
         if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
-        value = *valueRes;
+        value = std::move(*valueRes);
       }
     }
 
@@ -989,7 +989,7 @@ objectAssign(void *, Runtime *runtime, NativeArgs args) {
       // changing it to make proxy work is is a surprisingly large
       // regression if used always, even with no Proxy objects.  So we
       // check if we can use getComputedPropertyValue_RJS and do so.
-      CallResult<HermesValue> propRes = fromHandle->isProxyObject()
+      CallResult<PseudoHandle<>> propRes = fromHandle->isProxyObject()
           ? JSObject::getComputed_RJS(fromHandle, runtime, nextKeyHandle)
           : JSObject::getComputedPropertyValue_RJS(
                 fromHandle, runtime, fromHandle, desc);
@@ -997,7 +997,7 @@ objectAssign(void *, Runtime *runtime, NativeArgs args) {
         // 5.c.iii.2. ReturnIfAbrupt(propValue).
         return ExecutionStatus::EXCEPTION;
       }
-      propValueHandle = propRes.getValue();
+      propValueHandle = std::move(*propRes);
 
       // 5.c.iii.3. Let status be Set(to, nextKey, propValue, true).
       auto statusCr = JSObject::putComputed_RJS(
@@ -1080,8 +1080,9 @@ CallResult<HermesValue> directObjectPrototypeToString(
       return ExecutionStatus::EXCEPTION;
     }
 
-    if (tagRes->isString()) {
-      auto tag = runtime->makeHandle<StringPrimitive>(*tagRes);
+    if ((*tagRes)->isString()) {
+      auto tag = runtime->makeHandle(
+          PseudoHandle<StringPrimitive>::vmcast(std::move(*tagRes)));
       SafeUInt32 tagLen(tag->getStringLength());
       tagLen.add(9);
       CallResult<StringBuilder> builder =
@@ -1160,8 +1161,10 @@ objectPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  if (auto func = Handle<Callable>::dyn_vmcast(runtime->makeHandle(*propRes))) {
-    return Callable::executeCall0(func, runtime, selfHandle);
+  if (auto func = Handle<Callable>::dyn_vmcast(
+          runtime->makeHandle(std::move(*propRes)))) {
+    return Callable::executeCall0(func, runtime, selfHandle)
+        .toCallResultHermesValue();
   }
   return runtime->raiseTypeError("toString must be callable");
 }

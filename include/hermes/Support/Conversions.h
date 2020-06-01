@@ -10,7 +10,6 @@
 
 #include "hermes/Support/OptValue.h"
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MathExtras.h"
 

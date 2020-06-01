@@ -21,37 +21,37 @@ namespace {
 using JSLibTest = RuntimeTestFixture;
 
 TEST_F(JSLibTest, globalObjectConstTest) {
-  CallResult<HermesValue> propRes{ExecutionStatus::EXCEPTION};
+  CallResult<PseudoHandle<>> propRes{ExecutionStatus::EXCEPTION};
 
   GET_GLOBAL(NaN);
   EXPECT_TRUE(isSameValue(
-      *propRes,
+      propRes->get(),
       HermesValue::encodeDoubleValue(
           std::numeric_limits<double>::quiet_NaN())));
 
   GET_GLOBAL(Infinity);
   EXPECT_TRUE(isSameValue(
-      *propRes,
+      propRes->get(),
       HermesValue::encodeDoubleValue(std::numeric_limits<double>::infinity())));
 
   GET_GLOBAL(undefined);
-  EXPECT_TRUE(isSameValue(*propRes, HermesValue::encodeUndefinedValue()));
+  EXPECT_TRUE(isSameValue(propRes->get(), HermesValue::encodeUndefinedValue()));
 }
 
 TEST_F(JSLibTest, CreateObjectTest) {
-  CallResult<HermesValue> propRes{ExecutionStatus::EXCEPTION};
+  CallResult<PseudoHandle<>> propRes{ExecutionStatus::EXCEPTION};
   // Object constructor.
   GET_GLOBAL(Object);
-  auto objectCons = runtime->makeHandle<Callable>(*propRes);
+  auto objectCons = runtime->makeHandle<Callable>(std::move(*propRes));
 
   // Object.prototype.
   GET_VALUE(objectCons, prototype);
-  auto prototype = runtime->makeHandle<JSObject>(*propRes);
+  auto prototype = runtime->makeHandle<JSObject>(std::move(*propRes));
 
   // create a new instance.
   auto crtRes = objectCons->newObject(objectCons, runtime, prototype);
   ASSERT_RETURNED(crtRes.getStatus());
-  auto newObj = runtime->makeHandle<JSObject>(*crtRes);
+  auto newObj = runtime->makeHandle<JSObject>(std::move(*crtRes));
 
   // Make sure the prototype is correct.
   ASSERT_EQ(prototype.get(), newObj->getParent(runtime));
@@ -59,7 +59,7 @@ TEST_F(JSLibTest, CreateObjectTest) {
   // Call the constructor.
   auto callRes = Callable::executeCall0(objectCons, runtime, newObj, true);
   ASSERT_RETURNED(callRes.getStatus());
-  auto newObj1 = runtime->makeHandle<JSObject>(*callRes);
+  auto newObj1 = runtime->makeHandle<JSObject>(std::move(*callRes));
   ASSERT_EQ(newObj, newObj1);
 }
 
@@ -70,24 +70,25 @@ static Handle<JSObject> createObject(Runtime *runtime) {
       runtime,
       Predefined::getSymbolID(Predefined::Object));
   assert(propRes == ExecutionStatus::RETURNED);
-  auto objectCons = runtime->makeHandle<Callable>(*propRes);
+  auto objectCons = runtime->makeHandle<Callable>(std::move(*propRes));
 
   // Object.prototype.
   propRes = JSObject::getNamed_RJS(
       objectCons, runtime, Predefined::getSymbolID(Predefined::prototype));
   assert(propRes == ExecutionStatus::RETURNED);
-  auto prototype = runtime->makeHandle<JSObject>(*propRes);
+  auto prototype = runtime->makeHandle<JSObject>(std::move(*propRes));
 
   // create a new instance.
   auto crtRes = objectCons->newObject(objectCons, runtime, prototype);
   assert(crtRes == ExecutionStatus::RETURNED);
-  auto newObj = runtime->makeHandle<JSObject>(*crtRes);
+  auto newObj = runtime->makeHandle<JSObject>(std::move(*crtRes));
 
   // Call the constructor.
   auto callRes = Callable::executeCall0(objectCons, runtime, newObj, true);
   assert(callRes == ExecutionStatus::RETURNED);
-  return callRes->isUndefined() ? newObj
-                                : runtime->makeHandle<JSObject>(*callRes);
+  return (*callRes)->isUndefined()
+      ? newObj
+      : runtime->makeHandle<JSObject>(std::move(*callRes));
 }
 
 TEST_F(JSLibTest, ObjectToStringTest) {
@@ -96,7 +97,7 @@ TEST_F(JSLibTest, ObjectToStringTest) {
   auto propRes = JSObject::getNamed_RJS(
       obj, runtime, Predefined::getSymbolID(Predefined::toString));
   ASSERT_RETURNED(propRes.getStatus());
-  auto toStringFn = runtime->makeHandle<Callable>(*propRes);
+  auto toStringFn = runtime->makeHandle<Callable>(std::move(*propRes));
   EXPECT_CALLRESULT_STRING(
       "[object Object]", toStringFn->executeCall0(toStringFn, runtime, obj));
 
@@ -119,23 +120,23 @@ TEST_F(JSLibTest, ObjectToStringTest) {
 }
 
 TEST_F(JSLibTest, ObjectSealTest) {
-  CallResult<HermesValue> propRes{ExecutionStatus::EXCEPTION};
+  CallResult<PseudoHandle<>> propRes{ExecutionStatus::EXCEPTION};
   auto obj = createObject(runtime);
 
   GET_GLOBAL(Object);
-  auto objectCons = runtime->makeHandle<JSObject>(*propRes);
+  auto objectCons = runtime->makeHandle<JSObject>((std::move(*propRes)));
 
   ASSERT_RETURNED(
       (propRes = JSObject::getNamed_RJS(
            objectCons, runtime, Predefined::getSymbolID(Predefined::seal)))
           .getStatus());
-  auto sealFn = runtime->makeHandle<Callable>(*propRes);
+  auto sealFn = runtime->makeHandle<Callable>((std::move(*propRes)));
 
   ASSERT_RETURNED(
       (propRes = JSObject::getNamed_RJS(
            objectCons, runtime, Predefined::getSymbolID(Predefined::isSealed)))
           .getStatus());
-  auto isSealedFn = runtime->makeHandle<Callable>(*propRes);
+  auto isSealedFn = runtime->makeHandle<Callable>((std::move(*propRes)));
 
   // Create a property "obj.prop1".
   auto prop1ID = *runtime->getIdentifierTable().getSymbolHandle(
@@ -191,24 +192,24 @@ TEST_F(JSLibTest, ObjectSealTest) {
 }
 
 TEST_F(JSLibTest, ObjectFreezeTest) {
-  CallResult<HermesValue> propRes{ExecutionStatus::EXCEPTION};
+  CallResult<PseudoHandle<>> propRes{ExecutionStatus::EXCEPTION};
 
   auto obj = createObject(runtime);
 
   GET_GLOBAL(Object);
-  auto objectCons = runtime->makeHandle<JSObject>(*propRes);
+  auto objectCons = runtime->makeHandle<JSObject>(std::move(*propRes));
 
   ASSERT_RETURNED(
       (propRes = JSObject::getNamed_RJS(
            objectCons, runtime, Predefined::getSymbolID(Predefined::freeze)))
           .getStatus());
-  auto freezeFn = runtime->makeHandle<Callable>(*propRes);
+  auto freezeFn = runtime->makeHandle<Callable>(std::move(*propRes));
 
   ASSERT_RETURNED(
       (propRes = JSObject::getNamed_RJS(
            objectCons, runtime, Predefined::getSymbolID(Predefined::isFrozen)))
           .getStatus());
-  auto isFrozenFn = runtime->makeHandle<Callable>(*propRes);
+  auto isFrozenFn = runtime->makeHandle<Callable>(std::move(*propRes));
 
   // Create a property "obj.prop1".
   auto prop1ID = *runtime->getIdentifierTable().getSymbolHandle(
@@ -266,26 +267,27 @@ TEST_F(JSLibTest, ObjectFreezeTest) {
 }
 
 TEST_F(JSLibTest, ObjectPreventExtensionsTest) {
-  CallResult<HermesValue> propRes{ExecutionStatus::EXCEPTION};
+  CallResult<PseudoHandle<>> propRes{ExecutionStatus::EXCEPTION};
 
   auto obj = createObject(runtime);
 
   GET_GLOBAL(Object);
-  auto objectCons = runtime->makeHandle<JSObject>(*propRes);
+  auto objectCons =
+      Handle<JSObject>::vmcast(runtime->makeHandle(std::move(*propRes)));
 
   ASSERT_RETURNED((propRes = JSObject::getNamed_RJS(
                        objectCons,
                        runtime,
                        Predefined::getSymbolID(Predefined::preventExtensions)))
                       .getStatus());
-  auto preventExtensionsFn = runtime->makeHandle<Callable>(*propRes);
+  auto preventExtensionsFn = runtime->makeHandle<Callable>(std::move(*propRes));
 
   ASSERT_RETURNED((propRes = JSObject::getNamed_RJS(
                        objectCons,
                        runtime,
                        Predefined::getSymbolID(Predefined::isExtensible)))
                       .getStatus());
-  auto isExtensibleFn = runtime->makeHandle<Callable>(*propRes);
+  auto isExtensibleFn = runtime->makeHandle<Callable>(std::move(*propRes));
 
   // Make sure it's extensible.
   EXPECT_CALLRESULT_BOOL(
@@ -317,18 +319,18 @@ TEST_F(JSLibTest, ObjectPreventExtensionsTest) {
 }
 
 TEST_F(JSLibTest, ObjectGetPrototypeOfTest) {
-  CallResult<HermesValue> propRes{ExecutionStatus::EXCEPTION};
+  CallResult<PseudoHandle<>> propRes{ExecutionStatus::EXCEPTION};
   auto obj = createObject(runtime);
 
   GET_GLOBAL(Object);
-  auto objectCons = runtime->makeHandle<JSObject>(*propRes);
+  auto objectCons = runtime->makeHandle<JSObject>(std::move(*propRes));
 
   ASSERT_RETURNED((propRes = JSObject::getNamed_RJS(
                        objectCons,
                        runtime,
                        Predefined::getSymbolID(Predefined::getPrototypeOf)))
                       .getStatus());
-  auto getPrototypeOfFn = runtime->makeHandle<Callable>(*propRes);
+  auto getPrototypeOfFn = runtime->makeHandle<Callable>(std::move(*propRes));
 
   // Object.getPrototypeOf(obj).
   auto callRes = getPrototypeOfFn->executeCall1(
@@ -337,7 +339,7 @@ TEST_F(JSLibTest, ObjectGetPrototypeOfTest) {
       runtime->makeHandle(HermesValue::encodeUndefinedValue()),
       obj.getHermesValue());
   ASSERT_RETURNED(callRes.getStatus());
-  auto objProto = runtime->makeHandle<JSObject>(*callRes);
+  auto objProto = runtime->makeHandle<JSObject>(std::move(*callRes));
 
   // Create a property "objProto.prop1".
   auto prop1ID = *runtime->getIdentifierTable().getSymbolHandle(
@@ -359,7 +361,7 @@ TEST_F(JSLibTest, ObjectGetPrototypeOfTest) {
                        runtime->makeHandle(HermesValue::encodeUndefinedValue()),
                        obj2.getHermesValue()))
                       .getStatus());
-  auto obj2Proto = runtime->makeHandle<JSObject>(*callRes);
+  auto obj2Proto = runtime->makeHandle<JSObject>(std::move(*callRes));
 
   // Make sure that the new object's prototype is correct.
   EXPECT_CALLRESULT_DOUBLE(
@@ -368,13 +370,13 @@ TEST_F(JSLibTest, ObjectGetPrototypeOfTest) {
 
 TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
   GCScope scope{runtime, "JSLibTest.ObjectGetOwnPropertyDescriptorTest", 128};
-  CallResult<HermesValue> propRes{ExecutionStatus::EXCEPTION};
+  CallResult<PseudoHandle<>> propRes{ExecutionStatus::EXCEPTION};
 
   {
     auto obj = createObject(runtime);
 
     GET_GLOBAL(Object);
-    auto objectCons = runtime->makeHandle<JSObject>(*propRes);
+    auto objectCons = runtime->makeHandle<JSObject>(std::move(*propRes));
 
     ASSERT_RETURNED(
         (propRes = JSObject::getNamed_RJS(
@@ -382,7 +384,8 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
              runtime,
              Predefined::getSymbolID(Predefined::getOwnPropertyDescriptor)))
             .getStatus());
-    auto getOwnPropertyDescriptorFn = runtime->makeHandle<Callable>(*propRes);
+    auto getOwnPropertyDescriptorFn =
+        runtime->makeHandle<Callable>(std::move(*propRes));
 
     // Create a property "objProto.prop1".
     auto prop1ID = *runtime->getIdentifierTable().getSymbolHandle(
@@ -404,7 +407,7 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
         HermesValue::encodeStringValue(
             runtime->getStringPrimFromSymbolID(*prop1ID)));
     ASSERT_RETURNED(callRes.getStatus());
-    auto desc = runtime->makeHandle<JSObject>(*callRes);
+    auto desc = runtime->makeHandle<JSObject>(std::move(*callRes));
 
     EXPECT_CALLRESULT_BOOL(
         TRUE,
@@ -428,7 +431,7 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
     auto obj = createObject(runtime);
 
     GET_GLOBAL(Object);
-    auto objectCons = runtime->makeHandle<JSObject>(*propRes);
+    auto objectCons = runtime->makeHandle<JSObject>(std::move(*propRes));
 
     ASSERT_RETURNED(
         (propRes = JSObject::getNamed_RJS(
@@ -436,7 +439,8 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
              runtime,
              Predefined::getSymbolID(Predefined::getOwnPropertyDescriptor)))
             .getStatus());
-    auto getOwnPropertyDescriptorFn = runtime->makeHandle<Callable>(*propRes);
+    auto getOwnPropertyDescriptorFn =
+        runtime->makeHandle<Callable>(std::move(*propRes));
 
     // Create a property "objProto.prop1".
     auto prop1ID = *runtime->getIdentifierTable().getSymbolHandle(
@@ -483,7 +487,7 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
         HermesValue::encodeStringValue(
             runtime->getStringPrimFromSymbolID(*prop1ID)));
     ASSERT_RETURNED(callRes.getStatus());
-    auto desc = runtime->makeHandle<JSObject>(*callRes);
+    auto desc = runtime->makeHandle<JSObject>(std::move(*callRes));
 
     EXPECT_CALLRESULT_BOOL(
         TRUE,
@@ -497,22 +501,22 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
         (propRes = JSObject::getNamed_RJS(
              desc, runtime, Predefined::getSymbolID(Predefined::get)))
             .getStatus());
-    EXPECT_EQ(getter.get(), propRes->getPointer());
+    EXPECT_EQ(getter.get(), (*propRes)->getPointer());
     ASSERT_RETURNED(
         (propRes = JSObject::getNamed_RJS(
              desc, runtime, Predefined::getSymbolID(Predefined::set)))
             .getStatus());
-    EXPECT_EQ(setter.get(), propRes->getPointer());
+    EXPECT_EQ(setter.get(), (*propRes)->getPointer());
   }
 }
 
 TEST_F(JSLibTest, ObjectDefinePropertyTest) {
   GCScope scope{runtime, "JSLibTest.ObjectDefinePropertyTest", 128};
-  CallResult<HermesValue> propRes{ExecutionStatus::EXCEPTION};
+  CallResult<PseudoHandle<>> propRes{ExecutionStatus::EXCEPTION};
 
   // Get global object.
   GET_GLOBAL(Object);
-  auto objectCons = runtime->makeHandle<JSObject>(*propRes);
+  auto objectCons = runtime->makeHandle<JSObject>(std::move(*propRes));
 
   // Get Object.defineProperty() function.
   ASSERT_RETURNED((propRes = JSObject::getNamed_RJS(
@@ -521,7 +525,7 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
                        Predefined::getSymbolID(Predefined::defineProperty),
                        PropOpFlags().plusMustExist()))
                       .getStatus());
-  auto definePropertyFn = runtime->makeHandle<Callable>(*propRes);
+  auto definePropertyFn = runtime->makeHandle<Callable>(std::move(*propRes));
 
   {
     // Create a PropertyDescriptor object with enumerable and configurable set.
@@ -589,7 +593,7 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
         runtime,
         Predefined::getSymbolID(Predefined::toString));
     ASSERT_RETURNED(propRes.getStatus());
-    auto toStringFn = runtime->makeHandle<Callable>(*propRes);
+    auto toStringFn = runtime->makeHandle<Callable>(std::move(*propRes));
     ASSERT_TRUE(JSObject::putNamed_RJS(
                     accessorAttributes,
                     runtime,
@@ -648,13 +652,13 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
         (propRes = JSObject::getNamed_RJS(
              objectCons, runtime, *propID, PropOpFlags().plusMustExist()))
             .getStatus());
-    EXPECT_TRUE(propRes->isString());
+    EXPECT_TRUE((*propRes)->isString());
   }
 }
 
 TEST_F(JSLibTest, ObjectDefinePropertiesTest) {
   GCScope scope{runtime, "JSLibTest.ObjectDefinePropertiesTest", 128};
-  CallResult<HermesValue> propRes{ExecutionStatus::EXCEPTION};
+  CallResult<PseudoHandle<>> propRes{ExecutionStatus::EXCEPTION};
 
   auto str1 =
       StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"key1")).get();
@@ -733,7 +737,7 @@ TEST_F(JSLibTest, ObjectDefinePropertiesTest) {
   }
   // Get global object.
   GET_GLOBAL(Object);
-  auto objectCons = runtime->makeHandle<JSObject>(*propRes);
+  auto objectCons = runtime->makeHandle<JSObject>(std::move(*propRes));
 
   // Get Object.defineProperties() function.
   ASSERT_RETURNED((propRes = JSObject::getNamed_RJS(
@@ -742,7 +746,7 @@ TEST_F(JSLibTest, ObjectDefinePropertiesTest) {
                        Predefined::getSymbolID(Predefined::defineProperties),
                        PropOpFlags().plusMustExist()))
                       .getStatus());
-  auto definePropertiesFn = runtime->makeHandle<Callable>(*propRes);
+  auto definePropertiesFn = runtime->makeHandle<Callable>(std::move(*propRes));
 
   // Define the properties.
   auto obj = createObject(runtime);
@@ -781,7 +785,7 @@ TEST_F(JSLibTest, ObjectDefinePropertiesTest) {
 
 TEST_F(JSLibTest, ObjectCreateTest) {
   GCScope scope{runtime, "JSLibTest.ObjectCreateTest", 128};
-  CallResult<HermesValue> propRes{ExecutionStatus::EXCEPTION};
+  CallResult<PseudoHandle<>> propRes{ExecutionStatus::EXCEPTION};
 
   auto str1 =
       StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"key1")).get();
@@ -860,7 +864,7 @@ TEST_F(JSLibTest, ObjectCreateTest) {
   }
   // Get global object.
   GET_GLOBAL(Object);
-  auto objectCons = runtime->makeHandle<JSObject>(*propRes);
+  auto objectCons = runtime->makeHandle<JSObject>(std::move(*propRes));
 
   // Get Object.create() function.
   ASSERT_RETURNED((propRes = JSObject::getNamed_RJS(
@@ -869,7 +873,7 @@ TEST_F(JSLibTest, ObjectCreateTest) {
                        Predefined::getSymbolID(Predefined::create),
                        PropOpFlags().plusMustExist()))
                       .getStatus());
-  auto createFn = runtime->makeHandle<Callable>(*propRes);
+  auto createFn = runtime->makeHandle<Callable>(std::move(*propRes));
 
   // Call Object.create().
   auto prototype = createObject(runtime);
@@ -882,7 +886,7 @@ TEST_F(JSLibTest, ObjectCreateTest) {
       false);
   ASSERT_RETURNED(callRes.getStatus());
 
-  auto obj = runtime->makeHandle<JSObject>(*callRes);
+  auto obj = runtime->makeHandle<JSObject>(std::move(*callRes));
 
   // Verify the first property.
   {
@@ -908,20 +912,20 @@ TEST_F(JSLibTest, ObjectCreateTest) {
 
 TEST_F(JSLibTest, CreateStringTest) {
   GCScope scope(runtime);
-  CallResult<HermesValue> propRes{ExecutionStatus::EXCEPTION};
+  CallResult<PseudoHandle<>> propRes{ExecutionStatus::EXCEPTION};
 
   // String constructor.
   GET_GLOBAL(String);
-  auto stringCons = runtime->makeHandle<Callable>(*propRes);
+  auto stringCons = runtime->makeHandle<Callable>(std::move(*propRes));
 
   // String.prototype.
   GET_VALUE(stringCons, prototype);
-  auto prototype = runtime->makeHandle<JSObject>(*propRes);
+  auto prototype = runtime->makeHandle<JSObject>(std::move(*propRes));
 
   // create a new instance.
   auto crtRes = stringCons->newObject(stringCons, runtime, prototype);
   ASSERT_RETURNED(crtRes.getStatus());
-  auto newStr = runtime->makeHandle<JSObject>(*crtRes);
+  auto newStr = runtime->makeHandle<JSObject>(std::move(*crtRes));
 
   // Make sure the prototype is correct.
   ASSERT_EQ(prototype.get(), newStr->getParent(runtime));
@@ -989,24 +993,25 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
         Predefined::getSymbolID(Predefined::Math));
     ASSERT_NE(propRes, ExecutionStatus::EXCEPTION)
         << "Exception accessing Math on the global object";
-    auto mathObj = runtime->makeHandle(vmcast<JSObject>(propRes.getValue()));
+    auto mathObj = runtime->makeHandle<JSObject>(std::move(propRes.getValue()));
     propRes = JSObject::getNamed_RJS(
         mathObj, runtime, Predefined::getSymbolID(Predefined::random));
     ASSERT_NE(propRes, ExecutionStatus::EXCEPTION)
         << "Exception accessing random on the Math object";
-    auto randomFunc = runtime->makeHandle(vmcast<Callable>(propRes.getValue()));
+    auto randomFunc =
+        runtime->makeHandle<Callable>(std::move(propRes.getValue()));
     auto val = Callable::executeCall0(
         randomFunc, runtime, Runtime::getUndefinedValue());
     ASSERT_NE(val, ExecutionStatus::EXCEPTION)
         << "Exception executing the call on Math.random()";
-    EXPECT_EQ(val.getValue().getNumber(), mathRandom);
+    EXPECT_EQ(val->get().getNumber(), mathRandom);
 
     // Make sure the second call gets the second value.
     val = Callable::executeCall0(
         randomFunc, runtime, Runtime::getUndefinedValue());
     ASSERT_NE(val, ExecutionStatus::EXCEPTION)
         << "Exception executing the call on Math.random()";
-    EXPECT_EQ(val.getValue().getNumber(), secondMathRandom);
+    EXPECT_EQ(val->get().getNumber(), secondMathRandom);
   }
 
   {
@@ -1018,29 +1023,30 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
         Predefined::getSymbolID(Predefined::Date));
     ASSERT_NE(propRes, ExecutionStatus::EXCEPTION)
         << "Exception accessing Date on the global object";
-    auto dateFunc = runtime->makeHandle(vmcast<Callable>(propRes.getValue()));
-    auto dateObj = runtime->makeHandle(vmcast<JSObject>(propRes.getValue()));
+    Handle<Callable> dateFunc =
+        runtime->makeHandle<Callable>(std::move(propRes.getValue()));
 
     // Call Date.now().
     propRes = JSObject::getNamed_RJS(
-        dateObj, runtime, Predefined::getSymbolID(Predefined::now));
+        dateFunc, runtime, Predefined::getSymbolID(Predefined::now));
     ASSERT_NE(propRes, ExecutionStatus::EXCEPTION)
         << "Exception accessing now on the Date object";
-    auto nowFunc = runtime->makeHandle(vmcast<Callable>(propRes.getValue()));
+    auto nowFunc = runtime->makeHandle<Callable>(std::move(propRes.getValue()));
     auto val =
         Callable::executeCall0(nowFunc, runtime, Runtime::getUndefinedValue());
     ASSERT_NE(val, ExecutionStatus::EXCEPTION)
         << "Exception executing the call on Date.now()";
-    EXPECT_EQ(val.getValue().getNumberAs<uint64_t>(), dateNow);
+    EXPECT_EQ(val->getHermesValue().getNumberAs<uint64_t>(), dateNow);
 
     // Call new Date()
     val = Callable::executeConstruct0(dateFunc, runtime);
     ASSERT_NE(val, ExecutionStatus::EXCEPTION)
         << "Exception executing the call on new Date()";
-    auto *valAsObj = vmcast<JSObject>(val.getValue());
-    auto hv = JSDate::getPrimitiveValue(valAsObj, runtime);
+    PseudoHandle<JSDate> valAsObj =
+        PseudoHandle<JSDate>::vmcast(std::move(*val));
+    HermesValue hv = JSDate::getPrimitiveValue(valAsObj.get(), runtime);
     // This pointer can become invalid, don't be tempted to use it incorrectly.
-    valAsObj = nullptr;
+    valAsObj.invalidate();
     EXPECT_EQ(hv.getNumberAs<uint64_t>(), newDate);
 
     // Call Date()
@@ -1049,7 +1055,7 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
     ASSERT_NE(val, ExecutionStatus::EXCEPTION)
         << "Exception executing the call on Date()";
     SmallU16String<32> tmp;
-    val.getValue().getString()->copyUTF16String(tmp);
+    val->get().getString()->copyUTF16String(tmp);
     std::u16string str(tmp.begin(), tmp.end());
     EXPECT_EQ(str, dateAsFuncU16);
   }
@@ -1060,16 +1066,16 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
   {
     // Call HermesInternal.getInstrumentedStats() and check that the values
     // we've set are what we recorded.
-    auto hermesInternalRes = JSObject::getNamed_RJS(
+    CallResult<PseudoHandle<>> hermesInternalRes = JSObject::getNamed_RJS(
         runtime->getGlobal(),
         runtime,
         Predefined::getSymbolID(Predefined::HermesInternal));
     ASSERT_NE(hermesInternalRes, ExecutionStatus::EXCEPTION)
         << "Exception accessing HermesInternal on the global object";
-    ASSERT_TRUE(hermesInternalRes->isObject())
+    ASSERT_TRUE(hermesInternalRes.getValue()->isObject())
         << "HermesInternal is not an object.";
-    auto hermesInternal =
-        runtime->makeHandle(vmcast<JSObject>(hermesInternalRes.getValue()));
+    auto hermesInternal = runtime->makeHandle(
+        PseudoHandle<JSObject>::vmcast(std::move(*hermesInternalRes)));
     auto propRes = JSObject::getNamed_RJS(
         hermesInternal,
         runtime,
@@ -1077,17 +1083,17 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
     ASSERT_NE(propRes, ExecutionStatus::EXCEPTION)
         << "Exception accessing getInstrumentedStats on the "
         << "HermesInternal object";
-    auto getInstrumentedStatsFunc =
-        runtime->makeHandle(vmcast<Callable>(propRes.getValue()));
+    auto getInstrumentedStatsFunc = runtime->makeHandle(
+        PseudoHandle<Callable>::vmcast(std::move(propRes.getValue())));
     auto statsObjRes = Callable::executeCall0(
         getInstrumentedStatsFunc, runtime, Runtime::getUndefinedValue());
     ASSERT_NE(statsObjRes, ExecutionStatus::EXCEPTION)
         << "Exception executing the call on "
         << "HermesInternal.getInstrumentedStats";
-    ASSERT_TRUE(statsObjRes->isObject())
+    ASSERT_TRUE(statsObjRes.getValue()->isObject())
         << "HermesInternal.getInstrumentedStats result is not an object.";
-    auto statsObj =
-        runtime->makeHandle(vmcast<JSObject>(statsObjRes.getValue()));
+    auto statsObj = runtime->makeHandle(
+        PseudoHandle<JSObject>::vmcast(std::move(statsObjRes.getValue())));
 
     auto affinityMaskSymHandleRes =
         runtime->getIdentifierTable().getSymbolHandle(
@@ -1098,10 +1104,10 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
         JSObject::getNamed_RJS(statsObj, runtime, **affinityMaskSymHandleRes);
     ASSERT_NE(affinityMaskVal2Res, ExecutionStatus::EXCEPTION)
         << "Exception accessing 'js_threadAffinityMask' in stats object";
-    ASSERT_TRUE(affinityMaskVal2Res->isString())
+    ASSERT_TRUE(affinityMaskVal2Res.getValue()->isString())
         << "Value of 'js_threadAffinityMask' in stats object is not a string";
     auto affinityMaskVal2ResStringRef =
-        affinityMaskVal2Res->getString()->getStringRef<char>();
+        affinityMaskVal2Res.getValue()->getString()->getStringRef<char>();
     ASSERT_EQ(
         affinityMaskValue,
         std::string(
@@ -1118,9 +1124,9 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
         statsObj, runtime, **totalAllocBytesSymHandleRes);
     ASSERT_NE(totalAllocBytesVal2Res, ExecutionStatus::EXCEPTION)
         << "Exception accessing 'js_totalAllocatedBytes' in stats object";
-    ASSERT_TRUE(totalAllocBytesVal2Res->isNumber())
+    ASSERT_TRUE(totalAllocBytesVal2Res.getValue()->isNumber())
         << "Value of 'js_totalAllocatedBytes' in stats object is not a number";
-    double totalAllocBytesVal2 = totalAllocBytesVal2Res->getNumber();
+    double totalAllocBytesVal2 = totalAllocBytesVal2Res.getValue()->getNumber();
     ASSERT_EQ(totalAllocBytesVal2, 2222.0);
   }
 #endif

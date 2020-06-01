@@ -490,11 +490,11 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
   }
   MutableHandle<> tmpHandle{runtime_};
   CallResult<bool> isArrayRes =
-      isArray(runtime_, dyn_vmcast<JSObject>(*propRes));
+      isArray(runtime_, dyn_vmcast<JSObject>(propRes->get()));
   if (LLVM_UNLIKELY(isArrayRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto valHandle = runtime_->makeHandle(*propRes);
+  auto valHandle = runtime_->makeHandle(std::move(*propRes));
   if (*isArrayRes) {
     Handle<JSObject> objHandle = Handle<JSObject>::vmcast(valHandle);
     CallResult<uint64_t> lenRes = getArrayLikeLength(objHandle, runtime_);
@@ -533,7 +533,8 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
   tmpHandle = strRes->getHermesValue();
 
   return Callable::executeCall2(
-      reviver_, runtime_, holder, *tmpHandle, *valHandle);
+             reviver_, runtime_, holder, *tmpHandle, *valHandle)
+      .toCallResultHermesValue();
 }
 
 ExecutionStatus RuntimeJSONParser::filter(Handle<JSObject> val, Handle<> key) {
@@ -636,13 +637,14 @@ ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto v = *propRes;
+    PseudoHandle<> v = std::move(*propRes);
     // Convert v to string and store into item, if v is string, number, JSString
     // or JSNumber.
-    if (v.isString()) {
-      tmpHandle_ = v;
-    } else if (v.isNumber() || vmisa<JSNumber>(v) || vmisa<JSString>(v)) {
-      tmpHandle_ = v;
+    if (v->isString()) {
+      tmpHandle_ = std::move(v);
+    } else if (
+        v->isNumber() || vmisa<JSNumber>(v.get()) || vmisa<JSString>(v.get())) {
+      tmpHandle_ = std::move(v);
       auto strRes = toString_RJS(runtime_, tmpHandle_);
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
@@ -732,7 +734,7 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  operationStrValue_.set(*propRes);
+  operationStrValue_.set(propRes->get());
 
   if (auto valueObj = Handle<JSObject>::dyn_vmcast(operationStrValue_)) {
     // Str.2.
@@ -746,8 +748,8 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
       return ExecutionStatus::EXCEPTION;
     }
     // Str.2.b: check if toJSON is a Callable.
-    if (auto toJSON =
-            Handle<Callable>::dyn_vmcast(runtime_->makeHandle(*propRes))) {
+    if (auto toJSON = Handle<Callable>::dyn_vmcast(
+            runtime_->makeHandle(std::move(*propRes)))) {
       if (!tmpHandle_->isString()) {
         // Lazily convert key to a string.
         auto status = toString_RJS(runtime_, tmpHandle_);
@@ -762,7 +764,7 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
       if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      operationStrValue_ = *callRes;
+      operationStrValue_ = std::move(*callRes);
     }
   }
 
@@ -788,7 +790,7 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
     if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    operationStrValue_ = *callRes;
+    operationStrValue_ = std::move(*callRes);
   }
 
   // Str.4: unbox value if necessary.

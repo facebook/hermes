@@ -157,14 +157,14 @@ CallResult<HermesValue> ordinaryToPrimitive(
           selfHandle, runtime, Predefined::getSymbolID(Predefined::toString));
       if (propRes == ExecutionStatus::EXCEPTION)
         return ExecutionStatus::EXCEPTION;
-      if (auto funcHandle =
-              Handle<Callable>::dyn_vmcast(runtime->makeHandle(*propRes))) {
+      if (auto funcHandle = Handle<Callable>::dyn_vmcast(
+              runtime->makeHandle(std::move(*propRes)))) {
         auto callRes =
             funcHandle->executeCall0(funcHandle, runtime, selfHandle);
         if (callRes == ExecutionStatus::EXCEPTION)
           return ExecutionStatus::EXCEPTION;
-        if (isPrimitive(*callRes))
-          return *callRes;
+        if (isPrimitive(callRes->get()))
+          return callRes.toCallResultHermesValue();
       }
 
       // This method failed. Try the other one.
@@ -174,14 +174,14 @@ CallResult<HermesValue> ordinaryToPrimitive(
           selfHandle, runtime, Predefined::getSymbolID(Predefined::valueOf));
       if (propRes == ExecutionStatus::EXCEPTION)
         return ExecutionStatus::EXCEPTION;
-      if (auto funcHandle =
-              Handle<Callable>::dyn_vmcast(runtime->makeHandle(*propRes))) {
+      if (auto funcHandle = Handle<Callable>::dyn_vmcast(
+              runtime->makeHandle(std::move(*propRes)))) {
         auto callRes =
             funcHandle->executeCall0(funcHandle, runtime, selfHandle);
         if (callRes == ExecutionStatus::EXCEPTION)
           return ExecutionStatus::EXCEPTION;
-        if (isPrimitive(*callRes))
-          return *callRes;
+        if (isPrimitive(callRes->get()))
+          return callRes.toCallResultHermesValue();
       }
 
       // This method failed. Try the other one.
@@ -217,7 +217,7 @@ toPrimitive_RJS(Runtime *runtime, Handle<> valueHandle, PreferredType hint) {
   if (vmisa<Callable>(exoticToPrim->getHermesValue())) {
     auto callable = runtime->makeHandle<Callable>(
         dyn_vmcast<Callable>(exoticToPrim->getHermesValue()));
-    CallResult<HermesValue> resultRes = Callable::executeCall1(
+    CallResult<PseudoHandle<>> resultRes = Callable::executeCall1(
         callable,
         runtime,
         valueHandle,
@@ -229,8 +229,9 @@ toPrimitive_RJS(Runtime *runtime, Handle<> valueHandle, PreferredType hint) {
     if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (!resultRes->isObject()) {
-      return *resultRes;
+    PseudoHandle<> result = std::move(*resultRes);
+    if (!result->isObject()) {
+      return result.getHermesValue();
     }
     return runtime->raiseTypeError(
         "Symbol.toPrimitive function must return a primitive");
@@ -1127,13 +1128,13 @@ getMethod(Runtime *runtime, Handle<> O, Handle<> key) {
   if (LLVM_UNLIKELY(funcRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  if (funcRes->isUndefined() || funcRes->isNull()) {
+  if ((*funcRes)->isUndefined() || (*funcRes)->isNull()) {
     return PseudoHandle<>::create(HermesValue::encodeUndefinedValue());
   }
-  if (!vmisa<Callable>(*funcRes)) {
+  if (!vmisa<Callable>(funcRes->get())) {
     return runtime->raiseTypeError("Could not get callable method from object");
   }
-  return PseudoHandle<>::create(*funcRes);
+  return funcRes;
 }
 
 CallResult<IteratorRecord> getIterator(
@@ -1161,12 +1162,13 @@ CallResult<IteratorRecord> getIterator(
   if (LLVM_UNLIKELY(iteratorRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  if (LLVM_UNLIKELY(!iteratorRes->isObject())) {
+  if (LLVM_UNLIKELY(!(*iteratorRes)->isObject())) {
     return runtime->raiseTypeError("iterator is not an object");
   }
-  auto iterator = runtime->makeHandle<JSObject>(*iteratorRes);
+  Handle<JSObject> iterator =
+      Handle<JSObject>::vmcast(runtime->makeHandle(std::move(*iteratorRes)));
 
-  auto nextMethodRes = JSObject::getNamed_RJS(
+  CallResult<PseudoHandle<>> nextMethodRes = JSObject::getNamed_RJS(
       iterator, runtime, Predefined::getSymbolID(Predefined::next));
   if (LLVM_UNLIKELY(nextMethodRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -1174,12 +1176,13 @@ CallResult<IteratorRecord> getIterator(
 
   // We perform this check prior to returning, because every function in the JS
   // library which gets an iterator immediately calls the 'next' function.
-  if (!vmisa<Callable>(*nextMethodRes)) {
+  if (!vmisa<Callable>(nextMethodRes->get())) {
     return runtime->raiseTypeError(
         "'next' method on iterator must be callable");
   }
 
-  auto nextMethod = runtime->makeHandle<Callable>(*nextMethodRes);
+  auto nextMethod =
+      Handle<Callable>::vmcast(runtime->makeHandle(std::move(*nextMethodRes)));
 
   return IteratorRecord{iterator, nextMethod};
 }
@@ -1200,10 +1203,10 @@ CallResult<PseudoHandle<JSObject>> iteratorNext(
   if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  if (LLVM_UNLIKELY(!resultRes->isObject())) {
+  if (LLVM_UNLIKELY(!(*resultRes)->isObject())) {
     return runtime->raiseTypeError("iterator.next() did not return an object");
   }
-  return PseudoHandle<JSObject>::create(vmcast<JSObject>(*resultRes));
+  return PseudoHandle<JSObject>::vmcast(std::move(*resultRes));
 }
 
 CallResult<Handle<JSObject>> iteratorStep(
@@ -1219,7 +1222,7 @@ CallResult<Handle<JSObject>> iteratorStep(
   if (LLVM_UNLIKELY(completeRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  if (toBoolean(*completeRes)) {
+  if (toBoolean(completeRes->get())) {
     return Runtime::makeNullHandle<JSObject>();
   }
   return result;
@@ -1261,7 +1264,7 @@ ExecutionStatus iteratorClose(
   if (innerResultRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  if (!innerResultRes->isObject()) {
+  if (!(*innerResultRes)->isObject()) {
     return runtime->raiseTypeError(
         "iterator.return() did not return an object");
   }
@@ -1311,11 +1314,11 @@ CallResult<Handle<Callable>> speciesConstructor(
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto cons = *res;
-  if (cons.isUndefined()) {
+  PseudoHandle<> cons = std::move(*res);
+  if (cons->isUndefined()) {
     return defaultConstructor;
   }
-  if (!cons.isObject()) {
+  if (!cons->isObject()) {
     return runtime->raiseTypeError(
         "Constructor must be an object if it is not undefined");
   }
@@ -1405,8 +1408,8 @@ ordinaryHasInstance(Runtime *runtime, Handle<> constructor, Handle<> object) {
   }
 
   // 5. If Type(P) is not Object, throw a TypeError exception.
-  Handle<JSObject> ctorPrototype =
-      runtime->makeHandle(dyn_vmcast<JSObject>(*propRes));
+  Handle<JSObject> ctorPrototype = runtime->makeHandle(
+      PseudoHandle<JSObject>::dyn_vmcast(std::move(*propRes)));
   if (LLVM_UNLIKELY(!ctorPrototype)) {
     return runtime->raiseTypeError(
         "function's '.prototype' is not an object in 'instanceof'");
@@ -1453,14 +1456,14 @@ CallResult<bool> instanceOfOperator_RJS(
   }
 
   // 2. Let instOfHandler be GetMethod(C,@@hasInstance).
-  CallResult<HermesValue> instOfHandlerRes = JSObject::getNamed_RJS(
+  CallResult<PseudoHandle<>> instOfHandlerRes = JSObject::getNamed_RJS(
       Handle<JSObject>::vmcast(constructor),
       runtime,
       Predefined::getSymbolID(Predefined::SymbolHasInstance));
   if (LLVM_UNLIKELY(instOfHandlerRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto instOfHandler = runtime->makeHandle(*instOfHandlerRes);
+  auto instOfHandler = runtime->makeHandle(std::move(*instOfHandlerRes));
 
   // 4. If instOfHandler is not undefined, then
   if (!instOfHandler->isUndefined()) {
@@ -1473,7 +1476,7 @@ CallResult<bool> instanceOfOperator_RJS(
     if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    return toBoolean(*callRes);
+    return toBoolean(callRes->get());
   }
 
   // 6. If IsCallable(C) is false, throw a TypeError exception.
@@ -1503,8 +1506,8 @@ CallResult<bool> isRegExp(Runtime *runtime, Handle<> arg) {
     return ExecutionStatus::EXCEPTION;
   }
   // 4. If isRegExp is not undefined, return ToBoolean(isRegExp).
-  if (!propRes->isUndefined()) {
-    return toBoolean(propRes.getValue());
+  if (!(*propRes)->isUndefined()) {
+    return toBoolean(propRes->get());
   }
   // 5. If argument has a [[RegExpMatcher]] internal slot, return true.
   // 6. Return false.
@@ -1555,7 +1558,7 @@ CallResult<bool> isConcatSpreadable(Runtime *runtime, Handle<> value) {
     return false;
   }
 
-  CallResult<HermesValue> spreadable = JSObject::getNamed_RJS(
+  CallResult<PseudoHandle<>> spreadable = JSObject::getNamed_RJS(
       O,
       runtime,
       Predefined::getSymbolID(Predefined::SymbolIsConcatSpreadable));
@@ -1563,8 +1566,8 @@ CallResult<bool> isConcatSpreadable(Runtime *runtime, Handle<> value) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  if (!spreadable->isUndefined()) {
-    return toBoolean(*spreadable);
+  if (!(*spreadable)->isUndefined()) {
+    return toBoolean(spreadable->get());
   }
 
   return isArray(runtime, *O);
@@ -1600,7 +1603,7 @@ ExecutionStatus toPropertyDescriptor(
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    flags.enumerable = toBoolean(*propRes);
+    flags.enumerable = toBoolean(propRes->get());
     flags.setEnumerable = true;
   }
 
@@ -1618,7 +1621,7 @@ ExecutionStatus toPropertyDescriptor(
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    flags.configurable = toBoolean(*propRes);
+    flags.configurable = toBoolean(propRes->get());
     flags.setConfigurable = true;
   }
 
@@ -1636,7 +1639,7 @@ ExecutionStatus toPropertyDescriptor(
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    valueOrAccessor = *propRes;
+    valueOrAccessor = std::move(*propRes);
     flags.setValue = true;
   }
 
@@ -1654,7 +1657,7 @@ ExecutionStatus toPropertyDescriptor(
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    flags.writable = toBoolean(*propRes);
+    flags.writable = toBoolean(propRes->get());
     flags.setWritable = true;
   }
 
@@ -1674,9 +1677,9 @@ ExecutionStatus toPropertyDescriptor(
       return ExecutionStatus::EXCEPTION;
     }
     flags.setGetter = true;
-    auto getter = *propRes;
-    if (LLVM_LIKELY(!getter.isUndefined())) {
-      getterPtr = dyn_vmcast<Callable>(getter);
+    PseudoHandle<> getter = std::move(*propRes);
+    if (LLVM_LIKELY(!getter->isUndefined())) {
+      getterPtr = dyn_vmcast<Callable>(getter.get());
       if (LLVM_UNLIKELY(!getterPtr)) {
         return runtime->raiseTypeError(
             "Invalid property descriptor. Getter must be a function.");
@@ -1700,9 +1703,9 @@ ExecutionStatus toPropertyDescriptor(
       return ExecutionStatus::EXCEPTION;
     }
     flags.setSetter = true;
-    auto setter = *propRes;
-    if (LLVM_LIKELY(!setter.isUndefined())) {
-      setterPtr = dyn_vmcast<Callable>(setter);
+    PseudoHandle<> setter = std::move(*propRes);
+    if (LLVM_LIKELY(!setter->isUndefined())) {
+      setterPtr = PseudoHandle<Callable>::dyn_vmcast(std::move(setter));
       if (LLVM_UNLIKELY(!setterPtr)) {
         return runtime->raiseTypeError(
             "Invalid property descriptor. Setter must be a function.");

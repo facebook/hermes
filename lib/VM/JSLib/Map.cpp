@@ -105,14 +105,15 @@ Handle<JSObject> createMapConstructor(Runtime *runtime) {
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
-  auto propValue = runtime->ignoreAllocationFailure(JSObject::getNamed_RJS(
-      mapPrototype, runtime, Predefined::getSymbolID(Predefined::entries)));
+  PseudoHandle<> propValue =
+      runtime->ignoreAllocationFailure(JSObject::getNamed_RJS(
+          mapPrototype, runtime, Predefined::getSymbolID(Predefined::entries)));
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       mapPrototype,
       runtime,
       Predefined::getSymbolID(Predefined::SymbolIterator),
       dpf,
-      runtime->makeHandle<NativeFunction>(propValue)));
+      runtime->makeHandle<NativeFunction>(propValue.get())));
 
   dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.writable = 0;
@@ -159,7 +160,8 @@ mapConstructor(void *, Runtime *runtime, NativeArgs args) {
   }
 
   // ES6.0 23.1.1.1.7: Cache adder across all iterations of the loop.
-  auto adder = Handle<Callable>::dyn_vmcast(runtime->makeHandle(*propRes));
+  auto adder =
+      Handle<Callable>::dyn_vmcast(runtime->makeHandle(std::move(*propRes)));
   if (!adder) {
     return runtime->raiseTypeError("Property 'set' for Map is not callable");
   }

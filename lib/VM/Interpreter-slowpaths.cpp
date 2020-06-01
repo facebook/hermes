@@ -35,11 +35,12 @@ ExecutionStatus Interpreter::caseDirectEval(
   if (LLVM_UNLIKELY(existingEval == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto *nativeExistingEval = dyn_vmcast<NativeFunction>(*existingEval);
+  auto *nativeExistingEval = dyn_vmcast<NativeFunction>(existingEval->get());
   if (LLVM_UNLIKELY(
           !nativeExistingEval ||
           nativeExistingEval->getFunctionPtr() != hermes::vm::eval)) {
-    if (auto *existingEvalCallable = dyn_vmcast<Callable>(*existingEval)) {
+    if (auto *existingEvalCallable =
+            dyn_vmcast<Callable>(existingEval->get())) {
       auto evalRes = existingEvalCallable->executeCall1(
           runtime->makeHandle<Callable>(existingEvalCallable),
           runtime,
@@ -48,11 +49,12 @@ ExecutionStatus Interpreter::caseDirectEval(
       if (LLVM_UNLIKELY(evalRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      *result = *evalRes;
+      *result = evalRes->get();
+      evalRes->invalidate();
       return ExecutionStatus::RETURNED;
     }
     return runtime->raiseTypeErrorForValue(
-        runtime->makeHandle(*existingEval), " is not a function");
+        runtime->makeHandle(std::move(*existingEval)), " is not a function");
   }
 
   if (!input->isString()) {
@@ -194,12 +196,12 @@ ExecutionStatus Interpreter::caseIteratorNext(
     // Slow path, just run the full getComputedPropertyValue_RJS path.
     GCScopeMarkerRAII marker{runtime};
     Handle<> idxHandle{&O2REG(IteratorNext)};
-    CallResult<HermesValue> valueRes =
+    CallResult<PseudoHandle<>> valueRes =
         JSObject::getComputed_RJS(arr, runtime, idxHandle);
     if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    O1REG(IteratorNext) = *valueRes;
+    O1REG(IteratorNext) = valueRes->get();
     O2REG(IteratorNext) = HermesValue::encodeNumberValue(i + 1);
     return ExecutionStatus::RETURNED;
   }
@@ -226,12 +228,12 @@ ExecutionStatus Interpreter::caseIteratorNext(
     return ExecutionStatus::EXCEPTION;
   }
   Handle<JSObject> resultObj = runtime->makeHandle(std::move(*resultObjRes));
-  CallResult<HermesValue> doneRes = JSObject::getNamed_RJS(
+  CallResult<PseudoHandle<>> doneRes = JSObject::getNamed_RJS(
       resultObj, runtime, Predefined::getSymbolID(Predefined::done));
   if (LLVM_UNLIKELY(doneRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  if (toBoolean(*doneRes)) {
+  if (toBoolean(doneRes->get())) {
     // Done with iteration. Clear the iterator so that subsequent
     // instructions do not call next() or return().
     O2REG(IteratorNext) = HermesValue::encodeUndefinedValue();
@@ -239,12 +241,13 @@ ExecutionStatus Interpreter::caseIteratorNext(
   } else {
     // Not done iterating, so get the `value` property and store it
     // as the result.
-    CallResult<HermesValue> propRes = JSObject::getNamed_RJS(
+    CallResult<PseudoHandle<>> propRes = JSObject::getNamed_RJS(
         resultObj, runtime, Predefined::getSymbolID(Predefined::value));
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    O1REG(IteratorNext) = *propRes;
+    O1REG(IteratorNext) = propRes->get();
+    propRes->invalidate();
   }
   return ExecutionStatus::RETURNED;
 }

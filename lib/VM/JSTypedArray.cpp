@@ -363,7 +363,7 @@ CallResult<Handle<JSTypedArrayBase>> JSTypedArray<T, C>::_allocateSpeciesImpl(
   if (callRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto obj = runtime->makeHandle<JSObject>(*callRes);
+  auto obj = runtime->makeHandle<JSObject>(callRes->get());
   // validate that the constructed object is a TypedArray.
   if (JSTypedArrayBase::validateTypedArray(runtime, obj) ==
       ExecutionStatus::EXCEPTION) {

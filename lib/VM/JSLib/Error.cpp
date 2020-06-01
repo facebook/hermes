@@ -146,7 +146,7 @@ errorPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<> name = runtime->makeHandle(*propRes);
+  Handle<> name = runtime->makeHandle(std::move(*propRes));
   MutableHandle<StringPrimitive> nameStr{runtime};
   if (name->isUndefined()) {
     // If name is undefined, then let name be "Error"
@@ -167,7 +167,7 @@ errorPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
                PropOpFlags())) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<> message = runtime->makeHandle(*propRes);
+  Handle<> message = runtime->makeHandle(std::move(*propRes));
   MutableHandle<StringPrimitive> messageStr{runtime};
   if (message->isUndefined()) {
     // If msg is undefined, then let msg be the empty String.

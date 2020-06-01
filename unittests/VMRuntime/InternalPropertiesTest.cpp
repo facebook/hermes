@@ -21,21 +21,21 @@ using InternalPropertiesTest = RuntimeTestFixture;
 
 #define FORCE_DICTIONARY_MODE(obj)                                       \
   do {                                                                   \
-    EXPECT_CALLRESULT_VALUE(                                             \
-        true,                                                            \
+    EXPECT_CALLRESULT_BOOL_RAW(                                          \
+        TRUE,                                                            \
         JSObject::putNamed_RJS(                                          \
             obj,                                                         \
             runtime,                                                     \
             Predefined::getSymbolID(Predefined::Object),                 \
             runtime->makeHandle(HermesValue::encodeUndefinedValue())));  \
-    EXPECT_CALLRESULT_VALUE(                                             \
-        true,                                                            \
+    EXPECT_CALLRESULT_BOOL_RAW(                                          \
+        TRUE,                                                            \
         JSObject::deleteNamed(                                           \
             obj, runtime, Predefined::getSymbolID(Predefined::Object))); \
   } while (0)
 
 TEST_F(InternalPropertiesTest, NamedInternalPropertyTest) {
-  CallResult<HermesValue> propRes{ExecutionStatus::EXCEPTION};
+  CallResult<PseudoHandle<>> propRes{ExecutionStatus::EXCEPTION};
 
   Handle<JSObject> nullObj(runtime, nullptr);
   auto obj = runtime->makeHandle(JSObject::create(runtime, nullObj));
@@ -50,8 +50,8 @@ TEST_F(InternalPropertiesTest, NamedInternalPropertyTest) {
   auto propID = Predefined::getSymbolID(
       Predefined::InternalPropertyNamedPropForUnitTestOnly);
 
-  EXPECT_CALLRESULT_VALUE(
-      true,
+  EXPECT_CALLRESULT_BOOL_RAW(
+      TRUE,
       JSObject::defineOwnProperty(
           obj,
           runtime,

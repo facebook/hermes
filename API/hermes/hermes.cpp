@@ -1566,7 +1566,7 @@ jsi::Value HermesRuntimeImpl::getProperty(
     auto h = handle(obj);
     auto res = h->getComputed_RJS(h, &runtime_, stringHandle(name));
     checkStatus(res.getStatus());
-    return valueFromHermesValue(*res);
+    return valueFromHermesValue(res->get());
   });
 }
 
@@ -1579,7 +1579,7 @@ jsi::Value HermesRuntimeImpl::getProperty(
     vm::SymbolID nameID = phv(name).getSymbol();
     auto res = h->getNamedOrIndexed(h, &runtime_, nameID);
     checkStatus(res.getStatus());
-    return valueFromHermesValue(*res);
+    return valueFromHermesValue(res->get());
   });
 }
 
@@ -1750,7 +1750,7 @@ jsi::Value HermesRuntimeImpl::getValueAtIndex(const jsi::Array &arr, size_t i) {
         runtime_.makeHandle(vm::HermesValue::encodeNumberValue(i)));
     checkStatus(res.getStatus());
 
-    return valueFromHermesValue(*res);
+    return valueFromHermesValue(res->get());
   });
 }
 
@@ -1850,7 +1850,7 @@ jsi::Value HermesRuntimeImpl::call(
     auto callRes = vm::Callable::call(handle, &runtime_);
     checkStatus(callRes.getStatus());
 
-    return valueFromHermesValue(*callRes);
+    return valueFromHermesValue(callRes->get());
   });
 }
 
@@ -1891,7 +1891,7 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
     auto thisRes = vm::Callable::createThisForConstruct(funcHandle, &runtime_);
     // We need to capture this in case the ctor doesn't return an object,
     // we need to return this object.
-    auto objHandle = runtime_.makeHandle<vm::JSObject>(*thisRes);
+    auto objHandle = runtime_.makeHandle<vm::JSObject>(std::move(*thisRes));
 
     // 13.2.2.8:
     //    Let result be the result of calling the [[Call]] internal property of
@@ -1920,7 +1920,7 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
     //    If Type(result) is Object then return result
     // 13.2.2.10:
     //    Return obj
-    auto resultValue = *callRes;
+    auto resultValue = callRes->get();
     vm::HermesValue resultHValue =
         resultValue.isObject() ? resultValue : objHandle.getHermesValue();
     return valueFromHermesValue(resultHValue);
@@ -2027,10 +2027,10 @@ size_t HermesRuntimeImpl::getLength(vm::Handle<vm::ArrayImpl> arr) {
     auto res = vm::JSObject::getNamed_RJS(
         arr, &runtime_, vm::Predefined::getSymbolID(vm::Predefined::length));
     checkStatus(res.getStatus());
-    if (!res->isNumber()) {
+    if (!(*res)->isNumber()) {
       throw jsi::JSError(*this, "getLength: property 'length' is not a number");
     }
-    return static_cast<size_t>(res->getDouble());
+    return static_cast<size_t>((*res)->getDouble());
   });
 }
 
@@ -2041,11 +2041,11 @@ size_t HermesRuntimeImpl::getByteLength(vm::Handle<vm::JSArrayBuffer> arr) {
         &runtime_,
         vm::Predefined::getSymbolID(vm::Predefined::byteLength));
     checkStatus(res.getStatus());
-    if (!res->isNumber()) {
+    if (!(*res)->isNumber()) {
       throw jsi::JSError(
           *this, "getLength: property 'byteLength' is not a number");
     }
-    return static_cast<size_t>(res->getDouble());
+    return static_cast<size_t>((*res)->getDouble());
   });
 }
 

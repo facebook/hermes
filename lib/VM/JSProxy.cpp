@@ -43,20 +43,21 @@ findTrap(Handle<JSObject> selfHandle, Runtime *runtime, Predefined::Str name) {
   // 5. Let target be O.[[ProxyTarget]].
   // 6. Let trap be ? GetMethod(handler, « name »).
   Handle<JSObject> handler = runtime->makeHandle(handlerPtr);
-  CallResult<HermesValue> trapVal =
+  CallResult<PseudoHandle<>> trapVal =
       JSObject::getNamed_RJS(handler, runtime, Predefined::getSymbolID(name));
   if (trapVal == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  if (trapVal->isUndefined() || trapVal->isNull()) {
+  if ((*trapVal)->isUndefined() || (*trapVal)->isNull()) {
     return Runtime::makeNullHandle<Callable>();
   }
 
-  if (!vmisa<Callable>(*trapVal)) {
+  if (!vmisa<Callable>(trapVal->get())) {
     return runtime->raiseTypeErrorForValue(
-        Handle<>(runtime, *trapVal), " is not a Proxy trap function");
+        runtime->makeHandle(std::move(*trapVal)),
+        " is not a Proxy trap function");
   }
-  return runtime->makeHandle<Callable>(*trapVal);
+  return runtime->makeHandle<Callable>(std::move(trapVal->get()));
 }
 
 } // namespace detail
@@ -284,7 +285,7 @@ CallResult<PseudoHandle<JSObject>> JSProxy::getPrototypeOf(
     return JSObject::getPrototypeOf(target, runtime);
   }
   // 7. Let handlerProto be ? Call(trap, handler, « target »).
-  CallResult<HermesValue> handlerProtoRes = Callable::executeCall1(
+  CallResult<PseudoHandle<>> handlerProtoRes = Callable::executeCall1(
       *trapRes,
       runtime,
       runtime->makeHandle(detail::slots(*selfHandle).handler),
@@ -294,12 +295,12 @@ CallResult<PseudoHandle<JSObject>> JSProxy::getPrototypeOf(
   }
   // 8. If Type(handlerProto) is neither Object nor Null, throw a TypeError
   // exception.
-  if (!handlerProtoRes->isObject() && !handlerProtoRes->isNull()) {
+  if (!(*handlerProtoRes)->isObject() && !(*handlerProtoRes)->isNull()) {
     return runtime->raiseTypeError(
         "getPrototypeOf trap result is neither Object nor Null");
   }
   Handle<JSObject> handlerProto =
-      runtime->makeHandle(dyn_vmcast<JSObject>(*handlerProtoRes));
+      runtime->makeHandle(dyn_vmcast<JSObject>(handlerProtoRes->get()));
 
   // 9. Let extensibleTarget be ? IsExtensible(target).
   CallResult<bool> extensibleRes = JSObject::isExtensible(target, runtime);
@@ -346,7 +347,7 @@ CallResult<bool> JSProxy::setPrototypeOf(
   }
   // 8. Let booleanTrapResult be ToBoolean(? Call(trap, handler, « target, V
   // »)).
-  CallResult<HermesValue> booleanTrapRes = Callable::executeCall2(
+  CallResult<PseudoHandle<>> booleanTrapRes = Callable::executeCall2(
       *trapRes,
       runtime,
       runtime->makeHandle(detail::slots(*selfHandle).handler),
@@ -356,7 +357,7 @@ CallResult<bool> JSProxy::setPrototypeOf(
     return ExecutionStatus::EXCEPTION;
   }
   // 9. If booleanTrapResult is false, return false.
-  if (!toBoolean(*booleanTrapRes)) {
+  if (!toBoolean(booleanTrapRes->get())) {
     return false;
   }
   // 10. Let extensibleTarget be ? IsExtensible(target).
@@ -401,7 +402,7 @@ CallResult<bool> JSProxy::isExtensible(
     return JSObject::isExtensible(target, runtime);
   }
   // 7. Let booleanTrapResult be ToBoolean(? Call(trap, handler, « target »)).
-  CallResult<HermesValue> res = Callable::executeCall1(
+  CallResult<PseudoHandle<>> res = Callable::executeCall1(
       *trapRes,
       runtime,
       runtime->makeHandle(detail::slots(*selfHandle).handler),
@@ -416,7 +417,7 @@ CallResult<bool> JSProxy::isExtensible(
   }
   // 9. If SameValue(booleanTrapResult, targetResult) is false, throw
   //    a TypeError exception.
-  bool booleanTrapResult = toBoolean(*res);
+  bool booleanTrapResult = toBoolean(res->get());
   if (booleanTrapResult != *targetRes) {
     return runtime->raiseTypeError(
         "isExtensible trap returned different value than target");
@@ -448,7 +449,7 @@ CallResult<bool> JSProxy::preventExtensions(
     return JSObject::preventExtensions(target, runtime, opFlags);
   }
   // 7. Let booleanTrapResult be ToBoolean(? Call(trap, handler, « target »)).
-  CallResult<HermesValue> res = Callable::executeCall1(
+  CallResult<PseudoHandle<>> res = Callable::executeCall1(
       *trapRes,
       runtime,
       runtime->makeHandle(detail::slots(*selfHandle).handler),
@@ -456,7 +457,7 @@ CallResult<bool> JSProxy::preventExtensions(
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  bool booleanTrapResult = toBoolean(*res);
+  bool booleanTrapResult = toBoolean(res->get());
   if (booleanTrapResult) {
     // a. Let targetIsExtensible be ? target.[[IsExtensible]]().
     CallResult<bool> targetRes = JSObject::isExtensible(target, runtime);
@@ -503,7 +504,7 @@ CallResult<bool> JSProxy::getOwnProperty(
   // 8. Let trapResultObj be ? Call(trap, handler, « target, P »).
   // 9. If Type(trapResultObj) is neither Object nor Undefined, throw a
   // TypeError exception.
-  CallResult<HermesValue> trapResultRes = Callable::executeCall2(
+  CallResult<PseudoHandle<>> trapResultRes = Callable::executeCall2(
       *trapRes,
       runtime,
       runtime->makeHandle(detail::slots(*selfHandle).handler),
@@ -512,7 +513,7 @@ CallResult<bool> JSProxy::getOwnProperty(
   if (trapResultRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<> trapResultObj = runtime->makeHandle(*trapResultRes);
+  Handle<> trapResultObj = runtime->makeHandle(std::move(*trapResultRes));
   // 10. Let targetDesc be ? target.[[GetOwnProperty]](P).
   ComputedPropertyDescriptor targetDesc;
   MutableHandle<> targetValueOrAccessor{runtime};
@@ -657,7 +658,7 @@ CallResult<bool> JSProxy::defineOwnProperty(
   }
   // 9. Let booleanTrapResult be ToBoolean(? Call(trap, handler, « target, P,
   // descObj »)).
-  CallResult<HermesValue> trapResultRes = Callable::executeCall3(
+  CallResult<PseudoHandle<>> trapResultRes = Callable::executeCall3(
       *trapRes,
       runtime,
       runtime->makeHandle(detail::slots(*selfHandle).handler),
@@ -667,7 +668,7 @@ CallResult<bool> JSProxy::defineOwnProperty(
   if (trapResultRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  bool trapResult = toBoolean(*trapResultRes);
+  bool trapResult = toBoolean(trapResultRes->get());
   // 10. If booleanTrapResult is false, return false.
   if (!trapResult) {
     if (opFlags.getThrowOnError()) {
@@ -749,7 +750,7 @@ CallResult<bool> hasWithTrap(
   assert(isPropertyKey(nameValHandle) && "key is not a String or Symbol");
   // 8. Let booleanTrapResult be ToBoolean(? Call(trap, handler, « target, P
   // »)).
-  CallResult<HermesValue> trapResultRes = Callable::executeCall2(
+  CallResult<PseudoHandle<>> trapResultRes = Callable::executeCall2(
       trap,
       runtime,
       handler,
@@ -758,7 +759,7 @@ CallResult<bool> hasWithTrap(
   if (trapResultRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  bool trapResult = toBoolean(*trapResultRes);
+  bool trapResult = toBoolean(trapResultRes->get());
   // 9. If booleanTrapResult is false, then
   if (!trapResult) {
     //   a. Let targetDesc be ? target.[[GetOwnProperty]](P).
@@ -850,7 +851,7 @@ CallResult<bool> JSProxy::hasComputed(
 namespace {
 
 /// Common parts of getNamed/getComputed
-CallResult<HermesValue> getWithTrap(
+CallResult<PseudoHandle<>> getWithTrap(
     Runtime *runtime,
     Handle<> nameValHandle,
     Handle<Callable> trap,
@@ -860,7 +861,7 @@ CallResult<HermesValue> getWithTrap(
   // 1. Assert: IsPropertyKey(P) is true.
   assert(isPropertyKey(nameValHandle) && "key is not a String or Symbol");
   // 8. Let trapResult be ? Call(trap, handler, « target, P, Receiver »).
-  CallResult<HermesValue> trapResultRes = Callable::executeCall3(
+  CallResult<PseudoHandle<>> trapResultRes = Callable::executeCall3(
       trap,
       runtime,
       handler,
@@ -870,7 +871,7 @@ CallResult<HermesValue> getWithTrap(
   if (trapResultRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<> trapResult = runtime->makeHandle(*trapResultRes);
+  Handle<> trapResult = runtime->makeHandle(std::move(*trapResultRes));
   // 9. Let targetDesc be ? target.[[GetOwnProperty]](P).
   ComputedPropertyDescriptor targetDesc;
   MutableHandle<> targetValueOrAccessor{runtime};
@@ -904,12 +905,12 @@ CallResult<HermesValue> getWithTrap(
   }
 
   // 11. Return trapResult.
-  return *trapResult;
+  return {trapResult};
 }
 
 } // namespace
 
-CallResult<HermesValue> JSProxy::getNamed(
+CallResult<PseudoHandle<>> JSProxy::getNamed(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     SymbolID name,
@@ -939,7 +940,7 @@ CallResult<HermesValue> JSProxy::getNamed(
       receiver);
 }
 
-CallResult<HermesValue> JSProxy::getComputed(
+CallResult<PseudoHandle<>> JSProxy::getComputed(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     Handle<> nameValHandle,
@@ -983,7 +984,7 @@ CallResult<bool> setWithTrap(
   assert(isPropertyKey(nameValHandle) && "key is not a String or Symbol");
   // 8. Let booleanTrapResult be ToBoolean(? Call(trap, handler, « target, P, V,
   // Receiver »)).
-  CallResult<HermesValue> trapResultRes = Callable::executeCall4(
+  CallResult<PseudoHandle<>> trapResultRes = Callable::executeCall4(
       trap,
       runtime,
       handler,
@@ -995,7 +996,7 @@ CallResult<bool> setWithTrap(
     return ExecutionStatus::EXCEPTION;
   }
   // 9. If booleanTrapResult is false, return false.
-  if (!toBoolean(*trapResultRes)) {
+  if (!toBoolean(trapResultRes->get())) {
     return false;
   }
   // 10. Let targetDesc be ? target.[[GetOwnProperty]](P).
@@ -1115,7 +1116,7 @@ CallResult<bool> deleteWithTrap(
   assert(isPropertyKey(nameValHandle) && "key is not a String or Symbol");
   // 8. Let booleanTrapResult be ToBoolean(? Call(trap, handler, « target, P
   // »)).
-  CallResult<HermesValue> trapResultRes = Callable::executeCall2(
+  CallResult<PseudoHandle<>> trapResultRes = Callable::executeCall2(
       trap,
       runtime,
       handler,
@@ -1124,7 +1125,7 @@ CallResult<bool> deleteWithTrap(
   if (trapResultRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  bool trapResult = toBoolean(*trapResultRes);
+  bool trapResult = toBoolean(trapResultRes->getHermesValue());
   // 9. If booleanTrapResult is false, return false.
   if (!trapResult) {
     return false;
@@ -1317,7 +1318,7 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
     return filterKeys(selfHandle, *targetRes, runtime, okFlags);
   }
   // 7. Let trapResultArray be ? Call(trap, handler, « target »).
-  CallResult<HermesValue> trapResultArrayRes = Callable::executeCall1(
+  CallResult<PseudoHandle<>> trapResultArrayRes = Callable::executeCall1(
       *trapRes,
       runtime,
       runtime->makeHandle(detail::slots(*selfHandle).handler),
@@ -1325,12 +1326,13 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
   if (trapResultArrayRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  if (!vmisa<JSObject>(*trapResultArrayRes)) {
+  if (!vmisa<JSObject>(trapResultArrayRes->get())) {
     return runtime->raiseTypeErrorForValue(
-        Handle<>(runtime, *trapResultArrayRes),
+        runtime->makeHandle(std::move(*trapResultArrayRes)),
         " ownKeys trap result is not an Object");
   }
-  auto trapResultArray = runtime->makeHandle<JSObject>(*trapResultArrayRes);
+  auto trapResultArray =
+      runtime->makeHandle<JSObject>(std::move(trapResultArrayRes->get()));
   // 8. Let trapResult be ? CreateListFromArrayLike(trapResultArray, « String,
   // Symbol »)
   // 9. If trapResult contains any duplicate entries, throw a TypeError

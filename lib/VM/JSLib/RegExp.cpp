@@ -260,7 +260,7 @@ regExpConstructor(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<> newTarget = runtime->makeHandle(propRes.getValue());
+  Handle<> newTarget = runtime->makeHandle(std::move(*propRes));
   // 4. Else,
   // This is not a constructor call.
   if (!args.isConstructorCall()) {
@@ -280,8 +280,7 @@ regExpConstructor(void *, Runtime *runtime, NativeArgs args) {
       }
       // iii. If SameValue(newTarget, patternConstructor) is true, return
       // pattern.
-      if (isSameValue(
-              newTarget.getHermesValue(), patternConstructor.getValue())) {
+      if (isSameValue(newTarget.getHermesValue(), patternConstructor->get())) {
         return pattern.getHermesValue();
       }
     }
@@ -317,7 +316,7 @@ regExpConstructor(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    P = propRes.getValue();
+    P = std::move(propRes.getValue());
     //   c. If flags is undefined, then
     if (flags->isUndefined()) {
       //   i. Let F be Get(pattern, "flags").
@@ -327,7 +326,7 @@ regExpConstructor(void *, Runtime *runtime, NativeArgs args) {
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      F = propRes.getValue();
+      F = std::move(propRes.getValue());
     } else {
       //   d. Else, let F be flags.
       F = flags.getHermesValue();
@@ -382,7 +381,8 @@ CallResult<Handle<JSArray>> directRegExpExec(
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto lengthRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  auto lengthRes =
+      toLengthU64(runtime, runtime->makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(lengthRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -578,7 +578,7 @@ regExpExec(Runtime *runtime, Handle<JSObject> R, Handle<StringPrimitive> S) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto exec = runtime->makeHandle(propRes.getValue());
+  auto exec = runtime->makeHandle(std::move(propRes.getValue()));
   // 5. If IsCallable(exec) is true, then
   if (auto execCallable = Handle<Callable>::dyn_vmcast(exec)) {
     // a. Let result be Call(exec, R, «S»).
@@ -590,12 +590,12 @@ regExpExec(Runtime *runtime, Handle<JSObject> R, Handle<StringPrimitive> S) {
     }
     // c. If Type(result) is neither Object or Null, throw a TypeError
     // exception.
-    if (!callRes->isObject() && !callRes->isNull()) {
+    if (!(*callRes)->isObject() && !(*callRes)->isNull()) {
       return runtime->raiseTypeError(
           "The result of exec can only be object or null.");
     }
     // d. Return result.
-    return callRes;
+    return callRes.toCallResultHermesValue();
   }
   // 6. If R does not have a [[RegExpMatcher]] internal slot, throw a TypeError
   // exception.
@@ -986,7 +986,8 @@ regExpPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(source == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto patternRes = toString_RJS(runtime, runtime->makeHandle(*source));
+  auto patternRes =
+      toString_RJS(runtime, runtime->makeHandle(std::move(*source)));
   if (LLVM_UNLIKELY(patternRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -998,7 +999,8 @@ regExpPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(flagsObj == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto flagsRes = toString_RJS(runtime, runtime->makeHandle(*flagsObj));
+  auto flagsRes =
+      toString_RJS(runtime, runtime->makeHandle(std::move(*flagsObj)));
   if (LLVM_UNLIKELY(flagsRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1044,7 +1046,7 @@ regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto global = toBoolean(*propRes);
+  auto global = toBoolean(propRes->get());
   // 7. If global is false, then
   //   a. Return RegExpExec(rx, S).
   if (!global) {
@@ -1058,7 +1060,7 @@ regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(unicodePropRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  bool fullUnicode = toBoolean(unicodePropRes.getValue());
+  bool fullUnicode = toBoolean(unicodePropRes->get());
 
   // c. Let setStatus be Set(rx, "lastIndex", 0, true).
   // d. ReturnIfAbrupt(setStatus).
@@ -1110,7 +1112,7 @@ regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args) {
     if (propRes2 == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    propValue = propRes2.getValue();
+    propValue = std::move(propRes2.getValue());
     auto strRes2 = toString_RJS(runtime, propValue);
     if (strRes2 == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
@@ -1127,7 +1129,7 @@ regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args) {
           ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
-      propValue = propRes.getValue();
+      propValue = std::move(propRes.getValue());
       auto thisIndex = toLength(runtime, propValue);
       if (thisIndex == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
@@ -1174,7 +1176,8 @@ regExpPrototypeSymbolSearch(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<> previousLastIndex = runtime->makeHandle(propRes.getValue());
+  Handle<> previousLastIndex =
+      runtime->makeHandle(std::move(propRes.getValue()));
   // 7. Let status be Set(rx, "lastIndex", 0, true).
   auto status = setLastIndex(rx, runtime, 0);
   // 8. ReturnIfAbrupt(status).
@@ -1204,7 +1207,8 @@ regExpPrototypeSymbolSearch(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   return JSObject::getNamed_RJS(
-      resultObj, runtime, Predefined::getSymbolID(Predefined::index));
+             resultObj, runtime, Predefined::getSymbolID(Predefined::index))
+      .toCallResultHermesValue();
 }
 
 /// ES6.0 21.2.5.8
@@ -1249,7 +1253,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  bool global = toBoolean(propRes.getValue());
+  bool global = toBoolean(propRes->get());
 
   // Note: fullUnicode is only used if global is set.
   bool fullUnicode = false;
@@ -1264,7 +1268,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(unicodePropRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    fullUnicode = toBoolean(unicodePropRes.getValue());
+    fullUnicode = toBoolean(unicodePropRes->get());
 
     //   c. Let setStatus be Set(rx, "lastIndex", 0, true).
     auto setStatus = setLastIndex(rx, runtime, *zeroHandle);
@@ -1326,7 +1330,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      propValue = propRes.getValue();
+      propValue = std::move(propRes->get());
       auto strRes = toString_RJS(runtime, propValue);
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
@@ -1340,7 +1344,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
             ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
         }
-        propValue = propRes.getValue();
+        propValue = std::move(propRes.getValue());
         auto thisIndex = toLength(runtime, propValue);
         if (thisIndex == ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
@@ -1375,7 +1379,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    valueHandle = propRes.getValue();
+    valueHandle = std::move(propRes.getValue());
     auto lengthRes = toLength(runtime, valueHandle);
     if (LLVM_UNLIKELY(lengthRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1390,8 +1394,8 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto strRes =
-        toString_RJS(runtime, runtime->makeHandle(propRes.getValue()));
+    auto strRes = toString_RJS(
+        runtime, runtime->makeHandle(std::move(propRes.getValue())));
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1405,7 +1409,8 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto intRes = toInteger(runtime, runtime->makeHandle(propRes.getValue()));
+    auto intRes =
+        toInteger(runtime, runtime->makeHandle(std::move(propRes.getValue())));
     if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1437,7 +1442,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      capN = propRes.getValue();
+      capN = std::move(propRes.getValue());
       // iii. If capN is not undefined, then
       if (!capN->isUndefined()) {
         // 1. Let capN be ToString(capN).
@@ -1460,7 +1465,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
     // m. If functionalReplace is true, then
     MutableHandle<StringPrimitive> replacement{runtime};
     if (replaceFn) {
-      CallResult<HermesValue> callRes{ExecutionStatus::EXCEPTION};
+      CallResult<PseudoHandle<>> callRes{ExecutionStatus::EXCEPTION};
       {
         // i. Let replacerArgs be «matched».
         // Arguments: matched, captures, position, S.
@@ -1496,8 +1501,8 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
         }
       }
       // v. Let replacement be ToString(replValue).
-      auto strRes =
-          toString_RJS(runtime, runtime->makeHandle(callRes.getValue()));
+      auto strRes = toString_RJS(
+          runtime, runtime->makeHandle(std::move(callRes.getValue())));
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -1597,7 +1602,7 @@ regExpFlagsGetter(void *ctx, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(flagVal == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (toBoolean(*flagVal)) {
+    if (toBoolean(flagVal->get())) {
       result.push_back(f.flagChar);
     }
   }

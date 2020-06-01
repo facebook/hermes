@@ -852,7 +852,7 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto lenRes = toLength(runtime, runtime->makeHandle(*propRes));
+    auto lenRes = toLength(runtime, runtime->makeHandle(std::move(*propRes)));
     if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -882,11 +882,12 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
 
   // 13. Let elementKey be ToString(index).
   // 14. Let elementValue be Get(a, elementKey).
-  auto valueRes = JSObject::getComputed_RJS(a, runtime, indexHandle);
+  CallResult<PseudoHandle<>> valueRes =
+      JSObject::getComputed_RJS(a, runtime, indexHandle);
   if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto valueHandle = runtime->makeHandle(*valueRes);
+  Handle<> valueHandle = runtime->makeHandle(std::move(*valueRes));
 
   switch (self->iterationKind_) {
     case IterationKind::Key:

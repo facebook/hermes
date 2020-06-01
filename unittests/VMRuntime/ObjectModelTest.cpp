@@ -567,7 +567,7 @@ TEST_F(ObjectModelTest, NativeConstructorTest) {
       dateCons, runtime, Runtime::makeNullHandle<JSObject>());
   ASSERT_EQ(ExecutionStatus::RETURNED, crtRes.getStatus());
 
-  ASSERT_TRUE(dyn_vmcast<JSDate>(*crtRes));
+  ASSERT_TRUE(dyn_vmcast<JSDate>(crtRes->get()));
 }
 
 /// Test "computed" methods on a non-array object.
