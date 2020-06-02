@@ -3130,6 +3130,7 @@ Optional<ESTree::Node *> JSParserImpl::parseUnaryExpression() {
     case TokenKind::exclaim: {
       UniqueString *op = getTokenIdent(tok_->getKind());
       advance();
+      CHECK_RECURSION;
       auto expr = parseUnaryExpression();
       if (!expr)
         return None;
@@ -3154,6 +3155,7 @@ Optional<ESTree::Node *> JSParserImpl::parseUnaryExpression() {
     case TokenKind::minusminus: {
       UniqueString *op = getTokenIdent(tok_->getKind());
       advance();
+      CHECK_RECURSION;
       auto expr = parseUnaryExpression();
       if (!expr)
         return None;
@@ -3168,6 +3170,7 @@ Optional<ESTree::Node *> JSParserImpl::parseUnaryExpression() {
     case TokenKind::identifier:
       if (check(awaitIdent_) && paramAwait_) {
         advance();
+        CHECK_RECURSION;
         auto optExpr = parseUnaryExpression();
         if (!optExpr)
           return None;
