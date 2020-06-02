@@ -1239,24 +1239,24 @@ class WeakRefSlot {
     return static_cast<State>((reinterpret_cast<uintptr_t>(tagged_) & 3));
   }
 
-  void mark() {
+  void mark() LLVM_NO_SANITIZE("pointer-overflow") {
     assert(state() == Unmarked && "already marked");
     tagged_ += Marked;
   }
 
-  void unmark() {
+  void unmark() LLVM_NO_SANITIZE("pointer-overflow") {
     assert(state() == Marked && "not yet marked");
     tagged_ -= Marked;
   }
 
-  void free(WeakRefSlot *nextFree) {
+  void free(WeakRefSlot *nextFree) LLVM_NO_SANITIZE("pointer-overflow") {
     assert(state() == Unmarked && "cannot free a reachable slot");
     tagged_ = (char *)nextFree;
     tagged_ += Free;
     assert(state() == Free);
   }
 
-  WeakRefSlot *nextFree() const {
+  WeakRefSlot *nextFree() const LLVM_NO_SANITIZE("pointer-overflow") {
     assert(state() == Free);
     return (WeakRefSlot *)(tagged_ - Free);
   }
