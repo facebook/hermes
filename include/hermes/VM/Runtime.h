@@ -1378,7 +1378,7 @@ class ScopedNativeDepthReducer {
   Runtime *const runtime_;
   bool undo = false;
   // This is empirically good enough.
-  static constexpr int kDepthAdjustment = 2;
+  static constexpr int kDepthAdjustment = 3;
 
  public:
   explicit ScopedNativeDepthReducer(Runtime *runtime) : runtime_(runtime) {

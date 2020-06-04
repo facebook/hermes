@@ -2001,12 +2001,25 @@ void HermesRuntimeImpl::popScope(ScopeState *prv) {
 }
 
 void HermesRuntimeImpl::checkStatus(vm::ExecutionStatus status) {
-  if (LLVM_UNLIKELY(status == vm::ExecutionStatus::EXCEPTION)) {
-    jsi::Value exception = valueFromHermesValue(runtime_.getThrownValue());
-    runtime_.clearThrownValue();
-    vm::ScopedNativeDepthReducer reducer(&runtime_);
+  if (LLVM_LIKELY(status != vm::ExecutionStatus::EXCEPTION)) {
+    return;
+  }
+
+  jsi::Value exception = valueFromHermesValue(runtime_.getThrownValue());
+  runtime_.clearThrownValue();
+  // Here, we increment the depth to detect recursion in error handling.
+  vm::ScopedNativeDepthTracker depthTracker{&runtime_};
+  if (LLVM_LIKELY(!depthTracker.overflowed())) {
     throw jsi::JSError(*this, std::move(exception));
   }
+
+  runtime_.raiseStackOverflow(vm::Runtime::StackOverflowKind::NativeStack);
+  exception = valueFromHermesValue(runtime_.getThrownValue());
+  runtime_.clearThrownValue();
+  // Here, we give us a little more room so we can call into JS to
+  // populate the JSError members.
+  vm::ScopedNativeDepthReducer reducer(&runtime_);
+  throw jsi::JSError(*this, std::move(exception));
 }
 
 vm::HermesValue HermesRuntimeImpl::stringHVFromAscii(

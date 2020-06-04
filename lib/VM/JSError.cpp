@@ -117,6 +117,9 @@ errorStackGetter(void *, Runtime *runtime, NativeArgs args) {
     return HermesValue::encodeStringValue(
         runtime->getPredefinedString(Predefined::emptyString));
   }
+  // It's possible we're getting the stack for a stack overflow
+  // RangeError.  Allow ourselves a little extra room to do this.
+  vm::ScopedNativeDepthReducer reducer(runtime);
   SmallU16String<32> stack;
   if (JSError::constructStackTraceString(runtime, selfHandle, stack) ==
       ExecutionStatus::EXCEPTION) {
