@@ -101,33 +101,22 @@ ToType *dyn_vmcast_or_null(HermesValue val) {
 /// Return true if the value is an instance of ToType.
 template <class ToType>
 bool vmisa(HermesValue val) {
-  return dyn_vmcast<ToType>(val) != nullptr;
+  return val.isPointer() &&
+      llvm::isa<ToType>(static_cast<GCCell *>(val.getPointer()));
 }
 
 /// Return true if the cell is a pointer to an instance of ToType.
 template <class ToType>
 bool vmisa(GCCell *cell) {
-  return dyn_vmcast<ToType>(cell) != nullptr;
+  return llvm::isa<ToType>(cell);
 }
 
 /// Const version of vmisa.
 template <class ToType>
 bool vmisa(const GCCell *cell) {
-  return dyn_vmcast<ToType>(cell) != nullptr;
+  return llvm::isa<ToType>(cell);
 }
 
-/// Return true if the value, which could be nullptr, is an instance of ToType.
-template <class ToType>
-bool vmisa_or_null(HermesValue val) {
-  return dyn_vmcast_or_null<ToType>(val) != nullptr;
-}
-
-/// Return true if the cell, which could be nullptr, is a pointer to an instance
-/// of ToType.
-template <class ToType>
-bool vmisa_or_null(GCCell *cell) {
-  return dyn_vmcast_or_null<ToType>(cell) != nullptr;
-}
 /// @}
 
 } // namespace vm
