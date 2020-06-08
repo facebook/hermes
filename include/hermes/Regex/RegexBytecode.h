@@ -292,7 +292,8 @@ class RegexBytecodeStream {
   /// Whether our bytecode has been acquired.
   bool acquired_ = false;
 
-  /// Private type acting as a reallocation-safe pointer to an instruction.
+ public:
+  /// Type acting as a reallocation-safe pointer to an instruction.
   /// This stores a pointer to the vector and an offset, rather than a pointer
   /// into the vector contents.
   template <typename Instruction>
@@ -310,7 +311,6 @@ class RegexBytecodeStream {
         : bytes_(bytes), offset_(offset) {}
   };
 
- public:
   /// Emit an instruction.
   /// \return a dereferenceable "pointer" to the instruction in the bytecode
   /// stream.
