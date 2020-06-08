@@ -90,6 +90,9 @@ for (var i=0; i < 16; i++) longPattern += longPattern;
 try { new RegExp(longPattern, ""); } catch (err) { print(err.name); }
 // CHECK-NEXT: SyntaxError
 
+// Ensure very deep nesting produces an error.
+try { print(RegExp("(".repeat(50000) + "a" + ")".repeat(50000)).source.length); } catch (err) { print(err.name); }
+// CHECK-NEXT: SyntaxError
 
 try { new RegExp("*"); } catch (err) { print(err.name); }
 // CHECK-NEXT: SyntaxError
@@ -474,16 +477,6 @@ print(RegExp.prototype[Symbol.replace].name);
 // CHECK-NEXT: [Symbol.replace]
 print(/-/g[Symbol.replace]('2016-01-01', '.'));
 // CHECK-NEXT: 2016.01.01
-// test a RegExp with a lot of capture groups.
-var re_string = "(a)";
-for (var i = 0; i < 500; i++) {
-  re_string = "(" + re_string + ")";
-}
-re_string = re_string + "1";
-
-var re_long_replace = new RegExp(re_string, "g");
-print("a1".replace(re_long_replace, "b"));
-// CHECK-NEXT: b
 
 print("RegExp.prototype[Symbol.split]");
 // CHECK-LABEL: RegExp.prototype[Symbol.split]

@@ -54,6 +54,26 @@ class Parser {
   const uint32_t backRefLimit_;
   uint32_t maxBackRef_ = 0;
 
+  // Maximum depth of our parser. This is effectively the depth of C stack
+  // frames that the parser may use, and is the mechanism that prevents stack
+  // overflow for overly complex expressions.
+  static constexpr uint32_t kMaxParseDepth =
+#ifdef HERMES_LIMIT_STACK_DEPTH
+      128
+#elif defined(_MSC_VER) && defined(__clang__) && defined(HERMES_SLOW_DEBUG)
+      128
+#elif defined(_MSC_VER) && defined(HERMES_SLOW_DEBUG)
+      256
+#elif defined(_MSC_VER)
+      512
+#else
+      1024
+#endif
+      ;
+
+  // Current stack depth in our parser.
+  uint32_t parseDepth_ = 0;
+
   /// Set the error \p err, if not already set to a different error.
   /// Also move our input to end, to abort parsing.
   /// \return false, for convenience.
@@ -156,13 +176,29 @@ class Parser {
   /// ES6 21.2.2.3 Disjunction.
   void consumeDisjunction() {
     auto *cursor = re_->currentNode();
+
+    // All recursive productions (alternations and capture groups) pass through
+    // consumeDisjunction, therefore just tracking parse depth here is
+    // sufficient.
+    auto oldParseDepth = parseDepth_;
+    if (++parseDepth_ > kMaxParseDepth) {
+      setError(constants::ErrorType::PatternExceedsParseLimits);
+      return;
+    }
     consumeTerm();
     while (tryConsume('|')) {
+      // AlternationNodes are recursive structures, limit their depth to
+      // avoid stack overflows when optimising and emitting
+      if (++parseDepth_ > kMaxParseDepth) {
+        setError(constants::ErrorType::PatternExceedsParseLimits);
+        return;
+      }
       auto firstBranch = re_->spliceOut(cursor);
       consumeTerm();
       auto secondBranch = re_->spliceOut(cursor);
       re_->pushAlternation(move(firstBranch), move(secondBranch));
     }
+    parseDepth_ = oldParseDepth;
   }
 
   /// ES6 21.2.2.5 Term.
