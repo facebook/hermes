@@ -7,6 +7,7 @@
 
 #include "hermes/Regex/Compiler.h"
 #include "hermes/Regex/RegexTraits.h"
+#include "llvm/Support/SaveAndRestore.h"
 namespace hermes {
 namespace regex {
 
@@ -133,7 +134,7 @@ class Parser {
   /// Consume a single character which must be the next character in the string.
   /// \return the character.
   CharT consume(CharT c) {
-    assert(current_ != end_ && *current_ == c && "Could not consume char");
+    assert(check(c) && "Could not consume char");
     current_++;
     return c;
   }
@@ -154,10 +155,16 @@ class Parser {
   /// Attempt to consume a single character.
   /// \return true if the entire string could be consumed, false if not.
   bool tryConsume(CharT c) {
-    if (current_ == end_ || *current_ != c)
+    if (!check(c))
       return false;
     consume(c);
     return true;
+  }
+
+  /// Check if the next character to be consumed is \p c
+  /// \return true if the character is \p c, false if not.
+  bool check(CharT c) const {
+    return current_ != end_ && *current_ == c;
   }
 
   /// If the cursor is on a character (i.e. not at end_), and that character
@@ -175,30 +182,27 @@ class Parser {
 
   /// ES6 21.2.2.3 Disjunction.
   void consumeDisjunction() {
-    auto *cursor = re_->currentNode();
-
     // All recursive productions (alternations and capture groups) pass through
     // consumeDisjunction, therefore just tracking parse depth here is
     // sufficient.
-    auto oldParseDepth = parseDepth_;
+    llvm::SaveAndRestore<uint32_t> saveDepth(parseDepth_);
     if (++parseDepth_ > kMaxParseDepth) {
       setError(constants::ErrorType::PatternExceedsParseLimits);
       return;
     }
+    auto *cursor = re_->currentNode();
     consumeTerm();
-    while (tryConsume('|')) {
-      // AlternationNodes are recursive structures, limit their depth to
-      // avoid stack overflows when optimising and emitting
-      if (++parseDepth_ > kMaxParseDepth) {
-        setError(constants::ErrorType::PatternExceedsParseLimits);
-        return;
-      }
-      auto firstBranch = re_->spliceOut(cursor);
-      consumeTerm();
-      auto secondBranch = re_->spliceOut(cursor);
-      re_->pushAlternation(move(firstBranch), move(secondBranch));
+    // Avoid creating an AlternationNode if we don't need to
+    if (!check('|')) {
+      return;
     }
-    parseDepth_ = oldParseDepth;
+    std::vector<NodeList> alternatives;
+    alternatives.push_back(re_->spliceOut(cursor));
+    while (tryConsume('|')) {
+      consumeTerm();
+      alternatives.push_back(re_->spliceOut(cursor));
+    }
+    re_->pushAlternation(std::move(alternatives));
   }
 
   /// ES6 21.2.2.5 Term.

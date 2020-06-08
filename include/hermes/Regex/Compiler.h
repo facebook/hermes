@@ -1165,7 +1165,7 @@ class Regex {
   void pushChar(CodePoint c);
   void pushCharClass(CharacterClass c);
   void pushBackRef(uint32_t i);
-  void pushAlternation(NodeList left, NodeList right);
+  void pushAlternation(std::vector<NodeList> alternatives);
   void pushMarkedSubexpression(NodeList, uint32_t mexp);
   void pushWordBoundary(bool);
   void pushLookaround(NodeList, uint16_t, uint16_t, bool, bool);
@@ -1386,10 +1386,7 @@ void Regex<Traits>::pushBackRef(uint32_t i) {
 }
 
 template <class Traits>
-void Regex<Traits>::pushAlternation(NodeList left, NodeList right) {
-  std::vector<NodeList> alternatives;
-  alternatives.push_back(std::move(left));
-  alternatives.push_back(std::move(right));
+void Regex<Traits>::pushAlternation(std::vector<NodeList> alternatives) {
   appendNode<AlternationNode>(std::move(alternatives));
 }
 

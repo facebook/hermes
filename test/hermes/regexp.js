@@ -94,6 +94,10 @@ try { new RegExp(longPattern, ""); } catch (err) { print(err.name); }
 try { print(RegExp("(".repeat(50000) + "a" + ")".repeat(50000)).source.length); } catch (err) { print(err.name); }
 // CHECK-NEXT: SyntaxError
 
+// Ensure a large number of alternations does not produce an error
+try { print(RegExp("a" + "|a".repeat(50000)).source.length); } catch (err) { print(err.name); }
+// CHECK-NEXT: 100001
+
 try { new RegExp("*"); } catch (err) { print(err.name); }
 // CHECK-NEXT: SyntaxError
 try { new RegExp("[z-a]"); } catch (err) { print(err.name); }

@@ -251,3 +251,24 @@ print(/./us);
 // CHECK-NEXT:   Header: marked: 0 loops: 0 flags: 24 constraints: 4
 // CHECK-NEXT:   0000  U16MatchAny
 // CHECK-NEXT:   0001  Goal
+
+print(/a|b|c|d|e|f/);
+// CHECK:       26: /a|b|c|d|e|f/
+// CHECK-NEXT:    Header: marked: 0 loops: 0 flags: 0 constraints: 4
+// CHECK-NEXT:    0000  Alternation: Target 0x0e, constraints 4,4
+// CHECK-NEXT:    0007  MatchChar8: 'a'
+// CHECK-NEXT:    0009  Jump32: 0x48
+// CHECK-NEXT:    000e  Alternation: Target 0x1c, constraints 4,4
+// CHECK-NEXT:    0015  MatchChar8: 'b'
+// CHECK-NEXT:    0017  Jump32: 0x48
+// CHECK-NEXT:    001c  Alternation: Target 0x2a, constraints 4,4
+// CHECK-NEXT:    0023  MatchChar8: 'c'
+// CHECK-NEXT:    0025  Jump32: 0x48
+// CHECK-NEXT:    002a  Alternation: Target 0x38, constraints 4,4
+// CHECK-NEXT:    0031  MatchChar8: 'd'
+// CHECK-NEXT:    0033  Jump32: 0x48
+// CHECK-NEXT:    0038  Alternation: Target 0x46, constraints 4,4
+// CHECK-NEXT:    003f  MatchChar8: 'e'
+// CHECK-NEXT:    0041  Jump32: 0x48
+// CHECK-NEXT:    0046  MatchChar8: 'f'
+// CHECK-NEXT:    0048  Goal
