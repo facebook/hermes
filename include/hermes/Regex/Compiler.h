@@ -491,34 +491,48 @@ class AlternationNode final : public Node {
   using Super = Node;
 
   // The alternatives of this alternation.
-  // In an expression like /a|b/, firstBranch_ is a and secondBranch_ is b.
-  NodeList first_;
-  NodeList second_;
-
-  // We record the match constraints for our branches, so we can prune
-  // impossible alternatives.
-  MatchConstraintSet firstConstraints_;
-  MatchConstraintSet secondConstraints_;
+  // In an expression like /a|b|c/ this vector will contain NodeLists for a, b,
+  // and c.
+  std::vector<NodeList> alternatives_;
+  // Contains the constraints applicable to an element.
+  std::vector<MatchConstraintSet> elementConstraints_;
+  // Each element i in restConstraints_ contains the constraints applicable to
+  // the sublist starting at i. For instance, the first element contains the
+  // intersection of the constraints for all nodes, whereas the last element
+  // contains the constraint for only that element.
+  std::vector<MatchConstraintSet> restConstraints_;
 
  public:
   /// Constructor for an Alternation.
-  /// Accepts the two branches \p firstBranch and \p secondBranch
-  AlternationNode(NodeList first, NodeList second)
-      : first_(move(first)),
-        second_(move(second)),
-        firstConstraints_(matchConstraintsForList(first_)),
-        secondConstraints_(matchConstraintsForList(second_)) {}
+  /// Accepts a list of NodeLists in \p alternatives.
+  AlternationNode(std::vector<NodeList> alternatives)
+      : alternatives_(std::move(alternatives)),
+        elementConstraints_(alternatives_.size()),
+        restConstraints_(alternatives_.size()) {
+    assert(alternatives_.size() > 1 && "Must give at least 2 alternatives");
 
-  /// Alternations are constrained by the intersection of their branches'
-  /// constraints.
+    // restConstraints_ needs to be set in reverse order, since each element
+    // depends on the element after it.
+    elementConstraints_.back() = matchConstraintsForList(alternatives_.back());
+    restConstraints_.back() = elementConstraints_.back();
+
+    for (auto i = alternatives_.size() - 1; i-- > 0;) {
+      elementConstraints_[i] = matchConstraintsForList(alternatives_[i]);
+      restConstraints_[i] = restConstraints_[i + 1] & elementConstraints_[i];
+    }
+  }
+
+  /// Alternations are constrained by the intersection of all their
+  /// alternatives' constraints. This intersection is equal to the first element
+  /// in restConstraints.
   virtual MatchConstraintSet matchConstraints() const override {
-    MatchConstraintSet result = firstConstraints_ & secondConstraints_;
-    return result | Super::matchConstraints();
+    return restConstraints_.front() | Super::matchConstraints();
   }
 
   virtual void optimizeNodeContents(constants::SyntaxFlags flags) override {
-    optimizeNodeList(first_, flags);
-    optimizeNodeList(second_, flags);
+    for (auto &alternative : alternatives_) {
+      optimizeNodeList(alternative, flags);
+    }
   }
 
   void emit(RegexBytecodeStream &bcs) const override {
@@ -527,19 +541,31 @@ class AlternationNode final : public Node {
     //     |____________________________|____^               ^
     //                                  |____________________|
     // Where the Alternation has a JumpOffset to its secondary branch.
-    auto altInsn = bcs.emit<AlternationInsn>();
-    altInsn->primaryConstraints = firstConstraints_;
-    altInsn->secondaryConstraints = secondConstraints_;
-    compile(first_, bcs);
-    auto firstBranchCont = bcs.emit<Jump32Insn>();
-    altInsn->secondaryBranch = bcs.currentOffset();
-    compile(second_, bcs);
-    firstBranchCont->target = bcs.currentOffset();
+    std::vector<RegexBytecodeStream::InstructionWrapper<Jump32Insn>> jumps;
+    jumps.reserve(alternatives_.size());
+    // Do not emit an alternation instruction for the very last alternative
+    // because it is simply the secondary option of the penultimate
+    // alternative.
+    for (size_t i = 0; i < alternatives_.size() - 1; ++i) {
+      auto altInsn = bcs.emit<AlternationInsn>();
+      altInsn->primaryConstraints = elementConstraints_[i];
+      altInsn->secondaryConstraints = restConstraints_[i + 1];
+      compile(alternatives_[i], bcs);
+      jumps.push_back(bcs.emit<Jump32Insn>());
+      altInsn->secondaryBranch = bcs.currentOffset();
+    }
+    compile(alternatives_.back(), bcs);
+    // Set the jump instruction for every alternation to jump to the end of the
+    // block.
+    for (auto &jump : jumps) {
+      jump->target = bcs.currentOffset();
+    }
   }
 
   void reverseChildren() override {
-    reverseNodeList(first_);
-    reverseNodeList(second_);
+    for (auto &alternative : alternatives_) {
+      reverseNodeList(alternative);
+    }
   }
 };
 
@@ -1361,7 +1387,10 @@ void Regex<Traits>::pushBackRef(uint32_t i) {
 
 template <class Traits>
 void Regex<Traits>::pushAlternation(NodeList left, NodeList right) {
-  appendNode<AlternationNode>(move(left), move(right));
+  std::vector<NodeList> alternatives;
+  alternatives.push_back(std::move(left));
+  alternatives.push_back(std::move(right));
+  appendNode<AlternationNode>(std::move(alternatives));
 }
 
 template <class Traits>
