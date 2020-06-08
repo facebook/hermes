@@ -28,7 +28,9 @@ On Mac via Homebrew:
 Hermes will place its build files in the current directory by default.
 You can also give explicit source and build directories, use `--help` on the build scripts to see how.
 
-Create a base directory to work in, e.g. ~/workspace, and cd into it. Follow the steps below to generate the Hermes build system:
+Create a base directory to work in, e.g. `~/workspace`, and cd into it.
+(Tip: avoid naming it `hermes`, as `hermes` will be one of several subdirectories in the workspace).
+After `cd`ing, follow the steps below to generate the Hermes build system:
 
     git clone https://github.com/facebook/hermes.git
     hermes/utils/build/configure.py
@@ -36,6 +38,13 @@ Create a base directory to work in, e.g. ~/workspace, and cd into it. Follow the
 The build system has now been generated in the `build` directory. To perform the build:
 
     cd build && ninja
+
+## Release Build
+
+The above instructions create an unoptimized debug build. The `--distribute` flag will enable a release build, in the `build_release` directory. Example:
+
+    hermes/utils/build/configure.py --distribute
+    cd build_release && ninja
 
 ## Building on Windows
 
@@ -64,14 +73,6 @@ The primary binary is the `hermes` tool, which will be found at `build/bin/herme
 To run the Hermes test suite:
 
     ninja check-hermes
-
-
-## Release Build
-
-The above instructions create an unoptimized debug build. The `--distribute` flag will enable a release build, in the `build_release` directory. Example:
-
-    hermes/utils/build/configure.py --distribute
-    cd build_release && ninja
 
 ### Other Tools
 

@@ -12,7 +12,15 @@ A Hermes npm package combines:
 * Hermes CLI tools in binary form. These are used to compile JavaScript to bytecode when packaging up an app release.
 * Pre-compiled release and debug versions of the native Hermes library for Android targets.
 
+The interface between Hermes and React Native changes over time, so if you are
+not using the master branch of both, you may want to consider matching the
+Hermes version with your app's React Native version. E.g. `git checkout v0.5.0`
+to build for `react-native@0.63`.
+
 ### Dependencies
+
+To make a Hermes npm package, first follow the instructions on [building Hermes](BuildingAndRunning.md) to create a **Release Build** of Hermes. This will be the source of CLI binaries for use in the npm.
+
 As we will be compiling native libraries for Android, we first need to setup a suitable development environment. This subject is covered in more detail elsewhere, for example in the guide on [building React Native From Source](https://github.com/facebook/react-native/wiki/Building-from-source). However, a rough guide to the external dependencies for macOS/Linux is as follows:
 
 * Node.js
@@ -28,32 +36,33 @@ Note the Android SDK is typically downloaded and installed automatically as part
 
 Ensure the following variables are present and set correctly in your environment:
 
-* `ANDROID_NDK` - the root of your Android NDK install. E.g. "/opt/android_ndk/r15c".
-* `ANDROID_SDK`, `ANDROID_HOME`, and `ANDROID_SDK_ROOT` - the root of your Android SDK install. E.g. "/opt/android_sdk".
-* `JAVA_HOME` - the root of your Java Runtime Environment (JRE) install. Note a JRE instance is typically available in a sub-directory of a JDK install. E.g. "/opt/jdk-1.8/jre".
-* `HERMES_WS_DIR` - the same workspace used to make a build Hermes CLI tools.
+* `ANDROID_NDK` - the root of your Android NDK install. E.g. `/opt/android_ndk/r15c`.
+* `ANDROID_SDK`, `ANDROID_HOME`, and `ANDROID_SDK_ROOT` - the root of your Android SDK install. E.g. `/opt/android_sdk`.
+* `JAVA_HOME` - the root of your Java Runtime Environment (JRE) install. Note a JRE instance is typically available in a sub-directory of a JDK install. E.g. `/opt/jdk-1.8/jre`
+* `HERMES_WS_DIR` - The root of your workspace where the `hermes` git checkout directory and `build_release` Release Build directory should already be subdirectories. E.g. `$HOME/workspace`.
 
 Make sure the `node`, `yarn`, and `gradle` binaries are available in your system PATH.
 
 ### Package build
 
-To make a Hermes npm package, first follow the instructions on [building Hermes](BuildingAndRunning.md) to create a **release** version of Hermes. This will be the source of CLI binaries for use in the npm.
-
-Next, we need to cross-compile LLVM for various different Android targets. This step only needs to be run once, and may take quite some time:
+To make a Hermes npm package, check that you already followed the [Building Hermes](BuildingAndRunning.md) instructions for a **Release Build**. The `build_release` directory will be the source of CLI binaries for use in the npm.
 
 ```shell
-(cd $HERMES_WS_DIR && ./hermes/utils/crosscompile_llvm.sh)
-```
-
-Once cross-compiled LLVM is built we can build Hermes libraries for various Android platforms, and package everything together:
-
-```shell
+# Package CLI binaries for the current platform
 (cd $HERMES_WS_DIR/build_release && ninja github-cli-release)
+
+# Package Android libraries
 (cd $HERMES_WS_DIR/hermes/android && gradle githubRelease)
+
+# Copy the above to the NPM directory
 cp $HERMES_WS_DIR/build_android/distributions/hermes-runtime-android-v*.tar.gz $HERMES_WS_DIR/hermes/npm
 cp $HERMES_WS_DIR/build_release/github/hermes-cli-*-v*.tar.gz $HERMES_WS_DIR/hermes/npm
-(cd $HERMES_WS_DIR/hermes/npm && yarn install && yarn run prepack-dev)
-(cd $HERMES_WS_DIR/hermes/npm && yarn link)
+
+# Create NPMs
+(cd $HERMES_WS_DIR/hermes/npm && yarn install && yarn run create-npms-dev)
+
+# Link the package
+(cd $HERMES_WS_DIR/hermes/npm/hermes-engine && yarn link)
 ```
 
 The final `yarn link` command in this sequence registers your custom build of Hermes to Yarn for inclusion in local projects. It only needs to be run once, although running it again is benign.
@@ -65,7 +74,7 @@ To use your custom Hermes npm package in an app, first make sure the app works w
 Next, link the Hermes npm package into the React Native package in your app. For example, assuming your project is in the directory `$AWESOME_PROJECT` you would run this command:
 
 ```shell
-(cd $AWESOME_PROJECT/node_modules/react-native && yarn link hermes-engine)
+(cd ${AWESOME_PROJECT?}/node_modules/react-native && yarn link hermes-engine)
 ```
 
 You can now develop your app in the normal way.
