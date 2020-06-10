@@ -33,12 +33,6 @@ void HandleRootOwner::markGCScopes(SlotAcceptor &acceptor) {
     gcScope->mark(acceptor);
 }
 
-void HandleRootOwner::markWeakRefs(WeakRefAcceptor &acceptor) {
-  for (auto &weakRef : weakRefs_) {
-    acceptor.accept(weakRef);
-  }
-}
-
 //===----------------------------------------------------------------------===//
 // class GCScope
 

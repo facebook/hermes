@@ -378,6 +378,10 @@ std::list<detail::WeakRefKey *> GCBase::buildKeyList(
   return res;
 }
 
+WeakRefMutex &GCBase::weakRefMutex() {
+  return weakRefMutex_;
+}
+
 /*static*/
 double GCBase::clockDiffSeconds(TimePoint start, TimePoint end) {
   std::chrono::duration<double> elapsed = (end - start);

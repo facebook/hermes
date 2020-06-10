@@ -1702,20 +1702,22 @@ jsi::Array HermesRuntimeImpl::getPropertyNames(const jsi::Object &obj) {
 
 jsi::WeakObject HermesRuntimeImpl::createWeakObject(const jsi::Object &obj) {
   return maybeRethrow([&] {
-    return addWeak(
-        vm::WeakRef<vm::HermesValue>(&(runtime_.getHeap()), phv(obj)));
+    vm::WeakRefLock lk{runtime_.getHeap().weakRefMutex()};
+    return addWeak(vm::WeakRef<vm::HermesValue>(&runtime_.getHeap(), phv(obj)));
   });
 }
 
 jsi::Value HermesRuntimeImpl::lockWeakObject(jsi::WeakObject &wo) {
-  const vm::WeakRef<vm::HermesValue> &wr = wrhv(wo);
-  if (!wr.isValid()) {
+  vm::WeakRefLock lk{runtime_.getHeap().weakRefMutex()};
+  vm::WeakRef<vm::HermesValue> &wr = wrhv(wo);
+  const auto optValue = wr.unsafeGetOptional(&runtime_.getHeap());
+  if (!optValue) {
     return jsi::Value();
   }
-
-  vm::HermesValue hv = wr.unsafeGetHermesValue();
-  assert(hv.isObject() && "jsi::WeakObject referent is not an Object");
-  return add<jsi::Object>(hv);
+  assert(
+      optValue.getValue().isObject() &&
+      "jsi::WeakObject referent is not an Object");
+  return add<jsi::Object>(optValue.getValue());
 }
 
 jsi::Array HermesRuntimeImpl::createArray(size_t length) {

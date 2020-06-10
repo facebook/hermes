@@ -217,7 +217,7 @@ class SamplingProfiler {
   /// \return total number of stack frames captured in \p sampleStorage
   /// including existing frames before \p startIndex.
   uint32_t walkRuntimeStack(
-      const Runtime *runtime,
+      Runtime *runtime,
       StackTrace &sampleStorage,
       uint32_t startIndex = 0);
 

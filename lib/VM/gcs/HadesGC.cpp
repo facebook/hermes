@@ -412,7 +412,8 @@ class HadesGC::EvacAcceptor final : public SlotAcceptorDefault {
 class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
                                     public WeakRefAcceptor {
  public:
-  MarkAcceptor(GC &gc) : SlotAcceptorDefault{gc} {
+  MarkAcceptor(GC &gc)
+      : SlotAcceptorDefault{gc}, weakRefLock_{gc.weakRefMutex()} {
     markedSymbols_.resize(gc.gcCallbacks_->getSymbolsEnd(), false);
   }
 
@@ -463,10 +464,11 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
     // Unfortunately, this weak ref marking must be done during the initial
     // mark phase, because sweeping has to happen after weak references have
     // been nulled out in a concurrent sweeper.
+    WeakRefSlot *slot = wr.unsafeGetSlot(mutexRef());
     assert(
-        wr.unsafeGetSlot()->state() != WeakSlotState::Free &&
+        slot->state() != WeakSlotState::Free &&
         "marking a freed weak ref slot");
-    wr.unsafeGetSlot()->mark();
+    slot->mark();
   }
 
   void drainMarkWorklist(GC *gc) {
@@ -487,6 +489,10 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
     return markedSymbols_;
   }
 
+  const WeakRefMutex &mutexRef() override {
+    return gc.weakRefMutex();
+  }
+
  private:
   std::stack<GCCell *, std::vector<GCCell *>> worklist_;
 
@@ -498,6 +504,8 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
   /// possibly be garbage. At the end of the collection, it is guaranteed that
   /// the falses are garbage.
   std::vector<bool> markedSymbols_;
+
+  WeakRefLock weakRefLock_;
 
   void push(GCCell *cell) {
     HeapSegment::setCellMarkBit(cell);
@@ -511,7 +519,9 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
 };
 
 class HadesGC::WeakRootAcceptor final : public WeakRootAcceptorDefault {
-  using WeakRootAcceptorDefault::WeakRootAcceptorDefault;
+ public:
+  WeakRootAcceptor(GC &gc)
+      : WeakRootAcceptorDefault(gc), weakRefLock_(gc.weakRefMutex()) {}
 
   void acceptWeak(void *&ptr) override {
     if (ptr == nullptr) {
@@ -530,11 +540,19 @@ class HadesGC::WeakRootAcceptor final : public WeakRootAcceptorDefault {
 
   void accept(WeakRefBase &wr) override {
     // Duplicated from MarkAcceptor, since some weak roots are also weak refs.
+    WeakRefSlot *slot = wr.unsafeGetSlot(mutexRef());
     assert(
-        wr.unsafeGetSlot()->state() != WeakSlotState::Free &&
+        slot->state() != WeakSlotState::Free &&
         "marking a freed weak ref slot");
-    wr.unsafeGetSlot()->mark();
+    slot->mark();
   }
+
+  const WeakRefMutex &mutexRef() override {
+    return gcForWeakRootDefault.weakRefMutex();
+  }
+
+ private:
+  WeakRefLock weakRefLock_;
 };
 
 HadesGC::HadesGC(
@@ -754,6 +772,7 @@ bool HadesGC::canAllocExternalMemory(uint32_t size) {
 void HadesGC::markSymbol(SymbolID symbolID) {}
 
 WeakRefSlot *HadesGC::allocWeakSlot(HermesValue init) {
+  assert(weakRefMutex() && "Mutex must be held");
   weakPointers_.push_back({init});
   return &weakPointers_.back();
 }
@@ -1188,6 +1207,7 @@ bool HadesGC::inOldGen(const void *p) const {
 #ifdef HERMES_SLOW_DEBUG
 
 void HadesGC::checkWellFormed() {
+  WeakRefLock lk{weakRefMutex()};
   CheckHeapWellFormedAcceptor acceptor(*this);
   {
     DroppingAcceptor<CheckHeapWellFormedAcceptor> nameAcceptor{acceptor};

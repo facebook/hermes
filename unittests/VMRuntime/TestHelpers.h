@@ -260,7 +260,7 @@ struct DummyRuntime final : public HandleRootOwner,
   GC gc;
   std::vector<GCCell **> pointerRoots{};
   std::vector<HermesValue *> valueRoots{};
-  std::vector<void **> weakRoots{};
+  std::vector<WeakRoot<void> *> weakRoots{};
   std::function<void(WeakRefAcceptor &)> markExtraWeak{};
 
   /// Create a DummyRuntime with the default parameters.

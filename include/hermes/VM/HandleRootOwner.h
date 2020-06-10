@@ -112,20 +112,6 @@ class HandleRootOwner {
     return topGCScope_;
   }
 
-  /// Allocate a new WeakRef slot in the GC and add it to the internal weakRefs_
-  /// list.
-  WeakRef<HermesValue> pushWeakRef(GC *gc, Handle<> handle) {
-    weakRefs_.emplace_back(gc, handle);
-    return weakRefs_.back();
-  }
-
-  /// Remove the last element of the weakRefs_ list.
-  /// \param weakRef must be the most recently created live weakRef.
-  void popWeakRef(WeakRef<HermesValue> weakRef) {
-    assert(weakRef == weakRefs_.back() && "WeakRefs popped out of order");
-    weakRefs_.pop_back();
-  }
-
  protected:
   /// Used for efficient construction of Handle<>(..., nullptr).
   static PinnedHermesValue nullPointer_;
@@ -150,10 +136,6 @@ class HandleRootOwner {
 
   /// The top-most GC scope.
   GCScope *topGCScope_{};
-
-  /// The active WeakRefs that have been created using WeakRefHolders.
-  /// These are marked during GC to prevent collection of their WeakRefSlots.
-  std::vector<WeakRef<HermesValue>> weakRefs_{};
 
   /// Allocate a new handle in the top-most GCScope and initialize with
   /// \p value.

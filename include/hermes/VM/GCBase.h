@@ -147,6 +147,12 @@ class Deserializer;
 ///   be in the heap).  The value is may be null.  Execute a write barrier.
 ///      void writeBarrier(void *loc, void *value);
 ///
+///   A weak ref is about to be read. Executes a read barrier so the GC can
+///   take action such as extending the lifetime of the reference. The
+///   HermesValue version does nothing if the value isn't a pointer.
+///      void weakRefReadBarrier(void *value);
+///      void weakRefReadBarrier(HermesValue value);
+///
 ///   We copied HermesValues into the given region.  Note that \p numHVs is
 ///   the number of HermesValues in the the range, not the char length.
 ///   Do any necessary barriers.
@@ -676,7 +682,7 @@ class GCBase {
   void creditExternalMemory(GCCell *alloc, uint32_t size) {}
   void debitExternalMemory(GCCell *alloc, uint32_t size) {}
 
-  /// Default implementations for write barriers: do nothing.
+  /// Default implementations for read and write barriers: do nothing.
   inline void writeBarrier(void *loc, HermesValue value) {}
   inline void writeBarrier(void *loc, void *value) {}
   inline void constructorWriteBarrier(void *loc, HermesValue value) {}
@@ -685,6 +691,8 @@ class GCBase {
   inline void constructorWriteBarrierRange(
       GCHermesValue *start,
       uint32_t numHVs) {}
+  inline void weakRefReadBarrier(void *value) {}
+  inline void weakRefReadBarrier(HermesValue value) {}
 
 #ifndef NDEBUG
   bool needsWriteBarrier(void *loc, void *value) {
@@ -789,6 +797,10 @@ class GCBase {
           *unreachableKeys,
       ObjIsMarkedFunc objIsMarked,
       MarkFromValFunc markFromVal);
+
+  /// \return A reference to the mutex that controls accessing any WeakRef.
+  ///   This mutex must be held if a WeakRef is created or modified.
+  WeakRefMutex &weakRefMutex();
 
   /// Assumes that all known reachable WeakMaps have been collected in
   /// \p reachableWeakMaps.  For all these WeakMaps, find all
@@ -1095,6 +1107,16 @@ class GCBase {
   /// Name to indentify this heap in logs.
   std::string name_;
 
+  /// Any thread that modifies a WeakRefSlot or a data structure containing
+  /// WeakRefs that the GC will mark must hold this mutex. The GC will hold this
+  /// mutex while scanning any weak references.
+#ifdef HERMESVM_GC_HADES
+  WeakRefMutex weakRefMutex_;
+#else
+  /// In non-concurrent GCs, we consider the mutex to be always held.
+  WeakRefMutex weakRefMutex_{true};
+#endif
+
   /// Tracks what objects need a stable identity for features such as heap
   /// snapshots and the memory profiler.
   IDTracker idTracker_;
@@ -1202,10 +1224,10 @@ class WeakRefSlot {
 
   /// Return the object as a HermesValue.
   const HermesValue value() const {
-    assert(state() == Unmarked && "unclean GC mark state");
+    assert(
+        (state() == Unmarked || state() == Marked) && "unclean GC mark state");
     assert(hasPointer() && "tried to access collected referent");
-    static_assert(Unmarked == 0, "unmarked state should not need untagging");
-    return HermesValue::encodeObjectValue(tagged_);
+    return HermesValue::encodeObjectValue(getPointer());
   }
 
   // GC methods to update slot when referent moves/dies.
@@ -1296,7 +1318,8 @@ class WeakRefSlot {
 
   /// Return the object as a HermesValue.
   const HermesValue value() const {
-    assert(state() == Unmarked && "unclean GC mark state");
+    assert(
+        (state() == Unmarked || state() == Marked) && "unclean GC mark state");
     assert(hasValue() && "tried to access collected referent");
     return value_;
   }
@@ -1387,11 +1410,19 @@ class WeakRefBase {
 
  public:
   /// \return true if the referenced object hasn't been freed.
-  bool isValid() const {
+  /// \pre This must be called only while the WeakRef mutex is held, in case the
+  ///   GC mutates the slot.
+  bool isValid(const WeakRefMutex &mtx) const {
+    assert(
+        mtx &&
+        "Weak ref mutex must be held in order to access a weak ref's contents");
+    (void)mtx;
     return slot_->hasValue();
   }
 
   /// \return true if the given slot stores a non-empty value.
+  /// \pre This must be called only while the WeakRef mutex is held, in case the
+  ///   GC mutates the slot.
   static bool isSlotValid(const WeakRefSlot *slot) {
     assert(slot && "slot must not be null");
     return slot->hasValue();
@@ -1399,19 +1430,21 @@ class WeakRefBase {
 
   /// \return a pointer to the slot used by this WeakRef.
   /// Used primarily when populating a DenseMap with WeakRef keys.
-  WeakRefSlot *unsafeGetSlot() {
+  /// \pre The return value must be dereferenced only while the WeakRef mutex is
+  ///   held, in case the GC mutates the slot.
+  WeakRefSlot *unsafeGetSlot(const WeakRefMutex &mtx) {
+    assert(mtx && "WeakRefMutex must be held");
+    (void)mtx;
     return slot_;
   }
-  const WeakRefSlot *unsafeGetSlot() const {
+  const WeakRefSlot *unsafeGetSlot(const WeakRefMutex &mtx) const {
+    assert(mtx && "WeakRefMutex must be held");
+    (void)mtx;
     return slot_;
   }
-
-  /// \return the stored HermesValue.
-  /// The weak ref may be invalid, in which case an "empty" value is returned.
-  /// This is an unsafe function since the referenced object may be freed any
-  /// time that GC occurs.
-  HermesValue unsafeGetHermesValue() const {
-    return slot_->value();
+  /// Only for use in scenarios where a lock cannot be accessed.
+  const WeakRefSlot *unsafeGetSlotWithoutLock() const {
+    return slot_;
   }
 };
 

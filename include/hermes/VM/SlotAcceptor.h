@@ -17,6 +17,7 @@ namespace vm {
 
 class GCPointerBase;
 class WeakRefBase;
+class WeakRootBase;
 
 /// SlotAcceptor is an interface to be implemented by acceptors of objects in
 /// the heap.
@@ -52,6 +53,7 @@ struct SlotAcceptor {
 struct WeakRefAcceptor {
   virtual ~WeakRefAcceptor() {}
   virtual void accept(WeakRefBase &wr) = 0;
+  virtual const WeakRefMutex &mutexRef() = 0;
 };
 
 struct SlotAcceptorWithNames : public SlotAcceptor {
@@ -111,15 +113,9 @@ struct RootAcceptor : public SlotAcceptorWithNames, RootSectionAcceptor {};
 struct WeakRootAcceptor : public WeakRefAcceptor, RootSectionAcceptor {
   virtual ~WeakRootAcceptor() = default;
 
-  /// NOTE: This is called acceptWeak in order to avoid clashing with \p
-  /// accept(void *&) from SlotAcceptor, for classes that inherit from both.
-  virtual void acceptWeak(void *&ptr) = 0;
-
-#ifdef HERMESVM_COMPRESSED_POINTERS
-  /// This gets a default implementation: extract the real pointer to a local,
-  /// call acceptWeak on that, write the result back as a BasedPointer.
-  virtual void acceptWeak(BasedPointer &ptr) = 0;
-#endif
+  /// NOTE: This is called acceptWeak in order to avoid clashing with accept
+  /// from SlotAcceptor, for classes that inherit from both.
+  virtual void acceptWeak(WeakRootBase &ptr) = 0;
 };
 
 template <typename Acceptor>

@@ -116,7 +116,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// During hashing, keyBufferIndex takes the top 24bits while numLiterals
   /// becomes the lower 8bits of the key.
   /// Cacheing will be skipped if keyBufferIndex is >= 2^24.
-  llvm::DenseMap<uint32_t, HiddenClass *> objectLiteralHiddenClasses_;
+  llvm::DenseMap<uint32_t, WeakRoot<HiddenClass>> objectLiteralHiddenClasses_;
 
   /// A map from template object ids to template objects.
   llvm::DenseMap<uint32_t, JSObject *> templateMap_;
@@ -176,9 +176,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
       Handle<Domain> domain,
       RuntimeModuleFlags flags = {},
       facebook::hermes::debugger::ScriptID scriptID =
-          facebook::hermes::debugger::kInvalidLocation) {
-    return new RuntimeModule(runtime, domain, flags, "", scriptID);
-  }
+          facebook::hermes::debugger::kInvalidLocation);
 
 #ifndef HERMESVM_LEAN
   /// Crates a lazy RuntimeModule as part of lazy compilation. This module
@@ -318,7 +316,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   inline Handle<Domain> getDomain(Runtime *);
 
   /// \return a raw pointer to the domain which owns this RuntimeModule.
-  inline Domain *getDomainUnsafe();
+  inline Domain *getDomainUnsafe(Runtime *);
 
   /// \return the Runtime of this module.
   Runtime *getRuntime() {
@@ -369,6 +367,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// NewObjectWithBuffer instruction.
   /// \return the cached hidden class.
   llvm::Optional<Handle<HiddenClass>> findCachedLiteralHiddenClass(
+      Runtime *runtime,
       unsigned keyBufferIndex,
       unsigned numLiterals) const;
 
@@ -376,7 +375,10 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// be skipped if keyBufferIndex is >= 2^24.
   /// \param keyBufferIndex value of NewObjectWithBuffer instruction.
   /// \param clazz the hidden class to cache.
-  void tryCacheLiteralHiddenClass(unsigned keyBufferIndex, HiddenClass *clazz);
+  void tryCacheLiteralHiddenClass(
+      Runtime *runtime,
+      unsigned keyBufferIndex,
+      HiddenClass *clazz);
 
   /// Given \p templateObjectID, retrieve the cached template object.
   /// if it doesn't exist, return a nullptr.

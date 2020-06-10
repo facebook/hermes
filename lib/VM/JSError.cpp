@@ -397,13 +397,12 @@ ExecutionStatus JSError::recordStackTrace(
   // deduplicate.
   auto addDomain = [&domains,
                     runtime](CodeBlock *codeBlock) -> ExecutionStatus {
-    Domain *domainPtr = codeBlock->getRuntimeModule()->getDomainUnsafe();
+    GCScopeMarkerRAII marker{runtime};
+    Handle<Domain> domain = codeBlock->getRuntimeModule()->getDomain(runtime);
     if (domains->size() > 0 &&
-        vmcast<Domain>(domains->at(domains->size() - 1)) == domainPtr) {
+        vmcast<Domain>(domains->at(domains->size() - 1)) == domain.get()) {
       return ExecutionStatus::RETURNED;
     }
-    GCScopeMarkerRAII marker{runtime};
-    Handle<Domain> domain = runtime->makeHandle(domainPtr);
     return ArrayStorage::push_back(domains, runtime, domain);
   };
 

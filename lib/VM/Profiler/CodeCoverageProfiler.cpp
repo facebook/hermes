@@ -33,9 +33,11 @@ void CodeCoverageProfiler::markRoots(
   }
 }
 
-void CodeCoverageProfiler::markExecutedSlowPath(CodeBlock *codeBlock) {
+void CodeCoverageProfiler::markExecutedSlowPath(
+    Runtime *runtime,
+    CodeBlock *codeBlock) {
   std::vector<bool> &moduleFuncMap =
-      getModuleFuncMapRef(codeBlock->getRuntimeModule());
+      getModuleFuncMapRef(runtime, codeBlock->getRuntimeModule());
 
   const auto funcId = codeBlock->getFunctionID();
   assert(
@@ -70,6 +72,7 @@ CodeCoverageProfiler::getExecutedFunctions() {
 }
 
 std::vector<bool> &CodeCoverageProfiler::getModuleFuncMapRef(
+    Runtime *runtime,
     RuntimeModule *module) {
   auto &runtimeCoverageInfo = coverageInfo_[module->getRuntime()];
   auto &funcBitsArrayMap = runtimeCoverageInfo.executedFuncBitsArrayMap;
@@ -80,7 +83,7 @@ std::vector<bool> &CodeCoverageProfiler::getModuleFuncMapRef(
   }
 
   // For new module reigster its domain for marking.
-  runtimeCoverageInfo.domains.insert(module->getDomainUnsafe());
+  runtimeCoverageInfo.domains.insert(module->getDomainUnsafe(runtime));
 
   const uint32_t funcCount = module->getBytecode()->getFunctionCount();
   auto res = funcBitsArrayMap.insert(

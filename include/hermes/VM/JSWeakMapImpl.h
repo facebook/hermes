@@ -59,9 +59,10 @@ struct WeakRefInfo {
   }
   /// \return true both arguments are empty, both are tombstone,
   /// or both point to the same JSObject.
+  /// \pre The weak ref mutex needs to be held before this function is called.
   static inline bool isEqual(const WeakRefKey &a, const WeakRefKey &b) {
-    const auto *aSlot = a.ref.unsafeGetSlot();
-    const auto *bSlot = b.ref.unsafeGetSlot();
+    const auto *aSlot = a.ref.unsafeGetSlotWithoutLock();
+    const auto *bSlot = b.ref.unsafeGetSlotWithoutLock();
     // Check if the keys are empty or tombstones, to avoid deferencing them.
     if (aSlot == bSlot) {
       return true;
@@ -222,6 +223,7 @@ class JSWeakMapImplBase : public JSObject {
 
   /// Mark weak references and set hasFreeableSlots_ if invalidated slots
   /// were found.
+  /// \pre The weak ref mutex must be held.
   static void _markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor);
 
   static size_t _mallocSizeImpl(GCCell *cell) {

@@ -89,13 +89,15 @@ TEST(GCMarkWeakTest, MarkWeak) {
   rt.pointerRoots.push_back(&g);
   gc.collect();
 
-  TestCell *t = vmcast<TestCell>(g);
-  ASSERT_TRUE(t->weak.isValid());
-  HermesValue hv = t->weak.unsafeGetHermesValue();
-  EXPECT_TRUE(t == hv.getObject());
-  // Exactly one call to _markWeakImpl
-  EXPECT_EQ(1 + 2 * checkHeapOn, numMarkWeakCalls);
-  EXPECT_EQ(initUsedWeak + 1, gc.countUsedWeakRefs());
+  {
+    WeakRefLock lk{gc.weakRefMutex()};
+    TestCell *t = vmcast<TestCell>(g);
+    ASSERT_TRUE(t->weak.isValid(gc.weakRefMutex()));
+    EXPECT_EQ(t, getNoHandleLocked(t->weak, &gc));
+    // Exactly one call to _markWeakImpl
+    EXPECT_EQ(1 + 2 * checkHeapOn, numMarkWeakCalls);
+    EXPECT_EQ(initUsedWeak + 1, gc.countUsedWeakRefs());
+  }
 
   rt.pointerRoots.pop_back();
   gc.collect();

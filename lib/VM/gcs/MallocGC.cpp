@@ -15,6 +15,7 @@
 #include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/HiddenClass.h"
 #include "hermes/VM/JSWeakMapImpl.h"
+#include "hermes/VM/SlotAcceptorDefault-inline.h"
 #include "hermes/VM/SlotAcceptorDefault.h"
 
 #include "llvm/Support/Debug.h"
@@ -27,7 +28,7 @@ namespace hermes {
 namespace vm {
 
 struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
-                                         public WeakRootAcceptor {
+                                         public WeakRootAcceptorDefault {
   std::vector<CellHeader *> worklist_;
 
   /// The WeakMap objects that have been discovered to be reachable.
@@ -39,7 +40,8 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
   /// the falses are garbage.
   std::vector<bool> markedSymbols_;
 
-  MarkingAcceptor(GC &gc) : SlotAcceptorDefault(gc) {
+  MarkingAcceptor(GC &gc)
+      : SlotAcceptorDefault(gc), WeakRootAcceptorDefault(gc) {
     markedSymbols_.resize(gc.gcCallbacks_->getSymbolsEnd(), false);
   }
 
@@ -154,7 +156,11 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
   }
 
   void accept(WeakRefBase &wr) override {
-    wr.unsafeGetSlot()->mark();
+    wr.unsafeGetSlot(mutexRef())->mark();
+  }
+
+  const WeakRefMutex &mutexRef() override {
+    return gc.weakRefMutex();
   }
 };
 

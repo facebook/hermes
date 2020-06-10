@@ -58,14 +58,17 @@ void TransitionMap::snapshotUntrackMemory(GC *gc) {
   }
 }
 
-void TransitionMap::insertUnsafe(const Transition &key, WeakRefSlot *ptr) {
+void TransitionMap::insertUnsafe(
+    Runtime *runtime,
+    const Transition &key,
+    WeakRefSlot *ptr) {
   if (isClean()) {
     smallKey_ = key;
     smallValue() = WeakRef<HiddenClass>(ptr);
     return;
   }
   if (!isLarge())
-    uncleanMakeLarge();
+    uncleanMakeLarge(runtime);
   large()->insertUnsafe(key, ptr);
 }
 
@@ -74,13 +77,13 @@ size_t TransitionMap::getMemorySize() const {
   return isLarge() ? sizeof(*large()) + large()->getMemorySize() : 0;
 }
 
-void TransitionMap::uncleanMakeLarge() {
+void TransitionMap::uncleanMakeLarge(Runtime *runtime) {
   assert(!isClean() && "must not still be clean");
   assert(!isLarge() && "must not yet be large");
   auto large = new WeakValueMap<Transition, HiddenClass>();
   // Move any valid entry into the allocated map.
-  if (smallValue().isValid())
-    large->insertUnsafe(smallKey_, smallValue().unsafeGetSlot());
+  if (auto handle = smallValue().getLocked(runtime, &runtime->getHeap()))
+    large->insertNewLocked(&runtime->getHeap(), smallKey_, handle.getValue());
   u.large_ = large;
   smallKey_.symbolID = SymbolID::deleted();
   assert(isLarge());
@@ -125,17 +128,19 @@ void HiddenClassSerialize(Serializer &s, const GCCell *cell) {
   s.writeRelocation(self->propertyMap_.get(s.getRuntime()));
   s.writeRelocation(self->forInCache_.get(s.getRuntime()));
 
+  WeakRefMutex &mtx{s.getRuntime()->getHeap().weakRefMutex()};
+  WeakRefLock lk{mtx};
   // Serialize WeakValueMap<Transition, HiddenClass> transitionMap_;
   // Only serialize/deserialize valid entries. We don't know how many valid
   // entries are in the map beforehand. Therefore, we will use a sentinel
   // WeakRef (nullptr) to show we finish all entries. As a result, for each
   // valid entry, we write WeakRef<HiddenClass> first, them we write the key.
-  self->transitionMap_.forEachEntry([&s](
+  self->transitionMap_.forEachEntry([&s, &mtx](
                                         const HiddenClass::Transition &key,
                                         const WeakRef<HiddenClass> &value) {
-    if (value.isValid()) {
+    if (value.isValid(mtx)) {
       // Write value (WeakRef<HiddenClass>)
-      s.writeRelocation(value.unsafeGetSlot());
+      s.writeRelocation(value.unsafeGetSlot(mtx));
       // Write key (Transition: SymbolID, PropertyFlags)
       s.writeInt<uint32_t>(key.symbolID.unsafeGetRaw());
       s.writeData(&key.propertyFlags, sizeof(PropertyFlags));
@@ -179,7 +184,9 @@ void HiddenClassDeserialize(Deserializer &d, CellKind kind) {
     PropertyFlags tflags;
     d.readData(&tflags, sizeof(PropertyFlags));
     cell->transitionMap_.insertUnsafe(
-        HiddenClass::Transition(tid, tflags), (WeakRefSlot *)ptr);
+        d.getRuntime(),
+        HiddenClass::Transition(tid, tflags),
+        (WeakRefSlot *)ptr);
     relocationId = d.readInt<uint32_t>();
   }
 
@@ -344,12 +351,13 @@ OptValue<HiddenClass::PropertyPos> HiddenClass::findProperty(
     // in order to look for it (since we wouldn't find it anyway).
     if (expectedFlags.isValid()) {
       Transition t{name, expectedFlags};
-      if (self->transitionMap_.containsKey(t)) {
+      if (self->transitionMap_.containsKey(t, &runtime->getHeap())) {
         LLVM_DEBUG(
             dbgs() << "Property " << runtime->formatSymbolID(name)
                    << " NOT FOUND in Class:" << self->getDebugAllocationId()
                    << " due to existing transition to Class:"
-                   << (*self->transitionMap_.lookup(runtime, t))
+                   << (*self->transitionMap_.lookup(
+                           runtime, &runtime->getHeap(), t))
                           ->getDebugAllocationId()
                    << "\n");
         return llvm::None;
@@ -480,8 +488,8 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
   }
 
   // Do we already have a transition for that property+flags pair?
-  auto optChildHandle =
-      selfHandle->transitionMap_.lookup(runtime, {name, propertyFlags});
+  auto optChildHandle = selfHandle->transitionMap_.lookup(
+      runtime, &runtime->getHeap(), {name, propertyFlags});
   if (LLVM_LIKELY(optChildHandle)) {
     // If the child doesn't have a property map, but we do, update our map and
     // move it to the child.
@@ -554,7 +562,7 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
 
   // Add it to the transition table.
   auto inserted = selfHandle->transitionMap_.insertNew(
-      &runtime->getHeap(), Transition(name, propertyFlags), childHandle);
+      runtime, Transition(name, propertyFlags), childHandle);
   (void)inserted;
   assert(
       inserted &&
@@ -640,8 +648,8 @@ Handle<HiddenClass> HiddenClass::updateProperty(
   transitionFlags.flagsTransition = 1;
 
   // Do we already have a transition for that property+flags pair?
-  auto optChildHandle =
-      selfHandle->transitionMap_.lookup(runtime, {name, transitionFlags});
+  auto optChildHandle = selfHandle->transitionMap_.lookup(
+      runtime, &runtime->getHeap(), {name, transitionFlags});
   if (LLVM_LIKELY(optChildHandle)) {
     // If the child doesn't have a property map, but we do, update our map and
     // move it to the child.
@@ -685,7 +693,7 @@ Handle<HiddenClass> HiddenClass::updateProperty(
 
   // Add it to the transition table.
   auto inserted = selfHandle->transitionMap_.insertNew(
-      &runtime->getHeap(), Transition(name, transitionFlags), childHandle);
+      runtime, Transition(name, transitionFlags), childHandle);
   (void)inserted;
   assert(
       inserted &&

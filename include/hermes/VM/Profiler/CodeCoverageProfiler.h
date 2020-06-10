@@ -62,14 +62,14 @@ class CodeCoverageProfiler {
   void markRoots(Runtime *runtime, SlotAcceptorWithNames &acceptor);
 
   /// Record the executed JS function associated with \p codeBlock.
-  inline void markExecuted(CodeBlock *codeBlock) {
+  inline void markExecuted(Runtime *runtime, CodeBlock *codeBlock) {
     if (LLVM_LIKELY(!enabled_)) {
       return;
     }
-    markExecutedSlowPath(codeBlock);
+    markExecutedSlowPath(runtime, codeBlock);
   }
 
-  void markExecutedSlowPath(CodeBlock *codeBlock);
+  void markExecutedSlowPath(Runtime *runtime, CodeBlock *codeBlock);
 
   /// \return executed function information.
   std::vector<CodeCoverageProfiler::FuncInfo> getExecutedFunctions();
@@ -78,7 +78,9 @@ class CodeCoverageProfiler {
   explicit CodeCoverageProfiler() = default;
 
   /// \return reference to function bits array map for \p module.
-  std::vector<bool> &getModuleFuncMapRef(RuntimeModule *module);
+  std::vector<bool> &getModuleFuncMapRef(
+      Runtime *runtime,
+      RuntimeModule *module);
 
  private:
   struct RuntimeCodeCoverageInfo {

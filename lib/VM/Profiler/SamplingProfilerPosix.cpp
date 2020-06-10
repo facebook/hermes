@@ -234,7 +234,7 @@ void SamplingProfiler::timerLoop() {
 }
 
 uint32_t SamplingProfiler::walkRuntimeStack(
-    const Runtime *runtime,
+    Runtime *runtime,
     StackTrace &sampleStorage,
     uint32_t startIndex) {
   unsigned count = startIndex;
@@ -256,7 +256,7 @@ uint32_t SamplingProfiler::walkRuntimeStack(
       auto *module = calleeCodeBlock->getRuntimeModule();
       assert(module != nullptr && "Cannot fetch runtimeModule for code block");
       frameStorage.jsFrame.module = module;
-      registerDomain(module->getDomainUnsafe());
+      registerDomain(module->getDomainUnsafe(runtime));
     } else {
       if (auto *nativeFunction =
               dyn_vmcast_or_null<NativeFunction>(frame.getCalleeClosure())) {

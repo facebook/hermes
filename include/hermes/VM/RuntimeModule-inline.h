@@ -13,14 +13,17 @@
 namespace hermes {
 namespace vm {
 
-inline Handle<Domain> RuntimeModule::getDomain(Runtime *) {
-  assert(domain_.isValid() && "RuntimeModule has an invalid Domain");
-  return domain_.get(runtime_);
+inline Handle<Domain> RuntimeModule::getDomain(Runtime *runtime) {
+  auto optionalHandle = domain_.get(runtime_, &runtime_->getHeap());
+  assert(optionalHandle && "RuntimeModule has an invalid Domain");
+  return optionalHandle.getValue();
 }
 
-inline Domain *RuntimeModule::getDomainUnsafe() {
-  assert(domain_.isValid() && "RuntimeModule has an invalid Domain");
-  return vmcast<Domain>(domain_.unsafeGetHermesValue());
+inline Domain *RuntimeModule::getDomainUnsafe(Runtime *runtime) {
+  WeakRefLock lk{runtime->getHeap().weakRefMutex()};
+  Domain *domain = getNoHandleLocked(domain_, &runtime_->getHeap());
+  assert(domain && "RuntimeModule has an invalid Domain");
+  return domain;
 }
 
 } // namespace vm

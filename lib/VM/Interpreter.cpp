@@ -551,7 +551,8 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
   // Fetch any cached hidden class first.
   auto *runtimeModule = curCodeBlock->getRuntimeModule();
   const llvm::Optional<Handle<HiddenClass>> optCachedHiddenClassHandle =
-      runtimeModule->findCachedLiteralHiddenClass(keyBufferIndex, numLiterals);
+      runtimeModule->findCachedLiteralHiddenClass(
+          runtime, keyBufferIndex, numLiterals);
   // Create a new object using the built-in constructor or cached hidden class.
   // Note that the built-in constructor is empty, so we don't actually need to
   // call it.
@@ -661,7 +662,7 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
     assert(
         clazz->getNumProperties() < 256 &&
         "cached hidden class should have property count less than 256");
-    runtimeModule->tryCacheLiteralHiddenClass(keyBufferIndex, clazz);
+    runtimeModule->tryCacheLiteralHiddenClass(runtime, keyBufferIndex, clazz);
   }
 
   return createPseudoHandle(HermesValue::encodeObjectValue(*obj));
@@ -1038,7 +1039,7 @@ tailCall:
   runtime->getDebugger().willEnterCodeBlock(curCodeBlock);
 #endif
 
-  runtime->getCodeCoverageProfiler().markExecuted(curCodeBlock);
+  runtime->getCodeCoverageProfiler().markExecuted(runtime, curCodeBlock);
 
   // Update function executionCount_ count
   curCodeBlock->incrementExecutionCount();
@@ -2314,7 +2315,7 @@ tailCall:
               "unaccounted handles were created");
           auto objHandle = runtime->makeHandle(obj);
           auto cacheHCPtr = vmcast_or_null<HiddenClass>(static_cast<GCCell *>(
-              GCPointerBase::storageTypeToPointer(cacheEntry->clazz, runtime)));
+              cacheEntry->clazz.get(runtime, &runtime->getHeap())));
           CAPTURE_IP(runtime->recordHiddenClass(
               curCodeBlock, ip, ID(idVal), obj->getClass(runtime), cacheHCPtr));
           // obj may be moved by GC due to recordHiddenClass
@@ -2415,9 +2416,9 @@ tailCall:
         (void)NumGetByIdNotFound;
 #endif
 #ifdef HERMES_SLOW_DEBUG
-        auto savedClass = cacheIdx != hbc::PROPERTY_CACHING_DISABLED
-            ? cacheEntry->clazz
-            : GCPointer<HiddenClass>::StorageType{};
+        auto *savedClass = cacheIdx != hbc::PROPERTY_CACHING_DISABLED
+            ? cacheEntry->clazz.get(runtime, &runtime->getHeap())
+            : nullptr;
 #endif
         ++NumGetByIdSlow;
         CAPTURE_IP_ASSIGN(
@@ -2435,7 +2436,7 @@ tailCall:
         }
 #ifdef HERMES_SLOW_DEBUG
         if (cacheIdx != hbc::PROPERTY_CACHING_DISABLED && savedClass &&
-            cacheEntry->clazz != savedClass) {
+            cacheEntry->clazz.get(runtime, &runtime->getHeap()) != savedClass) {
           ++NumGetByIdCacheEvicts;
         }
 #endif
@@ -2494,7 +2495,7 @@ tailCall:
               "unaccounted handles were created");
           auto objHandle = runtime->makeHandle(obj);
           auto cacheHCPtr = vmcast_or_null<HiddenClass>(static_cast<GCCell *>(
-              GCPointerBase::storageTypeToPointer(cacheEntry->clazz, runtime)));
+              cacheEntry->clazz.get(runtime, &runtime->getHeap())));
           CAPTURE_IP(runtime->recordHiddenClass(
               curCodeBlock, ip, ID(idVal), obj->getClass(runtime), cacheHCPtr));
           // obj may be moved by GC due to recordHiddenClass

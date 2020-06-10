@@ -446,9 +446,6 @@ void Runtime::markRoots(RootAcceptor &acceptor, bool markLongLived) {
 #undef RUNTIME_HV_FIELD_RUNTIMEMODULE
     for (auto &rm : runtimeModuleList_)
       rm.markRoots(acceptor, markLongLived);
-    for (auto &entry : fixedPropCache_) {
-      acceptor.accept(entry.clazz);
-    }
     acceptor.endRootSection();
   }
 
@@ -547,9 +544,11 @@ void Runtime::markRoots(RootAcceptor &acceptor, bool markLongLived) {
 void Runtime::markWeakRoots(WeakRootAcceptor &acceptor) {
   MarkRootsPhaseTimer timer(this, RootAcceptor::Section::WeakRefs);
   acceptor.beginRootSection(RootAcceptor::Section::WeakRefs);
+  for (auto &entry : fixedPropCache_) {
+    acceptor.acceptWeak(entry.clazz);
+  }
   for (auto &rm : runtimeModuleList_)
     rm.markWeakRoots(acceptor);
-  markWeakRefs(acceptor);
   for (auto &fn : customMarkWeakRootFuncs_)
     fn(&getHeap(), acceptor);
   acceptor.endRootSection();

@@ -157,22 +157,20 @@ class TransitionMap {
   }
 
   /// Return true if there is an entry with the given key and a valid value.
-  bool containsKey(const Transition &key) {
-    return (smallKey_ == key && smallValue().isValid()) ||
-        (isLarge() && large()->containsKey(key));
+  bool containsKey(const Transition &key, GC *gc) {
+    WeakRefLock lk{gc->weakRefMutex()};
+    return (smallKey_ == key && smallValue().isValid(gc->weakRefMutex())) ||
+        (isLarge() && large()->containsKeyLocked(key, gc));
   }
 
   /// Look for key and return the value as Handle<T> if found or None if not.
-  llvm::Optional<Handle<HiddenClass>> lookup(
-      HandleRootOwner *runtime,
-      const Transition &key) {
+  llvm::Optional<Handle<HiddenClass>>
+  lookup(HandleRootOwner *runtime, GC *gc, const Transition &key) {
+    WeakRefLock lk{gc->weakRefMutex()};
     if (smallKey_ == key) {
-      if (smallValue().isValid())
-        return smallValue().get(runtime);
-      else
-        return llvm::None;
+      return smallValue().getLocked(runtime, gc);
     } else if (isLarge()) {
-      return large()->lookup(runtime, key);
+      return large()->lookupLocked(runtime, gc, key);
     } else {
       return llvm::None;
     }
@@ -180,21 +178,27 @@ class TransitionMap {
 
   /// Insert a key/value into the map if the key is not already there.
   /// \return true if it was inserted, false if the key was already there.
-  bool insertNew(GC *gc, const Transition &key, Handle<HiddenClass> value) {
+  bool insertNew(
+      Runtime *runtime,
+      const Transition &key,
+      Handle<HiddenClass> value) {
+    WeakRefLock lk{runtime->getHeap().weakRefMutex()};
     if (isClean()) {
       smallKey_ = key;
-      smallValue() = WeakRef<HiddenClass>(gc, value);
+      smallValue() = WeakRef<HiddenClass>(&runtime->getHeap(), value);
       return true;
-    } else if (smallKey_ == key && smallValue().isValid()) {
+    } else if (
+        smallKey_ == key &&
+        smallValue().isValid(runtime->getHeap().weakRefMutex())) {
       return false;
     }
     if (!isLarge())
-      uncleanMakeLarge();
-    return large()->insertNew(gc, key, value);
+      uncleanMakeLarge(runtime);
+    return large()->insertNewLocked(&runtime->getHeap(), key, value);
   }
 
   /// Insert key/value into the map. Used by deserialization.
-  void insertUnsafe(const Transition &key, WeakRefSlot *ptr);
+  void insertUnsafe(Runtime *runtime, const Transition &key, WeakRefSlot *ptr);
 
   /// Accepts every valid WeakRef in the map.
   void markWeakRefs(WeakRefAcceptor &acceptor) {
@@ -239,7 +243,7 @@ class TransitionMap {
   }
 
   /// Expand to large mode, assuming already unclean.
-  void uncleanMakeLarge();
+  void uncleanMakeLarge(Runtime *runtime);
 
   /// Accessors for each union member after asserting it's active.
   WeakRef<HiddenClass> &smallValue() {

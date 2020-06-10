@@ -270,6 +270,13 @@ TEST_F(GCBasicsTest, WeakRefSlotTest) {
 }
 
 TEST_F(GCBasicsTest, WeakRefTest) {
+#ifdef HERMESVM_GC_HADES
+#define LOCK(mtx) mtx.lock()
+#define UNLOCK(mtx) mtx.unlock()
+#else
+#define LOCK(mtx)
+#define UNLOCK(mtx)
+#endif
   auto &gc = rt.gc;
   GCBase::DebugHeapInfo debugInfo;
 
@@ -282,14 +289,16 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   gc.getDebugHeapInfo(debugInfo);
   EXPECT_EQ(2u, debugInfo.numAllocatedObjects);
 
+  WeakRefMutex &mtx = gc.weakRefMutex();
+  LOCK(mtx);
   WeakRef<Array> wr1{&gc, a1};
   WeakRef<Array> wr2{&gc, a2};
 
-  ASSERT_TRUE(wr1.isValid());
-  ASSERT_TRUE(wr2.isValid());
+  ASSERT_TRUE(wr1.isValid(mtx));
+  ASSERT_TRUE(wr2.isValid(mtx));
 
-  ASSERT_EQ(a1, wr1.unsafeGetHermesValue().getPointer());
-  ASSERT_EQ(a2, wr2.unsafeGetHermesValue().getPointer());
+  ASSERT_EQ(a1, getNoHandleLocked(wr1, &gc));
+  ASSERT_EQ(a2, getNoHandleLocked(wr2, &gc));
 
   // Test that freeing an object correctly "empties" the weak ref slot but
   // preserves the other slot.
@@ -303,27 +312,33 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   // the pointer to avoid mistakes.
   a1 = nullptr;
 
+  UNLOCK(mtx);
   gc.collect();
   gc.getDebugHeapInfo(debugInfo);
+  LOCK(mtx);
   EXPECT_EQ(1u, debugInfo.numAllocatedObjects);
-  ASSERT_FALSE(wr1.isValid());
+  ASSERT_FALSE(wr1.isValid(mtx));
   // Though the slot is empty, it's still reachable, so must not be freed yet.
-  ASSERT_NE(WeakSlotState::Free, wr1.unsafeGetSlot()->state());
-  ASSERT_TRUE(wr2.isValid());
-  ASSERT_EQ(a2, wr2.unsafeGetHermesValue().getPointer());
+  ASSERT_NE(WeakSlotState::Free, wr1.unsafeGetSlot(mtx)->state());
+  ASSERT_TRUE(wr2.isValid(mtx));
+  ASSERT_EQ(a2, getNoHandleLocked(wr2, &gc));
 
   // Make the slot unreachable and test that it is freed.
+  UNLOCK(mtx);
   rt.markExtraWeak = [&](WeakRefAcceptor &acceptor) { acceptor.accept(wr2); };
   gc.collect();
+  LOCK(mtx);
 
-  ASSERT_EQ(WeakSlotState::Free, wr1.unsafeGetSlot()->state());
+  ASSERT_EQ(WeakSlotState::Free, wr1.unsafeGetSlot(mtx)->state());
 
   // Create a new weak ref, possibly reusing the just freed slot.
   auto *a3 = Array::create(rt, 10);
   WeakRef<Array> wr3{&gc, a3};
 
-  ASSERT_TRUE(wr3.isValid());
-  ASSERT_EQ(a3, wr3.unsafeGetHermesValue().getPointer());
+  ASSERT_TRUE(wr3.isValid(mtx));
+  ASSERT_EQ(a3, getNoHandleLocked(wr3, &gc));
+#undef LOCK
+#undef UNLOCK
 }
 
 #ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
@@ -348,17 +363,19 @@ TEST_F(GCBasicsTest, WeakRefYoungGenCollectionTest) {
   gc.getDebugHeapInfo(debugInfo);
   EXPECT_EQ(3u, debugInfo.numAllocatedObjects);
 
+  WeakRefMutex &mtx = gc.weakRefMutex();
+  WeakRefLock lk{mtx};
   WeakRef<Dummy> wr0{&gc, d0};
   WeakRef<Dummy> wr1{&gc, d1};
   WeakRef<Dummy> wrOld{&gc, dOld};
 
-  ASSERT_TRUE(wr0.isValid());
-  ASSERT_TRUE(wr1.isValid());
-  ASSERT_TRUE(wrOld.isValid());
+  ASSERT_TRUE(wr0.isValid(mtx));
+  ASSERT_TRUE(wr1.isValid(mtx));
+  ASSERT_TRUE(wrOld.isValid(mtx));
 
-  ASSERT_EQ(d0, wr0.unsafeGetHermesValue().getPointer());
-  ASSERT_EQ(d1, wr1.unsafeGetHermesValue().getPointer());
-  ASSERT_EQ(dOld, wrOld.unsafeGetHermesValue().getPointer());
+  ASSERT_EQ(d0, getNoHandleLocked(wr0, &gc));
+  ASSERT_EQ(d1, getNoHandleLocked(wr1, &gc));
+  ASSERT_EQ(dOld, getNoHandleLocked(wrOld, &gc));
 
   // Create a root for d0.  We'll only be doing young-gen collections, so
   // we don't have to root dOld.
@@ -376,11 +393,11 @@ TEST_F(GCBasicsTest, WeakRefYoungGenCollectionTest) {
   gc.youngGenCollect();
   gc.getDebugHeapInfo(debugInfo);
   EXPECT_EQ(2u, debugInfo.numAllocatedObjects);
-  ASSERT_TRUE(wr0.isValid());
-  ASSERT_FALSE(wr1.isValid());
-  ASSERT_TRUE(wrOld.isValid());
-  ASSERT_EQ(d0, wr0.unsafeGetHermesValue().getPointer());
-  ASSERT_EQ(dOld, wrOld.unsafeGetHermesValue().getPointer());
+  ASSERT_TRUE(wr0.isValid(mtx));
+  ASSERT_FALSE(wr1.isValid(mtx));
+  ASSERT_TRUE(wrOld.isValid(mtx));
+  ASSERT_EQ(d0, getNoHandleLocked(wr0, &gc));
+  ASSERT_EQ(dOld, getNoHandleLocked(wrOld, &gc));
 }
 
 TEST_F(GCBasicsTest, TestYoungGenStats) {

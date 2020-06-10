@@ -76,12 +76,15 @@ struct WeakRootAcceptorDefault : public WeakRootAcceptor {
 
   WeakRootAcceptorDefault(GC &gc) : gcForWeakRootDefault(gc) {}
 
-  using WeakRootAcceptor::acceptWeak;
+  void acceptWeak(WeakRootBase &ptr) override final;
+
+  /// Subclasses override this implementation instead of accept(WeakRootBase &).
+  virtual void acceptWeak(void *&ptr) = 0;
 
 #ifdef HERMESVM_COMPRESSED_POINTERS
   /// This gets a default implementation: extract the real pointer to a local,
   /// call acceptWeak on that, write the result back as a BasedPointer.
-  void acceptWeak(BasedPointer &ptr) override;
+  virtual void acceptWeak(BasedPointer &ptr);
 #endif
 };
 

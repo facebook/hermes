@@ -10,6 +10,7 @@
 
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/SymbolID.h"
+#include "hermes/VM/WeakRef.h"
 
 namespace hermes {
 namespace vm {
@@ -23,7 +24,7 @@ class HiddenClass;
 /// non-accessor property.
 struct PropertyCacheEntry {
   /// Cached class.
-  GCPointer<HiddenClass>::StorageType clazz{nullptr};
+  WeakRoot<HiddenClass> clazz{nullptr};
 
   /// Cached property index.
   SlotIndex slot{0};

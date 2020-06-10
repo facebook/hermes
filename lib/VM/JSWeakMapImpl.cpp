@@ -8,7 +8,6 @@
 #include "hermes/VM/JSWeakMapImpl.h"
 
 #include "hermes/VM/Casting.h"
-#include "hermes/VM/WeakRefHolder.h"
 
 #include "llvm/Support/Debug.h"
 #define DEBUG_TYPE "serialize"
@@ -32,19 +31,26 @@ ExecutionStatus JSWeakMapImplBase::setValue(
     Runtime *runtime,
     Handle<JSObject> key,
     Handle<> value) {
-  WeakRefHolder<JSObject> weakRef(runtime, key);
-  WeakRefKey mapKey(*weakRef, runtime->gcStableHashHermesValue(key));
-  DenseMapT::iterator it = self->map_.find(mapKey);
+  WeakRefLock lk{runtime->getHeap().weakRefMutex()};
+  {
+    // No allocations should occur while a WeakRefKey is live.
+    // Holding the WeakRefLock will prevent the weak ref from getting cleared.
+    NoAllocScope noAlloc{runtime};
+    WeakRefKey mapKey(
+        WeakRef<JSObject>{&runtime->getHeap(), key},
+        runtime->gcStableHashHermesValue(key));
+    DenseMapT::iterator it = self->map_.find(mapKey);
 
-  if (it != self->map_.end()) {
-    // Key already exists, update existing value.
-    assert(
-        it->second < self->valueStorage_.get(runtime)->size() &&
-        "invalid index");
-    self->valueStorage_.get(runtime)
-        ->at(it->second)
-        .set(*value, &runtime->getHeap());
-    return ExecutionStatus::RETURNED;
+    if (it != self->map_.end()) {
+      // Key already exists, update existing value.
+      assert(
+          it->second < self->valueStorage_.get(runtime)->size() &&
+          "invalid index");
+      self->valueStorage_.get(runtime)
+          ->at(it->second)
+          .set(*value, &runtime->getHeap());
+      return ExecutionStatus::RETURNED;
+    }
   }
 
   // Index in valueStorage_ in which to place the new element.
@@ -54,6 +60,9 @@ ExecutionStatus JSWeakMapImplBase::setValue(
   }
   uint32_t i = *cr;
 
+  WeakRefKey mapKey(
+      WeakRef<JSObject>{&runtime->getHeap(), key},
+      runtime->gcStableHashHermesValue(key));
   auto result = self->map_.try_emplace(mapKey, i);
   (void)result;
   assert(result.second && "unable to add a new value to map");
@@ -68,8 +77,11 @@ bool JSWeakMapImplBase::deleteValue(
     Handle<JSWeakMapImplBase> self,
     Runtime *runtime,
     Handle<JSObject> key) {
-  WeakRefHolder<JSObject> weakRef(runtime, key);
-  WeakRefKey mapKey(*weakRef, runtime->gcStableHashHermesValue(key));
+  WeakRefLock lk{runtime->getHeap().weakRefMutex()};
+  NoAllocScope noAlloc{runtime};
+  WeakRefKey mapKey(
+      WeakRef<JSObject>{&runtime->getHeap(), key},
+      runtime->gcStableHashHermesValue(key));
   DenseMapT::iterator it = self->map_.find(mapKey);
   if (it == self->map_.end()) {
     return false;
@@ -85,7 +97,7 @@ bool JSWeakMapImplBase::clearEntryDirect(GC *gc, const WeakRefKey &key) {
   if (it == map_.end()) {
     return false;
   }
-  it->first.ref.clear();
+  it->first.ref.clear(gc->weakRefMutex());
   valueStorage_.get(gc->getPointerBase())
       ->at(it->second)
       .setInGC(HermesValue::encodeEmptyValue(), gc);
@@ -113,8 +125,11 @@ bool JSWeakMapImplBase::hasValue(
     Handle<JSWeakMapImplBase> self,
     Runtime *runtime,
     Handle<JSObject> key) {
-  WeakRefHolder<JSObject> weakRef(runtime, key);
-  WeakRefKey mapKey(*weakRef, runtime->gcStableHashHermesValue(key));
+  WeakRefLock lk{runtime->getHeap().weakRefMutex()};
+  NoAllocScope noAlloc{runtime};
+  WeakRefKey mapKey(
+      WeakRef<JSObject>{&runtime->getHeap(), key},
+      runtime->gcStableHashHermesValue(key));
   DenseMapT::iterator it = self->map_.find_as(mapKey);
   return it != self->map_.end();
 }
@@ -123,8 +138,11 @@ HermesValue JSWeakMapImplBase::getValue(
     Handle<JSWeakMapImplBase> self,
     Runtime *runtime,
     Handle<JSObject> key) {
-  WeakRefHolder<JSObject> weakRef(runtime, key);
-  WeakRefKey mapKey(*weakRef, runtime->gcStableHashHermesValue(key));
+  WeakRefLock lk{runtime->getHeap().weakRefMutex()};
+  NoAllocScope noAlloc{runtime};
+  WeakRefKey mapKey(
+      WeakRef<JSObject>{&runtime->getHeap(), key},
+      runtime->gcStableHashHermesValue(key));
   DenseMapT::iterator it = self->map_.find(mapKey);
   if (it == self->map_.end()) {
     return HermesValue::encodeUndefinedValue();
@@ -136,6 +154,7 @@ uint32_t JSWeakMapImplBase::debugFreeSlotsAndGetSize(
     PointerBase *base,
     GC *gc,
     JSWeakMapImplBase *self) {
+  WeakRefLock lk{gc->weakRefMutex()};
   /// Free up any freeable slots, so the count is more accurate.
   if (self->hasFreeableSlots_) {
     // There are freeable slots: find and delete them.
@@ -154,8 +173,7 @@ JSWeakMapImplBase::KeyIterator JSWeakMapImplBase::keys_end() {
 
 JSObject *detail::WeakRefKey::getObject(GC *gc) const {
   assert(gc->inGC() && "Should only be used by the GC implementation.");
-  return vmcast_or_null<JSObject>(
-      reinterpret_cast<GCCell *>(ref.unsafeGetSlot()->getPointer()));
+  return getNoHandleLocked(ref, gc);
 }
 
 void JSWeakMapImplBase::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
@@ -169,7 +187,7 @@ void JSWeakMapImplBase::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
     // we would attempt to call markWeakRef on a freed ref, which is a violation
     // of the markWeakRef contract.
     acceptor.accept(it->first.ref);
-    if (!it->first.ref.isValid()) {
+    if (!it->first.ref.isValid(acceptor.mutexRef())) {
       // Set the hasFreeableSlots_ to indicate that this slot can be
       // cleaned up the next time we add an element to this map.
       self->hasFreeableSlots_ = true;
@@ -180,7 +198,7 @@ void JSWeakMapImplBase::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
 /// Mark weak references and remove any invalid weak refs.
 void JSWeakMapImplBase::findAndDeleteFreeSlots(PointerBase *base, GC *gc) {
   for (auto it = map_.begin(); it != map_.end(); ++it) {
-    if (!it->first.ref.isValid()) {
+    if (!it->first.ref.isValid(gc->weakRefMutex())) {
       // If invalid, clear the value and remove the key from the map.
       deleteInternal(base, gc, it);
     }
@@ -286,7 +304,8 @@ void serializeJSWeakMapBase(Serializer &s, const GCCell *cell) {
   s.writeInt<unsigned>(self->map_.size());
   for (auto it = self->map_.begin(); it != self->map_.end(); it++) {
     // Write it->first: WeakRefKey.
-    s.writeRelocation(it->first.ref.unsafeGetSlot());
+    s.writeRelocation(
+        it->first.ref.unsafeGetSlot(s.getRuntime()->getHeap().weakRefMutex()));
     s.writeInt<uint32_t>(it->first.hash);
     // Write it->second: uint32_t
     s.writeInt<uint32_t>(it->second);
