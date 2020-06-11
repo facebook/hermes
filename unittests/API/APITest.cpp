@@ -6,6 +6,7 @@
  */
 
 #include <gtest/gtest.h>
+#include <hermes/BCGen/HBC/BytecodeFileFormat.h>
 #include <hermes/CompileJS.h>
 #include <hermes/hermes.h>
 
@@ -117,6 +118,8 @@ TEST_F(HermesRuntimeTest, BytecodeTest) {
   rt->evaluateJavaScript(
       std::unique_ptr<StringBuffer>(new StringBuffer(bytecode)), "");
   EXPECT_EQ(rt->global().getProperty(*rt, "x").getNumber(), 1);
+
+  EXPECT_EQ(HermesRuntime::getBytecodeVersion(), hermes::hbc::BYTECODE_VERSION);
 }
 
 TEST_F(HermesRuntimeTest, PreparedJavaScriptBytecodeTest) {

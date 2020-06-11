@@ -19,6 +19,7 @@
 #endif
 
 #include "hermes/BCGen/HBC/BytecodeDataProvider.h"
+#include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/DebuggerAPI.h"
 #include "hermes/Platform/Logging.h"
@@ -1024,6 +1025,10 @@ inline const HermesRuntimeImpl *impl(const HermesRuntime *rt) {
 bool HermesRuntime::isHermesBytecode(const uint8_t *data, size_t len) {
   return hbc::BCProviderFromBuffer::isBytecodeStream(
       llvm::ArrayRef<uint8_t>(data, len));
+}
+
+uint32_t HermesRuntime::getBytecodeVersion() {
+  return hbc::BYTECODE_VERSION;
 }
 
 void HermesRuntime::prefetchHermesBytecode(const uint8_t *data, size_t len) {

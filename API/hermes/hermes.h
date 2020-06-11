@@ -50,6 +50,8 @@ class HermesRuntimeImpl;
 class HermesRuntime : public jsi::Runtime {
  public:
   static bool isHermesBytecode(const uint8_t *data, size_t len);
+  // Returns the supported bytecode version.
+  static uint32_t getBytecodeVersion();
   // (EXPERIMENTAL) Issues madvise calls for portions of the given
   // bytecode file that will likely be used when loading the bytecode
   // file and running its global function.
