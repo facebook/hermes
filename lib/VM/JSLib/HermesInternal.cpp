@@ -450,6 +450,24 @@ hermesInternalGetRuntimeProperties(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 
+  const char buildMode[] =
+#ifdef HERMES_SLOW_DEBUG
+      "SlowDebug"
+#elif !defined(NDEBUG)
+      "Debug"
+#else
+      "Release"
+#endif
+      ;
+  auto buildModeVal = StringPrimitive::create(
+      runtime, ASCIIRef(buildMode, sizeof(buildMode) - 1));
+  if (LLVM_UNLIKELY(
+          buildModeVal == ExecutionStatus::EXCEPTION ||
+          addProperty(runtime->makeHandle(*buildModeVal), "Build") ==
+              ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
   return resultHandle.getHermesValue();
 }
 
