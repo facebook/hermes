@@ -317,15 +317,33 @@ jsi::Array TracingRuntime::getPropertyNames(const jsi::Object &o) {
 }
 
 jsi::WeakObject TracingRuntime::createWeakObject(const jsi::Object &o) {
-  auto wo = RD::createWeakObject(o);
-  // TODO mhorowitz: add synthtrace support for WeakObject
-  return wo;
+  // WeakObject is not traced for two reasons:
+  // It has no effect on the correctness of replay:
+  //  Say an object that is created, then a WeakObject created for
+  //  that object. At some point in the future, lockWeakObject is called. At
+  //  that point, either the original object was dead, and lockWeakObject
+  //  returns an undefined value; else, the original object is still alive, and
+  //  it returns the object reference. For an undefined return, there will be no
+  //  further operations on the object, and the replay will delete it. If that
+  //  returned object is then used for some operation such as getProperty, the
+  //  trace will see that and record that the object was alive for at least that
+  //  long. So it doesn't matter that the WeakObject was created at all, the
+  //  lifetime is unaffected.
+  // lockWeakObject can have a non-deterministic return value:
+  //  Because the return value of lockWeakObject is non-deterministic, there's
+  //  no guarantee that replaying lockWeakObject will have the same return
+  //  value. The GC may have run at different times on replay then it originally
+  //  did. Making this deterministic would require adding the GC schedule to
+  //  synth traces, which might not even be possible for a concurrent GC. So
+  //  tracing lockWeakObject would not guarantee correct replay of WeakObject
+  //  operations.
+  return RD::createWeakObject(o);
 }
 
 jsi::Value TracingRuntime::lockWeakObject(jsi::WeakObject &wo) {
-  auto val = RD::lockWeakObject(wo);
-  // TODO mhorowitz: add synthtrace support for WeakObject
-  return val;
+  // See comment in TracingRuntime::createWeakObject for why this function isn't
+  // traced.
+  return RD::lockWeakObject(wo);
 }
 
 jsi::Array TracingRuntime::createArray(size_t length) {
