@@ -9,6 +9,7 @@
 #define HERMES_VM_SLOTVISITOR_H
 
 #include "hermes/VM/GCCell.h"
+#include "hermes/VM/GCDecl.h"
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/Metadata.h"
@@ -25,8 +26,11 @@ class BaseVisitor {
   visitArray(Acceptor &acceptor, char *base, const Metadata::ArrayData &array) {
     using ArrayType = Metadata::ArrayData::ArrayType;
     char *start = base + array.startOffset;
-    const auto length =
-        *reinterpret_cast<std::uint32_t *>(base + array.lengthOffset);
+    // Load the length, making sure all dependent writes have completed with
+    // memory_order_acquire.
+    const auto length = reinterpret_cast<AtomicIfConcurrentGC<std::uint32_t> *>(
+                            base + array.lengthOffset)
+                            ->load(std::memory_order_acquire);
     const auto stride = array.stride;
     switch (array.type) {
       case ArrayType::Pointer:

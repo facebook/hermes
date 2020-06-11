@@ -39,10 +39,10 @@ void EnvironmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 #ifdef HERMESVM_SERIALIZE
 void EnvironmentSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const Environment>(cell);
-  s.writeInt<uint32_t>(self->size_);
+  s.writeInt<uint32_t>(self->getSize());
   s.writeRelocation(self->parentEnvironment_.get(s.getRuntime()));
   // Write Trailing GCHermesValue
-  for (uint32_t i = 0; i < self->size_; i++) {
+  for (uint32_t i = 0; i < self->getSize(); i++) {
     s.writeHermesValue(self->getSlots()[i]);
   }
 

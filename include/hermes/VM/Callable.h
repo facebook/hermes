@@ -29,7 +29,7 @@ class Environment final
   GCPointer<Environment> parentEnvironment_{};
 
   /// Number of entries in the environment.
-  const uint32_t size_;
+  AtomicIfConcurrentGC<uint32_t> size_;
 
  public:
 #ifdef HERMESVM_SERIALIZE
@@ -61,11 +61,11 @@ class Environment final
 
   /// \return the number of HermesValue slots in this environment.
   uint32_t getSize() const {
-    return size_;
+    return size_.load(std::memory_order_relaxed);
   }
 
   GCHermesValue &slot(uint32_t index) {
-    assert(index < size_ && "invalid Environment slot index");
+    assert(index < getSize() && "invalid Environment slot index");
     return getSlots()[index];
   }
 

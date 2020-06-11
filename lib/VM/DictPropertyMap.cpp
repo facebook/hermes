@@ -84,7 +84,7 @@ void DictPropertyMapSerialize(Serializer &s, const GCCell *cell) {
   s.writeInt<uint32_t>(self->descriptorCapacity_);
   s.writeInt<uint32_t>(self->hashCapacity_);
 
-  s.writeInt<uint32_t>(self->numDescriptors_);
+  s.writeInt<uint32_t>(self->numDescriptors_.load(std::memory_order_relaxed));
   s.writeInt<uint32_t>(self->numProperties_);
   s.writeInt<uint32_t>(self->deletedListHead_);
   s.writeInt<uint32_t>(self->deletedListSize_);
@@ -120,7 +120,7 @@ void DictPropertyMapDeserialize(Deserializer &d, CellKind kind) {
   auto *cell = new (mem)
       DictPropertyMap(d.getRuntime(), descriptorCapacity, hashCapacity);
 
-  cell->numDescriptors_ = d.readInt<uint32_t>();
+  cell->numDescriptors_.store(d.readInt<uint32_t>(), std::memory_order_release);
   cell->numProperties_ = d.readInt<uint32_t>();
   cell->deletedListHead_ = d.readInt<uint32_t>();
   cell->deletedListSize_ = d.readInt<uint32_t>();
@@ -196,7 +196,8 @@ ExecutionStatus DictPropertyMap::grow(
   auto *dst = newSelf->getDescriptorPairs();
   size_type count = 0;
 
-  for (auto *src = self->getDescriptorPairs(), *e = src + self->numDescriptors_;
+  for (auto *src = self->getDescriptorPairs(),
+            *e = src + self->numDescriptors_.load(std::memory_order_relaxed);
        src != e;
        ++src) {
     if (src->first.isInvalid())
@@ -244,7 +245,7 @@ ExecutionStatus DictPropertyMap::grow(
     } while (deletedIndex != END_OF_LIST);
   }
 
-  newSelf->numDescriptors_ = count;
+  newSelf->numDescriptors_.store(count, std::memory_order_release);
   assert(count <= newSelf->descriptorCapacity_);
   return ExecutionStatus::RETURNED;
 }
@@ -255,6 +256,7 @@ DictPropertyMap::findOrAdd(
     Runtime *runtime,
     SymbolID id) {
   auto *self = *selfHandleRef;
+  auto numDescriptors = self->numDescriptors_.load(std::memory_order_relaxed);
   auto found = lookupEntryFor(self, id);
   if (found.first) {
     return std::make_pair(
@@ -267,7 +269,7 @@ DictPropertyMap::findOrAdd(
   // capacity of the table is 4/3 of the capacity of the descriptor array, it is
   // sufficient to only check for the latter.
 
-  if (self->numDescriptors_ == self->descriptorCapacity_) {
+  if (numDescriptors == self->descriptorCapacity_) {
     size_type newCapacity;
     if (self->numProperties_ == self->descriptorCapacity_) {
       // Double the new capacity, up to kMaxCapacity. However make sure that
@@ -293,6 +295,7 @@ DictPropertyMap::findOrAdd(
     }
 
     self = *selfHandleRef;
+    numDescriptors = self->numDescriptors_.load(std::memory_order_relaxed);
 
     found = lookupEntryFor(self, id);
   }
@@ -301,12 +304,12 @@ DictPropertyMap::findOrAdd(
   if (found.second->isDeleted())
     self->decDeletedHashCount();
 
-  found.second->setDescIndex(self->numDescriptors_, id);
+  found.second->setDescIndex(numDescriptors, id);
 
-  auto *descPair = self->getDescriptorPairs() + self->numDescriptors_;
+  auto *descPair = self->getDescriptorPairs() + numDescriptors;
 
   descPair->first = id;
-  ++self->numDescriptors_;
+  self->numDescriptors_.fetch_add(1, std::memory_order_acq_rel);
 
   return std::make_pair(&descPair->second, true);
 }
@@ -314,7 +317,9 @@ DictPropertyMap::findOrAdd(
 void DictPropertyMap::erase(DictPropertyMap *self, PropertyPos pos) {
   auto *hashPair = self->getHashPairs() + pos.hashPairIndex;
   auto descIndex = hashPair->getDescIndex();
-  assert(descIndex < self->numDescriptors_ && "descriptor index out of range");
+  assert(
+      descIndex < self->numDescriptors_.load(std::memory_order_relaxed) &&
+      "descriptor index out of range");
 
   auto *descPair = self->getDescriptorPairs() + descIndex;
   assert(

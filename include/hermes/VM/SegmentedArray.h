@@ -59,7 +59,7 @@ class SegmentedArray final
 
     GCHermesValue &at(uint32_t index) {
       assert(
-          index < length_ &&
+          index < length() &&
           "Cannot get an index outside of the length of a segment");
       return data_[index];
     }
@@ -67,13 +67,13 @@ class SegmentedArray final
     /// \p const version of \p at.
     const GCHermesValue &at(uint32_t index) const {
       assert(
-          index < length_ &&
+          index < length() &&
           "Cannot get an index outside of the length of a segment");
       return data_[index];
     }
 
     uint32_t length() const {
-      return length_;
+      return length_.load(std::memory_order_relaxed);
     }
 
     /// Increases or decreases the length of the segment, up to a max of
@@ -87,7 +87,7 @@ class SegmentedArray final
     /// by the GC).
     void setLengthWithoutFilling(uint32_t newLength) {
       assert(newLength <= kMaxLength && "Cannot set length to more than size");
-      length_ = newLength;
+      length_.store(newLength, std::memory_order_release);
     }
 
    private:
@@ -101,7 +101,7 @@ class SegmentedArray final
     friend void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb);
     static VTable vt;
 
-    uint32_t length_;
+    AtomicIfConcurrentGC<uint32_t> length_;
     GCHermesValue data_[kMaxLength];
 
     explicit Segment(Runtime *runtime)
@@ -146,7 +146,7 @@ class SegmentedArray final
   size_type slotCapacity_;
   /// The number of slots that are currently valid. The \c size() is a derived
   /// field from this value.
-  size_type numSlotsUsed_;
+  AtomicIfConcurrentGC<size_type> numSlotsUsed_;
 
   struct iterator {
     using iterator_category = std::bidirectional_iterator_tag;
@@ -281,11 +281,11 @@ class SegmentedArray final
   /// Gets the size of the SegmentedArray. The size is the number of elements
   /// currently active in the array.
   size_type size() const {
-    if (LLVM_LIKELY(numSlotsUsed_ <= kValueToSegmentThreshold)) {
-      return numSlotsUsed_;
+    const auto numSlotsUsed = numSlotsUsed_.load(std::memory_order_relaxed);
+    if (LLVM_LIKELY(numSlotsUsed <= kValueToSegmentThreshold)) {
+      return numSlotsUsed;
     } else {
-      const SegmentNumber numSegments =
-          numSlotsUsed_ - kValueToSegmentThreshold;
+      const SegmentNumber numSegments = numSlotsUsed - kValueToSegmentThreshold;
       const size_type numBeforeLastSegment =
           kValueToSegmentThreshold + (numSegments - 1) * Segment::kMaxLength;
       const uint32_t numInLastSegment = segmentAt(numSegments - 1)->length();
@@ -526,9 +526,10 @@ class SegmentedArray final
 
   /// \return the number of segments in active use by this SegmentedArray.
   SegmentNumber numUsedSegments() const {
-    return numSlotsUsed_ <= kValueToSegmentThreshold
+    const auto numSlotsUsed = numSlotsUsed_.load(std::memory_order_relaxed);
+    return numSlotsUsed <= kValueToSegmentThreshold
         ? 0
-        : numSlotsUsed_ - kValueToSegmentThreshold;
+        : numSlotsUsed - kValueToSegmentThreshold;
   }
 
   /// @name Resize helper functions

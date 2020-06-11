@@ -40,16 +40,16 @@ void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 #ifdef HERMESVM_SERIALIZE
 SegmentedArray::Segment::Segment(Deserializer &d)
     : GCCell(&d.getRuntime()->getHeap(), &vt) {
-  length_ = d.readInt<uint32_t>();
-  for (uint32_t i = 0; i < length_; i++) {
+  length_.store(d.readInt<uint32_t>(), std::memory_order_release);
+  for (uint32_t i = 0; i < length(); i++) {
     d.readHermesValue(&data_[i]);
   }
 }
 
 void SegmentSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const SegmentedArray::Segment>(cell);
-  s.writeInt<uint32_t>(self->length_);
-  for (uint32_t i = 0; i < self->length_; i++) {
+  s.writeInt<uint32_t>(self->length());
+  for (uint32_t i = 0; i < self->length(); i++) {
     s.writeHermesValue(self->data_[i]);
   }
   s.endObject(cell);
@@ -73,10 +73,11 @@ PseudoHandle<SegmentedArray::Segment> SegmentedArray::Segment::create(
 }
 
 void SegmentedArray::Segment::setLength(Runtime *runtime, uint32_t newLength) {
-  if (newLength > length_) {
+  const auto len = length();
+  if (newLength > len) {
     // Length is increasing, fill with emptys.
     GCHermesValue::uninitialized_fill(
-        data_ + length_,
+        data_ + len,
         data_ + newLength,
         HermesValue::encodeEmptyValue(),
         &runtime->getHeap());
@@ -113,9 +114,11 @@ void SegmentedArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 void SegmentedArraySerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const SegmentedArray>(cell);
   s.writeInt<SegmentedArray::size_type>(self->slotCapacity_);
-  s.writeInt<SegmentedArray::size_type>(self->numSlotsUsed_);
+  s.writeInt<SegmentedArray::size_type>(
+      self->numSlotsUsed_.load(std::memory_order_relaxed));
 
-  for (uint32_t i = 0; i < self->numSlotsUsed_; i++) {
+  for (uint32_t i = 0; i < self->numSlotsUsed_.load(std::memory_order_relaxed);
+       i++) {
     s.writeHermesValue(self->at(i));
   }
 
@@ -181,7 +184,8 @@ SegmentedArray::create(Runtime *runtime, size_type capacity, size_type size) {
 }
 
 SegmentedArray::size_type SegmentedArray::capacity() const {
-  if (numSlotsUsed_ <= kValueToSegmentThreshold) {
+  const auto numSlotsUsed = numSlotsUsed_.load(std::memory_order_relaxed);
+  if (numSlotsUsed <= kValueToSegmentThreshold) {
     // In the case where the size is less than the number of inline elements,
     // the capacity is at most slotCapacity, or the segment threshold if slot
     // capacity goes beyond that.
@@ -189,7 +193,7 @@ SegmentedArray::size_type SegmentedArray::capacity() const {
   } else {
     // Any slot after numSlotsUsed_ is guaranteed to be null.
     return kValueToSegmentThreshold +
-        (numSlotsUsed_ - kValueToSegmentThreshold) * Segment::kMaxLength;
+        (numSlotsUsed - kValueToSegmentThreshold) * Segment::kMaxLength;
   }
 }
 
@@ -298,13 +302,15 @@ ExecutionStatus SegmentedArray::growRight(
   PseudoHandle<SegmentedArray> newSegmentedArray = std::move(*arrRes);
   // Copy inline storage and segments over.
   // Do this with raw pointers so that the range write barrier occurs.
+  const auto numSlotsUsed = self->numSlotsUsed_.load(std::memory_order_relaxed);
   GCHermesValue::uninitialized_copy(
       self->inlineStorage(),
-      self->inlineStorage() + self->numSlotsUsed_,
+      self->inlineStorage() + numSlotsUsed,
       newSegmentedArray->inlineStorage(),
       &runtime->getHeap());
   // Set the size of the new array to be the same as the old array's size.
-  newSegmentedArray->numSlotsUsed_ = self->numSlotsUsed_;
+  newSegmentedArray->numSlotsUsed_.store(
+      numSlotsUsed, std::memory_order_release);
   newSegmentedArray = increaseSize</*Fill*/ true>(
       runtime, std::move(newSegmentedArray), amount);
   // Assign back to self.
@@ -402,7 +408,7 @@ void SegmentedArray::increaseSizeWithinCapacity(
           &runtime->getHeap());
     }
     // Set the final size.
-    numSlotsUsed_ = finalSize;
+    numSlotsUsed_.store(finalSize, std::memory_order_release);
     return;
   }
   // Since this change is within capacity, it is at most filling up a single
@@ -449,7 +455,7 @@ PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
           &runtime->getHeap());
     }
     // Set the final size.
-    self->numSlotsUsed_ = finalSize;
+    self->numSlotsUsed_.store(finalSize, std::memory_order_release);
     return self;
   }
 
@@ -465,7 +471,8 @@ PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
         empty,
         &runtime->getHeap());
     // Set the size to the inline storage threshold.
-    self->numSlotsUsed_ = kValueToSegmentThreshold;
+    self->numSlotsUsed_.store(
+        kValueToSegmentThreshold, std::memory_order_release);
   }
 
   // NOTE: during this function, allocations can happen.
@@ -484,11 +491,12 @@ PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
   // Put empty values into all of the added slots so that the memory is not
   // uninitialized during marking.
   GCHermesValue::uninitialized_fill(
-      self->inlineStorage() + self->numSlotsUsed_,
+      self->inlineStorage() +
+          self->numSlotsUsed_.load(std::memory_order_relaxed),
       self->inlineStorage() + newNumSlotsUsed,
       empty,
       &runtime->getHeap());
-  self->numSlotsUsed_ = newNumSlotsUsed;
+  self->numSlotsUsed_.store(newNumSlotsUsed, std::memory_order_release);
 
   // Allocate a handle to track the current array.
   auto selfHandle = runtime->makeHandle(std::move(self));
@@ -526,26 +534,28 @@ void SegmentedArray::decreaseSize(Runtime *runtime, size_type amount) {
   const auto finalSize = size() - amount;
   if (finalSize <= kValueToSegmentThreshold) {
     // Just adjust the field and exit, no segments to compress.
-    numSlotsUsed_ = finalSize;
+    numSlotsUsed_.store(finalSize, std::memory_order_release);
     return;
   }
   // Set the new last used segment's length to be the leftover.
   segmentAt(toSegment(finalSize - 1))
       ->setLength(runtime, toInterior(finalSize - 1) + 1);
-  numSlotsUsed_ = numSlotsForCapacity(finalSize);
+  numSlotsUsed_.store(
+      numSlotsForCapacity(finalSize), std::memory_order_release);
 }
 
 gcheapsize_t SegmentedArray::_trimSizeCallback(const GCCell *cell) {
   const auto *self = reinterpret_cast<const SegmentedArray *>(cell);
   // This array will shrink so that it has the same slot capacity as the slot
   // size.
-  return allocationSizeForSlots(self->numSlotsUsed_);
+  return allocationSizeForSlots(
+      self->numSlotsUsed_.load(std::memory_order_relaxed));
 }
 
 void SegmentedArray::_trimCallback(GCCell *cell) {
   auto *self = reinterpret_cast<SegmentedArray *>(cell);
   // Shrink so that the capacity is equal to the size.
-  self->slotCapacity_ = self->numSlotsUsed_;
+  self->slotCapacity_ = self->numSlotsUsed_.load(std::memory_order_relaxed);
 }
 
 // Forward instantiations of increaseSize for use outside this file.

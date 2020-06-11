@@ -8,6 +8,8 @@
 #ifndef HERMES_VM_GCDECL_H
 #define HERMES_VM_GCDECL_H
 
+#include <atomic>
+
 #ifdef HERMESVM_GC_HADES
 #include <mutex>
 #include <thread>
@@ -60,6 +62,9 @@ using WeakRefLock = std::lock_guard<DebugMutex>;
 using WeakRefMutex = std::mutex;
 using WeakRefLock = std::lock_guard<std::mutex>;
 #endif
+/// HadesGC requires some fields to be atomic, such as array lengths.
+template <typename T>
+using AtomicIfConcurrentGC = std::atomic<T>;
 #else
 /// Non-concurrent GCs don't need any locks in order to have correct
 /// semantics for WeakRef, so use a cheap type to pass around instead.
@@ -84,6 +89,58 @@ static_assert(
     "FakeLockGuard must not be trivially destructible to avoid warnings about "
     "unused variables");
 
+/// FakeAtomic has the same API as std::atomic, but ignores the memory order
+/// argument and always accesses data non-atomically.
+/// Used when the GC doesn't require atomicity.
+/// In the JS VM, there is currently only one mutator thread and at most one GC
+/// thread. The GC thread will not do any modifications to these atomics, and
+/// will only read them. Therefore it is typically safe for the mutator to use
+/// relaxed reads. Writes will typically require std::memory_order_release or
+/// stricter to make sure the GC sees the writes which occur before the atomic
+/// write.
+/// NOTE: This differs from std::atomic where it doesn't have default memory
+/// orders, since we want all atomic operations to be very explicit with their
+/// requirements. Also don't define operator T for the same reason.
+template <typename T>
+class FakeAtomic final {
+ public:
+  constexpr explicit FakeAtomic() : data_{} {}
+  constexpr explicit FakeAtomic(T desired) : data_{desired} {}
+
+  T load(std::memory_order order) const {
+    (void)order;
+    return data_;
+  }
+
+  void store(T desired, std::memory_order order) {
+    (void)order;
+    data_ = desired;
+  }
+
+  T fetch_add(T arg, std::memory_order order) {
+    (void)order;
+    const T oldData = data_;
+    data_ += arg;
+    return oldData;
+  }
+
+  T fetch_sub(T arg, std::memory_order order) {
+    (void)order;
+    const T oldData = data_;
+    data_ -= arg;
+    return oldData;
+  }
+
+  /// Use store explicitly instead.
+  FakeAtomic &operator=(const FakeAtomic &) = delete;
+
+ private:
+  T data_;
+};
+
+/// No need for atomics with non-Hades GCs.
+template <typename T>
+using AtomicIfConcurrentGC = FakeAtomic<T>;
 #endif
 
 #if defined(HERMESVM_GC_MALLOC)

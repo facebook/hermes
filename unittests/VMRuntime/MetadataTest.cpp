@@ -37,7 +37,7 @@ void DummyCell::buildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 struct DummyArrayCell {
  public:
-  std::uint32_t length_ = 3;
+  AtomicIfConcurrentGC<std::uint32_t> length_{3};
   DummyCell data_[3];
 
   static void buildMeta(const GCCell *cell, Metadata::Builder &mb);

@@ -112,17 +112,17 @@ struct Metadata final {
     /// \p lengthLocation The location of the size of the array.
     /// The \c ArrayType parameter denotes which type of elements are in the
     /// array.
-    template <ArrayData::ArrayType type, typename SizeType>
+    template <ArrayData::ArrayType type>
     inline void addArray(
         const void *startLocation,
-        const SizeType *lengthLocation,
+        const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
         std::size_t stride);
 
-    template <ArrayData::ArrayType type, typename SizeType>
+    template <ArrayData::ArrayType type>
     inline void addArray(
         const char *name,
         const void *startLocation,
-        const SizeType *lengthLocation,
+        const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
         std::size_t stride);
 
     /// Should be called first when building metadata for a JSObject subclass.
@@ -203,23 +203,20 @@ llvm::raw_ostream &operator<<(
 /// @name Inline implementations
 /// @{
 
-template <Metadata::ArrayData::ArrayType type, typename SizeType>
+template <Metadata::ArrayData::ArrayType type>
 inline void Metadata::Builder::addArray(
     const void *startLocation,
-    const SizeType *lengthLocation,
+    const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
     std::size_t stride) {
-  addArray<type, SizeType>(nullptr, startLocation, lengthLocation, stride);
+  addArray<type>(nullptr, startLocation, lengthLocation, stride);
 }
 
-template <Metadata::ArrayData::ArrayType type, typename SizeType>
+template <Metadata::ArrayData::ArrayType type>
 inline void Metadata::Builder::addArray(
     const char *name,
     const void *startLocation,
-    const SizeType *lengthLocation,
+    const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
     std::size_t stride) {
-  static_assert(
-      (sizeof(SizeType) == sizeof(std::int32_t)),
-      "The size parameter of an array should only be a 32 bit value");
   array_ = ArrayData(
       type,
       reinterpret_cast<const char *>(startLocation) - base_,

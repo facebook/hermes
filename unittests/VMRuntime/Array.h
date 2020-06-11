@@ -27,9 +27,9 @@ class Array final : public VariableSizeRuntimeCell,
 
  public:
   static const VTable vt;
-  unsigned const length;
+  AtomicIfConcurrentGC<uint32_t> length;
 
-  Array(GC *gc, unsigned const length)
+  Array(GC *gc, uint32_t length)
       : VariableSizeRuntimeCell(gc, &vt, allocSize(length)), length(length) {}
 
   static bool classof(const GCCell *cell) {
@@ -43,7 +43,7 @@ class Array final : public VariableSizeRuntimeCell,
     return getTrailingObjects<GCHermesValue>();
   }
 
-  static Array *create(DummyRuntime &runtime, unsigned length) {
+  static Array *create(DummyRuntime &runtime, uint32_t length) {
     auto *self =
         new (runtime.allocWithFinalizer</*fixedSize*/ false>(allocSize(length)))
             Array(&runtime.getHeap(), length);
@@ -55,7 +55,7 @@ class Array final : public VariableSizeRuntimeCell,
     return self;
   }
 
-  static uint32_t allocSize(unsigned length) {
+  static uint32_t allocSize(uint32_t length) {
     return totalSizeToAlloc<GCHermesValue>(length);
   }
 };

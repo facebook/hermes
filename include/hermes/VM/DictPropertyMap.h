@@ -287,7 +287,7 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
 
   /// How many entries have been added to the descriptor array (including
   /// deleted).
-  size_type numDescriptors_{0};
+  AtomicIfConcurrentGC<size_type> numDescriptors_{0};
 
   /// Number of valid properties in the map.
   size_type numProperties_{0};
@@ -496,7 +496,11 @@ void DictPropertyMap::forEachProperty(
     Runtime *runtime,
     const CallbackFunction &callback) {
   GCScopeMarkerRAII gcMarker{runtime};
-  for (size_type i = 0, e = selfHandle->numDescriptors_; i != e; ++i) {
+  for (size_type
+           i = 0,
+           e = selfHandle->numDescriptors_.load(std::memory_order_relaxed);
+       i != e;
+       ++i) {
     auto const *descPair = selfHandle->getDescriptorPairs() + i;
     if (descPair->first.isValid()) {
       callback(descPair->first, descPair->second);
@@ -509,7 +513,10 @@ template <typename CallbackFunction>
 void DictPropertyMap::forEachPropertyNoAlloc(
     DictPropertyMap *self,
     const CallbackFunction &callback) {
-  for (size_type i = 0, e = self->numDescriptors_; i != e; ++i) {
+  for (size_type i = 0,
+                 e = self->numDescriptors_.load(std::memory_order_relaxed);
+       i != e;
+       ++i) {
     auto const *descPair = self->getDescriptorPairs() + i;
     if (descPair->first.isValid()) {
       callback(descPair->first, descPair->second);
@@ -523,7 +530,11 @@ bool DictPropertyMap::forEachPropertyWhile(
     Runtime *runtime,
     const CallbackFunction &callback) {
   GCScopeMarkerRAII gcMarker{runtime};
-  for (size_type i = 0, e = selfHandle->numDescriptors_; i != e; ++i) {
+  for (size_type
+           i = 0,
+           e = selfHandle->numDescriptors_.load(std::memory_order_relaxed);
+       i != e;
+       ++i) {
     auto const *descPair = selfHandle->getDescriptorPairs() + i;
     if (descPair->first.isValid()) {
       if (!callback(runtime, descPair->first, descPair->second))
@@ -539,7 +550,11 @@ void DictPropertyMap::forEachMutablePropertyDescriptor(
     Handle<DictPropertyMap> selfHandle,
     Runtime *runtime,
     const CallbackFunction &callback) {
-  for (size_type i = 0, e = selfHandle->numDescriptors_; i != e; ++i) {
+  for (size_type
+           i = 0,
+           e = selfHandle->numDescriptors_.load(std::memory_order_relaxed);
+       i != e;
+       ++i) {
     auto *descPair = selfHandle->getDescriptorPairs() + i;
     if (descPair->first.isValid()) {
       callback(descPair->second);
@@ -555,7 +570,9 @@ inline DictPropertyMap::DescriptorPair *DictPropertyMap::getDescriptorPair(
 
   auto *hashPair = self->getHashPairs() + pos.hashPairIndex;
   auto descIndex = hashPair->getDescIndex();
-  assert(descIndex < self->numDescriptors_ && "descriptor index out of range");
+  assert(
+      descIndex < self->numDescriptors_.load(std::memory_order_relaxed) &&
+      "descriptor index out of range");
 
   auto *res = self->getDescriptorPairs() + descIndex;
   assert(hashPair->mayBe(res->first) && "accessing incorrect descriptor pair");
