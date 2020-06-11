@@ -791,7 +791,6 @@ CallResult<HermesValue> splitInternal(
   }
 
   // The pattern which we want to separate on. Can be a JSRegExp or a string.
-  // TODO: implement sticky ('y') flag behavior.
   bool unicodeMatching = false;
   MutableHandle<> R{runtime};
   if (vmisa<JSRegExp>(separator.get())) {

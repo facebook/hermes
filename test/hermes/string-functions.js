@@ -199,6 +199,10 @@ print('abc'.split(''));
 // CHECK-NEXT: a,b,c
 print('ab'.split(/a*?/));
 // CHECK-NEXT: a,b
+var re = /,/y;
+re.lastIndex=6;
+print('abc,def,ghi'.split(re));
+// CHECK-NEXT: abc,def,ghi
 print('helloworld'.split(/(hello)(world)/));
 // CHECK-NEXT: ,hello,world,
 print('AhelloworldB'.split(/(hello)(world)/));
