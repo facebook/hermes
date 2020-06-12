@@ -11,6 +11,7 @@ set(RTSources
   Array.cpp
   ArrayTest.cpp
   ArrayStorageTest.cpp
+  BytecodeProviderTest.cpp
   CallResultTest.cpp
   CardObjectBoundaryNCTest.cpp
   CardTableNCTest.cpp
