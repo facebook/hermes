@@ -296,7 +296,8 @@ regExpConstructor(void *, Runtime *runtime, NativeArgs args) {
     // b. If flags is undefined, let F be the value of pattern’s
     // [[OriginalFlags]] internal slot.
     if (flags->isUndefined()) {
-      auto flagsStr = JSRegExp::getFlagBits(patternAsRegExp.get()).toString();
+      auto flagsStr =
+          JSRegExp::getSyntaxFlags(patternAsRegExp.get()).toString();
       auto strRes = StringPrimitive::create(runtime, flagsStr);
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
@@ -389,7 +390,7 @@ CallResult<Handle<JSArray>> directRegExpExec(
   uint64_t lastIndex = *lengthRes;
 
   // Let flags be R.[[OriginalFlags]]
-  const JSRegExp::FlagBits flags = JSRegExp::getFlagBits(regexp.get());
+  const regex::SyntaxFlags flags = JSRegExp::getSyntaxFlags(regexp.get());
 
   // If flags contains "g", let global be true, else let global be false
   // If flags contains "y", let sticky be true, else let sticky be false.
@@ -734,20 +735,20 @@ regExpFlagPropertyGetter(void *ctx, Runtime *runtime, NativeArgs args) {
   // "Let flags be the value of R’s [[OriginalFlags]] internal slot."
   // "If flags contains the code unit "i/m/g", return true."
   // "Return false."
-  auto flagBits = JSRegExp::getFlagBits(R.get());
+  auto syntaxFlags = JSRegExp::getSyntaxFlags(R.get());
   switch ((intptr_t)ctx) {
     case 'i':
-      return HermesValue::encodeBoolValue(flagBits.ignoreCase);
+      return HermesValue::encodeBoolValue(syntaxFlags.ignoreCase);
     case 'm':
-      return HermesValue::encodeBoolValue(flagBits.multiline);
+      return HermesValue::encodeBoolValue(syntaxFlags.multiline);
     case 'g':
-      return HermesValue::encodeBoolValue(flagBits.global);
+      return HermesValue::encodeBoolValue(syntaxFlags.global);
     case 'u':
-      return HermesValue::encodeBoolValue(flagBits.unicode);
+      return HermesValue::encodeBoolValue(syntaxFlags.unicode);
     case 'y':
-      return HermesValue::encodeBoolValue(flagBits.sticky);
+      return HermesValue::encodeBoolValue(syntaxFlags.sticky);
     case 's':
-      return HermesValue::encodeBoolValue(flagBits.dotAll);
+      return HermesValue::encodeBoolValue(syntaxFlags.dotAll);
     default:
       llvm_unreachable("Invalid flag passed to regExpFlagPropertyGetter");
       return HermesValue::encodeEmptyValue();

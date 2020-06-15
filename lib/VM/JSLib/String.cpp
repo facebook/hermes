@@ -796,7 +796,7 @@ CallResult<HermesValue> splitInternal(
   if (vmisa<JSRegExp>(separator.get())) {
     R = separator.get();
     unicodeMatching =
-        JSRegExp::getFlagBits(vmcast<JSRegExp>(separator.get())).unicode;
+        JSRegExp::getSyntaxFlags(vmcast<JSRegExp>(separator.get())).unicode;
   } else {
     auto strRes = toString_RJS(runtime, separator);
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {

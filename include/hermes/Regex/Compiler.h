@@ -27,6 +27,7 @@
 #include "hermes/Platform/Unicode/CharacterProperties.h"
 #include "hermes/Platform/Unicode/CodePointSet.h"
 
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -240,6 +241,84 @@ struct CharacterClass {
   bool inverted_;
 
   CharacterClass(Type type, bool invert) : type_(type), inverted_(invert) {}
+};
+
+// Struct representing flags which may be used when constructing the RegExp
+struct SyntaxFlags {
+  uint8_t ignoreCase : 1;
+  uint8_t multiline : 1;
+  uint8_t global : 1;
+  uint8_t sticky : 1;
+  uint8_t unicode : 1;
+  uint8_t dotAll : 1;
+
+  /// \return a string representing the flags
+  /// The characters are returned in the order given in ES 6 21.2.5.3
+  /// (specifically global, ignoreCase, multiline, unicode, sticky)
+  /// Note this may differ in order from the string passed in construction
+  llvm::SmallString<6> toString() const {
+    llvm::SmallString<6> result;
+    if (global)
+      result.push_back('g');
+    if (ignoreCase)
+      result.push_back('i');
+    if (multiline)
+      result.push_back('m');
+    if (unicode)
+      result.push_back('u');
+    if (sticky)
+      result.push_back('y');
+    if (dotAll)
+      result.push_back('s');
+    return result;
+  }
+
+  /// Given a flags string \p str, generate the corresponding SyntaxFlags
+  /// \return the flags if the string is valid, an empty optional otherwise
+  /// See ES 5.1 15.10.4.1 for description of the validation
+  static llvm::Optional<SyntaxFlags> fromString(
+      const llvm::ArrayRef<char16_t> flags) {
+    // A flags string may contain i,m,g, in any order, but at most once each
+    auto error = llvm::NoneType::None;
+    SyntaxFlags ret = {};
+    for (auto c : flags) {
+      switch (c) {
+        case u'i':
+          if (ret.ignoreCase)
+            return error;
+          ret.ignoreCase = 1;
+          break;
+        case u'm':
+          if (ret.multiline)
+            return error;
+          ret.multiline = 1;
+          break;
+        case u'g':
+          if (ret.global)
+            return error;
+          ret.global = 1;
+          break;
+        case u'u':
+          if (ret.unicode)
+            return error;
+          ret.unicode = 1;
+          break;
+        case u'y':
+          if (ret.sticky)
+            return error;
+          ret.sticky = 1;
+          break;
+        case u's':
+          if (ret.dotAll)
+            return error;
+          ret.dotAll = 1;
+          break;
+        default:
+          return error;
+      }
+    }
+    return ret;
+  }
 };
 
 class Node;

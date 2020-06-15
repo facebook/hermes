@@ -340,7 +340,7 @@ llvm::Optional<CompiledRegExp> CompiledRegExp::tryCompile(
   // Compute the SyntaxFlags based on the flags string.
   // TODO: need to emit errors for invalid flags by factoring out JSRegExp flag
   // validation.
-  SyntaxFlags sflags = {};
+  constants::SyntaxFlags sflags = {};
   if (flags.contains('i'))
     sflags |= icase;
   if (flags.contains('m'))

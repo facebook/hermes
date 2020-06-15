@@ -7,7 +7,6 @@
 
 #include "hermes/VM/JSRegExp.h"
 
-#include "hermes/Regex/Compiler.h"
 #include "hermes/Regex/Executor.h"
 #include "hermes/Regex/RegexTraits.h"
 #include "hermes/Support/UTF8.h"
@@ -62,7 +61,7 @@ JSRegExp::JSRegExp(Deserializer &d) : JSObject(d, &vt.base) {
   // relocation for it.
   d.endObject(bytecode_);
 
-  d.readData(&flagBits_, sizeof(flagBits_));
+  d.readData(&syntaxFlags_, sizeof(syntaxFlags_));
 }
 
 void RegExpSerialize(Serializer &s, const GCCell *cell) {
@@ -74,7 +73,7 @@ void RegExpSerialize(Serializer &s, const GCCell *cell) {
   // relocation for it.
   s.endObject(self->bytecode_);
 
-  s.writeData(&self->flagBits_, sizeof(self->flagBits_));
+  s.writeData(&self->syntaxFlags_, sizeof(self->syntaxFlags_));
 
   s.endObject(cell);
 }
@@ -120,13 +119,15 @@ ExecutionStatus JSRegExp::initialize(
       "Null pattern and/or flags passed to initializeWithPatternAndFlags");
 
   // Validate flags.
-  auto flagsView = StringPrimitive::createStringView(runtime, flags);
-  auto fbits = FlagBits::fromString(flagsView);
-  if (!fbits) {
+  llvm::SmallVector<char16_t, 16> flagsText16;
+  flags->copyUTF16String(flagsText16);
+
+  auto sflags = regex::SyntaxFlags::fromString(flagsText16);
+  if (!sflags) {
     runtime->raiseSyntaxError("Invalid flags passed to RegExp");
     return ExecutionStatus::EXCEPTION;
   }
-  selfHandle->flagBits_ = *fbits;
+  selfHandle->syntaxFlags_ = *sflags;
 
   JSObject::setInternalProperty(
       selfHandle.get(), runtime, patternPropIndex(), pattern.getHermesValue());
@@ -150,16 +151,15 @@ ExecutionStatus JSRegExp::initialize(
     return selfHandle->initializeBytecode(*bytecode, runtime);
   } else {
     regex::constants::SyntaxFlags nativeFlags = {};
-    if (fbits->ignoreCase)
+    if (sflags->ignoreCase)
       nativeFlags |= regex::constants::icase;
-    if (fbits->multiline)
+    if (sflags->multiline)
       nativeFlags |= regex::constants::multiline;
-    if (fbits->unicode)
+    if (sflags->unicode)
       nativeFlags |= regex::constants::unicode;
 
-    auto patternText = StringPrimitive::createStringView(runtime, pattern);
     llvm::SmallVector<char16_t, 16> patternText16;
-    patternText.copyUTF16String(patternText16);
+    pattern->copyUTF16String(patternText16);
 
     // Build the regex.
     regex::Regex<regex::UTF16RegexTraits> regex(
@@ -189,49 +189,6 @@ ExecutionStatus JSRegExp::initializeBytecode(
   bytecode_ = (uint8_t *)checkedMalloc(sz);
   memcpy(bytecode_, bytecode.data(), sz);
   return ExecutionStatus::RETURNED;
-}
-
-OptValue<JSRegExp::FlagBits> JSRegExp::FlagBits::fromString(StringView str) {
-  // A flags string may contain i,m,g, in any order, but at most once each
-  auto error = llvm::NoneType::None;
-  JSRegExp::FlagBits ret = {};
-  for (char16_t c : str) {
-    switch (c) {
-      case u'i':
-        if (ret.ignoreCase)
-          return error;
-        ret.ignoreCase = 1;
-        break;
-      case u'm':
-        if (ret.multiline)
-          return error;
-        ret.multiline = 1;
-        break;
-      case u'g':
-        if (ret.global)
-          return error;
-        ret.global = 1;
-        break;
-      case u'u':
-        if (ret.unicode)
-          return error;
-        ret.unicode = 1;
-        break;
-      case u'y':
-        if (ret.sticky)
-          return error;
-        ret.sticky = 1;
-        break;
-      case u's':
-        if (ret.dotAll)
-          return error;
-        ret.dotAll = 1;
-        break;
-      default:
-        return error;
-    }
-  }
-  return ret;
 }
 
 PseudoHandle<StringPrimitive> JSRegExp::getPattern(
@@ -301,7 +258,7 @@ CallResult<RegExpMatch> JSRegExp::search(
 
   // Respect the sticky flag, which forces us to match only at the given
   // location.
-  if (selfHandle->flagBits_.sticky) {
+  if (selfHandle->syntaxFlags_.sticky) {
     matchFlags |= regex::constants::matchOnlyAtStart;
   }
 
