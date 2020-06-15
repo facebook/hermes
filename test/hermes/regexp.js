@@ -207,6 +207,8 @@ try { re.sticky = false; } catch (err) { print(err.name); } // not writable
 re.lastIndex = 42; // yes writable
 print(re.global, re.ignoreCase, re.multiline, re.lastIndex);
 // CHECK-NEXT: true true false 42
+try { eval("b+/v/a"); } catch (err) { print(err.name); };
+// CHECK-NEXT: SyntaxError
 
 // Flag property getter tests.
 var globalGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'global').get;

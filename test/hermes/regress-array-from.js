@@ -12,4 +12,4 @@ try {
 } catch (e) {
   print (e);
 }
-// CHECK: SyntaxError: Invalid flags passed to RegExp
+// CHECK: SyntaxError: Invalid RegExp: Invalid flags

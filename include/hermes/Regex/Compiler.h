@@ -43,47 +43,6 @@ using namespace std;
 
 namespace constants {
 
-// SyntaxFlags
-// Note these are encoded into bytecode files, so changing their values is a
-// breaking change.
-enum SyntaxFlags : uint8_t {
-  icase = 1 << 0,
-  multiline = 1 << 2,
-  unicode = 1 << 3,
-  dotAll = 1 << 4,
-};
-
-inline constexpr SyntaxFlags operator~(SyntaxFlags x) {
-  return SyntaxFlags(~int(x) & 0x1FF);
-}
-
-inline constexpr SyntaxFlags operator&(SyntaxFlags x, SyntaxFlags y) {
-  return SyntaxFlags(int(x) & int(y));
-}
-
-inline constexpr SyntaxFlags operator|(SyntaxFlags x, SyntaxFlags y) {
-  return SyntaxFlags(int(x) | int(y));
-}
-
-inline constexpr SyntaxFlags operator^(SyntaxFlags x, SyntaxFlags y) {
-  return SyntaxFlags(int(x) ^ int(y));
-}
-
-inline SyntaxFlags &operator&=(SyntaxFlags &x, SyntaxFlags y) {
-  x = x & y;
-  return x;
-}
-
-inline SyntaxFlags &operator|=(SyntaxFlags &x, SyntaxFlags y) {
-  x = x | y;
-  return x;
-}
-
-inline SyntaxFlags &operator^=(SyntaxFlags &x, SyntaxFlags y) {
-  x = x ^ y;
-  return x;
-}
-
 // MatchFlagType
 
 enum MatchFlagType {
@@ -167,6 +126,9 @@ enum class ErrorType {
 
   /// The pattern exceeded internal limits, such as capture group or loop count.
   PatternExceedsParseLimits,
+
+  /// The flags supplied were either invalid or contained repetition.
+  InvalidFlags,
 };
 
 /// \return an error message for the given \p error.
@@ -192,6 +154,8 @@ inline const char *messageForError(ErrorType error) {
       return "Quantifier has nothing to repeat";
     case ErrorType::PatternExceedsParseLimits:
       return "Pattern exceeds parse limits";
+    case ErrorType::InvalidFlags:
+      return "Invalid flags";
     case ErrorType::None:
       return "No error";
   }
@@ -1230,11 +1194,20 @@ class Regex {
 
   // Constructors
   Regex() = default;
-  explicit Regex(const CharT *p, constants::SyntaxFlags f = {})
+  explicit Regex(const CharT *p, const llvm::ArrayRef<char16_t> f = {})
       : Regex(p, p + char_traits<CharT>::length(p), f) {}
 
-  Regex(const CharT *first, const CharT *last, constants::SyntaxFlags f = {})
-      : flags_(SyntaxFlags::fromByte(f)) {
+  Regex(
+      const CharT *first,
+      const CharT *last,
+      const llvm::ArrayRef<char16_t> flags = {}) {
+    // Compute the SyntaxFlags based on the flags string.
+    auto sflags = SyntaxFlags::fromString(flags);
+    if (!sflags) {
+      error_ = constants::ErrorType::InvalidFlags;
+      return;
+    }
+    flags_ = *sflags;
     error_ = parse(first, last);
   }
 

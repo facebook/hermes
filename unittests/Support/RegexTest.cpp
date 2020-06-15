@@ -662,8 +662,11 @@ TEST(Regex, FromLibCXX) {
   }
 }
 
-static constants::ErrorType error_for(const char16_t *pattern) {
-  return cregex(pattern).getError();
+static constants::ErrorType error_for(
+    const char16_t *pattern,
+    const std::u16string flags = u"") {
+  const std::vector<char16_t> flagsVec(flags.begin(), flags.end());
+  return cregex(pattern, flagsVec).getError();
 };
 
 TEST(Regex, Invalid) {
@@ -685,6 +688,8 @@ TEST(Regex, Invalid) {
   EXPECT_EQ(error_for(u"(+)"), ErrorType::InvalidRepeat);
   EXPECT_EQ(error_for(u"({1})"), ErrorType::InvalidRepeat);
   EXPECT_EQ(error_for(u"(?)"), ErrorType::InvalidRepeat);
+  EXPECT_EQ(error_for(u"abc", u"a"), ErrorType::InvalidFlags);
+  EXPECT_EQ(error_for(u"abc", u"gg"), ErrorType::InvalidFlags);
 }
 
 TEST(Regex, InvalidFromLibCXX) {
@@ -730,15 +735,17 @@ TEST(RegExp, RangeChecks) {
 
 static bool regexIsAnchored(
     const char16_t *pattern,
-    constants::SyntaxFlags flags = {}) {
-  return cregex(pattern, flags).matchConstraints() &
+    const std::u16string flags = u"") {
+  const std::vector<char16_t> flagsVec(flags.begin(), flags.end());
+  return cregex(pattern, flagsVec).matchConstraints() &
       MatchConstraintAnchoredAtStart;
 }
 
 static bool regexIsNonASCII(
     const char16_t *pattern,
-    constants::SyntaxFlags flags = {}) {
-  return cregex(pattern, flags).matchConstraints() & MatchConstraintNonASCII;
+    const std::u16string flags = u"") {
+  const std::vector<char16_t> flagsVec(flags.begin(), flags.end());
+  return cregex(pattern, flagsVec).matchConstraints() & MatchConstraintNonASCII;
 }
 
 TEST(Regex, LineStartAnchoring) {
@@ -755,8 +762,8 @@ TEST(Regex, LineStartAnchoring) {
   EXPECT_FALSE(regexIsAnchored(u"abc"));
   EXPECT_FALSE(regexIsAnchored(u"abc|^def"));
   EXPECT_FALSE(regexIsAnchored(u"abc^|^def|\\w"));
-  EXPECT_FALSE(regexIsAnchored(u"abc^", constants::multiline));
-  EXPECT_FALSE(regexIsAnchored(u"abc", constants::multiline));
+  EXPECT_FALSE(regexIsAnchored(u"abc^", u"m"));
+  EXPECT_FALSE(regexIsAnchored(u"abc", u"m"));
 }
 
 TEST(Regex, NonASCII) {

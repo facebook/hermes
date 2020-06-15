@@ -337,22 +337,12 @@ llvm::Optional<CompiledRegExp> CompiledRegExp::tryCompile(
   convertUTF8WithSurrogatesToUTF16(
       std::back_inserter(re16), pattern.begin(), pattern.end());
 
-  // Compute the SyntaxFlags based on the flags string.
-  // TODO: need to emit errors for invalid flags by factoring out JSRegExp flag
-  // validation.
-  constants::SyntaxFlags sflags = {};
-  if (flags.contains('i'))
-    sflags |= icase;
-  if (flags.contains('m'))
-    sflags |= multiline;
-  if (flags.contains('u'))
-    sflags |= unicode;
-  if (flags.contains('s'))
-    sflags |= dotAll;
-
+  llvm::SmallVector<char16_t, 6> flags16;
+  convertUTF8WithSurrogatesToUTF16(
+      std::back_inserter(flags16), flags.begin(), flags.end());
   // Build and compile the regexp.
   auto re =
-      regex::Regex<regex::UTF16RegexTraits>(re16.begin(), re16.end(), sflags);
+      regex::Regex<regex::UTF16RegexTraits>(re16.begin(), re16.end(), flags16);
   if (!re.valid()) {
     if (outError)
       *outError = messageForError(re.getError());

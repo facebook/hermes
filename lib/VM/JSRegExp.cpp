@@ -118,17 +118,6 @@ ExecutionStatus JSRegExp::initialize(
       pattern && flags &&
       "Null pattern and/or flags passed to initializeWithPatternAndFlags");
 
-  // Validate flags.
-  llvm::SmallVector<char16_t, 16> flagsText16;
-  flags->copyUTF16String(flagsText16);
-
-  auto sflags = regex::SyntaxFlags::fromString(flagsText16);
-  if (!sflags) {
-    runtime->raiseSyntaxError("Invalid flags passed to RegExp");
-    return ExecutionStatus::EXCEPTION;
-  }
-  selfHandle->syntaxFlags_ = *sflags;
-
   JSObject::setInternalProperty(
       selfHandle.get(), runtime, patternPropIndex(), pattern.getHermesValue());
 
@@ -150,20 +139,15 @@ ExecutionStatus JSRegExp::initialize(
   if (bytecode) {
     return selfHandle->initializeBytecode(*bytecode, runtime);
   } else {
-    regex::constants::SyntaxFlags nativeFlags = {};
-    if (sflags->ignoreCase)
-      nativeFlags |= regex::constants::icase;
-    if (sflags->multiline)
-      nativeFlags |= regex::constants::multiline;
-    if (sflags->unicode)
-      nativeFlags |= regex::constants::unicode;
+    llvm::SmallVector<char16_t, 6> flagsText16;
+    flags->copyUTF16String(flagsText16);
 
     llvm::SmallVector<char16_t, 16> patternText16;
     pattern->copyUTF16String(patternText16);
 
     // Build the regex.
     regex::Regex<regex::UTF16RegexTraits> regex(
-        patternText16.begin(), patternText16.end(), nativeFlags);
+        patternText16.begin(), patternText16.end(), flagsText16);
 
     if (!regex.valid()) {
       runtime->raiseSyntaxError(
@@ -185,6 +169,9 @@ ExecutionStatus JSRegExp::initializeBytecode(
     runtime->raiseRangeError("RegExp size overflow");
     return ExecutionStatus::EXCEPTION;
   }
+  auto header =
+      reinterpret_cast<const regex::RegexBytecodeHeader *>(bytecode.data());
+  syntaxFlags_ = regex::SyntaxFlags::fromByte(header->syntaxFlags);
   bytecodeSize_ = sz;
   bytecode_ = (uint8_t *)checkedMalloc(sz);
   memcpy(bytecode_, bytecode.data(), sz);
