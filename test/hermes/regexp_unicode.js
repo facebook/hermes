@@ -11,7 +11,7 @@ print('RegExp Unicode');
 // CHECK: RegExp Unicode
 
 try { new RegExp("\\u{FFFFFFFFF}", "u"); } catch (e) { print(e.message); }
-// CHECK-NEXT: Invalid RegExp pattern: Escaped value too large
+// CHECK-NEXT: Invalid RegExp: Escaped value too large
 
 print(/abc/ui.exec("AbC"));
 // CHECK-NEXT: AbC
@@ -26,34 +26,34 @@ print(/\110/.exec("H"));
 // CHECK-NEXT: H
 
 try { new RegExp("\\110", "u"); } catch (e) { print(e.message); }
-// CHECK-NEXT: Invalid RegExp pattern: Invalid escape
+// CHECK-NEXT: Invalid RegExp: Invalid escape
 
 try { new RegExp("\\u{}", "u"); } catch (e) { print(e.message); }
-// CHECK-NEXT: Invalid RegExp pattern: Invalid escape
+// CHECK-NEXT: Invalid RegExp: Invalid escape
 
 try { new RegExp("\\u{ABC", "u"); } catch (e) { print(e.message); }
-// CHECK-NEXT: Invalid RegExp pattern: Invalid escape
+// CHECK-NEXT: Invalid RegExp: Invalid escape
 
 try { new RegExp("\\u{}", "u"); } catch (e) { print(e.message); }
-// CHECK-NEXT: Invalid RegExp pattern: Invalid escape
+// CHECK-NEXT: Invalid RegExp: Invalid escape
 
 try { new RegExp("\\u}", "u"); } catch (e) { print(e.message); }
-// CHECK-NEXT: Invalid RegExp pattern: Invalid escape
+// CHECK-NEXT: Invalid RegExp: Invalid escape
 
 try { new RegExp("\\u", "u"); } catch (e) { print(e.message); }
-// CHECK-NEXT: Invalid RegExp pattern: Invalid escape
+// CHECK-NEXT: Invalid RegExp: Invalid escape
 
 try { new RegExp("\\uZZZZ", "u"); } catch (e) { print(e.message); }
-// CHECK-NEXT: Invalid RegExp pattern: Invalid escape
+// CHECK-NEXT: Invalid RegExp: Invalid escape
 
 try { new RegExp("\\u{FFFFFFFFF}", "u"); } catch (e) { print(e.message); }
-// CHECK-NEXT: Invalid RegExp pattern: Escaped value too large
+// CHECK-NEXT: Invalid RegExp: Escaped value too large
 
 try { new RegExp("{", "u"); } catch (e) { print(e.message); }
-// CHECK-NEXT: Invalid RegExp pattern: Invalid quantifier bracket
+// CHECK-NEXT: Invalid RegExp: Invalid quantifier bracket
 
 try { new RegExp("}", "u"); } catch (e) { print(e.message); }
-// CHECK-NEXT: Invalid RegExp pattern: Invalid quantifier bracket
+// CHECK-NEXT: Invalid RegExp: Invalid quantifier bracket
 
 print((new RegExp("{", "")).source);
 // CHECK-NEXT: {

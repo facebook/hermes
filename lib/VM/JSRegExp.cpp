@@ -167,7 +167,7 @@ ExecutionStatus JSRegExp::initialize(
 
     if (!regex.valid()) {
       runtime->raiseSyntaxError(
-          TwineChar16("Invalid RegExp pattern: ") +
+          TwineChar16("Invalid RegExp: ") +
           regex::constants::messageForError(regex.getError()));
       return ExecutionStatus::EXCEPTION;
     }

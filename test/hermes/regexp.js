@@ -451,9 +451,9 @@ print(RegExp.$1, RegExp.$2);
 // Check that error messages are propagated to exceptions.
 // The unit tests check the individual errors in more detail.
 try { new RegExp("["); } catch (e) { print(e.message); }
-// CHECK-NEXT: Invalid RegExp pattern: Character class not closed
+// CHECK-NEXT: Invalid RegExp: Character class not closed
 try { new RegExp("\\"); } catch (e) { print(e.message); }
-// CHECK-NEXT: Invalid RegExp pattern: Incomplete escape
+// CHECK-NEXT: Invalid RegExp: Incomplete escape
 
 print("RegExp.prototype[Symbol.match]");
 // CHECK-LABEL: RegExp.prototype[Symbol.match]
