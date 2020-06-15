@@ -20,6 +20,7 @@
 
 #include "hermes/Platform/Unicode/CharacterProperties.h"
 #include "hermes/Platform/Unicode/CodePointSet.h"
+#include "hermes/Support/Algorithms.h"
 #include "hermes/Support/Compiler.h"
 
 #include "hermes/Regex/RegexBytecode.h"
@@ -1117,21 +1118,13 @@ class Regex {
   // Constraints on the type of strings that can match this regex.
   MatchConstraintSet matchConstraints_ = 0;
 
-  /// Implementation of make_unique(). Construct a unique_ptr to a new Node from
-  /// the given args \p args.
-  /// \return the unique_ptr
-  template <typename NodeType, typename... Args>
-  static std::unique_ptr<NodeType> make_unique(Args &&... args) {
-    return std::unique_ptr<NodeType>(new NodeType(std::forward<Args>(args)...));
-  }
-
   /// Construct and and append a node of type NodeType at the end of the nodes_
   /// list. The node should be constructible from \p args.
   /// \return an observer pointer to the new node.
   template <typename NodeType, typename... Args>
   NodeType *appendNode(Args &&... args) {
     std::unique_ptr<NodeType> node =
-        make_unique<NodeType>(std::forward<Args>(args)...);
+        hermes::make_unique<NodeType>(std::forward<Args>(args)...);
     NodeType *nodePtr = node.get();
     nodes_.push_back(std::move(node));
     return nodePtr;
@@ -1410,14 +1403,14 @@ constants::ErrorType Regex<Traits>::parseWithBackRefLimit(
     uint32_t *outMaxBackRef) {
   // Initialize our node list with a single no-op node (it must never be empty.)
   nodes_.clear();
-  nodes_.push_back(make_unique<Node>());
+  nodes_.push_back(hermes::make_unique<Node>());
   auto result =
       parseRegex(first, last, this, flags_, backRefLimit, outMaxBackRef);
 
   // If we succeeded, add a goal node as the last node and perform optimizations
   // on the list.
   if (result == constants::ErrorType::None) {
-    nodes_.push_back(make_unique<GoalNode>());
+    nodes_.push_back(hermes::make_unique<GoalNode>());
     Node::optimizeNodeList(nodes_, flags_);
   }
 
@@ -1508,7 +1501,7 @@ void Regex<Traits>::pushLookaround(
   if (!forwards) {
     Node::reverseNodeList(exp);
   }
-  exp.push_back(make_unique<GoalNode>());
+  exp.push_back(hermes::make_unique<GoalNode>());
   appendNode<LookaroundNode>(
       std::move(exp), mexpBegin, mexpEnd, invert, forwards);
 }
