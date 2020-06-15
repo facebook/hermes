@@ -114,6 +114,12 @@ class TraceInterpreter final {
   /// \param revertToYGAtTTI: if true, and if the GC was not allocating in the
   ///   young generation, change back to young-gen allocation at TTI.
   struct ExecuteOptions {
+    // the embed RuntimeConfig instance that has all of the customization stuff
+    // it needs
+    // ::hermes::vm::RuntimeConfig::Builder rtConfigBuilder;
+    ::hermes::vm::GCConfig::Builder gcConfigBuilder;
+    mutable bool traceEnabled{false};
+
     // These are not config params.
     bool useTraceConfig{false};
     int warmupReps{0};
@@ -127,18 +133,8 @@ class TraceInterpreter final {
     // These are the config parameters.  We wrap them in llvm::Optional
     // to indicate whether the corresponding command line flag was set
     // explicitly.  We override the trace's config only when that is true.
-    llvm::Optional<bool> shouldPrintGCStats;
-    llvm::Optional<::hermes::vm::gcheapsize_t> minHeapSize;
-    llvm::Optional<::hermes::vm::gcheapsize_t> initHeapSize;
-    llvm::Optional<::hermes::vm::gcheapsize_t> maxHeapSize;
-    llvm::Optional<double> occupancyTarget;
-    llvm::Optional<::hermes::vm::ReleaseUnused> shouldReleaseUnused;
-    llvm::Optional<bool> allocInYoung;
-    llvm::Optional<bool> revertToYGAtTTI;
     llvm::Optional<bool> shouldTrackIO;
     llvm::Optional<unsigned> bytecodeWarmupPercent;
-    llvm::Optional<double> sanitizeRate;
-    llvm::Optional<int64_t> sanitizeRandomSeed;
   };
 
  private:
@@ -203,6 +199,13 @@ class TraceInterpreter final {
       const std::vector<std::string> &bytecodeFiles,
       const ExecuteOptions &options,
       std::unique_ptr<llvm::raw_ostream> traceStream);
+
+  static ::hermes::vm::RuntimeConfig merge(
+      ::hermes::vm::RuntimeConfig::Builder &,
+      const ::hermes::vm::GCConfig::Builder &,
+      const ExecuteOptions &,
+      bool,
+      bool);
 
   /// \param traceStream If non-null, write a trace of the execution into this
   /// stream.

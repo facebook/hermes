@@ -74,13 +74,13 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
   }
 }
 
-::hermes::vm::GCConfig getGCConfig(JSONObject *rtConfig) {
+::hermes::vm::GCConfig::Builder getGCConfig(JSONObject *rtConfig) {
   // This function should extract all fields from GCConfig that can affect
   // performance metrics. Configs for debugging can be ignored.
   ::hermes::vm::GCConfig::Builder gcconf;
   auto *val = rtConfig->get("gcConfig");
   if (!val) {
-    return gcconf.build();
+    return gcconf;
   }
   if (val->getKind() != JSONKind::Object) {
     throw std::invalid_argument("gcConfig should be an object");
@@ -115,22 +115,23 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
     gcconf.withRevertToYGAtTTI(
         llvm::cast<JSONBoolean>(revertAtTTI)->getValue());
   }
-  return gcconf.build();
+  return gcconf;
 }
 
-::hermes::vm::RuntimeConfig getRuntimeConfig(JSONObject *root) {
+::hermes::vm::RuntimeConfig::Builder getRuntimeConfig(JSONObject *root) {
   JSONValue *val = root->get("runtimeConfig");
   ::hermes::vm::RuntimeConfig::Builder conf;
   if (!val) {
     // If the config doesn't exist, return some default values.
-    return conf.build();
+    return conf;
   }
   if (val->getKind() != JSONKind::Object) {
     throw std::invalid_argument("runtimeConfig should be an object");
   }
   auto *rtConfig = llvm::cast<JSONObject>(val);
 
-  conf.withGCConfig(getGCConfig(rtConfig));
+  // It is required to pass the unittest SynthTraceTest
+  conf.withGCConfig(getGCConfig(rtConfig).build());
 
   if (auto *maxNumRegisters = rtConfig->get("maxNumRegisters")) {
     conf.withMaxNumRegisters(getNumberAs<unsigned>(maxNumRegisters));
@@ -146,7 +147,7 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
     conf.withVMExperimentFlags(getNumberAs<uint32_t>(vmExperimentFlags));
   }
 
-  return conf.build();
+  return conf;
 }
 
 template <template <typename, typename> class Collection>
@@ -524,7 +525,8 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
 
 std::tuple<
     SynthTrace,
-    ::hermes::vm::RuntimeConfig,
+    ::hermes::vm::RuntimeConfig::Builder,
+    ::hermes::vm::GCConfig::Builder,
     ::hermes::vm::MockedEnvironment>
 parseSynthTrace(std::unique_ptr<llvm::MemoryBuffer> trace) {
   JSLexer::Allocator alloc;
@@ -565,12 +567,14 @@ parseSynthTrace(std::unique_ptr<llvm::MemoryBuffer> trace) {
   return std::make_tuple(
       getTrace(llvm::cast<JSONArray>(root->at("trace")), globalObjID),
       getRuntimeConfig(root),
+      getGCConfig(root),
       getMockedEnvironment(llvm::cast<JSONObject>(root->at("env"))));
 }
 
 std::tuple<
     SynthTrace,
-    ::hermes::vm::RuntimeConfig,
+    ::hermes::vm::RuntimeConfig::Builder,
+    ::hermes::vm::GCConfig::Builder,
     ::hermes::vm::MockedEnvironment>
 parseSynthTrace(const std::string &tracefile) {
   return parseSynthTrace(

@@ -189,27 +189,31 @@ int main(int argc, char **argv) {
     // if -gc-print-stats is specified false explicitly, and
     // -gc-before-stats is also false, or if we're trying to get
     // a stable instruction count.
-    options.shouldPrintGCStats = true;
+    bool shouldPrintGCStats = true;
     if (cl::GCPrintStats.getNumOccurrences() > 0) {
-      options.shouldPrintGCStats = (cl::GCPrintStats || cl::GCBeforeStats) &&
+      shouldPrintGCStats = (cl::GCPrintStats || cl::GCBeforeStats) &&
           !cl::StableInstructionCount;
     }
-    options.shouldPrintGCStats =
-        options.shouldPrintGCStats && !cl::StableInstructionCount;
+    shouldPrintGCStats = shouldPrintGCStats && !cl::StableInstructionCount;
 
-    options.minHeapSize = execOption(cl::MinHeapSize);
-    options.initHeapSize = execOption(cl::InitHeapSize);
-    options.maxHeapSize = execOption(cl::MaxHeapSize);
-    options.occupancyTarget = execOption(cl::OccupancyTarget);
-    options.shouldReleaseUnused = execOption(cl::ShouldReleaseUnused);
-    options.allocInYoung = execOption(cl::GCAllocYoung);
-    options.revertToYGAtTTI = execOption(cl::GCRevertToYGAtTTI);
+    llvm::Optional<::hermes::vm::gcheapsize_t> minHeapSize =
+        execOption(cl::MinHeapSize);
+    llvm::Optional<::hermes::vm::gcheapsize_t> initHeapSize =
+        execOption(cl::InitHeapSize);
+    llvm::Optional<::hermes::vm::gcheapsize_t> maxHeapSize =
+        execOption(cl::MaxHeapSize);
+    llvm::Optional<double> occupancyTarget = execOption(cl::OccupancyTarget);
+    llvm::Optional<::hermes::vm::ReleaseUnused> shouldReleaseUnused =
+        execOption(cl::ShouldReleaseUnused);
+    llvm::Optional<bool> allocInYoung = execOption(cl::GCAllocYoung);
+    llvm::Optional<bool> revertToYGAtTTI = execOption(cl::GCRevertToYGAtTTI);
     options.shouldTrackIO = execOption(cl::TrackBytecodeIO);
     options.bytecodeWarmupPercent = execOption(cl::BytecodeWarmupPercent);
-    options.sanitizeRate = execOption(cl::GCSanitizeRate);
+    llvm::Optional<double> sanitizeRate = execOption(cl::GCSanitizeRate);
     // The type of this case is complicated, so just do it explicitly.
+    llvm::Optional<int64_t> sanitizeRandomSeed;
     if (cl::GCSanitizeRandomSeed) {
-      options.sanitizeRandomSeed = cl::GCSanitizeRandomSeed;
+      sanitizeRandomSeed = cl::GCSanitizeRandomSeed;
     }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
@@ -221,7 +225,7 @@ int main(int argc, char **argv) {
                                            cl::BytecodeFiles.end()};
     if (!cl::Trace.empty()) {
       // If this is tracing mode, get the trace instead of the stats.
-      options.shouldPrintGCStats = false;
+      shouldPrintGCStats = false;
       options.shouldTrackIO = false;
       std::error_code ec;
       auto os = ::hermes::make_unique<llvm::raw_fd_ostream>(
@@ -240,6 +244,39 @@ int main(int argc, char **argv) {
       llvm::outs() << TraceInterpreter::execAndGetStats(
                           cl::TraceFile, bytecodeFiles, options)
                    << "\n";
+    }
+
+    options.gcConfigBuilder.withShouldRecordStats(shouldPrintGCStats);
+    if (minHeapSize) {
+      options.gcConfigBuilder.withMinHeapSize(*minHeapSize);
+    }
+    if (initHeapSize) {
+      options.gcConfigBuilder.withMinHeapSize(*initHeapSize);
+    }
+    if (maxHeapSize) {
+      options.gcConfigBuilder.withMaxHeapSize(*maxHeapSize);
+    }
+    if (occupancyTarget) {
+      options.gcConfigBuilder.withOccupancyTarget(*occupancyTarget);
+    }
+    if (shouldReleaseUnused) {
+      options.gcConfigBuilder.withShouldReleaseUnused(*shouldReleaseUnused);
+    }
+    if (allocInYoung) {
+      options.gcConfigBuilder.withAllocInYoung(*allocInYoung);
+    }
+    if (revertToYGAtTTI) {
+      options.gcConfigBuilder.withRevertToYGAtTTI(*revertToYGAtTTI);
+    }
+    if (sanitizeRate || sanitizeRandomSeed) {
+      auto sanitizeConfigBuilder = ::hermes::vm::GCSanitizeConfig::Builder();
+      if (sanitizeRate) {
+        sanitizeConfigBuilder.withSanitizeRate(*sanitizeRate);
+      }
+      if (sanitizeRandomSeed) {
+        sanitizeConfigBuilder.withRandomSeed(*sanitizeRandomSeed);
+      }
+      options.gcConfigBuilder.withSanitizeConfig(sanitizeConfigBuilder.build());
     }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)

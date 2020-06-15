@@ -612,6 +612,50 @@ TraceInterpreter::getSourceHashToBundleMap(
 }
 
 /* static */
+::hermes::vm::RuntimeConfig TraceInterpreter::merge(
+    ::hermes::vm::RuntimeConfig::Builder &rtConfigBuilderIn,
+    const ::hermes::vm::GCConfig::Builder &gcConfigBuilderIn,
+    const ExecuteOptions &options,
+    bool codeIsMmapped,
+    bool isBytecode) {
+  ::hermes::vm::RuntimeConfig::Builder rtConfigBuilder;
+  ::hermes::vm::GCConfig::Builder gcConfigBuilder;
+
+  if (options.useTraceConfig) {
+    rtConfigBuilder.update(rtConfigBuilderIn);
+  } else {
+    // Some portions of even the default config must agree with the trace
+    // config, because the contents of the trace assume a given shape for
+    // runtime data structures during replay.  So far, we know of only one such
+    // parameter: EnableSampledStats.
+    rtConfigBuilder.withEnableSampledStats(
+        rtConfigBuilderIn.build().getEnableSampledStats());
+  }
+
+  if (options.bytecodeWarmupPercent) {
+    rtConfigBuilder.withBytecodeWarmupPercent(*options.bytecodeWarmupPercent);
+  }
+  if (options.shouldTrackIO) {
+    rtConfigBuilder.withTrackIO(
+        *options.shouldTrackIO && isBytecode && codeIsMmapped);
+  }
+
+  // If (and only if) an out trace is requested, turn on tracing in the VM
+  // as well.
+  rtConfigBuilder.withTraceEnabled(options.traceEnabled);
+
+  // If aggregating multiple reps, randomize the placement of some data
+  // structures in each rep, for a more robust time metric.
+  if (options.reps > 1) {
+    rtConfigBuilder.withRandomizeMemoryLayout(true);
+  }
+
+  gcConfigBuilder.update(gcConfigBuilderIn);
+  gcConfigBuilder.update(options.gcConfigBuilder);
+  return rtConfigBuilder.withGCConfig(gcConfigBuilder.build()).build();
+}
+
+/* static */
 std::string TraceInterpreter::execFromMemoryBuffer(
     std::unique_ptr<llvm::MemoryBuffer> &&traceBuf,
     std::vector<std::unique_ptr<llvm::MemoryBuffer>> &&codeBufs,
@@ -624,80 +668,14 @@ std::string TraceInterpreter::execFromMemoryBuffer(
   std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>>
       sourceHashToBundle = getSourceHashToBundleMap(
           std::move(codeBufs), trace, &codeIsMmapped, &isBytecode);
+  options.traceEnabled = (traceStream != nullptr);
 
-  ::hermes::vm::RuntimeConfig defaultConfig;
-  // Some portions of even the default config must agree with the trace config,
-  // because the contents of the trace assume a given shape for runtime data
-  // structures during replay.  So far, we know of only one such parameter:
-  defaultConfig =
-      defaultConfig.rebuild()
-          .withEnableSampledStats(
-              std::get<1>(traceAndConfigAndEnv).getEnableSampledStats())
-          .build();
-
-  ::hermes::vm::RuntimeConfig *rtConfigBase;
-  if (options.useTraceConfig) {
-    rtConfigBase = &std::get<1>(traceAndConfigAndEnv);
-  } else {
-    rtConfigBase = &defaultConfig;
-  }
-  ::hermes::vm::RuntimeConfig::Builder rtConfigBuilder =
-      rtConfigBase->rebuild();
-  ::hermes::vm::GCConfig::Builder gcConfigBuilder =
-      rtConfigBase->getGCConfig().rebuild();
-  if (options.bytecodeWarmupPercent) {
-    rtConfigBuilder.withBytecodeWarmupPercent(*options.bytecodeWarmupPercent);
-  }
-  if (options.shouldTrackIO) {
-    rtConfigBuilder.withTrackIO(
-        *options.shouldTrackIO && isBytecode && codeIsMmapped);
-  }
-  if (options.shouldPrintGCStats) {
-    gcConfigBuilder.withShouldRecordStats(*options.shouldPrintGCStats);
-  }
-  if (options.minHeapSize) {
-    gcConfigBuilder.withMinHeapSize(*options.minHeapSize);
-  }
-  if (options.initHeapSize) {
-    gcConfigBuilder.withMinHeapSize(*options.initHeapSize);
-  }
-  if (options.maxHeapSize) {
-    gcConfigBuilder.withMaxHeapSize(*options.maxHeapSize);
-  }
-  if (options.occupancyTarget) {
-    gcConfigBuilder.withOccupancyTarget(*options.occupancyTarget);
-  }
-  if (options.shouldReleaseUnused) {
-    gcConfigBuilder.withShouldReleaseUnused(*options.shouldReleaseUnused);
-  }
-  if (options.allocInYoung) {
-    gcConfigBuilder.withAllocInYoung(*options.allocInYoung);
-  }
-  if (options.revertToYGAtTTI) {
-    gcConfigBuilder.withRevertToYGAtTTI(*options.revertToYGAtTTI);
-  }
-  if (options.sanitizeRate || options.sanitizeRandomSeed) {
-    auto sanitizeConfigBuilder = ::hermes::vm::GCSanitizeConfig::Builder();
-    if (options.sanitizeRate) {
-      sanitizeConfigBuilder.withSanitizeRate(*options.sanitizeRate);
-    }
-    if (options.sanitizeRandomSeed) {
-      sanitizeConfigBuilder.withRandomSeed(*options.sanitizeRandomSeed);
-    }
-    gcConfigBuilder.withSanitizeConfig(sanitizeConfigBuilder.build());
-  }
-
-  // If (and only if) an out trace is requested, turn on tracing in the VM
-  // as well.
-  rtConfigBuilder.withTraceEnabled(traceStream != nullptr);
-
-  // If aggregating multiple reps, randomize the placement of some data
-  // structures in each rep, for a more robust time metric.
-  if (options.reps > 1) {
-    rtConfigBuilder.withRandomizeMemoryLayout(true);
-  }
-  auto &rtConfig =
-      rtConfigBuilder.withGCConfig(gcConfigBuilder.build()).build();
+  const auto &rtConfig = merge(
+      std::get<1>(traceAndConfigAndEnv),
+      std::get<2>(traceAndConfigAndEnv),
+      options,
+      codeIsMmapped,
+      isBytecode);
 
   std::vector<std::string> repGCStats(options.reps);
   for (int rep = -options.warmupReps; rep < options.reps; ++rep) {
@@ -706,7 +684,7 @@ std::string TraceInterpreter::execFromMemoryBuffer(
     std::unique_ptr<HermesRuntime> hermesRuntime = makeHermesRuntime(rtConfig);
     // Set up the mocks for environment-dependent JS behavior
     {
-      auto env = std::get<2>(traceAndConfigAndEnv);
+      auto env = std::get<3>(traceAndConfigAndEnv);
       env.stabilizeInstructionCount = options.stabilizeInstructionCount;
       hermesRuntime->setMockedEnvironment(env);
     }
@@ -731,7 +709,7 @@ std::string TraceInterpreter::execFromMemoryBuffer(
       (void)rt->instrumentation().flushAndDisableBridgeTrafficTrace();
     }
   }
-  return (options.shouldPrintGCStats && *options.shouldPrintGCStats)
+  return rtConfig.getGCConfig().getShouldRecordStats()
       ? mergeGCStats(repGCStats)
       : "";
 }
