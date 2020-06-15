@@ -39,8 +39,6 @@
 namespace hermes {
 namespace regex {
 
-using namespace std;
-
 namespace constants {
 
 // MatchFlagType
@@ -493,7 +491,7 @@ class LoopNode final : public Node {
         mexpBegin_(mexpBegin),
         mexpEnd_(mexpEnd),
         greedy_(greedy),
-        loopee_(move(loopee)),
+        loopee_(std::move(loopee)),
         loopeeConstraints_(matchConstraintsForList(loopee_)) {}
 
   /// We inherit the loopee's match constraints unless the loop is optional (min
@@ -965,7 +963,7 @@ class BracketNode : public Node {
 
   const Traits &traits_;
   CodePointSet codePointSet_;
-  vector<CharacterClass> classes_;
+  std::vector<CharacterClass> classes_;
   bool negate_;
   bool icase_;
   bool unicode_;
@@ -1123,8 +1121,8 @@ class Regex {
   /// the given args \p args.
   /// \return the unique_ptr
   template <typename NodeType, typename... Args>
-  static unique_ptr<NodeType> make_unique(Args &&... args) {
-    return unique_ptr<NodeType>(new NodeType(forward<Args>(args)...));
+  static std::unique_ptr<NodeType> make_unique(Args &&... args) {
+    return std::unique_ptr<NodeType>(new NodeType(std::forward<Args>(args)...));
   }
 
   /// Construct and and append a node of type NodeType at the end of the nodes_
@@ -1132,9 +1130,10 @@ class Regex {
   /// \return an observer pointer to the new node.
   template <typename NodeType, typename... Args>
   NodeType *appendNode(Args &&... args) {
-    unique_ptr<NodeType> node = make_unique<NodeType>(forward<Args>(args)...);
+    std::unique_ptr<NodeType> node =
+        make_unique<NodeType>(std::forward<Args>(args)...);
     NodeType *nodePtr = node.get();
-    nodes_.push_back(move(node));
+    nodes_.push_back(std::move(node));
     return nodePtr;
   }
 
@@ -1195,7 +1194,7 @@ class Regex {
   // Constructors
   Regex() = default;
   explicit Regex(const CharT *p, const llvm::ArrayRef<char16_t> f = {})
-      : Regex(p, p + char_traits<CharT>::length(p), f) {}
+      : Regex(p, p + std::char_traits<CharT>::length(p), f) {}
 
   Regex(
       const CharT *first,
@@ -1510,7 +1509,8 @@ void Regex<Traits>::pushLookaround(
     Node::reverseNodeList(exp);
   }
   exp.push_back(make_unique<GoalNode>());
-  appendNode<LookaroundNode>(move(exp), mexpBegin, mexpEnd, invert, forwards);
+  appendNode<LookaroundNode>(
+      std::move(exp), mexpBegin, mexpEnd, invert, forwards);
 }
 
 void Node::reverseNodeList(NodeList &nodes) {
@@ -1557,8 +1557,8 @@ void Node::optimizeNodeList(NodeList &nodes, SyntaxFlags flags) {
     if (rangeEnd - rangeStart >= 3) {
       // We successfully coalesced some nodes.
       // Replace the range with a new node.
-      nodes[rangeStart] =
-          unique_ptr<MatchCharNode>(new MatchCharNode(std::move(chars), flags));
+      nodes[rangeStart] = std::unique_ptr<MatchCharNode>(
+          new MatchCharNode(std::move(chars), flags));
       // Fill the remainder of the range with null (we'll clean them up after
       // the loop) and skip to the end of the range.
       // Note that rangeEnd may be one past the last valid element.

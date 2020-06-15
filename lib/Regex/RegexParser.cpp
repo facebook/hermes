@@ -266,7 +266,7 @@ class Parser {
             auto exprStart = re_->currentNode();
             consumeDisjunction();
             auto expr = re_->spliceOut(exprStart);
-            re_->pushMarkedSubexpression(move(expr), mexp);
+            re_->pushMarkedSubexpression(std::move(expr), mexp);
           }
           if (!tryConsume(')')) {
             setError(constants::ErrorType::UnbalancedParenthesis);
@@ -834,7 +834,7 @@ class Parser {
     consumeDisjunction();
     auto mexpEnd = re_->markedCount();
     auto expr = re_->spliceOut(exprStart);
-    re_->pushLookaround(move(expr), mexpBegin, mexpEnd, negate, forwards);
+    re_->pushLookaround(std::move(expr), mexpBegin, mexpEnd, negate, forwards);
   }
 
   /// 21.2.2.9 AtomEscape.
