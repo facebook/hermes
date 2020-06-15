@@ -162,7 +162,10 @@ BCProviderFromSrc::createBCProviderFromSrc(
 
   context->setStrictMode(compileFlags.strict);
   context->setEnableEval(true);
-  context->setLazyCompilation(compileFlags.lazy);
+  if (!compileFlags.optimize) {
+    context->setLazyCompilation(compileFlags.lazy);
+  }
+
   context->setAllowFunctionToStringWithRuntimeSource(
       compileFlags.allowFunctionToStringWithRuntimeSource);
 #ifdef HERMES_ENABLE_DEBUGGER
@@ -224,10 +227,6 @@ BCProviderFromSrc::createBCProviderFromSrc(
   if (context->getSourceErrorManager().getErrorCount() > 0) {
     return {nullptr, outputManager.getErrorString()};
   }
-
-  assert(
-      (compileFlags.optimize ? !compileFlags.lazy : true) &&
-      "Can't optimize in lazy mode.");
 
   if (compileFlags.optimize && runOptimizationPasses)
     runOptimizationPasses(M);

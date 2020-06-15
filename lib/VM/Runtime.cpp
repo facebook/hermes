@@ -148,6 +148,7 @@ Runtime::Runtime(
     // The initial heap size can't be larger than the max.
     : enableEval(runtimeConfig.getEnableEval()),
       verifyEvalIR(runtimeConfig.getVerifyEvalIR()),
+      optimizedEval(runtimeConfig.getOptimizedEval()),
       heap_(
           getMetadataTable(),
           this,

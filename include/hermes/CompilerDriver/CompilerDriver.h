@@ -96,5 +96,6 @@ extern llvm::cl::opt<bool> VerifyIR;
 extern llvm::cl::opt<bool> EmitAsyncBreakCheck;
 extern llvm::cl::opt<bool> AllowFunctionToString;
 extern llvm::cl::list<std::string> InputFilenames;
+extern llvm::cl::opt<bool> OptimizedEval;
 } // namespace cl
 #endif

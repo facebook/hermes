@@ -6,6 +6,7 @@
  */
 
 // RUN: LC_ALL=en_US.UTF-8 %hermes -O -Wno-direct-eval %s | %FileCheck --match-full-lines %s
+// RUN: LC_ALL=en_US.UTF-8 %hermes -O -optimized-eval -Wno-direct-eval %s | %FileCheck --match-full-lines %s
 "use strict";
 
 print('eval');

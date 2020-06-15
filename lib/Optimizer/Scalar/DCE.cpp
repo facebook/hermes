@@ -95,7 +95,10 @@ bool DCE::runOnModule(Module *M) {
         // If the function is a top-level module.
         continue;
       }
-      if (!F.isGlobalScope() && !F.hasUsers()) {
+      // Don't delete the function if it is at global scope, or if it is the
+      // entry point of a module.
+      if (!F.isGlobalScope() && &F != M->getTopLevelFunction() &&
+          !F.hasUsers()) {
         toRemove.push_back(&F);
         toDestroy.push_back(&F);
         changed = true;

@@ -117,6 +117,7 @@ static int executeHBCBytecodeFromCL(
           .withEnableJIT(cl::DumpJITCode || cl::EnableJIT)
           .withEnableEval(cl::EnableEval)
           .withVerifyEvalIR(cl::VerifyIR)
+          .withOptimizedEval(cl::OptimizedEval)
           .withVMExperimentFlags(cl::VMExperimentFlags)
           .withES6Proxy(cl::ES6Proxy)
           .withES6Symbol(cl::ES6Symbol)

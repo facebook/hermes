@@ -293,6 +293,11 @@ opt<bool> AllowFunctionToString(
     init(false),
     desc("Enables Function.toString() to return source-code when available"));
 
+opt<bool> OptimizedEval(
+    "optimized-eval",
+    desc("Turn on compiler optimizations in eval."),
+    init(false));
+
 static list<std::string> IncludeGlobals(
     "include-globals",
     desc("Include the definitions of global properties (can be "
