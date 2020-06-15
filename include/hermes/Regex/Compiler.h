@@ -244,13 +244,68 @@ struct CharacterClass {
 };
 
 // Struct representing flags which may be used when constructing the RegExp
-struct SyntaxFlags {
+class SyntaxFlags {
+ private:
+  // Note these are encoded into bytecode files, so changing their values is a
+  // breaking change.
+  enum : uint8_t {
+    ICASE = 1 << 0,
+    GLOBAL = 1 << 1,
+    MULTILINE = 1 << 2,
+    UNICODE = 1 << 3,
+    DOTALL = 1 << 4,
+    STICKY = 1 << 5
+  };
+
+ public:
+  // Note: Preserving the order here and ensuring it lines up with the order of
+  // the offsets above makes the generated assembly more efficient.
+  // Specifically, it makes the conversion to/from a byte almost free.
   uint8_t ignoreCase : 1;
-  uint8_t multiline : 1;
   uint8_t global : 1;
-  uint8_t sticky : 1;
+  uint8_t multiline : 1;
   uint8_t unicode : 1;
   uint8_t dotAll : 1;
+  uint8_t sticky : 1;
+
+  /// \return a byte representing the flags. Bits are set based on the offsets
+  /// specified above. This is used for serialising the flags to bytecode.
+  uint8_t toByte() const {
+    uint8_t ret = 0;
+    if (global)
+      ret |= GLOBAL;
+    if (ignoreCase)
+      ret |= ICASE;
+    if (multiline)
+      ret |= MULTILINE;
+    if (unicode)
+      ret |= UNICODE;
+    if (sticky)
+      ret |= STICKY;
+    if (dotAll)
+      ret |= DOTALL;
+    return ret;
+  }
+
+  /// \return a SyntaxFlags struct generated from the given byte. Bit offsets
+  /// are specified above. This is used for deserialising the flags from
+  /// bytecode.
+  static SyntaxFlags fromByte(uint8_t byte) {
+    SyntaxFlags ret = {};
+    if (byte & GLOBAL)
+      ret.global = 1;
+    if (byte & ICASE)
+      ret.ignoreCase = 1;
+    if (byte & MULTILINE)
+      ret.multiline = 1;
+    if (byte & UNICODE)
+      ret.unicode = 1;
+    if (byte & STICKY)
+      ret.sticky = 1;
+    if (byte & DOTALL)
+      ret.dotAll = 1;
+    return ret;
+  }
 
   /// \return a string representing the flags
   /// The characters are returned in the order given in ES 6 21.2.5.3
@@ -369,9 +424,7 @@ class Node {
 
   /// Perform optimizations on the given node list \p nodes, subject to the
   /// given \p flags.
-  inline static void optimizeNodeList(
-      NodeList &nodes,
-      constants::SyntaxFlags flags);
+  inline static void optimizeNodeList(NodeList &nodes, SyntaxFlags flags);
 
   /// \return whether the node always matches exactly one character.
   virtual bool matchesExactlyOneCharacter() const {
@@ -379,7 +432,7 @@ class Node {
   }
 
   /// Perform optimization on Node's contents, subject to the given \p flags.
-  virtual void optimizeNodeContents(constants::SyntaxFlags flags) {}
+  virtual void optimizeNodeContents(SyntaxFlags flags) {}
 
   /// If this Node can be coalesced into a single MatchCharNode,
   /// then add the node's characters to \p output and \return true.
@@ -489,7 +542,7 @@ class LoopNode final : public Node {
     return result | Super::matchConstraints();
   }
 
-  virtual void optimizeNodeContents(constants::SyntaxFlags flags) override {
+  virtual void optimizeNodeContents(SyntaxFlags flags) override {
     optimizeNodeList(loopee_, flags);
   }
 
@@ -608,7 +661,7 @@ class AlternationNode final : public Node {
     return restConstraints_.front() | Super::matchConstraints();
   }
 
-  virtual void optimizeNodeContents(constants::SyntaxFlags flags) override {
+  virtual void optimizeNodeContents(SyntaxFlags flags) override {
     for (auto &alternative : alternatives_) {
       optimizeNodeList(alternative, flags);
     }
@@ -679,7 +732,7 @@ class MarkedSubexpressionNode final : public Node {
     reverseNodeList(contents_);
   }
 
-  virtual void optimizeNodeContents(constants::SyntaxFlags flags) override {
+  virtual void optimizeNodeContents(SyntaxFlags flags) override {
     optimizeNodeList(contents_, flags);
   }
 
@@ -725,7 +778,7 @@ class LeftAnchorNode final : public Node {
   bool multiline_;
 
  public:
-  LeftAnchorNode(bool multiline) : multiline_(multiline) {}
+  LeftAnchorNode(SyntaxFlags flags) : multiline_(flags.multiline) {}
 
   virtual MatchConstraintSet matchConstraints() const override {
     MatchConstraintSet result = 0;
@@ -764,8 +817,8 @@ class MatchAnyNode final : public Node {
   /// If \p unicode is set, emit bytecode that treats surrogate pairs as a
   /// single character.
   /// If \p dotAll is set, match newlines. Otherwise, don't match newlines.
-  explicit MatchAnyNode(bool unicode, bool dotAll)
-      : unicode_(unicode), dotAll_(dotAll) {}
+  explicit MatchAnyNode(SyntaxFlags flags)
+      : unicode_(flags.unicode), dotAll_(flags.dotAll) {}
 
   virtual MatchConstraintSet matchConstraints() const override {
     return MatchConstraintNonEmpty | Super::matchConstraints();
@@ -811,10 +864,10 @@ class MatchCharNode final : public Node {
   static constexpr size_t kMaxMatchCharNCount = UINT8_MAX;
 
  public:
-  MatchCharNode(CodePointList chars, constants::SyntaxFlags flags)
+  MatchCharNode(CodePointList chars, SyntaxFlags flags)
       : chars_(std::move(chars)),
-        icase_(flags & constants::icase),
-        unicode_(flags & constants::unicode) {}
+        icase_(flags.ignoreCase),
+        unicode_(flags.unicode) {}
 
   virtual MatchConstraintSet matchConstraints() const override {
     MatchConstraintSet result = MatchConstraintNonEmpty;
@@ -1023,11 +1076,11 @@ class BracketNode : public Node {
   }
 
  public:
-  BracketNode(const Traits &traits, bool negate, constants::SyntaxFlags flags)
+  BracketNode(const Traits &traits, bool negate, SyntaxFlags flags)
       : traits_(traits),
         negate_(negate),
-        icase_(flags & constants::SyntaxFlags::icase),
-        unicode_(flags & constants::SyntaxFlags::unicode) {}
+        icase_(flags.ignoreCase),
+        unicode_(flags.unicode) {}
 
   void addChar(CodePoint c) {
     codePointSet_.add(c);
@@ -1085,7 +1138,7 @@ class Regex {
 
  private:
   Traits traits_;
-  constants::SyntaxFlags flags_ = {};
+  SyntaxFlags flags_ = {};
 
   // Number of capture groups encountered so far.
   uint32_t markedCount_ = 0;
@@ -1168,7 +1221,7 @@ class Regex {
     assert(loopCount_ <= constants::kMaxLoopCount && "Too many loops");
     RegexBytecodeHeader header = {static_cast<uint16_t>(markedCount_),
                                   static_cast<uint16_t>(loopCount_),
-                                  flags_,
+                                  flags_.toByte(),
                                   matchConstraints_};
     RegexBytecodeStream bcs(header);
     Node::compile(nodes_, bcs);
@@ -1181,7 +1234,7 @@ class Regex {
       : Regex(p, p + char_traits<CharT>::length(p), f) {}
 
   Regex(const CharT *first, const CharT *last, constants::SyntaxFlags f = {})
-      : flags_(f) {
+      : flags_(SyntaxFlags::fromByte(f)) {
     error_ = parse(first, last);
   }
 
@@ -1197,7 +1250,7 @@ class Regex {
   unsigned markCount() const {
     return markedCount_;
   }
-  constants::SyntaxFlags flags() const {
+  SyntaxFlags flags() const {
     return flags_;
   }
 
@@ -1305,7 +1358,7 @@ class LookaroundNode : public Node {
     return result | Super::matchConstraints();
   }
 
-  virtual void optimizeNodeContents(constants::SyntaxFlags flags) override {
+  virtual void optimizeNodeContents(SyntaxFlags flags) override {
     optimizeNodeList(exp_, flags);
   }
 
@@ -1327,7 +1380,7 @@ constants::ErrorType parseRegex(
     const char16_t *start,
     const char16_t *end,
     Receiver *receiver,
-    constants::SyntaxFlags flags,
+    SyntaxFlags flags,
     uint32_t backRefLimit,
     uint32_t *outMaxBackRef);
 
@@ -1354,7 +1407,7 @@ constants::ErrorType Regex<Traits>::parse(
   // capture group count, either produce an error (if Unicode) or re-parse with
   // that as the limit so overlarge decimal escapes will be ignored.
   if (result == constants::ErrorType::None && maxBackRef > markedCount_) {
-    if (flags_ & constants::SyntaxFlags::unicode) {
+    if (flags_.unicode) {
       return constants::ErrorType::EscapeInvalid;
     }
 
@@ -1421,9 +1474,9 @@ void Regex<Traits>::pushLoop(
 
 template <class Traits>
 void Regex<Traits>::pushChar(CodePoint c) {
-  bool icase = flags() & constants::icase;
+  bool icase = flags().ignoreCase;
   if (icase)
-    c = traits_.canonicalize(c, flags() & constants::unicode);
+    c = traits_.canonicalize(c, flags().unicode);
   appendNode<MatchCharNode>(Node::CodePointList{c}, flags());
 }
 
@@ -1440,7 +1493,7 @@ void Regex<Traits>::pushMarkedSubexpression(NodeList nodes, uint32_t mexp) {
 
 template <class Traits>
 void Regex<Traits>::pushLeftAnchor() {
-  appendNode<LeftAnchorNode>(flags_ & constants::multiline);
+  appendNode<LeftAnchorNode>(flags());
 }
 
 template <class Traits>
@@ -1450,8 +1503,7 @@ void Regex<Traits>::pushRightAnchor() {
 
 template <class Traits>
 void Regex<Traits>::pushMatchAny() {
-  appendNode<MatchAnyNode>(
-      flags_ & constants::unicode, flags_ & constants::dotAll);
+  appendNode<MatchAnyNode>(flags());
 }
 
 template <class Traits>
@@ -1510,7 +1562,7 @@ void Node::reverseNodeList(NodeList &nodes) {
   }
 }
 
-void Node::optimizeNodeList(NodeList &nodes, constants::SyntaxFlags flags) {
+void Node::optimizeNodeList(NodeList &nodes, SyntaxFlags flags) {
   // Recursively optimize child nodes.
   for (auto &node : nodes) {
     node->optimizeNodeContents(flags);

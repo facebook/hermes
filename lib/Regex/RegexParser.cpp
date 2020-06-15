@@ -49,7 +49,7 @@ class Parser {
   constants::ErrorType error_ = constants::ErrorType::None;
 
   // Flags for the regex.
-  const constants::SyntaxFlags flags_;
+  const SyntaxFlags flags_;
 
   // See comment --DecimalEscape--.
   const uint32_t backRefLimit_;
@@ -240,21 +240,21 @@ class Parser {
           if (tryConsume("(?=")) {
             // Positive lookahead.
             // Unicode prohibits these from being quantified.
-            quantifierAllowed = !(flags_ & constants::unicode);
+            quantifierAllowed = !(flags_.unicode);
             consumeLookaroundAssertion(false /* negate */, true /* forwards */);
           } else if (tryConsume("(?!")) {
             // Negative lookahead.
             // Unicode prohibits these from being quantified.
-            quantifierAllowed = !(flags_ & constants::unicode);
+            quantifierAllowed = !(flags_.unicode);
             consumeLookaroundAssertion(true /* negate */, true /* forwards */);
           } else if (tryConsume("(?<=")) {
             // Positive lookbehind.
-            quantifierAllowed = !(flags_ & constants::unicode);
+            quantifierAllowed = !(flags_.unicode);
             consumeLookaroundAssertion(
                 false /* negate */, false /* forwards */);
           } else if (tryConsume("(?<!")) {
             // Negative lookbehind.
-            quantifierAllowed = !(flags_ & constants::unicode);
+            quantifierAllowed = !(flags_.unicode);
             consumeLookaroundAssertion(true /* negate */, false /* forwards */);
           } else if (tryConsume("(?:")) {
             // Non-capturing group.
@@ -294,7 +294,7 @@ class Parser {
           if (tryConsumeQuantifier(&tmp)) {
             setError(constants::ErrorType::InvalidRepeat);
             return;
-          } else if (flags_ & constants::SyntaxFlags::unicode) {
+          } else if (flags_.unicode) {
             setError(constants::ErrorType::InvalidQuantifierBracket);
             return;
           }
@@ -314,7 +314,7 @@ class Parser {
           // ExtendedPatternCharacter production of ES9 Annex B 1.4.
           // However they are disallowed under Unicode, where Annex B does not
           // apply.
-          if (flags_ & constants::SyntaxFlags::unicode) {
+          if (flags_.unicode) {
             setError(
                 c == '}' ? constants::ErrorType::InvalidQuantifierBracket
                          : constants::ErrorType::UnbalancedBracket);
@@ -347,7 +347,7 @@ class Parser {
 
   /// If Unicode is set, try to consume a surrogate pair.
   Optional<CodePoint> tryConsumeSurrogatePair() {
-    if (!(flags_ & constants::SyntaxFlags::unicode))
+    if (!(flags_.unicode))
       return llvm::None;
     auto saved = current_;
     auto hi = consumeCharIf(isHighSurrogate);
@@ -424,7 +424,7 @@ class Parser {
   /// ES6 21.2.2.13 CharacterClass.
   void consumeCharacterClass() {
     consume('[');
-    bool unicode = flags_ & constants::SyntaxFlags::unicode;
+    bool unicode = flags_.unicode;
     bool negate = tryConsume('^');
     auto bracket = re_->startBracketList(negate);
 
@@ -548,7 +548,7 @@ class Parser {
           case '-':
             // ES6 21.2.1 ClassEscape: \- escapes -, in Unicode expressions
             // only.
-            if ((flags_ & constants::SyntaxFlags::unicode) && tryConsume('-')) {
+            if ((flags_.unicode) && tryConsume('-')) {
               return ClassAtom('-');
             }
             // fallthrough
@@ -580,7 +580,7 @@ class Parser {
     //   ZeroToThree OctalDigit OctalDigit
     // We implement this more directly.
     // Note this is forbidden in Unicode.
-    if (flags_ & constants::SyntaxFlags::unicode) {
+    if (flags_.unicode) {
       setError(constants::ErrorType::EscapeInvalid);
       return 0;
     }
@@ -746,7 +746,7 @@ class Parser {
   /// ES6 21.2.1 IdentityEscape
   CodePoint identityEscape(CharT c) {
     // In Unicode regexps, only syntax characters and '/' may be escaped.
-    if (flags_ & constants::SyntaxFlags::unicode) {
+    if (flags_.unicode) {
       if (c == 0 || c > 127 || !strchr("^$\\.*+?()[]{}|/", c)) {
         setError(constants::ErrorType::EscapeInvalid);
       }
@@ -763,7 +763,7 @@ class Parser {
     }
 
     // Non-unicode path only supports \uABCD style escapes.
-    if (!(flags_ & constants::SyntaxFlags::unicode)) {
+    if (!(flags_.unicode)) {
       if (auto ret = tryConsumeHexDigits(4)) {
         return *ret;
       }
@@ -887,7 +887,7 @@ class Parser {
         // if its value is octal. Otherwise it is IdentityEscape.
         auto saved = current_;
         uint32_t decimal = consumeDecimalIntegerLiteral();
-        bool unicode = flags_ & constants::SyntaxFlags::unicode;
+        bool unicode = flags_.unicode;
         if (unicode || decimal <= backRefLimit_) {
           // Backreference.
           maxBackRef_ = std::max(maxBackRef_, decimal);
@@ -919,7 +919,7 @@ class Parser {
       RegexType *re,
       ForwardIterator start,
       ForwardIterator end,
-      constants::SyntaxFlags flags,
+      SyntaxFlags flags,
       uint32_t backRefLimit)
       : re_(re),
         current_(start),
@@ -950,7 +950,7 @@ constants::ErrorType parseRegex(
     const char16_t *start,
     const char16_t *end,
     Receiver *receiver,
-    constants::SyntaxFlags flags,
+    SyntaxFlags flags,
     uint32_t backRefLimit,
     uint32_t *outMaxBackRef) {
   Parser<Receiver, const char16_t *> parser(
@@ -965,7 +965,7 @@ template constants::ErrorType parseRegex(
     const char16_t *start,
     const char16_t *end,
     Regex<UTF16RegexTraits> *receiver,
-    constants::SyntaxFlags flags,
+    SyntaxFlags flags,
     uint32_t backRefLimit,
     uint32_t *outMaxBackRef);
 
