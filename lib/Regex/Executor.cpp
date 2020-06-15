@@ -335,7 +335,7 @@ struct Context {
   constants::MatchFlagType flags_;
 
   /// Syntax flags associated with the regex.
-  constants::SyntaxFlags syntaxFlags_;
+  SyntaxFlags syntaxFlags_;
 
   /// The first character in the input string.
   const CodeUnit *first_;
@@ -362,7 +362,7 @@ struct Context {
   Context(
       llvm::ArrayRef<uint8_t> bytecodeStream,
       constants::MatchFlagType flags,
-      constants::SyntaxFlags syntaxFlags,
+      SyntaxFlags syntaxFlags,
       const CodeUnit *first,
       const CodeUnit *last,
       uint32_t markedCount,
@@ -527,7 +527,7 @@ bool matchesLeftAnchor(Context<Traits> &ctx, State<Traits> &s) {
     // Beginning of text.
     matchesAnchor = true;
   } else if (
-      (ctx.syntaxFlags_ & constants::multiline) && !c.atLeft() &&
+      (ctx.syntaxFlags_.multiline) && !c.atLeft() &&
       isLineTerminator(c.currentPointer()[-1])) {
     // Multiline and after line terminator.
     matchesAnchor = true;
@@ -542,7 +542,7 @@ bool matchesRightAnchor(Context<Traits> &ctx, State<Traits> &s) {
   if (c.atRight() && !(ctx.flags_ & constants::matchNotEndOfLine)) {
     matchesAnchor = true;
   } else if (
-      (ctx.syntaxFlags_ & constants::multiline) && (!c.atRight()) &&
+      (ctx.syntaxFlags_.multiline) && (!c.atRight()) &&
       isLineTerminator(c.currentPointer()[0])) {
     matchesAnchor = true;
   }
@@ -572,7 +572,7 @@ bool Context<Traits>::matchesNCharICase8(
   Cursor<Traits> &c = s.cursor_;
   auto insnCharPtr = reinterpret_cast<const char *>(insn + 1);
   auto charCount = insn->charCount;
-  bool unicode = syntaxFlags_ & constants::unicode;
+  bool unicode = syntaxFlags_.unicode;
   for (int idx = 0; idx < charCount; idx++) {
     auto c1 = c.consume();
     char instC = insnCharPtr[idx];
@@ -753,15 +753,15 @@ bool Context<Traits>::matchWidth1(const Insn *base, CodeUnit c) const {
     case Width1Opcode::MatchCharICase8: {
       const auto *insn = llvm::cast<MatchCharICase8Insn>(base);
       return c == (CodePoint)insn->c ||
-          (CodePoint)traits_.canonicalize(
-              c, syntaxFlags_ & constants::unicode) == (CodePoint)insn->c;
+          (CodePoint)traits_.canonicalize(c, syntaxFlags_.unicode) ==
+          (CodePoint)insn->c;
     }
 
     case Width1Opcode::MatchCharICase16: {
       const auto *insn = llvm::cast<MatchCharICase16Insn>(base);
       return c == insn->c ||
-          (char32_t)traits_.canonicalize(
-              c, syntaxFlags_ & constants::unicode) == (char32_t)insn->c;
+          (char32_t)traits_.canonicalize(c, syntaxFlags_.unicode) ==
+          (char32_t)insn->c;
     }
 
     case Width1Opcode::MatchAny:
@@ -773,7 +773,7 @@ bool Context<Traits>::matchWidth1(const Insn *base, CodeUnit c) const {
     case Width1Opcode::Bracket: {
       // BracketInsn is followed by a list of BracketRange32s.
       assert(
-          !(syntaxFlags_ & constants::unicode) &&
+          !(syntaxFlags_.unicode) &&
           "Unicode should not be set for Width 1 brackets");
       const BracketInsn *insn = llvm::cast<BracketInsn>(base);
       const BracketRange32 *ranges =
@@ -890,8 +890,7 @@ inline size_t Context<Traits>::advanceStringIndex(
   }
   // "If unicode is false, return index+1."
   // "If index+1 >= length, return index+1."
-  if (LLVM_LIKELY(!(syntaxFlags_ & constants::unicode)) ||
-      (index + 1 >= lastIndex))
+  if (LLVM_LIKELY(!(syntaxFlags_.unicode)) || (index + 1 >= lastIndex))
     return index + 1;
 
   // Let first be the code unit value at index index in S
@@ -1196,8 +1195,8 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
               "capture group exited but not entered");
           // TODO: this can be optimized by hoisting the branches out of the
           // loop.
-          bool icase = syntaxFlags_ & constants::icase;
-          bool unicode = syntaxFlags_ & constants::unicode;
+          bool icase = syntaxFlags_.ignoreCase;
+          bool unicode = syntaxFlags_.unicode;
           auto capturedStart = first_ + cr.start;
           auto capturedEnd = first_ + cr.end;
           Cursor<Traits> cursor2(
@@ -1466,7 +1465,7 @@ MatchRuntimeResult searchWithBytecodeImpl(
   Context<Traits> ctx(
       bytecode,
       matchFlags,
-      static_cast<constants::SyntaxFlags>(header->syntaxFlags),
+      SyntaxFlags::fromByte(header->syntaxFlags),
       first,
       first + length,
       header->markedCount,
