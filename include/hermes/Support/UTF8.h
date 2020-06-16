@@ -143,7 +143,7 @@ uint32_t _decodeUTF8SlowPath(const char *&from, F error) {
 
   } else {
     from += 1;
-    error("Invalid UTF-8 lead byte 0x" + llvm::Twine::utohexstr(ch));
+    error("Invalid UTF-8 lead byte 0x" + llvm::Twine::utohexstr((uint8_t)ch));
     return UNICODE_REPLACEMENT_CHARACTER;
   }
 
