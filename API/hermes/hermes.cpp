@@ -1285,7 +1285,7 @@ HermesRuntimeImpl::prepareJavaScript(
 #endif
   // Save the first few bytes of the buffer so that we can later append them
   // to any error message.
-  char bufPrefix[16];
+  uint8_t bufPrefix[16];
   const size_t bufSize = buffer->size();
   memcpy(bufPrefix, buffer->data(), std::min(sizeof(bufPrefix), bufSize));
 

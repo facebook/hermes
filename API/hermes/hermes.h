@@ -65,7 +65,7 @@ class HermesRuntime : public jsi::Runtime {
       std::string *errorMessage = nullptr);
   static void setFatalHandler(void (*handler)(const std::string &));
 
-  // Assuming that \p data is valid HBC bytecode data, returns a pointer to then
+  // Assuming that \p data is valid HBC bytecode data, returns a pointer to the
   // first element of the epilogue, data append to the end of the bytecode
   // stream. Return pair contain ptr to data and header.
   static std::pair<const uint8_t *, size_t> getBytecodeEpilogue(
@@ -119,7 +119,7 @@ class HermesRuntime : public jsi::Runtime {
   uint64_t getUniqueID(const jsi::String &s) const;
   uint64_t getUniqueID(const jsi::PropNameID &pni) const;
 
-  /// Get a structure representing the enviroment-dependent behavior, so
+  /// Get a structure representing the environment-dependent behavior, so
   /// it can be written into the trace for later replay.
   const ::hermes::vm::MockedEnvironment &getMockedEnvironment() const;
 
