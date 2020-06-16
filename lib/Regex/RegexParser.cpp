@@ -5,6 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "hermes/Platform/Unicode/CharacterProperties.h"
+#include "hermes/Platform/Unicode/CodePointSet.h"
+
 #include "hermes/Regex/Compiler.h"
 #include "hermes/Regex/RegexTraits.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -960,7 +963,7 @@ constants::ErrorType parseRegex(
   return result;
 }
 
-// Explicitly instantiate this for UTF16RegexTraits only.
+// Explicitly instantiate the parser for UTF16RegexTraits only.
 template constants::ErrorType parseRegex(
     const char16_t *start,
     const char16_t *end,

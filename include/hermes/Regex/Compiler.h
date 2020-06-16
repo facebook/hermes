@@ -18,8 +18,6 @@
 #ifndef HERMES_REGEX_COMPILER_H
 #define HERMES_REGEX_COMPILER_H
 
-#include "hermes/Platform/Unicode/CharacterProperties.h"
-#include "hermes/Platform/Unicode/CodePointSet.h"
 #include "hermes/Support/Algorithms.h"
 #include "hermes/Support/Compiler.h"
 
@@ -27,18 +25,11 @@
 #include "hermes/Regex/RegexNode.h"
 #include "hermes/Regex/RegexTypes.h"
 
-#include "hermes/Platform/Unicode/CharacterProperties.h"
-#include "hermes/Platform/Unicode/CodePointSet.h"
-
 #include <string>
 #include <vector>
 
 namespace hermes {
 namespace regex {
-
-// Forward declaration.
-template <class RegexType, class ForwardIterator>
-class Parser;
 
 template <class Traits>
 class Regex {
