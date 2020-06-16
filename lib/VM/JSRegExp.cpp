@@ -136,12 +136,20 @@ ExecutionStatus JSRegExp::initialize(
       res != ExecutionStatus::EXCEPTION && *res &&
       "defineOwnProperty() failed");
 
+  // Validate flags.
+  llvm::SmallVector<char16_t, 16> flagsText16;
+  flags->copyUTF16String(flagsText16);
+
+  auto sflags = regex::SyntaxFlags::fromString(flagsText16);
+  if (!sflags) {
+    runtime->raiseSyntaxError("Invalid RegExp: Invalid flags");
+    return ExecutionStatus::EXCEPTION;
+  }
+  selfHandle->syntaxFlags_ = *sflags;
+
   if (bytecode) {
     return selfHandle->initializeBytecode(*bytecode, runtime);
   } else {
-    llvm::SmallVector<char16_t, 6> flagsText16;
-    flags->copyUTF16String(flagsText16);
-
     llvm::SmallVector<char16_t, 16> patternText16;
     pattern->copyUTF16String(patternText16);
 
@@ -169,9 +177,6 @@ ExecutionStatus JSRegExp::initializeBytecode(
     runtime->raiseRangeError("RegExp size overflow");
     return ExecutionStatus::EXCEPTION;
   }
-  auto header =
-      reinterpret_cast<const regex::RegexBytecodeHeader *>(bytecode.data());
-  syntaxFlags_ = regex::SyntaxFlags::fromByte(header->syntaxFlags);
   bytecodeSize_ = sz;
   bytecode_ = (uint8_t *)checkedMalloc(sz);
   memcpy(bytecode_, bytecode.data(), sz);
