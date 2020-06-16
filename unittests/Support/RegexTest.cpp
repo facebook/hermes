@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/Regex/Compiler.h"
+#include "hermes/Regex/Regex.h"
 #include "hermes/Regex/Executor.h"
 #include "hermes/Regex/RegexTraits.h"
 

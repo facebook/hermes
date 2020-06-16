@@ -8,7 +8,7 @@
 #include "hermes/Platform/Unicode/CharacterProperties.h"
 #include "hermes/Platform/Unicode/CodePointSet.h"
 
-#include "hermes/Regex/Compiler.h"
+#include "hermes/Regex/Regex.h"
 #include "hermes/Regex/RegexTraits.h"
 #include "llvm/Support/SaveAndRestore.h"
 namespace hermes {

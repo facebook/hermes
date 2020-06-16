@@ -8,6 +8,7 @@
 #include "JSLibInternal.h"
 
 #include "hermes/Regex/Executor.h"
+#include "hermes/Regex/Regex.h"
 #include "hermes/Regex/RegexTraits.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/StringBuilder.h"

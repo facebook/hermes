@@ -15,7 +15,8 @@
 
 #include "hermes/Platform/Unicode/CharacterProperties.h"
 #include "hermes/Platform/Unicode/PlatformUnicode.h"
-#include "hermes/Regex/Compiler.h"
+#include "hermes/Regex/RegexBytecode.h"
+#include "hermes/Regex/RegexTypes.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 

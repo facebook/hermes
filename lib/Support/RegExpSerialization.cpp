@@ -6,7 +6,7 @@
  */
 
 #include "hermes/Support/RegExpSerialization.h"
-#include "hermes/Regex/Compiler.h"
+#include "hermes/Regex/Regex.h"
 #include "hermes/Regex/RegexTraits.h"
 #include "hermes/Support/Algorithms.h"
 #include "hermes/Support/UTF8.h"

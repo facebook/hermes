@@ -8,7 +8,8 @@
 #ifndef HERMES_REGEX_EXECUTOR_H
 #define HERMES_REGEX_EXECUTOR_H
 
-#include "hermes/Regex/Compiler.h"
+#include "hermes/Regex/RegexBytecode.h"
+#include "hermes/Regex/RegexTypes.h"
 
 // This file contains the machinery for executing a regexp compiled to bytecode.
 

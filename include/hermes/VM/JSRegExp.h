@@ -8,7 +8,7 @@
 #ifndef HERMES_VM_JSREGEXP_H
 #define HERMES_VM_JSREGEXP_H
 
-#include "hermes/Regex/Compiler.h"
+#include "hermes/Regex/RegexTypes.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/RegExpMatch.h"
 #include "hermes/VM/SmallXString.h"
