@@ -97,7 +97,9 @@ set_target_properties(libhermes PROPERTIES
 hermes_link_icu(libhermes)
 
 install(TARGETS libhermes
+  RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
 )
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/API/hermes" DESTINATION include
   FILES_MATCHING PATTERN "*.h"
