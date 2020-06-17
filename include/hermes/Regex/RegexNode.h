@@ -776,6 +776,138 @@ class BracketNode : public Node {
     return !unicode_;
   }
 };
+
+/// Node for lookaround assertions like (?=...) and (?!...)
+class LookaroundNode : public Node {
+  using Super = Node;
+
+  /// The contained expression representing our lookaround assertion.
+  NodeList exp_;
+
+  /// Match constraints for our contained expression.
+  MatchConstraintSet expConstraints_;
+
+  /// Whether the lookaround assertion is negative (?!) or positive (?=).
+  const bool invert_;
+
+  /// Whether the lookaround is forwards (true) or backwards (false).
+  const bool forwards_;
+
+  /// The marked subexpressions contained within this lookaround.
+  uint16_t mexpBegin_;
+  uint16_t mexpEnd_;
+
+ public:
+  LookaroundNode(
+      NodeList exp,
+      uint32_t mexpBegin,
+      uint32_t mexpEnd,
+      bool invert,
+      bool forwards)
+      : exp_(move(exp)),
+        expConstraints_(matchConstraintsForList(exp_)),
+        invert_(invert),
+        forwards_(forwards),
+        mexpBegin_(mexpBegin),
+        mexpEnd_(mexpEnd) {
+    // Clear AnchoredAtStart for lookbehind assertions.
+    // For example:
+    //    /(?<=^abc)def/.exec("abcdef")
+    // this matches the substring "def", even though that substring is not
+    // anchored at the start.
+    if (!forwards_) {
+      expConstraints_ &= ~MatchConstraintAnchoredAtStart;
+    }
+  }
+
+  virtual MatchConstraintSet matchConstraints() const override {
+    // Positive lookarounds apply their match constraints.
+    // e.g. if our assertion is anchored at the start, so are we.
+    MatchConstraintSet result = 0;
+    if (!invert_) {
+      result |= expConstraints_;
+    }
+    // Lookarounds match an empty string even if their contents do not.
+    result &= ~MatchConstraintNonEmpty;
+    return result | Super::matchConstraints();
+  }
+
+  virtual void optimizeNodeContents(SyntaxFlags flags) override {
+    optimizeNodeList(exp_, flags);
+  }
+
+  // Override emit() to compile our lookahead expression.
+  virtual void emit(RegexBytecodeStream &bcs) const override {
+    auto lookaround = bcs.emit<LookaroundInsn>();
+    lookaround->invert = invert_;
+    lookaround->forwards = forwards_;
+    lookaround->constraints = expConstraints_;
+    lookaround->mexpBegin = mexpBegin_;
+    lookaround->mexpEnd = mexpEnd_;
+    compile(exp_, bcs);
+    lookaround->continuation = bcs.currentOffset();
+  }
+};
+
+void Node::reverseNodeList(NodeList &nodes) {
+  // If we have a goal node it must come at the end.
+#ifndef NDEBUG
+  for (const auto &node : nodes) {
+    assert(
+        (!node->isGoal() || (node == nodes.back())) &&
+        "Goal node should only be at end");
+  }
+#endif
+
+  // Reverse this list, excluding any terminating goal.
+  if (!nodes.empty()) {
+    bool hasGoal = nodes.back()->isGoal();
+    std::reverse(nodes.begin(), nodes.end() - (hasGoal ? 1 : 0));
+  }
+
+  // Recursively reverse child nodes.
+  for (auto &node : nodes) {
+    node->reverseChildren();
+  }
+}
+
+void Node::optimizeNodeList(NodeList &nodes, SyntaxFlags flags) {
+  // Recursively optimize child nodes.
+  for (auto &node : nodes) {
+    node->optimizeNodeContents(flags);
+  }
+
+  // Merge adjacent runs of char nodes.
+  // For example, [CharNode('a') CharNode('b') CharNode('c')] becomes
+  // [CharNode('abc')].
+  for (size_t idx = 0, max = nodes.size(); idx < max; idx++) {
+    // Get the range of nodes that can be successfully coalesced.
+    Node::CodePointList chars;
+    size_t rangeStart = idx;
+    size_t rangeEnd = idx;
+    for (; rangeEnd < max; rangeEnd++) {
+      if (!nodes[rangeEnd]->tryCoalesceCharacters(&chars)) {
+        break;
+      }
+    }
+    if (rangeEnd - rangeStart >= 3) {
+      // We successfully coalesced some nodes.
+      // Replace the range with a new node.
+      nodes[rangeStart] = std::unique_ptr<MatchCharNode>(
+          new MatchCharNode(std::move(chars), flags));
+      // Fill the remainder of the range with null (we'll clean them up after
+      // the loop) and skip to the end of the range.
+      // Note that rangeEnd may be one past the last valid element.
+      std::fill(
+          nodes.begin() + (rangeStart + 1), nodes.begin() + rangeEnd, nullptr);
+      idx = rangeEnd - 1;
+    }
+  }
+
+  // Remove any nulls that we introduced.
+  nodes.erase(std::remove(nodes.begin(), nodes.end(), nullptr), nodes.end());
+}
+
 } // namespace regex
 } // namespace hermes
 #endif // HERMES_REGEX_NODE_H
