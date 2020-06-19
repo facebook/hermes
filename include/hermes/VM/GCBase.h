@@ -257,6 +257,14 @@ class GCBase {
     /// Get a StackTraceTree which can be used to recover stack-traces from \c
     /// StackTraceTreeNode() as returned by \c getCurrentStackTracesTreeNode() .
     virtual StackTracesTree *getStackTracesTree() = 0;
+
+#ifdef HERMES_SLOW_DEBUG
+    /// \return true if the given symbol is a live entry in the identifier
+    /// table.
+    /// NOTE: Used by CheckHeapWellFormedAcceptor to make sure a symbol
+    /// that is discovered live is marked as live.
+    virtual bool isSymbolLive(SymbolID id) = 0;
+#endif
   };
 
   /// Struct that keeps a reference to a GC.  Useful, for example, as a base

@@ -161,6 +161,13 @@ class IdentifierTable {
   /// Invoked at the end of a GC to free all unmarked symbols.
   void freeUnmarkedSymbols(const std::vector<bool> &markedSymbols);
 
+#ifdef HERMES_SLOW_DEBUG
+  /// \return true if the given symbol is a live entry in the identifier
+  ///   table. A live symbol means that it is still active and won't be re-used
+  ///   for any new identifiers.
+  bool isSymbolLive(SymbolID id) const;
+#endif
+
   /// Allocate a new SymbolID without adding an entry to the
   /// IdentifierHashTable, so it is not uniqued; this function should only be
   /// used during Runtime initialization. \param desc the description of the

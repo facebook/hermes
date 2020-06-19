@@ -315,6 +315,12 @@ struct DummyRuntime final : public HandleRootOwner,
 
   void freeSymbols(const std::vector<bool> &) override {}
 
+#ifdef HERMES_SLOW_DEBUG
+  bool isSymbolLive(SymbolID) override {
+    return true;
+  }
+#endif
+
   void printRuntimeGCStats(llvm::raw_ostream &) const override {}
 
   void visitIdentifiers(

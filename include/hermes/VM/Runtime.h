@@ -872,6 +872,12 @@ class Runtime : public HandleRootOwner,
   /// markedSymbols.
   virtual void freeSymbols(const std::vector<bool> &markedSymbols) override;
 
+#ifdef HERMES_SLOW_DEBUG
+  /// \return true if the given symbol is a live entry in the identifier
+  /// table.
+  virtual bool isSymbolLive(SymbolID id) override;
+#endif
+
   /// See \c GCCallbacks for details.
   size_t mallocSize() const override;
 

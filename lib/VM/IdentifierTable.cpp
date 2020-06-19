@@ -499,6 +499,14 @@ void IdentifierTable::freeUnmarkedSymbols(
   }
 }
 
+#ifdef HERMES_SLOW_DEBUG
+bool IdentifierTable::isSymbolLive(SymbolID id) const {
+  auto &entry = getLookupTableEntry(id);
+  // If the entry is not a free slot, then it is live.
+  return !entry.isFreeSlot();
+}
+#endif
+
 SymbolID IdentifierTable::createNotUniquedLazySymbol(ASCIIRef desc) {
   uint32_t nextID = allocNextID();
   new (&lookupVector_[nextID]) LookupEntry(desc, 0, true);

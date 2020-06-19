@@ -760,6 +760,12 @@ void Runtime::freeSymbols(const std::vector<bool> &markedSymbols) {
   identifierTable_.freeUnmarkedSymbols(markedSymbols);
 }
 
+#ifdef HERMES_SLOW_DEBUG
+bool Runtime::isSymbolLive(SymbolID id) {
+  return identifierTable_.isSymbolLive(id);
+}
+#endif
+
 size_t Runtime::mallocSize() const {
   size_t totalSize = 0;
 
