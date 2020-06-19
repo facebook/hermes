@@ -186,7 +186,7 @@ class TestFlag(enum.Enum):
         }[self.value]
 
 
-TIMEOUT_COMPILER = 40
+TIMEOUT_COMPILER = 200
 TIMEOUT_VM = 200
 
 includesMatcher = re.compile(r"includes:\s*\[(.*)\]")
