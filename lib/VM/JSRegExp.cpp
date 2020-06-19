@@ -155,8 +155,7 @@ ExecutionStatus JSRegExp::initialize(
     pattern->copyUTF16String(patternText16);
 
     // Build the regex.
-    regex::Regex<regex::UTF16RegexTraits> regex(
-        patternText16.begin(), patternText16.end(), flagsText16);
+    regex::Regex<regex::UTF16RegexTraits> regex(patternText16, flagsText16);
 
     if (!regex.valid()) {
       runtime->raiseSyntaxError(

@@ -128,13 +128,13 @@ class Regex {
   }
 
   // Constructors
-  Regex() = default;
-  explicit Regex(const CharT *p, const llvm::ArrayRef<char16_t> f = {})
-      : Regex(p, p + std::char_traits<CharT>::length(p), f) {}
+  explicit Regex(const CharT *p, const char16_t *f = u"")
+      : Regex(
+            {p, p + std::char_traits<CharT>::length(p)},
+            {f, f + std::char_traits<CharT>::length(f)}) {}
 
   Regex(
-      const CharT *first,
-      const CharT *last,
+      const llvm::ArrayRef<CharT> pattern,
       const llvm::ArrayRef<char16_t> flags = {}) {
     // Compute the SyntaxFlags based on the flags string.
     auto sflags = SyntaxFlags::fromString(flags);
@@ -143,7 +143,7 @@ class Regex {
       return;
     }
     flags_ = *sflags;
-    error_ = parse(first, last);
+    error_ = parse(pattern.begin(), pattern.end());
   }
 
   // Disallow copy-assignment and copy-construction.

@@ -346,7 +346,7 @@ TEST(Regex, FromLibCXX) {
     std::ptrdiff_t sr = std::char_traits<char16_t>::length(r);
     using FI = const char16_t *;
     using BI = const char16_t *;
-    cregex regex(FI(r), FI(r + sr));
+    cregex regex(llvm::ArrayRef<char16_t>(FI(r), FI(r + sr)));
     cmatch m;
     const char16_t s[] = u"-40C";
     std::ptrdiff_t ss = std::char_traits<char16_t>::length(s);
@@ -635,7 +635,7 @@ TEST(Regex, FromLibCXX) {
     std::ptrdiff_t sr = std::char_traits<char16_t>::length(r);
     using FI = const char16_t *;
     using BI = const char16_t *;
-    cregex regex(FI(r), FI(r + sr));
+    cregex regex(llvm::ArrayRef<char16_t>(FI(r), FI(r + sr)));
     cmatch m;
     const char16_t s[] = u"-40C";
     std::ptrdiff_t ss = std::char_traits<char16_t>::length(s);
@@ -664,9 +664,8 @@ TEST(Regex, FromLibCXX) {
 
 static constants::ErrorType error_for(
     const char16_t *pattern,
-    const std::u16string flags = u"") {
-  const std::vector<char16_t> flagsVec(flags.begin(), flags.end());
-  return cregex(pattern, flagsVec).getError();
+    const char16_t *flags = u"") {
+  return cregex(pattern, flags).getError();
 };
 
 TEST(Regex, Invalid) {
@@ -695,7 +694,9 @@ TEST(Regex, Invalid) {
 TEST(Regex, InvalidFromLibCXX) {
   using namespace constants;
   const char16_t *pat1 = u"a(b)c\\1234";
-  EXPECT_EQ(cregex(pat1, pat1 + 7).getError(), ErrorType::None);
+  EXPECT_EQ(
+      cregex(llvm::ArrayRef<char16_t>(pat1, pat1 + 7)).getError(),
+      ErrorType::None);
 
   EXPECT_EQ(error_for(u"[\\a]"), ErrorType::None);
   EXPECT_EQ(error_for(u"\\a"), ErrorType::None);
@@ -735,17 +736,15 @@ TEST(RegExp, RangeChecks) {
 
 static bool regexIsAnchored(
     const char16_t *pattern,
-    const std::u16string flags = u"") {
-  const std::vector<char16_t> flagsVec(flags.begin(), flags.end());
-  return cregex(pattern, flagsVec).matchConstraints() &
+    const char16_t *flags = u"") {
+  return cregex(pattern, flags).matchConstraints() &
       MatchConstraintAnchoredAtStart;
 }
 
 static bool regexIsNonASCII(
     const char16_t *pattern,
-    const std::u16string flags = u"") {
-  const std::vector<char16_t> flagsVec(flags.begin(), flags.end());
-  return cregex(pattern, flagsVec).matchConstraints() & MatchConstraintNonASCII;
+    const char16_t *flags = u"") {
+  return cregex(pattern, flags).matchConstraints() & MatchConstraintNonASCII;
 }
 
 TEST(Regex, LineStartAnchoring) {

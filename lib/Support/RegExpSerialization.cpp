@@ -341,8 +341,7 @@ llvm::Optional<CompiledRegExp> CompiledRegExp::tryCompile(
   convertUTF8WithSurrogatesToUTF16(
       std::back_inserter(flags16), flags.begin(), flags.end());
   // Build and compile the regexp.
-  auto re =
-      regex::Regex<regex::UTF16RegexTraits>(re16.begin(), re16.end(), flags16);
+  auto re = regex::Regex<regex::UTF16RegexTraits>(re16, flags16);
   if (!re.valid()) {
     if (outError)
       *outError = messageForError(re.getError());
