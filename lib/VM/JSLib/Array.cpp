@@ -3344,6 +3344,7 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
   if (!usingIterator->isUndefined()) {
     // a. If IsConstructor(C) is true, then
     if (isConstructor(runtime, *C)) {
+      GCScopeMarkerRAII markerConstruct{gcScope};
       // i. Let A be Construct(C).
       auto callRes =
           Callable::executeConstruct0(Handle<Callable>::vmcast(C), runtime);
@@ -3375,6 +3376,7 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
     MutableHandle<> k{runtime, HermesValue::encodeNumberValue(0)};
     // g. Repeat
     MutableHandle<> mappedValue{runtime};
+    MutableHandle<> nextValue{runtime};
     while (true) {
       GCScopeMarkerRAII marker1{runtime};
       // i. Let Pk be ToString(k).
@@ -3412,7 +3414,7 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      auto nextValue = runtime->makeHandle(std::move(*propRes));
+      nextValue = std::move(*propRes);
       // vii. If mapping is true, then
       if (mapfn) {
         // 1. Let mappedValue be Call(mapfn, T, «nextValue, k»).
