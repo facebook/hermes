@@ -589,8 +589,7 @@ bool JSLexer::isCurrentTokenADirective() {
 
       // Byte-order mark \uFEFF is encoded as: ef bb bf
       case 0xef:
-        if ((unsigned char)curCharPtr_[1] == 0xbb &&
-            (unsigned char)curCharPtr_[2] == 0xbf) {
+        if ((unsigned char)ptr[1] == 0xbb && (unsigned char)ptr[2] == 0xbf) {
           ptr += 3;
           continue;
         } else {

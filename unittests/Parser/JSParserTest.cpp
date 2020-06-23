@@ -158,4 +158,15 @@ TEST(JSParserTest, TestRegExp) {
   ASSERT_TRUE(parsed.hasValue());
 }
 
+TEST(JSParserTest, TestUnterminatedBOMInDirective) {
+  Context context;
+  // Begin an unterminated Byte Order Mark (BOM) after the first one.
+  JSParser parser(context, "\"\"\xef\xbb\xbf\xef");
+  auto parsed = parser.parse();
+  ASSERT_FALSE(parsed.hasValue());
+
+  SourceErrorManager &sm = context.getSourceErrorManager();
+  EXPECT_EQ(sm.getErrorCount(), 2);
+}
+
 }; // anonymous namespace
