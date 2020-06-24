@@ -369,6 +369,10 @@ BLACK_LIST = [
     "test262/test/language/expressions/object/fn-name-cover.js",
     "test262/test/language/expressions/object/fn-name-fn.js",
     # Proxy
+    # T68982208 Remove the following two tests from blacklist in the next update.
+    # These two tests don't support creation using revoked proxy.
+    "test262/test/built-ins/Proxy/create-handler-is-revoked-proxy.js",
+    "test262/test/built-ins/Proxy/create-target-is-revoked-proxy.js",
     "mjsunit/array-isarray.js",
     "mjsunit/es6/classof-proxy.js",
     "test262/test/language/statements/for-of/iterator-next-result-type.js",

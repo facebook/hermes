@@ -50,23 +50,9 @@ CallResult<Handle<JSObject>> proxyCreate(
   if (!target) {
     return runtime->raiseTypeError("new Proxy target must be an Object");
   }
-  // 2. If target is a Proxy exotic object and the value of the
-  // [[ProxyHandler]] internal slot of target is null, throw a
-  // TypeError exception.
-  if (target->isProxyObject() && JSProxy::isRevoked(*target, runtime)) {
-    return runtime->raiseTypeError(
-        "new Proxy target must not be a revoked proxy");
-  }
   // 3. If Type(handler) is not Object, throw a TypeError exception.
   if (!handler) {
     return runtime->raiseTypeError("new Proxy handler must be an Object");
-  }
-  // 4. If handler is a Proxy exotic object and the value of the
-  // [[ProxyHandler]] internal slot of handler is null, throw a
-  // TypeError exception.
-  if (handler->isProxyObject() && JSProxy::isRevoked(*handler, runtime)) {
-    return runtime->raiseTypeError(
-        "new Proxy handler must not be a revoked proxy");
   }
   // 5. Let P be a newly created object.
   // 6. Set P’s essential internal methods (except for [[Call]] and

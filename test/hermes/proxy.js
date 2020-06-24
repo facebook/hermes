@@ -1267,10 +1267,7 @@ assert.throws(_ => new p(), TypeError);
 print('ProxyCreate');
 // CHECK-LABEL: ProxyCreate
 
-var pr = Proxy.revocable({}, {});
-pr.revoke();
-
-for (let val of [undefined, null, true, 17, "string", pr.proxy]) {
+for (let val of [undefined, null, true, 17, "string"]) {
   assert.throws(_ => new Proxy(val, {}), TypeError);
   assert.throws(_ => new Proxy({}, val), TypeError);
 }
@@ -1282,7 +1279,10 @@ pr.revoke.prop = 1;
 assert.equal(pr.revoke.prop, 1);
 pr.revoke();
 assert.equal(pr.revoke.prop, 1);
-assert.throws(_ => new Proxy(pr.proxy, {}), TypeError);
+
+assert.throws(_=> pr.proxy.foo, TypeError);
+assert.ok(_=> new Proxy(pr.proxy, {}), "ProxyCreate using revoked proxies should be allowed.");
+assert.ok(_=> new Proxy({}, pr.proxy), "ProxyCreate using revoked proxies should be allowed.");
 
 print('Array.isArray');
 // CHECK-LABEL: Array.isArray
