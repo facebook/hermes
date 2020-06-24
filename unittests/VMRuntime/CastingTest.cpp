@@ -24,9 +24,9 @@ struct Type1 : public GCCell {
   uint64_t dummy2_{0};
 #endif
 
-  explicit Type1(GC *gc, int tag) : GCCell(gc, &vt), tag1(tag) {}
+  explicit Type1(GC *gc, int64_t tag) : GCCell(gc, &vt), tag1(tag) {}
 
-  static Type1 *create(DummyRuntime *runtime, int tag) {
+  static Type1 *create(DummyRuntime *runtime, int64_t tag) {
     return new (runtime->alloc(sizeof(Type1))) Type1(&runtime->getHeap(), tag);
   }
   static bool classof(const GCCell *cell) {
@@ -44,8 +44,8 @@ struct Type2 : public GCCell {
   uint64_t dummy2_{0};
 #endif
 
-  explicit Type2(GC *gc, int tag) : GCCell(gc, &vt), tag2(tag) {}
-  static Type2 *create(DummyRuntime *runtime, int tag) {
+  explicit Type2(GC *gc, int64_t tag) : GCCell(gc, &vt), tag2(tag) {}
+  static Type2 *create(DummyRuntime *runtime, int64_t tag) {
     return new (runtime->alloc(sizeof(Type2))) Type2(&runtime->getHeap(), tag);
   }
   static bool classof(const GCCell *cell) {

@@ -18,6 +18,7 @@
 #include "hermes/VM/detail/IdentifierHashTable.h"
 
 #include <functional>
+#include <mutex>
 #include <vector>
 
 #include "llvm/ADT/DenseMap.h"
@@ -66,6 +67,7 @@ class StringView;
 /// first occasion when a symbol is freed.
 class IdentifierTable {
   friend class detail::IdentifierHashTable;
+  friend class HadesGC;
 
  public:
   /// Initialize the identifier table.
@@ -208,7 +210,7 @@ class IdentifierTable {
   ///   Note that FREE_LIST_END is not a unique value, but it should only
   ///   be used when the union is nullptr, so that's not a problem.
   class LookupEntry {
-    static constexpr uint32_t LAZY_STRING_PRIM_TAG = (uint32_t)(1 << 30) - 1;
+    static constexpr uint32_t LAZY_STRING_PRIM_TAG = (uint32_t)(1 << 29) - 1;
     static constexpr uint32_t NON_LAZY_STRING_PRIM_TAG =
         LAZY_STRING_PRIM_TAG - 1;
 
@@ -231,7 +233,9 @@ class IdentifierTable {
     /// Set to true if the Identifier hasn't been added to the hashtable.
     bool isNotUniqued_ : 1;
 
-    uint32_t num_ : 30;
+    bool marked_ : 1;
+
+    uint32_t num_ : 29;
 
     /// Hash code for the represented string.
     uint32_t hash_{};
@@ -241,24 +245,28 @@ class IdentifierTable {
         : asciiPtr_(str.data()),
           isUTF16_(false),
           isNotUniqued_(isNotUniqued),
+          marked_(false),
           num_(str.size()),
           hash_(hermes::hashString(str)) {}
     explicit LookupEntry(ASCIIRef str, uint32_t hash, bool isNotUniqued = false)
         : asciiPtr_(str.data()),
           isUTF16_(false),
           isNotUniqued_(isNotUniqued),
+          marked_(false),
           num_(str.size()),
           hash_(hash) {}
     explicit LookupEntry(UTF16Ref str)
         : utf16Ptr_(str.data()),
           isUTF16_(true),
           isNotUniqued_(false),
+          marked_(false),
           num_(str.size()),
           hash_(hermes::hashString(str)) {}
     explicit LookupEntry(UTF16Ref str, uint32_t hash)
         : utf16Ptr_(str.data()),
           isUTF16_(true),
           isNotUniqued_(false),
+          marked_(false),
           num_(str.size()),
           hash_(hash) {}
     explicit LookupEntry(StringPrimitive *str, bool isNotUniqued = false);
@@ -269,6 +277,7 @@ class IdentifierTable {
         : strPrim_(str),
           isUTF16_(true),
           isNotUniqued_(isNotUniqued),
+          marked_(false),
           num_(NON_LAZY_STRING_PRIM_TAG),
           hash_(hash) {
       assert(str && "Invalid string primitive pointer");
@@ -299,6 +308,9 @@ class IdentifierTable {
     }
     bool isNotUniqued() const {
       return isNotUniqued_;
+    }
+    bool isMarked() const {
+      return marked_;
     }
 
     /// Transform a lazy identifier into a StringPrimitive.
@@ -331,6 +343,15 @@ class IdentifierTable {
       assert(isStringPrim() && "Not a valid string primitive");
       return strPrim_;
     }
+
+    void mark() {
+      marked_ = true;
+    }
+
+    void unmark() {
+      marked_ = false;
+    }
+
     int32_t getNextFreeSlot() const {
       assert(isFreeSlot() && "Not a free slot");
       return num_;
@@ -381,6 +402,15 @@ class IdentifierTable {
   /// Index of the first free index in lookupVector_.
   uint32_t firstFreeID_{LookupEntry::FREE_LIST_END};
 
+  /// Head of the free list created by the GC. Before resizing lookupVector_,
+  /// consult if this free list has any entries available.
+  /// Protected by lookupVectorMutex_.
+  uint32_t firstGCFreeID_{LookupEntry::FREE_LIST_END};
+
+  /// Must hold this whenever growing the vector, or when the GC iterates over
+  /// it.
+  Mutex lookupVectorMutex_;
+
   LookupEntry &getLookupTableEntry(SymbolID id) {
     return getLookupTableEntry(id.unsafeGetIndex());
   }
@@ -398,6 +428,10 @@ class IdentifierTable {
     assert(id < lookupVector_.size() && "Identifier ID out of bound");
     return lookupVector_[id];
   }
+
+  /// Marks a symbol as being read, which will ensure it isn't garbage collected
+  /// if a GC is ongoing.
+  void symbolReadBarrier(uint32_t id);
 
   /// Create or lookup a SymbolID from a string \str. If \p primHandle is not
   /// null, it is assumed to be backing str.

@@ -865,7 +865,13 @@ class GCBase {
   /// @}
 
   bool inGC() const {
-    return inGC_;
+#ifdef HERMESVM_GC_HADES
+    return true;
+#else
+    // This is only used in asserts and debugging purposes, make it as strict
+    // as possible.
+    return inGC_.load(std::memory_order_seq_cst);
+#endif
   }
 
   IDTracker &getIDTracker() {
@@ -938,6 +944,7 @@ class GCBase {
     GCBase *const gc_;
     OptValue<GCCallbacks *> gcCallbacksOpt_;
     std::string extraInfo_;
+    bool previousInGC_;
   };
 
   /// Returns the number of bytes allocated allocated since the last GC.
@@ -1092,7 +1099,7 @@ class GCBase {
   bool recordGcStats_{false};
 
   /// Whether or not a GC cycle is currently occurring.
-  bool inGC_;
+  AtomicIfConcurrentGC<bool> inGC_;
 
   /// The block of fields below records values of various metrics at
   /// the start of execution, so that we can get the values at the end
@@ -1118,12 +1125,7 @@ class GCBase {
   /// Any thread that modifies a WeakRefSlot or a data structure containing
   /// WeakRefs that the GC will mark must hold this mutex. The GC will hold this
   /// mutex while scanning any weak references.
-#ifdef HERMESVM_GC_HADES
   WeakRefMutex weakRefMutex_;
-#else
-  /// In non-concurrent GCs, we consider the mutex to be always held.
-  WeakRefMutex weakRefMutex_{true};
-#endif
 
   /// Tracks what objects need a stable identity for features such as heap
   /// snapshots and the memory profiler.

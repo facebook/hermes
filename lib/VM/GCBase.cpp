@@ -93,8 +93,9 @@ GCBase::GCCycle::GCCycle(
     std::string extraInfo)
     : gc_(gc),
       gcCallbacksOpt_(gcCallbacksOpt),
-      extraInfo_(std::move(extraInfo)) {
-  gc_->inGC_ = true;
+      extraInfo_(std::move(extraInfo)),
+      previousInGC_(gc->inGC_.load(std::memory_order_seq_cst)) {
+  gc_->inGC_.store(true, std::memory_order_seq_cst);
   if (gcCallbacksOpt_.hasValue()) {
     gcCallbacksOpt_.getValue()->onGCEvent(
         GCEventKind::CollectionStart, extraInfo_);
@@ -106,7 +107,7 @@ GCBase::GCCycle::~GCCycle() {
     gcCallbacksOpt_.getValue()->onGCEvent(
         GCEventKind::CollectionEnd, extraInfo_);
   }
-  gc_->inGC_ = false;
+  gc_->inGC_.store(previousInGC_, std::memory_order_seq_cst);
 }
 
 void GCBase::runtimeWillExecute() {

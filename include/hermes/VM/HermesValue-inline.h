@@ -129,6 +129,10 @@ inline OutputIt GCHermesValue::uninitialized_copy(
   return result;
 }
 
+// Specializations using memmove can't be used in Hades, because the concurrent
+// write barrier needs strict control over how assignments are done to HV fields
+// which need to be atomically updated.
+#ifndef HERMESVM_GC_HADES
 /// Specialization for raw pointers to do a ranged write barrier.
 template <>
 inline GCHermesValue *GCHermesValue::copy(
@@ -165,6 +169,7 @@ inline GCHermesValue *GCHermesValue::uninitialized_copy(
       (last - first) * sizeof(GCHermesValue));
   return result + (last - first);
 }
+#endif
 
 template <typename InputIt, typename OutputIt>
 inline OutputIt GCHermesValue::copy_backward(

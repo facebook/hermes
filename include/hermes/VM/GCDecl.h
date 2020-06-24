@@ -9,9 +9,9 @@
 #define HERMES_VM_GCDECL_H
 
 #include <atomic>
+#include <mutex>
 
 #ifdef HERMESVM_GC_HADES
-#include <mutex>
 #include <thread>
 #endif
 
@@ -26,6 +26,8 @@ namespace vm {
 class DebugMutex {
  public:
   DebugMutex() : tid_() {}
+  ~DebugMutex() = default;
+
   operator bool() const {
     // Check that this thread owns the mutex.
     // The mutex must be held in order to check this condition safely.
@@ -37,18 +39,21 @@ class DebugMutex {
     tid_ = std::this_thread::get_id();
   }
 
-  bool try_lock() {
-    if (inner_.try_lock()) {
-      tid_ = std::this_thread::get_id();
-      return true;
-    } else {
-      return false;
-    }
-  }
-
   void unlock() {
     tid_ = std::thread::id{};
     inner_.unlock();
+  }
+
+  /// Allow bypassing the guards for special cases, like
+  /// std::condition_variable.
+  std::mutex &inner() {
+    return inner_;
+  }
+
+  /// If inner() is used to handle locking, use assignThread to get the
+  /// DebugMutex back in a consistent state.
+  void assignThread(std::thread::id tid) {
+    tid_ = tid;
   }
 
  private:
@@ -56,12 +61,14 @@ class DebugMutex {
   std::thread::id tid_;
 };
 
-using WeakRefMutex = DebugMutex;
-using WeakRefLock = std::lock_guard<DebugMutex>;
+using Mutex = DebugMutex;
 #else
-using WeakRefMutex = std::mutex;
-using WeakRefLock = std::lock_guard<std::mutex>;
+using Mutex = std::mutex;
 #endif
+
+using WeakRefMutex = Mutex;
+using WeakRefLock = std::lock_guard<Mutex>;
+
 /// HadesGC requires some fields to be atomic, such as array lengths.
 template <typename T>
 using AtomicIfConcurrentGC = std::atomic<T>;
@@ -69,25 +76,27 @@ using AtomicIfConcurrentGC = std::atomic<T>;
 /// Non-concurrent GCs don't need any locks in order to have correct
 /// semantics for WeakRef, so use a cheap type to pass around instead.
 
-/// FakeLockGuard has the same API as lock_guard but does nothing. It exists
-/// only to prevent unused variable warnings.
-template <typename Mutex>
-class FakeLockGuard {
+/// A FakeMutex has the same API as a std::mutex but does nothing.
+/// It pretends to always be locked for convenience of asserts that need to work
+/// in both concurrent code and non-concurrent code.
+class FakeMutex {
  public:
-  explicit FakeLockGuard(Mutex &m) {
-    (void)m;
+  explicit FakeMutex() = default;
+
+  operator bool() const {
+    return true;
   }
-  // This is not "default" here to ensure that the destructor is non-trivial.
-  ~FakeLockGuard() {}
+
+  void lock() {}
+  bool try_lock() {
+    return true;
+  }
+  void unlock() {}
 };
 
-using WeakRefMutex = bool;
-using WeakRefLock = FakeLockGuard<WeakRefMutex>;
-
-static_assert(
-    !std::is_trivially_destructible<WeakRefLock>::value,
-    "FakeLockGuard must not be trivially destructible to avoid warnings about "
-    "unused variables");
+using Mutex = FakeMutex;
+using WeakRefMutex = FakeMutex;
+using WeakRefLock = std::lock_guard<WeakRefMutex>;
 
 /// FakeAtomic has the same API as std::atomic, but ignores the memory order
 /// argument and always accesses data non-atomically.

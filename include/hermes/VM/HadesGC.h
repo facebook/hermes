@@ -11,9 +11,13 @@
 #include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/GCBase.h"
 
+#include <atomic>
+#include <condition_variable>
 #include <cstdint>
 #include <deque>
 #include <memory>
+#include <mutex>
+#include <utility>
 #include <vector>
 
 namespace hermes {
@@ -114,29 +118,23 @@ class HadesGC final : public GCBase {
 
   /// The given value is being written at the given loc (required to
   /// be in the heap). If value is a pointer, execute a write barrier.
+  /// NOTE: The write barrier call must be placed *before* the write to the
+  /// pointer, so that the current value can be fetched.
   void writeBarrier(void *loc, HermesValue value);
 
   /// The given pointer value is being written at the given loc (required to
   /// be in the heap). The value is may be null. Execute a write barrier.
+  /// NOTE: The write barrier call must be placed *before* the write to the
+  /// pointer, so that the current value can be fetched.
   void writeBarrier(void *loc, void *value);
 
-  /// We copied HermesValues into the given region. Note that \p numHVs is
-  /// the number of HermesValues in the the range, not the char length.
-  /// Do any necessary barriers.
-  ///
-  /// \pre The range described must be wholly contained within one segment of
-  ///     the heap.
-  void writeBarrierRange(GCHermesValue *start, uint32_t numHVs);
-
-  /// The given value is being written at the given loc (required to
-  /// be in the heap). If value is a pointer, execute a write barrier.
+  /// Special versions of \p writeBarrier for when there was no previous value
+  /// initialized into the space.
   void constructorWriteBarrier(void *loc, HermesValue value);
-
-  /// The given pointer value is being written at the given loc (required to
-  /// be in the heap). The value is may be null. Execute a write barrier.
   void constructorWriteBarrier(void *loc, void *value);
 
-  void constructorWriteBarrierRange(GCHermesValue *start, uint32_t numHVs);
+  void weakRefReadBarrier(void *value);
+  void weakRefReadBarrier(HermesValue value);
 
   /// \}
 
@@ -192,7 +190,7 @@ class HadesGC final : public GCBase {
   class CollectionSection;
   class EvacAcceptor;
   class MarkAcceptor;
-  class WeakRootAcceptor;
+  class MarkWeakRootsAcceptor;
 
  private:
   const uint64_t maxHeapSize_;
@@ -201,19 +199,52 @@ class HadesGC final : public GCBase {
   std::shared_ptr<StorageProvider> provider_;
 
   /// youngGen is a bump-pointer space, so it can re-use AlignedHeapSegment.
+  /// Protected by oldGenMutex_.
   std::unique_ptr<HeapSegment> youngGen_;
+
   /// List of cells in YG that have finalizers. Iterate through this to clean
   /// them out.
+  /// Protected by oldGenMutex_.
   std::vector<GCCell *> youngGenFinalizables_;
 
   /// oldGen_ is a free list space, so it needs a different segment
   /// representation.
+  /// Protected by oldGenMutex_.
   std::vector<std::unique_ptr<HeapSegment>> oldGen_;
 
   /// weakPointers_ is a list of all the weak pointers in the system. They are
   /// invalidated if they point to an object that is dead, and do not count
   /// towards whether an object is live or dead.
+  /// Protected by weakRefMutex().
   std::deque<WeakRefSlot> weakPointers_;
+
+  /// Whoever holds this lock is permitted to modify data structures around the
+  /// OG. This includes mark bits, free lists, etc.
+  Mutex oldGenMutex_;
+
+  enum class Phase : uint8_t { None, Mark, WeakMapScan, Sweep };
+
+  /// Represents the current phase the concurrent GC is in. The main difference
+  /// between phases is their effect on read and write barriers.
+  /// Not protected by a lock and should be read/written atomically.
+  std::atomic<Phase> concurrentPhase_{Phase::None};
+
+  /// Used by the write barrier to add items to the worklist.
+  /// Protected by oldGenMutex_.
+  std::unique_ptr<MarkAcceptor> oldGenMarker_;
+
+  /// Use this with concurrentPhase_ to check for a completed collection.
+  /// Protected by oldGenMutex_.
+  std::condition_variable oldGenCollectionActiveCondVar_;
+
+  /// This mutex, condition variable, and bool are all used for the mutator to
+  /// signal the background marking thread when it's safe to try and complete.
+  /// Thus, the GC thread can wait for worldStopped_ to be true to
+  /// "stop the world" -- for example, to drain the final parts of the mark
+  /// stack.
+  Mutex stopTheWorldMutex_;
+  std::condition_variable stopTheWorldCondVar_;
+  bool worldStopped_{false};
 
   /// The main entrypoint for all allocations.
   /// \param sz The size of allocation requested. This might be rounded up to
@@ -234,6 +265,7 @@ class HadesGC final : public GCBase {
   /// space must be filled immediately after this call completes.
   /// \return A non-null pointer to memory in the old gen that should have a
   ///   constructor run in immediately.
+  /// \pre oldGenMutex_ must be held before calling this function.
   /// \post This function either successfully allocates, or reports OOM.
   GCCell *oldGenAlloc(uint32_t sz);
 
@@ -251,20 +283,58 @@ class HadesGC final : public GCBase {
   /// to the OG.
   /// \post The YG is completely empty, and all bytes are available for new
   ///   allocations.
-  void youngGenCollection(bool allowOGBegin);
+  void youngGenCollection();
 
   /// Perform an OG garbage collection. All live objects in OG will be left
   /// untouched, all unreachable objects will be placed into a free list that
   /// can be used by \c oldGenAlloc.
   void oldGenCollection();
 
+  /// If there's an OG collection going on, wait for it to complete. This
+  /// function is synchronous and will block the caller if the GC background
+  /// thread is still running.
+  /// \pre The oldGenMutex_ must be held before entering this function.
+  /// \post The oldGenMutex_ will be held when the function exits, but it might
+  ///   have been unlocked and then re-locked.
+  void waitForCollectionToFinish();
+
+  /// Worker function that does the bulk of the GC work concurrently with the
+  /// mutator.
+  void oldGenCollectionWorker();
+
+  /// Finish the marking process. This requires a STW pause in order to do a
+  /// final marking worklist drain, and to update weak roots.
+  void completeMarking();
+
+  /// As part of finishing the marking process, iterate through all of YG to
+  /// find symbols and WeakRefs only pointed to from there.
+  void findYoungGenSymbolsAndWeakRefs();
+
+  /// Put dead objects onto the free list, so their space can be re-used.
+  void sweep();
+
   /// Find all pointers from OG into YG during a YG collection. This is done
   /// quickly through use of write barriers that detect the creation of OG-to-YG
   /// pointers.
   void scanDirtyCards(EvacAcceptor &acceptor);
 
+  /// Common logic for doing the Snapshot At The Beginning (SATB) write barrier.
+  void snapshotWriteBarrier(GCCell *oldValue);
+
+  /// Common logic for doing the Snapshot At The Beginning (SATB) write barrier.
+  /// Forwards to \c snapshotWriteBarrier(GCCell *) if oldValue is a pointer.
+  void snapshotWriteBarrier(HermesValue oldValue);
+
+  /// Common logic for doing the generational write barrier for detecting
+  /// pointers into YG.
+  void generationalWriteBarrier(void *loc, void *value);
+
   /// Finalize all objects in YG that have finalizers.
   void finalizeYoungGenObjects();
+
+  /// Run the finalizers for all heap objects, if the oldGenMutex_ is already
+  /// locked.
+  void finalizeAllLocked();
 
   /// Update all of the weak references and invalidate the ones that point to
   /// dead objects.
@@ -309,6 +379,17 @@ class HadesGC final : public GCBase {
   /// it is O(1).
   /// \return true if the pointer is in the old gen.
   bool inOldGen(const void *p) const;
+
+  /// Give the background marking thread a chance to complete marking and finish
+  /// the OG collection.
+  void yieldToBackgroundThread();
+
+  /// Before returning control to the mutator, make sure that any background
+  /// marking threads won't try to complete the collection.
+  void yieldToMutator();
+
+  /// Given a potentially-debug mutex \p mtx, get the inner std::mutex it uses.
+  static std::mutex &innerMutex(Mutex &mtx);
 
 #ifdef HERMES_SLOW_DEBUG
   /// Checks the heap to make sure all cells are valid.

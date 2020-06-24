@@ -59,6 +59,9 @@ class MarkBitArrayNC {
   /// Clears the bit array.
   inline void clear();
 
+  /// Sets all bits to true.
+  inline void markAll();
+
   /// Finds the next bit in the MarkBitArray that is set to 1, starting at and
   /// including \p ind, the index from which to begin searching. Returns one
   /// past the last array index if there is not another marked bit.
@@ -149,6 +152,10 @@ void MarkBitArrayNC::mark(size_t ind) {
 
 void MarkBitArrayNC::clear() {
   ::memset(bitArray_, 0, sizeof(bitArray_));
+}
+
+void MarkBitArrayNC::markAll() {
+  ::memset(bitArray_, 0xff, sizeof(bitArray_));
 }
 
 char *MarkBitArrayNC::base() const {
