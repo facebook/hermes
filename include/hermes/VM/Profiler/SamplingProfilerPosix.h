@@ -22,6 +22,7 @@
 #endif
 
 #include <chrono>
+#include <condition_variable>
 #include <mutex>
 #include <thread>
 #include <unordered_set>
@@ -181,6 +182,15 @@ class SamplingProfiler {
   /// registerDomain() keeps a Domain from being destructed.
   std::vector<Domain *> domains_;
 
+  /// This thread starts in timerLoop_, and samples the stacks of registered
+  /// runtimes periodically. It is created in \p enable() and joined in
+  /// \p disable().
+  std::thread timerThread_;
+
+  /// This condition variable can be used to wait for a change in the enabled
+  /// member variable.
+  std::condition_variable enabledCondVar_;
+
  private:
   explicit SamplingProfiler();
 
@@ -205,7 +215,7 @@ class SamplingProfiler {
 
   /// Main routine to take a sample of runtime stack.
   /// \return false for failure which timer loop thread should stop.
-  bool sampleStack();
+  bool sampleStack(std::unique_lock<std::mutex> &mtx);
 
   /// Timer loop thread main routine.
   void timerLoop();

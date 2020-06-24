@@ -169,8 +169,7 @@ void SamplingProfiler::profilingSignalHandler(int signo) {
   errno = oldErrno;
 }
 
-bool SamplingProfiler::sampleStack() {
-  std::unique_lock<std::mutex> uniqueLock(profilerLock_);
+bool SamplingProfiler::sampleStack(std::unique_lock<std::mutex> &uniqueLock) {
   // Check profiling stopping request.
   if (!enabled_) {
     return false;
@@ -185,7 +184,7 @@ bool SamplingProfiler::sampleStack() {
     pthread_kill(targetThreadId, SIGPROF);
 
     // Threading: samplingDoneSem_ will synchronize with signal handler to
-    // to make sure there will NOT be two SIGPROF signals sent to the sameÍ
+    // to make sure there will NOT be two SIGPROF signals sent to the same
     // runtime thread at the same time which prevents signal coalescing.
     // Also, release profilerLock_ before waiting because the runtime thread
     // we try to signal may be trying to hold profilerLock_. Failing to unlock
@@ -203,6 +202,12 @@ bool SamplingProfiler::sampleStack() {
     // unlike activeRuntimeThreads_, their read/write operations
     // do not overlap each other across unlock/lock boundary.
     uniqueLock.lock();
+    // Enabled may have changed since the lock was released, and we should exit
+    // as early as possible before sending more signals to threads that no
+    // longer have signal handlers attached.
+    if (!enabled_) {
+      return false;
+    }
     if (sampledStackDepth_ > 0) {
       assert(
           sampledStackDepth_ <= sampleStorage_.stack.size() &&
@@ -222,14 +227,24 @@ bool SamplingProfiler::sampleStack() {
 }
 
 void SamplingProfiler::timerLoop() {
+  std::unique_lock<std::mutex> uniqueLock(profilerLock_);
   while (true) {
-    if (!sampleStack()) {
+    if (!sampleStack(uniqueLock)) {
       return;
     }
 
     // TODO: make sampling rate configurable.
     // TODO: add random fluctuation to interval value.
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    bool disabled = enabledCondVar_.wait_for(
+        uniqueLock, std::chrono::milliseconds(1), [this]() {
+          return !enabled_;
+        });
+    if (disabled) {
+      // The sampling profiler was disabled: don't continue sampling.
+      return;
+    }
+    // Else there was a timeout, which means enabled_ wasn't changed while this
+    // function was waiting. Continue to sample the stack.
   }
 }
 
@@ -436,25 +451,33 @@ bool SamplingProfiler::enable() {
   }
   enabled_ = true;
   // Start timer thread.
-  std::thread(&SamplingProfiler::timerLoop, this).detach();
+  timerThread_ = std::thread(&SamplingProfiler::timerLoop, this);
   return true;
 }
 
 bool SamplingProfiler::disable() {
-  std::lock_guard<std::mutex> lockGuard(profilerLock_);
-  if (!enabled_) {
-    // Already disabled.
-    return true;
+  {
+    std::lock_guard<std::mutex> lockGuard(profilerLock_);
+    if (!enabled_) {
+      // Already disabled.
+      return true;
+    }
+    if (!samplingDoneSem_.close()) {
+      return false;
+    }
+    // Unregister handlers before shutdown.
+    if (!unregisterSignalHandler()) {
+      return false;
+    }
+    // Telling timer thread to exit.
+    enabled_ = false;
   }
-  if (!samplingDoneSem_.close()) {
-    return false;
-  }
-  // Unregister handlers before shutdown.
-  if (!unregisterSignalHandler()) {
-    return false;
-  }
-  // Telling timer thread to exit.
-  enabled_ = false;
+  // Notify the timer thread that it has been disabled.
+  enabledCondVar_.notify_all();
+  // Wait for timer thread to exit. This avoids the timer thread reading from
+  // memory that is freed after a main thread exits. This is outside the lock
+  // on profilerLock_ since the timer thread needs to acquire that lock.
+  timerThread_.join();
   return true;
 }
 
