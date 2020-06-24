@@ -105,7 +105,7 @@ class PseudoHandle;
 template <typename T>
 class PseudoHandle;
 
-// Tags are defined as 17-bit values positioned at the high bits of a 64-bit
+// Tags are defined as 16-bit values positioned at the high bits of a 64-bit
 // word.
 
 using TagKind = uint32_t;
