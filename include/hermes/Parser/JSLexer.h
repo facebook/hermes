@@ -398,7 +398,8 @@ class JSLexer {
   /// Grammar context to be passed to advance().
   /// - AllowRegExp: RegExp can follow
   /// - AllowDiv: "/" can follow
-  /// - AllowJSXIdentifier: "/" can follow and "-" is part of identifiers.
+  /// - AllowJSXIdentifier: "/" can follow, "-" is part of identifiers,
+  ///     ">" is scanned as its own token.
   /// - Flow: "/" can follow and ">>" scans as two separate ">" tokens.
   enum GrammarContext { AllowRegExp, AllowDiv, AllowJSXIdentifier, Flow };
 

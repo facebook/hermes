@@ -407,8 +407,12 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       // > >= >> >>> >>= >>>=
       case '>':
         token_.setStart(curCharPtr_);
-        if (HERMES_PARSE_FLOW &&
-            LLVM_UNLIKELY(grammarContext == JSLexer::GrammarContext::Flow)) {
+        if ((HERMES_PARSE_FLOW &&
+             LLVM_UNLIKELY(grammarContext == JSLexer::GrammarContext::Flow)) ||
+            (HERMES_PARSE_JSX &&
+             LLVM_UNLIKELY(
+                 grammarContext ==
+                 JSLexer::GrammarContext::AllowJSXIdentifier))) {
           token_.setPunctuator(TokenKind::greater);
           curCharPtr_ += 1;
         } else if (curCharPtr_[1] == '=') { // >=

@@ -761,6 +761,38 @@
 // CHECK-NEXT:       "directive": null
 // CHECK-NEXT:     },
 
+<a>=asdf=</a>;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "JSXElement",
+// CHECK-NEXT:         "openingElement": {
+// CHECK-NEXT:           "type": "JSXOpeningElement",
+// CHECK-NEXT:           "name": {
+// CHECK-NEXT:             "type": "JSXIdentifier",
+// CHECK-NEXT:             "name": "a"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "attributes": [],
+// CHECK-NEXT:           "selfClosing": false
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "children": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "JSXText",
+// CHECK-NEXT:             "value": "=asdf=",
+// CHECK-NEXT:             "raw": "=asdf="
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "closingElement": {
+// CHECK-NEXT:           "type": "JSXClosingElement",
+// CHECK-NEXT:           "name": {
+// CHECK-NEXT:             "type": "JSXIdentifier",
+// CHECK-NEXT:             "name": "a"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
 <a><>foo</></a>;
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "ExpressionStatement",
