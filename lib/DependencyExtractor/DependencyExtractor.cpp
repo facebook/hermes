@@ -8,6 +8,9 @@
 #include "hermes/DependencyExtractor/DependencyExtractor.h"
 
 #include "hermes/AST/RecursiveVisitor.h"
+#include "hermes/Regex/Executor.h"
+#include "hermes/Regex/Regex.h"
+#include "hermes/Regex/RegexTraits.h"
 
 namespace hermes {
 
@@ -54,6 +57,11 @@ class DependencyExtractor {
   /// Store the RESOURCE_CALLEES uniqued for quick comparison in a loop.
   UniqueString *resourceIdents_[NUM_RESOURCE_CALLEES];
 
+  UniqueString *graphqlIdent_;
+  /// Bytecode for the regex that detects dependencies in GraphQL template
+  /// literals.
+  std::vector<uint8_t> graphqlQueryRegexBytecode_;
+
  public:
   DependencyExtractor(Context &astContext)
       : sm_(astContext.getSourceErrorManager()),
@@ -61,12 +69,16 @@ class DependencyExtractor {
         jestIdent_(astContext.getStringTable().getString("jest")),
         requireActualIdent_(
             astContext.getStringTable().getString("requireActual")),
-        requireMockIdent_(
-            astContext.getStringTable().getString("requireMock")) {
+        requireMockIdent_(astContext.getStringTable().getString("requireMock")),
+        graphqlIdent_(astContext.getStringTable().getString("graphql")) {
     for (uint32_t i = 0; i < NUM_RESOURCE_CALLEES; ++i) {
       llvm::StringLiteral callee = RESOURCE_CALLEES[i].callee;
       resourceIdents_[i] = astContext.getStringTable().getString(callee);
     }
+
+    regex::Regex<regex::UTF16RegexTraits> graphqlQueryRegex{
+        u"(?:^\\s*?(?:query|fragment|mutation|subscription) +(\\w+))", u"m"};
+    graphqlQueryRegexBytecode_ = graphqlQueryRegex.compile();
   }
 
   std::vector<Dependency> &getDeps() {
@@ -183,12 +195,34 @@ class DependencyExtractor {
     visitESTreeChildren(*this, node);
   }
 
+  void visit(TaggedTemplateExpressionNode *node) {
+    if (auto *tagIdent = llvm::dyn_cast<IdentifierNode>(node->_tag)) {
+      if (tagIdent->_name == graphqlIdent_) {
+        NodeList &quasis =
+            llvm::cast<TemplateLiteralNode>(node->_quasi)->_quasis;
+        for (auto &it : quasis) {
+          auto *quasi = llvm::cast<TemplateElementNode>(&it);
+          registerGraphQLDependencies(quasi);
+        }
+      }
+    }
+    visitESTreeChildren(*this, node);
+  }
+
  private:
   /// Perform any postprocessing on \p name (e.g. removing "m#" at the start)
   /// and add the {name, kind} pair to the list of extracted dependencies.
   void addDependency(llvm::StringRef name, DependencyKind kind) {
     name.consume_front("m#");
-    deps_.push_back(Dependency{name.str(), kind});
+    switch (kind) {
+      case DependencyKind::GraphQL:
+        // GraphQL dependencies require a .graphql appended to them.
+        deps_.push_back(Dependency{llvm::Twine(name, ".graphql").str(), kind});
+        break;
+      default:
+        deps_.push_back(Dependency{name.str(), kind});
+        break;
+    }
   }
 
   /// \return the first argument to \p node if it is a string literal.
@@ -209,6 +243,33 @@ class DependencyExtractor {
       return nullptr;
     }
     return first;
+  }
+
+  /// Run the graphqlQueryRegexBytecode_ against the contents of \p elem,
+  /// and add any matches to the dependency list.
+  void registerGraphQLDependencies(TemplateElementNode *elem) {
+    if (!elem->_cooked)
+      return;
+    llvm::StringRef string = elem->_cooked->str();
+    std::vector<regex::CapturedRange> captures{};
+    uint32_t searchStart = 0;
+    for (;;) {
+      captures.clear();
+      regex::MatchRuntimeResult matchResult = regex::searchWithBytecode(
+          graphqlQueryRegexBytecode_,
+          string.data(),
+          searchStart,
+          string.size(),
+          &captures,
+          regex::constants::MatchFlagType::matchDefault);
+      if (matchResult != regex::MatchRuntimeResult::Match) {
+        return;
+      }
+      addDependency(
+          string.slice(captures[1].start, captures[1].end),
+          DependencyKind::GraphQL);
+      searchStart = captures[0].end;
+    }
   }
 };
 
