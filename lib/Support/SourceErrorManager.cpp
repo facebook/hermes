@@ -372,7 +372,8 @@ void SourceErrorManager::message(
     llvm::SMLoc loc,
     llvm::SMRange sm,
     llvm::Twine const &msg,
-    hermes::Warning w) {
+    hermes::Warning w,
+    Subsystem subsystem) {
   assert(dk <= DK_Note);
   if (suppressMessages_)
     return;
@@ -404,16 +405,25 @@ void SourceErrorManager::message(
     DiagKind dk,
     SMLoc loc,
     SMRange sm,
-    const Twine &msg) {
-  message(dk, loc, sm, msg, Warning::NoWarning);
+    const Twine &msg,
+    Subsystem subsystem) {
+  message(dk, loc, sm, msg, Warning::NoWarning, subsystem);
 }
 
-void SourceErrorManager::message(DiagKind dk, SMRange sm, const Twine &msg) {
-  message(dk, sm.Start, sm, msg);
+void SourceErrorManager::message(
+    DiagKind dk,
+    SMRange sm,
+    const Twine &msg,
+    Subsystem subsystem) {
+  message(dk, sm.Start, sm, msg, subsystem);
 }
 
-void SourceErrorManager::message(DiagKind dk, SMLoc loc, const Twine &msg) {
-  message(dk, loc, SMRange{}, msg);
+void SourceErrorManager::message(
+    DiagKind dk,
+    SMLoc loc,
+    const Twine &msg,
+    Subsystem subsystem) {
+  message(dk, loc, SMRange{}, msg, subsystem);
 }
 
 bool SourceErrorManager::findBufferLineAndLoc(SMLoc loc, SourceCoords &result) {

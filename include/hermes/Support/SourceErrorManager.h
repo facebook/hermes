@@ -8,6 +8,7 @@
 #ifndef HERMES_SUPPORT_SOURCEERRORMANAGER_H
 #define HERMES_SUPPORT_SOURCEERRORMANAGER_H
 
+#include "hermes/Support/OptValue.h"
 #include "hermes/Support/Warning.h"
 
 #include "llvm/ADT/DenseMap.h"
@@ -48,6 +49,18 @@ struct SourceErrorOutputOptions {
   /// When showing an error for a range of text, the minimum amount of context
   /// (as a count of source code characters) around that range
   static constexpr size_t MinimumSourceContext = 16;
+};
+
+/// Allows the specification of the subsystem which generated a message.
+enum class Subsystem {
+  /// No specific system provided.
+  /// While different functions may interpret this as "exclude no systems"
+  /// or "include no systems", the general use case is akin to llvm::None.
+  Unspecified,
+  /// e.g. JSLexer or something with similar functionality.
+  Lexer,
+  /// e.g. JSParser, JSONParser or something with similar functionality.
+  Parser,
 };
 
 /// A facade around llvm::SourceMgr which simplifies error output and counts the
@@ -121,8 +134,9 @@ class SourceErrorManager {
   /// If set, warnings are treated as errors.
   bool warningsAreErrors_{false};
 
-  /// If set, all messages are ignored.
-  bool suppressMessages_{false};
+  /// If set, messages from the given subsystem are ignored.
+  /// If set to Subsystem::Unspecified, then all messages are ignored.
+  OptValue<Subsystem> suppressMessages_{llvm::None};
 
   /// Set to true if the last message was suppressed. Any following DK_Note
   /// messages will be automatically suppressed.
@@ -362,48 +376,102 @@ class SourceErrorManager {
   /// form.
   void dumpCoords(llvm::raw_ostream &OS, SMLoc loc);
 
-  void message(DiagKind dk, SMLoc loc, SMRange sm, const Twine &msg, Warning w);
-  void message(DiagKind dk, SMLoc loc, SMRange sm, const Twine &msg);
-  void message(DiagKind dk, SMRange sm, const Twine &msg);
-  void message(DiagKind dk, SMLoc loc, const Twine &msg);
+  void message(
+      DiagKind dk,
+      SMLoc loc,
+      SMRange sm,
+      const Twine &msg,
+      Warning w,
+      Subsystem subsystem);
+  void message(
+      DiagKind dk,
+      SMLoc loc,
+      SMRange sm,
+      const Twine &msg,
+      Subsystem subsystem);
+  void message(DiagKind dk, SMRange sm, const Twine &msg, Subsystem subsystem);
+  void message(DiagKind dk, SMLoc loc, const Twine &msg, Subsystem subsystem);
 
-  void error(SMLoc loc, SMRange rng, const llvm::Twine &msg) {
-    message(DK_Error, loc, rng, msg);
+  void error(
+      SMLoc loc,
+      SMRange rng,
+      const llvm::Twine &msg,
+      Subsystem subsystem = Subsystem::Unspecified) {
+    message(DK_Error, loc, rng, msg, subsystem);
   }
-  void warning(SMLoc loc, SMRange rng, const llvm::Twine &msg) {
-    warning(Warning::Misc, loc, rng, msg);
+  void warning(
+      SMLoc loc,
+      SMRange rng,
+      const llvm::Twine &msg,
+      Subsystem subsystem = Subsystem::Unspecified) {
+    warning(Warning::Misc, loc, rng, msg, subsystem);
   }
-  void warning(Warning w, SMLoc loc, SMRange rng, const llvm::Twine &msg) {
-    message(DK_Warning, loc, rng, msg, w);
+  void warning(
+      Warning w,
+      SMLoc loc,
+      SMRange rng,
+      const llvm::Twine &msg,
+      Subsystem subsystem = Subsystem::Unspecified) {
+    message(DK_Warning, loc, rng, msg, w, subsystem);
   }
-  void note(SMLoc loc, SMRange rng, const llvm::Twine &msg) {
-    message(DK_Note, loc, rng, msg);
+  void note(
+      SMLoc loc,
+      SMRange rng,
+      const llvm::Twine &msg,
+      Subsystem subsystem = Subsystem::Unspecified) {
+    message(DK_Note, loc, rng, msg, subsystem);
   }
 
-  void error(SMRange rng, const llvm::Twine &msg) {
-    message(DK_Error, rng, msg);
+  void error(
+      SMRange rng,
+      const llvm::Twine &msg,
+      Subsystem subsystem = Subsystem::Unspecified) {
+    message(DK_Error, rng, msg, subsystem);
   }
-  void warning(SMRange rng, const llvm::Twine &msg) {
-    warning(Warning::Misc, rng, msg);
+  void warning(
+      SMRange rng,
+      const llvm::Twine &msg,
+      Subsystem subsystem = Subsystem::Unspecified) {
+    warning(Warning::Misc, rng, msg, subsystem);
   }
-  void warning(Warning w, SMRange rng, const llvm::Twine &msg) {
-    message(DK_Warning, rng.Start, rng, msg, w);
+  void warning(
+      Warning w,
+      SMRange rng,
+      const llvm::Twine &msg,
+      Subsystem subsystem = Subsystem::Unspecified) {
+    message(DK_Warning, rng.Start, rng, msg, w, subsystem);
   }
-  void note(SMRange rng, const llvm::Twine &msg) {
-    message(DK_Note, rng, msg);
+  void note(
+      SMRange rng,
+      const llvm::Twine &msg,
+      Subsystem subsystem = Subsystem::Unspecified) {
+    message(DK_Note, rng, msg, subsystem);
   }
 
-  void error(SMLoc loc, const llvm::Twine &msg) {
-    message(DK_Error, loc, msg);
+  void error(
+      SMLoc loc,
+      const llvm::Twine &msg,
+      Subsystem subsystem = Subsystem::Unspecified) {
+    message(DK_Error, loc, msg, subsystem);
   }
-  void warning(SMLoc loc, const llvm::Twine &msg) {
-    warning(Warning::Misc, loc, msg);
+  void warning(
+      SMLoc loc,
+      const llvm::Twine &msg,
+      Subsystem subsystem = Subsystem::Unspecified) {
+    warning(Warning::Misc, loc, msg, subsystem);
   }
-  void warning(Warning w, SMLoc loc, const llvm::Twine &msg) {
-    message(DK_Warning, loc, SMRange{}, msg, w);
+  void warning(
+      Warning w,
+      SMLoc loc,
+      const llvm::Twine &msg,
+      Subsystem subsystem = Subsystem::Unspecified) {
+    message(DK_Warning, loc, SMRange{}, msg, w, subsystem);
   }
-  void note(SMLoc loc, const llvm::Twine &msg) {
-    message(DK_Note, loc, msg);
+  void note(
+      SMLoc loc,
+      const llvm::Twine &msg,
+      Subsystem subsystem = Subsystem::Unspecified) {
+    message(DK_Note, loc, msg, subsystem);
   }
 
   unsigned getMessageCount(DiagKind dk) const {
@@ -437,12 +505,14 @@ class SourceErrorManager {
   /// supression on destruction.
   class SaveAndSuppressMessages {
     SourceErrorManager *const sm_;
-    bool const messagesSuppressed_;
+    OptValue<Subsystem> messagesSuppressed_;
 
    public:
-    SaveAndSuppressMessages(SourceErrorManager *sm)
+    SaveAndSuppressMessages(
+        SourceErrorManager *sm,
+        Subsystem subsystem = Subsystem::Unspecified)
         : sm_(sm), messagesSuppressed_(sm->suppressMessages_) {
-      sm->suppressMessages_ = true;
+      sm->suppressMessages_ = subsystem;
     }
     ~SaveAndSuppressMessages() {
       sm_->suppressMessages_ = messagesSuppressed_;
