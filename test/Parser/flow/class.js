@@ -118,6 +118,124 @@ class C {
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+class C {
+  foo<T>() {}
+  get<T>() {}
+  set<T>() {}
+}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ClassDeclaration",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "C"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "superClass": null,
+// CHECK-NEXT:       "body": {
+// CHECK-NEXT:         "type": "ClassBody",
+// CHECK-NEXT:         "body": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "MethodDefinition",
+// CHECK-NEXT:             "key": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "foo"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "value": {
+// CHECK-NEXT:               "type": "FunctionExpression",
+// CHECK-NEXT:               "id": null,
+// CHECK-NEXT:               "params": [],
+// CHECK-NEXT:               "body": {
+// CHECK-NEXT:                 "type": "BlockStatement",
+// CHECK-NEXT:                 "body": []
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "typeParameters": {
+// CHECK-NEXT:                 "type": "TypeParameterDeclaration",
+// CHECK-NEXT:                 "params": [
+// CHECK-NEXT:                   {
+// CHECK-NEXT:                     "type": "TypeParameter",
+// CHECK-NEXT:                     "name": "T",
+// CHECK-NEXT:                     "bound": null,
+// CHECK-NEXT:                     "variance": null,
+// CHECK-NEXT:                     "default": null
+// CHECK-NEXT:                   }
+// CHECK-NEXT:                 ]
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "kind": "method",
+// CHECK-NEXT:             "computed": false,
+// CHECK-NEXT:             "static": false
+// CHECK-NEXT:           },
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "MethodDefinition",
+// CHECK-NEXT:             "key": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "get"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "value": {
+// CHECK-NEXT:               "type": "FunctionExpression",
+// CHECK-NEXT:               "id": null,
+// CHECK-NEXT:               "params": [],
+// CHECK-NEXT:               "body": {
+// CHECK-NEXT:                 "type": "BlockStatement",
+// CHECK-NEXT:                 "body": []
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "typeParameters": {
+// CHECK-NEXT:                 "type": "TypeParameterDeclaration",
+// CHECK-NEXT:                 "params": [
+// CHECK-NEXT:                   {
+// CHECK-NEXT:                     "type": "TypeParameter",
+// CHECK-NEXT:                     "name": "T",
+// CHECK-NEXT:                     "bound": null,
+// CHECK-NEXT:                     "variance": null,
+// CHECK-NEXT:                     "default": null
+// CHECK-NEXT:                   }
+// CHECK-NEXT:                 ]
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "kind": "method",
+// CHECK-NEXT:             "computed": false,
+// CHECK-NEXT:             "static": false
+// CHECK-NEXT:           },
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "MethodDefinition",
+// CHECK-NEXT:             "key": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "set"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "value": {
+// CHECK-NEXT:               "type": "FunctionExpression",
+// CHECK-NEXT:               "id": null,
+// CHECK-NEXT:               "params": [],
+// CHECK-NEXT:               "body": {
+// CHECK-NEXT:                 "type": "BlockStatement",
+// CHECK-NEXT:                 "body": []
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "typeParameters": {
+// CHECK-NEXT:                 "type": "TypeParameterDeclaration",
+// CHECK-NEXT:                 "params": [
+// CHECK-NEXT:                   {
+// CHECK-NEXT:                     "type": "TypeParameter",
+// CHECK-NEXT:                     "name": "T",
+// CHECK-NEXT:                     "bound": null,
+// CHECK-NEXT:                     "variance": null,
+// CHECK-NEXT:                     "default": null
+// CHECK-NEXT:                   }
+// CHECK-NEXT:                 ]
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "kind": "method",
+// CHECK-NEXT:             "computed": false,
+// CHECK-NEXT:             "static": false
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ]
+// CHECK-NEXT:       }
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]

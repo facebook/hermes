@@ -4061,6 +4061,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
   if (check(getIdent_)) {
     SMRange range = advance();
     if (!checkN(
+            TokenKind::less,
             TokenKind::l_paren,
             TokenKind::equal,
             TokenKind::colon,
@@ -4077,6 +4078,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
   } else if (check(setIdent_)) {
     SMRange range = advance();
     if (!checkN(
+            TokenKind::less,
             TokenKind::l_paren,
             TokenKind::equal,
             TokenKind::colon,
@@ -4093,6 +4095,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
   } else if (check(asyncIdent_)) {
     SMRange range = advance();
     if (!checkN(
+            TokenKind::less,
             TokenKind::l_paren,
             TokenKind::equal,
             TokenKind::colon,
@@ -4110,7 +4113,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     }
   } else if (checkAndEat(TokenKind::star)) {
     special = SpecialKind::Generator;
-  } else if (check(TokenKind::l_paren) && isStatic) {
+  } else if (check(TokenKind::l_paren, TokenKind::less) && isStatic) {
     // We've already parsed 'static', but there is nothing between 'static'
     // and the '(', so it must be used as the PropertyName and not as an
     // indicator for a static function.
@@ -4188,6 +4191,16 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
             prop, value, computed, isStatic, variance, typeAnnotation));
   }
 
+  ESTree::Node *typeParams = nullptr;
+#if HERMES_PARSE_FLOW
+  if (context_.getParseFlow() && check(TokenKind::less)) {
+    auto optTypeParams = parseTypeParams();
+    if (!optTypeParams)
+      return None;
+    typeParams = *optTypeParams;
+  }
+#endif
+
   // (
   if (!need(
           TokenKind::l_paren,
@@ -4238,7 +4251,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
           nullptr,
           std::move(args),
           optBody.getValue(),
-          nullptr,
+          typeParams,
           returnType,
           special == SpecialKind::Generator ||
               special == SpecialKind::AsyncGenerator,
