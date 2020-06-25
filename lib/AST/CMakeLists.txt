@@ -7,7 +7,6 @@ add_hermes_library(hermesAST
     ASTBuilder.cpp
     ESTree.cpp
     ESTreeJSONDumper.cpp
-    RecursiveVisitor.h
     SemValidate.cpp
     SemanticValidator.cpp SemanticValidator.h
     CommonJS.cpp
