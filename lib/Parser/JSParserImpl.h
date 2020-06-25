@@ -780,7 +780,16 @@ class JSParserImpl {
   /// recursion depth.
   Optional<ESTree::Node *> parseBinaryExpression(Param param);
 
-  Optional<ESTree::Node *> parseConditionalExpression(Param param = ParamIn);
+  /// Whether to allow a typed arrow function in the assignment expression.
+  enum class AllowTypedArrowFunction { No, Yes };
+
+  /// Whether to parse CoverTypedIdentifier nodes when seeing a `:`.
+  /// These can only be used as typed parameters in certain contexts.
+  enum class CoverTypedParameters { No, Yes };
+
+  Optional<ESTree::Node *> parseConditionalExpression(
+      Param param = ParamIn,
+      CoverTypedParameters coverTypedParameters = CoverTypedParameters::Yes);
   Optional<ESTree::YieldExpressionNode *> parseYieldExpression(
       Param param = ParamIn);
 
@@ -823,8 +832,22 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseArrowFunctionExpression(
       Param param,
       ESTree::Node *leftExpr,
+      ESTree::Node *returnType,
       SMLoc startLoc,
+      AllowTypedArrowFunction allowTypedArrowFunction,
       bool forceAsync);
+
+#if HERMES_PARSE_FLOW
+  Optional<ESTree::Node *> tryParseTypedAsyncArrowFunction(Param param);
+
+  /// Attempt to parse a CoverTypedIdentifierNode which consists of a
+  /// node which may be an arrow parameter, a colon, and a type.
+  /// \param test the LHS of the potential CoverTypedIdentifierNode.
+  /// \return nullptr if there was no error but attempting to parse the
+  ///   node is not possible because \p test can't be a formal parameter,
+  ///   or there wasn't a colon in the first place, None on error.
+  Optional<ESTree::Node *> tryParseCoverTypedIdentifierNode(ESTree::Node *test);
+#endif
 
   /// Reparse an ArrayExpression into an ArrayPattern.
   /// \param inDecl whether this is a declaration context or assignment.
@@ -845,8 +868,15 @@ class JSParserImpl {
       ESTree::Node *node,
       bool inDecl);
 
-  Optional<ESTree::Node *> parseAssignmentExpression(Param param = ParamIn);
-  Optional<ESTree::Node *> parseExpression(Param param = ParamIn);
+  Optional<ESTree::Node *> parseAssignmentExpression(
+      Param param = ParamIn,
+      AllowTypedArrowFunction allowTypedArrowFunction =
+          AllowTypedArrowFunction::Yes,
+      CoverTypedParameters coverTypedParameters = CoverTypedParameters::Yes,
+      ESTree::Node *typeParams = nullptr);
+  Optional<ESTree::Node *> parseExpression(
+      Param param = ParamIn,
+      CoverTypedParameters coverTypedParameters = CoverTypedParameters::Yes);
 
   /// Parse a FromClause and return the string literal representing the source.
   Optional<ESTree::StringLiteralNode *> parseFromClause();

@@ -112,6 +112,38 @@ function foo(a: number): number {}
 // CHECK-NEXT:       "directive": null
 // CHECK-NEXT:     },
 
+function foo(a?: number): number {}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "FunctionDeclaration",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "foo"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "params": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:           "type": "Identifier",
+// CHECK-NEXT:           "name": "a",
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "TypeAnnotation",
+// CHECK-NEXT:             "typeAnnotation": {
+// CHECK-NEXT:               "type": "NumberTypeAnnotation"
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
+// CHECK-NEXT:       ],
+// CHECK-NEXT:       "body": {
+// CHECK-NEXT:         "type": "BlockStatement",
+// CHECK-NEXT:         "body": []
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "returnType": {
+// CHECK-NEXT:         "type": "TypeAnnotation",
+// CHECK-NEXT:         "typeAnnotation": {
+// CHECK-NEXT:           "type": "NumberTypeAnnotation"
+// CHECK-NEXT:         }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "generator": false,
+// CHECK-NEXT:       "async": false
+// CHECK-NEXT:     },
 
 (function(a: number): number {});
 // CHECK-NEXT:     {
@@ -143,6 +175,348 @@ function foo(a: number): number {}
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "generator": false,
 // CHECK-NEXT:         "async": false
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
+((): number => 3);
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "ArrowFunctionExpression",
+// CHECK-NEXT:         "id": null,
+// CHECK-NEXT:         "params": [],
+// CHECK-NEXT:         "body": {
+// CHECK-NEXT:           "type": "NumericLiteral",
+// CHECK-NEXT:           "value": 3,
+// CHECK-NEXT:           "raw": "3"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "returnType": {
+// CHECK-NEXT:           "type": "TypeAnnotation",
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "NumberTypeAnnotation"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "expression": true,
+// CHECK-NEXT:         "async": false
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
+((): (number => string) => {});
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "ArrowFunctionExpression",
+// CHECK-NEXT:         "id": null,
+// CHECK-NEXT:         "params": [],
+// CHECK-NEXT:         "body": {
+// CHECK-NEXT:           "type": "BlockStatement",
+// CHECK-NEXT:           "body": []
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "returnType": {
+// CHECK-NEXT:           "type": "TypeAnnotation",
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "FunctionTypeAnnotation",
+// CHECK-NEXT:             "params": [
+// CHECK-NEXT:               {
+// CHECK-NEXT:                 "type": "FunctionTypeParam",
+// CHECK-NEXT:                 "name": null,
+// CHECK-NEXT:                 "typeAnnotation": {
+// CHECK-NEXT:                   "type": "NumberTypeAnnotation"
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "optional": false
+// CHECK-NEXT:               }
+// CHECK-NEXT:             ],
+// CHECK-NEXT:             "returnType": {
+// CHECK-NEXT:               "type": "StringTypeAnnotation"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "rest": null,
+// CHECK-NEXT:             "typeParameters": null
+// CHECK-NEXT:           }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "expression": false,
+// CHECK-NEXT:         "async": false
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
+(({x}:T) => 3);
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "ArrowFunctionExpression",
+// CHECK-NEXT:         "id": null,
+// CHECK-NEXT:         "params": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "ObjectPattern",
+// CHECK-NEXT:             "properties": [
+// CHECK-NEXT:               {
+// CHECK-NEXT:                 "type": "Property",
+// CHECK-NEXT:                 "key": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "x"
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "value": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "x"
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "kind": "init",
+// CHECK-NEXT:                 "computed": false
+// CHECK-NEXT:               }
+// CHECK-NEXT:             ],
+// CHECK-NEXT:             "typeAnnotation": {
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "GenericTypeAnnotation",
+// CHECK-NEXT:                 "id": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "T"
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "typeParameters": null
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "body": {
+// CHECK-NEXT:           "type": "NumericLiteral",
+// CHECK-NEXT:           "value": 3,
+// CHECK-NEXT:           "raw": "3"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "expression": true,
+// CHECK-NEXT:         "async": false
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
+((a:number): number => 3);
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "ArrowFunctionExpression",
+// CHECK-NEXT:         "id": null,
+// CHECK-NEXT:         "params": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "a",
+// CHECK-NEXT:             "typeAnnotation": {
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "NumberTypeAnnotation"
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "body": {
+// CHECK-NEXT:           "type": "NumericLiteral",
+// CHECK-NEXT:           "value": 3,
+// CHECK-NEXT:           "raw": "3"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "returnType": {
+// CHECK-NEXT:           "type": "TypeAnnotation",
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "NumberTypeAnnotation"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "expression": true,
+// CHECK-NEXT:         "async": false
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
+((a?:number): number => 3);
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "ArrowFunctionExpression",
+// CHECK-NEXT:         "id": null,
+// CHECK-NEXT:         "params": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "a",
+// CHECK-NEXT:             "typeAnnotation": {
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "NumberTypeAnnotation"
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "body": {
+// CHECK-NEXT:           "type": "NumericLiteral",
+// CHECK-NEXT:           "value": 3,
+// CHECK-NEXT:           "raw": "3"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "returnType": {
+// CHECK-NEXT:           "type": "TypeAnnotation",
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "NumberTypeAnnotation"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "expression": true,
+// CHECK-NEXT:         "async": false
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
+((a?:number): number => {3});
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "ArrowFunctionExpression",
+// CHECK-NEXT:         "id": null,
+// CHECK-NEXT:         "params": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "a",
+// CHECK-NEXT:             "typeAnnotation": {
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "NumberTypeAnnotation"
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "body": {
+// CHECK-NEXT:           "type": "BlockStatement",
+// CHECK-NEXT:           "body": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "ExpressionStatement",
+// CHECK-NEXT:               "expression": {
+// CHECK-NEXT:                 "type": "NumericLiteral",
+// CHECK-NEXT:                 "value": 3,
+// CHECK-NEXT:                 "raw": "3"
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "directive": null
+// CHECK-NEXT:             }
+// CHECK-NEXT:           ]
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "returnType": {
+// CHECK-NEXT:           "type": "TypeAnnotation",
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "NumberTypeAnnotation"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "expression": false,
+// CHECK-NEXT:         "async": false
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
+(async<T>(): number => {1});
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "ArrowFunctionExpression",
+// CHECK-NEXT:         "id": null,
+// CHECK-NEXT:         "params": [],
+// CHECK-NEXT:         "body": {
+// CHECK-NEXT:           "type": "BlockStatement",
+// CHECK-NEXT:           "body": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "ExpressionStatement",
+// CHECK-NEXT:               "expression": {
+// CHECK-NEXT:                 "type": "NumericLiteral",
+// CHECK-NEXT:                 "value": 1,
+// CHECK-NEXT:                 "raw": "1"
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "directive": null
+// CHECK-NEXT:             }
+// CHECK-NEXT:           ]
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "returnType": {
+// CHECK-NEXT:           "type": "TypeAnnotation",
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "NumberTypeAnnotation"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "expression": false,
+// CHECK-NEXT:         "async": true
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
+((): (foo: () => void,) => number => { return; });
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "ArrowFunctionExpression",
+// CHECK-NEXT:         "id": null,
+// CHECK-NEXT:         "params": [],
+// CHECK-NEXT:         "body": {
+// CHECK-NEXT:           "type": "BlockStatement",
+// CHECK-NEXT:           "body": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "ReturnStatement",
+// CHECK-NEXT:               "argument": null
+// CHECK-NEXT:             }
+// CHECK-NEXT:           ]
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "returnType": {
+// CHECK-NEXT:           "type": "TypeAnnotation",
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "FunctionTypeAnnotation",
+// CHECK-NEXT:             "params": [
+// CHECK-NEXT:               {
+// CHECK-NEXT:                 "type": "FunctionTypeParam",
+// CHECK-NEXT:                 "name": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "foo"
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "typeAnnotation": {
+// CHECK-NEXT:                   "type": "FunctionTypeAnnotation",
+// CHECK-NEXT:                   "params": [],
+// CHECK-NEXT:                   "returnType": {
+// CHECK-NEXT:                     "type": "VoidTypeAnnotation"
+// CHECK-NEXT:                   },
+// CHECK-NEXT:                   "rest": null,
+// CHECK-NEXT:                   "typeParameters": null
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "optional": false
+// CHECK-NEXT:               }
+// CHECK-NEXT:             ],
+// CHECK-NEXT:             "returnType": {
+// CHECK-NEXT:               "type": "NumberTypeAnnotation"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "rest": null,
+// CHECK-NEXT:             "typeParameters": null
+// CHECK-NEXT:           }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "expression": false,
+// CHECK-NEXT:         "async": false
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
+(async (): number => {1});
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "ArrowFunctionExpression",
+// CHECK-NEXT:         "id": null,
+// CHECK-NEXT:         "params": [],
+// CHECK-NEXT:         "body": {
+// CHECK-NEXT:           "type": "BlockStatement",
+// CHECK-NEXT:           "body": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "ExpressionStatement",
+// CHECK-NEXT:               "expression": {
+// CHECK-NEXT:                 "type": "NumericLiteral",
+// CHECK-NEXT:                 "value": 1,
+// CHECK-NEXT:                 "raw": "1"
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "directive": null
+// CHECK-NEXT:             }
+// CHECK-NEXT:           ]
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "returnType": {
+// CHECK-NEXT:           "type": "TypeAnnotation",
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "NumberTypeAnnotation"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "expression": false,
+// CHECK-NEXT:         "async": true
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "directive": null
 // CHECK-NEXT:     }

@@ -846,6 +846,18 @@ ESTREE_NODE_1_ARGS(
     CoverRestElement, Cover,
     NodePtr, rest, false)
 
+// CoverTypedIdentifier
+// This is used for parsing "ident: type" as either a type cast expression
+// or a typed parameter in the parameters list of an arrow function.
+// 'left' is the identifier which is typed.
+// 'right' is the type which is either the cast target or the type annotation,
+//   which may be null if the identifier was simply given a '?' and no ':'
+//   with a type annotation.
+ESTREE_NODE_2_ARGS(
+    CoverTypedIdentifier, Cover,
+    NodePtr, left, false,
+    NodePtr, right, true)
+
 ESTREE_LAST(Cover)
 
 #undef ESTREE_FIRST

@@ -7,6 +7,7 @@
 
 #include "JSParserImpl.h"
 
+#include "hermes/AST/ESTreeJSONDumper.h"
 #include "hermes/Support/PerfSection.h"
 
 #include "llvm/Support/SaveAndRestore.h"
@@ -1330,7 +1331,7 @@ Optional<ESTree::Node *> JSParserImpl::parseExpressionOrLabelledStatement(
     advance();
   }
 
-  auto optExpr = parseExpression();
+  auto optExpr = parseExpression(ParamIn, CoverTypedParameters::No);
   if (!optExpr)
     return None;
 
@@ -1830,7 +1831,7 @@ Optional<ESTree::SwitchStatementNode *> JSParserImpl::parseSwitchStatement(
 
     SMLoc caseLoc = tok_->getStartLoc();
     if (checkAndEat(TokenKind::rw_case)) {
-      auto optTestExpr = parseExpression();
+      auto optTestExpr = parseExpression(ParamIn, CoverTypedParameters::No);
       if (!optTestExpr)
         return None;
       testExpr = optTestExpr.getValue();
@@ -2158,7 +2159,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
             *optRest,
             new (context_) ESTree::CoverRestElementNode(*optRest));
       } else {
-        auto optExpr = parseExpression();
+        auto optExpr = parseExpression(ParamIn, CoverTypedParameters::Yes);
         if (!optExpr)
           return None;
         expr = *optExpr;
@@ -3482,20 +3483,110 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
   return topExpr;
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(Param param) {
+Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(
+    Param param,
+    CoverTypedParameters coverTypedParameters) {
   auto optTest = parseBinaryExpression(param);
   if (!optTest)
     return None;
+  ESTree::Node *test = *optTest;
 
+  if (!check(TokenKind::question)) {
+    // No '?', so this isn't a conditional expression.
+    // If CoverTypedParameters::Yes, we still need to account for this
+    // being formal parameters, so try that.
+#if HERMES_PARSE_FLOW
+    if (context_.getParseFlow() &&
+        coverTypedParameters == CoverTypedParameters::Yes) {
+      auto optCover = tryParseCoverTypedIdentifierNode(test);
+      if (!optCover)
+        return None;
+      if (*optCover)
+        return *optCover;
+    }
+#endif
+
+    // No CoverTypedParameters found, just return the LHS.
+    return test;
+  }
+
+  ESTree::Node *consequent = nullptr;
   SMLoc questionLoc = tok_->getStartLoc();
-  if (!checkAndEat(TokenKind::question))
-    return optTest.getValue();
 
-  // parseAssignmentExpression may call parseConditionalExpression again.
-  CHECK_RECURSION;
-  auto optConsequent = parseAssignmentExpression(ParamIn);
-  if (!optConsequent)
-    return None;
+#if HERMES_PARSE_FLOW
+  if (context_.getParseFlow()) {
+    // Save here to save the question mark (we can only save on punctuators).
+    // Early returns will happen if we find anything that leads to
+    // short-circuiting out of the traditional conditional expression.
+    JSLexer::SavePoint savePoint{&lexer_};
+    advance();
+
+    // If CoverTypedParameters::Yes, we still need to account for this
+    // being formal parameters, so try that,
+    // in which case the '?' was part of an optional parameter, not a
+    // conditional expression.
+    if (coverTypedParameters == CoverTypedParameters::Yes) {
+      auto optCover = tryParseCoverTypedIdentifierNode(test);
+      if (!optCover)
+        return None;
+      if (*optCover)
+        return *optCover;
+    }
+
+    // It is also possible to have a '?' without ':' but not be a conditional
+    // expression, in the case of typed arrow parameters that didn't have a type
+    // annotation. For example:
+    // (foo?) => 1
+    //      ^
+    // The tokens which can come here are limited to ',', '=', and ')'.
+    if (coverTypedParameters == CoverTypedParameters::Yes &&
+        checkN(TokenKind::comma, TokenKind::r_paren, TokenKind::equal)) {
+      // TODO: Store `optional` to the IdentifierNode.
+      return setLocation(
+          test,
+          questionLoc,
+          new (context_) ESTree::CoverTypedIdentifierNode(test, nullptr));
+    }
+
+    // Now we're in the real backtracking stage.
+    // First, parse with AllowTypedArrowFunction::Yes to allow for the
+    // possibility of a concise arrow function with return types. However, we
+    // want to avoid the possibility of eating the ':' that we'll need for the
+    // conditional expression's alternate. For example:
+    // a ? b1 => (c1) : b2 => (c2)
+    // We want to account for b2 incorrectly being parsed as the returnType
+    // of an arrow function returned by the arrow function with param b1.
+    // Thus, after parsing with AllowTypedArrowFunction::Yes, we check to
+    // see if there is a ':' afterwards. If there isn't, failure is assured,
+    // so we restore to the '?' and try again below, with
+    // AllowTypedArrowFunction::No.
+    SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
+                                                         Subsystem::Parser};
+    CHECK_RECURSION;
+    auto optConsequent = parseAssignmentExpression(
+        ParamIn, AllowTypedArrowFunction::Yes, CoverTypedParameters::No);
+    if (optConsequent && check(TokenKind::colon)) {
+      consequent = *optConsequent;
+    } else {
+      // Parsing with typed arrow functions failed because we don't have a :,
+      // so reset and try again.
+      savePoint.restore();
+    }
+  }
+#endif
+
+  // Only try with AllowTypedArrowFunction::No if we haven't already set
+  // up the consequent using AllowTypedArrowFunction::Yes.
+  if (!consequent) {
+    // Consume the '?' (either for the first time or after savePoint.restore()).
+    advance();
+    CHECK_RECURSION;
+    auto optConsequent = parseAssignmentExpression(
+        ParamIn, AllowTypedArrowFunction::No, CoverTypedParameters::No);
+    if (!optConsequent)
+      return None;
+    consequent = *optConsequent;
+  }
 
   if (!eat(
           TokenKind::colon,
@@ -3505,18 +3596,62 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(Param param) {
           questionLoc))
     return None;
 
-  auto optAlternate = parseAssignmentExpression(param);
+  auto optAlternate = parseAssignmentExpression(
+      param, AllowTypedArrowFunction::Yes, CoverTypedParameters::No);
   if (!optAlternate)
     return None;
+  ESTree::Node *alternate = *optAlternate;
 
   return setLocation(
-      optTest.getValue(),
-      optAlternate.getValue(),
-      new (context_) ESTree::ConditionalExpressionNode(
-          optTest.getValue(),
-          optAlternate.getValue(),
-          optConsequent.getValue()));
+      test,
+      alternate,
+      new (context_)
+          ESTree::ConditionalExpressionNode(test, alternate, consequent));
 }
+
+#if HERMES_PARSE_FLOW
+Optional<ESTree::Node *> JSParserImpl::tryParseCoverTypedIdentifierNode(
+    ESTree::Node *test) {
+  // In the case of flow types in arrow function parameters, we may have
+  // optional parameters which look like:
+  // Identifier ? : TypeAnnotation
+  // Because the colon and the type annotation are optional, we check and
+  // consume the colon here and return a CoverTypedIdentifierNode if it's
+  // possible we are parsing typed arrow parameters.
+  if (context_.getParseFlow() && check(TokenKind::colon) &&
+      test->getParens() == 0) {
+    if (isa<ESTree::IdentifierNode>(test) ||
+        isa<ESTree::ObjectExpressionNode>(test) ||
+        isa<ESTree::ArrayExpressionNode>(test)) {
+      ESTree::Node *type = nullptr;
+      bool optional = false;
+      if (check(TokenKind::question)) {
+        auto optNext = lexer_.lookahead1(None);
+        if (optNext.hasValue() &&
+            (*optNext == TokenKind::colon || *optNext == TokenKind::comma ||
+             *optNext == TokenKind::r_paren)) {
+          optional = true;
+        }
+      }
+      if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
+        // Deliberately wrap the type annotation later when reparsing.
+        auto optRet = parseTypeAnnotation(true);
+        if (!optRet)
+          return None;
+        type = *optRet;
+      }
+      // TODO: Store `optional` to the IdentifierNode.
+      return setLocation(
+          test,
+          type,
+          new (context_) ESTree::CoverTypedIdentifierNode(test, type));
+    }
+    // The colon must indicate something another than the typeAnnotation for
+    // the parameter. Continue as usual.
+  }
+  return nullptr;
+}
+#endif
 
 Optional<ESTree::YieldExpressionNode *> JSParserImpl::parseYieldExpression(
     Param param) {
@@ -4111,7 +4246,9 @@ bool JSParserImpl::reparseArrowParameters(
 Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
     Param param,
     ESTree::Node *leftExpr,
+    ESTree::Node *returnType,
     SMLoc startLoc,
+    AllowTypedArrowFunction allowTypedArrowFunction,
     bool forceAsync) {
   // ArrowFunction : ArrowParameters [no line terminator] => ConciseBody.
   assert(
@@ -4120,8 +4257,13 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
 
   llvm::SaveAndRestore<bool> argsParamAwait(paramAwait_, forceAsync);
 
-  // Eat the '=>'.
-  advance();
+  if (!eat(
+          TokenKind::equalgreater,
+          JSLexer::GrammarContext::AllowRegExp,
+          "in arrow function expression",
+          "start of arrow function",
+          startLoc))
+    return None;
 
   bool reparsedAsync;
   ESTree::NodeList paramList;
@@ -4142,7 +4284,11 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
     body = *optBody;
     expression = false;
   } else {
-    auto optConcise = parseAssignmentExpression(param.get(ParamIn));
+    auto optConcise = parseAssignmentExpression(
+        param.get(ParamIn),
+        allowTypedArrowFunction,
+        CoverTypedParameters::No,
+        nullptr);
     if (!optConcise)
       return None;
     body = *optConcise;
@@ -4154,7 +4300,7 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
       std::move(paramList),
       body,
       /* typeParameters */ nullptr,
-      /* returnType */ nullptr,
+      returnType,
       expression,
       forceAsync || reparsedAsync);
 
@@ -4175,6 +4321,45 @@ Optional<ESTree::Node *> JSParserImpl::reparseAssignmentPattern(
     if (isa<ESTree::IdentifierNode>(node) || isa<ESTree::PatternNode>(node)) {
       return node;
     }
+#if HERMES_PARSE_FLOW
+    if (auto *cover = dyn_cast<ESTree::CoverTypedIdentifierNode>(node)) {
+      auto optAssn = reparseAssignmentPattern(cover->_left, inDecl);
+      // type may be nullptr, but the patterns may have null typeAnnotation.
+      auto *type = cover->_right;
+      if (!optAssn)
+        return None;
+      if (auto *apn = dyn_cast<ESTree::ArrayPatternNode>(*optAssn)) {
+        apn->_typeAnnotation = type;
+        return apn;
+      }
+      if (auto *opn = dyn_cast<ESTree::ObjectPatternNode>(*optAssn)) {
+        opn->_typeAnnotation = type;
+        return opn;
+      }
+      if (auto *id = dyn_cast<ESTree::IdentifierNode>(*optAssn)) {
+        id->_typeAnnotation = type;
+        return id;
+      }
+    }
+    if (auto *typecast = dyn_cast<ESTree::TypeCastExpressionNode>(node)) {
+      auto optAssn = reparseAssignmentPattern(typecast->_expression, inDecl);
+      auto *type = typecast->_typeAnnotation;
+      if (!optAssn)
+        return None;
+      if (auto *apn = dyn_cast<ESTree::ArrayPatternNode>(*optAssn)) {
+        apn->_typeAnnotation = type;
+        return apn;
+      }
+      if (auto *opn = dyn_cast<ESTree::ObjectPatternNode>(*optAssn)) {
+        opn->_typeAnnotation = type;
+        return opn;
+      }
+      if (auto *id = dyn_cast<ESTree::IdentifierNode>(*optAssn)) {
+        id->_typeAnnotation = type;
+        return id;
+      }
+    }
+#endif
   }
 
   if (inDecl) {
@@ -4324,8 +4509,9 @@ Optional<ESTree::Node *> JSParserImpl::reparseObjectAssignmentPattern(
             isa<ESTree::IdentifierNode>(propNode->_key) &&
             "CoverInitializedName must start with an identifier");
         // Clone the key.
-        value = new (context_) ESTree::IdentifierNode(
-            cast<ESTree::IdentifierNode>(propNode->_key)->_name, nullptr);
+        auto *ident = cast<ESTree::IdentifierNode>(propNode->_key);
+        value = new (context_)
+            ESTree::IdentifierNode(ident->_name, ident->_typeAnnotation);
         value->copyLocationFrom(propNode->_key);
 
         init = coverInitializer->_init;
@@ -4355,7 +4541,71 @@ Optional<ESTree::Node *> JSParserImpl::reparseObjectAssignmentPattern(
   return OP;
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(Param param) {
+#if HERMES_PARSE_FLOW
+Optional<ESTree::Node *> JSParserImpl::tryParseTypedAsyncArrowFunction(
+    Param param) {
+  assert(context_.getParseFlow());
+  assert(check(asyncIdent_));
+  JSLexer::SavePoint savePoint{&lexer_};
+  SourceErrorManager::SaveAndSuppressMessages suppress{&sm_, Subsystem::Parser};
+  SMLoc start = advance().Start;
+
+  if (check(TokenKind::less)) {
+    auto optTypeParams = parseTypeParams();
+    if (!optTypeParams) {
+      savePoint.restore();
+      return None;
+    }
+  }
+
+  if (!check(TokenKind::l_paren)) {
+    savePoint.restore();
+    return None;
+  }
+
+  auto optLeftExpr =
+      parseConditionalExpression(param, CoverTypedParameters::Yes);
+  if (!optLeftExpr) {
+    savePoint.restore();
+    return None;
+  }
+
+  ESTree::Node *returnType = nullptr;
+  if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
+    auto optType = parseTypeAnnotation(true, AllowAnonFunctionType::No);
+    if (!optType) {
+      savePoint.restore();
+      return None;
+    }
+    returnType = *optType;
+  }
+
+  if (!check(TokenKind::equalgreater)) {
+    savePoint.restore();
+    return None;
+  }
+
+  auto optArrow = parseArrowFunctionExpression(
+      param,
+      *optLeftExpr,
+      returnType,
+      start,
+      AllowTypedArrowFunction::Yes,
+      /* forceAsync */ true);
+  if (!optArrow) {
+    savePoint.restore();
+    return None;
+  }
+
+  return *optArrow;
+}
+#endif
+
+Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
+    Param param,
+    AllowTypedArrowFunction allowTypedArrowFunction,
+    CoverTypedParameters coverTypedParameters,
+    ESTree::Node *typeParams) {
   // Check for yield, which may be lexed as a reserved word, but only in strict
   // mode.
   if (paramYield_ && check(TokenKind::rw_yield, TokenKind::identifier) &&
@@ -4376,11 +4626,90 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(Param param) {
     if (optNext.hasValue() && *optNext == TokenKind::identifier) {
       isAsync = true;
     }
+#if HERMES_PARSE_FLOW
+    if (context_.getParseFlow() && optNext.hasValue() &&
+        (*optNext == TokenKind::less || *optNext == TokenKind::l_paren)) {
+      auto optAsyncArrow = tryParseTypedAsyncArrowFunction(param);
+      if (optAsyncArrow.hasValue()) {
+        return *optAsyncArrow;
+      }
+    }
+#endif
   }
 
-  auto optLeftExpr = parseConditionalExpression(param);
+#if HERMES_PARSE_FLOW
+  if (context_.getParseFlow() &&
+      allowTypedArrowFunction == AllowTypedArrowFunction::Yes && !typeParams &&
+      check(TokenKind::less)) {
+    JSLexer::SavePoint savePoint{&lexer_};
+    // Suppress messages from the parser while still displaying lexer
+    // messages.
+    SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
+                                                         Subsystem::Parser};
+    // Do as the flow parser does due to JSX ambiguities.
+    // First we try and parse as an assignment expression disallowing
+    // typed arrow functions. If that fails, then try again while allowing
+    // typed arrow functions and attach the type parameters after the fact.
+    auto optAssign = parseAssignmentExpression(
+        param, AllowTypedArrowFunction::No, CoverTypedParameters::No, nullptr);
+    if (optAssign) {
+      // That worked, so just return it directly.
+      return *optAssign;
+    } else {
+      // Consume the type parameters and try again.
+      savePoint.restore();
+      auto optTypeParams = parseTypeParams();
+      if (optTypeParams) {
+        typeParams = *optTypeParams;
+        optAssign = parseAssignmentExpression(
+            param,
+            AllowTypedArrowFunction::Yes,
+            CoverTypedParameters::No,
+            typeParams);
+        if (optAssign) {
+          // We've got the arrow function now, return it directly.
+          return *optAssign;
+        } else {
+          // That's everything we can try.
+          error(
+              typeParams->getSourceRange(),
+              "type parameters must be used in an arrow function expression");
+          return None;
+        }
+      } else {
+        // Invalid type params, and also invalid JSX. Bail.
+        savePoint.restore();
+      }
+    }
+  }
+#endif
+
+  auto optLeftExpr = parseConditionalExpression(param, coverTypedParameters);
   if (!optLeftExpr)
     return None;
+
+  ESTree::Node *returnType = nullptr;
+#if HERMES_PARSE_FLOW
+  if (context_.getParseFlow()) {
+    if (allowTypedArrowFunction == AllowTypedArrowFunction::Yes &&
+        ((*optLeftExpr)->getParens() != 0 ||
+         isa<ESTree::CoverEmptyArgsNode>(*optLeftExpr)) &&
+        check(TokenKind::colon)) {
+      JSLexer::SavePoint savePoint{&lexer_};
+      // Suppress messages from the parser while still displaying lexer
+      // messages.
+      SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
+                                                           Subsystem::Parser};
+      advance(JSLexer::GrammarContext::Flow);
+      auto optType = parseTypeAnnotation(true, AllowAnonFunctionType::No);
+      if (optType && check(TokenKind::equalgreater)) {
+        returnType = *optType;
+      } else {
+        savePoint.restore();
+      }
+    }
+  }
+#endif
 
   // Check for ArrowFunction.
   //   ArrowFunction : ArrowParameters [no line terminator] => ConciseBody.
@@ -4388,8 +4717,26 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(Param param) {
   //   async [no line terminator] ArrowParameters [no line terminator] =>
   //   ConciseBody.
   if (check(TokenKind::equalgreater) && !lexer_.isNewLineBeforeCurrentToken()) {
-    return parseArrowFunctionExpression(param, *optLeftExpr, startLoc, isAsync);
+    // TODO: Pass typeParams along to arrow functions.
+    return parseArrowFunctionExpression(
+        param,
+        *optLeftExpr,
+        returnType,
+        startLoc,
+        allowTypedArrowFunction,
+        isAsync);
   }
+
+#if HERMES_PARSE_FLOW
+  if (typeParams) {
+    errorExpected(
+        TokenKind::equalgreater,
+        "in generic arrow function",
+        "start of function",
+        typeParams->getStartLoc());
+    return None;
+  }
+#endif
 
   if (!checkAssign())
     return *optLeftExpr;
@@ -4406,7 +4753,8 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(Param param) {
   UniqueString *op = getTokenIdent(tok_->getKind());
   auto debugLoc = advance().Start;
 
-  auto optRightExpr = parseAssignmentExpression(param);
+  auto optRightExpr = parseAssignmentExpression(
+      param, AllowTypedArrowFunction::Yes, CoverTypedParameters::No, nullptr);
   if (!optRightExpr)
     return None;
 
@@ -4427,8 +4775,11 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(Param param) {
           op, optLeftExpr.getValue(), optRightExpr.getValue()));
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseExpression(Param param) {
-  auto optExpr = parseAssignmentExpression(param);
+Optional<ESTree::Node *> JSParserImpl::parseExpression(
+    Param param,
+    CoverTypedParameters coverTypedParameters) {
+  auto optExpr = parseAssignmentExpression(
+      param, AllowTypedArrowFunction::Yes, coverTypedParameters, nullptr);
   if (!optExpr)
     return None;
 
