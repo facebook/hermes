@@ -2415,6 +2415,14 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           identRng,
           identRng,
           new (context_) ESTree::IdentifierNode(ident, nullptr));
+#if HERMES_PARSE_FLOW
+    } else if (context_.getParseFlow() && check(TokenKind::less)) {
+      // This is a method definition.
+      key = setLocation(
+          identRng,
+          identRng,
+          new (context_) ESTree::IdentifierNode(ident, nullptr));
+#endif
     } else if (check(TokenKind::comma, TokenKind::r_brace)) {
       // If the next token is "," or "}", this is a shorthand property
       // definition.
@@ -2500,6 +2508,14 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           identRng,
           identRng,
           new (context_) ESTree::IdentifierNode(ident, nullptr));
+#if HERMES_PARSE_FLOW
+    } else if (context_.getParseFlow() && check(TokenKind::less)) {
+      // This is a method definition.
+      key = setLocation(
+          identRng,
+          identRng,
+          new (context_) ESTree::IdentifierNode(ident, nullptr));
+#endif
     } else if (check(TokenKind::comma, TokenKind::r_brace)) {
       // If the next token is "," or "}", this is a shorthand property
       // definition.
@@ -2591,6 +2607,14 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           identRng,
           identRng,
           new (context_) ESTree::IdentifierNode(ident, nullptr));
+#if HERMES_PARSE_FLOW
+    } else if (context_.getParseFlow() && check(TokenKind::less)) {
+      // This is a method definition.
+      key = setLocation(
+          identRng,
+          identRng,
+          new (context_) ESTree::IdentifierNode(ident, nullptr));
+#endif
     } else if (check(TokenKind::comma, TokenKind::r_brace)) {
       // If the next token is "," or "}", this is a shorthand property
       // definition.
@@ -2653,8 +2677,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
         startLoc,
         *optInit,
         new (context_) ESTree::CoverInitializerNode(*optInit));
-  } else if (check(TokenKind::l_paren) || async) {
-    // Try this branch when we have '(' to indicate a method
+  } else if (check(TokenKind::l_paren, TokenKind::less) || async) {
+    // Try this branch when we have '(' or '<' to indicate a method
     // or when we know this is async, because async must also indicate a method,
     // and we must avoid parsing ordinary properties from ':'.
 
@@ -2667,6 +2691,16 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
     //               ^
     llvm::SaveAndRestore<bool> oldParamYield(paramYield_, generator);
     llvm::SaveAndRestore<bool> oldParamAwait(paramAwait_, async);
+
+    ESTree::Node *typeParams = nullptr;
+#if HERMES_PARSE_FLOW
+    if (context_.getParseFlow() && check(TokenKind::less)) {
+      auto optTypeParams = parseTypeParams();
+      if (!optTypeParams)
+        return None;
+      typeParams = *optTypeParams;
+    }
+#endif
 
     // (
     if (!need(
@@ -2705,7 +2739,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
         nullptr,
         std::move(args),
         optBody.getValue(),
-        nullptr,
+        typeParams,
         returnType,
         generator,
         async);
