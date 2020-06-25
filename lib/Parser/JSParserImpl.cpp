@@ -2191,6 +2191,30 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
         expr = *optExpr;
       }
 
+#if HERMES_PARSE_FLOW
+      if (context_.getParseFlow()) {
+        if (auto *cover = dyn_cast<ESTree::CoverTypedIdentifierNode>(expr)) {
+          if (cover->_right) {
+            expr = setLocation(
+                expr,
+                expr,
+                new (context_) ESTree::TypeCastExpressionNode(
+                    cover->_left, cover->_right));
+          }
+        } else if (checkAndEat(
+                       TokenKind::colon, JSLexer::GrammarContext::Flow)) {
+          auto optType = parseTypeAnnotation(true);
+          if (!optType)
+            return None;
+          ESTree::Node *type = *optType;
+          expr = setLocation(
+              startLoc,
+              type,
+              new (context_) ESTree::TypeCastExpressionNode(expr, type));
+        }
+      }
+#endif
+
       if (!eat(
               TokenKind::r_paren,
               JSLexer::AllowDiv,
