@@ -36,6 +36,21 @@ declare opaque type A;
 // CHECK-NEXT:       "supertype": null
 // CHECK-NEXT:     },
 
+declare var x: number;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "DeclareVariable",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "x",
+// CHECK-NEXT:         "typeAnnotation": {
+// CHECK-NEXT:           "type": "TypeAnnotation",
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "NumberTypeAnnotation"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
 declare function foo(): number;
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "DeclareFunction",

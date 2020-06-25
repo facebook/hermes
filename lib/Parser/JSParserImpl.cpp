@@ -844,6 +844,7 @@ Optional<ESTree::IdentifierNode *> JSParserImpl::parseBindingIdentifier(
   if (!check(TokenKind::identifier) && !tok_->isResWord()) {
     return None;
   }
+  SMRange identRng = tok_->getSourceRange();
 
   // If we have an identifier or reserved word, then store it and the kind,
   // and pass it to the validateBindingIdentifier function.
@@ -852,11 +853,27 @@ Optional<ESTree::IdentifierNode *> JSParserImpl::parseBindingIdentifier(
   if (!validateBindingIdentifier(param, tok_->getSourceRange(), id, kind)) {
     return None;
   }
-
-  auto *node = setLocation(
-      tok_, tok_, new (context_) ESTree::IdentifierNode(id, nullptr));
   advance();
-  return node;
+
+  ESTree::Node *type = nullptr;
+#if HERMES_PARSE_FLOW
+  if (context_.getParseFlow()) {
+    if (checkAndEat(TokenKind::question)) {
+      // TODO: Store `optional` to the IdentifierNode.
+    }
+    if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
+      auto optType = parseTypeAnnotation(true);
+      if (!optType)
+        return None;
+      type = *optType;
+    }
+  }
+#endif
+
+  return setLocation(
+      identRng,
+      type ? type->getSourceRange() : identRng,
+      new (context_) ESTree::IdentifierNode(id, type));
 }
 
 Optional<ESTree::VariableDeclarationNode *>
