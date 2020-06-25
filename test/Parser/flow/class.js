@@ -81,6 +81,43 @@ class C<T> extends S<T> implements I1<T>, I2 {}
 // CHECK-NEXT:         "type": "ClassBody",
 // CHECK-NEXT:         "body": []
 // CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+class C {
+  static foo: number = 3;
+}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ClassDeclaration",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "C"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "superClass": null,
+// CHECK-NEXT:       "body": {
+// CHECK-NEXT:         "type": "ClassBody",
+// CHECK-NEXT:         "body": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "ClassProperty",
+// CHECK-NEXT:             "key": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "foo"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "value": {
+// CHECK-NEXT:               "type": "NumericLiteral",
+// CHECK-NEXT:               "value": 3,
+// CHECK-NEXT:               "raw": "3"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "computed": false,
+// CHECK-NEXT:             "static": true,
+// CHECK-NEXT:             "typeAnnotation": {
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "NumberTypeAnnotation"
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ]
+// CHECK-NEXT:       }
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]

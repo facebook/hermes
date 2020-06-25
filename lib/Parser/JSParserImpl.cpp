@@ -2599,7 +2599,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
     // and we must avoid parsing ordinary properties from ':'.
 
     // Parse the MethodDefinition manually here.
-    // Do not use `parseMethodDefinition` because we had to parsePropertyName
+    // Do not use `parseClassElement` because we had to parsePropertyName
     // in this function ourselves and check for SingleNameBindings, which are
     // not parsed with `parsePropertyName`.
     // MethodDefinition:
@@ -3916,29 +3916,44 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
 
       case TokenKind::rw_static:
         // static MethodDefinition
+        // static FieldDefinition
         isStatic = true;
         advance();
         // intentional fallthrough
       default: {
-        // MethodDefinition
-        auto optMethod = parseMethodDefinition(isStatic, startRange);
-        if (!optMethod)
+        // ClassElement
+        auto optElem = parseClassElement(isStatic, startRange);
+        if (!optElem)
           return None;
-        ESTree::MethodDefinitionNode *method = *optMethod;
-
-        if (method->_kind == constructorIdent_) {
-          if (constructor) {
-            // Cannot have duplicate constructors, but report the error
-            // and move on to parse the rest of the class.
-            error(method->getSourceRange(), "duplicate constructors in class");
-            sm_.note(
-                constructor->getSourceRange(), "first constructor definition");
-          } else {
-            constructor = method;
+        if (auto *method = dyn_cast<ESTree::MethodDefinitionNode>(*optElem)) {
+          if (method->_kind == constructorIdent_) {
+            if (constructor) {
+              // Cannot have duplicate constructors, but report the error
+              // and move on to parse the rest of the class.
+              error(
+                  method->getSourceRange(), "duplicate constructors in class");
+              sm_.note(
+                  constructor->getSourceRange(),
+                  "first constructor definition",
+                  Subsystem::Parser);
+            } else {
+              constructor = method;
+            }
+          }
+        } else if (auto *prop = dyn_cast<ESTree::ClassPropertyNode>(*optElem)) {
+          if (auto *propId = dyn_cast<ESTree::IdentifierNode>(prop->_key)) {
+            if (propId->_name == constructorIdent_) {
+              error(prop->getSourceRange(), "invalid class property name");
+            }
+          } else if (
+              auto *propStr = dyn_cast<ESTree::StringLiteralNode>(prop->_key)) {
+            if (propStr->_value == constructorIdent_) {
+              error(prop->getSourceRange(), "invalid class property name");
+            }
           }
         }
 
-        body.push_back(*method);
+        body.push_back(**optElem);
       }
     }
   }
@@ -3957,7 +3972,7 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
       new (context_) ESTree::ClassBodyNode(std::move(body)));
 }
 
-Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
+Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     bool isStatic,
     SMRange startRange,
     bool eagerly) {
@@ -3970,6 +3985,7 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
     Generator,
     Async,
     AsyncGenerator,
+    ClassProperty,
   };
 
   // Indicates if this method is out of the ordinary.
@@ -3984,8 +4000,12 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
   ESTree::Node *prop = nullptr;
   if (check(getIdent_)) {
     SMRange range = advance();
-    if (!check(TokenKind::l_paren)) {
-      // If we don't see '(' then this was actually a getter.
+    if (!checkN(
+            TokenKind::l_paren,
+            TokenKind::equal,
+            TokenKind::colon,
+            TokenKind::semi)) {
+      // This was actually a getter.
       special = SpecialKind::Get;
     } else {
       prop = setLocation(
@@ -3996,7 +4016,11 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
     }
   } else if (check(setIdent_)) {
     SMRange range = advance();
-    if (!check(TokenKind::l_paren)) {
+    if (!checkN(
+            TokenKind::l_paren,
+            TokenKind::equal,
+            TokenKind::colon,
+            TokenKind::semi)) {
       // If we don't see '(' then this was actually a setter.
       special = SpecialKind::Set;
     } else {
@@ -4008,7 +4032,11 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
     }
   } else if (check(asyncIdent_)) {
     SMRange range = advance();
-    if (!check(TokenKind::l_paren)) {
+    if (!checkN(
+            TokenKind::l_paren,
+            TokenKind::equal,
+            TokenKind::colon,
+            TokenKind::semi)) {
       // If we don't see '(' then this was actually an async method.
       // These can be either Async or AsyncGenerator, so check for that.
       special = checkAndEat(TokenKind::star) ? SpecialKind::AsyncGenerator
@@ -4034,6 +4062,18 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
     doParsePropertyName = false;
   }
 
+  ESTree::Node *variance = nullptr;
+#if HERMES_PARSE_FLOW
+  if (context_.getParseFlow() && check(TokenKind::plus, TokenKind::minus)) {
+    variance = setLocation(
+        tok_,
+        tok_,
+        new (context_) ESTree::VarianceNode(
+            check(TokenKind::plus) ? plusIdent_ : minusIdent_));
+    advance(JSLexer::GrammarContext::Flow);
+  }
+#endif
+
   bool computed = false;
   if (doParsePropertyName) {
     computed = check(TokenKind::l_square);
@@ -4052,6 +4092,41 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
   }
   bool isConstructor =
       !isStatic && !computed && propName && propName->str() == "constructor";
+
+  if (checkN(TokenKind::colon, TokenKind::equal, TokenKind::semi)) {
+    // Parse a class property.
+    // TODO: Account for private properties.
+    // FieldDefinition ;
+    //                 ^
+    ESTree::Node *typeAnnotation = nullptr;
+#if HERMES_PARSE_FLOW
+    if (context_.getParseFlow() &&
+        checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
+      auto optType = parseTypeAnnotation(true);
+      if (!optType)
+        return None;
+      typeAnnotation = *optType;
+    }
+#endif
+    ESTree::Node *value = nullptr;
+    if (checkAndEat(TokenKind::equal)) {
+      // ClassElementName Initializer[opt]
+      //                  ^
+      auto optValue = parseAssignmentExpression();
+      if (!optValue)
+        return None;
+      value = *optValue;
+    }
+    SMLoc end;
+    if (!eatSemi(end)) {
+      return None;
+    }
+    return setLocation(
+        prop,
+        end,
+        new (context_) ESTree::ClassPropertyNode(
+            prop, value, computed, isStatic, variance, typeAnnotation));
+  }
 
   // (
   if (!need(
@@ -4109,9 +4184,7 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
               special == SpecialKind::AsyncGenerator,
           special == SpecialKind::Async ||
               special == SpecialKind::AsyncGenerator));
-  assert(
-      isStrictMode() &&
-      "parseMethodDefinition should only be used for classes");
+  assert(isStrictMode() && "parseClassElement should only be used for classes");
   funcExpr->strictness = ESTree::makeStrictness(true);
   funcExpr->isMethodDefinition = true;
 

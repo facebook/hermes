@@ -480,6 +480,17 @@ ESTREE_NODE_1_ARGS(
     ClassBody, Base,
     NodeList, body, false)
 
+ESTREE_NODE_6_ARGS(
+    ClassProperty, Base,
+    NodePtr, key, false,
+    NodePtr, value, true,
+    NodeBoolean, computed, false,
+    NodeBoolean, static, false,
+    NodePtr, variance, true,
+    NodePtr, typeAnnotation, true)
+ESTREE_IGNORE_IF_EMPTY(ClassProperty, variance)
+ESTREE_IGNORE_IF_EMPTY(ClassProperty, typeAnnotation)
+
 ESTREE_NODE_5_ARGS(
     MethodDefinition, Base,
     NodePtr, key, false,

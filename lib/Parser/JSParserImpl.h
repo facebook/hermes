@@ -813,10 +813,8 @@ class JSParserImpl {
 
   Optional<ESTree::ClassBodyNode *> parseClassBody(SMLoc startLoc);
 
-  Optional<ESTree::MethodDefinitionNode *> parseMethodDefinition(
-      bool isStatic,
-      SMRange startRange,
-      bool eagerly = false);
+  Optional<ESTree::Node *>
+  parseClassElement(bool isStatic, SMRange startRange, bool eagerly = false);
 
   /// Reparse the specified node as arrow function parameter list and store the
   /// parameter list in \p paramList. Print an error and return false on error,
