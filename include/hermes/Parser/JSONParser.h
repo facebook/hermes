@@ -658,7 +658,7 @@ class JSONParser {
   llvm::Optional<JSONValue *> parse();
 
   void error(const llvm::Twine &msg) {
-    sm_.error(lexer_.getCurToken()->getSourceRange(), msg);
+    sm_.error(lexer_.getCurToken()->getSourceRange(), msg, Subsystem::Parser);
   }
 
  private:

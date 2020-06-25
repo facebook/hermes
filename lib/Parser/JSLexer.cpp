@@ -948,7 +948,7 @@ llvm::Optional<uint32_t> JSLexer::consumeBracedCodePoint(bool errorOnFail) {
       // may report more errors after this braced code point.
       if (curCharPtr_ == bufferEnd_) {
         if (!failed && errorOnFail) {
-          sm_.error(
+          error(
               SMLoc::getFromPointer(start),
               "non-terminated unicode codepoint escape");
         }
@@ -956,7 +956,7 @@ llvm::Optional<uint32_t> JSLexer::consumeBracedCodePoint(bool errorOnFail) {
       }
       // Invalid character, set the failed flag and continue.
       if (!failed && errorOnFail) {
-        sm_.error(
+        error(
             SMLoc::getFromPointer(curCharPtr_),
             "invalid character in unicode codepoint escape");
       }
@@ -967,7 +967,7 @@ llvm::Optional<uint32_t> JSLexer::consumeBracedCodePoint(bool errorOnFail) {
     if (cp > UNICODE_MAX_VALUE) {
       // Number grew too big, set the failed flag and continue.
       if (!failed && errorOnFail) {
-        sm_.error(
+        error(
             SMLoc::getFromPointer(start),
             "unicode codepoint escape is too large");
       }
@@ -980,7 +980,7 @@ llvm::Optional<uint32_t> JSLexer::consumeBracedCodePoint(bool errorOnFail) {
   // An empty escape sequence is invalid.
   if (curCharPtr_ == start) {
     if (!failed && errorOnFail) {
-      sm_.error(SMLoc::getFromPointer(start), "empty unicode codepoint escape");
+      error(SMLoc::getFromPointer(start), "empty unicode codepoint escape");
     }
     failed = true;
   }
@@ -1876,7 +1876,7 @@ UniqueString *JSLexer::convertSurrogatesInString(StringRef str) {
 }
 
 bool JSLexer::error(llvm::SMLoc loc, const llvm::Twine &msg) {
-  sm_.error(loc, msg);
+  sm_.error(loc, msg, Subsystem::Lexer);
   if (!sm_.isErrorLimitReached())
     return true;
   forceEOF();
@@ -1884,7 +1884,7 @@ bool JSLexer::error(llvm::SMLoc loc, const llvm::Twine &msg) {
 }
 
 bool JSLexer::error(llvm::SMRange range, const llvm::Twine &msg) {
-  sm_.error(range, msg);
+  sm_.error(range, msg, Subsystem::Lexer);
   if (!sm_.isErrorLimitReached())
     return true;
   forceEOF();
@@ -1895,7 +1895,7 @@ bool JSLexer::error(
     llvm::SMLoc loc,
     llvm::SMRange range,
     const llvm::Twine &msg) {
-  sm_.error(loc, range, msg);
+  sm_.error(loc, range, msg, Subsystem::Lexer);
   if (!sm_.isErrorLimitReached())
     return true;
   forceEOF();

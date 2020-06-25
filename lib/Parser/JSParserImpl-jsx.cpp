@@ -98,12 +98,11 @@ Optional<ESTree::Node *> JSParserImpl::parseJSXElement(SMLoc start) {
   if (ESTree::JSXClosingElementNode *closing =
           dyn_cast<ESTree::JSXClosingElementNode>(*optClosing)) {
     if (!tagNamesMatch(opening, closing)) {
-      sm_.error(
-          (*optClosing)->getSourceRange(), "Closing tag must match opening");
+      error((*optClosing)->getSourceRange(), "Closing tag must match opening");
       sm_.note(opening->getSourceRange().Start, "location of opening");
     }
   } else {
-    sm_.error(
+    error(
         (*optClosing)->getSourceRange(), "Closing tag must not be a fragment");
     sm_.note(opening->getSourceRange().Start, "location of opening");
   }
@@ -178,8 +177,7 @@ Optional<ESTree::Node *> JSParserImpl::parseJSXFragment(SMLoc start) {
 
   // Check that the closing is a fragment.
   if (!isa<ESTree::JSXClosingFragmentNode>(*optClosing)) {
-    sm_.error(
-        (*optClosing)->getSourceRange(), "Closing tag must be a fragment");
+    error((*optClosing)->getSourceRange(), "Closing tag must be a fragment");
     lexer_.getSourceMgr().note(
         opening->getSourceRange().Start, "location of opening");
     return None;
@@ -476,7 +474,7 @@ Optional<ESTree::Node *> JSParserImpl::parseJSXElementName(
 
   if (isa<ESTree::MemberExpressionNode>(name) &&
       allowJSXMemberExpression == AllowJSXMemberExpression::No) {
-    sm_.error(name->getSourceRange(), "unexpected member expression");
+    error(name->getSourceRange(), "unexpected member expression");
   }
 
   return name;

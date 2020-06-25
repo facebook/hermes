@@ -165,12 +165,13 @@ void JSParserImpl::errorExpected(
     sm_.error(
         errorLoc,
         SourceErrorManager::combineIntoRange(whatLoc, errorLoc),
-        ss.str());
+        ss.str(),
+        Subsystem::Parser);
   } else {
-    sm_.error(errorLoc, ss.str());
+    sm_.error(errorLoc, ss.str(), Subsystem::Parser);
 
     if (what && whatCoords.isValid())
-      sm_.note(whatLoc, what);
+      sm_.note(whatLoc, what, Subsystem::Parser);
   }
 }
 
@@ -278,7 +279,7 @@ bool JSParserImpl::eatSemi(SMLoc &endLoc, bool optional) {
   }
 
   if (!optional)
-    sm_.error(tok_->getStartLoc(), "';' expected");
+    error(tok_->getStartLoc(), "';' expected");
   return false;
 }
 
@@ -293,7 +294,7 @@ bool JSParserImpl::recursionDepthExceeded() {
   assert(
       recursionDepth_ >= MAX_RECURSION_DEPTH &&
       "recursionDepthExceeded called without recursionDepthCheck");
-  sm_.error(
+  error(
       tok_->getStartLoc(),
       "Too many nested expressions/statements/declarations");
   return true;
@@ -645,12 +646,11 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclaration(Param param) {
 
     if (kind == TypeAliasKind::Declare &&
         !checkN(typeIdent_, interfaceIdent_, TokenKind::rw_interface)) {
-      sm_.error(tok_->getSourceRange(), "invalid token in type declaration");
+      error(tok_->getSourceRange(), "invalid token in type declaration");
       return None;
     }
     if (kind == TypeAliasKind::Opaque && !check(typeIdent_)) {
-      sm_.error(
-          tok_->getSourceRange(), "invalid token in opaque type declaration");
+      error(tok_->getSourceRange(), "invalid token in opaque type declaration");
       return None;
     }
 
@@ -722,7 +722,7 @@ bool JSParserImpl::parseStatementListItem(
 
       stmtList.push_back(*importDecl.getValue());
       if (allowImportExport == AllowImportExport::No) {
-        sm_.error(
+        error(
             importDecl.getValue()->getSourceRange(),
             "import declaration must be at top level of module");
       }
@@ -736,7 +736,7 @@ bool JSParserImpl::parseStatementListItem(
     if (allowImportExport == AllowImportExport::Yes) {
       stmtList.push_back(**exportDecl);
     } else {
-      sm_.error(
+      error(
           exportDecl.getValue()->getSourceRange(),
           "export declaration must be at top level of module");
     }
@@ -821,7 +821,7 @@ bool JSParserImpl::validateBindingIdentifier(
     // yield is permitted as BindingIdentifier in the grammar,
     // and prohibited with static semantics.
     if (isStrictMode() || paramYield_) {
-      sm_.error(range, "Unexpected usage of 'yield' as an identifier");
+      error(range, "Unexpected usage of 'yield' as an identifier");
     }
   }
 
@@ -829,7 +829,7 @@ bool JSParserImpl::validateBindingIdentifier(
     // await is permitted as BindingIdentifier in the grammar,
     // and prohibited with static semantics.
     if (paramAwait_) {
-      sm_.error(range, "Unexpected usage of 'await' as an identifier");
+      error(range, "Unexpected usage of 'await' as an identifier");
     }
   }
 
@@ -843,7 +843,7 @@ bool JSParserImpl::validateBindingIdentifier(
     // "yield".
     // NOTE: All except 'let' are scanned as reserved words instead of
     // identifiers, so we only check for `let` here.
-    sm_.error(
+    error(
         range,
         "Invalid use of strict mode reserved word as binding identifier");
   }
@@ -918,7 +918,7 @@ JSParserImpl::parseLexicalDeclaration(Param param) {
         // LexicalBinding is true.
         // Note that we don't perform this check in the SemanticValidator
         // because `const` declarations in `for` loops don't need initializers.
-        sm_.error(
+        error(
             varDecl->getSourceRange(),
             "missing initializer in const declaration");
       }
@@ -963,7 +963,7 @@ void JSParserImpl::ensureDestructuringInitialized(
     if (!isa<ESTree::PatternNode>(declarator->_id) || declarator->_init)
       continue;
 
-    sm_.error(
+    error(
         declarator->_id->getSourceRange(),
         "destucturing declaration must be initialized");
   }
@@ -1095,7 +1095,7 @@ Optional<ESTree::Node *> JSParserImpl::parseBindingElement(Param param) {
   } else {
     auto optIdent = parseBindingIdentifier(param);
     if (!optIdent) {
-      sm_.error(
+      error(
           tok_->getStartLoc(),
           "identifier, '{' or '[' expected in binding pattern");
       return None;
@@ -1124,7 +1124,7 @@ Optional<ESTree::Node *> JSParserImpl::parseBindingRestElement(Param param) {
   if (!optElem)
     return None;
   if (isa<ESTree::AssignmentPatternNode>(*optElem)) {
-    sm_.error(
+    error(
         optElem.getValue()->getSourceRange(),
         "rest elemenent may not have a default initializer");
     return None;
@@ -1232,7 +1232,7 @@ Optional<ESTree::PropertyNode *> JSParserImpl::parseBindingProperty(
             ident->getSourceRange(),
             ident->_name,
             TokenKind::identifier)) {
-      sm_.error(startLoc, "identifier expected in object binding pattern");
+      error(startLoc, "identifier expected in object binding pattern");
       return None;
     }
 
@@ -1282,7 +1282,7 @@ Optional<ESTree::Node *> JSParserImpl::parseBindingRestProperty(
   auto optElem = parseBindingIdentifier(param);
 #endif
   if (!optElem) {
-    sm_.error(
+    error(
         tok_->getStartLoc(),
         "identifier expected after '...' in object pattern");
     return None;
@@ -1313,7 +1313,7 @@ Optional<ESTree::Node *> JSParserImpl::parseExpressionOrLabelledStatement(
   if (checkN(TokenKind::l_brace, TokenKind::rw_function, TokenKind::rw_class) ||
       (check(asyncIdent_) && checkAsyncFunction())) {
     // There's no need to stop reporting errors.
-    sm_.error(
+    error(
         tok_->getSourceRange(),
         "declaration not allowed as expression statement");
   }
@@ -1322,7 +1322,7 @@ Optional<ESTree::Node *> JSParserImpl::parseExpressionOrLabelledStatement(
     SMLoc letLoc = advance().Start;
     if (check(TokenKind::l_square)) {
       // let [
-      sm_.error(
+      error(
           {letLoc, tok_->getEndLoc()},
           "ambiguous 'let [': either a 'let' binding or a member expression");
     }
@@ -1353,7 +1353,7 @@ Optional<ESTree::Node *> JSParserImpl::parseExpressionOrLabelledStatement(
       /// as well, so all FunctionDeclarations are disallowed as labeled
       /// items, except via an AnnexB extension which is unsupported in
       /// Hermes.
-      sm_.error(
+      error(
           optFunc.getValue()->getSourceRange().Start,
           "Function declaration not allowed as body of labeled statement");
       body = optFunc.getValue();
@@ -1562,7 +1562,7 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
     //   for ( LeftHandSideExpression in/of
 
     if (decl && decl->_declarations.size() > 1) {
-      sm_.error(
+      error(
           decl->getSourceRange(),
           "Only one binding must be declared in a for-in/for-of loop");
       return None;
@@ -1836,7 +1836,7 @@ Optional<ESTree::SwitchStatementNode *> JSParserImpl::parseSwitchStatement(
       testExpr = optTestExpr.getValue();
     } else if (checkAndEat(TokenKind::rw_default)) {
       if (defaultLocation.isValid()) {
-        sm_.error(clauseStartLoc, "more than one 'default' clause in 'switch'");
+        error(clauseStartLoc, "more than one 'default' clause in 'switch'");
         sm_.note(defaultLocation, "first 'default' clause was defined here");
 
         // We want to continue parsing but ignore the statements.
@@ -1909,7 +1909,7 @@ Optional<ESTree::ThrowStatementNode *> JSParserImpl::parseThrowStatement(
   SMLoc startLoc = advance().Start;
 
   if (lexer_.isNewLineBeforeCurrentToken()) {
-    sm_.error(tok_->getStartLoc(), "'throw' argument must be on the same line");
+    error(tok_->getStartLoc(), "'throw' argument must be on the same line");
     sm_.note(startLoc, "location of the 'throw'");
     return None;
   }
@@ -2056,7 +2056,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
         // yield is only allowed as an IdentifierReference when ParamYield is
         // false.
         if (paramYield_) {
-          sm_.error(
+          error(
               tok_->getSourceRange(),
               "Unexpected usage of 'yield' as an identifier reference");
         }
@@ -2207,14 +2207,14 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
           return None;
         return optJSX.getValue();
       }
-      sm_.error(
+      error(
           tok_->getStartLoc(),
           "invalid expression (possible JSX: pass -parse-jsx to parse)");
       return None;
 #endif
 
     default:
-      sm_.error(tok_->getStartLoc(), "invalid expression");
+      error(tok_->getStartLoc(), "invalid expression");
       return None;
   }
 }
@@ -2731,7 +2731,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyName() {
         advance();
         return res;
       } else {
-        sm_.error(
+        error(
             tok_->getSourceRange(),
             "invalid property name - must be a string, number or identifier");
         return None;
@@ -2753,7 +2753,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTemplateLiteral(Param param) {
   auto pushTemplateElement = [&quasis, &param, this](bool tail) -> bool {
     if (tok_->getTemplateLiteralContainsNotEscapes() &&
         !param.has(ParamTagged)) {
-      sm_.error(
+      error(
           tok_->getSourceRange(),
           "untagged template literal contains invalid escape sequence");
       return false;
@@ -2773,7 +2773,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTemplateLiteral(Param param) {
     // TemplateSpans
     // Alternate TemplateMiddle and Expression until TemplateTail.
     if (!check(TokenKind::template_head, TokenKind::template_middle)) {
-      sm_.error(tok_->getSourceRange(), "expected template literal");
+      error(tok_->getSourceRange(), "expected template literal");
       return None;
     }
 
@@ -2864,7 +2864,7 @@ Optional<ESTree::Node *> JSParserImpl::parseOptionalExpressionExceptNew_tail(
         if (isConstructorCall == IsConstructorCall::Yes) {
           // Report the error here, but continue on because we can still parse
           // the rest of the file.
-          sm_.error(
+          error(
               tok_->getSourceRange(),
               "Constructor calls may not contain an optional chain");
         }
@@ -2880,7 +2880,7 @@ Optional<ESTree::Node *> JSParserImpl::parseOptionalExpressionExceptNew_tail(
     } else {
       assert(checkTemplateLiteral());
       if (isa<ESTree::SuperNode>(expr)) {
-        sm_.error(
+        error(
             expr->getSourceRange(),
             "invalid use of 'super' as a template literal tag");
         return None;
@@ -2892,7 +2892,7 @@ Optional<ESTree::Node *> JSParserImpl::parseOptionalExpressionExceptNew_tail(
         // a?.b
         // `abc`;
         // \endcode
-        sm_.error(
+        error(
             tok_->getSourceRange(),
             "invalid use of tagged template literal in optional chain");
         sm_.note(expr->getSourceRange(), "location of optional chain");
@@ -3147,8 +3147,7 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrOptionalExpression(
     // NewTarget: new . target
     //                  ^
     if (!check(targetIdent_)) {
-      sm_.error(
-          tok_->getSourceRange(), "'target' expected in member expression");
+      error(tok_->getSourceRange(), "'target' expected in member expression");
       sm_.note(newRange.Start, "start of member expression");
       return None;
     }
@@ -3291,7 +3290,7 @@ Optional<ESTree::Node *> JSParserImpl::parseUnaryExpression() {
         // ExponentiationExpression only allows UpdateExpressionNode on the
         // left. The simplest way to enforce that the left operand is not
         // an unparenthesized UnaryExpression is to check here.
-        sm_.error(
+        error(
             {startLoc, tok_->getEndLoc()},
             "Unary operator before ** must use parens to disambiguate");
       }
@@ -3402,7 +3401,7 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
         // because it's only there to avoid confusion from the JS author's
         // perspective. Report the error but continue parsing.
         // The question marks are escaped to avoid triggering a trigraph.
-        sm_.error(
+        error(
             {left->getStartLoc(), right->getEndLoc()},
             "Mixing '\?\?' with '&&' or '||' requires parentheses");
       }
@@ -3754,8 +3753,7 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
           if (constructor) {
             // Cannot have duplicate constructors, but report the error
             // and move on to parse the rest of the class.
-            sm_.error(
-                method->getSourceRange(), "duplicate constructors in class");
+            error(method->getSourceRange(), "duplicate constructors in class");
             sm_.note(
                 constructor->getSourceRange(), "first constructor definition");
           } else {
@@ -3941,14 +3939,14 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
   funcExpr->isMethodDefinition = true;
 
   if (special == SpecialKind::Get && funcExpr->_params.size() != 0) {
-    sm_.error(
+    error(
         funcExpr->getSourceRange(),
         Twine("getter method must no one formal arguments, found ") +
             Twine(funcExpr->_params.size()));
   }
 
   if (special == SpecialKind::Set && funcExpr->_params.size() != 1) {
-    sm_.error(
+    error(
         funcExpr->getSourceRange(),
         Twine("setter method must have exactly one formal argument, found ") +
             Twine(funcExpr->_params.size()));
@@ -3957,8 +3955,7 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
   if (isStatic && propName && propName->str() == "prototype") {
     // ClassElement : static MethodDefinition
     // It is a Syntax Error if PropName of MethodDefinition is "prototype".
-    sm_.error(
-        funcExpr->getSourceRange(), "prototype method must not be static");
+    error(funcExpr->getSourceRange(), "prototype method must not be static");
     return None;
   }
 
@@ -3968,7 +3965,7 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
       // It is a Syntax Error if PropName of MethodDefinition is "constructor"
       // and SpecialMethod of MethodDefinition is true.
       // TODO: Account for generator methods in SpecialMethod here.
-      sm_.error(
+      error(
           funcExpr->getSourceRange(),
           "constructor method must not be a getter or setter");
       return None;
@@ -4008,7 +4005,7 @@ bool JSParserImpl::reparseArrowParameters(
   }
 
   if (node->getParens() != 1 && !isa<ESTree::CallExpressionNode>(node)) {
-    sm_.error(node->getSourceRange(), "invalid arrow function parameter list");
+    error(node->getSourceRange(), "invalid arrow function parameter list");
     return false;
   }
 
@@ -4036,8 +4033,7 @@ bool JSParserImpl::reparseArrowParameters(
     if (n->getParens() == 0)
       return true;
 
-    sm_.error(
-        n->getSourceRange(), "parentheses are not allowed around parameters");
+    error(n->getSourceRange(), "parentheses are not allowed around parameters");
     return false;
   };
 
@@ -4050,7 +4046,7 @@ bool JSParserImpl::reparseArrowParameters(
 
     if (auto *CRE = dyn_cast<ESTree::CoverRestElementNode>(expr)) {
       if (it != e)
-        sm_.error(expr->getSourceRange(), "rest parameter must be last");
+        error(expr->getSourceRange(), "rest parameter must be last");
       else
         paramList.push_back(*CRE->_rest);
       continue;
@@ -4060,7 +4056,7 @@ bool JSParserImpl::reparseArrowParameters(
       // async arrow heads are initially parsed as CallExpression,
       // which means that Rest elements are parsed as SpreadElement.
       if (it != e)
-        sm_.error(expr->getSourceRange(), "rest parameter must be last");
+        error(expr->getSourceRange(), "rest parameter must be last");
       else
         paramList.push_back(*new (context_)
                                 ESTree::RestElementNode(spread->_argument));
@@ -4182,7 +4178,7 @@ Optional<ESTree::Node *> JSParserImpl::reparseAssignmentPattern(
   }
 
   if (inDecl) {
-    sm_.error(node->getSourceRange(), "identifier or pattern expected");
+    error(node->getSourceRange(), "identifier or pattern expected");
     return None;
   }
 
@@ -4207,7 +4203,7 @@ Optional<ESTree::Node *> JSParserImpl::reparseArrayAsignmentPattern(
 
     if (auto *spread = dyn_cast<ESTree::SpreadElementNode>(elem)) {
       if (it != e || AEN->_trailingComma) {
-        sm_.error(spread->getSourceRange(), "rest element must be last");
+        error(spread->getSourceRange(), "rest element must be last");
         continue;
       }
 
@@ -4266,7 +4262,7 @@ Optional<ESTree::Node *> JSParserImpl::reparseObjectAssignmentPattern(
 
     if (auto *spread = dyn_cast<ESTree::SpreadElementNode>(node)) {
       if (it != e) {
-        sm_.error(spread->getSourceRange(), "rest property must be last");
+        error(spread->getSourceRange(), "rest property must be last");
         continue;
       }
 
@@ -4283,7 +4279,7 @@ Optional<ESTree::Node *> JSParserImpl::reparseObjectAssignmentPattern(
       node = spread->_argument;
       if (inDecl) {
         if (!isa<ESTree::IdentifierNode>(node)) {
-          sm_.error(
+          error(
               node->getSourceRange(), "identifier expected in parameter list");
           continue;
         }
@@ -4295,7 +4291,7 @@ Optional<ESTree::Node *> JSParserImpl::reparseObjectAssignmentPattern(
       auto *propNode = cast<ESTree::PropertyNode>(node);
 
       if (propNode->_kind != initIdent_) {
-        sm_.error(
+        error(
             SourceErrorManager::combineIntoRange(
                 propNode->getStartLoc(), propNode->_key->getStartLoc()),
             "invalid destructuring target");
@@ -4420,8 +4416,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(Param param) {
     // This check errors here to ensure that we still catch missing elements
     // in `checkEndAssignmentExpression` while allowing us to avoid actually
     // asserting and crashing.
-    sm_.error(
-        tok_->getStartLoc(), "unexpected token after assignment expression");
+    error(tok_->getStartLoc(), "unexpected token after assignment expression");
     return None;
   }
   return setLocation(
@@ -4489,7 +4484,7 @@ Optional<ESTree::StringLiteralNode *> JSParserImpl::parseFromClause() {
   SMLoc startLoc = tok_->getStartLoc();
 
   if (!checkAndEat(fromIdent_)) {
-    sm_.error(startLoc, "'from' expected");
+    error(startLoc, "'from' expected");
     return None;
   }
 
@@ -4644,7 +4639,7 @@ Optional<ESTree::Node *> JSParserImpl::parseNameSpaceImport() {
 
   SMLoc startLoc = advance().Start;
   if (!checkAndEat(asIdent_)) {
-    sm_.error(tok_->getStartLoc(), "'as' expected");
+    error(tok_->getStartLoc(), "'as' expected");
     return None;
   }
 
@@ -4686,7 +4681,7 @@ bool JSParserImpl::parseNamedImports(ESTree::NodeList &specifiers) {
       specifiers.push_back(*optSpecifier.getValue());
     } else {
       // Report the error but continue parsing to see if there's any others.
-      sm_.error(
+      error(
           localIdent->getSourceRange(),
           "Duplicate entry in import declaration list");
       sm_.note(
@@ -4886,7 +4881,7 @@ Optional<ESTree::ImportSpecifierNode *> JSParserImpl::parseImportSpecifier(
   // after the fact.
   if (!validateBindingIdentifier(
           Param{}, local->getSourceRange(), local->_name, localKind)) {
-    sm_.error(local->getSourceRange(), "Invalid local name for import");
+    error(local->getSourceRange(), "Invalid local name for import");
   }
 
   return setLocation(
@@ -4980,7 +4975,7 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
       // When there is no FromClause, any ranges added to invalids are actually
       // invalid, and should be reported as errors.
       for (const SMRange &range : invalids) {
-        sm_.error(range, "Invalid exported name");
+        error(range, "Invalid exported name");
       }
     }
 
@@ -5009,7 +5004,7 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
   // export Declaration [~Yield]
 
   if (!checkDeclaration()) {
-    sm_.error(tok_->getSourceRange(), "expected declaration in export");
+    error(tok_->getSourceRange(), "expected declaration in export");
     return None;
   }
 

@@ -360,6 +360,27 @@ class JSParserImpl {
   /// documented in errorExpected().
   bool need(TokenKind kind, const char *where, const char *what, SMLoc whatLoc);
 
+  /// Report an error to the SourceErrorManager.
+  void error(SMLoc loc, const llvm::Twine &message) {
+    sm_.error(loc, message, Subsystem::Parser);
+  }
+
+  /// Report an error to the SourceErrorManager.
+  void error(SMRange range, const llvm::Twine &message) {
+    sm_.error(range, message, Subsystem::Parser);
+  }
+
+  /// Report an error using the current token's location.
+  void error(const llvm::Twine &msg) {
+    error(tok_->getSourceRange(), msg);
+  }
+
+  /// Emit an error at the specified source location and range. If the maximum
+  /// number of errors has been reached, return false and move the scanning
+  /// pointer to EOF.
+  /// \return false if too many errors have been emitted and we need to abort.
+  bool error(SMLoc loc, SMRange range, const llvm::Twine &msg);
+
   /// Check whether the current token is the specified one and if it is, consume
   /// it, otherwise an report an error. \returns false if it reported an error.
   /// \param grammarContext enable recognizing either "/" and "/=", or a regexp

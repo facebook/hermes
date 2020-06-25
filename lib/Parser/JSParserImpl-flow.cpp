@@ -25,8 +25,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclare(SMLoc start) {
   }
   if (checkAndEat(opaqueIdent_)) {
     if (!check(typeIdent_)) {
-      sm_.error(
-          tok_->getStartLoc(), "'type' required in opaque type declaration");
+      error(tok_->getStartLoc(), "'type' required in opaque type declaration");
       return None;
     }
     advance(JSLexer::GrammarContext::Flow);
@@ -652,7 +651,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotation() {
           return None;
         return *optGeneric;
       }
-      sm_.error(tok_->getStartLoc(), "unexpected token in type annotation");
+      error(tok_->getStartLoc(), "unexpected token in type annotation");
       return None;
   }
 }
@@ -1055,7 +1054,7 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
 
   if (check(TokenKind::less, TokenKind::l_paren)) {
     if (variance != nullptr) {
-      sm_.error(
+      error(
           variance->getSourceRange(),
           "call property must not specify variance");
     }
@@ -1104,7 +1103,7 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
   if (auto *ident = dyn_cast<ESTree::IdentifierNode>(key)) {
     if (ident->_name == getIdent_ || ident->_name == setIdent_) {
       if (variance != nullptr) {
-        sm_.error(
+        error(
             variance->getSourceRange(),
             "accessor property must not specify variance");
       }
@@ -1616,7 +1615,7 @@ JSParserImpl::reparseTypeAnnotationAsIdentifier(ESTree::Node *typeAnnotation) {
   }
 
   if (!id) {
-    sm_.error(typeAnnotation->getSourceRange(), "identifier expected");
+    error(typeAnnotation->getSourceRange(), "identifier expected");
   }
 
   return setLocation(
