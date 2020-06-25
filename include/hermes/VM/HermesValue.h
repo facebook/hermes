@@ -24,7 +24,7 @@
 ///
 /// An exponent of all 1-s (0x7ff) and a non-zero mantissa is used to encode
 /// NaN. So, as long as the top 12 bits are 0x7ff or 0xfff and the bottom 52
-/// bits are not 0, we can store any bit patterm in the bottom bits and it will
+/// bits are not 0, we can store any bit pattern in the bottom bits and it will
 /// be interpreted as NaN.
 ///
 /// This is what the "canonical quiet NaN" looks like:
