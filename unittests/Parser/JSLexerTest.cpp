@@ -39,6 +39,10 @@ TEST(JSLexerTest, PunctuatorTest) {
 #include "hermes/Parser/TokenKinds.def"
   ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
 
+#ifndef NDEBUG
+#define PUNCTUATOR(name, str) ASSERT_TRUE(isPunctuatorDbg(TokenKind::name));
+#include "hermes/Parser/TokenKinds.def"
+#endif
   // "/=" and "/" require context or they could be interpreted as a regexp
   // literal
 }

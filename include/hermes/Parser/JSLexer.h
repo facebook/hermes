@@ -39,6 +39,20 @@ inline constexpr int ord(TokenKind kind) {
   return static_cast<int>(kind);
 }
 
+#ifndef NDEBUG
+/// \return true if \p kind is a punctuator token.
+inline bool isPunctuatorDbg(TokenKind kind) {
+  switch (kind) {
+#define PUNCTUATOR(name, str) \
+  case TokenKind::name:       \
+    return true;
+#include "TokenKinds.def"
+    default:
+      return false;
+  }
+}
+#endif
+
 const unsigned NUM_JS_TOKENS = ord(TokenKind::_last_token) + 1;
 const char *tokenKindStr(TokenKind kind);
 
@@ -371,6 +385,11 @@ class JSLexer {
     return &token_;
   }
 
+  /// \return the current char pointer location.
+  SMLoc getCurLoc() const {
+    return SMLoc::getFromPointer(curCharPtr_);
+  }
+
   /// Force an EOF at the next token.
   void forceEOF() {
     curCharPtr_ = bufferEnd_;
@@ -484,6 +503,45 @@ class JSLexer {
   const char *getBufferEnd() const {
     return bufferEnd_;
   }
+
+  /// Store state of the lexer and allow rescanning from that point.
+  /// Can only save state when the current token is a punctuator or
+  /// TokenKind::identifier.
+  class SavePoint {
+    JSLexer *const lexer_;
+
+    /// Saved token kind, must be a punctuator.
+    TokenKind kind_;
+
+    /// Saved identifier, nullptr if kind_ != identifier.
+    UniqueString *ident_;
+
+    /// Saved curCharPtr_ from the lexer.
+    SMLoc loc_;
+
+   public:
+    SavePoint(JSLexer *lexer)
+        : lexer_(lexer),
+          kind_(lexer_->getCurToken()->getKind()),
+          ident_(
+              kind_ == TokenKind::identifier
+                  ? lexer_->getCurToken()->getIdentifier()
+                  : nullptr),
+          loc_(lexer_->getCurLoc()) {
+      assert(
+          (isPunctuatorDbg(kind_) || kind_ == TokenKind::identifier) &&
+          "SavePoint can only be used for punctuators");
+    }
+
+    /// Restore the state of the lexer to the originally saved state.
+    void restore() {
+      if (kind_ == TokenKind::identifier) {
+        lexer_->unsafeSetIdentifier(ident_, loc_);
+      } else {
+        lexer_->unsafeSetPunctuator(kind_, loc_);
+      }
+    }
+  };
 
  private:
   /// Initialize the storage with the characters between \p begin and \p end.
@@ -673,6 +731,23 @@ class JSLexer {
   /// Convert the surrogates into \p str into a valid UTF-8 sequence, and unique
   /// it into the string table.
   UniqueString *convertSurrogatesInString(StringRef str);
+
+  /// Set the current token kind to \p kind without any checks and seek to
+  /// \p loc.
+  /// Should only be used for save point use-cases.
+  void unsafeSetPunctuator(TokenKind kind, SMLoc loc) {
+    assert(isPunctuatorDbg(kind) && "must set a punctuator");
+    token_.setPunctuator(kind);
+    seek(loc);
+  }
+
+  /// Set the current token kind to \p kind without any checks and seek to
+  /// \p loc.
+  /// Should only be used for save point use-cases.
+  void unsafeSetIdentifier(UniqueString *ident, SMLoc loc) {
+    token_.setIdentifier(ident);
+    seek(loc);
+  }
 
   /// Initialize the parser for a given source buffer id.
   void initializeWithBufferId(uint32_t bufId);
