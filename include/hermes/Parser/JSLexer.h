@@ -443,34 +443,6 @@ class JSLexer {
   ///   otherwise return None.
   OptValue<TokenKind> lookahead1(OptValue<TokenKind> expectedToken);
 
-  /// Report an error for the range from startLoc to curCharPtr.
-  bool errorRange(SMLoc startLoc, const llvm::Twine &msg) {
-    return error({startLoc, SMLoc::getFromPointer(curCharPtr_)}, msg);
-  }
-
-  /// Report an error using the current token's location.
-  bool error(const llvm::Twine &msg) {
-    return error(token_.getSourceRange(), msg);
-  }
-
-  /// Emit an error at the specified source location. If the maximum number of
-  /// errors has been reached, return false and move the scanning pointer to
-  /// EOF.
-  /// \return false if too many errors have been emitted and we need to abort.
-  bool error(SMLoc loc, const llvm::Twine &msg);
-
-  /// Emit an error at the specified source range. If the maximum number of
-  /// errors has been reached, return false and move the scanning pointer to
-  /// EOF.
-  /// \return false if too many errors have been emitted and we need to abort.
-  bool error(SMRange range, const llvm::Twine &msg);
-
-  /// Emit an error at the specified source location and range. If the maximum
-  /// number of errors has been reached, return false and move the scanning
-  /// pointer to EOF.
-  /// \return false if too many errors have been emitted and we need to abort.
-  bool error(SMLoc loc, SMRange range, const llvm::Twine &msg);
-
   UniqueString *getIdentifier(StringRef name) {
     return strTab_.getString(name);
   }
@@ -754,6 +726,34 @@ class JSLexer {
 
   /// Create/lookup identifiers for all reserved words used during parsing.
   void initializeReservedIdentifiers();
+
+  /// Report an error for the range from startLoc to curCharPtr.
+  bool errorRange(SMLoc startLoc, const llvm::Twine &msg) {
+    return error({startLoc, SMLoc::getFromPointer(curCharPtr_)}, msg);
+  }
+
+  /// Report an error using the current token's location.
+  bool error(const llvm::Twine &msg) {
+    return error(token_.getSourceRange(), msg);
+  }
+
+  /// Emit an error at the specified source location. If the maximum number of
+  /// errors has been reached, return false and move the scanning pointer to
+  /// EOF.
+  /// \return false if too many errors have been emitted and we need to abort.
+  bool error(SMLoc loc, const llvm::Twine &msg);
+
+  /// Emit an error at the specified source range. If the maximum number of
+  /// errors has been reached, return false and move the scanning pointer to
+  /// EOF.
+  /// \return false if too many errors have been emitted and we need to abort.
+  bool error(SMRange range, const llvm::Twine &msg);
+
+  /// Emit an error at the specified source location and range. If the maximum
+  /// number of errors has been reached, return false and move the scanning
+  /// pointer to EOF.
+  /// \return false if too many errors have been emitted and we need to abort.
+  bool error(SMLoc loc, SMRange range, const llvm::Twine &msg);
 };
 
 inline void JSLexer::initStorageWith(const char *begin, const char *end) {

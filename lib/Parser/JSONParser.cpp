@@ -188,7 +188,8 @@ JSONParser::JSONParser(
           factory_.getAllocator(),
           &factory_.getStringTable(),
           true,
-          convertSurrogates) {}
+          convertSurrogates),
+      sm_(sm) {}
 
 llvm::Optional<JSONValue *> JSONParser::parse() {
   lexer_.advance();
@@ -212,7 +213,7 @@ llvm::Optional<JSONValue *> JSONParser::parseValue() {
       needsNegation = true;
       lexer_.advance();
       if (lexer_.getCurToken()->getKind() != TokenKind::numeric_literal) {
-        lexer_.error("No numeric literal following minus (-) token in value");
+        error("No numeric literal following minus (-) token in value");
         return llvm::None;
       }
     case TokenKind::numeric_literal: {
@@ -241,7 +242,7 @@ llvm::Optional<JSONValue *> JSONParser::parseValue() {
       return factory_.getNull();
 
     default:
-      lexer_.error("JSON object or array expected");
+      error("JSON object or array expected");
       return llvm::None;
   }
 }
@@ -265,7 +266,7 @@ llvm::Optional<JSONValue *> JSONParser::parseArray() {
       }
     }
     if (lexer_.getCurToken()->getKind() != TokenKind::r_square) {
-      lexer_.error("expected ']'");
+      error("expected ']'");
       return llvm::None;
     }
   }
@@ -281,14 +282,14 @@ llvm::Optional<JSONValue *> JSONParser::parseObject() {
   if (lexer_.getCurToken()->getKind() != TokenKind::r_brace) {
     for (;;) {
       if (lexer_.getCurToken()->getKind() != TokenKind::string_literal) {
-        lexer_.error("expected a string");
+        error("expected a string");
         return llvm::None;
       }
       JSONString *key =
           factory_.getString(lexer_.getCurToken()->getStringLiteral());
 
       if (lexer_.advance()->getKind() != TokenKind::colon) {
-        lexer_.error("expected ':'");
+        error("expected ':'");
         return llvm::None;
       }
       lexer_.advance();
@@ -307,7 +308,7 @@ llvm::Optional<JSONValue *> JSONParser::parseObject() {
       }
     }
     if (lexer_.getCurToken()->getKind() != TokenKind::r_brace) {
-      lexer_.error("expected '}'");
+      error("expected '}'");
       return llvm::None;
     }
   }
@@ -315,7 +316,7 @@ llvm::Optional<JSONValue *> JSONParser::parseObject() {
   lexer_.advance(); // consume the '}'
 
   if (auto *duplicate = factory_.sortProps(pairs.begin(), pairs.end())) {
-    lexer_.error("key '" + duplicate->str() + "' is already present");
+    error("key '" + duplicate->str() + "' is already present");
     return llvm::None;
   }
 

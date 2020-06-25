@@ -625,6 +625,7 @@ class JSONParser {
  private:
   JSONFactory &factory_;
   JSLexer lexer_;
+  SourceErrorManager &sm_;
 
  public:
   JSONParser(
@@ -655,6 +656,10 @@ class JSONParser {
   /// Parse the supplied input. On error the result will be empty and the error
   /// would have been reported to the SourceMgr.
   llvm::Optional<JSONValue *> parse();
+
+  void error(const llvm::Twine &msg) {
+    sm_.error(lexer_.getCurToken()->getSourceRange(), msg);
+  }
 
  private:
   llvm::Optional<JSONValue *> parseValue();
