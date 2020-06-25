@@ -8,8 +8,12 @@
 #ifndef HERMES_PARSER_CONFIG_H
 #define HERMES_PARSER_CONFIG_H
 
-#if !defined(HERMES_PARSE_JSX) && !defined(HERMES_IS_MOBILE_BUILD)
+#if !defined(HERMES_PARSE_JSX)
+#if defined(HERMES_IS_MOBILE_BUILD)
+#define HERMES_PARSE_JSX 0
+#else
 #define HERMES_PARSE_JSX 1
+#endif
 #endif
 
 #endif
