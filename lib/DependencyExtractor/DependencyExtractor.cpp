@@ -62,6 +62,10 @@ class DependencyExtractor {
   /// literals.
   std::vector<uint8_t> graphqlQueryRegexBytecode_;
 
+  /// Set to true when we have already found an registered a JSX dependency
+  /// for this file.
+  bool foundJSX_{false};
+
  public:
   DependencyExtractor(Context &astContext)
       : sm_(astContext.getSourceErrorManager()),
@@ -209,6 +213,16 @@ class DependencyExtractor {
     visitESTreeChildren(*this, node);
   }
 
+  void visit(JSXElementNode *node) {
+    registerJSXDependencies();
+    visitESTreeChildren(*this, node);
+  }
+
+  void visit(JSXFragmentNode *node) {
+    registerJSXDependencies();
+    visitESTreeChildren(*this, node);
+  }
+
  private:
   /// Perform any postprocessing on \p name (e.g. removing "m#" at the start)
   /// and add the {name, kind} pair to the list of extracted dependencies.
@@ -270,6 +284,16 @@ class DependencyExtractor {
           DependencyKind::GraphQL);
       searchStart = captures[0].end;
     }
+  }
+
+  /// If we have not seen JSX before, add the relevant JSX dependencies to the
+  /// dependency list, and set foundJSX_ so we don't duplicate entries.
+  void registerJSXDependencies() {
+    if (foundJSX_)
+      return;
+    foundJSX_ = true;
+    addDependency("react/jsx-runtime", DependencyKind::ESM);
+    addDependency("react/jsx-dev-runtime", DependencyKind::ESM);
   }
 };
 
