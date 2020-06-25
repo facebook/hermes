@@ -376,6 +376,16 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
     return None;
   }
 
+  ESTree::Node *typeParams = nullptr;
+#if HERMES_PARSE_FLOW
+  if (context_.getParseFlow() && check(TokenKind::less)) {
+    auto optTypeParams = parseTypeParams();
+    if (!optTypeParams)
+      return None;
+    typeParams = *optTypeParams;
+  }
+#endif
+
   // (
   if (!need(
           TokenKind::l_paren,
@@ -431,7 +441,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
           optId ? *optId : nullptr,
           std::move(paramList),
           nullptr,
-          nullptr,
+          typeParams,
           returnType,
           isGenerator,
           isAsync);
@@ -443,7 +453,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
           optId ? *optId : nullptr,
           std::move(paramList),
           nullptr,
-          nullptr,
+          typeParams,
           returnType,
           isGenerator,
           isAsync);
@@ -473,7 +483,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
         optId ? *optId : nullptr,
         std::move(paramList),
         body,
-        nullptr,
+        typeParams,
         returnType,
         isGenerator,
         isAsync);
@@ -484,7 +494,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
         optId ? *optId : nullptr,
         std::move(paramList),
         body,
-        nullptr,
+        typeParams,
         returnType,
         isGenerator,
         isAsync);
