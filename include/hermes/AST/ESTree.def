@@ -523,11 +523,12 @@ ESTREE_NODE_1_ARGS(
 
 // Exports ========================================
 
-ESTREE_NODE_3_ARGS(
+ESTREE_NODE_4_ARGS(
     ExportNamedDeclaration, Base,
     NodePtr, declaration, true,
     NodeList, specifiers, false,
-    NodePtr, source, true)
+    NodePtr, source, true,
+    NodeLabel, exportKind, false)
 
 ESTREE_NODE_2_ARGS(
     ExportSpecifier, Base,
@@ -536,9 +537,10 @@ ESTREE_NODE_2_ARGS(
 ESTREE_NODE_1_ARGS(
     ExportDefaultDeclaration, Base,
     NodePtr, declaration, false)
-ESTREE_NODE_1_ARGS(
+ESTREE_NODE_2_ARGS(
     ExportAllDeclaration, Base,
-    NodePtr, source, false)
+    NodePtr, source, false,
+    NodeLabel, exportKind, false)
 
 // ================================================
 

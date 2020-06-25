@@ -17,7 +17,8 @@ export * from 'foo.js';
 // CHECK-NEXT:         "source": {
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo.js"
-// CHECK-NEXT:         }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "exportKind": "value"
 // CHECK-NEXT:       },
 
 export default function myFun() { return 3; }
@@ -70,7 +71,8 @@ export var abc = 3;
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "specifiers": [],
-// CHECK-NEXT:         "source": null
+// CHECK-NEXT:         "source": null,
+// CHECK-NEXT:         "exportKind": "value"
 // CHECK-NEXT:       },
 
 export function funDecl() {}
@@ -91,7 +93,8 @@ export function funDecl() {}
 // CHECK-NEXT:           "async": false
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "specifiers": [],
-// CHECK-NEXT:         "source": null
+// CHECK-NEXT:         "source": null,
+// CHECK-NEXT:         "exportKind": "value"
 // CHECK-NEXT:       },
 
 export let letValue = 123;
@@ -116,7 +119,8 @@ export let letValue = 123;
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "specifiers": [],
-// CHECK-NEXT:         "source": null
+// CHECK-NEXT:         "source": null,
+// CHECK-NEXT:         "exportKind": "value"
 // CHECK-NEXT:       },
 
 export const constValue = 321;
@@ -141,7 +145,8 @@ export const constValue = 321;
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "specifiers": [],
-// CHECK-NEXT:         "source": null
+// CHECK-NEXT:         "source": null,
+// CHECK-NEXT:         "exportKind": "value"
 // CHECK-NEXT:       },
 
 export { };
@@ -149,7 +154,8 @@ export { };
 // CHECK-NEXT:         "type": "ExportNamedDeclaration",
 // CHECK-NEXT:         "declaration": null,
 // CHECK-NEXT:         "specifiers": [],
-// CHECK-NEXT:         "source": null
+// CHECK-NEXT:         "source": null,
+// CHECK-NEXT:         "exportKind": "value"
 // CHECK-NEXT:       },
 
 export { x };
@@ -169,7 +175,8 @@ export { x };
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
-// CHECK-NEXT:         "source": null
+// CHECK-NEXT:         "source": null,
+// CHECK-NEXT:         "exportKind": "value"
 // CHECK-NEXT:       },
 
 export { y , };
@@ -189,7 +196,8 @@ export { y , };
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
-// CHECK-NEXT:         "source": null
+// CHECK-NEXT:         "source": null,
+// CHECK-NEXT:         "exportKind": "value"
 // CHECK-NEXT:       },
 
 export { a as b , c , last };
@@ -231,7 +239,8 @@ export { a as b , c , last };
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
-// CHECK-NEXT:         "source": null
+// CHECK-NEXT:         "source": null,
+// CHECK-NEXT:         "exportKind": "value"
 // CHECK-NEXT:       }
 
 // CHECK-NEXT:     ]

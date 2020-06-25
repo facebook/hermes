@@ -53,6 +53,8 @@ HERMES_OMITTED_KEYS = {
     },
     "ImportDeclaration": {"importKind"},
     "ImportSpecifier": {"importKind"},
+    "ExportNamedDeclaration": {"exportKind"},
+    "ExportAllDeclaration": {"exportKind"},
     "ArrayExpression": {"trailingComma"},
     # Some literals support "raw" and others don't.
     # ESPrima doesn't distinguish.

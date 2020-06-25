@@ -968,6 +968,8 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseDeclareFunction(SMLoc start);
   Optional<ESTree::Node *> parseDeclareClass(SMLoc start);
 
+  Optional<ESTree::Node *> parseExportTypeDeclaration(SMLoc start);
+
   Optional<ESTree::Node *> parseUnionTypeAnnotation();
   Optional<ESTree::Node *> parseIntersectionTypeAnnotation();
   Optional<ESTree::Node *> parseAnonFunctionWithoutParensTypeAnnotation();

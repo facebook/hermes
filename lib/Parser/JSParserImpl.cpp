@@ -5422,6 +5422,12 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
       "parseExportDeclaration requires 'export'");
   SMLoc startLoc = advance().Start;
 
+#if HERMES_PARSE_FLOW
+  if (context_.getParseFlow() && check(typeIdent_)) {
+    return parseExportTypeDeclaration(startLoc);
+  }
+#endif
+
   if (checkAndEat(TokenKind::star)) {
     // export * FromClause;
     auto optFromClause = parseFromClause();
@@ -5435,7 +5441,8 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
     return setLocation(
         startLoc,
         endLoc,
-        new (context_) ESTree::ExportAllDeclarationNode(*optFromClause));
+        new (context_)
+            ESTree::ExportAllDeclarationNode(*optFromClause, valueIdent_));
   } else if (checkAndEat(TokenKind::rw_default)) {
     // export default
     if (check(TokenKind::rw_function) ||
@@ -5513,7 +5520,7 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
         startLoc,
         endLoc,
         new (context_) ESTree::ExportNamedDeclarationNode(
-            nullptr, std::move(specifiers), source));
+            nullptr, std::move(specifiers), source, valueIdent_));
   } else if (check(TokenKind::rw_var)) {
     // export VariableStatement
     auto optVar = parseVariableStatement(Param{});
@@ -5523,8 +5530,8 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
     return setLocation(
         startLoc,
         *optVar,
-        new (context_)
-            ESTree::ExportNamedDeclarationNode(*optVar, {}, nullptr));
+        new (context_) ESTree::ExportNamedDeclarationNode(
+            *optVar, {}, nullptr, valueIdent_));
   }
 
   // export Declaration [~Yield]
@@ -5538,11 +5545,20 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
   if (!optDecl) {
     return None;
   }
+  ESTree::Node *decl = *optDecl;
+
+  UniqueString *kind = valueIdent_;
+  if (isa<ESTree::TypeAliasNode>(decl) || isa<ESTree::OpaqueTypeNode>(decl) ||
+      isa<ESTree::DeclareTypeAliasNode>(decl) ||
+      isa<ESTree::InterfaceDeclarationNode>(decl)) {
+    kind = typeIdent_;
+  }
 
   return setLocation(
       startLoc,
       *optDecl,
-      new (context_) ESTree::ExportNamedDeclarationNode(*optDecl, {}, nullptr));
+      new (context_)
+          ESTree::ExportNamedDeclarationNode(*optDecl, {}, nullptr, kind));
 }
 
 bool JSParserImpl::parseExportClause(

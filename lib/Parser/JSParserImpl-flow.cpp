@@ -364,6 +364,88 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareClass(SMLoc start) {
           *optBody));
 }
 
+Optional<ESTree::Node *> JSParserImpl::parseExportTypeDeclaration(
+    SMLoc startLoc) {
+  assert(check(typeIdent_));
+  advance();
+
+  if (checkAndEat(TokenKind::star)) {
+    // export type * FromClause;
+    //               ^
+    auto optFromClause = parseFromClause();
+    if (!optFromClause) {
+      return None;
+    }
+    SMLoc endLoc = optFromClause.getValue()->getEndLoc();
+    if (!eatSemi(endLoc)) {
+      return None;
+    }
+    return setLocation(
+        startLoc,
+        endLoc,
+        new (context_)
+            ESTree::ExportAllDeclarationNode(*optFromClause, typeIdent_));
+  }
+
+  if (check(TokenKind::l_brace)) {
+    ESTree::NodeList specifiers{};
+    SMLoc endLoc;
+    llvm::SmallVector<SMRange, 2> invalids{};
+
+    auto optExportClause = parseExportClause(specifiers, endLoc, invalids);
+    if (!optExportClause) {
+      return None;
+    }
+
+    ESTree::Node *source = nullptr;
+    if (check(fromIdent_)) {
+      // export ExportClause FromClause ;
+      auto optFromClause = parseFromClause();
+      if (!optFromClause) {
+        return None;
+      }
+      source = *optFromClause;
+      endLoc = source->getEndLoc();
+    } else {
+      // export ExportClause ;
+      // ES9.0 15.2.3.1
+      // When there is no FromClause, any ranges added to invalids are
+      // actually invalid, and should be reported as errors.
+      for (const SMRange &range : invalids) {
+        error(range, "Invalid exported name");
+      }
+    }
+
+    if (!eatSemi(endLoc)) {
+      return None;
+    }
+
+    return setLocation(
+        startLoc,
+        endLoc,
+        new (context_) ESTree::ExportNamedDeclarationNode(
+            nullptr, std::move(specifiers), source, typeIdent_));
+  }
+
+  if (check(TokenKind::identifier)) {
+    auto optAlias = parseTypeAlias(startLoc, TypeAliasKind::None);
+    if (!optAlias)
+      return None;
+    return setLocation(
+        startLoc,
+        *optAlias,
+        new (context_) ESTree::ExportNamedDeclarationNode(
+            *optAlias, {}, nullptr, typeIdent_));
+  }
+
+  errorExpected(
+      {TokenKind::star, TokenKind::l_brace, TokenKind::identifier},
+      "in export type declaration",
+      "start of export",
+      startLoc);
+  return None;
+}
+
 Optional<ESTree::Node *> JSParserImpl::parseTypeAnnotation(
     bool wrapped,
     AllowAnonFunctionType allowAnonFunctionType) {
