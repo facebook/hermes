@@ -217,7 +217,7 @@ Optional<ESTree::Node *> JSParserImpl::parseJSXChildren(
     } else if (check(TokenKind::l_brace)) {
       // { JSXChildExpression[opt] }
       // ^
-      SMLoc start = advance(JSLexer::GrammarContext::AllowDiv).Start;
+      SMLoc start = advance().Start;
       if (check(TokenKind::r_brace)) {
         // { }
         //   ^
@@ -285,7 +285,7 @@ Optional<ESTree::Node *> JSParserImpl::parseJSXSpreadAttribute() {
 
   if (!eat(
           TokenKind::dotdotdot,
-          JSLexer::GrammarContext::AllowDiv,
+          JSLexer::GrammarContext::AllowRegExp,
           "in JSX spread attribute",
           "location of attribute",
           start))
