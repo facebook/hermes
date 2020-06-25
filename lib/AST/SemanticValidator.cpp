@@ -543,6 +543,8 @@ void SemanticValidator::visit(ExportDefaultDeclarationNode *exportDecl) {
               funcDecl->_id,
               std::move(funcDecl->_params),
               funcDecl->_body,
+              funcDecl->_typeParameters,
+              funcDecl->_returnType,
               funcDecl->_generator,
               /* async */ false);
       exportDecl->_declaration->copyLocationFrom(funcDecl);

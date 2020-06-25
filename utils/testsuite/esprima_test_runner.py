@@ -37,6 +37,20 @@ ESPRIMA_OMITTED_KEYS_COMMON = {"loc", "range", "errors"}
 # needs to be omitted.
 HERMES_OMITTED_KEYS = {
     "FunctionDeclaration": {"returnType"},
+    "FunctionExpression": {"returnType"},
+    "ArrowFunctionExpression": {"returnType"},
+    "ClassDeclaration": {
+        "typeParameters",
+        "superTypeParameters",
+        "implements",
+        "decorators",
+    },
+    "ClassExpression": {
+        "typeParameters",
+        "superTypeParameters",
+        "implements",
+        "decorators",
+    },
     "ArrayExpression": {"trailingComma"},
     # Some literals support "raw" and others don't.
     # ESPrima doesn't distinguish.

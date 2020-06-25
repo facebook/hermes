@@ -33,28 +33,38 @@ ESTREE_NODE_0_ARGS(Metadata, Base)
 ESTREE_FIRST(FunctionLike, Base)
 ESTREE_NODE_1_ARGS(Program, FunctionLike,
     NodeList, body, false)
-ESTREE_NODE_5_ARGS(
+ESTREE_NODE_7_ARGS(
     FunctionExpression, FunctionLike,
     NodePtr, id, true,
     NodeList, params, false,
     NodePtr, body, false,
+    NodePtr, typeParameters, true,
+    NodePtr, returnType, true,
     NodeBoolean, generator, false,
     NodeBoolean, async, false)
-ESTREE_NODE_5_ARGS(
+ESTREE_IGNORE_IF_EMPTY(FunctionExpression, typeParameters)
+ESTREE_IGNORE_IF_EMPTY(FunctionExpression, returnType)
+ESTREE_NODE_7_ARGS(
     ArrowFunctionExpression, FunctionLike,
     NodePtr, id, true,
     NodeList, params, false,
     NodePtr, body, false,
+    NodePtr, typeParameters, true,
+    NodePtr, returnType, true,
     NodeBoolean, expression, false,
     NodeBoolean, async, false)
-ESTREE_NODE_6_ARGS(
+ESTREE_IGNORE_IF_EMPTY(ArrowFunctionExpression, typeParameters)
+ESTREE_IGNORE_IF_EMPTY(ArrowFunctionExpression, returnType)
+ESTREE_NODE_7_ARGS(
     FunctionDeclaration, FunctionLike,
     NodePtr, id, true,
     NodeList, params, false,
     NodePtr, body, false,
+    NodePtr, typeParameters, true,
     NodePtr, returnType, true,
     NodeBoolean, generator, false,
     NodeBoolean, async, false)
+ESTREE_IGNORE_IF_EMPTY(FunctionDeclaration, typeParameters)
 ESTREE_IGNORE_IF_EMPTY(FunctionDeclaration, returnType)
 ESTREE_LAST(FunctionLike)
 
@@ -345,15 +355,6 @@ ESTREE_NODE_3_ARGS(
     operator,
     false)
 
-ESTREE_NODE_0_ARGS(StringTypeAnnotation, Base)
-ESTREE_NODE_0_ARGS(NumberTypeAnnotation, Base)
-ESTREE_NODE_0_ARGS(GenericTypeAnnotation, Base)
-ESTREE_NODE_0_ARGS(BooleanTypeAnnotation, Base)
-ESTREE_NODE_0_ARGS(NullLiteralTypeAnnotation, Base)
-ESTREE_NODE_0_ARGS(AnyTypeAnnotation, Base)
-
-ESTREE_NODE_1_ARGS(TypeAnnotation, Base, NodePtr, typeAnnotation, false)
-
 ESTREE_NODE_1_ARGS(Directive, Base, NodePtr, value, false)
 ESTREE_NODE_1_ARGS(DirectiveLiteral, Base, NodeLabel, value, false)
 
@@ -443,17 +444,33 @@ ESTREE_NODE_4_ARGS(
     NodeLabel, kind, false,
     NodeBoolean, computed, false)
 
-ESTREE_NODE_3_ARGS(
+ESTREE_NODE_7_ARGS(
     ClassDeclaration, Base,
     NodePtr, id, true,
+    NodePtr, typeParameters, true,
     NodePtr, superClass, true,
+    NodePtr, superTypeParameters, true,
+    NodeList, implements, false,
+    NodeList, decorators, false,
     NodePtr, body, false)
+ESTREE_IGNORE_IF_EMPTY(ClassDeclaration, typeParameters)
+ESTREE_IGNORE_IF_EMPTY(ClassDeclaration, superTypeParameters)
+ESTREE_IGNORE_IF_EMPTY(ClassDeclaration, implements)
+ESTREE_IGNORE_IF_EMPTY(ClassDeclaration, decorators)
 
-ESTREE_NODE_3_ARGS(
+ESTREE_NODE_7_ARGS(
     ClassExpression, Base,
     NodePtr, id, true,
+    NodePtr, typeParameters, true,
     NodePtr, superClass, true,
+    NodePtr, superTypeParameters, true,
+    NodeList, implements, false,
+    NodeList, decorators, false,
     NodePtr, body, false)
+ESTREE_IGNORE_IF_EMPTY(ClassExpression, typeParameters)
+ESTREE_IGNORE_IF_EMPTY(ClassExpression, superTypeParameters)
+ESTREE_IGNORE_IF_EMPTY(ClassExpression, implements)
+ESTREE_IGNORE_IF_EMPTY(ClassExpression, decorators)
 
 ESTREE_NODE_1_ARGS(
     ClassBody, Base,
@@ -511,13 +528,17 @@ ESTREE_NODE_1_ARGS(
 // Patterns =======================================
 ESTREE_FIRST(Pattern, Base)
 
-ESTREE_NODE_1_ARGS(
+ESTREE_NODE_2_ARGS(
     ObjectPattern, Pattern,
-    NodeList, properties, false)
+    NodeList, properties, false,
+    NodePtr, typeAnnotation, true)
+ESTREE_IGNORE_IF_EMPTY(ObjectPattern, typeAnnotation)
 
-ESTREE_NODE_1_ARGS(
+ESTREE_NODE_2_ARGS(
     ArrayPattern, Pattern,
-    NodeList, elements, false)
+    NodeList, elements, false,
+    NodePtr, typeAnnotation, true)
+ESTREE_IGNORE_IF_EMPTY(ArrayPattern, typeAnnotation)
 
 ESTREE_NODE_1_ARGS(
     RestElement, Pattern,
@@ -591,6 +612,209 @@ ESTREE_NODE_0_ARGS(
     JSXOpeningFragment, Base)
 ESTREE_NODE_0_ARGS(
     JSXClosingFragment, Base)
+
+// ================================================
+
+// Types ==========================================
+
+ESTREE_NODE_0_ARGS(ExistsTypeAnnotation, Base)
+ESTREE_NODE_0_ARGS(EmptyTypeAnnotation, Base)
+ESTREE_NODE_0_ARGS(StringTypeAnnotation, Base)
+ESTREE_NODE_0_ARGS(NumberTypeAnnotation, Base)
+ESTREE_NODE_2_ARGS(
+    NumberLiteralTypeAnnotation, Base,
+    NodeNumber, value, false,
+    NodeLabel, raw, false)
+ESTREE_NODE_0_ARGS(BooleanTypeAnnotation, Base)
+ESTREE_NODE_2_ARGS(
+    BooleanLiteralTypeAnnotation, Base,
+    NodeBoolean, value, false,
+    NodeLabel, raw, false)
+ESTREE_NODE_0_ARGS(NullLiteralTypeAnnotation, Base)
+ESTREE_NODE_0_ARGS(AnyTypeAnnotation, Base)
+ESTREE_NODE_0_ARGS(VoidTypeAnnotation, Base)
+ESTREE_NODE_4_ARGS(
+    FunctionTypeAnnotation, Base,
+    NodeList, params, false,
+    NodePtr, returnType, false,
+    NodePtr, rest, true,
+    NodePtr, typeParameters, true)
+ESTREE_NODE_3_ARGS(
+    FunctionTypeParam, Base,
+    NodePtr, name, true,
+    NodePtr, typeAnnotation, false,
+    NodeBoolean, optional, false)
+ESTREE_NODE_1_ARGS(
+    NullableTypeAnnotation, Base,
+    NodePtr, typeAnnotation, false)
+ESTREE_NODE_2_ARGS(
+    QualifiedTypeIdentifier, Base,
+    NodePtr, qualification, false,
+    NodePtr, id, false)
+
+ESTREE_NODE_1_ARGS(
+    TypeofTypeAnnotation, Base,
+    NodePtr, argument, false)
+ESTREE_NODE_1_ARGS(
+    TupleTypeAnnotation, Base,
+    NodeList, types, false)
+ESTREE_NODE_1_ARGS(
+    ArrayTypeAnnotation, Base,
+    NodePtr, elementType, false)
+ESTREE_NODE_1_ARGS(
+    UnionTypeAnnotation, Base,
+    NodeList, types, false)
+ESTREE_NODE_1_ARGS(
+    IntersectionTypeAnnotation, Base,
+    NodeList, types, false)
+ESTREE_NODE_2_ARGS(
+    GenericTypeAnnotation, Base,
+    NodePtr, id, false,
+    NodePtr, typeParameters, true)
+
+ESTREE_NODE_2_ARGS(
+    InterfaceTypeAnnotation, Base,
+    NodeList, extends, false,
+    NodePtr, body, true)
+
+ESTREE_NODE_3_ARGS(
+    TypeAlias, Base,
+    NodePtr, id, false,
+    NodePtr, typeParameters, true,
+    NodePtr, right, false)
+ESTREE_NODE_4_ARGS(
+    OpaqueType, Base,
+    NodePtr, id, false,
+    NodePtr, typeParameters, true,
+    NodePtr, impltype, false,
+    NodePtr, supertype, true)
+
+ESTREE_NODE_4_ARGS(
+    InterfaceDeclaration, Base,
+    NodePtr, id, false,
+    NodePtr, typeParameters, true,
+    NodeList, extends, false,
+    NodePtr, body, false)
+
+ESTREE_NODE_3_ARGS(
+    DeclareTypeAlias, Base,
+    NodePtr, id, false,
+    NodePtr, typeParameters, true,
+    NodePtr, right, false)
+ESTREE_NODE_4_ARGS(
+    DeclareOpaqueType, Base,
+    NodePtr, id, false,
+    NodePtr, typeParameters, true,
+    NodePtr, impltype, true,
+    NodePtr, supertype, true)
+ESTREE_NODE_4_ARGS(
+    DeclareInterface, Base,
+    NodePtr, id, false,
+    NodePtr, typeParameters, true,
+    NodeList, extends, false,
+    NodePtr, body, false)
+ESTREE_NODE_6_ARGS(
+    DeclareClass, Base,
+    NodePtr, id, false,
+    NodePtr, typeParameters, true,
+    NodeList, extends, false,
+    NodeList, implements, false,
+    NodeList, mixins, false,
+    NodePtr, body, false)
+ESTREE_NODE_2_ARGS(
+    DeclareFunction, Base,
+    NodePtr, id, false,
+    NodePtr, predicate, true)
+ESTREE_NODE_1_ARGS(
+    DeclareVariable, Base,
+    NodePtr, id, false)
+ESTREE_NODE_4_ARGS(
+    DeclareExportDeclaration, Base,
+    NodePtr, declaration, true,
+    NodeList, specifiers, false,
+    NodePtr, source, true,
+    NodeBoolean, default, false)
+
+ESTREE_NODE_2_ARGS(
+    InterfaceExtends, Base,
+    NodePtr, id, false,
+    NodePtr, typeParameters, true)
+
+ESTREE_NODE_2_ARGS(
+    ClassImplements, Base,
+    NodePtr, id, false,
+    NodePtr, typeParameters, true)
+
+ESTREE_NODE_1_ARGS(
+    TypeAnnotation, Base,
+    NodePtr, typeAnnotation, false)
+
+ESTREE_NODE_6_ARGS(
+    ObjectTypeAnnotation, Base,
+    NodeList, properties, false,
+    NodeList, indexers, false,
+    NodeList, callProperties, false,
+    NodeList, internalSlots, false,
+    NodeBoolean, inexact, false,
+    NodeBoolean, exact, false)
+ESTREE_NODE_8_ARGS(
+    ObjectTypeProperty, Base,
+    NodePtr, key, false,
+    NodePtr, value, false,
+    NodeBoolean, method, false,
+    NodeBoolean, optional, false,
+    NodeBoolean, static, false,
+    NodeBoolean, proto, false,
+    NodePtr, variance, true,
+    NodeLabel, kind, false)
+ESTREE_NODE_1_ARGS(
+    ObjectTypeSpreadProperty, Base,
+    NodePtr, argument, false)
+ESTREE_NODE_5_ARGS(
+    ObjectTypeInternalSlot, Base,
+    NodePtr, id, false,
+    NodePtr, value, false,
+    NodeBoolean, optional, false,
+    NodeBoolean, static, false,
+    NodeBoolean, method, false)
+ESTREE_NODE_2_ARGS(
+    ObjectTypeCallProperty, Base,
+    NodePtr, value, false,
+    NodeBoolean, static, false)
+ESTREE_NODE_5_ARGS(
+    ObjectTypeIndexer, Base,
+    NodePtr, id, true,
+    NodePtr, key, false,
+    NodePtr, value, false,
+    NodeBoolean, static, false,
+    NodePtr, variance, true)
+
+ESTREE_NODE_1_ARGS(
+    Variance, Base,
+    NodeLabel, kind, false)
+
+ESTREE_NODE_1_ARGS(
+    TypeParameterDeclaration, Base,
+    NodeList, params, false)
+ESTREE_NODE_4_ARGS(
+    TypeParameter, Base,
+    NodeLabel, name, false,
+    NodePtr, bound, true,
+    NodePtr, variance, true,
+    NodePtr, default, true)
+ESTREE_NODE_1_ARGS(
+    TypeParameterInstantiation, Base,
+    NodeList, params, false)
+
+ESTREE_NODE_2_ARGS(
+    TypeCastExpression, Base,
+    NodePtr, expression, false,
+    NodePtr, typeAnnotation, false)
+
+ESTREE_NODE_0_ARGS(InferredPredicate, Base)
+ESTREE_NODE_1_ARGS(
+    DeclaredPredicate, Base,
+    NodePtr, value, false)
 
 // ================================================
 
