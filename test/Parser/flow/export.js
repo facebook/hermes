@@ -137,4 +137,41 @@ export {type as type};
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "source": null,
 // CHECK-NEXT:         "exportKind": "value"
+// CHECK-NEXT:       },
+
+export enum X {}
+// CHECK-NEXT:       {
+// CHECK-NEXT:         "type": "ExportNamedDeclaration",
+// CHECK-NEXT:         "declaration": {
+// CHECK-NEXT:           "type": "EnumDeclaration",
+// CHECK-NEXT:           "id": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "X"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "body": {
+// CHECK-NEXT:             "type": "EnumStringBody",
+// CHECK-NEXT:             "members": [],
+// CHECK-NEXT:             "explicitType": false
+// CHECK-NEXT:           }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "specifiers": [],
+// CHECK-NEXT:         "source": null,
+// CHECK-NEXT:         "exportKind": "value"
+// CHECK-NEXT:       },
+
+export default enum X {}
+// CHECK-NEXT:       {
+// CHECK-NEXT:         "type": "ExportDefaultDeclaration",
+// CHECK-NEXT:         "declaration": {
+// CHECK-NEXT:           "type": "EnumDeclaration",
+// CHECK-NEXT:           "id": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "X"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "body": {
+// CHECK-NEXT:             "type": "EnumStringBody",
+// CHECK-NEXT:             "members": [],
+// CHECK-NEXT:             "explicitType": false
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
 // CHECK-NEXT:       }

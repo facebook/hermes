@@ -248,6 +248,7 @@ class JSParserImpl {
   UniqueString *stringIdent_;
   UniqueString *voidIdent_;
   UniqueString *nullIdent_;
+  UniqueString *symbolIdent_;
 
   UniqueString *checksIdent_;
 
@@ -460,6 +461,9 @@ class JSParserImpl {
         return optNext.hasValue() && *optNext == TokenKind::identifier;
       }
       if (check(TokenKind::rw_interface)) {
+        return true;
+      }
+      if (check(TokenKind::rw_enum)) {
         return true;
       }
     }
@@ -1048,6 +1052,45 @@ class JSParserImpl {
 
   Optional<ESTree::IdentifierNode *> reparseTypeAnnotationAsIdentifier(
       ESTree::Node *typeAnnotation);
+
+  enum class EnumKind {
+    String,
+    Number,
+    Boolean,
+    Symbol,
+  };
+
+  static llvm::StringRef enumKindStr(EnumKind kind) {
+    switch (kind) {
+      case EnumKind::String:
+        return "string";
+      case EnumKind::Number:
+        return "number";
+      case EnumKind::Boolean:
+        return "boolean";
+      case EnumKind::Symbol:
+        return "symbol";
+    }
+  }
+
+  static OptValue<EnumKind> getMemberEnumKind(ESTree::Node *member) {
+    switch (member->getKind()) {
+      case ESTree::NodeKind::EnumStringMember:
+        return EnumKind::String;
+      case ESTree::NodeKind::EnumNumberMember:
+        return EnumKind::Number;
+      case ESTree::NodeKind::EnumBooleanMember:
+        return EnumKind::Boolean;
+      default:
+        return None;
+    }
+  }
+
+  Optional<ESTree::Node *> parseEnumDeclaration();
+  Optional<ESTree::Node *> parseEnumBody(
+      OptValue<EnumKind> optKind,
+      bool explicitType);
+  Optional<ESTree::Node *> parseEnumMember();
 #endif
 
   /// RAII to save and restore the current setting of "strict mode".

@@ -104,6 +104,7 @@ void JSParserImpl::initializeIdentifiers() {
   stringIdent_ = lexer_.getIdentifier("string");
   voidIdent_ = lexer_.getIdentifier("void");
   nullIdent_ = lexer_.getIdentifier("null");
+  symbolIdent_ = lexer_.getIdentifier("symbol");
 
   checksIdent_ = lexer_.getIdentifier("%checks");
 
@@ -658,6 +659,14 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclaration(Param param) {
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow()) {
     SMLoc start = tok_->getStartLoc();
+
+    if (check(TokenKind::rw_enum)) {
+      auto optEnum = parseEnumDeclaration();
+      if (!optEnum)
+        return None;
+      return *optEnum;
+    }
+
     TypeAliasKind kind = TypeAliasKind::None;
     if (checkAndEat(declareIdent_))
       kind = TypeAliasKind::Declare;
@@ -5536,6 +5545,17 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
           startLoc,
           *optClassDecl,
           new (context_) ESTree::ExportDefaultDeclarationNode(*optClassDecl));
+#if HERMES_PARSE_FLOW
+    } else if (context_.getParseFlow() && check(TokenKind::rw_enum)) {
+      auto optEnum = parseEnumDeclaration();
+      if (!optEnum) {
+        return None;
+      }
+      return setLocation(
+          startLoc,
+          *optEnum,
+          new (context_) ESTree::ExportDefaultDeclarationNode(*optEnum));
+#endif
     } else {
       // export default AssignmentExpression ;
       auto optExpr = parseAssignmentExpression(ParamIn);

@@ -1895,6 +1895,218 @@ JSParserImpl::reparseTypeAnnotationAsIdentifier(ESTree::Node *typeAnnotation) {
       new (context_) ESTree::IdentifierNode(id, nullptr));
 }
 
+Optional<ESTree::Node *> JSParserImpl::parseEnumDeclaration() {
+  assert(check(TokenKind::rw_enum));
+  SMLoc start = advance().Start;
+
+  auto optIdent = parseBindingIdentifier(Param{});
+  if (!optIdent)
+    return None;
+  ESTree::Node *id = *optIdent;
+
+  OptValue<EnumKind> optKind = llvm::None;
+  if (checkAndEat(ofIdent_)) {
+    if (checkAndEat(stringIdent_)) {
+      optKind = EnumKind::String;
+    } else if (checkAndEat(numberIdent_)) {
+      optKind = EnumKind::Number;
+    } else if (checkAndEat(booleanIdent_)) {
+      optKind = EnumKind::Boolean;
+    } else if (checkAndEat(symbolIdent_)) {
+      optKind = EnumKind::Symbol;
+    }
+  }
+  bool explicitType = optKind.hasValue();
+
+  if (!need(
+          TokenKind::l_brace,
+          "in enum declaration",
+          "start of declaration",
+          start))
+    return None;
+
+  auto optBody = parseEnumBody(optKind, explicitType);
+  if (!optBody)
+    return None;
+
+  return setLocation(
+      start,
+      *optBody,
+      new (context_) ESTree::EnumDeclarationNode(id, *optBody));
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseEnumBody(
+    OptValue<EnumKind> optKind,
+    bool explicitType) {
+  assert(check(TokenKind::l_brace));
+  SMLoc start = advance().Start;
+
+  ESTree::NodeList members{};
+  while (!check(TokenKind::r_brace)) {
+    if (!need(
+            TokenKind::identifier,
+            "in enum declaration",
+            "start of declaration",
+            start))
+      return None;
+
+    auto optMember = parseEnumMember();
+    if (!optMember)
+      return None;
+    ESTree::Node *member = *optMember;
+    OptValue<EnumKind> optMemberKind = getMemberEnumKind(member);
+
+    if (optKind.hasValue()) {
+      // We've already figured out the type of the enum, so ensure that the
+      // new member is compatible with this.
+      if (optMemberKind.hasValue()) {
+        if (*optKind != *optMemberKind) {
+          error(
+              member->getSourceRange(),
+              llvm::Twine("cannot use ") + enumKindStr(*optMemberKind) +
+                  " initializer in " + enumKindStr(*optKind) + " enum");
+          sm_.note(start, "start of enum body", Subsystem::Parser);
+          return None;
+        }
+      }
+    } else {
+      optKind = optMemberKind;
+    }
+
+    members.push_back(*member);
+    if (!checkAndEat(TokenKind::comma))
+      break;
+  }
+
+  if (!members.empty()) {
+    // Ensure that enum members use initializers consistently.
+    // This is vacuously true when `members` is empty, so just make sure
+    // all members use initializers iff the first member does.
+    bool usesInitializers =
+        !isa<ESTree::EnumDefaultedMemberNode>(members.front());
+    for (const ESTree::Node &member : members) {
+      if (usesInitializers != !isa<ESTree::EnumDefaultedMemberNode>(member)) {
+        error(
+            member.getSourceRange(),
+            "enum members need to consistently either all use initializers, "
+            "or use no initializers");
+        sm_.note(
+            members.front().getSourceRange(),
+            "first enum member",
+            Subsystem::Parser);
+        return None;
+      }
+    }
+
+    if (!usesInitializers) {
+      // It's only legal to use defaulted members for string and symbol enums,
+      // because other kinds of enums can't infer values from names.
+      if (optKind.hasValue() && *optKind != EnumKind::String &&
+          *optKind != EnumKind::Symbol) {
+        error(start, "number and boolean enums must use initializers");
+        return None;
+      }
+    }
+  }
+
+  SMLoc end = tok_->getEndLoc();
+  if (!eat(
+          TokenKind::r_brace,
+          JSLexer::GrammarContext::AllowRegExp,
+          "in enum body",
+          "start of body",
+          start))
+    return None;
+
+  if (!optKind.hasValue()) {
+    return setLocation(
+        start,
+        end,
+        new (context_)
+            ESTree::EnumStringBodyNode(std::move(members), explicitType));
+  }
+
+  // There are different node kinds per enum kind.
+  switch (*optKind) {
+    case EnumKind::String:
+      return setLocation(
+          start,
+          end,
+          new (context_)
+              ESTree::EnumStringBodyNode(std::move(members), explicitType));
+    case EnumKind::Number:
+      return setLocation(
+          start,
+          end,
+          new (context_)
+              ESTree::EnumNumberBodyNode(std::move(members), explicitType));
+    case EnumKind::Boolean:
+      return setLocation(
+          start,
+          end,
+          new (context_)
+              ESTree::EnumBooleanBodyNode(std::move(members), explicitType));
+    case EnumKind::Symbol:
+      assert(explicitType && "symbol enums can only be made via explicit type");
+      return setLocation(
+          start,
+          end,
+          new (context_) ESTree::EnumSymbolBodyNode(std::move(members)));
+  }
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseEnumMember() {
+  assert(check(TokenKind::identifier));
+  ESTree::Node *id = setLocation(
+      tok_,
+      tok_,
+      new (context_) ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
+  advance();
+
+  ESTree::Node *member = nullptr;
+  if (checkAndEat(TokenKind::equal)) {
+    // Parse initializer.
+    if (check(TokenKind::rw_true, TokenKind::rw_false)) {
+      member = setLocation(
+          id,
+          tok_,
+          new (context_)
+              ESTree::EnumBooleanMemberNode(id, check(TokenKind::rw_true)));
+    } else if (check(TokenKind::string_literal)) {
+      ESTree::Node *init = setLocation(
+          tok_,
+          tok_,
+          new (context_) ESTree::StringLiteralNode(tok_->getStringLiteral()));
+      member = setLocation(
+          id, tok_, new (context_) ESTree::EnumStringMemberNode(id, init));
+    } else if (check(TokenKind::numeric_literal)) {
+      ESTree::Node *init = setLocation(
+          tok_,
+          tok_,
+          new (context_) ESTree::NumericLiteralNode(tok_->getNumericLiteral()));
+      member = setLocation(
+          id, tok_, new (context_) ESTree::EnumNumberMemberNode(id, init));
+    } else {
+      errorExpected(
+          {TokenKind::rw_true,
+           TokenKind::rw_false,
+           TokenKind::string_literal,
+           TokenKind::numeric_literal},
+          "in enum member initializer",
+          "start of enum member",
+          id->getStartLoc());
+      return None;
+    }
+    advance();
+  } else {
+    member =
+        setLocation(id, id, new (context_) ESTree::EnumDefaultedMemberNode(id));
+  }
+
+  assert(member != nullptr && "member must have been parsed");
+  return member;
+}
+
 #endif
 
 } // namespace detail

@@ -838,6 +838,43 @@ ESTREE_NODE_1_ARGS(
     DeclaredPredicate, Base,
     NodePtr, value, false)
 
+ESTREE_NODE_2_ARGS(
+    EnumDeclaration, Base,
+    NodePtr, id, false,
+    NodePtr, body, false)
+
+ESTREE_NODE_2_ARGS(
+    EnumStringBody, Base,
+    NodeList, members, false,
+    NodeBoolean, explicitType, false)
+ESTREE_NODE_2_ARGS(
+    EnumNumberBody, Base,
+    NodeList, members, false,
+    NodeBoolean, explicitType, false)
+ESTREE_NODE_2_ARGS(
+    EnumBooleanBody, Base,
+    NodeList, members, false,
+    NodeBoolean, explicitType, false)
+ESTREE_NODE_1_ARGS(
+    EnumSymbolBody, Base,
+    NodeList, members, false)
+
+ESTREE_NODE_1_ARGS(
+    EnumDefaultedMember, Base,
+    NodePtr, id, false)
+ESTREE_NODE_2_ARGS(
+    EnumStringMember, Base,
+    NodePtr, id, false,
+    NodePtr, init, false)
+ESTREE_NODE_2_ARGS(
+    EnumNumberMember, Base,
+    NodePtr, id, false,
+    NodePtr, init, false)
+ESTREE_NODE_2_ARGS(
+    EnumBooleanMember, Base,
+    NodePtr, id, false,
+    NodeBoolean, init, false)
+
 // ================================================
 
 ESTREE_FIRST(Cover, Base)
