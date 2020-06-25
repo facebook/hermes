@@ -3041,8 +3041,8 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberSelect(
         expr,
         endLoc,
         debugLoc,
-        new (context_)
-            ESTree::OptionalCallExpressionNode(expr, std::move(argList), true));
+        new (context_) ESTree::OptionalCallExpressionNode(
+            expr, nullptr, std::move(argList), true));
   }
 
   llvm_unreachable("Invalid token in parseMemberSelect");
@@ -3051,6 +3051,7 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberSelect(
 Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
     SMLoc startLoc,
     ESTree::NodePtr expr,
+    ESTree::NodePtr typeArgs,
     bool seenOptionalChain,
     bool optional) {
   assert(checkN(
@@ -3059,6 +3060,25 @@ Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
       TokenKind::template_head));
 
   for (;;) {
+#if HERMES_PARSE_FLOW
+    if (context_.getParseFlow() && !typeArgs && check(TokenKind::less)) {
+      JSLexer::SavePoint savePoint{&lexer_};
+      // Each call in a chain may have type arguments.
+      // As such, we must attempt to parse them upon encountering '<',
+      // but roll back if it just ended up being a comparison operator.
+      SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
+                                                           Subsystem::Parser};
+      auto optTypeArgs = parseTypeArgs();
+      if (optTypeArgs && check(TokenKind::l_paren)) {
+        // Call expression with type arguments.
+        typeArgs = *optTypeArgs;
+      } else {
+        // Failed to parse a call expression with type arguments,
+        // simply roll back and start again.
+        savePoint.restore();
+      }
+    }
+#endif
     if (check(TokenKind::l_paren)) {
       auto debugLoc = tok_->getStartLoc();
       ESTree::NodeList argList;
@@ -3072,14 +3092,17 @@ Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
             endLoc,
             debugLoc,
             new (context_) ESTree::OptionalCallExpressionNode(
-                expr, std::move(argList), optional));
+                expr, typeArgs, std::move(argList), optional));
       } else {
         expr = setLocation(
             expr,
             endLoc,
             debugLoc,
             new (context_)
-                ESTree::CallExpressionNode(expr, std::move(argList)));
+                ESTree::CallExpressionNode(expr, typeArgs, std::move(argList)));
+        // typeArgs have been used, discard them so the next item in the call
+        // chain can populate them if necessary.
+        typeArgs = nullptr;
       }
     } else if (checkN(
                    TokenKind::l_square,
@@ -3221,7 +3244,7 @@ Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpression() {
             startLoc))
       return None;
 
-    return parseCallExpression(startLoc, import, false, false);
+    return parseCallExpression(startLoc, import, nullptr, false, false);
   }
 
   auto optExpr = parseNewExpressionOrOptionalExpression(IsConstructorCall::No);
@@ -3234,13 +3257,32 @@ Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpression() {
       llvm::isa<ESTree::OptionalMemberExpressionNode>(expr) ||
       llvm::isa<ESTree::OptionalCallExpressionNode>(expr);
 
+  ESTree::Node *typeArgs = nullptr;
+#if HERMES_PARSE_FLOW
+  if (context_.getParseFlow() && check(TokenKind::less)) {
+    JSLexer::SavePoint savePoint{&lexer_};
+    // Suppress messages from the parser while still displaying lexer messages.
+    SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
+                                                         Subsystem::Parser};
+    auto optTypeArgs = parseTypeArgs();
+    if (optTypeArgs && check(TokenKind::l_paren)) {
+      // Call expression with type arguments.
+      typeArgs = *optTypeArgs;
+    } else {
+      // Failed to parse a call expression with type arguments,
+      // simply roll back and start again.
+      savePoint.restore();
+    }
+  }
+#endif
+
   // Is this a CallExpression?
   if (checkN(
           TokenKind::l_paren,
           TokenKind::no_substitution_template,
           TokenKind::template_head)) {
-    auto optCallExpr =
-        parseCallExpression(startLoc, expr, seenOptionalChain, optional);
+    auto optCallExpr = parseCallExpression(
+        startLoc, expr, typeArgs, seenOptionalChain, optional);
     if (!optCallExpr)
       return None;
     expr = optCallExpr.getValue();

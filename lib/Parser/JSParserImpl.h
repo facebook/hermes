@@ -742,12 +742,14 @@ class JSParserImpl {
 
   /// \param startLoc the start location of the expression, used for error
   ///     display.
+  /// \param typeArgs the optional type arguments parsed before the '('.
   /// \param seenOptionalChain true when `?.` is used in the chain leading
   ///     to this call expression
   /// \param optional true when `?.` is used immediately prior to the Arguments.
   Optional<ESTree::Node *> parseCallExpression(
       SMLoc startLoc,
       ESTree::NodePtr expr,
+      ESTree::NodePtr typeArgs,
       bool seenOptionalChain,
       bool optional);
 

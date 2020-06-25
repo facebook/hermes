@@ -250,16 +250,20 @@ ESTREE_NODE_1_ARGS(
     NodePtr, argument, false)
 
 ESTREE_FIRST(CallExpressionLike, Base)
-ESTREE_NODE_2_ARGS(
+ESTREE_NODE_3_ARGS(
     CallExpression, CallExpressionLike,
     NodePtr, callee, false,
+    NodePtr, typeArguments, true,
     NodeList, arguments, false)
+ESTREE_IGNORE_IF_EMPTY(CallExpression, typeArguments)
 
-ESTREE_NODE_3_ARGS(
+ESTREE_NODE_4_ARGS(
     OptionalCallExpression, CallExpressionLike,
     NodePtr, callee, false,
+    NodePtr, typeArguments, true,
     NodeList, arguments, false,
     NodeBoolean, optional, false)
+ESTREE_IGNORE_IF_EMPTY(OptionalCallExpression, typeArguments)
 ESTREE_LAST(CallExpressionLike)
 
 ESTREE_NODE_3_ARGS(
