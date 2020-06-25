@@ -392,6 +392,17 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
   if (!parseFormalParameters(param, paramList))
     return None;
 
+  ESTree::Node *returnType = nullptr;
+#if HERMES_PARSE_FLOW
+  if (context_.getParseFlow() &&
+      checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
+    auto optRet = parseTypeAnnotation(true);
+    if (!optRet)
+      return None;
+    returnType = *optRet;
+  }
+#endif
+
   // {
   if (!need(
           TokenKind::l_brace,
@@ -418,7 +429,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
           std::move(paramList),
           nullptr,
           nullptr,
-          nullptr,
+          returnType,
           isGenerator,
           isAsync);
       // Initialize the node with a blank body.
@@ -430,7 +441,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
           std::move(paramList),
           nullptr,
           nullptr,
-          nullptr,
+          returnType,
           isGenerator,
           isAsync);
       // Initialize the node with a blank body.
@@ -460,7 +471,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
         std::move(paramList),
         body,
         nullptr,
-        nullptr,
+        returnType,
         isGenerator,
         isAsync);
     decl->strictness = ESTree::makeStrictness(isStrictMode());
@@ -471,7 +482,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
         std::move(paramList),
         body,
         nullptr,
-        nullptr,
+        returnType,
         isGenerator,
         isAsync);
     expr->strictness = ESTree::makeStrictness(isStrictMode());
@@ -2378,6 +2389,18 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
               "start of getter declaration",
               startLoc))
         return None;
+
+      ESTree::Node *returnType = nullptr;
+#if HERMES_PARSE_FLOW
+      if (context_.getParseFlow() &&
+          checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
+        auto optRet = parseTypeAnnotation(true);
+        if (!optRet)
+          return None;
+        returnType = *optRet;
+      }
+#endif
+
       if (!need(
               TokenKind::l_brace,
               "in getter declaration",
@@ -2394,7 +2417,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           ESTree::NodeList{},
           block.getValue(),
           nullptr,
-          nullptr,
+          returnType,
           false,
           false);
       funcExpr->strictness = ESTree::makeStrictness(isStrictMode());
@@ -2457,6 +2480,18 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
               "start of setter declaration",
               startLoc))
         return None;
+
+      ESTree::Node *returnType = nullptr;
+#if HERMES_PARSE_FLOW
+      if (context_.getParseFlow() &&
+          checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
+        auto optRet = parseTypeAnnotation(true);
+        if (!optRet)
+          return None;
+        returnType = *optRet;
+      }
+#endif
+
       if (!need(
               TokenKind::l_brace,
               "in setter declaration",
@@ -2473,7 +2508,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           std::move(params),
           block.getValue(),
           nullptr,
-          nullptr,
+          returnType,
           false,
           false);
       funcExpr->strictness = ESTree::makeStrictness(isStrictMode());
@@ -2585,6 +2620,16 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
     if (!parseFormalParameters(Param{}, args))
       return None;
 
+    ESTree::Node *returnType = nullptr;
+#if HERMES_PARSE_FLOW
+    if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
+      auto optRet = parseTypeAnnotation(true);
+      if (!optRet)
+        return None;
+      returnType = *optRet;
+    }
+#endif
+
     if (!need(
             TokenKind::l_brace,
             "in method definition",
@@ -2601,7 +2646,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
         std::move(args),
         optBody.getValue(),
         nullptr,
-        nullptr,
+        returnType,
         generator,
         async);
     funcExpr->strictness = ESTree::makeStrictness(isStrictMode());
@@ -3782,6 +3827,16 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
   if (!parseFormalParameters(Param{}, args))
     return None;
 
+  ESTree::Node *returnType = nullptr;
+#if HERMES_PARSE_FLOW
+  if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
+    auto optRet = parseTypeAnnotation(true);
+    if (!optRet)
+      return None;
+    returnType = *optRet;
+  }
+#endif
+
   if (!need(
           TokenKind::l_brace,
           "in method definition",
@@ -3802,7 +3857,7 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
           std::move(args),
           optBody.getValue(),
           nullptr,
-          nullptr,
+          returnType,
           special == SpecialKind::Generator ||
               special == SpecialKind::AsyncGenerator,
           special == SpecialKind::Async ||
