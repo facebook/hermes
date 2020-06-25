@@ -195,12 +195,44 @@ TEST(JSLexerTest, NumberTest) {
 #undef _GEN_TESTS
 }
 
+TEST(JSLexerTest, NumericSeparatorTest) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext diag(sm);
+
+  JSLexer lex(
+      " 1_2 12"
+      " 0x1_2 0x12"
+      " 0xdead_beef 0xdeadbeef"
+      " 0b1_1 0b11"
+      " 0o1_1 0o11"
+      " 123_456_789 123456789"
+      " 12_345e1_2 12345e12"
+      " 1_1.1_2 1_1.12",
+      sm,
+      alloc);
+
+  const Token *tok = lex.advance();
+  while (tok->getKind() != TokenKind::eof) {
+    ASSERT_EQ(TokenKind::numeric_literal, tok->getKind());
+    double withSep = tok->getNumericLiteral();
+
+    tok = lex.advance();
+    ASSERT_EQ(TokenKind::numeric_literal, tok->getKind());
+    double noSep = tok->getNumericLiteral();
+
+    ASSERT_EQ(withSep, noSep);
+    tok = lex.advance();
+  }
+}
+
 TEST(JSLexerTest, BadNumbersTest) {
   JSLexer::Allocator alloc;
   SourceErrorManager sm;
   DiagContext diag(sm);
 
-  JSLexer lex("123hhhh; 123e ; .4.5", sm, alloc);
+  JSLexer lex(
+      "123hhhh; 123e ; .4.5 ; 0_7 1__23 0b_11 123_ 1._2 12e_3", sm, alloc);
 
   ASSERT_EQ(TokenKind::numeric_literal, lex.advance()->getKind());
   ASSERT_EQ(1, diag.getErrCountClear());
@@ -216,6 +248,22 @@ TEST(JSLexerTest, BadNumbersTest) {
   ASSERT_EQ(0, diag.getErrCountClear());
   ASSERT_EQ(TokenKind::numeric_literal, lex.advance()->getKind());
   ASSERT_EQ(0, diag.getErrCountClear());
+
+  ASSERT_EQ(TokenKind::semi, lex.advance()->getKind());
+
+  lex.setStrictMode(false);
+  ASSERT_EQ(TokenKind::numeric_literal, lex.advance()->getKind());
+  ASSERT_EQ(1, diag.getErrCountClear());
+  ASSERT_EQ(TokenKind::numeric_literal, lex.advance()->getKind());
+  ASSERT_EQ(2, diag.getErrCountClear());
+  ASSERT_EQ(TokenKind::numeric_literal, lex.advance()->getKind());
+  ASSERT_EQ(1, diag.getErrCountClear());
+  ASSERT_EQ(TokenKind::numeric_literal, lex.advance()->getKind());
+  ASSERT_EQ(1, diag.getErrCountClear());
+  ASSERT_EQ(TokenKind::numeric_literal, lex.advance()->getKind());
+  ASSERT_EQ(1, diag.getErrCountClear());
+  ASSERT_EQ(TokenKind::numeric_literal, lex.advance()->getKind());
+  ASSERT_EQ(1, diag.getErrCountClear());
 
   ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
 }

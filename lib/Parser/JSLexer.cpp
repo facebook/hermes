@@ -1137,6 +1137,9 @@ void JSLexer::scanNumber() {
   bool ok = true;
   const char *start = curCharPtr_;
 
+  // True when we encounter the numeric literal separator: '_'.
+  bool seenSeparator = false;
+
   // True when we encounter a legacy octal number (starts with '0').
   bool legacyOctal = false;
 
@@ -1167,10 +1170,13 @@ void JSLexer::scanNumber() {
     }
   }
 
-  while (
-      isdigit(*curCharPtr_) ||
-      (radix == 16 && (*curCharPtr_ | 32) >= 'a' && (*curCharPtr_ | 32) <= 'f'))
+  while (isdigit(*curCharPtr_) ||
+         (radix == 16 && (*curCharPtr_ | 32) >= 'a' &&
+          (*curCharPtr_ | 32) <= 'f') ||
+         (*curCharPtr_ == '_')) {
+    seenSeparator |= *curCharPtr_ == '_';
     ++curCharPtr_;
+  }
 
   if (radix == 10) { // which means it is not necessarily an integer
     if (*curCharPtr_ == '.') {
@@ -1190,8 +1196,10 @@ fraction:
   // We arrive here after we have consumed the decimal dot ".".
   //
   real = true;
-  while (isdigit(*curCharPtr_))
+  while (isdigit(*curCharPtr_) || *curCharPtr_ == '_') {
+    seenSeparator |= *curCharPtr_ == '_';
     ++curCharPtr_;
+  }
 
   if ((*curCharPtr_ | 32) == 'e') {
     ++curCharPtr_;
@@ -1207,9 +1215,10 @@ exponent:
   if (*curCharPtr_ == '+' || *curCharPtr_ == '-')
     ++curCharPtr_;
   if (isdigit(*curCharPtr_)) {
-    do
+    do {
+      seenSeparator |= *curCharPtr_ == '_';
       ++curCharPtr_;
-    while (isdigit(*curCharPtr_));
+    } while (isdigit(*curCharPtr_) || *curCharPtr_ == '_');
   } else {
     ok = false;
   }
@@ -1231,7 +1240,9 @@ end:
   if (!ok) {
     error(token_.getSourceRange(), "invalid numeric literal");
     val = std::numeric_limits<double>::quiet_NaN();
-  } else if (!real && radix == 10 && curCharPtr_ - start <= 9) {
+  } else if (
+      !real && radix == 10 && curCharPtr_ - start <= 9 &&
+      LLVM_LIKELY(!seenSeparator)) {
     // If this is a decimal integer of at most 9 digits (log10(2**31-1), it can
     // fit in a 32-bit integer. Use a faster conversion.
     int32_t ival = *start - '0';
@@ -1242,7 +1253,35 @@ end:
     // We need a zero-terminated buffer for hermes_g_strtod().
     llvm::SmallString<32> buf;
     buf.reserve(curCharPtr_ - start + 1);
-    buf.append(start, curCharPtr_);
+    if (LLVM_UNLIKELY(seenSeparator)) {
+      for (const char *it = start; it != curCharPtr_; ++it) {
+        if (LLVM_LIKELY(*it != '_')) {
+          buf.push_back(*it);
+        } else {
+          // Check to ensure that '_' is surrounded by digits.
+          // This is safe because the source buffer is zero-terminated and
+          // we know that the numeric literal didn't start with '_'.
+          // Note that we could have a 0b_11 literal, but we'd still fail
+          // properly because of the radix==16 check.
+          char prev = *(it - 1);
+          char next = *(it + 1);
+          if (!isdigit(prev) &&
+              !(radix == 16 && 'a' <= (prev | 32) && (prev | 32) <= 'f')) {
+            error(
+                token_.getSourceRange(),
+                "numeric separator must come after a digit");
+          } else if (
+              !isdigit(next) &&
+              !(radix == 16 && 'a' <= (next | 32) && (next | 32) <= 'f')) {
+            error(
+                token_.getSourceRange(),
+                "numeric separator must come before a digit");
+          }
+        }
+      }
+    } else {
+      buf.append(start, curCharPtr_);
+    }
     buf.push_back(0);
     char *endPtr;
     val = ::hermes_g_strtod(buf.data(), &endPtr);
@@ -1274,7 +1313,7 @@ end:
         // If we encounter a "legacy" octal number (starting with a '0') but it
         // contains '8' or '9' we interpret it as decimal.
         for (auto *scanPtr = start; scanPtr < curCharPtr_; ++scanPtr) {
-          if (LLVM_UNLIKELY(*scanPtr >= '8')) {
+          if (LLVM_UNLIKELY(*scanPtr >= '8') && LLVM_LIKELY(*scanPtr != '_')) {
             sm_.warning(
                 token_.getSourceRange(),
                 "Numeric literal starts with 0 but contains an 8 or 9 digit. "
@@ -1283,8 +1322,15 @@ end:
             break;
           }
         }
+
+        // LegacyOctalLikeDecimalIntegerLiteral cannot contain separators.
+        if (LLVM_UNLIKELY(seenSeparator)) {
+          error(
+              token_.getSourceRange(),
+              "Numeric separator cannot be used in literal after leading 0");
+        }
       }
-      auto parsedInt = parseIntWithRadix(
+      auto parsedInt = parseIntWithRadix</* AllowNumericSeparator */ true>(
           llvm::ArrayRef<char>{start, (size_t)(curCharPtr_ - start)}, radix);
       if (!parsedInt) {
         error(token_.getSourceRange(), "invalid integer literal");

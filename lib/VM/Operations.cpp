@@ -357,7 +357,8 @@ CallResult<PseudoHandle<StringPrimitive>> toString_RJS(
 }
 
 double parseIntWithRadix(const StringView str, int radix) {
-  auto res = hermes::parseIntWithRadix(str, radix);
+  auto res =
+      hermes::parseIntWithRadix</* AllowNumericSeparator */ false>(str, radix);
   return res ? res.getValue() : std::numeric_limits<double>::quiet_NaN();
 }
 

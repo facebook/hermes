@@ -29,7 +29,9 @@ namespace {
   }
   for (size_t i = 0; i < sourceHash.size(); ++i) {
     auto byte = llvm::StringRef{hashStr.data() + (i * 2), 2};
-    sourceHash[i] = ::hermes::parseIntWithRadix(byte, 16).getValue();
+    sourceHash[i] =
+        ::hermes::parseIntWithRadix</* AllowNumericSeparator */ false>(byte, 16)
+            .getValue();
   }
   return sourceHash;
 }
