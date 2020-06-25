@@ -466,8 +466,6 @@ TEST_F(GCBasicsTest, ExtraBytes) {
 #endif
 }
 
-// Hades doesn't do any ID tracking yet, or GCEventKind monitoring.
-#ifndef HERMESVM_GC_HADES
 /// Test that the id is set to a unique number for each allocated object.
 TEST_F(GCBasicsTest, TestIDIsUnique) {
   auto *cell = Dummy::create(rt);
@@ -486,6 +484,8 @@ TEST_F(GCBasicsTest, TestIDPersistsAcrossCollections) {
   EXPECT_EQ(idBefore, idAfter);
 }
 
+// Hades doesn't do any GCEventKind monitoring.
+#ifndef HERMESVM_GC_HADES
 TEST(GCCallbackTest, TestCallbackInvoked) {
   std::vector<GCEventKind> ev;
   auto cb = [&ev](GCEventKind kind, const char *) { ev.push_back(kind); };

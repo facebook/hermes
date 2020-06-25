@@ -1589,12 +1589,38 @@ inline void Runtime::addCustomWeakRootsFunction(
 
 template <bool fixedSize, HasFinalizer hasFinalizer>
 inline void *Runtime::alloc(uint32_t sz) {
-  return heap_.alloc<fixedSize, hasFinalizer>(sz);
+#if !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && !defined(NDEBUG)
+  // If allocation location tracking is enabled we implicitly call
+  // getCurrentIP() via newAlloc() below. Even if this isn't enabled, we
+  // always call getCurrentIP() in a debug build as this has the effect of
+  // asserting the IP is correctly set (not invalidated) at this point. This
+  // allows us to leverage our whole test-suite to find missing cases of
+  // CAPTURE_IP* macros in the interpreter loop.
+  (void)getCurrentIP();
+#endif
+  void *ptr = heap_.alloc<fixedSize, hasFinalizer>(sz);
+#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+  heap_.getAllocationLocationTracker().newAlloc(ptr);
+#endif
+  return ptr;
 }
 
 template <HasFinalizer hasFinalizer>
 inline void *Runtime::allocLongLived(uint32_t size) {
-  return heap_.allocLongLived<hasFinalizer>(size);
+#if !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && !defined(NDEBUG)
+  // If allocation location tracking is enabled we implicitly call
+  // getCurrentIP() via newAlloc() below. Even if this isn't enabled, we always
+  // call getCurrentIP() in a debug build as this has the effect of
+  // asserting the IP is correctly set (not invalidated) at this point. This
+  // allows us to leverage our whole test-suite to find missing cases of
+  // CAPTURE_IP* macros in the interpreter loop.
+  (void)getCurrentIP();
+#endif
+  void *ptr = heap_.allocLongLived<hasFinalizer>(size);
+#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+  heap_.getAllocationLocationTracker().newAlloc(ptr);
+#endif
+  return ptr;
 }
 
 template <typename T>

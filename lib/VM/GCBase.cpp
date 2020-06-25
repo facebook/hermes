@@ -4,17 +4,19 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
+
 #define DEBUG_TYPE "gc"
 #include "hermes/VM/GC.h"
 
 #include "hermes/Platform/Logging.h"
 #include "hermes/Support/ErrorHandling.h"
-
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/CellKind.h"
+#include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/SlotAcceptorDefault.h"
 #include "hermes/VM/VTable.h"
 
 #include "llvm/Support/Debug.h"
@@ -128,6 +130,392 @@ std::error_code GCBase::createSnapshotToFile(const std::string &fileName) {
   }
   createSnapshot(os);
   return std::error_code{};
+}
+
+namespace {
+
+constexpr GCBase::IDTracker::ReservedObjectID objectIDForRootSection(
+    RootAcceptor::Section section) {
+  // Since root sections start at zero, and in IDTracker the root sections
+  // start one past the reserved super root, this number can be added to
+  // do conversions.
+  return static_cast<GCBase::IDTracker::ReservedObjectID>(
+      static_cast<uint64_t>(GCBase::IDTracker::ReservedObjectID::Root) + 1 +
+      static_cast<uint64_t>(section));
+}
+
+// Abstract base class for all snapshot acceptors.
+struct SnapshotAcceptor : public SlotAcceptorWithNamesDefault {
+  using SlotAcceptorWithNamesDefault::accept;
+  using SlotAcceptorWithNamesDefault::SlotAcceptorWithNamesDefault;
+
+  SnapshotAcceptor(GC &gc, HeapSnapshot &snap)
+      : SlotAcceptorWithNamesDefault(gc), snap_(snap) {}
+
+  void accept(HermesValue &hv, const char *name) override {
+    if (hv.isPointer()) {
+      auto ptr = hv.getPointer();
+      accept(ptr, name);
+    }
+  }
+
+ protected:
+  HeapSnapshot &snap_;
+};
+
+struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
+  using SnapshotAcceptor::accept;
+
+  PrimitiveNodeAcceptor(GC &gc, HeapSnapshot &snap)
+      : SnapshotAcceptor(gc, snap) {}
+
+  // Do nothing for any value except a number.
+  void accept(void *&ptr, const char *name) override {}
+
+  void accept(HermesValue &hv, const char *) override {
+    if (hv.isNumber()) {
+      seenNumbers_.insert(hv.getNumber());
+    }
+  }
+
+  void writeAllNodes() {
+    // Always write out the nodes for singletons.
+    snap_.beginNode();
+    snap_.endNode(
+        HeapSnapshot::NodeType::Object,
+        "undefined",
+        static_cast<HeapSnapshot::NodeID>(
+            GCBase::IDTracker::ReservedObjectID::Undefined),
+        0,
+        0);
+    snap_.beginNode();
+    snap_.endNode(
+        HeapSnapshot::NodeType::Object,
+        "null",
+        static_cast<HeapSnapshot::NodeID>(
+            GCBase::IDTracker::ReservedObjectID::Null),
+        0,
+        0);
+    snap_.beginNode();
+    snap_.endNode(
+        HeapSnapshot::NodeType::Object,
+        "true",
+        static_cast<HeapSnapshot::NodeID>(
+            GCBase::IDTracker::ReservedObjectID::True),
+        0,
+        0);
+    snap_.beginNode();
+    snap_.endNode(
+        HeapSnapshot::NodeType::Object,
+        "false",
+        static_cast<HeapSnapshot::NodeID>(
+            GCBase::IDTracker::ReservedObjectID::False),
+        0,
+        0);
+    for (double num : seenNumbers_) {
+      // A number never has any edges, so just make a node for it.
+      snap_.beginNode();
+      // Convert the number value to a string, according to the JS conversion
+      // routines.
+      char buf[hermes::NUMBER_TO_STRING_BUF_SIZE];
+      size_t len = hermes::numberToString(num, buf, sizeof(buf));
+      snap_.endNode(
+          HeapSnapshot::NodeType::Number,
+          llvm::StringRef{buf, len},
+          gc.getIDTracker().getNumberID(num),
+          // Numbers are zero-sized in the heap because they're stored inline.
+          0,
+          0);
+    }
+  }
+
+ private:
+  // Track all numbers that are seen in a heap pass, and only emit one node for
+  // each of them.
+  llvm::DenseSet<double, GCBase::IDTracker::DoubleComparator> seenNumbers_;
+};
+
+struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
+  using SnapshotAcceptor::accept;
+
+  EdgeAddingAcceptor(GC &gc, HeapSnapshot &snap) : SnapshotAcceptor(gc, snap) {}
+
+  void accept(void *&ptr, const char *name) override {
+    if (!ptr) {
+      return;
+    }
+    snap_.addNamedEdge(
+        HeapSnapshot::EdgeType::Internal,
+        llvm::StringRef::withNullAsEmpty(name),
+        gc.getObjectID(ptr));
+  }
+
+  void accept(HermesValue &hv, const char *name) override {
+    if (hv.isPointer()) {
+      auto ptr = hv.getPointer();
+      accept(ptr, name);
+    } else if (auto id = gc.getSnapshotID(hv)) {
+      snap_.addNamedEdge(
+          HeapSnapshot::EdgeType::Internal,
+          llvm::StringRef::withNullAsEmpty(name),
+          id.getValue());
+    }
+  }
+
+  void accept(WeakRefBase &wr) override {
+    WeakRefSlot *slot = wr.unsafeGetSlot(mutexRef());
+    if (slot->state() == WeakSlotState::Free) {
+      // If the slot is free, there's no edge to add.
+      return;
+    }
+    if (!slot->hasPointer()) {
+      // Filter out empty refs from adding edges.
+      return;
+    }
+    // Assume all weak pointers have no names, and are stored in an array-like
+    // structure.
+    std::string indexName = oscompat::to_string(nextEdge_++);
+    snap_.addNamedEdge(
+        HeapSnapshot::EdgeType::Weak,
+        indexName,
+        gc.getObjectID(slot->getPointer()));
+  }
+
+  const WeakRefMutex &mutexRef() override {
+    return gc.weakRefMutex();
+  }
+
+ private:
+  // For unnamed edges, use indices instead.
+  unsigned nextEdge_{0};
+};
+
+struct SnapshotRootSectionAcceptor : public SnapshotAcceptor,
+                                     public WeakRootAcceptorDefault {
+  using SnapshotAcceptor::accept;
+  using WeakRootAcceptor::acceptWeak;
+
+  SnapshotRootSectionAcceptor(GC &gc, HeapSnapshot &snap)
+      : SnapshotAcceptor(gc, snap), WeakRootAcceptorDefault(gc) {}
+
+  void accept(void *&, const char *) override {
+    // While adding edges to root sections, there's no need to do anything for
+    // pointers.
+  }
+
+  void accept(WeakRefBase &wr) override {
+    // Same goes for weak refs.
+  }
+
+  void acceptWeak(void *&ptr) override {
+    // Same goes for weak pointers.
+  }
+
+  void beginRootSection(Section section) override {
+    // Make an element edge from the super root to each root section.
+    snap_.addIndexedEdge(
+        HeapSnapshot::EdgeType::Element,
+        rootSectionNum_++,
+        static_cast<HeapSnapshot::NodeID>(objectIDForRootSection(section)));
+  }
+
+  void endRootSection() override {
+    // Do nothing for the end of the root section.
+  }
+
+  const WeakRefMutex &mutexRef() override {
+    return gc.weakRefMutex();
+  }
+
+ private:
+  // v8's roots start numbering at 1.
+  int rootSectionNum_{1};
+};
+
+struct SnapshotRootAcceptor : public SnapshotAcceptor,
+                              public WeakRootAcceptorDefault {
+  using SnapshotAcceptor::accept;
+  using WeakRootAcceptor::acceptWeak;
+
+  SnapshotRootAcceptor(GC &gc, HeapSnapshot &snap)
+      : SnapshotAcceptor(gc, snap), WeakRootAcceptorDefault(gc) {}
+
+  void accept(void *&ptr, const char *name) override {
+    pointerAccept(ptr, name, false);
+  }
+
+  void acceptWeak(void *&ptr) override {
+    pointerAccept(ptr, nullptr, true);
+  }
+
+  void accept(WeakRefBase &wr) override {
+    WeakRefSlot *slot = wr.unsafeGetSlot(mutexRef());
+    if (slot->state() == WeakSlotState::Free) {
+      // If the slot is free, there's no edge to add.
+      return;
+    }
+    if (!slot->hasPointer()) {
+      // Filter out empty refs from adding edges.
+      return;
+    }
+    pointerAccept(slot->getPointer(), nullptr, true);
+  }
+
+  void beginRootSection(Section section) override {
+    assert(
+        currentSection_ == Section::InvalidSection &&
+        "beginRootSection called while previous section is open");
+    snap_.beginNode();
+    currentSection_ = section;
+  }
+
+  void endRootSection() override {
+    // A root section creates a synthetic node with that name and makes edges
+    // come from that root.
+    static const char *rootNames[] = {
+// Parentheses around the name is adopted from V8's roots.
+#define ROOT_SECTION(name) "(" #name ")",
+#include "hermes/VM/RootSections.def"
+    };
+    snap_.endNode(
+        HeapSnapshot::NodeType::Synthetic,
+        rootNames[static_cast<unsigned>(currentSection_)],
+        static_cast<HeapSnapshot::NodeID>(
+            objectIDForRootSection(currentSection_)),
+        // The heap visualizer doesn't like it when these synthetic nodes have a
+        // size (it describes them as living in the heap).
+        0,
+        0);
+    currentSection_ = Section::InvalidSection;
+    // Reset the edge counter, so each root section's unnamed edges start at
+    // zero.
+    nextEdge_ = 0;
+  }
+
+  const WeakRefMutex &mutexRef() override {
+    return gc.weakRefMutex();
+  }
+
+ private:
+  llvm::DenseSet<uint64_t> seenIDs_;
+  // For unnamed edges, use indices instead.
+  unsigned nextEdge_{0};
+  Section currentSection_{Section::InvalidSection};
+
+  void pointerAccept(void *ptr, const char *name, bool weak) {
+    assert(
+        currentSection_ != Section::InvalidSection &&
+        "accept called outside of begin/end root section pair");
+    if (!ptr) {
+      return;
+    }
+
+    const auto id = gc.getObjectID(ptr);
+    if (!seenIDs_.insert(id).second) {
+      // Already seen this node, don't add another edge.
+      return;
+    }
+    auto nameRef = llvm::StringRef::withNullAsEmpty(name);
+    if (!nameRef.empty()) {
+      snap_.addNamedEdge(
+          weak ? HeapSnapshot::EdgeType::Weak
+               : HeapSnapshot::EdgeType::Internal,
+          nameRef,
+          id);
+    } else if (weak) {
+      std::string numericName = oscompat::to_string(nextEdge_++);
+      snap_.addNamedEdge(HeapSnapshot::EdgeType::Weak, numericName.c_str(), id);
+    } else {
+      // Unnamed edges get indices.
+      snap_.addIndexedEdge(HeapSnapshot::EdgeType::Element, nextEdge_++, id);
+    }
+  }
+};
+
+} // namespace
+
+void GCBase::createSnapshot(GC *gc, llvm::raw_ostream &os) {
+  JSONEmitter json(os);
+  HeapSnapshot snap(json, gcCallbacks_->getStackTracesTree());
+
+  const auto rootScan = [gc, &snap]() {
+    {
+      // Make the super root node and add edges to each root section.
+      SnapshotRootSectionAcceptor rootSectionAcceptor(*gc, snap);
+      snap.beginNode();
+      gc->markRoots(rootSectionAcceptor, true);
+      gc->markWeakRoots(rootSectionAcceptor);
+      snap.endNode(
+          HeapSnapshot::NodeType::Synthetic,
+          "(GC Roots)",
+          static_cast<HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::Root),
+          0,
+          0);
+    }
+    {
+      // Make a node for each root section and add edges into the actual heap.
+      // Within a root section, there might be duplicates. The root acceptor
+      // filters out duplicate edges because there cannot be duplicate edges to
+      // nodes reachable from the super root.
+      SnapshotRootAcceptor rootAcceptor(*gc, snap);
+      gc->markRoots(rootAcceptor, true);
+      gc->markWeakRoots(rootAcceptor);
+    }
+  };
+
+  snap.beginSection(HeapSnapshot::Section::Nodes);
+  rootScan();
+  // Add all primitive values as nodes if they weren't added before.
+  // This must be done as a step before adding any edges to these nodes.
+  // In particular, custom edge adders might try to add edges to primitives that
+  // haven't been recorded yet.
+  // The acceptor is recording some state between objects, so define it outside
+  // the loop.
+  PrimitiveNodeAcceptor primitiveAcceptor(*gc, snap);
+  SlotVisitorWithNames<PrimitiveNodeAcceptor> primitiveVisitor{
+      primitiveAcceptor};
+  // Add a node for each object in the heap.
+  const auto snapshotForObject = [&snap, &primitiveVisitor, gc](GCCell *cell) {
+    auto &allocationLocationTracker = gc->getAllocationLocationTracker();
+    // First add primitive nodes.
+    GCBase::markCellWithNames(primitiveVisitor, cell, gc);
+    EdgeAddingAcceptor acceptor(*gc, snap);
+    SlotVisitorWithNames<EdgeAddingAcceptor> visitor(acceptor);
+    // Allow nodes to add extra nodes not in the JS heap.
+    cell->getVT()->snapshotMetaData.addNodes(cell, gc, snap);
+    snap.beginNode();
+    // Add all internal edges first.
+    GCBase::markCellWithNames(visitor, cell, gc);
+    // Allow nodes to add custom edges not represented by metadata.
+    cell->getVT()->snapshotMetaData.addEdges(cell, gc, snap);
+    auto stackTracesTreeNode =
+        allocationLocationTracker.getStackTracesTreeNodeForAlloc(cell);
+    snap.endNode(
+        cell->getVT()->snapshotMetaData.nodeType(),
+        cell->getVT()->snapshotMetaData.nameForNode(cell, gc),
+        gc->getObjectID(cell),
+        cell->getAllocatedSize(),
+        stackTracesTreeNode ? stackTracesTreeNode->id : 0);
+  };
+  gc->forAllObjs(snapshotForObject);
+  // Write the singleton number nodes into the snapshot.
+  primitiveAcceptor.writeAllNodes();
+  snap.endSection(HeapSnapshot::Section::Nodes);
+
+  snap.beginSection(HeapSnapshot::Section::Edges);
+  rootScan();
+  // No need to run the primitive scan again, as it only adds nodes, not edges.
+  // Add edges between objects in the heap.
+  gc->forAllObjs(snapshotForObject);
+  snap.endSection(HeapSnapshot::Section::Edges);
+
+  snap.emitAllocationTraceInfo();
+
+  snap.beginSection(HeapSnapshot::Section::Locations);
+  gc->forAllObjs([&snap, gc](GCCell *cell) {
+    cell->getVT()->snapshotMetaData.addLocations(cell, gc, snap);
+  });
+  snap.endSection(HeapSnapshot::Section::Locations);
 }
 
 void GCBase::checkTripwire(size_t dataSize) {

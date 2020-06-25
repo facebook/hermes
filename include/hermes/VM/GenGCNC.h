@@ -130,9 +130,6 @@ class GenGC final : public GCBase {
   template <bool fixedSize = true, HasFinalizer hasFinalizer = HasFinalizer::No>
   inline void *alloc(uint32_t sz);
 
-  template <bool fixedSize = true, HasFinalizer hasFinalizer = HasFinalizer::No>
-  inline void *allocImpl(uint32_t sz);
-
 #ifndef NDEBUG
   /// Allocation path we use in debug builds, where we potentially follow
   /// different code paths to test things.
@@ -150,9 +147,6 @@ class GenGC final : public GCBase {
   /// necessary to create room).
   template <HasFinalizer hasFinalizer = HasFinalizer::No>
   inline void *allocLongLived(uint32_t size);
-
-  template <HasFinalizer hasFinalizer = HasFinalizer::No>
-  inline void *allocLongLivedImpl(uint32_t size);
 
   /// Returns whether an external allocation of the given \p size fits
   /// within the maximum heap size.  (Note that this does not guarantee that the
@@ -939,24 +933,6 @@ ToType *vmcast_during_gc(GCCell *cell, GC *gc) {
 
 template <bool fixedSize, HasFinalizer hasFinalizer>
 inline void *GenGC::alloc(uint32_t sz) {
-  auto ptr = allocImpl<fixedSize, hasFinalizer>(sz);
-#if !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && !defined(NDEBUG)
-  // If allocation location tracking is enabled we implicitly call
-  // getCurrentIP() via newAlloc() below. Even if this isn't enabled, we
-  // always call getCurrentIPSlow() in a debug build as this has the effect of
-  // asserting the IP is correctly set (not invalidated) at this point. This
-  // allows us to leverage our whole test-suite to find missing cases of
-  // CAPTURE_IP* macros in the interpreter loop.
-  (void)gcCallbacks_->getCurrentIPSlow();
-#endif
-#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-  getAllocationLocationTracker().newAlloc(ptr);
-#endif
-  return ptr;
-}
-
-template <bool fixedSize, HasFinalizer hasFinalizer>
-inline void *GenGC::allocImpl(uint32_t sz) {
 #ifndef NDEBUG
   lastAllocWasFixedSize_ = fixedSize ? FixedSizeValue::Yes : FixedSizeValue::No;
 #endif
@@ -999,24 +975,6 @@ inline void *GenGC::allocImpl(uint32_t sz) {
 
 template <HasFinalizer hasFinalizer>
 inline void *GenGC::allocLongLived(uint32_t size) {
-  auto ptr = allocLongLivedImpl<hasFinalizer>(size);
-#if !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && !defined(NDEBUG)
-  // If allocation location tracking is enabled we implicitly call
-  // getCurrentIP() via newAlloc() below. Even if this isn't enabled, we always
-  // call getCurrentIPSlow() in a debug build as this has the effect of
-  // asserting the IP is correctly set (not invalidated) at this point. This
-  // allows us to leverage our whole test-suite to find missing cases of
-  // CAPTURE_IP* macros in the interpreter loop.
-  (void)gcCallbacks_->getCurrentIPSlow();
-#endif
-#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-  getAllocationLocationTracker().newAlloc(ptr);
-#endif
-  return ptr;
-}
-
-template <HasFinalizer hasFinalizer>
-inline void *GenGC::allocLongLivedImpl(uint32_t size) {
 #ifndef NDEBUG
   lastAllocWasFixedSize_ = FixedSizeValue::Unknown;
 #endif

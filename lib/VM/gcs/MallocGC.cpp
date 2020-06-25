@@ -92,8 +92,10 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
         worklist_.push_back(newLocation);
       }
       gc.newPointers_.insert(newLocation);
-      if (gc.idTracker_.isTrackingIDs()) {
+      if (gc.idTracker_.isTrackingIDs() ||
+          gc.allocationLocationTracker_.isEnabled()) {
         gc.idTracker_.moveObject(cell, newLocation->data());
+        gc.allocationLocationTracker_.moveAlloc(cell, newLocation->data());
       }
       cell = newLocation->data();
     }
@@ -316,8 +318,10 @@ void MallocGC::collect() {
         }
 #endif
       }
-      if (idTracker_.isTrackingIDs()) {
+      if (idTracker_.isTrackingIDs() ||
+          allocationLocationTracker_.isEnabled()) {
         idTracker_.untrackObject(cell);
+        allocationLocationTracker_.freeAlloc(cell);
       }
       if (allocationLocationTracker_.isEnabled()) {
         allocationLocationTracker_.freeAlloc(cell);
@@ -575,7 +579,8 @@ bool MallocGC::isMostRecentFinalizableObj(const GCCell *cell) const {
 #endif
 
 void MallocGC::createSnapshot(llvm::raw_ostream &os) {
-  hermes_fatal("No snapshots allowed with MallocGC");
+  GCCycle cycle{this};
+  GCBase::createSnapshot(this, os);
 }
 
 #ifdef HERMESVM_SERIALIZE

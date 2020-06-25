@@ -20,11 +20,10 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <set>
+
 using namespace hermes::vm;
 using namespace hermes::parser;
-
-// Only the main NCGen needs to support snapshots
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 
 namespace hermes {
 namespace unittest {
@@ -157,6 +156,11 @@ struct Node {
         selfSize == that.selfSize && edgeCount == that.edgeCount &&
         traceNodeID == that.traceNodeID;
   }
+
+  bool operator<(const Node &that) const {
+    // Just IDs for comparison.
+    return id < that.id;
+  }
 };
 
 std::ostream &operator<<(std::ostream &os, const Node &node);
@@ -226,6 +230,11 @@ struct Edge {
   bool operator==(const Edge &that) const {
     return type == that.type && isNamed == that.isNamed && name == that.name &&
         index == that.index && toNode == that.toNode;
+  }
+
+  bool operator<(const Edge &that) const {
+    // Just toNode for comparison.
+    return toNode < that.toNode;
   }
 };
 
@@ -562,89 +571,70 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
   Edge nullEdge =
       Edge(HeapSnapshot::EdgeType::Internal, "HermesNull", nullNode);
 
+  std::set<Node> expectedNodes;
+  std::set<Edge> expectedEdges;
+  std::set<Node> actualNodes;
+  std::set<Edge> actualEdges;
+
   // First node is the roots object.
-  auto nextNode = nodes.begin();
-  EXPECT_EQ(
-      Node::parse(nextNode, strings),
-      Node(
-          HeapSnapshot::NodeType::Synthetic,
-          "(GC Roots)",
-          static_cast<HeapSnapshot::NodeID>(
-              GC::IDTracker::ReservedObjectID::Root),
-          0,
-          1));
-  nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
+  expectedNodes.emplace(
+      HeapSnapshot::NodeType::Synthetic,
+      "(GC Roots)",
+      static_cast<HeapSnapshot::NodeID>(GC::IDTracker::ReservedObjectID::Root),
+      0,
+      1);
   // Next node is the custom root section.
-  EXPECT_EQ(Node::parse(nextNode, strings), rootSection);
-  nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
+  expectedNodes.emplace(rootSection);
   // Next node is the first dummy object.
-  EXPECT_EQ(Node::parse(nextNode, strings), firstDummy);
-  nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
+  expectedNodes.emplace(firstDummy);
   // Next node is the second dummy, which is only reachable via the first
   // dummy.
-  EXPECT_EQ(Node::parse(nextNode, strings), secondDummy);
-  nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
+  expectedNodes.emplace(secondDummy);
   // Next node is the undefined singleton.
-  EXPECT_EQ(Node::parse(nextNode, strings), undefinedNode);
-  nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
+  expectedNodes.emplace(undefinedNode);
   // Next node is the null singleton.
-  EXPECT_EQ(Node::parse(nextNode, strings), nullNode);
-  nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
+  expectedNodes.emplace(nullNode);
   // Next node is the true singleton.
-  EXPECT_EQ(Node::parse(nextNode, strings), trueNode);
-  nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
+  expectedNodes.emplace(trueNode);
   // Next node is the false singleton.
-  EXPECT_EQ(Node::parse(nextNode, strings), falseNode);
-  nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
+  expectedNodes.emplace(falseNode);
   // Next node is the first number.
-  EXPECT_EQ(Node::parse(nextNode, strings), numberNode);
-  nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
-  EXPECT_EQ(nextNode, nodes.end());
+  expectedNodes.emplace(numberNode);
 
-  auto nextEdge = edges.begin();
   // Pointer from root to root section.
-  EXPECT_EQ(
-      Edge::parse(nextEdge, nodes, strings),
-      Edge(HeapSnapshot::EdgeType::Element, 1, rootSection));
-  nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
-
+  expectedEdges.emplace(HeapSnapshot::EdgeType::Element, 1, rootSection);
   // Pointer from root section to first dummy.
-  EXPECT_EQ(
-      Edge::parse(nextEdge, nodes, strings),
-      Edge(HeapSnapshot::EdgeType::Element, 0, firstDummy));
-  nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
-
+  expectedEdges.emplace(HeapSnapshot::EdgeType::Element, 0, firstDummy);
   // Pointer from first dummy to second dummy.
-  EXPECT_EQ(
-      Edge::parse(nextEdge, nodes, strings),
-      Edge(HeapSnapshot::EdgeType::Internal, "other", secondDummy));
-  nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
+  expectedEdges.emplace(HeapSnapshot::EdgeType::Internal, "other", secondDummy);
   // Pointer from first dummy to its bool field.
-  EXPECT_EQ(Edge::parse(nextEdge, nodes, strings), trueEdge);
-  nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
+  expectedEdges.emplace(trueEdge);
   // Pointer from first dummy to its number field.
-  EXPECT_EQ(Edge::parse(nextEdge, nodes, strings), numberEdge);
-  nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
+  expectedEdges.emplace(numberEdge);
   // Pointer from first dummy to its undefined field.
-  EXPECT_EQ(Edge::parse(nextEdge, nodes, strings), undefinedEdge);
-  nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
+  expectedEdges.emplace(undefinedEdge);
   // Pointer from first dummy to its null field.
-  EXPECT_EQ(Edge::parse(nextEdge, nodes, strings), nullEdge);
-  nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
-
+  expectedEdges.emplace(nullEdge);
   // Pointer from second dummy to its bool field.
-  EXPECT_EQ(Edge::parse(nextEdge, nodes, strings), trueEdge);
-  nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
+  expectedEdges.emplace(trueEdge);
   // Pointer from second dummy to its number field.
-  EXPECT_EQ(Edge::parse(nextEdge, nodes, strings), numberEdge);
-  nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
+  expectedEdges.emplace(numberEdge);
   // Pointer from second dummy to its undefined field.
-  EXPECT_EQ(Edge::parse(nextEdge, nodes, strings), undefinedEdge);
-  nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
+  expectedEdges.emplace(undefinedEdge);
   // Pointer from second dummy to its null field.
-  EXPECT_EQ(Edge::parse(nextEdge, nodes, strings), nullEdge);
-  nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
-  EXPECT_EQ(nextEdge, edges.end());
+  expectedEdges.emplace(nullEdge);
+
+  for (auto nextNode = nodes.begin(); nextNode != nodes.end();
+       nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT) {
+    actualNodes.emplace(Node::parse(nextNode, strings));
+  }
+  for (auto nextEdge = edges.begin(); nextEdge != edges.end();
+       nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT) {
+    actualEdges.emplace(Edge::parse(nextEdge, nodes, strings));
+  }
+
+  EXPECT_EQ(expectedNodes, actualNodes);
+  EXPECT_EQ(expectedEdges, actualEdges);
 
   // String table is checked by the nodes and edges checks.
 }
@@ -928,5 +918,3 @@ bar(4) @ test.js(4):6:20)#");
 } // namespace heapsnapshottest
 } // namespace unittest
 } // namespace hermes
-
-#endif

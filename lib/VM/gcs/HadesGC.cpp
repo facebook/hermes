@@ -346,7 +346,11 @@ class HadesGC::EvacAcceptor final : public SlotAcceptorDefault {
     CopyListCell *next_;
   };
 
-  EvacAcceptor(GC &gc) : SlotAcceptorDefault{gc}, copyListHead_{nullptr} {}
+  EvacAcceptor(GC &gc)
+      : SlotAcceptorDefault{gc},
+        copyListHead_{nullptr},
+        isTrackingIDs_{gc.getIDTracker().isTrackingIDs() ||
+                       gc.getAllocationLocationTracker().isEnabled()} {}
 
   ~EvacAcceptor() {}
 
@@ -380,6 +384,10 @@ class HadesGC::EvacAcceptor final : public SlotAcceptorDefault {
     CopyListCell *const copyCell = static_cast<CopyListCell *>(cell);
     // Set the forwarding pointer in the old spot
     copyCell->setMarkedForwardingPointer(newCell);
+    if (isTrackingIDs_) {
+      gc.getIDTracker().moveObject(cell, newCell);
+      gc.getAllocationLocationTracker().moveAlloc(cell, newCell);
+    }
     // Push onto the copied list.
     push(copyCell);
     // Mark the cell's bit in the mark bit array as well, so that OG can rely on
@@ -411,6 +419,7 @@ class HadesGC::EvacAcceptor final : public SlotAcceptorDefault {
  private:
   /// The copy list is managed implicitly in the body of each copied YG object.
   CopyListCell *copyListHead_;
+  const bool isTrackingIDs_;
 
   void push(CopyListCell *cell) {
     cell->next_ = copyListHead_;
@@ -776,7 +785,23 @@ void HadesGC::getHeapInfo(HeapInfo &info) {
 // TODO: Fill these out
 void HadesGC::getHeapInfoWithMallocSize(HeapInfo &info) {}
 void HadesGC::getCrashManagerHeapInfo(CrashManager::HeapInformation &info) {}
-void HadesGC::createSnapshot(llvm::raw_ostream &os) {}
+
+void HadesGC::createSnapshot(llvm::raw_ostream &os) {
+  // No allocations are allowed throughout the entire heap snapshot process.
+  NoAllocScope scope{this};
+  yieldToBackgroundThread();
+  {
+    std::lock_guard<Mutex> lk{oldGenMutex_};
+    // Let any existing collections complete before taking the snapshot.
+    waitForCollectionToFinish();
+    {
+      GCCycle cycle{this};
+      WeakRefLock lk{weakRefMutex()};
+      GCBase::createSnapshot(this, os);
+    }
+  }
+  yieldToMutator();
+}
 
 void HadesGC::printStats(llvm::raw_ostream &os, bool trailingComma) {
   if (!recordGcStats_) {
@@ -1012,6 +1037,8 @@ void HadesGC::sweep() {
   // require the lock at all.
   std::lock_guard<Mutex> lk{oldGenMutex_};
   concurrentPhase_.store(Phase::Sweep, std::memory_order_release);
+  const bool isTrackingIDs = getIDTracker().isTrackingIDs() ||
+      getAllocationLocationTracker().isEnabled();
   for (auto segit = oldGenBegin(), segitend = oldGenEnd(); segit != segitend;
        ++segit) {
     HeapSegment &seg = **segit;
@@ -1019,7 +1046,7 @@ void HadesGC::sweep() {
       // Quickly skip empty segments.
       continue;
     }
-    seg.forAllObjs([this, &seg](GCCell *cell) {
+    seg.forAllObjs([this, isTrackingIDs, &seg](GCCell *cell) {
       // forAllObjs skips free list cells, so no need to check for those.
       assert(cell->isValid() && "Invalid cell in sweeping");
       if (HeapSegment::getCellMarkBit(cell)) {
@@ -1030,6 +1057,13 @@ void HadesGC::sweep() {
       // Now add it to the head of the free list for the segment it's
       // in.
       seg.addCellToFreelist(cell);
+      if (isTrackingIDs) {
+        // There is no race condition here, because the object has already been
+        // determined to be dead, so nothing can be accessing it, or asking for
+        // its ID.
+        getIDTracker().untrackObject(cell);
+        getAllocationLocationTracker().freeAlloc(cell);
+      }
     });
     // Do *not* clear the mark bits. This is important to have a cheaper
     // solution to a race condition in weakRefReadBarrier. If it gets

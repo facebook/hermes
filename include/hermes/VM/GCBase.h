@@ -663,6 +663,7 @@ class GCBase {
   /// Creates a snapshot of the heap, which includes information about what
   /// objects exist, their sizes, and what they point to.
   virtual void createSnapshot(llvm::raw_ostream &os) = 0;
+  void createSnapshot(GC *gc, llvm::raw_ostream &os);
 
 #ifdef HERMESVM_SERIALIZE
   /// Serialize WeakRefs.
