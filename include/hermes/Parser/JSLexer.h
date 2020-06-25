@@ -380,7 +380,8 @@ class JSLexer {
   /// - AllowRegExp: RegExp can follow
   /// - AllowDiv: "/" can follow
   /// - AllowJSXIdentifier: "/" can follow and "-" is part of identifiers.
-  enum GrammarContext { AllowRegExp, AllowDiv, AllowJSXIdentifier };
+  /// - Flow: "/" can follow and ">>" scans as two separate ">" tokens.
+  enum GrammarContext { AllowRegExp, AllowDiv, AllowJSXIdentifier, Flow };
 
   /// Consume the current token and scan the next one, which becomes the new
   /// current token. All whitespace is skipped befire the new token and if
@@ -550,19 +551,30 @@ class JSLexer {
   /// \return the resultant code point on success, None on error.
   llvm::Optional<uint32_t> consumeUnicodeEscapeOptional();
 
+  /// Specify the types of identifiers which should be allowed when consuming
+  /// identifiers.
+  enum class IdentifierMode {
+    /// Standard JavaScript identifiers only.
+    JS,
+    /// JavaScript identifiers and '-'.
+    JSX,
+    /// JavaScript identifiers and identifiers which begin with '@'.
+    Flow,
+  };
+
   /// Decode an IdentifierStart production per ES5.1 7.6.
   /// \return whether an IdentifierStart was successfully decoded.
   bool consumeIdentifierStart();
 
   /// Decode a sequence (possibly empty) of IdentifierPart.
-  template <bool JSX>
+  template <IdentifierMode Mode>
   void consumeIdentifierParts();
 
   /// Decode an IdentifierPart per ES5.1 7.6 that does not begin with a
   /// backslash.
   /// \return true if an IdentifierPart was decoded, false if the current
   /// character was a backslash or not an IdentifierPart.
-  template <bool JSX>
+  template <IdentifierMode Mode>
   bool consumeOneIdentifierPartNoEscape();
 
   /// Scan an octal number after the first character has been recognized
@@ -611,26 +623,36 @@ class JSLexer {
   /// it into a temporary buffer. If an escape or UTF-8 character is
   /// encountered, add the currently scanned part to the storage and continue by
   /// invoking the slow path scanIdentifierParts().
-  template <bool JSX>
+  template <IdentifierMode Mode>
   void scanIdentifierFastPath(const char *start);
   void scanIdentifierFastPathInContext(
       const char *start,
       GrammarContext grammarContext) {
-#if HERMES_PARSE_JSX
-    LLVM_UNLIKELY(grammarContext == GrammarContext::AllowJSXIdentifier)
-    ? scanIdentifierFastPath<true>(start) :
-#endif
-    scanIdentifierFastPath<false>(start);
+    if (HERMES_PARSE_JSX &&
+        LLVM_UNLIKELY(grammarContext == GrammarContext::AllowJSXIdentifier)) {
+      scanIdentifierFastPath<IdentifierMode::JSX>(start);
+    } else if (
+        HERMES_PARSE_FLOW &&
+        LLVM_UNLIKELY(grammarContext == GrammarContext::Flow)) {
+      scanIdentifierFastPath<IdentifierMode::Flow>(start);
+    } else {
+      scanIdentifierFastPath<IdentifierMode::JS>(start);
+    }
   }
 
-  template <bool JSX>
+  template <IdentifierMode Mode>
   void scanIdentifierParts();
   void scanIdentifierPartsInContext(GrammarContext grammarContext) {
-#if HERMES_PARSE_JSX
-    LLVM_UNLIKELY(grammarContext == GrammarContext::AllowJSXIdentifier)
-    ? scanIdentifierParts<true>() :
-#endif
-    scanIdentifierParts<false>();
+    if (HERMES_PARSE_JSX &&
+        LLVM_UNLIKELY(grammarContext == GrammarContext::AllowJSXIdentifier)) {
+      scanIdentifierParts<IdentifierMode::JSX>();
+    } else if (
+        HERMES_PARSE_FLOW &&
+        LLVM_UNLIKELY(grammarContext == GrammarContext::Flow)) {
+      scanIdentifierParts<IdentifierMode::Flow>();
+    } else {
+      scanIdentifierParts<IdentifierMode::JS>();
+    }
   }
 
   template <bool JSX>

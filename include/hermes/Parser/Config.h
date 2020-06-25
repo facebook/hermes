@@ -16,4 +16,12 @@
 #endif
 #endif
 
+#if !defined(HERMES_PARSE_FLOW)
+#if defined(HERMES_IS_MOBILE_BUILD)
+#define HERMES_PARSE_FLOW 0
+#else
+#define HERMES_PARSE_FLOW 1
+#endif
+#endif
+
 #endif

@@ -10,6 +10,7 @@ add_hermes_library(hermesParser
         JSONParser.cpp
         JSParser.cpp
         JSParserImpl.cpp
+        JSParserImpl-flow.cpp
         JSParserImpl-jsx.cpp
         JSParserImpl.h
         LINK_LIBS hermesSupport hermesAST dtoa

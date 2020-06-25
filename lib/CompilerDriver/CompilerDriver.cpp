@@ -417,6 +417,14 @@ static opt<bool>
     JSX("parse-jsx", desc("Parse JSX"), init(false), cat(CompilerCategory));
 #endif
 
+#if HERMES_PARSE_FLOW
+static opt<bool> ParseFlow(
+    "parse-flow",
+    desc("Parse Flow"),
+    init(false),
+    cat(CompilerCategory));
+#endif
+
 static CLFlag StaticRequire(
     'f',
     "static-require",
@@ -1000,6 +1008,12 @@ std::shared_ptr<Context> createContext(
 #if HERMES_PARSE_JSX
   if (cl::JSX) {
     context->setParseJSX(true);
+  }
+#endif
+
+#if HERMES_PARSE_FLOW
+  if (cl::ParseFlow) {
+    context->setParseFlow(true);
   }
 #endif
 

@@ -17,6 +17,10 @@
 #define PUNCTUATOR(name, str) TOK(name, str)
 #endif
 
+#ifndef PUNCTUATOR_FLOW
+#define PUNCTUATOR_FLOW(name, str) TOK(name, str)
+#endif
+
 #ifndef BINOP
 #define BINOP(name, str, precedence) PUNCTUATOR(name, str)
 #endif
@@ -85,7 +89,9 @@ RESWORD(yield)
 RANGE_MARKER(_last_resword)
 
 PUNCTUATOR(l_brace,             "{")
+PUNCTUATOR_FLOW(l_bracepipe,    "{|")
 PUNCTUATOR(r_brace,             "}")
+PUNCTUATOR_FLOW(piper_brace,    "|}")
 PUNCTUATOR(l_paren,             "(")
 PUNCTUATOR(r_paren,             ")")
 PUNCTUATOR(l_square,            "[")

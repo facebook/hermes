@@ -176,6 +176,9 @@ class Context {
   /// If true, allow parsing JSX as a primary expression.
   bool parseJSX_{false};
 
+  /// If true, allow parsing Flow type annotations.
+  bool parseFlow_{false};
+
   /// If non-null, the resolution table which resolves static require().
   const std::unique_ptr<ResolutionTable> resolutionTable_;
 
@@ -307,6 +310,13 @@ class Context {
   }
   bool getParseJSX() const {
     return parseJSX_;
+  }
+
+  void setParseFlow(bool parseFlow) {
+    parseFlow_ = parseFlow;
+  }
+  bool getParseFlow() const {
+    return parseFlow_;
   }
 
   bool isLazyCompilation() const {

@@ -82,8 +82,28 @@ void JSParserImpl::initializeIdentifiers() {
   yieldIdent_ = lexer_.getIdentifier("yield");
   newIdent_ = lexer_.getIdentifier("new");
   targetIdent_ = lexer_.getIdentifier("target");
+  valueIdent_ = lexer_.getIdentifier("value");
+  typeIdent_ = lexer_.getIdentifier("type");
   asyncIdent_ = lexer_.getIdentifier("async");
   awaitIdent_ = lexer_.getIdentifier("await");
+
+#if HERMES_PARSE_FLOW
+
+  declareIdent_ = lexer_.getIdentifier("declare");
+  opaqueIdent_ = lexer_.getIdentifier("opaque");
+  plusIdent_ = lexer_.getIdentifier("plus");
+  minusIdent_ = lexer_.getIdentifier("minus");
+
+  anyIdent_ = lexer_.getIdentifier("any");
+  mixedIdent_ = lexer_.getIdentifier("mixed");
+  emptyIdent_ = lexer_.getIdentifier("empty");
+  booleanIdent_ = lexer_.getIdentifier("boolean");
+  numberIdent_ = lexer_.getIdentifier("number");
+  stringIdent_ = lexer_.getIdentifier("string");
+  voidIdent_ = lexer_.getIdentifier("void");
+  nullIdent_ = lexer_.getIdentifier("null");
+
+#endif
 
   // Generate the string representation of all tokens.
   for (unsigned i = 0; i != NUM_JS_TOKENS; ++i)
@@ -602,6 +622,44 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclaration(Param param) {
     return *optClass;
   }
 
+#if HERMES_PARSE_FLOW
+  if (context_.getParseFlow()) {
+    SMLoc start = tok_->getStartLoc();
+    TypeAliasKind kind = TypeAliasKind::None;
+    if (checkAndEat(declareIdent_))
+      kind = TypeAliasKind::Declare;
+    else if (checkAndEat(opaqueIdent_))
+      kind = TypeAliasKind::Opaque;
+
+    if (kind == TypeAliasKind::Declare &&
+        !checkN(typeIdent_, interfaceIdent_, TokenKind::rw_interface)) {
+      sm_.error(tok_->getSourceRange(), "invalid token in type declaration");
+      return None;
+    }
+    if (kind == TypeAliasKind::Opaque && !check(typeIdent_)) {
+      sm_.error(
+          tok_->getSourceRange(), "invalid token in opaque type declaration");
+      return None;
+    }
+
+    if (checkAndEat(typeIdent_)) {
+      auto optType = parseTypeAlias(start, kind);
+      if (!optType)
+        return None;
+      return *optType;
+    }
+    if (checkN(interfaceIdent_, TokenKind::rw_interface)) {
+      auto optType = parseInterfaceDeclaration(kind == TypeAliasKind::Declare);
+      if (!optType)
+        return None;
+      return *optType;
+    }
+    assert(
+        kind == TypeAliasKind::None &&
+        "checkDeclaration() returned true without 'type' or 'interface'");
+  }
+#endif
+
   assert(
       (check(TokenKind::rw_const) || check(letIdent_)) &&
       "declaration can only be let or const");
@@ -624,6 +682,15 @@ bool JSParserImpl::parseStatementListItem(
       return false;
 
     stmtList.push_back(*decl.getValue());
+#if HERMES_PARSE_FLOW
+  } else if (checkDeclareType()) {
+    // declare var, declare function, declare interface, etc.
+    SMLoc start = advance(JSLexer::GrammarContext::Flow).Start;
+    auto decl = parseDeclare(start);
+    if (!decl)
+      return false;
+    stmtList.push_back(*decl.getValue());
+#endif
   } else if (tok_->getKind() == TokenKind::rw_import) {
     // 'import' can indicate an import declaration, but it's also possible a
     // Statement begins with a call to `import()`, so do a lookahead to see if

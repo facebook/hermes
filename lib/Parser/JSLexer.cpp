@@ -161,7 +161,6 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
         break;
 
         // clang-format off
-      PUNC_L1_1('{', TokenKind::l_brace);
       PUNC_L1_1('}', TokenKind::r_brace);
       PUNC_L1_1('(', TokenKind::l_paren);
       PUNC_L1_1(')', TokenKind::r_paren);
@@ -171,6 +170,20 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       PUNC_L1_1(',', TokenKind::comma);
       PUNC_L1_1('~', TokenKind::tilde);
       PUNC_L1_1(':', TokenKind::colon);
+
+      // { {|
+      case '{':
+        token_.setStart(curCharPtr_);
+        if (HERMES_PARSE_FLOW &&
+            LLVM_UNLIKELY(grammarContext == GrammarContext::Flow) &&
+            curCharPtr_[1] == '|') {
+          token_.setPunctuator(TokenKind::l_bracepipe);
+          curCharPtr_ += 2;
+        } else {
+          token_.setPunctuator(TokenKind::l_brace);
+          curCharPtr_ += 1;
+        }
+        break;
 
       // = => == ===
       case '=':
@@ -200,12 +213,36 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       PUNC_L2_3('+', TokenKind::plus,  '+', TokenKind::plusplus,   '=', TokenKind::plusequal);
       PUNC_L2_3('-', TokenKind::minus, '-', TokenKind::minusminus, '=', TokenKind::minusequal);
       PUNC_L2_3('&', TokenKind::amp,   '&', TokenKind::ampamp,     '=', TokenKind::ampequal);
-      PUNC_L2_3('|', TokenKind::pipe,  '|', TokenKind::pipepipe,   '=', TokenKind::pipeequal);
+
+      case '|':
+        token_.setStart(curCharPtr_);
+        if (HERMES_PARSE_FLOW &&
+            LLVM_UNLIKELY(grammarContext == GrammarContext::Flow) &&
+            curCharPtr_[1] == '}') {
+          token_.setPunctuator(TokenKind::piper_brace);
+          curCharPtr_ += 2;
+        } else {
+          if (curCharPtr_[1] == '|') {
+            token_.setPunctuator(TokenKind::pipepipe);
+            curCharPtr_ += 2;
+          } else if (curCharPtr_[1] == '=') {
+            token_.setPunctuator(TokenKind::pipeequal);
+            curCharPtr_ += 2;
+          } else {
+            token_.setPunctuator(TokenKind::pipe);
+            curCharPtr_ += 1;
+          }
+        }
+        break;
 
       // ? ?? ?.
       case '?':
         token_.setStart(curCharPtr_);
-        if (curCharPtr_[1] == '.' && !isdigit(curCharPtr_[2])) {
+        if (HERMES_PARSE_FLOW &&
+            LLVM_UNLIKELY(grammarContext == GrammarContext::Flow)) {
+          token_.setPunctuator(TokenKind::question);
+          curCharPtr_ += 1;
+        } else if (curCharPtr_[1] == '.' && !isdigit(curCharPtr_[2])) {
           // OptionalChainingPunctuator ::
           // ?. [lookahead does not contain DecimalDigit]
           // This is done to prevent `x?.3:y` from being recognized
@@ -331,7 +368,11 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       // <  <= << <<=
       case '<':
         token_.setStart(curCharPtr_);
-        if (curCharPtr_[1] == '=') {
+        if (HERMES_PARSE_FLOW &&
+            LLVM_UNLIKELY(grammarContext == JSLexer::GrammarContext::Flow)) {
+          token_.setPunctuator(TokenKind::less);
+          curCharPtr_ += 1;
+        } else if (curCharPtr_[1] == '=') {
           token_.setPunctuator(TokenKind::lessequal);
           curCharPtr_ += 2;
         } else if (curCharPtr_[1] == '<') {
@@ -351,7 +392,11 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       // > >= >> >>> >>= >>>=
       case '>':
         token_.setStart(curCharPtr_);
-        if (curCharPtr_[1] == '=') { // >=
+        if (HERMES_PARSE_FLOW &&
+            LLVM_UNLIKELY(grammarContext == JSLexer::GrammarContext::Flow)) {
+          token_.setPunctuator(TokenKind::greater);
+          curCharPtr_ += 1;
+        } else if (curCharPtr_[1] == '=') { // >=
           token_.setPunctuator(TokenKind::greaterequal);
           curCharPtr_ += 2;
         } else if (curCharPtr_[1] == '>') { // >>
@@ -410,6 +455,16 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
         // clang-format on
         token_.setStart(curCharPtr_);
         scanIdentifierFastPathInContext(curCharPtr_, grammarContext);
+        break;
+
+      case '@':
+        token_.setStart(curCharPtr_);
+        if (HERMES_PARSE_FLOW &&
+            LLVM_UNLIKELY(grammarContext == GrammarContext::Flow)) {
+          scanIdentifierFastPathInContext(curCharPtr_, grammarContext);
+        } else {
+          errorRange(token_.getStartLoc(), "unrecognized character '@'");
+        }
         break;
 
       case '\\': {
@@ -777,11 +832,12 @@ bool JSLexer::consumeIdentifierStart() {
   return false;
 }
 
-template <bool JSX>
+template <JSLexer::IdentifierMode Mode>
 bool JSLexer::consumeOneIdentifierPartNoEscape() {
   char ch = *curCharPtr_;
   if (ch == '_' || ch == '$' || ((ch | 32) >= 'a' && (ch | 32) <= 'z') ||
-      (ch >= '0' && ch <= '9') || (JSX && ch == '-')) {
+      (ch >= '0' && ch <= '9') || (Mode == IdentifierMode::JSX && ch == '-') ||
+      (Mode == IdentifierMode::Flow && ch == '@')) {
     tmpStorage_.push_back(*curCharPtr_++);
     return true;
   } else if (LLVM_UNLIKELY(isUTF8Start(ch))) {
@@ -798,12 +854,12 @@ bool JSLexer::consumeOneIdentifierPartNoEscape() {
   return false;
 }
 
-template <bool JSX>
+template <JSLexer::IdentifierMode Mode>
 void JSLexer::consumeIdentifierParts() {
   for (;;) {
     // Try consuming an non-escaped identifier part. Failing that, check for an
     // escape.
-    if (consumeOneIdentifierPartNoEscape<JSX>())
+    if (consumeOneIdentifierPartNoEscape<Mode>())
       continue;
     else if (*curCharPtr_ == '\\') {
       // Decode the escape.
@@ -1146,7 +1202,7 @@ end:
   //
   if (consumeIdentifierStart()) {
     ok = false;
-    consumeIdentifierParts<false>();
+    consumeIdentifierParts<IdentifierMode::JS>();
   }
 
   token_.setEnd(curCharPtr_);
@@ -1254,7 +1310,7 @@ TokenKind JSLexer::scanReservedWord(const char *start, unsigned length) {
   return rw;
 }
 
-template <bool JSX>
+template <JSLexer::IdentifierMode Mode>
 void JSLexer::scanIdentifierFastPath(const char *start) {
   const char *end = start;
 
@@ -1263,14 +1319,16 @@ void JSLexer::scanIdentifierFastPath(const char *start) {
   do
     ch = (unsigned char)*++end;
   while (ch == '_' || ch == '$' || ((ch | 32) >= 'a' && (ch | 32) <= 'z') ||
-         (ch >= '0' && ch <= '9') || (JSX && ch == '-'));
+         (ch >= '0' && ch <= '9') ||
+         (Mode == IdentifierMode::JSX && ch == '-') ||
+         (Mode == IdentifierMode::Flow && ch == '@'));
 
   // Check whether a slow part of the identifier follows.
   if (LLVM_UNLIKELY(ch == '\\')) {
     // An escape. Pass the baton to the slow path.
     initStorageWith(start, end);
     curCharPtr_ = end;
-    scanIdentifierParts<JSX>();
+    scanIdentifierParts<Mode>();
     return;
   } else if (LLVM_UNLIKELY(isUTF8Start(ch))) {
     // If we have encountered a Unicode character, we try to decode it. If it
@@ -1281,7 +1339,7 @@ void JSLexer::scanIdentifierFastPath(const char *start) {
       initStorageWith(start, end);
       appendUnicodeToStorage(decoded.first);
       curCharPtr_ = decoded.second;
-      scanIdentifierParts<JSX>();
+      scanIdentifierParts<Mode>();
       return;
     }
   }
@@ -1299,9 +1357,9 @@ void JSLexer::scanIdentifierFastPath(const char *start) {
   }
 }
 
-template <bool JSX>
+template <JSLexer::IdentifierMode Mode>
 void JSLexer::scanIdentifierParts() {
-  consumeIdentifierParts<JSX>();
+  consumeIdentifierParts<Mode>();
   token_.setEnd(curCharPtr_);
   token_.setIdentifier(getIdentifier(tmpStorage_.str()));
 }
@@ -1781,7 +1839,7 @@ exitLoop:
   tmpStorage_.clear();
   bool escapingBackslash = false;
   for (;;) {
-    if (consumeOneIdentifierPartNoEscape<false>()) {
+    if (consumeOneIdentifierPartNoEscape<IdentifierMode::JS>()) {
       escapingBackslash = false;
       continue;
     } else if (*curCharPtr_ == '\\') {

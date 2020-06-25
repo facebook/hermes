@@ -200,6 +200,10 @@ class JSParserImpl {
   uint32_t jsxDepth_{0};
 #endif
 
+#if HERMES_PARSE_FLOW
+  bool allowAnonFunctionType_{false};
+#endif
+
   // Certain known identifiers which we need to use when constructing the
   // ESTree or when parsing;
   UniqueString *getIdent_;
@@ -223,8 +227,29 @@ class JSParserImpl {
   UniqueString *yieldIdent_;
   UniqueString *newIdent_;
   UniqueString *targetIdent_;
+  UniqueString *valueIdent_;
+  UniqueString *typeIdent_;
   UniqueString *asyncIdent_;
   UniqueString *awaitIdent_;
+
+#if HERMES_PARSE_FLOW
+
+  UniqueString *declareIdent_;
+  UniqueString *opaqueIdent_;
+  UniqueString *plusIdent_;
+  UniqueString *minusIdent_;
+
+  UniqueString *anyIdent_;
+  UniqueString *mixedIdent_;
+  UniqueString *emptyIdent_;
+  UniqueString *booleanIdent_;
+  UniqueString *numberIdent_;
+  UniqueString *stringIdent_;
+  UniqueString *voidIdent_;
+  UniqueString *nullIdent_;
+
+#endif
+
   /// String representation of all tokens.
   UniqueString *tokenIdent_[NUM_JS_TOKENS];
 
@@ -391,12 +416,47 @@ class JSParserImpl {
 
   /// Check whether the current token begins a Declaration.
   bool checkDeclaration() {
-    return checkN(
-               TokenKind::rw_function,
-               letIdent_,
-               TokenKind::rw_const,
-               TokenKind::rw_class) ||
-        (check(asyncIdent_) && checkAsyncFunction());
+    if (checkN(
+            TokenKind::rw_function,
+            letIdent_,
+            TokenKind::rw_const,
+            TokenKind::rw_class) ||
+        (check(asyncIdent_) && checkAsyncFunction())) {
+      return true;
+    }
+
+#if HERMES_PARSE_FLOW
+    if (context_.getParseFlow()) {
+      if (check(opaqueIdent_)) {
+        auto optNext = lexer_.lookahead1(llvm::None);
+        return optNext.hasValue() && (*optNext == TokenKind::identifier);
+      }
+      if (checkN(typeIdent_, interfaceIdent_)) {
+        auto optNext = lexer_.lookahead1(llvm::None);
+        return optNext.hasValue() && *optNext == TokenKind::identifier;
+      }
+      if (check(TokenKind::rw_interface)) {
+        return true;
+      }
+    }
+#endif
+
+    return false;
+  }
+
+  bool checkDeclareType() {
+#if HERMES_PARSE_FLOW
+    if (check(declareIdent_)) {
+      auto optNext = lexer_.lookahead1(llvm::None);
+      if (!optNext)
+        return false;
+      TokenKind next = *optNext;
+      return next == TokenKind::identifier || next == TokenKind::rw_interface ||
+          next == TokenKind::rw_var || next == TokenKind::rw_function ||
+          next == TokenKind::rw_class || next == TokenKind::rw_export;
+    }
+#endif
+    return false;
   }
 
   /// Check whether the current token begins a template literal.
@@ -812,6 +872,109 @@ class JSParserImpl {
   /// valid parse of the JSXElementName.
   Optional<ESTree::Node *> parseJSXElementName(
       AllowJSXMemberExpression allowJSXMemberExpression);
+#endif
+
+#if HERMES_PARSE_FLOW
+
+  enum class AllowAnonFunctionType { No, Yes };
+
+  /// \param wrapped true when the type annotation should be wrapped in a
+  /// TypeAnnotationNode.
+  Optional<ESTree::Node *> parseTypeAnnotation(
+      bool wrapped = false,
+      AllowAnonFunctionType allowAnonFunctionType = AllowAnonFunctionType::Yes);
+
+  Optional<ESTree::Node *> parseDeclare(SMLoc start);
+
+  enum class TypeAliasKind { None, Declare, Opaque, DeclareOpaque };
+  Optional<ESTree::Node *> parseTypeAlias(SMLoc start, TypeAliasKind kind);
+
+  Optional<ESTree::Node *> parseInterfaceDeclaration(bool declare);
+
+  /// \pre current token is 'extends' or '{'.
+  /// \param[out] extends the super-interfaces for the parsed interface.
+  /// \return the body of the interface
+  Optional<ESTree::Node *> parseInterfaceTail(
+      SMLoc start,
+      ESTree::NodeList &extends);
+  bool parseInterfaceExtends(SMLoc start, ESTree::NodeList &extends);
+
+  Optional<ESTree::Node *> parseDeclareFunction(SMLoc start);
+  Optional<ESTree::Node *> parseDeclareClass(SMLoc start);
+
+  Optional<ESTree::Node *> parseUnionTypeAnnotation();
+  Optional<ESTree::Node *> parseIntersectionTypeAnnotation();
+  Optional<ESTree::Node *> parseAnonFunctionWithoutParensTypeAnnotation();
+  Optional<ESTree::Node *> parsePrefixTypeAnnotation();
+  Optional<ESTree::Node *> parsePostfixTypeAnnotation();
+  Optional<ESTree::Node *> parsePrimaryTypeAnnotation();
+  Optional<ESTree::Node *> parseTupleTypeAnnotation();
+  Optional<ESTree::Node *> parseFunctionTypeAnnotation();
+  Optional<ESTree::Node *> parseFunctionTypeAnnotationWithParams(
+      SMLoc start,
+      ESTree::NodeList &&params,
+      ESTree::Node *rest,
+      ESTree::Node *typeParams);
+  Optional<ESTree::Node *> parseFunctionOrGroupTypeAnnotation();
+
+  Optional<ESTree::Node *> parseObjectTypeAnnotation();
+  bool parseObjectTypeProperties(
+      ESTree::NodeList &properties,
+      ESTree::NodeList &indexers,
+      ESTree::NodeList &callProperties,
+      ESTree::NodeList &internalSlots,
+      bool &inexact);
+  bool parsePropertyTypeAnnotation(
+      ESTree::NodeList &properties,
+      ESTree::NodeList &indexers,
+      ESTree::NodeList &callProperties,
+      ESTree::NodeList &internalSlots);
+
+  /// Current token must be immediately after opening '['.
+  Optional<ESTree::Node *>
+  parseTypeIndexerProperty(SMLoc start, ESTree::Node *variance, bool isStatic);
+
+  Optional<ESTree::Node *> parseTypeProperty(
+      SMLoc start,
+      ESTree::Node *variance,
+      bool isStatic,
+      ESTree::Node *key);
+  Optional<ESTree::Node *> parseMethodTypeProperty(
+      SMLoc start,
+      ESTree::Node *variance,
+      bool isStatic,
+      ESTree::Node *key);
+  Optional<ESTree::Node *> parseGetOrSetTypeProperty(
+      SMLoc start,
+      bool isStatic,
+      bool isGetter,
+      ESTree::Node *key);
+
+  Optional<ESTree::Node *> parseTypeParams();
+  Optional<ESTree::Node *> parseTypeParam();
+  Optional<ESTree::Node *> parseTypeArgs();
+
+  /// \param[out] params the parameters, populated by reference.
+  /// \return the rest parameter if it exists, nullptr otherwise. None still
+  /// indicates an error.
+  Optional<ESTree::FunctionTypeParamNode *> parseFunctionTypeAnnotationParams(
+      ESTree::NodeList &params);
+  Optional<ESTree::FunctionTypeParamNode *> parseFunctionTypeAnnotationParam();
+
+  Optional<ESTree::Node *> parseTypeCallProperty(SMLoc start, bool isStatic);
+
+  Optional<ESTree::GenericTypeAnnotationNode *> parseGenericType();
+
+  Optional<ESTree::ClassImplementsNode *> parseClassImplements();
+
+  /// Parse a property which looks like a method, starting at the opening '('.
+  /// \param typeParams (optional) type params between '<' and '>' before '('.
+  Optional<ESTree::FunctionTypeAnnotationNode *> parseMethodishTypeAnnotation(
+      SMLoc start,
+      ESTree::Node *typeParams);
+
+  Optional<ESTree::IdentifierNode *> reparseTypeAnnotationAsIdentifier(
+      ESTree::Node *typeAnnotation);
 #endif
 
   /// RAII to save and restore the current setting of "strict mode".
