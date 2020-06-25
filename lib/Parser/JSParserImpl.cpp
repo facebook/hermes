@@ -89,6 +89,7 @@ void JSParserImpl::initializeIdentifiers() {
 
 #if HERMES_PARSE_FLOW
 
+  typeofIdent_ = lexer_.getIdentifier("typeof");
   declareIdent_ = lexer_.getIdentifier("declare");
   opaqueIdent_ = lexer_.getIdentifier("opaque");
   plusIdent_ = lexer_.getIdentifier("plus");
@@ -4532,13 +4533,14 @@ Optional<ESTree::Node *> JSParserImpl::parseImportDeclaration() {
     return setLocation(
         startLoc,
         endLoc,
-        new (context_) ESTree::ImportDeclarationNode({}, source));
+        new (context_) ESTree::ImportDeclarationNode({}, source, valueIdent_));
   }
 
   ESTree::NodeList specifiers;
-  if (!parseImportClause(specifiers)) {
+  auto optKind = parseImportClause(specifiers);
+  if (!optKind)
     return None;
-  }
+  UniqueString *kind = *optKind;
 
   auto optFromClause = parseFromClause();
   if (!optFromClause) {
@@ -4553,34 +4555,61 @@ Optional<ESTree::Node *> JSParserImpl::parseImportDeclaration() {
   return setLocation(
       startLoc,
       endLoc,
-      new (context_)
-          ESTree::ImportDeclarationNode(std::move(specifiers), *optFromClause));
+      new (context_) ESTree::ImportDeclarationNode(
+          std::move(specifiers), *optFromClause, kind));
 }
 
-bool JSParserImpl::parseImportClause(ESTree::NodeList &specifiers) {
+Optional<UniqueString *> JSParserImpl::parseImportClause(
+    ESTree::NodeList &specifiers) {
   SMLoc startLoc = tok_->getStartLoc();
-  if (check(TokenKind::identifier)) {
-    // ImportedDefaultBinding
-    // ImportedDefaultBinding , NameSpaceImport
-    // ImportedDefaultBinding , NamedImports
-    auto optDefaultBinding = parseBindingIdentifier(Param{});
-    if (!optDefaultBinding) {
-      errorExpected(
-          TokenKind::identifier,
-          "in import clause",
-          "start of import clause",
-          startLoc);
-      return false;
+
+  UniqueString *kind = valueIdent_;
+  SMRange kindRange{};
+#if HERMES_PARSE_FLOW
+  if (context_.getParseFlow()) {
+    if (checkN(typeIdent_, TokenKind::rw_typeof)) {
+      kind = tok_->getResWordOrIdentifier();
+      kindRange = advance();
     }
-    SMLoc endLoc = optDefaultBinding.getValue()->getEndLoc();
-    specifiers.push_back(*setLocation(
-        startLoc,
-        endLoc,
-        new (context_) ESTree::ImportDefaultSpecifierNode(*optDefaultBinding)));
+  }
+#endif
+
+  if (check(TokenKind::identifier)) {
+    if (check(fromIdent_) && kind == typeIdent_) {
+      // Not actually a type import, just import default with the name 'type'.
+      kind = valueIdent_;
+      auto *defaultBinding = setLocation(
+          kindRange,
+          kindRange,
+          new (context_) ESTree::IdentifierNode(typeIdent_, nullptr));
+      specifiers.push_back(*setLocation(
+          defaultBinding,
+          defaultBinding,
+          new (context_) ESTree::ImportDefaultSpecifierNode(defaultBinding)));
+    } else {
+      // ImportedDefaultBinding
+      // ImportedDefaultBinding , NameSpaceImport
+      // ImportedDefaultBinding , NamedImports
+      auto optDefaultBinding = parseBindingIdentifier(Param{});
+      if (!optDefaultBinding) {
+        errorExpected(
+            TokenKind::identifier,
+            "in import clause",
+            "start of import clause",
+            startLoc);
+        return None;
+      }
+      SMLoc endLoc = optDefaultBinding.getValue()->getEndLoc();
+      specifiers.push_back(*setLocation(
+          startLoc,
+          endLoc,
+          new (context_)
+              ESTree::ImportDefaultSpecifierNode(*optDefaultBinding)));
+    }
     if (!checkAndEat(TokenKind::comma)) {
       // If there was no comma, there's no more bindings to parse,
       // so return immediately.
-      return true;
+      return kind;
     }
   }
 
@@ -4592,10 +4621,10 @@ bool JSParserImpl::parseImportClause(ESTree::NodeList &specifiers) {
     // NameSpaceImport
     auto optNsImport = parseNameSpaceImport();
     if (!optNsImport) {
-      return false;
+      return None;
     }
     specifiers.push_back(*optNsImport.getValue());
-    return true;
+    return kind;
   }
 
   // NamedImports is the only remaining possibility.
@@ -4604,10 +4633,12 @@ bool JSParserImpl::parseImportClause(ESTree::NodeList &specifiers) {
           "in import specifier clause",
           "location of import specifiers",
           startLoc)) {
-    return false;
+    return kind;
   }
 
-  return parseNamedImports(specifiers);
+  if (!parseNamedImports(specifiers))
+    return None;
+  return kind;
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseNameSpaceImport() {
@@ -4687,25 +4718,134 @@ Optional<ESTree::ImportSpecifierNode *> JSParserImpl::parseImportSpecifier(
   //   IdentifierName as ImportedBinding
   SMLoc startLoc = tok_->getStartLoc();
 
-  if (!check(TokenKind::identifier) && !tok_->isResWord()) {
-    errorExpected(
-        TokenKind::identifier,
-        "in import specifier",
-        "specifiers start",
-        importLoc);
-    return None;
+  UniqueString *kind = valueIdent_;
+  ESTree::IdentifierNode *imported = nullptr;
+  ESTree::IdentifierNode *local = nullptr;
+  TokenKind localKind;
+  SMLoc endLoc;
+
+#if HERMES_PARSE_FLOW
+  if (context_.getParseFlow() && checkAndEat(TokenKind::rw_typeof)) {
+    kind = typeofIdent_;
   }
-  auto *imported = setLocation(
-      tok_,
-      tok_,
-      new (context_)
-          ESTree::IdentifierNode(tok_->getResWordOrIdentifier(), nullptr));
-  TokenKind localKind = tok_->getKind();
+#endif
 
-  SMLoc endLoc = advance().End;
-  ESTree::IdentifierNode *local = imported;
-
-  if (checkAndEat(asIdent_)) {
+  // This isn't wrapped in #if HERMES_PARSE_FLOW, as it is entangled
+  // in the rest of the import specifier parsing code and doesn't actually
+  // depend on JSParserImpl-flow specific code at all.
+  if (HERMES_PARSE_FLOW && context_.getParseFlow() && check(typeIdent_) &&
+      kind == valueIdent_) {
+    // Consume 'type', but make no assumptions about what it means yet.
+    SMRange typeRange = advance();
+    if (check(TokenKind::r_brace, TokenKind::comma)) {
+      // 'type'
+      imported = setLocation(
+          typeRange,
+          typeRange,
+          new (context_) ESTree::IdentifierNode(typeIdent_, nullptr));
+      local = imported;
+      localKind = TokenKind::identifier;
+      endLoc = imported->getEndLoc();
+    } else if (check(asIdent_)) {
+      SMRange asRange = advance();
+      if (check(TokenKind::r_brace, TokenKind::comma)) {
+        // 'type' 'as'
+        kind = typeIdent_;
+        imported = setLocation(
+            asRange,
+            asRange,
+            new (context_) ESTree::IdentifierNode(asIdent_, nullptr));
+        local = imported;
+        localKind = TokenKind::identifier;
+        endLoc = advance().End;
+      } else if (checkAndEat(asIdent_)) {
+        // 'type' 'as' 'as' Identifier
+        //                  ^
+        if (!check(TokenKind::identifier) && !tok_->isResWord()) {
+          errorExpected(
+              TokenKind::identifier,
+              "in import specifier",
+              "specifiers start",
+              importLoc);
+          return None;
+        }
+        kind = typeIdent_;
+        imported = setLocation(
+            asRange,
+            asRange,
+            new (context_) ESTree::IdentifierNode(asIdent_, nullptr));
+        local = setLocation(
+            tok_,
+            tok_,
+            new (context_) ESTree::IdentifierNode(
+                tok_->getResWordOrIdentifier(), nullptr));
+        localKind = TokenKind::identifier;
+        endLoc = advance().End;
+      } else {
+        // 'type' 'as' Identifier
+        //             ^
+        if (!check(TokenKind::identifier) && !tok_->isResWord()) {
+          errorExpected(
+              TokenKind::identifier,
+              "in import specifier",
+              "specifiers start",
+              importLoc);
+          return None;
+        }
+        imported = setLocation(
+            typeRange,
+            typeRange,
+            new (context_) ESTree::IdentifierNode(typeIdent_, nullptr));
+        local = setLocation(
+            tok_,
+            tok_,
+            new (context_) ESTree::IdentifierNode(
+                tok_->getResWordOrIdentifier(), nullptr));
+        localKind = TokenKind::identifier;
+        endLoc = advance().End;
+      }
+    } else {
+      // 'type' Identifier
+      //        ^
+      kind = typeIdent_;
+      if (!check(TokenKind::identifier) && !tok_->isResWord()) {
+        errorExpected(
+            TokenKind::identifier,
+            "in import specifier",
+            "specifiers start",
+            importLoc);
+        return None;
+      }
+      imported = setLocation(
+          tok_,
+          tok_,
+          new (context_)
+              ESTree::IdentifierNode(tok_->getResWordOrIdentifier(), nullptr));
+      local = imported;
+      localKind = tok_->getKind();
+      endLoc = advance().End;
+      if (checkAndEat(asIdent_)) {
+        // type Identifier 'as' Identifier
+        //                      ^
+        if (!check(TokenKind::identifier) && !tok_->isResWord()) {
+          errorExpected(
+              TokenKind::identifier,
+              "in import specifier",
+              "specifiers start",
+              importLoc);
+          return None;
+        }
+        local = setLocation(
+            tok_,
+            tok_,
+            new (context_) ESTree::IdentifierNode(
+                tok_->getResWordOrIdentifier(), nullptr));
+        localKind = tok_->getKind();
+        endLoc = advance().End;
+      }
+    }
+  } else {
+    // Not attempting to parse a type identifier.
     if (!check(TokenKind::identifier) && !tok_->isResWord()) {
       errorExpected(
           TokenKind::identifier,
@@ -4714,13 +4854,32 @@ Optional<ESTree::ImportSpecifierNode *> JSParserImpl::parseImportSpecifier(
           importLoc);
       return None;
     }
-    local = setLocation(
+    imported = setLocation(
         tok_,
         tok_,
         new (context_)
             ESTree::IdentifierNode(tok_->getResWordOrIdentifier(), nullptr));
+    local = imported;
     localKind = tok_->getKind();
-    endLoc = advance().End;
+    advance();
+
+    if (checkAndEat(asIdent_)) {
+      if (!check(TokenKind::identifier) && !tok_->isResWord()) {
+        errorExpected(
+            TokenKind::identifier,
+            "in import specifier",
+            "specifiers start",
+            importLoc);
+        return None;
+      }
+      local = setLocation(
+          tok_,
+          tok_,
+          new (context_)
+              ESTree::IdentifierNode(tok_->getResWordOrIdentifier(), nullptr));
+      localKind = tok_->getKind();
+      endLoc = advance().End;
+    }
   }
 
   // Only the local name must be parsed as a binding identifier.
@@ -4735,7 +4894,7 @@ Optional<ESTree::ImportSpecifierNode *> JSParserImpl::parseImportSpecifier(
   return setLocation(
       startLoc,
       endLoc,
-      new (context_) ESTree::ImportSpecifierNode(imported, local));
+      new (context_) ESTree::ImportSpecifierNode(imported, local, kind));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {

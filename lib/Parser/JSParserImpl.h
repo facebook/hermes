@@ -234,6 +234,7 @@ class JSParserImpl {
 
 #if HERMES_PARSE_FLOW
 
+  UniqueString *typeofIdent_;
   UniqueString *declareIdent_;
   UniqueString *opaqueIdent_;
   UniqueString *plusIdent_;
@@ -830,7 +831,10 @@ class JSParserImpl {
   Optional<ESTree::StringLiteralNode *> parseFromClause();
 
   Optional<ESTree::Node *> parseImportDeclaration();
-  bool parseImportClause(ESTree::NodeList &specifiers);
+
+  /// \return the kind of the import.
+  Optional<UniqueString *> parseImportClause(ESTree::NodeList &specifiers);
+
   Optional<ESTree::Node *> parseNameSpaceImport();
   bool parseNamedImports(ESTree::NodeList &specifiers);
   Optional<ESTree::ImportSpecifierNode *> parseImportSpecifier(SMLoc importLoc);

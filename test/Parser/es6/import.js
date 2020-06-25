@@ -18,7 +18,8 @@ import 'foo.js';
 // CHECK-NEXT:         "source": {
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo.js"
-// CHECK-NEXT:         }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "importKind": "value"
 // CHECK-NEXT:       },
 
 import * as Foo from 'foo.js';
@@ -36,7 +37,8 @@ import * as Foo from 'foo.js';
 // CHECK-NEXT:         "source": {
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo.js"
-// CHECK-NEXT:         }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "importKind": "value"
 // CHECK-NEXT:       },
 
 import { x as y } from 'foo.js';
@@ -52,13 +54,15 @@ import { x as y } from 'foo.js';
 // CHECK-NEXT:             "local": {
 // CHECK-NEXT:               "type": "Identifier",
 // CHECK-NEXT:               "name": "y"
-// CHECK-NEXT:             }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "importKind": "value"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "source": {
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo.js"
-// CHECK-NEXT:         }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "importKind": "value"
 // CHECK-NEXT:       },
 
 import { x } from 'foo.js';
@@ -74,13 +78,15 @@ import { x } from 'foo.js';
 // CHECK-NEXT:             "local": {
 // CHECK-NEXT:               "type": "Identifier",
 // CHECK-NEXT:               "name": "x"
-// CHECK-NEXT:             }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "importKind": "value"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "source": {
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo.js"
-// CHECK-NEXT:         }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "importKind": "value"
 // CHECK-NEXT:       },
 
 import { abc, xyz as def, ghi , } from 'foo.js';
@@ -96,7 +102,8 @@ import { abc, xyz as def, ghi , } from 'foo.js';
 // CHECK-NEXT:             "local": {
 // CHECK-NEXT:               "type": "Identifier",
 // CHECK-NEXT:               "name": "abc"
-// CHECK-NEXT:             }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "importKind": "value"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "ImportSpecifier",
@@ -107,7 +114,8 @@ import { abc, xyz as def, ghi , } from 'foo.js';
 // CHECK-NEXT:             "local": {
 // CHECK-NEXT:               "type": "Identifier",
 // CHECK-NEXT:               "name": "def"
-// CHECK-NEXT:             }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "importKind": "value"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "ImportSpecifier",
@@ -118,13 +126,15 @@ import { abc, xyz as def, ghi , } from 'foo.js';
 // CHECK-NEXT:             "local": {
 // CHECK-NEXT:               "type": "Identifier",
 // CHECK-NEXT:               "name": "ghi"
-// CHECK-NEXT:             }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "importKind": "value"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "source": {
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo.js"
-// CHECK-NEXT:         }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "importKind": "value"
 // CHECK-NEXT:       },
 
 import { catch as valid } from 'foo.js';
@@ -140,13 +150,15 @@ import { catch as valid } from 'foo.js';
 // CHECK-NEXT:             "local": {
 // CHECK-NEXT:               "type": "Identifier",
 // CHECK-NEXT:               "name": "valid"
-// CHECK-NEXT:             }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "importKind": "value"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "source": {
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo.js"
-// CHECK-NEXT:         }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "importKind": "value"
 // CHECK-NEXT:       },
 
 import defaultFoo from 'foo.js';
@@ -164,7 +176,8 @@ import defaultFoo from 'foo.js';
 // CHECK-NEXT:         "source": {
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo.js"
-// CHECK-NEXT:         }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "importKind": "value"
 // CHECK-NEXT:       },
 
 import defaultBar, * as Bar from 'bar.js';
@@ -189,7 +202,8 @@ import defaultBar, * as Bar from 'bar.js';
 // CHECK-NEXT:         "source": {
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "bar.js"
-// CHECK-NEXT:         }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "importKind": "value"
 // CHECK-NEXT:       }
 
 // CHECK-NEXT:     ]

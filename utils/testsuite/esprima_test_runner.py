@@ -51,6 +51,8 @@ HERMES_OMITTED_KEYS = {
         "implements",
         "decorators",
     },
+    "ImportDeclaration": {"importKind"},
+    "ImportSpecifier": {"importKind"},
     "ArrayExpression": {"trailingComma"},
     # Some literals support "raw" and others don't.
     # ESPrima doesn't distinguish.
