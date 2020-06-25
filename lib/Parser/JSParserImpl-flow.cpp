@@ -273,7 +273,13 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFunction(SMLoc start) {
     return None;
   ESTree::Node *returnType = *optReturn;
 
-  // TODO: Parse inferred type predicates (%checks).
+  ESTree::Node *predicate = nullptr;
+  if (check(checksIdent_)) {
+    auto optPred = parsePredicate();
+    if (!optPred)
+      return None;
+    predicate = *optPred;
+  }
 
   SMLoc end;
   if (!eatSemi(end))
@@ -290,7 +296,9 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFunction(SMLoc start) {
   auto *ident = setLocation(
       idStart, func, new (context_) ESTree::IdentifierNode(id, func));
   return setLocation(
-      start, ident, new (context_) ESTree::DeclareFunctionNode(ident, nullptr));
+      start,
+      ident,
+      new (context_) ESTree::DeclareFunctionNode(ident, predicate));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseDeclareClass(SMLoc start) {
@@ -1830,6 +1838,28 @@ Optional<ESTree::ClassImplementsNode *> JSParserImpl::parseClassImplements() {
 
   return setLocation(
       start, end, new (context_) ESTree::ClassImplementsNode(id, typeParams));
+}
+
+Optional<ESTree::Node *> JSParserImpl::parsePredicate() {
+  assert(check(checksIdent_));
+  SMRange checksRng = advance(JSLexer::GrammarContext::Flow);
+  if (checkAndEat(TokenKind::l_paren, JSLexer::GrammarContext::AllowRegExp)) {
+    auto optCond = parseConditionalExpression();
+    if (!optCond)
+      return None;
+    SMLoc end = tok_->getEndLoc();
+    if (!eat(
+            TokenKind::r_paren,
+            JSLexer::GrammarContext::Flow,
+            "in declared predicate",
+            "start of predicate",
+            checksRng.Start))
+      return None;
+    return setLocation(
+        checksRng, end, new (context_) ESTree::DeclaredPredicateNode(*optCond));
+  }
+  return setLocation(
+      checksRng, checksRng, new (context_) ESTree::InferredPredicateNode());
 }
 
 Optional<ESTree::IdentifierNode *>

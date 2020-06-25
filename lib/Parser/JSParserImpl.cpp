@@ -105,6 +105,8 @@ void JSParserImpl::initializeIdentifiers() {
   voidIdent_ = lexer_.getIdentifier("void");
   nullIdent_ = lexer_.getIdentifier("null");
 
+  checksIdent_ = lexer_.getIdentifier("%checks");
+
 #endif
 
   // Generate the string representation of all tokens.
@@ -413,6 +415,13 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
     if (!optRet)
       return None;
     returnType = *optRet;
+
+    if (check(checksIdent_)) {
+      auto optPred = parsePredicate();
+      if (!optPred)
+        return None;
+      // TODO: Store the predicate.
+    }
   }
 #endif
 
@@ -4924,8 +4933,22 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
                                                            Subsystem::Parser};
       advance(JSLexer::GrammarContext::Flow);
       auto optType = parseTypeAnnotation(true, AllowAnonFunctionType::No);
-      if (optType && check(TokenKind::equalgreater)) {
-        returnType = *optType;
+      if (optType) {
+        if (check(TokenKind::equalgreater)) {
+          // Done parsing the return type and predicate.
+          returnType = *optType;
+        } else if (check(checksIdent_)) {
+          auto optPred = parsePredicate();
+          if (optPred && check(TokenKind::equalgreater)) {
+            // Done parsing the return type and predicate.
+            returnType = *optType;
+            // TODO: Store the predicate.
+          } else {
+            savePoint.restore();
+          }
+        } else {
+          savePoint.restore();
+        }
       } else {
         savePoint.restore();
       }

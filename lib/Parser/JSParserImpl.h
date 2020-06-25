@@ -249,6 +249,8 @@ class JSParserImpl {
   UniqueString *voidIdent_;
   UniqueString *nullIdent_;
 
+  UniqueString *checksIdent_;
+
 #endif
 
   /// String representation of all tokens.
@@ -1041,6 +1043,8 @@ class JSParserImpl {
   Optional<ESTree::FunctionTypeAnnotationNode *> parseMethodishTypeAnnotation(
       SMLoc start,
       ESTree::Node *typeParams);
+
+  Optional<ESTree::Node *> parsePredicate();
 
   Optional<ESTree::IdentifierNode *> reparseTypeAnnotationAsIdentifier(
       ESTree::Node *typeAnnotation);

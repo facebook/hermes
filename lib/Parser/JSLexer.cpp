@@ -277,11 +277,26 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
         break;
 
       // * *=
-      // % %=
       // ^ ^=
       // / /=
-      PUNC_L2_2('%', TokenKind::percent, '=', TokenKind::percentequal);
       PUNC_L2_2('^', TokenKind::caret, '=', TokenKind::caretequal);
+
+      // % %=
+      case '%':
+      token_.setStart(curCharPtr_);
+        if (HERMES_PARSE_FLOW &&
+            LLVM_UNLIKELY(grammarContext == GrammarContext::Flow) &&
+            llvm::StringRef(curCharPtr_, 7) == "%checks") {
+          token_.setIdentifier(getStringLiteral("%checks"));
+          curCharPtr_ += 7;
+        } else if (curCharPtr_[1] == ('=')) {
+          token_.setPunctuator(TokenKind::percentequal);
+          curCharPtr_ += 2;
+        } else {
+          token_.setPunctuator(TokenKind::percent);
+          curCharPtr_ += 1;
+        }
+        break;
 
         // clang-format on
 
