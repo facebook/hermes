@@ -3556,6 +3556,7 @@ Optional<ESTree::ClassDeclarationNode *> JSParserImpl::parseClassDeclaration(
   SMLoc startLoc = advance().Start;
 
   ESTree::Node *name = nullptr;
+  ESTree::Node *typeParams = nullptr;
 
   if (!check(TokenKind::rw_extends, TokenKind::l_brace)) {
     auto optName = parseBindingIdentifier(Param{});
@@ -3568,6 +3569,14 @@ Optional<ESTree::ClassDeclarationNode *> JSParserImpl::parseClassDeclaration(
       return None;
     }
     name = *optName;
+#if HERMES_PARSE_FLOW
+    if (context_.getParseFlow() && check(TokenKind::less)) {
+      auto optParams = parseTypeParams();
+      if (!optParams)
+        return None;
+      typeParams = *optParams;
+    }
+#endif
   } else if (!param.has(ParamDefault)) {
     // Identifier is required unless we have +Default parameter.
     errorExpected(
@@ -3578,16 +3587,11 @@ Optional<ESTree::ClassDeclarationNode *> JSParserImpl::parseClassDeclaration(
     return None;
   }
 
-  ESTree::NodePtr superClass = nullptr;
-  auto optBody = parseClassTail(startLoc, superClass);
-  if (!optBody)
+  auto optClass =
+      parseClassTail(startLoc, name, typeParams, ClassParseKind::Declaration);
+  if (!optClass)
     return None;
-
-  return setLocation(
-      startLoc,
-      optBody.getValue(),
-      new (context_) ESTree::ClassDeclarationNode(
-          name, nullptr, superClass, nullptr, {}, {}, optBody.getValue()));
+  return llvm::cast<ESTree::ClassDeclarationNode>(*optClass);
 }
 
 Optional<ESTree::ClassExpressionNode *> JSParserImpl::parseClassExpression() {
@@ -3599,6 +3603,8 @@ Optional<ESTree::ClassExpressionNode *> JSParserImpl::parseClassExpression() {
   SMLoc start = advance().Start;
 
   ESTree::Node *name = nullptr;
+  ESTree::Node *typeParams = nullptr;
+
   if (!check(TokenKind::rw_extends, TokenKind::l_brace)) {
     // Try to parse a BindingIdentifier if we did not see a ClassHeritage
     // or a '{'.
@@ -3612,23 +3618,31 @@ Optional<ESTree::ClassExpressionNode *> JSParserImpl::parseClassExpression() {
       return None;
     }
     name = *optName;
+#if HERMES_PARSE_FLOW
+    if (context_.getParseFlow() && check(TokenKind::less)) {
+      auto optParams = parseTypeParams();
+      if (!optParams)
+        return None;
+      typeParams = *optParams;
+    }
+#endif
   }
 
-  ESTree::NodePtr superClass = nullptr;
-  auto optBody = parseClassTail(start, superClass);
-  if (!optBody)
+  auto optClass =
+      parseClassTail(start, name, typeParams, ClassParseKind::Expression);
+  if (!optClass)
     return None;
-
-  return setLocation(
-      start,
-      optBody.getValue(),
-      new (context_) ESTree::ClassExpressionNode(
-          name, nullptr, superClass, nullptr, {}, {}, optBody.getValue()));
+  return llvm::cast<ESTree::ClassExpressionNode>(*optClass);
 }
 
-Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassTail(
+Optional<ESTree::Node *> JSParserImpl::parseClassTail(
     SMLoc startLoc,
-    ESTree::NodePtr &superClass) {
+    ESTree::Node *name,
+    ESTree::Node *typeParams,
+    ClassParseKind kind) {
+  ESTree::Node *superClass = nullptr;
+  ESTree::Node *superTypeParams = nullptr;
+
   if (checkAndEat(TokenKind::rw_extends)) {
     // ClassHeritage[opt] { ClassBody[opt] }
     // ^
@@ -3636,7 +3650,39 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassTail(
     if (!optSuperClass)
       return None;
     superClass = *optSuperClass;
+#if HERMES_PARSE_FLOW
+    if (context_.getParseFlow() && check(TokenKind::less)) {
+      auto optParams = parseTypeArgs();
+      if (!optParams)
+        return None;
+      superTypeParams = *optParams;
+    }
+#endif
   }
+
+  ESTree::NodeList implements{};
+#if HERMES_PARSE_FLOW
+  if (context_.getParseFlow()) {
+    if (checkAndEat(TokenKind::rw_implements) ||
+        checkAndEat(implementsIdent_)) {
+      while (!check(TokenKind::l_brace)) {
+        if (!need(
+                TokenKind::identifier,
+                "in class 'implements'",
+                "start of class",
+                startLoc))
+          return None;
+        auto optImpl = parseClassImplements();
+        if (!optImpl)
+          return None;
+        implements.push_back(**optImpl);
+        if (!checkAndEat(TokenKind::comma)) {
+          break;
+        }
+      }
+    }
+  }
+#endif
 
   if (!need(
           TokenKind::l_brace,
@@ -3646,7 +3692,34 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassTail(
     return None;
   }
 
-  return parseClassBody(startLoc);
+  auto optBody = parseClassBody(startLoc);
+  if (!optBody)
+    return None;
+
+  if (kind == ClassParseKind::Declaration) {
+    return setLocation(
+        startLoc,
+        *optBody,
+        new (context_) ESTree::ClassDeclarationNode(
+            name,
+            typeParams,
+            superClass,
+            superTypeParams,
+            std::move(implements),
+            {},
+            *optBody));
+  }
+  return setLocation(
+      startLoc,
+      *optBody,
+      new (context_) ESTree::ClassExpressionNode(
+          name,
+          typeParams,
+          superClass,
+          superTypeParams,
+          std::move(implements),
+          {},
+          *optBody));
 }
 
 Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {

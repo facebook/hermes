@@ -764,9 +764,20 @@ class JSParserImpl {
 
   Optional<ESTree::ClassDeclarationNode *> parseClassDeclaration(Param param);
   Optional<ESTree::ClassExpressionNode *> parseClassExpression();
-  Optional<ESTree::ClassBodyNode *> parseClassTail(
+
+  enum class ClassParseKind { Declaration, Expression };
+
+  /// Parse the class starting after the name (which is optional).
+  /// \param name the name if provided, nullptr if otherwise.
+  /// \param if the name is provided, the type params if provided, nullptr
+  /// otherwise.
+  /// \param kind whether the class is a declaration or expression.
+  Optional<ESTree::Node *> parseClassTail(
       SMLoc startLoc,
-      ESTree::NodePtr &superClass);
+      ESTree::Node *name,
+      ESTree::Node *typeParams,
+      ClassParseKind kind);
+
   Optional<ESTree::ClassBodyNode *> parseClassBody(SMLoc startLoc);
 
   Optional<ESTree::MethodDefinitionNode *> parseMethodDefinition(
