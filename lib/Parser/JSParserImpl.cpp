@@ -1079,10 +1079,23 @@ Optional<ESTree::ArrayPatternNode *> JSParserImpl::parseArrayBindingPattern(
           startLoc))
     return None;
 
+  ESTree::Node *type = nullptr;
+#if HERMES_PARSE_FLOW
+  if (context_.getParseFlow()) {
+    if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
+      auto optType = parseTypeAnnotation(true);
+      if (!optType)
+        return None;
+      type = *optType;
+      endLoc = type->getEndLoc();
+    }
+  }
+#endif
+
   return setLocation(
       startLoc,
       endLoc,
-      new (context_) ESTree::ArrayPatternNode(std::move(elemList), nullptr));
+      new (context_) ESTree::ArrayPatternNode(std::move(elemList), type));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseBindingElement(Param param) {
@@ -1195,10 +1208,23 @@ Optional<ESTree::ObjectPatternNode *> JSParserImpl::parseObjectBindingPattern(
           startLoc))
     return None;
 
+  ESTree::Node *type = nullptr;
+#if HERMES_PARSE_FLOW
+  if (context_.getParseFlow()) {
+    if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
+      auto optType = parseTypeAnnotation(true);
+      if (!optType)
+        return None;
+      type = *optType;
+      endLoc = type->getEndLoc();
+    }
+  }
+#endif
+
   return setLocation(
       startLoc,
       endLoc,
-      new (context_) ESTree::ObjectPatternNode(std::move(propList), nullptr));
+      new (context_) ESTree::ObjectPatternNode(std::move(propList), type));
 }
 
 Optional<ESTree::PropertyNode *> JSParserImpl::parseBindingProperty(
