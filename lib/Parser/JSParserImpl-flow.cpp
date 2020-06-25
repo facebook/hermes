@@ -51,8 +51,20 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclare(SMLoc start) {
         start, end, new (context_) ESTree::DeclareVariableNode(*optIdent));
   }
 
-  // TODO: Implement 'declare export'
-  llvm_unreachable("UNIMPLEMENTED");
+  if (!check(TokenKind::rw_export)) {
+    errorExpected(
+        {TokenKind::rw_export,
+         TokenKind::rw_interface,
+         TokenKind::rw_function,
+         TokenKind::rw_class,
+         TokenKind::rw_var},
+        "in declared type",
+        "start of declare",
+        start);
+    return None;
+  }
+
+  return parseDeclareExport(start);
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeAlias(
@@ -444,6 +456,153 @@ Optional<ESTree::Node *> JSParserImpl::parseExportTypeDeclaration(
       "start of export",
       startLoc);
   return None;
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(SMLoc start) {
+  assert(check(TokenKind::rw_export));
+  advance(JSLexer::GrammarContext::Flow);
+  SMLoc declareStart = tok_->getStartLoc();
+
+  if (checkAndEat(TokenKind::rw_default, JSLexer::GrammarContext::Flow)) {
+    if (check(TokenKind::rw_function)) {
+      auto optFunc = parseDeclareFunction(declareStart);
+      if (!optFunc)
+        return None;
+      return setLocation(
+          start,
+          *optFunc,
+          new (context_) ESTree::DeclareExportDeclarationNode(
+              *optFunc, {}, nullptr, true));
+    }
+    if (check(TokenKind::rw_class)) {
+      auto optClass = parseDeclareClass(declareStart);
+      if (!optClass)
+        return None;
+      return setLocation(
+          start,
+          *optClass,
+          new (context_) ESTree::DeclareExportDeclarationNode(
+              *optClass, {}, nullptr, true));
+    }
+    auto optType = parseTypeAnnotation();
+    if (!optType)
+      return None;
+    SMLoc end;
+    if (!eatSemi(end))
+      return None;
+    return setLocation(
+        start,
+        end,
+        new (context_)
+            ESTree::DeclareExportDeclarationNode(*optType, {}, nullptr, true));
+  }
+
+  if (check(TokenKind::rw_function)) {
+    auto optFunc = parseDeclareFunction(declareStart);
+    if (!optFunc)
+      return None;
+    return setLocation(
+        start,
+        *optFunc,
+        new (context_)
+            ESTree::DeclareExportDeclarationNode(*optFunc, {}, nullptr, false));
+  }
+
+  if (check(TokenKind::rw_class)) {
+    auto optClass = parseDeclareClass(declareStart);
+    if (!optClass)
+      return None;
+    return setLocation(
+        start,
+        *optClass,
+        new (context_) ESTree::DeclareExportDeclarationNode(
+            *optClass, {}, nullptr, false));
+  }
+
+  if (checkAndEat(TokenKind::rw_var, JSLexer::GrammarContext::Flow)) {
+    auto optIdent = parseBindingIdentifier(Param{});
+    if (!optIdent)
+      return None;
+    SMLoc end;
+    if (!eatSemi(end))
+      return None;
+    return setLocation(
+        start,
+        end,
+        new (context_) ESTree::DeclareExportDeclarationNode(
+            setLocation(
+                start,
+                end,
+                new (context_) ESTree::DeclareVariableNode(*optIdent)),
+            {},
+            nullptr,
+            false));
+  }
+
+  if (checkAndEat(opaqueIdent_, JSLexer::GrammarContext::Flow)) {
+    if (!check(typeIdent_)) {
+      error(tok_->getStartLoc(), "'type' required in opaque type declaration");
+      return None;
+    }
+    advance(JSLexer::GrammarContext::Flow);
+    auto optType = parseTypeAlias(declareStart, TypeAliasKind::DeclareOpaque);
+    if (!optType)
+      return None;
+    return setLocation(
+        start,
+        *optType,
+        new (context_)
+            ESTree::DeclareExportDeclarationNode(*optType, {}, nullptr, false));
+  }
+
+  if (checkAndEat(TokenKind::star, JSLexer::GrammarContext::Flow)) {
+    // declare export * from 'foo';
+    //                  ^
+    ESTree::Node *source = nullptr;
+    if (!check(fromIdent_)) {
+      error(
+          tok_->getStartLoc(), "expected 'from' clause in export declaration");
+      return None;
+    }
+    auto optSource = parseFromClause();
+    if (!optSource)
+      return None;
+    source = *optSource;
+    SMLoc end;
+    if (!eatSemi(end))
+      return None;
+    return setLocation(
+        start,
+        end,
+        new (context_) ESTree::DeclareExportAllDeclarationNode(*optSource));
+  }
+
+  if (!need(
+          TokenKind::l_brace, "in export specifier", "start of declare", start))
+    return None;
+
+  ESTree::NodeList specifiers{};
+  SMLoc end;
+  llvm::SmallVector<SMRange, 2> invalids{};
+  if (!parseExportClause(specifiers, end, invalids))
+    return None;
+
+  ESTree::Node *source = nullptr;
+  if (check(fromIdent_)) {
+    auto optSource = parseFromClause();
+    if (!optSource)
+      return None;
+    source = *optSource;
+  }
+
+  if (!eatSemi(end))
+    return None;
+
+  return setLocation(
+      start,
+      end,
+      new (context_) ESTree::DeclareExportDeclarationNode(
+          nullptr, std::move(specifiers), source, false));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeAnnotation(

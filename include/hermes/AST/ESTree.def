@@ -753,6 +753,9 @@ ESTREE_NODE_4_ARGS(
     NodeList, specifiers, false,
     NodePtr, source, true,
     NodeBoolean, default, false)
+ESTREE_NODE_1_ARGS(
+    DeclareExportAllDeclaration, Base,
+    NodePtr, source, false)
 
 ESTREE_NODE_2_ARGS(
     InterfaceExtends, Base,
