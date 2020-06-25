@@ -98,7 +98,7 @@ class HadesGC final : public GCBase {
   /// Allocate directly in the old generation (doing a full collection if
   /// necessary to create room).
   /// \tparam hasFinalizer Indicates whether the object being allocated will
-  ///   have a finalizer.
+  ///   have a finalizer. Unused by Hades, but used by other GCs.
   template <HasFinalizer hasFinalizer = HasFinalizer::No>
   inline void *allocLongLived(uint32_t sz);
 
@@ -249,17 +249,17 @@ class HadesGC final : public GCBase {
   /// The main entrypoint for all allocations.
   /// \param sz The size of allocation requested. This might be rounded up to
   ///   fit heap alignment requirements.
-  /// \param longLived If true, allocate directly into OG, instead of YG.
-  /// \param fixedSize If true, the allocation is of a cell type that always has
-  ///   the same size. The requirement enforced by Hades is that all fixed-size
-  ///   allocations must go into YG, unless \p longLived is also true.
-  /// \param hasFinalizer If true, the cell about to be allocated into the
+  /// \tparam fixedSize If true, the allocation is of a cell type that always
+  ///   has the same size. The requirement enforced by Hades is that all
+  ///   fixed-size allocations must go into YG.
+  /// \tparam hasFinalizer If true, the cell about to be allocated into the
   ///   requested space will have a finalizer that the GC will need to invoke.
-  void *allocWork(
-      uint32_t sz,
-      bool longLived,
-      bool fixedSize,
-      HasFinalizer hasFinalizer);
+  template <bool fixedSize, HasFinalizer hasFinalizer>
+  void *allocWork(uint32_t sz);
+
+  /// Same as \c allocLongLived<hasFinalizer> but discards the finalizer
+  /// parameter that is unused anyway.
+  inline void *allocLongLived(uint32_t sz);
 
   /// Allocate into OG. Returns a pointer to the newly allocated space. That
   /// space must be filled immediately after this call completes.
@@ -407,12 +407,28 @@ class HadesGC final : public GCBase {
 
 template <bool fixedSize, HasFinalizer hasFinalizer>
 void *HadesGC::alloc(uint32_t sz) {
-  return allocWork(sz, false, fixedSize, hasFinalizer);
+  return allocWork<fixedSize, hasFinalizer>(heapAlignSize(sz));
 }
 
 template <HasFinalizer hasFinalizer>
 void *HadesGC::allocLongLived(uint32_t sz) {
-  return allocWork(sz, true, false, hasFinalizer);
+  return allocLongLived(sz);
+}
+
+void *HadesGC::allocLongLived(uint32_t sz) {
+  // Have to unlock STW first.
+  yieldToBackgroundThread();
+  void *res;
+  {
+    // Alloc directly into the old gen.
+    std::lock_guard<Mutex> lk{oldGenMutex_};
+    // The memory doesn't need to be initialized before releasing the lock,
+    // because the sweeper skips cells that are still FreelistCells, and the
+    // mark bit is already set.
+    res = oldGenAlloc(heapAlignSize(sz));
+  }
+  yieldToMutator();
+  return res;
 }
 
 /// \}

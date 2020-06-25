@@ -1240,31 +1240,18 @@ bool HadesGC::isMostRecentFinalizableObj(const GCCell *cell) const {
 
 #endif
 
-void *HadesGC::allocWork(
-    uint32_t sz,
-    bool longLived,
-    bool fixedSize,
-    HasFinalizer hasFinalizer) {
-  sz = heapAlignSize(sz);
+template <bool fixedSize, HasFinalizer hasFinalizer>
+void *HadesGC::allocWork(uint32_t sz) {
+  assert(
+      isSizeHeapAligned(sz) &&
+      "Should be aligned before entering this function");
   assert(sz >= minAllocationSize() && "Allocating too small of an object");
   assert(sz <= maxAllocationSize() && "Allocating too large of an object");
-  if (longLived || sz >= HeapSegment::maxSize() / 2) {
-    // Have to unlock STW first.
-    yieldToBackgroundThread();
-    void *res;
-    {
-      // Alloc directly into the old gen.
-      std::lock_guard<Mutex> lk{oldGenMutex_};
-      // The memory doesn't need to be initialized before releasing the lock,
-      // because the sweeper skips cells that are still FreelistCells, and the
-      // mark bit is already set.
-      res = oldGenAlloc(sz);
-    }
-    yieldToMutator();
-    return res;
+  if (!fixedSize && LLVM_UNLIKELY(sz >= HeapSegment::maxSize() / 2)) {
+    return allocLongLived(sz);
   }
   AllocResult res = youngGen().bumpAlloc(sz);
-  if (!res.success) {
+  if (LLVM_UNLIKELY(!res.success)) {
     // Failed to alloc in young gen, do a young gen collection.
     youngGenCollection();
     res = youngGen().bumpAlloc(sz);
@@ -1276,7 +1263,18 @@ void *HadesGC::allocWork(
   return res.ptr;
 }
 
+// Instaniate all versions of allocWork up-front so that this function doesn't
+// need to be inlined.
+template void *HadesGC::allocWork<true, HasFinalizer::Yes>(uint32_t);
+template void *HadesGC::allocWork<false, HasFinalizer::Yes>(uint32_t);
+template void *HadesGC::allocWork<true, HasFinalizer::No>(uint32_t);
+template void *HadesGC::allocWork<false, HasFinalizer::No>(uint32_t);
+
 GCCell *HadesGC::oldGenAlloc(uint32_t sz) {
+  assert(
+      isSizeHeapAligned(sz) &&
+      "Should be aligned before entering this function");
+  assert(sz >= minAllocationSize() && "Allocating too small of an object");
   assert(sz <= maxAllocationSize() && "Allocating too large of an object");
   assert(
       oldGenMutex_ && "oldGenMutex_ must be held before calling oldGenAlloc");
