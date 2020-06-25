@@ -756,6 +756,14 @@ ESTREE_NODE_4_ARGS(
 ESTREE_NODE_1_ARGS(
     DeclareExportAllDeclaration, Base,
     NodePtr, source, false)
+ESTREE_NODE_3_ARGS(
+    DeclareModule, Base,
+    NodePtr, id, false,
+    NodePtr, body, false,
+    NodeLabel, kind, false)
+ESTREE_NODE_1_ARGS(
+    DeclareModuleExports, Base,
+    NodePtr, typeAnnotation, false)
 
 ESTREE_NODE_2_ARGS(
     InterfaceExtends, Base,

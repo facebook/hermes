@@ -40,6 +40,9 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclare(SMLoc start) {
   if (check(TokenKind::rw_function)) {
     return parseDeclareFunction(start);
   }
+  if (check(moduleIdent_)) {
+    return parseDeclareModule(start);
+  }
   if (checkAndEat(TokenKind::rw_var)) {
     auto optIdent = parseBindingIdentifier(Param{});
     if (!optIdent)
@@ -299,6 +302,119 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFunction(SMLoc start) {
       start,
       ident,
       new (context_) ESTree::DeclareFunctionNode(ident, predicate));
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseDeclareModule(SMLoc start) {
+  assert(check(moduleIdent_));
+  advance(JSLexer::GrammarContext::Flow);
+
+  if (checkAndEat(TokenKind::period, JSLexer::GrammarContext::Flow)) {
+    if (!checkAndEat(exportsIdent_, JSLexer::GrammarContext::Flow)) {
+      error(tok_->getSourceRange(), "expected module.exports declaration");
+      return None;
+    }
+    if (!eat(
+            TokenKind::colon,
+            JSLexer::GrammarContext::Flow,
+            "in module.exports declaration",
+            "start of declaration",
+            start))
+      return None;
+    auto optType = parseTypeAnnotation(/* wrapped */ true);
+    if (!optType)
+      return None;
+    SMLoc end;
+    eatSemi(end, true);
+    return setLocation(
+        start, end, new (context_) ESTree::DeclareModuleExportsNode(*optType));
+  }
+
+  // declare module Identifier {[opt]
+  //                ^
+  ESTree::Node *id = nullptr;
+  if (check(TokenKind::string_literal)) {
+    id = setLocation(
+        tok_,
+        tok_,
+        new (context_) ESTree::StringLiteralNode(tok_->getStringLiteral()));
+  } else {
+    if (!need(
+            TokenKind::identifier,
+            "in module declaration",
+            "start of declaration",
+            start))
+      return None;
+    id = setLocation(
+        tok_,
+        tok_,
+        new (context_) ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
+  }
+  advance(JSLexer::GrammarContext::Flow);
+
+  // declare module Identifier {
+  //                           ^
+  SMLoc bodyStart = tok_->getStartLoc();
+  if (!eat(
+          TokenKind::l_brace,
+          JSLexer::GrammarContext::Flow,
+          "in module declaration",
+          "start of declaration",
+          start))
+    return None;
+
+  UniqueString *kind = nullptr;
+  ESTree::NodeList declarations{};
+
+  while (!check(TokenKind::r_brace)) {
+    if (!check(declareIdent_)) {
+      error(
+          tok_->getSourceRange(),
+          "expected 'declare' in module  declaration body");
+      return None;
+    }
+    SMLoc declarationStart = advance(JSLexer::GrammarContext::Flow).Start;
+    auto optDecl = parseDeclare(declarationStart);
+    if (!optDecl)
+      return None;
+    ESTree::Node *decl = *optDecl;
+    switch (decl->getKind()) {
+      case ESTree::NodeKind::DeclareModuleExports:
+        if (kind != nullptr && kind != commonJSIdent_) {
+          error(
+              decl->getSourceRange(),
+              "cannot use CommonJS export in ES module");
+        }
+        kind = commonJSIdent_;
+        break;
+      case ESTree::NodeKind::DeclareExportDeclaration:
+        if (kind != nullptr && kind != esIdent_) {
+          error(
+              decl->getSourceRange(),
+              "cannot use ESM export in CommonJS module");
+        }
+        kind = esIdent_;
+        break;
+      default:
+        break;
+    }
+    declarations.push_back(*decl);
+  }
+
+  SMLoc bodyEnd = advance(JSLexer::GrammarContext::Flow).End;
+
+  ESTree::Node *body = setLocation(
+      bodyStart,
+      bodyEnd,
+      new (context_) ESTree::BlockStatementNode(std::move(declarations)));
+
+  if (kind == nullptr) {
+    // Default to CommonJS if we weren't able to figure it out based on
+    // declarations themselves.
+    kind = commonJSIdent_;
+  }
+
+  return setLocation(
+      start, body, new (context_) ESTree::DeclareModuleNode(id, body, kind));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseDeclareClass(SMLoc start) {

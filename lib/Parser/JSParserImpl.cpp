@@ -95,6 +95,10 @@ void JSParserImpl::initializeIdentifiers() {
   opaqueIdent_ = lexer_.getIdentifier("opaque");
   plusIdent_ = lexer_.getIdentifier("plus");
   minusIdent_ = lexer_.getIdentifier("minus");
+  moduleIdent_ = lexer_.getIdentifier("module");
+  exportsIdent_ = lexer_.getIdentifier("exports");
+  esIdent_ = lexer_.getIdentifier("ES");
+  commonJSIdent_ = lexer_.getIdentifier("CommonJS");
 
   anyIdent_ = lexer_.getIdentifier("any");
   mixedIdent_ = lexer_.getIdentifier("mixed");

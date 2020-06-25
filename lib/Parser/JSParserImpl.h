@@ -239,6 +239,10 @@ class JSParserImpl {
   UniqueString *opaqueIdent_;
   UniqueString *plusIdent_;
   UniqueString *minusIdent_;
+  UniqueString *moduleIdent_;
+  UniqueString *exportsIdent_;
+  UniqueString *esIdent_;
+  UniqueString *commonJSIdent_;
 
   UniqueString *anyIdent_;
   UniqueString *mixedIdent_;
@@ -974,6 +978,7 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseDeclareFunction(SMLoc start);
   Optional<ESTree::Node *> parseDeclareClass(SMLoc start);
   Optional<ESTree::Node *> parseDeclareExport(SMLoc start);
+  Optional<ESTree::Node *> parseDeclareModule(SMLoc start);
 
   Optional<ESTree::Node *> parseExportTypeDeclaration(SMLoc start);
 
