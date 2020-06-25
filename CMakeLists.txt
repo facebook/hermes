@@ -580,6 +580,7 @@ list(APPEND HERMES_TEST_DEPS
   hbc-attribute
   hbc-deltaprep
   hbc-diff
+  dependency-extractor
   )
 
 set(HERMES_LIT_TEST_PARAMS
@@ -590,6 +591,7 @@ set(HERMES_LIT_TEST_PARAMS
   jit_enabled=${HERMESVM_JIT}
   jit_disassembler_enabled=${HERMESVM_JIT_DISASSEMBLER}
   hbc_deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
+  dependency_extractor=${HERMES_TOOLS_OUTPUT_DIR}/dependency-extractor
   FileCheck=${HERMES_TOOLS_OUTPUT_DIR}//FileCheck
   hermes=${HERMES_TOOLS_OUTPUT_DIR}/hermes
   hermesc=${HERMES_TOOLS_OUTPUT_DIR}/hermesc

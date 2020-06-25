@@ -15,6 +15,7 @@ add_subdirectory(hbc-attribute)
 add_subdirectory(jsi)
 add_subdirectory(emhermesc)
 add_subdirectory(fuzzers)
+add_subdirectory(dependency-extractor)
 
 if (HERMESVM_API_TRACE)
   add_subdirectory(synth)
