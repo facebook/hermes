@@ -252,6 +252,12 @@ patternSplit[Symbol.split] = "dumdidum";
 try { "abcde".split(patternSplit, limit); } catch(e) { print(e.name); }
 // CHECK-NEXT: TypeError
 
+// Check that you cannot match at the end of a string
+print("aXbXcX".split(/(?<=X)/))
+// CHECK-NEXT: aX,bX,cX
+print("test".split(/$/))
+// CHECK-NEXT: test
+
 print('substring');
 // CHECK-LABEL: substring
 print('abcdcba'.substring());

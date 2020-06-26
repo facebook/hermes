@@ -722,6 +722,9 @@ stringPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
 /// \p R such that it starts on or after index \p q in \p S.
 /// \param q starting point in S. Requires: q <= S->getStringLength().
 /// \param R a RegExp or a String.
+/// \return A RegExpMatch object. Note that the returned match may start at
+/// S->getStringLength() whereas the spec requires that we only split on matches
+/// starting before S->getStringLength().
 static CallResult<RegExpMatch> splitMatch(
     Runtime *runtime,
     Handle<StringPrimitive> S,
@@ -861,10 +864,12 @@ CallResult<HermesValue> splitInternal(
 
     auto match = *matchResult;
 
-    if (match.empty()) {
-      // There's no matches at or after index q, so we're done searching.
-      // Note: This behavior differs from the spec implementation,
-      // because we check for matches at or after q.
+    if (match.empty() || match[0]->location >= s) {
+      // There's no matches between index q and the end of the string, so we're
+      // done searching. Note: This behavior differs from the spec
+      // implementation, because we check for matches at or after q. However, in
+      // line with the spec, we only count matches that start before the end of
+      // the string.
       break;
     }
     // Found a match, so go ahead and update q and e,
