@@ -1,0 +1,3 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.facebook.hermes.intl">
+  <uses-sdk android:minSdkVersion="24" />
+</manifest>

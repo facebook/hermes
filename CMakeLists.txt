@@ -194,6 +194,9 @@ set(HERMES_MSVC_MP ON CACHE STRING
 set(EMSCRIPTEN_FASTCOMP ON CACHE BOOL
   "Emscripten is using the fastcomp backend instead of the LLVM one")
 
+set(HERMES_ENABLE_INTL OFF CACHE BOOL
+  "Enable JS Intl support (WIP)")
+
 if (HERMES_IS_ANDROID)
   set(HERMES_IS_MOBILE_BUILD TRUE)
 
@@ -215,6 +218,7 @@ if (HERMES_IS_ANDROID)
     # https://github.com/android-ndk/ndk/issues/242
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fuse-ld=gold")
   endif()
+
 endif()
 
 if (HERMES_IS_MOBILE_BUILD)
@@ -332,6 +336,14 @@ if(HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION)
 endif()
 if (NOT (ANDROID_LINUX_PERF_PATH STREQUAL ""))
   add_definitions(-DANDROID_LINUX_PERF_PATH="${ANDROID_LINUX_PERF_PATH}")
+endif()
+
+if (HERMES_ENABLE_INTL)
+  if (HERMES_IS_ANDROID)
+    add_definitions(-DHERMES_PLATFORM_INTL=HERMES_PLATFORM_INTL_ANDROID)
+  else()
+    add_definitions(-DHERMES_PLATFORM_INTL=HERMES_PLATFORM_INTL_DUMMY)
+  endif()
 endif()
 
 if (HERMES_ENABLE_WERROR)
@@ -556,6 +568,7 @@ add_subdirectory(lib)
 add_subdirectory(external)
 add_subdirectory(unittests)
 add_subdirectory(API)
+add_subdirectory(android/intltest/java/com/facebook/hermes/test)
 
 # Make sure JSI is compiled with PIC
 set(save_CMAKE_POSITION_INDEPENDENT_CODE ${CMAKE_POSITION_INDEPENDENT_CODE})

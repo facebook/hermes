@@ -1,0 +1,88 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// To run intltests, cd hermes/android and run:
+//   ./gradlew intl:connectedAndroidTest
+
+apply plugin: 'com.android.library'
+
+def facebookBuild = System.getenv("FACEBOOK") ?: "0"
+def hermesHostBuild = System.getenv("HERMES_WS_DIR")
+
+// For Facebook internal use:
+def fbsource = System.getenv("FBSOURCE_DIR") ?:
+    System.getenv("HOME") + "/fbsource"
+
+// TODO: Figure out how to deduplicate this file and intl/build.gradle
+android {
+  compileSdkVersion = 24
+
+  defaultConfig {
+    minSdkVersion = 24
+    ndk {
+      abiFilters (*rootProject.ext.abis)
+    }
+    testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+
+    externalNativeBuild {
+      cmake {
+        arguments "-DHERMES_IS_ANDROID=True"
+        arguments "-DHERMES_FACEBOOK_BUILD=${facebookBuild}"
+        arguments "-DANDROID_STL=c++_shared"
+        arguments "-DANDROID_PIE=True"
+        arguments "-DIMPORT_HERMESC=${hermes_ws}/build/ImportHermesc.cmake"
+        arguments "-DFBSOURCE_DIR=${fbsource}"
+        arguments "-DHERMES_SLOW_DEBUG=False"
+        arguments "-DHERMES_ENABLE_INTL=True"
+        targets "jsijni", "jsijniepi", "libhermes"
+      }
+    }
+    ndk {
+      abiFilters (*rootProject.ext.abis)
+    }
+  }
+
+  externalNativeBuild {
+    cmake {
+      version "3.6.0"
+      path "../../CMakeLists.txt"
+      buildStagingDirectory = "${rootProject.ext.hermes_ws}/staging/intl"
+      buildStagingDirectory.mkdirs()
+    }
+  }
+
+  dependencies {
+    androidTestImplementation 'junit:junit:4.12'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
+    androidTestImplementation 'org.easytesting:fest-assert-core:2.0M10'
+    androidTestImplementation 'com.facebook.fbjni:fbjni:0.0.2'
+    androidTestImplementation 'com.facebook.soloader:soloader:0.9.0'
+    androidTestImplementation 'com.facebook.yoga:proguard-annotations:1.14.1'
+  }
+
+  sourceSets {
+    main {
+      java {
+        srcDirs = []
+      }
+    }
+    androidTest {
+      java {
+        srcDirs = [
+          "java",
+          // Include AndroidUnicodeUtils, which would normally come from RN
+          "${rootProject.ext.hermes_ws}/hermes/lib/Platform/Unicode/java",
+          "${rootProject.ext.hermes_ws}/hermes/lib/Platform/Intl/java",
+        ]
+      }
+      resources {
+        srcDir "java/com/facebook/hermes/test"
+      }
+    }
+  }
+}

@@ -7,4 +7,5 @@ add_hermes_library(hermesPlatform
         Logging.cpp
 )
 
+add_subdirectory(Intl)
 add_subdirectory(Unicode)

@@ -70,6 +70,9 @@ target_link_libraries(libhermes
   ${CORE_FOUNDATION}
 )
 
+# Export the required header directory
+target_include_directories(libhermes PUBLIC ..)
+
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR
     "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
   # Export all API symbols

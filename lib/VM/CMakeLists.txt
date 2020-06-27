@@ -83,6 +83,7 @@ set(source_files
   JSLib/HermesInternal.cpp
   JSLib/HermesBuiltin.cpp
   JSLib/Instrument.cpp
+  JSLib/Intl.cpp
   JSLib/JSLibInternal.cpp JSLib/JSLibInternal.h
   JSLib/RuntimeCommonStorage.cpp
   JSLib/Map.cpp
@@ -191,6 +192,7 @@ set(link_libs
   hermesSupport
   hermesParser
   hermesPlatform
+  hermesPlatformIntl
   hermesHBCBackend
   dtoa
   ${CORE_FOUNDATION}
