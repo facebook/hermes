@@ -11,8 +11,8 @@ import collections
 import re
 
 
-# The blacklist is ordered by decreasing severity.
-BLACK_LIST = [
+# The skiplist is ordered by decreasing severity.
+SKIP_LIST = [
     # Fails due to a bug in Hermes Function.apply(): T28044390.
     "CVEs/CVE-2016-7194.js",
     # These require constructing prohibitively large arrays.
@@ -1510,9 +1510,9 @@ BLACK_LIST = [
     ### Unsupported Esprima tests end ###
 ]
 
-# This blacklist is specifically for tests that Hermes never intends to support,
+# This skiplist is specifically for tests that Hermes never intends to support,
 # and so should not be counted in totals for targeting 100% coverage.
-PERMANENT_BLACK_LIST = [
+PERMANENT_SKIP_LIST = [
     # HTML comments.
     "mjsunit/html-comments.js",
     # Uses Function.toString().
@@ -1668,6 +1668,6 @@ PERMANENT_UNSUPPORTED_FEATURES = [
     "cross-realm",
 ]
 
-assert len(set(BLACK_LIST)) == len(BLACK_LIST), "Blacklist has duplicates: " + str(
-    [item for item, count in collections.Counter(BLACK_LIST).items() if count > 1]
+assert len(set(SKIP_LIST)) == len(SKIP_LIST), "Skiplist has duplicates: " + str(
+    [item for item, count in collections.Counter(SKIP_LIST).items() if count > 1]
 )

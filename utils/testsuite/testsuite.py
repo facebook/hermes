@@ -19,18 +19,18 @@ from os.path import basename, isdir, isfile, join, splitext
 
 
 try:
-    from testsuite.testsuite_blacklist import (
-        BLACK_LIST,
-        PERMANENT_BLACK_LIST,
+    from testsuite.testsuite_skiplist import (
+        SKIP_LIST,
+        PERMANENT_SKIP_LIST,
         UNSUPPORTED_FEATURES,
         PERMANENT_UNSUPPORTED_FEATURES,
     )
     import testsuite.esprima_test_runner as esprima
 except ImportError:
     # Hacky way to handle non-buck builds that call the file immediately.
-    from testsuite_blacklist import (
-        BLACK_LIST,
-        PERMANENT_BLACK_LIST,
+    from testsuite_skiplist import (
+        SKIP_LIST,
+        PERMANENT_SKIP_LIST,
         UNSUPPORTED_FEATURES,
         PERMANENT_UNSUPPORTED_FEATURES,
     )
@@ -44,7 +44,7 @@ except ImportError:
 ## the V8 test suite.
 
 ## How results are computed:
-## If a test is blacklisted or contains unsupported ES6 features,
+## If a test is on the skip list or contains unsupported ES6 features,
 ## it is skipped, and thus not executed at all.
 
 ## Result classes:
@@ -358,8 +358,8 @@ extra_run_args = ["-Xhermes-internal-test-methods"]
 extra_compile_flags = ["-fno-static-builtins"]
 
 
-def fileInBlacklist(filename):
-    for blName in BLACK_LIST + PERMANENT_BLACK_LIST:
+def fileInSkiplist(filename):
+    for blName in SKIP_LIST + PERMANENT_SKIP_LIST:
         if isinstance(blName, str):
             if blName in filename:
                 return True
@@ -370,8 +370,8 @@ def fileInBlacklist(filename):
     return False
 
 
-def fileInPermanentBlacklist(filename):
-    for blName in PERMANENT_BLACK_LIST:
+def fileInPermanentSkiplist(filename):
+    for blName in PERMANENT_SKIP_LIST:
         if blName in filename:
             return True
     return False
@@ -492,22 +492,22 @@ ESPRIMA_TEST_STATUS_MAP = {
 }
 
 
-def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner):
+def runTest(filename, test_skiplist, keep_tmp, binary_path, hvm, esprima_runner):
     """
     Runs a single js test pointed by filename
     """
     baseFileName = basename(filename)
     suite = getSuite(filename)
-    blacklisted = fileInBlacklist(filename)
+    skiplisted = fileInSkiplist(filename)
     skippedType = (
         TestFlag.TEST_PERMANENTLY_SKIPPED
-        if fileInPermanentBlacklist(filename)
+        if fileInPermanentSkiplist(filename)
         else TestFlag.TEST_SKIPPED
     )
 
-    if blacklisted and not test_blacklist:
+    if skiplisted and not test_skiplist:
         printVerbose(
-            "Skipping test in blacklist{}: {}".format(
+            "Skipping test in skiplist{}: {}".format(
                 " (permanently)"
                 if skippedType is TestFlag.TEST_PERMANENTLY_SKIPPED
                 else "",
@@ -538,7 +538,7 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
             if not permanent
             else TestFlag.TEST_PERMANENTLY_SKIPPED
         )
-        if not test_blacklist:
+        if not test_skiplist:
             printVerbose(
                 skipReason
                 + "{}: ".format(" (permanently)" if permanent else "")
@@ -620,12 +620,12 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
                             baseFileName
                         )
                     )
-                    # If the test was in the blacklist, it was possible a
+                    # If the test was in the skiplist, it was possible a
                     # compiler failure was expected. Else, it is unexpected and
                     # will return a failure.
                     return (
                         (skippedType, "", 0)
-                        if blacklisted
+                        if skiplisted
                         else (TestFlag.COMPILE_FAILED, "", 0)
                     )
             except subprocess.CalledProcessError as e:
@@ -640,7 +640,7 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
                     printVerbose(textwrap.indent(errString, "\t"))
                     return (
                         (skippedType, "", 0)
-                        if blacklisted
+                        if skiplisted
                         else (TestFlag.COMPILE_FAILED, errString, 0)
                     )
                 printVerbose("PASS: Hermes correctly failed to compile")
@@ -648,7 +648,7 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
                 printVerbose("FAIL: Compilation timed out on {}".format(baseFileName))
                 return (
                     (skippedType, "", 0)
-                    if blacklisted
+                    if skiplisted
                     else (TestFlag.COMPILE_TIMEOUT, "", 0)
                 )
 
@@ -673,7 +673,7 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
                         printVerbose("FAIL: Expected execution to throw")
                         return (
                             (skippedType, "", 0)
-                            if blacklisted
+                            if skiplisted
                             else (TestFlag.EXECUTE_FAILED, "", 0)
                         )
                     else:
@@ -694,7 +694,7 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
                             printVerbose("No output received from process")
                         return (
                             (skippedType, "", 0)
-                            if blacklisted
+                            if skiplisted
                             else (TestFlag.EXECUTE_FAILED, errString, 0)
                         )
                     else:
@@ -705,7 +705,7 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
                     printVerbose("FAIL: Execution of binary timed out")
                     return (
                         (skippedType, "", 0)
-                        if blacklisted
+                        if skiplisted
                         else (TestFlag.EXECUTE_TIMEOUT, "", 0)
                     )
             max_duration = max(max_duration, time.time() - start)
@@ -714,10 +714,10 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
         os.unlink(temp.name)
         os.unlink(binfile.name)
 
-    if blacklisted:
-        # If the test was blacklisted, but it passed successfully, consider that
+    if skiplisted:
+        # If the test was skiplisted, but it passed successfully, consider that
         # an error case.
-        printVerbose("FAIL: A blacklisted test completed successfully")
+        printVerbose("FAIL: A skiplisted test completed successfully")
         return (TestFlag.TEST_UNEXPECTED_PASSED, "", max_duration)
     else:
         printVerbose("PASS: Test completed successfully")
@@ -822,10 +822,10 @@ def get_arg_parser():
         help="Keep temporary files of successful tests.",
     )
     parser.add_argument(
-        "--test-blacklist",
-        dest="test_blacklist",
+        "--test-skiplist",
+        dest="test_skiplist",
         action="store_true",
-        help="Also test if tests in the blacklist fail",
+        help="Also test if tests in the skiplist fail",
     )
     parser.add_argument(
         "-a",
@@ -898,7 +898,7 @@ def run(
     is_verbose,
     match,
     source,
-    test_blacklist,
+    test_skiplist,
     num_slowest_tests,
     keep_tmp,
     show_all,
@@ -969,7 +969,7 @@ def run(
     esprima_runner = esprima.EsprimaTestRunner(verbose)
 
     calls = makeCalls(
-        (test_blacklist, keep_tmp, binary_path, hvm, esprima_runner),
+        (test_skiplist, keep_tmp, binary_path, hvm, esprima_runner),
         onlyfiles,
         rangeLeft,
         rangeRight,
@@ -1054,8 +1054,8 @@ def run(
     print("| Compile timeout      | {:>8} |".format(resultsHist[TestFlag.COMPILE_TIMEOUT]))
     print("| Execute fail         | {:>8} |".format(resultsHist[TestFlag.EXECUTE_FAILED]))
     print("| Execute timeout      | {:>8} |".format(resultsHist[TestFlag.EXECUTE_TIMEOUT]))
-    if test_blacklist:
-        print("| Blacklisted passes   | {:>8} |".format(resultsHist[TestFlag.TEST_UNEXPECTED_PASSED]))
+    if test_skiplist:
+        print("| Skiplisted passes    | {:>8} |".format(resultsHist[TestFlag.TEST_UNEXPECTED_PASSED]))
     print("-----------------------------------")
 
     # fmt: on
