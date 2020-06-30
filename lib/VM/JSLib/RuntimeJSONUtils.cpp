@@ -501,6 +501,8 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
     if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
+
+    GCScopeMarkerRAII marker(runtime_);
     for (uint64_t index = 0, e = *lenRes; index < e; ++index) {
       tmpHandle = HermesValue::encodeDoubleValue(index);
       // Note that deleting elements doesn't affect array length.
@@ -508,6 +510,7 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
               filter(objHandle, tmpHandle) == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
+      marker.flush();
     }
   } else if (auto scopedObject = Handle<JSObject>::dyn_vmcast(valHandle)) {
     auto cr = JSObject::getOwnPropertyNames(scopedObject, runtime_, true);
@@ -515,12 +518,14 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
       return ExecutionStatus::EXCEPTION;
     }
     auto keys = *cr;
+    GCScopeMarkerRAII marker(runtime_);
     for (uint32_t index = 0, e = keys->getEndIndex(); index < e; ++index) {
       tmpHandle = keys->at(runtime_, index);
       if (LLVM_UNLIKELY(
               filter(scopedObject, tmpHandle) == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
+      marker.flush();
     }
   }
   // We have delayed converting the property to a string if it was index.

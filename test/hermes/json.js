@@ -482,6 +482,17 @@ var reviver = function(name, val) {
 var str = '{"a": 1, "b": 2}';
 JSON.parse(str, reviver);
 
+globalFirst = true;
+var reviver = function () {
+  if (globalFirst) {
+    globalArray = Array(3000);
+    this[2] = globalArray;
+  }
+  globalFirst = false;
+}
+print(JSON.parse('[1, 2, []]', reviver));
+// CHECK-NEXT: undefined
+
 print(JSON.parse("1.2e2"));
 // CHECK-NEXT: 120
 print(JSON.parse("2.3E3"));
