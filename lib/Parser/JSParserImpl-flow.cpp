@@ -769,9 +769,11 @@ Optional<ESTree::Node *> JSParserImpl::parseUnionTypeAnnotation() {
     types.push_back(**optInt);
   }
 
+  SMLoc start = types.front().getStartLoc();
+  SMLoc end = types.back().getEndLoc();
   return setLocation(
-      types.front().getStartLoc(),
-      types.back().getEndLoc(),
+      start,
+      end,
       new (context_) ESTree::UnionTypeAnnotationNode(std::move(types)));
 }
 
@@ -797,9 +799,11 @@ Optional<ESTree::Node *> JSParserImpl::parseIntersectionTypeAnnotation() {
     types.push_back(**optInt);
   }
 
+  SMLoc start = types.front().getStartLoc();
+  SMLoc end = types.back().getEndLoc();
   return setLocation(
-      types.front().getStartLoc(),
-      types.back().getEndLoc(),
+      start,
+      end,
       new (context_) ESTree::IntersectionTypeAnnotationNode(std::move(types)));
 }
 
