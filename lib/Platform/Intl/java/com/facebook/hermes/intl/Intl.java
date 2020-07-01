@@ -145,15 +145,49 @@ public class Intl {
         }
 
         // Note: We are skiping the following as they can be expensive and doesn't add much value.
-        // Other engines (V8, Chakra) does the same.
+        // Other engines (V8, Chakra) also skip these validations as of today.
         // * does not include duplicate variant subtags, and *
         // * does not include duplicate singleton subtags. *
 
         return true;
     }
 
-    private static String canonicalizeUnicodeLocaleIdUsingICU(String locale) {
-        // Note:: Unlike the icu4c equivalents, the forLanguageTag in icu4j doesn't seem to have any error reporting ..
+    private static String canonicalizeUnicodeLocaleIdUsingPlatformICU(String locale) {
+        // A quick comparative study with other implementations.
+        // The canonical way to canonicalize a localeId string is to roundtrip it through the icu::Locale object using forLanguageTag/toLanguageTag functions.
+        // V8 relies on icu4c implementation of the above functions, but augmented with private tables and code for handling special cases and error scenarios
+        // https://github.com/v8/v8/blob/4b9b23521e6fd42373ebbcb20ebe03bf445494f9/src/objects/intl-objects.cc
+        // Also, note that Chromium applies a few patches (https://chromium.googlesource.com/chromium/deps/icu/+/refs/heads/master/patches/) over icu, which may also result in subtle behaviour differences.
+        //
+        // Firefox doesn't seem to rely on ICU much but custom implemented most code and tables
+        // https://dxr.mozilla.org/mozilla-central/rev/c68fe15a81fc2dc9fc5765f3be2573519c09b6c1/js/src/builtin/intl/Locale.cpp#1233
+        // Firefox has intentionally reimplemented them for performance as documented here:
+        // https://dxr.mozilla.org/mozilla-central/rev/c68fe15a81fc2dc9fc5765f3be2573519c09b6c1/js/src/builtin/intl/LanguageTag.cpp#1034
+        //
+        // Chakra official releases links to Windows.Globalization libraries available in Windows,
+        // But has an ICU variant which roundtrips the localId through icu::Locale as mentioned before with no other custom code around.
+        //
+        // Note:: icu4j is not a JNI wrapper around icu4c, but a reimplementation using Java.
+        // Even though they have similar APIs, there are subtle deviations for e.g. in error handling.
+        // Unlike the icu4c equivalents, the forLanguageTag in icu4j doesn't report any errors while parsing ..
+        // For e.g. icu4c identifies bogus locids.. and report failure when part of the loclid can't be parsed. (https://github.com/unicode-org/icu/blob/79fac501010d63231c258dc0d4fb9a9e87ddb8d8/icu4c/source/common/locid.cpp#L816)
+        // This results in our implementation a bit more leniant (i.e. not throwing RangeError for certain invalid inputs) campared to V8/Chakra
+        // Both icu4c and icu4j implementations use private tables and mappings embedded in code for special cases such as deprecated and grandfathered  language code.
+        // icu4c: https://github.com/unicode-org/icu/blob/9219c6ae038a3556dffca880e93d2f2ca00e685a/icu4c/source/common/uloc_tag.cpp#L103
+        // icu4j: https://github.com/unicode-org/icu/blob/79fac501010d63231c258dc0d4fb9a9e87ddb8d8/icu4j/main/classes/core/src/com/ibm/icu/impl/locale/LanguageTag.java#L43
+        // Android-icu4j: https://android.googlesource.com/platform/external/icu/+/refs/heads/master/android_icu4j/
+        //
+        // Clearly icu4c implementation has a few more private tables implementated, for e.g. the deprecated languages and regions. This results in subtle behavioural differences between our implemenation and say, V8.
+        //
+        // As of now, Firefox seems to be by far the most compliant engine out there.
+        //
+        // Our current implementation is directly over icu4j available with Android platform, as hasn't implemented any private tables/mappings yet.
+        // We fail many tests in our testcases based on https://github.com/tc39/test262/tree/master/test/intl402/Intl, but mostly special scenarios.
+        // Our implementation closely follows the current V8 implementation, and our differences from V8 stems from
+        // 1. The behavioural difference between icu4j and icu4c
+        // 2. We didnt' implement some of the private tables and mappings other than what we get from ICU. (for e.g. https://github.com/v8/v8/blob/d432b2185ca9f2c1c405df872e5546cd2cf2dfd0/src/objects/intl-objects.cc#L802)
+        // The failed test cases are commented with TODO::Hermes tag in intl_getCanonicalNames_*.js
+        //
         // Ref: https://unicode-org.github.io/icu-docs/apidoc/released/icu4j/com/ibm/icu/util/ULocale.html#forLanguageTag-java.lang.String-
         // Ref: https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/classicu_1_1Locale.html#af76028775e37fd75a30209aaede551e2
 
@@ -162,7 +196,6 @@ public class Intl {
         return tag;
 
         // Note: TODO : An alternative implementation could use https://developer.android.com/reference/android/icu/util/ULocale.Builder to build the locale.. which does structural validation internally based on documentation.
-        // But it may be more expensive because as we've already performed some structural validations which doesn't need to be repeated.
     }
 
     // https://tc39.es/ecma402/#sec-canonicalizeunicodelocaleid
@@ -178,11 +211,12 @@ public class Intl {
         // exposing classes like Locale, Character, and many subclasses of java.text.
         // But, forLanguageTag and toLanguageTag methods in java.util.Locale got added in API Level 21
         //
-        // For older devices, we take a crude fallback to assume that the locale id is already canonicalized.
+        // For older devices, we take a crude fallback .. assuming that the locale id is already canonicalized.
+        //
         // https://tc39.es/ecma402/#sec-canonicalizeunicodelocaleid
         // Steps 1. and 2.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            canonical = canonicalizeUnicodeLocaleIdUsingICU(locale);
+            canonical = canonicalizeUnicodeLocaleIdUsingPlatformICU(locale);
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             canonical = java.util.Locale.forLanguageTag(locale).toLanguageTag();
         } else {
