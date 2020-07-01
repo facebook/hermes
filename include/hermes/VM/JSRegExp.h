@@ -61,6 +61,11 @@ class JSRegExp final : public JSObject {
     return self->syntaxFlags_;
   }
 
+  /// Set the flag bits for this RegExp to \p flags
+  static void setSyntaxFlags(JSRegExp *self, regex::SyntaxFlags flags) {
+    self->syntaxFlags_ = flags;
+  }
+
   /// Searches self for a match for \str.
   /// \p searchStartOffset is the offset from which to begin searching.
   /// If searchStartOffset exceeds the length of the string, or if no match
