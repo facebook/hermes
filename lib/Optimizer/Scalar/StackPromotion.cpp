@@ -15,13 +15,13 @@
 #include "hermes/Optimizer/Scalar/Utils.h"
 #include "hermes/Support/Statistic.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/Support/Debug.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/DenseSet.h"
+#include "llvh/Support/Debug.h"
 
 using namespace hermes;
-using llvm::dbgs;
-using llvm::isa;
+using llvh::dbgs;
+using llvh::isa;
 
 STATISTIC(NumSP, "Number of stack allocations promoted");
 STATISTIC(NumOpsPostponed, "Number of stack ops removed or postponed");
@@ -61,8 +61,8 @@ static void promoteConstVariable(
   bool needToKeepStores = false;
 
   for (auto *U : V->getUsers()) {
-    if (auto *LF = llvm::dyn_cast<LoadFrameInst>(U)) {
-      if (auto *P = llvm::dyn_cast<Parameter>(val)) {
+    if (auto *LF = llvh::dyn_cast<LoadFrameInst>(U)) {
+      if (auto *P = llvh::dyn_cast<Parameter>(val)) {
         if (P->getParent() != LF->getParent()->getParent()) {
           needToKeepStores = true;
           continue;
@@ -74,14 +74,14 @@ static void promoteConstVariable(
         continue;
       }
 
-      if (llvm::isa<Literal>(val)) {
+      if (llvh::isa<Literal>(val)) {
         LF->replaceAllUsesWith(val);
         destroyer.add(LF);
         NumConstProm++;
         continue;
       }
 
-      if (auto *I = llvm::dyn_cast<Instruction>(val)) {
+      if (auto *I = llvh::dyn_cast<Instruction>(val)) {
         // If the stored value dominates the loads then we can use the original
         // stored value instead of the load.
         if (I->getParent() == LF->getParent() && DT.properlyDominates(I, LF)) {
@@ -97,7 +97,7 @@ static void promoteConstVariable(
       continue;
     }
 
-    if (llvm::isa<StoreFrameInst>(U))
+    if (llvh::isa<StoreFrameInst>(U))
       continue;
 
     llvm_unreachable("invalid user!");
@@ -106,10 +106,10 @@ static void promoteConstVariable(
   /// Delete the variable store if we were able to eliminate all loads.
   if (!needToKeepStores) {
     for (auto *U : V->getUsers()) {
-      if (llvm::isa<LoadFrameInst>(U))
+      if (llvh::isa<LoadFrameInst>(U))
         continue;
 
-      if (auto *SF = llvm::dyn_cast<StoreFrameInst>(U))
+      if (auto *SF = llvh::dyn_cast<StoreFrameInst>(U))
         destroyer.add(SF);
     }
   }
@@ -121,8 +121,8 @@ namespace {
 
 /// Insert \p toInsert into \p current, returning true if changed.
 bool unionSets(
-    llvm::DenseSet<Variable *> &current,
-    llvm::DenseSet<Variable *> &toInsert) {
+    llvh::DenseSet<Variable *> &current,
+    llvh::DenseSet<Variable *> &toInsert) {
   unsigned previousSize = current.size();
   current.insert(toInsert.begin(), toInsert.end());
   return previousSize != current.size();
@@ -131,20 +131,20 @@ bool unionSets(
 /// Find variables from the Function \p base captured by Function \p current.
 /// The variables will be stored in \p captured.
 void collectCapturedVariables(
-    llvm::DenseSet<Variable *> &captured,
+    llvh::DenseSet<Variable *> &captured,
     Function *base,
     Function *current) {
   for (auto &BB : *current) {
     for (auto &I : BB) {
-      if (auto *create = llvm::dyn_cast<CreateFunctionInst>(&I)) {
+      if (auto *create = llvh::dyn_cast<CreateFunctionInst>(&I)) {
         collectCapturedVariables(captured, base, create->getFunctionCode());
         continue;
       }
 
       Variable *var = nullptr;
-      if (auto *load = llvm::dyn_cast<LoadFrameInst>(&I)) {
+      if (auto *load = llvh::dyn_cast<LoadFrameInst>(&I)) {
         var = load->getLoadVariable();
-      } else if (auto *store = llvm::dyn_cast<StoreFrameInst>(&I)) {
+      } else if (auto *store = llvh::dyn_cast<StoreFrameInst>(&I)) {
         var = store->getVariable();
       }
       if (!var || var->getParent()->getFunction() != base)
@@ -160,20 +160,20 @@ void collectCapturedVariables(
 /// required variables.
 void determineCapturedVariableUsage(
     Function *F,
-    llvm::DenseMap<BasicBlock *, llvm::DenseSet<Variable *>>
+    llvh::DenseMap<BasicBlock *, llvh::DenseSet<Variable *>>
         &capturedVariableUsage) {
   for (auto &BB : *F) {
     capturedVariableUsage.FindAndConstruct(&BB);
   }
 
-  llvm::DenseSet<BasicBlock *> toPropagate;
+  llvh::DenseSet<BasicBlock *> toPropagate;
   for (auto &BB : *F) {
     for (auto &I : BB) {
-      auto *create = llvm::dyn_cast<CreateFunctionInst>(&I);
+      auto *create = llvh::dyn_cast<CreateFunctionInst>(&I);
       if (!create)
         continue;
 
-      llvm::DenseSet<Variable *> variables;
+      llvh::DenseSet<Variable *> variables;
       collectCapturedVariables(variables, F, create->getFunctionCode());
 
       // A block should be marked as using a captured frame variable if a
@@ -205,7 +205,7 @@ void determineCapturedVariableUsage(
 struct StorePoint {
   BasicBlock *from{};
   BasicBlock *to{};
-  llvm::SmallVector<Variable *, 2> variables{};
+  llvh::SmallVector<Variable *, 2> variables{};
 
   StorePoint(BasicBlock *from, BasicBlock *to) : from(from), to(to) {}
 };
@@ -226,12 +226,12 @@ struct StorePoint {
 bool promoteVariables(Function *F) {
   bool changed = false;
 
-  llvm::DenseMap<BasicBlock *, llvm::DenseSet<Variable *>>
+  llvh::DenseMap<BasicBlock *, llvh::DenseSet<Variable *>>
       capturedVariableUsage;
   determineCapturedVariableUsage(F, capturedVariableUsage);
 
   // Find variables that are currently not optimal.
-  llvm::DenseSet<Variable *> needsOptimizing;
+  llvh::DenseSet<Variable *> needsOptimizing;
   for (auto *var : F->getFunctionScope()->getVariables()) {
     if (!hasExternalUses(var)) {
       // This variable isn't needed at all, it should be purely on the stack.
@@ -255,7 +255,7 @@ bool promoteVariables(Function *F) {
   // Replace all variables with stack alloc operations in blocks that don't
   // need real variables. For uncaptured variables, this replaces all uses.
   IRBuilder builder(F);
-  llvm::DenseMap<Variable *, AllocStackInst *> stackMap;
+  llvh::DenseMap<Variable *, AllocStackInst *> stackMap;
   for (auto *var : F->getFunctionScope()->getVariables()) {
     if (!needsOptimizing.count(var))
       continue;
@@ -281,7 +281,7 @@ bool promoteVariables(Function *F) {
 
         NumOpsPostponed++;
 
-        if (auto *LF = llvm::dyn_cast<LoadFrameInst>(U)) {
+        if (auto *LF = llvh::dyn_cast<LoadFrameInst>(U)) {
           builder.setInsertionPoint(LF);
           auto *LS = builder.createLoadStackInst(stackVar);
           LS->moveBefore(LF);
@@ -289,7 +289,7 @@ bool promoteVariables(Function *F) {
           destroyer.add(LF);
           continue;
         }
-        if (auto *SF = llvm::dyn_cast<StoreFrameInst>(U)) {
+        if (auto *SF = llvh::dyn_cast<StoreFrameInst>(U)) {
           builder.setInsertionPoint(SF);
           auto *SS = builder.createStoreStackInst(SF->getValue(), stackVar);
           SS->moveBefore(SF);
@@ -307,15 +307,15 @@ bool promoteVariables(Function *F) {
 
   // For any block where all incoming arrows require the same stores,
   // insert them into the block itself.
-  llvm::DenseSet<std::pair<BasicBlock *, Variable *>> alreadyProcessed;
+  llvh::DenseSet<std::pair<BasicBlock *, Variable *>> alreadyProcessed;
   for (auto &BB : *F) {
     // No incoming arrows
     if (!pred_count(&BB))
       continue;
 
-    llvm::DenseSet<Variable *> commons = capturedVariableUsage[&BB];
+    llvh::DenseSet<Variable *> commons = capturedVariableUsage[&BB];
     for (auto *predecessor : predecessors(&BB)) {
-      llvm::SmallVector<Variable *, 4> toErase;
+      llvh::SmallVector<Variable *, 4> toErase;
       for (auto *var : commons) {
         if (needsOptimizing.count(var) &&
             !capturedVariableUsage[predecessor].count(var))
@@ -330,9 +330,9 @@ bool promoteVariables(Function *F) {
       continue;
 
     auto insertionPoint = BB.begin();
-    while (llvm::isa<TryEndInst>(*insertionPoint) ||
-           llvm::isa<CatchInst>(*insertionPoint) ||
-           llvm::isa<PhiInst>(*insertionPoint)) {
+    while (llvh::isa<TryEndInst>(*insertionPoint) ||
+           llvh::isa<CatchInst>(*insertionPoint) ||
+           llvh::isa<PhiInst>(*insertionPoint)) {
       insertionPoint++;
     }
     builder.setInsertionPoint(&*insertionPoint);
@@ -355,7 +355,7 @@ bool promoteVariables(Function *F) {
 
   // Find each block transition where one or more variable captures
   // go from inactive to active.
-  llvm::SmallVector<StorePoint, 4> storePoints;
+  llvh::SmallVector<StorePoint, 4> storePoints;
   for (auto &BB : *F) {
     TerminatorInst *terminator = BB.getTerminator();
     auto &usedHere = capturedVariableUsage[&BB];
@@ -364,7 +364,7 @@ bool promoteVariables(Function *F) {
     // accidentally consider the same arrow twice:
     //   A corner case that occurs under certain conditions in
     //   empty cases in switch statements
-    llvm::SmallPtrSet<BasicBlock *, 16> storeSuccessors;
+    llvh::SmallPtrSet<BasicBlock *, 16> storeSuccessors;
     for (int i = 0, e = terminator->getNumSuccessors(); i < e; i++) {
       auto *next = terminator->getSuccessor(i);
       // Only proceed if successor not seen before

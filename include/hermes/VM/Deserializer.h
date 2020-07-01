@@ -15,7 +15,7 @@
 
 #include "hermes/Support/MemoryBuffer.h"
 
-using llvm::ArrayRef;
+using llvh::ArrayRef;
 namespace hermes {
 
 class CompactTable;
@@ -42,7 +42,7 @@ class Runtime;
 /// nullptr to id 0 in both Serializer and Deserializer so that we can deal with
 /// nullptr gracefully during S/D.
 
-/// Deserializer: The Deserializer API will wrap a llvm::MemoryBuffer with a
+/// Deserializer: The Deserializer API will wrap a llvh::MemoryBuffer with a
 /// running pointer (and provide unaligned reads from that pointer). We also
 /// have a objectTable_ to map relocation id to the new pointer values. Whenever
 /// an entity is deserialized, we will be able to update the mapping of its
@@ -60,7 +60,7 @@ class Deserializer {
   /// Note: it is the caller's responsibility to make sure that MemoryBuffer
   /// can outlive the Runtime that we are deserializing.
   Deserializer(
-      std::shared_ptr<llvm::MemoryBuffer> buffer,
+      std::shared_ptr<llvh::MemoryBuffer> buffer,
       Runtime *runtime,
       ExternalPointersVectorFunction *externalPointersVectorCallBack)
       : runtime_(runtime), buffer_(std::move(buffer)) {
@@ -217,7 +217,7 @@ class Deserializer {
     assert(
         buffer_->getBufferStart() + offset_ + size < buffer_->getBufferEnd() &&
         "Deserialize read out of range");
-    auto resPtr = llvm::make_unique<const BufferFromSharedBuffer>(
+    auto resPtr = llvh::make_unique<const BufferFromSharedBuffer>(
         reinterpret_cast<const uint8_t *>(buffer_->getBufferStart()) + offset_,
         size,
         buffer_);
@@ -291,7 +291,7 @@ class Deserializer {
   std::deque<RelocationEntry> relocationQueue_;
 
   /// A MemoryBuffer that holds the serialized data and where we read from.
-  std::shared_ptr<const llvm::MemoryBuffer> buffer_;
+  std::shared_ptr<const llvh::MemoryBuffer> buffer_;
 
   // Current offset to read from the buffer.
   size_t offset_{0};

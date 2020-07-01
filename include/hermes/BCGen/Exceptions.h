@@ -8,9 +8,9 @@
 #ifndef HERMES_BCGEN_EXCEPTIONS_H
 #define HERMES_BCGEN_EXCEPTIONS_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/SmallPtrSet.h"
+#include "llvh/ADT/SmallVector.h"
 
 namespace hermes {
 
@@ -27,7 +27,7 @@ class CatchCoverageInfo {
   int catchLocation{0};
 
   /// The list of basic blocks covered by this catch.
-  llvm::SmallVector<BasicBlock *, 8> coveredBlockList{};
+  llvh::SmallVector<BasicBlock *, 8> coveredBlockList{};
 
   /// The depth of this catch in nesting.
   unsigned depth{0};
@@ -56,14 +56,14 @@ struct ExceptionHandlerInfo {
 };
 
 /// Maps catch instructions to the basic blocks it covers.
-using CatchInfoMap = llvm::DenseMap<CatchInst *, CatchCoverageInfo>;
+using CatchInfoMap = llvh::DenseMap<CatchInst *, CatchCoverageInfo>;
 
 //// Maps a basic block to it's beginning and end location in the bytecode.
 using BasicBlockInfoMap =
-    llvm::DenseMap<BasicBlock *, std::pair<uint32_t, uint32_t>>;
+    llvh::DenseMap<BasicBlock *, std::pair<uint32_t, uint32_t>>;
 
 /// A list of exception handler table entries.
-using ExceptionEntryList = llvm::SmallVector<ExceptionHandlerInfo, 4>;
+using ExceptionEntryList = llvh::SmallVector<ExceptionHandlerInfo, 4>;
 
 /// Construct the list of basic blocks covered by each catch instruction.
 /// \p catchInfoMap a CatchInfoMap that has entries for every CatchInst
@@ -72,8 +72,8 @@ using ExceptionEntryList = llvm::SmallVector<ExceptionHandlerInfo, 4>;
 /// \p currentBlock the entry BasicBlock
 void constructCatchMap(
     CatchInfoMap &catchInfoMap,
-    llvm::SmallVectorImpl<CatchInst *> &aliveCatches,
-    llvm::SmallPtrSetImpl<BasicBlock *> &visited,
+    llvh::SmallVectorImpl<CatchInst *> &aliveCatches,
+    llvh::SmallPtrSetImpl<BasicBlock *> &visited,
     BasicBlock *currentBlock);
 
 ExceptionEntryList generateExceptionHandlers(

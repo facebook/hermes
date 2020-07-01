@@ -9,7 +9,7 @@
 
 #include "hermes/VM/Casting.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 #define DEBUG_TYPE "serialize"
 
 namespace hermes {
@@ -293,7 +293,7 @@ void serializeJSWeakMapBase(Serializer &s, const GCCell *cell) {
   JSObject::serializeObjectImpl(
       s, cell, JSObject::numOverlapSlots<JSWeakMapImplBase>());
   auto *self = vmcast<const JSWeakMapImplBase>(cell);
-  // Serialize llvm::DenseMap<WeakRefKey, uint32_t, detail::WeakRefInfo> map_.
+  // Serialize llvh::DenseMap<WeakRefKey, uint32_t, detail::WeakRefInfo> map_.
   // We write all entries in Densemap. It's OK for us to serialize/deserialize
   // everything now because we serialize/deserialize every WeakRef too.
   // TODO: Ideally, we would want to compact the map and delete invalid entries

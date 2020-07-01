@@ -9,7 +9,7 @@
 
 #include "hermes/VM/BuildMetadata.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 #define DEBUG_TYPE "serialize"
 
 namespace hermes {

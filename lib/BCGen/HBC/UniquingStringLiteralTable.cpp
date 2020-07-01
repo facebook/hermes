@@ -16,7 +16,7 @@ namespace {
 
 /// Works out the String Kind for the string \p str depending on whether it
 /// \p isIdentifier or not.
-StringKind::Kind kind(llvm::StringRef str, bool isIdentifier) {
+StringKind::Kind kind(llvh::StringRef str, bool isIdentifier) {
   if (isIdentifier) {
     return StringKind::Identifier;
   } else {
@@ -83,13 +83,13 @@ std::vector<StringKind::Entry> StringLiteralTable::getStringKinds() const {
   /// Associate a string with its original index in the table.
   struct Index {
     size_t origIndex;
-    llvm::StringRef str;
+    llvh::StringRef str;
     StringKind::Kind kind;
 
-    Index(size_t origIndex, llvm::StringRef str, StringKind::Kind kind)
+    Index(size_t origIndex, llvh::StringRef str, StringKind::Kind kind)
         : origIndex(origIndex), str(str), kind(kind) {}
 
-    using Key = std::tuple<StringKind::Kind, llvm::StringRef>;
+    using Key = std::tuple<StringKind::Kind, llvh::StringRef>;
 
     inline Key key() const {
       return std::make_tuple(kind, str);
@@ -168,7 +168,7 @@ std::vector<StringKind::Entry> StringLiteralTable::getStringKinds() const {
   std::sort(indicesFrom(UINT16_MAX), indicesFrom(SIZE_MAX));
 
   { // Add the new strings to the storage.
-    std::vector<llvm::StringRef> refs;
+    std::vector<llvh::StringRef> refs;
     refs.reserve(newStrings);
     for (auto &i : indices) {
       refs.emplace_back(i.str);

@@ -22,7 +22,7 @@
 ///   * Better optimization because sharing occurs in local variables,
 ///     not in object properties.
 
-#include "llvm/ADT/ArrayRef.h"
+#include "llvh/ADT/ArrayRef.h"
 
 #include <cstdint>
 #include <vector>
@@ -33,7 +33,7 @@ namespace vm {
 /// Get a pre-compiled bytecode module to be included with the VM upon
 /// construction. This module must be run before any user code can be run.
 /// \return A list of bytes that can be turned into a Hermes bytecode module.
-llvm::ArrayRef<uint8_t> getInternalBytecode();
+llvh::ArrayRef<uint8_t> getInternalBytecode();
 
 } // namespace vm
 } // namespace hermes

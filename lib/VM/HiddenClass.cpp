@@ -15,9 +15,9 @@
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/StringView.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 
-using llvm::dbgs;
+using llvh::dbgs;
 
 namespace hermes {
 namespace vm {
@@ -29,7 +29,7 @@ void TransitionMap::snapshotAddNodes(GC *gc, HeapSnapshot &snap) {
     return;
   }
   // Make one node that is the sum of the sizes of the WeakValueMap and the
-  // llvm::DenseMap to which it points.
+  // llvh::DenseMap to which it points.
   // This is based on the assumption that the WeakValueMap uniquely owns that
   // DenseMap.
   snap.beginNode();
@@ -360,7 +360,7 @@ OptValue<HiddenClass::PropertyPos> HiddenClass::findProperty(
                            runtime, &runtime->getHeap(), t))
                           ->getDebugAllocationId()
                    << "\n");
-        return llvm::None;
+        return llvh::None;
       }
     }
 
@@ -375,7 +375,7 @@ OptValue<HiddenClass::PropertyPos> HiddenClass::findProperty(
     NoAllocScope noAlloc(runtime);
     auto found = DictPropertyMap::find(propMap, name);
     if (!found)
-      return llvm::None;
+      return llvh::None;
     // Technically, the last use of propMap occurs before the call here, so
     // it would be legal for the call to allocate.  If that were ever the case,
     // we would move "found" out of scope, and terminate the NoAllocScope here.
@@ -384,7 +384,7 @@ OptValue<HiddenClass::PropertyPos> HiddenClass::findProperty(
   }
 }
 
-llvm::Optional<NamedPropertyDescriptor> HiddenClass::findPropertyNoAlloc(
+llvh::Optional<NamedPropertyDescriptor> HiddenClass::findPropertyNoAlloc(
     HiddenClass *self,
     PointerBase *base,
     SymbolID name) {
@@ -408,7 +408,7 @@ llvm::Optional<NamedPropertyDescriptor> HiddenClass::findPropertyNoAlloc(
   }
   // Reached the root hidden class without finding a property map or the
   // matching symbol, this property doesn't exist.
-  return llvm::None;
+  return llvh::None;
 }
 
 bool HiddenClass::debugIsPropertyDefined(
@@ -814,7 +814,7 @@ Handle<HiddenClass> HiddenClass::updatePropertyFlagsWithoutTransitions(
     Runtime *runtime,
     PropertyFlags flagsToClear,
     PropertyFlags flagsToSet,
-    OptValue<llvm::ArrayRef<SymbolID>> props) {
+    OptValue<llvh::ArrayRef<SymbolID>> props) {
   // Result must be in dictionary mode, since it's a non-empty orphan.
   MutableHandle<HiddenClass> classHandle{runtime};
   if (selfHandle->isDictionary()) {
@@ -948,7 +948,7 @@ void HiddenClass::initializeMissingPropertyMap(
 
   // First collect all entries in reverse order. This avoids recursion.
   using MapEntry = std::pair<SymbolID, PropertyFlags>;
-  llvm::SmallVector<MapEntry, 4> entries;
+  llvh::SmallVector<MapEntry, 4> entries;
   entries.reserve(selfHandle->numProperties_);
   {
     // Walk chain of parents using raw pointers.

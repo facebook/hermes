@@ -99,7 +99,7 @@ TEST_F(SerializerTest, SerializeDeserializeTest) {
 
   // Now serialize.
   std::string str;
-  llvm::raw_string_ostream os(str);
+  llvh::raw_string_ostream os(str);
   Serializer s(os, runtime, testExternalPtrs);
   n0.serialize(s);
   n1.serialize(s);
@@ -108,7 +108,7 @@ TEST_F(SerializerTest, SerializeDeserializeTest) {
   s.writeEpilogue();
 
   Deserializer d(
-      llvm::MemoryBuffer::getMemBuffer(os.str()), runtime, testExternalPtrs);
+      llvh::MemoryBuffer::getMemBuffer(os.str()), runtime, testExternalPtrs);
 
   Node *n4 = Node::deserialize(d);
   Node *n5 = Node::deserialize(d);

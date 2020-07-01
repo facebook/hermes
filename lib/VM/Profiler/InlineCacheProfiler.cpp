@@ -80,13 +80,13 @@ uint32_t &InlineCacheProfiler::getHiddenClassArrayIndex() {
   return hcIdx_;
 }
 
-llvm::DenseMap<InlineCacheProfiler::ClassId, int32_t>
+llvh::DenseMap<InlineCacheProfiler::ClassId, int32_t>
     &InlineCacheProfiler::getClassIdtoIndexMap() {
   return classIdToIdx_;
 }
 
 void InlineCacheProfiler::dumpHiddenClassProperties(
-    llvm::raw_ostream &ostream,
+    llvh::raw_ostream &ostream,
     HiddenClass *hc,
     Runtime *runtime) {
   ostream << "\t\t";
@@ -135,7 +135,7 @@ void InlineCacheProfiler::dumpInlineCachingMissRecord(
     ICMissKey &icInfo,
     uint64_t icMiss,
     Runtime *runtime,
-    llvm::raw_ostream &ostream) {
+    llvh::raw_ostream &ostream) {
   GCScope gcscope(runtime);
 
   // dump get property name and frequency
@@ -158,7 +158,7 @@ void InlineCacheProfiler::dumpInfoOfSourceLocation(
     ICSrcKey &srcLoc,
     ICMiss &icMiss,
     Runtime *runtime,
-    llvm::raw_ostream &ostream) {
+    llvh::raw_ostream &ostream) {
   // get filename, line number, and column number
   auto locOrNull = runtime->getIPSourceLocation(
       srcLoc.second, srcLoc.second->getOffsetPtr(srcLoc.first));
@@ -199,7 +199,7 @@ void InlineCacheProfiler::dumpInfoOfSourceLocation(
 ///  ...
 void InlineCacheProfiler::dumpRankedInlineCachingMisses(
     Runtime *runtime,
-    llvm::raw_ostream &ostream) {
+    llvh::raw_ostream &ostream) {
   // rank the inline caching misses
   std::shared_ptr<InlineCacheProfiler::ICMissList> icInfoList =
       getRankedInlineCachingMisses();

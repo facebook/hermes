@@ -9,7 +9,7 @@
 #define HERMES_SUPPORT_COMPACTARRAY_H
 
 #include "hermes/Support/CheckedMalloc.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvh/Support/ErrorHandling.h"
 
 #include <cassert>
 #include <limits>

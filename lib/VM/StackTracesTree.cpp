@@ -38,7 +38,7 @@ OptValue<uint32_t> StackTracesTreeNode::findChildIndex(
   if (matchingChild != sourceLocToChildMap_.end()) {
     return matchingChild->getSecond();
   }
-  return llvm::None;
+  return llvh::None;
 }
 
 StackTracesTreeNode *StackTracesTreeNode::findChild(

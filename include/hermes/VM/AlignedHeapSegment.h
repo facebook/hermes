@@ -22,7 +22,7 @@
 #include "hermes/VM/PointerBase.h"
 #include "hermes/VM/SweepResultNC.h"
 
-#include "llvm/Support/MathExtras.h"
+#include "llvh/Support/MathExtras.h"
 
 #include <cstdint>
 #include <vector>

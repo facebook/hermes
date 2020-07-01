@@ -63,7 +63,7 @@ TEST_F(StringViewTest, Comparison) {
   EXPECT_FALSE(view1.equals(view4));
   EXPECT_FALSE(view4.equals(view1));
 
-  llvm::StringRef str = "abcde";
+  llvh::StringRef str = "abcde";
   auto strPrim5 = StringPrimitive::createNoThrow(runtime, str);
   auto view5 = StringPrimitive::createStringView(runtime, strPrim5);
   EXPECT_TRUE(view1.equals(view5));
@@ -138,8 +138,8 @@ TEST_F(StringViewTest, Slice) {
 
 TEST_F(StringViewTest, Output) {
   auto str = createUTF16Ref(u"abcd");
-  llvm::SmallVector<char, 32> result{};
-  llvm::raw_svector_ostream os{result};
+  llvh::SmallVector<char, 32> result{};
+  llvh::raw_svector_ostream os{result};
   auto strPrim = StringPrimitive::createNoThrow(runtime, str);
   auto view = StringPrimitive::createStringView(runtime, strPrim);
   os << view;

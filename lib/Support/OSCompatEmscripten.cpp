@@ -20,7 +20,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/raw_ostream.h"
 
 namespace hermes {
 namespace oscompat {
@@ -63,7 +63,7 @@ void unset_test_vm_allocate_limit() {
 }
 #endif // !NDEBUG
 
-static llvm::ErrorOr<void *> vm_allocate_impl(size_t sz) {
+static llvh::ErrorOr<void *> vm_allocate_impl(size_t sz) {
 #ifndef NDEBUG
   if (LLVM_UNLIKELY(sz > totalVMAllocLimit)) {
     return make_error_code(OOMError::TestVMLimitReached);
@@ -84,10 +84,10 @@ static llvm::ErrorOr<void *> vm_allocate_impl(size_t sz) {
 
 static char *alignAlloc(void *p, size_t alignment) {
   return reinterpret_cast<char *>(
-      llvm::alignTo(reinterpret_cast<uintptr_t>(p), alignment));
+      llvh::alignTo(reinterpret_cast<uintptr_t>(p), alignment));
 }
 
-llvm::ErrorOr<void *> vm_allocate(size_t sz) {
+llvh::ErrorOr<void *> vm_allocate(size_t sz) {
   assert(sz % page_size() == 0);
 #ifndef NDEBUG
   if (testPgSz != 0 && testPgSz > static_cast<size_t>(page_size_real())) {
@@ -97,7 +97,7 @@ llvm::ErrorOr<void *> vm_allocate(size_t sz) {
   return vm_allocate_impl(sz);
 }
 
-llvm::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment) {
+llvh::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment) {
   assert(sz > 0 && sz % page_size() == 0);
   assert(alignment > 0 && alignment % page_size() == 0);
 
@@ -191,7 +191,7 @@ bool vm_madvise(void *p, size_t sz, MAdvice advice) {
   return true;
 }
 
-int pages_in_ram(const void *p, size_t sz, llvm::SmallVectorImpl<int> *runs) {
+int pages_in_ram(const void *p, size_t sz, llvh::SmallVectorImpl<int> *runs) {
   return -1;
 }
 

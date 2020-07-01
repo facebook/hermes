@@ -10,9 +10,9 @@
 #include "dtoa/dtoa.h"
 #include "hermes/Support/Conversions.h"
 
-#include "llvm/ADT/StringSwitch.h"
+#include "llvh/ADT/StringSwitch.h"
 
-using llvm::Twine;
+using llvh::Twine;
 
 namespace hermes {
 namespace parser {
@@ -57,7 +57,7 @@ JSLexer::JSLexer(
 }
 
 JSLexer::JSLexer(
-    std::unique_ptr<llvm::MemoryBuffer> input,
+    std::unique_ptr<llvh::MemoryBuffer> input,
     SourceErrorManager &sm,
     Allocator &allocator,
     StringTable *strTab,
@@ -286,7 +286,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       token_.setStart(curCharPtr_);
         if (HERMES_PARSE_FLOW &&
             LLVM_UNLIKELY(grammarContext == GrammarContext::Flow) &&
-            llvm::StringRef(curCharPtr_, 7) == "%checks") {
+            llvh::StringRef(curCharPtr_, 7) == "%checks") {
           token_.setIdentifier(getStringLiteral("%checks"));
           curCharPtr_ += 7;
         } else if (curCharPtr_[1] == ('=')) {
@@ -727,7 +727,7 @@ OptValue<TokenKind> JSLexer::lookahead1(OptValue<TokenKind> expectedToken) {
   OptValue<TokenKind> kind = token_.getKind();
   if (isNewLineBeforeCurrentToken()) {
     // Disregard anything after LineTerminator.
-    kind = llvm::None;
+    kind = llvh::None;
   } else if (expectedToken == kind) {
     // Do not move the cursor back.
     return kind;
@@ -779,14 +779,14 @@ uint32_t JSLexer::consumeUnicodeEscape() {
   return cp.getValue();
 }
 
-llvm::Optional<uint32_t> JSLexer::consumeUnicodeEscapeOptional() {
+llvh::Optional<uint32_t> JSLexer::consumeUnicodeEscapeOptional() {
   const char *start = curCharPtr_;
   assert(*curCharPtr_ == '\\');
   ++curCharPtr_;
 
   if (*curCharPtr_ != 'u') {
     curCharPtr_ = start;
-    return llvm::None;
+    return llvh::None;
   }
   ++curCharPtr_;
 
@@ -795,7 +795,7 @@ llvm::Optional<uint32_t> JSLexer::consumeUnicodeEscapeOptional() {
     auto cp = consumeBracedCodePoint(false);
     if (!cp) {
       curCharPtr_ = start;
-      return llvm::None;
+      return llvh::None;
     }
     return *cp;
   }
@@ -803,7 +803,7 @@ llvm::Optional<uint32_t> JSLexer::consumeUnicodeEscapeOptional() {
   auto cp = consumeHex(4, false);
   if (!cp) {
     curCharPtr_ = start;
-    return llvm::None;
+    return llvh::None;
   }
 
   // We don't need t check for valid UTF-16. JavaScript allows invalid surrogate
@@ -915,7 +915,7 @@ unsigned char JSLexer::consumeOctal(unsigned maxLen) {
   return res;
 }
 
-llvm::Optional<uint32_t> JSLexer::consumeHex(
+llvh::Optional<uint32_t> JSLexer::consumeHex(
     unsigned requiredLen,
     bool errorOnFail) {
   uint32_t cp = 0;
@@ -932,7 +932,7 @@ llvm::Optional<uint32_t> JSLexer::consumeHex(
         if (errorOnFail) {
           error(SMLoc::getFromPointer(curCharPtr_), "invalid hex number");
         }
-        return llvm::None;
+        return llvh::None;
       }
     }
     cp = (cp << 4) + ch;
@@ -942,7 +942,7 @@ llvm::Optional<uint32_t> JSLexer::consumeHex(
   return cp;
 }
 
-llvm::Optional<uint32_t> JSLexer::consumeBracedCodePoint(bool errorOnFail) {
+llvh::Optional<uint32_t> JSLexer::consumeBracedCodePoint(bool errorOnFail) {
   assert(*curCharPtr_ == '{' && "braced codepoint must begin with {");
   ++curCharPtr_;
   const char *start = curCharPtr_;
@@ -971,7 +971,7 @@ llvm::Optional<uint32_t> JSLexer::consumeBracedCodePoint(bool errorOnFail) {
               SMLoc::getFromPointer(start),
               "non-terminated unicode codepoint escape");
         }
-        return llvm::None;
+        return llvh::None;
       }
       // Invalid character, set the failed flag and continue.
       if (!failed && errorOnFail) {
@@ -1006,7 +1006,7 @@ llvm::Optional<uint32_t> JSLexer::consumeBracedCodePoint(bool errorOnFail) {
 
   // Consume the final } and return.
   ++curCharPtr_;
-  return failed ? llvm::None : llvm::Optional<uint32_t>{cp};
+  return failed ? llvh::None : llvh::Optional<uint32_t>{cp};
 }
 
 const char *JSLexer::skipLineComment(const char *start) {
@@ -1107,24 +1107,24 @@ endLoop:
   return start;
 }
 
-llvm::Optional<StringRef> JSLexer::tryReadMagicComment(
-    llvm::StringRef name,
+llvh::Optional<StringRef> JSLexer::tryReadMagicComment(
+    llvh::StringRef name,
     const char *ptr) {
   assert(
       ptr[0] == '/' && ptr[1] == '/' && ptr[2] == '#' &&
       "Invalid start of magic comment");
 
-  llvm::StringRef str{ptr, static_cast<size_t>(bufferEnd_ - ptr)};
+  llvh::StringRef str{ptr, static_cast<size_t>(bufferEnd_ - ptr)};
 
   // Syntax is //# name=value
   auto isMatch = str.consume_front("//# ") && str.consume_front(name) &&
       str.consume_front("=");
   if (!isMatch) {
-    return llvm::None;
+    return llvh::None;
   }
 
   // Read until the next newline.
-  llvm::StringRef value =
+  llvh::StringRef value =
       str.take_while([](char c) -> bool { return c != '\n' && c != '\r'; });
   return value;
 }
@@ -1251,7 +1251,7 @@ end:
     val = ival;
   } else if (real || radix == 10) {
     // We need a zero-terminated buffer for hermes_g_strtod().
-    llvm::SmallString<32> buf;
+    llvh::SmallString<32> buf;
     buf.reserve(curCharPtr_ - start + 1);
     if (LLVM_UNLIKELY(seenSeparator)) {
       for (const char *it = start; it != curCharPtr_; ++it) {
@@ -1304,7 +1304,7 @@ end:
     if (curCharPtr_ == start) {
       error(
           token_.getSourceRange(),
-          llvm::Twine("No digits after ") + StringRef(start - 2, 2));
+          llvh::Twine("No digits after ") + StringRef(start - 2, 2));
       val = std::numeric_limits<double>::quiet_NaN();
     } else {
       // Parse the rest of the number:
@@ -1331,7 +1331,7 @@ end:
         }
       }
       auto parsedInt = parseIntWithRadix</* AllowNumericSeparator */ true>(
-          llvm::ArrayRef<char>{start, (size_t)(curCharPtr_ - start)}, radix);
+          llvh::ArrayRef<char>{start, (size_t)(curCharPtr_ - start)}, radix);
       if (!parsedInt) {
         error(token_.getSourceRange(), "invalid integer literal");
         val = std::numeric_limits<double>::quiet_NaN();
@@ -1346,7 +1346,7 @@ done:
 }
 
 static TokenKind matchReservedWord(const char *str, unsigned len) {
-  return llvm::StringSwitch<TokenKind>(StringRef(str, len))
+  return llvh::StringSwitch<TokenKind>(StringRef(str, len))
 #define RESWORD(name) .Case(#name, TokenKind::rw_##name)
 #include "hermes/Parser/TokenKinds.def"
       .Default(TokenKind::identifier);
@@ -1930,17 +1930,17 @@ exitLoop:
 }
 
 UniqueString *JSLexer::convertSurrogatesInString(StringRef str) {
-  llvm::SmallVector<char16_t, 8> ustr;
+  llvh::SmallVector<char16_t, 8> ustr;
   ustr.reserve(str.size());
   char16_t *ustrEnd =
       convertUTF8WithSurrogatesToUTF16(ustr.data(), str.begin(), str.end());
   std::string output;
   convertUTF16ToUTF8WithReplacements(
-      output, llvm::makeArrayRef(ustr.data(), ustrEnd));
+      output, llvh::makeArrayRef(ustr.data(), ustrEnd));
   return strTab_.getString(output);
 }
 
-bool JSLexer::error(llvm::SMLoc loc, const llvm::Twine &msg) {
+bool JSLexer::error(llvh::SMLoc loc, const llvh::Twine &msg) {
   sm_.error(loc, msg, Subsystem::Lexer);
   if (!sm_.isErrorLimitReached())
     return true;
@@ -1948,7 +1948,7 @@ bool JSLexer::error(llvm::SMLoc loc, const llvm::Twine &msg) {
   return false;
 }
 
-bool JSLexer::error(llvm::SMRange range, const llvm::Twine &msg) {
+bool JSLexer::error(llvh::SMRange range, const llvh::Twine &msg) {
   sm_.error(range, msg, Subsystem::Lexer);
   if (!sm_.isErrorLimitReached())
     return true;
@@ -1957,9 +1957,9 @@ bool JSLexer::error(llvm::SMRange range, const llvm::Twine &msg) {
 }
 
 bool JSLexer::error(
-    llvm::SMLoc loc,
-    llvm::SMRange range,
-    const llvm::Twine &msg) {
+    llvh::SMLoc loc,
+    llvh::SMRange range,
+    const llvh::Twine &msg) {
   sm_.error(loc, range, msg, Subsystem::Lexer);
   if (!sm_.isErrorLimitReached())
     return true;

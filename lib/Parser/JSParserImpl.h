@@ -15,10 +15,10 @@
 #include "hermes/Parser/PreParser.h"
 #include "hermes/Support/Compiler.h"
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/Optional.h"
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/Support/DataTypes.h"
 
 #include <utility>
 
@@ -26,9 +26,9 @@ namespace hermes {
 namespace parser {
 namespace detail {
 
-using llvm::ArrayRef;
-using llvm::None;
-using llvm::Optional;
+using llvh::ArrayRef;
+using llvh::None;
+using llvh::Optional;
 
 /// A convenience class to encapsulate passing multiple boolean parameters
 /// between parser functions.
@@ -85,17 +85,17 @@ class JSParserImpl {
  public:
   explicit JSParserImpl(
       Context &context,
-      std::unique_ptr<llvm::MemoryBuffer> input);
+      std::unique_ptr<llvh::MemoryBuffer> input);
 
   explicit JSParserImpl(Context &context, uint32_t bufferId, ParserPass pass);
 
   JSParserImpl(Context &context, StringRef input)
       : JSParserImpl(
             context,
-            llvm::MemoryBuffer::getMemBuffer(input, "JavaScript")) {}
+            llvh::MemoryBuffer::getMemBuffer(input, "JavaScript")) {}
 
-  JSParserImpl(Context &context, llvm::MemoryBufferRef input)
-      : JSParserImpl(context, llvm::MemoryBuffer::getMemBuffer(input)) {}
+  JSParserImpl(Context &context, llvh::MemoryBufferRef input)
+      : JSParserImpl(context, llvh::MemoryBuffer::getMemBuffer(input)) {}
 
   Context &getContext() {
     return context_;
@@ -368,17 +368,17 @@ class JSParserImpl {
   bool need(TokenKind kind, const char *where, const char *what, SMLoc whatLoc);
 
   /// Report an error to the SourceErrorManager.
-  void error(SMLoc loc, const llvm::Twine &message) {
+  void error(SMLoc loc, const llvh::Twine &message) {
     sm_.error(loc, message, Subsystem::Parser);
   }
 
   /// Report an error to the SourceErrorManager.
-  void error(SMRange range, const llvm::Twine &message) {
+  void error(SMRange range, const llvh::Twine &message) {
     sm_.error(range, message, Subsystem::Parser);
   }
 
   /// Report an error using the current token's location.
-  void error(const llvm::Twine &msg) {
+  void error(const llvh::Twine &msg) {
     error(tok_->getSourceRange(), msg);
   }
 
@@ -386,7 +386,7 @@ class JSParserImpl {
   /// number of errors has been reached, return false and move the scanning
   /// pointer to EOF.
   /// \return false if too many errors have been emitted and we need to abort.
-  bool error(SMLoc loc, SMRange range, const llvm::Twine &msg);
+  bool error(SMLoc loc, SMRange range, const llvh::Twine &msg);
 
   /// Check whether the current token is the specified one and if it is, consume
   /// it, otherwise an report an error. \returns false if it reported an error.
@@ -457,11 +457,11 @@ class JSParserImpl {
 #if HERMES_PARSE_FLOW
     if (context_.getParseFlow()) {
       if (check(opaqueIdent_)) {
-        auto optNext = lexer_.lookahead1(llvm::None);
+        auto optNext = lexer_.lookahead1(llvh::None);
         return optNext.hasValue() && (*optNext == TokenKind::identifier);
       }
       if (checkN(typeIdent_, interfaceIdent_)) {
-        auto optNext = lexer_.lookahead1(llvm::None);
+        auto optNext = lexer_.lookahead1(llvh::None);
         return optNext.hasValue() && *optNext == TokenKind::identifier;
       }
       if (check(TokenKind::rw_interface)) {
@@ -479,7 +479,7 @@ class JSParserImpl {
   bool checkDeclareType() {
 #if HERMES_PARSE_FLOW
     if (check(declareIdent_)) {
-      auto optNext = lexer_.lookahead1(llvm::None);
+      auto optNext = lexer_.lookahead1(llvh::None);
       if (!optNext)
         return false;
       TokenKind next = *optNext;
@@ -909,14 +909,14 @@ class JSParserImpl {
   bool parseExportClause(
       ESTree::NodeList &specifiers,
       SMLoc &endLoc,
-      llvm::SmallVectorImpl<SMRange> &invalids);
+      llvh::SmallVectorImpl<SMRange> &invalids);
 
   /// \param[out] invalids ranges of potentially invalid exported symbols,
   ///             only if the clause is eventually followed by a FromClause.
   ///             Appended to if an exported name may be invalid.
   Optional<ESTree::Node *> parseExportSpecifier(
       SMLoc exportLoc,
-      llvm::SmallVectorImpl<SMRange> &invalids);
+      llvh::SmallVectorImpl<SMRange> &invalids);
 
   /// If the current token can be recognised as a directive (ES5.1 14.1),
   /// process the directive and return the allocated directive statement.
@@ -1065,7 +1065,7 @@ class JSParserImpl {
     Symbol,
   };
 
-  static llvm::StringRef enumKindStr(EnumKind kind) {
+  static llvh::StringRef enumKindStr(EnumKind kind) {
     switch (kind) {
       case EnumKind::String:
         return "string";

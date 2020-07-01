@@ -7,7 +7,7 @@
 
 #include "hermes/VM/JIT/ExecHeap.h"
 
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <cassert>
 
@@ -31,9 +31,9 @@ ExecHeap::DualPool *ExecHeap::addPool() {
 
   // Allocate a new one.
   std::error_code EC;
-  const unsigned kRWX = llvm::sys::Memory::MF_READ |
-      llvm::sys::Memory::MF_WRITE | llvm::sys::Memory::MF_EXEC;
-  llvm::sys::OwningMemoryBlock mb{llvm::sys::Memory::allocateMappedMemory(
+  const unsigned kRWX = llvh::sys::Memory::MF_READ |
+      llvh::sys::Memory::MF_WRITE | llvh::sys::Memory::MF_EXEC;
+  llvh::sys::OwningMemoryBlock mb{llvh::sys::Memory::allocateMappedMemory(
       firstHeapSize_ + secondHeapSize_, nullptr, kRWX, EC)};
   if (!mb.base())
     return nullptr;
@@ -42,15 +42,15 @@ ExecHeap::DualPool *ExecHeap::addPool() {
   return &pools_.back();
 }
 
-llvm::Optional<ExecHeap::BlockPair> ExecHeap::alloc(SizePair sizes) {
+llvh::Optional<ExecHeap::BlockPair> ExecHeap::alloc(SizePair sizes) {
   // Can't allocate blocks larger than the individual heap sizes.
   // TODO: in the future we might consider allocating a separate pool for these.
   if (sizes.first > firstHeapSize_ || sizes.second > secondHeapSize_)
-    return llvm::None;
+    return llvh::None;
 
   // If nothing is requested, return nothing.
   if (!sizes.first && !sizes.second)
-    return llvm::None;
+    return llvh::None;
 
   // Try to allocate in every pool in order.
   for (auto &pool : pools_) {
@@ -59,7 +59,7 @@ llvm::Optional<ExecHeap::BlockPair> ExecHeap::alloc(SizePair sizes) {
   }
 
   // Not enough memory.
-  return llvm::None;
+  return llvh::None;
 }
 
 void ExecHeap::free(BlockPair blocks) {
@@ -105,7 +105,7 @@ ExecHeap::PoolList::iterator ExecHeap::findPool(BlockPair blocks) {
   return pools_.end();
 }
 
-void ExecHeap::dump(llvm::raw_ostream &OS, bool relativePointers) {
+void ExecHeap::dump(llvh::raw_ostream &OS, bool relativePointers) {
   OS << "== ExecHeap " << firstHeapSize_ << "+" << secondHeapSize_ << "\n"
      << "  maxPools:" << maxPools_ << "\n"
      << "  numPools:" << pools_.size() << "\n";
@@ -121,7 +121,7 @@ void ExecHeap::dump(llvm::raw_ostream &OS, bool relativePointers) {
 }
 
 ExecHeap::DualPool::DualPool(
-    llvm::sys::OwningMemoryBlock &&memBlock,
+    llvh::sys::OwningMemoryBlock &&memBlock,
     size_t firstSize,
     size_t secondSize)
     : memBlock_(std::move(memBlock)),
@@ -131,7 +131,7 @@ ExecHeap::DualPool::DualPool(
       (memBlock_.size() >= firstSize + secondSize) && "memBlock is too small");
 }
 
-llvm::Optional<ExecHeap::BlockPair> ExecHeap::DualPool::alloc(SizePair sizes) {
+llvh::Optional<ExecHeap::BlockPair> ExecHeap::DualPool::alloc(SizePair sizes) {
   // Note that either of the sizes can be 0, meaning we don't want to allocate
   // from that pool.
 
@@ -139,7 +139,7 @@ llvm::Optional<ExecHeap::BlockPair> ExecHeap::DualPool::alloc(SizePair sizes) {
   if (sizes.first) {
     first = firstHeap_.alloc(sizes.first);
     if (!first)
-      return llvm::None;
+      return llvh::None;
   }
 
   void *second = nullptr;
@@ -148,7 +148,7 @@ llvm::Optional<ExecHeap::BlockPair> ExecHeap::DualPool::alloc(SizePair sizes) {
     if (!second) {
       // If we failed to allocate the second, free the first.
       firstHeap_.free(first);
-      return llvm::None;
+      return llvh::None;
     }
   }
 

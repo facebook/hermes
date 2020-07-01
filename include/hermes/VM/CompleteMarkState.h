@@ -66,7 +66,7 @@ struct CompleteMarkState {
   /// This will allow us to lower this limit without hurting performance.
   static const uint32_t kMaxPtrsPushedByVarParent = 200;
 
-  // TODO: Test whether it is better to use llvm::SmallVector for the mark
+  // TODO: Test whether it is better to use llvh::SmallVector for the mark
   // stacks.
 
   /// The mark stack for fixed-sized objects that have been marked but not yet

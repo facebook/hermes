@@ -25,10 +25,10 @@
 #include <string>
 #include <vector>
 
-namespace llvm {
+namespace llvh {
 // Forward declaration to avoid including llvm headers.
 class raw_ostream;
-} // namespace llvm
+} // namespace llvh
 
 namespace facebook {
 namespace hermes {
@@ -36,7 +36,7 @@ namespace tracing {
 
 /// A SynthTrace is a list of events that occur in a run of a JS file by a
 /// runtime that uses JSI.
-/// It can be serialized into JSON and written to a llvm::raw_ostream.
+/// It can be serialized into JSON and written to a llvh::raw_ostream.
 class SynthTrace {
  public:
   using ObjectID = uint64_t;
@@ -256,7 +256,7 @@ class SynthTrace {
   explicit SynthTrace(
       ObjectID globalObjID,
       const ::hermes::vm::RuntimeConfig &conf,
-      std::unique_ptr<llvm::raw_ostream> traceStream = nullptr);
+      std::unique_ptr<llvh::raw_ostream> traceStream = nullptr);
 
   template <typename T, typename... Args>
   void emplace_back(Args &&... args) {
@@ -301,7 +301,7 @@ class SynthTrace {
   static ::hermes::vm::ReleaseUnused releaseUnusedFromName(const char *name);
 
  private:
-  llvm::raw_ostream &os() const {
+  llvh::raw_ostream &os() const {
     return (*traceStream_);
   }
 
@@ -319,7 +319,7 @@ class SynthTrace {
 
   /// If we're tracing to a file, pointer to a stream onto
   /// traceFilename_.  Null otherwise.
-  std::unique_ptr<llvm::raw_ostream> traceStream_;
+  std::unique_ptr<llvh::raw_ostream> traceStream_;
   /// If we're tracing to a file, pointer to a JSONEmitter writting
   /// into *traceStream_.  Null otherwise.
   std::unique_ptr<::hermes::JSONEmitter> json_;
@@ -1079,8 +1079,8 @@ class SynthTrace {
       const ::hermes::vm::GCExecTrace &gcTrace);
 };
 
-llvm::raw_ostream &operator<<(
-    llvm::raw_ostream &os,
+llvh::raw_ostream &operator<<(
+    llvh::raw_ostream &os,
     SynthTrace::RecordType type);
 std::istream &operator>>(std::istream &is, SynthTrace::RecordType &type);
 

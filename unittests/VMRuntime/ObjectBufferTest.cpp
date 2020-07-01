@@ -19,7 +19,7 @@
 
 #include "gtest/gtest.h"
 
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/raw_ostream.h"
 
 using namespace hermes::vm;
 using namespace hermes::hbc;
@@ -91,11 +91,11 @@ TEST_F(ObjectBufferTest, TestNewObjectWithBuffer) {
   std::vector<hermes::Literal *> innerObjVals{Builder.getLiteralNull()};
 
   auto objIdxs = BMG.addObjectBuffer(
-      llvm::ArrayRef<hermes::Literal *>{objKeys},
-      llvm::ArrayRef<hermes::Literal *>{objVals});
+      llvh::ArrayRef<hermes::Literal *>{objKeys},
+      llvh::ArrayRef<hermes::Literal *>{objVals});
   auto innerObjIdxs = BMG.addObjectBuffer(
-      llvm::ArrayRef<hermes::Literal *>{innerObjKeys},
-      llvm::ArrayRef<hermes::Literal *>{innerObjVals});
+      llvh::ArrayRef<hermes::Literal *>{innerObjKeys},
+      llvh::ArrayRef<hermes::Literal *>{innerObjVals});
 
   auto IDa = BMG.getStringID("a");
   auto IDb = BMG.getStringID("b");

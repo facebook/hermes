@@ -14,8 +14,8 @@
 
 #include "hermes/VM/Profiler/CodeCoverageProfiler.h"
 
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <algorithm>
 

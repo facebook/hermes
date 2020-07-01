@@ -28,19 +28,19 @@ class FunctionInfo {
   };
 
   /// Parameter names.
-  llvm::SmallVector<VarDecl, 4> paramNames{};
+  llvh::SmallVector<VarDecl, 4> paramNames{};
 
   /// The list of hoisted variable declarations.
-  llvm::SmallVector<VarDecl, 4> varDecls{};
+  llvh::SmallVector<VarDecl, 4> varDecls{};
 
   /// A list of functions that need to be hoisted and materialized before we
   /// can generate the rest of the function.
-  llvm::SmallVector<ESTree::FunctionDeclarationNode *, 2> closures{};
+  llvh::SmallVector<ESTree::FunctionDeclarationNode *, 2> closures{};
 
   /// A list of imports that need to be hoisted and materialized before we
   /// can generate the rest of the function.
   /// Any line of the file may use the imported values.
-  llvm::SmallVector<ESTree::ImportDeclarationNode *, 2> imports{};
+  llvh::SmallVector<ESTree::ImportDeclarationNode *, 2> imports{};
 
   /// Whether this function references the "arguments" identifier. This is a
   /// conservative approximation of whether it tries to access the "arguments"

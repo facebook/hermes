@@ -17,17 +17,17 @@
 #include "hermes/AST/ESTree.h"
 #endif
 
-#include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/ADT/ilist_node.h"
-#include "llvm/ADT/iterator_range.h"
-#include "llvm/IR/SymbolTableListTraits.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/MathExtras.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/FoldingSet.h"
+#include "llvh/ADT/Hashing.h"
+#include "llvh/ADT/SmallPtrSet.h"
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/ADT/Twine.h"
+#include "llvh/ADT/ilist_node.h"
+#include "llvh/ADT/iterator_range.h"
+#include "llvh/IR/SymbolTableListTraits.h"
+#include "llvh/Support/Casting.h"
+#include "llvh/Support/MathExtras.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <deque>
 #include <unordered_map>
@@ -179,7 +179,7 @@ class Type {
   /// \return true if the type is one of the known javascript primitive types:
   /// Number, Null, Boolean, String, Undefined.
   constexpr bool isKnownPrimitiveType() const {
-    return isPrimitive() && 1 == llvm::countPopulation(bitmask_);
+    return isPrimitive() && 1 == llvh::countPopulation(bitmask_);
   }
 
   constexpr bool isPrimitive() const {
@@ -258,11 +258,11 @@ class Type {
     return bitmask_ != t.bitmask_ && !(bitmask_ & ~t.bitmask_);
   }
 
-  void print(llvm::raw_ostream &OS) const;
+  void print(llvh::raw_ostream &OS) const;
 
   /// The hash of a Type is the hash of its opaque value.
-  llvm::hash_code hash() const {
-    return llvm::hash_value(bitmask_);
+  llvh::hash_code hash() const {
+    return llvh::hash_value(bitmask_);
   }
 
   constexpr bool operator==(Type RHS) const {
@@ -330,7 +330,7 @@ class SerializedScope {
   /// generated). Function::lazyClosureAlias_.
   Identifier closureAlias;
   /// List of variable names in the frame.
-  llvm::SmallVector<Identifier, 16> variables;
+  llvh::SmallVector<Identifier, 16> variables;
 };
 
 #ifndef HERMESVM_LEAN
@@ -348,7 +348,7 @@ struct LazySource {
 
 class Value {
  public:
-  using UseListTy = llvm::SmallVector<Instruction *, 2>;
+  using UseListTy = llvh::SmallVector<Instruction *, 2>;
   using Use = std::pair<Value *, unsigned>;
 
  private:
@@ -584,7 +584,7 @@ class LiteralUndefined : public Literal {
   }
 };
 
-class LiteralNumber : public Literal, public llvm::FoldingSetNode {
+class LiteralNumber : public Literal, public llvh::FoldingSetNode {
   LiteralNumber(const LiteralNumber &) = delete;
   void operator=(const LiteralNumber &) = delete;
   double value;
@@ -596,25 +596,25 @@ class LiteralNumber : public Literal, public llvm::FoldingSetNode {
 
   /// Check whether the number can be represented in integer
   /// of type T without losing any precision or information.
-  /// If not representible, \returns llvm::None.
+  /// If not representible, \returns llvh::None.
   template <typename T>
-  llvm::Optional<T> isIntTypeRepresentible() const {
+  llvh::Optional<T> isIntTypeRepresentible() const {
     // Check the value is within the bounds of T.
     // Converting double to int when it's out of bound is undefined behavior.
     // Although it is harmless in this scenario, we should still avoid it.
     if (value > std::numeric_limits<T>::max() ||
         value < std::numeric_limits<T>::min()) {
-      return llvm::None;
+      return llvh::None;
     }
     if (std::isnan(value)) {
-      return llvm::None;
+      return llvh::None;
     }
     // Check the value is integer and is not -0.
     T valAsInt = static_cast<T>(value);
     if (valAsInt == value && (valAsInt || !std::signbit(value))) {
       return valAsInt;
     }
-    return llvm::None;
+    return llvh::None;
   }
 
   /// Check whether the number is positive zero.
@@ -685,11 +685,11 @@ class LiteralNumber : public Literal, public llvm::FoldingSetNode {
     setType(Type::createNumber());
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID, double value) {
+  static void Profile(llvh::FoldingSetNodeID &ID, double value) {
     ID.AddInteger(safeTypeCast<double, int64_t>(value));
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID) const {
+  void Profile(llvh::FoldingSetNodeID &ID) const {
     LiteralNumber::Profile(ID, value);
   }
 
@@ -698,7 +698,7 @@ class LiteralNumber : public Literal, public llvm::FoldingSetNode {
   }
 };
 
-class LiteralString : public Literal, public llvm::FoldingSetNode {
+class LiteralString : public Literal, public llvh::FoldingSetNode {
   LiteralString(const LiteralString &) = delete;
   void operator=(const LiteralString &) = delete;
   Identifier value;
@@ -713,11 +713,11 @@ class LiteralString : public Literal, public llvm::FoldingSetNode {
     setType(Type::createString());
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID, Identifier value) {
+  static void Profile(llvh::FoldingSetNodeID &ID, Identifier value) {
     ID.AddPointer(value.getUnderlyingPointer());
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID) const {
+  void Profile(llvh::FoldingSetNodeID &ID) const {
     LiteralString::Profile(ID, value);
   }
 
@@ -878,7 +878,7 @@ class GlobalObjectProperty : public Value {
 
 /// This is the base class for all instructions in the high-level IR.
 class Instruction
-    : public llvm::ilist_node_with_parent<Instruction, BasicBlock>,
+    : public llvh::ilist_node_with_parent<Instruction, BasicBlock>,
       public Value {
   friend class Value;
   Instruction(const Instruction &) = delete;
@@ -887,7 +887,7 @@ class Instruction
   /// The basic block containing this instruction.
   BasicBlock *Parent;
   /// Saves the instruction operands.
-  llvm::SmallVector<Value::Use, 2> Operands;
+  llvh::SmallVector<Value::Use, 2> Operands;
 
   SMLoc location_{};
   /// The statement of which this Instruction is a part.
@@ -908,7 +908,7 @@ class Instruction
   /// don't want it to resemble a copy constructor (to avoid confusion).
   explicit Instruction(
       const Instruction *src,
-      llvm::ArrayRef<Value *> operands);
+      llvh::ArrayRef<Value *> operands);
 
   /// Add an operand to the operand list.
   void pushOperand(Value *Val);
@@ -945,7 +945,7 @@ class Instruction
 
   /// A debug utility that dumps the textual representation of the IR to the
   /// given ostream, defaults to stdout.
-  void dump(llvm::raw_ostream &os = llvm::outs());
+  void dump(llvh::raw_ostream &os = llvh::outs());
 
   /// Replace the first operand from \p From to \p To. The value \p From must
   /// be an operand of the instruction. The method only replaces the first
@@ -1012,8 +1012,8 @@ class Instruction
     bool operator!=(const Variety &other) const {
       return kinds_ != other.kinds_;
     }
-    friend llvm::hash_code hash_value(Variety variety) {
-      return llvm::hash_value(variety.kinds_);
+    friend llvh::hash_code hash_value(Variety variety) {
+      return llvh::hash_value(variety.kinds_);
     }
   };
 
@@ -1021,7 +1021,7 @@ class Instruction
   Variety getVariety() const;
 
   /// Return the hash code the this instruction.
-  llvm::hash_code getHashCode() const;
+  llvh::hash_code getHashCode() const;
 
   /// Return true if \p RHS is equal to this instruction.
   bool isIdenticalTo(const Instruction *RHS) const;
@@ -1033,7 +1033,7 @@ class Instruction
 // ilist_traits for Instruction
 //===----------------------------------------------------------------------===//
 
-namespace llvm {
+namespace llvh {
 
 template <>
 struct ilist_alloc_traits<::hermes::Instruction> {
@@ -1042,17 +1042,17 @@ struct ilist_alloc_traits<::hermes::Instruction> {
   }
 };
 
-} // namespace llvm
+} // namespace llvh
 
 namespace hermes {
 
-class BasicBlock : public llvm::ilist_node_with_parent<BasicBlock, Function>,
+class BasicBlock : public llvh::ilist_node_with_parent<BasicBlock, Function>,
                    public Value {
   BasicBlock(const BasicBlock &) = delete;
   void operator=(const BasicBlock &) = delete;
 
  public:
-  using InstListType = llvm::iplist<Instruction>;
+  using InstListType = llvh::iplist<Instruction>;
 
  private:
   InstListType InstList{};
@@ -1065,7 +1065,7 @@ class BasicBlock : public llvm::ilist_node_with_parent<BasicBlock, Function>,
   void dump();
 
   /// Used by LLVM's graph trait.
-  void printAsOperand(llvm::raw_ostream &OS, bool) const;
+  void printAsOperand(llvh::raw_ostream &OS, bool) const;
 
   /// \brief Returns the terminator instruction if the block is well formed or
   /// null if the block is not well formed.
@@ -1090,7 +1090,7 @@ class BasicBlock : public llvm::ilist_node_with_parent<BasicBlock, Function>,
     Parent = parent;
   }
 
-  /// Needed by llvm::ilist_node_with_parent. Returns the offset of the
+  /// Needed by llvh::ilist_node_with_parent. Returns the offset of the
   /// aproperiate list based on the type of the argument.
   static InstListType BasicBlock::*getSublistAccess(Instruction *) {
     return &BasicBlock::InstList;
@@ -1101,10 +1101,10 @@ class BasicBlock : public llvm::ilist_node_with_parent<BasicBlock, Function>,
   using reverse_iterator = InstListType::reverse_iterator;
   using const_reverse_iterator = InstListType::const_reverse_iterator;
 
-  using range = llvm::iterator_range<iterator>;
-  using const_range = llvm::iterator_range<const_iterator>;
-  using reverse_range = llvm::iterator_range<reverse_iterator>;
-  using const_reverse_range = llvm::iterator_range<const_reverse_iterator>;
+  using range = llvh::iterator_range<iterator>;
+  using const_range = llvh::iterator_range<const_iterator>;
+  using reverse_range = llvh::iterator_range<reverse_iterator>;
+  using const_reverse_range = llvh::iterator_range<const_reverse_iterator>;
 
   inline iterator begin() {
     return InstList.begin();
@@ -1160,7 +1160,7 @@ class BasicBlock : public llvm::ilist_node_with_parent<BasicBlock, Function>,
 // ilist_traits for BasicBlock
 //===----------------------------------------------------------------------===//
 
-namespace llvm {
+namespace llvh {
 
 template <>
 struct ilist_alloc_traits<::hermes::BasicBlock> {
@@ -1169,14 +1169,14 @@ struct ilist_alloc_traits<::hermes::BasicBlock> {
   }
 };
 
-} // namespace llvm
+} // namespace llvh
 
 namespace hermes {
 
 /// VariableScope is a lexical scope.
 class VariableScope : public Value {
   using Value::Value;
-  using VariableListType = llvm::SmallVector<Variable *, 8>;
+  using VariableListType = llvh::SmallVector<Variable *, 8>;
 
   friend class Function;
 
@@ -1252,14 +1252,14 @@ class ExternalScope : public VariableScope {
   }
 };
 
-class Function : public llvm::ilist_node_with_parent<Function, Module>,
+class Function : public llvh::ilist_node_with_parent<Function, Module>,
                  public Value {
   Function(const Function &) = delete;
   void operator=(const Function &) = delete;
 
  public:
-  using BasicBlockListType = llvm::iplist<BasicBlock>;
-  using ParameterListType = llvm::SmallVector<Parameter *, 8>;
+  using BasicBlockListType = llvh::iplist<BasicBlock>;
+  using ParameterListType = llvh::SmallVector<Parameter *, 8>;
 
   enum class DefinitionKind {
     ES5Function,
@@ -1276,7 +1276,7 @@ class Function : public llvm::ilist_node_with_parent<Function, Module>,
   bool isGlobal_;
 
   /// List of external scopes owned by this function. Deleted upon destruction.
-  llvm::SmallVector<VariableScope *, 4> externalScopes_;
+  llvh::SmallVector<VariableScope *, 4> externalScopes_;
 
   /// The function scope - it is always the first scope in the scope list.
   VariableScope functionScope_;
@@ -1468,7 +1468,7 @@ class Function : public llvm::ilist_node_with_parent<Function, Module>,
   }
 
   void clearStatementCount() {
-    statementCount_ = llvm::None;
+    statementCount_ = llvh::None;
   }
 
   ParameterListType &getParameters() {
@@ -1642,7 +1642,7 @@ class GeneratorInnerFunction final : public Function {
 // ilist_traits for Function
 //===----------------------------------------------------------------------===//
 
-namespace llvm {
+namespace llvh {
 
 template <>
 struct ilist_alloc_traits<::hermes::Function> {
@@ -1651,7 +1651,7 @@ struct ilist_alloc_traits<::hermes::Function> {
   }
 };
 
-} // namespace llvm
+} // namespace llvh
 
 namespace hermes {
 
@@ -1660,7 +1660,7 @@ class Module : public Value {
   void operator=(const Module &) = delete;
 
  public:
-  using FunctionListType = llvm::iplist<Function>;
+  using FunctionListType = llvh::iplist<Function>;
 
   using RawStringList = std::vector<LiteralString *>;
 
@@ -1685,7 +1685,7 @@ class Module : public Value {
   /// A list of all global properties, in the order of declaration.
   GlobalObjectPropertyList globalPropertyList_{};
   /// Mapping global property names to instances in the list.
-  llvm::DenseMap<Identifier, GlobalObjectProperty *> globalPropertyMap_{};
+  llvh::DenseMap<Identifier, GlobalObjectProperty *> globalPropertyMap_{};
 
   GlobalObject globalObject_{};
   LiteralUndefined literalUndefined{};
@@ -1694,8 +1694,8 @@ class Module : public Value {
   LiteralBool literalTrue{true};
   EmptySentinel emptySentinel_{};
 
-  using LiteralNumberFoldingSet = llvm::FoldingSet<LiteralNumber>;
-  using LiteralStringFoldingSet = llvm::FoldingSet<LiteralString>;
+  using LiteralNumberFoldingSet = llvh::FoldingSet<LiteralNumber>;
+  using LiteralStringFoldingSet = llvh::FoldingSet<LiteralString>;
 
   LiteralNumberFoldingSet literalNumbers{};
   LiteralStringFoldingSet literalStrings{};
@@ -1703,7 +1703,7 @@ class Module : public Value {
   /// Map from an identifier to a number indicating how many times it has been
   /// used. This allows to construct unique internal names derived from regular
   /// identifiers.
-  llvm::DenseMap<Identifier, unsigned> internalNamesMap_;
+  llvh::DenseMap<Identifier, unsigned> internalNamesMap_;
 
   /// Storage for the CJS modules.
   /// Element i will have the CJS module ID of i.
@@ -1714,15 +1714,15 @@ class Module : public Value {
   using CJSModuleIterator = std::deque<CJSModule>::iterator;
 
   /// Map from functions to members of the CJS module storage.
-  llvm::DenseMap<Function *, CJSModule *> cjsModuleFunctionMap_{};
+  llvh::DenseMap<Function *, CJSModule *> cjsModuleFunctionMap_{};
   /// Map from file names to members of the CJS module storage.
-  llvm::DenseMap<Identifier, CJSModule *> cjsModuleFilenameMap_{};
+  llvh::DenseMap<Identifier, CJSModule *> cjsModuleFilenameMap_{};
 
   /// true if all CJS modules have been resolved.
   bool cjsModulesResolved_{false};
 
   using CJSModuleUseGraph =
-      std::unordered_map<Function *, llvm::SmallPtrSet<Function *, 2>>;
+      std::unordered_map<Function *, llvh::SmallPtrSet<Function *, 2>>;
 
   /// Graph which maps from a function F to a set of functions which it uses.
   /// Used to determine what functions must be generated for a given segment.
@@ -1733,7 +1733,7 @@ class Module : public Value {
 
   struct HashRawStrings {
     std::size_t operator()(const RawStringList &rawStrings) const {
-      return llvm::hash_combine_range(rawStrings.begin(), rawStrings.end());
+      return llvh::hash_combine_range(rawStrings.begin(), rawStrings.end());
     }
   };
 
@@ -1798,7 +1798,7 @@ class Module : public Value {
 
   using GlobalObjectPropertyIterator = GlobalObjectPropertyList::const_iterator;
 
-  llvm::iterator_range<GlobalObjectPropertyIterator> getGlobalProperties() {
+  llvh::iterator_range<GlobalObjectPropertyIterator> getGlobalProperties() {
     return {globalPropertyList_.begin(), globalPropertyList_.end()};
   }
 
@@ -1878,7 +1878,7 @@ class Module : public Value {
   }
 
   /// \return the registered CommonJS modules.
-  llvm::iterator_range<CJSModuleIterator> getCJSModules() {
+  llvh::iterator_range<CJSModuleIterator> getCJSModules() {
     return {cjsModules_.begin(), cjsModules_.end()};
   }
 
@@ -1895,7 +1895,7 @@ class Module : public Value {
   /// \return the set of functions which are used by the modules in the segment
   /// specified by \p range. Order is unspecified, so the return value should
   /// not be used for iteration, only for checking membership.
-  llvm::DenseSet<Function *> getFunctionsInSegment(Context::SegmentRange range);
+  llvh::DenseSet<Function *> getFunctionsInSegment(Context::SegmentRange range);
 
   /// Given a list of raw strings from a template literal, get its unique id.
   uint32_t getTemplateObjectID(RawStringList &&rawStrings);
@@ -1959,16 +1959,16 @@ class Module : public Value {
 };
 
 /// The hash of a Type is the hash of its opaque value.
-static inline llvm::hash_code hash_value(Type V) {
+static inline llvh::hash_code hash_value(Type V) {
   return V.hash();
 }
 
 } // end namespace hermes
 
-namespace llvm {
+namespace llvh {
 
 raw_ostream &operator<<(raw_ostream &OS, const hermes::Type &T);
 
-} // namespace llvm
+} // namespace llvh
 
 #endif

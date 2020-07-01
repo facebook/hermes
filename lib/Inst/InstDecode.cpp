@@ -9,8 +9,8 @@
 
 #include "hermes/Support/Conversions.h"
 
-#include "llvm/Support/Format.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/Format.h"
+#include "llvh/Support/raw_ostream.h"
 
 namespace hermes {
 namespace inst {
@@ -152,7 +152,7 @@ DecodedInstruction decodeInstruction(const Inst *inst) {
   return decoded;
 }
 
-void dumpOperand(llvm::raw_ostream &OS, OperandType type, OperandValue value) {
+void dumpOperand(llvh::raw_ostream &OS, OperandType type, OperandValue value) {
   switch (type) {
     case OperandType::Reg8:
     case OperandType::Reg32:
@@ -178,10 +178,10 @@ void dumpOperand(llvm::raw_ostream &OS, OperandType type, OperandValue value) {
   }
 }
 
-llvm::raw_ostream &operator<<(
-    llvm::raw_ostream &OS,
+llvh::raw_ostream &operator<<(
+    llvh::raw_ostream &OS,
     const DecodedInstruction &decoded) {
-  OS << llvm::left_justify(getOpCodeString(decoded.meta.opCode), 17);
+  OS << llvh::left_justify(getOpCodeString(decoded.meta.opCode), 17);
 
   for (unsigned i = 0; i < decoded.meta.numOperands; ++i) {
     OS << (i == 0 ? " " : ", ");

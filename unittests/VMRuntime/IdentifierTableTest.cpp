@@ -52,7 +52,7 @@ TEST_F(IdentifierTableLargeHeapTest, LookupTest) {
       table.getSymbolHandle(runtime, c).getValue().get().unsafeGetIndex() -
           predefinedCount);
 
-  auto d = StringPrimitive::createNoThrow(runtime, llvm::StringRef("foo"));
+  auto d = StringPrimitive::createNoThrow(runtime, llvh::StringRef("foo"));
   EXPECT_EQ(
       0u,
       table.getSymbolHandleFromPrimitive(runtime, d)
@@ -61,7 +61,7 @@ TEST_F(IdentifierTableLargeHeapTest, LookupTest) {
               .unsafeGetIndex() -
           predefinedCount);
 
-  auto e = StringPrimitive::createNoThrow(runtime, llvm::StringRef("ab"));
+  auto e = StringPrimitive::createNoThrow(runtime, llvh::StringRef("ab"));
   EXPECT_EQ(
       1u,
       table.getSymbolHandleFromPrimitive(runtime, e)

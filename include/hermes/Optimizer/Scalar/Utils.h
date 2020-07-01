@@ -11,8 +11,8 @@
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/Instrs.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvh/ADT/DenseSet.h"
+#include "llvh/ADT/SmallVector.h"
 
 namespace hermes {
 
@@ -43,7 +43,7 @@ bool isDirectCallee(Value *C, CallInst *CI);
 
 /// Collect the call sites for function \p F in \p callsites.
 /// \returns True if all call sites are known and \p callsites is valid.
-bool getCallSites(Function *F, llvm::SmallVectorImpl<CallInst *> &callsites);
+bool getCallSites(Function *F, llvh::SmallVectorImpl<CallInst *> &callsites);
 
 /// Delete all incoming arrows from \p incoming in PhiInsts in \p blockToModify.
 bool deleteIncomingBlockFromPhis(

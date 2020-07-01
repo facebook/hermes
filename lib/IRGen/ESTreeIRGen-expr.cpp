@@ -16,26 +16,26 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
   IRBuilder::ScopedLocationChange slc(Builder, expr->getDebugLoc());
 
   // Handle identifiers.
-  if (auto *Iden = llvm::dyn_cast<ESTree::IdentifierNode>(expr)) {
+  if (auto *Iden = llvh::dyn_cast<ESTree::IdentifierNode>(expr)) {
     return genIdentifierExpression(Iden, false);
   }
 
   // Handle Null Literals.
   // http://www.ecma-international.org/ecma-262/6.0/#sec-null-literals
-  if (llvm::isa<ESTree::NullLiteralNode>(expr)) {
+  if (llvh::isa<ESTree::NullLiteralNode>(expr)) {
     return Builder.getLiteralNull();
   }
 
   // Handle String Literals.
   // http://www.ecma-international.org/ecma-262/6.0/#sec-literals-string-literals
-  if (auto *Lit = llvm::dyn_cast<ESTree::StringLiteralNode>(expr)) {
+  if (auto *Lit = llvh::dyn_cast<ESTree::StringLiteralNode>(expr)) {
     LLVM_DEBUG(dbgs() << "Loading String Literal \"" << Lit->_value << "\"\n");
     return Builder.getLiteralString(Lit->_value->str());
   }
 
   // Handle Regexp Literals.
   // http://www.ecma-international.org/ecma-262/6.0/#sec-literals-regular-expression-literals
-  if (auto *Lit = llvm::dyn_cast<ESTree::RegExpLiteralNode>(expr)) {
+  if (auto *Lit = llvh::dyn_cast<ESTree::RegExpLiteralNode>(expr)) {
     LLVM_DEBUG(
         dbgs() << "Loading regexp Literal \"" << Lit->_pattern->str() << " / "
                << Lit->_flags->str() << "\"\n");
@@ -47,67 +47,67 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
 
   // Handle Boolean Literals.
   // http://www.ecma-international.org/ecma-262/6.0/#sec-boolean-literals
-  if (auto *Lit = llvm::dyn_cast<ESTree::BooleanLiteralNode>(expr)) {
+  if (auto *Lit = llvh::dyn_cast<ESTree::BooleanLiteralNode>(expr)) {
     LLVM_DEBUG(dbgs() << "Loading String Literal \"" << Lit->_value << "\"\n");
     return Builder.getLiteralBool(Lit->_value);
   }
 
   // Handle Number Literals.
   // http://www.ecma-international.org/ecma-262/6.0/#sec-literals-numeric-literals
-  if (auto *Lit = llvm::dyn_cast<ESTree::NumericLiteralNode>(expr)) {
+  if (auto *Lit = llvh::dyn_cast<ESTree::NumericLiteralNode>(expr)) {
     LLVM_DEBUG(dbgs() << "Loading Numeric Literal \"" << Lit->_value << "\"\n");
     return Builder.getLiteralNumber(Lit->_value);
   }
 
   // Handle the assignment expression.
-  if (auto Assign = llvm::dyn_cast<ESTree::AssignmentExpressionNode>(expr)) {
+  if (auto Assign = llvh::dyn_cast<ESTree::AssignmentExpressionNode>(expr)) {
     return genAssignmentExpr(Assign);
   }
 
   // Handle Call expressions.
-  if (auto *call = llvm::dyn_cast<ESTree::CallExpressionNode>(expr)) {
+  if (auto *call = llvh::dyn_cast<ESTree::CallExpressionNode>(expr)) {
     return genCallExpr(call);
   }
 
   // Handle Call expressions.
-  if (auto *call = llvm::dyn_cast<ESTree::OptionalCallExpressionNode>(expr)) {
+  if (auto *call = llvh::dyn_cast<ESTree::OptionalCallExpressionNode>(expr)) {
     return genOptionalCallExpr(call, nullptr);
   }
 
   // Handle the 'new' expressions.
-  if (auto *newExp = llvm::dyn_cast<ESTree::NewExpressionNode>(expr)) {
+  if (auto *newExp = llvh::dyn_cast<ESTree::NewExpressionNode>(expr)) {
     return genNewExpr(newExp);
   }
 
   // Handle MemberExpression expressions for access property.
-  if (auto *Mem = llvm::dyn_cast<ESTree::MemberExpressionNode>(expr)) {
+  if (auto *Mem = llvh::dyn_cast<ESTree::MemberExpressionNode>(expr)) {
     return genMemberExpression(Mem, MemberExpressionOperation::Load).result;
   }
 
   // Handle MemberExpression expressions for access property.
-  if (auto *mem = llvm::dyn_cast<ESTree::OptionalMemberExpressionNode>(expr)) {
+  if (auto *mem = llvh::dyn_cast<ESTree::OptionalMemberExpressionNode>(expr)) {
     return genOptionalMemberExpression(
                mem, nullptr, MemberExpressionOperation::Load)
         .result;
   }
 
   // Handle Array expressions (syntax: [1,2,3]).
-  if (auto *Arr = llvm::dyn_cast<ESTree::ArrayExpressionNode>(expr)) {
+  if (auto *Arr = llvh::dyn_cast<ESTree::ArrayExpressionNode>(expr)) {
     return genArrayExpr(Arr);
   }
 
   // Handle object expressions (syntax: {"1" : "2"}).
-  if (auto *Obj = llvm::dyn_cast<ESTree::ObjectExpressionNode>(expr)) {
+  if (auto *Obj = llvh::dyn_cast<ESTree::ObjectExpressionNode>(expr)) {
     return genObjectExpr(Obj);
   }
 
   // Handle logical expressions (short circuiting).
-  if (auto *L = llvm::dyn_cast<ESTree::LogicalExpressionNode>(expr)) {
+  if (auto *L = llvh::dyn_cast<ESTree::LogicalExpressionNode>(expr)) {
     return genLogicalExpression(L);
   }
 
   // Handle Binary Expressions.
-  if (auto *Bin = llvm::dyn_cast<ESTree::BinaryExpressionNode>(expr)) {
+  if (auto *Bin = llvh::dyn_cast<ESTree::BinaryExpressionNode>(expr)) {
     Value *LHS = genExpression(Bin->_left);
     Value *RHS = genExpression(Bin->_right);
     auto cookie = instrumentIR_.preBinaryExpression(Bin, LHS, RHS);
@@ -120,12 +120,12 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
   }
 
   // Handle Unary operator Expressions.
-  if (auto *U = llvm::dyn_cast<ESTree::UnaryExpressionNode>(expr)) {
+  if (auto *U = llvh::dyn_cast<ESTree::UnaryExpressionNode>(expr)) {
     return genUnaryExpression(U);
   }
 
   // Handle the 'this' keyword.
-  if (llvm::isa<ESTree::ThisExpressionNode>(expr)) {
+  if (llvh::isa<ESTree::ThisExpressionNode>(expr)) {
     if (curFunction()->function->getDefinitionKind() ==
         Function::DefinitionKind::ES6Arrow) {
       assert(
@@ -136,40 +136,40 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
     return curFunction()->function->getThisParameter();
   }
 
-  if (auto *MP = llvm::dyn_cast<ESTree::MetaPropertyNode>(expr)) {
+  if (auto *MP = llvh::dyn_cast<ESTree::MetaPropertyNode>(expr)) {
     return genMetaProperty(MP);
   }
 
   // Handle function expressions.
-  if (auto *FE = llvm::dyn_cast<ESTree::FunctionExpressionNode>(expr)) {
+  if (auto *FE = llvh::dyn_cast<ESTree::FunctionExpressionNode>(expr)) {
     return genFunctionExpression(FE, nameHint);
   }
 
-  if (auto *AF = llvm::dyn_cast<ESTree::ArrowFunctionExpressionNode>(expr)) {
+  if (auto *AF = llvh::dyn_cast<ESTree::ArrowFunctionExpressionNode>(expr)) {
     return genArrowFunctionExpression(AF, nameHint);
   }
 
-  if (auto *U = llvm::dyn_cast<ESTree::UpdateExpressionNode>(expr)) {
+  if (auto *U = llvh::dyn_cast<ESTree::UpdateExpressionNode>(expr)) {
     return genUpdateExpr(U);
   }
 
-  if (auto *C = llvm::dyn_cast<ESTree::ConditionalExpressionNode>(expr)) {
+  if (auto *C = llvh::dyn_cast<ESTree::ConditionalExpressionNode>(expr)) {
     return genConditionalExpr(C);
   }
 
-  if (auto *Sq = llvm::dyn_cast<ESTree::SequenceExpressionNode>(expr)) {
+  if (auto *Sq = llvh::dyn_cast<ESTree::SequenceExpressionNode>(expr)) {
     return genSequenceExpr(Sq);
   }
 
-  if (auto *Tl = llvm::dyn_cast<ESTree::TemplateLiteralNode>(expr)) {
+  if (auto *Tl = llvh::dyn_cast<ESTree::TemplateLiteralNode>(expr)) {
     return genTemplateLiteralExpr(Tl);
   }
 
-  if (auto *Tt = llvm::dyn_cast<ESTree::TaggedTemplateExpressionNode>(expr)) {
+  if (auto *Tt = llvh::dyn_cast<ESTree::TaggedTemplateExpressionNode>(expr)) {
     return genTaggedTemplateExpr(Tt);
   }
 
-  if (auto *Y = llvm::dyn_cast<ESTree::YieldExpressionNode>(expr)) {
+  if (auto *Y = llvh::dyn_cast<ESTree::YieldExpressionNode>(expr)) {
     return Y->_delegate ? genYieldStarExpr(Y) : genYieldExpr(Y);
   }
 
@@ -245,7 +245,7 @@ Value *ESTreeIRGen::genArrayFromElements(ESTree::NodeList &list) {
   unsigned minElements = 0;
   bool variableLength = false;
   for (auto &E : list) {
-    if (llvm::isa<ESTree::SpreadElementNode>(&E)) {
+    if (llvh::isa<ESTree::SpreadElementNode>(&E)) {
       variableLength = true;
       continue;
     }
@@ -274,8 +274,8 @@ Value *ESTreeIRGen::genArrayFromElements(ESTree::NodeList &list) {
   for (auto &E : list) {
     Value *value{nullptr};
     bool isSpread = false;
-    if (!llvm::isa<ESTree::EmptyNode>(&E)) {
-      if (auto *spread = llvm::dyn_cast<ESTree::SpreadElementNode>(&E)) {
+    if (!llvh::isa<ESTree::EmptyNode>(&E)) {
+      if (auto *spread = llvh::dyn_cast<ESTree::SpreadElementNode>(&E)) {
         isSpread = true;
         value = genExpression(spread->_argument);
       } else {
@@ -283,7 +283,7 @@ Value *ESTreeIRGen::genArrayFromElements(ESTree::NodeList &list) {
       }
     }
     if (!value ||
-        (!llvm::isa<Literal>(value) && !codeGenOpts.unlimitedRegisters) ||
+        (!llvh::isa<Literal>(value) && !codeGenOpts.unlimitedRegisters) ||
         isSpread) {
       // This is either an elision,
       // or a non-literal in limited-register mode,
@@ -341,7 +341,7 @@ Value *ESTreeIRGen::genArrayFromElements(ESTree::NodeList &list) {
         "variable length arrays must allocate their own arrays");
     allocArrayInst = Builder.createAllocArrayInst(elements, list.size());
   }
-  if (count > 0 && llvm::isa<ESTree::EmptyNode>(&list.back())) {
+  if (count > 0 && llvh::isa<ESTree::EmptyNode>(&list.back())) {
     // Last element is an elision, VM cannot derive the length properly.
     // We have to explicitly set it.
     Builder.createStorePropertyInst(
@@ -358,10 +358,10 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
   LLVM_DEBUG(dbgs() << "IRGen 'call' statement/expression.\n");
 
   // Check for a direct call to eval().
-  if (auto *identNode = llvm::dyn_cast<ESTree::IdentifierNode>(call->_callee)) {
+  if (auto *identNode = llvh::dyn_cast<ESTree::IdentifierNode>(call->_callee)) {
     if (Identifier::getFromPointer(identNode->_name) == identEval_) {
       auto *evalVar = nameTable_.lookup(identEval_);
-      if (!evalVar || llvm::isa<GlobalObjectProperty>(evalVar))
+      if (!evalVar || llvh::isa<GlobalObjectProperty>(evalVar))
         return genCallEvalExpr(call);
     }
   }
@@ -370,7 +370,7 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
   Value *callee;
 
   // Handle MemberExpression expression calls that sets the 'this' property.
-  if (auto *Mem = llvm::dyn_cast<ESTree::MemberExpressionNode>(call->_callee)) {
+  if (auto *Mem = llvh::dyn_cast<ESTree::MemberExpressionNode>(call->_callee)) {
     MemberExpressionResult memResult =
         genMemberExpression(Mem, MemberExpressionOperation::Load);
 
@@ -379,7 +379,7 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
     callee = memResult.result;
   } else if (
       auto *Mem =
-          llvm::dyn_cast<ESTree::OptionalMemberExpressionNode>(call->_callee)) {
+          llvh::dyn_cast<ESTree::OptionalMemberExpressionNode>(call->_callee)) {
     MemberExpressionResult memResult = genOptionalMemberExpression(
         Mem, nullptr, MemberExpressionOperation::Load);
 
@@ -426,7 +426,7 @@ Value *ESTreeIRGen::genOptionalCallExpr(
   Value *callee;
 
   // Handle MemberExpression expression calls that sets the 'this' property.
-  if (auto *me = llvm::dyn_cast<ESTree::MemberExpressionNode>(call->_callee)) {
+  if (auto *me = llvh::dyn_cast<ESTree::MemberExpressionNode>(call->_callee)) {
     MemberExpressionResult memResult =
         genMemberExpression(me, MemberExpressionOperation::Load);
 
@@ -435,7 +435,7 @@ Value *ESTreeIRGen::genOptionalCallExpr(
     callee = memResult.result;
   } else if (
       auto *ome =
-          llvm::dyn_cast<ESTree::OptionalMemberExpressionNode>(call->_callee)) {
+          llvh::dyn_cast<ESTree::OptionalMemberExpressionNode>(call->_callee)) {
     MemberExpressionResult memResult = genOptionalMemberExpression(
         ome, shortCircuitBB, MemberExpressionOperation::Load);
 
@@ -444,7 +444,7 @@ Value *ESTreeIRGen::genOptionalCallExpr(
     callee = memResult.result;
   } else if (
       auto *oce =
-          llvm::dyn_cast<ESTree::OptionalCallExpressionNode>(call->_callee)) {
+          llvh::dyn_cast<ESTree::OptionalCallExpressionNode>(call->_callee)) {
     thisVal = Builder.getLiteralUndefined();
     callee = genOptionalCallExpr(oce, shortCircuitBB);
   } else {
@@ -491,7 +491,7 @@ Value *ESTreeIRGen::emitCall(
     Value *thisVal) {
   bool hasSpread = false;
   for (auto &arg : getArguments(call)) {
-    if (llvm::isa<ESTree::SpreadElementNode>(&arg)) {
+    if (llvh::isa<ESTree::SpreadElementNode>(&arg)) {
       hasSpread = true;
     }
   }
@@ -560,13 +560,13 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genOptionalMemberExpression(
 
   Value *baseValue = nullptr;
   if (ESTree::OptionalMemberExpressionNode *ome =
-          llvm::dyn_cast<ESTree::OptionalMemberExpressionNode>(mem->_object)) {
+          llvh::dyn_cast<ESTree::OptionalMemberExpressionNode>(mem->_object)) {
     baseValue = genOptionalMemberExpression(
                     ome, shortCircuitBB, MemberExpressionOperation::Load)
                     .result;
   } else if (
       ESTree::OptionalCallExpressionNode *oce =
-          llvm::dyn_cast<ESTree::OptionalCallExpressionNode>(mem->_object)) {
+          llvh::dyn_cast<ESTree::OptionalCallExpressionNode>(mem->_object)) {
     baseValue = genOptionalCallExpr(oce, shortCircuitBB);
   } else {
     baseValue = genExpression(mem->_object);
@@ -626,7 +626,7 @@ Value *ESTreeIRGen::genCallEvalExpr(ESTree::CallExpressionNode *call) {
       call->getSourceRange(),
       "Direct call to eval(), but lexical scope is not supported.");
 
-  llvm::SmallVector<Value *, 1> args;
+  llvh::SmallVector<Value *, 1> args;
   for (auto &arg : call->_arguments) {
     args.push_back(genExpression(&arg));
   }
@@ -641,24 +641,24 @@ Value *ESTreeIRGen::genCallEvalExpr(ESTree::CallExpressionNode *call) {
 
 /// Convert a property key node to its JavaScript string representation.
 static StringRef propertyKeyAsString(
-    llvm::SmallVectorImpl<char> &storage,
+    llvh::SmallVectorImpl<char> &storage,
     ESTree::Node *Key) {
   // Handle String Literals.
   // http://www.ecma-international.org/ecma-262/6.0/#sec-literals-string-literals
-  if (auto *Lit = llvm::dyn_cast<ESTree::StringLiteralNode>(Key)) {
+  if (auto *Lit = llvh::dyn_cast<ESTree::StringLiteralNode>(Key)) {
     LLVM_DEBUG(dbgs() << "Loading String Literal \"" << Lit->_value << "\"\n");
     return Lit->_value->str();
   }
 
   // Handle identifiers as if they are String Literals.
-  if (auto *Iden = llvm::dyn_cast<ESTree::IdentifierNode>(Key)) {
+  if (auto *Iden = llvh::dyn_cast<ESTree::IdentifierNode>(Key)) {
     LLVM_DEBUG(dbgs() << "Loading String Literal \"" << Iden->_name << "\"\n");
     return Iden->_name->str();
   }
 
   // Handle Number Literals.
   // http://www.ecma-international.org/ecma-262/6.0/#sec-literals-numeric-literals
-  if (auto *Lit = llvm::dyn_cast<ESTree::NumericLiteralNode>(Key)) {
+  if (auto *Lit = llvh::dyn_cast<ESTree::NumericLiteralNode>(Key)) {
     LLVM_DEBUG(dbgs() << "Loading Numeric Literal \"" << Lit->_value << "\"\n");
     storage.resize(NUMBER_TO_STRING_BUF_SIZE);
     auto len = numberToString(Lit->_value, storage.data(), storage.size());
@@ -731,15 +731,15 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
   // previous value.
   // Note that computed properties are not stored in the propMap as we do not
   // know the keys at compilation time.
-  llvm::StringMap<PropertyValue> propMap;
-  llvm::SmallVector<char, 32> stringStorage;
+  llvh::StringMap<PropertyValue> propMap;
+  llvh::SmallVector<char, 32> stringStorage;
   /// The optional __proto__ property.
   ESTree::PropertyNode *protoProperty = nullptr;
 
   uint32_t numComputed = 0;
 
   for (auto &P : Expr->_properties) {
-    if (llvm::isa<ESTree::SpreadElementNode>(&P))
+    if (llvh::isa<ESTree::SpreadElementNode>(&P))
       continue;
 
     // We are reusing the storage, so make sure it is cleared at every
@@ -800,7 +800,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
   // is no need to create them if we don't use them because creating a function
   // has no side effects.
   for (auto &P : Expr->_properties) {
-    if (auto *spread = llvm::dyn_cast<ESTree::SpreadElementNode>(&P)) {
+    if (auto *spread = llvh::dyn_cast<ESTree::SpreadElementNode>(&P)) {
       genBuiltinCall(
           BuiltinMethod::HermesBuiltin_copyDataProperties,
           {Obj, genExpression(spread->_argument)});
@@ -1265,14 +1265,14 @@ Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
   // Handle the delete unary expression. https://es5.github.io/#x11.4.1
   if (kind == UnaryOperatorInst::OpKind::DeleteKind) {
     if (auto *memberExpr =
-            llvm::dyn_cast<ESTree::MemberExpressionNode>(U->_argument)) {
+            llvh::dyn_cast<ESTree::MemberExpressionNode>(U->_argument)) {
       LLVM_DEBUG(dbgs() << "IRGen delete member expression.\n");
 
       return genMemberExpression(memberExpr, MemberExpressionOperation::Delete)
           .result;
     }
 
-    if (auto *memberExpr = llvm::dyn_cast<ESTree::OptionalMemberExpressionNode>(
+    if (auto *memberExpr = llvh::dyn_cast<ESTree::OptionalMemberExpressionNode>(
             U->_argument)) {
       LLVM_DEBUG(dbgs() << "IRGen delete optional member expression.\n");
 
@@ -1284,7 +1284,7 @@ Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
     // Check for "delete identifier". Note that deleting unqualified identifiers
     // is prohibited in strict mode, so that case is handled earlier in the
     // semantic validator. Here we are left to handle the non-strict mode case.
-    if (auto *iden = llvm::dyn_cast<ESTree::IdentifierNode>(U->_argument)) {
+    if (auto *iden = llvh::dyn_cast<ESTree::IdentifierNode>(U->_argument)) {
       assert(
           !curFunction()->function->isStrictMode() &&
           "delete identifier encountered in strict mode");
@@ -1292,7 +1292,7 @@ Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
       Identifier name = getNameFieldFromID(iden);
       auto *var = nameTable_.lookup(name);
 
-      if (!var || llvm::isa<GlobalObjectProperty>(var)) {
+      if (!var || llvh::isa<GlobalObjectProperty>(var)) {
         // If the variable doesn't exist or if it is global, we must generate
         // a delete global property instruction.
         return Builder.createDeletePropertyInst(
@@ -1313,7 +1313,7 @@ Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
 
   // Need to handle the special case of "typeof <undefined variable>".
   if (kind == UnaryOperatorInst::OpKind::TypeofKind) {
-    if (auto *id = llvm::dyn_cast<ESTree::IdentifierNode>(U->_argument)) {
+    if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(U->_argument)) {
       Value *argument = genIdentifierExpression(id, true);
       return Builder.createUnaryOperatorInst(argument, kind);
     }
@@ -1463,13 +1463,13 @@ Value *ESTreeIRGen::genIdentifierExpression(
 
   // For uses of undefined as the global property, we make an optimization
   // to always return undefined constant.
-  if (llvm::isa<GlobalObjectProperty>(Var) && StrName.str() == "undefined") {
+  if (llvh::isa<GlobalObjectProperty>(Var) && StrName.str() == "undefined") {
     return Builder.getLiteralUndefined();
   }
 
   LLVM_DEBUG(
       dbgs() << "Found variable " << StrName << " in function \""
-             << (llvm::isa<GlobalObjectProperty>(Var)
+             << (llvh::isa<GlobalObjectProperty>(Var)
                      ? StringRef("global")
                      : cast<Variable>(Var)
                            ->getParent()
@@ -1497,7 +1497,7 @@ Value *ESTreeIRGen::genMetaProperty(ESTree::MetaPropertyNode *MP) {
       }
 
       // If it is a variable, we must issue a load.
-      if (auto *V = llvm::dyn_cast<Variable>(value))
+      if (auto *V = llvh::dyn_cast<Variable>(value))
         return Builder.createLoadFrameInst(V);
 
       return value;
@@ -1514,7 +1514,7 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
 
   bool hasSpread = false;
   for (auto &arg : N->_arguments) {
-    if (llvm::isa<ESTree::SpreadElementNode>(&arg)) {
+    if (llvh::isa<ESTree::SpreadElementNode>(&arg)) {
       hasSpread = true;
     }
   }
@@ -1749,7 +1749,7 @@ Value *ESTreeIRGen::genTaggedTemplateExpr(
   Value *callee;
   Value *thisVal;
   // Tag function is a member expression.
-  if (auto *Mem = llvm::dyn_cast<ESTree::MemberExpressionNode>(Expr->_tag)) {
+  if (auto *Mem = llvh::dyn_cast<ESTree::MemberExpressionNode>(Expr->_tag)) {
     Value *obj = genExpression(Mem->_object);
     Value *prop = genMemberExpressionProperty(Mem);
     // Call the callee with obj as the 'this'.

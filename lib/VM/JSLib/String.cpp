@@ -388,7 +388,7 @@ stringFromCodePoint(void *, Runtime *runtime, NativeArgs args) {
   // 2. Let length be the number of elements in codePoints.
   uint32_t length = args.getArgCount();
   // 3. Let elements be a new List.
-  llvm::SmallVector<char16_t, 32> elements{};
+  llvh::SmallVector<char16_t, 32> elements{};
   // 4. Let nextIndex be 0.
   uint32_t nextIndex = 0;
 
@@ -488,7 +488,7 @@ CallResult<HermesValue> stringRaw(void *, Runtime *runtime, NativeArgs args) {
   }
 
   // 10. Let stringElements be a new List.
-  llvm::SmallVector<char16_t, 32> stringElements{};
+  llvh::SmallVector<char16_t, 32> stringElements{};
 
   // 11. Let nextIndex be 0.
   MutableHandle<> nextIndex{runtime, HermesValue::encodeNumberValue(0)};
@@ -1340,8 +1340,8 @@ stringPrototypeLocaleCompare(void *ctx, Runtime *runtime, NativeArgs args) {
   // "That" string.
   auto T = runtime->makeHandle(std::move(*tRes));
 
-  llvm::SmallVector<char16_t, 32> left;
-  llvm::SmallVector<char16_t, 32> right;
+  llvh::SmallVector<char16_t, 32> left;
+  llvh::SmallVector<char16_t, 32> right;
 
   StringPrimitive::createStringView(runtime, S).copyUTF16String(left);
   StringPrimitive::createStringView(runtime, T).copyUTF16String(right);
@@ -1401,7 +1401,7 @@ stringPrototypeNormalize(void *, Runtime *runtime, NativeArgs args) {
   // 8. Let ns be the String value that is the result of normalizing S into the
   // normalization form named by f as specified in
   // http://www.unicode.org/reports/tr15/tr15-29.html.
-  llvm::SmallVector<char16_t, 32> ns;
+  llvh::SmallVector<char16_t, 32> ns;
   S->copyUTF16String(ns);
   platform_unicode::normalize(ns, form);
 

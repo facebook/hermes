@@ -27,14 +27,14 @@ struct DummyCounter {
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
 // Debug - forward to llvm.
-#include "llvm/ADT/Statistic.h"
+#include "llvh/ADT/Statistic.h"
 
 namespace hermes {
 inline bool AreStatisticsEnabled() {
-  return llvm::AreStatisticsEnabled();
+  return llvh::AreStatisticsEnabled();
 }
 inline void EnableStatistics() {
-  llvm::EnableStatistics();
+  llvh::EnableStatistics();
 }
 } // namespace hermes
 

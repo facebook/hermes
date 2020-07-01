@@ -599,7 +599,7 @@ objectDefinePropertiesInternal(Runtime *runtime, Handle<> obj, Handle<> props) {
     NewProps(unsigned i, DefinePropertyFlags f, MutableHandle<> voa)
         : propNameIndex(i), flags(f), valueOrAccessor(std::move(voa)) {}
   };
-  llvm::SmallVector<NewProps, 4> newProps;
+  llvh::SmallVector<NewProps, 4> newProps;
 
   // We store each property name here. This is hoisted out of the loop
   // to avoid allocating a handle per property.

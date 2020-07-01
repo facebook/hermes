@@ -17,7 +17,7 @@
 #include "hermes/Support/RegExpSerialization.h"
 #include "hermes/Support/StringTableEntry.h"
 
-#include "llvm/ADT/ArrayRef.h"
+#include "llvh/ADT/ArrayRef.h"
 
 #include <atomic>
 #include <thread>
@@ -115,27 +115,27 @@ class BCProviderBase {
 
   /// Below are all the different global data tables/storage.
   uint32_t stringCount_{};
-  llvm::ArrayRef<StringKind::Entry> stringKinds_{};
-  llvm::ArrayRef<uint32_t> identifierHashes_{};
-  llvm::ArrayRef<unsigned char> stringStorage_{};
+  llvh::ArrayRef<StringKind::Entry> stringKinds_{};
+  llvh::ArrayRef<uint32_t> identifierHashes_{};
+  llvh::ArrayRef<unsigned char> stringStorage_{};
 
-  llvm::ArrayRef<unsigned char> arrayBuffer_{};
-  llvm::ArrayRef<unsigned char> objKeyBuffer_{};
-  llvm::ArrayRef<unsigned char> objValueBuffer_{};
+  llvh::ArrayRef<unsigned char> arrayBuffer_{};
+  llvh::ArrayRef<unsigned char> objKeyBuffer_{};
+  llvh::ArrayRef<unsigned char> objValueBuffer_{};
 
-  llvm::ArrayRef<RegExpTableEntry> regExpTable_{};
-  llvm::ArrayRef<unsigned char> regExpStorage_{};
+  llvh::ArrayRef<RegExpTableEntry> regExpTable_{};
+  llvh::ArrayRef<unsigned char> regExpStorage_{};
 
   /// The ID of the first CJS module in this BytecodeModule.
   uint32_t cjsModuleOffset_;
 
   /// Table which indicates where to find the different CommonJS modules.
   /// List of unsorted pairs from {filename ID => function index}.
-  llvm::ArrayRef<std::pair<uint32_t, uint32_t>> cjsModuleTable_{};
+  llvh::ArrayRef<std::pair<uint32_t, uint32_t>> cjsModuleTable_{};
 
   /// Table which indicates where to find the different CommonJS modules.
   /// Vector of function indexes.
-  llvm::ArrayRef<uint32_t> cjsModuleTableStatic_{};
+  llvh::ArrayRef<uint32_t> cjsModuleTableStatic_{};
 
   /// Pointer to the global debug info. This will not be eagerly initialized
   /// when loading bytecode from a buffer. Instead it will be constructed
@@ -163,37 +163,37 @@ class BCProviderBase {
   uint32_t getStringCount() const {
     return stringCount_;
   }
-  llvm::ArrayRef<StringKind::Entry> getStringKinds() const {
+  llvh::ArrayRef<StringKind::Entry> getStringKinds() const {
     return stringKinds_;
   }
-  llvm::ArrayRef<uint32_t> getIdentifierHashes() const {
+  llvh::ArrayRef<uint32_t> getIdentifierHashes() const {
     return identifierHashes_;
   }
-  llvm::ArrayRef<unsigned char> getStringStorage() const {
+  llvh::ArrayRef<unsigned char> getStringStorage() const {
     return stringStorage_;
   }
-  llvm::ArrayRef<unsigned char> getArrayBuffer() const {
+  llvh::ArrayRef<unsigned char> getArrayBuffer() const {
     return arrayBuffer_;
   }
-  llvm::ArrayRef<unsigned char> getObjectKeyBuffer() const {
+  llvh::ArrayRef<unsigned char> getObjectKeyBuffer() const {
     return objKeyBuffer_;
   }
-  llvm::ArrayRef<unsigned char> getObjectValueBuffer() const {
+  llvh::ArrayRef<unsigned char> getObjectValueBuffer() const {
     return objValueBuffer_;
   }
-  llvm::ArrayRef<RegExpTableEntry> getRegExpTable() const {
+  llvh::ArrayRef<RegExpTableEntry> getRegExpTable() const {
     return regExpTable_;
   }
-  llvm::ArrayRef<unsigned char> getRegExpStorage() const {
+  llvh::ArrayRef<unsigned char> getRegExpStorage() const {
     return regExpStorage_;
   }
   uint32_t getCJSModuleOffset() const {
     return cjsModuleOffset_;
   }
-  llvm::ArrayRef<std::pair<uint32_t, uint32_t>> getCJSModuleTable() const {
+  llvh::ArrayRef<std::pair<uint32_t, uint32_t>> getCJSModuleTable() const {
     return cjsModuleTable_;
   }
-  llvm::ArrayRef<uint32_t> getCJSModuleTableStatic() const {
+  llvh::ArrayRef<uint32_t> getCJSModuleTableStatic() const {
     return cjsModuleTableStatic_;
   }
   const std::string getErrorStr() const {
@@ -202,9 +202,9 @@ class BCProviderBase {
 
   virtual StringTableEntry getStringTableEntry(uint32_t index) const = 0;
 
-  llvm::StringRef getStringRefFromID(StringID stringID) const {
+  llvh::StringRef getStringRefFromID(StringID stringID) const {
     auto entry = getStringTableEntry(stringID);
-    return llvm::StringRef(
+    return llvh::StringRef(
         (const char *)getStringStorage().begin() + entry.getOffset(),
         entry.getLength());
   }
@@ -218,8 +218,8 @@ class BCProviderBase {
   }
 
   /// Get any trailing data after the real bytecode (only possible for buffers).
-  virtual llvm::ArrayRef<uint8_t> getEpilogue() const {
-    return llvm::ArrayRef<uint8_t>();
+  virtual llvh::ArrayRef<uint8_t> getEpilogue() const {
+    return llvh::ArrayRef<uint8_t>();
   }
 
   /// Get the hash of the source code that produced this bytecode.
@@ -235,7 +235,7 @@ class BCProviderBase {
   virtual const uint8_t *getBytecode(uint32_t functionID) const = 0;
 
   /// Get the exception table for a given function with \p functionID.
-  virtual llvm::ArrayRef<hbc::HBCExceptionHandlerInfo> getExceptionTable(
+  virtual llvh::ArrayRef<hbc::HBCExceptionHandlerInfo> getExceptionTable(
       uint32_t functionID) const = 0;
 
   /// Get the debug offsets for a given function with \p functionID.
@@ -244,7 +244,7 @@ class BCProviderBase {
 
   /// Get the source text location of address \p offsetInFunction in funciton
   /// \p funcId.
-  llvm::Optional<SourceMapTextLocation> getLocationForAddress(
+  llvh::Optional<SourceMapTextLocation> getLocationForAddress(
       uint32_t funcId,
       uint32_t offsetInFunction) const;
 
@@ -288,8 +288,8 @@ class BCProviderBase {
   }
 
   /// Return the entire bytecode file (only implemented for buffers).
-  virtual llvm::ArrayRef<uint8_t> getRawBuffer() const {
-    return llvm::ArrayRef<uint8_t>();
+  virtual llvh::ArrayRef<uint8_t> getRawBuffer() const {
+    return llvh::ArrayRef<uint8_t>();
   }
 
   /// Given the functionID and offset of the instruction where exception
@@ -315,7 +315,7 @@ class BCProviderBase {
   /// NOT be available, however it may be when compiling from source at
   /// run-time, and lazy compilation or Function.toString() returning soruce is
   /// enabled.
-  virtual llvm::SMRange getFunctionSourceRange(uint32_t functionID) const {
+  virtual llvh::SMRange getFunctionSourceRange(uint32_t functionID) const {
     return {};
   }
 #endif
@@ -341,13 +341,13 @@ class BCProviderFromBuffer final : public BCProviderBase {
   const hbc::SmallStringTableEntry *stringTableEntries_{};
 
   /// List of overflow string table entries.
-  llvm::ArrayRef<OverflowStringTableEntry> overflowStringTableEntries_{};
+  llvh::ArrayRef<OverflowStringTableEntry> overflowStringTableEntries_{};
 
   /// Offset of the location to find debug info.
   uint32_t debugInfoOffset_{};
 
   /// If \p startWarmup has been called, this is the thread doing the warmup.
-  llvm::Optional<std::thread> warmupThread_;
+  llvh::Optional<std::thread> warmupThread_;
 
   /// Set by \p stopWarmup to tell any warmup thread to abort.
   std::atomic<bool> warmupAbortFlag_;
@@ -370,7 +370,7 @@ class BCProviderFromBuffer final : public BCProviderBase {
   /// \returns the ArrayRef to the exception table data, along with a pointer
   /// to the DebugOffsets (or nullptr if there is none).
   std::pair<
-      llvm::ArrayRef<hbc::HBCExceptionHandlerInfo>,
+      llvh::ArrayRef<hbc::HBCExceptionHandlerInfo>,
       const hbc::DebugOffsets *>
   getExceptionTableAndDebugOffsets(uint32_t functionID) const;
 
@@ -386,7 +386,7 @@ class BCProviderFromBuffer final : public BCProviderBase {
   }
 
   /// Checks whether the data is actually bytecode.
-  static bool isBytecodeStream(llvm::ArrayRef<uint8_t> aref) {
+  static bool isBytecodeStream(llvh::ArrayRef<uint8_t> aref) {
     const auto *header =
         reinterpret_cast<const hbc::BytecodeFileHeader *>(aref.data());
     return (
@@ -397,31 +397,31 @@ class BCProviderFromBuffer final : public BCProviderBase {
   /// Checks whether the buffer is actually bytecode.
   static bool isBytecodeStream(const Buffer &buffer) {
     return isBytecodeStream(
-        llvm::ArrayRef<uint8_t>(buffer.data(), buffer.size()));
+        llvh::ArrayRef<uint8_t>(buffer.data(), buffer.size()));
   }
 
   /// Given a range of memory that contains a mapped bytecode file, issues
   /// madvise calls for portions of the bytecode file that will likely be
   /// used when loading the bytecode file and running its global function
   /// (such as the string table and the global function's body).
-  static void prefetch(llvm::ArrayRef<uint8_t> aref);
+  static void prefetch(llvh::ArrayRef<uint8_t> aref);
 
   /// Returns data appened after the bytecode stream.
-  static llvm::ArrayRef<uint8_t> getEpilogueFromBytecode(
-      llvm::ArrayRef<uint8_t> buffer);
+  static llvh::ArrayRef<uint8_t> getEpilogueFromBytecode(
+      llvh::ArrayRef<uint8_t> buffer);
 
-  static SHA1 getSourceHashFromBytecode(llvm::ArrayRef<uint8_t> buffer);
+  static SHA1 getSourceHashFromBytecode(llvh::ArrayRef<uint8_t> buffer);
 
   /// Returns if aref points to valid bytecode and specifies why it may not
   /// in errorMessage (if supplied).
   static bool bytecodeStreamSanityCheck(
-      llvm::ArrayRef<uint8_t> aref,
+      llvh::ArrayRef<uint8_t> aref,
       std::string *errorMessage = nullptr);
 
   /// Returns the arrayref to small function headers;
   /// this is also the start of the function header section.
-  const llvm::ArrayRef<hbc::SmallFuncHeader> getSmallFunctionHeaders() const {
-    return llvm::ArrayRef<hbc::SmallFuncHeader>(
+  const llvh::ArrayRef<hbc::SmallFuncHeader> getSmallFunctionHeaders() const {
+    return llvh::ArrayRef<hbc::SmallFuncHeader>(
         functionHeaders_, functionCount_);
   }
 
@@ -438,13 +438,13 @@ class BCProviderFromBuffer final : public BCProviderBase {
 
   /// Returns the ArrayRef to the small string table entries.
   /// Some of these may be indexes into overflow string table entries.
-  llvm::ArrayRef<SmallStringTableEntry> getSmallStringTableEntries() const {
-    return llvm::makeArrayRef(stringTableEntries_, stringCount_);
+  llvh::ArrayRef<SmallStringTableEntry> getSmallStringTableEntries() const {
+    return llvh::makeArrayRef(stringTableEntries_, stringCount_);
   }
 
   /// Returns the arrayref to the small string table entries;
   /// this is also the start of the string table section.
-  llvm::ArrayRef<OverflowStringTableEntry> getOverflowStringTableEntries()
+  llvh::ArrayRef<OverflowStringTableEntry> getOverflowStringTableEntries()
       const {
     return overflowStringTableEntries_;
   }
@@ -466,7 +466,7 @@ class BCProviderFromBuffer final : public BCProviderBase {
     return bufferPtr_ + getFunctionHeader(functionID).offset();
   }
 
-  llvm::ArrayRef<hbc::HBCExceptionHandlerInfo> getExceptionTable(
+  llvh::ArrayRef<hbc::HBCExceptionHandlerInfo> getExceptionTable(
       uint32_t functionID) const override {
     return getExceptionTableAndDebugOffsets(functionID).first;
   }
@@ -475,7 +475,7 @@ class BCProviderFromBuffer final : public BCProviderBase {
     return getExceptionTableAndDebugOffsets(functionID).second;
   }
 
-  llvm::ArrayRef<uint8_t> getEpilogue() const override;
+  llvh::ArrayRef<uint8_t> getEpilogue() const override;
   SHA1 getSourceHash() const override;
 
   void startWarmup(uint8_t percent) override;
@@ -492,8 +492,8 @@ class BCProviderFromBuffer final : public BCProviderBase {
     return tracker_.get();
   }
 
-  llvm::ArrayRef<uint8_t> getRawBuffer() const override {
-    return llvm::ArrayRef<uint8_t>(bufferPtr_, buffer_->size());
+  llvh::ArrayRef<uint8_t> getRawBuffer() const override {
+    return llvh::ArrayRef<uint8_t>(bufferPtr_, buffer_->size());
   }
 
   ~BCProviderFromBuffer() {

@@ -8,7 +8,7 @@
 #ifndef HERMES_SUPPORT_STRINGTABLEENTRY_H
 #define HERMES_SUPPORT_STRINGTABLEENTRY_H
 
-#include "llvm/ADT/ArrayRef.h"
+#include "llvh/ADT/ArrayRef.h"
 
 #include <cstdint>
 
@@ -26,9 +26,9 @@ class StringTableEntry {
   uint32_t length_;
 
  public:
-  using StringTableRefTy = llvm::ArrayRef<StringTableEntry>;
-  using MutStringTableRefTy = llvm::MutableArrayRef<StringTableEntry>;
-  using StringStorageRefTy = llvm::ArrayRef<unsigned char>;
+  using StringTableRefTy = llvh::ArrayRef<StringTableEntry>;
+  using MutStringTableRefTy = llvh::MutableArrayRef<StringTableEntry>;
+  using StringStorageRefTy = llvh::ArrayRef<unsigned char>;
 
   StringTableEntry(uint32_t offset, uint32_t length, bool isUTF16)
       : offset_(offset), length_(length) {

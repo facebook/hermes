@@ -13,7 +13,7 @@
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/StringView.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 #define DEBUG_TYPE "serialize"
 
 namespace hermes {
@@ -46,7 +46,7 @@ void ArrayImpl::_snapshotAddEdgesImpl(
   const auto len = self->endIndex_ - self->beginIndex_;
   for (uint32_t i = 0; i < len; i++) {
     const auto &elem = indexedStorage->at(i);
-    const llvm::Optional<HeapSnapshot::NodeID> elemID = gc->getSnapshotID(elem);
+    const llvh::Optional<HeapSnapshot::NodeID> elemID = gc->getSnapshotID(elem);
     if (!elemID) {
       continue;
     }
@@ -113,7 +113,7 @@ OptValue<PropertyFlags> ArrayImpl::_getOwnIndexedPropertyFlagsImpl(
     return indexedElementFlags;
   }
 
-  return llvm::None;
+  return llvh::None;
 }
 
 std::pair<uint32_t, uint32_t> ArrayImpl::_getOwnIndexedRangeImpl(
@@ -701,7 +701,7 @@ CallResult<bool> JSArray::setLength(
     // highest non-deletable would have terminated the deletion process.
 
     using IndexProp = std::pair<uint32_t, SymbolID>;
-    llvm::SmallVector<IndexProp, 8> toBeDeleted;
+    llvh::SmallVector<IndexProp, 8> toBeDeleted;
 
     HiddenClass::forEachProperty(
         runtime->makeHandle(selfHandle->clazz_),

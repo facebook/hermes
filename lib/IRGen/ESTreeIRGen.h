@@ -14,13 +14,13 @@
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IRGen/IRGen.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 
 // Use this value to enable debug logging from the command line.
 #define DEBUG_TYPE "irgen"
 
-using llvm::dbgs;
-using llvm::dyn_cast_or_null;
+using llvh::dbgs;
+using llvh::dyn_cast_or_null;
 
 namespace hermes {
 namespace irgen {
@@ -100,7 +100,7 @@ class FunctionContext {
 
   /// A vector of labels corresponding 1-to-1 to the labels defined in
   /// \c semInfo_.
-  llvm::SmallVector<GotoLabel, 2> labels_;
+  llvh::SmallVector<GotoLabel, 2> labels_;
 
  public:
   /// This is the actual function associated with this context.
@@ -332,7 +332,7 @@ class ESTreeIRGen {
   friend class FunctionContext;
   friend class LReference;
 
-  using BasicBlockListType = llvm::SmallVector<BasicBlock *, 4>;
+  using BasicBlockListType = llvh::SmallVector<BasicBlock *, 4>;
 
   /// The module we are constructing.
   Module *Mod;
@@ -394,7 +394,7 @@ class ESTreeIRGen {
       Function *topLevelFunction,
       sem::FunctionInfo *semInfo,
       uint32_t id,
-      llvm::StringRef filename);
+      llvh::StringRef filename);
 
   /// Perform IR generation for a lazy function.
   /// \return the newly allocated generated Function IR and lexical root
@@ -457,12 +457,12 @@ class ESTreeIRGen {
   /// \returns true if all cases are constant.
   bool areAllCasesConstant(
       ESTree::SwitchStatementNode *switchStmt,
-      llvm::SmallVectorImpl<Literal *> &caseLiterals);
+      llvh::SmallVectorImpl<Literal *> &caseLiterals);
 
   /// Generate IR Switch statements when all case tests are constant.
   void genConstSwitchStmt(
       ESTree::SwitchStatementNode *switchStmt,
-      llvm::SmallVectorImpl<Literal *> &caseLiterals);
+      llvh::SmallVectorImpl<Literal *> &caseLiterals);
 
   void genImportDeclaration(ESTree::ImportDeclarationNode *importDecl);
 
@@ -976,7 +976,7 @@ class ESTreeIRGen {
   void emitRestProperty(
       bool declInit,
       ESTree::RestElementNode *rest,
-      const llvm::SmallVectorImpl<Value *> &excludedItems,
+      const llvh::SmallVectorImpl<Value *> &excludedItems,
       Value *source);
 
   /// If the initializer \p init is nullptr, just return \p value.

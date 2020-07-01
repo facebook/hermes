@@ -19,8 +19,8 @@
 
 #include "dtoa/dtoa.h"
 
-#include "llvm/ADT/SmallString.h"
-#include "llvm/Support/Format.h"
+#include "llvh/ADT/SmallString.h"
+#include "llvh/Support/Format.h"
 
 namespace hermes {
 namespace vm {
@@ -426,7 +426,7 @@ numberPrototypeToFixed(void *, Runtime *runtime, NativeArgs args) {
   // Let n be an integer such that n/(10^f) - x is close to 0.
   // Store the string representation of n, as provided by dtoa.
   // Use mode=3 and precision=f for the dtoa call (fixed precision dtoa).
-  llvm::SmallString<32> n;
+  llvh::SmallString<32> n;
   {
     DtoaAllocator<> dalloc{};
     char *s = ::dtoa_fixedpoint(dalloc, x, 3, f, &decPt, &sign, &sEnd);
@@ -443,10 +443,10 @@ numberPrototypeToFixed(void *, Runtime *runtime, NativeArgs args) {
   }
 
   // Final string.
-  llvm::SmallString<32> m{};
+  llvh::SmallString<32> m{};
 
   // Check if n is 0 (n is empty or has no non-'0' characters);
-  bool isZero = n.find_first_not_of('0') == llvm::StringRef::npos;
+  bool isZero = n.find_first_not_of('0') == llvh::StringRef::npos;
 
   if (isZero) {
     // n is zero, so just add '0' and be done.
@@ -533,7 +533,7 @@ numberPrototypeToExponential(void *, Runtime *runtime, NativeArgs args) {
   }
 
   // Final result.
-  llvm::SmallString<32> n{};
+  llvh::SmallString<32> n{};
 
   // The exponent in final string.
   int e;
@@ -598,8 +598,8 @@ numberPrototypeToExponential(void *, Runtime *runtime, NativeArgs args) {
   if (e == 0) {
     n.append("e+0");
   } else {
-    llvm::raw_svector_ostream os{n};
-    os << llvm::format("e%+d", e);
+    llvh::raw_svector_ostream os{n};
+    os << llvh::format("e%+d", e);
   }
 
   if (negative) {
@@ -669,7 +669,7 @@ numberPrototypeToPrecision(void *, Runtime *runtime, NativeArgs args) {
   }
 
   // Final result: add '-' to the start if x was negative.
-  llvm::SmallString<32> n{};
+  llvh::SmallString<32> n{};
 
   // The exponent in final string.
   int e;
@@ -719,8 +719,8 @@ numberPrototypeToPrecision(void *, Runtime *runtime, NativeArgs args) {
       if (e == 0) {
         n.append("e+0");
       } else {
-        llvm::raw_svector_ostream os{n};
-        os << llvm::format("e%+d", e);
+        llvh::raw_svector_ostream os{n};
+        os << llvh::format("e%+d", e);
       }
 
       // ES5.1 spec says not to return here, and just set m.
@@ -758,7 +758,7 @@ numberPrototypeToPrecision(void *, Runtime *runtime, NativeArgs args) {
   } else {
     // Make a new string m here since it's easier than inserting at the start of
     // n repeatedly.
-    llvm::SmallString<32> m{"0."};
+    llvh::SmallString<32> m{"0."};
     m.reserve(2 + -(e + 1) + n.size());
     for (int i = 0; i < -(e + 1); ++i) {
       m.push_back('0');

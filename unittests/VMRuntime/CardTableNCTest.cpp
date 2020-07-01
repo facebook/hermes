@@ -12,7 +12,7 @@
 #include "hermes/VM/AlignedStorage.h"
 #include "hermes/VM/CardTableNC.h"
 #include "hermes/VM/StorageProvider.h"
-#include "llvm/Support/MathExtras.h"
+#include "llvh/Support/MathExtras.h"
 
 #include <ios>
 #include <utility>
@@ -60,7 +60,7 @@ CardTableNCTest::CardTableNCTest() {
   // the segment comes just after the card table (which is at the
   // start of the segment).
   auto first = as.lowLim() + sizeof(CardTable);
-  auto last = reinterpret_cast<char *>(llvm::alignDown(
+  auto last = reinterpret_cast<char *>(llvh::alignDown(
       reinterpret_cast<uintptr_t>(as.hiLim() - 1), CardTable::kCardSize));
 
   addrs = {first,

@@ -304,7 +304,7 @@ TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
   ASSERT_FALSE(y->isDictionary());
   // y is not a dictionary so we will get a new hidden class.
   auto yClone = HiddenClass::updatePropertyFlagsWithoutTransitions(
-      y, runtime, clearFlags, setFlags, llvm::None);
+      y, runtime, clearFlags, setFlags, llvh::None);
   ASSERT_NE(*y, *yClone);
   ASSERT_EQ(y->getNumProperties(), yClone->getNumProperties());
   ASSERT_TRUE(yClone->isDictionary());
@@ -342,7 +342,7 @@ TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
   ASSERT_EQ(2u, y3->getNumProperties());
   // We should not create a new hidden class in this case.
   auto y4 = HiddenClass::updatePropertyFlagsWithoutTransitions(
-      y3, runtime, clearFlags, setFlags, llvm::None);
+      y3, runtime, clearFlags, setFlags, llvh::None);
   ASSERT_EQ(*y4, *y3);
 
   // Only freeze y.a and y.c
@@ -357,7 +357,7 @@ TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
           runtime,
           clearFlags,
           setFlags,
-          llvm::ArrayRef<SymbolID>(propsToFreeze));
+          llvh::ArrayRef<SymbolID>(propsToFreeze));
 
   ASSERT_NE(*y, *partlyFrozenSingleton);
   ASSERT_EQ(y->getNumProperties(), partlyFrozenSingleton->getNumProperties());

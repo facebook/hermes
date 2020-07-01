@@ -7,7 +7,7 @@
 
 #include "hermes/VM/MarkBitArrayNC.h"
 
-#include "llvm/Support/MathExtras.h"
+#include "llvh/Support/MathExtras.h"
 
 namespace hermes {
 namespace vm {
@@ -24,7 +24,7 @@ size_t MarkBitArrayNC::findNextMarkedBitFrom(size_t ind) {
   // Immediately traverse by word values if the next marked bit is in the same
   // word-sized block.
   if (currentValue != 0) {
-    return ind + llvm::findFirstSet(currentValue);
+    return ind + llvh::findFirstSet(currentValue);
   }
   bitArrayIndex++;
 
@@ -35,7 +35,7 @@ size_t MarkBitArrayNC::findNextMarkedBitFrom(size_t ind) {
   while (bitArrayIndex < kBitArraySize) {
     currentValue = bitArray_[bitArrayIndex];
     if (currentValue != 0)
-      return bitArrayIndex * kBitsPerVal + llvm::findFirstSet(currentValue);
+      return bitArrayIndex * kBitsPerVal + llvh::findFirstSet(currentValue);
     bitArrayIndex++;
   }
   return kValidIndices;

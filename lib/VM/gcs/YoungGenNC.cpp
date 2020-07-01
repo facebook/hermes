@@ -8,8 +8,8 @@
 #define DEBUG_TYPE "gc"
 #include "hermes/VM/YoungGenNC.h"
 
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/Format.h"
+#include "llvh/Support/Debug.h"
+#include "llvh/Support/Format.h"
 
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PerfSection.h"
@@ -27,7 +27,7 @@
 
 #include <chrono>
 
-using llvm::dbgs;
+using llvh::dbgs;
 using std::chrono::steady_clock;
 
 namespace hermes {
@@ -77,7 +77,7 @@ gcheapsize_t YoungGen::Size::minStorageFootprint() const {
       max <= AlignedHeapSegment::maxSize() &&
       "segment must be able to hold at least 2 pages");
   auto clamped = std::max(min, std::min(desired, max));
-  return llvm::alignTo(clamped, HeapAlign);
+  return llvh::alignTo(clamped, HeapAlign);
 }
 
 YoungGen::YoungGen(
@@ -187,7 +187,7 @@ void YoungGen::forAllObjs(const std::function<void(GCCell *)> &callback) {
   trueActiveSegment().forAllObjs(callback);
 }
 
-void YoungGen::printStats(llvm::raw_ostream &os, bool trailingComma) const {
+void YoungGen::printStats(llvh::raw_ostream &os, bool trailingComma) const {
   double youngGenSurvivalPct = 0.0;
   if (cumPreBytes_ > 0) {
     youngGenSurvivalPct = 100.0 * static_cast<double>(cumPromotedBytes_) /

@@ -11,8 +11,8 @@
 #include <algorithm>
 #include <cassert>
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/SmallVector.h"
 
 namespace hermes {
 
@@ -44,7 +44,7 @@ struct CodePointRange {
 /// A class which manages a set of Unicode codepoints as a list of sorted,
 /// disjoint ranges. Deletion is not supported.
 
-// N.B.: This may seem a natural use case for llvm::IntervalMap. However it is
+// N.B.: This may seem a natural use case for llvh::IntervalMap. However it is
 // not for a few reasons:
 // 1. IntervalMap trips an assertion if you add a range that overlaps an
 // existing range. So when inserting, you must mask out the ranges already
@@ -106,7 +106,7 @@ class CodePointSet {
   }
 
   /// \return the list of ranges.
-  llvm::ArrayRef<CodePointRange> ranges() const {
+  llvh::ArrayRef<CodePointRange> ranges() const {
     return ranges_;
   }
 
@@ -123,7 +123,7 @@ class CodePointSet {
   }
 
  private:
-  llvm::SmallVector<CodePointRange, 4> ranges_;
+  llvh::SmallVector<CodePointRange, 4> ranges_;
 };
 
 } // namespace hermes

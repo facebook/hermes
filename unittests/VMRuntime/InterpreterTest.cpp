@@ -17,7 +17,7 @@
 
 #include "gtest/gtest.h"
 
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/raw_ostream.h"
 
 using namespace hermes::vm;
 using namespace hermes::hbc;
@@ -77,15 +77,15 @@ print(void *, Runtime *runtime, NativeArgs args) {
       return ExecutionStatus::EXCEPTION;
 
     if (!first)
-      llvm::outs() << " ";
+      llvh::outs() << " ";
     SmallU16String<32> tmp;
-    llvm::outs() << StringPrimitive::createStringView(
+    llvh::outs() << StringPrimitive::createStringView(
                         runtime, runtime->makeHandle(std::move(*res)))
                         .getUTF16Ref(tmp);
     first = false;
   }
 
-  llvm::outs() << "\n";
+  llvh::outs() << "\n";
   return HermesValue::encodeUndefinedValue();
 }
 

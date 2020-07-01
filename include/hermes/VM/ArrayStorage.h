@@ -12,7 +12,7 @@
 #include "hermes/VM/Metadata.h"
 #include "hermes/VM/Runtime.h"
 
-#include "llvm/Support/TrailingObjects.h"
+#include "llvh/Support/TrailingObjects.h"
 
 namespace hermes {
 namespace vm {
@@ -27,7 +27,7 @@ namespace vm {
 /// not contain any native pointers.
 class ArrayStorage final
     : public VariableSizeRuntimeCell,
-      private llvm::TrailingObjects<ArrayStorage, GCHermesValue> {
+      private llvh::TrailingObjects<ArrayStorage, GCHermesValue> {
   friend TrailingObjects;
   friend void ArrayStorageBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 

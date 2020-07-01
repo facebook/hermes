@@ -10,34 +10,34 @@
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
 // Debug - forward to llvm.
-#include "llvm/Support/Timer.h"
+#include "llvh/Support/Timer.h"
 
 namespace hermes {
-using Timer = llvm::Timer;
-using TimerGroup = llvm::TimerGroup;
-using NamedRegionTimer = llvm::NamedRegionTimer;
-using TimeRegion = llvm::TimeRegion;
+using Timer = llvh::Timer;
+using TimerGroup = llvh::TimerGroup;
+using NamedRegionTimer = llvh::NamedRegionTimer;
+using TimeRegion = llvh::TimeRegion;
 } // namespace hermes
 
 #else
 // Release - stub out.
-#include "llvm/ADT/StringRef.h"
+#include "llvh/ADT/StringRef.h"
 
 namespace hermes {
 struct TimerGroup {
-  TimerGroup(llvm::StringRef a, llvm::StringRef b) {}
+  TimerGroup(llvh::StringRef a, llvh::StringRef b) {}
 };
 struct Timer {
-  Timer(llvm::StringRef a, llvm::StringRef b) {}
+  Timer(llvh::StringRef a, llvh::StringRef b) {}
   Timer(const Timer &t) {}
-  Timer(llvm::StringRef a, llvm::StringRef b, TimerGroup &tg) {}
+  Timer(llvh::StringRef a, llvh::StringRef b, TimerGroup &tg) {}
 };
 struct NamedRegionTimer {
   NamedRegionTimer(
-      llvm::StringRef a,
-      llvm::StringRef b,
-      llvm::StringRef c,
-      llvm::StringRef d,
+      llvh::StringRef a,
+      llvh::StringRef b,
+      llvh::StringRef c,
+      llvh::StringRef d,
       bool Enabled = true) {}
 };
 struct TimeRegion {

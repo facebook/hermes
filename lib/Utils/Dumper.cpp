@@ -8,13 +8,13 @@
 #include <cctype>
 #include <string>
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/GraphWriter.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/DenseSet.h"
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/Support/Casting.h"
+#include "llvh/Support/ErrorHandling.h"
+#include "llvh/Support/GraphWriter.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include "hermes/AST/Context.h"
 #include "hermes/FrontEndDefs/Builtins.h"
@@ -29,10 +29,10 @@
 using namespace hermes;
 
 using hermes::oscompat::to_string;
-using llvm::cast;
-using llvm::dyn_cast;
-using llvm::isa;
-using llvm::raw_ostream;
+using llvh::cast;
+using llvh::dyn_cast;
+using llvh::isa;
+using llvh::raw_ostream;
 
 namespace hermes {
 
@@ -258,7 +258,7 @@ void IRPrinter::printInstruction(Instruction *I) {
   if (!codeGenOpts.dumpUseList || I->getUsers().empty())
     return;
 
-  llvm::DenseSet<Instruction *> Visited;
+  llvh::DenseSet<Instruction *> Visited;
   os << " // users:";
   for (auto &U : I->getUsers()) {
     auto *II = cast<Instruction>(U);
@@ -362,11 +362,11 @@ namespace {
 /// This class prints Functions into dotty graphs. This struct inherits the
 /// IRVisitor and reimplement the visitFunction and visitBasicBlock function.
 struct DottyPrinter : public IRVisitor<DottyPrinter, void> {
-  llvm::raw_ostream &os;
-  llvm::SmallVector<std::pair<std::string, std::string>, 4> Edges;
+  llvh::raw_ostream &os;
+  llvh::SmallVector<std::pair<std::string, std::string>, 4> Edges;
   IRPrinter Printer;
 
-  explicit DottyPrinter(Context &ctx, llvm::raw_ostream &ost, StringRef Title)
+  explicit DottyPrinter(Context &ctx, llvh::raw_ostream &ost, StringRef Title)
       : os(ost), Printer(ctx, ost, /* escape output */ true) {
     os << " digraph g {\n graph [ rankdir = \"TD\" ];\n";
     os << "labelloc=\"t\"; ";
@@ -456,12 +456,12 @@ void hermes::viewGraph(Function *F) {
   // Windows can't always handle long paths, so limit the length of the name.
   std::string N = Name.str();
   N = N.substr(0, std::min<std::size_t>(N.size(), 140));
-  std::string Filename = llvm::createGraphFilename(N, FD);
+  std::string Filename = llvh::createGraphFilename(N, FD);
   {
-    llvm::raw_fd_ostream O(FD, /*shouldClose=*/true);
+    llvh::raw_fd_ostream O(FD, /*shouldClose=*/true);
 
     if (FD == -1) {
-      llvm::errs() << "error opening file '" << Filename << "' for writing!\n";
+      llvh::errs() << "error opening file '" << Filename << "' for writing!\n";
       return;
     }
 
@@ -469,7 +469,7 @@ void hermes::viewGraph(Function *F) {
     D.visitFunction(*F);
   }
 
-  llvm::DisplayGraph(Filename);
-  llvm::errs() << " done. \n";
+  llvh::DisplayGraph(Filename);
+  llvh::errs() << " done. \n";
 #endif
 }

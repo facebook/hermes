@@ -9,7 +9,7 @@
 
 #include "hermes/VM/BuildMetadata.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 #define DEBUG_TYPE "serialize"
 
 namespace hermes {
@@ -27,7 +27,7 @@ void FreelistBuildMeta(const GCCell *, Metadata::Builder &) {}
 #ifdef HERMESVM_SERIALIZE
 void UninitializedSerialize(Serializer &s, const GCCell *cell) {
   LLVM_DEBUG(
-      llvm::dbgs() << "Serialize function not implemented for Uinitialized\n");
+      llvh::dbgs() << "Serialize function not implemented for Uinitialized\n");
 }
 
 void FillerCellSerialize(Serializer &s, const GCCell *cell) {
@@ -38,7 +38,7 @@ void FillerCellSerialize(Serializer &s, const GCCell *cell) {
 
 void UninitializedDeserialize(Deserializer &d, CellKind kind) {
   LLVM_DEBUG(
-      llvm::dbgs()
+      llvh::dbgs()
       << "Deserialize function not implemented for Uninitialized\n");
 }
 
@@ -52,12 +52,12 @@ void FillerCellDeserialize(Deserializer &d, CellKind kind) {
 #ifndef HERMESVM_GC_HADES
 void FreelistSerialize(Serializer &, const GCCell *) {
   LLVM_DEBUG(
-      llvm::dbgs() << "Serialize function not implemented for FreelistCell\n");
+      llvh::dbgs() << "Serialize function not implemented for FreelistCell\n");
 }
 
 void FreelistDeserialize(Deserializer &, CellKind) {
   LLVM_DEBUG(
-      llvm::dbgs()
+      llvh::dbgs()
       << "Deserialize function not implemented for FreelistCell\n");
 }
 #endif

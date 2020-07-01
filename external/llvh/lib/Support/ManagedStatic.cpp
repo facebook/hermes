@@ -11,24 +11,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/ManagedStatic.h"
-#include "llvm/Config/config.h"
-#include "llvm/Support/Mutex.h"
-#include "llvm/Support/MutexGuard.h"
-#include "llvm/Support/Threading.h"
+#include "llvh/Support/ManagedStatic.h"
+#include "llvh/Config/config.h"
+#include "llvh/Support/Mutex.h"
+#include "llvh/Support/MutexGuard.h"
+#include "llvh/Support/Threading.h"
 #include <cassert>
-using namespace llvm;
+using namespace llvh;
 
 static const ManagedStaticBase *StaticList = nullptr;
 static sys::Mutex *ManagedStaticMutex = nullptr;
-static llvm::once_flag mutex_init_flag;
+static llvh::once_flag mutex_init_flag;
 
 static void initializeMutex() {
   ManagedStaticMutex = new sys::Mutex();
 }
 
 static sys::Mutex* getManagedStaticMutex() {
-  llvm::call_once(mutex_init_flag, initializeMutex);
+  llvh::call_once(mutex_init_flag, initializeMutex);
   return ManagedStaticMutex;
 }
 
@@ -77,7 +77,7 @@ void ManagedStaticBase::destroy() const {
 }
 
 /// llvm_shutdown - Deallocate and destroy all ManagedStatic variables.
-void llvm::llvm_shutdown() {
+void llvh::llvm_shutdown() {
   MutexGuard Lock(*getManagedStaticMutex());
 
   while (StaticList)

@@ -11,7 +11,7 @@
 #include "hermes/SourceMap/SourceMap.h"
 #include "hermes/Support/SourceErrorManager.h"
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvh/ADT/DenseMap.h"
 
 namespace hermes {
 
@@ -20,7 +20,7 @@ namespace hermes {
 class SourceMapTranslator final : public SourceErrorManager::ICoordTranslator {
   /// Parsed input source maps for each input JS file.
   /// js file's buffer id => SourceMap.
-  llvm::DenseMap<unsigned, std::shared_ptr<SourceMap>> sourceMaps_;
+  llvh::DenseMap<unsigned, std::shared_ptr<SourceMap>> sourceMaps_;
 
   /// For lazily adding new virtual buffer for translated original source file.
   SourceErrorManager &sourceErrorManager_;

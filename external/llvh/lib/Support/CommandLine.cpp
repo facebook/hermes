@@ -16,32 +16,32 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/CommandLine.h"
-#include "llvm-c/Support.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/Triple.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/Config/config.h"
-#include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Host.h"
-#include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/Process.h"
-#include "llvm/Support/StringSaver.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/CommandLine.h"
+#include "llvh-c/Support.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/Optional.h"
+#include "llvh/ADT/STLExtras.h"
+#include "llvh/ADT/SmallPtrSet.h"
+#include "llvh/ADT/SmallString.h"
+#include "llvh/ADT/StringExtras.h"
+#include "llvh/ADT/StringMap.h"
+#include "llvh/ADT/Triple.h"
+#include "llvh/ADT/Twine.h"
+#include "llvh/Config/config.h"
+#include "llvh/Support/ConvertUTF.h"
+#include "llvh/Support/Debug.h"
+#include "llvh/Support/ErrorHandling.h"
+#include "llvh/Support/FileSystem.h"
+#include "llvh/Support/Host.h"
+#include "llvh/Support/ManagedStatic.h"
+#include "llvh/Support/MemoryBuffer.h"
+#include "llvh/Support/Path.h"
+#include "llvh/Support/Process.h"
+#include "llvh/Support/StringSaver.h"
+#include "llvh/Support/raw_ostream.h"
 #include <cstdlib>
 #include <map>
-using namespace llvm;
+using namespace llvh;
 using namespace cl;
 
 #define DEBUG_TYPE "commandline"
@@ -49,7 +49,7 @@ using namespace cl;
 //===----------------------------------------------------------------------===//
 // Template instantiations and anchors.
 //
-namespace llvm {
+namespace llvh {
 namespace cl {
 template class basic_parser<bool>;
 template class basic_parser<boolOrDefault>;
@@ -67,7 +67,7 @@ template class opt<std::string>;
 template class opt<char>;
 template class opt<bool>;
 }
-} // end namespace llvm::cl
+} // end namespace llvh::cl
 
 // Pin the vtables to this file.
 void GenericOptionValue::anchor() {}
@@ -368,17 +368,17 @@ void Option::setArgStr(StringRef S) {
 }
 
 // Initialise the general option category.
-OptionCategory llvm::cl::GeneralCategory("General options");
+OptionCategory llvh::cl::GeneralCategory("General options");
 
 void OptionCategory::registerCategory() {
   GlobalParser->registerCategory(this);
 }
 
 // A special subcommand representing no subcommand
-ManagedStatic<SubCommand> llvm::cl::TopLevelSubCommand;
+ManagedStatic<SubCommand> llvh::cl::TopLevelSubCommand;
 
 // A special subcommand that can be used to put an option into all subcommands.
-ManagedStatic<SubCommand> llvm::cl::AllSubCommands;
+ManagedStatic<SubCommand> llvh::cl::AllSubCommands;
 
 void SubCommand::registerSubCommand() {
   GlobalParser->registerSubCommand(this);
@@ -960,16 +960,16 @@ static bool ExpandResponseFile(StringRef FName, StringSaver &Saver,
         StringRef Arg = NewArgv[I];
         if (Arg.front() == '@') {
           StringRef FileName = Arg.drop_front();
-          if (llvm::sys::path::is_relative(FileName)) {
+          if (llvh::sys::path::is_relative(FileName)) {
             SmallString<128> ResponseFile;
             ResponseFile.append(1, '@');
-            if (llvm::sys::path::is_relative(FName)) {
+            if (llvh::sys::path::is_relative(FName)) {
               SmallString<128> curr_dir;
-              llvm::sys::fs::current_path(curr_dir);
+              llvh::sys::fs::current_path(curr_dir);
               ResponseFile.append(curr_dir.str());
             }
-            llvm::sys::path::append(
-                ResponseFile, llvm::sys::path::parent_path(FName), FileName);
+            llvh::sys::path::append(
+                ResponseFile, llvh::sys::path::parent_path(FName), FileName);
             NewArgv[I] = Saver.save(ResponseFile.c_str()).data();
           }
         }
@@ -1042,7 +1042,7 @@ void cl::ParseEnvironmentOptions(const char *progName, const char *envVar,
   assert(envVar && "Environment variable name missing");
 
   // Get the environment variable they want us to parse options out of.
-  llvm::Optional<std::string> envValue = sys::Process::GetEnv(StringRef(envVar));
+  llvh::Optional<std::string> envValue = sys::Process::GetEnv(StringRef(envVar));
   if (!envValue)
     return;
 
@@ -2239,6 +2239,6 @@ void cl::ResetAllOptionOccurrences() {
 
 void LLVMParseCommandLineOptions(int argc, const char *const *argv,
                                  const char *Overview) {
-  llvm::cl::ParseCommandLineOptions(argc, argv, StringRef(Overview),
-                                    &llvm::nulls());
+  llvh::cl::ParseCommandLineOptions(argc, argv, StringRef(Overview),
+                                    &llvh::nulls());
 }

@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the llvm::sys::Mutex class.
+// This file implements the llvh::sys::Mutex class.
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Mutex.h"
-#include "llvm/Config/config.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvh/Support/Mutex.h"
+#include "llvh/Config/config.h"
+#include "llvh/Support/ErrorHandling.h"
 
 //===----------------------------------------------------------------------===//
 //=== WARNING: Implementation here must contain only TRULY operating system
@@ -22,7 +22,7 @@
 
 #if !defined(LLVM_ENABLE_THREADS) || LLVM_ENABLE_THREADS == 0
 // Define all methods as no-ops if threading is explicitly disabled
-namespace llvm {
+namespace llvh {
 using namespace sys;
 MutexImpl::MutexImpl( bool recursive) { }
 MutexImpl::~MutexImpl() { }
@@ -38,7 +38,7 @@ bool MutexImpl::tryacquire() { return true; }
 #include <pthread.h>
 #include <stdlib.h>
 
-namespace llvm {
+namespace llvh {
 using namespace sys;
 
 // Construct a Mutex using pthread calls

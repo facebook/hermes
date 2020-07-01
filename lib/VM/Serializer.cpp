@@ -21,7 +21,7 @@
 
 #include "JSLib/JSLibInternal.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 
 #define DEBUG_TYPE "serialize"
 
@@ -37,7 +37,7 @@ static SerializeCallBack *serializeImpl[] = {
 };
 
 Serializer::Serializer(
-    llvm::raw_ostream &OS,
+    llvh::raw_ostream &OS,
     Runtime *runtime,
     ExternalPointersVectorFunction *externalPointersVectorCallBack)
     : os_(OS), runtime_(runtime) {
@@ -52,7 +52,7 @@ Serializer::Serializer(
 #define NATIVE_FUNCTION(func)                                             \
   assert(relocationMap_.count((void *)func) == 0);                        \
   LLVM_DEBUG(                                                             \
-      llvm::dbgs() << currentId_ << ", " << #func << ", " << (void *)func \
+      llvh::dbgs() << currentId_ << ", " << #func << ", " << (void *)func \
                    << "\n");                                              \
   relocationMap_[(void *)func] = currentId_++;
 
@@ -62,7 +62,7 @@ Serializer::Serializer(
   assert(relocationMap_.count((void *)func<type>) == 0);                   \
   relocationMap_[(void *)func<type>] = currentId_;                         \
   LLVM_DEBUG(                                                              \
-      llvm::dbgs() << currentId_ << ", " << #func << "<" << #type << ">, " \
+      llvh::dbgs() << currentId_ << ", " << #func << "<" << #type << ">, " \
                    << (void *)func<type> << "\n");                         \
   currentId_++;
 
@@ -72,7 +72,7 @@ Serializer::Serializer(
   assert(relocationMap_.count((void *)func<type, type2>) == 0);                \
   relocationMap_[(void *)func<type, type2>] = currentId_;                      \
   LLVM_DEBUG(                                                                  \
-      llvm::dbgs() << currentId_ << ", " << #func << "<" << #type << ", "      \
+      llvh::dbgs() << currentId_ << ", " << #func << "<" << #type << ", "      \
                    << #type2 << ">, " << ((void *)func<type, type2>) << "\n"); \
   currentId_++;
 
@@ -84,7 +84,7 @@ Serializer::Serializer(
   assert(relocationMap_.count((void *)funcPtr) == 0);                        \
   relocationMap_[(void *)funcPtr] = currentId_;                              \
   LLVM_DEBUG(                                                                \
-      llvm::dbgs() << currentId_ << ", " << #func << ", " << (void *)funcPtr \
+      llvh::dbgs() << currentId_ << ", " << #func << ", " << (void *)funcPtr \
                    << "\n");                                                 \
   currentId_++;
 
@@ -94,7 +94,7 @@ Serializer::Serializer(
   assert(relocationMap_.count((void *)funcPtr) == 0);                         \
   relocationMap_[(void *)funcPtr] = currentId_;                               \
   LLVM_DEBUG(                                                                 \
-      llvm::dbgs() << currentId_ << ", " << #func << "<" << #classname << "<" \
+      llvh::dbgs() << currentId_ << ", " << #func << "<" << #classname << "<" \
                    << #type << ", " << #type2 << ">>"                         \
                    << ", " << (void *)funcPtr << "\n");                       \
   currentId_++;

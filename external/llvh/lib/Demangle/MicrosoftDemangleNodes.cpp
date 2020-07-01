@@ -12,11 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "MicrosoftDemangleNodes.h"
-#include "llvm/Demangle/Compiler.h"
-#include "llvm/Demangle/Utility.h"
+#include "llvh/Demangle/Compiler.h"
+#include "llvh/Demangle/Utility.h"
 #include <cctype>
 
-using namespace llvm;
+using namespace llvh;
 using namespace ms_demangle;
 
 #define OUTPUT_ENUM_CLASS_VALUE(Enum, Value, Desc)                             \

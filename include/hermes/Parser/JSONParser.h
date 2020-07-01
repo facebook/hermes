@@ -21,16 +21,16 @@
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/JSONEmitter.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/FoldingSet.h"
+#include "llvh/ADT/Optional.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/Support/Casting.h"
 
 namespace hermes {
 namespace parser {
 
-using llvm::StringRef;
+using llvh::StringRef;
 
 class JSONFactory;
 class JSONParser;
@@ -116,7 +116,7 @@ class JSONBoolean : public JSONScalar {
   }
 };
 
-class JSONString : public JSONScalar, public llvm::FoldingSetNode {
+class JSONString : public JSONScalar, public llvh::FoldingSetNode {
   UniqueString *const value_;
 
  public:
@@ -137,11 +137,11 @@ class JSONString : public JSONScalar, public llvm::FoldingSetNode {
     return value_->c_str();
   }
 
-  static void Profile(llvm::FoldingSetNodeID &id, UniqueString *str) {
+  static void Profile(llvh::FoldingSetNodeID &id, UniqueString *str) {
     id.AddPointer(str);
   }
 
-  void Profile(llvm::FoldingSetNodeID &id) {
+  void Profile(llvh::FoldingSetNodeID &id) {
     JSONString::Profile(id, value_);
   }
 
@@ -150,7 +150,7 @@ class JSONString : public JSONScalar, public llvm::FoldingSetNode {
   }
 };
 
-class JSONNumber : public JSONScalar, public llvm::FoldingSetNode {
+class JSONNumber : public JSONScalar, public llvh::FoldingSetNode {
   double const value_;
 
  public:
@@ -164,11 +164,11 @@ class JSONNumber : public JSONScalar, public llvm::FoldingSetNode {
     return getValue();
   }
 
-  static void Profile(llvm::FoldingSetNodeID &id, double value) {
+  static void Profile(llvh::FoldingSetNodeID &id, double value) {
     id.AddInteger(safeTypeCast<double, int64_t>(value));
   }
 
-  void Profile(llvm::FoldingSetNodeID &id) {
+  void Profile(llvh::FoldingSetNodeID &id) {
     JSONNumber::Profile(id, value_);
   }
 
@@ -224,13 +224,13 @@ class JSONHiddenClass {
     return keys_ + size_;
   }
 
-  llvm::Optional<size_t> find(StringRef name) {
+  llvh::Optional<size_t> find(StringRef name) {
     auto e = end();
     auto it = std::lower_bound(begin(), e, name, NameComparator{});
     if (it != e && (*it)->str() == name)
       return it - begin();
     else
-      return llvm::None;
+      return llvh::None;
   }
 };
 
@@ -544,8 +544,8 @@ class JSONFactory {
   StringTable &strTab_;
 
   // Unique the strings and numbers as there are likely to be many duplicates.
-  llvm::FoldingSet<JSONString> strings_;
-  llvm::FoldingSet<JSONNumber> numbers_;
+  llvh::FoldingSet<JSONString> strings_;
+  llvh::FoldingSet<JSONNumber> numbers_;
 
   std::map<HiddenClassKey, JSONHiddenClass *, LessHiddenClassKey>
       hiddenClasses_;
@@ -630,7 +630,7 @@ class JSONParser {
  public:
   JSONParser(
       JSONFactory &factory,
-      std::unique_ptr<llvm::MemoryBuffer> input,
+      std::unique_ptr<llvh::MemoryBuffer> input,
       SourceErrorManager &sm,
       bool convertSurrogates = false);
 
@@ -641,30 +641,30 @@ class JSONParser {
       bool convertSurrogates = false)
       : JSONParser(
             factory,
-            llvm::MemoryBuffer::getMemBuffer(input, "json"),
+            llvh::MemoryBuffer::getMemBuffer(input, "json"),
             sm,
             convertSurrogates) {}
 
   JSONParser(
       JSONFactory &factory,
-      llvm::MemoryBufferRef input,
+      llvh::MemoryBufferRef input,
       SourceErrorManager &sm,
       bool showColors = true,
       bool convertSurrogates = false)
-      : JSONParser(factory, llvm::MemoryBuffer::getMemBuffer(input), sm) {}
+      : JSONParser(factory, llvh::MemoryBuffer::getMemBuffer(input), sm) {}
 
   /// Parse the supplied input. On error the result will be empty and the error
   /// would have been reported to the SourceMgr.
-  llvm::Optional<JSONValue *> parse();
+  llvh::Optional<JSONValue *> parse();
 
-  void error(const llvm::Twine &msg) {
+  void error(const llvh::Twine &msg) {
     sm_.error(lexer_.getCurToken()->getSourceRange(), msg, Subsystem::Parser);
   }
 
  private:
-  llvm::Optional<JSONValue *> parseValue();
-  llvm::Optional<JSONValue *> parseArray();
-  llvm::Optional<JSONValue *> parseObject();
+  llvh::Optional<JSONValue *> parseValue();
+  llvh::Optional<JSONValue *> parseArray();
+  llvh::Optional<JSONValue *> parseObject();
 };
 
 /// A holder class for a JSONValue backed by a shared allocator.

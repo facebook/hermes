@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/SetVector.h"
+#include "llvh/ADT/SmallString.h"
+#include "llvh/Support/Casting.h"
+#include "llvh/Support/ErrorHandling.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include "hermes/AST/Context.h"
 #include "hermes/IR/IR.h"
@@ -25,8 +25,8 @@
 using namespace hermes;
 
 using hermes::oscompat::to_string;
-using llvm::cast;
-using llvm::dyn_cast;
+using llvh::cast;
+using llvh::dyn_cast;
 
 // Make sure the ValueKinds.def tree is consistent with the class hierarchy.
 #define QUOTE(X) #X
@@ -217,24 +217,24 @@ BasicBlock::BasicBlock(Function *parent)
 }
 
 void BasicBlock::dump() {
-  IRPrinter D(getParent()->getContext(), llvm::outs());
+  IRPrinter D(getParent()->getContext(), llvh::outs());
   D.visit(*this);
 }
 
-void BasicBlock::printAsOperand(llvm::raw_ostream &OS, bool) const {
+void BasicBlock::printAsOperand(llvh::raw_ostream &OS, bool) const {
   // Use the address of the basic block when LLVM prints the CFG.
   size_t Num = (size_t)this;
   OS << "BB#" << to_string(Num);
 }
 
-void Instruction::dump(llvm::raw_ostream &os) {
+void Instruction::dump(llvh::raw_ostream &os) {
   IRPrinter D(getParent()->getContext(), os);
   D.visit(*this);
 }
 
 Instruction::Instruction(
     const Instruction *src,
-    llvm::ArrayRef<Value *> operands)
+    llvh::ArrayRef<Value *> operands)
     : Instruction(src->getKind()) {
   assert(
       src->getNumOperands() == operands.size() && "invalid number of operands");
@@ -450,13 +450,13 @@ void BasicBlock::push_back(Instruction *I) {
 TerminatorInst *BasicBlock::getTerminator() {
   if (InstList.empty())
     return nullptr;
-  return llvm::dyn_cast<TerminatorInst>(&InstList.back());
+  return llvh::dyn_cast<TerminatorInst>(&InstList.back());
 }
 
 const TerminatorInst *BasicBlock::getTerminator() const {
   if (InstList.empty())
     return nullptr;
-  return llvm::dyn_cast<TerminatorInst>(&InstList.back());
+  return llvh::dyn_cast<TerminatorInst>(&InstList.back());
 }
 
 void BasicBlock::removeFromParent() {
@@ -499,7 +499,7 @@ Module::~Module() {
     Value::destroy(prop);
   }
 
-  llvm::SmallVector<Literal *, 32> toDelete;
+  llvh::SmallVector<Literal *, 32> toDelete;
 
   // Collect all literals.
   // Note that we cannot delete while iterating due to the implementation
@@ -567,16 +567,16 @@ void Module::populateCJSModuleUseGraph() {
   }
 }
 
-llvm::DenseSet<Function *> Module::getFunctionsInSegment(
+llvh::DenseSet<Function *> Module::getFunctionsInSegment(
     Context::SegmentRange range) {
   populateCJSModuleUseGraph();
 
   // Final set of functions which must be output when generating this segment.
-  llvm::DenseSet<Function *> result{};
+  llvh::DenseSet<Function *> result{};
 
   // Current set of functions which we haven't inspected (the frontier).
   // Use this to perform graph search and find all used functions.
-  llvm::SetVector<Function *> worklist{};
+  llvh::SetVector<Function *> worklist{};
 
   // Populate the worklist initially with the wrapper functions for each module
   // in the given range.
@@ -637,7 +637,7 @@ int Parameter::getIndexInParamList() const {
 }
 
 void Function::dump() {
-  IRPrinter D(getParent()->getContext(), llvm::outs());
+  IRPrinter D(getParent()->getContext(), llvh::outs());
   D.visit(*this);
 }
 
@@ -689,7 +689,7 @@ Identifier Module::deriveUniqueInternalName(Identifier originalName) {
   char itoaBuf[16];
   snprintf(itoaBuf, sizeof(itoaBuf), "%u", insertResult.first->second);
 
-  llvm::SmallString<32> buf;
+  llvh::SmallString<32> buf;
   buf.append(originalName.str());
   buf.append(" ");
   buf.append(itoaBuf);
@@ -712,7 +712,7 @@ void Module::dump() {
 
 LiteralNumber *Module::getLiteralNumber(double value) {
   // Check to see if we've already seen this tuple before.
-  llvm::FoldingSetNodeID ID;
+  llvh::FoldingSetNodeID ID;
 
   LiteralNumber::Profile(ID, value);
 
@@ -728,7 +728,7 @@ LiteralNumber *Module::getLiteralNumber(double value) {
 
 LiteralString *Module::getLiteralString(Identifier value) {
   // Check to see if we've already seen this tuple before.
-  llvm::FoldingSetNodeID ID;
+  llvh::FoldingSetNodeID ID;
 
   LiteralString::Profile(ID, value);
 
@@ -748,7 +748,7 @@ LiteralBool *Module::getLiteralBool(bool value) {
   return &literalFalse;
 }
 
-void Type::print(llvm::raw_ostream &OS) const {
+void Type::print(llvh::raw_ostream &OS) const {
   bool first = true;
   for (unsigned i = 0; i < (unsigned)Type::TypeKind::LAST_TYPE; i++) {
     // Don't print the object type annotations if the type is closure or regex.
@@ -768,7 +768,7 @@ void Type::print(llvm::raw_ostream &OS) const {
   }
 }
 
-raw_ostream &llvm::operator<<(raw_ostream &OS, const hermes::Type &T) {
+raw_ostream &llvh::operator<<(raw_ostream &OS, const hermes::Type &T) {
   T.print(OS);
   return OS;
 }

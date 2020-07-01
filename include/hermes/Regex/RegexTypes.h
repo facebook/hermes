@@ -18,8 +18,8 @@
 #ifndef HERMES_REGEX_TYPES_H
 #define HERMES_REGEX_TYPES_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallString.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/SmallString.h"
 
 namespace hermes {
 namespace regex {
@@ -257,8 +257,8 @@ class SyntaxFlags {
   /// The characters are returned in the order given in ES 6 21.2.5.3
   /// (specifically global, ignoreCase, multiline, unicode, sticky)
   /// Note this may differ in order from the string passed in construction
-  llvm::SmallString<6> toString() const {
-    llvm::SmallString<6> result;
+  llvh::SmallString<6> toString() const {
+    llvh::SmallString<6> result;
     if (global)
       result.push_back('g');
     if (ignoreCase)
@@ -277,10 +277,10 @@ class SyntaxFlags {
   /// Given a flags string \p str, generate the corresponding SyntaxFlags
   /// \return the flags if the string is valid, an empty optional otherwise
   /// See ES 5.1 15.10.4.1 for description of the validation
-  static llvm::Optional<SyntaxFlags> fromString(
-      const llvm::ArrayRef<char16_t> flags) {
+  static llvh::Optional<SyntaxFlags> fromString(
+      const llvh::ArrayRef<char16_t> flags) {
     // A flags string may contain i,m,g, in any order, but at most once each
-    auto error = llvm::NoneType::None;
+    auto error = llvh::NoneType::None;
     SyntaxFlags ret = {};
     for (auto c : flags) {
       switch (c) {

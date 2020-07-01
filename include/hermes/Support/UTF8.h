@@ -9,9 +9,9 @@
 #define HERMES_SUPPORT_UTF8_H
 
 #include "hermes/Platform/Unicode/CharacterProperties.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/Support/Compiler.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/Twine.h"
+#include "llvh/Support/Compiler.h"
 
 #include <cstddef>
 
@@ -106,7 +106,7 @@ uint32_t _decodeUTF8SlowPath(const char *&from, F error) {
     if (LLVM_UNLIKELY(
             result >= UNICODE_SURROGATE_FIRST &&
             result <= UNICODE_SURROGATE_LAST && !allowSurrogates)) {
-      error("Invalid UTF-8 code point 0x" + llvm::Twine::utohexstr(result));
+      error("Invalid UTF-8 code point 0x" + llvh::Twine::utohexstr(result));
       return UNICODE_REPLACEMENT_CHARACTER;
     }
 
@@ -137,13 +137,13 @@ uint32_t _decodeUTF8SlowPath(const char *&from, F error) {
       return UNICODE_REPLACEMENT_CHARACTER;
     }
     if (LLVM_UNLIKELY(result > UNICODE_MAX_VALUE)) {
-      error("Invalid UTF-8 code point 0x" + llvm::Twine::utohexstr(result));
+      error("Invalid UTF-8 code point 0x" + llvh::Twine::utohexstr(result));
       return UNICODE_REPLACEMENT_CHARACTER;
     }
 
   } else {
     from += 1;
-    error("Invalid UTF-8 lead byte 0x" + llvm::Twine::utohexstr((uint8_t)ch));
+    error("Invalid UTF-8 lead byte 0x" + llvh::Twine::utohexstr((uint8_t)ch));
     return UNICODE_REPLACEMENT_CHARACTER;
   }
 
@@ -207,7 +207,7 @@ inline OutIt convertUTF8WithSurrogatesToUTF16(
     const char *begin8,
     const char *end8) {
   while (begin8 < end8)
-    encodeUTF16(dest, decodeUTF8<true>(begin8, [](const llvm::Twine &) {
+    encodeUTF16(dest, decodeUTF8<true>(begin8, [](const llvh::Twine &) {
                   llvm_unreachable("invalid UTF-8");
                 }));
   return dest;
@@ -221,7 +221,7 @@ inline OutIt convertUTF8WithSurrogatesToUTF16(
 /// compiler.
 void convertUTF16ToUTF8WithSingleSurrogates(
     std::string &dest,
-    llvm::ArrayRef<char16_t> input);
+    llvh::ArrayRef<char16_t> input);
 
 /// Convert a UTF-16 encoded string \p input to UTF-8 stored in \p dest,
 /// replacing unpaired surrogates halves with the Unicode replacement character.
@@ -231,7 +231,7 @@ void convertUTF16ToUTF8WithSingleSurrogates(
 ///   written out successfully.
 bool convertUTF16ToUTF8WithReplacements(
     std::string &dest,
-    llvm::ArrayRef<char16_t> input,
+    llvh::ArrayRef<char16_t> input,
     size_t maxCharacters = 0);
 
 } // namespace hermes

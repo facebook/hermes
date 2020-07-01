@@ -1150,11 +1150,11 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
   EXPECT_EQ(
       affinityMaskValue,
       callToHermesInternalGetInstrumentedStats
-          [llvm::StringRef(affinityMaskKey.c_str(), affinityMaskKey.size())]
+          [llvh::StringRef(affinityMaskKey.c_str(), affinityMaskKey.size())]
               .str());
   EXPECT_EQ(
       totalAllocBytesValue,
-      callToHermesInternalGetInstrumentedStats[llvm::StringRef(
+      callToHermesInternalGetInstrumentedStats[llvh::StringRef(
                                                    totalAllocBytesKey.c_str(),
                                                    totalAllocBytesKey.size())]
           .num());

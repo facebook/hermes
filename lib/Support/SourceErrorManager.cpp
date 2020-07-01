@@ -8,8 +8,8 @@
 #include "hermes/Support/SourceErrorManager.h"
 #include "hermes/Support/UTF8.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/Support/raw_ostream.h"
 
 namespace hermes {
 
@@ -49,11 +49,11 @@ class BufferLocationCache {
   };
 
   /// The associated source buffer.
-  const llvm::MemoryBuffer *const buf_;
+  const llvh::MemoryBuffer *const buf_;
 
   /// The cache itself. This array only grows - only the last element is ever
   /// updated, or new elements are pushed back.
-  llvm::SmallVector<LineInfo, 128> lineCache_;
+  llvh::SmallVector<LineInfo, 128> lineCache_;
 
   /// The result of last lookup. nullptr indicates that it is empty.
   LineInfo last_{nullptr, nullptr, 0};
@@ -61,7 +61,7 @@ class BufferLocationCache {
   unsigned lastIndex_{0};
 
  public:
-  explicit BufferLocationCache(const llvm::MemoryBuffer *buf) : buf_(buf) {
+  explicit BufferLocationCache(const llvh::MemoryBuffer *buf) : buf_(buf) {
     // Offset 0 is in line 1.
     lineCache_.push_back({buf->getBufferStart(), buf->getBufferStart(), 1});
   }
@@ -200,11 +200,11 @@ void BufferLocationCache::findBufferLineAndLoc(
 }; // anonymous namespace
 
 class SourceLocationCache {
-  llvm::SourceMgr &sm_;
-  llvm::DenseMap<unsigned, BufferCachePtr> bufferMap_{};
+  llvh::SourceMgr &sm_;
+  llvh::DenseMap<unsigned, BufferCachePtr> bufferMap_{};
 
  public:
-  explicit SourceLocationCache(llvm::SourceMgr &sm) : sm_(sm) {}
+  explicit SourceLocationCache(llvh::SourceMgr &sm) : sm_(sm) {}
 
   /// Find the bufferId, line and column of the specified location \p loc.
   /// This is a very slow method that should be used only for error generation.
@@ -262,7 +262,7 @@ void SourceErrorManager::BufferedMessage::addNote(
   ++noteCount_;
 }
 
-llvm::iterator_range<const SourceErrorManager::MessageData *>
+llvh::iterator_range<const SourceErrorManager::MessageData *>
 SourceErrorManager::BufferedMessage::notes(
     const std::vector<MessageData> &bufferedNotes) const {
   if (!noteCount_)
@@ -308,13 +308,13 @@ void SourceErrorManager::disableBuffering() {
 }
 
 uint32_t SourceErrorManager::addNewVirtualSourceBuffer(
-    llvm::StringRef bufferName) {
+    llvh::StringRef bufferName) {
   return addNewSourceBuffer(
-      llvm::MemoryBuffer::getMemBuffer("", bufferName, true));
+      llvh::MemoryBuffer::getMemBuffer("", bufferName, true));
 }
 
 void SourceErrorManager::dumpCoords(
-    llvm::raw_ostream &OS,
+    llvh::raw_ostream &OS,
     const SourceCoords &coords) {
   if (coords.isValid()) {
     OS << getSourceUrl(coords.bufId) << ":" << coords.line << "," << coords.col;
@@ -323,7 +323,7 @@ void SourceErrorManager::dumpCoords(
   }
 }
 
-void SourceErrorManager::dumpCoords(llvm::raw_ostream &OS, SMLoc loc) {
+void SourceErrorManager::dumpCoords(llvh::raw_ostream &OS, SMLoc loc) {
   SourceCoords coords;
   findBufferLineAndLoc(loc, coords);
   dumpCoords(OS, coords);
@@ -331,9 +331,9 @@ void SourceErrorManager::dumpCoords(llvm::raw_ostream &OS, SMLoc loc) {
 
 void SourceErrorManager::doGenMessage(
     hermes::SourceErrorManager::DiagKind dk,
-    llvm::SMLoc loc,
-    llvm::SMRange sm,
-    llvm::Twine const &msg) {
+    llvh::SMLoc loc,
+    llvh::SMRange sm,
+    llvh::Twine const &msg) {
   if (bufferingEnabled_) {
     SourceCoords coords;
     findBufferLineAndLoc(loc, coords);
@@ -359,19 +359,19 @@ void SourceErrorManager::doPrintMessage(
     const Twine &msg) {
   sm_.PrintMessage(
       loc,
-      static_cast<llvm::SourceMgr::DiagKind>(dk),
+      static_cast<llvh::SourceMgr::DiagKind>(dk),
       msg,
-      sm.isValid() ? llvm::ArrayRef<SMRange>(sm)
-                   : llvm::ArrayRef<SMRange>(llvm::None),
-      llvm::None,
+      sm.isValid() ? llvh::ArrayRef<SMRange>(sm)
+                   : llvh::ArrayRef<SMRange>(llvh::None),
+      llvh::None,
       outputOptions_.showColors);
 }
 
 void SourceErrorManager::message(
     hermes::SourceErrorManager::DiagKind dk,
-    llvm::SMLoc loc,
-    llvm::SMRange sm,
-    llvm::Twine const &msg,
+    llvh::SMLoc loc,
+    llvh::SMRange sm,
+    llvh::Twine const &msg,
     hermes::Warning w,
     Subsystem subsystem) {
   assert(dk <= DK_Note);
@@ -431,7 +431,7 @@ bool SourceErrorManager::findBufferLineAndLoc(SMLoc loc, SourceCoords &result) {
 }
 
 bool SourceErrorManager::findBufferLineAndLoc(
-    llvm::SMLoc loc,
+    llvh::SMLoc loc,
     hermes::SourceErrorManager::SourceCoords &result,
     bool translate) {
   if (!findBufferLineAndLoc(loc, result))
@@ -445,7 +445,7 @@ uint32_t SourceErrorManager::findBufferIdForLoc(SMLoc loc) const {
   return sm_.FindBufferContainingLoc(loc);
 }
 
-const llvm::MemoryBuffer *SourceErrorManager::findBufferForLoc(
+const llvh::MemoryBuffer *SourceErrorManager::findBufferForLoc(
     SMLoc loc) const {
   uint32_t bufID = findBufferIdForLoc(loc);
   if (bufID == 0) {
@@ -532,7 +532,7 @@ SMLoc SourceErrorManager::findSMLocFromCoords(SourceCoords coords) {
 /// Given an SMDiagnostic, return {sourceLine, caretLine}, respecting the error
 /// output options
 static std::pair<std::string, std::string> buildSourceAndCaretLine(
-    const llvm::SMDiagnostic &diag,
+    const llvh::SMDiagnostic &diag,
     SourceErrorOutputOptions opts) {
   // Decode our source line to UTF-32
   // Ignore errors (UTF-8 errors will become replacement character)
@@ -544,7 +544,7 @@ static std::pair<std::string, std::string> buildSourceAndCaretLine(
   const char *cursor = narrowSourceLine.c_str();
   while (*cursor) {
     const char *prev = cursor;
-    sourceLine.push_back(decodeUTF8<true>(cursor, [](const llvm::Twine &) {}));
+    sourceLine.push_back(decodeUTF8<true>(cursor, [](const llvh::Twine &) {}));
     while (prev++ < cursor) {
       narrowByteToColumn.push_back(sourceLine.size() - 1);
     }
@@ -637,14 +637,14 @@ static std::pair<std::string, std::string> buildSourceAndCaretLine(
 }
 
 void SourceErrorManager::printDiagnostic(
-    const llvm::SMDiagnostic &diag,
+    const llvh::SMDiagnostic &diag,
     void *ctx) {
-  using llvm::raw_ostream;
+  using llvh::raw_ostream;
   const SourceErrorManager *self = static_cast<SourceErrorManager *>(ctx);
   const SourceErrorOutputOptions opts = self->outputOptions_;
-  auto &S = llvm::errs();
+  auto &S = llvh::errs();
 
-  llvm::StringRef filename = diag.getFilename();
+  llvh::StringRef filename = diag.getFilename();
   int lineNo = diag.getLineNo();
   int columnNo = diag.getColumnNo();
 
@@ -671,19 +671,19 @@ void SourceErrorManager::printDiagnostic(
   }
 
   switch (diag.getKind()) {
-    case llvm::SourceMgr::DK_Error:
+    case llvh::SourceMgr::DK_Error:
       changeColor(raw_ostream::RED);
       S << "error: ";
       break;
-    case llvm::SourceMgr::DK_Warning:
+    case llvh::SourceMgr::DK_Warning:
       changeColor(raw_ostream::MAGENTA);
       S << "warning: ";
       break;
-    case llvm::SourceMgr::DK_Note:
+    case llvh::SourceMgr::DK_Note:
       changeColor(raw_ostream::BLACK);
       S << "note: ";
       break;
-    case llvm::SourceMgr::DK_Remark:
+    case llvh::SourceMgr::DK_Remark:
       changeColor(raw_ostream::BLACK);
       S << "remark: ";
       break;

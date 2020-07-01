@@ -12,7 +12,7 @@
 
 #include "hermes/SourceMap/SourceMapParser.h"
 
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <numeric>
 #include <unordered_map>
@@ -47,9 +47,9 @@ struct FunctionRuntimeStatistics {
 /// Analyzer for basic block profile trace.
 class ProfileAnalyzer {
  private:
-  llvm::raw_ostream &os_;
+  llvh::raw_ostream &os_;
   HBCParser hbcParser_;
-  llvm::Optional<ProfileData> profileDataOpt_;
+  llvh::Optional<ProfileData> profileDataOpt_;
   // Total number of executed instruction from this profile trace.
   uint64_t totalRuntimeInstructionCount_{0};
   // Maps from function_id to its runtime statiscs from trace.
@@ -59,7 +59,7 @@ class ProfileAnalyzer {
   std::unique_ptr<SourceMap> sourceMap_;
 
   ProfileData deserializeTrace(
-      std::unique_ptr<llvm::MemoryBuffer> profileBuffer);
+      std::unique_ptr<llvh::MemoryBuffer> profileBuffer);
 
   /// Loop through each traced function entry in profile and call \p f.
   /// \p f: (BCProvider, function_executionInfo, function_profileIndexMap,
@@ -72,7 +72,7 @@ class ProfileAnalyzer {
     for (auto &infoEntry : execInfo) {
       const std::string &funcChecksum = infoEntry.first;
       std::unordered_map<uint16_t, uint64_t> &funcExecInfo = infoEntry.second;
-      llvm::Optional<uint32_t> funcIdOpt =
+      llvh::Optional<uint32_t> funcIdOpt =
           hbcParser_.functionIdFromChecksum(funcChecksum);
       if (funcIdOpt.hasValue()) {
         f(hbcParser_.getBCProvider(),
@@ -105,7 +105,7 @@ class ProfileAnalyzer {
     assertTraceAvailable();
     auto &profileData = profileDataOpt_.getValue();
     for (const auto &entry : profileData.executionInfo) {
-      llvm::Optional<unsigned> funcIdOpt =
+      llvh::Optional<unsigned> funcIdOpt =
           hbcParser_.functionIdFromChecksum(entry.first);
       if (funcIdOpt.hasValue()) {
         checkAndReportAccuracyForFunction(funcIdOpt.getValue());
@@ -115,9 +115,9 @@ class ProfileAnalyzer {
 
  public:
   ProfileAnalyzer(
-      llvm::raw_ostream &os,
+      llvh::raw_ostream &os,
       std::shared_ptr<hbc::BCProvider> bcProvider,
-      llvm::Optional<std::unique_ptr<llvm::MemoryBuffer>> profileBufferOpt,
+      llvh::Optional<std::unique_ptr<llvh::MemoryBuffer>> profileBufferOpt,
       std::unique_ptr<SourceMap> &&sourceMap)
       : os_(os),
         hbcParser_(std::move(bcProvider)),
@@ -168,7 +168,7 @@ class ProfileAnalyzer {
     json.closeArray();
   }
   // Return the ID of the function, if any, found at a given virtual offset.
-  llvm::Optional<uint32_t> getFunctionFromVirtualOffset(uint32_t virtualOffset);
+  llvh::Optional<uint32_t> getFunctionFromVirtualOffset(uint32_t virtualOffset);
 };
 
 } // namespace hermes

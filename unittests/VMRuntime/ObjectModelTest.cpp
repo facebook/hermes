@@ -865,7 +865,7 @@ TEST_F(ObjectModelTest, UpdatePropertyFlagsWithoutTransitionsTest) {
       runtime,
       clearFlags,
       setFlags,
-      llvm::ArrayRef<SymbolID>(propsToFreeze));
+      llvh::ArrayRef<SymbolID>(propsToFreeze));
   // check each property descriptor.
   EXPECT_PROPERTY_FLAG(FALSE, obj, *aHnd, writable);
   EXPECT_PROPERTY_FLAG(FALSE, obj, *aHnd, configurable);
@@ -878,7 +878,7 @@ TEST_F(ObjectModelTest, UpdatePropertyFlagsWithoutTransitionsTest) {
 
   // Freeze all properties.
   JSObject::updatePropertyFlagsWithoutTransitions(
-      obj, runtime, clearFlags, setFlags, llvm::None);
+      obj, runtime, clearFlags, setFlags, llvh::None);
   // check each property descriptor.
   EXPECT_PROPERTY_FLAG(FALSE, obj, *aHnd, writable);
   EXPECT_PROPERTY_FLAG(FALSE, obj, *aHnd, configurable);

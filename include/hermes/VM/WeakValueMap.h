@@ -12,7 +12,7 @@
 #include "hermes/VM/HandleRootOwner.h"
 #include "hermes/VM/WeakRef.h"
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvh/ADT/DenseMap.h"
 
 namespace hermes {
 namespace vm {
@@ -26,7 +26,7 @@ class WeakValueMap {
   /// TODO: this is wasteful in terms of code size because it will be
   /// specialized for different kinds of ValueT while technically the underlying
   /// hash table always stores instances of WeakRefBase.
-  using DenseMapT = llvm::SmallDenseMap<KeyT, WeakRef<ValueT>, 8>;
+  using DenseMapT = llvh::SmallDenseMap<KeyT, WeakRef<ValueT>, 8>;
   using InternalIterator = typename DenseMapT::iterator;
 
  public:
@@ -66,19 +66,19 @@ class WeakValueMap {
     return internalFindLocked(key, gc) != map_.end();
   }
 
-  /// Look for a key and return the value as Handle<T> if found or llvm::None if
+  /// Look for a key and return the value as Handle<T> if found or llvh::None if
   /// not found.
-  llvm::Optional<Handle<ValueT>>
+  llvh::Optional<Handle<ValueT>>
   lookup(HandleRootOwner *runtime, GC *gc, const KeyT &key) {
     WeakRefLock lk{gc->weakRefMutex()};
     return lookupLocked(runtime, gc, key);
   }
 
-  llvm::Optional<Handle<ValueT>>
+  llvh::Optional<Handle<ValueT>>
   lookupLocked(HandleRootOwner *runtime, GC *gc, const KeyT &key) {
     auto it = internalFindLocked(key, gc);
     if (it == map_.end())
-      return llvm::None;
+      return llvh::None;
     return it->second.getLocked(runtime, gc);
   }
 

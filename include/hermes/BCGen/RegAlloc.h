@@ -9,16 +9,16 @@
 #define HERMES_BCGEN_REGALLOC_H
 
 #include "hermes/IR/IR.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/BitVector.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/DenseSet.h"
 
 namespace hermes {
 
-using llvm::ArrayRef;
-using llvm::BitVector;
-using llvm::DenseMap;
+using llvh::ArrayRef;
+using llvh::BitVector;
+using llvh::DenseMap;
 
 /// This is an instance of a bytecode register. It's just a wrapper around a
 /// simple integer index. Register is passed by value and must remain a small
@@ -81,7 +81,7 @@ class RegisterFile {
   // can only grow (and not shrink). This is how we keep track of the max number
   // of allocated register. There is no need to shrink the register file because
   // the compile time wins are negligable.
-  llvm::BitVector registers;
+  llvh::BitVector registers;
 
  public:
   RegisterFile(const RegisterFile &) = delete;
@@ -174,7 +174,7 @@ struct Segment {
 /// Interval is a collection of segments repreents a non-consecutive half-open
 /// range.
 struct Interval {
-  llvm::SmallVector<Segment, 2> segments_;
+  llvh::SmallVector<Segment, 2> segments_;
 
   explicit Interval() = default;
 
@@ -283,14 +283,14 @@ class RegisterAllocator {
   };
 
   /// Maps active slots (per bit) for each basic block.
-  llvm::DenseMap<BasicBlock *, BlockLifetimeInfo> blockLiveness_;
+  llvh::DenseMap<BasicBlock *, BlockLifetimeInfo> blockLiveness_;
 
   /// Maps index numbers to instructions.
-  llvm::DenseMap<Instruction *, unsigned> instructionNumbers_;
+  llvh::DenseMap<Instruction *, unsigned> instructionNumbers_;
   /// Maps instructions to a index numbers.
-  llvm::SmallVector<Instruction *, 32> instructionsByNumbers_;
+  llvh::SmallVector<Instruction *, 32> instructionsByNumbers_;
   /// Holds the live interval of each instruction.
-  llvm::SmallVector<Interval, 32> instructionInterval_;
+  llvh::SmallVector<Interval, 32> instructionInterval_;
 
   /// Returns the last index allocated.
   unsigned getMaxInstrIndex() {
@@ -317,7 +317,7 @@ class RegisterAllocator {
 
  protected:
   /// Keeps track of the already allocated values.
-  llvm::DenseMap<Value *, Register> allocated{};
+  llvh::DenseMap<Value *, Register> allocated{};
 
   /// The register file.
   RegisterFile file{};
@@ -418,7 +418,7 @@ class RegisterAllocator {
 
 } // namespace hermes
 
-namespace llvm {
+namespace llvh {
 class raw_ostream;
 
 // Print Register to llvm debug/error streams.
@@ -437,6 +437,6 @@ struct DenseMapInfo<hermes::Register> {
   static bool isEqual(hermes::Register LHS, hermes::Register RHS);
 };
 
-} // namespace llvm
+} // namespace llvh
 
 #endif

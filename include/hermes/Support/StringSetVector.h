@@ -8,8 +8,8 @@
 #ifndef HERMES_SUPPORT_STRINGSETVECTOR_H
 #define HERMES_SUPPORT_STRINGSETVECTOR_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/StringRef.h"
 
 #include <deque>
 #include <string>
@@ -36,12 +36,12 @@ struct StringSetVector final {
 
   /// Adds a string, \p str to the vector if it is not already present.
   /// \return the index of the string in the vector.
-  inline size_type insert(llvm::StringRef str);
+  inline size_type insert(llvh::StringRef str);
 
   /// Return an iterator \c it such that *it == str if such an iterator exists
   /// or end() otherwise.
-  inline iterator find(llvm::StringRef str);
-  inline const_iterator find(llvm::StringRef str) const;
+  inline iterator find(llvh::StringRef str);
+  inline const_iterator find(llvh::StringRef str) const;
 
   /// Return a reference to the \p i'th string inserted into this set vector.
   /// Assumes \pre i < size().
@@ -66,10 +66,10 @@ struct StringSetVector final {
 
   /// A map from strings to their index in the storage.  The strings referred
   /// to in the keys of this mapping are owned by \c stringsToStorage_.
-  llvm::DenseMap<llvm::StringRef, uint32_t> stringsToIndex_;
+  llvh::DenseMap<llvh::StringRef, uint32_t> stringsToIndex_;
 };
 
-inline StringSetVector::size_type StringSetVector::insert(llvm::StringRef str) {
+inline StringSetVector::size_type StringSetVector::insert(llvh::StringRef str) {
   assert(stringsToIndex_.size() == stringsStorage_.size());
   auto it = stringsToIndex_.find(str);
   if (it != stringsToIndex_.end()) {
@@ -85,7 +85,7 @@ inline StringSetVector::size_type StringSetVector::insert(llvm::StringRef str) {
   return newIdx;
 }
 
-inline StringSetVector::iterator StringSetVector::find(llvm::StringRef str) {
+inline StringSetVector::iterator StringSetVector::find(llvh::StringRef str) {
   auto it = stringsToIndex_.find(str);
   if (it == stringsToIndex_.end()) {
     return end();
@@ -95,7 +95,7 @@ inline StringSetVector::iterator StringSetVector::find(llvm::StringRef str) {
 }
 
 inline StringSetVector::const_iterator StringSetVector::find(
-    llvm::StringRef str) const {
+    llvh::StringRef str) const {
   return const_cast<StringSetVector *>(this)->find(str);
 }
 

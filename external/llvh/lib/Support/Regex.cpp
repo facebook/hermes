@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Regex.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
+#include "llvh/Support/Regex.h"
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/ADT/Twine.h"
 #include <string>
 
 // Important this comes last because it defines "_REGEX_H_". At least on
@@ -22,7 +22,7 @@
 // xlocale.h, this will cause trouble, because of missing regex-related types.
 #include "regex_impl.h"
 
-using namespace llvm;
+using namespace llvh;
 
 Regex::Regex() : preg(nullptr), error(REG_BADPAT) {}
 

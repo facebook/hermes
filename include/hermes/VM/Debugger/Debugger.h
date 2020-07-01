@@ -19,8 +19,8 @@
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/InterpreterState.h"
 #include "hermes/VM/RuntimeModule.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/MapVector.h"
+#include "llvh/ADT/DenseSet.h"
+#include "llvh/ADT/MapVector.h"
 
 #include <cstdint>
 #include <string>
@@ -94,7 +94,7 @@ class Debugger {
     SourceLocation requestedLocation;
     /// Resolved location of the breakpoint.
     /// Optionally filled in for resolved user breakpoints.
-    llvm::Optional<SourceLocation> resolvedLocation{llvm::None};
+    llvh::Optional<SourceLocation> resolvedLocation{llvh::None};
 
     bool isResolved() const {
       return resolvedLocation.hasValue();
@@ -104,7 +104,7 @@ class Debugger {
   /// Breakpoints that were set by the user.
   /// Every breakpoint has a unique ID that is never reused.
   /// Use a MapVector to iterate in insertion order.
-  llvm::MapVector<BreakpointID, Breakpoint> userBreakpoints_{};
+  llvh::MapVector<BreakpointID, Breakpoint> userBreakpoints_{};
   BreakpointID nextBreakpointId_{1};
 
   /// One-shot breakpoints that are used for stepping commands.
@@ -119,7 +119,7 @@ class Debugger {
     /// If this location has a user breakpoint set,
     /// then this is set to the ID of the user breakpoint.
     /// Else, it's set to None.
-    OptValue<BreakpointID> user{llvm::None};
+    OptValue<BreakpointID> user{llvh::None};
 
     /// Whether this location has an on-load breakpoint set.
     bool onLoad{false};
@@ -133,7 +133,7 @@ class Debugger {
     /// If a depth != 0, then only break when the runtime call stack
     /// has exactly depth elements in it, and if a depth == 0,
     /// then break on any runtime call stack size.
-    llvm::DenseSet<uint32_t> callStackDepths{};
+    llvh::DenseSet<uint32_t> callStackDepths{};
 
     BreakpointLocation(hbc::opcode_atom_t opCode) : opCode(opCode) {}
 
@@ -147,7 +147,7 @@ class Debugger {
     }
   };
 
-  llvm::DenseMap<const inst::Inst *, BreakpointLocation> breakpointLocations_{};
+  llvh::DenseMap<const inst::Inst *, BreakpointLocation> breakpointLocations_{};
 
   /// The debugger is currently executing instructions.
   bool isDebugging_{false};
@@ -155,7 +155,7 @@ class Debugger {
   /// If not None, the debugger was issued a STEP instruction of some sort,
   /// and it hasn't completed yet.
   /// The value indicates the type of step we're trying to take.
-  OptValue<StepMode> curStepMode_{llvm::None};
+  OptValue<StepMode> curStepMode_{llvh::None};
 
   /// If true, all code blocks are breakpointed,
   /// and the debugger should stop on entering any code blocks.
@@ -235,15 +235,15 @@ class Debugger {
   // \return the stack trace for the state given by \p state.
   StackTrace getStackTrace(InterpreterState state) const;
 
-  llvm::Optional<const BreakpointLocation> getBreakpointLocation(
+  llvh::Optional<const BreakpointLocation> getBreakpointLocation(
       const inst::Inst *ip) const {
     auto it = breakpointLocations_.find(ip);
     if (it == breakpointLocations_.end()) {
-      return llvm::None;
+      return llvh::None;
     }
     return {it->second};
   }
-  llvm::Optional<const BreakpointLocation> getBreakpointLocation(
+  llvh::Optional<const BreakpointLocation> getBreakpointLocation(
       CodeBlock *codeBlock,
       uint32_t offset) const;
 
@@ -390,9 +390,9 @@ class Debugger {
   String getSourceMappingUrl(ScriptID scriptId) const;
 
   /// Find the handler for an exception thrown at \p state.
-  /// \return llvm::None if no handler is found, else return the state of the
+  /// \return llvh::None if no handler is found, else return the state of the
   /// handler and the offset of its frame.
-  llvm::Optional<std::pair<InterpreterState, uint32_t>> findCatchTarget(
+  llvh::Optional<std::pair<InterpreterState, uint32_t>> findCatchTarget(
       const InterpreterState &state) const;
 
   /// Attempt to resolve the \p filenameId to a script ID based on the table.
@@ -545,7 +545,7 @@ class Debugger {
       const;
 
   /// Get the jump target for an instruction (if it is a jump).
-  llvm::Optional<uint32_t> findJumpTarget(CodeBlock *block, uint32_t offset);
+  llvh::Optional<uint32_t> findJumpTarget(CodeBlock *block, uint32_t offset);
 
   /// Set breakpoints at all possible next instructions after the current one.
   void breakAtPossibleNextInstructions(InterpreterState &state);

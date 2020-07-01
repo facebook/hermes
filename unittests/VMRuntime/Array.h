@@ -13,7 +13,7 @@
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/GC.h"
 
-#include "llvm/Support/TrailingObjects.h"
+#include "llvh/Support/TrailingObjects.h"
 
 using namespace hermes::vm;
 
@@ -22,7 +22,7 @@ namespace unittest {
 
 /// An Array class suitable for use in unit tests.
 class Array final : public VariableSizeRuntimeCell,
-                    private llvm::TrailingObjects<Array, GCHermesValue> {
+                    private llvh::TrailingObjects<Array, GCHermesValue> {
   friend TrailingObjects;
 
  public:

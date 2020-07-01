@@ -24,7 +24,7 @@
 #include "hermes/Regex/RegexBytecode.h"
 #include "hermes/Regex/RegexTypes.h"
 
-#include "llvm/ADT/SmallVector.h"
+#include "llvh/ADT/SmallVector.h"
 
 #include <string>
 #include <vector>
@@ -52,7 +52,7 @@ class Node {
   Node &operator=(Node &&) = delete;
 
   using CodePoint = uint32_t;
-  using CodePointList = llvm::SmallVector<CodePoint, 5>;
+  using CodePointList = llvh::SmallVector<CodePoint, 5>;
 
   /// Default constructor and destructor.
   Node() = default;
@@ -535,7 +535,7 @@ class MatchCharNode final : public Node {
   }
 
   void emit(RegexBytecodeStream &bcs) const override {
-    llvm::ArrayRef<CodePoint> remaining{chars_};
+    llvh::ArrayRef<CodePoint> remaining{chars_};
     while (!remaining.empty()) {
       // Output any run (possibly empty) of ASCII chars.
       auto asciis = remaining.take_while(isASCII);
@@ -583,7 +583,7 @@ class MatchCharNode final : public Node {
   }
 
   /// Emit a list of ASCII characters into bytecode stream \p bcs.
-  void emitASCIIList(llvm::ArrayRef<CodePoint> chars, RegexBytecodeStream &bcs)
+  void emitASCIIList(llvh::ArrayRef<CodePoint> chars, RegexBytecodeStream &bcs)
       const {
     assert(
         std::all_of(chars.begin(), chars.end(), isASCII) &&
@@ -619,7 +619,7 @@ class MatchCharNode final : public Node {
 
   /// Emit a list of non-ASCII characters into bytecode stream \p bcs.
   void emitNonASCIIList(
-      llvm::ArrayRef<CodePoint> chars,
+      llvh::ArrayRef<CodePoint> chars,
       RegexBytecodeStream &bcs) const {
     for (uint32_t c : chars) {
       if (mayRequireDecodingSurrogatePair(c)) {

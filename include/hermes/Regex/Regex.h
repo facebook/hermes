@@ -134,8 +134,8 @@ class Regex {
             {f, f + std::char_traits<CharT>::length(f)}) {}
 
   Regex(
-      const llvm::ArrayRef<CharT> pattern,
-      const llvm::ArrayRef<char16_t> flags = {}) {
+      const llvh::ArrayRef<CharT> pattern,
+      const llvh::ArrayRef<char16_t> flags = {}) {
     // Compute the SyntaxFlags based on the flags string.
     auto sflags = SyntaxFlags::fromString(flags);
     if (!sflags) {

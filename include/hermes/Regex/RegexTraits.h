@@ -17,8 +17,8 @@
 #include "hermes/Platform/Unicode/PlatformUnicode.h"
 #include "hermes/Regex/RegexBytecode.h"
 #include "hermes/Regex/RegexTypes.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/Optional.h"
 
 namespace hermes {
 namespace regex {
@@ -26,7 +26,7 @@ namespace regex {
 /// \return whether any range in \p ranges contains the character \p c,
 /// inclusive of both ends.
 inline bool anyRangeContainsChar(
-    llvm::ArrayRef<BracketRange32> ranges,
+    llvh::ArrayRef<BracketRange32> ranges,
     uint32_t c) {
   for (const auto &r : ranges) {
     if (r.start <= c && c <= r.end) {
@@ -45,7 +45,7 @@ struct UTF16RegexTraits {
   using CodeUnit = char16_t;
 
  private:
-  using CanonicalizeCache = llvm::SmallDenseMap<CodePoint, CodePoint, 16>;
+  using CanonicalizeCache = llvh::SmallDenseMap<CodePoint, CodePoint, 16>;
   mutable CanonicalizeCache toUpperCache_;
 
   /// ES9 11.2
@@ -101,7 +101,7 @@ struct UTF16RegexTraits {
   /// \return whether the character c is contained within the range [first,
   /// last]. If ICase is set, perform a canonicalizing membership test as
   /// specified in "CharacterSetMatcher" ES5.1 15.10.2.8.
-  bool rangesContain(llvm::ArrayRef<BracketRange32> ranges, CodePoint c) const {
+  bool rangesContain(llvh::ArrayRef<BracketRange32> ranges, CodePoint c) const {
     return anyRangeContainsChar(ranges, c);
   }
 };
@@ -148,7 +148,7 @@ struct ASCIIRegexTraits {
 
   /// \return whether any of a list of ranges contains \p c.
   /// Note that our ranges contain uint32_t, but we test chars for membership.
-  bool rangesContain(llvm::ArrayRef<BracketRange32> ranges, char16_t c) const {
+  bool rangesContain(llvh::ArrayRef<BracketRange32> ranges, char16_t c) const {
     return anyRangeContainsChar(ranges, c);
   }
 };

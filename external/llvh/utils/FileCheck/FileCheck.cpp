@@ -16,11 +16,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/FileCheck.h"
-using namespace llvm;
+#include "llvh/Support/CommandLine.h"
+#include "llvh/Support/InitLLVM.h"
+#include "llvh/Support/raw_ostream.h"
+#include "llvh/Support/FileCheck.h"
+using namespace llvh;
 
 static cl::opt<std::string>
     CheckFilename(cl::Positional, cl::desc("<check-file>"), cl::Required);
@@ -116,7 +116,7 @@ int main(int argc, char **argv) {
   // a problem because InitLLVM can't be instantiated more than once in the same
   // process. The most important functionality InitLLVM provides is shutting
   // down LLVM in its destructor. We can use "llvm_shutdown_obj" to do the same.
-  llvm::llvm_shutdown_obj Y;
+  llvh::llvm_shutdown_obj Y;
 #endif
   cl::ParseCommandLineOptions(argc, argv);
 

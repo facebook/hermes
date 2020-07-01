@@ -8,7 +8,7 @@
 #include "hermes/BCGen/HBC/SerializedLiteralParserBase.h"
 #include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
 
-#include "llvm/Support/Endian.h"
+#include "llvh/Support/Endian.h"
 
 namespace hermes {
 namespace hbc {

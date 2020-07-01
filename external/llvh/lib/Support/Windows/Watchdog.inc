@@ -16,7 +16,7 @@
 // on Windows. Roughly, a Windows implementation would use CreateWaitableTimer
 // and a second thread to run the TimerAPCProc.
 
-namespace llvm {
+namespace llvh {
   namespace sys {
     Watchdog::Watchdog(unsigned int seconds) {}
     Watchdog::~Watchdog() {}

@@ -9,7 +9,7 @@
 #define HERMES_TOOLS_HBCDUMP_HBCPARSER_H
 
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvh/ADT/StringRef.h"
 
 #include <unordered_map>
 #include <unordered_set>
@@ -60,7 +60,7 @@ class HBCParser {
   }
 
   /// Get the checksum of function with \p funcId.
-  llvm::StringRef getFunctionChecksum(uint32_t funcId) {
+  llvh::StringRef getFunctionChecksum(uint32_t funcId) {
     return funcChecksumMap_[funcId];
   }
 
@@ -69,20 +69,20 @@ class HBCParser {
   uint32_t getBasicBlockOffset(uint32_t funcId, uint16_t profileIndex);
 
   /// Get debug source location information at \p opcodeOffset in \p funcId.
-  llvm::Optional<SourceMapTextLocation> getSourceLocation(
+  llvh::Optional<SourceMapTextLocation> getSourceLocation(
       uint32_t funcId,
       uint32_t offsetInFunction) {
     return bcProvider_->getLocationForAddress(funcId, offsetInFunction);
   }
 
   /// Get function id from its \p checksum.
-  llvm::Optional<uint32_t> functionIdFromChecksum(llvm::StringRef checksum) {
+  llvh::Optional<uint32_t> functionIdFromChecksum(llvh::StringRef checksum) {
     for (const auto &entry : funcChecksumMap_) {
       if (entry.second == checksum) {
         return entry.first;
       }
     }
-    return llvm::None;
+    return llvh::None;
   }
 
   /// Get BasicBlockStaticInstCountMap for \p funcId.

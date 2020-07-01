@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include "hermes/BCGen/HBC/BytecodeDataProvider.h"
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
@@ -47,7 +47,7 @@ class StringBuffer : public Buffer {
 /// strings) for use with these tests.  Additionally adds the strings in
 /// \p strs if the test requires extra
 StringLiteralTable stringsForTest(
-    std::initializer_list<llvm::StringRef> strs = {}) {
+    std::initializer_list<llvh::StringRef> strs = {}) {
   UniquingStringLiteralAccumulator strings;
 
   strings.addString("global", /* isIdentifier */ false);
@@ -60,7 +60,7 @@ StringLiteralTable stringsForTest(
 
 TEST(HBCBytecodeGen, IntegrationTest) {
   std::string Result;
-  llvm::raw_string_ostream OS(Result);
+  llvh::raw_string_ostream OS(Result);
 
   auto Ctx = std::make_shared<Context>();
   Module M(Ctx);
@@ -98,7 +98,7 @@ TEST(HBCBytecodeGen, IntegrationTest) {
   EXPECT_GE(globalFunctionOffsetExpected, 0);
 
   auto bytecode = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-                      llvm::make_unique<StringBuffer>(OS.str()))
+                      llvh::make_unique<StringBuffer>(OS.str()))
                       .first;
 
   int functionCnt = bytecode->getFunctionCount();
@@ -157,12 +157,12 @@ TEST(HBCBytecodeGen, StripDebugInfo) {
   BytecodeGenerationOptions opts = BytecodeGenerationOptions::defaults();
 
   std::string unstrippedStorage;
-  llvm::raw_string_ostream unstrippedOS(unstrippedStorage);
+  llvh::raw_string_ostream unstrippedOS(unstrippedStorage);
   opts.stripDebugInfoSection = false;
   BytecodeSerializer{unstrippedOS, opts}.serialize(*BM, SHA1{});
 
   std::string strippedStorage;
-  llvm::raw_string_ostream strippedOS(strippedStorage);
+  llvh::raw_string_ostream strippedOS(strippedStorage);
   opts.stripDebugInfoSection = true;
   BytecodeSerializer{strippedOS, opts}.serialize(*BM, SHA1{});
 
@@ -172,7 +172,7 @@ TEST(HBCBytecodeGen, StripDebugInfo) {
   // Verify debug info absent from decoded BM.
   std::unique_ptr<hbc::BCProvider> strippedBC =
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-          llvm::make_unique<StringBuffer>(strippedOS.str()))
+          llvh::make_unique<StringBuffer>(strippedOS.str()))
           .first;
   ASSERT_EQ(strippedBC->getFunctionCount(), BM->getNumFunctions());
   for (uint32_t i = 0, max = BM->getNumFunctions(); i < max; i++) {
@@ -183,7 +183,7 @@ TEST(HBCBytecodeGen, StripDebugInfo) {
 
 TEST(HBCBytecodeGen, StringTableTest) {
   std::string Result;
-  llvm::raw_string_ostream OS(Result);
+  llvh::raw_string_ostream OS(Result);
 
   auto Ctx = std::make_shared<Context>();
   Module M(Ctx);
@@ -225,7 +225,7 @@ TEST(HBCBytecodeGen, StringTableTest) {
   BS.serialize(*BM, SHA1{});
 
   auto bytecode = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-                      llvm::make_unique<StringBuffer>(OS.str()))
+                      llvh::make_unique<StringBuffer>(OS.str()))
                       .first;
 
   EXPECT_EQ(bytecode->getStringCount(), 5u);
@@ -259,7 +259,7 @@ TEST(HBCBytecodeGen, StringTableTest) {
 
 TEST(HBCBytecodeGen, ExceptionTableTest) {
   std::string Result;
-  llvm::raw_string_ostream OS(Result);
+  llvh::raw_string_ostream OS(Result);
 
   auto Ctx = std::make_shared<Context>();
   Module M(Ctx);
@@ -286,7 +286,7 @@ TEST(HBCBytecodeGen, ExceptionTableTest) {
   BS.serialize(*BM, SHA1{});
 
   auto bytecode = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-                      llvm::make_unique<StringBuffer>(OS.str()))
+                      llvh::make_unique<StringBuffer>(OS.str()))
                       .first;
 
   ASSERT_EQ(bytecode->getExceptionTable(0).size(), 3u);
@@ -301,7 +301,7 @@ TEST(HBCBytecodeGen, ArrayBufferTest) {
   // the only thing that can be checked at BCGen time is that it uses
   // the proper number of bytes for the serialization format.
   std::string Result;
-  llvm::raw_string_ostream OS(Result);
+  llvh::raw_string_ostream OS(Result);
 
   auto Ctx = std::make_shared<Context>();
   Module M(Ctx);
@@ -321,7 +321,7 @@ TEST(HBCBytecodeGen, ArrayBufferTest) {
       Builder.getLiteralNull(),
       Builder.getLiteralString("abc"),
   };
-  BMG.addArrayBuffer(llvm::ArrayRef<Literal *>{arr1});
+  BMG.addArrayBuffer(llvh::ArrayRef<Literal *>{arr1});
 
   BMG.setEntryPointIndex(BMG.addFunction(F));
   BMG.setFunctionGenerator(F, std::move(BFG));
@@ -334,7 +334,7 @@ TEST(HBCBytecodeGen, ArrayBufferTest) {
   BS.serialize(*BM, SHA1{});
 
   auto bytecode = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-                      llvm::make_unique<StringBuffer>(OS.str()))
+                      llvh::make_unique<StringBuffer>(OS.str()))
                       .first;
 
   ASSERT_EQ(bytecode->getArrayBuffer().size(), 10u);
@@ -361,7 +361,7 @@ TEST(SpillRegisterTest, SpillsParameters) {
 
   HVMRegisterAllocator RA(F);
   PostOrderAnalysis PO(F);
-  llvm::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
+  llvh::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
   RA.allocate(order);
 
   PassManager PM;
@@ -373,7 +373,7 @@ TEST(SpillRegisterTest, SpillsParameters) {
 
   // Ensure that spilling takes care of that
   for (auto &inst : *BB) {
-    auto *load = llvm::dyn_cast<HBCLoadConstInst>(&inst);
+    auto *load = llvh::dyn_cast<HBCLoadConstInst>(&inst);
     if (!load)
       continue;
     EXPECT_LT(RA.getRegister(load).getIndex(), 256u);
@@ -399,7 +399,7 @@ TEST(SpillRegisterTest, NoStoreUnspilling) {
   // Allocate that store to a high register
   HVMRegisterAllocator RA(F);
   PostOrderAnalysis PO(F);
-  llvm::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
+  llvh::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
   RA.allocate(order);
   RA.allocateParameterCount(256);
   RA.updateRegister(store, Register(256));
@@ -459,11 +459,11 @@ TEST(HBCBytecodeGen, SerializeBytecodeOptions) {
 
   auto bytecodeDefault =
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-          llvm::make_unique<VectorBuffer>(bytecodeVecDefault))
+          llvh::make_unique<VectorBuffer>(bytecodeVecDefault))
           .first;
   auto bytecodeStaticBuiltins =
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-          llvm::make_unique<VectorBuffer>(bytecodeVecStaticBuiltins))
+          llvh::make_unique<VectorBuffer>(bytecodeVecStaticBuiltins))
           .first;
   ASSERT_TRUE(bytecodeDefault);
   ASSERT_TRUE(bytecodeStaticBuiltins);

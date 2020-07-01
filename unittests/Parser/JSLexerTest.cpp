@@ -9,17 +9,17 @@
 
 #include "DiagContext.h"
 
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/APInt.h"
-#include "llvm/ADT/SmallString.h"
+#include "llvh/ADT/APFloat.h"
+#include "llvh/ADT/APInt.h"
+#include "llvh/ADT/SmallString.h"
 
 #include "gtest/gtest.h"
 
 using namespace hermes;
 using namespace hermes::parser;
 
-using llvm::APFloat;
-using llvm::APInt;
+using llvh::APFloat;
+using llvh::APInt;
 
 namespace {
 
@@ -155,7 +155,7 @@ TEST(JSLexerTest, NumberTest) {
 #define _FLT(num)                                                        \
   {                                                                      \
     APFloat fval(APFloat::IEEEdouble(), #num);                           \
-    llvm::SmallString<16> actual, expected;                              \
+    llvh::SmallString<16> actual, expected;                              \
                                                                          \
     const Token *tok = lex.advance();                                    \
     ASSERT_EQ(TokenKind::numeric_literal, tok->getKind());               \
@@ -172,7 +172,7 @@ TEST(JSLexerTest, NumberTest) {
   {                                                                      \
     APInt ival;                                                          \
     APFloat fval(APFloat::IEEEdouble());                                 \
-    llvm::SmallString<16> actual, expected;                              \
+    llvh::SmallString<16> actual, expected;                              \
                                                                          \
     const Token *tok = lex.advance();                                    \
     ASSERT_EQ(TokenKind::numeric_literal, tok->getKind());               \
@@ -282,7 +282,7 @@ TEST(JSLexerTest, BigIntegerTest) {
   // Test more then 52 bits of integer
   {
     ASSERT_EQ(TokenKind::numeric_literal, lex.advance()->getKind());
-    llvm::SmallString<32> actual;
+    llvh::SmallString<32> actual;
     APFloat(lex.getCurToken()->getNumericLiteral()).toString(actual, 20);
     // We need dtoa.c for the correct string representation
     // EXPECT_STREQ("18446744073709552000", actual.c_str());
@@ -291,7 +291,7 @@ TEST(JSLexerTest, BigIntegerTest) {
 
   {
     ASSERT_EQ(TokenKind::numeric_literal, lex.advance()->getKind());
-    llvm::SmallString<32> actual;
+    llvh::SmallString<32> actual;
     APFloat(lex.getCurToken()->getNumericLiteral()).toString(actual, 30, 30);
     EXPECT_STREQ("100000000000000000000", actual.c_str());
   }
@@ -885,7 +885,7 @@ TEST(JSLexerTest, LookaheadNewlineTest) {
   {
     // Revert since there is no expected token
     // Expect None returned since there is a newline before the next token
-    auto optNext = lex.lookahead1(llvm::None);
+    auto optNext = lex.lookahead1(llvh::None);
     ASSERT_FALSE(optNext.hasValue());
   }
 
@@ -908,7 +908,7 @@ TEST(JSLexerTest, LookaheadTest) {
 
   {
     // Without the expected token, always revert.
-    auto optNext = lex.lookahead1(llvm::None);
+    auto optNext = lex.lookahead1(llvh::None);
     ASSERT_TRUE(optNext.hasValue());
     EXPECT_EQ(TokenKind::l_paren, optNext.getValue());
   }

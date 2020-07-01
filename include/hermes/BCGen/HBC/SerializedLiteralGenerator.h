@@ -9,7 +9,7 @@
 #define HERMES_BCGEN_HBC_SERIALIZEDLITERALGENERATOR_H
 
 #include "hermes/IR/IR.h"
-#include "llvm/ADT/ArrayRef.h"
+#include "llvh/ADT/ArrayRef.h"
 
 #include <cstdint>
 
@@ -81,7 +81,7 @@ class SerializedLiteralGenerator {
   /// \p isKeyBuffer: whether this is generating object literal key buffer or
   /// not.
   uint32_t serializeBuffer(
-      llvm::ArrayRef<Literal *> literals,
+      llvh::ArrayRef<Literal *> literals,
       std::vector<unsigned char> &buff,
       bool isKeyBuffer);
 };

@@ -85,13 +85,13 @@
 #include "hermes/VM/GCDecl.h"
 #include "hermes/VM/SymbolID.h"
 
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <cassert>
 #include <cmath>
 #include <cstdint>
 
-namespace llvm {
+namespace llvh {
 class raw_ostream;
 }
 
@@ -193,7 +193,7 @@ class HermesValue {
   }
 
   /// Dump the contents to stderr.
-  void dump(llvm::raw_ostream &stream = llvm::errs()) const;
+  void dump(llvh::raw_ostream &stream = llvh::errs()) const;
 
   inline TagKind getTag() const {
     return (TagKind)(raw_ >> kNumDataBits);
@@ -579,7 +579,7 @@ class GCHermesValue : public HermesValue {
       PinnedHermesValue *result);
 };
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HermesValue hv);
+llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, HermesValue hv);
 
 /// SafeNumericEncoder can encode any numeric type into a numeric HermesValue,
 /// as well as safely encoding any possible untrusted floating-point values.

@@ -30,10 +30,10 @@ quit(void *, vm::Runtime *runtime, vm::NativeArgs) {
   return runtime->raiseQuitError();
 }
 
-static void printStats(vm::Runtime *runtime, llvm::raw_ostream &os) {
+static void printStats(vm::Runtime *runtime, llvh::raw_ostream &os) {
   std::string stats;
   {
-    llvm::raw_string_ostream tmp{stats};
+    llvh::raw_string_ostream tmp{stats};
     runtime->printHeapStats(tmp);
   }
   vm::instrumentation::PerfEvents::endAndInsertStats(stats);
@@ -50,14 +50,14 @@ createHeapSnapshot(void *, vm::Runtime *runtime, vm::NativeArgs args) {
     }
     auto str = Handle<StringPrimitive>::vmcast(args.getArgHandle(0));
     auto jsFileName = StringPrimitive::createStringView(runtime, str);
-    llvm::SmallVector<char16_t, 16> buf;
+    llvh::SmallVector<char16_t, 16> buf;
     convertUTF16ToUTF8WithReplacements(fileName, jsFileName.getUTF16Ref(buf));
   }
 
   if (fileName.empty()) {
     // "-" is recognized as stdout.
     fileName = "-";
-  } else if (!llvm::StringRef{fileName}.endswith(".heapsnapshot")) {
+  } else if (!llvh::StringRef{fileName}.endswith(".heapsnapshot")) {
     return runtime->raiseTypeError("Filename must end in .heapsnapshot");
   }
   if (auto err = runtime->getHeap().createSnapshotToFile(fileName)) {
@@ -65,8 +65,8 @@ createHeapSnapshot(void *, vm::Runtime *runtime, vm::NativeArgs args) {
     // so this will have to do.
     return runtime->raiseTypeError(
         TwineChar16("Could not write out to the file located at \"") +
-        llvm::StringRef(fileName) +
-        "\". System error: " + llvm::StringRef(err.message()));
+        llvh::StringRef(fileName) +
+        "\". System error: " + llvh::StringRef(err.message()));
   }
   return HermesValue::encodeUndefinedValue();
 }
@@ -88,14 +88,14 @@ loadSegment(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
   uint32_t segment = segmentRes->getNumberAs<uint32_t>();
 
   auto fileBufRes =
-      llvm::MemoryBuffer::getFile(Twine(*baseFilename) + "." + Twine(segment));
+      llvh::MemoryBuffer::getFile(Twine(*baseFilename) + "." + Twine(segment));
   if (!fileBufRes) {
     return runtime->raiseTypeError(
         TwineChar16("Failed to open segment: ") + segment);
   }
 
   auto ret = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-      llvm::make_unique<OwnedMemoryBuffer>(std::move(*fileBufRes)));
+      llvh::make_unique<OwnedMemoryBuffer>(std::move(*fileBufRes)));
   if (!ret.first) {
     return runtime->raiseTypeError("Error deserializing bytecode");
   }
@@ -124,16 +124,16 @@ serializeVM(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
     return runtime->raiseTypeError("Invalid/Missing function argument");
   }
 
-  std::unique_ptr<llvm::raw_ostream> serializeStream = nullptr;
+  std::unique_ptr<llvh::raw_ostream> serializeStream = nullptr;
   if (ctx) {
     const auto *fileName = reinterpret_cast<std::string *>(ctx);
     std::error_code EC;
     serializeStream =
-        llvm::make_unique<llvm::raw_fd_ostream>(llvm::StringRef(*fileName), EC);
+        llvh::make_unique<llvh::raw_fd_ostream>(llvh::StringRef(*fileName), EC);
     if (EC) {
       return runtime->raiseTypeError(
           TwineChar16("Could not write to file located at ") +
-          llvm::StringRef(*fileName));
+          llvh::StringRef(*fileName));
     }
   } else {
     // See if filename is provided as an argument.
@@ -146,7 +146,7 @@ serializeVM(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
     // In the rare events where we have a UTF16 string, convert it to ASCII.
     auto str = Handle<StringPrimitive>::vmcast(args.getArgHandle(1));
     auto jsFileName = StringPrimitive::createStringView(runtime, str);
-    llvm::SmallVector<char16_t, 16> buf;
+    llvh::SmallVector<char16_t, 16> buf;
     convertUTF16ToUTF8WithReplacements(fileName, jsFileName.getUTF16Ref(buf));
 
     if (fileName.empty()) {
@@ -154,11 +154,11 @@ serializeVM(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
     }
     std::error_code EC;
     serializeStream =
-        llvm::make_unique<llvm::raw_fd_ostream>(llvm::StringRef(fileName), EC);
+        llvh::make_unique<llvh::raw_fd_ostream>(llvh::StringRef(fileName), EC);
     if (EC) {
       return runtime->raiseTypeError(
           TwineChar16("Could not write to file located at ") +
-          llvm::StringRef(fileName));
+          llvh::StringRef(fileName));
     }
   }
 
@@ -230,7 +230,7 @@ void installConsoleBindings(
       runtime
           ->ignoreAllocationFailure(
               runtime->getIdentifierTable().getSymbolHandle(
-                  runtime, llvm::createASCIIRef("serializeVM")))
+                  runtime, llvh::createASCIIRef("serializeVM")))
           .get(),
       serializeVM,
       reinterpret_cast<void *>(const_cast<std::string *>(serializePath)),
@@ -242,7 +242,7 @@ void installConsoleBindings(
       runtime
           ->ignoreAllocationFailure(
               runtime->getIdentifierTable().getSymbolHandle(
-                  runtime, llvm::createASCIIRef("loadSegment")))
+                  runtime, llvh::createASCIIRef("loadSegment")))
           .get(),
       loadSegment,
       reinterpret_cast<void *>(const_cast<std::string *>(filename)),
@@ -266,7 +266,7 @@ auto maybeCatchException(const F &f) -> decltype(f()) {
     return f();
   } catch (const std::exception &ex) {
     // Report thrown exception and exit the process with failure code.
-    llvm::errs() << ex.what();
+    llvh::errs() << ex.what();
     exit(1);
   }
 #else // HERMESVM_EXCEPTION_ON_OOM
@@ -286,28 +286,28 @@ bool executeHBCBytecodeImpl(
 
 #ifdef HERMESVM_SERIALIZE
   // Handle Serialization/Deserialization options
-  std::shared_ptr<llvm::raw_ostream> serializeFile = nullptr;
-  std::shared_ptr<llvm::MemoryBuffer> deserializeFile = nullptr;
+  std::shared_ptr<llvh::raw_ostream> serializeFile = nullptr;
+  std::shared_ptr<llvh::MemoryBuffer> deserializeFile = nullptr;
   if (!options.SerializeAfterInitFile.empty()) {
     if (!options.DeserializeFile.empty()) {
-      llvm::errs()
+      llvh::errs()
           << "Cannot serialize and deserialize in the same execution\n";
       return false;
     }
     std::error_code EC;
-    serializeFile = std::make_shared<llvm::raw_fd_ostream>(
-        llvm::StringRef(options.SerializeAfterInitFile), EC);
+    serializeFile = std::make_shared<llvh::raw_fd_ostream>(
+        llvh::StringRef(options.SerializeAfterInitFile), EC);
     if (EC) {
-      llvm::errs() << "Failed to read Serialize file: "
+      llvh::errs() << "Failed to read Serialize file: "
                    << options.SerializeAfterInitFile << "\n";
       return false;
     }
   }
 
   if (options.DeserializeFile != "") {
-    auto inputFileOrErr = llvm::MemoryBuffer::getFile(options.DeserializeFile);
+    auto inputFileOrErr = llvh::MemoryBuffer::getFile(options.DeserializeFile);
     if (!inputFileOrErr) {
-      llvm::errs() << "Failed to read Deserialize file: "
+      llvh::errs() << "Failed to read Deserialize file: "
                    << options.DeserializeFile << '\n';
       return false;
     }
@@ -343,7 +343,7 @@ bool executeHBCBytecodeImpl(
   }
 
   if (shouldRecordGCStats) {
-    statSampler = llvm::make_unique<vm::StatSamplingThread>(
+    statSampler = llvh::make_unique<vm::StatSamplingThread>(
         std::chrono::milliseconds(100));
   }
 
@@ -369,7 +369,7 @@ bool executeHBCBytecodeImpl(
                 facebook::hermes::debugger::kInvalidLocation,
                 std::move(bytecode),
                 flags) == vm::ExecutionStatus::EXCEPTION)) {
-      llvm::errs() << "Failed to initialize main RuntimeModule\n";
+      llvh::errs() << "Failed to initialize main RuntimeModule\n";
       return false;
     }
 
@@ -380,7 +380,7 @@ bool executeHBCBytecodeImpl(
     vm::SamplingProfiler::getInstance()->enable();
   }
 
-  llvm::StringRef sourceURL{};
+  llvh::StringRef sourceURL{};
   vm::CallResult<vm::HermesValue> status = runtime->runBytecode(
       std::move(bytecode),
       flags,
@@ -389,7 +389,7 @@ bool executeHBCBytecodeImpl(
 
   if (options.runtimeConfig.getEnableSampleProfiling()) {
     auto profiler = vm::SamplingProfiler::getInstance();
-    profiler->dumpChromeTrace(llvm::errs());
+    profiler->dumpChromeTrace(llvh::errs());
     profiler->disable();
   }
 
@@ -397,9 +397,9 @@ bool executeHBCBytecodeImpl(
 
   if (threwException) {
     // Make sure stdout catches up to stderr.
-    llvm::outs().flush();
+    llvh::outs().flush();
     runtime->printException(
-        llvm::errs(), runtime->makeHandle(runtime->getThrownValue()));
+        llvh::errs(), runtime->makeHandle(runtime->getThrownValue()));
   }
 
   if (options.timeLimit > 0) {
@@ -407,7 +407,7 @@ bool executeHBCBytecodeImpl(
   }
 
 #ifdef HERMESVM_PROFILER_OPCODE
-  runtime->dumpOpcodeStats(llvm::outs());
+  runtime->dumpOpcodeStats(llvh::outs());
 #endif
 
 #ifdef HERMESVM_PROFILER_JSFUNCTION
@@ -423,22 +423,22 @@ bool executeHBCBytecodeImpl(
 #endif
 
 #ifdef HERMESVM_PROFILER_NATIVECALL
-  runtime->dumpNativeCallStats(llvm::outs());
+  runtime->dumpNativeCallStats(llvh::outs());
 #endif
 
   if (shouldRecordGCStats) {
-    llvm::errs() << "Process stats:\n";
-    statSampler->stop().printJSON(llvm::errs());
+    llvh::errs() << "Process stats:\n";
+    statSampler->stop().printJSON(llvh::errs());
 
     if (options.forceGCBeforeStats) {
       runtime->collect();
     }
-    printStats(runtime.get(), llvm::errs());
+    printStats(runtime.get(), llvh::errs());
   }
 
 #ifdef HERMESVM_PROFILER_BB
   if (options.basicBlockProfiling) {
-    runtime->getBasicBlockExecutionInfo().dump(llvm::errs());
+    runtime->getBasicBlockExecutionInfo().dump(llvh::errs());
   }
 #endif
 

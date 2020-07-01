@@ -13,7 +13,7 @@ diff --git a/utils/FileCheck/FileCheck.cpp b/utils/FileCheck/FileCheck.cpp
 +  // a problem because InitLLVM can't be instantiated more than once in the same
 +  // process. The most important functionality InitLLVM provides is shutting
 +  // down LLVM in its destructor. We can use "llvm_shutdown_obj" to do the same.
-+  llvm::llvm_shutdown_obj Y;
++  llvh::llvm_shutdown_obj Y;
 +#endif
    cl::ParseCommandLineOptions(argc, argv);
 

@@ -13,14 +13,14 @@
 #include "hermes/Optimizer/Scalar/Utils.h"
 #include "hermes/Support/Statistic.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/Debug.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/Support/Debug.h"
 
 #include <algorithm>
 
 using namespace hermes;
-using llvm::dbgs;
-using llvm::isa;
+using llvh::dbgs;
+using llvh::isa;
 
 STATISTIC(NumCM, "Number of instructions moved");
 STATISTIC(NumHoistedCond, "Number of instructions hoisted from conditionals");
@@ -36,7 +36,7 @@ static Instruction *findIdenticalInWindow(
     Instruction *copy,
     unsigned searchBudget) {
   // Don't hoist terminators.
-  if (llvm::isa<TerminatorInst>(I) || llvm::isa<TerminatorInst>(copy))
+  if (llvh::isa<TerminatorInst>(I) || llvh::isa<TerminatorInst>(copy))
     return nullptr;
 
   while (searchBudget) {
@@ -51,7 +51,7 @@ static Instruction *findIdenticalInWindow(
     searchBudget--;
     copy = copy->getNextNode();
 
-    if (llvm::isa<TerminatorInst>(copy))
+    if (llvh::isa<TerminatorInst>(copy))
       return nullptr;
   }
 
@@ -79,7 +79,7 @@ static bool hoistCBI(CondBranchInst *CBI) {
     Instruction *I1 = &*BB1->begin();
 
     // Don't hoist terminators.
-    if (llvm::isa<TerminatorInst>(I0) || llvm::isa<TerminatorInst>(I1))
+    if (llvh::isa<TerminatorInst>(I0) || llvh::isa<TerminatorInst>(I1))
       return changed;
 
     Instruction *LHS;
@@ -121,7 +121,7 @@ static bool canHoistFromLoop(
     return false;
   }
   for (int i = 0, e = inst->getNumOperands(); i < e; ++i) {
-    auto *operand = llvm::dyn_cast<Instruction>(inst->getOperand(i));
+    auto *operand = llvh::dyn_cast<Instruction>(inst->getOperand(i));
     if (operand && !dominance.properlyDominates(operand, branchInst)) {
       return false;
     }
@@ -173,17 +173,17 @@ static bool sinkInstructionsInBlock(
   for (auto it = BB->rbegin(), e = BB->rend(); it != e; ++it) {
     Instruction *inst = &*it;
 
-    if (llvm::isa<PhiInst>(inst))
+    if (llvh::isa<PhiInst>(inst))
       continue;
 
     for (int i = 0, numOperands = inst->getNumOperands(); i < numOperands;
          i++) {
-      auto *I = llvm::dyn_cast<Instruction>(inst->getOperand(i));
+      auto *I = llvh::dyn_cast<Instruction>(inst->getOperand(i));
       // Don't touch non-instructions, special instructions, instructions that
       // have multiple uses or instructions with side effects.
       if (!I || !I->hasOneUser() || I->hasSideEffect() ||
-          llvm::isa<PhiInst>(I) || llvm::isa<TerminatorInst>(I) ||
-          llvm::isa<CreateArgumentsInst>(I))
+          llvh::isa<PhiInst>(I) || llvh::isa<TerminatorInst>(I) ||
+          llvh::isa<CreateArgumentsInst>(I))
         continue;
 
       // If block is in a loop, only sink instructions from the same loop.
@@ -208,7 +208,7 @@ bool CodeMotion::runOnFunction(Function *F) {
   for (auto &BB : PO) {
     auto *term = BB->getTerminator();
 
-    if (auto *CBI = llvm::dyn_cast<CondBranchInst>(term)) {
+    if (auto *CBI = llvh::dyn_cast<CondBranchInst>(term)) {
       changed |= hoistCBI(CBI);
     }
   }

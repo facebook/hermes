@@ -16,7 +16,7 @@
 namespace hermes {
 namespace parser {
 
-llvm::Optional<ESTree::ProgramNode *> parseFlowParser(
+llvh::Optional<ESTree::ProgramNode *> parseFlowParser(
     Context &context,
     uint32_t bufferId);
 

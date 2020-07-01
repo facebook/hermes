@@ -7,7 +7,7 @@
 
 #include "hermes.h"
 
-#include "llvm/Support/Compiler.h"
+#include "llvh/Support/Compiler.h"
 
 #ifndef LLVM_PTR_SIZE
 #error "LLVM_PTR_SIZE needs to be defined"
@@ -47,11 +47,11 @@
 #include "hermes/VM/SymbolID.h"
 #include "hermes/VM/TimeLimitMonitor.h"
 
-#include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/SHA1.h"
-#include "llvm/Support/raw_os_ostream.h"
+#include "llvh/Support/ConvertUTF.h"
+#include "llvh/Support/ErrorHandling.h"
+#include "llvh/Support/FileSystem.h"
+#include "llvh/Support/SHA1.h"
+#include "llvh/Support/raw_os_ostream.h"
 
 #include <algorithm>
 #include <atomic>
@@ -149,10 +149,10 @@ static constexpr unsigned kMaxNumRegisters =
     (512 * 1024 - sizeof(::hermes::vm::Runtime) - 4096 * 8) /
     sizeof(::hermes::vm::PinnedHermesValue);
 
-void raw_ostream_append(llvm::raw_ostream &os) {}
+void raw_ostream_append(llvh::raw_ostream &os) {}
 
 template <typename Arg0, typename... Args>
-void raw_ostream_append(llvm::raw_ostream &os, Arg0 &&arg0, Args &&... args) {
+void raw_ostream_append(llvh::raw_ostream &os, Arg0 &&arg0, Args &&... args) {
   os << arg0;
   raw_ostream_append(os, args...);
 }
@@ -160,7 +160,7 @@ void raw_ostream_append(llvm::raw_ostream &os, Arg0 &&arg0, Args &&... args) {
 template <typename... Args>
 jsi::JSError makeJSError(jsi::Runtime &rt, Args &&... args) {
   std::string s;
-  llvm::raw_string_ostream os(s);
+  llvh::raw_string_ostream os(s);
   raw_ostream_append(os, std::forward<Args>(args)...);
   return jsi::JSError(rt, os.str());
 }
@@ -175,7 +175,7 @@ class InstallHermesFatalErrorHandler {
     // singleton to guarantee it - the static "dummy" is guaranteed by the
     // compiler to be initialized no more than once.
     static int dummy = ([]() {
-      llvm::install_fatal_error_handler(detail::hermesFatalErrorHandler);
+      llvh::install_fatal_error_handler(detail::hermesFatalErrorHandler);
       return 0;
     })();
     (void)dummy;
@@ -227,7 +227,7 @@ class StackRuntime {
     pthread_setname_np("hermes-runtime-memorythread");
 #endif
 
-    llvm::Optional<::hermes::vm::StackRuntime> rt;
+    llvh::Optional<::hermes::vm::StackRuntime> rt;
 
     stack->runtime_ = &rt;
     stack->startup_.set_value();
@@ -248,7 +248,7 @@ class StackRuntime {
   // * Initialize provider_ and runtime_ from that thread
   std::promise<void> startup_;
   std::promise<void> shutdown_;
-  llvm::Optional<::hermes::vm::StackRuntime> *runtime_{nullptr};
+  llvh::Optional<::hermes::vm::StackRuntime> *runtime_{nullptr};
   std::thread thread_;
 };
 #endif
@@ -413,7 +413,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   // overriden from jsi::Instrumentation
   std::string getRecordedGCStats() override {
     std::string s;
-    llvm::raw_string_ostream os(s);
+    llvh::raw_string_ostream os(s);
     runtime_.printHeapStats(os);
     return os.str();
   }
@@ -502,7 +502,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   // Overridden from jsi::Instrumentation
   void createSnapshotToFile(const std::string &path) override {
     std::error_code code;
-    llvm::raw_fd_ostream os(path, code, llvm::sys::fs::FileAccess::FA_Write);
+    llvh::raw_fd_ostream os(path, code, llvh::sys::fs::FileAccess::FA_Write);
     if (code) {
       throw std::system_error(code);
     }
@@ -511,7 +511,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
   // Overridden from jsi::Instrumentation
   void createSnapshotToStream(std::ostream &os) override {
-    llvm::raw_os_ostream ros(os);
+    llvh::raw_os_ostream ros(os);
     runtime_.getHeap().createSnapshot(ros);
   }
 
@@ -526,7 +526,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
       const std::string &fileName) const override {
 #ifdef HERMESVM_PROFILER_BB
     std::error_code ec;
-    llvm::raw_fd_ostream os(fileName.c_str(), ec, llvm::sys::fs::F_Text);
+    llvh::raw_fd_ostream os(fileName.c_str(), ec, llvh::sys::fs::F_Text);
     if (ec) {
       throw std::system_error(ec);
     }
@@ -898,7 +898,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
       const vm::instrumentation::RAIITimer timer{
           "Host Function", stats, stats.hostFunction};
 
-      llvm::SmallVector<jsi::Value, 8> apiArgs;
+      llvh::SmallVector<jsi::Value, 8> apiArgs;
       for (vm::HermesValue hv : hvArgs) {
         apiArgs.push_back(rt.valueFromHermesValue(hv));
       }
@@ -1024,7 +1024,7 @@ inline const HermesRuntimeImpl *impl(const HermesRuntime *rt) {
 
 bool HermesRuntime::isHermesBytecode(const uint8_t *data, size_t len) {
   return hbc::BCProviderFromBuffer::isBytecodeStream(
-      llvm::ArrayRef<uint8_t>(data, len));
+      llvh::ArrayRef<uint8_t>(data, len));
 }
 
 uint32_t HermesRuntime::getBytecodeVersion() {
@@ -1032,7 +1032,7 @@ uint32_t HermesRuntime::getBytecodeVersion() {
 }
 
 void HermesRuntime::prefetchHermesBytecode(const uint8_t *data, size_t len) {
-  hbc::BCProviderFromBuffer::prefetch(llvm::ArrayRef<uint8_t>(data, len));
+  hbc::BCProviderFromBuffer::prefetch(llvh::ArrayRef<uint8_t>(data, len));
 }
 
 bool HermesRuntime::hermesBytecodeSanityCheck(
@@ -1040,14 +1040,14 @@ bool HermesRuntime::hermesBytecodeSanityCheck(
     size_t len,
     std::string *errorMessage) {
   return hbc::BCProviderFromBuffer::bytecodeStreamSanityCheck(
-      llvm::ArrayRef<uint8_t>(data, len), errorMessage);
+      llvh::ArrayRef<uint8_t>(data, len), errorMessage);
 }
 
 std::pair<const uint8_t *, size_t> HermesRuntime::getBytecodeEpilogue(
     const uint8_t *data,
     size_t len) {
   auto epi = hbc::BCProviderFromBuffer::getEpilogueFromBytecode(
-      llvm::ArrayRef<uint8_t>(data, len));
+      llvh::ArrayRef<uint8_t>(data, len));
   return std::make_pair(epi.data(), epi.size());
 }
 
@@ -1061,14 +1061,14 @@ void HermesRuntime::disableSamplingProfiler() {
 
 void HermesRuntime::dumpSampledTraceToFile(const std::string &fileName) {
   std::error_code ec;
-  llvm::raw_fd_ostream os(fileName.c_str(), ec, llvm::sys::fs::F_Text);
+  llvh::raw_fd_ostream os(fileName.c_str(), ec, llvh::sys::fs::F_Text);
   if (ec) {
     throw std::system_error(ec);
   }
   ::hermes::vm::SamplingProfiler::getInstance()->dumpChromeTrace(os);
 }
 
-void HermesRuntime::dumpSampledTraceToStream(llvm::raw_ostream &stream) {
+void HermesRuntime::dumpSampledTraceToStream(llvh::raw_ostream &stream) {
   ::hermes::vm::SamplingProfiler::getInstance()->dumpChromeTrace(stream);
 }
 
@@ -1171,7 +1171,7 @@ const ::hermes::vm::GCExecTrace &HermesRuntime::getGCExecTrace() const {
 
 std::string HermesRuntime::getIOTrackingInfoJSON() {
   std::string buf;
-  llvm::raw_string_ostream strstrm(buf);
+  llvh::raw_string_ostream strstrm(buf);
   static_cast<HermesRuntimeImpl *>(this)->runtime_.getIOTrackingInfoJSON(
       strstrm);
   strstrm.flush();
@@ -1179,14 +1179,14 @@ std::string HermesRuntime::getIOTrackingInfoJSON() {
 }
 
 #ifdef HERMESVM_PROFILER_BB
-void HermesRuntime::dumpBasicBlockProfileTrace(llvm::raw_ostream &os) const {
+void HermesRuntime::dumpBasicBlockProfileTrace(llvh::raw_ostream &os) const {
   static_cast<const HermesRuntimeImpl *>(this)
       ->runtime_.dumpBasicBlockProfileTrace(os);
 }
 #endif
 
 #ifdef HERMESVM_PROFILER_OPCODE
-void HermesRuntime::dumpOpcodeStats(llvm::raw_ostream &os) const {
+void HermesRuntime::dumpOpcodeStats(llvh::raw_ostream &os) const {
   static_cast<const HermesRuntimeImpl *>(this)->runtime_.dumpOpcodeStats(os);
 }
 #endif
@@ -1306,10 +1306,10 @@ HermesRuntimeImpl::prepareJavaScript(
   }
   if (!bcErr.first) {
     std::string storage;
-    llvm::raw_string_ostream os(storage);
+    llvh::raw_string_ostream os(storage);
     os << " Buffer size " << bufSize << " starts with: ";
     for (size_t i = 0; i < sizeof(bufPrefix) && i < bufSize; ++i)
-      os << llvm::format_hex_no_prefix(bufPrefix[i], 2);
+      os << llvh::format_hex_no_prefix(bufPrefix[i], 2);
     throw jsi::JSINativeException(
         "Compiling JS failed: " + std::move(bcErr.second) + os.str());
   }
@@ -1406,7 +1406,7 @@ jsi::PropNameID HermesRuntimeImpl::createPropNameIDFromAscii(
     auto cr = vm::stringToSymbolID(
         &runtime_,
         vm::StringPrimitive::createNoThrow(
-            &runtime_, llvm::StringRef(str, length)));
+            &runtime_, llvh::StringRef(str, length)));
     checkStatus(cr.getStatus());
     return add<jsi::PropNameID>(cr->getHermesValue());
   });
@@ -1516,20 +1516,20 @@ static void
 convertUtf8ToUtf16(const uint8_t *utf8, size_t length, std::u16string &out) {
   // length is the number of input bytes
   out.resize(length);
-  const llvm::UTF8 *sourceStart = (const llvm::UTF8 *)utf8;
-  const llvm::UTF8 *sourceEnd = sourceStart + length;
-  llvm::UTF16 *targetStart = (llvm::UTF16 *)&out[0];
-  llvm::UTF16 *targetEnd = targetStart + out.size();
-  llvm::ConversionResult cRes;
+  const llvh::UTF8 *sourceStart = (const llvh::UTF8 *)utf8;
+  const llvh::UTF8 *sourceEnd = sourceStart + length;
+  llvh::UTF16 *targetStart = (llvh::UTF16 *)&out[0];
+  llvh::UTF16 *targetEnd = targetStart + out.size();
+  llvh::ConversionResult cRes;
   cRes = ConvertUTF8toUTF16(
       &sourceStart,
       sourceEnd,
       &targetStart,
       targetEnd,
-      llvm::lenientConversion);
+      llvh::lenientConversion);
   (void)cRes;
   assert(
-      cRes != llvm::ConversionResult::targetExhausted &&
+      cRes != llvh::ConversionResult::targetExhausted &&
       "not enough space allocated for UTF16 conversion");
   out.resize((char16_t *)targetStart - &out[0]);
 }
@@ -1539,7 +1539,7 @@ jsi::Value HermesRuntimeImpl::createValueFromJsonUtf8(
     size_t length) {
   return maybeRethrow([&] {
     vm::GCScope gcScope(&runtime_);
-    llvm::ArrayRef<uint8_t> ref(json, length);
+    llvh::ArrayRef<uint8_t> ref(json, length);
     vm::CallResult<vm::HermesValue> res =
         runtimeJSONParseRef(&runtime_, ::hermes::UTF16Stream(ref));
     checkStatus(res.getStatus());
@@ -1692,7 +1692,7 @@ jsi::Array HermesRuntimeImpl::getPropertyNames(const jsi::Object &obj) {
         ret.setValueAtIndex(*this, i, valueFromHermesValue(name));
       } else if (name.isNumber()) {
         std::string s;
-        llvm::raw_string_ostream os(s);
+        llvh::raw_string_ostream os(s);
         os << static_cast<size_t>(name.getNumber());
         ret.setValueAtIndex(
             *this, i, jsi::String::createFromAscii(*this, os.str()));
@@ -2033,7 +2033,7 @@ vm::HermesValue HermesRuntimeImpl::stringHVFromAscii(
     const char *str,
     size_t length) {
   auto strRes = vm::StringPrimitive::createEfficient(
-      &runtime_, llvm::makeArrayRef(str, length));
+      &runtime_, llvh::makeArrayRef(str, length));
   checkStatus(strRes.getStatus());
   return *strRes;
 }

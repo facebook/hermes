@@ -16,25 +16,25 @@
 #include "hermes/IR/Instrs.h"
 #include "hermes/Support/Statistic.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/Support/Debug.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/DenseSet.h"
+#include "llvh/Support/Debug.h"
 
 STATISTIC(NumParamOpt, "Number of parameters optimized");
 STATISTIC(NumArgsOpt, "Number of arguments optimized");
 
 using namespace hermes;
-using llvm::dbgs;
-using llvm::isa;
+using llvh::dbgs;
+using llvh::isa;
 
 /// \returns True if the function access arguments not through the formal
 /// parameters.
 static bool capturesArgumentVector(Function *F) {
   for (auto &BB : *F) {
     for (auto &I : BB) {
-      if (llvm::isa<CreateArgumentsInst>(I))
+      if (llvh::isa<CreateArgumentsInst>(I))
         return true;
-      if (auto *CB = llvm::dyn_cast<CallBuiltinInst>(&I)) {
+      if (auto *CB = llvh::dyn_cast<CallBuiltinInst>(&I)) {
         if (CB->getBuiltinIndex() == BuiltinMethod::HermesBuiltin_copyRestArgs)
           return true;
       }
@@ -54,7 +54,7 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
 
   IRBuilder builder(F);
 
-  llvm::SmallVector<CallInst *, 8> callsites;
+  llvh::SmallVector<CallInst *, 8> callsites;
   if (!getCallSites(F, callsites))
     return false;
 
@@ -66,11 +66,11 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
   // Null is used to mark non-literal or diverged parameters. False means
   // that the value has not been set before.
   Literal *undef = builder.getLiteralUndefined();
-  llvm::SmallVector<std::pair<Literal *, bool>, 8> args(
+  llvh::SmallVector<std::pair<Literal *, bool>, 8> args(
       numFormalParam, {undef, false});
 
   // A list of unused arguments passed by the caller.
-  llvm::SmallVector<std::pair<CallInst *, unsigned>, 8> unusedParams;
+  llvh::SmallVector<std::pair<CallInst *, unsigned>, 8> unusedParams;
 
   // For each call site:
   for (CallInst *caller : callsites) {
@@ -82,7 +82,7 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
       if (i < caller->getNumArguments() - 1)
         arg = caller->getArgument(i + 1);
 
-      auto *L = llvm::dyn_cast<Literal>(arg);
+      auto *L = llvh::dyn_cast<Literal>(arg);
       if (L) {
         LLVM_DEBUG(
             dbgs() << "-- Found literal for argument " << i << ": "
@@ -139,12 +139,12 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
     paramIdx++;
   }
 
-  llvm::DenseSet<Function *> toRedo;
+  llvh::DenseSet<Function *> toRedo;
 
   // Replace all unused arguments with undef.
   for (auto &arg : unusedParams) {
     auto *prevArg = arg.first->getOperand(arg.second + 1);
-    if (!llvm::isa<Literal>(prevArg))
+    if (!llvh::isa<Literal>(prevArg))
       toRedo.insert(arg.first->getParent()->getParent());
 
     arg.first->setOperand(undef, arg.second + 1);

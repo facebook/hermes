@@ -13,7 +13,7 @@
 #include "hermes/VM/HeapAlign.h"
 #include "hermes/VM/MarkBitArrayNC.h"
 #include "hermes/VM/StorageProvider.h"
-#include "llvm/Support/MathExtras.h"
+#include "llvh/Support/MathExtras.h"
 
 #include <ios>
 #include <utility>
@@ -41,7 +41,7 @@ MarkBitArrayNCTest::MarkBitArrayNCTest()
       mba(new (as.lowLim()) MarkBitArrayNC()) {
   auto first = as.lowLim();
   auto last = reinterpret_cast<char *>(
-      llvm::alignDown(reinterpret_cast<uintptr_t>(as.hiLim() - 1), HeapAlign));
+      llvh::alignDown(reinterpret_cast<uintptr_t>(as.hiLim() - 1), HeapAlign));
 
   addrs = {first,
            first + HeapAlign,

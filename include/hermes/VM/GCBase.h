@@ -33,9 +33,9 @@
 #include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/VTable.h"
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/Support/ErrorHandling.h"
 
 #include <cassert>
 #include <chrono>
@@ -217,7 +217,7 @@ class GCBase {
     /// Prints any statistics maintained in the Runtime about GC to \p
     /// os.  At present, this means the breakdown of markRoots time by
     /// "phase" within markRoots.
-    virtual void printRuntimeGCStats(llvm::raw_ostream &os) const = 0;
+    virtual void printRuntimeGCStats(llvh::raw_ostream &os) const = 0;
 
     /// \returns the approximate usage of memory external to the GC such as
     /// malloc by the roots of the object graph.
@@ -377,7 +377,7 @@ class GCBase {
    private:
     /// Associates allocations at their current location with their stack trace
     /// data.
-    llvm::DenseMap<const void *, StackTracesTreeNode *> stackMap_;
+    llvh::DenseMap<const void *, StackTracesTreeNode *> stackMap_;
     /// We need access to the GCBase to collect the current stack when nodes are
     /// allocated.
     const GCBase *gc_;
@@ -511,15 +511,15 @@ class GCBase {
     /// snapshot is requested, or the first time the memory profiler is turned
     /// on, or if JSI tracing is in effect.
     /// NOTE: The same map is used for both JS heap and native heap IDs.
-    llvm::DenseMap<const void *, HeapSnapshot::NodeID> objectIDMap_;
+    llvh::DenseMap<const void *, HeapSnapshot::NodeID> objectIDMap_;
 
     /// Map from symbol indices to unique IDs.  Populated according to
     /// the same rules as the objectIDMap_.
-    llvm::DenseMap<uint32_t, HeapSnapshot::NodeID> symbolIDMap_;
+    llvh::DenseMap<uint32_t, HeapSnapshot::NodeID> symbolIDMap_;
 
     /// Map of numeric values to IDs. Used to give numbers in the heap a unique
     /// node.
-    llvm::DenseMap<double, HeapSnapshot::NodeID, DoubleComparator> numberIDMap_;
+    llvh::DenseMap<double, HeapSnapshot::NodeID, DoubleComparator> numberIDMap_;
   };
 
 #ifndef NDEBUG
@@ -602,7 +602,7 @@ class GCBase {
   virtual void recordNumAllocatedObjects() {}
 
   /// Print any and all collected statistics to the give output stream, \p os.
-  void printAllCollectedStats(llvm::raw_ostream &os);
+  void printAllCollectedStats(llvh::raw_ostream &os);
 
   /// Total number of collections of any kind.
   unsigned getNumGCs() const {
@@ -650,7 +650,7 @@ class GCBase {
 #endif
 
   /// Dump detailed heap contents to the given output stream, \p os.
-  virtual void dump(llvm::raw_ostream &os, bool verbose = false);
+  virtual void dump(llvh::raw_ostream &os, bool verbose = false);
 
   /// Do any logging of info about the heap that is useful, then dies with a
   /// fatal out-of-memory error.
@@ -662,8 +662,8 @@ class GCBase {
 
   /// Creates a snapshot of the heap, which includes information about what
   /// objects exist, their sizes, and what they point to.
-  virtual void createSnapshot(llvm::raw_ostream &os) = 0;
-  void createSnapshot(GC *gc, llvm::raw_ostream &os);
+  virtual void createSnapshot(llvh::raw_ostream &os) = 0;
+  void createSnapshot(GC *gc, llvh::raw_ostream &os);
 
 #ifdef HERMESVM_SERIALIZE
   /// Serialize WeakRefs.
@@ -802,7 +802,7 @@ class GCBase {
       GC *gc,
       JSWeakMap *weakMap,
       Acceptor &acceptor,
-      llvm::DenseMap<JSWeakMap *, std::list<detail::WeakRefKey *>>
+      llvh::DenseMap<JSWeakMap *, std::list<detail::WeakRefKey *>>
           *unreachableKeys,
       ObjIsMarkedFunc objIsMarked,
       MarkFromValFunc markFromVal);
@@ -889,7 +889,7 @@ class GCBase {
   inline HeapSnapshot::NodeID getNativeID(const void *mem);
   /// \return The ID for the given value. If the value cannot be represented
   ///   with an ID, returns None.
-  llvm::Optional<HeapSnapshot::NodeID> getSnapshotID(HermesValue val);
+  llvh::Optional<HeapSnapshot::NodeID> getSnapshotID(HermesValue val);
 
 #ifndef NDEBUG
   /// \return The next debug allocation ID for embedding directly into a GCCell.
@@ -933,7 +933,7 @@ class GCBase {
    public:
     GCCycle(
         GCBase *gc,
-        OptValue<GCCallbacks *> gcCallbacksOpt = llvm::None,
+        OptValue<GCCallbacks *> gcCallbacksOpt = llvh::None,
         std::string extraInfo = "");
     ~GCCycle();
 
@@ -976,7 +976,7 @@ class GCBase {
   /// \p os The output stream to print the stats to.
   /// \p trailingComma true if the end of the JSON string should have a trailing
   /// comma (anticipating more objects added after it).
-  virtual void printStats(llvm::raw_ostream &os, bool trailingComma);
+  virtual void printStats(llvh::raw_ostream &os, bool trailingComma);
 
   /// Record statistics from a single GC, which took \p wallTime seconds wall
   /// time and \p cpuTime seconds CPU time to run the gc and left the heap size
@@ -1191,8 +1191,8 @@ class JSOutOfMemoryError : public std::runtime_error {
 struct DurationFormatObj {
   double secs;
 };
-llvm::raw_ostream &operator<<(
-    llvm::raw_ostream &os,
+llvh::raw_ostream &operator<<(
+    llvh::raw_ostream &os,
     const DurationFormatObj &dfo);
 inline DurationFormatObj formatSecs(double secs) {
   return {secs};
@@ -1203,7 +1203,7 @@ inline DurationFormatObj formatSecs(double secs) {
 struct SizeFormatObj {
   gcheapsize_t bytes;
 };
-llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const SizeFormatObj &sfo);
+llvh::raw_ostream &operator<<(llvh::raw_ostream &os, const SizeFormatObj &sfo);
 inline SizeFormatObj formatSize(gcheapsize_t size) {
   return {size};
 }

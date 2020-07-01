@@ -13,7 +13,7 @@
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Runtime.h"
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvh/ADT/DenseMap.h"
 
 #ifndef __APPLE__
 // Prevent "The deprecated ucontext routines require _XOPEN_SOURCE to be
@@ -43,7 +43,7 @@ class SamplingProfiler {
   using ThreadId = uint64_t;
   using TimeStampType = std::chrono::steady_clock::time_point;
   using ThreadNamesMap =
-      llvm::DenseMap<SamplingProfiler::ThreadId, std::string>;
+      llvh::DenseMap<SamplingProfiler::ThreadId, std::string>;
 
   /// Captured JSFunction stack frame information for symbolication.
   /// TODO: consolidate the stack frame struct with other function/extern
@@ -127,7 +127,7 @@ class SamplingProfiler {
 
   /// Stores a list of active <thread, runtime> pair.
   /// Protected by profilerLock_.
-  llvm::DenseMap<Runtime *, pthread_t> activeRuntimeThreads_;
+  llvh::DenseMap<Runtime *, pthread_t> activeRuntimeThreads_;
 
   /// Per-thread runtime instance for loom/local profiling.
   /// Limitations: No recursive runtimes in one thread.
@@ -272,10 +272,10 @@ class SamplingProfiler {
 
   /// Dump sampled stack to \p OS.
   /// NOTE: this is for manual testing purpose.
-  void dumpSampledStack(llvm::raw_ostream &OS);
+  void dumpSampledStack(llvh::raw_ostream &OS);
 
   /// Dump sampled stack to \p OS in chrome trace format.
-  void dumpChromeTrace(llvm::raw_ostream &OS);
+  void dumpChromeTrace(llvh::raw_ostream &OS);
 
   /// Enable and start profiling.
   bool enable();

@@ -11,7 +11,7 @@
 #include "hermes/BCGen/HBC/SerializedLiteralParserBase.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/VM/HermesValue.h"
-#include "llvm/ADT/ArrayRef.h"
+#include "llvh/ADT/ArrayRef.h"
 
 namespace hermes {
 namespace vm {

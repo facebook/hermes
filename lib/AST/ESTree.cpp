@@ -7,10 +7,10 @@
 
 #include "hermes/AST/ESTree.h"
 
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/raw_ostream.h"
 
-using llvm::dyn_cast;
-using llvm::isa;
+using llvh::dyn_cast;
+using llvh::isa;
 
 namespace hermes {
 namespace ESTree {

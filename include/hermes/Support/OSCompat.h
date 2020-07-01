@@ -8,9 +8,9 @@
 #ifndef HERMES_SUPPORT_OSCOMPAT_H
 #define HERMES_SUPPORT_OSCOMPAT_H
 
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/ErrorOr.h"
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/Support/Compiler.h"
+#include "llvh/Support/ErrorOr.h"
 
 #ifdef _WINDOWS
 #include <io.h>
@@ -59,13 +59,13 @@ void unset_test_vm_allocate_limit();
 // a multiple of page_size()), and returns a pointer to the start.
 // Returns nullptr if the allocation is unsuccessful.  The pages
 // will be zero-filled on demand.
-llvm::ErrorOr<void *> vm_allocate(size_t sz);
+llvh::ErrorOr<void *> vm_allocate(size_t sz);
 
 // Allocates a virtual memory region of the given size and alignment (both
 // must be multiples of page_size()), and returns a pointer to the start.
 // Returns nullptr if the allocation is unsuccessful.  The pages
 // will be zero-filled on demand.
-llvm::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment);
+llvh::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment);
 
 /// Free a virtual memory region allocated by \p vm_allocate.
 /// \p p must point to the base address that was returned by \p vm_allocate.
@@ -118,7 +118,7 @@ bool vm_madvise(void *p, size_t sz, MAdvice advice);
 int pages_in_ram(
     const void *p,
     size_t sz,
-    llvm::SmallVectorImpl<int> *runs = nullptr);
+    llvh::SmallVectorImpl<int> *runs = nullptr);
 
 /// Resident set size (RSS), in bytes: the amount of RAM used by the process.
 /// It excludes virtual memory that has been paged out or was never loaded.

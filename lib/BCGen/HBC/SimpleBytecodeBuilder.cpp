@@ -7,7 +7,7 @@
 
 #include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
 
-#include "llvm/Support/MathExtras.h"
+#include "llvh/Support/MathExtras.h"
 
 using namespace hermes;
 using namespace hbc;
@@ -47,7 +47,7 @@ std::unique_ptr<Buffer> SimpleBytecodeBuilder::generateBytecodeBuffer() {
     currentSize += functions_[i].opcodes.size();
   }
   // DebugInfo comes after the bytescodes, padded by 4 bytes.
-  uint32_t debugOffset = llvm::alignTo(currentSize, 4);
+  uint32_t debugOffset = llvh::alignTo(currentSize, 4);
   uint32_t totalSize = debugOffset + sizeof(DebugInfoHeader);
   BytecodeOptions options;
   BytecodeFileHeader header{MAGIC,
@@ -98,7 +98,7 @@ std::unique_ptr<Buffer> SimpleBytecodeBuilder::generateBytecodeBuffer() {
         functions_[i].opcodes.end());
   }
   // Pad by 4 bytes.
-  bytecode.resize(llvm::alignTo(bytecode.size(), 4));
+  bytecode.resize(llvh::alignTo(bytecode.size(), 4));
   // Write an empty debug info header.
   DebugInfoHeader debugInfoHeader{0, 0, 0, 0, 0};
   appendStructToBytecode(bytecode, debugInfoHeader);

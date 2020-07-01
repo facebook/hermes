@@ -8,8 +8,8 @@
 #include "hermes/Parser/JSONParser.h"
 #include "hermes/ADT/HalfPairIterator.h"
 
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/Support/Casting.h"
 
 namespace hermes {
 namespace parser {
@@ -39,7 +39,7 @@ const char *JSONKindToString(JSONKind kind) {
 }
 
 void JSONValue::emitInto(JSONEmitter &emitter) const {
-  using llvm::cast;
+  using llvh::cast;
 
   switch (this->getKind()) {
     case JSONKind::Object:
@@ -79,7 +79,7 @@ JSONFactory::JSONFactory(Allocator &allocator, StringTable *strTab)
       strTab_(strTab ? *strTab : *ownStrTab_) {}
 
 JSONString *JSONFactory::getString(UniqueString *lit) {
-  llvm::FoldingSetNodeID id;
+  llvh::FoldingSetNodeID id;
   JSONString::Profile(id, lit);
 
   void *insertPos;
@@ -96,7 +96,7 @@ JSONString *JSONFactory::getString(StringRef str) {
 }
 
 JSONNumber *JSONFactory::getNumber(double value) {
-  llvm::FoldingSetNodeID id;
+  llvh::FoldingSetNodeID id;
   JSONNumber::Profile(id, value);
 
   void *insertPos;
@@ -145,7 +145,7 @@ JSONObject *JSONFactory::newObject(Prop *from, Prop *to, bool propsAreSorted) {
   }
 
   // Look for an existing hidden class.
-  llvm::SmallVector<JSONString *, 10> keys(
+  llvh::SmallVector<JSONString *, 10> keys(
       makePairFirstIterator(from), makePairFirstIterator(to));
 
   auto *klazz = getHiddenClass({keys.size(), keys.begin()});
@@ -178,7 +178,7 @@ bool JSONFactory::LessHiddenClassKey::operator()(
 
 JSONParser::JSONParser(
     JSONFactory &factory,
-    std::unique_ptr<llvm::MemoryBuffer> input,
+    std::unique_ptr<llvh::MemoryBuffer> input,
     SourceErrorManager &sm,
     bool convertSurrogates)
     : factory_(factory),
@@ -191,17 +191,17 @@ JSONParser::JSONParser(
           convertSurrogates),
       sm_(sm) {}
 
-llvm::Optional<JSONValue *> JSONParser::parse() {
+llvh::Optional<JSONValue *> JSONParser::parse() {
   lexer_.advance();
   auto res = parseValue();
   if (!res)
-    return llvm::None;
+    return llvh::None;
   if (lexer_.getSourceMgr().getErrorCount() != 0)
-    return llvm::None;
+    return llvh::None;
   return res.getValue();
 }
 
-llvm::Optional<JSONValue *> JSONParser::parseValue() {
+llvh::Optional<JSONValue *> JSONParser::parseValue() {
   bool needsNegation = false;
   switch (lexer_.getCurToken()->getKind()) {
     case TokenKind::string_literal: {
@@ -214,7 +214,7 @@ llvm::Optional<JSONValue *> JSONParser::parseValue() {
       lexer_.advance();
       if (lexer_.getCurToken()->getKind() != TokenKind::numeric_literal) {
         error("No numeric literal following minus (-) token in value");
-        return llvm::None;
+        return llvh::None;
       }
     case TokenKind::numeric_literal: {
       auto numericValue = lexer_.getCurToken()->getNumericLiteral();
@@ -243,18 +243,18 @@ llvm::Optional<JSONValue *> JSONParser::parseValue() {
 
     default:
       error("JSON object or array expected");
-      return llvm::None;
+      return llvh::None;
   }
 }
 
-llvm::Optional<JSONValue *> JSONParser::parseArray() {
-  llvm::SmallVector<JSONValue *, 10> storage;
+llvh::Optional<JSONValue *> JSONParser::parseArray() {
+  llvh::SmallVector<JSONValue *, 10> storage;
 
   if (lexer_.getCurToken()->getKind() != TokenKind::r_square) {
     for (;;) {
       auto val = parseValue();
       if (!val)
-        return llvm::None;
+        return llvh::None;
       storage.push_back(val.getValue());
 
       if (lexer_.getCurToken()->getKind() == TokenKind::comma) {
@@ -267,7 +267,7 @@ llvm::Optional<JSONValue *> JSONParser::parseArray() {
     }
     if (lexer_.getCurToken()->getKind() != TokenKind::r_square) {
       error("expected ']'");
-      return llvm::None;
+      return llvh::None;
     }
   }
 
@@ -276,28 +276,28 @@ llvm::Optional<JSONValue *> JSONParser::parseArray() {
   return factory_.newArray(storage.size(), storage.begin(), storage.end());
 }
 
-llvm::Optional<JSONValue *> JSONParser::parseObject() {
-  llvm::SmallVector<JSONFactory::Prop, 10> pairs;
+llvh::Optional<JSONValue *> JSONParser::parseObject() {
+  llvh::SmallVector<JSONFactory::Prop, 10> pairs;
 
   if (lexer_.getCurToken()->getKind() != TokenKind::r_brace) {
     for (;;) {
       if (lexer_.getCurToken()->getKind() != TokenKind::string_literal) {
         error("expected a string");
-        return llvm::None;
+        return llvh::None;
       }
       JSONString *key =
           factory_.getString(lexer_.getCurToken()->getStringLiteral());
 
       if (lexer_.advance()->getKind() != TokenKind::colon) {
         error("expected ':'");
-        return llvm::None;
+        return llvh::None;
       }
       lexer_.advance();
 
       if (auto val = parseValue()) {
         pairs.push_back({key, val.getValue()});
       } else
-        return llvm::None;
+        return llvh::None;
 
       if (lexer_.getCurToken()->getKind() == TokenKind::comma) {
         lexer_.advance();
@@ -309,7 +309,7 @@ llvm::Optional<JSONValue *> JSONParser::parseObject() {
     }
     if (lexer_.getCurToken()->getKind() != TokenKind::r_brace) {
       error("expected '}'");
-      return llvm::None;
+      return llvh::None;
     }
   }
 
@@ -317,7 +317,7 @@ llvm::Optional<JSONValue *> JSONParser::parseObject() {
 
   if (auto *duplicate = factory_.sortProps(pairs.begin(), pairs.end())) {
     error("key '" + duplicate->str() + "' is already present");
-    return llvm::None;
+    return llvh::None;
   }
 
   return factory_.newObject(pairs.begin(), pairs.end(), true);

@@ -11,7 +11,7 @@ namespace cl {
 
 bool MemorySizeParser::parse(
     cl::Option &O,
-    llvm::StringRef ArgName,
+    llvh::StringRef ArgName,
     const std::string &Arg,
     MemorySize &Val) {
   const char *ArgStart = Arg.c_str();

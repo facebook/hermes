@@ -8,7 +8,7 @@
 #ifndef HERMES_BCGEN_HBC_STREAMVECTOR_H
 #define HERMES_BCGEN_HBC_STREAMVECTOR_H
 
-#include "llvm/ADT/ArrayRef.h"
+#include "llvh/ADT/ArrayRef.h"
 
 namespace hermes {
 namespace hbc {
@@ -31,7 +31,7 @@ class StreamVector {
 
   /// The reference to the stream. Either pointing to bytesVec_
   /// or the input memory buffer directly.
-  llvm::ArrayRef<T> ref_{vec_};
+  llvh::ArrayRef<T> ref_{vec_};
 
  public:
   /// Force the compiler to generate a move constructor.
@@ -39,10 +39,10 @@ class StreamVector {
 
   /// Used during deserialization.
   explicit StreamVector(const T *data, size_t size)
-      : StreamVector(llvm::ArrayRef<T>(data, size)) {}
+      : StreamVector(llvh::ArrayRef<T>(data, size)) {}
 
   /// Used during deserialization.
-  explicit StreamVector(llvm::ArrayRef<T> ref) : ref_(ref) {}
+  explicit StreamVector(llvh::ArrayRef<T> ref) : ref_(ref) {}
 
   /// Used during serialization.
   explicit StreamVector(std::vector<T> &&data)
@@ -52,7 +52,7 @@ class StreamVector {
 
   StreamVector &operator=(StreamVector &&that) = default;
 
-  const llvm::ArrayRef<T> &getData() const {
+  const llvh::ArrayRef<T> &getData() const {
     return ref_;
   }
 

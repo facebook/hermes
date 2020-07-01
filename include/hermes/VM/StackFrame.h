@@ -16,7 +16,7 @@
 #include <iterator>
 #include <type_traits>
 
-namespace llvm {
+namespace llvh {
 class raw_ostream;
 }
 
@@ -279,12 +279,12 @@ using ConstStackFramePtr = StackFramePtrT<true>;
 ///   frame can be calculated. if nullptr, size is not calculated.
 void dumpStackFrame(
     ConstStackFramePtr frame,
-    llvm::raw_ostream &OS,
+    llvh::raw_ostream &OS,
     const PinnedHermesValue *next = nullptr);
 
-/// Dump information about this frame to llvm::errs().
+/// Dump information about this frame to llvh::errs().
 void dumpStackFrame(ConstStackFramePtr frame);
-/// Dump information about this frame to llvm::errs(). This overload is only
+/// Dump information about this frame to llvh::errs(). This overload is only
 /// needed for calls directly from teh debugger.
 void dumpStackFrame(StackFramePtr frame);
 

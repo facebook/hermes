@@ -14,10 +14,10 @@
 #include "hermes/Support/PerfSection.h"
 #include "hermes/Utils/Dumper.h"
 
-#include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/PostOrderIterator.h"
+#include "llvh/ADT/SmallPtrSet.h"
+#include "llvh/Support/Debug.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <queue>
 
@@ -25,13 +25,13 @@
 
 using namespace hermes;
 
-using llvm::cast;
-using llvm::dbgs;
-using llvm::dyn_cast;
-using llvm::dyn_cast_or_null;
-using llvm::isa;
+using llvh::cast;
+using llvh::dbgs;
+using llvh::dyn_cast;
+using llvh::dyn_cast_or_null;
+using llvh::isa;
 
-raw_ostream &llvm::operator<<(raw_ostream &OS, const Register &reg) {
+raw_ostream &llvh::operator<<(raw_ostream &OS, const Register &reg) {
   if (!reg.isValid()) {
     OS << "Null";
   } else {
@@ -41,7 +41,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const Register &reg) {
   return OS;
 }
 
-raw_ostream &llvm::operator<<(raw_ostream &OS, const Segment &segment) {
+raw_ostream &llvh::operator<<(raw_ostream &OS, const Segment &segment) {
   if (segment.empty()) {
     OS << "[empty]";
     return OS;
@@ -51,7 +51,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const Segment &segment) {
   return OS;
 }
 
-raw_ostream &llvm::operator<<(raw_ostream &OS, const Interval &interval) {
+raw_ostream &llvh::operator<<(raw_ostream &OS, const Interval &interval) {
   Interval t = interval.compress();
   for (auto &s : t.segments_) {
     OS << s;
@@ -78,11 +78,11 @@ void RegisterFile::killRegister(Register reg) {
 void RegisterFile::verify() {}
 
 void RegisterFile::dump() {
-  llvm::outs() << "\n";
+  llvh::outs() << "\n";
   for (unsigned i = 0; i < registers.size(); i++) {
-    llvm::outs() << (int)!registers.test(i);
+    llvh::outs() << (int)!registers.test(i);
   }
-  llvm::outs() << "\n";
+  llvh::outs() << "\n";
 }
 
 Register RegisterFile::allocateRegister() {
@@ -143,9 +143,9 @@ static bool phiReadWrite(PhiInst *P) {
   BasicBlock *parent = P->getParent();
 
   for (auto *U : P->getUsers()) {
-    terminatorUse |= llvm::isa<TerminatorInst>(U);
+    terminatorUse |= llvh::isa<TerminatorInst>(U);
     localPhiUse |=
-        (llvm::isa<PhiInst>(U) && U->getParent() == parent && P != U);
+        (llvh::isa<PhiInst>(U) && U->getParent() == parent && P != U);
     externalUse |= U->getParent() != parent;
   }
 
@@ -163,13 +163,13 @@ static bool phiReadWrite(PhiInst *P) {
 }
 
 void RegisterAllocator::lowerPhis(ArrayRef<BasicBlock *> order) {
-  llvm::SmallVector<PhiInst *, 8> PHIs;
+  llvh::SmallVector<PhiInst *, 8> PHIs;
   IRBuilder builder(F);
 
   // Collect all PHIs.
   for (auto &BB : order) {
     for (auto &Inst : *BB) {
-      if (auto *P = llvm::dyn_cast<PhiInst>(&Inst)) {
+      if (auto *P = llvh::dyn_cast<PhiInst>(&Inst)) {
         PHIs.push_back(P);
       }
     }
@@ -193,7 +193,7 @@ void RegisterAllocator::lowerPhis(ArrayRef<BasicBlock *> order) {
     // Update all external users:
     for (auto *U : users) {
       // Local uses of the PHI are allowed.
-      if (!llvm::isa<PhiInst>(U) && !llvm::isa<TerminatorInst>(U) &&
+      if (!llvh::isa<PhiInst>(U) && !llvh::isa<TerminatorInst>(U) &&
           U->getParent() == P->getParent())
         continue;
 
@@ -229,7 +229,7 @@ void RegisterAllocator::lowerPhis(ArrayRef<BasicBlock *> order) {
 
     for (int i = 0, e = term->getNumOperands(); i < e; i++) {
       auto *op = term->getOperand(i);
-      if (llvm::isa<Literal>(op))
+      if (llvh::isa<Literal>(op))
         continue;
       auto it = copied.find(op);
       if (it != copied.end()) {
@@ -254,8 +254,8 @@ void RegisterAllocator::calculateLocalLiveness(
 
     // PHI nodes require special handling because they are flow sensitive. Mask
     // out flow that does not go in the direction of the phi edge.
-    if (auto *P = llvm::dyn_cast<PhiInst>(I)) {
-      llvm::SmallVector<unsigned, 4> incomingValueNum;
+    if (auto *P = llvh::dyn_cast<PhiInst>(I)) {
+      llvh::SmallVector<unsigned, 4> incomingValueNum;
 
       // Collect all incoming value numbers.
       for (int i = 0, e = P->getNumEntries(); i < e; i++) {
@@ -263,7 +263,7 @@ void RegisterAllocator::calculateLocalLiveness(
         // Skip unreachable predecessors.
         if (!blockLiveness_.count(E.second))
           continue;
-        if (auto *II = llvm::dyn_cast<Instruction>(E.first)) {
+        if (auto *II = llvh::dyn_cast<Instruction>(E.first)) {
           incomingValueNum.push_back(getInstructionNumber(II));
         }
       }
@@ -285,7 +285,7 @@ void RegisterAllocator::calculateLocalLiveness(
         // Skip unreachable predecessors.
         if (!blockLiveness_.count(E.second))
           continue;
-        if (auto *II = llvm::dyn_cast<Instruction>(E.first)) {
+        if (auto *II = llvh::dyn_cast<Instruction>(E.first)) {
           unsigned idxII = getInstructionNumber(II);
           blockLiveness_[E.second].maskIn_.reset(idxII);
         }
@@ -294,7 +294,7 @@ void RegisterAllocator::calculateLocalLiveness(
 
     // For each one of the operands that are also instructions:
     for (unsigned opIdx = 0, e = I->getNumOperands(); opIdx != e; ++opIdx) {
-      auto *opInst = llvm::dyn_cast<Instruction>(I->getOperand(opIdx));
+      auto *opInst = llvh::dyn_cast<Instruction>(I->getOperand(opIdx));
       if (!opInst)
         continue;
       // Skip instructions from unreachable blocks.
@@ -312,7 +312,7 @@ void RegisterAllocator::calculateLocalLiveness(
 static void dumpVector(
     const BitVector &bv,
     StringRef text,
-    llvm::raw_ostream &ost = llvm::errs()) {
+    llvh::raw_ostream &ost = llvh::errs()) {
   ost << text;
   for (unsigned i = 0; i < bv.size(); i++) {
     ost << bv.test(i);
@@ -366,13 +366,13 @@ void RegisterAllocator::calculateGlobalLiveness(ArrayRef<BasicBlock *> order) {
   for (auto &it : blockLiveness_) {
     BasicBlock *BB = it.first;
     BlockLifetimeInfo &livenessInfo = it.second;
-    LLVM_DEBUG(llvm::dbgs() << "Block " << BB << "\n");
-    LLVM_DEBUG(dumpVector(livenessInfo.gen_, "gen     ", llvm::dbgs()));
-    LLVM_DEBUG(dumpVector(livenessInfo.kill_, "kill    ", llvm::dbgs()));
-    LLVM_DEBUG(dumpVector(livenessInfo.liveIn_, "liveIn  ", llvm::dbgs()));
-    LLVM_DEBUG(dumpVector(livenessInfo.liveOut_, "liveOut ", llvm::dbgs()));
-    LLVM_DEBUG(dumpVector(livenessInfo.maskIn_, "maskIn  ", llvm::dbgs()));
-    LLVM_DEBUG(llvm::dbgs() << "------\n");
+    LLVM_DEBUG(llvh::dbgs() << "Block " << BB << "\n");
+    LLVM_DEBUG(dumpVector(livenessInfo.gen_, "gen     ", llvh::dbgs()));
+    LLVM_DEBUG(dumpVector(livenessInfo.kill_, "kill    ", llvh::dbgs()));
+    LLVM_DEBUG(dumpVector(livenessInfo.liveIn_, "liveIn  ", llvh::dbgs()));
+    LLVM_DEBUG(dumpVector(livenessInfo.liveOut_, "liveOut ", llvh::dbgs()));
+    LLVM_DEBUG(dumpVector(livenessInfo.maskIn_, "maskIn  ", llvh::dbgs()));
+    LLVM_DEBUG(llvh::dbgs() << "------\n");
   }
 #endif
 
@@ -404,7 +404,7 @@ void RegisterAllocator::coalesce(
   // correctness because it bounds the MOV and the PHIs into a single interval.
   for (BasicBlock *BB : order) {
     for (Instruction &I : *BB) {
-      auto *P = llvm::dyn_cast<PhiInst>(&I);
+      auto *P = llvh::dyn_cast<PhiInst>(&I);
       if (!P)
         continue;
 
@@ -438,12 +438,12 @@ void RegisterAllocator::coalesce(
     DenseMap<Value *, MovInst *> lastCopy;
 
     for (Instruction &I : *BB) {
-      auto *mov = llvm::dyn_cast<MovInst>(&I);
+      auto *mov = llvh::dyn_cast<MovInst>(&I);
       if (!mov)
         continue;
 
       Value *op = mov->getSingleOperand();
-      if (llvm::isa<Literal>(op))
+      if (llvh::isa<Literal>(op))
         continue;
 
       // If we've made a copy inside this basic block then use the copy.
@@ -460,11 +460,11 @@ void RegisterAllocator::coalesce(
   // long interval. This phase is optional.
   for (BasicBlock *BB : order) {
     for (Instruction &I : *BB) {
-      auto *mov = llvm::dyn_cast<MovInst>(&I);
+      auto *mov = llvh::dyn_cast<MovInst>(&I);
       if (!mov)
         continue;
 
-      auto *op = llvm::dyn_cast<Instruction>(mov->getSingleOperand());
+      auto *op = llvh::dyn_cast<Instruction>(mov->getSingleOperand());
       if (!op)
         continue;
 
@@ -535,7 +535,7 @@ void RegisterAllocator::allocateFastPass(ArrayRef<BasicBlock *> order) {
   for (auto *bb : order) {
     for (auto &inst : *bb) {
       handleInstruction(&inst);
-      if (auto *phi = llvm::dyn_cast<PhiInst>(&inst)) {
+      if (auto *phi = llvh::dyn_cast<PhiInst>(&inst)) {
         auto reg = file.allocateRegister();
         updateRegister(phi, reg);
         for (int i = 0, e = phi->getNumEntries(); i < e; i++) {
@@ -545,7 +545,7 @@ void RegisterAllocator::allocateFastPass(ArrayRef<BasicBlock *> order) {
     }
   }
 
-  llvm::SmallVector<Register, 16> blockLocals;
+  llvh::SmallVector<Register, 16> blockLocals;
 
   // Then just allocate the rest sequentially, while optimizing the case
   // where an inst is only ever used in its own block.
@@ -652,7 +652,7 @@ void RegisterAllocator::allocate(ArrayRef<BasicBlock *> order) {
     return bInterval.end() > aInterval.end();
   };
 
-  using InstList = llvm::SmallVector<unsigned, 32>;
+  using InstList = llvh::SmallVector<unsigned, 32>;
 
   std::priority_queue<unsigned, InstList, decltype(endsFirst)> intervals(
       endsFirst);
@@ -782,13 +782,13 @@ void RegisterAllocator::calculateLiveIntervals(ArrayRef<BasicBlock *> order) {
 
       // Extend the lifetime of the operands.
       for (int i = 0, e = it.getNumOperands(); i < e; i++) {
-        auto instOp = llvm::dyn_cast<Instruction>(it.getOperand(i));
+        auto instOp = llvh::dyn_cast<Instruction>(it.getOperand(i));
         if (!instOp)
           continue;
 
         if (!hasInstructionNumber(instOp)) {
           assert(
-              llvm::isa<PhiInst>(&it) &&
+              llvh::isa<PhiInst>(&it) &&
               "Only PhiInst should reference values from dead code");
           continue;
         }
@@ -807,7 +807,7 @@ void RegisterAllocator::calculateLiveIntervals(ArrayRef<BasicBlock *> order) {
       }
 
       // Extend the lifetime of the PHI to include the source basic blocks.
-      if (auto *P = llvm::dyn_cast<PhiInst>(&it)) {
+      if (auto *P = llvh::dyn_cast<PhiInst>(&it)) {
         for (int i = 0, e = P->getNumEntries(); i < e; i++) {
           auto E = P->getEntry(i);
           // PhiInsts may reference instructions from dead code blocks
@@ -821,7 +821,7 @@ void RegisterAllocator::calculateLiveIntervals(ArrayRef<BasicBlock *> order) {
           instructionInterval_[instOffset].add(S);
 
           // Extend the lifetime of the predecessor to the end of the BB.
-          if (auto *instOp = llvm::dyn_cast<Instruction>(E.first)) {
+          if (auto *instOp = llvh::dyn_cast<Instruction>(E.first)) {
             auto predIdx = getInstructionNumber(instOp);
             auto S2 = Segment(predIdx + 1, termIdx);
             instructionInterval_[predIdx].add(S2);
@@ -838,7 +838,7 @@ struct LivenessRegAllocIRPrinter : IRPrinter {
 
   explicit LivenessRegAllocIRPrinter(
       RegisterAllocator &RA,
-      llvm::raw_ostream &ost,
+      llvh::raw_ostream &ost,
       bool escape = false)
       : IRPrinter(RA.getContext(), ost, escape), allocator(RA) {}
 
@@ -870,7 +870,7 @@ struct LivenessRegAllocIRPrinter : IRPrinter {
 };
 
 void RegisterAllocator::dump() {
-  LivenessRegAllocIRPrinter Printer(*this, llvm::outs());
+  LivenessRegAllocIRPrinter Printer(*this, llvh::outs());
   Printer.visitFunction(*F);
 }
 
@@ -923,10 +923,10 @@ unsigned RegisterAllocator::getInstructionNumber(Instruction *I) {
   return newIdx;
 }
 
-unsigned llvm::DenseMapInfo<Register>::getHashValue(Register Val) {
+unsigned llvh::DenseMapInfo<Register>::getHashValue(Register Val) {
   return Val.getIndex();
 }
 
-bool llvm::DenseMapInfo<Register>::isEqual(Register LHS, Register RHS) {
+bool llvh::DenseMapInfo<Register>::isEqual(Register LHS, Register RHS) {
   return LHS.getIndex() == RHS.getIndex();
 }

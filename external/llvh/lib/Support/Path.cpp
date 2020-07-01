@@ -11,15 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Path.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/Config/llvm-config.h"
-#include "llvm/Support/Endian.h"
-#include "llvm/Support/Errc.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Process.h"
-#include "llvm/Support/Signals.h"
+#include "llvh/Support/Path.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/Config/llvm-config.h"
+#include "llvh/Support/Endian.h"
+#include "llvh/Support/Errc.h"
+#include "llvh/Support/ErrorHandling.h"
+#include "llvh/Support/FileSystem.h"
+#include "llvh/Support/Process.h"
+#include "llvh/Support/Signals.h"
 #include <cctype>
 #include <cstring>
 
@@ -29,13 +29,13 @@
 #include <io.h>
 #endif
 
-using namespace llvm;
-using namespace llvm::support::endian;
+using namespace llvh;
+using namespace llvh::support::endian;
 
 namespace {
-  using llvm::StringRef;
-  using llvm::sys::path::is_separator;
-  using llvm::sys::path::Style;
+  using llvh::StringRef;
+  using llvh::sys::path::is_separator;
+  using llvh::sys::path::Style;
 
   inline Style real_style(Style style) {
 #ifdef _WIN32
@@ -243,7 +243,7 @@ createUniqueEntity(const Twine &Model, int &ResultFD,
   return EC;
 }
 
-namespace llvm {
+namespace llvh {
 namespace sys  {
 namespace path {
 
@@ -717,7 +717,7 @@ static SmallString<256> remove_dots(StringRef path, bool remove_dot_dot,
   // Skip the root path, then look for traversal in the components.
   StringRef rel = path::relative_path(path, style);
   for (StringRef C :
-       llvm::make_range(path::begin(rel, style), path::end(rel))) {
+       llvh::make_range(path::begin(rel, style), path::end(rel))) {
     if (C == ".")
       continue;
     // Leading ".." will remain in the path unless it's at the root.
@@ -790,7 +790,7 @@ std::error_code createUniqueFile(const Twine &Model,
 
 static std::error_code
 createTemporaryFile(const Twine &Model, int &ResultFD,
-                    llvm::SmallVectorImpl<char> &ResultPath, FSEntity Type) {
+                    llvh::SmallVectorImpl<char> &ResultPath, FSEntity Type) {
   SmallString<128> Storage;
   StringRef P = Model.toNullTerminatedStringRef(Storage);
   assert(P.find_first_of(separators(Style::native)) == StringRef::npos &&
@@ -802,7 +802,7 @@ createTemporaryFile(const Twine &Model, int &ResultFD,
 
 static std::error_code
 createTemporaryFile(const Twine &Prefix, StringRef Suffix, int &ResultFD,
-                    llvm::SmallVectorImpl<char> &ResultPath, FSEntity Type) {
+                    llvh::SmallVectorImpl<char> &ResultPath, FSEntity Type) {
   const char *Middle = Suffix.empty() ? "-%%%%%%" : "-%%%%%%.";
   return createTemporaryFile(Prefix + Middle + Suffix, ResultFD, ResultPath,
                              Type);
@@ -1104,7 +1104,7 @@ ErrorOr<perms> getPermissions(const Twine &Path) {
 
 } // end namespace fs
 } // end namespace sys
-} // end namespace llvm
+} // end namespace llvh
 
 // Include the truly platform-specific parts.
 #if defined(LLVM_ON_UNIX)
@@ -1114,7 +1114,7 @@ ErrorOr<perms> getPermissions(const Twine &Path) {
 #include "Windows/Path.inc"
 #endif
 
-namespace llvm {
+namespace llvh {
 namespace sys {
 namespace fs {
 TempFile::TempFile(StringRef Name, int FD) : TmpName(Name), FD(FD) {}
@@ -1241,4 +1241,4 @@ Expected<TempFile> TempFile::create(const Twine &Model, unsigned Mode) {
 }
 
 } // end namsspace sys
-} // end namespace llvm
+} // end namespace llvh

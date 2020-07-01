@@ -11,20 +11,20 @@
 #include "hermes/Support/OptValue.h"
 #include "hermes/Support/Warning.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SmallBitVector.h"
-#include "llvm/Support/SourceMgr.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/DenseSet.h"
+#include "llvh/ADT/SmallBitVector.h"
+#include "llvh/Support/SourceMgr.h"
 
 #include <cassert>
 #include <string>
 
 namespace hermes {
 
-using llvm::DenseSet;
-using llvm::SMLoc;
-using llvm::SMRange;
-using llvm::Twine;
+using llvh::DenseSet;
+using llvh::SMLoc;
+using llvh::SMRange;
+using llvh::Twine;
 
 /// Forward declaration of the private implementation of the source location
 /// cache.
@@ -55,7 +55,7 @@ struct SourceErrorOutputOptions {
 enum class Subsystem {
   /// No specific system provided.
   /// While different functions may interpret this as "exclude no systems"
-  /// or "include no systems", the general use case is akin to llvm::None.
+  /// or "include no systems", the general use case is akin to llvh::None.
   Unspecified,
   /// e.g. JSLexer or something with similar functionality.
   Lexer,
@@ -63,14 +63,14 @@ enum class Subsystem {
   Parser,
 };
 
-/// A facade around llvm::SourceMgr which simplifies error output and counts the
+/// A facade around llvh::SourceMgr which simplifies error output and counts the
 /// errors.
 class SourceErrorManager {
  public:
   enum DiagKind {
-    DK_Error = llvm::SourceMgr::DK_Error,
-    DK_Warning = llvm::SourceMgr::DK_Warning,
-    DK_Note = llvm::SourceMgr::DK_Note,
+    DK_Error = llvh::SourceMgr::DK_Error,
+    DK_Warning = llvh::SourceMgr::DK_Warning,
+    DK_Note = llvh::SourceMgr::DK_Note,
   };
 
   /// Encapsulate a buffer id, line number and column number, which uniquely
@@ -107,10 +107,10 @@ class SourceErrorManager {
     virtual void translate(SourceCoords &coords) = 0;
   };
 
-  using DiagHandlerTy = llvm::SourceMgr::DiagHandlerTy;
+  using DiagHandlerTy = llvh::SourceMgr::DiagHandlerTy;
 
  private:
-  llvm::SourceMgr sm_{};
+  llvh::SourceMgr sm_{};
   SourceErrorOutputOptions outputOptions_;
   std::shared_ptr<ICoordTranslator> translator_{};
 
@@ -129,14 +129,14 @@ class SourceErrorManager {
   /// Mapping from warnings to true if enabled, false if disabled.
   /// All warnings default to enabled, and the numerical value of the Warning
   /// enum is the index in this vector.
-  llvm::SmallBitVector warningStatuses_;
+  llvh::SmallBitVector warningStatuses_;
 
   /// If set, warnings are treated as errors.
   bool warningsAreErrors_{false};
 
   /// If set, messages from the given subsystem are ignored.
   /// If set to Subsystem::Unspecified, then all messages are ignored.
-  OptValue<Subsystem> suppressMessages_{llvm::None};
+  OptValue<Subsystem> suppressMessages_{llvh::None};
 
   /// Set to true if the last message was suppressed. Any following DK_Note
   /// messages will be automatically suppressed.
@@ -144,11 +144,11 @@ class SourceErrorManager {
 
   /// Map of bufId to source mapping URLs.
   /// If an entry doesn't exist, then there is no source mapping URL.
-  llvm::DenseMap<uint32_t, std::string> sourceMappingUrls_{};
+  llvh::DenseMap<uint32_t, std::string> sourceMappingUrls_{};
 
   /// Map of bufId to user-specified source URLs.
   /// If an entry doesn't exist, then there is no user-specified source URL.
-  llvm::DenseMap<uint32_t, std::string> sourceUrls_{};
+  llvh::DenseMap<uint32_t, std::string> sourceUrls_{};
 
   /// If larger than zero, messages are buffered and not immediately displayed.
   /// They will be displayed once the counter falls back to zero.
@@ -186,7 +186,7 @@ class SourceErrorManager {
         std::string &&msg,
         const SourceCoords &coords);
 
-    llvm::iterator_range<const MessageData *> notes(
+    llvh::iterator_range<const MessageData *> notes(
         const std::vector<MessageData> &bufferedNotes) const;
 
    private:
@@ -203,7 +203,7 @@ class SourceErrorManager {
   std::vector<MessageData> bufferedNotes_{};
 
   /// Diagnostic printer appropriate for setting via SourceMgr.setDiagHandler
-  static void printDiagnostic(const llvm::SMDiagnostic &, void *ctx);
+  static void printDiagnostic(const llvh::SMDiagnostic &, void *ctx);
 
   friend class SaveAndSuppressMessages;
   friend class SaveAndBufferMessages;
@@ -295,7 +295,7 @@ class SourceErrorManager {
   /// Add a new source buffer to this source manager. This takes ownership of
   /// the memory buffer.
   /// \return the ID of the newly added buffer.
-  uint32_t addNewSourceBuffer(std::unique_ptr<llvm::MemoryBuffer> f) {
+  uint32_t addNewSourceBuffer(std::unique_ptr<llvh::MemoryBuffer> f) {
     return sm_.AddNewSourceBuffer(std::move(f), SMLoc{});
   }
 
@@ -303,21 +303,21 @@ class SourceErrorManager {
   /// source.
   /// \param bufferName the LLVM buffer name associated with the buffer. In
   ///     practice it usually contains a file path.
-  uint32_t addNewVirtualSourceBuffer(llvm::StringRef bufferName);
+  uint32_t addNewVirtualSourceBuffer(llvh::StringRef bufferName);
 
-  const llvm::MemoryBuffer *getSourceBuffer(uint32_t bufId) const {
+  const llvh::MemoryBuffer *getSourceBuffer(uint32_t bufId) const {
     return sm_.getMemoryBuffer(bufId);
   }
 
   /// Set the source mapping URL for the buffer \p bufId.
   /// If one was already set, overwrite it.
-  void setSourceMappingUrl(uint32_t bufId, llvm::StringRef url) {
+  void setSourceMappingUrl(uint32_t bufId, llvh::StringRef url) {
     sourceMappingUrls_[bufId] = url;
   }
 
   /// Get the source mapping URL for file \p bufId.
   /// \return URL if it exists, else return empty string.
-  llvm::StringRef getSourceMappingUrl(uint32_t bufId) const {
+  llvh::StringRef getSourceMappingUrl(uint32_t bufId) const {
     const auto it = sourceMappingUrls_.find(bufId);
     if (it == sourceMappingUrls_.end()) {
       return "";
@@ -327,7 +327,7 @@ class SourceErrorManager {
 
   /// Set the user-specified source URL for the buffer \p bufId.
   /// If one was already set, overwrite it.
-  void setSourceUrl(uint32_t bufId, llvm::StringRef url) {
+  void setSourceUrl(uint32_t bufId, llvh::StringRef url) {
     sourceUrls_[bufId] = url;
   }
 
@@ -348,20 +348,20 @@ class SourceErrorManager {
 
   /// Given a \p loc, return the buffer that the location is in.
   /// Returns nullptr if the buffer is not found.
-  const llvm::MemoryBuffer *findBufferForLoc(SMLoc loc) const;
+  const llvh::MemoryBuffer *findBufferForLoc(SMLoc loc) const;
 
   /// Find the SMLoc corresponding to the supplied source coordinates.
   SMLoc findSMLocFromCoords(SourceCoords coords);
 
   /// Return an identifier for this buffer, typically the filename it was read
   /// from.
-  llvm::StringRef getOriginalBufferIdentifier(unsigned bufId) const {
+  llvh::StringRef getOriginalBufferIdentifier(unsigned bufId) const {
     return sm_.getMemoryBuffer(bufId)->getBufferIdentifier();
   }
 
   /// Get the user-specified source URL for this buffer, or a default identifier
   /// for it (typically the filename it was read from).
-  llvm::StringRef getSourceUrl(unsigned bufId) const {
+  llvh::StringRef getSourceUrl(unsigned bufId) const {
     const auto it = sourceUrls_.find(bufId);
     if (it != sourceUrls_.end()) {
       return it->second;
@@ -370,11 +370,11 @@ class SourceErrorManager {
   }
 
   /// Print the passed source coordinates in human readable form for debugging.
-  void dumpCoords(llvm::raw_ostream &OS, const SourceCoords &coords);
+  void dumpCoords(llvh::raw_ostream &OS, const SourceCoords &coords);
 
   /// If sucessfully decoded, print the passed source location in human readable
   /// form.
-  void dumpCoords(llvm::raw_ostream &OS, SMLoc loc);
+  void dumpCoords(llvh::raw_ostream &OS, SMLoc loc);
 
   void message(
       DiagKind dk,
@@ -395,14 +395,14 @@ class SourceErrorManager {
   void error(
       SMLoc loc,
       SMRange rng,
-      const llvm::Twine &msg,
+      const llvh::Twine &msg,
       Subsystem subsystem = Subsystem::Unspecified) {
     message(DK_Error, loc, rng, msg, subsystem);
   }
   void warning(
       SMLoc loc,
       SMRange rng,
-      const llvm::Twine &msg,
+      const llvh::Twine &msg,
       Subsystem subsystem = Subsystem::Unspecified) {
     warning(Warning::Misc, loc, rng, msg, subsystem);
   }
@@ -410,66 +410,66 @@ class SourceErrorManager {
       Warning w,
       SMLoc loc,
       SMRange rng,
-      const llvm::Twine &msg,
+      const llvh::Twine &msg,
       Subsystem subsystem = Subsystem::Unspecified) {
     message(DK_Warning, loc, rng, msg, w, subsystem);
   }
   void note(
       SMLoc loc,
       SMRange rng,
-      const llvm::Twine &msg,
+      const llvh::Twine &msg,
       Subsystem subsystem = Subsystem::Unspecified) {
     message(DK_Note, loc, rng, msg, subsystem);
   }
 
   void error(
       SMRange rng,
-      const llvm::Twine &msg,
+      const llvh::Twine &msg,
       Subsystem subsystem = Subsystem::Unspecified) {
     message(DK_Error, rng, msg, subsystem);
   }
   void warning(
       SMRange rng,
-      const llvm::Twine &msg,
+      const llvh::Twine &msg,
       Subsystem subsystem = Subsystem::Unspecified) {
     warning(Warning::Misc, rng, msg, subsystem);
   }
   void warning(
       Warning w,
       SMRange rng,
-      const llvm::Twine &msg,
+      const llvh::Twine &msg,
       Subsystem subsystem = Subsystem::Unspecified) {
     message(DK_Warning, rng.Start, rng, msg, w, subsystem);
   }
   void note(
       SMRange rng,
-      const llvm::Twine &msg,
+      const llvh::Twine &msg,
       Subsystem subsystem = Subsystem::Unspecified) {
     message(DK_Note, rng, msg, subsystem);
   }
 
   void error(
       SMLoc loc,
-      const llvm::Twine &msg,
+      const llvh::Twine &msg,
       Subsystem subsystem = Subsystem::Unspecified) {
     message(DK_Error, loc, msg, subsystem);
   }
   void warning(
       SMLoc loc,
-      const llvm::Twine &msg,
+      const llvh::Twine &msg,
       Subsystem subsystem = Subsystem::Unspecified) {
     warning(Warning::Misc, loc, msg, subsystem);
   }
   void warning(
       Warning w,
       SMLoc loc,
-      const llvm::Twine &msg,
+      const llvh::Twine &msg,
       Subsystem subsystem = Subsystem::Unspecified) {
     message(DK_Warning, loc, SMRange{}, msg, w, subsystem);
   }
   void note(
       SMLoc loc,
-      const llvm::Twine &msg,
+      const llvh::Twine &msg,
       Subsystem subsystem = Subsystem::Unspecified) {
     message(DK_Note, loc, msg, subsystem);
   }

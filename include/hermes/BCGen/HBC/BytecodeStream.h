@@ -8,7 +8,7 @@
 #ifndef HERMES_BCGEN_HBC_BYTECODESTREAM_H
 #define HERMES_BCGEN_HBC_BYTECODESTREAM_H
 
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include "hermes/BCGen/Exceptions.h"
 #include "hermes/BCGen/HBC/Bytecode.h"
@@ -19,15 +19,15 @@
 #include "hermes/Support/SHA1.h"
 #include "hermes/Utils/Options.h"
 
-namespace llvm {
+namespace llvh {
 class raw_ostream;
-} // namespace llvm
+} // namespace llvh
 
 namespace hermes {
 struct RegExpTableEntry;
 namespace hbc {
-using llvm::ArrayRef;
-using llvm::raw_ostream;
+using llvh::ArrayRef;
+using llvh::raw_ostream;
 
 class BytecodeFunction;
 class BytecodeModule;

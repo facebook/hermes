@@ -12,7 +12,7 @@
 #include "hermes/VM/Deserializer.h"
 #include "hermes/VM/Serializer.h"
 
-#include "llvm/Support/MathExtras.h"
+#include "llvh/Support/MathExtras.h"
 
 #ifdef HERMESVM_SERIALIZE
 using hermes::vm::Deserializer;
@@ -26,12 +26,12 @@ namespace {
 /// Returns if aref points to valid bytecode and specifies why it may not
 /// in errorMessage (if supplied).
 static bool sanityCheck(
-    llvm::ArrayRef<uint8_t> aref,
+    llvh::ArrayRef<uint8_t> aref,
     BytecodeForm form,
     std::string *errorMessage) {
   if (aref.size() < sizeof(hbc::BytecodeFileHeader)) {
     if (errorMessage) {
-      llvm::raw_string_ostream errs(*errorMessage);
+      llvh::raw_string_ostream errs(*errorMessage);
       errs << "Buffer smaller than a bytecode file header. Expected at least "
            << sizeof(hbc::BytecodeFileHeader) << " bytes but got "
            << aref.size() << " bytes";
@@ -40,7 +40,7 @@ static bool sanityCheck(
   }
 
   // Ensure the data is aligned to be able to read an int from the start.
-  if (llvm::alignAddr(aref.data(), BYTECODE_ALIGNMENT) !=
+  if (llvh::alignAddr(aref.data(), BYTECODE_ALIGNMENT) !=
       (uintptr_t)aref.data()) {
     if (errorMessage) {
       *errorMessage = "Buffer misaligned.";
@@ -60,7 +60,7 @@ static bool sanityCheck(
   }
   if (header->version != hbc::BYTECODE_VERSION) {
     if (errorMessage) {
-      llvm::raw_string_ostream errs(*errorMessage);
+      llvh::raw_string_ostream errs(*errorMessage);
       errs << "Wrong bytecode version. Expected " << hbc::BYTECODE_VERSION
            << " but got " << header->version;
     }
@@ -74,7 +74,7 @@ static bool sanityCheck(
   }
   if (aref.size() < header->fileLength) {
     if (errorMessage) {
-      llvm::raw_string_ostream errs(*errorMessage);
+      llvh::raw_string_ostream errs(*errorMessage);
       errs
           << "Buffer is smaller than the size stated in the file header. Expected at least "
           << header->fileLength << " bytes but got " << aref.size() << " bytes";
@@ -94,7 +94,7 @@ const T *alignCheckCast(const uint8_t *buf) {
   static_assert(
       alignof(T) <= BYTECODE_ALIGNMENT, "Cannot handle the alignment");
   assert(
-      (llvm::alignAddr(buf, alignof(T)) == (uintptr_t)buf) &&
+      (llvh::alignAddr(buf, alignof(T)) == (uintptr_t)buf) &&
       "buf is not properly aligned");
   return reinterpret_cast<const T *>(buf);
 }
@@ -105,7 +105,7 @@ T *alignCheckCast(uint8_t *buf) {
   static_assert(
       alignof(T) <= BYTECODE_ALIGNMENT, "Cannot handle the alignment");
   assert(
-      (llvm::alignAddr(buf, alignof(T)) == (uintptr_t)buf) &&
+      (llvh::alignAddr(buf, alignof(T)) == (uintptr_t)buf) &&
       "buf is not properly aligned");
   return reinterpret_cast<T *>(buf);
 }
@@ -131,7 +131,7 @@ T *castData(uint8_t *&buf) {
 /// Fatals if the end of the array extends past \p end.
 /// Increment \p buf by the total size of the array.
 template <typename T>
-llvm::ArrayRef<T>
+llvh::ArrayRef<T>
 castArrayRef(const uint8_t *&buf, size_t size, const uint8_t *end) {
   auto ptr = alignCheckCast<T>(buf);
   if (LLVM_UNLIKELY(buf > end || size > (end - buf) / sizeof(T)))
@@ -142,7 +142,7 @@ castArrayRef(const uint8_t *&buf, size_t size, const uint8_t *end) {
 
 /// Variant of castArrayRef() for non-const pointers.
 template <typename T>
-llvm::MutableArrayRef<T>
+llvh::MutableArrayRef<T>
 castArrayRef(uint8_t *&buf, size_t size, const uint8_t *end) {
   auto ptr = alignCheckCast<T>(buf);
   if (LLVM_UNLIKELY(buf > end || size > (end - buf) / sizeof(T)))
@@ -154,12 +154,12 @@ castArrayRef(uint8_t *&buf, size_t size, const uint8_t *end) {
 /// Align \p buf with the \p alignment.
 /// \p buf is passed by pointer reference and will be modified.
 void align(const uint8_t *&buf, uint32_t alignment = BYTECODE_ALIGNMENT) {
-  buf = (const uint8_t *)llvm::alignAddr(buf, alignment);
+  buf = (const uint8_t *)llvh::alignAddr(buf, alignment);
 }
 
 /// Variant of align() for non-const pointers.
 void align(uint8_t *&buf, uint32_t alignment = BYTECODE_ALIGNMENT) {
-  buf = (uint8_t *)llvm::alignAddr(buf, alignment);
+  buf = (uint8_t *)llvh::alignAddr(buf, alignment);
 }
 
 } // namespace
@@ -301,7 +301,7 @@ uint32_t BCProviderBase::getVirtualOffsetForFunction(
   return virtualOffset;
 }
 
-llvm::Optional<SourceMapTextLocation> BCProviderBase::getLocationForAddress(
+llvh::Optional<SourceMapTextLocation> BCProviderBase::getLocationForAddress(
     uint32_t funcId,
     uint32_t offsetInFunction) const {
   auto *funcDebugOffsets = getDebugOffsets(funcId);
@@ -317,7 +317,7 @@ llvm::Optional<SourceMapTextLocation> BCProviderBase::getLocationForAddress(
       return SourceMapTextLocation{std::move(fileName), loc.line, loc.column};
     }
   }
-  return llvm::None;
+  return llvh::None;
 }
 
 /// Read [data, data + size) sequentially into the OS page cache, but
@@ -379,7 +379,7 @@ inline void pageAlignDown(uint8_t **ptr, size_t *byteLen) {
   const auto PS = oscompat::page_size();
 
   auto orig = *ptr;
-  *ptr = reinterpret_cast<uint8_t *>(llvm::alignAddr(*ptr + 1, PS) - PS);
+  *ptr = reinterpret_cast<uint8_t *>(llvh::alignAddr(*ptr + 1, PS) - PS);
   byteLen += orig - *ptr;
 }
 
@@ -392,8 +392,8 @@ constexpr size_t totalByteSize() {
 
 template <typename T, typename... Ts>
 constexpr size_t totalByteSize(
-    llvm::ArrayRef<T> arr,
-    llvm::ArrayRef<Ts>... rest) {
+    llvh::ArrayRef<T> arr,
+    llvh::ArrayRef<Ts>... rest) {
   return sizeof(arr[0]) * arr.size() + totalByteSize(rest...);
 }
 
@@ -415,7 +415,7 @@ void BCProviderFromBuffer::madvise(oscompat::MAdvice advice) {
   assert(LEN == totalByteSize(__VA_ARGS__) && "Mismatched length of region")
 
 void BCProviderFromBuffer::adviseStringTableSequential() {
-  llvm::ArrayRef<SmallStringTableEntry> smallStringTableEntries{
+  llvh::ArrayRef<SmallStringTableEntry> smallStringTableEntries{
       stringTableEntries_, stringCount_};
 
   auto *start = rawptr_cast(stringKinds_.begin());
@@ -439,7 +439,7 @@ void BCProviderFromBuffer::adviseStringTableSequential() {
 }
 
 void BCProviderFromBuffer::adviseStringTableRandom() {
-  llvm::ArrayRef<SmallStringTableEntry> smallStringTableEntries{
+  llvh::ArrayRef<SmallStringTableEntry> smallStringTableEntries{
       stringTableEntries_, stringCount_};
 
   // We only advise the small string table entries, overflow string table
@@ -467,7 +467,7 @@ void BCProviderFromBuffer::adviseStringTableRandom() {
 }
 
 void BCProviderFromBuffer::willNeedStringTable() {
-  llvm::ArrayRef<SmallStringTableEntry> smallStringTableEntries{
+  llvh::ArrayRef<SmallStringTableEntry> smallStringTableEntries{
       stringTableEntries_, stringCount_};
 
   auto *start = rawptr_cast(stringKinds_.begin());
@@ -494,8 +494,8 @@ void BCProviderFromBuffer::dontNeedIdentifierHashes() {
   auto start = reinterpret_cast<uintptr_t>(identifierHashes_.begin());
   auto end = reinterpret_cast<uintptr_t>(identifierHashes_.end());
   const size_t PS = oscompat::page_size();
-  start = llvm::alignTo(start, PS);
-  end = llvm::alignDown(end, PS);
+  start = llvh::alignTo(start, PS);
+  end = llvh::alignDown(end, PS);
   if (start < end) {
     oscompat::vm_unused(reinterpret_cast<void *>(start), end - start);
   }
@@ -545,27 +545,27 @@ BCProviderFromBuffer::BCProviderFromBuffer(
   cjsModuleTableStatic_ = fields.cjsModuleTableStatic;
 }
 
-llvm::ArrayRef<uint8_t> BCProviderFromBuffer::getEpilogue() const {
+llvh::ArrayRef<uint8_t> BCProviderFromBuffer::getEpilogue() const {
   return BCProviderFromBuffer::getEpilogueFromBytecode(
-      llvm::ArrayRef<uint8_t>(bufferPtr_, buffer_->size()));
+      llvh::ArrayRef<uint8_t>(bufferPtr_, buffer_->size()));
 }
 
 SHA1 BCProviderFromBuffer::getSourceHash() const {
   return BCProviderFromBuffer::getSourceHashFromBytecode(
-      llvm::ArrayRef<uint8_t>(bufferPtr_, buffer_->size()));
+      llvh::ArrayRef<uint8_t>(bufferPtr_, buffer_->size()));
 }
 
-llvm::ArrayRef<uint8_t> BCProviderFromBuffer::getEpilogueFromBytecode(
-    llvm::ArrayRef<uint8_t> buffer) {
+llvh::ArrayRef<uint8_t> BCProviderFromBuffer::getEpilogueFromBytecode(
+    llvh::ArrayRef<uint8_t> buffer) {
   const uint8_t *p = buffer.data();
   const auto *fileHeader = castData<hbc::BytecodeFileHeader>(p);
   const auto *begin = buffer.data() + fileHeader->fileLength;
   const auto *end = buffer.data() + buffer.size();
-  return llvm::ArrayRef<uint8_t>(begin, end);
+  return llvh::ArrayRef<uint8_t>(begin, end);
 }
 
 SHA1 BCProviderFromBuffer::getSourceHashFromBytecode(
-    llvm::ArrayRef<uint8_t> buffer) {
+    llvh::ArrayRef<uint8_t> buffer) {
   SHA1 hash;
   const uint8_t *p = buffer.data();
   const auto *fileHeader = castData<hbc::BytecodeFileHeader>(p);
@@ -599,7 +599,7 @@ void BCProviderFromBuffer::createDebugInfo() {
 }
 
 std::pair<
-    llvm::ArrayRef<hbc::HBCExceptionHandlerInfo>,
+    llvh::ArrayRef<hbc::HBCExceptionHandlerInfo>,
     const hbc::DebugOffsets *>
 BCProviderFromBuffer::getExceptionTableAndDebugOffsets(
     uint32_t functionID) const {
@@ -617,7 +617,7 @@ BCProviderFromBuffer::getExceptionTableAndDebugOffsets(
   }
 
   // Deserialize exception table.
-  llvm::ArrayRef<hbc::HBCExceptionHandlerInfo> exceptionTable{};
+  llvh::ArrayRef<hbc::HBCExceptionHandlerInfo> exceptionTable{};
   if (header.flags.hasExceptionHandler) {
     align(buf);
     const auto *exceptionHeader =
@@ -646,7 +646,7 @@ void prefetchRegion(const uint8_t *p, size_t sz) {
 }
 } // namespace
 
-void BCProviderFromBuffer::prefetch(llvm::ArrayRef<uint8_t> aref) {
+void BCProviderFromBuffer::prefetch(llvh::ArrayRef<uint8_t> aref) {
   // We require file start be page-aligned so we can safely round down to page
   // size in prefetchRegion.
   assert(
@@ -683,7 +683,7 @@ void BCProviderFromBuffer::prefetch(llvm::ArrayRef<uint8_t> aref) {
 }
 
 bool BCProviderFromBuffer::bytecodeStreamSanityCheck(
-    llvm::ArrayRef<uint8_t> aref,
+    llvh::ArrayRef<uint8_t> aref,
     std::string *errorMessage) {
   return sanityCheck(aref, BytecodeForm::Execution, errorMessage);
 }

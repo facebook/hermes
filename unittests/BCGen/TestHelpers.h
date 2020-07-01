@@ -9,7 +9,7 @@
 
 #include <stdint.h>
 #include <vector>
-#include "llvm/ADT/SmallVector.h"
+#include "llvh/ADT/SmallVector.h"
 
 namespace hermes {
 

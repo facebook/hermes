@@ -33,11 +33,11 @@
 #include "hermes/VM/SymbolID.h"
 
 #ifdef HERMES_SLOW_DEBUG
-#include "llvm/ADT/DenseSet.h"
+#include "llvh/ADT/DenseSet.h"
 #endif
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/MathExtras.h"
+#include "llvh/Support/Debug.h"
+#include "llvh/Support/Format.h"
+#include "llvh/Support/MathExtras.h"
 
 #include <algorithm>
 #include <array>
@@ -50,7 +50,7 @@
 
 #define DEBUG_TYPE "gc"
 
-using llvm::dbgs;
+using llvh::dbgs;
 using std::chrono::steady_clock;
 
 namespace hermes {
@@ -204,7 +204,7 @@ void GenGC::debitExternalMemory(GCCell *cell, uint32_t size) {
 }
 
 #ifndef NDEBUG
-void GenGC::printExtAllocStats(llvm::raw_ostream &os) {
+void GenGC::printExtAllocStats(llvh::raw_ostream &os) {
   os << "\nExternal allocation:\n";
   os << "   " << numExtAllocs_ << " allocs for " << totalExtAllocBytes_
      << " bytes; average = "
@@ -524,7 +524,7 @@ size_t GenGC::usedDirect() const {
 /// the acceptor on the same root location more than once, which is illegal.
 struct FullMSCDuplicateRootsDetectorAcceptor final
     : public SlotAcceptorDefault {
-  llvm::DenseSet<void *> markedLocs_;
+  llvh::DenseSet<void *> markedLocs_;
 
   using SlotAcceptorDefault::accept;
   using SlotAcceptorDefault::SlotAcceptorDefault;
@@ -1205,7 +1205,7 @@ void GenGC::getDebugHeapInfo(DebugHeapInfo &info) {
 }
 #endif
 
-void GenGC::dump(llvm::raw_ostream &os, bool verbose) {
+void GenGC::dump(llvh::raw_ostream &os, bool verbose) {
   AllocContextYieldThenClaim yielder(this);
   GCBase::dump(os, verbose);
 #ifndef NDEBUG
@@ -1273,7 +1273,7 @@ void GenGC::claimAllocContext() {
   targetGen->setTrueAllocContext(&allocContext_);
 }
 
-void GenGC::createSnapshot(llvm::raw_ostream &os) {
+void GenGC::createSnapshot(llvh::raw_ostream &os) {
   // We need to yield/claim at outer scope, to cover the calls to
   // forUsedSegments below.
   AllocContextYieldThenClaim yielder(this);
@@ -1355,13 +1355,13 @@ void GenGC::serializeHeap(Serializer &s) {
     // only its owner knows if this ArrayStorage has native pointer in it.
     if (cell->getKind() != CellKind::ArrayStorageKind) {
       LLVM_DEBUG(
-          llvm::dbgs() << "Heap Serialize Cell " << cellKindStr(cell->getKind())
+          llvh::dbgs() << "Heap Serialize Cell " << cellKindStr(cell->getKind())
                        << ", id " << cell->getDebugAllocationId() << "\n");
       s.writeInt<uint8_t>((uint8_t)cell->getKind());
       s.serializeCell(cell);
     } else {
       LLVM_DEBUG(
-          llvm::dbgs() << "Heap Serialize Skipped Cell "
+          llvh::dbgs() << "Heap Serialize Skipped Cell "
                        << cellKindStr(cell->getKind()) << ", id "
                        << cell->getDebugAllocationId() << "\n");
     }
@@ -1377,7 +1377,7 @@ void GenGC::deserializeHeap(Deserializer &d) {
   uint8_t kind;
   while ((kind = d.readInt<uint8_t>()) != 255) {
     LLVM_DEBUG(
-        llvm::dbgs() << "Heap Deserialize Cell " << cellKindStr((CellKind)kind)
+        llvh::dbgs() << "Heap Deserialize Cell " << cellKindStr((CellKind)kind)
                      << "\n");
     // ArrayStorage will be serialized/deserialized with its "owner" because
     // only its owner knows if this ArrayStorage has native pointer in it.
@@ -1409,7 +1409,7 @@ void GenGC::deserializeEnd() {
 }
 #endif
 
-void GenGC::printStats(llvm::raw_ostream &os, bool trailingComma) {
+void GenGC::printStats(llvh::raw_ostream &os, bool trailingComma) {
   if (!recordGcStats_) {
     return;
   }
@@ -1465,7 +1465,7 @@ void GenGC::printStats(llvm::raw_ostream &os, bool trailingComma) {
   os << "\n";
 }
 
-void GenGC::printFullCollectionStats(llvm::raw_ostream &os, bool trailingComma)
+void GenGC::printFullCollectionStats(llvh::raw_ostream &os, bool trailingComma)
     const {
   double fullSurvivalPct = 0.0;
   if (cumPreBytes_ > 0) {
@@ -1605,7 +1605,7 @@ void GenGC::doAllocCensus() {
   oldGen_.forObjsAllocatedSinceGC(callback);
 }
 
-void GenGC::printCensusByKindStats(llvm::raw_ostream &os) const {
+void GenGC::printCensusByKindStats(llvh::raw_ostream &os) const {
   printCensusByKindStatsWork(
       os,
       "Allocs by cell kind, ranked by #allocs.",
@@ -1619,7 +1619,7 @@ void GenGC::printCensusByKindStats(llvm::raw_ostream &os) const {
 }
 
 void GenGC::printCensusByKindStatsWork(
-    llvm::raw_ostream &os,
+    llvh::raw_ostream &os,
     const char *msg,
     const uint64_t *allocs,
     const uint64_t *bytes) const {
@@ -1648,9 +1648,9 @@ void GenGC::printCensusByKindStatsWork(
   }
   os << "\n"
      << msg << "\n\n"
-     << "Total objs: " << llvm::format("%14lld", totAllocs)
-     << ", bytes = " << llvm::format("%14lld", totBytes) << ".\n\n"
-     << llvm::format(
+     << "Total objs: " << llvh::format("%14lld", totAllocs)
+     << ", bytes = " << llvh::format("%14lld", totBytes) << ".\n\n"
+     << llvh::format(
             "%35s%14s%8s%14s%8s\n",
             static_cast<const char *>("kind"),
             static_cast<const char *>("objects"),
@@ -1667,7 +1667,7 @@ void GenGC::printCensusByKindStatsWork(
       assert(std::get<2>(elem) == 0);
       continue;
     }
-    os << llvm::format(
+    os << llvh::format(
         "%35s%14lld%7.2f%%%14lld%7.2f%%\n",
         cellKindStr(static_cast<CellKind>(std::get<0>(elem))),
         std::get<1>(elem),
@@ -1776,8 +1776,8 @@ void GenGC::sizeDiagnosticCensus() {
              i < asciiStr.countPerSize.size();
              i++) {
           std::string tag;
-          llvm::raw_string_ostream stream(tag);
-          stream << llvm::format("StringPrimitive (size %1lu)", i);
+          llvh::raw_string_ostream stream(tag);
+          stream << llvh::format("StringPrimitive (size %1lu)", i);
           stream.flush();
           hermesLog(
               "HermesGC",
@@ -1799,8 +1799,8 @@ void GenGC::sizeDiagnosticCensus() {
              i < utf16Str.countPerSize.size();
              i++) {
           std::string tag;
-          llvm::raw_string_ostream stream(tag);
-          stream << llvm::format("StringPrimitive (size %1lu)", i);
+          llvh::raw_string_ostream stream(tag);
+          stream << llvh::format("StringPrimitive (size %1lu)", i);
           stream.flush();
           hermesLog(
               "HermesGC",

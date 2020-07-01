@@ -8,11 +8,11 @@
 #ifndef HERMES_OPTIMIZER_PASSMANAGER_PASS_H
 #define HERMES_OPTIMIZER_PASSMANAGER_PASS_H
 
-#include "llvm/ADT/StringRef.h"
+#include "llvh/ADT/StringRef.h"
 
 namespace hermes {
 
-using llvm::StringRef;
+using llvh::StringRef;
 
 class Function;
 class Module;

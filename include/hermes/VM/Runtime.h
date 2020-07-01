@@ -44,8 +44,8 @@
 #include "hermes/VM/Profiler/InlineCacheProfiler.h"
 #endif
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/SmallVector.h"
 
 #include <atomic>
 #include <chrono>
@@ -155,8 +155,8 @@ class Runtime : public HandleRootOwner,
   /// \param compileFlags Flags controlling compilation.
   /// \return the status of the execution.
   CallResult<HermesValue> run(
-      llvm::StringRef code,
-      llvm::StringRef sourceURL,
+      llvh::StringRef code,
+      llvh::StringRef sourceURL,
       hbc::CompileFlags compileFlags);
 
   /// Runs the given UTF-8 \p code in a new RuntimeModule as top-level code.
@@ -165,7 +165,7 @@ class Runtime : public HandleRootOwner,
   /// \return the status of the execution.
   CallResult<HermesValue> run(
       std::unique_ptr<Buffer> code,
-      llvm::StringRef sourceURL,
+      llvh::StringRef sourceURL,
       hbc::CompileFlags compileFlags);
 
   /// Runs the given \p bytecode with the given \p runtimeModuleFlags. The \p
@@ -177,7 +177,7 @@ class Runtime : public HandleRootOwner,
   CallResult<HermesValue> runBytecode(
       std::shared_ptr<hbc::BCProvider> &&bytecode,
       RuntimeModuleFlags runtimeModuleFlags,
-      llvm::StringRef sourceURL,
+      llvh::StringRef sourceURL,
       Handle<Environment> environment,
       Handle<> thisArg);
 
@@ -190,7 +190,7 @@ class Runtime : public HandleRootOwner,
   CallResult<HermesValue> runBytecode(
       std::shared_ptr<hbc::BCProvider> &&bytecode,
       RuntimeModuleFlags runtimeModuleFlags,
-      llvm::StringRef sourceURL,
+      llvh::StringRef sourceURL,
       Handle<Environment> environment) {
     heap_.runtimeWillExecute();
     return runBytecode(
@@ -210,7 +210,7 @@ class Runtime : public HandleRootOwner,
   void runInternalBytecode();
 
   /// A convenience function to print an exception to a stream.
-  void printException(llvm::raw_ostream &os, Handle<> valueHandle);
+  void printException(llvh::raw_ostream &os, Handle<> valueHandle);
 
   /// @name Heap management
   /// @{
@@ -412,16 +412,16 @@ class Runtime : public HandleRootOwner,
 
   /// \return an iterator range that provides access to all stack frames
   /// starting from the top-most one.
-  inline llvm::iterator_range<StackFrameIterator> getStackFrames();
+  inline llvh::iterator_range<StackFrameIterator> getStackFrames();
 
   /// \return an iterator range that provides access to all stack frames
   /// starting from the top-most one.
-  inline llvm::iterator_range<ConstStackFrameIterator> getStackFrames() const;
+  inline llvh::iterator_range<ConstStackFrameIterator> getStackFrames() const;
 
   /// Dump information about all stack frames to \p OS.
-  void dumpCallFrames(llvm::raw_ostream &OS);
+  void dumpCallFrames(llvh::raw_ostream &OS);
 
-  /// Dump information about all stack frames to llvm::errs(). This is a
+  /// Dump information about all stack frames to llvh::errs(). This is a
   /// helper method intended to be called from a debugger.
   void dumpCallFrames();
 
@@ -459,7 +459,7 @@ class Runtime : public HandleRootOwner,
     return jitContext_;
   }
   /// Returns trailing data for all runtime modules.
-  std::vector<llvm::ArrayRef<uint8_t>> getEpilogues();
+  std::vector<llvh::ArrayRef<uint8_t>> getEpilogues();
 
   /// \return the set of runtime stats.
   instrumentation::RuntimeStats &getRuntimeStats() {
@@ -467,18 +467,18 @@ class Runtime : public HandleRootOwner,
   }
 
   /// Print the heap and other misc. stats to the given stream.
-  void printHeapStats(llvm::raw_ostream &os);
+  void printHeapStats(llvh::raw_ostream &os);
 
   /// Write IO tracking (aka HBC page access) info to the supplied
   /// stream as JSON. There will only be useful data for RuntimeModules
   /// backed by mmap'ed bytecode, and there will only be any data at all if
   /// RuntimeConfig::withTrackIO() has been set, and IO tracking is available on
   /// the current platform.
-  void getIOTrackingInfoJSON(llvm::raw_ostream &os);
+  void getIOTrackingInfoJSON(llvh::raw_ostream &os);
 
 #ifndef NDEBUG
   /// Iterate over all arrays in the heap and print their sizes and capacities.
-  void printArrayCensus(llvm::raw_ostream &os);
+  void printArrayCensus(llvh::raw_ostream &os);
 #endif
 
   /// Returns the common storage object.
@@ -527,8 +527,8 @@ class Runtime : public HandleRootOwner,
 
   /// Extract \c StackFrameInfo of the specified stack frame.
   /// \param frameIdx a relative frame index where the top-most frame is 0.
-  /// \return a populated StackFrameInfo, or llvm::None if the frame is invalid.
-  llvm::Optional<StackFrameInfo> stackFrameInfoByIndex(uint32_t frameIdx) const;
+  /// \return a populated StackFrameInfo, or llvh::None if the frame is invalid.
+  llvh::Optional<StackFrameInfo> stackFrameInfoByIndex(uint32_t frameIdx) const;
 
   /// Calculate and \return the offset between the location of the specified
   /// frame and the start of the stack. This value increases with every nested
@@ -554,7 +554,7 @@ class Runtime : public HandleRootOwner,
   /// resumes. The string thrown concatenates a description of \p value
   /// with \p msg.
   /// \return ExecutionResult::EXCEPTION
-  ExecutionStatus raiseTypeErrorForValue(Handle<> value, llvm::StringRef msg) {
+  ExecutionStatus raiseTypeErrorForValue(Handle<> value, llvh::StringRef msg) {
     return raiseTypeErrorForValue("", value, msg);
   }
 
@@ -562,16 +562,16 @@ class Runtime : public HandleRootOwner,
   /// resumes. The string thrown concatenates \p msg1, a description of \p
   /// value, and \p msg2. \return ExecutionResult::EXCEPTION
   ExecutionStatus raiseTypeErrorForValue(
-      llvm::StringRef msg1,
+      llvh::StringRef msg1,
       Handle<> value,
-      llvm::StringRef msg2);
+      llvh::StringRef msg2);
 
   /// Flag the interpreter that a syntax error must be thrown.
   /// \return ExecutionStatus::EXCEPTION
   ExecutionStatus raiseSyntaxError(const TwineChar16 &msg);
 
   /// Raise a special SyntaxError when attempting to eval when disallowed.
-  ExecutionStatus raiseEvalUnsupported(llvm::StringRef code);
+  ExecutionStatus raiseEvalUnsupported(llvh::StringRef code);
 
   /// Raise a \c RangeError exception.
   /// \return ExecutionStatus::EXCEPTION
@@ -614,7 +614,7 @@ class Runtime : public HandleRootOwner,
   /// Utility function to raise a catchable JS error with \p errMessage.
   ExecutionStatus raiseUncatchableError(
       Handle<JSObject> prototype,
-      llvm::StringRef errMessage);
+      llvh::StringRef errMessage);
 
   /// Interpret the current function until it returns or throws and return
   /// CallResult<HermesValue> or the thrown object in 'thrownObject'.
@@ -674,7 +674,7 @@ class Runtime : public HandleRootOwner,
   uint64_t timeSpent[256] = {0};
 
   /// Dump opcode stats to a stream.
-  void dumpOpcodeStats(llvm::raw_ostream &os) const;
+  void dumpOpcodeStats(llvh::raw_ostream &os) const;
 #endif
 
 #if defined(HERMESVM_PROFILER_JSFUNCTION) || defined(HERMESVM_PROFILER_EXTERN)
@@ -708,7 +708,7 @@ class Runtime : public HandleRootOwner,
   BasicBlockExecutionInfo &getBasicBlockExecutionInfo();
 
   /// Dump basic block profile trace to \p OS in json format.
-  void dumpBasicBlockProfileTrace(llvm::raw_ostream &OS);
+  void dumpBasicBlockProfileTrace(llvh::raw_ostream &OS);
 #endif
 
   CodeCoverageProfiler &getCodeCoverageProfiler() {
@@ -717,7 +717,7 @@ class Runtime : public HandleRootOwner,
 
 #ifdef HERMESVM_PROFILER_NATIVECALL
   /// Dump statistics about native calls.
-  void dumpNativeCallStats(llvm::raw_ostream &OS);
+  void dumpNativeCallStats(llvh::raw_ostream &OS);
 #endif
 
 #ifdef HERMES_ENABLE_DEBUGGER
@@ -793,7 +793,7 @@ class Runtime : public HandleRootOwner,
 
   /// Get filename, line number, and column number from
   /// code block and instruction pointer. It returns true if it succeeds.
-  llvm::Optional<std::tuple<std::string, uint32_t, uint32_t>>
+  llvh::Optional<std::tuple<std::string, uint32_t, uint32_t>>
   getIPSourceLocation(const CodeBlock *codeBlock, const Inst *ip);
 
   /// Inserts the Hidden class as a root to prevent it from being garbage
@@ -812,7 +812,7 @@ class Runtime : public HandleRootOwner,
   HiddenClass *resolveHiddenClassId(ClassId classId);
 
   /// Dumps inline cache profiler info.
-  void getInlineCacheProfilerInfo(llvm::raw_ostream &ostream);
+  void getInlineCacheProfilerInfo(llvh::raw_ostream &ostream);
 #endif
 
  protected:
@@ -861,7 +861,7 @@ class Runtime : public HandleRootOwner,
   /// Prints any statistics maintained in the Runtime about GC to \p
   /// os.  At present, this means the breakdown of markRoots time by
   /// "phase" within markRoots.
-  void printRuntimeGCStats(llvm::raw_ostream &os) const override;
+  void printRuntimeGCStats(llvh::raw_ostream &os) const override;
 
   /// \return one higher than the largest symbol in the identifier table. This
   /// enables the GC to size its internal structures for symbol marking.
@@ -1222,7 +1222,7 @@ class Runtime : public HandleRootOwner,
   /// When assertions are enabled we track whether \c currentIP_ is "valid" by
   /// making it optional. If this is accessed when the optional value is cleared
   /// (the invalid state) we assert.
-  llvm::Optional<const inst::Inst *> currentIP_{(const inst::Inst *)nullptr};
+  llvh::Optional<const inst::Inst *> currentIP_{(const inst::Inst *)nullptr};
 #endif
 
  public:
@@ -1682,7 +1682,7 @@ inline BasicBlockExecutionInfo &Runtime::getBasicBlockExecutionInfo() {
   return basicBlockExecInfo_;
 }
 
-inline void Runtime::dumpBasicBlockProfileTrace(llvm::raw_ostream &OS) {
+inline void Runtime::dumpBasicBlockProfileTrace(llvh::raw_ostream &OS) {
   basicBlockExecInfo_.dump(OS);
 }
 #endif
@@ -1756,12 +1756,12 @@ inline StackFramePtr Runtime::restoreStackAndPreviousFrame() {
   return restoreStackAndPreviousFrame(currentFrame_);
 }
 
-inline llvm::iterator_range<StackFrameIterator> Runtime::getStackFrames() {
+inline llvh::iterator_range<StackFrameIterator> Runtime::getStackFrames() {
   return {StackFrameIterator{currentFrame_},
           StackFrameIterator{registerStackEnd_}};
 };
 
-inline llvm::iterator_range<ConstStackFrameIterator> Runtime::getStackFrames()
+inline llvh::iterator_range<ConstStackFrameIterator> Runtime::getStackFrames()
     const {
   return {ConstStackFrameIterator{currentFrame_},
           ConstStackFrameIterator{registerStackEnd_}};
@@ -1794,8 +1794,8 @@ inline void constructInHeapObj(void *mem, CtorArgs... args) {
 }
 
 /// Serialize a SymbolID.
-llvm::raw_ostream &operator<<(
-    llvm::raw_ostream &OS,
+llvh::raw_ostream &operator<<(
+    llvh::raw_ostream &OS,
     Runtime::FormatSymbolID format);
 
 } // namespace vm

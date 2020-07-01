@@ -11,8 +11,8 @@
 #include "hermes/Parser/JSONParser.h"
 #include "hermes/Support/OptValue.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <vector>
 
@@ -55,13 +55,13 @@ class SourceMap {
       int32_t columnIndex = 0;
 
       /// Zero based symbol name index into "names" list.
-      llvm::Optional<int32_t> nameIndex = llvm::None;
+      llvh::Optional<int32_t> nameIndex = llvh::None;
 
       SourceLocation(
           int32_t sourceIndex,
           int32_t lineIndex,
           int32_t columnIndex,
-          llvm::Optional<int32_t> nameIndex = llvm::None)
+          llvh::Optional<int32_t> nameIndex = llvh::None)
           : sourceIndex(sourceIndex),
             lineIndex(lineIndex),
             columnIndex(columnIndex),
@@ -71,7 +71,7 @@ class SourceMap {
       SourceLocation() = default;
     };
 
-    llvm::Optional<SourceLocation> representedLocation;
+    llvh::Optional<SourceLocation> representedLocation;
 
     /// Construct a segment that maps a generated column \p genCol to the given
     /// represented line \p repLine and column \p repCol.
@@ -80,7 +80,7 @@ class SourceMap {
         int32_t sourceIndex,
         int32_t repLine,
         int32_t repCol,
-        llvm::Optional<int32_t> repNameIndex = llvm::None)
+        llvh::Optional<int32_t> repNameIndex = llvh::None)
         : generatedColumn(genCol),
           representedLocation(
               SourceLocation{sourceIndex, repLine, repCol, repNameIndex}) {}
@@ -90,7 +90,7 @@ class SourceMap {
   };
   using SegmentList = std::vector<Segment>;
   using MetadataEntry = parser::JSONSharedValue;
-  using MetadataList = std::vector<llvm::Optional<MetadataEntry>>;
+  using MetadataList = std::vector<llvh::Optional<MetadataEntry>>;
 
   SourceMap(
       const std::string &sourceRoot,
@@ -105,14 +105,14 @@ class SourceMap {
   /// Query source map text location for \p line and \p column.
   /// In both the input and output of this function, line and column numbers
   /// are 1-based.
-  llvm::Optional<SourceMapTextLocation> getLocationForAddress(
+  llvh::Optional<SourceMapTextLocation> getLocationForAddress(
       uint32_t line,
       uint32_t column) const;
 
   /// Query source map segment for \p line and \p column.
   /// The line and column arguments are 1-based (but note that the return value
   /// has 0-based line and column indices).
-  llvm::Optional<SourceMap::Segment> getSegmentForAddress(
+  llvh::Optional<SourceMap::Segment> getSegmentForAddress(
       uint32_t line,
       uint32_t column) const;
 
@@ -134,9 +134,9 @@ class SourceMap {
   }
 
   /// \return metadata for source \p index, if we have any.
-  llvm::Optional<MetadataEntry> getSourceMetadata(uint32_t index) const {
+  llvh::Optional<MetadataEntry> getSourceMetadata(uint32_t index) const {
     if (index >= sourcesMetadata_.size()) {
-      return llvm::None;
+      return llvh::None;
     }
     return sourcesMetadata_[index];
   }

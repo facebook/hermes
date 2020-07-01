@@ -11,7 +11,7 @@
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/Runtime.h"
 
-#include "llvm/Support/TrailingObjects.h"
+#include "llvh/Support/TrailingObjects.h"
 
 #include <limits>
 
@@ -42,7 +42,7 @@ namespace vm {
 ///   * Sharing segments with multiple spines (copy-on-write)
 class SegmentedArray final
     : public VariableSizeRuntimeCell,
-      private llvm::TrailingObjects<SegmentedArray, GCHermesValue> {
+      private llvh::TrailingObjects<SegmentedArray, GCHermesValue> {
  public:
   /// A segment is just a blob of raw memory with a fixed size.
   class Segment final : public GCCell {
@@ -421,7 +421,7 @@ class SegmentedArray final
         ? capacity
         :
         // Enough segments to hold the capacity without inline storage.
-        (llvm::alignTo<Segment::kMaxLength>(
+        (llvh::alignTo<Segment::kMaxLength>(
              capacity - kValueToSegmentThreshold) /
          Segment::kMaxLength) +
             // The slots for inline storage plus the slots need to hold the

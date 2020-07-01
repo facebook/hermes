@@ -12,13 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "WindowsSupport.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/Errc.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/WindowsError.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/StringExtras.h"
+#include "llvh/Support/ConvertUTF.h"
+#include "llvh/Support/Errc.h"
+#include "llvh/Support/FileSystem.h"
+#include "llvh/Support/Path.h"
+#include "llvh/Support/WindowsError.h"
+#include "llvh/Support/raw_ostream.h"
 #include <cstdio>
 #include <fcntl.h>
 #include <io.h>
@@ -30,7 +30,7 @@
 //===          and must not be UNIX code
 //===----------------------------------------------------------------------===//
 
-namespace llvm {
+namespace llvh {
 
 ProcessInfo::ProcessInfo() : Pid(0), Process(0), ReturnCode(0) {}
 
@@ -356,7 +356,7 @@ static std::string quoteSingleArg(StringRef Arg) {
   return Result;
 }
 
-namespace llvm {
+namespace llvh {
 std::string sys::flattenWindowsCommandLine(ArrayRef<StringRef> Args) {
   std::string Command;
   for (StringRef Arg : Args) {
@@ -449,10 +449,10 @@ std::error_code sys::ChangeStdoutToBinary() {
 }
 
 std::error_code
-llvm::sys::writeFileWithEncoding(StringRef FileName, StringRef Contents,
+llvh::sys::writeFileWithEncoding(StringRef FileName, StringRef Contents,
                                  WindowsEncodingMethod Encoding) {
   std::error_code EC;
-  llvm::raw_fd_ostream OS(FileName, EC, llvm::sys::fs::F_Text);
+  llvh::raw_fd_ostream OS(FileName, EC, llvh::sys::fs::F_Text);
   if (EC)
     return EC;
 
@@ -492,7 +492,7 @@ llvm::sys::writeFileWithEncoding(StringRef FileName, StringRef Contents,
   return EC;
 }
 
-bool llvm::sys::commandLineFitsWithinSystemLimits(StringRef Program,
+bool llvh::sys::commandLineFitsWithinSystemLimits(StringRef Program,
                                                   ArrayRef<StringRef> Args) {
   // The documented max length of the command line passed to CreateProcess.
   static const size_t MaxCommandStringLength = 32768;

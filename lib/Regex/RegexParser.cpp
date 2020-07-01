@@ -10,11 +10,11 @@
 
 #include "hermes/Regex/Regex.h"
 #include "hermes/Regex/RegexTraits.h"
-#include "llvm/Support/SaveAndRestore.h"
+#include "llvh/Support/SaveAndRestore.h"
 namespace hermes {
 namespace regex {
 
-using llvm::Optional;
+using llvh::Optional;
 
 /// Parser is a class responsible for implementing the productions of the
 /// regex grammar, using a handwritten recursive descent parser.
@@ -33,7 +33,7 @@ class Parser {
   // This may be either a code point, or a CharacterClass.
   struct ClassAtom {
     CodePoint codePoint = -1;
-    llvm::Optional<CharacterClass> charClass{};
+    llvh::Optional<CharacterClass> charClass{};
 
     explicit ClassAtom(CodePoint cp) : codePoint(cp) {}
     ClassAtom(CharacterClass::Type cc, bool invert)
@@ -180,7 +180,7 @@ class Parser {
       consume(c);
       return c;
     }
-    return llvm::None;
+    return llvh::None;
   }
 
   /// ES6 21.2.2.3 Disjunction.
@@ -188,7 +188,7 @@ class Parser {
     // All recursive productions (alternations and capture groups) pass through
     // consumeDisjunction, therefore just tracking parse depth here is
     // sufficient.
-    llvm::SaveAndRestore<uint32_t> saveDepth(parseDepth_);
+    llvh::SaveAndRestore<uint32_t> saveDepth(parseDepth_);
     if (++parseDepth_ > kMaxParseDepth) {
       setError(constants::ErrorType::PatternExceedsParseLimits);
       return;
@@ -351,7 +351,7 @@ class Parser {
   /// If Unicode is set, try to consume a surrogate pair.
   Optional<CodePoint> tryConsumeSurrogatePair() {
     if (!(flags_.unicode))
-      return llvm::None;
+      return llvh::None;
     auto saved = current_;
     auto hi = consumeCharIf(isHighSurrogate);
     auto lo = consumeCharIf(isLowSurrogate);
@@ -359,7 +359,7 @@ class Parser {
       return decodeSurrogatePair(*hi, *lo);
     }
     current_ = saved;
-    return llvm::None;
+    return llvh::None;
   }
 
   /// ES6 21.2.2.7 Quantifier.
@@ -506,20 +506,20 @@ class Parser {
 
   Optional<ClassAtom> tryConsumeBracketClassAtom() {
     if (current_ == end_) {
-      return llvm::None;
+      return llvh::None;
     }
     CharT c = *current_;
     switch (c) {
       case ']': {
         // End of bracket. Note we don't consume it here.
-        return llvm::None;
+        return llvh::None;
       }
 
       case '\\': {
         consume('\\');
         if (current_ == end_) {
           setError(constants::ErrorType::EscapeIncomplete);
-          return llvm::None;
+          return llvh::None;
         }
         CharT ec = *current_;
         switch (ec) {
@@ -593,7 +593,7 @@ class Parser {
         "Should have leading octal digit");
     auto d1 = *current_++;
     auto d2 = consumeCharIf(isOctalDigit);
-    auto d3 = (d1 <= '3' ? consumeCharIf(isOctalDigit) : llvm::None);
+    auto d3 = (d1 <= '3' ? consumeCharIf(isOctalDigit) : llvh::None);
 
     char16_t result = d1 - '0';
     if (d2)
@@ -627,7 +627,7 @@ class Parser {
   Optional<CodePoint> tryConsumeDecimalIntegerLiteral() {
     if (current_ != end_ && '0' <= *current_ && *current_ <= '9')
       return consumeDecimalIntegerLiteral();
-    return llvm::None;
+    return llvh::None;
   }
 
   /// ES6 11.8.3 HexDigit .
@@ -640,7 +640,7 @@ class Parser {
         return c - 'a' + 10;
       if ('A' <= c && c <= 'F')
         return c - 'A' + 10;
-      return llvm::None;
+      return llvh::None;
     };
 
     auto saved = current_;
@@ -650,7 +650,7 @@ class Parser {
         result = result * 16 + *hexDigitValue(*c);
       } else {
         current_ = saved;
-        return llvm::None;
+        return llvh::None;
       }
     }
     return result;
@@ -762,7 +762,7 @@ class Parser {
   Optional<CodePoint> tryConsumeUnicodeEscapeSequence() {
     auto saved = current_;
     if (!consume('u')) {
-      return llvm::None;
+      return llvh::None;
     }
 
     // Non-unicode path only supports \uABCD style escapes.
@@ -771,7 +771,7 @@ class Parser {
         return *ret;
       }
       current_ = saved;
-      return llvm::None;
+      return llvh::None;
     }
 
     // Unicode path.

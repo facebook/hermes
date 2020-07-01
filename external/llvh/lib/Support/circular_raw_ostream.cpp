@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/circular_raw_ostream.h"
+#include "llvh/Support/circular_raw_ostream.h"
 #include <algorithm>
-using namespace llvm;
+using namespace llvh;
 
 void circular_raw_ostream::write_impl(const char *Ptr, size_t Size) {
   if (BufferSize == 0) {

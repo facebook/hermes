@@ -27,7 +27,7 @@ void SourceMapTranslator::translate(SourceErrorManager::SourceCoords &coords) {
   }
   const std::shared_ptr<SourceMap> &sourceMap = result->second;
 
-  llvm::Optional<SourceMapTextLocation> originalLocOpt =
+  llvh::Optional<SourceMapTextLocation> originalLocOpt =
       sourceMap->getLocationForAddress(coords.line, coords.col);
   if (originalLocOpt.hasValue()) {
     coords.bufId = sourceErrorManager_.addNewVirtualSourceBuffer(

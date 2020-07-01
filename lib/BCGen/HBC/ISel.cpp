@@ -14,15 +14,15 @@
 #include "hermes/SourceMap/SourceMapGenerator.h"
 #include "hermes/Support/Statistic.h"
 
-#include "llvm/ADT/Optional.h"
+#include "llvh/ADT/Optional.h"
 
 #define DEBUG_TYPE "hbc-backend-isel"
 
 using namespace hermes;
 using namespace hbc;
 
-using llvm::isa;
-using llvm::Optional;
+using llvh::isa;
+using llvh::Optional;
 
 #define INCLUDE_HBC_INSTRS
 
@@ -42,7 +42,7 @@ STATISTIC(
 /// successors. Note a jump from a block to itself is necessarily backwards.
 static DenseSet<const BasicBlock *> basicBlocksWithBackwardSuccessors(
     ArrayRef<BasicBlock *> blocks) {
-  llvm::SmallDenseSet<const BasicBlock *, 16> seen;
+  llvh::SmallDenseSet<const BasicBlock *, 16> seen;
   DenseSet<const BasicBlock *> result;
   for (const BasicBlock *BB : blocks) {
     seen.insert(BB);
@@ -56,13 +56,13 @@ static DenseSet<const BasicBlock *> basicBlocksWithBackwardSuccessors(
 }
 
 void HVMRegisterAllocator::handleInstruction(Instruction *I) {
-  if (auto *CI = llvm::dyn_cast<CallInst>(I)) {
+  if (auto *CI = llvh::dyn_cast<CallInst>(I)) {
     return allocateCallInst(CI);
   }
 }
 
 bool HVMRegisterAllocator::hasTargetSpecificLowering(Instruction *I) {
-  return llvm::isa<CallInst>(I);
+  return llvh::isa<CallInst>(I);
 }
 
 void HVMRegisterAllocator::allocateCallInst(CallInst *I) {
@@ -70,9 +70,9 @@ void HVMRegisterAllocator::allocateCallInst(CallInst *I) {
 }
 
 unsigned HBCISel::encodeValue(Value *value) {
-  if (llvm::isa<Instruction>(value)) {
+  if (llvh::isa<Instruction>(value)) {
     return RA_.getRegister(value).getIndex();
-  } else if (auto *var = llvm::dyn_cast<Variable>(value)) {
+  } else if (auto *var = llvh::dyn_cast<Variable>(value)) {
     return var->getIndexInVariableList();
   } else {
     llvm_unreachable("Do not support other value types");
@@ -166,7 +166,7 @@ void HBCISel::resolveExceptionHandlers() {
 
 void HBCISel::generateJumpTable() {
   using SwitchInfoEntry =
-      llvm::DenseMap<SwitchImmInst *, SwitchImmInfo>::iterator::value_type;
+      llvh::DenseMap<SwitchImmInst *, SwitchImmInfo>::iterator::value_type;
 
   if (switchImmInfo_.empty())
     return;
@@ -174,7 +174,7 @@ void HBCISel::generateJumpTable() {
   std::vector<uint32_t> res{};
 
   // Sort the jump table entries so iteration order is deterministic.
-  llvm::SmallVector<SwitchInfoEntry, 1> infoVector{switchImmInfo_.begin(),
+  llvh::SmallVector<SwitchInfoEntry, 1> infoVector{switchImmInfo_.begin(),
                                                    switchImmInfo_.end()};
   std::sort(
       infoVector.begin(),
@@ -351,15 +351,15 @@ void HBCISel::verifyCall(CallInst *Inst) {
   const auto lastArgReg = RA_.getLastRegister().getIndex() -
       HVMRegisterAllocator::CALL_EXTRA_REGISTERS;
 
-  const bool isBuiltin = llvm::isa<CallBuiltinInst>(Inst);
-  const bool isCallN = llvm::isa<HBCCallNInst>(Inst);
+  const bool isBuiltin = llvh::isa<CallBuiltinInst>(Inst);
+  const bool isCallN = llvh::isa<HBCCallNInst>(Inst);
 
   for (unsigned i = 0, max = Inst->getNumArguments(); i < max; i++) {
     Value *argument = Inst->getArgument(i);
     // The first argument (thisArg) of CallBuiltin must be LiteralUndefined.
     if (isBuiltin && i == 0) {
       assert(
-          llvm::isa<LiteralUndefined>(argument) && !RA_.isAllocated(argument) &&
+          llvh::isa<LiteralUndefined>(argument) && !RA_.isAllocated(argument) &&
           "Register for 'this' argument is misallocated");
     } else if (isCallN) {
       // CallN may take arguments from anywhere except for the last N registers
@@ -367,13 +367,13 @@ void HBCISel::verifyCall(CallInst *Inst) {
       // registers. Note that <= is correct because lastArgReg is the index of
       // the last register, not the count of registers.
       assert(
-          llvm::isa<Instruction>(argument) &&
+          llvh::isa<Instruction>(argument) &&
           RA_.getRegister(argument).getIndex() <= lastArgReg - max);
     } else {
       // Calls require that the arguments be at the end of the frame, in reverse
       // order.
       assert(
-          llvm::isa<Instruction>(argument) &&
+          llvh::isa<Instruction>(argument) &&
           RA_.getRegister(argument).getIndex() == lastArgReg - i &&
           "Register is misallocated");
     }
@@ -547,7 +547,7 @@ void HBCISel::generateStorePropertyInst(
   auto objReg = encodeValue(Inst->getObject());
   auto prop = Inst->getProperty();
 
-  if (auto *Lit = llvm::dyn_cast<LiteralString>(prop)) {
+  if (auto *Lit = llvh::dyn_cast<LiteralString>(prop)) {
     // Property is a string
     auto id = BCFGen_->getIdentifierID(Lit);
     if (id <= UINT16_MAX)
@@ -593,7 +593,7 @@ void HBCISel::generateStoreOwnPropertyInst(
   // If the property is a LiteralNumber, the property is enumerable, and it is a
   // valid array index, it is coming from an array initialization and we will
   // emit it as PutByIndex.
-  auto *numProp = llvm::dyn_cast<LiteralNumber>(prop);
+  auto *numProp = llvh::dyn_cast<LiteralNumber>(prop);
   if (numProp && isEnumerable) {
     if (auto arrayIndex = numProp->convertToArrayIndex()) {
       uint32_t index = arrayIndex.getValue();
@@ -662,7 +662,7 @@ void HBCISel::generateDeletePropertyInst(
   auto resultReg = encodeValue(Inst);
   auto prop = Inst->getProperty();
 
-  if (auto *Lit = llvm::dyn_cast<LiteralString>(prop)) {
+  if (auto *Lit = llvh::dyn_cast<LiteralString>(prop)) {
     auto id = BCFGen_->getIdentifierID(Lit);
     if (id <= UINT16_MAX)
       BCFGen_->emitDelById(resultReg, objReg, id);
@@ -681,7 +681,7 @@ void HBCISel::generateLoadPropertyInst(
   auto objReg = encodeValue(Inst->getObject());
   auto prop = Inst->getProperty();
 
-  if (auto *Lit = llvm::dyn_cast<LiteralString>(prop)) {
+  if (auto *Lit = llvh::dyn_cast<LiteralString>(prop)) {
     auto id = BCFGen_->getIdentifierID(Lit);
     if (id > UINT16_MAX) {
       BCFGen_->emitGetByIdLong(
@@ -731,7 +731,7 @@ void HBCISel::generateAllocStackInst(AllocStackInst *Inst, BasicBlock *next) {
 void HBCISel::generateAllocObjectInst(AllocObjectInst *Inst, BasicBlock *next) {
   auto result = encodeValue(Inst);
   // TODO: Utilize sizeHint.
-  if (llvm::isa<EmptySentinel>(Inst->getParentObject())) {
+  if (llvh::isa<EmptySentinel>(Inst->getParentObject())) {
     BCFGen_->emitNewObject(result);
   } else {
     auto parentReg = encodeValue(Inst->getParentObject());
@@ -779,7 +779,7 @@ void HBCISel::generateHBCCreateFunctionInst(
   auto env = encodeValue(Inst->getEnvironment());
   auto output = encodeValue(Inst);
   auto code = BCFGen_->getFunctionID(Inst->getFunctionCode());
-  bool isGen = llvm::isa<GeneratorFunction>(Inst->getFunctionCode());
+  bool isGen = llvh::isa<GeneratorFunction>(Inst->getFunctionCode());
   if (LLVM_LIKELY(code <= UINT16_MAX)) {
     // Most of the cases, function index will be less than 2^16.
     if (isGen) {
@@ -814,7 +814,7 @@ void HBCISel::generateHBCAllocObjectFromBufferInst(
       std::min((uint32_t)UINT16_MAX, Inst->getSizeHint()->asUInt32());
 
   auto buffIdxs = BCFGen_->BMGen_.addObjectBuffer(
-      llvm::ArrayRef<Literal *>{objKeys}, llvm::ArrayRef<Literal *>{objVals});
+      llvh::ArrayRef<Literal *>{objKeys}, llvh::ArrayRef<Literal *>{objVals});
   if (buffIdxs.first <= UINT16_MAX && buffIdxs.second <= UINT16_MAX) {
     BCFGen_->emitNewObjectWithBuffer(
         result, sizeHint, e, buffIdxs.first, buffIdxs.second);
@@ -872,7 +872,7 @@ void HBCISel::generateBranchInst(BranchInst *Inst, BasicBlock *next) {
 void HBCISel::generateReturnInst(ReturnInst *Inst, BasicBlock *next) {
   auto value = encodeValue(Inst->getValue());
   Function *F = Inst->getParent()->getParent();
-  if (llvm::isa<GeneratorInnerFunction>(F)) {
+  if (llvh::isa<GeneratorInnerFunction>(F)) {
     // Generator inner functions must complete before `return`,
     // unlike when they yield.
     BCFGen_->emitCompleteGenerator();
@@ -1570,7 +1570,7 @@ void HBCISel::generate(SourceMapGenerator *outSourceMap) {
 
   /// The order of the blocks is reverse-post-order, which is a simply
   /// topological sort.
-  llvm::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
+  llvh::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
 
   // If we are compiling with debugger or otherwise need async break checks,
   // decide which blocks need runtime async break checks: blocks with backwards

@@ -11,18 +11,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Host.h"
-#include "llvm/Support/TargetParser.h"
-#include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
-#include "llvm/Config/llvm-config.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/Host.h"
+#include "llvh/Support/TargetParser.h"
+#include "llvh/ADT/SmallSet.h"
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/ADT/StringSwitch.h"
+#include "llvh/ADT/Triple.h"
+#include "llvh/Config/llvm-config.h"
+#include "llvh/Support/Debug.h"
+#include "llvh/Support/FileSystem.h"
+#include "llvh/Support/MemoryBuffer.h"
+#include "llvh/Support/raw_ostream.h"
 #include <assert.h>
 #include <string.h>
 
@@ -51,14 +51,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-using namespace llvm;
+using namespace llvh;
 
-static std::unique_ptr<llvm::MemoryBuffer>
+static std::unique_ptr<llvh::MemoryBuffer>
     LLVM_ATTRIBUTE_UNUSED getProcCpuinfoContent() {
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
-      llvm::MemoryBuffer::getFileAsStream("/proc/cpuinfo");
+  llvh::ErrorOr<std::unique_ptr<llvh::MemoryBuffer>> Text =
+      llvh::MemoryBuffer::getFileAsStream("/proc/cpuinfo");
   if (std::error_code EC = Text.getError()) {
-    llvm::errs() << "Can't read "
+    llvh::errs() << "Can't read "
                  << "/proc/cpuinfo: " << EC.message() << "\n";
     return nullptr;
   }
@@ -1020,13 +1020,13 @@ StringRef sys::getHostCPUName() {
 #define X86_CPU_SUBTYPE(ARCHNAME, ENUM) \
   if (Subtype == X86::ENUM) \
     return ARCHNAME;
-#include "llvm/Support/X86TargetParser.def"
+#include "llvh/Support/X86TargetParser.def"
 
   // Now check types.
 #define X86_CPU_TYPE(ARCHNAME, ENUM) \
   if (Type == X86::ENUM) \
     return ARCHNAME;
-#include "llvm/Support/X86TargetParser.def"
+#include "llvh/Support/X86TargetParser.def"
 
   return "generic";
 }
@@ -1077,19 +1077,19 @@ StringRef sys::getHostCPUName() {
 }
 #elif defined(__linux__) && (defined(__ppc__) || defined(__powerpc__))
 StringRef sys::getHostCPUName() {
-  std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
+  std::unique_ptr<llvh::MemoryBuffer> P = getProcCpuinfoContent();
   StringRef Content = P ? P->getBuffer() : "";
   return detail::getHostCPUNameForPowerPC(Content);
 }
 #elif defined(__linux__) && (defined(__arm__) || defined(__aarch64__))
 StringRef sys::getHostCPUName() {
-  std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
+  std::unique_ptr<llvh::MemoryBuffer> P = getProcCpuinfoContent();
   StringRef Content = P ? P->getBuffer() : "";
   return detail::getHostCPUNameForARM(Content);
 }
 #elif defined(__linux__) && defined(__s390x__)
 StringRef sys::getHostCPUName() {
-  std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
+  std::unique_ptr<llvh::MemoryBuffer> P = getProcCpuinfoContent();
   StringRef Content = P ? P->getBuffer() : "";
   return detail::getHostCPUNameForS390x(Content);
 }
@@ -1104,10 +1104,10 @@ StringRef sys::getHostCPUName() { return "generic"; }
 static int computeHostNumPhysicalCores() {
   // Read /proc/cpuinfo as a stream (until EOF reached). It cannot be
   // mmapped because it appears to have 0 size.
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
-      llvm::MemoryBuffer::getFileAsStream("/proc/cpuinfo");
+  llvh::ErrorOr<std::unique_ptr<llvh::MemoryBuffer>> Text =
+      llvh::MemoryBuffer::getFileAsStream("/proc/cpuinfo");
   if (std::error_code EC = Text.getError()) {
-    llvm::errs() << "Can't read "
+    llvh::errs() << "Can't read "
                  << "/proc/cpuinfo: " << EC.message() << "\n";
     return -1;
   }
@@ -1313,7 +1313,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
 }
 #elif defined(__linux__) && (defined(__arm__) || defined(__aarch64__))
 bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
-  std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
+  std::unique_ptr<llvh::MemoryBuffer> P = getProcCpuinfoContent();
   if (!P)
     return false;
 

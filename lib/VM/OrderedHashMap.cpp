@@ -12,7 +12,7 @@
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/Operations.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 #define DEBUG_TYPE "serialize"
 
 namespace hermes {

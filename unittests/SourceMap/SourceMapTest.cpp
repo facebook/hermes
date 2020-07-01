@@ -10,8 +10,8 @@
 #include "hermes/SourceMap/SourceMapParser.h"
 #include "hermes/Support/Base64vlq.h"
 
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/MemoryBuffer.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include "gtest/gtest.h"
 
@@ -74,7 +74,7 @@ SourceMap::Segment loc(
     int32_t sourceIndex,
     int32_t line /* 1-based */,
     int32_t column /* 0-based */,
-    llvm::Optional<int32_t> nameIndex = llvm::None) {
+    llvh::Optional<int32_t> nameIndex = llvh::None) {
   return SourceMap::Segment{address, sourceIndex, line - 1, column, nameIndex};
 }
 
@@ -90,7 +90,7 @@ void verifySegment(
     int generatedLine,
     const std::vector<std::string> &sources,
     const SourceMap::Segment &segment) {
-  llvm::Optional<SourceMapTextLocation> locOpt =
+  llvh::Optional<SourceMapTextLocation> locOpt =
       sourceMap.getLocationForAddress(
           generatedLine, segment.generatedColumn + 1);
   if (segment.representedLocation.hasValue()) {
@@ -145,7 +145,7 @@ TEST(SourceMap, Basic) {
   map.addFunctionOffsets(std::move(functionOffsets1), 0);
   map.addFunctionOffsets(std::move(functionOffsets2), 1);
   std::string storage;
-  llvm::raw_string_ostream OS(storage);
+  llvh::raw_string_ostream OS(storage);
   map.outputAsJSON(OS);
   EXPECT_EQ(
       OS.str(),
@@ -190,7 +190,7 @@ TEST(SourceMap, SourcesField) {
 TEST(SourceMap, SourceRoot) {
   std::unique_ptr<SourceMap> sourceMap = SourceMapParser::parse(TestMap);
 
-  llvm::Optional<SourceMapTextLocation> locOpt =
+  llvh::Optional<SourceMapTextLocation> locOpt =
       sourceMap->getLocationForAddress(2, 2);
   EXPECT_TRUE(locOpt.hasValue());
   EXPECT_EQ(locOpt.getValue().fileName, "/the/root/two.js");
@@ -367,7 +367,7 @@ TEST(SourceMap, MergedWithInputSourceMaps) {
   gen.addMappingsLine(segments, 0);
 
   std::string storage;
-  llvm::raw_string_ostream OS(storage);
+  llvh::raw_string_ostream OS(storage);
   gen.outputAsJSON(OS);
   EXPECT_EQ(
       OS.str(),
@@ -397,7 +397,7 @@ class SimpleJSONParser {
     return JSONSharedValue(getValue(), alloc_);
   }
 
-  SimpleJSONParser(llvm::StringRef input)
+  SimpleJSONParser(llvh::StringRef input)
       : alloc_(std::make_shared<JSLexer::Allocator>()),
         factory_(*alloc_),
         parser_(factory_, input, sm_) {
@@ -453,13 +453,13 @@ TEST(SourceMap, PropagateFbMetadataFromInputs) {
       loc(9, 1, 1, 6), // addr 1:9 -> file2:1:6 -> file2orig:3:1
   };
 
-  gen.addSource("file1", llvm::None);
+  gen.addSource("file1", llvh::None);
   gen.addSource("file2", file2MetadataJson.getSharedValue());
   gen.setInputSourceMaps(std::move(inputSourceMaps));
   gen.addMappingsLine(segments, 0);
 
   std::string storage;
-  llvm::raw_string_ostream OS(storage);
+  llvh::raw_string_ostream OS(storage);
   gen.outputAsJSON(OS);
   EXPECT_EQ(
       OS.str(),
@@ -484,12 +484,12 @@ TEST(SourceMap, GenerateWithFbMetadata) {
       loc(1, 1, 1, 0), // addr 1:1 -> file2:1:0
   };
 
-  gen.addSource("file1", llvm::None);
+  gen.addSource("file1", llvh::None);
   gen.addSource("file2", file2MetadataJson.getSharedValue());
   gen.addMappingsLine(segments, 0);
 
   std::string storage;
-  llvm::raw_string_ostream OS(storage);
+  llvh::raw_string_ostream OS(storage);
   gen.outputAsJSON(OS);
   EXPECT_EQ(
       OS.str(),
@@ -540,7 +540,7 @@ TEST(SourceMap, VLQRandos) {
 
   // Encode every input into the string.
   std::string storage;
-  llvm::raw_string_ostream OS(storage);
+  llvh::raw_string_ostream OS(storage);
   for (int32_t x : inputs)
     base64vlq::encode(OS, x);
   OS.flush();
@@ -559,7 +559,7 @@ TEST(SourceMap, VLQDecodeInvalids) {
     return base64vlq::decode(s, s + strlen(s));
   };
   auto opt = [](int32_t x) -> OptValue<int32_t> { return x; };
-  const OptValue<int32_t> none{llvm::None};
+  const OptValue<int32_t> none{llvh::None};
   EXPECT_EQ(opt(INT32_MAX), decode("+/////D")); // 2**31-1
   EXPECT_EQ(opt(-INT32_MAX), decode("//////D")); // -2**31+1
   // note http://www.murzwin.com/base64vlq.html gets this wrong!

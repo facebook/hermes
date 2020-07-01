@@ -17,13 +17,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "Unix.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Config/config.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/Config/config.h"
 #include <cctype>
 #include <string>
 #include <sys/utsname.h>
 
-using namespace llvm;
+using namespace llvh;
 
 static std::string getOSVersion() {
   struct utsname info;

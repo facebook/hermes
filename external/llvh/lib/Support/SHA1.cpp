@@ -15,10 +15,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/SHA1.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/Host.h"
-using namespace llvm;
+#include "llvh/Support/SHA1.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/Support/Host.h"
+using namespace llvh;
 
 #include <stdint.h>
 #include <string.h>

@@ -7,15 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/APInt.h"
-#include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/edit_distance.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/ADT/APFloat.h"
+#include "llvh/ADT/APInt.h"
+#include "llvh/ADT/Hashing.h"
+#include "llvh/ADT/StringExtras.h"
+#include "llvh/ADT/edit_distance.h"
 #include <bitset>
 
-using namespace llvm;
+using namespace llvh;
 
 // MSVC emits references to this into the translation units which reference it.
 #ifndef _MSC_VER
@@ -92,10 +92,10 @@ int StringRef::compare_numeric(StringRef RHS) const {
 }
 
 // Compute the edit distance between the two given strings.
-unsigned StringRef::edit_distance(llvm::StringRef Other,
+unsigned StringRef::edit_distance(llvh::StringRef Other,
                                   bool AllowReplacements,
                                   unsigned MaxEditDistance) const {
-  return llvm::ComputeEditDistance(
+  return llvh::ComputeEditDistance(
       makeArrayRef(data(), size()),
       makeArrayRef(Other.data(), Other.size()),
       AllowReplacements, MaxEditDistance);
@@ -408,7 +408,7 @@ static unsigned GetAutoSenseRadix(StringRef &Str) {
   return 10;
 }
 
-bool llvm::consumeUnsignedInteger(StringRef &Str, unsigned Radix,
+bool llvh::consumeUnsignedInteger(StringRef &Str, unsigned Radix,
                                   unsigned long long &Result) {
   // Autosense radix if not specified.
   if (Radix == 0)
@@ -456,7 +456,7 @@ bool llvm::consumeUnsignedInteger(StringRef &Str, unsigned Radix,
   return false;
 }
 
-bool llvm::consumeSignedInteger(StringRef &Str, unsigned Radix,
+bool llvh::consumeSignedInteger(StringRef &Str, unsigned Radix,
                                 long long &Result) {
   unsigned long long ULLVal;
 
@@ -486,7 +486,7 @@ bool llvm::consumeSignedInteger(StringRef &Str, unsigned Radix,
 
 /// GetAsUnsignedInteger - Workhorse method that converts a integer character
 /// sequence of radix up to 36 to an unsigned long long value.
-bool llvm::getAsUnsignedInteger(StringRef Str, unsigned Radix,
+bool llvh::getAsUnsignedInteger(StringRef Str, unsigned Radix,
                                 unsigned long long &Result) {
   if (consumeUnsignedInteger(Str, Radix, Result))
     return true;
@@ -496,7 +496,7 @@ bool llvm::getAsUnsignedInteger(StringRef Str, unsigned Radix,
   return !Str.empty();
 }
 
-bool llvm::getAsSignedInteger(StringRef Str, unsigned Radix,
+bool llvh::getAsSignedInteger(StringRef Str, unsigned Radix,
                               long long &Result) {
   if (consumeSignedInteger(Str, Radix, Result))
     return true;
@@ -595,6 +595,6 @@ bool StringRef::getAsDouble(double &Result, bool AllowInexact) const {
 }
 
 // Implementation of StringRef hashing.
-hash_code llvm::hash_value(StringRef S) {
+hash_code llvh::hash_value(StringRef S) {
   return hash_combine_range(S.begin(), S.end());
 }

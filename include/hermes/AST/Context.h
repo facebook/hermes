@@ -113,12 +113,12 @@ class Context {
   /// Mapping from require() arguments to actual resolved paths.
   /// Strings owned by a JSON Parser allocator that the user of Context should
   /// manage.
-  using ResolutionTableEntry = llvm::DenseMap<llvm::StringRef, llvm::StringRef>;
+  using ResolutionTableEntry = llvh::DenseMap<llvh::StringRef, llvh::StringRef>;
 
   /// Mapping from file names to the dictionary to use to look up resolutions.
   /// Strings owned by a JSON Parser allocator that the user of Context should
   /// manage.
-  using ResolutionTable = llvm::DenseMap<llvm::StringRef, ResolutionTableEntry>;
+  using ResolutionTable = llvh::DenseMap<llvh::StringRef, ResolutionTableEntry>;
 
   /// Represents a range of modules used in a given segment.
   struct SegmentRange {
@@ -241,7 +241,7 @@ class Context {
 
   parser::PreParsedBufferInfo *getPreParsedBufferInfo(uint32_t bufferId) {
     if (!preParsed_)
-      preParsed_ = llvm::make_unique<parser::PreParsedData>();
+      preParsed_ = llvh::make_unique<parser::PreParsedData>();
     return preParsed_->getBufferInfo(bufferId);
   }
 
@@ -261,7 +261,7 @@ class Context {
 
   /// Get or create a new identifier for the string \p str. The method copies
   /// the content of the string.
-  Identifier getIdentifier(llvm::StringRef str) {
+  Identifier getIdentifier(llvh::StringRef str) {
     return stringTable_.getIdentifier(str);
   }
 

@@ -13,11 +13,11 @@
 #include "hermes/Optimizer/Scalar/Utils.h"
 #include "hermes/Support/Statistic.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 
-using llvm::cast;
-using llvm::dyn_cast;
-using llvm::isa;
+using llvh::cast;
+using llvh::dyn_cast;
+using llvh::isa;
 
 STATISTIC(NumInlinedCalls, "Number of inlined calls");
 
@@ -25,10 +25,10 @@ namespace hermes {
 
 /// Generate a list of basic blocks in simple depth-first-search order.
 /// Unreachable blocks are not included since we don't want to inline them.
-static llvm::SmallVector<BasicBlock *, 4> orderDFS(Function *F) {
-  llvm::SmallVector<BasicBlock *, 4> order{};
-  llvm::SmallVector<BasicBlock *, 4> stack{};
-  llvm::SmallDenseSet<BasicBlock *> visited{};
+static llvh::SmallVector<BasicBlock *, 4> orderDFS(Function *F) {
+  llvh::SmallVector<BasicBlock *, 4> order{};
+  llvh::SmallVector<BasicBlock *, 4> stack{};
+  llvh::SmallDenseSet<BasicBlock *> visited{};
 
   stack.push_back(&*F->begin());
   while (!stack.empty()) {
@@ -99,13 +99,13 @@ static Value *inlineFunction(
 
   // Map from operands in the original function to the operands in the inlined
   // copy.
-  llvm::DenseMap<Value *, Value *> operandMap{};
+  llvh::DenseMap<Value *, Value *> operandMap{};
 
   // We build the operand list here for every instruction.
-  llvm::SmallVector<Value *, 8> translatedOperands{};
+  llvh::SmallVector<Value *, 8> translatedOperands{};
 
   // We collect all phi-s during the first pass in this set.
-  llvm::SmallVector<PhiInst *, 4> phis{};
+  llvh::SmallVector<PhiInst *, 4> phis{};
 
   // Create a return block.
   BasicBlock *returnBlock = builder.createBasicBlock(intoFunction);
@@ -163,19 +163,19 @@ static Value *inlineFunction(
       Value *oldOp = I->getOperand(i);
       Value *newOp = nullptr;
 
-      if (llvm::isa<Instruction>(oldOp) || llvm::isa<Parameter>(oldOp) ||
-          llvm::isa<BasicBlock>(oldOp)) {
+      if (llvh::isa<Instruction>(oldOp) || llvh::isa<Parameter>(oldOp) ||
+          llvh::isa<BasicBlock>(oldOp)) {
         // Operands must already have been visited.
         newOp = operandMap[oldOp];
         assert(newOp && "operand not visited before instruction");
       } else if (
-          llvm::isa<Label>(oldOp) || llvm::isa<Literal>(oldOp) ||
-          llvm::isa<Variable>(oldOp) || llvm::isa<EmptySentinel>(oldOp)) {
+          llvh::isa<Label>(oldOp) || llvh::isa<Literal>(oldOp) ||
+          llvh::isa<Variable>(oldOp) || llvh::isa<EmptySentinel>(oldOp)) {
         // Labels, literals and variables are unchanged.
         newOp = oldOp;
       } else {
-        llvm::errs() << "INVALID OPERAND FOR : " << I->getKindStr() << '\n';
-        llvm::errs() << "INVALID OPERAND     : " << oldOp->getKindStr() << '\n';
+        llvh::errs() << "INVALID OPERAND FOR : " << I->getKindStr() << '\n';
+        llvh::errs() << "INVALID OPERAND     : " << oldOp->getKindStr() << '\n';
         llvm_unreachable("unexpected operand kind");
       }
 
@@ -194,7 +194,7 @@ static Value *inlineFunction(
     for (auto &I : *oldBB) {
       // Translate the operands.
 
-      if (auto *phi = llvm::dyn_cast<PhiInst>(&I)) {
+      if (auto *phi = llvh::dyn_cast<PhiInst>(&I)) {
         // We cannot translate phi operands yet because the instruction is not
         // dominated by its operands (unlike all others). So, use empty
         // operands and save the Phi for later.
@@ -207,7 +207,7 @@ static Value *inlineFunction(
 
       Instruction *newInst;
 
-      if (llvm::isa<ReturnInst>(I)) {
+      if (llvh::isa<ReturnInst>(I)) {
         // Handle return by jumping to the return block and adjusting the phi.
         assert(
             translatedOperands.size() == 1 &&
@@ -269,7 +269,7 @@ bool Inlining::runOnModule(Module *M) {
 
   for (Function &F : *M) {
     for (Instruction *I : F.getUsers()) {
-      auto *CFI = llvm::dyn_cast<CreateFunctionInst>(I);
+      auto *CFI = llvh::dyn_cast<CreateFunctionInst>(I);
       if (!CFI)
         continue;
 
@@ -291,15 +291,15 @@ bool Inlining::runOnModule(Module *M) {
       if (!canBeInlined(FC, intoFunction))
         continue;
 
-      LLVM_DEBUG(llvm::dbgs() << "Inlining function '"
+      LLVM_DEBUG(llvh::dbgs() << "Inlining function '"
                               << FC->getInternalNameStr() << "' ";
                  FC->getContext().getSourceErrorManager().dumpCoords(
-                     llvm::dbgs(), FC->getSourceRange().Start);
-                 llvm::dbgs() << " into function '"
+                     llvh::dbgs(), FC->getSourceRange().Start);
+                 llvh::dbgs() << " into function '"
                               << intoFunction->getInternalNameStr() << "' ";
                  FC->getContext().getSourceErrorManager().dumpCoords(
-                     llvm::dbgs(), intoFunction->getSourceRange().Start);
-                 llvm::dbgs() << "\n";);
+                     llvh::dbgs(), intoFunction->getSourceRange().Start);
+                 llvh::dbgs() << "\n";);
 
       IRBuilder builder(M);
 

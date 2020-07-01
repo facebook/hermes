@@ -20,9 +20,9 @@ using namespace hermes::ESTree;
 /// Pair of (callee, kind) where calling the callee with a string argument
 /// results in a dependency of the kind.
 struct ResourceCallee {
-  llvm::StringLiteral callee;
+  llvh::StringLiteral callee;
   DependencyKind kind;
-  constexpr ResourceCallee(llvm::StringLiteral callee, DependencyKind kind)
+  constexpr ResourceCallee(llvh::StringLiteral callee, DependencyKind kind)
       : callee(callee), kind(kind) {}
 };
 
@@ -76,7 +76,7 @@ class DependencyExtractor {
         requireMockIdent_(astContext.getStringTable().getString("requireMock")),
         graphqlIdent_(astContext.getStringTable().getString("graphql")) {
     for (uint32_t i = 0; i < NUM_RESOURCE_CALLEES; ++i) {
-      llvm::StringLiteral callee = RESOURCE_CALLEES[i].callee;
+      llvh::StringLiteral callee = RESOURCE_CALLEES[i].callee;
       resourceIdents_[i] = astContext.getStringTable().getString(callee);
     }
 
@@ -101,7 +101,7 @@ class DependencyExtractor {
   }
 
   void visit(ImportDeclarationNode *node) {
-    auto *source = llvm::cast<StringLiteralNode>(node->_source);
+    auto *source = llvh::cast<StringLiteralNode>(node->_source);
 
     // Whether there was an import of a value.
     bool hasValue = false;
@@ -119,7 +119,7 @@ class DependencyExtractor {
     for (Node &child : node->_specifiers) {
       // Use dyn_cast because there can also be ImportDefaultSpecifier or
       // ImportNamespaceSpecifier here.
-      if (auto *spec = llvm::dyn_cast<ImportSpecifierNode>(&child)) {
+      if (auto *spec = llvh::dyn_cast<ImportSpecifierNode>(&child)) {
         if (spec->_importKind->str() == "value") {
           hasValue = true;
         } else {
@@ -139,7 +139,7 @@ class DependencyExtractor {
   }
 
   void visit(ExportNamedDeclarationNode *node) {
-    auto *source = llvm::cast_or_null<StringLiteralNode>(node->_source);
+    auto *source = llvh::cast_or_null<StringLiteralNode>(node->_source);
     if (source) {
       DependencyKind kind = node->_exportKind->str() == "value"
           ? DependencyKind::ESM
@@ -150,7 +150,7 @@ class DependencyExtractor {
   }
 
   void visit(ExportAllDeclarationNode *node) {
-    auto *source = llvm::cast<StringLiteralNode>(node->_source);
+    auto *source = llvh::cast<StringLiteralNode>(node->_source);
     DependencyKind kind = node->_exportKind->str() == "value"
         ? DependencyKind::ESM
         : DependencyKind::Type;
@@ -162,11 +162,11 @@ class DependencyExtractor {
     // CallExpressionLike-based dependencies will need the first argument to be
     // a string indicating the source.
     auto *callee = getCallee(node);
-    if (auto *import = llvm::dyn_cast<ImportNode>(callee)) {
+    if (auto *import = llvh::dyn_cast<ImportNode>(callee)) {
       if (auto *name = needFirstStringArgument(node)) {
         addDependency(name->_value->str(), DependencyKind::Async);
       }
-    } else if (auto *ident = llvm::dyn_cast<IdentifierNode>(callee)) {
+    } else if (auto *ident = llvh::dyn_cast<IdentifierNode>(callee)) {
       if (ident->_name == requireIdent_) {
         if (auto *name = needFirstStringArgument(node)) {
           addDependency(name->_value->str(), DependencyKind::Require);
@@ -182,11 +182,11 @@ class DependencyExtractor {
           }
         }
       }
-    } else if (auto *mem = llvm::dyn_cast<MemberExpressionNode>(callee)) {
-      auto *obj = llvm::dyn_cast<IdentifierNode>(mem->_object);
+    } else if (auto *mem = llvh::dyn_cast<MemberExpressionNode>(callee)) {
+      auto *obj = llvh::dyn_cast<IdentifierNode>(mem->_object);
       if (obj && !mem->_computed &&
           (obj->_name == requireIdent_ || obj->_name == jestIdent_)) {
-        auto *prop = llvm::dyn_cast<IdentifierNode>(mem->_property);
+        auto *prop = llvh::dyn_cast<IdentifierNode>(mem->_property);
         if (prop &&
             (prop->_name == requireActualIdent_ ||
              prop->_name == requireMockIdent_)) {
@@ -200,12 +200,12 @@ class DependencyExtractor {
   }
 
   void visit(TaggedTemplateExpressionNode *node) {
-    if (auto *tagIdent = llvm::dyn_cast<IdentifierNode>(node->_tag)) {
+    if (auto *tagIdent = llvh::dyn_cast<IdentifierNode>(node->_tag)) {
       if (tagIdent->_name == graphqlIdent_) {
         NodeList &quasis =
-            llvm::cast<TemplateLiteralNode>(node->_quasi)->_quasis;
+            llvh::cast<TemplateLiteralNode>(node->_quasi)->_quasis;
         for (auto &it : quasis) {
-          auto *quasi = llvm::cast<TemplateElementNode>(&it);
+          auto *quasi = llvh::cast<TemplateElementNode>(&it);
           registerGraphQLDependencies(quasi);
         }
       }
@@ -226,12 +226,12 @@ class DependencyExtractor {
  private:
   /// Perform any postprocessing on \p name (e.g. removing "m#" at the start)
   /// and add the {name, kind} pair to the list of extracted dependencies.
-  void addDependency(llvm::StringRef name, DependencyKind kind) {
+  void addDependency(llvh::StringRef name, DependencyKind kind) {
     name.consume_front("m#");
     switch (kind) {
       case DependencyKind::GraphQL:
         // GraphQL dependencies require a .graphql appended to them.
-        deps_.push_back(Dependency{llvm::Twine(name, ".graphql").str(), kind});
+        deps_.push_back(Dependency{llvh::Twine(name, ".graphql").str(), kind});
         break;
       default:
         deps_.push_back(Dependency{name.str(), kind});
@@ -249,7 +249,7 @@ class DependencyExtractor {
           "dependency call needs a string literal argument");
       return nullptr;
     }
-    auto *first = llvm::dyn_cast<StringLiteralNode>(&args.front());
+    auto *first = llvh::dyn_cast<StringLiteralNode>(&args.front());
     if (!first) {
       sm_.error(
           node->getSourceRange(),
@@ -264,7 +264,7 @@ class DependencyExtractor {
   void registerGraphQLDependencies(TemplateElementNode *elem) {
     if (!elem->_cooked)
       return;
-    llvm::StringRef string = elem->_cooked->str();
+    llvh::StringRef string = elem->_cooked->str();
     std::vector<regex::CapturedRange> captures{};
     uint32_t searchStart = 0;
     for (;;) {

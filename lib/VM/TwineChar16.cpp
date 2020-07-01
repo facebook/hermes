@@ -9,7 +9,7 @@
 #include "hermes/VM/SmallXString.h"
 #include "hermes/VM/StringPrimitive.h"
 
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/raw_ostream.h"
 
 namespace hermes {
 namespace vm {
@@ -23,7 +23,7 @@ TwineChar16::TwineChar16(const StringPrimitive *str)
   assert(isValid());
 }
 
-void TwineChar16::print(llvm::raw_ostream &os) const {
+void TwineChar16::print(llvh::raw_ostream &os) const {
   assert(isValid());
   auto printChild = [&os](const Node child, const NodeKind kind, size_t size) {
     switch (kind) {
@@ -34,7 +34,7 @@ void TwineChar16::print(llvm::raw_ostream &os) const {
         child.twine->print(os);
         break;
       case TwineChar16::CharStrKind:
-        os << llvm::StringRef(child.charStr, size);
+        os << llvh::StringRef(child.charStr, size);
         break;
       case TwineChar16::Char16StrKind:
         os << UTF16Ref(child.char16Str, size);
@@ -119,7 +119,7 @@ size_t TwineChar16::toChar16Str(char16_t *out, size_t maxlen) const {
   return leftUsed + rightUsed;
 }
 
-void TwineChar16::toVector(llvm::SmallVectorImpl<char16_t> &out) const {
+void TwineChar16::toVector(llvh::SmallVectorImpl<char16_t> &out) const {
   assert(isValid());
   auto childToVector = [&out](
                            const Node child, const NodeKind kind, size_t size) {

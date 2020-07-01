@@ -13,12 +13,12 @@
 
 using namespace hermes;
 
-using llvm::isa;
+using llvh::isa;
 
 /// Auxiliary method to figure out the Functions that a given CallInst may
 /// be calling. Returns true if we have a complete set, false if there are
 /// unknown callees.
-static bool identifyCallees(CallInst *CI, llvm::DenseSet<Function *> &callees) {
+static bool identifyCallees(CallInst *CI, llvh::DenseSet<Function *> &callees) {
   Value *callee = CI->getCallee();
   switch (callee->getKind()) {
     case ValueKind::FunctionKind: {
@@ -38,16 +38,16 @@ static bool identifyCallees(CallInst *CI, llvm::DenseSet<Function *> &callees) {
         return false;
       }
       for (auto *U : V->getUsers()) {
-        if (llvm::isa<LoadFrameInst>(U)) {
+        if (llvh::isa<LoadFrameInst>(U)) {
           // Skip over a load frame using that address
           continue;
         }
-        auto *SF = llvm::dyn_cast<StoreFrameInst>(U);
+        auto *SF = llvh::dyn_cast<StoreFrameInst>(U);
         if (!SF) {
           // Unknown inst using that address ... bail out.
           return false;
         }
-        auto *CFI = llvm::dyn_cast<CreateFunctionInst>(SF->getValue());
+        auto *CFI = llvh::dyn_cast<CreateFunctionInst>(SF->getValue());
         if (!CFI) {
           // Currently look only direct stores of created functions.
           return false;
@@ -67,15 +67,15 @@ static bool identifyCallees(CallInst *CI, llvm::DenseSet<Function *> &callees) {
 /// invoked.  Returns true if the complete set of call sites is known.
 static bool identifyCallsites(
     Function *F,
-    llvm::DenseSet<CallInst *> &callSites) {
+    llvh::DenseSet<CallInst *> &callSites) {
   for (auto *CU : F->getUsers()) {
-    if (auto *CI = llvm::dyn_cast<CallInst>(CU)) {
+    if (auto *CI = llvh::dyn_cast<CallInst>(CU)) {
       if (!isDirectCallee(F, CI))
         return false;
       callSites.insert(CI);
-    } else if (auto *CFI = llvm::dyn_cast<CreateFunctionInst>(CU)) {
+    } else if (auto *CFI = llvh::dyn_cast<CreateFunctionInst>(CU)) {
       for (auto *CL : CFI->getUsers()) {
-        auto *CI = llvm::dyn_cast<CallInst>(CL);
+        auto *CI = llvh::dyn_cast<CallInst>(CL);
         if (!CI)
           return false;
 
@@ -93,7 +93,7 @@ static bool identifyCallsites(
 /// The main function that computes caller-callee relationships.
 void SimpleCallGraphProvider::initCallRelationships(Function *F) {
   // (a) Initialize the callsites map.
-  llvm::DenseSet<CallInst *> callSites;
+  llvh::DenseSet<CallInst *> callSites;
   if (identifyCallsites(F, callSites)) {
     callsites_.insert(std::make_pair(F, callSites));
   }
@@ -103,11 +103,11 @@ void SimpleCallGraphProvider::initCallRelationships(Function *F) {
     for (auto &it : bbit) {
       Instruction *I = &it;
 
-      auto *CI = llvm::dyn_cast<CallInst>(I);
+      auto *CI = llvh::dyn_cast<CallInst>(I);
       if (!CI)
         continue;
 
-      llvm::DenseSet<Function *> funcs;
+      llvh::DenseSet<Function *> funcs;
       if (identifyCallees(CI, funcs)) {
         callees_.insert(std::make_pair(CI, funcs));
       }

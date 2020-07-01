@@ -8,8 +8,8 @@
 #ifndef HERMES_SUPPORT_PERFSECTION_H
 #define HERMES_SUPPORT_PERFSECTION_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/StringRef.h"
 
 #include <string>
 
@@ -44,7 +44,7 @@ class PerfSection {
   /// arg above, and we don't want the overloading to be ambiguous.
   void addArgD(const char *argName, double d);
   void
-  addArg(const char *argName, const llvm::StringRef value, bool copy = true);
+  addArg(const char *argName, const llvh::StringRef value, bool copy = true);
 
 #ifdef HERMESVM_PLATFORM_LOGGING
  protected:
@@ -91,7 +91,7 @@ class PerfSection {
     }
   };
 
-  llvm::SmallDenseMap<llvm::StringRef, ArgValue> argValues_;
+  llvh::SmallDenseMap<llvh::StringRef, ArgValue> argValues_;
 
   void freeDataIfExists(const char *argName) {
     auto it = argValues_.find(argName);
@@ -106,7 +106,7 @@ class PerfSection {
   void addArg(const char *argName, size_t value) {}
   void addArgD(const char *argName, double d) {}
   void
-  addArg(const char *argName, const llvm::StringRef value, bool copy = true) {}
+  addArg(const char *argName, const llvh::StringRef value, bool copy = true) {}
 #endif
 };
 

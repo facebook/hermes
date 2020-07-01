@@ -21,20 +21,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/Mutex.h"
-#include "llvm/Support/Timer.h"
-#include "llvm/Support/YAMLTraits.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/Statistic.h"
+#include "llvh/ADT/StringExtras.h"
+#include "llvh/Support/CommandLine.h"
+#include "llvh/Support/Compiler.h"
+#include "llvh/Support/Debug.h"
+#include "llvh/Support/Format.h"
+#include "llvh/Support/ManagedStatic.h"
+#include "llvh/Support/Mutex.h"
+#include "llvh/Support/Timer.h"
+#include "llvh/Support/YAMLTraits.h"
+#include "llvh/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstring>
-using namespace llvm;
+using namespace llvh;
 
 /// -stats - Command line option to cause transformations to emit stats about
 /// what they did.
@@ -60,9 +60,9 @@ namespace {
 class StatisticInfo {
   std::vector<Statistic*> Stats;
 
-  friend void llvm::PrintStatistics();
-  friend void llvm::PrintStatistics(raw_ostream &OS);
-  friend void llvm::PrintStatisticsJSON(raw_ostream &OS);
+  friend void llvh::PrintStatistics();
+  friend void llvh::PrintStatistics(raw_ostream &OS);
+  friend void llvh::PrintStatisticsJSON(raw_ostream &OS);
 
   /// Sort statistics by debugtype,name,description.
   void sort();
@@ -123,15 +123,15 @@ StatisticInfo::StatisticInfo() {
 // Print information when destroyed, iff command line option is specified.
 StatisticInfo::~StatisticInfo() {
   if (::Stats || PrintOnExit)
-    llvm::PrintStatistics();
+    llvh::PrintStatistics();
 }
 
-void llvm::EnableStatistics(bool PrintOnExit) {
+void llvh::EnableStatistics(bool PrintOnExit) {
   Enabled = true;
   ::PrintOnExit = PrintOnExit;
 }
 
-bool llvm::AreStatisticsEnabled() {
+bool llvh::AreStatisticsEnabled() {
   return Enabled || Stats;
 }
 
@@ -170,7 +170,7 @@ void StatisticInfo::reset() {
   Stats.clear();
 }
 
-void llvm::PrintStatistics(raw_ostream &OS) {
+void llvh::PrintStatistics(raw_ostream &OS) {
   StatisticInfo &Stats = *StatInfo;
 
   // Figure out how long the biggest Value and Name fields are.
@@ -200,7 +200,7 @@ void llvm::PrintStatistics(raw_ostream &OS) {
   OS.flush();
 }
 
-void llvm::PrintStatisticsJSON(raw_ostream &OS) {
+void llvh::PrintStatisticsJSON(raw_ostream &OS) {
   sys::SmartScopedLock<true> Reader(*StatLock);
   StatisticInfo &Stats = *StatInfo;
 
@@ -226,7 +226,7 @@ void llvm::PrintStatisticsJSON(raw_ostream &OS) {
   OS.flush();
 }
 
-void llvm::PrintStatistics() {
+void llvh::PrintStatistics() {
 #if LLVM_ENABLE_STATS
   sys::SmartScopedLock<true> Reader(*StatLock);
   StatisticInfo &Stats = *StatInfo;
@@ -254,7 +254,7 @@ void llvm::PrintStatistics() {
 #endif
 }
 
-const std::vector<std::pair<StringRef, unsigned>> llvm::GetStatistics() {
+const std::vector<std::pair<StringRef, unsigned>> llvh::GetStatistics() {
   sys::SmartScopedLock<true> Reader(*StatLock);
   std::vector<std::pair<StringRef, unsigned>> ReturnStats;
 
@@ -263,6 +263,6 @@ const std::vector<std::pair<StringRef, unsigned>> llvm::GetStatistics() {
   return ReturnStats;
 }
 
-void llvm::ResetStatistics() {
+void llvh::ResetStatistics() {
   StatInfo->reset();
 }

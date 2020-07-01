@@ -21,9 +21,9 @@
 #include "hermes/Support/Algorithms.h"
 #include "hermes/Support/JSONEmitter.h"
 
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/Support/MemoryBuffer.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <string>
 
@@ -98,13 +98,13 @@ extern "C" Dependencies *hermesExtractDependencies(
   }
 
   auto fileBuf =
-      llvm::MemoryBuffer::getMemBuffer(llvm::StringRef{source, sourceSize - 1});
+      llvh::MemoryBuffer::getMemBuffer(llvh::StringRef{source, sourceSize - 1});
   int fileBufId =
       context->getSourceErrorManager().addNewSourceBuffer(std::move(fileBuf));
   auto mode = parser::FullParse;
 
   parser::JSParser jsParser(*context, fileBufId, mode);
-  llvm::Optional<ESTree::ProgramNode *> parsedJs = jsParser.parse();
+  llvh::Optional<ESTree::ProgramNode *> parsedJs = jsParser.parse();
 
   if (!parsedJs) {
     result->error_ = "Failed to parse JS source";
@@ -112,7 +112,7 @@ extern "C" Dependencies *hermesExtractDependencies(
   }
 
   auto deps = extractDependencies(*context, *parsedJs);
-  llvm::raw_string_ostream os{result->deps_};
+  llvh::raw_string_ostream os{result->deps_};
   JSONEmitter json{os, false};
 
   json.openArray();

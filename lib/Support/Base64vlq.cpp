@@ -27,7 +27,7 @@ static OptValue<uint32_t> base64Decode(char c) {
     if (c == bc)
       return &bc - &Base64Chars[0];
   }
-  return llvm::None;
+  return llvh::None;
 }
 
 // Each digit is stored in the low 5 bits, with bit 6 as a continuation flag.
@@ -45,7 +45,7 @@ enum {
   SignBit = 1,
 };
 
-llvm::raw_ostream &encode(llvm::raw_ostream &OS, int32_t value) {
+llvh::raw_ostream &encode(llvh::raw_ostream &OS, int32_t value) {
   // The first sextet reserves the LSB for the sign bit. Make space for it.
   // Widen to 64 bits to ensure we can multiply the value by 2.
   int64_t wideVal = value;
@@ -73,7 +73,7 @@ OptValue<int32_t> decode(const char *&begin, const char *end) {
     // Fail if our shift has grown too large, or if we couldn't decode a Base64
     // character. This shift check is what ensures 'result' cannot overflow.
     if (!word || shift > 32)
-      return llvm::None;
+      return llvh::None;
 
     // Digits are encoded little-endian (least-significant first).
     int64_t digit = *word & DigitMask;
@@ -92,14 +92,14 @@ OptValue<int32_t> decode(const char *&begin, const char *end) {
 
     // Check for overflow.
     if (result > INT32_MAX || result < INT32_MIN)
-      return llvm::None;
+      return llvh::None;
 
     // Success. Update the begin pointer to say where we stopped.
     begin = cursor + 1;
     return int32_t(result);
   }
   // Exited the loop: we never found a character without a continuation bit.
-  return llvm::None;
+  return llvh::None;
 }
 
 } // namespace base64vlq

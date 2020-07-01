@@ -65,7 +65,7 @@ void encodeUTF8(char *&dst, uint32_t cp) {
 
 bool convertUTF16ToUTF8WithReplacements(
     std::string &out,
-    llvm::ArrayRef<char16_t> input,
+    llvh::ArrayRef<char16_t> input,
     size_t maxCharacters) {
   out.clear();
   out.reserve(input.size());
@@ -114,7 +114,7 @@ bool convertUTF16ToUTF8WithReplacements(
 
 void convertUTF16ToUTF8WithSingleSurrogates(
     std::string &dest,
-    llvm::ArrayRef<char16_t> input) {
+    llvh::ArrayRef<char16_t> input) {
   dest.clear();
   dest.reserve(input.size());
   for (char16_t c : input) {

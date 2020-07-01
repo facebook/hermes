@@ -9,16 +9,16 @@
 
 #include <cstdlib>
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/MathExtras.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/Support/ConvertUTF.h"
+#include "llvh/Support/MathExtras.h"
 
 namespace hermes {
 
 /// Number of char16_t in the internal conversion buffer (if UTF8 input).
 static constexpr size_t kChunkChars = 1024;
 
-UTF16Stream::UTF16Stream(llvm::ArrayRef<uint8_t> utf8)
+UTF16Stream::UTF16Stream(llvh::ArrayRef<uint8_t> utf8)
     : utf8Begin_(utf8.begin()), utf8End_(utf8.end()), storage_(kChunkChars) {
   // Exhaust the buffer and refill it.
   cur_ = end_ = storage_.end();
@@ -44,14 +44,14 @@ bool UTF16Stream::refill() {
   }
   // ...and call the library for any non-ASCII remainder. Conversion always
   // stops at a code point boundary.
-  llvm::ConversionResult cRes = ConvertUTF8toUTF16(
+  llvh::ConversionResult cRes = ConvertUTF8toUTF16(
       &utf8Begin_,
       utf8End_,
-      (llvm::UTF16 **)&out,
-      (llvm::UTF16 *)const_cast<char16_t *>(end_),
-      llvm::lenientConversion);
+      (llvh::UTF16 **)&out,
+      (llvh::UTF16 *)const_cast<char16_t *>(end_),
+      llvh::lenientConversion);
 
-  if (cRes != llvm::ConversionResult::targetExhausted) {
+  if (cRes != llvh::ConversionResult::targetExhausted) {
     // Indicate that we have converted the final chunk.
     utf8Begin_ = utf8End_;
   }

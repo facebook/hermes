@@ -26,9 +26,9 @@
 #include "hermes/VM/OldGenNC.h"
 #include "hermes/VM/SweepResultNC.h"
 #include "hermes/VM/YoungGenNC.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvh/Support/Casting.h"
+#include "llvh/Support/Compiler.h"
+#include "llvh/Support/ErrorHandling.h"
 
 #include <deque>
 #include <limits>
@@ -217,7 +217,7 @@ class GenGC final : public GCBase {
   ///   The total amount of external memory allocated during the execution.
   uint64_t totalExtAllocBytes_{0};
 
-  void printExtAllocStats(llvm::raw_ostream &os);
+  void printExtAllocStats(llvh::raw_ostream &os);
 #endif
 
   /// Symbolic constants for indexing numWriteBarriers_.
@@ -339,7 +339,7 @@ class GenGC final : public GCBase {
 
   /// Creates a snapshot of the heap, which includes information about what
   /// objects exist, their sizes, and what they point to.
-  virtual void createSnapshot(llvm::raw_ostream &os) override;
+  virtual void createSnapshot(llvh::raw_ostream &os) override;
 
 #ifdef HERMESVM_SERIALIZE
   /// Serialize WeakRefs.
@@ -365,10 +365,10 @@ class GenGC final : public GCBase {
   gcheapsize_t bytesAllocatedSinceLastGC() const override;
 
   /// Shows statistics relevant to GenGC.
-  virtual void printStats(llvm::raw_ostream &os, bool trailingComma) override;
+  virtual void printStats(llvh::raw_ostream &os, bool trailingComma) override;
 
   /// Add some GenGC-specific stats to the output.
-  void dump(llvm::raw_ostream &os, bool verbose = false) override;
+  void dump(llvh::raw_ostream &os, bool verbose = false) override;
 
   // Stats maintainence.
 
@@ -564,7 +564,7 @@ class GenGC final : public GCBase {
   /// stream.
   /// \p os Is the output stream to print the stats to.
   /// \p trailingComma determines whether the output includes a trailing comma.
-  void printFullCollectionStats(llvm::raw_ostream &os, bool trailingComma)
+  void printFullCollectionStats(llvh::raw_ostream &os, bool trailingComma)
       const;
 
   /// In debug, these increment the counts of the indicated kinds of
@@ -585,7 +585,7 @@ class GenGC final : public GCBase {
     CollectionSection(
         GenGC *gc,
         const char *name,
-        OptValue<GCCallbacks *> gcCallbacksOpt = llvm::None);
+        OptValue<GCCallbacks *> gcCallbacksOpt = llvh::None);
     ~CollectionSection();
 
     /// Update the cumulative GC statistics held for all GCs, and the statistics
@@ -628,14 +628,14 @@ class GenGC final : public GCBase {
 
   /// Print data recorded about the distribution of allocations (and
   /// bytes), and reachable objects (and bytes) by cell kind.
-  void printCensusByKindStats(llvm::raw_ostream &os) const;
+  void printCensusByKindStats(llvh::raw_ostream &os) const;
 
   /// Helper function for the above.  Assumes \p allocs and \b bytes
   /// are arrays, indexed by CellKind, of number of objects and
   /// bytes for the given CellKind.  If there are any objects in the
   /// data, prints \p msg, then the table, sorted by # of allocs.
   void printCensusByKindStatsWork(
-      llvm::raw_ostream &os,
+      llvh::raw_ostream &os,
       const char *msg,
       const uint64_t *allocs,
       const uint64_t *bytes) const;
@@ -925,7 +925,7 @@ class GenGC final : public GCBase {
 template <class ToType>
 ToType *vmcast_during_gc(GCCell *cell, GC *gc) {
   if (!gc->inGC()) {
-    return llvm::cast<ToType>(cell);
+    return llvh::cast<ToType>(cell);
   } else {
     return static_cast<ToType *>(cell);
   }

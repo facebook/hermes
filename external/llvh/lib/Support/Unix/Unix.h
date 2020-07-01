@@ -19,9 +19,9 @@
 //===          is guaranteed to work on all UNIX variants.
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Config/config.h" // Get autoconf configuration settings
-#include "llvm/Support/Chrono.h"
-#include "llvm/Support/Errno.h"
+#include "llvh/Config/config.h" // Get autoconf configuration settings
+#include "llvh/Support/Chrono.h"
+#include "llvh/Support/Errno.h"
 #include <algorithm>
 #include <assert.h>
 #include <cerrno>
@@ -66,11 +66,11 @@ static inline bool MakeErrMsg(
     return true;
   if (errnum == -1)
     errnum = errno;
-  *ErrMsg = prefix + ": " + llvm::sys::StrError(errnum);
+  *ErrMsg = prefix + ": " + llvh::sys::StrError(errnum);
   return true;
 }
 
-namespace llvm {
+namespace llvh {
 namespace sys {
 
 /// Convert a struct timeval to a duration. Note that timeval can be used both
@@ -101,6 +101,6 @@ inline struct timeval toTimeVal(TimePoint<std::chrono::microseconds> TP) {
 }
 
 } // namespace sys
-} // namespace llvm
+} // namespace llvh
 
 #endif

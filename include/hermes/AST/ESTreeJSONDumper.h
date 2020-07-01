@@ -10,7 +10,7 @@
 
 #include "hermes/AST/ESTree.h"
 
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/raw_ostream.h"
 
 namespace hermes {
 
@@ -18,7 +18,7 @@ namespace hermes {
 /// \p pretty for pretty print the JSON.
 /// When \p sm is not null, print the source locations for the AST nodes.
 void dumpESTreeJSON(
-    llvm::raw_ostream &os,
+    llvh::raw_ostream &os,
     ESTree::NodePtr rootNode,
     bool pretty,
     SourceErrorManager *sm = nullptr);

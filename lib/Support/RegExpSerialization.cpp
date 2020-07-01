@@ -10,19 +10,19 @@
 #include "hermes/Regex/RegexTraits.h"
 #include "hermes/Support/Algorithms.h"
 #include "hermes/Support/UTF8.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/Format.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <cctype>
 
-using llvm::StringRef;
+using llvh::StringRef;
 using namespace hermes;
 
 /// Support for dumping regex bytecode.
 namespace {
 /// Base implementation of dumpInstruction() which just outputs the opcode.
 /// Overloads may be used to specialize this.
-void dumpInstruction(const regex::Insn *insn, llvm::raw_ostream &OS) {
+void dumpInstruction(const regex::Insn *insn, llvh::raw_ostream &OS) {
 /// Dump the instruction stream to a raw_ostream \p OS.
 /// The default implementation of dump() outputs the opcode name only.
 /// Note this is NOT a virtual function: we can't store a vtable since
@@ -73,42 +73,42 @@ uint32_t instructionWidth<regex::MatchNCharICase8Insn>(
   return insn->totalWidth();
 }
 
-void dumpInstruction(const regex::MatchChar8Insn *insn, llvm::raw_ostream &OS) {
+void dumpInstruction(const regex::MatchChar8Insn *insn, llvh::raw_ostream &OS) {
   OS << "MatchChar8: ";
   char c = insn->c;
   if (std::isprint(c))
-    OS << llvm::format("'%c'", c);
+    OS << llvh::format("'%c'", c);
   else
-    OS << llvm::format_hex(c, 4);
+    OS << llvh::format_hex(c, 4);
 }
 
 void dumpInstruction(
     const regex::MatchChar16Insn *insn,
-    llvm::raw_ostream &OS) {
+    llvh::raw_ostream &OS) {
   OS << "MatchChar16: ";
   char32_t c = insn->c;
-  OS << llvm::format_hex(c, 4);
+  OS << llvh::format_hex(c, 4);
 }
 
 void dumpInstruction(
     const regex::U16MatchChar32Insn *insn,
-    llvm::raw_ostream &OS) {
+    llvh::raw_ostream &OS) {
   OS << "U16MatchChar32: ";
   uint32_t c = insn->c;
-  OS << llvm::format_hex(c, 6);
+  OS << llvh::format_hex(c, 6);
 }
 
 void dumpInstruction(
     const regex::MatchNChar8Insn *insn,
-    llvm::raw_ostream &OS) {
+    llvh::raw_ostream &OS) {
   OS << "MatchNChar8: '";
   const char *cPtr = reinterpret_cast<const char *>(insn + sizeof(regex::Insn));
   for (uint32_t i = 0; i < insn->charCount; i++) {
     char c = *cPtr;
     if (std::isprint(c)) {
-      OS << llvm::format("%c", c);
+      OS << llvh::format("%c", c);
     } else {
-      OS << llvm::format_hex(c, 4);
+      OS << llvh::format_hex(c, 4);
     }
     cPtr++;
   }
@@ -117,15 +117,15 @@ void dumpInstruction(
 
 void dumpInstruction(
     const regex::MatchNCharICase8Insn *insn,
-    llvm::raw_ostream &OS) {
+    llvh::raw_ostream &OS) {
   OS << "MatchNCharICase8: '";
   const char *cPtr = reinterpret_cast<const char *>(insn + sizeof(regex::Insn));
   for (uint32_t i = 0; i < insn->charCount; i++) {
     char c = *cPtr;
     if (std::isprint(c)) {
-      OS << llvm::format("%c", c);
+      OS << llvh::format("%c", c);
     } else {
-      OS << llvm::format_hex(c, 4);
+      OS << llvh::format_hex(c, 4);
     }
     cPtr++;
   }
@@ -134,44 +134,44 @@ void dumpInstruction(
 
 void dumpInstruction(
     const regex::MatchCharICase8Insn *insn,
-    llvm::raw_ostream &OS) {
+    llvh::raw_ostream &OS) {
   OS << "MatchCharICase8: ";
   char c = insn->c;
   if (std::isprint(c))
-    OS << llvm::format("'%c'", c);
+    OS << llvh::format("'%c'", c);
   else
-    OS << llvm::format_hex(c, 4);
+    OS << llvh::format_hex(c, 4);
 }
 
 void dumpInstruction(
     const regex::MatchCharICase16Insn *insn,
-    llvm::raw_ostream &OS) {
+    llvh::raw_ostream &OS) {
   OS << "MatchCharICase16: ";
   char32_t c = insn->c;
-  OS << llvm::format_hex(c, 4);
+  OS << llvh::format_hex(c, 4);
 }
 
 void dumpInstruction(
     const regex::U16MatchCharICase32Insn *insn,
-    llvm::raw_ostream &OS) {
+    llvh::raw_ostream &OS) {
   OS << "U16MatchCharICase32: ";
   uint32_t c = insn->c;
-  OS << llvm::format_hex(c, 6);
+  OS << llvh::format_hex(c, 6);
 }
 
-void dumpInstruction(const regex::Jump32Insn *insn, llvm::raw_ostream &OS) {
-  OS << "Jump32: " << llvm::format_hex(insn->target, 4);
+void dumpInstruction(const regex::Jump32Insn *insn, llvh::raw_ostream &OS) {
+  OS << "Jump32: " << llvh::format_hex(insn->target, 4);
 }
 
 void dumpInstruction(
     const regex::AlternationInsn *insn,
-    llvm::raw_ostream &OS) {
-  OS << "Alternation: Target " << llvm::format_hex(insn->secondaryBranch, 4)
+    llvh::raw_ostream &OS) {
+  OS << "Alternation: Target " << llvh::format_hex(insn->secondaryBranch, 4)
      << ", constraints " << unsigned(insn->primaryConstraints) << ","
      << unsigned(insn->secondaryConstraints);
 }
 
-void dumpInstruction(const regex::BracketInsn *insn, llvm::raw_ostream &OS) {
+void dumpInstruction(const regex::BracketInsn *insn, llvh::raw_ostream &OS) {
   using namespace regex;
   OS << (insn->opcode == Opcode::U16Bracket ? "U16Bracket" : "Bracket")
      << ": [";
@@ -194,7 +194,7 @@ void dumpInstruction(const regex::BracketInsn *insn, llvm::raw_ostream &OS) {
     if (c <= 127 && std::isprint(c))
       OS << char(c);
     else
-      OS << llvm::format_hex(c, 4);
+      OS << llvh::format_hex(c, 4);
   };
   // BracketRange32 immediately follow insn.
   const BracketRange32 *range =
@@ -212,36 +212,36 @@ void dumpInstruction(const regex::BracketInsn *insn, llvm::raw_ostream &OS) {
 
 void dumpInstruction(
     const regex::WordBoundaryInsn *insn,
-    llvm::raw_ostream &OS) {
+    llvh::raw_ostream &OS) {
   OS << "WordBoundary: " << (insn->invert ? "\\B" : "\\b");
 }
 
 void dumpInstruction(
     const regex::BeginMarkedSubexpressionInsn *insn,
-    llvm::raw_ostream &OS) {
+    llvh::raw_ostream &OS) {
   OS << "BeginMarkedSubexpression: " << insn->mexp;
 }
 
 void dumpInstruction(
     const regex::EndMarkedSubexpressionInsn *insn,
-    llvm::raw_ostream &OS) {
+    llvh::raw_ostream &OS) {
   OS << "EndMarkedSubexpression: " << insn->mexp;
 }
 
-void dumpInstruction(const regex::BackRefInsn *insn, llvm::raw_ostream &OS) {
+void dumpInstruction(const regex::BackRefInsn *insn, llvh::raw_ostream &OS) {
   OS << "BackRefInsn: " << insn->mexp;
 }
 
-void dumpInstruction(const regex::LookaroundInsn *insn, llvm::raw_ostream &OS) {
+void dumpInstruction(const regex::LookaroundInsn *insn, llvh::raw_ostream &OS) {
   OS << "Lookaround: " << (insn->forwards ? "" : "<")
      << (insn->invert ? '!' : '=')
      << " (constraints: " << unsigned(insn->constraints)
      << ", marked expressions=[" << insn->mexpBegin << "," << insn->mexpEnd
-     << "), continuation " << llvm::format_hex(insn->continuation, 4) << ')';
+     << "), continuation " << llvh::format_hex(insn->continuation, 4) << ')';
 }
 
-void dumpInstruction(const regex::BeginLoopInsn *insn, llvm::raw_ostream &OS) {
-  OS << llvm::format(
+void dumpInstruction(const regex::BeginLoopInsn *insn, llvh::raw_ostream &OS) {
+  OS << llvh::format(
       "BeginLoop: %u %s {%u, %u} (constraints: %u)",
       aligner(insn->loopId),
       insn->greedy ? "greedy" : "nongreedy",
@@ -250,25 +250,25 @@ void dumpInstruction(const regex::BeginLoopInsn *insn, llvm::raw_ostream &OS) {
       aligner(insn->loopeeConstraints));
 }
 
-void dumpInstruction(const regex::EndLoopInsn *insn, llvm::raw_ostream &OS) {
-  OS << "EndLoop: " << llvm::format_hex(insn->target, 4);
+void dumpInstruction(const regex::EndLoopInsn *insn, llvh::raw_ostream &OS) {
+  OS << "EndLoop: " << llvh::format_hex(insn->target, 4);
 }
 
 void dumpInstruction(
     const regex::BeginSimpleLoopInsn *insn,
-    llvm::raw_ostream &OS) {
-  OS << llvm::format(
+    llvh::raw_ostream &OS) {
+  OS << llvh::format(
       "BeginSimpleLoop: (constraints: %u)", insn->loopeeConstraints);
 }
 
 void dumpInstruction(
     const regex::EndSimpleLoopInsn *insn,
-    llvm::raw_ostream &OS) {
-  OS << "EndSimpleLoop: " << llvm::format_hex(insn->target, 4);
+    llvh::raw_ostream &OS) {
+  OS << "EndSimpleLoop: " << llvh::format_hex(insn->target, 4);
 }
 
-void dumpInstruction(const regex::Width1LoopInsn *insn, llvm::raw_ostream &OS) {
-  OS << llvm::format(
+void dumpInstruction(const regex::Width1LoopInsn *insn, llvh::raw_ostream &OS) {
+  OS << llvh::format(
       "Width1Loop: %u %s {%u, %u}",
       aligner(insn->loopId),
       insn->greedy ? "greedy" : "nongreedy",
@@ -279,11 +279,11 @@ void dumpInstruction(const regex::Width1LoopInsn *insn, llvm::raw_ostream &OS) {
 
 namespace hermes {
 
-void dumpRegexBytecode(llvm::ArrayRef<uint8_t> bytes, llvm::raw_ostream &OS) {
+void dumpRegexBytecode(llvh::ArrayRef<uint8_t> bytes, llvh::raw_ostream &OS) {
   // Output the header and then slice it off.
   auto *header =
       reinterpret_cast<const regex::RegexBytecodeHeader *>(bytes.data());
-  OS << llvm::format(
+  OS << llvh::format(
       "  Header: marked: %u loops: %u flags: %u constraints: %u\n",
       aligner(header->markedCount),
       aligner(header->loopCount),
@@ -293,14 +293,14 @@ void dumpRegexBytecode(llvm::ArrayRef<uint8_t> bytes, llvm::raw_ostream &OS) {
   uint32_t cursor = 0;
   while (cursor < bytes.size()) {
     // Output offset in left column.
-    OS << "  " << llvm::format_hex_no_prefix(cursor, 4) << "  ";
+    OS << "  " << llvh::format_hex_no_prefix(cursor, 4) << "  ";
 
     // Call dumpInstruction() with its derived type.
     auto insn = reinterpret_cast<const regex::Insn *>(&bytes[cursor]);
     switch (insn->opcode) {
 #define REOP(Code)                                          \
   case regex::Opcode::Code: {                               \
-    auto derivedInsn = llvm::cast<regex::Code##Insn>(insn); \
+    auto derivedInsn = llvh::cast<regex::Code##Insn>(insn); \
     dumpInstruction(derivedInsn, OS);                       \
     cursor += instructionWidth(derivedInsn);                \
     break;                                                  \
@@ -324,20 +324,20 @@ CompiledRegExp::CompiledRegExp(
       pattern_(std::move(pattern)),
       flags_(flags) {}
 
-llvm::Optional<CompiledRegExp> CompiledRegExp::tryCompile(
+llvh::Optional<CompiledRegExp> CompiledRegExp::tryCompile(
     StringRef pattern,
     StringRef flags,
-    llvm::StringRef *outError) {
+    llvh::StringRef *outError) {
   using namespace regex;
   using namespace regex::constants;
 
   // We have to match the way strings are constructed by StringTable, which is
   // by interpreting UTF-8 encoded surrogates as UTF-16 surrogates.
-  llvm::SmallVector<char16_t, 16> re16;
+  llvh::SmallVector<char16_t, 16> re16;
   convertUTF8WithSurrogatesToUTF16(
       std::back_inserter(re16), pattern.begin(), pattern.end());
 
-  llvm::SmallVector<char16_t, 6> flags16;
+  llvh::SmallVector<char16_t, 6> flags16;
   convertUTF8WithSurrogatesToUTF16(
       std::back_inserter(flags16), flags.begin(), flags.end());
   // Build and compile the regexp.
@@ -345,12 +345,12 @@ llvm::Optional<CompiledRegExp> CompiledRegExp::tryCompile(
   if (!re.valid()) {
     if (outError)
       *outError = messageForError(re.getError());
-    return llvm::None;
+    return llvh::None;
   }
   return CompiledRegExp(re.compile(), pattern, flags);
 }
 
-llvm::ArrayRef<uint8_t> CompiledRegExp::getBytecode() const {
+llvh::ArrayRef<uint8_t> CompiledRegExp::getBytecode() const {
   return bytecode_;
 }
 
@@ -375,7 +375,7 @@ RegExpBytecode UniquingRegExpTable::getBytecodeBuffer() const {
   return result;
 }
 
-void UniquingRegExpTable::disassemble(llvm::raw_ostream &OS) const {
+void UniquingRegExpTable::disassemble(llvh::raw_ostream &OS) const {
   uint32_t index = 0;
   // Note that regexp patterns and flags are read without interpreting escapes
   // by JSLexer, so this will output in a format identical to the source

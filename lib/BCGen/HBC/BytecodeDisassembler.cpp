@@ -21,8 +21,8 @@
 #include <locale>
 #include <string>
 
-#include "llvm/Support/Endian.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvh/Support/Endian.h"
+#include "llvh/Support/ErrorHandling.h"
 
 using namespace hermes::inst;
 using hermes::oscompat::to_string;
@@ -60,32 +60,32 @@ std::string SLPToString(SLG::TagType tag, const unsigned char *buff, int *ind) {
   std::string rBracket{"]"};
   switch (tag) {
     case SLG::ByteStringTag: {
-      uint8_t val = llvm::support::endian::read<uint8_t, 1>(
-          buff + *ind, llvm::support::endianness::little);
+      uint8_t val = llvh::support::endian::read<uint8_t, 1>(
+          buff + *ind, llvh::support::endianness::little);
       *ind += 1;
       return std::string("[String ") + to_string(val) + rBracket;
     }
     case SLG::ShortStringTag: {
-      uint16_t val = llvm::support::endian::read<uint16_t, 1>(
-          buff + *ind, llvm::support::endianness::little);
+      uint16_t val = llvh::support::endian::read<uint16_t, 1>(
+          buff + *ind, llvh::support::endianness::little);
       *ind += 2;
       return std::string("[String ") + to_string(val) + rBracket;
     }
     case SLG::LongStringTag: {
-      uint32_t val = llvm::support::endian::read<uint32_t, 1>(
-          buff + *ind, llvm::support::endianness::little);
+      uint32_t val = llvh::support::endian::read<uint32_t, 1>(
+          buff + *ind, llvh::support::endianness::little);
       *ind += 4;
       return std::string("[String ") + to_string(val) + rBracket;
     }
     case SLG::NumberTag: {
-      double val = llvm::support::endian::read<double, 1>(
-          buff + *ind, llvm::support::endianness::little);
+      double val = llvh::support::endian::read<double, 1>(
+          buff + *ind, llvh::support::endianness::little);
       *ind += 8;
       return std::string("[double ") + to_string(val) + rBracket;
     }
     case SLG::IntegerTag: {
-      uint32_t val = llvm::support::endian::read<uint32_t, 1>(
-          buff + *ind, llvm::support::endianness::little);
+      uint32_t val = llvh::support::endian::read<uint32_t, 1>(
+          buff + *ind, llvh::support::endianness::little);
       *ind += 4;
       return std::string("[int ") + to_string(val) + rBracket;
     }
@@ -174,7 +174,7 @@ void BytecodeDisassembler::disassembleStringStorage(raw_ostream &OS) {
       switch (kindEntry.kind()) {
         case StringKind::Identifier:
           OS << " #"
-             << llvm::format_hex_no_prefix(
+             << llvh::format_hex_no_prefix(
                     hashes[hashID++], 8, /* Upper */ true);
           break;
 
@@ -188,7 +188,7 @@ void BytecodeDisassembler::disassembleStringStorage(raw_ostream &OS) {
         if (!strEntry.isUTF16() && isprint((char)c, loc)) {
           OS << c;
         } else {
-          OS << "\\x" << llvm::format_hex_no_prefix(c, 2, true);
+          OS << "\\x" << llvh::format_hex_no_prefix(c, 2, true);
         }
       }
       OS << "\n";
@@ -328,7 +328,7 @@ void switchJumpTableForEach(const inst::Inst *inst, F f) {
   /// from master jump table. This is the same computation done by the
   /// interpreter to figure out the start of the jump table view.
   const auto *curJmpTableView =
-      reinterpret_cast<const uint32_t *>(llvm::alignAddr(
+      reinterpret_cast<const uint32_t *>(llvh::alignAddr(
           (const uint8_t *)inst + inst->iSwitchImm.op2, sizeof(uint32_t)));
 
   for (unsigned curJmpTableViewOffset = 0;
@@ -553,12 +553,12 @@ void PrettyDisassembleVisitor::dumpOperandString(
         continue;
       }
       if (cp < 32) {
-        OS << "\\x" << llvm::format_hex_no_prefix(cp, 2);
+        OS << "\\x" << llvh::format_hex_no_prefix(cp, 2);
         len += 4;
         continue;
       }
       if (cp > 127) {
-        OS << "\\u" << llvm::format_hex_no_prefix(cp, 4);
+        OS << "\\u" << llvh::format_hex_no_prefix(cp, 4);
         len += 6;
         continue;
       }
@@ -604,16 +604,16 @@ void PrettyDisassembleVisitor::preVisitInstruction(
     os_ << "L" << label->second << ":\n";
     printSourceLineForOffset(offset);
     // Use the overrided indention for next line's output.
-    os_ << llvm::left_justify("", getIndentation());
+    os_ << llvh::left_justify("", getIndentation());
   }
   uint32_t globalVirtualOffset = funcVirtualOffset_ + offset;
   if ((options_ & DisassemblyOptions::IncludeVirtualOffsets) ==
       DisassemblyOptions::IncludeVirtualOffsets) {
     os_ << "    ";
-    os_ << llvm::right_justify(formatString("%d", globalVirtualOffset), 10);
+    os_ << llvh::right_justify(formatString("%d", globalVirtualOffset), 10);
   }
   os_ << "    ";
-  os_ << llvm::left_justify(getOpCodeString(opcode), 17);
+  os_ << llvh::left_justify(getOpCodeString(opcode), 17);
 }
 
 void PrettyDisassembleVisitor::visitOperand(
@@ -668,7 +668,7 @@ void PrettyDisassembleVisitor::visitOperand(
 void PrettyDisassembleVisitor::printSourceLineForOffset(uint32_t opcodeOffset) {
   if ((options_ & DisassemblyOptions::IncludeSource) ==
       DisassemblyOptions::IncludeSource) {
-    llvm::Optional<SourceMapTextLocation> sourceLocOpt =
+    llvh::Optional<SourceMapTextLocation> sourceLocOpt =
         bcProvider_->getLocationForAddress(funcId_, opcodeOffset);
     if (sourceLocOpt.hasValue()) {
       const std::string &fileNameStr = sourceLocOpt.getValue().fileName;
@@ -743,7 +743,7 @@ class DisassembleVisitor : public BytecodeVisitor {
 BytecodeSectionWalker::BytecodeSectionWalker(
     const uint8_t *bytecodeStart,
     std::shared_ptr<hbc::BCProviderFromBuffer> bcProvider,
-    llvm::raw_ostream &os)
+    llvh::raw_ostream &os)
     : bytecodeStart_(bytecodeStart), bcProvider_(bcProvider), os_(os) {
   const auto *fileHeader =
       reinterpret_cast<const hbc::BytecodeFileHeader *>(bytecodeStart_);
@@ -972,20 +972,20 @@ class ObjdumpDisassembleVisitor : public BytecodeVisitor {
     funcOffset_ = bcProvider_->getFunctionHeader(funcId).offset();
     bytecodeStart_ = bytecodeStart;
     os_ << "\n"
-        << llvm::format_hex_no_prefix(funcOffset_, 16) << " <_" << funcId
+        << llvh::format_hex_no_prefix(funcOffset_, 16) << " <_" << funcId
         << ">:\n";
   }
 
   void preVisitInstruction(inst::OpCode opcode, const uint8_t *ip, int length)
       override {
-    os_ << llvm::format_hex_no_prefix(ip - bytecodeStart_ + funcOffset_, 8)
+    os_ << llvh::format_hex_no_prefix(ip - bytecodeStart_ + funcOffset_, 8)
         << ":\t";
     for (int i = 0; i < length; ++i)
-      os_ << llvm::format_hex_no_prefix(ip[i], 2) << " ";
+      os_ << llvh::format_hex_no_prefix(ip[i], 2) << " ";
     // Align/justify to help any humans debugging the output.
     for (int i = length; i < 20; ++i)
       os_ << "   ";
-    os_ << llvm::left_justify(getOpCodeString(opcode), 32);
+    os_ << llvh::left_justify(getOpCodeString(opcode), 32);
   }
 
   void postVisitInstruction(inst::OpCode opcode, const uint8_t *ip, int length)
@@ -1011,12 +1011,12 @@ class ObjdumpDisassembleVisitor : public BytecodeVisitor {
     if (operandType == OperandType::Addr8 ||                                 \
         operandType == OperandType::Addr32) {                                \
       /* operandVal is relative to current ip.*/                             \
-      os_ << llvm::format_hex_no_prefix(                                     \
+      os_ << llvh::format_hex_no_prefix(                                     \
           ip + (int32_t)operandVal - bytecodeStart_ + funcOffset_, 8);       \
     } else if (operandType == OperandType::Double) {                         \
       uint64_t raw;                                                          \
       memcpy(&raw, operandBuf, sizeof(raw));                                 \
-      os_ << "$" << llvm::format_hex(raw, sizeof(raw));                      \
+      os_ << "$" << llvh::format_hex(raw, sizeof(raw));                      \
     } else if (                                                              \
         operandType == OperandType::Reg8 ||                                  \
         operandType == OperandType::Reg32) {                                 \
@@ -1024,7 +1024,7 @@ class ObjdumpDisassembleVisitor : public BytecodeVisitor {
       os_ << "%r" << +operandVal;                                            \
     } else {                                                                 \
       os_ << "$"                                                             \
-          << llvm::format_hex(operandVal, getOperandSize(operandType) * 2);  \
+          << llvh::format_hex(operandVal, getOperandSize(operandType) * 2);  \
     }                                                                        \
     break;                                                                   \
   }
@@ -1097,14 +1097,14 @@ void BytecodeDisassembler::disassemble(raw_ostream &OS) {
       if (debugSourceOffset == DebugOffsets::NO_OFFSET) {
         OS << "none";
       } else {
-        OS << llvm::format_hex(debugSourceOffset, 6);
+        OS << llvh::format_hex(debugSourceOffset, 6);
       }
       OS << ", lexical ";
       uint32_t debugLexicalOffset = funcDebugOffsets->lexicalData;
       if (debugLexicalOffset == DebugOffsets::NO_OFFSET) {
         OS << "none";
       } else {
-        OS << llvm::format_hex(debugLexicalOffset, 6);
+        OS << llvh::format_hex(debugLexicalOffset, 6);
       }
       OS << '\n';
     }

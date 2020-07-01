@@ -5,15 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/Signals.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/Support/CommandLine.h"
+#include "llvh/Support/FileSystem.h"
+#include "llvh/Support/InitLLVM.h"
+#include "llvh/Support/MemoryBuffer.h"
+#include "llvh/Support/PrettyStackTrace.h"
+#include "llvh/Support/Signals.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 #include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
@@ -56,8 +56,8 @@ using namespace hermes;
 using namespace hermes::hbc;
 using namespace hermes::inst;
 
-using llvm::MutableArrayRef;
-using llvm::raw_fd_ostream;
+using llvh::MutableArrayRef;
+using llvh::raw_fd_ostream;
 using SLG = hermes::hbc::SerializedLiteralGenerator;
 
 /* This tool is highly dependent upon the current bytecode format.
@@ -71,13 +71,13 @@ static_assert(
     BYTECODE_VERSION == 74,
     "Bytecode version changed. Please verify that hbc-attribute counts correctly..");
 
-static llvm::cl::opt<std::string> InputFilename(
-    llvm::cl::Positional,
-    llvm::cl::desc("Input bundle"),
-    llvm::cl::init("-"));
+static llvh::cl::opt<std::string> InputFilename(
+    llvh::cl::Positional,
+    llvh::cl::desc("Input bundle"),
+    llvh::cl::init("-"));
 
-static llvm::cl::opt<std::string>
-    OutputFilename("out", llvm::cl::desc("Output file"), llvm::cl::init("-"));
+static llvh::cl::opt<std::string>
+    OutputFilename("out", llvh::cl::desc("Output file"), llvh::cl::init("-"));
 
 namespace {
 template <typename T>
@@ -89,7 +89,7 @@ unsigned byteSize(ArrayRef<T> ref) {
 class UsageCounter : public BytecodeVisitor {
  protected:
   JSONEmitter &emitter_;
-  llvm::DenseMap<unsigned, unsigned> virtualOffsets_;
+  llvh::DenseMap<unsigned, unsigned> virtualOffsets_;
   uintptr_t bundleStart_;
 
   unsigned currentFuncId_;
@@ -97,13 +97,13 @@ class UsageCounter : public BytecodeVisitor {
   uintptr_t opcodeEnd_;
   uintptr_t functionEnd_;
 
-  llvm::DenseMap<std::pair<StringRef, unsigned>, unsigned> emitted_;
+  llvh::DenseMap<std::pair<StringRef, unsigned>, unsigned> emitted_;
 
   /// Indices into the bytecode's string table corresponding to the (exclusive)
   /// end of each string kind entry.
   std::vector<uint32_t> stringKindEnds_;
 
-  void appendRecord(llvm::StringRef type, unsigned dedupKey, unsigned size) {
+  void appendRecord(llvh::StringRef type, unsigned dedupKey, unsigned size) {
     assert(size < (2 << 20) && "Abnormally large size!");
 
     if (size == 0) {
@@ -161,7 +161,7 @@ class UsageCounter : public BytecodeVisitor {
     emitted_.clear();
 
     opcodeStart_ = (uintptr_t)bytecodeStart;
-    opcodeEnd_ = llvm::alignAddr(
+    opcodeEnd_ = llvh::alignAddr(
         bytecodeStart +
             bcProvider_->getFunctionHeader(funcId).bytecodeSizeInBytes(),
         sizeof(uint32_t));
@@ -330,22 +330,22 @@ class UsageCounter : public BytecodeVisitor {
     unsigned bundleOffset = (uintptr_t)(*ind + buff - bundleStart_);
     switch (tag) {
       case SLG::ByteStringTag: {
-        uint8_t val = llvm::support::endian::read<uint8_t, 1>(
-            buff + *ind, llvm::support::endianness::little);
+        uint8_t val = llvh::support::endian::read<uint8_t, 1>(
+            buff + *ind, llvh::support::endianness::little);
         appendRecord("data:literalbuffer:bytestring", bundleOffset, 1);
         countStringLiteral(val);
         *ind += 1;
       } break;
       case SLG::ShortStringTag: {
-        uint16_t val = llvm::support::endian::read<uint16_t, 1>(
-            buff + *ind, llvm::support::endianness::little);
+        uint16_t val = llvh::support::endian::read<uint16_t, 1>(
+            buff + *ind, llvh::support::endianness::little);
         appendRecord("data:literalbuffer:shortstring", bundleOffset, 2);
         countStringLiteral(val);
         *ind += 2;
       } break;
       case SLG::LongStringTag: {
-        uint32_t val = llvm::support::endian::read<uint32_t, 1>(
-            buff + *ind, llvm::support::endianness::little);
+        uint32_t val = llvh::support::endian::read<uint32_t, 1>(
+            buff + *ind, llvh::support::endianness::little);
         appendRecord("data:literalbuffer:longstring", bundleOffset, 4);
         countStringLiteral(val);
         *ind += 4;
@@ -392,7 +392,7 @@ class UsageCounter : public BytecodeVisitor {
     assert(inst->opCode == inst::OpCode::SwitchImm);
 
     const auto *curJmpTableView =
-        reinterpret_cast<const uint32_t *>(llvm::alignAddr(
+        reinterpret_cast<const uint32_t *>(llvh::alignAddr(
             (const uint8_t *)inst + inst->iSwitchImm.op2, sizeof(uint32_t)));
 
     unsigned start = inst->iSwitchImm.op4;
@@ -464,7 +464,7 @@ class UsageCounter : public BytecodeVisitor {
   UsageCounter(
       std::shared_ptr<BCProvider> bc,
       JSONEmitter &emitter,
-      llvm::DenseMap<unsigned, unsigned> offsets,
+      llvh::DenseMap<unsigned, unsigned> offsets,
       uintptr_t bundleStart)
       : BytecodeVisitor(bc),
         emitter_(emitter),
@@ -479,9 +479,9 @@ class UsageCounter : public BytecodeVisitor {
 };
 
 // Getting all virtual offsets is O(N^2) unless we do them in a single pass.
-llvm::DenseMap<unsigned, unsigned> getVirtualOffsets(
+llvh::DenseMap<unsigned, unsigned> getVirtualOffsets(
     std::shared_ptr<BCProvider> bc) {
-  llvm::DenseMap<unsigned, unsigned> map(bc->getFunctionCount());
+  llvh::DenseMap<unsigned, unsigned> map(bc->getFunctionCount());
 
   unsigned virtualOffset = 0;
   for (unsigned i = 0, e = bc->getFunctionCount(); i < e; i++) {
@@ -493,18 +493,18 @@ llvm::DenseMap<unsigned, unsigned> getVirtualOffsets(
 }
 
 bool attribute(
-    std::unique_ptr<llvm::MemoryBuffer> input,
+    std::unique_ptr<llvh::MemoryBuffer> input,
     JSONEmitter &emitter) {
   assert(
-      llvm::alignAddr(input->getBufferStart(), sizeof(uint32_t)) ==
+      llvh::alignAddr(input->getBufferStart(), sizeof(uint32_t)) ==
       (uintptr_t)input->getBufferStart());
 
   uintptr_t bundleStart = (uintptr_t)input->getBuffer().data();
-  auto hermesBuffer = llvm::make_unique<hermes::MemoryBuffer>(input.get());
+  auto hermesBuffer = llvh::make_unique<hermes::MemoryBuffer>(input.get());
   auto ret = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
       std::move(hermesBuffer));
   if (!ret.first) {
-    llvm::errs() << "Can't deserialize: " << ret.second << "\n";
+    llvh::errs() << "Can't deserialize: " << ret.second << "\n";
     return false;
   }
   std::shared_ptr<BCProvider> bc = std::move(ret.first);
@@ -524,33 +524,33 @@ bool attribute(
 
 int main(int argc, char **argv) {
   // Normalize the arg vector.
-  llvm::InitLLVM initLLVM(argc, argv);
-  llvm::sys::PrintStackTraceOnErrorSignal("hbc-attribute");
-  llvm::PrettyStackTraceProgram X(argc, argv);
-  llvm::llvm_shutdown_obj Y;
-  llvm::cl::ParseCommandLineOptions(
+  llvh::InitLLVM initLLVM(argc, argv);
+  llvh::sys::PrintStackTraceOnErrorSignal("hbc-attribute");
+  llvh::PrettyStackTraceProgram X(argc, argv);
+  llvh::llvm_shutdown_obj Y;
+  llvh::cl::ParseCommandLineOptions(
       argc, argv, "Hermes bytecode size attribution tool\n");
 
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> fileBufOrErr =
-      llvm::MemoryBuffer::getFileOrSTDIN(InputFilename);
+  llvh::ErrorOr<std::unique_ptr<llvh::MemoryBuffer>> fileBufOrErr =
+      llvh::MemoryBuffer::getFileOrSTDIN(InputFilename);
   if (!fileBufOrErr) {
-    llvm::errs() << "Error: fail to open file: " << InputFilename << ": "
+    llvh::errs() << "Error: fail to open file: " << InputFilename << ": "
                  << fileBufOrErr.getError().message() << "\n";
     return 1;
   }
 
-  llvm::Optional<raw_fd_ostream> fileOS;
+  llvh::Optional<raw_fd_ostream> fileOS;
   if (!OutputFilename.empty()) {
     std::error_code EC;
-    fileOS.emplace(OutputFilename.data(), EC, llvm::sys::fs::F_Text);
+    fileOS.emplace(OutputFilename.data(), EC, llvh::sys::fs::F_Text);
     if (EC) {
-      llvm::errs() << "Error: fail to open file " << OutputFilename << ": "
+      llvh::errs() << "Error: fail to open file " << OutputFilename << ": "
                    << EC.message() << '\n';
       return 1;
     }
   }
 
-  auto &output = fileOS ? *fileOS : llvm::outs();
+  auto &output = fileOS ? *fileOS : llvh::outs();
   JSONEmitter emitter(output);
   if (!attribute(std::move(fileBufOrErr.get()), emitter)) {
     return 3;

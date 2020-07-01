@@ -21,7 +21,7 @@
 #include <mutex>
 #include <vector>
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvh/ADT/DenseMap.h"
 
 namespace hermes {
 namespace vm {
@@ -97,7 +97,7 @@ class IdentifierTable {
   /// return it as a StringPrimitive, otherwise return nullptr.
   StringPrimitive *getExistingStringPrimitiveOrNull(
       Runtime *runtime,
-      llvm::ArrayRef<char16_t> str);
+      llvh::ArrayRef<char16_t> str);
 
   /// Register a lazy ASCII identifier from a bytecode module or as predefined
   /// identifier.
@@ -443,13 +443,13 @@ class IdentifierTable {
   template <typename T>
   CallResult<SymbolID> getOrCreateIdentifier(
       Runtime *runtime,
-      llvm::ArrayRef<T> str,
+      llvh::ArrayRef<T> str,
       Handle<StringPrimitive> primHandle,
       uint32_t hash);
   template <typename T>
   CallResult<SymbolID> getOrCreateIdentifier(
       Runtime *runtime,
-      llvm::ArrayRef<T> str,
+      llvh::ArrayRef<T> str,
       Handle<StringPrimitive> primHandle) {
     return getOrCreateIdentifier(
         runtime, str, primHandle, hermes::hashString(str));
@@ -457,7 +457,7 @@ class IdentifierTable {
 
   /// Internal implementation of registerLazyIdentifier().
   template <typename T>
-  SymbolID registerLazyIdentifierImpl(llvm::ArrayRef<T> str, uint32_t hash);
+  SymbolID registerLazyIdentifierImpl(llvh::ArrayRef<T> str, uint32_t hash);
 
   /// Allocate a new SymbolID, and set it to \p str. Update the hash table
   /// location \p hashTableIndex with the ID. \return the new ID.
@@ -484,7 +484,7 @@ class IdentifierTable {
   template <typename T, bool Unique = true>
   CallResult<PseudoHandle<StringPrimitive>> allocateDynamicString(
       Runtime *runtime,
-      llvm::ArrayRef<T> str,
+      llvh::ArrayRef<T> str,
       Handle<StringPrimitive> primHandle);
 
   /// Turn an existing lazy identifier into a StringPrimitive.

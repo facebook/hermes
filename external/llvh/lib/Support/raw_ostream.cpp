@@ -11,20 +11,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Config/config.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/MathExtras.h"
-#include "llvm/Support/NativeFormatting.h"
-#include "llvm/Support/Process.h"
-#include "llvm/Support/Program.h"
+#include "llvh/Support/raw_ostream.h"
+#include "llvh/ADT/STLExtras.h"
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/ADT/StringExtras.h"
+#include "llvh/Config/config.h"
+#include "llvh/Support/Compiler.h"
+#include "llvh/Support/ErrorHandling.h"
+#include "llvh/Support/FileSystem.h"
+#include "llvh/Support/Format.h"
+#include "llvh/Support/FormatVariadic.h"
+#include "llvh/Support/MathExtras.h"
+#include "llvh/Support/NativeFormatting.h"
+#include "llvh/Support/Process.h"
+#include "llvh/Support/Program.h"
 #include <algorithm>
 #include <cctype>
 #include <cerrno>
@@ -60,11 +60,11 @@
 #endif
 
 #ifdef _WIN32
-#include "llvm/Support/ConvertUTF.h"
+#include "llvh/Support/ConvertUTF.h"
 #include "Windows/WindowsSupport.h"
 #endif
 
-using namespace llvm;
+using namespace llvh;
 
 raw_ostream::~raw_ostream() {
   // raw_ostream's subclasses should take care to flush the buffer
@@ -130,7 +130,7 @@ raw_ostream &raw_ostream::operator<<(long long N) {
 }
 
 raw_ostream &raw_ostream::write_hex(unsigned long long N) {
-  llvm::write_hex(*this, N, HexPrintStyle::Lower);
+  llvh::write_hex(*this, N, HexPrintStyle::Lower);
   return *this;
 }
 
@@ -185,12 +185,12 @@ raw_ostream &raw_ostream::write_escaped(StringRef Str,
 }
 
 raw_ostream &raw_ostream::operator<<(const void *P) {
-  llvm::write_hex(*this, (uintptr_t)P, HexPrintStyle::PrefixLower);
+  llvh::write_hex(*this, (uintptr_t)P, HexPrintStyle::PrefixLower);
   return *this;
 }
 
 raw_ostream &raw_ostream::operator<<(double N) {
-  llvm::write_double(*this, N, FloatStyle::Exponent);
+  llvh::write_double(*this, N, FloatStyle::Exponent);
   return *this;
 }
 
@@ -369,11 +369,11 @@ raw_ostream &raw_ostream::operator<<(const FormattedNumber &FN) {
       Style = HexPrintStyle::PrefixLower;
     else
       Style = HexPrintStyle::Lower;
-    llvm::write_hex(*this, FN.HexValue, Style, FN.Width);
+    llvh::write_hex(*this, FN.HexValue, Style, FN.Width);
   } else {
-    llvm::SmallString<16> Buffer;
-    llvm::raw_svector_ostream Stream(Buffer);
-    llvm::write_integer(Stream, FN.DecValue, 0, IntegerStyle::Integer);
+    llvh::SmallString<16> Buffer;
+    llvh::raw_svector_ostream Stream(Buffer);
+    llvh::write_integer(Stream, FN.DecValue, 0, IntegerStyle::Integer);
     if (Buffer.size() < FN.Width)
       indent(FN.Width - Buffer.size());
     (*this) << Buffer;
@@ -398,8 +398,8 @@ raw_ostream &raw_ostream::operator<<(const FormattedBytes &FB) {
     uint64_t MaxOffset = *FB.FirstByteOffset + Lines * FB.NumPerLine;
     unsigned Power = 0;
     if (MaxOffset > 0)
-      Power = llvm::Log2_64_Ceil(MaxOffset);
-    OffsetWidth = std::max<uint64_t>(4, llvm::alignTo(Power, 4) / 4);
+      Power = llvh::Log2_64_Ceil(MaxOffset);
+    OffsetWidth = std::max<uint64_t>(4, llvh::alignTo(Power, 4) / 4);
   }
 
   // The width of a block of data including all spaces for group separators.
@@ -412,7 +412,7 @@ raw_ostream &raw_ostream::operator<<(const FormattedBytes &FB) {
 
     if (FB.FirstByteOffset.hasValue()) {
       uint64_t Offset = FB.FirstByteOffset.getValue();
-      llvm::write_hex(*this, Offset + LineIndex, HPS, OffsetWidth);
+      llvh::write_hex(*this, Offset + LineIndex, HPS, OffsetWidth);
       *this << ": ";
     }
 
@@ -425,7 +425,7 @@ raw_ostream &raw_ostream::operator<<(const FormattedBytes &FB) {
         ++CharsPrinted;
         *this << " ";
       }
-      llvm::write_hex(*this, Line[I], HPS, 2);
+      llvh::write_hex(*this, Line[I], HPS, 2);
     }
 
     if (FB.ASCII) {
@@ -841,7 +841,7 @@ void raw_fd_ostream::anchor() {}
 
 /// outs() - This returns a reference to a raw_ostream for standard output.
 /// Use it like: outs() << "foo" << "bar";
-raw_ostream &llvm::outs() {
+raw_ostream &llvh::outs() {
   // Set buffer settings to model stdout behavior.
   std::error_code EC;
   static raw_fd_ostream S("-", EC, sys::fs::F_None);
@@ -851,14 +851,14 @@ raw_ostream &llvm::outs() {
 
 /// errs() - This returns a reference to a raw_ostream for standard error.
 /// Use it like: errs() << "foo" << "bar";
-raw_ostream &llvm::errs() {
+raw_ostream &llvh::errs() {
   // Set standard error to be unbuffered by default.
   static raw_fd_ostream S(STDERR_FILENO, false, true);
   return S;
 }
 
 /// nulls() - This returns a reference to a raw_ostream which discards output.
-raw_ostream &llvm::nulls() {
+raw_ostream &llvh::nulls() {
   static raw_null_ostream S;
   return S;
 }

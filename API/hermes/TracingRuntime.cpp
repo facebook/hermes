@@ -12,9 +12,9 @@
 #include <hermes/Support/Algorithms.h>
 #include <hermes/Support/JSONEmitter.h>
 
-#include <llvm/Support/raw_ostream.h>
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/SHA1.h"
+#include <llvh/Support/raw_ostream.h>
+#include "llvh/Support/FileSystem.h"
+#include "llvh/Support/SHA1.h"
 
 namespace facebook {
 namespace hermes {
@@ -24,7 +24,7 @@ TracingRuntime::TracingRuntime(
     std::unique_ptr<jsi::Runtime> runtime,
     uint64_t globalID,
     const ::hermes::vm::RuntimeConfig &conf,
-    std::unique_ptr<llvm::raw_ostream> traceStream)
+    std::unique_ptr<llvh::raw_ostream> traceStream)
     : RuntimeDecorator<jsi::Runtime>(*runtime),
       runtime_(std::move(runtime)),
       trace_(globalID, conf, std::move(traceStream)) {}
@@ -36,11 +36,11 @@ jsi::Value TracingRuntime::evaluateJavaScript(
   bool sourceIsBytecode = false;
   if (HermesRuntime::isHermesBytecode(buffer->data(), buffer->size())) {
     sourceHash = ::hermes::hbc::BCProviderFromBuffer::getSourceHashFromBytecode(
-        llvm::makeArrayRef(buffer->data(), buffer->size()));
+        llvh::makeArrayRef(buffer->data(), buffer->size()));
     sourceIsBytecode = true;
   } else {
     sourceHash =
-        llvm::SHA1::hash(llvm::makeArrayRef(buffer->data(), buffer->size()));
+        llvh::SHA1::hash(llvh::makeArrayRef(buffer->data(), buffer->size()));
   }
   trace_.emplace_back<SynthTrace::BeginExecJSRecord>(
       getTimeSinceStart(), sourceURL, sourceHash, sourceIsBytecode);
@@ -526,7 +526,7 @@ SynthTrace::TimeSinceStart TracingRuntime::getTimeSinceStart() const {
 TracingHermesRuntime::TracingHermesRuntime(
     std::unique_ptr<HermesRuntime> runtime,
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
-    std::unique_ptr<llvm::raw_ostream> traceStream,
+    std::unique_ptr<llvh::raw_ostream> traceStream,
     std::function<std::string()> commitAction,
     std::function<void()> rollbackAction)
     : TracingHermesRuntime(
@@ -553,7 +553,7 @@ TracingHermesRuntime::TracingHermesRuntime(
     std::unique_ptr<HermesRuntime> &runtime,
     uint64_t globalID,
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
-    std::unique_ptr<llvm::raw_ostream> traceStream,
+    std::unique_ptr<llvh::raw_ostream> traceStream,
     std::function<std::string()> commitAction,
     std::function<void()> rollbackAction)
     : TracingRuntime(
@@ -566,10 +566,10 @@ TracingHermesRuntime::TracingHermesRuntime(
       rollbackAction_(std::move(rollbackAction)),
       crashCallbackKey_(
           conf_.getCrashMgr()
-              ? llvm::Optional<::hermes::vm::CrashManager::CallbackKey>(
+              ? llvh::Optional<::hermes::vm::CrashManager::CallbackKey>(
                     conf_.getCrashMgr()->registerCallback(
                         [this](int fd) { crashCallback(fd); }))
-              : llvm::None) {}
+              : llvh::None) {}
 
 void TracingHermesRuntime::flushAndDisableTrace() {
   (void)flushAndDisableBridgeTrafficTrace();
@@ -598,7 +598,7 @@ void TracingHermesRuntime::crashCallback(int fd) {
     // As a result, this trace will likely not re-produce the crash.
     return;
   }
-  llvm::raw_fd_ostream jsonStream(fd, false);
+  llvh::raw_fd_ostream jsonStream(fd, false);
   ::hermes::JSONEmitter json(jsonStream);
   json.openDict();
   json.emitKeyValue("type", "tracing");
@@ -654,7 +654,7 @@ void addRecordMarker(TracingRuntime &tracingRuntime) {
 static std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntimeImpl(
     std::unique_ptr<HermesRuntime> hermesRuntime,
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
-    std::unique_ptr<llvm::raw_ostream> traceStream,
+    std::unique_ptr<llvh::raw_ostream> traceStream,
     std::function<std::string()> commitAction,
     std::function<void()> rollbackAction,
     bool forReplay) {
@@ -681,9 +681,9 @@ std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
     const std::string &traceResultPath,
     std::function<bool()> traceCompletionCallback) {
   std::error_code ec;
-  std::unique_ptr<llvm::raw_ostream> traceStream =
-      std::make_unique<llvm::raw_fd_ostream>(
-          traceScratchPath, ec, llvm::sys::fs::F_Text);
+  std::unique_ptr<llvh::raw_ostream> traceStream =
+      std::make_unique<llvh::raw_fd_ostream>(
+          traceScratchPath, ec, llvh::sys::fs::F_Text);
   if (ec) {
     ::hermes::hermesLog(
         "Hermes",
@@ -701,7 +701,7 @@ std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
       [traceCompletionCallback, traceScratchPath, traceResultPath]() {
         if (traceScratchPath != traceResultPath) {
           std::error_code ec =
-              llvm::sys::fs::rename(traceScratchPath, traceResultPath);
+              llvh::sys::fs::rename(traceScratchPath, traceResultPath);
           if (ec) {
             ::hermes::hermesLog(
                 "Hermes",
@@ -726,7 +726,7 @@ std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
       },
       [traceScratchPath]() {
         // Delete the in-progress trace
-        llvm::sys::fs::remove(traceScratchPath);
+        llvh::sys::fs::remove(traceScratchPath);
       },
       false);
 }
@@ -734,7 +734,7 @@ std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
 std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
     std::unique_ptr<HermesRuntime> hermesRuntime,
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
-    std::unique_ptr<llvm::raw_ostream> traceStream,
+    std::unique_ptr<llvh::raw_ostream> traceStream,
     bool forReplay) {
   return makeTracingHermesRuntimeImpl(
       std::move(hermesRuntime),

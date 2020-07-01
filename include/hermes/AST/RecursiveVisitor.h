@@ -10,7 +10,7 @@
 
 #include "hermes/AST/ESTree.h"
 
-#include "llvm/Support/Casting.h"
+#include "llvh/Support/Casting.h"
 
 namespace hermes {
 namespace ESTree {
@@ -41,7 +41,7 @@ struct VisitCaller<
 
 } // namespace detail
 
-using llvm::cast;
+using llvh::cast;
 
 /// A different kind of dispatcher allowing the visitor to visit the child
 /// nodes recursively from its stack frame. This allows usage of commoan RAII

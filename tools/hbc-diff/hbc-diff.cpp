@@ -12,8 +12,8 @@
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/Support/MemoryBuffer.h"
 
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/MemoryBuffer.h"
+#include "llvh/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "hbc-diff"
 
@@ -44,7 +44,7 @@ static std::array<const char *, 15> sectionNames = {
 
 /// Prints the number of bytes represented by \p size to \p os.
 /// \param humanize display sizes in KiB, MiB, GiB instead of just bytes.
-static void printBytes(int64_t size, llvm::raw_ostream &os, bool humanize) {
+static void printBytes(int64_t size, llvh::raw_ostream &os, bool humanize) {
   const uint64_t base = 1024;
   if (size < 0) {
     os << '-';
@@ -62,13 +62,13 @@ static void printBytes(int64_t size, llvm::raw_ostream &os, bool humanize) {
     std::exit(ExecutionFailed);
   }
   char prefix = "KMG"[exponent - 1];
-  os << llvm::format(
+  os << llvh::format(
       "%.2f %ciB", (double)absSize / std::pow(base, exponent), prefix);
 }
 
 /// Performs a size-diff of each section in two bytecode files
 static ExecutionStatus diffFiles(
-    const std::vector<std::unique_ptr<llvm::MemoryBuffer>> &fileBufs,
+    const std::vector<std::unique_ptr<llvh::MemoryBuffer>> &fileBufs,
     const std::vector<std::string> &filenames,
     bool humanize) {
   assert(
@@ -80,14 +80,14 @@ static ExecutionStatus diffFiles(
       fileBufs.size());
 
   for (uint32_t i = 0; i < fileBufs.size(); ++i) {
-    auto buffer = llvm::make_unique<MemoryBuffer>(fileBufs[i].get());
+    auto buffer = llvh::make_unique<MemoryBuffer>(fileBufs[i].get());
     const auto *fileHeader =
         reinterpret_cast<const hbc::BytecodeFileHeader *>(buffer->data());
 
     auto ret = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
         std::move(buffer));
     if (!ret.first) {
-      llvm::errs() << ret.second << '\n';
+      llvh::errs() << ret.second << '\n';
       return ExecutionFailed;
     }
     auto bytecode = std::move(ret.first);
@@ -139,7 +139,7 @@ static ExecutionStatus diffFiles(
     fileSizes[i].push_back(fileHeader->fileLength - debugInfoStart);
 
     if (fileSizes[i].size() != sectionNames.size()) {
-      llvm::errs() << "Mismatch between size data and size section count\n";
+      llvh::errs() << "Mismatch between size data and size section count\n";
       return ExecutionFailed;
     }
 
@@ -152,16 +152,16 @@ static ExecutionStatus diffFiles(
     }
   }
 
-  llvm::outs() << "Increase from " << filenames[0] << " to " << filenames[1]
+  llvh::outs() << "Increase from " << filenames[0] << " to " << filenames[1]
                << ":\n";
   for (uint32_t j = 0; j < sectionNames.size(); ++j) {
-    llvm::outs() << sectionNames[j] << ": ";
-    printBytes(fileSizes[1][j] - fileSizes[0][j], llvm::outs(), humanize);
-    llvm::outs() << "  (";
-    printBytes(fileSizes[0][j], llvm::outs(), humanize);
-    llvm::outs() << " -> ";
-    printBytes(fileSizes[1][j], llvm::outs(), humanize);
-    llvm::outs() << ")\n";
+    llvh::outs() << sectionNames[j] << ": ";
+    printBytes(fileSizes[1][j] - fileSizes[0][j], llvh::outs(), humanize);
+    llvh::outs() << "  (";
+    printBytes(fileSizes[0][j], llvh::outs(), humanize);
+    llvh::outs() << " -> ";
+    printBytes(fileSizes[1][j], llvh::outs(), humanize);
+    llvh::outs() << ")\n";
   }
 
   auto &before = funcHashToSize[0];
@@ -173,24 +173,24 @@ static ExecutionStatus diffFiles(
       newHashes.emplace_back(it.second, it.first);
     }
   }
-  llvm::outs() << newHashes.size() << " of " << after.size()
+  llvh::outs() << newHashes.size() << " of " << after.size()
                << " functions seem new. Largest new sizes:\n";
   sort(newHashes.begin(), newHashes.end());
   reverse(newHashes.begin(), newHashes.end());
   for (unsigned i = 0; i < 10 && i < newHashes.size(); ++i) {
-    llvm::outs() << newHashes[i].first << '\n';
+    llvh::outs() << newHashes[i].first << '\n';
   }
   return Success;
 }
 
 int main(int argc, char **argv) {
   if (argc < 3 || argc > 4) {
-    llvm::errs() << "usage: hbc-diff [-h] <filename1> <filename2>"
+    llvh::errs() << "usage: hbc-diff [-h] <filename1> <filename2>"
                  << "\n";
     return ExecutionFailed;
   }
   bool humanize = false;
-  std::vector<std::unique_ptr<llvm::MemoryBuffer>> fileBufs{};
+  std::vector<std::unique_ptr<llvh::MemoryBuffer>> fileBufs{};
   std::vector<std::string> filenames;
   for (int i = 1; i < argc; ++i) {
     if (::strncmp(argv[i], "-h", 2) == 0) {
@@ -198,10 +198,10 @@ int main(int argc, char **argv) {
       continue;
     }
     filenames.push_back(argv[i]);
-    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> fileBufOrErr =
-        llvm::MemoryBuffer::getFileOrSTDIN(argv[i]);
+    llvh::ErrorOr<std::unique_ptr<llvh::MemoryBuffer>> fileBufOrErr =
+        llvh::MemoryBuffer::getFileOrSTDIN(argv[i]);
     if (!fileBufOrErr) {
-      llvm::errs() << "Error! Failed to open file: " << argv[i] << "\n";
+      llvh::errs() << "Error! Failed to open file: " << argv[i] << "\n";
       return LoadFileFailed;
     }
     fileBufs.push_back(std::move(fileBufOrErr.get()));

@@ -101,7 +101,7 @@ struct WeakRefInfo {
 class JSWeakMapImplBase : public JSObject {
   using Super = JSObject;
   using WeakRefKey = detail::WeakRefKey;
-  using DenseMapT = llvm::DenseMap<WeakRefKey, uint32_t, detail::WeakRefInfo>;
+  using DenseMapT = llvh::DenseMap<WeakRefKey, uint32_t, detail::WeakRefInfo>;
 
  protected:
 #ifdef HERMESVM_SERIALIZE

@@ -17,9 +17,9 @@
 #include "hermes/VM/Profiler.h"
 #include "hermes/VM/PropertyCache.h"
 #include "hermes/VM/SerializedLiteralParser.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/Support/TrailingObjects.h"
+#include "llvh/ADT/DenseSet.h"
+#include "llvh/ADT/Optional.h"
+#include "llvh/Support/TrailingObjects.h"
 
 #include <memory>
 #include <vector>
@@ -35,7 +35,7 @@ typedef CallResult<HermesValue> (*JITCompiledFunctionPtr)(Runtime *runtime);
 
 /// A sequence of instructions representing the body of a function.
 class CodeBlock final
-    : private llvm::TrailingObjects<CodeBlock, PropertyCacheEntry> {
+    : private llvh::TrailingObjects<CodeBlock, PropertyCacheEntry> {
   friend TrailingObjects;
   /// Points to the runtime module with the information required for this code
   /// block.
@@ -200,7 +200,7 @@ class CodeBlock final
   const_iterator end() const {
     return bytecode_ + functionHeader_.bytecodeSizeInBytes();
   }
-  llvm::ArrayRef<uint8_t> getOpcodeArray() const {
+  llvh::ArrayRef<uint8_t> getOpcodeArray() const {
     return {bytecode_, functionHeader_.bytecodeSizeInBytes()};
   }
 
@@ -392,7 +392,7 @@ class CodeBlock final
   /// CodeBlock. This will only be the case if the function is lazily compiled,
   /// or we've enabled Function.toString() to return source and compilation was
   /// done at run-time.
-  llvm::StringRef getFunctionSource() const;
+  llvh::StringRef getFunctionSource() const;
 
   /// Returns true if \c getFunctionSource() above will return function source.
   bool hasFunctionSource() const;

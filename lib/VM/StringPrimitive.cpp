@@ -218,12 +218,12 @@ void ExternalUTF16StringPrimitiveDeserialize(Deserializer &d, CellKind kind) {
 template <typename T>
 CallResult<HermesValue> StringPrimitive::createEfficientImpl(
     Runtime *runtime,
-    llvm::ArrayRef<T> str,
+    llvh::ArrayRef<T> str,
     std::basic_string<T> *optStorage) {
   constexpr bool charIs8Bit = std::is_same<T, char>::value;
   assert(
       (!optStorage ||
-       str == llvm::makeArrayRef(optStorage->data(), optStorage->size())) &&
+       str == llvh::makeArrayRef(optStorage->data(), optStorage->size())) &&
       "If optStorage is provided, it must equal the input string");
   assert(
       (!charIs8Bit || isAllASCII(str.begin(), str.end())) &&
@@ -276,14 +276,14 @@ CallResult<HermesValue> StringPrimitive::createEfficient(
     Runtime *runtime,
     std::basic_string<char> &&str) {
   return createEfficientImpl(
-      runtime, llvm::makeArrayRef(str.data(), str.size()), &str);
+      runtime, llvh::makeArrayRef(str.data(), str.size()), &str);
 }
 
 CallResult<HermesValue> StringPrimitive::createEfficient(
     Runtime *runtime,
     std::basic_string<char16_t> &&str) {
   return createEfficientImpl(
-      runtime, llvm::makeArrayRef(str.data(), str.size()), &str);
+      runtime, llvh::makeArrayRef(str.data(), str.size()), &str);
 }
 
 CallResult<HermesValue> StringPrimitive::createDynamic(
@@ -429,7 +429,7 @@ StringView StringPrimitive::createStringView(
 }
 
 void StringPrimitive::copyUTF16String(
-    llvm::SmallVectorImpl<char16_t> &str) const {
+    llvh::SmallVectorImpl<char16_t> &str) const {
   if (isASCII()) {
     const char *ptr = castToASCIIPointer();
     str.append(ptr, ptr + getStringLength());

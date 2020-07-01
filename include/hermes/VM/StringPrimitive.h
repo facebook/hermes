@@ -16,7 +16,7 @@
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/StringRefUtils.h"
 
-#include "llvm/Support/TrailingObjects.h"
+#include "llvh/Support/TrailingObjects.h"
 
 #include <type_traits>
 
@@ -36,8 +36,8 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   template <typename T>
   friend class BufferedStringPrimitive;
 
-  friend llvm::raw_ostream &operator<<(
-      llvm::raw_ostream &OS,
+  friend llvh::raw_ostream &operator<<(
+      llvh::raw_ostream &OS,
       const StringPrimitive *str);
 
   /// Private implementation of createEfficient.
@@ -47,7 +47,7 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   template <typename T>
   static CallResult<HermesValue> createEfficientImpl(
       Runtime *runtime,
-      llvm::ArrayRef<T> str,
+      llvh::ArrayRef<T> str,
       std::basic_string<T> *optStorage = nullptr);
 
   /// Create a new DynamicASCIIStringPrimitive if str is all ASCII, otherwise
@@ -71,7 +71,7 @@ class StringPrimitive : public VariableSizeRuntimeCell {
 
   /// Internal helper to return a std::string from an ArrayRef.
   template <typename CharT>
-  static std::basic_string<CharT> arrayToString(llvm::ArrayRef<CharT> arr) {
+  static std::basic_string<CharT> arrayToString(llvh::ArrayRef<CharT> arr) {
     return std::basic_string<CharT>{arr.begin(), arr.end()};
   }
 
@@ -202,7 +202,7 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// should never happen.
   static inline Handle<StringPrimitive> createNoThrow(
       Runtime *runtime,
-      llvm::StringRef ascii);
+      llvh::StringRef ascii);
 
   /// \return the length of string in 16-bit characters.
   uint32_t getStringLength() const {
@@ -272,7 +272,7 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// In the rare case (most likely for debugging, printing and etc), we just
   /// want to get a copy of the string in UTF16 form, without worrying about
   /// performance and efficiency. The string will be copied into \p str.
-  void copyUTF16String(llvm::SmallVectorImpl<char16_t> &str) const;
+  void copyUTF16String(llvh::SmallVectorImpl<char16_t> &str) const;
 
   /// \return the character at \p index.
   /// Use it only when you cannot use a StringView.
@@ -287,8 +287,8 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// Get a StringRef of T. T must be char or char16_t corresponding to whether
   /// this string is ASCII or UTF-16.
   template <typename T>
-  llvm::ArrayRef<T> getStringRef() const {
-    return llvm::ArrayRef<T>{castToPointer<T>(), getStringLength()};
+  llvh::ArrayRef<T> getStringRef() const {
+    return llvh::ArrayRef<T>{castToPointer<T>(), getStringLength()};
   }
 
  private:
@@ -418,15 +418,15 @@ using OptSymbolStringPrimitive = typename std::
 template <typename T, bool Uniqued>
 class DynamicStringPrimitive final
     : public OptSymbolStringPrimitive<Uniqued>,
-      private llvm::TrailingObjects<DynamicStringPrimitive<T, Uniqued>, T> {
+      private llvh::TrailingObjects<DynamicStringPrimitive<T, Uniqued>, T> {
   friend class IdentifierTable;
-  friend class llvm::TrailingObjects<DynamicStringPrimitive<T, Uniqued>, T>;
+  friend class llvh::TrailingObjects<DynamicStringPrimitive<T, Uniqued>, T>;
   friend class StringBuilder;
   friend class StringPrimitive;
   using OptSymbolStringPrimitive<Uniqued>::isExternalLength;
   using OptSymbolStringPrimitive<Uniqued>::getStringLength;
 
-  using Ref = llvm::ArrayRef<T>;
+  using Ref = llvh::ArrayRef<T>;
 
   /// \return the cell kind for this string.
   static constexpr CellKind getCellKind() {
@@ -529,7 +529,7 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   friend class ExtStringForTest;
 #endif
 
-  using Ref = llvm::ArrayRef<T>;
+  using Ref = llvh::ArrayRef<T>;
   using StdString = std::basic_string<T>;
   using CopyableStdString = CopyableBasicString<T>;
 
@@ -655,7 +655,7 @@ class BufferedStringPrimitive final : public StringPrimitive {
       const GCCell *cell,
       Metadata::Builder &mb);
 
-  using Ref = llvm::ArrayRef<T>;
+  using Ref = llvh::ArrayRef<T>;
   using StdString = std::basic_string<T>;
 
   /// \return the cell kind for this string.
@@ -860,8 +860,8 @@ using BufferedASCIIStringPrimitive = BufferedStringPrimitive<char>;
 //===----------------------------------------------------------------------===//
 // StringPrimitive inline methods.
 
-inline llvm::raw_ostream &operator<<(
-    llvm::raw_ostream &OS,
+inline llvh::raw_ostream &operator<<(
+    llvh::raw_ostream &OS,
     const StringPrimitive *str) {
   if (str->isASCII()) {
     return OS << str->castToASCIIRef();
@@ -881,7 +881,7 @@ inline llvm::raw_ostream &operator<<(
 
 /*static*/ inline Handle<StringPrimitive> StringPrimitive::createNoThrow(
     Runtime *runtime,
-    llvm::StringRef ascii) {
+    llvh::StringRef ascii) {
   auto strRes = create(runtime, ASCIIRef(ascii.data(), ascii.size()));
   if (strRes == ExecutionStatus::EXCEPTION) {
     hermes_fatal("String allocation failed");

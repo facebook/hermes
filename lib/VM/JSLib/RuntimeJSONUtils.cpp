@@ -21,8 +21,8 @@
 
 #include "JSONLexer.h"
 
-#include "llvm/ADT/SmallString.h"
-#include "llvm/Support/SaveAndRestore.h"
+#include "llvh/ADT/SmallString.h"
+#include "llvh/Support/SaveAndRestore.h"
 
 namespace hermes {
 namespace vm {
@@ -165,7 +165,7 @@ class JSONStringifyer {
       RuntimeJSONParser::MAX_RECURSION_DEPTH};
 
   /// The output buffer. The serialization process will append into it.
-  llvm::SmallVector<char16_t, 32> output_{};
+  llvh::SmallVector<char16_t, 32> output_{};
 
  public:
   explicit JSONStringifyer(Runtime *runtime)
@@ -282,7 +282,7 @@ CallResult<HermesValue> RuntimeJSONParser::parse() {
 }
 
 CallResult<HermesValue> RuntimeJSONParser::parseValue() {
-  llvm::SaveAndRestore<decltype(remainingDepth_)> oldDepth{remainingDepth_,
+  llvh::SaveAndRestore<decltype(remainingDepth_)> oldDepth{remainingDepth_,
                                                            remainingDepth_ - 1};
   if (remainingDepth_ <= 0) {
     return runtime_->raiseStackOverflow(Runtime::StackOverflowKind::JSONParser);
@@ -478,7 +478,7 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
   // The operation is recursive so it needs a GCScope.
   GCScope gcScope(runtime_);
 
-  llvm::SaveAndRestore<decltype(remainingDepth_)> oldDepth{remainingDepth_,
+  llvh::SaveAndRestore<decltype(remainingDepth_)> oldDepth{remainingDepth_,
                                                            remainingDepth_ - 1};
   if (remainingDepth_ <= 0) {
     return runtime_->raiseStackOverflow(Runtime::StackOverflowKind::JSONParser);
@@ -704,7 +704,7 @@ ExecutionStatus JSONStringifyer::initializeSpace(Handle<> space) {
         static_cast<int>(std::max(0.0, std::min(10.0, intRes->getNumber())));
     if (spaceCount > 0) {
       // Construct a string with spaceCount spaces.
-      llvm::SmallString<32> spaces;
+      llvh::SmallString<32> spaces;
       for (int i = 0; i < spaceCount; ++i) {
         spaces.push_back(' ');
       }

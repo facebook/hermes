@@ -14,7 +14,7 @@
 #include "hermes/VM/SmallXString.h"
 
 #include <memory>
-#include "llvm/ADT/SmallString.h"
+#include "llvh/ADT/SmallString.h"
 
 namespace hermes {
 namespace vm {
@@ -41,7 +41,7 @@ class JSRegExp final : public JSObject {
       Runtime *runtime,
       Handle<StringPrimitive> pattern,
       Handle<StringPrimitive> flags,
-      OptValue<llvm::ArrayRef<uint8_t>> bytecode = llvm::None);
+      OptValue<llvh::ArrayRef<uint8_t>> bytecode = llvh::None);
 
   /// \return the pattern string used to initialize this RegExp.
   /// Note this is not suitable for interpolation between //, nor for
@@ -97,7 +97,7 @@ class JSRegExp final : public JSObject {
 
   /// Store a copy of the \p bytecode array.
   ExecutionStatus initializeBytecode(
-      llvm::ArrayRef<uint8_t> bytecode,
+      llvh::ArrayRef<uint8_t> bytecode,
       Runtime *runtime);
 
   uint8_t *bytecode_{};

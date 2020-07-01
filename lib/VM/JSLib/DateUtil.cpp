@@ -14,9 +14,9 @@
 #include "hermes/VM/JSLib/RuntimeCommonStorage.h"
 #include "hermes/VM/SmallXString.h"
 
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/ErrorHandling.h"
+#include "llvh/Support/Format.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <cassert>
 #include <cctype>
@@ -504,8 +504,8 @@ double timeClip(double t) {
 //===----------------------------------------------------------------------===//
 // toString Functions
 
-void dateToISOString(double t, double, llvm::SmallVectorImpl<char> &buf) {
-  llvm::raw_svector_ostream os{buf};
+void dateToISOString(double t, double, llvh::SmallVectorImpl<char> &buf) {
+  llvh::raw_svector_ostream os{buf};
 
   /// Make these ints here because we're printing and we have bounds on
   /// their values. Makes printing very easy.
@@ -515,14 +515,14 @@ void dateToISOString(double t, double, llvm::SmallVectorImpl<char> &buf) {
 
   if (y < 0 || y > 9999) {
     // Handle extended years.
-    os << llvm::format("%+07d-%02d-%02d", y, m, d);
+    os << llvh::format("%+07d-%02d-%02d", y, m, d);
   } else {
-    os << llvm::format("%04d-%02d-%02d", y, m, d);
+    os << llvh::format("%04d-%02d-%02d", y, m, d);
   }
 }
 
-void timeToISOString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {
-  llvm::raw_svector_ostream os{buf};
+void timeToISOString(double t, double tza, llvh::SmallVectorImpl<char> &buf) {
+  llvh::raw_svector_ostream os{buf};
 
   /// Make all of these ints here because we're printing and we have bounds on
   /// their values. Makes printing very easy.
@@ -533,7 +533,7 @@ void timeToISOString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {
 
   if (tza == 0) {
     // Zulu time, output Z as the time zone.
-    os << llvm::format("%02d:%02d:%02d.%03dZ", h, min, s, ms);
+    os << llvh::format("%02d:%02d:%02d.%03dZ", h, min, s, ms);
   } else {
     // Calculate the +HH:mm expression for the time zone adjustment.
     // First account for the sign, then perform calculations on positive TZA.
@@ -541,7 +541,7 @@ void timeToISOString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {
     double tzaPos = std::abs(tza);
     int32_t tzh = hourFromTime(tzaPos);
     int32_t tzm = minFromTime(tzaPos);
-    os << llvm::format(
+    os << llvh::format(
         "%02d:%02d:%02d.%03d%c%02d:%02d", h, min, s, ms, sign, tzh, tzm);
   }
 }
@@ -549,7 +549,7 @@ void timeToISOString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {
 static void datetimeToISOString(
     double t,
     double tza,
-    llvm::SmallVectorImpl<char> &buf,
+    llvh::SmallVectorImpl<char> &buf,
     char separator) {
   dateToISOString(t, tza, buf);
   buf.push_back(separator);
@@ -559,19 +559,19 @@ static void datetimeToISOString(
 void datetimeToISOString(
     double t,
     double tza,
-    llvm::SmallVectorImpl<char> &buf) {
+    llvh::SmallVectorImpl<char> &buf) {
   return datetimeToISOString(t, tza, buf, 'T');
 }
 
-void datetimeToLocaleString(double t, llvm::SmallVectorImpl<char16_t> &buf) {
+void datetimeToLocaleString(double t, llvh::SmallVectorImpl<char16_t> &buf) {
   return platform_unicode::dateFormat(t, true, true, buf);
 }
 
-void dateToLocaleString(double t, llvm::SmallVectorImpl<char16_t> &buf) {
+void dateToLocaleString(double t, llvh::SmallVectorImpl<char16_t> &buf) {
   return platform_unicode::dateFormat(t, true, false, buf);
 }
 
-void timeToLocaleString(double t, llvm::SmallVectorImpl<char16_t> &buf) {
+void timeToLocaleString(double t, llvh::SmallVectorImpl<char16_t> &buf) {
   return platform_unicode::dateFormat(t, false, true, buf);
 }
 
@@ -602,8 +602,8 @@ static const char *const monthNames[12]{
     "Dec",
 };
 
-void dateString(double t, double, llvm::SmallVectorImpl<char> &buf) {
-  llvm::raw_svector_ostream os{buf};
+void dateString(double t, double, llvh::SmallVectorImpl<char> &buf) {
+  llvh::raw_svector_ostream os{buf};
 
   // Make these ints here because we're printing and we have bounds on
   // their values. Makes printing very easy.
@@ -616,22 +616,22 @@ void dateString(double t, double, llvm::SmallVectorImpl<char> &buf) {
   // (SPACE), month, the code unit 0x0020 (SPACE), day, the code unit 0x0020
   // (SPACE), and year.
   // Example: Mon Jul 22 2019
-  os << llvm::format("%s %s %02d %0.4d", weekdayNames[wd], monthNames[m], d, y);
+  os << llvh::format("%s %s %02d %0.4d", weekdayNames[wd], monthNames[m], d, y);
 }
 
-void timeString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {
-  llvm::raw_svector_ostream os{buf};
+void timeString(double t, double tza, llvh::SmallVectorImpl<char> &buf) {
+  llvh::raw_svector_ostream os{buf};
 
   int32_t hour = hourFromTime(t);
   int32_t minute = minFromTime(t);
   int32_t second = secFromTime(t);
 
   // Example: 15:50:49 GMT
-  os << llvm::format("%02d:%02d:%02d GMT", hour, minute, second);
+  os << llvh::format("%02d:%02d:%02d GMT", hour, minute, second);
 }
 
-void timeZoneString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {
-  llvm::raw_svector_ostream os{buf};
+void timeZoneString(double t, double tza, llvh::SmallVectorImpl<char> &buf) {
+  llvh::raw_svector_ostream os{buf};
 
   // We've already computed the TZA, so use that as the offset.
   double offset = tza;
@@ -658,11 +658,11 @@ void timeZoneString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {
   // 8. Return the string-concatenation of offsetSign, offsetHour, offsetMin,
   // and tzName.
   // Example: -0700
-  os << llvm::format("%c%02d%02d", offsetSign, offsetHour, offsetMin);
+  os << llvh::format("%c%02d%02d", offsetSign, offsetHour, offsetMin);
 }
 
-void dateTimeString(double tv, double tza, llvm::SmallVectorImpl<char> &buf) {
-  llvm::raw_svector_ostream os{buf};
+void dateTimeString(double tv, double tza, llvh::SmallVectorImpl<char> &buf) {
+  llvh::raw_svector_ostream os{buf};
   dateString(tv, tza, buf);
   // Return the string-concatenation of DateString(t), the code unit 0x0020
   // (SPACE), TimeString(t), and TimeZoneString(tv).
@@ -675,8 +675,8 @@ void dateTimeString(double tv, double tza, llvm::SmallVectorImpl<char> &buf) {
 void dateTimeUTCString(
     double tv,
     double tza,
-    llvm::SmallVectorImpl<char> &buf) {
-  llvm::raw_svector_ostream os{buf};
+    llvh::SmallVectorImpl<char> &buf) {
+  llvh::raw_svector_ostream os{buf};
 
   // Make these ints here because we're printing and we have bounds on
   // their values. Makes printing very easy.
@@ -689,12 +689,12 @@ void dateTimeUTCString(
   // (SPACE), day, the code unit 0x0020 (SPACE), month, the code unit 0x0020
   // (SPACE), year, the code unit 0x0020 (SPACE), and TimeString(tv).
   // Example: Mon Jul 22 2019 15:51:50 GMT
-  os << llvm::format(
+  os << llvh::format(
       "%s, %02d %s %0.4d ", weekdayNames[wd], d, monthNames[m], y);
   timeString(tv, tza, buf);
 }
 
-void timeTZString(double tv, double tza, llvm::SmallVectorImpl<char> &buf) {
+void timeTZString(double tv, double tza, llvh::SmallVectorImpl<char> &buf) {
   // Return the string-concatenation of TimeString(t) and TimeZoneString(tv).
   // Example: 15:51:50 GMT-0700
   timeString(tv, tza, buf);
@@ -724,14 +724,14 @@ static inline bool isAlpha(char16_t c) {
 /// \return true if successful, false if failed.
 template <class InputIter>
 static bool scanInt(InputIter &it, const InputIter end, int32_t &x) {
-  llvm::SmallString<16> str{};
+  llvh::SmallString<16> str{};
   if (it == end) {
     return false;
   }
   for (; it != end && isDigit(*it); ++it) {
     str += static_cast<char>(*it);
   }
-  llvm::StringRef ref{str};
+  llvh::StringRef ref{str};
   // getAsInteger returns false to signify success.
   return !ref.getAsInteger(10, x);
 }
@@ -918,7 +918,7 @@ static double parseESDate(StringView str) {
     return nan;
   bool foundWeekday = false;
   for (const char *name : weekdayNames) {
-    if (tok.equals(llvm::arrayRefFromStringRef(name))) {
+    if (tok.equals(llvh::arrayRefFromStringRef(name))) {
       foundWeekday = true;
       break;
     }
@@ -929,7 +929,7 @@ static double parseESDate(StringView str) {
   /// If we found a valid Month string from the current `tok`.
   auto tokIsMonth = [&]() -> bool {
     for (uint32_t i = 0; i < sizeof(monthNames) / sizeof(monthNames[0]); ++i) {
-      if (tok.equals(llvm::arrayRefFromStringRef(monthNames[i]))) {
+      if (tok.equals(llvh::arrayRefFromStringRef(monthNames[i]))) {
         // m is 1-indexed.
         m = i + 1;
         return true;
@@ -1021,7 +1021,7 @@ static double parseESDate(StringView str) {
     if (!scanStr(3))
       return nan;
     for (const KnownTZ &knownTZ : knownTZs) {
-      if (tok.equals(llvm::arrayRefFromStringRef(knownTZ.tz))) {
+      if (tok.equals(llvh::arrayRefFromStringRef(knownTZ.tz))) {
         tzh = knownTZ.tzh;
         break;
       }

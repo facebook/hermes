@@ -13,17 +13,17 @@
 #include "hermes/Optimizer/Scalar/Utils.h"
 #include "hermes/Support/Statistic.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopedHashTable.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/RecyclingAllocator.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/DenseSet.h"
+#include "llvh/ADT/Hashing.h"
+#include "llvh/ADT/STLExtras.h"
+#include "llvh/ADT/ScopedHashTable.h"
+#include "llvh/Support/Debug.h"
+#include "llvh/Support/RecyclingAllocator.h"
 
 using namespace hermes;
-using llvm::dbgs;
-using llvm::isa;
+using llvh::dbgs;
+using llvh::isa;
 
 STATISTIC(NumCSE, "Number of instructions CSE'd");
 
@@ -42,8 +42,8 @@ struct CSEValue {
   }
 
   bool isSentinel() const {
-    return inst_ == llvm::DenseMapInfo<Instruction *>::getEmptyKey() ||
-        inst_ == llvm::DenseMapInfo<Instruction *>::getTombstoneKey();
+    return inst_ == llvh::DenseMapInfo<Instruction *>::getEmptyKey() ||
+        inst_ == llvh::DenseMapInfo<Instruction *>::getTombstoneKey();
   }
 
   /// Return true if we know how to CSE this instruction.
@@ -53,7 +53,7 @@ struct CSEValue {
 };
 } // end anonymous namespace
 
-namespace llvm {
+namespace llvh {
 template <>
 struct DenseMapInfo<CSEValue> {
   static inline CSEValue getEmptyKey() {
@@ -65,13 +65,13 @@ struct DenseMapInfo<CSEValue> {
   static unsigned getHashValue(CSEValue Val);
   static bool isEqual(CSEValue LHS, CSEValue RHS);
 };
-} // end namespace llvm
+} // end namespace llvh
 
-unsigned llvm::DenseMapInfo<CSEValue>::getHashValue(CSEValue Val) {
+unsigned llvh::DenseMapInfo<CSEValue>::getHashValue(CSEValue Val) {
   return Val.inst_->getHashCode();
 }
 
-bool llvm::DenseMapInfo<CSEValue>::isEqual(CSEValue LHS, CSEValue RHS) {
+bool llvh::DenseMapInfo<CSEValue>::isEqual(CSEValue LHS, CSEValue RHS) {
   hermes::Instruction *LHSI = LHS.inst_, *RHSI = RHS.inst_;
   if (LHS.isSentinel() || RHS.isSentinel())
     return LHSI == RHSI;
@@ -87,13 +87,13 @@ namespace {
 
 class CSEContext;
 
-using CSEValueHTType = llvm::ScopedHashTableVal<CSEValue, Value *>;
+using CSEValueHTType = llvh::ScopedHashTableVal<CSEValue, Value *>;
 using AllocatorTy =
-    llvm::RecyclingAllocator<llvm::BumpPtrAllocator, CSEValueHTType>;
-using ScopedHTType = llvm::ScopedHashTable<
+    llvh::RecyclingAllocator<llvh::BumpPtrAllocator, CSEValueHTType>;
+using ScopedHTType = llvh::ScopedHashTable<
     CSEValue,
     Value *,
-    llvm::DenseMapInfo<CSEValue>,
+    llvh::DenseMapInfo<CSEValue>,
     AllocatorTy>;
 
 // StackNode - contains all the needed information to create a stack for doing

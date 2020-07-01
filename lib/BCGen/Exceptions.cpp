@@ -12,19 +12,19 @@
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
 
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/Debug.h"
+#include "llvh/Support/raw_ostream.h"
 
 using namespace hermes;
 
-using llvm::isa;
+using llvh::isa;
 
 /// Construct the list of basic blocks covered by each catch instruction.
 /// Use recursion to handle nested catches.
 void hermes::constructCatchMap(
     CatchInfoMap &catchInfoMap,
-    llvm::SmallVectorImpl<CatchInst *> &aliveCatches,
-    llvm::SmallPtrSetImpl<BasicBlock *> &visited,
+    llvh::SmallVectorImpl<CatchInst *> &aliveCatches,
+    llvh::SmallPtrSetImpl<BasicBlock *> &visited,
     BasicBlock *currentBlock) {
   if (!visited.insert(currentBlock).second)
     return;
@@ -32,8 +32,8 @@ void hermes::constructCatchMap(
   // TryStartInst can only show up at the end of a block.
   // Hence we process the block with the order:
   // TryEndInst => block body => TryStartInst => successors.
-  bool isTryStartBlock = llvm::isa<TryStartInst>(currentBlock->getTerminator());
-  bool isTryEndBlock = llvm::isa<TryEndInst>(&currentBlock->front());
+  bool isTryStartBlock = llvh::isa<TryStartInst>(currentBlock->getTerminator());
+  bool isTryEndBlock = llvh::isa<TryEndInst>(&currentBlock->front());
   CatchInst *currentCatch = nullptr;
 
   if (isTryEndBlock) {
@@ -84,8 +84,8 @@ ExceptionEntryList hermes::generateExceptionHandlers(
     BasicBlockInfoMap &bbMap,
     Function *F) {
   // Construct the list of blocks and depth covered by each CatchInst.
-  llvm::SmallVector<CatchInst *, 4> aliveCatches{};
-  llvm::SmallPtrSet<BasicBlock *, 32> visited{};
+  llvh::SmallVector<CatchInst *, 4> aliveCatches{};
+  llvh::SmallPtrSet<BasicBlock *, 32> visited{};
   constructCatchMap(catchInfoMap, aliveCatches, visited, &F->front());
 
   ExceptionEntryList exception_entries;
@@ -94,7 +94,7 @@ ExceptionEntryList hermes::generateExceptionHandlers(
     // The basic blocks covered by a catch instruction may not be continuous.
     // For each basic block, we walk through the current list of ranges,
     // and try to merge them into a minimum number of ranges.
-    llvm::SmallVector<std::pair<uint32_t, uint32_t>, 4> catch_ranges;
+    llvh::SmallVector<std::pair<uint32_t, uint32_t>, 4> catch_ranges;
     for (auto BB : catchInfo.coveredBlockList) {
       auto it = bbMap.find(BB);
       assert(it != bbMap.end() && "Basic Block missing.");

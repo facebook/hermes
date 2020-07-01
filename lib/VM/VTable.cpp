@@ -56,7 +56,7 @@ void VTable::HeapSnapshotMetadata::addLocations(
   }
 }
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const VTable &vt) {
+llvh::raw_ostream &operator<<(llvh::raw_ostream &os, const VTable &vt) {
   return os << "VTable: {\n\tsize: " << vt.size
             << ", finalize: " << reinterpret_cast<void *>(vt.finalize_)
             << ", markWeak: " << reinterpret_cast<void *>(vt.markWeak_) << "}";

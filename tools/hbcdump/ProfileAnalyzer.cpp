@@ -47,7 +47,7 @@ static std::string getFunctionName(
     uint32_t funcId) {
   hbc::RuntimeFunctionHeader functionHeader =
       bcProvider->getFunctionHeader(funcId);
-  llvm::StringRef functionName =
+  llvh::StringRef functionName =
       bcProvider->getStringRefFromID(functionHeader.functionName());
   return functionName.str();
 }
@@ -145,7 +145,7 @@ void ProfileAnalyzer::buildFunctionRuntimeStatisticsMapIfNeeded() {
 
 void ProfileAnalyzer::checkAndReportAccuracyForFunction(unsigned funcId) {
   assertTraceAvailable();
-  llvm::StringRef funcChecksum = hbcParser_.getFunctionChecksum(funcId);
+  llvh::StringRef funcChecksum = hbcParser_.getFunctionChecksum(funcId);
   auto &executionInfo = profileDataOpt_.getValue().executionInfo;
   assert(executionInfo.find(funcChecksum) != executionInfo.end());
   std::unordered_map<uint16_t, uint64_t> &funcExecInfo =
@@ -163,7 +163,7 @@ void ProfileAnalyzer::checkAndReportAccuracyForFunction(unsigned funcId) {
 }
 
 ProfileData ProfileAnalyzer::deserializeTrace(
-    std::unique_ptr<llvm::MemoryBuffer> profileBuffer) {
+    std::unique_ptr<llvh::MemoryBuffer> profileBuffer) {
   JSLexer::Allocator alloc;
   JSONFactory factory(alloc);
   SourceErrorManager sm;
@@ -172,55 +172,55 @@ ProfileData ProfileAnalyzer::deserializeTrace(
   auto checkInvalidTraceObjectAndExit = [](const void *json,
                                            const char *details) {
     if (json == nullptr) {
-      llvm::errs() << "Invalid trace file format: " << details << "\n";
+      llvh::errs() << "Invalid trace file format: " << details << "\n";
       exit(-3);
     }
   };
 
-  auto *json = llvm::dyn_cast<JSONObject>(jsonParser.parse().getValue());
+  auto *json = llvh::dyn_cast<JSONObject>(jsonParser.parse().getValue());
   checkInvalidTraceObjectAndExit(json, "root is not JSONObject");
 
   // TODO: share BASIC_BLOCK_STAT_VERSION with VM.
   const static int32_t BASIC_BLOCK_STAT_VERSION = 2;
   ProfileData profileData;
-  auto *version = llvm::dyn_cast<JSONNumber>(json->at("version"));
+  auto *version = llvh::dyn_cast<JSONNumber>(json->at("version"));
   checkInvalidTraceObjectAndExit(
       version, "fail to fetch 'version' entry from root object");
   profileData.version = (uint16_t)version->getValue();
   if (profileData.version != BASIC_BLOCK_STAT_VERSION) {
-    llvm::errs() << "Mismatch profile trace version. Expected "
+    llvh::errs() << "Mismatch profile trace version. Expected "
                  << BASIC_BLOCK_STAT_VERSION << " but got "
                  << profileData.version;
     exit(-3);
   }
 
-  auto *pageSize = llvm::dyn_cast<JSONNumber>(json->at("page_size"));
+  auto *pageSize = llvh::dyn_cast<JSONNumber>(json->at("page_size"));
   checkInvalidTraceObjectAndExit(
       pageSize, "fail to fetch 'page_size' entry from root object");
   profileData.pageSize = (uint32_t)pageSize->getValue();
 
-  auto *functions = llvm::dyn_cast<JSONArray>(json->at("functions"));
+  auto *functions = llvh::dyn_cast<JSONArray>(json->at("functions"));
   checkInvalidTraceObjectAndExit(
       functions, "fail to fetch 'functions' entry from root object");
 
   for (size_t i = 0; i < functions->size(); ++i) {
-    auto *func = llvm::dyn_cast<JSONObject>(functions->at(i));
+    auto *func = llvh::dyn_cast<JSONObject>(functions->at(i));
     checkInvalidTraceObjectAndExit(func, "fail to fetch function entry");
-    auto *checksum = llvm::dyn_cast<JSONString>(func->at("checksum"));
+    auto *checksum = llvh::dyn_cast<JSONString>(func->at("checksum"));
     checkInvalidTraceObjectAndExit(checksum, "fail to fetch 'checksum' field");
-    auto *basicBlocks = llvm::dyn_cast<JSONArray>(func->at("basic_blocks"));
+    auto *basicBlocks = llvh::dyn_cast<JSONArray>(func->at("basic_blocks"));
     checkInvalidTraceObjectAndExit(
         basicBlocks, "fail to fetch 'basic_blocks' field");
     for (size_t i = 0; i < basicBlocks->size(); ++i) {
-      auto *basicBlock = llvm::dyn_cast<JSONObject>(basicBlocks->at(i));
+      auto *basicBlock = llvh::dyn_cast<JSONObject>(basicBlocks->at(i));
       checkInvalidTraceObjectAndExit(
           basicBlock, "fail to fetch basic block entry");
       auto *profileIndex =
-          llvm::dyn_cast<JSONNumber>(basicBlock->at("profile_index"));
+          llvh::dyn_cast<JSONNumber>(basicBlock->at("profile_index"));
       checkInvalidTraceObjectAndExit(
           profileIndex, "fail to fetch 'profile_index' field");
       auto *executionCount =
-          llvm::dyn_cast<JSONNumber>(basicBlock->at("execution_count"));
+          llvh::dyn_cast<JSONNumber>(basicBlock->at("execution_count"));
       checkInvalidTraceObjectAndExit(
           executionCount, "fail to fetch 'execution_count' field");
       profileData
@@ -337,11 +337,11 @@ void ProfileAnalyzer::dumpFunctionStats() {
 
   int maxOutputCount = 100;
   // Put function name as the last column because its length varies a lot.
-  os_ << llvm::left_justify("Inst(%)", 12)
-      << llvm::left_justify("Inst Acc(%)", 12)
-      << llvm::left_justify("Inst(#)", 12) << llvm::left_justify("Entry(#)", 12)
-      << llvm::left_justify("Size", 12) << llvm::left_justify("Size Acc", 12)
-      << llvm::left_justify("Function", 24) << "Source\n";
+  os_ << llvh::left_justify("Inst(%)", 12)
+      << llvh::left_justify("Inst Acc(%)", 12)
+      << llvh::left_justify("Inst(#)", 12) << llvh::left_justify("Entry(#)", 12)
+      << llvh::left_justify("Size", 12) << llvh::left_justify("Size Acc", 12)
+      << llvh::left_justify("Function", 24) << "Source\n";
   std::shared_ptr<hbc::BCProvider> bcProvider = hbcParser_.getBCProvider();
 
   float funcInstFreqPercentageAcc = 0.0;
@@ -352,7 +352,7 @@ void ProfileAnalyzer::dumpFunctionStats() {
     }
 
     const auto funcId = entry.first;
-    llvm::Optional<SourceMapTextLocation> funcStartSourceLocOpt =
+    llvh::Optional<SourceMapTextLocation> funcStartSourceLocOpt =
         hbcParser_.getSourceLocation(funcId, 0);
 
     uint64_t funcInstFrequency = entry.second.instFrequency;
@@ -362,23 +362,23 @@ void ProfileAnalyzer::dumpFunctionStats() {
         100.0 * funcInstFrequency / this->totalRuntimeInstructionCount_;
     funcInstFreqPercentageAcc += funcInstFreqPercentage;
     // Print instruction stats.
-    os_ << llvm::left_justify(
+    os_ << llvh::left_justify(
                formatString("%.3f%%", funcInstFreqPercentage), 12)
-        << llvm::left_justify(
+        << llvh::left_justify(
                formatString("%.3f%%", funcInstFreqPercentageAcc), 12)
-        << llvm::left_justify(std::to_string(funcInstFrequency), 12)
-        << llvm::left_justify(std::to_string(entry.second.entryCount), 12);
+        << llvh::left_justify(std::to_string(funcInstFrequency), 12)
+        << llvh::left_justify(std::to_string(entry.second.entryCount), 12);
 
     auto funcSize = bcProvider->getFunctionHeader(funcId).bytecodeSizeInBytes();
     funcSizeAcc += funcSize;
-    os_ << llvm::left_justify(std::to_string(funcSize), 12)
-        << llvm::left_justify(std::to_string(funcSizeAcc), 12);
+    os_ << llvh::left_justify(std::to_string(funcSize), 12)
+        << llvh::left_justify(std::to_string(funcSizeAcc), 12);
 
     // Print function name/source.
     if (funcStartSourceLocOpt.hasValue()) {
       const std::string &fileNameStr =
           funcStartSourceLocOpt.getValue().fileName;
-      os_ << llvm::left_justify(
+      os_ << llvh::left_justify(
                  formatString("%s(%d)", funcNameStr.c_str(), funcId), 24)
           << formatString(
                  "%s[%d:%d]",
@@ -439,10 +439,10 @@ class FunctionBasicBlockStatsVisitor : public hbc::PrettyDisassembleVisitor {
         << "\n";
 
     // Print header.
-    os_ << llvm::left_justify("inst(%)", 12)
-        << llvm::left_justify("inst(#)", 12)
-        << llvm::left_justify("hits(#)", 12)
-        << llvm::left_justify("avg loop(#)", 12) << "bytecode\n";
+    os_ << llvh::left_justify("inst(%)", 12)
+        << llvh::left_justify("inst(#)", 12)
+        << llvh::left_justify("hits(#)", 12)
+        << llvh::left_justify("avg loop(#)", 12) << "bytecode\n";
   }
 
   unsigned getIndentation() {
@@ -469,15 +469,15 @@ class FunctionBasicBlockStatsVisitor : public hbc::PrettyDisassembleVisitor {
           funcExecInfo_[curProfileIndex_] / (double)funcStat_.entryCount;
 
       assert(funcExecInfo_.find(curProfileIndex_) != funcExecInfo_.end());
-      os_ << llvm::left_justify(formatString("%.3f%%", curBlockPercentage), 12)
-          << llvm::left_justify(
+      os_ << llvh::left_justify(formatString("%.3f%%", curBlockPercentage), 12)
+          << llvh::left_justify(
                  std::to_string(curBlockRuntimeInstructionCount), 12)
-          << llvm::left_justify(
+          << llvh::left_justify(
                  std::to_string(funcExecInfo_[curProfileIndex_]), 12)
-          << llvm::left_justify(formatString("%.1f", averageLoopCount), 12);
+          << llvh::left_justify(formatString("%.1f", averageLoopCount), 12);
     } else {
       // Middle of the block, just indent.
-      os_ << llvm::left_justify("", getIndentation());
+      os_ << llvh::left_justify("", getIndentation());
     }
     PrettyDisassembleVisitor::preVisitInstruction(opcode, ip, length);
   }
@@ -490,7 +490,7 @@ class FunctionBasicBlockStatsVisitor : public hbc::PrettyDisassembleVisitor {
       FunctionRuntimeStatistics &funcStat,
       std::unordered_map<uint16_t, uint64_t> &funcExecInfo,
       JumpTargetsTy &jumpTargets,
-      llvm::raw_ostream &os)
+      llvh::raw_ostream &os)
       : PrettyDisassembleVisitor(bcProvider, jumpTargets, os),
         profileIndexMap_(profileIndexMap),
         totalProfileRuntimeInstructionCount_(
@@ -505,7 +505,7 @@ void ProfileAnalyzer::dumpFunctionBasicBlockStat(unsigned funcId) {
     return;
   }
   assertTraceAvailable();
-  llvm::StringRef funcChecksum = hbcParser_.getFunctionChecksum(funcId);
+  llvh::StringRef funcChecksum = hbcParser_.getFunctionChecksum(funcId);
   std::unordered_map<uint16_t, uint64_t> &funcExecInfo =
       profileDataOpt_.getValue().executionInfo[funcChecksum];
   ProfileIndexMap &funcProfileIndexMap = hbcParser_.getProfileIndexMap(funcId);
@@ -605,11 +605,11 @@ void ProfileAnalyzer::dumpBasicBlockStats() {
       });
 
   int maxOutputCount = 100;
-  os_ << llvm::left_justify("Inst(#)", 12) << llvm::left_justify("Inst(%)", 12)
-      << llvm::left_justify("Hits(#)", 12)
-      << llvm::left_justify("Avg Loop(#)", 12)
-      << llvm::left_justify("ProfileIndex", 12)
-      << llvm::left_justify("Function", 24) << "Source"
+  os_ << llvh::left_justify("Inst(#)", 12) << llvh::left_justify("Inst(%)", 12)
+      << llvh::left_justify("Hits(#)", 12)
+      << llvh::left_justify("Avg Loop(#)", 12)
+      << llvh::left_justify("ProfileIndex", 12)
+      << llvh::left_justify("Function", 24) << "Source"
       << "\n";
   for (const auto &entry : blockRuntimeStats) {
     if (maxOutputCount-- == 0) {
@@ -620,16 +620,16 @@ void ProfileAnalyzer::dumpBasicBlockStats() {
         100 * entry.runtimeInstCount / (double)totalRuntimeInstructionCount_;
     auto funcName = getFunctionName(hbcParser_.getBCProvider(), funcId);
 
-    os_ << llvm::left_justify(std::to_string(entry.runtimeInstCount), 12)
-        << llvm::left_justify(formatString("%.3f%%", percentage), 12)
-        << llvm::left_justify(std::to_string(entry.hitCount), 12)
-        << llvm::left_justify(formatString("%.1f", entry.avgLoopCount), 12)
-        << llvm::left_justify(std::to_string(entry.profileIndex), 12)
-        << llvm::left_justify(
+    os_ << llvh::left_justify(std::to_string(entry.runtimeInstCount), 12)
+        << llvh::left_justify(formatString("%.3f%%", percentage), 12)
+        << llvh::left_justify(std::to_string(entry.hitCount), 12)
+        << llvh::left_justify(formatString("%.1f", entry.avgLoopCount), 12)
+        << llvh::left_justify(std::to_string(entry.profileIndex), 12)
+        << llvh::left_justify(
                formatString("%s(%d)", funcName.c_str(), funcId), 24);
 
     // Print source location for the block if available.
-    llvm::Optional<SourceMapTextLocation> sourceLocOpt =
+    llvh::Optional<SourceMapTextLocation> sourceLocOpt =
         hbcParser_.getSourceLocation(funcId, entry.offset);
     if (sourceLocOpt.hasValue()) {
       const std::string &fileNameStr = sourceLocOpt.getValue().fileName;
@@ -701,7 +701,7 @@ void ProfileAnalyzer::dumpIO() {
   int i = 0;
   const int outputPerRow = 16;
   for (auto index : pageIndexSet) {
-    os_ << llvm::left_justify(std::to_string(index), 6);
+    os_ << llvh::left_justify(std::to_string(index), 6);
     if (++i % outputPerRow == 0) {
       os_ << "\n";
     }
@@ -710,7 +710,7 @@ void ProfileAnalyzer::dumpIO() {
 }
 
 void ProfileAnalyzer::dumpEpilogue() {
-  llvm::ArrayRef<uint8_t> epilogue = hbcParser_.getBCProvider()->getEpilogue();
+  llvh::ArrayRef<uint8_t> epilogue = hbcParser_.getBCProvider()->getEpilogue();
   std::string epiStr(
       reinterpret_cast<const char *>(epilogue.data()), epilogue.size());
   os_ << epiStr << "\n";
@@ -805,7 +805,7 @@ void ProfileAnalyzer::dumpSummary() {
       });
   buildFunctionRuntimeStatisticsMapIfNeeded();
   os_ << "Average instructions per basic block: "
-      << llvm::format(
+      << llvh::format(
              "%.3f",
              (double)totalRuntimeInstructionCount_ /
                  sumamry.blockAccumulatedCount)
@@ -813,13 +813,13 @@ void ProfileAnalyzer::dumpSummary() {
       << "Total functions in hbc: " << totalFuncCount << "\n"
       << "Executed functions in trace: " << tracedFuncCount << "\n"
       << "Percentage: "
-      << llvm::format("%.3f%%", 100.0 * tracedFuncCount / totalFuncCount)
+      << llvh::format("%.3f%%", 100.0 * tracedFuncCount / totalFuncCount)
       << "\n"
       << "Total basic block count in traced functions: "
       << sumamry.functTotalBlockCount << "\n"
       << "Executed basic block count: " << sumamry.blockUniqueCount << "\n"
       << "Percentage: "
-      << llvm::format(
+      << llvh::format(
              "%.3f%%",
              100.0 * sumamry.blockUniqueCount / sumamry.functTotalBlockCount)
       << "\n"
@@ -828,7 +828,7 @@ void ProfileAnalyzer::dumpSummary() {
       << "Executed basic block static instruction count: "
       << sumamry.blockStaticInstCount << "\n"
       << "Percentage: "
-      << llvm::format(
+      << llvh::format(
              "%.3f%%",
              100.0 * sumamry.blockStaticInstCount /
                  sumamry.funcTotalStaticInstCount)
@@ -863,7 +863,7 @@ void ProfileAnalyzer::dumpFunctionInfo(uint32_t funcId, JSONEmitter &json) {
     }
   }
 
-  llvm::Optional<SourceMapTextLocation> sourceLocOpt =
+  llvh::Optional<SourceMapTextLocation> sourceLocOpt =
       bcProvider->getLocationForAddress(funcId, /* offsetInFunction */ 0);
   if (sourceLocOpt.hasValue()) {
     json.emitKey("FinalSourceLocation");
@@ -889,7 +889,7 @@ void ProfileAnalyzer::dumpFunctionInfo(uint32_t funcId, JSONEmitter &json) {
   json.closeDict();
 }
 
-llvm::Optional<uint32_t> ProfileAnalyzer::getFunctionFromVirtualOffset(
+llvh::Optional<uint32_t> ProfileAnalyzer::getFunctionFromVirtualOffset(
     uint32_t virtualOffset) {
   auto bcProvider = hbcParser_.getBCProvider();
   uint32_t funcCount = bcProvider->getFunctionCount();
@@ -901,7 +901,7 @@ llvm::Optional<uint32_t> ProfileAnalyzer::getFunctionFromVirtualOffset(
       return i;
     }
   }
-  return llvm::None;
+  return llvh::None;
 }
 
 } // namespace hermes

@@ -13,10 +13,10 @@
 #include "hermes/Support/Conversions.h"
 #include "hermes/VM/StringRefUtils.h"
 
-namespace llvm {
+namespace llvh {
 class raw_ostream;
 class raw_svector_ostream;
-} // namespace llvm
+} // namespace llvh
 
 namespace hermes {
 namespace vm {
@@ -116,10 +116,10 @@ class TwineChar16 {
     assert(isValid());
   }
 
-  TwineChar16(const char *str) : TwineChar16(llvm::StringRef(str)) {}
+  TwineChar16(const char *str) : TwineChar16(llvh::StringRef(str)) {}
 
   /// Make a twine out of the null-terminated \p str.
-  TwineChar16(const llvm::StringRef str)
+  TwineChar16(const llvh::StringRef str)
       : rightKind_(EmptyKind), leftSize_(str.size()), rightSize_(0) {
     if (str.size() == 0) {
       leftKind_ = EmptyKind;
@@ -184,7 +184,7 @@ class TwineChar16 {
   }
 
   /// Make a twine out of the concatenation of the null-terminated strings.
-  TwineChar16(const llvm::StringRef left, const char16_t *right)
+  TwineChar16(const llvh::StringRef left, const char16_t *right)
       : leftKind_(CharStrKind),
         rightKind_(Char16StrKind),
         leftSize_(left.size()),
@@ -195,7 +195,7 @@ class TwineChar16 {
   }
 
   /// Make a twine out of the concatenation of the null-terminated strings.
-  TwineChar16(const char16_t *left, const llvm::StringRef right)
+  TwineChar16(const char16_t *left, const llvh::StringRef right)
       : leftKind_(Char16StrKind),
         rightKind_(CharStrKind),
         leftSize_(utf16_traits::length(left)),
@@ -250,7 +250,7 @@ class TwineChar16 {
   }
 
   /// Make a twine out of the concatenation of the raw string and number.
-  TwineChar16(const llvm::StringRef left, const int32_t right)
+  TwineChar16(const llvh::StringRef left, const int32_t right)
       : leftKind_(CharStrKind), rightKind_(Int32Kind), leftSize_(left.size()) {
     // snprintf returns the number of characters that right takes to write.
     rightSize_ = ::snprintf(0, 0, "%" PRId32, right);
@@ -289,10 +289,10 @@ class TwineChar16 {
 
   /// Append the string representation of this twine to \p out.
   /// Adds size() elements to \p out, does not include a null terminator.
-  void toVector(llvm::SmallVectorImpl<char16_t> &out) const;
+  void toVector(llvh::SmallVectorImpl<char16_t> &out) const;
 
   /// Print the string representation of this twine to \p os.
-  void print(llvm::raw_ostream &os) const;
+  void print(llvh::raw_ostream &os) const;
 
  private:
   /// Make a nullary twine with the specified left kind.
@@ -436,17 +436,17 @@ inline TwineChar16 operator+(
 }
 
 inline TwineChar16 operator+(
-    const llvm::StringRef left,
+    const llvh::StringRef left,
     const char16_t *right) {
   return TwineChar16(left, right);
 }
 
-inline TwineChar16 operator+(const llvm::StringRef left, const int32_t right) {
+inline TwineChar16 operator+(const llvh::StringRef left, const int32_t right) {
   return TwineChar16(left, right);
 }
 
-inline llvm::raw_ostream &operator<<(
-    llvm::raw_ostream &os,
+inline llvh::raw_ostream &operator<<(
+    llvh::raw_ostream &os,
     const TwineChar16 &other) {
   other.print(os);
   return os;

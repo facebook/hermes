@@ -8,8 +8,8 @@
 #ifndef HERMES_BCGEN_HBC_BYTECODE_H
 #define HERMES_BCGEN_HBC_BYTECODE_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/SMLoc.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/Support/SMLoc.h"
 
 #include "hermes/AST/Context.h"
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
@@ -30,7 +30,7 @@ class SourceMapGenerator;
 
 namespace hbc {
 
-using llvm::ArrayRef;
+using llvh::ArrayRef;
 
 // This class represents the in-memory representation of the bytecode function.
 class BytecodeFunction {
@@ -239,7 +239,7 @@ class BytecodeModule {
   /// Stores references to source code strings for functions. These are only
   /// available when compiling from source at run-time, and when lazily compiled
   /// functions or Function.toString() returning source are enabled.
-  llvm::DenseMap<uint32_t, llvm::SMRange> functionSourceRangeMap_;
+  llvh::DenseMap<uint32_t, llvh::SMRange> functionSourceRangeMap_;
 
   /// If there are any entries in functionSourceRangeMap_ we need to keep
   /// Context alive so the source buffers don't dissapear from under us.
@@ -306,7 +306,7 @@ class BytecodeModule {
     return getFunction(globalFunctionIndex_);
   }
 
-  llvm::ArrayRef<StringKind::Entry> getStringKinds() const {
+  llvh::ArrayRef<StringKind::Entry> getStringKinds() const {
     return stringKinds_;
   }
 
@@ -315,7 +315,7 @@ class BytecodeModule {
     return identifierHashes_.size();
   }
 
-  llvm::ArrayRef<uint32_t> getIdentifierHashes() const {
+  llvh::ArrayRef<uint32_t> getIdentifierHashes() const {
     return identifierHashes_;
   }
 
@@ -335,11 +335,11 @@ class BytecodeModule {
     return stringStorage_;
   }
 
-  llvm::ArrayRef<RegExpTableEntry> getRegExpTable() const {
+  llvh::ArrayRef<RegExpTableEntry> getRegExpTable() const {
     return regExpTable_;
   }
 
-  llvm::ArrayRef<unsigned char> getRegExpStorage() const {
+  llvh::ArrayRef<unsigned char> getRegExpStorage() const {
     return regExpStorage_;
   }
 
@@ -347,11 +347,11 @@ class BytecodeModule {
     return cjsModuleOffset_;
   }
 
-  llvm::ArrayRef<std::pair<uint32_t, uint32_t>> getCJSModuleTable() const {
+  llvh::ArrayRef<std::pair<uint32_t, uint32_t>> getCJSModuleTable() const {
     return cjsModuleTable_;
   }
 
-  llvm::ArrayRef<uint32_t> getCJSModuleTableStatic() const {
+  llvh::ArrayRef<uint32_t> getCJSModuleTableStatic() const {
     return cjsModuleTableStatic_;
   }
 
@@ -412,7 +412,7 @@ class BytecodeModule {
 
 #ifndef HERMESVM_LEAN
   /// Called during BytecodeModule generation.
-  void setFunctionSourceRange(uint32_t functionID, llvm::SMRange range) {
+  void setFunctionSourceRange(uint32_t functionID, llvh::SMRange range) {
     functionSourceRangeMap_.try_emplace(functionID, range);
   }
 
@@ -424,9 +424,9 @@ class BytecodeModule {
 
   /// Returns source code for a given function if available. Use \c isValid() on
   /// the result to confirm source is actually available.
-  llvm::SMRange getFunctionSourceRange(uint32_t functionID) {
+  llvh::SMRange getFunctionSourceRange(uint32_t functionID) {
     auto it = functionSourceRangeMap_.find(functionID);
-    return it == functionSourceRangeMap_.end() ? llvm::SMRange() : it->second;
+    return it == functionSourceRangeMap_.end() ? llvh::SMRange() : it->second;
   }
 
   /// This will only be available if we're retaining source code for at least

@@ -14,7 +14,7 @@
 
 #include <hermes/hermes.h>
 #include <jsi/decorator.h>
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/raw_ostream.h"
 
 namespace facebook {
 namespace hermes {
@@ -28,7 +28,7 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
       std::unique_ptr<jsi::Runtime> runtime,
       uint64_t globalID,
       const ::hermes::vm::RuntimeConfig &conf,
-      std::unique_ptr<llvm::raw_ostream> traceStream);
+      std::unique_ptr<llvh::raw_ostream> traceStream);
 
   virtual SynthTrace::ObjectID getUniqueID(const jsi::Object &o) = 0;
   virtual SynthTrace::ObjectID getUniqueID(const jsi::String &s) = 0;
@@ -151,7 +151,7 @@ class TracingHermesRuntime final : public TracingRuntime {
   TracingHermesRuntime(
       std::unique_ptr<HermesRuntime> runtime,
       const ::hermes::vm::RuntimeConfig &runtimeConfig,
-      std::unique_ptr<llvm::raw_ostream> traceStream,
+      std::unique_ptr<llvh::raw_ostream> traceStream,
       std::function<std::string()> commitAction,
       std::function<void()> rollbackAction);
 
@@ -195,7 +195,7 @@ class TracingHermesRuntime final : public TracingRuntime {
       std::unique_ptr<HermesRuntime> &runtime,
       uint64_t globalID,
       const ::hermes::vm::RuntimeConfig &runtimeConfig,
-      std::unique_ptr<llvm::raw_ostream> traceStream,
+      std::unique_ptr<llvh::raw_ostream> traceStream,
       std::function<std::string()> commitAction,
       std::function<void()> rollbackAction);
 
@@ -204,7 +204,7 @@ class TracingHermesRuntime final : public TracingRuntime {
   const ::hermes::vm::RuntimeConfig conf_;
   const std::function<std::string()> commitAction_;
   const std::function<void()> rollbackAction_;
-  const llvm::Optional<::hermes::vm::CrashManager::CallbackKey>
+  const llvh::Optional<::hermes::vm::CrashManager::CallbackKey>
       crashCallbackKey_;
 
   bool flushedAndDisabled_{false};
@@ -235,7 +235,7 @@ std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
 std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
     std::unique_ptr<HermesRuntime> hermesRuntime,
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
-    std::unique_ptr<llvm::raw_ostream> traceStream,
+    std::unique_ptr<llvh::raw_ostream> traceStream,
     bool forReplay = false);
 
 } // namespace tracing

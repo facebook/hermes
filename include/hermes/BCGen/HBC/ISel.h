@@ -16,7 +16,7 @@
 #include "hermes/Utils/Dumper.h"
 #include "hermes/Utils/Options.h"
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvh/ADT/DenseMap.h"
 
 namespace hermes {
 namespace hbc {
@@ -95,9 +95,9 @@ class HBCISel {
   CatchInfoMap catchInfoMap_{};
 
   /// Map from SwitchImm -> (inst offset, default block, jump table).
-  llvm::DenseMap<SwitchImmInst *, SwitchImmInfo> switchImmInfo_{};
+  llvh::DenseMap<SwitchImmInst *, SwitchImmInfo> switchImmInfo_{};
   using switchInfoEntry =
-      llvm::DenseMap<SwitchImmInst *, SwitchImmInfo>::iterator::value_type;
+      llvh::DenseMap<SwitchImmInst *, SwitchImmInfo>::iterator::value_type;
 
   /// Saved identifier of "__proto__" for fast comparisons.
   Identifier protoIdent_{};
@@ -151,8 +151,8 @@ class HBCISel {
   uint8_t lastPropertyWriteCacheIndex_{0};
 
   /// Map from property name to the read/write cache index for that name.
-  llvm::DenseMap<unsigned /* name */, uint8_t> propertyReadCacheIndexForId_;
-  llvm::DenseMap<unsigned /* name */, uint8_t> propertyWriteCacheIndexForId_;
+  llvh::DenseMap<unsigned /* name */, uint8_t> propertyReadCacheIndexForId_;
+  llvh::DenseMap<unsigned /* name */, uint8_t> propertyWriteCacheIndexForId_;
 
   /// Compute and return the index to use for caching the read/write of a
   /// property with the given identifier name.

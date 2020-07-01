@@ -16,7 +16,7 @@
 //===          is guaranteed to work on *all* UNIX variants.
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Config/config.h"
+#include "llvh/Config/config.h"
 
 #if defined(HAVE_PTHREAD_H) && defined(HAVE_PTHREAD_GETSPECIFIC)
 
@@ -24,7 +24,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 
-namespace llvm {
+namespace llvh {
 using namespace sys;
 
 ThreadLocalImpl::ThreadLocalImpl() : data() {
@@ -60,7 +60,7 @@ void ThreadLocalImpl::removeInstance() {
 
 }
 #else
-namespace llvm {
+namespace llvh {
 using namespace sys;
 ThreadLocalImpl::ThreadLocalImpl() : data() { }
 ThreadLocalImpl::~ThreadLocalImpl() { }

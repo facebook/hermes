@@ -17,7 +17,7 @@
 #include "hermes/VM/LimitedStorageProvider.h"
 #include "hermes/VM/StorageProvider.h"
 
-#include "llvm/Support/MathExtras.h"
+#include "llvh/Support/MathExtras.h"
 
 #include <cstdint>
 #include <vector>
@@ -30,7 +30,7 @@ namespace {
 
 static char *alignPointer(char *p, size_t align) {
   return reinterpret_cast<char *>(
-      llvm::alignTo(reinterpret_cast<uintptr_t>(p), align));
+      llvh::alignTo(reinterpret_cast<uintptr_t>(p), align));
 }
 
 struct AlignedStorageTest : public ::testing::Test {

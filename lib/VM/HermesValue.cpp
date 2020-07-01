@@ -13,33 +13,33 @@
 
 #include "hermes/Support/UTF8.h"
 
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/ErrorHandling.h"
+#include "llvh/Support/Format.h"
+#include "llvh/Support/raw_ostream.h"
 
 namespace hermes {
 namespace vm {
 
-void HermesValue::dump(llvm::raw_ostream &os) const {
+void HermesValue::dump(llvh::raw_ostream &os) const {
   os << *this << "\n";
 }
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HermesValue hv) {
+llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, HermesValue hv) {
   switch (hv.getTag()) {
     case ObjectTag: {
       auto *cell = static_cast<GCCell *>(hv.getObject());
       return OS << "[Object " << (cell ? cellKindStr(cell->getKind()) : "")
                 << ":" << (cell ? cell->getDebugAllocationId() : 0) << " "
-                << llvm::format_hex((uintptr_t)cell, 10) << "]";
+                << llvh::format_hex((uintptr_t)cell, 10) << "]";
     }
     case StrTag: {
       auto *cell = static_cast<GCCell *>(hv.getPointer());
       OS << "[String "
          << ":" << (cell ? cell->getDebugAllocationId() : 0) << " "
-         << llvm::format_hex((uintptr_t)cell, 10);
+         << llvh::format_hex((uintptr_t)cell, 10);
       // Note contained StringPrimitive may be NULL.
       if (hv.getString()) {
-        llvm::SmallVector<char16_t, 16> storage;
+        llvh::SmallVector<char16_t, 16> storage;
         hv.getString()->copyUTF16String(storage);
         std::string narrowStr;
         convertUTF16ToUTF8WithReplacements(narrowStr, storage);

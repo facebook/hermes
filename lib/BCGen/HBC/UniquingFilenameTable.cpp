@@ -12,7 +12,7 @@
 namespace hermes {
 namespace hbc {
 
-uint32_t UniquingFilenameTable::addFilename(llvm::StringRef filename) {
+uint32_t UniquingFilenameTable::addFilename(llvh::StringRef filename) {
   return filenames_.insert(filename);
 }
 

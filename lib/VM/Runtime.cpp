@@ -43,15 +43,15 @@
 #include "hermes/Support/MemoryBuffer.h"
 #endif
 
-#include "llvm/ADT/Hashing.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/Hashing.h"
+#include "llvh/Support/Debug.h"
+#include "llvh/Support/raw_ostream.h"
 
 #ifdef HERMESVM_PROFILER_BB
 #include "hermes/VM/IterationKind.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/Profiler/InlineCacheProfiler.h"
-#include "llvm/ADT/DenseMap.h"
+#include "llvh/ADT/DenseMap.h"
 #endif
 
 namespace hermes {
@@ -190,7 +190,7 @@ Runtime::Runtime(
     // registerStack_ should not be allocated with new, because then
     // default constructors would run for the whole stack space.
     // Round up to page size as required by vm_allocate.
-    const auto numBytesForRegisters = llvm::alignTo(
+    const auto numBytesForRegisters = llvh::alignTo(
         sizeof(PinnedHermesValue) * maxNumRegisters, oscompat::page_size());
     auto result = oscompat::vm_allocate(numBytesForRegisters);
     if (!result) {
@@ -231,7 +231,7 @@ Runtime::Runtime(
         runtimeConfig.getExternalPointersVectorCallBack());
     deserializeImpl(d, runtimeConfig.getGCConfig().getAllocInYoung());
 
-    LLVM_DEBUG(llvm::dbgs() << "Runtime initialized\n");
+    LLVM_DEBUG(llvh::dbgs() << "Runtime initialized\n");
 
     samplingProfiler_ = SamplingProfiler::getInstance();
     samplingProfiler_->registerRuntime(this);
@@ -333,7 +333,7 @@ Runtime::Runtime(
   // Execute our internal bytecode.
   runInternalBytecode();
 
-  LLVM_DEBUG(llvm::dbgs() << "Runtime initialized\n");
+  LLVM_DEBUG(llvh::dbgs() << "Runtime initialized\n");
 
   samplingProfiler_ = SamplingProfiler::getInstance();
   samplingProfiler_->registerRuntime(this);
@@ -564,7 +564,7 @@ std::string Runtime::convertSymbolToUTF8(SymbolID id) {
   return identifierTable_.convertSymbolToUTF8(id);
 }
 
-void Runtime::printRuntimeGCStats(llvm::raw_ostream &os) const {
+void Runtime::printRuntimeGCStats(llvh::raw_ostream &os) const {
   const unsigned kNumPhases =
       static_cast<unsigned>(RootAcceptor::Section::NumSections);
 #define ROOT_SECTION(phase) "MarkRoots_" #phase,
@@ -588,20 +588,20 @@ void Runtime::printRuntimeGCStats(llvm::raw_ostream &os) const {
   os << "\n\t}";
 }
 
-void Runtime::printHeapStats(llvm::raw_ostream &os) {
+void Runtime::printHeapStats(llvh::raw_ostream &os) {
   // Printing the timings is unstable.
   if (shouldStabilizeInstructionCount())
     return;
   getHeap().printAllCollectedStats(os);
 #ifndef NDEBUG
-  printArrayCensus(llvm::outs());
+  printArrayCensus(llvh::outs());
 #endif
   if (trackIO_) {
     getIOTrackingInfoJSON(os);
   }
 }
 
-void Runtime::getIOTrackingInfoJSON(llvm::raw_ostream &os) {
+void Runtime::getIOTrackingInfoJSON(llvh::raw_ostream &os) {
   JSONEmitter json(os);
   json.openArray();
   for (auto &module : getRuntimeModules()) {
@@ -625,7 +625,7 @@ void Runtime::removeRuntimeModule(RuntimeModule *rm) {
 }
 
 #ifndef NDEBUG
-void Runtime::printArrayCensus(llvm::raw_ostream &os) {
+void Runtime::printArrayCensus(llvh::raw_ostream &os) {
   // Do array capacity histogram.
   // Map from array size to number of arrays that are that size.
   // Arrays includes ArrayStorage and SegmentedArray.
@@ -635,7 +635,7 @@ void Runtime::printArrayCensus(llvm::raw_ostream &os) {
                           std::pair<size_t, size_t>,
                           std::pair<size_t, size_t>>
                               &arraySizeToCountAndWastedSlots) {
-    os << llvm::format(
+    os << llvh::format(
         "%8s %8s %8s %10s %15s %15s %15s %20s %25s\n",
         (const char *)"Capacity",
         (const char *)"Sizeof",
@@ -661,7 +661,7 @@ void Runtime::printArrayCensus(llvm::raw_ostream &os) {
       cumulativeBytes += p.first.second * p.second.first;
       cumulativeCount += p.second.first;
       cumulativeWastedSlots += p.second.second;
-      os << llvm::format(
+      os << llvh::format(
           "%8d %8d %8d %9.2f%% %14.2f%% %14.2f%% %14.2f%% %19.2f%% %24.2f%%\n",
           p.first.first,
           p.first.second,
@@ -811,8 +811,8 @@ static CallResult<HermesValue> interpretFunctionWithRandomStack(
 }
 
 CallResult<HermesValue> Runtime::run(
-    llvm::StringRef code,
-    llvm::StringRef sourceURL,
+    llvh::StringRef code,
+    llvh::StringRef sourceURL,
     hbc::CompileFlags compileFlags) {
 #ifdef HERMESVM_LEAN
   return raiseEvalUnsupported(code);
@@ -823,10 +823,10 @@ CallResult<HermesValue> Runtime::run(
   if (compileFlags.lazy ||
       compileFlags.allowFunctionToStringWithRuntimeSource) {
     buffer.reset(new hermes::OwnedMemoryBuffer(
-        llvm::MemoryBuffer::getMemBufferCopy(code)));
+        llvh::MemoryBuffer::getMemBufferCopy(code)));
   } else {
     buffer.reset(
-        new hermes::OwnedMemoryBuffer(llvm::MemoryBuffer::getMemBuffer(code)));
+        new hermes::OwnedMemoryBuffer(llvh::MemoryBuffer::getMemBuffer(code)));
   }
   return run(std::move(buffer), sourceURL, compileFlags);
 #endif
@@ -834,11 +834,11 @@ CallResult<HermesValue> Runtime::run(
 
 CallResult<HermesValue> Runtime::run(
     std::unique_ptr<hermes::Buffer> code,
-    llvm::StringRef sourceURL,
+    llvh::StringRef sourceURL,
     hbc::CompileFlags compileFlags) {
 #ifdef HERMESVM_LEAN
   auto buffer = code.get();
-  return raiseEvalUnsupported(llvm::StringRef(
+  return raiseEvalUnsupported(llvh::StringRef(
       reinterpret_cast<const char *>(buffer->data()), buffer->size()));
 #else
   compileFlags.allowFunctionToStringWithRuntimeSource |=
@@ -866,7 +866,7 @@ CallResult<HermesValue> Runtime::run(
 CallResult<HermesValue> Runtime::runBytecode(
     std::shared_ptr<hbc::BCProvider> &&bytecode,
     RuntimeModuleFlags flags,
-    llvm::StringRef sourceURL,
+    llvh::StringRef sourceURL,
     Handle<Environment> environment,
     Handle<> thisArg) {
   clearThrownValue();
@@ -999,7 +999,7 @@ void Runtime::runInternalBytecode() {
 #ifdef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
   auto module = getInternalBytecode();
   auto bcProvider = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-                        llvm::make_unique<Buffer>(module.data(), module.size()))
+                        llvh::make_unique<Buffer>(module.data(), module.size()))
                         .first;
   assert(bcProvider && "Failed to decode internal bytecode");
   // The bytes backing our buffer are immortal, so we can be persistent.
@@ -1018,7 +1018,7 @@ void Runtime::runInternalBytecode() {
 #endif
 }
 
-void Runtime::printException(llvm::raw_ostream &os, Handle<> valueHandle) {
+void Runtime::printException(llvh::raw_ostream &os, Handle<> valueHandle) {
   clearThrownValue();
 
   // Try to fetch the stack trace.
@@ -1074,8 +1074,8 @@ Handle<JSObject> Runtime::getGlobal() {
   return Handle<JSObject>::vmcast(&global_);
 }
 
-std::vector<llvm::ArrayRef<uint8_t>> Runtime::getEpilogues() {
-  std::vector<llvm::ArrayRef<uint8_t>> result;
+std::vector<llvh::ArrayRef<uint8_t>> Runtime::getEpilogues() {
+  std::vector<llvh::ArrayRef<uint8_t>> result;
   for (const auto &m : runtimeModuleList_) {
     if (!m.hidesEpilogue()) {
       result.push_back(m.getEpilogue());
@@ -1086,7 +1086,7 @@ std::vector<llvm::ArrayRef<uint8_t>> Runtime::getEpilogues() {
 
 #ifdef HERMES_ENABLE_DEBUGGER
 
-llvm::Optional<Runtime::StackFrameInfo> Runtime::stackFrameInfoByIndex(
+llvh::Optional<Runtime::StackFrameInfo> Runtime::stackFrameInfoByIndex(
     uint32_t frameIdx) const {
   // Locate the frame.
   auto frames = getStackFrames();
@@ -1094,7 +1094,7 @@ llvm::Optional<Runtime::StackFrameInfo> Runtime::stackFrameInfoByIndex(
   for (; frameIdx && it != frames.end(); ++it, --frameIdx) {
   }
   if (it == frames.end())
-    return llvm::None;
+    return llvh::None;
 
   StackFrameInfo info;
   info.frame = *it++;
@@ -1158,7 +1158,7 @@ static ExecutionStatus raisePlaceholder(
     return ExecutionStatus::EXCEPTION;
   }
   auto str = runtime->makeHandle<StringPrimitive>(*strRes);
-  LLVM_DEBUG(llvm::errs() << buf.arrayRef() << "\n");
+  LLVM_DEBUG(llvh::errs() << buf.arrayRef() << "\n");
   return raisePlaceholder(runtime, prototype, str);
 }
 
@@ -1171,9 +1171,9 @@ ExecutionStatus Runtime::raiseTypeError(Handle<> message) {
 }
 
 ExecutionStatus Runtime::raiseTypeErrorForValue(
-    llvm::StringRef msg1,
+    llvh::StringRef msg1,
     Handle<> value,
-    llvm::StringRef msg2) {
+    llvh::StringRef msg2) {
   switch (value->getTag()) {
     case ObjectTag:
       return raiseTypeError(msg1 + TwineChar16("Object") + msg2);
@@ -1198,7 +1198,7 @@ ExecutionStatus Runtime::raiseTypeErrorForValue(
         size_t len = numberToString(
             value->getNumber(), buf, hermes::NUMBER_TO_STRING_BUF_SIZE);
         return raiseTypeError(
-            msg1 + TwineChar16(llvm::StringRef{buf, len}) + msg2);
+            msg1 + TwineChar16(llvh::StringRef{buf, len}) + msg2);
       }
       return raiseTypeError(msg1 + TwineChar16("Value") + msg2);
   }
@@ -1262,10 +1262,10 @@ ExecutionStatus Runtime::raiseTimeoutError() {
 
 ExecutionStatus Runtime::raiseUncatchableError(
     Handle<JSObject> prototype,
-    llvm::StringRef errMessage) {
+    llvh::StringRef errMessage) {
   Handle<JSError> err = makeHandle(JSError::createUncatchable(this, prototype));
   auto res = StringPrimitive::create(
-      this, llvm::ASCIIRef{errMessage.begin(), errMessage.end()});
+      this, llvh::ASCIIRef{errMessage.begin(), errMessage.end()});
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1273,7 +1273,7 @@ ExecutionStatus Runtime::raiseUncatchableError(
   return raisePlaceholder(this, err, str);
 }
 
-ExecutionStatus Runtime::raiseEvalUnsupported(llvm::StringRef code) {
+ExecutionStatus Runtime::raiseEvalUnsupported(llvh::StringRef code) {
   return raiseSyntaxError(
       TwineChar16("Parsing source code unsupported: ") + code.substr(0, 32));
 }
@@ -1447,7 +1447,7 @@ ExecutionStatus Runtime::forEachBuiltin(const std::function<ExecutionStatus(
   for (unsigned methodIndex = 0; methodIndex < BuiltinMethod::_firstPrivate;
        ++methodIndex) {
     GCScopeMarkerRAII marker{this};
-    LLVM_DEBUG(llvm::dbgs() << builtinMethods[methodIndex].name << "\n");
+    LLVM_DEBUG(llvh::dbgs() << builtinMethods[methodIndex].name << "\n");
     // Find the object first, if it changed.
     auto objectName = (Predefined::Str)builtinMethods[methodIndex].object;
     if (objectName != lastObjectName) {
@@ -1568,7 +1568,7 @@ void Runtime::freezeBuiltins() {
           this,
           clearFlags,
           setFlags,
-          llvm::ArrayRef<SymbolID>(methodList));
+          llvh::ArrayRef<SymbolID>(methodList));
       methodList.clear();
     }
     return ExecutionStatus::RETURNED;
@@ -1581,7 +1581,7 @@ void Runtime::freezeBuiltins() {
       this,
       clearFlags,
       setFlags,
-      llvm::ArrayRef<SymbolID>(objectList));
+      llvh::ArrayRef<SymbolID>(objectList));
 
   builtinsFrozen_ = true;
 }
@@ -1592,13 +1592,13 @@ uint64_t Runtime::gcStableHashHermesValue(Handle<HermesValue> value) {
       // For objects, because pointers can move, we need a unique ID
       // that does not change for each object.
       auto id = JSObject::getObjectID(vmcast<JSObject>(*value), this);
-      return llvm::hash_value(id);
+      return llvh::hash_value(id);
     }
     case StrTag: {
       // For strings, we hash the string content.
       auto strView = StringPrimitive::createStringView(
           this, Handle<StringPrimitive>::vmcast(value));
-      return llvm::hash_combine_range(strView.begin(), strView.end());
+      return llvh::hash_combine_range(strView.begin(), strView.end());
     }
     default:
       assert(!value->isPointer() && "Unhandled pointer type");
@@ -1607,7 +1607,7 @@ uint64_t Runtime::gcStableHashHermesValue(Handle<HermesValue> value) {
         return 0;
       } else {
         // For everything else, we just take advantage of HermesValue.
-        return llvm::hash_value(value->getRaw());
+        return llvh::hash_value(value->getRaw());
       }
   }
 }
@@ -1628,7 +1628,7 @@ void Runtime::allocStack(uint32_t count, HermesValue initValue) {
   std::uninitialized_fill_n(stackPointer_, count, initValue);
 }
 
-void Runtime::dumpCallFrames(llvm::raw_ostream &OS) {
+void Runtime::dumpCallFrames(llvh::raw_ostream &OS) {
   OS << "== Call Frames ==\n";
   const PinnedHermesValue *next = getStackPointer();
   unsigned i = 0;
@@ -1647,7 +1647,7 @@ void Runtime::dumpCallFrames(llvm::raw_ostream &OS) {
 
 LLVM_ATTRIBUTE_NOINLINE
 void Runtime::dumpCallFrames() {
-  dumpCallFrames(llvm::errs());
+  dumpCallFrames(llvh::errs());
 }
 
 StackRuntime::StackRuntime(const RuntimeConfig &config)
@@ -1661,8 +1661,8 @@ StackRuntime::StackRuntime(
 StackRuntime::~StackRuntime() {}
 
 /// Serialize a SymbolID.
-llvm::raw_ostream &operator<<(
-    llvm::raw_ostream &OS,
+llvh::raw_ostream &operator<<(
+    llvh::raw_ostream &OS,
     Runtime::FormatSymbolID format) {
   if (!format.symbolID.isValid())
     return OS << "SymbolID(INVALID)";
@@ -1683,7 +1683,7 @@ static std::string &llvmStreamableToString(const T &v) {
   // multi-threaded usage.
   static std::string buf;
   buf.clear();
-  llvm::raw_string_ostream strstrm(buf);
+  llvh::raw_string_ostream strstrm(buf);
   strstrm << v;
   strstrm.flush();
   return buf;
@@ -1694,22 +1694,22 @@ static std::string &llvmStreamableToString(const T &v) {
  *          doing memory allocation, or using libc etc. as much as possible
  ****************************************************************************/
 void Runtime::crashCallback(int fd) {
-  llvm::raw_fd_ostream jsonStream(fd, false);
+  llvh::raw_fd_ostream jsonStream(fd, false);
   JSONEmitter json(jsonStream);
   json.openDict();
   json.emitKeyValue("type", "runtime");
   json.emitKeyValue(
-      "address", llvmStreamableToString(llvm::format_hex((uintptr_t)this, 10)));
+      "address", llvmStreamableToString(llvh::format_hex((uintptr_t)this, 10)));
   json.emitKeyValue(
       "registerStack",
-      llvmStreamableToString(llvm::format_hex((uintptr_t)registerStack_, 10)));
+      llvmStreamableToString(llvh::format_hex((uintptr_t)registerStack_, 10)));
   json.emitKeyValue(
       "registerStackPointer",
-      llvmStreamableToString(llvm::format_hex((uintptr_t)stackPointer_, 10)));
+      llvmStreamableToString(llvh::format_hex((uintptr_t)stackPointer_, 10)));
   json.emitKeyValue(
       "registerStackEnd",
       llvmStreamableToString(
-          llvm::format_hex((uintptr_t)registerStackEnd_, 10)));
+          llvh::format_hex((uintptr_t)registerStackEnd_, 10)));
   json.emitKey("callstack");
   crashWriteCallStack(json);
   json.closeDict();
@@ -1738,18 +1738,18 @@ void Runtime::crashWriteCallStack(JSONEmitter &json) {
             blockSourceCode.getValue(), bytecodeOffs);
         if (sourceLocation) {
           auto file = debugInfo->getFilenameByID(sourceLocation->filenameId);
-          llvm::SmallString<256> srcLocStorage;
+          llvh::SmallString<256> srcLocStorage;
           json.emitKeyValue(
               "SourceLocation",
-              (llvm::Twine(file) + llvm::Twine(":") +
-               llvm::Twine(sourceLocation->line) + llvm::Twine(":") +
-               llvm::Twine(sourceLocation->column))
+              (llvh::Twine(file) + llvh::Twine(":") +
+               llvh::Twine(sourceLocation->line) + llvh::Twine(":") +
+               llvh::Twine(sourceLocation->column))
                   .toStringRef(srcLocStorage));
         }
       }
       uint32_t cjsModuleOffset =
           runtimeModule->getBytecode()->getCJSModuleOffset();
-      llvm::StringRef sourceURL = runtimeModule->getSourceURL();
+      llvh::StringRef sourceURL = runtimeModule->getSourceURL();
       json.emitKeyValue("CJSModuleOffset", cjsModuleOffset);
       json.emitKeyValue("SourceURL", sourceURL);
     } else {
@@ -1807,19 +1807,19 @@ void Runtime::onGCEvent(GCEventKind kind, const std::string &extraInfo) {
 
 #ifdef HERMESVM_PROFILER_BB
 
-llvm::Optional<std::tuple<std::string, uint32_t, uint32_t>>
+llvh::Optional<std::tuple<std::string, uint32_t, uint32_t>>
 Runtime::getIPSourceLocation(const CodeBlock *codeBlock, const Inst *ip) {
   auto bytecodeOffs = codeBlock->getOffsetOf(ip);
   auto blockSourceCode = codeBlock->getDebugSourceLocationsOffset();
 
   if (!blockSourceCode) {
-    return llvm::None;
+    return llvh::None;
   }
   auto debugInfo = codeBlock->getRuntimeModule()->getBytecode()->getDebugInfo();
   auto sourceLocation = debugInfo->getLocationForAddress(
       blockSourceCode.getValue(), bytecodeOffs);
   if (!sourceLocation) {
-    return llvm::None;
+    return llvh::None;
   }
   auto filename = debugInfo->getFilenameByID(sourceLocation->filenameId);
   auto line = sourceLocation->line;
@@ -1870,7 +1870,7 @@ void Runtime::recordHiddenClass(
       codeBlock, offset, symbolID, objectHiddenClassId, cachedHiddenClassId);
 }
 
-void Runtime::getInlineCacheProfilerInfo(llvm::raw_ostream &ostream) {
+void Runtime::getInlineCacheProfilerInfo(llvh::raw_ostream &ostream) {
   inlineCacheProfiler_.dumpRankedInlineCachingMisses(this, ostream);
 }
 
@@ -2132,7 +2132,7 @@ void Runtime::deserializeImpl(Deserializer &d, bool currentlyInYoung) {
   // JSObject *functionPrototypeRawPtr{};
   functionPrototypeRawPtr = vmcast<NativeFunction>(functionPrototype);
 
-  LLVM_DEBUG(llvm::dbgs() << "Finish deserializing\n");
+  LLVM_DEBUG(llvh::dbgs() << "Finish deserializing\n");
 
   if (currentlyInYoung) {
     // Only switch back now if the config says allocInYoung. Otherwise

@@ -55,12 +55,12 @@ static std::string getFileNameAsUTF8(
 /// \return a scope chain containing the block and all its lexical parents,
 /// including the global scope.
 /// \return none if the scope chain is unavailable.
-static llvm::Optional<ScopeChain> scopeChainForBlock(
+static llvh::Optional<ScopeChain> scopeChainForBlock(
     Runtime *runtime,
     const CodeBlock *cb) {
   OptValue<uint32_t> lexicalDataOffset = cb->getDebugLexicalDataOffset();
   if (!lexicalDataOffset)
-    return llvm::None;
+    return llvh::None;
 
   ScopeChain scopeChain;
   RuntimeModule *runtimeModule = cb->getRuntimeModule();
@@ -107,7 +107,7 @@ void Debugger::triggerAsyncPause(AsyncPauseKind kind) {
   runtime_->triggerDebuggerAsyncBreak(kind);
 }
 
-llvm::Optional<uint32_t> Debugger::findJumpTarget(
+llvh::Optional<uint32_t> Debugger::findJumpTarget(
     CodeBlock *block,
     uint32_t offset) {
   const Inst *ip = block->getOffsetPtr(offset);
@@ -123,7 +123,7 @@ llvm::Optional<uint32_t> Debugger::findJumpTarget(
   switch (ip->opCode) {
 #include "hermes/BCGen/HBC/BytecodeList.def"
     default:
-      return llvm::None;
+      return llvh::None;
   }
 #undef DEFINE_JUMP_LONG_VARIANT
 }
@@ -190,7 +190,7 @@ ExecutionStatus Debugger::runDebugger(
     // continue.
     if (curStepMode_) {
       clearTempBreakpoints();
-      curStepMode_ = llvm::None;
+      curStepMode_ = llvh::None;
     }
     pauseReason = PauseReason::AsyncTrigger;
   } else {
@@ -256,7 +256,7 @@ ExecutionStatus Debugger::runDebugger(
         }
 
         // Done stepping.
-        curStepMode_ = llvm::None;
+        curStepMode_ = llvh::None;
         pauseReason = PauseReason::StepFinish;
       } else {
         // We don't want to stop on this Step breakpoint.
@@ -313,7 +313,7 @@ ExecutionStatus Debugger::runDebugger(
       if (curStepMode_) {
         // If we're in a step, then the client still thinks we're debugging,
         // so just clear the status and clear the temp breakpoints.
-        curStepMode_ = llvm::None;
+        curStepMode_ = llvh::None;
         clearTempBreakpoints();
       }
     }
@@ -345,7 +345,7 @@ ExecutionStatus Debugger::debuggerLoop(
         break;
       case DebugCommandType::CONTINUE:
         isDebugging_ = false;
-        curStepMode_ = llvm::None;
+        curStepMode_ = llvh::None;
         return ExecutionStatus::RETURNED;
       case DebugCommandType::EVAL:
         evalResult = evalInFrame(
@@ -472,7 +472,7 @@ void Debugger::willUnloadModule(RuntimeModule *module) {
     return;
   }
 
-  llvm::DenseSet<CodeBlock *> unloadingBlocks;
+  llvh::DenseSet<CodeBlock *> unloadingBlocks;
   for (auto *block : module->getFunctionMap()) {
     if (block) {
       unloadingBlocks.insert(block);
@@ -534,7 +534,7 @@ auto Debugger::getCallFrameInfo(const CodeBlock *codeBlock, uint32_t ipOffset)
     // so make sure we aren't.
     GCScopeMarkerRAII gcMarker{runtime_};
 
-    llvm::SmallVector<char16_t, 64> storage;
+    llvh::SmallVector<char16_t, 64> storage;
     UTF16Ref functionName =
         getFunctionName(runtime_, codeBlock).getUTF16Ref(storage);
     convertUTF16ToUTF8WithReplacements(frameInfo.functionName, functionName);
@@ -578,7 +578,7 @@ auto Debugger::getStackTrace(InterpreterState state) const -> StackTrace {
         displayName =
             JSObject::getNamedSlotValue(propObj.get(), runtime_, desc);
         if (displayName->isString()) {
-          llvm::SmallVector<char16_t, 64> storage;
+          llvh::SmallVector<char16_t, 64> storage;
           displayName->getString()->copyUTF16String(storage);
           convertUTF16ToUTF8WithReplacements(frameInfo.functionName, storage);
         }
@@ -607,7 +607,7 @@ auto Debugger::getStackTrace(InterpreterState state) const -> StackTrace {
 auto Debugger::createBreakpoint(const SourceLocation &loc) -> BreakpointID {
   using fhd::kInvalidBreakpoint;
 
-  OptValue<hbc::DebugSearchResult> locationOpt{llvm::None};
+  OptValue<hbc::DebugSearchResult> locationOpt{llvh::None};
 
   Breakpoint breakpoint{};
   breakpoint.requestedLocation = loc;
@@ -691,7 +691,7 @@ void Debugger::setBreakpointEnabled(BreakpointID id, bool enable) {
   }
 }
 
-llvm::Optional<const Debugger::BreakpointLocation>
+llvh::Optional<const Debugger::BreakpointLocation>
 Debugger::getBreakpointLocation(CodeBlock *codeBlock, uint32_t offset) const {
   return getBreakpointLocation(codeBlock->getOffsetPtr(offset));
 }
@@ -769,7 +769,7 @@ void Debugger::unsetUserBreakpoint(const Breakpoint &breakpoint) {
   auto &location = locIt->second;
 
   assert(location.user && "no user breakpoints to unset");
-  location.user = llvm::None;
+  location.user = llvh::None;
   if (location.count() == 0) {
     // No more reason to keep this location around.
     // Unpatch it from the opcode stream and delete it from the map.
@@ -831,7 +831,7 @@ void Debugger::breakpointExceptionHandler(const InterpreterState &state) {
 }
 
 void Debugger::clearTempBreakpoints() {
-  llvm::SmallVector<const Inst *, 4> toErase{};
+  llvh::SmallVector<const Inst *, 4> toErase{};
   for (const auto &breakpoint : tempBreakpoints_) {
     auto *codeBlock = breakpoint.codeBlock;
     auto offset = breakpoint.offset;
@@ -981,7 +981,7 @@ HermesValue Debugger::getExceptionAsEvalResult(
   // TODO: rationalize what should happen if toString_RJS() itself throws.
   auto res = toString_RJS(runtime_, thrownValue);
   if (res != ExecutionStatus::EXCEPTION) {
-    llvm::SmallVector<char16_t, 64> errorText;
+    llvh::SmallVector<char16_t, 64> errorText;
     res->get()->copyUTF16String(errorText);
     convertUTF16ToUTF8WithReplacements(
         outMetadata->exceptionDetails.text, errorText);
@@ -1065,7 +1065,7 @@ HermesValue Debugger::evalInFrame(
   return *resultHandle;
 }
 
-llvm::Optional<std::pair<InterpreterState, uint32_t>> Debugger::findCatchTarget(
+llvh::Optional<std::pair<InterpreterState, uint32_t>> Debugger::findCatchTarget(
     const InterpreterState &state) const {
   auto *codeBlock = state.codeBlock;
   auto offset = state.offset;
@@ -1084,7 +1084,7 @@ llvm::Optional<std::pair<InterpreterState, uint32_t>> Debugger::findCatchTarget(
       offset = codeBlock->getOffsetOf(it->getSavedIP());
     }
   }
-  return llvm::None;
+  return llvh::None;
 }
 
 bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
@@ -1105,7 +1105,7 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
   // skipping any CodeBlocks we've seen before.
   GCScope gcScope{runtime_};
   for (auto &runtimeModule : runtime_->getRuntimeModules()) {
-    llvm::DenseSet<CodeBlock *> visited{};
+    llvh::DenseSet<CodeBlock *> visited{};
     std::vector<CodeBlock *> toVisit{};
     for (uint32_t i = 0, e = runtimeModule.getNumCodeBlocks(); i < e; ++i) {
       GCScopeMarkerRAII marker{gcScope};
@@ -1191,7 +1191,7 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
       for (const auto &region : fileRegions) {
         std::string storage =
             getFileNameAsUTF8(runtime_, &runtimeModule, region.filenameId);
-        llvm::StringRef storageRef{storage};
+        llvh::StringRef storageRef{storage};
         if (storageRef.consume_back(breakpoint.requestedLocation.fileName)) {
           resolvedFileId = region.filenameId;
           resolvedFileName = std::move(storage);
@@ -1224,7 +1224,7 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
         resolvedFileId,
         breakpoint.requestedLocation.line,
         breakpoint.requestedLocation.column == kInvalidLocation
-            ? llvm::None
+            ? llvh::None
             : OptValue<uint32_t>{breakpoint.requestedLocation.column});
 
     if (locationOpt.hasValue()) {

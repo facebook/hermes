@@ -11,12 +11,12 @@
 #include "hermes/IR/IRVisitor.h"
 #include "hermes/IR/Instrs.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/Casting.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/Support/Casting.h"
 
-using llvm::dyn_cast;
-using llvm::isa;
-using llvm::raw_null_ostream;
+using llvh::dyn_cast;
+using llvh::isa;
+using llvh::raw_null_ostream;
 
 using namespace hermes;
 
@@ -43,7 +43,7 @@ class Verifier : public InstructionVisitor<Verifier, void> {
   /// State for the function currently being verified.
   FunctionState *functionState{};
   /// Cached users of each value, lazily computed.
-  llvm::DenseMap<const Value *, llvm::DenseSet<const Value *>> cachedUsers{};
+  llvh::DenseMap<const Value *, llvh::DenseSet<const Value *>> cachedUsers{};
 
   /// Verifier state per-function is kept here.
   class FunctionState {
@@ -106,7 +106,7 @@ class Verifier : public InstructionVisitor<Verifier, void> {
   void visitBinaryOperatorLikeInst(const T &Inst);
 
   /// \return a DenseSet of users for a Value, computed lazily.
-  const llvm::DenseSet<const Value *> &getUsersSetForValue(const Value *V) {
+  const llvh::DenseSet<const Value *> &getUsersSetForValue(const Value *V) {
     auto &users = cachedUsers[V];
     if (users.empty()) {
       users.insert(V->users_begin(), V->users_end());
@@ -174,17 +174,17 @@ void Verifier::visitFunction(const Function &F) {
     // Domination checks within a block are linear, so for huge blocks we get
     // quadratic runtime. To avoid this, we store a set of instructions we've
     // seen so far in the current block.
-    llvm::SmallPtrSet<const Instruction *, 32> seen;
+    llvh::SmallPtrSet<const Instruction *, 32> seen;
 
     // Instruction dominance check
     for (BasicBlock::const_iterator II = I.begin(); II != I.end(); II++) {
       // Check that incoming phi node values are dominated in their incoming
       // blocks.
-      if (auto *Phi = llvm::dyn_cast<PhiInst>(&*II)) {
+      if (auto *Phi = llvh::dyn_cast<PhiInst>(&*II)) {
         for (int i = 0, e = Phi->getNumEntries(); i < e; ++i) {
           auto pair = Phi->getEntry(i);
           BasicBlock *block = pair.second;
-          auto *inst = llvm::dyn_cast<Instruction>(pair.first);
+          auto *inst = llvh::dyn_cast<Instruction>(pair.first);
 
           // Non-instructions always dominate everything. Move on.
           if (!inst) {
@@ -202,7 +202,7 @@ void Verifier::visitFunction(const Function &F) {
       // Check that all instructions are dominated by their operands.
       for (unsigned i = 0; i < II->getNumOperands(); i++) {
         auto Operand = II->getOperand(i);
-        if (auto *InstOp = llvm::dyn_cast<Instruction>(Operand)) {
+        if (auto *InstOp = llvh::dyn_cast<Instruction>(Operand)) {
           Assert(
               seen.count(InstOp) || D.properlyDominates(InstOp, &*II),
               "Operand must dominates the Instruction");
@@ -252,33 +252,33 @@ void Verifier::beforeVisitInstruction(const Instruction &Inst) {
     Assert(
         getUsersSetForValue(Operand).count(&Inst) == 1,
         "This instruction is not in the User list of the operand");
-    if (llvm::isa<Variable>(Operand)) {
+    if (llvh::isa<Variable>(Operand)) {
       Assert(
-          llvm::isa<LoadFrameInst>(Inst) || llvm::isa<StoreFrameInst>(Inst) ||
-              llvm::isa<HBCLoadFromEnvironmentInst>(Inst) ||
-              llvm::isa<HBCStoreToEnvironmentInst>(Inst),
+          llvh::isa<LoadFrameInst>(Inst) || llvh::isa<StoreFrameInst>(Inst) ||
+              llvh::isa<HBCLoadFromEnvironmentInst>(Inst) ||
+              llvh::isa<HBCStoreToEnvironmentInst>(Inst),
           "Variable can only be accessed in "
           "LoadFrame/StoreFrame/HBCLoadFromEnvironmentInst/HBCStoreToEnvironmentInst Inst.");
     }
-    if (llvm::isa<AllocStackInst>(Operand)) {
+    if (llvh::isa<AllocStackInst>(Operand)) {
       Assert(
-          llvm::isa<LoadStackInst>(Inst) || llvm::isa<StoreStackInst>(Inst) ||
-              llvm::isa<CatchInst>(Inst) || llvm::isa<GetPNamesInst>(Inst) ||
-              llvm::isa<CheckHasInstanceInst>(Inst) ||
-              llvm::isa<GetNextPNameInst>(Inst) ||
-              llvm::isa<ResumeGeneratorInst>(Inst) ||
-              llvm::isa<IteratorBeginInst>(Inst) ||
-              llvm::isa<IteratorNextInst>(Inst) ||
-              llvm::isa<IteratorCloseInst>(Inst) ||
-              llvm::isa<HBCGetArgumentsPropByValInst>(Inst) ||
-              llvm::isa<HBCGetArgumentsLengthInst>(Inst) ||
-              llvm::isa<HBCReifyArgumentsInst>(Inst),
+          llvh::isa<LoadStackInst>(Inst) || llvh::isa<StoreStackInst>(Inst) ||
+              llvh::isa<CatchInst>(Inst) || llvh::isa<GetPNamesInst>(Inst) ||
+              llvh::isa<CheckHasInstanceInst>(Inst) ||
+              llvh::isa<GetNextPNameInst>(Inst) ||
+              llvh::isa<ResumeGeneratorInst>(Inst) ||
+              llvh::isa<IteratorBeginInst>(Inst) ||
+              llvh::isa<IteratorNextInst>(Inst) ||
+              llvh::isa<IteratorCloseInst>(Inst) ||
+              llvh::isa<HBCGetArgumentsPropByValInst>(Inst) ||
+              llvh::isa<HBCGetArgumentsLengthInst>(Inst) ||
+              llvh::isa<HBCReifyArgumentsInst>(Inst),
           "Stack variable can only be accessed in certain instructions.");
     }
   }
 
   // Verify that terminator instructions never need to return a value.
-  if (llvm::isa<TerminatorInst>(Inst)) {
+  if (llvh::isa<TerminatorInst>(Inst)) {
     Assert(Inst.getNumUsers() == 0, "Terminator Inst cannot return value.");
   }
 }
@@ -411,7 +411,7 @@ void Verifier::visitTryEndInst(const TryEndInst &Inst) {
 
 void Verifier::visitStoreStackInst(const StoreStackInst &Inst) {
   Assert(
-      !llvm::isa<AllocStackInst>(Inst.getValue()),
+      !llvh::isa<AllocStackInst>(Inst.getValue()),
       "Storing the address of stack location");
   Assert(!Inst.hasUsers(), "Store Instructions must not have users");
 }
@@ -451,7 +451,7 @@ void Verifier::visitCallBuiltinInst(CallBuiltinInst const &Inst) {
 }
 void Verifier::visitHBCCallDirectInst(HBCCallDirectInst const &Inst) {
   Assert(
-      llvm::isa<Function>(Inst.getCallee()),
+      llvh::isa<Function>(Inst.getCallee()),
       "HBCCallDirect callee must be a Function");
   Assert(
       Inst.getNumArguments() <= CallBuiltinInst::MAX_ARGUMENTS,
@@ -483,7 +483,7 @@ void Verifier::visitTryStoreGlobalPropertyInst(
 
 void Verifier::visitStoreOwnPropertyInst(const StoreOwnPropertyInst &Inst) {
   Assert(
-      llvm::isa<LiteralBool>(
+      llvh::isa<LiteralBool>(
           Inst.getOperand(StoreOwnPropertyInst::IsEnumerableIdx)),
       "StoreOwnPropertyInst::IsEnumerable must be a boolean literal");
 }
@@ -491,7 +491,7 @@ void Verifier::visitStoreNewOwnPropertyInst(
     const StoreNewOwnPropertyInst &Inst) {
   visitStoreOwnPropertyInst(Inst);
   Assert(
-      llvm::isa<LiteralString>(
+      llvh::isa<LiteralString>(
           Inst.getOperand(StoreOwnPropertyInst::PropertyIdx)),
       "StoreNewOwnPropertyInst::Property must be a string literal");
   Assert(
@@ -501,7 +501,7 @@ void Verifier::visitStoreNewOwnPropertyInst(
 
 void Verifier::visitStoreGetterSetterInst(const StoreGetterSetterInst &Inst) {
   Assert(
-      llvm::isa<LiteralBool>(
+      llvh::isa<LiteralBool>(
           Inst.getOperand(StoreGetterSetterInst::IsEnumerableIdx)),
       "StoreGetterSetterInsr::IsEnumerable must be a boolean constant");
 }
@@ -529,7 +529,7 @@ void Verifier::visitCreateArgumentsInst(const CreateArgumentsInst &Inst) {
 
   BasicBlock *BB = Inst.getParent();
   Function *F = BB->getParent();
-  if (llvm::isa<GeneratorInnerFunction>(F)) {
+  if (llvh::isa<GeneratorInnerFunction>(F)) {
     auto secondBB = F->begin();
     ++secondBB;
     Assert(
@@ -628,7 +628,7 @@ void Verifier::visitPhiInst(const hermes::PhiInst &Inst) {
   // We verify the dominance property when we scan the whole function. In here
   // we only verify local properties.
 
-  llvm::DenseMap<BasicBlock *, Value *> entries(8);
+  llvh::DenseMap<BasicBlock *, Value *> entries(8);
 
   // Check that every input block enters only once:
   for (int i = 0, e = Inst.getNumEntries(); i < e; ++i) {
@@ -687,7 +687,7 @@ void Verifier::visitSwitchLikeInst(const T &Inst) {
   }
 
   // Verify that each case is unique.
-  llvm::SmallPtrSet<Literal *, 8> values;
+  llvh::SmallPtrSet<Literal *, 8> values;
   for (unsigned idx = 0, e = Inst.getNumCasePair(); idx < e; ++idx) {
     Assert(
         values.insert(Inst.getCasePair(idx).first).second,
@@ -805,17 +805,17 @@ void Verifier::visitUnreachableInst(const UnreachableInst &Inst) {}
 
 void Verifier::visitIteratorBeginInst(const IteratorBeginInst &Inst) {
   Assert(
-      llvm::isa<AllocStackInst>(Inst.getSourceOrNext()),
+      llvh::isa<AllocStackInst>(Inst.getSourceOrNext()),
       "SourceOrNext must be an AllocStackInst");
 }
 void Verifier::visitIteratorNextInst(const IteratorNextInst &Inst) {
   Assert(
-      llvm::isa<AllocStackInst>(Inst.getSourceOrNext()),
+      llvh::isa<AllocStackInst>(Inst.getSourceOrNext()),
       "SourceOrNext must be an AllocStackInst");
 }
 void Verifier::visitIteratorCloseInst(const IteratorCloseInst &Inst) {
   Assert(
-      llvm::isa<LiteralBool>(
+      llvh::isa<LiteralBool>(
           Inst.getOperand(IteratorCloseInst::IgnoreInnerExceptionIdx)),
       "IgnoreInnerException must be a LiteralBool in IteratorCloseInst");
 }

@@ -12,14 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/PrettyStackTrace.h"
-#include "llvm-c/ErrorHandling.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/Config/config.h" // Get autoconf configuration settings
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/Signals.h"
-#include "llvm/Support/Watchdog.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/PrettyStackTrace.h"
+#include "llvh-c/ErrorHandling.h"
+#include "llvh/ADT/SmallString.h"
+#include "llvh/Config/config.h" // Get autoconf configuration settings
+#include "llvh/Support/Compiler.h"
+#include "llvh/Support/Signals.h"
+#include "llvh/Support/Watchdog.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <cstdarg>
 #include <cstdio>
@@ -29,7 +29,7 @@
 #include <CrashReporterClient.h>
 #endif
 
-using namespace llvm;
+using namespace llvh;
 
 // If backtrace support is not enabled, compile out support for pretty stack
 // traces.  This has the secondary effect of not requiring thread local storage
@@ -42,7 +42,7 @@ using namespace llvm;
 // thread-local variable.
 static LLVM_THREAD_LOCAL PrettyStackTraceEntry *PrettyStackTraceHead = nullptr;
 
-namespace llvm {
+namespace llvh {
 PrettyStackTraceEntry *ReverseStackTrace(PrettyStackTraceEntry *Head) {
   PrettyStackTraceEntry *Prev = nullptr;
   while (Head)
@@ -58,14 +58,14 @@ static void PrintStack(raw_ostream &OS) {
   // reverse the stack, then print it, then reverse it again.
   unsigned ID = 0;
   PrettyStackTraceEntry *ReversedStack =
-      llvm::ReverseStackTrace(PrettyStackTraceHead);
+      llvh::ReverseStackTrace(PrettyStackTraceHead);
   for (const PrettyStackTraceEntry *Entry = ReversedStack; Entry;
        Entry = Entry->getNextEntry()) {
     OS << ID++ << ".\t";
     sys::Watchdog W(5);
     Entry->print(OS);
   }
-  llvm::ReverseStackTrace(ReversedStack);
+  llvh::ReverseStackTrace(ReversedStack);
 }
 
 /// PrintCurStackTrace - Print the current stack trace to the specified stream.
@@ -182,7 +182,7 @@ static bool RegisterCrashPrinter() {
 }
 #endif
 
-void llvm::EnablePrettyStackTrace() {
+void llvh::EnablePrettyStackTrace() {
 #if defined(HAVE_BACKTRACE) && ENABLE_BACKTRACES
   // The first time this is called, we register the crash printer.
   static bool HandlerRegistered = RegisterCrashPrinter();
@@ -190,7 +190,7 @@ void llvm::EnablePrettyStackTrace() {
 #endif
 }
 
-const void *llvm::SavePrettyStackState() {
+const void *llvh::SavePrettyStackState() {
 #if defined(HAVE_BACKTRACE) && ENABLE_BACKTRACES
   return PrettyStackTraceHead;
 #else
@@ -198,7 +198,7 @@ const void *llvm::SavePrettyStackState() {
 #endif
 }
 
-void llvm::RestorePrettyStackState(const void *Top) {
+void llvh::RestorePrettyStackState(const void *Top) {
 #if defined(HAVE_BACKTRACE) && ENABLE_BACKTRACES
   PrettyStackTraceHead =
       static_cast<PrettyStackTraceEntry *>(const_cast<void *>(Top));

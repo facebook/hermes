@@ -25,7 +25,7 @@ RuntimeModule::RuntimeModule(
     Runtime *runtime,
     Handle<Domain> domain,
     RuntimeModuleFlags flags,
-    llvm::StringRef sourceURL,
+    llvh::StringRef sourceURL,
     facebook::hermes::debugger::ScriptID scriptID)
     : runtime_(runtime),
       domain_(&runtime->getHeap(), domain),
@@ -91,7 +91,7 @@ CallResult<RuntimeModule *> RuntimeModule::create(
     facebook::hermes::debugger::ScriptID scriptID,
     std::shared_ptr<hbc::BCProvider> &&bytecode,
     RuntimeModuleFlags flags,
-    llvm::StringRef sourceURL) {
+    llvh::StringRef sourceURL) {
   RuntimeModule *result;
   {
     WeakRefLock lk{runtime->getHeap().weakRefMutex()};
@@ -340,7 +340,7 @@ std::string RuntimeModule::getStringFromStringID(StringID stringID) {
   }
 }
 
-llvm::ArrayRef<uint8_t> RuntimeModule::getRegExpBytecodeFromRegExpID(
+llvh::ArrayRef<uint8_t> RuntimeModule::getRegExpBytecodeFromRegExpID(
     uint32_t regExpId) const {
   assert(
       regExpId < bcProvider_->getRegExpTable().size() && "Invalid regexp id");
@@ -350,7 +350,7 @@ llvm::ArrayRef<uint8_t> RuntimeModule::getRegExpBytecodeFromRegExpID(
 
 template <typename T>
 SymbolID RuntimeModule::mapStringMayAllocate(
-    llvm::ArrayRef<T> str,
+    llvh::ArrayRef<T> str,
     StringID stringID,
     uint32_t hash) {
   // Create a SymbolID for a given string. In general a SymbolID holds onto an
@@ -407,7 +407,7 @@ void RuntimeModule::markDomainRef(WeakRefAcceptor &acceptor) {
   acceptor.accept(domain_);
 }
 
-llvm::Optional<Handle<HiddenClass>> RuntimeModule::findCachedLiteralHiddenClass(
+llvh::Optional<Handle<HiddenClass>> RuntimeModule::findCachedLiteralHiddenClass(
     Runtime *runtime,
     unsigned keyBufferIndex,
     unsigned numLiterals) const {
@@ -421,7 +421,7 @@ llvm::Optional<Handle<HiddenClass>> RuntimeModule::findCachedLiteralHiddenClass(
       }
     }
   }
-  return llvm::None;
+  return llvh::None;
 }
 
 void RuntimeModule::tryCacheLiteralHiddenClass(

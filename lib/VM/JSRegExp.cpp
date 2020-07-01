@@ -16,7 +16,7 @@
 #include "hermes/VM/RegExpMatch.h"
 #include "hermes/VM/StringView.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 #define DEBUG_TYPE "serialize"
 
 namespace hermes {
@@ -114,7 +114,7 @@ ExecutionStatus JSRegExp::initialize(
     Runtime *runtime,
     Handle<StringPrimitive> pattern,
     Handle<StringPrimitive> flags,
-    OptValue<llvm::ArrayRef<uint8_t>> bytecode) {
+    OptValue<llvh::ArrayRef<uint8_t>> bytecode) {
   assert(
       pattern && flags &&
       "Null pattern and/or flags passed to initializeWithPatternAndFlags");
@@ -138,7 +138,7 @@ ExecutionStatus JSRegExp::initialize(
       "defineOwnProperty() failed");
 
   // Validate flags.
-  llvm::SmallVector<char16_t, 16> flagsText16;
+  llvh::SmallVector<char16_t, 16> flagsText16;
   flags->copyUTF16String(flagsText16);
 
   auto sflags = regex::SyntaxFlags::fromString(flagsText16);
@@ -151,7 +151,7 @@ ExecutionStatus JSRegExp::initialize(
   if (bytecode) {
     return selfHandle->initializeBytecode(*bytecode, runtime);
   } else {
-    llvm::SmallVector<char16_t, 16> patternText16;
+    llvh::SmallVector<char16_t, 16> patternText16;
     pattern->copyUTF16String(patternText16);
 
     // Build the regex.
@@ -170,7 +170,7 @@ ExecutionStatus JSRegExp::initialize(
 }
 
 ExecutionStatus JSRegExp::initializeBytecode(
-    llvm::ArrayRef<uint8_t> bytecode,
+    llvh::ArrayRef<uint8_t> bytecode,
     Runtime *runtime) {
   size_t sz = bytecode.size();
   if (sz > std::numeric_limits<decltype(bytecodeSize_)>::max()) {
@@ -194,7 +194,7 @@ PseudoHandle<StringPrimitive> JSRegExp::getPattern(
 template <typename CharT, typename Traits>
 CallResult<RegExpMatch> performSearch(
     Runtime *runtime,
-    llvm::ArrayRef<uint8_t> bytecode,
+    llvh::ArrayRef<uint8_t> bytecode,
     const CharT *start,
     uint32_t stringLength,
     uint32_t searchStartOffset,
@@ -221,7 +221,7 @@ CallResult<RegExpMatch> performSearch(
     const auto &submatch = nativeMatchRanges[i];
     if (!submatch.matched()) {
       assert(i > 0 && "match_result[0] should always match");
-      match.push_back(llvm::None);
+      match.push_back(llvh::None);
     } else {
       uint32_t pos = submatch.start;
       uint32_t length = submatch.end - submatch.start;
@@ -259,7 +259,7 @@ CallResult<RegExpMatch> JSRegExp::search(
     matchFlags |= regex::constants::matchInputAllAscii;
     matchResult = performSearch<char, regex::ASCIIRegexTraits>(
         runtime,
-        llvm::makeArrayRef(selfHandle->bytecode_, selfHandle->bytecodeSize_),
+        llvh::makeArrayRef(selfHandle->bytecode_, selfHandle->bytecodeSize_),
         input.castToCharPtr(),
         input.length(),
         searchStartOffset,
@@ -267,7 +267,7 @@ CallResult<RegExpMatch> JSRegExp::search(
   } else {
     matchResult = performSearch<char16_t, regex::UTF16RegexTraits>(
         runtime,
-        llvm::makeArrayRef(selfHandle->bytecode_, selfHandle->bytecodeSize_),
+        llvh::makeArrayRef(selfHandle->bytecode_, selfHandle->bytecodeSize_),
         input.castToChar16Ptr(),
         input.length(),
         searchStartOffset,

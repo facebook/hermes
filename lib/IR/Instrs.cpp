@@ -5,10 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvh/ADT/Hashing.h"
+#include "llvh/ADT/SmallString.h"
+#include "llvh/Support/Casting.h"
+#include "llvh/Support/ErrorHandling.h"
 
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IR.h"
@@ -17,14 +17,14 @@
 
 #define INCLUDE_ALL_INSTRS
 
-using llvm::cast;
+using llvh::cast;
 
 using namespace hermes;
 
 unsigned TerminatorInst::getNumSuccessors() const {
 #undef TERMINATOR
 #define TERMINATOR(CLASS, PARENT)           \
-  if (auto I = llvm::dyn_cast<CLASS>(this)) \
+  if (auto I = llvh::dyn_cast<CLASS>(this)) \
     return I->getNumSuccessors();
 #include "hermes/IR/Instrs.def"
   llvm_unreachable("not a terminator?!");
@@ -33,7 +33,7 @@ unsigned TerminatorInst::getNumSuccessors() const {
 BasicBlock *TerminatorInst::getSuccessor(unsigned idx) const {
 #undef TERMINATOR
 #define TERMINATOR(CLASS, PARENT)           \
-  if (auto I = llvm::dyn_cast<CLASS>(this)) \
+  if (auto I = llvh::dyn_cast<CLASS>(this)) \
     return I->getSuccessor(idx);
 #include "hermes/IR/Instrs.def"
   llvm_unreachable("not a terminator?!");
@@ -42,7 +42,7 @@ BasicBlock *TerminatorInst::getSuccessor(unsigned idx) const {
 void TerminatorInst::setSuccessor(unsigned idx, BasicBlock *B) {
 #undef TERMINATOR
 #define TERMINATOR(CLASS, PARENT)           \
-  if (auto I = llvm::dyn_cast<CLASS>(this)) \
+  if (auto I = llvh::dyn_cast<CLASS>(this)) \
     return I->setSuccessor(idx, B);
 #include "hermes/IR/Instrs.def"
   llvm_unreachable("not a terminator?!");
@@ -118,7 +118,7 @@ BinaryOperatorInst::OpKind BinaryOperatorInst::parseAssignmentOperator(
   return parseOperator_impl(op, assignmentOpStringRepr);
 }
 
-llvm::Optional<BinaryOperatorInst::OpKind>
+llvh::Optional<BinaryOperatorInst::OpKind>
 BinaryOperatorInst::tryGetReverseOperator(BinaryOperatorInst::OpKind op) {
   switch (op) {
     // Commutative operators
@@ -144,7 +144,7 @@ BinaryOperatorInst::tryGetReverseOperator(BinaryOperatorInst::OpKind op) {
       return OpKind::LessThanOrEqualKind;
 
     default:
-      return llvm::None;
+      return llvh::None;
   }
 }
 
@@ -416,11 +416,11 @@ bool Instruction::isIdenticalTo(const Instruction *RHS) const {
 namespace {
 /// Return the hash code of the visited instruction.
 class InstructionHashConstructor
-    : public InstructionVisitor<InstructionHashConstructor, llvm::hash_code> {
+    : public InstructionVisitor<InstructionHashConstructor, llvh::hash_code> {
  public:
   /// Return default hash code.
-  llvm::hash_code visitInstruction(const Instruction &V) {
-    return llvm::hash_code();
+  llvh::hash_code visitInstruction(const Instruction &V) {
+    return llvh::hash_code();
   }
 
   /// IMPLEMENT anything that needs special handling here. visitInstruction will
@@ -428,13 +428,13 @@ class InstructionHashConstructor
 };
 } // namespace
 
-llvm::hash_code Instruction::getHashCode() const {
-  llvm::hash_code hc = llvm::hash_combine(getVariety(), getNumOperands());
+llvh::hash_code Instruction::getHashCode() const {
+  llvh::hash_code hc = llvh::hash_combine(getVariety(), getNumOperands());
 
   // Check operands.
   for (unsigned i = 0, e = getNumOperands(); i != e; ++i)
-    hc = llvm::hash_combine(hc, getOperand(i));
+    hc = llvh::hash_combine(hc, getOperand(i));
 
   // Hash in any special attributes for an instruction.
-  return llvm::hash_combine(hc, InstructionHashConstructor().visit(*this));
+  return llvh::hash_combine(hc, InstructionHashConstructor().visit(*this));
 }

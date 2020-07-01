@@ -21,7 +21,7 @@
 #include "hermes/VM/GCGeneration.h"
 #include "hermes/VM/HiddenClass.h"
 
-#include "llvm/Support/MathExtras.h"
+#include "llvh/Support/MathExtras.h"
 
 #include <algorithm>
 #include <cassert>
@@ -76,9 +76,9 @@ void AlignedHeapSegment::setLevel(char *lvl) {
     if (MU == AdviseUnused::Yes) {
       const size_t PS = oscompat::page_size();
       auto nextPageAfter = reinterpret_cast<char *>(
-          llvm::alignTo(reinterpret_cast<uintptr_t>(lvl), PS));
+          llvh::alignTo(reinterpret_cast<uintptr_t>(lvl), PS));
       auto nextPageBefore = reinterpret_cast<char *>(
-          llvm::alignTo(reinterpret_cast<uintptr_t>(level_), PS));
+          llvh::alignTo(reinterpret_cast<uintptr_t>(level_), PS));
 
       // Some kernels seems to require all pages in the mapping to have the same
       // permissions for the advise to "take", so suspend guard page protection
@@ -154,7 +154,7 @@ bool AlignedHeapSegment::growToFit(size_t amount) {
     return false;
   }
 
-  growTo(llvm::alignTo(used() + amount, oscompat::page_size()));
+  growTo(llvh::alignTo(used() + amount, oscompat::page_size()));
   return true;
 }
 

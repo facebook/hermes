@@ -793,7 +793,7 @@ HadesGC::HadesGC(
           std::move(crashMgr)),
       maxHeapSize_{std::max(
           static_cast<size_t>(
-              llvm::alignTo<AlignedStorage::size()>(gcConfig.getMaxHeapSize())),
+              llvh::alignTo<AlignedStorage::size()>(gcConfig.getMaxHeapSize())),
           // At least one YG segment and one OG segment.
           2 * AlignedStorage::size())},
       provider_(std::move(provider)),
@@ -801,11 +801,11 @@ HadesGC::HadesGC(
           AlignedStorage::create(provider_.get(), "young-gen").get())}} {
   const size_t minHeapSegments =
       // Align up first to round up.
-      llvm::alignTo<AlignedStorage::size()>(gcConfig.getMinHeapSize()) /
+      llvh::alignTo<AlignedStorage::size()>(gcConfig.getMinHeapSize()) /
       AlignedStorage::size();
   const size_t requestedInitHeapSegments =
       // Align up first to round up.
-      llvm::alignTo<AlignedStorage::size()>(gcConfig.getInitHeapSize()) /
+      llvh::alignTo<AlignedStorage::size()>(gcConfig.getInitHeapSize()) /
       AlignedStorage::size();
 
   const size_t initHeapSegments =
@@ -839,7 +839,7 @@ void HadesGC::getHeapInfo(HeapInfo &info) {
 void HadesGC::getHeapInfoWithMallocSize(HeapInfo &info) {}
 void HadesGC::getCrashManagerHeapInfo(CrashManager::HeapInformation &info) {}
 
-void HadesGC::createSnapshot(llvm::raw_ostream &os) {
+void HadesGC::createSnapshot(llvh::raw_ostream &os) {
   // No allocations are allowed throughout the entire heap snapshot process.
   NoAllocScope scope{this};
   yieldToBackgroundThread();
@@ -856,7 +856,7 @@ void HadesGC::createSnapshot(llvm::raw_ostream &os) {
   yieldToMutator();
 }
 
-void HadesGC::printStats(llvm::raw_ostream &os, bool trailingComma) {
+void HadesGC::printStats(llvh::raw_ostream &os, bool trailingComma) {
   if (!recordGcStats_) {
     return;
   }

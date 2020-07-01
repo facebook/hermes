@@ -12,7 +12,7 @@
 #include "hermes/VM/PropertyDescriptor.h"
 #include "hermes/VM/Runtime.h"
 
-#include "llvm/Support/TrailingObjects.h"
+#include "llvh/Support/TrailingObjects.h"
 
 namespace hermes {
 namespace vm {
@@ -144,7 +144,7 @@ class DPMHashPair {
 } // namespace detail
 
 class DictPropertyMap final : public VariableSizeRuntimeCell,
-                              private llvm::TrailingObjects<
+                              private llvh::TrailingObjects<
                                   DictPropertyMap,
                                   std::pair<SymbolID, NamedPropertyDescriptor>,
                                   detail::DPMHashPair> {
@@ -317,7 +317,7 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
         (cap <= std::numeric_limits<size_type>::max() / 4) &&
         "size will cause integer overflow in calcHashCapacity");
 
-    return llvm::PowerOf2Ceil(cap * 4 / 3 + 1);
+    return llvh::PowerOf2Ceil(cap * 4 / 3 + 1);
   }
 
   /// A const-expr version of \c calcHashCapacity() using 64-bit arithmetic.
@@ -326,7 +326,7 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
     return constPowerOf2Ceil(cap * 4 / 3 + 1);
   }
 
-  /// A constexpr compatible version of llvm::PowerOf2Ceil().
+  /// A constexpr compatible version of llvh::PowerOf2Ceil().
   /// NOTE: it must not be used at runtime since it might be slow.
   static constexpr uint64_t constPowerOf2Ceil(uint64_t A, uint64_t ceil = 1) {
     return ceil >= A ? ceil : constPowerOf2Ceil(A, ceil << 1);
@@ -589,7 +589,7 @@ inline OptValue<DictPropertyMap::PropertyPos> DictPropertyMap::find(
   auto *mutableSelf = const_cast<DictPropertyMap *>(self);
   auto found = lookupEntryFor(mutableSelf, id);
   if (!found.first)
-    return llvm::None;
+    return llvh::None;
   return PropertyPos{(size_type)(found.second - mutableSelf->getHashPairs())};
 }
 

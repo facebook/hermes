@@ -18,7 +18,7 @@
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/SweepResultNC.h"
 
-#include "llvm/Support/MathExtras.h"
+#include "llvh/Support/MathExtras.h"
 
 #include <functional>
 
@@ -172,7 +172,7 @@ class YoungGen : public GCGeneration {
   /// stream.
   /// \p os Is the output stream to print the stats to.
   /// \p trailingComma determines whether the output includes a trailing comma.
-  void printStats(llvm::raw_ostream &os, bool trailingComma) const;
+  void printStats(llvh::raw_ostream &os, bool trailingComma) const;
 
   /// Fixup the tracked IDs of objects that were moved or deleted.
   void updateIDTracker();

@@ -10,7 +10,7 @@
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/StringPrimitive.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 #define DEBUG_TYPE "serialize"
 
 namespace hermes {
@@ -133,7 +133,7 @@ OptValue<PropertyFlags> JSString::_getOwnIndexedPropertyFlagsImpl(
     return flags;
   }
 
-  return llvm::None;
+  return llvh::None;
 }
 
 std::pair<uint32_t, uint32_t> JSString::_getOwnIndexedRangeImpl(

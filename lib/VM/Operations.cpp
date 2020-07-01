@@ -25,7 +25,7 @@
 
 #include "dtoa/dtoa.h"
 
-#include "llvm/ADT/SmallString.h"
+#include "llvh/ADT/SmallString.h"
 
 #include <cfloat>
 #include <cmath>
@@ -445,7 +445,7 @@ static inline double stringToNumber(
   }
 
   // Finally, copy 16 bit chars into 8 bit chars and call dtoa.
-  llvm::SmallVector<char, 32> str8(len + 1);
+  llvh::SmallVector<char, 32> str8(len + 1);
   uint32_t i = 0;
   for (auto c16 : str16) {
     // Check to ensure we only have valid number characters now.
@@ -730,7 +730,7 @@ CallResult<HermesValue> toObject(Runtime *runtime, Handle<> valueHandle) {
 ExecutionStatus amendPropAccessErrorMsgWithPropName(
     Runtime *runtime,
     Handle<> valueHandle,
-    llvm::StringRef operationStr,
+    llvh::StringRef operationStr,
     SymbolID id) {
   if (!valueHandle->isNull() && !valueHandle->isUndefined()) {
     // If value is not null/undefined, fall back to the original exception.
@@ -741,7 +741,7 @@ ExecutionStatus amendPropAccessErrorMsgWithPropName(
   runtime->clearThrownValue();
 
   // Construct an error message that contains the property name.
-  llvm::StringRef valueStr = valueHandle->isNull() ? "null" : "undefined";
+  llvh::StringRef valueStr = valueHandle->isNull() ? "null" : "undefined";
   return runtime->raiseTypeError(
       TwineChar16("Cannot ") + operationStr + " property '" +
       runtime->getIdentifierTable().getStringView(runtime, id) + "' of " +
@@ -990,10 +990,10 @@ numberToStringWithRadix(Runtime *runtime, double number, unsigned radix) {
   (void)MAX_RADIX;
   assert(MIN_RADIX <= radix && radix <= MAX_RADIX && "Invalid radix");
   // Two parts of the final result: integer part and fractional part.
-  llvm::SmallString<64> result{};
+  llvh::SmallString<64> result{};
 
   // Used to store just the fractional part of the string (not including '.').
-  llvm::SmallString<32> fStr{};
+  llvh::SmallString<32> fStr{};
 
   // If negative, treat as if positive and add a '-' later.
   bool negative = false;
@@ -1141,7 +1141,7 @@ getMethod(Runtime *runtime, Handle<> O, Handle<> key) {
 CallResult<IteratorRecord> getIterator(
     Runtime *runtime,
     Handle<> obj,
-    llvm::Optional<Handle<Callable>> methodOpt) {
+    llvh::Optional<Handle<Callable>> methodOpt) {
   MutableHandle<Callable> method{runtime};
   if (LLVM_LIKELY(!methodOpt.hasValue())) {
     auto methodRes = getMethod(
@@ -1191,7 +1191,7 @@ CallResult<IteratorRecord> getIterator(
 CallResult<PseudoHandle<JSObject>> iteratorNext(
     Runtime *runtime,
     const IteratorRecord &iteratorRecord,
-    llvm::Optional<Handle<>> value) {
+    llvh::Optional<Handle<>> value) {
   GCScopeMarkerRAII marker{runtime};
   auto resultRes = value
       ? Callable::executeCall1(

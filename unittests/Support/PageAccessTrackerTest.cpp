@@ -32,7 +32,7 @@ TEST(PageAccessTrackerTest, Order) {
 
   std::string out;
   {
-    llvm::raw_string_ostream OS(out);
+    llvh::raw_string_ostream OS(out);
     tracker->printStats(OS, true);
   }
   std::string expected = "\"page_ids\":[1,2,0],";

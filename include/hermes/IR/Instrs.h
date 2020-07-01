@@ -14,13 +14,13 @@
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/IR/IR.h"
 
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/ilist_node.h"
-#include "llvm/IR/CFG.h"
-#include "llvm/IR/SymbolTableListTraits.h"
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/ADT/ilist_node.h"
+#include "llvh/IR/CFG.h"
+#include "llvh/IR/SymbolTableListTraits.h"
 
-using llvm::ArrayRef;
-using llvm::cast;
+using llvh::ArrayRef;
+using llvh::cast;
 
 namespace hermes {
 
@@ -47,7 +47,7 @@ class SingleOperandInst : public Instruction {
 
   explicit SingleOperandInst(
       const SingleOperandInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {
     assert(operands.size() == 1 && "SingleOperandInst must have 1 operand!");
   }
@@ -81,7 +81,7 @@ class TerminatorInst : public Instruction {
  public:
   explicit TerminatorInst(
       const TerminatorInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   unsigned getNumSuccessors() const;
@@ -100,11 +100,11 @@ class TerminatorInst : public Instruction {
     return kindIsA(V->getKind(), ValueKind::TerminatorInstKind);
   }
 
-  using succ_iterator = llvm::SuccIterator<TerminatorInst, BasicBlock>;
+  using succ_iterator = llvh::SuccIterator<TerminatorInst, BasicBlock>;
   using succ_const_iterator =
-      llvm::SuccIterator<const TerminatorInst, const BasicBlock>;
-  using succ_range = llvm::iterator_range<succ_iterator>;
-  using succ_const_range = llvm::iterator_range<succ_const_iterator>;
+      llvh::SuccIterator<const TerminatorInst, const BasicBlock>;
+  using succ_range = llvh::iterator_range<succ_iterator>;
+  using succ_const_range = llvh::iterator_range<succ_const_iterator>;
 
  private:
   inline succ_iterator succ_begin() {
@@ -144,7 +144,7 @@ class BranchInst : public TerminatorInst {
       : TerminatorInst(ValueKind::BranchInstKind) {
     pushOperand(dest);
   }
-  explicit BranchInst(const BranchInst *src, llvm::ArrayRef<Value *> operands)
+  explicit BranchInst(const BranchInst *src, llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -183,7 +183,7 @@ class AddEmptyStringInst : public SingleOperandInst {
   }
   explicit AddEmptyStringInst(
       const AddEmptyStringInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -210,7 +210,7 @@ class AsNumberInst : public SingleOperandInst {
   }
   explicit AsNumberInst(
       const AsNumberInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -235,7 +235,7 @@ class AsInt32Inst : public SingleOperandInst {
       : SingleOperandInst(ValueKind::AsInt32InstKind, value) {
     setType(Type::createNumber());
   }
-  explicit AsInt32Inst(const AsInt32Inst *src, llvm::ArrayRef<Value *> operands)
+  explicit AsInt32Inst(const AsInt32Inst *src, llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -280,7 +280,7 @@ class CondBranchInst : public TerminatorInst {
   }
   explicit CondBranchInst(
       const CondBranchInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -325,7 +325,7 @@ class ReturnInst : public TerminatorInst {
   explicit ReturnInst(Value *val) : TerminatorInst(ValueKind::ReturnInstKind) {
     pushOperand(val);
   }
-  explicit ReturnInst(const ReturnInst *src, llvm::ArrayRef<Value *> operands)
+  explicit ReturnInst(const ReturnInst *src, llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -366,7 +366,7 @@ class AllocStackInst : public Instruction {
   }
   explicit AllocStackInst(
       const AllocStackInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : AllocStackInst(cast<Label>(operands[0])->get()) {
     // NOTE: we are playing a little trick here since the Label is not heap
     // allocated.
@@ -398,7 +398,7 @@ class LoadStackInst : public SingleOperandInst {
       : SingleOperandInst(ValueKind::LoadStackInstKind, alloc) {}
   explicit LoadStackInst(
       const LoadStackInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
   AllocStackInst *getPtr() const {
@@ -439,7 +439,7 @@ class StoreStackInst : public Instruction {
   }
   explicit StoreStackInst(
       const StoreStackInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -464,7 +464,7 @@ class LoadFrameInst : public SingleOperandInst {
       : SingleOperandInst(ValueKind::LoadFrameInstKind, alloc) {}
   explicit LoadFrameInst(
       const LoadFrameInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
   Variable *getLoadVariable() const {
@@ -505,7 +505,7 @@ class StoreFrameInst : public Instruction {
   }
   explicit StoreFrameInst(
       const StoreFrameInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -537,7 +537,7 @@ class CreateFunctionInst : public Instruction {
       : CreateFunctionInst(ValueKind::CreateFunctionInstKind, code) {}
   explicit CreateFunctionInst(
       const CreateFunctionInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   Function *getFunctionCode() const {
@@ -564,7 +564,7 @@ class CallInst : public Instruction {
  public:
   enum { CalleeIdx, ThisIdx };
 
-  using ArgumentList = llvm::SmallVector<Value *, 2>;
+  using ArgumentList = llvh::SmallVector<Value *, 2>;
 
   Value *getCallee() const {
     return getOperand(CalleeIdx);
@@ -598,7 +598,7 @@ class CallInst : public Instruction {
       pushOperand(arg);
     }
   }
-  explicit CallInst(const CallInst *src, llvm::ArrayRef<Value *> operands)
+  explicit CallInst(const CallInst *src, llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -632,7 +632,7 @@ class ConstructInst : public CallInst {
   }
   explicit ConstructInst(
       const ConstructInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : CallInst(src, operands) {}
 
   static bool classof(const Value *V) {
@@ -663,7 +663,7 @@ class CallBuiltinInst : public CallInst {
   }
   explicit CallBuiltinInst(
       const CallBuiltinInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : CallInst(src, operands) {}
 
   BuiltinMethod::Enum getBuiltinIndex() const {
@@ -695,7 +695,7 @@ class HBCCallNInst : public CallInst {
 
   explicit HBCCallNInst(
       const HBCCallNInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : CallInst(src, operands) {}
 
   static bool classof(const Value *V) {
@@ -714,7 +714,7 @@ class HBCGetGlobalObjectInst : public Instruction {
   }
   explicit HBCGetGlobalObjectInst(
       const HBCGetGlobalObjectInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -767,7 +767,7 @@ class StorePropertyInst : public Instruction {
             property) {}
   explicit StorePropertyInst(
       const StorePropertyInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -802,13 +802,13 @@ class TryStoreGlobalPropertyInst : public StorePropertyInst {
             globalObject,
             property) {
     assert(
-        (llvm::isa<GlobalObject>(globalObject) ||
-         llvm::isa<HBCGetGlobalObjectInst>(globalObject)) &&
+        (llvh::isa<GlobalObject>(globalObject) ||
+         llvh::isa<HBCGetGlobalObjectInst>(globalObject)) &&
         "globalObject must refer to the global object");
   }
   explicit TryStoreGlobalPropertyInst(
       const TryStoreGlobalPropertyInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : StorePropertyInst(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -872,7 +872,7 @@ class StoreOwnPropertyInst : public Instruction {
 
   explicit StoreOwnPropertyInst(
       const StoreOwnPropertyInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -915,7 +915,7 @@ class StoreNewOwnPropertyInst : public StoreOwnPropertyInst {
 
   explicit StoreNewOwnPropertyInst(
       const StoreNewOwnPropertyInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : StoreOwnPropertyInst(src, operands) {}
 
   static bool classof(const Value *V) {
@@ -967,7 +967,7 @@ class StoreGetterSetterInst : public Instruction {
   }
   explicit StoreGetterSetterInst(
       const StoreGetterSetterInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -1004,7 +1004,7 @@ class DeletePropertyInst : public Instruction {
   }
   explicit DeletePropertyInst(
       const DeletePropertyInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -1045,7 +1045,7 @@ class LoadPropertyInst : public Instruction {
       : LoadPropertyInst(ValueKind::LoadPropertyInstKind, object, property) {}
   explicit LoadPropertyInst(
       const LoadPropertyInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -1078,13 +1078,13 @@ class TryLoadGlobalPropertyInst : public LoadPropertyInst {
             globalObject,
             property) {
     assert(
-        (llvm::isa<GlobalObject>(globalObject) ||
-         llvm::isa<HBCGetGlobalObjectInst>(globalObject)) &&
+        (llvh::isa<GlobalObject>(globalObject) ||
+         llvh::isa<HBCGetGlobalObjectInst>(globalObject)) &&
         "globalObject must refer to the global object");
   }
   explicit TryLoadGlobalPropertyInst(
       const TryLoadGlobalPropertyInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : LoadPropertyInst(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -1124,7 +1124,7 @@ class AllocObjectInst : public Instruction {
   }
   explicit AllocObjectInst(
       const AllocObjectInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -1148,7 +1148,7 @@ class HBCAllocObjectFromBufferInst : public Instruction {
   enum { SizeIdx, FirstKeyIdx };
 
   using ObjectPropertyMap =
-      llvm::SmallVector<std::pair<Literal *, Literal *>, 4>;
+      llvh::SmallVector<std::pair<Literal *, Literal *>, 4>;
 
   /// \sizeHint is a hint for the VM regarding the final size of this object.
   /// It is the number of entries in the object declaration including
@@ -1167,7 +1167,7 @@ class HBCAllocObjectFromBufferInst : public Instruction {
   }
   explicit HBCAllocObjectFromBufferInst(
       const HBCAllocObjectFromBufferInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -1206,7 +1206,7 @@ class AllocArrayInst : public Instruction {
  public:
   enum { SizeHintIdx, ElementStartIdx };
 
-  using ArrayValueList = llvm::SmallVector<Value *, 4>;
+  using ArrayValueList = llvh::SmallVector<Value *, 4>;
 
   explicit AllocArrayInst(ArrayValueList &val_list, LiteralNumber *sizeHint)
       : Instruction(ValueKind::AllocArrayInstKind) {
@@ -1219,7 +1219,7 @@ class AllocArrayInst : public Instruction {
   }
   explicit AllocArrayInst(
       const AllocArrayInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   /// Return the size of array to be allocated.
@@ -1242,7 +1242,7 @@ class AllocArrayInst : public Instruction {
   /// Returns -1 if every element is a literal.
   int getFirstNonLiteralIndex() const {
     for (unsigned i = 0, e = getElementCount(); i < e; ++i) {
-      if (!llvm::isa<Literal>(getArrayElement(i)))
+      if (!llvh::isa<Literal>(getArrayElement(i)))
         return i;
     }
     return -1;
@@ -1277,7 +1277,7 @@ class CreateArgumentsInst : public Instruction {
   }
   explicit CreateArgumentsInst(
       const CreateArgumentsInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -1315,7 +1315,7 @@ class CreateRegExpInst : public Instruction {
   }
   explicit CreateRegExpInst(
       const CreateRegExpInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -1376,7 +1376,7 @@ class UnaryOperatorInst : public SingleOperandInst {
         op_(opKind) {}
   explicit UnaryOperatorInst(
       const UnaryOperatorInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands), op_(src->op_) {}
 
   SideEffectKind getSideEffect();
@@ -1460,7 +1460,7 @@ class BinaryOperatorInst : public Instruction {
 
   // Get the operator that allows you to swap the operands, if one exists.
   // >= becomes <= and + becomes +.
-  static llvm::Optional<OpKind> tryGetReverseOperator(OpKind op);
+  static llvh::Optional<OpKind> tryGetReverseOperator(OpKind op);
 
   /// \return the string representation of the operator.
   StringRef getOperatorStr() {
@@ -1474,7 +1474,7 @@ class BinaryOperatorInst : public Instruction {
   }
   explicit BinaryOperatorInst(
       const BinaryOperatorInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands), op_(src->op_) {}
 
   SideEffectKind getSideEffect() {
@@ -1504,7 +1504,7 @@ class CatchInst : public Instruction {
 
  public:
   explicit CatchInst() : Instruction(ValueKind::CatchInstKind) {}
-  explicit CatchInst(const CatchInst *src, llvm::ArrayRef<Value *> operands)
+  explicit CatchInst(const CatchInst *src, llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -1531,7 +1531,7 @@ class ThrowInst : public TerminatorInst {
       : TerminatorInst(ValueKind::ThrowInstKind) {
     pushOperand(thrownValue);
   }
-  explicit ThrowInst(const ThrowInst *src, llvm::ArrayRef<Value *> operands)
+  explicit ThrowInst(const ThrowInst *src, llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -1568,8 +1568,8 @@ class SwitchInst : public TerminatorInst {
  public:
   enum { InputIdx, DefaultBlockIdx, FirstCaseIdx };
 
-  using ValueListType = llvm::SmallVector<Literal *, 8>;
-  using BasicBlockListType = llvm::SmallVector<BasicBlock *, 8>;
+  using ValueListType = llvh::SmallVector<Literal *, 8>;
+  using BasicBlockListType = llvh::SmallVector<BasicBlock *, 8>;
 
   /// \returns the number of switch case values.
   unsigned getNumCasePair() const;
@@ -1589,7 +1589,7 @@ class SwitchInst : public TerminatorInst {
       BasicBlock *defaultBlock,
       const ValueListType &values,
       const BasicBlockListType &blocks);
-  explicit SwitchInst(const SwitchInst *src, llvm::ArrayRef<Value *> operands)
+  explicit SwitchInst(const SwitchInst *src, llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -1628,7 +1628,7 @@ class GetPNamesInst : public TerminatorInst {
       BasicBlock *onSome);
   explicit GetPNamesInst(
       const GetPNamesInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands) {}
 
   Value *getIterator() const {
@@ -1711,7 +1711,7 @@ class GetNextPNameInst : public TerminatorInst {
       BasicBlock *onSome);
   explicit GetNextPNameInst(
       const GetNextPNameInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -1794,7 +1794,7 @@ class CheckHasInstanceInst : public TerminatorInst {
   }
   explicit CheckHasInstanceInst(
       const CheckHasInstanceInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -1860,7 +1860,7 @@ class TryStartInst : public TerminatorInst {
   }
   explicit TryStartInst(
       const TryStartInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands) {}
 
   BasicBlock *getTryBody() const {
@@ -1899,7 +1899,7 @@ class TryEndInst : public Instruction {
 
  public:
   explicit TryEndInst() : Instruction(ValueKind::TryEndInstKind) {}
-  explicit TryEndInst(const TryEndInst *src, llvm::ArrayRef<Value *> operands)
+  explicit TryEndInst(const TryEndInst *src, llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -1920,8 +1920,8 @@ class PhiInst : public Instruction {
   void operator=(const PhiInst &) = delete;
 
  public:
-  using ValueListType = llvm::SmallVector<Value *, 8>;
-  using BasicBlockListType = llvm::SmallVector<BasicBlock *, 8>;
+  using ValueListType = llvh::SmallVector<Value *, 8>;
+  using BasicBlockListType = llvh::SmallVector<BasicBlock *, 8>;
 
   /// \returns the number of phi incoming values.
   unsigned getNumEntries() const;
@@ -1947,7 +1947,7 @@ class PhiInst : public Instruction {
   explicit PhiInst(
       const ValueListType &values,
       const BasicBlockListType &blocks);
-  explicit PhiInst(const PhiInst *src, llvm::ArrayRef<Value *> operands)
+  explicit PhiInst(const PhiInst *src, llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -1972,7 +1972,7 @@ class MovInst : public SingleOperandInst {
       : SingleOperandInst(ValueKind::MovInstKind, input) {
     setType(input->getType());
   }
-  explicit MovInst(const MovInst *src, llvm::ArrayRef<Value *> operands)
+  explicit MovInst(const MovInst *src, llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -2001,7 +2001,7 @@ class ImplicitMovInst : public SingleOperandInst {
 
   explicit ImplicitMovInst(
       const ImplicitMovInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -2028,7 +2028,7 @@ class CoerceThisNSInst : public SingleOperandInst {
   }
   explicit CoerceThisNSInst(
       const CoerceThisNSInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -2052,7 +2052,7 @@ class DebuggerInst : public Instruction {
   explicit DebuggerInst() : Instruction(ValueKind::DebuggerInstKind) {}
   explicit DebuggerInst(
       const DebuggerInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -2076,7 +2076,7 @@ class GetNewTargetInst : public Instruction {
   explicit GetNewTargetInst() : Instruction(ValueKind::GetNewTargetInstKind) {}
   explicit GetNewTargetInst(
       const GetNewTargetInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -2106,7 +2106,7 @@ class ThrowIfUndefinedInst : public Instruction {
   }
   explicit ThrowIfUndefinedInst(
       const ThrowIfUndefinedInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   Value *getCheckedValue() {
@@ -2135,7 +2135,7 @@ class HBCResolveEnvironment : public SingleOperandInst {
       : SingleOperandInst(ValueKind::HBCResolveEnvironmentKind, scope) {}
   explicit HBCResolveEnvironment(
       const HBCResolveEnvironment *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
   VariableScope *getScope() const {
@@ -2170,7 +2170,7 @@ class HBCStoreToEnvironmentInst : public Instruction {
   }
   explicit HBCStoreToEnvironmentInst(
       const HBCStoreToEnvironmentInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   Variable *getResolvedName() const {
@@ -2210,7 +2210,7 @@ class HBCLoadFromEnvironmentInst : public Instruction {
   }
   explicit HBCLoadFromEnvironmentInst(
       const HBCLoadFromEnvironmentInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   Variable *getResolvedName() const {
@@ -2240,8 +2240,8 @@ class SwitchImmInst : public TerminatorInst {
  public:
   enum { InputIdx, DefaultBlockIdx, MinValueIdx, SizeIdx, FirstCaseIdx };
 
-  using ValueListType = llvm::SmallVector<LiteralNumber *, 8>;
-  using BasicBlockListType = llvm::SmallVector<BasicBlock *, 8>;
+  using ValueListType = llvh::SmallVector<LiteralNumber *, 8>;
+  using BasicBlockListType = llvh::SmallVector<BasicBlock *, 8>;
 
   /// \returns the number of switch case values.
   unsigned getNumCasePair() const {
@@ -2293,7 +2293,7 @@ class SwitchImmInst : public TerminatorInst {
       const BasicBlockListType &blocks);
   explicit SwitchImmInst(
       const SwitchImmInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -2337,7 +2337,7 @@ class SaveAndYieldInst : public TerminatorInst {
   }
   explicit SaveAndYieldInst(
       const SaveAndYieldInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -2371,7 +2371,7 @@ class DirectEvalInst : public SingleOperandInst {
       : SingleOperandInst(ValueKind::DirectEvalInstKind, value) {}
   explicit DirectEvalInst(
       const DirectEvalInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
   SideEffectKind getSideEffect() const {
@@ -2396,7 +2396,7 @@ class HBCCreateEnvironmentInst : public Instruction {
       : Instruction(ValueKind::HBCCreateEnvironmentInstKind) {}
   explicit HBCCreateEnvironmentInst(
       const HBCCreateEnvironmentInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -2425,7 +2425,7 @@ class HBCProfilePointInst : public Instruction {
 
   explicit HBCProfilePointInst(
       const HBCProfilePointInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands), pointIndex_(src->pointIndex_) {}
 
   SideEffectKind getSideEffect() {
@@ -2456,7 +2456,7 @@ class HBCLoadConstInst : public SingleOperandInst {
   }
   explicit HBCLoadConstInst(
       const HBCLoadConstInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
   Literal *getConst() const {
@@ -2487,7 +2487,7 @@ class HBCLoadParamInst : public SingleOperandInst {
       : SingleOperandInst(ValueKind::HBCLoadParamInstKind, input) {}
   explicit HBCLoadParamInst(
       const HBCLoadParamInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
   LiteralNumber *getIndex() const {
@@ -2518,7 +2518,7 @@ class HBCGetThisNSInst : public Instruction {
   explicit HBCGetThisNSInst() : Instruction(ValueKind::HBCGetThisNSInstKind) {}
   explicit HBCGetThisNSInst(
       const HBCGetThisNSInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -2544,7 +2544,7 @@ class HBCGetArgumentsLengthInst : public SingleOperandInst {
       : SingleOperandInst(ValueKind::HBCGetArgumentsLengthInstKind, reg) {}
   explicit HBCGetArgumentsLengthInst(
       const HBCGetArgumentsLengthInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
   Value *getLazyRegister() const {
@@ -2579,7 +2579,7 @@ class HBCGetArgumentsPropByValInst : public Instruction {
   }
   explicit HBCGetArgumentsPropByValInst(
       const HBCGetArgumentsPropByValInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   Value *getIndex() const {
@@ -2613,7 +2613,7 @@ class HBCReifyArgumentsInst : public SingleOperandInst {
       : SingleOperandInst(ValueKind::HBCReifyArgumentsInstKind, reg) {}
   explicit HBCReifyArgumentsInst(
       const HBCReifyArgumentsInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
   Value *getLazyRegister() const {
@@ -2648,7 +2648,7 @@ class HBCCreateThisInst : public Instruction {
   }
   explicit HBCCreateThisInst(
       const HBCCreateThisInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   Value *getPrototype() const {
@@ -2684,7 +2684,7 @@ class HBCConstructInst : public CallInst {
       : CallInst(ValueKind::HBCConstructInstKind, callee, thisValue, args) {}
   explicit HBCConstructInst(
       const HBCConstructInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : CallInst(src, operands) {}
 
   static bool classof(const Value *V) {
@@ -2709,7 +2709,7 @@ class HBCGetConstructedObjectInst : public Instruction {
   }
   explicit HBCGetConstructedObjectInst(
       const HBCGetConstructedObjectInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   Value *getThisValue() const {
@@ -2752,7 +2752,7 @@ class HBCCallDirectInst : public CallInst {
   }
   explicit HBCCallDirectInst(
       const HBCCallDirectInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : CallInst(src, operands) {}
 
   Function *getFunctionCode() const {
@@ -2778,7 +2778,7 @@ class HBCCreateFunctionInst : public CreateFunctionInst {
   }
   explicit HBCCreateFunctionInst(
       const HBCCreateFunctionInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : CreateFunctionInst(src, operands) {}
 
   Value *getEnvironment() const {
@@ -2801,7 +2801,7 @@ class HBCSpillMovInst : public SingleOperandInst {
       : SingleOperandInst(ValueKind::HBCSpillMovInstKind, value) {}
   explicit HBCSpillMovInst(
       const HBCSpillMovInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
   Instruction *getValue() const {
@@ -2866,7 +2866,7 @@ class CompareBranchInst : public TerminatorInst {
   }
   explicit CompareBranchInst(
       const CompareBranchInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands), op_(src->op_) {}
 
   SideEffectKind getSideEffect() {
@@ -2913,7 +2913,7 @@ class CreateGeneratorInst : public CreateFunctionInst {
       : CreateGeneratorInst(ValueKind::CreateGeneratorInstKind, genFunction) {}
   explicit CreateGeneratorInst(
       const CreateGeneratorInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : CreateFunctionInst(src, operands) {}
 
   static bool classof(const Value *V) {
@@ -2935,7 +2935,7 @@ class HBCCreateGeneratorInst : public CreateGeneratorInst {
   }
   explicit HBCCreateGeneratorInst(
       const HBCCreateGeneratorInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : CreateGeneratorInst(src, operands) {}
 
   Value *getEnvironment() const {
@@ -2956,7 +2956,7 @@ class StartGeneratorInst : public Instruction {
       : Instruction(ValueKind::StartGeneratorInstKind) {}
   explicit StartGeneratorInst(
       const StartGeneratorInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -2985,7 +2985,7 @@ class ResumeGeneratorInst : public Instruction {
   }
   explicit ResumeGeneratorInst(
       const ResumeGeneratorInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() {
@@ -3018,7 +3018,7 @@ class IteratorBeginInst : public Instruction {
   }
   explicit IteratorBeginInst(
       const IteratorBeginInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() const {
@@ -3054,7 +3054,7 @@ class IteratorNextInst : public Instruction {
   }
   explicit IteratorNextInst(
       const IteratorNextInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() const {
@@ -3084,7 +3084,7 @@ class IteratorCloseInst : public Instruction {
  public:
   enum { IteratorIdx, IgnoreInnerExceptionIdx };
 
-  using TargetList = llvm::SmallVector<Value *, 2>;
+  using TargetList = llvh::SmallVector<Value *, 2>;
 
   explicit IteratorCloseInst(
       AllocStackInst *iterator,
@@ -3095,7 +3095,7 @@ class IteratorCloseInst : public Instruction {
   }
   explicit IteratorCloseInst(
       const IteratorCloseInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() const {
@@ -3128,7 +3128,7 @@ class UnreachableInst : public Instruction {
   explicit UnreachableInst() : Instruction(ValueKind::UnreachableInstKind) {}
   explicit UnreachableInst(
       const UnreachableInst *src,
-      llvm::ArrayRef<Value *> operands)
+      llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() {

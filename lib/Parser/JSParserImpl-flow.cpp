@@ -7,11 +7,11 @@
 
 #include "JSParserImpl.h"
 
-#include "llvm/Support/SaveAndRestore.h"
+#include "llvh/Support/SaveAndRestore.h"
 
-using llvm::cast;
-using llvm::dyn_cast;
-using llvm::isa;
+using llvh::cast;
+using llvh::dyn_cast;
+using llvh::isa;
 
 namespace hermes {
 namespace parser {
@@ -526,7 +526,7 @@ Optional<ESTree::Node *> JSParserImpl::parseExportTypeDeclaration(
   if (check(TokenKind::l_brace)) {
     ESTree::NodeList specifiers{};
     SMLoc endLoc;
-    llvm::SmallVector<SMRange, 2> invalids{};
+    llvh::SmallVector<SMRange, 2> invalids{};
 
     auto optExportClause = parseExportClause(specifiers, endLoc, invalids);
     if (!optExportClause) {
@@ -707,7 +707,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(SMLoc start) {
 
   ESTree::NodeList specifiers{};
   SMLoc end;
-  llvm::SmallVector<SMRange, 2> invalids{};
+  llvh::SmallVector<SMRange, 2> invalids{};
   if (!parseExportClause(specifiers, end, invalids))
     return None;
 
@@ -732,7 +732,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(SMLoc start) {
 Optional<ESTree::Node *> JSParserImpl::parseTypeAnnotation(
     bool wrapped,
     AllowAnonFunctionType allowAnonFunctionType) {
-  llvm::SaveAndRestore<bool> saveParam(
+  llvh::SaveAndRestore<bool> saveParam(
       allowAnonFunctionType_,
       allowAnonFunctionType == AllowAnonFunctionType::Yes);
   auto optType = parseUnionTypeAnnotation();
@@ -2024,7 +2024,7 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumDeclaration() {
     return None;
   ESTree::Node *id = *optIdent;
 
-  OptValue<EnumKind> optKind = llvm::None;
+  OptValue<EnumKind> optKind = llvh::None;
   if (checkAndEat(ofIdent_)) {
     if (checkAndEat(stringIdent_)) {
       optKind = EnumKind::String;
@@ -2083,7 +2083,7 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumBody(
         if (*optKind != *optMemberKind) {
           error(
               member->getSourceRange(),
-              llvm::Twine("cannot use ") + enumKindStr(*optMemberKind) +
+              llvh::Twine("cannot use ") + enumKindStr(*optMemberKind) +
                   " initializer in " + enumKindStr(*optKind) + " enum");
           sm_.note(start, "start of enum body", Subsystem::Parser);
           return None;

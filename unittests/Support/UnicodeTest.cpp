@@ -145,13 +145,13 @@ TEST(StringTest, IsAllASCIITest) {
 }
 
 TEST(UTF16StreamTest, EmptyUTF16InputTest) {
-  UTF16Stream stream(llvm::ArrayRef<char16_t>{});
+  UTF16Stream stream(llvh::ArrayRef<char16_t>{});
   EXPECT_FALSE(stream.hasChar());
 }
 
 TEST(UTF16StreamTest, UTF16InputTest) {
   char16_t str16[] = {1, 123, 1234};
-  UTF16Stream stream(llvm::ArrayRef<char16_t>(str16, str16 + 3));
+  UTF16Stream stream(llvh::ArrayRef<char16_t>(str16, str16 + 3));
   EXPECT_TRUE(stream.hasChar());
   EXPECT_EQ(1, *stream);
   ++stream;
@@ -166,12 +166,12 @@ TEST(UTF16StreamTest, UTF16InputTest) {
 
 TEST(UTF16StreamTest, UTF8InputTest) {
   {
-    UTF16Stream stream(llvm::ArrayRef<uint8_t>{});
+    UTF16Stream stream(llvh::ArrayRef<uint8_t>{});
     EXPECT_FALSE(stream.hasChar());
   }
   {
     uint8_t str8[] = {0xF0, 0x9F, 0x98, 0xB9};
-    UTF16Stream stream(llvm::ArrayRef<uint8_t>(str8, str8 + sizeof(str8)));
+    UTF16Stream stream(llvh::ArrayRef<uint8_t>(str8, str8 + sizeof(str8)));
     EXPECT_TRUE(stream.hasChar());
     EXPECT_EQ(0xD83D, *stream);
     ++stream;
@@ -190,7 +190,7 @@ TEST(UTF16StreamTest, UTF8InputTest) {
     for (int i = 0; i < kReps; ++i) {
       str8.insert(str8.end(), surrogates, surrogates + sizeof(surrogates));
     }
-    UTF16Stream stream(llvm::ArrayRef<uint8_t>(str8.data(), str8.size()));
+    UTF16Stream stream(llvh::ArrayRef<uint8_t>(str8.data(), str8.size()));
     EXPECT_TRUE(stream.hasChar());
     EXPECT_EQ('X', *stream);
     ++stream;
@@ -217,7 +217,7 @@ size_t countRemainingCharsInStream(UTF16Stream &&str) {
 
 TEST(UTF16StreamTest, MoveTest) {
   char16_t str16[] = {1, 123, 1234};
-  UTF16Stream stream(llvm::ArrayRef<char16_t>(str16, str16 + 3));
+  UTF16Stream stream(llvh::ArrayRef<char16_t>(str16, str16 + 3));
   EXPECT_EQ(3, countRemainingCharsInStream(std::move(stream)));
 }
 

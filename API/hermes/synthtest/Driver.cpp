@@ -12,9 +12,9 @@
 
 #include <gtest/gtest.h>
 
-#include <llvm/Support/FileSystem.h>
-#include <llvm/Support/MemoryBuffer.h>
-#include <llvm/Support/SHA1.h>
+#include <llvh/Support/FileSystem.h>
+#include <llvh/Support/MemoryBuffer.h>
+#include <llvh/Support/SHA1.h>
 
 #include <iterator>
 #include <memory>
@@ -63,11 +63,11 @@ class SynthBenchmarkTestFixture : public ::testing::TestWithParam<ParamType> {
   /// This method is then run on the translated trace.
   void canRunWithoutException(const std::string &trace) {
     tracing::TraceInterpreter::ExecuteOptions options;
-    std::vector<std::unique_ptr<llvm::MemoryBuffer>> sources;
-    sources.emplace_back(llvm::MemoryBuffer::getMemBuffer(source_));
+    std::vector<std::unique_ptr<llvh::MemoryBuffer>> sources;
+    sources.emplace_back(llvh::MemoryBuffer::getMemBuffer(source_));
     EXPECT_NO_THROW({
       tracing::TraceInterpreter::execFromMemoryBuffer(
-          llvm::MemoryBuffer::getMemBuffer(trace.c_str()),
+          llvh::MemoryBuffer::getMemBuffer(trace.c_str()),
           std::move(sources),
           options,
           nullptr);
@@ -139,9 +139,9 @@ TEST(SynthBenchmark, RunMultipleSourceFiles) {
   std::string source2 = R"("goodbye";)";
   std::string trace;
   {
-    auto hash1 = llvm::SHA1::hash(llvm::makeArrayRef(
+    auto hash1 = llvh::SHA1::hash(llvh::makeArrayRef(
         reinterpret_cast<const uint8_t *>(source1.c_str()), source1.length()));
-    auto hash2 = llvm::SHA1::hash(llvm::makeArrayRef(
+    auto hash2 = llvh::SHA1::hash(llvh::makeArrayRef(
         reinterpret_cast<const uint8_t *>(source2.c_str()), source2.length()));
     std::string hash1AsStr = ::hermes::hashAsString(hash1);
     std::string hash2AsStr = ::hermes::hashAsString(hash2);
@@ -153,12 +153,12 @@ TEST(SynthBenchmark, RunMultipleSourceFiles) {
     trace = std::string(buf);
     delete[] buf;
   }
-  std::vector<std::unique_ptr<llvm::MemoryBuffer>> sources;
-  sources.emplace_back(llvm::MemoryBuffer::getMemBuffer(source1));
-  sources.emplace_back(llvm::MemoryBuffer::getMemBuffer(source2));
+  std::vector<std::unique_ptr<llvh::MemoryBuffer>> sources;
+  sources.emplace_back(llvh::MemoryBuffer::getMemBuffer(source1));
+  sources.emplace_back(llvh::MemoryBuffer::getMemBuffer(source2));
   EXPECT_NO_THROW({
     tracing::TraceInterpreter::execFromMemoryBuffer(
-        llvm::MemoryBuffer::getMemBuffer(trace),
+        llvh::MemoryBuffer::getMemBuffer(trace),
         std::move(sources),
         options,
         nullptr);

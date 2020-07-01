@@ -31,14 +31,14 @@
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
 
-#include "llvm/ADT/SmallSet.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/SmallSet.h"
+#include "llvh/Support/Debug.h"
+#include "llvh/Support/Format.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include "Interpreter-internal.h"
 
-using llvm::dbgs;
+using llvh::dbgs;
 using namespace hermes::inst;
 
 HERMES_SLOW_STATISTIC(
@@ -106,7 +106,7 @@ HERMES_SLOW_STATISTIC(
 // function that recusively calls the interpreter. See Profiler.{h,cpp} for how
 // these symbols are subsequently patched with JS function names.
 #define INTERP_WRAPPER(name)                                                \
-  __attribute__((__noinline__)) static llvm::CallResult<llvm::HermesValue>  \
+  __attribute__((__noinline__)) static llvh::CallResult<llvh::HermesValue>  \
   name(hermes::vm::Runtime *runtime, hermes::vm::CodeBlock *newCodeBlock) { \
     return runtime->interpretFunctionImpl(newCodeBlock);                    \
   }
@@ -550,7 +550,7 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
     unsigned valBufferIndex) {
   // Fetch any cached hidden class first.
   auto *runtimeModule = curCodeBlock->getRuntimeModule();
-  const llvm::Optional<Handle<HiddenClass>> optCachedHiddenClassHandle =
+  const llvh::Optional<Handle<HiddenClass>> optCachedHiddenClassHandle =
       runtimeModule->findCachedLiteralHiddenClass(
           runtime, keyBufferIndex, numLiterals);
   // Create a new object using the built-in constructor or cached hidden class.
@@ -706,8 +706,8 @@ struct DumpHermesValue {
 
 } // anonymous namespace.
 
-static llvm::raw_ostream &operator<<(
-    llvm::raw_ostream &OS,
+static llvh::raw_ostream &operator<<(
+    llvh::raw_ostream &OS,
     DumpHermesValue dhv) {
   OS << dhv.hv;
   // If it is a string, dump the contents, truncated to 8 characters.
@@ -728,7 +728,7 @@ static llvm::raw_ostream &operator<<(
 /// Dump the arguments from a callee frame.
 LLVM_ATTRIBUTE_UNUSED
 static void dumpCallArguments(
-    llvm::raw_ostream &OS,
+    llvh::raw_ostream &OS,
     Runtime *runtime,
     StackFramePtr calleeFrame) {
   OS << "arguments:\n";
@@ -753,7 +753,7 @@ static void printDebugInfo(
 
   DecodedInstruction decoded = decodeInstruction(ip);
 
-  dbgs() << llvm::format_decimal((const uint8_t *)ip - curCodeBlock->begin(), 4)
+  dbgs() << llvh::format_decimal((const uint8_t *)ip - curCodeBlock->begin(), 4)
          << " OpCode::" << getOpCodeString(decoded.meta.opCode);
 
   for (unsigned i = 0; i < decoded.meta.numOperands; ++i) {
@@ -1073,7 +1073,7 @@ tailCall:
                << "\n");
     for (uint32_t i = 0; i != runtime->getCurrentFrame()->getArgCount(); ++i) {
       LLVM_DEBUG(
-          dbgs() << "   " << llvm::format_decimal(i, 4) << " "
+          dbgs() << "   " << llvh::format_decimal(i, 4) << " "
                  << DumpHermesValue(runtime->getCurrentFrame().getArgRef(i))
                  << "\n");
     }
@@ -2015,7 +2015,7 @@ tailCall:
       CASE(ProfilePoint) {
 #ifdef HERMESVM_PROFILER_BB
         auto pointIndex = ip->iProfilePoint.op1;
-        SLOW_DEBUG(llvm::dbgs() << "ProfilePoint: " << pointIndex << "\n");
+        SLOW_DEBUG(llvh::dbgs() << "ProfilePoint: " << pointIndex << "\n");
         CAPTURE_IP(runtime->getBasicBlockExecutionInfo().executeBlock(
             curCodeBlock, pointIndex));
 #endif
@@ -3387,7 +3387,7 @@ tailCall:
           {
             // Calculate the offset into the bytecode where the jump table for
             // this SwitchImm starts.
-            const uint8_t *tablestart = (const uint8_t *)llvm::alignAddr(
+            const uint8_t *tablestart = (const uint8_t *)llvh::alignAddr(
                 (const uint8_t *)ip + ip->iSwitchImm.op2, sizeof(uint32_t));
 
             // Read the offset from the table.

@@ -10,7 +10,7 @@
 
 #include "hermes/IR/Instrs.h"
 #include "hermes/Optimizer/PassManager/Pass.h"
-#include "llvm/Support/Casting.h"
+#include "llvh/Support/Casting.h"
 
 namespace hermes {
 class Instruction;

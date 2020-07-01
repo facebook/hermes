@@ -346,7 +346,7 @@ TEST(Regex, FromLibCXX) {
     std::ptrdiff_t sr = std::char_traits<char16_t>::length(r);
     using FI = const char16_t *;
     using BI = const char16_t *;
-    cregex regex(llvm::ArrayRef<char16_t>(FI(r), FI(r + sr)));
+    cregex regex(llvh::ArrayRef<char16_t>(FI(r), FI(r + sr)));
     cmatch m;
     const char16_t s[] = u"-40C";
     std::ptrdiff_t ss = std::char_traits<char16_t>::length(s);
@@ -635,7 +635,7 @@ TEST(Regex, FromLibCXX) {
     std::ptrdiff_t sr = std::char_traits<char16_t>::length(r);
     using FI = const char16_t *;
     using BI = const char16_t *;
-    cregex regex(llvm::ArrayRef<char16_t>(FI(r), FI(r + sr)));
+    cregex regex(llvh::ArrayRef<char16_t>(FI(r), FI(r + sr)));
     cmatch m;
     const char16_t s[] = u"-40C";
     std::ptrdiff_t ss = std::char_traits<char16_t>::length(s);
@@ -695,7 +695,7 @@ TEST(Regex, InvalidFromLibCXX) {
   using namespace constants;
   const char16_t *pat1 = u"a(b)c\\1234";
   EXPECT_EQ(
-      cregex(llvm::ArrayRef<char16_t>(pat1, pat1 + 7)).getError(),
+      cregex(llvh::ArrayRef<char16_t>(pat1, pat1 + 7)).getError(),
       ErrorType::None);
 
   EXPECT_EQ(error_for(u"[\\a]"), ErrorType::None);

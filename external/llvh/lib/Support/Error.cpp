@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Error.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ManagedStatic.h"
+#include "llvh/Support/Error.h"
+#include "llvh/ADT/Twine.h"
+#include "llvh/Support/ErrorHandling.h"
+#include "llvh/Support/ManagedStatic.h"
 #include <system_error>
 
-using namespace llvm;
+using namespace llvh;
 
 namespace {
 
@@ -23,7 +23,7 @@ namespace {
     InconvertibleError
   };
 
-  // FIXME: This class is only here to support the transition to llvm::Error. It
+  // FIXME: This class is only here to support the transition to llvh::Error. It
   // will be removed once this transition is complete. Clients should prefer to
   // deal with the Error value directly, rather than converting to error_code.
   class ErrorErrorCategory : public std::error_category {
@@ -49,7 +49,7 @@ namespace {
 
 static ManagedStatic<ErrorErrorCategory> ErrorErrorCat;
 
-namespace llvm {
+namespace llvh {
 
 void ErrorInfoBase::anchor() {}
 char ErrorInfoBase::ID = 0;
@@ -87,7 +87,7 @@ std::error_code FileError::convertToErrorCode() const {
 Error errorCodeToError(std::error_code EC) {
   if (!EC)
     return Error::success();
-  return Error(llvm::make_unique<ECError>(ECError(EC)));
+  return Error(llvh::make_unique<ECError>(ECError(EC)));
 }
 
 std::error_code errorToErrorCode(Error Err) {
@@ -146,7 +146,7 @@ void report_fatal_error(Error Err, bool GenCrashDiag) {
   report_fatal_error(ErrMsg);
 }
 
-} // end namespace llvm
+} // end namespace llvh
 
 LLVMErrorTypeId LLVMGetErrorTypeId(LLVMErrorRef Err) {
   return reinterpret_cast<ErrorInfoBase *>(Err)->dynamicClassID();
@@ -169,7 +169,7 @@ LLVMErrorTypeId LLVMGetStringErrorTypeId() {
 }
 
 #ifndef _MSC_VER
-namespace llvm {
+namespace llvh {
 
 // One of these two variables will be referenced by a symbol defined in
 // llvm-config.h. We provide a link-time (or load time for DSO) failure when
@@ -180,5 +180,5 @@ int EnableABIBreakingChecks;
 int DisableABIBreakingChecks;
 #endif
 
-} // end namespace llvm
+} // end namespace llvh
 #endif

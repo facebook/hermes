@@ -20,7 +20,7 @@
 using namespace hermes;
 
 using hermes::oscompat::to_string;
-using llvm::StringRef;
+using llvh::StringRef;
 
 namespace {
 
@@ -44,7 +44,7 @@ TEST(StringStorageTest, UniquingRegExpTest) {
 }
 
 TEST(StringStorageTest, GetStringFromEntryTest) {
-  std::vector<llvm::StringRef> strings = {"alpha", "beta", "", "\xE2\x84\xAB"};
+  std::vector<llvh::StringRef> strings = {"alpha", "beta", "", "\xE2\x84\xAB"};
   hbc::ConsecutiveStringStorage storage{strings};
   std::string utf8;
   for (uint32_t i = 0; i < strings.size(); i++) {
@@ -89,10 +89,10 @@ TEST(StringStorageTest, ConsecutiveStringStorageTest) {
 }
 
 TEST(StringStorageTest, PackingStringStorageTest) {
-  std::vector<llvm::StringRef> strings{"phab", "alphabet", "soup", "ou"};
+  std::vector<llvh::StringRef> strings{"phab", "alphabet", "soup", "ou"};
   hbc::ConsecutiveStringStorage storage(strings);
   const auto data = storage.acquireStringStorage();
-  llvm::StringRef dataAsStr((const char *)data.data(), data.size());
+  llvh::StringRef dataAsStr((const char *)data.data(), data.size());
   EXPECT_EQ(dataAsStr.str(), "phabalphabetsoupou");
 }
 
@@ -103,7 +103,7 @@ TEST(StringStorageTest, PackingStringStorageTest) {
 // first construct ConsecutiveStringStorage from baseStrings to simulate that
 // from the base bytecode, then pass it to the new ConsecutiveStringStorage.
 static void test1OptimizingStringStorage(
-    llvm::ArrayRef<llvm::StringRef> strings,
+    llvh::ArrayRef<llvh::StringRef> strings,
     int line,
     bool expectSmaller = true) {
   std::string info = " from test on line " + to_string(line);
@@ -111,7 +111,7 @@ static void test1OptimizingStringStorage(
   hbc::ConsecutiveStringStorage storage(strings, true /* optimize */);
   auto index = storage.acquireStringTable();
   auto data = storage.acquireStringStorage();
-  llvm::StringRef dataAsString((const char *)data.data(), data.size());
+  llvh::StringRef dataAsString((const char *)data.data(), data.size());
   size_t idx = 0;
   for (const auto &p : index) {
     uint32_t offset = p.getOffset();
@@ -582,8 +582,8 @@ TEST(StringStorageTest, Optimizing) {
 TEST(StringStorageTest, NoHang) {
   std::string s1(16 * 1024 * 1024, 'a');
   std::string s2(16 * 1024 * 1024, 'b');
-  llvm::StringRef sr1 = s1;
-  llvm::StringRef sr2 = s2;
+  llvh::StringRef sr1 = s1;
+  llvh::StringRef sr2 = s2;
   test1OptimizingStringStorage({sr1, sr2}, __LINE__, false);
 }
 
@@ -591,7 +591,7 @@ TEST(StringStorageTest, NoHang) {
 /// accumulator \p accum (defaults to empty), and converting it into a table
 /// with optimizations enabled.
 hbc::StringLiteralTable tableForStrings(
-    llvm::ArrayRef<llvm::StringRef> strings,
+    llvh::ArrayRef<llvh::StringRef> strings,
     hbc::UniquingStringLiteralAccumulator accum = {}) {
   for (auto str : strings) {
     accum.addString(str, /* isIdentifier */ false);
@@ -602,7 +602,7 @@ hbc::StringLiteralTable tableForStrings(
 }
 
 TEST(StringStorageTest, DeltaOptimizingModeTest) {
-  std::vector<llvm::StringRef> baseStrings = {
+  std::vector<llvh::StringRef> baseStrings = {
       "ellitlavehr", "ranmellit",  "nationsecern", "octpifine",
       "damnation",   "octoutrun",  "recoct",       "utrunsecpar",
       "apteran",     "avehr",      "ampe",         "dampedslyish",
@@ -616,7 +616,7 @@ TEST(StringStorageTest, DeltaOptimizingModeTest) {
   std::vector<StringTableEntry> baseEntries = baseTable.acquireStringTable();
 
   // Create a new table starting with the base storage.
-  std::vector<llvm::StringRef> newStrings = {
+  std::vector<llvh::StringRef> newStrings = {
       "ina",          "rchamomis",   "fulurinal",    "rustful",
       "descar",       "unstripped",  "liere",        "oyoreback",
       "gerfaucet",    "ruelstamoyo", "rippedcruels", "schlieren",
@@ -675,7 +675,7 @@ TEST(StringAccumulatorTest, Ordering) {
   auto SLT = hbc::UniquingStringLiteralAccumulator::toTable(
       std::move(USLA), /* optimize */ false);
 
-  std::vector<llvm::StringRef> expectedStrings{
+  std::vector<llvh::StringRef> expectedStrings{
       "Str0",
       "Str1",
       "Str2",

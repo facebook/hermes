@@ -98,7 +98,7 @@ void HeapSnapshot::beginNode() {
 
 void HeapSnapshot::endNode(
     NodeType type,
-    llvm::StringRef name,
+    llvh::StringRef name,
     NodeID id,
     HeapSizeType selfSize,
     HeapSizeType traceNodeID) {
@@ -126,7 +126,7 @@ void HeapSnapshot::endNode(
 
 void HeapSnapshot::addNamedEdge(
     EdgeType type,
-    llvm::StringRef name,
+    llvh::StringRef name,
     NodeID toNode) {
   if (nextSection_ == Section::Nodes) {
     // If we're emitting nodes, only count the number of edges being processed,
@@ -317,11 +317,11 @@ size_t HeapSnapshot::countFunctionTraceInfos() {
   }
 
   size_t count = 0;
-  llvm::DenseSet<
+  llvh::DenseSet<
       StackTracesTreeNode::SourceLoc,
       StackTracesTreeNode::SourceLocMapInfo>
       sourceLocSet;
-  llvm::SmallVector<StackTracesTreeNode *, 128> nodeStack;
+  llvh::SmallVector<StackTracesTreeNode *, 128> nodeStack;
   nodeStack.push_back(stackTracesTree_->getRootNode());
   while (!nodeStack.empty()) {
     auto curNode = nodeStack.pop_back_val();
@@ -358,13 +358,13 @@ void HeapSnapshot::emitAllocationTraceInfo() {
       return l == r;
     }
   };
-  llvm::DenseMap<StackTracesTreeNode::SourceLoc, size_t, FuncHashMapInfo>
+  llvh::DenseMap<StackTracesTreeNode::SourceLoc, size_t, FuncHashMapInfo>
       funcHashToFuncIdxMap;
   size_t nextFunctionIdx = 0;
 
   std::stack<
       StackTracesTreeNode *,
-      llvm::SmallVector<StackTracesTreeNode *, 128>>
+      llvh::SmallVector<StackTracesTreeNode *, 128>>
       nodeStack;
 
   beginSection(Section::TraceFunctionInfos);
@@ -441,7 +441,7 @@ std::string converter(int index) {
   return oscompat::to_string(index);
 }
 std::string converter(const StringPrimitive *str) {
-  llvm::SmallVector<char16_t, 16> buf;
+  llvh::SmallVector<char16_t, 16> buf;
   str->copyUTF16String(buf);
   std::string out;
   convertUTF16ToUTF8WithReplacements(out, UTF16Ref(buf));

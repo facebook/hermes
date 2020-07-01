@@ -46,7 +46,7 @@
 
 ------------------------------------------------------------------------ */
 
-#include "llvm/Support/ConvertUTF.h"
+#include "llvh/Support/ConvertUTF.h"
 #ifdef CVTUTF_DEBUG
 #include <stdio.h>
 #endif
@@ -80,7 +80,7 @@
 
 ConvertUTF_DISABLE_WARNINGS
 
-namespace llvm {
+namespace llvh {
 
 static const int halfShift  = 10; /* used for shifting by 10 bits */
 
@@ -734,6 +734,6 @@ ConversionResult ConvertUTF8toUTF32(const UTF8 **sourceStart,
 
    --------------------------------------------------------------------- */
 
-} // namespace llvm
+} // namespace llvh
 
 ConvertUTF_RESTORE_WARNINGS

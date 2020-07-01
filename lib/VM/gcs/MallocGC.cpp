@@ -18,7 +18,7 @@
 #include "hermes/VM/SlotAcceptorDefault-inline.h"
 #include "hermes/VM/SlotAcceptorDefault.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 
 #include <algorithm>
 
@@ -261,7 +261,7 @@ void MallocGC::clearUnmarkedPropertyMaps() {
 void MallocGC::collect() {
   assert(noAllocLevel_ == 0 && "no GC allowed right now");
   using std::chrono::steady_clock;
-  LLVM_DEBUG(llvm::dbgs() << "Beginning collection");
+  LLVM_DEBUG(llvh::dbgs() << "Beginning collection");
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormed();
 #endif
@@ -438,7 +438,7 @@ void MallocGC::finalizeAll() {
   }
 }
 
-void MallocGC::printStats(llvm::raw_ostream &os, bool trailingComma) {
+void MallocGC::printStats(llvh::raw_ostream &os, bool trailingComma) {
   if (!recordGcStats_) {
     return;
   }
@@ -578,7 +578,7 @@ bool MallocGC::isMostRecentFinalizableObj(const GCCell *cell) const {
 }
 #endif
 
-void MallocGC::createSnapshot(llvm::raw_ostream &os) {
+void MallocGC::createSnapshot(llvh::raw_ostream &os) {
   GCCycle cycle{this};
   GCBase::createSnapshot(this, os);
 }

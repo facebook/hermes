@@ -406,7 +406,7 @@ struct BytecodeFileFields {
 
   template <typename T>
   using Array = typename std::
-      conditional<Mutable, llvm::MutableArrayRef<T>, llvm::ArrayRef<T>>::type;
+      conditional<Mutable, llvh::MutableArrayRef<T>, llvh::ArrayRef<T>>::type;
 
   /// The file header.
   Pointer<BytecodeFileHeader> header{nullptr};

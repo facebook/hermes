@@ -12,18 +12,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm-c/ErrorHandling.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/Config/config.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/Errc.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/Signals.h"
-#include "llvm/Support/Threading.h"
-#include "llvm/Support/WindowsError.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/ErrorHandling.h"
+#include "llvh-c/ErrorHandling.h"
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/ADT/Twine.h"
+#include "llvh/Config/config.h"
+#include "llvh/Support/Debug.h"
+#include "llvh/Support/Errc.h"
+#include "llvh/Support/Error.h"
+#include "llvh/Support/Signals.h"
+#include "llvh/Support/Threading.h"
+#include "llvh/Support/WindowsError.h"
+#include "llvh/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdlib>
 #include <mutex>
@@ -37,7 +37,7 @@
 # include <fcntl.h>
 #endif
 
-using namespace llvm;
+using namespace llvh;
 
 static fatal_error_handler_t ErrorHandler = nullptr;
 static void *ErrorHandlerUserData = nullptr;
@@ -61,7 +61,7 @@ static std::mutex ErrorHandlerMutex;
 static std::mutex BadAllocErrorHandlerMutex;
 #endif
 
-void llvm::install_fatal_error_handler(fatal_error_handler_t handler,
+void llvh::install_fatal_error_handler(fatal_error_handler_t handler,
                                        void *user_data) {
 #if LLVM_ENABLE_THREADS == 1
   std::lock_guard<std::mutex> Lock(ErrorHandlerMutex);
@@ -71,7 +71,7 @@ void llvm::install_fatal_error_handler(fatal_error_handler_t handler,
   ErrorHandlerUserData = user_data;
 }
 
-void llvm::remove_fatal_error_handler() {
+void llvh::remove_fatal_error_handler() {
 #if LLVM_ENABLE_THREADS == 1
   std::lock_guard<std::mutex> Lock(ErrorHandlerMutex);
 #endif
@@ -79,20 +79,20 @@ void llvm::remove_fatal_error_handler() {
   ErrorHandlerUserData = nullptr;
 }
 
-void llvm::report_fatal_error(const char *Reason, bool GenCrashDiag) {
+void llvh::report_fatal_error(const char *Reason, bool GenCrashDiag) {
   report_fatal_error(Twine(Reason), GenCrashDiag);
 }
 
-void llvm::report_fatal_error(const std::string &Reason, bool GenCrashDiag) {
+void llvh::report_fatal_error(const std::string &Reason, bool GenCrashDiag) {
   report_fatal_error(Twine(Reason), GenCrashDiag);
 }
 
-void llvm::report_fatal_error(StringRef Reason, bool GenCrashDiag) {
+void llvh::report_fatal_error(StringRef Reason, bool GenCrashDiag) {
   report_fatal_error(Twine(Reason), GenCrashDiag);
 }
 
-void llvm::report_fatal_error(const Twine &Reason, bool GenCrashDiag) {
-  llvm::fatal_error_handler_t handler = nullptr;
+void llvh::report_fatal_error(const Twine &Reason, bool GenCrashDiag) {
+  llvh::fatal_error_handler_t handler = nullptr;
   void* handlerData = nullptr;
   {
     // Only acquire the mutex while reading the handler, so as not to invoke a
@@ -126,7 +126,7 @@ void llvm::report_fatal_error(const Twine &Reason, bool GenCrashDiag) {
   exit(1);
 }
 
-void llvm::install_bad_alloc_error_handler(fatal_error_handler_t handler,
+void llvh::install_bad_alloc_error_handler(fatal_error_handler_t handler,
                                            void *user_data) {
 #if LLVM_ENABLE_THREADS == 1
   std::lock_guard<std::mutex> Lock(BadAllocErrorHandlerMutex);
@@ -136,7 +136,7 @@ void llvm::install_bad_alloc_error_handler(fatal_error_handler_t handler,
   BadAllocErrorHandlerUserData = user_data;
 }
 
-void llvm::remove_bad_alloc_error_handler() {
+void llvh::remove_bad_alloc_error_handler() {
 #if LLVM_ENABLE_THREADS == 1
   std::lock_guard<std::mutex> Lock(BadAllocErrorHandlerMutex);
 #endif
@@ -144,7 +144,7 @@ void llvm::remove_bad_alloc_error_handler() {
   BadAllocErrorHandlerUserData = nullptr;
 }
 
-void llvm::report_bad_alloc_error(const char *Reason, bool GenCrashDiag) {
+void llvh::report_bad_alloc_error(const char *Reason, bool GenCrashDiag) {
   fatal_error_handler_t Handler = nullptr;
   void *HandlerData = nullptr;
   {
@@ -178,19 +178,19 @@ void llvm::report_bad_alloc_error(const char *Reason, bool GenCrashDiag) {
 #ifdef LLVM_ENABLE_EXCEPTIONS
 // Do not set custom new handler if exceptions are enabled. In this case OOM
 // errors are handled by throwing 'std::bad_alloc'.
-void llvm::install_out_of_memory_new_handler() {
+void llvh::install_out_of_memory_new_handler() {
 }
 #else
 // Causes crash on allocation failure. It is called prior to the handler set by
 // 'install_bad_alloc_error_handler'.
 static void out_of_memory_new_handler() {
-  llvm::report_bad_alloc_error("Allocation failed");
+  llvh::report_bad_alloc_error("Allocation failed");
 }
 
 // Installs new handler that causes crash on allocation failure. It does not
 // need to be called explicitly, if this file is linked to application, because
 // in this case it is called during construction of 'new_handler_installer'.
-void llvm::install_out_of_memory_new_handler() {
+void llvh::install_out_of_memory_new_handler() {
   static bool out_of_memory_new_handler_installed = false;
   if (!out_of_memory_new_handler_installed) {
     std::set_new_handler(out_of_memory_new_handler);
@@ -211,7 +211,7 @@ public:
 #endif
 #endif
 
-void llvm::llvm_unreachable_internal(const char *msg, const char *file,
+void llvh::llvm_unreachable_internal(const char *msg, const char *file,
                                      unsigned line) {
   // This code intentionally doesn't call the ErrorHandler callback, because
   // llvm_unreachable is intended to be used to indicate "impossible"
@@ -255,7 +255,7 @@ void LLVMResetFatalErrorHandler() {
   case x:                                                                      \
     return make_error_code(errc::y)
 
-std::error_code llvm::mapWindowsError(unsigned EV) {
+std::error_code llvh::mapWindowsError(unsigned EV) {
   switch (EV) {
     MAP_ERR_TO_COND(ERROR_ACCESS_DENIED, permission_denied);
     MAP_ERR_TO_COND(ERROR_ALREADY_EXISTS, file_exists);

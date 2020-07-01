@@ -9,16 +9,16 @@
 
 #include "hermes/Support/RegExpSerialization.h"
 
-#include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallSet.h"
-#include "llvm/Support/SaveAndRestore.h"
+#include "llvh/ADT/ScopeExit.h"
+#include "llvh/ADT/SmallSet.h"
+#include "llvh/Support/SaveAndRestore.h"
 
-using llvm::cast;
-using llvm::cast_or_null;
-using llvm::dyn_cast;
-using llvm::dyn_cast_or_null;
-using llvm::isa;
-using llvm::SaveAndRestore;
+using llvh::cast;
+using llvh::cast_or_null;
+using llvh::dyn_cast;
+using llvh::dyn_cast_or_null;
+using llvh::isa;
+using llvh::SaveAndRestore;
 
 using namespace hermes::ESTree;
 
@@ -245,13 +245,13 @@ void SemanticValidator::visit(LabeledStatementNode *labelStmt) {
   if (!insertRes.second) {
     sm_.error(
         id->getSourceRange(),
-        llvm::Twine("label '") + id->_name->str() + "' is already defined");
+        llvh::Twine("label '") + id->_name->str() + "' is already defined");
     sm_.note(
         insertRes.first->second.declarationNode->getSourceRange(),
         "previous definition");
   }
   // Auto-erase the label on exit, if we inserted it.
-  const auto &deleter = llvm::make_scope_exit([=]() {
+  const auto &deleter = llvh::make_scope_exit([=]() {
     if (insertRes.second)
       curFunction()->labelMap.erase(id->_name);
   });
@@ -262,7 +262,7 @@ void SemanticValidator::visit(LabeledStatementNode *labelStmt) {
 
 /// Check RegExp syntax.
 void SemanticValidator::visit(RegExpLiteralNode *regexp) {
-  llvm::StringRef regexpError;
+  llvh::StringRef regexpError;
   if (!CompiledRegExp::tryCompile(
           regexp->_pattern->str(), regexp->_flags->str(), &regexpError)) {
     sm_.error(
@@ -394,7 +394,7 @@ void SemanticValidator::visit(ContinueStatementNode *continueStmt) {
       } else {
         sm_.error(
             id->getSourceRange(),
-            llvm::Twine("continue label '") + id->_name->str() +
+            llvh::Twine("continue label '") + id->_name->str() +
                 "' is not a loop label");
         sm_.note(
             labelIt->second.declarationNode->getSourceRange(),
@@ -592,7 +592,7 @@ void SemanticValidator::visitFunction(
   // NOTE: isFormalParams_ is reset to false on encountering a new function,
   // because the semantics for "x Contains y" always return `false` when "x" is
   // a function definition.
-  llvm::SaveAndRestore<bool> oldIsFormalParamsFn{isFormalParams_, false};
+  llvh::SaveAndRestore<bool> oldIsFormalParamsFn{isFormalParams_, false};
 
   Node *useStrictNode = nullptr;
 
@@ -626,7 +626,7 @@ void SemanticValidator::visitFunction(
   // Check if we have seen this parameter name before.
   if (!simpleParameterList || curFunction()->strictMode ||
       isa<ArrowFunctionExpressionNode>(node)) {
-    llvm::SmallSet<NodeLabel, 8> paramNameSet;
+    llvh::SmallSet<NodeLabel, 8> paramNameSet;
     for (const auto &curIdNode : newFuncCtx.semInfo->paramNames) {
       auto insert_result = paramNameSet.insert(curIdNode.identifier->_name);
       if (insert_result.second == false) {
@@ -647,7 +647,7 @@ void SemanticValidator::visitParamsAndBody(FunctionLikeNode *node) {
       auto *fe = cast<ESTree::FunctionExpressionNode>(node);
       visitESTreeNode(*this, fe->_id, fe);
       for (auto &param : fe->_params) {
-        llvm::SaveAndRestore<bool> oldIsFormalParams{isFormalParams_, true};
+        llvh::SaveAndRestore<bool> oldIsFormalParams{isFormalParams_, true};
         visitESTreeNode(*this, &param, fe);
       }
       visitESTreeNode(*this, fe->_body, fe);
@@ -657,7 +657,7 @@ void SemanticValidator::visitParamsAndBody(FunctionLikeNode *node) {
       auto *fe = cast<ESTree::ArrowFunctionExpressionNode>(node);
       visitESTreeNode(*this, fe->_id, fe);
       for (auto &param : fe->_params) {
-        llvm::SaveAndRestore<bool> oldIsFormalParams{isFormalParams_, true};
+        llvh::SaveAndRestore<bool> oldIsFormalParams{isFormalParams_, true};
         visitESTreeNode(*this, &param, fe);
       }
       visitESTreeNode(*this, fe->_body, fe);
@@ -667,7 +667,7 @@ void SemanticValidator::visitParamsAndBody(FunctionLikeNode *node) {
       auto *fe = cast<ESTree::FunctionDeclarationNode>(node);
       visitESTreeNode(*this, fe->_id, fe);
       for (auto &param : fe->_params) {
-        llvm::SaveAndRestore<bool> oldIsFormalParams{isFormalParams_, true};
+        llvh::SaveAndRestore<bool> oldIsFormalParams{isFormalParams_, true};
         visitESTreeNode(*this, &param, fe);
       }
       visitESTreeNode(*this, fe->_body, fe);
@@ -738,7 +738,7 @@ bool SemanticValidator::isValidDeclarationName(
 void SemanticValidator::validateDeclarationNames(
     FunctionInfo::VarDecl::Kind declKind,
     Node *node,
-    llvm::SmallVectorImpl<FunctionInfo::VarDecl> *idents) {
+    llvh::SmallVectorImpl<FunctionInfo::VarDecl> *idents) {
   // The identifier is sometimes optional, in which case it is valid.
   if (!node)
     return;

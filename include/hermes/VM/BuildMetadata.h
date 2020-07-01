@@ -13,7 +13,7 @@
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/Metadata.h"
 
-#include "llvm/ADT/ArrayRef.h"
+#include "llvh/ADT/ArrayRef.h"
 
 namespace hermes {
 namespace vm {
@@ -32,7 +32,7 @@ using BuildMetadataCallback = void(const GCCell *, Metadata::Builder &);
 /// This is a reference to some static storage that holds the mapping.
 /// It should be passed by value since it is a trivially copyable reference,
 /// not the actual data.
-using MetadataTable = llvm::ArrayRef<Metadata>;
+using MetadataTable = llvh::ArrayRef<Metadata>;
 
 static_assert(
     IsTriviallyCopyable<MetadataTable, true>::value,

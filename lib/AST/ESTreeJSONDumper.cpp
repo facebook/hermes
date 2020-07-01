@@ -8,9 +8,9 @@
 #include "hermes/AST/ESTreeJSONDumper.h"
 
 #include "hermes/Support/JSONEmitter.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringSet.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvh/ADT/StringMap.h"
+#include "llvh/ADT/StringSet.h"
+#include "llvh/Support/MemoryBuffer.h"
 
 namespace hermes {
 
@@ -24,11 +24,11 @@ class ESTreeJSONDumper {
 
   /// A collection of fields to ignore if they are empty (null or []).
   /// Mapping from node name to a set of ignored field names for that node.
-  llvm::StringMap<llvm::StringSet<>> ignoredEmptyFields_{};
+  llvh::StringMap<llvh::StringSet<>> ignoredEmptyFields_{};
 
  public:
   explicit ESTreeJSONDumper(
-      llvm::raw_ostream &os,
+      llvh::raw_ostream &os,
       bool pretty,
       SourceErrorManager *sm)
       : json_(os, pretty), sm_(sm) {
@@ -76,7 +76,7 @@ class ESTreeJSONDumper {
     json_.closeDict();
     json_.closeDict();
 
-    const llvm::MemoryBuffer *buffer = sm_->findBufferForLoc(rng.Start);
+    const llvh::MemoryBuffer *buffer = sm_->findBufferForLoc(rng.Start);
     assert(buffer && "The buffer must exist");
     const char *bufStart = buffer->getBufferStart();
     assert(
@@ -422,7 +422,7 @@ class ESTreeJSONDumper {
 } // namespace
 
 void dumpESTreeJSON(
-    llvm::raw_ostream &os,
+    llvh::raw_ostream &os,
     NodePtr rootNode,
     bool pretty,
     SourceErrorManager *sm) {

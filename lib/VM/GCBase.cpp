@@ -19,18 +19,18 @@
 #include "hermes/VM/SlotAcceptorDefault.h"
 #include "hermes/VM/VTable.h"
 
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/NativeFormatting.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/Debug.h"
+#include "llvh/Support/FileSystem.h"
+#include "llvh/Support/Format.h"
+#include "llvh/Support/NativeFormatting.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <inttypes.h>
 #include <stdexcept>
 #include <system_error>
 
-using llvm::dbgs;
-using llvm::format;
+using llvh::dbgs;
+using llvh::format;
 
 namespace hermes {
 namespace vm {
@@ -76,11 +76,11 @@ GCBase::GCBase(
       ? gcConfig.getSanitizeConfig().getRandomSeed()
       : std::random_device()();
   if (sanitizeRate_ > 0.0 && sanitizeRate_ < 1.0) {
-    llvm::errs()
+    llvh::errs()
         << "Warning: you are using handle sanitization with random sampling.\n"
         << "Sanitize Rate: ";
-    llvm::write_double(llvm::errs(), sanitizeRate_, llvm::FloatStyle::Percent);
-    llvm::errs() << "\n"
+    llvh::write_double(llvh::errs(), sanitizeRate_, llvh::FloatStyle::Percent);
+    llvh::errs() << "\n"
                  << "Sanitize Rate Seed: " << seed << "\n"
                  << "Re-run with -gc-sanitize-handles-random-seed=" << seed
                  << " for deterministic crashes.\n";
@@ -124,7 +124,7 @@ void GCBase::runtimeWillExecute() {
 
 std::error_code GCBase::createSnapshotToFile(const std::string &fileName) {
   std::error_code code;
-  llvm::raw_fd_ostream os(fileName, code, llvm::sys::fs::FileAccess::FA_Write);
+  llvh::raw_fd_ostream os(fileName, code, llvh::sys::fs::FileAccess::FA_Write);
   if (code) {
     return code;
   }
@@ -221,7 +221,7 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
       size_t len = hermes::numberToString(num, buf, sizeof(buf));
       snap_.endNode(
           HeapSnapshot::NodeType::Number,
-          llvm::StringRef{buf, len},
+          llvh::StringRef{buf, len},
           gc.getIDTracker().getNumberID(num),
           // Numbers are zero-sized in the heap because they're stored inline.
           0,
@@ -232,7 +232,7 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
  private:
   // Track all numbers that are seen in a heap pass, and only emit one node for
   // each of them.
-  llvm::DenseSet<double, GCBase::IDTracker::DoubleComparator> seenNumbers_;
+  llvh::DenseSet<double, GCBase::IDTracker::DoubleComparator> seenNumbers_;
 };
 
 struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
@@ -246,7 +246,7 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
     }
     snap_.addNamedEdge(
         HeapSnapshot::EdgeType::Internal,
-        llvm::StringRef::withNullAsEmpty(name),
+        llvh::StringRef::withNullAsEmpty(name),
         gc.getObjectID(ptr));
   }
 
@@ -257,7 +257,7 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
     } else if (auto id = gc.getSnapshotID(hv)) {
       snap_.addNamedEdge(
           HeapSnapshot::EdgeType::Internal,
-          llvm::StringRef::withNullAsEmpty(name),
+          llvh::StringRef::withNullAsEmpty(name),
           id.getValue());
     }
   }
@@ -397,7 +397,7 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
   }
 
  private:
-  llvm::DenseSet<uint64_t> seenIDs_;
+  llvh::DenseSet<uint64_t> seenIDs_;
   // For unnamed edges, use indices instead.
   unsigned nextEdge_{0};
   Section currentSection_{Section::InvalidSection};
@@ -415,7 +415,7 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
       // Already seen this node, don't add another edge.
       return;
     }
-    auto nameRef = llvm::StringRef::withNullAsEmpty(name);
+    auto nameRef = llvh::StringRef::withNullAsEmpty(name);
     if (!nameRef.empty()) {
       snap_.addNamedEdge(
           weak ? HeapSnapshot::EdgeType::Weak
@@ -434,7 +434,7 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
 
 } // namespace
 
-void GCBase::createSnapshot(GC *gc, llvm::raw_ostream &os) {
+void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
   JSONEmitter json(os);
   HeapSnapshot snap(json, gcCallbacks_->getStackTracesTree());
 
@@ -540,7 +540,7 @@ void GCBase::checkTripwire(size_t dataSize) {
   tripwireCallback_(ctx);
 }
 
-void GCBase::printAllCollectedStats(llvm::raw_ostream &os) {
+void GCBase::printAllCollectedStats(llvh::raw_ostream &os) {
   if (!recordGcStats_)
     return;
 
@@ -581,10 +581,10 @@ void GCBase::DebugHeapInfo::assertInvariants() const {
 }
 #endif
 
-void GCBase::dump(llvm::raw_ostream &, bool) { /* nop */
+void GCBase::dump(llvh::raw_ostream &, bool) { /* nop */
 }
 
-void GCBase::printStats(llvm::raw_ostream &os, bool trailingComma) {
+void GCBase::printStats(llvh::raw_ostream &os, bool trailingComma) {
   std::chrono::duration<double> elapsedTime =
       std::chrono::steady_clock::now() - execStartTime_;
   auto elapsedCPUSeconds =
@@ -710,7 +710,7 @@ void GCBase::oom(std::error_code reason) {
       gcCallbacks_->getCallStackNoAlloc());
 #else
   oomDetail(reason);
-  hermes_fatal((llvm::Twine("OOM: ") + convert_error_to_message(reason)).str());
+  hermes_fatal((llvh::Twine("OOM: ") + convert_error_to_message(reason)).str());
 #endif
 }
 
@@ -785,8 +785,8 @@ double GCBase::clockDiffSeconds(
   return elapsed.count();
 }
 
-llvm::raw_ostream &operator<<(
-    llvm::raw_ostream &os,
+llvh::raw_ostream &operator<<(
+    llvh::raw_ostream &os,
     const DurationFormatObj &dfo) {
   if (dfo.secs >= 1.0) {
     os << format("%5.3f", dfo.secs) << " s";
@@ -798,7 +798,7 @@ llvm::raw_ostream &operator<<(
   return os;
 }
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const SizeFormatObj &sfo) {
+llvh::raw_ostream &operator<<(llvh::raw_ostream &os, const SizeFormatObj &sfo) {
   double dblsize = static_cast<double>(sfo.bytes);
   if (sfo.bytes >= (1024 * 1024 * 1024)) {
     double gbs = dblsize / (1024.0 * 1024.0 * 1024.0);
@@ -886,7 +886,7 @@ HeapSnapshot::NodeID GCBase::IDTracker::getNumberID(double num) {
   return numberRef = nextNumberID();
 }
 
-llvm::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
+llvh::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
   if (val.isPointer() && val.getPointer()) {
     // Make nullptr HermesValue look like a JS null.
     // This should be rare, but is occasionally used by some parts of the VM.
@@ -905,7 +905,7 @@ llvm::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
         val.getBool() ? IDTracker::ReservedObjectID::True
                       : IDTracker::ReservedObjectID::False);
   } else {
-    return llvm::None;
+    return llvh::None;
   }
 }
 

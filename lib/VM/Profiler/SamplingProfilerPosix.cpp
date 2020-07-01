@@ -16,7 +16,7 @@
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
 
-#include "llvm/Support/Compiler.h"
+#include "llvh/Support/Compiler.h"
 
 #include <assert.h>
 #include <fcntl.h>
@@ -390,7 +390,7 @@ SamplingProfiler::SamplingProfiler() : sampleStorage_(kMaxStackDepth) {
   gcEventExtraInfoSet_.reserve(kMaxGCEventExtraInfoCount);
 }
 
-void SamplingProfiler::dumpSampledStack(llvm::raw_ostream &OS) {
+void SamplingProfiler::dumpSampledStack(llvh::raw_ostream &OS) {
   // TODO: serialize to visualizable trace format.
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
 
@@ -429,7 +429,7 @@ void SamplingProfiler::dumpSampledStack(llvm::raw_ostream &OS) {
   }
 }
 
-void SamplingProfiler::dumpChromeTrace(llvm::raw_ostream &OS) {
+void SamplingProfiler::dumpChromeTrace(llvh::raw_ostream &OS) {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
   auto pid = getpid();
   ChromeTraceSerializer serializer(

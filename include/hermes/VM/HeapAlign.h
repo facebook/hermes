@@ -10,7 +10,7 @@
 
 #include "hermes/Public/GCConfig.h"
 
-#include "llvm/Support/MathExtras.h"
+#include "llvh/Support/MathExtras.h"
 
 namespace hermes {
 namespace vm {
@@ -20,7 +20,7 @@ static const uint32_t HeapAlign = 1 << LogHeapAlign;
 
 /// Align requested size according to the alignment requirement of the GC.
 constexpr inline uint32_t heapAlignSize(gcheapsize_t size) {
-  return llvm::alignTo<HeapAlign>(size);
+  return llvh::alignTo<HeapAlign>(size);
 }
 
 /// Return true if the requested size is properly aligned according to the

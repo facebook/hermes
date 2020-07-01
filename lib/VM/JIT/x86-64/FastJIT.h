@@ -13,9 +13,9 @@
 #include "hermes/VM/JIT/x86-64/Emitter.h"
 #include "hermes/VM/JIT/x86-64/JIT.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/Support/Debug.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/Twine.h"
+#include "llvh/Support/Debug.h"
 
 namespace hermes {
 namespace vm {
@@ -75,7 +75,7 @@ class FastJIT {
 
  private:
   /// Raise the error flag and record an error message.
-  void error(const llvm::Twine &msg);
+  void error(const llvh::Twine &msg);
 
   /// Allocate executable memory using a conservative size estimate based on
   /// bytecode length. On failure it sets the error message and flag.
@@ -84,7 +84,7 @@ class FastJIT {
   ///     allocatedmemory memory blocks (fast paths and slow paths). Undefined
   ///     on failure.
   /// \return pointers to both allocated blocks on success.
-  llvm::Optional<ExecHeap::BlockPair> allocRWX(
+  llvh::Optional<ExecHeap::BlockPair> allocRWX(
       size_t bytecodeLength,
       ExecHeap::SizePair &sizes);
 
@@ -97,12 +97,12 @@ class FastJIT {
   void disassembleRange(
       const uint8_t *from,
       const uint8_t *to,
-      llvm::raw_ostream &OS,
+      llvh::raw_ostream &OS,
       bool withAddr) const;
 
   /// Disassemble the entire compiled function.
   /// \param withAddr whether to dump the addresses and bytes of instructions.
-  void disassembleResult(Emitters emit, llvm::raw_ostream &OS, bool withAddr)
+  void disassembleResult(Emitters emit, llvh::raw_ostream &OS, bool withAddr)
       const;
 
   /// Apply a single relocation with an already resolved address \p target.
@@ -570,7 +570,7 @@ class FastJIT {
   std::vector<uint32_t> bcBasicBlocks_{};
 
   /// Map from a bytecode target label offset to a basic block index.
-  llvm::DenseMap<uint32_t, unsigned> bcLabels_{};
+  llvh::DenseMap<uint32_t, unsigned> bcLabels_{};
 
   /// The native code offset of every compiled bc BB.
   std::vector<uint8_t *> nativeBBAddress_{};
@@ -588,11 +588,11 @@ class FastJIT {
   std::string errorMsg_{};
 
   // The fast-path execution region.
-  llvm::MutableArrayRef<uint8_t> fast_;
+  llvh::MutableArrayRef<uint8_t> fast_;
   // The slow-path execution region.
-  llvm::MutableArrayRef<uint8_t> slow_;
+  llvh::MutableArrayRef<uint8_t> slow_;
 
-  llvm::DenseMap<DenseUInt64, uint8_t *> doubleConstants_{};
+  llvh::DenseMap<DenseUInt64, uint8_t *> doubleConstants_{};
 
 #ifndef NDEBUG
   /// A section describing a section of code for disassembly.

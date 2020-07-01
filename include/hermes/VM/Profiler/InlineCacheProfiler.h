@@ -9,7 +9,7 @@
 #define INLINECACHE_PROFILER_H
 
 #include "hermes/VM/SymbolID.h"
-#include "llvm/ADT/DenseMap.h"
+#include "llvh/ADT/DenseMap.h"
 
 namespace hermes {
 namespace inst {
@@ -63,7 +63,7 @@ class InlineCacheProfiler {
 
     /// Internal map that keeps track of the mapping between
     /// <property, object hidden class, cached hidden class> and its frequency.
-    llvm::DenseMap<ICMissKey, uint64_t> hiddenClasses;
+    llvh::DenseMap<ICMissKey, uint64_t> hiddenClasses;
   };
 
   using ICMissList = std::vector<std::pair<ICSrcKey, ICMiss>>;
@@ -102,14 +102,14 @@ class InlineCacheProfiler {
 
   /// Get a map from object Id to array index in the array
   /// referenced by cachedHiddenClassesRawPtr_.
-  llvm::DenseMap<InlineCacheProfiler::ClassId, int32_t> &getClassIdtoIndexMap();
+  llvh::DenseMap<InlineCacheProfiler::ClassId, int32_t> &getClassIdtoIndexMap();
 
   /// Organize and rank inline caching misses and dump
   /// the information to ostream. Inline caching miss records are
   /// ranked in descending order based on the miss count.
   void dumpRankedInlineCachingMisses(
       Runtime *runtime,
-      llvm::raw_ostream &ostream);
+      llvh::raw_ostream &ostream);
 
  private:
   /// Keep track of the current index of the hidden class array
@@ -122,7 +122,7 @@ class InlineCacheProfiler {
 
   /// Store a map from object Id to array index in the array
   /// referenced by cachedHiddenClassesRawPtr_.
-  llvm::DenseMap<InlineCacheProfiler::ClassId, int32_t> classIdToIdx_;
+  llvh::DenseMap<InlineCacheProfiler::ClassId, int32_t> classIdToIdx_;
 
   /// Rank all inline caching misses records and return a list.
   /// Each source location maintains a inline caching miss record.
@@ -137,7 +137,7 @@ class InlineCacheProfiler {
       ICSrcKey &srcLoc,
       ICMiss &icMiss,
       Runtime *runtime,
-      llvm::raw_ostream &ostream);
+      llvh::raw_ostream &ostream);
 
   /// Dump a inline caching miss record, which
   /// includes the hidden classes, property, and frequency.
@@ -145,11 +145,11 @@ class InlineCacheProfiler {
       ICMissKey &icInfo,
       uint64_t icMiss,
       Runtime *runtime,
-      llvm::raw_ostream &ostream);
+      llvh::raw_ostream &ostream);
 
   /// Dump properties of a hidden class to ostream.
   void dumpHiddenClassProperties(
-      llvm::raw_ostream &ostream,
+      llvh::raw_ostream &ostream,
       HiddenClass *hc,
       Runtime *runtime);
 
@@ -162,7 +162,7 @@ class InlineCacheProfiler {
   /// Store the data structure of all inline caching misses information.
   /// The map is keyed by pairs <instruction offset, CodeBlock> and maps
   /// to ICMiss objects, which keeps track of hidden classes and frequency.
-  llvm::DenseMap<ICSrcKey, ICMiss> cacheMisses_;
+  llvh::DenseMap<ICSrcKey, ICMiss> cacheMisses_;
 };
 
 } // namespace vm

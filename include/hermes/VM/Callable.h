@@ -20,7 +20,7 @@ namespace vm {
 /// Environment storing all escaping variables for a function.
 class Environment final
     : public VariableSizeRuntimeCell,
-      private llvm::TrailingObjects<Environment, GCHermesValue> {
+      private llvh::TrailingObjects<Environment, GCHermesValue> {
   friend TrailingObjects;
   friend void EnvironmentBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 

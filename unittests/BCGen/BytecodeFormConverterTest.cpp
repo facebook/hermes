@@ -8,7 +8,7 @@
 #include "hermes/BCGen/HBC/BytecodeFormConverter.h"
 #include "TestHelpers.h"
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvh/ADT/SmallVector.h"
 
 #include "gtest/gtest.h"
 

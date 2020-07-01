@@ -13,8 +13,8 @@
 #include <hermes/TracingRuntime.h>
 #include <hermes/VM/instrumentation/PerfEvents.h>
 #include <jsi/instrumentation.h>
-#include <llvm/Support/SHA1.h>
-#include <llvm/Support/SaveAndRestore.h>
+#include <llvh/Support/SHA1.h>
+#include <llvh/Support/SaveAndRestore.h>
 
 #include <algorithm>
 #include <unordered_set>
@@ -377,11 +377,11 @@ Value traceValueToJSIValue(
 }
 
 std::unique_ptr<const jsi::Buffer> bufConvert(
-    std::unique_ptr<llvm::MemoryBuffer> buf) {
-  // A jsi::Buffer adapter that owns a llvm::MemoryBuffer.
+    std::unique_ptr<llvh::MemoryBuffer> buf) {
+  // A jsi::Buffer adapter that owns a llvh::MemoryBuffer.
   class OwnedMemoryBuffer : public jsi::Buffer {
    public:
-    OwnedMemoryBuffer(std::unique_ptr<llvm::MemoryBuffer> buffer)
+    OwnedMemoryBuffer(std::unique_ptr<llvh::MemoryBuffer> buffer)
         : data_(std::move(buffer)) {}
     size_t size() const override {
       return data_->getBufferSize();
@@ -391,10 +391,10 @@ std::unique_ptr<const jsi::Buffer> bufConvert(
     }
 
    private:
-    std::unique_ptr<llvm::MemoryBuffer> data_;
+    std::unique_ptr<llvh::MemoryBuffer> data_;
   };
 
-  return llvm::make_unique<const OwnedMemoryBuffer>(std::move(buf));
+  return llvh::make_unique<const OwnedMemoryBuffer>(std::move(buf));
 }
 
 static bool isAllZeroSourceHash(const ::hermes::SHA1 sourceHash) {
@@ -522,7 +522,7 @@ void TraceInterpreter::execAndTrace(
     const std::string &traceFile,
     const std::vector<std::string> &bytecodeFiles,
     const ExecuteOptions &options,
-    std::unique_ptr<llvm::raw_ostream> traceStream) {
+    std::unique_ptr<llvh::raw_ostream> traceStream) {
   assert(traceStream && "traceStream must be provided (precondition)");
   execFromFileNames(traceFile, bytecodeFiles, options, std::move(traceStream));
 }
@@ -532,15 +532,15 @@ std::string TraceInterpreter::execFromFileNames(
     const std::string &traceFile,
     const std::vector<std::string> &bytecodeFiles,
     const ExecuteOptions &options,
-    std::unique_ptr<llvm::raw_ostream> traceStream) {
-  auto errorOrFile = llvm::MemoryBuffer::getFile(traceFile);
+    std::unique_ptr<llvh::raw_ostream> traceStream) {
+  auto errorOrFile = llvh::MemoryBuffer::getFile(traceFile);
   if (!errorOrFile) {
     throw std::system_error(errorOrFile.getError());
   }
-  std::unique_ptr<llvm::MemoryBuffer> traceBuf = std::move(errorOrFile.get());
-  std::vector<std::unique_ptr<llvm::MemoryBuffer>> bytecodeBuffers;
+  std::unique_ptr<llvh::MemoryBuffer> traceBuf = std::move(errorOrFile.get());
+  std::vector<std::unique_ptr<llvh::MemoryBuffer>> bytecodeBuffers;
   for (const std::string &bytecode : bytecodeFiles) {
-    errorOrFile = llvm::MemoryBuffer::getFile(bytecode);
+    errorOrFile = llvh::MemoryBuffer::getFile(bytecode);
     if (!errorOrFile) {
       throw std::system_error(errorOrFile.getError());
     }
@@ -556,14 +556,14 @@ std::string TraceInterpreter::execFromFileNames(
 /* static */
 std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>>
 TraceInterpreter::getSourceHashToBundleMap(
-    std::vector<std::unique_ptr<llvm::MemoryBuffer>> &&codeBufs,
+    std::vector<std::unique_ptr<llvh::MemoryBuffer>> &&codeBufs,
     const SynthTrace &trace,
     bool *codeIsMmapped,
     bool *isBytecode) {
   if (codeIsMmapped) {
     *codeIsMmapped = true;
     for (const auto &buf : codeBufs) {
-      if (buf->getBufferKind() != llvm::MemoryBuffer::MemoryBuffer_MMap) {
+      if (buf->getBufferKind() != llvh::MemoryBuffer::MemoryBuffer_MMap) {
         // If any of the buffers aren't mmapped, don't turn on I/O tracking.
         *codeIsMmapped = false;
         break;
@@ -594,10 +594,10 @@ TraceInterpreter::getSourceHashToBundleMap(
     if (HermesRuntime::isHermesBytecode(bundle->data(), bundle->size())) {
       sourceHash =
           ::hermes::hbc::BCProviderFromBuffer::getSourceHashFromBytecode(
-              llvm::makeArrayRef(bundle->data(), bundle->size()));
+              llvh::makeArrayRef(bundle->data(), bundle->size()));
     } else {
       sourceHash =
-          llvm::SHA1::hash(llvm::makeArrayRef(bundle->data(), bundle->size()));
+          llvh::SHA1::hash(llvh::makeArrayRef(bundle->data(), bundle->size()));
     }
     auto inserted = sourceHashToBundle.insert({sourceHash, std::move(bundle)});
     assert(
@@ -657,10 +657,10 @@ TraceInterpreter::getSourceHashToBundleMap(
 
 /* static */
 std::string TraceInterpreter::execFromMemoryBuffer(
-    std::unique_ptr<llvm::MemoryBuffer> &&traceBuf,
-    std::vector<std::unique_ptr<llvm::MemoryBuffer>> &&codeBufs,
+    std::unique_ptr<llvh::MemoryBuffer> &&traceBuf,
+    std::vector<std::unique_ptr<llvh::MemoryBuffer>> &&codeBufs,
     const ExecuteOptions &options,
-    std::unique_ptr<llvm::raw_ostream> traceStream) {
+    std::unique_ptr<llvh::raw_ostream> traceStream) {
   auto traceAndConfigAndEnv = parseSynthTrace(std::move(traceBuf));
   const auto &trace = std::get<0>(traceAndConfigAndEnv);
   bool codeIsMmapped;
@@ -716,8 +716,8 @@ std::string TraceInterpreter::execFromMemoryBuffer(
 
 /* static */
 std::string TraceInterpreter::execFromMemoryBuffer(
-    std::unique_ptr<llvm::MemoryBuffer> &&traceBuf,
-    std::vector<std::unique_ptr<llvm::MemoryBuffer>> &&codeBufs,
+    std::unique_ptr<llvh::MemoryBuffer> &&traceBuf,
+    std::vector<std::unique_ptr<llvh::MemoryBuffer>> &&codeBufs,
     jsi::Runtime &runtime,
     const ExecuteOptions &options) {
   auto traceAndConfigAndEnv = parseSynthTrace(std::move(traceBuf));
@@ -783,7 +783,7 @@ Function TraceInterpreter::createHostFunction(
               args,
               count);
         } catch (const std::exception &e) {
-          crashOnException(e, llvm::None);
+          crashOnException(e, llvh::None);
         }
       });
 }
@@ -819,7 +819,7 @@ Object TraceInterpreter::createHostObject(ObjectID objID) {
             0,
             &name);
       } catch (const std::exception &e) {
-        interpreter.crashOnException(e, llvm::None);
+        interpreter.crashOnException(e, llvh::None);
       }
     }
 
@@ -837,7 +837,7 @@ Object TraceInterpreter::createHostObject(ObjectID objID) {
             args,
             1);
       } catch (const std::exception &e) {
-        interpreter.crashOnException(e, llvm::None);
+        interpreter.crashOnException(e, llvh::None);
       }
     }
 
@@ -859,7 +859,7 @@ Object TraceInterpreter::createHostObject(ObjectID objID) {
         }
         return props;
       } catch (const std::exception &e) {
-        interpreter.crashOnException(e, llvm::None);
+        interpreter.crashOnException(e, llvh::None);
       }
     }
   };
@@ -879,7 +879,7 @@ std::string TraceInterpreter::execEntryFunction(
 
 #ifdef HERMESVM_PROFILER_BB
   if (auto *hermesRuntime = dynamic_cast<HermesRuntime *>(&rt_)) {
-    hermesRuntime->dumpBasicBlockProfileTrace(llvm::errs());
+    hermesRuntime->dumpBasicBlockProfileTrace(llvh::errs());
   }
 #endif
 
@@ -889,7 +889,7 @@ std::string TraceInterpreter::execEntryFunction(
       hermesRT->instrumentation().createSnapshotToFile(
           options_.snapshotMarkerFileName);
     } else {
-      llvm::errs() << "Heap snapshot requested from non-Hermes runtime\n";
+      llvh::errs() << "Heap snapshot requested from non-Hermes runtime\n";
     }
     snapshotMarkerFound_ = true;
   }
@@ -920,7 +920,7 @@ Value TraceInterpreter::execFunction(
     const Value *args,
     uint64_t count,
     const PropNameID *nativePropNameToConsumeAsDef) {
-  llvm::SaveAndRestore<uint64_t> depthGuard(depth_, depth_ + 1);
+  llvh::SaveAndRestore<uint64_t> depthGuard(depth_, depth_ + 1);
   // A mapping from an ObjectID to the Object for local variables.
   // Invariant: value is Object or String;
   std::unordered_map<ObjectID, Value> locals;
@@ -949,7 +949,7 @@ Value TraceInterpreter::execFunction(
     uint64_t globalRecordNum = piece.start;
     const auto getJSIValueForUseOpt =
         [this, &call, &locals, &globalRecordNum](
-            ObjectID obj) -> llvm::Optional<Value> {
+            ObjectID obj) -> llvh::Optional<Value> {
       // Check locals, then globals.
       auto it = locals.find(obj);
       if (it != locals.end()) {
@@ -972,7 +972,7 @@ Value TraceInterpreter::execFunction(
       // locals table for non-Values, and therefore might not be in the global
       // use/def table.
       if (defAndUse == globalDefsAndUses_.end()) {
-        return llvm::None;
+        return llvh::None;
       }
       it = gom_.find(obj);
       if (it != gom_.end()) {
@@ -984,7 +984,7 @@ Value TraceInterpreter::execFunction(
         }
         return val;
       }
-      return llvm::None;
+      return llvh::None;
     };
     const auto getJSIValueForUse =
         [&getJSIValueForUseOpt](ObjectID obj) -> Value {
@@ -1059,7 +1059,7 @@ Value TraceInterpreter::execFunction(
             auto bundle = it->second;
             if (!HermesRuntime::isHermesBytecode(
                     bundle->data(), bundle->size())) {
-              llvm::errs()
+              llvh::errs()
                   << "Note: You are running from source code, not HBC bytecode.\n"
                   << "      This run will reflect dev performance, not production.\n";
             }
@@ -1105,7 +1105,7 @@ Value TraceInterpreter::execFunction(
                 hermesRT->instrumentation().createSnapshotToFile(
                     options_.snapshotMarkerFileName);
               } else {
-                llvm::errs()
+                llvh::errs()
                     << "Heap snapshot requested from non-Hermes runtime\n";
               }
               snapshotMarkerFound_ = true;
@@ -1599,7 +1599,7 @@ std::string TraceInterpreter::printStats() {
 #ifdef HERMESVM_PROFILER_OPCODE
   stats += "\n";
   std::string opcodeOutput;
-  llvm::raw_string_ostream os{opcodeOutput};
+  llvh::raw_string_ostream os{opcodeOutput};
   if (auto *hermesRuntime = dynamic_cast<HermesRuntime *>(&rt_)) {
     hermesRuntime->dumpOpcodeStats(os);
   } else {
@@ -1615,24 +1615,24 @@ std::string TraceInterpreter::printStats() {
 LLVM_ATTRIBUTE_NORETURN void TraceInterpreter::crashOnException(
     const std::exception &e,
     ::hermes::OptValue<uint64_t> globalRecordNum) {
-  llvm::errs() << "An exception occurred while running the benchmark:\n";
+  llvh::errs() << "An exception occurred while running the benchmark:\n";
   if (globalRecordNum) {
-    llvm::errs() << "At record number " << globalRecordNum.getValue() << ":\n";
+    llvh::errs() << "At record number " << globalRecordNum.getValue() << ":\n";
   }
-  llvm::errs() << e.what() << "\n";
+  llvh::errs() << e.what() << "\n";
   if (traceStream_) {
-    llvm::errs() << "Writing out the trace\n";
+    llvh::errs() << "Writing out the trace\n";
     dynamic_cast<TracingRuntime &>(rt_).flushAndDisableTrace();
-    llvm::errs() << "\n";
+    llvh::errs() << "\n";
   } else {
-    llvm::errs() << "Pass --trace to get a trace for comparison\n";
+    llvh::errs() << "Pass --trace to get a trace for comparison\n";
   }
   // Do not re-throw, since that will pass back and forth between JS and
   // Native, causing more perturbations to the state of this interpreter,
   // which will cause an assertion to fire.
   // Instead, crash here so that it's clear where the error actually
   // occurred.
-  llvm::errs() << "Crashing now\n";
+  llvh::errs() << "Crashing now\n";
   std::abort();
 }
 

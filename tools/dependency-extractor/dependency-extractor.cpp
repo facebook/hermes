@@ -8,35 +8,35 @@
 #include "hermes/DependencyExtractor/DependencyExtractor.h"
 #include "hermes/Parser/JSParser.h"
 
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/Signals.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/Support/CommandLine.h"
+#include "llvh/Support/FileSystem.h"
+#include "llvh/Support/InitLLVM.h"
+#include "llvh/Support/MemoryBuffer.h"
+#include "llvh/Support/PrettyStackTrace.h"
+#include "llvh/Support/Signals.h"
+#include "llvh/Support/raw_ostream.h"
 
-static llvm::cl::opt<std::string> InputFilename(
-    llvm::cl::desc("input file"),
-    llvm::cl::Positional);
+static llvh::cl::opt<std::string> InputFilename(
+    llvh::cl::desc("input file"),
+    llvh::cl::Positional);
 
 using namespace hermes;
 
 int main(int argc, char **argv) {
   // Normalize the arg vector.
-  llvm::InitLLVM initLLVM(argc, argv);
-  llvm::sys::PrintStackTraceOnErrorSignal("dependency-extractor");
-  llvm::PrettyStackTraceProgram X(argc, argv);
-  llvm::llvm_shutdown_obj Y;
-  llvm::cl::ParseCommandLineOptions(
+  llvh::InitLLVM initLLVM(argc, argv);
+  llvh::sys::PrintStackTraceOnErrorSignal("dependency-extractor");
+  llvh::PrettyStackTraceProgram X(argc, argv);
+  llvh::llvm_shutdown_obj Y;
+  llvh::cl::ParseCommandLineOptions(
       argc, argv, "Hermes JS dependency extractor\n");
 
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> fileBufOrErr =
-      llvm::MemoryBuffer::getFile(InputFilename);
+  llvh::ErrorOr<std::unique_ptr<llvh::MemoryBuffer>> fileBufOrErr =
+      llvh::MemoryBuffer::getFile(InputFilename);
 
   if (!fileBufOrErr) {
-    llvm::errs() << "Error: fail to open file: " << InputFilename << ": "
+    llvh::errs() << "Error: fail to open file: " << InputFilename << ": "
                  << fileBufOrErr.getError().message() << "\n";
     return -1;
   }
@@ -56,14 +56,14 @@ int main(int argc, char **argv) {
   auto mode = parser::FullParse;
 
   parser::JSParser jsParser(*context, fileBufId, mode);
-  llvm::Optional<ESTree::ProgramNode *> parsedJs = jsParser.parse();
+  llvh::Optional<ESTree::ProgramNode *> parsedJs = jsParser.parse();
 
   if (!parsedJs)
     return -1;
 
   auto deps = extractDependencies(*context, *parsedJs);
   for (const auto &dep : deps) {
-    llvm::outs() << dependencyKindStr(dep.kind) << " | " << dep.name << '\n';
+    llvh::outs() << dependencyKindStr(dep.kind) << " | " << dep.name << '\n';
   }
 
   return 0;

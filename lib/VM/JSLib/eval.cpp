@@ -22,15 +22,15 @@
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/StringView.h"
-#include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/ConvertUTF.h"
+#include "llvh/Support/raw_ostream.h"
 
 namespace hermes {
 namespace vm {
 
 CallResult<HermesValue> evalInEnvironment(
     Runtime *runtime,
-    llvm::StringRef utf8code,
+    llvh::StringRef utf8code,
     Handle<Environment> environment,
     const ScopeChain &scopeChain,
     Handle<> thisArg,
@@ -61,10 +61,10 @@ CallResult<HermesValue> evalInEnvironment(
     if (compileFlags.lazy ||
         compileFlags.allowFunctionToStringWithRuntimeSource) {
       buffer.reset(new hermes::OwnedMemoryBuffer(
-          llvm::MemoryBuffer::getMemBufferCopy(utf8code)));
+          llvh::MemoryBuffer::getMemBufferCopy(utf8code)));
     } else {
       buffer.reset(new hermes::OwnedMemoryBuffer(
-          llvm::MemoryBuffer::getMemBuffer(utf8code)));
+          llvh::MemoryBuffer::getMemBuffer(utf8code)));
     }
 
     auto bytecode_err = hbc::BCProviderFromSrc::createBCProviderFromSrc(
@@ -79,7 +79,7 @@ CallResult<HermesValue> evalInEnvironment(
   }
 
   // TODO: pass a sourceURL derived from a '//# sourceURL' comment.
-  llvm::StringRef sourceURL{};
+  llvh::StringRef sourceURL{};
   return runtime->runBytecode(
       std::move(bytecode),
       RuntimeModuleFlags{},

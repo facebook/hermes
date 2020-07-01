@@ -15,8 +15,8 @@
 #include "hermes/Support/StringTable.h"
 #include "hermes/Support/UTF8.h"
 
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallString.h"
+#include "llvh/ADT/Optional.h"
+#include "llvh/ADT/SmallString.h"
 
 #include <functional>
 #include <utility>
@@ -24,8 +24,8 @@
 namespace hermes {
 namespace parser {
 
-using llvm::SMLoc;
-using llvm::SMRange;
+using llvh::SMLoc;
+using llvh::SMRange;
 
 class Token;
 class JSLexer;
@@ -287,10 +287,10 @@ class JSLexer {
 
   bool newLineBeforeCurrentToken_ = false;
 
-  llvm::SmallString<256> tmpStorage_;
+  llvh::SmallString<256> tmpStorage_;
 
   /// Storage used for the Template Raw Value when scanning template literals.
-  llvm::SmallString<256> rawStorage_;
+  llvh::SmallString<256> rawStorage_;
 
   /// Pre-allocated identifiers for all reserved words.
   UniqueString *resWordIdent_
@@ -305,7 +305,7 @@ class JSLexer {
  public:
   /// \param convertSurrogates See member variable \p convertSurrogates_.
   explicit JSLexer(
-      std::unique_ptr<llvm::MemoryBuffer> input,
+      std::unique_ptr<llvh::MemoryBuffer> input,
       SourceErrorManager &sm,
       Allocator &allocator,
       StringTable *strTab = nullptr,
@@ -330,7 +330,7 @@ class JSLexer {
       bool strictMode = true,
       bool convertSurrogates = false)
       : JSLexer(
-            llvm::MemoryBuffer::getMemBuffer(input, "JavaScript"),
+            llvh::MemoryBuffer::getMemBuffer(input, "JavaScript"),
             sm,
             allocator,
             strTab,
@@ -339,14 +339,14 @@ class JSLexer {
 
   /// \param convertSurrogates See member variable \p convertSurrogates_.
   JSLexer(
-      llvm::MemoryBufferRef input,
+      llvh::MemoryBufferRef input,
       SourceErrorManager &sm,
       Allocator &allocator,
       StringTable *strTab = nullptr,
       bool strictMode = true,
       bool convertSurrogates = false)
       : JSLexer(
-            llvm::MemoryBuffer::getMemBuffer(input),
+            llvh::MemoryBuffer::getMemBuffer(input),
             sm,
             allocator,
             strTab,
@@ -525,7 +525,7 @@ class JSLexer {
   /// resulting surrogate pair values are encoded individually into UTF8.
   static inline void appendUnicodeToStorage(
       uint32_t cp,
-      llvm::SmallVectorImpl<char> &storage);
+      llvh::SmallVectorImpl<char> &storage);
 
   /// Encode a Unicode codepoint into a UTF8 sequence and append it to \ref
   /// tmpStorage_. Code points above 0xFFFF are encoded into UTF16, and the
@@ -580,7 +580,7 @@ class JSLexer {
   /// On failure, curCharPtr_ will be reset to where it was when the function
   /// was called.
   /// \return the resultant code point on success, None on error.
-  llvm::Optional<uint32_t> consumeUnicodeEscapeOptional();
+  llvh::Optional<uint32_t> consumeUnicodeEscapeOptional();
 
   /// Specify the types of identifiers which should be allowed when consuming
   /// identifiers.
@@ -618,7 +618,7 @@ class JSLexer {
   /// \param requiredLen is the number of digits in the hex literal.
   /// \param errorOnFail if true, report an error on failing to recognize a hex
   ///   number.
-  llvm::Optional<uint32_t> consumeHex(
+  llvh::Optional<uint32_t> consumeHex(
       unsigned requiredLen,
       bool errorOnFail = true);
 
@@ -627,7 +627,7 @@ class JSLexer {
   /// \ref curCharPtr_ must point to the opening { of the escape, and will
   /// be updated to point after the closing }.
   /// \return the resultant number on success, None on failure.
-  llvm::Optional<uint32_t> consumeBracedCodePoint(bool errorOnFail = true);
+  llvh::Optional<uint32_t> consumeBracedCodePoint(bool errorOnFail = true);
 
   /// Skip until after the end of the line terminaing the block comment.
   /// \return the updated source pointer.
@@ -638,8 +638,8 @@ class JSLexer {
 
   /// Try to read a "magic comment" of the form `//# name=value` at \p ptr.
   /// \return the value encoded in the comment if found, None otherwise.
-  llvm::Optional<StringRef> tryReadMagicComment(
-      llvm::StringRef name,
+  llvh::Optional<StringRef> tryReadMagicComment(
+      llvh::StringRef name,
       const char *ptr);
 
   void scanNumber();
@@ -729,12 +729,12 @@ class JSLexer {
   void initializeReservedIdentifiers();
 
   /// Report an error for the range from startLoc to curCharPtr.
-  bool errorRange(SMLoc startLoc, const llvm::Twine &msg) {
+  bool errorRange(SMLoc startLoc, const llvh::Twine &msg) {
     return error({startLoc, SMLoc::getFromPointer(curCharPtr_)}, msg);
   }
 
   /// Report an error using the current token's location.
-  bool error(const llvm::Twine &msg) {
+  bool error(const llvh::Twine &msg) {
     return error(token_.getSourceRange(), msg);
   }
 
@@ -742,19 +742,19 @@ class JSLexer {
   /// errors has been reached, return false and move the scanning pointer to
   /// EOF.
   /// \return false if too many errors have been emitted and we need to abort.
-  bool error(SMLoc loc, const llvm::Twine &msg);
+  bool error(SMLoc loc, const llvh::Twine &msg);
 
   /// Emit an error at the specified source range. If the maximum number of
   /// errors has been reached, return false and move the scanning pointer to
   /// EOF.
   /// \return false if too many errors have been emitted and we need to abort.
-  bool error(SMRange range, const llvm::Twine &msg);
+  bool error(SMRange range, const llvh::Twine &msg);
 
   /// Emit an error at the specified source location and range. If the maximum
   /// number of errors has been reached, return false and move the scanning
   /// pointer to EOF.
   /// \return false if too many errors have been emitted and we need to abort.
-  bool error(SMLoc loc, SMRange range, const llvm::Twine &msg);
+  bool error(SMLoc loc, SMRange range, const llvh::Twine &msg);
 };
 
 inline void JSLexer::initStorageWith(const char *begin, const char *end) {
@@ -764,7 +764,7 @@ inline void JSLexer::initStorageWith(const char *begin, const char *end) {
 
 inline void JSLexer::appendUnicodeToStorage(
     uint32_t cp,
-    llvm::SmallVectorImpl<char> &storage) {
+    llvh::SmallVectorImpl<char> &storage) {
   // Sized to allow for two 16-bit values to be encoded.
   // A 16-bit value takes up to three bytes encoded in UTF-8.
   char buf[8];
@@ -797,7 +797,7 @@ inline uint32_t JSLexer::_decodeUTF8SlowPath(const char *&at) {
 inline std::pair<uint32_t, const char *> JSLexer::_peekUTF8(
     const char *at) const {
   uint32_t ch =
-      hermes::_decodeUTF8SlowPath<false>(at, [](const llvm::Twine &) {});
+      hermes::_decodeUTF8SlowPath<false>(at, [](const llvh::Twine &) {});
   return std::make_pair(ch, at);
 }
 

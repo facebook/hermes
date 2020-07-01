@@ -17,9 +17,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "WindowsSupport.h"
-#include "llvm/Support/Mutex.h"
+#include "llvh/Support/Mutex.h"
 
-namespace llvm {
+namespace llvh {
 
 sys::MutexImpl::MutexImpl(bool /*recursive*/)
 {

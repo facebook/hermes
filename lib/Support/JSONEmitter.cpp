@@ -12,8 +12,8 @@
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/UTF8.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/NativeFormatting.h"
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/Support/NativeFormatting.h"
 
 using namespace hermes;
 
@@ -75,7 +75,7 @@ void JSONEmitter::emitValue(double val) {
   }
 }
 
-void JSONEmitter::emitValue(llvm::StringRef val) {
+void JSONEmitter::emitValue(llvh::StringRef val) {
   willEmitValue();
   primitiveEmitString(val);
 }
@@ -85,7 +85,7 @@ void JSONEmitter::emitNullValue() {
   OS << "null";
 }
 
-void JSONEmitter::emitKey(llvm::StringRef key) {
+void JSONEmitter::emitKey(llvh::StringRef key) {
   assert(inDict() && "Not emitting a dictionary");
   State &state = states_.back();
   assert(state.needsKey && "Not expecting a key");
@@ -138,23 +138,23 @@ void JSONEmitter::closeArray() {
   states_.pop_back();
 }
 
-void JSONEmitter::primitiveEmitString(llvm::StringRef str) {
+void JSONEmitter::primitiveEmitString(llvh::StringRef str) {
   OS << '"';
   const char *begin8 = str.begin();
   const char *end8 = str.end();
-  auto errorHandler = [](const llvm::Twine &) {
+  auto errorHandler = [](const llvh::Twine &) {
     hermes_fatal("invalid UTF-8");
   };
   while (begin8 != end8) {
     uint32_t cp = decodeUTF8<true>(begin8, errorHandler);
     // Escape non-ascii characters.
     if (cp > 0x7F) {
-      llvm::SmallVector<char16_t, 2> utf16Chars;
+      llvh::SmallVector<char16_t, 2> utf16Chars;
       auto insert = std::back_inserter(utf16Chars);
       encodeUTF16(insert, cp);
       for (auto &c : utf16Chars) {
         OS << "\\u";
-        llvm::write_hex(OS, c, llvm::HexPrintStyle::Lower, 4);
+        llvh::write_hex(OS, c, llvh::HexPrintStyle::Lower, 4);
       }
       continue;
     }
@@ -184,7 +184,7 @@ void JSONEmitter::primitiveEmitString(llvm::StringRef str) {
         break;
       default:
         OS << "\\u";
-        llvm::write_hex(OS, cp, llvm::HexPrintStyle::Lower, 4);
+        llvh::write_hex(OS, cp, llvh::HexPrintStyle::Lower, 4);
     }
   }
   OS << '"';

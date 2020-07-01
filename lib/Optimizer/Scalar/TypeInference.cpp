@@ -15,15 +15,15 @@
 #include "hermes/Optimizer/Scalar/SimpleCallGraphProvider.h"
 #include "hermes/Support/Statistic.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Support/Debug.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/DenseSet.h"
+#include "llvh/ADT/SmallPtrSet.h"
+#include "llvh/Support/Debug.h"
 
 using namespace hermes;
-using llvm::dbgs;
-using llvm::isa;
-using llvm::SmallPtrSetImpl;
+using llvh::dbgs;
+using llvh::isa;
+using llvh::SmallPtrSetImpl;
 
 STATISTIC(NumTI, "Number of instructions type inferred");
 STATISTIC(NumRT, "Number of call sites type inferred");
@@ -190,7 +190,7 @@ static void collectPHIInputs(
 
     // Recursively inspect PHI node operands, and insert non-phis into the input
     // list.
-    if (auto *PN = llvm::dyn_cast<PhiInst>(E.first)) {
+    if (auto *PN = llvh::dyn_cast<PhiInst>(E.first)) {
       collectPHIInputs(visited, inputs, PN);
     } else {
       inputs.insert(E.first);
@@ -205,8 +205,8 @@ static bool inferPhiInstInst(PhiInst *P) {
   if (numEntries < 1)
     return false;
 
-  llvm::SmallPtrSet<Value *, 8> visited;
-  llvm::SmallPtrSet<Value *, 8> values;
+  llvh::SmallPtrSet<Value *, 8> visited;
+  llvh::SmallPtrSet<Value *, 8> values;
   collectPHIInputs(visited, values, P);
 
   Type originalTy = P->getType();
@@ -324,7 +324,7 @@ static bool inferFunctionReturnType(Function *F) {
   Type returnTy;
   bool first = true;
 
-  if (llvm::isa<GeneratorInnerFunction>(F)) {
+  if (llvh::isa<GeneratorInnerFunction>(F)) {
     // GeneratorInnerFunctions may be called with `.return()` at the start,
     // with any value of any type.
     return false;
@@ -333,7 +333,7 @@ static bool inferFunctionReturnType(Function *F) {
   for (auto &bbit : *F) {
     for (auto &it : bbit) {
       Instruction *I = &it;
-      if (auto *RI = llvm::dyn_cast<ReturnInst>(I)) {
+      if (auto *RI = llvh::dyn_cast<ReturnInst>(I)) {
         Type T = RI->getType();
         if (first) {
           returnTy = T;
@@ -353,7 +353,7 @@ static bool inferFunctionReturnType(Function *F) {
 
 /// Propagate type information from call sites of F to formals of F.
 /// This assumes that all call sites of F are known.
-static bool propagateArgs(llvm::DenseSet<CallInst *> &callSites, Function *F) {
+static bool propagateArgs(llvh::DenseSet<CallInst *> &callSites, Function *F) {
   bool changed = false;
 
   // In non strict mode a function can escape by accessing arguments.caller.
@@ -421,7 +421,7 @@ bool TypeInferenceImpl::inferParams(Function *F) {
         dbgs() << F->getInternalName().str() << " has unknown call sites.\n");
     return false;
   }
-  llvm::DenseSet<CallInst *> &callsites = cgp_->getKnownCallsites(F);
+  llvh::DenseSet<CallInst *> &callsites = cgp_->getKnownCallsites(F);
   LLVM_DEBUG(
       dbgs() << F->getInternalName().str() << " has " << callsites.size()
              << " call sites.\n");
@@ -437,7 +437,7 @@ bool TypeInferenceImpl::inferParams(Function *F) {
 
 /// Propagate return type from potential callees to a CallInst.
 /// Assumes that each funcs' type has been inferred, in F->getType().
-static bool propagateReturn(llvm::DenseSet<Function *> &funcs, CallInst *CI) {
+static bool propagateReturn(llvh::DenseSet<Function *> &funcs, CallInst *CI) {
   bool changed = false;
   bool first = true;
   Type retTy;
@@ -471,7 +471,7 @@ bool TypeInferenceImpl::inferCallInst(CallInst *CI) {
         dbgs() << "Unknown callees for : " << CI->getName().str() << "\n");
     return false;
   }
-  llvm::DenseSet<Function *> &callees = cgp_->getKnownCallees(CI);
+  llvh::DenseSet<Function *> &callees = cgp_->getKnownCallees(CI);
   LLVM_DEBUG(
       dbgs() << "Found " << callees.size()
              << " callees for : " << CI->getName().str() << "\n");
@@ -498,7 +498,7 @@ static bool inferReturnInst(ReturnInst *RI) {
 /// Does a given prop belong in the owned set?
 static bool isOwnedProperty(AllocObjectInst *I, Value *prop) {
   for (auto *J : I->getUsers()) {
-    if (auto *SOPI = llvm::dyn_cast<StoreOwnPropertyInst>(J)) {
+    if (auto *SOPI = llvh::dyn_cast<StoreOwnPropertyInst>(J)) {
       if (SOPI->getObject() == I) {
         if (prop == SOPI->getProperty())
           return true;
@@ -521,7 +521,7 @@ bool TypeInferenceImpl::inferLoadPropertyInst(LoadPropertyInst *LPI) {
 
   // Go over each known receiver R (can be empty)
   for (auto *R : cgp_->getKnownReceivers(LPI)) {
-    assert(llvm::isa<AllocObjectInst>(R));
+    assert(llvh::isa<AllocObjectInst>(R));
     // Note: currently Array analysis is purposely disabled.
 
     // Bail out if there are unknown stores.
@@ -531,7 +531,7 @@ bool TypeInferenceImpl::inferLoadPropertyInst(LoadPropertyInst *LPI) {
     Value *prop = LPI->getProperty();
 
     // If the property being requested is NOT an owned prop, Bail out
-    if (llvm::isa<AllocObjectInst>(R)) {
+    if (llvh::isa<AllocObjectInst>(R)) {
       if (!isOwnedProperty(cast<AllocObjectInst>(R), prop))
         return false;
     }
@@ -539,26 +539,26 @@ bool TypeInferenceImpl::inferLoadPropertyInst(LoadPropertyInst *LPI) {
     // Go over each store of R (can be empty)
     for (auto *S : cgp_->getKnownStores(R)) {
       assert(
-          llvm::isa<StoreOwnPropertyInst>(S) ||
-          llvm::isa<StorePropertyInst>(S));
+          llvh::isa<StoreOwnPropertyInst>(S) ||
+          llvh::isa<StorePropertyInst>(S));
       Value *storeVal = nullptr;
 
-      if (llvm::isa<AllocObjectInst>(R)) {
+      if (llvh::isa<AllocObjectInst>(R)) {
         // If the property in the store is what this LPI wants, skip the store.
-        if (auto *SS = llvm::dyn_cast<StoreOwnPropertyInst>(S)) {
+        if (auto *SS = llvh::dyn_cast<StoreOwnPropertyInst>(S)) {
           storeVal = SS->getStoredValue();
           if (prop != SS->getProperty())
             continue;
         }
-        if (auto *SS = llvm::dyn_cast<StorePropertyInst>(S)) {
+        if (auto *SS = llvh::dyn_cast<StorePropertyInst>(S)) {
           storeVal = SS->getStoredValue();
           if (prop != SS->getProperty())
             continue;
         }
       }
 
-      if (llvm::isa<AllocArrayInst>(R)) {
-        if (auto *SS = llvm::dyn_cast<StorePropertyInst>(S)) {
+      if (llvh::isa<AllocArrayInst>(R)) {
+        if (auto *SS = llvh::dyn_cast<StorePropertyInst>(S)) {
           storeVal =
               SS->getStoredValue(); // for arrays, no need to match prop name
         }

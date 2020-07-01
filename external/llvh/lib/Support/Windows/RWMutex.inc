@@ -18,7 +18,7 @@
 
 #include "WindowsSupport.h"
 
-namespace llvm {
+namespace llvh {
 
 // Windows has slim read-writer lock support on Vista and higher, so we
 // will attempt to load the APIs.  If they exist, we will use them, and

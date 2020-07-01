@@ -17,8 +17,8 @@
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/SymbolID.h"
 
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <set>
 
@@ -125,28 +125,28 @@ struct Node {
     // Need two levels of cast for enums because Windows complains about casting
     // doubles to enums.
     auto type = static_cast<HeapSnapshot::NodeType>(
-        static_cast<unsigned>(llvm::cast<JSONNumber>(*nodes)->getValue()));
+        static_cast<unsigned>(llvh::cast<JSONNumber>(*nodes)->getValue()));
     nodes++;
 
-    std::string name = llvm::cast<JSONString>(
-                           strings[llvm::cast<JSONNumber>(*nodes)->getValue()])
+    std::string name = llvh::cast<JSONString>(
+                           strings[llvh::cast<JSONNumber>(*nodes)->getValue()])
                            ->str();
     nodes++;
 
     auto id = static_cast<HeapSnapshot::NodeID>(
-        llvm::cast<JSONNumber>(*nodes)->getValue());
+        llvh::cast<JSONNumber>(*nodes)->getValue());
     nodes++;
 
     auto selfSize =
-        static_cast<size_t>(llvm::cast<JSONNumber>(*nodes)->getValue());
+        static_cast<size_t>(llvh::cast<JSONNumber>(*nodes)->getValue());
     nodes++;
 
     auto edgeCount =
-        static_cast<size_t>(llvm::cast<JSONNumber>(*nodes)->getValue());
+        static_cast<size_t>(llvh::cast<JSONNumber>(*nodes)->getValue());
     nodes++;
 
     auto traceNodeID =
-        static_cast<size_t>(llvm::cast<JSONNumber>(*nodes)->getValue());
+        static_cast<size_t>(llvh::cast<JSONNumber>(*nodes)->getValue());
 
     return Node{type, std::move(name), id, selfSize, edgeCount, traceNodeID};
   }
@@ -200,25 +200,25 @@ struct Edge {
     // Need two levels of cast for enums because Windows complains about casting
     // doubles to enums.
     edge.type = static_cast<HeapSnapshot::EdgeType>(
-        static_cast<unsigned>(llvm::cast<JSONNumber>(*edges)->getValue()));
+        static_cast<unsigned>(llvh::cast<JSONNumber>(*edges)->getValue()));
     ++edges;
     switch (edge.type) {
       case HeapSnapshot::EdgeType::Internal:
         edge.isNamed = true;
-        edge.name = llvm::cast<JSONString>(
-                        strings[llvm::cast<JSONNumber>(*edges)->getValue()])
+        edge.name = llvh::cast<JSONString>(
+                        strings[llvh::cast<JSONNumber>(*edges)->getValue()])
                         ->str();
         edge.index = -1;
         break;
       default:
         edge.isNamed = false;
         // Leave name as the empty string.
-        edge.index = llvm::cast<JSONNumber>(*edges)->getValue();
+        edge.index = llvh::cast<JSONNumber>(*edges)->getValue();
         break;
     }
     ++edges;
 
-    uint32_t toNode = llvm::cast<JSONNumber>(*edges)->getValue();
+    uint32_t toNode = llvh::cast<JSONNumber>(*edges)->getValue();
     assert(
         toNode % HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT == 0 &&
         "Invalid to node pointer");
@@ -273,18 +273,18 @@ struct Location {
     Location loc;
 
     size_t objectIndex =
-        static_cast<size_t>(llvm::cast<JSONNumber>(*locations)->getValue());
+        static_cast<size_t>(llvh::cast<JSONNumber>(*locations)->getValue());
     loc.object = Node::parse(nodes.begin() + objectIndex, strings);
     locations++;
 
-    loc.scriptID = llvm::cast<JSONNumber>(*locations)->getValue();
+    loc.scriptID = llvh::cast<JSONNumber>(*locations)->getValue();
     locations++;
 
     // Line numbers and column numbers are 0-based internally,
     // but 1-based when viewed.
-    loc.line = llvm::cast<JSONNumber>(*locations)->getValue() + 1;
+    loc.line = llvh::cast<JSONNumber>(*locations)->getValue() + 1;
     locations++;
-    loc.column = llvm::cast<JSONNumber>(*locations)->getValue() + 1;
+    loc.column = llvh::cast<JSONNumber>(*locations)->getValue() + 1;
     locations++;
 
     return loc;
@@ -306,11 +306,11 @@ std::ostream &operator<<(std::ostream &os, const Location &loc) {
 static ::testing::AssertionResult testListOfStrings(
     JSONArray::iterator begin,
     JSONArray::iterator end,
-    std::initializer_list<llvm::StringRef> strs) {
+    std::initializer_list<llvh::StringRef> strs) {
   EXPECT_EQ(static_cast<unsigned long>(end - begin), strs.size());
   auto strsIt = strs.begin();
   for (auto it = begin; it != end; ++it) {
-    EXPECT_EQ(llvm::cast<JSONString>(*it)->str(), *strsIt);
+    EXPECT_EQ(llvh::cast<JSONString>(*it)->str(), *strsIt);
     ++strsIt;
   }
   return ::testing::AssertionSuccess();
@@ -318,7 +318,7 @@ static ::testing::AssertionResult testListOfStrings(
 
 static ::testing::AssertionResult testListOfStrings(
     const JSONArray &arr,
-    std::initializer_list<llvm::StringRef> strs) {
+    std::initializer_list<llvh::StringRef> strs) {
   return testListOfStrings(arr.begin(), arr.end(), strs);
 }
 
@@ -365,7 +365,7 @@ static Location findLocationForID(
 static JSONObject *
 takeSnapshot(GC &gc, JSONFactory &factory, const char *file, int line) {
   std::string result("");
-  llvm::raw_string_ostream str(result);
+  llvh::raw_string_ostream str(result);
   gc.collect();
   gc.createSnapshot(str);
   str.flush();
@@ -383,12 +383,12 @@ takeSnapshot(GC &gc, JSONFactory &factory, const char *file, int line) {
     return nullptr;
   }
   JSONValue *root = optSnapshot.getValue();
-  if (!llvm::isa<JSONObject>(root)) {
+  if (!llvh::isa<JSONObject>(root)) {
     ADD_FAILURE_AT(file, line) << "Snapshot isn't a JSON object";
     return nullptr;
   }
 
-  return llvm::cast<JSONObject>(root);
+  return llvh::cast<JSONObject>(root);
 }
 
 #define TAKE_SNAPSHOT(...) takeSnapshot(__VA_ARGS__, __FILE__, __LINE__)
@@ -408,33 +408,33 @@ TEST(HeapSnapshotTest, HeaderTest) {
   JSONObject *root = TAKE_SNAPSHOT(gc, jsonFactory);
   ASSERT_NE(root, nullptr);
 
-  JSONObject *snapshot = llvm::cast<JSONObject>(root->at("snapshot"));
+  JSONObject *snapshot = llvh::cast<JSONObject>(root->at("snapshot"));
 
-  EXPECT_EQ(llvm::cast<JSONNumber>(snapshot->at("node_count"))->getValue(), 0);
-  EXPECT_EQ(llvm::cast<JSONNumber>(snapshot->at("edge_count"))->getValue(), 0);
+  EXPECT_EQ(llvh::cast<JSONNumber>(snapshot->at("node_count"))->getValue(), 0);
+  EXPECT_EQ(llvh::cast<JSONNumber>(snapshot->at("edge_count"))->getValue(), 0);
   EXPECT_EQ(
-      llvm::cast<JSONNumber>(snapshot->at("trace_function_count"))->getValue(),
+      llvh::cast<JSONNumber>(snapshot->at("trace_function_count"))->getValue(),
       0);
 
-  JSONObject *meta = llvm::cast<JSONObject>(snapshot->at("meta"));
-  EXPECT_EQ(llvm::cast<JSONArray>(meta->at("sample_fields"))->size(), 0);
+  JSONObject *meta = llvh::cast<JSONObject>(snapshot->at("meta"));
+  EXPECT_EQ(llvh::cast<JSONArray>(meta->at("sample_fields"))->size(), 0);
 
-  JSONArray &nodeFields = *llvm::cast<JSONArray>(meta->at("node_fields"));
-  JSONArray &nodeTypes = *llvm::cast<JSONArray>(meta->at("node_types"));
-  JSONArray &edgeFields = *llvm::cast<JSONArray>(meta->at("edge_fields"));
-  JSONArray &edgeTypes = *llvm::cast<JSONArray>(meta->at("edge_types"));
+  JSONArray &nodeFields = *llvh::cast<JSONArray>(meta->at("node_fields"));
+  JSONArray &nodeTypes = *llvh::cast<JSONArray>(meta->at("node_types"));
+  JSONArray &edgeFields = *llvh::cast<JSONArray>(meta->at("edge_fields"));
+  JSONArray &edgeTypes = *llvh::cast<JSONArray>(meta->at("edge_types"));
   JSONArray &traceFunctionInfoFields =
-      *llvm::cast<JSONArray>(meta->at("trace_function_info_fields"));
+      *llvh::cast<JSONArray>(meta->at("trace_function_info_fields"));
   JSONArray &traceNodeFields =
-      *llvm::cast<JSONArray>(meta->at("trace_node_fields"));
+      *llvh::cast<JSONArray>(meta->at("trace_node_fields"));
   JSONArray &locationFields =
-      *llvm::cast<JSONArray>(meta->at("location_fields"));
+      *llvh::cast<JSONArray>(meta->at("location_fields"));
 
   // Check that node_fields/types are correct.
   EXPECT_TRUE(testListOfStrings(
       nodeFields,
       {"type", "name", "id", "self_size", "edge_count", "trace_node_id"}));
-  const JSONArray &nodeTypeEnum = *llvm::cast<JSONArray>(nodeTypes[0]);
+  const JSONArray &nodeTypeEnum = *llvh::cast<JSONArray>(nodeTypes[0]);
   EXPECT_TRUE(testListOfStrings(
       nodeTypeEnum,
       {"hidden",
@@ -458,7 +458,7 @@ TEST(HeapSnapshotTest, HeaderTest) {
   // Check that edge_fields/types are correct.
   EXPECT_TRUE(
       testListOfStrings(edgeFields, {"type", "name_or_index", "to_node"}));
-  const JSONArray &edgeTypeEnum = *llvm::cast<JSONArray>(edgeTypes[0]);
+  const JSONArray &edgeTypeEnum = *llvh::cast<JSONArray>(edgeTypes[0]);
   EXPECT_TRUE(testListOfStrings(
       edgeTypeEnum,
       {"context",
@@ -502,14 +502,14 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
   ASSERT_NE(root, nullptr);
 
   // Check the nodes and edges.
-  JSONArray &nodes = *llvm::cast<JSONArray>(root->at("nodes"));
-  JSONArray &edges = *llvm::cast<JSONArray>(root->at("edges"));
-  const JSONArray &strings = *llvm::cast<JSONArray>(root->at("strings"));
+  JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
+  JSONArray &edges = *llvh::cast<JSONArray>(root->at("edges"));
+  const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
 
-  EXPECT_EQ(llvm::cast<JSONArray>(root->at("trace_function_infos"))->size(), 0);
-  EXPECT_EQ(llvm::cast<JSONArray>(root->at("trace_tree"))->size(), 0);
-  EXPECT_EQ(llvm::cast<JSONArray>(root->at("samples"))->size(), 0);
-  EXPECT_EQ(llvm::cast<JSONArray>(root->at("locations"))->size(), 0);
+  EXPECT_EQ(llvh::cast<JSONArray>(root->at("trace_function_infos"))->size(), 0);
+  EXPECT_EQ(llvh::cast<JSONArray>(root->at("trace_tree"))->size(), 0);
+  EXPECT_EQ(llvh::cast<JSONArray>(root->at("samples"))->size(), 0);
+  EXPECT_EQ(llvh::cast<JSONArray>(root->at("locations"))->size(), 0);
 
   // Common nodes.
   Node rootSection{HeapSnapshot::NodeType::Synthetic,
@@ -664,8 +664,8 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionLocationForLazyCode) {
   JSONObject *root = TAKE_SNAPSHOT(runtime->getHeap(), jsonFactory);
   ASSERT_NE(root, nullptr);
 
-  const JSONArray &nodes = *llvm::cast<JSONArray>(root->at("nodes"));
-  const JSONArray &strings = *llvm::cast<JSONArray>(root->at("strings"));
+  const JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
+  const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
 
   // This test requires a location to be emitted.
   auto node = FIND_NODE_FOR_ID(funcID, nodes, strings);
@@ -679,7 +679,7 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionLocationForLazyCode) {
 
 #ifdef HERMES_ENABLE_DEBUGGER
   // The location isn't emitted in fully optimized builds.
-  const JSONArray &locations = *llvm::cast<JSONArray>(root->at("locations"));
+  const JSONArray &locations = *llvh::cast<JSONArray>(root->at("locations"));
   Location loc = FIND_LOCATION_FOR_ID(funcID, locations, nodes, strings);
   // The location should be the given file, at line 1 column 5 with indenting
   auto scriptId = func->getRuntimeModule()->getScriptID();
@@ -706,8 +706,8 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionLocationAndNameTest) {
   JSONObject *root = TAKE_SNAPSHOT(runtime->getHeap(), jsonFactory);
   ASSERT_NE(root, nullptr);
 
-  const JSONArray &nodes = *llvm::cast<JSONArray>(root->at("nodes"));
-  const JSONArray &strings = *llvm::cast<JSONArray>(root->at("strings"));
+  const JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
+  const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
 
   // This test requires a location to be emitted.
   auto node = FIND_NODE_FOR_ID(funcID, nodes, strings);
@@ -721,7 +721,7 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionLocationAndNameTest) {
 
 #ifdef HERMES_ENABLE_DEBUGGER
   // The location isn't emitted in fully optimized builds.
-  const JSONArray &locations = *llvm::cast<JSONArray>(root->at("locations"));
+  const JSONArray &locations = *llvh::cast<JSONArray>(root->at("locations"));
   Location loc = FIND_LOCATION_FOR_ID(funcID, locations, nodes, strings);
   // The location should be the given file, second line, third column
   auto scriptId = func->getRuntimeModule()->getScriptID();
@@ -749,8 +749,8 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionDisplayNameTest) {
   JSONObject *root = TAKE_SNAPSHOT(runtime->getHeap(), jsonFactory);
   ASSERT_NE(root, nullptr);
 
-  const JSONArray &nodes = *llvm::cast<JSONArray>(root->at("nodes"));
-  const JSONArray &strings = *llvm::cast<JSONArray>(root->at("strings"));
+  const JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
+  const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
 
   auto node = FIND_NODE_FOR_ID(funcID, nodes, strings);
   Node expected{HeapSnapshot::NodeType::Closure,
@@ -770,23 +770,23 @@ static std::string functionInfoToString(
     const JSONArray &strings) {
   auto base = idx * 6;
   auto functionID =
-      llvm::cast<JSONNumber>(traceFunctionInfos[base])->getValue();
+      llvh::cast<JSONNumber>(traceFunctionInfos[base])->getValue();
 
-  auto name = llvm::cast<JSONString>(
-                  strings[llvm::cast<JSONNumber>(traceFunctionInfos[base + 1])
+  auto name = llvh::cast<JSONString>(
+                  strings[llvh::cast<JSONNumber>(traceFunctionInfos[base + 1])
                               ->getValue()])
                   ->str();
 
   auto scriptName =
-      llvm::cast<JSONString>(
-          strings[llvm::cast<JSONNumber>(traceFunctionInfos[base + 2])
+      llvh::cast<JSONString>(
+          strings[llvh::cast<JSONNumber>(traceFunctionInfos[base + 2])
                       ->getValue()])
           ->str();
 
   auto scriptID =
-      llvm::cast<JSONNumber>(traceFunctionInfos[base + 3])->getValue();
-  auto line = llvm::cast<JSONNumber>(traceFunctionInfos[base + 4])->getValue();
-  auto col = llvm::cast<JSONNumber>(traceFunctionInfos[base + 5])->getValue();
+      llvh::cast<JSONNumber>(traceFunctionInfos[base + 3])->getValue();
+  auto line = llvh::cast<JSONNumber>(traceFunctionInfos[base + 4])->getValue();
+  auto col = llvh::cast<JSONNumber>(traceFunctionInfos[base + 5])->getValue();
 
   return std::string(name) + "(" + oscompat::to_string((int)functionID) +
       ") @ " + std::string(scriptName) + "(" +
@@ -805,10 +805,10 @@ struct ChromeStackTreeNode {
       std::map<int, ChromeStackTreeNode *> &idNodeMap) {
     std::vector<std::unique_ptr<ChromeStackTreeNode>> res;
     for (size_t i = 0; i < traceNodes.size(); i += 5) {
-      auto id = llvm::cast<JSONNumber>(traceNodes[i])->getValue();
+      auto id = llvh::cast<JSONNumber>(traceNodes[i])->getValue();
       auto functionInfoIndex =
-          llvm::cast<JSONNumber>(traceNodes[i + 1])->getValue();
-      auto children = llvm::cast<JSONArray>(traceNodes[i + 4]);
+          llvh::cast<JSONNumber>(traceNodes[i + 1])->getValue();
+      auto children = llvh::cast<JSONArray>(traceNodes[i + 4]);
       auto treeNode =
           hermes::make_unique<ChromeStackTreeNode>(parent, functionInfoIndex);
       idNodeMap.emplace(id, treeNode.get());
@@ -878,14 +878,14 @@ baz();
   JSONObject *root = TAKE_SNAPSHOT(runtime->getHeap(), jsonFactory);
   ASSERT_NE(root, nullptr);
 
-  const JSONArray &nodes = *llvm::cast<JSONArray>(root->at("nodes"));
-  const JSONArray &strings = *llvm::cast<JSONArray>(root->at("strings"));
+  const JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
+  const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
   const JSONArray &traceFunctionInfos =
-      *llvm::cast<JSONArray>(root->at("trace_function_infos"));
+      *llvh::cast<JSONArray>(root->at("trace_function_infos"));
 
   std::map<int, ChromeStackTreeNode *> idNodeMap;
   auto roots = ChromeStackTreeNode::parse(
-      *llvm::cast<JSONArray>(root->at("trace_tree")), nullptr, idNodeMap);
+      *llvh::cast<JSONArray>(root->at("trace_tree")), nullptr, idNodeMap);
 
   auto fooAllocNode = FIND_NODE_FOR_ID(fooObjID, nodes, strings);
   auto fooStackTreeNode = idNodeMap.find(fooAllocNode.traceNodeID);

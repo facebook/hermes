@@ -202,7 +202,7 @@ class SemanticValidator {
   void validateDeclarationNames(
       FunctionInfo::VarDecl::Kind declKind,
       Node *node,
-      llvm::SmallVectorImpl<FunctionInfo::VarDecl> *idents);
+      llvh::SmallVectorImpl<FunctionInfo::VarDecl> *idents);
 
   /// Ensure that the specified node is a valid target for an assignment, in
   /// other words it is an l-value, a Pattern (checked recursively) or an Empty
@@ -252,7 +252,7 @@ class FunctionContext {
   bool strictMode = false;
 
   /// The currently active labels in the function.
-  llvm::DenseMap<NodeLabel, Label> labelMap;
+  llvh::DenseMap<NodeLabel, Label> labelMap;
 
   explicit FunctionContext(
       SemanticValidator *validator,

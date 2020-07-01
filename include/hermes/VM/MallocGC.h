@@ -12,9 +12,9 @@
 #include "hermes/VM/GCBase.h"
 #include "hermes/VM/GCCell.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/DenseSet.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <deque>
 #include <limits>
@@ -106,12 +106,12 @@ class MallocGC final : public GCBase {
   /// pointers_ stores all of the objects managed by the GC. If a pointer is not
   /// in this set, then it is not a GC pointer, and thus invalid to be collected
   /// or marked.
-  llvm::DenseSet<CellHeader *> pointers_;
+  llvh::DenseSet<CellHeader *> pointers_;
   /// newPointers_ is the set of live objects at the end of a collection.
   /// Pointers are moved from pointers_ to this as they are discovered to be
   /// alive.
   /// This should be empty between collections.
-  llvm::DenseSet<CellHeader *> newPointers_;
+  llvh::DenseSet<CellHeader *> newPointers_;
   /// weakPointers_ is a list of all the weak pointers in the system. They are
   /// invalidated if they point to an object that is dead, and do not count
   /// towards whether an object is live or dead.
@@ -216,7 +216,7 @@ class MallocGC final : public GCBase {
 #endif
 
   /// Same as in superclass GCBase.
-  virtual void createSnapshot(llvm::raw_ostream &os) override;
+  virtual void createSnapshot(llvh::raw_ostream &os) override;
 
 #ifdef HERMESVM_SERIALIZE
   /// Same as in superclass GCBase.
@@ -278,7 +278,7 @@ class MallocGC final : public GCBase {
   void freeWeakSlot(WeakRefSlot *slot);
 
   /// See \c GCBase::printStats.
-  void printStats(llvm::raw_ostream &os, bool trailingComma) override;
+  void printStats(llvh::raw_ostream &os, bool trailingComma) override;
 
   /// Reset the statistics used for reporting GC information.
   void resetStats();

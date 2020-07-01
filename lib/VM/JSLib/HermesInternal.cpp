@@ -319,7 +319,7 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
     for (auto &module : runtime->getRuntimeModules()) {
       auto buf = module.getBytecode()->getRawBuffer();
       if (buf.size()) {
-        llvm::SmallVector<int, 64> runs;
+        llvh::SmallVector<int, 64> runs;
         int pages = oscompat::pages_in_ram(buf.data(), buf.size(), &runs);
         if (pages >= 0) {
           bytecodePagesResident += pages;
@@ -359,7 +359,7 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
           bytecodeIOus += us;
         }
         sample.clear();
-        llvm::raw_string_ostream str(sample);
+        llvh::raw_string_ostream str(sample);
         std::random_device rng;
         for (unsigned sampleIdx = 0; sampleIdx < NUM_SAMPLES; ++sampleIdx) {
           int32_t accessOrderPos = rng() % ids.size();
@@ -477,7 +477,7 @@ static void logGCStats(Runtime *runtime, const char *msg) {
   // 1024 bytes.  Break it up.
   std::string stats;
   {
-    llvm::raw_string_ostream os(stats);
+    llvh::raw_string_ostream os(stats);
     runtime->printHeapStats(os);
   }
   auto copyRegionFrom = [&stats](size_t from) -> size_t {
@@ -800,7 +800,7 @@ static CallResult<HermesValue> getCodeBlockFileName(
     return StringPrimitive::createEfficient(
         runtime, debugInfo->getFilenameByID(location->filenameId));
   } else {
-    llvm::StringRef sourceURL = runtimeModule->getSourceURL();
+    llvh::StringRef sourceURL = runtimeModule->getSourceURL();
     if (!sourceURL.empty()) {
       return StringPrimitive::createEfficient(runtime, sourceURL);
     }

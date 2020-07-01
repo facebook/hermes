@@ -13,7 +13,7 @@
 #include "hermes/VM/ExpectedPageSize.h"
 #include "hermes/VM/HeapAlign.h"
 
-#include "llvm/Support/MathExtras.h"
+#include "llvh/Support/MathExtras.h"
 
 namespace hermes {
 namespace vm {
@@ -106,7 +106,7 @@ class MarkBitArrayNC {
   /// platform-specific maximum page size.
   static constexpr size_t kValsPerMaxPage =
       pagesize::kExpectedPageSize / sizeof(size_t);
-  static constexpr size_t kBitArraySize = llvm::alignTo<kValsPerMaxPage>(
+  static constexpr size_t kBitArraySize = llvh::alignTo<kValsPerMaxPage>(
       ((kValidIndices - 1) >> kLogBitsPerVal) + 1);
 
   /// The inline array holding the contents of the mark bit array.

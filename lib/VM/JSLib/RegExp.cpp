@@ -1585,7 +1585,7 @@ regExpFlagsGetter(void *ctx, Runtime *runtime, NativeArgs args) {
         "RegExp.prototype.flags getter called on non-object");
   }
 
-  llvm::SmallString<5> result;
+  llvh::SmallString<5> result;
   static const struct FlagProp {
     char flagChar;
     Predefined::Str name;

@@ -88,9 +88,9 @@
 #define STATVFS_F_FLAG(vfs) (vfs).f_flags
 #endif
 
-using namespace llvm;
+using namespace llvh;
 
-namespace llvm {
+namespace llvh {
 namespace sys  {
 namespace fs {
 
@@ -237,10 +237,10 @@ std::error_code current_path(SmallVectorImpl<char> &result) {
   result.clear();
 
   const char *pwd = ::getenv("PWD");
-  llvm::sys::fs::file_status PWDStatus, DotStatus;
-  if (pwd && llvm::sys::path::is_absolute(pwd) &&
-      !llvm::sys::fs::status(pwd, PWDStatus) &&
-      !llvm::sys::fs::status(".", DotStatus) &&
+  llvh::sys::fs::file_status PWDStatus, DotStatus;
+  if (pwd && llvh::sys::path::is_absolute(pwd) &&
+      !llvh::sys::fs::status(pwd, PWDStatus) &&
+      !llvh::sys::fs::status(".", DotStatus) &&
       PWDStatus.getUniqueID() == DotStatus.getUniqueID()) {
     result.append(pwd, pwd + strlen(pwd));
     return std::error_code();
@@ -522,7 +522,7 @@ static void expandTildeExpr(SmallVectorImpl<char> &Path) {
   Storage = Remainder;
   Path.clear();
   Path.append(Entry->pw_dir, Entry->pw_dir + strlen(Entry->pw_dir));
-  llvm::sys::path::append(Path, Storage);
+  llvh::sys::path::append(Path, Storage);
 }
 
 static file_type typeForMode(mode_t Mode) {
@@ -1016,4 +1016,4 @@ void system_temp_directory(bool ErasedOnReboot, SmallVectorImpl<char> &Result) {
 } // end namespace path
 
 } // end namespace sys
-} // end namespace llvm
+} // end namespace llvh

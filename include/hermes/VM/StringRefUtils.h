@@ -8,17 +8,17 @@
 #ifndef HERMES_VM_UTF16REF_H
 #define HERMES_VM_UTF16REF_H
 
-#include "llvm/ADT/ArrayRef.h"
+#include "llvh/ADT/ArrayRef.h"
 
-namespace llvm {
+namespace llvh {
 class raw_ostream;
 }
 
 namespace hermes {
 namespace vm {
 
-using UTF16Ref = llvm::ArrayRef<char16_t>;
-using ASCIIRef = llvm::ArrayRef<char>;
+using UTF16Ref = llvh::ArrayRef<char16_t>;
+using ASCIIRef = llvh::ArrayRef<char>;
 
 /// Convenient alias.
 using utf16_traits = std::char_traits<char16_t>;
@@ -30,13 +30,13 @@ UTF16Ref createUTF16Ref(const char16_t *str);
 /// Create an ASCIIRef from a zero-terminated string.
 ASCIIRef createASCIIRef(const char *str);
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, ASCIIRef asciiRef);
+llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, ASCIIRef asciiRef);
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, UTF16Ref u16ref);
+llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, UTF16Ref u16ref);
 
 /// Check whether two ArrayRef are equal in content.
 template <typename T1, typename T2>
-bool stringRefEquals(llvm::ArrayRef<T1> str1, llvm::ArrayRef<T2> str2) {
+bool stringRefEquals(llvh::ArrayRef<T1> str1, llvh::ArrayRef<T2> str2) {
   if (str1.size() != str2.size()) {
     return false;
   }
@@ -46,7 +46,7 @@ bool stringRefEquals(llvm::ArrayRef<T1> str1, llvm::ArrayRef<T2> str2) {
 /// Compare two ArrayRef, \return +1 if str1 > str2, -1 if str1 < str2, 0
 /// otherwise.
 template <typename T1, typename T2>
-int stringRefCompare(llvm::ArrayRef<T1> str1, llvm::ArrayRef<T2> str2) {
+int stringRefCompare(llvh::ArrayRef<T1> str1, llvh::ArrayRef<T2> str2) {
   if (str1.size() >= str2.size()) {
     // If str1 is equal or longer than str2, match using str2's length.
     auto pos = std::mismatch(str2.begin(), str2.end(), str1.begin());

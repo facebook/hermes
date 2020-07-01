@@ -9,7 +9,7 @@
 #define HERMES_BCGEN_HBC_SERIALIZEDLITERALPARSERBASE_H
 
 #include "hermes/Support/Conversions.h"
-#include "llvm/ADT/ArrayRef.h"
+#include "llvh/ADT/ArrayRef.h"
 
 namespace hermes {
 namespace hbc {
@@ -18,7 +18,7 @@ namespace hbc {
 /// containing VM independent parsing logic.
 class SerializedLiteralParserBase {
  protected:
-  using CharArray = llvm::ArrayRef<unsigned char>;
+  using CharArray = llvh::ArrayRef<unsigned char>;
 
   /// Stores the unsigned char buffer in which the literals are serialized.
   CharArray buffer_;

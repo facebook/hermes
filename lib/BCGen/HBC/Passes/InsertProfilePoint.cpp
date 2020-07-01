@@ -17,8 +17,8 @@ Instruction *InsertProfilePoint::findInsertionPoint(BasicBlock &BB) const {
   for (auto &inst : BB.getInstList()) {
     /// CatchInst/TryEndInst/PhiInst must be the first instructions
     /// in a basic block.
-    if (!llvm::isa<CatchInst>(inst) && !llvm::isa<TryEndInst>(inst) &&
-        !llvm::isa<PhiInst>(inst)) {
+    if (!llvh::isa<CatchInst>(inst) && !llvh::isa<TryEndInst>(inst) &&
+        !llvh::isa<PhiInst>(inst)) {
       return &inst;
     }
   }

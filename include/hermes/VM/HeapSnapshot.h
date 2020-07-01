@@ -15,10 +15,10 @@
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/StringRefUtils.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/Optional.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <bitset>
 #include <string>
@@ -50,7 +50,7 @@ std::string converter(UTF16Ref ref);
 ///   Currently it also does not do anything about string pointers, so those
 ///   will also be invalid.
 ///   Something which enables these should be implemented in the future.
-void rawHeapSnapshot(llvm::raw_ostream &os, const char *start, const char *end);
+void rawHeapSnapshot(llvh::raw_ostream &os, const char *start, const char *end);
 
 class HeapSnapshot {
  public:
@@ -114,12 +114,12 @@ class HeapSnapshot {
   void beginNode();
   void endNode(
       NodeType type,
-      llvm::StringRef name,
+      llvh::StringRef name,
       NodeID id,
       HeapSizeType selfSize,
       HeapSizeType traceNodeID);
 
-  void addNamedEdge(EdgeType type, llvm::StringRef name, NodeID toNode);
+  void addNamedEdge(EdgeType type, llvh::StringRef name, NodeID toNode);
   void addIndexedEdge(EdgeType type, EdgeIndex index, NodeID toNode);
 
   /// Adds a location for the given node. This will identify a source location
@@ -159,7 +159,7 @@ class HeapSnapshot {
 
   JSONEmitter &json_;
   StackTracesTree *stackTracesTree_;
-  llvm::DenseMap<NodeID, NodeIndex> nodeToIndex_;
+  llvh::DenseMap<NodeID, NodeIndex> nodeToIndex_;
   std::shared_ptr<StringSetVector> stringTable_;
   NodeIndex nodeCount_{0};
   HeapSizeType currEdgeCount_{0};
@@ -167,7 +167,7 @@ class HeapSnapshot {
     HeapSizeType count{0};
     HeapSizeType size{0};
   };
-  llvm::DenseMap<HeapSizeType, TraceNodeStats> traceNodeStats_;
+  llvh::DenseMap<HeapSizeType, TraceNodeStats> traceNodeStats_;
 
 #ifndef NDEBUG
   /// How many edges have currently been added.

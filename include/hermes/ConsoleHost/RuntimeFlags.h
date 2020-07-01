@@ -8,8 +8,8 @@
 #ifndef HERMES_VM_RUNTIMEFLAGS_H
 #define HERMES_VM_RUNTIMEFLAGS_H
 
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/Support/CommandLine.h"
 
 #include "hermes/ConsoleHost/MemorySizeParser.h"
 #include "hermes/ConsoleHost/RandomSeedParser.h"
@@ -23,14 +23,14 @@
 
 namespace cl {
 
-using llvm::cl::cat;
-using llvm::cl::desc;
-using llvm::cl::Hidden;
-using llvm::cl::init;
-using llvm::cl::opt;
-using llvm::cl::Option;
-using llvm::cl::OptionCategory;
-using llvm::cl::parser;
+using llvh::cl::cat;
+using llvh::cl::desc;
+using llvh::cl::Hidden;
+using llvh::cl::init;
+using llvh::cl::opt;
+using llvh::cl::Option;
+using llvh::cl::OptionCategory;
+using llvh::cl::parser;
 
 using hermes::vm::GCConfig;
 using hermes::vm::RuntimeConfig;
@@ -157,9 +157,9 @@ static opt<bool> ES6Symbol(
     init(RuntimeConfig::getDefaultES6Symbol()),
     cat(RuntimeCategory));
 
-static llvm::cl::opt<bool> StopAfterInit(
+static llvh::cl::opt<bool> StopAfterInit(
     "stop-after-module-init",
-    llvm::cl::desc("Exit once module loading is finished. Useful "
+    llvh::cl::desc("Exit once module loading is finished. Useful "
                    "to measure module initialization time"),
     cat(RuntimeCategory));
 
@@ -178,20 +178,20 @@ static opt<bool> StableInstructionCount(
 
 static opt<uint32_t> VMExperimentFlags(
     "Xvm-experiment-flags",
-    llvm::cl::desc("VM experiment flags."),
-    llvm::cl::init(0),
-    llvm::cl::Hidden,
+    llvh::cl::desc("VM experiment flags."),
+    llvh::cl::init(0),
+    llvh::cl::Hidden,
     cat(RuntimeCategory));
 
 static opt<bool> EnableHermesInternal(
     "enable-hermes-internal",
-    llvm::cl::desc("Enable the HermesInternal object."),
-    llvm::cl::init(RuntimeConfig::getDefaultEnableHermesInternal()));
+    llvh::cl::desc("Enable the HermesInternal object."),
+    llvh::cl::init(RuntimeConfig::getDefaultEnableHermesInternal()));
 static opt<bool> EnableHermesInternalTestMethods(
     "Xhermes-internal-test-methods",
-    llvm::cl::desc("Enable the HermesInternal test methods."),
-    llvm::cl::init(RuntimeConfig::getDefaultEnableHermesInternalTestMethods()),
-    llvm::cl::Hidden);
+    llvh::cl::desc("Enable the HermesInternal test methods."),
+    llvh::cl::init(RuntimeConfig::getDefaultEnableHermesInternalTestMethods()),
+    llvh::cl::Hidden);
 
 } // namespace cl
 

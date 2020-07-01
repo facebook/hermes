@@ -15,7 +15,7 @@ using namespace hermes;
 
 namespace {
 
-static llvm::ArrayRef<char> makeArrayRef(const char *s) {
+static llvh::ArrayRef<char> makeArrayRef(const char *s) {
   return {s, strlen(s)};
 }
 

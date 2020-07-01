@@ -61,7 +61,7 @@ TEST(JSONParserTest, SmokeTest2) {
   // Parse an object.
   auto t1 = parser.parse();
   ASSERT_TRUE(t1.hasValue());
-  auto *o1 = llvm::dyn_cast<JSONObject>(t1.getValue());
+  auto *o1 = llvh::dyn_cast<JSONObject>(t1.getValue());
   ASSERT_NE(nullptr, o1);
 
   ASSERT_EQ(4u, o1->size());
@@ -105,7 +105,7 @@ TEST(JSONParserTest, SmokeTest2) {
   ASSERT_EQ(o1->end(), it);
 
   // Check the nested object
-  auto *o2 = llvm::dyn_cast<JSONObject>((*o1)["key3"]);
+  auto *o2 = llvh::dyn_cast<JSONObject>((*o1)["key3"]);
   ASSERT_NE(nullptr, o2);
   auto it2 = o2->begin();
   ASSERT_STREQ("nested1", (*it2).first->c_str());
@@ -114,7 +114,7 @@ TEST(JSONParserTest, SmokeTest2) {
   ASSERT_EQ(o2->end(), it2);
 
   // Check the array
-  auto *a1 = llvm::dyn_cast<JSONArray>(o1->at("key4"));
+  auto *a1 = llvh::dyn_cast<JSONArray>(o1->at("key4"));
   ASSERT_NE(nullptr, a1);
   ASSERT_EQ(3u, a1->size());
 
@@ -140,13 +140,13 @@ TEST(JSONParserTest, NegativeNumbers) {
   JSONParser parser(factory, "[-1.0, -1, -0]", sm);
   auto t1 = parser.parse();
   ASSERT_TRUE(t1.hasValue());
-  auto a1 = llvm::dyn_cast<JSONArray>(*t1);
+  auto a1 = llvh::dyn_cast<JSONArray>(*t1);
   ASSERT_NE(nullptr, a1);
   ASSERT_EQ(a1->size(), expectedValues.size());
 
   auto it = a1->begin();
   for (double expected : expectedValues) {
-    auto actual = llvm::dyn_cast<JSONNumber>(*it++);
+    auto actual = llvh::dyn_cast<JSONNumber>(*it++);
     ASSERT_NE(nullptr, actual);
     ASSERT_EQ(actual->getValue(), expected);
   }
@@ -170,19 +170,19 @@ TEST(JSONParserTest, HiddenClassTest) {
 
   auto t1 = parser.parse();
   ASSERT_TRUE(t1.hasValue());
-  auto array = llvm::dyn_cast<JSONArray>(t1.getValue());
+  auto array = llvh::dyn_cast<JSONArray>(t1.getValue());
   ASSERT_NE(nullptr, array);
 
   ASSERT_EQ(2u, array->size());
 
-  auto o1 = llvm::dyn_cast<JSONObject>(array->at(0));
+  auto o1 = llvh::dyn_cast<JSONObject>(array->at(0));
   ASSERT_NE(nullptr, o1);
 
-  auto o2 = llvm::dyn_cast<JSONObject>(o1->at("key2"));
+  auto o2 = llvh::dyn_cast<JSONObject>(o1->at("key2"));
   ASSERT_NE(nullptr, o2);
   ASSERT_EQ(o1->getHiddenClass(), o2->getHiddenClass());
 
-  auto o3 = llvm::dyn_cast<JSONObject>(array->at(1));
+  auto o3 = llvh::dyn_cast<JSONObject>(array->at(1));
   ASSERT_NE(nullptr, o3);
   ASSERT_EQ(o1->getHiddenClass(), o3->getHiddenClass());
 }
@@ -192,7 +192,7 @@ TEST(JSONParserTest, EmitTest) {
   JSONFactory factory(alloc);
   SourceErrorManager sm;
   std::string storage;
-  llvm::raw_string_ostream OS(storage);
+  llvh::raw_string_ostream OS(storage);
   JSONEmitter emitter(OS);
   JSONParser parser(
       factory,

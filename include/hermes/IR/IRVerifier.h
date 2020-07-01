@@ -9,9 +9,9 @@
 #define HERMES_IR_IRVERIFIER_H
 
 #include "hermes/IR/IR.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/raw_ostream.h"
 
-using llvm::raw_ostream;
+using llvh::raw_ostream;
 
 namespace hermes {
 

@@ -14,7 +14,7 @@
 #include "hermes/AST/ESTreeJSONDumper.h"
 #include "hermes/Support/Conversions.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
@@ -25,10 +25,10 @@ namespace hermes {
 namespace parser {
 
 using namespace hermes::parser;
-using llvm::cast;
-using llvm::dyn_cast;
-using llvm::dyn_cast_or_null;
-using llvm::isa;
+using llvh::cast;
+using llvh::dyn_cast;
+using llvh::dyn_cast_or_null;
+using llvh::isa;
 
 namespace {
 
@@ -60,7 +60,7 @@ class JSONTranslator final
   }
 
   virtual JSONValue *convert_object(value props) {
-    llvm::SmallVector<JSONFactory::Prop, 4> propList;
+    llvh::SmallVector<JSONFactory::Prop, 4> propList;
 
     while (flowparser::list_has_next(props)) {
       value prop = flowparser::list_head(props);
@@ -76,7 +76,7 @@ class JSONTranslator final
   }
 
   virtual JSONValue *convert_array(value items) {
-    llvm::SmallVector<JSONValue *, 4> storage;
+    llvh::SmallVector<JSONValue *, 4> storage;
 
     while (flowparser::list_has_next(items)) {
       value head = flowparser::list_head(items);
@@ -93,7 +93,7 @@ class JSONTranslator final
 };
 
 #ifndef NDEBUG
-void dump(llvm::raw_ostream &OS, const JSONValue *jsonValue, unsigned indent) {
+void dump(llvh::raw_ostream &OS, const JSONValue *jsonValue, unsigned indent) {
   if (!jsonValue) {
     OS << "!!nullptr!!";
     return;
@@ -141,7 +141,7 @@ void dump(llvm::raw_ostream &OS, const JSONValue *jsonValue, unsigned indent) {
   }
 }
 
-void dump(llvm::raw_ostream &OS, const JSONValue *jsonValue) {
+void dump(llvh::raw_ostream &OS, const JSONValue *jsonValue) {
   dump(OS, jsonValue, 0);
   OS << "\n";
 }
@@ -200,7 +200,7 @@ bool printErrors(Context &context, uint32_t bufferId, JSONValue *v) {
 
 } // anonymous namespace
 
-llvm::Optional<ESTree::ProgramNode *> parseFlowParser(
+llvh::Optional<ESTree::ProgramNode *> parseFlowParser(
     Context &context,
     uint32_t bufferId) {
   static const bool initFlowParser = (flowparser::init(), true);
@@ -215,27 +215,27 @@ llvm::Optional<ESTree::ProgramNode *> parseFlowParser(
   if (!jsonValue || tr.getErrorEncountered()) {
     context.getSourceErrorManager().error(
         SMLoc::getFromPointer(buffer->getBufferStart()), "Error parsing");
-    return llvm::None;
+    return llvh::None;
   }
 
-  LLVM_DEBUG(dump(llvm::dbgs(), jsonValue));
+  LLVM_DEBUG(dump(llvh::dbgs(), jsonValue));
 
   if (!printErrors(context, bufferId, jsonValue))
-    return llvm::None;
+    return llvh::None;
 
   auto parsedRes = ESTree::buildAST(context, jsonValue, buffer);
   if (!parsedRes)
-    return llvm::None;
+    return llvh::None;
 
   ESTree::Node *parsed = *parsedRes;
 
   if (!isa<ESTree::ProgramNode>(parsed)) {
     context.getSourceErrorManager().error(
         SMLoc::getFromPointer(buffer->getBufferStart()), "Unexpected AST node");
-    return llvm::None;
+    return llvh::None;
   }
 
-  LLVM_DEBUG(hermes::dumpESTreeJSON(llvm::dbgs(), parsed, true /* pretty */));
+  LLVM_DEBUG(hermes::dumpESTreeJSON(llvh::dbgs(), parsed, true /* pretty */));
 
   return cast<ESTree::ProgramNode>(parsed);
 }

@@ -85,7 +85,7 @@ void BytecodeSerializer::serializeDebugInfo(BytecodeModule &BM) {
     return;
   }
 
-  const llvm::ArrayRef<StringTableEntry> filenameTable =
+  const llvh::ArrayRef<StringTableEntry> filenameTable =
       info.getFilenameTable();
   const auto filenameStorage = info.getFilenameStorage();
   const DebugInfo::DebugFileRegionList &files = info.viewFiles();
@@ -156,8 +156,8 @@ void BytecodeSerializer::serializeDebugOffsets(BytecodeFunction &BF) {
 void BytecodeSerializer::serializeFunctionsBytecode(BytecodeModule &BM) {
   // Map from opcodes and jumptables to offsets, used to deduplicate bytecode.
   using DedupKey =
-      std::pair<llvm::ArrayRef<opcode_atom_t>, llvm::ArrayRef<uint32_t>>;
-  llvm::DenseMap<DedupKey, uint32_t> bcMap;
+      std::pair<llvh::ArrayRef<opcode_atom_t>, llvh::ArrayRef<uint32_t>>;
+  llvh::DenseMap<DedupKey, uint32_t> bcMap;
   for (auto &entry : BM.getFunctionTable()) {
     if (options_.optimizationEnabled) {
       // If identical bytecode exists, we'll reuse it.
@@ -209,7 +209,7 @@ void BytecodeSerializer::serializeFunctionInfo(BytecodeFunction &BF) {
   // Set the offset of this function's info. Any subsection that is present is
   // aligned to INFO_ALIGNMENT, so we also align the recorded offset to that.
   if (isLayout_) {
-    BF.setInfoOffset(llvm::alignTo(loc_, INFO_ALIGNMENT));
+    BF.setInfoOffset(llvh::alignTo(loc_, INFO_ALIGNMENT));
   }
 
   // Write large header if it doesn't fit in a small.
@@ -254,14 +254,14 @@ void BytecodeSerializer::visitSmallStringTable() {
 
 void BytecodeSerializer::visitOverflowStringTable() {
   pad(BYTECODE_ALIGNMENT);
-  llvm::SmallVector<OverflowStringTableEntry, 64> overflow;
+  llvh::SmallVector<OverflowStringTableEntry, 64> overflow;
   for (auto &entry : bytecodeModule_->getStringTable()) {
     SmallStringTableEntry small(entry, overflow.size());
     if (small.isOverflowed()) {
       overflow.emplace_back(entry.getOffset(), entry.getLength());
     }
   }
-  writeBinaryArray(llvm::makeArrayRef(overflow));
+  writeBinaryArray(llvh::makeArrayRef(overflow));
 }
 
 void BytecodeSerializer::visitStringStorage() {

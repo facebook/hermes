@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvh/Support/Casting.h"
+#include "llvh/Support/ErrorHandling.h"
 
 #include "hermes/AST/Context.h"
 #include "hermes/IR/IR.h"
@@ -16,9 +16,9 @@
 using namespace hermes;
 
 using hermes::oscompat::to_string;
-using llvm::cast;
-using llvm::dyn_cast;
-using llvm::isa;
+using llvh::cast;
+using llvh::dyn_cast;
+using llvh::isa;
 
 BasicBlock *IRBuilder::createBasicBlock(Function *Parent) {
   assert(Parent && "Invalid insertion point");
@@ -976,12 +976,12 @@ void IRBuilder::transferInstructionToCurrentBlock(Instruction *inst) {
   inst->setParent(Block);
   Block->getInstList().insert(InsertionPoint, inst);
 
-  if (oldBlock == Block || !llvm::isa<TerminatorInst>(inst))
+  if (oldBlock == Block || !llvh::isa<TerminatorInst>(inst))
     return;
 
   // If we moved the terminator, we want to update all successors' phi-nodes.
   for (auto *use : oldBlock->getUsers()) {
-    auto *phi = llvm::dyn_cast<PhiInst>(use);
+    auto *phi = llvh::dyn_cast<PhiInst>(use);
     if (!phi)
       continue;
     for (unsigned i = 0, e = phi->getNumOperands(); i != e; ++i) {
@@ -993,7 +993,7 @@ void IRBuilder::transferInstructionToCurrentBlock(Instruction *inst) {
 
 Instruction *IRBuilder::cloneInst(
     const Instruction *source,
-    llvm::ArrayRef<Value *> operands) {
+    llvh::ArrayRef<Value *> operands) {
   Instruction *inst;
   switch (source->getKind()) {
 #define INCLUDE_ALL_INSTRS

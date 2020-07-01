@@ -9,7 +9,7 @@
 
 #if defined(__linux__) && \
     (!defined(__ANDROID__) || defined(HERMES_ANDROID_PERF_EVENTS))
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -96,7 +96,7 @@ bool PerfCounter::endAndInsertStats(std::string &jsonStats) {
   if (res <= 0)
     return false;
   std::string stats;
-  llvm::raw_string_ostream os{stats};
+  llvh::raw_string_ostream os{stats};
   os << "\"perfEvent_" << name_ << "\": " << count << ",\n\t\t";
   os.flush();
   auto pos = jsonStats.find("\"totalTime\"");

@@ -111,9 +111,9 @@ bool Metadata::Builder::fieldConflicts(offset_t offset, size_t size) {
 /// @name Formatters
 /// @{
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Metadata &meta) {
+llvh::raw_ostream &operator<<(llvh::raw_ostream &os, const Metadata &meta) {
   os << "Metadata: {\n\tfieldsAndNames: [";
-  auto printOffsetAndNameAndSizes = [](llvm::raw_ostream &os,
+  auto printOffsetAndNameAndSizes = [](llvh::raw_ostream &os,
                                        const Metadata::Fields &vec) {
     bool first = true;
     for (size_t i = 0; i < vec.size(); ++i) {
@@ -141,13 +141,13 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Metadata &meta) {
   return os << "}";
 }
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &os, ArrayData array) {
+llvh::raw_ostream &operator<<(llvh::raw_ostream &os, ArrayData array) {
   return os << "ArrayData: {type: {" << array.type
             << "}, lengthOffset: " << array.lengthOffset
             << ", stride: " << array.stride << "}";
 }
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &os, ArrayType arraytype) {
+llvh::raw_ostream &operator<<(llvh::raw_ostream &os, ArrayType arraytype) {
   os << "ArrayType: {";
   switch (arraytype) {
     case ArrayType::Pointer:

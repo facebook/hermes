@@ -18,7 +18,7 @@
 
 struct HermesTestHelper;
 
-namespace llvm {
+namespace llvh {
 class raw_ostream;
 }
 
@@ -82,7 +82,7 @@ class HermesRuntime : public jsi::Runtime {
   static void dumpSampledTraceToFile(const std::string &fileName);
 
   /// Dump sampled stack trace to the given stream.
-  static void dumpSampledTraceToStream(llvm::raw_ostream &stream);
+  static void dumpSampledTraceToStream(llvh::raw_ostream &stream);
 
   /// Return the executed JavaScript function info.
   /// Each function info is a 64bit integer with the module id encoded in
@@ -139,12 +139,12 @@ class HermesRuntime : public jsi::Runtime {
 
 #ifdef HERMESVM_PROFILER_BB
   /// Write the trace to the given stream.
-  void dumpBasicBlockProfileTrace(llvm::raw_ostream &os) const;
+  void dumpBasicBlockProfileTrace(llvh::raw_ostream &os) const;
 #endif
 
 #ifdef HERMESVM_PROFILER_OPCODE
   /// Write the opcode stats to the given stream.
-  void dumpOpcodeStats(llvm::raw_ostream &os) const;
+  void dumpOpcodeStats(llvh::raw_ostream &os) const;
 #endif
 
 #ifdef HERMESVM_PROFILER_EXTERN

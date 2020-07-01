@@ -8,9 +8,9 @@
 #include <climits>
 
 #include "hermes/Support/LEB128.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/LEB128.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/ErrorHandling.h"
+#include "llvh/Support/LEB128.h"
+#include "llvh/Support/raw_ostream.h"
 
 namespace {
 
@@ -50,9 +50,9 @@ inline bigger_signed_int<B, T> signExtend(const T allBits) {
 namespace hermes {
 
 void appendSignedLEB128(std::vector<uint8_t> &vector, int64_t value) {
-  llvm::SmallVector<char, 16> data;
-  llvm::raw_svector_ostream OS(data);
-  llvm::encodeSLEB128(value, OS);
+  llvh::SmallVector<char, 16> data;
+  llvh::raw_svector_ostream OS(data);
+  llvh::encodeSLEB128(value, OS);
 
   // "Convert" from char to uint8_t.
   for (int i = 0, e = data.size(); i < e; i++) {
@@ -61,15 +61,15 @@ void appendSignedLEB128(std::vector<uint8_t> &vector, int64_t value) {
 }
 
 unsigned readSignedLEB128(
-    llvm::ArrayRef<uint8_t> data,
+    llvh::ArrayRef<uint8_t> data,
     unsigned offset,
     int64_t *output) {
   unsigned size;
-  *output = llvm::decodeSLEB128(&data[offset], &size);
+  *output = llvh::decodeSLEB128(&data[offset], &size);
   return size;
 }
 
-void encodeSLEB128(int32_t input, llvm::raw_ostream &os, size_t minBytes) {
+void encodeSLEB128(int32_t input, llvh::raw_ostream &os, size_t minBytes) {
   constexpr size_t CAP = bits<int32_t>::width / 7 + 1;
   assert(minBytes <= CAP);
 

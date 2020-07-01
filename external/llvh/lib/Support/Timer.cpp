@@ -11,20 +11,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Timer.h"
-#include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/Mutex.h"
-#include "llvm/Support/Process.h"
-#include "llvm/Support/YAMLTraits.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/Timer.h"
+#include "llvh/ADT/Statistic.h"
+#include "llvh/ADT/StringMap.h"
+#include "llvh/Support/CommandLine.h"
+#include "llvh/Support/FileSystem.h"
+#include "llvh/Support/Format.h"
+#include "llvh/Support/ManagedStatic.h"
+#include "llvh/Support/Mutex.h"
+#include "llvh/Support/Process.h"
+#include "llvh/Support/YAMLTraits.h"
+#include "llvh/Support/raw_ostream.h"
 #include <limits>
 
-using namespace llvm;
+using namespace llvh;
 
 // This ugly hack is brought to you courtesy of constructor/destructor ordering
 // being unspecified by C++.  Basically the problem is that a Statistic object
@@ -52,26 +52,26 @@ namespace {
                    cl::Hidden, cl::location(getLibSupportInfoOutputFilename()));
 }
 
-std::unique_ptr<raw_fd_ostream> llvm::CreateInfoOutputFile() {
+std::unique_ptr<raw_fd_ostream> llvh::CreateInfoOutputFile() {
   const std::string &OutputFilename = getLibSupportInfoOutputFilename();
   if (OutputFilename.empty())
-    return llvm::make_unique<raw_fd_ostream>(2, false); // stderr.
+    return llvh::make_unique<raw_fd_ostream>(2, false); // stderr.
   if (OutputFilename == "-")
-    return llvm::make_unique<raw_fd_ostream>(1, false); // stdout.
+    return llvh::make_unique<raw_fd_ostream>(1, false); // stdout.
 
   // Append mode is used because the info output file is opened and closed
   // each time -stats or -time-passes wants to print output to it. To
   // compensate for this, the test-suite Makefiles have code to delete the
   // info output file before running commands which write to it.
   std::error_code EC;
-  auto Result = llvm::make_unique<raw_fd_ostream>(
+  auto Result = llvh::make_unique<raw_fd_ostream>(
       OutputFilename, EC, sys::fs::F_Append | sys::fs::F_Text);
   if (!EC)
     return Result;
 
   errs() << "Error opening info-output-file '"
     << OutputFilename << " for appending!\n";
-  return llvm::make_unique<raw_fd_ostream>(2, false); // stderr.
+  return llvh::make_unique<raw_fd_ostream>(2, false); // stderr.
 }
 
 namespace {
@@ -295,7 +295,7 @@ void TimerGroup::addTimer(Timer &T) {
 
 void TimerGroup::PrintQueuedTimers(raw_ostream &OS) {
   // Sort the timers in descending order by amount of time taken.
-  llvm::sort(TimersToPrint);
+  llvh::sort(TimersToPrint);
 
   TimeRecord Total;
   for (const PrintRecord &Record : TimersToPrint)

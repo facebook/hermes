@@ -9,10 +9,10 @@
 
 #include "hermes/Optimizer/Scalar/BundlerUtils.h"
 #include "hermes/IR/Instrs.h"
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 
 using namespace hermes;
-using llvm::dbgs;
+using llvh::dbgs;
 
 // Metromin format
 // II =
@@ -30,7 +30,7 @@ using llvm::dbgs;
 //    (StoredValue V)
 // )
 bool BundlerUtils::isJSModuleExportsMetroMin(Instruction *II, Value *&V) {
-  auto *SPI = llvm::dyn_cast<StorePropertyInst>(II);
+  auto *SPI = llvh::dyn_cast<StorePropertyInst>(II);
   if (!SPI)
     return false;
 
@@ -86,7 +86,7 @@ bool BundlerUtils::isJSModuleExports(Instruction *II, Value *&V) {
 bool BundlerUtils::isJSModuleRequiresMetroMin(
     Instruction *II,
     unsigned int &modId) { // TODO: Fix the scoping of ModuleID
-  auto *CI = llvm::dyn_cast<CallInst>(II);
+  auto *CI = llvh::dyn_cast<CallInst>(II);
   if (!CI)
     return false;
 
@@ -161,7 +161,7 @@ bool BundlerUtils::isJSModuleRequires(Instruction *II, ModuleID &modId) {
 
 void BundlerUtils::findFunctionRequires(
     Function *F,
-    llvm::DenseSet<ModuleID> &requires) {
+    llvh::DenseSet<ModuleID> &requires) {
   LLVM_DEBUG(dbgs() << "Function " << F->getInternalName() << " requires:\n");
   for (BasicBlock &BB : *F) {
     for (Instruction &II : BB) {
@@ -188,16 +188,16 @@ bool BundlerUtils::isJSModuleDefine(
   if (xmform_ != BundlerKind::metromin)
     return false;
 
-  auto *CI = llvm::dyn_cast<CallInst>(II);
+  auto *CI = llvh::dyn_cast<CallInst>(II);
   if (!CI)
     return false;
 
-  auto *LPI = llvm::dyn_cast<LoadPropertyInst>(CI->getCallee());
+  auto *LPI = llvh::dyn_cast<LoadPropertyInst>(CI->getCallee());
   if (!LPI)
     return false;
-  if (!llvm::isa<GlobalObject>(LPI->getObject()))
+  if (!llvh::isa<GlobalObject>(LPI->getObject()))
     return false;
-  LiteralString *PN = llvm::dyn_cast<LiteralString>(LPI->getProperty());
+  LiteralString *PN = llvh::dyn_cast<LiteralString>(LPI->getProperty());
   if (!PN)
     return false;
   if (PN->getValue().str().compare("__d") != 0)
@@ -254,7 +254,7 @@ void BundlerUtils::identifyInlineableJSModules() {
     auto it = importsMap_.find(jsModId);
     if (it == importsMap_.end())
       continue;
-    llvm::DenseSet<ModuleID> &imports = it->second;
+    llvh::DenseSet<ModuleID> &imports = it->second;
     for (ModuleID i : imports) {
       if (inlineableJSmodules_.count(i) != 0) {
         LLVM_DEBUG(
@@ -298,9 +298,9 @@ void BundlerUtils::createJSModuleDependencies(Module *M) {
     if (nm_it == nestedMap_.end()) {
       llvm_unreachable("Expected to find function in nestedMap_\n");
     }
-    llvm::SetVector<Function *> funcs = nm_it->second;
+    llvh::SetVector<Function *> funcs = nm_it->second;
 
-    llvm::DenseSet<ModuleID> requires;
+    llvh::DenseSet<ModuleID> requires;
 
     for (Function *f : funcs) {
       BundlerUtils::findFunctionRequires(f, requires);
@@ -314,11 +314,11 @@ void BundlerUtils::createJSModuleDependencies(Module *M) {
     for (ModuleID r : requires) {
       auto it = revImportsMap_.find(r);
       if (it == revImportsMap_.end()) {
-        llvm::DenseSet<ModuleID> exports;
+        llvh::DenseSet<ModuleID> exports;
         exports.insert(jsModId);
         revImportsMap_[r] = exports;
       } else {
-        llvm::DenseSet<ModuleID> &exports = it->second;
+        llvh::DenseSet<ModuleID> &exports = it->second;
         exports.insert(jsModId);
       }
     }

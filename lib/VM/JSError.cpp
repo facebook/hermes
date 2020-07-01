@@ -468,7 +468,7 @@ static OptValue<hbc::DebugSourceLocation> getDebugInfo(
     uint32_t bytecodeOffset) {
   auto offset = codeBlock->getDebugSourceLocationsOffset();
   if (!offset.hasValue()) {
-    return llvm::None;
+    return llvh::None;
   }
 
   return codeBlock->getRuntimeModule()
@@ -481,7 +481,7 @@ bool JSError::appendFunctionNameAtIndex(
     Runtime *runtime,
     Handle<JSError> selfHandle,
     size_t index,
-    llvm::SmallVectorImpl<char16_t> &str) {
+    llvh::SmallVectorImpl<char16_t> &str) {
   IdentifierTable &idt = runtime->getIdentifierTable();
   MutableHandle<StringPrimitive> name{
       runtime, runtime->getPredefinedString(Predefined::emptyString)};
@@ -537,7 +537,7 @@ ExecutionStatus JSError::constructStackTraceString(
   // we have an extremely deep stack, this could get expensive. Assume that very
   // deep stacks are most likely due to runaway recursion and so use a local
   // cache of virtual offsets.
-  llvm::DenseMap<const CodeBlock *, uint32_t> virtualOffsetCache;
+  llvh::DenseMap<const CodeBlock *, uint32_t> virtualOffsetCache;
 
   // Append each function location in the call stack to stack trace.
   auto marker = gcScope.createMarker();

@@ -9,7 +9,7 @@
 #define HERMES_VM_POINTERBASE_H
 
 #include "hermes/VM/AlignedStorage.h"
-#include "llvm/Support/Compiler.h"
+#include "llvh/Support/Compiler.h"
 
 #include <cassert>
 #include <cstdint>

@@ -12,7 +12,7 @@
 #include "hermes/AST/ESTree.h"
 #include "hermes/Parser/Config.h"
 
-#include "llvm/ADT/Optional.h"
+#include "llvh/ADT/Optional.h"
 
 namespace hermes {
 namespace parser {
@@ -39,17 +39,17 @@ class JSParser {
  public:
   explicit JSParser(
       Context &context,
-      std::unique_ptr<llvm::MemoryBuffer> input);
+      std::unique_ptr<llvh::MemoryBuffer> input);
 
   explicit JSParser(Context &context, uint32_t bufferId, ParserPass pass);
 
   JSParser(Context &context, StringRef input)
       : JSParser(
             context,
-            llvm::MemoryBuffer::getMemBuffer(input, "JavaScript")) {}
+            llvh::MemoryBuffer::getMemBuffer(input, "JavaScript")) {}
 
-  JSParser(Context &context, llvm::MemoryBufferRef input)
-      : JSParser(context, llvm::MemoryBuffer::getMemBuffer(input)) {}
+  JSParser(Context &context, llvh::MemoryBufferRef input)
+      : JSParser(context, llvh::MemoryBuffer::getMemBuffer(input)) {}
 
   ~JSParser();
 
@@ -63,7 +63,7 @@ class JSParser {
   /// source.
   bool getUseStaticBuiltin() const;
 
-  llvm::Optional<ESTree::ProgramNode *> parse();
+  llvh::Optional<ESTree::ProgramNode *> parse();
 
   void seek(SMLoc startPos);
 
@@ -80,7 +80,7 @@ class JSParser {
   /// Parse the AST of a specified function type at a given starting point.
   /// This is used for lazy compilation to parse and compile the function on
   /// the first call.
-  llvm::Optional<ESTree::NodePtr> parseLazyFunction(
+  llvh::Optional<ESTree::NodePtr> parseLazyFunction(
       ESTree::NodeKind kind,
       SMLoc start);
 

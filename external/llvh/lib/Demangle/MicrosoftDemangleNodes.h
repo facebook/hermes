@@ -1,14 +1,14 @@
 #ifndef LLVM_SUPPORT_MICROSOFTDEMANGLENODES_H
 #define LLVM_SUPPORT_MICROSOFTDEMANGLENODES_H
 
-#include "llvm/Demangle/Compiler.h"
-#include "llvm/Demangle/StringView.h"
+#include "llvh/Demangle/Compiler.h"
+#include "llvh/Demangle/StringView.h"
 #include <array>
 #include <cstdint>
 
 class OutputStream;
 
-namespace llvm {
+namespace llvh {
 namespace ms_demangle {
 
 // This memory allocator is extremely fast, but it doesn't call dtors
@@ -693,6 +693,6 @@ struct FunctionSymbolNode : public SymbolNode {
 };
 
 } // namespace ms_demangle
-} // namespace llvm
+} // namespace llvh
 
 #endif

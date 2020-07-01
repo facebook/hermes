@@ -68,7 +68,7 @@ class WeakRef : public WeakRefBase {
         gc->weakRefMutex() &&
         "Weak ref mutex must be held in order to access a weak ref's contents");
     if (!isValid(gc->weakRefMutex())) {
-      return OptValue<typename Traits::value_type>(llvm::None);
+      return OptValue<typename Traits::value_type>(llvh::None);
     }
 
     const HermesValue value = slot_->value();
@@ -79,7 +79,7 @@ class WeakRef : public WeakRefBase {
   /// This function returns the stored HermesValue and wraps it into a new
   /// handle, ensuring that it cannot be freed while the handle is alive.
   /// If the weak reference is not live, returns None.
-  llvm::Optional<Handle<T>> get(HandleRootOwner *runtime, GC *gc) const {
+  llvh::Optional<Handle<T>> get(HandleRootOwner *runtime, GC *gc) const {
     // Grab the weak ref lock to be able to safely query the slot. The GC might
     // be marking WeakRefs or nulling them out.
     // TODO: Checking isValid requires reading the slot, which is wasteful if
@@ -90,11 +90,11 @@ class WeakRef : public WeakRefBase {
     return getLocked(runtime, gc);
   }
 
-  llvm::Optional<Handle<T>> getLocked(HandleRootOwner *runtime, GC *gc) const {
+  llvh::Optional<Handle<T>> getLocked(HandleRootOwner *runtime, GC *gc) const {
     if (const auto optValue = unsafeGetOptional(gc)) {
       return Handle<T>::vmcast(runtime, Traits::encode(optValue.getValue()));
     }
-    return llvm::None;
+    return llvh::None;
   }
 
   /// Clear the slot to which the WeakRef refers.

@@ -47,7 +47,7 @@
 #include "regutils.h"
 #include "regex2.h"
 
-#include "llvm/Config/config.h"
+#include "llvh/Config/config.h"
 
 /* character-class table */
 static struct cclass {

@@ -11,50 +11,50 @@
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PageAccessTracker.h"
 
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Allocator.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/Program.h"
-#include "llvm/Support/SHA1.h"
-#include "llvm/Support/Signals.h"
+#include "llvh/ADT/SmallString.h"
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/Support/Allocator.h"
+#include "llvh/Support/CommandLine.h"
+#include "llvh/Support/FileSystem.h"
+#include "llvh/Support/InitLLVM.h"
+#include "llvh/Support/PrettyStackTrace.h"
+#include "llvh/Support/Program.h"
+#include "llvh/Support/SHA1.h"
+#include "llvh/Support/Signals.h"
 
 #include "repl.h"
 
 using namespace hermes;
 
 namespace cl {
-using llvm::cl::opt;
+using llvh::cl::opt;
 
 static opt<bool> EnableJIT(
     "jit",
-    llvm::cl::desc("enable JIT compilation"),
-    llvm::cl::init(false));
+    llvh::cl::desc("enable JIT compilation"),
+    llvh::cl::init(false));
 
 static opt<bool> DumpJITCode(
     "dump-jitcode",
-    llvm::cl::desc("dump JIT'ed code"),
-    llvm::cl::init(false));
+    llvh::cl::desc("dump JIT'ed code"),
+    llvh::cl::init(false));
 
 static opt<bool> JITCrashOnError(
     "jit-crash-on-error",
-    llvm::cl::desc("crash on any JIT compilation error"),
-    llvm::cl::init(false));
+    llvh::cl::desc("crash on any JIT compilation error"),
+    llvh::cl::init(false));
 
 static opt<unsigned> Repeat(
     "Xrepeat",
-    llvm::cl::desc("Repeat execution N number of times"),
-    llvm::cl::init(1),
-    llvm::cl::Hidden);
+    llvh::cl::desc("Repeat execution N number of times"),
+    llvh::cl::init(1),
+    llvh::cl::Hidden);
 
 static opt<bool> RandomizeMemoryLayout(
     "Xrandomize-memory-layout",
-    llvm::cl::desc("Randomize stack placement etc."),
-    llvm::cl::init(false),
-    llvm::cl::Hidden);
+    llvh::cl::desc("Randomize stack placement etc."),
+    llvh::cl::init(false),
+    llvh::cl::Hidden);
 
 static opt<bool> GCAllocYoung(
     "gc-alloc-young",
@@ -83,8 +83,8 @@ static opt<bool> GCPrintStats(
 
 static opt<unsigned> ExecutionTimeLimit(
     "time-limit",
-    llvm::cl::desc("Number of milliseconds after which to abort JS exeuction"),
-    llvm::cl::init(0));
+    llvh::cl::desc("Number of milliseconds after which to abort JS exeuction"),
+    llvh::cl::init(0));
 } // namespace cl
 
 /// Execute Hermes bytecode \p bytecode, respecting command line arguments.
@@ -192,18 +192,18 @@ static vm::RuntimeConfig getReplRuntimeConfig() {
 int main(int argc, char **argv) {
 #ifndef HERMES_FBCODE_BUILD
   // Normalize the arg vector.
-  llvm::InitLLVM initLLVM(argc, argv);
+  llvh::InitLLVM initLLVM(argc, argv);
 #else
   // When both HERMES_FBCODE_BUILD and sanitizers are enabled, InitLLVM may have
   // been already created and destroyed before main() is invoked. This presents
   // a problem because InitLLVM can't be instantiated more than once in the same
   // process. The most important functionality InitLLVM provides is shutting
   // down LLVM in its destructor. We can use "llvm_shutdown_obj" to do the same.
-  llvm::llvm_shutdown_obj Y;
+  llvh::llvm_shutdown_obj Y;
 #endif
 
-  llvm::cl::AddExtraVersionPrinter(driver::printHermesCompilerVMVersion);
-  llvm::cl::ParseCommandLineOptions(argc, argv, "Hermes driver\n");
+  llvh::cl::AddExtraVersionPrinter(driver::printHermesCompilerVMVersion);
+  llvh::cl::ParseCommandLineOptions(argc, argv, "Hermes driver\n");
 
   if (cl::InputFilenames.size() == 0) {
     return repl(getReplRuntimeConfig());

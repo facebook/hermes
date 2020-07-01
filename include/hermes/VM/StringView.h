@@ -47,9 +47,9 @@ class StringView {
     /// must have been resolved if it's a rope, i.e. we should be able to obtain
     /// a char/char16 pointer directly from str_.
     ///
-    /// NOTE: we are using \c llvm::AlignedCharArrayUnion to avoid constructing
+    /// NOTE: we are using \c llvh::AlignedCharArrayUnion to avoid constructing
     /// the handle (which doesn't have a default constructor).
-    llvm::AlignedCharArrayUnion<Handle<StringPrimitive>> strPrim_;
+    llvh::AlignedCharArrayUnion<Handle<StringPrimitive>> strPrim_;
   };
 
   /// Starting index in the StringPrimitive as the beginning of this view.
@@ -321,13 +321,13 @@ class StringView {
   /// and \return a pointer to the beginning of this string in the allocator.
   /// Note: \p allocator does not need to be empty when passed in. We always
   /// append.
-  UTF16Ref getUTF16Ref(llvm::SmallVectorImpl<char16_t> &allocator) const {
+  UTF16Ref getUTF16Ref(llvh::SmallVectorImpl<char16_t> &allocator) const {
     return getUTF16Ref(allocator, false);
   }
 
   /// Force copying the string into \p allocator, even though the string
   /// may have already been UTF16.
-  void copyUTF16String(llvm::SmallVectorImpl<char16_t> &allocator) const {
+  void copyUTF16String(llvh::SmallVectorImpl<char16_t> &allocator) const {
     (void)getUTF16Ref(allocator, true);
   }
 
@@ -361,7 +361,7 @@ class StringView {
 
   /// Check if a StringView is equal to an ArrayRef.
   template <typename T>
-  bool equals(const llvm::ArrayRef<T> &other) const {
+  bool equals(const llvh::ArrayRef<T> &other) const {
     if (isASCII()) {
       return stringRefEquals(ASCIIRef(castToCharPtr(), length()), other);
     }
@@ -370,7 +370,7 @@ class StringView {
 
   TwineChar16 toTwine() const {
     if (isASCII()) {
-      return TwineChar16(llvm::StringRef(castToCharPtr(), length()));
+      return TwineChar16(llvh::StringRef(castToCharPtr(), length()));
     }
     return TwineChar16(UTF16Ref(castToChar16Ptr(), length()));
   }
@@ -408,7 +408,7 @@ class StringView {
 
   /// Helper function for getUTF16Ref and copyUTF16String.
   UTF16Ref getUTF16Ref(
-      llvm::SmallVectorImpl<char16_t> &allocator,
+      llvh::SmallVectorImpl<char16_t> &allocator,
       bool alwaysCopy) const;
 
   Handle<StringPrimitive> &strPrim() {
@@ -425,7 +425,7 @@ class StringView {
   }
 };
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const StringView &sv);
+llvh::raw_ostream &operator<<(llvh::raw_ostream &os, const StringView &sv);
 
 } // namespace vm
 } // namespace hermes

@@ -16,12 +16,12 @@
 #include "hermes/Optimizer/Scalar/Utils.h"
 #include "hermes/Support/Statistic.h"
 
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/Support/Debug.h"
+#include "llvh/ADT/DenseSet.h"
+#include "llvh/Support/Debug.h"
 
 using namespace hermes;
-using llvm::dbgs;
-using llvm::isa;
+using llvh::dbgs;
+using llvh::isa;
 
 STATISTIC(NumSimp, "Number of instructions simplified");
 
@@ -35,7 +35,7 @@ bool canBeNaN(Value *value) {
     return false;
   }
 
-  if (auto *literalNumber = llvm::dyn_cast<LiteralNumber>(value)) {
+  if (auto *literalNumber = llvh::dyn_cast<LiteralNumber>(value)) {
     return std::isnan(literalNumber->getValue());
   }
 
@@ -47,7 +47,7 @@ Value *reduceAsNumber(AsNumberInst *asNumber) {
   auto *op = asNumber->getSingleOperand();
 
   // If operand is a literal, try to evaluate ToNumber(operand).
-  if (auto *lit = llvm::dyn_cast<Literal>(op)) {
+  if (auto *lit = llvh::dyn_cast<Literal>(op)) {
     if (auto *result = evalToNumber(builder, lit)) {
       return result;
     }
@@ -67,7 +67,7 @@ Value *reduceAsInt32(AsInt32Inst *asInt32) {
   auto *op = asInt32->getSingleOperand();
 
   // If operand is a literal, try to evaluate ToNumber(operand).
-  if (auto *lit = llvm::dyn_cast<Literal>(op)) {
+  if (auto *lit = llvh::dyn_cast<Literal>(op)) {
     if (auto *result = evalToInt32(builder, lit)) {
       return result;
     }
@@ -88,7 +88,7 @@ Value *simplifyUnOp(UnaryOperatorInst *unary) {
   Type t = op->getType();
 
   // If the operand is a literal, try to evaluate the expression.
-  if (auto *lit = llvm::dyn_cast<Literal>(op)) {
+  if (auto *lit = llvh::dyn_cast<Literal>(op)) {
     if (auto result = evalUnaryOperator(kind, builder, lit)) {
       return result;
     }
@@ -148,8 +148,8 @@ Value *simplifyBinOp(BinaryOperatorInst *binary) {
   auto kind = binary->getOperatorKind();
 
   // Try simplifying without replacing the instruction.
-  auto *litLhs = llvm::dyn_cast<Literal>(lhs);
-  auto *litRhs = llvm::dyn_cast<Literal>(rhs);
+  auto *litLhs = llvh::dyn_cast<Literal>(lhs);
+  auto *litRhs = llvh::dyn_cast<Literal>(rhs);
   if (litLhs && litRhs) {
     if (auto result = evalBinaryOperator(kind, builder, litLhs, litRhs)) {
       return result;
@@ -250,12 +250,12 @@ Value *simplifyBinOp(BinaryOperatorInst *binary) {
 
     case OpKind::AddKind:
       // Convert ("" + x) or (x + "") as AsString(x).
-      if (llvm::isa<LiteralString>(lhs) &&
+      if (llvh::isa<LiteralString>(lhs) &&
           cast<LiteralString>(lhs)->getValue().str() == "") {
         builder.setInsertionPoint(binary);
         return builder.createAddEmptyStringInst(rhs);
       } else if (
-          llvm::isa<LiteralString>(rhs) &&
+          llvh::isa<LiteralString>(rhs) &&
           cast<LiteralString>(rhs)->getValue().str() == "") {
         builder.setInsertionPoint(binary);
         return builder.createAddEmptyStringInst(lhs);
@@ -265,11 +265,11 @@ Value *simplifyBinOp(BinaryOperatorInst *binary) {
     case OpKind::OrKind: { // |
       // Convert (x | 0) of (0 | x) to AsInt32.
       Value *nonzeroOp = nullptr;
-      if (llvm::isa<LiteralNumber>(lhs) &&
+      if (llvh::isa<LiteralNumber>(lhs) &&
           cast<LiteralNumber>(lhs)->getValue() == 0) {
         nonzeroOp = rhs;
       } else if (
-          llvm::isa<LiteralNumber>(rhs) &&
+          llvh::isa<LiteralNumber>(rhs) &&
           cast<LiteralNumber>(rhs)->getValue() == 0) {
         nonzeroOp = lhs;
       }
@@ -346,7 +346,7 @@ Value *simplifyCondBranchInst(CondBranchInst *CBI) {
   // %1 = NOT %0
   // COND_BR %0, %BB2, %BB1
   //
-  if (auto *U = llvm::dyn_cast<UnaryOperatorInst>(cond)) {
+  if (auto *U = llvh::dyn_cast<UnaryOperatorInst>(cond)) {
     if (U->getSideEffect() == SideEffectKind::None &&
         U->getOperatorKind() == UnaryOperatorInst::OpKind::BangKind) {
       // Strip the negation.
@@ -366,11 +366,11 @@ Value *simplifyCondBranchInst(CondBranchInst *CBI) {
 /// for callsite \p callSite, or nullptr if none found.
 Value *getKnownReturnValue(Function *F, CallInst *callSite) {
   IRBuilder builder(F);
-  llvm::DenseSet<Value *> returnValues;
+  llvh::DenseSet<Value *> returnValues;
 
   for (auto &BB : F->getBasicBlockList()) {
     auto *term = BB.getTerminator();
-    auto *ret = llvm::dyn_cast<ReturnInst>(term);
+    auto *ret = llvh::dyn_cast<ReturnInst>(term);
     if (!ret)
       continue;
 
@@ -386,12 +386,12 @@ Value *getKnownReturnValue(Function *F, CallInst *callSite) {
   Value *v = *returnValues.begin();
 
   // The function always returns a single literal.
-  if (llvm::isa<Literal>(v))
+  if (llvh::isa<Literal>(v))
     return v;
 
   // The function returns a parameter, let's inspect the call
   // site and find the value.
-  if (auto *P = llvm::dyn_cast<Parameter>(v)) {
+  if (auto *P = llvh::dyn_cast<Parameter>(v)) {
     // Don't handle the 'this' parameter.
     if (P->isThisParameter())
       return nullptr;
@@ -412,7 +412,7 @@ Value *getKnownReturnValue(Function *F, CallInst *callSite) {
 }
 
 Value *simplifyCallInst(CallInst *CI) {
-  if (!CI->hasUsers() || llvm::isa<ConstructInst>(CI))
+  if (!CI->hasUsers() || llvh::isa<ConstructInst>(CI))
     return nullptr;
 
   if (Function *F = getCallee(CI->getCallee())) {
@@ -431,7 +431,7 @@ Value *simplifySwitchInst(SwitchInst *SI) {
   builder.setInsertionBlock(thisBlock);
 
   Value *input = SI->getInputValue();
-  auto *litInput = llvm::dyn_cast<Literal>(input);
+  auto *litInput = llvh::dyn_cast<Literal>(input);
 
   // If input of switch is not literal, nothing can be done.
   if (!litInput) {
@@ -476,7 +476,7 @@ Value *simplifyAddEmptyString(AddEmptyStringInst *AES) {
   auto *op = AES->getSingleOperand();
 
   // If operand is a literal, try to evaluate ToString(operand).
-  if (auto *lit = llvm::dyn_cast<Literal>(op)) {
+  if (auto *lit = llvh::dyn_cast<Literal>(op)) {
     if (auto *result = evalToString(builder, lit)) {
       return result;
     }
@@ -512,12 +512,12 @@ Value *simplifyCoerceThisNS(CoerceThisNSInst *coerce) {
 ///   - nullptr if the instruction cannot be simplified.
 ///   - the instruction itself, if it was changed inplace.
 ///   - a new instruction to replace the original one
-///   - llvm::None if the instruction should be deleted.
+///   - llvh::None if the instruction should be deleted.
 OptValue<Value *> simplifyThrowIfUndefined(ThrowIfUndefinedInst *TIU) {
   // If the operand does not contain the "poison" type, it can be safely
   // eliminated.
   if (!TIU->getCheckedValue()->getType().canBeUndefined())
-    return llvm::None;
+    return llvh::None;
   return nullptr;
 }
 
@@ -526,7 +526,7 @@ OptValue<Value *> simplifyThrowIfUndefined(ThrowIfUndefinedInst *TIU) {
 ///   - nullptr if the instruction cannot be simplified.
 ///   - the instruction itself, if it was changed inplace.
 ///   - a new instruction to replace the original one
-///   - llvm::None if the instruction should be deleted.
+///   - llvh::None if the instruction should be deleted.
 OptValue<Value *> simplifyInstruction(Instruction *I) {
   // Dispatch the different simplification kinds:
   switch (I->getKind()) {
