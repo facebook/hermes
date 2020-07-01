@@ -91,6 +91,29 @@ var desc = Object.getOwnPropertyDescriptor(obj, 'x');
 print(desc.value, desc.writable, desc.enumerable, desc.configurable);
 // CHECK: asdf true true true
 
+print('getOwnPropertyDescriptors');
+// CHECK-LABEL: getOwnPropertyDescriptors
+var obj = { x: 'a' };
+obj[2] = 'b';
+Object.defineProperty(obj, 'z', {
+  value: 'c',
+  enumerable: false,
+});
+var sym = Symbol();
+Object.defineProperty(obj, sym, {
+  value: 'd',
+  enumerable: true,
+});
+var descs = Object.getOwnPropertyDescriptors(obj);
+print(descs.x.value, descs.x.enumerable);
+print(descs[2].value, descs[2].enumerable);
+print(descs.z.value, descs.z.enumerable);
+print(descs[sym].value, descs[sym].enumerable);
+// CHECK-NEXT: a true
+// CHECK-NEXT: b true
+// CHECK-NEXT: c false
+// CHECK-NEXT: d true
+
 var acc = Object();
 acc.get = function() {
   print('getter called');
