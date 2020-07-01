@@ -490,3 +490,7 @@ print(RegExp.prototype[Symbol.split].name);
 // CHECK-NEXT: [Symbol.split]
 print(/-/[Symbol.split]('a-b-c'));
 // CHECK-NEXT: a,b,c
+
+// Check UTF-16 string matching executes correctly
+print(/abc/u.exec("\u20ac\u20ac\u20ac\u20ac"));
+// CHECK-LABEL: null

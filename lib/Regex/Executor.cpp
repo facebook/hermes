@@ -883,14 +883,14 @@ template <class Traits>
 inline size_t Context<Traits>::advanceStringIndex(
     const CodeUnit *start,
     size_t index,
-    size_t lastIndex) const {
+    size_t length) const {
   if (sizeof(CodeUnit) == 1) {
     // The input string is ASCII and therefore cannot have surrogate pairs.
     return index + 1;
   }
   // "If unicode is false, return index+1."
   // "If index+1 >= length, return index+1."
-  if (LLVM_LIKELY(!(syntaxFlags_.unicode)) || (index + 1 >= lastIndex))
+  if (LLVM_LIKELY(!(syntaxFlags_.unicode)) || (index + 1 >= length))
     return index + 1;
 
   // Let first be the code unit value at index index in S
@@ -924,10 +924,12 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
 
   const CodeUnit *const startLoc = c.currentPointer();
 
+  const size_t charsToEnd = c.remaining();
+
   // Decide how many locations we'll need to check.
   // Note that we do want to check the empty range at the end, so add one to
-  // remaining().
-  const size_t locsToCheckCount = onlyAtStart ? 1 : 1 + c.remaining();
+  // charsToEnd.
+  const size_t locsToCheckCount = onlyAtStart ? 1 : 1 + charsToEnd;
 
   // If we are tracking backwards, we should only ever have one potential match
   // location. This is because advanceStringIndex only ever tracks forwards.
@@ -944,7 +946,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
   } while (0)
 
   for (size_t locIndex = 0; locIndex < locsToCheckCount;
-       locIndex = advanceStringIndex(startLoc, locIndex, locsToCheckCount)) {
+       locIndex = advanceStringIndex(startLoc, locIndex, charsToEnd)) {
     const CodeUnit *potentialMatchLocation = startLoc + locIndex;
     c.setCurrentPointer(potentialMatchLocation);
     s->ip_ = startIp;
