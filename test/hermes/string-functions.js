@@ -258,6 +258,21 @@ print("aXbXcX".split(/(?<=X)/))
 print("test".split(/$/))
 // CHECK-NEXT: test
 
+// Check splitting with sticky/global flag set
+var pattern = /X/y
+print("aXbXcX".split(pattern))
+// CHECK-NEXT: a,b,c,
+print(pattern.lastIndex)
+// CHECK-NEXT: 0
+// We temporarily strip the sticky flag when splitting, ensure it is restored
+print(pattern)
+// CHECK-NEXT: /X/y
+var pattern = /X/g
+print("aXbXcX".split(pattern))
+// CHECK-NEXT: a,b,c,
+print(pattern.lastIndex)
+// CHECK-NEXT: 0
+
 print('substring');
 // CHECK-LABEL: substring
 print('abcdcba'.substring());

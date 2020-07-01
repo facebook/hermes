@@ -731,7 +731,21 @@ static CallResult<RegExpMatch> splitMatch(
     uint32_t q,
     Handle<> R) {
   if (auto regexp = Handle<JSRegExp>::dyn_vmcast(R)) {
-    return JSRegExp::search(regexp, runtime, S, q);
+    const auto originalFlags = JSRegExp::getSyntaxFlags(regexp.get());
+    auto newFlags = originalFlags;
+    // The spec actually tells us to always set the sticky flag to true, but
+    // since it is much faster to perform a global search, we set sticky to
+    // false and then check the returned index in splitInternal.
+    // NOTE: We can only do this because JSRegExp::search cannot execute any
+    // JavaScript so the change to the sticky flag is invisible to the user.
+    newFlags.sticky = 0;
+    JSRegExp::setSyntaxFlags(regexp.get(), newFlags);
+    auto match = JSRegExp::search(regexp, runtime, S, q);
+    // We can ignore an EXCEPTION in the returned value because calling
+    // setSyntaxFlags is safe even after an exception. Instead, we just pass it
+    // on to the caller.
+    JSRegExp::setSyntaxFlags(regexp.get(), originalFlags);
+    return match;
   }
 
   // Not searching for a RegExp, manually do string matching.
