@@ -175,6 +175,7 @@ jobs:
             cd "$HERMES_WS_DIR"
             hermes/utils/build/configure.py
             cd build
+            ninja
             ninja check-hermes
 
   macos:
@@ -249,6 +250,7 @@ jobs:
           command: |
             cd "$HERMES_WS_DIR"
             hermes/utils/build/configure.py
+            cmake --build ./build
             cmake --build ./build --target check-hermes
 
   windows:
