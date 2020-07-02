@@ -63,9 +63,7 @@ class Parser {
   // overflow for overly complex expressions.
   static constexpr uint32_t kMaxParseDepth =
 #ifdef HERMES_LIMIT_STACK_DEPTH
-      128
-#elif defined(_MSC_VER) && defined(__clang__) && defined(HERMES_SLOW_DEBUG)
-      128
+      256
 #elif defined(_MSC_VER) && defined(HERMES_SLOW_DEBUG)
       256
 #elif defined(_MSC_VER)
