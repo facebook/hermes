@@ -376,6 +376,44 @@ uint64_t current_private_dirty() {
 #endif
 }
 
+#if defined(__linux__)
+static bool overlap(uintptr_t a, size_t asize, uintptr_t b, size_t bsize) {
+  // An empty interval has no overlap.
+  if (asize == 0 || bsize == 0)
+    return false;
+  // Order by start address.
+  if (a > b)
+    return overlap(b, bsize, a, asize);
+  // Overlap iff the first interval extends beyond the start of the second.
+  return a + asize > b;
+}
+#endif
+
+std::vector<std::string> get_vm_protect_modes(const void *p, size_t sz) {
+  std::vector<std::string> modes;
+#if defined(__linux__)
+  FILE *fp = fopen("/proc/self/maps", "r");
+  unsigned long long begin;
+  unsigned long long end;
+  char mode[4 + 1];
+  while (fscanf(fp, "%llx-%llx %4s", &begin, &end, mode) == 3) {
+    if (overlap(
+            reinterpret_cast<uintptr_t>(p),
+            sz,
+            static_cast<uintptr_t>(begin),
+            static_cast<size_t>(end - begin))) {
+      modes.push_back(mode);
+    }
+    // Discard remainder of the line.
+    int result;
+    do {
+      result = fgetc(fp);
+    } while (result != '\n' && result > 0);
+  }
+#endif
+  return modes;
+}
+
 bool num_context_switches(long &voluntary, long &involuntary) {
   voluntary = involuntary = -1;
   rusage ru;

@@ -207,6 +207,10 @@ uint64_t current_private_dirty() {
   return 0;
 }
 
+std::vector<std::string> get_vm_protect_modes(const void *p, size_t sz) {
+  return std::vector<std::string>{};
+}
+
 bool num_context_switches(long &voluntary, long &involuntary) {
   voluntary = involuntary = -1;
   return false;

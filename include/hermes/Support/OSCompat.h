@@ -120,6 +120,12 @@ int pages_in_ram(
     size_t sz,
     llvh::SmallVectorImpl<int> *runs = nullptr);
 
+/// Return the protection modes of all memory mappings that overlap with
+/// [p, p + sz). Each mode is a 4-character string of the form:
+/// [r-][w-][x-][ps] where the last character indicates private/shared.
+/// Returns an empty vector if this operation is not supported.
+std::vector<std::string> get_vm_protect_modes(const void *p, size_t sz);
+
 /// Resident set size (RSS), in bytes: the amount of RAM used by the process.
 /// It excludes virtual memory that has been paged out or was never loaded.
 /// \return Peak RSS usage throughout this process's history.

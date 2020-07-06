@@ -339,6 +339,11 @@ uint64_t current_private_dirty() {
   return 0;
 }
 
+std::vector<std::string> get_vm_protect_modes(const void *p, size_t sz) {
+  // Not yet supported.
+  return std::vector<std::string>{};
+}
+
 bool num_context_switches(long &voluntary, long &involuntary) {
   // Not yet supported.
   voluntary = involuntary = -1;
