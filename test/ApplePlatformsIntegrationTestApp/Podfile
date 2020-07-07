@@ -1,5 +1,4 @@
-# Uncomment the next line to define a global platform for your project
-# platform :ios, '9.0'
+source 'https://cdn.cocoapods.org/'
 
 target 'ApplePlatformsIntegrationTestApp' do
   use_frameworks!
