@@ -1,0 +1,8 @@
+# Uncomment the next line to define a global platform for your project
+# platform :ios, '9.0'
+
+target 'ApplePlatformsIntegrationTestApp' do
+  use_frameworks!
+  platform :osx, '10.14'
+  pod 'hermes', :path => '../../'
+end
