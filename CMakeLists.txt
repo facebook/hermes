@@ -210,7 +210,7 @@ set(HERMES_ENABLE_TEST_SUITE ON CACHE BOOL
   "Enable the test suite")
 
 set(HERMES_BUILD_APPLE_FRAMEWORK ON CACHE BOOL
-  "Whether to build a framework bundle or dylib on Apple platforms")
+  "Whether to build the libhermes target as a framework bundle or dylib on Apple platforms")
 
 if (NOT HERMES_IS_MOBILE_BUILD AND APPLE)
   # Always emit debugging symbols (in the DWARF) format, as these will be
