@@ -92,7 +92,7 @@ arrayBufferConstructor(void *, Runtime *runtime, NativeArgs args) {
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto byteLength = res->getNumber();
+  uint64_t byteLength = res->getNumberAs<uint64_t>();
 
   // 3. Return AllocateArrayBuffer(NewTarget, byteLength).
   // This object should not have been initialized yet, ensure this is true
