@@ -80,3 +80,13 @@ Next, link the Hermes npm package into the React Native package in your app. For
 You can now develop your app in the normal way.
 
 Note: if you are making changes to the compiler in Hermes, be sure to make sure you test your app in release mode as this enables bytecode compilation in advance.
+
+## Reporting crashes
+
+If your React Native app crashes with a stack trace, you can use [ndk-stack](https://developer.android.com/ndk/guides/ndk-stack) to symbolicate the stack trace to assist with debugging.
+
+The necessary unstripped libraries can be found in the [GitHub release](https://github.com/facebook/hermes/releases) corresponding to the Hermes NPM you used to build your application.  Download the `hermes-runtime-android-vX.Y.Z.tar.gz` file, and use the directory corresponding to the build flavor and architecture for your app.  For example, for a release arm64 build:
+
+```
+cat crash.txt | $ANDROID_NDK/ndk-stack -sym .../unstripped-release/0/lib/arm64-v8a
+```
