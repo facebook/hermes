@@ -576,7 +576,9 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
     assert(
         slot->state() != WeakSlotState::Free &&
         "marking a freed weak ref slot");
-    slot->mark();
+    if (slot->state() != WeakSlotState::Marked) {
+      slot->mark();
+    }
   }
 
   /// Drain the mark stack of cells to be processed.
@@ -766,7 +768,9 @@ class HadesGC::MarkWeakRootsAcceptor final : public WeakRootAcceptor {
     assert(
         slot->state() != WeakSlotState::Free &&
         "marking a freed weak ref slot");
-    slot->mark();
+    if (slot->state() != WeakSlotState::Marked) {
+      slot->mark();
+    }
   }
 
   const WeakRefMutex &mutexRef() override {
@@ -935,6 +939,10 @@ void HadesGC::oldGenCollection() {
     seg.markBitArray().clear();
   }
 
+  // Unmark all symbols in the identifier table, as Symbol liveness will be
+  // determined during the collection.
+  gcCallbacks_->unmarkSymbols();
+
   // Mark phase: discover all pointers that are live.
   // This assignment will reset any leftover memory from the last collection. We
   // leave the last marker alive to avoid a race condition with setting
@@ -1013,6 +1021,9 @@ void HadesGC::completeMarking() {
   // barrier will need to be updated to handle the case where a WeakRef points
   // to an now-empty cell.
   updateWeakReferencesForOldGen();
+  // Change the phase to sweep here, before the STW lock is released. This
+  // ensures that no mutator read barriers observer the WeakMapScan phase.
+  concurrentPhase_.store(Phase::Sweep, std::memory_order_release);
 }
 
 void HadesGC::findYoungGenSymbolsAndWeakRefs() {
@@ -1048,7 +1059,9 @@ void HadesGC::findYoungGenSymbolsAndWeakRefs() {
       assert(
           slot->state() != WeakSlotState::Free &&
           "marking a freed weak ref slot");
-      slot->mark();
+      if (slot->state() != WeakSlotState::Marked) {
+        slot->mark();
+      }
     }
 
     const WeakRefMutex &mutexRef() override {
@@ -1089,7 +1102,6 @@ void HadesGC::sweep() {
   // TODO: Make sweeping either yield the old gen lock regularly, or not
   // require the lock at all.
   std::lock_guard<Mutex> lk{oldGenMutex_};
-  concurrentPhase_.store(Phase::Sweep, std::memory_order_release);
   const bool isTrackingIDs = getIDTracker().isTrackingIDs() ||
       getAllocationLocationTracker().isEnabled();
   for (auto segit = oldGenBegin(), segitend = oldGenEnd(); segit != segitend;
@@ -1285,7 +1297,18 @@ void HadesGC::markSymbol(SymbolID) {}
 WeakRefSlot *HadesGC::allocWeakSlot(HermesValue init) {
   assert(weakRefMutex() && "Mutex must be held");
   weakPointers_.push_back({init});
-  return &weakPointers_.back();
+  WeakRefSlot *const slot = &weakPointers_.back();
+  const Phase phase = concurrentPhase_.load(std::memory_order_acquire);
+  if (phase == Phase::Mark) {
+    // During the mark phase, if a WeakRef is created, it might not be marked
+    // if the object holding this new WeakRef has already been visited.
+    slot->mark();
+  } else {
+    assert(
+        (phase == Phase::None || phase == Phase::Sweep) &&
+        "WeakRef shouldn't be allocated during any other phase");
+  }
+  return slot;
 }
 
 void HadesGC::freeWeakSlot(WeakRefSlot *slot) {

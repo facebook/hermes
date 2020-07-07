@@ -210,6 +210,10 @@ class GCBase {
     /// Optionally invoked at the beginning of a garbage collection.
     virtual unsigned getSymbolsEnd() const = 0;
 
+    /// If any symbols are marked by the IdentifierTable, clear that marking.
+    /// Optionally invoked at the beginning of some collections.
+    virtual void unmarkSymbols() = 0;
+
     /// Free all symbols which are not marked as \c true in \p markedSymbols.
     /// Optionally invoked at the end of a garbage collection.
     virtual void freeSymbols(const std::vector<bool> &markedSymbols) = 0;

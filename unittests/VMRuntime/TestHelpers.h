@@ -313,6 +313,8 @@ struct DummyRuntime final : public HandleRootOwner,
     return 0;
   }
 
+  void unmarkSymbols() override {}
+
   void freeSymbols(const std::vector<bool> &) override {}
 
 #ifdef HERMES_SLOW_DEBUG

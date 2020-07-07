@@ -756,6 +756,10 @@ unsigned Runtime::getSymbolsEnd() const {
   return identifierTable_.getSymbolsEnd();
 }
 
+void Runtime::unmarkSymbols() {
+  identifierTable_.unmarkSymbols();
+}
+
 void Runtime::freeSymbols(const std::vector<bool> &markedSymbols) {
   identifierTable_.freeUnmarkedSymbols(markedSymbols);
 }

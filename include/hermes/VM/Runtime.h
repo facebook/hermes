@@ -868,6 +868,10 @@ class Runtime : public HandleRootOwner,
   /// Optionally invoked at the beginning of a garbage collection.
   virtual unsigned getSymbolsEnd() const override;
 
+  /// If any symbols are marked by the IdentifierTable, clear that marking.
+  /// Optionally invoked at the beginning of some collections.
+  virtual void unmarkSymbols() override;
+
   /// Called by the GC at the end of a collection to free all symbols not set in
   /// markedSymbols.
   virtual void freeSymbols(const std::vector<bool> &markedSymbols) override;

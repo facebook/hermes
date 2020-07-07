@@ -160,6 +160,9 @@ class IdentifierTable {
     return lookupVector_.size();
   }
 
+  /// Remove the mark bit from each symbol.
+  void unmarkSymbols();
+
   /// Invoked at the end of a GC to free all unmarked symbols.
   void freeUnmarkedSymbols(const std::vector<bool> &markedSymbols);
 
@@ -245,28 +248,28 @@ class IdentifierTable {
         : asciiPtr_(str.data()),
           isUTF16_(false),
           isNotUniqued_(isNotUniqued),
-          marked_(false),
+          marked_(true),
           num_(str.size()),
           hash_(hermes::hashString(str)) {}
     explicit LookupEntry(ASCIIRef str, uint32_t hash, bool isNotUniqued = false)
         : asciiPtr_(str.data()),
           isUTF16_(false),
           isNotUniqued_(isNotUniqued),
-          marked_(false),
+          marked_(true),
           num_(str.size()),
           hash_(hash) {}
     explicit LookupEntry(UTF16Ref str)
         : utf16Ptr_(str.data()),
           isUTF16_(true),
           isNotUniqued_(false),
-          marked_(false),
+          marked_(true),
           num_(str.size()),
           hash_(hermes::hashString(str)) {}
     explicit LookupEntry(UTF16Ref str, uint32_t hash)
         : utf16Ptr_(str.data()),
           isUTF16_(true),
           isNotUniqued_(false),
-          marked_(false),
+          marked_(true),
           num_(str.size()),
           hash_(hash) {}
     explicit LookupEntry(StringPrimitive *str, bool isNotUniqued = false);
@@ -277,7 +280,7 @@ class IdentifierTable {
         : strPrim_(str),
           isUTF16_(true),
           isNotUniqued_(isNotUniqued),
-          marked_(false),
+          marked_(true),
           num_(NON_LAZY_STRING_PRIM_TAG),
           hash_(hash) {
       assert(str && "Invalid string primitive pointer");
@@ -401,15 +404,6 @@ class IdentifierTable {
 
   /// Index of the first free index in lookupVector_.
   uint32_t firstFreeID_{LookupEntry::FREE_LIST_END};
-
-  /// Head of the free list created by the GC. Before resizing lookupVector_,
-  /// consult if this free list has any entries available.
-  /// Protected by lookupVectorMutex_.
-  uint32_t firstGCFreeID_{LookupEntry::FREE_LIST_END};
-
-  /// Must hold this whenever growing the vector, or when the GC iterates over
-  /// it.
-  Mutex lookupVectorMutex_;
 
   LookupEntry &getLookupTableEntry(SymbolID id) {
     return getLookupTableEntry(id.unsafeGetIndex());
