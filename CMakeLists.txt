@@ -58,8 +58,10 @@ if (POLICY CMP0026)
   cmake_policy(SET CMP0026 OLD)
 endif()
 
-# This must be consistent with the release_version in
-# android/build.gradle and npm/package.json
+# This must be consistent with the release_version in:
+# - android/build.gradle
+# - npm/package.json
+# - hermes.podspec
 project(Hermes
         VERSION 0.5.0
         LANGUAGES C CXX)
