@@ -29,7 +29,7 @@ def main():
         args.verbose,
         args.match,
         args.source,
-        args.test_blacklist,
+        args.test_skiplist,
         args.num_slowest_tests,
         args.keep_tmp,
         args.show_all,
