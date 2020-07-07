@@ -507,7 +507,7 @@ endfunction()
 # Declare a function that strips debugging symbols from any target built for
 # Apple platforms, which we do build initially so they can be extracted into a
 # dSYM bundle.
-function(hermes_strip_debug_symbols target_name)
+function(hermes_strip_apple_debug_symbols target_name)
   if(APPLE)
     if(NOT CMAKE_STRIP)
       set(CMAKE_STRIP xcrun strip)

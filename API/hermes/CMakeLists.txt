@@ -161,4 +161,4 @@ if(APPLE AND CMAKE_CXX_FLAGS MATCHES "-gdwarf")
   endif()
 endif()
 
-hermes_strip_debug_symbols(libhermes)
+hermes_strip_apple_debug_symbols(libhermes)
