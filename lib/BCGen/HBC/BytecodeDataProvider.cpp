@@ -543,19 +543,6 @@ BCProviderFromBuffer::BCProviderFromBuffer(
   cjsModuleOffset_ = fileHeader->cjsModuleOffset;
   cjsModuleTable_ = fields.cjsModuleTable;
   cjsModuleTableStatic_ = fields.cjsModuleTableStatic;
-
-#ifdef HERMES_FACEBOOK_BUILD
-  // Any buffer larer than 64 kB should be read-only.
-  // This is a temporary hack for debugging purposes.
-  if (buffer_->size() > (1 << 16)) {
-    for (const auto &mode :
-         oscompat::get_vm_protect_modes(buffer_->data(), buffer_->size())) {
-      if (mode[1] == 'w') {
-        hermes_fatal("Bytecode buffer is writable");
-      }
-    }
-  }
-#endif
 }
 
 llvh::ArrayRef<uint8_t> BCProviderFromBuffer::getEpilogue() const {
