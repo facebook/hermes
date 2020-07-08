@@ -1364,6 +1364,9 @@ void *HadesGC::allocWork(uint32_t sz) {
       "Should be aligned before entering this function");
   assert(sz >= minAllocationSize() && "Allocating too small of an object");
   assert(sz <= maxAllocationSize() && "Allocating too large of an object");
+  HERMES_SLOW_ASSERT(
+      !weakRefMutex() &&
+      "WeakRef mutex should not be held when alloc is called");
   if (!fixedSize && LLVM_UNLIKELY(sz >= HeapSegment::maxSize() / 2)) {
     return allocLongLived(sz);
   }

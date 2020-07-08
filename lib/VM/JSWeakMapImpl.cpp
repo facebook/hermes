@@ -31,11 +31,11 @@ ExecutionStatus JSWeakMapImplBase::setValue(
     Runtime *runtime,
     Handle<JSObject> key,
     Handle<> value) {
-  WeakRefLock lk{runtime->getHeap().weakRefMutex()};
   {
     // No allocations should occur while a WeakRefKey is live.
-    // Holding the WeakRefLock will prevent the weak ref from getting cleared.
     NoAllocScope noAlloc{runtime};
+    // Holding the WeakRefLock will prevent the weak ref from getting cleared.
+    WeakRefLock lk{runtime->getHeap().weakRefMutex()};
     WeakRefKey mapKey(
         WeakRef<JSObject>{&runtime->getHeap(), key},
         runtime->gcStableHashHermesValue(key));
@@ -60,12 +60,18 @@ ExecutionStatus JSWeakMapImplBase::setValue(
   }
   uint32_t i = *cr;
 
-  WeakRefKey mapKey(
-      WeakRef<JSObject>{&runtime->getHeap(), key},
-      runtime->gcStableHashHermesValue(key));
-  auto result = self->map_.try_emplace(mapKey, i);
-  (void)result;
-  assert(result.second && "unable to add a new value to map");
+  {
+    // No allocations should occur while a WeakRefKey is live.
+    NoAllocScope noAlloc{runtime};
+    // Holding the WeakRefLock will prevent the weak ref from getting cleared.
+    WeakRefLock lk{runtime->getHeap().weakRefMutex()};
+    WeakRefKey mapKey(
+        WeakRef<JSObject>{&runtime->getHeap(), key},
+        runtime->gcStableHashHermesValue(key));
+    auto result = self->map_.try_emplace(mapKey, i);
+    (void)result;
+    assert(result.second && "unable to add a new value to map");
+  }
 
   self->valueStorage_.get(runtime)->at(i).set(*value, &runtime->getHeap());
   return ExecutionStatus::RETURNED;
@@ -224,6 +230,8 @@ CallResult<uint32_t> JSWeakMapImplBase::getFreeValueStorageIndex(
   if (self->freeListHead_ == kFreeListInvalid && self->hasFreeableSlots_) {
     // No elements in the free list and there are freeable slots.
     // Try to find some.
+    // findAndDeleteFreeSlots needs the lock to be held.
+    WeakRefLock lk{runtime->getHeap().weakRefMutex()};
     self->findAndDeleteFreeSlots(runtime, &runtime->getHeap());
   }
 

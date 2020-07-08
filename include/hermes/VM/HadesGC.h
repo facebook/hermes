@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_HADESGC_H
 #define HERMES_VM_HADESGC_H
 
+#include "hermes/Support/SlowAssert.h"
 #include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/GCBase.h"
 
@@ -416,6 +417,9 @@ void *HadesGC::allocLongLived(uint32_t sz) {
 }
 
 void *HadesGC::allocLongLived(uint32_t sz) {
+  HERMES_SLOW_ASSERT(
+      !weakRefMutex() &&
+      "WeakRef mutex should not be held when allocLongLived is called");
   // Have to unlock STW first.
   yieldToBackgroundThread();
   void *res;
