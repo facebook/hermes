@@ -67,12 +67,18 @@ The primary binary is the `hermes` tool, which will be found at `build/bin/herme
     hermes -emit-binary -out test.hbc test.js
     hermes test.hbc
 
-
 ## Running Tests
 
 To run the Hermes test suite:
 
     ninja check-hermes
+
+## Formatting Code
+
+To automatically format all your changes, you will need `clang-format`, then
+simply run:
+
+    hermes/utils/format.sh
 
 ### Other Tools
 

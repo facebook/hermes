@@ -1,0 +1,4 @@
+contact_links:
+  - name: ⚛️ Need Help From React Native?
+    url: https://github.com/facebook/react-native/issues
+    about: Consider file an issue in the React Native repository.
