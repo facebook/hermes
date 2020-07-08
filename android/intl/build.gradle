@@ -10,14 +10,8 @@
 
 apply plugin: 'com.android.library'
 
-def facebookBuild = System.getenv("FACEBOOK") ?: "0"
-def hermesHostBuild = System.getenv("HERMES_WS_DIR")
 buildDir = "${rootProject.ext.hermes_ws}/build_android/intl"
 buildDir.mkdirs()
-
-// For Facebook internal use:
-def fbsource = System.getenv("FBSOURCE_DIR") ?:
-    System.getenv("HOME") + "/fbsource"
 
 android {
   compileSdkVersion = 24
@@ -31,11 +25,11 @@ android {
     externalNativeBuild {
       cmake {
         arguments "-DHERMES_IS_ANDROID=True"
-        arguments "-DHERMES_FACEBOOK_BUILD=${facebookBuild}"
+        arguments "-DHERMES_FACEBOOK_BUILD=${rootProject.ext.facebookBuild}"
         arguments "-DANDROID_STL=c++_shared"
         arguments "-DANDROID_PIE=True"
-        arguments "-DIMPORT_HERMESC=${hermes_ws}/build/ImportHermesc.cmake"
-        arguments "-DFBSOURCE_DIR=${fbsource}"
+        arguments "-DIMPORT_HERMESC=${rootProject.ext.hermesC}"
+        arguments "-DFBSOURCE_DIR=${rootProject.ext.fbsource}"
         arguments "-DHERMES_SLOW_DEBUG=False"
         arguments "-DHERMES_ENABLE_INTL=True"
         targets "libhermes"
