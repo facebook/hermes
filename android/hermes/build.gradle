@@ -90,5 +90,21 @@ android {
         file("$aarDir/hermes.aar").renameTo("${rootProject.ext.outputDir}/hermes-release.aar")
       }
     }
+    tasks.named("transformNativeLibsWithMergeJniLibsForDebug").configure {
+      doLast { task ->
+        copy {
+          from(task)
+          into("${rootProject.ext.outputDir}/unstripped-debug")
+        }
+      }
+    }
+    tasks.named("transformNativeLibsWithMergeJniLibsForRelease").configure {
+      doLast { task ->
+        copy {
+          from(task)
+          into("${rootProject.ext.outputDir}/unstripped-release")
+        }
+      }
+    }
   }
 }
