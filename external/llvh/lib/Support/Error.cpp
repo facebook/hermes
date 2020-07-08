@@ -148,13 +148,13 @@ void report_fatal_error(Error Err, bool GenCrashDiag) {
 
 } // end namespace llvh
 
-LLVMErrorTypeId LLVMGetErrorTypeId(LLVMErrorRef Err) {
+LLVMErrorTypeId LLVHGetErrorTypeId(LLVMErrorRef Err) {
   return reinterpret_cast<ErrorInfoBase *>(Err)->dynamicClassID();
 }
 
-void LLVMConsumeError(LLVMErrorRef Err) { consumeError(unwrap(Err)); }
+void LLVHConsumeError(LLVMErrorRef Err) { consumeError(unwrap(Err)); }
 
-char *LLVMGetErrorMessage(LLVMErrorRef Err) {
+char *LLVHGetErrorMessage(LLVMErrorRef Err) {
   std::string Tmp = toString(unwrap(Err));
   char *ErrMsg = new char[Tmp.size() + 1];
   memcpy(ErrMsg, Tmp.data(), Tmp.size());
@@ -162,9 +162,9 @@ char *LLVMGetErrorMessage(LLVMErrorRef Err) {
   return ErrMsg;
 }
 
-void LLVMDisposeErrorMessage(char *ErrMsg) { delete[] ErrMsg; }
+void LLVHDisposeErrorMessage(char *ErrMsg) { delete[] ErrMsg; }
 
-LLVMErrorTypeId LLVMGetStringErrorTypeId() {
+LLVMErrorTypeId LLVHGetStringErrorTypeId() {
   return reinterpret_cast<void *>(&StringError::ID);
 }
 

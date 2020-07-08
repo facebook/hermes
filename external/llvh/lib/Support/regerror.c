@@ -56,7 +56,7 @@ static struct rerr {
 	const char *name;
 	const char *explain;
 } rerrs[] = {
-	{ REG_NOMATCH,	"REG_NOMATCH",	"llvm_regexec() failed to match" },
+	{ REG_NOMATCH,	"REG_NOMATCH",	"llvh_regexec() failed to match" },
 	{ REG_BADPAT,	"REG_BADPAT",	"invalid regular expression" },
 	{ REG_ECOLLATE,	"REG_ECOLLATE",	"invalid collating element" },
 	{ REG_ECTYPE,	"REG_ECTYPE",	"invalid character class" },
@@ -76,12 +76,12 @@ static struct rerr {
 };
 
 /*
- - llvm_regerror - the interface to error numbers
- = extern size_t llvm_regerror(int, const llvm_regex_t *, char *, size_t);
+ - llvh_regerror - the interface to error numbers
+ = extern size_t llvh_regerror(int, const llvm_regex_t *, char *, size_t);
  */
 /* ARGSUSED */
 size_t
-llvm_regerror(int errcode, const llvm_regex_t *preg, char *errbuf, size_t errbuf_size)
+llvh_regerror(int errcode, const llvm_regex_t *preg, char *errbuf, size_t errbuf_size)
 {
 	struct rerr *r;
 	size_t len;
@@ -99,7 +99,7 @@ llvm_regerror(int errcode, const llvm_regex_t *preg, char *errbuf, size_t errbuf
 		if (errcode&REG_ITOA) {
 			if (r->code != 0) {
 				assert(strlen(r->name) < sizeof(convbuf));
-				(void) llvm_strlcpy(convbuf, r->name, sizeof convbuf);
+				(void) llvh_strlcpy(convbuf, r->name, sizeof convbuf);
 			} else
 				(void)snprintf(convbuf, sizeof convbuf,
 				    "REG_0x%x", target);
@@ -110,7 +110,7 @@ llvm_regerror(int errcode, const llvm_regex_t *preg, char *errbuf, size_t errbuf
 
 	len = strlen(s) + 1;
 	if (errbuf_size > 0) {
-		llvm_strlcpy(errbuf, s, errbuf_size);
+		llvh_strlcpy(errbuf, s, errbuf_size);
 	}
 
 	return(len);

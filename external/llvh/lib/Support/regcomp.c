@@ -286,10 +286,10 @@ static int never = 0;		/* for use in asserts; shuts lint up */
 #endif
 
 /*
- - llvm_regcomp - interface for parser and compilation
+ - llvh_regcomp - interface for parser and compilation
  */
 int				/* 0 success, otherwise REG_something */
-llvm_regcomp(llvm_regex_t *preg, const char *pattern, int cflags)
+llvh_regcomp(llvm_regex_t *preg, const char *pattern, int cflags)
 {
 	struct parse pa;
 	struct re_guts *g;
@@ -374,14 +374,14 @@ llvm_regcomp(llvm_regex_t *preg, const char *pattern, int cflags)
 	preg->re_g = g;
 	preg->re_magic = MAGIC1;
 #ifndef REDEBUG
-	/* not debugging, so can't rely on the assert() in llvm_regexec() */
+	/* not debugging, so can't rely on the assert() in llvh_regexec() */
 	if (g->iflags&REGEX_BAD)
 		SETERROR(REG_ASSERT);
 #endif
 
 	/* win or lose, we're done */
 	if (p->error != 0)	/* lose */
-		llvm_regfree(preg);
+		llvh_regfree(preg);
 	return(p->error);
 }
 
@@ -1352,7 +1352,7 @@ mcadd( struct parse *p, cset *cs, const char *cp)
 	}
 	cs->multis = np;
 
-	llvm_strlcpy(cs->multis + oldend - 1, cp, cs->smultis - oldend + 1);
+	llvh_strlcpy(cs->multis + oldend - 1, cp, cs->smultis - oldend + 1);
 }
 
 /*

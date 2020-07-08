@@ -44,10 +44,10 @@
 #include "regex2.h"
 
 /*
- - llvm_regfree - free everything
+ - llvh_regfree - free everything
  */
 void
-llvm_regfree(llvm_regex_t *preg)
+llvh_regfree(llvm_regex_t *preg)
 {
 	struct re_guts *g;
 

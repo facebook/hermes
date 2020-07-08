@@ -205,6 +205,6 @@ void llvh::RestorePrettyStackState(const void *Top) {
 #endif
 }
 
-void LLVMEnablePrettyStackTrace() {
+void LLVHEnablePrettyStackTrace() {
   EnablePrettyStackTrace();
 }
