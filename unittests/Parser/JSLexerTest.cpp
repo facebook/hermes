@@ -140,6 +140,28 @@ TEST(JSLexerTest, CommentTest) {
   ASSERT_TRUE(lex.isNewLineBeforeCurrentToken());
 }
 
+TEST(JSLexerTest, HashbangTest) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext diag(sm);
+
+  JSLexer lex(
+      "#! hashbang comment\n"
+      ";\n"
+      "#! // not a hashbang comment\n",
+      sm,
+      alloc);
+  ASSERT_EQ(TokenKind::semi, lex.advance()->getKind());
+  ASSERT_TRUE(lex.isNewLineBeforeCurrentToken());
+
+  ASSERT_EQ(TokenKind::exclaim, lex.advance()->getKind());
+  ASSERT_EQ(1, diag.getErrCountClear());
+  ASSERT_TRUE(lex.isNewLineBeforeCurrentToken());
+
+  ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+  ASSERT_TRUE(lex.isNewLineBeforeCurrentToken());
+}
+
 TEST(JSLexerTest, NumberTest) {
   JSLexer::Allocator alloc;
   SourceErrorManager sm;

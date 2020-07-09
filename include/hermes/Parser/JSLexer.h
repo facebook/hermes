@@ -629,7 +629,8 @@ class JSLexer {
   /// \return the resultant number on success, None on failure.
   llvh::Optional<uint32_t> consumeBracedCodePoint(bool errorOnFail = true);
 
-  /// Skip until after the end of the line terminaing the block comment.
+  /// Skip until after the end of the line terminating the line or hashbang
+  /// comment.
   /// \return the updated source pointer.
   const char *skipLineComment(const char *start);
   /// Skip until after the end of the block comment.

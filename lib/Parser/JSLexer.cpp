@@ -380,6 +380,16 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
         }
         break;
 
+      // #! (hashbang) at the very start of the buffer.
+      case '#':
+        if (LLVM_UNLIKELY(
+                curCharPtr_ == bufferStart_ && curCharPtr_[1] == '!')) {
+          curCharPtr_ = skipLineComment(curCharPtr_);
+          continue;
+        } else {
+          goto default_label;
+        }
+
       // <  <= << <<=
       case '<':
         token_.setStart(curCharPtr_);
@@ -1017,7 +1027,9 @@ llvh::Optional<uint32_t> JSLexer::consumeBracedCodePoint(bool errorOnFail) {
 }
 
 const char *JSLexer::skipLineComment(const char *start) {
-  assert(start[0] == '/' && start[1] == '/');
+  assert(
+      (start[0] == '/' && start[1] == '/') ||
+      (start[0] == '#' && start[1] == '!'));
   start += 2;
 
   for (;;) {

@@ -1644,7 +1644,6 @@ UNSUPPORTED_FEATURES = [
     "destructuring-binding",
     "dynamic-import",
     "FinalizationGroup",
-    "hashbang",
     "json-superset",
     "let",
     "new.target",
