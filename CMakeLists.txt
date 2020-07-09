@@ -51,9 +51,17 @@ if (POLICY CMP0023)
   cmake_policy(SET CMP0023 OLD)
 endif()
 
+# Allow reading the LOCATION property of a target to determine the eventual
+# location of build targets. This is needed when building the debugging symbols
+# bundles for Apple platforms.
+if (POLICY CMP0026)
+  cmake_policy(SET CMP0026 OLD)
+endif()
 
-# This must be consistent with the release_version in
-# android/build.gradle and npm/package.json
+# This must be consistent with the release_version in:
+# - android/build.gradle
+# - npm/package.json
+# - hermes.podspec
 project(Hermes
         VERSION 0.5.0
         LANGUAGES C CXX)
@@ -127,6 +135,9 @@ set(HERMES_ENABLE_ADDRESS_SANITIZER OFF CACHE BOOL
 set(HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER OFF CACHE BOOL
   "Enable -fsanitize=undefined")
 
+set(HERMES_ENABLE_FUZZING ON CACHE BOOL
+  "Enable fuzzing")
+
 # Set linker flag for building the fuzzer
 set(HERMES_FUZZING_FLAG "-fsanitize=fuzzer" CACHE STRING
   "Linker argument to link fuzz targets against a given fuzzer.")
@@ -197,7 +208,17 @@ set(EMSCRIPTEN_FASTCOMP ON CACHE BOOL
 set(HERMES_ENABLE_INTL OFF CACHE BOOL
   "Enable JS Intl support (WIP)")
 
-if (HERMES_IS_ANDROID)
+set(HERMES_ENABLE_TEST_SUITE ON CACHE BOOL
+  "Enable the test suite")
+
+set(HERMES_BUILD_APPLE_FRAMEWORK ON CACHE BOOL
+  "Whether to build the libhermes target as a framework bundle or dylib on Apple platforms")
+
+if (NOT HERMES_IS_MOBILE_BUILD AND APPLE)
+  # Always emit debugging symbols (in the DWARF) format, as these will be
+  # stripped out of each target post-build.
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gdwarf")
+elseif (HERMES_IS_ANDROID)
   set(HERMES_IS_MOBILE_BUILD TRUE)
 
   add_definitions(-DHERMES_PLATFORM_UNICODE=HERMES_PLATFORM_UNICODE_JAVA)
@@ -218,7 +239,6 @@ if (HERMES_IS_ANDROID)
     # https://github.com/android-ndk/ndk/issues/242
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fuse-ld=gold")
   endif()
-
 endif()
 
 if (HERMES_IS_MOBILE_BUILD)
@@ -486,6 +506,20 @@ function(hermes_link_icu target_name)
   endif()
 endfunction()
 
+# Declare a function that strips debugging symbols from any target built for
+# Apple platforms, which we do build initially so they can be extracted into a
+# dSYM bundle.
+function(hermes_strip_apple_debug_symbols target_name)
+  if(APPLE)
+    if(NOT CMAKE_STRIP)
+      set(CMAKE_STRIP xcrun strip)
+    endif()
+    add_custom_command(TARGET ${target_name} POST_BUILD
+      COMMAND ${CMAKE_STRIP} -S $<TARGET_FILE:${target_name}>
+    )
+  endif()
+endfunction()
+
 if (APPLE)
   find_library(CORE_FOUNDATION CoreFoundation)
 else()
@@ -566,8 +600,8 @@ add_subdirectory(utils/hermes-lit)
 add_subdirectory(tools)
 add_subdirectory(include)
 add_subdirectory(lib)
+add_subdirectory(public)
 add_subdirectory(external)
-add_subdirectory(unittests)
 add_subdirectory(API)
 add_subdirectory(android/intltest/java/com/facebook/hermes/test)
 
@@ -583,55 +617,59 @@ endif()
 
 # Configure the test suites
 #
-list(APPEND HERMES_TEST_DEPS
-  HermesUnitTests
-  hermes
-  hermesc
-  hvm
-  interp-dispatch-bench
-  hdb
-  hbcdump
-  hbc-attribute
-  hbc-deltaprep
-  hbc-diff
-  dependency-extractor
-  )
+if(HERMES_ENABLE_TEST_SUITE)
+  add_subdirectory(unittests)
 
-set(HERMES_LIT_TEST_PARAMS
-  test_exec_root=${HERMES_BINARY_DIR}/test
-  unittests_dir=${HERMES_BINARY_DIR}/unittests
-  debugger_enabled=${HERMES_ENABLE_DEBUGGER}
-  use_flowparser=${HERMES_USE_FLOWPARSER}
-  jit_enabled=${HERMESVM_JIT}
-  jit_disassembler_enabled=${HERMESVM_JIT_DISASSEMBLER}
-  hbc_deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
-  dependency_extractor=${HERMES_TOOLS_OUTPUT_DIR}/dependency-extractor
-  FileCheck=${HERMES_TOOLS_OUTPUT_DIR}//FileCheck
-  hermes=${HERMES_TOOLS_OUTPUT_DIR}/hermes
-  hermesc=${HERMES_TOOLS_OUTPUT_DIR}/hermesc
-  hdb=${HERMES_TOOLS_OUTPUT_DIR}/hdb
-  hbcdump=${HERMES_TOOLS_OUTPUT_DIR}/hbcdump
-  hbc-deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
-  hbc_diff=${HERMES_TOOLS_OUTPUT_DIR}/hbc-diff
-  build_mode=${HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST}
-  exception_on_oom_enabled=${HERMESVM_EXCEPTION_ON_OOM}
-  serialize_enabled=${HERMESVM_SERIALIZE}
-  profiler=${HERMES_PROFILER_MODE_IN_LIT_TEST}
-  use_js_library_implementation=${HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION}
-  gc=${HERMESVM_GCKIND}
-  ubsan=${HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER}
-  )
+  list(APPEND HERMES_TEST_DEPS
+    HermesUnitTests
+    hermes
+    hermesc
+    hvm
+    interp-dispatch-bench
+    hdb
+    hbcdump
+    hbc-attribute
+    hbc-deltaprep
+    hbc-diff
+    dependency-extractor
+    )
 
-set(LLVH_LIT_ARGS "-sv")
+  set(HERMES_LIT_TEST_PARAMS
+    test_exec_root=${HERMES_BINARY_DIR}/test
+    unittests_dir=${HERMES_BINARY_DIR}/unittests
+    debugger_enabled=${HERMES_ENABLE_DEBUGGER}
+    use_flowparser=${HERMES_USE_FLOWPARSER}
+    jit_enabled=${HERMESVM_JIT}
+    jit_disassembler_enabled=${HERMESVM_JIT_DISASSEMBLER}
+    hbc_deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
+    dependency_extractor=${HERMES_TOOLS_OUTPUT_DIR}/dependency-extractor
+    FileCheck=${HERMES_TOOLS_OUTPUT_DIR}//FileCheck
+    hermes=${HERMES_TOOLS_OUTPUT_DIR}/hermes
+    hermesc=${HERMES_TOOLS_OUTPUT_DIR}/hermesc
+    hdb=${HERMES_TOOLS_OUTPUT_DIR}/hdb
+    hbcdump=${HERMES_TOOLS_OUTPUT_DIR}/hbcdump
+    hbc-deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
+    hbc_diff=${HERMES_TOOLS_OUTPUT_DIR}/hbc-diff
+    build_mode=${HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST}
+    exception_on_oom_enabled=${HERMESVM_EXCEPTION_ON_OOM}
+    serialize_enabled=${HERMESVM_SERIALIZE}
+    profiler=${HERMES_PROFILER_MODE_IN_LIT_TEST}
+    use_js_library_implementation=${HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION}
+    gc=${HERMESVM_GCKIND}
+    ubsan=${HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER}
+    )
 
-add_lit_testsuite(check-hermes "Running the Hermes regression tests"
-  ${HERMES_SOURCE_DIR}/test
-  ${HERMES_SOURCE_DIR}/unittests
-  PARAMS ${HERMES_LIT_TEST_PARAMS}
-  DEPENDS ${HERMES_TEST_DEPS}
-  ARGS ${HERMES_TEST_EXTRA_ARGS}
-  )
-set_target_properties(check-hermes PROPERTIES FOLDER "Hermes regression tests")
+  set(LLVH_LIT_ARGS "-sv")
+
+  add_lit_testsuite(check-hermes "Running the Hermes regression tests"
+    ${HERMES_SOURCE_DIR}/test
+    ${HERMES_SOURCE_DIR}/unittests
+    PARAMS ${HERMES_LIT_TEST_PARAMS}
+    DEPENDS ${HERMES_TEST_DEPS}
+    ARGS ${HERMES_TEST_EXTRA_ARGS}
+    )
+  set_target_properties(check-hermes PROPERTIES FOLDER "Hermes regression tests")
+endif()
 
 # This is how github release files are built.
 

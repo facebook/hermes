@@ -43,3 +43,8 @@ target_link_libraries(hermes
 )
 
 hermes_link_icu(hermes)
+hermes_strip_apple_debug_symbols(hermes)
+
+install(TARGETS hermes
+  RUNTIME DESTINATION bin
+)

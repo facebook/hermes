@@ -20,6 +20,9 @@ set(api_sources
   DebuggerAPI.cpp
   )
 
+file(GLOB api_headers ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
+file(GLOB api_public_headers ${PROJECT_SOURCE_DIR}/public/hermes/Public/*.h)
+
 if (HERMESVM_API_TRACE)
   list(APPEND api_sources
     hermes_tracing.cpp
@@ -63,12 +66,13 @@ add_hermes_library(compileJS STATIC CompileJS.cpp)
 set(HERMES_ENABLE_EH ON)
 set(HERMES_ENABLE_RTTI ON)
 
-add_library(libhermes SHARED ${api_sources})
+add_library(libhermes SHARED ${api_sources} ${api_headers} ${api_public_headers})
 target_link_libraries(libhermes
   jsi
   hermesVMRuntime
   ${CORE_FOUNDATION}
 )
+hermes_link_icu(libhermes)
 
 # Export the required header directory
 target_include_directories(libhermes PUBLIC ..)
@@ -96,5 +100,65 @@ set_target_properties(libhermes PROPERTIES
   CXX_STANDARD_REQUIRED 14
   # Avoid becoming liblibhermes (and there's already a target called 'hermes')
   OUTPUT_NAME hermes
+)
+
+if(APPLE AND HERMES_BUILD_APPLE_FRAMEWORK)
+  set_target_properties(libhermes PROPERTIES
+    FRAMEWORK TRUE
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION}
+    FRAMEWORK_VERSION ${PROJECT_VERSION_MAJOR}
+    MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${PROJECT_VERSION}
+    MACOSX_FRAMEWORK_BUNDLE_VERSION ${PROJECT_VERSION}
+    MACOSX_FRAMEWORK_IDENTIFIER dev.hermesengine.${CMAKE_SYSTEM_NAME}
   )
-hermes_link_icu(libhermes)
+  # Install headers into `Headers` while keeping required directory structure
+  set_source_files_properties(${api_headers} PROPERTIES
+    MACOSX_PACKAGE_LOCATION Headers
+  )
+  set_source_files_properties(${api_public_headers} PROPERTIES
+    MACOSX_PACKAGE_LOCATION Headers/Public
+  )
+endif()
+
+install(TARGETS libhermes
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+  FRAMEWORK DESTINATION Library/Frameworks
+)
+# Install headers into `include` while keeping required directory structure
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/API/hermes" DESTINATION include
+  FILES_MATCHING PATTERN "*.h"
+  PATTERN "synthtest" EXCLUDE)
+
+# Create debug symbols (dSYM) bundle for Apple platform dylibs/frameworks
+# Largely inspired by https://github.com/llvm/llvm-project/blob/6701993027f8af172d7ba697884459261b00e3c6/llvm/cmake/modules/AddLLVM.cmake#L1934-L1986
+if(APPLE AND CMAKE_CXX_FLAGS MATCHES "-gdwarf")
+  if(CMAKE_CXX_FLAGS MATCHES "-flto")
+    set(lto_object ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/libhermes-lto.o)
+    set_property(TARGET libhermes APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-object_path_lto,${lto_object}")
+  endif()
+
+  get_target_property(DSYM_PATH libhermes LOCATION)
+  if(HERMES_BUILD_APPLE_FRAMEWORK)
+    get_filename_component(DSYM_PATH ${DSYM_PATH} DIRECTORY)
+  endif()
+  set(DSYM_PATH "${DSYM_PATH}.dSYM")
+
+  if(NOT CMAKE_DSYMUTIL)
+    set(CMAKE_DSYMUTIL xcrun dsymutil)
+  endif()
+  add_custom_command(TARGET libhermes POST_BUILD
+    COMMAND ${CMAKE_DSYMUTIL} $<TARGET_FILE:libhermes> --out ${DSYM_PATH}
+    BYPRODUCTS ${DSYM_PATH}
+  )
+
+  if(HERMES_BUILD_APPLE_FRAMEWORK)
+    install(DIRECTORY ${DSYM_PATH} DESTINATION Library/Frameworks)
+  else()
+    install(DIRECTORY ${DSYM_PATH} DESTINATION lib)
+  endif()
+endif()
+
+hermes_strip_apple_debug_symbols(libhermes)

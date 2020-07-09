@@ -29,6 +29,7 @@ workflows:
             - windows
       - test-linux
       - test-macos
+      - test-macos-podspec
       - test-e2e:
           requires:
             - npm
@@ -253,13 +254,33 @@ jobs:
             cmake --build ./build
             cmake --build ./build --target check-hermes
 
+  test-macos-podspec:
+    macos:
+      xcode: "10.3.0"
+    environment:
+      - TERM: dumb
+      # Homebrew currently breaks while updating:
+      # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
+      - HOMEBREW_NO_AUTO_UPDATE: 1
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            brew install cmake ninja
+      - run:
+          name: Run CocoaPods installation and test framework
+          command: |
+            cd test/ApplePlatformsIntegrationTestApp
+            ./run.sh
+
   windows:
     executor:
       name: win/preview-default
       shell: powershell.exe
     environment:
       - HERMES_WS_DIR: 'C:\tmp\hermes'
-      - ICU_URL: 'https://github.com/unicode-org/icu/releases/download/release-64-2/icu4c-64_2-Win64-MSVC2017.zip'
+      - ICU_URL: "https://github.com/unicode-org/icu/releases/download/release-64-2/icu4c-64_2-Win64-MSVC2017.zip"
       - MSBUILD_DIR: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin'
       - CMAKE_DIR: 'C:\Program Files\CMake\bin'
     steps:
