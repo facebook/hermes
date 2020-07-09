@@ -64,7 +64,7 @@ if [[ -n "$use_react_native_master" ]] ; then
   cd react-native
   npm install
   popd
-  sed_op '/classpath("com.android.tools.build:gradle:3.4.2")/aclasspath("de.undercouch:gradle-download-task:4.0.0")' "$project_dir"/android/build.gradle
+  sed_op '/classpath("com.android.tools.build:gradle:3\..\..")/aclasspath("de.undercouch:gradle-download-task:4.0.0")' "$project_dir"/android/build.gradle
   cat >> "$project_dir"/android/settings.gradle <<EOT
 include ':ReactAndroid'
 project(':ReactAndroid').projectDir = new File(
