@@ -59,22 +59,27 @@ cp $HERMES_WS_DIR/build_android/distributions/hermes-runtime-android-v*.tar.gz $
 cp $HERMES_WS_DIR/build_release/github/hermes-cli-*-v*.tar.gz $HERMES_WS_DIR/hermes/npm
 
 # Create NPMs
-(cd $HERMES_WS_DIR/hermes/npm && yarn install && yarn run create-npms-dev)
-
-# Link the package
-(cd $HERMES_WS_DIR/hermes/npm/hermes-engine && yarn link)
+(cd $HERMES_WS_DIR/hermes/npm && yarn install && yarn run unpack-builds-dev && yarn run create-npms-dev)
 ```
 
-The final `yarn link` command in this sequence registers your custom build of Hermes to Yarn for inclusion in local projects. It only needs to be run once, although running it again is benign.
+The NPM bundles can now be found in `$HERMES_WS_DIR/hermes/npm/*.tgz`
+
 
 ## Linking Hermes into a React Native app
 
 To use your custom Hermes npm package in an app, first make sure the app works with a normal release of Hermes by following [instructions in the React Native docs](https://reactnative.dev/docs/hermes).
 
-Next, link the Hermes npm package into the React Native package in your app. For example, assuming your project is in the directory `$AWESOME_PROJECT` you would run this command:
+Next, install the Hermes npm package into your app as a dependency, and (if
+running react-native from source) into react-native as well.  For example,
+assuming your project is in the directory `$AWESOME_PROJECT` you would run this
+command:
 
 ```shell
-(cd ${AWESOME_PROJECT?}/node_modules/react-native && yarn link hermes-engine)
+# Install the Hermes NPM to be used by the project
+( cd ${AWESOME_PROJECT?} && yarn install $HERMES_WS_DIR/hermes/npm/hermes-engine-v*.tgz )
+
+# If running react-native from source, install it there as well
+( cd ${AWESOME_PROJECT?}/node_modules/react-native && yarn install $HERMES_WS_DIR/hermes/npm/hermes-engine-v*.tgz )
 ```
 
 You can now develop your app in the normal way.
