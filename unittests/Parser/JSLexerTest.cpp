@@ -957,6 +957,25 @@ TEST(JSLexerTest, RegressConsumeBadHexTest) {
   ASSERT_EQ(0, diag.getErrCountClear());
 }
 
+TEST(JSLexerTest, ConsumeBadBracedCodePoint) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext diag(sm);
+
+  // Test an invalid curly brace escape without a terminating curly brace
+  // This catches an out of bounds read where we hit the error limit and
+  // curCharPtr_ was set to eof, but JSLexer::consumeBracedCodePoint continued
+  // to operate on curCharPtr_
+  // We configure a low error limit to reach the interesting code path faster
+  // then we use invalid characters in a non terminated curly brace code point
+  // to trigger JSLexer:error
+  sm.setErrorLimit(1);
+  JSLexer lex("'\\u{12XXXXXXXXXXX'", sm, alloc);
+
+  ASSERT_EQ(TokenKind::string_literal, lex.advance()->getKind());
+  ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+}
+
 TEST(JSLexerTest, JSXTest) {
   JSLexer::Allocator alloc;
   SourceErrorManager sm;

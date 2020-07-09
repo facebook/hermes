@@ -975,9 +975,11 @@ llvh::Optional<uint32_t> JSLexer::consumeBracedCodePoint(bool errorOnFail) {
       }
       // Invalid character, set the failed flag and continue.
       if (!failed && errorOnFail) {
-        error(
-            SMLoc::getFromPointer(curCharPtr_),
-            "invalid character in unicode codepoint escape");
+        if (!error(
+                SMLoc::getFromPointer(curCharPtr_),
+                "invalid character in unicode codepoint escape")) {
+          return llvh::None;
+        }
       }
       failed = true;
       continue;
@@ -986,9 +988,11 @@ llvh::Optional<uint32_t> JSLexer::consumeBracedCodePoint(bool errorOnFail) {
     if (cp > UNICODE_MAX_VALUE) {
       // Number grew too big, set the failed flag and continue.
       if (!failed && errorOnFail) {
-        error(
-            SMLoc::getFromPointer(start),
-            "unicode codepoint escape is too large");
+        if (!error(
+                SMLoc::getFromPointer(start),
+                "unicode codepoint escape is too large")) {
+          return llvh::None;
+        }
       }
       failed = true;
     }
@@ -999,7 +1003,10 @@ llvh::Optional<uint32_t> JSLexer::consumeBracedCodePoint(bool errorOnFail) {
   // An empty escape sequence is invalid.
   if (curCharPtr_ == start) {
     if (!failed && errorOnFail) {
-      error(SMLoc::getFromPointer(start), "empty unicode codepoint escape");
+      if (!error(
+              SMLoc::getFromPointer(start), "empty unicode codepoint escape")) {
+        return llvh::None;
+      }
     }
     failed = true;
   }
