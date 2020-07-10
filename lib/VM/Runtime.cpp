@@ -1025,6 +1025,7 @@ void Runtime::runInternalBytecode() {
 void Runtime::printException(llvh::raw_ostream &os, Handle<> valueHandle) {
   clearThrownValue();
 
+  os << "Exception: ";
   // Try to fetch the stack trace.
   CallResult<PseudoHandle<>> propRes{ExecutionStatus::EXCEPTION};
   if (auto objHandle = Handle<JSObject>::dyn_vmcast(valueHandle)) {
