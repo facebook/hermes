@@ -710,3 +710,16 @@ add_custom_command(
 add_custom_target(
   github-cli-release
   DEPENDS ${HERMES_GITHUB_DIR}/${HERMES_CLI_GITHUB_FILE})
+
+add_custom_target(
+  hermes-runtime-darwin-cocoapods-release
+  DEPENDS install
+  COMMAND
+    mkdir -p ${HERMES_GITHUB_DIR}/package-root
+  COMMAND
+    cp -R -f ${CMAKE_INSTALL_PREFIX} ${HERMES_GITHUB_DIR}/package-root/destroot
+  COMMAND
+    cp ${CMAKE_CURRENT_SOURCE_DIR}/hermes.podspec ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE ${CMAKE_CURRENT_SOURCE_DIR}/README.md ${HERMES_GITHUB_DIR}/package-root/
+  COMMAND
+    tar -C ${HERMES_GITHUB_DIR}/package-root/ -czhf ${HERMES_GITHUB_DIR}/hermes-runtime-${HERMES_GITHUB_SYSTEM_NAME}-v${HERMES_RELEASE_VERSION}.tar.gz .
+)

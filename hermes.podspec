@@ -11,8 +11,12 @@ module HermesHelper
     "command -v #{bin} > /dev/null 2>&1"
   end
 
+  def self.cmake_configuration
+    "-DHERMES_ENABLE_DEBUGGER:BOOLEAN=true -DHERMES_ENABLE_FUZZING:BOOLEAN=false -DHERMES_ENABLE_TEST_SUITE:BOOLEAN=false"
+  end
+
   def self.configure_command
-    "./utils/build/configure.py #{BUILD_TYPE == :release ? "--distribute" : "--build-type=Debug"} --cmake-flags='-DHERMES_ENABLE_DEBUGGER:BOOLEAN=true -DHERMES_ENABLE_FUZZING:BOOLEAN=false -DHERMES_ENABLE_TEST_SUITE:BOOLEAN=false -DCMAKE_INSTALL_PREFIX:PATH=../destroot' build"
+    "./utils/build/configure.py #{BUILD_TYPE == :release ? "--distribute" : "--build-type=Debug"} --cmake-flags='#{HermesHelper.cmake_configuration} -DCMAKE_INSTALL_PREFIX:PATH=../destroot' build"
   end
 end
 
