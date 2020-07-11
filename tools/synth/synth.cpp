@@ -221,31 +221,6 @@ int main(int argc, char **argv) {
       llvh::EnableStatistics();
 #endif
 
-    std::vector<std::string> bytecodeFiles{cl::BytecodeFiles.begin(),
-                                           cl::BytecodeFiles.end()};
-    if (!cl::Trace.empty()) {
-      // If this is tracing mode, get the trace instead of the stats.
-      shouldPrintGCStats = false;
-      options.shouldTrackIO = false;
-      std::error_code ec;
-      auto os = ::hermes::make_unique<llvh::raw_fd_ostream>(
-          cl::Trace.c_str(),
-          ec,
-          llvh::sys::fs::CD_CreateAlways,
-          llvh::sys::fs::FA_Write,
-          llvh::sys::fs::OF_Text);
-      if (ec) {
-        throw std::system_error(ec);
-      }
-      TraceInterpreter::execAndTrace(
-          cl::TraceFile, bytecodeFiles, options, std::move(os));
-      llvh::outs() << "\nWrote output trace to: " << cl::Trace << "\n";
-    } else {
-      llvh::outs() << TraceInterpreter::execAndGetStats(
-                          cl::TraceFile, bytecodeFiles, options)
-                   << "\n";
-    }
-
     options.gcConfigBuilder.withShouldRecordStats(shouldPrintGCStats);
     if (minHeapSize) {
       options.gcConfigBuilder.withMinHeapSize(*minHeapSize);
@@ -277,6 +252,31 @@ int main(int argc, char **argv) {
         sanitizeConfigBuilder.withRandomSeed(*sanitizeRandomSeed);
       }
       options.gcConfigBuilder.withSanitizeConfig(sanitizeConfigBuilder.build());
+    }
+
+    std::vector<std::string> bytecodeFiles{cl::BytecodeFiles.begin(),
+                                           cl::BytecodeFiles.end()};
+    if (!cl::Trace.empty()) {
+      // If this is tracing mode, get the trace instead of the stats.
+      options.gcConfigBuilder.withShouldRecordStats(false);
+      options.shouldTrackIO = false;
+      std::error_code ec;
+      auto os = ::hermes::make_unique<llvh::raw_fd_ostream>(
+          cl::Trace.c_str(),
+          ec,
+          llvh::sys::fs::CD_CreateAlways,
+          llvh::sys::fs::FA_Write,
+          llvh::sys::fs::OF_Text);
+      if (ec) {
+        throw std::system_error(ec);
+      }
+      TraceInterpreter::execAndTrace(
+          cl::TraceFile, bytecodeFiles, options, std::move(os));
+      llvh::outs() << "\nWrote output trace to: " << cl::Trace << "\n";
+    } else {
+      llvh::outs() << TraceInterpreter::execAndGetStats(
+                          cl::TraceFile, bytecodeFiles, options)
+                   << "\n";
     }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
