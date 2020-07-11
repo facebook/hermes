@@ -21,6 +21,8 @@ target_link_libraries(hdb
   hermesapi
 )
 
+hermes_link_icu(hdb)
+
 hermes_strip_apple_debug_symbols(hdb)
 
 install(TARGETS hdb
