@@ -38,7 +38,9 @@ buildscript {
 
     minSdkVersion = 16
     compileSdkVersion = 28
-    abis = ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
+    abis = project.hasProperty('abis') ?
+         project.getProperty("abis").split(",") :
+         ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
   }
   repositories {
     google()
