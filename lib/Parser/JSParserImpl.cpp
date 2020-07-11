@@ -3604,7 +3604,6 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
         break;
       }
       topExpr = newBinNode(stack.back().first, stack.back().second, topExpr);
-      recursionDepth_--;
       stack.pop_back();
     }
 
@@ -3614,10 +3613,6 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
     //                     ^
     //                 We are here
     // Push topExpr and the '*', so we can parse rightExpr.
-    ++recursionDepth_;
-    if (LLVM_UNLIKELY(recursionDepthCheck())) {
-      return None;
-    }
     stack.emplace_back(topExpr, tok_->getKind());
     advance();
 
@@ -3631,13 +3626,13 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
   // We have consumed all binary operators. Pop the stack, creating expressions.
   while (!stack.empty()) {
     topExpr = newBinNode(stack.back().first, stack.back().second, topExpr);
-    --recursionDepth_;
     stack.pop_back();
   }
 
   assert(
       stack.empty() &&
       "Stack must be empty when done parsing binary expression");
+
   return topExpr;
 }
 

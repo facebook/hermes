@@ -94,6 +94,13 @@ class DependencyExtractor {
     visitESTreeNode(*this, rootNode);
   }
 
+  /// A dummy implementation of the AST stack overflow protocol.
+  bool incRecursionDepth(Node *) const {
+    return true;
+  }
+  /// A dummy implementation of the AST stack overflow protocol.
+  void decRecursionDepth() const {}
+
   /// Stub which catches all nodes we don't need to directly extract
   /// dependencies from.
   void visit(Node *node) {

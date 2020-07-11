@@ -56,15 +56,28 @@ using llvh::cast;
 /// This class is not intended to be used directly. Instead two global wrapper
 /// functions: visitESTreeNode() and visitESTreeChildren() have been defined.
 ///
-/// The visitor class must at least implement the method \c visit(Node *) and
+/// The visitor class must at least implement the method `visit(Node *)` and
 /// in addition to that any node-specific overloads. Each overload can have one
 /// of two possible signatures:
 /// \code
 ///     visit(NodeType *n)
 ///     visit(NodeType *n, Node *parent)
 /// \endcode
+/// Additionally the visitor class must implement the following two methods:
+/// \code
+///     bool incRecursionDepth(Node *);
+///     void decRecursionDepth();
+/// \endcode
+/// If incRecursionDepth() returns false, the current visitor immediately
+/// returns. The purpose of these methods is to protect against stack overflow.
 ///
-/// \tparam Visitor the visitor class.
+/// A recommended implementation will increment and decrement a "depth" value
+/// until it exceeds a certain threshold. At that point it should generate an
+/// error and set a "failure" mode flag and return false. All future invocations
+/// of both methods should do nothing and just return false once the "failure"
+/// flag is set.
+///
+/// \param Visitor the visitor class.
 template <class Visitor>
 struct RecursiveVisitorDispatch {
   /// Invoke Visitor::visit(cast<Type>(node)) with node being cast to its
@@ -73,15 +86,18 @@ struct RecursiveVisitorDispatch {
   static void visit(Visitor &v, Node *node, Node *parent) {
     if (!node)
       return;
+    if (LLVM_UNLIKELY(!v.incRecursionDepth(node)))
+      return;
 
     switch (node->getKind()) {
       default:
         llvm_unreachable("invalid node kind");
 
-#define VISIT(NAME)                                        \
-  case NodeKind::NAME:                                     \
-    return detail::VisitCaller<Visitor, NAME##Node>::call( \
-        v, cast<NAME##Node>(node), parent);
+#define VISIT(NAME)                                 \
+  case NodeKind::NAME:                              \
+    detail::VisitCaller<Visitor, NAME##Node>::call( \
+        v, cast<NAME##Node>(node), parent);         \
+    break;
 
 #define ESTREE_NODE_0_ARGS(NAME, ...) VISIT(NAME)
 #define ESTREE_NODE_1_ARGS(NAME, ...) VISIT(NAME)
@@ -97,6 +113,7 @@ struct RecursiveVisitorDispatch {
 
 #undef VISIT
     }
+    v.decRecursionDepth();
   }
 
   static void visit(Visitor &, NodeLabel, Node *) {}

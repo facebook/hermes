@@ -863,6 +863,11 @@ LabelDecorationBase *SemanticValidator::getLabelDecorationBase(
   return nullptr;
 }
 
+void SemanticValidator::recursionDepthExceeded(Node *n) {
+  sm_.error(
+      n->getEndLoc(), "Too many nested expressions/statements/declarations");
+}
+
 //===----------------------------------------------------------------------===//
 // FunctionContext
 
