@@ -1023,6 +1023,7 @@ void Runtime::runInternalBytecode() {
 }
 
 void Runtime::printException(llvh::raw_ostream &os, Handle<> valueHandle) {
+  os << "Uncaught ";
   clearThrownValue();
 
   // Try to fetch the stack trace.

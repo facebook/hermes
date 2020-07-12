@@ -21,5 +21,5 @@ try {
 
 // QuitError should be uncatchable, and should not run catch or finally blocks.
 
-// CHECK-NEXT: QuitError: Quit
+// CHECK-NEXT: Uncaught QuitError: Quit
 // CHECK-NEXT:     at quit (native)
