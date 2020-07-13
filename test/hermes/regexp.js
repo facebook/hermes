@@ -338,6 +338,11 @@ print(/(?<!$ab)\d/.exec("ab1ab2"));
 // CHECK-NEXT: 1
 print(/(?<!^ab)\d/.exec("ab1ab2"));
 // CHECK-NEXT: 2
+print(/a(?<=(\1))/.exec("a"));
+// CHECK-NEXT: a,
+print(/a(?<=((?!\1)))/.exec("a"));
+// CHECK-NEXT: null
+
 
 // Sticky support
 print(/abc/y.exec("abc"));

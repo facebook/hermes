@@ -1179,22 +1179,24 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           break;
         }
 
+        // ES10 21.2.2.9.1
         case Opcode::BackRef: {
           const auto insn = llvh::cast<BackRefInsn>(base);
+          // a. Let cap be x's captures List.
+          // b. Let s be cap[n].
           CapturedRange cr = s->getCapturedRange(insn->mexp - 1);
-          // Note we have to check whether cr.end has matched here, not
-          // cr.start, because we may be in the middle of the capture group we
-          // are examining, e.g. /(abc\1)/.
-          if (cr.end == kNotMatched) {
+
+          // c. If s is undefined, return c(x).
+          // Note we have to check both cr.start and cr.end here. If we are
+          // currently in the middle of matching a capture group (going either
+          // forwards or backwards) we should just return success.
+          if (cr.start == kNotMatched || cr.end == kNotMatched) {
             // Backreferences to a capture group that did not match always
-            // succeed (ES5 15.10.2.9)
+            // succeed (ES10 21.2.2.9)
             s->ip_ += sizeof(BackRefInsn);
             break;
           }
 
-          assert(
-              cr.start != kNotMatched &&
-              "capture group exited but not entered");
           // TODO: this can be optimized by hoisting the branches out of the
           // loop.
           bool icase = syntaxFlags_.ignoreCase;
