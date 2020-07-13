@@ -426,7 +426,7 @@ class HadesGC::EvacAcceptor final : public SlotAcceptorDefault {
     assert(cell->isValid() && "Encountered an invalid cell");
     // Newly discovered cell, first forward into the old gen.
     const auto sz = cell->getAllocatedSize();
-    GCCell *const newCell = gc.oldGenAlloc(sz);
+    GCCell *const newCell = gc.oldGen_.alloc(sz);
     HERMES_SLOW_ASSERT(
         gc.inOldGen(newCell) && "Evacuated cell not in the old gen");
     assert(
@@ -782,6 +782,8 @@ class HadesGC::MarkWeakRootsAcceptor final : public WeakRootAcceptor {
   PointerBase *const pointerBase_;
 };
 
+HadesGC::OldGen::OldGen(HadesGC *gc) : gc_(gc) {}
+
 HadesGC::HadesGC(
     MetadataTable metaTable,
     GCCallbacks *gcCallbacks,
@@ -819,7 +821,7 @@ HadesGC::HadesGC(
                 static_cast<size_t>(2)});
 
   for (size_t i = 0; i < initHeapSegments; ++i) {
-    createOldGenSegment();
+    oldGen_.createSegment();
   }
 }
 
@@ -834,7 +836,7 @@ void HadesGC::getHeapInfo(HeapInfo &info) {
   GCBase::getHeapInfo(info);
   info.allocatedBytes = allocatedBytes();
   // Heap size includes fragmentation, which means every segment is fully used.
-  info.heapSize = (oldGenEnd() - oldGenBegin() + 1) * AlignedStorage::size();
+  info.heapSize = (oldGen_.numSegments() + 1) * AlignedStorage::size();
   info.totalAllocatedBytes = 0;
   info.va = info.heapSize;
 }
@@ -947,7 +949,8 @@ void HadesGC::oldGenCollection() {
 #endif
   // First, clear any mark bits that were set by direct-to-OG allocation, they
   // aren't needed anymore.
-  for (auto segit = oldGenBegin(), segitend = oldGenEnd(); segit != segitend;
+  for (auto segit = oldGen_.begin(), segitend = oldGen_.end();
+       segit != segitend;
        ++segit) {
     HeapSegment &seg = **segit;
     seg.markBitArray().clear();
@@ -1125,7 +1128,8 @@ void HadesGC::sweep() {
   std::lock_guard<Mutex> lk{oldGenMutex_};
   const bool isTrackingIDs = getIDTracker().isTrackingIDs() ||
       getAllocationLocationTracker().isEnabled();
-  for (auto segit = oldGenBegin(), segitend = oldGenEnd(); segit != segitend;
+  for (auto segit = oldGen_.begin(), segitend = oldGen_.end();
+       segit != segitend;
        ++segit) {
     HeapSegment &seg = **segit;
     if (seg.allocatedBytes() == 0) {
@@ -1185,7 +1189,7 @@ void HadesGC::finalizeAllLocked() {
   // the OG, and some not. Only finalize objects that have not been promoted to
   // OG, and let the OG finalize the promoted objects.
   finalizeYoungGenObjects();
-  for (auto seg = oldGenBegin(), end = oldGenEnd(); seg != end; ++seg) {
+  for (auto seg = oldGen_.begin(), end = oldGen_.end(); seg != end; ++seg) {
     (*seg)->forAllObjs([this](GCCell *cell) {
       assert(cell->isValid() && "Invalid cell in finalizeAll");
       cell->getVT()->finalizeIfExists(cell, this);
@@ -1339,7 +1343,7 @@ void HadesGC::freeWeakSlot(WeakRefSlot *slot) {
 
 void HadesGC::forAllObjs(const std::function<void(GCCell *)> &callback) {
   youngGen().forAllObjs(callback);
-  for (auto seg = oldGenBegin(), end = oldGenEnd(); seg != end; ++seg) {
+  for (auto seg = oldGen_.begin(), end = oldGen_.end(); seg != end; ++seg) {
     (*seg)->forAllObjs(callback);
   }
 }
@@ -1418,7 +1422,7 @@ void *HadesGC::allocLongLived(uint32_t sz) {
       "WeakRef mutex should not be held when allocLongLived is called");
   // Alloc directly into the old gen.
   std::lock_guard<Mutex> lk{oldGenMutex_};
-  void *res = oldGenAlloc(heapAlignSize(sz));
+  void *res = oldGen_.alloc(heapAlignSize(sz));
   // Need to initialize the memory here to a valid cell to prevent the case
   // where sweeping discovers the uninitialized memory while it's traversing
   // a segment. This only happens at the end of a bump-alloc segment.
@@ -1426,24 +1430,25 @@ void *HadesGC::allocLongLived(uint32_t sz) {
   return res;
 }
 
-GCCell *HadesGC::oldGenAlloc(uint32_t sz) {
+GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
   assert(
       isSizeHeapAligned(sz) &&
       "Should be aligned before entering this function");
   assert(sz >= minAllocationSize() && "Allocating too small of an object");
   assert(sz <= maxAllocationSize() && "Allocating too large of an object");
   assert(
-      oldGenMutex_ && "oldGenMutex_ must be held before calling oldGenAlloc");
-  if (GCCell *cell = oldGenSearch(sz)) {
+      gc_->oldGenMutex_ &&
+      "oldGenMutex_ must be held before calling oldGenAlloc");
+  if (GCCell *cell = search(sz)) {
     return cell;
   }
   // Before waiting for a collection to finish, check if we're below the max
   // heap size and can simply allocate another segment. This will prevent
   // blocking the YG unnecessarily.
-  const auto maxNumOldGenSegments = (maxHeapSize_ / AlignedStorage::size()) - 1;
-  if (static_cast<uint64_t>(oldGenEnd() - oldGenBegin()) <
-      maxNumOldGenSegments) {
-    HeapSegment &seg = createOldGenSegment();
+  const auto maxNumOldGenSegments =
+      (gc_->maxHeapSize_ / AlignedStorage::size()) - 1;
+  if (segments_.size() < maxNumOldGenSegments) {
+    HeapSegment &seg = createSegment();
     AllocResult res = seg.alloc(sz);
     assert(
         res.success &&
@@ -1454,21 +1459,21 @@ GCCell *HadesGC::oldGenAlloc(uint32_t sz) {
   }
   // Can't expand to any more segments, wait for an old gen collection to finish
   // and possibly free up memory.
-  waitForCollectionToFinish();
+  gc_->waitForCollectionToFinish();
   // Repeat the search in case the collection did free memory.
-  if (GCCell *cell = oldGenSearch(sz)) {
+  if (GCCell *cell = search(sz)) {
     return cell;
   }
 
   // The GC didn't recover enough memory, OOM.
   // Before OOMing, finalize everything to avoid reporting leaks.
-  finalizeAllLocked();
-  oom(make_error_code(OOMError::MaxHeapReached));
+  gc_->finalizeAllLocked();
+  gc_->oom(make_error_code(OOMError::MaxHeapReached));
 }
 
-GCCell *HadesGC::oldGenSearch(uint32_t sz) {
+GCCell *HadesGC::OldGen::search(uint32_t sz) {
   // TODO: Should do something better than iterating through all segments.
-  for (auto seg = oldGenBegin(), end = oldGenEnd(); seg != end; ++seg) {
+  for (auto seg = segments_.begin(), end = segments_.end(); seg != end; ++seg) {
     const AllocResult res = (*seg)->alloc(sz);
     if (!res.success) {
       continue;
@@ -1543,9 +1548,8 @@ void HadesGC::youngGenCollection() {
   if (concurrentPhase_ == Phase::None) {
     // If the OG is sufficiently full after the collection finishes, begin
     // an OG collection.
-    const uint64_t totalAllocated = oldGenAllocatedBytes();
-    const uint64_t totalBytes =
-        (oldGenEnd() - oldGenBegin()) * HeapSegment::maxSize();
+    const uint64_t totalAllocated = oldGen_.allocatedBytes();
+    const uint64_t totalBytes = oldGen_.numSegments() * HeapSegment::maxSize();
     constexpr double collectionThreshold = 0.75;
     double allocatedRatio = static_cast<double>(totalAllocated) / totalBytes;
     if (allocatedRatio >= collectionThreshold) {
@@ -1562,9 +1566,9 @@ void HadesGC::scanDirtyCards(EvacAcceptor &acceptor) {
   // of iterators, which aren't invalidated. It's ok to not scan newly added
   // segments, since they are going to be handled from the rest of YG
   // collection.
-  const auto segEnd = oldGen_.size();
-  for (decltype(oldGen_.size()) i = 0; i < segEnd; ++i) {
-    HeapSegment &seg = *oldGen_[i];
+  const auto segEnd = oldGen_.numSegments();
+  for (decltype(oldGen_.numSegments()) i = 0; i < segEnd; ++i) {
+    HeapSegment &seg = oldGen_[i];
     const auto &cardTable = seg.cardTable();
     // Use level instead of end in case the OG segment is still in bump alloc
     // mode.
@@ -1749,13 +1753,14 @@ void HadesGC::completeWeakMapMarking(MarkAcceptor &acceptor) {
   (void)weakMapAllocBytes;
 }
 
-uint64_t HadesGC::allocatedBytes() {
-  return youngGen().used() + oldGenAllocatedBytes();
+uint64_t HadesGC::allocatedBytes() const {
+  return youngGen().allocatedBytes() + oldGen_.allocatedBytes();
 }
 
-uint64_t HadesGC::oldGenAllocatedBytes() {
+uint64_t HadesGC::OldGen::allocatedBytes() const {
   uint64_t totalAllocated = 0;
-  for (auto segit = oldGenBegin(), end = oldGenEnd(); segit != end; ++segit) {
+  for (auto segit = segments_.begin(), end = segments_.end(); segit != end;
+       ++segit) {
     // TODO: Should a fragmentation measurement be used as well?
     totalAllocated += (*segit)->allocatedBytes();
   }
@@ -1775,40 +1780,44 @@ bool HadesGC::inYoungGen(const void *p) const {
 }
 
 std::vector<std::unique_ptr<HadesGC::HeapSegment>>::iterator
-HadesGC::oldGenBegin() {
-  assert(oldGen_.size() >= 1 && "No old gen segments");
-  return oldGen_.begin();
-}
-
-std::vector<std::unique_ptr<HadesGC::HeapSegment>>::const_iterator
-HadesGC::oldGenBegin() const {
-  assert(oldGen_.size() >= 1 && "No old gen segments");
-  return oldGen_.begin();
+HadesGC::OldGen::begin() {
+  return segments_.begin();
 }
 
 std::vector<std::unique_ptr<HadesGC::HeapSegment>>::iterator
-HadesGC::oldGenEnd() {
-  assert(oldGen_.size() >= 1 && "No old gen segments");
-  return oldGen_.end();
+HadesGC::OldGen::end() {
+  return segments_.end();
 }
 
 std::vector<std::unique_ptr<HadesGC::HeapSegment>>::const_iterator
-HadesGC::oldGenEnd() const {
-  assert(oldGen_.size() >= 1 && "No old gen segments");
-  return oldGen_.end();
+HadesGC::OldGen::begin() const {
+  return segments_.begin();
 }
 
-HadesGC::HeapSegment &HadesGC::createOldGenSegment() {
-  auto res = AlignedStorage::create(provider_.get(), "old-gen");
+std::vector<std::unique_ptr<HadesGC::HeapSegment>>::const_iterator
+HadesGC::OldGen::end() const {
+  return segments_.end();
+}
+
+size_t HadesGC::OldGen::numSegments() const {
+  return segments_.size();
+}
+
+HadesGC::HeapSegment &HadesGC::OldGen::operator[](size_t i) {
+  return *segments_[i];
+}
+
+HadesGC::HeapSegment &HadesGC::OldGen::createSegment() {
+  auto res = AlignedStorage::create(gc_->provider_.get(), "old-gen");
   if (!res) {
     hermes_fatal("Failed to alloc old gen");
   }
-  oldGen_.emplace_back(new HeapSegment{std::move(res.get())});
-  return **oldGen_.rbegin();
+  segments_.emplace_back(new HeapSegment{std::move(res.get())});
+  return **segments_.rbegin();
 }
 
 bool HadesGC::inOldGen(const void *p) const {
-  for (auto seg = oldGenBegin(), end = oldGenEnd(); seg != end; ++seg) {
+  for (auto seg = oldGen_.begin(), end = oldGen_.end(); seg != end; ++seg) {
     if ((*seg)->contains(p)) {
       return true;
     }
@@ -1920,7 +1929,8 @@ void HadesGC::verifyCardTable() {
 }
 
 void HadesGC::verifyCardTableBoundaries() const {
-  for (auto segit = oldGenBegin(), end = oldGenEnd(); segit != end; ++segit) {
+  for (auto segit = oldGen_.begin(), end = oldGen_.end(); segit != end;
+       ++segit) {
     // The old gen heap segments use the object heads array instead of card
     // table boundaries to track where objects start.
     HeapSegment &seg = **segit;

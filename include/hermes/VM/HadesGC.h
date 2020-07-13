@@ -193,6 +193,45 @@ class HadesGC final : public GCBase {
   class MarkAcceptor;
   class MarkWeakRootsAcceptor;
 
+  class OldGen final {
+   public:
+    explicit OldGen(HadesGC *gc);
+
+    std::vector<std::unique_ptr<HeapSegment>>::iterator begin();
+    std::vector<std::unique_ptr<HeapSegment>>::iterator end();
+    std::vector<std::unique_ptr<HeapSegment>>::const_iterator begin() const;
+    std::vector<std::unique_ptr<HeapSegment>>::const_iterator end() const;
+
+    size_t numSegments() const;
+
+    HeapSegment &operator[](size_t i);
+
+    /// Create a new OG segment and attach it to the end of the OG segment
+    /// vector. \return a reference to the newly created segment.
+    HeapSegment &createSegment();
+
+    /// Allocate into OG. Returns a pointer to the newly allocated space. That
+    /// space must be filled before releasing the oldGenMutex_.
+    /// \return A non-null pointer to memory in the old gen that should have a
+    ///   constructor run in immediately.
+    /// \pre oldGenMutex_ must be held before calling this function.
+    /// \post This function either successfully allocates, or reports OOM.
+    GCCell *alloc(uint32_t sz);
+
+    /// \return the total number of bytes that are in use by the OG section of
+    /// the JS heap.
+    uint64_t allocatedBytes() const;
+
+   private:
+    HadesGC *gc_;
+    std::vector<std::unique_ptr<HeapSegment>> segments_;
+
+    /// Searches the OG for a space to allocate memory into.
+    /// \return A pointer to uninitialized memory that can be written into, null
+    ///   if no such space exists.
+    GCCell *search(uint32_t sz);
+  };
+
  private:
   const uint64_t maxHeapSize_;
 
@@ -211,7 +250,7 @@ class HadesGC final : public GCBase {
   /// oldGen_ is a free list space, so it needs a different segment
   /// representation.
   /// Protected by oldGenMutex_.
-  std::vector<std::unique_ptr<HeapSegment>> oldGen_;
+  OldGen oldGen_{this};
 
   /// weakPointers_ is a list of all the weak pointers in the system. They are
   /// invalidated if they point to an object that is dead, and do not count
@@ -262,21 +301,6 @@ class HadesGC final : public GCBase {
   /// Same as \c allocLongLived<hasFinalizer> but discards the finalizer
   /// parameter that is unused anyway.
   void *allocLongLived(uint32_t sz);
-
-  /// Allocate into OG. Returns a pointer to the newly allocated space. That
-  /// space must be filled before releasing the oldGenMutex_.
-  /// \return A non-null pointer to memory in the old gen that should have a
-  ///   constructor run in immediately.
-  /// \pre oldGenMutex_ must be held before calling this function.
-  /// \post This function either successfully allocates, or reports OOM.
-  GCCell *oldGenAlloc(uint32_t sz);
-
-  /// Searches the OG for a space to allocate memory into.
-  /// \return A pointer to uninitialized memory that can be written into, null
-  ///   if no such space exists.
-  /// NOTE: oldGenAlloc should be called instead, which will try to do
-  /// collections until this function returns a non-null pointer.
-  GCCell *oldGenSearch(uint32_t sz);
 
   /// Frees the weak slot, so it can be re-used by future WeakRef allocations.
   void freeWeakSlot(WeakRefSlot *slot);
@@ -355,26 +379,11 @@ class HadesGC final : public GCBase {
   void resetWeakReferences();
 
   /// Return the total number of bytes that are in use by the JS heap.
-  uint64_t allocatedBytes();
-
-  /// Return the total number of bytes that are in use by the OG section of the
-  /// JS heap.
-  uint64_t oldGenAllocatedBytes();
+  uint64_t allocatedBytes() const;
 
   /// Accessor for the YG.
   HeapSegment &youngGen();
   const HeapSegment &youngGen() const;
-
-  /// Accessors for the segments of OG.
-  std::vector<std::unique_ptr<HeapSegment>>::iterator oldGenBegin();
-  std::vector<std::unique_ptr<HeapSegment>>::const_iterator oldGenBegin() const;
-
-  std::vector<std::unique_ptr<HeapSegment>>::iterator oldGenEnd();
-  std::vector<std::unique_ptr<HeapSegment>>::const_iterator oldGenEnd() const;
-
-  /// Create a new OG segment and attach it to the end of the OG segment vector.
-  /// \return a reference to the newly created segment.
-  HeapSegment &createOldGenSegment();
 
   /// Searches the old gen for this pointer. This is O(number of OG segments).
   /// NOTE: In any non-debug case, \c inYoungGen should be used instead, because
