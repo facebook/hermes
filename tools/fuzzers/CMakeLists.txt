@@ -4,8 +4,6 @@
 # LICENSE file in the root directory of this source tree.
 
 if(HERMES_ENABLE_FUZZING)
-  CHECK_CXX_COMPILER_FLAG("-fsanitize=fuzzer-no-link" HAVE_SANITIZE_FUZZER)
-  if(HAVE_SANITIZE_FUZZER)
     set(CMAKE_CXX_STANDARD 14)
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
     set(HERMES_ENABLE_EH ON)
@@ -23,5 +21,4 @@ if(HERMES_ENABLE_FUZZING)
       PRIVATE
         hermesapi
     )
-  endif()
 endif()
