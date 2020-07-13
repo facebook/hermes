@@ -260,10 +260,10 @@ class HadesGC final : public GCBase {
 
   /// Same as \c allocLongLived<hasFinalizer> but discards the finalizer
   /// parameter that is unused anyway.
-  inline void *allocLongLived(uint32_t sz);
+  void *allocLongLived(uint32_t sz);
 
   /// Allocate into OG. Returns a pointer to the newly allocated space. That
-  /// space must be filled immediately after this call completes.
+  /// space must be filled before releasing the oldGenMutex_.
   /// \return A non-null pointer to memory in the old gen that should have a
   ///   constructor run in immediately.
   /// \pre oldGenMutex_ must be held before calling this function.
@@ -414,25 +414,6 @@ void *HadesGC::alloc(uint32_t sz) {
 template <HasFinalizer hasFinalizer>
 void *HadesGC::allocLongLived(uint32_t sz) {
   return allocLongLived(sz);
-}
-
-void *HadesGC::allocLongLived(uint32_t sz) {
-  HERMES_SLOW_ASSERT(
-      !weakRefMutex() &&
-      "WeakRef mutex should not be held when allocLongLived is called");
-  // Have to unlock STW first.
-  yieldToBackgroundThread();
-  void *res;
-  {
-    // Alloc directly into the old gen.
-    std::lock_guard<Mutex> lk{oldGenMutex_};
-    // The memory doesn't need to be initialized before releasing the lock,
-    // because the sweeper skips cells that are still FreelistCells, and the
-    // mark bit is already set.
-    res = oldGenAlloc(heapAlignSize(sz));
-  }
-  yieldToMutator();
-  return res;
 }
 
 /// \}

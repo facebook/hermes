@@ -1390,6 +1390,26 @@ template void *HadesGC::allocWork<false, HasFinalizer::Yes>(uint32_t);
 template void *HadesGC::allocWork<true, HasFinalizer::No>(uint32_t);
 template void *HadesGC::allocWork<false, HasFinalizer::No>(uint32_t);
 
+void *HadesGC::allocLongLived(uint32_t sz) {
+  HERMES_SLOW_ASSERT(
+      !weakRefMutex() &&
+      "WeakRef mutex should not be held when allocLongLived is called");
+  // Have to unlock STW first.
+  yieldToBackgroundThread();
+  void *res;
+  {
+    // Alloc directly into the old gen.
+    std::lock_guard<Mutex> lk{oldGenMutex_};
+    res = oldGenAlloc(heapAlignSize(sz));
+    // Need to initialize the memory here to a valid cell to prevent the case
+    // where sweeping discovers the uninitialized memory while it's traversing
+    // a segment. This only happens at the end of a bump-alloc segment.
+    new (res) HeapSegment::FreelistCell(sz, nullptr);
+  }
+  yieldToMutator();
+  return res;
+}
+
 GCCell *HadesGC::oldGenAlloc(uint32_t sz) {
   assert(
       isSizeHeapAligned(sz) &&
