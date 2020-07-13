@@ -844,20 +844,16 @@ void HadesGC::getHeapInfoWithMallocSize(HeapInfo &info) {}
 void HadesGC::getCrashManagerHeapInfo(CrashManager::HeapInformation &info) {}
 
 void HadesGC::createSnapshot(llvh::raw_ostream &os) {
+  std::lock_guard<Mutex> lk{oldGenMutex_};
   // No allocations are allowed throughout the entire heap snapshot process.
   NoAllocScope scope{this};
-  yieldToBackgroundThread();
+  // Let any existing collections complete before taking the snapshot.
+  waitForCollectionToFinish();
   {
-    std::lock_guard<Mutex> lk{oldGenMutex_};
-    // Let any existing collections complete before taking the snapshot.
-    waitForCollectionToFinish();
-    {
-      GCCycle cycle{this};
-      WeakRefLock lk{weakRefMutex()};
-      GCBase::createSnapshot(this, os);
-    }
+    GCCycle cycle{this};
+    WeakRefLock lk{weakRefMutex()};
+    GCBase::createSnapshot(this, os);
   }
-  yieldToMutator();
 }
 
 void HadesGC::printStats(llvh::raw_ostream &os, bool trailingComma) {
@@ -881,35 +877,53 @@ void HadesGC::collect() {
   // This function should block until a collection finishes.
   // YG needs to be empty in order to do an OG collection.
   youngGenCollection();
-  yieldToBackgroundThread();
-  {
-    // Acquire the old gen lock now so that the condition variable can be
-    // accessed safely.
-    std::lock_guard<Mutex> lk{oldGenMutex_};
-    if (concurrentPhase_ == Phase::None) {
-      // If there is no active collection, start one.
-      oldGenCollection();
-    }
-    waitForCollectionToFinish();
+  // Acquire the old gen lock now so that the condition variable can be
+  // accessed safely.
+  std::lock_guard<Mutex> lk{oldGenMutex_};
+  if (concurrentPhase_ == Phase::None) {
+    // If there is no active collection, start one.
+    oldGenCollection();
   }
-  yieldToMutator();
+  waitForCollectionToFinish();
 }
 
 void HadesGC::waitForCollectionToFinish() {
   assert(
       oldGenMutex_ &&
       "oldGenMutex_ must be held before calling waitForCollectionToFinish");
-  std::unique_lock<std::mutex> lk{innerMutex(oldGenMutex_), std::adopt_lock};
-  if (concurrentPhase_ != Phase::None) {
-    // Wait for an existing collection to finish.
-    oldGenCollectionActiveCondVar_.wait(
-        lk, [this]() { return concurrentPhase_ == Phase::None; });
-#ifndef NDEBUG
-    // Since the condition_variable reacquires the lock before finishing wait,
-    // we need to assign the old thread id back to this DebugMutex.
-    oldGenMutex_.assignThread(std::this_thread::get_id());
-#endif
+  if (concurrentPhase_ == Phase::None) {
+    return;
   }
+  std::unique_lock<std::mutex> lk{innerMutex(oldGenMutex_), std::adopt_lock};
+  // Before waiting for the OG collection to finish, tell the OG collection
+  // that the world is stopped. Need to not hold the oldGenMutex_ while
+  // acquiring the stopTheWorldMutex_ to avoid lock inversion issues.
+  lk.unlock();
+  {
+    std::lock_guard<Mutex> stw{stopTheWorldMutex_};
+    worldStopped_ = true;
+  }
+  // Notify a waiting OG collection that it can complete.
+  stopTheWorldCondVar_.notify_all();
+  // Re-lock the oldGenMutex_ so that it can be waited on.
+  lk.lock();
+  // Wait for an existing collection to finish.
+  oldGenCollectionActiveCondVar_.wait(
+      lk, [this]() { return concurrentPhase_ == Phase::None; });
+#ifndef NDEBUG
+  // Since the condition_variable reacquires the lock before finishing wait,
+  // we need to assign the old thread id back to this DebugMutex.
+  oldGenMutex_.assignThread(std::this_thread::get_id());
+#endif
+  // Undo the worldStopped_ change, as the mutator will now resume. Can't rely
+  // on completeMarking to set worldStopped_ to false, as the OG collection
+  // might have already passed the stage where it was waiting for STW.
+  lk.unlock();
+  {
+    std::lock_guard<Mutex> stw{stopTheWorldMutex_};
+    worldStopped_ = false;
+  }
+  lk.lock();
   assert(lk && "Lock must be re-acquired before exiting");
   assert(
       oldGenMutex_ &&
@@ -987,6 +1001,7 @@ void HadesGC::completeMarking() {
   //    WeakRefs.
   // This lock order is required for any other lock acquisitions in this file.
   std::unique_lock<std::mutex> stw{innerMutex(stopTheWorldMutex_)};
+  stopTheWorldRequested_ = true;
   stopTheWorldCondVar_.wait(stw, [this]() { return worldStopped_; });
   std::lock_guard<Mutex> oglk{oldGenMutex_};
   WeakRefLock weakRefLock{weakRefMutex()};
@@ -1024,6 +1039,12 @@ void HadesGC::completeMarking() {
   // Change the phase to sweep here, before the STW lock is released. This
   // ensures that no mutator read barriers observer the WeakMapScan phase.
   concurrentPhase_.store(Phase::Sweep, std::memory_order_release);
+
+  // Let the thread that yielded know that the STW pause has completed.
+  stopTheWorldRequested_ = false;
+  worldStopped_ = false;
+  stw.unlock();
+  stopTheWorldCondVar_.notify_all();
 }
 
 void HadesGC::findYoungGenSymbolsAndWeakRefs() {
@@ -1151,12 +1172,8 @@ void HadesGC::sweep() {
 }
 
 void HadesGC::finalizeAll() {
-  yieldToBackgroundThread();
-  {
-    std::lock_guard<Mutex> lk{oldGenMutex_};
-    finalizeAllLocked();
-  }
-  yieldToMutator();
+  std::lock_guard<Mutex> lk{oldGenMutex_};
+  finalizeAllLocked();
 }
 
 void HadesGC::finalizeAllLocked() {
@@ -1399,19 +1416,13 @@ void *HadesGC::allocLongLived(uint32_t sz) {
   HERMES_SLOW_ASSERT(
       !weakRefMutex() &&
       "WeakRef mutex should not be held when allocLongLived is called");
-  // Have to unlock STW first.
-  yieldToBackgroundThread();
-  void *res;
-  {
-    // Alloc directly into the old gen.
-    std::lock_guard<Mutex> lk{oldGenMutex_};
-    res = oldGenAlloc(heapAlignSize(sz));
-    // Need to initialize the memory here to a valid cell to prevent the case
-    // where sweeping discovers the uninitialized memory while it's traversing
-    // a segment. This only happens at the end of a bump-alloc segment.
-    new (res) HeapSegment::FreelistCell(sz, nullptr);
-  }
-  yieldToMutator();
+  // Alloc directly into the old gen.
+  std::lock_guard<Mutex> lk{oldGenMutex_};
+  void *res = oldGenAlloc(heapAlignSize(sz));
+  // Need to initialize the memory here to a valid cell to prevent the case
+  // where sweeping discovers the uninitialized memory while it's traversing
+  // a segment. This only happens at the end of a bump-alloc segment.
+  new (res) HeapSegment::FreelistCell(sz, nullptr);
   return res;
 }
 
@@ -1472,78 +1483,75 @@ GCCell *HadesGC::oldGenSearch(uint32_t sz) {
 
 void HadesGC::youngGenCollection() {
   yieldToBackgroundThread();
+  // Acquire the old gen lock for the duration of the YG collection.
+  std::lock_guard<Mutex> lk{oldGenMutex_};
+#ifdef HERMES_SLOW_DEBUG
+  // Check that the card tables are well-formed before the collection.
+  verifyCardTable();
+#endif
   {
-    // Acquire the old gen lock for the duration of the YG collection.
-    std::lock_guard<Mutex> lk{oldGenMutex_};
-#ifdef HERMES_SLOW_DEBUG
-    // Check that the card tables are well-formed before the collection.
-    verifyCardTable();
-#endif
+    CollectionSection section{this};
+
+    auto &yg = youngGen();
+
+    // Clear the mark bits in the young gen first. They will be needed
+    // during YG collection, and they should've previously been all 1s.
+    yg.markBitArray().clear();
+
+    // Marking each object puts it onto an embedded free list.
+    EvacAcceptor acceptor{*this};
+    // Find old-to-young pointers first before marking roots.
+    scanDirtyCards(acceptor);
     {
-      CollectionSection section{this};
-
-      auto &yg = youngGen();
-
-      // Clear the mark bits in the young gen first. They will be needed
-      // during YG collection, and they should've previously been all 1s.
-      yg.markBitArray().clear();
-
-      // Marking each object puts it onto an embedded free list.
-      EvacAcceptor acceptor{*this};
-      // Find old-to-young pointers first before marking roots.
+      DroppingAcceptor<EvacAcceptor> nameAcceptor{acceptor};
+      markRoots(nameAcceptor, /*markLongLived*/ false);
+      // Do not call markWeakRoots here, as all weak roots point to
+      // long-lived objects.
+      // Find old-to-young pointers, as they are considered roots for YG
+      // collection.
       scanDirtyCards(acceptor);
-      {
-        DroppingAcceptor<EvacAcceptor> nameAcceptor{acceptor};
-        markRoots(nameAcceptor, /*markLongLived*/ false);
-        // Do not call markWeakRoots here, as all weak roots point to
-        // long-lived objects.
-        // Find old-to-young pointers, as they are considered roots for YG
-        // collection.
-        scanDirtyCards(acceptor);
-      }
-      // Iterate through the copy list to find new pointers.
-      while (EvacAcceptor::CopyListCell *const copyCell = acceptor.pop()) {
-        assert(
-            copyCell->hasMarkedForwardingPointer() &&
-            "Discovered unmarked object");
-        assert(inYoungGen(copyCell) && "Discovered OG object in YG collection");
-        // Update the pointers inside the forwarded object, since the old
-        // object is only there for the forwarding pointer.
-        GCCell *const cell = copyCell->getMarkedForwardingPointer();
-        GCBase::markCell(cell, this, acceptor);
-      }
-      {
-        WeakRefLock weakRefLock{weakRefMutex_};
-        // Now that all YG objects have been marked, update weak references.
-        updateWeakReferencesForYoungGen();
-      }
-      // Run finalizers for young gen objects.
-      finalizeYoungGenObjects();
-      // Now the copy list is drained, and all references point to the old
-      // gen. Clear the level of the young gen.
-      yg.resetLevel();
-      // Set all bits to 1. This way an OG collection never thinks an object
-      // in YG needs to be marked.
-      yg.markBitArray().markAll();
     }
+    // Iterate through the copy list to find new pointers.
+    while (EvacAcceptor::CopyListCell *const copyCell = acceptor.pop()) {
+      assert(
+          copyCell->hasMarkedForwardingPointer() &&
+          "Discovered unmarked object");
+      assert(inYoungGen(copyCell) && "Discovered OG object in YG collection");
+      // Update the pointers inside the forwarded object, since the old
+      // object is only there for the forwarding pointer.
+      GCCell *const cell = copyCell->getMarkedForwardingPointer();
+      GCBase::markCell(cell, this, acceptor);
+    }
+    {
+      WeakRefLock weakRefLock{weakRefMutex_};
+      // Now that all YG objects have been marked, update weak references.
+      updateWeakReferencesForYoungGen();
+    }
+    // Run finalizers for young gen objects.
+    finalizeYoungGenObjects();
+    // Now the copy list is drained, and all references point to the old
+    // gen. Clear the level of the young gen.
+    yg.resetLevel();
+    // Set all bits to 1. This way an OG collection never thinks an object
+    // in YG needs to be marked.
+    yg.markBitArray().markAll();
+  }
 #ifdef HERMES_SLOW_DEBUG
-    // Check that the card tables are well-formed after the collection.
-    verifyCardTable();
+  // Check that the card tables are well-formed after the collection.
+  verifyCardTable();
 #endif
-    if (concurrentPhase_ == Phase::None) {
-      // If the OG is sufficiently full after the collection finishes, begin
-      // an OG collection.
-      const uint64_t totalAllocated = oldGenAllocatedBytes();
-      const uint64_t totalBytes =
-          (oldGenEnd() - oldGenBegin()) * HeapSegment::maxSize();
-      constexpr double collectionThreshold = 0.75;
-      double allocatedRatio = static_cast<double>(totalAllocated) / totalBytes;
-      if (allocatedRatio >= collectionThreshold) {
-        oldGenCollection();
-      }
+  if (concurrentPhase_ == Phase::None) {
+    // If the OG is sufficiently full after the collection finishes, begin
+    // an OG collection.
+    const uint64_t totalAllocated = oldGenAllocatedBytes();
+    const uint64_t totalBytes =
+        (oldGenEnd() - oldGenBegin()) * HeapSegment::maxSize();
+    constexpr double collectionThreshold = 0.75;
+    double allocatedRatio = static_cast<double>(totalAllocated) / totalBytes;
+    if (allocatedRatio >= collectionThreshold) {
+      oldGenCollection();
     }
   }
-  yieldToMutator();
 }
 
 void HadesGC::scanDirtyCards(EvacAcceptor &acceptor) {
@@ -1810,14 +1818,30 @@ bool HadesGC::inOldGen(const void *p) const {
 }
 
 void HadesGC::yieldToBackgroundThread() {
-  std::unique_lock<std::mutex> stw{innerMutex(stopTheWorldMutex_)};
-  worldStopped_ = true;
+  assert(
+      !oldGenMutex_ &&
+      "Shouldn't hold the old gen mutex when calling yieldToBackgroundThread");
+  assert(
+      !stopTheWorldMutex_ &&
+      "Shouldn't hold the STW mutex when calling yieldToBackgroundThread");
+  {
+    std::lock_guard<Mutex> stw{stopTheWorldMutex_};
+    if (!stopTheWorldRequested_) {
+      // If the OG isn't waiting for a STW pause yet, exit immediately.
+      return;
+    }
+    worldStopped_ = true;
+  }
+  // Notify a waiting OG collection that it can complete.
   stopTheWorldCondVar_.notify_all();
-}
-
-void HadesGC::yieldToMutator() {
-  std::unique_lock<std::mutex> stw{innerMutex(stopTheWorldMutex_)};
-  worldStopped_ = false;
+  {
+    std::unique_lock<std::mutex> stw{innerMutex(stopTheWorldMutex_)};
+    // Wait for the pause to complete.
+    stopTheWorldCondVar_.wait(stw, [this]() { return !worldStopped_; });
+    assert(
+        !stopTheWorldRequested_ &&
+        "The request should be set to false after being completed");
+  }
 }
 
 std::mutex &HadesGC::innerMutex(Mutex &mtx) {

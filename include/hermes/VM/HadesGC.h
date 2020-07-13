@@ -246,6 +246,7 @@ class HadesGC final : public GCBase {
   Mutex stopTheWorldMutex_;
   std::condition_variable stopTheWorldCondVar_;
   bool worldStopped_{false};
+  bool stopTheWorldRequested_{false};
 
   /// The main entrypoint for all allocations.
   /// \param sz The size of allocation requested. This might be rounded up to
@@ -384,10 +385,6 @@ class HadesGC final : public GCBase {
   /// Give the background marking thread a chance to complete marking and finish
   /// the OG collection.
   void yieldToBackgroundThread();
-
-  /// Before returning control to the mutator, make sure that any background
-  /// marking threads won't try to complete the collection.
-  void yieldToMutator();
 
   /// Given a potentially-debug mutex \p mtx, get the inner std::mutex it uses.
   static std::mutex &innerMutex(Mutex &mtx);
