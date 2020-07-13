@@ -1164,11 +1164,16 @@ void HadesGC::finalizeAllLocked() {
   // TODO: Investigate sending a cancellation instead.
   waitForCollectionToFinish();
   // Now finalize the heap.
-  const auto finalizeCell = [this](GCCell *cell) {
-    assert(cell->isValid() && "Invalid cell in finalizeAll");
-    cell->getVT()->finalizeIfExists(cell, this);
-  };
-  forAllObjs(finalizeCell);
+  // We might be in the middle of a YG collection, with some objects promoted to
+  // the OG, and some not. Only finalize objects that have not been promoted to
+  // OG, and let the OG finalize the promoted objects.
+  finalizeYoungGenObjects();
+  for (auto seg = oldGenBegin(), end = oldGenEnd(); seg != end; ++seg) {
+    (*seg)->forAllObjs([this](GCCell *cell) {
+      assert(cell->isValid() && "Invalid cell in finalizeAll");
+      cell->getVT()->finalizeIfExists(cell, this);
+    });
+  }
 }
 
 void HadesGC::writeBarrier(void *loc, HermesValue value) {
