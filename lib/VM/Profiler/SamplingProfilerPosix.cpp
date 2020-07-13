@@ -26,6 +26,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <chrono>
+#include <cmath>
+#include <random>
 #include <thread>
 
 namespace hermes {
@@ -227,16 +229,26 @@ bool SamplingProfiler::sampleStack(std::unique_lock<std::mutex> &uniqueLock) {
 }
 
 void SamplingProfiler::timerLoop() {
+  constexpr double kMeanMilliseconds = 10;
+  constexpr double kStdDevMilliseconds = 5;
+  std::random_device rd{};
+  std::mt19937 gen{rd()};
+  // The amount of time that is spent sleeping comes from a normal distribution,
+  // to avoid the case where the timer thread samples a stack at a predictable
+  // period.
+  std::normal_distribution<> distribution{kMeanMilliseconds,
+                                          kStdDevMilliseconds};
   std::unique_lock<std::mutex> uniqueLock(profilerLock_);
+
   while (true) {
     if (!sampleStack(uniqueLock)) {
       return;
     }
 
+    const uint64_t millis = round(std::fabs(distribution(gen)));
     // TODO: make sampling rate configurable.
-    // TODO: add random fluctuation to interval value.
     bool disabled = enabledCondVar_.wait_for(
-        uniqueLock, std::chrono::milliseconds(1), [this]() {
+        uniqueLock, std::chrono::milliseconds(millis), [this]() {
           return !enabled_;
         });
     if (disabled) {
