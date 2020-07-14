@@ -20,7 +20,7 @@ workflows:
       - android
       - linux
       - macos
-      - macos-cocoapods
+      - build-macos-runtime
       - windows
       - npm:
           requires:
@@ -30,7 +30,7 @@ workflows:
             - windows
       - test-linux
       - test-macos
-      - test-macos-cocoapods
+      - test-macos-runtime-build-and-cocoapods-integration
       - test-e2e:
           requires:
             - npm
@@ -226,7 +226,7 @@ jobs:
           paths:
             - .
 
-  macos-cocoapods:
+  build-macos-runtime:
     macos:
       xcode: "10.3.0"
     environment:
@@ -301,7 +301,7 @@ jobs:
             cmake --build ./build
             cmake --build ./build --target check-hermes
 
-  test-macos-cocoapods:
+  test-macos-runtime-build-and-cocoapods-integration:
     macos:
       xcode: "10.3.0"
     environment:
