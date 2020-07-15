@@ -160,5 +160,3 @@ if(APPLE AND CMAKE_CXX_FLAGS MATCHES "-gdwarf")
     install(DIRECTORY ${DSYM_PATH} DESTINATION lib)
   endif()
 endif()
-
-hermes_strip_apple_debug_symbols(libhermes)

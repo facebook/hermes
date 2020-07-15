@@ -19,4 +19,3 @@ target_link_libraries(hbc-diff
 )
 
 hermes_link_icu(hbc-diff)
-hermes_strip_apple_debug_symbols(hbc-diff)

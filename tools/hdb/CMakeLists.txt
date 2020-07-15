@@ -23,8 +23,6 @@ target_link_libraries(hdb
 
 hermes_link_icu(hdb)
 
-hermes_strip_apple_debug_symbols(hdb)
-
 install(TARGETS hdb
   RUNTIME DESTINATION bin
 )

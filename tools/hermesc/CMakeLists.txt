@@ -23,7 +23,6 @@ target_link_libraries(hermesc
 )
 
 hermes_link_icu(hermesc)
-hermes_strip_apple_debug_symbols(hermesc)
 
 # The Hermes compiler is used as part of the build of the VM.
 # During cross-compilation, the compiler needs to be built for the host system,

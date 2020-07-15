@@ -15,4 +15,3 @@ target_link_libraries(hbc-attribute
 )
 
 hermes_link_icu(hbc-attribute)
-hermes_strip_apple_debug_symbols(hbc-attribute)

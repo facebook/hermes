@@ -24,5 +24,4 @@ target_link_libraries(interp-dispatch-bench
 )
 
 hermes_link_icu(interp-dispatch-bench)
-hermes_strip_apple_debug_symbols(interp-dispatch-bench)
 

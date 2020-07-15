@@ -18,7 +18,6 @@ target_link_libraries(hbcdump
 )
 
 hermes_link_icu(hbcdump)
-hermes_strip_apple_debug_symbols(hbcdump)
 
 install(TARGETS hbcdump
   RUNTIME DESTINATION bin

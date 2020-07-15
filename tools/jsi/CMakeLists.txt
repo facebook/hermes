@@ -16,4 +16,3 @@ add_hermes_tool(hermes-jsi
   LINK_LIBS hermesapi
   )
 
-hermes_strip_apple_debug_symbols(hermes-jsi)

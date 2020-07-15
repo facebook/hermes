@@ -214,11 +214,7 @@ set(HERMES_ENABLE_TEST_SUITE ON CACHE BOOL
 set(HERMES_BUILD_APPLE_FRAMEWORK ON CACHE BOOL
   "Whether to build the libhermes target as a framework bundle or dylib on Apple platforms")
 
-if (NOT HERMES_IS_MOBILE_BUILD AND APPLE)
-  # Always emit debugging symbols (in the DWARF) format, as these will be
-  # stripped out of each target post-build.
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gdwarf")
-elseif (HERMES_IS_ANDROID)
+if (HERMES_IS_ANDROID)
   set(HERMES_IS_MOBILE_BUILD TRUE)
 
   add_definitions(-DHERMES_PLATFORM_UNICODE=HERMES_PLATFORM_UNICODE_JAVA)
@@ -503,20 +499,6 @@ function(hermes_link_icu target_name)
                   INSTALL_RPATH ${ICU_RPATH})
     set_property(TARGET ${target_name} PROPERTY
                   BUILD_WITH_INSTALL_RPATH TRUE)
-  endif()
-endfunction()
-
-# Declare a function that strips debugging symbols from any target built for
-# Apple platforms, which we do build initially so they can be extracted into a
-# dSYM bundle.
-function(hermes_strip_apple_debug_symbols target_name)
-  if(APPLE)
-    if(NOT CMAKE_STRIP)
-      set(CMAKE_STRIP xcrun strip)
-    endif()
-    add_custom_command(TARGET ${target_name} POST_BUILD
-      COMMAND ${CMAKE_STRIP} -S $<TARGET_FILE:${target_name}>
-    )
   endif()
 endfunction()
 
