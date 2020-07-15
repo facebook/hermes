@@ -20,6 +20,7 @@ workflows:
       - android
       - linux
       - macos
+      - build-macos-runtime
       - windows
       - npm:
           requires:
@@ -29,7 +30,7 @@ workflows:
             - windows
       - test-linux
       - test-macos
-      - test-macos-podspec
+      - test-macos-runtime-build-and-cocoapods-integration
       - test-e2e:
           requires:
             - npm
@@ -203,13 +204,59 @@ jobs:
           name: Build Hermes for macOS
           command: |
             cd "$HERMES_WS_DIR"
-            hermes/utils/build/configure.py --distribute
+            hermes/utils/build/configure.py --distribute --cmake-flags='-DHERMES_BUILD_APPLE_FRAMEWORK:BOOLEAN=false'
             cmake --build ./build_release --target github-cli-release
       - run:
           name: Copy artifacts
           command: |
             cd "$HERMES_WS_DIR"
             cp "build_release/github"/hermes-cli-*.tar.gz "output"
+      - run:
+          name: Checksum artifacts
+          command: |
+            cd "$HERMES_WS_DIR/output"
+            for file in *
+            do
+              shasum -a 256 "$file" > "$file.sha256"
+            done
+      - store_artifacts:
+          path: /tmp/hermes/output/
+      - persist_to_workspace:
+          root: /tmp/hermes/output/
+          paths:
+            - .
+
+  build-macos-runtime:
+    macos:
+      xcode: "10.3.0"
+    environment:
+      - HERMES_WS_DIR: /tmp/hermes
+      - TERM: dumb
+      # Homebrew currently breaks while updating:
+      # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
+      - HOMEBREW_NO_AUTO_UPDATE: 1
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            brew install cmake ninja
+      - run:
+          name: Set up workspace
+          command: |
+            mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output" "$HERMES_WS_DIR/package-root"
+            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
+      - run:
+          name: Build Hermes for macOS as CocoaPods pod
+          command: |
+            cd "$HERMES_WS_DIR"
+            hermes/utils/build/configure.py --distribute --cmake-flags="$(ruby -rcocoapods-core -e 'load %{hermes/hermes.podspec}; puts HermesHelper.cmake_configuration') -DCMAKE_INSTALL_PREFIX:PATH=../destroot"
+            cmake --build ./build_release --target hermes-runtime-darwin-cocoapods-release
+      - run:
+          name: Copy artifacts
+          command: |
+            cd "$HERMES_WS_DIR"
+            cp "build_release/github"/hermes-runtime-darwin-*.tar.gz "output"
       - run:
           name: Checksum artifacts
           command: |
@@ -254,7 +301,7 @@ jobs:
             cmake --build ./build
             cmake --build ./build --target check-hermes
 
-  test-macos-podspec:
+  test-macos-runtime-build-and-cocoapods-integration:
     macos:
       xcode: "10.3.0"
     environment:
