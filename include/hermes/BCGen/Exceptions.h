@@ -66,16 +66,23 @@ using BasicBlockInfoMap =
 using ExceptionEntryList = llvh::SmallVector<ExceptionHandlerInfo, 4>;
 
 /// Construct the list of basic blocks covered by each catch instruction.
+/// Returns true on success.
+/// \p F the function under consideration
 /// \p catchInfoMap a CatchInfoMap that has entries for every CatchInst
 /// \p aliveCatches the currently active CatchInsts (should be empty)
 /// \p visited the previously visited BasicBlocks (should be empty)
 /// \p currentBlock the entry BasicBlock
-void constructCatchMap(
+/// \p maxRecursionDepth if the construction exceeds this many levels of
+///     recursion, it adds a compilation error and returns false
+bool constructCatchMap(
+    Function *F,
     CatchInfoMap &catchInfoMap,
     llvh::SmallVectorImpl<CatchInst *> &aliveCatches,
     llvh::SmallPtrSetImpl<BasicBlock *> &visited,
-    BasicBlock *currentBlock);
+    BasicBlock *currentBlock,
+    uint32_t maxRecursionDepth);
 
+/// Note: Returns an empty list if generation fails due to excessive recursion.
 ExceptionEntryList generateExceptionHandlers(
     CatchInfoMap &catchInfoMap,
     BasicBlockInfoMap &bbMap,
