@@ -314,7 +314,7 @@ namespace {
 
 /// Given a SwitchImm instruction, loop through each entry of the associated
 /// jump table.
-/// F: (current index into master jump table, jump target offset, destination
+/// F: (current index into primary jump table, jump target offset, destination
 /// instruction) -> void.
 template <typename F>
 void switchJumpTableForEach(const inst::Inst *inst, F f) {
@@ -325,7 +325,7 @@ void switchJumpTableForEach(const inst::Inst *inst, F f) {
   unsigned numberOfEntries = end - start;
 
   /// Get the current SwitchImm instruction's subview [start, end] start pointer
-  /// from master jump table. This is the same computation done by the
+  /// from primary jump table. This is the same computation done by the
   /// interpreter to figure out the start of the jump table view.
   const auto *curJmpTableView =
       reinterpret_cast<const uint32_t *>(llvh::alignAddr(
