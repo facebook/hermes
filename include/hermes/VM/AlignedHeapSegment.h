@@ -256,6 +256,10 @@ class AlignedHeapSegment {
   const MarkBitArrayNC &cellHeads() const {
     return contents()->startOfCells_;
   }
+
+  static MarkBitArrayNC &cellHeadsCovering(const void *ptr) {
+    return contents(AlignedStorage::start(ptr))->startOfCells_;
+  }
 #endif
 
   explicit inline operator bool() const;

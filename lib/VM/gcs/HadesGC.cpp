@@ -14,112 +14,15 @@
 #include "hermes/VM/SlotAcceptorDefault-inline.h"
 #include "hermes/VM/SlotAcceptorDefault.h"
 
+#include <array>
 #include <stack>
 
 namespace hermes {
 namespace vm {
 
-/// Similar to AlignedHeapSegment except it uses a free list.
-class HadesGC::HeapSegment final : public AlignedHeapSegment {
- public:
-  explicit HeapSegment(AlignedStorage &&storage);
-  ~HeapSegment() = default;
-
-  /// Allocates space to place an object of size \p sz.
-  /// \param sz The amount of memory, in bytes, required for this allocation.
-  /// \return A pointer into this segment that can have \p sz bytes written into
-  ///   it. If no space is available to satisfy this request, null is
-  ///   returned.
-  /// \post If this allocation succeeds, a GCCell must be constructed in it
-  ///   before the next allocation occurs.
-  AllocResult alloc(uint32_t sz);
-
-  /// YG has a much simpler alloc path, which shortcuts some steps the normal
-  /// \p alloc takes.
-  AllocResult youngGenBumpAlloc(uint32_t sz);
-
-  /// Adds the given cell to the free list for this segment.
-  /// \pre this->contains(cell) is true.
-  void addCellToFreelist(GCCell *cell);
-  /// Version of addCellToFreelist when nothing is initialized at the address
-  /// yet.
-  void addCellToFreelist(void *addr, uint32_t sz);
-
-  /// Record the head of this cell so it can be found by the card scanner.
-  void setCellHead(const GCCell *cell);
-
-  /// For a given address, find the head of the cell.
-  /// \return A cell such that cell <= address < cell->nextCell().
-  GCCell *getCellHead(const void *address);
-
-  /// Call \p callback on every cell allocated in this segment.
-  /// NOTE: Overridden to skip free list entries.
-  template <typename CallbackFunction>
-  void forAllObjs(CallbackFunction callback);
-  template <typename CallbackFunction>
-  void forAllObjs(CallbackFunction callback) const;
-
-  /// \return the number of bytes in this segment that are in active use by the
-  /// program, and are not part of free cells.
-  uint64_t allocatedBytes() const {
-    return bumpAllocMode_ ? used() : allocatedBytes_;
-  }
-
-  bool isBumpAllocMode() const {
-    return bumpAllocMode_;
-  }
-
-  /// Transitions the segment from bump-alloc mode to freelist mode.
-  /// Can only be called once, when the segment is in bump-alloc mode. There is
-  /// no transitioning from freelist mode back to bump-alloc mode.
-  void transitionToFreelist();
-
-  class FreelistCell final : public VariableSizeRuntimeCell {
-   private:
-    static const VTable vt;
-
-   public:
-    // If null, this is the tail of the free list.
-    FreelistCell *next_;
-
-    explicit FreelistCell(uint32_t sz, FreelistCell *next)
-        : VariableSizeRuntimeCell{&vt, sz}, next_{next} {}
-
-    /// Split this cell into two FreelistCells. The first cell will be the
-    /// requested size \p sz, and will have a next pointer to the second cell.
-    /// The second cell will have the remainder that was left from the original.
-    /// \param sz The size that the newly-split cell should be.
-    /// \pre getAllocatedSize() >= sz + minAllocationSize()
-    /// \post this will now point to the first cell, but without modifying this.
-    ///   this should no longer be used as a FreelistCell, and something else
-    ///   should be constructed into it immediately.
-    FreelistCell *split(HeapSegment &seg, uint32_t sz);
-
-    static bool classof(const GCCell *cell) {
-      return cell->getKind() == CellKind::FreelistKind;
-    }
-  };
-
- private:
-  /// Head of the free list. Null if the free list is empty.
-  FreelistCell *freelistHead_ = nullptr;
-
-  uint64_t allocatedBytes_{0};
-
-  /// If true, then allocations into this segment increment a level inside the
-  /// segment. Once the level reaches the end of the segment, no more
-  /// allocations can occur.
-  /// All segments begin in bumpAllocMode. If an OG segment has this mode set,
-  /// and sweeping frees an object, this mode will be unset.
-  bool bumpAllocMode_{true};
-
-  /// Allocate space by bumping a level.
-  AllocResult bumpAlloc(uint32_t sz);
-};
-
 // A free list cell is always variable-sized.
-const VTable HadesGC::HeapSegment::FreelistCell::vt{CellKind::FreelistKind,
-                                                    /*variableSize*/ 0};
+const VTable HadesGC::OldGen::FreelistCell::vt{CellKind::FreelistKind,
+                                               /*variableSize*/ 0};
 
 void FreelistBuildMeta(const GCCell *, Metadata::Builder &) {}
 
@@ -129,7 +32,12 @@ HadesGC::HeapSegment::HeapSegment(AlignedStorage &&storage)
   growToLimit();
 }
 
-void HadesGC::HeapSegment::transitionToFreelist() {
+void HadesGC::OldGen::transitionToFreelist(HeapSegment &seg) {
+  allocatedBytes_ += seg.used();
+  seg.transitionToFreelist(*this);
+}
+
+void HadesGC::HeapSegment::transitionToFreelist(OldGen &og) {
   assert(bumpAllocMode_ && "This segment has already been transitioned");
   // Add a free list cell that spans the distance from end to level.
   const uint32_t sz = end() - level();
@@ -139,85 +47,24 @@ void HadesGC::HeapSegment::transitionToFreelist() {
     // space, the sweeper should coalesce this tail space when the last object
     // is free'd.
     bumpAllocMode_ = false;
-    allocatedBytes_ = used();
     return;
   }
   AllocResult res = bumpAlloc(sz);
   assert(res.success && "Failed to bump the level to the end");
   bumpAllocMode_ = false;
-  allocatedBytes_ = used();
-  addCellToFreelist(res.ptr, sz);
+  og.addCellToFreelist(res.ptr, sz, /*alreadyFree*/ true);
 }
 
-AllocResult HadesGC::HeapSegment::alloc(uint32_t sz) {
-  assert(isSizeHeapAligned(sz) && "sz must be heap-aligned");
-  assert(
-      sz >= minAllocationSize() &&
-      "Allocating too small of an object into old gen");
-  if (bumpAllocMode_) {
-    // No need to check for failure: if the bump alloc fails then the only free
-    // space is beyond the level of the segment and is already considered.
-    return bumpAlloc(sz);
-  }
-  // Need to track the previous entry in order to change the next pointer.
-  FreelistCell **prevLoc = &freelistHead_;
-  FreelistCell *cell = freelistHead_;
-  // TODO: This algorithm is first-fit. The world of free-list allocation
-  // algorithms is vast, and the best one can be explored later.
-  while (true) {
-    if (!cell) {
-      // Free list exhausted, and nothing had enough space.
-      return {nullptr, false};
-    }
-    assert(
-        vmisa<FreelistCell>(cell) &&
-        "Non-free-list cell found in the free list");
-    assert(
-        (!cell->next_ || cell->next_->isValid()) &&
-        "Next pointer points to an invalid cell");
-    // Check if the size is large enough that the cell could be split.
-    if (cell->getAllocatedSize() >= sz + minAllocationSize()) {
-      // Split the free cell. In order to avoid initializing soon-to-be-unused
-      // values like the size and the next pointer, copy the return path here.
-      *prevLoc = cell->split(*this, sz);
-      allocatedBytes_ += sz;
-      // Unpoison the memory so that the mutator can use it.
-      __asan_unpoison_memory_region(cell + 1, sz - sizeof(FreelistCell));
-      return {cell, true};
-    } else if (cell->getAllocatedSize() == sz) {
-      // Exact match, take it.
-      break;
-    }
-    // Non-exact matches, or anything just barely too small to fit, will need
-    // to find another block.
-    // NOTE: This is due to restrictions on the minimum cell size to keep the
-    // heap parseable, especially in debug mode. If this minimum size becomes
-    // smaller (smaller header, size becomes part of it automatically, debug
-    // magic field is handled differently), this decisions can be re-examined.
-    // An example alternative is to make a special fixed-size cell that is only
-    // as big as an empty GCCell. That alternative only works if the empty
-    // is small enough to fit in any gap in the heap. That's not true in debug
-    // modes currently.
-    prevLoc = &cell->next_;
-    cell = cell->next_;
-  }
-  assert(
-      cell->getAllocatedSize() == sz &&
-      "Cell found in free list should have exactly enough bytes to contain the "
-      "allocation");
-  assert(
-      (!cell->next_ || cell->next_->isValid()) &&
-      "Next pointer points to an invalid cell");
-
-  // Remove from free list.
-  *prevLoc = cell->next_;
+GCCell *HadesGC::OldGen::finishAlloc(FreelistCell *cell, uint32_t sz) {
   // Track the number of allocated bytes in a segment.
   allocatedBytes_ += sz;
   // Unpoison the memory so that the mutator can use it.
   __asan_unpoison_memory_region(cell + 1, sz - sizeof(FreelistCell));
+  // Write a mark bit so this entry doesn't get free'd by the sweeper.
+  HeapSegment::setCellMarkBit(cell);
   // Could overwrite the VTable, but the allocator will write a new one in
   // anyway.
-  return {cell, true};
+  return cell;
 }
 
 AllocResult HadesGC::HeapSegment::bumpAlloc(uint32_t sz) {
@@ -231,7 +78,7 @@ AllocResult HadesGC::HeapSegment::bumpAlloc(uint32_t sz) {
     setCellHead(static_cast<GCCell *>(res.ptr));
     // No need to change allocatedBytes_ here, as AlignedHeapSegment::used()
     // already tracks that. Once the cell is transitioned to freelist mode the
-    // right value will be stored in allocatedBytes_.
+    // right value will be stored in OldGen::allocatedBytes_.
   }
   return res;
 }
@@ -244,30 +91,39 @@ AllocResult HadesGC::HeapSegment::youngGenBumpAlloc(uint32_t sz) {
   return AlignedHeapSegment::alloc(sz);
 }
 
-void HadesGC::HeapSegment::addCellToFreelist(GCCell *cell) {
-  addCellToFreelist(cell, cell->getAllocatedSize());
+void HadesGC::OldGen::addCellToFreelist(GCCell *cell) {
+  addCellToFreelist(cell, cell->getAllocatedSize(), /*alreadyFree*/ false);
 }
 
-void HadesGC::HeapSegment::addCellToFreelist(void *addr, uint32_t sz) {
-  assert(
-      !bumpAllocMode_ &&
-      "Segment should call transitionToFreelist before calling "
-      "addCellToFreelist");
-  assert(contains(addr) && "This segment doesn't contain the cell");
+void HadesGC::OldGen::addCellToFreelist(
+    void *addr,
+    uint32_t sz,
+    bool alreadyFree) {
   assert(
       sz >= sizeof(FreelistCell) &&
       "Cannot construct a FreelistCell into an allocation in the OG");
-  assert(
-      allocatedBytes_ >= sz &&
-      "Free'ing a cell that is larger than what is left allocated");
-  // Turn this into a FreelistCell by constructing in-place.
-  // TODO: For concurrent access it's probably better to append to the
-  // tail instead. Only requires writing a single next pointer instead
-  // of the two-phase head swap + next pointer change.
-  auto *const newFreeCell = new (addr) FreelistCell{sz, freelistHead_};
-  freelistHead_ = newFreeCell;
-  // We free'd this many bytes.
-  allocatedBytes_ -= sz;
+  // Get the size bucket for the cell being added;
+  const uint32_t bucket = sz >> LogHeapAlign;
+  FreelistCell *newFreeCell = nullptr;
+  if (bucket < kNumFreelistBuckets) {
+    // Push onto the size-specific free list.
+    // TODO(T68919270): For concurrent access it's probably better to append to
+    // the tail instead. Only requires writing a single next pointer instead of
+    // the two-phase head swap + next pointer change.
+    newFreeCell = new (addr) FreelistCell{sz, freelistBuckets_[bucket]};
+    freelistBuckets_[bucket] = newFreeCell;
+  } else {
+    // Push onto the general free list.
+    newFreeCell = new (addr) FreelistCell{sz, largeBlockFreelistHead_};
+    largeBlockFreelistHead_ = newFreeCell;
+  }
+  if (!alreadyFree) {
+    // We free'd this many bytes.
+    assert(
+        allocatedBytes_ >= sz &&
+        "Free'ing a cell that is larger than what is left allocated");
+    allocatedBytes_ -= sz;
+  }
   // In ASAN builds, poison the memory outside of the FreelistCell so that
   // accesses are flagged as illegal.
   // Here, and in other places where FreelistCells are poisoned, use +1 on the
@@ -277,8 +133,10 @@ void HadesGC::HeapSegment::addCellToFreelist(void *addr, uint32_t sz) {
   __asan_poison_memory_region(newFreeCell + 1, sz - sizeof(FreelistCell));
 }
 
+/* static */
 void HadesGC::HeapSegment::setCellHead(const GCCell *cell) {
-  cellHeads().mark(cellHeads().addressToIndex(cell));
+  MarkBitArrayNC &heads = cellHeadsCovering(cell);
+  heads.mark(heads.addressToIndex(cell));
 }
 
 GCCell *HadesGC::HeapSegment::getCellHead(const void *address) {
@@ -305,15 +163,13 @@ void HadesGC::HeapSegment::forAllObjs(CallbackFunction callback) {
   for (GCCell *cell = reinterpret_cast<GCCell *>(start()); cell < stop;
        cell = cell->nextCell()) {
     // Skip free-list entries.
-    if (!vmisa<FreelistCell>(cell)) {
+    if (!vmisa<OldGen::FreelistCell>(cell)) {
       callback(cell);
     }
   }
 }
 
-HadesGC::HeapSegment::FreelistCell *HadesGC::HeapSegment::FreelistCell::split(
-    HeapSegment &seg,
-    uint32_t sz) {
+void HadesGC::OldGen::FreelistCell::split(OldGen &og, uint32_t sz) {
   const auto origSize = getAllocatedSize();
   assert(
       origSize >= sz + minAllocationSize() &&
@@ -322,9 +178,10 @@ HadesGC::HeapSegment::FreelistCell *HadesGC::HeapSegment::FreelistCell::split(
   // We're about to touch some memory in the newly split cell.
   // All other memory should remain poisoned.
   __asan_unpoison_memory_region(nextCellAddress, sizeof(FreelistCell));
-  // Construct a new FreelistCell in the empty space.
-  FreelistCell *const newCell =
-      new (nextCellAddress) FreelistCell(origSize - sz, next_);
+  // Adding the newly formed cell to the free list will add it to the
+  // appropriate size bucket.
+  og.addCellToFreelist(nextCellAddress, origSize - sz, /*alreadyFree*/ true);
+  GCCell *const newCell = reinterpret_cast<GCCell *>(nextCellAddress);
 #ifndef NDEBUG
   const auto newSize = newCell->getAllocatedSize();
   assert(
@@ -345,8 +202,7 @@ HadesGC::HeapSegment::FreelistCell *HadesGC::HeapSegment::FreelistCell::split(
   // of a cell extending into a dirty card is not a critical operation.
   // This is the only operation in a segment that actually creates new cells,
   // all other cells are already present.
-  seg.setCellHead(newCell);
-  return newCell;
+  HeapSegment::setCellHead(newCell);
 }
 
 class HadesGC::CollectionSection final {
@@ -829,7 +685,7 @@ HadesGC::~HadesGC() {}
 
 uint32_t HadesGC::minAllocationSize() {
   return heapAlignSize(std::max(
-      sizeof(HeapSegment::FreelistCell), sizeof(EvacAcceptor::CopyListCell)));
+      sizeof(OldGen::FreelistCell), sizeof(EvacAcceptor::CopyListCell)));
 }
 
 void HadesGC::getHeapInfo(HeapInfo &info) {
@@ -1132,10 +988,6 @@ void HadesGC::sweep() {
        segit != segitend;
        ++segit) {
     HeapSegment &seg = **segit;
-    if (seg.allocatedBytes() == 0) {
-      // Quickly skip empty segments.
-      continue;
-    }
     seg.forAllObjs([this, isTrackingIDs, &seg](GCCell *cell) {
       // forAllObjs skips free list cells, so no need to check for those.
       assert(cell->isValid() && "Invalid cell in sweeping");
@@ -1148,11 +1000,9 @@ void HadesGC::sweep() {
         // If anything was freed, transition from bump-alloc to freelist mode.
         // This has to be done immediately in order for the addCellToFreelist
         // function to work.
-        seg.transitionToFreelist();
+        oldGen_.transitionToFreelist(seg);
       }
-      // Now add it to the head of the free list for the segment it's
-      // in.
-      seg.addCellToFreelist(cell);
+      oldGen_.addCellToFreelist(cell);
       if (isTrackingIDs) {
         // There is no race condition here, because the object has already been
         // determined to be dead, so nothing can be accessing it, or asking for
@@ -1426,7 +1276,7 @@ void *HadesGC::allocLongLived(uint32_t sz) {
   // Need to initialize the memory here to a valid cell to prevent the case
   // where sweeping discovers the uninitialized memory while it's traversing
   // a segment. This only happens at the end of a bump-alloc segment.
-  new (res) HeapSegment::FreelistCell(sz, nullptr);
+  new (res) OldGen::FreelistCell(sz, nullptr);
   return res;
 }
 
@@ -1472,16 +1322,81 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
 }
 
 GCCell *HadesGC::OldGen::search(uint32_t sz) {
-  // TODO: Should do something better than iterating through all segments.
-  for (auto seg = segments_.begin(), end = segments_.end(); seg != end; ++seg) {
-    const AllocResult res = (*seg)->alloc(sz);
-    if (!res.success) {
-      continue;
+  size_t bucket = sz >> LogHeapAlign;
+  if (bucket < kNumFreelistBuckets) {
+    // Fast path: There already exists a size bucket for this alloc. Check if
+    // there's a free cell to take and exit.
+    if (FreelistCell *cell = freelistBuckets_[bucket]) {
+      // There is a free cell for this size class, take it and return.
+      assert(
+          cell->getAllocatedSize() == sz &&
+          "Size bucket should be an exact match");
+      freelistBuckets_[bucket] = cell->next_;
+      return finishAlloc(cell, sz);
     }
-    // Whenever allocation into the OG occurs, it should be marked as live.
-    GCCell *newObj = static_cast<GCCell *>(res.ptr);
-    HeapSegment::setCellMarkBit(newObj);
-    return newObj;
+  }
+  // Else the size bucket was empty, try the large block free list.
+  // NOTE: There's an option to try fitting a cell into a different size bucket,
+  // rather than go immediately to the large block free list; however, on the
+  // workloads Hermes cares about most, there was no discovered benefit from
+  // allowing different sizes over going immediately to the large block free
+  // list.
+
+  // Need to track the previous entry in order to change the next pointer.
+  FreelistCell **prevLoc = &largeBlockFreelistHead_;
+  FreelistCell *cell = largeBlockFreelistHead_;
+  // Once we're examining the general free list, it's a first-fit algorithm.
+  while (cell) {
+    assert(cell == *prevLoc && "prevLoc should be updated in each iteration");
+    assert(
+        vmisa<FreelistCell>(cell) &&
+        "Non-free-list cell found in the free list");
+    assert(
+        (!cell->next_ || cell->next_->isValid()) &&
+        "Next pointer points to an invalid cell");
+    const auto cellSize = cell->getAllocatedSize();
+    assert(
+        cellSize >= kMinSizeForLargeBlock &&
+        "Found a small block on the large block free list");
+    // Check if the size is large enough that the cell could be split.
+    if (cellSize >= sz + minAllocationSize()) {
+      // Split the free cell. In order to avoid initializing soon-to-be-unused
+      // values like the size and the next pointer, copy the return path here.
+      *prevLoc = cell->next_;
+      cell->split(*this, sz);
+      return finishAlloc(cell, sz);
+    } else if (cellSize == sz) {
+      // Exact match, take it.
+      *prevLoc = cell->next_;
+      return finishAlloc(cell, sz);
+    }
+    // Non-exact matches, or anything just barely too small to fit, will need
+    // to find another block.
+    // NOTE: This is due to restrictions on the minimum cell size to keep the
+    // heap parseable, especially in debug mode. If this minimum size becomes
+    // smaller (smaller header, size becomes part of it automatically, debug
+    // magic field is handled differently), this decisions can be re-examined.
+    // An example alternative is to make a special fixed-size cell that is only
+    // as big as an empty GCCell. That alternative only works if the empty is
+    // small enough to fit in any gap in the heap. That's not true in debug
+    // modes currently.
+    prevLoc = &cell->next_;
+    cell = cell->next_;
+  }
+  // Free list exhausted, and nothing had enough space. Try bump-alloc as a last
+  // resort.
+  // TODO: Right now this iterates over all segments. Could instead have a
+  // separate data structure for bump-alloc segments. OldGen::allocatedBytes()
+  // could also use that data structure.
+  for (auto &seg : segments_) {
+    if (seg->isBumpAllocMode()) {
+      const AllocResult res = seg->bumpAlloc(sz);
+      if (res.success) {
+        GCCell *newCell = static_cast<GCCell *>(res.ptr);
+        HeapSegment::setCellMarkBit(newCell);
+        return newCell;
+      }
+    }
   }
   return nullptr;
 }
@@ -1754,15 +1669,18 @@ void HadesGC::completeWeakMapMarking(MarkAcceptor &acceptor) {
 }
 
 uint64_t HadesGC::allocatedBytes() const {
-  return youngGen().allocatedBytes() + oldGen_.allocatedBytes();
+  return youngGen().used() + oldGen_.allocatedBytes();
 }
 
 uint64_t HadesGC::OldGen::allocatedBytes() const {
-  uint64_t totalAllocated = 0;
+  uint64_t totalAllocated = allocatedBytes_;
   for (auto segit = segments_.begin(), end = segments_.end(); segit != end;
        ++segit) {
     // TODO: Should a fragmentation measurement be used as well?
-    totalAllocated += (*segit)->allocatedBytes();
+    HeapSegment &seg = **segit;
+    if (seg.isBumpAllocMode()) {
+      totalAllocated += seg.used();
+    }
   }
   return totalAllocated;
 }

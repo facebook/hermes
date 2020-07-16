@@ -187,11 +187,57 @@ class HadesGC final : public GCBase {
   /// \}
 #endif
 
-  class HeapSegment;
   class CollectionSection;
   class EvacAcceptor;
   class MarkAcceptor;
   class MarkWeakRootsAcceptor;
+  class OldGen;
+
+  /// Similar to AlignedHeapSegment except it uses a free list.
+  class HeapSegment final : public AlignedHeapSegment {
+   public:
+    explicit HeapSegment(AlignedStorage &&storage);
+    ~HeapSegment() = default;
+
+    /// Allocate space by bumping a level.
+    /// \pre isBumpAllocMode() must be true.
+    AllocResult bumpAlloc(uint32_t sz);
+
+    /// YG has a much simpler alloc path, which shortcuts some steps the normal
+    /// \p alloc takes.
+    AllocResult youngGenBumpAlloc(uint32_t sz);
+
+    /// Record the head of this cell so it can be found by the card scanner.
+    static void setCellHead(const GCCell *cell);
+
+    /// For a given address, find the head of the cell.
+    /// \return A cell such that cell <= address < cell->nextCell().
+    GCCell *getCellHead(const void *address);
+
+    /// Call \p callback on every cell allocated in this segment.
+    /// NOTE: Overridden to skip free list entries.
+    template <typename CallbackFunction>
+    void forAllObjs(CallbackFunction callback);
+    template <typename CallbackFunction>
+    void forAllObjs(CallbackFunction callback) const;
+
+    bool isBumpAllocMode() const {
+      return bumpAllocMode_;
+    }
+
+    /// Transitions this segment from bump-alloc mode to freelist mode.
+    /// Can only be called once, when the segment is in bump-alloc mode. There
+    /// is no transitioning from freelist mode back to bump-alloc mode.
+    void transitionToFreelist(OldGen &og);
+
+   private:
+    /// If true, then allocations into this segment increment a level inside the
+    /// segment. Once the level reaches the end of the segment, no more
+    /// allocations can occur.
+    /// All segments begin in bumpAllocMode. If an OG segment has this mode set,
+    /// and sweeping frees an object, this mode will be unset.
+    bool bumpAllocMode_{true};
+  };
 
   class OldGen final {
    public:
@@ -218,18 +264,78 @@ class HadesGC final : public GCBase {
     /// \post This function either successfully allocates, or reports OOM.
     GCCell *alloc(uint32_t sz);
 
+    /// Adds the given cell to the free list for this segment.
+    /// \pre this->contains(cell) is true.
+    void addCellToFreelist(GCCell *cell);
+
+    /// Version of addCellToFreelist when nothing is initialized at the address
+    /// yet.
+    /// \param alreadyFree If true, this location is not currently allocated.
+    void addCellToFreelist(void *addr, uint32_t sz, bool alreadyFree);
+
+    /// Transitions the given segment from bump-alloc mode to freelist mode.
+    /// Can only be called once, when the segment is in bump-alloc mode. There
+    /// is no transitioning from freelist mode back to bump-alloc mode.
+    void transitionToFreelist(HeapSegment &seg);
+
     /// \return the total number of bytes that are in use by the OG section of
     /// the JS heap.
     uint64_t allocatedBytes() const;
+
+    class FreelistCell final : public VariableSizeRuntimeCell {
+     private:
+      static const VTable vt;
+
+     public:
+      // If null, this is the tail of the free list.
+      FreelistCell *next_;
+
+      explicit FreelistCell(uint32_t sz, FreelistCell *next)
+          : VariableSizeRuntimeCell{&vt, sz}, next_{next} {}
+
+      /// Split this cell into two FreelistCells. The first cell will be the
+      /// requested size \p sz, but no guarantee is made about its next pointer.
+      /// The second cell will have the remainder that was left from the
+      /// original, and will be on the free list.
+      /// \param og The OldGen that this FreelistCell resides in.
+      /// \param sz The size that the newly-split cell should be.
+      /// \pre getAllocatedSize() >= sz + minAllocationSize()
+      /// \post this will now point to the first cell, but without modifying
+      ///   this. this should no longer be used as a FreelistCell, and something
+      ///   else should be constructed into it immediately.
+      void split(OldGen &og, uint32_t sz);
+
+      static bool classof(const GCCell *cell) {
+        return cell->getKind() == CellKind::FreelistKind;
+      }
+    };
 
    private:
     HadesGC *gc_;
     std::vector<std::unique_ptr<HeapSegment>> segments_;
 
+    /// This is the sum of all bytes currently allocated in the heap, excluding
+    /// bump-allocated segments. Use \c allocatedBytes() to include
+    /// bump-allocated segments.
+    uint64_t allocatedBytes_{0};
+
+    /// There is one bucket for each size, in multiples of heapAlign.
+    static constexpr size_t kNumFreelistBuckets = 256;
+    static constexpr size_t kMinSizeForLargeBlock = kNumFreelistBuckets
+        << LogHeapAlign;
+    std::array<FreelistCell *, kNumFreelistBuckets> freelistBuckets_{};
+    FreelistCell *largeBlockFreelistHead_ = nullptr;
+
     /// Searches the OG for a space to allocate memory into.
     /// \return A pointer to uninitialized memory that can be written into, null
     ///   if no such space exists.
     GCCell *search(uint32_t sz);
+
+    /// Common path for when an allocation has succeeded.
+    /// \param cell The free memory that will soon have an object allocated into
+    ///   it.
+    /// \param sz The number of bytes associated with the free memory.
+    GCCell *finishAlloc(FreelistCell *cell, uint32_t sz);
   };
 
  private:
