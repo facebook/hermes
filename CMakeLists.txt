@@ -214,6 +214,9 @@ set(HERMES_ENABLE_TEST_SUITE ON CACHE BOOL
 set(HERMES_BUILD_APPLE_FRAMEWORK ON CACHE BOOL
   "Whether to build the libhermes target as a framework bundle or dylib on Apple platforms")
 
+set(HERMES_BUILD_APPLE_DSYM OFF CACHE BOOL
+  "Whether to build a DWARF debugging symbols bundle")
+
 if (HERMES_IS_ANDROID)
   set(HERMES_IS_MOBILE_BUILD TRUE)
 
@@ -235,6 +238,10 @@ if (HERMES_IS_ANDROID)
     # https://github.com/android-ndk/ndk/issues/242
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fuse-ld=gold")
   endif()
+endif()
+
+if(HERMES_BUILD_APPLE_DSYM)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gdwarf")
 endif()
 
 if (HERMES_IS_MOBILE_BUILD)
@@ -695,7 +702,8 @@ add_custom_target(
 
 add_custom_target(
   hermes-runtime-darwin-cocoapods-release
-  DEPENDS install
+  COMMAND
+    ${CMAKE_COMMAND} --build . --target install/strip
   COMMAND
     mkdir -p ${HERMES_GITHUB_DIR}/package-root
   COMMAND

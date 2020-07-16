@@ -134,7 +134,7 @@ install(DIRECTORY "${PROJECT_SOURCE_DIR}/API/hermes" DESTINATION include
 
 # Create debug symbols (dSYM) bundle for Apple platform dylibs/frameworks
 # Largely inspired by https://github.com/llvm/llvm-project/blob/6701993027f8af172d7ba697884459261b00e3c6/llvm/cmake/modules/AddLLVM.cmake#L1934-L1986
-if(APPLE AND CMAKE_CXX_FLAGS MATCHES "-gdwarf")
+if(HERMES_BUILD_APPLE_DSYM)
   if(CMAKE_CXX_FLAGS MATCHES "-flto")
     set(lto_object ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/libhermes-lto.o)
     set_property(TARGET libhermes APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-object_path_lto,${lto_object}")
