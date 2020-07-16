@@ -700,16 +700,21 @@ add_custom_target(
   github-cli-release
   DEPENDS ${HERMES_GITHUB_DIR}/${HERMES_CLI_GITHUB_FILE})
 
+set(HERMES_PKG_ROOT ${HERMES_GITHUB_DIR}/package-root)
+set(HERMES_PKG_FRAMEWORK ${HERMES_PKG_ROOT}/destroot/Library/Frameworks/hermes.framework)
+
 add_custom_target(
   hermes-runtime-darwin-cocoapods-release
   COMMAND
     ${CMAKE_COMMAND} --build . --target install/strip
   COMMAND
-    mkdir -p ${HERMES_GITHUB_DIR}/package-root
+    mkdir -p ${HERMES_PKG_ROOT}
   COMMAND
-    cp -R -f ${CMAKE_INSTALL_PREFIX} ${HERMES_GITHUB_DIR}/package-root/destroot
+    cp -R -f ${CMAKE_INSTALL_PREFIX} ${HERMES_PKG_ROOT}/destroot
   COMMAND
-    cp ${CMAKE_CURRENT_SOURCE_DIR}/hermes.podspec ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE ${CMAKE_CURRENT_SOURCE_DIR}/README.md ${HERMES_GITHUB_DIR}/package-root/
+    rm -r ${HERMES_PKG_FRAMEWORK}/{Headers,Resources,hermes} && mv ${HERMES_PKG_FRAMEWORK}/Versions/0/* ${HERMES_PKG_FRAMEWORK}/ && rm -r ${HERMES_PKG_FRAMEWORK}/Versions && install_name_tool -id @rpath/hermes.framework/hermes ${HERMES_PKG_FRAMEWORK}/hermes
   COMMAND
-    tar -C ${HERMES_GITHUB_DIR}/package-root/ -czhf ${HERMES_GITHUB_DIR}/hermes-runtime-${HERMES_GITHUB_SYSTEM_NAME}-v${HERMES_RELEASE_VERSION}.tar.gz .
+    cp ${CMAKE_CURRENT_SOURCE_DIR}/hermes.podspec ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE ${CMAKE_CURRENT_SOURCE_DIR}/README.md ${HERMES_PKG_ROOT}
+  COMMAND
+    tar -C ${HERMES_PKG_ROOT}/ -czhf ${HERMES_GITHUB_DIR}/hermes-runtime-${HERMES_GITHUB_SYSTEM_NAME}-v${HERMES_RELEASE_VERSION}.tar.gz .
 )
