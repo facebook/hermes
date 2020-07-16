@@ -12,7 +12,7 @@ module HermesHelper
   end
 
   def self.cmake_configuration
-    "-DHERMES_ENABLE_DEBUGGER:BOOLEAN=true -DHERMES_ENABLE_FUZZING:BOOLEAN=false -DHERMES_ENABLE_TEST_SUITE:BOOLEAN=false"
+    "-DHERMES_ENABLE_DEBUGGER:BOOLEAN=true -DHERMES_ENABLE_FUZZING:BOOLEAN=false -DHERMES_ENABLE_TEST_SUITE:BOOLEAN=false -DHERMES_BUILD_APPLE_FRAMEWORK:BOOLEAN=true -DHERMES_BUILD_APPLE_DSYM:BOOLEAN=true"
   end
 
   def self.configure_command
@@ -41,9 +41,9 @@ Pod::Spec.new do |spec|
     if [ ! -d destroot/Library/Frameworks/hermes.framework ]; then
       if #{HermesHelper.command_exists?("cmake")}; then
         if #{HermesHelper.command_exists?("ninja")}; then
-          #{HermesHelper.configure_command} --build-system='Ninja' && cd build && ninja install
+          #{HermesHelper.configure_command} --build-system='Ninja' && cd build && ninja install/strip
         else
-          #{HermesHelper.configure_command} --build-system='Unix Makefiles' && cd build && make install
+          #{HermesHelper.configure_command} --build-system='Unix Makefiles' && cd build && make install/strip
         fi
       else
         echo >&2 'CMake is required to install Hermes, install it with: brew install cmake'
