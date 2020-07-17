@@ -163,6 +163,18 @@ print(child.hasOwnProperty('newprop'));
 print(child.hasOwnProperty(5));
 //CHECK: false
 
+var key = {
+  [Symbol.toPrimitive]() {
+    throw 'to_prim';
+  }
+};
+try {
+  Object.prototype.hasOwnProperty.call(undefined, key);
+} catch (e) {
+  print(e);
+}
+//CHECK: to_prim
+
 print('defineProperties');
 // CHECK-LABEL: defineProperties
 var a = [];

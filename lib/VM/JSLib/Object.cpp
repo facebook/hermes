@@ -1246,20 +1246,31 @@ objectPrototypeValueOf(void *, Runtime *runtime, NativeArgs args) {
   return res;
 }
 
+/// ES11.0 19.1.3.2
 CallResult<HermesValue>
 objectPrototypeHasOwnProperty(void *, Runtime *runtime, NativeArgs args) {
-  auto res = toObject(runtime, args.getThisHandle());
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+  /// 1. Let P be ? ToPropertyKey(V).
+  auto PRes = toPropertyKey(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(PRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto objHandle = runtime->makeHandle<JSObject>(res.getValue());
+  Handle<> P = *PRes;
+
+  /// 2. Let O be ? ToObject(this value).
+  auto ORes = toObject(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(ORes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  Handle<JSObject> O = runtime->makeHandle<JSObject>(ORes.getValue());
+
+  /// 3. Return ? HasOwnProperty(O, P).
   ComputedPropertyDescriptor desc;
-  auto status = JSObject::getOwnComputedDescriptor(
-      objHandle, runtime, args.getArgHandle(0), desc);
-  if (status == ExecutionStatus::EXCEPTION) {
+  CallResult<bool> hasProp =
+      JSObject::getOwnComputedDescriptor(O, runtime, P, desc);
+  if (LLVM_UNLIKELY(hasProp == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  if (*status) {
+  if (*hasProp) {
     return HermesValue::encodeBoolValue(true);
   }
   // For compatibility with polyfills we want to pretend that all HostObject
@@ -1272,7 +1283,7 @@ objectPrototypeHasOwnProperty(void *, Runtime *runtime, NativeArgs args) {
   //      if (Object.hasOwnProperty(hostObj, key))
   //        ...
   //    }
-  if (LLVM_UNLIKELY(objHandle->isHostObject())) {
+  if (LLVM_UNLIKELY(O->isHostObject())) {
     return HermesValue::encodeBoolValue(true);
   }
   return HermesValue::encodeBoolValue(false);
