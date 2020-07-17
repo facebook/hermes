@@ -240,6 +240,9 @@ bool JSParserImpl::checkAssign() const {
       TokenKind::greatergreaterequal,
       TokenKind::greatergreatergreaterequal,
       TokenKind::starstarequal,
+      TokenKind::pipepipeequal,
+      TokenKind::ampampequal,
+      TokenKind::questionquestionequal,
       TokenKind::ampequal,
       TokenKind::caretequal,
       TokenKind::pipeequal);

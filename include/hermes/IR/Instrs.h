@@ -1416,6 +1416,9 @@ class BinaryOperatorInst : public Instruction {
     XorKind, // ^   (^=)
     AndKind, // &   (^=)
     ExponentiationKind, // ** (**=)
+    AssignShortCircuitOrKind, // ||= (only for assignment)
+    AssignShortCircuitAndKind, // &&= (only for assignment)
+    AssignNullishCoalesceKind, // ??= (only for assignment)
     InKind, // "in"
     InstanceOfKind, // instanceof
     LAST_OPCODE

@@ -1384,6 +1384,57 @@ Value *ESTreeIRGen::genAssignmentExpr(ESTree::AssignmentExpressionNode *AE) {
   }
 
   Value *result;
+  if (AssignmentKind == BinaryOperatorInst::OpKind::AssignShortCircuitOrKind ||
+      AssignmentKind == BinaryOperatorInst::OpKind::AssignShortCircuitAndKind ||
+      AssignmentKind == BinaryOperatorInst::OpKind::AssignNullishCoalesceKind) {
+    // Logical assignment expressions must use short-circuiting logic.
+    // BB which actually performs the assignment.
+    BasicBlock *assignBB = Builder.createBasicBlock(Builder.getFunction());
+    // BB which simply continues without performing the assignment.
+    BasicBlock *continueBB = Builder.createBasicBlock(Builder.getFunction());
+    auto *lhs = lref.emitLoad();
+
+    PhiInst::ValueListType values;
+    PhiInst::BasicBlockListType blocks;
+
+    values.push_back(lhs);
+    blocks.push_back(Builder.getInsertionBlock());
+
+    switch (AssignmentKind) {
+      case BinaryOperatorInst::OpKind::AssignShortCircuitOrKind:
+        Builder.createCondBranchInst(lhs, continueBB, assignBB);
+        break;
+      case BinaryOperatorInst::OpKind::AssignShortCircuitAndKind:
+        Builder.createCondBranchInst(lhs, assignBB, continueBB);
+        break;
+      case BinaryOperatorInst::OpKind::AssignNullishCoalesceKind:
+        Builder.createCondBranchInst(
+            Builder.createBinaryOperatorInst(
+                lhs,
+                Builder.getLiteralNull(),
+                BinaryOperatorInst::OpKind::EqualKind),
+            assignBB,
+            continueBB);
+        break;
+      default:
+        llvm_unreachable("invalid AssignmentKind in this branch");
+    }
+
+    Builder.setInsertionBlock(assignBB);
+    auto *rhs = genExpression(AE->_right, nameHint);
+    auto *cookie = instrumentIR_.preAssignment(AE, lhs, rhs);
+    result = instrumentIR_.postAssignment(AE, cookie, rhs, lhs, rhs);
+    lref.emitStore(result);
+    values.push_back(result);
+    blocks.push_back(Builder.getInsertionBlock());
+    Builder.createBranchInst(continueBB);
+
+    Builder.setInsertionBlock(continueBB);
+    // Final result is either the original value or the value assigned,
+    // depending on which branch was taken.
+    return Builder.createPhiInst(std::move(values), std::move(blocks));
+  }
+
   if (AssignmentKind != BinaryOperatorInst::OpKind::IdentityKind) {
     // Section 11.13.1 specifies that we should first load the
     // LHS before materializing the RHS. Unlike in C, this

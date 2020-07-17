@@ -212,7 +212,25 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       // | || |=
       PUNC_L2_3('+', TokenKind::plus,  '+', TokenKind::plusplus,   '=', TokenKind::plusequal);
       PUNC_L2_3('-', TokenKind::minus, '-', TokenKind::minusminus, '=', TokenKind::minusequal);
-      PUNC_L2_3('&', TokenKind::amp,   '&', TokenKind::ampamp,     '=', TokenKind::ampequal);
+
+      case '&':
+        token_.setStart(curCharPtr_);
+        if (curCharPtr_[1] == '&') {
+          if (curCharPtr_[2] == '=') {
+            token_.setPunctuator(TokenKind::ampampequal);
+            curCharPtr_ += 3;
+          } else {
+            token_.setPunctuator(TokenKind::ampamp);
+            curCharPtr_ += 2;
+          }
+        } else if (curCharPtr_[1] == '=') {
+          token_.setPunctuator(TokenKind::ampequal);
+          curCharPtr_ += 2;
+        } else {
+          token_.setPunctuator(TokenKind::amp);
+          curCharPtr_ += 1;
+        }
+        break;
 
       case '|':
         token_.setStart(curCharPtr_);
@@ -223,8 +241,13 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
           curCharPtr_ += 2;
         } else {
           if (curCharPtr_[1] == '|') {
-            token_.setPunctuator(TokenKind::pipepipe);
-            curCharPtr_ += 2;
+            if (curCharPtr_[2] == '=') {
+              token_.setPunctuator(TokenKind::pipepipeequal);
+              curCharPtr_ += 3;
+            } else {
+              token_.setPunctuator(TokenKind::pipepipe);
+              curCharPtr_ += 2;
+            }
           } else if (curCharPtr_[1] == '=') {
             token_.setPunctuator(TokenKind::pipeequal);
             curCharPtr_ += 2;
@@ -250,8 +273,13 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
           token_.setPunctuator(TokenKind::questiondot);
           curCharPtr_ += 2;
         } else if (curCharPtr_[1] == '?') {
-          token_.setPunctuator(TokenKind::questionquestion);
-          curCharPtr_ += 2;
+          if (curCharPtr_[2] == '=') {
+            token_.setPunctuator(TokenKind::questionquestionequal);
+            curCharPtr_ += 3;
+          } else {
+            token_.setPunctuator(TokenKind::questionquestion);
+            curCharPtr_ += 2;
+          }
         } else {
           token_.setPunctuator(TokenKind::question);
           curCharPtr_ += 1;

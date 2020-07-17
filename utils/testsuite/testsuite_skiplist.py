@@ -669,6 +669,9 @@ SKIP_LIST = [
     "test262/test/language/statements/for/dstr/var-ary-ptrn-elem-id-init-fn-name-class.js",
     "test262/test/language/statements/for/dstr/let-ary-ptrn-elem-id-init-fn-name-class.js",
     "test262/test/language/statements/for/dstr/var-obj-ptrn-id-init-fn-name-class.js",
+    "test262/test/language/expressions/logical-assignment/lgcl-or-assignment-operator-namedevaluation-class-expression.js",
+    "test262/test/language/expressions/logical-assignment/lgcl-and-assignment-operator-namedevaluation-class-expression.js",
+    "test262/test/language/expressions/logical-assignment/lgcl-nullish-assignment-operator-namedevaluation-class-expression.js",
     # T34396912 .prototype property on getter/setter
     "test262/test/built-ins/Function/prototype/Symbol.hasInstance/this-val-poisoned-prototype.js",
     # spread operator
@@ -1671,7 +1674,6 @@ UNSUPPORTED_FEATURES = [
     "FinalizationRegistry",
     "json-superset",
     "let",
-    "logical-assignment-operators",
     "new.target",
     "regexp-match-indices",
     "regexp-named-groups",
