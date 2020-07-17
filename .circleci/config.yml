@@ -11,7 +11,7 @@ version: 2.1
 # Comments saying "see top comment" refer to this.
 
 orbs:
-  win: circleci/windows-tools@0.0.4
+  win: circleci/windows@2.4.0
 
 workflows:
   version: 2
@@ -323,7 +323,7 @@ jobs:
 
   windows:
     executor:
-      name: win/preview-default
+      name: win/default
       shell: powershell.exe
     environment:
       - HERMES_WS_DIR: 'C:\tmp\hermes'
@@ -359,27 +359,6 @@ jobs:
             if (-not $?) { throw "Failed to install CMake" }
             choco install --no-progress python3
             if (-not $?) { throw "Failed to install Python" }
-
-            # dotnetfx-4.8.0 requires a reboot, so pin an earlier version
-            choco install --no-progress dotnetfx --version 4.7.2.20180712
-            if (-not $?) { throw "Failed to install dotnetfx" }
-
-            # Choco installs of VS2019 are so slow that CircleCI times it out
-            # after 10 minutes of perceived inactivity. There's no verbose flag,
-            # so we'll just print something occasionally to bump the timer.
-            $install = Start-Job {
-              choco install visualstudio2019buildtools --package-parameters "--allWorkloads --includeRecommended --passive --locale en-US"
-            }
-            $eta = 15
-            while ($install.State -eq "Running") {
-                Write-Host "Waiting for visualstudio2019buildtools. ETA $eta minutes..."
-                $install | Wait-Job -timeout 60
-                $eta -= 1
-            }
-            $install | Receive-Job
-            if (-not $?) { throw "Failed to install visualstudio2019buildtools" }
-            choco install visualstudio2019-workload-vctools
-            if (-not $?) { throw "Failed to install visualstudio2019-workload-vctools" }
 
       - run:
           name: Assemble Windows runtime dependencies
