@@ -1012,6 +1012,11 @@ typedArrayPrototypeIndexOf(void *ctx, Runtime *runtime, NativeArgs args) {
       return ExecutionStatus::EXCEPTION;
     }
     fromIndex = res->getNumber();
+    if (LLVM_UNLIKELY(!self->attached(runtime))) {
+      // If the ToInteger call detached this TypedArray, raise a TypeError and
+      // don't continue.
+      return runtime->raiseTypeError("Detached the TypedArray in the callback");
+    }
   }
   // Negative zero case.
   if (fromIndex == 0) {
