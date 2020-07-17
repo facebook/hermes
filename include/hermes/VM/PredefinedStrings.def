@@ -137,7 +137,6 @@ STR(displayName, "displayName")
 STR(message, "message")
 STR(stack, "stack")
 STR(stacktraceTooLong, "Stacktrace too long")
-STR(errorSeparator, ": ")
 #define ALL_ERROR_TYPE(name) STR(name, "" #name)
 #include "hermes/VM/NativeErrorTypes.def"
 
