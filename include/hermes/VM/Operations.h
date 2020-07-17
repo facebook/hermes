@@ -328,7 +328,7 @@ CallResult<Handle<JSObject>> iteratorStep(
     Runtime *runtime,
     const IteratorRecord &iteratorRecord);
 
-/// ES6.0 7.4.7
+/// ES sec-iteratorclose
 /// \param completion the thrown value to complete this operation with, empty if
 /// not thrown.
 ExecutionStatus
