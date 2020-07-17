@@ -228,6 +228,19 @@ delete Array.prototype[1];
 var args = [];
 for (var i = 0; i < 1000; ++i) args.push([]);
 Array.prototype.concat.apply([], args);
+var obj = {
+  length: Number.MAX_SAFE_INTEGER,
+  get '0'() {
+    throw 'in_getter';
+  },
+};
+obj[Symbol.isConcatSpreadable] = true;
+try {
+  [].concat(obj);
+} catch (e) {
+  print(e);
+}
+// CHECK-NEXT: in_getter
 
 print('copyWithin');
 // CHECK-LABEL: copyWithin

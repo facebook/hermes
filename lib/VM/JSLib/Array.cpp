@@ -635,7 +635,8 @@ arrayPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
         len = lengthRes->getNumberAs<uint64_t>();
       }
 
-      if (LLVM_UNLIKELY(n + len >= ((uint64_t)1 << 53) - 1)) {
+      // 5.c.iii. If n + len > 2^53 - 1, throw a TypeError exception
+      if (LLVM_UNLIKELY(n + len > ((uint64_t)1 << 53) - 1)) {
         return runtime->raiseTypeError(
             "Array.prototype.concat result out of space");
       }
@@ -655,7 +656,7 @@ arrayPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
 
       // Note that we must increase n every iteration even if nothing was
       // appended to the result array.
-      // 7.d.v. Repeat, while k < len
+      // 5.c.iv. Repeat, while k < len
       for (uint64_t k = 0; k < len; ++k, ++n) {
         HermesValue subElement = LLVM_LIKELY(arrHandle)
             ? arrHandle->at(runtime, k)
@@ -701,8 +702,8 @@ arrayPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
       }
       gcScope.flushToMarker(marker);
     } else {
-      // 7.e. Else E is added as a single item rather than spread.
-      // 7.e.i. If n >= 2**53 - 1, throw a TypeError exception.
+      // 5.d.i. NOTE: E is added as a single item rather than spread.
+      // 5.d.ii. If n >= 2**53 - 1, throw a TypeError exception.
       if (LLVM_UNLIKELY(n >= ((uint64_t)1 << 53) - 1)) {
         return runtime->raiseTypeError(
             "Array.prototype.concat result out of space");
