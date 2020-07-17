@@ -376,6 +376,12 @@ SKIP_LIST = [
     "mjsunit/es6/classof-proxy.js",
     "test262/test/language/statements/for-of/iterator-next-result-type.js",
     "test262/test/annexB/built-ins/Object/prototype/__proto__/set-cycle-shadowed.js",
+    # Missing/undefined Proxy traps
+    "test262/test/built-ins/Proxy/defineProperty/trap-is-missing-target-is-proxy.js",
+    "test262/test/built-ins/Proxy/defineProperty/trap-is-undefined-target-is-proxy.js",
+    "test262/test/built-ins/Proxy/getOwnPropertyDescriptor/trap-is-undefined-target-is-proxy.js",
+    "test262/test/built-ins/Proxy/set/trap-is-missing-receiver-multiple-calls-index.js",
+    "test262/test/built-ins/Proxy/set/trap-is-missing-receiver-multiple-calls.js",
     # These test proxy validations which don't exist in the ES10 spec or
     # or any spec I can find.
     "test262/test/built-ins/Proxy/getOwnPropertyDescriptor/resultdesc-is-not-configurable-not-writable-targetdesc-is-writable.js",
@@ -920,7 +926,15 @@ SKIP_LIST = [
     # T46136220 Names on anonymous functions with computed property names
     "test262/test/language/expressions/object/fn-name-gen.js",
     # T56360814 Symbol primitives in iteration order
+    "test262/test/built-ins/Object/defineProperties/proxy-no-ownkeys-returned-keys-order.js",
+    "test262/test/built-ins/Object/freeze/proxy-no-ownkeys-returned-keys-order.js",
+    "test262/test/built-ins/Object/getOwnPropertyDescriptors/proxy-no-ownkeys-returned-keys-order.js",
+    "test262/test/built-ins/Object/isFrozen/proxy-no-ownkeys-returned-keys-order.js",
+    "test262/test/built-ins/Object/isSealed/proxy-no-ownkeys-returned-keys-order.js",
+    "test262/test/built-ins/Object/prototype/toString/proxy-revoked-during-get-call.js",
+    "test262/test/built-ins/Object/seal/proxy-no-ownkeys-returned-keys-order.js",
     "test262/test/built-ins/Object/assign/strings-and-symbol-order.js",
+    "test262/test/built-ins/Array/prototype/concat/is-concat-spreadable-get-order.js",
     "test262/test/language/expressions/array/spread-obj-spread-order.js",
     "test262/test/language/expressions/call/spread-obj-spread-order.js",
     "test262/test/language/expressions/new/spread-obj-spread-order.js",
@@ -945,6 +959,16 @@ SKIP_LIST = [
     # CoreFoundation. See T24545708 for a discussion.
     "test262/test/built-ins/String/prototype/toLocaleLowerCase/special_casing_conditional.js",
     "test262/test/built-ins/String/prototype/toLowerCase/special_casing_conditional.js",
+    # Unicode 13.0
+    "test262/test/language/identifiers/part-unicode-13.0.0-escaped.js",
+    "test262/test/language/identifiers/part-unicode-13.0.0.js",
+    "test262/test/language/identifiers/part-unicode-5.2.0-escaped.js",
+    "test262/test/language/identifiers/part-unicode-5.2.0.js",
+    "test262/test/language/identifiers/start-unicode-13.0.0-escaped.js",
+    "test262/test/language/identifiers/start-unicode-13.0.0.js",
+    # yield* should use GetMethod
+    "test262/test/language/expressions/yield/star-return-is-null.js",
+    "test262/test/language/expressions/yield/star-throw-is-null.js",
     # Stack overflow catching.
     "mjsunit/regress/regress-1132.js",
     "mjsunit/regress/regress-446389.js",
@@ -1644,8 +1668,10 @@ UNSUPPORTED_FEATURES = [
     "destructuring-binding",
     "dynamic-import",
     "FinalizationGroup",
+    "FinalizationRegistry",
     "json-superset",
     "let",
+    "logical-assignment-operators",
     "new.target",
     "regexp-match-indices",
     "regexp-named-groups",
