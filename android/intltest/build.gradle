@@ -10,6 +10,9 @@
 
 apply plugin: 'com.android.library'
 
+buildDir = "${rootProject.ext.hermes_ws}/build_android/intltest"
+buildDir.mkdirs()
+
 // TODO: Figure out how to deduplicate this file and intl/build.gradle
 android {
   compileSdkVersion = 24
