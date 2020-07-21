@@ -712,9 +712,9 @@ add_custom_target(
   COMMAND
     cp -R -f ${CMAKE_INSTALL_PREFIX} ${HERMES_PKG_ROOT}/destroot
   COMMAND
-    rm -r ${HERMES_PKG_FRAMEWORK}/{Headers,Resources,hermes} && mv ${HERMES_PKG_FRAMEWORK}/Versions/0/* ${HERMES_PKG_FRAMEWORK}/ && rm -r ${HERMES_PKG_FRAMEWORK}/Versions && install_name_tool -id @rpath/hermes.framework/hermes ${HERMES_PKG_FRAMEWORK}/hermes
+    find ${HERMES_PKG_ROOT}/destroot/bin -type f ! -name 'hermesc' -delete
   COMMAND
-    cp ${CMAKE_CURRENT_SOURCE_DIR}/hermes.podspec ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE ${CMAKE_CURRENT_SOURCE_DIR}/README.md ${HERMES_PKG_ROOT}
+    cp ${CMAKE_CURRENT_SOURCE_DIR}/hermes.podspec ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE ${HERMES_PKG_ROOT}
   COMMAND
-    tar -C ${HERMES_PKG_ROOT}/ -czhf ${HERMES_GITHUB_DIR}/hermes-runtime-${HERMES_GITHUB_SYSTEM_NAME}-v${HERMES_RELEASE_VERSION}.tar.gz .
+    tar -C ${HERMES_PKG_ROOT}/ -czvf ${HERMES_GITHUB_DIR}/hermes-runtime-${HERMES_GITHUB_SYSTEM_NAME}-v${HERMES_RELEASE_VERSION}.tar.gz .
 )
