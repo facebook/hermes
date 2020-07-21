@@ -6,8 +6,8 @@
 
 from __future__ import print_function
 
-import os
 import re
+import os
 import sys
 
 
@@ -44,7 +44,7 @@ def parseSource(lines):
             if lines[i].strip():
                 sourceLines[i + 1] = lines[i]
                 lastSourceLine = i + 1
-        i += 1
+        i =i+ 1
 
 
 def parseErrors(lines):
