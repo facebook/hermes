@@ -27,7 +27,6 @@ workflows:
             - android
             - linux
             - macos
-            - build-macos-runtime
             - windows
       - test-linux
       - test-macos
