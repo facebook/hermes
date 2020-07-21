@@ -1,6 +1,6 @@
 {
   "name": "hermes-engine-darwin",
-  "version": "%VERSION%",
+  "version": "0.4.1",
   "private": false,
   "description": "A JavaScript engine optimized for running React Native on macOS",
   "license": "MIT",
@@ -8,12 +8,12 @@
     "type": "git",
     "url": "git@github.com:facebook/hermes.git"
   },
+  "scripts": {
+    "postinstall": "node unpack-tarball.js"
+  },
   "files": [
-    "LICENSE",
     "README.md",
-    "hermes.podspec",
-    "destroot/bin/hermesc",
-    "destroot/include/**/*",
-    "destroot/Library/**/*"
+    "unpack-tarball.js",
+    "hermes-runtime-darwin-v*.tar.gz"
   ]
 }
