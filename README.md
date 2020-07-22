@@ -1,8 +1,20 @@
-# Hermes JS Engine
-[![MIT license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/facebook/hermes/blob/master/LICENSE)
-[![npm version](https://img.shields.io/npm/v/hermes-engine.svg?style=flat)](https://www.npmjs.com/package/hermes-engine)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/facebook/hermes/blob/master/CONTRIBUTING.md)
-<img src="./website/static/img/logo.svg" alt="Hermes logo - large H with wings" align="right" width="20%"/>
+<p align="center">
+  <img src="./website/static/img/logo.svg" alt="Hermes logo - large H with wings" width="20%"/>
+</p>
+<h1 align="center">
+  Hermes JS Engine
+</h1>
+<p align="center">
+  <a href="https://github.com/facebook/hermes/blob/master/LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license" />
+  </a>
+  <a href="https://www.npmjs.com/package/hermes-engine">
+    <img src="https://img.shields.io/npm/v/hermes-engine.svg?style=flat" alt="npm version" />
+  </a>
+  <a href="https://github.com/facebook/hermes/blob/master/CONTRIBUTING.md">
+    <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome" />
+  </a>
+</p>
 
 Hermes is a JavaScript engine optimized for fast start-up of [React Native](https://reactnative.dev/) apps on Android. It features ahead-of-time static optimization and compact bytecode.
 
