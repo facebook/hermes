@@ -1486,6 +1486,33 @@ SKIP_LIST = [
     "esprima/test_fixtures/ES6/lexical-declaration/let_identifier.js",
     "esprima/test_fixtures/ES6/lexical-declaration/for_let_in.js",
     "esprima/test_fixtures/ES6/lexical-declaration/let_assign.js",
+    # async
+    "esprima/test_fixtures/es2017/async/methods/invalid-async-line-terminator-property.js",
+    "esprima/test_fixtures/es2017/async/methods/invalid-async-line-terminator-method.js",
+    "esprima/test_fixtures/es2017/async/methods/invalid-static-async-class-generator.js",
+    "esprima/test_fixtures/es2017/async/methods/invalid-async-line-terminator-static-method.js",
+    "esprima/test_fixtures/es2017/async/methods/invalid-async-generator.js",
+    "esprima/test_fixtures/es2017/async/methods/invalid-async-class-generator.js",
+    "esprima/test_fixtures/es2017/async/regular-identifier/line-terminator-parenthesized-arrow.js",
+    "esprima/test_fixtures/es2017/async/functions/invalid-generator-declaration.js",
+    "esprima/test_fixtures/es2017/async/functions/invalid-generator-expression.js",
+    "esprima/test_fixtures/es2017/async/arrows/invalid-async-line-terminator3.js",
+    "esprima/test_fixtures/es2017/async/arrows/invalid-async-line-terminator1.js",
+    # super property
+    "esprima/test_fixtures/ES6/super-property/invalid_super_access.js",
+    "esprima/test_fixtures/ES6/super-property/invalid_super_id.js",
+    "esprima/test_fixtures/ES6/binding-pattern/array-pattern/patterned-catch-dupe.js",
+    "esprima/test_fixtures/ES6/super-property/invalid_super_not_inside_function.js",
+    # object init
+    "esprima/test_fixtures/ES6/object-initialiser/invalid-proto-identifiers.js",
+    "esprima/test_fixtures/ES6/object-initialiser/invalid-proto-getter-literal-identifier.js",
+    "esprima/test_fixtures/ES6/object-initialiser/invalid-proto-literals.js",
+    "esprima/test_fixtures/ES6/object-initialiser/invalid-proto-identifier-literal.js",
+    "esprima/test_fixtures/ES6/object-initialiser/invalid-proto-literal-identifier.js",
+    "esprima/test_fixtures/ES6/object-initialiser/invalid-proto-setter-literal-identifier.js",
+    "esprima/test_fixtures/ES6/class/invalid-setter-method-rest.js",
+    "esprima/test_fixtures/invalid-syntax/migrated_0250.js",
+    "esprima/test_fixtures/invalid-syntax/migrated_0184.js",
     ## ES6 end ##
     # Hermes parser does not output tokens.
     "esprima/test_fixtures/tokenize/",
