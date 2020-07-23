@@ -185,9 +185,7 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
 static CallResult<HermesValue> regExpAlloc(
     Runtime *runtime,
     PseudoHandle<> /* newTarget */) {
-  return JSRegExp::create(
-             runtime, Handle<JSObject>::vmcast(&runtime->regExpPrototype))
-      .getHermesValue();
+  return JSRegExp::create(runtime).getHermesValue();
 }
 
 /// 21.2.3.2.2 Runtime Semantics: RegExpInitialize ( obj, pattern, flags )

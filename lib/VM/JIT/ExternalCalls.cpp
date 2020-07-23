@@ -916,8 +916,7 @@ CallResult<HermesValue> externCreateRegExpMayAllocate(
   GCScopeMarkerRAII marker{runtime};
 
   // Create the RegExp object.
-  Handle<JSRegExp> re = JSRegExp::create(
-      runtime, Handle<JSObject>::vmcast(&runtime->regExpPrototype));
+  Handle<JSRegExp> re = JSRegExp::create(runtime);
   // Initialize the regexp.
   auto pattern = runtime->makeHandle(
       codeBlock->getRuntimeModule()->getStringPrimFromStringIDMayAllocate(

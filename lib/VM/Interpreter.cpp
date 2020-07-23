@@ -3343,11 +3343,7 @@ tailCall:
       CASE(CreateRegExp) {
         {
           // Create the RegExp object.
-          CAPTURE_IP_ASSIGN(
-              auto re,
-              JSRegExp::create(
-                  runtime,
-                  Handle<JSObject>::vmcast(&runtime->regExpPrototype)));
+          CAPTURE_IP_ASSIGN(auto re, JSRegExp::create(runtime));
           // Initialize the regexp.
           CAPTURE_IP_ASSIGN(
               auto pattern,
