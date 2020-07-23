@@ -25,6 +25,8 @@
 
 #include <memory>
 
+using namespace std;
+
 namespace hermes {
 class SourceMapGenerator;
 
@@ -35,7 +37,7 @@ using llvh::ArrayRef;
 // This class represents the in-memory representation of the bytecode function.
 class BytecodeFunction {
   /// The bytecode executable.
-  std::vector<opcode_atom_t> opcodes_;
+  vector<opcode_atom_t> opcodes_;
 
   /// Header that stores all the metadata of this function.
   FunctionHeader header_;
@@ -44,7 +46,7 @@ class BytecodeFunction {
   DebugOffsets debugOffsets_{};
 
   /// List of exception handlers.
-  std::vector<HBCExceptionHandlerInfo> exceptions_;
+  vector<HBCExceptionHandlerInfo> exceptions_;
 
   /// Data to lazily compile this BytecodeFunction, if applicable.
   std::unique_ptr<LazyCompilationData> lazyCompilationData_{};
@@ -53,18 +55,18 @@ class BytecodeFunction {
   /// SwitchImm instruction in the function, laid out sequentially.
   /// Entries are jumps relative to the corresponding
   /// SwitchImm instruction that the jump table segment belongs to.
-  std::vector<uint32_t> jumpTables_;
+  vector<uint32_t> jumpTables_;
 
  public:
   /// Used during serialization. \p opcodes will be swapped after this call.
   explicit BytecodeFunction(
-      std::vector<opcode_atom_t> &&opcodes,
+      vector<opcode_atom_t> &&opcodes,
       Function::DefinitionKind definitionKind,
       ValueKind valueKind,
       bool strictMode,
       FunctionHeader &&header,
-      std::vector<HBCExceptionHandlerInfo> &&exceptionHandlers,
-      std::vector<uint32_t> &&jumpTables)
+      vector<HBCExceptionHandlerInfo> &&exceptionHandlers,
+      vector<uint32_t> &&jumpTables)
       : opcodes_(std::move(opcodes)),
         header_(std::move(header)),
         exceptions_(std::move(exceptionHandlers)),
@@ -185,25 +187,25 @@ class BytecodeModule {
   uint32_t globalFunctionIndex_{};
 
   /// Run-length encoding representing the kinds of strings in the table.
-  std::vector<StringKind::Entry> stringKinds_;
+  vector<StringKind::Entry> stringKinds_;
 
   /// The list of identifier hashes, corresponding to the string entries
   /// marked as identifiers, in order.
-  std::vector<uint32_t> identifierHashes_;
+  vector<uint32_t> identifierHashes_;
 
   /// The global string table, a list of <offset, length> pair to represent
   /// each string in the string storage.
-  std::vector<StringTableEntry> stringTable_;
+  vector<StringTableEntry> stringTable_;
 
   /// The global string storage. A sequence of bytes.
-  std::vector<unsigned char> stringStorage_;
+  vector<unsigned char> stringStorage_;
 
   /// The regexp bytecode buffer.
-  std::vector<unsigned char> regExpStorage_;
+  vector<unsigned char> regExpStorage_;
 
   /// The regexp bytecode table. This is a list of pairs of (offset, lengths)
   /// into regExpStorage_.
-  std::vector<RegExpTableEntry> regExpTable_;
+  vector<RegExpTableEntry> regExpTable_;
 
   /// A table containing debug info (if compiled with -g).
   DebugInfo debugInfo_;
@@ -224,12 +226,12 @@ class BytecodeModule {
 
   /// Table which indicates where to find the different CommonJS modules.
   /// Mapping from {filename ID => function index}.
-  std::vector<std::pair<uint32_t, uint32_t>> cjsModuleTable_{};
+  vector<std::pair<uint32_t, uint32_t>> cjsModuleTable_{};
 
   /// Table which indicates where to find the different CommonJS modules.
   /// Used if the modules have been statically resolved.
   /// Element i contains the function index for module i + cjsModuleOffset.
-  std::vector<uint32_t> cjsModuleTableStatic_{};
+  vector<uint32_t> cjsModuleTableStatic_{};
 
   /// Storing information about the bytecode, needed when it is loaded by the
   /// runtime.
@@ -250,19 +252,19 @@ class BytecodeModule {
   /// Used during serialization.
   explicit BytecodeModule(
       uint32_t functionCount,
-      std::vector<StringKind::Entry> &&stringKinds,
-      std::vector<uint32_t> &&identifierHashes,
-      std::vector<StringTableEntry> &&stringTable,
-      std::vector<unsigned char> &&stringStorage,
-      std::vector<RegExpTableEntry> &&regExpTable,
-      std::vector<unsigned char> &&regExpStorage,
+      vector<StringKind::Entry> &&stringKinds,
+      vector<uint32_t> &&identifierHashes,
+      vector<StringTableEntry> &&stringTable,
+      vector<unsigned char> &&stringStorage,
+      vector<RegExpTableEntry> &&regExpTable,
+      vector<unsigned char> &&regExpStorage,
       uint32_t globalFunctionIndex,
-      std::vector<unsigned char> &&arrayBuffer,
-      std::vector<unsigned char> &&objKeyBuffer,
-      std::vector<unsigned char> &&objValBuffer,
+      vector<unsigned char> &&arrayBuffer,
+      vector<unsigned char> &&objKeyBuffer,
+      vector<unsigned char> &&objValBuffer,
       uint32_t cjsModuleOffset,
-      std::vector<std::pair<uint32_t, uint32_t>> &&cjsModuleTable,
-      std::vector<uint32_t> &&cjsModuleTableStatic,
+      vector<std::pair<uint32_t, uint32_t>> &&cjsModuleTable,
+      vector<uint32_t> &&cjsModuleTableStatic,
       BytecodeOptions options)
       : globalFunctionIndex_(globalFunctionIndex),
         stringKinds_(std::move(stringKinds)),
