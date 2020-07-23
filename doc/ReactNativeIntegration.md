@@ -24,7 +24,6 @@ To make a Hermes npm package, first follow the instructions on [building Hermes]
 As we will be compiling native libraries for Android, we first need to setup a suitable development environment. This subject is covered in more detail elsewhere, for example in the guide on [building React Native From Source](https://github.com/facebook/react-native/wiki/Building-from-source). However, a rough guide to the external dependencies for macOS/Linux is as follows:
 
 * Node.js
-* Gradle (version 4.10.1+)
 * JDK (1.8+)
 * Yarn
 * The Android Native Development Kit (NDK)
@@ -41,7 +40,7 @@ Ensure the following variables are present and set correctly in your environment
 * `JAVA_HOME` - the root of your Java Runtime Environment (JRE) install. Note a JRE instance is typically available in a sub-directory of a JDK install. E.g. `/opt/jdk-1.8/jre`
 * `HERMES_WS_DIR` - The root of your workspace where the `hermes` git checkout directory and `build_release` Release Build directory should already be subdirectories. E.g. `$HOME/workspace`.
 
-Make sure the `node`, `yarn`, and `gradle` binaries are available in your system PATH.
+Make sure the `node` and `yarn` binaries are available in your system PATH.
 
 ### Package build
 
@@ -52,7 +51,7 @@ To make a Hermes npm package, check that you already followed the [Building Herm
 (cd $HERMES_WS_DIR/build_release && ninja github-cli-release)
 
 # Package Android libraries
-(cd $HERMES_WS_DIR/hermes/android && gradle githubRelease)
+(cd $HERMES_WS_DIR/hermes/android && ./gradlew githubRelease)
 
 # Copy the above to the NPM directory
 cp $HERMES_WS_DIR/build_android/distributions/hermes-runtime-android-v*.tar.gz $HERMES_WS_DIR/hermes/npm
