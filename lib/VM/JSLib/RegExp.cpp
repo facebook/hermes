@@ -17,6 +17,8 @@
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
 
+#include "llvh/ADT/ScopeExit.h"
+
 namespace hermes {
 namespace vm {
 
@@ -1553,6 +1555,8 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
 // TODO(T35212035): make this ES6 compliant once we support species constructor.
 CallResult<HermesValue>
 regExpPrototypeSymbolSplit(void *, Runtime *runtime, NativeArgs args) {
+  GCScope gcScope{runtime};
+
   // 2. If Type(rx) is not Object, throw a TypeError exception.
   if (LLVM_UNLIKELY(!vmisa<JSObject>(args.getThisArg()))) {
     return runtime->raiseTypeError(
@@ -1564,11 +1568,230 @@ regExpPrototypeSymbolSplit(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Calling RegExp.protoype[Symbol.split] on a non-RegExp object is not supported yet.");
   }
-  return splitInternal(
+
+  auto strRes = toString_RJS(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto limit = args.getArgHandle(1);
+  auto separator = args.getThisHandle();
+  auto S = runtime->makeHandle(std::move(*strRes));
+  // Final array.
+  auto arrRes = JSArray::create(runtime, 0, 0);
+  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto A = runtime->makeHandle(std::move(*arrRes));
+  uint32_t lengthA = 0;
+
+  // Limit on the number of items allowed in the result array.
+  uint32_t lim;
+  if (limit->isUndefined()) {
+    // No limit supplied, make it max.
+    lim = 0xffffffff; // 2 ^ 32 - 1
+  } else {
+    auto intRes = toUInt32_RJS(runtime, limit);
+    if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lim = intRes->getNumber();
+  }
+
+  bool unicodeMatching = false;
+  auto regexp = Handle<JSRegExp>::vmcast(separator);
+  MutableHandle<JSRegExp> R{runtime, regexp.get()};
+  CallResult<PseudoHandle<>> flagsRes = JSObject::getNamed_RJS(
+      regexp, runtime, Predefined::getSymbolID(Predefined::flags));
+  if (LLVM_UNLIKELY(flagsRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  CallResult<PseudoHandle<StringPrimitive>> flagsStrRes = toString_RJS(
+      runtime, runtime->makeHandle(std::move(flagsRes.getValue())));
+  if (LLVM_UNLIKELY(flagsStrRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto flags = runtime->makeHandle(std::move(flagsStrRes.getValue()));
+  llvh::SmallVector<char16_t, 16> flagsText16;
+  flags->copyUTF16String(flagsText16);
+  const auto newFlagsOpt = regex::SyntaxFlags::fromString(flagsText16);
+  // As an optimisation, we only create a new RegExp if the flags attribute
+  // has been modified
+  if (LLVM_UNLIKELY(
+          !newFlagsOpt ||
+          newFlagsOpt->toByte() !=
+              JSRegExp::getSyntaxFlags(regexp.get()).toByte())) {
+    auto newRegexp = JSRegExp::create(runtime);
+    auto pattern =
+        runtime->makeHandle(JSRegExp::getPattern(regexp.get(), runtime));
+    if (LLVM_UNLIKELY(
+            JSRegExp::initialize(
+                newRegexp, runtime, pattern, flags, llvh::None) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    R = newRegexp.get();
+  }
+  // The spec actually tells us to always set the sticky flag to true, but
+  // since it is much faster to perform a global search, we set sticky to
+  // false and then check the returned index. NOTE: We can only do this because
+  // no user provided code can run after this point.
+  auto nonStickyFlags = *newFlagsOpt;
+  nonStickyFlags.sticky = 0;
+  JSRegExp::setSyntaxFlags(R.get(), nonStickyFlags);
+  const auto restoreFlags = llvh::make_scope_exit(
+      [&]() { JSRegExp::setSyntaxFlags(R.get(), *newFlagsOpt); });
+  unicodeMatching = newFlagsOpt->unicode;
+
+  if (lim == 0) {
+    // Don't want any elements, so we're done.
+    return A.getHermesValue();
+  }
+
+  // If there's no separator, then don't split the string and return.
+  if (LLVM_UNLIKELY(separator->isUndefined())) {
+    (void)JSArray::setElementAt(A, runtime, 0, S);
+    if (LLVM_UNLIKELY(
+            JSArray::setLengthProperty(A, runtime, 1) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    return A.getHermesValue();
+  }
+
+  uint32_t s = S->getStringLength();
+
+  if (s == 0) {
+    auto matchResult = JSRegExp::search(R, runtime, S, 0);
+
+    if (LLVM_UNLIKELY(matchResult == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    } else if (!matchResult->empty()) {
+      // Matched the entirety of S, so return the empty array.
+      return A.getHermesValue();
+    }
+    // Didn't match S, so add it to the array and return.
+    (void)JSArray::setElementAt(A, runtime, 0, S);
+    if (LLVM_UNLIKELY(
+            JSArray::setLengthProperty(A, runtime, 1) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    return A.getHermesValue();
+  }
+
+  // End of the last match.
+  uint32_t p = 0;
+  // Place to attempt the start of the next match.
+  uint32_t q = p;
+
+  auto marker = gcScope.createMarker();
+
+  // Main loop: continue while we have space to find another match.
+  while (q < s) {
+    gcScope.flushToMarker(marker);
+
+    // Find the next valid match. We know that q < s.
+    // ES5.1's SplitMatch only finds matches at q, but we find matches at or
+    // after q, so if it fails, we know we're done.
+    auto matchResult = JSRegExp::search(R, runtime, S, q);
+
+    if (LLVM_UNLIKELY(matchResult == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+
+    auto match = *matchResult;
+
+    if (match.empty() || match[0]->location >= s) {
+      // There's no matches between index q and the end of the string, so we're
+      // done searching. Note: This behavior differs from the spec
+      // implementation, because we check for matches at or after q. However, in
+      // line with the spec, we only count matches that start before the end of
+      // the string.
+      break;
+    }
+    // Found a match, so go ahead and update q and e,
+    // such that the match is the range [q,e).
+    q = match[0]->location;
+    uint32_t e = q + match[0]->length;
+    if (e == p) {
+      // The end of this match is the same as the end of the last match,
+      // so we matched with the empty string.
+      // We don't want to match the empty string at this location again,
+      // so increment q in order to start the next search at the next position.
+      // ES6 21.2.5.11:
+      // If e = p, let q be AdvanceStringIndex(S, q, unicodeMatching).
+      q = advanceStringIndex(S.get(), q, unicodeMatching);
+    } else {
+      // Found a non-empty string match.
+      // Add everything from the last match to the current one to A.
+      // This has length q-p because q is the start of the current match,
+      // and p was the end (exclusive) of the last match.
+      auto strRes = StringPrimitive::slice(runtime, S, p, q - p);
+      if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      JSArray::setElementAt(
+          A, runtime, lengthA, runtime->makeHandle<StringPrimitive>(*strRes));
+      ++lengthA;
+      if (lengthA == lim) {
+        // Reached the limit, return early.
+        if (LLVM_UNLIKELY(
+                JSArray::setLengthProperty(A, runtime, lengthA) ==
+                ExecutionStatus::EXCEPTION))
+          return ExecutionStatus::EXCEPTION;
+        return A.getHermesValue();
+      }
+      // Update p to point to the end of this match, maintaining the
+      // invariant that it points to the end of the last match encountered.
+      p = e;
+      // Add all the capture groups to A. Start at i=1 to skip the full match.
+      for (uint32_t i = 1, m = match.size(); i < m; ++i) {
+        const auto &range = match[i];
+        if (!range) {
+          JSArray::setElementAt(
+              A, runtime, lengthA, Runtime::getUndefinedValue());
+        } else {
+          if (LLVM_UNLIKELY(
+                  (strRes = StringPrimitive::slice(
+                       runtime, S, range->location, range->length)) ==
+                  ExecutionStatus::EXCEPTION)) {
+            return ExecutionStatus::EXCEPTION;
+          }
+          JSArray::setElementAt(
+              A,
+              runtime,
+              lengthA,
+              runtime->makeHandle<StringPrimitive>(*strRes));
+        }
+        ++lengthA;
+        if (lengthA == lim) {
+          // Reached the limit, return early.
+          if (LLVM_UNLIKELY(
+                  JSArray::setLengthProperty(A, runtime, lengthA) ==
+                  ExecutionStatus::EXCEPTION))
+            return ExecutionStatus::EXCEPTION;
+          return A.getHermesValue();
+        }
+      }
+      // Start position of the next search is updated to the end of this match.
+      q = p;
+    }
+  }
+
+  // Add the rest of the string (after the last match) to A.
+  auto elementStrRes = StringPrimitive::slice(runtime, S, p, s - p);
+  if (LLVM_UNLIKELY(elementStrRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  JSArray::setElementAt(
+      A,
       runtime,
-      args.getArgHandle(0),
-      args.getArgHandle(1),
-      args.getThisHandle());
+      lengthA,
+      runtime->makeHandle<StringPrimitive>(*elementStrRes));
+  ++lengthA;
+
+  if (LLVM_UNLIKELY(
+          JSArray::setLengthProperty(A, runtime, lengthA) ==
+          ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  return A.getHermesValue();
 }
 
 // ES9 21.2.5.4
