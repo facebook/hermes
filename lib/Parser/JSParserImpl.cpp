@@ -5640,17 +5640,19 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
   ESTree::Node *decl = *optDecl;
 
   UniqueString *kind = valueIdent_;
+#if HERMES_PARSE_FLOW
   if (isa<ESTree::TypeAliasNode>(decl) || isa<ESTree::OpaqueTypeNode>(decl) ||
       isa<ESTree::DeclareTypeAliasNode>(decl) ||
       isa<ESTree::InterfaceDeclarationNode>(decl)) {
     kind = typeIdent_;
   }
+#endif
 
   return setLocation(
       startLoc,
-      *optDecl,
+      decl,
       new (context_)
-          ESTree::ExportNamedDeclarationNode(*optDecl, {}, nullptr, kind));
+          ESTree::ExportNamedDeclarationNode(decl, {}, nullptr, kind));
 }
 
 bool JSParserImpl::parseExportClause(

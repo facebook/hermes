@@ -8,7 +8,7 @@
 #ifndef HERMES_PARSER_JSLEXER_H
 #define HERMES_PARSER_JSLEXER_H
 
-#include "hermes/Parser/Config.h"
+#include "hermes/AST/Config.h"
 #include "hermes/Support/Allocator.h"
 #include "hermes/Support/OptValue.h"
 #include "hermes/Support/SourceErrorManager.h"

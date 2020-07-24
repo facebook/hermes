@@ -10,6 +10,8 @@
 ///
 /// Each parameter is described by three tokens: Type, Name and Optional.
 
+#include "hermes/AST/Config.h"
+
 // clang-format off
 
 // Defines the start of range of nodes with the same base
@@ -573,6 +575,8 @@ ESTREE_LAST(Pattern)
 
 // JSX ============================================
 
+#if HERMES_PARSE_JSX
+
 ESTREE_NODE_1_ARGS(
     JSXIdentifier, Base,
     NodeLabel, name, false)
@@ -632,9 +636,13 @@ ESTREE_NODE_0_ARGS(
 ESTREE_NODE_0_ARGS(
     JSXClosingFragment, Base)
 
+#endif
+
 // ================================================
 
 // Types ==========================================
+
+#if HERMES_PARSE_FLOW
 
 ESTREE_NODE_0_ARGS(ExistsTypeAnnotation, Base)
 ESTREE_NODE_0_ARGS(EmptyTypeAnnotation, Base)
@@ -882,6 +890,8 @@ ESTREE_NODE_2_ARGS(
     EnumBooleanMember, Base,
     NodePtr, id, false,
     NodeBoolean, init, false)
+
+#endif
 
 // ================================================
 
