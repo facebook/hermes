@@ -721,7 +721,7 @@ stringPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
 /// Given a string \p S and a starting point \p q, finds the first match of
 /// \p R such that it starts on or after index \p q in \p S.
 /// \param q starting point in S. Requires: q <= S->getStringLength().
-/// \param R a RegExp or a String.
+/// \param R a String.
 /// \return A RegExpMatch object. Note that the returned match may start at
 /// S->getStringLength() whereas the spec requires that we only split on matches
 /// starting before S->getStringLength().
@@ -729,31 +729,9 @@ static CallResult<RegExpMatch> splitMatch(
     Runtime *runtime,
     Handle<StringPrimitive> S,
     uint32_t q,
-    Handle<> R) {
-  if (auto regexp = Handle<JSRegExp>::dyn_vmcast(R)) {
-    const auto originalFlags = JSRegExp::getSyntaxFlags(regexp.get());
-    auto newFlags = originalFlags;
-    // The spec actually tells us to always set the sticky flag to true, but
-    // since it is much faster to perform a global search, we set sticky to
-    // false and then check the returned index in splitInternal.
-    // NOTE: We can only do this because JSRegExp::search cannot execute any
-    // JavaScript so the change to the sticky flag is invisible to the user.
-    newFlags.sticky = 0;
-    JSRegExp::setSyntaxFlags(regexp.get(), newFlags);
-    auto match = JSRegExp::search(regexp, runtime, S, q);
-    // We can ignore an EXCEPTION in the returned value because calling
-    // setSyntaxFlags is safe even after an exception. Instead, we just pass it
-    // on to the caller.
-    JSRegExp::setSyntaxFlags(regexp.get(), originalFlags);
-    return match;
-  }
-
-  // Not searching for a RegExp, manually do string matching.
-  auto RHandle = Handle<StringPrimitive>::dyn_vmcast(R);
-  assert(RHandle && "SplitMatch() called without RegExp or String");
-
+    Handle<StringPrimitive> R) {
   auto SStr = StringPrimitive::createStringView(runtime, S);
-  auto RStr = StringPrimitive::createStringView(runtime, RHandle);
+  auto RStr = StringPrimitive::createStringView(runtime, R);
   RegExpMatch match{};
 
   // Handle empty string separately.
@@ -770,7 +748,7 @@ static CallResult<RegExpMatch> splitMatch(
 
   if (searchResult != sliced.end()) {
     uint32_t i = q + (searchResult - sliced.begin());
-    match.push_back({{i, RHandle->getStringLength()}});
+    match.push_back({{i, R->getStringLength()}});
   }
   return match;
 }
@@ -807,52 +785,13 @@ CallResult<HermesValue> splitInternal(
     lim = intRes->getNumber();
   }
 
-  // The pattern which we want to separate on. Can be a JSRegExp or a string.
+  // The pattern which we want to separate on.
   bool unicodeMatching = false;
-  MutableHandle<> R{runtime};
-  if (vmisa<JSRegExp>(separator.get())) {
-    auto regexp = Handle<JSRegExp>::vmcast(separator);
-    R = separator.get();
-    CallResult<PseudoHandle<>> flagsRes = JSObject::getNamed_RJS(
-        regexp, runtime, Predefined::getSymbolID(Predefined::flags));
-    if (LLVM_UNLIKELY(flagsRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    CallResult<PseudoHandle<StringPrimitive>> flagsStrRes = toString_RJS(
-        runtime, runtime->makeHandle(std::move(flagsRes.getValue())));
-    if (LLVM_UNLIKELY(flagsStrRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    auto flags = runtime->makeHandle(std::move(flagsStrRes.getValue()));
-    llvh::SmallVector<char16_t, 16> flagsText16;
-    flags->copyUTF16String(flagsText16);
-    auto newFlagsOpt = regex::SyntaxFlags::fromString(flagsText16);
-    // As an optimisation, we only create a new RegExp if the flags attribute
-    // has been modified
-    if (LLVM_UNLIKELY(
-            !newFlagsOpt ||
-            newFlagsOpt->toByte() !=
-                JSRegExp::getSyntaxFlags(regexp.get()).toByte())) {
-      auto newRegexp = JSRegExp::create(runtime);
-      auto pattern =
-          runtime->makeHandle(JSRegExp::getPattern(regexp.get(), runtime));
-      if (LLVM_UNLIKELY(
-              JSRegExp::initialize(
-                  newRegexp, runtime, pattern, flags, llvh::None) ==
-              ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      R = newRegexp.getHermesValue();
-    }
-    unicodeMatching = newFlagsOpt->unicode;
-
-  } else {
-    auto strRes = toString_RJS(runtime, separator);
-    if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    R = strRes->getHermesValue();
+  auto sepRes = toString_RJS(runtime, separator);
+  if (LLVM_UNLIKELY(sepRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
   }
+  Handle<StringPrimitive> R = runtime->makeHandle(std::move(sepRes.getValue()));
 
   if (lim == 0) {
     // Don't want any elements, so we're done.
@@ -953,35 +892,6 @@ CallResult<HermesValue> splitInternal(
       // Update p to point to the end of this match, maintaining the
       // invariant that it points to the end of the last match encountered.
       p = e;
-      // Add all the capture groups to A. Start at i=1 to skip the full match.
-      for (uint32_t i = 1, m = match.size(); i < m; ++i) {
-        const auto &range = match[i];
-        if (!range) {
-          JSArray::setElementAt(
-              A, runtime, lengthA, Runtime::getUndefinedValue());
-        } else {
-          if (LLVM_UNLIKELY(
-                  (strRes = StringPrimitive::slice(
-                       runtime, S, range->location, range->length)) ==
-                  ExecutionStatus::EXCEPTION)) {
-            return ExecutionStatus::EXCEPTION;
-          }
-          JSArray::setElementAt(
-              A,
-              runtime,
-              lengthA,
-              runtime->makeHandle<StringPrimitive>(*strRes));
-        }
-        ++lengthA;
-        if (lengthA == lim) {
-          // Reached the limit, return early.
-          if (LLVM_UNLIKELY(
-                  JSArray::setLengthProperty(A, runtime, lengthA) ==
-                  ExecutionStatus::EXCEPTION))
-            return ExecutionStatus::EXCEPTION;
-          return A.getHermesValue();
-        }
-      }
       // Start position of the next search is updated to the end of this match.
       q = p;
     }
