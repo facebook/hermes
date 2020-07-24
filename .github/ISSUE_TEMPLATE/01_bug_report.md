@@ -23,7 +23,7 @@ labels:
   to assist with debugging.
 -->
 
-- [ ] I have run `gradle clean` and confirmed this bug does not occur with JSC"
+- [ ] I have run `gradle clean` and confirmed this bug does not occur with JSC
 
 Hermes version:
 React Native version (if any):
