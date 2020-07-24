@@ -960,6 +960,7 @@ class JSParserImpl {
       bool wrapped = false,
       AllowAnonFunctionType allowAnonFunctionType = AllowAnonFunctionType::Yes);
 
+  Optional<ESTree::Node *> parseFlowDeclaration();
   Optional<ESTree::Node *> parseDeclare(SMLoc start);
 
   enum class TypeAliasKind { None, Declare, Opaque, DeclareOpaque };

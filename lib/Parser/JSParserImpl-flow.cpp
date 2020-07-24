@@ -19,6 +19,53 @@ namespace detail {
 
 #if HERMES_PARSE_FLOW
 
+Optional<ESTree::Node *> JSParserImpl::parseFlowDeclaration() {
+  assert(checkDeclaration());
+  SMLoc start = tok_->getStartLoc();
+
+  if (check(TokenKind::rw_enum)) {
+    auto optEnum = parseEnumDeclaration();
+    if (!optEnum)
+      return None;
+    return *optEnum;
+  }
+
+  TypeAliasKind kind = TypeAliasKind::None;
+  if (checkAndEat(declareIdent_))
+    kind = TypeAliasKind::Declare;
+  else if (checkAndEat(opaqueIdent_))
+    kind = TypeAliasKind::Opaque;
+
+  if (kind == TypeAliasKind::Declare &&
+      !checkN(typeIdent_, interfaceIdent_, TokenKind::rw_interface)) {
+    error(tok_->getSourceRange(), "invalid token in type declaration");
+    return None;
+  }
+  if (kind == TypeAliasKind::Opaque && !check(typeIdent_)) {
+    error(tok_->getSourceRange(), "invalid token in opaque type declaration");
+    return None;
+  }
+
+  if (checkAndEat(typeIdent_)) {
+    auto optType = parseTypeAlias(start, kind);
+    if (!optType)
+      return None;
+    return *optType;
+  }
+
+  if (checkN(interfaceIdent_, TokenKind::rw_interface)) {
+    auto optType = parseInterfaceDeclaration(kind == TypeAliasKind::Declare);
+    if (!optType)
+      return None;
+    return *optType;
+  }
+
+  assert(
+      kind == TypeAliasKind::None &&
+      "checkDeclaration() returned true without 'type' or 'interface'");
+  return None;
+}
+
 Optional<ESTree::Node *> JSParserImpl::parseDeclare(SMLoc start) {
   if (checkAndEat(typeIdent_)) {
     return parseTypeAlias(start, TypeAliasKind::Declare);

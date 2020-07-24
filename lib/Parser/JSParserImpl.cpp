@@ -655,7 +655,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclaration(Param param) {
     return *fdecl;
   }
 
-  if (tok_->getKind() == TokenKind::rw_class) {
+  if (check(TokenKind::rw_class)) {
     auto optClass = parseClassDeclaration(Param{});
     if (!optClass)
       return None;
@@ -663,60 +663,25 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclaration(Param param) {
     return *optClass;
   }
 
+  if (checkN(TokenKind::rw_const, letIdent_)) {
+    auto optLexDecl = parseLexicalDeclaration(ParamIn);
+    if (!optLexDecl)
+      return None;
+
+    return *optLexDecl;
+  }
+
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow()) {
-    SMLoc start = tok_->getStartLoc();
-
-    if (check(TokenKind::rw_enum)) {
-      auto optEnum = parseEnumDeclaration();
-      if (!optEnum)
-        return None;
-      return *optEnum;
-    }
-
-    TypeAliasKind kind = TypeAliasKind::None;
-    if (checkAndEat(declareIdent_))
-      kind = TypeAliasKind::Declare;
-    else if (checkAndEat(opaqueIdent_))
-      kind = TypeAliasKind::Opaque;
-
-    if (kind == TypeAliasKind::Declare &&
-        !checkN(typeIdent_, interfaceIdent_, TokenKind::rw_interface)) {
-      error(tok_->getSourceRange(), "invalid token in type declaration");
+    auto optDecl = parseFlowDeclaration();
+    if (!optDecl)
       return None;
-    }
-    if (kind == TypeAliasKind::Opaque && !check(typeIdent_)) {
-      error(tok_->getSourceRange(), "invalid token in opaque type declaration");
-      return None;
-    }
-
-    if (checkAndEat(typeIdent_)) {
-      auto optType = parseTypeAlias(start, kind);
-      if (!optType)
-        return None;
-      return *optType;
-    }
-    if (checkN(interfaceIdent_, TokenKind::rw_interface)) {
-      auto optType = parseInterfaceDeclaration(kind == TypeAliasKind::Declare);
-      if (!optType)
-        return None;
-      return *optType;
-    }
-    assert(
-        kind == TypeAliasKind::None &&
-        "checkDeclaration() returned true without 'type' or 'interface'");
+    return *optDecl;
   }
 #endif
 
-  assert(
-      (check(TokenKind::rw_const) || check(letIdent_)) &&
-      "declaration can only be let or const");
-
-  auto optLexDecl = parseLexicalDeclaration(ParamIn);
-  if (!optLexDecl)
-    return None;
-
-  return *optLexDecl;
+  assert(false && "checkDeclaration() returned true without a declaration");
+  return None;
 }
 
 bool JSParserImpl::parseStatementListItem(
