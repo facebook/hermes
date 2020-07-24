@@ -1754,40 +1754,45 @@ stringPrototypeEndsWith(void *, Runtime *runtime, NativeArgs args) {
       S->sliceEquals(start, searchLength, *searchStr));
 }
 
+/// ES11 21.1.3.20.1
 /// Works slightly differently from the given implementation in the spec.
 /// Given a string \p S and a starting point \p q, finds the first match of
 /// \p R such that it starts on or after index \p q in \p S.
 /// \param q starting point in S. Requires: q <= S->getStringLength().
 /// \param R a String.
-/// \return A RegExpMatch object. Note that the returned match may start at
-/// S->getStringLength() whereas the spec requires that we only split on matches
-/// starting before S->getStringLength().
-static CallResult<RegExpMatch> splitMatch(
+/// \return Either None or an integer representing the start of the match.
+static OptValue<uint32_t> splitMatch(
     Runtime *runtime,
     Handle<StringPrimitive> S,
     uint32_t q,
     Handle<StringPrimitive> R) {
+  // 2. Let r be the number of code units in R.
+  auto r = R->getStringLength();
+  // 3. Let s be the number of code units in S.
+  auto s = S->getStringLength();
+  // 4. If q+r > s, return false.
+  if (q + r > s) {
+    return llvh::None;
+  }
+
+  // Handle the case where the search starts at the end of the string and R is
+  // the empty string. This path should only be triggered when S is itself the
+  // empty string.
+  if (q == s) {
+    return q;
+  }
+
   auto SStr = StringPrimitive::createStringView(runtime, S);
   auto RStr = StringPrimitive::createStringView(runtime, R);
-  RegExpMatch match{};
-
-  // Handle empty string separately.
-  if (SStr.empty()) {
-    if (RStr.empty()) {
-      match.push_back({{0, 0}});
-    }
-    return match;
-  }
 
   auto sliced = SStr.slice(q);
   auto searchResult =
       std::search(sliced.begin(), sliced.end(), RStr.begin(), RStr.end());
 
   if (searchResult != sliced.end()) {
-    uint32_t i = q + (searchResult - sliced.begin());
-    match.push_back({{i, R->getStringLength()}});
+    return q + (searchResult - sliced.begin()) + r;
   }
-  return match;
+  return llvh::None;
 }
 
 CallResult<HermesValue>
@@ -1883,9 +1888,7 @@ stringPrototypeSplit(void *, Runtime *runtime, NativeArgs args) {
   if (s == 0) {
     // S is the empty string.
     auto matchResult = splitMatch(runtime, S, 0, R);
-    if (LLVM_UNLIKELY(matchResult == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    } else if (!matchResult->empty()) {
+    if (matchResult) {
       // Matched the entirety of S, so return the empty array.
       return A.getHermesValue();
     }
@@ -1913,13 +1916,11 @@ stringPrototypeSplit(void *, Runtime *runtime, NativeArgs args) {
     // ES5.1's SplitMatch only finds matches at q, but we find matches at or
     // after q, so if it fails, we know we're done.
     auto matchResult = splitMatch(runtime, S, q, R);
-
-    if (LLVM_UNLIKELY(matchResult == ExecutionStatus::EXCEPTION))
-      return ExecutionStatus::EXCEPTION;
-
-    auto match = *matchResult;
-
-    if (match.empty() || match[0]->location >= s) {
+    // If we did find a match, fast-forward q to the start of that match.
+    if (matchResult) {
+      q = *matchResult - R->getStringLength();
+    }
+    if (!matchResult || q >= s) {
       // There's no matches between index q and the end of the string, so we're
       // done searching. Note: This behavior differs from the spec
       // implementation, because we check for matches at or after q. However, in
@@ -1927,10 +1928,9 @@ stringPrototypeSplit(void *, Runtime *runtime, NativeArgs args) {
       // the string.
       break;
     }
-    // Found a match, so go ahead and update q and e,
+    // Found a match, so go ahead and update e,
     // such that the match is the range [q,e).
-    q = match[0]->location;
-    uint32_t e = q + match[0]->length;
+    uint32_t e = *matchResult;
     if (e == p) {
       // The end of this match is the same as the end of the last match,
       // so we matched with the empty string.

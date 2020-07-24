@@ -257,6 +257,8 @@ print("aXbXcX".split(/(?<=X)/))
 // CHECK-NEXT: aX,bX,cX
 print("test".split(/$/))
 // CHECK-NEXT: test
+print("abc".split(""))
+// CHECK-NEXT: a,b,c
 
 // Check splitting with sticky/global flag set
 var pattern = /X/y
