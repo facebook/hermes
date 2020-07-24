@@ -273,6 +273,20 @@ print("aXbXcX".split(pattern))
 print(pattern.lastIndex)
 // CHECK-NEXT: 0
 
+// Check that split uses the "flags" property
+var pattern = /abc/u
+Object.defineProperty(pattern, 'flags', {value: 'test'})
+print(pattern.flags)
+// CHECK-NEXT: test
+try { "abcabc".split(pattern); } catch(e) { print(e.name); }
+// CHECK-NEXT: SyntaxError
+var pattern = /abc/
+Object.defineProperty(pattern, 'flags', {value: 'i'})
+print(pattern.flags)
+// CHECK-NEXT: i
+print("zAbCzAbCz".split(pattern))
+// CHECK-NEXT: z,z,z
+
 print('substring');
 // CHECK-LABEL: substring
 print('abcdcba'.substring());

@@ -811,9 +811,41 @@ CallResult<HermesValue> splitInternal(
   bool unicodeMatching = false;
   MutableHandle<> R{runtime};
   if (vmisa<JSRegExp>(separator.get())) {
+    auto regexp = Handle<JSRegExp>::vmcast(separator);
     R = separator.get();
-    unicodeMatching =
-        JSRegExp::getSyntaxFlags(vmcast<JSRegExp>(separator.get())).unicode;
+    CallResult<PseudoHandle<>> flagsRes = JSObject::getNamed_RJS(
+        regexp, runtime, Predefined::getSymbolID(Predefined::flags));
+    if (LLVM_UNLIKELY(flagsRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    CallResult<PseudoHandle<StringPrimitive>> flagsStrRes = toString_RJS(
+        runtime, runtime->makeHandle(std::move(flagsRes.getValue())));
+    if (LLVM_UNLIKELY(flagsStrRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    auto flags = runtime->makeHandle(std::move(flagsStrRes.getValue()));
+    llvh::SmallVector<char16_t, 16> flagsText16;
+    flags->copyUTF16String(flagsText16);
+    auto newFlagsOpt = regex::SyntaxFlags::fromString(flagsText16);
+    // As an optimisation, we only create a new RegExp if the flags attribute
+    // has been modified
+    if (LLVM_UNLIKELY(
+            !newFlagsOpt ||
+            newFlagsOpt->toByte() !=
+                JSRegExp::getSyntaxFlags(regexp.get()).toByte())) {
+      auto newRegexp = JSRegExp::create(runtime);
+      auto pattern =
+          runtime->makeHandle(JSRegExp::getPattern(regexp.get(), runtime));
+      if (LLVM_UNLIKELY(
+              JSRegExp::initialize(
+                  newRegexp, runtime, pattern, flags, llvh::None) ==
+              ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      R = newRegexp.getHermesValue();
+    }
+    unicodeMatching = newFlagsOpt->unicode;
+
   } else {
     auto strRes = toString_RJS(runtime, separator);
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
