@@ -26,6 +26,7 @@
 
 #include "llvh/ADT/SmallVector.h"
 
+#include <deque>
 #include <string>
 #include <vector>
 
@@ -34,8 +35,10 @@ namespace regex {
 
 class Node;
 
-/// A NodeList is list of owned Nodes. Note it is move-only.
-using NodeList = std::vector<std::unique_ptr<Node>>;
+/// A NodeList is list of Nodes.
+using NodeList = std::vector<Node *>;
+/// A NodeHolder is list of owned Nodes. Note it is move-only.
+using NodeHolder = std::deque<std::unique_ptr<Node>>;
 
 /// Base class representing some part of a compiled regular expression.
 /// A Node is part of an expression that knows how to match against a State.
@@ -80,7 +83,8 @@ class Node {
 
   /// Perform optimizations on the given node list \p nodes, subject to the
   /// given \p flags.
-  inline static void optimizeNodeList(NodeList &nodes, SyntaxFlags flags);
+  inline static void
+  optimizeNodeList(NodeList &nodes, SyntaxFlags flags, NodeHolder &nodeHolder);
 
   /// \return whether the node always matches exactly one character.
   virtual bool matchesExactlyOneCharacter() const {
@@ -88,7 +92,8 @@ class Node {
   }
 
   /// Perform optimization on Node's contents, subject to the given \p flags.
-  virtual void optimizeNodeContents(SyntaxFlags flags) {}
+  virtual void optimizeNodeContents(SyntaxFlags flags, NodeHolder &nodeHolder) {
+  }
 
   /// If this Node can be coalesced into a single MatchCharNode,
   /// then add the node's characters to \p output and \return true.
@@ -198,8 +203,9 @@ class LoopNode final : public Node {
     return result | Super::matchConstraints();
   }
 
-  virtual void optimizeNodeContents(SyntaxFlags flags) override {
-    optimizeNodeList(loopee_, flags);
+  virtual void optimizeNodeContents(SyntaxFlags flags, NodeHolder &nodeHolder)
+      override {
+    optimizeNodeList(loopee_, flags, nodeHolder);
   }
 
  protected:
@@ -317,9 +323,10 @@ class AlternationNode final : public Node {
     return restConstraints_.front() | Super::matchConstraints();
   }
 
-  virtual void optimizeNodeContents(SyntaxFlags flags) override {
+  virtual void optimizeNodeContents(SyntaxFlags flags, NodeHolder &nodeHolder)
+      override {
     for (auto &alternative : alternatives_) {
-      optimizeNodeList(alternative, flags);
+      optimizeNodeList(alternative, flags, nodeHolder);
     }
   }
 
@@ -388,8 +395,9 @@ class MarkedSubexpressionNode final : public Node {
     reverseNodeList(contents_);
   }
 
-  virtual void optimizeNodeContents(SyntaxFlags flags) override {
-    optimizeNodeList(contents_, flags);
+  virtual void optimizeNodeContents(SyntaxFlags flags, NodeHolder &nodeHolder)
+      override {
+    optimizeNodeList(contents_, flags, nodeHolder);
   }
 
   virtual MatchConstraintSet matchConstraints() const override {
@@ -832,8 +840,9 @@ class LookaroundNode : public Node {
     return result | Super::matchConstraints();
   }
 
-  virtual void optimizeNodeContents(SyntaxFlags flags) override {
-    optimizeNodeList(exp_, flags);
+  virtual void optimizeNodeContents(SyntaxFlags flags, NodeHolder &nodeHolder)
+      override {
+    optimizeNodeList(exp_, flags, nodeHolder);
   }
 
   // Override emit() to compile our lookahead expression.
@@ -871,10 +880,13 @@ void Node::reverseNodeList(NodeList &nodes) {
   }
 }
 
-void Node::optimizeNodeList(NodeList &nodes, SyntaxFlags flags) {
+void Node::optimizeNodeList(
+    NodeList &nodes,
+    SyntaxFlags flags,
+    NodeHolder &nodeHolder) {
   // Recursively optimize child nodes.
   for (auto &node : nodes) {
-    node->optimizeNodeContents(flags);
+    node->optimizeNodeContents(flags, nodeHolder);
   }
 
   // Merge adjacent runs of char nodes.
@@ -893,8 +905,8 @@ void Node::optimizeNodeList(NodeList &nodes, SyntaxFlags flags) {
     if (rangeEnd - rangeStart >= 3) {
       // We successfully coalesced some nodes.
       // Replace the range with a new node.
-      nodes[rangeStart] = std::unique_ptr<MatchCharNode>(
-          new MatchCharNode(std::move(chars), flags));
+      nodeHolder.emplace_back(new MatchCharNode(std::move(chars), flags));
+      nodes[rangeStart] = nodeHolder.back().get();
       // Fill the remainder of the range with null (we'll clean them up after
       // the loop) and skip to the end of the range.
       // Note that rangeEnd may be one past the last valid element.

@@ -55,6 +55,10 @@ class Regex {
   // The list of nodes so far.
   NodeList nodes_;
 
+  // List of all unique_ptrs to all nodes created by this Regex, used to defer
+  // destructors and avoid a stack overflow.
+  NodeHolder nodeHolder_;
+
   // The error, which may be set after parsing.
   constants::ErrorType error_ = constants::ErrorType::None;
 
@@ -69,13 +73,14 @@ class Regex {
     std::unique_ptr<NodeType> node =
         hermes::make_unique<NodeType>(std::forward<Args>(args)...);
     NodeType *nodePtr = node.get();
-    nodes_.push_back(std::move(node));
+    nodeHolder_.push_back(std::move(node));
+    nodes_.push_back(nodePtr);
     return nodePtr;
   }
 
   /// \return the "current" node, which is the last (rightmost) node created.
   Node *currentNode() {
-    return nodes_.back().get();
+    return nodes_.back();
   }
 
   /// \return the number of marked subexpressions.
@@ -95,7 +100,7 @@ class Regex {
     // Find the index of the splice point. We expect it to be towards the end.
     size_t spliceIndex = nodes_.size();
     while (spliceIndex--) {
-      if (nodes_[spliceIndex].get() == splicePoint)
+      if (nodes_[spliceIndex] == splicePoint)
         break;
     }
     assert(spliceIndex < nodes_.size() && "Node not in node list");
@@ -274,15 +279,15 @@ constants::ErrorType Regex<Traits>::parseWithBackRefLimit(
     uint32_t *outMaxBackRef) {
   // Initialize our node list with a single no-op node (it must never be empty.)
   nodes_.clear();
-  nodes_.push_back(hermes::make_unique<Node>());
+  appendNode<Node>();
   auto result =
       parseRegex(first, last, this, flags_, backRefLimit, outMaxBackRef);
 
   // If we succeeded, add a goal node as the last node and perform optimizations
   // on the list.
   if (result == constants::ErrorType::None) {
-    nodes_.push_back(hermes::make_unique<GoalNode>());
-    Node::optimizeNodeList(nodes_, flags_);
+    appendNode<GoalNode>();
+    Node::optimizeNodeList(nodes_, flags_, nodeHolder_);
   }
 
   // Compute any match constraints.
@@ -372,7 +377,8 @@ void Regex<Traits>::pushLookaround(
   if (!forwards) {
     Node::reverseNodeList(exp);
   }
-  exp.push_back(hermes::make_unique<GoalNode>());
+  nodeHolder_.push_back(hermes::make_unique<GoalNode>());
+  exp.push_back(nodeHolder_.back().get());
   appendNode<LookaroundNode>(
       std::move(exp), mexpBegin, mexpEnd, invert, forwards);
 }
