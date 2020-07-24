@@ -7,7 +7,7 @@ if (
   !fs.existsSync(path.join(__dirname, "destroot"))
 ) {
   const tarball = fs.readdirSync(__dirname).find(function (entry) {
-    return entry.endsWith(".tar.gz");
+    return /^hermes-runtime-darwin-v[\d\.]+\.tar\.gz$/.test(entry);
   });
   if (!tarball) {
     throw new Error("Could not locate tarball");

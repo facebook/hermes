@@ -639,11 +639,13 @@ add_custom_target(
   COMMAND
     ${CMAKE_COMMAND} --build . --target install/strip
   COMMAND
-    mkdir -p ${HERMES_PKG_ROOT}
+    mkdir -p ${HERMES_PKG_ROOT}/destroot/bin
   COMMAND
-    cp -R -f ${CMAKE_INSTALL_PREFIX} ${HERMES_PKG_ROOT}/destroot
+    cp ${CMAKE_INSTALL_PREFIX}/bin/hermesc ${HERMES_PKG_ROOT}/destroot/bin/
   COMMAND
-    find ${HERMES_PKG_ROOT}/destroot/bin -type f ! -name 'hermesc' -delete
+    cp -R ${CMAKE_INSTALL_PREFIX}/Library ${HERMES_PKG_ROOT}/destroot/
+  COMMAND
+    cp -R ${CMAKE_INSTALL_PREFIX}/include ${HERMES_PKG_ROOT}/destroot/
   COMMAND
     cp ${CMAKE_CURRENT_SOURCE_DIR}/hermes.podspec ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE ${HERMES_PKG_ROOT}
   COMMAND
