@@ -73,9 +73,6 @@ class Parser {
 #endif
       ;
 
-  // Current stack depth in our parser.
-  uint32_t parseDepth_ = 0;
-
   /// Set the error \p err, if not already set to a different error.
   /// Also move our input to end, to abort parsing.
   /// \return false, for convenience.
@@ -181,29 +178,224 @@ class Parser {
     return llvh::None;
   }
 
+  /// Our parser uses an explicit stack to avoid stack overflow for deeply
+  /// nested regexps. This represents a level in the stack.
+  struct ParseStackElement {
+    enum Type {
+      /// We are parsing an alternation: a|b|c
+      Alternation,
+
+      /// We are parsing a capturing group: ().
+      CapturingGroup,
+
+      /// We are parsing a non-capturing group: (?:).
+      NonCapturingGroup,
+
+      /// We are parsing a lookaround:
+      // Positive lookahead (?=)
+      // Negative lookahead (?!)
+      // Positive lookbehind (?<=)
+      // Negative lookbehind (?<!)
+      LookAround,
+
+    } type;
+
+    /// The splice point.
+    /// For Alternation elements, nodes after this represent an alternative.
+    /// For Group elements, nodes after this are part of the group.
+    Node *splicePoint{nullptr};
+
+    /// For group elements, the marked subexpression index for this element.
+    /// For lookaround elements, the marked subexpression index when this
+    /// lookaround element was pushed onto the stack.
+    /// Ignored for alternation elements.
+    uint32_t mexp{0};
+
+    /// A quantifier prepared for the currently parsed group.
+    /// Ignored for alternations (which cannot be quantified).
+    Quantifier quant{};
+
+    /// If this is an Alternation, the list of alternatives
+    /// Ignored for group elements.
+    std::vector<NodeList> alternatives;
+
+    // True if this lookaround represents a negative lookaround. Ignored for
+    // non-lookarounds
+    bool negateLookaround;
+
+    // True if this lookaround is a lookahead. Ignored for non-lookarounds.
+    bool forwardLookaround;
+
+    explicit ParseStackElement(Type type) : type(type) {}
+  };
+
+  using ParseStack = llvh::SmallVector<ParseStackElement, 4>;
+
+  /// Push an empty alternation onto the parse stack \p stack.
+  void openAlternation(ParseStack &stack) {
+    // Should never have two adjacent alternations on the stack
+    assert(
+        stack.empty() || stack.back().type != ParseStackElement::Alternation);
+    ParseStackElement elem(ParseStackElement::Alternation);
+    elem.splicePoint = re_->currentNode();
+    stack.push_back(std::move(elem));
+  }
+
+  /// Close any alternation on top of the stack.
+  void closeAlternation(ParseStack &stack) {
+    if (!stack.empty() && stack.back().type == ParseStackElement::Alternation) {
+      auto alternatives = std::move(stack.back().alternatives);
+      auto last = re_->spliceOut(stack.back().splicePoint);
+      stack.pop_back();
+      alternatives.push_back(std::move(last));
+      re_->pushAlternation(std::move(alternatives));
+    }
+  }
+
+  /// Open a capturing group, pushing it onto \p stack.
+  void openCapturingGroup(ParseStack &stack) {
+    ParseStackElement elem(ParseStackElement::CapturingGroup);
+    // Quantifier must be prepared before incrementing the marked counter
+    // because it uses the marked counter to perform the simple loop
+    // optimisation
+    elem.quant = prepareQuantifier();
+    elem.mexp = re_->incrementMarkedCount();
+    elem.splicePoint = re_->currentNode();
+    stack.push_back(std::move(elem));
+  }
+
+  /// Open a non-capturing group, pushing it onto \p stack.
+  void openNonCapturingGroup(ParseStack &stack) {
+    ParseStackElement elem(ParseStackElement::NonCapturingGroup);
+    elem.quant = prepareQuantifier();
+    elem.splicePoint = re_->currentNode();
+    stack.push_back(std::move(elem));
+  }
+
+  /// Open a lookaround, pushing it onto \p stack.
+  void openLookaround(ParseStack &stack, bool negate, bool forwards) {
+    ParseStackElement elem(ParseStackElement::LookAround);
+    elem.mexp = re_->markedCount();
+    elem.forwardLookaround = forwards;
+    elem.negateLookaround = negate;
+    elem.quant = prepareQuantifier();
+    elem.splicePoint = re_->currentNode();
+    stack.push_back(std::move(elem));
+  }
+
+  /// Close a group or lookaround on top of \p stack, emitting the proper nodes
+  /// into the regex.
+  void closeGroup(ParseStack &stack) {
+    assert(!stack.empty() && "Stack must not be empty");
+    ParseStackElement elem = std::move(stack.back());
+    stack.pop_back();
+    bool quantifierAllowed = true;
+    switch (elem.type) {
+      case ParseStackElement::Alternation:
+        llvm_unreachable("Alternations must be popped via closeAlternation()");
+        break;
+
+      case ParseStackElement::CapturingGroup:
+        re_->pushMarkedSubexpression(
+            re_->spliceOut(elem.splicePoint), elem.mexp);
+        break;
+
+      case ParseStackElement::NonCapturingGroup:
+        break;
+
+      case ParseStackElement::LookAround: {
+        quantifierAllowed = !(flags_.unicode);
+        bool negate = elem.negateLookaround;
+        bool forwards = elem.forwardLookaround;
+        auto mexpStart = elem.mexp;
+        auto mexpEnd = re_->markedCount();
+        auto expr = re_->spliceOut(elem.splicePoint);
+        re_->pushLookaround(
+            std::move(expr), mexpStart, mexpEnd, negate, forwards);
+        break;
+      }
+    }
+
+    // If the group is followed by a quantifier, then quantify it.
+    if (tryConsumeQuantifier(&elem.quant)) {
+      if (!quantifierAllowed) {
+        setError(constants::ErrorType::InvalidRepeat);
+        return;
+      }
+      applyQuantifier(elem.quant);
+    }
+  }
+
   /// ES6 21.2.2.3 Disjunction.
   void consumeDisjunction() {
-    // All recursive productions (alternations and capture groups) pass through
-    // consumeDisjunction, therefore just tracking parse depth here is
-    // sufficient.
-    llvh::SaveAndRestore<uint32_t> saveDepth(parseDepth_);
-    if (++parseDepth_ > kMaxParseDepth) {
-      setError(constants::ErrorType::PatternExceedsParseLimits);
-      return;
-    }
-    auto *cursor = re_->currentNode();
-    consumeTerm();
-    // Avoid creating an AlternationNode if we don't need to
-    if (!check('|')) {
-      return;
-    }
-    std::vector<NodeList> alternatives;
-    alternatives.push_back(re_->spliceOut(cursor));
-    while (tryConsume('|')) {
+    Node *const firstNode = re_->currentNode();
+    ParseStack stack;
+
+    while (current_ != end_) {
+      switch (*current_) {
+        case '|': {
+          consume('|');
+          auto *splicePoint =
+              stack.empty() ? firstNode : stack.back().splicePoint;
+          auto nodes = re_->spliceOut(splicePoint);
+          if (stack.empty() ||
+              stack.back().type != ParseStackElement::Alternation) {
+            // Open a new alternation
+            openAlternation(stack);
+          }
+          stack.back().alternatives.push_back(std::move(nodes));
+          break;
+        }
+
+        case '(': {
+          // Open a new group of the right type.
+          if (tryConsume("(?=")) {
+            // Positive lookeahead, negate = false, forwards = true
+            openLookaround(stack, false, true);
+          } else if (tryConsume("(?!")) {
+            // Negative lookeahead, negate = true, forwards = true
+            openLookaround(stack, true, true);
+          } else if (tryConsume("(?<=")) {
+            // Positive lookbehind, negate = false, forwards = false
+            openLookaround(stack, false, false);
+          } else if (tryConsume("(?<!")) {
+            // Negative lookbehind, negate = true, forwards = false
+            openLookaround(stack, true, false);
+          } else if (tryConsume("(?:")) {
+            openNonCapturingGroup(stack);
+          } else {
+            consume('(');
+            openCapturingGroup(stack);
+          }
+          break;
+        }
+
+        case ')': {
+          // Close any in-flight alternation and pop a group stack
+          // element.
+          consume(')');
+          closeAlternation(stack);
+          if (stack.empty()) {
+            setError(constants::ErrorType::UnbalancedParenthesis);
+            return;
+          }
+          closeGroup(stack);
+          break;
+        }
+      }
+
+      if (stack.size() > kMaxParseDepth) {
+        setError(constants::ErrorType::PatternExceedsParseLimits);
+        return;
+      }
       consumeTerm();
-      alternatives.push_back(re_->spliceOut(cursor));
     }
-    re_->pushAlternation(std::move(alternatives));
+
+    assert(current_ == end_ && "Should have consumed all input");
+    closeAlternation(stack);
+    if (!stack.empty()) {
+      setError(constants::ErrorType::UnbalancedParenthesis);
+    }
   }
 
   /// ES6 21.2.2.5 Term.
@@ -237,45 +429,6 @@ class Parser {
           break;
         }
 
-        case '(': {
-          if (tryConsume("(?=")) {
-            // Positive lookahead.
-            // Unicode prohibits these from being quantified.
-            quantifierAllowed = !(flags_.unicode);
-            consumeLookaroundAssertion(false /* negate */, true /* forwards */);
-          } else if (tryConsume("(?!")) {
-            // Negative lookahead.
-            // Unicode prohibits these from being quantified.
-            quantifierAllowed = !(flags_.unicode);
-            consumeLookaroundAssertion(true /* negate */, true /* forwards */);
-          } else if (tryConsume("(?<=")) {
-            // Positive lookbehind.
-            quantifierAllowed = !(flags_.unicode);
-            consumeLookaroundAssertion(
-                false /* negate */, false /* forwards */);
-          } else if (tryConsume("(?<!")) {
-            // Negative lookbehind.
-            quantifierAllowed = !(flags_.unicode);
-            consumeLookaroundAssertion(true /* negate */, false /* forwards */);
-          } else if (tryConsume("(?:")) {
-            // Non-capturing group.
-            consumeDisjunction();
-          } else {
-            // Capturing group.
-            consume('(');
-            uint32_t mexp = re_->incrementMarkedCount();
-            auto exprStart = re_->currentNode();
-            consumeDisjunction();
-            auto expr = re_->spliceOut(exprStart);
-            re_->pushMarkedSubexpression(std::move(expr), mexp);
-          }
-          if (!tryConsume(')')) {
-            setError(constants::ErrorType::UnbalancedParenthesis);
-            return;
-          }
-          break;
-        }
-
         case '[': {
           consumeCharacterClass();
           break;
@@ -304,8 +457,11 @@ class Parser {
         }
 
         case '|':
+        case '(':
         case ')': {
-          // End of the disjunction or group.
+          // This is a new alternation, or the beginning or end of a group or
+          // assertion. Transfer control back to consumeDisjunction() so it can
+          // act on it.
           return;
         }
 
@@ -824,20 +980,6 @@ class Parser {
     return 0;
   }
 
-  /// ES6 21.2.2.6 Assertion.
-  /// This implements positive and negative lookaheads.
-  /// We will have consumed the leading paren; the cursor is at the
-  /// disjunction.
-  void consumeLookaroundAssertion(bool negate, bool forwards) {
-    // Parse a disjunction, then splice it out from our list.
-    auto mexpBegin = re_->markedCount();
-    auto exprStart = re_->currentNode();
-    consumeDisjunction();
-    auto mexpEnd = re_->markedCount();
-    auto expr = re_->spliceOut(exprStart);
-    re_->pushLookaround(std::move(expr), mexpBegin, mexpEnd, negate, forwards);
-  }
-
   /// 21.2.2.9 AtomEscape.
   /// Here the backslash has been consumed.
   void consumeAtomEscape() {
@@ -930,13 +1072,8 @@ class Parser {
 
   constants::ErrorType performParse() {
     consumeDisjunction();
-    if (current_ != end_) {
-      // We are top level and did not consume all the input.
-      // The only way this can happen is if we have an unbalanced ).
-      // TODO: express that directly in the grammar, so that the grammar
-      // always consumes all input or errors.
-      setError(constants::ErrorType::UnbalancedParenthesis);
-    }
+    assert(
+        current_ == end_ && "We should always consume all input even on error");
     return error_;
   }
 
@@ -944,7 +1081,7 @@ class Parser {
   uint32_t maxBackRef() const {
     return maxBackRef_;
   }
-};
+}; // namespace regex
 
 template <typename Receiver>
 constants::ErrorType parseRegex(
