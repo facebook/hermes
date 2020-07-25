@@ -273,6 +273,17 @@ Handle<JSObject> createReflectObject(Runtime *runtime) {
   defineReflectMethod(Predefined::set, reflectSet, 3);
   defineReflectMethod(Predefined::setPrototypeOf, reflectSetPrototypeOf, 2);
 
+  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
+  dpf.writable = 0;
+  dpf.enumerable = 0;
+  dpf.configurable = 1;
+  defineProperty(
+      runtime,
+      reflect,
+      Predefined::getSymbolID(Predefined::SymbolToStringTag),
+      runtime->getPredefinedStringHandle(Predefined::Reflect),
+      dpf);
+
   return reflect;
 }
 
