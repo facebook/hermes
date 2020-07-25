@@ -1299,7 +1299,7 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
       (gc_->maxHeapSize_ / AlignedStorage::size()) - 1;
   if (segments_.size() < maxNumOldGenSegments) {
     HeapSegment &seg = createSegment();
-    AllocResult res = seg.alloc(sz);
+    AllocResult res = seg.bumpAlloc(sz);
     assert(
         res.success &&
         "A newly created segment should always be able to allocate");

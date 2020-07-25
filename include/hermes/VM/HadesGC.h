@@ -194,7 +194,7 @@ class HadesGC final : public GCBase {
   class OldGen;
 
   /// Similar to AlignedHeapSegment except it uses a free list.
-  class HeapSegment final : public AlignedHeapSegment {
+  class HeapSegment final : private AlignedHeapSegment {
    public:
     explicit HeapSegment(AlignedStorage &&storage);
     ~HeapSegment() = default;
@@ -229,6 +229,20 @@ class HadesGC final : public GCBase {
     /// Can only be called once, when the segment is in bump-alloc mode. There
     /// is no transitioning from freelist mode back to bump-alloc mode.
     void transitionToFreelist(OldGen &og);
+
+    // APIs from AlignedHeapSegment that are safe to use on a HeapSegment.
+    using AlignedHeapSegment::cardTable;
+    using AlignedHeapSegment::cardTableCovering;
+    using AlignedHeapSegment::cellHeads;
+    using AlignedHeapSegment::contains;
+    using AlignedHeapSegment::getCellMarkBit;
+    using AlignedHeapSegment::level;
+    using AlignedHeapSegment::markBitArray;
+    using AlignedHeapSegment::maxSize;
+    using AlignedHeapSegment::resetLevel;
+    using AlignedHeapSegment::setCellMarkBit;
+    using AlignedHeapSegment::start;
+    using AlignedHeapSegment::used;
 
    private:
     /// If true, then allocations into this segment increment a level inside the
