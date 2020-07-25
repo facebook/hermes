@@ -482,12 +482,14 @@ jobs:
       - ANDROID_HOME: /usr/local/share/android-sdk
       - ANDROID_SDK_HOME: /usr/local/share/android-sdk
       - ANDROID_SDK_ROOT: /usr/local/share/android-sdk
+      - ANDROID_NDK_HOME: /usr/local/share/android-ndk
       - QEMU_AUDIO_DRV: none
       - JAVA_HOME: /Library/Java/Home
     steps:
       - run:
           name: Setup dependencies
           command: |
+            mkdir -p /tmp/hermes/output
             # Node some version greater than 11 is needed by one of the app dependencies
             curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.1/install.sh | bash
             NVM_DIR="$HOME/.nvm"
@@ -500,6 +502,7 @@ jobs:
             brew install md5sha1sum
             brew tap homebrew/cask
             brew cask install android-sdk
+            brew cask install android-ndk
             echo 'export PATH="/usr/local/share/android-sdk/platform-tools:/usr/local/share/android-sdk/tools/bin:$PATH"' >> $BASH_ENV
             # At some point, adb ended up in platform-tools/platform-tools. Work around that.
             echo 'export PATH="/usr/local/share/android-sdk/platform-tools/platform-tools:$PATH"' >> $BASH_ENV
@@ -518,16 +521,13 @@ jobs:
       - attach_workspace:
           at: /tmp/hermes/input
       - run:
-          # For now we're not testing with RN from master because it's broken.
-          # If RN master + Hermes becoms stable we can pass --react-native-master to
-          # run.sh, or run it again as another step/job.
+          # If RN master + Hermes becomes unstable we can remove
+          # --react-native-master in the run.sh invocation.
           name: Run E2E test with master Hermes and Release React Native
           command: |
             cd test/circleci-e2e
-            ./run.sh --hermes-npm-package /tmp/hermes/input/hermes-engine-v*.tgz
+            ./run.sh --react-native-master --hermes-npm-package /tmp/hermes/input/hermes-engine-v*.tgz
           # The react-native setup tool takes AGES "Installing CocoaPods dependencies"
           no_output_timeout: 45m
       - store_artifacts:
-          path: /tmp/screencap.mp4
-      - store_artifacts:
-          path: /tmp/app-release.apk
+          path: /tmp/hermes/output/
