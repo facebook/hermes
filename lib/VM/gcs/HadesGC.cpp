@@ -681,7 +681,11 @@ HadesGC::HadesGC(
   }
 }
 
-HadesGC::~HadesGC() {}
+HadesGC::~HadesGC() {
+  if (oldGenCollectionThread_.joinable()) {
+    oldGenCollectionThread_.join();
+  }
+}
 
 uint32_t HadesGC::minAllocationSize() {
   return heapAlignSize(std::max(
@@ -752,7 +756,7 @@ void HadesGC::waitForCollectionToFinish() {
   if (concurrentPhase_ == Phase::None) {
     return;
   }
-  std::unique_lock<std::mutex> lk{innerMutex(oldGenMutex_), std::adopt_lock};
+  std::unique_lock<Mutex> lk{oldGenMutex_, std::adopt_lock};
   // Before waiting for the OG collection to finish, tell the OG collection
   // that the world is stopped. Need to not hold the oldGenMutex_ while
   // acquiring the stopTheWorldMutex_ to avoid lock inversion issues.
@@ -763,20 +767,12 @@ void HadesGC::waitForCollectionToFinish() {
   }
   // Notify a waiting OG collection that it can complete.
   stopTheWorldCondVar_.notify_all();
-  // Re-lock the oldGenMutex_ so that it can be waited on.
-  lk.lock();
   // Wait for an existing collection to finish.
-  oldGenCollectionActiveCondVar_.wait(
-      lk, [this]() { return concurrentPhase_ == Phase::None; });
-#ifndef NDEBUG
-  // Since the condition_variable reacquires the lock before finishing wait,
-  // we need to assign the old thread id back to this DebugMutex.
-  oldGenMutex_.assignThread(std::this_thread::get_id());
-#endif
+  oldGenCollectionThread_.join();
+  assert(concurrentPhase_ == Phase::None);
   // Undo the worldStopped_ change, as the mutator will now resume. Can't rely
   // on completeMarking to set worldStopped_ to false, as the OG collection
   // might have already passed the stage where it was waiting for STW.
-  lk.unlock();
   {
     std::lock_guard<Mutex> stw{stopTheWorldMutex_};
     worldStopped_ = false;
@@ -800,6 +796,12 @@ void HadesGC::oldGenCollection() {
       concurrentPhase_ == Phase::None &&
       "Starting a second old gen collection");
   inGC_.store(true, std::memory_order_seq_cst);
+  if (oldGenCollectionThread_.joinable()) {
+    // This is just making sure the leftover thread is completed before starting
+    // a new one. Since concurrentPhase_ == None here, there is no collection
+    // ongoing.
+    oldGenCollectionThread_.join();
+  }
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormed();
 #endif
@@ -836,9 +838,8 @@ void HadesGC::oldGenCollection() {
   // the new thread, the GC cannot be destructed until the new thread completes.
   // This means that before destroying the GC, waitForCollectionToFinish must
   // be called.
-  std::thread markingThread(&HadesGC::oldGenCollectionWorker, this);
+  oldGenCollectionThread_ = std::thread(&HadesGC::oldGenCollectionWorker, this);
   // Use concurrentPhase_ to be able to tell when the collection finishes.
-  markingThread.detach();
 }
 
 void HadesGC::oldGenCollectionWorker() {
@@ -847,8 +848,6 @@ void HadesGC::oldGenCollectionWorker() {
   completeMarking();
   sweep();
   inGC_.store(false, std::memory_order_seq_cst);
-  // Notify anything waiting for an OG collection to finish.
-  oldGenCollectionActiveCondVar_.notify_all();
 }
 
 void HadesGC::completeMarking() {

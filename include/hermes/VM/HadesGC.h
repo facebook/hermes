@@ -18,6 +18,7 @@
 #include <deque>
 #include <memory>
 #include <mutex>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -393,9 +394,11 @@ class HadesGC final : public GCBase {
   /// Protected by oldGenMutex_.
   std::unique_ptr<MarkAcceptor> oldGenMarker_;
 
-  /// Use this with concurrentPhase_ to check for a completed collection.
-  /// Protected by oldGenMutex_.
-  std::condition_variable oldGenCollectionActiveCondVar_;
+  /// This is the background thread that does marking and sweeping concurrently
+  /// with the mutator.
+  /// It should only be joined via \c waitForCollectionToFinish, which ensures
+  /// that the STW pause handling is done correctly.
+  std::thread oldGenCollectionThread_;
 
   /// This mutex, condition variable, and bool are all used for the mutator to
   /// signal the background marking thread when it's safe to try and complete.
