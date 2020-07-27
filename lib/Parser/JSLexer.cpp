@@ -1058,100 +1058,100 @@ const char *JSLexer::skipLineComment(const char *start) {
   assert(
       (start[0] == '/' && start[1] == '/') ||
       (start[0] == '#' && start[1] == '!'));
-  start += 2;
+  const char *cur = start + 2;
 
   for (;;) {
-    switch ((unsigned char)*start) {
+    switch ((unsigned char)*cur) {
       case 0:
-        if (start == bufferEnd_)
+        if (cur == bufferEnd_)
           goto endLoop;
         else
-          ++start;
+          ++cur;
         break;
 
       case '\r':
       case '\n':
-        ++start;
+        ++cur;
         newLineBeforeCurrentToken_ = true;
         goto endLoop;
 
       // Line separator \u2028 UTF8 encoded is      : e2 80 a8
       // Paragraph separator \u2029 UTF8 encoded is: e2 80 a9
       case UTF8_LINE_TERMINATOR_CHAR0:
-        if (matchUnicodeLineTerminatorOffset1(start)) {
-          start += 3;
+        if (matchUnicodeLineTerminatorOffset1(cur)) {
+          cur += 3;
           newLineBeforeCurrentToken_ = true;
           goto endLoop;
         } else {
-          _decodeUTF8SlowPath(start);
+          _decodeUTF8SlowPath(cur);
         }
         break;
 
       default:
-        if (LLVM_UNLIKELY(isUTF8Start(*start)))
-          _decodeUTF8SlowPath(start);
+        if (LLVM_UNLIKELY(isUTF8Start(*cur)))
+          _decodeUTF8SlowPath(cur);
         else
-          ++start;
+          ++cur;
         break;
     }
   }
 endLoop:
-  return start;
+  return cur;
 }
 
 const char *JSLexer::skipBlockComment(const char *start) {
   assert(start[0] == '/' && start[1] == '*');
   SMLoc blockCommentStart = SMLoc::getFromPointer(start);
-  start += 2;
+  const char *cur = start + 2;
 
   for (;;) {
-    switch ((unsigned char)*start) {
+    switch ((unsigned char)*cur) {
       case 0:
-        if (start == bufferEnd_) {
-          error(SMLoc::getFromPointer(start), "non-terminated block comment");
+        if (cur == bufferEnd_) {
+          error(SMLoc::getFromPointer(cur), "non-terminated block comment");
           sm_.note(blockCommentStart, "comment started here");
           goto endLoop;
         } else {
-          ++start;
+          ++cur;
         }
         break;
 
       case '\r':
       case '\n':
-        ++start;
+        ++cur;
         newLineBeforeCurrentToken_ = true;
         break;
 
       // Line separator \u2028 UTF8 encoded is      : e2 80 a8
       // Paragraph separator \u2029 UTF8 encoded is: e2 80 a9
       case UTF8_LINE_TERMINATOR_CHAR0:
-        if (matchUnicodeLineTerminatorOffset1(start)) {
-          start += 3;
+        if (matchUnicodeLineTerminatorOffset1(cur)) {
+          cur += 3;
           newLineBeforeCurrentToken_ = true;
         } else {
-          _decodeUTF8SlowPath(start);
+          _decodeUTF8SlowPath(cur);
         }
         break;
 
       case '*':
-        ++start;
-        if (*start == '/') {
-          ++start;
+        ++cur;
+        if (*cur == '/') {
+          ++cur;
           goto endLoop;
         }
         break;
 
       default:
-        if (LLVM_UNLIKELY(isUTF8Start(*start)))
-          _decodeUTF8SlowPath(start);
+        if (LLVM_UNLIKELY(isUTF8Start(*cur)))
+          _decodeUTF8SlowPath(cur);
         else
-          ++start;
+          ++cur;
         break;
     }
   }
 endLoop:
 
-  return start;
+  return cur;
 }
 
 llvh::Optional<StringRef> JSLexer::tryReadMagicComment(
