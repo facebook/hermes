@@ -12,8 +12,5 @@ if (
   if (!tarball) {
     throw new Error("Could not locate tarball");
   }
-  child_process.execFileSync("/usr/bin/tar", [
-    "-xzvf",
-    path.join(__dirname, tarball),
-  ]);
+  child_process.execFileSync("tar", ["-xzvf", path.join(__dirname, tarball)]);
 }
