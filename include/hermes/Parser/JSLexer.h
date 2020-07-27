@@ -274,6 +274,9 @@ class JSLexer {
 
   bool strictMode_;
 
+  /// Whether to store the comments instead of skipping them.
+  bool storeComments_{false};
+
   /// If true, when a surrogate pair sequence is encountered in a string literal
   /// in the source, convert that string literal to its canonical UTF-8
   /// sequence.
@@ -301,6 +304,12 @@ class JSLexer {
         kind >= TokenKind::_first_resword && kind <= TokenKind::_last_resword);
     return resWordIdent_[ord(kind) - ord(TokenKind::_first_resword)];
   }
+
+  /// Storage for comments we store when storedComments_ == true.
+  /// Elements of commentStorage_ are pointers into the file buffer
+  /// and have the same lifetime as pointers such as bufferStart_ and
+  /// bufferEnd_.
+  std::vector<StringRef> commentStorage_{};
 
  public:
   /// \param convertSurrogates See member variable \p convertSurrogates_.
@@ -370,6 +379,10 @@ class JSLexer {
 
   void setStrictMode(bool strictMode) {
     strictMode_ = strictMode;
+  }
+
+  void setStoreComments(bool storeComments) {
+    storeComments_ = storeComments;
   }
 
   /// \return true if a line terminator was consumed before the current token.
@@ -475,6 +488,11 @@ class JSLexer {
   /// \return a pointer to the end of the buffer.
   const char *getBufferEnd() const {
     return bufferEnd_;
+  }
+
+  /// \return any stored comments to this point.
+  llvh::ArrayRef<StringRef> getStoredComments() const {
+    return commentStorage_;
   }
 
   /// Store state of the lexer and allow rescanning from that point.

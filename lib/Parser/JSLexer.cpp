@@ -1096,6 +1096,11 @@ const char *JSLexer::skipLineComment(const char *start) {
     }
   }
 endLoop:
+
+  if (storeComments_) {
+    commentStorage_.push_back(llvh::StringRef{start, (size_t)(cur - start)});
+  }
+
   return cur;
 }
 
@@ -1150,6 +1155,10 @@ const char *JSLexer::skipBlockComment(const char *start) {
     }
   }
 endLoop:
+
+  if (storeComments_) {
+    commentStorage_.push_back(llvh::StringRef{start, (size_t)(cur - start)});
+  }
 
   return cur;
 }

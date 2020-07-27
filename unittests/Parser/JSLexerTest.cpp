@@ -1017,4 +1017,34 @@ TEST(JSLexerTest, JSXTest) {
   EXPECT_STREQ("qwerty", lex.getCurToken()->getJSXTextRaw()->c_str());
 }
 
+TEST(JSLexerTest, StoreCommentsTest) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext diag(sm);
+
+  {
+    JSLexer lex("// hello\n;\n// world", sm, alloc, nullptr, true, false);
+    lex.setStoreComments(true);
+
+    ASSERT_EQ(TokenKind::semi, lex.advance()->getKind());
+    ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+
+    ASSERT_EQ(2, lex.getStoredComments().size());
+    EXPECT_EQ("// hello\n", lex.getStoredComments()[0]);
+    EXPECT_EQ("// world", lex.getStoredComments()[1]);
+  }
+
+  {
+    JSLexer lex("/* hello */;/*world*/", sm, alloc, nullptr, true, false);
+    lex.setStoreComments(true);
+
+    ASSERT_EQ(TokenKind::semi, lex.advance()->getKind());
+    ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+
+    ASSERT_EQ(2, lex.getStoredComments().size());
+    EXPECT_EQ("/* hello */", lex.getStoredComments()[0]);
+    EXPECT_EQ("/*world*/", lex.getStoredComments()[1]);
+  }
+}
+
 } // namespace
