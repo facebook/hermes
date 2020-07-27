@@ -72,6 +72,17 @@ int __llvm_profile_dump(void);
 }
 #endif
 
+// Android OSS has a bug where exception data can get mangled when going via
+// fbjni. This macro can be used to expose the root cause in adb log. It serves
+// no purpose other than as a backup.
+#ifdef __ANDROID__
+#define LOG_EXCEPTION_CAUSE(...) hermesLog("HermesVM", __VA_ARGS__)
+#else
+#define LOG_EXCEPTION_CAUSE(...) \
+  do {                           \
+  } while (0)
+#endif
+
 // If a function body might throw C++ exceptions other than
 // jsi::JSError from Hermes, it should be wrapped in this form:
 //
@@ -160,6 +171,7 @@ jsi::JSError makeJSError(jsi::Runtime &rt, Args &&... args) {
   std::string s;
   llvm::raw_string_ostream os(s);
   raw_ostream_append(os, std::forward<Args>(args)...);
+  LOG_EXCEPTION_CAUSE("JSError: %s", os.str().c_str());
   return jsi::JSError(rt, os.str());
 }
 
@@ -1113,12 +1125,14 @@ void HermesRuntime::loadSegment(
   auto ret = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
       std::make_unique<BufferAdapter>(std::move(buffer)));
   if (!ret.first) {
+    LOG_EXCEPTION_CAUSE("Error evaluating javascript: %s", ret.second.c_str());
     throw jsi::JSINativeException("Error evaluating javascript: " + ret.second);
   }
 
   auto requireContext = vm::Handle<vm::RequireContext>::dyn_vmcast(
       impl(this)->vmHandleFromValue(context));
   if (!requireContext) {
+    LOG_EXCEPTION_CAUSE("Error loading segment: Invalid context");
     throw jsi::JSINativeException("Error loading segment: Invalid context");
   }
 
@@ -1278,6 +1292,8 @@ HermesRuntimeImpl::prepareJavaScript(
 #endif
   }
   if (!bcErr.first) {
+    LOG_EXCEPTION_CAUSE(
+        "Compiling JS failed: %s", bcErr.second.c_str());
     throw jsi::JSINativeException(
         "Compiling JS failed: \n" + std::move(bcErr.second));
   }
@@ -1810,6 +1826,8 @@ jsi::Value HermesRuntimeImpl::call(
         vm::Handle<vm::Callable>::vmcast(&phv(func));
     if (count > std::numeric_limits<uint32_t>::max() ||
         !runtime_.checkAvailableStack((uint32_t)count)) {
+      LOG_EXCEPTION_CAUSE(
+          "HermesRuntimeImpl::call: Unable to call function: stack overflow");
       throw jsi::JSINativeException(
           "HermesRuntimeImpl::call: Unable to call function: stack overflow");
     }
@@ -1848,6 +1866,8 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
 
     if (count > std::numeric_limits<uint32_t>::max() ||
         !runtime_.checkAvailableStack((uint32_t)count)) {
+      LOG_EXCEPTION_CAUSE(
+          "HermesRuntimeImpl::call: Unable to call function: stack overflow");
       throw jsi::JSINativeException(
           "HermesRuntimeImpl::call: Unable to call function: stack overflow");
     }
@@ -1978,7 +1998,9 @@ void HermesRuntimeImpl::checkStatus(vm::ExecutionStatus status) {
     jsi::Value exception = valueFromHermesValue(runtime_.getThrownValue());
     runtime_.clearThrownValue();
     vm::ScopedNativeDepthReducer reducer(&runtime_);
-    throw jsi::JSError(*this, std::move(exception));
+    auto ex = jsi::JSError(*this, std::move(exception));
+    LOG_EXCEPTION_CAUSE("JSI rethrowing JS exception: %s", ex.what());
+    throw ex;
   }
 }
 
