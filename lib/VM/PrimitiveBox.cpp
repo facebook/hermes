@@ -236,6 +236,7 @@ void StringIteratorDeserialize(Deserializer &d, CellKind kind) {
 }
 #endif
 
+/// ES6.0 21.1.5.1 CreateStringIterator Abstract Operation
 CallResult<HermesValue> JSStringIterator::create(
     Runtime *runtime,
     Handle<StringPrimitive> string) {
@@ -251,6 +252,7 @@ CallResult<HermesValue> JSStringIterator::create(
       *string));
 }
 
+/// ES6.0 21.1.5.2.1 %StringIteratorPrototype%.next ( ) 4-14
 CallResult<HermesValue> JSStringIterator::nextElement(
     Handle<JSStringIterator> self,
     Runtime *runtime) {

@@ -1216,20 +1216,25 @@ stringPrototypeRepeat(void *, Runtime *runtime, NativeArgs args) {
   return builderRes->getStringPrimitive().getHermesValue();
 }
 
+/// ES6.0 21.1.3.27 String.prototype [ @@iterator ]( )
 CallResult<HermesValue>
 stringPrototypeSymbolIterator(void *, Runtime *runtime, NativeArgs args) {
+  // 1. Let O be RequireObjectCoercible(this value).
   auto thisValue = args.getThisHandle();
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, thisValue) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
+  // 2. Let S be ToString(O).
+  // 3. ReturnIfAbrupt(S).
   auto strRes = toString_RJS(runtime, thisValue);
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   auto string = runtime->makeHandle(std::move(*strRes));
 
+  // 4. Return CreateStringIterator(S).
   return JSStringIterator::create(runtime, string);
 }
 

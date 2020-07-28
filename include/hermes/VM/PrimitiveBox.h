@@ -158,6 +158,7 @@ class JSString final : public PrimitiveBox {
 };
 
 /// StringIterator object.
+/// See ES6 21.1.5.3 for Properties of String Iterator Instances.
 class JSStringIterator : public JSObject {
   using Super = JSObject;
 
