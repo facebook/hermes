@@ -272,8 +272,8 @@ TEST_F(JSLibTest, ObjectPreventExtensionsTest) {
   auto obj = createObject(runtime);
 
   GET_GLOBAL(Object);
-  auto objectCons =
-      Handle<JSObject>::vmcast(runtime->makeHandle(std::move(*propRes)));
+
+  auto objectCons = runtime->makeHandle<JSObject>(std::move(*propRes));
 
   ASSERT_RETURNED((propRes = JSObject::getNamed_RJS(
                        objectCons,

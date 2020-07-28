@@ -102,7 +102,7 @@ static CallResult<Handle<JSObject>> generatorResume(
   }
   if (LLVM_UNLIKELY(generator->isDelegated())) {
     generator->setIsDelegated(false);
-    return Handle<JSObject>::vmcast(runtime->makeHandle(std::move(*valueRes)));
+    return runtime->makeHandle<JSObject>(std::move(*valueRes));
   }
   return createIterResultObject(
       runtime,
@@ -165,7 +165,7 @@ static CallResult<Handle<JSObject>> generatorResumeAbrupt(
   }
   if (LLVM_UNLIKELY(generator->isDelegated())) {
     generator->setIsDelegated(false);
-    return Handle<JSObject>::vmcast(runtime->makeHandle(std::move(*valueRes)));
+    return runtime->makeHandle<JSObject>(std::move(*valueRes));
   }
   return createIterResultObject(
       runtime,

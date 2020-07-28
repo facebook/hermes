@@ -1166,8 +1166,7 @@ CallResult<IteratorRecord> getIterator(
   if (LLVM_UNLIKELY(!(*iteratorRes)->isObject())) {
     return runtime->raiseTypeError("iterator is not an object");
   }
-  Handle<JSObject> iterator =
-      Handle<JSObject>::vmcast(runtime->makeHandle(std::move(*iteratorRes)));
+  auto iterator = runtime->makeHandle<JSObject>(std::move(*iteratorRes));
 
   CallResult<PseudoHandle<>> nextMethodRes = JSObject::getNamed_RJS(
       iterator, runtime, Predefined::getSymbolID(Predefined::next));

@@ -1053,8 +1053,7 @@ regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args) {
 
   // c. Let setStatus be Set(rx, "lastIndex", 0, true).
   // d. ReturnIfAbrupt(setStatus).
-  Handle<HermesValue> zeroHandle =
-      runtime->makeHandle(HermesValue::encodeNumberValue(0));
+  Handle<> zeroHandle = runtime->makeHandle(HermesValue::encodeNumberValue(0));
   if (setLastIndex(rx, runtime, *zeroHandle) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
