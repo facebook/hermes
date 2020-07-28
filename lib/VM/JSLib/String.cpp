@@ -1369,8 +1369,7 @@ stringPrototypeMatch(void *, Runtime *runtime, NativeArgs args) {
     // c. If matcher is not undefined, then
     //   i. Return Call(matcher, regexp, «‍O»).
     if (!methodRes->getHermesValue().isUndefined()) {
-      Handle<Callable> matcher =
-          Handle<Callable>::vmcast(runtime, methodRes->getHermesValue());
+      auto matcher = runtime->makeHandle<Callable>(std::move(*methodRes));
       return Callable::executeCall1(
                  matcher, runtime, regexp, O.getHermesValue())
           .toCallResultHermesValue();
@@ -1398,17 +1397,13 @@ stringPrototypeMatch(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  PseudoHandle<Callable> func =
-      PseudoHandle<Callable>::dyn_vmcast(std::move(*propRes));
+  auto func =
+      Handle<Callable>::dyn_vmcast(runtime->makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(!func)) {
     return runtime->raiseTypeError(
         "RegExp.prototype[@@match] must be callable.");
   }
-  return Callable::executeCall1(
-             runtime->makeHandle(std::move(func)),
-             runtime,
-             rx,
-             S.getHermesValue())
+  return Callable::executeCall1(func, runtime, rx, S.getHermesValue())
       .toCallResultHermesValue();
 }
 
