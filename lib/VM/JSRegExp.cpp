@@ -109,6 +109,7 @@ Handle<JSRegExp> JSRegExp::create(
   return selfHandle;
 }
 
+/// ES11 21.2.3.2.2 RegExpInitialize ( obj, pattern, flags ) 5-
 ExecutionStatus JSRegExp::initialize(
     Handle<JSRegExp> selfHandle,
     Runtime *runtime,
@@ -141,6 +142,9 @@ ExecutionStatus JSRegExp::initialize(
   llvh::SmallVector<char16_t, 16> flagsText16;
   flags->copyUTF16String(flagsText16);
 
+  // 5. If F contains any code unit other than "g", "i", "m", "s", "u", or "y"
+  // or if it contains the same code unit more than once, throw a SyntaxError
+  // exception.
   auto sflags = regex::SyntaxFlags::fromString(flagsText16);
   if (!sflags) {
     runtime->raiseSyntaxError("Invalid RegExp: Invalid flags");

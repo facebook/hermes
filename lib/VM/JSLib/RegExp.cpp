@@ -200,7 +200,7 @@ static CallResult<HermesValue> regExpAlloc(
   return JSRegExp::create(runtime).getHermesValue();
 }
 
-/// 21.2.3.2.2 Runtime Semantics: RegExpInitialize ( obj, pattern, flags )
+/// ES11 21.2.3.2.2 RegExpInitialize ( obj, pattern, flags ) 1-4
 static CallResult<Handle<JSRegExp>> regExpInitialize(
     Runtime *runtime,
     Handle<> obj,
@@ -210,9 +210,9 @@ static CallResult<Handle<JSRegExp>> regExpInitialize(
   if (LLVM_UNLIKELY(!regExpObj)) {
     return ExecutionStatus::EXCEPTION;
   }
+  // 1. If pattern is undefined, let P be the empty String.
+  // 2. Else, let P be ? ToString(pattern).
   MutableHandle<StringPrimitive> P = runtime->makeMutableHandle(
-      runtime->getPredefinedString(Predefined::emptyString));
-  MutableHandle<StringPrimitive> F = runtime->makeMutableHandle(
       runtime->getPredefinedString(Predefined::emptyString));
   if (!pattern->isUndefined()) {
     auto strRes = toString_RJS(runtime, pattern);
@@ -221,6 +221,10 @@ static CallResult<Handle<JSRegExp>> regExpInitialize(
     }
     P = strRes->get();
   }
+  // 3. If flags is undefined, let F be the empty String.
+  // 4. Else, let F be ? ToString(flags).
+  MutableHandle<StringPrimitive> F = runtime->makeMutableHandle(
+      runtime->getPredefinedString(Predefined::emptyString));
   if (!flags->isUndefined()) {
     auto strRes = toString_RJS(runtime, flags);
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
