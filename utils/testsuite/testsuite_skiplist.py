@@ -923,6 +923,8 @@ SKIP_LIST = [
     # SpeciesConstructor
     "test262/test/built-ins/ArrayBuffer/prototype/slice/species-constructor-is-not-object.js",
     "test262/test/built-ins/TypedArray/prototype/map/speciesctor-get-ctor-abrupt.js",
+    "test262/test/built-ins/RegExp/prototype/Symbol.matchAll/species-constructor-get-constructor-throws.js",
+    "test262/test/built-ins/RegExp/prototype/Symbol.matchAll/species-constructor-is-not-object-throws.js",
     # t19359477
     "mjsunit/regress/regress-3976.js",
     "mjsunit/string-replace-gc.js",
@@ -1680,10 +1682,8 @@ PERMANENT_SKIP_LIST = [
 UNSUPPORTED_FEATURES = [
     "AggregateError",
     "Promise.prototype.finally",
-    "String.prototype.matchAll",
     "String.prototype.replaceAll",
     "Symbol.asyncIterator",
-    "Symbol.matchAll",
     "Symbol.species",
     "Symbol.prototype.description",
     "Symbol.unscopables",
