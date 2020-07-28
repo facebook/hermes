@@ -23,6 +23,7 @@
 #endif
 
 #include <cstdlib>
+#include <cxxabi.h>
 #include <ios>
 #include <stdexcept>
 #include <stdio.h>
@@ -278,7 +279,13 @@ local_ref<JThrowable> convertCppExceptionToJavaException(std::exception_ptr ptr)
   } catch (const char* msg) {
     current = JUnknownCppException::create(msg);
   } catch (...) {
-    current = JUnknownCppException::create();
+    const std::type_info* tinfo = abi::__cxa_current_exception_type();
+    if (tinfo) {
+      std::string msg = std::string("Unknown: ") + tinfo->name();
+      current = JUnknownCppException::create(msg.c_str());
+    } else {
+      current = JUnknownCppException::create();
+    }
   }
 
   if (addCppStack) {
