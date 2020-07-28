@@ -101,6 +101,7 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleModules) {
   CallResult<HermesValue> res1 =
       runtime->run("function foo() {}; foo(); foo;", "file:///fake1.js", flags);
   EXPECT_FALSE(isException(res1));
+  Handle<JSFunction> funcFoo = runtime->makeHandle(vmcast<JSFunction>(*res1));
 
   CallResult<HermesValue> res2 = runtime->run(
       "\n  function bar() {}; function bar() {}; function unused() {}; bar(); [bar, unused];",
@@ -110,8 +111,6 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleModules) {
 
   std::vector<CodeCoverageProfiler::FuncInfo> executedFuncInfos =
       profiler->getExecutedFunctions();
-
-  Handle<JSFunction> funcFoo = runtime->makeHandle(vmcast<JSFunction>(*res1));
 
   Handle<JSArray> funcArr = runtime->makeHandle(vmcast<JSArray>(*res2));
   Handle<JSFunction> funcBar =
