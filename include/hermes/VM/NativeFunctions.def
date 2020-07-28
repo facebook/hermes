@@ -327,6 +327,7 @@ NATIVE_FUNCTION(stringPrototypeToUpperCase)
 NATIVE_FUNCTION(stringPrototypeTrim)
 NATIVE_FUNCTION(stringPrototypeTrimEnd)
 NATIVE_FUNCTION(stringPrototypeTrimStart)
+NATIVE_FUNCTION(stringPrototypeMatchAll)
 NATIVE_FUNCTION(stringRaw)
 
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION

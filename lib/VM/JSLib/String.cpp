@@ -218,6 +218,13 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
       ctx,
       stringRaw,
       1);
+  defineMethod(
+      runtime,
+      stringPrototype,
+      Predefined::getSymbolID(Predefined::matchAll),
+      ctx,
+      stringPrototypeMatchAll,
+      1);
 
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
   defineMethod(
@@ -1236,6 +1243,105 @@ stringPrototypeSymbolIterator(void *, Runtime *runtime, NativeArgs args) {
 
   // 4. Return CreateStringIterator(S).
   return JSStringIterator::create(runtime, string).getHermesValue();
+}
+
+CallResult<HermesValue>
+stringPrototypeMatchAll(void *, Runtime *runtime, NativeArgs args) {
+  // 1. Let O be ? RequireObjectCoercible(this value).
+  auto O = args.getThisHandle();
+  if (LLVM_UNLIKELY(
+          checkObjectCoercible(runtime, O) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 2. If regexp is neither undefined nor null, then
+  auto regexp = args.getArgHandle(0);
+  if (!regexp->isUndefined() && !regexp->isNull()) {
+    // a. Let isRegExp be ? IsRegExp(regexp).
+    auto isRegExpRes = isRegExp(runtime, args.getArgHandle(0));
+    if (LLVM_UNLIKELY(isRegExpRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    // b. If isRegExp is true, then
+    if (*isRegExpRes) {
+      // Passing undefined and null checks imply regexp is an ObjectCoercible.
+      Handle<JSObject> regexpObj = Handle<JSObject>::vmcast(regexp);
+      bool isGlobal = false;
+      // i. Let flags be ? Get(regexp, "flags").
+      auto flagsPropRes = JSObject::getNamed_RJS(
+          regexpObj, runtime, Predefined::getSymbolID(Predefined::flags));
+      if (LLVM_UNLIKELY(flagsPropRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      auto flags = runtime->makeHandle(std::move(*flagsPropRes));
+      // ii. Perform ? RequireObjectCoercible(flags).
+      if (LLVM_UNLIKELY(
+              checkObjectCoercible(runtime, flags) ==
+              ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      // iii. If ? ToString(flags) does not contain "g", throw a TypeError
+      // exception.
+      auto strRes = toString_RJS(runtime, flags);
+      if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      auto strView = StringPrimitive::createStringView(
+          runtime, runtime->makeHandle(std::move(*strRes)));
+      for (char16_t c : strView)
+        if (c == u'g')
+          isGlobal = true;
+      if (!isGlobal)
+        return runtime->raiseTypeError(
+            "String.prototype.matchAll called with a non-global RegExp argument");
+    }
+    // c. Let matcher be ? GetMethod(regexp, @@matchAll).
+    auto matcherRes = getMethod(
+        runtime,
+        regexp,
+        runtime->makeHandle(
+            Predefined::getSymbolID(Predefined::SymbolMatchAll)));
+    if (LLVM_UNLIKELY(matcherRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    // d. If matcher is not undefined, then
+    if (!matcherRes->getHermesValue().isUndefined()) {
+      auto matcher = runtime->makeHandle<Callable>(std::move(*matcherRes));
+      // i. Return ? Call(matcher, regexp, «O»).
+      return Callable::executeCall1(
+                 matcher, runtime, regexp, O.getHermesValue())
+          .toCallResultHermesValue();
+    }
+  }
+
+  // 3. Let S be ? ToString(O).
+  auto strRes = toString_RJS(runtime, O);
+  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto S = runtime->makeHandle(std::move(*strRes));
+
+  // 4. Let rx be ? RegExpCreate(regexp, "g").
+  auto regRes = regExpCreate(runtime, regexp, runtime->getCharacterString('g'));
+  if (regRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  Handle<JSRegExp> rx = regRes.getValue();
+
+  // 5. Return ? Invoke(rx, @@matchAll, «S»).
+  auto propRes = JSObject::getNamed_RJS(
+      rx, runtime, Predefined::getSymbolID(Predefined::SymbolMatchAll));
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto func =
+      Handle<Callable>::dyn_vmcast(runtime->makeHandle(std::move(*propRes)));
+  if (LLVM_UNLIKELY(!func)) {
+    return runtime->raiseTypeError(
+        "RegExp.prototype[@@matchAll] must be callable.");
+  }
+  return Callable::executeCall1(func, runtime, rx, S.getHermesValue())
+      .toCallResultHermesValue();
 }
 
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION

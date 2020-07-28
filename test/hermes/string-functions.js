@@ -637,6 +637,8 @@ try {str.match(obj);} catch(e) {print('caught', e);}
 
 // test ES6 specific implementation
 // borrowed from mjsunit/es6/string-match.js
+print('match (Symbol.match)');
+// CHECK-LABEL: match (Symbol.match)
 var pattern = {};
 pattern[Symbol.match] = function(string) {
   return string.length;
@@ -659,6 +661,105 @@ try {
   print(e.name);
 }
 // CHECK-NEXT: TypeError
+
+print('matchAll');
+// CHECK-LABEL: matchAll
+var it = "foo bar".matchAll(/\w+/g)
+var foo = it.next()
+var bar = it.next()
+var nil = it.next()
+print(it)
+// CHECK-NEXT: [object RegExp String Iterator]
+print(foo.value, foo.done)
+// CHECK-NEXT: foo false
+print(foo.value[0], foo.value.index, foo.value.input, foo.value.groups);
+// CHECK-NEXT: foo 0 foo bar undefined
+print(bar.value, bar.done)
+// CHECK-NEXT: bar false
+print(bar.value[0], bar.value.index, bar.value.input, bar.value.groups);
+// CHECK-NEXT: bar 4 foo bar undefined
+print(nil.value, nil.done)
+// CHECK-NEXT: undefined true
+try {
+  "foo bar".matchAll(/\w+/);
+} catch(e) {
+  print(e)
+}
+// CHECK-NEXT: TypeError: String.prototype.matchAll called with a non-global RegExp argument
+try {
+  RegExp.prototype[Symbol.matchAll].call(1);
+} catch (e) {
+  print(e)
+}
+// CHECK-NEXT: TypeError: RegExp.prototype[@@matchAll] should be called on a js object
+try {
+  var it = "foo bar".matchAll(/\w+/g)
+  it.next.call(1)
+} catch (e) {
+  print(e)
+}
+// CHECK-NEXT: TypeError: RegExpStringIteratorPrototype.next requires 'this' is a RegExp String Iterator
+print(Array.from("foo bar".matchAll(/\w+/g)));
+// CHECK-NEXT: foo,bar
+print([..."foo bar".matchAll(/\w+/g)]);
+// CHECK-NEXT: foo,bar
+
+// matchAll should have no side effects to original regExp.
+print('matchAll (lastIndex)');
+// CHECK-LABEL: matchAll (lastIndex)
+var re = /\w+/g;
+re.lastIndex = 3;
+var it = 'foo bar'.matchAll(re)
+print(it.next().value, re.lastIndex)
+// CHECK-NEXT: bar 3
+print(it.next().value, re.lastIndex)
+// CHECK-NEXT: undefined 3
+
+print('matchAll (flags)');
+// CHECK-LABEL: matchAll (flags)
+var re = /\w+/;
+Object.defineProperty(re, 'flags', { value: 'g' })
+var it = 'foo bar'.matchAll(re)
+print(it.next().value)
+// CHECK-NEXT: foo
+print(it.next().value)
+// CHECK-NEXT: bar
+print(re.global)
+// CHECK-NEXT: false
+
+print('matchAll (Symbol.matchAll)');
+// CHECK-LABEL: matchAll (Symbol.matchAll)
+var re = /\w+/g;
+re[Symbol.matchAll] = function(str) { return str }
+print("abc cde".matchAll(re));
+// CHECK-NEXT: abc cde
+try {
+  var re = /\w+/;
+  re[Symbol.matchAll] = function(str) { return str }
+  "abc cde".matchAll(re)
+} catch(e) { print(e) }
+// CHECK-NEXT: TypeError: String.prototype.matchAll called with a non-global RegExp argument
+var re = {
+  [Symbol.matchAll]: function(str) { return str },
+  flags: "contain_g"
+}
+print("abc cde".matchAll(re));
+// CHECK-NEXT: abc cde
+var re = {
+  [Symbol.matchAll]: function(str) { return str },
+  flags: "blah"
+}
+// re had no [Symbol.match] made it !isRegExp, so this should not throw.
+print("abc cde".matchAll(re));
+// CHECK-NEXT: abc cde
+var re = {
+  [Symbol.match]: function(str) { return str },
+  [Symbol.matchAll]: function(str) { return str },
+  flags: "blah"
+}
+// re had [Symbol.match] made it isRegExp and now this throws!
+try { "abc cde".matchAll(re) } catch(e) { print(e) }
+// CHECK-NEXT: TypeError: String.prototype.matchAll called with a non-global RegExp argument
 
 print('normalize');
 // CHECK-LABEL: normalize
