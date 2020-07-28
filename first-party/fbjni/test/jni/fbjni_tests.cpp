@@ -852,6 +852,12 @@ jboolean TestInterDsoExceptionHandlingB(JNIEnv* env, jobject self) {
   return inter_dso_exception_test_2b();
 }
 
+struct NonStdException /* has no base class */ {};
+
+void TestHandleNonStdException(JNIEnv* env, jobject self) {
+  throw NonStdException();
+}
+
 void TestHandleCppIntThrow(JNIEnv* env, jobject self) {
   throw 42;
 }
@@ -1518,6 +1524,7 @@ void RegisterFbjniTests() {
       makeNativeMethod("nativeTestHandleCppSystemError", TestHandleCppSystemError),
       makeNativeMethod("nativeTestInterDsoExceptionHandlingA", TestInterDsoExceptionHandlingA),
       makeNativeMethod("nativeTestInterDsoExceptionHandlingB", TestInterDsoExceptionHandlingB),
+      makeNativeMethod("nativeTestHandleNonStdExceptionThrow", TestHandleNonStdException),
       makeNativeMethod("nativeTestHandleCppIntThrow", TestHandleCppIntThrow),
       makeNativeMethod("nativeTestHandleCppCharPointerThrow", TestHandleCppCharPointerThrow),
       makeNativeMethod("nativeTestThrowJavaExceptionByName", TestThrowJavaExceptionByName),
