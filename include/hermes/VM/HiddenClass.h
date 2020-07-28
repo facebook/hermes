@@ -39,13 +39,13 @@ struct ClassFlags {
   uint8_t dictionaryMode : 1;
 
   /// If dictionaryMode is set, this indicates whether the hidden class can
-  /// be used as the key in inline caches.  If we delete properties, or update
+  /// be used as the key in property caches.  If we delete properties, or update
   /// properties, we create a new hidden class for the owning object
-  /// (to invalidate any inline caches referencing the old hidden
+  /// (to invalidate any property caches referencing the old hidden
   /// class).  We may decide to limit the number of hidden classes
   /// created this way (currently we allow just one).  To do this, we
   /// set this property of the hidden class property, so that the new
-  /// hidden class is never added to an inline cache.
+  /// hidden class is never added to an property cache.
   uint8_t dictionaryNoCacheMode : 1;
 
   /// Set when we have index-like named properties (e.g. "0", "1", etc) defined
