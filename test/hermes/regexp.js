@@ -462,6 +462,20 @@ try { new RegExp("["); } catch (e) { print(e.message); }
 try { new RegExp("\\"); } catch (e) { print(e.message); }
 // CHECK-NEXT: Invalid RegExp: Incomplete escape
 
+// textual 'undefined' flag is invalid.
+try {
+  RegExp(/1/g, 'undefined');
+} catch (e) {
+  print (e);
+}
+// CHECK-NEXT: SyntaxError: Invalid RegExp: Invalid flags 'undefined'
+// actual undefined flag would result in empty pattern.
+var obj = {
+  get [Symbol.match]() { return () => 1 }
+}
+print(RegExp(obj))
+// CHECK-NEXT: /(?:)/
+
 print("RegExp.prototype[Symbol.match]");
 // CHECK-LABEL: RegExp.prototype[Symbol.match]
 print(/[0-9]+/g[Symbol.match]('2016-01-02'));

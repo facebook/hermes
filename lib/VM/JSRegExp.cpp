@@ -147,7 +147,8 @@ ExecutionStatus JSRegExp::initialize(
   // exception.
   auto sflags = regex::SyntaxFlags::fromString(flagsText16);
   if (!sflags) {
-    runtime->raiseSyntaxError("Invalid RegExp: Invalid flags");
+    runtime->raiseSyntaxError(
+        "Invalid RegExp: Invalid flags '" + TwineChar16(flagsText16) + "'");
     return ExecutionStatus::EXCEPTION;
   }
   selfHandle->syntaxFlags_ = *sflags;
