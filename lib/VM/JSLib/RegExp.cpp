@@ -12,6 +12,7 @@
 
 #include "JSLibInternal.h"
 
+#include "hermes/VM/JSRegExpStringIterator.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/SmallXString.h"
 #include "hermes/VM/StringPrimitive.h"
@@ -79,6 +80,18 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
       regExpPrototypeTest,
       1);
 
+  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
+
+  (void)defineMethod(
+      runtime,
+      proto,
+      Predefined::getSymbolID(Predefined::SymbolMatchAll),
+      Predefined::getSymbolID(Predefined::squareSymbolMatchAll),
+      nullptr,
+      regExpPrototypeSymbolMatchAll,
+      1,
+      dpf);
+
   // The RegExp prototype and constructors have a variety of getters defined on
   // it; use this helper to define them. Note the context is passed as an
   // intptr_t which we convert to void*.
@@ -126,8 +139,6 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
   defineGetter(cons, Predefined::lastParen, regExpLastParenGetter);
 
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
-  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
-
   defineMethod(
       runtime,
       proto,
@@ -135,7 +146,6 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
       nullptr,
       regExpPrototypeToString,
       0);
-
   (void)defineMethod(
       runtime,
       proto,
@@ -237,10 +247,18 @@ regExpCreate(Runtime *runtime, Handle<> P, Handle<> F) {
       runtime, runtime->makeHandle(objRes.getValue()), P, F);
 }
 
-CallResult<HermesValue>
-regExpConstructor(void *, Runtime *runtime, NativeArgs args) {
-  Handle<> pattern = args.getArgHandle(0);
-  Handle<> flags = args.getArgHandle(1);
+/// ES6 21.2.3.1 RegExp ( pattern, flags )
+/// The internals of \c regExpConstructor. It's extracted to allow internal call
+/// sites such as @@MatchAll to construct a new JSRegExp via handles.
+/// \p isConstructorCall true if a newTarget is not undefined.
+// TODO: right now the NewTarget can only be the RegExp constructor itself,
+// after supporting subclassing, this function should take the NewTarget as a
+// param and compute \p isConstructorCall from the NewTarget.
+static CallResult<Handle<JSObject>> regExpConstructorInternal(
+    Runtime *runtime,
+    Handle<> pattern,
+    Handle<> flags,
+    bool isConstructorCall) {
   // 1. Let patternIsRegExp be IsRegExp(pattern).
   // 2. ReturnIfAbrupt(patternIsRegExp).
   auto callRes = isRegExp(runtime, pattern);
@@ -263,7 +281,7 @@ regExpConstructor(void *, Runtime *runtime, NativeArgs args) {
   Handle<> newTarget = runtime->makeHandle(std::move(*propRes));
   // 4. Else,
   // This is not a constructor call.
-  if (!args.isConstructorCall()) {
+  if (!isConstructorCall) {
     // a. Let newTarget be the active function object.
     // Note: newTarget is the RegExp constructor, which is already set.
     // b. If patternIsRegExp is true and flags is undefined, then
@@ -281,7 +299,10 @@ regExpConstructor(void *, Runtime *runtime, NativeArgs args) {
       // iii. If SameValue(newTarget, patternConstructor) is true, return
       // pattern.
       if (isSameValue(newTarget.getHermesValue(), patternConstructor->get())) {
-        return pattern.getHermesValue();
+        // Note: unfortunately, even at this point it's still unsafe to assume
+        // pattern is a JSRegExp, see the objWithRegExpCons from
+        // test/hermes/regexp.js for an example of how such assumptions falls.
+        return patternObj;
       }
     }
   }
@@ -348,6 +369,20 @@ regExpConstructor(void *, Runtime *runtime, NativeArgs args) {
   // 10. Return RegExpInitialize(O, P, F).
   auto regExpRes =
       regExpInitialize(runtime, runtime->makeHandle(objRes.getValue()), P, F);
+  if (LLVM_UNLIKELY(regExpRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return Handle<JSObject>::vmcast(*regExpRes);
+}
+
+/// ES6 21.2.3.1 RegExp ( pattern, flags )
+// This is just a wrapper of \c regExpConstructorInternal to take NativeArgs.
+CallResult<HermesValue>
+regExpConstructor(void *, Runtime *runtime, NativeArgs args) {
+  Handle<> pattern = args.getArgHandle(0);
+  Handle<> flags = args.getArgHandle(1);
+  auto regExpRes = regExpConstructorInternal(
+      runtime, pattern, flags, args.isConstructorCall());
   if (LLVM_UNLIKELY(regExpRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -956,6 +991,90 @@ CallResult<HermesValue> getSubstitution(
   }
   // 12. Return result.
   return StringPrimitive::create(runtime, result);
+}
+
+/// ES11 21.2.5.8
+/// TODO(T69340954): make this compliant once we support species constructor.
+CallResult<HermesValue>
+regExpPrototypeSymbolMatchAll(void *, Runtime *runtime, NativeArgs args) {
+  GCScope gcScope{runtime};
+
+  // 1. Let R be the this value.
+  auto R = args.dyncastThis<JSObject>();
+
+  // 2. If Type(R) is not Object, throw a TypeError exception.
+  if (LLVM_UNLIKELY(!R)) {
+    return runtime->raiseTypeError(
+        "RegExp.prototype[@@matchAll] should be called on a js object");
+  }
+
+  // 3. Let S be ? ToString(string).
+  auto strRes = toString_RJS(runtime, args.getArgHandle(0));
+  if (strRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto S = runtime->makeHandle(std::move(*strRes));
+
+  // 4. Let C be ? SpeciesConstructor(R, %RegExp%).
+  // Since species constructors is not supported, C is always %RegExp%.
+
+  // 5. Let flags be ? ToString(? Get(R, "flags")).
+  auto flagsPropRes = JSObject::getNamed_RJS(
+      R, runtime, Predefined::getSymbolID(Predefined::flags));
+  if (LLVM_UNLIKELY(flagsPropRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto flagsStrRes =
+      toString_RJS(runtime, runtime->makeHandle(std::move(*flagsPropRes)));
+  if (LLVM_UNLIKELY(flagsStrRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto flags = runtime->makeHandle(std::move(*flagsStrRes));
+
+  // 6. Let matcher be ? Construct(C, « R, flags »).
+  // This is thus equivalent to RegExp(« R, flags »).
+  // it is necessary to invoke the 21.2.3.1 RegExp, neither RegExpCreate
+  // nor internal JSRegExp creation can shortcut without diverging the spec.
+  auto newRegExpRes = regExpConstructorInternal(runtime, R, flags, false);
+  if (newRegExpRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto matcher = *newRegExpRes;
+
+  // 7. Let lastIndex be ? ToLength(? Get(R, "lastIndex")).
+  auto propRes = JSObject::getNamed_RJS(
+      R, runtime, Predefined::getSymbolID(Predefined::lastIndex));
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto lenRes = toLength(runtime, runtime->makeHandle(std::move(*propRes)));
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double lastIndex = lenRes->getNumber();
+  // 8. Perform ? Set(matcher, "lastIndex", lastIndex, true).
+  if (setLastIndex(matcher, runtime, lastIndex) == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 9. If flags contains "g", let global be true.
+  // 10. Else, let global be false.
+  // 11. If flags contains "u", let fullUnicode be true.
+  // 12. Else, let fullUnicode be false.
+  bool global = false;
+  bool fullUnicode = false;
+  auto strView = StringPrimitive::createStringView(runtime, flags);
+  for (auto it = strView.begin(); it < strView.end(); it++) {
+    if (*it == 'g')
+      global = true;
+    if (*it == 'u')
+      fullUnicode = true;
+  }
+
+  // 13. Return ! CreateRegExpStringIterator(matcher, S, global, fullUnicode).
+  return JSRegExpStringIterator::create(
+             runtime, matcher, S, global, fullUnicode)
+      .getHermesValue();
 }
 
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
