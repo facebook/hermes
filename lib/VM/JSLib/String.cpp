@@ -1235,7 +1235,7 @@ stringPrototypeSymbolIterator(void *, Runtime *runtime, NativeArgs args) {
   auto string = runtime->makeHandle(std::move(*strRes));
 
   // 4. Return CreateStringIterator(S).
-  return JSStringIterator::create(runtime, string);
+  return JSStringIterator::create(runtime, string).getHermesValue();
 }
 
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION

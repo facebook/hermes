@@ -173,7 +173,7 @@ class JSStringIterator : public JSObject {
     return cell->getKind() == CellKind::StringIteratorKind;
   }
 
-  static CallResult<HermesValue> create(
+  static PseudoHandle<JSStringIterator> create(
       Runtime *runtime,
       Handle<StringPrimitive> string);
 

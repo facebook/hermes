@@ -237,13 +237,13 @@ void StringIteratorDeserialize(Deserializer &d, CellKind kind) {
 #endif
 
 /// ES6.0 21.1.5.1 CreateStringIterator Abstract Operation
-CallResult<HermesValue> JSStringIterator::create(
+PseudoHandle<JSStringIterator> JSStringIterator::create(
     Runtime *runtime,
     Handle<StringPrimitive> string) {
   auto proto = Handle<JSObject>::vmcast(&runtime->stringIteratorPrototype);
 
   JSObjectAlloc<JSStringIterator> mem{runtime};
-  return mem.initToHermesValue(new (mem) JSStringIterator(
+  return mem.initToPseudoHandle(new (mem) JSStringIterator(
       runtime,
       *proto,
       runtime->getHiddenClassForPrototypeRaw(
