@@ -32,6 +32,16 @@ function four() { with({}) {}; }
 //CHECK-NEXT: (function () { return inAnonymous; })()
 //CHECK-NEXT:                       ^~~~~~~~~~~
 
+(() => { return inAnonymousArrow; })()
+//CHECK: {{.*}}warning: the variable "inAnonymousArrow" was not declared in anonymous arrow function " 1#"
+//CHECK-NEXT: (() => { return inAnonymousArrow; })()
+//CHECK-NEXT:                 ^~~~~~~~~~~~~~~~
+
+var inferredName = () => { return i }; inferredName();
+//CHECK: {{.*}}warning: the variable "i" was not declared in arrow function "inferredName"
+//CHECK-NEXT: var inferredName = () => { return i }; inferredName();
+//CHECK-NEXT:                                   ^
+
 //CHECK:{{.*}}warning: the property "color" was set multiple times in the object definition.
 //CHECK-NEXT:var x = { color: 10, color: 20 };
 //CHECK-NEXT:                            ^~

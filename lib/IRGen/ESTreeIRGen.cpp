@@ -507,7 +507,7 @@ Value *ESTreeIRGen::ensureVariableExists(ESTree::IdentifierNode *id) {
         Warning::UndefinedVariable,
         id->getSourceRange(),
         Twine("the variable \"") + name.str() + "\" was not declared in " +
-            (currentFunc->isAnonymous() ? "anonymous " : "") + "function \"" +
+            currentFunc->getDescriptiveDefinitionKindStr() + " \"" +
             currentFunc->getInternalNameStr() + "\"");
   }
 

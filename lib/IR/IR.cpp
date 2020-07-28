@@ -202,12 +202,23 @@ Function::~Function() {
     Value::destroy(ES);
 }
 
-const Identifier Function::getInternalName() const {
-  return internalName_;
+std::string Function::getDefinitionKindStr(bool isDescriptive) const {
+  switch (definitionKind_) {
+    case Function::DefinitionKind::ES5Function:
+      return "function";
+    case Function::DefinitionKind::ES6Constructor:
+      return "constructor";
+    case Function::DefinitionKind::ES6Arrow:
+      return isDescriptive ? "arrow function" : "arrow";
+    case Function::DefinitionKind::ES6Method:
+      return "method";
+  }
+  assert(false && "Invalid DefinitionKind");
+  return "function";
 }
 
-StringRef Function::getInternalNameStr() const {
-  return internalName_.str();
+std::string Function::getDescriptiveDefinitionKindStr() const {
+  return (isAnonymous() ? "anonymous " : "") + getDefinitionKindStr(true);
 }
 
 BasicBlock::BasicBlock(Function *parent)

@@ -32,9 +32,10 @@ Function *IRBuilder::createFunction(
     SMRange sourceRange,
     bool isGlobal,
     Function *insertBefore) {
+  // Function must have a name. If the source doesn't provide the function name,
+  // Hermes will try to infer the name from the name of a variable or property
+  // it is assigned to. If there was no inference, an empty string is used.
   if (!OriginalName.isValid()) {
-    // Function must have a name, even it's empty.
-    // Eventually we will give it a properly inferred name.
     OriginalName = createIdentifier("");
   }
   return new Function(

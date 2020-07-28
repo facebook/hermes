@@ -1287,8 +1287,7 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   ParameterListType Parameters;
   /// The user-specified original name of the function,
   /// or if not specified (e.g. anonymous), the inferred name.
-  /// Currently there is no inference, and hence it will be empty string
-  /// if not specified.
+  /// If there was no inference, an empty string.
   Identifier originalOrInferredName_;
   /// What kind of function is this - es5, constructor, etc.
   DefinitionKind const definitionKind_;
@@ -1397,11 +1396,31 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
     return originalOrInferredName_.str().empty();
   }
 
-  /// Just an alias for \c getOriginalOrInferredName().
-  const Identifier getInternalName() const;
+  /// \param isDescriptive whether in a more descriptive manner, e.g.
+  /// "arrow function" instead of "arrow".
+  /// \return the string representation of enum \c DefinitionKind.
+  std::string getDefinitionKindStr(bool isDescriptive) const;
 
-  /// Just an alias for \c getOriginalOrInferredNameStr().
-  StringRef getInternalNameStr() const;
+  /// \return the string representation in a more human readable manner that
+  /// should be used in error messages. Currently it only prefixes a "anonymous"
+  /// when it's needed, e.g. "anonymous function" instead of "function".
+  std::string getDescriptiveDefinitionKindStr() const;
+
+  /// \returns the internal name of the function.
+  const Identifier getInternalName() const {
+    return internalName_;
+  }
+
+  /// \returns the string representation of internal name.
+  StringRef getInternalNameStr() const {
+    return internalName_.str();
+  }
+
+  /// \returns the original function name specified by the user,
+  /// or if not specified, the inferred name.
+  const Identifier getOriginalOrInferredName() const {
+    return originalOrInferredName_;
+  }
 
   /// \return the Context of the parent module.
   Context &getContext() const;
@@ -1430,12 +1449,6 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   /// Then remove the function from the module, remove all references.
   /// However this does not deallocate (destroy) the memory of this function.
   void eraseFromParentNoDestroy();
-
-  /// \returns the original function name specified by the user,
-  /// or if not specified, the inferred name.
-  Identifier getOriginalOrInferredName() const {
-    return originalOrInferredName_;
-  }
 
   /// A debug utility that dumps the textual representation of the IR to stdout.
   void dump();
