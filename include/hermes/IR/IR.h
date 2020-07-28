@@ -1392,6 +1392,11 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
     return isGlobal_;
   }
 
+  /// \return whether this is a anonymous function.
+  bool isAnonymous() const {
+    return originalOrInferredName_.str().empty();
+  }
+
   /// Just an alias for \c getOriginalOrInferredName().
   const Identifier getInternalName() const;
 

@@ -27,6 +27,10 @@ function four() { with({}) {}; }
 //CHECK-NEXT: function four() { with({}) {}; }
 //CHECK-NEXT:                   ^~~~~~~~~~~
 
+(function () { return inAnonymous; })()
+//CHECK: {{.*}}warning: the variable "inAnonymous" was not declared in anonymous function ""
+//CHECK-NEXT: (function () { return inAnonymous; })()
+//CHECK-NEXT:                       ^~~~~~~~~~~
 
 //CHECK:{{.*}}warning: the property "color" was set multiple times in the object definition.
 //CHECK-NEXT:var x = { color: 10, color: 20 };

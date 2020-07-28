@@ -506,8 +506,8 @@ Value *ESTreeIRGen::ensureVariableExists(ESTree::IdentifierNode *id) {
     Builder.getModule()->getContext().getSourceErrorManager().warning(
         Warning::UndefinedVariable,
         id->getSourceRange(),
-        Twine("the variable \"") + name.str() +
-            "\" was not declared in function \"" +
+        Twine("the variable \"") + name.str() + "\" was not declared in " +
+            (currentFunc->isAnonymous() ? "anonymous " : "") + "function \"" +
             currentFunc->getInternalNameStr() + "\"");
   }
 
