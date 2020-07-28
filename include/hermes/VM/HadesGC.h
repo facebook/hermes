@@ -156,6 +156,10 @@ class HadesGC final : public GCBase {
   /// \param callback A function to call on each found object.
   void forAllObjs(const std::function<void(GCCell *)> &callback);
 
+  /// Inform the GC that TTI has been reached. This will transition the GC mode,
+  /// if the GC was currently allocating directly into OG.
+  void ttiReached();
+
   /// \}
 
   /// \return true if the pointer lives in the young generation.
@@ -270,6 +274,9 @@ class HadesGC final : public GCBase {
     /// Create a new OG segment and attach it to the end of the OG segment
     /// vector. \return a reference to the newly created segment.
     HeapSegment &createSegment();
+
+    /// Take ownership of the given segment.
+    void moveSegment(std::unique_ptr<HeapSegment> &&seg);
 
     /// Allocate into OG. Returns a pointer to the newly allocated space. That
     /// space must be filled before releasing the oldGenMutex_.
@@ -410,6 +417,12 @@ class HadesGC final : public GCBase {
   bool worldStopped_{false};
   bool stopTheWorldRequested_{false};
 
+  /// If true, whenever YG fills up immediately put it into the OG.
+  bool promoteYGToOG_;
+
+  /// If true, turn off promoteYGToOG_ as soon as the first OG GC occurs.
+  bool revertToYGAtTTI_;
+
   /// The main entrypoint for all allocations.
   /// \param sz The size of allocation requested. This might be rounded up to
   ///   fit heap alignment requirements.
@@ -433,6 +446,10 @@ class HadesGC final : public GCBase {
   /// \post The YG is completely empty, and all bytes are available for new
   ///   allocations.
   void youngGenCollection();
+
+  /// In the "no GC before TTI" mode, move the Young Gen heap segment to the
+  /// Old Gen without scanning for garbage.
+  void promoteYoungGenToOldGen();
 
   /// Perform an OG garbage collection. All live objects in OG will be left
   /// untouched, all unreachable objects will be placed into a free list that
@@ -507,6 +524,9 @@ class HadesGC final : public GCBase {
   /// Accessor for the YG.
   HeapSegment &youngGen();
   const HeapSegment &youngGen() const;
+
+  /// Create a new YG segment.
+  std::unique_ptr<HeapSegment> createYoungGenSegment();
 
   /// Searches the old gen for this pointer. This is O(number of OG segments).
   /// NOTE: In any non-debug case, \c inYoungGen should be used instead, because

@@ -573,6 +573,7 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
     assert(
         !HeapSegment::getCellMarkBit(cell) &&
         "A marked object should never be pushed onto a worklist");
+    assert(!gc.inYoungGen(cell) && "Should never push a young gen cell");
     HeapSegment::setCellMarkBit(cell);
     // There could be a race here: however, the mutator will never change a
     // cell's kind after initialization. The GC thread might to a free cell, but
@@ -659,8 +660,9 @@ HadesGC::HadesGC(
           // At least one YG segment and one OG segment.
           2 * AlignedStorage::size())},
       provider_(std::move(provider)),
-      youngGen_{new HeapSegment{std::move(
-          AlignedStorage::create(provider_.get(), "young-gen").get())}} {
+      youngGen_{createYoungGenSegment()},
+      promoteYGToOG_{!gcConfig.getAllocInYoung()},
+      revertToYGAtTTI_{gcConfig.getRevertToYGAtTTI()} {
   const size_t minHeapSegments =
       // Align up first to round up.
       llvh::alignTo<AlignedStorage::size()>(gcConfig.getMinHeapSize()) /
@@ -805,6 +807,11 @@ void HadesGC::oldGenCollection() {
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormed();
 #endif
+  if (revertToYGAtTTI_) {
+    // If we've reached the first OG collection, and reverting behavior is
+    // requested, switch back to YG mode.
+    promoteYGToOG_ = false;
+  }
   // First, clear any mark bits that were set by direct-to-OG allocation, they
   // aren't needed anymore.
   for (auto segit = oldGen_.begin(), segitend = oldGen_.end();
@@ -1197,6 +1204,10 @@ void HadesGC::forAllObjs(const std::function<void(GCCell *)> &callback) {
   }
 }
 
+void HadesGC::ttiReached() {
+  promoteYGToOG_ = false;
+}
+
 #ifndef NDEBUG
 
 bool HadesGC::validPointer(const void *p) const {
@@ -1408,7 +1419,9 @@ void HadesGC::youngGenCollection() {
   // Check that the card tables are well-formed before the collection.
   verifyCardTable();
 #endif
-  {
+  if (promoteYGToOG_) {
+    promoteYoungGenToOldGen();
+  } else {
     CollectionSection section{this};
 
     auto &yg = youngGen();
@@ -1451,10 +1464,10 @@ void HadesGC::youngGenCollection() {
     // Now the copy list is drained, and all references point to the old
     // gen. Clear the level of the young gen.
     yg.resetLevel();
-    // Set all bits to 1. This way an OG collection never thinks an object
-    // in YG needs to be marked.
-    yg.markBitArray().markAll();
   }
+  // Set all bits to 1. This way an OG collection never thinks an object
+  // in YG needs to be marked.
+  youngGen().markBitArray().markAll();
 #ifdef HERMES_SLOW_DEBUG
   // Check that the card tables are well-formed after the collection.
   verifyCardTable();
@@ -1470,6 +1483,23 @@ void HadesGC::youngGenCollection() {
       oldGenCollection();
     }
   }
+}
+
+void HadesGC::promoteYoungGenToOldGen() {
+  // The flag is on to prevent GC until TTI. Promote the whole YG segment
+  // directly into OG.
+  // Before promoting it, set the cell heads correctly for the segment
+  // going into OG. This could be done at allocation time, but at a cost
+  // to YG alloc times for a case that might not come up.
+  youngGen_->forAllObjs([this](GCCell *cell) { youngGen_->setCellHead(cell); });
+  // It is important that this operation is just a move of pointers to
+  // segments. The addresses have to stay the same or else it would
+  // require a marking pass through all objects.
+  oldGen_.moveSegment(std::move(youngGen_));
+  // Replace YG with a new segment.
+  youngGen_ = createYoungGenSegment();
+  // These objects will be finalized by an OG collection.
+  youngGenFinalizables_.clear();
 }
 
 void HadesGC::scanDirtyCards(EvacAcceptor &acceptor) {
@@ -1724,6 +1754,14 @@ HadesGC::HeapSegment &HadesGC::OldGen::operator[](size_t i) {
   return *segments_[i];
 }
 
+std::unique_ptr<HadesGC::HeapSegment> HadesGC::createYoungGenSegment() {
+  auto res = AlignedStorage::create(provider_.get(), "young-gen");
+  if (!res) {
+    hermes_fatal("Failed to alloc young gen");
+  }
+  return std::unique_ptr<HeapSegment>(new HeapSegment{std::move(res.get())});
+}
+
 HadesGC::HeapSegment &HadesGC::OldGen::createSegment() {
   auto res = AlignedStorage::create(gc_->provider_.get(), "old-gen");
   if (!res) {
@@ -1731,6 +1769,10 @@ HadesGC::HeapSegment &HadesGC::OldGen::createSegment() {
   }
   segments_.emplace_back(new HeapSegment{std::move(res.get())});
   return **segments_.rbegin();
+}
+
+void HadesGC::OldGen::moveSegment(std::unique_ptr<HeapSegment> &&seg) {
+  segments_.emplace_back(std::move(seg));
 }
 
 bool HadesGC::inOldGen(const void *p) const {
