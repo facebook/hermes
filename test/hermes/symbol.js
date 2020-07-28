@@ -140,6 +140,8 @@ print(String(Symbol.hasInstance));
 // CHECK-NEXT: Symbol(Symbol.hasInstance)
 print(String(Symbol.match));
 // CHECK-NEXT: Symbol(Symbol.match)
+print(String(Symbol.matchAll));
+// CHECK-NEXT: Symbol(Symbol.matchAll)
 print(String(Symbol.search));
 // CHECK-NEXT: Symbol(Symbol.search)
 print(String(Symbol.replace));
