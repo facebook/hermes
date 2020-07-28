@@ -220,6 +220,7 @@ STR(isSafeInteger, "isSafeInteger")
 STR(Boolean, "Boolean")
 
 STR(StringIterator, "String Iterator")
+STR(RegExpStringIterator, "RegExp String Iterator")
 
 STR(Date, "Date")
 STR(UTC, "UTC")

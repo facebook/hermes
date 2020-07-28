@@ -33,6 +33,7 @@ set(source_files
   JSObject.cpp
   JSProxy.cpp
   JSRegExp.cpp
+  JSRegExpStringIterator.cpp
   JSMapImpl.cpp
   JSNativeFunctions.cpp
   JSTypedArray.cpp
@@ -101,6 +102,7 @@ set(source_files
   JSLib/Number.cpp
   JSLib/Boolean.cpp
   JSLib/RegExp.cpp
+  JSLib/RegExpStringIterator.cpp
   JSLib/DateUtil.cpp
   JSLib/Sorting.cpp
   JSLib/Symbol.cpp

@@ -335,6 +335,19 @@ CallResult<HermesValue> splitInternal(
     Handle<> limit,
     Handle<> separator);
 
+/// Set the lastIndex property of \p regexp to \p value.
+inline ExecutionStatus
+setLastIndex(Handle<JSObject> regexp, Runtime *runtime, HermesValue hv) {
+  return runtime->putNamedThrowOnError(
+      regexp, PropCacheID::RegExpLastIndex, hv);
+}
+
+/// Set the lastIndex property of \p regexp to \p value.
+inline ExecutionStatus
+setLastIndex(Handle<JSObject> regexp, Runtime *runtime, double value) {
+  return setLastIndex(regexp, runtime, HermesValue::encodeNumberValue(value));
+}
+
 /// ES6.0 21.2.5.2.3
 /// If \p unicode is set and the character at \p index in \S is the start of a
 /// surrogate pair, \return index + 2. Otherwise \return index + 1.
@@ -390,6 +403,9 @@ void populateArrayIteratorPrototype(Runtime *runtime);
 
 /// Create the StringIterator prototype.
 void populateStringIteratorPrototype(Runtime *runtime);
+
+/// Create the RegExpStringIterator prototype.
+void populateRegExpStringIteratorPrototype(Runtime *runtime);
 
 /// Create the %GeneratorPrototype%.
 void populateGeneratorPrototype(Runtime *runtime);

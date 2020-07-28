@@ -354,18 +354,6 @@ regExpConstructor(void *, Runtime *runtime, NativeArgs args) {
   return regExpRes->getHermesValue();
 }
 
-/// Set the lastIndex property of \p regexp to \p value.
-static ExecutionStatus
-setLastIndex(Handle<JSObject> regexp, Runtime *runtime, HermesValue hv) {
-  return runtime->putNamedThrowOnError(
-      regexp, PropCacheID::RegExpLastIndex, hv);
-}
-
-static ExecutionStatus
-setLastIndex(Handle<JSObject> regexp, Runtime *runtime, double value) {
-  return setLastIndex(regexp, runtime, HermesValue::encodeNumberValue(value));
-}
-
 // ES6 21.2.5.2.2
 CallResult<Handle<JSArray>> directRegExpExec(
     Handle<JSRegExp> regexp,

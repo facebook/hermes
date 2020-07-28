@@ -523,6 +523,12 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
           runtime, Handle<JSObject>::vmcast(&runtime->iteratorPrototype))
           .getHermesValue();
 
+  // "Forward declaration" of %RegExpStringIteratorPrototype%.
+  runtime->regExpStringIteratorPrototype =
+      JSObject::create(
+          runtime, Handle<JSObject>::vmcast(&runtime->iteratorPrototype))
+          .getHermesValue();
+
   runtime->generatorPrototype =
       JSObject::create(
           runtime, Handle<JSObject>::vmcast(&runtime->iteratorPrototype))
@@ -611,6 +617,9 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
 
   /// String Iterator.
   populateStringIteratorPrototype(runtime);
+
+  /// RegExp String Iterator.
+  populateRegExpStringIteratorPrototype(runtime);
 
   // GeneratorFunction constructor (not directly exposed in the global object).
   createGeneratorFunctionConstructor(runtime);
