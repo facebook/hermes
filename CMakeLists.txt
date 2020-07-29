@@ -34,7 +34,7 @@ endif()
 # - npm/package.json
 # - hermes.podspec
 project(Hermes
-        VERSION 0.4.1
+        VERSION 0.4.3
         LANGUAGES C CXX)
 
 include(CheckCXXCompilerFlag)

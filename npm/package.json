@@ -1,6 +1,6 @@
 {
   "name": "hermes-engine",
-  "version": "0.4.1",
+  "version": "0.4.3",
   "private": false,
   "description": "A JavaScript engine optimized for running React Native on Android",
   "license": "MIT",
