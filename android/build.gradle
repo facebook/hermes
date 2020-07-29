@@ -47,7 +47,7 @@ buildscript {
     jcenter()
   }
   dependencies {
-    classpath 'com.android.tools.build:gradle:3.3.0'
+    classpath 'com.android.tools.build:gradle:4.0.0'
   }
 }
 
@@ -80,9 +80,9 @@ task copyPublicHeaders(type: Copy) {
 }
 
 task githubRelease(dependsOn: ['hermes:build', 'cppruntime:build', 'copyApiHeaders', 'copyJsiHeaders', 'copyPublicHeaders'], type: Tar) {
-  baseName = "hermes-runtime-android"
-  version = "v" + release_version
-  extension = "tar.gz"
+  archiveBaseName = "hermes-runtime-android"
+  archiveVersion = "v" + release_version
+  archiveExtension = "tar.gz"
   compression = Compression.GZIP
   destinationDirectory = file("${hermes_ws}/build_android/distributions")
   from "$outputDir"
