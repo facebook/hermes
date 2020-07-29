@@ -23,3 +23,4 @@ set_property(TARGET hermes-jsi APPEND_STRING PROPERTY
 target_link_libraries(hermes-jsi
   hermesapi
   )
+

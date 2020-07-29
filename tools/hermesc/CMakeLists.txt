@@ -35,3 +35,7 @@ if(NOT CMAKE_CROSSCOMPILING)
   # Namespace added to avoid clashing the host binary with the target binary.
   export(TARGETS hermesc FILE ${CMAKE_BINARY_DIR}/ImportHermesc.cmake NAMESPACE native-)
 endif()
+
+install(TARGETS hermesc
+  RUNTIME DESTINATION bin
+)

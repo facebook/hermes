@@ -23,3 +23,7 @@ target_link_libraries(hbcdump
 )
 
 hermes_link_icu(hbcdump)
+
+install(TARGETS hbcdump
+  RUNTIME DESTINATION bin
+)

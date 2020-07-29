@@ -22,18 +22,25 @@ if (POLICY CMP0075)
   cmake_policy(SET CMP0075 NEW)
 endif()
 
-# This must be consistent with the release_version in
-# android/build.gradle and npm/package.json
+# Allow reading the LOCATION property of a target to determine the eventual
+# location of build targets. This is needed when building the debugging symbols
+# bundles for Apple platforms.
+if (POLICY CMP0026)
+  cmake_policy(SET CMP0026 OLD)
+endif()
+
+# This must be consistent with the release_version in:
+# - android/build.gradle
+# - npm/package.json
+# - hermes.podspec
 project(Hermes
-        VERSION 0.4.2
+        VERSION 0.4.1
         LANGUAGES C CXX)
-# Optional suffix like "-rc3"
-set(VERSION_SUFFIX "-rc1")
 
 include(CheckCXXCompilerFlag)
 include(CheckCXXSourceCompiles)
 
-set(HERMES_RELEASE_VERSION ${PROJECT_VERSION}${VERSION_SUFFIX})
+set(HERMES_RELEASE_VERSION ${PROJECT_VERSION})
 
 # Project options.
 set(HERMESVM_GCKIND NONCONTIG_GENERATIONAL
@@ -128,11 +135,21 @@ set(ANDROID_LINUX_PERF_PATH ""
 set(HERMES_MSVC_MP ON CACHE STRING
   "Enable /MP in MSVC for parallel builds")
 
-# On Android we need an ABI specific version of LLVM.
-# Unfortunately, the build system doesn't allow setting the
-# LLVM_BUILD_DIR per ABI, so we do it here instead.
+set(HERMES_ENABLE_TEST_SUITE ON CACHE BOOL
+  "Enable the test suite")
+
+set(HERMES_BUILD_APPLE_FRAMEWORK ON CACHE BOOL
+  "Whether to build the libhermes target as a framework bundle or dylib on Apple platforms")
+
+set(HERMES_BUILD_APPLE_DSYM OFF CACHE BOOL
+  "Whether to build a DWARF debugging symbols bundle")
+
 if (HERMES_IS_ANDROID)
+  # On Android we need an ABI specific version of LLVM.
+  # Unfortunately, the build system doesn't allow setting the
+  # LLVM_BUILD_DIR per ABI, so we do it here instead.
   set(LLVM_BUILD_DIR "${LLVM_BUILD_BASE}-${ANDROID_ABI}")
+
   add_definitions(-DHERMES_PLATFORM_UNICODE=HERMES_PLATFORM_UNICODE_JAVA)
 
   # The toolchain passes -Wa,--noexecstack which is valid for compiling
@@ -151,6 +168,10 @@ if (HERMES_IS_ANDROID)
     # https://github.com/android-ndk/ndk/issues/242
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fuse-ld=gold")
   endif()
+endif()
+
+if(HERMES_BUILD_APPLE_DSYM)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gdwarf")
 endif()
 
 # The hermes project is built using CMake and the LLVM's build system.
@@ -348,6 +369,8 @@ endif()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(LLVM_MAIN_SRC_DIR ${LLVM_SRC_DIR})
+# Do not install llvm artefacts.
+set(LLVM_INSTALL_TOOLCHAIN_ONLY ON)
 include(LLVMConfig)
 include(AddLLVM)
 include(HandleLLVMOptions)
@@ -501,68 +524,72 @@ endif()
 add_subdirectory(tools)
 add_subdirectory(include)
 add_subdirectory(lib)
+add_subdirectory(public)
 add_subdirectory(external)
-add_subdirectory(unittests)
 add_subdirectory(${HERMES_JSI_DIR}/jsi ${CMAKE_CURRENT_BINARY_DIR}/jsi)
 add_subdirectory(API)
 
 # Configure the test suites
 #
-list(APPEND HERMES_TEST_DEPS
-  HermesUnitTests
-  hermes
-  hermesc
-  hvm
-  interp-dispatch-bench
-  hdb
-  hbcdump
-  hermes-repl
-  hbc-attribute
-  hbc-deltaprep
-  hbc-diff
-  llvm-config
-  )
+if(HERMES_ENABLE_TEST_SUITE)
+  add_subdirectory(unittests)
 
-set(HERMES_LIT_TEST_PARAMS
-  test_exec_root=${HERMES_BINARY_DIR}/test
-  unittests_dir=${HERMES_BINARY_DIR}/unittests
-  debugger_enabled=${HERMES_ENABLE_DEBUGGER}
-  use_flowparser=${HERMES_USE_FLOWPARSER}
-  jit_enabled=${HERMESVM_JIT}
-  jit_disassembler_enabled=${HERMESVM_JIT_DISASSEMBLER}
-  hbc_deltaprep=${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/hbc-deltaprep
-  FileCheck=${LLVM_BUILD_DIR}/${CMAKE_CFG_INTDIR}/bin/FileCheck
-  hermes=${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/hermes
-  hermesc=${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/hermesc
-  hdb=${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/hdb
-  hbcdump=${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/hbcdump
-  repl=${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/hermes-repl
-  hbc-deltaprep=${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/hbc-deltaprep
-  hbc_diff=${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/hbc-diff
-  build_mode=${HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST}
-  exception_on_oom_enabled=${HERMESVM_EXCEPTION_ON_OOM}
-  serialize_enabled=${HERMESVM_SERIALIZE}
-  profiler=${HERMES_PROFILER_MODE_IN_LIT_TEST}
-  use_js_library_implementation=${HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION}
-  gc=${HERMESVM_GCKIND}
-  # TODO: Figure out how to tell if CMake is doing a UBSAN build.
-  ubsan=OFF
-  )
+  list(APPEND HERMES_TEST_DEPS
+    HermesUnitTests
+    hermes
+    hermesc
+    hvm
+    interp-dispatch-bench
+    hdb
+    hbcdump
+    hermes-repl
+    hbc-attribute
+    hbc-deltaprep
+    hbc-diff
+    llvm-config
+    )
 
-set(LLVM_LIT_ARGS "-sv")
+  set(HERMES_LIT_TEST_PARAMS
+    test_exec_root=${HERMES_BINARY_DIR}/test
+    unittests_dir=${HERMES_BINARY_DIR}/unittests
+    debugger_enabled=${HERMES_ENABLE_DEBUGGER}
+    use_flowparser=${HERMES_USE_FLOWPARSER}
+    jit_enabled=${HERMESVM_JIT}
+    jit_disassembler_enabled=${HERMESVM_JIT_DISASSEMBLER}
+    hbc_deltaprep=${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/hbc-deltaprep
+    FileCheck=${LLVM_BUILD_DIR}/${CMAKE_CFG_INTDIR}/bin/FileCheck
+    hermes=${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/hermes
+    hermesc=${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/hermesc
+    hdb=${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/hdb
+    hbcdump=${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/hbcdump
+    repl=${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/hermes-repl
+    hbc-deltaprep=${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/hbc-deltaprep
+    hbc_diff=${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/hbc-diff
+    build_mode=${HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST}
+    exception_on_oom_enabled=${HERMESVM_EXCEPTION_ON_OOM}
+    serialize_enabled=${HERMESVM_SERIALIZE}
+    profiler=${HERMES_PROFILER_MODE_IN_LIT_TEST}
+    use_js_library_implementation=${HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION}
+    gc=${HERMESVM_GCKIND}
+    # TODO: Figure out how to tell if CMake is doing a UBSAN build.
+    ubsan=OFF
+    )
 
-# This is a hack to help LLVM find its own llvm-lit tool, since we had to set
-# LLVM_RUNTIME_OUTPUT_INTDIR to our own build dir.
-set(LLVM_LIT_OUTPUT_DIR ${LLVM_BUILD_DIR}/${CMAKE_CFG_INTDIR}/bin)
+  set(LLVM_LIT_ARGS "-sv")
 
-add_lit_testsuite(check-hermes "Running the Hermes regression tests"
-  ${HERMES_SOURCE_DIR}/test
-  ${HERMES_SOURCE_DIR}/unittests
-  PARAMS ${HERMES_LIT_TEST_PARAMS}
-  DEPENDS ${HERMES_TEST_DEPS}
-  ARGS ${HERMES_TEST_EXTRA_ARGS}
-  )
-set_target_properties(check-hermes PROPERTIES FOLDER "Hermes regression tests")
+  # This is a hack to help LLVM find its own llvm-lit tool, since we had to set
+  # LLVM_RUNTIME_OUTPUT_INTDIR to our own build dir.
+  set(LLVM_LIT_OUTPUT_DIR ${LLVM_BUILD_DIR}/${CMAKE_CFG_INTDIR}/bin)
+
+  add_lit_testsuite(check-hermes "Running the Hermes regression tests"
+    ${HERMES_SOURCE_DIR}/test
+    ${HERMES_SOURCE_DIR}/unittests
+    PARAMS ${HERMES_LIT_TEST_PARAMS}
+    DEPENDS ${HERMES_TEST_DEPS}
+    ARGS ${HERMES_TEST_EXTRA_ARGS}
+    )
+  set_target_properties(check-hermes PROPERTIES FOLDER "Hermes regression tests")
+endif()
 
 # This is how github release files are built.
 
@@ -603,3 +630,24 @@ add_custom_command(
 add_custom_target(
   github-cli-release
   DEPENDS ${HERMES_GITHUB_DIR}/${HERMES_CLI_GITHUB_FILE})
+
+set(HERMES_PKG_ROOT ${HERMES_GITHUB_DIR}/package-root)
+set(HERMES_PKG_FRAMEWORK ${HERMES_PKG_ROOT}/destroot/Library/Frameworks/hermes.framework)
+
+add_custom_target(
+  hermes-runtime-darwin-cocoapods-release
+  COMMAND
+    ${CMAKE_COMMAND} --build . --target install/strip
+  COMMAND
+    mkdir -p ${HERMES_PKG_ROOT}/destroot/bin
+  COMMAND
+    cp ${CMAKE_INSTALL_PREFIX}/bin/hermesc ${HERMES_PKG_ROOT}/destroot/bin/
+  COMMAND
+    cp -R ${CMAKE_INSTALL_PREFIX}/Library ${HERMES_PKG_ROOT}/destroot/
+  COMMAND
+    cp -R ${CMAKE_INSTALL_PREFIX}/include ${HERMES_PKG_ROOT}/destroot/
+  COMMAND
+    cp ${CMAKE_CURRENT_SOURCE_DIR}/hermes.podspec ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE ${HERMES_PKG_ROOT}
+  COMMAND
+    tar -C ${HERMES_PKG_ROOT}/ -czvf ${HERMES_GITHUB_DIR}/hermes-runtime-${HERMES_GITHUB_SYSTEM_NAME}-v${HERMES_RELEASE_VERSION}.tar.gz .
+)
