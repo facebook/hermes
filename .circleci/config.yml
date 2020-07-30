@@ -194,8 +194,9 @@ jobs:
       - checkout
       - run:
           name: Install dependencies
+          # Force homebrew to install cmake 3.7
           command: |
-            brew install cmake ninja
+            brew install ninja https://raw.githubusercontent.com/Homebrew/homebrew-core/d25c628ff2510f68c89f4660fc93e86377ae61dc/Formula/cmake.rb
       - run:
           name: Set up workspace
           command: |
@@ -356,7 +357,7 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            choco install --no-progress cmake
+            choco install --no-progress cmake --version 3.14.7
             if (-not $?) { throw "Failed to install CMake" }
             choco install --no-progress python3
             if (-not $?) { throw "Failed to install Python" }
