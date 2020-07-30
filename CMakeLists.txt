@@ -63,7 +63,7 @@ endif()
 # - npm/package.json
 # - hermes.podspec
 project(Hermes
-        VERSION 0.5.0
+        VERSION 0.6.0
         LANGUAGES C CXX)
 # Optional suffix like "-rc3"
 set(VERSION_SUFFIX "")
