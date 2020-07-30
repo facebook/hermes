@@ -15,3 +15,11 @@ buck-out
 
 # Mac
 .DS_Store
+
+# CocoaPods testing
+build
+destroot
+test/ApplePlatformsIntegrationTestApp/Podfile.lock
+test/ApplePlatformsIntegrationTestApp/Pods
+test/ApplePlatformsIntegrationTestApp/**/xcuserdata
+test/ApplePlatformsIntegrationTestApp/ApplePlatformsIntegrationTestApp.xcworkspace

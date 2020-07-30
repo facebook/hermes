@@ -25,4 +25,8 @@ target_link_libraries(hvm
 )
 
 hermes_link_icu(hvm)
+hermes_strip_apple_debug_symbols(hvm)
 
+install(TARGETS hvm
+  RUNTIME DESTINATION bin
+)
