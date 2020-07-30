@@ -18,6 +18,7 @@ using namespace hermes::hbc;
 
 namespace {
 
+using hermes::vm::Handle;
 using JSLibTest = RuntimeTestFixture;
 
 TEST_F(JSLibTest, globalObjectConstTest) {

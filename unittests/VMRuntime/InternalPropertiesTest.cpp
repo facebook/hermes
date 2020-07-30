@@ -18,6 +18,7 @@ using namespace hermes::hbc;
 namespace {
 
 using InternalPropertiesTest = RuntimeTestFixture;
+using hermes::vm::Handle;
 
 #define FORCE_DICTIONARY_MODE(obj)                                       \
   do {                                                                   \
