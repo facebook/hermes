@@ -443,9 +443,11 @@ class HadesGC final : public GCBase {
 
   /// Perform a YG garbage collection. All live objects in YG will be evacuated
   /// to the OG.
+  /// \param forceOldGenCollection If true, always start an old gen collection
+  ///   if one is not already active.
   /// \post The YG is completely empty, and all bytes are available for new
   ///   allocations.
-  void youngGenCollection();
+  void youngGenCollection(bool forceOldGenCollection);
 
   /// In the "no GC before TTI" mode, move the Young Gen heap segment to the
   /// Old Gen without scanning for garbage.

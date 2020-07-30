@@ -7,8 +7,9 @@
 
 #ifdef HERMESVM_SANITIZE_HANDLES
 
-// TODO (T25686322): Implement Handle Sanitisation for GenGCNC.
-#ifndef HERMESVM_GC_NONCONTIG_GENERATIONAL
+// TODO (T25686322): In non-Malloc GCs, handle sanitization doesn't fully move
+// the heap on every alloc.
+#if defined(HERMESVM_GC_MALLOC)
 
 #include "TestHelpers.h"
 #include "gtest/gtest.h"

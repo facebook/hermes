@@ -789,7 +789,11 @@ size_t Runtime::mallocSize() const {
 void Runtime::potentiallyMoveHeap() {
   // Do a dummy allocation which could force a heap move if handle sanitization
   // is on.
-  FillerCell::create(this, sizeof(FillerCell));
+  FillerCell::create(
+      this,
+      std::max(
+          sizeof(FillerCell),
+          static_cast<size_t>(toRValue(GC::minAllocationSize()))));
 }
 #endif
 

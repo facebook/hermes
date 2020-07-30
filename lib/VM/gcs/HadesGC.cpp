@@ -738,16 +738,16 @@ void HadesGC::printStats(llvh::raw_ostream &os, bool trailingComma) {
 }
 
 void HadesGC::collect() {
+  {
+    // Wait for any existing collections to finish before starting a new one.
+    std::lock_guard<Mutex> lk{oldGenMutex_};
+    waitForCollectionToFinish();
+  }
   // This function should block until a collection finishes.
   // YG needs to be empty in order to do an OG collection.
-  youngGenCollection();
-  // Acquire the old gen lock now so that the condition variable can be
-  // accessed safely.
+  youngGenCollection(/*forceOldGenCollection*/ true);
+  // Wait for the collection to complete.
   std::lock_guard<Mutex> lk{oldGenMutex_};
-  if (concurrentPhase_ == Phase::None) {
-    // If there is no active collection, start one.
-    oldGenCollection();
-  }
   waitForCollectionToFinish();
 }
 
@@ -855,6 +855,9 @@ void HadesGC::oldGenCollectionWorker() {
   completeMarking();
   sweep();
   inGC_.store(false, std::memory_order_seq_cst);
+  // TODO: Should probably check for cancellation, either via a
+  // promise/future pair or a condition variable.
+  concurrentPhase_.store(Phase::None, std::memory_order_release);
 }
 
 void HadesGC::completeMarking() {
@@ -1026,9 +1029,6 @@ void HadesGC::sweep() {
     // Mark bits are reset before any new collection occurs, so there's no
     // need to worry about their information being misused.
   }
-  // TODO: Should probably check for cancellation, either via a
-  // promise/future pair or a condition variable.
-  concurrentPhase_.store(Phase::None, std::memory_order_release);
 }
 
 void HadesGC::finalizeAll() {
@@ -1256,10 +1256,19 @@ void *HadesGC::allocWork(uint32_t sz) {
   if (!fixedSize && LLVM_UNLIKELY(sz >= HeapSegment::maxSize() / 2)) {
     return allocLongLived(sz);
   }
+  if (shouldSanitizeHandles()) {
+    // The best way to sanitize uses of raw pointers outside handles is to force
+    // the entire heap to move, and ASAN poison the old heap. That is too
+    // expensive to do, even with sampling, for Hades. It also doesn't test the
+    // more interesting aspect of Hades which is concurrent background
+    // collections. So instead, do a youngGenCollection which force-starts an
+    // oldGenCollection if one is not already running.
+    youngGenCollection(/*forceOldGenCollection*/ true);
+  }
   AllocResult res = youngGen().youngGenBumpAlloc(sz);
   if (LLVM_UNLIKELY(!res.success)) {
     // Failed to alloc in young gen, do a young gen collection.
-    youngGenCollection();
+    youngGenCollection(/*forceOldGenCollection*/ false);
     res = youngGen().youngGenBumpAlloc(sz);
     assert(res.success && "Should never fail to allocate");
   }
@@ -1411,7 +1420,7 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
   return nullptr;
 }
 
-void HadesGC::youngGenCollection() {
+void HadesGC::youngGenCollection(bool forceOldGenCollection) {
   yieldToBackgroundThread();
   // Acquire the old gen lock for the duration of the YG collection.
   std::lock_guard<Mutex> lk{oldGenMutex_};
@@ -1472,15 +1481,20 @@ void HadesGC::youngGenCollection() {
   // Check that the card tables are well-formed after the collection.
   verifyCardTable();
 #endif
-  if (concurrentPhase_ == Phase::None) {
-    // If the OG is sufficiently full after the collection finishes, begin
-    // an OG collection.
-    const uint64_t totalAllocated = oldGen_.allocatedBytes();
-    const uint64_t totalBytes = oldGen_.numSegments() * HeapSegment::maxSize();
-    constexpr double collectionThreshold = 0.75;
-    double allocatedRatio = static_cast<double>(totalAllocated) / totalBytes;
-    if (allocatedRatio >= collectionThreshold) {
+  if (concurrentPhase_.load(std::memory_order_acquire) == Phase::None) {
+    if (forceOldGenCollection) {
       oldGenCollection();
+    } else {
+      // If the OG is sufficiently full after the collection finishes, begin
+      // an OG collection.
+      const uint64_t totalAllocated = oldGen_.allocatedBytes();
+      const uint64_t totalBytes =
+          oldGen_.numSegments() * HeapSegment::maxSize();
+      constexpr double kCollectionThreshold = 0.75;
+      double allocatedRatio = static_cast<double>(totalAllocated) / totalBytes;
+      if (allocatedRatio >= kCollectionThreshold) {
+        oldGenCollection();
+      }
     }
   }
 }
