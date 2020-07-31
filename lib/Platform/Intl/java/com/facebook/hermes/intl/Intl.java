@@ -446,6 +446,19 @@ public class Intl {
         // Note: We don't do complex region replacement as it is expensive to do.
     }
 
+    private static void addSingletonSequence(String[] extensions, char singleton, StringBuffer extensionSequence) throws JSRangeErrorException{
+        int singletonIndex = singleton - 'a';
+
+        if (extensions[singletonIndex] != null) {
+            throw new JSRangeErrorException("Duplicate singleton");
+        }
+        if (extensionSequence.length() == 0) {
+            throw new JSRangeErrorException("Empty singleton");
+        }
+
+        extensions[singletonIndex] = extensionSequence.toString();
+    }
+
     private static String canonicalizeUnicodeLocaleIdUsingPlatformICU(String languageTag, StringBuffer languageSubtagBuffer, StringBuffer scriptSubtagBuffer,
                                                                       StringBuffer regionSubtagBuffer, ArrayList<String> variantSubtagList,
                                                                       StringBuffer extensionAndPrivateUseSequenceBuffer) throws JSRangeErrorException{
@@ -477,11 +490,23 @@ public class Intl {
         //
         // As of now, Firefox seems to be by far the most compliant engine out there.
         //
-        // Our current implementation is directly over icu4j available with Android platform, augmented with some tables (grandfathered tags, simple language and region replacements etc.).
+        // Our current implementation is leveraging icu4j available with Android platform, but  augmented with our own structure validation and some table lookups (grandfathered tags, simple language and region replacements etc.).
         //
         // Ref: https://unicode-org.github.io/icu-docs/apidoc/released/icu4j/com/ibm/icu/util/ULocale.html#forLanguageTag-java.lang.String-
         // Ref: https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/classicu_1_1Locale.html#af76028775e37fd75a30209aaede551e2
+        // Ref: https://developer.android.com/reference/android/icu/util/ULocale.Builder
 
+        // We could have a much simpler implementation completely relying on icu4j. But that had the following deficiencies,
+        // 1. icu4j roundtripping with forLanguageTag constructor does almost not error validation. None of the negative test cases passes and many structurally invalid tags passes through.
+        // It essentially forces us to do structural validation outselves.
+        // 2. Unicode CLDR has various mapping which needs to be applied prior to canonicalization.
+        //    icu implementations could either lookup those mappings in CLDR (not advisable) or keep those mapping privately. icu4c and icu4j does keep private mapping but to different degrees,
+        //    which results in subtle behaviour differences, even between different versions of ICU.
+        // 3. forLanguageTag constructor internally parses the tag again, which is wasteful as we've already parsed the tag for structure validation.
+        //    ULocale.Builder approach comes to rescue there as it allows us to create ULocale object using subtags, which we've got while parsing.
+        // 4. But, ULocale.Builder code path lacks some tag mappings, for e.g. grandfathered locale id, which forced us to add more private tables and mapping.
+        //
+        // Essentially, we ended up with slightly more complicated and less space efficient (due to added tables, but mostly static, not runtime allocations) traded against correctlness and predictability.
 
         ULocale.Builder localeBuilder = new ULocale.Builder();
 
@@ -500,106 +525,74 @@ public class Intl {
             localeBuilder.setVariant(TextUtils.join("-", variantSubtagList));
         }
 
-        try {
+        if (extensionAndPrivateUseSequenceBuffer.length() > 0) {
+            // TODO :: We have a relatively unoptimized implementation for parsing the extensions ..
 
-            if (extensionAndPrivateUseSequenceBuffer.length() > 0) {
-                // TODO :: We have a relatively unoptimized implementation for parsing the extensions ..
+            if (extensionAndPrivateUseSequenceBuffer.charAt(extensionAndPrivateUseSequenceBuffer.length() - 1) == '-') {
+                throw new JSRangeErrorException("Incomplete singleton");
+            }
 
-                if (extensionAndPrivateUseSequenceBuffer.charAt(extensionAndPrivateUseSequenceBuffer.length() - 1) == '-') {
-                    throw new JSRangeErrorException("Incomplete singleton");
-                }
+            String extensions[] = new String[26];
+            String[] extensionTokens = extensionAndPrivateUseSequenceBuffer.toString().split("-");
+            char currentSingleton = Character.MIN_VALUE;
+            StringBuffer currentExtensionSequence = new StringBuffer();
+            for (int tokenIdx = 0; tokenIdx < extensionTokens.length; tokenIdx++) {
+                String extensionToken = extensionTokens[tokenIdx];
 
-                String extensions[] = new String[26];
-                String[] extensionTokens = extensionAndPrivateUseSequenceBuffer.toString().split("-");
-                char currentSingleton = Character.MIN_VALUE;
-                StringBuffer currentExtensionSequence = new StringBuffer();
-                for (int tokenIdx = 0; tokenIdx < extensionTokens.length; tokenIdx++) {
-                    String extensionToken = extensionTokens[tokenIdx];
+                if (extensionToken.length() == 1) {
+                    char newSingleton = Character.toLowerCase(extensionToken.charAt(0));
 
-                    if (extensionToken.length() == 1) {
-                        char newSingleton = Character.toLowerCase(extensionToken.charAt(0));
+                    if (currentSingleton != Character.MIN_VALUE && currentSingleton != 'x') {
+                        addSingletonSequence(extensions, currentSingleton, currentExtensionSequence);
+                    }
 
-                        if (currentSingleton != Character.MIN_VALUE && currentSingleton != 'x') {
-                            if (extensions[currentSingleton - 'a'] != null) {
-                                throw new JSRangeErrorException("Duplicate singleton");
-                            }
-                            if (currentExtensionSequence.length() == 0) {
-                                throw new JSRangeErrorException("Empty singleton");
-                            }
-                            if (!isAlphaNum(currentExtensionSequence, 0, currentExtensionSequence.length() -1, 1, 8)) {
+                    currentSingleton = newSingleton;
+                    currentExtensionSequence.delete(0, currentExtensionSequence.length());
+
+                    if (newSingleton == 'x') {
+                        // Consume the rest of the tokens.
+                        tokenIdx++;
+                        while (tokenIdx < extensionTokens.length) {
+                            extensionToken = extensionTokens[tokenIdx];
+
+                            if (currentExtensionSequence.length() > 0)
+                                currentExtensionSequence.append('-');
+
+                            if (!isAlphaNum(extensionToken, 0, extensionToken.length() - 1, 1, 8)) {
                                 throw new JSRangeErrorException("Invalid singleton: " + languageTag);
                             }
 
-                            extensions[currentSingleton - 'a'] = currentExtensionSequence.toString();
-                        }
-
-                        currentSingleton = newSingleton;
-                        currentExtensionSequence.delete(0, currentExtensionSequence.length());
-
-                        if (newSingleton == 'x') {
-                            // Consume the rest of the tokens.
+                            currentExtensionSequence.append(extensionToken.toLowerCase());
                             tokenIdx++;
-                            while (tokenIdx < extensionTokens.length) {
-                                extensionToken = extensionTokens[tokenIdx];
-
-                                if (currentExtensionSequence.length() > 0)
-                                    currentExtensionSequence.append('-');
-
-                                if (!isAlphaNum(extensionToken, 0, extensionToken.length() - 1, 1, 8)) {
-                                    throw new JSRangeErrorException("Invalid singleton: " + languageTag);
-                                }
-
-                                currentExtensionSequence.append(extensionToken.toLowerCase());
-                                tokenIdx++;
-                            }
-
-                            if (extensions['x' - 'a'] != null) {
-                                throw new JSRangeErrorException("Duplicate singleton");
-                            }
-                            if (currentExtensionSequence.length() == 0) {
-                                throw new JSRangeErrorException("Empty singleton");
-                            }
-
-                            extensions['x' - 'a'] = currentExtensionSequence.toString();
-                            break;
-                        }
-                    } else {
-                        if (currentExtensionSequence.length() > 0)
-                            currentExtensionSequence.append('-');
-
-                        if (!isAlphaNum(extensionToken, 0, extensionToken.length() - 1, 1, 8)) {
-                            throw new JSRangeErrorException("Invalid singleton: " + languageTag);
                         }
 
-                        currentExtensionSequence.append(extensionToken.toLowerCase());
+                        addSingletonSequence(extensions, 'x', currentExtensionSequence);
+                        break;
                     }
-                }
+                } else {
+                    if (currentExtensionSequence.length() > 0)
+                        currentExtensionSequence.append('-');
 
-                if (currentSingleton != Character.MIN_VALUE && currentSingleton != 'x') {
-                    if (extensions[currentSingleton - 'a'] != null) {
-                        throw new JSRangeErrorException("Duplicate singleton");
-                    }
-                    if (currentExtensionSequence.length() == 0) {
-                        throw new JSRangeErrorException("Empty singleton");
+                    if (!isAlphaNum(extensionToken, 0, extensionToken.length() - 1, 1, 8)) {
+                        throw new JSRangeErrorException("Invalid singleton: " + languageTag);
                     }
 
-                    extensions[currentSingleton - 'a'] = currentExtensionSequence.toString();
+                    currentExtensionSequence.append(extensionToken.toLowerCase());
                 }
-
-                for (int ii = 0; ii < 26; ii++) {
-                    if (extensions[ii] != null && !extensions[ii].isEmpty())
-                        localeBuilder.setExtension((char) ('a' + ii), extensions[ii]);
-                }
-
             }
-            ;
 
-        }catch (RuntimeException ex) {
-            ex.printStackTrace();
-        }
+            if (currentSingleton != Character.MIN_VALUE && currentSingleton != 'x') {
+                addSingletonSequence(extensions, currentSingleton, currentExtensionSequence);
+            }
+
+            for (int ii = 0; ii < 26; ii++) {
+                if (extensions[ii] != null && !extensions[ii].isEmpty())
+                    localeBuilder.setExtension((char) ('a' + ii), extensions[ii]);
+            }
+
+        };
 
         String canonical = localeBuilder.build().toLanguageTag();
-        // return ULocale.forLanguageTag(canonical).toLanguageTag();
         return canonical;
     }
 
@@ -764,12 +757,7 @@ public class Intl {
     // for more discussion of locales and CanonicalizeLocaleList.
     public static List<String> getCanonicalLocales(List<String> locales)
             throws JSRangeErrorException {
-        try {
-            return canonicalizeLocaleList(locales);
-        } catch (RuntimeException ex) {
-            ex.printStackTrace();
-            return null;
-        }
+        return canonicalizeLocaleList(locales);
     }
 
     // Implementer note: This method corresponds roughly to
