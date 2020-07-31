@@ -221,7 +221,7 @@ class GCBase {
     /// Prints any statistics maintained in the Runtime about GC to \p
     /// os.  At present, this means the breakdown of markRoots time by
     /// "phase" within markRoots.
-    virtual void printRuntimeGCStats(llvh::raw_ostream &os) const = 0;
+    virtual void printRuntimeGCStats(JSONEmitter &json) const = 0;
 
     /// \returns the approximate usage of memory external to the GC such as
     /// malloc by the roots of the object graph.
@@ -977,10 +977,7 @@ class GCBase {
   }
 
   /// Print the cumulative statistics.
-  /// \p os The output stream to print the stats to.
-  /// \p trailingComma true if the end of the JSON string should have a trailing
-  /// comma (anticipating more objects added after it).
-  virtual void printStats(llvh::raw_ostream &os, bool trailingComma);
+  virtual void printStats(JSONEmitter &json);
 
   /// Record statistics from a single GC, which took \p wallTime seconds wall
   /// time and \p cpuTime seconds CPU time to run the gc and left the heap size

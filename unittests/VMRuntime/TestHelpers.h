@@ -323,7 +323,7 @@ struct DummyRuntime final : public HandleRootOwner,
   }
 #endif
 
-  void printRuntimeGCStats(llvh::raw_ostream &) const override {}
+  void printRuntimeGCStats(JSONEmitter &) const override {}
 
   void visitIdentifiers(
       const std::function<void(UTF16Ref, uint32_t)> &acceptor) override {

@@ -79,7 +79,7 @@ class HadesGC final : public GCBase {
   void getHeapInfoWithMallocSize(HeapInfo &info) override;
   void getCrashManagerHeapInfo(CrashManager::HeapInformation &info) override;
   void createSnapshot(llvh::raw_ostream &os) override;
-  void printStats(llvh::raw_ostream &os, bool trailingComma) override;
+  void printStats(JSONEmitter &json) override;
 
   /// \}
 

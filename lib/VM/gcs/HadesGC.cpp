@@ -720,21 +720,15 @@ void HadesGC::createSnapshot(llvh::raw_ostream &os) {
   }
 }
 
-void HadesGC::printStats(llvh::raw_ostream &os, bool trailingComma) {
-  if (!recordGcStats_) {
-    return;
-  }
-  GCBase::printStats(os, true);
-  os << "\t\"specific\": {\n"
-     << "\t\t\"collector\": \"hades\",\n"
-     << "\t\t\"stats\": {\n"
-     << "\t\t}\n"
-     << "\t},\n";
-  gcCallbacks_->printRuntimeGCStats(os);
-  if (trailingComma) {
-    os << ",";
-  }
-  os << "\n";
+void HadesGC::printStats(JSONEmitter &json) {
+  GCBase::printStats(json);
+  json.emitKey("specific");
+  json.openDict();
+  json.emitKeyValue("collector", "hades");
+  json.emitKey("stats");
+  json.openDict();
+  json.closeDict();
+  json.closeDict();
 }
 
 void HadesGC::collect() {

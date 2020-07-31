@@ -438,20 +438,15 @@ void MallocGC::finalizeAll() {
   }
 }
 
-void MallocGC::printStats(llvh::raw_ostream &os, bool trailingComma) {
-  if (!recordGcStats_) {
-    return;
-  }
-  GCBase::printStats(os, true);
-  os << "\t\"specific\": {\n"
-     << "\t\t\"collector\": \"malloc\",\n"
-     << "\t\t\"stats\": {}\n"
-     << "\t},\n";
-  gcCallbacks_->printRuntimeGCStats(os);
-  if (trailingComma) {
-    os << ",";
-  }
-  os << "\n";
+void MallocGC::printStats(JSONEmitter &json) {
+  GCBase::printStats(json);
+  json.emitKey("specific");
+  json.openDict();
+  json.emitKeyValue("collector", "malloc");
+  json.emitKey("stats");
+  json.openDict();
+  json.closeDict();
+  json.closeDict();
 }
 
 void MallocGC::resetStats() {

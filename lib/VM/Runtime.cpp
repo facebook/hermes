@@ -564,7 +564,7 @@ std::string Runtime::convertSymbolToUTF8(SymbolID id) {
   return identifierTable_.convertSymbolToUTF8(id);
 }
 
-void Runtime::printRuntimeGCStats(llvh::raw_ostream &os) const {
+void Runtime::printRuntimeGCStats(JSONEmitter &json) const {
   const unsigned kNumPhases =
       static_cast<unsigned>(RootAcceptor::Section::NumSections);
 #define ROOT_SECTION(phase) "MarkRoots_" #phase,
@@ -572,20 +572,15 @@ void Runtime::printRuntimeGCStats(llvh::raw_ostream &os) const {
 #include "hermes/VM/RootSections.def"
   };
 #undef ROOT_SECTION
-  os << "\t\"runtime\": {\n";
-  os << "\t\t\"totalMarkRootsTime\": " << formatSecs(totalMarkRootsTime_).secs
-     << ",\n";
-  bool first = true;
+  json.emitKey("runtime");
+  json.openDict();
+  json.emitKeyValue("totalMarkRootsTime", formatSecs(totalMarkRootsTime_).secs);
   for (unsigned phaseNum = 0; phaseNum < kNumPhases; phaseNum++) {
-    if (first) {
-      first = false;
-    } else {
-      os << ",\n";
-    }
-    os << "\t\t\"" << markRootsPhaseNames[phaseNum] << "Time"
-       << "\": " << formatSecs(markRootsPhaseTimes_[phaseNum]).secs;
+    json.emitKeyValue(
+        std::string(markRootsPhaseNames[phaseNum]) + "Time",
+        formatSecs(markRootsPhaseTimes_[phaseNum]).secs);
   }
-  os << "\n\t}";
+  json.closeDict();
 }
 
 void Runtime::printHeapStats(llvh::raw_ostream &os) {

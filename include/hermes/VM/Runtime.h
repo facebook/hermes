@@ -861,7 +861,7 @@ class Runtime : public HandleRootOwner,
   /// Prints any statistics maintained in the Runtime about GC to \p
   /// os.  At present, this means the breakdown of markRoots time by
   /// "phase" within markRoots.
-  void printRuntimeGCStats(llvh::raw_ostream &os) const override;
+  void printRuntimeGCStats(JSONEmitter &json) const override;
 
   /// \return one higher than the largest symbol in the identifier table. This
   /// enables the GC to size its internal structures for symbol marking.

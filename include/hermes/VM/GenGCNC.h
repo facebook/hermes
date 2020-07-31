@@ -365,7 +365,7 @@ class GenGC final : public GCBase {
   gcheapsize_t bytesAllocatedSinceLastGC() const override;
 
   /// Shows statistics relevant to GenGC.
-  virtual void printStats(llvh::raw_ostream &os, bool trailingComma) override;
+  virtual void printStats(JSONEmitter &json) override;
 
   /// Add some GenGC-specific stats to the output.
   void dump(llvh::raw_ostream &os, bool verbose = false) override;
@@ -562,10 +562,7 @@ class GenGC final : public GCBase {
 
   /// Print stats (in JSON format) specific to full collections to an output
   /// stream.
-  /// \p os Is the output stream to print the stats to.
-  /// \p trailingComma determines whether the output includes a trailing comma.
-  void printFullCollectionStats(llvh::raw_ostream &os, bool trailingComma)
-      const;
+  void printFullCollectionStats(JSONEmitter &json) const;
 
   /// In debug, these increment the counts of the indicated kinds of
   /// write barriers.  First is for normal barriers.  In opt, they do nothing.

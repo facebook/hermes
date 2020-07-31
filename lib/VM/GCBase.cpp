@@ -545,12 +545,12 @@ void GCBase::printAllCollectedStats(llvh::raw_ostream &os) {
     return;
 
   dump(os);
-  os << "GC stats:\n"
-     << "{\n"
-     << "\t\"type\": \"hermes\",\n"
-     << "\t\"version\": 0,\n";
-  printStats(os, false);
-  os << "}\n";
+  os << "GC stats:\n";
+  JSONEmitter json{os, /*pretty*/ true};
+  json.openDict();
+  printStats(json);
+  json.closeDict();
+  os << "\n";
 }
 
 void GCBase::getHeapInfo(HeapInfo &info) {
@@ -584,7 +584,11 @@ void GCBase::DebugHeapInfo::assertInvariants() const {
 void GCBase::dump(llvh::raw_ostream &, bool) { /* nop */
 }
 
-void GCBase::printStats(llvh::raw_ostream &os, bool trailingComma) {
+void GCBase::printStats(JSONEmitter &json) {
+  json.emitKeyValue("type", "hermes");
+  json.emitKeyValue("version", 0);
+  gcCallbacks_->printRuntimeGCStats(json);
+
   std::chrono::duration<double> elapsedTime =
       std::chrono::steady_clock::now() - execStartTime_;
   auto elapsedCPUSeconds =
@@ -603,30 +607,26 @@ void GCBase::printStats(llvh::raw_ostream &os, bool trailingComma) {
   getDebugHeapInfo(debugInfo);
 #endif
 
-  os << "\t\"heapInfo\": {\n"
+  json.emitKey("heapInfo");
+  json.openDict();
 #ifndef NDEBUG
-     << "\t\t\"Num allocated cells\": " << debugInfo.numAllocatedObjects
-     << ",\n"
-     << "\t\t\"Num reachable cells\": " << debugInfo.numReachableObjects
-     << ",\n"
-     << "\t\t\"Num collected cells\": " << debugInfo.numCollectedObjects
-     << ",\n"
-     << "\t\t\"Num finalized cells\": " << debugInfo.numFinalizedObjects
-     << ",\n"
-     << "\t\t\"Num marked symbols\": " << debugInfo.numMarkedSymbols << ",\n"
-     << "\t\t\"Num hidden classes\": " << debugInfo.numHiddenClasses << ",\n"
-     << "\t\t\"Num leaf classes\": " << debugInfo.numLeafHiddenClasses << ",\n"
-     << "\t\t\"Num weak references\": " << ((GC *)this)->countUsedWeakRefs()
-     << ",\n"
+  json.emitKeyValue("Num allocated cells", debugInfo.numAllocatedObjects);
+  json.emitKeyValue("Num reachable cells", debugInfo.numReachableObjects);
+  json.emitKeyValue("Num collected cells", debugInfo.numCollectedObjects);
+  json.emitKeyValue("Num finalized cells", debugInfo.numFinalizedObjects);
+  json.emitKeyValue("Num marked symbols", debugInfo.numMarkedSymbols);
+  json.emitKeyValue("Num hidden classes", debugInfo.numHiddenClasses);
+  json.emitKeyValue("Num leaf classes", debugInfo.numLeafHiddenClasses);
+  json.emitKeyValue("Num weak references", ((GC *)this)->countUsedWeakRefs());
 #endif
-     << "\t\t\"Peak RSS\": " << oscompat::peak_rss() << ",\n"
-     << "\t\t\"Current RSS\": " << oscompat::current_rss() << ",\n"
-     << "\t\t\"Current Dirty\": " << oscompat::current_private_dirty() << ",\n"
-     << "\t\t\"Heap size\": " << info.heapSize << ",\n"
-     << "\t\t\"Allocated bytes\": " << info.allocatedBytes << ",\n"
-     << "\t\t\"Num collections\": " << info.numCollections << ",\n"
-     << "\t\t\"Malloc size\": " << info.mallocSizeEstimate << "\n"
-     << "\t},\n";
+  json.emitKeyValue("Peak RSS", oscompat::peak_rss());
+  json.emitKeyValue("Current RSS", oscompat::current_rss());
+  json.emitKeyValue("Current Dirty", oscompat::current_private_dirty());
+  json.emitKeyValue("Heap size", info.heapSize);
+  json.emitKeyValue("Allocated bytes", info.allocatedBytes);
+  json.emitKeyValue("Num collections", info.numCollections);
+  json.emitKeyValue("Malloc size", info.mallocSizeEstimate);
+  json.closeDict();
 
   long vol = -1;
   long invol = -1;
@@ -635,38 +635,30 @@ void GCBase::printStats(llvh::raw_ostream &os, bool trailingComma) {
     invol -= startNumInvoluntaryContextSwitches_;
   }
 
-  os << "\t\"general\": {\n"
-     << "\t\t\"numCollections\": " << cumStats_.numCollections << ",\n"
-     << "\t\t\"totalTime\": " << elapsedTime.count() << ",\n"
-     << "\t\t\"totalCPUTime\": " << elapsedCPUSeconds << ",\n"
-     << "\t\t\"totalGCTime\": " << formatSecs(cumStats_.gcWallTime.sum()).secs
-     << ",\n"
-     << "\t\t\"volCtxSwitch\": " << vol << ",\n"
-     << "\t\t\"involCtxSwitch\": " << invol << ",\n"
-     << "\t\t\"avgGCPause\": "
-     << formatSecs(cumStats_.gcWallTime.average()).secs << ",\n"
-     << "\t\t\"maxGCPause\": " << formatSecs(cumStats_.gcWallTime.max()).secs
-     << ",\n"
-     << "\t\t\"totalGCCPUTime\": " << formatSecs(cumStats_.gcCPUTime.sum()).secs
-     << ",\n"
-     << "\t\t\"avgGCCPUPause\": "
-     << formatSecs(cumStats_.gcCPUTime.average()).secs << ",\n"
-     << "\t\t\"maxGCCPUPause\": " << formatSecs(cumStats_.gcCPUTime.max()).secs
-     << ",\n"
-     << "\t\t\"finalHeapSize\": " << formatSize(cumStats_.finalHeapSize).bytes
-     << ",\n"
-     << "\t\t\"peakAllocatedBytes\": "
-     << formatSize(getPeakAllocatedBytes()).bytes << ",\n"
-     << "\t\t\"peakLiveAfterGC\": " << formatSize(getPeakLiveAfterGC()).bytes
-     << ",\n"
-     << "\t\t\"totalAllocatedBytes\": "
-     << formatSize(info.totalAllocatedBytes).bytes << "\n"
-     << "\t}";
-
-  if (trailingComma) {
-    os << ",";
-  }
-  os << "\n";
+  json.emitKey("general");
+  json.openDict();
+  json.emitKeyValue("numCollections", cumStats_.numCollections);
+  json.emitKeyValue("totalTime", elapsedTime.count());
+  json.emitKeyValue("totalCPUTime", elapsedCPUSeconds);
+  json.emitKeyValue("totalGCTime", formatSecs(cumStats_.gcWallTime.sum()).secs);
+  json.emitKeyValue("volCtxSwitch", vol);
+  json.emitKeyValue("involCtxSwitch", invol);
+  json.emitKeyValue(
+      "avgGCPause", formatSecs(cumStats_.gcWallTime.average()).secs);
+  json.emitKeyValue("maxGCPause", formatSecs(cumStats_.gcWallTime.max()).secs);
+  json.emitKeyValue(
+      "totalGCCPUTime", formatSecs(cumStats_.gcCPUTime.sum()).secs);
+  json.emitKeyValue(
+      "avgGCCPUPause", formatSecs(cumStats_.gcCPUTime.average()).secs);
+  json.emitKeyValue(
+      "maxGCCPUPause", formatSecs(cumStats_.gcCPUTime.max()).secs);
+  json.emitKeyValue("finalHeapSize", formatSize(cumStats_.finalHeapSize).bytes);
+  json.emitKeyValue(
+      "peakAllocatedBytes", formatSize(getPeakAllocatedBytes()).bytes);
+  json.emitKeyValue("peakLiveAfterGC", formatSize(getPeakLiveAfterGC()).bytes);
+  json.emitKeyValue(
+      "totalAllocatedBytes", formatSize(info.totalAllocatedBytes).bytes);
+  json.closeDict();
 }
 
 void GCBase::recordGCStats(

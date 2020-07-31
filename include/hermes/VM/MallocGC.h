@@ -278,7 +278,7 @@ class MallocGC final : public GCBase {
   void freeWeakSlot(WeakRefSlot *slot);
 
   /// See \c GCBase::printStats.
-  void printStats(llvh::raw_ostream &os, bool trailingComma) override;
+  void printStats(JSONEmitter &json) override;
 
   /// Reset the statistics used for reporting GC information.
   void resetStats();
