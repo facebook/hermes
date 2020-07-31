@@ -18,37 +18,19 @@ import org.junit.Test;
 
 public class HermesIntlAndroidTest extends InstrumentationTestCase {
 
-  private void evalScriptFromAsset(JSRuntime rt, String filename) {
-    try {
-      AssetManager assets = getInstrumentation().getContext().getAssets();
-      InputStream is = assets.open(filename);
-      String script = new BufferedReader(new InputStreamReader(is))
-              .lines().collect(Collectors.joining("\n"));
-      rt.evaluateJavaScript(script);
-    } catch (IOException ex) {
-      ex.printStackTrace();
-      assert (false);
-    }
+  private void evalScriptFromAsset(JSRuntime rt, String filename) throws IOException {
+    AssetManager assets = getInstrumentation().getContext().getAssets();
+    InputStream is = assets.open(filename);
+    String script = new BufferedReader(new InputStreamReader(is))
+            .lines().collect(Collectors.joining("\n"));
+    rt.evaluateJavaScript(script);
+
   }
 
-  @Test
+  // @Test
   public void testIntlFromAsset() throws IOException {
     try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
       evalScriptFromAsset(rt, "intl.js");
-    }
-  }
-
-  @Test
-  public void testIntlGetCanonicalNamesTestScriptFromAsset() throws IOException {
-    try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
-      evalScriptFromAsset(rt, "sta.js");
-      evalScriptFromAsset(rt, "assert.js");
-      evalScriptFromAsset(rt, "testintl.js");
-      evalScriptFromAsset(rt, "propertyHelpers.js");
-      evalScriptFromAsset(rt, "compareArray.js");
-      evalScriptFromAsset(rt, "intl_getCanonicalNames.js");
-      evalScriptFromAsset(rt, "intl_getCanonicalNames_2.js");
-      evalScriptFromAsset(rt, "intl_getCanonicalNames_3.js");
     }
   }
 }

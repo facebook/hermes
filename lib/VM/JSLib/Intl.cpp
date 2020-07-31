@@ -35,8 +35,15 @@ namespace {
 CallResult<std::u16string> stringFromJS(
     Runtime *runtime,
     PseudoHandle<> value) {
+  Handle<> valueHandle = runtime->makeHandle(std::move(value));
+  TagKind kind = valueHandle.get().getTag();
+  if(kind != StrTag && kind != ObjectTag ) {
+    return runtime->raiseTypeError(
+            "Incorrect object type");
+  }
+
   CallResult<PseudoHandle<StringPrimitive>> strRes =
-      toString_RJS(runtime, runtime->makeHandle(std::move(value)));
+      toString_RJS(runtime, valueHandle);
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -208,7 +215,9 @@ CallResult<std::vector<std::u16string>> normalizeLocales(
               runtime,
               *lengthRes,
               [&ret](Runtime *runtime, uint64_t index, PseudoHandle<> value) {
-                CallResult<std::u16string> strRes =
+
+
+          CallResult<std::u16string> strRes =
                     stringFromJS(runtime, std::move(value));
                 if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
                   return ExecutionStatus::EXCEPTION;

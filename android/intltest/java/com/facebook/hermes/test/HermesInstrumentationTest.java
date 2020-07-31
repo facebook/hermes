@@ -72,12 +72,12 @@ public class HermesInstrumentationTest extends InstrumentationTestCase {
       }
 
       rt.evaluateJavaScript(
-          new StringBuilder()
-              .append("var date = new Date(Date.UTC(2012, 11, 20, 3, 0, 0));\n")
-              .append("d1 = date.toLocaleDateString();\n")
-              .append("d2 = date.toLocaleTimeString();\n")
-              .append("d3 = date.toLocaleString();\n")
-              .toString());
+              new StringBuilder()
+                      .append("var date = new Date(Date.UTC(2012, 11, 20, 3, 0, 0));\n")
+                      .append("d1 = date.toLocaleDateString();\n")
+                      .append("d2 = date.toLocaleTimeString();\n")
+                      .append("d3 = date.toLocaleString();\n")
+                      .toString());
 
       String result1 = rt.getGlobalStringProperty("d1");
       assertThat(result1).isEqualTo("Dec 20, 2012");
@@ -98,10 +98,10 @@ public class HermesInstrumentationTest extends InstrumentationTestCase {
 
     try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
       rt.evaluateJavaScript(
-          new StringBuilder()
-              .append("var s1 = 'abc'.toUpperCase();")
-              .append("var s2 = '\u00E0'.toUpperCase();")
-              .toString());
+              new StringBuilder()
+                      .append("var s1 = 'abc'.toUpperCase();")
+                      .append("var s2 = '\u00E0'.toUpperCase();")
+                      .toString());
       String result1 = rt.getGlobalStringProperty("s1");
       assertThat(result1).isEqualTo("ABC");
       String result2 = rt.getGlobalStringProperty("s2");
@@ -116,12 +116,12 @@ public class HermesInstrumentationTest extends InstrumentationTestCase {
 
     try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
       rt.evaluateJavaScript(
-          new StringBuilder()
-              .append("var s1 = '\u1E9B\u0323'.normalize('NFC');")
-              .append("var s2 = '\u1E9B\u0323'.normalize('NFD');")
-              .append("var s3 = '\u1E9B\u0323'.normalize('NFKC');")
-              .append("var s4 = '\u1E9B\u0323'.normalize('NFKD');")
-              .toString());
+              new StringBuilder()
+                      .append("var s1 = '\u1E9B\u0323'.normalize('NFC');")
+                      .append("var s2 = '\u1E9B\u0323'.normalize('NFD');")
+                      .append("var s3 = '\u1E9B\u0323'.normalize('NFKC');")
+                      .append("var s4 = '\u1E9B\u0323'.normalize('NFKD');")
+                      .toString());
       String result1 = rt.getGlobalStringProperty("s1");
       String result2 = rt.getGlobalStringProperty("s2");
       String result3 = rt.getGlobalStringProperty("s3");
@@ -158,7 +158,7 @@ public class HermesInstrumentationTest extends InstrumentationTestCase {
     // Now show that we can make runtime with a smaller heap with the alternate
     // factory function:
     try (JSRuntime rt =
-        JSRuntime.makeHermesRuntimeWithHeapSpec(8 * M, 8 * M, /* shouldRecordGCStats */ true)) {
+                 JSRuntime.makeHermesRuntimeWithHeapSpec(8 * M, 8 * M, /* shouldRecordGCStats */ true)) {
       assertThat(getHeapSize(rt)).isGreaterThanOrEqualTo(8 * M);
       assertThat(getHeapSize(rt)).isLessThan(8 * M + 8 * M);
     }
@@ -171,8 +171,8 @@ public class HermesInstrumentationTest extends InstrumentationTestCase {
     assertThat(s.length).isZero();
 
     byte[] epilogue =
-        HermesEpilogue.getHermesBytecodeMetadata(
-            HermesEpilogueTestData.getBytecodeWithEpilogue(EXPECTED_EPILOGUE));
+            HermesEpilogue.getHermesBytecodeMetadata(
+                    HermesEpilogueTestData.getBytecodeWithEpilogue(EXPECTED_EPILOGUE));
     assertEquals(EXPECTED_EPILOGUE, new String(epilogue));
   }
 }
