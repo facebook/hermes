@@ -19,7 +19,7 @@ namespace {
 using namespace hermes::ESTree;
 
 class ESTreeJSONDumper {
-  JSONEmitter json_;
+  JSONEmitter &json_;
   SourceErrorManager *sm_{nullptr};
 
   /// A collection of fields to ignore if they are empty (null or []).
@@ -27,11 +27,8 @@ class ESTreeJSONDumper {
   llvh::StringMap<llvh::StringSet<>> ignoredEmptyFields_{};
 
  public:
-  explicit ESTreeJSONDumper(
-      llvh::raw_ostream &os,
-      bool pretty,
-      SourceErrorManager *sm)
-      : json_(os, pretty), sm_(sm) {
+  explicit ESTreeJSONDumper(JSONEmitter &json, SourceErrorManager *sm)
+      : json_(json), sm_(sm) {
 #define ESTREE_NODE_0_ARGS(NAME, ...)
 #define ESTREE_NODE_1_ARGS(NAME, ...)
 #define ESTREE_NODE_2_ARGS(NAME, ...)
@@ -48,7 +45,6 @@ class ESTreeJSONDumper {
 
   void doIt(NodePtr rootNode) {
     dumpNode(rootNode);
-    json_.endJSONL();
   }
 
  private:
@@ -426,7 +422,16 @@ void dumpESTreeJSON(
     NodePtr rootNode,
     bool pretty,
     SourceErrorManager *sm) {
-  return ESTreeJSONDumper(os, pretty, sm).doIt(rootNode);
+  JSONEmitter json{os, pretty};
+  ESTreeJSONDumper(json, sm).doIt(rootNode);
+  json.endJSONL();
+}
+
+void dumpESTreeJSON(
+    JSONEmitter &json,
+    NodePtr rootNode,
+    SourceErrorManager *sm) {
+  ESTreeJSONDumper(json, sm).doIt(rootNode);
 }
 
 } // namespace hermes
