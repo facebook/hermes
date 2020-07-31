@@ -155,7 +155,7 @@ Runtime::Runtime(
           runtimeConfig.getCrashMgr(),
           std::move(provider)),
       jitContext_(runtimeConfig.getEnableJIT(), (1 << 20) * 16, (1 << 20) * 32),
-      hasES6Proxy_(runtimeConfig.getES6Proxy()),
+      hasES6Proxy_(true),
       hasES6Symbol_(runtimeConfig.getES6Symbol()),
       shouldRandomizeMemoryLayout_(runtimeConfig.getRandomizeMemoryLayout()),
       bytecodeWarmupPercent_(runtimeConfig.getBytecodeWarmupPercent()),
