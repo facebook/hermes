@@ -920,15 +920,12 @@ void Node::optimizeNodeList(
   // [CharNode('abc')].
   for (size_t idx = 0, max = nodes.size(); idx < max; idx++) {
     // Get the range of nodes that can be successfully coalesced.
-    Node::CodePointList chars;
+    CodePointList chars;
     size_t rangeStart = idx;
-    size_t rangeEnd = idx;
-    for (; rangeEnd < max; rangeEnd++) {
-      if (!nodes[rangeEnd]->tryCoalesceCharacters(&chars)) {
-        break;
-      }
+    while (idx < max && nodes[idx]->tryCoalesceCharacters(&chars)) {
+      idx++;
     }
-    if (rangeEnd - rangeStart >= 3) {
+    if (idx - rangeStart >= 2) {
       // We successfully coalesced some nodes.
       // Replace the range with a new node.
       nodeHolder.emplace_back(new MatchCharNode(std::move(chars), flags));
@@ -936,9 +933,7 @@ void Node::optimizeNodeList(
       // Fill the remainder of the range with null (we'll clean them up after
       // the loop) and skip to the end of the range.
       // Note that rangeEnd may be one past the last valid element.
-      std::fill(
-          nodes.begin() + (rangeStart + 1), nodes.begin() + rangeEnd, nullptr);
-      idx = rangeEnd - 1;
+      std::fill(nodes.begin() + (rangeStart + 1), nodes.begin() + idx, nullptr);
     }
   }
 
