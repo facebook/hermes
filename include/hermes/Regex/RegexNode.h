@@ -91,10 +91,6 @@ class Node {
     return false;
   }
 
-  /// Perform optimization on Node's contents, subject to the given \p flags.
-  virtual void optimizeNodeContents(SyntaxFlags flags, NodeHolder &nodeHolder) {
-  }
-
   /// If this Node can be coalesced into a single MatchCharNode,
   /// then add the node's characters to \p output and \return true.
   /// Otherwise \return false.
@@ -206,11 +202,6 @@ class LoopNode final : public Node {
       result |= loopeeConstraints_;
     }
     return result | Super::matchConstraints();
-  }
-
-  virtual void optimizeNodeContents(SyntaxFlags flags, NodeHolder &nodeHolder)
-      override {
-    optimizeNodeList(loopee_, flags, nodeHolder);
   }
 
   virtual llvh::SmallVector<NodeList *, 1> getChildren() override {
@@ -332,13 +323,6 @@ class AlternationNode final : public Node {
     return restConstraints_.front() | Super::matchConstraints();
   }
 
-  virtual void optimizeNodeContents(SyntaxFlags flags, NodeHolder &nodeHolder)
-      override {
-    for (auto &alternative : alternatives_) {
-      optimizeNodeList(alternative, flags, nodeHolder);
-    }
-  }
-
   virtual llvh::SmallVector<NodeList *, 1> getChildren() override {
     llvh::SmallVector<NodeList *, 1> ret;
     ret.reserve(alternatives_.size());
@@ -411,11 +395,6 @@ class MarkedSubexpressionNode final : public Node {
 
   void reverseChildren() override {
     reverseNodeList(contents_);
-  }
-
-  virtual void optimizeNodeContents(SyntaxFlags flags, NodeHolder &nodeHolder)
-      override {
-    optimizeNodeList(contents_, flags, nodeHolder);
   }
 
   virtual llvh::SmallVector<NodeList *, 1> getChildren() override {
@@ -862,11 +841,6 @@ class LookaroundNode : public Node {
     return result | Super::matchConstraints();
   }
 
-  virtual void optimizeNodeContents(SyntaxFlags flags, NodeHolder &nodeHolder)
-      override {
-    optimizeNodeList(exp_, flags, nodeHolder);
-  }
-
   virtual llvh::SmallVector<NodeList *, 1> getChildren() override {
     return {&exp_};
   }
@@ -907,38 +881,44 @@ void Node::reverseNodeList(NodeList &nodes) {
 }
 
 void Node::optimizeNodeList(
-    NodeList &nodes,
+    NodeList &rootNodes,
     SyntaxFlags flags,
     NodeHolder &nodeHolder) {
-  // Recursively optimize child nodes.
-  for (auto &node : nodes) {
-    node->optimizeNodeContents(flags, nodeHolder);
-  }
+  std::deque<NodeList *> stack;
+  stack.push_back(&rootNodes);
 
-  // Merge adjacent runs of char nodes.
-  // For example, [CharNode('a') CharNode('b') CharNode('c')] becomes
-  // [CharNode('abc')].
-  for (size_t idx = 0, max = nodes.size(); idx < max; idx++) {
-    // Get the range of nodes that can be successfully coalesced.
-    CodePointList chars;
-    size_t rangeStart = idx;
-    while (idx < max && nodes[idx]->tryCoalesceCharacters(&chars)) {
-      idx++;
-    }
-    if (idx - rangeStart >= 2) {
-      // We successfully coalesced some nodes.
-      // Replace the range with a new node.
-      nodeHolder.emplace_back(new MatchCharNode(std::move(chars), flags));
-      nodes[rangeStart] = nodeHolder.back().get();
-      // Fill the remainder of the range with null (we'll clean them up after
-      // the loop) and skip to the end of the range.
-      // Note that rangeEnd may be one past the last valid element.
-      std::fill(nodes.begin() + (rangeStart + 1), nodes.begin() + idx, nullptr);
-    }
-  }
+  while (!stack.empty()) {
+    auto &nodes = *stack.back();
+    stack.pop_back();
 
-  // Remove any nulls that we introduced.
-  nodes.erase(std::remove(nodes.begin(), nodes.end(), nullptr), nodes.end());
+    // Merge adjacent runs of char nodes.
+    // For example, [CharNode('a') CharNode('b') CharNode('c')] becomes
+    // [CharNode('abc')].
+    for (size_t idx = 0, max = nodes.size(); idx < max; idx++) {
+      auto childNodes = nodes[idx]->getChildren();
+      stack.insert(stack.end(), childNodes.begin(), childNodes.end());
+      // Get the range of nodes that can be successfully coalesced.
+      CodePointList chars;
+      size_t rangeStart = idx;
+      while (idx < max && nodes[idx]->tryCoalesceCharacters(&chars)) {
+        idx++;
+      }
+      if (idx - rangeStart >= 2) {
+        // We successfully coalesced some nodes.
+        // Replace the range with a new node.
+        nodeHolder.emplace_back(new MatchCharNode(std::move(chars), flags));
+        nodes[rangeStart] = nodeHolder.back().get();
+        // Fill the remainder of the range with null (we'll clean them up after
+        // the loop) and skip to the end of the range.
+        // Note that rangeEnd may be one past the last valid element.
+        std::fill(
+            nodes.begin() + (rangeStart + 1), nodes.begin() + idx, nullptr);
+      }
+    }
+
+    // Remove any nulls that we introduced.
+    nodes.erase(std::remove(nodes.begin(), nodes.end(), nullptr), nodes.end());
+  }
 }
 
 } // namespace regex
