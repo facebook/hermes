@@ -115,6 +115,11 @@ class Node {
     return false;
   }
 
+  /// \return pointers to the NodeLists contained in this node.
+  virtual llvh::SmallVector<NodeList *, 1> getChildren() {
+    return {};
+  }
+
   /// Reverse the order of children of this node. The default implementation
   /// does nothing, but nodes which store a child list should reverse the order
   /// of that list and then recurse.
@@ -206,6 +211,10 @@ class LoopNode final : public Node {
   virtual void optimizeNodeContents(SyntaxFlags flags, NodeHolder &nodeHolder)
       override {
     optimizeNodeList(loopee_, flags, nodeHolder);
+  }
+
+  virtual llvh::SmallVector<NodeList *, 1> getChildren() override {
+    return {&loopee_};
   }
 
  protected:
@@ -330,6 +339,15 @@ class AlternationNode final : public Node {
     }
   }
 
+  virtual llvh::SmallVector<NodeList *, 1> getChildren() override {
+    llvh::SmallVector<NodeList *, 1> ret;
+    ret.reserve(alternatives_.size());
+    for (auto &alternative : alternatives_) {
+      ret.push_back(&alternative);
+    }
+    return ret;
+  }
+
   void emit(RegexBytecodeStream &bcs) const override {
     // Instruction stream looks like:
     //   [Alternation][PrimaryBranch][Jump][SecondaryBranch][...]
@@ -398,6 +416,10 @@ class MarkedSubexpressionNode final : public Node {
   virtual void optimizeNodeContents(SyntaxFlags flags, NodeHolder &nodeHolder)
       override {
     optimizeNodeList(contents_, flags, nodeHolder);
+  }
+
+  virtual llvh::SmallVector<NodeList *, 1> getChildren() override {
+    return {&contents_};
   }
 
   virtual MatchConstraintSet matchConstraints() const override {
@@ -843,6 +865,10 @@ class LookaroundNode : public Node {
   virtual void optimizeNodeContents(SyntaxFlags flags, NodeHolder &nodeHolder)
       override {
     optimizeNodeList(exp_, flags, nodeHolder);
+  }
+
+  virtual llvh::SmallVector<NodeList *, 1> getChildren() override {
+    return {&exp_};
   }
 
   // Override emit() to compile our lookahead expression.
