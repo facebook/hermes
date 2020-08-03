@@ -48,6 +48,16 @@ void BytecodeSerializer::serialize(BytecodeModule &BM, const SHA1 &sourceHash) {
 
   serializeDebugInfo(BM);
 
+  SHA1 fileHash{};
+  if (!isLayout_) {
+    auto hash = outputHasher_.result();
+    assert(hash.size() == sizeof(fileHash) && "Incorrect length of SHA1 hash");
+    std::copy(hash.begin(), hash.end(), fileHash.begin());
+  }
+  // Even in layout mode, we "write" a footer (with an ignored zero hash),
+  // so that fileLength_ is set correctly.
+  writeBinary(BytecodeFileFooter{fileHash});
+
   if (isLayout_) {
     finishLayout(BM);
     serialize(BM, sourceHash);

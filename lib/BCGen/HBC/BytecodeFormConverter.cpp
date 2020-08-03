@@ -194,6 +194,7 @@ class BytecodeFormConverter {
     for (auto step : steps) {
       (this->*step)();
     }
+    hbc::BCProviderFromBuffer::updateBytecodeHash(bytes_);
   }
 };
 

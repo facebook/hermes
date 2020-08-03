@@ -13,6 +13,7 @@
 #include "hermes/VM/Serializer.h"
 
 #include "llvh/Support/MathExtras.h"
+#include "llvh/Support/SHA1.h"
 
 #ifdef HERMESVM_SERIALIZE
 using hermes::vm::Deserializer;
@@ -23,6 +24,37 @@ namespace hermes {
 namespace hbc {
 
 namespace {
+
+/// Given a valid bytecode buffer aref, returns whether its stored fileHash
+/// matches the actual hash of the buffer.
+static bool hashIsValid(llvh::ArrayRef<uint8_t> aref) {
+  const auto *header =
+      reinterpret_cast<const hbc::BytecodeFileHeader *>(aref.data());
+  assert(
+      header->version == hbc::BYTECODE_VERSION &&
+      "must perform basic checks first");
+  // Use fileLength rather than aref.end() since there may be an epilogue.
+  const auto *footer = reinterpret_cast<const hbc::BytecodeFileFooter *>(
+      aref.data() + header->fileLength - sizeof(BytecodeFileFooter));
+  SHA1 actual = llvh::SHA1::hash(llvh::ArrayRef<uint8_t>(
+      aref.begin(), reinterpret_cast<const uint8_t *>(footer)));
+  return std::equal(actual.begin(), actual.end(), footer->fileHash);
+}
+
+static void updateHash(llvh::MutableArrayRef<uint8_t> aref) {
+  const auto *header =
+      reinterpret_cast<const hbc::BytecodeFileHeader *>(aref.data());
+  assert(
+      header->version == hbc::BYTECODE_VERSION &&
+      "must perform basic checks first");
+  // Use fileLength rather than aref.end() since there may be an epilogue.
+  auto *footer = reinterpret_cast<hbc::BytecodeFileFooter *>(
+      aref.data() + header->fileLength - sizeof(BytecodeFileFooter));
+  SHA1 actual = llvh::SHA1::hash(llvh::ArrayRef<uint8_t>(
+      aref.begin(), reinterpret_cast<const uint8_t *>(footer)));
+  std::copy(actual.begin(), actual.end(), footer->fileHash);
+}
+
 /// Returns if aref points to valid bytecode and specifies why it may not
 /// in errorMessage (if supplied).
 static bool sanityCheck(
@@ -81,6 +113,14 @@ static bool sanityCheck(
     }
     return false;
   }
+#ifdef HERMES_SLOW_DEBUG
+  if (!hashIsValid(aref)) {
+    if (errorMessage) {
+      *errorMessage = "Bytecode hash mismatch";
+    }
+    return false;
+  }
+#endif
   return true;
 }
 
@@ -686,6 +726,15 @@ bool BCProviderFromBuffer::bytecodeStreamSanityCheck(
     llvh::ArrayRef<uint8_t> aref,
     std::string *errorMessage) {
   return sanityCheck(aref, BytecodeForm::Execution, errorMessage);
+}
+
+bool BCProviderFromBuffer::bytecodeHashIsValid(llvh::ArrayRef<uint8_t> aref) {
+  return hashIsValid(aref);
+}
+
+void BCProviderFromBuffer::updateBytecodeHash(
+    llvh::MutableArrayRef<uint8_t> aref) {
+  updateHash(aref);
 }
 
 #ifdef HERMESVM_SERIALIZE

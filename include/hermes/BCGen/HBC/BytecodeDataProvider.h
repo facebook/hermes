@@ -418,6 +418,14 @@ class BCProviderFromBuffer final : public BCProviderBase {
       llvh::ArrayRef<uint8_t> aref,
       std::string *errorMessage = nullptr);
 
+  /// Given a valid bytecode buffer aref, returns whether its stored fileHash
+  /// matches the actual hash of the buffer.
+  static bool bytecodeHashIsValid(llvh::ArrayRef<uint8_t> aref);
+
+  /// Given a writable valid bytecode buffer aref, update its fileHash field
+  /// with the actual hash of the buffer.
+  static void updateBytecodeHash(llvh::MutableArrayRef<uint8_t> aref);
+
   /// Returns the arrayref to small function headers;
   /// this is also the start of the function header section.
   const llvh::ArrayRef<hbc::SmallFuncHeader> getSmallFunctionHeaders() const {

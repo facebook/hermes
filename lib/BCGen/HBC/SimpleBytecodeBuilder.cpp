@@ -8,6 +8,7 @@
 #include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
 
 #include "llvh/Support/MathExtras.h"
+#include "llvh/Support/SHA1.h"
 
 using namespace hermes;
 using namespace hbc;
@@ -48,7 +49,8 @@ std::unique_ptr<Buffer> SimpleBytecodeBuilder::generateBytecodeBuffer() {
   }
   // DebugInfo comes after the bytescodes, padded by 4 bytes.
   uint32_t debugOffset = llvh::alignTo(currentSize, 4);
-  uint32_t totalSize = debugOffset + sizeof(DebugInfoHeader);
+  uint32_t totalSize =
+      debugOffset + sizeof(DebugInfoHeader) + sizeof(BytecodeFileFooter);
   BytecodeOptions options;
   BytecodeFileHeader header{MAGIC,
                             BYTECODE_VERSION,
@@ -102,6 +104,9 @@ std::unique_ptr<Buffer> SimpleBytecodeBuilder::generateBytecodeBuffer() {
   // Write an empty debug info header.
   DebugInfoHeader debugInfoHeader{0, 0, 0, 0, 0};
   appendStructToBytecode(bytecode, debugInfoHeader);
+  // Add the bytecode hash.
+  appendStructToBytecode(
+      bytecode, BytecodeFileFooter{llvh::SHA1::hash(bytecode)});
   // Generate the buffer.
   return std::unique_ptr<Buffer>(new VectorBuffer(std::move(bytecode)));
 }
