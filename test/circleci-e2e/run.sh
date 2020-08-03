@@ -72,15 +72,6 @@ fi
 ( cd "$project_path" && git init && git add . )
 commit "Initial project"
 
-# The template project from RN 0.63 is no longer compatible with RN master.  We
-# should really be using the RN master template, but the CLI functionality for
-# this is currently broken. Meanwhile, we'll just kludge the required changes.
-#
-# https://github.com/react-native-community/cli/pull/1110
-#
-sed_op 's/minSdkVersion = .*/minSdkVersion = 19/' "$project_dir"/android/build.gradle
-commit "Kludge minSdkVersion until we can use an updated RN project"
-
 # Enable Hermes
 # https://reactnative.dev/docs/hermes
 sed_op 's/enableHermes: false/enableHermes: true/' "$project_dir"/android/app/build.gradle
@@ -107,21 +98,14 @@ fi
 commit "Run RN from source"
 
 
-# Modify app to print a log message at start-up
-echo "console.log('Using Hermes: ' + (global.HermesInternal != null));" >> "$project_dir"/index.js
-commit "Add smoke test message"
-
-# Build release app
-( cd "$project_dir"/android/ && ./gradlew packageRelease )
+# Modify RN Tester app to print a log message at start-up
+echo "console.log('Using Hermes: ' + (global.HermesInternal != null));" >> "$project_dir"/node_modules/react-native/RNTester/js/RNTesterApp.android.js
 
 # Wait for emulator to boot
 adb wait-for-device
 
-# Install onto emulator
-( cd "$project_dir"/android/ && ./gradlew installRelease )
-
-# Stash the APK
-cp "$project_dir"/android/app/build/outputs/apk/release/app-release.apk /tmp/hermes/output/app-release.apk
+# Build and install release app
+( cd "$project_dir"/node_modules/react-native/ && ./gradlew :RNTester:android:app:installHermesRelease )
 
 # Start screen recording for debug
 adb shell screenrecord /sdcard/screencap.mp4 &
@@ -137,7 +121,7 @@ trap stashScreenCapture EXIT
 
 # Start app + wait to see relevant log message
 adb logcat -c || true  # This sometimes fails to clear the "main" log. This is benign.
-adb shell am start com."$project_dir"/.MainActivity
+adb shell am start com.facebook.react.uiapp/.RNTesterActivity
 SECONDS=0
 until grep 'Using Hermes: true' <(adb logcat -d -s ReactNativeJS:I) ; do
   if ((SECONDS > 30 )) ; then
@@ -149,5 +133,5 @@ until grep 'Using Hermes: true' <(adb logcat -d -s ReactNativeJS:I) ; do
   sleep 2
 done
 
-echo "Test passed: Hermes in use in React Native Awesome App"
+echo "Test passed: Hermes in use in RNTester App"
 exit 0
