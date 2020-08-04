@@ -408,6 +408,7 @@ class ESTreeJSONDumper {
     DUMP_KEY_VALUE_PAIR(NAME, #ARG4NM, node->_##ARG4NM) \
     DUMP_KEY_VALUE_PAIR(NAME, #ARG5NM, node->_##ARG5NM) \
     DUMP_KEY_VALUE_PAIR(NAME, #ARG6NM, node->_##ARG6NM) \
+    DUMP_KEY_VALUE_PAIR(NAME, #ARG7NM, node->_##ARG7NM) \
   }
 
 #include "hermes/AST/ESTree.def"

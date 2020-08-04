@@ -37,7 +37,8 @@ type T1 = {
 // CHECK-NEXT:             "optional": false,
 // CHECK-NEXT:             "static": false,
 // CHECK-NEXT:             "proto": false,
-// CHECK-NEXT:             "variance": null
+// CHECK-NEXT:             "variance": null,
+// CHECK-NEXT:             "kind": "init"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "indexers": [],
@@ -82,7 +83,8 @@ type T2 = {
 // CHECK-NEXT:             "optional": false,
 // CHECK-NEXT:             "static": false,
 // CHECK-NEXT:             "proto": false,
-// CHECK-NEXT:             "variance": null
+// CHECK-NEXT:             "variance": null,
+// CHECK-NEXT:             "kind": "init"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "ObjectTypeProperty",
@@ -115,7 +117,8 @@ type T2 = {
 // CHECK-NEXT:             "optional": false,
 // CHECK-NEXT:             "static": false,
 // CHECK-NEXT:             "proto": false,
-// CHECK-NEXT:             "variance": null
+// CHECK-NEXT:             "variance": null,
+// CHECK-NEXT:             "kind": "init"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "ObjectTypeProperty",
@@ -147,7 +150,8 @@ type T2 = {
 // CHECK-NEXT:             "optional": false,
 // CHECK-NEXT:             "static": false,
 // CHECK-NEXT:             "proto": false,
-// CHECK-NEXT:             "variance": null
+// CHECK-NEXT:             "variance": null,
+// CHECK-NEXT:             "kind": "init"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "indexers": [],
@@ -278,7 +282,8 @@ type T5 = {
 // CHECK-NEXT:             "variance": {
 // CHECK-NEXT:               "type": "Variance",
 // CHECK-NEXT:               "kind": "plus"
-// CHECK-NEXT:             }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "kind": "init"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "ObjectTypeProperty",
@@ -296,7 +301,8 @@ type T5 = {
 // CHECK-NEXT:             "variance": {
 // CHECK-NEXT:               "type": "Variance",
 // CHECK-NEXT:               "kind": "minus"
-// CHECK-NEXT:             }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "kind": "init"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "indexers": [],
@@ -443,7 +449,8 @@ type T9 = {|
 // CHECK-NEXT:             "optional": false,
 // CHECK-NEXT:             "static": false,
 // CHECK-NEXT:             "proto": false,
-// CHECK-NEXT:             "variance": null
+// CHECK-NEXT:             "variance": null,
+// CHECK-NEXT:             "kind": "init"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "indexers": [],
@@ -480,7 +487,8 @@ type T10 = {|
 // CHECK-NEXT:             "optional": false,
 // CHECK-NEXT:             "static": false,
 // CHECK-NEXT:             "proto": false,
-// CHECK-NEXT:             "variance": null
+// CHECK-NEXT:             "variance": null,
+// CHECK-NEXT:             "kind": "init"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "indexers": [],
@@ -535,7 +543,8 @@ type T11 = {
 // CHECK-NEXT:             "optional": false,
 // CHECK-NEXT:             "static": false,
 // CHECK-NEXT:             "proto": false,
-// CHECK-NEXT:             "variance": null
+// CHECK-NEXT:             "variance": null,
+// CHECK-NEXT:             "kind": "init"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "indexers": [],
@@ -572,7 +581,8 @@ type T12 = {
 // CHECK-NEXT:             "optional": false,
 // CHECK-NEXT:             "static": false,
 // CHECK-NEXT:             "proto": false,
-// CHECK-NEXT:             "variance": null
+// CHECK-NEXT:             "variance": null,
+// CHECK-NEXT:             "kind": "init"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "indexers": [],
@@ -609,7 +619,8 @@ type T13 = {
 // CHECK-NEXT:             "optional": true,
 // CHECK-NEXT:             "static": false,
 // CHECK-NEXT:             "proto": false,
-// CHECK-NEXT:             "variance": null
+// CHECK-NEXT:             "variance": null,
+// CHECK-NEXT:             "kind": "init"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "indexers": [],
