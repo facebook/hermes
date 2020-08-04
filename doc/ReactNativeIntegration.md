@@ -1,3 +1,21 @@
+# Reporting native crashes
+
+If Hermes causes a native crash in your application, a stack trace is critical for us to be able to understand where the crash occurred.  If you have a native crash to report, please be aware that in most cases, it is not feasible for us to debug crashes in earlier versions of Hermes.  Please update your app to a hermes-engine npm versions 0.5.1, 0.5.2-rc1, or later.  Version 0.5.0 is too old.  This may require you to update React Native as well.
+
+At a minimum, you should include in your bug report the native stack trace as described in the [the `ndk-stack` documentation.](https://developer.android.com/ndk/guides/ndk-stack) documentation
+
+Including 10-20 lines from the logs before the line of asterisks can also help us understand what went wrong.
+
+Additionally, you can also symbolicate the stack trace in order to indicate where in the Hermes source the failure is occurring.  Symbolication will only work with the newer versions of Hermes listed above.  It will not work with 0.5.0 or any earlier version.
+
+The necessary unstripped libraries can be found in the [GitHub release](https://github.com/facebook/hermes/releases) corresponding to the Hermes NPM you used to build your application.  Download the `hermes-runtime-android-vX.Y.Z.tar.gz` file for your version.  Unpack the tar file, then run `ndk-stack` using the contained directory corresponding to the build flavor and architecture for your app.  For example, for a release arm64 build:
+
+```
+$ANDROID_NDK/ndk-stack -sym .../unstripped-release/0/lib/arm64-v8a < crash.txt
+```
+
+Including the symbolicated stack trace will make it easier for us to address your bug report more quickly.
+
 # Using a custom Hermes build in a React Native app
 
 To make Hermes usable in a React Native app we need to perform the following steps:
