@@ -61,6 +61,7 @@ public class LocaleMatcher {
 
         // Note: Currently we ignore "localeMatcher" argument, as we support only "lookup" algorithm
 
+
         Set<LocaleObject> candiateLocaleSet = new HashSet<>();
         for (String candidateLocaleStr: candidateLocales) {
             candiateLocaleSet.add(LocaleObject.constructFromLocaleId(candidateLocaleStr));

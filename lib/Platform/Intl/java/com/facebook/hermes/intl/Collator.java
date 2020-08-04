@@ -40,6 +40,55 @@ class PlatformCollatorObject {
     return new PlatformCollatorObject(locale);
   }
 
+  public boolean isSensitiySupported(String sensitivity) {
+    // Legacy mode don't support sensitivity "case" as the collator object doesn't support "setCaseLevel" method.
+    if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N || sensitivity.compareTo(Constants.SENSITIVITY_CASE) == 0) {
+      return false;
+    }
+
+    return true;
+  }
+
+  public void setSensitivity(String sensitivity) {
+    if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+      switch (sensitivity) {
+        case Constants.SENSITIVITY_BASE:
+          icu4jCollator.setStrength(android.icu.text.Collator.PRIMARY);
+          break;
+        case Constants.SENSITIVITY_ACCENT:
+          icu4jCollator.setStrength(android.icu.text.Collator.SECONDARY);
+          break;
+        case Constants.SENSITIVITY_CASE:
+          icu4jCollator.setStrength(android.icu.text.Collator.PRIMARY);
+          icu4jCollator.setCaseLevel(true);
+          break;
+        case Constants.SENSITIVITY_VARIANT:
+          icu4jCollator.setStrength(android.icu.text.Collator.TERTIARY);
+          break;
+      }
+    } else {
+      switch (sensitivity) {
+        case Constants.SENSITIVITY_BASE:
+          legacyCollator.setStrength(android.icu.text.Collator.PRIMARY);
+          break;
+        case Constants.SENSITIVITY_ACCENT:
+          legacyCollator.setStrength(android.icu.text.Collator.SECONDARY);
+          break;
+        case Constants.SENSITIVITY_CASE:
+          throw new UnsupportedOperationException("Unsupported Sensitivity option is Collator");
+        case Constants.SENSITIVITY_VARIANT:
+          legacyCollator.setStrength(android.icu.text.Collator.TERTIARY);
+          break;
+      }
+    }
+  }
+
+  public void setIgnorePunctuation(boolean ignore) {
+    // TODO:: According to documentation, it should take effect only when the strength is se to "QUATERNARY". Need to test it.
+    if(ignore)
+      icu4jCollator.setAlternateHandlingShifted(true);
+  }
+
   public boolean isNumericCollationSupported() {
     if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
       return true;
@@ -68,11 +117,11 @@ class PlatformCollatorObject {
     if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
       switch (caseFirst) {
         case "upper":
-          icu4jCollator.setUpperCaseFirst();
+          icu4jCollator.setUpperCaseFirst(true);
           break;
 
         case "lower":
-          icu4jCollator.setLowerCaseFirst();
+          icu4jCollator.setLowerCaseFirst(true);
           break;
 
         case "false":
@@ -105,6 +154,9 @@ public class Collator {
   private static final String defaultCaseFirst = "false";
 
   private LocaleObject resolvedLocaleObject = null;
+
+  private String resolvedLocaleMatcher = null;
+
   private String resolvedSensitivity = defaultSensitivity;
   private String resolvedUsage = defaultUsage;
   private boolean resolvedIsIgnorePunctuation = defaultIsIgnorePunctuation;
@@ -148,6 +200,50 @@ public class Collator {
       }
     }
 
+    if (options.containsKey(Constants.LOCALEMATCHER)) {
+      final String optionLocaleMatcher = (String) options.get(Constants.LOCALEMATCHER);
+      if(containsString(Constants.LOCALEMATCHER_POSSIBLE_VALUES, optionLocaleMatcher)) {
+        resolvedLocaleMatcher = optionLocaleMatcher;
+      } else {
+        // TODO: Check whether we can support "best fit" which is the default based on spec. Does icu4j's acceptLanguage method "best fit" ?
+        resolvedLocaleMatcher = Constants.LOCALEMATCHER_BESTFIT;
+      }
+    }
+
+    if (options.containsKey(Constants.SENSITIVITY)) {
+      final String optionSensitivity = (String) options.get(Constants.SENSITIVITY);
+      if(containsString(Constants.SENSITIVITY_POSSIBLE_VALUES, optionSensitivity)) {
+        resolvedSensitivity = optionSensitivity;
+      } else {
+        resolvedLocaleMatcher = Constants.SENSITIVITY_VARIANT;
+      }
+    }
+
+    if (options.containsKey(Constants.IGNOREPUNCTUATION)) {
+      boolean optionIgnorePunctuation = (boolean) options.get(Constants.IGNOREPUNCTUATION);
+      resolvedIsIgnorePunctuation = optionIgnorePunctuation;
+    }
+
+    if(platformCollatorObject.isNumericCollationSupported()) {
+      if (options.containsKey(Constants.NUMERIC)) {
+        boolean optionIsNumeric = (boolean) options.get(Constants.NUMERIC);
+        resolvedIsNumeric = optionIsNumeric;
+        resolvedIsNumericSet = true;
+      } else {
+        // TODO: Check extensions in localeId
+      }
+    }
+
+
+    if(platformCollatorObject.isCaseFirstCollationSupported()) {
+      if (options.containsKey(Constants.CASEFIRST)) {
+        String optionCaseFirst = (String) options.get(Constants.CASEFIRST);
+        resolvedCaseFirst = optionCaseFirst;
+        resolvedCaseFirstSet = true;
+      } else {
+        // TODO: Check extensions in localeId
+      }
+    }
   }
 
   // options are usage:string, localeMatcher:string, numeric:boolean, caseFirst:string,
@@ -161,52 +257,29 @@ public class Collator {
   {
     resolveArguments(locales, options);
 
-    // 1.
+    // TODO :: Handle "search" usage by augmenting the extension in the locale id.
+
     if(locales == null || locales.size() == 0) {
       resolvedLocaleObject = LocaleObject.constructDefault();
     } else {
-      String localeMatcher = (String) options.get(Constants.LOCALEMATCHER);
-      if(localeMatcher == null)
-        localeMatcher = Constants.LOCALEMATCHER_BESTFIT;
-
-      resolvedLocaleObject = LocaleMatcher.lookupAgainstAvailableLocales(locales, localeMatcher);
+      resolvedLocaleObject = LocaleMatcher.lookupAgainstAvailableLocales(locales, resolvedLocaleMatcher);
     }
-
-
-
-
 
     platformCollatorObject = PlatformCollatorObject.getInstance(resolvedLocaleObject);
 
-    // 2.
-    // Options take priority
-    if(platformCollatorObject.isNumericCollationSupported()) {
-      if (options.containsKey(Constants.NUMERIC)) {
-        boolean optionIsNumeric = (boolean) options.get(Constants.NUMERIC);
-        resolvedIsNumeric = optionIsNumeric;
-        resolvedIsNumericSet = true;
-      } else {
-        // TODO: Check extensions in localeId
-      }
-
-      if(resolvedIsNumericSet)
-        platformCollatorObject.setNumericAttribute(resolvedIsNumeric);
+    if (!platformCollatorObject.isSensitiySupported(resolvedSensitivity)) {
+      resolvedSensitivity = Constants.SENSITIVITY_VARIANT;
     }
 
+    platformCollatorObject.setSensitivity(resolvedSensitivity);
 
-    if(platformCollatorObject.isCaseFirstCollationSupported()) {
-      if (options.containsKey(Constants.CASEFIRST)) {
-        String optionCaseFirst = (String) options.get(Constants.CASEFIRST);
-        resolvedCaseFirst = optionCaseFirst;
-        resolvedCaseFirstSet = true;
-      } else {
-        // TODO: Check extensions in localeId
-      }
+    platformCollatorObject.setIgnorePunctuation(resolvedIsIgnorePunctuation);
 
-      if (resolvedCaseFirstSet)
-        platformCollatorObject.setCaseFirstAttribute(resolvedCaseFirst);
-    }
+    if(resolvedIsNumericSet)
+      platformCollatorObject.setNumericAttribute(resolvedIsNumeric);
 
+    if (resolvedCaseFirstSet)
+      platformCollatorObject.setCaseFirstAttribute(resolvedCaseFirst);
 
   }
 
@@ -244,8 +317,8 @@ public class Collator {
     if(resolvedIsNumericSet)
       resolvedOptions.put("numeric", resolvedIsNumeric);
 
-    if(resolvedIsCaseFirstSet)
-      resolvedOptions.put("caseFirst", resolvedIsCaseFirst);
+    if(resolvedCaseFirstSet)
+      resolvedOptions.put("caseFirst", resolvedCaseFirst);
 
     return resolvedOptions;
   }
