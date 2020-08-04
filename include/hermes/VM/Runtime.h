@@ -103,6 +103,7 @@ enum {
   MAdviseStringsSequential = 1 << 4,
   MAdviseStringsRandom = 1 << 5,
   MAdviseStringsWillNeed = 1 << 6,
+  VerifyBytecodeChecksum = 1 << 7,
 };
 /// Set of flags for active VM experiments.
 using VMExperimentFlags = uint32_t;

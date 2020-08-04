@@ -914,6 +914,17 @@ CallResult<HermesValue> Runtime::runBytecode(
     } else if (getVMExperimentFlags() & experiments::MAdviseSequential) {
       bytecode->madvise(oscompat::MAdvice::Sequential);
     }
+    if (getVMExperimentFlags() & experiments::VerifyBytecodeChecksum) {
+      llvh::ArrayRef<uint8_t> buf = bytecode->getRawBuffer();
+      // buf is empty for non-buffer providers
+      if (!buf.empty()) {
+        if (!hbc::BCProviderFromBuffer::bytecodeHashIsValid(buf)) {
+          const char *msg = "Bytecode checksum verification failed";
+          hermesLog("Hermes", "%s", msg);
+          hermes_fatal(msg);
+        }
+      }
+    }
   }
   // Only track I/O for buffers > 64 kB (which excludes things like
   // Runtime::generateSpecialRuntimeBytecode).
