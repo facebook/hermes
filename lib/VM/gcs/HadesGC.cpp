@@ -1435,17 +1435,15 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
 
     // Marking each object puts it onto an embedded free list.
     EvacAcceptor acceptor{*this};
-    // Find old-to-young pointers first before marking roots.
-    scanDirtyCards(acceptor);
     {
       DroppingAcceptor<EvacAcceptor> nameAcceptor{acceptor};
       markRoots(nameAcceptor, /*markLongLived*/ false);
       // Do not call markWeakRoots here, as all weak roots point to
       // long-lived objects.
-      // Find old-to-young pointers, as they are considered roots for YG
-      // collection.
-      scanDirtyCards(acceptor);
     }
+    // Find old-to-young pointers, as they are considered roots for YG
+    // collection.
+    scanDirtyCards(acceptor);
     // Iterate through the copy list to find new pointers.
     while (EvacAcceptor::CopyListCell *const copyCell = acceptor.pop()) {
       assert(
