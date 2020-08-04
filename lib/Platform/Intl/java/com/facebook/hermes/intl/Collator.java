@@ -40,6 +40,14 @@ class PlatformCollatorObject {
         return new PlatformCollatorObject(locale);
     }
 
+    public int compare(String source, String target) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            return icu4jCollator.compare(source, target);
+        } else {
+            return legacyCollator.compare(source, target);
+        }
+    }
+
     public boolean isSensitiySupported(String sensitivity) {
         // Legacy mode don't support sensitivity "case" as the collator object doesn't support "setCaseLevel" method.
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N && sensitivity.compareTo(Constants.SENSITIVITY_CASE) == 0) {
@@ -311,8 +319,8 @@ public class Collator {
 
         HashMap<String, Object> resolvedOptions = new HashMap<>();
         resolvedOptions.put("locale", resolvedLocaleObject.toLocaleId());
-        resolvedOptions.put("sensitivity", resolvedSensitivity);
         resolvedOptions.put("usage", resolvedUsage);
+        resolvedOptions.put("sensitivity", resolvedSensitivity);
         resolvedOptions.put("ignorePunctuation", resolvedIsIgnorePunctuation);
         resolvedOptions.put("collation", "default");
 
@@ -327,9 +335,8 @@ public class Collator {
 
     // Implementer note: This method corresponds roughly to
     // https://tc39.es/ecma402/#sec-collator-comparestrings
-    public double compare(String a, String b) {
-
-        return a.compareTo(b);
+    public double compare(String source, String target) {
+        return platformCollatorObject.compare(source, target);
     }
 }
 

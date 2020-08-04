@@ -10,18 +10,23 @@ import android.test.InstrumentationTestCase;
 import android.text.TextUtils;
 import android.util.Log;
 
+import static org.fest.assertions.api.Assertions.assertThat;
+
 import com.facebook.hermes.test.JSRuntime;
 
 import org.junit.Test;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -48,9 +53,47 @@ public class HermesIntlGetCanonicalLocalesTest extends InstrumentationTestCase {
 
     }
 
+    private void runTests(String basePath, Set<String> blackList) throws IOException {
+        String[] testFileList = getInstrumentation().getContext().getAssets().list(basePath);
+
+        ArrayList<String> ranTests = new ArrayList<>();
+        HashMap<String, String> failedTests = new HashMap<>();
+
+        for (String testFileName : testFileList) {
+            if (blackList.contains(testFileName)) {
+                Log.v(LOG_TAG, "Skipping " + testFileName + " as it is blacklisted.");
+                continue;
+            }
+
+            String testFilePath = basePath + testFileName;
+            Log.d(LOG_TAG, "Evaluating " + testFilePath);
+
+            try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
+                evaluateCommonScriptsFromAsset(rt);
+                ranTests.add(testFileName);
+                try {
+                    evalScriptFromAsset(rt, testFilePath);
+                } catch (FileNotFoundException ex) {
+                    // Skip, they are likely subdirectories
+                } catch (com.facebook.jni.CppException ex) {
+                    failedTests.put(testFilePath, ex.getMessage());
+                }
+            }
+        }
+
+        Log.v(LOG_TAG, "Passed Tests: " + TextUtils.join("\n", ranTests));
+
+        for (Map.Entry<String, String> entry: failedTests.entrySet() ) {
+            Log.v(LOG_TAG, "Failed Tests: " +  entry.getKey() + " : " + entry.getValue());
+            assert(false);
+        }
+
+        assertThat(failedTests.entrySet().isEmpty()).isEqualTo(true);
+    }
+
     @Test
     public void testIntlGetCanonicalLocales() throws IOException {
-        String[] testFileList = getInstrumentation().getContext().getAssets().list("test262/intl/getCanonicalLocales");
+        String basePath = "test262/intl/getCanonicalLocales";
         Set<String> blackList = new HashSet<>(Arrays.asList("Locale-object.js"
                 , "canonicalized-tags.js" // All except one tag (cmn-hans-cn-u-ca-t-ca-x-t-u) passes. icu4j adds an extra 'yes' token to the unicode 'ca' extension!
                 , "complex-region-subtag-replacement.js" // We don't do complex region replacement.
@@ -96,26 +139,6 @@ public class HermesIntlGetCanonicalLocalesTest extends InstrumentationTestCase {
             weird-cases.js
             */
 
-
-        ArrayList<String> ranTests = new ArrayList<>();
-
-        for (String testFileName : testFileList) {
-            if (blackList.contains(testFileName)) {
-                Log.v(LOG_TAG, "Skipping " + testFileName + " as it is blacklisted.");
-                continue;
-            }
-
-            String testFilePath = "test262/intl/getCanonicalLocales/" + testFileName;
-            Log.d(LOG_TAG, "Evaluating " + testFilePath);
-
-            try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
-                evaluateCommonScriptsFromAsset(rt);
-                evalScriptFromAsset(rt, testFilePath);
-            }
-
-            ranTests.add(testFileName);
-        }
-
-        Log.v(LOG_TAG, "Executed Tests: " + TextUtils.join("\n", ranTests));
+        runTests(basePath, blackList);
     }
 }
