@@ -3,6 +3,7 @@ package com.facebook.hermes.intl;
 import android.icu.util.ULocale;
 import android.os.Build;
 import android.text.TextUtils;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.Locale;
@@ -70,6 +71,10 @@ public class LocaleObject {
             }
 
             icu4jLocale = localeBuilder.build();
+
+            // TODO:: Only for debugging ..
+            String localeId = icu4jLocale.toLanguageTag();
+            Log.d("Test", localeId);
 
         } else {
 

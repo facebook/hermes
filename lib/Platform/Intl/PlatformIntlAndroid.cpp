@@ -7,6 +7,8 @@
 
 #include "hermes/Platform/Intl/PlatformIntl.h"
 
+#include <android/log.h>
+
 // Android ICU uses different package names than ICU4J, and claims
 // other differences.  So for now, consider this impl specific to
 // Android.  It's likely it could be made to work against the
@@ -86,17 +88,24 @@ jni::local_ref<JLocalesList> localesToJava(
 
 jni::local_ref<JOptionsMap> optionsToJava(const Options &options) {
   auto ret = JHashMap<jni::JString, jni::JObject>::create();
+  __android_log_print(ANDROID_LOG_ERROR,"ANAND::optionsToJava", "1 %d options", options.size()); \
   for (const auto &kv : options) {
+
     jni::local_ref<jni::JObject> jvalue;
     if (kv.second.isBool()) {
       jvalue = jni::autobox(static_cast<jboolean>(kv.second.getBool()));
     } else if (kv.second.isNumber()) {
       jvalue = jni::autobox(static_cast<jdouble>(kv.second.getNumber()));
     } else {
-      assert(kv.second.isString() && "Option is not valid type");
+      assert(kv.second.isString());
+
       jvalue = jni::make_jstring(kv.second.getString());
-      continue;
+      // continue;
     }
+
+    std::string key(kv.first.begin(), kv.first.end());
+    __android_log_print(ANDROID_LOG_ERROR,"ANAND::optionsToJava", "2. key: %s", key.c_str()); \
+
     ret->put(jni::make_jstring(kv.first), jvalue);
   }
   return ret;
@@ -337,10 +346,15 @@ vm::ExecutionStatus Collator::initialize(
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
   try {
+
+    __android_log_print(ANDROID_LOG_ERROR,"ANAND::Collator::initialize", "1. %d options", options.size()); \
+
     impl_->jCollator_ = jni::make_global(
         JCollator::create(localesToJava(locales), optionsToJava(options)));
   } catch (const std::exception &ex) {
+    __android_log_print(ANDROID_LOG_ERROR,"ANAND::Collator::initialize::exception", "1. %s", ex.what()); \
     runtime->raiseRangeError(ex.what());
+    return vm::ExecutionStatus::EXCEPTION;
   }
 
   return vm::ExecutionStatus::RETURNED;

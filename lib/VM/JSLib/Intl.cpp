@@ -18,6 +18,8 @@
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringView.h"
 
+#include <android/log.h>
+
 namespace hermes {
 // TODO T65916424: Move this out of the hermes::vm namespace.
 namespace vm {
@@ -316,8 +318,11 @@ CallResult<platform_intl::Options> normalizeOptions(
     const OptionData optionData[]) {
   platform_intl::Options ret;
 
+  __android_log_print(ANDROID_LOG_ERROR,"normalizeOptions", "%s", "called !"); \
+
   auto optionsObj = Handle<JSObject>::dyn_vmcast(options);
   if (!optionsObj) {
+    __android_log_print(ANDROID_LOG_ERROR,"normalizeOptions", "%s", "No options !"); \
     return ret;
   }
 
@@ -326,9 +331,17 @@ CallResult<platform_intl::Options> normalizeOptions(
   MutableHandle<StringPrimitive> strValue{runtime};
   GCScopeMarkerRAII marker{runtime};
   for (const OptionData *pod = optionData; pod->name; ++pod) {
+
+    __android_log_print(ANDROID_LOG_ERROR,"normalizeOptions", "%s", "Option data !"); \
+
     marker.flush();
     CallResult<HermesValue> nameRes =
         StringPrimitive::createEfficient(runtime, createUTF16Ref(pod->name));
+
+    UTF16Ref str = createUTF16Ref(pod->name);
+    std::string str8 (str.begin(), str.end());
+    __android_log_print(ANDROID_LOG_ERROR,"normalizeOptions", "%s", str8.c_str()); \
+
     if (LLVM_UNLIKELY(nameRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -370,8 +383,12 @@ CallResult<platform_intl::Options> normalizeOptions(
       ret.emplace(
           pod->name,
           platform_intl::Option(std::u16string(view.begin(), view.end())));
+
+      __android_log_print(ANDROID_LOG_ERROR,"normalizeOptions", "%s", "String option added !"); \
     }
   }
+
+  __android_log_print(ANDROID_LOG_ERROR,"normalizeOptions", "%d options", ret.size()); \
 
   return std::move(ret);
 }
@@ -429,12 +446,16 @@ CallResult<HermesValue> intlServiceConstructor(
     return ExecutionStatus::EXCEPTION;
   }
 
+  __android_log_print(ANDROID_LOG_ERROR,"intlServiceConstructor", "1. %d options", (*optionsRes).size()); \
+
   // NumberFormat has a couple extra checks to make.
   if (LLVM_UNLIKELY(
           checkOptions<T>(runtime, *optionsRes) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
+
+  __android_log_print(ANDROID_LOG_ERROR,"intlServiceConstructor", "2. %d options", (*optionsRes).size()); \
 
   auto native = make_unique<T>();
   if (LLVM_UNLIKELY(

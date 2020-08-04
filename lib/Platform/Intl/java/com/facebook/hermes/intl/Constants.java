@@ -10,12 +10,17 @@ public class Constants {
     public static final String SENSITIVITY_BASE = "base";
     public static final String SENSITIVITY_ACCENT = "accent";
     public static final String SENSITIVITY_CASE = "case";
-    public static final String SENSITIVITY_VARIANT = "varant";
+    public static final String SENSITIVITY_VARIANT = "variant";
     public static final String[] SENSITIVITY_POSSIBLE_VALUES = {SENSITIVITY_BASE, SENSITIVITY_ACCENT, SENSITIVITY_CASE, SENSITIVITY_VARIANT};
 
     public static final String IGNOREPUNCTUATION = "ignorePunctuation";
     public static final String NUMERIC = "numeric";
     public static final String CASEFIRST = "caseFirst";
+
+    public static final String CASEFIRST_UPPER = "upper";
+    public static final String CASEFIRST_LOWER = "lower";
+    public static final String CASEFIRST_FALSE = "false";
+    public static final String[] CASEFIRST_POSSIBLE_VALUES = {CASEFIRST_UPPER, CASEFIRST_LOWER, CASEFIRST_FALSE};
 
     public static final String SORT = "sort";
     public static final String SEARCH = "search";

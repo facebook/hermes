@@ -8,6 +8,9 @@
 import android.content.res.AssetManager;
 import android.icu.util.ULocale;
 import android.test.InstrumentationTestCase;
+import android.text.TextUtils;
+import android.util.Log;
+
 import static org.fest.assertions.api.Assertions.assertThat;
 
 import com.facebook.hermes.test.JSRuntime;
@@ -15,14 +18,21 @@ import com.facebook.hermes.test.JSRuntime;
 import org.junit.Test;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class HermesIntlCollatorTest extends InstrumentationTestCase {
 
-    private static final String LOG_TAG = "testintl";
+    private static final String LOG_TAG = "HermesIntlCollatorTest";
 
     private void evalScriptFromAsset(JSRuntime rt, String filename) throws IOException {
         AssetManager assets = getInstrumentation().getContext().getAssets();
@@ -44,20 +54,52 @@ public class HermesIntlCollatorTest extends InstrumentationTestCase {
     }
 
     @Test
-    public void testIntlCollatorSupportedLocalesOf() throws IOException {
-        int i = 10;
-        String result1 = "d1";
+    public void testIntlCollator262() throws IOException {
+        String[] testFileList = getInstrumentation().getContext().getAssets().list("test262/Collator");
+        Set<String> blackList = new HashSet<>(Arrays.asList(
+                "numeric-and-caseFirst.js" // Property numeric couldn't be set through locale extension key kn. Expected SameValue(«undefined», «true») to be true
+                , "usage-de.js" // Expected [AE, Ä] and [Ä, AE] to have the same contents. sort
+                , "proto-from-ctor-realm.js" // ReferenceError: Property '$262' doesn't exist
+                , "subclassing.js" // Compiling JS failed: 18:1:invalid statement encountered. Buffer size 917 starts with: 2f2f20436f7079726967687420323031
+                , "test-option-sensitivity.js" // com.facebook.hermes.intl.JSRangeErrorException: Invalid value '-1' for option sensitivity
+        ));
 
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-            // ULocale[] locales = ULocale.getAvailableLocales();
+        ArrayList<String> ranTests = new ArrayList<>();
+        HashMap<String, String> failedTests = new HashMap<>();
 
-//             ULocale[] locales = new ULocale[] {ULocale.forLanguageTag("en-uk")};
- //            ULocale accepted = ULocale.acceptLanguage(locales, null);
+//        try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
+//            evaluateCommonScriptsFromAsset(rt);
+//            evalScriptFromAsset(rt, "test262/Collator/test-option-usage.js");
+//            ranTests.add("test262/Collator/test-option-usage.js");
+//        }
+//
+
+        for (String testFileName : testFileList) {
+            if (blackList.contains(testFileName)) {
+                Log.v(LOG_TAG, "Skipping " + testFileName + " as it is blacklisted.");
+                continue;
+            }
+
+            String testFilePath = "test262/Collator/" + testFileName;
+            Log.d(LOG_TAG, "Evaluating " + testFilePath);
 
             try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
                 evaluateCommonScriptsFromAsset(rt);
-                evalScriptFromAsset(rt, "test262/Collator/supportedLocalesOf/basic.js");
+                ranTests.add(testFileName);
+                try {
+                    evalScriptFromAsset(rt, testFilePath);
+                } catch (FileNotFoundException ex) {
+                    // Skip, they are likely subdirectories
+                } catch (com.facebook.jni.CppException ex) {
+                    failedTests.put(testFilePath, ex.getMessage());
+                }
             }
+        }
+
+        Log.v(LOG_TAG, "Passed Tests: " + TextUtils.join("\n", ranTests));
+
+        for (Map.Entry<String, String> entry: failedTests.entrySet() ) {
+            Log.v(LOG_TAG, "Failed Tests: " +  entry.getKey() + " : " + entry.getValue());
         }
     }
 

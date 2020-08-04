@@ -40,7 +40,9 @@ public class LocaleMatcher {
             candiateLocaleSet.add(LocaleObject.constructFromLocaleId(candidateLocaleStr));
         }
 
-        for (LocaleObject availableLocale : getAvailableLocales()) {
+        LocaleObject[] availableLocales = getAvailableLocales();
+
+        for (LocaleObject availableLocale : availableLocales) {
             if(candiateLocaleSet.isEmpty()) // Candidates exhausted.
                 break;
 
