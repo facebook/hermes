@@ -1039,7 +1039,7 @@ regExpPrototypeSymbolMatchAll(void *, Runtime *runtime, NativeArgs args) {
   // This is thus equivalent to RegExp(« R, flags »).
   // it is necessary to invoke the 21.2.3.1 RegExp, neither RegExpCreate
   // nor internal JSRegExp creation can shortcut without diverging the spec.
-  auto newRegExpRes = regExpConstructorInternal(runtime, R, flags, false);
+  auto newRegExpRes = regExpConstructorInternal(runtime, R, flags, true);
   if (newRegExpRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
