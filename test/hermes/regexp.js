@@ -468,7 +468,7 @@ try {
 } catch (e) {
   print (e);
 }
-// CHECK-NEXT: SyntaxError: Invalid RegExp: Invalid flags 'undefined'
+// CHECK-NEXT: SyntaxError: Invalid RegExp: Invalid flags
 // actual undefined flag would result in empty pattern.
 var obj = {
   get [Symbol.match]() { return () => 1 }

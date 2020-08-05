@@ -138,24 +138,12 @@ ExecutionStatus JSRegExp::initialize(
       res != ExecutionStatus::EXCEPTION && *res &&
       "defineOwnProperty() failed");
 
-  // Validate flags.
-  llvh::SmallVector<char16_t, 16> flagsText16;
-  flags->copyUTF16String(flagsText16);
-
-  // 5. If F contains any code unit other than "g", "i", "m", "s", "u", or "y"
-  // or if it contains the same code unit more than once, throw a SyntaxError
-  // exception.
-  auto sflags = regex::SyntaxFlags::fromString(flagsText16);
-  if (!sflags) {
-    runtime->raiseSyntaxError(
-        "Invalid RegExp: Invalid flags '" + TwineChar16(flagsText16) + "'");
-    return ExecutionStatus::EXCEPTION;
-  }
-  selfHandle->syntaxFlags_ = *sflags;
-
   if (bytecode) {
     return selfHandle->initializeBytecode(*bytecode, runtime);
   } else {
+    llvh::SmallVector<char16_t, 6> flagsText16;
+    flags->copyUTF16String(flagsText16);
+
     llvh::SmallVector<char16_t, 16> patternText16;
     pattern->copyUTF16String(patternText16);
 
@@ -182,6 +170,9 @@ ExecutionStatus JSRegExp::initializeBytecode(
     runtime->raiseRangeError("RegExp size overflow");
     return ExecutionStatus::EXCEPTION;
   }
+  auto header =
+      reinterpret_cast<const regex::RegexBytecodeHeader *>(bytecode.data());
+  syntaxFlags_ = regex::SyntaxFlags::fromByte(header->syntaxFlags);
   bytecodeSize_ = sz;
   bytecode_ = (uint8_t *)checkedMalloc(sz);
   memcpy(bytecode_, bytecode.data(), sz);
