@@ -12,8 +12,6 @@
 
 #include "llvm/Support/raw_ostream.h"
 
-#include <android/log.h>
-
 namespace hermes {
 namespace vm {
 
@@ -32,16 +30,9 @@ CallResult<HermesValue> print(void *, Runtime *runtime, NativeArgs args) {
     if (!first)
       llvm::outs() << " ";
     SmallU16String<32> tmp;
-
-    UTF16Ref str = StringPrimitive::createStringView(
-            runtime, runtime->makeHandle(std::move(*res)))
-            .getUTF16Ref(tmp);
-
-    llvm::outs() << str;
-
-    std::string str8 (str.begin(), str.end());
-    __android_log_print(ANDROID_LOG_ERROR,"HERMES_PRINT", "%s", str8.c_str()); \
-
+    llvm::outs() << StringPrimitive::createStringView(
+                        runtime, runtime->makeHandle(std::move(*res)))
+                        .getUTF16Ref(tmp);
     first = false;
   }
 
