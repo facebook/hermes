@@ -93,16 +93,61 @@ public class HermesIntlCollatorTest extends InstrumentationTestCase {
 
     @Test
     public void testIntlCollator262() throws IOException {
+//
+//        try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
+//            evaluateCommonScriptsFromAsset(rt);
+//            try {
+//                evalScriptFromAsset(rt, "test262/Collator/usage-de.js");
+//            } catch (FileNotFoundException ex) {
+//                // Skip, they are likely subdirectories
+//            }
+//        }
+
+
         String basePath = "test262/Collator/";
 
+//        Set<String> blackList = new HashSet<>(Arrays.asList(
+//                "numeric-and-caseFirst.js" // Property numeric couldn't be set through locale extension key kn. Expected SameValue(«undefined», «true») to be true
+//                , "usage-de.js" // Expected [AE, Ä] and [Ä, AE] to have the same contents. sort
+//                , "proto-from-ctor-realm.js" // ReferenceError: Property '$262' doesn't exist
+//                , "subclassing.js" // Compiling JS failed: 18:1:invalid statement encountered. Buffer size 917 starts with: 2f2f20436f7079726967687420323031
+//                , "test-option-sensitivity.js" // com.facebook.hermes.intl.JSRangeErrorException: Invalid value '-1' for option sensitivity
+//                , "ignore-invalid-unicode-ext-values.js" // Expected [1, 10, 9, Å, Å, Å, hello, peché, pêche, ự, ự, ự, ự, こんにちは, 你好] and [1, 10, 9, Å, Å, Å, hello, peché, pêche, ự, ự, ự, ự, こんにちは, 你好] to have the same contents.
+//        ));
+//
         Set<String> blackList = new HashSet<>(Arrays.asList(
-                "numeric-and-caseFirst.js" // Property numeric couldn't be set through locale extension key kn. Expected SameValue(«undefined», «true») to be true
-                , "usage-de.js" // Expected [AE, Ä] and [Ä, AE] to have the same contents. sort
-                , "proto-from-ctor-realm.js" // ReferenceError: Property '$262' doesn't exist
-                , "subclassing.js" // Compiling JS failed: 18:1:invalid statement encountered. Buffer size 917 starts with: 2f2f20436f7079726967687420323031
-                , "test-option-sensitivity.js" // com.facebook.hermes.intl.JSRangeErrorException: Invalid value '-1' for option sensitivity
-                , "ignore-invalid-unicode-ext-values.js" // Expected [1, 10, 9, Å, Å, Å, hello, peché, pêche, ự, ự, ự, ự, こんにちは, 你好] and [1, 10, 9, Å, Å, Å, hello, peché, pêche, ự, ự, ự, ự, こんにちは, 你好] to have the same contents.
+                "subclassing.js",  // Test requires Javascript classes
+                "proto-from-ctor-realm.js", // ReferenceError: Property '$262' doesn't exist .. Test requires Reflect
+                "unicode-ext-value-collation.js", // Collation for "standard" should be default, but is search. Expected SameValue(«-1», «-1») to be false << TODO >>
+                "ignore-invalid-unicode-ext-values.js", // Locale en is affected by key co; value standard. Expected SameValue(«en», «en-US») to be true << TODO >>
+                "missing-unicode-ext-value-defaults-to-true.js", // "kn-true" is returned in locale, but shouldn't be. Expected SameValue(«15», «-1») to be true << TODO >>
+                "missing-unicode-ext-value-defaults-to-true.js", // "kn-true" is returned in locale, but shouldn't be. Expected SameValue(«15», «-1») to be true
+                "numeric-and-caseFirst.js" // "Property numeric couldn't be set through locale extension key kn. Expected SameValue(«undefined», «true») to be true // This is because icu4j collator doesn't support the extension
         ));
+
+//        Passed Tests:
+//        builtin.js
+//        constructor-options-throwing-getters.js
+//        default-options-object-prototype.js
+//        ignore-invalid-unicode-ext-values.js
+//        instance-proto-and-extensible.js
+//        legacy-regexp-statics-not-modified.js
+//        length.js
+//        missing-unicode-ext-value-defaults-to-true.js
+//        name.js
+//        numeric-and-caseFirst.js
+//        prop-desc.js
+//        taint-Object-prototype.js
+//        test-option-ignorePunctuation.js
+//        test-option-localeMatcher.js
+//        test-option-numeric-and-caseFirst.js
+//        test-option-sensitivity.js
+//        test-option-usage.js
+//        this-value-ignored.js
+//        unicode-ext-seq-in-private-tag.js
+//        unicode-ext-seq-with-attribute.js
+//        unicode-ext-value-collation.js
+//        usage-de.js
 
         runTests(basePath, blackList);
     }

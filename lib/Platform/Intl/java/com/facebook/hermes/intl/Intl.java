@@ -14,17 +14,6 @@ import java.util.regex.Pattern;
 
 public class Intl {
 
-    // https://tc39.es/ecma402/#sec-canonicalizeunicodelocaleid
-    // Definition of Canonical Unicode Locale Ids: https://unicode.org/reports/tr35/#Canonical_Unicode_Locale_Identifiers
-//    private static String canonicalizeUnicodeLocaleId(String locale, StringBuffer languageSubtagBuffer,
-//                                                      StringBuffer scriptSubtagBuffer, StringBuffer regionSubtagBuffer,
-//                                                      ArrayList<String> variantSubtagList,
-//                                                      StringBuffer extensionAndPrivateUseSequenceBuffer) throws JSRangeErrorException{
-//        String canonical = LocaleIdentifier.constructLocaleIdFromSubtags(locale, languageSubtagBuffer, scriptSubtagBuffer, regionSubtagBuffer, variantSubtagList, extensionAndPrivateUseSequenceBuffer);
-//        return canonical;
-//    }
-
-
     // Implementation of https://tc39.es/ecma402/#sec-canonicalizelocalelist
     private static List<String> canonicalizeLocaleList(List<String> locales) throws
             JSRangeErrorException {
@@ -34,7 +23,7 @@ public class Intl {
             return Collections.emptyList();
         }
 
-        // Note:: Some other major input validation occurs closer to VM in 'normalizeLocales' in JSLib/aIntl.cpp
+        // Note:: Some other major input validation occurs closer to VM in 'normalizeLocales' in JSLib/Intl.cpp
 
         // 2. Let seen be a new empty List.
         ArrayList<String> seen = new ArrayList<String>();
@@ -62,24 +51,7 @@ public class Intl {
                 throw new JSRangeErrorException("Incorrect locale information provided");
             }
 
-//            StringBuffer languageSubtag = new StringBuffer(8);
-//            StringBuffer scriptSubtag = new StringBuffer(4);
-//            StringBuffer regionSubtag = new StringBuffer(4);
-//            ArrayList<String> variantSubtagList = new ArrayList<>();
-//            StringBuffer extensionAndPrivateUseSequence = new StringBuffer();
-
-            // 7.c.v
-            // if(!LocaleIdentifier.canonicalizeLocaleIdIntoParts(localeBuffer, languageSubtag, scriptSubtag, regionSubtag, variantSubtagList, extensionAndPrivateUseSequence)) {
-            //     throw new JSRangeErrorException(String.format("Incorrect locale information provided: %s", locale==null? "null":locale));
-            // }
-
-            // if(!LocaleIdentifier.canonicalizeLocaleId(locale)) {
-            //     throw new JSRangeErrorException(String.format("Incorrect locale information provided: %s", locale == null ? "null" : locale));
-            // }
-
-            // 7.c.vi
-            // String canonicalizedTag = canonicalizeUnicodeLocaleId(locale, languageSubtag, scriptSubtag, regionSubtag, variantSubtagList, extensionAndPrivateUseSequence);
-
+            // 7.c.v & 7.c.vi
             String canonicalizedTag= LocaleIdentifier.canonicalizeLocaleId(locale);
 
             // 7.c.vii
