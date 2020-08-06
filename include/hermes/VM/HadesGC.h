@@ -246,6 +246,7 @@ class HadesGC final : public GCBase {
     using AlignedHeapSegment::maxSize;
     using AlignedHeapSegment::resetLevel;
     using AlignedHeapSegment::setCellMarkBit;
+    using AlignedHeapSegment::size;
     using AlignedHeapSegment::start;
     using AlignedHeapSegment::used;
 
@@ -301,8 +302,12 @@ class HadesGC final : public GCBase {
     void transitionToFreelist(HeapSegment &seg);
 
     /// \return the total number of bytes that are in use by the OG section of
-    /// the JS heap.
+    /// the JS heap, excluding free list entries.
     uint64_t allocatedBytes() const;
+
+    /// \return the total number of bytes that are in use by the OG section of
+    /// the JS heap, including free list entries.
+    uint64_t size() const;
 
     class FreelistCell final : public VariableSizeRuntimeCell {
      private:
@@ -422,6 +427,10 @@ class HadesGC final : public GCBase {
 
   /// If true, turn off promoteYGToOG_ as soon as the first OG GC occurs.
   bool revertToYGAtTTI_;
+
+  /// A collection section used to track the size of OG before and after an OG
+  /// collection, as well as the time an OG collection takes.
+  std::unique_ptr<CollectionSection> ogCollectionSection_;
 
   /// The main entrypoint for all allocations.
   /// \param sz The size of allocation requested. This might be rounded up to

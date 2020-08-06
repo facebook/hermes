@@ -20,6 +20,8 @@
 namespace hermes {
 namespace vm {
 
+static const char kHeapNameForAnalytics[] = "hades";
+
 // A free list cell is always variable-sized.
 const VTable HadesGC::OldGen::FreelistCell::vt{CellKind::FreelistKind,
                                                /*variableSize*/ 0};
@@ -207,46 +209,86 @@ void HadesGC::OldGen::FreelistCell::split(OldGen &og, uint32_t sz) {
 
 class HadesGC::CollectionSection final {
  public:
-  CollectionSection(HadesGC *gc);
+  using Clock = std::chrono::steady_clock;
+  using TimePoint = std::chrono::time_point<Clock>;
+  using Duration = std::chrono::microseconds;
+
+  CollectionSection(HadesGC *gc, std::string extraInfo = "")
+      : gc_{gc}, cycle_{gc, llvh::None, std::move(extraInfo)} {}
   ~CollectionSection();
+
+  /// Record the allocated bytes in the heap and its size before a collection
+  /// begins.
+  void setBeforeSizes(uint64_t allocated, uint64_t sz) {
+    allocatedBefore_ = allocated;
+    sizeBefore_ = sz;
+  }
+
+  /// Record the allocated bytes in the heap and its size after a collection
+  /// ends.
+  void setAfterSizes(uint64_t allocated, uint64_t sz) {
+    allocatedAfter_ = allocated;
+    sizeAfter_ = sz;
+  }
+
+  /// Record that a collection is beginning right now.
+  void setBeginTime() {
+    assert(beginTime_ == Clock::time_point{} && "Begin time already set");
+    beginTime_ = Clock::now();
+  }
+
+  /// Record that a collection is ending right now.
+  void setEndTime() {
+    assert(endTime_ == Clock::time_point{} && "End time already set");
+    endTime_ = Clock::now();
+  }
+
+  /// Record this amount of CPU time was taken.
+  /// Call this in each thread that does work to correctly count CPU time.
+  void incrementCPUTime(Duration cpuTime) {
+    cpuDuration_ += cpuTime;
+  }
 
  private:
   HadesGC *gc_;
   GCCycle cycle_;
-  uint64_t usedBefore_;
-  TimePoint wallStart_;
-  std::chrono::microseconds cpuStart_;
-  std::chrono::microseconds wallElapsed_;
-  std::chrono::microseconds cpuElapsed_;
+  TimePoint beginTime_{};
+  TimePoint endTime_{};
+  TimePoint cpuBeginTime_{};
+  TimePoint cpuEndTime_{};
+  Duration cpuDuration_{};
+  uint64_t allocatedBefore_{0};
+  uint64_t sizeBefore_{0};
+  uint64_t allocatedAfter_{0};
+  uint64_t sizeAfter_{0};
 };
 
-HadesGC::CollectionSection::CollectionSection(HadesGC *gc)
-    : gc_{gc},
-      cycle_{gc},
-      usedBefore_{gc->allocatedBytes()},
-      wallStart_{std::chrono::steady_clock::now()},
-      cpuStart_{oscompat::thread_cpu_time()} {
-#ifdef HERMES_SLOW_DEBUG
-  gc_->checkWellFormed();
-#endif
-}
-
 HadesGC::CollectionSection::~CollectionSection() {
-  wallElapsed_ = std::chrono::duration_cast<std::chrono::microseconds>(
-      std::chrono::steady_clock::now() - wallStart_);
-  cpuElapsed_ = oscompat::thread_cpu_time() - cpuStart_;
-
-  std::chrono::duration<double> wallElapsedSeconds = wallElapsed_;
-  std::chrono::duration<double> cpuElapsedSeconds = cpuElapsed_;
   gc_->recordGCStats(
-      wallElapsedSeconds.count(),
-      cpuElapsedSeconds.count(),
+      std::chrono::duration_cast<std::chrono::duration<double>>(
+          endTime_ - beginTime_)
+          .count(),
+      std::chrono::duration_cast<std::chrono::duration<double>>(cpuDuration_)
+          .count(),
       0,
-      usedBefore_,
-      gc_->allocatedBytes());
-#ifdef HERMES_SLOW_DEBUG
-  gc_->checkWellFormed();
-#endif
+      allocatedBefore_,
+      allocatedAfter_);
+
+  if (gc_->analyticsCallback_) {
+    gc_->analyticsCallback_(GCAnalyticsEvent{
+        gc_->getName(),
+        kHeapNameForAnalytics,
+        cycle_.extraInfo(),
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            endTime_ - beginTime_),
+        std::chrono::duration_cast<std::chrono::milliseconds>(cpuDuration_),
+        /*preAllocated*/ allocatedBefore_,
+        /*preSize*/ sizeBefore_,
+        /*postAllocated*/ allocatedAfter_,
+        /*postSize*/ sizeAfter_,
+        /*survivalRatio*/ static_cast<double>(allocatedAfter_) /
+            allocatedBefore_});
+  }
 }
 
 class HadesGC::EvacAcceptor final : public SlotAcceptorDefault {
@@ -791,7 +833,6 @@ void HadesGC::oldGenCollection() {
   assert(
       concurrentPhase_ == Phase::None &&
       "Starting a second old gen collection");
-  inGC_.store(true, std::memory_order_seq_cst);
   if (oldGenCollectionThread_.joinable()) {
     // This is just making sure the leftover thread is completed before starting
     // a new one. Since concurrentPhase_ == None here, there is no collection
@@ -801,6 +842,12 @@ void HadesGC::oldGenCollection() {
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormed();
 #endif
+  ogCollectionSection_.reset(new CollectionSection(this, "old"));
+  auto cpuTimeStart = oscompat::thread_cpu_time();
+  ogCollectionSection_->setBeginTime();
+  ogCollectionSection_->setBeforeSizes(
+      oldGen_.allocatedBytes(), oldGen_.size());
+
   if (revertToYGAtTTI_) {
     // If we've reached the first OG collection, and reverting behavior is
     // requested, switch back to YG mode.
@@ -839,16 +886,22 @@ void HadesGC::oldGenCollection() {
   // the new thread, the GC cannot be destructed until the new thread completes.
   // This means that before destroying the GC, waitForCollectionToFinish must
   // be called.
+  auto cpuTimeEnd = oscompat::thread_cpu_time();
+  ogCollectionSection_->incrementCPUTime(cpuTimeEnd - cpuTimeStart);
   oldGenCollectionThread_ = std::thread(&HadesGC::oldGenCollectionWorker, this);
   // Use concurrentPhase_ to be able to tell when the collection finishes.
 }
 
 void HadesGC::oldGenCollectionWorker() {
   oscompat::set_thread_name("hades");
+  auto cpuTimeStart = oscompat::thread_cpu_time();
   oldGenMarker_->drainMarkWorklist</*shouldLock*/ true>();
   completeMarking();
   sweep();
-  inGC_.store(false, std::memory_order_seq_cst);
+  ogCollectionSection_->setEndTime();
+  auto cpuTimeEnd = oscompat::thread_cpu_time();
+  ogCollectionSection_->incrementCPUTime(cpuTimeEnd - cpuTimeStart);
+  ogCollectionSection_.reset();
   // TODO: Should probably check for cancellation, either via a
   // promise/future pair or a condition variable.
   concurrentPhase_.store(Phase::None, std::memory_order_release);
@@ -1023,6 +1076,7 @@ void HadesGC::sweep() {
     // Mark bits are reset before any new collection occurs, so there's no
     // need to worry about their information being misused.
   }
+  ogCollectionSection_->setAfterSizes(oldGen_.allocatedBytes(), oldGen_.size());
 }
 
 void HadesGC::finalizeAll() {
@@ -1415,18 +1469,21 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
 }
 
 void HadesGC::youngGenCollection(bool forceOldGenCollection) {
+  CollectionSection section{this, "young"};
+  auto cpuTimeStart = oscompat::thread_cpu_time();
+  section.setBeginTime();
+  section.setBeforeSizes(youngGen().used(), youngGen().size());
   yieldToBackgroundThread();
   // Acquire the old gen lock for the duration of the YG collection.
   std::lock_guard<Mutex> lk{oldGenMutex_};
 #ifdef HERMES_SLOW_DEBUG
+  checkWellFormed();
   // Check that the card tables are well-formed before the collection.
   verifyCardTable();
 #endif
   if (promoteYGToOG_) {
     promoteYoungGenToOldGen();
   } else {
-    CollectionSection section{this};
-
     auto &yg = youngGen();
 
     // Clear the mark bits in the young gen first. They will be needed
@@ -1470,6 +1527,7 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
   // in YG needs to be marked.
   youngGen().markBitArray().markAll();
 #ifdef HERMES_SLOW_DEBUG
+  checkWellFormed();
   // Check that the card tables are well-formed after the collection.
   verifyCardTable();
 #endif
@@ -1489,6 +1547,11 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
       }
     }
   }
+  // YG is always empty after a collection, it is fully evac'ed into OG.
+  section.setAfterSizes(0, youngGen().size());
+  section.setEndTime();
+  auto cpuTimeEnd = oscompat::thread_cpu_time();
+  section.incrementCPUTime(cpuTimeEnd - cpuTimeStart);
 }
 
 void HadesGC::promoteYoungGenToOldGen() {
@@ -1718,6 +1781,15 @@ uint64_t HadesGC::OldGen::allocatedBytes() const {
     }
   }
   return totalAllocated;
+}
+
+uint64_t HadesGC::OldGen::size() const {
+  uint64_t totalBytes = 0;
+  for (auto segit = segments_.begin(), end = segments_.end(); segit != end;
+       ++segit) {
+    totalBytes += (*segit)->used();
+  }
+  return totalBytes;
 }
 
 HadesGC::HeapSegment &HadesGC::youngGen() {
