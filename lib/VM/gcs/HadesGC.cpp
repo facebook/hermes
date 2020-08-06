@@ -15,6 +15,7 @@
 #include "hermes/VM/SlotAcceptorDefault.h"
 
 #include <array>
+#include <forward_list>
 #include <stack>
 
 namespace hermes {
@@ -380,45 +381,119 @@ class HadesGC::EvacAcceptor final : public SlotAcceptorDefault {
 };
 
 class MarkWorklist {
+ private:
+  /// Like std::vector but has a fixed capacity specified by N to reduce memory
+  /// allocation.
+  template <typename T, size_t N>
+  class FixedCapacityVector {
+   public:
+    explicit FixedCapacityVector() : FixedCapacityVector(0) {}
+    explicit FixedCapacityVector(size_t sz) : size_(sz) {}
+    explicit FixedCapacityVector(const FixedCapacityVector &vec)
+        : data_(vec.data_), size_(vec.size_) {}
+
+    size_t size() const {
+      return size_;
+    }
+
+    constexpr size_t capacity() {
+      return N;
+    }
+
+    bool empty() const {
+      return size_ == 0;
+    }
+
+    void push_back(T elem) {
+      assert(
+          size_ < N && "Trying to push off the end of a FixedCapacityVector");
+      data_[size_++] = elem;
+    }
+
+    llvh::ArrayRef<T> data() {
+      return llvh::ArrayRef<T>{data_.data(), size_};
+    }
+
+    void clear() {
+#ifndef NDEBUG
+      // Fill the push chunk with bad memory in debug modes to catch invalid
+      // reads.
+      std::memset(data_.data(), kInvalidHeapValue, sizeof(GCCell *) * N);
+#endif
+      size_ = 0;
+    }
+
+   private:
+    std::array<T, N> data_;
+    size_t size_;
+  };
+
  public:
   /// Adds an element to the end of the queue.
   void enqueue(GCCell *cell) {
-    std::lock_guard<Mutex> lk{mtx_};
-    work_.push(cell);
-  }
-
-  /// Dequeue an element if one is available.
-  /// \return true if there was an element to dequeue, false if the queue is
-  ///   empty.
-  bool tryDequeue(GCCell *&outCell) {
-    std::lock_guard<Mutex> lk{mtx_};
-    return tryDequeueLocked(outCell);
-  }
-
-  bool tryDequeueLocked(GCCell *&outCell) {
-    assert(mtx_ && "mtx_ should be locked before calling tryDequeueLocked");
-    if (work_.empty()) {
-      return false;
+    pushChunk_.push_back(cell);
+    if (pushChunk_.size() == pushChunk_.capacity()) {
+      // Once the chunk has reached its max size, move it to the pull chunks.
+      flushPushChunk();
     }
-    outCell = work_.top();
-    work_.pop();
-    return true;
   }
 
+  /// Calls \p callback on each element in the worklist, excluding any in the
+  /// push chunk.
+  template <typename F>
+  void drain(F callback) {
+    std::forward_list<Chunk> chunks;
+    {
+      // Move the list (in O(1) time) to a local variable, and then release the
+      // lock. This unblocks the mutator faster.
+      std::lock_guard<Mutex> lk{mtx_};
+      std::swap(chunks, pullChunks_);
+      assert(pullChunks_.empty() && "pull chunks isn't cleared out");
+    }
+    for (Chunk &chunk : chunks) {
+      if (chunk.empty()) {
+        continue;
+      }
+      for (GCCell *cell : chunk.data()) {
+        callback(cell);
+      }
+    }
+  }
+
+  /// While the world is stopped, move the push chunk to the list of pull chunks
+  /// to finish draining the mark worklist.
+  /// WARN: This can only be called by the mutator or when the world is stopped.
+  void flushPushChunk() {
+    std::lock_guard<Mutex> lk{mtx_};
+    // NOTE: Currently the background marking thread depletes the pullChunks_
+    // entirely, so it doesn't matter whether the chunks is pushed to the front
+    // or the back.
+    pullChunks_.emplace_front(pushChunk_);
+    // Set the size back to 0 and refill the same buffer.
+    pushChunk_.clear();
+  }
+
+  /// \return true if there is still some work to be drained, with the exception
+  /// of the push chunk.
+  bool hasPendingWork() {
+    std::lock_guard<Mutex> lk{mtx_};
+    return !pullChunks_.empty();
+  }
+
+#ifndef NDEBUG
+  /// WARN: This can only be called when the world is stopped.
   bool empty() {
     std::lock_guard<Mutex> lk{mtx_};
-    return work_.empty();
+    return pushChunk_.empty() && pullChunks_.empty();
   }
-
-  Mutex &mutex() {
-    return mtx_;
-  }
+#endif
 
  private:
-  // TODO: Optimize this with private push/pull segments to avoid taking a
-  // lock on each queue/dequeue.
   Mutex mtx_;
-  std::stack<GCCell *, std::vector<GCCell *>> work_;
+  static constexpr size_t kChunkSize = 128;
+  using Chunk = FixedCapacityVector<GCCell *, kChunkSize>;
+  Chunk pushChunk_;
+  std::forward_list<Chunk> pullChunks_;
 };
 
 class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
@@ -542,25 +617,20 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
       }
       // Either the worklist is empty or we've marked a fixed amount of items.
       // Pull any new items off the global worklist.
-      {
-        std::lock_guard<Mutex> lk{globalWorklist_.mutex()};
-        // Drain the global worklist.
-        for (GCCell *cell; globalWorklist_.tryDequeueLocked(cell);) {
-          assert(
-              cell->isValid() &&
-              "Invalid cell received off the global worklist");
-          assert(
-              !gc.inYoungGen(cell) &&
-              "Shouldn't ever traverse a YG object in this loop");
-          HERMES_SLOW_ASSERT(
-              gc.dbgContains(cell) && "Non-heap cell found in global worklist");
-          if (HeapSegment::getCellMarkBit(cell)) {
-            // It's already in the worklist, no need to mark again.
-            continue;
-          }
-          push(cell);
+      globalWorklist_.drain([this](GCCell *cell) {
+        assert(
+            cell->isValid() && "Invalid cell received off the global worklist");
+        assert(
+            !gc.inYoungGen(cell) &&
+            "Shouldn't ever traverse a YG object in this loop");
+        HERMES_SLOW_ASSERT(
+            gc.dbgContains(cell) && "Non-heap cell found in global worklist");
+        if (HeapSegment::getCellMarkBit(cell)) {
+          // It's already in the worklist, no need to mark again.
+          return;
         }
-      }
+        push(cell);
+      });
       // We need to give the mutator a chance to acquire these locks in case it
       // needs to do a YG collection.
       if (shouldLock) {
@@ -921,6 +991,7 @@ void HadesGC::completeMarking() {
   std::lock_guard<Mutex> oglk{oldGenMutex_};
   WeakRefLock weakRefLock{weakRefMutex()};
 
+  oldGenMarker_->globalWorklist().flushPushChunk();
   // Drain the marking queue.
   oldGenMarker_->drainMarkWorklist</*shouldLock*/ false>();
   assert(
