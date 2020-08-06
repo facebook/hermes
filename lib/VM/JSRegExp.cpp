@@ -109,17 +109,10 @@ Handle<JSRegExp> JSRegExp::create(
   return selfHandle;
 }
 
-/// ES11 21.2.3.2.2 RegExpInitialize ( obj, pattern, flags ) 5-
-ExecutionStatus JSRegExp::initialize(
+void JSRegExp::initializeProperties(
     Handle<JSRegExp> selfHandle,
     Runtime *runtime,
-    Handle<StringPrimitive> pattern,
-    Handle<StringPrimitive> flags,
-    OptValue<llvh::ArrayRef<uint8_t>> bytecode) {
-  assert(
-      pattern && flags &&
-      "Null pattern and/or flags passed to initializeWithPatternAndFlags");
-
+    Handle<StringPrimitive> pattern) {
   JSObject::setInternalProperty(
       selfHandle.get(), runtime, patternPropIndex(), pattern.getHermesValue());
 
@@ -137,6 +130,45 @@ ExecutionStatus JSRegExp::initialize(
   assert(
       res != ExecutionStatus::EXCEPTION && *res &&
       "defineOwnProperty() failed");
+}
+
+ExecutionStatus JSRegExp::initialize(
+    Handle<JSRegExp> selfHandle,
+    Runtime *runtime,
+    Handle<JSRegExp> otherHandle,
+    Handle<StringPrimitive> flags) {
+  llvh::SmallVector<char16_t, 16> flagsText16;
+  flags->copyUTF16String(flagsText16);
+
+  auto sflags = regex::SyntaxFlags::fromString(flagsText16);
+  if (!sflags) {
+    return runtime->raiseSyntaxError("Invalid RegExp: Invalid flags");
+  }
+
+  auto pattern = runtime->makeHandle(getPattern(otherHandle.get(), runtime));
+
+  // Fast path to avoid recompiling the RegExp if the flags match
+  if (LLVM_LIKELY(
+          sflags->toByte() == getSyntaxFlags(otherHandle.get()).toByte())) {
+    initializeProperties(selfHandle, runtime, pattern);
+    selfHandle->syntaxFlags_ = *sflags;
+    return selfHandle->initializeBytecode(
+        {otherHandle->bytecode_, otherHandle->bytecodeSize_}, runtime);
+  }
+  return initialize(selfHandle, runtime, pattern, flags, llvh::None);
+}
+
+/// ES11 21.2.3.2.2 RegExpInitialize ( obj, pattern, flags )
+ExecutionStatus JSRegExp::initialize(
+    Handle<JSRegExp> selfHandle,
+    Runtime *runtime,
+    Handle<StringPrimitive> pattern,
+    Handle<StringPrimitive> flags,
+    OptValue<llvh::ArrayRef<uint8_t>> bytecode) {
+  assert(
+      pattern && flags &&
+      "Null pattern and/or flags passed to JSRegExp::initialize");
+  initializeProperties(selfHandle, runtime, pattern);
 
   if (bytecode) {
     return selfHandle->initializeBytecode(*bytecode, runtime);
@@ -318,8 +350,8 @@ void JSRegExp::_snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
 void JSRegExp::_snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
   auto *const self = vmcast<JSRegExp>(cell);
   if (self->bytecode_) {
-    // Add a native node for regex bytecode, to account for native size directly
-    // owned by the regex.
+    // Add a native node for regex bytecode, to account for native size
+    // directly owned by the regex.
     snap.beginNode();
     snap.endNode(
         HeapSnapshot::NodeType::Native,
@@ -350,10 +382,10 @@ CallResult<HermesValue> JSRegExp::escapePattern(
       case u'/':
         // Avoid premature end of regex.
         // TODO nice to have: don't do this if we are in square brackets.
-        // /[/]/ is valid and the middle / does not need to be escaped. However
-        // /[\/]/ is also valid and means the same thing (CharacterEscape
-        // production from regexp grammar). Still it would be nice to not
-        // unnecessarily mangle the user's supplied pattern.
+        // /[/]/ is valid and the middle / does not need to be escaped.
+        // However /[\/]/ is also valid and means the same thing
+        // (CharacterEscape production from regexp grammar). Still it would be
+        // nice to not unnecessarily mangle the user's supplied pattern.
         result.append(isBackslashed ? "/" : "\\/");
         break;
 
