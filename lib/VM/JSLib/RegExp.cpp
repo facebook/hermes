@@ -393,6 +393,30 @@ regExpConstructor(void *, Runtime *runtime, NativeArgs args) {
   return regExpRes->getHermesValue();
 }
 
+/// Wrapper for regExpConstructorInternal to implement a fast path for
+/// Construct(%RegExp%, « pattern, flags ») and avoid a recompilation in the
+/// common case where \p pattern is a JSRegExp with [[OriginalFlags]] equal to
+/// \p flags.
+static CallResult<Handle<JSRegExp>> regExpConstructorFastCopy(
+    Runtime *runtime,
+    Handle<> pattern,
+    Handle<StringPrimitive> flags) {
+  if (auto R = Handle<JSRegExp>::dyn_vmcast(pattern)) {
+    auto newRegexp = JSRegExp::create(runtime);
+    if (LLVM_UNLIKELY(
+            JSRegExp::initialize(newRegexp, runtime, R, flags) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return newRegexp;
+  }
+  auto newRegexpRes = regExpConstructorInternal(runtime, pattern, flags, true);
+  if (LLVM_UNLIKELY(newRegexpRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return Handle<JSRegExp>::vmcast(*newRegexpRes);
+}
+
 // ES6 21.2.5.2.2
 CallResult<Handle<JSArray>> directRegExpExec(
     Handle<JSRegExp> regexp,
@@ -1039,7 +1063,7 @@ regExpPrototypeSymbolMatchAll(void *, Runtime *runtime, NativeArgs args) {
   // This is thus equivalent to RegExp(« R, flags »).
   // it is necessary to invoke the 21.2.3.1 RegExp, neither RegExpCreate
   // nor internal JSRegExp creation can shortcut without diverging the spec.
-  auto newRegExpRes = regExpConstructorInternal(runtime, R, flags, true);
+  auto newRegExpRes = regExpConstructorFastCopy(runtime, R, flags);
   if (newRegExpRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
