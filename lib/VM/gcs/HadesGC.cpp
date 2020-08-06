@@ -1297,8 +1297,18 @@ void HadesGC::markSymbol(SymbolID) {}
 
 WeakRefSlot *HadesGC::allocWeakSlot(HermesValue init) {
   assert(weakRefMutex() && "Mutex must be held");
-  weakPointers_.push_back({init});
-  WeakRefSlot *const slot = &weakPointers_.back();
+  WeakRefSlot *slot;
+  if (firstFreeWeak_) {
+    assert(
+        firstFreeWeak_->state() == WeakSlotState::Free &&
+        "invalid free slot state");
+    slot = firstFreeWeak_;
+    firstFreeWeak_ = firstFreeWeak_->nextFree();
+    slot->reset(init);
+  } else {
+    weakPointers_.push_back({init});
+    slot = &weakPointers_.back();
+  }
   const Phase phase = concurrentPhase_.load(std::memory_order_acquire);
   if (phase == Phase::Mark) {
     // During the mark phase, if a WeakRef is created, it might not be marked
@@ -1313,7 +1323,9 @@ WeakRefSlot *HadesGC::allocWeakSlot(HermesValue init) {
 }
 
 void HadesGC::freeWeakSlot(WeakRefSlot *slot) {
-  slot->free(nullptr);
+  // Sets the given WeakRefSlot to point to firstFreeWeak_ instead of a cell.
+  slot->free(firstFreeWeak_);
+  firstFreeWeak_ = slot;
 }
 
 void HadesGC::forAllObjs(const std::function<void(GCCell *)> &callback) {

@@ -432,6 +432,10 @@ class HadesGC final : public GCBase {
   /// collection, as well as the time an OG collection takes.
   std::unique_ptr<CollectionSection> ogCollectionSection_;
 
+  /// Pointer to the first free weak reference slot. Free weak refs are chained
+  /// together in a linked list.
+  WeakRefSlot *firstFreeWeak_{nullptr};
+
   /// The main entrypoint for all allocations.
   /// \param sz The size of allocation requested. This might be rounded up to
   ///   fit heap alignment requirements.
