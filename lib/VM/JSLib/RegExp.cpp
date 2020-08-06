@@ -18,8 +18,6 @@
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
 
-#include "llvh/ADT/ScopeExit.h"
-
 namespace hermes {
 namespace vm {
 
@@ -1696,12 +1694,6 @@ regExpPrototypeSymbolSplit(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Cannot call RegExp.protoype[Symbol.split] on a non-object.");
   }
-  // We currently cannot support calling this method on a non-RegExp object, so
-  // throw a TypeError in this case.
-  if (LLVM_UNLIKELY(!vmisa<JSRegExp>(args.getThisArg()))) {
-    return runtime->raiseTypeError(
-        "Calling RegExp.protoype[Symbol.split] on a non-RegExp object is not supported yet.");
-  }
   // 3. Let S be ToString(string).
   auto strRes = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
@@ -1710,7 +1702,7 @@ regExpPrototypeSymbolSplit(void *, Runtime *runtime, NativeArgs args) {
   auto S = runtime->makeHandle(std::move(*strRes));
 
   // 5. Let flags be ? ToString(? Get(rx, "flags")).
-  auto regexp = Handle<JSRegExp>::vmcast(args.getThisHandle());
+  auto regexp = Handle<JSObject>::vmcast(args.getThisHandle());
   CallResult<PseudoHandle<>> flagsRes = JSObject::getNamed_RJS(
       regexp, runtime, Predefined::getSymbolID(Predefined::flags));
   if (LLVM_UNLIKELY(flagsRes == ExecutionStatus::EXCEPTION)) {
@@ -1729,33 +1721,23 @@ regExpPrototypeSymbolSplit(void *, Runtime *runtime, NativeArgs args) {
   // "y".
   // NOTE: We do not follow this part of the spec, instead, we just use flags as
   // newFlags and actually strip the sticky flag. See below.
-  llvh::SmallVector<char16_t, 16> flagsText16;
-  flags->copyUTF16String(flagsText16);
-  const auto newFlagsOpt = regex::SyntaxFlags::fromString(flagsText16);
-
   // 10. Let splitter be Construct(C, «rx, newFlags»).
-  MutableHandle<JSRegExp> splitter{runtime, regexp.get()};
-  // As an optimisation, we only create a new RegExp if the flags attribute
-  // has been modified
-  if (LLVM_UNLIKELY(
-          !newFlagsOpt ||
-          newFlagsOpt->toByte() !=
-              JSRegExp::getSyntaxFlags(regexp.get()).toByte())) {
-    auto newRegexp = JSRegExp::create(runtime);
-    auto pattern =
-        runtime->makeHandle(JSRegExp::getPattern(regexp.get(), runtime));
-    // 14. ReturnIfAbrupt(splitter).
-    if (LLVM_UNLIKELY(
-            JSRegExp::initialize(
-                newRegexp, runtime, pattern, flags, llvh::None) ==
-            ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    splitter = newRegexp.get();
+  auto splitterRes = regExpConstructorFastCopy(runtime, regexp, flags);
+  if (LLVM_UNLIKELY(splitterRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
   }
+  auto splitter = *splitterRes;
+  // The spec actually tells us to always set the sticky flag to true, but
+  // since it is much faster to perform a global search, we set sticky to
+  // false and then check the returned index.
+  auto stickyFlags = JSRegExp::getSyntaxFlags(splitter.get());
+  auto newFlags = stickyFlags;
+  newFlags.sticky = 0;
+  JSRegExp::setSyntaxFlags(splitter.get(), newFlags);
+
   // 6. If flags contains "u", let unicodeMatching be true.
   // 7. Else, let unicodeMatching be false.
-  bool unicodeMatching = newFlagsOpt->unicode;
+  bool unicodeMatching = newFlags.unicode;
 
   // 11. Let A be ArrayCreate(0).
   auto arrRes = JSArray::create(runtime, 0, 0);
@@ -1793,17 +1775,6 @@ regExpPrototypeSymbolSplit(void *, Runtime *runtime, NativeArgs args) {
     // Don't want any elements, so we're done.
     return A.getHermesValue();
   }
-
-  // The spec actually tells us to always set the sticky flag to true, but
-  // since it is much faster to perform a global search, we set sticky to
-  // false and then check the returned index.
-  // NOTE: We can only do this because no user provided code can run after this
-  // point.
-  auto nonStickyFlags = *newFlagsOpt;
-  nonStickyFlags.sticky = 0;
-  JSRegExp::setSyntaxFlags(splitter.get(), nonStickyFlags);
-  const auto restoreFlags = llvh::make_scope_exit(
-      [&]() { JSRegExp::setSyntaxFlags(splitter.get(), *newFlagsOpt); });
 
   // 27. If size = 0, then
   if (size == 0) {

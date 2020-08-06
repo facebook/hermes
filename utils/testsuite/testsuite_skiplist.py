@@ -778,9 +778,6 @@ SKIP_LIST = [
     "test262/test/built-ins/RegExp/prototype/Symbol.split/species-ctor-species-undef.js",
     "test262/test/built-ins/RegExp/prototype/Symbol.split/species-ctor-y.js",
     "test262/test/built-ins/RegExp/prototype/Symbol.split/species-ctor.js",
-    # Implementation specific
-    "test262/test/built-ins/RegExp/prototype/Symbol.split/get-flags-err.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.split/coerce-flags-err.js",
     # JSON changes
     # prototype changes
     "test262/test/built-ins/Error/prototype/S15.11.4_A2.js",
