@@ -1,0 +1,30 @@
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <!-- Set HERMES_ARCH to "win32" for desktop builds -->
+    <HERMES_ARCH Condition="'$(HERMES_ARCH)' == ''">uwp</HERMES_ARCH>
+
+    <HERMES_PLATFORM Condition="'$(HERMES_PLATFORM)' == ''">$(Platform)</HERMES_PLATFORM>
+    <!-- Fix platform name (win32 should be x86) -->
+    <HERMES_PLATFORM Condition="'$(HERMES_PLATFORM)' == 'Win32'">x86</HERMES_PLATFORM>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)' == 'Debug'">$(MSBuildThisFileDirectory)..\..\lib\$(HERMES_ARCH)\debug\$(HERMES_PLATFORM);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)' == 'Release'">$(MSBuildThisFileDirectory)..\..\lib\$(HERMES_ARCH)\release\$(HERMES_PLATFORM);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>hermes.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DelayLoadDLLs>hermes.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+    </Link>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup Condition="'$(Configuration)' == 'Debug' And '$(HERMES_NODLLCOPY)' == ''">
+    <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\..\lib\$(HERMES_ARCH)\debug\$(HERMES_PLATFORM)\hermes.dll" />
+    <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\..\lib\$(HERMES_ARCH)\debug\$(HERMES_PLATFORM)\hermes.pdb" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(Configuration)' == 'Release' And '$(HERMES_NODLLCOPY)' == ''">
+    <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\..\lib\$(HERMES_ARCH)\release\$(HERMES_PLATFORM)\hermes.dll" />
+    <!--  We don't currently build a PDB for release builds
+    <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\..\lib\$(HERMES_ARCH)\release\$(HERMES_PLATFORM)\hermes.pdb" / -->
+  </ItemGroup>
+</Project>

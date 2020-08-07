@@ -83,6 +83,13 @@ elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
   # Same as above, but for windows. Note that there is no equivalent of -fvisibility=default.
   set(compile_flags "")
   set(link_flags "/O2 ${OPTIONAL_GC_SECTIONS} ${OPTIONAL_JNI_ONLOAD}")
+
+  # Generate a PDB for debug builds
+  if("{CMAKE_BUILD_TYPE}" MATCHES "Debug")
+    set(compile_flags "${compile_flags} /Zi")
+    set(link_flags "${link_flags} /DEBUG")
+  endif()
+
 endif()
 
 set_target_properties(libhermes PROPERTIES

@@ -1,0 +1,100 @@
+name: 0.0.$(Date:yyMM.d)$(Rev:rrr)
+
+trigger:
+  - master
+
+pr:
+  - master
+
+pool:
+  vmImage: 'windows-latest'
+
+jobs:
+  - job: HermesBuild
+    timeoutInMinutes: 30
+    displayName: Build the Hermes binary for supported architectures and flavors
+    strategy:
+      matrix:
+        DebugX64:
+          BuildConfiguration: debug
+          BuildPlatform: x64
+        DebugX86:
+          BuildConfiguration: debug
+          BuildPlatform: x86
+        DebugARM:
+          BuildConfiguration: debug
+          BuildPlatform: arm
+        DebugARM64:
+          BuildConfiguration: debug
+          BuildPlatform: arm64
+        ReleaseX64:
+          BuildConfiguration: release
+          BuildPlatform: x64
+        ReleaseX86:
+          BuildConfiguration: release
+          BuildPlatform: x86
+        ReleaseARM:
+          BuildConfiguration: release
+          BuildPlatform: arm
+        ReleaseARM64:
+          BuildConfiguration: release
+          BuildPlatform: arm64
+
+    steps:
+      - task: PowerShell@2
+        displayName: Run the build script
+        inputs:
+          targetType: filePath
+          filePath: $(Build.SourcesDirectory)\cibuild.ps1
+          arguments:
+            -SourcesPath:$(Build.SourcesDirectory)
+            -OutputPath:$(Build.ArtifactStagingDirectory)
+            -Platform:$(BuildPlatform)
+            -Configuration:$(BuildConfiguration)
+
+      - task: PublishBuildArtifacts@1
+        displayName: "Publish artifacts"
+        inputs:
+          artifactName: HermesArtifacts
+          pathtoPublish: $(Build.ArtifactStagingDirectory)
+
+  - job: HermesPublishNuget
+    dependsOn:
+      - HermesBuild
+    displayName: Publish Nuget
+    steps:
+      - checkout: none
+
+      # The commit tag in the nuspec requires that we use at least nuget 4.6
+      - task: NuGetToolInstaller@0
+        inputs:
+          versionSpec: ">=4.6.0"
+
+      - task: DownloadBuildArtifacts@0
+        displayName: Download Build outputs
+        inputs:
+          artifactName: HermesArtifacts
+          downloadPath: $(System.DefaultWorkingDirectory)
+
+      - task: PowerShell@2
+        inputs:
+          targetType: 'inline'
+          script: |
+            $Version = (Get-Content (Join-Path $(System.DefaultWorkingDirectory) "HermesArtifacts\version") | Out-String).Trim()
+            Write-Host "##vso[task.setvariable variable=Version]$Version"
+
+      - task: NuGetCommand@2
+        displayName: 'NuGet Pack'
+        inputs:
+          command: pack
+          packagesToPack: $(System.DefaultWorkingDirectory)\HermesArtifacts\ReactNative.Hermes.Windows.nuspec
+          packDestination: $(System.DefaultWorkingDirectory)\NugetRootFinal
+          buildProperties: CommitId=$(Build.SourceVersion);nugetroot=$(System.DefaultWorkingDirectory)\HermesArtifacts;RepoUri=$(Build.Repository.Uri)
+          versioningScheme: byEnvVar
+          versionEnvVar: Version
+
+      - task: PublishBuildArtifacts@1
+        displayName: "Publish final nuget artifacts"
+        inputs:
+          PathtoPublish: $(System.DefaultWorkingDirectory)\NugetRootFinal
+          ArtifactName: "Hermes-final-nuget"

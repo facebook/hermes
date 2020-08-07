@@ -15,3 +15,6 @@ buck-out
 
 # Mac
 .DS_Store
+
+build
+out

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>ReactNative.Hermes.Windows</id>
+    <version>$Version$</version>
+    <description>Contains a Windows implementation of Hermes for use with ReactNative (VERSION_DETAILS)</description>
+    <authors>Facebook, Microsoft</authors>
+    <projectUrl>https://github.com/microsoft/hermes-windows</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <repository type="git" url="$RepoUri$" commit="$CommitId$" />
+  </metadata>
+  <files>
+    <file src="$nugetroot$\lib\**\*.*" target="lib" exclude="**\*.manifest;**\*.iobj;**\*.ipdb;**\*.exp;**\*.ilk" />
+    <file src="$nugetroot$\build\**\*.*" target="build"/>
+    <file src="$nugetroot$\license\*.*" target="license"/>
+  </files>
+</package>

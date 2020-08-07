@@ -46,6 +46,11 @@
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/raw_ostream.h"
 
+#ifdef _MSC_VER
+// Avoid conflicting definitions for ssize_t from \zip\src\zip.h and \llvh\include\llvm-c\DataTypes.h
+#define _SSIZE_T_DEFINED
+#endif
+
 #include "zip/src/zip.h"
 
 #include <sstream>
