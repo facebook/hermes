@@ -518,6 +518,23 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
     push(cell);
   }
 
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  void accept(BasedPointer &ptr) override {
+    if (!ptr) {
+      return;
+    }
+    PointerBase *const base = gc.getPointerBase();
+    void *actualizedPointer = base->basedToPointerNonNull(ptr);
+#ifndef NDEBUG
+    void *const ptrCopy = actualizedPointer;
+#endif
+    accept(actualizedPointer);
+    assert(
+        ptrCopy == actualizedPointer &&
+        "MarkAcceptor::accept should not modify its argument");
+  }
+#endif
+
   void accept(HermesValue &hv) override {
     if (hv.isPointer()) {
       void *ptr = hv.getPointer();
@@ -1034,7 +1051,8 @@ void HadesGC::completeMarking() {
 }
 
 void HadesGC::findYoungGenSymbolsAndWeakRefs() {
-  class SymbolAndWeakRefAcceptor : public SlotAcceptor, public WeakRefAcceptor {
+  class SymbolAndWeakRefAcceptor final : public SlotAcceptor,
+                                         public WeakRefAcceptor {
    public:
     explicit SymbolAndWeakRefAcceptor(GC &gc, std::vector<bool> &markedSymbols)
         : gc_{gc}, markedSymbols_{markedSymbols} {}
@@ -1197,7 +1215,8 @@ void HadesGC::writeBarrier(void *loc, void *value) {
 #ifdef HERMESVM_COMPRESSED_POINTERS
     // TODO: Pass in pointer base? Slows down the non-concurrent-marking case.
     // Or maybe always decode the old value? Also slows down the normal case.
-    GCCell *const oldValue = getPointerBase()->basedToPointer(oldValueStorage);
+    GCCell *const oldValue = static_cast<GCCell *>(
+        getPointerBase()->basedToPointer(oldValueStorage));
 #else
     GCCell *const oldValue = static_cast<GCCell *>(oldValueStorage);
 #endif
@@ -1920,7 +1939,11 @@ std::unique_ptr<HadesGC::HeapSegment> HadesGC::createYoungGenSegment() {
   if (!res) {
     hermes_fatal("Failed to alloc young gen");
   }
-  return std::unique_ptr<HeapSegment>(new HeapSegment{std::move(res.get())});
+  std::unique_ptr<HeapSegment> seg(new HeapSegment{std::move(res.get())});
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  pointerBase_->setSegment(++numSegments_, seg->lowLim());
+#endif
+  return seg;
 }
 
 HadesGC::HeapSegment &HadesGC::OldGen::createSegment() {
@@ -1929,7 +1952,11 @@ HadesGC::HeapSegment &HadesGC::OldGen::createSegment() {
     hermes_fatal("Failed to alloc old gen");
   }
   segments_.emplace_back(new HeapSegment{std::move(res.get())});
-  return **segments_.rbegin();
+  HeapSegment &seg = **segments_.rbegin();
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  gc_->pointerBase_->setSegment(++gc_->numSegments_, seg.lowLim());
+#endif
+  return seg;
 }
 
 void HadesGC::OldGen::moveSegment(std::unique_ptr<HeapSegment> &&seg) {

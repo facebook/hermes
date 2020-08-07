@@ -242,6 +242,7 @@ class HadesGC final : public GCBase {
     using AlignedHeapSegment::contains;
     using AlignedHeapSegment::getCellMarkBit;
     using AlignedHeapSegment::level;
+    using AlignedHeapSegment::lowLim;
     using AlignedHeapSegment::markBitArray;
     using AlignedHeapSegment::maxSize;
     using AlignedHeapSegment::resetLevel;
@@ -367,6 +368,12 @@ class HadesGC final : public GCBase {
 
  private:
   const uint64_t maxHeapSize_;
+
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  /// This needs to be placed before youngGen_ and oldGen_, because those
+  /// members use numSegments_ as part of being constructed.
+  uint64_t numSegments_{0};
+#endif
 
   /// Keeps the storage provider alive until after the GC is fully destructed.
   std::shared_ptr<StorageProvider> provider_;
