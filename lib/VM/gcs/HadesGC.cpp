@@ -519,7 +519,9 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
   }
 
 #ifdef HERMESVM_COMPRESSED_POINTERS
-  void accept(BasedPointer &ptr) override {
+  void accept(BasedPointer &ptrRef) override {
+    // Copy into local variable in case it changes during evaluation.
+    const BasedPointer ptr = ptrRef;
     if (!ptr) {
       return;
     }
@@ -535,7 +537,8 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
   }
 #endif
 
-  void accept(HermesValue &hv) override {
+  void accept(HermesValue &hvRef) override {
+    const HermesValue hv = hvRef;
     if (hv.isPointer()) {
       void *ptr = hv.getPointer();
 #ifndef NDEBUG
@@ -1064,7 +1067,8 @@ void HadesGC::findYoungGenSymbolsAndWeakRefs() {
 #endif
     void accept(GCPointerBase &ptr) override {}
 
-    void accept(HermesValue &hv) override {
+    void accept(HermesValue &hvRef) override {
+      const HermesValue hv = hvRef;
       if (hv.isSymbol()) {
         accept(hv.getSymbol());
       }
