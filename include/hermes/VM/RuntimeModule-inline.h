@@ -20,8 +20,7 @@ inline Handle<Domain> RuntimeModule::getDomain(Runtime *runtime) {
 }
 
 inline Domain *RuntimeModule::getDomainUnsafe(Runtime *runtime) {
-  WeakRefLock lk{runtime->getHeap().weakRefMutex()};
-  Domain *domain = getNoHandleLocked(domain_, &runtime_->getHeap());
+  Domain *domain = getNoHandle(domain_, &runtime_->getHeap());
   assert(domain && "RuntimeModule has an invalid Domain");
   return domain;
 }

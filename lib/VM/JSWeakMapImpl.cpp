@@ -34,8 +34,6 @@ ExecutionStatus JSWeakMapImplBase::setValue(
   {
     // No allocations should occur while a WeakRefKey is live.
     NoAllocScope noAlloc{runtime};
-    // Holding the WeakRefLock will prevent the weak ref from getting cleared.
-    WeakRefLock lk{runtime->getHeap().weakRefMutex()};
     WeakRefKey mapKey(
         WeakRef<JSObject>{&runtime->getHeap(), key},
         runtime->gcStableHashHermesValue(key));
@@ -103,7 +101,7 @@ bool JSWeakMapImplBase::clearEntryDirect(GC *gc, const WeakRefKey &key) {
   if (it == map_.end()) {
     return false;
   }
-  it->first.ref.clear(gc->weakRefMutex());
+  it->first.ref.clear();
   valueStorage_.get(gc->getPointerBase())
       ->at(it->second)
       .setInGC(HermesValue::encodeEmptyValue(), gc);
@@ -131,7 +129,6 @@ bool JSWeakMapImplBase::hasValue(
     Handle<JSWeakMapImplBase> self,
     Runtime *runtime,
     Handle<JSObject> key) {
-  WeakRefLock lk{runtime->getHeap().weakRefMutex()};
   NoAllocScope noAlloc{runtime};
   WeakRefKey mapKey(
       WeakRef<JSObject>{&runtime->getHeap(), key},
@@ -144,7 +141,6 @@ HermesValue JSWeakMapImplBase::getValue(
     Handle<JSWeakMapImplBase> self,
     Runtime *runtime,
     Handle<JSObject> key) {
-  WeakRefLock lk{runtime->getHeap().weakRefMutex()};
   NoAllocScope noAlloc{runtime};
   WeakRefKey mapKey(
       WeakRef<JSObject>{&runtime->getHeap(), key},
@@ -160,7 +156,6 @@ uint32_t JSWeakMapImplBase::debugFreeSlotsAndGetSize(
     PointerBase *base,
     GC *gc,
     JSWeakMapImplBase *self) {
-  WeakRefLock lk{gc->weakRefMutex()};
   /// Free up any freeable slots, so the count is more accurate.
   if (self->hasFreeableSlots_) {
     // There are freeable slots: find and delete them.
@@ -179,7 +174,7 @@ JSWeakMapImplBase::KeyIterator JSWeakMapImplBase::keys_end() {
 
 JSObject *detail::WeakRefKey::getObject(GC *gc) const {
   assert(gc->inGC() && "Should only be used by the GC implementation.");
-  return getNoHandleLocked(ref, gc);
+  return getNoHandle(ref, gc);
 }
 
 void JSWeakMapImplBase::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
@@ -193,7 +188,7 @@ void JSWeakMapImplBase::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
     // we would attempt to call markWeakRef on a freed ref, which is a violation
     // of the markWeakRef contract.
     acceptor.accept(it->first.ref);
-    if (!it->first.ref.isValid(acceptor.mutexRef())) {
+    if (!it->first.ref.isValid()) {
       // Set the hasFreeableSlots_ to indicate that this slot can be
       // cleaned up the next time we add an element to this map.
       self->hasFreeableSlots_ = true;
@@ -203,8 +198,9 @@ void JSWeakMapImplBase::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
 
 /// Mark weak references and remove any invalid weak refs.
 void JSWeakMapImplBase::findAndDeleteFreeSlots(PointerBase *base, GC *gc) {
+  WeakRefLock lk{gc->weakRefMutex()};
   for (auto it = map_.begin(); it != map_.end(); ++it) {
-    if (!it->first.ref.isValid(gc->weakRefMutex())) {
+    if (!it->first.ref.isValid()) {
       // If invalid, clear the value and remove the key from the map.
       deleteInternal(base, gc, it);
     }
@@ -230,8 +226,6 @@ CallResult<uint32_t> JSWeakMapImplBase::getFreeValueStorageIndex(
   if (self->freeListHead_ == kFreeListInvalid && self->hasFreeableSlots_) {
     // No elements in the free list and there are freeable slots.
     // Try to find some.
-    // findAndDeleteFreeSlots needs the lock to be held.
-    WeakRefLock lk{runtime->getHeap().weakRefMutex()};
     self->findAndDeleteFreeSlots(runtime, &runtime->getHeap());
   }
 
@@ -312,8 +306,7 @@ void serializeJSWeakMapBase(Serializer &s, const GCCell *cell) {
   s.writeInt<unsigned>(self->map_.size());
   for (auto it = self->map_.begin(); it != self->map_.end(); it++) {
     // Write it->first: WeakRefKey.
-    s.writeRelocation(
-        it->first.ref.unsafeGetSlot(s.getRuntime()->getHeap().weakRefMutex()));
+    s.writeRelocation(it->first.ref.unsafeGetSlot());
     s.writeInt<uint32_t>(it->first.hash);
     // Write it->second: uint32_t
     s.writeInt<uint32_t>(it->second);

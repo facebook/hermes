@@ -1227,7 +1227,7 @@ class WeakRefSlot {
     reset(v);
   }
 
-#if 1
+#ifndef HERMESVM_GC_HADES
   /// Tagged pointer implementation. Only supports HermesValues with object tag.
 
   bool hasValue() const {
@@ -1266,6 +1266,7 @@ class WeakRefSlot {
   /// Return true if this slot stores a non-null pointer to something. For any
   /// slot reachable by the mutator, that something is a GCCell.
   bool hasPointer() const {
+    assert(state() != Free && "Should never query a free WeakRef");
     return reinterpret_cast<uintptr_t>(tagged_) > Free;
   }
 
@@ -1325,6 +1326,10 @@ class WeakRefSlot {
   /// HermesValue implementation. Supports any value as referent.
 
   bool hasValue() const {
+    // An empty value means the pointer has been cleared, and a native value
+    // means it is free.
+    // Don't use state_ here since that can be modified concurrently by the GC.
+    assert(!value_.isNativeValue() && "Should never query a free WeakRef");
     return !value_.isEmpty();
   }
 
@@ -1406,6 +1411,9 @@ class WeakRefSlot {
   }
 #endif // HERMESVM_SERIALIZE
  private:
+  // value_ and state_ are read and written by different threads. We rely on
+  // them being independent words so that they can be used without
+  // synchronization.
   PinnedHermesValue value_;
   State state_;
 #endif
@@ -1422,19 +1430,11 @@ class WeakRefBase {
 
  public:
   /// \return true if the referenced object hasn't been freed.
-  /// \pre This must be called only while the WeakRef mutex is held, in case the
-  ///   GC mutates the slot.
-  bool isValid(const WeakRefMutex &mtx) const {
-    assert(
-        mtx &&
-        "Weak ref mutex must be held in order to access a weak ref's contents");
-    (void)mtx;
-    return slot_->hasValue();
+  bool isValid() const {
+    return isSlotValid(slot_);
   }
 
   /// \return true if the given slot stores a non-empty value.
-  /// \pre This must be called only while the WeakRef mutex is held, in case the
-  ///   GC mutates the slot.
   static bool isSlotValid(const WeakRefSlot *slot) {
     assert(slot && "slot must not be null");
     return slot->hasValue();
@@ -1442,20 +1442,10 @@ class WeakRefBase {
 
   /// \return a pointer to the slot used by this WeakRef.
   /// Used primarily when populating a DenseMap with WeakRef keys.
-  /// \pre The return value must be dereferenced only while the WeakRef mutex is
-  ///   held, in case the GC mutates the slot.
-  WeakRefSlot *unsafeGetSlot(const WeakRefMutex &mtx) {
-    assert(mtx && "WeakRefMutex must be held");
-    (void)mtx;
+  WeakRefSlot *unsafeGetSlot() {
     return slot_;
   }
-  const WeakRefSlot *unsafeGetSlot(const WeakRefMutex &mtx) const {
-    assert(mtx && "WeakRefMutex must be held");
-    (void)mtx;
-    return slot_;
-  }
-  /// Only for use in scenarios where a lock cannot be accessed.
-  const WeakRefSlot *unsafeGetSlotWithoutLock() const {
+  const WeakRefSlot *unsafeGetSlot() const {
     return slot_;
   }
 };

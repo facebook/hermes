@@ -565,7 +565,7 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
   }
 
   void accept(WeakRefBase &wr) override {
-    WeakRefSlot *slot = wr.unsafeGetSlot(mutexRef());
+    WeakRefSlot *slot = wr.unsafeGetSlot();
     assert(
         slot->state() != WeakSlotState::Free &&
         "marking a freed weak ref slot");
@@ -674,10 +674,6 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
     return markedSymbols_;
   }
 
-  const WeakRefMutex &mutexRef() override {
-    return gc.weakRefMutex();
-  }
-
  private:
   /// A worklist local to the marking thread, that is only pushed onto by the
   /// marking thread. If this is empty, the global worklist must be consulted
@@ -753,17 +749,13 @@ class HadesGC::MarkWeakRootsAcceptor final : public WeakRootAcceptor {
 
   void accept(WeakRefBase &wr) override {
     // Duplicated from MarkAcceptor, since some weak roots are also weak refs.
-    WeakRefSlot *slot = wr.unsafeGetSlot(mutexRef());
+    WeakRefSlot *slot = wr.unsafeGetSlot();
     assert(
         slot->state() != WeakSlotState::Free &&
         "marking a freed weak ref slot");
     if (slot->state() != WeakSlotState::Marked) {
       slot->mark();
     }
-  }
-
-  const WeakRefMutex &mutexRef() override {
-    return gc_.weakRefMutex();
   }
 
  private:
@@ -1058,7 +1050,7 @@ void HadesGC::findYoungGenSymbolsAndWeakRefs() {
                                          public WeakRefAcceptor {
    public:
     explicit SymbolAndWeakRefAcceptor(GC &gc, std::vector<bool> &markedSymbols)
-        : gc_{gc}, markedSymbols_{markedSymbols} {}
+        : markedSymbols_{markedSymbols} {}
 
     // Do nothing for pointers.
     void accept(void *&) override {}
@@ -1084,7 +1076,7 @@ void HadesGC::findYoungGenSymbolsAndWeakRefs() {
     }
 
     void accept(WeakRefBase &wr) override {
-      WeakRefSlot *slot = wr.unsafeGetSlot(mutexRef());
+      WeakRefSlot *slot = wr.unsafeGetSlot();
       assert(
           slot->state() != WeakSlotState::Free &&
           "marking a freed weak ref slot");
@@ -1093,12 +1085,7 @@ void HadesGC::findYoungGenSymbolsAndWeakRefs() {
       }
     }
 
-    const WeakRefMutex &mutexRef() override {
-      return gc_.weakRefMutex();
-    }
-
    private:
-    GC &gc_;
     std::vector<bool> &markedSymbols_;
   };
 
@@ -1319,7 +1306,8 @@ bool HadesGC::canAllocExternalMemory(uint32_t size) {
 void HadesGC::markSymbol(SymbolID) {}
 
 WeakRefSlot *HadesGC::allocWeakSlot(HermesValue init) {
-  assert(weakRefMutex() && "Mutex must be held");
+  // The weak ref mutex doesn't need to be held since weakPointers_ and
+  // firstFreeWeak_ are only modified while the world is stopped.
   WeakRefSlot *slot;
   if (firstFreeWeak_) {
     assert(
@@ -1336,6 +1324,8 @@ WeakRefSlot *HadesGC::allocWeakSlot(HermesValue init) {
   if (phase == Phase::Mark) {
     // During the mark phase, if a WeakRef is created, it might not be marked
     // if the object holding this new WeakRef has already been visited.
+    // This doesn't need the WeakRefMutex because nothing is using this slot
+    // yet.
     slot->mark();
   } else {
     assert(

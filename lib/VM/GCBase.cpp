@@ -263,7 +263,7 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
   }
 
   void accept(WeakRefBase &wr) override {
-    WeakRefSlot *slot = wr.unsafeGetSlot(mutexRef());
+    WeakRefSlot *slot = wr.unsafeGetSlot();
     if (slot->state() == WeakSlotState::Free) {
       // If the slot is free, there's no edge to add.
       return;
@@ -279,10 +279,6 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
         HeapSnapshot::EdgeType::Weak,
         indexName,
         gc.getObjectID(slot->getPointer()));
-  }
-
-  const WeakRefMutex &mutexRef() override {
-    return gc.weakRefMutex();
   }
 
  private:
@@ -323,10 +319,6 @@ struct SnapshotRootSectionAcceptor : public SnapshotAcceptor,
     // Do nothing for the end of the root section.
   }
 
-  const WeakRefMutex &mutexRef() override {
-    return gc.weakRefMutex();
-  }
-
  private:
   // v8's roots start numbering at 1.
   int rootSectionNum_{1};
@@ -349,7 +341,7 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
   }
 
   void accept(WeakRefBase &wr) override {
-    WeakRefSlot *slot = wr.unsafeGetSlot(mutexRef());
+    WeakRefSlot *slot = wr.unsafeGetSlot();
     if (slot->state() == WeakSlotState::Free) {
       // If the slot is free, there's no edge to add.
       return;
@@ -390,10 +382,6 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
     // Reset the edge counter, so each root section's unnamed edges start at
     // zero.
     nextEdge_ = 0;
-  }
-
-  const WeakRefMutex &mutexRef() override {
-    return gc.weakRefMutex();
   }
 
  private:

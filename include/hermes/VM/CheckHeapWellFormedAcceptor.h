@@ -30,7 +30,6 @@ struct CheckHeapWellFormedAcceptor final : public SlotAcceptorDefault,
   void accept(HermesValue &hv) override;
   void accept(WeakRefBase &wr) override;
   void accept(SymbolID sym) override;
-  const WeakRefMutex &mutexRef() override;
 };
 
 #endif

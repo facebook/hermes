@@ -158,11 +158,7 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
   }
 
   void accept(WeakRefBase &wr) override {
-    wr.unsafeGetSlot(mutexRef())->mark();
-  }
-
-  const WeakRefMutex &mutexRef() override {
-    return gc.weakRefMutex();
+    wr.unsafeGetSlot()->mark();
   }
 };
 

@@ -29,7 +29,6 @@ template <class T>
 class WeakRef : public WeakRefBase {
  public:
   using Traits = HermesValueTraits<T>;
-  // WeakRefMutex must be held when calling the constructors.
   explicit WeakRef(
       GC *gc,
       typename Traits::value_type value = Traits::defaultValue())
@@ -64,10 +63,7 @@ class WeakRef : public WeakRefBase {
   /// This is an unsafe function since the referenced object may be freed any
   /// time that GC occurs.
   OptValue<typename Traits::value_type> unsafeGetOptional(GC *gc) const {
-    assert(
-        gc->weakRefMutex() &&
-        "Weak ref mutex must be held in order to access a weak ref's contents");
-    if (!isValid(gc->weakRefMutex())) {
+    if (!isValid()) {
       return OptValue<typename Traits::value_type>(llvh::None);
     }
 
@@ -80,17 +76,6 @@ class WeakRef : public WeakRefBase {
   /// handle, ensuring that it cannot be freed while the handle is alive.
   /// If the weak reference is not live, returns None.
   llvh::Optional<Handle<T>> get(HandleRootOwner *runtime, GC *gc) const {
-    // Grab the weak ref lock to be able to safely query the slot. The GC might
-    // be marking WeakRefs or nulling them out.
-    // TODO: Checking isValid requires reading the slot, which is wasteful if
-    // the same reference has already been checked before. Adding a bit in each
-    // WeakRef could allow a non-locked check, but updating them all to be zero
-    // to force a re-check when a GC is activated is non-trivial.
-    WeakRefLock lk{gc->weakRefMutex()};
-    return getLocked(runtime, gc);
-  }
-
-  llvh::Optional<Handle<T>> getLocked(HandleRootOwner *runtime, GC *gc) const {
     if (const auto optValue = unsafeGetOptional(gc)) {
       return Handle<T>::vmcast(runtime, Traits::encode(optValue.getValue()));
     }
@@ -98,8 +83,8 @@ class WeakRef : public WeakRefBase {
   }
 
   /// Clear the slot to which the WeakRef refers.
-  void clear(const WeakRefMutex &mtx) {
-    unsafeGetSlot(mtx)->clearPointer();
+  void clear() {
+    unsafeGetSlot()->clearPointer();
   }
 };
 
@@ -107,7 +92,7 @@ class WeakRef : public WeakRefBase {
 /// Defined as a free function to avoid template errors.
 template <typename T>
 inline typename std::enable_if<!std::is_same<T, HermesValue>::value, T *>::type
-getNoHandleLocked(const WeakRef<T> &wr, GC *gc) {
+getNoHandle(const WeakRef<T> &wr, GC *gc) {
   if (const auto hv = wr.unsafeGetOptional(gc)) {
     return ::hermes::vm::vmcast_or_null<T>(hv.getValue());
   }
