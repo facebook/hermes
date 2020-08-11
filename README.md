@@ -6,6 +6,13 @@
 
 Hermes is a JavaScript engine optimized for fast start-up of [React Native](https://reactnative.dev/) apps on Android. It features ahead-of-time static optimization and compact bytecode.
 
+
+To get started, check out these links:
+
+* [Learn more about Hermes.](https://engineering.fb.com/android/hermes/)
+* [Using Hermes and installation instructions](https://reactnative.dev/docs/hermes)
+* [Hermes-javascript-npm](https://www.npmjs.com/package/hermes-javascript)
+
 If you're only interested in using pre-built Hermes in a new or existing React Native app, you do not need to follow this guide or have direct access to the Hermes source. Instead, just follow [these instructions to enable Hermes](https://reactnative.dev/docs/hermes).
 
 If you want to know how to build and hack on Hermes directly, and/or integrate Hermes built from source into a React Native app then read on.
