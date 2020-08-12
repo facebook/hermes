@@ -562,6 +562,7 @@ SKIP_LIST = [
     # TODO(T60938585): Make these conditional on the choice of build.
     "test262/test/built-ins/decodeURI/S15.1.3.1_A2.5_T1.js",
     "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A2.5_T1.js",
+    "test262/test/built-ins/RegExp/character-class-escape-non-whitespace.js",
     # default arguments
     "esprima/test_fixtures/expression/primary/object/migrated_0038.js",
     "mjsunit/es6/default-parameters-debug.js",
