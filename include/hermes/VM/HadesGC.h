@@ -367,6 +367,8 @@ class HadesGC final : public GCBase {
   };
 
  private:
+  /// The maximum number of bytes that the heap can hold. Once this amount has
+  /// been filled up, OOM will occur.
   const uint64_t maxHeapSize_;
 
 #ifdef HERMESVM_COMPRESSED_POINTERS
@@ -406,8 +408,9 @@ class HadesGC final : public GCBase {
 
   /// Represents the current phase the concurrent GC is in. The main difference
   /// between phases is their effect on read and write barriers.
-  /// Not protected by a lock and should be read/written atomically.
-  std::atomic<Phase> concurrentPhase_{Phase::None};
+  /// Can be read with memory_order_acquire, or after acquiring oldGenMutex_ can
+  /// be read as relaxed. Should only be stored to if oldGenMutex_ is acquired.
+  AtomicIfConcurrentGC<Phase> concurrentPhase_{Phase::None};
 
   /// Used by the write barrier to add items to the worklist.
   /// Protected by oldGenMutex_.
@@ -490,8 +493,18 @@ class HadesGC final : public GCBase {
   /// mutator.
   void oldGenCollectionWorker();
 
+  /// For 32-bit systems, Hades runs on a single thread, interleaving OG work
+  /// with YG collections. This function completes that OG collection.
+  /// \pre kConcurrentGC must be false.
+  void completeNonConcurrentOldGenCollection();
+
   /// Finish the marking process. This requires a STW pause in order to do a
   /// final marking worklist drain, and to update weak roots.
+  /// \pre All three of stopTheWorldMutex_, oldGenMutex_, and weakRefMutex_, are
+  /// held before entering.
+  void completeMarkingAssumeLocks();
+
+  /// Same as \c completeMarkingAssumeLocks, but acquires necessary locks first.
   void completeMarking();
 
   /// As part of finishing the marking process, iterate through all of YG to
@@ -499,6 +512,10 @@ class HadesGC final : public GCBase {
   void findYoungGenSymbolsAndWeakRefs();
 
   /// Put dead objects onto the free list, so their space can be re-used.
+  /// \pre oldGenMutex_ must be held.
+  void sweepAssumeLocks();
+
+  /// Same as \c sweepAssumeLocks, but acquires necessary locks first.
   void sweep();
 
   /// Find all pointers from OG into YG during a YG collection. This is done
@@ -559,9 +576,6 @@ class HadesGC final : public GCBase {
   /// Give the background marking thread a chance to complete marking and finish
   /// the OG collection.
   void yieldToBackgroundThread();
-
-  /// Given a potentially-debug mutex \p mtx, get the inner std::mutex it uses.
-  static std::mutex &innerMutex(Mutex &mtx);
 
 #ifdef HERMES_SLOW_DEBUG
   /// Checks the heap to make sure all cells are valid.

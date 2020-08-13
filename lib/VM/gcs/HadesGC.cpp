@@ -589,68 +589,7 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
         gc.oldGenMutex_.lock();
         gc.weakRefMutex().lock();
       }
-      // Only mark up to this many objects before consulting the global
-      // worklist. This way the mutator doesn't get blocked as long as the GC
-      // makes progress.
-      // NOTE: This does *not* guarantee that the marker thread has upper bounds
-      // on the amount of work it does before reading from the global worklist.
-      // Any individual cell can be quite large (such as an ArrayStorage), which
-      // means there is a possibility of the global worklist filling up and
-      // blocking the mutator.
-      constexpr int kMarkLimit = 128;
-      for (int numMarked = 0; !localWorklist_.empty() && numMarked < kMarkLimit;
-           ++numMarked) {
-        GCCell *const cell = localWorklist_.top();
-        localWorklist_.pop();
-        assert(cell->isValid() && "Invalid cell in marking");
-        assert(
-            HeapSegment::getCellMarkBit(cell) && "Discovered unmarked object");
-        assert(
-            !gc.inYoungGen(cell) &&
-            "Shouldn't ever traverse a YG object in this loop");
-        HERMES_SLOW_ASSERT(
-            gc.dbgContains(cell) &&
-            "Non-heap object discovered during marking");
-        // There is a benign data race here, as the GC can read a pointer while
-        // it's being modified by the mutator; however, the following rules we
-        // obey prevent it from being a problem:
-        // * The only things being modified that the GC reads are the GCPointers
-        //    and GCHermesValue in an object. All other fields are ignored.
-        // * Those fields are fewer than 64 bits.
-        // * Therefore, on 64-bit platforms, those fields are atomic
-        //    automatically.
-        // * On 32-bit platforms, we don't run this code concurrently, and
-        //    instead yield cooperatively with the mutator. WARN: This isn't
-        //    true yet, will be true later.
-        // * Thanks to the write barrier, if something is modified its old value
-        //    is placed in the globalWorklist, so we don't miss marking it.
-        // * Since the global worklist is pushed onto *before* the write
-        //    happens, we know that there's no way the loop will exit unless it
-        //    reads the old value.
-        // * If it observes the old value (pre-write-barrier value) here, the
-        //    new value will still be live, either by being pre-marked by the
-        //    allocator, or because something else's write barrier will catch
-        //    the modification.
-        TsanIgnoreReadsBegin();
-        GCBase::markCell(cell, &gc, *this);
-        TsanIgnoreReadsEnd();
-      }
-      // Either the worklist is empty or we've marked a fixed amount of items.
-      // Pull any new items off the global worklist.
-      globalWorklist_.drain([this](GCCell *cell) {
-        assert(
-            cell->isValid() && "Invalid cell received off the global worklist");
-        assert(
-            !gc.inYoungGen(cell) &&
-            "Shouldn't ever traverse a YG object in this loop");
-        HERMES_SLOW_ASSERT(
-            gc.dbgContains(cell) && "Non-heap cell found in global worklist");
-        if (HeapSegment::getCellMarkBit(cell)) {
-          // It's already in the worklist, no need to mark again.
-          return;
-        }
-        push(cell);
-      });
+      drainSomeWork();
       // We need to give the mutator a chance to acquire these locks in case it
       // needs to do a YG collection.
       if (shouldLock) {
@@ -660,6 +599,78 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
       // It's ok to access localWorklist outside of the lock, since it is local
       // memory to only this thread.
     } while (!localWorklist_.empty());
+  }
+
+  /// Drain some of the work to be done for marking.
+  void drainSomeWork() {
+    // Only mark up to this many objects before consulting the global
+    // worklist. This way the mutator doesn't get blocked as long as the GC
+    // makes progress.
+    // NOTE: This does *not* guarantee that the marker thread has upper bounds
+    // on the amount of work it does before reading from the global worklist.
+    // Any individual cell can be quite large (such as an ArrayStorage), which
+    // means there is a possibility of the global worklist filling up and
+    // blocking the mutator.
+    constexpr int kMarkLimit = 128;
+    for (int numMarked = 0; !localWorklist_.empty() && numMarked < kMarkLimit;
+         ++numMarked) {
+      GCCell *const cell = localWorklist_.top();
+      localWorklist_.pop();
+      assert(cell->isValid() && "Invalid cell in marking");
+      assert(HeapSegment::getCellMarkBit(cell) && "Discovered unmarked object");
+      assert(
+          !gc.inYoungGen(cell) &&
+          "Shouldn't ever traverse a YG object in this loop");
+      HERMES_SLOW_ASSERT(
+          gc.dbgContains(cell) && "Non-heap object discovered during marking");
+      // There is a benign data race here, as the GC can read a pointer while
+      // it's being modified by the mutator; however, the following rules we
+      // obey prevent it from being a problem:
+      // * The only things being modified that the GC reads are the GCPointers
+      //    and GCHermesValue in an object. All other fields are ignored.
+      // * Those fields are fewer than 64 bits.
+      // * Therefore, on 64-bit platforms, those fields are atomic
+      //    automatically.
+      // * On 32-bit platforms, we don't run this code concurrently, and
+      //    instead yield cooperatively with the mutator. WARN: This isn't
+      //    true yet, will be true later.
+      // * Thanks to the write barrier, if something is modified its old value
+      //    is placed in the globalWorklist, so we don't miss marking it.
+      // * Since the global worklist is pushed onto *before* the write
+      //    happens, we know that there's no way the loop will exit unless it
+      //    reads the old value.
+      // * If it observes the old value (pre-write-barrier value) here, the
+      //    new value will still be live, either by being pre-marked by the
+      //    allocator, or because something else's write barrier will catch
+      //    the modification.
+      TsanIgnoreReadsBegin();
+      GCBase::markCell(cell, &gc, *this);
+      TsanIgnoreReadsEnd();
+    }
+    // Either the worklist is empty or we've marked a fixed amount of items.
+    // Pull any new items off the global worklist.
+    globalWorklist_.drain([this](GCCell *cell) {
+      assert(
+          cell->isValid() && "Invalid cell received off the global worklist");
+      assert(
+          !gc.inYoungGen(cell) &&
+          "Shouldn't ever traverse a YG object in this loop");
+      HERMES_SLOW_ASSERT(
+          gc.dbgContains(cell) && "Non-heap cell found in global worklist");
+      if (HeapSegment::getCellMarkBit(cell)) {
+        // It's already in the worklist, no need to mark again.
+        return;
+      }
+      push(cell);
+    });
+  }
+
+  /// \return true if there is no more work to be done for marking.
+  /// WARN: This should only be called when the mutator is paused, as
+  /// otherwise there is a race condition between reading this and new work
+  /// getting added.
+  bool allWorkIsDrained() {
+    return localWorklist_.empty() && globalWorklist_.hasPendingWork();
   }
 
   MarkWorklist &globalWorklist() {
@@ -701,7 +712,9 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
     assert(
         !HeapSegment::getCellMarkBit(cell) &&
         "A marked object should never be pushed onto a worklist");
-    assert(!gc.inYoungGen(cell) && "Should never push a young gen cell");
+    assert(
+        !gc.inYoungGen(cell) &&
+        "Shouldn't ever push a YG object onto the worklist");
     HeapSegment::setCellMarkBit(cell);
     // There could be a race here: however, the mutator will never change a
     // cell's kind after initialization. The GC thread might to a free cell, but
@@ -873,7 +886,14 @@ void HadesGC::waitForCollectionToFinish() {
   assert(
       oldGenMutex_ &&
       "oldGenMutex_ must be held before calling waitForCollectionToFinish");
-  if (concurrentPhase_ == Phase::None) {
+  if (concurrentPhase_.load(std::memory_order_acquire) == Phase::None) {
+    return;
+  }
+  if (!kConcurrentGC) {
+    if (oldGenMarker_) {
+      // Complete the collection.
+      completeNonConcurrentOldGenCollection();
+    }
     return;
   }
   std::unique_lock<Mutex> lk{oldGenMutex_, std::adopt_lock};
@@ -889,7 +909,7 @@ void HadesGC::waitForCollectionToFinish() {
   stopTheWorldCondVar_.notify_all();
   // Wait for an existing collection to finish.
   oldGenCollectionThread_.join();
-  assert(concurrentPhase_ == Phase::None);
+  assert(concurrentPhase_.load(std::memory_order_acquire) == Phase::None);
   // Undo the worldStopped_ change, as the mutator will now resume. Can't rely
   // on completeMarking to set worldStopped_ to false, as the OG collection
   // might have already passed the stage where it was waiting for STW.
@@ -899,9 +919,7 @@ void HadesGC::waitForCollectionToFinish() {
   }
   lk.lock();
   assert(lk && "Lock must be re-acquired before exiting");
-  assert(
-      oldGenMutex_ &&
-      "oldGenMutex_ must be held before exiting waitForCollectionToFinish");
+  assert(oldGenMutex_ && "Old gen mutex must be re-acquired before exiting");
   // Release association with the mutex to prevent the destructor from unlocking
   // it.
   lk.release();
@@ -913,7 +931,7 @@ void HadesGC::oldGenCollection() {
   //  * Sweep dead objects onto the free lists.
   // This function must be called while the oldGenMutex_ is held.
   assert(
-      concurrentPhase_ == Phase::None &&
+      concurrentPhase_.load(std::memory_order_acquire) == Phase::None &&
       "Starting a second old gen collection");
   if (oldGenCollectionThread_.joinable()) {
     // This is just making sure the leftover thread is completed before starting
@@ -970,6 +988,23 @@ void HadesGC::oldGenCollection() {
   // be called.
   auto cpuTimeEnd = oscompat::thread_cpu_time();
   ogCollectionSection_->incrementCPUTime(cpuTimeEnd - cpuTimeStart);
+  if (!kConcurrentGC) {
+    // 32-bit system: 64-bit HermesValues cannot be updated in one atomic
+    // instruction. Have YG collections interleave marking work.
+    // In this version of the system, the mark stack will be drained in batches
+    // during each YG collection. Once the mark stack is fully drained, the rest
+    // of the collection finishes while blocking a YG GC. This allows
+    // incremental work without actually using multiple threads.
+    // NOTE: Nothing is done here, YG will check for this condition and drain
+    // directly from the oldGenMarker_.
+    return;
+  }
+  // 64-bit system: 64-bit HermesValues can be updated in one atomic
+  // instruction. Start up a separate thread for doing marking work.
+  // NOTE: Since the "this" value (the HadesGC instance) is implicitly copied
+  // to the new thread, the GC cannot be destructed until the new thread
+  // completes. This means that before destroying the GC,
+  // waitForCollectionToFinish must be called.
   oldGenCollectionThread_ = std::thread(&HadesGC::oldGenCollectionWorker, this);
   // Use concurrentPhase_ to be able to tell when the collection finishes.
 }
@@ -989,6 +1024,17 @@ void HadesGC::oldGenCollectionWorker() {
   concurrentPhase_.store(Phase::None, std::memory_order_release);
 }
 
+void HadesGC::completeNonConcurrentOldGenCollection() {
+  assert(
+      !kConcurrentGC &&
+      "Shouldn't call completeNonConcurrentOldGenCollection if concurrency "
+      "is enabled");
+  completeMarkingAssumeLocks();
+  sweepAssumeLocks();
+  inGC_.store(false, std::memory_order_seq_cst);
+  concurrentPhase_.store(Phase::None, std::memory_order_release);
+}
+
 void HadesGC::completeMarking() {
   // All 3 locks are held here for 3 reasons:
   //  * stwLock prevents any write barriers from occurring
@@ -997,12 +1043,21 @@ void HadesGC::completeMarking() {
   //  * weakRefMutex prevents the mutator from accessing data structures using
   //    WeakRefs.
   // This lock order is required for any other lock acquisitions in this file.
-  std::unique_lock<std::mutex> stw{innerMutex(stopTheWorldMutex_)};
+  std::unique_lock<Mutex> stw{stopTheWorldMutex_};
   stopTheWorldRequested_ = true;
-  stopTheWorldCondVar_.wait(stw, [this]() { return worldStopped_; });
+  waitForConditionVariable(
+      stopTheWorldCondVar_, stw, [this]() { return worldStopped_; });
   std::lock_guard<Mutex> oglk{oldGenMutex_};
   WeakRefLock weakRefLock{weakRefMutex()};
+  completeMarkingAssumeLocks();
+  // Let the thread that yielded know that the STW pause has completed.
+  stopTheWorldRequested_ = false;
+  worldStopped_ = false;
+  stw.unlock();
+  stopTheWorldCondVar_.notify_all();
+}
 
+void HadesGC::completeMarkingAssumeLocks() {
   oldGenMarker_->globalWorklist().flushPushChunk();
   // Drain the marking queue.
   oldGenMarker_->drainMarkWorklist</*shouldLock*/ false>();
@@ -1038,11 +1093,8 @@ void HadesGC::completeMarking() {
   // ensures that no mutator read barriers observer the WeakMapScan phase.
   concurrentPhase_.store(Phase::Sweep, std::memory_order_release);
 
-  // Let the thread that yielded know that the STW pause has completed.
-  stopTheWorldRequested_ = false;
-  worldStopped_ = false;
-  stw.unlock();
-  stopTheWorldCondVar_.notify_all();
+  // Nothing needs oldGenMarker_ from this point onward.
+  oldGenMarker_.reset(nullptr);
 }
 
 void HadesGC::findYoungGenSymbolsAndWeakRefs() {
@@ -1112,12 +1164,16 @@ void HadesGC::findYoungGenSymbolsAndWeakRefs() {
 }
 
 void HadesGC::sweep() {
-  // Sweep phase: iterate through dead objects and add them to the
-  // free list. Also finalize them at this point.
   // Sweeping only needs to pause the OG.
   // TODO: Make sweeping either yield the old gen lock regularly, or not
   // require the lock at all.
   std::lock_guard<Mutex> lk{oldGenMutex_};
+  sweepAssumeLocks();
+}
+
+void HadesGC::sweepAssumeLocks() {
+  // Sweep phase: iterate through dead objects and add them to the
+  // free list. Also finalize them at this point.
   const bool isTrackingIDs = getIDTracker().isTrackingIDs() ||
       getAllocationLocationTracker().isEnabled();
   for (auto segit = oldGen_.begin(), segitend = oldGen_.end();
@@ -1394,9 +1450,11 @@ void *HadesGC::allocWork(uint32_t sz) {
       "Should be aligned before entering this function");
   assert(sz >= minAllocationSize() && "Allocating too small of an object");
   assert(sz <= maxAllocationSize() && "Allocating too large of an object");
-  HERMES_SLOW_ASSERT(
-      !weakRefMutex() &&
-      "WeakRef mutex should not be held when alloc is called");
+  if (kConcurrentGC) {
+    HERMES_SLOW_ASSERT(
+        !weakRefMutex() &&
+        "WeakRef mutex should not be held when alloc is called");
+  }
   if (!fixedSize && LLVM_UNLIKELY(sz >= HeapSegment::maxSize() / 2)) {
     return allocLongLived(sz);
   }
@@ -1430,9 +1488,11 @@ template void *HadesGC::allocWork<true, HasFinalizer::No>(uint32_t);
 template void *HadesGC::allocWork<false, HasFinalizer::No>(uint32_t);
 
 void *HadesGC::allocLongLived(uint32_t sz) {
-  HERMES_SLOW_ASSERT(
-      !weakRefMutex() &&
-      "WeakRef mutex should not be held when allocLongLived is called");
+  if (kConcurrentGC) {
+    HERMES_SLOW_ASSERT(
+        !weakRefMutex() &&
+        "WeakRef mutex should not be held when allocLongLived is called");
+  }
   // Alloc directly into the old gen.
   std::lock_guard<Mutex> lk{oldGenMutex_};
   void *res = oldGen_.alloc(heapAlignSize(sz));
@@ -1581,6 +1641,16 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
     promoteYoungGenToOldGen();
   } else {
     auto &yg = youngGen();
+
+    // 32-bit system: check if there's any work to be done from oldGenMarker_.
+    if (!kConcurrentGC && oldGenMarker_) {
+      // Draining requires both the OG lock and the WeakRefLock to be held.
+      oldGenMarker_->drainSomeWork();
+      if (oldGenMarker_->allWorkIsDrained()) {
+        // If the work has finished completely, finish the collection.
+        completeNonConcurrentOldGenCollection();
+      }
+    }
 
     // Clear the mark bits in the young gen first. They will be needed
     // during YG collection, and they should've previously been all 1s.
@@ -1755,7 +1825,7 @@ void HadesGC::finalizeYoungGenObjects() {
 }
 
 void HadesGC::updateWeakReferencesForYoungGen() {
-  const Phase phase = concurrentPhase_.load(std::memory_order_seq_cst);
+  const Phase phase = concurrentPhase_.load(std::memory_order_acquire);
   // If an OG collection is active, it will be determining what weak references
   // are live. The YG collection shouldn't modify the state of any weak
   // references that OG is trying to track. Only fixup pointers that are
@@ -1937,6 +2007,7 @@ std::unique_ptr<HadesGC::HeapSegment> HadesGC::createYoungGenSegment() {
 #ifdef HERMESVM_COMPRESSED_POINTERS
   pointerBase_->setSegment(++numSegments_, seg->lowLim());
 #endif
+  seg->markBitArray().markAll();
   return seg;
 }
 
@@ -1968,6 +2039,10 @@ bool HadesGC::inOldGen(const void *p) const {
 }
 
 void HadesGC::yieldToBackgroundThread() {
+  if (!kConcurrentGC) {
+    // A non-concurrent GC doesn't need to do anything here.
+    return;
+  }
   assert(
       !oldGenMutex_ &&
       "Shouldn't hold the old gen mutex when calling yieldToBackgroundThread");
@@ -1985,21 +2060,13 @@ void HadesGC::yieldToBackgroundThread() {
   // Notify a waiting OG collection that it can complete.
   stopTheWorldCondVar_.notify_all();
   {
-    std::unique_lock<std::mutex> stw{innerMutex(stopTheWorldMutex_)};
-    // Wait for the pause to complete.
-    stopTheWorldCondVar_.wait(stw, [this]() { return !worldStopped_; });
+    std::unique_lock<Mutex> stw{stopTheWorldMutex_};
+    waitForConditionVariable(
+        stopTheWorldCondVar_, stw, [this]() { return !worldStopped_; });
     assert(
         !stopTheWorldRequested_ &&
         "The request should be set to false after being completed");
   }
-}
-
-std::mutex &HadesGC::innerMutex(Mutex &mtx) {
-#ifndef NDEBUG
-  return mtx.inner();
-#else
-  return mtx;
-#endif
 }
 
 #ifdef HERMES_SLOW_DEBUG
