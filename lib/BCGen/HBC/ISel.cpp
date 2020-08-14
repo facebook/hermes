@@ -247,7 +247,6 @@ void HBCISel::addDebugSourceLocationInfo(SourceMapGenerator *outSourceMap) {
   IRBuilder builder(F_);
 
   DebugSourceLocation info{};
-  debugIdCache_.currentBufId = (unsigned)-1;
 
   bool hasDebugInfo = false;
   for (auto &reloc : relocations_) {

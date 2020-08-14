@@ -244,6 +244,10 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
 
   // Construct the relative function scope depth map.
   FunctionScopeAnalysis scopeAnalysis{lexicalTopLevel};
+
+  // Allow reusing the debug cache between functions
+  HBCISelDebugCache debugCache;
+
   // Bytecode generation for each function.
   for (auto &F : *M) {
     if (!shouldGenerate(&F)) {
@@ -295,7 +299,9 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
       funcGen =
           BytecodeFunctionGenerator::create(BMGen, RA.getMaxRegisterUsage());
       HBCISel hbciSel(&F, funcGen.get(), RA, scopeAnalysis);
+      hbciSel.populateDebugCache(debugCache);
       hbciSel.generate(sourceMapGen);
+      debugCache = hbciSel.getDebugCache();
     }
 
     BMGen.setFunctionGenerator(&F, std::move(funcGen));
