@@ -409,8 +409,8 @@ class MarkWorklist {
       data_[size_++] = elem;
     }
 
-    llvh::ArrayRef<T> data() {
-      return llvh::ArrayRef<T>{data_.data(), size_};
+    T *data() {
+      return data_.data();
     }
 
     void clear() {
@@ -437,26 +437,17 @@ class MarkWorklist {
     }
   }
 
-  /// Calls \p callback on each element in the worklist, excluding any in the
-  /// push chunk.
-  template <typename F>
-  void drain(F callback) {
-    std::forward_list<Chunk> chunks;
-    {
-      // Move the list (in O(1) time) to a local variable, and then release the
-      // lock. This unblocks the mutator faster.
-      std::lock_guard<Mutex> lk{mtx_};
-      std::swap(chunks, pullChunks_);
-      assert(pullChunks_.empty() && "pull chunks isn't cleared out");
-    }
-    for (Chunk &chunk : chunks) {
-      if (chunk.empty()) {
-        continue;
-      }
-      for (GCCell *cell : chunk.data()) {
-        callback(cell);
-      }
-    }
+  /// Empty and return the current worklist
+  llvh::SmallVector<GCCell *, 0> drain() {
+    llvh::SmallVector<GCCell *, 0> cells;
+    // Move the list (in O(1) time) to a local variable, and then release the
+    // lock. This unblocks the mutator faster.
+    std::lock_guard<Mutex> lk{mtx_};
+    std::swap(cells, worklist_);
+    assert(worklist_.empty() && "worklist isn't cleared out");
+    // Keep the previously allocated size to minimise allocations
+    worklist_.reserve(cells.size());
+    return cells;
   }
 
   /// While the world is stopped, move the push chunk to the list of pull chunks
@@ -464,10 +455,10 @@ class MarkWorklist {
   /// WARN: This can only be called by the mutator or when the world is stopped.
   void flushPushChunk() {
     std::lock_guard<Mutex> lk{mtx_};
-    // NOTE: Currently the background marking thread depletes the pullChunks_
-    // entirely, so it doesn't matter whether the chunks is pushed to the front
-    // or the back.
-    pullChunks_.emplace_front(pushChunk_);
+    worklist_.insert(
+        worklist_.end(),
+        pushChunk_.data(),
+        pushChunk_.data() + pushChunk_.size());
     // Set the size back to 0 and refill the same buffer.
     pushChunk_.clear();
   }
@@ -476,14 +467,14 @@ class MarkWorklist {
   /// of the push chunk.
   bool hasPendingWork() {
     std::lock_guard<Mutex> lk{mtx_};
-    return !pullChunks_.empty();
+    return !worklist_.empty();
   }
 
 #ifndef NDEBUG
   /// WARN: This can only be called when the world is stopped.
   bool empty() {
     std::lock_guard<Mutex> lk{mtx_};
-    return pushChunk_.empty() && pullChunks_.empty();
+    return pushChunk_.empty() && worklist_.empty();
   }
 #endif
 
@@ -492,7 +483,8 @@ class MarkWorklist {
   static constexpr size_t kChunkSize = 128;
   using Chunk = FixedCapacityVector<GCCell *, kChunkSize>;
   Chunk pushChunk_;
-  std::forward_list<Chunk> pullChunks_;
+  // Use a SmallVector of size 0 since it is more aggressive with PODs
+  llvh::SmallVector<GCCell *, 0> worklist_;
 };
 
 class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
@@ -648,7 +640,8 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
     }
     // Either the worklist is empty or we've marked a fixed amount of items.
     // Pull any new items off the global worklist.
-    globalWorklist_.drain([this](GCCell *cell) {
+    auto cells = globalWorklist_.drain();
+    for (GCCell *cell : cells) {
       assert(
           cell->isValid() && "Invalid cell received off the global worklist");
       assert(
@@ -656,12 +649,11 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
           "Shouldn't ever traverse a YG object in this loop");
       HERMES_SLOW_ASSERT(
           gc.dbgContains(cell) && "Non-heap cell found in global worklist");
-      if (HeapSegment::getCellMarkBit(cell)) {
-        // It's already in the worklist, no need to mark again.
-        return;
+      if (!HeapSegment::getCellMarkBit(cell)) {
+        // Cell has not yet been marked.
+        push(cell);
       }
-      push(cell);
-    });
+    }
   }
 
   /// \return true if there is no more work to be done for marking.
