@@ -319,9 +319,9 @@ class StringView {
   /// If the string is already UTF16, we return the pointer directly;
   /// otherwise (it's ASCII) we copy the string into the end of \p allocator,
   /// and \return a pointer to the beginning of this string in the allocator.
-  /// Note: \p allocator does not need to be empty when passed in. We always
-  /// append.
+  /// \pre allocator must be empty when passed in.
   UTF16Ref getUTF16Ref(llvh::SmallVectorImpl<char16_t> &allocator) const {
+    assert(allocator.empty() && "Shouldn't use a non-empty allocator");
     return getUTF16Ref(allocator, false);
   }
 

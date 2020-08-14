@@ -445,11 +445,12 @@ transientObjectPutErrorMessage(Runtime *runtime, Handle<> base, SymbolID id) {
   StringView valueAsStringPrintable =
       StringPrimitive::createStringView(runtime, valueAsString);
 
-  SmallU16String<32> tmp;
+  SmallU16String<32> tmp1;
+  SmallU16String<32> tmp2;
   return runtime->raiseTypeError(
       TwineChar16("Cannot create property '") + propName + "' on " +
-      baseTypeAsString.getUTF16Ref(tmp) + " '" +
-      valueAsStringPrintable.getUTF16Ref(tmp) + "'");
+      baseTypeAsString.getUTF16Ref(tmp1) + " '" +
+      valueAsStringPrintable.getUTF16Ref(tmp2) + "'");
 }
 
 ExecutionStatus Interpreter::putByIdTransient_RJS(
