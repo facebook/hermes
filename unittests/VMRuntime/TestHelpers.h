@@ -285,6 +285,12 @@ struct DummyRuntime final : public HandleRootOwner,
   static std::unique_ptr<StorageProvider> defaultProvider();
 
   ~DummyRuntime() override {
+#ifndef NDEBUG
+    gc.getIDTracker().forEachID(
+        [this](const void *mem, HeapSnapshot::NodeID id) {
+          EXPECT_TRUE(gc.validPointer(mem));
+        });
+#endif
     gc.finalizeAll();
   }
 

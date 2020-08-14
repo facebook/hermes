@@ -302,8 +302,7 @@ class HadesGC::EvacAcceptor final : public SlotAcceptorDefault {
   EvacAcceptor(GC &gc)
       : SlotAcceptorDefault{gc},
         copyListHead_{nullptr},
-        isTrackingIDs_{gc.getIDTracker().isTrackingIDs() ||
-                       gc.getAllocationLocationTracker().isEnabled()} {}
+        isTrackingIDs_{gc.isTrackingIDs()} {}
 
   ~EvacAcceptor() {}
 
@@ -1174,13 +1173,12 @@ void HadesGC::sweep() {
 void HadesGC::sweepAssumeLocks() {
   // Sweep phase: iterate through dead objects and add them to the
   // free list. Also finalize them at this point.
-  const bool isTrackingIDs = getIDTracker().isTrackingIDs() ||
-      getAllocationLocationTracker().isEnabled();
+  const bool isTracking = isTrackingIDs();
   for (auto segit = oldGen_.begin(), segitend = oldGen_.end();
        segit != segitend;
        ++segit) {
     HeapSegment &seg = **segit;
-    seg.forAllObjs([this, isTrackingIDs, &seg](GCCell *cell) {
+    seg.forAllObjs([this, isTracking, &seg](GCCell *cell) {
       // forAllObjs skips free list cells, so no need to check for those.
       assert(cell->isValid() && "Invalid cell in sweeping");
       if (HeapSegment::getCellMarkBit(cell)) {
@@ -1195,7 +1193,7 @@ void HadesGC::sweepAssumeLocks() {
         oldGen_.transitionToFreelist(seg);
       }
       oldGen_.addCellToFreelist(cell);
-      if (isTrackingIDs) {
+      if (isTracking) {
         // There is no race condition here, because the object has already been
         // determined to be dead, so nothing can be accessing it, or asking for
         // its ID.
@@ -1682,6 +1680,22 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
       WeakRefLock weakRefLock{weakRefMutex_};
       // Now that all YG objects have been marked, update weak references.
       updateWeakReferencesForYoungGen();
+    }
+    // Inform trackers about objects that died during this YG collection.
+    if (isTrackingIDs()) {
+      char *ptr = youngGen().start();
+      char *const lvl = youngGen().level();
+      while (ptr < lvl) {
+        GCCell *cell = reinterpret_cast<GCCell *>(ptr);
+        if (cell->hasMarkedForwardingPointer()) {
+          auto *fptr = cell->getMarkedForwardingPointer();
+          ptr += reinterpret_cast<GCCell *>(fptr)->getAllocatedSize();
+        } else {
+          ptr += cell->getAllocatedSize();
+          getIDTracker().untrackObject(cell);
+          getAllocationLocationTracker().freeAlloc(cell);
+        }
+      }
     }
     // Run finalizers for young gen objects.
     finalizeYoungGenObjects();

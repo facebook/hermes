@@ -477,6 +477,14 @@ TEST_F(GCBasicsTest, TestIDPersistsAcrossCollections) {
   EXPECT_EQ(idBefore, idAfter);
 }
 
+/// Test that objects that die during (YG) GC are untracked.
+TEST_F(GCBasicsTest, TestIDDeathInYoung) {
+  GCScope scope{&rt};
+  rt.getHeap().getObjectID(Dummy::create(rt));
+  rt.getHeap().collect();
+  // ~DummyRuntime will verify all pointers in ID map.
+}
+
 // Hades doesn't do any GCEventKind monitoring.
 #ifndef HERMESVM_GC_HADES
 TEST(GCCallbackTest, TestCallbackInvoked) {

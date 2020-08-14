@@ -879,6 +879,11 @@ class GCBase {
 #endif
   }
 
+  bool isTrackingIDs() {
+    return getIDTracker().isTrackingIDs() ||
+        getAllocationLocationTracker().isEnabled();
+  }
+
   IDTracker &getIDTracker() {
     return idTracker_;
   }
