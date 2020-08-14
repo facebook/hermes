@@ -91,7 +91,7 @@ ExecutionStatus heapSort(SortModel *sm, uint32_t begin, uint32_t end) {
 
 ExecutionStatus insertionSort(SortModel *sm, uint32_t begin, uint32_t end) {
   CallResult<bool> res{false};
-  if (begin == end) {
+  if (end - begin <= 1) {
     return ExecutionStatus::RETURNED;
   }
 
