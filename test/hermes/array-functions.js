@@ -516,6 +516,8 @@ print('sort');
 // CHECK-LABEL: sort
 print('empty', [].sort());
 // CHECK-NEXT: empty
+print([1].sort());
+// CHECK-NEXT: 1
 print([1,2].sort());
 // CHECK-NEXT: 1,2
 print([2,1].sort());

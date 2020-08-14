@@ -268,7 +268,9 @@ quicksort_top:
 } // namespace
 
 ExecutionStatus quickSort(SortModel *sm, uint32_t begin, uint32_t end) {
-  if (end - begin > INSERTION_THRESHOLD) {
+  if (end - begin <= 1) {
+    return ExecutionStatus::RETURNED;
+  } else if (end - begin > INSERTION_THRESHOLD) {
     return doQuickSort(sm, llvh::Log2_32(end - begin) * 2, begin, end - 1);
   } else {
     return insertionSort(sm, begin, end);
