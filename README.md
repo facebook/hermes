@@ -10,7 +10,7 @@ If you're only interested in using pre-built Hermes in a new or existing React N
 
 If you want to know how to build and hack on Hermes directly, and/or integrate Hermes built from source into a React Native app then read on.
 
-The instructions here very briefly cover steps to build the Hermes CLI. They assume you have typical native development tools setup for your OS, and support for cmake and Ninja. For more details of required dependencies, building Hermes with different options, etc. follow these links instead:
+The instructions here very briefly cover steps to build the Hermes CLI. They assume you have typical native development tools setup for your OS, and support for cmake and Ninja. For more details of required dependencies, building Hermes with different options, etc. follow the links given below:
 
 * [Building and Running Hermes](doc/BuildingAndRunning.md)
 * [Using a custom Hermes build in a React Native app](doc/ReactNativeIntegration.md#using-a-custom-hermes-build-in-a-react-native-app)
@@ -45,7 +45,7 @@ echo "'use strict'; function hello() { print('Hello World'); } hello();" | ./bin
 
 ## Contributing
 
-The main purpose of this repository is to continue to evolve Hermes, making it faster and more efficient. We are grateful to the community for contributing bugfixes and improvements. Read below to learn how you can take part in improving Hermes.
+The purpose of this repository is to continue to evolve Hermes; making it faster and more efficient. We are grateful to the community for contributing bugfixes and improvements. Read below to learn how you can take part in improving Hermes.
 
 ### Code of Conduct
 
