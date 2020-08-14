@@ -3387,8 +3387,9 @@ tailCall:
                 (const uint8_t *)ip + ip->iSwitchImm.op2, sizeof(uint32_t));
 
             // Read the offset from the table.
-            const uint32_t *loc =
-                (const uint32_t *)tablestart + uintVal - ip->iSwitchImm.op4;
+            // Must be signed to account for backwards branching.
+            const int32_t *loc =
+                (const int32_t *)tablestart + uintVal - ip->iSwitchImm.op4;
 
             ip = IPADD(*loc);
             DISPATCH;
