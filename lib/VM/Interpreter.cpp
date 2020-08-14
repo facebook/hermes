@@ -1112,6 +1112,8 @@ tailCall:
 #define BEFORE_OP_CODE                                                       \
   {                                                                          \
     UPDATE_OPCODE_TIME_SPENT;                                                \
+    HERMES_SLOW_ASSERT(                                                      \
+        curCodeBlock->contains(ip) && "curCodeBlock must contain ip");       \
     HERMES_SLOW_ASSERT((printDebugInfo(curCodeBlock, frameRegs, ip), true)); \
     HERMES_SLOW_ASSERT(                                                      \
         gcScope.getHandleCountDbg() == KEEP_HANDLES &&                       \
