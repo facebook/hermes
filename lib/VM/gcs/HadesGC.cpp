@@ -1529,8 +1529,6 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
   }
 
   // The GC didn't recover enough memory, OOM.
-  // Before OOMing, finalize everything to avoid reporting leaks.
-  gc_->finalizeAllLocked();
   gc_->oom(make_error_code(OOMError::MaxHeapReached));
 }
 
