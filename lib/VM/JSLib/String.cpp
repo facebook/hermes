@@ -1258,7 +1258,7 @@ stringPrototypeMatchAll(void *, Runtime *runtime, NativeArgs args) {
   auto regexp = args.getArgHandle(0);
   if (!regexp->isUndefined() && !regexp->isNull()) {
     // a. Let isRegExp be ? IsRegExp(regexp).
-    auto isRegExpRes = isRegExp(runtime, args.getArgHandle(0));
+    auto isRegExpRes = isRegExp(runtime, regexp);
     if (LLVM_UNLIKELY(isRegExpRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
