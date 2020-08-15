@@ -1579,7 +1579,7 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(replaceValueStrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    replaceValueStr = replaceValueStrRes->get();
+    replaceValueStr = std::move(*replaceValueStrRes);
   }
   // 10. Search string for the first occurrence of searchString and let pos be
   // the index within string of the first code unit of the matched substring and
