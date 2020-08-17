@@ -25,6 +25,10 @@ Pod::Spec.new do |spec|
   spec.vendored_frameworks = "destroot/Library/Frameworks/hermes.framework"
   spec.xcconfig            = { "CLANG_CXX_LANGUAGE_STANDARD" => "c++14", "CLANG_CXX_LIBRARY" => "compiler-default", "GCC_PREPROCESSOR_DEFINITIONS" => "HERMES_ENABLE_DEBUGGER=1" }
 
-  spec.script_phase = { :name => 'Build source files', :script => File.read("./configure-ios.sh")}
-  
+  spec.prepare_command = <<-EOS
+    # If universal framework does not exist, build one
+    if [ ! -d destroot/Library/Frameworks/hermes.framework ]; then
+      ./utils/build-apple-framework.sh
+    fi
+  EOS
 end
