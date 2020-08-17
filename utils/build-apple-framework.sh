@@ -4,10 +4,10 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-if [[ "$CONFIGURATION" = *Debug* ]]; then
-    BUILD_TYPE="--build-type=Debug"
+if [ "$DEBUG" = true ]; then
+  BUILD_TYPE="--build-type=Debug"
 else
-    BUILD_TYPE="--distribute"
+  BUILD_TYPE="--distribute"
 fi
 
 function command_exists {
@@ -40,17 +40,17 @@ function build_apple_framework {
     exit 1
   fi
 
-  ./utils/build/configure.py "$BUILD_TYPE" --cmake-flags "$cmake_flags" --build-system="$build_system" build
+  ./utils/build/configure.py "$BUILD_TYPE" --cmake-flags "$cmake_flags" --build-system="$build_system" "build_$1"
 
   if [[ "$build_system" == "Ninja" ]]; then
-    (cd build && ninja install/strip)
+    (cd ./build && ninja install/strip)
   else 
-    (cd build && make install/strip)
+    (cd ./build && make install/strip)
   fi
-
-  echo "Succesfully built framework for $1"
 }
 
+# Accepts an array of frameworks and will place all of
+# the architectures into the first one in the list
 function create_universal_framework {
   cd ./destroot/Library/Frameworks
 
@@ -58,26 +58,16 @@ function create_universal_framework {
 
   echo "Creating universal framework for platforms: ${platforms[@]}"
 
-  # Create a placeholder for universal framework based on one of the existing frameworks
-  cp -r "./${platforms[0]}/hermes.framework" ./hermes.framework
-
   for i in "${!platforms[@]}"; do
     platforms[$i]="${platforms[$i]}/hermes.framework/hermes"
   done
 
-  lipo -create -output "hermes.framework/hermes" "${platforms[@]}"
+  lipo -create -output "${platforms[0]}" "${platforms[@]}"
 
   lipo -info "hermes.framework/hermes"
+
+  cd -
 }
-
-# Build frameworks for every platform and architecture.
-# In the future, this list can be extended ith other Apple platforms,
-# such as `ipados`, depending on our prefernces
-build_apple_framework "iphoneos" "armv7;armv7s;arm64"
-build_apple_framework "iphonesimulator" "x86_64"
-
-# Create universal framework for requested platforms
-create_universal_framework "iphoneos" "iphonesimulator"
 
 
 

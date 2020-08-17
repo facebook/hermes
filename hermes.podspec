@@ -22,13 +22,31 @@ Pod::Spec.new do |spec|
   spec.preserve_paths      = ["destroot/bin/*"].concat(HermesHelper::BUILD_TYPE == :debug ? ["**/*.{h,c,cpp}"] : [])
   spec.source_files        = "destroot/include/**/*.h"
   spec.header_mappings_dir = "destroot/include"
-  spec.vendored_frameworks = "destroot/Library/Frameworks/hermes.framework"
+
+  spec.ios.vendored_frameworks = "destroot/Library/Frameworks/iphoneos/hermes.framework"
+  spec.osx.vendored_frameworks = "destroot/Library/Frameworks/macosx/hermes.framework"
+
   spec.xcconfig            = { "CLANG_CXX_LANGUAGE_STANDARD" => "c++14", "CLANG_CXX_LIBRARY" => "compiler-default", "GCC_PREPROCESSOR_DEFINITIONS" => "HERMES_ENABLE_DEBUGGER=1" }
 
   spec.prepare_command = <<-EOS
-    # If universal framework does not exist, build one
-    if [ ! -d destroot/Library/Frameworks/hermes.framework ]; then
-      ./utils/build-apple-framework.sh
+    # When true, debug build will be used.
+    # See `build-apple-framework.sh` for details
+    DEBUG=#{HermesHelper::BUILD_TYPE == :debug}
+
+    # Source utilities into the scope
+    . ./utils/build-apple-framework.sh
+
+    # If universal framework for iOS does not exist, build one
+    if [ ! -d destroot/Library/Frameworks/iphoneos/hermes.framework ]; then
+      build_apple_framework "iphoneos" "armv7;armv7s;arm64"
+      build_apple_framework "iphonesimulator" "x86_64"
+
+      create_universal_framework "iphoneos" "iphonesimulator"
+    fi
+
+    # If MacOS framework does not exist, build one
+    if [ ! -d destroot/Library/Frameworks/macosx/hermes.framework ]; then
+      build_apple_framework "macosx" "x86_64"
     fi
   EOS
 end
