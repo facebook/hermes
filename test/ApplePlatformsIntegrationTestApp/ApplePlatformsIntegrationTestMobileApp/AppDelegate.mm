@@ -1,10 +1,3 @@
-//
-//  AppDelegate.m
-//  ApplePlatformsIntegrationTestMobileApp
-//
-//  Created by Michał Grabowski on 17/08/2020.
-//
-
 #import "AppDelegate.h"
 
 #import <hermes/hermes.h>
