@@ -132,9 +132,9 @@ class Deserializer;
 /// Mark a GCPointer<T>, which must be within the heap.
 ///   void mark(GCPointer<T> &ptr, Name name);
 ///
-/// Return true if a GC cycle is currently in progress.
-/// If false, all objects in the heap have a valid VTable.
-///   bool inGC() const;
+/// Return true if the GC is active and is calling into the VM.
+/// If true, some objects in the heap may have an invalid VTable pointer.
+///   bool calledByGC() const;
 ///
 /// Various forms of write barriers: these can have empty implementations
 /// for GCs that don't require them:
@@ -869,14 +869,14 @@ class GCBase {
 
   /// @}
 
+  /// If false, all reachable objects in the heap will have a dereference-able
+  /// VTable pointer which describes its type and size. If true, both reachable
+  /// objects and unreachable objects may not have dereference-able VTable
+  /// pointers, and any reads from JS heap memory may give strange results.
   bool inGC() const {
-#ifdef HERMESVM_GC_HADES
-    return true;
-#else
     // This is only used in asserts and debugging purposes, make it as strict
     // as possible.
     return inGC_.load(std::memory_order_seq_cst);
-#endif
   }
 
   bool isTrackingIDs() {

@@ -169,6 +169,15 @@ class HadesGC final : public GCBase {
   /// \name Debug APIs
   /// \{
 
+  /// See comment in GCBase.
+  bool calledByGC() const {
+    // If the background thread is active, check if this thread matches the
+    // background thread. If this isn't called by the background thread, the
+    // inGC flag is sufficient.
+    return oldGenCollectionThread_.get_id() == std::this_thread::get_id() ||
+        inGC();
+  }
+
   /// Return true if \p ptr is currently pointing at valid accessable memory,
   /// allocated to an object.
   bool validPointer(const void *ptr) const;

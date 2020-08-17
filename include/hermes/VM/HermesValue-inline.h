@@ -19,7 +19,7 @@ namespace vm {
 
 void HermesValue::setInGC(HermesValue hv, GC *gc) {
   setNoBarrier(hv);
-  assert(gc->inGC());
+  assert(gc->calledByGC());
 }
 
 template <typename T>

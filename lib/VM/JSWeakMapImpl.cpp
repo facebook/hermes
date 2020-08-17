@@ -96,7 +96,7 @@ bool JSWeakMapImplBase::deleteValue(
 
 // Only during GC.
 bool JSWeakMapImplBase::clearEntryDirect(GC *gc, const WeakRefKey &key) {
-  assert(gc->inGC() && "Should only be used by the GC implementation.");
+  assert(gc->calledByGC() && "Should only be used by the GC implementation.");
   DenseMapT::iterator it = map_.find(key);
   if (it == map_.end()) {
     return false;
@@ -111,7 +111,7 @@ bool JSWeakMapImplBase::clearEntryDirect(GC *gc, const WeakRefKey &key) {
 GCHermesValue *JSWeakMapImplBase::getValueDirect(
     GC *gc,
     const WeakRefKey &key) {
-  assert(gc->inGC() && "Should only be used by the GC implementation.");
+  assert(gc->calledByGC() && "Should only be used by the GC implementation.");
   DenseMapT::iterator it = map_.find(key);
   if (it == map_.end()) {
     return nullptr;
@@ -120,7 +120,7 @@ GCHermesValue *JSWeakMapImplBase::getValueDirect(
 }
 
 GCPointerBase::StorageType &JSWeakMapImplBase::getValueStorageRef(GC *gc) {
-  assert(gc->inGC() && "Should only be used by the GC implementation.");
+  assert(gc->calledByGC() && "Should only be used by the GC implementation.");
   return valueStorage_.getLoc(gc);
 }
 
@@ -173,7 +173,7 @@ JSWeakMapImplBase::KeyIterator JSWeakMapImplBase::keys_end() {
 }
 
 JSObject *detail::WeakRefKey::getObject(GC *gc) const {
-  assert(gc->inGC() && "Should only be used by the GC implementation.");
+  assert(gc->calledByGC() && "Should only be used by the GC implementation.");
   return getNoHandle(ref, gc);
 }
 

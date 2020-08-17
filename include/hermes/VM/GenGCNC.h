@@ -273,6 +273,12 @@ class GenGC final : public GCBase {
   void finalizeAll();
 
 #ifndef NDEBUG
+
+  /// See comment in GCBase.
+  bool calledByGC() const {
+    return inGC_.load(std::memory_order_seq_cst);
+  }
+
   /// Return true if \p ptr is within one of the virtual address ranges
   /// allocated for the heap. Not intended for use in normal production GC
   /// operation, debug mode only.
@@ -913,20 +919,6 @@ class GenGC final : public GCBase {
   FixedSizeValue lastAllocWasFixedSize_;
 #endif
 };
-
-// A special vmcast implementation used during GC.  At some points
-// during a mark-sweep-compact GC, the heap becomes invalid: GCCells
-// no longer have valid vtables.  When the heap is valid, we do the normal
-// checked cast that vmcast does, but when the heap is invalid, we
-// just do an unchecked cast.
-template <class ToType>
-ToType *vmcast_during_gc(GCCell *cell, GC *gc) {
-  if (!gc->inGC()) {
-    return llvh::cast<ToType>(cell);
-  } else {
-    return static_cast<ToType *>(cell);
-  }
-}
 
 template <bool fixedSize, HasFinalizer hasFinalizer>
 inline void *GenGC::alloc(uint32_t sz) {

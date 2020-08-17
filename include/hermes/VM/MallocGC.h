@@ -208,6 +208,11 @@ class MallocGC final : public GCBase {
   }
 
 #ifndef NDEBUG
+  /// See comment in GCBase.
+  bool calledByGC() const {
+    return inGC_.load(std::memory_order_seq_cst);
+  }
+
   /// \return true iff the pointer \p p is controlled by this GC.
   bool validPointer(const void *p) const;
 
@@ -311,16 +316,6 @@ class MallocGC final : public GCBase {
   /// dead objects.
   void updateWeakReferences();
 };
-
-/// @name Free standing functions
-/// @{
-
-template <class ToType>
-ToType *vmcast_during_gc(GCCell *cell, GC *gc) {
-  return static_cast<ToType *>(cell);
-}
-
-/// @}
 
 /// @name Inline implementations
 /// @{
