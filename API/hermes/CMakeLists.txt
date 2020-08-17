@@ -110,7 +110,7 @@ if(APPLE AND HERMES_BUILD_APPLE_FRAMEWORK)
     FRAMEWORK_VERSION ${PROJECT_VERSION_MAJOR}
     MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${PROJECT_VERSION}
     MACOSX_FRAMEWORK_BUNDLE_VERSION ${PROJECT_VERSION}
-    MACOSX_FRAMEWORK_IDENTIFIER dev.hermesengine.apple
+    MACOSX_FRAMEWORK_IDENTIFIER dev.hermesengine.${HERMES_APPLE_TARGET_PLATFORM}
   )
   # Install headers into `Headers` while keeping required directory structure
   set_source_files_properties(${api_headers} PROPERTIES

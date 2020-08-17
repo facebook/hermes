@@ -20,18 +20,18 @@ workflows:
       - android
       - linux
       - macos
-      - build-macos-runtime
+      - build-apple-runtime
       - windows
       - npm:
           requires:
             - android
             - linux
             - macos
-            - build-macos-runtime
+            - build-apple-runtime
             - windows
       - test-linux
       - test-macos
-      - test-macos-runtime-build-and-cocoapods-integration
+      - test-apple-runtime-build-and-cocoapods-integration
       - test-e2e:
           requires:
             - npm
@@ -227,7 +227,7 @@ jobs:
           paths:
             - .
 
-  build-macos-runtime:
+  build-apple-runtime:
     macos:
       xcode: "10.3.0"
     environment:
@@ -250,9 +250,7 @@ jobs:
       - run:
           name: Build Hermes for macOS as CocoaPods pod
           command: |
-            cd "$HERMES_WS_DIR"
-            hermes/utils/build/configure.py --distribute --cmake-flags="$(ruby -rcocoapods-core -e 'load %{hermes/hermes.podspec}; puts HermesHelper.cmake_configuration') -DCMAKE_INSTALL_PREFIX:PATH=../destroot"
-            cmake --build ./build_release --target hermes-runtime-darwin-cocoapods-release
+            exit 1
       - run:
           name: Copy artifacts
           command: |
@@ -302,7 +300,7 @@ jobs:
             cmake --build ./build
             cmake --build ./build --target check-hermes
 
-  test-macos-runtime-build-and-cocoapods-integration:
+  test-apple-runtime-build-and-cocoapods-integration:
     macos:
       xcode: "10.3.0"
     environment:
@@ -317,10 +315,20 @@ jobs:
           command: |
             brew install cmake ninja
       - run:
-          name: Run CocoaPods installation and test framework
+          name: Install CocoaPods and build the framework
           command: |
             cd test/ApplePlatformsIntegrationTestApp
-            ./run.sh
+            pod install
+      - run:
+          name: Test MacOS application
+          command: |
+            . ./run.sh
+            test_apple_target "ApplePlatformsIntegrationTestApp"
+      - run:
+          name: Test iPhone application
+          command: |
+            . ./run.sh
+            test_apple_target "ApplePlatformsIntegrationMobileTestApp"
 
   windows:
     executor:

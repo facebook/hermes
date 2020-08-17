@@ -14,10 +14,19 @@ function command_exists {
   command -v ${1} > /dev/null 2>&1
 }
 
-# Utility function to build an Apple framework
-function build_apple_framework {
-  echo "Building framework for $1 with architectures: $2"
-  
+if command_exists "cmake"; then
+  if command_exists "ninja"; then
+    BUILD_SYSTEM="Ninja"
+  else
+    BUILD_SYSTEM="Unix Makefiles"
+  fi
+else
+  echo >&2 'CMake is required to install Hermes, install it with: brew install cmake'
+  exit 1
+fi
+
+# Utility function to configure an Apple framework
+function configure_apple_framework {
   local cmake_flags=" \
     -DHERMES_APPLE_TARGET_PLATFORM:STRING=$1 \
     -DCMAKE_OSX_ARCHITECTURES:STRING=$2 \
@@ -28,24 +37,19 @@ function build_apple_framework {
     -DHERMES_BUILD_APPLE_DSYM:BOOLEAN=true
     -DCMAKE_INSTALL_PREFIX:PATH=../destroot"
 
+  ./utils/build/configure.py "$BUILD_TYPE" --cmake-flags "$cmake_flags" --build-system="$BUILD_SYSTEM" "build_$1"
+}
+
+# Utility function to build an Apple framework
+function build_apple_framework {
+  echo "Building framework for $1 with architectures: $2"
   
-  if command_exists "cmake"; then
-    if command_exists "ninja"; then
-      local build_system="Ninja"
-    else
-      local build_system="Unix Makefiles"
-    fi
-  else
-    echo >&2 'CMake is required to install Hermes, install it with: brew install cmake'
-    exit 1
-  fi
+  configure_apple_framework "$1" "$2"
 
-  ./utils/build/configure.py "$BUILD_TYPE" --cmake-flags "$cmake_flags" --build-system="$build_system" "build_$1"
-
-  if [[ "$build_system" == "Ninja" ]]; then
-    (cd ./build && ninja install/strip)
+  if [[ "$BUILD_SYSTEM" == "Ninja" ]]; then
+    (cd "./build_$1" && ninja install/strip)
   else 
-    (cd ./build && make install/strip)
+    (cd "./build_$1" && make install/strip)
   fi
 }
 
@@ -64,7 +68,7 @@ function create_universal_framework {
 
   lipo -create -output "${platforms[0]}" "${platforms[@]}"
 
-  lipo -info "hermes.framework/hermes"
+  lipo -info "${platforms[0]}"
 
   cd -
 }
