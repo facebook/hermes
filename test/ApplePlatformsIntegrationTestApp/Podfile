@@ -5,3 +5,9 @@ target 'ApplePlatformsIntegrationTestApp' do
   platform :osx, '10.14'
   pod 'hermes', :path => '../../'
 end
+
+target 'ApplePlatformsIntegrationTestMobileApp' do
+  use_frameworks!
+  platform :ios, '10'
+  pod 'hermes', :path => '../../'
+end
