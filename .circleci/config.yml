@@ -321,6 +321,7 @@ jobs:
     macos:
       xcode: "10.0.0"
     environment:
+      - HERMES_WS_DIR: /tmp/hermes
       - TERM: dumb
       # Homebrew currently breaks while updating:
       # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
