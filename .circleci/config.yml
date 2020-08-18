@@ -42,8 +42,8 @@ workflows:
 apple_defaults: &apple_defaults
   macos:
     xcode: "10.3.0"
+  working_directory: ~/hermes
   environment:
-    - HERMES_WS_DIR: /tmp/hermes
     - TERM: dumb
     # Homebrew currently breaks while updating:
     # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
@@ -284,11 +284,11 @@ jobs:
   apple-runtime:
     <<: *apple_defaults
     steps:
+      - restore_cache:
+          key: v1-repo-{{ .Environment.CIRCLE_SHA1 }}
       - run:
           name: Set up workspace
           command: mkdir -p /tmp/hermes/output
-      - restore_cache:
-          key: v1-repo-{{ .Environment.CIRCLE_SHA1 }}
       - run:
           name: Install dependencies
           command: |
