@@ -16,6 +16,15 @@ namespace hermes {
 
 class JSONEmitter;
 
+/// Specifies which fields should be dumped by ESTreeJSONDumper.
+enum class ESTreeDumpMode {
+  /// Hide empty fields (empty lists, nullptr, etc) which are rarely populated.
+  /// See ignoredEmptyFields_ in the ESTreeJSONDumper class.
+  HideEmpty,
+  /// Force dumping of all fields regardless of whether they are empty.
+  DumpAll,
+};
+
 /// Print out the contents of the given tree to \p os.
 /// \p pretty for pretty print the JSON.
 /// When \p sm is not null, print the source locations for the AST nodes.
@@ -23,6 +32,7 @@ void dumpESTreeJSON(
     llvh::raw_ostream &os,
     ESTree::NodePtr rootNode,
     bool pretty,
+    ESTreeDumpMode mode,
     SourceErrorManager *sm = nullptr);
 
 /// Print out the contents of \p rootNode to \p json.
@@ -31,6 +41,7 @@ void dumpESTreeJSON(
 void dumpESTreeJSON(
     JSONEmitter &json,
     ESTree::NodePtr rootNode,
+    ESTreeDumpMode mode,
     SourceErrorManager *sm = nullptr);
 
 } // namespace hermes

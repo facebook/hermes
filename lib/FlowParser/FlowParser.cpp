@@ -235,7 +235,8 @@ llvh::Optional<ESTree::ProgramNode *> parseFlowParser(
     return llvh::None;
   }
 
-  LLVM_DEBUG(hermes::dumpESTreeJSON(llvh::dbgs(), parsed, true /* pretty */));
+  LLVM_DEBUG(hermes::dumpESTreeJSON(
+      llvh::dbgs(), parsed, true /* pretty */, ESTreeDumpMode::HideEmpty));
 
   return cast<ESTree::ProgramNode>(parsed);
 }

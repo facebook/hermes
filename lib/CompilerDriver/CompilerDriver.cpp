@@ -818,6 +818,7 @@ ESTree::NodePtr parseJS(
         llvh::outs(),
         parsedAST,
         cl::PrettyJSON /* pretty */,
+        ESTreeDumpMode::HideEmpty,
         cl::DumpSourceLocation ? &context->getSourceErrorManager() : nullptr);
   }
 
@@ -830,6 +831,7 @@ ESTree::NodePtr parseJS(
         llvh::outs(),
         parsedAST,
         cl::PrettyJSON /* pretty */,
+        ESTreeDumpMode::HideEmpty,
         cl::DumpSourceLocation ? &context->getSourceErrorManager() : nullptr);
   }
 
