@@ -378,7 +378,8 @@ class GenGC final : public GCBase {
 
   // Stats maintainence.
 
-  /// For testing purposes the ability to iterate over all objects in the heap.
+  /// Iterate over all objects in the heap, and call \p callback on them.
+  /// \param callback A function to call on each found object.
   void forAllObjs(const std::function<void(GCCell *)> &callback);
 
 #ifndef NDEBUG

@@ -285,7 +285,7 @@ void HeapSnapshot::emitMeta() {
 
   json_.emitKey("sample_fields");
   json_.openArray();
-  // TODO: Possibly populate this if Chrome complains
+  json_.emitValues({"timestamp_us", "last_assigned_id"});
   json_.closeArray(); // sample_fields
 
   json_.emitKey("location_fields");

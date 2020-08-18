@@ -417,7 +417,7 @@ TEST(HeapSnapshotTest, HeaderTest) {
       0);
 
   JSONObject *meta = llvh::cast<JSONObject>(snapshot->at("meta"));
-  EXPECT_EQ(llvh::cast<JSONArray>(meta->at("sample_fields"))->size(), 0);
+  EXPECT_EQ(llvh::cast<JSONArray>(meta->at("sample_fields"))->size(), 2);
 
   JSONArray &nodeFields = *llvh::cast<JSONArray>(meta->at("node_fields"));
   JSONArray &nodeTypes = *llvh::cast<JSONArray>(meta->at("node_types"));

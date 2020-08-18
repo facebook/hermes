@@ -15,6 +15,7 @@
 #include "hermes/Public/GCTripwireContext.h"
 #include "hermes/Support/CheckedMalloc.h"
 #include "hermes/Support/OSCompat.h"
+#include "hermes/Support/SamplingThread.h"
 #include "hermes/Support/StatsAccumulator.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/CellKind.h"
@@ -117,6 +118,9 @@ class Deserializer;
 ///
 /// Return the upper bound of the heap's virtual address range (exclusive).
 ///   char *hiLim() const;
+///
+/// Iterate over all objects in the heap.
+///   void forAllObjs(const std::function<void(GCCell *)> &callback);
 ///
 /// In the "mark" functions below, Name is one of const char*, int,
 /// unsigned, or const StringPrimitive*:
@@ -347,8 +351,9 @@ class GCBase {
   };
 #endif
 
-  /// When enabled, the AllocationLocationTracker attaches a stack-trace to
-  /// every allocation. When disabled old allocations continue to be tracked but
+  /// When enabled, every allocation gets an attached stack-trace and an
+  /// object ID, and the latter is periodically sampled by the GCs IDTracker.
+  /// When disabled old allocations continue to be tracked but
   /// no new allocations get a stack-trace.
   struct AllocationLocationTracker final {
     explicit inline AllocationLocationTracker(GCBase *gc);
@@ -366,12 +371,12 @@ class GCBase {
     inline StackTracesTreeNode *getStackTracesTreeNodeForAlloc(
         const void *ptr) const;
 
-    /// Enable location tracking.
-    inline void enable();
+    /// Enable location tracking and ID sampling.
+    void enable();
 
     /// Disable location tracking - turns \c newAlloc() into a no-op. Existing
     /// allocations continue to be tracked.
-    inline void disable();
+    void disable();
 
 #ifdef HERMESVM_SERIALIZE
     void serialize(Serializer &s) const;
@@ -383,8 +388,8 @@ class GCBase {
     /// data.
     llvh::DenseMap<const void *, StackTracesTreeNode *> stackMap_;
     /// We need access to the GCBase to collect the current stack when nodes are
-    /// allocated.
-    const GCBase *gc_;
+    /// allocated and to sample IDs for the allocation timeline.
+    GCBase *gc_;
     /// Indicates if tracking of new allocations is enabled.
     bool enabled_{false};
   };
@@ -434,6 +439,9 @@ class GCBase {
       }
     };
 
+    /// Thread to periodically sample the last assigned ID.
+    using Sampler = SamplingThread<HeapSnapshot::NodeID>;
+
     explicit IDTracker();
 
     /// Return true if IDs are being tracked.
@@ -481,6 +489,14 @@ class GCBase {
     template <typename F>
     inline void forEachID(F callback);
 
+    /// Begin periodically sampling the most recently assigned object ID.
+    /// Restarts sampling from scratch if it was already in progress.
+    void beginSamplingLastID(Sampler::Duration duration);
+
+    /// End sampling and return all collected samples. Returns empty values
+    /// if sampling was not in progress.
+    std::pair<Sampler::TimePoint, Sampler::Samples> endSamplingLastID();
+
 #ifdef HERMESVM_SERIALIZE
     /// Serialize this IDTracker to the output stream.
     void serialize(Serializer &s) const;
@@ -506,8 +522,10 @@ class GCBase {
     /// recycled so that snapshots don't confuse two objects with each other.
     /// NOTE: Need to ensure that this starts on an odd number, so check if
     /// the first non-reserved ID is odd, if not add one.
-    uint64_t nextID_{
-        static_cast<uint64_t>(ReservedObjectID::FirstNonReservedID) | 1};
+    std::atomic<HeapSnapshot::NodeID> nextID_{
+        static_cast<HeapSnapshot::NodeID>(
+            ReservedObjectID::FirstNonReservedID) |
+        1};
     /// The next available native ID to assign to a chunk of native memory.
     HeapSnapshot::NodeID nextNativeID_{nextID_ + 1};
 
@@ -524,6 +542,9 @@ class GCBase {
     /// Map of numeric values to IDs. Used to give numbers in the heap a unique
     /// node.
     llvh::DenseMap<double, HeapSnapshot::NodeID, DoubleComparator> numberIDMap_;
+
+    /// Thread that periodically samples the last assigned ID.
+    std::unique_ptr<Sampler> sampler_;
   };
 
 #ifndef NDEBUG
@@ -1562,13 +1583,15 @@ inline void GCBase::IDTracker::forEachID(F callback) {
 }
 
 inline HeapSnapshot::NodeID GCBase::IDTracker::nextObjectID() {
+  // fetch_add returns the old value.
+  uint64_t before = nextID_.fetch_add(kIDStep);
   // This must be unique for most features that rely on it, check for overflow.
   if (LLVM_UNLIKELY(
-          nextID_ >=
+          before >=
           std::numeric_limits<HeapSnapshot::NodeID>::max() - kIDStep)) {
     hermes_fatal("Ran out of object IDs");
   }
-  return nextID_ += kIDStep;
+  return before + kIDStep;
 }
 
 inline HeapSnapshot::NodeID GCBase::IDTracker::nextNativeID() {
@@ -1600,6 +1623,8 @@ inline void GCBase::AllocationLocationTracker::newAlloc(const void *ptr) {
   // in Runtime though.
   const auto *ip = gc_->gcCallbacks_->getCurrentIPSlow();
   if (enabled_) {
+    // This is stateful and causes the object to have an ID assigned.
+    gc_->getIDTracker().getObjectID(ptr);
     if (auto node = gc_->gcCallbacks_->getCurrentStackTracesTreeNode(ip)) {
       stackMap_.try_emplace(ptr, node);
     }
@@ -1634,14 +1659,6 @@ GCBase::AllocationLocationTracker::getStackTracesTreeNodeForAlloc(
     const void *ptr) const {
   auto mapIt = stackMap_.find(ptr);
   return mapIt == stackMap_.end() ? nullptr : mapIt->second;
-}
-
-inline void GCBase::AllocationLocationTracker::enable() {
-  enabled_ = true;
-}
-
-inline void GCBase::AllocationLocationTracker::disable() {
-  enabled_ = false;
 }
 
 } // namespace vm

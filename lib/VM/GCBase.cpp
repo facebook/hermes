@@ -499,6 +499,20 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
 
   snap.emitAllocationTraceInfo();
 
+  snap.beginSection(HeapSnapshot::Section::Samples);
+  GCBase::IDTracker::Sampler::TimePoint startTime;
+  GCBase::IDTracker::Sampler::Samples samples;
+  std::tie(startTime, samples) = gc->getIDTracker().endSamplingLastID();
+  for (auto sample : samples) {
+    uint64_t lastID = sample.second;
+    uint64_t timestampMicros =
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            sample.first - startTime)
+            .count();
+    json.emitValues({timestampMicros, lastID});
+  }
+  snap.endSection(HeapSnapshot::Section::Samples);
+
   snap.beginSection(HeapSnapshot::Section::Locations);
   gc->forAllObjs([&snap, gc](GCCell *cell) {
     cell->getVT()->snapshotMetaData.addLocations(cell, gc, snap);
@@ -864,6 +878,41 @@ HeapSnapshot::NodeID GCBase::IDTracker::getNumberID(double num) {
   }
   // Else, it is a number that hasn't been seen before.
   return numberRef = nextNumberID();
+}
+
+void GCBase::IDTracker::beginSamplingLastID(Sampler::Duration duration) {
+  endSamplingLastID();
+  sampler_ = llvh::make_unique<Sampler>(nextID_, duration);
+}
+
+std::pair<
+    GCBase::IDTracker::Sampler::TimePoint,
+    GCBase::IDTracker::Sampler::Samples>
+GCBase::IDTracker::endSamplingLastID() {
+  if (sampler_) {
+    std::pair<Sampler::TimePoint, Sampler::Samples> result =
+        make_pair(sampler_->startTime(), sampler_->stop());
+    sampler_.reset();
+    return result;
+  } else {
+    return std::make_pair(Sampler::TimePoint{}, Sampler::Samples{});
+  }
+}
+
+void GCBase::AllocationLocationTracker::enable() {
+  enabled_ = true;
+  GC *gc = reinterpret_cast<GC *>(gc_);
+  // For correct visualization of the allocation timeline, it's necessary that
+  // objects in the heap snapshot that existed before sampling was enabled have
+  // numerically lower IDs than those allocated during sampling. We ensure this
+  // by assigning IDs to everything here.
+  gc->forAllObjs([gc](GCCell *cell) { gc->getIDTracker().getObjectID(cell); });
+  gc->getIDTracker().beginSamplingLastID(std::chrono::milliseconds(50));
+}
+
+void GCBase::AllocationLocationTracker::disable() {
+  gc_->getIDTracker().endSamplingLastID();
+  enabled_ = false;
 }
 
 llvh::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
