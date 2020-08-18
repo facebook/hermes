@@ -43,16 +43,11 @@ apple_defaults: &apple_defaults
   macos:
     xcode: "10.3.0"
   environment:
+    - HERMES_WS_DIR: /tmp/hermes
     - TERM: dumb
     # Homebrew currently breaks while updating:
     # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
     - HOMEBREW_NO_AUTO_UPDATE: 1
-  steps:
-    - checkout
-    - run:
-        name: Install dependencies
-        command: |
-          brew install cmake ninja
 
 jobs:
   android:
@@ -255,6 +250,10 @@ jobs:
       - restore_cache:
           key: v1-repo-{{ .Environment.CIRCLE_SHA1 }}
       - run:
+          name: Install dependencies
+          command: |
+            brew install cmake ninja
+      - run:
           name: Build the framework
           command: |
             pod install
@@ -285,33 +284,27 @@ jobs:
   apple-runtime:
     <<: *apple_defaults
     steps:
+      - run:
+          name: Set up workspace
+          command: mkdir -p /tmp/hermes/output
       - restore_cache:
           key: v1-repo-{{ .Environment.CIRCLE_SHA1 }}
       - run:
-          name: Set up workspace
+          name: Install dependencies
           command: |
-            mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output" "$HERMES_WS_DIR/package-root"
-            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
+            brew install cmake ninja
       - run:
-          name: Build Hermes for iPhone
+          name: Package the framework
           command: |
-            exit 1
-      - run:
-          name: Build Hermes for macOS and package the framework
-          command: |
-            . ./hermes/utils/build-apple-framework.sh
-            hermes/utils/build/configure.py --distribute --cmake-flags=$(configure_apple_framework "macosx" "x86_64")
-            cmake --build ./build_release --target hermes-runtime-darwin-cocoapods-release
-          working_directory: $HERMES_WS_DIR
+            cmake --build ./build_iphoneos --target hermes-runtime-darwin-cocoapods-release
       - run:
           name: Copy artifacts
           command: |
-            cd "$HERMES_WS_DIR"
-            cp "build_release/github"/hermes-runtime-darwin-*.tar.gz "output"
+            cp "build_iphoneos/github"/hermes-runtime-darwin-*.tar.gz /tmp/hermes/output
       - run:
           name: Checksum artifacts
           command: |
-            cd "$HERMES_WS_DIR/output"
+            cd /tmp/hermes/output
             for file in *
             do
               shasum -a 256 "$file" > "$file.sha256"
@@ -328,7 +321,6 @@ jobs:
     macos:
       xcode: "10.0.0"
     environment:
-      - HERMES_WS_DIR: /tmp/hermes
       - TERM: dumb
       # Homebrew currently breaks while updating:
       # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
