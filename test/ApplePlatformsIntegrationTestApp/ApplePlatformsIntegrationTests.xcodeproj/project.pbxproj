@@ -425,7 +425,6 @@
 			baseConfigurationReference = 389F549E68F2869589934C24 /* Pods-ApplePlatformsIntegrationMobileTests.debug.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				HERMES_ENABLE_DEBUGGER = YES;
 				INFOPLIST_FILE = ApplePlatformsIntegrationMobileTests/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 13.6;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -436,6 +435,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = dev.hermesengine.ApplePlatformsIntegrationMobileTests.ApplePlatformsIntegrationMobileTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -445,7 +445,6 @@
 			baseConfigurationReference = 7C198466C93A1B0680744E8F /* Pods-ApplePlatformsIntegrationMobileTests.release.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				HERMES_ENABLE_DEBUGGER = YES;
 				INFOPLIST_FILE = ApplePlatformsIntegrationMobileTests/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 13.6;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -456,6 +455,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = dev.hermesengine.ApplePlatformsIntegrationMobileTests.ApplePlatformsIntegrationMobileTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
 			};
