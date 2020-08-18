@@ -7,11 +7,11 @@
 
 using namespace std;
 
-@interface ApplePlatformsIntegrationMobileTests : XCTestCase
+@interface ApplePlatformsIntegrationTests : XCTestCase
 
 @end
 
-@implementation ApplePlatformsIntegrationMobileTests
+@implementation ApplePlatformsIntegrationTests
 
 - (void)testBasicRuntime {
     facebook::hermes::HermesRuntime::DebugFlags flags;
