@@ -205,6 +205,17 @@ hermesBuiltinEnsureObject(void *, Runtime *runtime, NativeArgs args) {
   return runtime->raiseTypeError(args.getArgHandle(1));
 }
 
+/// Perform the GetMethod() abstract operation.
+///
+/// \code
+///   HermesBuiltin.getMethod = function(object, property) {...}
+/// \endcode
+CallResult<HermesValue>
+hermesBuiltinGetMethod(void *, Runtime *runtime, NativeArgs args) {
+  return getMethod(runtime, args.getArgHandle(0), args.getArgHandle(1))
+      .toCallResultHermesValue();
+}
+
 /// Throw a type error with the argument as a message.
 ///
 /// \code
@@ -767,6 +778,8 @@ void createHermesBuiltins(
       P::ensureObject,
       hermesBuiltinEnsureObject,
       2);
+  defineInternMethod(
+      B::HermesBuiltin_getMethod, P::getMethod, hermesBuiltinGetMethod, 2);
   defineInternMethod(
       B::HermesBuiltin_throwTypeError,
       P::throwTypeError,

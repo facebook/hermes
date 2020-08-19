@@ -330,3 +330,27 @@ var it = f(iter);
 show(it.next())
 // CHECK-NEXT: START 42
 // CHECK-NEXT: 5 | true
+
+var iterable = {
+  next() {
+    return { value: 1, done: false };
+  },
+  get return() {
+    print('get return');
+    return null;
+  },
+  [Symbol.iterator]() {
+    return iterable;
+  },
+};
+
+function* generator() {
+  yield* iterable;
+}
+
+// GetMethod returns undefined, so there shouldn't be an attempt to call.
+var iterator = generator();
+print(iterator.next().value);
+iterator.return(123);
+// CHECK-NEXT: 1
+// CHECK-NEXT: get return

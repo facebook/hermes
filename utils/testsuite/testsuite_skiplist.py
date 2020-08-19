@@ -969,9 +969,6 @@ SKIP_LIST = [
     "test262/test/language/identifiers/part-unicode-5.2.0.js",
     "test262/test/language/identifiers/start-unicode-13.0.0-escaped.js",
     "test262/test/language/identifiers/start-unicode-13.0.0.js",
-    # yield* should use GetMethod
-    "test262/test/language/expressions/yield/star-return-is-null.js",
-    "test262/test/language/expressions/yield/star-throw-is-null.js",
     # Stack overflow catching.
     "mjsunit/regress/regress-1132.js",
     "mjsunit/regress/regress-446389.js",

@@ -669,8 +669,9 @@ void ESTreeIRGen::emitIteratorCloseSlow(
   auto *haveReturn = Builder.createBasicBlock(Builder.getFunction());
   auto *noReturn = Builder.createBasicBlock(Builder.getFunction());
 
-  auto *returnMethod =
-      Builder.createLoadPropertyInst(iteratorRecord.iterator, "return");
+  auto *returnMethod = genBuiltinCall(
+      BuiltinMethod::HermesBuiltin_getMethod,
+      {iteratorRecord.iterator, Builder.getLiteralString("return")});
   Builder.createCompareBranchInst(
       returnMethod,
       Builder.getLiteralUndefined(),
