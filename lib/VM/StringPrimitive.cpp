@@ -428,7 +428,7 @@ StringView StringPrimitive::createStringView(
   return createStringViewMustBeFlat(self);
 }
 
-void StringPrimitive::copyUTF16String(
+void StringPrimitive::appendUTF16String(
     llvh::SmallVectorImpl<char16_t> &str) const {
   if (isASCII()) {
     const char *ptr = castToASCIIPointer();
@@ -439,7 +439,7 @@ void StringPrimitive::copyUTF16String(
   }
 }
 
-void StringPrimitive::copyUTF16String(char16_t *ptr) const {
+void StringPrimitive::appendUTF16String(char16_t *ptr) const {
   if (isASCII()) {
     const char *src = castToASCIIPointer();
     std::copy(src, src + getStringLength(), ptr);

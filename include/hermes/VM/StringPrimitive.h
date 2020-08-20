@@ -272,7 +272,7 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// In the rare case (most likely for debugging, printing and etc), we just
   /// want to get a copy of the string in UTF16 form, without worrying about
   /// performance and efficiency. The string will be copied into \p str.
-  void copyUTF16String(llvh::SmallVectorImpl<char16_t> &str) const;
+  void appendUTF16String(llvh::SmallVectorImpl<char16_t> &str) const;
 
   /// \return the character at \p index.
   /// Use it only when you cannot use a StringView.
@@ -292,10 +292,10 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   }
 
  private:
-  /// Similar to copyUTF16String(SmallVectorImpl), copy the string into
+  /// Similar to appendUTF16String(SmallVectorImpl), copy the string into
   /// a raw pointer \p ptr. Since there is no size check, this function should
   /// only be called in rare cases carefully.
-  void copyUTF16String(char16_t *ptr) const;
+  void appendUTF16String(char16_t *ptr) const;
 
   /// Get a read-only raw char pointer, assert that this is ASCII string.
   const char *castToASCIIPointer() const;

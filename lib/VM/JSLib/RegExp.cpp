@@ -945,16 +945,16 @@ CallResult<HermesValue> getSubstitution(
       i += 2;
     } else if (c1 == u'&') {
       // The matched substring.
-      matchedStrView.copyUTF16String(result);
+      matchedStrView.appendUTF16String(result);
       i += 2;
     } else if (c1 == u'`') {
       // Portion of string before the matched substring.
-      stringView.slice(0, position).copyUTF16String(result);
+      stringView.slice(0, position).appendUTF16String(result);
       i += 2;
     } else if (c1 == u'\'') {
       // Portion of string after the matched substring.
       if (tailPos < stringLength) {
-        stringView.slice(position + matchLength).copyUTF16String(result);
+        stringView.slice(position + matchLength).appendUTF16String(result);
       }
       i += 2;
     } else if (u'0' <= c1 && c1 <= u'9') {
@@ -1146,9 +1146,9 @@ regExpPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   result.reserve(pattern->getStringLength() + 2 + 5);
 
   result.push_back(u'/');
-  pattern->copyUTF16String(result);
+  pattern->appendUTF16String(result);
   result.push_back(u'/');
-  flags->copyUTF16String(result);
+  flags->appendUTF16String(result);
   return StringPrimitive::create(runtime, result);
 }
 
@@ -1662,8 +1662,8 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
       // nextSourcePosition (inclusive) up to position (exclusive) and with the
       // code units of replacement.
       stringView.slice(nextSourcePosition, position - nextSourcePosition)
-          .copyUTF16String(accumulatedResult);
-      replacement->copyUTF16String(accumulatedResult);
+          .appendUTF16String(accumulatedResult);
+      replacement->appendUTF16String(accumulatedResult);
       // iii. Let nextSourcePosition be position + matchLength.
       nextSourcePosition = position + matchLength;
     }
@@ -1677,7 +1677,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
   // accumulatedResult with the substring of S consisting of the code units from
   // nextSourcePosition (inclusive) up through the final code unit of S
   // (inclusive).
-  stringView.slice(nextSourcePosition).copyUTF16String(accumulatedResult);
+  stringView.slice(nextSourcePosition).appendUTF16String(accumulatedResult);
   return StringPrimitive::createEfficient(runtime, accumulatedResult);
 }
 

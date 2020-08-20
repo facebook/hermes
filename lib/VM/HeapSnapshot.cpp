@@ -442,7 +442,7 @@ std::string converter(int index) {
 }
 std::string converter(const StringPrimitive *str) {
   llvh::SmallVector<char16_t, 16> buf;
-  str->copyUTF16String(buf);
+  str->appendUTF16String(buf);
   std::string out;
   convertUTF16ToUTF8WithReplacements(out, UTF16Ref(buf));
   return out;

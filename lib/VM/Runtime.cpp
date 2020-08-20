@@ -1059,7 +1059,7 @@ void Runtime::printException(llvh::raw_ostream &os, Handle<> valueHandle) {
       return;
     }
 
-    strRes->get()->copyUTF16String(tmp);
+    strRes->get()->appendUTF16String(tmp);
     os << tmp << "\n";
     return;
   }
@@ -1081,7 +1081,7 @@ void Runtime::printException(llvh::raw_ostream &os, Handle<> valueHandle) {
     }
     str = std::move(*errToStringRes);
   }
-  str->copyUTF16String(tmp);
+  str->appendUTF16String(tmp);
   os << tmp << "\n";
 }
 

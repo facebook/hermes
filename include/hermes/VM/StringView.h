@@ -325,9 +325,9 @@ class StringView {
     return getUTF16Ref(allocator, false);
   }
 
-  /// Force copying the string into \p allocator, even though the string
-  /// may have already been UTF16.
-  void copyUTF16String(llvh::SmallVectorImpl<char16_t> &allocator) const {
+  /// Append the string into \p allocator, even though the string may already be
+  /// UTF16.
+  void appendUTF16String(llvh::SmallVectorImpl<char16_t> &allocator) const {
     (void)getUTF16Ref(allocator, true);
   }
 

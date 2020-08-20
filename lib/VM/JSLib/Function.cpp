@@ -148,7 +148,7 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
     if (strRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    strRes->get()->copyUTF16String(strBuf);
+    strRes->get()->appendUTF16String(strBuf);
   }
 
   // Append the named parameters.

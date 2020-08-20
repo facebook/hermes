@@ -31,7 +31,7 @@ IdentifierTable::LookupEntry::LookupEntry(
       num_(NON_LAZY_STRING_PRIM_TAG) {
   assert(str && "Invalid string primitive pointer");
   llvh::SmallVector<char16_t, 32> storage{};
-  str->copyUTF16String(storage);
+  str->appendUTF16String(storage);
   hash_ = hermes::hashString(llvh::ArrayRef<char16_t>(storage));
 }
 
@@ -212,7 +212,7 @@ std::string IdentifierTable::convertSymbolToUTF8(SymbolID id) {
   if (vectorEntry.isStringPrim()) {
     const StringPrimitive *stringPrim = vectorEntry.getStringPrim();
     llvh::SmallVector<char16_t, 16> tmp;
-    stringPrim->copyUTF16String(tmp);
+    stringPrim->appendUTF16String(tmp);
     std::string out;
     convertUTF16ToUTF8WithReplacements(out, UTF16Ref{tmp});
     return out;
@@ -254,7 +254,7 @@ void IdentifierTable::visitIdentifiers(
     if (vectorEntry.isStringPrim()) {
       allocator.clear();
       auto stringPrim = vectorEntry.getStringPrim();
-      stringPrim->copyUTF16String(allocator);
+      stringPrim->appendUTF16String(allocator);
       ref = allocator.arrayRef();
     } else if (vectorEntry.isLazyASCII()) {
       allocator.clear();

@@ -580,7 +580,7 @@ CallResult<HermesValue> runtimeJSONParse(
     ref = jsonString->getStringRef<char16_t>();
   } else {
     StringPrimitive::createStringView(runtime, jsonString)
-        .copyUTF16String(storage);
+        .appendUTF16String(storage);
     ref = storage;
   }
 
@@ -1127,7 +1127,7 @@ void JSONStringifyer::appendToOutput(SymbolID identifierID) {
 }
 
 void JSONStringifyer::appendToOutput(const StringPrimitive *str) {
-  str->copyUTF16String(output_);
+  str->appendUTF16String(output_);
 }
 
 CallResult<HermesValue> JSONStringifyer::stringify(Handle<> value) {

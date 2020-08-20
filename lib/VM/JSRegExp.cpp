@@ -138,7 +138,7 @@ ExecutionStatus JSRegExp::initialize(
     Handle<JSRegExp> otherHandle,
     Handle<StringPrimitive> flags) {
   llvh::SmallVector<char16_t, 16> flagsText16;
-  flags->copyUTF16String(flagsText16);
+  flags->appendUTF16String(flagsText16);
 
   auto sflags = regex::SyntaxFlags::fromString(flagsText16);
   if (!sflags) {
@@ -174,10 +174,10 @@ ExecutionStatus JSRegExp::initialize(
     return selfHandle->initializeBytecode(*bytecode, runtime);
   } else {
     llvh::SmallVector<char16_t, 6> flagsText16;
-    flags->copyUTF16String(flagsText16);
+    flags->appendUTF16String(flagsText16);
 
     llvh::SmallVector<char16_t, 16> patternText16;
-    pattern->copyUTF16String(patternText16);
+    pattern->appendUTF16String(patternText16);
 
     // Build the regex.
     regex::Regex<regex::UTF16RegexTraits> regex(patternText16, flagsText16);

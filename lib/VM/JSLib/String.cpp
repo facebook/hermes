@@ -523,7 +523,7 @@ CallResult<HermesValue> stringRaw(void *, Runtime *runtime, NativeArgs args) {
 
     // 12. d. Append in order the code unit elements of nextSeg to the end of
     // stringElements.
-    nextSeg->copyUTF16String(stringElements);
+    nextSeg->appendUTF16String(stringElements);
 
     // 12. e. If nextIndex + 1 = literalSegments, then
     if (nextIndex->getNumberAs<int64_t>() + 1 == literalSegments) {
@@ -546,7 +546,7 @@ CallResult<HermesValue> stringRaw(void *, Runtime *runtime, NativeArgs args) {
       nextSub = nextSubRes->get();
       // 12. j. Append in order the code unit elements of nextSub to the end of
       // stringElements.
-      nextSub->copyUTF16String(stringElements);
+      nextSub->appendUTF16String(stringElements);
     }
 
     // 12. g. Else, let next be the empty String.
@@ -773,7 +773,7 @@ static CallResult<HermesValue> convertCase(
   SmallU16String<32> buff;
   // Must copy instead of just getting the reference, because later operations
   // may trigger GC and hence invalid pointers inside S.
-  S->copyUTF16String(buff);
+  S->appendUTF16String(buff);
   UTF16Ref str = buff.arrayRef();
 
   if (!useCurrentLocale) {
@@ -1093,8 +1093,8 @@ stringPrototypeLocaleCompare(void *ctx, Runtime *runtime, NativeArgs args) {
   llvh::SmallVector<char16_t, 32> left;
   llvh::SmallVector<char16_t, 32> right;
 
-  StringPrimitive::createStringView(runtime, S).copyUTF16String(left);
-  StringPrimitive::createStringView(runtime, T).copyUTF16String(right);
+  StringPrimitive::createStringView(runtime, S).appendUTF16String(left);
+  StringPrimitive::createStringView(runtime, T).appendUTF16String(right);
   int comparisonResult = platform_unicode::localeCompare(left, right);
   assert(comparisonResult >= -1 && comparisonResult <= 1);
   return HermesValue::encodeNumberValue(comparisonResult);
@@ -1152,7 +1152,7 @@ stringPrototypeNormalize(void *, Runtime *runtime, NativeArgs args) {
   // normalization form named by f as specified in
   // http://www.unicode.org/reports/tr15/tr15-29.html.
   llvh::SmallVector<char16_t, 32> ns;
-  S->copyUTF16String(ns);
+  S->appendUTF16String(ns);
   platform_unicode::normalize(ns, form);
 
   // 9. Return ns.
@@ -1645,10 +1645,10 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
   // index tailPos. If pos is 0, the first element of the concatenation will be
   // the empty String.
   SmallU16String<32> newString{};
-  strView.slice(0, pos).copyUTF16String(newString);
+  strView.slice(0, pos).appendUTF16String(newString);
   StringPrimitive::createStringView(runtime, replStr)
-      .copyUTF16String(newString);
-  strView.slice(tailPos).copyUTF16String(newString);
+      .appendUTF16String(newString);
+  strView.slice(tailPos).appendUTF16String(newString);
   // 15. Return newString.
   return StringPrimitive::create(runtime, newString);
 }

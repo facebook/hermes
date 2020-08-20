@@ -171,7 +171,7 @@ static llvh::SmallString<32> canonicalizePath(
                                Handle<StringPrimitive> strPrim,
                                uint32_t start = 0) {
     SmallU16String<32> u16String{};
-    strPrim->copyUTF16String(u16String);
+    strPrim->appendUTF16String(u16String);
     std::string str{};
     hermes::convertUTF16ToUTF8WithReplacements(
         str, UTF16Ref{u16String}.slice(start));
