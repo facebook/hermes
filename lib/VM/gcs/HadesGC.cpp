@@ -110,9 +110,6 @@ void HadesGC::OldGen::addCellToFreelist(
   FreelistCell *newFreeCell = nullptr;
   if (bucket < kNumFreelistBuckets) {
     // Push onto the size-specific free list.
-    // TODO(T68919270): For concurrent access it's probably better to append to
-    // the tail instead. Only requires writing a single next pointer instead of
-    // the two-phase head swap + next pointer change.
     newFreeCell = new (addr) FreelistCell{sz, freelistBuckets_[bucket]};
     freelistBuckets_[bucket] = newFreeCell;
   } else {
@@ -1028,7 +1025,9 @@ void HadesGC::completeNonConcurrentOldGenCollection() {
       "Shouldn't call completeNonConcurrentOldGenCollection if concurrency "
       "is enabled");
   completeMarkingAssumeLocks();
-  sweepAssumeLocks();
+  // Sweeping will try to acquire mutexes, but they will be fake mutexes, so
+  // there's no performance cost.
+  sweep();
   concurrentPhase_.store(Phase::None, std::memory_order_release);
 }
 
@@ -1172,21 +1171,24 @@ void HadesGC::findYoungGenSymbolsAndWeakRefs() {
 }
 
 void HadesGC::sweep() {
-  // Sweeping only needs to pause the OG.
-  // TODO: Make sweeping either yield the old gen lock regularly, or not
-  // require the lock at all.
-  std::lock_guard<Mutex> lk{oldGenMutex_};
-  sweepAssumeLocks();
-}
-
-void HadesGC::sweepAssumeLocks() {
   // Sweep phase: iterate through dead objects and add them to the
   // free list. Also finalize them at this point.
+  size_t segEnd;
   const bool isTracking = isTrackingIDs();
-  for (auto segit = oldGen_.begin(), segitend = oldGen_.end();
-       segit != segitend;
-       ++segit) {
-    HeapSegment &seg = **segit;
+  {
+    std::lock_guard<Mutex> lk{oldGenMutex_};
+    segEnd = oldGen_.numSegments();
+  }
+
+  // The number of segments can change during this loop if a YG collection
+  // interleaves. There's no need to sweep those extra segments since they are
+  // full of newly promoted objects from YG (which have all their mark bits
+  // set).
+  for (size_t i = 0; i < segEnd; ++i) {
+    // Acquire and release the lock once per loop, to allow YG collections to
+    // interrupt the sweeper.
+    std::lock_guard<Mutex> lk{oldGenMutex_};
+    HeapSegment &seg = oldGen_[i];
     seg.forAllObjs([this, isTracking, &seg](GCCell *cell) {
       // forAllObjs skips free list cells, so no need to check for those.
       assert(cell->isValid() && "Invalid cell in sweeping");
@@ -1634,9 +1636,8 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
   auto cpuTimeStart = oscompat::thread_cpu_time();
   section.setBeginTime();
   section.setBeforeSizes(youngGen().used(), youngGen().size());
-  yieldToBackgroundThread();
   // Acquire the old gen lock for the duration of the YG collection.
-  std::lock_guard<Mutex> lk{oldGenMutex_};
+  std::unique_lock<Mutex> lk{oldGenMutex_};
   // The YG is not parseable while a collection is occurring.
   gcCallbacks_->onGCEvent(GCEventKind::CollectionStart, "Young Gen");
   inGC_.store(true, std::memory_order_release);
@@ -1737,14 +1738,18 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
       }
     }
   }
+  // The heap is parseable again.
+  inGC_.store(false, std::memory_order_release);
+  gcCallbacks_->onGCEvent(GCEventKind::CollectionEnd, "");
+  // yielding requires all locks to be released.
+  lk.unlock();
+  // Give an existing background thread a chance to complete.
+  yieldToBackgroundThread();
   // YG is always empty after a collection, it is fully evac'ed into OG.
   section.setAfterSizes(0, youngGen().size());
   section.setEndTime();
   auto cpuTimeEnd = oscompat::thread_cpu_time();
   section.incrementCPUTime(cpuTimeEnd - cpuTimeStart);
-  // The heap is parseable again.
-  inGC_.store(false, std::memory_order_release);
-  gcCallbacks_->onGCEvent(GCEventKind::CollectionEnd, "");
 }
 
 void HadesGC::promoteYoungGenToOldGen() {
@@ -1773,7 +1778,7 @@ void HadesGC::scanDirtyCards(EvacAcceptor &acceptor) {
   // segments, since they are going to be handled from the rest of YG
   // collection.
   const auto segEnd = oldGen_.numSegments();
-  for (decltype(oldGen_.numSegments()) i = 0; i < segEnd; ++i) {
+  for (size_t i = 0; i < segEnd; ++i) {
     HeapSegment &seg = oldGen_[i];
     const auto &cardTable = seg.cardTable();
     // Use level instead of end in case the OG segment is still in bump alloc

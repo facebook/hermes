@@ -521,10 +521,6 @@ class HadesGC final : public GCBase {
   void findYoungGenSymbolsAndWeakRefs();
 
   /// Put dead objects onto the free list, so their space can be re-used.
-  /// \pre oldGenMutex_ must be held.
-  void sweepAssumeLocks();
-
-  /// Same as \c sweepAssumeLocks, but acquires necessary locks first.
   void sweep();
 
   /// Find all pointers from OG into YG during a YG collection. This is done
