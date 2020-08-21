@@ -205,15 +205,15 @@ void HadesGC::OldGen::FreelistCell::split(OldGen &og, uint32_t sz) {
   HeapSegment::setCellHead(newCell);
 }
 
-class HadesGC::CollectionSection final {
+class HadesGC::CollectionStats final {
  public:
   using Clock = std::chrono::steady_clock;
   using TimePoint = std::chrono::time_point<Clock>;
   using Duration = std::chrono::microseconds;
 
-  CollectionSection(HadesGC *gc, std::string extraInfo = "")
-      : gc_{gc}, cycle_{gc, llvh::None, std::move(extraInfo)} {}
-  ~CollectionSection();
+  CollectionStats(HadesGC *gc, std::string extraInfo = "")
+      : gc_{gc}, extraInfo_{std::move(extraInfo)} {}
+  ~CollectionStats();
 
   /// Record the allocated bytes in the heap and its size before a collection
   /// begins.
@@ -249,7 +249,7 @@ class HadesGC::CollectionSection final {
 
  private:
   HadesGC *gc_;
-  GCCycle cycle_;
+  std::string extraInfo_;
   TimePoint beginTime_{};
   TimePoint endTime_{};
   TimePoint cpuBeginTime_{};
@@ -261,7 +261,7 @@ class HadesGC::CollectionSection final {
   uint64_t sizeAfter_{0};
 };
 
-HadesGC::CollectionSection::~CollectionSection() {
+HadesGC::CollectionStats::~CollectionStats() {
   gc_->recordGCStats(
       std::chrono::duration_cast<std::chrono::duration<double>>(
           endTime_ - beginTime_)
@@ -276,7 +276,7 @@ HadesGC::CollectionSection::~CollectionSection() {
     gc_->analyticsCallback_(GCAnalyticsEvent{
         gc_->getName(),
         kHeapNameForAnalytics,
-        cycle_.extraInfo(),
+        extraInfo_,
         std::chrono::duration_cast<std::chrono::milliseconds>(
             endTime_ - beginTime_),
         std::chrono::duration_cast<std::chrono::milliseconds>(cpuDuration_),
@@ -937,11 +937,14 @@ void HadesGC::oldGenCollection() {
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormed();
 #endif
-  ogCollectionSection_.reset(new CollectionSection(this, "old"));
+  // Note: This line calls the destructor for the previous CollectionStats (if
+  // any) in addition to creating a new CollectionStats. It is desirable to
+  // call the destructor here so that the analytics callback is invoked from the
+  // mutator thread.
+  ogCollectionStats_ = llvh::make_unique<CollectionStats>(this, "old");
   auto cpuTimeStart = oscompat::thread_cpu_time();
-  ogCollectionSection_->setBeginTime();
-  ogCollectionSection_->setBeforeSizes(
-      oldGen_.allocatedBytes(), oldGen_.size());
+  ogCollectionStats_->setBeginTime();
+  ogCollectionStats_->setBeforeSizes(oldGen_.allocatedBytes(), oldGen_.size());
 
   if (revertToYGAtTTI_) {
     // If we've reached the first OG collection, and reverting behavior is
@@ -982,7 +985,7 @@ void HadesGC::oldGenCollection() {
   // This means that before destroying the GC, waitForCollectionToFinish must
   // be called.
   auto cpuTimeEnd = oscompat::thread_cpu_time();
-  ogCollectionSection_->incrementCPUTime(cpuTimeEnd - cpuTimeStart);
+  ogCollectionStats_->incrementCPUTime(cpuTimeEnd - cpuTimeStart);
   if (!kConcurrentGC) {
     // 32-bit system: 64-bit HermesValues cannot be updated in one atomic
     // instruction. Have YG collections interleave marking work.
@@ -1010,10 +1013,9 @@ void HadesGC::oldGenCollectionWorker() {
   oldGenMarker_->drainMarkWorklist</*shouldLock*/ true>();
   completeMarking();
   sweep();
-  ogCollectionSection_->setEndTime();
+  ogCollectionStats_->setEndTime();
   auto cpuTimeEnd = oscompat::thread_cpu_time();
-  ogCollectionSection_->incrementCPUTime(cpuTimeEnd - cpuTimeStart);
-  ogCollectionSection_.reset();
+  ogCollectionStats_->incrementCPUTime(cpuTimeEnd - cpuTimeStart);
   // TODO: Should probably check for cancellation, either via a
   // promise/future pair or a condition variable.
   concurrentPhase_.store(Phase::None, std::memory_order_release);
@@ -1221,7 +1223,7 @@ void HadesGC::sweep() {
     // Mark bits are reset before any new collection occurs, so there's no
     // need to worry about their information being misused.
   }
-  ogCollectionSection_->setAfterSizes(oldGen_.allocatedBytes(), oldGen_.size());
+  ogCollectionStats_->setAfterSizes(oldGen_.allocatedBytes(), oldGen_.size());
 }
 
 void HadesGC::finalizeAll() {
@@ -1632,10 +1634,10 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
 }
 
 void HadesGC::youngGenCollection(bool forceOldGenCollection) {
-  CollectionSection section{this, "young"};
+  CollectionStats stats{this, "young"};
   auto cpuTimeStart = oscompat::thread_cpu_time();
-  section.setBeginTime();
-  section.setBeforeSizes(youngGen().used(), youngGen().size());
+  stats.setBeginTime();
+  stats.setBeforeSizes(youngGen().used(), youngGen().size());
   // Acquire the old gen lock for the duration of the YG collection.
   std::unique_lock<Mutex> lk{oldGenMutex_};
   // The YG is not parseable while a collection is occurring.
@@ -1746,10 +1748,10 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
   // Give an existing background thread a chance to complete.
   yieldToBackgroundThread();
   // YG is always empty after a collection, it is fully evac'ed into OG.
-  section.setAfterSizes(0, youngGen().size());
-  section.setEndTime();
+  stats.setAfterSizes(0, youngGen().size());
+  stats.setEndTime();
   auto cpuTimeEnd = oscompat::thread_cpu_time();
-  section.incrementCPUTime(cpuTimeEnd - cpuTimeStart);
+  stats.incrementCPUTime(cpuTimeEnd - cpuTimeStart);
 }
 
 void HadesGC::promoteYoungGenToOldGen() {

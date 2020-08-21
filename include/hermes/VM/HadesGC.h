@@ -201,7 +201,7 @@ class HadesGC final : public GCBase {
   /// \}
 #endif
 
-  class CollectionSection;
+  class CollectionStats;
   class EvacAcceptor;
   class MarkAcceptor;
   class MarkWeakRootsAcceptor;
@@ -449,7 +449,7 @@ class HadesGC final : public GCBase {
 
   /// A collection section used to track the size of OG before and after an OG
   /// collection, as well as the time an OG collection takes.
-  std::unique_ptr<CollectionSection> ogCollectionSection_;
+  std::unique_ptr<CollectionStats> ogCollectionStats_;
 
   /// Pointer to the first free weak reference slot. Free weak refs are chained
   /// together in a linked list.
