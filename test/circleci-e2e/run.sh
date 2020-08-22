@@ -33,13 +33,13 @@ npm install
 npm install "$hermes_npm_package"
 
 # Modify RN Tester app to print a log message at start-up
-echo "console.log('Using Hermes: ' + (global.HermesInternal != null));" >> RNTester/js/RNTesterApp.android.js
+echo "console.log('Using Hermes: ' + (global.HermesInternal != null));" >> packages/rn-tester/js/RNTesterApp.android.js
 
 # Wait for emulator to boot
 adb wait-for-device
 
 # Build and install release app
-./gradlew :RNTester:android:app:installHermesRelease
+./gradlew :packages:rn-tester:android:app:installHermesRelease
 
 cd ..
 
