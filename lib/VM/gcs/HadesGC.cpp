@@ -570,11 +570,11 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
     // Use do-while to make sure both the global worklist and the local worklist
     // are examined at least once.
     do {
-      // Hold the old gen lock while setting mark bits. Grab it in big
+      // Hold the GC lock while setting mark bits. Grab it in big
       // chunks so that we're not constantly acquiring and releasing the lock.
       // Can't use lock_guard here due to use of bool and separate scopes.
       if (shouldLock) {
-        gc.oldGenMutex_.lock();
+        gc.gcMutex_.lock();
         gc.weakRefMutex().lock();
       }
       drainSomeWork();
@@ -582,7 +582,7 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
       // needs to do a YG collection.
       if (shouldLock) {
         gc.weakRefMutex().unlock();
-        gc.oldGenMutex_.unlock();
+        gc.gcMutex_.unlock();
       }
       // It's ok to access localWorklist outside of the lock, since it is local
       // memory to only this thread.
@@ -833,7 +833,7 @@ void HadesGC::getHeapInfoWithMallocSize(HeapInfo &info) {}
 void HadesGC::getCrashManagerHeapInfo(CrashManager::HeapInformation &info) {}
 
 void HadesGC::createSnapshot(llvh::raw_ostream &os) {
-  std::lock_guard<Mutex> lk{oldGenMutex_};
+  std::lock_guard<Mutex> lk{gcMutex_};
   // No allocations are allowed throughout the entire heap snapshot process.
   NoAllocScope scope{this};
   // Let any existing collections complete before taking the snapshot.
@@ -859,21 +859,21 @@ void HadesGC::printStats(JSONEmitter &json) {
 void HadesGC::collect() {
   {
     // Wait for any existing collections to finish before starting a new one.
-    std::lock_guard<Mutex> lk{oldGenMutex_};
+    std::lock_guard<Mutex> lk{gcMutex_};
     waitForCollectionToFinish();
   }
   // This function should block until a collection finishes.
   // YG needs to be empty in order to do an OG collection.
   youngGenCollection(/*forceOldGenCollection*/ true);
   // Wait for the collection to complete.
-  std::lock_guard<Mutex> lk{oldGenMutex_};
+  std::lock_guard<Mutex> lk{gcMutex_};
   waitForCollectionToFinish();
 }
 
 void HadesGC::waitForCollectionToFinish() {
   assert(
-      oldGenMutex_ &&
-      "oldGenMutex_ must be held before calling waitForCollectionToFinish");
+      gcMutex_ &&
+      "gcMutex_ must be held before calling waitForCollectionToFinish");
   if (concurrentPhase_.load(std::memory_order_acquire) == Phase::None) {
     return;
   }
@@ -891,16 +891,12 @@ void HadesGC::waitForCollectionToFinish() {
     }
     return;
   }
-  std::unique_lock<Mutex> lk{oldGenMutex_, std::adopt_lock};
+  std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
   // Before waiting for the OG collection to finish, tell the OG collection
-  // that the world is stopped. Need to not hold the oldGenMutex_ while
-  // acquiring the stopTheWorldMutex_ to avoid lock inversion issues.
-  lk.unlock();
-  {
-    std::lock_guard<Mutex> stw{stopTheWorldMutex_};
-    worldStopped_ = true;
-  }
+  // that the world is stopped.
+  worldStopped_ = true;
   // Notify a waiting OG collection that it can complete.
+  lk.unlock();
   stopTheWorldCondVar_.notify_all();
   // Wait for an existing collection to finish.
   oldGenCollectionThread_.join();
@@ -908,13 +904,11 @@ void HadesGC::waitForCollectionToFinish() {
   // Undo the worldStopped_ change, as the mutator will now resume. Can't rely
   // on completeMarking to set worldStopped_ to false, as the OG collection
   // might have already passed the stage where it was waiting for STW.
-  {
-    std::lock_guard<Mutex> stw{stopTheWorldMutex_};
-    worldStopped_ = false;
-  }
   lk.lock();
+  worldStopped_ = false;
+
   assert(lk && "Lock must be re-acquired before exiting");
-  assert(oldGenMutex_ && "Old gen mutex must be re-acquired before exiting");
+  assert(gcMutex_ && "GC mutex must be re-acquired before exiting");
   // Release association with the mutex to prevent the destructor from unlocking
   // it.
   lk.release();
@@ -924,7 +918,7 @@ void HadesGC::oldGenCollection() {
   // Full collection:
   //  * Mark all live objects by iterating through a worklist.
   //  * Sweep dead objects onto the free lists.
-  // This function must be called while the oldGenMutex_ is held.
+  // This function must be called while the gcMutex_ is held.
   assert(
       concurrentPhase_.load(std::memory_order_acquire) == Phase::None &&
       "Starting a second old gen collection");
@@ -1034,18 +1028,18 @@ void HadesGC::completeNonConcurrentOldGenCollection() {
 }
 
 void HadesGC::completeMarking() {
-  // All 3 locks are held here for 3 reasons:
-  //  * stwLock prevents any write barriers from occurring
-  //  * ogLock prevents any YG collections from modifying the OG heap or mark
-  //    bits
-  //  * weakRefMutex prevents the mutator from accessing data structures using
-  //    WeakRefs.
+  // Both locks are held here for a few reasons.
+  //  * gcMutex_ is associated with the stopTheWorldCondVar and needs to be held
+  //  in order to stop the world. It also synchronises access to GC data
+  //  structures and if the mutator were still active, would prevent concurrent
+  //  access to them from YG.
+  //  * weakRefMutex_ synchronises access to WeakRef data structures and
+  //  prevents the mutator from accessing them.
   // This lock order is required for any other lock acquisitions in this file.
-  std::unique_lock<Mutex> stw{stopTheWorldMutex_};
+  std::unique_lock<Mutex> lk{gcMutex_};
   stopTheWorldRequested_ = true;
   waitForConditionVariable(
-      stopTheWorldCondVar_, stw, [this]() { return worldStopped_; });
-  std::lock_guard<Mutex> oglk{oldGenMutex_};
+      stopTheWorldCondVar_, lk, [this]() { return worldStopped_; });
 
   // While the world is stopped, nothing should attempt to read or write to the
   // heap. This store won't race with YG because this happens during a STW
@@ -1062,7 +1056,6 @@ void HadesGC::completeMarking() {
   // Let the thread that yielded know that the STW pause has completed.
   stopTheWorldRequested_ = false;
   worldStopped_ = false;
-  stw.unlock();
   stopTheWorldCondVar_.notify_all();
 }
 
@@ -1178,7 +1171,7 @@ void HadesGC::sweep() {
   size_t segEnd;
   const bool isTracking = isTrackingIDs();
   {
-    std::lock_guard<Mutex> lk{oldGenMutex_};
+    std::lock_guard<Mutex> lk{gcMutex_};
     segEnd = oldGen_.numSegments();
   }
 
@@ -1189,7 +1182,7 @@ void HadesGC::sweep() {
   for (size_t i = 0; i < segEnd; ++i) {
     // Acquire and release the lock once per loop, to allow YG collections to
     // interrupt the sweeper.
-    std::lock_guard<Mutex> lk{oldGenMutex_};
+    std::lock_guard<Mutex> lk{gcMutex_};
     HeapSegment &seg = oldGen_[i];
     seg.forAllObjs([this, isTracking, &seg](GCCell *cell) {
       // forAllObjs skips free list cells, so no need to check for those.
@@ -1227,7 +1220,7 @@ void HadesGC::sweep() {
 }
 
 void HadesGC::finalizeAll() {
-  std::lock_guard<Mutex> lk{oldGenMutex_};
+  std::lock_guard<Mutex> lk{gcMutex_};
   finalizeAllLocked();
 }
 
@@ -1505,7 +1498,7 @@ void *HadesGC::allocLongLived(uint32_t sz) {
         "WeakRef mutex should not be held when allocLongLived is called");
   }
   // Alloc directly into the old gen.
-  std::lock_guard<Mutex> lk{oldGenMutex_};
+  std::lock_guard<Mutex> lk{gcMutex_};
   void *res = oldGen_.alloc(heapAlignSize(sz));
   // Need to initialize the memory here to a valid cell to prevent the case
   // where sweeping discovers the uninitialized memory while it's traversing
@@ -1520,9 +1513,7 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
       "Should be aligned before entering this function");
   assert(sz >= minAllocationSize() && "Allocating too small of an object");
   assert(sz <= maxAllocationSize() && "Allocating too large of an object");
-  assert(
-      gc_->oldGenMutex_ &&
-      "oldGenMutex_ must be held before calling oldGenAlloc");
+  assert(gc_->gcMutex_ && "gcMutex_ must be held before calling oldGenAlloc");
   if (GCCell *cell = search(sz)) {
     return cell;
   }
@@ -1638,8 +1629,8 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
   auto cpuTimeStart = oscompat::thread_cpu_time();
   stats.setBeginTime();
   stats.setBeforeSizes(youngGen().used(), youngGen().size());
-  // Acquire the old gen lock for the duration of the YG collection.
-  std::unique_lock<Mutex> lk{oldGenMutex_};
+  // Acquire the GC lock for the duration of the YG collection.
+  std::lock_guard<Mutex> lk{gcMutex_};
   // The YG is not parseable while a collection is occurring.
   gcCallbacks_->onGCEvent(GCEventKind::CollectionStart, "Young Gen");
   inGC_.store(true, std::memory_order_release);
@@ -1655,7 +1646,7 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
 
     // 32-bit system: check if there's any work to be done from oldGenMarker_.
     if (!kConcurrentGC && oldGenMarker_) {
-      // Draining requires both the OG lock and the WeakRefLock to be held.
+      // Draining requires both the GC lock and the WeakRefLock to be held.
       oldGenMarker_->drainSomeWork();
       if (oldGenMarker_->allWorkIsDrained()) {
         // If the work has finished completely, finish the collection.
@@ -1743,8 +1734,6 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
   // The heap is parseable again.
   inGC_.store(false, std::memory_order_release);
   gcCallbacks_->onGCEvent(GCEventKind::CollectionEnd, "");
-  // yielding requires all locks to be released.
-  lk.unlock();
   // Give an existing background thread a chance to complete.
   yieldToBackgroundThread();
   // YG is always empty after a collection, it is fully evac'ed into OG.
@@ -2078,29 +2067,23 @@ void HadesGC::yieldToBackgroundThread() {
     return;
   }
   assert(
-      !oldGenMutex_ &&
-      "Shouldn't hold the old gen mutex when calling yieldToBackgroundThread");
-  assert(
-      !stopTheWorldMutex_ &&
-      "Shouldn't hold the STW mutex when calling yieldToBackgroundThread");
-  {
-    std::lock_guard<Mutex> stw{stopTheWorldMutex_};
-    if (!stopTheWorldRequested_) {
-      // If the OG isn't waiting for a STW pause yet, exit immediately.
-      return;
-    }
-    worldStopped_ = true;
+      gcMutex_ &&
+      "Must hold the GC mutex when calling yieldToBackgroundThread");
+
+  if (!stopTheWorldRequested_) {
+    // If the OG isn't waiting for a STW pause yet, exit immediately.
+    return;
   }
+  worldStopped_ = true;
   // Notify a waiting OG collection that it can complete.
   stopTheWorldCondVar_.notify_all();
-  {
-    std::unique_lock<Mutex> stw{stopTheWorldMutex_};
-    waitForConditionVariable(
-        stopTheWorldCondVar_, stw, [this]() { return !worldStopped_; });
-    assert(
-        !stopTheWorldRequested_ &&
-        "The request should be set to false after being completed");
-  }
+  std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
+  waitForConditionVariable(
+      stopTheWorldCondVar_, lk, [this]() { return !worldStopped_; });
+  assert(
+      !stopTheWorldRequested_ &&
+      "The request should be set to false after being completed");
+  lk.release();
 }
 
 #ifdef HERMES_SLOW_DEBUG

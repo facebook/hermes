@@ -290,10 +290,10 @@ class HadesGC final : public GCBase {
     void moveSegment(std::unique_ptr<HeapSegment> &&seg);
 
     /// Allocate into OG. Returns a pointer to the newly allocated space. That
-    /// space must be filled before releasing the oldGenMutex_.
+    /// space must be filled before releasing the gcMutex_.
     /// \return A non-null pointer to memory in the old gen that should have a
     ///   constructor run in immediately.
-    /// \pre oldGenMutex_ must be held before calling this function.
+    /// \pre gcMutex_ must be held before calling this function.
     /// \post This function either successfully allocates, or reports OOM.
     GCCell *alloc(uint32_t sz);
 
@@ -390,17 +390,17 @@ class HadesGC final : public GCBase {
   std::shared_ptr<StorageProvider> provider_;
 
   /// youngGen is a bump-pointer space, so it can re-use AlignedHeapSegment.
-  /// Protected by oldGenMutex_.
+  /// Protected by gcMutex_.
   std::unique_ptr<HeapSegment> youngGen_;
 
   /// List of cells in YG that have finalizers. Iterate through this to clean
   /// them out.
-  /// Protected by oldGenMutex_.
+  /// Protected by gcMutex_.
   std::vector<GCCell *> youngGenFinalizables_;
 
   /// oldGen_ is a free list space, so it needs a different segment
   /// representation.
-  /// Protected by oldGenMutex_.
+  /// Protected by gcMutex_.
   OldGen oldGen_{this};
 
   /// weakPointers_ is a list of all the weak pointers in the system. They are
@@ -410,19 +410,19 @@ class HadesGC final : public GCBase {
   std::deque<WeakRefSlot> weakPointers_;
 
   /// Whoever holds this lock is permitted to modify data structures around the
-  /// OG. This includes mark bits, free lists, etc.
-  Mutex oldGenMutex_;
+  /// GC. This includes mark bits, free lists, etc.
+  Mutex gcMutex_;
 
   enum class Phase : uint8_t { None, Mark, WeakMapScan, Sweep };
 
   /// Represents the current phase the concurrent GC is in. The main difference
   /// between phases is their effect on read and write barriers.
-  /// Can be read with memory_order_acquire, or after acquiring oldGenMutex_ can
-  /// be read as relaxed. Should only be stored to if oldGenMutex_ is acquired.
+  /// Can be read with memory_order_acquire, or after acquiring gcMutex_ can
+  /// be read as relaxed. Should only be stored to if gcMutex_ is acquired.
   AtomicIfConcurrentGC<Phase> concurrentPhase_{Phase::None};
 
   /// Used by the write barrier to add items to the worklist.
-  /// Protected by oldGenMutex_.
+  /// Protected by gcMutex_.
   std::unique_ptr<MarkAcceptor> oldGenMarker_;
 
   /// This is the background thread that does marking and sweeping concurrently
@@ -431,13 +431,13 @@ class HadesGC final : public GCBase {
   /// that the STW pause handling is done correctly.
   std::thread oldGenCollectionThread_;
 
-  /// This mutex, condition variable, and bool are all used for the mutator to
+  /// This condition variable and bool are used for the mutator to
   /// signal the background marking thread when it's safe to try and complete.
   /// Thus, the GC thread can wait for worldStopped_ to be true to
   /// "stop the world" -- for example, to drain the final parts of the mark
   /// stack.
-  Mutex stopTheWorldMutex_;
   std::condition_variable stopTheWorldCondVar_;
+  /// The boolean variables are protected by gcMutex_.
   bool worldStopped_{false};
   bool stopTheWorldRequested_{false};
 
@@ -493,8 +493,8 @@ class HadesGC final : public GCBase {
   /// If there's an OG collection going on, wait for it to complete. This
   /// function is synchronous and will block the caller if the GC background
   /// thread is still running.
-  /// \pre The oldGenMutex_ must be held before entering this function.
-  /// \post The oldGenMutex_ will be held when the function exits, but it might
+  /// \pre The gcMutex_ must be held before entering this function.
+  /// \post The gcMutex_ will be held when the function exits, but it might
   ///   have been unlocked and then re-locked.
   void waitForCollectionToFinish();
 
@@ -509,8 +509,7 @@ class HadesGC final : public GCBase {
 
   /// Finish the marking process. This requires a STW pause in order to do a
   /// final marking worklist drain, and to update weak roots.
-  /// \pre All three of stopTheWorldMutex_, oldGenMutex_, and weakRefMutex_, are
-  /// held before entering.
+  /// \pre Both gcMutex_ and weakRefMutex_ are held before entering.
   void completeMarkingAssumeLocks();
 
   /// Same as \c completeMarkingAssumeLocks, but acquires necessary locks first.
@@ -542,7 +541,7 @@ class HadesGC final : public GCBase {
   /// Finalize all objects in YG that have finalizers.
   void finalizeYoungGenObjects();
 
-  /// Run the finalizers for all heap objects, if the oldGenMutex_ is already
+  /// Run the finalizers for all heap objects, if the gcMutex_ is already
   /// locked.
   void finalizeAllLocked();
 
