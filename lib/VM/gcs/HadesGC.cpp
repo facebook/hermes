@@ -252,8 +252,6 @@ class HadesGC::CollectionStats final {
   std::string extraInfo_;
   TimePoint beginTime_{};
   TimePoint endTime_{};
-  TimePoint cpuBeginTime_{};
-  TimePoint cpuEndTime_{};
   Duration cpuDuration_{};
   uint64_t allocatedBefore_{0};
   uint64_t sizeBefore_{0};
@@ -936,6 +934,8 @@ void HadesGC::oldGenCollection() {
   // call the destructor here so that the analytics callback is invoked from the
   // mutator thread.
   ogCollectionStats_ = llvh::make_unique<CollectionStats>(this, "old");
+  // NOTE: Leave CPU time as zero if the collection isn't concurrent, as the
+  // times aren't useful.
   auto cpuTimeStart = oscompat::thread_cpu_time();
   ogCollectionStats_->setBeginTime();
   ogCollectionStats_->setBeforeSizes(oldGen_.allocatedBytes(), oldGen_.size());
@@ -978,8 +978,6 @@ void HadesGC::oldGenCollection() {
   // the new thread, the GC cannot be destructed until the new thread completes.
   // This means that before destroying the GC, waitForCollectionToFinish must
   // be called.
-  auto cpuTimeEnd = oscompat::thread_cpu_time();
-  ogCollectionStats_->incrementCPUTime(cpuTimeEnd - cpuTimeStart);
   if (!kConcurrentGC) {
     // 32-bit system: 64-bit HermesValues cannot be updated in one atomic
     // instruction. Have YG collections interleave marking work.
@@ -991,6 +989,8 @@ void HadesGC::oldGenCollection() {
     // directly from the oldGenMarker_.
     return;
   }
+  auto cpuTimeEnd = oscompat::thread_cpu_time();
+  ogCollectionStats_->incrementCPUTime(cpuTimeEnd - cpuTimeStart);
   // 64-bit system: 64-bit HermesValues can be updated in one atomic
   // instruction. Start up a separate thread for doing marking work.
   // NOTE: Since the "this" value (the HadesGC instance) is implicitly copied
@@ -1024,6 +1024,7 @@ void HadesGC::completeNonConcurrentOldGenCollection() {
   // Sweeping will try to acquire mutexes, but they will be fake mutexes, so
   // there's no performance cost.
   sweep();
+  ogCollectionStats_->setEndTime();
   concurrentPhase_.store(Phase::None, std::memory_order_release);
 }
 
