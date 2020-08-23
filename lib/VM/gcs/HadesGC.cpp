@@ -560,45 +560,47 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
     }
   }
 
-  /// Drain the mark stack of cells to be processed.
-  /// \tparam shouldLock If true, the OG and WeakRef mutexes should be acquired
-  ///   by this loop. If false, the lock needs to be held by the caller.
-  template <bool shouldLock>
+  /// Drain the mark stack of cells to be processed. This function periodically
+  /// acquires and releases oldGenMutex_ and weakRefMutex_.
   void drainMarkWorklist() {
     // Use do-while to make sure both the global worklist and the local worklist
     // are examined at least once.
     do {
       // Hold the GC lock while setting mark bits. Grab it in big
       // chunks so that we're not constantly acquiring and releasing the lock.
-      // Can't use lock_guard here due to use of bool and separate scopes.
-      if (shouldLock) {
-        gc.gcMutex_.lock();
-        gc.weakRefMutex().lock();
-      }
-      drainSomeWork();
-      // We need to give the mutator a chance to acquire these locks in case it
-      // needs to do a YG collection.
-      if (shouldLock) {
-        gc.weakRefMutex().unlock();
-        gc.gcMutex_.unlock();
-      }
+      std::lock_guard<Mutex> ogLk{gc.gcMutex_};
+      std::lock_guard<Mutex> wrLk{gc.weakRefMutex()};
+      constexpr size_t kConcurrentMarkLimit = 128;
+      drainSomeWork(kConcurrentMarkLimit);
       // It's ok to access localWorklist outside of the lock, since it is local
       // memory to only this thread.
     } while (!localWorklist_.empty());
   }
 
+  /// Same as \c drainMarkWorklist, but assumes locks are already held, and
+  /// doesn't release them. Can be used in a non-concurrent GC, or during a STW
+  /// pause.
+  void drainMarkWorklistNoLocks() {
+    // This should only be called during a STW pause. This means no write
+    // barriers should occur, and there's no need to check the global worklist
+    // more than once.
+    drainSomeWork(std::numeric_limits<size_t>::max());
+    // Drain a second time in case there were some leftover write barriers.
+    drainSomeWork(std::numeric_limits<size_t>::max());
+    assert(allWorkIsDrained() && "Some work left that wasn't completed");
+  }
+
   /// Drain some of the work to be done for marking.
-  void drainSomeWork() {
-    // Only mark up to this many objects before consulting the global
-    // worklist. This way the mutator doesn't get blocked as long as the GC
-    // makes progress.
-    // NOTE: This does *not* guarantee that the marker thread has upper bounds
-    // on the amount of work it does before reading from the global worklist.
-    // Any individual cell can be quite large (such as an ArrayStorage), which
-    // means there is a possibility of the global worklist filling up and
-    // blocking the mutator.
-    constexpr int kMarkLimit = 128;
-    for (int numMarked = 0; !localWorklist_.empty() && numMarked < kMarkLimit;
+  /// \param markLimit Only mark up to this many objects before consulting the
+  ///   global worklist. This way the mutator doesn't get blocked as long as the
+  ///   GC makes progress.
+  ///   NOTE: This does *not* guarantee that the marker thread
+  ///   has upper bounds on the amount of work it does before reading from the
+  ///   global worklist. Any individual cell can be quite large (such as an
+  ///   ArrayStorage), which means there is a possibility of the global worklist
+  ///   filling up and blocking the mutator.
+  void drainSomeWork(const size_t markLimit) {
+    for (size_t numMarked = 0; !localWorklist_.empty() && numMarked < markLimit;
          ++numMarked) {
       GCCell *const cell = localWorklist_.top();
       localWorklist_.pop();
@@ -656,7 +658,7 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
   /// otherwise there is a race condition between reading this and new work
   /// getting added.
   bool allWorkIsDrained() {
-    return localWorklist_.empty() && globalWorklist_.hasPendingWork();
+    return localWorklist_.empty() && !globalWorklist_.hasPendingWork();
   }
 
   MarkWorklist &globalWorklist() {
@@ -1004,7 +1006,7 @@ void HadesGC::oldGenCollection() {
 void HadesGC::oldGenCollectionWorker() {
   oscompat::set_thread_name("hades");
   auto cpuTimeStart = oscompat::thread_cpu_time();
-  oldGenMarker_->drainMarkWorklist</*shouldLock*/ true>();
+  oldGenMarker_->drainMarkWorklist();
   completeMarking();
   sweep();
   ogCollectionStats_->setEndTime();
@@ -1063,7 +1065,7 @@ void HadesGC::completeMarking() {
 void HadesGC::completeMarkingAssumeLocks() {
   oldGenMarker_->globalWorklist().flushPushChunk();
   // Drain the marking queue.
-  oldGenMarker_->drainMarkWorklist</*shouldLock*/ false>();
+  oldGenMarker_->drainMarkWorklistNoLocks();
   assert(
       oldGenMarker_->globalWorklist().empty() &&
       "Marking worklist wasn't drained");
@@ -1930,14 +1932,14 @@ void HadesGC::completeWeakMapMarking(MarkAcceptor &acceptor) {
         acceptor.accept(valRef);
         // The weak ref lock is held throughout this entire section, so no need
         // to re-lock it.
-        acceptor.drainMarkWorklist</*shouldLock*/ false>();
+        acceptor.drainMarkWorklistNoLocks();
         return true;
       },
       /*drainMarkStack*/
       [](MarkAcceptor &acceptor) {
         // The weak ref lock is held throughout this entire section, so no need
         // to re-lock it.
-        acceptor.drainMarkWorklist</*shouldLock*/ false>();
+        acceptor.drainMarkWorklistNoLocks();
       },
       /*checkMarkStackOverflow (HadesGC does not have mark stack overflow)*/
       []() { return false; });
@@ -2057,7 +2059,10 @@ void HadesGC::yieldToOldGen() {
     // A non-concurrent GC needs to check if there's any work to be done from
     // oldGenMarker_.
     if (oldGenMarker_) {
-      oldGenMarker_->drainSomeWork();
+      // TODO: This is currently the same as kConcurrentMarkLimit. Instead,
+      // choose this dynamically.
+      constexpr size_t kNonConcurrentMarkLimit = 128;
+      oldGenMarker_->drainSomeWork(kNonConcurrentMarkLimit);
       if (oldGenMarker_->allWorkIsDrained()) {
         // If the work has finished completely, finish the collection.
         completeNonConcurrentOldGenCollection();
