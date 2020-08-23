@@ -577,9 +577,9 @@ class HadesGC final : public GCBase {
   /// \return true if the pointer is in the old gen.
   bool inOldGen(const void *p) const;
 
-  /// Give the background marking thread a chance to complete marking and finish
-  /// the OG collection.
-  void yieldToBackgroundThread();
+  /// Give the background GC a chance to complete marking and finish the OG
+  /// collection.
+  void yieldToOldGen();
 
 #ifdef HERMES_SLOW_DEBUG
   /// Checks the heap to make sure all cells are valid.

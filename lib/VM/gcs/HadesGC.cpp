@@ -1645,16 +1645,6 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
   } else {
     auto &yg = youngGen();
 
-    // 32-bit system: check if there's any work to be done from oldGenMarker_.
-    if (!kConcurrentGC && oldGenMarker_) {
-      // Draining requires both the GC lock and the WeakRefLock to be held.
-      oldGenMarker_->drainSomeWork();
-      if (oldGenMarker_->allWorkIsDrained()) {
-        // If the work has finished completely, finish the collection.
-        completeNonConcurrentOldGenCollection();
-      }
-    }
-
     // Clear the mark bits in the young gen first. They will be needed
     // during YG collection, and they should've previously been all 1s.
     yg.markBitArray().clear();
@@ -1732,11 +1722,11 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
       }
     }
   }
+  // Give an existing background thread a chance to complete.
+  yieldToOldGen();
   // The heap is parseable again.
   inGC_.store(false, std::memory_order_release);
   gcCallbacks_->onGCEvent(GCEventKind::CollectionEnd, "");
-  // Give an existing background thread a chance to complete.
-  yieldToBackgroundThread();
   // YG is always empty after a collection, it is fully evac'ed into OG.
   stats.setAfterSizes(0, youngGen().size());
   stats.setEndTime();
@@ -2062,9 +2052,17 @@ bool HadesGC::inOldGen(const void *p) const {
   return false;
 }
 
-void HadesGC::yieldToBackgroundThread() {
+void HadesGC::yieldToOldGen() {
   if (!kConcurrentGC) {
-    // A non-concurrent GC doesn't need to do anything here.
+    // A non-concurrent GC needs to check if there's any work to be done from
+    // oldGenMarker_.
+    if (oldGenMarker_) {
+      oldGenMarker_->drainSomeWork();
+      if (oldGenMarker_->allWorkIsDrained()) {
+        // If the work has finished completely, finish the collection.
+        completeNonConcurrentOldGenCollection();
+      }
+    }
     return;
   }
   assert(
