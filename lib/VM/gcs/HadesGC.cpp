@@ -1857,7 +1857,7 @@ void HadesGC::updateWeakReferencesForYoungGen() {
           // Set all allocated slots to unmarked.
           slot.unmark();
         }
-        [[fallthrough]];
+        // fallthrough
       case WeakSlotState::Unmarked: {
         // Both marked and unmarked weak ref slots need to be updated.
         if (!slot.hasPointer()) {
