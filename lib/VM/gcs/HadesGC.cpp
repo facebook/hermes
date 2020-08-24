@@ -585,21 +585,34 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
     // barriers should occur, and there's no need to check the global worklist
     // more than once.
     drainSomeWork(std::numeric_limits<size_t>::max());
-    // Drain a second time in case there were some leftover write barriers.
-    drainSomeWork(std::numeric_limits<size_t>::max());
     assert(allWorkIsDrained() && "Some work left that wasn't completed");
   }
 
   /// Drain some of the work to be done for marking.
-  /// \param markLimit Only mark up to this many objects before consulting the
-  ///   global worklist. This way the mutator doesn't get blocked as long as the
-  ///   GC makes progress.
+  /// \param markLimit Only mark up to this many objects from the local
+  /// worklist.
   ///   NOTE: This does *not* guarantee that the marker thread
   ///   has upper bounds on the amount of work it does before reading from the
   ///   global worklist. Any individual cell can be quite large (such as an
   ///   ArrayStorage), which means there is a possibility of the global worklist
   ///   filling up and blocking the mutator.
   void drainSomeWork(const size_t markLimit) {
+    // Pull any new items off the global worklist.
+    auto cells = globalWorklist_.drain();
+    for (GCCell *cell : cells) {
+      assert(
+          cell->isValid() && "Invalid cell received off the global worklist");
+      assert(
+          !gc.inYoungGen(cell) &&
+          "Shouldn't ever traverse a YG object in this loop");
+      HERMES_SLOW_ASSERT(
+          gc.dbgContains(cell) && "Non-heap cell found in global worklist");
+      if (!HeapSegment::getCellMarkBit(cell)) {
+        // Cell has not yet been marked.
+        push(cell);
+      }
+    }
+
     for (size_t numMarked = 0; !localWorklist_.empty() && numMarked < markLimit;
          ++numMarked) {
       GCCell *const cell = localWorklist_.top();
@@ -634,22 +647,6 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
       TsanIgnoreReadsBegin();
       GCBase::markCell(cell, &gc, *this);
       TsanIgnoreReadsEnd();
-    }
-    // Either the worklist is empty or we've marked a fixed amount of items.
-    // Pull any new items off the global worklist.
-    auto cells = globalWorklist_.drain();
-    for (GCCell *cell : cells) {
-      assert(
-          cell->isValid() && "Invalid cell received off the global worklist");
-      assert(
-          !gc.inYoungGen(cell) &&
-          "Shouldn't ever traverse a YG object in this loop");
-      HERMES_SLOW_ASSERT(
-          gc.dbgContains(cell) && "Non-heap cell found in global worklist");
-      if (!HeapSegment::getCellMarkBit(cell)) {
-        // Cell has not yet been marked.
-        push(cell);
-      }
     }
   }
 
