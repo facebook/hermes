@@ -3072,6 +3072,12 @@ ExecutionStatus setProtoClasses(
       arr->clear(runtime);
       return ExecutionStatus::RETURNED;
     }
+    if (JSObject::Helper::flags(*head).lazyObject) {
+      // Ensure all properties have been initialized before caching the hidden
+      // class. Not doing this will result in changes to the hidden class
+      // when getOwnPropertyKeys is called later.
+      JSObject::initializeLazyObject(runtime, head);
+    }
     clazz = HermesValue::encodeObjectValue(head->getClass(runtime));
     if (LLVM_UNLIKELY(
             BigStorage::push_back(arr, runtime, clazz) ==
