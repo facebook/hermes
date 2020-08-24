@@ -2,276 +2,31 @@ package com.facebook.hermes.intl;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Locale;
+import java.util.HashMap;
+import java.util.TreeMap;
 
 public class LocaleIdentifier {
 
-    private static void addSingletonSequence(String[] extensions, char singleton, StringBuffer extensionSequence) throws JSRangeErrorException {
-        int singletonIndex = singleton - 'a';
-
-        if (extensions[singletonIndex] != null) {
-            throw new JSRangeErrorException("Duplicate singleton");
-        }
-        if (extensionSequence.length() == 0) {
-            throw new JSRangeErrorException("Empty singleton");
-        }
-
-        extensions[singletonIndex] = extensionSequence.toString();
-    }
-
-    // Note this is a shallow parsing.. We don't parse the extension's kay and values.
-    public static void parseExtensionSequence(StringBuffer extensionAndPrivateUseSequenceBuffer, String[] extensions) throws JSRangeErrorException {
-
-        String[] extensionTokens = extensionAndPrivateUseSequenceBuffer.toString().split("-");
-        char currentSingleton = Character.MIN_VALUE;
-        StringBuffer currentExtensionSequence = new StringBuffer();
-        for (int tokenIdx = 0; tokenIdx < extensionTokens.length; tokenIdx++) {
-            String extensionToken = extensionTokens[tokenIdx];
-
-            if (extensionToken.length() == 1) {
-                char newSingleton = Character.toLowerCase(extensionToken.charAt(0));
-
-                if (currentSingleton != Character.MIN_VALUE && currentSingleton != 'x') {
-                    addSingletonSequence(extensions, currentSingleton, currentExtensionSequence);
-                }
-
-                currentSingleton = newSingleton;
-                currentExtensionSequence.delete(0, currentExtensionSequence.length());
-
-                if (newSingleton == 'x') {
-                    // Consume the rest of the tokens.
-                    tokenIdx++;
-                    while (tokenIdx < extensionTokens.length) {
-                        extensionToken = extensionTokens[tokenIdx];
-
-                        if (currentExtensionSequence.length() > 0)
-                            currentExtensionSequence.append('-');
-
-                        if (!isAlphaNum(extensionToken, 0, extensionToken.length() - 1, 1, 8)) {
-                            throw new JSRangeErrorException("Invalid singleton: " + extensionAndPrivateUseSequenceBuffer);
-                        }
-
-                        currentExtensionSequence.append(extensionToken.toLowerCase());
-                        tokenIdx++;
-                    }
-
-                    addSingletonSequence(extensions, 'x', currentExtensionSequence);
-                    break;
-                }
+    private static void addVariantSubtag(String variantSubtag, ParsedLocaleIdentifier.ParsedLanguageIdentifier parsedLanguageIdentifier) throws JSRangeErrorException {
+        if (parsedLanguageIdentifier.variantSubtagList != null) {
+            int position = Collections.binarySearch(parsedLanguageIdentifier.variantSubtagList, variantSubtag);
+            if (position < 0) {
+                // parsedLocaleIdentifier.languageIdentifier.variantSubtagList.ensureCapacity(variantSubtagList.size() + 1); // todo:: check whether this is needed ?
+                parsedLanguageIdentifier.variantSubtagList.add(-1 * position - 1, variantSubtag);
             } else {
-                if (currentExtensionSequence.length() > 0)
-                    currentExtensionSequence.append('-');
-
-                if (!isAlphaNum(extensionToken, 0, extensionToken.length() - 1, 1, 8)) {
-                    throw new JSRangeErrorException("Invalid singleton: " + extensionAndPrivateUseSequenceBuffer);
-                }
-
-                currentExtensionSequence.append(extensionToken.toLowerCase());
+                throw new JSRangeErrorException("Duplicate variant");
             }
-        }
-
-        if (currentSingleton != Character.MIN_VALUE && currentSingleton != 'x') {
-            addSingletonSequence(extensions, currentSingleton, currentExtensionSequence);
-        }
-    }
-
-    private static boolean isAlphaNum(String name, int start, int end, int min, int max) {
-        assert (start >= 0 && end >= 0 && start <= name.length() && end <= name.length());
-
-        return isAlphaNum(new StringBuffer(name), start, end, min, max);
-    }
-
-
-    private static boolean isAlphaNum(StringBuffer name, int start, int end, int min, int max) {
-        assert (start >= 0 && end >= 0 && start <= name.length() && end <= name.length());
-
-        int length = end - start + 1;
-        if (length < min || length > max) {
-            return false;
-        }
-
-        for (int idx = start; idx <= end; idx++) {
-            char c = name.charAt(idx);
-            if (!Character.isLetter(c) && !Character.isDigit(c)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static boolean isAlpha(StringBuffer name, int start, int end, int min, int max) {
-        assert (start >= 0 && end >= 0 && start <= name.length() && end <= name.length());
-
-        int length = end - start + 1;
-        if (length < min || length > max) {
-            return false;
-        }
-
-        for (int idx = start; idx <= end; idx++) {
-            char c = name.charAt(idx);
-            if (!Character.isLetter(c)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static boolean isDigit(StringBuffer name, int start, int end, int min, int max) {
-        assert (start >= 0 && end >= 0 && start <= name.length() && end <= name.length());
-
-        int length = end - start + 1;
-        if (length < min || length > max) {
-            return false;
-        }
-
-        for (int idx = start; idx <= end; idx++) {
-            char c = name.charAt(idx);
-            if (!Character.isDigit(c)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static boolean isDigitAlphanum3(StringBuffer token, int start, int end) {
-        return end - start + 1 == 4 && Character.isDigit(token.charAt(start)) && isAlphaNum(token, start + 1, end, 3, 3);
-    }
-
-    private static boolean isUnicodeLanguageSubtag(StringBuffer token, int[] currentTokenTerminals) {
-        // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
-        // = alpha{2,3} | alpha{5,8};
-        assert (currentTokenTerminals.length == 2);
-        int start = currentTokenTerminals[0];
-        int end = currentTokenTerminals[1];
-        return isAlpha(token, start, end, 2, 3) || isAlpha(token, start, end, 5, 8);
-    }
-
-    private static boolean isExtensionSingleton(StringBuffer token, int start, int end) {
-        return isAlphaNum(token, start, end, 1, 1);
-    }
-
-    private static boolean isUnicodeScriptSubtag(StringBuffer token, int[] currentTokenTerminals) {
-        // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
-        // = alpha{4};
-        assert (currentTokenTerminals.length == 2);
-        int start = currentTokenTerminals[0];
-        int end = currentTokenTerminals[1];
-        return isAlpha(token, start, end, 4, 4);
-    }
-
-    private static boolean isUnicodeRegionSubtag(StringBuffer token, int[] currentTokenTerminals) {
-        // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
-        //= (alpha{2} | digit{3}) ;
-        assert (currentTokenTerminals.length == 2);
-        int start = currentTokenTerminals[0];
-        int end = currentTokenTerminals[1];
-        return isAlpha(token, start, end, 2, 2) || isDigit(token, start, end, 3, 3);
-    }
-
-    private static boolean isUnicodeVariantSubtag(StringBuffer token, int[] currentTokenTerminals) {
-        // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
-        // = (alphanum{5,8}
-        // | digit alphanum{3}) ;
-        assert (currentTokenTerminals.length == 2);
-        int start = currentTokenTerminals[0];
-        int end = currentTokenTerminals[1];
-        return isAlphaNum(token, start, end, 5, 8) || isDigitAlphanum3(token, start, end);
-    }
-
-    enum TransformType {
-        ToCapital,
-        ToSmall,
-        ToTitle,
-        None
-    };
-
-    private static void transformAndCopyString(StringBuffer destination, StringBuffer source, int start, int end, TransformType transform) {
-        for (int idx = start; idx <= end; idx++) {
-            switch (transform) {
-                case ToCapital:
-                    destination.append(Character.toUpperCase(source.charAt(idx)));
-                    break;
-                case ToSmall:
-                    destination.append(Character.toLowerCase(source.charAt(idx)));
-                    break;
-                case ToTitle:
-                    if (idx == start)
-                        destination.append(Character.toUpperCase((source.charAt(idx))));
-                    else
-                        destination.append(Character.toLowerCase(source.charAt(idx)));
-                    break;
-                default:
-                    destination.append(source.charAt(idx));
-            }
-        }
-    }
-
-    private static boolean isSubtagSeparator(char c) {
-        // Note: LDML allows both "_" and "-" unlike BCP47 : https://unicode.org/reports/tr35/#BCP_47_Conformance
-
-        // return c  == '-' || c  == '_';
-        // Note:: Even though LDML allows '_' as separator, our reference test data doesn't allow it !
-        return c == '-';
-    }
-
-    // Populates "subTagTerminals" array with the terminal positions of next token
-    // Returns false if something went unexpected.
-    // Returns true if the next token is successfully identified or the end of input has reached.
-    private static boolean findNextSubtag(StringBuffer tag, int[] subTagTerminals) {
-
-        assert (subTagTerminals.length == 2);
-        if (subTagTerminals[1] == tag.length() - 1) {
-            subTagTerminals[0] = tag.length();
-            subTagTerminals[1] = tag.length();
-            return true;
-        }
-
-        // Seek forward to the start of next subtag if not the first one.
-        if (subTagTerminals[1] > subTagTerminals[0]) {
-            char nextChar = tag.charAt(subTagTerminals[1] + 1);
-            if (!isSubtagSeparator(nextChar)) {
-                return false;
-            }
-
-            subTagTerminals[0] = subTagTerminals[1] + 2;
-        }
-
-        int seek = subTagTerminals[0];
-        for (; seek < tag.length(); seek++) {
-            char currentChar = tag.charAt(seek);
-            if (isSubtagSeparator(currentChar)) {
-                break;
-            }
-        }
-
-        subTagTerminals[1] = seek - 1;
-
-        if (subTagTerminals[1] >= subTagTerminals[0])
-            return true;
-        else
-            return false;
-    }
-
-    private static void normalizeVariantAndAddToListSorted(StringBuffer languageTag, int currentTokenTerminalStart,
-                                                           int currentTokenTerminalEnd, ArrayList<String> variantSubtagList) throws JSRangeErrorException {
-        StringBuffer variantSubtagBuffer = new StringBuffer();
-        for (int i = currentTokenTerminalStart; i <= currentTokenTerminalEnd; i++)
-            variantSubtagBuffer.append(Character.toLowerCase(languageTag.charAt(i)));
-
-        String variantSubtag = variantSubtagBuffer.toString();
-        int position = Collections.binarySearch(variantSubtagList, variantSubtag);
-        if (position < 0) {
-            variantSubtagList.ensureCapacity(variantSubtagList.size() + 1); // todo:: check whether this is needed ?
-            variantSubtagList.add(-1 * position - 1, variantSubtag);
         } else {
-            throw new JSRangeErrorException("Duplicate variant");
+            parsedLanguageIdentifier.variantSubtagList = new ArrayList<>();
+            parsedLanguageIdentifier.variantSubtagList.add(variantSubtag);
         }
     }
 
     public static void replaceLanguageSubtagIfNeeded(StringBuffer languageSubtagBuffer, StringBuffer scriptSubtagBuffer, StringBuffer regionSubtagBuffer) {
+
+        // If mappings are not available .. return early.
+        if(LanguageTagsGenerated.languageAliasKeys2 == null)
+            return;
 
         String[] languageAliasKeys = null, languageAliasReplacements = null;
         String[] complexLanguageAliasKeys = null, complexLanguageAliasReplacementsLanguage = null, complexLanguageAliasReplacementsScript = null, complexLanguageAliasReplacementsRegion = null;
@@ -323,6 +78,9 @@ public class LocaleIdentifier {
     }
 
     public static String replaceRegionSubtagIfNeeded(StringBuffer regionSubtag) {
+        if(LanguageTagsGenerated.regionAliasKeys2 == null)
+            return regionSubtag.toString();
+
         if (regionSubtag.length() == 2) {
             int found = java.util.Arrays.binarySearch(LanguageTagsGenerated.regionAliasKeys2, regionSubtag.toString());
             if (found >= 0) {
@@ -340,39 +98,6 @@ public class LocaleIdentifier {
         }
 
         // Note: We don't do complex region replacement as it is expensive to do.
-    }
-
-    private static boolean noMoreTokensInLocaleId(int[] currentTokenTerminals, int tagLength) {
-        return currentTokenTerminals[0] == currentTokenTerminals[1] && currentTokenTerminals[0] == tagLength;
-    }
-
-
-    private static void copyLocaleStringToBufferNormalized(StringBuffer buffer, String locale) throws JSRangeErrorException {
-        assert (buffer.length() == 0);
-
-        // Normalize the string by
-        // 1. lower casing
-        // 2. Convert '_' to - [Nope: We are not doing it as test262 has tests which validates that the separator is hyphen]
-        // 3. avoiding leading and trailing whitespaces [Nope; We are not doing it as test262 has tests which validates that the leading and trailing spaces should throw]
-
-        // Seek past initial spaces.
-        // int idx=0;
-        // while (locale.charAt(idx) == ' ')idx++;
-        if (locale.charAt(0) == ' ' || locale.charAt(locale.length() - 1) == ' ')
-            throw new JSRangeErrorException("Incorrect locale information provided");
-
-
-        int idx = 0;
-        for (; idx < locale.length(); idx++) {
-            char localeChar = locale.charAt(idx);
-
-            //if(localeChar == '_') {
-            //    buffer.append('-');
-            //    continue;
-            //}
-
-            buffer.append(Character.toLowerCase(localeChar));
-        }
     }
 
     static String canonicalizeLocaleId(String inLocaleId) throws JSRangeErrorException {
@@ -423,99 +148,367 @@ public class LocaleIdentifier {
         //
         // Essentially, we ended up with slightly more complicated and less space efficient (due to added tables, but mostly static, not runtime allocations) traded against correctlness and predictability.
 
-        return LocaleObject.constructFromLocaleId(inLocaleId, false /*Don't strip extensions*/).toLocaleId();
+        return LocaleObject.constructFromLocaleId(inLocaleId).toCanonicalLocaleId();
+    }
+
+
+    // unicode_locale_extensions = sep [uU]
+    // ((sep keyword)+
+    // |(sep attribute)+ (sep keyword)*) ;
+    //
+    // keyword = = key (sep type)? ;
+    //
+    // key = = alphanum alpha ;
+    //
+    // type = = alphanum{3,8}
+    //  (sep alphanum{3,8})* ;
+    //
+    // attribute = alphanum{3,8} ;
+    static void parseUnicodeExtensions(CharSequence inLocaleId, LocaleIdTokenizer localeIdTokenizer,
+                                       ParsedLocaleIdentifier parsedLocaleIdentifier) throws JSRangeErrorException, LocaleIdTokenizer.LocaleIdSubtagIterationFailed {
+        if (!localeIdTokenizer.hasMoreSubtags())
+            throw new JSRangeErrorException("Extension sequence expected.");
+
+        LocaleIdTokenizer.LocaleIdSubtag nextSubtag = localeIdTokenizer.nextSubtag();
+
+        if(parsedLocaleIdentifier.unicodeExtensionAttributes != null || parsedLocaleIdentifier.unicodeExtensionKeywords != null) {
+            throw new JSRangeErrorException(String.format("Duplicate unicode extension sequence in [%s]", inLocaleId));
+        }
+
+        // Read out all attributes first ..
+        while (nextSubtag.isUnicodeExtensionAttribute()) {
+            if (parsedLocaleIdentifier.unicodeExtensionAttributes == null)
+                parsedLocaleIdentifier.unicodeExtensionAttributes = new ArrayList<>();
+
+            parsedLocaleIdentifier.unicodeExtensionAttributes.add(nextSubtag.toString());
+
+            if (!localeIdTokenizer.hasMoreSubtags())
+                return;
+
+            nextSubtag = localeIdTokenizer.nextSubtag();
+        }
+
+        if (nextSubtag.isUnicodeExtensionKey()) {
+
+            if (parsedLocaleIdentifier.unicodeExtensionKeywords == null) {
+                parsedLocaleIdentifier.unicodeExtensionKeywords = new TreeMap<>();
+            }
+
+            do {
+                String key = nextSubtag.toString();
+                ArrayList<String> extensionKeyTypes = new ArrayList<>();
+                parsedLocaleIdentifier.unicodeExtensionKeywords.put(key, extensionKeyTypes);
+
+                // Read out all key types
+                if (!localeIdTokenizer.hasMoreSubtags()) {
+                    return;
+                } else {
+                    nextSubtag = localeIdTokenizer.nextSubtag();
+
+                    while (nextSubtag.isUnicodeExtensionKeyTypeItem()) {
+                        extensionKeyTypes.add(nextSubtag.toString());
+
+                        if (!localeIdTokenizer.hasMoreSubtags())
+                            return;
+
+                        nextSubtag = localeIdTokenizer.nextSubtag();
+                    }
+
+                }
+            } while (nextSubtag.isUnicodeExtensionKey());
+        }
+
+        if (nextSubtag.isExtensionSingleton()) {
+            parseExtensions(inLocaleId, nextSubtag, localeIdTokenizer, parsedLocaleIdentifier);
+            return;
+        } else {
+            throw new JSRangeErrorException("Malformed sequence expected.");
+        }
+    }
+
+    static void parseTransformedExtensionFields(CharSequence inLocaleId, LocaleIdTokenizer localeIdTokenizer, LocaleIdTokenizer.LocaleIdSubtag nextSubtag,
+                                           ParsedLocaleIdentifier parsedLocaleIdentifier) throws JSRangeErrorException, LocaleIdTokenizer.LocaleIdSubtagIterationFailed {
+
+        if(nextSubtag.isTranformedExtensionTKey()) {
+
+            if(parsedLocaleIdentifier.transformedExtensionFields != null) {
+                throw new JSRangeErrorException(String.format("Duplicate transformed extension sequence in [%s]", inLocaleId));
+            }
+
+            if (parsedLocaleIdentifier.transformedExtensionFields == null) {
+                parsedLocaleIdentifier.transformedExtensionFields = new TreeMap<>();
+            }
+
+            do {
+                String tkey = nextSubtag.toString();
+                ArrayList<String> tValues = new ArrayList<>();
+                parsedLocaleIdentifier.transformedExtensionFields.put(tkey, tValues);
+
+                // Read out all key types
+                if (localeIdTokenizer.hasMoreSubtags()) {
+                    nextSubtag = localeIdTokenizer.nextSubtag();
+
+                    while (nextSubtag.isTranformedExtensionTValueItem()) {
+                        tValues.add(nextSubtag.toString());
+
+                        if (!localeIdTokenizer.hasMoreSubtags())
+                            return;
+
+                        nextSubtag = localeIdTokenizer.nextSubtag();
+                    }
+
+                } else {
+                    throw new JSRangeErrorException(String.format("Malformated transformed key in : %s", inLocaleId));
+                }
+
+            } while (nextSubtag.isTranformedExtensionTKey());
+        }
+
+        if (nextSubtag.isExtensionSingleton()) {
+            parseExtensions(inLocaleId, nextSubtag, localeIdTokenizer, parsedLocaleIdentifier);
+            return;
+        } else {
+            throw new JSRangeErrorException("Malformed extension sequence.");
+        }
+    }
+
+    // transformed_extensions= sep [tT]
+    // ((sep tlang (sep tfield)*)
+    // | (sep tfield)+) ;
+    //
+    // tlang = unicode_language_subtag
+    //  (sep unicode_script_subtag)?
+    //  (sep unicode_region_subtag)?
+    //  (sep unicode_variant_subtag)* ;
+    //
+    //  tfield = tkey tvalue;
+    //
+    // tkey =  	= alpha digit ;
+    //
+    // tvalue = (sep alphanum{3,8})+ ;
+    static void parseTransformedExtensions(CharSequence inLocaleId, LocaleIdTokenizer localeIdTokenizer, ParsedLocaleIdentifier parsedLocaleIdentifier)
+            throws JSRangeErrorException, LocaleIdTokenizer.LocaleIdSubtagIterationFailed {
+
+        if (!localeIdTokenizer.hasMoreSubtags())
+            throw new JSRangeErrorException("Extension sequence expected.");
+
+        LocaleIdTokenizer.LocaleIdSubtag nextSubtag = localeIdTokenizer.nextSubtag();
+
+        if(nextSubtag.isUnicodeLanguageSubtag()) {
+            parseLanguageId(inLocaleId, localeIdTokenizer, nextSubtag, true, parsedLocaleIdentifier);
+            // nextSubtag = localeIdTokenizer.currentSubtag();
+        } else if (nextSubtag.isTranformedExtensionTKey()) {
+            parseTransformedExtensionFields(inLocaleId, localeIdTokenizer, nextSubtag, parsedLocaleIdentifier);
+        } else {
+            throw new JSRangeErrorException(String.format("Unexpected token [%s] in transformed extension sequence [%s]", nextSubtag.toString(), inLocaleId));
+        }
+    }
+
+    static void parsePrivateUseExtensions(CharSequence inLocaleId, LocaleIdTokenizer localeIdTokenizer, ParsedLocaleIdentifier parsedLocaleIdentifier)
+            throws JSRangeErrorException, LocaleIdTokenizer.LocaleIdSubtagIterationFailed {
+
+        if (!localeIdTokenizer.hasMoreSubtags())
+            throw new JSRangeErrorException("Extension sequence expected.");
+
+        LocaleIdTokenizer.LocaleIdSubtag nextSubtag = localeIdTokenizer.nextSubtag();
+
+        if (parsedLocaleIdentifier.puExtensions == null) {
+            parsedLocaleIdentifier.puExtensions = new ArrayList<>();
+        }
+
+        while (nextSubtag.isPrivateUseExtension()) {
+
+            parsedLocaleIdentifier.puExtensions.add(nextSubtag.toString());
+
+            if (!localeIdTokenizer.hasMoreSubtags())
+                return;
+
+            nextSubtag = localeIdTokenizer.nextSubtag();
+        }
+
+        throw new JSRangeErrorException("Tokens are not expected after pu extension.");
+    }
+
+    static void parseOtherExtensions(CharSequence inLocaleId, LocaleIdTokenizer localeIdTokenizer, ParsedLocaleIdentifier parsedLocaleIdentifier, char singleton)
+            throws JSRangeErrorException, LocaleIdTokenizer.LocaleIdSubtagIterationFailed {
+
+        if (!localeIdTokenizer.hasMoreSubtags())
+            throw new JSRangeErrorException("Extension sequence expected.");
+
+        LocaleIdTokenizer.LocaleIdSubtag nextSubtag = localeIdTokenizer.nextSubtag();
+
+        if (parsedLocaleIdentifier.otherExtensionsMap == null) {
+            parsedLocaleIdentifier.otherExtensionsMap = new TreeMap<>();
+        }
+
+        ArrayList<String> otherExtensions = new ArrayList<>();
+        parsedLocaleIdentifier.otherExtensionsMap.put(new Character(singleton), otherExtensions);
+
+        while (nextSubtag.isOtherExtension()) {
+
+            otherExtensions.add(nextSubtag.toString());
+
+            if (!localeIdTokenizer.hasMoreSubtags())
+                return;
+
+            nextSubtag = localeIdTokenizer.nextSubtag();
+        }
+
+        if (nextSubtag.isExtensionSingleton()) {
+            parseExtensions(inLocaleId, nextSubtag, localeIdTokenizer, parsedLocaleIdentifier);
+            return;
+        } else {
+            throw new JSRangeErrorException("Malformed sequence expected.");
+        }
+    }
+
+    static void parseExtensions(CharSequence inLocaleId, LocaleIdTokenizer.LocaleIdSubtag singletonSubtag, LocaleIdTokenizer localeIdTokenizer, ParsedLocaleIdentifier parsedLocaleIdentifier)
+            throws JSRangeErrorException, LocaleIdTokenizer.LocaleIdSubtagIterationFailed {
+
+        if (!localeIdTokenizer.hasMoreSubtags())
+            throw new JSRangeErrorException("Extension sequence expected.");
+
+        char singleton = singletonSubtag.toString().charAt(0);
+
+        if (singleton == 'u') {
+            parseUnicodeExtensions(inLocaleId, localeIdTokenizer, parsedLocaleIdentifier);
+        } else if (singleton == 't') {
+            parseTransformedExtensions(inLocaleId, localeIdTokenizer, parsedLocaleIdentifier);
+        } else if (singleton == 'x') {
+            parsePrivateUseExtensions(inLocaleId, localeIdTokenizer, parsedLocaleIdentifier);
+        } else {
+            parseOtherExtensions(inLocaleId, localeIdTokenizer, parsedLocaleIdentifier, singleton);
+        }
+    }
+
+    static boolean handleExtensions(CharSequence inLocaleId, LocaleIdTokenizer localeIdTokenizer, LocaleIdTokenizer.LocaleIdSubtag nextSubtag, boolean transformedExtMode, ParsedLocaleIdentifier parsedLocaleIdentifier)
+            throws JSRangeErrorException, LocaleIdTokenizer.LocaleIdSubtagIterationFailed {
+
+        if(transformedExtMode && nextSubtag.isTranformedExtensionTKey()) {
+                parseTransformedExtensionFields(inLocaleId, localeIdTokenizer, nextSubtag, parsedLocaleIdentifier);
+                return true;
+            }
+
+        // https://en.wikipedia.org/wiki/IETF_language_tag#Extensions
+        if (nextSubtag.isExtensionSingleton()) {
+            if(!transformedExtMode) {
+                parseExtensions(inLocaleId, nextSubtag, localeIdTokenizer, parsedLocaleIdentifier);
+                return true;
+            } else {
+                throw new JSRangeErrorException(String.format("Extension singletons in transformed extension language tag: %s", inLocaleId));
+            }
+        }
+
+        return false;
+    }
+
+    static void parseLanguageId(CharSequence inLocaleId, LocaleIdTokenizer localeIdTokenizer, LocaleIdTokenizer.LocaleIdSubtag nextSubtag, boolean transformedExtMode, ParsedLocaleIdentifier parsedLocaleIdentifier)
+            throws JSRangeErrorException, LocaleIdTokenizer.LocaleIdSubtagIterationFailed {
+
+        ParsedLocaleIdentifier.ParsedLanguageIdentifier parsedLanguageIdentifier = parsedLocaleIdentifier.new ParsedLanguageIdentifier();
+
+        if(transformedExtMode)
+            parsedLocaleIdentifier.transformedLanguageIdentifier = parsedLanguageIdentifier;
+        else
+            parsedLocaleIdentifier.languageIdentifier = parsedLanguageIdentifier;
+
+        try {
+            // We expect at least one subtag.
+            // We assume the languageId starts with language subtag, but LDML allows languageId starting with script subtag: https://unicode.org/reports/tr35/#BCP_47_Conformance
+            if (!nextSubtag.isUnicodeLanguageSubtag())
+                throw new JSRangeErrorException(String.format("Language subtag expected at %s: %s", nextSubtag.toString(), inLocaleId));
+
+            parsedLanguageIdentifier.languageSubtag = nextSubtag.toLowerString();
+
+            if (!localeIdTokenizer.hasMoreSubtags()) {
+                return;
+            }
+
+            nextSubtag = localeIdTokenizer.nextSubtag();
+
+            // Note: According to BCP47, the language subtag can be followed by extlang subtags which are sequence of upto 3 3-letter alphabetic codes.
+            // But unicode LDML spec disallows it: https://unicode.org/reports/tr35/#BCP_47_Conformance
+
+            if(handleExtensions(inLocaleId, localeIdTokenizer, nextSubtag, transformedExtMode, parsedLocaleIdentifier))
+                return;
+
+            if (nextSubtag.isUnicodeScriptSubtag()) {
+                parsedLanguageIdentifier.scriptSubtag = nextSubtag.toTitleString();
+
+                if (!localeIdTokenizer.hasMoreSubtags()) {
+                    return;
+                }
+
+                nextSubtag = localeIdTokenizer.nextSubtag();
+            }
+
+            if (nextSubtag.isUnicodeRegionSubtag()) {
+                parsedLanguageIdentifier.regionSubtag = nextSubtag.toUpperString();
+
+                if (!localeIdTokenizer.hasMoreSubtags()) {
+                    return;
+                }
+                nextSubtag = localeIdTokenizer.nextSubtag();
+            }
+
+            do {
+                if(handleExtensions(inLocaleId, localeIdTokenizer, nextSubtag, transformedExtMode, parsedLocaleIdentifier))
+                    return;
+
+                if (!nextSubtag.isUnicodeVariantSubtag())
+                    throw new JSRangeErrorException(String.format("Unknown token [%s] found in locale id: %s", nextSubtag.toString(), inLocaleId));
+                else {
+                    addVariantSubtag(nextSubtag.toString(), parsedLanguageIdentifier);
+                }
+
+                if (!localeIdTokenizer.hasMoreSubtags()) {
+                    return;
+                }
+                nextSubtag = localeIdTokenizer.nextSubtag();
+
+            } while (true);
+
+        } catch (LocaleIdTokenizer.LocaleIdSubtagIterationFailed localeIdSubtagIterationFailed) {
+            throw new JSRangeErrorException(String.format("Locale Identifier subtag iteration failed: %s", inLocaleId));
+        }
+    }
+
+    static ParsedLocaleIdentifier parseLocaleId(String inLocaleId, LocaleIdTokenizer localeIdTokenizer) throws JSRangeErrorException {
+        ParsedLocaleIdentifier parsedLocaleIdentifier = new ParsedLocaleIdentifier();
+
+        try {
+
+            if (!localeIdTokenizer.hasMoreSubtags())
+                throw new JSRangeErrorException(String.format("Language subtag not found: %s", inLocaleId));
+
+            LocaleIdTokenizer.LocaleIdSubtag nextSubtag = localeIdTokenizer.nextSubtag();
+
+            parseLanguageId(inLocaleId, localeIdTokenizer, nextSubtag, false, parsedLocaleIdentifier);
+
+            return parsedLocaleIdentifier;
+
+        } catch (LocaleIdTokenizer.LocaleIdSubtagIterationFailed localeIdSubtagIterationFailed) {
+            throw new JSRangeErrorException(String.format("Locale Identifier subtag iteration failed: %s", inLocaleId));
+        }
     }
 
     // This method parses a given locale id to constituent subtags.
     // Note that the extension sequence is not yet parsed, but the whole extension sequence is returned as a buffer.
     // https://tc39.es/ecma402/#sec-isstructurallyvalidlanguagetag
     // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
-    static boolean canonicalizeLocaleIdIntoParts(StringBuffer inLocaleId, StringBuffer outLanguageSubtagBuffer,
-                                                 StringBuffer outScriptSubtagBuffer, StringBuffer outRegionSubtagBuffer,
-                                                 ArrayList<String> outVariantSubtagList,
-                                                 StringBuffer outExtensionSequenceBuffer) throws JSRangeErrorException {
-        assert (outLanguageSubtagBuffer != null && outLanguageSubtagBuffer.length() == 0);
-        assert (outScriptSubtagBuffer != null && outScriptSubtagBuffer.length() == 0);
-        assert (outRegionSubtagBuffer != null && outRegionSubtagBuffer.length() == 0);
-        assert (outExtensionSequenceBuffer != null && outExtensionSequenceBuffer.length() == 0);
-        assert (outVariantSubtagList != null && outVariantSubtagList.isEmpty());
+    static ParsedLocaleIdentifier parseLocaleId(String inLocaleId) throws JSRangeErrorException {
 
-        // Handle grandfathered locales .. Essentially overwrite the input buffer with the alias.
+        // Handle grandfathered locales ..
         int grandfatheredIndex = java.util.Arrays.binarySearch(LanguageTagsGenerated.regularGrandfatheredKeys, inLocaleId.toString());
         if (grandfatheredIndex >= 0) {
-            inLocaleId.delete(0, inLocaleId.length());
-            inLocaleId.append(LanguageTagsGenerated.regularGrandfatheredReplacements[grandfatheredIndex]);
+            inLocaleId = LanguageTagsGenerated.regularGrandfatheredReplacements[grandfatheredIndex];
         }
 
-        // Note: This array is essentially as iterator over the inLanguageTag
-        int currentTokenTerminals[] = new int[2];
+        // Normalize input to lower case.
+        inLocaleId = inLocaleId.toLowerCase();
 
-        int localeIdLength = inLocaleId.length();
-
-        if (!findNextSubtag(inLocaleId, currentTokenTerminals))
-            return false;
-
-        // We assume the languageId starts with language subtag, but LDML allows languageId starting with script subtag: https://unicode.org/reports/tr35/#BCP_47_Conformance
-        if (!isUnicodeLanguageSubtag(inLocaleId, currentTokenTerminals))
-            return false;
-
-        transformAndCopyString(outLanguageSubtagBuffer, inLocaleId, currentTokenTerminals[0], currentTokenTerminals[1], TransformType.ToSmall);
-
-        // Error while seeking next token
-        if (!findNextSubtag(inLocaleId, currentTokenTerminals))
-            return false; // Error while seeking next token
-
-        if (noMoreTokensInLocaleId(currentTokenTerminals, localeIdLength))
-            return true;
-
-        // Note: According to BCP47, the language subtag can be followed by extlang subtags which are sequence of upto 3 3-letter alphabetic codes.
-        // But unicode LDML spec disallows it: https://unicode.org/reports/tr35/#BCP_47_Conformance
-
-        // https://en.wikipedia.org/wiki/IETF_language_tag#Extensions
-        // We don;t bother the rest of the tags.
-        if (isExtensionSingleton(inLocaleId, currentTokenTerminals[0], currentTokenTerminals[1])) {
-            transformAndCopyString(outExtensionSequenceBuffer, inLocaleId, currentTokenTerminals[0], localeIdLength - 1, TransformType.None);
-            return true;
-        }
-
-        if (isUnicodeScriptSubtag(inLocaleId, currentTokenTerminals)) {
-            transformAndCopyString(outScriptSubtagBuffer, inLocaleId, currentTokenTerminals[0], currentTokenTerminals[1], TransformType.ToTitle);
-
-            if (!findNextSubtag(inLocaleId, currentTokenTerminals))
-                return false; // Error while seeking next token
-
-            if (noMoreTokensInLocaleId(currentTokenTerminals, localeIdLength))
-                return true;
-        }
-
-        if (isUnicodeRegionSubtag(inLocaleId, currentTokenTerminals)) {
-            transformAndCopyString(outRegionSubtagBuffer, inLocaleId, currentTokenTerminals[0], currentTokenTerminals[1], TransformType.ToCapital);
-
-            if (!findNextSubtag(inLocaleId, currentTokenTerminals))
-                return false;
-        }
-
-        do {
-
-            if (noMoreTokensInLocaleId(currentTokenTerminals, localeIdLength))
-                return true;
-
-            if (isExtensionSingleton(inLocaleId, currentTokenTerminals[0], currentTokenTerminals[1])) {
-                transformAndCopyString(outExtensionSequenceBuffer, inLocaleId, currentTokenTerminals[0], localeIdLength - 1, TransformType.None);
-                return true;
-            }
-
-            if (!isUnicodeVariantSubtag(inLocaleId, currentTokenTerminals))
-                return false;
-            else {
-                // Canonical form of variants is lower case
-                normalizeVariantAndAddToListSorted(inLocaleId, currentTokenTerminals[0], currentTokenTerminals[1], outVariantSubtagList);
-            }
-
-            if (!findNextSubtag(inLocaleId, currentTokenTerminals))
-                return false;
-
-        } while (true);
+        LocaleIdTokenizer localeIdTokenizer = new LocaleIdTokenizer(inLocaleId);
+        return parseLocaleId(inLocaleId, localeIdTokenizer);
     }
 }
 

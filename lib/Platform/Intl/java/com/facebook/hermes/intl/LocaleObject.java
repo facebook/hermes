@@ -6,22 +6,20 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 // A class which is supposed to wrap various represenations of a "locale".
 // It is not designed as a representation of the Intl::Locale object as defined by https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Locale/Locale
 public class LocaleObject {
-    private ULocale icu4jLocale;
-    private Locale legacylocale;
+    private ULocale icu4jLocale = null;
+    private Locale legacylocale = null;
 
-    private boolean mSubtagsParsed = false;
-    StringBuffer mLanguageSubtagBuffer = null;
-    StringBuffer mScriptSubtagBuffer = null;
-    StringBuffer mRegionSubtagBuffer = null;
-    ArrayList<String> mVariantSubtagList = null;
-    StringBuffer mExtensionAndPrivateUseSequenceBuffer = null;
-
+    private ParsedLocaleIdentifier mParsedLocaleIdentifier = null;
 
     private LocaleObject(ULocale uLocale) {
         assert (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N);
@@ -35,7 +33,7 @@ public class LocaleObject {
             return false;
         }
 
-        for (int idx=0; idx<name.length(); idx++) {
+        for (int idx = 0; idx < name.length(); idx++) {
             char c = name.charAt(idx);
             if (!Character.isLetter(c) && !Character.isDigit(c)) {
                 return false;
@@ -45,8 +43,26 @@ public class LocaleObject {
         return true;
     }
 
+    private void ensureParsedLocaleIdentifier() throws JSRangeErrorException {
+        if(mParsedLocaleIdentifier == null) {
+            String localeId = null;
+            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                localeId = icu4jLocale.toLanguageTag();
+            } else {
+                localeId = legacylocale.toLanguageTag();
+            }
+
+            mParsedLocaleIdentifier = LocaleIdentifier.parseLocaleId(localeId);
+        }
+    }
+
+    public TreeMap<String, ArrayList<String>>  getUnicodeExtensions() throws JSRangeErrorException {
+        ensureParsedLocaleIdentifier();
+        return mParsedLocaleIdentifier.unicodeExtensionKeywords;
+    }
+
     private static boolean isUnicodeExtensionAttribute(String name) {
-        return isAlphaNum(name, 3,8);
+        return isAlphaNum(name, 3, 8);
     }
 
     // key = alphanum alpha;
@@ -59,163 +75,166 @@ public class LocaleObject {
         return isAlphaNum(name, 3, 8);
     }
 
-    public void getUnicodeExtensions(ArrayList<String> attributes, HashMap<String, String> keywords, HashMap<String, String> defaults) throws JSRangeErrorException {
-        assert (mSubtagsParsed); // TODO Need to ensure it.
+    public void addUnicodeExtension(String key, String type) throws JSRangeErrorException {
+        ensureParsedLocaleIdentifier();
 
-        assert (attributes != null);
-        assert (keywords != null);
+        if(mParsedLocaleIdentifier.unicodeExtensionKeywords == null)
+            mParsedLocaleIdentifier.unicodeExtensionKeywords = new TreeMap<>();
 
-        if (mExtensionAndPrivateUseSequenceBuffer == null || mExtensionAndPrivateUseSequenceBuffer.length() == 0) {
-            return;
-        }
+        if(!mParsedLocaleIdentifier.unicodeExtensionKeywords.containsKey(key))
+            mParsedLocaleIdentifier.unicodeExtensionKeywords.put(key, new ArrayList<String>());
 
-        String extensions[] = new String[26];
-        LocaleIdentifier.parseExtensionSequence(mExtensionAndPrivateUseSequenceBuffer, extensions);
-        String unicodeExtensions = extensions['u' - 'a'];
-        if (unicodeExtensions == null)
-            return;
+        mParsedLocaleIdentifier.unicodeExtensionKeywords.get(key).add(type);
 
-        // TODO:: Relatively unoptimized implementation ..
-        String[] tokens = unicodeExtensions.split("-");
-
-        int tokenIndex = 0;
-        // find all the attributes which are guaranteed to be at the start of canonicalized tags.
-        while (tokenIndex < tokens.length) {
-            String token = tokens[tokenIndex];
-            if (isUnicodeExtensionAttribute(token)) {
-                attributes.add(token);
-                tokenIndex++;
-            } else {
-                break;
-            }
-        }
-
-        while (tokenIndex < tokens.length) {
-            String token = tokens[tokenIndex];
-
-            String key = null, type = null;
-
-            if (isUnicodeExtensionkeywordKey(token)) {
-                key = token;
-            } else {
-                throw new JSRangeErrorException("Unicode extension keyword key expected !");
-            }
-
-            ++tokenIndex;
-            if (tokenIndex >= tokens.length) {
-                if (defaults.containsKey(key)) {
-                    keywords.put(key, defaults.get(key));
-                }
-                break;
-            }
-
-            token = tokens[tokenIndex];
-            if (isUnicodeExtensionkeywordKey(token)) {
-                if (defaults.containsKey(key)) {
-                    keywords.put(key, defaults.get(key));
-                }
-                continue;
-            }
-
-            if (isUnicodeExtensionkeywordType(token)) {
-                type = token;
-            } else {
-                throw new JSRangeErrorException("Unicode extension keyword type expected !");
-            }
-            tokenIndex++;
-
-            keywords.put(key, type);
-        }
+        // TODO :: This is an expensive way to add an extension ..
+        reInitFromParsedLocaleIdentifier();
     }
 
-    public LocaleObject (StringBuffer languageSubtagBuffer, StringBuffer scriptSubtagBuffer,
-                                                         StringBuffer regionSubtagBuffer, ArrayList<String> variantSubtagList,
-                                                         StringBuffer extensionAndPrivateUseSequenceBuffer) throws JSRangeErrorException{
+    private void reInitFromParsedLocaleIdentifier() throws JSRangeErrorException {
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
 
-        mLanguageSubtagBuffer = new StringBuffer(languageSubtagBuffer);
-        mScriptSubtagBuffer = new StringBuffer(scriptSubtagBuffer);
-        mRegionSubtagBuffer = new StringBuffer(regionSubtagBuffer);
-        mVariantSubtagList = (ArrayList<String>)variantSubtagList.clone();
-        mExtensionAndPrivateUseSequenceBuffer = new StringBuffer(extensionAndPrivateUseSequenceBuffer);
-        mSubtagsParsed = true;
-
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             ULocale.Builder localeBuilder = new ULocale.Builder();
 
+
+            StringBuffer languageSubtagBuffer = new StringBuffer(), scriptSubtagBuffer = new StringBuffer(), regionSubtagBuffer = new StringBuffer();
+
+            if(mParsedLocaleIdentifier.languageIdentifier.languageSubtag != null && !mParsedLocaleIdentifier.languageIdentifier.languageSubtag.isEmpty())
+                languageSubtagBuffer.append(mParsedLocaleIdentifier.languageIdentifier.languageSubtag);
+
+            if (mParsedLocaleIdentifier.languageIdentifier.scriptSubtag != null && !mParsedLocaleIdentifier.languageIdentifier.scriptSubtag.isEmpty())
+                scriptSubtagBuffer.append(mParsedLocaleIdentifier.languageIdentifier.scriptSubtag);
+
+            if (mParsedLocaleIdentifier.languageIdentifier.regionSubtag != null && !mParsedLocaleIdentifier.languageIdentifier.regionSubtag.isEmpty())
+                regionSubtagBuffer.append(mParsedLocaleIdentifier.languageIdentifier.regionSubtag);
+
             LocaleIdentifier.replaceLanguageSubtagIfNeeded(languageSubtagBuffer, scriptSubtagBuffer, regionSubtagBuffer);
-            localeBuilder.setLanguage(languageSubtagBuffer.toString());
 
-            if (scriptSubtagBuffer.length() > 0) {
+            if(languageSubtagBuffer.length() > 0)
+                localeBuilder.setLanguage(languageSubtagBuffer.toString());
+
+            if (scriptSubtagBuffer.length() > 0)
                 localeBuilder.setScript(scriptSubtagBuffer.toString());
-            }
 
-            if (regionSubtagBuffer.length() > 0) {
+            if (regionSubtagBuffer.length() > 0)
                 localeBuilder.setRegion(LocaleIdentifier.replaceRegionSubtagIfNeeded(regionSubtagBuffer));
+
+            if (mParsedLocaleIdentifier.languageIdentifier.variantSubtagList != null && !mParsedLocaleIdentifier.languageIdentifier.variantSubtagList.isEmpty()) {
+                localeBuilder.setVariant(TextUtils.join("-", mParsedLocaleIdentifier.languageIdentifier.variantSubtagList));
             }
 
-            if (!variantSubtagList.isEmpty()) {
-                localeBuilder.setVariant(TextUtils.join("-", variantSubtagList));
-            }
-
-            if (extensionAndPrivateUseSequenceBuffer.length() > 0) {
-
-                if (extensionAndPrivateUseSequenceBuffer.charAt(extensionAndPrivateUseSequenceBuffer.length() - 1) == '-') {
-                    throw new JSRangeErrorException("Incomplete singleton");
-                }
-
-                String extensions[] = new String[26];
-                LocaleIdentifier.parseExtensionSequence(extensionAndPrivateUseSequenceBuffer, extensions);
-
-                for (int i = 0; i < 26; i++) {
-                    if (extensions[i] != null && !extensions[i].isEmpty())
-                        localeBuilder.setExtension((char) ('a' + i), extensions[i]);
+            if(mParsedLocaleIdentifier.unicodeExtensionAttributes != null) {
+                for (CharSequence unicodeAttribute : mParsedLocaleIdentifier.unicodeExtensionAttributes) {
+                    localeBuilder.addUnicodeLocaleAttribute(unicodeAttribute.toString());
                 }
             }
 
-            icu4jLocale = localeBuilder.build();
+            // unicode extension attributes
+            StringBuffer extension = new StringBuffer();
+            if(mParsedLocaleIdentifier.unicodeExtensionAttributes != null)
+                extension.append(TextUtils.join("-", mParsedLocaleIdentifier.unicodeExtensionAttributes));
+
+            // unicode extension keywords
+            if(mParsedLocaleIdentifier.unicodeExtensionKeywords != null) {
+                for (Map.Entry<String, ArrayList<String>> entry : mParsedLocaleIdentifier.unicodeExtensionKeywords.entrySet()) {
+                    String key = entry.getKey();
+                    ArrayList<String> values = entry.getValue();
+
+                    extension.append("-" + key);
+                    for (String value : values)
+                        extension.append("-" + value);
+                }
+            }
+
+            if(extension.length() > 0 && extension.charAt(0) == '-')
+                extension.deleteCharAt(0);
+
+            localeBuilder.setExtension('u', extension.toString());
+
+            // -t-extensions
+            StringBuffer transformedExtension = new StringBuffer();
+            if(mParsedLocaleIdentifier.transformedLanguageIdentifier != null) {
+                transformedExtension.append(mParsedLocaleIdentifier.transformedLanguageIdentifier.languageSubtag);
+
+                if(mParsedLocaleIdentifier.transformedLanguageIdentifier.scriptSubtag != null) {
+                    transformedExtension.append("-");
+                    transformedExtension.append(mParsedLocaleIdentifier.transformedLanguageIdentifier.scriptSubtag);
+                }
+
+                if(mParsedLocaleIdentifier.transformedLanguageIdentifier.regionSubtag != null) {
+                    transformedExtension.append("-");
+                    transformedExtension.append(mParsedLocaleIdentifier.transformedLanguageIdentifier.regionSubtag);
+                }
+
+                if (mParsedLocaleIdentifier.transformedLanguageIdentifier.variantSubtagList != null && !mParsedLocaleIdentifier.transformedLanguageIdentifier.variantSubtagList.isEmpty()) {
+                    transformedExtension.append("-");
+                    transformedExtension.append(TextUtils.join("-", mParsedLocaleIdentifier.transformedLanguageIdentifier.variantSubtagList));
+                }
+            }
+
+            if(mParsedLocaleIdentifier.transformedExtensionFields != null) {
+                for (Map.Entry<String, ArrayList<String>> entry : mParsedLocaleIdentifier.transformedExtensionFields.entrySet()) {
+                    String key = entry.getKey();
+                    ArrayList<String> values = entry.getValue();
+
+                    transformedExtension.append("-" + key);
+                    for (String value : values)
+                        transformedExtension.append("-" + value);
+                }
+
+                if(transformedExtension.length() > 0 && transformedExtension.charAt(0) == '-')
+                    transformedExtension.deleteCharAt(0);
+            }
+
+            localeBuilder.setExtension('t', transformedExtension.toString());
+
+
+            // pu extension
+            if(mParsedLocaleIdentifier.puExtensions != null) {
+                localeBuilder.setExtension('x', TextUtils.join("-", mParsedLocaleIdentifier.puExtensions));
+            }
+
+            // other extensions
+            if(mParsedLocaleIdentifier.otherExtensionsMap != null) {
+                for (Map.Entry<Character, ArrayList<String>> entry : mParsedLocaleIdentifier.otherExtensionsMap.entrySet()) {
+                    localeBuilder.setExtension(entry.getKey(), TextUtils.join("-", entry.getValue()));
+                }
+            }
+
+            try {
+                icu4jLocale = localeBuilder.build();
+            } catch (Exception ex) {
+                throw new JSRangeErrorException("Unknown error parsing locale id.");
+            }
 
         } else {
 
             StringBuffer localeIdBuffer = new StringBuffer();
 
-            localeIdBuffer.append(languageSubtagBuffer);
+            localeIdBuffer.append(mParsedLocaleIdentifier.languageIdentifier.languageSubtag);
 
-            if (scriptSubtagBuffer.length() > 0) {
+            if (mParsedLocaleIdentifier.languageIdentifier.scriptSubtag.length() > 0) {
                 localeIdBuffer.append('-');
-                localeIdBuffer.append(scriptSubtagBuffer);
+                localeIdBuffer.append(mParsedLocaleIdentifier.languageIdentifier.scriptSubtag);
             }
 
-            if (regionSubtagBuffer.length() > 0) {
+            if (mParsedLocaleIdentifier.languageIdentifier.regionSubtag.length() > 0) {
                 localeIdBuffer.append('-');
-                localeIdBuffer.append(regionSubtagBuffer);
+                localeIdBuffer.append(mParsedLocaleIdentifier.languageIdentifier.regionSubtag);
             }
 
-            if (!variantSubtagList.isEmpty()) {
+            if (!mParsedLocaleIdentifier.languageIdentifier.variantSubtagList.isEmpty()) {
                 localeIdBuffer.append('-');
-                localeIdBuffer.append(TextUtils.join("-", variantSubtagList));
-            }
-
-            if (extensionAndPrivateUseSequenceBuffer.length() > 0) {
-
-                if (extensionAndPrivateUseSequenceBuffer.charAt(extensionAndPrivateUseSequenceBuffer.length() - 1) == '-') {
-                    throw new JSRangeErrorException("Incomplete singleton");
-                }
-
-                String extensions[] = new String[26];
-                LocaleIdentifier.parseExtensionSequence(extensionAndPrivateUseSequenceBuffer, extensions);
-
-                for (int i = 0; i < 26; i++) {
-                    if (extensions[i] != null && !extensions[i].isEmpty()) {
-                        localeIdBuffer.append('-');
-                        localeIdBuffer.append((char) ('a' + i));
-                        localeIdBuffer.append('-');
-                        localeIdBuffer.append(extensions[i]);
-                    }
-                }
+                localeIdBuffer.append(TextUtils.join("-", mParsedLocaleIdentifier.languageIdentifier.variantSubtagList));
             }
 
             legacylocale = Locale.forLanguageTag(localeIdBuffer.toString());
         }
+    }
+
+    public LocaleObject(ParsedLocaleIdentifier parsedLocaleIdentifier) throws JSRangeErrorException {
+        mParsedLocaleIdentifier = parsedLocaleIdentifier;
+        reInitFromParsedLocaleIdentifier();
     }
 
     private LocaleObject(Locale locale) {
@@ -223,53 +242,9 @@ public class LocaleObject {
         legacylocale = locale;
     }
 
-    private static void copyLocaleStringToBufferNormalized(StringBuffer buffer, String locale) throws JSRangeErrorException{
-        assert(buffer.length() == 0);
-
-        // Normalize the string by
-        // 1. lower casing
-        // 2. Convert '_' to - [Nope: We are not doing it as test262 has tests which validates that the separator is hyphen]
-        // 3. avoiding leading and trailing whitespaces [Nope; We are not doing it as test262 has tests which validates that the leading and trailing spaces should throw]
-
-        // Seek past initial spaces.
-        // int idx=0;
-        // while (locale.charAt(idx) == ' ')idx++;
-        if(locale.charAt(0) == ' ' || locale.charAt(locale.length()-1) == ' ')
-            throw new JSRangeErrorException("Incorrect locale information provided");
-
-
-        int idx=0;
-        for(; idx<locale.length(); idx++) {
-            char localeChar = locale.charAt(idx);
-
-            //if(localeChar == '_') {
-            //    buffer.append('-');
-            //    continue;
-            //}
-
-            buffer.append(Character.toLowerCase(localeChar));
-        }
-
-        // idx=buffer.length()-1;
-        // while (buffer.charAt(idx) == ' ') idx--;
-        // buffer.delete(idx+1, buffer.length());
-    }
-
-    public static LocaleObject constructFromLocaleId(String localeId, boolean stripExtensions) throws JSRangeErrorException {
-        StringBuffer languageSubtag = new StringBuffer(8);
-        StringBuffer scriptSubtag = new StringBuffer(4);
-        StringBuffer regionSubtag = new StringBuffer(4);
-        ArrayList<String> variantSubtagList = new ArrayList<>();
-        StringBuffer extensionAndPrivateUseSequence = new StringBuffer();
-
-        StringBuffer localeBuffer = new StringBuffer();
-        copyLocaleStringToBufferNormalized(localeBuffer, localeId);
-
-        if(!LocaleIdentifier.canonicalizeLocaleIdIntoParts(localeBuffer, languageSubtag, scriptSubtag, regionSubtag, variantSubtagList, extensionAndPrivateUseSequence)) {
-            throw new JSRangeErrorException(String.format("Incorrect locale information provided: %s", localeId==null? "null":localeId));
-        }
-
-        return LocaleObject.constructFromSubtags(languageSubtag, scriptSubtag, regionSubtag, variantSubtagList, stripExtensions ? new StringBuffer() : extensionAndPrivateUseSequence);
+    public static LocaleObject constructFromLocaleId(String localeId) throws JSRangeErrorException {
+        ParsedLocaleIdentifier parsedLocaleIdentifier = LocaleIdentifier.parseLocaleId(localeId);
+        return LocaleObject.constructFromParsedLocaleId(parsedLocaleIdentifier);
     }
 
     public static LocaleObject constructFromICU4jLocale(ULocale uLocale) {
@@ -280,39 +255,21 @@ public class LocaleObject {
         return new LocaleObject(locale);
     }
 
-    public static LocaleObject constructFromSubtags(StringBuffer languageSubtagBuffer, StringBuffer scriptSubtagBuffer,
-                                                         StringBuffer regionSubtagBuffer, ArrayList<String> variantSubtagList,
-                                                         StringBuffer extensionAndPrivateUseSequenceBuffer) throws JSRangeErrorException{
+    public static LocaleObject constructFromParsedLocaleId(ParsedLocaleIdentifier parsedLocaleIdentifier) throws JSRangeErrorException {
 
-        return new LocaleObject(languageSubtagBuffer, scriptSubtagBuffer, regionSubtagBuffer, variantSubtagList, extensionAndPrivateUseSequenceBuffer);
-    }
-
-    public static LocaleObject constructByExtendingExistingObject(LocaleObject baseLocaleObject, char extensionSingleton, String extension) {
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            // Put the collation extension keys back if needed.
-            ULocale.Builder builder = new ULocale.Builder();
-            builder.setLocale(baseLocaleObject.getICU4jLocale());
-
-            if(extension.length() > 0) {
-                builder.setExtension(extensionSingleton, extension);
-            }
-
-            return LocaleObject.constructFromICU4jLocale(builder.build());
-        } else {
-            throw new UnsupportedOperationException("Extending an existing locale object is not supported !");
-        }
+        return new LocaleObject(parsedLocaleIdentifier);
     }
 
     // Construct a LocaleObject corresponding to the current "default" locale for the user ..
     public static LocaleObject constructDefault() {
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             return new LocaleObject(ULocale.getDefault(ULocale.Category.FORMAT));
         } else {
             return new LocaleObject(Locale.getDefault(Locale.Category.FORMAT));
         }
     }
 
-    public String toLocaleId() {
+    public String toCanonicalLocaleId() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             return icu4jLocale.toLanguageTag();
         } else {
@@ -320,10 +277,32 @@ public class LocaleObject {
         }
     }
 
-    private void ensureSubtagsAvailable() {
-        if(!mSubtagsParsed) {
+    public String toCanonicalLocaleIdForLocaleFiltering() throws JSRangeErrorException {
 
+        // This is based on the following assumption
+        // 1. The list of available locales returned by <locale|collator>.getAvailableULocales()
+        // 1.a. don't contain variants and extensions
+        // 1.b. are canonicalized .. i.e. <langsubtag in lower case>-<script in title case>-<region in capital>
+
+        StringBuffer canonical = new StringBuffer();
+
+        ensureParsedLocaleIdentifier();
+        if(mParsedLocaleIdentifier.languageIdentifier.languageSubtag == null)
+            throw new JSRangeErrorException ("LocaleId without language subtag !");
+
+        canonical.append(mParsedLocaleIdentifier.languageIdentifier.languageSubtag);
+
+        if(mParsedLocaleIdentifier.languageIdentifier.scriptSubtag != null) {
+            canonical.append("-");
+            canonical.append(mParsedLocaleIdentifier.languageIdentifier.scriptSubtag);
         }
+
+        if(mParsedLocaleIdentifier.languageIdentifier.regionSubtag != null) {
+            canonical.append("-");
+            canonical.append(mParsedLocaleIdentifier.languageIdentifier.regionSubtag);
+        }
+
+        return canonical.toString();
     }
 
     public boolean matches(LocaleObject candidate) {
@@ -339,7 +318,7 @@ public class LocaleObject {
             throw new UnsupportedOperationException("ICU4j locale object not available !");
         }
 
-        assert(icu4jLocale != null);
+        assert (icu4jLocale != null);
         return icu4jLocale;
     }
 
@@ -348,7 +327,7 @@ public class LocaleObject {
             throw new UnsupportedOperationException("ICU4j locale should be used instead of legacy Localy !");
         }
 
-        assert(legacylocale != null);
+        assert (legacylocale != null);
         return legacylocale;
     }
 }
