@@ -148,7 +148,7 @@ public class LocaleIdentifier {
         //
         // Essentially, we ended up with slightly more complicated and less space efficient (due to added tables, but mostly static, not runtime allocations) traded against correctlness and predictability.
 
-        return LocaleObject.constructFromLocaleId(inLocaleId).toCanonicalLocaleId();
+        return LocaleObject.createFromLocaleId(inLocaleId).toCanonicalTag();
     }
 
 
