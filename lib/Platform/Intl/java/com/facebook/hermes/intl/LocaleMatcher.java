@@ -37,8 +37,6 @@ public class LocaleMatcher <T> {
                 ArrayList<ULocale> candidateLocales = new ArrayList<>();
                 ILocaleObject localeObject = LocaleObjectICU4J.createFromLocaleId(requestedLocale);
 
-                // Note :: android.icu.util.ULocale.acceptLanguage doesn't match the locale if the candidate local has unicode extensions
-                // for e.g. "android.icu.util.ULocale.acceptLanguage(new ULocale[]{ULocale.forLanguageTag("de-u-co-phonebk")}, availableLocalesArray, null)" return null;
                 candidateLocales.add(ULocale.forLanguageTag(localeObject.toCanonicalTagWithoutExtensions()));
 
                 ULocale[] candidateLocaleArray = candidateLocales.toArray(new ULocale[candidateLocales.size()]);
@@ -46,54 +44,20 @@ public class LocaleMatcher <T> {
                 android.icu.util.ULocale[] availableLocalesArray = android.icu.text.RuleBasedCollator.getAvailableULocales();
 
                 // Note: We assume that this method doesn "best fit" matching, which is not yet verified.
+                // Note: ICU4J's LocaleMatcher (https://unicode-org.github.io/icu-docs/apidoc/released/icu4j/com/ibm/icu/util/LocaleMatcher.html) is not available on Android !
                 android.icu.util.ULocale acceptedLocale = android.icu.util.ULocale.acceptLanguage(candidateLocaleArray, availableLocalesArray, null);
 
                 if (acceptedLocale != null) {
-                    // Add relevant extensions back .. specifically if the desired locale contains "co" extension.
-
                     result.matcher = Constants.LOCALEMATCHER_BESTFIT;
                     result.matchedLocale = LocaleObjectICU4J.createFromULocale(acceptedLocale);
                     result.matchedRequestedLocale = LocaleObjectICU4J.createFromLocaleId(requestedLocale);
                     result.isDefault = false;
 
                     return result;
-
-//                    // Add the extensions .. for e.g. the "de-u-co-phonebk" ..
-//                    ArrayList<String> collationExtensions = result.resolvedDesiredLocale.getUnicodeExtensions(Constants.COLLATION_EXTENSION_KEY_LONG);
-//                    if (collationExtensions != null && collationExtensions.size() > 0) {
-//
-//                        ArrayList<String> resolvedExtensions = new ArrayList<>();
-//                        for (String collationType : collationExtensions) {
-//                            resolvedExtensions.add(UnicodeLocaleKeywordUtils.resolveCollationKeyword(collationType));
-//                        }
-//
-//                        result.resolvedLocale.setUnicodeExtensions(Constants.COLLATION_EXTENSION_KEY_SHORT, resolvedExtensions);
-//                    }
-//
-//                    // for e.g. "es_TRADITIONAL" locale uses traditional sorting order which is different form the default modern sorting of spanish.
-//                    ArrayList<String> desiredLocaleVariants = result.resolvedDesiredLocale.getVariants();
-//                    if (desiredLocaleVariants != null && desiredLocaleVariants.size() > 0) {
-//                        result.resolvedLocale.setVariant(desiredLocaleVariants);
-//                    }
-//
-//                    // Note:: We can't find any other way to force the collator to use search locale data .. This is what other engines such as "V8" also does .
-//                    // TODO :: We need to make sure that this won't be shown in the resolvedLocales
-//                    if (options.forSearch) {
-//                        ArrayList<String> currentCollationExtensions = result.resolvedDesiredLocale.getUnicodeExtensions(Constants.COLLATION_EXTENSION_KEY_LONG);
-//
-//                        ArrayList<String> currentResolvedCollationExtensions = new ArrayList<>();
-//                        for (String currentCollationExtensio : currentCollationExtensions) {
-//                            currentResolvedCollationExtensions.add(UnicodeLocaleKeywordUtils.resolveCollationKeyword(currentCollationExtensio));
-//                        }
-//
-//                        currentResolvedCollationExtensions.add(UnicodeLocaleKeywordUtils.resolveCollationKeyword(Constants.SEARCH));
-//                        result.resolvedLocale.setUnicodeExtensions(Constants.COLLATION_EXTENSION_KEY_SHORT, currentResolvedCollationExtensions);
-//                    }
-
                 }
             }
         } else {
-            // We don't have best fit matcher available on older platforms.
+            // We don't have best fit matcher available on older platforms..
             result = lookupMatch(requestedLocales, availableLocales);
             result.matcher = Constants.LOCALEMATCHER_BESTFIT;
             return result;

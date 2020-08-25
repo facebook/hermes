@@ -7,9 +7,6 @@
 
 package com.facebook.hermes.intl;
 
-import android.icu.util.ULocale;
-import android.os.Build;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -104,7 +101,7 @@ public class Collator {
 
         // 1.
         // Canonicalize Locale List
-        // TODO
+        // We don't explicitly canonicalize but it is implicitly happening while creating Locale objects from the tag.
 
         // 4 & 5
         mResolvedUsage = resolveStringOption(options, Constants.COLLATION_OPTION_USAGE, Constants.COLLATOR_USAGE_POSSIBLE_VALUES, Constants.SORT);
@@ -126,15 +123,9 @@ public class Collator {
             mResolvedCaseFirst = resolveStringOption(options, Constants.COLLATION_OPTION_CASEFIRST, Constants.CASEFIRST_POSSIBLE_VALUES, Constants.CASEFIRST_FALSE);
         }
 
-        // 8, 10, 13, 15 .. Note With our implementation, "kf" and "kb" don't influence locale selection.
-        //PlatformCollator.LocaleResolutionOptions localeResolutionOptions = new PlatformCollator.LocaleResolutionOptions();
-        //localeResolutionOptions.localeMatcher = desiredLocaleMatcher;
-        //localeResolutionOptions.forSearch = (mResolvedUsage.equals(Constants.SEARCH));
-
         // 16, 17 & 18
         // Let r be ResolveLocale(%Collator%.[[AvailableLocales]], requestedLocales, opt, relevantExtensionKeys, localeData).
         resolveLocale(locales, desiredLocaleMatcher);
-        mPlatformCollatorObject = PlatformCollator.createFromLocale(mResolvedLocaleObject);
 
         // Note:: We can't find any other way to force the collator to use search locale data .. This is what other engines such as "V8" also does .
         // TODO :: We need to make sure that this won't be shown in the resolvedLocales
@@ -150,8 +141,10 @@ public class Collator {
             mResolvedLocaleObject.setUnicodeExtensions(Constants.COLLATION_EXTENSION_KEY_SHORT, currentResolvedCollationExtensions);
         }
 
+        mPlatformCollatorObject = PlatformCollator.createFromLocale(mResolvedLocaleObject);
+
         // 19-21
-        // If the locale id has collation keys, then they should be added to resolvedOptions.
+        // If the locale id has collation keys, then they should be added to resolvedOptions so that users can query.
 
         ArrayList<String> collationExtension = mResolvedLocaleObject.getUnicodeExtensions(Constants.COLLATION_EXTENSION_KEY_LONG);
         if (collationExtension != null && collationExtension.size() > 0)
@@ -182,7 +175,6 @@ public class Collator {
 
         // 23
         configureCaseFirst();
-
 
         // 24 & 25
         mResolvedSensitivity = resolveStringOption(options, Constants.COLLATION_OPTION_SENSITIVITY, Constants.SENSITIVITY_POSSIBLE_VALUES, "");
@@ -243,32 +235,13 @@ public class Collator {
             throws JSRangeErrorException {
 
         ArrayList<String> supportedLocales = new ArrayList<>();
-        ArrayList<String> availableLocales = PlatformCollator.getAvailableLocales();
 
         String localeMatcher = Constants.LOCALEMATCHER_BESTFIT;
         if (options.containsKey(Constants.LOCALEMATCHER)) {
             localeMatcher = (String) options.get(Constants.LOCALEMATCHER);
         }
 
-        for (String candidateLocale : locales) {
-            ArrayList<String> canonicalCandidateLocaleList = new ArrayList<>();
-            canonicalCandidateLocaleList.add(candidateLocale);
-
-            LocaleMatcher.LocaleMatchResult localeMatchResult;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                android.icu.util.ULocale[] availableLocalesArray = android.icu.text.RuleBasedCollator.getAvailableULocales();
-                localeMatchResult = (new LocaleMatcher<ULocale>()).match(locales.toArray(new String[locales.size()]), availableLocalesArray, localeMatcher);
-            } else {
-                java.util.Locale[] availableLocalesArray = java.text.RuleBasedCollator.getAvailableLocales();
-                localeMatchResult = (new LocaleMatcher<java.util.Locale>()).match(locales.toArray(new String[locales.size()]), availableLocalesArray, localeMatcher);
-            }
-
-            if(localeMatchResult.matchedLocale != null && !localeMatchResult.isDefault) {
-                supportedLocales.add(localeMatchResult.matchedRequestedLocale.toCanonicalTag());
-            }
-        }
-
-        return supportedLocales;
+        return PlatformCollator.filterLocales(locales, localeMatcher);
     }
 
     // Implementer note: This method corresponds roughly to

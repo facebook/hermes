@@ -12,8 +12,6 @@ import java.util.TreeMap;
 
 public class LocaleObjectAndroid implements ILocaleObject<Locale> {
 
-    // On SDK < N .. this object keeps the java.util.Locale instance.
-    // All the methods must ensure that the legacylocale & mParsedLocaleIdentifier are in sync on exit.
     private Locale mLocale = null;
 
     private ParsedLocaleIdentifier mParsedLocaleIdentifier = null;
@@ -198,31 +196,11 @@ public class LocaleObjectAndroid implements ILocaleObject<Locale> {
     }
 
     @Override
-    public ArrayList<String> getVariants() throws JSRangeErrorException {
-        ensureNotDirty();
-        ensureParsedLocaleIdentifier();
-
-        return mParsedLocaleIdentifier.languageIdentifier.variantSubtagList;
-    }
-
-    @Override
     public ArrayList<String> getUnicodeExtensions(String key) throws JSRangeErrorException {
         ensureNotDirty();
         ensureParsedLocaleIdentifier();
 
         return mParsedLocaleIdentifier.unicodeExtensionKeywords.get(key);
-    }
-
-    @Override
-    public void setVariant(ArrayList<String> newVariant) throws JSRangeErrorException {
-        ensureNotDirty();
-        ensureParsedLocaleIdentifier();
-
-        if(mParsedLocaleIdentifier.languageIdentifier.variantSubtagList == null)
-            mParsedLocaleIdentifier.languageIdentifier.variantSubtagList = new ArrayList<>();
-
-        mParsedLocaleIdentifier.languageIdentifier.variantSubtagList.addAll(newVariant);
-        mIsDirty = true;
     }
 
     @Override
