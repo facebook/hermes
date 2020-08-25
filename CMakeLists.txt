@@ -135,6 +135,10 @@ set(HERMES_ENABLE_ADDRESS_SANITIZER OFF CACHE BOOL
 set(HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER OFF CACHE BOOL
   "Enable -fsanitize=undefined")
 
+# Enable Thread Sanitizer
+set(HERMES_ENABLE_THREAD_SANITIZER OFF CACHE BOOL
+  "Enable -fsanitize=thread")
+
 set(HERMES_ENABLE_FUZZING OFF CACHE BOOL
   "Enable fuzzing")
 
@@ -339,6 +343,9 @@ if (HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER)
     add_definitions(-DHERMES_UBSAN)
     # Do not enable the vptr sanitizer, as it requires RTTI.
     append("-fsanitize=undefined -fno-sanitize=vptr -fno-sanitize-recover=undefined" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
+endif()
+if (HERMES_ENABLE_THREAD_SANITIZER)
+    append("-fsanitize=thread" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
 endif()
 if(HERMES_FACEBOOK_BUILD)
     add_definitions(-DHERMES_FACEBOOK_BUILD)
