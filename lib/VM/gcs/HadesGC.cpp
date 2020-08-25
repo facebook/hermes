@@ -817,6 +817,7 @@ uint32_t HadesGC::minAllocationSize() {
 }
 
 void HadesGC::getHeapInfo(HeapInfo &info) {
+  std::lock_guard<Mutex> lk{gcMutex_};
   GCBase::getHeapInfo(info);
   info.allocatedBytes = allocatedBytes();
   // Heap size includes fragmentation, which means every segment is fully used.
@@ -843,6 +844,7 @@ void HadesGC::createSnapshot(llvh::raw_ostream &os) {
 }
 
 void HadesGC::printStats(JSONEmitter &json) {
+  std::lock_guard<Mutex> lk{gcMutex_};
   GCBase::printStats(json);
   json.emitKey("specific");
   json.openDict();
@@ -1216,6 +1218,7 @@ void HadesGC::sweep() {
     // Mark bits are reset before any new collection occurs, so there's no
     // need to worry about their information being misused.
   }
+  std::lock_guard<Mutex> lk{gcMutex_};
   ogCollectionStats_->setAfterSizes(oldGen_.allocatedBytes(), oldGen_.size());
 }
 
