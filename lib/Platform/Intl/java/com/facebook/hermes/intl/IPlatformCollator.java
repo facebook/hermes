@@ -15,4 +15,6 @@ public interface IPlatformCollator {
 
     boolean isCaseFirstCollationSupported();
     public void setCaseFirstAttribute(String caseFirst);
+
+    // boolean isCollationKeywordAccepted();
 }

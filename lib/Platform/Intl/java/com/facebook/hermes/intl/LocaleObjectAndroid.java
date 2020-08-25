@@ -240,21 +240,6 @@ public class LocaleObjectAndroid implements ILocaleObject<Locale> {
         mIsDirty = true;
     }
 
-//    @Override
-//    public void setUnicodeExtension(String key, String value) throws JSRangeErrorException {
-//        ensureNotDirty();
-//        ensureParsedLocaleIdentifier();
-//
-//        if(mParsedLocaleIdentifier.unicodeExtensionKeywords == null)
-//            mParsedLocaleIdentifier.unicodeExtensionKeywords = new TreeMap<>();
-//
-//        ArrayList<String> values = new ArrayList<String>();
-//        values.add(value);
-//        mParsedLocaleIdentifier.unicodeExtensionKeywords.put(key, values);
-//
-//        mIsDirty = true;
-//    }
-
     @Override
     public Locale getLocale() throws JSRangeErrorException {
         ensureNotDirty();

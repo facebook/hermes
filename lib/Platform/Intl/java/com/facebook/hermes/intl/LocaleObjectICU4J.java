@@ -103,20 +103,6 @@ public class LocaleObjectICU4J implements ILocaleObject<ULocale> {
         mIsDirty = true;
     }
 
-//    @Override
-//    public void setUnicodeExtension(String key, String value) throws JSRangeErrorException {
-//        ensureNotDirty();
-//        if (icu4jLocaleBuilder == null)
-//            icu4jLocaleBuilder = new ULocale.Builder().setLocale(icu4jLocale);
-//
-//        try {
-//            icu4jLocaleBuilder.setUnicodeLocaleKeyword(key, value);
-//        } catch (RuntimeException ex) {
-//            throw new JSRangeErrorException(ex.getMessage());
-//        }
-//        mIsDirty = true;
-//    }
-
     @Override
     public ULocale getLocale() throws JSRangeErrorException {
         ensureNotDirty();

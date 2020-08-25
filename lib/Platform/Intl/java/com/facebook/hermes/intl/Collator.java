@@ -7,147 +7,13 @@
 
 package com.facebook.hermes.intl;
 
+import android.icu.util.ULocale;
+import android.os.Build;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
-//
-//class PlatformCollatorObject {
-//    private android.icu.text.RuleBasedCollator icu4jCollator = null;
-//    private java.text.RuleBasedCollator legacyCollator = null;
-//
-//    private PlatformCollatorObject(ILocaleObject locale) {
-//
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-//            icu4jCollator = (RuleBasedCollator) RuleBasedCollator.getInstance(locale.);
-//
-//            // Normalization is always on by the spec. We don't know whether the text is already normalized.
-//            // This has perf implications.
-//            icu4jCollator.setDecomposition(android.icu.text.Collator.CANONICAL_DECOMPOSITION);
-//
-//        } else {
-//            legacyCollator = (java.text.RuleBasedCollator) java.text.Collator.getInstance(locale.getLegacyLocale());
-//            legacyCollator.setDecomposition(java.text.Collator.CANONICAL_DECOMPOSITION);
-//        }
-//    }
-//
-//    public static PlatformCollatorObject getInstance(LocaleObject locale) {
-//        return new PlatformCollatorObject(locale);
-//    }
-//
-//
-//
-//    public int compare(String source, String target) {
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-//            return icu4jCollator.compare(source, target);
-//        } else {
-//            return legacyCollator.compare(source, target);
-//        }
-//    }
-//
-//    public boolean isSensitiySupported(String sensitivity) {
-//        // Legacy mode don't support sensitivity "case" since the collator object doesn't support "setCaseLevel" method.
-//        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N && sensitivity.compareTo(Constants.SENSITIVITY_CASE) == 0) {
-//            return false;
-//        }
-//
-//        return true;
-//    }
-//
-//    public void setSensitivity(String sensitivity) {
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-//            switch (sensitivity) {
-//                case Constants.SENSITIVITY_BASE:
-//                    icu4jCollator.setStrength(android.icu.text.Collator.PRIMARY);
-//                    break;
-//                case Constants.SENSITIVITY_ACCENT:
-//                    icu4jCollator.setStrength(android.icu.text.Collator.SECONDARY);
-//                    break;
-//                case Constants.SENSITIVITY_CASE:
-//                    icu4jCollator.setStrength(android.icu.text.Collator.PRIMARY);
-//                    icu4jCollator.setCaseLevel(true);
-//                    break;
-//                case Constants.SENSITIVITY_VARIANT:
-//                    icu4jCollator.setStrength(android.icu.text.Collator.TERTIARY);
-//                    break;
-//            }
-//        } else {
-//            switch (sensitivity) {
-//                case Constants.SENSITIVITY_BASE:
-//                    legacyCollator.setStrength(android.icu.text.Collator.PRIMARY);
-//                    break;
-//                case Constants.SENSITIVITY_ACCENT:
-//                    legacyCollator.setStrength(android.icu.text.Collator.SECONDARY);
-//                    break;
-//                case Constants.SENSITIVITY_CASE:
-//                    throw new UnsupportedOperationException("Unsupported Sensitivity option is Collator");
-//                case Constants.SENSITIVITY_VARIANT:
-//                    legacyCollator.setStrength(android.icu.text.Collator.TERTIARY);
-//                    break;
-//            }
-//        }
-//    }
-//
-//    public void setIgnorePunctuation(boolean ignore) {
-//        // TODO:: According to documentation, it should take effect only when the strength is se to "QUATERNARY". Need to test it.
-//        if (ignore && (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N))
-//            icu4jCollator.setAlternateHandlingShifted(true);
-//    }
-//
-//    public static boolean isIgnorePunctuationSupported() {
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-//            return true;
-//        } else {
-//            return false;
-//        }
-//    }
-//
-//    public static boolean isNumericCollationSupported() {
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-//            return true;
-//        } else {
-//            return false;
-//        }
-//    }
-//
-//    public void setNumericAttribute(boolean numeric) {
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-//            icu4jCollator.setNumericCollation(numeric);
-//        } else {
-//            throw new UnsupportedOperationException("Numeric collation not supported !");
-//        }
-//    }
-//
-//    public static boolean isCaseFirstCollationSupported() {
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-//            return true;
-//        } else {
-//            return false;
-//        }
-//    }
-//
-//    public void setCaseFirstAttribute(String caseFirst) {
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-//            switch (caseFirst) {
-//                case "upper":
-//                    icu4jCollator.setUpperCaseFirst(true);
-//                    break;
-//
-//                case "lower":
-//                    icu4jCollator.setLowerCaseFirst(true);
-//                    break;
-//
-//                case "false":
-//                default:
-//                    icu4jCollator.setCaseFirstDefault();
-//                    break;
-//            }
-//        } else {
-//            throw new UnsupportedOperationException("CaseFirst collation attribute not supported !");
-//        }
-//    }
-//}
 
 /**
  * This class represents the Java part of the Android Intl.Collator
@@ -194,7 +60,7 @@ public class Collator {
     private ILocaleObject mResolvedLocaleObject = null;
 
     // The original locale provided by user which is matched.
-    private ILocaleObject mDesiredLocaleObject = null;
+    private ILocaleObject mReolvedRequestedLocaleObject = null;
 
     // [[InitializedCollator]]
     private IPlatformCollator mPlatformCollatorObject = null;
@@ -221,15 +87,15 @@ public class Collator {
         }
     }
 
-    private void resolveLocale(List<String> locales, PlatformCollator.LocaleResolutionOptions localeResolutionOptions) throws JSRangeErrorException {
+    private void resolveLocale(List<String> locales, String localeMatcher) throws JSRangeErrorException {
 
         if (locales == null || locales.size() == 0) {
             mResolvedLocaleObject = LocaleObject.createDefault();
-            mDesiredLocaleObject = mResolvedLocaleObject;
+            mReolvedRequestedLocaleObject = mResolvedLocaleObject;
         } else {
-            PlatformCollator.LocaleResolutionResult localeResolutionResult = PlatformCollator.resolveLocales(locales, localeResolutionOptions, true /*fallbackToDefault*/);
+            PlatformCollator.LocaleResolutionResult localeResolutionResult = PlatformCollator.resolveLocales(locales, localeMatcher);
             mResolvedLocaleObject = localeResolutionResult.resolvedLocale;
-            mDesiredLocaleObject = localeResolutionResult.resolvedDesiredLocale;
+            mReolvedRequestedLocaleObject = localeResolutionResult.resolvedDesiredLocale;
         }
     }
 
@@ -261,14 +127,28 @@ public class Collator {
         }
 
         // 8, 10, 13, 15 .. Note With our implementation, "kf" and "kb" don't influence locale selection.
-        PlatformCollator.LocaleResolutionOptions localeResolutionOptions = new PlatformCollator.LocaleResolutionOptions();
-        localeResolutionOptions.localeMatcher = desiredLocaleMatcher;
-        localeResolutionOptions.forSearch = (mResolvedUsage.equals(Constants.SEARCH));
+        //PlatformCollator.LocaleResolutionOptions localeResolutionOptions = new PlatformCollator.LocaleResolutionOptions();
+        //localeResolutionOptions.localeMatcher = desiredLocaleMatcher;
+        //localeResolutionOptions.forSearch = (mResolvedUsage.equals(Constants.SEARCH));
 
         // 16, 17 & 18
         // Let r be ResolveLocale(%Collator%.[[AvailableLocales]], requestedLocales, opt, relevantExtensionKeys, localeData).
-        resolveLocale(locales, localeResolutionOptions);
+        resolveLocale(locales, desiredLocaleMatcher);
         mPlatformCollatorObject = PlatformCollator.createFromLocale(mResolvedLocaleObject);
+
+        // Note:: We can't find any other way to force the collator to use search locale data .. This is what other engines such as "V8" also does .
+        // TODO :: We need to make sure that this won't be shown in the resolvedLocales
+        if (mResolvedUsage.equals(Constants.SEARCH)) {
+            ArrayList<String> currentCollationExtensions = mReolvedRequestedLocaleObject.getUnicodeExtensions(Constants.COLLATION_EXTENSION_KEY_LONG);
+
+            ArrayList<String> currentResolvedCollationExtensions = new ArrayList<>();
+            for (String currentCollationExtension : currentCollationExtensions) {
+                currentResolvedCollationExtensions.add(UnicodeLocaleKeywordUtils.resolveCollationKeyword(currentCollationExtension));
+            }
+
+            currentResolvedCollationExtensions.add(UnicodeLocaleKeywordUtils.resolveCollationKeyword(Constants.SEARCH));
+            mResolvedLocaleObject.setUnicodeExtensions(Constants.COLLATION_EXTENSION_KEY_SHORT, currentResolvedCollationExtensions);
+        }
 
         // 19-21
         // If the locale id has collation keys, then they should be added to resolvedOptions.
@@ -365,14 +245,26 @@ public class Collator {
         ArrayList<String> supportedLocales = new ArrayList<>();
         ArrayList<String> availableLocales = PlatformCollator.getAvailableLocales();
 
+        String localeMatcher = Constants.LOCALEMATCHER_BESTFIT;
+        if (options.containsKey(Constants.LOCALEMATCHER)) {
+            localeMatcher = (String) options.get(Constants.LOCALEMATCHER);
+        }
+
         for (String candidateLocale : locales) {
             ArrayList<String> canonicalCandidateLocaleList = new ArrayList<>();
             canonicalCandidateLocaleList.add(candidateLocale);
 
-            // Note :: Any locale which is accepted, even with a fallback, is added to the list as is.
-            PlatformCollator.LocaleResolutionResult localeResolutionResult = PlatformCollator.resolveLocales(canonicalCandidateLocaleList, new PlatformCollator.LocaleResolutionOptions(), false);
-            if (localeResolutionResult.resolvedLocale != null) {
-                supportedLocales.add(localeResolutionResult.resolvedDesiredLocale.toCanonicalTag());
+            LocaleMatcher.LocaleMatchResult localeMatchResult;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                android.icu.util.ULocale[] availableLocalesArray = android.icu.text.RuleBasedCollator.getAvailableULocales();
+                localeMatchResult = (new LocaleMatcher<ULocale>()).match(locales.toArray(new String[locales.size()]), availableLocalesArray, localeMatcher);
+            } else {
+                java.util.Locale[] availableLocalesArray = java.text.RuleBasedCollator.getAvailableLocales();
+                localeMatchResult = (new LocaleMatcher<java.util.Locale>()).match(locales.toArray(new String[locales.size()]), availableLocalesArray, localeMatcher);
+            }
+
+            if(localeMatchResult.matchedLocale != null && !localeMatchResult.isDefault) {
+                supportedLocales.add(localeMatchResult.matchedRequestedLocale.toCanonicalTag());
             }
         }
 
