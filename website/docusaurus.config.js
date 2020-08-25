@@ -45,6 +45,10 @@ module.exports = {
               label: 'Hermes Development',
               to: 'https://github.com/facebook/hermes',
             },
+            {
+              label: 'Contributing',
+              to:'https://github.com/facebook/hermes/blob/master/CONTRIBUTING.md'
+            }
           ],
         },
         {
@@ -62,7 +66,7 @@ module.exports = {
         src: 'https://docusaurus.io/img/oss_logo.png',
         href: 'https://opensource.facebook.com',
       },
-      copyright: `Copyright © ${new Date().getFullYear()} Facebook, Inc. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Facebook, Inc. Built with <a href="https://docusaurus.io/" target="_blank">Docusaurus</a> .`,
     },
   },
   presets: [
