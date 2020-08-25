@@ -58,6 +58,10 @@ public class PlatformCollator {
 
             ArrayList<String> resolvedExtensions = new ArrayList<>();
             for (String collationType : collationExtensions) {
+                // https://tc39.es/ecma402/#sec-intl-collator-internal-slots
+                if(collationType.equals(Constants.COLLATION_SEARCH) || collationType.equals(Constants.COLLATION_STANDARD))
+                    continue;
+
                 resolvedExtensions.add(UnicodeLocaleKeywordUtils.resolveCollationKeyword(collationType));
             }
 
@@ -92,13 +96,7 @@ public class PlatformCollator {
 
     public static LocaleResolutionResult resolveLocales(List<String> locales, String localeMatcher) throws JSRangeErrorException {
 
-        // This implementation makes the following assumptions
-        // 1. The list of available locales returned by <locale|collator>.getAvailableULocales()
-        // 1.a. don't contain extensions (In other words, for all available locales, all variants and extension are supported.)
-        // 1.b. are canonicalized .. i.e. <langsubtag in lower case>-<script in title case>-<region in capital>
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-
             android.icu.util.ULocale[] availableLocalesArray = android.icu.text.RuleBasedCollator.getAvailableULocales();
 
             LocaleMatcher.LocaleMatchResult localeMatchResult = (new LocaleMatcher<ULocale>()).match(locales.toArray(new String[locales.size()]), availableLocalesArray, localeMatcher);

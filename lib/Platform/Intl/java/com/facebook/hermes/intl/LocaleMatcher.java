@@ -23,22 +23,18 @@ public class LocaleMatcher <T> {
             throw new JSRangeErrorException("Unrecognized locale matcher");
     }
 
-    private ILocaleObject getLocaleObject(String localeId) throws JSRangeErrorException {
-        return LocaleObjectICU4J.createFromLocaleId(localeId);
-    }
-
     private LocaleMatchResult bestFitMatch(String[] requestedLocales, T[] availableLocales) throws JSRangeErrorException {
 
         LocaleMatchResult result = new LocaleMatchResult();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
 
+            // Note:: We are trying one candidate at a time so that we know which requestedLocale matched.
             for (String requestedLocale : requestedLocales) {
                 ArrayList<ULocale> candidateLocales = new ArrayList<>();
                 ILocaleObject localeObject = LocaleObjectICU4J.createFromLocaleId(requestedLocale);
 
                 candidateLocales.add(ULocale.forLanguageTag(localeObject.toCanonicalTagWithoutExtensions()));
-
                 ULocale[] candidateLocaleArray = candidateLocales.toArray(new ULocale[candidateLocales.size()]);
 
                 android.icu.util.ULocale[] availableLocalesArray = android.icu.text.RuleBasedCollator.getAvailableULocales();
@@ -57,9 +53,9 @@ public class LocaleMatcher <T> {
                 }
             }
         } else {
-            // We don't have best fit matcher available on older platforms..
+            // We don't have best fit matcher available on older platforms.
             result = lookupMatch(requestedLocales, availableLocales);
-            result.matcher = Constants.LOCALEMATCHER_BESTFIT;
+            result.matcher = Constants.LOCALEMATCHER_BESTFIT; // Lookup fit is the best fit that we have.
             return result;
         }
 

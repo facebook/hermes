@@ -85,7 +85,6 @@ public class Collator {
     }
 
     private void resolveLocale(List<String> locales, String localeMatcher) throws JSRangeErrorException {
-
         if (locales == null || locales.size() == 0) {
             mResolvedLocaleObject = LocaleObject.createDefault();
             mReolvedRequestedLocaleObject = mResolvedLocaleObject;
@@ -147,7 +146,7 @@ public class Collator {
         // If the locale id has collation keys, then they should be added to resolvedOptions so that users can query.
 
         ArrayList<String> collationExtension = mResolvedLocaleObject.getUnicodeExtensions(Constants.COLLATION_EXTENSION_KEY_LONG);
-        if (collationExtension != null && collationExtension.size() > 0)
+        if (collationExtension != null && collationExtension.size() > 0 && !collationExtension.get(0).equals(Constants.COLLATION_SEARCH))
             mResolvedCollation = collationExtension.get(0);
 
         // if "kf" is not yet set through options, look for extensions in the desired locale.
@@ -246,8 +245,6 @@ public class Collator {
 
     // Implementer note: This method corresponds roughly to
     // https://tc39.es/ecma402/#sec-intl.collator.prototype.resolvedoptions
-    //
-    // Also see the implementer notes on DateTimeFormat#resolvedOptions()
     public Map<String, Object> resolvedOptions() throws JSRangeErrorException {
         HashMap<String, Object> finalResolvedOptions = new HashMap<>();
         finalResolvedOptions.put(Constants.LOCALE, mResolvedLocaleObject.toCanonicalTag());
