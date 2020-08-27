@@ -1313,7 +1313,7 @@ CallResult<bool> Runtime::insertVisitedObject(Handle<JSObject> obj) {
 void Runtime::removeVisitedObject(Handle<JSObject> obj) {
   (void)obj;
   auto stack = Handle<ArrayStorage>::vmcast(&stringCycleCheckVisited_);
-  auto elem = stack->pop_back();
+  auto elem = stack->pop_back(this);
   (void)elem;
   assert(
       elem.isObject() && elem.getObject() == obj.get() &&

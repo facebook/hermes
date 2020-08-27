@@ -1049,7 +1049,7 @@ ExecutionStatus JSONStringifyer::operationJO() {
     marker.flush();
     auto result = operationStr(*tmpHandle_);
 
-    operationJOK_ = vmcast<JSArray>(stackJO_->pop_back());
+    operationJOK_ = vmcast<JSArray>(stackJO_->pop_back(runtime_));
 
     if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1104,7 +1104,7 @@ CallResult<bool> JSONStringifyer::pushValueToStack(HermesValue value) {
 
 void JSONStringifyer::popValueFromStack() {
   assert(stackValue_->size() && "Cannot pop from an empty stack");
-  stackValue_->pop_back();
+  stackValue_->pop_back(runtime_);
 }
 
 void JSONStringifyer::appendToOutput(SymbolID identifierID) {
