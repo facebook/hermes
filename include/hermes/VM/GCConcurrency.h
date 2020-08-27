@@ -66,6 +66,13 @@ class FakeAtomic final {
     return oldData;
   }
 
+  T exchange(T arg, std::memory_order order) {
+    (void)order;
+    const T oldData = data_;
+    data_ = arg;
+    return oldData;
+  }
+
   T fetch_sub(T arg, std::memory_order order) {
     (void)order;
     const T oldData = data_;

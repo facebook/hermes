@@ -96,20 +96,26 @@ GCBase::GCCycle::GCCycle(
     : gc_(gc),
       gcCallbacksOpt_(gcCallbacksOpt),
       extraInfo_(std::move(extraInfo)),
-      previousInGC_(gc->inGC_.load(std::memory_order_seq_cst)) {
-  gc_->inGC_.store(true, std::memory_order_seq_cst);
-  if (gcCallbacksOpt_.hasValue()) {
-    gcCallbacksOpt_.getValue()->onGCEvent(
-        GCEventKind::CollectionStart, extraInfo_);
+      previousInGC_(gc_->inGC_.load(std::memory_order_acquire)) {
+  if (!previousInGC_) {
+    if (gcCallbacksOpt_.hasValue()) {
+      gcCallbacksOpt_.getValue()->onGCEvent(
+          GCEventKind::CollectionStart, extraInfo_);
+    }
+    bool wasInGC_ = gc_->inGC_.exchange(true, std::memory_order_acquire);
+    (void)wasInGC_;
+    assert(!wasInGC_ && "inGC_ should not be concurrently modified!");
   }
 }
 
 GCBase::GCCycle::~GCCycle() {
-  if (gcCallbacksOpt_.hasValue()) {
-    gcCallbacksOpt_.getValue()->onGCEvent(
-        GCEventKind::CollectionEnd, extraInfo_);
+  if (!previousInGC_) {
+    gc_->inGC_.store(false, std::memory_order_release);
+    if (gcCallbacksOpt_.hasValue()) {
+      gcCallbacksOpt_.getValue()->onGCEvent(
+          GCEventKind::CollectionEnd, extraInfo_);
+    }
   }
-  gc_->inGC_.store(previousInGC_, std::memory_order_seq_cst);
 }
 
 void GCBase::runtimeWillExecute() {

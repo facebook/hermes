@@ -837,7 +837,7 @@ void HadesGC::createSnapshot(llvh::raw_ostream &os) {
   // Let any existing collections complete before taking the snapshot.
   waitForCollectionToFinish();
   {
-    GCCycle cycle{this};
+    GCCycle cycle{this, gcCallbacks_, "Heap Snapshot"};
     WeakRefLock lk{weakRefMutex()};
     GCBase::createSnapshot(this, os);
   }
@@ -876,17 +876,12 @@ void HadesGC::waitForCollectionToFinish() {
   if (concurrentPhase_.load(std::memory_order_acquire) == Phase::None) {
     return;
   }
+  GCCycle cycle{this, gcCallbacks_, "Old Gen (Direct)"};
+
   if (!kConcurrentGC) {
     if (oldGenMarker_) {
       // Complete the collection.
-      const bool alreadyInGC = inGC();
-      if (!alreadyInGC) {
-        inGC_.store(true, std::memory_order_seq_cst);
-      }
       completeNonConcurrentOldGenCollection();
-      if (!alreadyInGC) {
-        inGC_.store(false, std::memory_order_seq_cst);
-      }
     }
     return;
   }
@@ -1042,18 +1037,9 @@ void HadesGC::completeMarking() {
   stopTheWorldRequested_ = true;
   waitForConditionVariable(
       stopTheWorldCondVar_, lk, [this]() { return worldStopped_; });
-
-  // While the world is stopped, nothing should attempt to read or write to the
-  // heap. This store won't race with YG because this happens during a STW
-  // pause. This has to be done before acquiring the weak ref lock because the
-  // sampling profiler also tries to use the weak ref lock.
-  gcCallbacks_->onGCEvent(
-      GCEventKind::CollectionStart, "Old Gen Stop the World");
-  inGC_.store(true, std::memory_order_release);
+  assert(inGC() && "inGC_ must be set during the STW pause");
   WeakRefLock weakRefLock{weakRefMutex()};
   completeMarkingAssumeLocks();
-  inGC_.store(false, std::memory_order_release);
-  gcCallbacks_->onGCEvent(GCEventKind::CollectionEnd, "");
 
   // Let the thread that yielded know that the STW pause has completed.
   stopTheWorldRequested_ = false;
@@ -1635,8 +1621,8 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
   // Acquire the GC lock for the duration of the YG collection.
   std::lock_guard<Mutex> lk{gcMutex_};
   // The YG is not parseable while a collection is occurring.
-  gcCallbacks_->onGCEvent(GCEventKind::CollectionStart, "Young Gen");
-  inGC_.store(true, std::memory_order_release);
+  assert(!inGC() && "Cannot be in GC at the start of YG!");
+  GCCycle cycle{this, gcCallbacks_, "Young Gen"};
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormed();
   // Check that the card tables are well-formed before the collection.
@@ -1726,9 +1712,6 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
   }
   // Give an existing background thread a chance to complete.
   yieldToOldGen();
-  // The heap is parseable again.
-  inGC_.store(false, std::memory_order_release);
-  gcCallbacks_->onGCEvent(GCEventKind::CollectionEnd, "");
   // YG is always empty after a collection, it is fully evac'ed into OG.
   stats.setAfterSizes(0, youngGen().size());
   stats.setEndTime();
@@ -2057,6 +2040,7 @@ bool HadesGC::inOldGen(const void *p) const {
 }
 
 void HadesGC::yieldToOldGen() {
+  assert(inGC() && "Must be in GC when yielding to old gen");
   if (!kConcurrentGC) {
     // A non-concurrent GC needs to check if there's any work to be done from
     // oldGenMarker_.
@@ -2109,7 +2093,7 @@ void HadesGC::checkWellFormed() {
 }
 
 void HadesGC::verifyCardTable() {
-  GCCycle cycle{this};
+  assert(inGC() && "Must be in GC to call verifyCardTable");
   struct VerifyCardDirtyAcceptor final : public SlotAcceptorDefault {
     using SlotAcceptorDefault::accept;
     using SlotAcceptorDefault::SlotAcceptorDefault;

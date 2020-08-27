@@ -486,7 +486,6 @@ TEST_F(GCBasicsTest, TestIDDeathInYoung) {
 }
 
 // Hades doesn't do any GCEventKind monitoring.
-#ifndef HERMESVM_GC_HADES
 TEST(GCCallbackTest, TestCallbackInvoked) {
   std::vector<GCEventKind> ev;
   auto cb = [&ev](GCEventKind kind, const char *) { ev.push_back(kind); };
@@ -494,11 +493,20 @@ TEST(GCCallbackTest, TestCallbackInvoked) {
   auto rt =
       Runtime::create(RuntimeConfig::Builder().withGCConfig(config).build());
   rt->collect();
+  // Hades will record the YG and OG collections as separate events.
+#ifndef HERMESVM_GC_HADES
   EXPECT_EQ(2, ev.size());
-  EXPECT_EQ(GCEventKind::CollectionStart, ev[0]);
-  EXPECT_EQ(GCEventKind::CollectionEnd, ev[1]);
-}
+#else
+  EXPECT_EQ(4, ev.size());
 #endif
+  for (size_t i = 0; i < ev.size(); i++) {
+    if (i % 2 == 0) {
+      EXPECT_EQ(GCEventKind::CollectionStart, ev[i]);
+    } else {
+      EXPECT_EQ(GCEventKind::CollectionEnd, ev[i]);
+    }
+  }
+}
 
 #ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
