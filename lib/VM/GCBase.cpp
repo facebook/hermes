@@ -819,7 +819,6 @@ GCBase::GCCallbacks::~GCCallbacks() {}
 
 GCBase::IDTracker::IDTracker() {
   assert(nextID_ % 2 == 1 && "First JS object ID isn't odd");
-  assert(nextNativeID_ % 2 == 0 && "First native object ID isn't even");
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -839,7 +838,6 @@ void GCBase::AllocationLocationTracker::deserialize(Deserializer &d) {
 
 void GCBase::IDTracker::serialize(Serializer &s) const {
   s.writeInt<HeapSnapshot::NodeID>(nextID_);
-  s.writeInt<HeapSnapshot::NodeID>(nextNativeID_);
   s.writeInt<size_t>(objectIDMap_.size());
   for (auto it = objectIDMap_.begin(); it != objectIDMap_.end(); it++) {
     s.writeRelocation(it->first);
@@ -849,7 +847,6 @@ void GCBase::IDTracker::serialize(Serializer &s) const {
 
 void GCBase::IDTracker::deserialize(Deserializer &d) {
   nextID_ = d.readInt<HeapSnapshot::NodeID>();
-  nextNativeID_ = d.readInt<HeapSnapshot::NodeID>();
   size_t size = d.readInt<size_t>();
   for (size_t i = 0; i < size; i++) {
     // Heap must have been deserialized before this function. All deserialized

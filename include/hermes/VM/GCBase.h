@@ -518,7 +518,7 @@ class GCBase {
     /// the Chrome snapshot viewer.
     static constexpr HeapSnapshot::NodeID kIDStep = 2;
 
-    /// The next available ID to assign to an object. Object IDs are not
+    /// The last ID assigned to a non-native object. Object IDs are not
     /// recycled so that snapshots don't confuse two objects with each other.
     /// NOTE: Need to ensure that this starts on an odd number, so check if
     /// the first non-reserved ID is odd, if not add one.
@@ -526,8 +526,6 @@ class GCBase {
         static_cast<HeapSnapshot::NodeID>(
             ReservedObjectID::FirstNonReservedID) |
         1};
-    /// The next available native ID to assign to a chunk of native memory.
-    HeapSnapshot::NodeID nextNativeID_{nextID_ + 1};
 
     /// Map of object pointers to IDs. Only populated once the first heap
     /// snapshot is requested, or the first time the memory profiler is turned
@@ -1595,13 +1593,11 @@ inline HeapSnapshot::NodeID GCBase::IDTracker::nextObjectID() {
 }
 
 inline HeapSnapshot::NodeID GCBase::IDTracker::nextNativeID() {
-  // This must be unique for most features that rely on it, check for overflow.
-  if (LLVM_UNLIKELY(
-          nextNativeID_ >=
-          std::numeric_limits<HeapSnapshot::NodeID>::max() - kIDStep)) {
-    hermes_fatal("Ran out of native IDs");
-  }
-  return nextNativeID_ += kIDStep;
+  // Calling nextObjectID effectively allocates two new IDs, one even
+  // and one odd, returning the latter. For native objects, we want the former.
+  HeapSnapshot::NodeID id = nextObjectID();
+  assert(id > 0 && "nextObjectID should check for overflow");
+  return id - 1;
 }
 
 inline HeapSnapshot::NodeID GCBase::IDTracker::nextNumberID() {
