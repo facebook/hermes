@@ -826,9 +826,31 @@ void HadesGC::getHeapInfo(HeapInfo &info) {
   info.va = info.heapSize;
 }
 
-// TODO: Fill these out
-void HadesGC::getHeapInfoWithMallocSize(HeapInfo &info) {}
-void HadesGC::getCrashManagerHeapInfo(CrashManager::HeapInformation &info) {}
+void HadesGC::getHeapInfoWithMallocSize(HeapInfo &info) {
+  // Get the usual heap info.
+  getHeapInfo(info);
+  std::lock_guard<Mutex> lk{gcMutex_};
+  // In case the info is being re-used, ensure the count starts at 0.
+  info.mallocSizeEstimate = 0;
+  // First add the usage by the runtime's roots.
+  info.mallocSizeEstimate += gcCallbacks_->mallocSize();
+  // Scan all objects for their malloc size. This operation is what makes
+  // getHeapInfoWithMallocSize O(heap size).
+  forAllObjs([&info](GCCell *cell) {
+    info.mallocSizeEstimate += cell->getVT()->getMallocSize(cell);
+  });
+  // A deque doesn't have a capacity, so the size is the lower bound.
+  info.mallocSizeEstimate +=
+      weakPointers_.size() * sizeof(decltype(weakPointers_)::value_type);
+}
+
+void HadesGC::getCrashManagerHeapInfo(
+    CrashManager::HeapInformation &crashInfo) {
+  HeapInfo info;
+  getHeapInfo(info);
+  crashInfo.size_ = info.heapSize;
+  crashInfo.used_ = info.allocatedBytes;
+}
 
 void HadesGC::createSnapshot(llvh::raw_ostream &os) {
   std::lock_guard<Mutex> lk{gcMutex_};
@@ -844,7 +866,6 @@ void HadesGC::createSnapshot(llvh::raw_ostream &os) {
 }
 
 void HadesGC::printStats(JSONEmitter &json) {
-  std::lock_guard<Mutex> lk{gcMutex_};
   GCBase::printStats(json);
   json.emitKey("specific");
   json.openDict();

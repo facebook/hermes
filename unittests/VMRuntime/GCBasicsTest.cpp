@@ -437,8 +437,6 @@ TEST_F(GCBasicsTest, TestFixedRuntimeCell) {
 
 /// Test that the extra bytes in the heap are reported correctly.
 TEST_F(GCBasicsTest, ExtraBytes) {
-  // Hades doesn't do malloc size reporting yet.
-#ifndef HERMESVM_GC_HADES
   auto &gc = rt.gc;
 
   {
@@ -456,7 +454,6 @@ TEST_F(GCBasicsTest, ExtraBytes) {
     gc.getHeapInfoWithMallocSize(info);
     EXPECT_EQ(info.mallocSizeEstimate, getExtraSize(nullptr) * 2);
   }
-#endif
 }
 
 /// Test that the id is set to a unique number for each allocated object.
