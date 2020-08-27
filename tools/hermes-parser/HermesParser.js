@@ -27,9 +27,9 @@ const hermesParseResult_getError = hermesParserWASM.cwrap(
   ['number'],
 );
 
-const hermesParseResult_getJsonAst = hermesParserWASM.cwrap(
-  'hermesParseResult_getJsonAst',
-  'string',
+const hermesParseResult_getASTReference = hermesParserWASM.cwrap(
+  'hermesParseResult_getASTReference',
+  'number',
   ['number'],
 );
 
@@ -50,12 +50,14 @@ function parse(code) {
       // Extract and throw error from parse result if parsing failed
       const err = hermesParseResult_getError(parseResult);
       if (err) {
+        const astReference = hermesParseResult_getASTReference(parseResult);
+        hermesParserWASM.JSReferences.pop(astReference);
         throw new Error(err);
       }
 
-      // Extract and deserialize JSON AST
-      const jsonAst = hermesParseResult_getJsonAst(parseResult);
-      return JSON.parse(jsonAst);
+      // Find root AST mode from reference
+      const astReference = hermesParseResult_getASTReference(parseResult);
+      return hermesParserWASM.JSReferences.pop(astReference);
     } finally {
       hermesParseResult_free(parseResult);
     }

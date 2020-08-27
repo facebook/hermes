@@ -6,13 +6,14 @@
  */
 
 #include "hermes/AST/Context.h"
-#include "hermes/AST/ESTreeJSONDumper.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Support/Algorithms.h"
 
 #include "llvh/ADT/StringRef.h"
 #include "llvh/Support/MemoryBuffer.h"
 #include "llvh/Support/raw_ostream.h"
+
+#include "HermesParserJSBuilder.h"
 
 #include <string>
 
@@ -28,7 +29,7 @@ using namespace hermes;
 class ParseResult {
  public:
   std::string error_;
-  std::string jsonAst_;
+  JSReference astReference_;
 };
 
 EMSCRIPTEN_KEEPALIVE
@@ -56,13 +57,8 @@ extern "C" ParseResult *hermesParse(const char *source, size_t sourceSize) {
     return result.release();
   }
 
-  llvh::raw_string_ostream os{result->jsonAst_};
-  dumpESTreeJSON(
-      os,
-      *parsedJs,
-      false,
-      ESTreeDumpMode::DumpAll,
-      &context->getSourceErrorManager());
+  result->astReference_ =
+      buildProgram(*parsedJs, &context->getSourceErrorManager());
 
   return result.release();
 }
@@ -82,12 +78,13 @@ extern "C" const char *hermesParseResult_getError(const ParseResult *result) {
 }
 
 EMSCRIPTEN_KEEPALIVE
-extern "C" const char *hermesParseResult_getJsonAst(const ParseResult *result) {
+extern "C" JSReference hermesParseResult_getASTReference(
+    const ParseResult *result) {
   if (!result || !result->error_.empty()) {
-    return nullptr;
+    return 0;
   }
 
-  return result->jsonAst_.c_str();
+  return result->astReference_;
 }
 
 // Dummy main routine which won't actually be called by JS.
