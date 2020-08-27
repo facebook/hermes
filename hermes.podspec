@@ -7,12 +7,14 @@ module HermesHelper
   # BUILD_TYPE = :debug
   BUILD_TYPE = :release
 
+  DEPLOYMENT_TARGET = "10.13"
+
   def self.command_exists?(bin)
     "command -v #{bin} > /dev/null 2>&1"
   end
 
   def self.cmake_configuration
-    "-DHERMES_ENABLE_DEBUGGER:BOOLEAN=true -DHERMES_ENABLE_FUZZING:BOOLEAN=false -DHERMES_ENABLE_TEST_SUITE:BOOLEAN=false -DHERMES_BUILD_APPLE_FRAMEWORK:BOOLEAN=true -DHERMES_BUILD_APPLE_DSYM:BOOLEAN=true"
+    "-DCMAKE_OSX_DEPLOYMENT_TARGET:STRING='#{DEPLOYMENT_TARGET}' -DHERMES_ENABLE_DEBUGGER:BOOLEAN=true -DHERMES_ENABLE_FUZZING:BOOLEAN=false -DHERMES_ENABLE_TEST_SUITE:BOOLEAN=false -DHERMES_BUILD_APPLE_FRAMEWORK:BOOLEAN=true -DHERMES_BUILD_APPLE_DSYM:BOOLEAN=true"
   end
 
   def self.configure_command
@@ -29,7 +31,7 @@ Pod::Spec.new do |spec|
   spec.license     = { type: "MIT", file: "LICENSE" }
   spec.author      = "Facebook"
   spec.source      = { git: "https://github.com/facebook/hermes.git", tag: "v#{spec.version}" }
-  spec.platforms   = { :osx => "10.14" }
+  spec.platforms   = { :osx => HermesHelper::DEPLOYMENT_TARGET }
 
   spec.preserve_paths      = ["destroot/bin/*"].concat(HermesHelper::BUILD_TYPE == :debug ? ["**/*.{h,c,cpp}"] : [])
   spec.source_files        = "destroot/include/**/*.h"
