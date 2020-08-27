@@ -948,19 +948,6 @@ ExecutionStatus JSONStringifyer::operationJA() {
   return ExecutionStatus::RETURNED;
 }
 
-static ExecutionStatus propStoragePushBack(
-    MutableHandle<PropStorage> &self,
-    Runtime *runtime,
-    Handle<> value) {
-  if (LLVM_UNLIKELY(
-          PropStorage::resize(self, runtime, self->size() + 1) ==
-          ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  self->at(self->size() - 1).set(value.get(), &runtime->getHeap());
-  return ExecutionStatus::RETURNED;
-}
-
 ExecutionStatus JSONStringifyer::operationJO() {
   GCScopeMarkerRAII marker{runtime_};
 
@@ -1053,7 +1040,7 @@ ExecutionStatus JSONStringifyer::operationJO() {
         vmcast<JSObject>(stackValue_->at(stackValue_->size() - 1));
 
     tmpHandle2_ = operationJOK_.getHermesValue();
-    if (propStoragePushBack(stackJO_, runtime_, tmpHandle2_) ==
+    if (PropStorage::push_back(stackJO_, runtime_, tmpHandle2_) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1062,9 +1049,7 @@ ExecutionStatus JSONStringifyer::operationJO() {
     marker.flush();
     auto result = operationStr(*tmpHandle_);
 
-    operationJOK_ = vmcast<JSArray>(stackJO_->at(stackJO_->size() - 1));
-    assert(stackJO_->size() && "Cannot pop from an empty stack");
-    stackJO_->pop_back();
+    operationJOK_ = vmcast<JSArray>(stackJO_->pop_back());
 
     if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1110,7 +1095,7 @@ CallResult<bool> JSONStringifyer::pushValueToStack(HermesValue value) {
   }
 
   tmpHandle_ = value;
-  if (propStoragePushBack(stackValue_, runtime_, tmpHandle_) ==
+  if (PropStorage::push_back(stackValue_, runtime_, tmpHandle_) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
