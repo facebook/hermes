@@ -614,8 +614,12 @@ hermesBuiltinArraySpread(void *, Runtime *runtime, NativeArgs args) {
     //    ToString(ToUint32(nextIndex)), nextValue).
     // e. Assert: status is true.
     if (LLVM_UNLIKELY(
-            JSArray::putComputed_RJS(target, runtime, nextIndex, nextValue) ==
-            ExecutionStatus::EXCEPTION)) {
+            JSArray::defineOwnComputed(
+                target,
+                runtime,
+                nextIndex,
+                DefinePropertyFlags::getDefaultNewPropertyFlags(),
+                nextValue) == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
 
@@ -671,7 +675,11 @@ hermesBuiltinApply(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
 
   for (uint32_t i = 0; i < len; ++i) {
-    newFrame->getArgRef(i) = argArray->at(runtime, i);
+    assert(!argArray->at(runtime, i).isEmpty() && "arg array must be dense");
+    HermesValue arg = argArray->at(runtime, i);
+    newFrame->getArgRef(i) = LLVM_UNLIKELY(arg.isEmpty())
+        ? HermesValue::encodeUndefinedValue()
+        : arg;
   }
   if (isConstructor) {
     auto res = Callable::construct(fn, runtime, thisVal);
