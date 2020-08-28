@@ -103,6 +103,9 @@ class HBCISel {
   /// Mapping from CatchInst to the catch coverage information.
   CatchInfoMap catchInfoMap_{};
 
+  /// Bytecode generation options.
+  const BytecodeGenerationOptions &bytecodeGenerationOptions_;
+
   /// Map from SwitchImm -> (inst offset, default block, jump table).
   llvh::DenseMap<SwitchImmInst *, SwitchImmInfo> switchImmInfo_{};
   using switchInfoEntry =
@@ -178,8 +181,13 @@ class HBCISel {
       Function *F,
       BytecodeFunctionGenerator *BCFGen,
       HVMRegisterAllocator &RA,
-      FunctionScopeAnalysis &scopeAnalysis)
-      : F_(F), BCFGen_(BCFGen), RA_(RA), scopeAnalysis_(scopeAnalysis) {
+      FunctionScopeAnalysis &scopeAnalysis,
+      const BytecodeGenerationOptions &options)
+      : F_(F),
+        BCFGen_(BCFGen),
+        RA_(RA),
+        scopeAnalysis_(scopeAnalysis),
+        bytecodeGenerationOptions_(options) {
     protoIdent_ = F->getContext().getIdentifier("__proto__");
   }
 

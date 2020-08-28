@@ -313,8 +313,15 @@ std::unique_ptr<hbc::BytecodeModule> compileLazyFunction(
   Function *entryPoint = pair.first;
   Function *lexicalRoot = pair.second;
 
-  auto bytecodeModule = hbc::generateBytecodeModule(
-      &M, lexicalRoot, entryPoint, BytecodeGenerationOptions::defaults());
+  // We look up source map URLs by iterating modules and finding the first one
+  // with a matching buffer id, which will be the root module. These lazily
+  // compiled compiled modules therefore don't need to duplicate the URL,
+  // which can be several MB if it encodes the source map itself.
+  BytecodeGenerationOptions opts = BytecodeGenerationOptions::defaults();
+  opts.stripSourceMappingURL = true;
+
+  auto bytecodeModule =
+      hbc::generateBytecodeModule(&M, lexicalRoot, entryPoint, opts);
 
   return bytecodeModule;
 }

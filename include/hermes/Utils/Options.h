@@ -54,6 +54,9 @@ struct BytecodeGenerationOptions {
   /// Add this much garbage after each function body (relative to its size).
   unsigned padFunctionBodiesPercent = 0;
 
+  /// Strip the source map URL.
+  bool stripSourceMappingURL = false;
+
   /* implicit */ BytecodeGenerationOptions(OutputFormatKind format)
       : format(format) {}
 

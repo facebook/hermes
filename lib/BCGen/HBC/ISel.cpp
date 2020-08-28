@@ -220,7 +220,12 @@ bool HBCISel::getDebugSourceLocation(
     debugIdCache_.currentFilenameId = BCFGen_->addFilename(filename);
 
     auto sourceMappingUrl = manager.getSourceMappingUrl(coords.bufId);
-    if (sourceMappingUrl.empty()) {
+
+    // Lazily compiled functions ask to strip the source mapping URL because it
+    // was already encoded in the top level module, and it could be a 1MB+ data
+    // url that we don't want to duplicate once per function.
+    if (sourceMappingUrl.empty() ||
+        bytecodeGenerationOptions_.stripSourceMappingURL) {
       debugIdCache_.currentSourceMappingUrlId =
           facebook::hermes::debugger::kInvalidBreakpoint;
     } else {

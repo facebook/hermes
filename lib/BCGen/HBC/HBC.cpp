@@ -298,7 +298,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
 
       funcGen =
           BytecodeFunctionGenerator::create(BMGen, RA.getMaxRegisterUsage());
-      HBCISel hbciSel(&F, funcGen.get(), RA, scopeAnalysis);
+      HBCISel hbciSel(&F, funcGen.get(), RA, scopeAnalysis, options);
       hbciSel.populateDebugCache(debugCache);
       hbciSel.generate(sourceMapGen);
       debugCache = hbciSel.getDebugCache();
