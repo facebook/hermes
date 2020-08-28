@@ -335,6 +335,7 @@ def printVerbose(s):
 istty = sys.stdout.isatty()
 completed = Value("i", 0)
 ttyWidth = os.get_terminal_size().columns if istty else 0
+count = -1
 
 
 def showStatus(filename):
