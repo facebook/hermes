@@ -5,10 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// Disable this test for JS lib feature because it will change the number of
-// executed JS functions.
-#ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
-
 #include "TestHelpers.h"
 #include "gtest/gtest.h"
 
@@ -164,5 +160,3 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleDomains) {
 } // namespace CodeCoverageTest
 } // namespace unittest
 } // namespace hermes
-
-#endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION

@@ -1010,7 +1010,8 @@ ExecutionStatus Runtime::loadSegment(
 }
 
 void Runtime::runInternalBytecode() {
-#ifdef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+// TODO: remove the guard
+#if 0
   auto module = getInternalBytecode();
   auto bcProvider = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
                         llvh::make_unique<Buffer>(module.data(), module.size()))

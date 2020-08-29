@@ -11,7 +11,8 @@ namespace hermes {
 namespace vm {
 
 llvh::ArrayRef<uint8_t> getInternalBytecode() {
-#ifdef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+// TODO: remove the guard
+#if 0
   static const uint8_t InternalBytecode[] = {
 #ifdef HERMES_CMAKE_BUILD
 #include "InternalBytecode.inc"

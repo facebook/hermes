@@ -193,6 +193,7 @@ set(link_libs
   hermesPlatform
   hermesPlatformIntl
   hermesHBCBackend
+  # TODO: hermesInternalBytecode
   dtoa
   ${CORE_FOUNDATION}
 )
@@ -209,10 +210,6 @@ if(HERMESVM_JIT)
     MC
     MCParser
   )
-endif()
-
-if(HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION)
-  list(APPEND link_libs hermesInternalBytecode)
 endif()
 
 add_hermes_library(hermesVMRuntime STATIC ${source_files}
