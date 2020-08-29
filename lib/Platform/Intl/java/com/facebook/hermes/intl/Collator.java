@@ -37,8 +37,7 @@ public class Collator {
 
     // Internal slots as defined by https://tc39.es/ecma402/#sec-intl.collator
     // Let internalSlotsList be « [[InitializedCollator]], [[Locale]], [[Usage]], [[Sensitivity]], [[IgnorePunctuation]], [[Collation]], [[BoundCompare]] ».
-    // TODO :: We don't support [[BoundCompare]] as of now.
-    //
+    // Note: [[BoundCompare]] is likely implemented in native layers ..
     // And we add [[Numeric]] and [[CaseFirst]] slots unconditionally as described above.
 
     // 11.1.2 2-4

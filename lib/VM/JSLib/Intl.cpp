@@ -215,7 +215,7 @@ CallResult<std::vector<std::u16string>> normalizeLocales(
               runtime,
               *lengthRes,
               [&ret](Runtime *runtime, uint64_t index, PseudoHandle<> value) {
-          CallResult<std::u16string> strRes =
+    CallResult<std::u16string> strRes =
                     stringFromJS(runtime, std::move(value));
                 if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
                   return ExecutionStatus::EXCEPTION;
@@ -298,6 +298,7 @@ const OptionData kNumberFormatOptions[] = {
     {u"unitDisplay", platform_intl::Option::Kind::String, 0},
     {u"notation", platform_intl::Option::Kind::String, 0},
     {u"minimumIntegerDigits", platform_intl::Option::Kind::Number, 0},
+    {u"maximumIntegerDigits", platform_intl::Option::Kind::Number, 0},
     {u"minimumFractionDigits", platform_intl::Option::Kind::Number, 0},
     {u"maximumFractionDigits", platform_intl::Option::Kind::Number, 0},
     {u"minimumSignificantDigits", platform_intl::Option::Kind::Number, 0},

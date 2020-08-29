@@ -73,9 +73,14 @@ public class DateTimeFormat {
   // is the responsibility of the ctor to store whatever locale and
   // option data is needed to implement the other members of this
   // class.
+
+  private android.icu.text.SimpleDateFormat mDateFormat = null;
+
   public DateTimeFormat(List<String> locales, Map<String, Object> options)
     throws JSRangeErrorException
-  {}
+  {
+    mDateFormat = (SimpleDateFormat) SimpleDateFormat.getDateTimeInstance();
+  }
 
   // options are localeMatcher:string
   //
@@ -110,7 +115,8 @@ public class DateTimeFormat {
   // exposed; it should be possible to create and use java
   // NumberFormat objects only.
   public String format(double jsTimeValue) {
-    return (new SimpleDateFormat()).format(new Date((long) jsTimeValue));
+    String result = (new SimpleDateFormat()).format(new Date((long) jsTimeValue));
+    return result;
   }
 
   // Implementer note: This method corresponds roughly to
