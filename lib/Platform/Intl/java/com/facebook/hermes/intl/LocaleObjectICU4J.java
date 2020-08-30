@@ -97,6 +97,12 @@ public class LocaleObjectICU4J implements ILocaleObject<ULocale> {
         return getLocaleWithoutExtensions().toLanguageTag();
     }
 
+    @Override
+    public ILocaleObject<ULocale> cloneObject() throws JSRangeErrorException {
+        ensureNotDirty();
+        return new LocaleObjectICU4J(m_icu4jLocale);
+    }
+
     public static ILocaleObject<ULocale> createFromLocaleId(String localeId) throws JSRangeErrorException {
         return new LocaleObjectICU4J(localeId);
     }

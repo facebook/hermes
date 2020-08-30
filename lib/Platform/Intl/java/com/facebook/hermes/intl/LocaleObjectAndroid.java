@@ -254,4 +254,10 @@ public class LocaleObjectAndroid implements ILocaleObject<Locale> {
     public static ILocaleObject<Locale> createDefault() {
         return new LocaleObjectAndroid(Locale.getDefault(Locale.Category.FORMAT));
     }
+
+    @Override
+    public ILocaleObject<Locale> cloneObject() throws JSRangeErrorException {
+        ensureNotDirty();
+        return new LocaleObjectAndroid(mLocale);
+    }
 }

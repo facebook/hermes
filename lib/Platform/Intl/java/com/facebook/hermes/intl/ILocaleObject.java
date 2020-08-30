@@ -11,4 +11,6 @@ public interface ILocaleObject <T> {
 
     String toCanonicalTag() throws JSRangeErrorException;
     String toCanonicalTagWithoutExtensions() throws JSRangeErrorException;
+
+    ILocaleObject <T> cloneObject() throws JSRangeErrorException;
 }

@@ -61,28 +61,6 @@ public class Collator {
     // [[InitializedCollator]]
     private IPlatformCollator mPlatformCollatorObject = null;
 
-    private String resolveStringOption(Map<String, Object> options, String key, String[] possibleValues, String defaultValue) throws JSRangeErrorException {
-        if (options.containsKey(key)) {
-            String optionValue = (String) options.get(key);
-            if (TextUtils.containsString(possibleValues, optionValue)) {
-                return optionValue;
-            } else {
-                throw new JSRangeErrorException(String.format("Invalid value '%s' for option %s", optionValue, key));
-            }
-        } else {
-            return defaultValue;
-        }
-    }
-
-    private boolean resolveBooleanOption(Map<String, Object> options, String key, boolean defaultValue) throws JSRangeErrorException {
-        if (options.containsKey(key)) {
-            // Note:: Our JSI interop layer ensures that this object is indeed a boolean
-            return (boolean) options.get(key);
-        } else {
-            return defaultValue;
-        }
-    }
-
     private void resolveLocale(List<String> locales, String localeMatcher) throws JSRangeErrorException {
         if (locales == null || locales.size() == 0) {
             mResolvedLocaleObject = LocaleObject.createDefault();
@@ -102,23 +80,23 @@ public class Collator {
         // We don't explicitly canonicalize but it is implicitly happening while creating Locale objects from the tag.
 
         // 4 & 5
-        mResolvedUsage = resolveStringOption(options, Constants.COLLATION_OPTION_USAGE, Constants.COLLATOR_USAGE_POSSIBLE_VALUES, Constants.SORT);
+        mResolvedUsage = OptionHelpers.resolveStringOption(options, Constants.COLLATION_OPTION_USAGE, Constants.COLLATOR_USAGE_POSSIBLE_VALUES, Constants.SORT);
 
         // We don't have 6 & 7
         // Note: We don't know a way to map the 'usage' option to "LocaleData" parameter to be used while resolving locales, with ICU.
         // With ICU, the only way to specify 'search' usage is through 'co=search' unicode extension .. (which is explicitly deprecated in ecma402, but internally we use this ! )
 
         // 9 & 10
-        String desiredLocaleMatcher = resolveStringOption(options, Constants.LOCALEMATCHER, Constants.LOCALEMATCHER_POSSIBLE_VALUES, Constants.LOCALEMATCHER_BESTFIT);
+        String desiredLocaleMatcher = OptionHelpers.resolveStringOption(options, Constants.LOCALEMATCHER, Constants.LOCALEMATCHER_POSSIBLE_VALUES, Constants.LOCALEMATCHER_BESTFIT);
 
         // 11,12,13
         if (options.containsKey(Constants.COLLATION_OPTION_NUMERIC) && PlatformCollator.isNumericCollationSupported()) {
-            mResolvedNumeric = resolveBooleanOption(options, Constants.COLLATION_OPTION_NUMERIC, false);
+            mResolvedNumeric = OptionHelpers.resolveBooleanOption(options, Constants.COLLATION_OPTION_NUMERIC, false);
         }
 
         // 14 & 15
         if (options.containsKey(Constants.COLLATION_OPTION_CASEFIRST) && PlatformCollator.isCaseFirstCollationSupported()) {
-            mResolvedCaseFirst = resolveStringOption(options, Constants.COLLATION_OPTION_CASEFIRST, Constants.CASEFIRST_POSSIBLE_VALUES, Constants.CASEFIRST_FALSE);
+            mResolvedCaseFirst = OptionHelpers.resolveStringOption(options, Constants.COLLATION_OPTION_CASEFIRST, Constants.CASEFIRST_POSSIBLE_VALUES, Constants.CASEFIRST_FALSE);
         }
 
         // 16, 17 & 18
@@ -175,7 +153,7 @@ public class Collator {
         configureCaseFirst();
 
         // 24 & 25
-        mResolvedSensitivity = resolveStringOption(options, Constants.COLLATION_OPTION_SENSITIVITY, Constants.SENSITIVITY_POSSIBLE_VALUES, "");
+        mResolvedSensitivity = OptionHelpers.resolveStringOption(options, Constants.COLLATION_OPTION_SENSITIVITY, Constants.SENSITIVITY_POSSIBLE_VALUES, "");
         if (mResolvedSensitivity.isEmpty() && mResolvedUsage.equals(Constants.SORT)) {
             mResolvedSensitivity = Constants.SENSITIVITY_VARIANT;
 
@@ -186,7 +164,7 @@ public class Collator {
         configureSensitivity();
 
         // 27
-        mResolvedIgnorePunctuation = resolveBooleanOption(options, Constants.COLLATION_OPTION_IGNOREPUNCTUATION, false);
+        mResolvedIgnorePunctuation = OptionHelpers.resolveBooleanOption(options, Constants.COLLATION_OPTION_IGNOREPUNCTUATION, false);
 
         // 28
         configureIgnorePunctuation();

@@ -64,89 +64,52 @@ public class NumberFormat {
   private DecimalFormat mDecimalFormat = null;
   private MeasureFormat mMeasureFormat = null;
 
-  private String resolveStringOption(Map<String, Object> options, String key, String[] possibleValues, String defaultValue) throws JSRangeErrorException {
-    if (options.containsKey(key)) {
-      String optionValue = (String) options.get(key);
-      if (possibleValues.length == 0 ||  TextUtils.containsString(possibleValues, optionValue)) {
-        return optionValue;
-      } else {
-        throw new JSRangeErrorException(String.format("Invalid value '%s' for option %s", optionValue, key));
-      }
-    } else {
-      return defaultValue;
-    }
-  }
-
-  private boolean resolveBooleanOption(Map<String, Object> options, String key, boolean defaultValue) throws JSRangeErrorException {
-    if (options.containsKey(key)) {
-      // Note:: Our JSI interop layer ensures that this object is indeed a boolean
-      return (boolean) options.get(key);
-    } else {
-      return defaultValue;
-    }
-  }
-
-  private int resolveIntegerOption(Map<String, Object> options, String key, int defaultValue) throws JSRangeErrorException {
-    if (options.containsKey(key)) {
-      return ((Double)options.get(key)).intValue();
-    } else {
-      return defaultValue;
-    }
-  }
-
-
-  public static <T extends Enum<?>> T searchEnum(Class<T> enumeration,
-                                                 String search) {
-    for (T each : enumeration.getEnumConstants()) {
-      if (each.name().compareToIgnoreCase(search) == 0) {
-        return each;
-      }
-    }
-    return null;
-  }
 
   public NumberFormat(List<String> locales, Map<String, Object> options) throws JSRangeErrorException {
-    PlatformCollator.LocaleResolutionResult localeResolutionResult = PlatformNumberFormatter.resolveLocales(locales, "best fit");
+
+    String desiredLocaleMatcher = OptionHelpers.resolveStringOption(options, Constants.LOCALEMATCHER, Constants.LOCALEMATCHER_POSSIBLE_VALUES, Constants.LOCALEMATCHER_BESTFIT);
+
+    PlatformCollator.LocaleResolutionResult localeResolutionResult = PlatformNumberFormatter.resolveLocales(locales, desiredLocaleMatcher);
 
     // TODO :: Make is more robust.
-    mResolvedStyle = Enum.valueOf(IPlatformNumberFormatter.Style.class, resolveStringOption(options, "style", new String[]{"decimal", "currency", "percent", "unit"}, "decimal"));
+    mResolvedStyle = Enum.valueOf(IPlatformNumberFormatter.Style.class, OptionHelpers.resolveStringOption(options, "style", new String[]{"decimal", "currency", "percent", "unit"}, "decimal"));
 
-    mGroupingUsed = resolveBooleanOption(options, "useGrouping", true);
+    mGroupingUsed = OptionHelpers.resolveBooleanOption(options, "useGrouping", true);
 
-    mMinimumIntegerDigits = resolveIntegerOption(options, "minimumIntegerDigits", -1);
-    mMaximumIntegerDigits = resolveIntegerOption(options, "maximumIntegerDigits", -1);
-    mMinimumFractionDigits = resolveIntegerOption(options, "minimumFractionDigits", -1);
-    mMaximumFractionDigits = resolveIntegerOption(options, "maximumFractionDigits", -1);
+    mMinimumIntegerDigits = OptionHelpers.resolveIntegerOption(options, "minimumIntegerDigits", -1);
+    mMaximumIntegerDigits = OptionHelpers.resolveIntegerOption(options, "maximumIntegerDigits", -1);
+    mMinimumFractionDigits = OptionHelpers.resolveIntegerOption(options, "minimumFractionDigits", -1);
+    mMaximumFractionDigits = OptionHelpers.resolveIntegerOption(options, "maximumFractionDigits", -1);
 
-    mSignDisplay = Enum.valueOf(IPlatformNumberFormatter.SignDisplay.class, resolveStringOption(options, "signDisplay", new String[]{"auto", "never", "always", "exceptZero"}, "auto"));
+    mSignDisplay = Enum.valueOf(IPlatformNumberFormatter.SignDisplay.class, OptionHelpers.resolveStringOption(options, "signDisplay", new String[]{"auto", "never", "always", "exceptZero"}, "auto"));
 
     if(options.containsKey("numberingSystem")) {
-      mNumberingSystem = resolveStringOption(options, "numberingSystem", new String[]{}, "");
+      mNumberingSystem = OptionHelpers.resolveStringOption(options, "numberingSystem", new String[]{}, "");
 
       ArrayList<String> numberingSystemList = new ArrayList<>();
       numberingSystemList.add(mNumberingSystem);
       localeResolutionResult.resolvedLocale.setUnicodeExtensions("nu", numberingSystemList);
     }
 
-    mNotation = Enum.valueOf(IPlatformNumberFormatter.Notation.class, resolveStringOption(options, "notation", new String[]{"standard", "scientific", "engineering", "compact"}, "standard"));
+    mNotation = Enum.valueOf(IPlatformNumberFormatter.Notation.class, OptionHelpers.resolveStringOption(options, "notation", new String[]{"standard", "scientific", "engineering", "compact"}, "standard"));
     if(mNotation != IPlatformNumberFormatter.Notation.standard) {
-      mCompactDisplay = searchEnum(IPlatformNumberFormatter.CompactDisplay.class, resolveStringOption(options, "compactDisplay", new String[]{"short", "long"}, "short"));
+      mCompactDisplay = OptionHelpers.searchEnum(IPlatformNumberFormatter.CompactDisplay.class, OptionHelpers.resolveStringOption(options, "compactDisplay", new String[]{"short", "long"}, "short"));
     }
 
     switch (mResolvedStyle) {
       case currency:
-        mResolvedCurrency = resolveStringOption(options, "currency", new String[]{}, "");
-        mResolvedCurrencyDisplay = Enum.valueOf(IPlatformNumberFormatter.CurrencyDisplay.class, resolveStringOption(options, "currencyDisplay", new String[]{"symbol", "narrowSymbol", "code", "name"}, "symbol"));
-        mResolvedCurrencySign = Enum.valueOf(IPlatformNumberFormatter.CurrencySign.class, resolveStringOption(options, "currencySign", new String[]{"accounting", "standard"}, "standard"));
+        mResolvedCurrency = OptionHelpers.resolveStringOption(options, "currency", new String[]{}, "");
+        mResolvedCurrencyDisplay = Enum.valueOf(IPlatformNumberFormatter.CurrencyDisplay.class, OptionHelpers.resolveStringOption(options, "currencyDisplay", new String[]{"symbol", "narrowSymbol", "code", "name"}, "symbol"));
+        mResolvedCurrencySign = Enum.valueOf(IPlatformNumberFormatter.CurrencySign.class, OptionHelpers.resolveStringOption(options, "currencySign", new String[]{"accounting", "standard"}, "standard"));
 
         mDecimalFormat = PlatformDecimalFormatHelperICU4J.createCurrencyFormat((ULocale) localeResolutionResult.resolvedLocale.getLocale(), mResolvedCurrency, mResolvedCurrencyDisplay, mResolvedCurrencySign);
         // mPlatformNumberFormatter = PlatformNumberFormatter.createCurrencyFormatter(localeResolutionResult.resolvedLocale, mResolvedCurrency, mResolvedCurrencyDisplay, mResolvedCurrencySign, mSignDisplay, mGroupingUsed, mMinimumIntegerDigits, mMaximumIntegerDigits, mMinimumFractionDigits, mMaximumFractionDigits, mNumberingSystem);
         break;
 
       case unit:
-        mResolvedUnit = resolveStringOption(options, "unit", new String[]{}, "");
-        String unitDisplayStr = resolveStringOption(options, "unitDisplay", new String[]{"long", "short", "narrow"}, "short");
-        mResolvedUnitDisplay = searchEnum(IPlatformNumberFormatter.UnitDisplay.class, unitDisplayStr);
+        mResolvedUnit = OptionHelpers.resolveStringOption(options, "unit", new String[]{}, "");
+        String unitDisplayStr = OptionHelpers.resolveStringOption(options, "unitDisplay", new String[]{"long", "short", "narrow"}, "short");
+        mResolvedUnitDisplay = OptionHelpers.searchEnum(IPlatformNumberFormatter.UnitDisplay.class, unitDisplayStr);
         mResolveMeasureUnitPlatform = PlatformDecimalFormatHelperICU4J.parseUnit(mResolvedUnit);
         //mPlatformNumberFormatter = PlatformNumberFormatter.createUnitFormatter(localeResolutionResult.resolvedLocale, mResolvedUnit, mResolvedUnitDisplay, mSignDisplay, mGroupingUsed, mMinimumIntegerDigits, mMaximumIntegerDigits, mMinimumFractionDigits, mMaximumFractionDigits, mNumberingSystem);
 

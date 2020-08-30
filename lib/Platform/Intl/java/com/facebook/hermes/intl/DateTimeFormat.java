@@ -7,11 +7,19 @@
 
 package com.facebook.hermes.intl;
 
+import android.icu.text.DateFormat;
 import android.icu.text.SimpleDateFormat;
+import android.icu.util.Calendar;
+import android.icu.util.TimeZone;
+import android.icu.util.ULocale;
+
+import java.lang.reflect.Array;
+import java.text.FieldPosition;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -74,12 +82,258 @@ public class DateTimeFormat {
   // option data is needed to implement the other members of this
   // class.
 
-  private android.icu.text.SimpleDateFormat mDateFormat = null;
+  private DateFormat mDateFormat = null;
+
+  private String mCalendar = null;
+  private Calendar mPlatformCalendarInstance = null;
+
+  private String mDateStyle = null;
+  private String mTimeStyle = null;
+
+  private String mWeekDay = null;
+  private String mEra = null;
+  private String mYear = null;
+  private String mMonth = null;
+  private String mDay = null;
+  private String mHour = null;
+  private String mMinute = null;
+  private String mSecond = null;
+  private String mTimeZoneName = null;
+
+  private String mTimeZone = null;
+
+  private int getDateStyleValue (String styleStr) throws JSRangeErrorException {
+    switch (styleStr) {
+      case "full":
+        return DateFormat.FULL;
+      case "long":
+        return DateFormat.LONG;
+      case "medium":
+        return DateFormat.MEDIUM;
+      case "short":
+        return DateFormat.SHORT;
+      default:
+        throw new JSRangeErrorException("Unknow date style !");
+    }
+  }
+
+  private int getTimeStyleValue (String styleStr) throws JSRangeErrorException {
+    switch (styleStr) {
+      case "full":
+        return DateFormat.FULL;
+      case "long":
+        return DateFormat.LONG;
+      case "medium":
+        return DateFormat.MEDIUM;
+      case "short":
+        return DateFormat.SHORT;
+      default:
+        throw new JSRangeErrorException("Unknow date style !");
+    }
+  }
+
+  private void initializeFormatterFromDateTimeStyles() throws JSRangeErrorException {
+
+    // TODO :: use setCalendar to simplify this code.
+    if(mPlatformCalendarInstance != null ) {
+      if(!mDateStyle.isEmpty() && !mTimeStyle.isEmpty()) {
+        mDateFormat = DateFormat.getDateTimeInstance(mPlatformCalendarInstance, getDateStyleValue(mDateStyle), getTimeStyleValue(mDateStyle));
+      } else if (!mDateStyle.isEmpty()) {
+        mDateFormat = DateFormat.getDateInstance(mPlatformCalendarInstance, getDateStyleValue(mDateStyle));
+      }  else if (!mTimeStyle.isEmpty()) {
+        mDateFormat = DateFormat.getTimeInstance(mPlatformCalendarInstance, getTimeStyleValue(mTimeStyle));
+      } else {
+        throw new JSRangeErrorException("Expected date or time style");
+      }
+    } else {
+      if(!mDateStyle.isEmpty() && !mTimeStyle.isEmpty()) {
+        mDateFormat = DateFormat.getDateTimeInstance(getDateStyleValue(mDateStyle), getTimeStyleValue(mDateStyle));
+      } else if (!mDateStyle.isEmpty()) {
+        mDateFormat = DateFormat.getDateInstance(getDateStyleValue(mDateStyle));
+      }  else if (!mTimeStyle.isEmpty()) {
+        mDateFormat = DateFormat.getTimeInstance(getTimeStyleValue(mTimeStyle));
+      } else {
+        throw new JSRangeErrorException("Expected date or time style");
+      }
+    }
+  }
+
+  private void initializeFormatterFromComponents(ILocaleObject resolvedLocale, String weekDay, String era, String year, String month, String day, String hour, String minute, String second, String timeZoneName) throws JSRangeErrorException {
+
+    StringBuffer skeletonBuffer = new StringBuffer();
+
+    if(!weekDay.isEmpty()) {
+      switch (weekDay) {
+        case "long":
+          skeletonBuffer.append("EEEE");
+          break;
+        case "short":
+          skeletonBuffer.append("EEE");
+          break;
+        case "narrow":
+          skeletonBuffer.append("EEEEE");
+          break;
+      }
+    }
+
+    if(!era.isEmpty()) {
+      switch (era) {
+        case "long":
+          skeletonBuffer.append("GGGG");
+          break;
+        case "short":
+          skeletonBuffer.append("GGG");
+          break;
+        case "narrow":
+          skeletonBuffer.append("G5");
+          break;
+      }
+    }
+
+    if(!year.isEmpty()) {
+      switch (year) {
+        case "numeric":
+          skeletonBuffer.append("yyyy");
+          break;
+        case "2-digit":
+          skeletonBuffer.append("yy");
+          break;
+      }
+    }
+
+    if(!month.isEmpty()) {
+      switch (month) {
+        case "numeric":
+          skeletonBuffer.append("M");
+          break;
+        case "2-digit":
+          skeletonBuffer.append("MM");
+          break;
+      }
+    }
+
+    if(!day.isEmpty()) {
+      switch (day) {
+        case "numeric":
+          skeletonBuffer.append("d");
+          break;
+        case "2-digit":
+          skeletonBuffer.append("dd");
+          break;
+      }
+    }
+
+    // TODO
+    if(!hour.isEmpty()) {
+      switch (hour) {
+        case "numeric":
+          skeletonBuffer.append("h");
+          break;
+        case "2-digit":
+          skeletonBuffer.append("HH");
+          break;
+      }
+    }
+
+    if(!minute.isEmpty()) {
+      switch (minute) {
+        case "numeric":
+          skeletonBuffer.append("m");
+          break;
+        case "2-digit":
+          skeletonBuffer.append("mm");
+          break;
+      }
+    }
+
+    if(!second.isEmpty()) {
+      switch (second) {
+        case "numeric":
+          skeletonBuffer.append("s");
+          break;
+        case "2-digit":
+          skeletonBuffer.append("ss");
+          break;
+      }
+    }
+
+    if(!timeZoneName.isEmpty()) {
+      switch (timeZoneName) {
+        case "long":
+          skeletonBuffer.append("VV");
+          break;
+        case "short":
+          skeletonBuffer.append("O");
+          break;
+      }
+    }
+
+    // TODO :: Calendar
+    mDateFormat  = DateFormat.getPatternInstance(skeletonBuffer.toString(), (ULocale) resolvedLocale.getLocale());
+  }
 
   public DateTimeFormat(List<String> locales, Map<String, Object> options)
     throws JSRangeErrorException
   {
-    mDateFormat = (SimpleDateFormat) SimpleDateFormat.getDateTimeInstance();
+    String desiredLocaleMatcher = OptionHelpers.resolveStringOption(options, Constants.LOCALEMATCHER, Constants.LOCALEMATCHER_POSSIBLE_VALUES, Constants.LOCALEMATCHER_BESTFIT);
+    PlatformCollator.LocaleResolutionResult localeResolutionResult = PlatformNumberFormatter.resolveLocales(locales, desiredLocaleMatcher);
+
+    mCalendar = OptionHelpers.resolveStringOption(options, "calendar", new String [] { "buddhist", "chinese", "coptic", "ethiopia", "ethiopic", "gregory", "hebrew", "indian", "islamic", "iso8601", "japanese", "persian", "roc"}, "");
+
+    if(!mCalendar.isEmpty()) {
+      ILocaleObject locale = localeResolutionResult.resolvedLocale.cloneObject();
+      ArrayList<String> calendarList = new ArrayList<>();
+      calendarList.add(mCalendar);
+      locale.setUnicodeExtensions("ca", calendarList); // TODO
+
+      mPlatformCalendarInstance = Calendar.getInstance((ULocale) locale.getLocale());
+    }
+
+    mDateStyle = OptionHelpers.resolveStringOption(options, "dateStyle", new String [] { "full", "long", "medium", "short"}, "");
+    mTimeStyle = OptionHelpers.resolveStringOption(options, "timeStyle", new String [] { "full", "long", "medium", "short"}, "");
+
+    mTimeZone = OptionHelpers.resolveStringOption(options, "timeZone", new String [] {}, "");
+
+    if(!mDateStyle.isEmpty() || !mTimeStyle.isEmpty()) {
+      initializeFormatterFromDateTimeStyles();
+    } else {
+      mWeekDay = OptionHelpers.resolveStringOption(options, "weekday", new String[]{"long", "short", "narrow"}, "");
+      mEra = OptionHelpers.resolveStringOption(options, "era", new String[]{"long", "short", "narrow"}, "");
+      mYear = OptionHelpers.resolveStringOption(options, "year", new String[]{"numeric", "2-digit"}, "");
+      mMonth = OptionHelpers.resolveStringOption(options, "month", new String[]{"numeric", "2-digit", "long", "short", "narrow"}, "");
+      mDay = OptionHelpers.resolveStringOption(options, "day", new String[]{"numeric", "2-digit"}, "");
+      mHour = OptionHelpers.resolveStringOption(options, "hour", new String[]{"numeric", "2-digit"}, "");
+      mMinute = OptionHelpers.resolveStringOption(options, "minute", new String[]{"numeric", "2-digit"}, "");
+      mSecond = OptionHelpers.resolveStringOption(options, "second", new String[]{"numeric", "2-digit"}, "");
+      mTimeZoneName = OptionHelpers.resolveStringOption(options, "timeZoneName", new String[]{"long", "short"}, "");
+
+      if (mWeekDay.isEmpty() &&
+              mEra.isEmpty() &&
+              mYear.isEmpty() &&
+              mMonth.isEmpty() &&
+              mDay.isEmpty() &&
+              mHour.isEmpty() &&
+              mMinute.isEmpty() &&
+              mSecond.isEmpty() &&
+              mTimeZoneName.isEmpty()) {
+        mYear = "numeric";
+        mMonth = "numeric";
+        mDay = "numeric";
+      }
+      initializeFormatterFromComponents(localeResolutionResult.resolvedLocale ,
+              mWeekDay ,
+              mEra,
+              mYear,
+              mMonth,
+              mDay,
+              mHour, mMinute, mSecond, mTimeZoneName);
+    }
+
+    if(!mTimeZone.isEmpty()) {
+      TimeZone timeZone = TimeZone.getTimeZone(mTimeZone);
+      mDateFormat.setTimeZone(timeZone);
+    }
+
   }
 
   // options are localeMatcher:string
@@ -115,7 +369,7 @@ public class DateTimeFormat {
   // exposed; it should be possible to create and use java
   // NumberFormat objects only.
   public String format(double jsTimeValue) {
-    String result = (new SimpleDateFormat()).format(new Date((long) jsTimeValue));
+    String result = mDateFormat.format(new Date((long) jsTimeValue));
     return result;
   }
 
