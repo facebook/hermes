@@ -243,6 +243,12 @@ class HadesGC::CollectionStats final {
     cpuDuration_ += cpuTime;
   }
 
+  double survivalRatio() const {
+    return allocatedBefore_
+        ? static_cast<double>(allocatedAfter_) / allocatedBefore_
+        : 0;
+  }
+
  private:
   HadesGC *gc_;
   std::string extraInfo_;
@@ -278,8 +284,7 @@ HadesGC::CollectionStats::~CollectionStats() {
         /*preSize*/ sizeBefore_,
         /*postAllocated*/ allocatedAfter_,
         /*postSize*/ sizeAfter_,
-        /*survivalRatio*/ static_cast<double>(allocatedAfter_) /
-            allocatedBefore_});
+        /*survivalRatio*/ survivalRatio()});
   }
 }
 
@@ -324,6 +329,7 @@ class HadesGC::EvacAcceptor final : public SlotAcceptorDefault {
     // Copy the contents of the existing cell over before modifying it.
     std::memcpy(newCell, cell, sz);
     assert(newCell->isValid() && "Cell was copied incorrectly");
+    promotedBytes_ += sz;
     CopyListCell *const copyCell = static_cast<CopyListCell *>(cell);
     // Set the forwarding pointer in the old spot
     copyCell->setMarkedForwardingPointer(newCell);
@@ -348,6 +354,10 @@ class HadesGC::EvacAcceptor final : public SlotAcceptorDefault {
     }
   }
 
+  uint64_t promotedBytes() const {
+    return promotedBytes_;
+  }
+
   CopyListCell *pop() {
     if (!copyListHead_) {
       return nullptr;
@@ -363,6 +373,7 @@ class HadesGC::EvacAcceptor final : public SlotAcceptorDefault {
   /// The copy list is managed implicitly in the body of each copied YG object.
   CopyListCell *copyListHead_;
   const bool isTrackingIDs_;
+  uint64_t promotedBytes_{0};
 
   void push(CopyListCell *cell) {
     cell->next_ = copyListHead_;
@@ -1674,7 +1685,9 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
   // Check that the card tables are well-formed before the collection.
   verifyCardTable();
 #endif
+  uint64_t promotedBytes = 0;
   if (promoteYGToOG_) {
+    promotedBytes = youngGen().used();
     promoteYoungGenToOldGen();
   } else {
     auto &yg = youngGen();
@@ -1705,6 +1718,7 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
       GCCell *const cell = copyCell->getMarkedForwardingPointer();
       GCBase::markCell(cell, this, acceptor);
     }
+    promotedBytes = acceptor.promotedBytes();
     {
       WeakRefLock weakRefLock{weakRefMutex_};
       // Now that all YG objects have been marked, update weak references.
@@ -1758,8 +1772,11 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
   }
   // Give an existing background thread a chance to complete.
   yieldToOldGen();
-  // YG is always empty after a collection, it is fully evac'ed into OG.
-  stats.setAfterSizes(0, youngGen().size());
+  // Post-allocated has an ambiguous meaning for a young-gen GC, since the
+  // young gen must be completely evacuated. Since zeros aren't really
+  // useful here, instead put the number of bytes that were promoted into
+  // old gen, which is the amount that survived the collection.
+  stats.setAfterSizes(promotedBytes, youngGen().size());
   stats.setEndTime();
   auto cpuTimeEnd = oscompat::thread_cpu_time();
   stats.incrementCPUTime(cpuTimeEnd - cpuTimeStart);
