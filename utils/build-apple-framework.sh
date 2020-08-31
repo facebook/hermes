@@ -30,6 +30,7 @@ function configure_apple_framework {
   local cmake_flags=" \
     -DHERMES_APPLE_TARGET_PLATFORM:STRING=$1 \
     -DCMAKE_OSX_ARCHITECTURES:STRING=$2 \
+    -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=$3 \
     -DHERMES_ENABLE_DEBUGGER:BOOLEAN=true \
     -DHERMES_ENABLE_FUZZING:BOOLEAN=false \
     -DHERMES_ENABLE_TEST_SUITE:BOOLEAN=false \
@@ -44,7 +45,7 @@ function configure_apple_framework {
 function build_apple_framework {
   echo "Building framework for $1 with architectures: $2"
   
-  configure_apple_framework "$1" "$2"
+  configure_apple_framework "$1" "$2" "$3"
 
   if [[ "$BUILD_SYSTEM" == "Ninja" ]]; then
     (cd "./build_$1" && ninja install/strip)

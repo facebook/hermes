@@ -6,6 +6,9 @@
 module HermesHelper
   # BUILD_TYPE = :debug
   BUILD_TYPE = :release
+
+  OSX_DEPLOYMENT_TARGET = "10.13"
+  IOS_DEPLOYMENT_TARGET = "10.0"
 end
 
 Pod::Spec.new do |spec|
@@ -17,7 +20,7 @@ Pod::Spec.new do |spec|
   spec.license     = { type: "MIT", file: "LICENSE" }
   spec.author      = "Facebook"
   spec.source      = { git: "https://github.com/facebook/hermes.git", tag: "v#{spec.version}" }
-  spec.platforms   = { :osx => "10.14", :ios => "10.0" }
+  spec.platforms   = { :osx => HermesHelper::OSX_DEPLOYMENT_TARGET, :ios => HermesHelper::IOS_DEPLOYMENT_TARGET }
 
   spec.preserve_paths      = ["destroot/bin/*"].concat(HermesHelper::BUILD_TYPE == :debug ? ["**/*.{h,c,cpp}"] : [])
   spec.source_files        = "destroot/include/**/*.h"
@@ -38,15 +41,13 @@ Pod::Spec.new do |spec|
 
     # If universal framework for iOS does not exist, build one
     if [ ! -d destroot/Library/Frameworks/iphoneos/hermes.framework ]; then
-      build_apple_framework "iphoneos" "armv7;armv7s;arm64"
-      build_apple_framework "iphonesimulator" "x86_64"
-
-      create_universal_framework "iphoneos" "iphonesimulator"
+      build_apple_framework "iphoneos" "armv7;armv7s;arm64" "#{HermesHelper::IOS_DEPLOYMENT_TARGET}"
+      build_apple_framework "iphonesimulator" "x86_64" "#{HermesHelper::IOS_DEPLOYMENT_TARGET}"
     fi
 
     # If MacOS framework does not exist, build one
     if [ ! -d destroot/Library/Frameworks/macosx/hermes.framework ]; then
-      build_apple_framework "macosx" "x86_64"
+      build_apple_framework "macosx" "x86_64" "#{HermesHelper::OSX_DEPLOYMENT_TARGET}"
     fi
   EOS
 end
