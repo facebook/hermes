@@ -8,9 +8,12 @@
 #ifndef HERMES_VM_HADESGC_H
 #define HERMES_VM_HADESGC_H
 
+#include "hermes/ADT/BitArray.h"
 #include "hermes/Support/SlowAssert.h"
 #include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/GCBase.h"
+
+#include "llvh/Support/PointerLikeTypeTraits.h"
 
 #include <atomic>
 #include <condition_variable>
@@ -69,7 +72,7 @@ class HadesGC final : public GCBase {
   static constexpr uint32_t maxAllocationSize() {
     // The largest allocation allowable in Hades is the max size a single
     // segment supports.
-    return AlignedHeapSegment::maxSize();
+    return HeapSegment::maxSize();
   }
 
   /// \name GCBase overrides
@@ -348,6 +351,11 @@ class HadesGC final : public GCBase {
     };
 
    private:
+    /// \return the index of the bucket in freelistBuckets_ corresponding to
+    /// \p size.
+    /// \post The returned index is less than kNumFreelistBuckets.
+    static uint32_t getFreelistBucket(uint32_t size);
+
     HadesGC *gc_;
     std::vector<std::unique_ptr<HeapSegment>> segments_;
 
@@ -356,12 +364,37 @@ class HadesGC final : public GCBase {
     /// bump-allocated segments.
     uint64_t allocatedBytes_{0};
 
-    /// There is one bucket for each size, in multiples of heapAlign.
-    static constexpr size_t kNumFreelistBuckets = 256;
-    static constexpr size_t kMinSizeForLargeBlock = kNumFreelistBuckets
-        << LogHeapAlign;
+    /// The freelist buckets are split into two sections. In the "small"
+    /// section, there is one bucket for each size, in multiples of heapAlign.
+    /// In the "large" section, there is a bucket for each power of 2. The
+    /// bucket for a large block is obtained by rounding down to the nearest
+    /// power of 2.
+
+    /// So for instance, with a heap alignment of 8 bytes, 256 small buckets,
+    /// and a maximum allocation size of 2^21, we would get:
+
+    /// |    Small section      |  Large section   |
+    /// +----+----+----+   +--------------+   +----+
+    /// | 0  | 8  | 16 |...|2040|2048|4096|...|2^21|
+    /// +----+----+----+   +--------------+   +----+
+
+    static constexpr size_t kLogNumSmallFreelistBuckets = 8;
+    static constexpr size_t kNumSmallFreelistBuckets = 1
+        << kLogNumSmallFreelistBuckets;
+    static constexpr size_t kLogMinSizeForLargeBlock =
+        kLogNumSmallFreelistBuckets + LogHeapAlign;
+    static constexpr size_t kMinSizeForLargeBlock = 1
+        << kLogMinSizeForLargeBlock;
+    static constexpr size_t kNumLargeFreelistBuckets =
+        llvh::detail::ConstantLog2<HeapSegment::maxSize()>::value -
+        kLogMinSizeForLargeBlock + 1;
+    static constexpr size_t kNumFreelistBuckets =
+        kNumSmallFreelistBuckets + kNumLargeFreelistBuckets;
+
     std::array<FreelistCell *, kNumFreelistBuckets> freelistBuckets_{};
-    FreelistCell *largeBlockFreelistHead_ = nullptr;
+    /// Keep track of which freelist buckets have valid elements to make search
+    /// fast.
+    BitArray<kNumFreelistBuckets> freelistBucketBitArray_;
 
     /// Searches the OG for a space to allocate memory into.
     /// \return A pointer to uninitialized memory that can be written into, null

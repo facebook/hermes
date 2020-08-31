@@ -106,17 +106,13 @@ void HadesGC::OldGen::addCellToFreelist(
       sz >= sizeof(FreelistCell) &&
       "Cannot construct a FreelistCell into an allocation in the OG");
   // Get the size bucket for the cell being added;
-  const uint32_t bucket = sz >> LogHeapAlign;
-  FreelistCell *newFreeCell = nullptr;
-  if (bucket < kNumFreelistBuckets) {
-    // Push onto the size-specific free list.
-    newFreeCell = new (addr) FreelistCell{sz, freelistBuckets_[bucket]};
-    freelistBuckets_[bucket] = newFreeCell;
-  } else {
-    // Push onto the general free list.
-    newFreeCell = new (addr) FreelistCell{sz, largeBlockFreelistHead_};
-    largeBlockFreelistHead_ = newFreeCell;
-  }
+  const uint32_t bucket = getFreelistBucket(sz);
+  // Push onto the size-specific free list and set the corresponding bit in the
+  // bit array.
+  FreelistCell *newFreeCell =
+      new (addr) FreelistCell{sz, freelistBuckets_[bucket]};
+  freelistBuckets_[bucket] = newFreeCell;
+  freelistBucketBitArray_.set(bucket, true);
   if (!alreadyFree) {
     // We free'd this many bytes.
     assert(
@@ -1554,9 +1550,30 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
   gc_->oom(make_error_code(OOMError::MaxHeapReached));
 }
 
+uint32_t HadesGC::OldGen::getFreelistBucket(uint32_t size) {
+  // If the size corresponds to the "small" portion of the freelist, then the
+  // bucket is just (size) / (heap alignment)
+  if (size < kMinSizeForLargeBlock) {
+    auto bucket = size >> LogHeapAlign;
+    assert(
+        bucket < kNumSmallFreelistBuckets &&
+        "Small blocks must be within the small free list range");
+    return bucket;
+  }
+  // Otherwise, index into the large portion of the freelist, which is based on
+  // powers of 2
+
+  auto bucket =
+      kNumSmallFreelistBuckets + llvh::Log2_32(size) - kLogMinSizeForLargeBlock;
+  assert(
+      bucket < kNumFreelistBuckets &&
+      "Block size must be within the freelist range!");
+  return bucket;
+}
+
 GCCell *HadesGC::OldGen::search(uint32_t sz) {
-  size_t bucket = sz >> LogHeapAlign;
-  if (bucket < kNumFreelistBuckets) {
+  size_t bucket = getFreelistBucket(sz);
+  if (bucket < kNumSmallFreelistBuckets) {
     // Fast path: There already exists a size bucket for this alloc. Check if
     // there's a free cell to take and exit.
     if (FreelistCell *cell = freelistBuckets_[bucket]) {
@@ -1565,57 +1582,65 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
           cell->getAllocatedSize() == sz &&
           "Size bucket should be an exact match");
       freelistBuckets_[bucket] = cell->next_;
+      freelistBucketBitArray_.set(bucket, freelistBuckets_[bucket]);
       return finishAlloc(cell, sz);
     }
+    // Make sure we start searching at the smallest possible size that could fit
+    bucket = getFreelistBucket(sz + minAllocationSize());
   }
-  // Else the size bucket was empty, try the large block free list.
-  // NOTE: There's an option to try fitting a cell into a different size bucket,
-  // rather than go immediately to the large block free list; however, on the
-  // workloads Hermes cares about most, there was no discovered benefit from
-  // allowing different sizes over going immediately to the large block free
-  // list.
+  // Once we're examining the rest of the free list, it's a first-fit algorithm.
+  // This approach approximates finding the smallest possible fit.
+  bucket = freelistBucketBitArray_.findNextSetBitFrom(bucket);
+  for (; bucket < kNumFreelistBuckets;
+       bucket = freelistBucketBitArray_.findNextSetBitFrom(bucket + 1)) {
+    assert(freelistBuckets_[bucket] && "Empty bucket should not have bit set!");
+    // Need to track the previous entry in order to change the next pointer.
+    FreelistCell **prevLoc = &freelistBuckets_[bucket];
+    FreelistCell *cell = freelistBuckets_[bucket];
 
-  // Need to track the previous entry in order to change the next pointer.
-  FreelistCell **prevLoc = &largeBlockFreelistHead_;
-  FreelistCell *cell = largeBlockFreelistHead_;
-  // Once we're examining the general free list, it's a first-fit algorithm.
-  while (cell) {
-    assert(cell == *prevLoc && "prevLoc should be updated in each iteration");
-    assert(
-        vmisa<FreelistCell>(cell) &&
-        "Non-free-list cell found in the free list");
-    assert(
-        (!cell->next_ || cell->next_->isValid()) &&
-        "Next pointer points to an invalid cell");
-    const auto cellSize = cell->getAllocatedSize();
-    assert(
-        cellSize >= kMinSizeForLargeBlock &&
-        "Found a small block on the large block free list");
-    // Check if the size is large enough that the cell could be split.
-    if (cellSize >= sz + minAllocationSize()) {
-      // Split the free cell. In order to avoid initializing soon-to-be-unused
-      // values like the size and the next pointer, copy the return path here.
-      *prevLoc = cell->next_;
-      cell->split(*this, sz);
-      return finishAlloc(cell, sz);
-    } else if (cellSize == sz) {
-      // Exact match, take it.
-      *prevLoc = cell->next_;
-      return finishAlloc(cell, sz);
+    while (cell) {
+      assert(cell == *prevLoc && "prevLoc should be updated in each iteration");
+      assert(
+          vmisa<FreelistCell>(cell) &&
+          "Non-free-list cell found in the free list");
+      assert(
+          (!cell->next_ || cell->next_->isValid()) &&
+          "Next pointer points to an invalid cell");
+      const auto cellSize = cell->getAllocatedSize();
+      assert(
+          getFreelistBucket(cellSize) == bucket &&
+          "Found an incorrectly sized block in this bucket");
+      // Check if the size is large enough that the cell could be split.
+      if (cellSize >= sz + minAllocationSize()) {
+        // Split the free cell. In order to avoid initializing soon-to-be-unused
+        // values like the size and the next pointer, copy the return path here.
+        *prevLoc = cell->next_;
+        // Update the bit in the bit array if freelistBuckets_[bucket] has
+        // changed
+        freelistBucketBitArray_.set(bucket, freelistBuckets_[bucket]);
+        cell->split(*this, sz);
+        return finishAlloc(cell, sz);
+      } else if (cellSize == sz) {
+        // Exact match, take it.
+        *prevLoc = cell->next_;
+        freelistBucketBitArray_.set(bucket, freelistBuckets_[bucket]);
+        return finishAlloc(cell, sz);
+      }
+      // Non-exact matches, or anything just barely too small to fit, will need
+      // to find another block.
+      // NOTE: This is due to restrictions on the minimum cell size to keep the
+      // heap parseable, especially in debug mode. If this minimum size becomes
+      // smaller (smaller header, size becomes part of it automatically, debug
+      // magic field is handled differently), this decisions can be re-examined.
+      // An example alternative is to make a special fixed-size cell that is
+      // only as big as an empty GCCell. That alternative only works if the
+      // empty is small enough to fit in any gap in the heap. That's not true in
+      // debug modes currently.
+      prevLoc = &cell->next_;
+      cell = cell->next_;
     }
-    // Non-exact matches, or anything just barely too small to fit, will need
-    // to find another block.
-    // NOTE: This is due to restrictions on the minimum cell size to keep the
-    // heap parseable, especially in debug mode. If this minimum size becomes
-    // smaller (smaller header, size becomes part of it automatically, debug
-    // magic field is handled differently), this decisions can be re-examined.
-    // An example alternative is to make a special fixed-size cell that is only
-    // as big as an empty GCCell. That alternative only works if the empty is
-    // small enough to fit in any gap in the heap. That's not true in debug
-    // modes currently.
-    prevLoc = &cell->next_;
-    cell = cell->next_;
   }
+
   // Free list exhausted, and nothing had enough space. Try bump-alloc as a last
   // resort.
   // TODO: Right now this iterates over all segments. Could instead have a
