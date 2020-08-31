@@ -12,4 +12,4 @@ try {
 } catch (e) {
   print (e);
 }
-// CHECK: SyntaxError: Invalid RegExp: Invalid flags '0'
+// CHECK: SyntaxError: Invalid RegExp: Invalid flags

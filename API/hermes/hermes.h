@@ -16,6 +16,18 @@
 #include <hermes/Public/RuntimeConfig.h>
 #include <jsi/jsi.h>
 
+#ifndef HERMES_EXPORT
+#ifdef _MSC_VER
+#ifdef CREATE_SHARED_LIBRARY
+#define HERMES_EXPORT __declspec(dllexport)
+#else
+#define HERMES_EXPORT
+#endif // CREATE_SHARED_LIBRARY
+#else // _MSC_VER
+#define HERMES_EXPORT __attribute__((visibility("default")))
+#endif // _MSC_VER
+#endif // !defined(HERMES_EXPORT)
+
 struct HermesTestHelper;
 
 namespace llvh {
@@ -47,7 +59,7 @@ class Debugger;
 class HermesRuntimeImpl;
 
 /// Represents a Hermes JS runtime.
-class HermesRuntime : public jsi::Runtime {
+class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
  public:
   static bool isHermesBytecode(const uint8_t *data, size_t len);
   // Returns the supported bytecode version.
@@ -196,10 +208,11 @@ class HermesRuntime : public jsi::Runtime {
   // class in the .cpp file.
 };
 
-std::unique_ptr<HermesRuntime> makeHermesRuntime(
+HERMES_EXPORT std::unique_ptr<HermesRuntime> makeHermesRuntime(
     const ::hermes::vm::RuntimeConfig &runtimeConfig =
         ::hermes::vm::RuntimeConfig());
-std::unique_ptr<jsi::ThreadSafeRuntime> makeThreadSafeHermesRuntime(
+HERMES_EXPORT std::unique_ptr<jsi::ThreadSafeRuntime>
+makeThreadSafeHermesRuntime(
     const ::hermes::vm::RuntimeConfig &runtimeConfig =
         ::hermes::vm::RuntimeConfig());
 } // namespace hermes

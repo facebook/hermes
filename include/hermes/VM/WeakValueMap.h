@@ -57,37 +57,26 @@ class WeakValueMap {
   }
 
   /// Return true if there is an entry with the given key and a valid value.
-  bool containsKey(const KeyT &key, GC *gc) {
-    WeakRefLock lk{gc->weakRefMutex()};
-    return containsKeyLocked(key, gc);
-  }
-
-  bool containsKeyLocked(const KeyT &key, GC *gc) {
-    return internalFindLocked(key, gc) != map_.end();
+  bool containsKey(const KeyT &key) {
+    return internalFind(key) != map_.end();
   }
 
   /// Look for a key and return the value as Handle<T> if found or llvh::None if
   /// not found.
   llvh::Optional<Handle<ValueT>>
   lookup(HandleRootOwner *runtime, GC *gc, const KeyT &key) {
-    WeakRefLock lk{gc->weakRefMutex()};
-    return lookupLocked(runtime, gc, key);
-  }
-
-  llvh::Optional<Handle<ValueT>>
-  lookupLocked(HandleRootOwner *runtime, GC *gc, const KeyT &key) {
-    auto it = internalFindLocked(key, gc);
+    auto it = internalFind(key);
     if (it == map_.end())
       return llvh::None;
-    return it->second.getLocked(runtime, gc);
+    return it->second.get(runtime, gc);
   }
 
   /// Remove the element with key \p key and return true if it was found.
   bool erase(const KeyT &key, GC *gc) {
-    WeakRefLock lk{gc->weakRefMutex()};
-    auto it = internalFindLocked(key, gc);
+    auto it = internalFind(key);
     if (it == map_.end())
       return false;
+    WeakRefLock lk{gc->weakRefMutex()};
     map_.erase(it);
     recalcPruneLimit();
     return true;
@@ -101,8 +90,14 @@ class WeakValueMap {
   }
 
   bool insertNewLocked(GC *gc, const KeyT &key, Handle<ValueT> value) {
-    if (!map_.try_emplace(key, WeakRef<ValueT>(gc, value)).second)
-      return false;
+    auto itAndInserted = map_.try_emplace(key, WeakRef<ValueT>(gc, value));
+    if (!itAndInserted.second) {
+      // The key already exists and the value is valid, this isn't a new entry.
+      if (itAndInserted.first->second.isValid()) {
+        return false;
+      }
+      itAndInserted.first->second = WeakRef<ValueT>(gc, value);
+    }
     pruneInvalid(gc);
     return true;
   }
@@ -119,13 +114,8 @@ class WeakValueMap {
   /// This method should be invoked during garbage collection. It calls
   /// the acceptor with every valid WeakRef in the map.
   void markWeakRefs(WeakRefAcceptor &acceptor) {
-    const auto &mtx = acceptor.mutexRef();
-    // The weak ref lock should be held here by the GC.
     for (auto it = map_.begin(), e = map_.end(); it != e; ++it) {
-      if (it->second.isValid(mtx))
-        acceptor.accept(it->second);
-      else
-        map_.erase(it);
+      acceptor.accept(it->second);
     }
   }
 
@@ -142,23 +132,17 @@ class WeakValueMap {
   size_type pruneLimit_{kMinPruneLimit};
 
   /// Look for the specified key \p key in the internal map and return it if
-  /// it is there and if the value is still valid. If the value is invalid
-  /// delete it.
+  /// it is there and if the value is still valid. If the value is invalid, say
+  /// it wasn't found.
   /// \return the internal iterator or map_.end() if not found.
-  /// \pre This function must be called while the weak ref mutex is held.
-  InternalIterator internalFindLocked(const KeyT &key, GC *gc) {
-    assert(
-        gc->weakRefMutex() &&
-        "WeakRefMutex must be held before entering this function");
+  InternalIterator internalFind(const KeyT &key) {
     auto it = map_.find(key);
     // Not found?
     if (it == map_.end())
       return it;
 
     // The value was garbage collected, so pretend that we didn't find it.
-    // Accessing isValid requires a lock to be held.
-    if (!it->second.isValid(gc->weakRefMutex())) {
-      map_.erase(it);
+    if (!it->second.isValid()) {
       return map_.end();
     }
 
@@ -175,7 +159,7 @@ class WeakValueMap {
       return;
 
     for (auto it = map_.begin(), e = map_.end(); it != e; ++it) {
-      if (!it->second.isValid(gc->weakRefMutex())) {
+      if (!it->second.isValid()) {
         // NOTE: DenseMap's erase() operation doesn't invalidate any
         // iterators, (and has a void return type), so this is safe to do. If
         // we were using a std::map<>, we would have to do

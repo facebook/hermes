@@ -562,6 +562,7 @@ SKIP_LIST = [
     # TODO(T60938585): Make these conditional on the choice of build.
     "test262/test/built-ins/decodeURI/S15.1.3.1_A2.5_T1.js",
     "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A2.5_T1.js",
+    "test262/test/built-ins/RegExp/character-class-escape-non-whitespace.js",
     # default arguments
     "esprima/test_fixtures/expression/primary/object/migrated_0038.js",
     "mjsunit/es6/default-parameters-debug.js",
@@ -778,9 +779,6 @@ SKIP_LIST = [
     "test262/test/built-ins/RegExp/prototype/Symbol.split/species-ctor-species-undef.js",
     "test262/test/built-ins/RegExp/prototype/Symbol.split/species-ctor-y.js",
     "test262/test/built-ins/RegExp/prototype/Symbol.split/species-ctor.js",
-    # Implementation specific
-    "test262/test/built-ins/RegExp/prototype/Symbol.split/get-flags-err.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.split/coerce-flags-err.js",
     # JSON changes
     # prototype changes
     "test262/test/built-ins/Error/prototype/S15.11.4_A2.js",
@@ -971,9 +969,6 @@ SKIP_LIST = [
     "test262/test/language/identifiers/part-unicode-5.2.0.js",
     "test262/test/language/identifiers/start-unicode-13.0.0-escaped.js",
     "test262/test/language/identifiers/start-unicode-13.0.0.js",
-    # yield* should use GetMethod
-    "test262/test/language/expressions/yield/star-return-is-null.js",
-    "test262/test/language/expressions/yield/star-throw-is-null.js",
     # Stack overflow catching.
     "mjsunit/regress/regress-1132.js",
     "mjsunit/regress/regress-446389.js",

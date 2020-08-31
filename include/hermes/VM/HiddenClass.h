@@ -158,19 +158,17 @@ class TransitionMap {
 
   /// Return true if there is an entry with the given key and a valid value.
   bool containsKey(const Transition &key, GC *gc) {
-    WeakRefLock lk{gc->weakRefMutex()};
-    return (smallKey_ == key && smallValue().isValid(gc->weakRefMutex())) ||
-        (isLarge() && large()->containsKeyLocked(key, gc));
+    return (smallKey_ == key && smallValue().isValid()) ||
+        (isLarge() && large()->containsKey(key));
   }
 
   /// Look for key and return the value as Handle<T> if found or None if not.
   llvh::Optional<Handle<HiddenClass>>
   lookup(HandleRootOwner *runtime, GC *gc, const Transition &key) {
-    WeakRefLock lk{gc->weakRefMutex()};
     if (smallKey_ == key) {
-      return smallValue().getLocked(runtime, gc);
+      return smallValue().get(runtime, gc);
     } else if (isLarge()) {
-      return large()->lookupLocked(runtime, gc, key);
+      return large()->lookup(runtime, gc, key);
     } else {
       return llvh::None;
     }
@@ -182,15 +180,18 @@ class TransitionMap {
       Runtime *runtime,
       const Transition &key,
       Handle<HiddenClass> value) {
+    assert(
+        key.symbolID != SymbolID::empty() &&
+        "Should never insert an empty key");
+    if (smallKey_ == key && smallValue().isValid()) {
+      return false;
+    }
+    // Need to hold the lock when mutating smallKey and smallValue.
     WeakRefLock lk{runtime->getHeap().weakRefMutex()};
     if (isClean()) {
       smallKey_ = key;
       smallValue() = WeakRef<HiddenClass>(&runtime->getHeap(), value);
       return true;
-    } else if (
-        smallKey_ == key &&
-        smallValue().isValid(runtime->getHeap().weakRefMutex())) {
-      return false;
     }
     if (!isLarge())
       uncleanMakeLarge(runtime);
@@ -220,10 +221,10 @@ class TransitionMap {
   /// Invoke \p callback on each (const) key and value. Values may be invalid.
   template <typename CallbackFunction>
   void forEachEntry(const CallbackFunction &callback) const {
-    if (smallKey_.symbolID.isValid()) {
-      callback(smallKey_, smallValue());
-    } else if (isLarge()) {
+    if (isLarge()) {
       large()->forEachEntry(callback);
+    } else if (!isClean()) {
+      callback(smallKey_, smallValue());
     }
   }
 

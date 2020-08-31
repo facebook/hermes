@@ -287,6 +287,8 @@ print(Date.parse('Tue May 05 2020  00:00:00'));
 // CHECK-NEXT: 1588636800000
 print(Date.parse('Tue May 05 2020 00:00:00  PDT'));
 // CHECK-NEXT: 1588662000000
+print(Date.parse('Tue May 05 2020 00:00:00'.padEnd(60)));  // trailing spaces.
+// CHECK-NEXT: 1588636800000
 
 // Quick check that getters work; internal functions are unit tested instead.
 print('getters');

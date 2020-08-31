@@ -21,6 +21,15 @@
 namespace hermes {
 namespace hbc {
 
+// Looking up filename/sourcemap id for each instruction is pretty slow,
+// and it's almost always from the same bufId every time. Cache the previous
+// result in this struct.
+struct HBCISelDebugCache {
+  unsigned currentBufId = -1;
+  unsigned currentFilenameId;
+  unsigned currentSourceMappingUrlId;
+};
+
 class HBCISel {
   struct Relocation {
     enum RelocationType {
@@ -94,6 +103,9 @@ class HBCISel {
   /// Mapping from CatchInst to the catch coverage information.
   CatchInfoMap catchInfoMap_{};
 
+  /// Bytecode generation options.
+  const BytecodeGenerationOptions &bytecodeGenerationOptions_;
+
   /// Map from SwitchImm -> (inst offset, default block, jump table).
   llvh::DenseMap<SwitchImmInst *, SwitchImmInfo> switchImmInfo_{};
   using switchInfoEntry =
@@ -159,14 +171,7 @@ class HBCISel {
   uint8_t acquirePropertyReadCacheIndex(unsigned id);
   uint8_t acquirePropertyWriteCacheIndex(unsigned id);
 
-  // Looking up filename/sourcemap id for each instruction is pretty slow,
-  // and it's almost always from the same bufId every time. Cache the previous
-  // result here, to reuse it when possible.
-  struct {
-    unsigned currentBufId;
-    unsigned currentFilenameId;
-    unsigned currentSourceMappingUrlId;
-  } debugIdCache_;
+  HBCISelDebugCache debugIdCache_;
 
  public:
   /// C'tor.
@@ -176,8 +181,13 @@ class HBCISel {
       Function *F,
       BytecodeFunctionGenerator *BCFGen,
       HVMRegisterAllocator &RA,
-      FunctionScopeAnalysis &scopeAnalysis)
-      : F_(F), BCFGen_(BCFGen), RA_(RA), scopeAnalysis_(scopeAnalysis) {
+      FunctionScopeAnalysis &scopeAnalysis,
+      const BytecodeGenerationOptions &options)
+      : F_(F),
+        BCFGen_(BCFGen),
+        RA_(RA),
+        scopeAnalysis_(scopeAnalysis),
+        bytecodeGenerationOptions_(options) {
     protoIdent_ = F->getContext().getIdentifier("__proto__");
   }
 
@@ -201,6 +211,16 @@ class HBCISel {
 
   /// Generate the bytecode stream for the function.
   void generate(SourceMapGenerator *outSourceMap);
+
+  /// Get the current debug cache, to allow pre-populating another HBCISel in
+  /// the same module.
+  HBCISelDebugCache getDebugCache() {
+    return debugIdCache_;
+  }
+  /// Populate the debug cache with data from a previous function.
+  void populateDebugCache(HBCISelDebugCache cache) {
+    debugIdCache_ = cache;
+  }
 };
 
 } // namespace hbc

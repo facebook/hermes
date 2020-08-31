@@ -19,8 +19,10 @@ labels:
   the red background section). Please also include a few lines of the JavaScript
   source before and after the line in which the error occurs.
 
-  If it's an abort (e.g. app crashes), please try to provide native stack trace  
-  to assist with debugging.
+  If it's an abort (e.g. app crashes), please see "Reporting crashes" from
+  <https://github.com/facebook/hermes/blob/master/doc/ReactNativeIntegration.md#reporting-native-crashes>
+  for instructions on reporting a native crash, including symbolicating the native
+  stack trace.  Note this will only work with some versions of Hermes.
 -->
 
 - [ ] I have run `gradle clean` and confirmed this bug does not occur with JSC

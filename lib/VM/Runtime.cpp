@@ -564,7 +564,7 @@ std::string Runtime::convertSymbolToUTF8(SymbolID id) {
   return identifierTable_.convertSymbolToUTF8(id);
 }
 
-void Runtime::printRuntimeGCStats(llvh::raw_ostream &os) const {
+void Runtime::printRuntimeGCStats(JSONEmitter &json) const {
   const unsigned kNumPhases =
       static_cast<unsigned>(RootAcceptor::Section::NumSections);
 #define ROOT_SECTION(phase) "MarkRoots_" #phase,
@@ -572,20 +572,15 @@ void Runtime::printRuntimeGCStats(llvh::raw_ostream &os) const {
 #include "hermes/VM/RootSections.def"
   };
 #undef ROOT_SECTION
-  os << "\t\"runtime\": {\n";
-  os << "\t\t\"totalMarkRootsTime\": " << formatSecs(totalMarkRootsTime_).secs
-     << ",\n";
-  bool first = true;
+  json.emitKey("runtime");
+  json.openDict();
+  json.emitKeyValue("totalMarkRootsTime", formatSecs(totalMarkRootsTime_).secs);
   for (unsigned phaseNum = 0; phaseNum < kNumPhases; phaseNum++) {
-    if (first) {
-      first = false;
-    } else {
-      os << ",\n";
-    }
-    os << "\t\t\"" << markRootsPhaseNames[phaseNum] << "Time"
-       << "\": " << formatSecs(markRootsPhaseTimes_[phaseNum]).secs;
+    json.emitKeyValue(
+        std::string(markRootsPhaseNames[phaseNum]) + "Time",
+        formatSecs(markRootsPhaseTimes_[phaseNum]).secs);
   }
-  os << "\n\t}";
+  json.closeDict();
 }
 
 void Runtime::printHeapStats(llvh::raw_ostream &os) {
@@ -789,7 +784,11 @@ size_t Runtime::mallocSize() const {
 void Runtime::potentiallyMoveHeap() {
   // Do a dummy allocation which could force a heap move if handle sanitization
   // is on.
-  FillerCell::create(this, sizeof(FillerCell));
+  FillerCell::create(
+      this,
+      std::max(
+          sizeof(FillerCell),
+          static_cast<size_t>(toRValue(GC::minAllocationSize()))));
 }
 #endif
 
@@ -915,6 +914,17 @@ CallResult<HermesValue> Runtime::runBytecode(
     } else if (getVMExperimentFlags() & experiments::MAdviseSequential) {
       bytecode->madvise(oscompat::MAdvice::Sequential);
     }
+    if (getVMExperimentFlags() & experiments::VerifyBytecodeChecksum) {
+      llvh::ArrayRef<uint8_t> buf = bytecode->getRawBuffer();
+      // buf is empty for non-buffer providers
+      if (!buf.empty()) {
+        if (!hbc::BCProviderFromBuffer::bytecodeHashIsValid(buf)) {
+          const char *msg = "Bytecode checksum verification failed";
+          hermesLog("Hermes", "%s", msg);
+          hermes_fatal(msg);
+        }
+      }
+    }
   }
   // Only track I/O for buffers > 64 kB (which excludes things like
   // Runtime::generateSpecialRuntimeBytecode).
@@ -1000,7 +1010,8 @@ ExecutionStatus Runtime::loadSegment(
 }
 
 void Runtime::runInternalBytecode() {
-#ifdef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+// TODO: remove the guard
+#if 0
   auto module = getInternalBytecode();
   auto bcProvider = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
                         llvh::make_unique<Buffer>(module.data(), module.size()))
@@ -1049,7 +1060,7 @@ void Runtime::printException(llvh::raw_ostream &os, Handle<> valueHandle) {
       return;
     }
 
-    strRes->get()->copyUTF16String(tmp);
+    strRes->get()->appendUTF16String(tmp);
     os << tmp << "\n";
     return;
   }
@@ -1071,7 +1082,7 @@ void Runtime::printException(llvh::raw_ostream &os, Handle<> valueHandle) {
     }
     str = std::move(*errToStringRes);
   }
-  str->copyUTF16String(tmp);
+  str->appendUTF16String(tmp);
   os << tmp << "\n";
 }
 
@@ -1303,7 +1314,7 @@ CallResult<bool> Runtime::insertVisitedObject(Handle<JSObject> obj) {
 void Runtime::removeVisitedObject(Handle<JSObject> obj) {
   (void)obj;
   auto stack = Handle<ArrayStorage>::vmcast(&stringCycleCheckVisited_);
-  auto elem = stack->pop_back();
+  auto elem = stack->pop_back(this);
   (void)elem;
   assert(
       elem.isObject() && elem.getObject() == obj.get() &&

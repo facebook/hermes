@@ -290,7 +290,7 @@ void AlignedHeapSegment::deleteDeadObjectIDs(GC *gc) {
   GCBase::IDTracker &idTracker = gc->getIDTracker();
   GCBase::AllocationLocationTracker &allocationLocationTracker =
       gc->getAllocationLocationTracker();
-  if (idTracker.isTrackingIDs() || allocationLocationTracker.isEnabled()) {
+  if (gc->isTrackingIDs()) {
     MarkBitArrayNC &markBits = markBitArray();
     // Separate out the delete tracking into a different loop in order to keep
     // the normal case fast.
@@ -310,7 +310,7 @@ void AlignedHeapSegment::updateObjectIDs(
   GCBase::IDTracker &idTracker = gc->getIDTracker();
   GCBase::AllocationLocationTracker &allocationLocationTracker =
       gc->getAllocationLocationTracker();
-  if (!idTracker.isTrackingIDs() && !allocationLocationTracker.isEnabled()) {
+  if (!gc->isTrackingIDs()) {
     // If ID tracking isn't on, there's nothing to do here.
     return;
   }

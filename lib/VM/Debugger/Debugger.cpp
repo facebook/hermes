@@ -579,7 +579,7 @@ auto Debugger::getStackTrace(InterpreterState state) const -> StackTrace {
             JSObject::getNamedSlotValue(propObj.get(), runtime_, desc);
         if (displayName->isString()) {
           llvh::SmallVector<char16_t, 64> storage;
-          displayName->getString()->copyUTF16String(storage);
+          displayName->getString()->appendUTF16String(storage);
           convertUTF16ToUTF8WithReplacements(frameInfo.functionName, storage);
         }
       }
@@ -982,7 +982,7 @@ HermesValue Debugger::getExceptionAsEvalResult(
   auto res = toString_RJS(runtime_, thrownValue);
   if (res != ExecutionStatus::EXCEPTION) {
     llvh::SmallVector<char16_t, 64> errorText;
-    res->get()->copyUTF16String(errorText);
+    res->get()->appendUTF16String(errorText);
     convertUTF16ToUTF8WithReplacements(
         outMetadata->exceptionDetails.text, errorText);
   }

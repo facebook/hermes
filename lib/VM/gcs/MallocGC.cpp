@@ -92,8 +92,7 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
         worklist_.push_back(newLocation);
       }
       gc.newPointers_.insert(newLocation);
-      if (gc.idTracker_.isTrackingIDs() ||
-          gc.allocationLocationTracker_.isEnabled()) {
+      if (gc.isTrackingIDs()) {
         gc.idTracker_.moveObject(cell, newLocation->data());
         gc.allocationLocationTracker_.moveAlloc(cell, newLocation->data());
       }
@@ -158,11 +157,7 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
   }
 
   void accept(WeakRefBase &wr) override {
-    wr.unsafeGetSlot(mutexRef())->mark();
-  }
-
-  const WeakRefMutex &mutexRef() override {
-    return gc.weakRefMutex();
+    wr.unsafeGetSlot()->mark();
   }
 };
 
@@ -438,20 +433,15 @@ void MallocGC::finalizeAll() {
   }
 }
 
-void MallocGC::printStats(llvh::raw_ostream &os, bool trailingComma) {
-  if (!recordGcStats_) {
-    return;
-  }
-  GCBase::printStats(os, true);
-  os << "\t\"specific\": {\n"
-     << "\t\t\"collector\": \"malloc\",\n"
-     << "\t\t\"stats\": {}\n"
-     << "\t},\n";
-  gcCallbacks_->printRuntimeGCStats(os);
-  if (trailingComma) {
-    os << ",";
-  }
-  os << "\n";
+void MallocGC::printStats(JSONEmitter &json) {
+  GCBase::printStats(json);
+  json.emitKey("specific");
+  json.openDict();
+  json.emitKeyValue("collector", "malloc");
+  json.emitKey("stats");
+  json.openDict();
+  json.closeDict();
+  json.closeDict();
 }
 
 void MallocGC::resetStats() {

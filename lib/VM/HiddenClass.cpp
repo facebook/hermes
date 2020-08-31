@@ -82,7 +82,7 @@ void TransitionMap::uncleanMakeLarge(Runtime *runtime) {
   assert(!isLarge() && "must not yet be large");
   auto large = new WeakValueMap<Transition, HiddenClass>();
   // Move any valid entry into the allocated map.
-  if (auto handle = smallValue().getLocked(runtime, &runtime->getHeap()))
+  if (auto handle = smallValue().get(runtime, &runtime->getHeap()))
     large->insertNewLocked(&runtime->getHeap(), smallKey_, handle.getValue());
   u.large_ = large;
   smallKey_.symbolID = SymbolID::deleted();
@@ -135,12 +135,12 @@ void HiddenClassSerialize(Serializer &s, const GCCell *cell) {
   // entries are in the map beforehand. Therefore, we will use a sentinel
   // WeakRef (nullptr) to show we finish all entries. As a result, for each
   // valid entry, we write WeakRef<HiddenClass> first, them we write the key.
-  self->transitionMap_.forEachEntry([&s, &mtx](
+  self->transitionMap_.forEachEntry([&s](
                                         const HiddenClass::Transition &key,
                                         const WeakRef<HiddenClass> &value) {
-    if (value.isValid(mtx)) {
+    if (value.isValid()) {
       // Write value (WeakRef<HiddenClass>)
-      s.writeRelocation(value.unsafeGetSlot(mtx));
+      s.writeRelocation(value.unsafeGetSlot());
       // Write key (Transition: SymbolID, PropertyFlags)
       s.writeInt<uint32_t>(key.symbolID.unsafeGetRaw());
       s.writeData(&key.propertyFlags, sizeof(PropertyFlags));

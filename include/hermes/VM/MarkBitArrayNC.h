@@ -8,12 +8,11 @@
 #ifndef HERMES_VM_MARKBITARRAYNC_H
 #define HERMES_VM_MARKBITARRAYNC_H
 
+#include "hermes/ADT/BitArray.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/AlignedStorage.h"
 #include "hermes/VM/ExpectedPageSize.h"
 #include "hermes/VM/HeapAlign.h"
-
-#include "llvh/Support/MathExtras.h"
 
 namespace hermes {
 namespace vm {
@@ -65,7 +64,7 @@ class MarkBitArrayNC {
   /// Finds the next bit in the MarkBitArray that is set to 1, starting at and
   /// including \p ind, the index from which to begin searching. Returns one
   /// past the last array index if there is not another marked bit.
-  size_t findNextMarkedBitFrom(size_t ind);
+  inline size_t findNextMarkedBitFrom(size_t ind);
 
 // Mangling scheme used by MSVC encode public/private into the name.
 // As a result, vanilla "ifdef public" trick leads to link errors.
@@ -85,36 +84,20 @@ class MarkBitArrayNC {
   /// of the mark bit array).
   inline char *base() const;
 
-  /// Log of bits in each value of bitArray().
-  static constexpr unsigned kLogBitsPerVal = sizeof(size_t) == 8 ? 6 : 5;
-  /// Number of bits in each value of bitArray(), which is the number of bits a
-  /// word can hold.
-  static constexpr unsigned kBitsPerVal = 1 << kLogBitsPerVal;
-
-  // Log of number of bits in a byte. Needed to calculate the log ratio of bytes
-  // in the parent region to bytes in the mark bit array.
-  static constexpr unsigned kLogBitsPerByte = 3;
-
   /// The number of bits representing the total number of heap-aligned addresses
-  /// in the AlignedStorage. This is different from kBitArraySize, since each
-  /// value in the bit array can fit an amount of valid indices equal to the
-  /// number of bits in a word.
-  static constexpr size_t kValidIndices =
-      AlignedStorage::size() >> LogHeapAlign;
+  /// in the AlignedStorage.
+  static constexpr size_t kNumBits = AlignedStorage::size() >> LogHeapAlign;
+  /// Bitset holding the contents of the mark bit array. Align it to the page
+  /// size.
+  BitArray<kNumBits, pagesize::kExpectedPageSize> bitArray_;
 
-  /// Number of elements in the bit array (values, not bits).  Round up to the
-  /// platform-specific maximum page size.
-  static constexpr size_t kValsPerMaxPage =
-      pagesize::kExpectedPageSize / sizeof(size_t);
-  static constexpr size_t kBitArraySize = llvh::alignTo<kValsPerMaxPage>(
-      ((kValidIndices - 1) >> kLogBitsPerVal) + 1);
-
-  /// The inline array holding the contents of the mark bit array.
-  size_t bitArray_[kBitArraySize]{};
+  static_assert(
+      sizeof(bitArray_) % pagesize::kExpectedPageSize == 0,
+      "Bit array does not meet alignment requirements!");
 };
 
 /* static */ constexpr size_t MarkBitArrayNC::size() {
-  return kValidIndices;
+  return kNumBits;
 }
 
 size_t MarkBitArrayNC::addressToIndex(const void *p) const {
@@ -126,7 +109,7 @@ size_t MarkBitArrayNC::addressToIndex(const void *p) const {
 }
 
 char *MarkBitArrayNC::indexToAddress(size_t ind) const {
-  assert(ind < kValidIndices && "ind must be within the index range");
+  assert(ind < kNumBits && "ind must be within the index range");
   char *res = base() + (ind << LogHeapAlign);
 
   assert(
@@ -136,26 +119,27 @@ char *MarkBitArrayNC::indexToAddress(size_t ind) const {
 }
 
 bool MarkBitArrayNC::at(size_t ind) const {
-  assert(
-      ind < kValidIndices &&
-      "precondition: ind must be within the index range");
-  return bitArray_[ind / kBitsPerVal] & (size_t)1 << (ind % kBitsPerVal);
+  assert(ind < kNumBits && "precondition: ind must be within the index range");
+  return bitArray_.at(ind);
 }
 
 void MarkBitArrayNC::mark(size_t ind) {
-  assert(
-      ind < kValidIndices &&
-      "precondition: ind must be within the index range");
-
-  bitArray_[ind / kBitsPerVal] |= (size_t)1 << (ind % kBitsPerVal);
+  assert(ind < kNumBits && "precondition: ind must be within the index range");
+  bitArray_.set(ind, true);
 }
 
 void MarkBitArrayNC::clear() {
-  ::memset(bitArray_, 0, sizeof(bitArray_));
+  bitArray_.reset();
 }
 
 void MarkBitArrayNC::markAll() {
-  ::memset(bitArray_, 0xff, sizeof(bitArray_));
+  bitArray_.set();
+}
+
+size_t MarkBitArrayNC::findNextMarkedBitFrom(size_t ind) {
+  assert(
+      ind < kNumBits && "precondition: ind is less than number valid indices");
+  return bitArray_.findNextSetBitFrom(ind);
 }
 
 char *MarkBitArrayNC::base() const {

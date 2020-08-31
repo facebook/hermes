@@ -204,6 +204,12 @@ class CodeBlock final
     return {bytecode_, functionHeader_.bytecodeSizeInBytes()};
   }
 
+  /// \return true when \p inst is in this code block, false otherwise.
+  bool contains(const inst::Inst *inst) const {
+    return begin() <= reinterpret_cast<const uint8_t *>(inst) &&
+        reinterpret_cast<const uint8_t *>(inst) < end();
+  }
+
   OptValue<uint32_t> getDebugSourceLocationsOffset() const;
 
   /// \return the source location of the given instruction offset \p offset in

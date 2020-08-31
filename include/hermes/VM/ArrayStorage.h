@@ -152,9 +152,24 @@ class ArrayStorage final
   }
 
   /// Pop the last element off the array and return it.
-  HermesValue pop_back() {
-    assert(size() > 0 && "Can't pop from empty ArrayStorage");
-    return data()[size_.fetch_sub(1, std::memory_order_relaxed) - 1];
+  HermesValue pop_back(Runtime *runtime) {
+    const size_type sz = size();
+    assert(sz > 0 && "Can't pop from empty ArrayStorage");
+    HermesValue val = data()[sz - 1];
+#ifdef HERMESVM_GC_HADES
+    // In Hades, a snapshot write barrier must be executed on the value that is
+    // conceptually being changed to null. The write doesn't need to occur, but
+    // it is the only correct way to use the write barrier.
+    data()[sz - 1].set(HermesValue::encodeEmptyValue(), &runtime->getHeap());
+#else
+    (void)runtime;
+#endif
+    // The background thread can't mutate size, so we don't need fetch_sub here.
+    // Relaxed is fine, because the GC doesn't care about the order of seeing
+    // the length and the individual elements, as long as illegal HermesValues
+    // aren't written there (which they won't be).
+    size_.store(sz - 1, std::memory_order_relaxed);
+    return val;
   }
 
   /// Ensure that the capacity of the array is at least \p capacity,

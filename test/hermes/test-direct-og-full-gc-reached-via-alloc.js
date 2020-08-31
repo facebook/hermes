@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -gc-alloc-young=false -gc-revert-to-yg-at-tti=true -gc-init-heap=12M %s
+// RUN: %hermes -O -gc-alloc-young=false -gc-revert-to-yg-at-tti=true -gc-init-heap=12M -gc-sanitize-handles=0 %s
 
 var rootArray = [];
 

@@ -73,10 +73,10 @@ TEST_F(IdentifierTableLargeHeapTest, LookupTest) {
   EXPECT_TRUE(table.getStringView(runtime, sa).equals(a));
   EXPECT_TRUE(table.getStringView(runtime, sb).equals(b));
   SmallU16String<8> tmp;
-  table.getStringView(runtime, sa).copyUTF16String(tmp);
+  table.getStringView(runtime, sa).appendUTF16String(tmp);
   EXPECT_EQ(a, tmp.arrayRef());
   tmp.clear();
-  table.getStringView(runtime, sb).copyUTF16String(tmp);
+  table.getStringView(runtime, sb).appendUTF16String(tmp);
   EXPECT_EQ(b, tmp.arrayRef());
 
   // Ensure allocations are aligned.

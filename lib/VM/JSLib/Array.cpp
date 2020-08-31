@@ -143,7 +143,6 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       arrayIsArray,
       1);
 
-#ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
   defineMethod(
       runtime,
       arrayPrototype,
@@ -295,7 +294,6 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
         arrayFrom,
         1);
   }
-#endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 
   return cons;
 }
@@ -1126,9 +1124,10 @@ class StandardSortModel : public SortModel {
     return ExecutionStatus::RETURNED;
   }
 
-  /// If compareFn isn't null, return compareFn(obj[a], obj[b]) < 0.
-  /// If compareFn is null, return obj[a] < obj[b].
-  CallResult<bool> less(uint32_t a, uint32_t b) override {
+  /// If compareFn isn't null, return compareFn(obj[a], obj[b])
+  /// If compareFn is null, return -1 if obj[a] < obj[b], 1 if obj[a] > obj[b],
+  /// 0 otherwise
+  CallResult<int> compare(uint32_t a, uint32_t b) override {
     // Ensure that we don't leave here with any new handles.
     GCScopeMarkerRAII gcMarker{gcScope_, gcMarker_};
 
@@ -1145,7 +1144,7 @@ class StandardSortModel : public SortModel {
     }
     if ((*propRes)->isEmpty()) {
       // Spec defines empty as greater than everything.
-      return false;
+      return 1;
     }
     aValue_ = std::move(*propRes);
     assert(!aValue_->isEmpty());
@@ -1160,18 +1159,18 @@ class StandardSortModel : public SortModel {
     }
     if ((*propRes)->isEmpty()) {
       // Spec defines empty as greater than everything.
-      return true;
+      return -1;
     }
     bValue_ = std::move(*propRes);
     assert(!bValue_->isEmpty());
 
     if (aValue_->isUndefined()) {
       // Spec defines undefined as greater than everything.
-      return false;
+      return 1;
     }
     if (bValue_->isUndefined()) {
       // Spec defines undefined as greater than everything.
-      return true;
+      return -1;
     }
 
     if (compareFn_) {
@@ -1190,9 +1189,11 @@ class StandardSortModel : public SortModel {
       if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      return intRes->getNumber() < 0;
+      // Cannot return intRes's value directly because it can be NaN
+      auto res = intRes->getNumber();
+      return (res < 0) ? -1 : (res > 0 ? 1 : 0);
     } else {
-      // Convert both arguments to strings and use the lessOp on them.
+      // Convert both arguments to strings and compare
       auto aValueRes = toString_RJS(runtime_, aValue_);
       if (LLVM_UNLIKELY(aValueRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
@@ -1205,7 +1206,7 @@ class StandardSortModel : public SortModel {
       }
       bValue_ = bValueRes->getHermesValue();
 
-      return lessOp_RJS(runtime_, aValue_, bValue_).getValue();
+      return aValue_->getString()->compare(bValue_->getString());
     }
   }
 };
@@ -1590,7 +1591,6 @@ arrayPrototypeIterator(void *ctx, Runtime *runtime, NativeArgs args) {
   return JSArrayIterator::create(runtime, obj, kind).getHermesValue();
 }
 
-#ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 CallResult<HermesValue>
 arrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
@@ -3556,7 +3556,6 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
   // 19. Return A.
   return A.getHermesValue();
 }
-#endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 
 } // namespace vm
 } // namespace hermes

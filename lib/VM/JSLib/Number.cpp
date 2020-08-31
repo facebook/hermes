@@ -115,7 +115,6 @@ Handle<JSObject> createNumberConstructor(Runtime *runtime) {
   setNumberValueProperty(
       Predefined::getSymbolID(Predefined::EPSILON),
       std::numeric_limits<double>::epsilon());
-#ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
   // ES6.0 20.1.2.6
   constexpr double kMaxSafeInteger = 9007199254740991;
   setNumberValueProperty(
@@ -123,7 +122,6 @@ Handle<JSObject> createNumberConstructor(Runtime *runtime) {
   // ES6.0 20.1.2.8
   setNumberValueProperty(
       Predefined::getSymbolID(Predefined::MIN_SAFE_INTEGER), -kMaxSafeInteger);
-#endif
 
   defineMethod(
       runtime,

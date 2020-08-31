@@ -34,7 +34,7 @@ TEST_F(StringViewTest, Construction) {
   EXPECT_EQ(ref1.data(), view1.castToChar16Ptr());
 
   // After copy, storage should now contain data.
-  view1.copyUTF16String(storage);
+  view1.appendUTF16String(storage);
   EXPECT_EQ(storage.size(), 7u);
 }
 

@@ -273,6 +273,12 @@ class GenGC final : public GCBase {
   void finalizeAll();
 
 #ifndef NDEBUG
+
+  /// See comment in GCBase.
+  bool calledByGC() const {
+    return inGC_.load(std::memory_order_seq_cst);
+  }
+
   /// Return true if \p ptr is within one of the virtual address ranges
   /// allocated for the heap. Not intended for use in normal production GC
   /// operation, debug mode only.
@@ -365,14 +371,15 @@ class GenGC final : public GCBase {
   gcheapsize_t bytesAllocatedSinceLastGC() const override;
 
   /// Shows statistics relevant to GenGC.
-  virtual void printStats(llvh::raw_ostream &os, bool trailingComma) override;
+  virtual void printStats(JSONEmitter &json) override;
 
   /// Add some GenGC-specific stats to the output.
   void dump(llvh::raw_ostream &os, bool verbose = false) override;
 
   // Stats maintainence.
 
-  /// For testing purposes the ability to iterate over all objects in the heap.
+  /// Iterate over all objects in the heap, and call \p callback on them.
+  /// \param callback A function to call on each found object.
   void forAllObjs(const std::function<void(GCCell *)> &callback);
 
 #ifndef NDEBUG
@@ -562,10 +569,7 @@ class GenGC final : public GCBase {
 
   /// Print stats (in JSON format) specific to full collections to an output
   /// stream.
-  /// \p os Is the output stream to print the stats to.
-  /// \p trailingComma determines whether the output includes a trailing comma.
-  void printFullCollectionStats(llvh::raw_ostream &os, bool trailingComma)
-      const;
+  void printFullCollectionStats(JSONEmitter &json) const;
 
   /// In debug, these increment the counts of the indicated kinds of
   /// write barriers.  First is for normal barriers.  In opt, they do nothing.
@@ -916,20 +920,6 @@ class GenGC final : public GCBase {
   FixedSizeValue lastAllocWasFixedSize_;
 #endif
 };
-
-// A special vmcast implementation used during GC.  At some points
-// during a mark-sweep-compact GC, the heap becomes invalid: GCCells
-// no longer have valid vtables.  When the heap is valid, we do the normal
-// checked cast that vmcast does, but when the heap is invalid, we
-// just do an unchecked cast.
-template <class ToType>
-ToType *vmcast_during_gc(GCCell *cell, GC *gc) {
-  if (!gc->inGC()) {
-    return llvh::cast<ToType>(cell);
-  } else {
-    return static_cast<ToType *>(cell);
-  }
-}
 
 template <bool fixedSize, HasFinalizer hasFinalizer>
 inline void *GenGC::alloc(uint32_t sz) {

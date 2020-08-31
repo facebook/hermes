@@ -1096,8 +1096,10 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
                 auto *isNotDoneBB = Builder.createBasicBlock(function);
 
                 // Check if "returnMethod" is undefined.
-                auto *returnMethod = Builder.createLoadPropertyInst(
-                    iteratorRecord.iterator, "return");
+                auto *returnMethod = genBuiltinCall(
+                    BuiltinMethod::HermesBuiltin_getMethod,
+                    {iteratorRecord.iterator,
+                     Builder.getLiteralString("return")});
                 Builder.createCompareBranchInst(
                     returnMethod,
                     Builder.getLiteralUndefined(),
@@ -1175,8 +1177,9 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
         auto *isNotDoneBB = Builder.createBasicBlock(function);
 
         // b.i. Let throw be ? GetMethod(iterator, "throw").
-        auto *throwMethod =
-            Builder.createLoadPropertyInst(iteratorRecord.iterator, "throw");
+        auto *throwMethod = genBuiltinCall(
+            BuiltinMethod::HermesBuiltin_getMethod,
+            {iteratorRecord.iterator, Builder.getLiteralString("throw")});
         Builder.createCompareBranchInst(
             throwMethod,
             Builder.getLiteralUndefined(),

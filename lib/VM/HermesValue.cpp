@@ -40,7 +40,7 @@ llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, HermesValue hv) {
       // Note contained StringPrimitive may be NULL.
       if (hv.getString()) {
         llvh::SmallVector<char16_t, 16> storage;
-        hv.getString()->copyUTF16String(storage);
+        hv.getString()->appendUTF16String(storage);
         std::string narrowStr;
         convertUTF16ToUTF8WithReplacements(narrowStr, storage);
         OS << " '";

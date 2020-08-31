@@ -507,7 +507,7 @@ bool JSError::appendFunctionNameAtIndex(
   if (!name || name->getStringLength() == 0)
     return false;
 
-  name->copyUTF16String(str);
+  name->appendUTF16String(str);
   return true;
 }
 
@@ -530,7 +530,7 @@ ExecutionStatus JSError::constructStackTraceString(
     // sufficient to tell what happened here.
     runtime->clearThrownValue();
   } else {
-    res->get()->copyUTF16String(stack);
+    res->get()->appendUTF16String(stack);
   }
 
   // Virtual offsets are computed by walking the list of bytecode functions. If

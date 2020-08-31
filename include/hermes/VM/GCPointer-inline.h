@@ -83,7 +83,7 @@ inline GCPointerBase::StorageType GCPointerBase::getStorageType() const {
 }
 
 inline GCPointerBase::StorageType &GCPointerBase::getLoc(GC *gc) {
-  assert(gc->inGC() && "Can only use GCPointer::getLoc within GC.");
+  assert(gc->calledByGC() && "Can only use GCPointer::getLoc within GC.");
   return ptr_;
 }
 

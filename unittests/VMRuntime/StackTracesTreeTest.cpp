@@ -8,7 +8,6 @@
 #include "hermes/VM/StackTracesTree-NoRuntime.h"
 
 #if defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) and \
-    !defined(HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION) and  \
     !defined(HERMESVM_GC_HADES)
 
 #include "TestHelpers.h"

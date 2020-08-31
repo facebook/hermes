@@ -187,23 +187,19 @@ void YoungGen::forAllObjs(const std::function<void(GCCell *)> &callback) {
   trueActiveSegment().forAllObjs(callback);
 }
 
-void YoungGen::printStats(llvh::raw_ostream &os, bool trailingComma) const {
+void YoungGen::printStats(JSONEmitter &json) const {
   double youngGenSurvivalPct = 0.0;
   if (cumPreBytes_ > 0) {
     youngGenSurvivalPct = 100.0 * static_cast<double>(cumPromotedBytes_) /
         static_cast<double>(cumPreBytes_);
   }
 
-  os << "\t\t\t\"ygMarkOldToYoungTime\": " << markOldToYoungSecs_ << ",\n"
-     << "\t\t\t\"ygMarkRootsTime\": " << markRootsSecs_ << ",\n"
-     << "\t\t\t\"ygScanTransitiveTime\": " << scanTransitiveSecs_ << ",\n"
-     << "\t\t\t\"ygUpdateWeakRefsTime\": " << updateWeakRefsSecs_ << ",\n"
-     << "\t\t\t\"ygFinalizersTime\": " << finalizersSecs_ << ",\n"
-     << "\t\t\t\"ygSurvivalPct\": " << youngGenSurvivalPct;
-  if (trailingComma) {
-    os << ",";
-  }
-  os << "\n";
+  json.emitKeyValue("ygMarkOldToYoungTime", markOldToYoungSecs_);
+  json.emitKeyValue("ygMarkRootsTime", markRootsSecs_);
+  json.emitKeyValue("ygScanTransitiveTime", scanTransitiveSecs_);
+  json.emitKeyValue("ygUpdateWeakRefsTime", updateWeakRefsSecs_);
+  json.emitKeyValue("ygFinalizersTime", finalizersSecs_);
+  json.emitKeyValue("ygSurvivalPct", youngGenSurvivalPct);
 }
 
 #ifndef NDEBUG

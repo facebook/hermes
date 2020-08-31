@@ -36,6 +36,22 @@ class JSRegExp final : public JSObject {
     return create(runtime, Handle<JSObject>::vmcast(&runtime->regExpPrototype));
   }
 
+  /// Initialize the internal properties of the RegExp such as the pattern and
+  /// lastIndex.
+  static void initializeProperties(
+      Handle<JSRegExp> selfHandle,
+      Runtime *runtime,
+      Handle<StringPrimitive> pattern);
+
+  /// Initialize a RegExp based on another RegExp \p otherHandle. If \p flags
+  /// matches the internal flags of the other RegExp, this lets us avoid
+  /// recompiling by just copying the bytecode.
+  static ExecutionStatus initialize(
+      Handle<JSRegExp> selfHandle,
+      Runtime *runtime,
+      Handle<JSRegExp> otherHandle,
+      Handle<StringPrimitive> flags);
+
   /// Perform validation of the pattern and flags and throw \c SyntaxError on
   /// error. If valid, set the source and flags to the given strings, and set
   /// the standard properties of the RegExp according to the flags. Note that

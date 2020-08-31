@@ -208,6 +208,11 @@ class MallocGC final : public GCBase {
   }
 
 #ifndef NDEBUG
+  /// See comment in GCBase.
+  bool calledByGC() const {
+    return inGC_.load(std::memory_order_seq_cst);
+  }
+
   /// \return true iff the pointer \p p is controlled by this GC.
   bool validPointer(const void *p) const;
 
@@ -260,7 +265,8 @@ class MallocGC final : public GCBase {
     return maxSize_;
   }
 
-  /// For testing purposes the ability to iterate over all objects in the heap.
+  /// Iterate over all objects in the heap, and call \p callback on them.
+  /// \param callback A function to call on each found object.
   void forAllObjs(const std::function<void(GCCell *)> &callback);
 
   /// @}
@@ -278,7 +284,7 @@ class MallocGC final : public GCBase {
   void freeWeakSlot(WeakRefSlot *slot);
 
   /// See \c GCBase::printStats.
-  void printStats(llvh::raw_ostream &os, bool trailingComma) override;
+  void printStats(JSONEmitter &json) override;
 
   /// Reset the statistics used for reporting GC information.
   void resetStats();
@@ -311,16 +317,6 @@ class MallocGC final : public GCBase {
   /// dead objects.
   void updateWeakReferences();
 };
-
-/// @name Free standing functions
-/// @{
-
-template <class ToType>
-ToType *vmcast_during_gc(GCCell *cell, GC *gc) {
-  return static_cast<ToType *>(cell);
-}
-
-/// @}
 
 /// @name Inline implementations
 /// @{

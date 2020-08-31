@@ -41,7 +41,7 @@ void TwineChar16::print(llvh::raw_ostream &os) const {
         break;
       case TwineChar16::StringPrimitiveKind: {
         SmallU16String<32> str;
-        child.stringPrimitive->copyUTF16String(str);
+        child.stringPrimitive->appendUTF16String(str);
         os << str;
         break;
       }
@@ -83,7 +83,7 @@ size_t TwineChar16::toChar16Str(char16_t *out, size_t maxlen) const {
             break;
           case TwineChar16::StringPrimitiveKind: {
             SmallU16String<32> str;
-            child.stringPrimitive->copyUTF16String(str);
+            child.stringPrimitive->appendUTF16String(str);
             std::copy(str.begin(), str.end(), out);
             break;
           }
@@ -137,7 +137,7 @@ void TwineChar16::toVector(llvh::SmallVectorImpl<char16_t> &out) const {
         out.append(child.char16Str, child.char16Str + size);
         break;
       case TwineChar16::StringPrimitiveKind:
-        child.stringPrimitive->copyUTF16String(out);
+        child.stringPrimitive->appendUTF16String(out);
         break;
       case TwineChar16::Int32Kind: {
         char buf[32];

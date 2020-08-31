@@ -220,7 +220,7 @@ var yieldStar = function*() {
 //CHECK-NEXT:  %32 = CondBranchInst %31, %BB9, %BB3
 //CHECK-NEXT:%BB6:
 //CHECK-NEXT:  %33 = CatchInst
-//CHECK-NEXT:  %34 = LoadPropertyInst %10, "throw" : string
+//CHECK-NEXT:  %34 = CallBuiltinInst [HermesBuiltin.getMethod] : number, undefined : undefined, %10, "throw" : string
 //CHECK-NEXT:  %35 = CompareBranchInst '===', %34, undefined : undefined, %BB10, %BB11
 //CHECK-NEXT:%BB7:
 //CHECK-NEXT:  %36 = CallBuiltinInst [HermesBuiltin.generatorSetDelegated] : number, undefined : undefined
@@ -230,7 +230,7 @@ var yieldStar = function*() {
 //CHECK-NEXT:  %39 = BranchInst %BB12
 //CHECK-NEXT:%BB12:
 //CHECK-NEXT:  %40 = TryEndInst
-//CHECK-NEXT:  %41 = LoadPropertyInst %10, "return" : string
+//CHECK-NEXT:  %41 = CallBuiltinInst [HermesBuiltin.getMethod] : number, undefined : undefined, %10, "return" : string
 //CHECK-NEXT:  %42 = CompareBranchInst '===', %41, undefined : undefined, %BB13, %BB14
 //CHECK-NEXT:%BB14:
 //CHECK-NEXT:  %43 = LoadStackInst %13
@@ -257,7 +257,7 @@ var yieldStar = function*() {
 //CHECK-NEXT:  %58 = LoadPropertyInst %56, "done" : string
 //CHECK-NEXT:  %59 = CondBranchInst %58, %BB19, %BB20
 //CHECK-NEXT:%BB10:
-//CHECK-NEXT:  %60 = LoadPropertyInst %10, "return" : string
+//CHECK-NEXT:  %60 = CallBuiltinInst [HermesBuiltin.getMethod] : number, undefined : undefined, %10, "return" : string
 //CHECK-NEXT:  %61 = CompareBranchInst '===', %60, undefined : undefined, %BB21, %BB22
 //CHECK-NEXT:%BB19:
 //CHECK-NEXT:  %62 = StoreStackInst %56, %16

@@ -445,11 +445,12 @@ transientObjectPutErrorMessage(Runtime *runtime, Handle<> base, SymbolID id) {
   StringView valueAsStringPrintable =
       StringPrimitive::createStringView(runtime, valueAsString);
 
-  SmallU16String<32> tmp;
+  SmallU16String<32> tmp1;
+  SmallU16String<32> tmp2;
   return runtime->raiseTypeError(
       TwineChar16("Cannot create property '") + propName + "' on " +
-      baseTypeAsString.getUTF16Ref(tmp) + " '" +
-      valueAsStringPrintable.getUTF16Ref(tmp) + "'");
+      baseTypeAsString.getUTF16Ref(tmp1) + " '" +
+      valueAsStringPrintable.getUTF16Ref(tmp2) + "'");
 }
 
 ExecutionStatus Interpreter::putByIdTransient_RJS(
@@ -713,7 +714,7 @@ static llvh::raw_ostream &operator<<(
   // If it is a string, dump the contents, truncated to 8 characters.
   if (dhv.hv.isString()) {
     SmallU16String<32> str;
-    dhv.hv.getString()->copyUTF16String(str);
+    dhv.hv.getString()->appendUTF16String(str);
     UTF16Ref ref = str.arrayRef();
     if (str.size() <= 8) {
       OS << ":'" << ref << "'";
@@ -1112,6 +1113,8 @@ tailCall:
 #define BEFORE_OP_CODE                                                       \
   {                                                                          \
     UPDATE_OPCODE_TIME_SPENT;                                                \
+    HERMES_SLOW_ASSERT(                                                      \
+        curCodeBlock->contains(ip) && "curCodeBlock must contain ip");       \
     HERMES_SLOW_ASSERT((printDebugInfo(curCodeBlock, frameRegs, ip), true)); \
     HERMES_SLOW_ASSERT(                                                      \
         gcScope.getHandleCountDbg() == KEEP_HANDLES &&                       \
@@ -3387,8 +3390,9 @@ tailCall:
                 (const uint8_t *)ip + ip->iSwitchImm.op2, sizeof(uint32_t));
 
             // Read the offset from the table.
-            const uint32_t *loc =
-                (const uint32_t *)tablestart + uintVal - ip->iSwitchImm.op4;
+            // Must be signed to account for backwards branching.
+            const int32_t *loc =
+                (const int32_t *)tablestart + uintVal - ip->iSwitchImm.op4;
 
             ip = IPADD(*loc);
             DISPATCH;

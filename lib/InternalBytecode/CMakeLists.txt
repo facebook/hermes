@@ -31,10 +31,6 @@ endif()
 
 set(js_lib_sources
   header.js
-  Number.js
-  Array.js
-  String.js
-  RegExp.js
   footer.js
 )
 

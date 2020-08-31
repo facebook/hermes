@@ -19,8 +19,9 @@ namespace {
 using namespace hermes::ESTree;
 
 class ESTreeJSONDumper {
-  JSONEmitter json_;
+  JSONEmitter &json_;
   SourceErrorManager *sm_{nullptr};
+  ESTreeDumpMode mode_;
 
   /// A collection of fields to ignore if they are empty (null or []).
   /// Mapping from node name to a set of ignored field names for that node.
@@ -28,10 +29,10 @@ class ESTreeJSONDumper {
 
  public:
   explicit ESTreeJSONDumper(
-      llvh::raw_ostream &os,
-      bool pretty,
-      SourceErrorManager *sm)
-      : json_(os, pretty), sm_(sm) {
+      JSONEmitter &json,
+      SourceErrorManager *sm,
+      ESTreeDumpMode mode)
+      : json_(json), sm_(sm), mode_(mode) {
 #define ESTREE_NODE_0_ARGS(NAME, ...)
 #define ESTREE_NODE_1_ARGS(NAME, ...)
 #define ESTREE_NODE_2_ARGS(NAME, ...)
@@ -48,7 +49,6 @@ class ESTreeJSONDumper {
 
   void doIt(NodePtr rootNode) {
     dumpNode(rootNode);
-    json_.endJSONL();
   }
 
  private:
@@ -217,18 +217,18 @@ class ESTreeJSONDumper {
     }
   }
 
-#define DUMP_KEY_VALUE_PAIR(PARENT, KEY, NODE)     \
-  do {                                             \
-    if (isEmpty(NODE)) {                           \
-      auto it = ignoredEmptyFields_.find(#PARENT); \
-      if (it != ignoredEmptyFields_.end()) {       \
-        if (it->second.count(KEY)) {               \
-          break;                                   \
-        }                                          \
-      }                                            \
-    }                                              \
-    json_.emitKey(KEY);                            \
-    dumpNode(NODE);                                \
+#define DUMP_KEY_VALUE_PAIR(PARENT, KEY, NODE)                 \
+  do {                                                         \
+    if (mode_ == ESTreeDumpMode::HideEmpty && isEmpty(NODE)) { \
+      auto it = ignoredEmptyFields_.find(#PARENT);             \
+      if (it != ignoredEmptyFields_.end()) {                   \
+        if (it->second.count(KEY)) {                           \
+          break;                                               \
+        }                                                      \
+      }                                                        \
+    }                                                          \
+    json_.emitKey(KEY);                                        \
+    dumpNode(NODE);                                            \
   } while (0);
 
 /// Declare helper functions to recursively visit the children of a node.
@@ -412,6 +412,7 @@ class ESTreeJSONDumper {
     DUMP_KEY_VALUE_PAIR(NAME, #ARG4NM, node->_##ARG4NM) \
     DUMP_KEY_VALUE_PAIR(NAME, #ARG5NM, node->_##ARG5NM) \
     DUMP_KEY_VALUE_PAIR(NAME, #ARG6NM, node->_##ARG6NM) \
+    DUMP_KEY_VALUE_PAIR(NAME, #ARG7NM, node->_##ARG7NM) \
   }
 
 #include "hermes/AST/ESTree.def"
@@ -425,8 +426,19 @@ void dumpESTreeJSON(
     llvh::raw_ostream &os,
     NodePtr rootNode,
     bool pretty,
+    ESTreeDumpMode mode,
     SourceErrorManager *sm) {
-  return ESTreeJSONDumper(os, pretty, sm).doIt(rootNode);
+  JSONEmitter json{os, pretty};
+  ESTreeJSONDumper(json, sm, mode).doIt(rootNode);
+  json.endJSONL();
+}
+
+void dumpESTreeJSON(
+    JSONEmitter &json,
+    NodePtr rootNode,
+    ESTreeDumpMode mode,
+    SourceErrorManager *sm) {
+  ESTreeJSONDumper(json, sm, mode).doIt(rootNode);
 }
 
 } // namespace hermes

@@ -62,7 +62,8 @@ type A = B<{x: number}>;
 // CHECK-NEXT:                   "optional": false,
 // CHECK-NEXT:                   "static": false,
 // CHECK-NEXT:                   "proto": false,
-// CHECK-NEXT:                   "variance": null
+// CHECK-NEXT:                   "variance": null,
+// CHECK-NEXT:                   "kind": "init"
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               ],
 // CHECK-NEXT:               "indexers": [],

@@ -32,7 +32,8 @@ class SortModel {
   virtual ExecutionStatus swap(uint32_t a, uint32_t b) = 0;
 
   // Compare elements at index a and at index b.
-  virtual CallResult<bool> less(uint32_t a, uint32_t b) = 0;
+  // Return negative if [a] < [b], positive if [a] > [b], 0 if [a] = [b]
+  virtual CallResult<int> compare(uint32_t a, uint32_t b) = 0;
 
   virtual ~SortModel() = 0;
 };

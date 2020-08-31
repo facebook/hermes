@@ -360,6 +360,12 @@ static opt<bool> DumpSourceLocation(
     desc("Print source location information in IR or AST dumps."),
     cat(CompilerCategory));
 
+static opt<bool> IncludeEmptyASTNodes(
+    "Xinclude-empty-ast-nodes",
+    desc("Print all AST nodes, including nodes that are hidden when empty."),
+    Hidden,
+    cat(CompilerCategory));
+
 static opt<bool> DumpBetweenPasses(
     "Xdump-between-passes",
     init(false),
@@ -818,6 +824,8 @@ ESTree::NodePtr parseJS(
         llvh::outs(),
         parsedAST,
         cl::PrettyJSON /* pretty */,
+        cl::IncludeEmptyASTNodes ? ESTreeDumpMode::DumpAll
+                                 : ESTreeDumpMode::HideEmpty,
         cl::DumpSourceLocation ? &context->getSourceErrorManager() : nullptr);
   }
 
@@ -830,6 +838,8 @@ ESTree::NodePtr parseJS(
         llvh::outs(),
         parsedAST,
         cl::PrettyJSON /* pretty */,
+        cl::IncludeEmptyASTNodes ? ESTreeDumpMode::DumpAll
+                                 : ESTreeDumpMode::HideEmpty,
         cl::DumpSourceLocation ? &context->getSourceErrorManager() : nullptr);
   }
 

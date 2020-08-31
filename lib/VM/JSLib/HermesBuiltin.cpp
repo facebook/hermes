@@ -205,6 +205,17 @@ hermesBuiltinEnsureObject(void *, Runtime *runtime, NativeArgs args) {
   return runtime->raiseTypeError(args.getArgHandle(1));
 }
 
+/// Perform the GetMethod() abstract operation.
+///
+/// \code
+///   HermesBuiltin.getMethod = function(object, property) {...}
+/// \endcode
+CallResult<HermesValue>
+hermesBuiltinGetMethod(void *, Runtime *runtime, NativeArgs args) {
+  return getMethod(runtime, args.getArgHandle(0), args.getArgHandle(1))
+      .toCallResultHermesValue();
+}
+
 /// Throw a type error with the argument as a message.
 ///
 /// \code
@@ -603,8 +614,12 @@ hermesBuiltinArraySpread(void *, Runtime *runtime, NativeArgs args) {
     //    ToString(ToUint32(nextIndex)), nextValue).
     // e. Assert: status is true.
     if (LLVM_UNLIKELY(
-            JSArray::putComputed_RJS(target, runtime, nextIndex, nextValue) ==
-            ExecutionStatus::EXCEPTION)) {
+            JSArray::defineOwnComputed(
+                target,
+                runtime,
+                nextIndex,
+                DefinePropertyFlags::getDefaultNewPropertyFlags(),
+                nextValue) == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
 
@@ -660,7 +675,11 @@ hermesBuiltinApply(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
 
   for (uint32_t i = 0; i < len; ++i) {
-    newFrame->getArgRef(i) = argArray->at(runtime, i);
+    assert(!argArray->at(runtime, i).isEmpty() && "arg array must be dense");
+    HermesValue arg = argArray->at(runtime, i);
+    newFrame->getArgRef(i) = LLVM_UNLIKELY(arg.isEmpty())
+        ? HermesValue::encodeUndefinedValue()
+        : arg;
   }
   if (isConstructor) {
     auto res = Callable::construct(fn, runtime, thisVal);
@@ -767,6 +786,8 @@ void createHermesBuiltins(
       P::ensureObject,
       hermesBuiltinEnsureObject,
       2);
+  defineInternMethod(
+      B::HermesBuiltin_getMethod, P::getMethod, hermesBuiltinGetMethod, 2);
   defineInternMethod(
       B::HermesBuiltin_throwTypeError,
       P::throwTypeError,

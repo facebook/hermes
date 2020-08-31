@@ -448,8 +448,7 @@ RuntimeModule::RuntimeModule(Runtime *runtime, WeakRefSlot *domainSlot)
 
 void RuntimeModule::serialize(Serializer &s) {
   // Serialize WeakRef<Domain> domain_.
-  s.writeRelocation(
-      domain_.unsafeGetSlot(s.getRuntime()->getHeap().weakRefMutex()));
+  s.writeRelocation(domain_.unsafeGetSlot());
   // Serialize std::vector<SymbolID> stringIDMap_.
   s.writeInt<size_t>(stringIDMap_.size());
   s.writeData(stringIDMap_.data(), stringIDMap_.size() * sizeof(SymbolID));

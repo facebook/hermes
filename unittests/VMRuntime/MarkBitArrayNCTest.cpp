@@ -57,7 +57,7 @@ MarkBitArrayNCTest::MarkBitArrayNCTest()
 TEST_F(MarkBitArrayNCTest, AddressToIndex) {
   // Expected indices in the mark bit array corresponding to the probe
   // addresses into the storage.
-  size_t lastIx = MarkBitArrayNC::kValidIndices - 1;
+  size_t lastIx = MarkBitArrayNC::kNumBits - 1;
   std::vector<size_t> indices{0, 1, 42, lastIx - 42, lastIx - 1, lastIx};
 
   for (unsigned i = 0; i < addrs.size(); i++) {
@@ -72,7 +72,7 @@ TEST_F(MarkBitArrayNCTest, AddressToIndex) {
 }
 
 TEST_F(MarkBitArrayNCTest, MarkGet) {
-  const size_t lastIx = MarkBitArrayNC::kValidIndices - 1;
+  const size_t lastIx = MarkBitArrayNC::kNumBits - 1;
 
   for (char *addr : addrs) {
     size_t ind = mba->addressToIndex(addr);
@@ -131,7 +131,7 @@ TEST_F(MarkBitArrayNCTest, NextMarkedBitImmediate) {
 }
 
 TEST_F(MarkBitArrayNCTest, NextMarkedBit) {
-  constexpr size_t FOUND_NONE = MarkBitArrayNC::kValidIndices;
+  constexpr size_t FOUND_NONE = MarkBitArrayNC::kNumBits;
 
   /// Empty case: No marked bits
   EXPECT_EQ(FOUND_NONE, mba->findNextMarkedBitFrom(0));

@@ -74,7 +74,7 @@ android {
         file("$aarDir/hermes.aar").renameTo("${rootProject.ext.outputDir}/hermes-release.aar")
       }
     }
-    tasks.named("transformNativeLibsWithMergeJniLibsForDebug").configure {
+    tasks.named("mergeDebugNativeLibs").configure {
       doLast { task ->
         copy {
           from(task)
@@ -82,7 +82,7 @@ android {
         }
       }
     }
-    tasks.named("transformNativeLibsWithMergeJniLibsForRelease").configure {
+    tasks.named("mergeReleaseNativeLibs").configure {
       doLast { task ->
         copy {
           from(task)

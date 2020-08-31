@@ -212,7 +212,6 @@ print(/(a)(?<!(.))/i);
 // CHECK-NEXT:   001b  Goal
 // CHECK-NEXT:   001c  Goal
 
-
 // There are 255 'a's here.
 print(/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaoverflow/);
 // CHECK:        20: /{{a{255}overflow}}/
@@ -272,3 +271,14 @@ print(/a|b|c|d|e|f/);
 // CHECK-NEXT:    0041  Jump32: 0x48
 // CHECK-NEXT:    0046  MatchChar8: 'f'
 // CHECK-NEXT:    0048  Goal
+
+print(/(abc|def)/);
+// CHECK:       27: /(abc|def)/
+// CHECK-NEXT:    Header: marked: 1 loops: 0 flags: 0 constraints: 4
+// CHECK-NEXT:    0000  BeginMarkedSubexpression: 1
+// CHECK-NEXT:    0003  Alternation: Target 0x14, constraints 4,4
+// CHECK-NEXT:    000a  MatchNChar8: 'abc'
+// CHECK-NEXT:    000f  Jump32: 0x19
+// CHECK-NEXT:    0014  MatchNChar8: 'def'
+// CHECK-NEXT:    0019  EndMarkedSubexpression: 1
+// CHECK-NEXT:    001c  Goal

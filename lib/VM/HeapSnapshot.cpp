@@ -285,7 +285,7 @@ void HeapSnapshot::emitMeta() {
 
   json_.emitKey("sample_fields");
   json_.openArray();
-  // TODO: Possibly populate this if Chrome complains
+  json_.emitValues({"timestamp_us", "last_assigned_id"});
   json_.closeArray(); // sample_fields
 
   json_.emitKey("location_fields");
@@ -442,7 +442,7 @@ std::string converter(int index) {
 }
 std::string converter(const StringPrimitive *str) {
   llvh::SmallVector<char16_t, 16> buf;
-  str->copyUTF16String(buf);
+  str->appendUTF16String(buf);
   std::string out;
   convertUTF16ToUTF8WithReplacements(out, UTF16Ref(buf));
   return out;

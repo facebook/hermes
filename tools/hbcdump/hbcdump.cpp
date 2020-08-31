@@ -33,8 +33,9 @@ using namespace hermes::hbc;
 using llvh::raw_fd_ostream;
 
 static llvh::cl::opt<std::string> InputFilename(
+    llvh::cl::Positional,
     llvh::cl::desc("input file"),
-    llvh::cl::Positional);
+    llvh::cl::Required);
 
 static llvh::cl::opt<std::string> DumpOutputFilename(
     "out",

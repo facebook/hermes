@@ -15,6 +15,7 @@
 #include "hermes/Public/GCTripwireContext.h"
 #include "hermes/Support/CheckedMalloc.h"
 #include "hermes/Support/OSCompat.h"
+#include "hermes/Support/SamplingThread.h"
 #include "hermes/Support/StatsAccumulator.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/CellKind.h"
@@ -118,6 +119,9 @@ class Deserializer;
 /// Return the upper bound of the heap's virtual address range (exclusive).
 ///   char *hiLim() const;
 ///
+/// Iterate over all objects in the heap.
+///   void forAllObjs(const std::function<void(GCCell *)> &callback);
+///
 /// In the "mark" functions below, Name is one of const char*, int,
 /// unsigned, or const StringPrimitive*:
 ///
@@ -132,9 +136,9 @@ class Deserializer;
 /// Mark a GCPointer<T>, which must be within the heap.
 ///   void mark(GCPointer<T> &ptr, Name name);
 ///
-/// Return true if a GC cycle is currently in progress.
-/// If false, all objects in the heap have a valid VTable.
-///   bool inGC() const;
+/// Return true if the GC is active and is calling into the VM.
+/// If true, some objects in the heap may have an invalid VTable pointer.
+///   bool calledByGC() const;
 ///
 /// Various forms of write barriers: these can have empty implementations
 /// for GCs that don't require them:
@@ -221,7 +225,7 @@ class GCBase {
     /// Prints any statistics maintained in the Runtime about GC to \p
     /// os.  At present, this means the breakdown of markRoots time by
     /// "phase" within markRoots.
-    virtual void printRuntimeGCStats(llvh::raw_ostream &os) const = 0;
+    virtual void printRuntimeGCStats(JSONEmitter &json) const = 0;
 
     /// \returns the approximate usage of memory external to the GC such as
     /// malloc by the roots of the object graph.
@@ -347,8 +351,9 @@ class GCBase {
   };
 #endif
 
-  /// When enabled, the AllocationLocationTracker attaches a stack-trace to
-  /// every allocation. When disabled old allocations continue to be tracked but
+  /// When enabled, every allocation gets an attached stack-trace and an
+  /// object ID, and the latter is periodically sampled by the GCs IDTracker.
+  /// When disabled old allocations continue to be tracked but
   /// no new allocations get a stack-trace.
   struct AllocationLocationTracker final {
     explicit inline AllocationLocationTracker(GCBase *gc);
@@ -366,12 +371,12 @@ class GCBase {
     inline StackTracesTreeNode *getStackTracesTreeNodeForAlloc(
         const void *ptr) const;
 
-    /// Enable location tracking.
-    inline void enable();
+    /// Enable location tracking and ID sampling.
+    void enable();
 
     /// Disable location tracking - turns \c newAlloc() into a no-op. Existing
     /// allocations continue to be tracked.
-    inline void disable();
+    void disable();
 
 #ifdef HERMESVM_SERIALIZE
     void serialize(Serializer &s) const;
@@ -383,8 +388,8 @@ class GCBase {
     /// data.
     llvh::DenseMap<const void *, StackTracesTreeNode *> stackMap_;
     /// We need access to the GCBase to collect the current stack when nodes are
-    /// allocated.
-    const GCBase *gc_;
+    /// allocated and to sample IDs for the allocation timeline.
+    GCBase *gc_;
     /// Indicates if tracking of new allocations is enabled.
     bool enabled_{false};
   };
@@ -434,6 +439,9 @@ class GCBase {
       }
     };
 
+    /// Thread to periodically sample the last assigned ID.
+    using Sampler = SamplingThread<HeapSnapshot::NodeID>;
+
     explicit IDTracker();
 
     /// Return true if IDs are being tracked.
@@ -481,6 +489,14 @@ class GCBase {
     template <typename F>
     inline void forEachID(F callback);
 
+    /// Begin periodically sampling the most recently assigned object ID.
+    /// Restarts sampling from scratch if it was already in progress.
+    void beginSamplingLastID(Sampler::Duration duration);
+
+    /// End sampling and return all collected samples. Returns empty values
+    /// if sampling was not in progress.
+    std::pair<Sampler::TimePoint, Sampler::Samples> endSamplingLastID();
+
 #ifdef HERMESVM_SERIALIZE
     /// Serialize this IDTracker to the output stream.
     void serialize(Serializer &s) const;
@@ -502,14 +518,14 @@ class GCBase {
     /// the Chrome snapshot viewer.
     static constexpr HeapSnapshot::NodeID kIDStep = 2;
 
-    /// The next available ID to assign to an object. Object IDs are not
+    /// The last ID assigned to a non-native object. Object IDs are not
     /// recycled so that snapshots don't confuse two objects with each other.
     /// NOTE: Need to ensure that this starts on an odd number, so check if
     /// the first non-reserved ID is odd, if not add one.
-    uint64_t nextID_{
-        static_cast<uint64_t>(ReservedObjectID::FirstNonReservedID) | 1};
-    /// The next available native ID to assign to a chunk of native memory.
-    HeapSnapshot::NodeID nextNativeID_{nextID_ + 1};
+    std::atomic<HeapSnapshot::NodeID> nextID_{
+        static_cast<HeapSnapshot::NodeID>(
+            ReservedObjectID::FirstNonReservedID) |
+        1};
 
     /// Map of object pointers to IDs. Only populated once the first heap
     /// snapshot is requested, or the first time the memory profiler is turned
@@ -524,6 +540,9 @@ class GCBase {
     /// Map of numeric values to IDs. Used to give numbers in the heap a unique
     /// node.
     llvh::DenseMap<double, HeapSnapshot::NodeID, DoubleComparator> numberIDMap_;
+
+    /// Thread that periodically samples the last assigned ID.
+    std::unique_ptr<Sampler> sampler_;
   };
 
 #ifndef NDEBUG
@@ -869,14 +888,19 @@ class GCBase {
 
   /// @}
 
+  /// If false, all reachable objects in the heap will have a dereference-able
+  /// VTable pointer which describes its type and size. If true, both reachable
+  /// objects and unreachable objects may not have dereference-able VTable
+  /// pointers, and any reads from JS heap memory may give strange results.
   bool inGC() const {
-#ifdef HERMESVM_GC_HADES
-    return true;
-#else
     // This is only used in asserts and debugging purposes, make it as strict
     // as possible.
     return inGC_.load(std::memory_order_seq_cst);
-#endif
+  }
+
+  bool isTrackingIDs() {
+    return getIDTracker().isTrackingIDs() ||
+        getAllocationLocationTracker().isEnabled();
   }
 
   IDTracker &getIDTracker() {
@@ -977,10 +1001,7 @@ class GCBase {
   }
 
   /// Print the cumulative statistics.
-  /// \p os The output stream to print the stats to.
-  /// \p trailingComma true if the end of the JSON string should have a trailing
-  /// comma (anticipating more objects added after it).
-  virtual void printStats(llvh::raw_ostream &os, bool trailingComma);
+  virtual void printStats(JSONEmitter &json);
 
   /// Record statistics from a single GC, which took \p wallTime seconds wall
   /// time and \p cpuTime seconds CPU time to run the gc and left the heap size
@@ -1230,7 +1251,7 @@ class WeakRefSlot {
     reset(v);
   }
 
-#if 1
+#ifndef HERMESVM_GC_HADES
   /// Tagged pointer implementation. Only supports HermesValues with object tag.
 
   bool hasValue() const {
@@ -1269,6 +1290,7 @@ class WeakRefSlot {
   /// Return true if this slot stores a non-null pointer to something. For any
   /// slot reachable by the mutator, that something is a GCCell.
   bool hasPointer() const {
+    assert(state() != Free && "Should never query a free WeakRef");
     return reinterpret_cast<uintptr_t>(tagged_) > Free;
   }
 
@@ -1328,6 +1350,10 @@ class WeakRefSlot {
   /// HermesValue implementation. Supports any value as referent.
 
   bool hasValue() const {
+    // An empty value means the pointer has been cleared, and a native value
+    // means it is free.
+    // Don't use state_ here since that can be modified concurrently by the GC.
+    assert(!value_.isNativeValue() && "Should never query a free WeakRef");
     return !value_.isEmpty();
   }
 
@@ -1409,6 +1435,9 @@ class WeakRefSlot {
   }
 #endif // HERMESVM_SERIALIZE
  private:
+  // value_ and state_ are read and written by different threads. We rely on
+  // them being independent words so that they can be used without
+  // synchronization.
   PinnedHermesValue value_;
   State state_;
 #endif
@@ -1425,19 +1454,11 @@ class WeakRefBase {
 
  public:
   /// \return true if the referenced object hasn't been freed.
-  /// \pre This must be called only while the WeakRef mutex is held, in case the
-  ///   GC mutates the slot.
-  bool isValid(const WeakRefMutex &mtx) const {
-    assert(
-        mtx &&
-        "Weak ref mutex must be held in order to access a weak ref's contents");
-    (void)mtx;
-    return slot_->hasValue();
+  bool isValid() const {
+    return isSlotValid(slot_);
   }
 
   /// \return true if the given slot stores a non-empty value.
-  /// \pre This must be called only while the WeakRef mutex is held, in case the
-  ///   GC mutates the slot.
   static bool isSlotValid(const WeakRefSlot *slot) {
     assert(slot && "slot must not be null");
     return slot->hasValue();
@@ -1445,20 +1466,10 @@ class WeakRefBase {
 
   /// \return a pointer to the slot used by this WeakRef.
   /// Used primarily when populating a DenseMap with WeakRef keys.
-  /// \pre The return value must be dereferenced only while the WeakRef mutex is
-  ///   held, in case the GC mutates the slot.
-  WeakRefSlot *unsafeGetSlot(const WeakRefMutex &mtx) {
-    assert(mtx && "WeakRefMutex must be held");
-    (void)mtx;
+  WeakRefSlot *unsafeGetSlot() {
     return slot_;
   }
-  const WeakRefSlot *unsafeGetSlot(const WeakRefMutex &mtx) const {
-    assert(mtx && "WeakRefMutex must be held");
-    (void)mtx;
-    return slot_;
-  }
-  /// Only for use in scenarios where a lock cannot be accessed.
-  const WeakRefSlot *unsafeGetSlotWithoutLock() const {
+  const WeakRefSlot *unsafeGetSlot() const {
     return slot_;
   }
 };
@@ -1570,23 +1581,23 @@ inline void GCBase::IDTracker::forEachID(F callback) {
 }
 
 inline HeapSnapshot::NodeID GCBase::IDTracker::nextObjectID() {
+  // fetch_add returns the old value.
+  uint64_t before = nextID_.fetch_add(kIDStep);
   // This must be unique for most features that rely on it, check for overflow.
   if (LLVM_UNLIKELY(
-          nextID_ >=
+          before >=
           std::numeric_limits<HeapSnapshot::NodeID>::max() - kIDStep)) {
     hermes_fatal("Ran out of object IDs");
   }
-  return nextID_ += kIDStep;
+  return before + kIDStep;
 }
 
 inline HeapSnapshot::NodeID GCBase::IDTracker::nextNativeID() {
-  // This must be unique for most features that rely on it, check for overflow.
-  if (LLVM_UNLIKELY(
-          nextNativeID_ >=
-          std::numeric_limits<HeapSnapshot::NodeID>::max() - kIDStep)) {
-    hermes_fatal("Ran out of native IDs");
-  }
-  return nextNativeID_ += kIDStep;
+  // Calling nextObjectID effectively allocates two new IDs, one even
+  // and one odd, returning the latter. For native objects, we want the former.
+  HeapSnapshot::NodeID id = nextObjectID();
+  assert(id > 0 && "nextObjectID should check for overflow");
+  return id - 1;
 }
 
 inline HeapSnapshot::NodeID GCBase::IDTracker::nextNumberID() {
@@ -1608,6 +1619,8 @@ inline void GCBase::AllocationLocationTracker::newAlloc(const void *ptr) {
   // in Runtime though.
   const auto *ip = gc_->gcCallbacks_->getCurrentIPSlow();
   if (enabled_) {
+    // This is stateful and causes the object to have an ID assigned.
+    gc_->getIDTracker().getObjectID(ptr);
     if (auto node = gc_->gcCallbacks_->getCurrentStackTracesTreeNode(ip)) {
       stackMap_.try_emplace(ptr, node);
     }
@@ -1642,14 +1655,6 @@ GCBase::AllocationLocationTracker::getStackTracesTreeNodeForAlloc(
     const void *ptr) const {
   auto mapIt = stackMap_.find(ptr);
   return mapIt == stackMap_.end() ? nullptr : mapIt->second;
-}
-
-inline void GCBase::AllocationLocationTracker::enable() {
-  enabled_ = true;
-}
-
-inline void GCBase::AllocationLocationTracker::disable() {
-  enabled_ = false;
 }
 
 } // namespace vm

@@ -229,6 +229,8 @@ bool SamplingProfiler::sampleStack(std::unique_lock<std::mutex> &uniqueLock) {
 }
 
 void SamplingProfiler::timerLoop() {
+  oscompat::set_thread_name("hermes-sampling-profiler");
+
   constexpr double kMeanMilliseconds = 10;
   constexpr double kStdDevMilliseconds = 5;
   std::random_device rd{};

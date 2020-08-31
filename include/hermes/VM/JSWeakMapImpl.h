@@ -61,8 +61,8 @@ struct WeakRefInfo {
   /// or both point to the same JSObject.
   /// \pre The weak ref mutex needs to be held before this function is called.
   static inline bool isEqual(const WeakRefKey &a, const WeakRefKey &b) {
-    const auto *aSlot = a.ref.unsafeGetSlotWithoutLock();
-    const auto *bSlot = b.ref.unsafeGetSlotWithoutLock();
+    const auto *aSlot = a.ref.unsafeGetSlot();
+    const auto *bSlot = b.ref.unsafeGetSlot();
     // Check if the keys are empty or tombstones, to avoid deferencing them.
     if (aSlot == bSlot) {
       return true;

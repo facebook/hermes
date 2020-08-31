@@ -886,10 +886,10 @@ static double parseESDate(StringView str) {
   /// whatever how long it is (i.e. until a space is encountered).
   /// e.g.
   ///     &str ="Garbage G MayG"
-  ///     scanStr(3); consumeSpaces();  // &str="G MayG", &tok="Gar"
-  ///     scanStr(3); consumeSpaces();  // &str="MayG"  , &tok="G M"
-  ///     scanStr(3); consumeSpaces();  // &str=""      , &tok="May"
-  ///     scanStr(3);                   // -> false
+  ///     scanStrAndSkipWord(3); consumeSpaces();  // &str="G MayG", &tok="Gar"
+  ///     scanStrAndSkipWord(3); consumeSpaces();  // &str="MayG"  , &tok="G M"
+  ///     scanStrAndSkipWord(3); consumeSpaces();  // &str=""      , &tok="May"
+  ///     scanStrAndSkipWord(3);                   // -> false
   /// \return true if successful, false if failed.
   auto scanStrAndSkipWord = [&str, &tok, &it](int32_t len) -> bool {
     if (it + len > str.end())
@@ -993,9 +993,9 @@ static double parseESDate(StringView str) {
     return nan;
 
   // Space and time zone.
+  consumeSpaces();
   if (it == end)
     goto complete;
-  consumeSpaces();
 
   struct KnownTZ {
     const char *tz;

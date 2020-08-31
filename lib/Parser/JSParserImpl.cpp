@@ -3167,6 +3167,10 @@ Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
       auto debugLoc = tok_->getStartLoc();
       ESTree::NodeList argList;
       SMLoc endLoc;
+
+      // parseArguments can result in another call to parseCallExpression
+      // without parsing another primary or declaration.
+      CHECK_RECURSION;
       if (!parseArguments(argList, endLoc))
         return None;
 

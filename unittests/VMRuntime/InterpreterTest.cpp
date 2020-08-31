@@ -417,7 +417,7 @@ TEST_F(InterpreterFunctionTest, TestToString) {
   BFG->emitRet(0);
   ASSERT_EQ(ExecutionStatus::RETURNED, run());
   SmallU16String<8> tmp;
-  getResultAsString()->copyUTF16String(tmp);
+  getResultAsString()->appendUTF16String(tmp);
   ASSERT_EQ(createUTF16Ref(u"false"), tmp.arrayRef());
 }
 

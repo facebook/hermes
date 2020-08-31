@@ -8,9 +8,12 @@
 #ifndef HERMES_VM_HADESGC_H
 #define HERMES_VM_HADESGC_H
 
+#include "hermes/ADT/BitArray.h"
 #include "hermes/Support/SlowAssert.h"
 #include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/GCBase.h"
+
+#include "llvh/Support/PointerLikeTypeTraits.h"
 
 #include <atomic>
 #include <condition_variable>
@@ -69,7 +72,7 @@ class HadesGC final : public GCBase {
   static constexpr uint32_t maxAllocationSize() {
     // The largest allocation allowable in Hades is the max size a single
     // segment supports.
-    return AlignedHeapSegment::maxSize();
+    return HeapSegment::maxSize();
   }
 
   /// \name GCBase overrides
@@ -79,7 +82,7 @@ class HadesGC final : public GCBase {
   void getHeapInfoWithMallocSize(HeapInfo &info) override;
   void getCrashManagerHeapInfo(CrashManager::HeapInformation &info) override;
   void createSnapshot(llvh::raw_ostream &os) override;
-  void printStats(llvh::raw_ostream &os, bool trailingComma) override;
+  void printStats(JSONEmitter &json) override;
 
   /// \}
 
@@ -169,6 +172,15 @@ class HadesGC final : public GCBase {
   /// \name Debug APIs
   /// \{
 
+  /// See comment in GCBase.
+  bool calledByGC() const {
+    // If the background thread is active, check if this thread matches the
+    // background thread. If this isn't called by the background thread, the
+    // inGC flag is sufficient.
+    return oldGenCollectionThread_.get_id() == std::this_thread::get_id() ||
+        inGC();
+  }
+
   /// Return true if \p ptr is currently pointing at valid accessable memory,
   /// allocated to an object.
   bool validPointer(const void *ptr) const;
@@ -192,7 +204,7 @@ class HadesGC final : public GCBase {
   /// \}
 #endif
 
-  class CollectionSection;
+  class CollectionStats;
   class EvacAcceptor;
   class MarkAcceptor;
   class MarkWeakRootsAcceptor;
@@ -242,10 +254,12 @@ class HadesGC final : public GCBase {
     using AlignedHeapSegment::contains;
     using AlignedHeapSegment::getCellMarkBit;
     using AlignedHeapSegment::level;
+    using AlignedHeapSegment::lowLim;
     using AlignedHeapSegment::markBitArray;
     using AlignedHeapSegment::maxSize;
     using AlignedHeapSegment::resetLevel;
     using AlignedHeapSegment::setCellMarkBit;
+    using AlignedHeapSegment::size;
     using AlignedHeapSegment::start;
     using AlignedHeapSegment::used;
 
@@ -279,10 +293,10 @@ class HadesGC final : public GCBase {
     void moveSegment(std::unique_ptr<HeapSegment> &&seg);
 
     /// Allocate into OG. Returns a pointer to the newly allocated space. That
-    /// space must be filled before releasing the oldGenMutex_.
+    /// space must be filled before releasing the gcMutex_.
     /// \return A non-null pointer to memory in the old gen that should have a
     ///   constructor run in immediately.
-    /// \pre oldGenMutex_ must be held before calling this function.
+    /// \pre gcMutex_ must be held before calling this function.
     /// \post This function either successfully allocates, or reports OOM.
     GCCell *alloc(uint32_t sz);
 
@@ -301,8 +315,12 @@ class HadesGC final : public GCBase {
     void transitionToFreelist(HeapSegment &seg);
 
     /// \return the total number of bytes that are in use by the OG section of
-    /// the JS heap.
+    /// the JS heap, excluding free list entries.
     uint64_t allocatedBytes() const;
+
+    /// \return the total number of bytes that are in use by the OG section of
+    /// the JS heap, including free list entries.
+    uint64_t size() const;
 
     class FreelistCell final : public VariableSizeRuntimeCell {
      private:
@@ -333,6 +351,11 @@ class HadesGC final : public GCBase {
     };
 
    private:
+    /// \return the index of the bucket in freelistBuckets_ corresponding to
+    /// \p size.
+    /// \post The returned index is less than kNumFreelistBuckets.
+    static uint32_t getFreelistBucket(uint32_t size);
+
     HadesGC *gc_;
     std::vector<std::unique_ptr<HeapSegment>> segments_;
 
@@ -341,12 +364,37 @@ class HadesGC final : public GCBase {
     /// bump-allocated segments.
     uint64_t allocatedBytes_{0};
 
-    /// There is one bucket for each size, in multiples of heapAlign.
-    static constexpr size_t kNumFreelistBuckets = 256;
-    static constexpr size_t kMinSizeForLargeBlock = kNumFreelistBuckets
-        << LogHeapAlign;
+    /// The freelist buckets are split into two sections. In the "small"
+    /// section, there is one bucket for each size, in multiples of heapAlign.
+    /// In the "large" section, there is a bucket for each power of 2. The
+    /// bucket for a large block is obtained by rounding down to the nearest
+    /// power of 2.
+
+    /// So for instance, with a heap alignment of 8 bytes, 256 small buckets,
+    /// and a maximum allocation size of 2^21, we would get:
+
+    /// |    Small section      |  Large section   |
+    /// +----+----+----+   +--------------+   +----+
+    /// | 0  | 8  | 16 |...|2040|2048|4096|...|2^21|
+    /// +----+----+----+   +--------------+   +----+
+
+    static constexpr size_t kLogNumSmallFreelistBuckets = 8;
+    static constexpr size_t kNumSmallFreelistBuckets = 1
+        << kLogNumSmallFreelistBuckets;
+    static constexpr size_t kLogMinSizeForLargeBlock =
+        kLogNumSmallFreelistBuckets + LogHeapAlign;
+    static constexpr size_t kMinSizeForLargeBlock = 1
+        << kLogMinSizeForLargeBlock;
+    static constexpr size_t kNumLargeFreelistBuckets =
+        llvh::detail::ConstantLog2<HeapSegment::maxSize()>::value -
+        kLogMinSizeForLargeBlock + 1;
+    static constexpr size_t kNumFreelistBuckets =
+        kNumSmallFreelistBuckets + kNumLargeFreelistBuckets;
+
     std::array<FreelistCell *, kNumFreelistBuckets> freelistBuckets_{};
-    FreelistCell *largeBlockFreelistHead_ = nullptr;
+    /// Keep track of which freelist buckets have valid elements to make search
+    /// fast.
+    BitArray<kNumFreelistBuckets> freelistBucketBitArray_;
 
     /// Searches the OG for a space to allocate memory into.
     /// \return A pointer to uninitialized memory that can be written into, null
@@ -361,23 +409,31 @@ class HadesGC final : public GCBase {
   };
 
  private:
+  /// The maximum number of bytes that the heap can hold. Once this amount has
+  /// been filled up, OOM will occur.
   const uint64_t maxHeapSize_;
+
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  /// This needs to be placed before youngGen_ and oldGen_, because those
+  /// members use numSegments_ as part of being constructed.
+  uint64_t numSegments_{0};
+#endif
 
   /// Keeps the storage provider alive until after the GC is fully destructed.
   std::shared_ptr<StorageProvider> provider_;
 
   /// youngGen is a bump-pointer space, so it can re-use AlignedHeapSegment.
-  /// Protected by oldGenMutex_.
+  /// Protected by gcMutex_.
   std::unique_ptr<HeapSegment> youngGen_;
 
   /// List of cells in YG that have finalizers. Iterate through this to clean
   /// them out.
-  /// Protected by oldGenMutex_.
+  /// Protected by gcMutex_.
   std::vector<GCCell *> youngGenFinalizables_;
 
   /// oldGen_ is a free list space, so it needs a different segment
   /// representation.
-  /// Protected by oldGenMutex_.
+  /// Protected by gcMutex_.
   OldGen oldGen_{this};
 
   /// weakPointers_ is a list of all the weak pointers in the system. They are
@@ -387,18 +443,19 @@ class HadesGC final : public GCBase {
   std::deque<WeakRefSlot> weakPointers_;
 
   /// Whoever holds this lock is permitted to modify data structures around the
-  /// OG. This includes mark bits, free lists, etc.
-  Mutex oldGenMutex_;
+  /// GC. This includes mark bits, free lists, etc.
+  Mutex gcMutex_;
 
   enum class Phase : uint8_t { None, Mark, WeakMapScan, Sweep };
 
   /// Represents the current phase the concurrent GC is in. The main difference
   /// between phases is their effect on read and write barriers.
-  /// Not protected by a lock and should be read/written atomically.
-  std::atomic<Phase> concurrentPhase_{Phase::None};
+  /// Can be read with memory_order_acquire, or after acquiring gcMutex_ can
+  /// be read as relaxed. Should only be stored to if gcMutex_ is acquired.
+  AtomicIfConcurrentGC<Phase> concurrentPhase_{Phase::None};
 
   /// Used by the write barrier to add items to the worklist.
-  /// Protected by oldGenMutex_.
+  /// Protected by gcMutex_.
   std::unique_ptr<MarkAcceptor> oldGenMarker_;
 
   /// This is the background thread that does marking and sweeping concurrently
@@ -407,13 +464,13 @@ class HadesGC final : public GCBase {
   /// that the STW pause handling is done correctly.
   std::thread oldGenCollectionThread_;
 
-  /// This mutex, condition variable, and bool are all used for the mutator to
+  /// This condition variable and bool are used for the mutator to
   /// signal the background marking thread when it's safe to try and complete.
   /// Thus, the GC thread can wait for worldStopped_ to be true to
   /// "stop the world" -- for example, to drain the final parts of the mark
   /// stack.
-  Mutex stopTheWorldMutex_;
   std::condition_variable stopTheWorldCondVar_;
+  /// The boolean variables are protected by gcMutex_.
   bool worldStopped_{false};
   bool stopTheWorldRequested_{false};
 
@@ -422,6 +479,14 @@ class HadesGC final : public GCBase {
 
   /// If true, turn off promoteYGToOG_ as soon as the first OG GC occurs.
   bool revertToYGAtTTI_;
+
+  /// A collection section used to track the size of OG before and after an OG
+  /// collection, as well as the time an OG collection takes.
+  std::unique_ptr<CollectionStats> ogCollectionStats_;
+
+  /// Pointer to the first free weak reference slot. Free weak refs are chained
+  /// together in a linked list.
+  WeakRefSlot *firstFreeWeak_{nullptr};
 
   /// The main entrypoint for all allocations.
   /// \param sz The size of allocation requested. This might be rounded up to
@@ -443,9 +508,11 @@ class HadesGC final : public GCBase {
 
   /// Perform a YG garbage collection. All live objects in YG will be evacuated
   /// to the OG.
+  /// \param forceOldGenCollection If true, always start an old gen collection
+  ///   if one is not already active.
   /// \post The YG is completely empty, and all bytes are available for new
   ///   allocations.
-  void youngGenCollection();
+  void youngGenCollection(bool forceOldGenCollection);
 
   /// In the "no GC before TTI" mode, move the Young Gen heap segment to the
   /// Old Gen without scanning for garbage.
@@ -459,8 +526,8 @@ class HadesGC final : public GCBase {
   /// If there's an OG collection going on, wait for it to complete. This
   /// function is synchronous and will block the caller if the GC background
   /// thread is still running.
-  /// \pre The oldGenMutex_ must be held before entering this function.
-  /// \post The oldGenMutex_ will be held when the function exits, but it might
+  /// \pre The gcMutex_ must be held before entering this function.
+  /// \post The gcMutex_ will be held when the function exits, but it might
   ///   have been unlocked and then re-locked.
   void waitForCollectionToFinish();
 
@@ -468,8 +535,17 @@ class HadesGC final : public GCBase {
   /// mutator.
   void oldGenCollectionWorker();
 
+  /// For 32-bit systems, Hades runs on a single thread, interleaving OG work
+  /// with YG collections. This function completes that OG collection.
+  /// \pre kConcurrentGC must be false.
+  void completeNonConcurrentOldGenCollection();
+
   /// Finish the marking process. This requires a STW pause in order to do a
   /// final marking worklist drain, and to update weak roots.
+  /// \pre Both gcMutex_ and weakRefMutex_ are held before entering.
+  void completeMarkingAssumeLocks();
+
+  /// Same as \c completeMarkingAssumeLocks, but acquires necessary locks first.
   void completeMarking();
 
   /// As part of finishing the marking process, iterate through all of YG to
@@ -498,7 +574,7 @@ class HadesGC final : public GCBase {
   /// Finalize all objects in YG that have finalizers.
   void finalizeYoungGenObjects();
 
-  /// Run the finalizers for all heap objects, if the oldGenMutex_ is already
+  /// Run the finalizers for all heap objects, if the gcMutex_ is already
   /// locked.
   void finalizeAllLocked();
 
@@ -534,12 +610,9 @@ class HadesGC final : public GCBase {
   /// \return true if the pointer is in the old gen.
   bool inOldGen(const void *p) const;
 
-  /// Give the background marking thread a chance to complete marking and finish
-  /// the OG collection.
-  void yieldToBackgroundThread();
-
-  /// Given a potentially-debug mutex \p mtx, get the inner std::mutex it uses.
-  static std::mutex &innerMutex(Mutex &mtx);
+  /// Give the background GC a chance to complete marking and finish the OG
+  /// collection.
+  void yieldToOldGen();
 
 #ifdef HERMES_SLOW_DEBUG
   /// Checks the heap to make sure all cells are valid.

@@ -39,9 +39,17 @@ bool UTF16Stream::refill() {
   auto out = storage_.begin();
 
   // Fast case for any ASCII prefix...
-  while (out != end_ && utf8Begin_ != utf8End_ && *utf8Begin_ < 128) {
-    *out++ = *utf8Begin_++;
+  {
+    int len = std::min(end_ - cur_, utf8End_ - utf8Begin_);
+    int index = 0;
+    while (index < len && utf8Begin_[index] < 128) {
+      out[index] = utf8Begin_[index];
+      ++index;
+    }
+    utf8Begin_ += index;
+    out += index;
   }
+
   // ...and call the library for any non-ASCII remainder. Conversion always
   // stops at a code point boundary.
   llvh::ConversionResult cRes = ConvertUTF8toUTF16(

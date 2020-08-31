@@ -1055,7 +1055,7 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
     ASSERT_NE(val, ExecutionStatus::EXCEPTION)
         << "Exception executing the call on Date()";
     SmallU16String<32> tmp;
-    val->get().getString()->copyUTF16String(tmp);
+    val->get().getString()->appendUTF16String(tmp);
     std::u16string str(tmp.begin(), tmp.end());
     EXPECT_EQ(str, dateAsFuncU16);
   }

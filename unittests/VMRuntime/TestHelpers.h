@@ -285,6 +285,12 @@ struct DummyRuntime final : public HandleRootOwner,
   static std::unique_ptr<StorageProvider> defaultProvider();
 
   ~DummyRuntime() override {
+#ifndef NDEBUG
+    gc.getIDTracker().forEachID(
+        [this](const void *mem, HeapSnapshot::NodeID id) {
+          EXPECT_TRUE(gc.validPointer(mem));
+        });
+#endif
     gc.finalizeAll();
   }
 
@@ -323,7 +329,7 @@ struct DummyRuntime final : public HandleRootOwner,
   }
 #endif
 
-  void printRuntimeGCStats(llvh::raw_ostream &) const override {}
+  void printRuntimeGCStats(JSONEmitter &) const override {}
 
   void visitIdentifiers(
       const std::function<void(UTF16Ref, uint32_t)> &acceptor) override {

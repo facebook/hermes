@@ -170,9 +170,7 @@ class YoungGen : public GCGeneration {
 
   /// Print stats (in JSON format) specific to young-gen collection to an output
   /// stream.
-  /// \p os Is the output stream to print the stats to.
-  /// \p trailingComma determines whether the output includes a trailing comma.
-  void printStats(llvh::raw_ostream &os, bool trailingComma) const;
+  void printStats(JSONEmitter &json) const;
 
   /// Fixup the tracked IDs of objects that were moved or deleted.
   void updateIDTracker();

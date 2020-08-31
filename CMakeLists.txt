@@ -67,7 +67,7 @@ set(CMAKE_OSX_SYSROOT ${HERMES_APPLE_TARGET_PLATFORM})
 # - npm/package.json
 # - hermes.podspec
 project(Hermes
-        VERSION 0.5.0
+        VERSION 0.6.0
         LANGUAGES C CXX)
 # Optional suffix like "-rc3"
 set(VERSION_SUFFIX "")
@@ -139,6 +139,10 @@ set(HERMES_ENABLE_ADDRESS_SANITIZER OFF CACHE BOOL
 set(HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER OFF CACHE BOOL
   "Enable -fsanitize=undefined")
 
+# Enable Thread Sanitizer
+set(HERMES_ENABLE_THREAD_SANITIZER OFF CACHE BOOL
+  "Enable -fsanitize=thread")
+
 set(HERMES_ENABLE_FUZZING OFF CACHE BOOL
   "Enable fuzzing")
 
@@ -180,9 +184,6 @@ set(HERMESVM_PLATFORM_LOGGING OFF CACHE BOOL
 
 set(HERMESVM_JIT OFF CACHE BOOL
   "Enable the JIT")
-
-set(HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION OFF CACHE BOOL
-  "Enable using JS to implement parts of Hermes")
 
 set(HERMESVM_JIT_DISASSEMBLER OFF CACHE BOOL
   "Enable the JIT disassembler")
@@ -344,6 +345,9 @@ if (HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER)
     # Do not enable the vptr sanitizer, as it requires RTTI.
     append("-fsanitize=undefined -fno-sanitize=vptr -fno-sanitize-recover=undefined" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
 endif()
+if (HERMES_ENABLE_THREAD_SANITIZER)
+    append("-fsanitize=thread" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
+endif()
 if(HERMES_FACEBOOK_BUILD)
     add_definitions(-DHERMES_FACEBOOK_BUILD)
 endif()
@@ -358,9 +362,6 @@ if(HERMESVM_JIT)
 endif()
 if(HERMESVM_JIT_DISASSEMBLER)
   add_definitions(-DHERMESVM_JIT_DISASSEMBLER)
-endif()
-if(HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION)
-  add_definitions(-DHERMESVM_USE_JS_LIBRARY_IMPLEMENTATION)
 endif()
 if (NOT (ANDROID_LINUX_PERF_PATH STREQUAL ""))
   add_definitions(-DANDROID_LINUX_PERF_PATH="${ANDROID_LINUX_PERF_PATH}")
@@ -647,7 +648,6 @@ if(HERMES_ENABLE_TEST_SUITE)
     exception_on_oom_enabled=${HERMESVM_EXCEPTION_ON_OOM}
     serialize_enabled=${HERMESVM_SERIALIZE}
     profiler=${HERMES_PROFILER_MODE_IN_LIT_TEST}
-    use_js_library_implementation=${HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION}
     gc=${HERMESVM_GCKIND}
     ubsan=${HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER}
     )

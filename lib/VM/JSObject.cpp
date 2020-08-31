@@ -1173,7 +1173,7 @@ CallResult<PseudoHandle<>> JSObject::getComputedWithReceiver_RJS(
   } else if (desc.flags.hostObject) {
     SymbolID id{};
     LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, id);
-    auto propRes = vmcast<HostObject>(selfHandle.get())->get(id);
+    auto propRes = vmcast<HostObject>(propObj.get())->get(id);
     if (propRes == ExecutionStatus::EXCEPTION)
       return ExecutionStatus::EXCEPTION;
     return createPseudoHandle(*propRes);
@@ -3071,6 +3071,12 @@ ExecutionStatus setProtoClasses(
     if (!head->shouldCacheForIn(runtime)) {
       arr->clear(runtime);
       return ExecutionStatus::RETURNED;
+    }
+    if (JSObject::Helper::flags(*head).lazyObject) {
+      // Ensure all properties have been initialized before caching the hidden
+      // class. Not doing this will result in changes to the hidden class
+      // when getOwnPropertyKeys is called later.
+      JSObject::initializeLazyObject(runtime, head);
     }
     clazz = HermesValue::encodeObjectValue(head->getClass(runtime));
     if (LLVM_UNLIKELY(
