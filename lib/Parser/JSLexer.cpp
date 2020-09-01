@@ -520,7 +520,9 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
             LLVM_UNLIKELY(grammarContext == GrammarContext::Flow)) {
           scanIdentifierFastPathInContext(curCharPtr_, grammarContext);
         } else {
+          curCharPtr_ += 1;
           errorRange(token_.getStartLoc(), "unrecognized character '@'");
+          continue;
         }
         break;
 

@@ -998,6 +998,39 @@ TEST(JSLexerTest, ConsumeBadBracedCodePoint) {
   ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
 }
 
+TEST(JSLexerTest, AtSignTest) {
+  {
+    JSLexer::Allocator alloc;
+    SourceErrorManager sm;
+    DiagContext diag(sm);
+    sm.setErrorLimit(10);
+    JSLexer lex("`${{}@", sm, alloc);
+
+    ASSERT_EQ(TokenKind::template_head, lex.advance()->getKind());
+
+    ASSERT_EQ(TokenKind::l_brace, lex.advance()->getKind());
+    ASSERT_EQ(TokenKind::r_brace, lex.advance()->getKind());
+
+    ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+    EXPECT_EQ(1, sm.getErrorCount());
+  }
+  {
+    JSLexer::Allocator alloc;
+    SourceErrorManager sm;
+    DiagContext diag(sm);
+    sm.setErrorLimit(1);
+    JSLexer lex("`${{}@", sm, alloc);
+
+    ASSERT_EQ(TokenKind::template_head, lex.advance()->getKind());
+
+    ASSERT_EQ(TokenKind::l_brace, lex.advance()->getKind());
+    ASSERT_EQ(TokenKind::r_brace, lex.advance()->getKind());
+
+    ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+    EXPECT_EQ(1, sm.getErrorCount());
+  }
+}
+
 TEST(JSLexerTest, JSXTest) {
   JSLexer::Allocator alloc;
   SourceErrorManager sm;
