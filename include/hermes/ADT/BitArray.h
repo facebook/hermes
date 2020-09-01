@@ -14,7 +14,6 @@
 #include <bitset>
 
 namespace hermes {
-namespace vm {
 
 /// This serves as a replacement for std::bitset that provides fast search and
 /// customisable alignment. The storage is fixed size and inline, unlike
@@ -109,7 +108,6 @@ class BitArray {
     return idx;
   }
 };
-} // namespace vm
 } // namespace hermes
 
 #endif // HERMES_ADT_BITARRAY_H
