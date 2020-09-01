@@ -137,8 +137,6 @@ void MarkBitArrayNC::markAll() {
 }
 
 size_t MarkBitArrayNC::findNextMarkedBitFrom(size_t ind) {
-  assert(
-      ind < kNumBits && "precondition: ind is less than number valid indices");
   return bitArray_.findNextSetBitFrom(ind);
 }
 
