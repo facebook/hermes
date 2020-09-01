@@ -1124,10 +1124,9 @@ class StandardSortModel : public SortModel {
     return ExecutionStatus::RETURNED;
   }
 
-  /// If compareFn isn't null, return compareFn(obj[a], obj[b])
-  /// If compareFn is null, return -1 if obj[a] < obj[b], 1 if obj[a] > obj[b],
-  /// 0 otherwise
-  CallResult<int> compare(uint32_t a, uint32_t b) override {
+  /// If compareFn isn't null, return compareFn(obj[a], obj[b]) < 0.
+  /// If compareFn is null, return obj[a] < obj[b].
+  CallResult<bool> less(uint32_t a, uint32_t b) override {
     // Ensure that we don't leave here with any new handles.
     GCScopeMarkerRAII gcMarker{gcScope_, gcMarker_};
 
@@ -1144,7 +1143,7 @@ class StandardSortModel : public SortModel {
     }
     if ((*propRes)->isEmpty()) {
       // Spec defines empty as greater than everything.
-      return 1;
+      return false;
     }
     aValue_ = std::move(*propRes);
     assert(!aValue_->isEmpty());
@@ -1159,18 +1158,18 @@ class StandardSortModel : public SortModel {
     }
     if ((*propRes)->isEmpty()) {
       // Spec defines empty as greater than everything.
-      return -1;
+      return true;
     }
     bValue_ = std::move(*propRes);
     assert(!bValue_->isEmpty());
 
     if (aValue_->isUndefined()) {
       // Spec defines undefined as greater than everything.
-      return 1;
+      return false;
     }
     if (bValue_->isUndefined()) {
       // Spec defines undefined as greater than everything.
-      return -1;
+      return true;
     }
 
     if (compareFn_) {
@@ -1189,11 +1188,9 @@ class StandardSortModel : public SortModel {
       if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      // Cannot return intRes's value directly because it can be NaN
-      auto res = intRes->getNumber();
-      return (res < 0) ? -1 : (res > 0 ? 1 : 0);
+      return intRes->getNumber() < 0;
     } else {
-      // Convert both arguments to strings and compare
+      // Convert both arguments to strings and use the lessOp on them.
       auto aValueRes = toString_RJS(runtime_, aValue_);
       if (LLVM_UNLIKELY(aValueRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
@@ -1206,7 +1203,7 @@ class StandardSortModel : public SortModel {
       }
       bValue_ = bValueRes->getHermesValue();
 
-      return aValue_->getString()->compare(bValue_->getString());
+      return lessOp_RJS(runtime_, aValue_, bValue_).getValue();
     }
   }
 };

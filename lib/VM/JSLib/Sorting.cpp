@@ -11,9 +11,7 @@
 
 #include "llvh/Support/MathExtras.h"
 
-#include <algorithm>
 #include <cstdio>
-#include <vector>
 
 namespace hermes {
 namespace vm {
@@ -22,37 +20,11 @@ SortModel::~SortModel(){};
 
 namespace {
 
-/// Helper function to make sort algorithm stable
-/// If [i] < [j], return true
-/// If [j] < [i], return false
-/// If [i] == [j], compare their original index
-CallResult<bool>
-_less(SortModel *sm, std::vector<uint32_t> &index, uint32_t i, uint32_t j) {
-  auto res = sm->compare(i, j);
-  if (res == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  return (*res != 0) ? (*res < 0) : (index[i] < index[j]);
-}
-
-/// Helper function to swap both items and their indices
-ExecutionStatus
-_swap(SortModel *sm, std::vector<uint32_t> &index, uint32_t i, uint32_t j) {
-  if (sm->swap(i, j) == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  std::swap(index[i], index[j]);
-  return ExecutionStatus::RETURNED;
-}
-
-/// Helper function for heapSort
-/// @param base the beginning of the logical array
-LLVM_NODISCARD ExecutionStatus heapFixDown(
-    SortModel *sm,
-    std::vector<uint32_t> &index,
-    uint32_t base,
-    uint32_t begin,
-    uint32_t end) {
+/**
+ * @param base the beginning of the logical array
+ */
+LLVM_NODISCARD ExecutionStatus
+heapFixDown(SortModel *sm, uint32_t base, uint32_t begin, uint32_t end) {
   CallResult<bool> res{false};
   if (LLVM_UNLIKELY(end - begin <= 1)) {
     return ExecutionStatus::RETURNED;
@@ -65,7 +37,7 @@ LLVM_NODISCARD ExecutionStatus heapFixDown(
     uint32_t j = (i - base) * 2 + 1 + base;
     // Find the greater of the two children
     if (j + 1 < end) {
-      res = _less(sm, index, j, j + 1);
+      res = sm->less(j, j + 1);
       if (res == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -74,7 +46,7 @@ LLVM_NODISCARD ExecutionStatus heapFixDown(
       }
     }
     // If the child is greater than us, exchange places
-    res = _less(sm, index, i, j);
+    res = sm->less(i, j);
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -82,7 +54,7 @@ LLVM_NODISCARD ExecutionStatus heapFixDown(
       break;
     }
 
-    if (_swap(sm, index, i, j) == ExecutionStatus::EXCEPTION) {
+    if (sm->swap(i, j) == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
     i = j;
@@ -91,11 +63,7 @@ LLVM_NODISCARD ExecutionStatus heapFixDown(
   return ExecutionStatus::RETURNED;
 }
 
-ExecutionStatus heapSort(
-    SortModel *sm,
-    std::vector<uint32_t> &index,
-    uint32_t begin,
-    uint32_t end) {
+ExecutionStatus heapSort(SortModel *sm, uint32_t begin, uint32_t end) {
   if (LLVM_UNLIKELY(end - begin <= 1)) {
     return ExecutionStatus::RETURNED;
   }
@@ -103,19 +71,17 @@ ExecutionStatus heapSort(
   // "heapify"
   uint32_t start = (end - begin - 2) / 2 + begin;
   do {
-    if (heapFixDown(sm, index, begin, start, end) ==
-        ExecutionStatus::EXCEPTION) {
+    if (heapFixDown(sm, begin, start, end) == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
   } while (start-- != begin);
 
   while (end - begin > 1) {
     --end;
-    if (_swap(sm, index, begin, end) == ExecutionStatus::EXCEPTION) {
+    if (sm->swap(begin, end) == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (heapFixDown(sm, index, begin, begin, end) ==
-        ExecutionStatus::EXCEPTION) {
+    if (heapFixDown(sm, begin, begin, end) == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
   }
@@ -123,11 +89,7 @@ ExecutionStatus heapSort(
   return ExecutionStatus::RETURNED;
 }
 
-ExecutionStatus insertionSort(
-    SortModel *sm,
-    std::vector<uint32_t> &index,
-    uint32_t begin,
-    uint32_t end) {
+ExecutionStatus insertionSort(SortModel *sm, uint32_t begin, uint32_t end) {
   CallResult<bool> res{false};
   if (begin == end) {
     return ExecutionStatus::RETURNED;
@@ -135,14 +97,14 @@ ExecutionStatus insertionSort(
 
   for (uint32_t i = begin + 1; i != end; ++i) {
     for (uint32_t j = i; j != begin; --j) {
-      res = _less(sm, index, j, j - 1);
+      res = sm->less(j, j - 1);
       if (res == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
       if (!*res) {
         break;
       }
-      if (_swap(sm, index, j, j - 1) == ExecutionStatus::EXCEPTION) {
+      if (sm->swap(j, j - 1) == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
     }
@@ -150,17 +112,13 @@ ExecutionStatus insertionSort(
   return ExecutionStatus::RETURNED;
 }
 
-// Must be at least 3, for "median of three" to work
+// Must be at lest 3, for "median of three" to work
 const uint32_t INSERTION_THRESHOLD = 6;
 
 /// Performs the partition for quickSort between elements [l,r].
 /// The pivot must be at element [l+1].
 /// \return the new index of the pivot.
-CallResult<uint32_t> quickSortPartition(
-    SortModel *sm,
-    std::vector<uint32_t> &index,
-    uint32_t l,
-    uint32_t r) {
+CallResult<uint32_t> quickSortPartition(SortModel *sm, uint32_t l, uint32_t r) {
   CallResult<bool> res{false};
   // Now [l] <= [l+1] <= [r]
   // [l+1] is our pivot and [r] is a sentinel
@@ -171,7 +129,7 @@ CallResult<uint32_t> quickSortPartition(
   while (true) {
     while (true) {
       ++i;
-      res = _less(sm, index, i, pivot);
+      res = sm->less(i, pivot);
       if (res == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -181,7 +139,7 @@ CallResult<uint32_t> quickSortPartition(
     }
     while (true) {
       --j;
-      res = _less(sm, index, pivot, j);
+      res = sm->less(pivot, j);
       if (res == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -192,14 +150,14 @@ CallResult<uint32_t> quickSortPartition(
     if (i >= j) {
       break;
     }
-    if (_swap(sm, index, i, j) == ExecutionStatus::EXCEPTION) {
+    if (sm->swap(i, j) == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
   }
 
   // put the pivot in its final position
   if (j != pivot) {
-    if (_swap(sm, index, pivot, j) == ExecutionStatus::EXCEPTION) {
+    if (sm->swap(pivot, j) == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
   }
@@ -207,57 +165,51 @@ CallResult<uint32_t> quickSortPartition(
   return j;
 }
 
-ExecutionStatus doQuickSort(
-    SortModel *sm,
-    std::vector<uint32_t> &index,
-    int limit,
-    uint32_t l,
-    uint32_t r) {
+ExecutionStatus doQuickSort(SortModel *sm, int limit, uint32_t l, uint32_t r) {
   CallResult<bool> res{false};
 quicksort_top:
   if (limit <= 0) {
     // Bail to heap sort
-    return heapSort(sm, index, l, r + 1);
+    return heapSort(sm, l, r + 1);
   }
 
   // Median-of-three
   // Place the middle element at [l+1]
-  if (_swap(sm, index, l + 1, l + ((r - l) >> 1)) ==
-      ExecutionStatus::EXCEPTION) {
+  if (sm->swap(l + 1, l + ((r - l) >> 1)) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   // Sort, [l], [l+1], [r]
-  res = _less(sm, index, r, l + 1);
+  res = sm->less(r, l + 1);
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   if (*res) {
-    if (_swap(sm, index, r, l + 1) == ExecutionStatus::EXCEPTION) {
+    if (sm->swap(r, l + 1) == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
   }
-  res = _less(sm, index, l + 1, l);
+  res = sm->less(l + 1, l);
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   if (*res) {
-    if (_swap(sm, index, l + 1, l) == ExecutionStatus::EXCEPTION) {
+    if (sm->swap(l + 1, l) == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
   }
-  res = _less(sm, index, r, l + 1);
+  res = sm->less(r, l + 1);
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   if (*res) {
-    if (_swap(sm, index, r, l + 1) == ExecutionStatus::EXCEPTION) {
+    if (sm->swap(r, l + 1) == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
   }
 
   // Now [l] <= [l+1] <= [r]
   // [l+1] is our pivot and [r] is a sentinel
-  CallResult<uint32_t> partitionResult{quickSortPartition(sm, index, l, r)};
+  CallResult<uint32_t> partitionResult{quickSortPartition(sm, l, r)};
   if (partitionResult == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -269,12 +221,11 @@ quicksort_top:
   uint32_t rSize = r - j;
   if (lSize <= rSize) {
     if (lSize > INSERTION_THRESHOLD) {
-      if (doQuickSort(sm, index, limit - 1, l, j - 1) ==
-          ExecutionStatus::EXCEPTION) {
+      if (doQuickSort(sm, limit - 1, l, j - 1) == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
     } else {
-      if (insertionSort(sm, index, l, j) == ExecutionStatus::EXCEPTION) {
+      if (insertionSort(sm, l, j) == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
     }
@@ -284,21 +235,18 @@ quicksort_top:
       --limit;
       goto quicksort_top;
     } else {
-      if (insertionSort(sm, index, j + 1, r + 1) ==
-          ExecutionStatus::EXCEPTION) {
+      if (insertionSort(sm, j + 1, r + 1) == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
     }
 
   } else {
     if (rSize > INSERTION_THRESHOLD) {
-      if (doQuickSort(sm, index, limit - 1, j + 1, r) ==
-          ExecutionStatus::EXCEPTION) {
+      if (doQuickSort(sm, limit - 1, j + 1, r) == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
     } else {
-      if (insertionSort(sm, index, j + 1, r + 1) ==
-          ExecutionStatus::EXCEPTION) {
+      if (insertionSort(sm, j + 1, r + 1) == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
     }
@@ -308,7 +256,7 @@ quicksort_top:
       --limit;
       goto quicksort_top;
     } else {
-      if (insertionSort(sm, index, l, j) == ExecutionStatus::EXCEPTION) {
+      if (insertionSort(sm, l, j) == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
     }
@@ -320,16 +268,10 @@ quicksort_top:
 } // namespace
 
 ExecutionStatus quickSort(SortModel *sm, uint32_t begin, uint32_t end) {
-  uint32_t len = end - begin;
-  std::vector<uint32_t> index(len); // Array of original indices of items
-  for (uint32_t i = 0; i < len; ++i) {
-    index[i] = i;
-  }
-
-  if (len > INSERTION_THRESHOLD) {
-    return doQuickSort(sm, index, llvh::Log2_32(len) * 2, begin, end - 1);
+  if (end - begin > INSERTION_THRESHOLD) {
+    return doQuickSort(sm, llvh::Log2_32(end - begin) * 2, begin, end - 1);
   } else {
-    return insertionSort(sm, index, begin, end);
+    return insertionSort(sm, begin, end);
   }
 }
 
