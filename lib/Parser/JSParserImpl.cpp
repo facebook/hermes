@@ -4824,10 +4824,12 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
     auto optYieldExpr = parseYieldExpression(param.get(ParamIn));
     if (!optYieldExpr)
       return None;
-    assert(
-        checkEndAssignmentExpression() &&
-        "invalid end token in AssignmentExpression");
-    return *optYieldExpr;
+    ESTree::YieldExpressionNode *yieldExpr = *optYieldExpr;
+    if (!checkEndAssignmentExpression()) {
+      error(tok_->getStartLoc(), "unexpected token after yield expression");
+      return None;
+    }
+    return yieldExpr;
   }
 
   SMLoc startLoc = tok_->getStartLoc();
