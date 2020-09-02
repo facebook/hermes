@@ -35,11 +35,6 @@ HadesGC::HeapSegment::HeapSegment(AlignedStorage &&storage)
   growToLimit();
 }
 
-void HadesGC::OldGen::transitionToFreelist(HeapSegment &seg) {
-  allocatedBytes_ += seg.used();
-  seg.transitionToFreelist(*this);
-}
-
 void HadesGC::HeapSegment::transitionToFreelist(OldGen &og) {
   assert(bumpAllocMode_ && "This segment has already been transitioned");
   // Add a free list cell that spans the distance from end to level.
@@ -1199,8 +1194,7 @@ void HadesGC::sweep() {
     // Acquire and release the lock once per loop, to allow YG collections to
     // interrupt the sweeper.
     std::lock_guard<Mutex> lk{gcMutex_};
-    HeapSegment &seg = oldGen_[i];
-    seg.forAllObjs([this, isTracking, &seg](GCCell *cell) {
+    oldGen_[i].forAllObjs([this, isTracking](GCCell *cell) {
       // forAllObjs skips free list cells, so no need to check for those.
       assert(cell->isValid() && "Invalid cell in sweeping");
       if (HeapSegment::getCellMarkBit(cell)) {
@@ -1208,12 +1202,6 @@ void HadesGC::sweep() {
       }
       // Cell is dead, run its finalizer first if it has one.
       cell->getVT()->finalizeIfExists(cell, this);
-      if (seg.isBumpAllocMode()) {
-        // If anything was freed, transition from bump-alloc to freelist mode.
-        // This has to be done immediately in order for the addCellToFreelist
-        // function to work.
-        oldGen_.transitionToFreelist(seg);
-      }
       oldGen_.addCellToFreelist(cell);
       if (isTracking) {
         // There is no race condition here, because the object has already been
@@ -1541,10 +1529,13 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
       (gc_->maxHeapSize_ / AlignedStorage::size()) - 1;
   if (segments_.size() < maxNumOldGenSegments) {
     std::unique_ptr<HeapSegment> seg = gc_->createSegment("old-gen");
+    // Complete this allocation using a bump alloc.
     AllocResult res = seg->bumpAlloc(sz);
     assert(
         res.success &&
         "A newly created segment should always be able to allocate");
+    // Add the segment to segments_ and add the remainder of the segment to the
+    // free list.
     addSegment(std::move(seg));
     GCCell *newObj = static_cast<GCCell *>(res.ptr);
     HeapSegment::setCellMarkBit(newObj);
@@ -1650,22 +1641,6 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
       // debug modes currently.
       prevLoc = &cell->next_;
       cell = cell->next_;
-    }
-  }
-
-  // Free list exhausted, and nothing had enough space. Try bump-alloc as a last
-  // resort.
-  // TODO: Right now this iterates over all segments. Could instead have a
-  // separate data structure for bump-alloc segments. OldGen::allocatedBytes()
-  // could also use that data structure.
-  for (auto &seg : segments_) {
-    if (seg->isBumpAllocMode()) {
-      const AllocResult res = seg->bumpAlloc(sz);
-      if (res.success) {
-        GCCell *newCell = static_cast<GCCell *>(res.ptr);
-        HeapSegment::setCellMarkBit(newCell);
-        return newCell;
-      }
     }
   }
   return nullptr;
@@ -2002,25 +1977,11 @@ uint64_t HadesGC::allocatedBytes() const {
 }
 
 uint64_t HadesGC::OldGen::allocatedBytes() const {
-  uint64_t totalAllocated = allocatedBytes_;
-  for (auto segit = segments_.begin(), end = segments_.end(); segit != end;
-       ++segit) {
-    // TODO: Should a fragmentation measurement be used as well?
-    HeapSegment &seg = **segit;
-    if (seg.isBumpAllocMode()) {
-      totalAllocated += seg.used();
-    }
-  }
-  return totalAllocated;
+  return allocatedBytes_;
 }
 
 uint64_t HadesGC::OldGen::size() const {
-  uint64_t totalBytes = 0;
-  for (auto segit = segments_.begin(), end = segments_.end(); segit != end;
-       ++segit) {
-    totalBytes += (*segit)->used();
-  }
-  return totalBytes;
+  return numSegments() * HeapSegment::maxSize();
 }
 
 HadesGC::HeapSegment &HadesGC::youngGen() {
@@ -2077,7 +2038,15 @@ std::unique_ptr<HadesGC::HeapSegment> HadesGC::createSegment(const char *name) {
 }
 
 void HadesGC::OldGen::addSegment(std::unique_ptr<HeapSegment> seg) {
+  assert(
+      seg->isBumpAllocMode() &&
+      "Segments added to OG must be in bump alloc mode!");
   segments_.emplace_back(std::move(seg));
+  HeapSegment &newSeg = *segments_.back();
+  allocatedBytes_ += newSeg.used();
+  // Switch the segment from bump alloc mode to free list mode and add any
+  // remaining capacity to the free list.
+  newSeg.transitionToFreelist(*this);
 }
 
 bool HadesGC::inOldGen(const void *p) const {

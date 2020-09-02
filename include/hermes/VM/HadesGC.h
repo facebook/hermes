@@ -305,11 +305,6 @@ class HadesGC final : public GCBase {
     /// \param alreadyFree If true, this location is not currently allocated.
     void addCellToFreelist(void *addr, uint32_t sz, bool alreadyFree);
 
-    /// Transitions the given segment from bump-alloc mode to freelist mode.
-    /// Can only be called once, when the segment is in bump-alloc mode. There
-    /// is no transitioning from freelist mode back to bump-alloc mode.
-    void transitionToFreelist(HeapSegment &seg);
-
     /// \return the total number of bytes that are in use by the OG section of
     /// the JS heap, excluding free list entries.
     uint64_t allocatedBytes() const;
