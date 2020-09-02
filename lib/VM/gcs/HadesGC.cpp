@@ -789,7 +789,7 @@ HadesGC::HadesGC(
           // At least one YG segment and one OG segment.
           2 * AlignedStorage::size())},
       provider_(std::move(provider)),
-      youngGen_{createYoungGenSegment()},
+      youngGen_{createSegment("young-gen")},
       promoteYGToOG_{!gcConfig.getAllocInYoung()},
       revertToYGAtTTI_{gcConfig.getRevertToYGAtTTI()} {
   const size_t minHeapSegments =
@@ -808,7 +808,7 @@ HadesGC::HadesGC(
                 static_cast<size_t>(2)});
 
   for (size_t i = 0; i < initHeapSegments; ++i) {
-    oldGen_.createSegment();
+    oldGen_.addSegment(createSegment("old-gen"));
   }
 }
 
@@ -1540,11 +1540,12 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
   const auto maxNumOldGenSegments =
       (gc_->maxHeapSize_ / AlignedStorage::size()) - 1;
   if (segments_.size() < maxNumOldGenSegments) {
-    HeapSegment &seg = createSegment();
-    AllocResult res = seg.bumpAlloc(sz);
+    std::unique_ptr<HeapSegment> seg = gc_->createSegment("old-gen");
+    AllocResult res = seg->bumpAlloc(sz);
     assert(
         res.success &&
         "A newly created segment should always be able to allocate");
+    addSegment(std::move(seg));
     GCCell *newObj = static_cast<GCCell *>(res.ptr);
     HeapSegment::setCellMarkBit(newObj);
     return newObj;
@@ -1792,9 +1793,9 @@ void HadesGC::promoteYoungGenToOldGen() {
   // It is important that this operation is just a move of pointers to
   // segments. The addresses have to stay the same or else it would
   // require a marking pass through all objects.
-  oldGen_.moveSegment(std::move(youngGen_));
+  oldGen_.addSegment(std::move(youngGen_));
   // Replace YG with a new segment.
-  youngGen_ = createYoungGenSegment();
+  youngGen_ = createSegment("young-gen");
   // These objects will be finalized by an OG collection.
   youngGenFinalizables_.clear();
 }
@@ -2062,10 +2063,10 @@ HadesGC::HeapSegment &HadesGC::OldGen::operator[](size_t i) {
   return *segments_[i];
 }
 
-std::unique_ptr<HadesGC::HeapSegment> HadesGC::createYoungGenSegment() {
-  auto res = AlignedStorage::create(provider_.get(), "young-gen");
+std::unique_ptr<HadesGC::HeapSegment> HadesGC::createSegment(const char *name) {
+  auto res = AlignedStorage::create(provider_.get(), name);
   if (!res) {
-    hermes_fatal("Failed to alloc young gen");
+    hermes_fatal("Failed to alloc memory segment");
   }
   std::unique_ptr<HeapSegment> seg(new HeapSegment{std::move(res.get())});
 #ifdef HERMESVM_COMPRESSED_POINTERS
@@ -2075,20 +2076,7 @@ std::unique_ptr<HadesGC::HeapSegment> HadesGC::createYoungGenSegment() {
   return seg;
 }
 
-HadesGC::HeapSegment &HadesGC::OldGen::createSegment() {
-  auto res = AlignedStorage::create(gc_->provider_.get(), "old-gen");
-  if (!res) {
-    hermes_fatal("Failed to alloc old gen");
-  }
-  segments_.emplace_back(new HeapSegment{std::move(res.get())});
-  HeapSegment &seg = **segments_.rbegin();
-#ifdef HERMESVM_COMPRESSED_POINTERS
-  gc_->pointerBase_->setSegment(++gc_->numSegments_, seg.lowLim());
-#endif
-  return seg;
-}
-
-void HadesGC::OldGen::moveSegment(std::unique_ptr<HeapSegment> &&seg) {
+void HadesGC::OldGen::addSegment(std::unique_ptr<HeapSegment> seg) {
   segments_.emplace_back(std::move(seg));
 }
 
