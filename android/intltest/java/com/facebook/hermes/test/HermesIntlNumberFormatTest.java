@@ -69,8 +69,8 @@ public class HermesIntlNumberFormatTest extends InstrumentationTestCase {
                 try {
                     evalScriptFromAsset(rt, testFilePath);
                 } catch (FileNotFoundException ex) {
-                    if (testFilePath.endsWith(".js"))
-                        throw ex;
+                    //if (testFilePath.endsWith(".js"))
+                    //    throw ex;
                     // Skip, they are likely subdirectories
                 } catch (com.facebook.jni.CppException ex) {
                     if (!blackList.contains(testFileName))
