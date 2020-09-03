@@ -198,8 +198,7 @@ $npmPackage = (Get-Content (Join-Path $SourcesPath "npm\package.json") | Out-Str
 
 (Get-Content "$SourcesPath\ReactNative.Hermes.Windows.nuspec") -replace ('VERSION_DETAILS', "Hermes version: $npmPackage; Git revision: $gitRevision") | Set-Content "$OutputPath\ReactNative.Hermes.Windows.nuspec"
 
-$nugetVersion = "$npmPackage-$gitRevision"
-$nugetVersion | Set-Content "$OutputPath\version"
+$npmPackage | Set-Content "$OutputPath\version"
 
 $elapsedTime = $(get-date) - $StartTime
 
