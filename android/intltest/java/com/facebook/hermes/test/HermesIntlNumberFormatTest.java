@@ -30,9 +30,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class HermesIntlCollatorTest extends InstrumentationTestCase {
+public class HermesIntlNumberFormatTest extends InstrumentationTestCase {
 
-    private static final String LOG_TAG = "HermesIntlCollatorTest";
+    private static final String LOG_TAG = "HermesIntlNumberFormatTest";
 
     private void evalScriptFromAsset(JSRuntime rt, String filename) throws IOException {
         AssetManager assets = getInstrumentation().getContext().getAssets();
@@ -59,15 +59,8 @@ public class HermesIntlCollatorTest extends InstrumentationTestCase {
         ArrayList<String> ranTests = new ArrayList<>();
         HashMap<String, String> failedTests = new HashMap<>();
 
-        // for (String testFileName : testFileList) {
-        // String testFileName =  "usage-de.js";
-        String testFileName =  "intl_scratch.js";
-//            if (blackList.contains(testFileName)) {
-//                Log.v(LOG_TAG, "Skipping " + testFileName + " as it is blacklisted.");
-//                continue;
-//            }
-
-            String testFilePath = testFileName; //basePath + testFileName;
+        for (String testFileName : testFileList) {
+            String testFilePath = basePath + testFileName;
             Log.d(LOG_TAG, "Evaluating " + testFilePath);
 
             try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
@@ -76,119 +69,174 @@ public class HermesIntlCollatorTest extends InstrumentationTestCase {
                 try {
                     evalScriptFromAsset(rt, testFilePath);
                 } catch (FileNotFoundException ex) {
+                    if (testFilePath.endsWith(".js"))
+                        throw ex;
                     // Skip, they are likely subdirectories
                 } catch (com.facebook.jni.CppException ex) {
-                    failedTests.put(testFilePath, ex.getMessage());
+                    if (!blackList.contains(testFileName))
+                        failedTests.put(testFilePath, ex.getMessage());
+                } catch (Exception ex) {
+                    if   (!blackList.contains(testFileName))
+                        failedTests.put(testFilePath, ex.getMessage());
                 }
             }
-        // }
+        }
 
         Log.v(LOG_TAG, "Passed Tests: " + TextUtils.join("\n", ranTests));
 
-        for (Map.Entry<String, String> entry: failedTests.entrySet() ) {
-            Log.v(LOG_TAG, "Failed Tests: " +  entry.getKey() + " : " + entry.getValue());
-            assert(false);
+        for (
+                Map.Entry<String, String> entry : failedTests.entrySet()) {
+            Log.v(LOG_TAG, "Failed Tests: " + entry.getKey() + " : " + entry.getValue());
+            assert (false);
         }
 
-        assertThat(failedTests.entrySet().isEmpty()).isEqualTo(true);
+        assertThat(failedTests.entrySet().
+
+                isEmpty()).
+
+                isEqualTo(true);
+
+    }
+
+    public void testIntlNumberFormat() throws IOException {
+
+        String basePath = "test262/NumberFormat/";
+
+        Set<String> blackList = new HashSet<>(Arrays.asList(
+                "proto-from-ctor-realm.js", // Property '$262' doesn't exist
+                "constructor-locales-get-tostring.js", // Property 'Proxy' doesn't exist
+                "subclassing.js", // Compiling JS failed: 18:1:invalid statement encountered. Buffer size 986 starts with: 2f2f20436f7079726967687420323031
+                "constructor-order.js", // Expected a RangeError but got a TypeError
+                "constructor-locales-hasproperty.js",  // Property 'Proxy' doesn't exist
+                "currency-digits.js" // Didn't get correct minimumFractionDigits for currency AFN. Expected SameValue(«0», «2») to be true
+        ));
+
+        runTests3(basePath, blackList);
     }
 
     @Test
-    public void testIntlCollator262() throws IOException {
+    public void testIntlNumberFormat_prototype() throws IOException {
 
-        String basePath = "test262/Collator/";
+        String basePath = "test262/NumberFormat/prototype/";
 
-        Set<String> blackList = new HashSet<>(Arrays.asList(
-                "subclassing.js",  // Test requires Javascript classes
-                "proto-from-ctor-realm.js", // ReferenceError: Property '$262' doesn't exist .. Test requires Reflect
-                "unicode-ext-value-collation.js", // Collation for "standard" should be default, but is search. Expected SameValue(«-1», «-1») to be false << TODO >>
-                "ignore-invalid-unicode-ext-values.js", // Locale en is affected by key co; value standard. Expected SameValue(«en», «en-US») to be true << TODO >>
-                "missing-unicode-ext-value-defaults-to-true.js", // "kn-true" is returned in locale, but shouldn't be. Expected SameValue(«15», «-1») to be true << TODO >>
-                "missing-unicode-ext-value-defaults-to-true.js", // "kn-true" is returned in locale, but shouldn't be. Expected SameValue(«15», «-1») to be true
-                "numeric-and-caseFirst.js" // "Property numeric couldn't be set through locale extension key kn. Expected SameValue(«undefined», «true») to be true // This is because icu4j collator doesn't support the extension
-        ));
+        Set<String> blackList = new HashSet<>();
 
-//        Passed Tests:
-//        builtin.js
-//        constructor-options-throwing-getters.js
-//        default-options-object-prototype.js
-//        ignore-invalid-unicode-ext-values.js
-//        instance-proto-and-extensible.js
-//        legacy-regexp-statics-not-modified.js
-//        length.js
-//        missing-unicode-ext-value-defaults-to-true.js
-//        name.js
-//        numeric-and-caseFirst.js
-//        prop-desc.js
-//        taint-Object-prototype.js
-//        test-option-ignorePunctuation.js
-//        test-option-localeMatcher.js
-//        test-option-numeric-and-caseFirst.js
-//        test-option-sensitivity.js
-//        test-option-usage.js
-//        this-value-ignored.js
-//        unicode-ext-seq-in-private-tag.js
-//        unicode-ext-seq-with-attribute.js
-//        unicode-ext-value-collation.js
-//        usage-de.js
 
         runTests(basePath, blackList);
     }
-//
-//    public void test262_prototype() throws IOException {
-//        String basePath = "test262/Collator/prototype";
-//        Set<String> blackList = new HashSet<>(Arrays.asList(""
-//        ));
-//
-//        runTests(basePath, blackList);
-//    }
-//
-//    public void test262_prototype_resolvedOptions() throws IOException {
-//        String basePath = "test262/Collator/prototype/resolvedOptions";
-//        Set<String> blackList = new HashSet<>(Arrays.asList("order.js" // Expected [locale, sensitivity, ignorePunctuation, caseFirst, collation, numeric, usage] and [locale, usage, sensitivity, ignorePunctuation, collation, numeric, caseFirst] to have the same contents.
-//                // TODO :: We fail the above test above we use std::unordered_map to hold the options in the C++ binding layer between java/platform code and VM
-//                , "builtin.js" // Property 'isConstructor' doesn't exist // needs Reflect.construct
-//        ));
-//
-////        Passed Tests:
-////        basic.js
-////        length.js
-////        name.js
-////        prop-desc.js
-//
-//        runTests(basePath, blackList);
-//    }
-//
-//    public void test262_prototype_constructor() throws IOException {
-//        String basePath = "test262/Collator/prototype/constructor";
-//        Set<String> blackList = new HashSet<>(Arrays.asList(""
-//        ));
-//
-////        Passed Tests:
-////        prop-desc.js
-////        value.js
-//
-//        runTests(basePath, blackList);
-//    }
-//
-//    public void test262_prototype_compare() throws IOException {
-//        String basePath = "test262/Collator/prototype/compare";
-//        Set<String> blackList = new HashSet<>(Arrays.asList("compare-function-length.js" // Expected SameValue(«0», «2») to be true .. Hermes Function.length doesn't seem to work correctly
-//                , "canonically-equivalent-strings.js" // Collator.compare considers ö (\u006f\u0308) ≠ ö (\u00f6). Expected SameValue(«-135», «0») to be true
-//                , "non-normative-sensitivity.js" // Expected [Aa] and [Aa, aA, áÁ, Aã] to have the same contents.
-//                , "non-normative-basic.js" // Expected [A, C, E, H, J, L, N, V, X, Z, b, d, f, g, i, k, m, w, y] and [A, b, C, d, E, f, g, H, i, J, k, L, m, N, V, w, X, y, Z] to have the same contents.
-//                , "compare-function-builtin.js" // Property 'isConstructor' doesn't exist
-//                , "builtin.js" // Property 'isConstructor' doesn't exist
-//        ));
-//
-////        Passed Tests:
-////        bound-to-collator-instance.js
-////        compare-function-name.js
-////        length.js
-////        name.js
-////        non-normative-phonebook.js
-////        prop-desc.js
-//
-//        runTests(basePath, blackList);
-//    }
+
+    @Test
+    public void testIntlNumberFormat_supportedLocalesOf() throws IOException {
+
+        String basePath = "test262/NumberFormat/supportedLocalesOf/";
+        Set<String> blackList = new HashSet<>(Arrays.asList(
+                "builtin.js" // Property 'isConstructor' doesn't exist
+        ));
+
+        runTests(basePath, blackList);
+    }
+
+
+    @Test
+    public void testIntlNumberFormat_prototype_constructor() throws IOException {
+
+        String basePath = "test262/NumberFormat/prototype/constructor/";
+
+        Set<String> blackList = new HashSet<>();
+
+        runTests(basePath, blackList);
+    }
+
+
+    @Test
+    public void testIntlNumberFormat_prototype_toStringTag() throws IOException {
+
+        String basePath = "test262/NumberFormat/prototype/toStringTag/";
+
+        Set<String> blackList = new HashSet<>(Arrays.asList(
+                "prop-desc.js", // Property 'isConstructor' doesn't exist
+                "configurable.js" // Expected SameValue(«Object», «Intl.NumberFormat») to be true
+        ));
+
+        runTests(basePath, blackList);
+    }
+
+    @Test
+    public void testIntlNumberFormat_prototype_resolvedOptions() throws IOException {
+
+        String basePath = "test262/NumberFormat/prototype/resolvedOptions/";
+
+        Set<String> blackList = new HashSet<>(Arrays.asList(
+                "order.js", // Expected [notation, locale, minimumSignificantDigits, maximumSignificantDigits, minimumIntegerDigits, currency, signDisplay, numberingSystem, useGrouping, style, currencyDisplay, currencySign] and [locale, numberingSystem, style, currency, currencyDisplay, currencySign, minimumIntegerDigits, minimumSignificantDigits, maximumSignificantDigits, useGrouping, notation, signDisplay] to have the same contents.
+                "builtin.js" // Property 'isConstructor' doesn't exist
+        ));
+
+        runTests(basePath, blackList);
+    }
+//    @Test
+
+    @Test
+    public void testIntlNumberFormat_prototype_format() throws IOException {
+
+        String basePath = "test262/NumberFormat/prototype/format/";
+
+        Set<String> blackList = new HashSet<>(Arrays.asList(
+                "signDisplay-currency-zh-TW.js", //Expected SameValue(«US$0.00», «+US$0.00») to be true
+                "signDisplay-rounding.js", //Expected SameValue(«-0», «0») to be true
+                "signDisplay-currency-de-DE.js", //Expected SameValue(«0,00 $», «+0,00 $») to be true
+                "signDisplay-de-DE.js", //0 (always) Expected SameValue(«0», «+0») to be true
+                "signDisplay-ko-KR.js", //0 (always) Expected SameValue(«0», «+0») to be true
+                "signDisplay-currency-en-US.js", //Expected SameValue(«$0.00», «+$0.00») to be true
+                "signDisplay-currency-ja-JP.js", //Expected SameValue(«$0.00», «+$0.00») to be true
+                "signDisplay-zh-TW.js", //NaN (auto) Expected SameValue(«NaN», «非數值») to be true
+                "notation-compact-zh-TW.js", //Expected SameValue(«9.9亿», «9.9億») to be true
+                "unit-zh-TW.js", //Expected SameValue(«每小时-987公里», «-987 公里/小時») to be true
+                "builtin.js", //Property 'isConstructor' doesn't exist -- ReferenceError: Property 'isConstructor' doesn't exist
+                "engineering-scientific-zh-TW.js", //Expected SameValue(«NaN», «非數值») to be true
+                "signDisplay-en-US.js", //0 (always) Expected SameValue(«0», «+0») to be true
+                "units.js", //Expected SameValue(«123», «123») to be false
+                "format-function-length.js", //Expected SameValue(«0», «1») to be true
+                "signDisplay-currency-ko-KR.js", //Expected SameValue(«US$0.00», «+US$0.00») to be true
+                "signDisplay-ja-JP.js", //0 (always) Expected SameValue(«0», «+0») to be true
+                "format-function-builtin.js" //Property 'isConstructor' doesn't exist
+        ));
+
+        runTests(basePath, blackList);
+    }
+
+
+    @Test
+    public void testIntlNumberFormat_prototype_formatToParts() throws IOException {
+
+        String basePath = "test262/NumberFormat/prototype/formatToParts/";
+
+        Set<String> blackList = new HashSet<>(Arrays.asList(
+                "signDisplay-zh-TW.js", //NaN (auto): parts[0].value Expected SameValue(«NaN», «非數值») to be true
+                "unit-zh-TW.js", //undefined: length Expected SameValue(«1», «4») to be true
+                "unit.js", //Expected SameValue(«false», «true») to be true
+                "notation-compact-zh-TW.js", //Compact short: 987654321: parts[3].type Expected SameValue(«literal», «compact») to be true
+                "length.js", //Expected SameValue(«0», «1») to be true
+                "signDisplay-currency-de-DE.js", //undefined: length Expected SameValue(«5», «6») to be true
+                "signDisplay-en-US.js", //0 (always): length Expected SameValue(«1», «2») to be true
+                "notation-compact-ko-KR.js", //Compact short: 987654321: parts[3].type Expected SameValue(«literal», «compact») to be true
+                "engineering-scientific-zh-TW.js", //NaN - engineering: parts[0].value Expected SameValue(«NaN», «非數值») to be true
+                "unit-ko-KR.js", //undefined: length Expected SameValue(«1», «3») to be true
+                "signDisplay-de-DE.js", //0 (always): length Expected SameValue(«1», «2») to be true
+                "signDisplay-currency-ko-KR.js", //undefined: length Expected SameValue(«4», «5») to be true
+                "notation-compact-ja-JP.js", //Compact short: 987654321: parts[3].type Expected SameValue(«literal», «compact») to be true
+                "signDisplay-ja-JP.js", //0 (always): length Expected SameValue(«1», «2») to be true
+                "signDisplay-currency-zh-TW.js", //undefined: length Expected SameValue(«4», «5») to be true
+                "unit-de-DE.js", //undefined: length Expected SameValue(«1», «4») to be true
+                "percent-en-US.js", //unit: length Expected SameValue(«1», «3») to be true
+                "signDisplay-ko-KR.js", //0 (always): length Expected SameValue(«1», «2») to be true
+                "unit-en-US.js", //undefined: length Expected SameValue(«1», «4») to be true
+                "notation-compact-en-US.js", //Compact short: 987654321: parts[1].type Expected SameValue(«literal», «compact») to be true
+                "unit-ja-JP.js", //undefined: length Expected SameValue(«1», «4») to be true
+                "signDisplay-currency-en-US.js", //undefined: length Expected SameValue(«4», «5») to be true
+                "notation-compact-de-DE.js", //Compact short: 987654321: parts[2].type Expected SameValue(«literal», «compact») to be true
+                "signDisplay-currency-ja-JP.js" //undefined: length Expected SameValue(«4», «5») to be true//
+        ));
+
+        runTests(basePath, blackList);
+    }
 }
