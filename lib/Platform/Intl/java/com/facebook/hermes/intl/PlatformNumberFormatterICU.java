@@ -20,6 +20,9 @@ import static com.facebook.hermes.intl.IPlatformNumberFormatter.Style.CURRENCY;
 // An implementation of NumberFormat services using ICU4J APIs available in Android from API 24 onwards.
 // We could have a much richer implementation on newer API versions with // Note :: https://developer.android.com/reference/android/icu/number/NumberFormatter which was introduced in API 30.
 //
+// The implementation has at least the following deficiencies,
+// 1. SignDisplay attribute implementation is partly hacky, and doesn't work in many cases.
+// 2. formatToParts does report the whole formatted string as a "literal"
 public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
 
     private java.text.Format mFinalFormat;

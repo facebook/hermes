@@ -301,7 +301,6 @@ public class NumberFormat {
         initializeNumberFormat(locales, options);
 
 
-        IPlatformNumberFormatter platformNumberFormatter;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             mResolvedNumberingSystem = PlatformNumberFormatterICU.configureNumberingSystem(mResolvedNumberingSystem, mResolvedLocaleObject);
             mPlatformNumberFormatter = PlatformNumberFormatterICU.createDecimalFormat(mResolvedLocaleObject, mResolvedStyle, mResolvedCurrencySign, mResolvedNotation, mResolvedCompactDisplay);
@@ -379,8 +378,7 @@ public class NumberFormat {
             if (mResolvedMaximumFractionDigits != -1)
                 finalResolvedOptions.put("maximumFractionDigits", mResolvedMaximumFractionDigits);
 
-        } else if (mRoundingType == IPlatformNumberFormatter.RoundingType.COMPACT_ROUNDING)
-            ; // TODO
+        }
 
         finalResolvedOptions.put("useGrouping", mGroupingUsed);
 
