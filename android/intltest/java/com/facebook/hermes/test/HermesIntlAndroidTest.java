@@ -17,20 +17,14 @@ import java.util.stream.Collectors;
 import org.junit.Test;
 
 public class HermesIntlAndroidTest extends InstrumentationTestCase {
-
-  private void evalScriptFromAsset(JSRuntime rt, String filename) throws IOException {
-    AssetManager assets = getInstrumentation().getContext().getAssets();
-    InputStream is = assets.open(filename);
-    String script = new BufferedReader(new InputStreamReader(is))
-            .lines().collect(Collectors.joining("\n"));
-    rt.evaluateJavaScript(script);
-
-  }
-
-  // @Test
+  @Test
   public void testIntlFromAsset() throws IOException {
+    AssetManager assets = getInstrumentation().getContext().getAssets();
+    InputStream is = assets.open("intl.js");
+    String script = new BufferedReader(new InputStreamReader(is))
+      .lines().collect(Collectors.joining("\n"));
     try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
-      evalScriptFromAsset(rt, "intl.js");
+      rt.evaluateJavaScript(script);
     }
   }
 }
