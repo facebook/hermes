@@ -29,7 +29,7 @@ public class LocaleMatcher <T> {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
 
-            // Note:: We are trying one candidate at a time so that we know which requestedLocale matched.
+            // Note:: We are trying one candidate at a time so that we know which of the requested locales matched.
             for (String requestedLocale : requestedLocales) {
                 ArrayList<ULocale> candidateLocales = new ArrayList<>();
                 ILocaleObject localeObject = LocaleObjectICU4J.createFromLocaleId(requestedLocale);

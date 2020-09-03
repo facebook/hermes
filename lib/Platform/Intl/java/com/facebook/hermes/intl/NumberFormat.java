@@ -7,10 +7,6 @@
 
 package com.facebook.hermes.intl;
 
-import android.icu.text.DecimalFormat;
-import android.icu.util.Currency;
-import android.icu.util.Measure;
-import android.icu.util.MeasureUnit;
 import android.os.Build;
 
 import java.text.AttributedCharacterIterator;
@@ -21,9 +17,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import static com.facebook.hermes.intl.IPlatformNumberFormatter.Style.currency;
-import static com.facebook.hermes.intl.IPlatformNumberFormatter.Style.percent;
-import static com.facebook.hermes.intl.IPlatformNumberFormatter.Style.unit;
+import static com.facebook.hermes.intl.IPlatformNumberFormatter.Style.CURRENCY;
+import static com.facebook.hermes.intl.IPlatformNumberFormatter.Style.PERCENT;
+import static com.facebook.hermes.intl.IPlatformNumberFormatter.Style.UNIT;
 
 /**
  * This class represents the Java part of the Android
@@ -45,10 +41,9 @@ public class NumberFormat {
     private IPlatformNumberFormatter.Style mResolvedStyle = null;
 
     private String mResolvedCurrency = null;
-    private IPlatformNumberFormatter.CurrencyDisplay mResolvedCurrencyDisplay = IPlatformNumberFormatter.CurrencyDisplay.symbol;
-    private IPlatformNumberFormatter.CurrencySign mResolvedCurrencySign = IPlatformNumberFormatter.CurrencySign.standard;
+    private IPlatformNumberFormatter.CurrencyDisplay mResolvedCurrencyDisplay = IPlatformNumberFormatter.CurrencyDisplay.SYMBOL;
+    private IPlatformNumberFormatter.CurrencySign mResolvedCurrencySign = IPlatformNumberFormatter.CurrencySign.STANDARD;
 
-    private MeasureUnit mResolveMeasureUnitPlatform;
     private String mResolvedUnit = null;
     private IPlatformNumberFormatter.UnitDisplay mResolvedUnitDisplay;
 
@@ -59,7 +54,7 @@ public class NumberFormat {
 
     private IPlatformNumberFormatter.RoundingType mRoundingType;
 
-    private IPlatformNumberFormatter.SignDisplay mResolvedSignDisplay = IPlatformNumberFormatter.SignDisplay.auto;
+    private IPlatformNumberFormatter.SignDisplay mResolvedSignDisplay = IPlatformNumberFormatter.SignDisplay.AUTO;
 
     private IPlatformNumberFormatter mPlatformNumberFormatter = null;
 
@@ -67,11 +62,6 @@ public class NumberFormat {
 
     private IPlatformNumberFormatter.Notation mResolvedNotation = null;
     private IPlatformNumberFormatter.CompactDisplay mResolvedCompactDisplay;
-
-    // Note :: https://developer.android.com/reference/android/icu/number/NumberFormatter is not available until API 30.
-    // private DecimalFormat mDecimalFormat = null;
-    // private java.text.Format mFormatter = null;
-    // private IPlatformNumberFormatter mPlatformNumberFormatter;
 
     private ILocaleObject mResolvedLocaleObject = null;
     private ILocaleObject mReolvedRequestedLocaleObject = null;
@@ -161,18 +151,10 @@ public class NumberFormat {
         return normalized.matches("^[A-Z][A-Z][A-Z]$");
     }
 
-    private int getCurrencyDigits(String currencyCode) throws JSRangeErrorException {
-        try {
-            return Currency.getInstance(currencyCode).getDefaultFractionDigits();
-        } catch (IllegalArgumentException ex) {
-            throw new JSRangeErrorException("Invalid currency code !");
-        }
-    }
-
     private void setNumberFormatUnitOptions(Map<String, Object> options) throws JSRangeErrorException {
         // 3,4
         // TODO :: Make is more robust.
-        mResolvedStyle = Enum.valueOf(IPlatformNumberFormatter.Style.class, OptionHelpers.resolveStringOption(options, "style", new String[]{"decimal", "currency", "percent", "unit"}, "decimal"));
+        mResolvedStyle = OptionHelpers.searchEnum(IPlatformNumberFormatter.Style.class, OptionHelpers.resolveStringOption(options, "style", new String[]{"decimal", "currency", "percent", "unit"}, "decimal"));
 
         // 5
         String currencyCode = OptionHelpers.resolveStringOption(options, "currency", new String[]{}, "");
@@ -194,11 +176,11 @@ public class NumberFormat {
 
         String unitDisplay = OptionHelpers.resolveStringOption(options, "unitDisplay", new String[]{"long", "short", "narrow"}, "short");
 
-        if (mResolvedStyle == currency) {
+        if (mResolvedStyle == CURRENCY) {
             mResolvedCurrency = normalizeCurrencyCode(currencyCode);
-            mResolvedCurrencyDisplay = Enum.valueOf(IPlatformNumberFormatter.CurrencyDisplay.class, currencyDisplay);
-            mResolvedCurrencySign = Enum.valueOf(IPlatformNumberFormatter.CurrencySign.class, currencySign);
-        } else if (mResolvedStyle == IPlatformNumberFormatter.Style.unit) {
+            mResolvedCurrencyDisplay = OptionHelpers.searchEnum(IPlatformNumberFormatter.CurrencyDisplay.class, currencyDisplay);
+            mResolvedCurrencySign = OptionHelpers.searchEnum(IPlatformNumberFormatter.CurrencySign.class, currencySign);
+        } else if (mResolvedStyle == IPlatformNumberFormatter.Style.UNIT) {
             mResolvedUnit = unitId;
             mResolvedUnitDisplay = OptionHelpers.searchEnum(IPlatformNumberFormatter.UnitDisplay.class, unitDisplay);
         }
@@ -216,23 +198,23 @@ public class NumberFormat {
         mResolvedMinimumIntegerDigits = mnid;
 
         if (mnsd != -1 || mxsd != -1) {
-            mRoundingType = IPlatformNumberFormatter.RoundingType.significantDigits;
+            mRoundingType = IPlatformNumberFormatter.RoundingType.SIGNIFICANT_DIGITS;
             mnsd = OptionHelpers.DefaultNumberOption(mnsd, 1, 21, 1);
             mxsd = OptionHelpers.DefaultNumberOption(mxsd, mnsd, 21, 21);
 
             mResolvedMinimumSignificantDigits = mnsd;
             mResolvedMaximumSignificantDigits = mxsd;
         } else if (mnfd != -1 || mxfd != -1) {
-            mRoundingType = IPlatformNumberFormatter.RoundingType.fractionDigits;
+            mRoundingType = IPlatformNumberFormatter.RoundingType.FRACTION_DIGITS;
             mnfd = OptionHelpers.DefaultNumberOption(mnfd, 0, 20, mnfdDefault);
             int mxfdActualDefault = Integer.max(mnfd, mxfdDefault);
             mxfd = OptionHelpers.DefaultNumberOption(mxfd, mnfd, 20, mxfdActualDefault);
 
             mResolvedMinimumFractionDigits = mnfd;
             mResolvedMaximumFractionDigits = mxfd;
-        } else if (mResolvedNotation == IPlatformNumberFormatter.Notation.compact) {
-            mRoundingType = IPlatformNumberFormatter.RoundingType.compactRounding;
-        } else if (mResolvedNotation == IPlatformNumberFormatter.Notation.engineering){
+        } else if (mResolvedNotation == IPlatformNumberFormatter.Notation.COMPACT) {
+            mRoundingType = IPlatformNumberFormatter.RoundingType.COMPACT_ROUNDING;
+        } else if (mResolvedNotation == IPlatformNumberFormatter.Notation.ENGINEERING){
             // The default setting for engineering notation. It is not based on the spec, but is required by our implementation of engineering notation.
             // From https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/classicu_1_1DecimalFormat.html
             // If areSignificantDigitsUsed() returns false, then the minimum number of significant digits shown is one,
@@ -240,10 +222,10 @@ public class NumberFormat {
             // and is unaffected by the maximum integer digits.
             //
             // In short, the minimum integer will be set to 1 and hence to achieve maximum default fraction digits of "3" (as in spec), we should set the maximum fraction digits to "5"
-            mRoundingType = IPlatformNumberFormatter.RoundingType.fractionDigits;
+            mRoundingType = IPlatformNumberFormatter.RoundingType.FRACTION_DIGITS;
             mResolvedMaximumFractionDigits = 5;
         } else {
-            mRoundingType = IPlatformNumberFormatter.RoundingType.fractionDigits;
+            mRoundingType = IPlatformNumberFormatter.RoundingType.FRACTION_DIGITS;
             mResolvedMinimumFractionDigits = mnfdDefault;
             mResolvedMaximumFractionDigits = mxfdDefault;
         }
@@ -278,15 +260,21 @@ public class NumberFormat {
         // 17, 18
         int mnfdDefault;
         int mxfdDefault;
-        if (mResolvedStyle == currency) {
-            int cDigits = getCurrencyDigits(mResolvedCurrency);
+        if (mResolvedStyle == CURRENCY) {
+
+            int cDigits;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                cDigits = PlatformNumberFormatterICU.getCurrencyDigits(mResolvedCurrency);
+            } else {
+                cDigits = PlatformNumberFormatterAndroid.getCurrencyDigits(mResolvedCurrency);
+            }
 
             mnfdDefault = cDigits;
             mxfdDefault = cDigits;
         } else {
             mnfdDefault = 0;
 
-            if (mResolvedStyle == percent)
+            if (mResolvedStyle == PERCENT)
                 mxfdDefault = 0;
             else
                 mxfdDefault = 3;
@@ -294,30 +282,33 @@ public class NumberFormat {
 
         // 19, 20
         String notation = OptionHelpers.resolveStringOption(options, "notation", new String[]{"standard", "scientific", "engineering", "compact"}, "standard");
-        mResolvedNotation = Enum.valueOf(IPlatformNumberFormatter.Notation.class, notation);
+        mResolvedNotation = OptionHelpers.searchEnum(IPlatformNumberFormatter.Notation.class, notation);
 
         // 21
         setNumberFormatDigitOptions(options, mnfdDefault, mxfdDefault, mResolvedNotation);
 
         // 22, 23
         String compactDisplay = OptionHelpers.resolveStringOption(options, "compactDisplay", new String[]{"short", "long"}, "short");
-        if (mResolvedNotation == IPlatformNumberFormatter.Notation.compact) {
+        if (mResolvedNotation == IPlatformNumberFormatter.Notation.COMPACT) {
             mResolvedCompactDisplay = OptionHelpers.searchEnum(IPlatformNumberFormatter.CompactDisplay.class, compactDisplay);
         }
 
         mGroupingUsed = OptionHelpers.resolveBooleanOption(options, "useGrouping", true);
-        mResolvedSignDisplay = Enum.valueOf(IPlatformNumberFormatter.SignDisplay.class, OptionHelpers.resolveStringOption(options, "signDisplay", new String[]{"auto", "never", "always", "exceptZero"}, "auto"));
+        mResolvedSignDisplay = OptionHelpers.searchEnum(IPlatformNumberFormatter.SignDisplay.class, OptionHelpers.resolveStringOption(options, "signDisplay", new String[]{"auto", "never", "always", "exceptZero"}, "auto"));
     }
 
     public NumberFormat(List<String> locales, Map<String, Object> options) throws JSRangeErrorException {
         initializeNumberFormat(locales, options);
-        mResolvedNumberingSystem = PlatformNumberFormatterICU.configureNumberingSystem(mResolvedNumberingSystem, mResolvedLocaleObject);
+
 
         IPlatformNumberFormatter platformNumberFormatter;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            mResolvedNumberingSystem = PlatformNumberFormatterICU.configureNumberingSystem(mResolvedNumberingSystem, mResolvedLocaleObject);
             mPlatformNumberFormatter = PlatformNumberFormatterICU.createDecimalFormat(mResolvedLocaleObject, mResolvedStyle, mResolvedCurrencySign, mResolvedNotation, mResolvedCompactDisplay);
-        else
+        } else {
+            mResolvedNumberingSystem = PlatformNumberFormatterAndroid.configureNumberingSystem(mResolvedNumberingSystem, mResolvedLocaleObject);
             mPlatformNumberFormatter = PlatformNumberFormatterAndroid.createDecimalFormat(mResolvedLocaleObject, mResolvedStyle, mResolvedCurrencySign, mResolvedNotation, mResolvedCompactDisplay);
+        }
 
         mPlatformNumberFormatter.configureCurrency(mResolvedCurrency, mResolvedCurrencyDisplay)
                 .configureGrouping(mGroupingUsed)
@@ -351,6 +342,9 @@ public class NumberFormat {
     //
     // Also see the implementer notes on DateTimeFormat#resolvedOptions()
     public Map<String, Object> resolvedOptions() throws JSRangeErrorException {
+
+        // TODO :: We are currently reporting all options that we resoled, including what the implementation don't support.
+
         HashMap<String, Object> finalResolvedOptions = new HashMap<>();
 
         finalResolvedOptions.put(Constants.LOCALE, mResolvedLocaleObject.toCanonicalTag());
@@ -358,26 +352,26 @@ public class NumberFormat {
 
         finalResolvedOptions.put("style", mResolvedStyle.toString());
 
-        if (mResolvedStyle == currency) {
+        if (mResolvedStyle == CURRENCY) {
             finalResolvedOptions.put("currency", mResolvedCurrency);
             finalResolvedOptions.put("currencyDisplay", mResolvedCurrencyDisplay.toString());
             finalResolvedOptions.put("currencySign", mResolvedCurrencySign.toString());
-        } else if (mResolvedStyle == unit) {
+        } else if (mResolvedStyle == UNIT) {
             finalResolvedOptions.put("unit", mResolvedUnit);
-            finalResolvedOptions.put("unitDisplay", mResolvedUnitDisplay.toString().toLowerCase()); // TODO
+            finalResolvedOptions.put("unitDisplay", mResolvedUnitDisplay.toString());
         }
 
         if (mResolvedMinimumIntegerDigits != -1)
             finalResolvedOptions.put("minimumIntegerDigits", mResolvedMinimumIntegerDigits);
 
-        if (mRoundingType == IPlatformNumberFormatter.RoundingType.significantDigits) {
+        if (mRoundingType == IPlatformNumberFormatter.RoundingType.SIGNIFICANT_DIGITS) {
             if (mResolvedMaximumSignificantDigits != -1)
                 finalResolvedOptions.put("minimumSignificantDigits", mResolvedMaximumSignificantDigits);
 
             if (mResolvedMinimumSignificantDigits != -1)
                 finalResolvedOptions.put("maximumSignificantDigits", mResolvedMinimumSignificantDigits);
 
-        } else if (mRoundingType == IPlatformNumberFormatter.RoundingType.fractionDigits) {
+        } else if (mRoundingType == IPlatformNumberFormatter.RoundingType.FRACTION_DIGITS) {
 
             if (mResolvedMinimumFractionDigits != -1)
                 finalResolvedOptions.put("minimumFractionDigits", mResolvedMinimumFractionDigits);
@@ -385,14 +379,14 @@ public class NumberFormat {
             if (mResolvedMaximumFractionDigits != -1)
                 finalResolvedOptions.put("maximumFractionDigits", mResolvedMaximumFractionDigits);
 
-        } else if (mRoundingType == IPlatformNumberFormatter.RoundingType.compactRounding)
+        } else if (mRoundingType == IPlatformNumberFormatter.RoundingType.COMPACT_ROUNDING)
             ; // TODO
 
         finalResolvedOptions.put("useGrouping", mGroupingUsed);
 
         finalResolvedOptions.put("notation", mResolvedNotation.toString());
-        if (mResolvedNotation == IPlatformNumberFormatter.Notation.compact) {
-            finalResolvedOptions.put("compactDisplay", mResolvedCompactDisplay.toString().toLowerCase()); // TODO :: FIx these
+        if (mResolvedNotation == IPlatformNumberFormatter.Notation.COMPACT) {
+            finalResolvedOptions.put("compactDisplay", mResolvedCompactDisplay.toString());
         }
 
         finalResolvedOptions.put("signDisplay", mResolvedSignDisplay.toString());
@@ -408,53 +402,6 @@ public class NumberFormat {
         return result;
     }
 
-    private static String fieldToString(DecimalFormat.Field field, double x) {
-        if (field == DecimalFormat.Field.SIGN) {
-            if (Double.compare(x, +0) >= 0) {
-                return "plusSign";
-            }
-            return "minusSign";
-        }
-        if (field == DecimalFormat.Field.INTEGER) {
-            if (Double.isNaN(x)) {
-                return "nan";
-            }
-            if (Double.isInfinite(x)) {
-                return "infinity";
-            }
-            return "integer";
-        }
-        if (field == DecimalFormat.Field.FRACTION) {
-            return "fraction";
-        }
-        if (field == DecimalFormat.Field.EXPONENT) {
-            return "exponentInteger";
-        }
-        if (field == DecimalFormat.Field.EXPONENT_SIGN) {
-            return "exponentMinusSign";
-        }
-        if (field == DecimalFormat.Field.EXPONENT_SYMBOL) {
-            return "exponentSeparator";
-        }
-        if (field == DecimalFormat.Field.DECIMAL_SEPARATOR) {
-            return "decimal";
-        }
-        if (field == DecimalFormat.Field.GROUPING_SEPARATOR) {
-            return "group";
-        }
-        if (field == DecimalFormat.Field.PERCENT) {
-            return "percentSign";
-        }
-        if (field == DecimalFormat.Field.PERMILLE) {
-            return "permilleSign";
-        }
-        if (field == DecimalFormat.Field.CURRENCY) {
-            return "currency";
-        }
-        // Report unsupported/unexpected number fields as literal.
-        return "literal";
-    }
-
     // Implementer note: This method corresponds roughly to
     // https://tc39.es/ecma402/#sec-formatnumbertoparts
     public List<Map<String, String>> formatToParts(double n) throws JSRangeErrorException {
@@ -467,8 +414,9 @@ public class NumberFormat {
             if (iterator.getIndex() + 1 == iterator.getRunLimit()) {
                 Iterator<AttributedCharacterIterator.Attribute> keyIterator = iterator.getAttributes().keySet().iterator();
                 String key;
+
                 if (keyIterator.hasNext()) {
-                    key = fieldToString((DecimalFormat.Field) keyIterator.next(), n);
+                    key = mPlatformNumberFormatter.fieldToString(keyIterator.next(), n);
                 } else {
                     key = "literal";
                 }

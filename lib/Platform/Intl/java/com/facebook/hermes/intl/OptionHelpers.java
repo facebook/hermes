@@ -57,7 +57,6 @@ public class OptionHelpers {
         }
     }
 
-
     public static <T extends Enum<?>> T searchEnum(Class<T> enumeration,
                                                    String search) {
         for (T each : enumeration.getEnumConstants()) {
@@ -67,4 +66,6 @@ public class OptionHelpers {
         }
         return null;
     }
+
+
 }

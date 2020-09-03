@@ -1,17 +1,14 @@
 package com.facebook.hermes.intl;
 
-import android.icu.text.NumberingSystem;
-
 import java.math.RoundingMode;
 import java.text.AttributedCharacterIterator;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
-import java.util.ArrayList;
 import java.util.Currency;
 import java.util.Locale;
 
-import static com.facebook.hermes.intl.IPlatformNumberFormatter.Style.currency;
+import static com.facebook.hermes.intl.IPlatformNumberFormatter.Style.CURRENCY;
 
 public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter {
 
@@ -29,21 +26,21 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
 
     @Override
     public PlatformNumberFormatterAndroid configureCurrency(String currencyCode, IPlatformNumberFormatter.CurrencyDisplay currencyDisplay) throws JSRangeErrorException {
-        if (mStyle == currency) {
+        if (mStyle == CURRENCY) {
 
             Currency currency = Currency.getInstance(currencyCode);
             mDecimalFormat.setCurrency(currency);
 
             String currencySymbol;
             switch (currencyDisplay) {
-                case name:
+                case NAME:
                     currencySymbol = currency.getDisplayName((Locale) mLocaleObject.getLocale());
                     break;
-                case code:
+                case CODE:
                     currencySymbol = currencyCode;
                     break;
-                case symbol:
-                case narrowSymbol:
+                case SYMBOL:
+                case NARROWSYMBOL:
                 default:
                     currencySymbol = currency.getSymbol((Locale) mLocaleObject.getLocale());
                     break;
@@ -77,7 +74,7 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
 
     @Override
     public PlatformNumberFormatterAndroid configureFractinDigits(IPlatformNumberFormatter.RoundingType roundingType, int minimumFractionDigits, int maximumFractionDigits) {
-        if (roundingType == IPlatformNumberFormatter.RoundingType.fractionDigits) {
+        if (roundingType == IPlatformNumberFormatter.RoundingType.FRACTION_DIGITS) {
             if (minimumFractionDigits >= 0)
                 mDecimalFormat.setMinimumFractionDigits(minimumFractionDigits);
 
@@ -93,7 +90,7 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
         DecimalFormatSymbols symbols = mDecimalFormat.getDecimalFormatSymbols();
 
         switch (signDisplay) {
-            case never:
+            case NEVER:
                 mDecimalFormat.setPositivePrefix("");
                 mDecimalFormat.setPositiveSuffix("");
 
@@ -106,10 +103,24 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
         return this;
     }
 
+    public static int getCurrencyDigits (String currencyCode) throws JSRangeErrorException {
+        try {
+            return Currency.getInstance(currencyCode).getDefaultFractionDigits();
+        } catch (IllegalArgumentException ex) {
+            throw new JSRangeErrorException("Invalid currency code !");
+        }
+    }
+
     @Override
     public String format(double n) {
         String result = mFinalFormat.format(n);
         return result;
+    }
+
+    @Override
+    public String fieldToString(AttributedCharacterIterator.Attribute attribute, double x) {
+        // Report unsupported/unexpected number fields as literal.
+        return "literal";
     }
 
     @Override
@@ -127,6 +138,7 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
                                                                      IPlatformNumberFormatter.CurrencySign currencySign,
                                                                      IPlatformNumberFormatter.Notation notation,
                                                                      IPlatformNumberFormatter.CompactDisplay compactDisplay) throws JSRangeErrorException {
+
         NumberFormat numberFormat = NumberFormat.getInstance((Locale)localeObject.getLocale());
         numberFormat.setRoundingMode(RoundingMode.HALF_UP);
 
@@ -135,20 +147,6 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
 
 
     public static String configureNumberingSystem(String inNumberingSystem, ILocaleObject locale) throws JSRangeErrorException {
-        if(!inNumberingSystem.isEmpty()) {
-            try {
-                NumberingSystem numberingSystemObject = NumberingSystem.getInstanceByName(inNumberingSystem);
-            } catch (RuntimeException ex) {
-                throw new JSRangeErrorException("Invalid numbering system: " + inNumberingSystem);
-            }
-
-            ArrayList<String> numberingSystemList = new ArrayList<>();
-            numberingSystemList.add(inNumberingSystem);
-            locale.setUnicodeExtensions("nu", numberingSystemList);
-
-            return inNumberingSystem;
-        } else {
-            return NumberingSystem.getInstance((Locale) locale.getLocale()).getName();
-        }
+        return "latn";
     }
 }

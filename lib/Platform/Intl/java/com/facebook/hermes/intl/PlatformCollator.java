@@ -105,9 +105,6 @@ public class PlatformCollator {
             result.resolvedLocale = localeMatchResult.matchedLocale;
             result.resolvedDesiredLocale = localeMatchResult.matchedRequestedLocale;
 
-            // Note that we copy only collation extension as we know that "collation" is the only relevant keyword for icu.RuleBasedCollator;
-            // ; as returned by RuleBasedCollator.getKeywords()
-            // TODO: Spec requires & to be future proof, this should be dynamic.
             copyCollationExtension(result.resolvedDesiredLocale, result.resolvedLocale);
 
             return result;

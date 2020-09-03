@@ -1,14 +1,6 @@
 package com.facebook.hermes.intl;
 
-import android.icu.text.DecimalFormatSymbols;
-import android.icu.util.Currency;
-import android.icu.util.ULocale;
-
 import java.text.AttributedCharacterIterator;
-import java.util.List;
-import java.util.Map;
-
-import static com.facebook.hermes.intl.IPlatformNumberFormatter.Style.currency;
 
 public interface IPlatformNumberFormatter {
 
@@ -19,7 +11,27 @@ public interface IPlatformNumberFormatter {
     // "percent" for percent formatting
     // "unit" for unit formatting
     enum Style {
-        decimal, percent, currency, unit
+        DECIMAL,
+        PERCENT,
+        CURRENCY,
+        UNIT;
+
+        @Override
+        public String toString() {
+            switch (this) {
+                case DECIMAL:
+                    return "decimal";
+                case PERCENT:
+                    return "percent";
+                case CURRENCY:
+                    return "currency";
+                case UNIT:
+                    return "unit";
+                default:
+                    throw new IllegalArgumentException();
+            }
+        }
+
     }
 
     // [[Notation ]]
@@ -30,32 +42,89 @@ public interface IPlatformNumberFormatter {
     //    "engineering" return the exponent of ten when divisible by three
     //    "compact" string representing exponent, defaults is using the "short" form.
     enum Notation {
-        standard,
-        scientific,
-        engineering,
-        compact
+        STANDARD,
+        SCIENTIFIC,
+        ENGINEERING,
+        COMPACT;
+
+        @Override
+        public String toString() {
+            switch (this) {
+                case STANDARD:
+                    return "standard";
+                case SCIENTIFIC:
+                    return "scientific";
+                case ENGINEERING:
+                    return "engineering";
+                case COMPACT:
+                    return "compact";
+                default:
+                    throw new IllegalArgumentException();
+            }
+        }
     }
 
     // [[compactDisplay]]
     // Only used when notation is "compact". Takes either "short" (default) or "long".
     enum CompactDisplay {
         SHORT,
-        LONG
+        LONG;
+
+        @Override
+        public String toString() {
+            switch (this) {
+                case SHORT:
+                    return "short";
+                case LONG:
+                    return "long";
+                default:
+                    throw new IllegalArgumentException();
+            }
+        }
     }
 
     enum SignDisplay {
-        auto,
-        always,
-        never,
-        exceptZero
+        AUTO,
+        ALWAYS,
+        NEVER,
+        EXCEPTZERO;
+
+        @Override
+        public String toString() {
+            switch (this) {
+                case AUTO:
+                    return "auto";
+                case ALWAYS:
+                    return "always";
+                case NEVER:
+                    return "never";
+                case EXCEPTZERO:
+                    return "exceptZero";
+                default:
+                    throw new IllegalArgumentException();
+            }
+        }
     }
 
     enum UnitDisplay {
         SHORT,
-        narrow,
-        LONG
-    }
+        NARROW,
+        LONG;
 
+        @Override
+        public String toString() {
+            switch (this) {
+                case SHORT:
+                    return "short";
+                case NARROW:
+                    return "narrow";
+                case LONG:
+                    return "long";
+                default:
+                    throw new IllegalArgumentException();
+            }
+        }
+    }
 
     // How to display the currency in currency formatting. Possible values are:
     // "symbol" to use a localized currency symbol such as €, this is the default value,
@@ -63,35 +132,71 @@ public interface IPlatformNumberFormatter {
     // "code" to use the ISO currency code,
     // "name" to use a localized currency name such as "dollar",
     enum CurrencyDisplay {
-        symbol,
-        narrowSymbol,
-        code,
-        name,
+        SYMBOL,
+        NARROWSYMBOL,
+        CODE,
+        NAME;
+
+        @Override
+        public String toString() {
+            switch (this) {
+                case SYMBOL:
+                    return "symbol";
+                case NARROWSYMBOL:
+                    return "narrowSymbol";
+                case CODE:
+                    return "code";
+                case NAME:
+                    return "name";
+                default:
+                    throw new IllegalArgumentException();
+            }
+        }
     }
 
     // In many locales, accounting format means to wrap the number with parentheses instead of appending a minus sign.
     // You can enable this formatting by setting the currencySign option to "accounting". The default value is "standard".
     enum CurrencySign {
-        standard,
-        accounting
+        STANDARD,
+        ACCOUNTING;
+
+        @Override
+        public String toString() {
+            switch (this) {
+                case ACCOUNTING:
+                    return "accounting";
+                case STANDARD:
+                    return "standard";
+                default:
+                    throw new IllegalArgumentException();
+            }
+        }
     }
 
     enum RoundingType {
-        significantDigits,
-        fractionDigits,
-        compactRounding
+        SIGNIFICANT_DIGITS,
+        FRACTION_DIGITS,
+        COMPACT_ROUNDING
     }
 
-
     IPlatformNumberFormatter configureCurrency(String currencyCode, CurrencyDisplay currencyDisplay) throws JSRangeErrorException;
+
     IPlatformNumberFormatter configureGrouping(boolean mGroupingUsed);
+
     IPlatformNumberFormatter configureMinIntergerDigits(int minimumIntegerDigits);
-    IPlatformNumberFormatter configureSignificantDigits(IPlatformNumberFormatter.RoundingType roundingType, int minimumSignificantDigits, int maximumSignificantDigits) throws JSRangeErrorException ;
+
+    IPlatformNumberFormatter configureSignificantDigits(IPlatformNumberFormatter.RoundingType roundingType, int minimumSignificantDigits, int maximumSignificantDigits) throws JSRangeErrorException;
+
     IPlatformNumberFormatter configureFractinDigits(IPlatformNumberFormatter.RoundingType roundingType, int minimumFractionDigits, int maximumFractionDigits);
+
     IPlatformNumberFormatter configureSignDisplay(IPlatformNumberFormatter.SignDisplay signDisplay);
+
     IPlatformNumberFormatter configureUnits(String unit, IPlatformNumberFormatter.UnitDisplay unitDisplay) throws JSRangeErrorException;
 
     String format(double n) throws JSRangeErrorException;
+
+    String fieldToString(AttributedCharacterIterator.Attribute attribute, double x);
+
     AttributedCharacterIterator formatToParts(double n) throws JSRangeErrorException;
 }
 
