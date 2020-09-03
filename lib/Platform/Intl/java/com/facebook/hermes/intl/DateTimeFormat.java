@@ -8,16 +8,22 @@
 package com.facebook.hermes.intl;
 
 import android.icu.text.DateFormat;
+import android.icu.text.DateIntervalFormat;
 import android.icu.text.SimpleDateFormat;
 import android.icu.util.Calendar;
 import android.icu.util.TimeZone;
 import android.icu.util.ULocale;
+import android.util.TimeFormatException;
 
 import java.lang.reflect.Array;
+import java.text.AttributedCharacterIterator;
+import java.text.CharacterIterator;
 import java.text.FieldPosition;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -82,6 +88,8 @@ public class DateTimeFormat {
   // option data is needed to implement the other members of this
   // class.
 
+  private ULocale mLocale = null;
+
   private DateFormat mDateFormat = null;
 
   private String mCalendar = null;
@@ -137,21 +145,22 @@ public class DateTimeFormat {
     // TODO :: use setCalendar to simplify this code.
     if(mPlatformCalendarInstance != null ) {
       if(!mDateStyle.isEmpty() && !mTimeStyle.isEmpty()) {
-        mDateFormat = DateFormat.getDateTimeInstance(mPlatformCalendarInstance, getDateStyleValue(mDateStyle), getTimeStyleValue(mDateStyle));
+        mDateFormat = DateFormat.getDateTimeInstance(mPlatformCalendarInstance, getDateStyleValue(mDateStyle), getTimeStyleValue(mDateStyle), mLocale);
       } else if (!mDateStyle.isEmpty()) {
-        mDateFormat = DateFormat.getDateInstance(mPlatformCalendarInstance, getDateStyleValue(mDateStyle));
+        mDateFormat = DateFormat.getDateInstance(mPlatformCalendarInstance, getDateStyleValue(mDateStyle), mLocale);
       }  else if (!mTimeStyle.isEmpty()) {
-        mDateFormat = DateFormat.getTimeInstance(mPlatformCalendarInstance, getTimeStyleValue(mTimeStyle));
+        mDateFormat = DateFormat.getTimeInstance(mPlatformCalendarInstance, getTimeStyleValue(mTimeStyle), mLocale);
       } else {
         throw new JSRangeErrorException("Expected date or time style");
       }
+
     } else {
       if(!mDateStyle.isEmpty() && !mTimeStyle.isEmpty()) {
-        mDateFormat = DateFormat.getDateTimeInstance(getDateStyleValue(mDateStyle), getTimeStyleValue(mDateStyle));
+        mDateFormat = DateFormat.getDateTimeInstance(getDateStyleValue(mDateStyle), getTimeStyleValue(mDateStyle), mLocale);
       } else if (!mDateStyle.isEmpty()) {
-        mDateFormat = DateFormat.getDateInstance(getDateStyleValue(mDateStyle));
+        mDateFormat = DateFormat.getDateInstance(getDateStyleValue(mDateStyle), mLocale);
       }  else if (!mTimeStyle.isEmpty()) {
-        mDateFormat = DateFormat.getTimeInstance(getTimeStyleValue(mTimeStyle));
+        mDateFormat = DateFormat.getTimeInstance(getTimeStyleValue(mTimeStyle), mLocale);
       } else {
         throw new JSRangeErrorException("Expected date or time style");
       }
@@ -268,7 +277,6 @@ public class DateTimeFormat {
       }
     }
 
-    // TODO :: Calendar
     mDateFormat  = DateFormat.getPatternInstance(skeletonBuffer.toString(), (ULocale) resolvedLocale.getLocale());
   }
 
@@ -277,6 +285,8 @@ public class DateTimeFormat {
   {
     String desiredLocaleMatcher = OptionHelpers.resolveStringOption(options, Constants.LOCALEMATCHER, Constants.LOCALEMATCHER_POSSIBLE_VALUES, Constants.LOCALEMATCHER_BESTFIT);
     PlatformCollator.LocaleResolutionResult localeResolutionResult = PlatformNumberFormatter.resolveLocales(locales, desiredLocaleMatcher);
+
+    mLocale = (ULocale) localeResolutionResult.resolvedLocale.getLocale();
 
     mCalendar = OptionHelpers.resolveStringOption(options, "calendar", new String [] { "buddhist", "chinese", "coptic", "ethiopia", "ethiopic", "gregory", "hebrew", "indian", "islamic", "iso8601", "japanese", "persian", "roc"}, "");
 
@@ -373,15 +383,78 @@ public class DateTimeFormat {
     return result;
   }
 
+  // Copied from https://github.com/anba/es6draft/blob/5487e074da2f9489fa2d8c653f037c0969bb2a68/src/main/java/com/github/anba/es6draft/runtime/objects/intl/DateTimeFormatConstructor.java
+  private static String fieldToString(DateFormat.Field field) {
+    if (field == DateFormat.Field.DAY_OF_WEEK) {
+      return "weekday";
+    }
+    if (field == DateFormat.Field.ERA) {
+      return "era";
+    }
+    if (field == DateFormat.Field.YEAR) {
+      return "year";
+    }
+    if (field == DateFormat.Field.MONTH) {
+      return "month";
+    }
+    if (field == DateFormat.Field.DAY_OF_MONTH) {
+      return "day";
+    }
+    if (field == DateFormat.Field.HOUR0) {
+      return "hour";
+    }
+    if (field == DateFormat.Field.HOUR1) {
+      return "hour";
+    }
+    if (field == DateFormat.Field.HOUR_OF_DAY0) {
+      return "hour";
+    }
+    if (field == DateFormat.Field.HOUR_OF_DAY1) {
+      return "hour";
+    }
+    if (field == DateFormat.Field.MINUTE) {
+      return "minute";
+    }
+    if (field == DateFormat.Field.SECOND) {
+      return "second";
+    }
+    if (field == DateFormat.Field.TIME_ZONE) {
+      return "timeZoneName";
+    }
+    if (field == DateFormat.Field.AM_PM) {
+      return "dayPeriod";
+    }
+    // Report unsupported/unexpected date fields as literals.
+    return "literal";
+  }
+
   // Implementer note: This method corresponds roughly to
   // https://tc39.es/ecma402/#sec-formatdatetimetoparts
   public List<Map<String, String>> formatToParts(double jsTimeValue) {
     ArrayList<Map<String, String>> ret = new ArrayList<Map<String, String>>();
-    HashMap<String, String> part = new HashMap<String, String>();
-    part.put("month", "integer");
-    // This isn't right, but I didn't want to do more work for a stub.
-    part.put("value", (new SimpleDateFormat()).format(new Date((long) jsTimeValue)));
-    ret.add(part);
+
+    // TODO :: Redo the code.
+    AttributedCharacterIterator iterator = mDateFormat.formatToCharacterIterator(jsTimeValue);
+    StringBuilder sb = new StringBuilder();
+    for (char ch = iterator.first(); ch != CharacterIterator.DONE; ch = iterator.next()) {
+      sb.append(ch);
+      if (iterator.getIndex() + 1 == iterator.getRunLimit()) {
+        Iterator<AttributedCharacterIterator.Attribute> keyIterator = iterator.getAttributes().keySet().iterator();
+        String key;
+        if (keyIterator.hasNext()) {
+          key  = fieldToString((DateFormat.Field) keyIterator.next());
+        } else {
+          key = "literal";
+        }
+        String value = sb.toString();
+        sb.setLength(0);
+
+        HashMap<String, String> part = new HashMap();
+        part.put(key, value);
+        ret.add(part);
+      }
+    }
+
     return ret;
   }
 }

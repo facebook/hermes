@@ -1,5 +1,15 @@
 package com.facebook.hermes.intl;
 
+import android.icu.text.DecimalFormatSymbols;
+import android.icu.util.Currency;
+import android.icu.util.ULocale;
+
+import java.text.AttributedCharacterIterator;
+import java.util.List;
+import java.util.Map;
+
+import static com.facebook.hermes.intl.IPlatformNumberFormatter.Style.currency;
+
 public interface IPlatformNumberFormatter {
 
     // [[style]]
@@ -66,7 +76,22 @@ public interface IPlatformNumberFormatter {
         accounting
     }
 
+    enum RoundingType {
+        significantDigits,
+        fractionDigits,
+        compactRounding
+    }
 
-    String format(double number);
+
+    IPlatformNumberFormatter configureCurrency(String currencyCode, CurrencyDisplay currencyDisplay) throws JSRangeErrorException;
+    IPlatformNumberFormatter configureGrouping(boolean mGroupingUsed);
+    IPlatformNumberFormatter configureMinIntergerDigits(int minimumIntegerDigits);
+    IPlatformNumberFormatter configureSignificantDigits(IPlatformNumberFormatter.RoundingType roundingType, int minimumSignificantDigits, int maximumSignificantDigits) throws JSRangeErrorException ;
+    IPlatformNumberFormatter configureFractinDigits(IPlatformNumberFormatter.RoundingType roundingType, int minimumFractionDigits, int maximumFractionDigits);
+    IPlatformNumberFormatter configureSignDisplay(IPlatformNumberFormatter.SignDisplay signDisplay);
+    IPlatformNumberFormatter configureUnits(String unit, IPlatformNumberFormatter.UnitDisplay unitDisplay) throws JSRangeErrorException;
+
+    String format(double n) throws JSRangeErrorException;
+    AttributedCharacterIterator formatToParts(double n) throws JSRangeErrorException;
 }
 

@@ -518,7 +518,7 @@ vm::CallResult<std::vector<std::u16string>> NumberFormat::supportedLocalesOf(
   try {
     return localesFromJava(
         runtime,
-        JCollator::supportedLocalesOf(
+        JNumberFormat::supportedLocalesOf(
             localesToJava(locales), optionsToJava(options)));
   } catch (const std::exception &ex) {
     return runtime->raiseRangeError(ex.what());
@@ -533,7 +533,7 @@ vm::ExecutionStatus NumberFormat::initialize(
     impl_->jNumberFormat_ = jni::make_global(
         JNumberFormat::create(localesToJava(locales), optionsToJava(options)));
   } catch (const std::exception &ex) {
-    runtime->raiseRangeError(ex.what());
+    return runtime->raiseRangeError(ex.what());
   }
 
   return vm::ExecutionStatus::RETURNED;

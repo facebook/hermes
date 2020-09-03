@@ -7,6 +7,8 @@
 
 #include "JSLibInternal.h"
 
+#include <android/log.h>
+
 #include "hermes/Platform/Intl/PlatformIntl.h"
 
 #ifdef HERMES_PLATFORM_INTL
@@ -103,7 +105,11 @@ CallResult<HermesValue> optionsToJS(
     key = *keyRes;
     if (kv.second.isBool()) {
       value = HermesValue::encodeBoolValue(kv.second.getBool());
-    } else {
+    }
+    else if (kv.second.isNumber()) {
+      value = HermesValue::encodeNumberValue(kv.second.getNumber());
+    }
+    else {
       assert(kv.second.isString() && "Option is neither bool nor string");
       CallResult<HermesValue> strRes = StringPrimitive::createEfficient(
           runtime, std::move(kv.second.getString()));
@@ -134,6 +140,7 @@ CallResult<Handle<JSObject>> partToJS(
   GCScopeMarkerRAII marker{runtime};
   for (auto &kv : result) {
     marker.flush();
+
     CallResult<HermesValue> keyRes = StringPrimitive::createEfficient(
         runtime, createUTF16Ref(kv.first.c_str()));
     if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION)) {
@@ -150,8 +157,10 @@ CallResult<Handle<JSObject>> partToJS(
     if (LLVM_UNLIKELY(putRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
+
     assert(*putRes && "put returned false on a plain object");
   }
+
   return obj;
 }
 
@@ -172,9 +181,6 @@ CallResult<HermesValue> partsToJS(
   uint64_t index = 0;
   for (auto &part : *result) {
     CallResult<Handle<JSObject>> partRes = partToJS(runtime, std::move(part));
-    if (LLVM_UNLIKELY(partRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
     JSArray::setElementAt(array, runtime, index++, *partRes);
   }
   return array.getHermesValue();
@@ -258,6 +264,8 @@ const OptionData kCollatorOptions[] = {
 };
 
 const OptionData kDTFOptions[] = {
+        {u"dateStyle", platform_intl::Option::Kind::String, 0},
+        {u"timeStyle", platform_intl::Option::Kind::String, 0},
     {u"localeMatcher", platform_intl::Option::Kind::String, 0},
     {u"calendar", platform_intl::Option::Kind::String, 0},
     {u"numberingSystem", platform_intl::Option::Kind::String, 0},
@@ -298,7 +306,6 @@ const OptionData kNumberFormatOptions[] = {
     {u"unitDisplay", platform_intl::Option::Kind::String, 0},
     {u"notation", platform_intl::Option::Kind::String, 0},
     {u"minimumIntegerDigits", platform_intl::Option::Kind::Number, 0},
-    {u"maximumIntegerDigits", platform_intl::Option::Kind::Number, 0},
     {u"minimumFractionDigits", platform_intl::Option::Kind::Number, 0},
     {u"maximumFractionDigits", platform_intl::Option::Kind::Number, 0},
     {u"minimumSignificantDigits", platform_intl::Option::Kind::Number, 0},
@@ -314,6 +321,10 @@ CallResult<platform_intl::Options> normalizeOptions(
     Handle<> options,
     const OptionData optionData[]) {
   platform_intl::Options ret;
+
+  if(options->isNull())
+      return runtime->raiseTypeError(
+              "Options object can't be null !");
 
   auto optionsObj = Handle<JSObject>::dyn_vmcast(options);
   if (!optionsObj) {
