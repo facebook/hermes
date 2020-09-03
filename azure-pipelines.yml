@@ -11,7 +11,7 @@ pool:
 
 jobs:
   - job: HermesBuild
-    timeoutInMinutes: 30
+    timeoutInMinutes: 50
     displayName: Build the Hermes binary for supported architectures and flavors
     strategy:
       matrix:
