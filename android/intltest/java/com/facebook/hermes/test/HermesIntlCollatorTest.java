@@ -93,7 +93,6 @@ public class HermesIntlCollatorTest extends InstrumentationTestCase {
 
     }
 
-
     @Test
     public void testIntlCollator262() throws IOException {
 
