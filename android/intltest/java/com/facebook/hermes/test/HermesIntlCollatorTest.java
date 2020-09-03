@@ -60,11 +60,6 @@ public class HermesIntlCollatorTest extends InstrumentationTestCase {
         HashMap<String, String> failedTests = new HashMap<>();
 
         for (String testFileName : testFileList) {
-            if (blackList.contains(testFileName)) {
-                Log.v(LOG_TAG, "Skipping " + testFileName + " as it is blacklisted.");
-                continue;
-            }
-
             String testFilePath = basePath + testFileName;
             Log.d(LOG_TAG, "Evaluating " + testFilePath);
 
@@ -74,47 +69,36 @@ public class HermesIntlCollatorTest extends InstrumentationTestCase {
                 try {
                     evalScriptFromAsset(rt, testFilePath);
                 } catch (FileNotFoundException ex) {
+                    //if (testFilePath.endsWith(".js"))
+                    //    throw ex;
                     // Skip, they are likely subdirectories
                 } catch (com.facebook.jni.CppException ex) {
-                    failedTests.put(testFilePath, ex.getMessage());
+                    if (!blackList.contains(testFileName))
+                        failedTests.put(testFilePath, ex.getMessage());
+                } catch (Exception ex) {
+                    if   (!blackList.contains(testFileName))
+                        failedTests.put(testFilePath, ex.getMessage());
                 }
             }
         }
 
         Log.v(LOG_TAG, "Passed Tests: " + TextUtils.join("\n", ranTests));
 
-        for (Map.Entry<String, String> entry: failedTests.entrySet() ) {
-            Log.v(LOG_TAG, "Failed Tests: " +  entry.getKey() + " : " + entry.getValue());
-            assert(false);
+        for (Map.Entry<String, String> entry : failedTests.entrySet()) {
+            Log.v(LOG_TAG, "Failed Tests: " + entry.getKey() + " : " + entry.getValue());
+            assert (false);
         }
 
         assertThat(failedTests.entrySet().isEmpty()).isEqualTo(true);
+
     }
+
 
     @Test
     public void testIntlCollator262() throws IOException {
-//
-//        try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
-//            evaluateCommonScriptsFromAsset(rt);
-//            try {
-//                evalScriptFromAsset(rt, "test262/Collator/usage-de.js");
-//            } catch (FileNotFoundException ex) {
-//                // Skip, they are likely subdirectories
-//            }
-//        }
-
 
         String basePath = "test262/Collator/";
 
-//        Set<String> blackList = new HashSet<>(Arrays.asList(
-//                "numeric-and-caseFirst.js" // Property numeric couldn't be set through locale extension key kn. Expected SameValue(«undefined», «true») to be true
-//                , "usage-de.js" // Expected [AE, Ä] and [Ä, AE] to have the same contents. sort
-//                , "proto-from-ctor-realm.js" // ReferenceError: Property '$262' doesn't exist
-//                , "subclassing.js" // Compiling JS failed: 18:1:invalid statement encountered. Buffer size 917 starts with: 2f2f20436f7079726967687420323031
-//                , "test-option-sensitivity.js" // com.facebook.hermes.intl.JSRangeErrorException: Invalid value '-1' for option sensitivity
-//                , "ignore-invalid-unicode-ext-values.js" // Expected [1, 10, 9, Å, Å, Å, hello, peché, pêche, ự, ự, ự, ự, こんにちは, 你好] and [1, 10, 9, Å, Å, Å, hello, peché, pêche, ự, ự, ự, ự, こんにちは, 你好] to have the same contents.
-//        ));
-//
         Set<String> blackList = new HashSet<>(Arrays.asList(
                 "subclassing.js",  // Test requires Javascript classes
                 "proto-from-ctor-realm.js", // ReferenceError: Property '$262' doesn't exist .. Test requires Reflect

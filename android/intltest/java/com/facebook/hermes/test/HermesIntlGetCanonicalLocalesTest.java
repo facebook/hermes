@@ -60,11 +60,6 @@ public class HermesIntlGetCanonicalLocalesTest extends InstrumentationTestCase {
         HashMap<String, String> failedTests = new HashMap<>();
 
         for (String testFileName : testFileList) {
-            if (blackList.contains(testFileName)) {
-                Log.v(LOG_TAG, "Skipping " + testFileName + " as it is blacklisted.");
-                continue;
-            }
-
             String testFilePath = basePath + testFileName;
             Log.d(LOG_TAG, "Evaluating " + testFilePath);
 
@@ -74,22 +69,30 @@ public class HermesIntlGetCanonicalLocalesTest extends InstrumentationTestCase {
                 try {
                     evalScriptFromAsset(rt, testFilePath);
                 } catch (FileNotFoundException ex) {
+                    //if (testFilePath.endsWith(".js"))
+                    //    throw ex;
                     // Skip, they are likely subdirectories
                 } catch (com.facebook.jni.CppException ex) {
-                    failedTests.put(testFilePath, ex.getMessage());
+                    if (!blackList.contains(testFileName))
+                        failedTests.put(testFilePath, ex.getMessage());
+                } catch (Exception ex) {
+                    if   (!blackList.contains(testFileName))
+                        failedTests.put(testFilePath, ex.getMessage());
                 }
             }
         }
 
         Log.v(LOG_TAG, "Passed Tests: " + TextUtils.join("\n", ranTests));
 
-        for (Map.Entry<String, String> entry: failedTests.entrySet() ) {
-            Log.v(LOG_TAG, "Failed Tests: " +  entry.getKey() + " : " + entry.getValue());
-            assert(false);
+        for (Map.Entry<String, String> entry : failedTests.entrySet()) {
+            Log.v(LOG_TAG, "Failed Tests: " + entry.getKey() + " : " + entry.getValue());
+            assert (false);
         }
 
         assertThat(failedTests.entrySet().isEmpty()).isEqualTo(true);
+
     }
+
 
     @Test
     public void testIntlGetCanonicalLocales() throws IOException {
@@ -99,7 +102,7 @@ public class HermesIntlGetCanonicalLocalesTest extends InstrumentationTestCase {
                 , "complex-region-subtag-replacement.js" // We don't do complex region replacement.
                 , "has-property.js" // Test needs Proxy,
                 , "non-iana-canon.js" // All except one tag (de-u-kf) passes. icu4j adds an extra 'yes' token to the unicode 'kf' extension !
-                , "preferred-variant.js" // We din;t do variant replacement
+                , "preferred-variant.js" // We don;t do variant replacement
                 , "transformed-ext-canonical.js" // We don't canonicalize extensions yet.
                 , "transformed-ext-invalid.js"  // We don't canonicalize extensions yet.
                 , "unicode-ext-canonicalize-region.js"  // We don't canonicalize extensions yet.
@@ -137,7 +140,7 @@ public class HermesIntlGetCanonicalLocalesTest extends InstrumentationTestCase {
             unicode-ext-canonicalize-measurement-system.js
             unicode-ext-canonicalize-timezone.js
             weird-cases.js
-            */
+        */
 
         runTests(basePath, blackList);
     }
