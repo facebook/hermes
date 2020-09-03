@@ -22,7 +22,7 @@ class Interpreter {
  public:
   /// Allocate a GeneratorFuncxtion for the specified function and the specified
   /// environment. \param funcIndex function index in the global function table.
-  static CallResult<HermesValue> createGeneratorClosure(
+  static CallResult<PseudoHandle<JSGeneratorFunction>> createGeneratorClosure(
       Runtime *runtime,
       RuntimeModule *runtimeModule,
       unsigned funcIndex,
@@ -30,7 +30,7 @@ class Interpreter {
 
   /// Allocate a generator for the specified function and the specified
   /// environment. \param funcIndex function index in the global function table.
-  static CallResult<HermesValue> createGenerator_RJS(
+  static CallResult<PseudoHandle<JSGenerator>> createGenerator_RJS(
       Runtime *runtime,
       RuntimeModule *runtimeModule,
       unsigned funcIndex,
@@ -41,7 +41,7 @@ class Interpreter {
   /// It assumes that he fast path has handled the case when 'lazyReg' is
   /// already initialized. It creates a new 'arguments' object and populates it
   /// with the argument values.
-  static CallResult<HermesValue> reifyArgumentsSlowPath(
+  static CallResult<Handle<Arguments>> reifyArgumentsSlowPath(
       Runtime *runtime,
       Handle<Callable> curFunction,
       bool strictMode);
@@ -67,7 +67,7 @@ class Interpreter {
   /// The FRAME in question is obtained from \p runtime, and the registers
   /// \p lazyReg and \p valueReg are passed directly to make this function
   /// easier to use outside the interpeter.
-  static CallResult<HermesValue> getArgumentsPropByValSlowPath_RJS(
+  static CallResult<PseudoHandle<>> getArgumentsPropByValSlowPath_RJS(
       Runtime *runtime,
       PinnedHermesValue *lazyReg,
       PinnedHermesValue *valueReg,
@@ -86,7 +86,7 @@ class Interpreter {
   /// not even a function).
   /// \param callTarget the register containing the function object
   /// \return ExecutionStatus::EXCEPTION if the call threw.
-  static CallResult<HermesValue> handleCallSlowPath(
+  static CallResult<PseudoHandle<>> handleCallSlowPath(
       Runtime *runtime,
       PinnedHermesValue *callTarget);
 
@@ -95,20 +95,22 @@ class Interpreter {
   /// Primitive own properties are properties fetching values from primitive
   /// value itself.
   /// Currently the only primitive own property is String.prototype.length.
-  static OptValue<HermesValue>
+  /// If the fast path property does not exist, return Empty.
+  static PseudoHandle<>
   tryGetPrimitiveOwnPropertyById(Runtime *runtime, Handle<> base, SymbolID id);
 
   /// Implement OpCode::GetById/TryGetById when the base is not an object.
-  static CallResult<HermesValue>
+  static CallResult<PseudoHandle<>>
   getByIdTransient_RJS(Runtime *runtime, Handle<> base, SymbolID id);
 
   /// Fast path for getByValTransient() -- avoid boxing for \p base if it is
   /// string primitive and \p nameHandle is an array index.
-  static OptValue<HermesValue>
+  /// If the property does not exist, return Empty.
+  static PseudoHandle<>
   getByValTransientFast(Runtime *runtime, Handle<> base, Handle<> nameHandle);
 
   /// Implement OpCode::GetByVal when the base is not an object.
-  static CallResult<HermesValue>
+  static CallResult<PseudoHandle<>>
   getByValTransient_RJS(Runtime *runtime, Handle<> base, Handle<> name);
 
   /// Implement OpCode::PutById/TryPutById when the base is not an object.
@@ -137,7 +139,7 @@ class Interpreter {
   /// \param keyBufferIndex the first element of the key buffer to read.
   /// \param valBufferIndex the first element of the val buffer to read.
   /// \return ExecutionStatus::EXCEPTION if the property definitions throw.
-  static CallResult<HermesValue> createObjectFromBuffer(
+  static CallResult<PseudoHandle<>> createObjectFromBuffer(
       Runtime *runtime,
       CodeBlock *curCodeBlock,
       unsigned numLiterals,
@@ -148,7 +150,7 @@ class Interpreter {
   /// \param numLiterals the amount of literals to read from the buffer.
   /// \param bufferIndex the first element of the buffer to read.
   /// \return ExecutionStatus::EXCEPTION if the property definitions throw.
-  static CallResult<HermesValue> createArrayFromBuffer(
+  static CallResult<PseudoHandle<>> createArrayFromBuffer(
       Runtime *runtime,
       CodeBlock *curCodeBlock,
       unsigned numElements,

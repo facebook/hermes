@@ -12,12 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "Unix.h"
-#include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Config/config.h"
-#include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/Mutex.h"
-#include "llvm/Support/MutexGuard.h"
+#include "llvh/ADT/Hashing.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/Config/config.h"
+#include "llvh/Support/ManagedStatic.h"
+#include "llvh/Support/Mutex.h"
+#include "llvh/Support/MutexGuard.h"
 #if HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
@@ -57,7 +57,7 @@
 //===          is guaranteed to work on *all* UNIX variants.
 //===----------------------------------------------------------------------===//
 
-using namespace llvm;
+using namespace llvh;
 using namespace sys;
 
 static std::pair<std::chrono::microseconds, std::chrono::microseconds> getRUsageTimes() {
@@ -449,7 +449,7 @@ static unsigned GetRandomNumberSeed() {
 }
 #endif
 
-unsigned llvm::sys::Process::GetRandomNumber() {
+unsigned llvh::sys::Process::GetRandomNumber() {
 #if HAVE_DECL_ARC4RANDOM
   return arc4random();
 #else

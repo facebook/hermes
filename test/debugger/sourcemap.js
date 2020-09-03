@@ -7,7 +7,6 @@
 
 // RUN: %hdb %s < %s.debug | %FileCheck --match-full-lines %s
 // REQUIRES: debugger
-// UNSUPPORTED: jslib
 
 //# sourceMappingURL=this_is_a_url
 

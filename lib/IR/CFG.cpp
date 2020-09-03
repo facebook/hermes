@@ -5,15 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "llvm/Support/GenericDomTree.h"
-#include "llvm/Support/GenericDomTreeConstruction.h"
+#include "llvh/Support/GenericDomTree.h"
+#include "llvh/Support/GenericDomTreeConstruction.h"
 
 #include "hermes/IR/CFG.h"
 
 using namespace hermes;
 
-template class llvm::DominatorTreeBase<BasicBlock, false>;
-template class llvm::DomTreeNodeBase<BasicBlock>;
+template class llvh::DominatorTreeBase<BasicBlock, false>;
+template class llvh::DomTreeNodeBase<BasicBlock>;
 
 DominanceInfo::DominanceInfo(Function *F) : DominatorTreeBase() {
   assert(F->begin() != F->end() && "Function is empty!");

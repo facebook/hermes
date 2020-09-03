@@ -23,12 +23,12 @@ void swap(AlignedStorage &a, AlignedStorage &b) {
   swap(a.provider_, b.provider_);
 }
 
-llvm::ErrorOr<AlignedStorage> AlignedStorage::create(
+llvh::ErrorOr<AlignedStorage> AlignedStorage::create(
     StorageProvider *provider) {
   return create(provider, nullptr);
 }
 
-llvm::ErrorOr<AlignedStorage> AlignedStorage::create(
+llvh::ErrorOr<AlignedStorage> AlignedStorage::create(
     StorageProvider *provider,
     const char *name) {
   auto result = provider->newStorage(name);

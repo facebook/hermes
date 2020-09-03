@@ -9,13 +9,14 @@
 #define HERMES_VM_POINTERBASE_H
 
 #include "hermes/VM/AlignedStorage.h"
-#include "llvm/Support/Compiler.h"
+#include "llvh/Support/Compiler.h"
 
 #include <cassert>
 #include <cstdint>
 
 #if defined(HERMESVM_ALLOW_COMPRESSED_POINTERS) && LLVM_PTR_SIZE == 8 && \
-    defined(HERMESVM_GC_NONCONTIG_GENERATIONAL)
+    (defined(HERMESVM_GC_NONCONTIG_GENERATIONAL) ||                      \
+     defined(HERMESVM_GC_HADES))
 /// \macro HERMESVM_COMPRESSED_POINTERS
 /// \brief If defined, store pointers as 32 bits in GC-managed Hermes objects.
 #define HERMESVM_COMPRESSED_POINTERS
@@ -38,6 +39,8 @@ class BasedPointer final {
 
   /// Efficiently yields the representation of a null pointer.
   explicit BasedPointer(std::nullptr_t);
+
+  BasedPointer &operator=(std::nullptr_t);
 
   inline uint32_t getSegmentIndex() const;
 

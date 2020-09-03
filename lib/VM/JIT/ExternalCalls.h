@@ -267,7 +267,8 @@ void externStoreToEnvironment(
 void externStoreNPToEnvironment(
     PinnedHermesValue *env,
     uint32_t idx,
-    PinnedHermesValue *val);
+    PinnedHermesValue *val,
+    Runtime *runtime);
 
 /// An external call invoked by JIT compiled code to \return a value from an
 /// environment \p env, by the index slot number \p idx

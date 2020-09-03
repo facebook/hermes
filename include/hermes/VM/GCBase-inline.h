@@ -13,8 +13,8 @@
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/SkipWeakRefsAcceptor.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/DenseSet.h"
 
 namespace hermes {
 namespace vm {
@@ -83,7 +83,7 @@ void GCBase::clearEntriesWithUnreachableKeys(
        iter != end;
        iter++) {
     JSObject *keyObj = iter->getObject(gc);
-    if (keyObj && !objIsMarked(keyObj)) {
+    if (!keyObj || !objIsMarked(keyObj)) {
       weakMap->clearEntryDirect(gc, *iter);
     }
   }
@@ -95,7 +95,7 @@ bool GCBase::markFromReachableWeakMapKeys(
     GC *gc,
     JSWeakMap *weakMap,
     Acceptor &acceptor,
-    llvm::DenseMap<JSWeakMap *, std::list<detail::WeakRefKey *>>
+    llvh::DenseMap<JSWeakMap *, std::list<detail::WeakRefKey *>>
         *unreachableKeys,
     ObjIsMarkedFunc objIsMarked,
     MarkFromValFunc markFromVal) {
@@ -157,7 +157,7 @@ gcheapsize_t GCBase::completeWeakMapMarking(
   // If a WeakMap is present as a key in this map, the corresponding list
   // is a superset of the unreachable keys in the WeakMap.  (The set last
   // found to be unreachable, some of which may now be reachable.)
-  llvm::DenseMap<JSWeakMap *, std::list<detail::WeakRefKey *>> unreachableKeys;
+  llvh::DenseMap<JSWeakMap *, std::list<detail::WeakRefKey *>> unreachableKeys;
 
   /// A specialized acceptor, which does not mark weak refs.  We will
   /// revisit the WeakMaps with an acceptor that does, at the end.
@@ -169,7 +169,7 @@ gcheapsize_t GCBase::completeWeakMapMarking(
 
   // The set of weak maps that have already been scanned -- we do the
   // initial scan of each weak map only once.
-  llvm::DenseSet<JSWeakMap *> scannedWeakMaps;
+  llvh::DenseSet<JSWeakMap *> scannedWeakMaps;
 
   /// The total size of the reachable WeakMaps.
   gcheapsize_t weakMapAllocBytes = 0;
@@ -227,6 +227,9 @@ gcheapsize_t GCBase::completeWeakMapMarking(
     return 0;
   }
 
+#ifndef NDEBUG
+  const auto numReachableWeakMaps = reachableWeakMaps.size();
+#endif
   for (auto *weakMap : reachableWeakMaps) {
     clearEntriesWithUnreachableKeys(gc, weakMap, objIsMarked);
     // Previously we scanned the weak map while its value storage was
@@ -247,6 +250,10 @@ gcheapsize_t GCBase::completeWeakMapMarking(
   // Because of the limited nature of the marking done above, we can
   // assert that overflow did not occur.
   assert(!checkMarkStackOverflow());
+  // Also ensure that no new WeakMaps were encountered during the final drains.
+  assert(
+      numReachableWeakMaps == reachableWeakMaps.size() &&
+      "A reachable weak map wasn't marked");
 
   return weakMapAllocBytes;
 }

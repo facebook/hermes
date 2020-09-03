@@ -12,24 +12,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/APInt.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/bit.h"
-#include "llvm/Config/llvm-config.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/APInt.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/FoldingSet.h"
+#include "llvh/ADT/Hashing.h"
+#include "llvh/ADT/Optional.h"
+#include "llvh/ADT/SmallString.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/ADT/bit.h"
+#include "llvh/Config/llvm-config.h"
+#include "llvh/Support/Debug.h"
+#include "llvh/Support/ErrorHandling.h"
+#include "llvh/Support/MathExtras.h"
+#include "llvh/Support/raw_ostream.h"
 #include <climits>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
-using namespace llvm;
+using namespace llvh;
 
 #define DEBUG_TYPE "apint"
 
@@ -492,7 +492,7 @@ unsigned APInt::getBitsNeeded(StringRef str, uint8_t radix) {
   }
 }
 
-hash_code llvm::hash_value(const APInt &Arg) {
+hash_code llvh::hash_value(const APInt &Arg) {
   if (Arg.isSingleWord())
     return hash_combine(Arg.U.VAL);
 
@@ -537,7 +537,7 @@ unsigned APInt::countLeadingZerosSlowCase() const {
     if (V == 0)
       Count += APINT_BITS_PER_WORD;
     else {
-      Count += llvm::countLeadingZeros(V);
+      Count += llvh::countLeadingZeros(V);
       break;
     }
   }
@@ -557,13 +557,13 @@ unsigned APInt::countLeadingOnesSlowCase() const {
     shift = APINT_BITS_PER_WORD - highWordBits;
   }
   int i = getNumWords() - 1;
-  unsigned Count = llvm::countLeadingOnes(U.pVal[i] << shift);
+  unsigned Count = llvh::countLeadingOnes(U.pVal[i] << shift);
   if (Count == highWordBits) {
     for (i--; i >= 0; --i) {
       if (U.pVal[i] == WORDTYPE_MAX)
         Count += APINT_BITS_PER_WORD;
       else {
-        Count += llvm::countLeadingOnes(U.pVal[i]);
+        Count += llvh::countLeadingOnes(U.pVal[i]);
         break;
       }
     }
@@ -577,7 +577,7 @@ unsigned APInt::countTrailingZerosSlowCase() const {
   for (; i < getNumWords() && U.pVal[i] == 0; ++i)
     Count += APINT_BITS_PER_WORD;
   if (i < getNumWords())
-    Count += llvm::countTrailingZeros(U.pVal[i]);
+    Count += llvh::countTrailingZeros(U.pVal[i]);
   return std::min(Count, BitWidth);
 }
 
@@ -587,7 +587,7 @@ unsigned APInt::countTrailingOnesSlowCase() const {
   for (; i < getNumWords() && U.pVal[i] == WORDTYPE_MAX; ++i)
     Count += APINT_BITS_PER_WORD;
   if (i < getNumWords())
-    Count += llvm::countTrailingOnes(U.pVal[i]);
+    Count += llvh::countTrailingOnes(U.pVal[i]);
   assert(Count <= BitWidth);
   return Count;
 }
@@ -595,7 +595,7 @@ unsigned APInt::countTrailingOnesSlowCase() const {
 unsigned APInt::countPopulationSlowCase() const {
   unsigned Count = 0;
   for (unsigned i = 0; i < getNumWords(); ++i)
-    Count += llvm::countPopulation(U.pVal[i]);
+    Count += llvh::countPopulation(U.pVal[i]);
   return Count;
 }
 
@@ -644,13 +644,13 @@ APInt APInt::byteSwap() const {
 APInt APInt::reverseBits() const {
   switch (BitWidth) {
   case 64:
-    return APInt(BitWidth, llvm::reverseBits<uint64_t>(U.VAL));
+    return APInt(BitWidth, llvh::reverseBits<uint64_t>(U.VAL));
   case 32:
-    return APInt(BitWidth, llvm::reverseBits<uint32_t>(U.VAL));
+    return APInt(BitWidth, llvh::reverseBits<uint32_t>(U.VAL));
   case 16:
-    return APInt(BitWidth, llvm::reverseBits<uint16_t>(U.VAL));
+    return APInt(BitWidth, llvh::reverseBits<uint16_t>(U.VAL));
   case 8:
-    return APInt(BitWidth, llvm::reverseBits<uint8_t>(U.VAL));
+    return APInt(BitWidth, llvh::reverseBits<uint8_t>(U.VAL));
   default:
     break;
   }
@@ -669,7 +669,7 @@ APInt APInt::reverseBits() const {
   return Reversed;
 }
 
-APInt llvm::APIntOps::GreatestCommonDivisor(APInt A, APInt B) {
+APInt llvh::APIntOps::GreatestCommonDivisor(APInt A, APInt B) {
   // Fast-path a common case.
   if (A == B) return A;
 
@@ -712,7 +712,7 @@ APInt llvm::APIntOps::GreatestCommonDivisor(APInt A, APInt B) {
   return A;
 }
 
-APInt llvm::APIntOps::RoundDoubleToAPInt(double Double, unsigned width) {
+APInt llvh::APIntOps::RoundDoubleToAPInt(double Double, unsigned width) {
   uint64_t I = bit_cast<uint64_t>(Double);
 
   // Get the sign bit from the highest order bit
@@ -2650,7 +2650,7 @@ void APInt::tcSetLeastSignificantBits(WordType *dst, unsigned parts,
     dst[i++] = 0;
 }
 
-APInt llvm::APIntOps::RoundingUDiv(const APInt &A, const APInt &B,
+APInt llvh::APIntOps::RoundingUDiv(const APInt &A, const APInt &B,
                                    APInt::Rounding RM) {
   // Currently udivrem always rounds down.
   switch (RM) {
@@ -2668,7 +2668,7 @@ APInt llvm::APIntOps::RoundingUDiv(const APInt &A, const APInt &B,
   llvm_unreachable("Unknown APInt::Rounding enum");
 }
 
-APInt llvm::APIntOps::RoundingSDiv(const APInt &A, const APInt &B,
+APInt llvh::APIntOps::RoundingSDiv(const APInt &A, const APInt &B,
                                    APInt::Rounding RM) {
   switch (RM) {
   case APInt::Rounding::DOWN:
@@ -2699,7 +2699,7 @@ APInt llvm::APIntOps::RoundingSDiv(const APInt &A, const APInt &B,
 }
 
 Optional<APInt>
-llvm::APIntOps::SolveQuadraticEquationWrap(APInt A, APInt B, APInt C,
+llvh::APIntOps::SolveQuadraticEquationWrap(APInt A, APInt B, APInt C,
                                            unsigned RangeWidth) {
   unsigned CoeffWidth = A.getBitWidth();
   assert(CoeffWidth == B.getBitWidth() && CoeffWidth == C.getBitWidth());

@@ -17,7 +17,8 @@ export * from 'foo.js';
 // CHECK-NEXT:         "source": {
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo.js"
-// CHECK-NEXT:         }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "exportKind": "value"
 // CHECK-NEXT:       },
 
 export default function myFun() { return 3; }
@@ -27,8 +28,7 @@ export default function myFun() { return 3; }
 // CHECK-NEXT:           "type": "FunctionDeclaration",
 // CHECK-NEXT:           "id": {
 // CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "myFun",
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "name": "myFun"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "params": [],
 // CHECK-NEXT:           "body": {
@@ -44,7 +44,6 @@ export default function myFun() { return 3; }
 // CHECK-NEXT:               }
 // CHECK-NEXT:             ]
 // CHECK-NEXT:           },
-// CHECK-NEXT:           "returnType": null,
 // CHECK-NEXT:           "generator": false,
 // CHECK-NEXT:           "async": false
 // CHECK-NEXT:         }
@@ -66,14 +65,14 @@ export var abc = 3;
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "id": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "abc",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "abc"
 // CHECK-NEXT:               }
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "specifiers": [],
-// CHECK-NEXT:         "source": null
+// CHECK-NEXT:         "source": null,
+// CHECK-NEXT:         "exportKind": "value"
 // CHECK-NEXT:       },
 
 export function funDecl() {}
@@ -83,20 +82,19 @@ export function funDecl() {}
 // CHECK-NEXT:           "type": "FunctionDeclaration",
 // CHECK-NEXT:           "id": {
 // CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "funDecl",
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "name": "funDecl"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "params": [],
 // CHECK-NEXT:           "body": {
 // CHECK-NEXT:             "type": "BlockStatement",
 // CHECK-NEXT:             "body": []
 // CHECK-NEXT:           },
-// CHECK-NEXT:           "returnType": null,
 // CHECK-NEXT:           "generator": false,
 // CHECK-NEXT:           "async": false
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "specifiers": [],
-// CHECK-NEXT:         "source": null
+// CHECK-NEXT:         "source": null,
+// CHECK-NEXT:         "exportKind": "value"
 // CHECK-NEXT:       },
 
 export let letValue = 123;
@@ -115,14 +113,14 @@ export let letValue = 123;
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "id": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "letValue",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "letValue"
 // CHECK-NEXT:               }
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "specifiers": [],
-// CHECK-NEXT:         "source": null
+// CHECK-NEXT:         "source": null,
+// CHECK-NEXT:         "exportKind": "value"
 // CHECK-NEXT:       },
 
 export const constValue = 321;
@@ -141,14 +139,14 @@ export const constValue = 321;
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "id": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "constValue",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "constValue"
 // CHECK-NEXT:               }
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "specifiers": [],
-// CHECK-NEXT:         "source": null
+// CHECK-NEXT:         "source": null,
+// CHECK-NEXT:         "exportKind": "value"
 // CHECK-NEXT:       },
 
 export { };
@@ -156,7 +154,8 @@ export { };
 // CHECK-NEXT:         "type": "ExportNamedDeclaration",
 // CHECK-NEXT:         "declaration": null,
 // CHECK-NEXT:         "specifiers": [],
-// CHECK-NEXT:         "source": null
+// CHECK-NEXT:         "source": null,
+// CHECK-NEXT:         "exportKind": "value"
 // CHECK-NEXT:       },
 
 export { x };
@@ -168,17 +167,16 @@ export { x };
 // CHECK-NEXT:             "type": "ExportSpecifier",
 // CHECK-NEXT:             "exported": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "x",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "x"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "local": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "x",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "x"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
-// CHECK-NEXT:         "source": null
+// CHECK-NEXT:         "source": null,
+// CHECK-NEXT:         "exportKind": "value"
 // CHECK-NEXT:       },
 
 export { y , };
@@ -190,17 +188,16 @@ export { y , };
 // CHECK-NEXT:             "type": "ExportSpecifier",
 // CHECK-NEXT:             "exported": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "y",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "y"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "local": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "y",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "y"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
-// CHECK-NEXT:         "source": null
+// CHECK-NEXT:         "source": null,
+// CHECK-NEXT:         "exportKind": "value"
 // CHECK-NEXT:       },
 
 export { a as b , c , last };
@@ -212,43 +209,38 @@ export { a as b , c , last };
 // CHECK-NEXT:             "type": "ExportSpecifier",
 // CHECK-NEXT:             "exported": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "b",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "b"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "local": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "a",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "a"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "ExportSpecifier",
 // CHECK-NEXT:             "exported": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "c",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "c"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "local": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "c",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "c"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "ExportSpecifier",
 // CHECK-NEXT:             "exported": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "last",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "last"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "local": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "last",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "last"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
-// CHECK-NEXT:         "source": null
+// CHECK-NEXT:         "source": null,
+// CHECK-NEXT:         "exportKind": "value"
 // CHECK-NEXT:       }
 
 // CHECK-NEXT:     ]

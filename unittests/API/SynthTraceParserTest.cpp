@@ -15,9 +15,9 @@ namespace {
 using namespace facebook::hermes::tracing;
 
 struct SynthTraceParserTest : public ::testing::Test {
-  std::unique_ptr<llvm::MemoryBuffer> bufFromStr(const std::string &str) {
-    llvm::StringRef ref{str.data(), str.size()};
-    return llvm::MemoryBuffer::getMemBufferCopy(ref);
+  std::unique_ptr<llvh::MemoryBuffer> bufFromStr(const std::string &str) {
+    llvh::StringRef ref{str.data(), str.size()};
+    return llvh::MemoryBuffer::getMemBufferCopy(ref);
   }
 };
 
@@ -55,8 +55,8 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
 )";
   auto result = parseSynthTrace(bufFromStr(src));
   const SynthTrace &trace = std::get<0>(result);
-  const hermes::vm::RuntimeConfig &rtconf = std::get<1>(result);
-  const hermes::vm::MockedEnvironment &env = std::get<2>(result);
+  const hermes::vm::RuntimeConfig &rtconf = std::get<1>(result).build();
+  const hermes::vm::MockedEnvironment &env = std::get<3>(result);
 
   EXPECT_EQ(trace.records().size(), 0);
 
@@ -99,7 +99,7 @@ TEST_F(SynthTraceParserTest, RuntimeConfigDefaults) {
 }
   )";
   auto result = parseSynthTrace(bufFromStr(src));
-  const hermes::vm::RuntimeConfig &rtconf = std::get<1>(result);
+  const hermes::vm::RuntimeConfig &rtconf = std::get<1>(result).build();
 
   EXPECT_EQ(rtconf.getGCConfig().getMinHeapSize(), 0);
   EXPECT_EQ(rtconf.getGCConfig().getInitHeapSize(), 33554432);

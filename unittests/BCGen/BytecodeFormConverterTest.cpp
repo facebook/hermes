@@ -8,7 +8,7 @@
 #include "hermes/BCGen/HBC/BytecodeFormConverter.h"
 #include "TestHelpers.h"
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvh/ADT/SmallVector.h"
 
 #include "gtest/gtest.h"
 
@@ -56,7 +56,9 @@ TEST(BytecodeFormConverterTest, WrongMagicNumberTest) {
   std::vector<uint8_t> bytecode = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   bool converted = convertBytecodeToForm(bytecode, BytecodeForm::Delta, &error);
   EXPECT_FALSE(converted);
-  EXPECT_EQ(error, "Buffer too small");
+  EXPECT_EQ(
+      error,
+      "Buffer smaller than a bytecode file header. Expected at least 128 bytes but got 10 bytes");
 }
 
 TEST(BytecodeFormConverterTest, NotDeltaFormTest) {

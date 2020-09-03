@@ -10,18 +10,18 @@
 // This file provides the Win32 specific implementation of the Signals class.
 //
 //===----------------------------------------------------------------------===//
-#include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/Process.h"
-#include "llvm/Support/WindowsError.h"
+#include "llvh/Support/ConvertUTF.h"
+#include "llvh/Support/FileSystem.h"
+#include "llvh/Support/Path.h"
+#include "llvh/Support/Process.h"
+#include "llvh/Support/WindowsError.h"
 #include <algorithm>
 #include <io.h>
 #include <signal.h>
 #include <stdio.h>
 
-#include "llvm/Support/Format.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/Format.h"
+#include "llvh/Support/raw_ostream.h"
 
 // The Windows.h header must be after LLVM and standard headers.
 #include "WindowsSupport.h"
@@ -185,7 +185,7 @@ static bool load64BitDebugHelp(void) {
   return fStackWalk64 && fSymInitialize && fSymSetOptions && fMiniDumpWriteDump;
 }
 
-using namespace llvm;
+using namespace llvh;
 
 // Forward declare.
 static LONG WINAPI LLVMUnhandledExceptionFilter(LPEXCEPTION_POINTERS ep);
@@ -221,7 +221,7 @@ enum {
 #endif
 };
 
-static bool printStackTraceWithLLVMSymbolizer(llvm::raw_ostream &OS,
+static bool printStackTraceWithLLVMSymbolizer(llvh::raw_ostream &OS,
                                               HANDLE hProcess, HANDLE hThread,
                                               STACKFRAME64 &StackFrameOrig,
                                               CONTEXT *ContextOrig) {
@@ -294,7 +294,7 @@ static bool findModulesAndOffsets(void **StackTrace, int Depth,
   return true;
 }
 
-static void PrintStackTraceForThread(llvm::raw_ostream &OS, HANDLE hProcess,
+static void PrintStackTraceForThread(llvh::raw_ostream &OS, HANDLE hProcess,
                                      HANDLE hThread, STACKFRAME64 &StackFrame,
                                      CONTEXT *Context) {
   // Initialize the symbol handler.
@@ -319,7 +319,7 @@ static void PrintStackTraceForThread(llvm::raw_ostream &OS, HANDLE hProcess,
     if (StackFrame.AddrFrame.Offset == 0)
       break;
 
-    using namespace llvm;
+    using namespace llvh;
     // Print the PC in hexadecimal.
     DWORD64 PC = StackFrame.AddrPC.Offset;
 #if defined(_M_X64) || defined(_M_ARM64)
@@ -380,7 +380,7 @@ static void PrintStackTraceForThread(llvm::raw_ostream &OS, HANDLE hProcess,
   }
 }
 
-namespace llvm {
+namespace llvh {
 
 //===----------------------------------------------------------------------===//
 //=== WARNING: Implementation here must contain only Win32 specific code
@@ -522,7 +522,7 @@ void sys::PrintStackTraceOnErrorSignal(StringRef Argv0,
 extern "C" VOID WINAPI RtlCaptureContext(PCONTEXT ContextRecord);
 #endif
 
-void llvm::sys::PrintStackTrace(raw_ostream &OS) {
+void llvh::sys::PrintStackTrace(raw_ostream &OS) {
   STACKFRAME64 StackFrame = {};
   CONTEXT Context = {};
   ::RtlCaptureContext(&Context);
@@ -551,7 +551,7 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS) {
 }
 
 
-void llvm::sys::SetInterruptFunction(void (*IF)()) {
+void llvh::sys::SetInterruptFunction(void (*IF)()) {
   RegisterHandler();
   InterruptFunction = IF;
   LeaveCriticalSection(&CriticalSection);
@@ -561,7 +561,7 @@ void llvm::sys::SetInterruptFunction(void (*IF)()) {
 /// Add a function to be called when a signal is delivered to the process. The
 /// handler can have a cookie passed to it to identify what instance of the
 /// handler it is.
-void llvm::sys::AddSignalHandler(sys::SignalHandlerCallback FnPtr,
+void llvh::sys::AddSignalHandler(sys::SignalHandlerCallback FnPtr,
                                  void *Cookie) {
   insertSignalHandler(FnPtr, Cookie);
   RegisterHandler();
@@ -581,14 +581,14 @@ static void Cleanup() {
   // FIXME: open files cannot be deleted.
   if (FilesToRemove != NULL)
     while (!FilesToRemove->empty()) {
-      llvm::sys::fs::remove(FilesToRemove->back());
+      llvh::sys::fs::remove(FilesToRemove->back());
       FilesToRemove->pop_back();
     }
-  llvm::sys::RunSignalHandlers();
+  llvh::sys::RunSignalHandlers();
   LeaveCriticalSection(&CriticalSection);
 }
 
-void llvm::sys::RunInterruptHandlers() {
+void llvh::sys::RunInterruptHandlers() {
   // The interrupt handler may be called from an interrupt, but it may also be
   // called manually (such as the case of report_fatal_error with no registered
   // error handler). We must ensure that the critical section is properly
@@ -600,7 +600,7 @@ void llvm::sys::RunInterruptHandlers() {
 /// Find the Windows Registry Key for a given location.
 ///
 /// \returns a valid HKEY if the location exists, else NULL.
-static HKEY FindWERKey(const llvm::Twine &RegistryLocation) {
+static HKEY FindWERKey(const llvh::Twine &RegistryLocation) {
   HKEY Key;
   if (ERROR_SUCCESS != ::RegOpenKeyExA(HKEY_LOCAL_MACHINE,
                                        RegistryLocation.str().c_str(), 0,
@@ -615,8 +615,8 @@ static HKEY FindWERKey(const llvm::Twine &RegistryLocation) {
 ///
 /// \returns true if a valid value for DumpFolder exists, false otherwise.
 static bool GetDumpFolder(HKEY Key,
-                          llvm::SmallVectorImpl<char> &ResultDirectory) {
-  using llvm::sys::windows::UTF16ToUTF8;
+                          llvh::SmallVectorImpl<char> &ResultDirectory) {
+  using llvh::sys::windows::UTF16ToUTF8;
 
   if (!Key)
     return false;
@@ -705,8 +705,8 @@ static bool GetDumpType(HKEY Key, MINIDUMP_TYPE &ResultType) {
 /// otherwise.
 static std::error_code WINAPI
 WriteWindowsDumpFile(PMINIDUMP_EXCEPTION_INFORMATION ExceptionInfo) {
-  using namespace llvm;
-  using namespace llvm::sys;
+  using namespace llvh;
+  using namespace llvh::sys;
 
   std::string MainExecutableName = fs::getMainExecutable(nullptr, nullptr);
   StringRef ProgramName;
@@ -778,7 +778,7 @@ WriteWindowsDumpFile(PMINIDUMP_EXCEPTION_INFORMATION ExceptionInfo) {
                           FileHandle, DumpType, ExceptionInfo, NULL, NULL))
     return mapWindowsError(::GetLastError());
 
-  llvm::errs() << "Wrote crash dump file \"" << DumpPath << "\"\n";
+  llvh::errs() << "Wrote crash dump file \"" << DumpPath << "\"\n";
   return std::error_code();
 }
 
@@ -789,14 +789,14 @@ static LONG WINAPI LLVMUnhandledExceptionFilter(LPEXCEPTION_POINTERS ep) {
   // the nasty sorts of crashes that aren't 100% reproducible from a set of
   // inputs (or in the event that the user is unable or unwilling to provide a
   // reproducible case).
-  if (!llvm::sys::Process::AreCoreFilesPrevented()) {
+  if (!llvh::sys::Process::AreCoreFilesPrevented()) {
     MINIDUMP_EXCEPTION_INFORMATION ExceptionInfo;
     ExceptionInfo.ThreadId = ::GetCurrentThreadId();
     ExceptionInfo.ExceptionPointers = ep;
     ExceptionInfo.ClientPointers = FALSE;
 
     if (std::error_code EC = WriteWindowsDumpFile(&ExceptionInfo))
-      llvm::errs() << "Could not write crash dump file: " << EC.message()
+      llvh::errs() << "Could not write crash dump file: " << EC.message()
                    << "\n";
   }
 
@@ -832,7 +832,7 @@ static LONG WINAPI LLVMUnhandledExceptionFilter(LPEXCEPTION_POINTERS ep) {
 
   HANDLE hProcess = GetCurrentProcess();
   HANDLE hThread = GetCurrentThread();
-  PrintStackTraceForThread(llvm::errs(), hProcess, hThread, StackFrame,
+  PrintStackTraceForThread(llvh::errs(), hProcess, hThread, StackFrame,
                            ep->ContextRecord);
 
   _exit(ep->ExceptionRecord->ExceptionCode);

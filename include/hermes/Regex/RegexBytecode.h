@@ -8,8 +8,8 @@
 #ifndef HERMES_REGEX_REGEXBYTECODE_H
 #define HERMES_REGEX_REGEXBYTECODE_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/Casting.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/Support/Casting.h"
 
 #include <cstdint>
 #include <vector>
@@ -292,7 +292,8 @@ class RegexBytecodeStream {
   /// Whether our bytecode has been acquired.
   bool acquired_ = false;
 
-  /// Private type acting as a reallocation-safe pointer to an instruction.
+ public:
+  /// Type acting as a reallocation-safe pointer to an instruction.
   /// This stores a pointer to the vector and an offset, rather than a pointer
   /// into the vector contents.
   template <typename Instruction>
@@ -303,14 +304,13 @@ class RegexBytecodeStream {
    public:
     Instruction *operator->() {
       Insn *base = reinterpret_cast<Insn *>(&bytes_->at(offset_));
-      return llvm::cast<Instruction>(base);
+      return llvh::cast<Instruction>(base);
     }
 
     InstructionWrapper(std::vector<uint8_t> *bytes, uint32_t offset)
         : bytes_(bytes), offset_(offset) {}
   };
 
- public:
   /// Emit an instruction.
   /// \return a dereferenceable "pointer" to the instruction in the bytecode
   /// stream.
@@ -357,7 +357,7 @@ class RegexBytecodeStream {
 } // namespace regex
 } // namespace hermes
 
-namespace llvm {
+namespace llvh {
 /// LLVM RTTI implementation for regex instructions. Rather than defining
 /// classof() for each instruction struct, which would require a lot of
 /// error-prone boilerplate, we take the Casting.h header's suggestion of
@@ -374,5 +374,5 @@ struct isa_impl<
     return val.opcode == hermes::regex::OpcodeFor<To>::value;
   }
 };
-} // namespace llvm
+} // namespace llvh
 #endif // HERMES_REGEX_REGEXBYTECODE_H

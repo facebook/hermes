@@ -8,9 +8,9 @@
 #ifndef HERMES_SUPPORT_OSCOMPAT_H
 #define HERMES_SUPPORT_OSCOMPAT_H
 
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/ErrorOr.h"
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/Support/Compiler.h"
+#include "llvh/Support/ErrorOr.h"
 
 #ifdef _WINDOWS
 #include <io.h>
@@ -59,13 +59,13 @@ void unset_test_vm_allocate_limit();
 // a multiple of page_size()), and returns a pointer to the start.
 // Returns nullptr if the allocation is unsuccessful.  The pages
 // will be zero-filled on demand.
-llvm::ErrorOr<void *> vm_allocate(size_t sz);
+llvh::ErrorOr<void *> vm_allocate(size_t sz);
 
 // Allocates a virtual memory region of the given size and alignment (both
 // must be multiples of page_size()), and returns a pointer to the start.
 // Returns nullptr if the allocation is unsuccessful.  The pages
 // will be zero-filled on demand.
-llvm::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment);
+llvh::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment);
 
 /// Free a virtual memory region allocated by \p vm_allocate.
 /// \p p must point to the base address that was returned by \p vm_allocate.
@@ -118,7 +118,13 @@ bool vm_madvise(void *p, size_t sz, MAdvice advice);
 int pages_in_ram(
     const void *p,
     size_t sz,
-    llvm::SmallVectorImpl<int> *runs = nullptr);
+    llvh::SmallVectorImpl<int> *runs = nullptr);
+
+/// Return the protection modes of all memory mappings that overlap with
+/// [p, p + sz). Each mode is a 4-character string of the form:
+/// [r-][w-][x-][ps] where the last character indicates private/shared.
+/// Returns an empty vector if this operation is not supported.
+std::vector<std::string> get_vm_protect_modes(const void *p, size_t sz);
 
 /// Resident set size (RSS), in bytes: the amount of RAM used by the process.
 /// It excludes virtual memory that has been paged out or was never loaded.
@@ -140,6 +146,11 @@ bool num_context_switches(long &voluntary, long &involuntary);
 
 /// \return OS thread id of current thread.
 uint64_t thread_id();
+
+/// Set the thread name for the current thread. This can be viewed in various
+/// debuggers and profilers.
+/// NOTE: Is a no-op on some platforms.
+void set_thread_name(const char *name);
 
 /// \return the duration in microseconds the CPU has spent executing this thread
 /// upon success, or `std::chrono::microseconds::max()` on failure.

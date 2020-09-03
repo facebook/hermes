@@ -14,7 +14,7 @@ namespace {
 using namespace hermes::platform_unicode;
 
 TEST(PlatformUnicode, CaseTest) {
-  llvm::SmallVector<char16_t, 16> str = {u'a', u'B', u'c', u'\u00df'};
+  llvh::SmallVector<char16_t, 16> str = {u'a', u'B', u'c', u'\u00df'};
   convertToCase(str, CaseConversion::ToUpper, false /* useCurrentLocale */);
   ASSERT_EQ(5, str.size());
   EXPECT_EQ(u'A', str[0]);
@@ -26,7 +26,7 @@ TEST(PlatformUnicode, CaseTest) {
 
 TEST(PlatformUnicode, VersionCheck) {
   // Make sure we have an up-to-date version of ICU.
-  llvm::SmallVector<char16_t, 16> str = {u'A', u'\u180e', u'\u03a3'};
+  llvh::SmallVector<char16_t, 16> str = {u'A', u'\u180e', u'\u03a3'};
   convertToCase(str, CaseConversion::ToLower, false /* useCurrentLocale */);
   ASSERT_EQ(3, str.size());
   EXPECT_EQ(u'a', str[0]);
@@ -35,7 +35,7 @@ TEST(PlatformUnicode, VersionCheck) {
 }
 
 TEST(PlatformUnicode, Normalize) {
-  llvm::SmallVector<char16_t, 16> str = {u'\u1e9b', u'\u0323'};
+  llvh::SmallVector<char16_t, 16> str = {u'\u1e9b', u'\u0323'};
   normalize(str, NormalizationForm::D);
   ASSERT_EQ(3, str.size());
   EXPECT_EQ(u'\u017f', str[0]);

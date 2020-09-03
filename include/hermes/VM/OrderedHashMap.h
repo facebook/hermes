@@ -53,9 +53,9 @@ class HashMapEntry final : public GCCell {
   }
 
   /// Mark this entry as deleted.
-  void markDeleted() {
-    key.setNonPtr(HermesValue::encodeEmptyValue());
-    value.setNonPtr(HermesValue::encodeEmptyValue());
+  void markDeleted(Runtime *runtime) {
+    key.setNonPtr(HermesValue::encodeEmptyValue(), &runtime->getHeap());
+    value.setNonPtr(HermesValue::encodeEmptyValue(), &runtime->getHeap());
   }
 
  protected:

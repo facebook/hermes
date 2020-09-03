@@ -14,8 +14,8 @@
 #include "hermes/Support/Statistic.h"
 #include "hermes/Support/StringTable.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/Debug.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/Support/Debug.h"
 
 STATISTIC(NumLowered, "Number of builtin calls lowered");
 
@@ -49,11 +49,11 @@ class LowerBuiltinCallsContext {
   Identifier hermesInternalID_;
 
   /// Map from a builtin object to an integer "object index".
-  llvm::DenseMap<Identifier, int> objects_;
+  llvh::DenseMap<Identifier, int> objects_;
 
   /// Map from "object index":identifier to a "method index".
   /// We are avoiding allocating a DenseMap per object.
-  llvm::DenseMap<std::pair<int, Identifier>, BuiltinMethod::Enum> methods_;
+  llvh::DenseMap<std::pair<int, Identifier>, BuiltinMethod::Enum> methods_;
 };
 
 LowerBuiltinCallsContext::LowerBuiltinCallsContext(StringTable &strTab) {
@@ -79,11 +79,11 @@ LowerBuiltinCallsContext::findBuiltinMethod(
     Identifier methodName) {
   auto objIt = objects_.find(objectName);
   if (objIt == objects_.end())
-    return llvm::None;
+    return llvh::None;
 
   auto methIt = methods_.find(std::make_pair(objIt->second, methodName));
   if (methIt == methods_.end())
-    return llvm::None;
+    return llvh::None;
 
   return methIt->second;
 }
@@ -111,26 +111,26 @@ static bool run(Function *F) {
       if (inst->getKind() != ValueKind::CallInstKind)
         continue;
       auto *callInst = cast<CallInst>(inst);
-      auto *loadProp = llvm::dyn_cast<LoadPropertyInst>(callInst->getCallee());
+      auto *loadProp = llvh::dyn_cast<LoadPropertyInst>(callInst->getCallee());
       if (!loadProp)
         continue;
-      auto propLit = llvm::dyn_cast<LiteralString>(loadProp->getProperty());
+      auto propLit = llvh::dyn_cast<LiteralString>(loadProp->getProperty());
       if (!propLit)
         continue;
       auto *loadGlobalProp =
-          llvm::dyn_cast<LoadPropertyInst>(loadProp->getObject());
+          llvh::dyn_cast<LoadPropertyInst>(loadProp->getObject());
       if (!loadGlobalProp)
         continue;
-      if (!llvm::isa<GlobalObject>(loadGlobalProp->getObject()))
+      if (!llvh::isa<GlobalObject>(loadGlobalProp->getObject()))
         continue;
       LiteralString *objLit =
-          llvm::dyn_cast<LiteralString>(loadGlobalProp->getProperty());
+          llvh::dyn_cast<LiteralString>(loadGlobalProp->getProperty());
       if (!objLit)
         continue;
 
       // Uncomment this to get a dump of all global calls detected during
       // compilation.
-      // llvm::outs() << "global call: " << objLit->getValue() << "."
+      // llvh::outs() << "global call: " << objLit->getValue() << "."
       //             << propLit->getValue() << "\n";
 
       auto builtinIndex =
@@ -142,7 +142,7 @@ static bool run(Function *F) {
         continue;
 
       LLVM_DEBUG(
-          llvm::dbgs() << "Found builtin [" << (int)*builtinIndex << "] "
+          llvh::dbgs() << "Found builtin [" << (int)*builtinIndex << "] "
                        << getBuiltinMethodName(*builtinIndex) << "()\n");
 
       // Always lower HermesInternal.xxx() calls, but only lower the rest if
@@ -156,7 +156,7 @@ static bool run(Function *F) {
       builder.setInsertionPoint(callInst);
       builder.setLocation(callInst->getLocation());
 
-      llvm::SmallVector<Value *, 8> args{};
+      llvh::SmallVector<Value *, 8> args{};
       unsigned numArgsExcludingThis = callInst->getNumArguments() - 1;
       args.reserve(numArgsExcludingThis);
       for (unsigned i = 0; i < numArgsExcludingThis; ++i)

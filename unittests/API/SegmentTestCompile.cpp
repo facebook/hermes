@@ -17,8 +17,8 @@
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Support/Algorithms.h"
 
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/Support/MemoryBuffer.h"
 
 namespace hermes {
 
@@ -40,7 +40,7 @@ std::pair<std::string, std::string> genSplitCode(
   hermes::Module M(context);
   hermes::sem::SemContext semCtx{};
 
-  auto parseJS = [&](std::unique_ptr<llvm::MemoryBuffer> fileBuf,
+  auto parseJS = [&](std::unique_ptr<llvh::MemoryBuffer> fileBuf,
                      bool wrapCJSModule = false) -> hermes::ESTree::NodePtr {
     ::hermes::parser::JSParser jsParser(*context, std::move(fileBuf));
     auto parsedJs = jsParser.parse();
@@ -55,14 +55,14 @@ std::pair<std::string, std::string> genSplitCode(
 
   ::hermes::DeclarationFileListTy declFileList;
 
-  auto globalMemBuffer = llvm::MemoryBuffer::getMemBufferCopy("", "<global>");
+  auto globalMemBuffer = llvh::MemoryBuffer::getMemBufferCopy("", "<global>");
   auto *globalAST = parseJS(std::move(globalMemBuffer));
   generateIRFromESTree(globalAST, &M, declFileList, {});
   auto *topLevelFunction = M.getTopLevelFunction();
 
   auto genModule = [&](uint32_t id,
-                       std::unique_ptr<llvm::MemoryBuffer> fileBuf) {
-    llvm::StringRef filename = fileBuf->getBufferIdentifier();
+                       std::unique_ptr<llvh::MemoryBuffer> fileBuf) {
+    llvh::StringRef filename = fileBuf->getBufferIdentifier();
     auto *ast = parseJS(std::move(fileBuf), true);
     generateIRForCJSModule(
         cast<hermes::ESTree::FunctionExpressionNode>(ast),
@@ -73,15 +73,15 @@ std::pair<std::string, std::string> genSplitCode(
         declFileList);
   };
 
-  genModule(0, llvm::MemoryBuffer::getMemBufferCopy(mainCode, "main.js"));
-  genModule(1, llvm::MemoryBuffer::getMemBufferCopy(segmentCode, "foo.js"));
+  genModule(0, llvh::MemoryBuffer::getMemBufferCopy(mainCode, "main.js"));
+  genModule(1, llvh::MemoryBuffer::getMemBufferCopy(segmentCode, "foo.js"));
 
   hermes::BytecodeGenerationOptions genOpts{hermes::EmitBundle};
   hermes::SHA1 sourceHash;
 
   auto genBC = [&](hermes::Context::SegmentRange range) {
     std::string bc{};
-    llvm::raw_string_ostream os{bc};
+    llvh::raw_string_ostream os{bc};
     hermes::hbc::generateBytecode(
         &M, os, genOpts, sourceHash, range, nullptr, nullptr);
     return os.str();

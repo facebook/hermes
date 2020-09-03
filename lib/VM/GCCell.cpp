@@ -12,6 +12,8 @@ namespace hermes {
 namespace vm {
 
 #ifndef NDEBUG
+GCCell::GCCell(const VTable *vtp) : vtp_(vtp), _debugAllocationId_(0) {}
+
 GCCell::GCCell(GC *gc, const VTable *vtp)
     : vtp_(vtp), _debugAllocationId_(gc->nextObjectID()) {
   // If the vtp has a finalizer, then it should be the most recent thing

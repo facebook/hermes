@@ -24,13 +24,11 @@ try {} catch ([a,b]) {}
 // CHECK-NEXT:           "elements": [
 // CHECK-NEXT:             {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "a",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "a"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "b",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "b"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         },

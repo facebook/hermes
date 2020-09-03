@@ -23,8 +23,7 @@
 // CHECK-NEXT:             "type": "Property",
 // CHECK-NEXT:             "key": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "foo",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "foo"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionExpression",
@@ -32,13 +31,11 @@
 // CHECK-NEXT:               "params": [
 // CHECK-NEXT:                 {
 // CHECK-NEXT:                   "type": "Identifier",
-// CHECK-NEXT:                   "name": "x",
-// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                   "name": "x"
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 {
 // CHECK-NEXT:                   "type": "Identifier",
-// CHECK-NEXT:                   "name": "y",
-// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                   "name": "y"
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               ],
 // CHECK-NEXT:               "body": {
@@ -133,8 +130,7 @@
 // CHECK-NEXT:             "type": "Property",
 // CHECK-NEXT:             "key": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "gen",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "gen"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionExpression",
@@ -170,8 +166,7 @@
 // CHECK-NEXT:             "type": "Property",
 // CHECK-NEXT:             "key": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "get",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "get"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionExpression",
@@ -193,8 +188,7 @@
 // CHECK-NEXT:             "type": "Property",
 // CHECK-NEXT:             "key": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "set",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "set"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionExpression",
@@ -216,8 +210,7 @@
 // CHECK-NEXT:             "type": "Property",
 // CHECK-NEXT:             "key": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "mySetter",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "mySetter"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionExpression",
@@ -227,8 +220,7 @@
 // CHECK-NEXT:                   "type": "AssignmentPattern",
 // CHECK-NEXT:                   "left": {
 // CHECK-NEXT:                     "type": "Identifier",
-// CHECK-NEXT:                     "name": "x",
-// CHECK-NEXT:                     "typeAnnotation": null
+// CHECK-NEXT:                     "name": "x"
 // CHECK-NEXT:                   },
 // CHECK-NEXT:                   "right": {
 // CHECK-NEXT:                     "type": "NumericLiteral",
@@ -253,8 +245,7 @@
 // CHECK-NEXT:             "type": "Property",
 // CHECK-NEXT:             "key": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "rest",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "rest"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionExpression",
@@ -262,15 +253,13 @@
 // CHECK-NEXT:               "params": [
 // CHECK-NEXT:                 {
 // CHECK-NEXT:                   "type": "Identifier",
-// CHECK-NEXT:                   "name": "a",
-// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                   "name": "a"
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 {
 // CHECK-NEXT:                   "type": "RestElement",
 // CHECK-NEXT:                   "argument": {
 // CHECK-NEXT:                     "type": "Identifier",
-// CHECK-NEXT:                     "name": "b",
-// CHECK-NEXT:                     "typeAnnotation": null
+// CHECK-NEXT:                     "name": "b"
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               ],

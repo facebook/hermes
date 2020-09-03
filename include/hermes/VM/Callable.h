@@ -20,7 +20,7 @@ namespace vm {
 /// Environment storing all escaping variables for a function.
 class Environment final
     : public VariableSizeRuntimeCell,
-      private llvm::TrailingObjects<Environment, GCHermesValue> {
+      private llvh::TrailingObjects<Environment, GCHermesValue> {
   friend TrailingObjects;
   friend void EnvironmentBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
@@ -29,7 +29,7 @@ class Environment final
   GCPointer<Environment> parentEnvironment_{};
 
   /// Number of entries in the environment.
-  const uint32_t size_;
+  AtomicIfConcurrentGC<uint32_t> size_;
 
  public:
 #ifdef HERMESVM_SERIALIZE
@@ -61,11 +61,11 @@ class Environment final
 
   /// \return the number of HermesValue slots in this environment.
   uint32_t getSize() const {
-    return size_;
+    return size_.load(std::memory_order_relaxed);
   }
 
   GCHermesValue &slot(uint32_t index) {
-    assert(index < size_ && "invalid Environment slot index");
+    assert(index < getSize() && "invalid Environment slot index");
     return getSlots()[index];
   }
 
@@ -89,8 +89,11 @@ class Environment final
             &runtime->getHeap()),
         size_(size) {
     // Initialize all slots to 'undefined'.
-    GCHermesValue::fill(
-        getSlots(), getSlots() + size, HermesValue::encodeUndefinedValue());
+    GCHermesValue::uninitialized_fill(
+        getSlots(),
+        getSlots() + size,
+        HermesValue::encodeUndefinedValue(),
+        &runtime->getHeap());
   }
 
 #ifdef HERMESVM_SERIALIZE
@@ -116,13 +119,13 @@ struct CallableVTable {
   /// Create a new object instance to be passed as the 'this' argument when
   /// invoking the constructor. Overriding this method allows creation of
   /// different underlying native objects.
-  CallResult<HermesValue> (*newObject)(
+  CallResult<PseudoHandle<JSObject>> (*newObject)(
       Handle<Callable> selfHandle,
       Runtime *runtime,
       Handle<JSObject> parentHandle);
 
   /// Call the callable with arguments already on the stack.
-  CallResult<HermesValue> (
+  CallResult<PseudoHandle<>> (
       *call)(Handle<Callable> selfHandle, Runtime *runtime);
 };
 
@@ -193,7 +196,7 @@ class Callable : public JSObject {
 
   /// Execute this function with no arguments. This is just a convenience
   /// helper method; it actually invokes the interpreter recursively.
-  static CallResult<HermesValue> executeCall0(
+  static CallResult<PseudoHandle<>> executeCall0(
       Handle<Callable> selfHandle,
       Runtime *runtime,
       Handle<> thisArgHandle,
@@ -201,7 +204,7 @@ class Callable : public JSObject {
 
   /// Execute this function with one argument. This is just a convenience
   /// helper method; it actually invokes the interpreter recursively.
-  static CallResult<HermesValue> executeCall1(
+  static CallResult<PseudoHandle<>> executeCall1(
       Handle<Callable> selfHandle,
       Runtime *runtime,
       Handle<> thisArgHandle,
@@ -210,7 +213,7 @@ class Callable : public JSObject {
 
   /// Execute this function with two arguments. This is just a convenience
   /// helper method; it actually invokes the interpreter recursively.
-  static CallResult<HermesValue> executeCall2(
+  static CallResult<PseudoHandle<>> executeCall2(
       Handle<Callable> selfHandle,
       Runtime *runtime,
       Handle<> thisArgHandle,
@@ -220,7 +223,7 @@ class Callable : public JSObject {
 
   /// Execute this function with three arguments. This is just a convenience
   /// helper method; it actually invokes the interpreter recursively.
-  static CallResult<HermesValue> executeCall3(
+  static CallResult<PseudoHandle<>> executeCall3(
       Handle<Callable> selfHandle,
       Runtime *runtime,
       Handle<> thisArgHandle,
@@ -231,7 +234,7 @@ class Callable : public JSObject {
 
   /// Execute this function with four arguments. This is just a convenience
   /// helper method; it actually invokes the interpreter recursively.
-  static CallResult<HermesValue> executeCall4(
+  static CallResult<PseudoHandle<>> executeCall4(
       Handle<Callable> selfHandle,
       Runtime *runtime,
       Handle<> thisArgHandle,
@@ -244,7 +247,7 @@ class Callable : public JSObject {
   /// Execute this function with given this and newTarget, and a
   /// variable number of arguments taken from arrayLike.  This invokes
   /// the interpreter recursively.
-  static CallResult<HermesValue> executeCall(
+  static CallResult<PseudoHandle<>> executeCall(
       Handle<Callable> selfHandle,
       Runtime *runtime,
       Handle<> newTarget,
@@ -252,7 +255,7 @@ class Callable : public JSObject {
       Handle<JSObject> arrayLike);
 
   /// Calls CallableVTable::newObject.
-  static CallResult<HermesValue> newObject(
+  static CallResult<PseudoHandle<JSObject>> newObject(
       Handle<Callable> selfHandle,
       Runtime *runtime,
       Handle<JSObject> parentHandle) {
@@ -260,7 +263,7 @@ class Callable : public JSObject {
   }
 
   /// Calls CallableVTable::call.
-  static CallResult<HermesValue> call(
+  static CallResult<PseudoHandle<>> call(
       Handle<Callable> selfHandle,
       Runtime *runtime) {
     // Any call to a native or JS function could potentially allocate.
@@ -273,19 +276,21 @@ class Callable : public JSObject {
   /// Call the callable in contruct mode with arguments already on the stack.
   /// Checks the return value of the called function. If it is an object, then
   /// it is returned, else the `this` value is returned.
-  static CallResult<HermesValue>
+  static CallResult<PseudoHandle<>>
   construct(Handle<Callable> selfHandle, Runtime *runtime, Handle<> thisVal) {
     auto result = call(selfHandle, runtime);
     if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    return result->isObject() ? result : thisVal.getHermesValue();
+    return (*result)->isObject()
+        ? std::move(result)
+        : CallResult<PseudoHandle<>>{PseudoHandle<>(thisVal)};
   }
 
   /// Create a new object and construct the new object of the given type
   /// by invoking \p selfHandle with construct=true.
   /// \param selfHandle the Callable from which to construct the new object.
-  static CallResult<HermesValue> executeConstruct0(
+  static CallResult<PseudoHandle<>> executeConstruct0(
       Handle<Callable> selfHandle,
       Runtime *runtime);
 
@@ -293,7 +298,7 @@ class Callable : public JSObject {
   /// by invoking \p selfHandle with construct=true.
   /// \param selfHandle the Callable from which to construct the new object.
   /// \param param1 the first argument to the constructor.
-  static CallResult<HermesValue> executeConstruct1(
+  static CallResult<PseudoHandle<>> executeConstruct1(
       Handle<Callable> selfHandle,
       Runtime *runtime,
       Handle<> param1);
@@ -316,7 +321,7 @@ class Callable : public JSObject {
   /// Retrieves the "prototype" property from \p selfHandle,
   /// and calls newObject() on it if it's an object,
   /// else calls newObject() on the built-in Object prototype object.
-  static CallResult<HermesValue> createThisForConstruct(
+  static CallResult<PseudoHandle<JSObject>> createThisForConstruct(
       Handle<Callable> selfHandle,
       Runtime *runtime);
 
@@ -340,7 +345,7 @@ class Callable : public JSObject {
 
   /// Create a an instance of Object to be passed as the 'this' argument when
   /// invoking the constructor.
-  static CallResult<HermesValue> _newObjectImpl(
+  static CallResult<PseudoHandle<JSObject>> _newObjectImpl(
       Handle<Callable> selfHandle,
       Runtime *runtime,
       Handle<JSObject> parentHandle);
@@ -386,7 +391,7 @@ class BoundFunction final : public Callable {
   /// Other users of this class must use \c Callable::call().
   /// \param ip the caller's IP at the point of the call (used for preserving
   /// stack traces).
-  static CallResult<HermesValue>
+  static CallResult<PseudoHandle<>>
   _boundCall(BoundFunction *self, const Inst *ip, Runtime *runtime);
 
   /// Intialize the length and name and property of a lazily created bound
@@ -427,13 +432,13 @@ class BoundFunction final : public Callable {
   }
 
   /// Create an instance of the object using the bound constructor.
-  static CallResult<HermesValue> _newObjectImpl(
+  static CallResult<PseudoHandle<JSObject>> _newObjectImpl(
       Handle<Callable> selfHandle,
       Runtime *runtime,
       Handle<JSObject> parentHandle);
 
   /// Call the callable with arguments already on the stack.
-  static CallResult<HermesValue> _callImpl(
+  static CallResult<PseudoHandle<>> _callImpl(
       Handle<Callable> selfHandle,
       Runtime *runtime);
 };
@@ -510,7 +515,7 @@ class NativeFunction : public Callable {
   /// This is a lightweight and unsafe wrapper intended to be used only by the
   /// interpreter. Its purpose is to avoid needlessly exposing the private
   /// fields.
-  static CallResult<HermesValue> _nativeCall(
+  static CallResult<PseudoHandle<>> _nativeCall(
       NativeFunction *self,
       Runtime *runtime) {
     ScopedNativeDepthTracker depthTracker{runtime};
@@ -538,7 +543,10 @@ class NativeFunction : public Callable {
     ++self->callCount_;
 #endif
     runtime->restoreStackAndPreviousFrame(newFrame);
-    return res;
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return createPseudoHandle(*res);
   }
 
   /// Create an instance of NativeFunction.
@@ -652,7 +660,7 @@ class NativeFunction : public Callable {
   /// \param index must be less than the \c additionalSlotCount passed to
   /// the create method.
   static void setAdditionalSlotValue(
-      JSObject *self,
+      NativeFunction *self,
       Runtime *runtime,
       unsigned index,
       HermesValue value) {
@@ -689,7 +697,7 @@ class NativeFunction : public Callable {
   static std::string _snapshotNameImpl(GCCell *cell, GC *gc);
 
   /// Call the native function with arguments already on the stack.
-  static CallResult<HermesValue> _callImpl(
+  static CallResult<PseudoHandle<>> _callImpl(
       Handle<Callable> selfHandle,
       Runtime *runtime);
 
@@ -697,7 +705,7 @@ class NativeFunction : public Callable {
   /// used as constructor.
   /// Note: this may change in the future, in that case, we should create
   /// a subclass of NativeFunction for this restriction.
-  static CallResult<HermesValue>
+  static CallResult<PseudoHandle<JSObject>>
   _newObjectImpl(Handle<Callable>, Runtime *runtime, Handle<JSObject>);
 };
 
@@ -858,23 +866,19 @@ class NativeConstructor final : public NativeFunction {
 
   /// Create a an instance of an object from \c creator_ to be passed as the
   /// 'this' argument when invoking the constructor.
-  static CallResult<HermesValue> _newObjectImpl(
+  static CallResult<PseudoHandle<JSObject>> _newObjectImpl(
       Handle<Callable> selfHandle,
       Runtime *runtime,
       Handle<JSObject> parentHandle) {
     auto nativeConsHandle = Handle<NativeConstructor>::vmcast(selfHandle);
-    auto res = nativeConsHandle->creator_(
+    return nativeConsHandle->creator_(
         runtime, parentHandle, nativeConsHandle->getContext());
-    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    return res->getHermesValue();
   }
 
 #ifndef NDEBUG
   /// If construct=true, check that the constructor was called with a "this"
   /// of the correct type.
-  static CallResult<HermesValue> _callImpl(
+  static CallResult<PseudoHandle<>> _callImpl(
       Handle<Callable> selfHandle,
       Runtime *runtime);
 #endif
@@ -1020,7 +1024,7 @@ class JSFunction : public Callable {
 
  protected:
   /// Call the JavaScript function with arguments already on the stack.
-  static CallResult<HermesValue> _callImpl(
+  static CallResult<PseudoHandle<>> _callImpl(
       Handle<Callable> selfHandle,
       Runtime *runtime);
 
@@ -1167,7 +1171,7 @@ class GeneratorInnerFunction final : public JSFunction {
   /// \param action the user-requested action, assigned to the action_ field.
   /// Restores the stored arguments before actually calling the wrapped
   /// function.
-  static CallResult<HermesValue> callInnerFunction(
+  static CallResult<PseudoHandle<>> callInnerFunction(
       Handle<GeneratorInnerFunction> selfHandle,
       Runtime *runtime,
       Handle<> arg,
@@ -1175,7 +1179,7 @@ class GeneratorInnerFunction final : public JSFunction {
 
   /// GeneratorInnerFunction must not be called through _callImpl, but rather
   /// directly by VM code only.
-  static CallResult<HermesValue> _callImpl(
+  static CallResult<PseudoHandle<>> _callImpl(
       Handle<Callable> selfHandle,
       Runtime *runtime) {
     return runtime->raiseTypeError(
@@ -1202,8 +1206,8 @@ class GeneratorInnerFunction final : public JSFunction {
 
   /// Clear the stored result_ field to prevent memory leaks.
   /// Should be called after getResult() by the ResumeGenerator instruction.
-  void clearResult() {
-    result_.setNonPtr(HermesValue::encodeEmptyValue());
+  void clearResult(Runtime *runtime) {
+    result_.setNonPtr(HermesValue::encodeEmptyValue(), &runtime->getHeap());
   }
 
   HermesValue getResult() const {

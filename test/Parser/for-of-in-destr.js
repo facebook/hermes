@@ -19,20 +19,17 @@ for([a, b] of x);
 //CHECK-NEXT:           "elements": [
 //CHECK-NEXT:             {
 //CHECK-NEXT:               "type": "Identifier",
-//CHECK-NEXT:               "name": "a",
-//CHECK-NEXT:               "typeAnnotation": null
+//CHECK-NEXT:               "name": "a"
 //CHECK-NEXT:             },
 //CHECK-NEXT:             {
 //CHECK-NEXT:               "type": "Identifier",
-//CHECK-NEXT:               "name": "b",
-//CHECK-NEXT:               "typeAnnotation": null
+//CHECK-NEXT:               "name": "b"
 //CHECK-NEXT:             }
 //CHECK-NEXT:           ]
 //CHECK-NEXT:         },
 //CHECK-NEXT:         "right": {
 //CHECK-NEXT:           "type": "Identifier",
-//CHECK-NEXT:           "name": "x",
-//CHECK-NEXT:           "typeAnnotation": null
+//CHECK-NEXT:           "name": "x"
 //CHECK-NEXT:         },
 //CHECK-NEXT:         "body": {
 //CHECK-NEXT:           "type": "EmptyStatement"
@@ -47,20 +44,17 @@ for([a, b] in x);
 //CHECK-NEXT:           "elements": [
 //CHECK-NEXT:             {
 //CHECK-NEXT:               "type": "Identifier",
-//CHECK-NEXT:               "name": "a",
-//CHECK-NEXT:               "typeAnnotation": null
+//CHECK-NEXT:               "name": "a"
 //CHECK-NEXT:             },
 //CHECK-NEXT:             {
 //CHECK-NEXT:               "type": "Identifier",
-//CHECK-NEXT:               "name": "b",
-//CHECK-NEXT:               "typeAnnotation": null
+//CHECK-NEXT:               "name": "b"
 //CHECK-NEXT:             }
 //CHECK-NEXT:           ]
 //CHECK-NEXT:         },
 //CHECK-NEXT:         "right": {
 //CHECK-NEXT:           "type": "Identifier",
-//CHECK-NEXT:           "name": "x",
-//CHECK-NEXT:           "typeAnnotation": null
+//CHECK-NEXT:           "name": "x"
 //CHECK-NEXT:         },
 //CHECK-NEXT:         "body": {
 //CHECK-NEXT:           "type": "EmptyStatement"
@@ -77,13 +71,11 @@ for({a, b} of x);
 //CHECK-NEXT:               "type": "Property",
 //CHECK-NEXT:               "key": {
 //CHECK-NEXT:                 "type": "Identifier",
-//CHECK-NEXT:                 "name": "a",
-//CHECK-NEXT:                 "typeAnnotation": null
+//CHECK-NEXT:                 "name": "a"
 //CHECK-NEXT:               },
 //CHECK-NEXT:               "value": {
 //CHECK-NEXT:                 "type": "Identifier",
-//CHECK-NEXT:                 "name": "a",
-//CHECK-NEXT:                 "typeAnnotation": null
+//CHECK-NEXT:                 "name": "a"
 //CHECK-NEXT:               },
 //CHECK-NEXT:               "kind": "init",
 //CHECK-NEXT:               "computed": false
@@ -92,13 +84,11 @@ for({a, b} of x);
 //CHECK-NEXT:               "type": "Property",
 //CHECK-NEXT:               "key": {
 //CHECK-NEXT:                 "type": "Identifier",
-//CHECK-NEXT:                 "name": "b",
-//CHECK-NEXT:                 "typeAnnotation": null
+//CHECK-NEXT:                 "name": "b"
 //CHECK-NEXT:               },
 //CHECK-NEXT:               "value": {
 //CHECK-NEXT:                 "type": "Identifier",
-//CHECK-NEXT:                 "name": "b",
-//CHECK-NEXT:                 "typeAnnotation": null
+//CHECK-NEXT:                 "name": "b"
 //CHECK-NEXT:               },
 //CHECK-NEXT:               "kind": "init",
 //CHECK-NEXT:               "computed": false
@@ -107,8 +97,7 @@ for({a, b} of x);
 //CHECK-NEXT:         },
 //CHECK-NEXT:         "right": {
 //CHECK-NEXT:           "type": "Identifier",
-//CHECK-NEXT:           "name": "x",
-//CHECK-NEXT:           "typeAnnotation": null
+//CHECK-NEXT:           "name": "x"
 //CHECK-NEXT:         },
 //CHECK-NEXT:         "body": {
 //CHECK-NEXT:           "type": "EmptyStatement"

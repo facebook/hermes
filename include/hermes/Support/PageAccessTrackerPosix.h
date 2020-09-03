@@ -13,7 +13,7 @@
 #include <memory>
 #include <vector>
 
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include "hermes/Support/JSONEmitter.h"
 
@@ -60,8 +60,8 @@ class PageAccessTracker {
 
   /// Print the tracked stats, including page size, total number of pages,
   /// number of pages accessed, and the page ids in the accessed order.
-  void printStats(llvm::raw_ostream &OS);
-  void printStatsJSON(llvm::raw_ostream &OS);
+  void printStats(llvh::raw_ostream &OS);
+  void printStatsJSON(llvh::raw_ostream &OS);
 
   /// Get the tracked stats, including page size, total number of pages,
   /// number of pages accessed, page ids in the accessed order, and microseconds
@@ -69,8 +69,8 @@ class PageAccessTracker {
   void getJSONStats(JSONEmitter &json);
 
   /// Print only the page ids in the accessed order.
-  void printPageAccessedOrder(llvm::raw_ostream &OS);
-  void printPageAccessedOrderJSON(llvm::raw_ostream &OS);
+  void printPageAccessedOrder(llvh::raw_ostream &OS);
+  void printPageAccessedOrderJSON(llvh::raw_ostream &OS);
 
   /// Handle the signal sent when an inaccesible page is touched. When the page
   /// touched is in the range we are tracking, mark it readable and continue
@@ -109,7 +109,7 @@ class PageAccessTracker {
   /// \param json If true, print in json format, otherwise in a more readable
   /// format.
   /// \return true if function completed successfully, false on failure.
-  bool printStats(llvm::raw_ostream &OS, bool json) volatile;
+  bool printStats(llvh::raw_ostream &OS, bool json) volatile;
 
   /// Public wrapper around the non-volatile version of this method.
   void getJSONStats(JSONEmitter &json) volatile;
@@ -118,7 +118,7 @@ class PageAccessTracker {
   /// \param json If true, print in json format, otherwise in a more readable
   /// format.
   /// \return true if function completed successfully, false on failure.
-  bool printPageAccessedOrder(llvm::raw_ostream &OS, bool json) volatile;
+  bool printPageAccessedOrder(llvh::raw_ostream &OS, bool json) volatile;
 
   /// Unregisters the signal handler.
   ~PageAccessTracker();

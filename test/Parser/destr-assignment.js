@@ -24,8 +24,7 @@
 //CHECK-NEXT:                 "type": "Property",
 //CHECK-NEXT:                 "key": {
 //CHECK-NEXT:                   "type": "Identifier",
-//CHECK-NEXT:                   "name": "a",
-//CHECK-NEXT:                   "typeAnnotation": null
+//CHECK-NEXT:                   "name": "a"
 //CHECK-NEXT:                 },
 //CHECK-NEXT:                 "value": {
 //CHECK-NEXT:                   "type": "AssignmentPattern",
@@ -36,13 +35,11 @@
 //CHECK-NEXT:                         "type": "MemberExpression",
 //CHECK-NEXT:                         "object": {
 //CHECK-NEXT:                           "type": "Identifier",
-//CHECK-NEXT:                           "name": "x",
-//CHECK-NEXT:                           "typeAnnotation": null
+//CHECK-NEXT:                           "name": "x"
 //CHECK-NEXT:                         },
 //CHECK-NEXT:                         "property": {
 //CHECK-NEXT:                           "type": "Identifier",
-//CHECK-NEXT:                           "name": "y",
-//CHECK-NEXT:                           "typeAnnotation": null
+//CHECK-NEXT:                           "name": "y"
 //CHECK-NEXT:                         },
 //CHECK-NEXT:                         "computed": true
 //CHECK-NEXT:                       },
@@ -50,8 +47,7 @@
 //CHECK-NEXT:                         "type": "AssignmentPattern",
 //CHECK-NEXT:                         "left": {
 //CHECK-NEXT:                           "type": "Identifier",
-//CHECK-NEXT:                           "name": "z",
-//CHECK-NEXT:                           "typeAnnotation": null
+//CHECK-NEXT:                           "name": "z"
 //CHECK-NEXT:                         },
 //CHECK-NEXT:                         "right": {
 //CHECK-NEXT:                           "type": "NumericLiteral",
@@ -74,13 +70,11 @@
 //CHECK-NEXT:                 "type": "Property",
 //CHECK-NEXT:                 "key": {
 //CHECK-NEXT:                   "type": "Identifier",
-//CHECK-NEXT:                   "name": "b",
-//CHECK-NEXT:                   "typeAnnotation": null
+//CHECK-NEXT:                   "name": "b"
 //CHECK-NEXT:                 },
 //CHECK-NEXT:                 "value": {
 //CHECK-NEXT:                   "type": "Identifier",
-//CHECK-NEXT:                   "name": "b",
-//CHECK-NEXT:                   "typeAnnotation": null
+//CHECK-NEXT:                   "name": "b"
 //CHECK-NEXT:                 },
 //CHECK-NEXT:                 "kind": "init",
 //CHECK-NEXT:                 "computed": false
@@ -89,8 +83,7 @@
 //CHECK-NEXT:           },
 //CHECK-NEXT:           "right": {
 //CHECK-NEXT:             "type": "Identifier",
-//CHECK-NEXT:             "name": "x",
-//CHECK-NEXT:             "typeAnnotation": null
+//CHECK-NEXT:             "name": "x"
 //CHECK-NEXT:           }
 //CHECK-NEXT:         },
 //CHECK-NEXT:         "directive": null
@@ -109,15 +102,13 @@
 //CHECK-NEXT:                "type": "Property",
 //CHECK-NEXT:                "key": {
 //CHECK-NEXT:                  "type": "Identifier",
-//CHECK-NEXT:                  "name": "a",
-//CHECK-NEXT:                  "typeAnnotation": null
+//CHECK-NEXT:                  "name": "a"
 //CHECK-NEXT:                },
 //CHECK-NEXT:                "value": {
 //CHECK-NEXT:                  "type": "AssignmentPattern",
 //CHECK-NEXT:                  "left": {
 //CHECK-NEXT:                    "type": "Identifier",
-//CHECK-NEXT:                    "name": "a",
-//CHECK-NEXT:                    "typeAnnotation": null
+//CHECK-NEXT:                    "name": "a"
 //CHECK-NEXT:                  },
 //CHECK-NEXT:                  "right": {
 //CHECK-NEXT:                    "type": "NumericLiteral",
@@ -132,8 +123,7 @@
 //CHECK-NEXT:          },
 //CHECK-NEXT:          "right": {
 //CHECK-NEXT:            "type": "Identifier",
-//CHECK-NEXT:            "name": "x",
-//CHECK-NEXT:            "typeAnnotation": null
+//CHECK-NEXT:            "name": "x"
 //CHECK-NEXT:          }
 //CHECK-NEXT:        },
 //CHECK-NEXT:        "directive": null
@@ -156,8 +146,7 @@
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "b",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "b"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "init",
 // CHECK-NEXT:               "computed": false
@@ -166,8 +155,7 @@
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "right": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "x",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "x"
 // CHECK-NEXT:         }
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "directive": null
@@ -191,8 +179,7 @@
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "b",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "b"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "init",
 // CHECK-NEXT:               "computed": false
@@ -201,8 +188,7 @@
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "right": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "x",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "x"
 // CHECK-NEXT:         }
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "directive": null

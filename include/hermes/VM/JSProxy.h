@@ -126,13 +126,13 @@ class JSProxy : public JSObject {
       Runtime *runtime,
       Handle<> nameValHandle);
 
-  static CallResult<HermesValue> getNamed(
+  static CallResult<PseudoHandle<>> getNamed(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       SymbolID name,
       Handle<> receiver);
 
-  static CallResult<HermesValue> getComputed(
+  static CallResult<PseudoHandle<>> getComputed(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       Handle<> nameValHandle,

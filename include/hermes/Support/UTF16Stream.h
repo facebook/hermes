@@ -11,7 +11,7 @@
 #include <cstdint>
 
 #include "hermes/ADT/OwningArray.h"
-#include "llvm/ADT/ArrayRef.h"
+#include "llvh/ADT/ArrayRef.h"
 
 namespace hermes {
 
@@ -23,7 +23,7 @@ namespace hermes {
 class UTF16Stream {
  public:
   /// A stream that simply passes through the data in \p str.
-  explicit UTF16Stream(llvm::ArrayRef<char16_t> str)
+  explicit UTF16Stream(llvh::ArrayRef<char16_t> str)
       : cur_(str.begin()),
         end_(str.end()),
         utf8Begin_(nullptr),
@@ -31,7 +31,7 @@ class UTF16Stream {
 
   /// A stream that converts \p utf8 to UTF16. If the input is not valid UTF8,
   /// then the stream will end at the first malformed character.
-  explicit UTF16Stream(llvm::ArrayRef<uint8_t> utf8);
+  explicit UTF16Stream(llvh::ArrayRef<uint8_t> utf8);
 
   /// Movable but not copyable.
   UTF16Stream(UTF16Stream &&rhs) = default;

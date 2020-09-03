@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/Twine.h"
+#include "llvh/ADT/SmallString.h"
+#include "llvh/ADT/Twine.h"
 
 #if defined(__APPLE__)
 #include <mach/mach_init.h>
@@ -54,7 +54,7 @@ static void *ExecuteOnThread_Dispatch(void *Arg) {
   return nullptr;
 }
 
-void llvm::llvm_execute_on_thread(void(*Fn)(void*), void *UserData,
+void llvh::llvm_execute_on_thread(void(*Fn)(void*), void *UserData,
   unsigned RequestedStackSize) {
   ThreadInfo Info = { Fn, UserData };
   pthread_attr_t Attr;
@@ -82,7 +82,7 @@ error:
 }
 
 
-uint64_t llvm::get_threadid() {
+uint64_t llvh::get_threadid() {
 #if defined(__APPLE__)
   // Calling "mach_thread_self()" bumps the reference count on the thread
   // port, so we need to deallocate it. mach_task_self() doesn't bump the ref
@@ -124,11 +124,11 @@ static constexpr uint32_t get_max_thread_name_length_impl() {
 #endif
 }
 
-uint32_t llvm::get_max_thread_name_length() {
+uint32_t llvh::get_max_thread_name_length() {
   return get_max_thread_name_length_impl();
 }
 
-void llvm::set_thread_name(const Twine &Name) {
+void llvh::set_thread_name(const Twine &Name) {
   // Make sure the input is null terminated.
   SmallString<64> Storage;
   StringRef NameStr = Name.toNullTerminatedStringRef(Storage);
@@ -158,7 +158,7 @@ void llvm::set_thread_name(const Twine &Name) {
 #endif
 }
 
-void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
+void llvh::get_thread_name(SmallVectorImpl<char> &Name) {
   Name.clear();
 
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)

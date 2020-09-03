@@ -17,7 +17,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "llvm/ADT/STLExtras.h"
+#include "llvh/ADT/STLExtras.h"
 
 using namespace hermes;
 
@@ -26,7 +26,7 @@ std::unique_ptr<volatile PageAccessTracker> PageAccessTracker::create(
     size_t bufSize) {
   uint32_t pageSize = getpagesize();
   if (bufSize < pageSize) {
-    llvm::errs()
+    llvh::errs()
         << "Nothing to track because the buffer is less than a page.\n";
     return nullptr;
   }
@@ -104,8 +104,8 @@ PageAccessTracker::PageAccessTracker(
       bufStartPage_(bufStartPage),
       totalPages_(totalPages),
       signal_(signal) {
-  accessedPageIds_ = llvm::make_unique<unsigned int[]>(totalPages);
-  accessedMicros_ = llvm::make_unique<unsigned int[]>(totalPages);
+  accessedPageIds_ = llvh::make_unique<unsigned int[]>(totalPages);
+  accessedMicros_ = llvh::make_unique<unsigned int[]>(totalPages);
 }
 
 void PageAccessTracker::recordPageAccess(void *accessedAddr, uint32_t micros) {
@@ -161,7 +161,7 @@ sigmux_action PageAccessTracker::signalHandler(
   return SIGMUX_CONTINUE_EXECUTION;
 }
 
-void PageAccessTracker::printStats(llvm::raw_ostream &OS) {
+void PageAccessTracker::printStats(llvh::raw_ostream &OS) {
   OS << "Bytecode I/O stats:\n";
   OS << "page size: " << pageSize_ << "\n";
   OS << "number of pages in bytecode file (rounded down): " << totalPages_
@@ -171,7 +171,7 @@ void PageAccessTracker::printStats(llvm::raw_ostream &OS) {
   printPageAccessedOrder(OS);
 }
 
-void PageAccessTracker::printStatsJSON(llvm::raw_ostream &OS) {
+void PageAccessTracker::printStatsJSON(llvh::raw_ostream &OS) {
   JSONEmitter json(OS);
   getJSONStats(json);
 }
@@ -196,14 +196,14 @@ void PageAccessTracker::getJSONStats(JSONEmitter &json) {
   json.closeDict();
 }
 
-void PageAccessTracker::printPageAccessedOrder(llvm::raw_ostream &OS) {
+void PageAccessTracker::printPageAccessedOrder(llvh::raw_ostream &OS) {
   OS << "Page ids (and microseconds to access) in accessed order:\n";
   for (unsigned i = 0; i < accessedPageCount_; ++i) {
     OS << accessedPageIds_[i] << " (" << accessedMicros_[i] << " us)\n";
   }
 }
 
-void PageAccessTracker::printPageAccessedOrderJSON(llvm::raw_ostream &OS) {
+void PageAccessTracker::printPageAccessedOrderJSON(llvh::raw_ostream &OS) {
   JSONEmitter json(OS);
   json.openDict();
   json.emitKey("page_ids");
@@ -233,7 +233,7 @@ std::vector<uint32_t> PageAccessTracker::getMicros() volatile {
   return result;
 }
 
-bool PageAccessTracker::printStats(llvm::raw_ostream &OS, bool json) volatile {
+bool PageAccessTracker::printStats(llvh::raw_ostream &OS, bool json) volatile {
   auto tracker = uninstall();
   if (json) {
     tracker->printStatsJSON(OS);
@@ -251,7 +251,7 @@ void PageAccessTracker::getJSONStats(JSONEmitter &json) volatile {
 }
 
 bool PageAccessTracker::printPageAccessedOrder(
-    llvm::raw_ostream &OS,
+    llvh::raw_ostream &OS,
     bool json) volatile {
   auto tracker = uninstall();
   if (json) {

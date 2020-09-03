@@ -15,14 +15,12 @@ function foo(a, [b = 1, c] = [], {c:d = 1, e:{f}}, ...[g,h = 1]) {}
 //CHECK-NEXT:         "type": "FunctionDeclaration",
 //CHECK-NEXT:         "id": {
 //CHECK-NEXT:           "type": "Identifier",
-//CHECK-NEXT:           "name": "foo",
-//CHECK-NEXT:           "typeAnnotation": null
+//CHECK-NEXT:           "name": "foo"
 //CHECK-NEXT:         },
 //CHECK-NEXT:         "params": [
 //CHECK-NEXT:           {
 //CHECK-NEXT:             "type": "Identifier",
-//CHECK-NEXT:             "name": "a",
-//CHECK-NEXT:             "typeAnnotation": null
+//CHECK-NEXT:             "name": "a"
 //CHECK-NEXT:           },
 //CHECK-NEXT:           {
 //CHECK-NEXT:             "type": "AssignmentPattern",
@@ -33,8 +31,7 @@ function foo(a, [b = 1, c] = [], {c:d = 1, e:{f}}, ...[g,h = 1]) {}
 //CHECK-NEXT:                   "type": "AssignmentPattern",
 //CHECK-NEXT:                   "left": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "b",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "b"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "right": {
 //CHECK-NEXT:                     "type": "NumericLiteral",
@@ -44,8 +41,7 @@ function foo(a, [b = 1, c] = [], {c:d = 1, e:{f}}, ...[g,h = 1]) {}
 //CHECK-NEXT:                 },
 //CHECK-NEXT:                 {
 //CHECK-NEXT:                   "type": "Identifier",
-//CHECK-NEXT:                   "name": "c",
-//CHECK-NEXT:                   "typeAnnotation": null
+//CHECK-NEXT:                   "name": "c"
 //CHECK-NEXT:                 }
 //CHECK-NEXT:               ]
 //CHECK-NEXT:             },
@@ -62,15 +58,13 @@ function foo(a, [b = 1, c] = [], {c:d = 1, e:{f}}, ...[g,h = 1]) {}
 //CHECK-NEXT:                 "type": "Property",
 //CHECK-NEXT:                 "key": {
 //CHECK-NEXT:                   "type": "Identifier",
-//CHECK-NEXT:                   "name": "c",
-//CHECK-NEXT:                   "typeAnnotation": null
+//CHECK-NEXT:                   "name": "c"
 //CHECK-NEXT:                 },
 //CHECK-NEXT:                 "value": {
 //CHECK-NEXT:                   "type": "AssignmentPattern",
 //CHECK-NEXT:                   "left": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "d",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "d"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "right": {
 //CHECK-NEXT:                     "type": "NumericLiteral",
@@ -85,8 +79,7 @@ function foo(a, [b = 1, c] = [], {c:d = 1, e:{f}}, ...[g,h = 1]) {}
 //CHECK-NEXT:                 "type": "Property",
 //CHECK-NEXT:                 "key": {
 //CHECK-NEXT:                   "type": "Identifier",
-//CHECK-NEXT:                   "name": "e",
-//CHECK-NEXT:                   "typeAnnotation": null
+//CHECK-NEXT:                   "name": "e"
 //CHECK-NEXT:                 },
 //CHECK-NEXT:                 "value": {
 //CHECK-NEXT:                   "type": "ObjectPattern",
@@ -95,13 +88,11 @@ function foo(a, [b = 1, c] = [], {c:d = 1, e:{f}}, ...[g,h = 1]) {}
 //CHECK-NEXT:                       "type": "Property",
 //CHECK-NEXT:                       "key": {
 //CHECK-NEXT:                         "type": "Identifier",
-//CHECK-NEXT:                         "name": "f",
-//CHECK-NEXT:                         "typeAnnotation": null
+//CHECK-NEXT:                         "name": "f"
 //CHECK-NEXT:                       },
 //CHECK-NEXT:                       "value": {
 //CHECK-NEXT:                         "type": "Identifier",
-//CHECK-NEXT:                         "name": "f",
-//CHECK-NEXT:                         "typeAnnotation": null
+//CHECK-NEXT:                         "name": "f"
 //CHECK-NEXT:                       },
 //CHECK-NEXT:                       "kind": "init",
 //CHECK-NEXT:                       "computed": false
@@ -120,15 +111,13 @@ function foo(a, [b = 1, c] = [], {c:d = 1, e:{f}}, ...[g,h = 1]) {}
 //CHECK-NEXT:               "elements": [
 //CHECK-NEXT:                 {
 //CHECK-NEXT:                   "type": "Identifier",
-//CHECK-NEXT:                   "name": "g",
-//CHECK-NEXT:                   "typeAnnotation": null
+//CHECK-NEXT:                   "name": "g"
 //CHECK-NEXT:                 },
 //CHECK-NEXT:                 {
 //CHECK-NEXT:                   "type": "AssignmentPattern",
 //CHECK-NEXT:                   "left": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "h",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "h"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "right": {
 //CHECK-NEXT:                     "type": "NumericLiteral",
@@ -144,7 +133,6 @@ function foo(a, [b = 1, c] = [], {c:d = 1, e:{f}}, ...[g,h = 1]) {}
 //CHECK-NEXT:           "type": "BlockStatement",
 //CHECK-NEXT:           "body": []
 //CHECK-NEXT:         },
-//CHECK-NEXT:         "returnType": null,
 //CHECK-NEXT:         "generator": false,
 //CHECK-NEXT:         "async": false
 //CHECK-NEXT:       }

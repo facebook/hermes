@@ -26,3 +26,6 @@ target_link_libraries(hvm
 
 hermes_link_icu(hvm)
 
+install(TARGETS hvm
+  RUNTIME DESTINATION bin
+)

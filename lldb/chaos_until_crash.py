@@ -7,6 +7,8 @@
 import argparse
 import math
 import os
+import shlex
+import signal
 import subprocess
 import sys
 from pathlib import Path
@@ -29,6 +31,7 @@ def main():
     )
     parser.add_argument("args", nargs=argparse.REMAINDER)
     args = parser.parse_args()
+    args.executable = args.executable.resolve()
     if not args.executable.is_file():
         raise Exception("Executable isn't a file")
     rr = which("rr")
@@ -36,15 +39,15 @@ def main():
         raise Exception(f"rr not found on PATH: {os.environ.get('PATH', '')}")
     args.retries = args.retries or math.inf
 
-    print(f"Running {args.retries} times using {rr}")
+    print(
+        f"Running {shlex.join([str(args.executable)] + args.args)} {args.retries} times using {rr}"
+    )
 
     @retry_while_successful(retries=args.retries)
     def chaos_mode(executable, args):
-        return subprocess.check_call(
-            [rr, "record", "--chaos"] + [executable] + args,
-            stdout=sys.stdout,
-            stderr=sys.stderr,
-        )
+        command = [rr, "record", "--chaos", str(executable), *args]
+        print("> " + shlex.join(command))
+        return subprocess.check_call(command, stdout=sys.stdout, stderr=sys.stderr)
 
     chaos_mode(args.executable, args.args)
 
@@ -58,7 +61,14 @@ def retry_while_successful(retries=1):
                     func(*args, **kwargs)
                     retries -= 1
                 except subprocess.CalledProcessError as e:
-                    print(e)
+                    print(e, file=sys.stderr)
+                    if e.returncode < 0 and -e.returncode == signal.SIGPIPE:
+                        print(
+                            "Warning: SIGPIPE encountered, skipping as unimportant",
+                            file=sys.stderr,
+                        )
+                        retries -= 1
+                        continue
                     return
             print("All retries used")
 

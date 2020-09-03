@@ -16,14 +16,14 @@
 
 #include <unordered_map>
 
-namespace llvm {
+namespace llvh {
 class raw_ostream;
-} // namespace llvm
+} // namespace llvh
 
 namespace hermes {
 namespace hbc {
 
-using llvm::raw_ostream;
+using llvh::raw_ostream;
 using StringID = uint32_t;
 
 /// The reverse of emitOperand, loading an operand encoded in little-endian
@@ -232,7 +232,7 @@ class BytecodeSectionWalker {
   /// Pointer to the start of the bytecode buffer.
   const uint8_t *bytecodeStart_{nullptr};
   std::shared_ptr<hbc::BCProviderFromBuffer> bcProvider_{};
-  llvm::raw_ostream &os_;
+  llvh::raw_ostream &os_;
 
   std::vector<const char *> sectionNames_{};
   std::vector<const uint8_t *> sectionStarts_{};
@@ -256,7 +256,7 @@ class BytecodeSectionWalker {
   BytecodeSectionWalker(
       const uint8_t *bytecodeStart,
       std::shared_ptr<hbc::BCProviderFromBuffer> bcProvider,
-      llvm::raw_ostream &os);
+      llvh::raw_ostream &os);
 
   /// Prints the ranges of each section in the bytecode to the output.
   /// \param human When set to true, prints the range in hex, for ease of

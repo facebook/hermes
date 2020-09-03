@@ -25,16 +25,13 @@ RuntimeModule::RuntimeModule(
     Runtime *runtime,
     Handle<Domain> domain,
     RuntimeModuleFlags flags,
-    llvm::StringRef sourceURL,
+    llvh::StringRef sourceURL,
     facebook::hermes::debugger::ScriptID scriptID)
     : runtime_(runtime),
       domain_(&runtime->getHeap(), domain),
       flags_(flags),
       sourceURL_(sourceURL),
       scriptID_(scriptID) {
-  assert(
-      domain_.isValid() && vmisa<Domain>(domain_.unsafeGetHermesValue()) &&
-      "initialized with invalid domain");
   runtime_->addRuntimeModule(this);
   Domain::addRuntimeModule(domain, runtime, this);
 #ifndef HERMESVM_LEAN
@@ -94,8 +91,12 @@ CallResult<RuntimeModule *> RuntimeModule::create(
     facebook::hermes::debugger::ScriptID scriptID,
     std::shared_ptr<hbc::BCProvider> &&bytecode,
     RuntimeModuleFlags flags,
-    llvm::StringRef sourceURL) {
-  auto *result = new RuntimeModule(runtime, domain, flags, sourceURL, scriptID);
+    llvh::StringRef sourceURL) {
+  RuntimeModule *result;
+  {
+    WeakRefLock lk{runtime->getHeap().weakRefMutex()};
+    result = new RuntimeModule(runtime, domain, flags, sourceURL, scriptID);
+  }
   runtime->getCrashManager().registerMemory(result, sizeof(*result));
   if (bytecode) {
     if (result->initializeMayAllocate(std::move(bytecode)) ==
@@ -109,6 +110,15 @@ CallResult<RuntimeModule *> RuntimeModule::create(
           result->bcProvider_.get(), sizeof(hbc::BCProviderFromBuffer));
   }
   return result;
+}
+
+RuntimeModule *RuntimeModule::createUninitialized(
+    Runtime *runtime,
+    Handle<Domain> domain,
+    RuntimeModuleFlags flags,
+    facebook::hermes::debugger::ScriptID scriptID) {
+  WeakRefLock lk{runtime->getHeap().weakRefMutex()};
+  return new RuntimeModule(runtime, domain, flags, "", scriptID);
 }
 
 void RuntimeModule::initializeWithoutCJSModulesMayAllocate(
@@ -330,7 +340,7 @@ std::string RuntimeModule::getStringFromStringID(StringID stringID) {
   }
 }
 
-llvm::ArrayRef<uint8_t> RuntimeModule::getRegExpBytecodeFromRegExpID(
+llvh::ArrayRef<uint8_t> RuntimeModule::getRegExpBytecodeFromRegExpID(
     uint32_t regExpId) const {
   assert(
       regExpId < bcProvider_->getRegExpTable().size() && "Invalid regexp id");
@@ -340,7 +350,7 @@ llvm::ArrayRef<uint8_t> RuntimeModule::getRegExpBytecodeFromRegExpID(
 
 template <typename T>
 SymbolID RuntimeModule::mapStringMayAllocate(
-    llvm::ArrayRef<T> str,
+    llvh::ArrayRef<T> str,
     StringID stringID,
     uint32_t hash) {
   // Create a SymbolID for a given string. In general a SymbolID holds onto an
@@ -388,7 +398,7 @@ void RuntimeModule::markWeakRoots(WeakRootAcceptor &acceptor) {
   }
   for (auto &entry : objectLiteralHiddenClasses_) {
     if (entry.second) {
-      acceptor.acceptWeak(reinterpret_cast<void *&>(entry.second));
+      acceptor.acceptWeak(entry.second);
     }
   }
 }
@@ -397,30 +407,36 @@ void RuntimeModule::markDomainRef(WeakRefAcceptor &acceptor) {
   acceptor.accept(domain_);
 }
 
-llvm::Optional<Handle<HiddenClass>> RuntimeModule::findCachedLiteralHiddenClass(
+llvh::Optional<Handle<HiddenClass>> RuntimeModule::findCachedLiteralHiddenClass(
+    Runtime *runtime,
     unsigned keyBufferIndex,
     unsigned numLiterals) const {
   if (canGenerateLiteralHiddenClassCacheKey(keyBufferIndex, numLiterals)) {
     const auto cachedHiddenClassIter = objectLiteralHiddenClasses_.find(
         getLiteralHiddenClassCacheHashKey(keyBufferIndex, numLiterals));
-    if (cachedHiddenClassIter != objectLiteralHiddenClasses_.end() &&
-        cachedHiddenClassIter->second != nullptr) {
-      return runtime_->makeHandle(cachedHiddenClassIter->second);
+    if (cachedHiddenClassIter != objectLiteralHiddenClasses_.end()) {
+      if (HiddenClass *const cachedHiddenClass =
+              cachedHiddenClassIter->second.get(runtime, &runtime->getHeap())) {
+        return runtime_->makeHandle(cachedHiddenClass);
+      }
     }
   }
-  return llvm::None;
+  return llvh::None;
 }
 
 void RuntimeModule::tryCacheLiteralHiddenClass(
+    Runtime *runtime,
     unsigned keyBufferIndex,
     HiddenClass *clazz) {
   auto numLiterals = clazz->getNumProperties();
   if (canGenerateLiteralHiddenClassCacheKey(keyBufferIndex, numLiterals)) {
     assert(
-        !findCachedLiteralHiddenClass(keyBufferIndex, numLiterals).hasValue() &&
+        !findCachedLiteralHiddenClass(runtime, keyBufferIndex, numLiterals)
+             .hasValue() &&
         "Why are we caching an item already cached?");
     objectLiteralHiddenClasses_[getLiteralHiddenClassCacheHashKey(
-        keyBufferIndex, numLiterals)] = clazz;
+                                    keyBufferIndex, numLiterals)]
+        .set(runtime, clazz);
   }
 }
 

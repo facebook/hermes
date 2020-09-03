@@ -9,16 +9,16 @@
 #define HERMES_SUPPORT_JSONEMITTER_H
 
 #include <cstdint>
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/Support/Format.h"
+#include "llvh/Support/raw_ostream.h"
 
 namespace hermes {
 
 /// JSONEmitter is a simple, stateful class for emitting JSON to an
-/// llvm::raw_ostream.
+/// llvh::raw_ostream.
 /// To emit an array, use openArray(). Then call a sequence of emitValue() or
 /// emitValues(), or use openArray()/openDict() to nest a collection. Finish
 /// with closeArray(). To emit a dictionary, use openDict(), a sequence of
@@ -31,7 +31,7 @@ namespace hermes {
 /// to ensure only valid UTF-8 is passed.
 ///
 /// Example usage:
-///  JSONEmitter json(llvm::outs());
+///  JSONEmitter json(llvh::outs());
 ///  json.openDict();
 ///  json.emitKeyValue("name", "hermes");
 ///  json.emitKeyValue("age", 2);
@@ -50,7 +50,7 @@ class JSONEmitter {
   /// and indentation. Note that since the JSONEmitter does not know when
   /// the printing will stop, the user needs to print a new line themselves
   /// when they finish.
-  JSONEmitter(llvm::raw_ostream &OS, bool pretty = false)
+  JSONEmitter(llvh::raw_ostream &OS, bool pretty = false)
       : OS(OS), pretty_(pretty) {}
 
   /// Emit a boolean value \p val.
@@ -75,9 +75,9 @@ class JSONEmitter {
 
   /// Emit a string \p val. This is not used to emit dictionary keys: use
   /// emitKey() instead.
-  void emitValue(llvm::StringRef val);
+  void emitValue(llvh::StringRef val);
   void emitValue(const char *val) {
-    emitValue(llvm::StringRef(val));
+    emitValue(llvh::StringRef(val));
   }
 
   /// Emit a null as value.
@@ -85,12 +85,12 @@ class JSONEmitter {
 
   /// Emit a dictionary key \p key. This requires that we are currently emitting
   /// a dictionary, and it expects a key (not a value).
-  void emitKey(llvm::StringRef key);
+  void emitKey(llvh::StringRef key);
 
   /// Emit a key \p key followed by a value \p val. This requires that we are
   /// currently emitting a dictionary and it expects a key.
   template <typename T>
-  void emitKeyValue(llvm::StringRef key, const T &val) {
+  void emitKeyValue(llvh::StringRef key, const T &val) {
     emitKey(key);
     emitValue(val);
   }
@@ -98,7 +98,7 @@ class JSONEmitter {
   /// Emit a sequence of values \p val. This requires that we are currently
   /// emitting an array.
   template <typename T>
-  void emitValues(llvm::ArrayRef<T> vals) {
+  void emitValues(llvh::ArrayRef<T> vals) {
     for (const T &val : vals)
       emitValue(val);
   }
@@ -137,7 +137,7 @@ class JSONEmitter {
   /// dictionary keys and ordinary string values.
   /// Assumes \p str is encoded in utf-8.
   /// Escapes certain control characters and non-ascii characters.
-  void primitiveEmitString(llvm::StringRef str);
+  void primitiveEmitString(llvh::StringRef str);
 
   /// \return whether a dictionary is currently being emitted.
   bool inDict() const {
@@ -190,10 +190,10 @@ class JSONEmitter {
   };
 
   /// The stack of states.
-  llvm::SmallVector<State, 8> states_;
+  llvh::SmallVector<State, 8> states_;
 
   /// The stream to output to.
-  llvm::raw_ostream &OS;
+  llvh::raw_ostream &OS;
 
   /// Pretty print the JSON object.
   bool pretty_{false};

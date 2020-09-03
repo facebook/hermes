@@ -62,7 +62,7 @@ void GCGeneration::clearUnmarkedPropertyMaps() {
   for (auto cell : cellsWithFinalizers())
     if (!AlignedHeapSegment::getCellMarkBit(cell))
       if (auto hc = dyn_vmcast<HiddenClass>(cell))
-        hc->clearPropertyMap();
+        hc->clearPropertyMap(gc_);
 }
 
 #ifdef HERMES_SLOW_DEBUG

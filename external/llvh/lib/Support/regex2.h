@@ -119,7 +119,7 @@ typedef struct {
 #define	CHadd(cs, c)	((cs)->ptr[(uch)(c)] |= (cs)->mask, (cs)->hash += (c))
 #define	CHsub(cs, c)	((cs)->ptr[(uch)(c)] &= ~(cs)->mask, (cs)->hash -= (c))
 #define	CHIN(cs, c)	((cs)->ptr[(uch)(c)] & (cs)->mask)
-#define	MCadd(p, cs, cp)	mcadd(p, cs, cp)	/* llvm_regcomp() internal fns */
+#define	MCadd(p, cs, cp)	mcadd(p, cs, cp)	/* llvh_regcomp() internal fns */
 #define	MCsub(p, cs, cp)	mcsub(p, cs, cp)
 #define	MCin(p, cs, cp)	mcin(p, cs, cp)
 
@@ -137,7 +137,7 @@ struct re_guts {
 	int ncsets;		/* number of csets in use */
 	cset *sets;		/* -> cset [ncsets] */
 	uch *setbits;		/* -> uch[csetsize][ncsets/CHAR_BIT] */
-	int cflags;		/* copy of llvm_regcomp() cflags argument */
+	int cflags;		/* copy of llvh_regcomp() cflags argument */
 	sopno nstates;		/* = number of sops */
 	sopno firststate;	/* the initial OEND (normally 0) */
 	sopno laststate;	/* the final OEND */

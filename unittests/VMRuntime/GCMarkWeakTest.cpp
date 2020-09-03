@@ -60,6 +60,8 @@ const VTable TestCell::vt{CellKind::FillerCellKind,
 
 namespace {
 
+// Hades doesn't call markWeak the same number of times as other GCs.
+#ifndef HERMESVM_GC_HADES
 MetadataTableForTests getMetadataTable() {
   // Nothing to mark for either of them, leave a blank metadata.
   static const Metadata storage[] = {Metadata(), Metadata()};
@@ -87,13 +89,15 @@ TEST(GCMarkWeakTest, MarkWeak) {
   rt.pointerRoots.push_back(&g);
   gc.collect();
 
-  TestCell *t = vmcast<TestCell>(g);
-  ASSERT_TRUE(t->weak.isValid());
-  HermesValue hv = t->weak.unsafeGetHermesValue();
-  EXPECT_TRUE(t == hv.getObject());
-  // Exactly one call to _markWeakImpl
-  EXPECT_EQ(1 + 2 * checkHeapOn, numMarkWeakCalls);
-  EXPECT_EQ(initUsedWeak + 1, gc.countUsedWeakRefs());
+  {
+    WeakRefLock lk{gc.weakRefMutex()};
+    TestCell *t = vmcast<TestCell>(g);
+    ASSERT_TRUE(t->weak.isValid());
+    EXPECT_EQ(t, getNoHandle(t->weak, &gc));
+    // Exactly one call to _markWeakImpl
+    EXPECT_EQ(1 + 2 * checkHeapOn, numMarkWeakCalls);
+    EXPECT_EQ(initUsedWeak + 1, gc.countUsedWeakRefs());
+  }
 
   rt.pointerRoots.pop_back();
   gc.collect();
@@ -103,6 +107,7 @@ TEST(GCMarkWeakTest, MarkWeak) {
   EXPECT_EQ(1 + 3 * checkHeapOn, numMarkWeakCalls);
   EXPECT_EQ(initUsedWeak, gc.countUsedWeakRefs());
 }
+#endif
 
 } // namespace
 

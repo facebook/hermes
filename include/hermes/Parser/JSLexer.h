@@ -8,14 +8,15 @@
 #ifndef HERMES_PARSER_JSLEXER_H
 #define HERMES_PARSER_JSLEXER_H
 
+#include "hermes/AST/Config.h"
 #include "hermes/Support/Allocator.h"
 #include "hermes/Support/OptValue.h"
 #include "hermes/Support/SourceErrorManager.h"
 #include "hermes/Support/StringTable.h"
 #include "hermes/Support/UTF8.h"
 
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallString.h"
+#include "llvh/ADT/Optional.h"
+#include "llvh/ADT/SmallString.h"
 
 #include <functional>
 #include <utility>
@@ -23,8 +24,8 @@
 namespace hermes {
 namespace parser {
 
-using llvm::SMLoc;
-using llvm::SMRange;
+using llvh::SMLoc;
+using llvh::SMRange;
 
 class Token;
 class JSLexer;
@@ -37,6 +38,20 @@ enum class TokenKind {
 inline constexpr int ord(TokenKind kind) {
   return static_cast<int>(kind);
 }
+
+#ifndef NDEBUG
+/// \return true if \p kind is a punctuator token.
+inline bool isPunctuatorDbg(TokenKind kind) {
+  switch (kind) {
+#define PUNCTUATOR(name, str) \
+  case TokenKind::name:       \
+    return true;
+#include "TokenKinds.def"
+    default:
+      return false;
+  }
+}
+#endif
 
 const unsigned NUM_JS_TOKENS = ord(TokenKind::_last_token) + 1;
 const char *tokenKindStr(TokenKind kind);
@@ -74,9 +89,11 @@ class Token {
 
   RegExpLiteral *regExpLiteral_{nullptr};
 
-  /// The Template Raw Value (TRV) associated with the token if it represents
+  /// Representation of one these depending on the TokenKind:
+  /// - The Template Raw Value (TRV) associated with the token if it represents
   /// a part or whole of a template literal.
-  UniqueString *templateRawValue_{nullptr};
+  /// - The raw string of a JSXText.
+  UniqueString *rawString_{nullptr};
 
   /// If the current token is a string literal, this flag indicates whether it
   /// contains any escapes or new line continuations. We need this in order to
@@ -162,12 +179,22 @@ class Token {
 
   UniqueString *getTemplateRawValue() const {
     assert(isTemplateLiteral());
-    return templateRawValue_;
+    return rawString_;
   }
 
   RegExpLiteral *getRegExpLiteral() const {
     assert(getKind() == TokenKind::regexp_literal);
     return regExpLiteral_;
+  }
+
+  UniqueString *getJSXTextValue() const {
+    assert(getKind() == TokenKind::jsx_text);
+    return stringLiteral_;
+  }
+
+  UniqueString *getJSXTextRaw() const {
+    assert(getKind() == TokenKind::jsx_text);
+    return rawString_;
   }
 
  private:
@@ -216,7 +243,13 @@ class Token {
         kind == TokenKind::template_middle || kind == TokenKind::template_tail);
     kind_ = kind;
     stringLiteral_ = cooked;
-    templateRawValue_ = raw;
+    rawString_ = raw;
+  }
+
+  void setJSXText(UniqueString *value, UniqueString *raw) {
+    kind_ = TokenKind::jsx_text;
+    stringLiteral_ = value;
+    rawString_ = raw;
   }
 
   friend class JSLexer;
@@ -241,6 +274,9 @@ class JSLexer {
 
   bool strictMode_;
 
+  /// Whether to store the comments instead of skipping them.
+  bool storeComments_{false};
+
   /// If true, when a surrogate pair sequence is encountered in a string literal
   /// in the source, convert that string literal to its canonical UTF-8
   /// sequence.
@@ -254,10 +290,10 @@ class JSLexer {
 
   bool newLineBeforeCurrentToken_ = false;
 
-  llvm::SmallString<256> tmpStorage_;
+  llvh::SmallString<256> tmpStorage_;
 
   /// Storage used for the Template Raw Value when scanning template literals.
-  llvm::SmallString<256> rawStorage_;
+  llvh::SmallString<256> rawStorage_;
 
   /// Pre-allocated identifiers for all reserved words.
   UniqueString *resWordIdent_
@@ -269,10 +305,16 @@ class JSLexer {
     return resWordIdent_[ord(kind) - ord(TokenKind::_first_resword)];
   }
 
+  /// Storage for comments we store when storedComments_ == true.
+  /// Elements of commentStorage_ are pointers into the file buffer
+  /// and have the same lifetime as pointers such as bufferStart_ and
+  /// bufferEnd_.
+  std::vector<StringRef> commentStorage_{};
+
  public:
   /// \param convertSurrogates See member variable \p convertSurrogates_.
   explicit JSLexer(
-      std::unique_ptr<llvm::MemoryBuffer> input,
+      std::unique_ptr<llvh::MemoryBuffer> input,
       SourceErrorManager &sm,
       Allocator &allocator,
       StringTable *strTab = nullptr,
@@ -297,7 +339,7 @@ class JSLexer {
       bool strictMode = true,
       bool convertSurrogates = false)
       : JSLexer(
-            llvm::MemoryBuffer::getMemBuffer(input, "JavaScript"),
+            llvh::MemoryBuffer::getMemBuffer(input, "JavaScript"),
             sm,
             allocator,
             strTab,
@@ -306,14 +348,14 @@ class JSLexer {
 
   /// \param convertSurrogates See member variable \p convertSurrogates_.
   JSLexer(
-      llvm::MemoryBufferRef input,
+      llvh::MemoryBufferRef input,
       SourceErrorManager &sm,
       Allocator &allocator,
       StringTable *strTab = nullptr,
       bool strictMode = true,
       bool convertSurrogates = false)
       : JSLexer(
-            llvm::MemoryBuffer::getMemBuffer(input),
+            llvh::MemoryBuffer::getMemBuffer(input),
             sm,
             allocator,
             strTab,
@@ -339,6 +381,10 @@ class JSLexer {
     strictMode_ = strictMode;
   }
 
+  void setStoreComments(bool storeComments) {
+    storeComments_ = storeComments;
+  }
+
   /// \return true if a line terminator was consumed before the current token.
   ///
   /// The caller can use that information to make decisions about inserting
@@ -352,21 +398,34 @@ class JSLexer {
     return &token_;
   }
 
+  /// \return the current char pointer location.
+  SMLoc getCurLoc() const {
+    return SMLoc::getFromPointer(curCharPtr_);
+  }
+
   /// Force an EOF at the next token.
   void forceEOF() {
     curCharPtr_ = bufferEnd_;
   }
 
-  /// Grammar context to be passed to advance() determining whether "/" or
-  /// RegExp can follow at that point.
-  enum GrammarContext { AllowRegExp, AllowDiv };
+  /// Grammar context to be passed to advance().
+  /// - AllowRegExp: RegExp can follow
+  /// - AllowDiv: "/" can follow
+  /// - AllowJSXIdentifier: "/" can follow, "-" is part of identifiers,
+  ///     ">" is scanned as its own token.
+  /// - Flow: "/" can follow and ">>" scans as two separate ">" tokens.
+  enum GrammarContext { AllowRegExp, AllowDiv, AllowJSXIdentifier, Flow };
 
   /// Consume the current token and scan the next one, which becomes the new
   /// current token. All whitespace is skipped befire the new token and if
   /// a line terminator was encountered, the newLineBefireCurrentToken_ flag is
   /// set.
-  /// \param grammarContext enable recognizing either "/" and "/=", or a regexp.
+  /// \param grammarContext determines "/", "/=", regexp, and JSX identifiers.
   const Token *advance(GrammarContext grammarContext = AllowRegExp);
+
+  /// Consume the current token and scan a new one inside a JSX child.
+  /// This scans JSXText or one of the punctuators: {, <, >, }.
+  const Token *advanceInJSXChild();
 
   /// Check whether the current token is a directive, in other words is it a
   /// string literal without escapes or new line continuations, followed by
@@ -391,40 +450,12 @@ class JSLexer {
   ///   async [no LineTerminator here] ArrowFormalParameters
   ///         ^
   /// case for parsing async functions and arrow functions.
-  /// \pre the current token must be "async".
+  /// \pre current token is an identifier or reserved word.
   /// \param expectedToken if not None, then if the next token is expectedToken,
-  ///   the next token is scanned and the curCharPtr_ isn't reset to 'async'.
+  ///   the next token is scanned and the curCharPtr_ isn't reset.
   /// \return the kind of next token if there was no LineTerminator,
   ///   otherwise return None.
-  OptValue<TokenKind> lookaheadAfterAsync(OptValue<TokenKind> expectedToken);
-
-  /// Report an error for the range from startLoc to curCharPtr.
-  bool errorRange(SMLoc startLoc, const llvm::Twine &msg) {
-    return error({startLoc, SMLoc::getFromPointer(curCharPtr_)}, msg);
-  }
-
-  /// Report an error using the current token's location.
-  bool error(const llvm::Twine &msg) {
-    return error(token_.getSourceRange(), msg);
-  }
-
-  /// Emit an error at the specified source location. If the maximum number of
-  /// errors has been reached, return false and move the scanning pointer to
-  /// EOF.
-  /// \return false if too many errors have been emitted and we need to abort.
-  bool error(SMLoc loc, const llvm::Twine &msg);
-
-  /// Emit an error at the specified source range. If the maximum number of
-  /// errors has been reached, return false and move the scanning pointer to
-  /// EOF.
-  /// \return false if too many errors have been emitted and we need to abort.
-  bool error(SMRange range, const llvm::Twine &msg);
-
-  /// Emit an error at the specified source location and range. If the maximum
-  /// number of errors has been reached, return false and move the scanning
-  /// pointer to EOF.
-  /// \return false if too many errors have been emitted and we need to abort.
-  bool error(SMLoc loc, SMRange range, const llvm::Twine &msg);
+  OptValue<TokenKind> lookahead1(OptValue<TokenKind> expectedToken);
 
   UniqueString *getIdentifier(StringRef name) {
     return strTab_.getString(name);
@@ -459,6 +490,50 @@ class JSLexer {
     return bufferEnd_;
   }
 
+  /// \return any stored comments to this point.
+  llvh::ArrayRef<StringRef> getStoredComments() const {
+    return commentStorage_;
+  }
+
+  /// Store state of the lexer and allow rescanning from that point.
+  /// Can only save state when the current token is a punctuator or
+  /// TokenKind::identifier.
+  class SavePoint {
+    JSLexer *const lexer_;
+
+    /// Saved token kind, must be a punctuator.
+    TokenKind kind_;
+
+    /// Saved identifier, nullptr if kind_ != identifier.
+    UniqueString *ident_;
+
+    /// Saved curCharPtr_ from the lexer.
+    SMLoc loc_;
+
+   public:
+    SavePoint(JSLexer *lexer)
+        : lexer_(lexer),
+          kind_(lexer_->getCurToken()->getKind()),
+          ident_(
+              kind_ == TokenKind::identifier
+                  ? lexer_->getCurToken()->getIdentifier()
+                  : nullptr),
+          loc_(lexer_->getCurLoc()) {
+      assert(
+          (isPunctuatorDbg(kind_) || kind_ == TokenKind::identifier) &&
+          "SavePoint can only be used for punctuators");
+    }
+
+    /// Restore the state of the lexer to the originally saved state.
+    void restore() {
+      if (kind_ == TokenKind::identifier) {
+        lexer_->unsafeSetIdentifier(ident_, loc_);
+      } else {
+        lexer_->unsafeSetPunctuator(kind_, loc_);
+      }
+    }
+  };
+
  private:
   /// Initialize the storage with the characters between \p begin and \p end.
   inline void initStorageWith(const char *begin, const char *end);
@@ -468,7 +543,7 @@ class JSLexer {
   /// resulting surrogate pair values are encoded individually into UTF8.
   static inline void appendUnicodeToStorage(
       uint32_t cp,
-      llvm::SmallVectorImpl<char> &storage);
+      llvh::SmallVectorImpl<char> &storage);
 
   /// Encode a Unicode codepoint into a UTF8 sequence and append it to \ref
   /// tmpStorage_. Code points above 0xFFFF are encoded into UTF16, and the
@@ -523,19 +598,32 @@ class JSLexer {
   /// On failure, curCharPtr_ will be reset to where it was when the function
   /// was called.
   /// \return the resultant code point on success, None on error.
-  llvm::Optional<uint32_t> consumeUnicodeEscapeOptional();
+  llvh::Optional<uint32_t> consumeUnicodeEscapeOptional();
+
+  /// Specify the types of identifiers which should be allowed when consuming
+  /// identifiers.
+  enum class IdentifierMode {
+    /// Standard JavaScript identifiers only.
+    JS,
+    /// JavaScript identifiers and '-'.
+    JSX,
+    /// JavaScript identifiers and identifiers which begin with '@'.
+    Flow,
+  };
 
   /// Decode an IdentifierStart production per ES5.1 7.6.
   /// \return whether an IdentifierStart was successfully decoded.
   bool consumeIdentifierStart();
 
   /// Decode a sequence (possibly empty) of IdentifierPart.
+  template <IdentifierMode Mode>
   void consumeIdentifierParts();
 
   /// Decode an IdentifierPart per ES5.1 7.6 that does not begin with a
   /// backslash.
   /// \return true if an IdentifierPart was decoded, false if the current
   /// character was a backslash or not an IdentifierPart.
+  template <IdentifierMode Mode>
   bool consumeOneIdentifierPartNoEscape();
 
   /// Scan an octal number after the first character has been recognized
@@ -548,7 +636,7 @@ class JSLexer {
   /// \param requiredLen is the number of digits in the hex literal.
   /// \param errorOnFail if true, report an error on failing to recognize a hex
   ///   number.
-  llvm::Optional<uint32_t> consumeHex(
+  llvh::Optional<uint32_t> consumeHex(
       unsigned requiredLen,
       bool errorOnFail = true);
 
@@ -557,9 +645,10 @@ class JSLexer {
   /// \ref curCharPtr_ must point to the opening { of the escape, and will
   /// be updated to point after the closing }.
   /// \return the resultant number on success, None on failure.
-  llvm::Optional<uint32_t> consumeBracedCodePoint(bool errorOnFail = true);
+  llvh::Optional<uint32_t> consumeBracedCodePoint(bool errorOnFail = true);
 
-  /// Skip until after the end of the line terminaing the block comment.
+  /// Skip until after the end of the line terminating the line or hashbang
+  /// comment.
   /// \return the updated source pointer.
   const char *skipLineComment(const char *start);
   /// Skip until after the end of the block comment.
@@ -568,8 +657,8 @@ class JSLexer {
 
   /// Try to read a "magic comment" of the form `//# name=value` at \p ptr.
   /// \return the value encoded in the comment if found, None otherwise.
-  llvm::Optional<StringRef> tryReadMagicComment(
-      llvm::StringRef name,
+  llvh::Optional<StringRef> tryReadMagicComment(
+      llvh::StringRef name,
       const char *ptr);
 
   void scanNumber();
@@ -584,9 +673,48 @@ class JSLexer {
   /// it into a temporary buffer. If an escape or UTF-8 character is
   /// encountered, add the currently scanned part to the storage and continue by
   /// invoking the slow path scanIdentifierParts().
+  template <IdentifierMode Mode>
   void scanIdentifierFastPath(const char *start);
+  void scanIdentifierFastPathInContext(
+      const char *start,
+      GrammarContext grammarContext) {
+    if (HERMES_PARSE_JSX &&
+        LLVM_UNLIKELY(grammarContext == GrammarContext::AllowJSXIdentifier)) {
+      scanIdentifierFastPath<IdentifierMode::JSX>(start);
+    } else if (
+        HERMES_PARSE_FLOW &&
+        LLVM_UNLIKELY(grammarContext == GrammarContext::Flow)) {
+      scanIdentifierFastPath<IdentifierMode::Flow>(start);
+    } else {
+      scanIdentifierFastPath<IdentifierMode::JS>(start);
+    }
+  }
+
+  template <IdentifierMode Mode>
   void scanIdentifierParts();
+  void scanIdentifierPartsInContext(GrammarContext grammarContext) {
+    if (HERMES_PARSE_JSX &&
+        LLVM_UNLIKELY(grammarContext == GrammarContext::AllowJSXIdentifier)) {
+      scanIdentifierParts<IdentifierMode::JSX>();
+    } else if (
+        HERMES_PARSE_FLOW &&
+        LLVM_UNLIKELY(grammarContext == GrammarContext::Flow)) {
+      scanIdentifierParts<IdentifierMode::Flow>();
+    } else {
+      scanIdentifierParts<IdentifierMode::JS>();
+    }
+  }
+
+  template <bool JSX>
   void scanString();
+  void scanStringInContext(GrammarContext grammarContext) {
+#if HERMES_PARSE_JSX
+    LLVM_UNLIKELY(grammarContext == GrammarContext::AllowJSXIdentifier)
+    ? scanString<true>() :
+#endif
+    scanString<false>();
+  }
+
   void scanRegExp();
 
   /// Attempt to scan a template literal starting at ` or at }.
@@ -596,11 +724,56 @@ class JSLexer {
   /// it into the string table.
   UniqueString *convertSurrogatesInString(StringRef str);
 
+  /// Set the current token kind to \p kind without any checks and seek to
+  /// \p loc.
+  /// Should only be used for save point use-cases.
+  void unsafeSetPunctuator(TokenKind kind, SMLoc loc) {
+    assert(isPunctuatorDbg(kind) && "must set a punctuator");
+    token_.setPunctuator(kind);
+    seek(loc);
+  }
+
+  /// Set the current token kind to \p kind without any checks and seek to
+  /// \p loc.
+  /// Should only be used for save point use-cases.
+  void unsafeSetIdentifier(UniqueString *ident, SMLoc loc) {
+    token_.setIdentifier(ident);
+    seek(loc);
+  }
+
   /// Initialize the parser for a given source buffer id.
   void initializeWithBufferId(uint32_t bufId);
 
   /// Create/lookup identifiers for all reserved words used during parsing.
   void initializeReservedIdentifiers();
+
+  /// Report an error for the range from startLoc to curCharPtr.
+  bool errorRange(SMLoc startLoc, const llvh::Twine &msg) {
+    return error({startLoc, SMLoc::getFromPointer(curCharPtr_)}, msg);
+  }
+
+  /// Report an error using the current token's location.
+  bool error(const llvh::Twine &msg) {
+    return error(token_.getSourceRange(), msg);
+  }
+
+  /// Emit an error at the specified source location. If the maximum number of
+  /// errors has been reached, return false and move the scanning pointer to
+  /// EOF.
+  /// \return false if too many errors have been emitted and we need to abort.
+  bool error(SMLoc loc, const llvh::Twine &msg);
+
+  /// Emit an error at the specified source range. If the maximum number of
+  /// errors has been reached, return false and move the scanning pointer to
+  /// EOF.
+  /// \return false if too many errors have been emitted and we need to abort.
+  bool error(SMRange range, const llvh::Twine &msg);
+
+  /// Emit an error at the specified source location and range. If the maximum
+  /// number of errors has been reached, return false and move the scanning
+  /// pointer to EOF.
+  /// \return false if too many errors have been emitted and we need to abort.
+  bool error(SMLoc loc, SMRange range, const llvh::Twine &msg);
 };
 
 inline void JSLexer::initStorageWith(const char *begin, const char *end) {
@@ -610,7 +783,7 @@ inline void JSLexer::initStorageWith(const char *begin, const char *end) {
 
 inline void JSLexer::appendUnicodeToStorage(
     uint32_t cp,
-    llvm::SmallVectorImpl<char> &storage) {
+    llvh::SmallVectorImpl<char> &storage) {
   // Sized to allow for two 16-bit values to be encoded.
   // A 16-bit value takes up to three bytes encoded in UTF-8.
   char buf[8];
@@ -631,19 +804,19 @@ inline void JSLexer::appendUnicodeToStorage(
 inline uint32_t JSLexer::decodeUTF8() {
   const char *saveStart = curCharPtr_;
   return hermes::decodeUTF8<false>(curCharPtr_, [=](const Twine &msg) {
-    sm_.error(SMLoc::getFromPointer(saveStart), msg);
+    error(SMLoc::getFromPointer(saveStart), msg);
   });
 }
 
 inline uint32_t JSLexer::_decodeUTF8SlowPath(const char *&at) {
   return hermes::_decodeUTF8SlowPath<false>(
-      at, [=](const Twine &msg) { sm_.error(SMLoc::getFromPointer(at), msg); });
+      at, [=](const Twine &msg) { error(SMLoc::getFromPointer(at), msg); });
 }
 
 inline std::pair<uint32_t, const char *> JSLexer::_peekUTF8(
     const char *at) const {
   uint32_t ch =
-      hermes::_decodeUTF8SlowPath<false>(at, [](const llvm::Twine &) {});
+      hermes::_decodeUTF8SlowPath<false>(at, [](const llvh::Twine &) {});
   return std::make_pair(ch, at);
 }
 

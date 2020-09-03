@@ -22,8 +22,7 @@ namespace vm {
 /// the calls are delegated, is a template parameter so that those calls are
 /// non-virtual (since we know the exact type).
 template <typename TargetAcceptor>
-class SkipWeakRefsAcceptor final : public SlotAcceptorDefault,
-                                   public WeakRootAcceptor {
+class SkipWeakRefsAcceptor final : public SlotAcceptorDefault {
  public:
   SkipWeakRefsAcceptor(GC &gc, TargetAcceptor *acceptor)
       : SlotAcceptorDefault(gc), acceptor_(acceptor) {}
@@ -44,20 +43,6 @@ class SkipWeakRefsAcceptor final : public SlotAcceptorDefault,
   void accept(SymbolID sym) override {
     acceptor_->accept(sym);
   }
-  void accept(WeakRefBase &wr) override {
-    // Do nothing -- will be done later.
-  }
-
-  void acceptWeak(void *&ptr) override {
-    acceptor_->accept(ptr);
-  }
-#ifdef HERMESVM_COMPRESSED_POINTERS
-  /// This gets a default implementation: extract the real pointer to a local,
-  /// call acceptWeak on that, write the result back as a BasedPointer.
-  void acceptWeak(BasedPointer &ptr) override {
-    acceptor_->accept(ptr);
-  }
-#endif
 
  private:
   TargetAcceptor *acceptor_;

@@ -9,7 +9,7 @@
 
 #include "hermes/Support/ErrorHandling.h"
 
-#include "llvm/Support/Compiler.h"
+#include "llvh/Support/Compiler.h"
 
 namespace hermes {
 

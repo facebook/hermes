@@ -8,12 +8,13 @@
 #ifndef HERMES_VM_JSREGEXP_H
 #define HERMES_VM_JSREGEXP_H
 
+#include "hermes/Regex/RegexTypes.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/RegExpMatch.h"
 #include "hermes/VM/SmallXString.h"
 
 #include <memory>
-#include "llvm/ADT/SmallString.h"
+#include "llvh/ADT/SmallString.h"
 
 namespace hermes {
 namespace vm {
@@ -26,44 +27,30 @@ class JSRegExp final : public JSObject {
     return cell->getKind() == CellKind::RegExpKind;
   }
 
-  // Struct representing flags which may be used when constructing the RegExp
-  struct FlagBits {
-    uint8_t ignoreCase : 1;
-    uint8_t multiline : 1;
-    uint8_t global : 1;
-    uint8_t sticky : 1;
-    uint8_t unicode : 1;
-    uint8_t dotAll : 1;
-
-    /// \return a string representing the flags
-    /// The characters are returned in the order given in ES 6 21.2.5.3
-    /// (specifically global, ignoreCase, multiline, unicode, sticky)
-    /// Note this may differ in order from the string passed in construction
-    llvm::SmallString<5> toString() const {
-      llvm::SmallString<5> result;
-      if (global)
-        result.push_back('g');
-      if (ignoreCase)
-        result.push_back('i');
-      if (multiline)
-        result.push_back('m');
-      if (unicode)
-        result.push_back('u');
-      if (sticky)
-        result.push_back('y');
-      if (dotAll)
-        result.push_back('s');
-      return result;
-    }
-
-    /// Given a flags string \p str, generate the corresponding FlagBits
-    /// \return the flags if the string is valid, an empty optional otherwise
-    /// See ES 5.1 15.10.4.1 for description of the validation
-    static OptValue<FlagBits> fromString(StringView str);
-  };
-
-  /// Create a JSRegExp, with the empty string for pattern and flags
+  /// Create a JSRegExp, with the empty string for pattern and flags.
   static Handle<JSRegExp> create(Runtime *runtime, Handle<JSObject> prototype);
+
+  /// Create a JSRegExp, with the standard RegExp prototype and the empty string
+  /// for pattern and flags.
+  static Handle<JSRegExp> create(Runtime *runtime) {
+    return create(runtime, Handle<JSObject>::vmcast(&runtime->regExpPrototype));
+  }
+
+  /// Initialize the internal properties of the RegExp such as the pattern and
+  /// lastIndex.
+  static void initializeProperties(
+      Handle<JSRegExp> selfHandle,
+      Runtime *runtime,
+      Handle<StringPrimitive> pattern);
+
+  /// Initialize a RegExp based on another RegExp \p otherHandle. If \p flags
+  /// matches the internal flags of the other RegExp, this lets us avoid
+  /// recompiling by just copying the bytecode.
+  static ExecutionStatus initialize(
+      Handle<JSRegExp> selfHandle,
+      Runtime *runtime,
+      Handle<JSRegExp> otherHandle,
+      Handle<StringPrimitive> flags);
 
   /// Perform validation of the pattern and flags and throw \c SyntaxError on
   /// error. If valid, set the source and flags to the given strings, and set
@@ -76,7 +63,7 @@ class JSRegExp final : public JSObject {
       Runtime *runtime,
       Handle<StringPrimitive> pattern,
       Handle<StringPrimitive> flags,
-      OptValue<llvm::ArrayRef<uint8_t>> bytecode = llvm::None);
+      OptValue<llvh::ArrayRef<uint8_t>> bytecode = llvh::None);
 
   /// \return the pattern string used to initialize this RegExp.
   /// Note this is not suitable for interpolation between //, nor for
@@ -92,8 +79,13 @@ class JSRegExp final : public JSObject {
       Runtime *runtime);
 
   /// \return the flag bits used to initialize this RegExp
-  static FlagBits getFlagBits(JSRegExp *self) {
-    return self->flagBits_;
+  static regex::SyntaxFlags getSyntaxFlags(JSRegExp *self) {
+    return self->syntaxFlags_;
+  }
+
+  /// Set the flag bits for this RegExp to \p flags
+  static void setSyntaxFlags(JSRegExp *self, regex::SyntaxFlags flags) {
+    self->syntaxFlags_ = flags;
   }
 
   /// Searches self for a match for \str.
@@ -127,13 +119,13 @@ class JSRegExp final : public JSObject {
 
   /// Store a copy of the \p bytecode array.
   ExecutionStatus initializeBytecode(
-      llvm::ArrayRef<uint8_t> bytecode,
+      llvh::ArrayRef<uint8_t> bytecode,
       Runtime *runtime);
 
   uint8_t *bytecode_{};
   uint32_t bytecodeSize_{0};
 
-  FlagBits flagBits_ = {};
+  regex::SyntaxFlags syntaxFlags_ = {};
 
   // Finalizer to clean up stored native regex
   static void _finalizeImpl(GCCell *cell, GC *gc);

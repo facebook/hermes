@@ -9,6 +9,7 @@
 #define HERMES_VM_SLOTVISITOR_H
 
 #include "hermes/VM/GCCell.h"
+#include "hermes/VM/GCDecl.h"
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/Metadata.h"
@@ -25,8 +26,11 @@ class BaseVisitor {
   visitArray(Acceptor &acceptor, char *base, const Metadata::ArrayData &array) {
     using ArrayType = Metadata::ArrayData::ArrayType;
     char *start = base + array.startOffset;
-    const auto length =
-        *reinterpret_cast<std::uint32_t *>(base + array.lengthOffset);
+    // Load the length, making sure all dependent writes have completed with
+    // memory_order_acquire.
+    const auto length = reinterpret_cast<AtomicIfConcurrentGC<std::uint32_t> *>(
+                            base + array.lengthOffset)
+                            ->load(std::memory_order_acquire);
     const auto stride = array.stride;
     switch (array.type) {
       case ArrayType::Pointer:
@@ -142,7 +146,7 @@ struct SlotVisitor final : BaseVisitor {
   template <typename T>
   void visitSlots(
       char *const base,
-      llvm::ArrayRef<Metadata::offset_t> offsets) {
+      llvh::ArrayRef<Metadata::offset_t> offsets) {
     for (const auto offset : offsets) {
       assert(
           reinterpret_cast<uintptr_t>(base + offset) % alignof(T) == 0 &&
@@ -156,7 +160,7 @@ struct SlotVisitor final : BaseVisitor {
   template <typename T>
   void visitSlotsWithinRange(
       char *base,
-      llvm::ArrayRef<Metadata::offset_t> offsets,
+      llvh::ArrayRef<Metadata::offset_t> offsets,
       const char *begin,
       const char *end) {
     for (const auto offset : offsets) {
@@ -272,8 +276,8 @@ struct SlotVisitorWithNames final : BaseVisitor {
   template <typename T>
   void visitSlots(
       char *base,
-      llvm::ArrayRef<Metadata::offset_t> offsets,
-      llvm::ArrayRef<const char *> names) {
+      llvh::ArrayRef<Metadata::offset_t> offsets,
+      llvh::ArrayRef<const char *> names) {
     for (decltype(offsets.size()) i = 0; i < offsets.size(); ++i) {
       char *curr = base + offsets[i];
       assert(

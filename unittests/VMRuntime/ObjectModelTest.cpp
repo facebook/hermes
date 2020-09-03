@@ -533,7 +533,8 @@ TEST_F(ObjectModelTest, EnvironmentSmokeTest) {
   ASSERT_TRUE(parentEnv->slot(0).isUndefined());
   ASSERT_TRUE(parentEnv->slot(1).isUndefined());
 
-  parentEnv->slot(0).setNonPtr(HermesValue::encodeBoolValue(true));
+  parentEnv->slot(0).setNonPtr(
+      HermesValue::encodeBoolValue(true), &runtime->getHeap());
   ASSERT_TRUE(parentEnv->slot(0).getBool());
 
   // Create a child environment.
@@ -566,7 +567,7 @@ TEST_F(ObjectModelTest, NativeConstructorTest) {
       dateCons, runtime, Runtime::makeNullHandle<JSObject>());
   ASSERT_EQ(ExecutionStatus::RETURNED, crtRes.getStatus());
 
-  ASSERT_TRUE(dyn_vmcast<JSDate>(*crtRes));
+  ASSERT_TRUE(dyn_vmcast<JSDate>(crtRes->get()));
 }
 
 /// Test "computed" methods on a non-array object.
@@ -864,7 +865,7 @@ TEST_F(ObjectModelTest, UpdatePropertyFlagsWithoutTransitionsTest) {
       runtime,
       clearFlags,
       setFlags,
-      llvm::ArrayRef<SymbolID>(propsToFreeze));
+      llvh::ArrayRef<SymbolID>(propsToFreeze));
   // check each property descriptor.
   EXPECT_PROPERTY_FLAG(FALSE, obj, *aHnd, writable);
   EXPECT_PROPERTY_FLAG(FALSE, obj, *aHnd, configurable);
@@ -877,7 +878,7 @@ TEST_F(ObjectModelTest, UpdatePropertyFlagsWithoutTransitionsTest) {
 
   // Freeze all properties.
   JSObject::updatePropertyFlagsWithoutTransitions(
-      obj, runtime, clearFlags, setFlags, llvm::None);
+      obj, runtime, clearFlags, setFlags, llvh::None);
   // check each property descriptor.
   EXPECT_PROPERTY_FLAG(FALSE, obj, *aHnd, writable);
   EXPECT_PROPERTY_FLAG(FALSE, obj, *aHnd, configurable);

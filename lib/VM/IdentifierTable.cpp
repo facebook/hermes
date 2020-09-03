@@ -16,7 +16,7 @@
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 
 namespace hermes {
 namespace vm {
@@ -27,11 +27,12 @@ IdentifierTable::LookupEntry::LookupEntry(
     : strPrim_(str),
       isUTF16_(false),
       isNotUniqued_(isNotUniqued),
+      marked_(true),
       num_(NON_LAZY_STRING_PRIM_TAG) {
   assert(str && "Invalid string primitive pointer");
-  llvm::SmallVector<char16_t, 32> storage{};
-  str->copyUTF16String(storage);
-  hash_ = hermes::hashString(llvm::ArrayRef<char16_t>(storage));
+  llvh::SmallVector<char16_t, 32> storage{};
+  str->appendUTF16String(storage);
+  hash_ = hermes::hashString(llvh::ArrayRef<char16_t>(storage));
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -210,8 +211,8 @@ std::string IdentifierTable::convertSymbolToUTF8(SymbolID id) {
   auto &vectorEntry = getLookupTableEntry(id);
   if (vectorEntry.isStringPrim()) {
     const StringPrimitive *stringPrim = vectorEntry.getStringPrim();
-    llvm::SmallVector<char16_t, 16> tmp;
-    stringPrim->copyUTF16String(tmp);
+    llvh::SmallVector<char16_t, 16> tmp;
+    stringPrim->appendUTF16String(tmp);
     std::string out;
     convertUTF16ToUTF8WithReplacements(out, UTF16Ref{tmp});
     return out;
@@ -233,7 +234,7 @@ std::string IdentifierTable::convertSymbolToUTF8(SymbolID id) {
 void IdentifierTable::markIdentifiers(SlotAcceptor &acceptor, GC *gc) {
   for (auto &vectorEntry : lookupVector_) {
     if (!vectorEntry.isFreeSlot() && vectorEntry.isStringPrim()) {
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
+#if defined(HERMESVM_GC_NONCONTIG_GENERATIONAL) || defined(HERMESVM_GC_HADES)
       assert(
           !gc->inYoungGen(vectorEntry.getStringPrimRef()) &&
           "Identifiers must be allocated in the old gen");
@@ -253,7 +254,7 @@ void IdentifierTable::visitIdentifiers(
     if (vectorEntry.isStringPrim()) {
       allocator.clear();
       auto stringPrim = vectorEntry.getStringPrim();
-      stringPrim->copyUTF16String(allocator);
+      stringPrim->appendUTF16String(allocator);
       ref = allocator.arrayRef();
     } else if (vectorEntry.isLazyASCII()) {
       allocator.clear();
@@ -274,7 +275,7 @@ template <typename T, bool Unique>
 CallResult<PseudoHandle<StringPrimitive>>
 IdentifierTable::allocateDynamicString(
     Runtime *runtime,
-    llvm::ArrayRef<T> str,
+    llvh::ArrayRef<T> str,
     Handle<StringPrimitive> primHandle) {
   size_t length = str.size();
 
@@ -312,6 +313,14 @@ IdentifierTable::allocateDynamicString(
   return result;
 }
 
+void IdentifierTable::symbolReadBarrier(uint32_t id) {
+  // Set the mark bool inside the symbol table entry so that this symbol isn't
+  // garbage collected.
+  // The reason this exists is that a Symbol can be retrieved via a string hash
+  // that doesn't otherwise keep the symbol alive while in the middle of a GC.
+  getLookupTableEntry(id).mark();
+}
+
 uint32_t IdentifierTable::allocIDAndInsert(
     uint32_t hashTableIndex,
     StringPrimitive *strPrim) {
@@ -328,7 +337,7 @@ uint32_t IdentifierTable::allocIDAndInsert(
   hashTable_.insert(hashTableIndex, symbolId);
 
   LLVM_DEBUG(
-      llvm::dbgs() << "allocated symbol " << nextId << " '" << strPrim
+      llvh::dbgs() << "allocated symbol " << nextId << " '" << strPrim
                    << "'\n");
 
   return nextId;
@@ -337,7 +346,7 @@ uint32_t IdentifierTable::allocIDAndInsert(
 template <typename T>
 CallResult<SymbolID> IdentifierTable::getOrCreateIdentifier(
     Runtime *runtime,
-    llvm::ArrayRef<T> str,
+    llvh::ArrayRef<T> str,
     Handle<StringPrimitive> maybeIncomingPrimHandle,
     uint32_t hash) {
   assert(
@@ -349,7 +358,12 @@ CallResult<SymbolID> IdentifierTable::getOrCreateIdentifier(
 
   auto idx = hashTable_.lookupString(str, hash);
   if (hashTable_.isValid(idx)) {
-    return SymbolID::unsafeCreate(hashTable_.get(idx));
+    NoAllocScope scope{runtime};
+    const auto id = hashTable_.get(idx);
+    // Read barrier here because a symbol value is getting read out of the hash
+    // map.
+    symbolReadBarrier(id);
+    return SymbolID::unsafeCreate(id);
   }
 
   // It is tempting here to check whether the incoming StringPrimitive can be
@@ -379,24 +393,28 @@ CallResult<SymbolID> IdentifierTable::getOrCreateIdentifier(
 
 StringPrimitive *IdentifierTable::getExistingStringPrimitiveOrNull(
     Runtime *runtime,
-    llvm::ArrayRef<char16_t> str) {
+    llvh::ArrayRef<char16_t> str) {
   auto idx = hashTable_.lookupString(str, hashString(str));
   if (!hashTable_.isValid(idx)) {
     return nullptr;
   }
   // Use a handle since getStringPrim may need to materialize the string.
-  Handle<SymbolID> sym(runtime, SymbolID::unsafeCreate(hashTable_.get(idx)));
+  const auto id = hashTable_.get(idx);
+  symbolReadBarrier(id);
+  Handle<SymbolID> sym(runtime, SymbolID::unsafeCreate(id));
   return getStringPrim(runtime, *sym);
 }
 
 template <typename T>
 SymbolID IdentifierTable::registerLazyIdentifierImpl(
-    llvm::ArrayRef<T> str,
+    llvh::ArrayRef<T> str,
     uint32_t hash) {
   auto idx = hashTable_.lookupString(str, hash);
   if (hashTable_.isValid(idx)) {
     // If the string is already in the table, return it.
-    return SymbolID::unsafeCreate(hashTable_.get(idx));
+    const auto id = hashTable_.get(idx);
+    symbolReadBarrier(id);
+    return SymbolID::unsafeCreate(id);
   }
   uint32_t nextId = allocNextID();
   SymbolID symbolId = SymbolID::unsafeCreate(nextId);
@@ -404,7 +422,7 @@ SymbolID IdentifierTable::registerLazyIdentifierImpl(
   new (&lookupVector_[nextId]) LookupEntry(str, hash);
   hashTable_.insert(idx, symbolId);
   LLVM_DEBUG(
-      llvm::dbgs() << "Allocated lazy identifier: " << nextId << " " << str
+      llvh::dbgs() << "Allocated lazy identifier: " << nextId << " " << str
                    << "\n");
   return symbolId;
 }
@@ -429,7 +447,7 @@ StringPrimitive *IdentifierTable::materializeLazyIdentifier(
                                 Runtime::makeNullHandle<StringPrimitive>()));
   if (id.isUniqued())
     strPrim->convertToUniqued(id);
-  LLVM_DEBUG(llvm::dbgs() << "Materializing lazy identifier " << id << "\n");
+  LLVM_DEBUG(llvh::dbgs() << "Materializing lazy identifier " << id << "\n");
   entry.materialize(strPrim.get());
   return strPrim.get();
 }
@@ -441,7 +459,7 @@ void IdentifierTable::freeSymbol(uint32_t index) {
       "The specified symbol cannot be freed");
 
   LLVM_DEBUG(
-      llvm::dbgs() << "Freeing symbol index " << index << " '"
+      llvh::dbgs() << "Freeing symbol index " << index << " '"
                    << lookupVector_[index].getStringPrim() << "'\n");
 
   if (LLVM_LIKELY(!lookupVector_[index].isNotUniqued())) {
@@ -462,16 +480,18 @@ uint32_t IdentifierTable::allocNextID() {
     }
     lookupVector_.emplace_back();
     LLVM_DEBUG(
-        llvm::dbgs() << "Allocated new symbol id at end " << newID << "\n");
+        llvh::dbgs() << "Allocated new symbol id at end " << newID << "\n");
+    // Don't need to tell the GC about this ID, it will assume any growth is
+    // live.
     return newID;
   }
 
   // Allocate from the free list.
-  uint32_t nextId = (uint32_t)firstFreeID_;
-  const auto &entry = getLookupTableEntry(nextId);
+  uint32_t nextId = firstFreeID_;
+  auto &entry = getLookupTableEntry(nextId);
   assert(entry.isFreeSlot() && "firstFreeID_ is not a free slot");
   firstFreeID_ = entry.getNextFreeSlot();
-  LLVM_DEBUG(llvm::dbgs() << "Allocated freed symbol id " << nextId << "\n");
+  LLVM_DEBUG(llvh::dbgs() << "Allocated freed symbol id " << nextId << "\n");
   return nextId;
 }
 
@@ -483,21 +503,43 @@ void IdentifierTable::freeID(uint32_t id) {
   // Add the freed index to the free list.
   lookupVector_[id].free(firstFreeID_);
   firstFreeID_ = id;
-  LLVM_DEBUG(llvm::dbgs() << "Freeing ID " << id << "\n");
+  LLVM_DEBUG(llvh::dbgs() << "Freeing ID " << id << "\n");
+}
+
+void IdentifierTable::unmarkSymbols() {
+  for (auto &entry : lookupVector_) {
+    entry.unmark();
+  }
 }
 
 void IdentifierTable::freeUnmarkedSymbols(
     const std::vector<bool> &markedSymbols) {
   assert(
-      markedSymbols.size() == lookupVector_.size() &&
-      "Size of markedSymbols does not match lookupVector_");
+      markedSymbols.size() <= lookupVector_.size() &&
+      "Size of markedSymbols must be less than the current lookupVector");
   for (uint32_t i = 0, e = markedSymbols.size(); i < e; ++i) {
     // We never free StringPrimitives that are materialized from a lazy
     // identifier.
-    if (!markedSymbols[i] && lookupVector_[i].isNonLazyStringPrim())
+    if (!markedSymbols[i] && !lookupVector_[i].isMarked() &&
+        lookupVector_[i].isNonLazyStringPrim())
       freeSymbol(i);
+    lookupVector_[i].unmark();
+  }
+  // Don't free any symbols that were newly created after the GC started.
+  for (uint32_t i = markedSymbols.size(), e = lookupVector_.size(); i < e;
+       ++i) {
+    // Unmark any symbols allocated after the GC started.
+    lookupVector_[i].unmark();
   }
 }
+
+#ifdef HERMES_SLOW_DEBUG
+bool IdentifierTable::isSymbolLive(SymbolID id) const {
+  auto &entry = getLookupTableEntry(id);
+  // If the entry is not a free slot, then it is live.
+  return !entry.isFreeSlot();
+}
+#endif
 
 SymbolID IdentifierTable::createNotUniquedLazySymbol(ASCIIRef desc) {
   uint32_t nextID = allocNextID();
@@ -510,7 +552,7 @@ CallResult<SymbolID> IdentifierTable::createNotUniquedSymbol(
     Handle<StringPrimitive> desc) {
   uint32_t nextID = allocNextID();
 
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
+#if defined(HERMESVM_GC_NONCONTIG_GENERATIONAL) || defined(HERMESVM_GC_HADES)
   if (runtime->getHeap().inYoungGen(desc.get())) {
     // Need to reallocate in the old gen if the description is in the young gen.
     CallResult<PseudoHandle<StringPrimitive>> longLivedStr = desc->isASCII()
@@ -537,7 +579,7 @@ CallResult<SymbolID> IdentifierTable::createNotUniquedSymbol(
   return SymbolID::unsafeCreateNotUniqued(nextID);
 }
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, SymbolID symbolID) {
+llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, SymbolID symbolID) {
   if (symbolID.isInvalid())
     return OS << "SymbolID(INVALID)";
   else if (symbolID == SymbolID::deleted())

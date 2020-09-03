@@ -7,8 +7,8 @@
 
 #include "hermes/VM/JSRegExp.h"
 
-#include "hermes/Regex/Compiler.h"
 #include "hermes/Regex/Executor.h"
+#include "hermes/Regex/Regex.h"
 #include "hermes/Regex/RegexTraits.h"
 #include "hermes/Support/UTF8.h"
 #include "hermes/VM/BuildMetadata.h"
@@ -16,7 +16,7 @@
 #include "hermes/VM/RegExpMatch.h"
 #include "hermes/VM/StringView.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 #define DEBUG_TYPE "serialize"
 
 namespace hermes {
@@ -62,7 +62,7 @@ JSRegExp::JSRegExp(Deserializer &d) : JSObject(d, &vt.base) {
   // relocation for it.
   d.endObject(bytecode_);
 
-  d.readData(&flagBits_, sizeof(flagBits_));
+  d.readData(&syntaxFlags_, sizeof(syntaxFlags_));
 }
 
 void RegExpSerialize(Serializer &s, const GCCell *cell) {
@@ -74,7 +74,7 @@ void RegExpSerialize(Serializer &s, const GCCell *cell) {
   // relocation for it.
   s.endObject(self->bytecode_);
 
-  s.writeData(&self->flagBits_, sizeof(self->flagBits_));
+  s.writeData(&self->syntaxFlags_, sizeof(self->syntaxFlags_));
 
   s.endObject(cell);
 }
@@ -109,25 +109,10 @@ Handle<JSRegExp> JSRegExp::create(
   return selfHandle;
 }
 
-ExecutionStatus JSRegExp::initialize(
+void JSRegExp::initializeProperties(
     Handle<JSRegExp> selfHandle,
     Runtime *runtime,
-    Handle<StringPrimitive> pattern,
-    Handle<StringPrimitive> flags,
-    OptValue<llvm::ArrayRef<uint8_t>> bytecode) {
-  assert(
-      pattern && flags &&
-      "Null pattern and/or flags passed to initializeWithPatternAndFlags");
-
-  // Validate flags.
-  auto flagsView = StringPrimitive::createStringView(runtime, flags);
-  auto fbits = FlagBits::fromString(flagsView);
-  if (!fbits) {
-    runtime->raiseSyntaxError("Invalid flags passed to RegExp");
-    return ExecutionStatus::EXCEPTION;
-  }
-  selfHandle->flagBits_ = *fbits;
-
+    Handle<StringPrimitive> pattern) {
   JSObject::setInternalProperty(
       selfHandle.get(), runtime, patternPropIndex(), pattern.getHermesValue());
 
@@ -145,29 +130,61 @@ ExecutionStatus JSRegExp::initialize(
   assert(
       res != ExecutionStatus::EXCEPTION && *res &&
       "defineOwnProperty() failed");
+}
+
+ExecutionStatus JSRegExp::initialize(
+    Handle<JSRegExp> selfHandle,
+    Runtime *runtime,
+    Handle<JSRegExp> otherHandle,
+    Handle<StringPrimitive> flags) {
+  llvh::SmallVector<char16_t, 16> flagsText16;
+  flags->appendUTF16String(flagsText16);
+
+  auto sflags = regex::SyntaxFlags::fromString(flagsText16);
+  if (!sflags) {
+    return runtime->raiseSyntaxError("Invalid RegExp: Invalid flags");
+  }
+
+  auto pattern = runtime->makeHandle(getPattern(otherHandle.get(), runtime));
+
+  // Fast path to avoid recompiling the RegExp if the flags match
+  if (LLVM_LIKELY(
+          sflags->toByte() == getSyntaxFlags(otherHandle.get()).toByte())) {
+    initializeProperties(selfHandle, runtime, pattern);
+    selfHandle->syntaxFlags_ = *sflags;
+    return selfHandle->initializeBytecode(
+        {otherHandle->bytecode_, otherHandle->bytecodeSize_}, runtime);
+  }
+  return initialize(selfHandle, runtime, pattern, flags, llvh::None);
+}
+
+/// ES11 21.2.3.2.2 RegExpInitialize ( obj, pattern, flags )
+ExecutionStatus JSRegExp::initialize(
+    Handle<JSRegExp> selfHandle,
+    Runtime *runtime,
+    Handle<StringPrimitive> pattern,
+    Handle<StringPrimitive> flags,
+    OptValue<llvh::ArrayRef<uint8_t>> bytecode) {
+  assert(
+      pattern && flags &&
+      "Null pattern and/or flags passed to JSRegExp::initialize");
+  initializeProperties(selfHandle, runtime, pattern);
 
   if (bytecode) {
     return selfHandle->initializeBytecode(*bytecode, runtime);
   } else {
-    regex::constants::SyntaxFlags nativeFlags = {};
-    if (fbits->ignoreCase)
-      nativeFlags |= regex::constants::icase;
-    if (fbits->multiline)
-      nativeFlags |= regex::constants::multiline;
-    if (fbits->unicode)
-      nativeFlags |= regex::constants::unicode;
+    llvh::SmallVector<char16_t, 6> flagsText16;
+    flags->appendUTF16String(flagsText16);
 
-    auto patternText = StringPrimitive::createStringView(runtime, pattern);
-    llvm::SmallVector<char16_t, 16> patternText16;
-    patternText.copyUTF16String(patternText16);
+    llvh::SmallVector<char16_t, 16> patternText16;
+    pattern->appendUTF16String(patternText16);
 
     // Build the regex.
-    regex::Regex<regex::UTF16RegexTraits> regex(
-        patternText16.begin(), patternText16.end(), nativeFlags);
+    regex::Regex<regex::UTF16RegexTraits> regex(patternText16, flagsText16);
 
     if (!regex.valid()) {
       runtime->raiseSyntaxError(
-          TwineChar16("Invalid RegExp pattern: ") +
+          TwineChar16("Invalid RegExp: ") +
           regex::constants::messageForError(regex.getError()));
       return ExecutionStatus::EXCEPTION;
     }
@@ -178,60 +195,20 @@ ExecutionStatus JSRegExp::initialize(
 }
 
 ExecutionStatus JSRegExp::initializeBytecode(
-    llvm::ArrayRef<uint8_t> bytecode,
+    llvh::ArrayRef<uint8_t> bytecode,
     Runtime *runtime) {
   size_t sz = bytecode.size();
   if (sz > std::numeric_limits<decltype(bytecodeSize_)>::max()) {
     runtime->raiseRangeError("RegExp size overflow");
     return ExecutionStatus::EXCEPTION;
   }
+  auto header =
+      reinterpret_cast<const regex::RegexBytecodeHeader *>(bytecode.data());
+  syntaxFlags_ = regex::SyntaxFlags::fromByte(header->syntaxFlags);
   bytecodeSize_ = sz;
   bytecode_ = (uint8_t *)checkedMalloc(sz);
   memcpy(bytecode_, bytecode.data(), sz);
   return ExecutionStatus::RETURNED;
-}
-
-OptValue<JSRegExp::FlagBits> JSRegExp::FlagBits::fromString(StringView str) {
-  // A flags string may contain i,m,g, in any order, but at most once each
-  auto error = llvm::NoneType::None;
-  JSRegExp::FlagBits ret = {};
-  for (char16_t c : str) {
-    switch (c) {
-      case u'i':
-        if (ret.ignoreCase)
-          return error;
-        ret.ignoreCase = 1;
-        break;
-      case u'm':
-        if (ret.multiline)
-          return error;
-        ret.multiline = 1;
-        break;
-      case u'g':
-        if (ret.global)
-          return error;
-        ret.global = 1;
-        break;
-      case u'u':
-        if (ret.unicode)
-          return error;
-        ret.unicode = 1;
-        break;
-      case u'y':
-        if (ret.sticky)
-          return error;
-        ret.sticky = 1;
-        break;
-      case u's':
-        if (ret.dotAll)
-          return error;
-        ret.dotAll = 1;
-        break;
-      default:
-        return error;
-    }
-  }
-  return ret;
 }
 
 PseudoHandle<StringPrimitive> JSRegExp::getPattern(
@@ -245,7 +222,7 @@ PseudoHandle<StringPrimitive> JSRegExp::getPattern(
 template <typename CharT, typename Traits>
 CallResult<RegExpMatch> performSearch(
     Runtime *runtime,
-    llvm::ArrayRef<uint8_t> bytecode,
+    llvh::ArrayRef<uint8_t> bytecode,
     const CharT *start,
     uint32_t stringLength,
     uint32_t searchStartOffset,
@@ -272,7 +249,7 @@ CallResult<RegExpMatch> performSearch(
     const auto &submatch = nativeMatchRanges[i];
     if (!submatch.matched()) {
       assert(i > 0 && "match_result[0] should always match");
-      match.push_back(llvm::None);
+      match.push_back(llvh::None);
     } else {
       uint32_t pos = submatch.start;
       uint32_t length = submatch.end - submatch.start;
@@ -301,7 +278,7 @@ CallResult<RegExpMatch> JSRegExp::search(
 
   // Respect the sticky flag, which forces us to match only at the given
   // location.
-  if (selfHandle->flagBits_.sticky) {
+  if (selfHandle->syntaxFlags_.sticky) {
     matchFlags |= regex::constants::matchOnlyAtStart;
   }
 
@@ -310,7 +287,7 @@ CallResult<RegExpMatch> JSRegExp::search(
     matchFlags |= regex::constants::matchInputAllAscii;
     matchResult = performSearch<char, regex::ASCIIRegexTraits>(
         runtime,
-        llvm::makeArrayRef(selfHandle->bytecode_, selfHandle->bytecodeSize_),
+        llvh::makeArrayRef(selfHandle->bytecode_, selfHandle->bytecodeSize_),
         input.castToCharPtr(),
         input.length(),
         searchStartOffset,
@@ -318,7 +295,7 @@ CallResult<RegExpMatch> JSRegExp::search(
   } else {
     matchResult = performSearch<char16_t, regex::UTF16RegexTraits>(
         runtime,
-        llvm::makeArrayRef(selfHandle->bytecode_, selfHandle->bytecodeSize_),
+        llvh::makeArrayRef(selfHandle->bytecode_, selfHandle->bytecodeSize_),
         input.castToChar16Ptr(),
         input.length(),
         searchStartOffset,
@@ -373,20 +350,15 @@ void JSRegExp::_snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
 void JSRegExp::_snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
   auto *const self = vmcast<JSRegExp>(cell);
   if (self->bytecode_) {
-    // Add a native node for regex bytecode, to account for native size directly
-    // owned by the regex.
+    // Add a native node for regex bytecode, to account for native size
+    // directly owned by the regex.
     snap.beginNode();
-    auto &allocationLocationTracker = gc->getAllocationLocationTracker();
     snap.endNode(
         HeapSnapshot::NodeType::Native,
         "RegExpBytecode",
         gc->getNativeID(self->bytecode_),
         self->bytecodeSize_,
-        allocationLocationTracker.isEnabled()
-            ? allocationLocationTracker
-                  .getStackTracesTreeNodeForAlloc(self->bytecode_)
-                  ->id
-            : 0);
+        0);
   }
 }
 
@@ -410,10 +382,10 @@ CallResult<HermesValue> JSRegExp::escapePattern(
       case u'/':
         // Avoid premature end of regex.
         // TODO nice to have: don't do this if we are in square brackets.
-        // /[/]/ is valid and the middle / does not need to be escaped. However
-        // /[\/]/ is also valid and means the same thing (CharacterEscape
-        // production from regexp grammar). Still it would be nice to not
-        // unnecessarily mangle the user's supplied pattern.
+        // /[/]/ is valid and the middle / does not need to be escaped.
+        // However /[\/]/ is also valid and means the same thing
+        // (CharacterEscape production from regexp grammar). Still it would be
+        // nice to not unnecessarily mangle the user's supplied pattern.
         result.append(isBackslashed ? "/" : "\\/");
         break;
 

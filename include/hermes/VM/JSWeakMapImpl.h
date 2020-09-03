@@ -59,6 +59,7 @@ struct WeakRefInfo {
   }
   /// \return true both arguments are empty, both are tombstone,
   /// or both point to the same JSObject.
+  /// \pre The weak ref mutex needs to be held before this function is called.
   static inline bool isEqual(const WeakRefKey &a, const WeakRefKey &b) {
     const auto *aSlot = a.ref.unsafeGetSlot();
     const auto *bSlot = b.ref.unsafeGetSlot();
@@ -100,7 +101,7 @@ struct WeakRefInfo {
 class JSWeakMapImplBase : public JSObject {
   using Super = JSObject;
   using WeakRefKey = detail::WeakRefKey;
-  using DenseMapT = llvm::DenseMap<WeakRefKey, uint32_t, detail::WeakRefInfo>;
+  using DenseMapT = llvh::DenseMap<WeakRefKey, uint32_t, detail::WeakRefInfo>;
 
  protected:
 #ifdef HERMESVM_SERIALIZE
@@ -161,9 +162,8 @@ class JSWeakMapImplBase : public JSObject {
 
   /// \return the size of the internal map, after freeing any freeable slots.
   /// Used for testing purposes.
-  static uint32_t debugFreeSlotsAndGetSize(
-      PointerBase *base,
-      JSWeakMapImplBase *self);
+  static uint32_t
+  debugFreeSlotsAndGetSize(PointerBase *base, GC *gc, JSWeakMapImplBase *self);
 
   /// An iterator over the keys of the map.
   struct KeyIterator {
@@ -223,6 +223,7 @@ class JSWeakMapImplBase : public JSObject {
 
   /// Mark weak references and set hasFreeableSlots_ if invalidated slots
   /// were found.
+  /// \pre The weak ref mutex must be held.
   static void _markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor);
 
   static size_t _mallocSizeImpl(GCCell *cell) {
@@ -237,12 +238,12 @@ class JSWeakMapImplBase : public JSObject {
 
   /// Iterate the slots in map_ and call deleteInternal on any invalid
   /// references, adding all available slots to the free list.
-  void findAndDeleteFreeSlots(PointerBase *base);
+  void findAndDeleteFreeSlots(PointerBase *base, GC *gc);
 
   /// Erase the map entry and corresponding valueStorage entry
   /// pointed to by the iterator \p it.
   /// Add the newly opened valueStorage slot to the free list.
-  void deleteInternal(PointerBase *base, DenseMapT::iterator it);
+  void deleteInternal(PointerBase *base, GC *gc, DenseMapT::iterator it);
 
  private:
   /// Get the index to insert a new value into valueStorage_.

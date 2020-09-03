@@ -143,7 +143,11 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime *runtime, NativeArgs) {
     // I know statically that target is a Callable, but storing it as
     // a Callable makes it much harder to share all the JSProxy code,
     // so we cast here.
-    return Callable::call(Handle<Callable>::vmcast(target), runtime);
+    auto res = Callable::call(Handle<Callable>::vmcast(target), runtime);
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return res->get();
   }
   // 7. Let argArray be CreateArrayFromList(argumentsList).
   CallResult<PseudoHandle<JSArray>> argArrayRes = JSArray::create(
@@ -159,7 +163,7 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime *runtime, NativeArgs) {
   }
   // 8. Let newObj be ? Call(trap, handler, « target, argArray, newTarget »).
   if (callerFrame->isConstructorCall()) {
-    CallResult<HermesValue> newObjRes = Callable::executeCall3(
+    CallResult<PseudoHandle<>> newObjRes = Callable::executeCall3(
         *trapRes,
         runtime,
         runtime->makeHandle(detail::slots(*selfHandle).handler),
@@ -170,25 +174,29 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime *runtime, NativeArgs) {
       return ExecutionStatus::EXCEPTION;
     }
     // 9. If Type(newObj) is not Object, throw a TypeError exception.
-    if (!vmisa<JSObject>(*newObjRes)) {
+    if (!vmisa<JSObject>(newObjRes->get())) {
       return runtime->raiseTypeError(
           "Proxy construct trap returned non-Object");
     }
     // 10. return newObj.
-    return newObjRes;
+    return newObjRes->get();
   } else {
     // 8. Return ? Call(trap, handler, « target, thisArgument, argArray »).
-    return Callable::executeCall3(
+    auto res = Callable::executeCall3(
         *trapRes,
         runtime,
         runtime->makeHandle(detail::slots(*selfHandle).handler),
         target.getHermesValue(),
         callerFrame.getThisArgRef(),
         argArray.getHermesValue());
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return res->get();
   }
 }
 
-CallResult<HermesValue> JSCallableProxy::_newObjectImpl(
+CallResult<PseudoHandle<JSObject>> JSCallableProxy::_newObjectImpl(
     Handle<Callable> callable,
     Runtime *runtime,
     Handle<JSObject> protoHandle) {

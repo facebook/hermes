@@ -49,10 +49,10 @@ void ArrayStorage::serializeArrayStorage(
     Serializer &s,
     const ArrayStorage *cell) {
   s.writeInt<size_type>(cell->capacity_);
-  s.writeInt<size_type>(cell->size_);
+  s.writeInt<size_type>(cell->size());
 
   // Serialize HermesValue in storage. There is no native pointer.
-  for (size_type i = 0; i < cell->size_; i++) {
+  for (size_type i = 0; i < cell->size(); i++) {
     s.writeHermesValue(cell->data()[i]);
   }
 
@@ -65,11 +65,11 @@ ArrayStorage *ArrayStorage::deserializeArrayStorage(Deserializer &d) {
   void *mem = d.getRuntime()->alloc</*fixedSize*/ false>(
       ArrayStorage::allocationSize(capacity));
   auto *cell = new (mem) ArrayStorage(d.getRuntime(), capacity);
-  assert(cell->size_ <= capacity && "size cannot be greater than capacity");
-  cell->size_ = d.readInt<size_type>();
+  assert(cell->size() <= capacity && "size cannot be greater than capacity");
+  cell->size_.store(d.readInt<size_type>(), std::memory_order_release);
 
   // Deserialize HermesValue in storage. There are no native pointers.
-  for (size_type i = 0; i < cell->size_; i++) {
+  for (size_type i = 0; i < cell->size(); i++) {
     d.readHermesValue(&cell->data()[i]);
   }
 
@@ -87,8 +87,8 @@ ExecutionStatus ArrayStorage::ensureCapacity(
   if (capacity <= selfHandle->capacity_)
     return ExecutionStatus::RETURNED;
 
-  auto size = selfHandle->size_;
-  return reallocateToLarger(selfHandle, runtime, capacity, 0, 0, size);
+  return reallocateToLarger(
+      selfHandle, runtime, capacity, 0, 0, selfHandle->size());
 }
 
 ExecutionStatus ArrayStorage::reallocateToLarger(
@@ -114,31 +114,32 @@ ExecutionStatus ArrayStorage::reallocateToLarger(
 
   // Copy the existing data.
   auto *self = selfHandle.get();
-  size_type copySize = std::min(self->size_ - fromFirst, toLast - toFirst);
+  size_type copySize = std::min(self->size() - fromFirst, toLast - toFirst);
 
   {
     GCHermesValue *from = self->data() + fromFirst;
     GCHermesValue *to = newSelf->data() + toFirst;
-    for (size_t n = 0; n < copySize; n++) {
-      to[n].set(from[n], &runtime->getHeap());
-    }
+    GCHermesValue::uninitialized_copy(
+        from, from + copySize, to, &runtime->getHeap());
   }
 
   // Initialize the elements before the first copied element.
-  GCHermesValue::fill(
+  GCHermesValue::uninitialized_fill(
       newSelf->data(),
       newSelf->data() + toFirst,
-      HermesValue::encodeEmptyValue());
+      HermesValue::encodeEmptyValue(),
+      &runtime->getHeap());
 
   // Initialize the elements after the last copied element and toLast.
   if (toFirst + copySize < toLast) {
-    GCHermesValue::fill(
+    GCHermesValue::uninitialized_fill(
         newSelf->data() + toFirst + copySize,
         newSelf->data() + toLast,
-        HermesValue::encodeEmptyValue());
+        HermesValue::encodeEmptyValue(),
+        &runtime->getHeap());
   }
 
-  newSelf->size_ = toLast;
+  newSelf->size_.store(toLast, std::memory_order_release);
 
   // Update the handle.
   selfHandle = newSelfHandle.get();
@@ -146,18 +147,41 @@ ExecutionStatus ArrayStorage::reallocateToLarger(
   return ExecutionStatus::RETURNED;
 }
 
-void ArrayStorage::resizeWithinCapacity(ArrayStorage *self, size_type newSize) {
+void ArrayStorage::resizeWithinCapacity(
+    ArrayStorage *self,
+    Runtime *runtime,
+    size_type newSize) {
   assert(
       newSize <= self->capacity_ &&
       "newSize must be <= capacity in resizeWithinCapacity()");
   // If enlarging, clear the new elements.
-  if (newSize > self->size_) {
-    GCHermesValue::fill(
-        self->data() + self->size_,
+  const auto sz = self->size();
+  if (newSize > sz) {
+    // Treat the memory as uninitialized when growing.
+    // This applies even in the case where the length has been decreased and
+    // increased again. When the length is decreased, it executes a write
+    // barrier to mark all of the values between the new length and the old
+    // length as unreachable. Since the GC will then be aware of those values,
+    // it doesn't matter if we overwrite them here again.
+    GCHermesValue::uninitialized_fill(
+        self->data() + sz,
         self->data() + newSize,
-        HermesValue::encodeEmptyValue());
+        HermesValue::encodeEmptyValue(),
+        &runtime->getHeap());
+  } else if (newSize < sz) {
+#ifdef HERMESVM_GC_HADES
+    // Execute write barriers on elements about to be conceptually changed to
+    // null.
+    // This also means if an array is refilled, it can treat the memory here
+    // as uninitialized safely.
+    GCHermesValue::fill(
+        self->data() + newSize,
+        self->data() + sz,
+        HermesValue::encodeEmptyValue(),
+        &runtime->getHeap());
+#endif
   }
-  self->size_ = newSize;
+  self->size_.store(newSize, std::memory_order_release);
 }
 
 ExecutionStatus ArrayStorage::shift(
@@ -171,26 +195,41 @@ ExecutionStatus ArrayStorage::shift(
   // If we don't need to expand the capacity.
   if (toLast <= selfHandle->capacity_) {
     auto *self = selfHandle.get();
-    size_type copySize = std::min(self->size_ - fromFirst, toLast - toFirst);
+    size_type copySize = std::min(self->size() - fromFirst, toLast - toFirst);
 
     // Copy the values to their final destination.
-    GCHermesValue::copy(
-        self->data() + fromFirst,
-        self->data() + fromFirst + copySize,
-        self->data() + toFirst,
-        &runtime->getHeap());
+    if (fromFirst > toFirst) {
+      GCHermesValue::copy(
+          self->data() + fromFirst,
+          self->data() + fromFirst + copySize,
+          self->data() + toFirst,
+          &runtime->getHeap());
+    } else if (fromFirst < toFirst) {
+      // Copying to the right, need to copy backwards to avoid overwriting what
+      // is being copied.
+      GCHermesValue::copy_backward(
+          self->data() + fromFirst,
+          self->data() + fromFirst + copySize,
+          self->data() + toFirst + copySize,
+          &runtime->getHeap());
+    }
+
     // Initialize the elements which were emptied in front.
     GCHermesValue::fill(
-        self->data(), self->data() + toFirst, HermesValue::encodeEmptyValue());
+        self->data(),
+        self->data() + toFirst,
+        HermesValue::encodeEmptyValue(),
+        &runtime->getHeap());
 
     // Initialize the elements between the last copied element and toLast.
     if (toFirst + copySize < toLast) {
-      GCHermesValue::fill(
+      GCHermesValue::uninitialized_fill(
           self->data() + toFirst + copySize,
           self->data() + toLast,
-          HermesValue::encodeEmptyValue());
+          HermesValue::encodeEmptyValue(),
+          &runtime->getHeap());
     }
-    self->size_ = toLast;
+    self->size_.store(toLast, std::memory_order_release);
     return ExecutionStatus::RETURNED;
   }
 
@@ -224,7 +263,7 @@ ExecutionStatus ArrayStorage::pushBackSlowPath(
     MutableHandle<ArrayStorage> &selfHandle,
     Runtime *runtime,
     Handle<> value) {
-  auto size = selfHandle->size_;
+  const auto size = selfHandle->size();
   if (resize(selfHandle, runtime, size + 1) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }

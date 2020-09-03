@@ -60,6 +60,7 @@ module.exports = {
       logo: {
         alt: 'Facebook Open Source Logo',
         src: 'https://docusaurus.io/img/oss_logo.png',
+        href: 'https://opensource.facebook.com',
       },
       copyright: `Copyright © ${new Date().getFullYear()} Facebook, Inc. Built with Docusaurus.`,
     },
@@ -68,14 +69,17 @@ module.exports = {
     [
       '@docusaurus/preset-classic',
       {
-        pages: {
-          path: 'src/pages',
-        },
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
         },
       },
     ],
   ],
-  plugins: [path.join(__dirname, '/plugins/monaco-editor')],
+  stylesheets: [
+    require.resolve('./node_modules/normalize.css/normalize.css'),
+  ],
+  plugins: [
+    path.join(__dirname, '/plugins/monaco-editor'),
+    path.join(__dirname, '/plugins/case-sensitive-paths')
+  ],
 };

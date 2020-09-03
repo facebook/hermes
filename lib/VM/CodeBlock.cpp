@@ -22,16 +22,16 @@
 #include "hermes/VM/RuntimeModule.h"
 #include "hermes/VM/SerializedLiteralParser.h"
 
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
+#include "llvh/Support/Debug.h"
+#include "llvh/Support/ErrorHandling.h"
+#include "llvh/Support/MathExtras.h"
 
 namespace hermes {
 namespace vm {
 
 using namespace hermes::inst;
-using llvm::ArrayRef;
-using llvm::StringRef;
+using llvh::ArrayRef;
+using llvh::StringRef;
 using SLP = SerializedLiteralParser;
 
 #ifdef HERMES_SLOW_DEBUG
@@ -207,10 +207,10 @@ OptValue<uint32_t> CodeBlock::getDebugSourceLocationsOffset() const {
   auto *debugOffsets =
       runtimeModule_->getBytecode()->getDebugOffsets(functionID_);
   if (!debugOffsets)
-    return llvm::None;
+    return llvh::None;
   uint32_t ret = debugOffsets->sourceLocations;
   if (ret == hbc::DebugOffsets::NO_OFFSET)
-    return llvm::None;
+    return llvh::None;
   return ret;
 }
 
@@ -227,7 +227,7 @@ OptValue<hbc::DebugSourceLocation> CodeBlock::getSourceLocation(
     SourceErrorManager::SourceCoords coords;
     if (!bcModule->getContext()->getSourceErrorManager().findBufferLineAndLoc(
             sourceLoc, coords)) {
-      return llvm::None;
+      return llvh::None;
     }
 
     hbc::DebugSourceLocation location;
@@ -243,7 +243,7 @@ OptValue<hbc::DebugSourceLocation> CodeBlock::getSourceLocation(
 
   auto debugLocsOffset = getDebugSourceLocationsOffset();
   if (!debugLocsOffset) {
-    return llvm::None;
+    return llvh::None;
   }
 
   return getRuntimeModule()
@@ -256,10 +256,10 @@ OptValue<uint32_t> CodeBlock::getDebugLexicalDataOffset() const {
   auto *debugOffsets =
       runtimeModule_->getBytecode()->getDebugOffsets(functionID_);
   if (!debugOffsets)
-    return llvm::None;
+    return llvh::None;
   uint32_t ret = debugOffsets->lexicalData;
   if (ret == hbc::DebugOffsets::NO_OFFSET)
-    return llvm::None;
+    return llvh::None;
   return ret;
 }
 
@@ -288,7 +288,7 @@ bool CodeBlock::hasFunctionSource() const {
       .isValid();
 }
 
-llvm::StringRef CodeBlock::getFunctionSource() const {
+llvh::StringRef CodeBlock::getFunctionSource() const {
   auto sourceRange =
       runtimeModule_->getBytecode()->getFunctionSourceRange(functionID_);
   assert(sourceRange.isValid() && "Function does not have source available");
@@ -302,10 +302,10 @@ namespace {
 std::unique_ptr<hbc::BytecodeModule> compileLazyFunction(
     std::shared_ptr<Context> context,
     hbc::BytecodeFunction *func,
-    llvm::SMRange sourceRange) {
+    llvh::SMRange sourceRange) {
   assert(func);
   LLVM_DEBUG(
-      llvm::dbgs() << "Compiling lazy function "
+      llvh::dbgs() << "Compiling lazy function "
                    << func->getLazyCompilationData()->originalName << "\n");
 
   Module M{context};
@@ -313,8 +313,15 @@ std::unique_ptr<hbc::BytecodeModule> compileLazyFunction(
   Function *entryPoint = pair.first;
   Function *lexicalRoot = pair.second;
 
-  auto bytecodeModule = hbc::generateBytecodeModule(
-      &M, lexicalRoot, entryPoint, BytecodeGenerationOptions::defaults());
+  // We look up source map URLs by iterating modules and finding the first one
+  // with a matching buffer id, which will be the root module. These lazily
+  // compiled compiled modules therefore don't need to duplicate the URL,
+  // which can be several MB if it encodes the source map itself.
+  BytecodeGenerationOptions opts = BytecodeGenerationOptions::defaults();
+  opts.stripSourceMappingURL = true;
+
+  auto bytecodeModule =
+      hbc::generateBytecodeModule(&M, lexicalRoot, entryPoint, opts);
 
   return bytecodeModule;
 }
@@ -344,7 +351,7 @@ void CodeBlock::markCachedHiddenClasses(
     Runtime *runtime,
     WeakRootAcceptor &acceptor) {
   for (auto &prop :
-       llvm::makeMutableArrayRef(propertyCache(), propertyCacheSize_)) {
+       llvh::makeMutableArrayRef(propertyCache(), propertyCacheSize_)) {
     if (prop.clazz) {
       acceptor.acceptWeak(prop.clazz);
     }
@@ -379,7 +386,7 @@ static void makeWritable(void *address, size_t length) {
   void *endAddress = static_cast<void *>(static_cast<char *>(address) + length);
 
   // Align the address to page size before setting the pagesize.
-  void *alignedAddress = safeTypeCast<size_t, void *>(llvm::alignDown(
+  void *alignedAddress = safeTypeCast<size_t, void *>(llvh::alignDown(
       safeTypeCast<void *, size_t>(address), hermes::oscompat::page_size()));
 
   size_t totalLength =

@@ -48,6 +48,12 @@ var si2 = a6[Symbol.iterator]();
 var a7 = 'x\uD83D\uDCD3y';
 var si3 = a7[Symbol.iterator]();
 
+var a6 = 'foo bar baz';
+var re = /\w+/g
+var rsi1 = a6.matchAll(re);
+var a7 = ''
+var rsi2 = a7.matchAll(re);
+
 serializeVM(function() {
   print('Array Iterator');
   // CHECK-LABEL: Array Iterator
@@ -126,5 +132,17 @@ serializeVM(function() {
   // CHECK-NEXT: x false
   // CHECK-NEXT: 📓 false
   // CHECK-NEXT: y false
+  // CHECK-NEXT: undefined true
+
+  print('RegExp String Iterator');
+  // CHECK-LABEL: RegExp String Iterator
+  runIterator(rsi1);
+  // CHECK-NEXT: [object RegExp String Iterator]
+  // CHECK-NEXT: foo false
+  // CHECK-NEXT: bar false
+  // CHECK-NEXT: baz false
+  // CHECK-NEXT: undefined true
+  runIterator(rsi2);
+  // CHECK-NEXT: [object RegExp String Iterator]
   // CHECK-NEXT: undefined true
 })

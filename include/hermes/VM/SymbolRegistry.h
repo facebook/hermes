@@ -14,8 +14,8 @@
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/SymbolID.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/DenseSet.h"
 
 namespace hermes {
 namespace vm {
@@ -47,7 +47,7 @@ class SymbolRegistry {
   /// The set of SymbolIDs that have been registered in the SymbolRegistry.
   /// Note that these are guaranteed to be values in stringMap_,
   /// and therefore their backing strings will be kept alive.
-  llvm::DenseSet<SymbolID> registeredSymbols_{};
+  llvh::DenseSet<SymbolID> registeredSymbols_{};
 
  public:
   explicit SymbolRegistry() {}

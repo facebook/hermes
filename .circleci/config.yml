@@ -11,7 +11,7 @@ version: 2.1
 # Comments saying "see top comment" refer to this.
 
 orbs:
-  win: circleci/windows-tools@0.0.4
+  win: circleci/windows@2.4.0
 
 workflows:
   version: 2
@@ -20,15 +20,18 @@ workflows:
       - android
       - linux
       - macos
+      - build-macos-runtime
       - windows
       - npm:
           requires:
             - android
             - linux
             - macos
+            - build-macos-runtime
             - windows
       - test-linux
       - test-macos
+      - test-macos-runtime-build-and-cocoapods-integration
       - test-e2e:
           requires:
             - npm
@@ -175,6 +178,7 @@ jobs:
             cd "$HERMES_WS_DIR"
             hermes/utils/build/configure.py
             cd build
+            ninja
             ninja check-hermes
 
   macos:
@@ -190,8 +194,9 @@ jobs:
       - checkout
       - run:
           name: Install dependencies
+          # Force homebrew to install cmake 3.7
           command: |
-            brew install cmake ninja
+            brew install ninja https://raw.githubusercontent.com/Homebrew/homebrew-core/d25c628ff2510f68c89f4660fc93e86377ae61dc/Formula/cmake.rb
       - run:
           name: Set up workspace
           command: |
@@ -201,13 +206,59 @@ jobs:
           name: Build Hermes for macOS
           command: |
             cd "$HERMES_WS_DIR"
-            hermes/utils/build/configure.py --distribute
+            hermes/utils/build/configure.py --distribute --cmake-flags='-DHERMES_BUILD_APPLE_FRAMEWORK:BOOLEAN=false'
             cmake --build ./build_release --target github-cli-release
       - run:
           name: Copy artifacts
           command: |
             cd "$HERMES_WS_DIR"
             cp "build_release/github"/hermes-cli-*.tar.gz "output"
+      - run:
+          name: Checksum artifacts
+          command: |
+            cd "$HERMES_WS_DIR/output"
+            for file in *
+            do
+              shasum -a 256 "$file" > "$file.sha256"
+            done
+      - store_artifacts:
+          path: /tmp/hermes/output/
+      - persist_to_workspace:
+          root: /tmp/hermes/output/
+          paths:
+            - .
+
+  build-macos-runtime:
+    macos:
+      xcode: "10.3.0"
+    environment:
+      - HERMES_WS_DIR: /tmp/hermes
+      - TERM: dumb
+      # Homebrew currently breaks while updating:
+      # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
+      - HOMEBREW_NO_AUTO_UPDATE: 1
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            brew install cmake ninja
+      - run:
+          name: Set up workspace
+          command: |
+            mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output" "$HERMES_WS_DIR/package-root"
+            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
+      - run:
+          name: Build Hermes for macOS as CocoaPods pod
+          command: |
+            cd "$HERMES_WS_DIR"
+            hermes/utils/build/configure.py --distribute --cmake-flags="$(ruby -rcocoapods-core -e 'load %{hermes/hermes.podspec}; puts HermesHelper.cmake_configuration') -DCMAKE_INSTALL_PREFIX:PATH=../destroot"
+            cmake --build ./build_release --target hermes-runtime-darwin-cocoapods-release
+      - run:
+          name: Copy artifacts
+          command: |
+            cd "$HERMES_WS_DIR"
+            cp "build_release/github"/hermes-runtime-darwin-*.tar.gz "output"
       - run:
           name: Checksum artifacts
           command: |
@@ -249,15 +300,36 @@ jobs:
           command: |
             cd "$HERMES_WS_DIR"
             hermes/utils/build/configure.py
+            cmake --build ./build
             cmake --build ./build --target check-hermes
+
+  test-macos-runtime-build-and-cocoapods-integration:
+    macos:
+      xcode: "10.3.0"
+    environment:
+      - TERM: dumb
+      # Homebrew currently breaks while updating:
+      # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
+      - HOMEBREW_NO_AUTO_UPDATE: 1
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            brew install cmake ninja
+      - run:
+          name: Run CocoaPods installation and test framework
+          command: |
+            cd test/ApplePlatformsIntegrationTestApp
+            ./run.sh
 
   windows:
     executor:
-      name: win/preview-default
+      name: win/default
       shell: powershell.exe
     environment:
       - HERMES_WS_DIR: 'C:\tmp\hermes'
-      - ICU_URL: 'https://github.com/unicode-org/icu/releases/download/release-64-2/icu4c-64_2-Win64-MSVC2017.zip'
+      - ICU_URL: "https://github.com/unicode-org/icu/releases/download/release-64-2/icu4c-64_2-Win64-MSVC2017.zip"
       - MSBUILD_DIR: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin'
       - CMAKE_DIR: 'C:\Program Files\CMake\bin'
     steps:
@@ -285,31 +357,10 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            choco install --no-progress cmake
+            choco install --no-progress cmake --version 3.14.7
             if (-not $?) { throw "Failed to install CMake" }
             choco install --no-progress python3
             if (-not $?) { throw "Failed to install Python" }
-
-            # dotnetfx-4.8.0 requires a reboot, so pin an earlier version
-            choco install --no-progress dotnetfx --version 4.7.2.20180712
-            if (-not $?) { throw "Failed to install dotnetfx" }
-
-            # Choco installs of VS2019 are so slow that CircleCI times it out
-            # after 10 minutes of perceived inactivity. There's no verbose flag,
-            # so we'll just print something occasionally to bump the timer.
-            $install = Start-Job {
-              choco install visualstudio2019buildtools --package-parameters "--allWorkloads --includeRecommended --passive --locale en-US"
-            }
-            $eta = 15
-            while ($install.State -eq "Running") {
-                Write-Host "Waiting for visualstudio2019buildtools. ETA $eta minutes..."
-                $install | Wait-Job -timeout 60
-                $eta -= 1
-            }
-            $install | Receive-Job
-            if (-not $?) { throw "Failed to install visualstudio2019buildtools" }
-            choco install visualstudio2019-workload-vctools
-            if (-not $?) { throw "Failed to install visualstudio2019-workload-vctools" }
 
       - run:
           name: Assemble Windows runtime dependencies
@@ -319,6 +370,7 @@ jobs:
             # Include MSVC++ 2015 redistributables
             Copy-Item -Path "c:\windows\system32\msvcp140.dll" -Destination "deps"
             Copy-Item -Path "c:\windows\system32\vcruntime140.dll" -Destination "deps"
+            Copy-Item -Path "c:\windows\system32\vcruntime140_1.dll" -Destination "deps"
 
       - run:
           name: Build Hermes for Windows
@@ -432,12 +484,14 @@ jobs:
       - ANDROID_HOME: /usr/local/share/android-sdk
       - ANDROID_SDK_HOME: /usr/local/share/android-sdk
       - ANDROID_SDK_ROOT: /usr/local/share/android-sdk
+      - ANDROID_NDK_HOME: /usr/local/share/android-ndk
       - QEMU_AUDIO_DRV: none
       - JAVA_HOME: /Library/Java/Home
     steps:
       - run:
           name: Setup dependencies
           command: |
+            mkdir -p /tmp/hermes/output
             # Node some version greater than 11 is needed by one of the app dependencies
             curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.1/install.sh | bash
             NVM_DIR="$HOME/.nvm"
@@ -450,6 +504,7 @@ jobs:
             brew install md5sha1sum
             brew tap homebrew/cask
             brew cask install android-sdk
+            brew cask install android-ndk
             echo 'export PATH="/usr/local/share/android-sdk/platform-tools:/usr/local/share/android-sdk/tools/bin:$PATH"' >> $BASH_ENV
             # At some point, adb ended up in platform-tools/platform-tools. Work around that.
             echo 'export PATH="/usr/local/share/android-sdk/platform-tools/platform-tools:$PATH"' >> $BASH_ENV
@@ -468,9 +523,6 @@ jobs:
       - attach_workspace:
           at: /tmp/hermes/input
       - run:
-          # For now we're not testing with RN from master because it's broken.
-          # If RN master + Hermes becoms stable we can pass --react-native-master to
-          # run.sh, or run it again as another step/job.
           name: Run E2E test with master Hermes and Release React Native
           command: |
             cd test/circleci-e2e
@@ -478,6 +530,4 @@ jobs:
           # The react-native setup tool takes AGES "Installing CocoaPods dependencies"
           no_output_timeout: 45m
       - store_artifacts:
-          path: /tmp/screencap.mp4
-      - store_artifacts:
-          path: /tmp/app-release.apk
+          path: /tmp/hermes/output/

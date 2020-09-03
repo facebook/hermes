@@ -34,6 +34,11 @@ struct Environment {
   // much better to always use a ThreadScope to manage attaching/detaching for
   // you.
   static JNIEnv* ensureCurrentThreadIsAttached();
+
+  // To check if a Java VM is available at all in this environment.
+  // Note that this doesn't check if it is attached to this thread,
+  // it checks whether one is available at all.
+  static bool isGlobalJvmAvailable();
 };
 
 namespace detail {

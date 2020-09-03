@@ -14,7 +14,7 @@ using namespace hermes::vm;
 namespace {
 static void assertDump(ExecHeap &heap, const char *msg) {
   std::string str;
-  llvm::raw_string_ostream OS{str};
+  llvh::raw_string_ostream OS{str};
   heap.dump(OS, true);
   OS.flush();
   // Strip prefix and suffix.
@@ -121,7 +121,7 @@ TEST(ExecHeapTest, SmokeTest) {
       "size : 1024\n"
       "  Used at        0 size 1024");
 
-  eh.dump(llvm::errs(), true);
+  eh.dump(llvh::errs(), true);
 }
 
 } // namespace

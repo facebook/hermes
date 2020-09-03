@@ -18,8 +18,7 @@ new x;
 //CHECK-NEXT:           "type": "NewExpression",
 //CHECK-NEXT:           "callee": {
 //CHECK-NEXT:             "type": "Identifier",
-//CHECK-NEXT:             "name": "x",
-//CHECK-NEXT:             "typeAnnotation": null
+//CHECK-NEXT:             "name": "x"
 //CHECK-NEXT:           },
 //CHECK-NEXT:           "arguments": []
 //CHECK-NEXT:         },
@@ -35,8 +34,7 @@ new new x;
 //CHECK-NEXT:             "type": "NewExpression",
 //CHECK-NEXT:             "callee": {
 //CHECK-NEXT:               "type": "Identifier",
-//CHECK-NEXT:               "name": "x",
-//CHECK-NEXT:               "typeAnnotation": null
+//CHECK-NEXT:               "name": "x"
 //CHECK-NEXT:             },
 //CHECK-NEXT:             "arguments": []
 //CHECK-NEXT:           },
@@ -56,8 +54,7 @@ new new new x;
 //CHECK-NEXT:               "type": "NewExpression",
 //CHECK-NEXT:               "callee": {
 //CHECK-NEXT:                 "type": "Identifier",
-//CHECK-NEXT:                 "name": "x",
-//CHECK-NEXT:                 "typeAnnotation": null
+//CHECK-NEXT:                 "name": "x"
 //CHECK-NEXT:               },
 //CHECK-NEXT:               "arguments": []
 //CHECK-NEXT:             },
@@ -75,8 +72,7 @@ new x();
 //CHECK-NEXT:           "type": "NewExpression",
 //CHECK-NEXT:           "callee": {
 //CHECK-NEXT:             "type": "Identifier",
-//CHECK-NEXT:             "name": "x",
-//CHECK-NEXT:             "typeAnnotation": null
+//CHECK-NEXT:             "name": "x"
 //CHECK-NEXT:           },
 //CHECK-NEXT:           "arguments": []
 //CHECK-NEXT:         },
@@ -92,8 +88,7 @@ new x()();
 //CHECK-NEXT:             "type": "NewExpression",
 //CHECK-NEXT:             "callee": {
 //CHECK-NEXT:               "type": "Identifier",
-//CHECK-NEXT:               "name": "x",
-//CHECK-NEXT:               "typeAnnotation": null
+//CHECK-NEXT:               "name": "x"
 //CHECK-NEXT:             },
 //CHECK-NEXT:             "arguments": []
 //CHECK-NEXT:           },
@@ -111,8 +106,7 @@ new new x();
 //CHECK-NEXT:             "type": "NewExpression",
 //CHECK-NEXT:             "callee": {
 //CHECK-NEXT:               "type": "Identifier",
-//CHECK-NEXT:               "name": "x",
-//CHECK-NEXT:               "typeAnnotation": null
+//CHECK-NEXT:               "name": "x"
 //CHECK-NEXT:             },
 //CHECK-NEXT:             "arguments": []
 //CHECK-NEXT:           },
@@ -132,8 +126,7 @@ new new new x()();
 //CHECK-NEXT:               "type": "NewExpression",
 //CHECK-NEXT:               "callee": {
 //CHECK-NEXT:                 "type": "Identifier",
-//CHECK-NEXT:                 "name": "x",
-//CHECK-NEXT:                 "typeAnnotation": null
+//CHECK-NEXT:                 "name": "x"
 //CHECK-NEXT:               },
 //CHECK-NEXT:               "arguments": []
 //CHECK-NEXT:             },
@@ -155,8 +148,7 @@ new new x[10];
 //CHECK-NEXT:               "type": "MemberExpression",
 //CHECK-NEXT:               "object": {
 //CHECK-NEXT:                 "type": "Identifier",
-//CHECK-NEXT:                 "name": "x",
-//CHECK-NEXT:                 "typeAnnotation": null
+//CHECK-NEXT:                 "name": "x"
 //CHECK-NEXT:               },
 //CHECK-NEXT:               "property": {
 //CHECK-NEXT:                 "type": "NumericLiteral",
@@ -183,8 +175,7 @@ new x()[10]();
 //CHECK-NEXT:               "type": "NewExpression",
 //CHECK-NEXT:               "callee": {
 //CHECK-NEXT:                 "type": "Identifier",
-//CHECK-NEXT:                 "name": "x",
-//CHECK-NEXT:                 "typeAnnotation": null
+//CHECK-NEXT:                 "name": "x"
 //CHECK-NEXT:               },
 //CHECK-NEXT:               "arguments": []
 //CHECK-NEXT:             },
@@ -211,8 +202,7 @@ new new x[10];
 //CHECK-NEXT:               "type": "MemberExpression",
 //CHECK-NEXT:               "object": {
 //CHECK-NEXT:                 "type": "Identifier",
-//CHECK-NEXT:                 "name": "x",
-//CHECK-NEXT:                 "typeAnnotation": null
+//CHECK-NEXT:                 "name": "x"
 //CHECK-NEXT:               },
 //CHECK-NEXT:               "property": {
 //CHECK-NEXT:                 "type": "NumericLiteral",

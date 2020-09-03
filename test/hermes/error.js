@@ -21,6 +21,15 @@ print(e.__proto__.hasOwnProperty('name'));
 print(e.__proto__.hasOwnProperty('message'));
 //CHECK: true
 
+try { Error.prototype.toString.call(undefined); } catch (e) { print(e.name); }
+//CHECK: TypeError
+try { Error.prototype.toString.call('string'); } catch (e) { print(e.name); }
+//CHECK: TypeError
+try { Error.prototype.toString.call(11); } catch (e) { print(e.name); }
+//CHECK: TypeError
+try { Error.prototype.toString.call(Symbol()); } catch (e) { print(e.name); }
+//CHECK: TypeError
+
 e.name = 'RandomError';
 print(e);
 //CHECK: RandomError
@@ -32,6 +41,10 @@ print(e);
 e.name = '';
 print(e);
 //CHECK: random-message
+
+e = new Error(undefined);
+print(e.hasOwnProperty(e, 'message'));
+//CHECK: false
 
 e = new Error('another-message');
 print(e);

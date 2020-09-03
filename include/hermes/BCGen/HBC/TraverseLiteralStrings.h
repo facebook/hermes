@@ -10,8 +10,8 @@
 
 #include "hermes/IR/IR.h"
 
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvh/ADT/DenseSet.h"
+#include "llvh/ADT/StringRef.h"
 
 #include <functional>
 
@@ -31,14 +31,14 @@ namespace hbc {
 void traverseFunctionNames(
     Module *M,
     std::function<bool(Function *)> shouldVisitFunction,
-    std::function<void(llvm::StringRef)> traversal);
+    std::function<void(llvh::StringRef)> traversal);
 
 /// Calls \p traversal with the name of the CommonJS module of every function
 /// in bytecode module \p M that passes the predicate \p shouldVisitFunction.
 void traverseCJSModuleNames(
     Module *M,
     std::function<bool(Function *)> shouldVisitFunction,
-    std::function<void(llvm::StringRef)> traversal);
+    std::function<void(llvh::StringRef)> traversal);
 
 /// Walk the structure of the bytecode module \p M, calling \p traversal, for
 /// each string encountered, with the string's character representation and a
@@ -49,7 +49,7 @@ void traverseCJSModuleNames(
 void traverseLiteralStrings(
     Module *M,
     std::function<bool(Function *)> shouldVisitFunction,
-    std::function<void(llvm::StringRef, bool)> traversal);
+    std::function<void(llvh::StringRef, bool)> traversal);
 
 } // namespace hbc
 } // namespace hermes

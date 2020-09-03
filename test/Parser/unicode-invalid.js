@@ -13,15 +13,19 @@
  ͛xyz = false;
 // Starts with a combining mark
 // CHECK: error: unrecognized Unicode character \u35b
+// CHECK-NEXT:  ͛xyz = false;
 
 ᥊abc = false;
 // Starts with a digit
 // CHECK: error: unrecognized Unicode character \u194a
+// CHECK-NEXT: ᥊abc = false;
 
-૬͓͋ = false;
+͋de = false;
 // Starts with a digit with combining mark
-// CHECK: unrecognized Unicode character \u34b
+// CHECK: error: unrecognized Unicode character \u34b
+// CHECK-NEXT:  ͋de = false;
 
-﹏ = false;
+͓fg = false;
 // Starts with connector puncutation
-// CHECK: unrecognized Unicode character \u353
+// CHECK: error: unrecognized Unicode character \u353
+// CHECK-NEXT:  ͓fg = false;

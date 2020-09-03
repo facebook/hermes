@@ -67,5 +67,26 @@ TEST(OSCompatTest, Scheduling) {
   ASSERT_LE(cpu, (int)mask.size());
   EXPECT_TRUE(mask[cpu]);
 }
+
+TEST(OSCompatTest, GetProtections) {
+  {
+    static const char k = 'k';
+    auto modes = oscompat::get_vm_protect_modes(&k, 1);
+    ASSERT_EQ(modes.size(), 1);
+    EXPECT_EQ(modes[0][0], 'r');
+    EXPECT_EQ(modes[0][1], '-');
+  }
+  {
+    char arr[1];
+    auto modes = oscompat::get_vm_protect_modes(arr, 1);
+    ASSERT_EQ(modes.size(), 1);
+    EXPECT_EQ(modes[0][0], 'r');
+    EXPECT_EQ(modes[0][1], 'w');
+  }
+  {
+    auto modes = oscompat::get_vm_protect_modes(nullptr, 0);
+    EXPECT_EQ(modes.size(), 0);
+  }
+}
 #endif
 } // namespace

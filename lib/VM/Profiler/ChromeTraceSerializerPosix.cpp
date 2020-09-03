@@ -200,7 +200,7 @@ void ChromeTraceSerializer::serializeStackFrames(JSONEmitter &json) const {
           return bcProvider->getDebugInfo()->getLocationForAddress(
               debugOffsets->sourceLocations, opcodeOffset);
         }
-        return llvm::None;
+        return llvh::None;
       };
 
       std::string frameName, categoryName;
@@ -210,7 +210,7 @@ void ChromeTraceSerializer::serializeStackFrames(JSONEmitter &json) const {
           RuntimeModule *module = frame.jsFrame.module;
           hbc::BCProvider *bcProvider = module->getBytecode();
 
-          llvm::raw_string_ostream os(frameName);
+          llvh::raw_string_ostream os(frameName);
           os << getJSFunctionName(bcProvider, frame.jsFrame.functionId);
           categoryName = "JavaScript";
 
@@ -297,7 +297,7 @@ void ChromeTraceSerializer::serializeStackFrames(JSONEmitter &json) const {
   }
 }
 
-void ChromeTraceSerializer::serialize(llvm::raw_ostream &OS) const {
+void ChromeTraceSerializer::serialize(llvh::raw_ostream &OS) const {
   JSONEmitter json(OS);
 
   // The format of the chrome trace is a bit vague. Here are the essential

@@ -19,7 +19,7 @@
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringView.h"
 
-#include "llvm/Support/ConvertUTF.h"
+#include "llvh/Support/ConvertUTF.h"
 
 namespace hermes {
 namespace vm {
@@ -109,23 +109,23 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
     auto code = jsFunc->getCodeBlock()->getFunctionSource();
     if (isAllASCII(std::begin(code), std::end(code))) {
       return vm::StringPrimitive::createEfficient(
-          runtime, llvm::makeArrayRef(std::begin(code), std::end(code)));
+          runtime, llvh::makeArrayRef(std::begin(code), std::end(code)));
     }
     std::u16string out;
     out.resize(code.size());
-    const llvm::UTF8 *sourceStart = (const llvm::UTF8 *)code.data();
-    const llvm::UTF8 *sourceEnd = sourceStart + code.size();
-    llvm::UTF16 *targetStart = (llvm::UTF16 *)&out[0];
-    llvm::UTF16 *targetEnd = targetStart + out.size();
+    const llvh::UTF8 *sourceStart = (const llvh::UTF8 *)code.data();
+    const llvh::UTF8 *sourceEnd = sourceStart + code.size();
+    llvh::UTF16 *targetStart = (llvh::UTF16 *)&out[0];
+    llvh::UTF16 *targetEnd = targetStart + out.size();
     auto cRes = ConvertUTF8toUTF16(
         &sourceStart,
         sourceEnd,
         &targetStart,
         targetEnd,
-        llvm::lenientConversion);
+        llvh::lenientConversion);
     (void)cRes;
     assert(
-        cRes != llvm::ConversionResult::targetExhausted &&
+        cRes != llvh::ConversionResult::targetExhausted &&
         "not enough space allocated for UTF16 conversion");
     return vm::StringPrimitive::createEfficient(runtime, std::move(out));
   }
@@ -142,12 +142,13 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   }
 
   // Convert the name to string, unless it is undefined.
-  if (!propRes->isUndefined()) {
-    auto strRes = toString_RJS(runtime, runtime->makeHandle(*propRes));
+  if (!(*propRes)->isUndefined()) {
+    auto strRes =
+        toString_RJS(runtime, runtime->makeHandle(std::move(*propRes)));
     if (strRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    strRes->get()->copyUTF16String(strBuf);
+    strRes->get()->appendUTF16String(strBuf);
   }
 
   // Append the named parameters.
@@ -199,7 +200,7 @@ functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(newFrame.overflowed()))
       return runtime->raiseStackOverflow(
           Runtime::StackOverflowKind::NativeStack);
-    return Callable::call(func, runtime);
+    return Callable::call(func, runtime).toCallResultHermesValue();
   }
 
   auto argObj = Handle<JSObject>::dyn_vmcast(args.getArgHandle(1));
@@ -209,11 +210,12 @@ functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {
   }
 
   return Callable::executeCall(
-      func,
-      runtime,
-      Runtime::getUndefinedValue(),
-      args.getArgHandle(0),
-      argObj);
+             func,
+             runtime,
+             Runtime::getUndefinedValue(),
+             args.getArgHandle(0),
+             argObj)
+      .toCallResultHermesValue();
 }
 
 CallResult<HermesValue>
@@ -231,7 +233,11 @@ functionPrototypeCall(void *, Runtime *runtime, NativeArgs args) {
   for (uint32_t i = 1; i < argCount; ++i) {
     newFrame->getArgRef(i - 1) = args.getArg(i);
   }
-  return Callable::call(func, runtime);
+  auto res = Callable::call(func, runtime);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return res->getHermesValue();
 }
 
 CallResult<HermesValue>

@@ -16,9 +16,21 @@
 #include <hermes/Public/RuntimeConfig.h>
 #include <jsi/jsi.h>
 
+#ifndef HERMES_EXPORT
+#ifdef _MSC_VER
+#ifdef CREATE_SHARED_LIBRARY
+#define HERMES_EXPORT __declspec(dllexport)
+#else
+#define HERMES_EXPORT
+#endif // CREATE_SHARED_LIBRARY
+#else // _MSC_VER
+#define HERMES_EXPORT __attribute__((visibility("default")))
+#endif // _MSC_VER
+#endif // !defined(HERMES_EXPORT)
+
 struct HermesTestHelper;
 
-namespace llvm {
+namespace llvh {
 class raw_ostream;
 }
 
@@ -47,9 +59,11 @@ class Debugger;
 class HermesRuntimeImpl;
 
 /// Represents a Hermes JS runtime.
-class HermesRuntime : public jsi::Runtime {
+class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
  public:
   static bool isHermesBytecode(const uint8_t *data, size_t len);
+  // Returns the supported bytecode version.
+  static uint32_t getBytecodeVersion();
   // (EXPERIMENTAL) Issues madvise calls for portions of the given
   // bytecode file that will likely be used when loading the bytecode
   // file and running its global function.
@@ -63,7 +77,7 @@ class HermesRuntime : public jsi::Runtime {
       std::string *errorMessage = nullptr);
   static void setFatalHandler(void (*handler)(const std::string &));
 
-  // Assuming that \p data is valid HBC bytecode data, returns a pointer to then
+  // Assuming that \p data is valid HBC bytecode data, returns a pointer to the
   // first element of the epilogue, data append to the end of the bytecode
   // stream. Return pair contain ptr to data and header.
   static std::pair<const uint8_t *, size_t> getBytecodeEpilogue(
@@ -80,7 +94,7 @@ class HermesRuntime : public jsi::Runtime {
   static void dumpSampledTraceToFile(const std::string &fileName);
 
   /// Dump sampled stack trace to the given stream.
-  static void dumpSampledTraceToStream(llvm::raw_ostream &stream);
+  static void dumpSampledTraceToStream(llvh::raw_ostream &stream);
 
   /// Return the executed JavaScript function info.
   /// Each function info is a 64bit integer with the module id encoded in
@@ -117,7 +131,7 @@ class HermesRuntime : public jsi::Runtime {
   uint64_t getUniqueID(const jsi::String &s) const;
   uint64_t getUniqueID(const jsi::PropNameID &pni) const;
 
-  /// Get a structure representing the enviroment-dependent behavior, so
+  /// Get a structure representing the environment-dependent behavior, so
   /// it can be written into the trace for later replay.
   const ::hermes::vm::MockedEnvironment &getMockedEnvironment() const;
 
@@ -137,12 +151,12 @@ class HermesRuntime : public jsi::Runtime {
 
 #ifdef HERMESVM_PROFILER_BB
   /// Write the trace to the given stream.
-  void dumpBasicBlockProfileTrace(llvm::raw_ostream &os) const;
+  void dumpBasicBlockProfileTrace(llvh::raw_ostream &os) const;
 #endif
 
 #ifdef HERMESVM_PROFILER_OPCODE
   /// Write the opcode stats to the given stream.
-  void dumpOpcodeStats(llvm::raw_ostream &os) const;
+  void dumpOpcodeStats(llvh::raw_ostream &os) const;
 #endif
 
 #ifdef HERMESVM_PROFILER_EXTERN
@@ -194,10 +208,11 @@ class HermesRuntime : public jsi::Runtime {
   // class in the .cpp file.
 };
 
-__declspec(dllexport) std::unique_ptr<HermesRuntime> makeHermesRuntime(
+__declspec(dllexport) HERMES_EXPORT std::unique_ptr<HermesRuntime> makeHermesRuntime(
     const ::hermes::vm::RuntimeConfig &runtimeConfig =
         ::hermes::vm::RuntimeConfig());
-std::unique_ptr<jsi::ThreadSafeRuntime> makeThreadSafeHermesRuntime(
+HERMES_EXPORT std::unique_ptr<jsi::ThreadSafeRuntime>
+makeThreadSafeHermesRuntime(
     const ::hermes::vm::RuntimeConfig &runtimeConfig =
         ::hermes::vm::RuntimeConfig());
 } // namespace hermes

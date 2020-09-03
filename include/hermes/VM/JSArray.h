@@ -398,7 +398,8 @@ class JSArray final : public ArrayImpl {
     self->shadowLength_ = newLength;
 
     namedSlotRef(self, runtime, lengthPropIndex())
-        .setNonPtr(HermesValue::encodeNumberValue(newLength));
+        .setNonPtr(
+            HermesValue::encodeNumberValue(newLength), &runtime->getHeap());
   }
 
   /// Update the JavaScript '.length' property, which also resizes the array.

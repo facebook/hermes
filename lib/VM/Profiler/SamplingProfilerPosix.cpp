@@ -16,7 +16,7 @@
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
 
-#include "llvm/Support/Compiler.h"
+#include "llvh/Support/Compiler.h"
 
 #include <assert.h>
 #include <fcntl.h>
@@ -26,6 +26,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <chrono>
+#include <cmath>
+#include <random>
 #include <thread>
 
 namespace hermes {
@@ -169,8 +171,7 @@ void SamplingProfiler::profilingSignalHandler(int signo) {
   errno = oldErrno;
 }
 
-bool SamplingProfiler::sampleStack() {
-  std::unique_lock<std::mutex> uniqueLock(profilerLock_);
+bool SamplingProfiler::sampleStack(std::unique_lock<std::mutex> &uniqueLock) {
   // Check profiling stopping request.
   if (!enabled_) {
     return false;
@@ -185,7 +186,7 @@ bool SamplingProfiler::sampleStack() {
     pthread_kill(targetThreadId, SIGPROF);
 
     // Threading: samplingDoneSem_ will synchronize with signal handler to
-    // to make sure there will NOT be two SIGPROF signals sent to the sameÍ
+    // to make sure there will NOT be two SIGPROF signals sent to the same
     // runtime thread at the same time which prevents signal coalescing.
     // Also, release profilerLock_ before waiting because the runtime thread
     // we try to signal may be trying to hold profilerLock_. Failing to unlock
@@ -203,6 +204,12 @@ bool SamplingProfiler::sampleStack() {
     // unlike activeRuntimeThreads_, their read/write operations
     // do not overlap each other across unlock/lock boundary.
     uniqueLock.lock();
+    // Enabled may have changed since the lock was released, and we should exit
+    // as early as possible before sending more signals to threads that no
+    // longer have signal handlers attached.
+    if (!enabled_) {
+      return false;
+    }
     if (sampledStackDepth_ > 0) {
       assert(
           sampledStackDepth_ <= sampleStorage_.stack.size() &&
@@ -222,19 +229,41 @@ bool SamplingProfiler::sampleStack() {
 }
 
 void SamplingProfiler::timerLoop() {
+  oscompat::set_thread_name("hermes-sampling-profiler");
+
+  constexpr double kMeanMilliseconds = 10;
+  constexpr double kStdDevMilliseconds = 5;
+  std::random_device rd{};
+  std::mt19937 gen{rd()};
+  // The amount of time that is spent sleeping comes from a normal distribution,
+  // to avoid the case where the timer thread samples a stack at a predictable
+  // period.
+  std::normal_distribution<> distribution{kMeanMilliseconds,
+                                          kStdDevMilliseconds};
+  std::unique_lock<std::mutex> uniqueLock(profilerLock_);
+
   while (true) {
-    if (!sampleStack()) {
+    if (!sampleStack(uniqueLock)) {
       return;
     }
 
+    const uint64_t millis = round(std::fabs(distribution(gen)));
     // TODO: make sampling rate configurable.
-    // TODO: add random fluctuation to interval value.
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    bool disabled = enabledCondVar_.wait_for(
+        uniqueLock, std::chrono::milliseconds(millis), [this]() {
+          return !enabled_;
+        });
+    if (disabled) {
+      // The sampling profiler was disabled: don't continue sampling.
+      return;
+    }
+    // Else there was a timeout, which means enabled_ wasn't changed while this
+    // function was waiting. Continue to sample the stack.
   }
 }
 
 uint32_t SamplingProfiler::walkRuntimeStack(
-    const Runtime *runtime,
+    Runtime *runtime,
     StackTrace &sampleStorage,
     uint32_t startIndex) {
   unsigned count = startIndex;
@@ -256,7 +285,7 @@ uint32_t SamplingProfiler::walkRuntimeStack(
       auto *module = calleeCodeBlock->getRuntimeModule();
       assert(module != nullptr && "Cannot fetch runtimeModule for code block");
       frameStorage.jsFrame.module = module;
-      registerDomain(module->getDomainUnsafe());
+      registerDomain(module->getDomainUnsafe(runtime));
     } else {
       if (auto *nativeFunction =
               dyn_vmcast_or_null<NativeFunction>(frame.getCalleeClosure())) {
@@ -375,7 +404,7 @@ SamplingProfiler::SamplingProfiler() : sampleStorage_(kMaxStackDepth) {
   gcEventExtraInfoSet_.reserve(kMaxGCEventExtraInfoCount);
 }
 
-void SamplingProfiler::dumpSampledStack(llvm::raw_ostream &OS) {
+void SamplingProfiler::dumpSampledStack(llvh::raw_ostream &OS) {
   // TODO: serialize to visualizable trace format.
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
 
@@ -414,7 +443,7 @@ void SamplingProfiler::dumpSampledStack(llvm::raw_ostream &OS) {
   }
 }
 
-void SamplingProfiler::dumpChromeTrace(llvm::raw_ostream &OS) {
+void SamplingProfiler::dumpChromeTrace(llvh::raw_ostream &OS) {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
   auto pid = getpid();
   ChromeTraceSerializer serializer(
@@ -436,25 +465,33 @@ bool SamplingProfiler::enable() {
   }
   enabled_ = true;
   // Start timer thread.
-  std::thread(&SamplingProfiler::timerLoop, this).detach();
+  timerThread_ = std::thread(&SamplingProfiler::timerLoop, this);
   return true;
 }
 
 bool SamplingProfiler::disable() {
-  std::lock_guard<std::mutex> lockGuard(profilerLock_);
-  if (!enabled_) {
-    // Already disabled.
-    return true;
+  {
+    std::lock_guard<std::mutex> lockGuard(profilerLock_);
+    if (!enabled_) {
+      // Already disabled.
+      return true;
+    }
+    if (!samplingDoneSem_.close()) {
+      return false;
+    }
+    // Unregister handlers before shutdown.
+    if (!unregisterSignalHandler()) {
+      return false;
+    }
+    // Telling timer thread to exit.
+    enabled_ = false;
   }
-  if (!samplingDoneSem_.close()) {
-    return false;
-  }
-  // Unregister handlers before shutdown.
-  if (!unregisterSignalHandler()) {
-    return false;
-  }
-  // Telling timer thread to exit.
-  enabled_ = false;
+  // Notify the timer thread that it has been disabled.
+  enabledCondVar_.notify_all();
+  // Wait for timer thread to exit. This avoids the timer thread reading from
+  // memory that is freed after a main thread exits. This is outside the lock
+  // on profilerLock_ since the timer thread needs to acquire that lock.
+  timerThread_.join();
   return true;
 }
 

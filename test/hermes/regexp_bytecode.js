@@ -212,7 +212,6 @@ print(/(a)(?<!(.))/i);
 // CHECK-NEXT:   001b  Goal
 // CHECK-NEXT:   001c  Goal
 
-
 // There are 255 'a's here.
 print(/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaoverflow/);
 // CHECK:        20: /{{a{255}overflow}}/
@@ -251,3 +250,35 @@ print(/./us);
 // CHECK-NEXT:   Header: marked: 0 loops: 0 flags: 24 constraints: 4
 // CHECK-NEXT:   0000  U16MatchAny
 // CHECK-NEXT:   0001  Goal
+
+print(/a|b|c|d|e|f/);
+// CHECK:       26: /a|b|c|d|e|f/
+// CHECK-NEXT:    Header: marked: 0 loops: 0 flags: 0 constraints: 4
+// CHECK-NEXT:    0000  Alternation: Target 0x0e, constraints 4,4
+// CHECK-NEXT:    0007  MatchChar8: 'a'
+// CHECK-NEXT:    0009  Jump32: 0x48
+// CHECK-NEXT:    000e  Alternation: Target 0x1c, constraints 4,4
+// CHECK-NEXT:    0015  MatchChar8: 'b'
+// CHECK-NEXT:    0017  Jump32: 0x48
+// CHECK-NEXT:    001c  Alternation: Target 0x2a, constraints 4,4
+// CHECK-NEXT:    0023  MatchChar8: 'c'
+// CHECK-NEXT:    0025  Jump32: 0x48
+// CHECK-NEXT:    002a  Alternation: Target 0x38, constraints 4,4
+// CHECK-NEXT:    0031  MatchChar8: 'd'
+// CHECK-NEXT:    0033  Jump32: 0x48
+// CHECK-NEXT:    0038  Alternation: Target 0x46, constraints 4,4
+// CHECK-NEXT:    003f  MatchChar8: 'e'
+// CHECK-NEXT:    0041  Jump32: 0x48
+// CHECK-NEXT:    0046  MatchChar8: 'f'
+// CHECK-NEXT:    0048  Goal
+
+print(/(abc|def)/);
+// CHECK:       27: /(abc|def)/
+// CHECK-NEXT:    Header: marked: 1 loops: 0 flags: 0 constraints: 4
+// CHECK-NEXT:    0000  BeginMarkedSubexpression: 1
+// CHECK-NEXT:    0003  Alternation: Target 0x14, constraints 4,4
+// CHECK-NEXT:    000a  MatchNChar8: 'abc'
+// CHECK-NEXT:    000f  Jump32: 0x19
+// CHECK-NEXT:    0014  MatchNChar8: 'def'
+// CHECK-NEXT:    0019  EndMarkedSubexpression: 1
+// CHECK-NEXT:    001c  Goal

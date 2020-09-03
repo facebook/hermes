@@ -16,7 +16,7 @@
 #include <cstdlib>
 #include <limits>
 
-#include "llvm/ADT/SmallString.h"
+#include "llvh/ADT/SmallString.h"
 
 /// Helper functions used by the JavaScript Date object.
 /// Specified in ES5.1 15.9.1.
@@ -175,14 +175,14 @@ double timeClip(double t);
 /// \param t timestamp in milliseconds since Jan 1 1970.
 /// \param tza unused, placed for compatibility with the other toStrings.
 /// \param buf the buffer to be populated with the resultant string.
-void dateToISOString(double t, double tza, llvm::SmallVectorImpl<char> &buf);
+void dateToISOString(double t, double tza, llvh::SmallVectorImpl<char> &buf);
 
 /// Creates an ISO 8601 format time string.
 /// The string is of the format HH:mm:ss.sssZ where Z is timezone.
 /// \param t timestamp in milliseconds since Jan 1 1970.
 /// \param tza time zone adjustment in milliseconds, used for the TZ.
 /// \param buf the buffer to be populated with the resultant string.
-void timeToISOString(double t, double tza, llvm::SmallVectorImpl<char> &buf);
+void timeToISOString(double t, double tza, llvh::SmallVectorImpl<char> &buf);
 
 /// Creates an ISO 8601 format string, in the provided timezone.
 /// The string is of the format YYYY-MM-DDTHH:mm:ss.sssZ where Z is timezone.
@@ -194,55 +194,55 @@ void timeToISOString(double t, double tza, llvm::SmallVectorImpl<char> &buf);
 void datetimeToISOString(
     double t,
     double tza,
-    llvm::SmallVectorImpl<char> &buf);
+    llvh::SmallVectorImpl<char> &buf);
 
-void datetimeToLocaleString(double t, llvm::SmallVectorImpl<char16_t> &buf);
+void datetimeToLocaleString(double t, llvh::SmallVectorImpl<char16_t> &buf);
 
-void dateToLocaleString(double t, llvm::SmallVectorImpl<char16_t> &buf);
+void dateToLocaleString(double t, llvh::SmallVectorImpl<char16_t> &buf);
 
-void timeToLocaleString(double t, llvm::SmallVectorImpl<char16_t> &buf);
+void timeToLocaleString(double t, llvh::SmallVectorImpl<char16_t> &buf);
 
 /// ES9.0 20.3.4.41.2 DateString
 /// Returns a spec-compliant string representing the date of \p t.
 /// \param t timestamp in milliseconds since Jan 1 1970.
 /// \param tza unused, placed for compatibility with the other toStrings.
 /// \param buf the buffer to be populated with the resultant string.
-void dateString(double t, double tza, llvm::SmallVectorImpl<char> &buf);
+void dateString(double t, double tza, llvh::SmallVectorImpl<char> &buf);
 
 /// ES9.0 20.3.4.41.1 TimeString
 /// Returns a spec-compliant string representing the time of \p t.
 /// \param t timestamp in milliseconds since Jan 1 1970.
 /// \param tza time zone adjustment in milliseconds, used for the TZ.
 /// \param buf the buffer to be populated with the resultant string.
-void timeString(double t, double tza, llvm::SmallVectorImpl<char> &buf);
+void timeString(double t, double tza, llvh::SmallVectorImpl<char> &buf);
 
 /// ES9.0 20.3.4.41.3 TimeZoneString
 /// Returns a spec-compliant string representing the timezone of \p t.
 /// \param t timestamp in milliseconds since Jan 1 1970.
 /// \param tza time zone adjustment in milliseconds, used for the TZ.
 /// \param buf the buffer to be populated with the resultant string.
-void timeZoneString(double t, double tza, llvm::SmallVectorImpl<char> &buf);
+void timeZoneString(double t, double tza, llvh::SmallVectorImpl<char> &buf);
 
 /// ES9.0 20.3.4.41.4 ToDateString
 /// Returns a spec-compliant string representing the datetime of \p t.
 /// \param t timestamp in milliseconds since Jan 1 1970.
 /// \param tza unused, placed for compatibility with the other toStrings.
 /// \param buf the buffer to be populated with the resultant string.
-void dateTimeString(double t, double tza, llvm::SmallVectorImpl<char> &buf);
+void dateTimeString(double t, double tza, llvh::SmallVectorImpl<char> &buf);
 
 /// ES9.0 20.3.4.43 Main logic of Date.prototype.toUTCString.
 /// Returns a spec-compliant string representing the datetime of \p t.
 /// \param t timestamp in milliseconds since Jan 1 1970.
 /// \param tza unused, placed for compatibility with the other toStrings.
 /// \param buf the buffer to be populated with the resultant string.
-void dateTimeUTCString(double t, double tza, llvm::SmallVectorImpl<char> &buf);
+void dateTimeUTCString(double t, double tza, llvh::SmallVectorImpl<char> &buf);
 
 /// ES9.0 20.3.4.42 ToTimeString
 /// Returns a spec-compliant string representing only the time of \p t.
 /// \param t timestamp in milliseconds since Jan 1 1970.
 /// \param tza unused, placed for compatibility with the other toStrings.
 /// \param buf the buffer to be populated with the resultant string.
-void timeTZString(double t, double tza, llvm::SmallVectorImpl<char> &buf);
+void timeTZString(double t, double tza, llvh::SmallVectorImpl<char> &buf);
 
 //===----------------------------------------------------------------------===//
 // Date parsing

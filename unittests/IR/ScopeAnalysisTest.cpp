@@ -47,13 +47,13 @@ TEST(IRVerifierTest, ScopeAnalysisTest) {
   EXPECT_EQ(1, fsa.getScopeDepth(F2->getFunctionScope()));
   EXPECT_EQ(2, fsa.getScopeDepth(F11->getFunctionScope()));
   EXPECT_EQ(-5, fsa.getScopeDepth(ES));
-  EXPECT_EQ(llvm::None, fsa.getScopeDepth(orphan->getFunctionScope()));
+  EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan->getFunctionScope()));
 
   EXPECT_EQ(nullptr, fsa.getLexicalParent(G));
   EXPECT_EQ(G, fsa.getLexicalParent(F1));
   EXPECT_EQ(G, fsa.getLexicalParent(F2));
   EXPECT_EQ(F1, fsa.getLexicalParent(F11));
-  EXPECT_EQ(llvm::None, fsa.getScopeDepth(orphan->getFunctionScope()));
+  EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan->getFunctionScope()));
 }
 
 } // end anonymous namespace

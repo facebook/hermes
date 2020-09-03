@@ -22,7 +22,7 @@ namespace {
 /// IRBuilder.
 TEST(BuilderTest, SimpleSmokeTest) {
   std::string Result;
-  llvm::raw_string_ostream OS(Result);
+  llvh::raw_string_ostream OS(Result);
 
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
@@ -351,13 +351,13 @@ TEST(BuilderTest, LiteralConstructionTest) {
   }
 
   // Make sure that casting works.
-  EXPECT_TRUE(llvm::dyn_cast<LiteralNull>(Builder.getLiteralNull()));
-  EXPECT_TRUE(llvm::dyn_cast<LiteralUndefined>(Builder.getLiteralUndefined()));
-  EXPECT_TRUE(llvm::dyn_cast<LiteralBool>(Builder.getLiteralBool(true)));
-  EXPECT_TRUE(llvm::dyn_cast<LiteralBool>(Builder.getLiteralBool(false)));
+  EXPECT_TRUE(llvh::dyn_cast<LiteralNull>(Builder.getLiteralNull()));
+  EXPECT_TRUE(llvh::dyn_cast<LiteralUndefined>(Builder.getLiteralUndefined()));
+  EXPECT_TRUE(llvh::dyn_cast<LiteralBool>(Builder.getLiteralBool(true)));
+  EXPECT_TRUE(llvh::dyn_cast<LiteralBool>(Builder.getLiteralBool(false)));
   EXPECT_TRUE(
-      llvm::dyn_cast<LiteralString>(Builder.getLiteralString("hello world")));
-  EXPECT_TRUE(llvm::dyn_cast<LiteralNumber>(Builder.getLiteralNumber(10.23)));
+      llvh::dyn_cast<LiteralString>(Builder.getLiteralString("hello world")));
+  EXPECT_TRUE(llvh::dyn_cast<LiteralNumber>(Builder.getLiteralNumber(10.23)));
 }
 
 TEST(BuilderTest, PropertyTest) {

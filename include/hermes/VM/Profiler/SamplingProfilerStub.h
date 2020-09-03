@@ -40,10 +40,10 @@ class SamplingProfiler {
 
   /// Dump sampled stack to \p OS.
   /// NOTE: this is for manual testing purpose.
-  void dumpSampledStack(llvm::raw_ostream &OS) {}
+  void dumpSampledStack(llvh::raw_ostream &OS) {}
 
   /// Dump sampled stack to \p OS in chrome trace format.
-  void dumpChromeTrace(llvm::raw_ostream &OS) {}
+  void dumpChromeTrace(llvh::raw_ostream &OS) {}
 
   /// Enable and start profiling.
   bool enable() {

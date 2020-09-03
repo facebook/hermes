@@ -52,7 +52,7 @@ TEST_F(IdentifierTableLargeHeapTest, LookupTest) {
       table.getSymbolHandle(runtime, c).getValue().get().unsafeGetIndex() -
           predefinedCount);
 
-  auto d = StringPrimitive::createNoThrow(runtime, llvm::StringRef("foo"));
+  auto d = StringPrimitive::createNoThrow(runtime, llvh::StringRef("foo"));
   EXPECT_EQ(
       0u,
       table.getSymbolHandleFromPrimitive(runtime, d)
@@ -61,7 +61,7 @@ TEST_F(IdentifierTableLargeHeapTest, LookupTest) {
               .unsafeGetIndex() -
           predefinedCount);
 
-  auto e = StringPrimitive::createNoThrow(runtime, llvm::StringRef("ab"));
+  auto e = StringPrimitive::createNoThrow(runtime, llvh::StringRef("ab"));
   EXPECT_EQ(
       1u,
       table.getSymbolHandleFromPrimitive(runtime, e)
@@ -73,10 +73,10 @@ TEST_F(IdentifierTableLargeHeapTest, LookupTest) {
   EXPECT_TRUE(table.getStringView(runtime, sa).equals(a));
   EXPECT_TRUE(table.getStringView(runtime, sb).equals(b));
   SmallU16String<8> tmp;
-  table.getStringView(runtime, sa).copyUTF16String(tmp);
+  table.getStringView(runtime, sa).appendUTF16String(tmp);
   EXPECT_EQ(a, tmp.arrayRef());
   tmp.clear();
-  table.getStringView(runtime, sb).copyUTF16String(tmp);
+  table.getStringView(runtime, sb).appendUTF16String(tmp);
   EXPECT_EQ(b, tmp.arrayRef());
 
   // Ensure allocations are aligned.
@@ -106,6 +106,8 @@ TEST_F(IdentifierTableTest, NotUniquedSymbol) {
 }
 
 TEST_F(IdentifierTableTest, LazyExternalSymbolTooBig) {
+  // Hades doesn't handle external memory crediting/debiting yet.
+#ifndef HERMESVM_GC_HADES
   GCScope gcScope{runtime};
   auto &idTable = runtime->getIdentifierTable();
 
@@ -125,6 +127,7 @@ TEST_F(IdentifierTableTest, LazyExternalSymbolTooBig) {
   EXPECT_DEATH_IF_SUPPORTED(
       { idTable.getStringPrim(runtime, symbol); },
       "Unhandled out of memory exception");
+#endif
 }
 
 // Verifies that SymbolIDs are allocated consecutively, increasing from zero, as

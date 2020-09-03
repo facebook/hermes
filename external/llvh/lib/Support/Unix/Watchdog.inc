@@ -11,13 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Config/config.h"
+#include "llvh/Config/config.h"
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
 
-namespace llvm {
+namespace llvh {
   namespace sys {
     Watchdog::Watchdog(unsigned int seconds) {
 #ifdef HAVE_UNISTD_H

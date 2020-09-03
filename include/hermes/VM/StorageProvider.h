@@ -8,7 +8,7 @@
 #ifndef HERMES_VM_STORAGEPROVIDER_H
 #define HERMES_VM_STORAGEPROVIDER_H
 
-#include "llvm/Support/ErrorOr.h"
+#include "llvh/Support/ErrorOr.h"
 
 #include <limits>
 #include <memory>
@@ -35,18 +35,41 @@ class StorageProvider {
   /// @}
 
   /// Create a new segment memory space.
-  llvm::ErrorOr<void *> newStorage() {
+  llvh::ErrorOr<void *> newStorage() {
     return newStorage(nullptr);
   }
   /// Create a new segment memory space and give this memory the name \p name.
   /// \return A pointer to a block of memory that has AlignedStorage::size()
   ///   bytes, and is aligned on AlignedStorage::size().
-  virtual llvm::ErrorOr<void *> newStorage(const char *name) = 0;
+  llvh::ErrorOr<void *> newStorage(const char *name);
 
   /// Delete the given segment's memory space, and make it available for re-use.
   /// \post Nothing in the range [storage, storage + AlignedStorage::size())
   ///   is valid memory to be read or written.
-  virtual void deleteStorage(void *storage) = 0;
+  void deleteStorage(void *storage);
+
+  /// The number of storages this provider has allocated in its lifetime.
+  size_t numSucceededAllocs() const;
+
+  /// The number of storages this provider has failed to allocate in its
+  /// lifetime.
+  size_t numFailedAllocs() const;
+
+  /// The number of storages this provider has deleted its lifetime.
+  size_t numDeletedAllocs() const;
+
+  /// The number of storages allocated by this provider that have not been
+  /// deleted yet.
+  size_t numLiveAllocs() const;
+
+ protected:
+  virtual llvh::ErrorOr<void *> newStorageImpl(const char *name) = 0;
+  virtual void deleteStorageImpl(void *storage) = 0;
+
+ private:
+  size_t numSucceededAllocs_{0};
+  size_t numFailedAllocs_{0};
+  size_t numDeletedAllocs_{0};
 };
 
 /// Attempts to allocate \p sz memory, aligned at \p alignment.
@@ -58,7 +81,7 @@ class StorageProvider {
 /// \pre sz % alignment == 0 && minSz % alignment == 0.
 /// \post Returned size is always a multiple of the alignment.
 /// NOTE: Exposed for testing purposes.
-llvm::ErrorOr<std::pair<void *, size_t>>
+llvh::ErrorOr<std::pair<void *, size_t>>
 vmAllocateAllowLess(size_t sz, size_t minSz, size_t alignment);
 
 } // namespace vm

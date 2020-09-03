@@ -14,7 +14,7 @@
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/SymbolID.h"
 
-#include "llvm/ADT/SmallVector.h"
+#include "llvh/ADT/SmallVector.h"
 
 namespace hermes {
 namespace vm {
@@ -47,6 +47,16 @@ bool toBoolean(HermesValue value);
 
 /// ES5.1 9.3
 CallResult<HermesValue> toNumber_RJS(Runtime *runtime, Handle<> valueHandle);
+
+/// ES 2020 7.1.3
+inline CallResult<HermesValue> toNumeric_RJS(
+    Runtime *runtime,
+    Handle<> valueHandle) {
+  // The difference between this and toNumber is that it can return a
+  // BigInt.  But Hermes doesn't support BigInt yet, so for now, this
+  // is a placeholder.
+  return toNumber_RJS(runtime, valueHandle);
+}
 
 /// ES6 7.1.15
 CallResult<HermesValue> toLength(Runtime *runtime, Handle<> valueHandle);
@@ -146,7 +156,7 @@ CallResult<HermesValue> toObject(Runtime *runtime, Handle<> valueHandle);
 ExecutionStatus amendPropAccessErrorMsgWithPropName(
     Runtime *runtime,
     Handle<> valueHandle,
-    llvm::StringRef operationStr,
+    llvh::StringRef operationStr,
     SymbolID id);
 
 inline ExecutionStatus checkObjectCoercible(
@@ -219,7 +229,7 @@ inline OptValue<uint32_t> toArrayIndexFastPath(HermesValue value) {
   if (value.isNumber()) {
     return hermes::doubleToArrayIndex(value.getNumber());
   }
-  return llvm::None;
+  return llvh::None;
 }
 
 /// \return true if the ToPrimitive function (ES5.1 9.1) performs no conversion.
@@ -304,13 +314,13 @@ struct IteratorRecord {
 CallResult<IteratorRecord> getIterator(
     Runtime *runtime,
     Handle<> obj,
-    llvm::Optional<Handle<Callable>> method = llvm::None);
+    llvh::Optional<Handle<Callable>> method = llvh::None);
 
 /// ES6.0 7.4.2
 CallResult<PseudoHandle<JSObject>> iteratorNext(
     Runtime *runtime,
     const IteratorRecord &iteratorRecord,
-    llvm::Optional<Handle<>> value = llvm::None);
+    llvh::Optional<Handle<>> value = llvh::None);
 
 /// ES6.0 7.4.5
 /// \return a null pointer instead of the boolean false.
@@ -318,7 +328,7 @@ CallResult<Handle<JSObject>> iteratorStep(
     Runtime *runtime,
     const IteratorRecord &iteratorRecord);
 
-/// ES6.0 7.4.7
+/// ES sec-iteratorclose
 /// \param completion the thrown value to complete this operation with, empty if
 /// not thrown.
 ExecutionStatus
@@ -365,7 +375,7 @@ ordinaryHasInstance(Runtime *runtime, Handle<> constructor, Handle<> object);
 /// \param[out] output the vector into which to place the results.
 inline void utf16Encoding(
     uint32_t cp,
-    llvm::SmallVectorImpl<char16_t> &output) {
+    llvh::SmallVectorImpl<char16_t> &output) {
   // Assert: 0 ≤ cp ≤ 0x10FFFF.
   assert(cp <= 0x10FFFF && "Invalid input to UTF16Encoding");
   // If cp ≤ 65535, return cp.

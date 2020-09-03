@@ -9,7 +9,7 @@
 #define HERMES_VM_ALIGNED_STORAGE_H
 
 #include "hermes/VM/AllocSource.h"
-#include "llvm/Support/ErrorOr.h"
+#include "llvh/Support/ErrorOr.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -61,8 +61,8 @@ struct AlignedStorage {
 
   friend void swap(AlignedStorage &, AlignedStorage &);
 
-  static llvm::ErrorOr<AlignedStorage> create(StorageProvider *provider);
-  static llvm::ErrorOr<AlignedStorage> create(
+  static llvh::ErrorOr<AlignedStorage> create(StorageProvider *provider);
+  static llvh::ErrorOr<AlignedStorage> create(
       StorageProvider *provider,
       const char *name);
 

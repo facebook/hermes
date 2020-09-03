@@ -14,16 +14,16 @@
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/Statistic.h"
 
-#include "llvm/ADT/SmallString.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/Path.h"
+#include "llvh/ADT/SmallString.h"
+#include "llvh/Support/Debug.h"
+#include "llvh/Support/Path.h"
 
 STATISTIC(NumRequireCalls, "Number of require() calls found");
 STATISTIC(NumRequireCallsResolved, "Number of require() calls resolved");
 
 namespace hermes {
 
-using llvm::dyn_cast;
+using llvh::dyn_cast;
 
 namespace {
 
@@ -134,10 +134,10 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
       "CJS module second parameter must be 'require'");
 
   // Visited instructions.
-  llvm::SmallDenseSet<Instruction *> visited{};
+  llvh::SmallDenseSet<Instruction *> visited{};
 
   // Usages to process.
-  llvm::SmallVector<Usage, 8> workList{};
+  llvh::SmallVector<Usage, 8> workList{};
 
   // Add all unvisited users of a value to the work list.
   auto addUsers = [&visited, &workList](Value *value) {
@@ -153,7 +153,7 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
   while (!workList.empty()) {
     Usage U = workList.pop_back_val();
 
-    if (auto *call = llvm::dyn_cast<CallInst>(U.I)) {
+    if (auto *call = llvh::dyn_cast<CallInst>(U.I)) {
       // Make sure require() doesn't escape as a parameter.
       bool fail = false;
       for (unsigned numArgs = call->getNumArguments(), arg = 0; arg != numArgs;
@@ -172,7 +172,7 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
       if (fail)
         continue;
 
-      if (llvm::isa<ConstructInst>(call) || llvm::isa<HBCConstructInst>(call)) {
+      if (llvh::isa<ConstructInst>(call) || llvh::isa<HBCConstructInst>(call)) {
         EM_.warning(call->getLocation(), "'require' used as a constructor");
         canResolve_ = false;
         continue;
@@ -182,7 +182,7 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
           call->getCallee() == U.V && "Value is not used at all in CallInst");
 
       resolveRequireCall(moduleFunction, call);
-    } else if (auto *SS = llvm::dyn_cast<StoreStackInst>(U.I)) {
+    } else if (auto *SS = llvh::dyn_cast<StoreStackInst>(U.I)) {
       // Storing "require" into a stack location.
 
       if (!isStoreOnceStackLocation(cast<AllocStackInst>(SS->getPtr()))) {
@@ -194,11 +194,11 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
       }
 
       addUsers(SS->getPtr());
-    } else if (auto *LS = llvm::dyn_cast<LoadStackInst>(U.I)) {
+    } else if (auto *LS = llvh::dyn_cast<LoadStackInst>(U.I)) {
       // Loading "require" from a stack location.
 
       addUsers(LS);
-    } else if (auto *SF = llvm::dyn_cast<StoreFrameInst>(U.I)) {
+    } else if (auto *SF = llvh::dyn_cast<StoreFrameInst>(U.I)) {
       // Storing "require" into a frame variable.
 
       if (!isStoreOnceVariable(SF->getVariable())) {
@@ -210,11 +210,11 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
       }
 
       addUsers(SF->getVariable());
-    } else if (auto *LF = llvm::dyn_cast<LoadFrameInst>(U.I)) {
+    } else if (auto *LF = llvh::dyn_cast<LoadFrameInst>(U.I)) {
       // Loading "require" from a frame variable.
 
       addUsers(LF);
-    } else if (auto *LPI = llvm::dyn_cast<LoadPropertyInst>(U.I)) {
+    } else if (auto *LPI = llvh::dyn_cast<LoadPropertyInst>(U.I)) {
       if (LPI->getProperty() == U.V) {
         // `require` must not be used as a key in a LoadPropertyInst,
         // because it could be used in a getter and escape.
@@ -249,14 +249,14 @@ void ResolveStaticRequireImpl::resolveRequireCall(
   }
 
   LiteralString *stringTarget = nullptr;
-  if (auto *lit = llvm::dyn_cast<Literal>(call->getArgument(1)))
+  if (auto *lit = llvh::dyn_cast<Literal>(call->getArgument(1)))
     stringTarget = evalToString(builder_, lit);
 
   if (!stringTarget) {
     EM_.warning(
         call->getLocation(),
         "require() argument cannot be coerced to constant string at compile time");
-    if (auto *inst = llvm::dyn_cast<Instruction>(call->getArgument(1)))
+    if (auto *inst = llvh::dyn_cast<Instruction>(call->getArgument(1)))
       if (inst->hasLocation())
         EM_.note(inst->getLocation(), "First argument of require()");
 
@@ -279,19 +279,19 @@ void ResolveStaticRequireImpl::resolveRequireCall(
 /// \p dirname.
 /// This assumes that the target is given relative to the current dirname.
 static void canonicalizePath(
-    llvm::SmallVectorImpl<char> &dirname,
+    llvh::SmallVectorImpl<char> &dirname,
     StringRef target) {
   if (!target.empty() && target[0] == '/') {
     // If the target is absolute (starts with a '/'), resolve from the module
     // root (disregard the dirname).
     dirname.clear();
-    llvm::sys::path::append(dirname, target.drop_front(1));
+    llvh::sys::path::append(dirname, target.drop_front(1));
     return;
   }
-  llvm::sys::path::append(dirname, llvm::sys::path::Style::posix, target);
+  llvh::sys::path::append(dirname, llvh::sys::path::Style::posix, target);
 
   // Remove all dots. This is done to get rid of ../ or anything like ././.
-  llvm::sys::path::remove_dots(dirname, true, llvm::sys::path::Style::posix);
+  llvh::sys::path::remove_dots(dirname, true, llvh::sys::path::Style::posix);
 }
 
 Literal *ResolveStaticRequireImpl::resolveModuleTarget(
@@ -314,7 +314,7 @@ Literal *ResolveStaticRequireImpl::resolveModuleTarget(
       moduleFunction->getContext().getResolutionTable();
   if (resolutionTable) {
     LLVM_DEBUG(
-        llvm::errs() << "Resolving " << cjsModule->filename.str() << " @ "
+        llvh::errs() << "Resolving " << cjsModule->filename.str() << " @ "
                      << target->getValue().str() << '\n');
     auto fileEntry = resolutionTable->find(cjsModule->filename.str());
     if (fileEntry != resolutionTable->end()) {
@@ -329,9 +329,9 @@ Literal *ResolveStaticRequireImpl::resolveModuleTarget(
   // basic canonicalization procedure.
   if (!targetIdentifier.isValid()) {
     // First, place the directory name into canonicalPath.
-    llvm::SmallString<32> canonicalPath = cjsModule->filename.str();
-    llvm::sys::path::remove_filename(
-        canonicalPath, llvm::sys::path::Style::posix);
+    llvh::SmallString<32> canonicalPath = cjsModule->filename.str();
+    llvh::sys::path::remove_filename(
+        canonicalPath, llvh::sys::path::Style::posix);
 
     // Canonicalize (canonicalPath + target) together to get the final path.
     canonicalizePath(canonicalPath, target->getValue().str());

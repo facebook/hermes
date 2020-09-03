@@ -85,16 +85,14 @@ hermesInternalGetEpilogues(void *, Runtime *runtime, NativeArgs args) {
 /// are in the given WeakMap or WeakSet.
 CallResult<HermesValue>
 hermesInternalGetWeakSize(void *, Runtime *runtime, NativeArgs args) {
-  auto M = args.dyncastArg<JSWeakMap>(0);
-  if (M) {
-    return HermesValue::encodeNumberValue(
-        JSWeakMap::debugFreeSlotsAndGetSize(runtime, *M));
+  if (auto M = args.dyncastArg<JSWeakMap>(0)) {
+    return HermesValue::encodeNumberValue(JSWeakMap::debugFreeSlotsAndGetSize(
+        static_cast<PointerBase *>(runtime), &runtime->getHeap(), *M));
   }
 
-  auto S = args.dyncastArg<JSWeakSet>(0);
-  if (S) {
-    return HermesValue::encodeNumberValue(
-        JSWeakSet::debugFreeSlotsAndGetSize(runtime, *S));
+  if (auto S = args.dyncastArg<JSWeakSet>(0)) {
+    return HermesValue::encodeNumberValue(JSWeakSet::debugFreeSlotsAndGetSize(
+        static_cast<PointerBase *>(runtime), &runtime->getHeap(), *S));
   }
 
   return runtime->raiseTypeError(
@@ -321,7 +319,7 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
     for (auto &module : runtime->getRuntimeModules()) {
       auto buf = module.getBytecode()->getRawBuffer();
       if (buf.size()) {
-        llvm::SmallVector<int, 64> runs;
+        llvh::SmallVector<int, 64> runs;
         int pages = oscompat::pages_in_ram(buf.data(), buf.size(), &runs);
         if (pages >= 0) {
           bytecodePagesResident += pages;
@@ -361,7 +359,7 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
           bytecodeIOus += us;
         }
         sample.clear();
-        llvm::raw_string_ostream str(sample);
+        llvh::raw_string_ostream str(sample);
         std::random_device rng;
         for (unsigned sampleIdx = 0; sampleIdx < NUM_SAMPLES; ++sampleIdx) {
           int32_t accessOrderPos = rng() % ids.size();
@@ -452,6 +450,24 @@ hermesInternalGetRuntimeProperties(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 
+  const char buildMode[] =
+#ifdef HERMES_SLOW_DEBUG
+      "SlowDebug"
+#elif !defined(NDEBUG)
+      "Debug"
+#else
+      "Release"
+#endif
+      ;
+  auto buildModeVal = StringPrimitive::create(
+      runtime, ASCIIRef(buildMode, sizeof(buildMode) - 1));
+  if (LLVM_UNLIKELY(
+          buildModeVal == ExecutionStatus::EXCEPTION ||
+          addProperty(runtime->makeHandle(*buildModeVal), "Build") ==
+              ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
   return resultHandle.getHermesValue();
 }
 
@@ -461,7 +477,7 @@ static void logGCStats(Runtime *runtime, const char *msg) {
   // 1024 bytes.  Break it up.
   std::string stats;
   {
-    llvm::raw_string_ostream os(stats);
+    llvh::raw_string_ostream os(stats);
     runtime->printHeapStats(os);
   }
   auto copyRegionFrom = [&stats](size_t from) -> size_t {
@@ -520,243 +536,6 @@ hermesInternalGetCallStack(void *, Runtime *runtime, NativeArgs args) {
 }
 #endif // HERMESVM_EXCEPTION_ON_OOM
 
-#ifdef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
-/// \code
-///   HermesInternal.executeCall = function (func, thisArg, ...params) {}
-/// \endcode
-/// Invoke func with `this` context set to thisArg, and parameters param1,
-/// param2, and param3
-CallResult<HermesValue>
-hermesInternalExecuteCall(void *, Runtime *runtime, NativeArgs args) {
-  auto func = args.dyncastArg<Callable>(0);
-  if (!func) {
-    return runtime->raiseTypeError("Non-callable value passed to executeCall");
-  }
-
-  const unsigned offset = 2; // number of args before the params
-  unsigned numParam = args.getArgCount() - offset;
-  ScopedNativeCallFrame newFrame{runtime,
-                                 numParam,
-                                 func.getHermesValue(),
-                                 HermesValue::encodeUndefinedValue(),
-                                 args.getArg(1)};
-  if (LLVM_UNLIKELY(newFrame.overflowed()))
-    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
-
-  for (unsigned i = 0; i < numParam; i++) {
-    newFrame->getArgRef(i) = args.getArg(i + offset);
-  }
-  return Callable::call(func, runtime);
-}
-
-///   HermesInternal.getSubstitution
-///     = function (matched,str, position, captures, replacement) {}
-/// \encode
-/// Returns true if func is a valid constructor, false otherwise.
-CallResult<HermesValue>
-hermesInternalGetSubstitution(void *, Runtime *runtime, NativeArgs args) {
-  auto matched = args.dyncastArg<StringPrimitive>(0);
-  auto str = args.dyncastArg<StringPrimitive>(1);
-  auto replacement = args.dyncastArg<StringPrimitive>(4);
-  if (!matched || !str || !replacement) {
-    return runtime->raiseTypeError(
-        "First, second, and fifth arguments should be strings");
-  }
-
-  auto posArg = args.getArg(2);
-  if (!posArg.isNumber()) {
-    return runtime->raiseTypeError("Third argument should be a number");
-  }
-  uint32_t position = posArg.getNumberAs<uint32_t>();
-
-  Handle<JSArray> capturesArg = args.dyncastArg<JSArray>(3);
-  if (!capturesArg) {
-    return runtime->raiseTypeError("Fourth argument should be an array");
-  }
-
-  uint32_t capturesLen = JSArray::getLength(*capturesArg);
-  auto arrRes = ArrayStorage::create(runtime, capturesLen /* capacity */);
-  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  MutableHandle<ArrayStorage> captures{runtime,
-                                       vmcast<ArrayStorage>(arrRes.getValue())};
-
-  for (uint i = 0; i < capturesLen; ++i) {
-    GCScopeMarkerRAII marker{runtime};
-    ArrayStorage::push_back(
-        captures, runtime, capturesArg->handleAt(runtime, i));
-  }
-
-  return getSubstitution(
-      runtime, matched, str, position, captures, replacement);
-}
-
-/// \code
-///   HermesInternal.isConstructor = function (func) {}
-/// \endcode
-/// Returns true if func is a valid constructor, false otherwise.
-CallResult<HermesValue>
-hermesInternalIsConstructor(void *, Runtime *runtime, NativeArgs args) {
-  return HermesValue::encodeBoolValue(isConstructor(runtime, args.getArg(0)));
-}
-
-///   HermesInternal.isRegExp = function (pattern) {}
-/// \encode
-/// Returns true if pattern is a valid RegExp, false otherwise.
-CallResult<HermesValue>
-hermesInternalIsRegExp(void *, Runtime *runtime, NativeArgs args) {
-  auto boolRes = isRegExp(runtime, args.getArgHandle(0));
-  if (LLVM_UNLIKELY(boolRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  return HermesValue::encodeBoolValue(boolRes.getValue());
-}
-
-/// \code
-///   HermesInternal.jsArraySetElementAt = function (array, index, val) {}
-/// \endcode
-/// Set array[index] to val without triggering the setter.
-CallResult<HermesValue>
-hermesInternalJSArraySetElementAt(void *, Runtime *runtime, NativeArgs args) {
-  JSArray::setElementAt(
-      args.dyncastArg<ArrayImpl>(0),
-      runtime,
-      args.getArg(1).getDouble(),
-      args.getArgHandle(2));
-  return HermesValue::encodeUndefinedValue();
-}
-
-/// \code
-///   HermesInternal.regExpCreate = function (pattern, flags) {}
-/// \endcode
-/// Create and return a RegExp object based on the given pattern and flags
-CallResult<HermesValue>
-hermesInternalRegExpCreate(void *, Runtime *runtime, NativeArgs args) {
-  auto res = regExpCreate(runtime, args.getArgHandle(0), args.getArgHandle(1));
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  return res->getHermesValue();
-}
-
-/// \code
-///   HermesInternal.regExpExec = function (regexp, str) {}
-/// \encode
-/// Returns the result of executing RegExp object regexp on string str.
-CallResult<HermesValue>
-hermesInternalRegExpExec(void *, Runtime *runtime, NativeArgs args) {
-  auto regexp = args.dyncastArg<JSObject>(0);
-  auto str = args.dyncastArg<StringPrimitive>(1);
-  if (!regexp || !str) {
-    return runtime->raiseTypeError(
-        "Arguments of regExpExec should be an Object and a String");
-  }
-  return regExpExec(runtime, regexp, str);
-}
-
-/// \code
-///   HermesInternal.searchString =
-///     function (source, substr, reverse, startOffset, endOffset) {}
-/// \endcode
-/// Search for the first (or last if reverse is true) occurrence of substr
-/// inside of source from the given offsets. Return the starting index of the
-/// first (or last is reverse is true) match or -1 if there is no match.
-/// TypeError if either argument is not a string.
-CallResult<HermesValue>
-hermesInternalSearchString(void *, Runtime *runtime, NativeArgs args) {
-  auto source = args.dyncastArg<StringPrimitive>(0);
-  auto substr = args.dyncastArg<StringPrimitive>(1);
-  if (!source || !substr) {
-    return runtime->raiseTypeError("Non-string value passed to searchString");
-  }
-
-  bool reverse = false;
-  if (args.getArg(2).isBool()) {
-    reverse = args.getArg(2).getBool();
-  }
-
-  uint32_t startOffset = 0;
-  if (args.getArg(3).isNumber()) {
-    startOffset = args.getArg(3).getNumberAs<uint32_t>();
-  }
-  uint32_t endOffset = 0;
-  if (args.getArg(4).isNumber()) {
-    endOffset = args.getArg(4).getNumberAs<uint32_t>();
-  }
-
-  auto sourceView = StringPrimitive::createStringView(runtime, source);
-  auto substrView = StringPrimitive::createStringView(runtime, substr);
-  double ret = -1;
-
-  if (!reverse) {
-    auto endIter = sourceView.end() - endOffset;
-    auto foundIter = std::search(
-        sourceView.begin() + startOffset,
-        endIter,
-        substrView.begin(),
-        substrView.end());
-    if (foundIter != endIter || substrView.empty()) {
-      ret = foundIter - sourceView.begin();
-    }
-  } else {
-    auto endIter = sourceView.rend() - endOffset;
-    auto foundIter = std::search(
-        sourceView.rbegin() + startOffset,
-        endIter,
-        substrView.rbegin(),
-        substrView.rend());
-    if (foundIter != endIter || substrView.empty()) {
-      ret = sourceView.rend() - foundIter;
-    }
-  }
-  return HermesValue::encodeDoubleValue(ret);
-}
-
-/// \code
-///   HermesInternal.toInteger = function (arg) {}
-/// \endcode
-/// Converts arg to an integer
-CallResult<HermesValue>
-hermesInternalToInteger(void *, Runtime *runtime, NativeArgs args) {
-  return toInteger(runtime, args.getArgHandle(0));
-}
-
-/// \code
-///   HermesInternal.toLength function (arg) {}
-/// \endcode
-/// Converts arg to an integer suitable for use as the length of an array-like
-/// object. Return value is an an integer in the range[0, 2^53 - 1].
-CallResult<HermesValue>
-hermesInternalToLength(void *, Runtime *runtime, NativeArgs args) {
-  return toLength(runtime, args.getArgHandle(0));
-}
-
-/// \code
-///   HermesInternal.toObject function (arg) {}
-/// \endcode
-/// Converts arg to an object if possible.
-/// TypeError if arg is null or undefined.
-CallResult<HermesValue>
-hermesInternalToObject(void *, Runtime *runtime, NativeArgs args) {
-  return toObject(runtime, args.getArgHandle(0));
-}
-
-/// \code
-///   HermesInternal.toObject function (arg) {}
-/// \endcode
-/// Converts arg to a string if possible.
-/// TypeError if arg is a symbol.
-CallResult<HermesValue>
-hermesInternalToString(void *, Runtime *runtime, NativeArgs args) {
-  auto res = toString_RJS(runtime, args.getArgHandle(0));
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  return res->getHermesValue();
-}
-#endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
-
 /// \return the code block associated with \p callableHandle if it is a
 /// (possibly bound) JS function, or nullptr otherwise.
 static const CodeBlock *getLeafCodeBlock(
@@ -784,7 +563,7 @@ static CallResult<HermesValue> getCodeBlockFileName(
     return StringPrimitive::createEfficient(
         runtime, debugInfo->getFilenameByID(location->filenameId));
   } else {
-    llvm::StringRef sourceURL = runtimeModule->getSourceURL();
+    llvh::StringRef sourceURL = runtimeModule->getSourceURL();
     if (!sourceURL.empty()) {
       return StringPrimitive::createEfficient(runtime, sourceURL);
     }
@@ -957,21 +736,6 @@ Handle<JSObject> createHermesInternalObject(
   defineInternMethod(P::ttrcReached, hermesInternalTTRCReached);
   defineInternMethod(P::getFunctionLocation, hermesInternalGetFunctionLocation);
 
-#ifdef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
-  defineInternMethodAndSymbol("executeCall", hermesInternalExecuteCall);
-  defineInternMethodAndSymbol("getSubstitution", hermesInternalGetSubstitution);
-  defineInternMethodAndSymbol("isConstructor", hermesInternalIsConstructor);
-  defineInternMethodAndSymbol("isRegExp", hermesInternalIsRegExp);
-  defineInternMethodAndSymbol(
-      "jsArraySetElementAt", hermesInternalJSArraySetElementAt);
-  defineInternMethodAndSymbol("regExpCreate", hermesInternalRegExpCreate);
-  defineInternMethodAndSymbol("regExpExec", hermesInternalRegExpExec);
-  defineInternMethodAndSymbol("searchString", hermesInternalSearchString);
-  defineInternMethodAndSymbol("toInteger", hermesInternalToInteger);
-  defineInternMethodAndSymbol("toLength", hermesInternalToLength);
-  defineInternMethodAndSymbol("toObject", hermesInternalToObject);
-  defineInternMethodAndSymbol("toString", hermesInternalToString);
-#endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 #ifdef HERMESVM_EXCEPTION_ON_OOM
   defineInternMethodAndSymbol("getCallStack", hermesInternalGetCallStack, 0);
 #endif // HERMESVM_EXCEPTION_ON_OOM
@@ -986,14 +750,14 @@ Handle<JSObject> createHermesInternalObject(
       runtime,
       Predefined::getSymbolID(Predefined::concat));
   assert(
-      propRes != ExecutionStatus::EXCEPTION && !propRes->isUndefined() &&
+      propRes != ExecutionStatus::EXCEPTION && !(*propRes)->isUndefined() &&
       "Failed to get String.prototype.concat.");
   auto putRes = JSObject::defineOwnProperty(
       intern,
       runtime,
       Predefined::getSymbolID(Predefined::concat),
       constantDPF,
-      runtime->makeHandle(*propRes));
+      runtime->makeHandle(std::move(*propRes)));
   assert(
       putRes != ExecutionStatus::EXCEPTION && *putRes &&
       "Failed to set HermesInternal.concat.");

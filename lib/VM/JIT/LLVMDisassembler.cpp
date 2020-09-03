@@ -9,45 +9,45 @@
 
 #include "hermes/VM/JIT/LLVMDisassembler.h"
 
-#include "llvm/MC/MCAsmBackend.h"
-#include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCCodeEmitter.h"
-#include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDisassembler/MCDisassembler.h"
-#include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCInstPrinter.h"
-#include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCObjectFileInfo.h"
-#include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/TargetRegistry.h"
-#include "llvm/Support/TargetSelect.h"
+#include "llvh/MC/MCAsmBackend.h"
+#include "llvh/MC/MCAsmInfo.h"
+#include "llvh/MC/MCCodeEmitter.h"
+#include "llvh/MC/MCContext.h"
+#include "llvh/MC/MCDisassembler/MCDisassembler.h"
+#include "llvh/MC/MCInst.h"
+#include "llvh/MC/MCInstPrinter.h"
+#include "llvh/MC/MCInstrInfo.h"
+#include "llvh/MC/MCObjectFileInfo.h"
+#include "llvh/MC/MCRegisterInfo.h"
+#include "llvh/MC/MCStreamer.h"
+#include "llvh/MC/MCSubtargetInfo.h"
+#include "llvh/Support/TargetRegistry.h"
+#include "llvh/Support/TargetSelect.h"
 
 namespace hermes {
 namespace vm {
 
 static void initLLVM() {
   // Initialize targets and assembly printers/parsers.
-  llvm::InitializeAllTargetInfos();
-  llvm::InitializeAllTargetMCs();
-  llvm::InitializeAllAsmParsers();
-  llvm::InitializeAllDisassemblers();
+  llvh::InitializeAllTargetInfos();
+  llvh::InitializeAllTargetMCs();
+  llvh::InitializeAllAsmParsers();
+  llvh::InitializeAllDisassemblers();
 }
 
 class LLVMDisassembler::Impl {
-  std::unique_ptr<llvm::MCRegisterInfo> MRI_;
-  std::unique_ptr<llvm::MCAsmInfo> MAI_;
-  std::unique_ptr<llvm::MCObjectFileInfo> MOFI_;
-  std::unique_ptr<llvm::MCContext> ctx_;
-  std::unique_ptr<llvm::MCInstrInfo> MCII_;
+  std::unique_ptr<llvh::MCRegisterInfo> MRI_;
+  std::unique_ptr<llvh::MCAsmInfo> MAI_;
+  std::unique_ptr<llvh::MCObjectFileInfo> MOFI_;
+  std::unique_ptr<llvh::MCContext> ctx_;
+  std::unique_ptr<llvh::MCInstrInfo> MCII_;
 
-  llvm::SmallString<64> buf_;
-  llvm::raw_svector_ostream OS_{buf_};
+  llvh::SmallString<64> buf_;
+  llvh::raw_svector_ostream OS_{buf_};
 
-  std::unique_ptr<llvm::MCStreamer> streamer_;
-  std::unique_ptr<llvm::MCSubtargetInfo> STI_;
-  std::unique_ptr<const llvm::MCDisassembler> disAsm_;
+  std::unique_ptr<llvh::MCStreamer> streamer_;
+  std::unique_ptr<llvh::MCSubtargetInfo> STI_;
+  std::unique_ptr<const llvh::MCDisassembler> disAsm_;
 
  public:
   Impl(const char *tripleName, unsigned asmOutputVariant);
@@ -58,8 +58,8 @@ class LLVMDisassembler::Impl {
   /// \param[out] size is initialized with the byte size of the decoded
   ///   instruction.
   /// \return the instruction string on success or an empty optional on error.
-  llvm::Optional<llvm::StringRef> formatInstruction(
-      llvm::ArrayRef<uint8_t> bytes,
+  llvh::Optional<llvh::StringRef> formatInstruction(
+      llvh::ArrayRef<uint8_t> bytes,
       uint64_t address,
       uint64_t &size);
 };
@@ -72,12 +72,12 @@ LLVMDisassembler::Impl::Impl(
   (void)dummyInit;
 
   // Obtain the target.
-  llvm::Triple triple{llvm::Triple::normalize(tripleName)};
+  llvh::Triple triple{llvh::Triple::normalize(tripleName)};
   std::string error;
-  auto *target = llvm::TargetRegistry::lookupTarget("", triple, error);
+  auto *target = llvh::TargetRegistry::lookupTarget("", triple, error);
   if (!target) {
-    llvm::report_fatal_error(
-        llvm::Twine("Can't get target for triple ") + tripleName);
+    llvh::report_fatal_error(
+        llvh::Twine("Can't get target for triple ") + tripleName);
   }
 
   MRI_.reset(target->createMCRegInfo(triple.getTriple()));
@@ -87,18 +87,18 @@ LLVMDisassembler::Impl::Impl(
   assert(MAI_ && "Unable to create target asm info!");
 
   // Note circular dependency between MOFI_ and ctx_.
-  MOFI_.reset(new llvm::MCObjectFileInfo());
-  ctx_.reset(new llvm::MCContext(MAI_.get(), MRI_.get(), MOFI_.get()));
+  MOFI_.reset(new llvh::MCObjectFileInfo());
+  ctx_.reset(new llvh::MCContext(MAI_.get(), MRI_.get(), MOFI_.get()));
   MOFI_->InitMCObjectFileInfo(triple, true, *ctx_);
 
   MCII_.reset(target->createMCInstrInfo());
 
-  std::unique_ptr<llvm::MCInstPrinter> IP{target->createMCInstPrinter(
+  std::unique_ptr<llvh::MCInstPrinter> IP{target->createMCInstPrinter(
       triple, asmOutputVariant, *MAI_, *MCII_, *MRI_)};
 
   streamer_.reset(target->createAsmStreamer(
       *ctx_,
-      llvm::make_unique<llvm::formatted_raw_ostream>(OS_),
+      llvh::make_unique<llvh::formatted_raw_ostream>(OS_),
       /*asmverbose*/ true,
       /*useDwarfDirectory*/ true,
       IP.release(),
@@ -112,28 +112,28 @@ LLVMDisassembler::Impl::Impl(
   STI_.reset(target->createMCSubtargetInfo(triple.getTriple(), "", ""));
   disAsm_.reset(target->createMCDisassembler(*STI_, *ctx_));
   if (!disAsm_) {
-    llvm::report_fatal_error(
-        llvm::Twine("No disassembler for triple") + tripleName);
+    llvh::report_fatal_error(
+        llvh::Twine("No disassembler for triple") + tripleName);
   }
 }
 
-llvm::Optional<llvm::StringRef> LLVMDisassembler::Impl::formatInstruction(
-    llvm::ArrayRef<uint8_t> bytes,
+llvh::Optional<llvh::StringRef> LLVMDisassembler::Impl::formatInstruction(
+    llvh::ArrayRef<uint8_t> bytes,
     uint64_t address,
     uint64_t &size) {
-  llvm::MCInst inst;
-  llvm::MCDisassembler::DecodeStatus status;
+  llvh::MCInst inst;
+  llvh::MCDisassembler::DecodeStatus status;
 
   status = disAsm_->getInstruction(
-      inst, size, bytes, address, /*REMOVE*/ llvm::nulls(), llvm::nulls());
+      inst, size, bytes, address, /*REMOVE*/ llvh::nulls(), llvh::nulls());
   switch (status) {
-    case llvm::MCDisassembler::Fail:
+    case llvh::MCDisassembler::Fail:
       if (size == 0)
         size = 1; // skip illegible bytes
-      return llvm::None;
+      return llvh::None;
 
-    case llvm::MCDisassembler::SoftFail:
-    case llvm::MCDisassembler::Success:
+    case llvh::MCDisassembler::SoftFail:
+    case llvh::MCDisassembler::Success:
       buf_.clear();
       streamer_->EmitInstruction(inst, *STI_);
       // Remove trailing "\n".
@@ -154,8 +154,8 @@ LLVMDisassembler::~LLVMDisassembler() {
   delete impl_;
 }
 
-llvm::Optional<llvm::StringRef> LLVMDisassembler::formatInstruction(
-    llvm::ArrayRef<uint8_t> bytes,
+llvh::Optional<llvh::StringRef> LLVMDisassembler::formatInstruction(
+    llvh::ArrayRef<uint8_t> bytes,
     uint64_t address,
     uint64_t &size) {
   return impl_->formatInstruction(bytes, address, size);

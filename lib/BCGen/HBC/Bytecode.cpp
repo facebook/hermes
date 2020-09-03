@@ -8,7 +8,7 @@
 #include "hermes/BCGen/HBC/Bytecode.h"
 #include "hermes/SourceMap/SourceMapGenerator.h"
 
-#include "llvm/ADT/SmallVector.h"
+#include "llvh/ADT/SmallVector.h"
 
 using namespace hermes;
 using namespace hbc;

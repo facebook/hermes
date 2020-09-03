@@ -12,18 +12,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/APSInt.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Config/llvm-config.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/APFloat.h"
+#include "llvh/ADT/APSInt.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/FoldingSet.h"
+#include "llvh/ADT/Hashing.h"
+#include "llvh/ADT/StringExtras.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/Config/llvm-config.h"
+#include "llvh/Support/Debug.h"
+#include "llvh/Support/ErrorHandling.h"
+#include "llvh/Support/MathExtras.h"
+#include "llvh/Support/raw_ostream.h"
 #include <cstring>
 #include <limits.h>
 
@@ -36,7 +36,7 @@
     llvm_unreachable("Unexpected semantics");                                  \
   } while (false)
 
-using namespace llvm;
+using namespace llvh;
 
 /// A macro used to combine two fcCategory enums into one key which can be used
 /// in a switch statement to classify how the interaction of two APFloat's
@@ -50,7 +50,7 @@ using namespace llvm;
    hexadecimal strings.  */
 static_assert(APFloatBase::integerPartWidth % 4 == 0, "Part width must be divisible by 4!");
 
-namespace llvm {
+namespace llvh {
   /* Represents floating point arithmetic semantics.  */
   struct fltSemantics {
     /* The largest E such that 2^E is representable; this matches the
@@ -2795,7 +2795,7 @@ hash_code hash_value(const IEEEFloat &Arg) {
 // the actual IEEE respresentations.  We compensate for that here.
 
 APInt IEEEFloat::convertF80LongDoubleAPFloatToAPInt() const {
-  assert(semantics == (const llvm::fltSemantics*)&semX87DoubleExtended);
+  assert(semantics == (const llvh::fltSemantics*)&semX87DoubleExtended);
   assert(partCount()==2);
 
   uint64_t myexponent, mysignificand;
@@ -2825,7 +2825,7 @@ APInt IEEEFloat::convertF80LongDoubleAPFloatToAPInt() const {
 }
 
 APInt IEEEFloat::convertPPCDoubleDoubleAPFloatToAPInt() const {
-  assert(semantics == (const llvm::fltSemantics *)&semPPCDoubleDoubleLegacy);
+  assert(semantics == (const llvh::fltSemantics *)&semPPCDoubleDoubleLegacy);
   assert(partCount()==2);
 
   uint64_t words[2];
@@ -2874,7 +2874,7 @@ APInt IEEEFloat::convertPPCDoubleDoubleAPFloatToAPInt() const {
 }
 
 APInt IEEEFloat::convertQuadrupleAPFloatToAPInt() const {
-  assert(semantics == (const llvm::fltSemantics*)&semIEEEquad);
+  assert(semantics == (const llvh::fltSemantics*)&semIEEEquad);
   assert(partCount()==2);
 
   uint64_t myexponent, mysignificand, mysignificand2;
@@ -2908,7 +2908,7 @@ APInt IEEEFloat::convertQuadrupleAPFloatToAPInt() const {
 }
 
 APInt IEEEFloat::convertDoubleAPFloatToAPInt() const {
-  assert(semantics == (const llvm::fltSemantics*)&semIEEEdouble);
+  assert(semantics == (const llvh::fltSemantics*)&semIEEEdouble);
   assert(partCount()==1);
 
   uint64_t myexponent, mysignificand;
@@ -2936,7 +2936,7 @@ APInt IEEEFloat::convertDoubleAPFloatToAPInt() const {
 }
 
 APInt IEEEFloat::convertFloatAPFloatToAPInt() const {
-  assert(semantics == (const llvm::fltSemantics*)&semIEEEsingle);
+  assert(semantics == (const llvh::fltSemantics*)&semIEEEsingle);
   assert(partCount()==1);
 
   uint32_t myexponent, mysignificand;
@@ -2963,7 +2963,7 @@ APInt IEEEFloat::convertFloatAPFloatToAPInt() const {
 }
 
 APInt IEEEFloat::convertHalfAPFloatToAPInt() const {
-  assert(semantics == (const llvm::fltSemantics*)&semIEEEhalf);
+  assert(semantics == (const llvh::fltSemantics*)&semIEEEhalf);
   assert(partCount()==1);
 
   uint32_t myexponent, mysignificand;
@@ -2994,35 +2994,35 @@ APInt IEEEFloat::convertHalfAPFloatToAPInt() const {
 // and treating the result as a normal integer is unlikely to be useful.
 
 APInt IEEEFloat::bitcastToAPInt() const {
-  if (semantics == (const llvm::fltSemantics*)&semIEEEhalf)
+  if (semantics == (const llvh::fltSemantics*)&semIEEEhalf)
     return convertHalfAPFloatToAPInt();
 
-  if (semantics == (const llvm::fltSemantics*)&semIEEEsingle)
+  if (semantics == (const llvh::fltSemantics*)&semIEEEsingle)
     return convertFloatAPFloatToAPInt();
 
-  if (semantics == (const llvm::fltSemantics*)&semIEEEdouble)
+  if (semantics == (const llvh::fltSemantics*)&semIEEEdouble)
     return convertDoubleAPFloatToAPInt();
 
-  if (semantics == (const llvm::fltSemantics*)&semIEEEquad)
+  if (semantics == (const llvh::fltSemantics*)&semIEEEquad)
     return convertQuadrupleAPFloatToAPInt();
 
-  if (semantics == (const llvm::fltSemantics *)&semPPCDoubleDoubleLegacy)
+  if (semantics == (const llvh::fltSemantics *)&semPPCDoubleDoubleLegacy)
     return convertPPCDoubleDoubleAPFloatToAPInt();
 
-  assert(semantics == (const llvm::fltSemantics*)&semX87DoubleExtended &&
+  assert(semantics == (const llvh::fltSemantics*)&semX87DoubleExtended &&
          "unknown format!");
   return convertF80LongDoubleAPFloatToAPInt();
 }
 
 float IEEEFloat::convertToFloat() const {
-  assert(semantics == (const llvm::fltSemantics*)&semIEEEsingle &&
+  assert(semantics == (const llvh::fltSemantics*)&semIEEEsingle &&
          "Float semantics are not IEEEsingle");
   APInt api = bitcastToAPInt();
   return api.bitsToFloat();
 }
 
 double IEEEFloat::convertToDouble() const {
-  assert(semantics == (const llvm::fltSemantics*)&semIEEEdouble &&
+  assert(semantics == (const llvh::fltSemantics*)&semIEEEdouble &&
          "Float semantics are not IEEEdouble");
   APInt api = bitcastToAPInt();
   return api.bitsToDouble();

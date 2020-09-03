@@ -218,6 +218,13 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
       ctx,
       stringRaw,
       1);
+  defineMethod(
+      runtime,
+      stringPrototype,
+      Predefined::getSymbolID(Predefined::matchAll),
+      ctx,
+      stringPrototypeMatchAll,
+      1);
 
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
   defineMethod(
@@ -388,7 +395,7 @@ stringFromCodePoint(void *, Runtime *runtime, NativeArgs args) {
   // 2. Let length be the number of elements in codePoints.
   uint32_t length = args.getArgCount();
   // 3. Let elements be a new List.
-  llvm::SmallVector<char16_t, 32> elements{};
+  llvh::SmallVector<char16_t, 32> elements{};
   // 4. Let nextIndex be 0.
   uint32_t nextIndex = 0;
 
@@ -463,7 +470,7 @@ CallResult<HermesValue> stringRaw(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(getRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto rawRes = toObject(runtime, runtime->makeHandle(*getRes));
+  auto rawRes = toObject(runtime, runtime->makeHandle(std::move(*getRes)));
   if (LLVM_UNLIKELY(rawRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -475,7 +482,8 @@ CallResult<HermesValue> stringRaw(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(lengthRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto literalSegmentsRes = toLength(runtime, runtime->makeHandle(*lengthRes));
+  auto literalSegmentsRes =
+      toLength(runtime, runtime->makeHandle(std::move(*lengthRes)));
   if (LLVM_UNLIKELY(literalSegmentsRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -487,7 +495,7 @@ CallResult<HermesValue> stringRaw(void *, Runtime *runtime, NativeArgs args) {
   }
 
   // 10. Let stringElements be a new List.
-  llvm::SmallVector<char16_t, 32> stringElements{};
+  llvh::SmallVector<char16_t, 32> stringElements{};
 
   // 11. Let nextIndex be 0.
   MutableHandle<> nextIndex{runtime, HermesValue::encodeNumberValue(0)};
@@ -506,7 +514,7 @@ CallResult<HermesValue> stringRaw(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(nextSegPropRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    tmpHandle = *nextSegPropRes;
+    tmpHandle = std::move(*nextSegPropRes);
     auto nextSegRes = toString_RJS(runtime, tmpHandle);
     if (LLVM_UNLIKELY(nextSegRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -515,7 +523,7 @@ CallResult<HermesValue> stringRaw(void *, Runtime *runtime, NativeArgs args) {
 
     // 12. d. Append in order the code unit elements of nextSeg to the end of
     // stringElements.
-    nextSeg->copyUTF16String(stringElements);
+    nextSeg->appendUTF16String(stringElements);
 
     // 12. e. If nextIndex + 1 = literalSegments, then
     if (nextIndex->getNumberAs<int64_t>() + 1 == literalSegments) {
@@ -538,7 +546,7 @@ CallResult<HermesValue> stringRaw(void *, Runtime *runtime, NativeArgs args) {
       nextSub = nextSubRes->get();
       // 12. j. Append in order the code unit elements of nextSub to the end of
       // stringElements.
-      nextSub->copyUTF16String(stringElements);
+      nextSub->appendUTF16String(stringElements);
     }
 
     // 12. g. Else, let next be the empty String.
@@ -716,245 +724,6 @@ stringPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
   return builder->getStringPrimitive().getHermesValue();
 }
 
-/// Works slightly differently from the given implementation in the spec.
-/// Given a string \p S and a starting point \p q, finds the first match of
-/// \p R such that it starts on or after index \p q in \p S.
-/// \param q starting point in S. Requires: q <= S->getStringLength().
-/// \param R a RegExp or a String.
-static CallResult<RegExpMatch> splitMatch(
-    Runtime *runtime,
-    Handle<StringPrimitive> S,
-    uint32_t q,
-    Handle<> R) {
-  if (auto regexp = Handle<JSRegExp>::dyn_vmcast(R)) {
-    return JSRegExp::search(regexp, runtime, S, q);
-  }
-
-  // Not searching for a RegExp, manually do string matching.
-  auto RHandle = Handle<StringPrimitive>::dyn_vmcast(R);
-  assert(RHandle && "SplitMatch() called without RegExp or String");
-
-  auto SStr = StringPrimitive::createStringView(runtime, S);
-  auto RStr = StringPrimitive::createStringView(runtime, RHandle);
-  RegExpMatch match{};
-
-  // Handle empty string separately.
-  if (SStr.empty()) {
-    if (RStr.empty()) {
-      match.push_back({{0, 0}});
-    }
-    return match;
-  }
-
-  auto sliced = SStr.slice(q);
-  auto searchResult =
-      std::search(sliced.begin(), sliced.end(), RStr.begin(), RStr.end());
-
-  if (searchResult != sliced.end()) {
-    uint32_t i = q + (searchResult - sliced.begin());
-    match.push_back({{i, RHandle->getStringLength()}});
-  }
-  return match;
-}
-
-// TODO: implement this following ES6 21.2.5.11.
-CallResult<HermesValue> splitInternal(
-    Runtime *runtime,
-    Handle<> string,
-    Handle<> limit,
-    Handle<> separator) {
-  auto strRes = toString_RJS(runtime, string);
-  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto S = runtime->makeHandle(std::move(*strRes));
-  // Final array.
-  auto arrRes = JSArray::create(runtime, 0, 0);
-  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto A = runtime->makeHandle(std::move(*arrRes));
-  uint32_t lengthA = 0;
-
-  // Limit on the number of items allowed in the result array.
-  uint32_t lim;
-  if (limit->isUndefined()) {
-    // No limit supplied, make it max.
-    lim = 0xffffffff; // 2 ^ 32 - 1
-  } else {
-    auto intRes = toUInt32_RJS(runtime, limit);
-    if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    lim = intRes->getNumber();
-  }
-
-  // The pattern which we want to separate on. Can be a JSRegExp or a string.
-  // TODO: implement sticky ('y') flag behavior.
-  bool unicodeMatching = false;
-  MutableHandle<> R{runtime};
-  if (vmisa<JSRegExp>(separator.get())) {
-    R = separator.get();
-    unicodeMatching =
-        JSRegExp::getFlagBits(vmcast<JSRegExp>(separator.get())).unicode;
-  } else {
-    auto strRes = toString_RJS(runtime, separator);
-    if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    R = strRes->getHermesValue();
-  }
-
-  if (lim == 0) {
-    // Don't want any elements, so we're done.
-    return A.getHermesValue();
-  }
-
-  // If there's no separator, then don't split the string and return.
-  if (LLVM_UNLIKELY(separator->isUndefined())) {
-    (void)JSArray::setElementAt(A, runtime, 0, S);
-    if (LLVM_UNLIKELY(
-            JSArray::setLengthProperty(A, runtime, 1) ==
-            ExecutionStatus::EXCEPTION))
-      return ExecutionStatus::EXCEPTION;
-    return A.getHermesValue();
-  }
-
-  uint32_t s = S->getStringLength();
-
-  if (s == 0) {
-    // S is the empty string.
-    auto matchResult = splitMatch(runtime, S, 0, R);
-    if (LLVM_UNLIKELY(matchResult == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    } else if (!matchResult->empty()) {
-      // Matched the entirety of S, so return the empty array.
-      return A.getHermesValue();
-    }
-    // Didn't match S, so add it to the array and return.
-    (void)JSArray::setElementAt(A, runtime, 0, S);
-    if (LLVM_UNLIKELY(
-            JSArray::setLengthProperty(A, runtime, 1) ==
-            ExecutionStatus::EXCEPTION))
-      return ExecutionStatus::EXCEPTION;
-    return A.getHermesValue();
-  }
-
-  // End of the last match.
-  uint32_t p = 0;
-  // Place to attempt the start of the next match.
-  uint32_t q = p;
-
-  GCScopeMarkerRAII gcMarker{runtime};
-
-  // Main loop: continue while we have space to find another match.
-  while (q < s) {
-    gcMarker.flush();
-
-    // Find the next valid match. We know that q < s.
-    // ES5.1's SplitMatch only finds matches at q, but we find matches at or
-    // after q, so if it fails, we know we're done.
-    auto matchResult = splitMatch(runtime, S, q, R);
-
-    if (LLVM_UNLIKELY(matchResult == ExecutionStatus::EXCEPTION))
-      return ExecutionStatus::EXCEPTION;
-
-    auto match = *matchResult;
-
-    if (match.empty()) {
-      // There's no matches at or after index q, so we're done searching.
-      // Note: This behavior differs from the spec implementation,
-      // because we check for matches at or after q.
-      break;
-    }
-    // Found a match, so go ahead and update q and e,
-    // such that the match is the range [q,e).
-    q = match[0]->location;
-    uint32_t e = q + match[0]->length;
-    if (e == p) {
-      // The end of this match is the same as the end of the last match,
-      // so we matched with the empty string.
-      // We don't want to match the empty string at this location again,
-      // so increment q in order to start the next search at the next position.
-      // ES6 21.2.5.11:
-      // If e = p, let q be AdvanceStringIndex(S, q, unicodeMatching).
-      q = advanceStringIndex(S.get(), q, unicodeMatching);
-    } else {
-      // Found a non-empty string match.
-      // Add everything from the last match to the current one to A.
-      // This has length q-p because q is the start of the current match,
-      // and p was the end (exclusive) of the last match.
-      auto strRes = StringPrimitive::slice(runtime, S, p, q - p);
-      if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      JSArray::setElementAt(
-          A, runtime, lengthA, runtime->makeHandle<StringPrimitive>(*strRes));
-      ++lengthA;
-      if (lengthA == lim) {
-        // Reached the limit, return early.
-        if (LLVM_UNLIKELY(
-                JSArray::setLengthProperty(A, runtime, lengthA) ==
-                ExecutionStatus::EXCEPTION))
-          return ExecutionStatus::EXCEPTION;
-        return A.getHermesValue();
-      }
-      // Update p to point to the end of this match, maintaining the
-      // invariant that it points to the end of the last match encountered.
-      p = e;
-      // Add all the capture groups to A. Start at i=1 to skip the full match.
-      for (uint32_t i = 1, m = match.size(); i < m; ++i) {
-        const auto &range = match[i];
-        if (!range) {
-          JSArray::setElementAt(
-              A, runtime, lengthA, Runtime::getUndefinedValue());
-        } else {
-          if (LLVM_UNLIKELY(
-                  (strRes = StringPrimitive::slice(
-                       runtime, S, range->location, range->length)) ==
-                  ExecutionStatus::EXCEPTION)) {
-            return ExecutionStatus::EXCEPTION;
-          }
-          JSArray::setElementAt(
-              A,
-              runtime,
-              lengthA,
-              runtime->makeHandle<StringPrimitive>(*strRes));
-        }
-        ++lengthA;
-        if (lengthA == lim) {
-          // Reached the limit, return early.
-          if (LLVM_UNLIKELY(
-                  JSArray::setLengthProperty(A, runtime, lengthA) ==
-                  ExecutionStatus::EXCEPTION))
-            return ExecutionStatus::EXCEPTION;
-          return A.getHermesValue();
-        }
-      }
-      // Start position of the next search is updated to the end of this match.
-      q = p;
-    }
-  }
-
-  // Add the rest of the string (after the last match) to A.
-  auto elementStrRes = StringPrimitive::slice(runtime, S, p, s - p);
-  if (LLVM_UNLIKELY(elementStrRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  JSArray::setElementAt(
-      A,
-      runtime,
-      lengthA,
-      runtime->makeHandle<StringPrimitive>(*elementStrRes));
-  ++lengthA;
-
-  if (LLVM_UNLIKELY(
-          JSArray::setLengthProperty(A, runtime, lengthA) ==
-          ExecutionStatus::EXCEPTION))
-    return ExecutionStatus::EXCEPTION;
-  return A.getHermesValue();
-}
-
 CallResult<HermesValue>
 stringPrototypeSubstring(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(
@@ -1004,7 +773,7 @@ static CallResult<HermesValue> convertCase(
   SmallU16String<32> buff;
   // Must copy instead of just getting the reference, because later operations
   // may trigger GC and hence invalid pointers inside S.
-  S->copyUTF16String(buff);
+  S->appendUTF16String(buff);
   UTF16Ref str = buff.arrayRef();
 
   if (!useCurrentLocale) {
@@ -1094,7 +863,10 @@ stringPrototypeToLowerCase(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringPrototypeToLocaleLowerCase(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeToLocaleLowerCase(void *ctx, Runtime *runtime, NativeArgs args) {
+#ifdef HERMES_PLATFORM_INTL
+  return intlStringPrototypeToLocaleLowerCase(/* unused */ ctx, runtime, args);
+#else
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
           ExecutionStatus::EXCEPTION)) {
@@ -1106,6 +878,7 @@ stringPrototypeToLocaleLowerCase(void *, Runtime *runtime, NativeArgs args) {
   }
   return convertCase(
       runtime, runtime->makeHandle(std::move(*res)), false, true);
+#endif
 }
 
 CallResult<HermesValue>
@@ -1124,7 +897,10 @@ stringPrototypeToUpperCase(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringPrototypeToLocaleUpperCase(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeToLocaleUpperCase(void *ctx, Runtime *runtime, NativeArgs args) {
+#ifdef HERMES_PLATFORM_INTL
+  return intlStringPrototypeToLocaleUpperCase(/* unused */ ctx, runtime, args);
+#else
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
           ExecutionStatus::EXCEPTION)) {
@@ -1135,7 +911,9 @@ stringPrototypeToLocaleUpperCase(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   return convertCase(runtime, runtime->makeHandle(std::move(*res)), true, true);
+#endif
 }
+
 CallResult<HermesValue>
 stringPrototypeSubstr(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(
@@ -1289,7 +1067,10 @@ stringPrototypeTrimEnd(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringPrototypeLocaleCompare(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeLocaleCompare(void *ctx, Runtime *runtime, NativeArgs args) {
+#ifdef HERMES_PLATFORM_INTL
+  return intlStringPrototypeLocaleCompare(/* unused */ ctx, runtime, args);
+#else
   auto thisValue = args.getThisHandle();
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, thisValue) ==
@@ -1309,14 +1090,15 @@ stringPrototypeLocaleCompare(void *, Runtime *runtime, NativeArgs args) {
   // "That" string.
   auto T = runtime->makeHandle(std::move(*tRes));
 
-  llvm::SmallVector<char16_t, 32> left;
-  llvm::SmallVector<char16_t, 32> right;
+  llvh::SmallVector<char16_t, 32> left;
+  llvh::SmallVector<char16_t, 32> right;
 
-  StringPrimitive::createStringView(runtime, S).copyUTF16String(left);
-  StringPrimitive::createStringView(runtime, T).copyUTF16String(right);
+  StringPrimitive::createStringView(runtime, S).appendUTF16String(left);
+  StringPrimitive::createStringView(runtime, T).appendUTF16String(right);
   int comparisonResult = platform_unicode::localeCompare(left, right);
   assert(comparisonResult >= -1 && comparisonResult <= 1);
   return HermesValue::encodeNumberValue(comparisonResult);
+#endif
 }
 
 CallResult<HermesValue>
@@ -1369,8 +1151,8 @@ stringPrototypeNormalize(void *, Runtime *runtime, NativeArgs args) {
   // 8. Let ns be the String value that is the result of normalizing S into the
   // normalization form named by f as specified in
   // http://www.unicode.org/reports/tr15/tr15-29.html.
-  llvm::SmallVector<char16_t, 32> ns;
-  S->copyUTF16String(ns);
+  llvh::SmallVector<char16_t, 32> ns;
+  S->appendUTF16String(ns);
   platform_unicode::normalize(ns, form);
 
   // 9. Return ns.
@@ -1441,21 +1223,125 @@ stringPrototypeRepeat(void *, Runtime *runtime, NativeArgs args) {
   return builderRes->getStringPrimitive().getHermesValue();
 }
 
+/// ES6.0 21.1.3.27 String.prototype [ @@iterator ]( )
 CallResult<HermesValue>
 stringPrototypeSymbolIterator(void *, Runtime *runtime, NativeArgs args) {
+  // 1. Let O be RequireObjectCoercible(this value).
   auto thisValue = args.getThisHandle();
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, thisValue) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
+  // 2. Let S be ToString(O).
+  // 3. ReturnIfAbrupt(S).
   auto strRes = toString_RJS(runtime, thisValue);
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   auto string = runtime->makeHandle(std::move(*strRes));
 
-  return JSStringIterator::create(runtime, string);
+  // 4. Return CreateStringIterator(S).
+  return JSStringIterator::create(runtime, string).getHermesValue();
+}
+
+CallResult<HermesValue>
+stringPrototypeMatchAll(void *, Runtime *runtime, NativeArgs args) {
+  // 1. Let O be ? RequireObjectCoercible(this value).
+  auto O = args.getThisHandle();
+  if (LLVM_UNLIKELY(
+          checkObjectCoercible(runtime, O) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 2. If regexp is neither undefined nor null, then
+  auto regexp = args.getArgHandle(0);
+  if (!regexp->isUndefined() && !regexp->isNull()) {
+    // a. Let isRegExp be ? IsRegExp(regexp).
+    auto isRegExpRes = isRegExp(runtime, regexp);
+    if (LLVM_UNLIKELY(isRegExpRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    // b. If isRegExp is true, then
+    if (*isRegExpRes) {
+      // Passing undefined and null checks imply regexp is an ObjectCoercible.
+      Handle<JSObject> regexpObj = Handle<JSObject>::vmcast(regexp);
+      bool isGlobal = false;
+      // i. Let flags be ? Get(regexp, "flags").
+      auto flagsPropRes = JSObject::getNamed_RJS(
+          regexpObj, runtime, Predefined::getSymbolID(Predefined::flags));
+      if (LLVM_UNLIKELY(flagsPropRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      auto flags = runtime->makeHandle(std::move(*flagsPropRes));
+      // ii. Perform ? RequireObjectCoercible(flags).
+      if (LLVM_UNLIKELY(
+              checkObjectCoercible(runtime, flags) ==
+              ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      // iii. If ? ToString(flags) does not contain "g", throw a TypeError
+      // exception.
+      auto strRes = toString_RJS(runtime, flags);
+      if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      auto strView = StringPrimitive::createStringView(
+          runtime, runtime->makeHandle(std::move(*strRes)));
+      for (char16_t c : strView)
+        if (c == u'g')
+          isGlobal = true;
+      if (!isGlobal)
+        return runtime->raiseTypeError(
+            "String.prototype.matchAll called with a non-global RegExp argument");
+    }
+    // c. Let matcher be ? GetMethod(regexp, @@matchAll).
+    auto matcherRes = getMethod(
+        runtime,
+        regexp,
+        runtime->makeHandle(
+            Predefined::getSymbolID(Predefined::SymbolMatchAll)));
+    if (LLVM_UNLIKELY(matcherRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    // d. If matcher is not undefined, then
+    if (!matcherRes->getHermesValue().isUndefined()) {
+      auto matcher = runtime->makeHandle<Callable>(std::move(*matcherRes));
+      // i. Return ? Call(matcher, regexp, «O»).
+      return Callable::executeCall1(
+                 matcher, runtime, regexp, O.getHermesValue())
+          .toCallResultHermesValue();
+    }
+  }
+
+  // 3. Let S be ? ToString(O).
+  auto strRes = toString_RJS(runtime, O);
+  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto S = runtime->makeHandle(std::move(*strRes));
+
+  // 4. Let rx be ? RegExpCreate(regexp, "g").
+  auto regRes = regExpCreate(runtime, regexp, runtime->getCharacterString('g'));
+  if (regRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  Handle<JSRegExp> rx = regRes.getValue();
+
+  // 5. Return ? Invoke(rx, @@matchAll, «S»).
+  auto propRes = JSObject::getNamed_RJS(
+      rx, runtime, Predefined::getSymbolID(Predefined::SymbolMatchAll));
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto func =
+      Handle<Callable>::dyn_vmcast(runtime->makeHandle(std::move(*propRes)));
+  if (LLVM_UNLIKELY(!func)) {
+    return runtime->raiseTypeError(
+        "RegExp.prototype[@@matchAll] must be callable.");
+  }
+  return Callable::executeCall1(func, runtime, rx, S.getHermesValue())
+      .toCallResultHermesValue();
 }
 
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
@@ -1483,10 +1369,10 @@ stringPrototypeMatch(void *, Runtime *runtime, NativeArgs args) {
     // c. If matcher is not undefined, then
     //   i. Return Call(matcher, regexp, «‍O»).
     if (!methodRes->getHermesValue().isUndefined()) {
-      Handle<Callable> matcher =
-          Handle<Callable>::vmcast(runtime, methodRes->getHermesValue());
+      auto matcher = runtime->makeHandle<Callable>(std::move(*methodRes));
       return Callable::executeCall1(
-          matcher, runtime, regexp, O.getHermesValue());
+                 matcher, runtime, regexp, O.getHermesValue())
+          .toCallResultHermesValue();
     }
   }
   // 4. Let S be ToString(O).
@@ -1511,13 +1397,14 @@ stringPrototypeMatch(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto func = dyn_vmcast<Callable>(propRes.getValue());
+  auto func =
+      Handle<Callable>::dyn_vmcast(runtime->makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(!func)) {
     return runtime->raiseTypeError(
         "RegExp.prototype[@@match] must be callable.");
   }
-  return Callable::executeCall1(
-      runtime->makeHandle(func), runtime, rx, S.getHermesValue());
+  return Callable::executeCall1(func, runtime, rx, S.getHermesValue())
+      .toCallResultHermesValue();
 }
 
 CallResult<HermesValue>
@@ -1658,11 +1545,12 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
       Handle<Callable> replacer =
           Handle<Callable>::vmcast(runtime, methodRes->getHermesValue());
       return Callable::executeCall2(
-          replacer,
-          runtime,
-          searchValue,
-          O.getHermesValue(),
-          replaceValue.getHermesValue());
+                 replacer,
+                 runtime,
+                 searchValue,
+                 O.getHermesValue(),
+                 replaceValue.getHermesValue())
+          .toCallResultHermesValue();
     }
   }
   // 4. Let string be ToString(O).
@@ -1691,7 +1579,7 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(replaceValueStrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    replaceValueStr = replaceValueStrRes->get();
+    replaceValueStr = std::move(*replaceValueStrRes);
   }
   // 10. Search string for the first occurrence of searchString and let pos be
   // the index within string of the first code unit of the matched substring and
@@ -1731,7 +1619,7 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
     }
     // b. Let replStr be ToString(replValue).
     auto replStrRes =
-        toString_RJS(runtime, runtime->makeHandle(callRes.getValue()));
+        toString_RJS(runtime, runtime->makeHandle(std::move(*callRes)));
     // c. ReturnIfAbrupt(replStr).
     if (LLVM_UNLIKELY(replStrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1757,10 +1645,10 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
   // index tailPos. If pos is 0, the first element of the concatenation will be
   // the empty String.
   SmallU16String<32> newString{};
-  strView.slice(0, pos).copyUTF16String(newString);
+  strView.slice(0, pos).appendUTF16String(newString);
   StringPrimitive::createStringView(runtime, replStr)
-      .copyUTF16String(newString);
-  strView.slice(tailPos).copyUTF16String(newString);
+      .appendUTF16String(newString);
+  strView.slice(tailPos).appendUTF16String(newString);
   // 15. Return newString.
   return StringPrimitive::create(runtime, newString);
 }
@@ -1793,7 +1681,8 @@ stringPrototypeSearch(void *, Runtime *runtime, NativeArgs args) {
       Handle<Callable> searcher =
           Handle<Callable>::vmcast(runtime, methodRes->getHermesValue());
       return Callable::executeCall1(
-          searcher, runtime, regexp, O.getHermesValue());
+                 searcher, runtime, regexp, O.getHermesValue())
+          .toCallResultHermesValue();
     }
   }
   // 4. Let string be ToString(O).
@@ -1818,12 +1707,14 @@ stringPrototypeSearch(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  if (LLVM_UNLIKELY(!vmisa<Callable>(propRes.getValue()))) {
+  if (LLVM_UNLIKELY(!vmisa<Callable>(propRes->get()))) {
     return runtime->raiseTypeError(
         "RegExp.prototype[@@search] must be callable.");
   }
-  auto func = Handle<Callable>::vmcast(runtime, *propRes);
-  return Callable::executeCall1(func, runtime, rx, string.getHermesValue());
+  auto func =
+      Handle<Callable>::vmcast(runtime->makeHandle(std::move(*propRes)));
+  return Callable::executeCall1(func, runtime, rx, string.getHermesValue())
+      .toCallResultHermesValue();
 }
 
 CallResult<HermesValue>
@@ -1969,41 +1860,267 @@ stringPrototypeEndsWith(void *, Runtime *runtime, NativeArgs args) {
       S->sliceEquals(start, searchLength, *searchStr));
 }
 
+/// ES11 21.1.3.20.1
+/// Works slightly differently from the given implementation in the spec.
+/// Given a string \p S and a starting point \p q, finds the first match of
+/// \p R such that it starts on or after index \p q in \p S.
+/// \param q starting point in S. Requires: q <= S->getStringLength().
+/// \param R a String.
+/// \return Either None or an integer representing the start of the match.
+static OptValue<uint32_t> splitMatch(
+    Runtime *runtime,
+    Handle<StringPrimitive> S,
+    uint32_t q,
+    Handle<StringPrimitive> R) {
+  // 2. Let r be the number of code units in R.
+  auto r = R->getStringLength();
+  // 3. Let s be the number of code units in S.
+  auto s = S->getStringLength();
+  // 4. If q+r > s, return false.
+  if (q + r > s) {
+    return llvh::None;
+  }
+
+  // Handle the case where the search starts at the end of the string and R is
+  // the empty string. This path should only be triggered when S is itself the
+  // empty string.
+  if (q == s) {
+    return q;
+  }
+
+  auto SStr = StringPrimitive::createStringView(runtime, S);
+  auto RStr = StringPrimitive::createStringView(runtime, R);
+
+  auto sliced = SStr.slice(q);
+  auto searchResult =
+      std::search(sliced.begin(), sliced.end(), RStr.begin(), RStr.end());
+
+  if (searchResult != sliced.end()) {
+    return q + (searchResult - sliced.begin()) + r;
+  }
+  return llvh::None;
+}
+
+// ES11 21.1.3.20 String.prototype.split ( separator, limit )
 CallResult<HermesValue>
 stringPrototypeSplit(void *, Runtime *runtime, NativeArgs args) {
-  // 1. Let O be RequireObjectCoercible(this value).
-  // 2. ReturnIfAbrupt(O).
+  GCScope gcScope{runtime};
+
+  // 1. Let O be ? RequireObjectCoercible(this value).
   auto O = args.getThisHandle();
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, O) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  // 3. If separator is neither undefined nor null, then
+  // 2. If separator is neither undefined nor null, then
   auto separator = args.getArgHandle(0);
   if (!separator->isUndefined() && !separator->isNull()) {
-    // a. Let splitter be GetMethod(separator, @@split).
+    // a. Let splitter be ? GetMethod(separator, @@split).
     auto methodRes = getMethod(
         runtime,
         separator,
         runtime->makeHandle(Predefined::getSymbolID(Predefined::SymbolSplit)));
-    // b. ReturnIfAbrupt(splitter).
     if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    // c. If splitter is not undefined, then
-    //   i. Return Call(splitter, separator, «‍O, limit»).
+    // b. If splitter is not undefined, then
+    // i. Return ? Call(splitter, separator, «‍O, limit»).
     if (!methodRes->getHermesValue().isUndefined()) {
       Handle<Callable> splitter =
           Handle<Callable>::vmcast(runtime, methodRes->getHermesValue());
       return Callable::executeCall2(
-          splitter, runtime, separator, O.getHermesValue(), args.getArg(1));
+                 splitter,
+                 runtime,
+                 separator,
+                 O.getHermesValue(),
+                 args.getArg(1))
+          .toCallResultHermesValue();
     }
   }
-  return splitInternal(
-      runtime,
-      args.getThisHandle(),
-      args.getArgHandle(1),
-      args.getArgHandle(0));
+
+  // 3. Let S be ? ToString(O).
+  auto strRes = toString_RJS(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto S = runtime->makeHandle(std::move(*strRes));
+
+  // 4. Let A be ! ArrayCreate(0).
+  auto arrRes = JSArray::create(runtime, 0, 0);
+  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto A = runtime->makeHandle(std::move(*arrRes));
+  // 5. Let lengthA be 0.
+  uint32_t lengthA = 0;
+
+  // 6. If limit is undefined, let lim be 232 - 1; else let lim be ?
+  // ToUint32(limit).
+  auto limit = args.getArgHandle(1);
+  uint32_t lim;
+  if (limit->isUndefined()) {
+    // No limit supplied, make it max.
+    lim = 0xffffffff; // 2 ^ 32 - 1
+  } else {
+    auto intRes = toUInt32_RJS(runtime, limit);
+    if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lim = intRes->getNumber();
+  }
+
+  // 7. Let s be the length of S.
+  uint32_t s = S->getStringLength();
+  // 8. Let p be 0.
+  // End of the last match.
+  uint32_t p = 0;
+
+  // 9. Let R be ? ToString(separator).
+  // The pattern which we want to separate on.
+  auto sepRes = toString_RJS(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(sepRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  Handle<StringPrimitive> R = runtime->makeHandle(std::move(sepRes.getValue()));
+
+  // 10. If lim = 0, return A.
+  if (lim == 0) {
+    // Don't want any elements, so we're done.
+    return A.getHermesValue();
+  }
+
+  // 11. If separator is undefined, then
+  if (LLVM_UNLIKELY(separator->isUndefined())) {
+    // a. Perform ! CreateDataPropertyOrThrow(A, "0", S).
+    (void)JSArray::setElementAt(A, runtime, 0, S);
+    if (LLVM_UNLIKELY(
+            JSArray::setLengthProperty(A, runtime, 1) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    // b. Return A.
+    return A.getHermesValue();
+  }
+
+  // 12. If s = 0, then
+  if (s == 0) {
+    // S is the empty string.
+    // a. Let z be SplitMatch(S, 0, R).
+    auto matchResult = splitMatch(runtime, S, 0, R);
+    // b. If z is not false, return A.
+    if (matchResult) {
+      return A.getHermesValue();
+    }
+    // c. Perform ! CreateDataPropertyOrThrow(A, "0", S).
+    (void)JSArray::setElementAt(A, runtime, 0, S);
+    if (LLVM_UNLIKELY(
+            JSArray::setLengthProperty(A, runtime, 1) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    // e. Return A.
+    return A.getHermesValue();
+  }
+
+  // 17. Let q be p.
+  // Place to attempt the start of the next match.
+  uint32_t q = p;
+
+  MutableHandle<> tmpHandle{runtime};
+  auto marker = gcScope.createMarker();
+
+  // 18. Repeat, while q ≠ s
+  // Main loop: continue while we have space to find another match.
+  while (q != s) {
+    gcScope.flushToMarker(marker);
+
+    // a. Let e be SplitMatch(S, q, R).
+    // b. If e is false, let q = q+1.
+
+    // Find the next valid match. We know that q < s.
+    // ES6's SplitMatch only finds matches at q, but we find matches at or
+    // after q, so if it fails, we know we're done. In effect, we are performing
+    // steps (a) and (b) over and over again.
+    auto matchResult = splitMatch(runtime, S, q, R);
+    // If we did find a match, fast-forward q to the start of that match.
+    if (matchResult) {
+      q = *matchResult - R->getStringLength();
+    }
+    if (!matchResult || q >= s) {
+      // There's no matches between index q and the end of the string, so we're
+      // done searching. Note: This behavior differs from the spec
+      // implementation, because we check for matches at or after q. However, in
+      // line with the spec, we only count matches that start before the end of
+      // the string.
+      break;
+    }
+    // c. Else,
+    // Found a match, so go ahead and update e, such that the match is the range
+    // [q,e).
+    uint32_t e = *matchResult;
+    // i. If e = p, set q to q + 1.
+    if (e == p) {
+      // The end of this match is the same as the end of the last match,
+      // so we matched with the empty string.
+      // We don't want to match the empty string at this location again,
+      // so increment q in order to start the next search at the next position.
+      q++;
+    }
+    // ii. Else,
+    else {
+      // Found a non-empty string match.
+      // Add everything from the last match to the current one to A.
+      // This has length q-p because q is the start of the current match,
+      // and p was the end (exclusive) of the last match.
+
+      // 1. Let T be the String value equal to the substring of S consisting of
+      // the code units at indices p (inclusive) through q (exclusive).
+      auto strRes = StringPrimitive::slice(runtime, S, p, q - p);
+      if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      tmpHandle = *strRes;
+      // 2. Perform ! CreateDataPropertyOrThrow(A, ! ToString(lengthA), T)
+      JSArray::setElementAt(A, runtime, lengthA, tmpHandle);
+      // 3. Set lengthA to lengthA + 1.
+      ++lengthA;
+
+      // 4. If lengthA = lim, return A.
+      if (lengthA == lim) {
+        // Reached the limit, return early.
+        if (LLVM_UNLIKELY(
+                JSArray::setLengthProperty(A, runtime, lengthA) ==
+                ExecutionStatus::EXCEPTION))
+          return ExecutionStatus::EXCEPTION;
+        return A.getHermesValue();
+      }
+      // 5. Set p to e.
+      // Update p to point to the end of this match, maintaining the
+      // invariant that it points to the end of the last match encountered.
+      p = e;
+      // 6. Set q to p.
+      // Start position of the next search is updated to the end of this match.
+      q = p;
+    }
+  }
+
+  // 15. Let T be the String value equal to the substring of S consisting of the
+  // code units at indices p (inclusive) through s (exclusive).
+  // Add the rest of the string (after the last match) to A.
+  auto elementStrRes = StringPrimitive::slice(runtime, S, p, s - p);
+  if (LLVM_UNLIKELY(elementStrRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  tmpHandle = *elementStrRes;
+  // 16. Perform ! CreateDataPropertyOrThrow(A, ! ToString(lengthA), T).
+  JSArray::setElementAt(A, runtime, lengthA, tmpHandle);
+  ++lengthA;
+
+  if (LLVM_UNLIKELY(
+          JSArray::setLengthProperty(A, runtime, lengthA) ==
+          ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+
+  // 27. Return A.
+  return A.getHermesValue();
 }
 
 CallResult<HermesValue> stringPrototypeIncludesOrStartsWith(

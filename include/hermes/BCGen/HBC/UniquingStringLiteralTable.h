@@ -54,11 +54,11 @@ struct StringLiteralTable final : public StringLiteralIDMapping {
   using StringLiteralIDMapping::StringLiteralIDMapping;
 
   /// \return string id of an existing \p str in string table.
-  inline uint32_t getStringID(llvm::StringRef str) const;
+  inline uint32_t getStringID(llvh::StringRef str) const;
 
   /// \return string id of an existing \p str in string table, assuming it is
   /// marked as an identifier.
-  inline uint32_t getIdentifierID(llvm::StringRef str) const;
+  inline uint32_t getIdentifierID(llvh::StringRef str) const;
 
   /// Exposes interface to extract parts of underlying ConsecutiveStringStorage
   inline std::vector<StringTableEntry> acquireStringTable();
@@ -95,7 +95,7 @@ class UniquingStringLiteralAccumulator final : public StringLiteralIDMapping {
   /// Add a new string -- \p str -- to the accumulation.  If \p isIdentifier is
   /// true, then the string is marked as potentially being used as an
   /// identifier.
-  inline void addString(llvm::StringRef str, bool isIdentifier);
+  inline void addString(llvh::StringRef str, bool isIdentifier);
 
   /// \return a StringLiteralTable with the same strings as the accumulator
   /// \p strings.  If \p optimize is set, attempt to pack the strings to
@@ -114,7 +114,7 @@ inline bool StringLiteralIDMapping::empty() const {
   return strings_.size() == 0;
 }
 
-inline uint32_t StringLiteralTable::getStringID(llvm::StringRef str) const {
+inline uint32_t StringLiteralTable::getStringID(llvh::StringRef str) const {
   auto iter = strings_.find(str);
   assert(
       iter != strings_.end() &&
@@ -124,7 +124,7 @@ inline uint32_t StringLiteralTable::getStringID(llvm::StringRef str) const {
   return std::distance(strings_.begin(), iter);
 }
 
-inline uint32_t StringLiteralTable::getIdentifierID(llvm::StringRef str) const {
+inline uint32_t StringLiteralTable::getIdentifierID(llvh::StringRef str) const {
   auto idx = getStringID(str);
   assert(
       isIdentifier_[idx] &&
@@ -144,7 +144,7 @@ inline std::vector<unsigned char> StringLiteralTable::acquireStringStorage() {
 }
 
 inline void UniquingStringLiteralAccumulator::addString(
-    llvm::StringRef str,
+    llvh::StringRef str,
     bool isIdentifier) {
   assert(strings_.size() == isIdentifier_.size());
   const auto fresh = strings_.size();

@@ -15,7 +15,7 @@
 
 #include "hermes/Inst/Inst.h"
 
-namespace llvm {
+namespace llvh {
 class raw_ostream;
 }
 
@@ -81,7 +81,7 @@ uint8_t getInstSize(OpCode opCode);
 uint8_t getOperandSize(OperandType type);
 
 /// \return the name of the instruction as string.
-llvm::StringRef getOpCodeString(OpCode opCode);
+llvh::StringRef getOpCodeString(OpCode opCode);
 
 /// \return the metadata for the specified opcode \p opCode.
 InstMetaData getInstMetaData(OpCode opCode);
@@ -89,12 +89,12 @@ InstMetaData getInstMetaData(OpCode opCode);
 /// \return the decoded form of the specified instruction instance \p inst.
 DecodedInstruction decodeInstruction(const Inst *inst);
 
-llvm::raw_ostream &operator<<(
-    llvm::raw_ostream &OS,
+llvh::raw_ostream &operator<<(
+    llvh::raw_ostream &OS,
     const DecodedInstruction &decoded);
 
 /// Print a single operand to the specified stream.
-void dumpOperand(llvm::raw_ostream &OS, OperandType type, OperandValue value);
+void dumpOperand(llvh::raw_ostream &OS, OperandType type, OperandValue value);
 
 } // namespace inst
 } // namespace hermes

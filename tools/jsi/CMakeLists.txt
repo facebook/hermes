@@ -16,4 +16,3 @@ add_hermes_tool(hermes-jsi
   LINK_LIBS hermesapi
   )
 
-

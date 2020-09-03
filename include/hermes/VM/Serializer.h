@@ -39,7 +39,7 @@ class Runtime;
 /// nullptr to id 0 in both Serializer and Deserializer so that we can deal with
 /// nullptr gracefully during S/D.
 
-/// Serializer: The Serializer API will wrap a llvm::raw_ostream. It has a
+/// Serializer: The Serializer API will wrap a llvh::raw_ostream. It has a
 /// relocation map that maps each unique pointer value it has seen to an unique
 /// relocation id. When serializing an entity, ordinary data (numbers etc.
 /// except string literals) are binary copied to the stream and pointer values
@@ -72,7 +72,7 @@ class Runtime;
 class Serializer {
  public:
   Serializer(
-      llvm::raw_ostream &OS,
+      llvh::raw_ostream &OS,
       Runtime *runtime,
       ExternalPointersVectorFunction *externalPointersVectorCallBack);
 
@@ -218,7 +218,7 @@ class Serializer {
   void flushCharBufs();
 
   /// Output Stream.
-  llvm::raw_ostream &os_;
+  llvh::raw_ostream &os_;
 
   /// Total bytes written so far.
   size_t writtenBytes_{0};
@@ -230,7 +230,7 @@ class Serializer {
 
   /// Current relocation map. Maps each unique pointer value to an unique
   /// relocation id.
-  llvm::DenseMap<const void *, uint32_t> relocationMap_;
+  llvh::DenseMap<const void *, uint32_t> relocationMap_;
 
   /// Pointer to the Runtime that the Serializer is used. Also used as
   /// PointerBase for GCPointer.

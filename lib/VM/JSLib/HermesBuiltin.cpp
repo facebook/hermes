@@ -205,6 +205,17 @@ hermesBuiltinEnsureObject(void *, Runtime *runtime, NativeArgs args) {
   return runtime->raiseTypeError(args.getArgHandle(1));
 }
 
+/// Perform the GetMethod() abstract operation.
+///
+/// \code
+///   HermesBuiltin.getMethod = function(object, property) {...}
+/// \endcode
+CallResult<HermesValue>
+hermesBuiltinGetMethod(void *, Runtime *runtime, NativeArgs args) {
+  return getMethod(runtime, args.getArgHandle(0), args.getArgHandle(1))
+      .toCallResultHermesValue();
+}
+
 /// Throw a type error with the argument as a message.
 ///
 /// \code
@@ -293,11 +304,11 @@ CallResult<HermesValue> copyDataPropertiesSlowPath_RJS(
     //   ii. If desc is not undefined and desc.[[Enumerable]] is true, then
     if (*crb && desc.flags.enumerable) {
       //     1. Let propValue be ? Get(from, nextKey).
-      CallResult<HermesValue> crv =
+      CallResult<PseudoHandle<>> crv =
           JSProxy::getComputed(from, runtime, nextKeyHandle, from);
       if (LLVM_UNLIKELY(crv == ExecutionStatus::EXCEPTION))
         return ExecutionStatus::EXCEPTION;
-      propValueHandle = *crv;
+      propValueHandle = std::move(*crv);
       //     2. Perform ! CreateDataProperty(target, nextKey, propValue).
       crb = JSObject::defineOwnComputed(
           target,
@@ -431,7 +442,7 @@ hermesBuiltinCopyDataProperties(void *, Runtime *runtime, NativeArgs args) {
         if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
           return false;
 
-        valueHandle = *cr;
+        valueHandle = std::move(*cr);
 
         if (LLVM_UNLIKELY(
                 JSObject::defineOwnProperty(
@@ -501,6 +512,7 @@ hermesBuiltinCopyRestArgs(void *, Runtime *runtime, NativeArgs args) {
 /// \return the next empty index in the array to use for additional properties.
 CallResult<HermesValue>
 hermesBuiltinArraySpread(void *, Runtime *runtime, NativeArgs args) {
+  GCScopeMarkerRAII topMarker{runtime};
   Handle<JSArray> target = args.dyncastArg<JSArray>(0);
   // To be safe, check for non-arrays.
   if (!target) {
@@ -530,20 +542,21 @@ hermesBuiltinArraySpread(void *, Runtime *runtime, NativeArgs args) {
         slotValue.invalidate();
         auto nextIndex = args.getArg(2).getNumberAs<JSArray::size_type>();
         MutableHandle<> idxHandle{runtime};
+        GCScopeMarkerRAII marker{runtime};
         for (JSArray::size_type i = 0; i < JSArray::getLength(*arr); ++i) {
+          marker.flush();
           // Fast path: look up the property in indexed storage.
           nextValue = arr->at(runtime, i);
           if (LLVM_UNLIKELY(nextValue->isEmpty())) {
             // Slow path, just run the full getComputed_RJS path.
             // Runs when there is a hole, accessor, non-regular property, etc.
-            GCScopeMarkerRAII marker{runtime};
             idxHandle = HermesValue::encodeNumberValue(i);
-            CallResult<HermesValue> valueRes =
+            CallResult<PseudoHandle<>> valueRes =
                 JSObject::getComputed_RJS(arr, runtime, idxHandle);
             if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
               return ExecutionStatus::EXCEPTION;
             }
-            nextValue = *valueRes;
+            nextValue = std::move(*valueRes);
           }
           // It is valid to use setElementAt here because we know that
           // `target` was created immediately prior to running the spread
@@ -595,14 +608,18 @@ hermesBuiltinArraySpread(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(nextItemRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    nextValue = *nextItemRes;
+    nextValue = std::move(*nextItemRes);
 
     // d. Let status be CreateDataProperty(array,
     //    ToString(ToUint32(nextIndex)), nextValue).
     // e. Assert: status is true.
     if (LLVM_UNLIKELY(
-            JSArray::putComputed_RJS(target, runtime, nextIndex, nextValue) ==
-            ExecutionStatus::EXCEPTION)) {
+            JSArray::defineOwnComputed(
+                target,
+                runtime,
+                nextIndex,
+                DefinePropertyFlags::getDefaultNewPropertyFlags(),
+                nextValue) == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
 
@@ -647,7 +664,7 @@ hermesBuiltinApply(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(thisValRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    thisVal = *thisValRes;
+    thisVal = thisValRes->getHermesValue();
   } else {
     thisVal = args.getArg(2);
   }
@@ -658,10 +675,24 @@ hermesBuiltinApply(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
 
   for (uint32_t i = 0; i < len; ++i) {
-    newFrame->getArgRef(i) = argArray->at(runtime, i);
+    assert(!argArray->at(runtime, i).isEmpty() && "arg array must be dense");
+    HermesValue arg = argArray->at(runtime, i);
+    newFrame->getArgRef(i) = LLVM_UNLIKELY(arg.isEmpty())
+        ? HermesValue::encodeUndefinedValue()
+        : arg;
   }
-  return isConstructor ? Callable::construct(fn, runtime, thisVal)
-                       : Callable::call(fn, runtime);
+  if (isConstructor) {
+    auto res = Callable::construct(fn, runtime, thisVal);
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return res->getHermesValue();
+  }
+  auto res = Callable::call(fn, runtime);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return res->getHermesValue();
 }
 
 /// HermesBuiltin.exportAll(exports, source) will copy exported named
@@ -720,7 +751,7 @@ hermesBuiltinExportAll(void *, Runtime *runtime, NativeArgs args) {
 
 void createHermesBuiltins(
     Runtime *runtime,
-    llvm::MutableArrayRef<NativeFunction *> builtins) {
+    llvh::MutableArrayRef<NativeFunction *> builtins) {
   auto defineInternMethod = [&](BuiltinMethod::Enum builtinIndex,
                                 Predefined::Str symID,
                                 NativeFunctionPtr func,
@@ -755,6 +786,8 @@ void createHermesBuiltins(
       P::ensureObject,
       hermesBuiltinEnsureObject,
       2);
+  defineInternMethod(
+      B::HermesBuiltin_getMethod, P::getMethod, hermesBuiltinGetMethod, 2);
   defineInternMethod(
       B::HermesBuiltin_throwTypeError,
       P::throwTypeError,

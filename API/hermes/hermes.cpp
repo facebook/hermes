@@ -7,7 +7,7 @@
 
 #include "hermes.h"
 
-#include "llvm/Support/Compiler.h"
+#include "llvh/Support/Compiler.h"
 
 #ifndef LLVM_PTR_SIZE
 #error "LLVM_PTR_SIZE needs to be defined"
@@ -19,6 +19,7 @@
 #endif
 
 #include "hermes/BCGen/HBC/BytecodeDataProvider.h"
+#include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/DebuggerAPI.h"
 #include "hermes/Platform/Logging.h"
@@ -46,11 +47,11 @@
 #include "hermes/VM/SymbolID.h"
 #include "hermes/VM/TimeLimitMonitor.h"
 
-#include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/SHA1.h"
-#include "llvm/Support/raw_os_ostream.h"
+#include "llvh/Support/ConvertUTF.h"
+#include "llvh/Support/ErrorHandling.h"
+#include "llvh/Support/FileSystem.h"
+#include "llvh/Support/SHA1.h"
+#include "llvh/Support/raw_os_ostream.h"
 
 #include <algorithm>
 #include <atomic>
@@ -71,6 +72,17 @@
 extern "C" {
 int __llvm_profile_dump(void);
 }
+#endif
+
+// Android OSS has a bug where exception data can get mangled when going via
+// fbjni. This macro can be used to expose the root cause in adb log. It serves
+// no purpose other than as a backup.
+#ifdef __ANDROID__
+#define LOG_EXCEPTION_CAUSE(...) hermesLog("HermesVM", __VA_ARGS__)
+#else
+#define LOG_EXCEPTION_CAUSE(...) \
+  do {                           \
+  } while (0)
 #endif
 
 // If a function body might throw C++ exceptions other than
@@ -148,10 +160,10 @@ static constexpr unsigned kMaxNumRegisters =
     (512 * 1024 - sizeof(::hermes::vm::Runtime) - 4096 * 8) /
     sizeof(::hermes::vm::PinnedHermesValue);
 
-void raw_ostream_append(llvm::raw_ostream &os) {}
+void raw_ostream_append(llvh::raw_ostream &os) {}
 
 template <typename Arg0, typename... Args>
-void raw_ostream_append(llvm::raw_ostream &os, Arg0 &&arg0, Args &&... args) {
+void raw_ostream_append(llvh::raw_ostream &os, Arg0 &&arg0, Args &&... args) {
   os << arg0;
   raw_ostream_append(os, args...);
 }
@@ -159,8 +171,9 @@ void raw_ostream_append(llvm::raw_ostream &os, Arg0 &&arg0, Args &&... args) {
 template <typename... Args>
 jsi::JSError makeJSError(jsi::Runtime &rt, Args &&... args) {
   std::string s;
-  llvm::raw_string_ostream os(s);
+  llvh::raw_string_ostream os(s);
   raw_ostream_append(os, std::forward<Args>(args)...);
+  LOG_EXCEPTION_CAUSE("JSError: %s", os.str().c_str());
   return jsi::JSError(rt, os.str());
 }
 
@@ -174,7 +187,7 @@ class InstallHermesFatalErrorHandler {
     // singleton to guarantee it - the static "dummy" is guaranteed by the
     // compiler to be initialized no more than once.
     static int dummy = ([]() {
-      llvm::install_fatal_error_handler(detail::hermesFatalErrorHandler);
+      llvh::install_fatal_error_handler(detail::hermesFatalErrorHandler);
       return 0;
     })();
     (void)dummy;
@@ -226,7 +239,7 @@ class StackRuntime {
     pthread_setname_np("hermes-runtime-memorythread");
 #endif
 
-    llvm::Optional<::hermes::vm::StackRuntime> rt;
+    llvh::Optional<::hermes::vm::StackRuntime> rt;
 
     stack->runtime_ = &rt;
     stack->startup_.set_value();
@@ -247,7 +260,7 @@ class StackRuntime {
   // * Initialize provider_ and runtime_ from that thread
   std::promise<void> startup_;
   std::promise<void> shutdown_;
-  llvm::Optional<::hermes::vm::StackRuntime> *runtime_{nullptr};
+  llvh::Optional<::hermes::vm::StackRuntime> *runtime_{nullptr};
   std::thread thread_;
 };
 #endif
@@ -301,8 +314,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
             if (it->get() == 0) {
               it = weakHermesValues_->erase(it);
             } else {
-              acceptor.accept(
-                  const_cast<vm::WeakRef<vm::HermesValue> &>(it->wr));
+              acceptor.accept(it->wr);
               ++it;
             }
           }
@@ -383,9 +395,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   struct WeakRefPointerValue final : CountedPointerValue {
     WeakRefPointerValue(vm::WeakRef<vm::HermesValue> _wr) : wr(_wr) {}
 
-    // This should only ever be modified by the GC.  We const_cast the
-    // reference before passing it to the GC.
-    const vm::WeakRef<vm::HermesValue> wr;
+    vm::WeakRef<vm::HermesValue> wr;
   };
 
   HermesPointerValue *clone(const Runtime::PointerValue *pv) {
@@ -415,7 +425,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   // overriden from jsi::Instrumentation
   std::string getRecordedGCStats() override {
     std::string s;
-    llvm::raw_string_ostream os(s);
+    llvh::raw_string_ostream os(s);
     runtime_.printHeapStats(os);
     return os.str();
   }
@@ -504,7 +514,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   // Overridden from jsi::Instrumentation
   void createSnapshotToFile(const std::string &path) override {
     std::error_code code;
-    llvm::raw_fd_ostream os(path, code, llvm::sys::fs::FileAccess::FA_Write);
+    llvh::raw_fd_ostream os(path, code, llvh::sys::fs::FileAccess::FA_Write);
     if (code) {
       throw std::system_error(code);
     }
@@ -513,7 +523,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
   // Overridden from jsi::Instrumentation
   void createSnapshotToStream(std::ostream &os) override {
-    llvm::raw_os_ostream ros(os);
+    llvh::raw_os_ostream ros(os);
     runtime_.getHeap().createSnapshot(ros);
   }
 
@@ -528,7 +538,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
       const std::string &fileName) const override {
 #ifdef HERMESVM_PROFILER_BB
     std::error_code ec;
-    llvm::raw_fd_ostream os(fileName.c_str(), ec, llvm::sys::fs::F_Text);
+    llvh::raw_fd_ostream os(fileName.c_str(), ec, llvh::sys::fs::F_Text);
     if (ec) {
       throw std::system_error(ec);
     }
@@ -590,13 +600,11 @@ class HermesRuntimeImpl final : public HermesRuntime,
     return ::hermes::vm::Handle<::hermes::vm::JSArrayBuffer>::vmcast(&phv(arr));
   }
 
-  static const ::hermes::vm::WeakRef<vm::HermesValue> &wrhv(
-      const jsi::Pointer &pointer) {
+  static ::hermes::vm::WeakRef<vm::HermesValue> &wrhv(jsi::Pointer &pointer) {
     assert(
-        dynamic_cast<const WeakRefPointerValue *>(getPointerValue(pointer)) &&
+        dynamic_cast<WeakRefPointerValue *>(getPointerValue(pointer)) &&
         "Pointer does not contain a WeakRefPointerValue");
-    return static_cast<const WeakRefPointerValue *>(getPointerValue(pointer))
-        ->wr;
+    return static_cast<WeakRefPointerValue *>(getPointerValue(pointer))->wr;
   }
 
   // These helpers use public (mostly) interfaces on the runtime and
@@ -718,7 +726,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsi::Array getPropertyNames(const jsi::Object &) override;
 
   jsi::WeakObject createWeakObject(const jsi::Object &) override;
-  jsi::Value lockWeakObject(const jsi::WeakObject &) override;
+  jsi::Value lockWeakObject(jsi::WeakObject &) override;
 
   jsi::Array createArray(size_t length) override;
   size_t size(const jsi::Array &) override;
@@ -902,7 +910,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
       const vm::instrumentation::RAIITimer timer{
           "Host Function", stats, stats.hostFunction};
 
-      llvm::SmallVector<jsi::Value, 8> apiArgs;
+      llvh::SmallVector<jsi::Value, 8> apiArgs;
       for (vm::HermesValue hv : hvArgs) {
         apiArgs.push_back(rt.valueFromHermesValue(hv));
       }
@@ -1028,11 +1036,15 @@ inline const HermesRuntimeImpl *impl(const HermesRuntime *rt) {
 
 bool HermesRuntime::isHermesBytecode(const uint8_t *data, size_t len) {
   return hbc::BCProviderFromBuffer::isBytecodeStream(
-      llvm::ArrayRef<uint8_t>(data, len));
+      llvh::ArrayRef<uint8_t>(data, len));
+}
+
+uint32_t HermesRuntime::getBytecodeVersion() {
+  return hbc::BYTECODE_VERSION;
 }
 
 void HermesRuntime::prefetchHermesBytecode(const uint8_t *data, size_t len) {
-  hbc::BCProviderFromBuffer::prefetch(llvm::ArrayRef<uint8_t>(data, len));
+  hbc::BCProviderFromBuffer::prefetch(llvh::ArrayRef<uint8_t>(data, len));
 }
 
 bool HermesRuntime::hermesBytecodeSanityCheck(
@@ -1040,14 +1052,14 @@ bool HermesRuntime::hermesBytecodeSanityCheck(
     size_t len,
     std::string *errorMessage) {
   return hbc::BCProviderFromBuffer::bytecodeStreamSanityCheck(
-      llvm::ArrayRef<uint8_t>(data, len), errorMessage);
+      llvh::ArrayRef<uint8_t>(data, len), errorMessage);
 }
 
 std::pair<const uint8_t *, size_t> HermesRuntime::getBytecodeEpilogue(
     const uint8_t *data,
     size_t len) {
   auto epi = hbc::BCProviderFromBuffer::getEpilogueFromBytecode(
-      llvm::ArrayRef<uint8_t>(data, len));
+      llvh::ArrayRef<uint8_t>(data, len));
   return std::make_pair(epi.data(), epi.size());
 }
 
@@ -1061,14 +1073,14 @@ void HermesRuntime::disableSamplingProfiler() {
 
 void HermesRuntime::dumpSampledTraceToFile(const std::string &fileName) {
   std::error_code ec;
-  llvm::raw_fd_ostream os(fileName.c_str(), ec, llvm::sys::fs::F_Text);
+  llvh::raw_fd_ostream os(fileName.c_str(), ec, llvh::sys::fs::F_Text);
   if (ec) {
     throw std::system_error(ec);
   }
   ::hermes::vm::SamplingProfiler::getInstance()->dumpChromeTrace(os);
 }
 
-void HermesRuntime::dumpSampledTraceToStream(llvm::raw_ostream &stream) {
+void HermesRuntime::dumpSampledTraceToStream(llvh::raw_ostream &stream) {
   ::hermes::vm::SamplingProfiler::getInstance()->dumpChromeTrace(stream);
 }
 
@@ -1122,12 +1134,14 @@ void HermesRuntime::loadSegment(
   auto ret = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
       std::make_unique<BufferAdapter>(std::move(buffer)));
   if (!ret.first) {
+    LOG_EXCEPTION_CAUSE("Error evaluating javascript: %s", ret.second.c_str());
     throw jsi::JSINativeException("Error evaluating javascript: " + ret.second);
   }
 
   auto requireContext = vm::Handle<vm::RequireContext>::dyn_vmcast(
       impl(this)->vmHandleFromValue(context));
   if (!requireContext) {
+    LOG_EXCEPTION_CAUSE("Error loading segment: Invalid context");
     throw jsi::JSINativeException("Error loading segment: Invalid context");
   }
 
@@ -1171,7 +1185,7 @@ const ::hermes::vm::GCExecTrace &HermesRuntime::getGCExecTrace() const {
 
 std::string HermesRuntime::getIOTrackingInfoJSON() {
   std::string buf;
-  llvm::raw_string_ostream strstrm(buf);
+  llvh::raw_string_ostream strstrm(buf);
   static_cast<HermesRuntimeImpl *>(this)->runtime_.getIOTrackingInfoJSON(
       strstrm);
   strstrm.flush();
@@ -1179,14 +1193,14 @@ std::string HermesRuntime::getIOTrackingInfoJSON() {
 }
 
 #ifdef HERMESVM_PROFILER_BB
-void HermesRuntime::dumpBasicBlockProfileTrace(llvm::raw_ostream &os) const {
+void HermesRuntime::dumpBasicBlockProfileTrace(llvh::raw_ostream &os) const {
   static_cast<const HermesRuntimeImpl *>(this)
       ->runtime_.dumpBasicBlockProfileTrace(os);
 }
 #endif
 
 #ifdef HERMESVM_PROFILER_OPCODE
-void HermesRuntime::dumpOpcodeStats(llvm::raw_ostream &os) const {
+void HermesRuntime::dumpOpcodeStats(llvh::raw_ostream &os) const {
   static_cast<const HermesRuntimeImpl *>(this)->runtime_.dumpOpcodeStats(os);
 }
 #endif
@@ -1283,6 +1297,11 @@ HermesRuntimeImpl::prepareJavaScript(
   hermesLog(
       "HermesVM", "Prepare JS on %s.", isBytecode ? "bytecode" : "source");
 #endif
+  // Save the first few bytes of the buffer so that we can later append them
+  // to any error message.
+  uint8_t bufPrefix[16];
+  const size_t bufSize = buffer->size();
+  memcpy(bufPrefix, buffer->data(), std::min(sizeof(bufPrefix), bufSize));
 
   // Construct the BC provider either from buffer or source.
   if (isBytecode) {
@@ -1300,8 +1319,15 @@ HermesRuntimeImpl::prepareJavaScript(
 #endif
   }
   if (!bcErr.first) {
+    std::string storage;
+    llvh::raw_string_ostream os(storage);
+    os << " Buffer size " << bufSize << " starts with: ";
+    for (size_t i = 0; i < sizeof(bufPrefix) && i < bufSize; ++i)
+      os << llvh::format_hex_no_prefix(bufPrefix[i], 2);
+    LOG_EXCEPTION_CAUSE(
+        "Compiling JS failed: %s, %s", bcErr.second.c_str(), os.str().c_str());
     throw jsi::JSINativeException(
-        "Compiling JS failed: \n" + std::move(bcErr.second));
+        "Compiling JS failed: " + std::move(bcErr.second) + os.str());
   }
   return std::make_shared<const HermesPreparedJavaScript>(
       std::move(bcErr.first), runtimeFlags, std::move(sourceURL));
@@ -1396,7 +1422,7 @@ jsi::PropNameID HermesRuntimeImpl::createPropNameIDFromAscii(
     auto cr = vm::stringToSymbolID(
         &runtime_,
         vm::StringPrimitive::createNoThrow(
-            &runtime_, llvm::StringRef(str, length)));
+            &runtime_, llvh::StringRef(str, length)));
     checkStatus(cr.getStatus());
     return add<jsi::PropNameID>(cr->getHermesValue());
   });
@@ -1506,20 +1532,20 @@ static void
 convertUtf8ToUtf16(const uint8_t *utf8, size_t length, std::u16string &out) {
   // length is the number of input bytes
   out.resize(length);
-  const llvm::UTF8 *sourceStart = (const llvm::UTF8 *)utf8;
-  const llvm::UTF8 *sourceEnd = sourceStart + length;
-  llvm::UTF16 *targetStart = (llvm::UTF16 *)&out[0];
-  llvm::UTF16 *targetEnd = targetStart + out.size();
-  llvm::ConversionResult cRes;
+  const llvh::UTF8 *sourceStart = (const llvh::UTF8 *)utf8;
+  const llvh::UTF8 *sourceEnd = sourceStart + length;
+  llvh::UTF16 *targetStart = (llvh::UTF16 *)&out[0];
+  llvh::UTF16 *targetEnd = targetStart + out.size();
+  llvh::ConversionResult cRes;
   cRes = ConvertUTF8toUTF16(
       &sourceStart,
       sourceEnd,
       &targetStart,
       targetEnd,
-      llvm::lenientConversion);
+      llvh::lenientConversion);
   (void)cRes;
   assert(
-      cRes != llvm::ConversionResult::targetExhausted &&
+      cRes != llvh::ConversionResult::targetExhausted &&
       "not enough space allocated for UTF16 conversion");
   out.resize((char16_t *)targetStart - &out[0]);
 }
@@ -1529,7 +1555,7 @@ jsi::Value HermesRuntimeImpl::createValueFromJsonUtf8(
     size_t length) {
   return maybeRethrow([&] {
     vm::GCScope gcScope(&runtime_);
-    llvm::ArrayRef<uint8_t> ref(json, length);
+    llvh::ArrayRef<uint8_t> ref(json, length);
     vm::CallResult<vm::HermesValue> res =
         runtimeJSONParseRef(&runtime_, ::hermes::UTF16Stream(ref));
     checkStatus(res.getStatus());
@@ -1571,7 +1597,7 @@ jsi::Value HermesRuntimeImpl::getProperty(
     auto h = handle(obj);
     auto res = h->getComputed_RJS(h, &runtime_, stringHandle(name));
     checkStatus(res.getStatus());
-    return valueFromHermesValue(*res);
+    return valueFromHermesValue(res->get());
   });
 }
 
@@ -1584,7 +1610,7 @@ jsi::Value HermesRuntimeImpl::getProperty(
     vm::SymbolID nameID = phv(name).getSymbol();
     auto res = h->getNamedOrIndexed(h, &runtime_, nameID);
     checkStatus(res.getStatus());
-    return valueFromHermesValue(*res);
+    return valueFromHermesValue(res->get());
   });
 }
 
@@ -1682,7 +1708,7 @@ jsi::Array HermesRuntimeImpl::getPropertyNames(const jsi::Object &obj) {
         ret.setValueAtIndex(*this, i, valueFromHermesValue(name));
       } else if (name.isNumber()) {
         std::string s;
-        llvm::raw_string_ostream os(s);
+        llvh::raw_string_ostream os(s);
         os << static_cast<size_t>(name.getNumber());
         ret.setValueAtIndex(
             *this, i, jsi::String::createFromAscii(*this, os.str()));
@@ -1697,20 +1723,22 @@ jsi::Array HermesRuntimeImpl::getPropertyNames(const jsi::Object &obj) {
 
 jsi::WeakObject HermesRuntimeImpl::createWeakObject(const jsi::Object &obj) {
   return maybeRethrow([&] {
-    return addWeak(
-        vm::WeakRef<vm::HermesValue>(&(runtime_.getHeap()), phv(obj)));
+    vm::WeakRefLock lk{runtime_.getHeap().weakRefMutex()};
+    return addWeak(vm::WeakRef<vm::HermesValue>(&runtime_.getHeap(), phv(obj)));
   });
 }
 
-jsi::Value HermesRuntimeImpl::lockWeakObject(const jsi::WeakObject &wo) {
-  const vm::WeakRef<vm::HermesValue> &wr = wrhv(wo);
-  if (!wr.isValid()) {
+jsi::Value HermesRuntimeImpl::lockWeakObject(jsi::WeakObject &wo) {
+  vm::WeakRefLock lk{runtime_.getHeap().weakRefMutex()};
+  vm::WeakRef<vm::HermesValue> &wr = wrhv(wo);
+  const auto optValue = wr.unsafeGetOptional(&runtime_.getHeap());
+  if (!optValue) {
     return jsi::Value();
   }
-
-  vm::HermesValue hv = wr.unsafeGetHermesValue();
-  assert(hv.isObject() && "jsi::WeakObject referent is not an Object");
-  return add<jsi::Object>(hv);
+  assert(
+      optValue.getValue().isObject() &&
+      "jsi::WeakObject referent is not an Object");
+  return add<jsi::Object>(optValue.getValue());
 }
 
 jsi::Array HermesRuntimeImpl::createArray(size_t length) {
@@ -1755,7 +1783,7 @@ jsi::Value HermesRuntimeImpl::getValueAtIndex(const jsi::Array &arr, size_t i) {
         runtime_.makeHandle(vm::HermesValue::encodeNumberValue(i)));
     checkStatus(res.getStatus());
 
-    return valueFromHermesValue(*res);
+    return valueFromHermesValue(res->get());
   });
 }
 
@@ -1832,6 +1860,8 @@ jsi::Value HermesRuntimeImpl::call(
         vm::Handle<vm::Callable>::vmcast(&phv(func));
     if (count > std::numeric_limits<uint32_t>::max() ||
         !runtime_.checkAvailableStack((uint32_t)count)) {
+      LOG_EXCEPTION_CAUSE(
+          "HermesRuntimeImpl::call: Unable to call function: stack overflow");
       throw jsi::JSINativeException(
           "HermesRuntimeImpl::call: Unable to call function: stack overflow");
     }
@@ -1855,7 +1885,7 @@ jsi::Value HermesRuntimeImpl::call(
     auto callRes = vm::Callable::call(handle, &runtime_);
     checkStatus(callRes.getStatus());
 
-    return valueFromHermesValue(*callRes);
+    return valueFromHermesValue(callRes->get());
   });
 }
 
@@ -1870,6 +1900,8 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
 
     if (count > std::numeric_limits<uint32_t>::max() ||
         !runtime_.checkAvailableStack((uint32_t)count)) {
+      LOG_EXCEPTION_CAUSE(
+          "HermesRuntimeImpl::call: Unable to call function: stack overflow");
       throw jsi::JSINativeException(
           "HermesRuntimeImpl::call: Unable to call function: stack overflow");
     }
@@ -1896,7 +1928,7 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
     auto thisRes = vm::Callable::createThisForConstruct(funcHandle, &runtime_);
     // We need to capture this in case the ctor doesn't return an object,
     // we need to return this object.
-    auto objHandle = runtime_.makeHandle<vm::JSObject>(*thisRes);
+    auto objHandle = runtime_.makeHandle<vm::JSObject>(std::move(*thisRes));
 
     // 13.2.2.8:
     //    Let result be the result of calling the [[Call]] internal property of
@@ -1925,7 +1957,7 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
     //    If Type(result) is Object then return result
     // 13.2.2.10:
     //    Return obj
-    auto resultValue = *callRes;
+    auto resultValue = callRes->get();
     vm::HermesValue resultHValue =
         resultValue.isObject() ? resultValue : objHandle.getHermesValue();
     return valueFromHermesValue(resultHValue);
@@ -1996,19 +2028,34 @@ void HermesRuntimeImpl::popScope(ScopeState *prv) {
 }
 
 void HermesRuntimeImpl::checkStatus(vm::ExecutionStatus status) {
-  if (LLVM_UNLIKELY(status == vm::ExecutionStatus::EXCEPTION)) {
-    jsi::Value exception = valueFromHermesValue(runtime_.getThrownValue());
-    runtime_.clearThrownValue();
-    vm::ScopedNativeDepthReducer reducer(&runtime_);
-    throw jsi::JSError(*this, std::move(exception));
+  if (LLVM_LIKELY(status != vm::ExecutionStatus::EXCEPTION)) {
+    return;
   }
+
+  jsi::Value exception = valueFromHermesValue(runtime_.getThrownValue());
+  runtime_.clearThrownValue();
+  // Here, we increment the depth to detect recursion in error handling.
+  vm::ScopedNativeDepthTracker depthTracker{&runtime_};
+  if (LLVM_LIKELY(!depthTracker.overflowed())) {
+    auto ex = jsi::JSError(*this, std::move(exception));
+    LOG_EXCEPTION_CAUSE("JSI rethrowing JS exception: %s", ex.what());
+    throw ex;
+  }
+
+  runtime_.raiseStackOverflow(vm::Runtime::StackOverflowKind::NativeStack);
+  exception = valueFromHermesValue(runtime_.getThrownValue());
+  runtime_.clearThrownValue();
+  // Here, we give us a little more room so we can call into JS to
+  // populate the JSError members.
+  vm::ScopedNativeDepthReducer reducer(&runtime_);
+  throw jsi::JSError(*this, std::move(exception));
 }
 
 vm::HermesValue HermesRuntimeImpl::stringHVFromAscii(
     const char *str,
     size_t length) {
   auto strRes = vm::StringPrimitive::createEfficient(
-      &runtime_, llvm::makeArrayRef(str, length));
+      &runtime_, llvh::makeArrayRef(str, length));
   checkStatus(strRes.getStatus());
   return *strRes;
 }
@@ -2032,10 +2079,10 @@ size_t HermesRuntimeImpl::getLength(vm::Handle<vm::ArrayImpl> arr) {
     auto res = vm::JSObject::getNamed_RJS(
         arr, &runtime_, vm::Predefined::getSymbolID(vm::Predefined::length));
     checkStatus(res.getStatus());
-    if (!res->isNumber()) {
+    if (!(*res)->isNumber()) {
       throw jsi::JSError(*this, "getLength: property 'length' is not a number");
     }
-    return static_cast<size_t>(res->getDouble());
+    return static_cast<size_t>((*res)->getDouble());
   });
 }
 
@@ -2046,11 +2093,11 @@ size_t HermesRuntimeImpl::getByteLength(vm::Handle<vm::JSArrayBuffer> arr) {
         &runtime_,
         vm::Predefined::getSymbolID(vm::Predefined::byteLength));
     checkStatus(res.getStatus());
-    if (!res->isNumber()) {
+    if (!(*res)->isNumber()) {
       throw jsi::JSError(
           *this, "getLength: property 'byteLength' is not a number");
     }
-    return static_cast<size_t>(res->getDouble());
+    return static_cast<size_t>((*res)->getDouble());
   });
 }
 
@@ -2066,7 +2113,7 @@ class HermesMutex : public std::recursive_mutex {
 
 } // namespace
 
-__declspec(dllexport) std::unique_ptr<HermesRuntime> makeHermesRuntime(
+std::unique_ptr<HermesRuntime> makeHermesRuntime(
     const vm::RuntimeConfig &runtimeConfig) {
   // This is insurance against someone adding data members to
   // HermesRuntime.  If on some weird platform it fails, it can be

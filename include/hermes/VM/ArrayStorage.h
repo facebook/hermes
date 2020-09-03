@@ -12,7 +12,7 @@
 #include "hermes/VM/Metadata.h"
 #include "hermes/VM/Runtime.h"
 
-#include "llvm/Support/TrailingObjects.h"
+#include "llvh/Support/TrailingObjects.h"
 
 namespace hermes {
 namespace vm {
@@ -27,7 +27,7 @@ namespace vm {
 /// not contain any native pointers.
 class ArrayStorage final
     : public VariableSizeRuntimeCell,
-      private llvm::TrailingObjects<ArrayStorage, GCHermesValue> {
+      private llvh::TrailingObjects<ArrayStorage, GCHermesValue> {
   friend TrailingObjects;
   friend void ArrayStorageBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
@@ -94,7 +94,8 @@ class ArrayStorage final
       return ExecutionStatus::EXCEPTION;
     }
 
-    ArrayStorage::resizeWithinCapacity(vmcast<ArrayStorage>(*arrRes), size);
+    ArrayStorage::resizeWithinCapacity(
+        vmcast<ArrayStorage>(*arrRes), runtime, size);
     return arrRes;
   }
 
@@ -114,7 +115,7 @@ class ArrayStorage final
   /// \return a reference to the element at index \p index
   template <Inline inl = Inline::No>
   GCHermesValue &at(size_type index) {
-    assert(index < size_ && "index out of range");
+    assert(index < size() && "index out of range");
     return data()[index];
   }
 
@@ -122,14 +123,14 @@ class ArrayStorage final
     return capacity_;
   }
   size_type size() const {
-    return size_;
+    return size_.load(std::memory_order_relaxed);
   }
 
   iterator begin() {
     return data();
   }
   iterator end() {
-    return data() + size_;
+    return data() + size();
   }
 
   /// Append the given element to the end (increasing size by 1).
@@ -138,17 +139,37 @@ class ArrayStorage final
       Runtime *runtime,
       Handle<> value) {
     auto *self = selfHandle.get();
-    if (LLVM_LIKELY(self->size_ < self->capacity_)) {
-      self->data()[self->size_++].set(value.get(), &runtime->getHeap());
+    const auto currSz = self->size();
+    if (LLVM_LIKELY(currSz < self->capacity_)) {
+      // Use the constructor of GCHermesValue to use the correct write barrier
+      // for uninitialized memory.
+      new (&self->data()[currSz])
+          GCHermesValue(value.get(), &runtime->getHeap());
+      self->size_.store(currSz + 1, std::memory_order_release);
       return ExecutionStatus::RETURNED;
     }
     return pushBackSlowPath(selfHandle, runtime, value);
   }
 
   /// Pop the last element off the array and return it.
-  HermesValue pop_back() {
-    assert(size_ > 0 && "Can't pop from empty ArrayStorage");
-    return data()[--size_];
+  HermesValue pop_back(Runtime *runtime) {
+    const size_type sz = size();
+    assert(sz > 0 && "Can't pop from empty ArrayStorage");
+    HermesValue val = data()[sz - 1];
+#ifdef HERMESVM_GC_HADES
+    // In Hades, a snapshot write barrier must be executed on the value that is
+    // conceptually being changed to null. The write doesn't need to occur, but
+    // it is the only correct way to use the write barrier.
+    data()[sz - 1].set(HermesValue::encodeEmptyValue(), &runtime->getHeap());
+#else
+    (void)runtime;
+#endif
+    // The background thread can't mutate size, so we don't need fetch_sub here.
+    // Relaxed is fine, because the GC doesn't care about the order of seeing
+    // the length and the individual elements, as long as illegal HermesValues
+    // aren't written there (which they won't be).
+    size_.store(sz - 1, std::memory_order_relaxed);
+    return val;
   }
 
   /// Ensure that the capacity of the array is at least \p capacity,
@@ -178,13 +199,14 @@ class ArrayStorage final
       MutableHandle<ArrayStorage> &selfHandle,
       Runtime *runtime,
       size_type newSize) {
-    return shift(selfHandle, runtime, 0, newSize - selfHandle->size_, newSize);
+    return shift(selfHandle, runtime, 0, newSize - selfHandle->size(), newSize);
   }
 
   /// Set the size to a value <= the capacity. This is a special
   /// case of resize() but has a simpler interface since we know that it doesn't
   /// need to reallocate.
-  static void resizeWithinCapacity(ArrayStorage *self, size_type newSize);
+  static void
+  resizeWithinCapacity(ArrayStorage *self, Runtime *runtime, size_type newSize);
 
  private:
   /// The capacity is the maximum number of elements this array can ever
@@ -192,7 +214,7 @@ class ArrayStorage final
   /// shrinking during a GC compaction. In order to increase the capacity, a new
   /// ArrayStorage must be created.
   size_type capacity_;
-  size_type size_{0};
+  AtomicIfConcurrentGC<size_type> size_{0};
 
   ArrayStorage() = delete;
   ArrayStorage(const ArrayStorage &) = delete;

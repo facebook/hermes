@@ -72,7 +72,7 @@ void PerfSection::addArgD(const char *argName, double d) {
 
 void PerfSection::addArg(
     const char *argName,
-    const llvm::StringRef value,
+    const llvh::StringRef value,
     bool doCopy) {
   if (!enabled_)
     return;
@@ -183,5 +183,5 @@ PerfSection::~PerfSection() {
 
 } // namespace hermes
 
-#endif // defined(HERMES_FACEBOOK_BUILD) ||
+#endif // defined(HERMES_USE_FBSYSTRACE) ||
        // defined(HERMESVM_PLATFORM_LOGGING)

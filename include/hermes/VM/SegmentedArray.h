@@ -11,7 +11,7 @@
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/Runtime.h"
 
-#include "llvm/Support/TrailingObjects.h"
+#include "llvh/Support/TrailingObjects.h"
 
 #include <limits>
 
@@ -42,7 +42,7 @@ namespace vm {
 ///   * Sharing segments with multiple spines (copy-on-write)
 class SegmentedArray final
     : public VariableSizeRuntimeCell,
-      private llvm::TrailingObjects<SegmentedArray, GCHermesValue> {
+      private llvh::TrailingObjects<SegmentedArray, GCHermesValue> {
  public:
   /// A segment is just a blob of raw memory with a fixed size.
   class Segment final : public GCCell {
@@ -59,7 +59,7 @@ class SegmentedArray final
 
     GCHermesValue &at(uint32_t index) {
       assert(
-          index < length_ &&
+          index < length() &&
           "Cannot get an index outside of the length of a segment");
       return data_[index];
     }
@@ -67,19 +67,19 @@ class SegmentedArray final
     /// \p const version of \p at.
     const GCHermesValue &at(uint32_t index) const {
       assert(
-          index < length_ &&
+          index < length() &&
           "Cannot get an index outside of the length of a segment");
       return data_[index];
     }
 
     uint32_t length() const {
-      return length_;
+      return length_.load(std::memory_order_relaxed);
     }
 
     /// Increases or decreases the length of the segment, up to a max of
     /// kMaxLength. If the length increases, it fills the newly used portion of
     /// the segment with empty values.
-    void setLength(uint32_t newLength);
+    void setLength(Runtime *runtime, uint32_t newLength);
 
     /// Same as above, except it doesn't fill with empty values.
     /// It is the caller's responsibility to ensure that the newly used portion
@@ -87,7 +87,7 @@ class SegmentedArray final
     /// by the GC).
     void setLengthWithoutFilling(uint32_t newLength) {
       assert(newLength <= kMaxLength && "Cannot set length to more than size");
-      length_ = newLength;
+      length_.store(newLength, std::memory_order_release);
     }
 
    private:
@@ -101,7 +101,7 @@ class SegmentedArray final
     friend void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb);
     static VTable vt;
 
-    uint32_t length_;
+    AtomicIfConcurrentGC<uint32_t> length_;
     GCHermesValue data_[kMaxLength];
 
     explicit Segment(Runtime *runtime)
@@ -146,7 +146,7 @@ class SegmentedArray final
   size_type slotCapacity_;
   /// The number of slots that are currently valid. The \c size() is a derived
   /// field from this value.
-  size_type numSlotsUsed_;
+  AtomicIfConcurrentGC<size_type> numSlotsUsed_;
 
   struct iterator {
     using iterator_category = std::bidirectional_iterator_tag;
@@ -281,11 +281,11 @@ class SegmentedArray final
   /// Gets the size of the SegmentedArray. The size is the number of elements
   /// currently active in the array.
   size_type size() const {
-    if (LLVM_LIKELY(numSlotsUsed_ <= kValueToSegmentThreshold)) {
-      return numSlotsUsed_;
+    const auto numSlotsUsed = numSlotsUsed_.load(std::memory_order_relaxed);
+    if (LLVM_LIKELY(numSlotsUsed <= kValueToSegmentThreshold)) {
+      return numSlotsUsed;
     } else {
-      const SegmentNumber numSegments =
-          numSlotsUsed_ - kValueToSegmentThreshold;
+      const SegmentNumber numSegments = numSlotsUsed - kValueToSegmentThreshold;
       const size_type numBeforeLastSegment =
           kValueToSegmentThreshold + (numSegments - 1) * Segment::kMaxLength;
       const uint32_t numInLastSegment = segmentAt(numSegments - 1)->length();
@@ -335,11 +335,14 @@ class SegmentedArray final
   /// Set the size to a value <= the capacity. This is a special
   /// case of resize() but has a simpler interface since we know that it doesn't
   /// need to reallocate.
-  static void resizeWithinCapacity(SegmentedArray *self, size_type newSize);
+  static void resizeWithinCapacity(
+      SegmentedArray *self,
+      Runtime *runtime,
+      size_type newSize);
 
   /// Decrease the size to zero.
-  void clear() {
-    shrinkRight(size());
+  void clear(Runtime *runtime) {
+    shrinkRight(runtime, size());
   }
 
   static bool classof(const GCCell *cell) {
@@ -418,7 +421,7 @@ class SegmentedArray final
         ? capacity
         :
         // Enough segments to hold the capacity without inline storage.
-        (llvm::alignTo<Segment::kMaxLength>(
+        (llvh::alignTo<Segment::kMaxLength>(
              capacity - kValueToSegmentThreshold) /
          Segment::kMaxLength) +
             // The slots for inline storage plus the slots need to hold the
@@ -523,9 +526,10 @@ class SegmentedArray final
 
   /// \return the number of segments in active use by this SegmentedArray.
   SegmentNumber numUsedSegments() const {
-    return numSlotsUsed_ <= kValueToSegmentThreshold
+    const auto numSlotsUsed = numSlotsUsed_.load(std::memory_order_relaxed);
+    return numSlotsUsed <= kValueToSegmentThreshold
         ? 0
-        : numSlotsUsed_ - kValueToSegmentThreshold;
+        : numSlotsUsed - kValueToSegmentThreshold;
   }
 
   /// @name Resize helper functions
@@ -556,7 +560,8 @@ class SegmentedArray final
 
   /// Shrink the array on the right hand side, removing the existing elements.
   /// \p pre amount <= size().
-  void shrinkRight(size_type amount);
+  void shrinkRight(Runtime *runtime, size_type amount);
+
   /// Shrink the array on the left hand side, removing the existing elements
   /// from the left.
   /// \p pre amount <= size().
@@ -564,7 +569,8 @@ class SegmentedArray final
 
   /// Increases the size by \p amount, without doing any allocation.
   /// \param fill If true, fill the newly usable space with empty HermesValues.
-  void increaseSizeWithinCapacity(size_type amount, bool fill);
+  void
+  increaseSizeWithinCapacity(Runtime *runtime, size_type amount, bool fill);
 
   /// Increases the size by \p amount, and adjusts segment sizes
   /// accordingly.
@@ -577,7 +583,7 @@ class SegmentedArray final
 
   /// Decreases the size by \p amount, and no longer tracks the elements past
   /// the new size limit.
-  void decreaseSize(size_type amount);
+  void decreaseSize(Runtime *runtime, size_type amount);
 
   /// @}
 

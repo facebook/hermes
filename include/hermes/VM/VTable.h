@@ -12,11 +12,10 @@
 #include "hermes/VM/GCDecl.h"
 #include "hermes/VM/HeapAlign.h"
 #include "hermes/VM/HeapSnapshot.h"
-#include "hermes/VM/Metadata.h"
 #include "hermes/VM/PointerBase.h"
 #include "hermes/VM/SlotAcceptor.h"
 
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <cstdint>
 
@@ -228,7 +227,7 @@ struct VTable {
   }
 };
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const VTable &vt);
+llvh::raw_ostream &operator<<(llvh::raw_ostream &os, const VTable &vt);
 
 } // namespace vm
 } // namespace hermes

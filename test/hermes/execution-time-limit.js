@@ -20,7 +20,7 @@ function helper() {
 
 entryPoint();
 
-//CHECK: TimeoutError: Javascript execution has timed out.
+//CHECK: Uncaught TimeoutError: Javascript execution has timed out.
 //CHECK: at helper ({{.*/execution-time-limit.js}}:17:5)
 //CHECK-NEXT: at entryPoint ({{.*/execution-time-limit.js}}:11:9)
 //CHECK-NEXT: at global ({{.*/execution-time-limit.js}}:21:11)

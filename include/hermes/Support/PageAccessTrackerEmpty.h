@@ -11,7 +11,7 @@
 #include <memory>
 #include <vector>
 #include "hermes/Support/JSONEmitter.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/raw_ostream.h"
 
 namespace hermes {
 
@@ -32,7 +32,7 @@ class PageAccessTracker {
     return std::vector<uint32_t>();
   }
 
-  bool printStats(llvm::raw_ostream &OS, bool json) volatile {
+  bool printStats(llvh::raw_ostream &OS, bool json) volatile {
     return false;
   }
 
@@ -40,7 +40,7 @@ class PageAccessTracker {
     json.emitNullValue();
   }
 
-  bool printPageAccessedOrder(llvm::raw_ostream &OS, bool json) volatile {
+  bool printPageAccessedOrder(llvh::raw_ostream &OS, bool json) volatile {
     return false;
   }
 };

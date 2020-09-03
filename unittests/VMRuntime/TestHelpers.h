@@ -161,29 +161,37 @@ inline const GCConfig TestGCConfigFixedSize(
       StringPrimitive::createNoThrow(runtime, str).getHermesValue(), x));
 
 /// Assert that execution of 'x' didn't throw and returned the expected bool.
+#define EXPECT_CALLRESULT_BOOL_RAW(B, x) \
+  do {                                   \
+    auto res = x;                        \
+    ASSERT_RETURNED(res.getStatus());    \
+    EXPECT_##B(*res);                    \
+  } while (0)
+
+/// Assert that execution of 'x' didn't throw and returned the expected bool.
 #define EXPECT_CALLRESULT_BOOL(B, x)  \
   do {                                \
     auto res = x;                     \
     ASSERT_RETURNED(res.getStatus()); \
-    EXPECT_##B(res->getBool());       \
+    EXPECT_##B((*res)->getBool());    \
   } while (0)
 
 /// Assert that execution of 'x' didn't throw and returned the expected
 /// CallResult.
 // Will replace "EXPECT_RETURN_STRING" after the entire refactor.
-#define EXPECT_CALLRESULT_STRING(str, x)    \
-  do {                                      \
-    auto res = x;                           \
-    ASSERT_RETURNED(res.getStatus());       \
-    EXPECT_STRINGPRIM(str, res.getValue()); \
+#define EXPECT_CALLRESULT_STRING(str, x) \
+  do {                                   \
+    auto res = x;                        \
+    ASSERT_RETURNED(res.getStatus());    \
+    EXPECT_STRINGPRIM(str, res->get());  \
   } while (0)
 
 /// Assert that execution of 'x' didn't throw and returned undefined.
-#define EXPECT_CALLRESULT_UNDEFINED(x) \
-  do {                                 \
-    auto res = x;                      \
-    ASSERT_RETURNED(res.getStatus());  \
-    EXPECT_TRUE(res->isUndefined());   \
+#define EXPECT_CALLRESULT_UNDEFINED(x)  \
+  do {                                  \
+    auto res = x;                       \
+    ASSERT_RETURNED(res.getStatus());   \
+    EXPECT_TRUE((*res)->isUndefined()); \
   } while (0)
 
 /// Assert that execution of 'x' didn't throw and returned the expected double.
@@ -191,7 +199,7 @@ inline const GCConfig TestGCConfigFixedSize(
   do {                                 \
     auto res = x;                      \
     ASSERT_RETURNED(res.getStatus());  \
-    EXPECT_EQ(d, res->getDouble());    \
+    EXPECT_EQ(d, (*res)->getDouble()); \
   } while (0)
 
 /// Assert that execution of 'x' didn't throw and returned the expected double.
@@ -199,7 +207,7 @@ inline const GCConfig TestGCConfigFixedSize(
   do {                                \
     auto res = x;                     \
     ASSERT_RETURNED(res.getStatus()); \
-    EXPECT_EQ(v, res.getValue());     \
+    EXPECT_EQ(v, res->get());         \
   } while (0)
 
 /// Some tests expect out of memory.  This may either be fatal, or throw
@@ -252,7 +260,7 @@ struct DummyRuntime final : public HandleRootOwner,
   GC gc;
   std::vector<GCCell **> pointerRoots{};
   std::vector<HermesValue *> valueRoots{};
-  std::vector<void **> weakRoots{};
+  std::vector<WeakRoot<void> *> weakRoots{};
   std::function<void(WeakRefAcceptor &)> markExtraWeak{};
 
   /// Create a DummyRuntime with the default parameters.
@@ -277,6 +285,12 @@ struct DummyRuntime final : public HandleRootOwner,
   static std::unique_ptr<StorageProvider> defaultProvider();
 
   ~DummyRuntime() override {
+#ifndef NDEBUG
+    gc.getIDTracker().forEachID(
+        [this](const void *mem, HeapSnapshot::NodeID id) {
+          EXPECT_TRUE(gc.validPointer(mem));
+        });
+#endif
     gc.finalizeAll();
   }
 
@@ -305,9 +319,17 @@ struct DummyRuntime final : public HandleRootOwner,
     return 0;
   }
 
+  void unmarkSymbols() override {}
+
   void freeSymbols(const std::vector<bool> &) override {}
 
-  void printRuntimeGCStats(llvm::raw_ostream &) const override {}
+#ifdef HERMES_SLOW_DEBUG
+  bool isSymbolLive(SymbolID) override {
+    return true;
+  }
+#endif
+
+  void printRuntimeGCStats(JSONEmitter &) const override {}
 
   void visitIdentifiers(
       const std::function<void(UTF16Ref, uint32_t)> &acceptor) override {

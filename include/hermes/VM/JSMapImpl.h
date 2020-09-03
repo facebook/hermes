@@ -122,9 +122,11 @@ class JSMapImpl final : public JSObject {
       Handle<> thisArg) {
     self->assertInitialized();
     MutableHandle<HashMapEntry> entry{runtime};
+    GCScopeMarkerRAII marker{runtime};
     for (entry = self->storage_.get(runtime)->iteratorNext(runtime); entry;
          entry =
              self->storage_.get(runtime)->iteratorNext(runtime, entry.get())) {
+      marker.flush();
       HermesValue key = entry->key;
       HermesValue value = entry->value;
       assert(!key.isEmpty() && "Invalid key encountered");
@@ -251,7 +253,7 @@ class JSMapIteratorImpl final : public JSObject {
         // If the next element in the iterator is invalid, we have
         // reached the end.
         self->iterationFinished_ = true;
-        self->data_ = nullptr;
+        self->data_.setNull(&runtime->getHeap());
       }
     }
     return createIterResultObject(runtime, value, self->iterationFinished_)

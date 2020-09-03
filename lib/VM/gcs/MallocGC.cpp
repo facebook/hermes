@@ -15,9 +15,10 @@
 #include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/HiddenClass.h"
 #include "hermes/VM/JSWeakMapImpl.h"
+#include "hermes/VM/SlotAcceptorDefault-inline.h"
 #include "hermes/VM/SlotAcceptorDefault.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 
 #include <algorithm>
 
@@ -27,7 +28,7 @@ namespace hermes {
 namespace vm {
 
 struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
-                                         public WeakRootAcceptor {
+                                         public WeakRootAcceptorDefault {
   std::vector<CellHeader *> worklist_;
 
   /// The WeakMap objects that have been discovered to be reachable.
@@ -39,7 +40,8 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
   /// the falses are garbage.
   std::vector<bool> markedSymbols_;
 
-  MarkingAcceptor(GC &gc) : SlotAcceptorDefault(gc) {
+  MarkingAcceptor(GC &gc)
+      : SlotAcceptorDefault(gc), WeakRootAcceptorDefault(gc) {
     markedSymbols_.resize(gc.gcCallbacks_->getSymbolsEnd(), false);
   }
 
@@ -90,8 +92,9 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
         worklist_.push_back(newLocation);
       }
       gc.newPointers_.insert(newLocation);
-      if (gc.idTracker_.isTrackingIDs()) {
+      if (gc.isTrackingIDs()) {
         gc.idTracker_.moveObject(cell, newLocation->data());
+        gc.allocationLocationTracker_.moveAlloc(cell, newLocation->data());
       }
       cell = newLocation->data();
     }
@@ -246,14 +249,14 @@ void MallocGC::clearUnmarkedPropertyMaps() {
   for (CellHeader *header : pointers_)
     if (!header->isMarked())
       if (auto hc = dyn_vmcast<HiddenClass>(header->data()))
-        hc->clearPropertyMap();
+        hc->clearPropertyMap(this);
 }
 #endif
 
 void MallocGC::collect() {
   assert(noAllocLevel_ == 0 && "no GC allowed right now");
   using std::chrono::steady_clock;
-  LLVM_DEBUG(llvm::dbgs() << "Beginning collection");
+  LLVM_DEBUG(llvh::dbgs() << "Beginning collection");
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormed();
 #endif
@@ -310,8 +313,10 @@ void MallocGC::collect() {
         }
 #endif
       }
-      if (idTracker_.isTrackingIDs()) {
+      if (idTracker_.isTrackingIDs() ||
+          allocationLocationTracker_.isEnabled()) {
         idTracker_.untrackObject(cell);
+        allocationLocationTracker_.freeAlloc(cell);
       }
       if (allocationLocationTracker_.isEnabled()) {
         allocationLocationTracker_.freeAlloc(cell);
@@ -428,20 +433,15 @@ void MallocGC::finalizeAll() {
   }
 }
 
-void MallocGC::printStats(llvm::raw_ostream &os, bool trailingComma) {
-  if (!recordGcStats_) {
-    return;
-  }
-  GCBase::printStats(os, true);
-  os << "\t\"specific\": {\n"
-     << "\t\t\"collector\": \"malloc\",\n"
-     << "\t\t\"stats\": {}\n"
-     << "\t},\n";
-  gcCallbacks_->printRuntimeGCStats(os);
-  if (trailingComma) {
-    os << ",";
-  }
-  os << "\n";
+void MallocGC::printStats(JSONEmitter &json) {
+  GCBase::printStats(json);
+  json.emitKey("specific");
+  json.openDict();
+  json.emitKeyValue("collector", "malloc");
+  json.emitKey("stats");
+  json.openDict();
+  json.closeDict();
+  json.closeDict();
 }
 
 void MallocGC::resetStats() {
@@ -568,8 +568,9 @@ bool MallocGC::isMostRecentFinalizableObj(const GCCell *cell) const {
 }
 #endif
 
-void MallocGC::createSnapshot(llvm::raw_ostream &os) {
-  hermes_fatal("No snapshots allowed with MallocGC");
+void MallocGC::createSnapshot(llvh::raw_ostream &os) {
+  GCCycle cycle{this};
+  GCBase::createSnapshot(this, os);
 }
 
 #ifdef HERMESVM_SERIALIZE

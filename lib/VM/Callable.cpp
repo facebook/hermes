@@ -16,9 +16,9 @@
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
 
-#include "llvm/ADT/ArrayRef.h"
+#include "llvh/ADT/ArrayRef.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 #define DEBUG_TYPE "serialize"
 
 namespace hermes {
@@ -39,10 +39,10 @@ void EnvironmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 #ifdef HERMESVM_SERIALIZE
 void EnvironmentSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const Environment>(cell);
-  s.writeInt<uint32_t>(self->size_);
+  s.writeInt<uint32_t>(self->getSize());
   s.writeRelocation(self->parentEnvironment_.get(s.getRuntime()));
   // Write Trailing GCHermesValue
-  for (uint32_t i = 0; i < self->size_; i++) {
+  for (uint32_t i = 0; i < self->getSize(); i++) {
     s.writeHermesValue(self->getSlots()[i]);
   }
 
@@ -95,11 +95,11 @@ std::string Callable::_snapshotNameImpl(GCCell *cell, GC *gc) {
   return self->getNameIfExists(gc->getPointerBase());
 }
 
-CallResult<HermesValue> Callable::_newObjectImpl(
+CallResult<PseudoHandle<JSObject>> Callable::_newObjectImpl(
     Handle<Callable> /*selfHandle*/,
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  return JSObject::create(runtime, parentHandle).getHermesValue();
+  return JSObject::create(runtime, parentHandle);
 }
 
 void Callable::defineLazyProperties(Handle<Callable> fn, Runtime *runtime) {
@@ -226,7 +226,7 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
 
 /// Execute this function with no arguments. This is just a convenience
 /// helper method; it actually invokes the interpreter recursively.
-CallResult<HermesValue> Callable::executeCall0(
+CallResult<PseudoHandle<>> Callable::executeCall0(
     Handle<Callable> selfHandle,
     Runtime *runtime,
     Handle<> thisArgHandle,
@@ -245,7 +245,7 @@ CallResult<HermesValue> Callable::executeCall0(
 
 /// Execute this function with one argument. This is just a convenience
 /// helper method; it actually invokes the interpreter recursively.
-CallResult<HermesValue> Callable::executeCall1(
+CallResult<PseudoHandle<>> Callable::executeCall1(
     Handle<Callable> selfHandle,
     Runtime *runtime,
     Handle<> thisArgHandle,
@@ -266,7 +266,7 @@ CallResult<HermesValue> Callable::executeCall1(
 
 /// Execute this function with two arguments. This is just a convenience
 /// helper method; it actually invokes the interpreter recursively.
-CallResult<HermesValue> Callable::executeCall2(
+CallResult<PseudoHandle<>> Callable::executeCall2(
     Handle<Callable> selfHandle,
     Runtime *runtime,
     Handle<> thisArgHandle,
@@ -289,7 +289,7 @@ CallResult<HermesValue> Callable::executeCall2(
 
 /// Execute this function with three arguments. This is just a convenience
 /// helper method; it actually invokes the interpreter recursively.
-CallResult<HermesValue> Callable::executeCall3(
+CallResult<PseudoHandle<>> Callable::executeCall3(
     Handle<Callable> selfHandle,
     Runtime *runtime,
     Handle<> thisArgHandle,
@@ -314,7 +314,7 @@ CallResult<HermesValue> Callable::executeCall3(
 
 /// Execute this function with four arguments. This is just a convenience
 /// helper method; it actually invokes the interpreter recursively.
-CallResult<HermesValue> Callable::executeCall4(
+CallResult<PseudoHandle<>> Callable::executeCall4(
     Handle<Callable> selfHandle,
     Runtime *runtime,
     Handle<> thisArgHandle,
@@ -339,7 +339,7 @@ CallResult<HermesValue> Callable::executeCall4(
   return call(selfHandle, runtime);
 }
 
-CallResult<HermesValue> Callable::executeCall(
+CallResult<PseudoHandle<>> Callable::executeCall(
     Handle<Callable> selfHandle,
     Runtime *runtime,
     Handle<> newTarget,
@@ -378,22 +378,24 @@ CallResult<HermesValue> Callable::executeCall(
   return Callable::call(selfHandle, runtime);
 }
 
-CallResult<HermesValue> Callable::executeConstruct0(
+CallResult<PseudoHandle<>> Callable::executeConstruct0(
     Handle<Callable> selfHandle,
     Runtime *runtime) {
   auto thisVal = Callable::createThisForConstruct(selfHandle, runtime);
   if (LLVM_UNLIKELY(thisVal == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto thisValHandle = runtime->makeHandle<JSObject>(*thisVal);
+  auto thisValHandle = runtime->makeHandle<JSObject>(std::move(thisVal->get()));
   auto result = executeCall0(selfHandle, runtime, thisValHandle, true);
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return result->isObject() ? result : thisValHandle.getHermesValue();
+  return (*result)->isObject() ? std::move(result)
+                               : CallResult<PseudoHandle<>>(createPseudoHandle(
+                                     thisValHandle.getHermesValue()));
 }
 
-CallResult<HermesValue> Callable::executeConstruct1(
+CallResult<PseudoHandle<>> Callable::executeConstruct1(
     Handle<Callable> selfHandle,
     Runtime *runtime,
     Handle<> param1) {
@@ -401,24 +403,27 @@ CallResult<HermesValue> Callable::executeConstruct1(
   if (LLVM_UNLIKELY(thisVal == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto thisValHandle = runtime->makeHandle<JSObject>(*thisVal);
-  auto result = executeCall1(selfHandle, runtime, thisValHandle, *param1, true);
+  auto thisValHandle = runtime->makeHandle<JSObject>(std::move(thisVal->get()));
+  CallResult<PseudoHandle<>> result =
+      executeCall1(selfHandle, runtime, thisValHandle, *param1, true);
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return result->isObject() ? result : thisValHandle.getHermesValue();
+  return (*result)->isObject() ? std::move(result)
+                               : CallResult<PseudoHandle<>>(createPseudoHandle(
+                                     thisValHandle.getHermesValue()));
 }
 
-CallResult<HermesValue> Callable::createThisForConstruct(
+CallResult<PseudoHandle<JSObject>> Callable::createThisForConstruct(
     Handle<Callable> selfHandle,
     Runtime *runtime) {
-  auto prototypeProp = JSObject::getNamed_RJS(
+  CallResult<PseudoHandle<>> prototypeProp = JSObject::getNamed_RJS(
       selfHandle, runtime, Predefined::getSymbolID(Predefined::prototype));
   if (LLVM_UNLIKELY(prototypeProp == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSObject> prototype = vmisa<JSObject>(*prototypeProp)
-      ? runtime->makeHandle<JSObject>(*prototypeProp)
+  Handle<JSObject> prototype = vmisa<JSObject>(prototypeProp->get())
+      ? runtime->makeHandle<JSObject>(std::move(prototypeProp->get()))
       : Handle<JSObject>::vmcast(&runtime->objectPrototype);
   return Callable::newObject(selfHandle, runtime, prototype);
 }
@@ -426,7 +431,8 @@ CallResult<HermesValue> Callable::createThisForConstruct(
 CallResult<double> Callable::extractOwnLengthProperty_RJS(
     Handle<Callable> selfHandle,
     Runtime *runtime) {
-  CallResult<HermesValue> propRes{HermesValue::encodeUndefinedValue()};
+  CallResult<PseudoHandle<>> propRes{
+      createPseudoHandle(HermesValue::encodeUndefinedValue())};
   NamedPropertyDescriptor desc;
   if (JSObject::getOwnNamedDescriptor(
           selfHandle,
@@ -462,12 +468,12 @@ CallResult<double> Callable::extractOwnLengthProperty_RJS(
       return ExecutionStatus::EXCEPTION;
     }
 
-    if (!propRes->isNumber()) {
+    if (!(*propRes)->isNumber()) {
       return 0.0;
     }
   }
 
-  auto intRes = toInteger(runtime, runtime->makeHandle(propRes.getValue()));
+  auto intRes = toInteger(runtime, runtime->makeHandle(std::move(*propRes)));
   if (intRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -643,11 +649,11 @@ ExecutionStatus BoundFunction::initializeLengthAndName(
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto nameHandle = propRes->isString()
-      ? runtime->makeHandle<StringPrimitive>(*propRes)
+  auto nameHandle = (*propRes)->isString()
+      ? runtime->makeHandle<StringPrimitive>(propRes->getHermesValue())
       : runtime->getPredefinedStringHandle(Predefined::emptyString);
   auto nameView = StringPrimitive::createStringView(runtime, nameHandle);
-  llvm::SmallU16String<32> boundName{"bound "};
+  llvh::SmallU16String<32> boundName{"bound "};
   boundName.append(nameView.begin(), nameView.end());
   // Share name strings for repeatedly bound functions by using the
   // identifier table. If a new symbol is created, it will disappear
@@ -705,7 +711,7 @@ ExecutionStatus BoundFunction::initializeLengthAndName(
   return ExecutionStatus::RETURNED;
 }
 
-CallResult<HermesValue> BoundFunction::_newObjectImpl(
+CallResult<PseudoHandle<JSObject>> BoundFunction::_newObjectImpl(
     Handle<Callable> selfHandle,
     Runtime *runtime,
     Handle<JSObject>) {
@@ -725,7 +731,7 @@ CallResult<HermesValue> BoundFunction::_newObjectImpl(
       targetHandle, runtime, Predefined::getSymbolID(Predefined::prototype));
   if (propRes == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
-  auto prototype = runtime->makeHandle(*propRes);
+  auto prototype = runtime->makeHandle(std::move(*propRes));
 
   // If target.prototype is an object, use it, otherwise use the standard
   // object prototype.
@@ -737,7 +743,7 @@ CallResult<HermesValue> BoundFunction::_newObjectImpl(
           : Handle<JSObject>::vmcast(&runtime->objectPrototype));
 }
 
-CallResult<HermesValue> BoundFunction::_boundCall(
+CallResult<PseudoHandle<>> BoundFunction::_boundCall(
     BoundFunction *self,
     const Inst *ip,
     Runtime *runtime) {
@@ -746,7 +752,7 @@ CallResult<HermesValue> BoundFunction::_boundCall(
     return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
 
-  CallResult<HermesValue> res{ExecutionStatus::EXCEPTION};
+  CallResult<PseudoHandle<>> res{ExecutionStatus::EXCEPTION};
   StackFramePtr originalCalleeFrame = StackFramePtr(runtime->getStackPointer());
   // Save the original newTarget since we will overwrite it.
   HermesValue originalNewTarget = originalCalleeFrame.getNewTargetRef();
@@ -805,7 +811,7 @@ CallResult<HermesValue> BoundFunction::_boundCall(
       std::uninitialized_copy_n(
           self->getArgsWithThis(runtime) + 1,
           boundArgCount,
-          llvm::make_reverse_iterator(stack + 1));
+          llvh::make_reverse_iterator(stack + 1));
     }
 
     // Loop while the target is another bound function.
@@ -873,7 +879,7 @@ bail:
   return res;
 }
 
-CallResult<HermesValue> BoundFunction::_callImpl(
+CallResult<PseudoHandle<>> BoundFunction::_callImpl(
     Handle<Callable> selfHandle,
     Runtime *runtime) {
   // Pass `nullptr` as the IP because this function is never called
@@ -1052,13 +1058,13 @@ Handle<NativeFunction> NativeFunction::create(
   return selfHandle;
 }
 
-CallResult<HermesValue> NativeFunction::_callImpl(
+CallResult<PseudoHandle<>> NativeFunction::_callImpl(
     Handle<Callable> selfHandle,
     Runtime *runtime) {
   return _nativeCall(vmcast<NativeFunction>(selfHandle.get()), runtime);
 }
 
-CallResult<HermesValue> NativeFunction::_newObjectImpl(
+CallResult<PseudoHandle<JSObject>> NativeFunction::_newObjectImpl(
     Handle<Callable>,
     Runtime *runtime,
     Handle<JSObject>) {
@@ -1163,7 +1169,7 @@ void NativeConstructorDeserialize(Deserializer &d, CellKind kind) {
 #endif
 
 #ifndef NDEBUG
-CallResult<HermesValue> NativeConstructor::_callImpl(
+CallResult<PseudoHandle<>> NativeConstructor::_callImpl(
     Handle<Callable> selfHandle,
     Runtime *runtime) {
   StackFramePtr newFrame{runtime->getStackPointer()};
@@ -1279,13 +1285,20 @@ void JSFunction::addLocationToSnapshot(
   }
 }
 
-CallResult<HermesValue> JSFunction::_callImpl(
+CallResult<PseudoHandle<>> JSFunction::_callImpl(
     Handle<Callable> selfHandle,
     Runtime *runtime) {
   auto *self = vmcast<JSFunction>(selfHandle.get());
-  if (auto *jitPtr = self->getCodeBlock()->getJITCompiled())
-    return (*jitPtr)(runtime);
-  return runtime->interpretFunction(self->getCodeBlock());
+  CallResult<HermesValue> result{ExecutionStatus::EXCEPTION};
+  if (auto *jitPtr = self->getCodeBlock()->getJITCompiled()) {
+    result = (*jitPtr)(runtime);
+  } else {
+    result = runtime->interpretFunction(self->getCodeBlock());
+  }
+  if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return createPseudoHandle(*result);
 }
 
 std::string JSFunction::_snapshotNameImpl(GCCell *cell, GC *gc) {
@@ -1519,7 +1532,7 @@ CallResult<Handle<GeneratorInnerFunction>> GeneratorInnerFunction::create(
 }
 
 /// Call the callable with arguments already on the stack.
-CallResult<HermesValue> GeneratorInnerFunction::callInnerFunction(
+CallResult<PseudoHandle<>> GeneratorInnerFunction::callInnerFunction(
     Handle<GeneratorInnerFunction> selfHandle,
     Runtime *runtime,
     Handle<> arg,

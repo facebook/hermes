@@ -5,6 +5,16 @@
 
 Hermes is a JavaScript engine optimized for fast start up of [React Native](https://reactnative.dev/) apps. It features ahead-of-time static optimization and compact bytecode. This repo is Microsoft’s fork of [facebook/hermes](https://github.com/facebook/hermes) and brings Hermes support to [React Native Windows](https://github.com/microsoft/react-native-windows).
 
+If you're only interested in using pre-built Hermes in a new or existing React Native app, you do not need to follow this guide or have direct access to the Hermes source. Instead, just follow [these instructions to enable Hermes](https://reactnative.dev/docs/hermes).
+
+If you want to know how to build and hack on Hermes directly, and/or integrate Hermes built from source into a React Native app then read on.
+
+The instructions here very briefly cover steps to build the Hermes CLI. They assume you have typical native development tools setup for your OS, and support for cmake and Ninja. For more details of required dependencies, building Hermes with different options, etc. follow these links instead:
+
+* [Building and Running Hermes](doc/BuildingAndRunning.md)
+* [Using a custom Hermes build in a React Native app](doc/ReactNativeIntegration.md#using-a-custom-hermes-build-in-a-react-native-app)
+
+To build a local debug version of the Hermes CLI tools the following steps should get you started on macOS/Linux:
 The following commands should get you going in a Windows Command Prompt:
 
 ```shell

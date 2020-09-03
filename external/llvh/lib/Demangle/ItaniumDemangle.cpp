@@ -11,8 +11,8 @@
 // file does not yet support:
 //   - C++ modules TS
 
-#include "llvm/Demangle/Demangle.h"
-#include "llvm/Demangle/ItaniumDemangle.h"
+#include "llvh/Demangle/Demangle.h"
+#include "llvh/Demangle/ItaniumDemangle.h"
 
 #include <cassert>
 #include <cctype>
@@ -24,8 +24,8 @@
 #include <utility>
 #include <vector>
 
-using namespace llvm;
-using namespace llvm::itanium_demangle;
+using namespace llvh;
+using namespace llvh::itanium_demangle;
 
 constexpr const char *itanium_demangle::FloatData<float>::spec;
 constexpr const char *itanium_demangle::FloatData<double>::spec;
@@ -318,7 +318,7 @@ public:
 
 using Demangler = itanium_demangle::Db<DefaultAllocator>;
 
-char *llvm::itaniumDemangle(const char *MangledName, char *Buf,
+char *llvh::itaniumDemangle(const char *MangledName, char *Buf,
                             size_t *N, int *Status) {
   if (MangledName == nullptr || (Buf != nullptr && N == nullptr)) {
     if (Status)
@@ -350,7 +350,7 @@ char *llvm::itaniumDemangle(const char *MangledName, char *Buf,
   return InternalStatus == demangle_success ? Buf : nullptr;
 }
 
-bool llvm::itaniumFindTypesInMangledName(const char *MangledName, void *Ctx,
+bool llvh::itaniumFindTypesInMangledName(const char *MangledName, void *Ctx,
                                          void (*Callback)(void *,
                                                           const char *)) {
   Demangler Parser(MangledName, MangledName + std::strlen(MangledName));

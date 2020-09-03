@@ -15,7 +15,7 @@ namespace {
 
 static void assertDump(PoolHeap &pool, const char *msg) {
   std::string str;
-  llvm::raw_string_ostream OS{str};
+  llvh::raw_string_ostream OS{str};
   pool.dump(OS, true);
   OS.flush();
   // Strip prefix and suffix.

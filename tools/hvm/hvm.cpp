@@ -5,15 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/Program.h"
-#include "llvm/Support/Signals.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/CommandLine.h"
+#include "llvh/Support/FileSystem.h"
+#include "llvh/Support/InitLLVM.h"
+#include "llvh/Support/MemoryBuffer.h"
+#include "llvh/Support/Path.h"
+#include "llvh/Support/PrettyStackTrace.h"
+#include "llvh/Support/Program.h"
+#include "llvh/Support/Signals.h"
+#include "llvh/Support/raw_ostream.h"
 
 #ifndef HERMESVM_LEAN
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
@@ -33,60 +33,60 @@
 
 using namespace hermes;
 
-static llvm::cl::opt<std::string> InputFilename(
-    llvm::cl::desc("input file"),
-    llvm::cl::init("-"),
-    llvm::cl::Positional);
+static llvh::cl::opt<std::string> InputFilename(
+    llvh::cl::desc("input file"),
+    llvh::cl::init("-"),
+    llvh::cl::Positional);
 
 // Lean VM doesn't include the disassembler.
 #ifndef HERMESVM_LEAN
-static llvm::cl::opt<bool> Disassemble(
+static llvh::cl::opt<bool> Disassemble(
     "d",
-    llvm::cl::desc("Disassemble bytecode"));
+    llvh::cl::desc("Disassemble bytecode"));
 
-static llvm::cl::opt<bool> PrettyDisassemble(
+static llvh::cl::opt<bool> PrettyDisassemble(
     "pretty-disassemble",
-    llvm::cl::init(true),
-    llvm::cl::desc("Pretty print the disassembled bytecode"));
+    llvh::cl::init(true),
+    llvh::cl::desc("Pretty print the disassembled bytecode"));
 #endif
 
-static llvm::cl::opt<unsigned> Repeat(
+static llvh::cl::opt<unsigned> Repeat(
     "Xrepeat",
-    llvm::cl::desc("Repeat execution N number of times"),
-    llvm::cl::init(1),
-    llvm::cl::Hidden);
+    llvh::cl::desc("Repeat execution N number of times"),
+    llvh::cl::init(1),
+    llvh::cl::Hidden);
 
-static llvm::cl::opt<bool> GCPrintStats(
+static llvh::cl::opt<bool> GCPrintStats(
     "gc-print-stats",
-    llvm::cl::desc("Output summary garbage collection statistics at exit"),
-    llvm::cl::cat(cl::GCCategory),
-    llvm::cl::init(false));
+    llvh::cl::desc("Output summary garbage collection statistics at exit"),
+    llvh::cl::cat(cl::GCCategory),
+    llvh::cl::init(false));
 
 // This is the vm driver.
 int main(int argc, char **argv) {
   // Normalize the arg vector.
-  llvm::InitLLVM initLLVM(argc, argv);
-  llvm::sys::PrintStackTraceOnErrorSignal("hvm");
-  llvm::PrettyStackTraceProgram X(argc, argv);
-  llvm::llvm_shutdown_obj Y;
-  llvm::cl::ParseCommandLineOptions(argc, argv, "Hermes VM driver\n");
+  llvh::InitLLVM initLLVM(argc, argv);
+  llvh::sys::PrintStackTraceOnErrorSignal("hvm");
+  llvh::PrettyStackTraceProgram X(argc, argv);
+  llvh::llvm_shutdown_obj Y;
+  llvh::cl::ParseCommandLineOptions(argc, argv, "Hermes VM driver\n");
 
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileBufOrErr =
-      llvm::MemoryBuffer::getFileOrSTDIN(InputFilename);
+  llvh::ErrorOr<std::unique_ptr<llvh::MemoryBuffer>> FileBufOrErr =
+      llvh::MemoryBuffer::getFileOrSTDIN(InputFilename);
 
   std::string filename = FileBufOrErr.get()->getBufferIdentifier().str();
 
   if (!FileBufOrErr) {
-    llvm::errs() << "Error! Failed to open file: " << InputFilename << "\n";
+    llvh::errs() << "Error! Failed to open file: " << InputFilename << "\n";
     return -1;
   }
 
-  auto buffer = llvm::make_unique<MemoryBuffer>(FileBufOrErr.get().get());
+  auto buffer = llvh::make_unique<MemoryBuffer>(FileBufOrErr.get().get());
   auto ret =
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(std::move(buffer));
 
   if (!ret.first) {
-    llvm::errs() << ret.second;
+    llvh::errs() << ret.second;
     return 1;
   }
 
@@ -98,7 +98,7 @@ int main(int argc, char **argv) {
     disassembler.setOptions(
         PrettyDisassemble ? hermes::hbc::DisassemblyOptions::Pretty
                           : hermes::hbc::DisassemblyOptions::None);
-    disassembler.disassemble(llvm::outs());
+    disassembler.disassemble(llvh::outs());
   }
 #endif
 

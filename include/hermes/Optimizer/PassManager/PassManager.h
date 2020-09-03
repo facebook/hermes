@@ -12,12 +12,12 @@
 #include "hermes/Support/Statistic.h"
 #include "hermes/Support/Timer.h"
 
-#include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/Debug.h"
+#include "llvh/ADT/StringSwitch.h"
+#include "llvh/Support/Debug.h"
 
 #define DEBUG_TYPE "passmanager"
 
-using llvm::dbgs;
+using llvh::dbgs;
 
 namespace hermes {
 
@@ -77,9 +77,9 @@ class PassManager {
         return;
 
       if (!lastPass) {
-        llvm::outs() << "*** INITIAL STATE\n\n";
+        llvh::outs() << "*** INITIAL STATE\n\n";
       } else {
-        llvm::outs() << "\n*** AFTER " << lastPass->getName() << "\n\n";
+        llvh::outs() << "\n*** AFTER " << lastPass->getName() << "\n\n";
       }
 
       F->dump();
@@ -90,7 +90,7 @@ class PassManager {
     for (auto *P : pipeline) {
       dumpLastPass(P);
 
-      auto *FP = llvm::dyn_cast<FunctionPass>(P);
+      auto *FP = llvh::dyn_cast<FunctionPass>(P);
       assert(FP && "Invalid pass kind");
       LLVM_DEBUG(dbgs() << "Running the pass " << FP->getName() << "\n");
       LLVM_DEBUG(
@@ -102,7 +102,7 @@ class PassManager {
   }
 
   void run(Module *M) {
-    llvm::SmallVector<Timer, 32> timers;
+    llvh::SmallVector<Timer, 32> timers;
     std::unique_ptr<TimerGroup> timerGroup{nullptr};
     if (AreStatisticsEnabled()) {
       timerGroup.reset(new TimerGroup("", "PassManager Timers"));
@@ -115,9 +115,9 @@ class PassManager {
         return;
 
       if (!lastPass) {
-        llvm::outs() << "*** INITIAL STATE\n\n";
+        llvh::outs() << "*** INITIAL STATE\n\n";
       } else {
-        llvm::outs() << "\n*** AFTER " << lastPass->getName() << "\n\n";
+        llvh::outs() << "\n*** AFTER " << lastPass->getName() << "\n\n";
       }
 
       M->dump();
@@ -134,7 +134,7 @@ class PassManager {
                      : nullptr);
 
       /// Handle function passes:
-      if (auto *FP = llvm::dyn_cast<FunctionPass>(P)) {
+      if (auto *FP = llvh::dyn_cast<FunctionPass>(P)) {
         LLVM_DEBUG(
             dbgs() << "Running the function pass " << FP->getName() << "\n");
 
@@ -153,7 +153,7 @@ class PassManager {
       }
 
       /// Handle module passes:
-      if (auto *MP = llvm::dyn_cast<ModulePass>(P)) {
+      if (auto *MP = llvh::dyn_cast<ModulePass>(P)) {
         LLVM_DEBUG(
             dbgs() << "Running the module pass " << MP->getName() << "\n");
         MP->runOnModule(M);

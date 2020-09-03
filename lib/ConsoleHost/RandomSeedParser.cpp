@@ -11,7 +11,7 @@ namespace cl {
 
 bool RandomSeedParser::parse(
     cl::Option &O,
-    llvm::StringRef ArgName,
+    llvh::StringRef ArgName,
     const std::string &Arg,
     int64_t &Val) {
   const char *ArgStart = Arg.c_str();

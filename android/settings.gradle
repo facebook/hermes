@@ -9,3 +9,5 @@ rootProject.name = 'Hermes'
 
 include ':hermes'
 include ':cppruntime'
+include ':intl'
+include ':intltest'

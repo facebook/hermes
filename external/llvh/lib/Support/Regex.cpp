@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Regex.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
+#include "llvh/Support/Regex.h"
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/ADT/Twine.h"
 #include <string>
 
 // Important this comes last because it defines "_REGEX_H_". At least on
@@ -22,7 +22,7 @@
 // xlocale.h, this will cause trouble, because of missing regex-related types.
 #include "regex_impl.h"
 
-using namespace llvm;
+using namespace llvh;
 
 Regex::Regex() : preg(nullptr), error(REG_BADPAT) {}
 
@@ -36,7 +36,7 @@ Regex::Regex(StringRef regex, unsigned Flags) {
     flags |= REG_NEWLINE;
   if (!(Flags & BasicRegex))
     flags |= REG_EXTENDED;
-  error = llvm_regcomp(preg, regex.data(), flags|REG_PEND);
+  error = llvh_regcomp(preg, regex.data(), flags|REG_PEND);
 }
 
 Regex::Regex(Regex &&regex) {
@@ -48,7 +48,7 @@ Regex::Regex(Regex &&regex) {
 
 Regex::~Regex() {
   if (preg) {
-    llvm_regfree(preg);
+    llvh_regfree(preg);
     delete preg;
   }
 }
@@ -57,10 +57,10 @@ bool Regex::isValid(std::string &Error) const {
   if (!error)
     return true;
 
-  size_t len = llvm_regerror(error, preg, nullptr, 0);
+  size_t len = llvh_regerror(error, preg, nullptr, 0);
 
   Error.resize(len - 1);
-  llvm_regerror(error, preg, &Error[0], len);
+  llvh_regerror(error, preg, &Error[0], len);
   return false;
 }
 
@@ -82,7 +82,7 @@ bool Regex::match(StringRef String, SmallVectorImpl<StringRef> *Matches){
   pm[0].rm_so = 0;
   pm[0].rm_eo = String.size();
 
-  int rc = llvm_regexec(preg, String.data(), nmatch, pm.data(), REG_STARTEND);
+  int rc = llvh_regexec(preg, String.data(), nmatch, pm.data(), REG_STARTEND);
 
   if (rc == REG_NOMATCH)
     return false;

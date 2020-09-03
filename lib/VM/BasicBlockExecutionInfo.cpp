@@ -13,8 +13,8 @@
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/Runtime.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/MD5.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/Support/MD5.h"
 
 #include <string>
 
@@ -36,15 +36,15 @@ void BasicBlockExecutionInfo::resizeFuncStatMap(
   funcStat.resize(pointIndex == 0 ? kMaxBlockNumbers : pointIndex + 1);
 }
 
-static llvm::MD5::MD5Result doMD5Checksum(llvm::ArrayRef<uint8_t> bytecode) {
-  llvm::MD5 md5;
-  llvm::MD5::MD5Result checksum;
+static llvh::MD5::MD5Result doMD5Checksum(llvh::ArrayRef<uint8_t> bytecode) {
+  llvh::MD5 md5;
+  llvh::MD5::MD5Result checksum;
   md5.update(bytecode);
   md5.final(checksum);
   return checksum;
 }
 
-void BasicBlockExecutionInfo::dump(llvm::raw_ostream &OS) {
+void BasicBlockExecutionInfo::dump(llvh::raw_ostream &OS) {
   JSONEmitter json(OS);
   json.openDict();
   json.emitKeyValue("version", BASIC_BLOCK_STAT_VERSION);

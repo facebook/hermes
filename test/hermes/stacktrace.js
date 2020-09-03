@@ -82,7 +82,7 @@ runAndPrint(function() {
 runAndPrint(function() {
   Math.abs({valueOf: thrower});
 })
-//CHECK-LABEL: Error: undefined
+//CHECK-LABEL: Error
 //CHECK-NEXT:     at thrower ({{.*}})
 //CHECK-NEXT:     at abs (native)
 //CHECK-NEXT:     at anonymous ({{.*}})
@@ -117,7 +117,7 @@ runAndPrint(func)
 
 Object.defineProperty(func, 'name', {writable:true, value:undefined})
 runAndPrint(func)
-//CHECK-LABEL: Error: undefined
+//CHECK-LABEL: Error
 //CHECK-NEXT:    at original ({{.*}})
 
 // Native functions can be renamed. Currently native functions with invalid

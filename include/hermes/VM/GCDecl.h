@@ -8,6 +8,8 @@
 #ifndef HERMES_VM_GCDECL_H
 #define HERMES_VM_GCDECL_H
 
+#include "hermes/VM/GCConcurrency.h"
+
 namespace hermes {
 namespace vm {
 

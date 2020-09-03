@@ -10,8 +10,8 @@
 
 #include "hermes/ADT/ConsumableRange.h"
 
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Compiler.h"
+#include "llvh/ADT/STLExtras.h"
+#include "llvh/Support/Compiler.h"
 
 #include <memory>
 #include <vector>

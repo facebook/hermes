@@ -13,7 +13,7 @@
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/GC.h"
 
-#include "llvm/Support/TrailingObjects.h"
+#include "llvh/Support/TrailingObjects.h"
 
 using namespace hermes::vm;
 
@@ -22,14 +22,14 @@ namespace unittest {
 
 /// An Array class suitable for use in unit tests.
 class Array final : public VariableSizeRuntimeCell,
-                    private llvm::TrailingObjects<Array, GCHermesValue> {
+                    private llvh::TrailingObjects<Array, GCHermesValue> {
   friend TrailingObjects;
 
  public:
   static const VTable vt;
-  unsigned const length;
+  AtomicIfConcurrentGC<uint32_t> length;
 
-  Array(GC *gc, unsigned const length)
+  Array(GC *gc, uint32_t length)
       : VariableSizeRuntimeCell(gc, &vt, allocSize(length)), length(length) {}
 
   static bool classof(const GCCell *cell) {
@@ -43,18 +43,19 @@ class Array final : public VariableSizeRuntimeCell,
     return getTrailingObjects<GCHermesValue>();
   }
 
-  static Array *create(DummyRuntime &runtime, unsigned length) {
+  static Array *create(DummyRuntime &runtime, uint32_t length) {
     auto *self =
         new (runtime.allocWithFinalizer</*fixedSize*/ false>(allocSize(length)))
             Array(&runtime.getHeap(), length);
     GCHermesValue::fill(
         self->values(),
         self->values() + length,
-        HermesValue::encodeEmptyValue());
+        HermesValue::encodeEmptyValue(),
+        &runtime.getHeap());
     return self;
   }
 
-  static uint32_t allocSize(unsigned length) {
+  static uint32_t allocSize(uint32_t length) {
     return totalSizeToAlloc<GCHermesValue>(length);
   }
 };

@@ -25,7 +25,7 @@ class IRInstrumentationTest : public ::testing::Test {
     runtime_ = Runtime::create(config);
   }
 
-  CallResult<HermesValue> run(llvm::StringRef ref, bool instrument) {
+  CallResult<HermesValue> run(llvh::StringRef ref, bool instrument) {
     CompileFlags flags;
     flags.instrumentIR = instrument;
     flags.optimize = false;
@@ -34,11 +34,11 @@ class IRInstrumentationTest : public ::testing::Test {
     return result;
   }
 
-  CallResult<HermesValue> run(llvm::StringRef code) {
+  CallResult<HermesValue> run(llvh::StringRef code) {
     return run(code, true);
   }
 
-  void setHook(llvm::StringRef code) {
+  void setHook(llvh::StringRef code) {
     auto result = run(code, false);
     ASSERT_EQ(ExecutionStatus::RETURNED, result.getStatus());
   }

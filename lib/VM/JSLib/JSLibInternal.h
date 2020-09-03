@@ -335,6 +335,19 @@ CallResult<HermesValue> splitInternal(
     Handle<> limit,
     Handle<> separator);
 
+/// Set the lastIndex property of \p regexp to \p value.
+inline ExecutionStatus
+setLastIndex(Handle<JSObject> regexp, Runtime *runtime, HermesValue hv) {
+  return runtime->putNamedThrowOnError(
+      regexp, PropCacheID::RegExpLastIndex, hv);
+}
+
+/// Set the lastIndex property of \p regexp to \p value.
+inline ExecutionStatus
+setLastIndex(Handle<JSObject> regexp, Runtime *runtime, double value) {
+  return setLastIndex(regexp, runtime, HermesValue::encodeNumberValue(value));
+}
+
 /// ES6.0 21.2.5.2.3
 /// If \p unicode is set and the character at \p index in \S is the start of a
 /// surrogate pair, \return index + 2. Otherwise \return index + 1.
@@ -390,6 +403,9 @@ void populateArrayIteratorPrototype(Runtime *runtime);
 
 /// Create the StringIterator prototype.
 void populateStringIteratorPrototype(Runtime *runtime);
+
+/// Create the RegExpStringIterator prototype.
+void populateRegExpStringIteratorPrototype(Runtime *runtime);
 
 /// Create the %GeneratorPrototype%.
 void populateGeneratorPrototype(Runtime *runtime);
@@ -458,14 +474,14 @@ CallResult<HermesValue> addEntriesFromIterable(
     if (LLVM_UNLIKELY(nextItemRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (!vmisa<JSObject>(*nextItemRes)) {
+    if (!vmisa<JSObject>(nextItemRes->get())) {
       // d. If Type(nextItem) is not Object, then
       // i.     Let error be ThrowCompletion(a newly created TypeError object).
       // ii.     Return ? IteratorClose(iteratorRecord, error).
       runtime->raiseTypeError("Iterator value must be an object");
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
-    nextItem = vmcast<JSObject>(*nextItemRes);
+    nextItem = PseudoHandle<JSObject>::vmcast(std::move(*nextItemRes));
 
     // e. Let k be Get(nextItem, "0").
     auto keyRes = JSObject::getComputed_RJS(nextItem, runtime, zero);
@@ -474,7 +490,7 @@ CallResult<HermesValue> addEntriesFromIterable(
       //    return ? IteratorClose(iteratorRecord, k).
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
-    key = *keyRes;
+    key = std::move(*keyRes);
 
     // g. Let v be Get(nextItem, "1").
     auto valueRes = JSObject::getComputed_RJS(nextItem, runtime, one);
@@ -483,7 +499,7 @@ CallResult<HermesValue> addEntriesFromIterable(
       //    return ? IteratorClose(iteratorRecord, v).
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
-    value = *valueRes;
+    value = std::move(*valueRes);
 
     // i. Let status be Call(adder, target, « k.[[Value]], v.[[Value]] »).
     if (LLVM_UNLIKELY(
@@ -504,6 +520,16 @@ Handle<JSObject> createInstrumentObject(Runtime *runtime);
 #endif
 
 } // namespace vm
+
+#ifdef HERMES_PLATFORM_INTL
+namespace intl {
+
+// TODO T65916424: Consider how we can move this somewhere more modular.
+vm::Handle<vm::JSObject> createIntlObject(vm::Runtime *runtime);
+
+} // namespace intl
+#endif
+
 } // namespace hermes
 
 #endif // HERMES_VM_JSLIB_JSLIBINTERNAL_H

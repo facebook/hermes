@@ -4,31 +4,33 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
+
 #define DEBUG_TYPE "gc"
 #include "hermes/VM/GC.h"
 
 #include "hermes/Platform/Logging.h"
 #include "hermes/Support/ErrorHandling.h"
-
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/CellKind.h"
+#include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/SlotAcceptorDefault.h"
 #include "hermes/VM/VTable.h"
 
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/NativeFormatting.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/Debug.h"
+#include "llvh/Support/FileSystem.h"
+#include "llvh/Support/Format.h"
+#include "llvh/Support/NativeFormatting.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <inttypes.h>
 #include <stdexcept>
 #include <system_error>
 
-using llvm::dbgs;
-using llvm::format;
+using llvh::dbgs;
+using llvh::format;
 
 namespace hermes {
 namespace vm {
@@ -74,11 +76,11 @@ GCBase::GCBase(
       ? gcConfig.getSanitizeConfig().getRandomSeed()
       : std::random_device()();
   if (sanitizeRate_ > 0.0 && sanitizeRate_ < 1.0) {
-    llvm::errs()
+    llvh::errs()
         << "Warning: you are using handle sanitization with random sampling.\n"
         << "Sanitize Rate: ";
-    llvm::write_double(llvm::errs(), sanitizeRate_, llvm::FloatStyle::Percent);
-    llvm::errs() << "\n"
+    llvh::write_double(llvh::errs(), sanitizeRate_, llvh::FloatStyle::Percent);
+    llvh::errs() << "\n"
                  << "Sanitize Rate Seed: " << seed << "\n"
                  << "Re-run with -gc-sanitize-handles-random-seed=" << seed
                  << " for deterministic crashes.\n";
@@ -93,20 +95,27 @@ GCBase::GCCycle::GCCycle(
     std::string extraInfo)
     : gc_(gc),
       gcCallbacksOpt_(gcCallbacksOpt),
-      extraInfo_(std::move(extraInfo)) {
-  gc_->inGC_ = true;
-  if (gcCallbacksOpt_.hasValue()) {
-    gcCallbacksOpt_.getValue()->onGCEvent(
-        GCEventKind::CollectionStart, extraInfo_);
+      extraInfo_(std::move(extraInfo)),
+      previousInGC_(gc_->inGC_.load(std::memory_order_acquire)) {
+  if (!previousInGC_) {
+    if (gcCallbacksOpt_.hasValue()) {
+      gcCallbacksOpt_.getValue()->onGCEvent(
+          GCEventKind::CollectionStart, extraInfo_);
+    }
+    bool wasInGC_ = gc_->inGC_.exchange(true, std::memory_order_acquire);
+    (void)wasInGC_;
+    assert(!wasInGC_ && "inGC_ should not be concurrently modified!");
   }
 }
 
 GCBase::GCCycle::~GCCycle() {
-  if (gcCallbacksOpt_.hasValue()) {
-    gcCallbacksOpt_.getValue()->onGCEvent(
-        GCEventKind::CollectionEnd, extraInfo_);
+  if (!previousInGC_) {
+    gc_->inGC_.store(false, std::memory_order_release);
+    if (gcCallbacksOpt_.hasValue()) {
+      gcCallbacksOpt_.getValue()->onGCEvent(
+          GCEventKind::CollectionEnd, extraInfo_);
+    }
   }
-  gc_->inGC_ = false;
 }
 
 void GCBase::runtimeWillExecute() {
@@ -121,12 +130,400 @@ void GCBase::runtimeWillExecute() {
 
 std::error_code GCBase::createSnapshotToFile(const std::string &fileName) {
   std::error_code code;
-  llvm::raw_fd_ostream os(fileName, code, llvm::sys::fs::FileAccess::FA_Write);
+  llvh::raw_fd_ostream os(fileName, code, llvh::sys::fs::FileAccess::FA_Write);
   if (code) {
     return code;
   }
   createSnapshot(os);
   return std::error_code{};
+}
+
+namespace {
+
+constexpr GCBase::IDTracker::ReservedObjectID objectIDForRootSection(
+    RootAcceptor::Section section) {
+  // Since root sections start at zero, and in IDTracker the root sections
+  // start one past the reserved super root, this number can be added to
+  // do conversions.
+  return static_cast<GCBase::IDTracker::ReservedObjectID>(
+      static_cast<uint64_t>(GCBase::IDTracker::ReservedObjectID::Root) + 1 +
+      static_cast<uint64_t>(section));
+}
+
+// Abstract base class for all snapshot acceptors.
+struct SnapshotAcceptor : public SlotAcceptorWithNamesDefault {
+  using SlotAcceptorWithNamesDefault::accept;
+  using SlotAcceptorWithNamesDefault::SlotAcceptorWithNamesDefault;
+
+  SnapshotAcceptor(GC &gc, HeapSnapshot &snap)
+      : SlotAcceptorWithNamesDefault(gc), snap_(snap) {}
+
+  void accept(HermesValue &hv, const char *name) override {
+    if (hv.isPointer()) {
+      auto ptr = hv.getPointer();
+      accept(ptr, name);
+    }
+  }
+
+ protected:
+  HeapSnapshot &snap_;
+};
+
+struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
+  using SnapshotAcceptor::accept;
+
+  PrimitiveNodeAcceptor(GC &gc, HeapSnapshot &snap)
+      : SnapshotAcceptor(gc, snap) {}
+
+  // Do nothing for any value except a number.
+  void accept(void *&ptr, const char *name) override {}
+
+  void accept(HermesValue &hv, const char *) override {
+    if (hv.isNumber()) {
+      seenNumbers_.insert(hv.getNumber());
+    }
+  }
+
+  void writeAllNodes() {
+    // Always write out the nodes for singletons.
+    snap_.beginNode();
+    snap_.endNode(
+        HeapSnapshot::NodeType::Object,
+        "undefined",
+        static_cast<HeapSnapshot::NodeID>(
+            GCBase::IDTracker::ReservedObjectID::Undefined),
+        0,
+        0);
+    snap_.beginNode();
+    snap_.endNode(
+        HeapSnapshot::NodeType::Object,
+        "null",
+        static_cast<HeapSnapshot::NodeID>(
+            GCBase::IDTracker::ReservedObjectID::Null),
+        0,
+        0);
+    snap_.beginNode();
+    snap_.endNode(
+        HeapSnapshot::NodeType::Object,
+        "true",
+        static_cast<HeapSnapshot::NodeID>(
+            GCBase::IDTracker::ReservedObjectID::True),
+        0,
+        0);
+    snap_.beginNode();
+    snap_.endNode(
+        HeapSnapshot::NodeType::Object,
+        "false",
+        static_cast<HeapSnapshot::NodeID>(
+            GCBase::IDTracker::ReservedObjectID::False),
+        0,
+        0);
+    for (double num : seenNumbers_) {
+      // A number never has any edges, so just make a node for it.
+      snap_.beginNode();
+      // Convert the number value to a string, according to the JS conversion
+      // routines.
+      char buf[hermes::NUMBER_TO_STRING_BUF_SIZE];
+      size_t len = hermes::numberToString(num, buf, sizeof(buf));
+      snap_.endNode(
+          HeapSnapshot::NodeType::Number,
+          llvh::StringRef{buf, len},
+          gc.getIDTracker().getNumberID(num),
+          // Numbers are zero-sized in the heap because they're stored inline.
+          0,
+          0);
+    }
+  }
+
+ private:
+  // Track all numbers that are seen in a heap pass, and only emit one node for
+  // each of them.
+  llvh::DenseSet<double, GCBase::IDTracker::DoubleComparator> seenNumbers_;
+};
+
+struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
+  using SnapshotAcceptor::accept;
+
+  EdgeAddingAcceptor(GC &gc, HeapSnapshot &snap) : SnapshotAcceptor(gc, snap) {}
+
+  void accept(void *&ptr, const char *name) override {
+    if (!ptr) {
+      return;
+    }
+    snap_.addNamedEdge(
+        HeapSnapshot::EdgeType::Internal,
+        llvh::StringRef::withNullAsEmpty(name),
+        gc.getObjectID(ptr));
+  }
+
+  void accept(HermesValue &hv, const char *name) override {
+    if (hv.isPointer()) {
+      auto ptr = hv.getPointer();
+      accept(ptr, name);
+    } else if (auto id = gc.getSnapshotID(hv)) {
+      snap_.addNamedEdge(
+          HeapSnapshot::EdgeType::Internal,
+          llvh::StringRef::withNullAsEmpty(name),
+          id.getValue());
+    }
+  }
+
+  void accept(WeakRefBase &wr) override {
+    WeakRefSlot *slot = wr.unsafeGetSlot();
+    if (slot->state() == WeakSlotState::Free) {
+      // If the slot is free, there's no edge to add.
+      return;
+    }
+    if (!slot->hasPointer()) {
+      // Filter out empty refs from adding edges.
+      return;
+    }
+    // Assume all weak pointers have no names, and are stored in an array-like
+    // structure.
+    std::string indexName = oscompat::to_string(nextEdge_++);
+    snap_.addNamedEdge(
+        HeapSnapshot::EdgeType::Weak,
+        indexName,
+        gc.getObjectID(slot->getPointer()));
+  }
+
+ private:
+  // For unnamed edges, use indices instead.
+  unsigned nextEdge_{0};
+};
+
+struct SnapshotRootSectionAcceptor : public SnapshotAcceptor,
+                                     public WeakRootAcceptorDefault {
+  using SnapshotAcceptor::accept;
+  using WeakRootAcceptor::acceptWeak;
+
+  SnapshotRootSectionAcceptor(GC &gc, HeapSnapshot &snap)
+      : SnapshotAcceptor(gc, snap), WeakRootAcceptorDefault(gc) {}
+
+  void accept(void *&, const char *) override {
+    // While adding edges to root sections, there's no need to do anything for
+    // pointers.
+  }
+
+  void accept(WeakRefBase &wr) override {
+    // Same goes for weak refs.
+  }
+
+  void acceptWeak(void *&ptr) override {
+    // Same goes for weak pointers.
+  }
+
+  void beginRootSection(Section section) override {
+    // Make an element edge from the super root to each root section.
+    snap_.addIndexedEdge(
+        HeapSnapshot::EdgeType::Element,
+        rootSectionNum_++,
+        static_cast<HeapSnapshot::NodeID>(objectIDForRootSection(section)));
+  }
+
+  void endRootSection() override {
+    // Do nothing for the end of the root section.
+  }
+
+ private:
+  // v8's roots start numbering at 1.
+  int rootSectionNum_{1};
+};
+
+struct SnapshotRootAcceptor : public SnapshotAcceptor,
+                              public WeakRootAcceptorDefault {
+  using SnapshotAcceptor::accept;
+  using WeakRootAcceptor::acceptWeak;
+
+  SnapshotRootAcceptor(GC &gc, HeapSnapshot &snap)
+      : SnapshotAcceptor(gc, snap), WeakRootAcceptorDefault(gc) {}
+
+  void accept(void *&ptr, const char *name) override {
+    pointerAccept(ptr, name, false);
+  }
+
+  void acceptWeak(void *&ptr) override {
+    pointerAccept(ptr, nullptr, true);
+  }
+
+  void accept(WeakRefBase &wr) override {
+    WeakRefSlot *slot = wr.unsafeGetSlot();
+    if (slot->state() == WeakSlotState::Free) {
+      // If the slot is free, there's no edge to add.
+      return;
+    }
+    if (!slot->hasPointer()) {
+      // Filter out empty refs from adding edges.
+      return;
+    }
+    pointerAccept(slot->getPointer(), nullptr, true);
+  }
+
+  void beginRootSection(Section section) override {
+    assert(
+        currentSection_ == Section::InvalidSection &&
+        "beginRootSection called while previous section is open");
+    snap_.beginNode();
+    currentSection_ = section;
+  }
+
+  void endRootSection() override {
+    // A root section creates a synthetic node with that name and makes edges
+    // come from that root.
+    static const char *rootNames[] = {
+// Parentheses around the name is adopted from V8's roots.
+#define ROOT_SECTION(name) "(" #name ")",
+#include "hermes/VM/RootSections.def"
+    };
+    snap_.endNode(
+        HeapSnapshot::NodeType::Synthetic,
+        rootNames[static_cast<unsigned>(currentSection_)],
+        static_cast<HeapSnapshot::NodeID>(
+            objectIDForRootSection(currentSection_)),
+        // The heap visualizer doesn't like it when these synthetic nodes have a
+        // size (it describes them as living in the heap).
+        0,
+        0);
+    currentSection_ = Section::InvalidSection;
+    // Reset the edge counter, so each root section's unnamed edges start at
+    // zero.
+    nextEdge_ = 0;
+  }
+
+ private:
+  llvh::DenseSet<uint64_t> seenIDs_;
+  // For unnamed edges, use indices instead.
+  unsigned nextEdge_{0};
+  Section currentSection_{Section::InvalidSection};
+
+  void pointerAccept(void *ptr, const char *name, bool weak) {
+    assert(
+        currentSection_ != Section::InvalidSection &&
+        "accept called outside of begin/end root section pair");
+    if (!ptr) {
+      return;
+    }
+
+    const auto id = gc.getObjectID(ptr);
+    if (!seenIDs_.insert(id).second) {
+      // Already seen this node, don't add another edge.
+      return;
+    }
+    auto nameRef = llvh::StringRef::withNullAsEmpty(name);
+    if (!nameRef.empty()) {
+      snap_.addNamedEdge(
+          weak ? HeapSnapshot::EdgeType::Weak
+               : HeapSnapshot::EdgeType::Internal,
+          nameRef,
+          id);
+    } else if (weak) {
+      std::string numericName = oscompat::to_string(nextEdge_++);
+      snap_.addNamedEdge(HeapSnapshot::EdgeType::Weak, numericName.c_str(), id);
+    } else {
+      // Unnamed edges get indices.
+      snap_.addIndexedEdge(HeapSnapshot::EdgeType::Element, nextEdge_++, id);
+    }
+  }
+};
+
+} // namespace
+
+void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
+  JSONEmitter json(os);
+  HeapSnapshot snap(json, gcCallbacks_->getStackTracesTree());
+
+  const auto rootScan = [gc, &snap]() {
+    {
+      // Make the super root node and add edges to each root section.
+      SnapshotRootSectionAcceptor rootSectionAcceptor(*gc, snap);
+      snap.beginNode();
+      gc->markRoots(rootSectionAcceptor, true);
+      gc->markWeakRoots(rootSectionAcceptor);
+      snap.endNode(
+          HeapSnapshot::NodeType::Synthetic,
+          "(GC Roots)",
+          static_cast<HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::Root),
+          0,
+          0);
+    }
+    {
+      // Make a node for each root section and add edges into the actual heap.
+      // Within a root section, there might be duplicates. The root acceptor
+      // filters out duplicate edges because there cannot be duplicate edges to
+      // nodes reachable from the super root.
+      SnapshotRootAcceptor rootAcceptor(*gc, snap);
+      gc->markRoots(rootAcceptor, true);
+      gc->markWeakRoots(rootAcceptor);
+    }
+  };
+
+  snap.beginSection(HeapSnapshot::Section::Nodes);
+  rootScan();
+  // Add all primitive values as nodes if they weren't added before.
+  // This must be done as a step before adding any edges to these nodes.
+  // In particular, custom edge adders might try to add edges to primitives that
+  // haven't been recorded yet.
+  // The acceptor is recording some state between objects, so define it outside
+  // the loop.
+  PrimitiveNodeAcceptor primitiveAcceptor(*gc, snap);
+  SlotVisitorWithNames<PrimitiveNodeAcceptor> primitiveVisitor{
+      primitiveAcceptor};
+  // Add a node for each object in the heap.
+  const auto snapshotForObject = [&snap, &primitiveVisitor, gc](GCCell *cell) {
+    auto &allocationLocationTracker = gc->getAllocationLocationTracker();
+    // First add primitive nodes.
+    GCBase::markCellWithNames(primitiveVisitor, cell, gc);
+    EdgeAddingAcceptor acceptor(*gc, snap);
+    SlotVisitorWithNames<EdgeAddingAcceptor> visitor(acceptor);
+    // Allow nodes to add extra nodes not in the JS heap.
+    cell->getVT()->snapshotMetaData.addNodes(cell, gc, snap);
+    snap.beginNode();
+    // Add all internal edges first.
+    GCBase::markCellWithNames(visitor, cell, gc);
+    // Allow nodes to add custom edges not represented by metadata.
+    cell->getVT()->snapshotMetaData.addEdges(cell, gc, snap);
+    auto stackTracesTreeNode =
+        allocationLocationTracker.getStackTracesTreeNodeForAlloc(cell);
+    snap.endNode(
+        cell->getVT()->snapshotMetaData.nodeType(),
+        cell->getVT()->snapshotMetaData.nameForNode(cell, gc),
+        gc->getObjectID(cell),
+        cell->getAllocatedSize(),
+        stackTracesTreeNode ? stackTracesTreeNode->id : 0);
+  };
+  gc->forAllObjs(snapshotForObject);
+  // Write the singleton number nodes into the snapshot.
+  primitiveAcceptor.writeAllNodes();
+  snap.endSection(HeapSnapshot::Section::Nodes);
+
+  snap.beginSection(HeapSnapshot::Section::Edges);
+  rootScan();
+  // No need to run the primitive scan again, as it only adds nodes, not edges.
+  // Add edges between objects in the heap.
+  gc->forAllObjs(snapshotForObject);
+  snap.endSection(HeapSnapshot::Section::Edges);
+
+  snap.emitAllocationTraceInfo();
+
+  snap.beginSection(HeapSnapshot::Section::Samples);
+  GCBase::IDTracker::Sampler::TimePoint startTime;
+  GCBase::IDTracker::Sampler::Samples samples;
+  std::tie(startTime, samples) = gc->getIDTracker().endSamplingLastID();
+  for (auto sample : samples) {
+    uint64_t lastID = sample.second;
+    uint64_t timestampMicros =
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            sample.first - startTime)
+            .count();
+    json.emitValues({timestampMicros, lastID});
+  }
+  snap.endSection(HeapSnapshot::Section::Samples);
+
+  snap.beginSection(HeapSnapshot::Section::Locations);
+  gc->forAllObjs([&snap, gc](GCCell *cell) {
+    cell->getVT()->snapshotMetaData.addLocations(cell, gc, snap);
+  });
+  snap.endSection(HeapSnapshot::Section::Locations);
 }
 
 void GCBase::checkTripwire(size_t dataSize) {
@@ -151,17 +548,17 @@ void GCBase::checkTripwire(size_t dataSize) {
   tripwireCallback_(ctx);
 }
 
-void GCBase::printAllCollectedStats(llvm::raw_ostream &os) {
+void GCBase::printAllCollectedStats(llvh::raw_ostream &os) {
   if (!recordGcStats_)
     return;
 
   dump(os);
-  os << "GC stats:\n"
-     << "{\n"
-     << "\t\"type\": \"hermes\",\n"
-     << "\t\"version\": 0,\n";
-  printStats(os, false);
-  os << "}\n";
+  os << "GC stats:\n";
+  JSONEmitter json{os, /*pretty*/ true};
+  json.openDict();
+  printStats(json);
+  json.closeDict();
+  os << "\n";
 }
 
 void GCBase::getHeapInfo(HeapInfo &info) {
@@ -192,10 +589,14 @@ void GCBase::DebugHeapInfo::assertInvariants() const {
 }
 #endif
 
-void GCBase::dump(llvm::raw_ostream &, bool) { /* nop */
+void GCBase::dump(llvh::raw_ostream &, bool) { /* nop */
 }
 
-void GCBase::printStats(llvm::raw_ostream &os, bool trailingComma) {
+void GCBase::printStats(JSONEmitter &json) {
+  json.emitKeyValue("type", "hermes");
+  json.emitKeyValue("version", 0);
+  gcCallbacks_->printRuntimeGCStats(json);
+
   std::chrono::duration<double> elapsedTime =
       std::chrono::steady_clock::now() - execStartTime_;
   auto elapsedCPUSeconds =
@@ -214,30 +615,26 @@ void GCBase::printStats(llvm::raw_ostream &os, bool trailingComma) {
   getDebugHeapInfo(debugInfo);
 #endif
 
-  os << "\t\"heapInfo\": {\n"
+  json.emitKey("heapInfo");
+  json.openDict();
 #ifndef NDEBUG
-     << "\t\t\"Num allocated cells\": " << debugInfo.numAllocatedObjects
-     << ",\n"
-     << "\t\t\"Num reachable cells\": " << debugInfo.numReachableObjects
-     << ",\n"
-     << "\t\t\"Num collected cells\": " << debugInfo.numCollectedObjects
-     << ",\n"
-     << "\t\t\"Num finalized cells\": " << debugInfo.numFinalizedObjects
-     << ",\n"
-     << "\t\t\"Num marked symbols\": " << debugInfo.numMarkedSymbols << ",\n"
-     << "\t\t\"Num hidden classes\": " << debugInfo.numHiddenClasses << ",\n"
-     << "\t\t\"Num leaf classes\": " << debugInfo.numLeafHiddenClasses << ",\n"
-     << "\t\t\"Num weak references\": " << ((GC *)this)->countUsedWeakRefs()
-     << ",\n"
+  json.emitKeyValue("Num allocated cells", debugInfo.numAllocatedObjects);
+  json.emitKeyValue("Num reachable cells", debugInfo.numReachableObjects);
+  json.emitKeyValue("Num collected cells", debugInfo.numCollectedObjects);
+  json.emitKeyValue("Num finalized cells", debugInfo.numFinalizedObjects);
+  json.emitKeyValue("Num marked symbols", debugInfo.numMarkedSymbols);
+  json.emitKeyValue("Num hidden classes", debugInfo.numHiddenClasses);
+  json.emitKeyValue("Num leaf classes", debugInfo.numLeafHiddenClasses);
+  json.emitKeyValue("Num weak references", ((GC *)this)->countUsedWeakRefs());
 #endif
-     << "\t\t\"Peak RSS\": " << oscompat::peak_rss() << ",\n"
-     << "\t\t\"Current RSS\": " << oscompat::current_rss() << ",\n"
-     << "\t\t\"Current Dirty\": " << oscompat::current_private_dirty() << ",\n"
-     << "\t\t\"Heap size\": " << info.heapSize << ",\n"
-     << "\t\t\"Allocated bytes\": " << info.allocatedBytes << ",\n"
-     << "\t\t\"Num collections\": " << info.numCollections << ",\n"
-     << "\t\t\"Malloc size\": " << info.mallocSizeEstimate << "\n"
-     << "\t},\n";
+  json.emitKeyValue("Peak RSS", oscompat::peak_rss());
+  json.emitKeyValue("Current RSS", oscompat::current_rss());
+  json.emitKeyValue("Current Dirty", oscompat::current_private_dirty());
+  json.emitKeyValue("Heap size", info.heapSize);
+  json.emitKeyValue("Allocated bytes", info.allocatedBytes);
+  json.emitKeyValue("Num collections", info.numCollections);
+  json.emitKeyValue("Malloc size", info.mallocSizeEstimate);
+  json.closeDict();
 
   long vol = -1;
   long invol = -1;
@@ -246,38 +643,30 @@ void GCBase::printStats(llvm::raw_ostream &os, bool trailingComma) {
     invol -= startNumInvoluntaryContextSwitches_;
   }
 
-  os << "\t\"general\": {\n"
-     << "\t\t\"numCollections\": " << cumStats_.numCollections << ",\n"
-     << "\t\t\"totalTime\": " << elapsedTime.count() << ",\n"
-     << "\t\t\"totalCPUTime\": " << elapsedCPUSeconds << ",\n"
-     << "\t\t\"totalGCTime\": " << formatSecs(cumStats_.gcWallTime.sum()).secs
-     << ",\n"
-     << "\t\t\"volCtxSwitch\": " << vol << ",\n"
-     << "\t\t\"involCtxSwitch\": " << invol << ",\n"
-     << "\t\t\"avgGCPause\": "
-     << formatSecs(cumStats_.gcWallTime.average()).secs << ",\n"
-     << "\t\t\"maxGCPause\": " << formatSecs(cumStats_.gcWallTime.max()).secs
-     << ",\n"
-     << "\t\t\"totalGCCPUTime\": " << formatSecs(cumStats_.gcCPUTime.sum()).secs
-     << ",\n"
-     << "\t\t\"avgGCCPUPause\": "
-     << formatSecs(cumStats_.gcCPUTime.average()).secs << ",\n"
-     << "\t\t\"maxGCCPUPause\": " << formatSecs(cumStats_.gcCPUTime.max()).secs
-     << ",\n"
-     << "\t\t\"finalHeapSize\": " << formatSize(cumStats_.finalHeapSize).bytes
-     << ",\n"
-     << "\t\t\"peakAllocatedBytes\": "
-     << formatSize(getPeakAllocatedBytes()).bytes << ",\n"
-     << "\t\t\"peakLiveAfterGC\": " << formatSize(getPeakLiveAfterGC()).bytes
-     << ",\n"
-     << "\t\t\"totalAllocatedBytes\": "
-     << formatSize(info.totalAllocatedBytes).bytes << "\n"
-     << "\t}";
-
-  if (trailingComma) {
-    os << ",";
-  }
-  os << "\n";
+  json.emitKey("general");
+  json.openDict();
+  json.emitKeyValue("numCollections", cumStats_.numCollections);
+  json.emitKeyValue("totalTime", elapsedTime.count());
+  json.emitKeyValue("totalCPUTime", elapsedCPUSeconds);
+  json.emitKeyValue("totalGCTime", formatSecs(cumStats_.gcWallTime.sum()).secs);
+  json.emitKeyValue("volCtxSwitch", vol);
+  json.emitKeyValue("involCtxSwitch", invol);
+  json.emitKeyValue(
+      "avgGCPause", formatSecs(cumStats_.gcWallTime.average()).secs);
+  json.emitKeyValue("maxGCPause", formatSecs(cumStats_.gcWallTime.max()).secs);
+  json.emitKeyValue(
+      "totalGCCPUTime", formatSecs(cumStats_.gcCPUTime.sum()).secs);
+  json.emitKeyValue(
+      "avgGCCPUPause", formatSecs(cumStats_.gcCPUTime.average()).secs);
+  json.emitKeyValue(
+      "maxGCCPUPause", formatSecs(cumStats_.gcCPUTime.max()).secs);
+  json.emitKeyValue("finalHeapSize", formatSize(cumStats_.finalHeapSize).bytes);
+  json.emitKeyValue(
+      "peakAllocatedBytes", formatSize(getPeakAllocatedBytes()).bytes);
+  json.emitKeyValue("peakLiveAfterGC", formatSize(getPeakLiveAfterGC()).bytes);
+  json.emitKeyValue(
+      "totalAllocatedBytes", formatSize(info.totalAllocatedBytes).bytes);
+  json.closeDict();
 }
 
 void GCBase::recordGCStats(
@@ -321,7 +710,7 @@ void GCBase::oom(std::error_code reason) {
       gcCallbacks_->getCallStackNoAlloc());
 #else
   oomDetail(reason);
-  hermes_fatal((llvm::Twine("OOM: ") + convert_error_to_message(reason)).str());
+  hermes_fatal((llvh::Twine("OOM: ") + convert_error_to_message(reason)).str());
 #endif
 }
 
@@ -378,6 +767,10 @@ std::list<detail::WeakRefKey *> GCBase::buildKeyList(
   return res;
 }
 
+WeakRefMutex &GCBase::weakRefMutex() {
+  return weakRefMutex_;
+}
+
 /*static*/
 double GCBase::clockDiffSeconds(TimePoint start, TimePoint end) {
   std::chrono::duration<double> elapsed = (end - start);
@@ -392,8 +785,8 @@ double GCBase::clockDiffSeconds(
   return elapsed.count();
 }
 
-llvm::raw_ostream &operator<<(
-    llvm::raw_ostream &os,
+llvh::raw_ostream &operator<<(
+    llvh::raw_ostream &os,
     const DurationFormatObj &dfo) {
   if (dfo.secs >= 1.0) {
     os << format("%5.3f", dfo.secs) << " s";
@@ -405,7 +798,7 @@ llvm::raw_ostream &operator<<(
   return os;
 }
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const SizeFormatObj &sfo) {
+llvh::raw_ostream &operator<<(llvh::raw_ostream &os, const SizeFormatObj &sfo) {
   double dblsize = static_cast<double>(sfo.bytes);
   if (sfo.bytes >= (1024 * 1024 * 1024)) {
     double gbs = dblsize / (1024.0 * 1024.0 * 1024.0);
@@ -426,7 +819,6 @@ GCBase::GCCallbacks::~GCCallbacks() {}
 
 GCBase::IDTracker::IDTracker() {
   assert(nextID_ % 2 == 1 && "First JS object ID isn't odd");
-  assert(nextNativeID_ % 2 == 0 && "First native object ID isn't even");
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -446,7 +838,6 @@ void GCBase::AllocationLocationTracker::deserialize(Deserializer &d) {
 
 void GCBase::IDTracker::serialize(Serializer &s) const {
   s.writeInt<HeapSnapshot::NodeID>(nextID_);
-  s.writeInt<HeapSnapshot::NodeID>(nextNativeID_);
   s.writeInt<size_t>(objectIDMap_.size());
   for (auto it = objectIDMap_.begin(); it != objectIDMap_.end(); it++) {
     s.writeRelocation(it->first);
@@ -456,7 +847,6 @@ void GCBase::IDTracker::serialize(Serializer &s) const {
 
 void GCBase::IDTracker::deserialize(Deserializer &d) {
   nextID_ = d.readInt<HeapSnapshot::NodeID>();
-  nextNativeID_ = d.readInt<HeapSnapshot::NodeID>();
   size_t size = d.readInt<size_t>();
   for (size_t i = 0; i < size; i++) {
     // Heap must have been deserialized before this function. All deserialized
@@ -493,7 +883,42 @@ HeapSnapshot::NodeID GCBase::IDTracker::getNumberID(double num) {
   return numberRef = nextNumberID();
 }
 
-llvm::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
+void GCBase::IDTracker::beginSamplingLastID(Sampler::Duration duration) {
+  endSamplingLastID();
+  sampler_ = llvh::make_unique<Sampler>(nextID_, duration);
+}
+
+std::pair<
+    GCBase::IDTracker::Sampler::TimePoint,
+    GCBase::IDTracker::Sampler::Samples>
+GCBase::IDTracker::endSamplingLastID() {
+  if (sampler_) {
+    std::pair<Sampler::TimePoint, Sampler::Samples> result =
+        make_pair(sampler_->startTime(), sampler_->stop());
+    sampler_.reset();
+    return result;
+  } else {
+    return std::make_pair(Sampler::TimePoint{}, Sampler::Samples{});
+  }
+}
+
+void GCBase::AllocationLocationTracker::enable() {
+  enabled_ = true;
+  GC *gc = reinterpret_cast<GC *>(gc_);
+  // For correct visualization of the allocation timeline, it's necessary that
+  // objects in the heap snapshot that existed before sampling was enabled have
+  // numerically lower IDs than those allocated during sampling. We ensure this
+  // by assigning IDs to everything here.
+  gc->forAllObjs([gc](GCCell *cell) { gc->getIDTracker().getObjectID(cell); });
+  gc->getIDTracker().beginSamplingLastID(std::chrono::milliseconds(50));
+}
+
+void GCBase::AllocationLocationTracker::disable() {
+  gc_->getIDTracker().endSamplingLastID();
+  enabled_ = false;
+}
+
+llvh::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
   if (val.isPointer() && val.getPointer()) {
     // Make nullptr HermesValue look like a JS null.
     // This should be rare, but is occasionally used by some parts of the VM.
@@ -512,7 +937,7 @@ llvm::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
         val.getBool() ? IDTracker::ReservedObjectID::True
                       : IDTracker::ReservedObjectID::False);
   } else {
-    return llvm::None;
+    return llvh::None;
   }
 }
 

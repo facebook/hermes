@@ -18,10 +18,15 @@ namespace {
 struct Type1 : public GCCell {
   static VTable vt;
   int tag1;
+#ifdef HERMESVM_GC_HADES
+  // Need to meet minimum allocation size requirements.
+  uint64_t dummy_{0};
+  uint64_t dummy2_{0};
+#endif
 
-  explicit Type1(GC *gc, int tag) : GCCell(gc, &vt), tag1(tag) {}
+  explicit Type1(GC *gc, int64_t tag) : GCCell(gc, &vt), tag1(tag) {}
 
-  static Type1 *create(DummyRuntime *runtime, int tag) {
+  static Type1 *create(DummyRuntime *runtime, int64_t tag) {
     return new (runtime->alloc(sizeof(Type1))) Type1(&runtime->getHeap(), tag);
   }
   static bool classof(const GCCell *cell) {
@@ -33,9 +38,14 @@ VTable Type1::vt(CellKind::UninitializedKind, sizeof(Type1));
 struct Type2 : public GCCell {
   static VTable vt;
   int tag2;
+#ifdef HERMESVM_GC_HADES
+  // Need to meet minimum allocation size requirements.
+  uint64_t dummy_{0};
+  uint64_t dummy2_{0};
+#endif
 
-  explicit Type2(GC *gc, int tag) : GCCell(gc, &vt), tag2(tag) {}
-  static Type2 *create(DummyRuntime *runtime, int tag) {
+  explicit Type2(GC *gc, int64_t tag) : GCCell(gc, &vt), tag2(tag) {}
+  static Type2 *create(DummyRuntime *runtime, int64_t tag) {
     return new (runtime->alloc(sizeof(Type2))) Type2(&runtime->getHeap(), tag);
   }
   static bool classof(const GCCell *cell) {

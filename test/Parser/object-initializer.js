@@ -20,8 +20,7 @@ var tmp = { a : 1, b, c };
 //CHECK-NEXT:                   "type": "Property",
 //CHECK-NEXT:                   "key": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "a",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "a"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "value": {
 //CHECK-NEXT:                     "type": "NumericLiteral",
@@ -35,13 +34,11 @@ var tmp = { a : 1, b, c };
 //CHECK-NEXT:                   "type": "Property",
 //CHECK-NEXT:                   "key": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "b",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "b"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "value": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "b",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "b"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "kind": "init",
 //CHECK-NEXT:                   "computed": false
@@ -50,13 +47,11 @@ var tmp = { a : 1, b, c };
 //CHECK-NEXT:                   "type": "Property",
 //CHECK-NEXT:                   "key": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "c",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "c"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "value": {
 //CHECK-NEXT:                     "type": "Identifier",
-//CHECK-NEXT:                     "name": "c",
-//CHECK-NEXT:                     "typeAnnotation": null
+//CHECK-NEXT:                     "name": "c"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "kind": "init",
 //CHECK-NEXT:                   "computed": false
@@ -65,8 +60,7 @@ var tmp = { a : 1, b, c };
 //CHECK-NEXT:             },
 //CHECK-NEXT:             "id": {
 //CHECK-NEXT:               "type": "Identifier",
-//CHECK-NEXT:               "name": "tmp",
-//CHECK-NEXT:               "typeAnnotation": null
+//CHECK-NEXT:               "name": "tmp"
 //CHECK-NEXT:             }
 //CHECK-NEXT:           }
 //CHECK-NEXT:         ]
@@ -84,13 +78,11 @@ var tmp1 = { d };
 //CHECK-NEXT:                  "type": "Property",
 //CHECK-NEXT:                  "key": {
 //CHECK-NEXT:                    "type": "Identifier",
-//CHECK-NEXT:                    "name": "d",
-//CHECK-NEXT:                    "typeAnnotation": null
+//CHECK-NEXT:                    "name": "d"
 //CHECK-NEXT:                  },
 //CHECK-NEXT:                  "value": {
 //CHECK-NEXT:                    "type": "Identifier",
-//CHECK-NEXT:                    "name": "d",
-//CHECK-NEXT:                    "typeAnnotation": null
+//CHECK-NEXT:                    "name": "d"
 //CHECK-NEXT:                  },
 //CHECK-NEXT:                  "kind": "init",
 //CHECK-NEXT:                  "computed": false
@@ -99,8 +91,7 @@ var tmp1 = { d };
 //CHECK-NEXT:            },
 //CHECK-NEXT:            "id": {
 //CHECK-NEXT:              "type": "Identifier",
-//CHECK-NEXT:              "name": "tmp1",
-//CHECK-NEXT:              "typeAnnotation": null
+//CHECK-NEXT:              "name": "tmp1"
 //CHECK-NEXT:            }
 //CHECK-NEXT:          }
 //CHECK-NEXT:        ]
@@ -119,13 +110,11 @@ var a1 = { async, x };
 // CHECK-NEXT:                 "type": "Property",
 // CHECK-NEXT:                 "key": {
 // CHECK-NEXT:                   "type": "Identifier",
-// CHECK-NEXT:                   "name": "async",
-// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                   "name": "async"
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "value": {
 // CHECK-NEXT:                   "type": "Identifier",
-// CHECK-NEXT:                   "name": "async",
-// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                   "name": "async"
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "kind": "init",
 // CHECK-NEXT:                 "computed": false
@@ -134,13 +123,11 @@ var a1 = { async, x };
 // CHECK-NEXT:                 "type": "Property",
 // CHECK-NEXT:                 "key": {
 // CHECK-NEXT:                   "type": "Identifier",
-// CHECK-NEXT:                   "name": "x",
-// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                   "name": "x"
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "value": {
 // CHECK-NEXT:                   "type": "Identifier",
-// CHECK-NEXT:                   "name": "x",
-// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                   "name": "x"
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "kind": "init",
 // CHECK-NEXT:                 "computed": false
@@ -149,8 +136,7 @@ var a1 = { async, x };
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "id": {
 // CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "a1",
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "name": "a1"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ]
@@ -169,13 +155,11 @@ var a2 = { x, async };
 // CHECK-NEXT:                 "type": "Property",
 // CHECK-NEXT:                 "key": {
 // CHECK-NEXT:                   "type": "Identifier",
-// CHECK-NEXT:                   "name": "x",
-// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                   "name": "x"
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "value": {
 // CHECK-NEXT:                   "type": "Identifier",
-// CHECK-NEXT:                   "name": "x",
-// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                   "name": "x"
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "kind": "init",
 // CHECK-NEXT:                 "computed": false
@@ -184,13 +168,11 @@ var a2 = { x, async };
 // CHECK-NEXT:                 "type": "Property",
 // CHECK-NEXT:                 "key": {
 // CHECK-NEXT:                   "type": "Identifier",
-// CHECK-NEXT:                   "name": "async",
-// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                   "name": "async"
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "value": {
 // CHECK-NEXT:                   "type": "Identifier",
-// CHECK-NEXT:                   "name": "async",
-// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                   "name": "async"
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "kind": "init",
 // CHECK-NEXT:                 "computed": false
@@ -199,8 +181,7 @@ var a2 = { x, async };
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "id": {
 // CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "a2",
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "name": "a2"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ]
@@ -221,13 +202,11 @@ var getset = {
 // CHECK-NEXT:                 "type": "Property",
 // CHECK-NEXT:                 "key": {
 // CHECK-NEXT:                   "type": "Identifier",
-// CHECK-NEXT:                   "name": "get",
-// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                   "name": "get"
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "value": {
 // CHECK-NEXT:                   "type": "Identifier",
-// CHECK-NEXT:                   "name": "get",
-// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                   "name": "get"
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "kind": "init",
 // CHECK-NEXT:                 "computed": false
@@ -236,13 +215,11 @@ var getset = {
 // CHECK-NEXT:                 "type": "Property",
 // CHECK-NEXT:                 "key": {
 // CHECK-NEXT:                   "type": "Identifier",
-// CHECK-NEXT:                   "name": "set",
-// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                   "name": "set"
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "value": {
 // CHECK-NEXT:                   "type": "Identifier",
-// CHECK-NEXT:                   "name": "set",
-// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                   "name": "set"
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "kind": "init",
 // CHECK-NEXT:                 "computed": false
@@ -251,8 +228,7 @@ var getset = {
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "id": {
 // CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "getset",
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "name": "getset"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ]

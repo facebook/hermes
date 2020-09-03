@@ -64,54 +64,54 @@ TEST(TrackIOTest, GetIOTrackingJSONWorks) {
   SourceErrorManager sourceErrorManager;
   parser::JSONParser jsonParser(
       factory,
-      llvm::MemoryBufferRef(jsonInfo, "JSON data"),
+      llvh::MemoryBufferRef(jsonInfo, "JSON data"),
       sourceErrorManager);
 
-  llvm::Optional<JSONValue *> parsedInfo = jsonParser.parse();
+  llvh::Optional<JSONValue *> parsedInfo = jsonParser.parse();
   ASSERT_TRUE(parsedInfo.hasValue());
   auto *runtimeModulesInfo =
-      llvm::dyn_cast_or_null<JSONArray>(parsedInfo.getValue());
+      llvh::dyn_cast_or_null<JSONArray>(parsedInfo.getValue());
   ASSERT_NE(runtimeModulesInfo, nullptr);
   ASSERT_EQ(runtimeModulesInfo->size(), 1);
   auto *runtimeModuleInfo =
-      llvm::dyn_cast_or_null<JSONObject>(runtimeModulesInfo->at(0));
+      llvh::dyn_cast_or_null<JSONObject>(runtimeModulesInfo->at(0));
   ASSERT_NE(runtimeModuleInfo, nullptr);
   ASSERT_EQ(
-      llvm::dyn_cast_or_null<JSONString>(runtimeModuleInfo->get("url"))->str(),
+      llvh::dyn_cast_or_null<JSONString>(runtimeModuleInfo->get("url"))->str(),
       fileUrl);
-  auto *trackingInfo = llvm::dyn_cast_or_null<JSONObject>(
+  auto *trackingInfo = llvh::dyn_cast_or_null<JSONObject>(
       runtimeModuleInfo->get("tracking_info"));
   ASSERT_NE(trackingInfo, nullptr);
   auto *pageSize =
-      llvm::dyn_cast_or_null<JSONNumber>(trackingInfo->get("page_size"));
+      llvh::dyn_cast_or_null<JSONNumber>(trackingInfo->get("page_size"));
   ASSERT_NE(pageSize, nullptr);
   ASSERT_EQ((size_t)pageSize->getValue(), hermes::oscompat::page_size());
   auto *totalPagesJson =
-      llvm::dyn_cast_or_null<JSONNumber>(trackingInfo->get("total_pages"));
+      llvh::dyn_cast_or_null<JSONNumber>(trackingInfo->get("total_pages"));
   ASSERT_NE(totalPagesJson, nullptr);
   auto totalPages = (int)totalPagesJson->getValue();
   ASSERT_GT(totalPages, 1);
   auto *accessedPagesJson =
-      llvm::dyn_cast_or_null<JSONNumber>(trackingInfo->get("accessed_pages"));
+      llvh::dyn_cast_or_null<JSONNumber>(trackingInfo->get("accessed_pages"));
   ASSERT_NE(accessedPagesJson, nullptr);
   auto accessedPages = (int)accessedPagesJson->getValue();
   ASSERT_GT(accessedPages, 1);
   ASSERT_LE(accessedPages, totalPages);
   auto *pageIDs =
-      llvm::dyn_cast_or_null<JSONArray>(trackingInfo->get("page_ids"));
+      llvh::dyn_cast_or_null<JSONArray>(trackingInfo->get("page_ids"));
   ASSERT_NE(pageIDs, nullptr);
   ASSERT_EQ(pageIDs->size(), accessedPages);
   for (size_t i = 0; i < pageIDs->size(); i++) {
-    auto *page = llvm::dyn_cast_or_null<JSONNumber>(pageIDs->at(i));
+    auto *page = llvh::dyn_cast_or_null<JSONNumber>(pageIDs->at(i));
     ASSERT_NE(page, nullptr);
     ASSERT_GE((int)page->getValue(), 0);
     ASSERT_LT((int)page->getValue(), totalPages);
   }
-  auto *micros = llvm::dyn_cast_or_null<JSONArray>(trackingInfo->get("micros"));
+  auto *micros = llvh::dyn_cast_or_null<JSONArray>(trackingInfo->get("micros"));
   ASSERT_NE(micros, nullptr);
   ASSERT_EQ(micros->size(), accessedPages);
   for (size_t i = 0; i < micros->size(); i++) {
-    auto *micro = llvm::dyn_cast_or_null<JSONNumber>(micros->at(i));
+    auto *micro = llvh::dyn_cast_or_null<JSONNumber>(micros->at(i));
     ASSERT_NE(micro, nullptr);
     ASSERT_GE((int)micro->getValue(), 0);
   }

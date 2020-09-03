@@ -24,22 +24,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/Signals.h"
-#include "llvm/Support/circular_raw_ostream.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/Debug.h"
+#include "llvh/Support/CommandLine.h"
+#include "llvh/Support/ManagedStatic.h"
+#include "llvh/Support/Signals.h"
+#include "llvh/Support/circular_raw_ostream.h"
+#include "llvh/Support/raw_ostream.h"
 
 #undef isCurrentDebugType
 #undef setCurrentDebugType
 #undef setCurrentDebugTypes
 
-using namespace llvm;
+using namespace llvh;
 
 // Even though LLVM might be built with NDEBUG, define symbols that the code
 // built without NDEBUG can depend on via the llvm/Support/Debug.h header.
-namespace llvm {
+namespace llvh {
 /// Exported boolean set by the -debug option.
 bool DebugFlag = false;
 
@@ -75,7 +75,7 @@ void setCurrentDebugTypes(const char **Types, unsigned Count) {
   for (size_t T = 0; T < Count; ++T)
     CurrentDebugType->push_back(Types[T]);
 }
-} // namespace llvm
+} // namespace llvh
 
 // All Debug.h functionality is a no-op in NDEBUG mode.
 #ifndef NDEBUG
@@ -124,13 +124,13 @@ static void debug_user_sig_handler(void *Cookie) {
   // know that debug mode is enabled and dbgs() really is a
   // circular_raw_ostream.  If NDEBUG is defined, then dbgs() ==
   // errs() but this will never be invoked.
-  llvm::circular_raw_ostream &dbgout =
-      static_cast<circular_raw_ostream &>(llvm::dbgs());
+  llvh::circular_raw_ostream &dbgout =
+      static_cast<circular_raw_ostream &>(llvh::dbgs());
   dbgout.flushBufferWithBanner();
 }
 
 /// dbgs - Return a circular-buffered debug stream.
-raw_ostream &llvm::dbgs() {
+raw_ostream &llvh::dbgs() {
   // Do one-time initialization in a thread-safe way.
   static struct dbgstream {
     circular_raw_ostream strm;
@@ -152,7 +152,7 @@ raw_ostream &llvm::dbgs() {
 
 #else
 // Avoid "has no symbols" warning.
-namespace llvm {
+namespace llvh {
   /// dbgs - Return errs().
   raw_ostream &dbgs() {
     return errs();
@@ -163,4 +163,4 @@ namespace llvm {
 
 /// EnableDebugBuffering - Turn on signal handler installation.
 ///
-bool llvm::EnableDebugBuffering = false;
+bool llvh::EnableDebugBuffering = false;

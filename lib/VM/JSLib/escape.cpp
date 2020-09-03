@@ -12,14 +12,14 @@
 #include "hermes/VM/SmallXString.h"
 #include "hermes/VM/StringView.h"
 
-#include "llvm/Support/ConvertUTF.h"
+#include "llvh/Support/ConvertUTF.h"
 
 namespace hermes {
 namespace vm {
 
-using llvm::ConversionResult;
-using llvm::UTF32;
-using llvm::UTF8;
+using llvh::ConversionResult;
+using llvh::UTF32;
+using llvh::UTF8;
 
 /// \return true if c is a character that doesn't need to be escaped.
 static inline bool noEscape(char16_t c) {
@@ -324,7 +324,7 @@ static CallResult<Handle<StringPrimitive>> decode(
             sourceEnd,
             &targetStart,
             targetEnd,
-            llvm::strictConversion);
+            llvh::strictConversion);
         if (cRes != ConversionResult::conversionOK) {
           return runtime->raiseURIError("Malformed decodeURI input");
         }

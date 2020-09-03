@@ -18,24 +18,21 @@ f(...x, ...y);
 // CHECK-NEXT:         "type": "CallExpression",
 // CHECK-NEXT:         "callee": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "f",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "f"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "arguments": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "SpreadElement",
 // CHECK-NEXT:             "argument": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "x",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "x"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "SpreadElement",
 // CHECK-NEXT:             "argument": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "y",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "y"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]

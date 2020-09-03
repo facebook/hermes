@@ -24,13 +24,11 @@
 //CHECK-NEXT:             "elements": [
 //CHECK-NEXT:               {
 //CHECK-NEXT:                 "type": "Identifier",
-//CHECK-NEXT:                 "name": "a",
-//CHECK-NEXT:                 "typeAnnotation": null
+//CHECK-NEXT:                 "name": "a"
 //CHECK-NEXT:               },
 //CHECK-NEXT:               {
 //CHECK-NEXT:                 "type": "Identifier",
-//CHECK-NEXT:                 "name": "b",
-//CHECK-NEXT:                 "typeAnnotation": null
+//CHECK-NEXT:                 "name": "b"
 //CHECK-NEXT:               },
 //CHECK-NEXT:               {
 //CHECK-NEXT:                 "type": "RestElement",
@@ -39,15 +37,13 @@
 //CHECK-NEXT:                   "elements": [
 //CHECK-NEXT:                     {
 //CHECK-NEXT:                       "type": "Identifier",
-//CHECK-NEXT:                       "name": "c",
-//CHECK-NEXT:                       "typeAnnotation": null
+//CHECK-NEXT:                       "name": "c"
 //CHECK-NEXT:                     },
 //CHECK-NEXT:                     {
 //CHECK-NEXT:                       "type": "RestElement",
 //CHECK-NEXT:                       "argument": {
 //CHECK-NEXT:                         "type": "Identifier",
-//CHECK-NEXT:                         "name": "d",
-//CHECK-NEXT:                         "typeAnnotation": null
+//CHECK-NEXT:                         "name": "d"
 //CHECK-NEXT:                       }
 //CHECK-NEXT:                     }
 //CHECK-NEXT:                   ]

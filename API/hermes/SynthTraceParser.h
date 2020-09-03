@@ -23,14 +23,16 @@ namespace tracing {
 /// Parse a trace from a JSON string stored in a MemoryBuffer.
 std::tuple<
     SynthTrace,
-    ::hermes::vm::RuntimeConfig,
+    ::hermes::vm::RuntimeConfig::Builder,
+    ::hermes::vm::GCConfig::Builder,
     ::hermes::vm::MockedEnvironment>
-parseSynthTrace(std::unique_ptr<llvm::MemoryBuffer> trace);
+parseSynthTrace(std::unique_ptr<llvh::MemoryBuffer> trace);
 
 /// Parse a trace from a JSON string stored in the given file name.
 std::tuple<
     SynthTrace,
-    ::hermes::vm::RuntimeConfig,
+    ::hermes::vm::RuntimeConfig::Builder,
+    ::hermes::vm::GCConfig::Builder,
     ::hermes::vm::MockedEnvironment>
 parseSynthTrace(const std::string &tracefile);
 

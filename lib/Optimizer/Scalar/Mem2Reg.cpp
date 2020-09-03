@@ -15,19 +15,19 @@
 #include "hermes/Optimizer/Scalar/Utils.h"
 #include "hermes/Support/Statistic.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Debug.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/DenseSet.h"
+#include "llvh/ADT/STLExtras.h"
+#include "llvh/Support/Debug.h"
 
 #include <queue>
 
 using namespace hermes;
-using llvm::dbgs;
-using llvm::isa;
-using llvm::SmallPtrSet;
-using llvm::SmallVector;
-using llvm::SmallVectorImpl;
+using llvh::dbgs;
+using llvh::isa;
+using llvh::SmallPtrSet;
+using llvh::SmallVector;
+using llvh::SmallVectorImpl;
 
 static const int kFrameSizeThreshold = 128;
 
@@ -39,8 +39,8 @@ STATISTIC(NumStore, "Number of stores eliminated");
 STATISTIC(NumSOL, "Number of store only locations");
 STATISTIC(NumInitVar, "Number of init once variables");
 
-using BlockSet = llvm::DenseSet<BasicBlock *>;
-using BlockToInstMap = llvm::DenseMap<BasicBlock *, Instruction *>;
+using BlockSet = llvh::DenseSet<BasicBlock *>;
+using BlockToInstMap = llvh::DenseMap<BasicBlock *, Instruction *>;
 
 /// \returns the single initializer if the variable \p V is initializes once
 /// (in the lexical scope that it belongs to).
@@ -48,7 +48,7 @@ static bool getSingleInitializer(Variable *V) {
   StoreFrameInst *singleStore = nullptr;
 
   for (auto *U : V->getUsers()) {
-    if (auto *S = llvm::dyn_cast<StoreFrameInst>(U)) {
+    if (auto *S = llvh::dyn_cast<StoreFrameInst>(U)) {
       // This is not the first store.
       if (singleStore)
         return false;
@@ -68,8 +68,8 @@ static bool getSingleInitializer(Variable *V) {
 /// Notice that the function F may have sub-closures that capture variables.
 /// This method does a recursive scan and collects all captured variables.
 static void collectCapturedVariables(
-    llvm::DenseSet<Variable *> &capturedLoads,
-    llvm::DenseSet<Variable *> &capturedStores,
+    llvh::DenseSet<Variable *> &capturedLoads,
+    llvh::DenseSet<Variable *> &capturedStores,
     Function *F) {
   // For all instructions in the function:
   for (auto blockIter = F->begin(), e = F->end(); blockIter != e; ++blockIter) {
@@ -79,20 +79,20 @@ static void collectCapturedVariables(
 
       // Recursively check capturing functions by inspecting the created
       // closure.
-      if (auto *CF = llvm::dyn_cast<CreateFunctionInst>(II)) {
+      if (auto *CF = llvh::dyn_cast<CreateFunctionInst>(II)) {
         collectCapturedVariables(
             capturedLoads, capturedStores, CF->getFunctionCode());
         continue;
       }
 
-      if (auto *LF = llvm::dyn_cast<LoadFrameInst>(II)) {
+      if (auto *LF = llvh::dyn_cast<LoadFrameInst>(II)) {
         Variable *V = LF->getLoadVariable();
         if (V->getParent()->getFunction() != F) {
           capturedLoads.insert(V);
         }
       }
 
-      if (auto *SF = llvm::dyn_cast<StoreFrameInst>(II)) {
+      if (auto *SF = llvh::dyn_cast<StoreFrameInst>(II)) {
         auto *V = SF->getVariable();
         if (V->getParent()->getFunction() != F) {
           capturedStores.insert(V);
@@ -110,11 +110,11 @@ static bool promoteLoads(BasicBlock *BB) {
   // A list of un-clobbered variable stored values in flight.
   // All of these values are known to be valid for replacement at the current
   // iteration point.
-  llvm::DenseMap<Variable *, Value *> knownFrameValues;
+  llvh::DenseMap<Variable *, Value *> knownFrameValues;
 
   /// A list of variables that are known to stay constant during the lifetime
   /// of the current function.
-  llvm::DenseMap<Variable *, Value *> constFrameValues;
+  llvh::DenseMap<Variable *, Value *> constFrameValues;
 
   // Uncaptured AllocStack instructions don't alias with other memory locations
   // and may only be accessed by LoadStack/StoreStack instructions. We can
@@ -124,12 +124,12 @@ static bool promoteLoads(BasicBlock *BB) {
   // inspecting loads or by recording stores. Captured allocas (allocas in
   // try-catch blocks) must be wiped out on side effects because exceptions
   // modify the expected control flow.
-  llvm::DenseMap<AllocStackInst *, Value *> knownStackValues;
+  llvh::DenseMap<AllocStackInst *, Value *> knownStackValues;
 
   // A list of captured variables that are accessed by loads.
-  llvm::DenseSet<Variable *> capturedVariableLoads;
+  llvh::DenseSet<Variable *> capturedVariableLoads;
   // A list of captured variables that are accessed by stores.
-  llvm::DenseSet<Variable *> capturedVariableStores;
+  llvh::DenseSet<Variable *> capturedVariableStores;
 
   // In the entry block we can keep track of which variables have been captured
   // by inspecting the closures that we generate.
@@ -142,13 +142,13 @@ static bool promoteLoads(BasicBlock *BB) {
   for (auto &it : *BB) {
     Instruction *II = &it;
 
-    if (auto *SS = llvm::dyn_cast<StoreStackInst>(II)) {
+    if (auto *SS = llvh::dyn_cast<StoreStackInst>(II)) {
       // Record the value stored to the stack:
       knownStackValues[SS->getPtr()] = SS->getValue();
       continue;
     }
 
-    if (auto *SF = llvm::dyn_cast<StoreFrameInst>(II)) {
+    if (auto *SF = llvh::dyn_cast<StoreFrameInst>(II)) {
       Variable *var = SF->getVariable();
 
       // Record the value stored to the frame:
@@ -161,13 +161,13 @@ static bool promoteLoads(BasicBlock *BB) {
     // values.
     if (II->mayWriteMemory()) {
       for (unsigned i = 0, e = II->getNumOperands(); i != e; ++i) {
-        if (auto *ASI = llvm::dyn_cast<AllocStackInst>(II->getOperand(i)))
+        if (auto *ASI = llvh::dyn_cast<AllocStackInst>(II->getOperand(i)))
           knownStackValues.erase(ASI);
       }
     }
 
     // Try to replace the LoadStack with a recently saved value.
-    if (auto *LS = llvm::dyn_cast<LoadStackInst>(II)) {
+    if (auto *LS = llvh::dyn_cast<LoadStackInst>(II)) {
       AllocStackInst *dest = LS->getPtr();
       auto entry = knownStackValues.find(dest);
 
@@ -190,7 +190,7 @@ static bool promoteLoads(BasicBlock *BB) {
     }
 
     // Try to replace the LoadFrame with a recently saved value.
-    if (auto *LF = llvm::dyn_cast<LoadFrameInst>(II)) {
+    if (auto *LF = llvh::dyn_cast<LoadFrameInst>(II)) {
       Variable *dest = LF->getLoadVariable();
 
       // If this variable is known to be constant during the lifetime of the
@@ -235,7 +235,7 @@ static bool promoteLoads(BasicBlock *BB) {
       continue;
     }
 
-    if (auto *CF = llvm::dyn_cast<CreateFunctionInst>(II)) {
+    if (auto *CF = llvh::dyn_cast<CreateFunctionInst>(II)) {
       // Collect the captured variables.
       if (usePreciseCaptureAnalysis) {
         collectCapturedVariables(
@@ -272,22 +272,22 @@ static bool promoteLoads(BasicBlock *BB) {
 
 static bool eliminateStores(
     BasicBlock *BB,
-    llvm::ArrayRef<AllocStackInst *> unsafeAllocas) {
+    llvh::ArrayRef<AllocStackInst *> unsafeAllocas) {
   // Check if this block is the entry block.
   Function *F = BB->getParent();
   bool isEntryBlock = (BB == &*F->begin());
 
   // A list of un-clobbered frame stored values in flight.
-  llvm::DenseMap<Variable *, StoreFrameInst *> prevStoreFrame;
+  llvh::DenseMap<Variable *, StoreFrameInst *> prevStoreFrame;
 
   // A list of un-clobbered stack store instructions.
-  llvm::DenseMap<AllocStackInst *, StoreStackInst *> prevStoreStack;
+  llvh::DenseMap<AllocStackInst *, StoreStackInst *> prevStoreStack;
 
   // Deletes instructions when we leave the function.
   IRBuilder::InstructionDestroyer destroyer;
 
   // A list of variables that are known to be captured.
-  llvm::DenseSet<Variable *> capturedVariables;
+  llvh::DenseSet<Variable *> capturedVariables;
 
   // In the entry block we can keep track of which variables have been captured
   // by inspecting the closures that we generate.
@@ -299,7 +299,7 @@ static bool eliminateStores(
     Instruction *II = &it;
 
     // Try to delete the previous store based on the current store.
-    if (auto *SF = llvm::dyn_cast<StoreFrameInst>(II)) {
+    if (auto *SF = llvh::dyn_cast<StoreFrameInst>(II)) {
       auto *V = SF->getVariable();
       auto entry = prevStoreFrame.find(V);
 
@@ -320,7 +320,7 @@ static bool eliminateStores(
     }
 
     // Try to delete the previous store based on the current store.
-    if (auto *SS = llvm::dyn_cast<StoreStackInst>(II)) {
+    if (auto *SS = llvh::dyn_cast<StoreStackInst>(II)) {
       auto *AS = SS->getPtr();
       auto entry = prevStoreStack.find(AS);
 
@@ -341,14 +341,14 @@ static bool eliminateStores(
     }
 
     // Invalidate the frame store storage.
-    if (auto *LF = llvm::dyn_cast<LoadFrameInst>(II)) {
+    if (auto *LF = llvh::dyn_cast<LoadFrameInst>(II)) {
       auto *V = LF->getLoadVariable();
       prevStoreFrame[V] = nullptr;
       continue;
     }
 
     // Invalidate the stack store storage.
-    if (auto *LS = llvm::dyn_cast<LoadStackInst>(II)) {
+    if (auto *LS = llvh::dyn_cast<LoadStackInst>(II)) {
       AllocStackInst *AS = LS->getPtr();
       prevStoreStack[AS] = nullptr;
       continue;
@@ -383,7 +383,7 @@ static bool eliminateStores(
       }
     }
 
-    if (auto *CF = llvm::dyn_cast<CreateFunctionInst>(II)) {
+    if (auto *CF = llvh::dyn_cast<CreateFunctionInst>(II)) {
       // Collect the captured variables.
       if (usePreciseCaptureAnalysis) {
         collectCapturedVariables(
@@ -398,7 +398,7 @@ static bool eliminateStores(
 /// \returns true if the instruction has non-store uses, like loads.
 static bool hasNonStoreUses(AllocStackInst *ASI) {
   for (auto *U : ASI->getUsers()) {
-    if (!llvm::isa<StoreStackInst>(U))
+    if (!llvh::isa<StoreStackInst>(U))
       return true;
   }
 
@@ -410,7 +410,7 @@ static bool eliminateStoreOnlyLocations(BasicBlock *BB) {
   IRBuilder::InstructionDestroyer destroyer;
 
   for (auto &it : *BB) {
-    auto *ASI = llvm::dyn_cast<AllocStackInst>(&it);
+    auto *ASI = llvh::dyn_cast<AllocStackInst>(&it);
     if (!ASI)
       continue;
 
@@ -444,7 +444,7 @@ static bool isUnsafeStackLocation(
     BlockSet &exceptionHandlingBlocks) {
   // For all users of the stack allocation:
   for (auto *U : ASI->getUsers()) {
-    if (llvm::isa<LoadStackInst>(U) || llvm::isa<StoreStackInst>(U)) {
+    if (llvh::isa<LoadStackInst>(U) || llvh::isa<StoreStackInst>(U)) {
       // If the load/store is used inside of a catch block then we consider this
       // variable as captured.
       for (auto *BB : exceptionHandlingBlocks) {
@@ -474,8 +474,8 @@ static void collectStackAllocations(
   BlockSet exceptionHandlingBlocks;
   for (auto &BB : *F) {
     Instruction *I = &*BB.begin();
-    if (llvm::isa<TryStartInst>(BB.getTerminator()) ||
-        llvm::isa<CatchInst>(I)) {
+    if (llvh::isa<TryStartInst>(BB.getTerminator()) ||
+        llvh::isa<CatchInst>(I)) {
       exceptionHandlingBlocks.insert(&BB);
     }
   }
@@ -483,7 +483,7 @@ static void collectStackAllocations(
   // For each instruction in the basic block:
   for (auto &BB : *F) {
     for (auto &it : BB) {
-      auto *ASI = llvm::dyn_cast<AllocStackInst>(&it);
+      auto *ASI = llvh::dyn_cast<AllocStackInst>(&it);
       if (!ASI)
         continue;
 
@@ -499,14 +499,14 @@ static void collectStackAllocations(
   }
 }
 
-using DomTreeNode = llvm::DomTreeNodeBase<BasicBlock>;
-using DomTreeLevelMap = llvm::DenseMap<DomTreeNode *, unsigned>;
+using DomTreeNode = llvh::DomTreeNodeBase<BasicBlock>;
+using DomTreeLevelMap = llvh::DenseMap<DomTreeNode *, unsigned>;
 
 using DomTreeNodePair = std::pair<DomTreeNode *, unsigned>;
 using NodePriorityQueue = std::priority_queue<
     DomTreeNodePair,
     SmallVector<DomTreeNodePair, 32>,
-    llvm::less_second>;
+    llvh::less_second>;
 
 /// Compute the dominator tree levels for our graph.
 static void computeDomTreeLevels(
@@ -536,7 +536,7 @@ static Value *getLiveOutValue(
     BlockToInstMap &phiLoc,
     DominanceInfo &DT,
     BlockToInstMap &stores) {
-  LLVM_DEBUG(llvm::dbgs() << "Searching for a value definition.\n");
+  LLVM_DEBUG(llvh::dbgs() << "Searching for a value definition.\n");
 
   // Walk the Dom tree in search of a defining value:
   for (DomTreeNode *Node = DT.getNode(startBB); Node; Node = Node->getIDom()) {
@@ -555,7 +555,7 @@ static Value *getLiveOutValue(
     }
     // Move to the next dominating block.
   }
-  LLVM_DEBUG(llvm::dbgs() << "Could not find a def. Using undefined.\n");
+  LLVM_DEBUG(llvh::dbgs() << "Could not find a def. Using undefined.\n");
   IRBuilder builder(startBB->getParent());
   return builder.getLiteralUndefined();
 }
@@ -607,17 +607,17 @@ static void promoteAllocStackToSSA(
   // most one store per block.
   for (auto *U : ASI->getUsers()) {
     // We need to place Phis for this block.
-    if (llvm::isa<StoreStackInst>(U)) {
+    if (llvh::isa<StoreStackInst>(U)) {
       // If the block is in the dom tree (dominated by the entry block).
       if (DomTreeNode *Node = DT.getNode(U->getParent()))
         PQ.push(std::make_pair(Node, domTreeLevels[Node]));
     }
   }
 
-  LLVM_DEBUG(llvm::dbgs() << " Found: " << PQ.size() << " Defs\n");
+  LLVM_DEBUG(llvh::dbgs() << " Found: " << PQ.size() << " Defs\n");
 
   // A list of nodes for which we already calculated the dominator frontier.
-  llvm::SmallPtrSet<DomTreeNode *, 32> visited;
+  llvh::SmallPtrSet<DomTreeNode *, 32> visited;
 
   SmallVector<DomTreeNode *, 32> worklist;
 
@@ -674,7 +674,7 @@ static void promoteAllocStackToSSA(
     }
   }
 
-  LLVM_DEBUG(llvm::dbgs() << " Found: " << phiBlocks.size() << " new PHIs\n");
+  LLVM_DEBUG(llvh::dbgs() << " Found: " << phiBlocks.size() << " new PHIs\n");
 
   // At this point we've calculated the locations of all of the new phi nodes.
   // Next, create the phi nodes and promote all of the loads and stores into the
@@ -692,15 +692,15 @@ static void promoteAllocStackToSSA(
   }
 
   BlockToInstMap stores;
-  llvm::SmallVector<LoadStackInst *, 16> loads;
+  llvh::SmallVector<LoadStackInst *, 16> loads;
 
   // Collect all loads/stores for the ASI.
   for (auto *U : ASI->getUsers()) {
-    if (auto *L = llvm::dyn_cast<LoadStackInst>(U)) {
+    if (auto *L = llvh::dyn_cast<LoadStackInst>(U)) {
       loads.push_back(L);
       continue;
     }
-    if (auto *S = llvm::dyn_cast<StoreStackInst>(U)) {
+    if (auto *S = llvh::dyn_cast<StoreStackInst>(U)) {
       assert(!stores.count(S->getParent()) && "multiple stores per block!");
       stores[S->getParent()] = S;
       continue;
@@ -708,7 +708,7 @@ static void promoteAllocStackToSSA(
     llvm_unreachable("Invalid use");
   }
 
-  LLVM_DEBUG(llvm::dbgs() << " Finished placing Phis \n");
+  LLVM_DEBUG(llvh::dbgs() << " Finished placing Phis \n");
 
   // For all phi nodes we've decided to insert:
   for (auto *BB : phiBlocks) {
@@ -744,7 +744,7 @@ static void promoteAllocStackToSSA(
   }
 
   NumAlloc++;
-  LLVM_DEBUG(llvm::dbgs() << " Finished placing Phis \n");
+  LLVM_DEBUG(llvh::dbgs() << " Finished placing Phis \n");
 }
 
 bool Mem2Reg::runOnFunction(Function *F) {

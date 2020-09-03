@@ -10,10 +10,10 @@
 
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IR.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Support/RecyclingAllocator.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/Optional.h"
+#include "llvh/ADT/SmallPtrSet.h"
+#include "llvh/Support/RecyclingAllocator.h"
 
 namespace hermes {
 
@@ -24,7 +24,6 @@ namespace hermes {
 /// blocks. The analysis does not enumerate unreachable blocks.
 class PostOrderAnalysis {
   using BlockList = std::vector<BasicBlock *>;
-  using BlockSet = llvm::SmallPtrSet<BasicBlock *, 16>;
 
   /// The AST context, which here is only used by Dump().
   Context &ctx_;
@@ -34,9 +33,8 @@ class PostOrderAnalysis {
 
   /// This function does the recursive scan of the function. \p BB is the basic
   /// block that starts the scan. \p order is the ordered list of blocks, and
-  /// the output, and \p visited is a set of already visited blocks.
-  static void
-  visitPostOrder(BasicBlock *BB, BlockList &order, BlockSet &visited);
+  /// the output.
+  static void visitPostOrder(BasicBlock *BB, BlockList &order);
 
  public:
   explicit PostOrderAnalysis(Function *F);
@@ -48,10 +46,10 @@ class PostOrderAnalysis {
   using reverse_iterator = decltype(Order)::reverse_iterator;
   using const_reverse_iterator = decltype(Order)::const_reverse_iterator;
 
-  using range = llvm::iterator_range<iterator>;
-  using const_range = llvm::iterator_range<const_iterator>;
-  using reverse_range = llvm::iterator_range<reverse_iterator>;
-  using const_reverse_range = llvm::iterator_range<const_reverse_iterator>;
+  using range = llvh::iterator_range<iterator>;
+  using const_range = llvh::iterator_range<const_iterator>;
+  using reverse_range = llvh::iterator_range<reverse_iterator>;
+  using const_reverse_range = llvh::iterator_range<const_reverse_iterator>;
 
   inline iterator begin() {
     return Order.begin();
@@ -100,7 +98,7 @@ class PostOrderAnalysis {
 /// \endcode
 class LoopAnalysis {
   template <typename T>
-  using BlockMap = llvm::SmallDenseMap<const BasicBlock *, T, 16>;
+  using BlockMap = llvh::SmallDenseMap<const BasicBlock *, T, 16>;
 
   /// Mapping from each block to the header of the enclosing loop, or to null if
   /// the block is in a cycle but has no unique header.
@@ -158,7 +156,7 @@ class FunctionScopeAnalysis {
       return ScopeData(nullptr, 0, true);
     }
   };
-  using LexicalScopeMap = llvm::DenseMap<const Function *, ScopeData>;
+  using LexicalScopeMap = llvh::DenseMap<const Function *, ScopeData>;
   LexicalScopeMap lexicalScopeMap_{};
 
   /// Recursively calculate the scope data of a function \p F.
@@ -171,7 +169,7 @@ class FunctionScopeAnalysis {
   }
 
   /// Lazily get the scope depth of \p VS.
-  llvm::Optional<int32_t> getScopeDepth(VariableScope *VS);
+  llvh::Optional<int32_t> getScopeDepth(VariableScope *VS);
 
   /// Lazily get the lexical parent of \p F, or nullptr if none.
   Function *getLexicalParent(Function *F);
@@ -221,7 +219,7 @@ class StackNode {
 /// bool processNode(StackNode &);
 template <typename Derived, typename StackNode>
 class Visitor {
-  llvm::RecyclingAllocator<llvm::BumpPtrAllocator, StackNode> nodeAllocator_;
+  llvh::RecyclingAllocator<llvh::BumpPtrAllocator, StackNode> nodeAllocator_;
 
   Derived *derived() {
     return static_cast<Derived *>(this);
@@ -248,7 +246,7 @@ class Visitor {
 
   /// Starting DFS from a specific node.
   bool DFS(DominanceInfoNode *DIN) {
-    llvm::SmallVector<StackNode *, 4> nodesToProcess;
+    llvh::SmallVector<StackNode *, 4> nodesToProcess;
 
     bool changed = false;
 

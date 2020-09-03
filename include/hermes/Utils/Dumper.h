@@ -12,9 +12,9 @@
 
 #include "hermes/IR/IRVisitor.h"
 
-namespace llvm {
+namespace llvh {
 class raw_ostream;
-} // namespace llvm
+} // namespace llvh
 
 namespace hermes {
 class Value;
@@ -43,7 +43,7 @@ struct InstructionNamer {
   unsigned getNumber(Value *);
 };
 
-using llvm::raw_ostream;
+using llvh::raw_ostream;
 
 struct IRPrinter : public IRVisitor<IRPrinter, void> {
   /// Indentation level.
@@ -51,7 +51,7 @@ struct IRPrinter : public IRVisitor<IRPrinter, void> {
 
   SourceErrorManager &sm_;
   /// Output stream.
-  llvm::raw_ostream &os;
+  llvh::raw_ostream &os;
   /// If set to true then we need to escape the quote mark because the output of
   /// this printer may be printed as a quoted label.
   bool needEscape;
@@ -59,7 +59,7 @@ struct IRPrinter : public IRVisitor<IRPrinter, void> {
   InstructionNamer InstNamer;
   InstructionNamer BBNamer;
 
-  explicit IRPrinter(Context &ctx, llvm::raw_ostream &ost, bool escape = false)
+  explicit IRPrinter(Context &ctx, llvh::raw_ostream &ost, bool escape = false)
       : Indent(0),
         sm_(ctx.getSourceErrorManager()),
         os(ost),

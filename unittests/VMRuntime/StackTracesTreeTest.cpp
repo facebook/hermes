@@ -8,7 +8,7 @@
 #include "hermes/VM/StackTracesTree-NoRuntime.h"
 
 #if defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) and \
-    !defined(HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION)
+    !defined(HERMESVM_GC_HADES)
 
 #include "TestHelpers.h"
 
@@ -55,7 +55,7 @@ struct StackTracesTreeTest : RuntimeTestFixtureBase {
           << "Returned value was not a HV with a pointer";
     }
     std::string res;
-    llvm::raw_string_ostream resStream(res);
+    llvh::raw_string_ostream resStream(res);
     auto stringTable = runtime->getStackTracesTree()->getStringTable();
     auto allocationLocationTracker =
         runtime->getHeap().getAllocationLocationTracker();
@@ -69,7 +69,7 @@ struct StackTracesTreeTest : RuntimeTestFixtureBase {
       node = node->parent;
     }
     resStream.flush();
-    auto trimmedRes = llvm::StringRef(res).trim();
+    auto trimmedRes = llvh::StringRef(res).trim();
     return trimmedRes == expectedTrace
         ? ::testing::AssertionSuccess()
         : (::testing::AssertionFailure()
@@ -83,9 +83,9 @@ struct StackTracesTreeTest : RuntimeTestFixtureBase {
 static std::string stackTraceToJSON(StackTracesTree &tree) {
   auto &stringTable = *tree.getStringTable();
   std::string res;
-  llvm::raw_string_ostream stream(res);
+  llvh::raw_string_ostream stream(res);
   JSONEmitter json(stream, /* pretty */ true);
-  llvm::SmallVector<StackTracesTreeNode *, 128> nodeStack;
+  llvh::SmallVector<StackTracesTreeNode *, 128> nodeStack;
   nodeStack.push_back(tree.getRootNode());
   while (!nodeStack.empty()) {
     auto curNode = nodeStack.pop_back_val();
@@ -102,7 +102,7 @@ static std::string stackTraceToJSON(StackTracesTree &tree) {
     json.emitKey("children");
     json.openArray();
     nodeStack.push_back(nullptr);
-    for (auto child : *curNode) {
+    for (auto child : curNode->getChildren()) {
       nodeStack.push_back(child);
     }
   }
@@ -112,7 +112,7 @@ static std::string stackTraceToJSON(StackTracesTree &tree) {
 
 #define ASSERT_RUN_TRACE(code, trace)                                        \
   ASSERT_TRUE(                                                               \
-      checkTraceMatches(code, llvm::StringRef(trace).trim().str().c_str())); \
+      checkTraceMatches(code, llvh::StringRef(trace).trim().str().c_str())); \
   ASSERT_TRUE(runtime->getStackTracesTree()->isHeadAtRoot())
 
 TEST_F(StackTracesTreeTest, BasicOperation) {
@@ -126,7 +126,7 @@ global test.js:1:1
 (invalid function name) (invalid script name):-1:-1
     )#");
 
-  const auto expectedTree = llvm::StringRef(R"#(
+  const auto expectedTree = llvh::StringRef(R"#(
 {
   "name": "(invalid function name)",
   "scriptName": "(invalid script name)",
@@ -149,13 +149,6 @@ global test.js:1:1
               "name": "foo",
               "scriptName": "test.js",
               "line": 1,
-              "col": 40,
-              "children": []
-            },
-            {
-              "name": "foo",
-              "scriptName": "test.js",
-              "line": 1,
               "col": 66,
               "children": [
                 {
@@ -173,6 +166,13 @@ global test.js:1:1
                   "children": []
                 }
               ]
+            },
+            {
+              "name": "foo",
+              "scriptName": "test.js",
+              "line": 1,
+              "col": 40,
+              "children": []
             }
           ]
         },
@@ -495,7 +495,7 @@ function baz() {
 [[foo, 1], [foo, 10], [baz, 1]].map(bar);
 )#"));
 
-  const auto expectedTree = llvm::StringRef(R"#(
+  const auto expectedTree = llvh::StringRef(R"#(
 {
   "name": "(invalid function name)",
   "scriptName": "(invalid script name)",
@@ -528,17 +528,17 @@ function baz() {
                   "children": []
                 },
                 {
-                  "name": "foo",
-                  "scriptName": "eval.js",
-                  "line": 4,
-                  "col": 20,
-                  "children": []
-                },
-                {
                   "name": "baz",
                   "scriptName": "eval.js",
                   "line": 11,
                   "col": 1,
+                  "children": []
+                },
+                {
+                  "name": "foo",
+                  "scriptName": "eval.js",
+                  "line": 4,
+                  "col": 20,
                   "children": []
                 },
                 {
@@ -570,7 +570,7 @@ function baz() {
           "name": "global",
           "scriptName": "eval.js",
           "line": 14,
-          "col": 3,
+          "col": 13,
           "children": []
         },
         {
@@ -584,7 +584,7 @@ function baz() {
           "name": "global",
           "scriptName": "eval.js",
           "line": 14,
-          "col": 13,
+          "col": 3,
           "children": []
         },
         {

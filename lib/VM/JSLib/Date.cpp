@@ -30,7 +30,7 @@ struct ToStringOptions {
   /// \param t the local time since Jan 1 1970 UTC.
   /// \param tza the offset from UTC that \p t has been adjusted by.
   /// \param buf[out] the buffer into which to output the result string.
-  void (*toStringFn)(double t, double tza, llvm::SmallVectorImpl<char> &buf);
+  void (*toStringFn)(double t, double tza, llvh::SmallVectorImpl<char> &buf);
   bool isUTC;
   /// Throw if the internal value of this Date is not finite.
   bool throwOnError;
@@ -42,7 +42,7 @@ struct ToLocaleStringOptions {
   /// \param t the local time since Jan 1 1970 UTC.
   /// \param locale the locale to convert in (the current locale).
   /// \param buf[out] the buffer into which to output the result string.
-  void (*toStringFn)(double t, llvm::SmallVectorImpl<char16_t> &buf);
+  void (*toStringFn)(double t, llvh::SmallVectorImpl<char16_t> &buf);
 };
 
 struct GetterOptions {
@@ -476,7 +476,7 @@ dateConstructor(void *, Runtime *runtime, NativeArgs args) {
     return self.getHermesValue();
   }
 
-  llvm::SmallString<32> str{};
+  llvh::SmallString<32> str{};
   if (storage->env) {
     if (storage->env->callsToDateAsFunction.empty()) {
       return runtime->raiseTypeError(
@@ -574,7 +574,7 @@ datePrototypeToStringHelper(void *ctx, Runtime *runtime, NativeArgs args) {
     return HermesValue::encodeStringValue(
         runtime->getPredefinedString(Predefined::InvalidDate));
   }
-  llvm::SmallString<32> str{};
+  llvh::SmallString<32> str{};
   if (!opts->isUTC) {
     double local = localTime(t);
     opts->toStringFn(local, local - t, str);
@@ -589,14 +589,31 @@ CallResult<HermesValue> datePrototypeToLocaleStringHelper(
     void *ctx,
     Runtime *runtime,
     NativeArgs args) {
+  assert(
+      (uint64_t)ctx < (uint64_t)ToLocaleStringKind::NumKinds &&
+      "dataPrototypeToLocaleString with wrong kind as context");
+#ifdef HERMES_PLATFORM_INTL
+  static NativeFunctionPtr toLocaleStringFunctions[] = {
+      intlDatePrototypeToLocaleString,
+      intlDatePrototypeToLocaleDateString,
+      intlDatePrototypeToLocaleTimeString,
+  };
+  assert(
+      sizeof(toLocaleStringFunctions) / sizeof(toLocaleStringFunctions[0]) ==
+          (size_t)ToLocaleStringKind::NumKinds &&
+      "toLocaleStringFunctions has wrong number of elements");
+  return toLocaleStringFunctions[(uint64_t)ctx](
+      /* unused */ ctx, runtime, args);
+#else
   static ToLocaleStringOptions toLocaleStringOptions[] = {
       {datetimeToLocaleString},
       {dateToLocaleString},
       {timeToLocaleString},
   };
   assert(
-      (uint64_t)ctx < (uint64_t)ToLocaleStringKind::NumKinds &&
-      "dataPrototypeToLocaleString with wrong kind as context");
+      sizeof(toLocaleStringOptions) / sizeof(toLocaleStringOptions[0]) ==
+          (size_t)ToLocaleStringKind::NumKinds &&
+      "toLocaleStringOptions has wrong number of elements");
   ToLocaleStringOptions *opts = &toLocaleStringOptions[(uint64_t)ctx];
   auto *date = dyn_vmcast<JSDate>(args.getThisArg());
   if (!date) {
@@ -613,6 +630,7 @@ CallResult<HermesValue> datePrototypeToLocaleStringHelper(
 
   opts->toStringFn(t, str);
   return StringPrimitive::create(runtime, str);
+#endif
 }
 
 CallResult<HermesValue>
@@ -1070,26 +1088,26 @@ datePrototypeToJSON(void *ctx, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
-  auto propRes = toPrimitive_RJS(runtime, O, PreferredType::NUMBER);
-  if (propRes == ExecutionStatus::EXCEPTION) {
+  auto tvRes = toPrimitive_RJS(runtime, O, PreferredType::NUMBER);
+  if (tvRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto tv = *propRes;
+  auto tv = *tvRes;
   if (tv.isNumber() && !std::isfinite(tv.getNumber())) {
     return HermesValue::encodeNullValue();
   }
-  if ((propRes = JSObject::getNamed_RJS(
-           O, runtime, Predefined::getSymbolID(Predefined::toISOString))) ==
-      ExecutionStatus::EXCEPTION) {
+  auto propRes = JSObject::getNamed_RJS(
+      O, runtime, Predefined::getSymbolID(Predefined::toISOString));
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   Handle<Callable> toISO =
-      Handle<Callable>::dyn_vmcast(runtime->makeHandle(*propRes));
+      Handle<Callable>::dyn_vmcast(runtime->makeHandle(std::move(*propRes)));
   if (!toISO.get()) {
     return runtime->raiseTypeError(
         "toISOString is not callable in Date.prototype.toJSON()");
   }
-  return Callable::executeCall0(toISO, runtime, O);
+  return Callable::executeCall0(toISO, runtime, O).toCallResultHermesValue();
 }
 
 CallResult<HermesValue>

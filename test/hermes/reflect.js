@@ -473,5 +473,10 @@ assert.equal(Reflect.setPrototypeOf(o, {}),
 assert.throws(_ => Reflect.setPrototypeOf(1, proto),
              TypeError);
 
+print('Symbol.toStringTag');
+// CHECK-LABEL: Symbol.toStringTag
+
+assert.equal(Reflect[Symbol.toStringTag], 'Reflect');
+
 print('done');
 // CHECK-LABEL: done

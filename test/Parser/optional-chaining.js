@@ -18,13 +18,11 @@ a?.b;
 // CHECK-NEXT:         "type": "OptionalMemberExpression",
 // CHECK-NEXT:         "object": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "a",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "a"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "property": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "b",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "b"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "computed": false,
 // CHECK-NEXT:         "optional": true
@@ -45,37 +43,32 @@ a?.b.c?.d.e
 // CHECK-NEXT:               "type": "OptionalMemberExpression",
 // CHECK-NEXT:               "object": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "a",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "a"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "property": {
 // CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "b",
-// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:                 "name": "b"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "computed": false,
 // CHECK-NEXT:               "optional": true
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "property": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "c",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "c"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "computed": false,
 // CHECK-NEXT:             "optional": false
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "property": {
 // CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "d",
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "name": "d"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "computed": false,
 // CHECK-NEXT:           "optional": true
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "property": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "e",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "e"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "computed": false,
 // CHECK-NEXT:         "optional": false
@@ -90,14 +83,12 @@ a ?. (b);
 // CHECK-NEXT:         "type": "OptionalCallExpression",
 // CHECK-NEXT:         "callee": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "a",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "a"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "arguments": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "b",
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "name": "b"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "optional": true
@@ -112,13 +103,11 @@ a ?. [b];
 // CHECK-NEXT:         "type": "OptionalMemberExpression",
 // CHECK-NEXT:         "object": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "a",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "a"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "property": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "b",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "b"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "computed": true,
 // CHECK-NEXT:         "optional": true
@@ -135,22 +124,19 @@ a ?. (b) . c;
 // CHECK-NEXT:           "type": "OptionalCallExpression",
 // CHECK-NEXT:           "callee": {
 // CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "a",
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "name": "a"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "arguments": [
 // CHECK-NEXT:             {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "b",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "b"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "optional": true
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "property": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "c",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "c"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "computed": false,
 // CHECK-NEXT:         "optional": false
@@ -169,29 +155,25 @@ a ?. (b) . c;
 // CHECK-NEXT:             "type": "OptionalMemberExpression",
 // CHECK-NEXT:             "object": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "a",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "a"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "property": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "b",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "b"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "computed": false,
 // CHECK-NEXT:             "optional": true
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "property": {
 // CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "c",
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "name": "c"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "computed": false,
 // CHECK-NEXT:           "optional": false
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "property": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "d",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "d"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "computed": false
 // CHECK-NEXT:       },
@@ -209,29 +191,25 @@ a ?. (b) . c;
 // CHECK-NEXT:             "type": "OptionalMemberExpression",
 // CHECK-NEXT:             "object": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "a",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "a"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "property": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "b",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "b"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "computed": true,
 // CHECK-NEXT:             "optional": true
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "property": {
 // CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "c",
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "name": "c"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "computed": false,
 // CHECK-NEXT:           "optional": false
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "property": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "d",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "d"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "computed": false
 // CHECK-NEXT:       },
@@ -247,22 +225,19 @@ a?.(b).c;
 // CHECK-NEXT:           "type": "OptionalCallExpression",
 // CHECK-NEXT:           "callee": {
 // CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "a",
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "name": "a"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "arguments": [
 // CHECK-NEXT:             {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "b",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "b"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "optional": true
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "property": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "c",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "c"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "computed": false,
 // CHECK-NEXT:         "optional": false
@@ -281,13 +256,11 @@ a?.(b).c;
 // CHECK-NEXT:             "type": "OptionalMemberExpression",
 // CHECK-NEXT:             "object": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "a",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "a"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "property": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "b",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "b"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "computed": false,
 // CHECK-NEXT:             "optional": true
@@ -297,8 +270,7 @@ a?.(b).c;
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "property": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "c",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "c"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "computed": false,
 // CHECK-NEXT:         "optional": false
@@ -317,13 +289,11 @@ a?.(b).c;
 // CHECK-NEXT:             "type": "OptionalMemberExpression",
 // CHECK-NEXT:             "object": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "a",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "a"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "property": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "b",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "b"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "computed": false,
 // CHECK-NEXT:             "optional": true
@@ -333,8 +303,7 @@ a?.(b).c;
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "property": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "c",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "c"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "computed": false
 // CHECK-NEXT:       },
@@ -352,22 +321,19 @@ new a().b?.c;
 // CHECK-NEXT:             "type": "NewExpression",
 // CHECK-NEXT:             "callee": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "a",
-// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:               "name": "a"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "arguments": []
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "property": {
 // CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "b",
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "name": "b"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "computed": false
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "property": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "c",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "c"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "computed": false,
 // CHECK-NEXT:         "optional": true
@@ -384,15 +350,13 @@ a()?.b;
 // CHECK-NEXT:           "type": "CallExpression",
 // CHECK-NEXT:           "callee": {
 // CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "a",
-// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:             "name": "a"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "arguments": []
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "property": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "b",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "b"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "computed": false,
 // CHECK-NEXT:         "optional": true
@@ -408,8 +372,7 @@ x ? .3 : .4;
 // CHECK-NEXT:         "type": "ConditionalExpression",
 // CHECK-NEXT:         "test": {
 // CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "x",
-// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:           "name": "x"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "alternate": {
 // CHECK-NEXT:           "type": "NumericLiteral",

@@ -21,7 +21,7 @@ namespace {
 void copyStringTo(
     JNIEnv *env,
     local_ref<jstring> jstr,
-    llvm::SmallVectorImpl<char16_t> &buf) {
+    llvh::SmallVectorImpl<char16_t> &buf) {
   jsize len = env->GetStringLength(jstr.get());
   const jchar *chr = env->GetStringChars(jstr.get(), nullptr);
   buf.assign(chr, chr + len);
@@ -32,7 +32,7 @@ void copyStringTo(
 /// \p env The JNI environment to create the string in.
 /// \p str The string to copy into the Java Heap.
 /// \return the resulting string.
-local_ref<JString> toJavaString(JNIEnv *env, llvm::ArrayRef<char16_t> str) {
+local_ref<JString> toJavaString(JNIEnv *env, llvh::ArrayRef<char16_t> str) {
   static_assert(
       sizeof(jchar) == sizeof(*str.data()),
       "UTF16 char not the same size as Java char.");
@@ -65,8 +65,8 @@ class JAndroidUnicodeUtils
   /// Compares two strings using the user's chosen locale to order chars.
   /// Equivalent of left.localeCompare(right) in JS.
   static jint localeCompare(
-      llvm::ArrayRef<char16_t> left,
-      llvm::ArrayRef<char16_t> right) noexcept {
+      llvh::ArrayRef<char16_t> left,
+      llvh::ArrayRef<char16_t> right) noexcept {
     const auto env = facebook::jni::Environment::current();
     auto jLeft = toJavaString(env, left);
     auto jRight = toJavaString(env, right);
@@ -82,7 +82,7 @@ class JAndroidUnicodeUtils
       double unixtimeMs,
       bool formatDate,
       bool formatTime,
-      llvm::SmallVectorImpl<char16_t> &buf) noexcept {
+      llvh::SmallVectorImpl<char16_t> &buf) noexcept {
     const auto env = facebook::jni::Environment::current();
     static const auto jDateFormat =
         javaClassStatic()
@@ -100,7 +100,7 @@ class JAndroidUnicodeUtils
   }
 
   static void convertToCase(
-      llvm::SmallVectorImpl<char16_t> &buf,
+      llvh::SmallVectorImpl<char16_t> &buf,
       CaseConversion targetCase,
       bool useCurrentLocale) noexcept {
     const auto env = facebook::jni::Environment::current();
@@ -117,7 +117,7 @@ class JAndroidUnicodeUtils
   }
 
   static void normalize(
-      llvm::SmallVectorImpl<char16_t> &buf,
+      llvh::SmallVectorImpl<char16_t> &buf,
       NormalizationForm form) noexcept {
     const auto env = facebook::jni::Environment::current();
     static const auto jNormalize =
@@ -133,8 +133,8 @@ class JAndroidUnicodeUtils
 };
 
 int localeCompare(
-    llvm::ArrayRef<char16_t> left,
-    llvm::ArrayRef<char16_t> right) {
+    llvh::ArrayRef<char16_t> left,
+    llvh::ArrayRef<char16_t> right) {
   return JAndroidUnicodeUtils::localeCompare(left, right);
 }
 
@@ -142,18 +142,18 @@ void dateFormat(
     double unixtimeMs,
     bool formatDate,
     bool formatTime,
-    llvm::SmallVectorImpl<char16_t> &buf) {
+    llvh::SmallVectorImpl<char16_t> &buf) {
   JAndroidUnicodeUtils::dateFormat(unixtimeMs, formatDate, formatTime, buf);
 }
 
 void convertToCase(
-    llvm::SmallVectorImpl<char16_t> &str,
+    llvh::SmallVectorImpl<char16_t> &str,
     CaseConversion targetCase,
     bool useCurrentLocale) {
   JAndroidUnicodeUtils::convertToCase(str, targetCase, useCurrentLocale);
 }
 
-void normalize(llvm::SmallVectorImpl<char16_t> &buf, NormalizationForm form) {
+void normalize(llvh::SmallVectorImpl<char16_t> &buf, NormalizationForm form) {
   JAndroidUnicodeUtils::normalize(buf, form);
 }
 

@@ -10,7 +10,7 @@
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/StringView.h"
 
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/raw_ostream.h"
 
 namespace hermes {
 namespace vm {
@@ -28,16 +28,16 @@ CallResult<HermesValue> print(void *, Runtime *runtime, NativeArgs args) {
       return ExecutionStatus::EXCEPTION;
 
     if (!first)
-      llvm::outs() << " ";
+      llvh::outs() << " ";
     SmallU16String<32> tmp;
-    llvm::outs() << StringPrimitive::createStringView(
+    llvh::outs() << StringPrimitive::createStringView(
                         runtime, runtime->makeHandle(std::move(*res)))
                         .getUTF16Ref(tmp);
     first = false;
   }
 
-  llvm::outs() << "\n";
-  llvm::outs().flush();
+  llvh::outs() << "\n";
+  llvh::outs().flush();
   return HermesValue::encodeUndefinedValue();
 }
 

@@ -16,9 +16,9 @@
 //===          is guaranteed to work on *all* UNIX variants.
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Mutex.h"
+#include "llvh/Support/Mutex.h"
 
-namespace llvm {
+namespace llvh {
 
 using namespace sys;
 

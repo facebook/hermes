@@ -13,7 +13,7 @@
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Runtime.h"
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvh/ADT/DenseMap.h"
 
 #ifndef __APPLE__
 // Prevent "The deprecated ucontext routines require _XOPEN_SOURCE to be
@@ -22,6 +22,7 @@
 #endif
 
 #include <chrono>
+#include <condition_variable>
 #include <mutex>
 #include <thread>
 #include <unordered_set>
@@ -42,7 +43,7 @@ class SamplingProfiler {
   using ThreadId = uint64_t;
   using TimeStampType = std::chrono::steady_clock::time_point;
   using ThreadNamesMap =
-      llvm::DenseMap<SamplingProfiler::ThreadId, std::string>;
+      llvh::DenseMap<SamplingProfiler::ThreadId, std::string>;
 
   /// Captured JSFunction stack frame information for symbolication.
   /// TODO: consolidate the stack frame struct with other function/extern
@@ -126,7 +127,7 @@ class SamplingProfiler {
 
   /// Stores a list of active <thread, runtime> pair.
   /// Protected by profilerLock_.
-  llvm::DenseMap<Runtime *, pthread_t> activeRuntimeThreads_;
+  llvh::DenseMap<Runtime *, pthread_t> activeRuntimeThreads_;
 
   /// Per-thread runtime instance for loom/local profiling.
   /// Limitations: No recursive runtimes in one thread.
@@ -181,6 +182,15 @@ class SamplingProfiler {
   /// registerDomain() keeps a Domain from being destructed.
   std::vector<Domain *> domains_;
 
+  /// This thread starts in timerLoop_, and samples the stacks of registered
+  /// runtimes periodically. It is created in \p enable() and joined in
+  /// \p disable().
+  std::thread timerThread_;
+
+  /// This condition variable can be used to wait for a change in the enabled
+  /// member variable.
+  std::condition_variable enabledCondVar_;
+
  private:
   explicit SamplingProfiler();
 
@@ -205,7 +215,7 @@ class SamplingProfiler {
 
   /// Main routine to take a sample of runtime stack.
   /// \return false for failure which timer loop thread should stop.
-  bool sampleStack();
+  bool sampleStack(std::unique_lock<std::mutex> &mtx);
 
   /// Timer loop thread main routine.
   void timerLoop();
@@ -217,7 +227,7 @@ class SamplingProfiler {
   /// \return total number of stack frames captured in \p sampleStorage
   /// including existing frames before \p startIndex.
   uint32_t walkRuntimeStack(
-      const Runtime *runtime,
+      Runtime *runtime,
       StackTrace &sampleStorage,
       uint32_t startIndex = 0);
 
@@ -262,10 +272,10 @@ class SamplingProfiler {
 
   /// Dump sampled stack to \p OS.
   /// NOTE: this is for manual testing purpose.
-  void dumpSampledStack(llvm::raw_ostream &OS);
+  void dumpSampledStack(llvh::raw_ostream &OS);
 
   /// Dump sampled stack to \p OS in chrome trace format.
-  void dumpChromeTrace(llvm::raw_ostream &OS);
+  void dumpChromeTrace(llvh::raw_ostream &OS);
 
   /// Enable and start profiling.
   bool enable();

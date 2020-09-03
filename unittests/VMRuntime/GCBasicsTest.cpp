@@ -29,6 +29,11 @@ using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
 
 struct Dummy final : public GCCell {
   static const VTable vt;
+#ifdef HERMESVM_GC_HADES
+  // Some padding to meet the minimum cell size.
+  uint64_t padding1_{0};
+  uint64_t padding2_{0};
+#endif
 
   static Dummy *create(DummyRuntime &runtime) {
     return new (runtime.allocWithFinalizer(sizeof(Dummy)))
@@ -95,7 +100,8 @@ struct GCBasicsTest : public ::testing::Test {
         rt(*runtime) {}
 };
 
-#ifndef NDEBUG
+// Hades doesn't report its stats the same way as other GCs.
+#if !defined(NDEBUG) && !defined(HERMESVM_GC_HADES)
 TEST_F(GCBasicsTest, SmokeTest) {
   auto &gc = rt.gc;
   GCBase::HeapInfo info;
@@ -276,14 +282,16 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   gc.getDebugHeapInfo(debugInfo);
   EXPECT_EQ(2u, debugInfo.numAllocatedObjects);
 
+  WeakRefMutex &mtx = gc.weakRefMutex();
+  mtx.lock();
   WeakRef<Array> wr1{&gc, a1};
   WeakRef<Array> wr2{&gc, a2};
 
   ASSERT_TRUE(wr1.isValid());
   ASSERT_TRUE(wr2.isValid());
 
-  ASSERT_EQ(a1, wr1.unsafeGetHermesValue().getPointer());
-  ASSERT_EQ(a2, wr2.unsafeGetHermesValue().getPointer());
+  ASSERT_EQ(a1, getNoHandle(wr1, &gc));
+  ASSERT_EQ(a2, getNoHandle(wr2, &gc));
 
   // Test that freeing an object correctly "empties" the weak ref slot but
   // preserves the other slot.
@@ -297,18 +305,22 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   // the pointer to avoid mistakes.
   a1 = nullptr;
 
+  mtx.unlock();
   gc.collect();
   gc.getDebugHeapInfo(debugInfo);
+  mtx.lock();
   EXPECT_EQ(1u, debugInfo.numAllocatedObjects);
   ASSERT_FALSE(wr1.isValid());
   // Though the slot is empty, it's still reachable, so must not be freed yet.
   ASSERT_NE(WeakSlotState::Free, wr1.unsafeGetSlot()->state());
   ASSERT_TRUE(wr2.isValid());
-  ASSERT_EQ(a2, wr2.unsafeGetHermesValue().getPointer());
+  ASSERT_EQ(a2, getNoHandle(wr2, &gc));
 
   // Make the slot unreachable and test that it is freed.
+  mtx.unlock();
   rt.markExtraWeak = [&](WeakRefAcceptor &acceptor) { acceptor.accept(wr2); };
   gc.collect();
+  mtx.lock();
 
   ASSERT_EQ(WeakSlotState::Free, wr1.unsafeGetSlot()->state());
 
@@ -317,7 +329,9 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   WeakRef<Array> wr3{&gc, a3};
 
   ASSERT_TRUE(wr3.isValid());
-  ASSERT_EQ(a3, wr3.unsafeGetHermesValue().getPointer());
+  ASSERT_EQ(a3, getNoHandle(wr3, &gc));
+#undef LOCK
+#undef UNLOCK
 }
 
 #ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
@@ -342,6 +356,8 @@ TEST_F(GCBasicsTest, WeakRefYoungGenCollectionTest) {
   gc.getDebugHeapInfo(debugInfo);
   EXPECT_EQ(3u, debugInfo.numAllocatedObjects);
 
+  WeakRefMutex &mtx = gc.weakRefMutex();
+  WeakRefLock lk{mtx};
   WeakRef<Dummy> wr0{&gc, d0};
   WeakRef<Dummy> wr1{&gc, d1};
   WeakRef<Dummy> wrOld{&gc, dOld};
@@ -350,9 +366,9 @@ TEST_F(GCBasicsTest, WeakRefYoungGenCollectionTest) {
   ASSERT_TRUE(wr1.isValid());
   ASSERT_TRUE(wrOld.isValid());
 
-  ASSERT_EQ(d0, wr0.unsafeGetHermesValue().getPointer());
-  ASSERT_EQ(d1, wr1.unsafeGetHermesValue().getPointer());
-  ASSERT_EQ(dOld, wrOld.unsafeGetHermesValue().getPointer());
+  ASSERT_EQ(d0, getNoHandle(wr0, &gc));
+  ASSERT_EQ(d1, getNoHandle(wr1, &gc));
+  ASSERT_EQ(dOld, getNoHandle(wrOld, &gc));
 
   // Create a root for d0.  We'll only be doing young-gen collections, so
   // we don't have to root dOld.
@@ -373,8 +389,8 @@ TEST_F(GCBasicsTest, WeakRefYoungGenCollectionTest) {
   ASSERT_TRUE(wr0.isValid());
   ASSERT_FALSE(wr1.isValid());
   ASSERT_TRUE(wrOld.isValid());
-  ASSERT_EQ(d0, wr0.unsafeGetHermesValue().getPointer());
-  ASSERT_EQ(dOld, wrOld.unsafeGetHermesValue().getPointer());
+  ASSERT_EQ(d0, getNoHandle(wr0, &gc));
+  ASSERT_EQ(dOld, getNoHandle(wrOld, &gc));
 }
 
 TEST_F(GCBasicsTest, TestYoungGenStats) {
@@ -407,7 +423,7 @@ TEST_F(GCBasicsTest, TestYoungGenStats) {
 }
 
 #endif // HERMES_GC_GENERATIONAL || HERMES_GC_NONCONTIG_GENERATIONAL
-#endif // !NDEBUG
+#endif // !NDEBUG && !HERMESVM_GC_HADES
 
 TEST_F(GCBasicsTest, VariableSizeRuntimeCellOffsetTest) {
   auto *cell = Array::create(rt, 1);
@@ -458,6 +474,15 @@ TEST_F(GCBasicsTest, TestIDPersistsAcrossCollections) {
   EXPECT_EQ(idBefore, idAfter);
 }
 
+/// Test that objects that die during (YG) GC are untracked.
+TEST_F(GCBasicsTest, TestIDDeathInYoung) {
+  GCScope scope{&rt};
+  rt.getHeap().getObjectID(Dummy::create(rt));
+  rt.getHeap().collect();
+  // ~DummyRuntime will verify all pointers in ID map.
+}
+
+// Hades doesn't do any GCEventKind monitoring.
 TEST(GCCallbackTest, TestCallbackInvoked) {
   std::vector<GCEventKind> ev;
   auto cb = [&ev](GCEventKind kind, const char *) { ev.push_back(kind); };
@@ -465,9 +490,19 @@ TEST(GCCallbackTest, TestCallbackInvoked) {
   auto rt =
       Runtime::create(RuntimeConfig::Builder().withGCConfig(config).build());
   rt->collect();
+  // Hades will record the YG and OG collections as separate events.
+#ifndef HERMESVM_GC_HADES
   EXPECT_EQ(2, ev.size());
-  EXPECT_EQ(GCEventKind::CollectionStart, ev[0]);
-  EXPECT_EQ(GCEventKind::CollectionEnd, ev[1]);
+#else
+  EXPECT_EQ(4, ev.size());
+#endif
+  for (size_t i = 0; i < ev.size(); i++) {
+    if (i % 2 == 0) {
+      EXPECT_EQ(GCEventKind::CollectionStart, ev[i]);
+    } else {
+      EXPECT_EQ(GCEventKind::CollectionEnd, ev[i]);
+    }
+  }
 }
 
 #ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL

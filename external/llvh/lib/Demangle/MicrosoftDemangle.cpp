@@ -15,18 +15,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "MicrosoftDemangleNodes.h"
-#include "llvm/Demangle/Demangle.h"
+#include "llvh/Demangle/Demangle.h"
 
-#include "llvm/Demangle/Compiler.h"
-#include "llvm/Demangle/StringView.h"
-#include "llvm/Demangle/Utility.h"
+#include "llvh/Demangle/Compiler.h"
+#include "llvh/Demangle/StringView.h"
+#include "llvh/Demangle/Utility.h"
 
 #include <array>
 #include <cctype>
 #include <cstdio>
 #include <tuple>
 
-using namespace llvm;
+using namespace llvh;
 using namespace ms_demangle;
 
 static bool startsWithDigit(StringView S) {
@@ -2322,7 +2322,7 @@ void Demangler::dumpBackReferences() {
     std::printf("\n");
 }
 
-char *llvm::microsoftDemangle(const char *MangledName, char *Buf, size_t *N,
+char *llvh::microsoftDemangle(const char *MangledName, char *Buf, size_t *N,
                               int *Status, MSDemangleFlags Flags) {
   int InternalStatus = demangle_success;
   Demangler D;

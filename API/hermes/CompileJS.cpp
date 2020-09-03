@@ -10,7 +10,7 @@
 #include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/Support/Algorithms.h"
 
-#include "llvm/Support/SHA1.h"
+#include "llvh/Support/SHA1.h"
 
 namespace hermes {
 
@@ -32,7 +32,7 @@ bool compileJS(
   if (!res.first)
     return false;
 
-  llvm::raw_string_ostream bcstream(bytecode);
+  llvh::raw_string_ostream bcstream(bytecode);
 
   BytecodeGenerationOptions opts(::hermes::EmitBundle);
   opts.optimizationEnabled = optimize;
@@ -40,7 +40,7 @@ bool compileJS(
   hbc::BytecodeSerializer BS{bcstream, opts};
   BS.serialize(
       *res.first->getBytecodeModule(),
-      llvm::SHA1::hash(llvm::makeArrayRef(
+      llvh::SHA1::hash(llvh::makeArrayRef(
           reinterpret_cast<const uint8_t *>(str.data()), str.size())));
 
   // Flush to string.

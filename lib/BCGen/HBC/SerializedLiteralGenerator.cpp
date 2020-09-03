@@ -7,7 +7,7 @@
 
 #include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
-#include "llvm/Support/Endian.h"
+#include "llvh/Support/Endian.h"
 
 namespace hermes {
 namespace hbc {
@@ -36,15 +36,15 @@ void serializeValueToBuffer(
   // Since the buffer is a char buffer, we pass in an alignment of 1
   // to endian::write.
   buff.resize(buff.size() + sizeof(value_type));
-  llvm::support::endian::write<value_type, 1>(
+  llvh::support::endian::write<value_type, 1>(
       buff.data() + buff.size() - sizeof(value_type),
       value,
-      llvm::support::endianness::little);
+      llvh::support::endianness::little);
 }
 } // namespace
 
 uint32_t SerializedLiteralGenerator::serializeBuffer(
-    llvm::ArrayRef<Literal *> literals,
+    llvh::ArrayRef<Literal *> literals,
     std::vector<unsigned char> &buff,
     bool isKeyBuffer) {
   // Stores the last type parsed by the for loop
@@ -79,13 +79,13 @@ uint32_t SerializedLiteralGenerator::serializeBuffer(
     // tmpSeqBuffer afterwards, or add a second switch.
     switch (literals[i]->getKind()) {
       case ValueKind::LiteralNumberKind:
-        newTag = llvm::cast<LiteralNumber>(literals[i])
+        newTag = llvh::cast<LiteralNumber>(literals[i])
                      ->isIntTypeRepresentible<int32_t>()
             ? IntegerTag
             : NumberTag;
         break;
       case ValueKind::LiteralStringKind: {
-        auto str = llvm::cast<LiteralString>(literals[i])->getValue().str();
+        auto str = llvh::cast<LiteralString>(literals[i])->getValue().str();
         int ind =
             isKeyBuffer ? BMGen_.getIdentifierID(str) : BMGen_.getStringID(str);
 
@@ -99,7 +99,7 @@ uint32_t SerializedLiteralGenerator::serializeBuffer(
         break;
       }
       case ValueKind::LiteralBoolKind:
-        newTag = llvm::cast<LiteralBool>(literals[i])->getValue() ? TrueTag
+        newTag = llvh::cast<LiteralBool>(literals[i])->getValue() ? TrueTag
                                                                   : FalseTag;
         break;
       case ValueKind::LiteralNullKind:
@@ -123,8 +123,8 @@ uint32_t SerializedLiteralGenerator::serializeBuffer(
 
     switch (literals[i]->getKind()) {
       case ValueKind::LiteralNumberKind: {
-        auto litNum = llvm::cast<LiteralNumber>(literals[i]);
-        if (llvm::Optional<int> intPointer =
+        auto litNum = llvh::cast<LiteralNumber>(literals[i]);
+        if (llvh::Optional<int> intPointer =
                 litNum->isIntTypeRepresentible<int32_t>()) {
           int n = intPointer.getValue();
           serializeValueToBuffer<uint32_t>(n, tmpSeqBuffer);
@@ -137,7 +137,7 @@ uint32_t SerializedLiteralGenerator::serializeBuffer(
       case ValueKind::LiteralStringKind: {
         // For strings, we are going to store the index to the string table,
         // which will need to be decoded at runtime.
-        auto str = llvm::cast<LiteralString>(literals[i])->getValue().str();
+        auto str = llvh::cast<LiteralString>(literals[i])->getValue().str();
         auto stringID =
             isKeyBuffer ? BMGen_.getIdentifierID(str) : BMGen_.getStringID(str);
 

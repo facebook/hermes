@@ -218,12 +218,12 @@ void ExternalUTF16StringPrimitiveDeserialize(Deserializer &d, CellKind kind) {
 template <typename T>
 CallResult<HermesValue> StringPrimitive::createEfficientImpl(
     Runtime *runtime,
-    llvm::ArrayRef<T> str,
+    llvh::ArrayRef<T> str,
     std::basic_string<T> *optStorage) {
   constexpr bool charIs8Bit = std::is_same<T, char>::value;
   assert(
       (!optStorage ||
-       str == llvm::makeArrayRef(optStorage->data(), optStorage->size())) &&
+       str == llvh::makeArrayRef(optStorage->data(), optStorage->size())) &&
       "If optStorage is provided, it must equal the input string");
   assert(
       (!charIs8Bit || isAllASCII(str.begin(), str.end())) &&
@@ -276,14 +276,14 @@ CallResult<HermesValue> StringPrimitive::createEfficient(
     Runtime *runtime,
     std::basic_string<char> &&str) {
   return createEfficientImpl(
-      runtime, llvm::makeArrayRef(str.data(), str.size()), &str);
+      runtime, llvh::makeArrayRef(str.data(), str.size()), &str);
 }
 
 CallResult<HermesValue> StringPrimitive::createEfficient(
     Runtime *runtime,
     std::basic_string<char16_t> &&str) {
   return createEfficientImpl(
-      runtime, llvm::makeArrayRef(str.data(), str.size()), &str);
+      runtime, llvh::makeArrayRef(str.data(), str.size()), &str);
 }
 
 CallResult<HermesValue> StringPrimitive::createDynamic(
@@ -428,8 +428,8 @@ StringView StringPrimitive::createStringView(
   return createStringViewMustBeFlat(self);
 }
 
-void StringPrimitive::copyUTF16String(
-    llvm::SmallVectorImpl<char16_t> &str) const {
+void StringPrimitive::appendUTF16String(
+    llvh::SmallVectorImpl<char16_t> &str) const {
   if (isASCII()) {
     const char *ptr = castToASCIIPointer();
     str.append(ptr, ptr + getStringLength());
@@ -439,7 +439,7 @@ void StringPrimitive::copyUTF16String(
   }
 }
 
-void StringPrimitive::copyUTF16String(char16_t *ptr) const {
+void StringPrimitive::appendUTF16String(char16_t *ptr) const {
   if (isASCII()) {
     const char *src = castToASCIIPointer();
     std::copy(src, src + getStringLength(), ptr);
@@ -641,17 +641,12 @@ void ExternalStringPrimitive<T>::_snapshotAddNodesImpl(
     HeapSnapshot &snap) {
   auto *const self = vmcast<ExternalStringPrimitive<T>>(cell);
   snap.beginNode();
-  auto &allocationLocationTracker = gc->getAllocationLocationTracker();
   snap.endNode(
       HeapSnapshot::NodeType::Native,
       "ExternalStringPrimitive",
       gc->getNativeID(self->contents_.data()),
       self->contents_.size(),
-      allocationLocationTracker.isEnabled()
-          ? allocationLocationTracker
-                .getStackTracesTreeNodeForAlloc(self->contents_.data())
-                ->id
-          : 0);
+      0);
 }
 
 template class ExternalStringPrimitive<char16_t>;

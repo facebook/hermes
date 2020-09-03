@@ -7,20 +7,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/Process.h"
-#include "llvm/Support/Signals.h"
+#include "llvh/Support/InitLLVM.h"
+#include "llvh/Support/Error.h"
+#include "llvh/Support/ManagedStatic.h"
+#include "llvh/Support/PrettyStackTrace.h"
+#include "llvh/Support/Process.h"
+#include "llvh/Support/Signals.h"
 #include <string>
 
 #ifdef _WIN32
 #include "Windows/WindowsSupport.h"
 #endif
 
-using namespace llvm;
-using namespace llvm::sys;
+using namespace llvh;
+using namespace llvh::sys;
 
 InitLLVM::InitLLVM(int &Argc, const char **&Argv) : StackPrinter(Argc, Argv) {
   sys::PrintStackTraceOnErrorSignal(Argv[0]);

@@ -137,3 +137,22 @@ a = new Float64Array([]);
 // CHECK-NEXT: Float64Array [  ]
 a = new ArrayBuffer();
 // CHECK-NEXT: ArrayBuffer {  }
+
+g = (function*(){})();
+// CHECK-NEXT: Generator {  }
+
+it = new Map().entries()
+// CHECK-NEXT: Map Iterator {  }
+it = new Set().entries()
+// CHECK-NEXT: Set Iterator {  }
+it =  [][Symbol.iterator]();
+// CHECK-NEXT: Array Iterator {  }
+it = 'abc'[Symbol.iterator]();
+// CHECK-NEXT: String Iterator {  }
+it = 'abc'.matchAll(/1/g)
+// CHECK-NEXT: RegExp String Iterator {  }
+
+Math
+// CHECK-NEXT: Math {{{.*}}}
+JSON
+// CHECK-NEXT: JSON {{{.*}}}

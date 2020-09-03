@@ -17,7 +17,7 @@
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/StringView.h"
 
-#include "llvm/ADT/SmallSet.h"
+#include "llvh/ADT/SmallSet.h"
 
 namespace hermes {
 namespace vm {
@@ -318,14 +318,14 @@ void JSObject::allocateNewSlotStorage(
       assert(
           newSlotIndex == propStorage->size() &&
           "allocated slot must be at end");
-      PropStorage::resizeWithinCapacity(propStorage, newSlotIndex + 1);
+      PropStorage::resizeWithinCapacity(propStorage, runtime, newSlotIndex + 1);
     }
     // If we don't need to resize, just store it directly.
     propStorage->at(newSlotIndex).set(*valueHandle, &runtime->getHeap());
   }
 }
 
-CallResult<HermesValue> JSObject::getNamedPropertyValue_RJS(
+CallResult<PseudoHandle<>> JSObject::getNamedPropertyValue_RJS(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     Handle<JSObject> propObj,
@@ -335,19 +335,19 @@ CallResult<HermesValue> JSObject::getNamedPropertyValue_RJS(
       "getNamedPropertyValue_RJS cannot be used with proxy objects");
 
   if (LLVM_LIKELY(!desc.flags.accessor))
-    return getNamedSlotValue(propObj.get(), runtime, desc);
+    return createPseudoHandle(getNamedSlotValue(propObj.get(), runtime, desc));
 
   auto *accessor =
       vmcast<PropertyAccessor>(getNamedSlotValue(propObj.get(), runtime, desc));
   if (!accessor->getter)
-    return HermesValue::encodeUndefinedValue();
+    return createPseudoHandle(HermesValue::encodeUndefinedValue());
 
   // Execute the accessor on this object.
   return accessor->getter.get(runtime)->executeCall0(
       runtime->makeHandle(accessor->getter), runtime, selfHandle);
 }
 
-CallResult<HermesValue> JSObject::getComputedPropertyValue_RJS(
+CallResult<PseudoHandle<>> JSObject::getComputedPropertyValue_RJS(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     Handle<JSObject> propObj,
@@ -357,26 +357,27 @@ CallResult<HermesValue> JSObject::getComputedPropertyValue_RJS(
       "getComputedPropertyValue_RJS cannot be used with proxy objects");
 
   if (LLVM_LIKELY(!desc.flags.accessor))
-    return getComputedSlotValue(propObj.get(), runtime, desc);
+    return createPseudoHandle(
+        getComputedSlotValue(propObj.get(), runtime, desc));
 
   auto *accessor = vmcast<PropertyAccessor>(
       getComputedSlotValue(propObj.get(), runtime, desc));
   if (!accessor->getter)
-    return HermesValue::encodeUndefinedValue();
+    return createPseudoHandle(HermesValue::encodeUndefinedValue());
 
   // Execute the accessor on this object.
   return accessor->getter.get(runtime)->executeCall0(
       runtime->makeHandle(accessor->getter), runtime, selfHandle);
 }
 
-CallResult<HermesValue> JSObject::getComputedPropertyValue_RJS(
+CallResult<PseudoHandle<>> JSObject::getComputedPropertyValue_RJS(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     Handle<JSObject> propObj,
     ComputedPropertyDescriptor desc,
     Handle<> nameValHandle) {
   if (!propObj) {
-    return HermesValue::encodeEmptyValue();
+    return createPseudoHandle(HermesValue::encodeEmptyValue());
   }
 
   if (LLVM_LIKELY(!desc.flags.proxyObject)) {
@@ -393,7 +394,7 @@ CallResult<HermesValue> JSObject::getComputedPropertyValue_RJS(
     return ExecutionStatus::EXCEPTION;
   }
   if (!*hasRes) {
-    return HermesValue::encodeEmptyValue();
+    return createPseudoHandle(HermesValue::encodeEmptyValue());
   }
   return JSProxy::getComputed(propObj, runtime, *keyRes, selfHandle);
 }
@@ -435,11 +436,11 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
   auto array = runtime->makeHandle(std::move(*arrayRes));
 
   // Optional array of SymbolIDs reported via host object API
-  llvm::Optional<Handle<JSArray>> hostObjectSymbols;
+  llvh::Optional<Handle<JSArray>> hostObjectSymbols;
   size_t hostObjectSymbolCount = 0;
 
   // If current object is a host object we need to deduplicate its properties
-  llvm::SmallSet<SymbolID::RawType, 16> dedupSet;
+  llvh::SmallSet<SymbolID::RawType, 16> dedupSet;
 
   // Output index.
   uint32_t index = 0;
@@ -452,7 +453,7 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
 
   // Regular properties with names that are array indexes are stashed here, if
   // encountered.
-  llvm::SmallVector<uint32_t, 8> indexNames{};
+  llvh::SmallVector<uint32_t, 8> indexNames{};
 
   // Iterate the named properties excluding those which use Symbols.
   if (okFlags.getIncludeNonSymbols()) {
@@ -1037,7 +1038,7 @@ ExecutionStatus JSObject::getComputedDescriptor(
       selfHandle, runtime, *converted, propObj, desc);
 }
 
-CallResult<HermesValue> JSObject::getNamedWithReceiver_RJS(
+CallResult<PseudoHandle<>> JSObject::getNamedWithReceiver_RJS(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     SymbolID name,
@@ -1055,7 +1056,7 @@ CallResult<HermesValue> JSObject::getNamedWithReceiver_RJS(
           runtime->getIdentifierTable().getStringViewForDev(runtime, name) +
           "' doesn't exist");
     }
-    return HermesValue::encodeUndefinedValue();
+    return createPseudoHandle(HermesValue::encodeUndefinedValue());
   }
 
   if (LLVM_LIKELY(
@@ -1066,20 +1067,24 @@ CallResult<HermesValue> JSObject::getNamedWithReceiver_RJS(
       cacheEntry->clazz = propObj->getClassGCPtr().getStorageType();
       cacheEntry->slot = desc.slot;
     }
-    return getNamedSlotValue(propObj, runtime, desc);
+    return createPseudoHandle(getNamedSlotValue(propObj, runtime, desc));
   }
 
   if (desc.flags.accessor) {
     auto *accessor =
         vmcast<PropertyAccessor>(getNamedSlotValue(propObj, runtime, desc));
     if (!accessor->getter)
-      return HermesValue::encodeUndefinedValue();
+      return createPseudoHandle(HermesValue::encodeUndefinedValue());
 
     // Execute the accessor on this object.
     return Callable::executeCall0(
         runtime->makeHandle(accessor->getter), runtime, receiver);
   } else if (desc.flags.hostObject) {
-    return vmcast<HostObject>(propObj)->get(name);
+    auto res = vmcast<HostObject>(propObj)->get(name);
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return createPseudoHandle(*res);
   } else {
     assert(desc.flags.proxyObject && "descriptor flags are impossible");
     return JSProxy::getNamed(
@@ -1087,7 +1092,7 @@ CallResult<HermesValue> JSObject::getNamedWithReceiver_RJS(
   }
 }
 
-CallResult<HermesValue> JSObject::getNamedOrIndexed(
+CallResult<PseudoHandle<>> JSObject::getNamedOrIndexed(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     SymbolID name,
@@ -1109,7 +1114,7 @@ CallResult<HermesValue> JSObject::getNamedOrIndexed(
   return getNamed_RJS(selfHandle, runtime, name, opFlags);
 }
 
-CallResult<HermesValue> JSObject::getComputedWithReceiver_RJS(
+CallResult<PseudoHandle<>> JSObject::getComputedWithReceiver_RJS(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     Handle<> nameValHandle,
@@ -1119,9 +1124,9 @@ CallResult<HermesValue> JSObject::getComputedWithReceiver_RJS(
   if (selfHandle->flags_.fastIndexProperties) {
     if (auto arrayIndex = toArrayIndexFastPath(*nameValHandle)) {
       // Do we have this value present in our array storage? If so, return it.
-      HermesValue ourValue =
-          getOwnIndexed(selfHandle.get(), runtime, *arrayIndex);
-      if (LLVM_LIKELY(!ourValue.isEmpty()))
+      PseudoHandle<> ourValue = createPseudoHandle(
+          getOwnIndexed(selfHandle.get(), runtime, *arrayIndex));
+      if (LLVM_LIKELY(!ourValue->isEmpty()))
         return ourValue;
     }
   }
@@ -1148,18 +1153,19 @@ CallResult<HermesValue> JSObject::getComputedWithReceiver_RJS(
   }
 
   if (!propObj)
-    return HermesValue::encodeUndefinedValue();
+    return createPseudoHandle(HermesValue::encodeUndefinedValue());
 
   if (LLVM_LIKELY(
           !desc.flags.accessor && !desc.flags.hostObject &&
           !desc.flags.proxyObject))
-    return getComputedSlotValue(propObj.get(), runtime, desc);
+    return createPseudoHandle(
+        getComputedSlotValue(propObj.get(), runtime, desc));
 
   if (desc.flags.accessor) {
     auto *accessor = vmcast<PropertyAccessor>(
         getComputedSlotValue(propObj.get(), runtime, desc));
     if (!accessor->getter)
-      return HermesValue::encodeUndefinedValue();
+      return createPseudoHandle(HermesValue::encodeUndefinedValue());
 
     // Execute the accessor on this object.
     return accessor->getter.get(runtime)->executeCall0(
@@ -1167,10 +1173,10 @@ CallResult<HermesValue> JSObject::getComputedWithReceiver_RJS(
   } else if (desc.flags.hostObject) {
     SymbolID id{};
     LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, id);
-    auto propRes = vmcast<HostObject>(selfHandle.get())->get(id);
+    auto propRes = vmcast<HostObject>(propObj.get())->get(id);
     if (propRes == ExecutionStatus::EXCEPTION)
       return ExecutionStatus::EXCEPTION;
-    return propRes;
+    return createPseudoHandle(*propRes);
   } else {
     assert(desc.flags.proxyObject && "descriptor flags are impossible");
     CallResult<Handle<>> key = toPropertyKey(runtime, nameValPrimitiveHandle);
@@ -2402,7 +2408,7 @@ void JSObject::_snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
         // Else, it's a user-visible property.
         GCHermesValue &prop =
             namedSlotRef(self, gc->getPointerBase(), desc.slot);
-        const llvm::Optional<HeapSnapshot::NodeID> idForProp =
+        const llvh::Optional<HeapSnapshot::NodeID> idForProp =
             gc->getSnapshotID(prop);
         if (!idForProp) {
           return;
@@ -2456,7 +2462,7 @@ OptValue<PropertyFlags> JSObject::_getOwnIndexedPropertyFlagsImpl(
     JSObject *self,
     Runtime *runtime,
     uint32_t) {
-  return llvm::None;
+  return llvh::None;
 }
 
 HermesValue JSObject::_getOwnIndexedImpl(JSObject *, Runtime *, uint32_t) {
@@ -2550,7 +2556,7 @@ void JSObject::updatePropertyFlagsWithoutTransitions(
     Runtime *runtime,
     PropertyFlags flagsToClear,
     PropertyFlags flagsToSet,
-    OptValue<llvm::ArrayRef<SymbolID>> props) {
+    OptValue<llvh::ArrayRef<SymbolID>> props) {
   auto newClazz = HiddenClass::updatePropertyFlagsWithoutTransitions(
       runtime->makeHandle(selfHandle->clazz_),
       runtime,
@@ -3055,7 +3061,7 @@ ExecutionStatus setProtoClasses(
   // [class(proto(obj)), class(proto(proto(obj))), ..., null, prop0, prop1, ...]
 
   if (!obj->shouldCacheForIn(runtime)) {
-    arr->clear();
+    arr->clear(runtime);
     return ExecutionStatus::RETURNED;
   }
   MutableHandle<JSObject> head(runtime, obj->getParent(runtime));
@@ -3063,8 +3069,14 @@ ExecutionStatus setProtoClasses(
   GCScopeMarkerRAII marker{runtime};
   while (head.get()) {
     if (!head->shouldCacheForIn(runtime)) {
-      arr->clear();
+      arr->clear(runtime);
       return ExecutionStatus::RETURNED;
+    }
+    if (JSObject::Helper::flags(*head).lazyObject) {
+      // Ensure all properties have been initialized before caching the hidden
+      // class. Not doing this will result in changes to the hidden class
+      // when getOwnPropertyKeys is called later.
+      JSObject::initializeLazyObject(runtime, head);
     }
     clazz = HermesValue::encodeObjectValue(head->getClass(runtime));
     if (LLVM_UNLIKELY(
@@ -3128,7 +3140,7 @@ CallResult<Handle<BigStorage>> getForInPropertyNames(
     }
     // Invalid for this object. We choose to clear the cache since the
     // changes to the prototype chain probably affect other objects too.
-    clazz->clearForInCache();
+    clazz->clearForInCache(runtime);
     // Clear arr to slightly reduce risk of OOM from allocation below.
     arr = nullptr;
   }

@@ -8,7 +8,7 @@
 #ifndef HERMES_PUBLIC_MOCKEDENVIRONMENT_H
 #define HERMES_PUBLIC_MOCKEDENVIRONMENT_H
 
-#include <llvm/ADT/StringMap.h>
+#include <llvh/ADT/StringMap.h>
 
 #include <cstdint>
 #include <deque>
@@ -52,7 +52,7 @@ struct MockedEnvironment final {
     double numVal_;
     std::string strVal_;
   };
-  using StatsTable = llvm::StringMap<StatsTableValue>;
+  using StatsTable = llvh::StringMap<StatsTableValue>;
 
   // Zero is assumed to be an invalid random seed in several places.
   std::minstd_rand::result_type mathRandomSeed{0};

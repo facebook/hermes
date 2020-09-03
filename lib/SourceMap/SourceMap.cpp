@@ -11,13 +11,13 @@ using namespace hermes;
 
 namespace hermes {
 
-llvm::Optional<SourceMapTextLocation> SourceMap::getLocationForAddress(
+llvh::Optional<SourceMapTextLocation> SourceMap::getLocationForAddress(
     uint32_t line,
     uint32_t column) const {
   auto seg = this->getSegmentForAddress(line, column);
   // Unmapped location
   if (!seg.hasValue() || !seg->representedLocation.hasValue()) {
-    return llvm::None;
+    return llvh::None;
   }
   // parseSegment() should have validated this.
   assert(
@@ -31,18 +31,18 @@ llvm::Optional<SourceMapTextLocation> SourceMap::getLocationForAddress(
       (uint32_t)seg->representedLocation->columnIndex + 1};
 }
 
-llvm::Optional<SourceMap::Segment> SourceMap::getSegmentForAddress(
+llvh::Optional<SourceMap::Segment> SourceMap::getSegmentForAddress(
     uint32_t line,
     uint32_t column) const {
   if (line == 0 || line > lines_.size()) {
-    return llvm::None;
+    return llvh::None;
   }
 
   // line is 1-based.
   uint32_t lineIndex = line - 1;
   auto &segments = lines_[lineIndex];
   if (segments.empty()) {
-    return llvm::None;
+    return llvh::None;
   }
   assert(column >= 1 && "the column argument to this function is 1-based");
   uint32_t columnIndex = column - 1;
@@ -60,7 +60,7 @@ llvm::Optional<SourceMap::Segment> SourceMap::getSegmentForAddress(
       });
   // The found sentinel segment is the first one. No covering segment.
   if (segIter == segments.begin()) {
-    return llvm::None;
+    return llvh::None;
   }
   // Move back one slot.
   const Segment &target =

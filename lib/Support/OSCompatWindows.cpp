@@ -7,6 +7,7 @@
 
 #ifdef _WINDOWS
 
+#include "hermes/Support/Compiler.h"
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/OSCompat.h"
 
@@ -21,8 +22,8 @@
 #include <io.h>
 #include <psapi.h>
 
-#include "llvm/ADT/Twine.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/Twine.h"
+#include "llvh/Support/raw_ostream.h"
 
 namespace hermes {
 namespace oscompat {
@@ -69,10 +70,10 @@ void unset_test_vm_allocate_limit() {
 
 static char *alignAlloc(void *p, size_t alignment) {
   return reinterpret_cast<char *>(
-      llvm::alignTo(reinterpret_cast<uintptr_t>(p), alignment));
+      llvh::alignTo(reinterpret_cast<uintptr_t>(p), alignment));
 }
 
-static llvm::ErrorOr<void *>
+static llvh::ErrorOr<void *>
 vm_allocate_impl(void *addr, size_t sz, DWORD flags) {
   void *result = VirtualAlloc(addr, sz, flags, PAGE_READWRITE);
   if (result == nullptr) {
@@ -84,7 +85,7 @@ vm_allocate_impl(void *addr, size_t sz, DWORD flags) {
   return result;
 }
 
-static llvm::ErrorOr<void *> vm_allocate_impl(size_t sz) {
+static llvh::ErrorOr<void *> vm_allocate_impl(size_t sz) {
   // Default flags are to reserve and commit.
 
   // TODO(T40416012) introduce explicit "commit" in OSCompat abstraction of
@@ -107,7 +108,7 @@ static std::error_code vm_free_impl(void *p, size_t sz) {
              : std::error_code(GetLastError(), std::system_category());
 }
 
-llvm::ErrorOr<void *> vm_allocate(size_t sz) {
+llvh::ErrorOr<void *> vm_allocate(size_t sz) {
 #ifndef NDEBUG
   assert(sz % page_size() == 0);
   if (testPgSz != 0 && testPgSz > static_cast<size_t>(page_size_real())) {
@@ -122,7 +123,7 @@ llvm::ErrorOr<void *> vm_allocate(size_t sz) {
   return vm_allocate_impl(sz);
 }
 
-llvm::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment) {
+llvh::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment) {
   /// A value of 3 means vm_allocate_aligned will:
   /// 1. Opportunistic: allocate and see if it happens to be aligned
   /// 2. Regular: Try aligned allocation 3 times (see below for details)
@@ -143,7 +144,7 @@ llvm::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment) {
   // and see if the memory happens to be aligned.
   // While this may be unlikely on the first allocation request,
   // subsequent allocation requests have a good chance.
-  llvm::ErrorOr<void *> result = vm_allocate_impl(sz);
+  llvh::ErrorOr<void *> result = vm_allocate_impl(sz);
   if (!result) {
     // Don't attempt to do anything further if the allocation failed.
     return result;
@@ -156,7 +157,7 @@ llvm::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment) {
   std::error_code err = vm_free_impl(addr, sz);
   if (err) {
     hermes_fatal(
-        (llvm::Twine("Failed to free memory region in vm_allocate_aligned: ") +
+        (llvh::Twine("Failed to free memory region in vm_allocate_aligned: ") +
          convert_error_to_message(err))
             .str());
   }
@@ -177,7 +178,7 @@ llvm::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment) {
     err = vm_free_impl(addr, sz);
     if (err) {
       hermes_fatal(
-          (llvm::Twine(
+          (llvh::Twine(
                "Failed to free memory region in vm_allocate_aligned: ") +
            convert_error_to_message(err))
               .str());
@@ -206,7 +207,7 @@ llvm::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment) {
   result = vm_allocate_impl(addr, alignment, MEM_COMMIT);
   if (!result) {
     hermes_fatal(
-        (llvm::Twine(
+        (llvh::Twine(
              "Failed to commit subsection of reserved memory in vm_allocate_aligned: ") +
          convert_error_to_message(result.getError()))
             .str());
@@ -224,7 +225,7 @@ void vm_free(void *p, size_t sz) {
 
   std::error_code err = vm_free_impl(p, sz);
   if (err) {
-    hermes_fatal((llvm::Twine("Failed to free virtual memory region: ") +
+    hermes_fatal((llvh::Twine("Failed to free virtual memory region: ") +
                   convert_error_to_message(err))
                      .str());
   }
@@ -308,7 +309,7 @@ bool vm_madvise(void *p, size_t sz, MAdvice advice) {
   return false;
 }
 
-int pages_in_ram(const void *p, size_t sz, llvm::SmallVectorImpl<int> *runs) {
+int pages_in_ram(const void *p, size_t sz, llvh::SmallVectorImpl<int> *runs) {
   // Not yet supported.
   return -1;
 }
@@ -338,6 +339,11 @@ uint64_t current_private_dirty() {
   return 0;
 }
 
+std::vector<std::string> get_vm_protect_modes(const void *p, size_t sz) {
+  // Not yet supported.
+  return std::vector<std::string>{};
+}
+
 bool num_context_switches(long &voluntary, long &involuntary) {
   // Not yet supported.
   voluntary = involuntary = -1;
@@ -346,6 +352,15 @@ bool num_context_switches(long &voluntary, long &involuntary) {
 
 uint64_t thread_id() {
   return GetCurrentThreadId();
+}
+
+void set_thread_name(const char *name) {
+  // Set the thread name for TSAN. It doesn't share the same name mapping as the
+  // OS does. This macro expands to nothing if TSAN isn't on.
+  TsanThreadName(name);
+  // SetThreadDescription is too new (since Windows 10 version 1607).
+  // Prior to that, the concept of thread names only exists when
+  // a Visual Studio debugger is attached.
 }
 
 static std::chrono::microseconds::rep fromFileTimeToMicros(

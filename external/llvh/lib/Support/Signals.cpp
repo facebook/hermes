@@ -12,21 +12,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Signals.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Config/llvm-config.h"
-#include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Mutex.h"
-#include "llvm/Support/Program.h"
-#include "llvm/Support/StringSaver.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/Options.h"
+#include "llvh/Support/Signals.h"
+#include "llvh/ADT/STLExtras.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/Config/llvm-config.h"
+#include "llvh/Support/ErrorOr.h"
+#include "llvh/Support/FileSystem.h"
+#include "llvh/Support/FileUtilities.h"
+#include "llvh/Support/Format.h"
+#include "llvh/Support/ManagedStatic.h"
+#include "llvh/Support/MemoryBuffer.h"
+#include "llvh/Support/Mutex.h"
+#include "llvh/Support/Program.h"
+#include "llvh/Support/StringSaver.h"
+#include "llvh/Support/raw_ostream.h"
+#include "llvh/Support/Options.h"
 #include <vector>
 
 //===----------------------------------------------------------------------===//
@@ -34,7 +34,7 @@
 //===          independent code.
 //===----------------------------------------------------------------------===//
 
-using namespace llvm;
+using namespace llvh;
 
 // Use explicit storage to avoid accessing cl::opt in a signal handler.
 static bool DisableSymbolicationFlag = false;
@@ -105,7 +105,7 @@ static FormattedNumber format_ptr(void *PC) {
 /// Helper that launches llvm-symbolizer and symbolizes a backtrace.
 LLVM_ATTRIBUTE_USED
 static bool printSymbolizedStackTrace(StringRef Argv0, void **StackTrace,
-                                      int Depth, llvm::raw_ostream &OS) {
+                                      int Depth, llvh::raw_ostream &OS) {
   if (DisableSymbolicationFlag)
     return false;
 
@@ -119,7 +119,7 @@ static bool printSymbolizedStackTrace(StringRef Argv0, void **StackTrace,
   // alongside our binary, then in $PATH.
   ErrorOr<std::string> LLVMSymbolizerPathOrErr = std::error_code();
   if (!Argv0.empty()) {
-    StringRef Parent = llvm::sys::path::parent_path(Argv0);
+    StringRef Parent = llvh::sys::path::parent_path(Argv0);
     if (!Parent.empty())
       LLVMSymbolizerPathOrErr = sys::findProgramByName("llvm-symbolizer", Parent);
   }
@@ -157,7 +157,7 @@ static bool printSymbolizedStackTrace(StringRef Argv0, void **StackTrace,
   }
 
   Optional<StringRef> Redirects[] = {StringRef(InputFile),
-                                     StringRef(OutputFile), llvm::None};
+                                     StringRef(OutputFile), llvh::None};
   StringRef Args[] = {"llvm-symbolizer", "--functions=linkage", "--inlining",
 #ifdef _WIN32
                       // Pass --relative-address on Windows so that we don't

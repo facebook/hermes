@@ -51,7 +51,7 @@ static void verifyAllBuiltinsFrozen(Runtime *runtime) {
     auto objectID = Predefined::getSymbolID(Predefined::object);      \
     auto cr = JSObject::getNamed_RJS(global, runtime, objectID);      \
     ASSERT_NE(cr, ExecutionStatus::EXCEPTION);                        \
-    objHandle = vmcast<JSObject>(*cr);                                \
+    objHandle = vmcast<JSObject>(cr->get());                          \
     auto methodID = Predefined::getSymbolID(Predefined::method);      \
     EXPECT_PROPERTY_FROZEN_AND_MARKED_AS_STATIC(objHandle, methodID); \
   }

@@ -33,7 +33,18 @@ void CheckHeapWellFormedAcceptor::accept(HermesValue &hv) {
   if (hv.isPointer()) {
     void *cell = hv.getPointer();
     accept(cell);
+  } else if (hv.isSymbol()) {
+    accept(hv.getSymbol());
   }
+}
+
+void CheckHeapWellFormedAcceptor::accept(SymbolID sym) {
+  if (!sym.isValid()) {
+    return;
+  }
+  assert(
+      gc.getCallbacks()->isSymbolLive(sym) &&
+      "Symbol is marked but is not live");
 }
 
 void CheckHeapWellFormedAcceptor::accept(WeakRefBase &wr) {

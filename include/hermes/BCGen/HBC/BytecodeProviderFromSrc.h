@@ -11,7 +11,7 @@
 #include "hermes/BCGen/HBC/Bytecode.h"
 #include "hermes/BCGen/HBC/BytecodeDataProvider.h"
 
-#include "llvm/ADT/Optional.h"
+#include "llvh/ADT/Optional.h"
 
 namespace hermes {
 namespace hbc {
@@ -27,7 +27,7 @@ struct CompileFlags {
   /// on the value; when it is unset, it means the parser needs to automatically
   /// detect the 'use static builtin' directive and set the optimization setting
   /// accordingly.
-  llvm::Optional<bool> staticBuiltins;
+  llvh::Optional<bool> staticBuiltins;
   bool verifyIR{false};
   /// If set, the compiler emits async break check instructions.  These may be
   /// used for several purposes, for example, to enforce a time limit on
@@ -87,7 +87,7 @@ class BCProviderFromSrc final : public BCProviderBase {
   static std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
   createBCProviderFromSrc(
       std::unique_ptr<Buffer> buffer,
-      llvm::StringRef sourceURL,
+      llvh::StringRef sourceURL,
       const CompileFlags &compileFlags);
 
   /// Creates a BCProviderFromSrc by compiling the given JavaScript.
@@ -104,7 +104,7 @@ class BCProviderFromSrc final : public BCProviderBase {
   static std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
   createBCProviderFromSrc(
       std::unique_ptr<Buffer> buffer,
-      llvm::StringRef sourceURL,
+      llvh::StringRef sourceURL,
       std::unique_ptr<SourceMap> sourceMap,
       const CompileFlags &compileFlags);
 
@@ -123,7 +123,7 @@ class BCProviderFromSrc final : public BCProviderBase {
   static std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
   createBCProviderFromSrc(
       std::unique_ptr<Buffer> buffer,
-      llvm::StringRef sourceURL,
+      llvh::StringRef sourceURL,
       std::unique_ptr<SourceMap> sourceMap,
       const CompileFlags &compileFlags,
       const ScopeChain &scopeChain);
@@ -148,7 +148,7 @@ class BCProviderFromSrc final : public BCProviderBase {
   static std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
   createBCProviderFromSrc(
       std::unique_ptr<Buffer> buffer,
-      llvm::StringRef sourceURL,
+      llvh::StringRef sourceURL,
       std::unique_ptr<SourceMap> sourceMap,
       const CompileFlags &compileFlags,
       const ScopeChain &scopeChain,
@@ -167,7 +167,7 @@ class BCProviderFromSrc final : public BCProviderBase {
     return module_->getFunction(functionID).getOpcodeArray().data();
   }
 
-  llvm::ArrayRef<hbc::HBCExceptionHandlerInfo> getExceptionTable(
+  llvh::ArrayRef<hbc::HBCExceptionHandlerInfo> getExceptionTable(
       uint32_t functionID) const override {
     return module_->getFunction(functionID).getExceptionHandlers();
   }
@@ -198,7 +198,7 @@ class BCProviderFromSrc final : public BCProviderBase {
 #endif
 
 #ifndef HERMESVM_LEAN
-  llvm::SMRange getFunctionSourceRange(uint32_t functionID) const override {
+  llvh::SMRange getFunctionSourceRange(uint32_t functionID) const override {
     return module_->getFunctionSourceRange(functionID);
   }
 #endif
@@ -242,7 +242,7 @@ class BCProviderLazy final : public BCProviderBase {
     llvm_unreachable("Accessing bytecode from a lazy module");
   }
 
-  llvm::ArrayRef<hbc::HBCExceptionHandlerInfo> getExceptionTable(
+  llvh::ArrayRef<hbc::HBCExceptionHandlerInfo> getExceptionTable(
       uint32_t) const override {
     llvm_unreachable("Accessing exception info from a lazy module");
   }
@@ -273,7 +273,7 @@ class BCProviderLazy final : public BCProviderBase {
   void serialize(vm::Serializer &s) const override;
 #endif
 
-  llvm::SMRange getFunctionSourceRange(uint32_t functionID) const override {
+  llvh::SMRange getFunctionSourceRange(uint32_t functionID) const override {
     return bytecodeModule_->getFunctionSourceRange(functionID);
   }
 };

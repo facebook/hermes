@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Valgrind.h"
-#include "llvm/Config/config.h"
+#include "llvh/Support/Valgrind.h"
+#include "llvh/Config/config.h"
 #include <cstddef>
 
 #if HAVE_VALGRIND_VALGRIND_H
@@ -30,13 +30,13 @@ static bool InitNotUnderValgrind() {
 // Valgrind-provided macros.
 static const bool NotUnderValgrind = InitNotUnderValgrind();
 
-bool llvm::sys::RunningOnValgrind() {
+bool llvh::sys::RunningOnValgrind() {
   if (NotUnderValgrind)
     return false;
   return RUNNING_ON_VALGRIND;
 }
 
-void llvm::sys::ValgrindDiscardTranslations(const void *Addr, size_t Len) {
+void llvh::sys::ValgrindDiscardTranslations(const void *Addr, size_t Len) {
   if (NotUnderValgrind)
     return;
 
@@ -45,11 +45,11 @@ void llvm::sys::ValgrindDiscardTranslations(const void *Addr, size_t Len) {
 
 #else  // !HAVE_VALGRIND_VALGRIND_H
 
-bool llvm::sys::RunningOnValgrind() {
+bool llvh::sys::RunningOnValgrind() {
   return false;
 }
 
-void llvm::sys::ValgrindDiscardTranslations(const void *Addr, size_t Len) {
+void llvh::sys::ValgrindDiscardTranslations(const void *Addr, size_t Len) {
 }
 
 #endif  // !HAVE_VALGRIND_VALGRIND_H

@@ -25,7 +25,7 @@ FastJIT::FastJIT(JITContext *context, CodeBlock *codeBlock)
 
 void FastJIT::compile() {
   LLVM_DEBUG(
-      llvm::dbgs() << "JIT compilation of FunctionID "
+      llvh::dbgs() << "JIT compilation of FunctionID "
                    << codeBlock_->getFunctionID() << "\n");
 
   discoverBasicBlocks(codeBlock_, bcBasicBlocks_, bcLabels_);
@@ -35,8 +35,8 @@ void FastJIT::compile() {
   if (!blocks)
     return;
 
-  fast_ = llvm::makeMutableArrayRef(blocks->first, sizes.first);
-  slow_ = llvm::makeMutableArrayRef(blocks->second, sizes.second);
+  fast_ = llvh::makeMutableArrayRef(blocks->first, sizes.first);
+  slow_ = llvh::makeMutableArrayRef(blocks->second, sizes.second);
 
   Emitters emit{Emitter{fast_.begin()}, Emitter{slow_.begin()}};
   emit = emitPrologue(emit);
@@ -54,7 +54,7 @@ void FastJIT::compile() {
     // FIXME: more instructions. We should also check error_ below to avoid
     // FIXME: doing unnecessary work.
     //    if (error_) {
-    //      llvm::outs() << "FastJIT error: " << errorMsg_ << "\n";
+    //      llvh::outs() << "FastJIT error: " << errorMsg_ << "\n";
     //      std::abort();
     //    }
   }
@@ -65,9 +65,9 @@ void FastJIT::compile() {
 
   resolveRelocations();
 
-  LLVM_DEBUG(disassembleResult(emit, llvm::dbgs(), true));
+  LLVM_DEBUG(disassembleResult(emit, llvh::dbgs(), true));
   if (context_->getDumpJITCode())
-    disassembleResult(emit, llvm::outs(), false);
+    disassembleResult(emit, llvh::outs(), false);
 
   if (!error_) {
     context_->getHeap().freeRemaining(
@@ -77,7 +77,7 @@ void FastJIT::compile() {
     codeBlock_->setJITCompiled((JITCompiledFunctionPtr)fast_.data());
 
     // Dump the heap at the end.
-    LLVM_DEBUG(context_->getHeap().dump(llvm::dbgs()));
+    LLVM_DEBUG(context_->getHeap().dump(llvh::dbgs()));
   } else {
     context_->getHeap().free(*blocks);
     if (context_->getCrashOnError()) {
@@ -86,16 +86,16 @@ void FastJIT::compile() {
   }
 }
 
-void FastJIT::error(const llvm::Twine &msg) {
+void FastJIT::error(const llvh::Twine &msg) {
   if (!error_)
     codeBlock_->setDontJIT(true);
   error_ = true;
   if (errorMsg_.empty())
     errorMsg_ = msg.str();
-  LLVM_DEBUG(llvm::dbgs() << "FastJIT error: " << msg << "\n");
+  LLVM_DEBUG(llvh::dbgs() << "FastJIT error: " << msg << "\n");
 }
 
-llvm::Optional<ExecHeap::BlockPair> FastJIT::allocRWX(
+llvh::Optional<ExecHeap::BlockPair> FastJIT::allocRWX(
     size_t bytecodeLength,
     ExecHeap::SizePair &sizes) {
   sizes = ExecHeap::SizePair{bytecodeLength * 50 + kMinInstructionSpace,
@@ -107,14 +107,14 @@ llvm::Optional<ExecHeap::BlockPair> FastJIT::allocRWX(
     auto newPool = context_->getHeap().addPool();
     if (!newPool) {
       error("out of executable memory");
-      return llvm::None;
+      return llvh::None;
     }
     initializeNewPool(newPool);
 
     blocks = newPool->alloc(sizes);
     if (!blocks) {
       error("bytecode size too large");
-      return llvm::None;
+      return llvh::None;
     }
   }
 
@@ -127,7 +127,7 @@ void FastJIT::initializeNewPool(ExecHeap::DualPool *pool) {}
 void FastJIT::disassembleRange(
     const uint8_t *from,
     const uint8_t *to,
-    llvm::raw_ostream &OS,
+    llvh::raw_ostream &OS,
     bool withAddr) const {
   if (to != from) {
     context_->getDisassembler().disassembleBuffer(
@@ -137,7 +137,7 @@ void FastJIT::disassembleRange(
 
 void FastJIT::disassembleResult(
     Emitters emit,
-    llvm::raw_ostream &OS,
+    llvh::raw_ostream &OS,
     bool withAddr) const {
   OS << "\n\nCompiled Code of FunctionID: " << codeBlock_->getFunctionID()
      << "\n";
@@ -292,7 +292,7 @@ Emitters FastJIT::compileBB(Emitters emit) {
     if (!checkSpace(emit))
       return emit;
 
-    LLVM_DEBUG(llvm::dbgs() << ";   " << decodeInstruction(ip) << "\n");
+    LLVM_DEBUG(llvh::dbgs() << ";   " << decodeInstruction(ip) << "\n");
 #ifndef NDEBUG
     auto sav = emit;
 #endif
@@ -576,7 +576,7 @@ Emitters FastJIT::compileBB(Emitters emit) {
 
       default:
         error(
-            llvm::Twine("unsupported opcode ") + llvm::Twine((int)ip->opCode)
+            llvh::Twine("unsupported opcode ") + llvh::Twine((int)ip->opCode)
 #ifndef NDEBUG
             + " " + getOpCodeString(ip->opCode)
 #endif
@@ -587,12 +587,12 @@ Emitters FastJIT::compileBB(Emitters emit) {
 
     LLVM_DEBUG(
         disassembleRange(
-            sav.fast.current(), emit.fast.current(), llvm::dbgs(), true);
+            sav.fast.current(), emit.fast.current(), llvh::dbgs(), true);
         if (sav.slow.current() != emit.slow.current() &&
             !slowPathSections_.back().data) {
-          llvm::dbgs() << "; SLOW PATH\n";
+          llvh::dbgs() << "; SLOW PATH\n";
           disassembleRange(
-              sav.slow.current(), emit.slow.current(), llvm::dbgs(), true);
+              sav.slow.current(), emit.slow.current(), llvh::dbgs(), true);
         });
   }
 

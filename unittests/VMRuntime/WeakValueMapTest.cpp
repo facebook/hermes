@@ -58,47 +58,41 @@ TEST_F(WeakValueMapTest, SmokeTest) {
   // Make sure enumaration covers all cases.
   {
     std::set<int> intset{};
-    auto it = wvp.begin();
-    ASSERT_TRUE(it != wvp.end());
-    ASSERT_TRUE(intset.insert(it->first).second);
-    ++it;
-    ASSERT_TRUE(it != wvp.end());
-    ASSERT_TRUE(intset.insert(it->first).second);
-    ++it;
-    ASSERT_TRUE(it != wvp.end());
-    ASSERT_TRUE(intset.insert(it->first).second);
-    ++it;
-    ASSERT_TRUE(it == wvp.end());
+    wvp.forEachEntry(
+        [&intset](int key, const WeakRef<JSNumber> &) { intset.insert(key); });
+    ASSERT_EQ(intset.size(), 3);
   }
 
   // Validate erase. Erase 1 and 2.
-  auto it = wvp.find(1);
-  ASSERT_TRUE(it != wvp.end());
-  wvp.erase(it);
-  it = wvp.find(1);
-  ASSERT_TRUE(it == wvp.end());
-  ASSERT_FALSE(wvp.erase(1));
-  ASSERT_TRUE(wvp.erase(2));
-  ASSERT_TRUE(wvp.find(2) == wvp.end());
+  ASSERT_TRUE(wvp.containsKey(1));
+  ASSERT_TRUE(wvp.containsKey(2));
+  wvp.erase(1, &runtime->getHeap());
+  ASSERT_FALSE(wvp.containsKey(1));
+  ASSERT_FALSE(wvp.erase(1, &runtime->getHeap()));
+  ASSERT_TRUE(wvp.erase(2, &runtime->getHeap()));
+  ASSERT_FALSE(wvp.containsKey(2));
 
   // Add 1 and 2 again.
   EXPECT_TRUE(wvp.insertNew(&runtime->getHeap(), 1, h1));
   EXPECT_TRUE(wvp.insertNew(&runtime->getHeap(), 2, h2));
 
   // Now make sure 1 gets garbage collected.
-  ASSERT_TRUE(wvp.find(1) != wvp.end());
+  ASSERT_TRUE(wvp.containsKey(1));
   h1.clear();
   // Make sure no temporary handles exist.
   gcScope.flushToMarker(marker);
 
   runtime->collect();
+#ifndef HERMESVM_GC_HADES
+  // Hades doesn't support DebugHeapInfo yet.
   GCBase::DebugHeapInfo debugInfo;
   runtime->getHeap().getDebugHeapInfo(debugInfo);
   // We can't be sure how many cells precisely this will collect.
   ASSERT_TRUE(
       debugInfo.numCollectedObjects > 0 && debugInfo.numCollectedObjects <= 5);
+#endif
   // Make sure we can't find the collected value.
-  ASSERT_TRUE(wvp.find(1) == wvp.end());
+  ASSERT_FALSE(wvp.containsKey(1));
 
   // Now make sure 2 gets garbage collected, but check differently.
   h2.clear();
@@ -106,20 +100,19 @@ TEST_F(WeakValueMapTest, SmokeTest) {
   gcScope.flushToMarker(marker);
 
   runtime->collect();
+#ifndef HERMESVM_GC_HADES
+  // Hades doesn't support debugInfo yet.
   runtime->getHeap().getDebugHeapInfo(debugInfo);
   // We can't be sure how many cells precisely this will collect.
   ASSERT_TRUE(
       debugInfo.numCollectedObjects > 0 && debugInfo.numCollectedObjects <= 5);
+#endif
 
-  it = wvp.begin();
-  ASSERT_TRUE(it != wvp.end());
-  ASSERT_EQ(3, it->first);
-  ++it;
-  ASSERT_TRUE(it == wvp.end());
+  ASSERT_TRUE(wvp.containsKey(3));
 
   // Test lookup.
-  ASSERT_TRUE(wvp.lookup(runtime, 3));
-  ASSERT_FALSE(wvp.lookup(runtime, 300));
+  ASSERT_TRUE(wvp.lookup(runtime, &runtime->getHeap(), 3));
+  ASSERT_FALSE(wvp.lookup(runtime, &runtime->getHeap(), 300));
 }
 } // namespace
 

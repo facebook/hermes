@@ -8,10 +8,10 @@
 #ifndef HERMES_VM_CASTING_H
 #define HERMES_VM_CASTING_H
 
-#include "hermes/VM/GC.h"
+#include "hermes/VM/GCCell.h"
 #include "hermes/VM/HermesValue.h"
 
-#include "llvm/Support/Casting.h"
+#include "llvh/Support/Casting.h"
 
 #include <cassert>
 
@@ -27,13 +27,13 @@ namespace vm {
 /// and return the type-casted pointer.
 template <class ToType>
 ToType *vmcast(GCCell *cell) {
-  return llvm::cast<ToType>(cell);
+  return llvh::cast<ToType>(cell);
 }
 
 /// const version of vmcast.
 template <class ToType>
 const ToType *vmcast(const GCCell *cell) {
-  return llvm::cast<ToType>(cell);
+  return llvh::cast<ToType>(cell);
 }
 
 /// Assert that the HermesValue, is a non-null pointer of the specified type
@@ -47,7 +47,12 @@ ToType *vmcast(HermesValue val) {
 /// Identical to vmcast() except a null pointer is allowed.
 template <class ToType>
 ToType *vmcast_or_null(GCCell *cell) {
-  return llvm::cast_or_null<ToType>(cell);
+#ifndef NDEBUG
+  return llvh::cast_or_null<ToType>(cell);
+#else
+  // In opt builds, avoid doing a branch for the null case.
+  return static_cast<ToType *>(cell);
+#endif
 }
 
 /// Identical to vmcast() except a null pointer is allowed.
@@ -61,13 +66,13 @@ ToType *vmcast_or_null(HermesValue val) {
 /// to that type, otherwise return null.
 template <class ToType>
 ToType *dyn_vmcast(GCCell *cell) {
-  return llvm::dyn_cast<ToType>(cell);
+  return llvh::dyn_cast<ToType>(cell);
 }
 
 /// Const version of dyn_vmcast.
 template <class ToType>
 const ToType *dyn_vmcast(const GCCell *cell) {
-  return llvm::dyn_cast<ToType>(cell);
+  return llvh::dyn_cast<ToType>(cell);
 }
 
 /// If the argument, which must be a non-null pointer, is of the specified type,
@@ -82,7 +87,7 @@ ToType *dyn_vmcast(HermesValue val) {
 /// Identical to dyn_vmcast() except a null pointer is allowed.
 template <class ToType>
 ToType *dyn_vmcast_or_null(GCCell *cell) {
-  return llvm::dyn_cast_or_null<ToType>(cell);
+  return llvh::dyn_cast_or_null<ToType>(cell);
 }
 
 /// Identical to dyn_vmcast() except a null pointer is allowed.
@@ -96,33 +101,22 @@ ToType *dyn_vmcast_or_null(HermesValue val) {
 /// Return true if the value is an instance of ToType.
 template <class ToType>
 bool vmisa(HermesValue val) {
-  return dyn_vmcast<ToType>(val) != nullptr;
+  return val.isPointer() &&
+      llvh::isa<ToType>(static_cast<GCCell *>(val.getPointer()));
 }
 
 /// Return true if the cell is a pointer to an instance of ToType.
 template <class ToType>
 bool vmisa(GCCell *cell) {
-  return dyn_vmcast<ToType>(cell) != nullptr;
+  return llvh::isa<ToType>(cell);
 }
 
 /// Const version of vmisa.
 template <class ToType>
 bool vmisa(const GCCell *cell) {
-  return dyn_vmcast<ToType>(cell) != nullptr;
+  return llvh::isa<ToType>(cell);
 }
 
-/// Return true if the value, which could be nullptr, is an instance of ToType.
-template <class ToType>
-bool vmisa_or_null(HermesValue val) {
-  return dyn_vmcast_or_null<ToType>(val) != nullptr;
-}
-
-/// Return true if the cell, which could be nullptr, is a pointer to an instance
-/// of ToType.
-template <class ToType>
-bool vmisa_or_null(GCCell *cell) {
-  return dyn_vmcast_or_null<ToType>(cell) != nullptr;
-}
 /// @}
 
 } // namespace vm

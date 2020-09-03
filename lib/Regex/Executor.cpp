@@ -8,8 +8,8 @@
 #include "hermes/Regex/Executor.h"
 #include "hermes/Regex/RegexTraits.h"
 
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/TrailingObjects.h"
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/Support/TrailingObjects.h"
 
 // This file contains the machinery for executing a regexp compiled to bytecode.
 
@@ -322,20 +322,20 @@ struct Context {
   };
 
   /// Our stack of backtrack instructions.
-  using BacktrackStack = llvm::SmallVector<BacktrackInsn, 64>;
+  using BacktrackStack = llvh::SmallVector<BacktrackInsn, 64>;
 
   /// The maximum depth of our backtracking stack. Beyond this we return a stack
   /// overflow error.
   static constexpr size_t kMaxBacktrackDepth = 1u << 24;
 
   /// The stream of bytecode instructions, including the header.
-  llvm::ArrayRef<uint8_t> bytecodeStream_;
+  llvh::ArrayRef<uint8_t> bytecodeStream_;
 
   /// The flags associated with the match attempt.
   constants::MatchFlagType flags_;
 
   /// Syntax flags associated with the regex.
-  constants::SyntaxFlags syntaxFlags_;
+  SyntaxFlags syntaxFlags_;
 
   /// The first character in the input string.
   const CodeUnit *first_;
@@ -360,9 +360,9 @@ struct Context {
   MatchRuntimeErrorType error_ = MatchRuntimeErrorType::None;
 
   Context(
-      llvm::ArrayRef<uint8_t> bytecodeStream,
+      llvh::ArrayRef<uint8_t> bytecodeStream,
       constants::MatchFlagType flags,
-      constants::SyntaxFlags syntaxFlags,
+      SyntaxFlags syntaxFlags,
       const CodeUnit *first,
       const CodeUnit *last,
       uint32_t markedCount,
@@ -461,7 +461,7 @@ struct Context {
 
 /// We store loop and captured range data contiguously in a single allocation at
 /// the end of the State. Use this union to simplify the use of
-/// llvm::TrailingObjects.
+/// llvh::TrailingObjects.
 union LoopOrCapturedRange {
   struct LoopData loopData;
   struct CapturedRange capturedRange;
@@ -481,11 +481,11 @@ struct State {
 
   /// List of captured ranges. This has size equal to the number of marked
   /// subexpressions for the regex.
-  llvm::SmallVector<CapturedRange, 16> capturedRanges_;
+  llvh::SmallVector<CapturedRange, 16> capturedRanges_;
 
   /// List of loop datas. This has size equal to the number of loops for the
   /// regex.
-  llvm::SmallVector<LoopData, 16> loopDatas_;
+  llvh::SmallVector<LoopData, 16> loopDatas_;
 
   /// \return the loop data at index \p idx.
   LoopData &getLoop(uint32_t idx) {
@@ -527,7 +527,7 @@ bool matchesLeftAnchor(Context<Traits> &ctx, State<Traits> &s) {
     // Beginning of text.
     matchesAnchor = true;
   } else if (
-      (ctx.syntaxFlags_ & constants::multiline) && !c.atLeft() &&
+      (ctx.syntaxFlags_.multiline) && !c.atLeft() &&
       isLineTerminator(c.currentPointer()[-1])) {
     // Multiline and after line terminator.
     matchesAnchor = true;
@@ -542,7 +542,7 @@ bool matchesRightAnchor(Context<Traits> &ctx, State<Traits> &s) {
   if (c.atRight() && !(ctx.flags_ & constants::matchNotEndOfLine)) {
     matchesAnchor = true;
   } else if (
-      (ctx.syntaxFlags_ & constants::multiline) && (!c.atRight()) &&
+      (ctx.syntaxFlags_.multiline) && (!c.atRight()) &&
       isLineTerminator(c.currentPointer()[0])) {
     matchesAnchor = true;
   }
@@ -572,7 +572,7 @@ bool Context<Traits>::matchesNCharICase8(
   Cursor<Traits> &c = s.cursor_;
   auto insnCharPtr = reinterpret_cast<const char *>(insn + 1);
   auto charCount = insn->charCount;
-  bool unicode = syntaxFlags_ & constants::unicode;
+  bool unicode = syntaxFlags_.unicode;
   for (int idx = 0; idx < charCount; idx++) {
     auto c1 = c.consume();
     char instC = insnCharPtr[idx];
@@ -615,7 +615,7 @@ bool bracketMatchesChar(
   }
 
   bool contained =
-      traits.rangesContain(llvm::makeArrayRef(ranges, insn->rangeCount), ch);
+      traits.rangesContain(llvh::makeArrayRef(ranges, insn->rangeCount), ch);
   return contained ^ insn->negate;
 }
 
@@ -741,27 +741,27 @@ bool Context<Traits>::matchWidth1(const Insn *base, CodeUnit c) const {
       "Instruction has wrong opcode");
   switch (w1opcode) {
     case Width1Opcode::MatchChar8: {
-      const auto *insn = llvm::cast<MatchChar8Insn>(base);
+      const auto *insn = llvh::cast<MatchChar8Insn>(base);
       return c == insn->c;
     }
 
     case Width1Opcode::MatchChar16: {
-      const auto *insn = llvm::cast<MatchChar16Insn>(base);
+      const auto *insn = llvh::cast<MatchChar16Insn>(base);
       return c == insn->c;
     }
 
     case Width1Opcode::MatchCharICase8: {
-      const auto *insn = llvm::cast<MatchCharICase8Insn>(base);
+      const auto *insn = llvh::cast<MatchCharICase8Insn>(base);
       return c == (CodePoint)insn->c ||
-          (CodePoint)traits_.canonicalize(
-              c, syntaxFlags_ & constants::unicode) == (CodePoint)insn->c;
+          (CodePoint)traits_.canonicalize(c, syntaxFlags_.unicode) ==
+          (CodePoint)insn->c;
     }
 
     case Width1Opcode::MatchCharICase16: {
-      const auto *insn = llvm::cast<MatchCharICase16Insn>(base);
+      const auto *insn = llvh::cast<MatchCharICase16Insn>(base);
       return c == insn->c ||
-          (char32_t)traits_.canonicalize(
-              c, syntaxFlags_ & constants::unicode) == (char32_t)insn->c;
+          (char32_t)traits_.canonicalize(c, syntaxFlags_.unicode) ==
+          (char32_t)insn->c;
     }
 
     case Width1Opcode::MatchAny:
@@ -773,9 +773,9 @@ bool Context<Traits>::matchWidth1(const Insn *base, CodeUnit c) const {
     case Width1Opcode::Bracket: {
       // BracketInsn is followed by a list of BracketRange32s.
       assert(
-          !(syntaxFlags_ & constants::unicode) &&
+          !(syntaxFlags_.unicode) &&
           "Unicode should not be set for Width 1 brackets");
-      const BracketInsn *insn = llvm::cast<BracketInsn>(base);
+      const BracketInsn *insn = llvh::cast<BracketInsn>(base);
       const BracketRange32 *ranges =
           reinterpret_cast<const BracketRange32 *>(insn + 1);
       return bracketMatchesChar<Traits>(*this, insn, ranges, c);
@@ -883,15 +883,14 @@ template <class Traits>
 inline size_t Context<Traits>::advanceStringIndex(
     const CodeUnit *start,
     size_t index,
-    size_t lastIndex) const {
+    size_t length) const {
   if (sizeof(CodeUnit) == 1) {
     // The input string is ASCII and therefore cannot have surrogate pairs.
     return index + 1;
   }
   // "If unicode is false, return index+1."
   // "If index+1 >= length, return index+1."
-  if (LLVM_LIKELY(!(syntaxFlags_ & constants::unicode)) ||
-      (index + 1 >= lastIndex))
+  if (LLVM_LIKELY(!(syntaxFlags_.unicode)) || (index + 1 >= length))
     return index + 1;
 
   // Let first be the code unit value at index index in S
@@ -925,10 +924,12 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
 
   const CodeUnit *const startLoc = c.currentPointer();
 
+  const size_t charsToEnd = c.remaining();
+
   // Decide how many locations we'll need to check.
   // Note that we do want to check the empty range at the end, so add one to
-  // remaining().
-  const size_t locsToCheckCount = onlyAtStart ? 1 : 1 + c.remaining();
+  // charsToEnd.
+  const size_t locsToCheckCount = onlyAtStart ? 1 : 1 + charsToEnd;
 
   // If we are tracking backwards, we should only ever have one potential match
   // location. This is because advanceStringIndex only ever tracks forwards.
@@ -945,7 +946,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
   } while (0)
 
   for (size_t locIndex = 0; locIndex < locsToCheckCount;
-       locIndex = advanceStringIndex(startLoc, locIndex, locsToCheckCount)) {
+       locIndex = advanceStringIndex(startLoc, locIndex, charsToEnd)) {
     const CodeUnit *potentialMatchLocation = startLoc + locIndex;
     c.setCurrentPointer(potentialMatchLocation);
     s->ip_ = startIp;
@@ -1012,7 +1013,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
         }
 
         case Opcode::U16MatchChar32: {
-          const auto *insn = llvm::cast<U16MatchChar32Insn>(base);
+          const auto *insn = llvh::cast<U16MatchChar32Insn>(base);
           if (c.atEnd() || c.consumeUTF16() != (CodePoint)insn->c)
             BACKTRACK();
           s->ip_ += sizeof(U16MatchChar32Insn);
@@ -1036,7 +1037,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
         }
 
         case Opcode::U16MatchCharICase32: {
-          const auto *insn = llvm::cast<U16MatchCharICase32Insn>(base);
+          const auto *insn = llvh::cast<U16MatchCharICase32Insn>(base);
           assert(insn->c >= 0x010000 && "Character should be astral");
           bool matched = false;
           if (!c.atEnd()) {
@@ -1052,7 +1053,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
         }
 
         case Opcode::MatchNChar8: {
-          const auto *insn = llvm::cast<MatchNChar8Insn>(base);
+          const auto *insn = llvh::cast<MatchNChar8Insn>(base);
           if (c.remaining() < insn->charCount || !matchesNChar8(insn, *s))
             BACKTRACK();
           s->ip_ += insn->totalWidth();
@@ -1060,7 +1061,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
         }
 
         case Opcode::MatchNCharICase8: {
-          const auto *insn = llvm::cast<MatchNCharICase8Insn>(base);
+          const auto *insn = llvh::cast<MatchNCharICase8Insn>(base);
           if (c.remaining() < insn->charCount || !matchesNCharICase8(insn, *s))
             BACKTRACK();
           s->ip_ += insn->totalWidth();
@@ -1070,7 +1071,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
         case Opcode::Alternation: {
           // We have an alternation. Determine which of our first and second
           // branches are viable. If both are, we have to split our state.
-          const AlternationInsn *alt = llvm::cast<AlternationInsn>(base);
+          const AlternationInsn *alt = llvh::cast<AlternationInsn>(base);
           bool primaryViable =
               c.satisfiesConstraints(flags_, alt->primaryConstraints);
           bool secondaryViable =
@@ -1096,19 +1097,19 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
         }
 
         case Opcode::Jump32:
-          s->ip_ = llvm::cast<Jump32Insn>(base)->target;
+          s->ip_ = llvh::cast<Jump32Insn>(base)->target;
           break;
 
         case Opcode::Bracket: {
           if (c.atEnd() ||
               !matchWidth1<Width1Opcode::Bracket>(base, c.consume()))
             BACKTRACK();
-          s->ip_ += llvm::cast<BracketInsn>(base)->totalWidth();
+          s->ip_ += llvh::cast<BracketInsn>(base)->totalWidth();
           break;
         }
 
         case Opcode::U16Bracket: {
-          const U16BracketInsn *insn = llvm::cast<U16BracketInsn>(base);
+          const U16BracketInsn *insn = llvh::cast<U16BracketInsn>(base);
           // U16BracketInsn is followed by a list of BracketRange32s.
           const BracketRange32 *ranges =
               reinterpret_cast<const BracketRange32 *>(insn + 1);
@@ -1121,7 +1122,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
         }
 
         case Opcode::WordBoundary: {
-          const WordBoundaryInsn *insn = llvm::cast<WordBoundaryInsn>(base);
+          const WordBoundaryInsn *insn = llvh::cast<WordBoundaryInsn>(base);
           const auto *charPointer = c.currentPointer();
 
           bool prevIsWordchar = false;
@@ -1143,7 +1144,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
         }
 
         case Opcode::BeginMarkedSubexpression: {
-          const auto *insn = llvm::cast<BeginMarkedSubexpressionInsn>(base);
+          const auto *insn = llvh::cast<BeginMarkedSubexpressionInsn>(base);
           if (!pushBacktrack(
                   backtrackStack,
                   BacktrackInsn::makeSetCaptureGroup(
@@ -1163,7 +1164,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
         }
 
         case Opcode::EndMarkedSubexpression: {
-          const auto *insn = llvm::cast<EndMarkedSubexpressionInsn>(base);
+          const auto *insn = llvh::cast<EndMarkedSubexpressionInsn>(base);
           auto &range = s->getCapturedRange(insn->mexp - 1);
           if (c.forwards()) {
             assert(
@@ -1178,26 +1179,28 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           break;
         }
 
+        // ES10 21.2.2.9.1
         case Opcode::BackRef: {
-          const auto insn = llvm::cast<BackRefInsn>(base);
+          const auto insn = llvh::cast<BackRefInsn>(base);
+          // a. Let cap be x's captures List.
+          // b. Let s be cap[n].
           CapturedRange cr = s->getCapturedRange(insn->mexp - 1);
-          // Note we have to check whether cr.end has matched here, not
-          // cr.start, because we may be in the middle of the capture group we
-          // are examining, e.g. /(abc\1)/.
-          if (cr.end == kNotMatched) {
+
+          // c. If s is undefined, return c(x).
+          // Note we have to check both cr.start and cr.end here. If we are
+          // currently in the middle of matching a capture group (going either
+          // forwards or backwards) we should just return success.
+          if (cr.start == kNotMatched || cr.end == kNotMatched) {
             // Backreferences to a capture group that did not match always
-            // succeed (ES5 15.10.2.9)
+            // succeed (ES10 21.2.2.9)
             s->ip_ += sizeof(BackRefInsn);
             break;
           }
 
-          assert(
-              cr.start != kNotMatched &&
-              "capture group exited but not entered");
           // TODO: this can be optimized by hoisting the branches out of the
           // loop.
-          bool icase = syntaxFlags_ & constants::icase;
-          bool unicode = syntaxFlags_ & constants::unicode;
+          bool icase = syntaxFlags_.ignoreCase;
+          bool unicode = syntaxFlags_.unicode;
           auto capturedStart = first_ + cr.start;
           auto capturedEnd = first_ + cr.end;
           Cursor<Traits> cursor2(
@@ -1242,7 +1245,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
         }
 
         case Opcode::Lookaround: {
-          const LookaroundInsn *insn = llvm::cast<LookaroundInsn>(base);
+          const LookaroundInsn *insn = llvh::cast<LookaroundInsn>(base);
           bool matched = false;
           if (c.satisfiesConstraints(flags_, insn->constraints)) {
             // Copy the state. This is because if the match fails (or if we are
@@ -1299,7 +1302,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
         case Opcode::BeginLoop: {
           // Here we are entering a loop from outside, not jumping back into
           // it.
-          const BeginLoopInsn *loop = llvm::cast<BeginLoopInsn>(base);
+          const BeginLoopInsn *loop = llvh::cast<BeginLoopInsn>(base);
           s->getLoop(loop->loopId).iterations = 0;
           // Check to see if the loop body is viable. If not, and the loop has
           // a nonzero minimum iteration, then we know we won't match and we
@@ -1321,12 +1324,12 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
         case Opcode::EndLoop:
           // This is reached after the body of a loop finishes executing.
           // Move the IP to the loop and run it again immediately.
-          s->ip_ = llvm::cast<EndLoopInsn>(base)->target;
+          s->ip_ = llvh::cast<EndLoopInsn>(base)->target;
           base = reinterpret_cast<const Insn *>(&bytecode[s->ip_]);
           // Note fall through.
 
         runLoop : {
-          const BeginLoopInsn *loop = llvm::cast<BeginLoopInsn>(base);
+          const BeginLoopInsn *loop = llvh::cast<BeginLoopInsn>(base);
           auto &loopData = s->getLoop(loop->loopId);
           uint32_t iteration = loopData.iterations;
 
@@ -1389,7 +1392,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           // Here we are entering a simple loop from outside,
           // not jumping back into it.
           const BeginSimpleLoopInsn *loop =
-              llvm::cast<BeginSimpleLoopInsn>(base);
+              llvh::cast<BeginSimpleLoopInsn>(base);
 
           if (!c.satisfiesConstraints(flags_, loop->loopeeConstraints)) {
             s->ip_ = loop->notTakenTarget;
@@ -1400,13 +1403,13 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
         }
 
         case Opcode::EndSimpleLoop:
-          s->ip_ = llvm::cast<EndSimpleLoopInsn>(base)->target;
+          s->ip_ = llvh::cast<EndSimpleLoopInsn>(base)->target;
           base = reinterpret_cast<const Insn *>(&bytecode[s->ip_]);
           // Note: fall-through.
 
         runSimpleLoop : {
           const BeginSimpleLoopInsn *loop =
-              llvm::cast<BeginSimpleLoopInsn>(base);
+              llvh::cast<BeginSimpleLoopInsn>(base);
           // Since this is a simple loop, we'll always need to explore both
           // exiting the loop at this point and continuing to loop.
           // Note simple loops are always greedy.
@@ -1421,7 +1424,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
         }
 
         case Opcode::Width1Loop: {
-          const Width1LoopInsn *loop = llvm::cast<Width1LoopInsn>(base);
+          const Width1LoopInsn *loop = llvh::cast<Width1LoopInsn>(base);
           if (!matchWidth1Loop(loop, s, backtrackStack))
             BACKTRACK();
           break;
@@ -1444,7 +1447,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
 /// false otherwise.
 template <typename CharT, class Traits>
 MatchRuntimeResult searchWithBytecodeImpl(
-    llvm::ArrayRef<uint8_t> bytecode,
+    llvh::ArrayRef<uint8_t> bytecode,
     const CharT *first,
     uint32_t start,
     uint32_t length,
@@ -1466,7 +1469,7 @@ MatchRuntimeResult searchWithBytecodeImpl(
   Context<Traits> ctx(
       bytecode,
       matchFlags,
-      static_cast<constants::SyntaxFlags>(header->syntaxFlags),
+      SyntaxFlags::fromByte(header->syntaxFlags),
       first,
       first + length,
       header->markedCount,
@@ -1502,7 +1505,7 @@ MatchRuntimeResult searchWithBytecodeImpl(
 }
 
 MatchRuntimeResult searchWithBytecode(
-    llvm::ArrayRef<uint8_t> bytecode,
+    llvh::ArrayRef<uint8_t> bytecode,
     const char16_t *first,
     uint32_t start,
     uint32_t length,
@@ -1513,7 +1516,7 @@ MatchRuntimeResult searchWithBytecode(
 }
 
 MatchRuntimeResult searchWithBytecode(
-    llvm::ArrayRef<uint8_t> bytecode,
+    llvh::ArrayRef<uint8_t> bytecode,
     const char *first,
     uint32_t start,
     uint32_t length,

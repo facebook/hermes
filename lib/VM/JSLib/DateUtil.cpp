@@ -14,11 +14,12 @@
 #include "hermes/VM/JSLib/RuntimeCommonStorage.h"
 #include "hermes/VM/SmallXString.h"
 
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/ErrorHandling.h"
+#include "llvh/Support/Format.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <cassert>
+#include <cctype>
 #include <cmath>
 #include <ctime>
 
@@ -503,8 +504,8 @@ double timeClip(double t) {
 //===----------------------------------------------------------------------===//
 // toString Functions
 
-void dateToISOString(double t, double, llvm::SmallVectorImpl<char> &buf) {
-  llvm::raw_svector_ostream os{buf};
+void dateToISOString(double t, double, llvh::SmallVectorImpl<char> &buf) {
+  llvh::raw_svector_ostream os{buf};
 
   /// Make these ints here because we're printing and we have bounds on
   /// their values. Makes printing very easy.
@@ -514,14 +515,14 @@ void dateToISOString(double t, double, llvm::SmallVectorImpl<char> &buf) {
 
   if (y < 0 || y > 9999) {
     // Handle extended years.
-    os << llvm::format("%+07d-%02d-%02d", y, m, d);
+    os << llvh::format("%+07d-%02d-%02d", y, m, d);
   } else {
-    os << llvm::format("%04d-%02d-%02d", y, m, d);
+    os << llvh::format("%04d-%02d-%02d", y, m, d);
   }
 }
 
-void timeToISOString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {
-  llvm::raw_svector_ostream os{buf};
+void timeToISOString(double t, double tza, llvh::SmallVectorImpl<char> &buf) {
+  llvh::raw_svector_ostream os{buf};
 
   /// Make all of these ints here because we're printing and we have bounds on
   /// their values. Makes printing very easy.
@@ -532,7 +533,7 @@ void timeToISOString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {
 
   if (tza == 0) {
     // Zulu time, output Z as the time zone.
-    os << llvm::format("%02d:%02d:%02d.%03dZ", h, min, s, ms);
+    os << llvh::format("%02d:%02d:%02d.%03dZ", h, min, s, ms);
   } else {
     // Calculate the +HH:mm expression for the time zone adjustment.
     // First account for the sign, then perform calculations on positive TZA.
@@ -540,7 +541,7 @@ void timeToISOString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {
     double tzaPos = std::abs(tza);
     int32_t tzh = hourFromTime(tzaPos);
     int32_t tzm = minFromTime(tzaPos);
-    os << llvm::format(
+    os << llvh::format(
         "%02d:%02d:%02d.%03d%c%02d:%02d", h, min, s, ms, sign, tzh, tzm);
   }
 }
@@ -548,7 +549,7 @@ void timeToISOString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {
 static void datetimeToISOString(
     double t,
     double tza,
-    llvm::SmallVectorImpl<char> &buf,
+    llvh::SmallVectorImpl<char> &buf,
     char separator) {
   dateToISOString(t, tza, buf);
   buf.push_back(separator);
@@ -558,19 +559,19 @@ static void datetimeToISOString(
 void datetimeToISOString(
     double t,
     double tza,
-    llvm::SmallVectorImpl<char> &buf) {
+    llvh::SmallVectorImpl<char> &buf) {
   return datetimeToISOString(t, tza, buf, 'T');
 }
 
-void datetimeToLocaleString(double t, llvm::SmallVectorImpl<char16_t> &buf) {
+void datetimeToLocaleString(double t, llvh::SmallVectorImpl<char16_t> &buf) {
   return platform_unicode::dateFormat(t, true, true, buf);
 }
 
-void dateToLocaleString(double t, llvm::SmallVectorImpl<char16_t> &buf) {
+void dateToLocaleString(double t, llvh::SmallVectorImpl<char16_t> &buf) {
   return platform_unicode::dateFormat(t, true, false, buf);
 }
 
-void timeToLocaleString(double t, llvm::SmallVectorImpl<char16_t> &buf) {
+void timeToLocaleString(double t, llvh::SmallVectorImpl<char16_t> &buf) {
   return platform_unicode::dateFormat(t, false, true, buf);
 }
 
@@ -601,8 +602,8 @@ static const char *const monthNames[12]{
     "Dec",
 };
 
-void dateString(double t, double, llvm::SmallVectorImpl<char> &buf) {
-  llvm::raw_svector_ostream os{buf};
+void dateString(double t, double, llvh::SmallVectorImpl<char> &buf) {
+  llvh::raw_svector_ostream os{buf};
 
   // Make these ints here because we're printing and we have bounds on
   // their values. Makes printing very easy.
@@ -615,22 +616,22 @@ void dateString(double t, double, llvm::SmallVectorImpl<char> &buf) {
   // (SPACE), month, the code unit 0x0020 (SPACE), day, the code unit 0x0020
   // (SPACE), and year.
   // Example: Mon Jul 22 2019
-  os << llvm::format("%s %s %02d %0.4d", weekdayNames[wd], monthNames[m], d, y);
+  os << llvh::format("%s %s %02d %0.4d", weekdayNames[wd], monthNames[m], d, y);
 }
 
-void timeString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {
-  llvm::raw_svector_ostream os{buf};
+void timeString(double t, double tza, llvh::SmallVectorImpl<char> &buf) {
+  llvh::raw_svector_ostream os{buf};
 
   int32_t hour = hourFromTime(t);
   int32_t minute = minFromTime(t);
   int32_t second = secFromTime(t);
 
   // Example: 15:50:49 GMT
-  os << llvm::format("%02d:%02d:%02d GMT", hour, minute, second);
+  os << llvh::format("%02d:%02d:%02d GMT", hour, minute, second);
 }
 
-void timeZoneString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {
-  llvm::raw_svector_ostream os{buf};
+void timeZoneString(double t, double tza, llvh::SmallVectorImpl<char> &buf) {
+  llvh::raw_svector_ostream os{buf};
 
   // We've already computed the TZA, so use that as the offset.
   double offset = tza;
@@ -657,11 +658,11 @@ void timeZoneString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {
   // 8. Return the string-concatenation of offsetSign, offsetHour, offsetMin,
   // and tzName.
   // Example: -0700
-  os << llvm::format("%c%02d%02d", offsetSign, offsetHour, offsetMin);
+  os << llvh::format("%c%02d%02d", offsetSign, offsetHour, offsetMin);
 }
 
-void dateTimeString(double tv, double tza, llvm::SmallVectorImpl<char> &buf) {
-  llvm::raw_svector_ostream os{buf};
+void dateTimeString(double tv, double tza, llvh::SmallVectorImpl<char> &buf) {
+  llvh::raw_svector_ostream os{buf};
   dateString(tv, tza, buf);
   // Return the string-concatenation of DateString(t), the code unit 0x0020
   // (SPACE), TimeString(t), and TimeZoneString(tv).
@@ -674,8 +675,8 @@ void dateTimeString(double tv, double tza, llvm::SmallVectorImpl<char> &buf) {
 void dateTimeUTCString(
     double tv,
     double tza,
-    llvm::SmallVectorImpl<char> &buf) {
-  llvm::raw_svector_ostream os{buf};
+    llvh::SmallVectorImpl<char> &buf) {
+  llvh::raw_svector_ostream os{buf};
 
   // Make these ints here because we're printing and we have bounds on
   // their values. Makes printing very easy.
@@ -688,12 +689,12 @@ void dateTimeUTCString(
   // (SPACE), day, the code unit 0x0020 (SPACE), month, the code unit 0x0020
   // (SPACE), year, the code unit 0x0020 (SPACE), and TimeString(tv).
   // Example: Mon Jul 22 2019 15:51:50 GMT
-  os << llvm::format(
+  os << llvh::format(
       "%s, %02d %s %0.4d ", weekdayNames[wd], d, monthNames[m], y);
   timeString(tv, tza, buf);
 }
 
-void timeTZString(double tv, double tza, llvm::SmallVectorImpl<char> &buf) {
+void timeTZString(double tv, double tza, llvh::SmallVectorImpl<char> &buf) {
   // Return the string-concatenation of TimeString(t) and TimeZoneString(tv).
   // Example: 15:51:50 GMT-0700
   timeString(tv, tza, buf);
@@ -708,6 +709,12 @@ static inline bool isDigit(char16_t c) {
   return u'0' <= c && c <= u'9';
 }
 
+/// \return true if c represents an alphabet letter.
+static inline bool isAlpha(char16_t c) {
+  c |= 'a' ^ 'A'; // Lowercase
+  return 'a' <= c && c <= 'z';
+}
+
 /// Read a number from the iterator at \p it into \p x.
 /// Can read integers that consist entirely of digits.
 /// \param[in,out] it is modified to the new start point of the scan if
@@ -717,14 +724,14 @@ static inline bool isDigit(char16_t c) {
 /// \return true if successful, false if failed.
 template <class InputIter>
 static bool scanInt(InputIter &it, const InputIter end, int32_t &x) {
-  llvm::SmallString<16> str{};
+  llvh::SmallString<16> str{};
   if (it == end) {
     return false;
   }
   for (; it != end && isDigit(*it); ++it) {
     str += static_cast<char>(*it);
   }
-  llvm::StringRef ref{str};
+  llvh::StringRef ref{str};
   // getAsInteger returns false to signify success.
   return !ref.getAsInteger(10, x);
 }
@@ -864,13 +871,32 @@ static double parseESDate(StringView str) {
 
   /// Read a string starting at `it` into `tok`.
   /// \p len the number of characters to scan in the string.
-  /// Return true if successful, false if failed.
+  /// \return true if successful, false if failed.
   auto scanStr = [&str, &tok, &it](int32_t len) -> bool {
     if (it + len > str.end()) {
       return false;
     }
     tok = str.slice(it, it + len);
     it += len;
+    return true;
+  };
+
+  /// Reads the next \p len characters into `tok`,
+  /// but instead of consuming \p len chars, it consumes a single word
+  /// whatever how long it is (i.e. until a space is encountered).
+  /// e.g.
+  ///     &str ="Garbage G MayG"
+  ///     scanStrAndSkipWord(3); consumeSpaces();  // &str="G MayG", &tok="Gar"
+  ///     scanStrAndSkipWord(3); consumeSpaces();  // &str="MayG"  , &tok="G M"
+  ///     scanStrAndSkipWord(3); consumeSpaces();  // &str=""      , &tok="May"
+  ///     scanStrAndSkipWord(3);                   // -> false
+  /// \return true if successful, false if failed.
+  auto scanStrAndSkipWord = [&str, &tok, &it](int32_t len) -> bool {
+    if (it + len > str.end())
+      return false;
+    tok = str.slice(it, it + len);
+    while (it != str.end() && !std::isspace(*it))
+      it++;
     return true;
   };
 
@@ -882,63 +908,79 @@ static double parseESDate(StringView str) {
     return false;
   };
 
-  // Weekday, optional comma, and following space.
+  auto consumeSpaces = [&]() {
+    while (it != str.end() && std::isspace(*it))
+      ++it;
+  };
+
+  // Weekday
   if (!scanStr(3))
     return nan;
   bool foundWeekday = false;
   for (const char *name : weekdayNames) {
-    if (tok.equals(llvm::arrayRefFromStringRef(name))) {
+    if (tok.equals(llvh::arrayRefFromStringRef(name))) {
       foundWeekday = true;
       break;
     }
   }
   if (!foundWeekday)
     return nan;
-  consume(','); // Optional comma, disregard failure.
-  if (!consume(' '))
-    return nan;
+
+  /// If we found a valid Month string from the current `tok`.
+  auto tokIsMonth = [&]() -> bool {
+    for (uint32_t i = 0; i < sizeof(monthNames) / sizeof(monthNames[0]); ++i) {
+      if (tok.equals(llvh::arrayRefFromStringRef(monthNames[i]))) {
+        // m is 1-indexed.
+        m = i + 1;
+        return true;
+      }
+    }
+    return false;
+  };
 
   // Day Month Year
   // or
   // Month Day Year
-  if (scanInt(it, end, d)) {
-    // Day Month
-    if (!consume(' '))
-      return nan;
-    if (!scanStr(3))
-      return nan;
-  } else {
-    // Month Day
-    if (!scanStr(3))
-      return nan;
-    if (!consume(' '))
-      return nan;
-    if (!scanInt(it, end, d))
-      return nan;
-  }
-  // tok is now set to the Month string.
-  bool foundMonth = false;
-  for (uint32_t i = 0; i < sizeof(monthNames) / sizeof(monthNames[0]); ++i) {
-    if (tok.equals(llvm::arrayRefFromStringRef(monthNames[i]))) {
-      // m is 1-indexed.
-      m = i + 1;
-      foundMonth = true;
+  while (it != str.end()) {
+    if (isDigit(*it)) {
+      // Day
+      scanInt(it, end, d);
+      // Month
+      consumeSpaces();
+      // e.g. `Janwhatever` will get read as `Jan`
+      if (!scanStrAndSkipWord(3))
+        return nan;
+      // `tok` is now set to the Month candidate.
+      if (!tokIsMonth())
+        return nan;
       break;
     }
+    if (isAlpha(*it)) {
+      // try Month
+      if (!scanStrAndSkipWord(3))
+        return nan;
+      // `tok` is now set to the Month candidate.
+      if (tokIsMonth()) {
+        // Day
+        consumeSpaces();
+        if (!scanInt(it, end, d))
+          return nan;
+        break;
+      }
+      // Continue scanning for Month.
+      continue;
+    }
+    // Ignore any garbage.
+    ++it;
   }
-  if (!foundMonth)
-    return nan;
 
   // Year
-  if (!consume(' '))
-    return nan;
+  consumeSpaces();
   if (!scanInt(it, end, y))
     return nan;
 
-  if (!consume(' '))
-    return nan;
-
   // Hour:minute:second.
+  consumeSpaces();
   if (!scanInt(it, end, h))
     return nan;
   if (!consume(':'))
@@ -951,10 +993,7 @@ static double parseESDate(StringView str) {
     return nan;
 
   // Space and time zone.
-  if (it == end)
-    goto complete;
-  if (!consume(' '))
-    return nan;
+  consumeSpaces();
   if (it == end)
     goto complete;
 
@@ -982,7 +1021,7 @@ static double parseESDate(StringView str) {
     if (!scanStr(3))
       return nan;
     for (const KnownTZ &knownTZ : knownTZs) {
-      if (tok.equals(llvm::arrayRefFromStringRef(knownTZ.tz))) {
+      if (tok.equals(llvh::arrayRefFromStringRef(knownTZ.tz))) {
         tzh = knownTZ.tzh;
         break;
       }

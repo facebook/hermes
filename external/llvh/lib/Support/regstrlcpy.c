@@ -26,7 +26,7 @@
  * Returns strlen(src); if retval >= siz, truncation occurred.
  */
 size_t
-llvm_strlcpy(char *dst, const char *src, size_t siz)
+llvh_strlcpy(char *dst, const char *src, size_t siz)
 {
 	char *d = dst;
 	const char *s = src;

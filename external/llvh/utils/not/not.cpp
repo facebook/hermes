@@ -12,9 +12,9 @@
 //   not --crash cmd
 //     Will return true if cmd crashes (e.g. for testing crash reporting).
 
-#include "llvm/Support/Program.h"
-#include "llvm/Support/raw_ostream.h"
-using namespace llvm;
+#include "llvh/Support/Program.h"
+#include "llvh/Support/raw_ostream.h"
+using namespace llvh;
 
 int main(int argc, const char **argv) {
   bool ExpectCrash = false;

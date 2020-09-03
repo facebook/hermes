@@ -60,6 +60,8 @@ TEST_F(SegmentedArrayTest, AllocLargeArrayThrowsRangeError) {
 }
 
 TEST_F(SegmentedArrayTest, AllowTrimming) {
+  // Hades doesn't trim arrays.
+#ifndef HERMESVM_GC_HADES
   MutableHandle<SegmentedArray> array(runtime);
   constexpr SegmentedArray::size_type originalCapacity = 4;
   // Create an array and put in an element so its size is 1 and its capacity
@@ -79,6 +81,7 @@ TEST_F(SegmentedArrayTest, AllowTrimming) {
 
   // The array should be trimmed.
   EXPECT_EQ(array->size(), array->capacity());
+#endif
 }
 
 } // namespace

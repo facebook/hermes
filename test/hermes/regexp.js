@@ -90,6 +90,13 @@ for (var i=0; i < 16; i++) longPattern += longPattern;
 try { new RegExp(longPattern, ""); } catch (err) { print(err.name); }
 // CHECK-NEXT: SyntaxError
 
+// Ensure very deep nesting produces an error.
+try { print(RegExp("(".repeat(50000) + "a" + ")".repeat(50000)).source.length); } catch (err) { print(err.name); }
+// CHECK-NEXT: SyntaxError
+
+// Ensure a large number of alternations does not produce an error
+try { print(RegExp("a" + "|a".repeat(50000)).source.length); } catch (err) { print(err.name); }
+// CHECK-NEXT: 100001
 
 try { new RegExp("*"); } catch (err) { print(err.name); }
 // CHECK-NEXT: SyntaxError
@@ -200,6 +207,8 @@ try { re.sticky = false; } catch (err) { print(err.name); } // not writable
 re.lastIndex = 42; // yes writable
 print(re.global, re.ignoreCase, re.multiline, re.lastIndex);
 // CHECK-NEXT: true true false 42
+try { eval("b+/v/a"); } catch (err) { print(err.name); };
+// CHECK-NEXT: SyntaxError
 
 // Flag property getter tests.
 var globalGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'global').get;
@@ -329,6 +338,11 @@ print(/(?<!$ab)\d/.exec("ab1ab2"));
 // CHECK-NEXT: 1
 print(/(?<!^ab)\d/.exec("ab1ab2"));
 // CHECK-NEXT: 2
+print(/a(?<=(\1))/.exec("a"));
+// CHECK-NEXT: a,
+print(/a(?<=((?!\1)))/.exec("a"));
+// CHECK-NEXT: null
+
 
 // Sticky support
 print(/abc/y.exec("abc"));
@@ -444,9 +458,23 @@ print(RegExp.$1, RegExp.$2);
 // Check that error messages are propagated to exceptions.
 // The unit tests check the individual errors in more detail.
 try { new RegExp("["); } catch (e) { print(e.message); }
-// CHECK-NEXT: Invalid RegExp pattern: Character class not closed
+// CHECK-NEXT: Invalid RegExp: Character class not closed
 try { new RegExp("\\"); } catch (e) { print(e.message); }
-// CHECK-NEXT: Invalid RegExp pattern: Incomplete escape
+// CHECK-NEXT: Invalid RegExp: Incomplete escape
+
+// textual 'undefined' flag is invalid.
+try {
+  RegExp(/1/g, 'undefined');
+} catch (e) {
+  print (e);
+}
+// CHECK-NEXT: SyntaxError: Invalid RegExp: Invalid flags
+// actual undefined flag would result in empty pattern.
+var obj = {
+  get [Symbol.match]() { return () => 1 }
+}
+print(RegExp(obj))
+// CHECK-NEXT: /(?:)/
 
 print("RegExp.prototype[Symbol.match]");
 // CHECK-LABEL: RegExp.prototype[Symbol.match]
@@ -456,6 +484,36 @@ print(/[0-9]+/g[Symbol.match]('hello'));
 // CHECK-NEXT: null
 print(RegExp.prototype[Symbol.match].name);
 // CHECK-NEXT: [Symbol.match]
+
+print("RegExp.prototype[Symbol.matchAll]");
+// CHECK-LABEL: RegExp.prototype[Symbol.matchAll]
+var it = /[0-9]+/g[Symbol.matchAll]('2016-01-02')
+var y = it.next()
+var m = it.next()
+var d = it.next()
+var nil = it.next()
+print(y.value, y.done)
+// CHECK-NEXT: 2016 false
+print(m.value, m.done)
+// CHECK-NEXT: 01 false
+print(d.value, d.done)
+// CHECK-NEXT: 02 false
+print(nil.value, nil.done)
+// CHECK-NEXT: undefined true
+print([.../[0-9]+/g[Symbol.matchAll]('2016-01-02')])
+// CHECK-NEXT: 2016,01,02
+var it = /[0-9]+/g[Symbol.matchAll]('hello')
+var nil = it.next()
+print(nil.value, nil.done)
+// CHECK-NEXT: undefined true
+print(RegExp.prototype[Symbol.matchAll].name);
+// CHECK-NEXT: [Symbol.matchAll]
+try {
+  RegExp.prototype[Symbol.matchAll].call(1);
+} catch (e) {
+  print(e)
+}
+// CHECK-NEXT: TypeError: RegExp.prototype[@@matchAll] should be called on a js object
 
 print("RegExp.prototype[Symbol.search]");
 // CHECK-LABEL: RegExp.prototype[Symbol.search]
@@ -474,16 +532,6 @@ print(RegExp.prototype[Symbol.replace].name);
 // CHECK-NEXT: [Symbol.replace]
 print(/-/g[Symbol.replace]('2016-01-01', '.'));
 // CHECK-NEXT: 2016.01.01
-// test a RegExp with a lot of capture groups.
-var re_string = "(a)";
-for (var i = 0; i < 500; i++) {
-  re_string = "(" + re_string + ")";
-}
-re_string = re_string + "1";
-
-var re_long_replace = new RegExp(re_string, "g");
-print("a1".replace(re_long_replace, "b"));
-// CHECK-NEXT: b
 
 print("RegExp.prototype[Symbol.split]");
 // CHECK-LABEL: RegExp.prototype[Symbol.split]
@@ -491,3 +539,7 @@ print(RegExp.prototype[Symbol.split].name);
 // CHECK-NEXT: [Symbol.split]
 print(/-/[Symbol.split]('a-b-c'));
 // CHECK-NEXT: a,b,c
+
+// Check UTF-16 string matching executes correctly
+print(/abc/u.exec("\u20ac\u20ac\u20ac\u20ac"));
+// CHECK-LABEL: null

@@ -1267,10 +1267,7 @@ assert.throws(_ => new p(), TypeError);
 print('ProxyCreate');
 // CHECK-LABEL: ProxyCreate
 
-var pr = Proxy.revocable({}, {});
-pr.revoke();
-
-for (let val of [undefined, null, true, 17, "string", pr.proxy]) {
+for (let val of [undefined, null, true, 17, "string"]) {
   assert.throws(_ => new Proxy(val, {}), TypeError);
   assert.throws(_ => new Proxy({}, val), TypeError);
 }
@@ -1282,7 +1279,10 @@ pr.revoke.prop = 1;
 assert.equal(pr.revoke.prop, 1);
 pr.revoke();
 assert.equal(pr.revoke.prop, 1);
-assert.throws(_ => new Proxy(pr.proxy, {}), TypeError);
+
+assert.throws(_=> pr.proxy.foo, TypeError);
+assert.ok(_=> new Proxy(pr.proxy, {}), "ProxyCreate using revoked proxies should be allowed.");
+assert.ok(_=> new Proxy({}, pr.proxy), "ProxyCreate using revoked proxies should be allowed.");
 
 print('Array.isArray');
 // CHECK-LABEL: Array.isArray
@@ -1367,13 +1367,13 @@ function multiTests(source, func, checkResult, checkTraps) {
 multiTests(
   source,
   Object.getOwnPropertyDescriptors,
-  checkUnimplemented({
+  checkDeep({
     ca:{value:21, writable:true, configurable:true, enumerable: true},
     cb:{value:22, writable:true, configurable:true, enumerable: false},
     [Symbol.for('cc')]:{value:23, writable:true, configurable:true, enumerable: true},
     [Symbol.for('cd')]:{value:24, writable:true, configurable:true, enumerable: false},
   }),
-  checkUnimplementedTraps([
+  checkArray([
     'ownKeys',
     'getOwnPropertyDescriptor:ca',
     'getOwnPropertyDescriptor:cb',
@@ -1383,13 +1383,13 @@ multiTests(
 multiTests(
   sourceArray,
   Object.getOwnPropertyDescriptors,
-  checkUnimplemented({
+  checkDeep({
     0:{value:10, writable:true, configurable:true, enumerable: true},
     1:{value:20, writable:true, configurable:true, enumerable: true},
     2:{value:30, writable:true, configurable:true, enumerable: true},
     length:{value:3, writable:true, configurable:false, enumerable: false},
   }),
-  checkUnimplementedTraps([
+  checkArray([
     'ownKeys',
     'getOwnPropertyDescriptor:0',
     'getOwnPropertyDescriptor:1',

@@ -44,7 +44,7 @@ TEST(DisassemblerTest, NativeDisassemblerTest) {
         NativeDisassembler::x86_64_unknown_linux_gnu, 0);
     EXPECT_TRUE(dis);
     std::string str;
-    llvm::raw_string_ostream OS(str);
+    llvh::raw_string_ostream OS(str);
     dis->disassembleBuffer(OS, bytes, 0, true);
     OS.flush();
     EXPECT_STREQ(
@@ -56,7 +56,7 @@ TEST(DisassemblerTest, NativeDisassemblerTest) {
         NativeDisassembler::x86_64_unknown_linux_gnu, 1);
     EXPECT_TRUE(dis);
     std::string str;
-    llvm::raw_string_ostream OS(str);
+    llvh::raw_string_ostream OS(str);
     dis->disassembleBuffer(OS, bytes, 0, true);
     OS.flush();
     EXPECT_STREQ(

@@ -10,7 +10,7 @@
 
 #include "hermes/Support/Config.h"
 
-#include "llvm/Support/Compiler.h"
+#include "llvh/Support/Compiler.h"
 
 #include <type_traits>
 
@@ -56,8 +56,50 @@
 // In fbcode we might have bigger code samples during development due to
 // integration testing. However, we're also at liberty to increase stack
 // size at the application level and for things like HaaS we do this.
-#if !defined(HERMES_FBCODE_BUILD) && defined(HERMES_UBSAN)
+#if !defined(HERMES_FBCODE_BUILD) && \
+    (defined(HERMES_UBSAN) || LLVM_ADDRESS_SANITIZER_BUILD)
 #define HERMES_LIMIT_STACK_DEPTH
+#endif
+
+#if LLVM_THREAD_SANITIZER_BUILD
+// tsan detects these exact functions by name.
+#ifdef __cplusplus
+extern "C" {
+#endif
+void AnnotateIgnoreReadsBegin(const char *file, int line);
+void AnnotateIgnoreReadsEnd(const char *file, int line);
+void AnnotateBenignRaceSized(
+    const char *file,
+    int line,
+    const volatile void *address,
+    size_t size,
+    const char *description);
+void AnnotateThreadName(const char *file, int line, const char *name);
+#ifdef __cplusplus
+}
+#endif
+
+/// Ignore any races on reads between here and the next TsanIgnoreReadsEnd.
+#define TsanIgnoreReadsBegin() AnnotateIgnoreReadsBegin(__FILE__, __LINE__)
+
+/// Resume checking for racy reads.
+#define TsanIgnoreReadsEnd() AnnotateIgnoreReadsEnd(__FILE__, __LINE__)
+
+/// \def TsanBenignRaceSized(address, size, description)
+/// Tell TSAN to ignore a race that was detected at the given address.
+/// \param size Ignore a race on this many bytes after and including \p address.
+/// \param description A string that will be shown in TSAN diagnostics to
+///   explain why the race is benign.
+#define TsanBenignRaceSized(address, size, description) \
+  AnnotateBenignRaceSized(__FILE__, __LINE__, address, size, description)
+
+/// Give the current thread a different name in TSAN output.
+#define TsanThreadName(name) AnnotateThreadName(__FILE__, __LINE__, name)
+#else
+#define TsanIgnoreReadsBegin()
+#define TsanIgnoreReadsEnd()
+#define TsanBenignRaceSized(address, size, description)
+#define TsanThreadName(name)
 #endif
 
 namespace hermes {

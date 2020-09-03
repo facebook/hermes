@@ -11,7 +11,7 @@
 #include "hermes/Support/Compiler.h"
 #include "hermes/VM/Handle.h"
 
-#include "llvm/Support/AlignOf.h"
+#include "llvh/Support/AlignOf.h"
 
 #include <cassert>
 #include <new>
@@ -94,7 +94,7 @@ class CallResult {
   // Nontrivial implementation.
   // Trivial implementation provided by partial specialization below.
   // Here we identify a missing value as an exception.
-  llvm::Optional<T> value_;
+  llvh::Optional<T> value_;
 
  public:
   CallResult(const CallResult &cr) = default;
@@ -105,7 +105,7 @@ class CallResult {
   /* implicit */ CallResult(const T &value) : value_(value) {}
   /* implicit */ CallResult(T &&value) : value_(std::move(value)) {}
 
-  /* implicit */ CallResult(ExecutionStatus status) : value_(llvm::None) {
+  /* implicit */ CallResult(ExecutionStatus status) : value_(llvh::None) {
     assert(status != ExecutionStatus::RETURNED);
   }
 

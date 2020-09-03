@@ -21,7 +21,7 @@
 
 #include "JSLib/JSLibInternal.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 
 #define DEBUG_TYPE "serialize"
 
@@ -88,7 +88,7 @@ void Deserializer::init(
     // size is buffer size in bytes. Let's calculate the end first before
     // casting to char16_t *.
     // Ensure we are aligned.
-    uint32_t aligningOffset = llvm::alignTo(size, alignof(char16_t)) - size;
+    uint32_t aligningOffset = llvh::alignTo(size, alignof(char16_t)) - size;
     assert(aligningOffset <= size && "aligning offset should not exceed size");
     assert(
         (intptr_t)(ptr + aligningOffset) % alignof(char16_t) == 0 &&
@@ -117,14 +117,14 @@ void Deserializer::init(
   assert(!objectTable_[idx]);                                                \
   objectTable_[idx] = (void *)func;                                          \
   LLVM_DEBUG(                                                                \
-      llvm::dbgs() << idx << ", " << #func << ", " << (void *)func << "\n"); \
+      llvh::dbgs() << idx << ", " << #func << ", " << (void *)func << "\n"); \
   idx++;
 
 #define NATIVE_FUNCTION_TYPED(func, type)                           \
   assert(!objectTable_[idx]);                                       \
   objectTable_[idx] = (void *)func<type>;                           \
   LLVM_DEBUG(                                                       \
-      llvm::dbgs() << idx << ", " << #func << "<" << #type << ">, " \
+      llvh::dbgs() << idx << ", " << #func << "<" << #type << ">, " \
                    << (void *)func<type> << "\n");                  \
   idx++;
 
@@ -132,7 +132,7 @@ void Deserializer::init(
   assert(!objectTable_[idx]);                                                \
   objectTable_[idx] = (void *)func<type, type2>;                             \
   LLVM_DEBUG(                                                                \
-      llvm::dbgs() << idx << ", " << #func << "<" << #type << ", " << #type2 \
+      llvh::dbgs() << idx << ", " << #func << "<" << #type << ", " << #type2 \
                    << ">, " << ((void *)func<type, type2>) << "\n");         \
   idx++;
 
@@ -142,7 +142,7 @@ void Deserializer::init(
   assert(!objectTable_[idx]);                                         \
   objectTable_[idx] = (void *)funcPtr;                                \
   LLVM_DEBUG(                                                         \
-      llvm::dbgs() << idx << ", " << #func << ", " << (void *)funcPtr \
+      llvh::dbgs() << idx << ", " << #func << ", " << (void *)funcPtr \
                    << "\n");                                          \
   idx++;
 
@@ -151,7 +151,7 @@ void Deserializer::init(
   assert(!objectTable_[idx]);                                          \
   objectTable_[idx] = (void *)funcPtr;                                 \
   LLVM_DEBUG(                                                          \
-      llvm::dbgs() << idx << ", " << #func << "<" << #classname << "<" \
+      llvh::dbgs() << idx << ", " << #func << "<" << #classname << "<" \
                    << #type << ", " << #type2 << ">>"                  \
                    << ", " << (void *)funcPtr << "\n");                \
   idx++;
@@ -181,9 +181,9 @@ void Deserializer::readHeader() {
   }
   if (runtime_->getHeap().size() < readHeader.heapSize) {
     hermes_fatal(
-        (llvm::Twine("Deserialize heap size less than Serialize heap size(") +
-         llvm::StringRef(std::to_string(readHeader.heapSize)) +
-         llvm::Twine(" bytes), try increase initial heap size"))
+        (llvh::Twine("Deserialize heap size less than Serialize heap size(") +
+         llvh::StringRef(std::to_string(readHeader.heapSize)) +
+         llvh::Twine(" bytes), try increase initial heap size"))
             .str());
   }
 

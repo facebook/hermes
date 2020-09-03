@@ -11,9 +11,9 @@
 #include "hermes/SourceMap/SourceMap.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/StringSetVector.h"
-#include "llvm/ADT/ArrayRef.h"
+#include "llvh/ADT/ArrayRef.h"
 
-#include <llvm/ADT/DenseMap.h>
+#include <llvh/ADT/DenseMap.h>
 #include <vector>
 
 namespace hermes {
@@ -38,7 +38,7 @@ class SourceMapGenerator {
   }
 
   /// \return the list of mappings lines.
-  llvm::ArrayRef<SourceMap::SegmentList> getMappingsLines() const {
+  llvh::ArrayRef<SourceMap::SegmentList> getMappingsLines() const {
     return lines_;
   }
 
@@ -54,11 +54,11 @@ class SourceMapGenerator {
   /// associated with this source (even if the source existed previously).
   /// \return the index of \p filename in filenameTable_.
   uint32_t addSource(
-      llvm::StringRef filename,
-      llvm::Optional<SourceMap::MetadataEntry> metadata = llvm::None);
+      llvh::StringRef filename,
+      llvh::Optional<SourceMap::MetadataEntry> metadata = llvh::None);
 
   /// Output the given source map as JSON.
-  void outputAsJSON(llvm::raw_ostream &OS) const;
+  void outputAsJSON(llvh::raw_ostream &OS) const;
 
   /// Adds a list of function offsets indexed by function ID for a given
   /// bytecode segment. This list will be printed under
@@ -69,7 +69,7 @@ class SourceMapGenerator {
       uint32_t cjsModuleOffset);
 
   /// Get the source index given the filename.
-  uint32_t getSourceIndex(llvm::StringRef filename) const {
+  uint32_t getSourceIndex(llvh::StringRef filename) const {
     auto it = filenameTable_.find(filename);
     assert(it != filenameTable_.end() && "unable to find filenameId");
     return std::distance(filenameTable_.begin(), it);
@@ -86,7 +86,7 @@ class SourceMapGenerator {
   };
 
   /// Implementation of outputAsJSON for a merged source map generator.
-  void outputAsJSONImpl(llvm::raw_ostream &OS) const;
+  void outputAsJSONImpl(llvh::raw_ostream &OS) const;
 
   /// \return the mappings encoded in VLQ format.
   std::string getVLQMappingsString() const;
@@ -94,31 +94,31 @@ class SourceMapGenerator {
   /// \return a list of sources, in order.
   /// This list refers to internals of the StringMap and is invalidated by
   /// addSource().
-  std::vector<llvm::StringRef> getSources() const;
+  std::vector<llvh::StringRef> getSources() const;
 
   /// Encode the list \p segments into \p OS using the SourceMap
   /// Base64-VLQ scheme, delta-encoded with \p lastState as the starting state.
   static SourceMapGenerator::State encodeSourceLocations(
       const SourceMapGenerator::State &lastState,
-      llvm::ArrayRef<SourceMap::Segment> segments,
-      llvm::raw_ostream &OS);
+      llvh::ArrayRef<SourceMap::Segment> segments,
+      llvh::raw_ostream &OS);
 
   /// Merge the input source maps with the state in this generator,
   /// and return a new generator which contains a merged representation.
   SourceMapGenerator mergedWithInputSourceMaps() const;
 
   /// \return the input source map segment for \p seg if the input source map
-  /// exists and has a valid location for \p seg, else return llvm::None.
-  llvm::Optional<std::pair<SourceMap::Segment, const SourceMap *>>
+  /// exists and has a valid location for \p seg, else return llvh::None.
+  llvh::Optional<std::pair<SourceMap::Segment, const SourceMap *>>
   getInputSegmentForSegment(const SourceMap::Segment &seg) const;
 
   bool hasSourcesMetadata() const;
 
   /// \return metadata for source \index, if we have any.
-  llvm::Optional<SourceMap::MetadataEntry> getSourceMetadata(
+  llvh::Optional<SourceMap::MetadataEntry> getSourceMetadata(
       uint32_t index) const {
     if (index >= sourcesMetadata_.size()) {
-      return llvm::None;
+      return llvh::None;
     }
     return sourcesMetadata_[index];
   }
@@ -143,7 +143,7 @@ class SourceMapGenerator {
 
   ///  Maps cjsModuleOffset to a vector of function offsets indexed by their
   /// function id.
-  llvm::DenseMap<uint32_t, std::vector<uint32_t>> functionOffsets_{};
+  llvh::DenseMap<uint32_t, std::vector<uint32_t>> functionOffsets_{};
 };
 
 } // namespace hermes

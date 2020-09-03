@@ -42,7 +42,7 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags);
 /// \c BuiltinMethod::xxx index.
 void createHermesBuiltins(
     Runtime *runtime,
-    llvm::MutableArrayRef<NativeFunction *> builtins);
+    llvh::MutableArrayRef<NativeFunction *> builtins);
 
 std::shared_ptr<RuntimeCommonStorage> createRuntimeCommonStorage(
     bool shouldTrace);
@@ -54,7 +54,7 @@ std::shared_ptr<RuntimeCommonStorage> createRuntimeCommonStorage(
 /// function. \return the result of evaluation.
 CallResult<HermesValue> evalInEnvironment(
     Runtime *runtime,
-    llvm::StringRef utf8code,
+    llvh::StringRef utf8code,
     Handle<Environment> environment,
     const ScopeChain &scopeChain,
     Handle<> thisArg,

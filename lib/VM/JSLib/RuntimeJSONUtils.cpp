@@ -21,8 +21,8 @@
 
 #include "JSONLexer.h"
 
-#include "llvm/ADT/SmallString.h"
-#include "llvm/Support/SaveAndRestore.h"
+#include "llvh/ADT/SmallString.h"
+#include "llvh/Support/SaveAndRestore.h"
 
 namespace hermes {
 namespace vm {
@@ -165,7 +165,7 @@ class JSONStringifyer {
       RuntimeJSONParser::MAX_RECURSION_DEPTH};
 
   /// The output buffer. The serialization process will append into it.
-  llvm::SmallVector<char16_t, 32> output_{};
+  llvh::SmallVector<char16_t, 32> output_{};
 
  public:
   explicit JSONStringifyer(Runtime *runtime)
@@ -282,7 +282,7 @@ CallResult<HermesValue> RuntimeJSONParser::parse() {
 }
 
 CallResult<HermesValue> RuntimeJSONParser::parseValue() {
-  llvm::SaveAndRestore<decltype(remainingDepth_)> oldDepth{remainingDepth_,
+  llvh::SaveAndRestore<decltype(remainingDepth_)> oldDepth{remainingDepth_,
                                                            remainingDepth_ - 1};
   if (remainingDepth_ <= 0) {
     return runtime_->raiseStackOverflow(Runtime::StackOverflowKind::JSONParser);
@@ -478,7 +478,7 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
   // The operation is recursive so it needs a GCScope.
   GCScope gcScope(runtime_);
 
-  llvm::SaveAndRestore<decltype(remainingDepth_)> oldDepth{remainingDepth_,
+  llvh::SaveAndRestore<decltype(remainingDepth_)> oldDepth{remainingDepth_,
                                                            remainingDepth_ - 1};
   if (remainingDepth_ <= 0) {
     return runtime_->raiseStackOverflow(Runtime::StackOverflowKind::JSONParser);
@@ -490,17 +490,19 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
   }
   MutableHandle<> tmpHandle{runtime_};
   CallResult<bool> isArrayRes =
-      isArray(runtime_, dyn_vmcast<JSObject>(*propRes));
+      isArray(runtime_, dyn_vmcast<JSObject>(propRes->get()));
   if (LLVM_UNLIKELY(isArrayRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto valHandle = runtime_->makeHandle(*propRes);
+  auto valHandle = runtime_->makeHandle(std::move(*propRes));
   if (*isArrayRes) {
     Handle<JSObject> objHandle = Handle<JSObject>::vmcast(valHandle);
     CallResult<uint64_t> lenRes = getArrayLikeLength(objHandle, runtime_);
     if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
+
+    GCScopeMarkerRAII marker(runtime_);
     for (uint64_t index = 0, e = *lenRes; index < e; ++index) {
       tmpHandle = HermesValue::encodeDoubleValue(index);
       // Note that deleting elements doesn't affect array length.
@@ -508,6 +510,7 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
               filter(objHandle, tmpHandle) == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
+      marker.flush();
     }
   } else if (auto scopedObject = Handle<JSObject>::dyn_vmcast(valHandle)) {
     auto cr = JSObject::getOwnPropertyNames(scopedObject, runtime_, true);
@@ -515,12 +518,14 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
       return ExecutionStatus::EXCEPTION;
     }
     auto keys = *cr;
+    GCScopeMarkerRAII marker(runtime_);
     for (uint32_t index = 0, e = keys->getEndIndex(); index < e; ++index) {
       tmpHandle = keys->at(runtime_, index);
       if (LLVM_UNLIKELY(
               filter(scopedObject, tmpHandle) == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
+      marker.flush();
     }
   }
   // We have delayed converting the property to a string if it was index.
@@ -533,7 +538,8 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
   tmpHandle = strRes->getHermesValue();
 
   return Callable::executeCall2(
-      reviver_, runtime_, holder, *tmpHandle, *valHandle);
+             reviver_, runtime_, holder, *tmpHandle, *valHandle)
+      .toCallResultHermesValue();
 }
 
 ExecutionStatus RuntimeJSONParser::filter(Handle<JSObject> val, Handle<> key) {
@@ -574,7 +580,7 @@ CallResult<HermesValue> runtimeJSONParse(
     ref = jsonString->getStringRef<char16_t>();
   } else {
     StringPrimitive::createStringView(runtime, jsonString)
-        .copyUTF16String(storage);
+        .appendUTF16String(storage);
     ref = storage;
   }
 
@@ -636,13 +642,14 @@ ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto v = *propRes;
+    PseudoHandle<> v = std::move(*propRes);
     // Convert v to string and store into item, if v is string, number, JSString
     // or JSNumber.
-    if (v.isString()) {
-      tmpHandle_ = v;
-    } else if (v.isNumber() || vmisa<JSNumber>(v) || vmisa<JSString>(v)) {
-      tmpHandle_ = v;
+    if (v->isString()) {
+      tmpHandle_ = std::move(v);
+    } else if (
+        v->isNumber() || vmisa<JSNumber>(v.get()) || vmisa<JSString>(v.get())) {
+      tmpHandle_ = std::move(v);
       auto strRes = toString_RJS(runtime_, tmpHandle_);
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
@@ -697,7 +704,7 @@ ExecutionStatus JSONStringifyer::initializeSpace(Handle<> space) {
         static_cast<int>(std::max(0.0, std::min(10.0, intRes->getNumber())));
     if (spaceCount > 0) {
       // Construct a string with spaceCount spaces.
-      llvm::SmallString<32> spaces;
+      llvh::SmallString<32> spaces;
       for (int i = 0; i < spaceCount; ++i) {
         spaces.push_back(' ');
       }
@@ -732,7 +739,7 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  operationStrValue_.set(*propRes);
+  operationStrValue_.set(propRes->get());
 
   if (auto valueObj = Handle<JSObject>::dyn_vmcast(operationStrValue_)) {
     // Str.2.
@@ -746,8 +753,8 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
       return ExecutionStatus::EXCEPTION;
     }
     // Str.2.b: check if toJSON is a Callable.
-    if (auto toJSON =
-            Handle<Callable>::dyn_vmcast(runtime_->makeHandle(*propRes))) {
+    if (auto toJSON = Handle<Callable>::dyn_vmcast(
+            runtime_->makeHandle(std::move(*propRes)))) {
       if (!tmpHandle_->isString()) {
         // Lazily convert key to a string.
         auto status = toString_RJS(runtime_, tmpHandle_);
@@ -762,7 +769,7 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
       if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      operationStrValue_ = *callRes;
+      operationStrValue_ = std::move(*callRes);
     }
   }
 
@@ -788,7 +795,7 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
     if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    operationStrValue_ = *callRes;
+    operationStrValue_ = std::move(*callRes);
   }
 
   // Str.4: unbox value if necessary.
@@ -941,19 +948,6 @@ ExecutionStatus JSONStringifyer::operationJA() {
   return ExecutionStatus::RETURNED;
 }
 
-static ExecutionStatus propStoragePushBack(
-    MutableHandle<PropStorage> &self,
-    Runtime *runtime,
-    Handle<> value) {
-  if (LLVM_UNLIKELY(
-          PropStorage::resize(self, runtime, self->size() + 1) ==
-          ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  self->at(self->size() - 1).set(value.get(), &runtime->getHeap());
-  return ExecutionStatus::RETURNED;
-}
-
 ExecutionStatus JSONStringifyer::operationJO() {
   GCScopeMarkerRAII marker{runtime_};
 
@@ -1046,7 +1040,7 @@ ExecutionStatus JSONStringifyer::operationJO() {
         vmcast<JSObject>(stackValue_->at(stackValue_->size() - 1));
 
     tmpHandle2_ = operationJOK_.getHermesValue();
-    if (propStoragePushBack(stackJO_, runtime_, tmpHandle2_) ==
+    if (PropStorage::push_back(stackJO_, runtime_, tmpHandle2_) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1055,9 +1049,7 @@ ExecutionStatus JSONStringifyer::operationJO() {
     marker.flush();
     auto result = operationStr(*tmpHandle_);
 
-    operationJOK_ = vmcast<JSArray>(stackJO_->at(stackJO_->size() - 1));
-    assert(stackJO_->size() && "Cannot pop from an empty stack");
-    stackJO_->pop_back();
+    operationJOK_ = vmcast<JSArray>(stackJO_->pop_back(runtime_));
 
     if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1103,7 +1095,7 @@ CallResult<bool> JSONStringifyer::pushValueToStack(HermesValue value) {
   }
 
   tmpHandle_ = value;
-  if (propStoragePushBack(stackValue_, runtime_, tmpHandle_) ==
+  if (PropStorage::push_back(stackValue_, runtime_, tmpHandle_) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1112,7 +1104,7 @@ CallResult<bool> JSONStringifyer::pushValueToStack(HermesValue value) {
 
 void JSONStringifyer::popValueFromStack() {
   assert(stackValue_->size() && "Cannot pop from an empty stack");
-  stackValue_->pop_back();
+  stackValue_->pop_back(runtime_);
 }
 
 void JSONStringifyer::appendToOutput(SymbolID identifierID) {
@@ -1120,7 +1112,7 @@ void JSONStringifyer::appendToOutput(SymbolID identifierID) {
 }
 
 void JSONStringifyer::appendToOutput(const StringPrimitive *str) {
-  str->copyUTF16String(output_);
+  str->appendUTF16String(output_);
 }
 
 CallResult<HermesValue> JSONStringifyer::stringify(Handle<> value) {

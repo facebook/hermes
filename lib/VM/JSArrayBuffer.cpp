@@ -9,7 +9,7 @@
 
 #include "hermes/VM/BuildMetadata.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 #define DEBUG_TYPE "serialize"
 
 namespace hermes {
@@ -216,17 +216,12 @@ void JSArrayBuffer::_snapshotAddNodesImpl(
   }
   // Add the native node before the JSArrayBuffer node.
   snap.beginNode();
-  auto &allocationLocationTracker = gc->getAllocationLocationTracker();
   snap.endNode(
       HeapSnapshot::NodeType::Native,
       "JSArrayBufferData",
       gc->getNativeID(self->data_),
       self->size_,
-      allocationLocationTracker.isEnabled()
-          ? allocationLocationTracker
-                .getStackTracesTreeNodeForAlloc(self->data_)
-                ->id
-          : 0);
+      0);
 }
 
 void JSArrayBuffer::detach(GC *gc) {

@@ -8,7 +8,8 @@
 #ifndef HERMES_BCGEN_HBC_BYTECODESTREAM_H
 #define HERMES_BCGEN_HBC_BYTECODESTREAM_H
 
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/SHA1.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include "hermes/BCGen/Exceptions.h"
 #include "hermes/BCGen/HBC/Bytecode.h"
@@ -19,15 +20,15 @@
 #include "hermes/Support/SHA1.h"
 #include "hermes/Utils/Options.h"
 
-namespace llvm {
+namespace llvh {
 class raw_ostream;
-} // namespace llvm
+} // namespace llvh
 
 namespace hermes {
 struct RegExpTableEntry;
 namespace hbc {
-using llvm::ArrayRef;
-using llvm::raw_ostream;
+using llvh::ArrayRef;
+using llvh::raw_ostream;
 
 class BytecodeFunction;
 class BytecodeModule;
@@ -52,6 +53,8 @@ class BytecodeSerializer {
   uint32_t debugInfoOffset_{0};
   /// Count of overflow string entries, computed during layout phase.
   uint32_t overflowStringEntryCount_{0};
+  /// Hash of everything written in non-layout mode so far.
+  llvh::SHA1 outputHasher_;
 
   /// Each subsection of a function's `info' section is aligned thusly.
   static constexpr uint32_t INFO_ALIGNMENT = 4;
@@ -60,6 +63,8 @@ class BytecodeSerializer {
   void writeBinaryArray(const ArrayRef<T> array) {
     size_t size = sizeof(T) * array.size();
     if (!isLayout_) {
+      outputHasher_.update(llvh::ArrayRef<uint8_t>(
+          reinterpret_cast<const uint8_t *>(array.data()), size));
       os_.write(reinterpret_cast<const char *>(array.data()), size);
     }
     loc_ += size;

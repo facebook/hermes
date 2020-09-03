@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/Regex/Compiler.h"
+#include "hermes/Regex/Regex.h"
 #include "hermes/Regex/Executor.h"
 #include "hermes/Regex/RegexTraits.h"
 
@@ -346,7 +346,7 @@ TEST(Regex, FromLibCXX) {
     std::ptrdiff_t sr = std::char_traits<char16_t>::length(r);
     using FI = const char16_t *;
     using BI = const char16_t *;
-    cregex regex(FI(r), FI(r + sr));
+    cregex regex(llvh::ArrayRef<char16_t>(FI(r), FI(r + sr)));
     cmatch m;
     const char16_t s[] = u"-40C";
     std::ptrdiff_t ss = std::char_traits<char16_t>::length(s);
@@ -635,7 +635,7 @@ TEST(Regex, FromLibCXX) {
     std::ptrdiff_t sr = std::char_traits<char16_t>::length(r);
     using FI = const char16_t *;
     using BI = const char16_t *;
-    cregex regex(FI(r), FI(r + sr));
+    cregex regex(llvh::ArrayRef<char16_t>(FI(r), FI(r + sr)));
     cmatch m;
     const char16_t s[] = u"-40C";
     std::ptrdiff_t ss = std::char_traits<char16_t>::length(s);
@@ -662,8 +662,10 @@ TEST(Regex, FromLibCXX) {
   }
 }
 
-static constants::ErrorType error_for(const char16_t *pattern) {
-  return cregex(pattern).getError();
+static constants::ErrorType error_for(
+    const char16_t *pattern,
+    const char16_t *flags = u"") {
+  return cregex(pattern, flags).getError();
 };
 
 TEST(Regex, Invalid) {
@@ -685,12 +687,16 @@ TEST(Regex, Invalid) {
   EXPECT_EQ(error_for(u"(+)"), ErrorType::InvalidRepeat);
   EXPECT_EQ(error_for(u"({1})"), ErrorType::InvalidRepeat);
   EXPECT_EQ(error_for(u"(?)"), ErrorType::InvalidRepeat);
+  EXPECT_EQ(error_for(u"abc", u"a"), ErrorType::InvalidFlags);
+  EXPECT_EQ(error_for(u"abc", u"gg"), ErrorType::InvalidFlags);
 }
 
 TEST(Regex, InvalidFromLibCXX) {
   using namespace constants;
   const char16_t *pat1 = u"a(b)c\\1234";
-  EXPECT_EQ(cregex(pat1, pat1 + 7).getError(), ErrorType::None);
+  EXPECT_EQ(
+      cregex(llvh::ArrayRef<char16_t>(pat1, pat1 + 7)).getError(),
+      ErrorType::None);
 
   EXPECT_EQ(error_for(u"[\\a]"), ErrorType::None);
   EXPECT_EQ(error_for(u"\\a"), ErrorType::None);
@@ -730,14 +736,14 @@ TEST(RegExp, RangeChecks) {
 
 static bool regexIsAnchored(
     const char16_t *pattern,
-    constants::SyntaxFlags flags = {}) {
+    const char16_t *flags = u"") {
   return cregex(pattern, flags).matchConstraints() &
       MatchConstraintAnchoredAtStart;
 }
 
 static bool regexIsNonASCII(
     const char16_t *pattern,
-    constants::SyntaxFlags flags = {}) {
+    const char16_t *flags = u"") {
   return cregex(pattern, flags).matchConstraints() & MatchConstraintNonASCII;
 }
 
@@ -755,8 +761,8 @@ TEST(Regex, LineStartAnchoring) {
   EXPECT_FALSE(regexIsAnchored(u"abc"));
   EXPECT_FALSE(regexIsAnchored(u"abc|^def"));
   EXPECT_FALSE(regexIsAnchored(u"abc^|^def|\\w"));
-  EXPECT_FALSE(regexIsAnchored(u"abc^", constants::multiline));
-  EXPECT_FALSE(regexIsAnchored(u"abc", constants::multiline));
+  EXPECT_FALSE(regexIsAnchored(u"abc^", u"m"));
+  EXPECT_FALSE(regexIsAnchored(u"abc", u"m"));
 }
 
 TEST(Regex, NonASCII) {

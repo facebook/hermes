@@ -10,9 +10,8 @@
 
 #include "hermes/Support/OptValue.h"
 
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/MathExtras.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/Support/MathExtras.h"
 
 #include <cstdint>
 
@@ -98,7 +97,7 @@ template <typename IT>
 OptValue<uint32_t> toArrayIndex(IT first, IT last) {
   /// Empty string is invalid.
   if (first == last)
-    return llvm::None;
+    return llvh::None;
 
   // Leading 0 is special.
   if (*first == '0') {
@@ -107,30 +106,30 @@ OptValue<uint32_t> toArrayIndex(IT first, IT last) {
     if (first == last)
       return 0;
     // Leading 0 is invalid otherwise.
-    return llvm::None;
+    return llvh::None;
   }
 
   uint32_t res = 0;
   do {
     auto ch = *first;
     if (ch < '0' || ch > '9')
-      return llvm::None;
+      return llvh::None;
     uint64_t tmp = (uint64_t)res * 10 + (ch - '0');
     // Check for overflow.
     if (tmp & ((uint64_t)0xFFFFFFFFu << 32))
-      return llvm::None;
+      return llvh::None;
     res = (uint32_t)tmp;
   } while (++first != last);
 
   // 0xFFFFFFFF is not a valid array index.
   if (res == 0xFFFFFFFFu)
-    return llvm::None;
+    return llvh::None;
 
   return res;
 }
 
 /// A convenient wrapper around 'toArrayIndex(first,last)'.
-inline OptValue<uint32_t> toArrayIndex(llvm::StringRef str) {
+inline OptValue<uint32_t> toArrayIndex(llvh::StringRef str) {
   return toArrayIndex(str.begin(), str.end());
 }
 
@@ -141,7 +140,7 @@ inline OptValue<uint32_t> doubleToArrayIndex(double d) {
   uint32_t index = (uint32_t)d;
   if (index == d && index != 0xFFFFFFFFu)
     return index;
-  return llvm::None;
+  return llvh::None;
 }
 
 /// Size of buffer that must be passed to numberToString.
@@ -161,29 +160,46 @@ inline char charLetterToLower(char ch) {
 
 /// Takes a non-empty string (without the leading "0x" if hex) and parses it
 /// as radix \p radix.
+/// \param AllowNumericSeparator when true, allow '_' as a separator and ignore
+///    it when parsing.
 /// \returns the double that results on success, empty on error.
-template <class Iterable>
+template <bool AllowNumericSeparator, class Iterable>
 OptValue<double> parseIntWithRadix(Iterable str, int radix) {
   assert(
       radix >= 2 && radix <= 36 && "Invalid radix passed to parseIntWithRadix");
 
   assert(str.begin() != str.end() && "Empty string");
   double result = 0;
-  for (auto c : str) {
+  for (auto it = str.begin(); it != str.end(); ++it) {
+    char c = *it;
     auto cLow = charLetterToLower(c);
-    result *= radix;
     if ('0' <= c && c <= '9' && c < '0' + radix) {
+      result *= radix;
       result += c - '0';
     } else if ('a' <= cLow && cLow < 'a' + radix - 10) {
+      result *= radix;
       result += cLow - 'a' + 0xa;
+    } else if (AllowNumericSeparator && LLVM_UNLIKELY(c == '_')) {
+      // Ensure the '_' is in a valid location.
+      // It can only be between two existing digits.
+      if (it == str.begin() || it == str.end() - 1) {
+        return llvh::None;
+      }
+      // Note that the previous character must not be '_' if the current
+      // character is '_', because we would have returned None.
+      // So just check if the next character is '_'.
+      char next = *(it + 1);
+      if (next == '_') {
+        return llvh::None;
+      }
     } else {
-      return llvm::None;
+      return llvh::None;
     }
   }
 
   // The largest value that fits in the 53-bit mantissa (2**53).
   const double MAX_MANTISSA = 9007199254740992.0;
-  if (result >= MAX_MANTISSA && llvm::isPowerOf2_32(radix)) {
+  if (result >= MAX_MANTISSA && llvh::isPowerOf2_32(radix)) {
     // If the result is too high, manually reconstruct the double if
     // the radix is 2, 4, 8, 16, 32.
     // Go through the digits bit by bit, and manually round when necessary.
@@ -215,6 +231,10 @@ OptValue<double> parseIntWithRadix(Iterable str, int radix) {
           break;
         }
         auto c = *itr;
+        if (AllowNumericSeparator && LLVM_UNLIKELY(c == '_')) {
+          ++itr;
+          continue;
+        }
         auto cLow = charLetterToLower(c);
         if ('0' <= c && c <= '9') {
           curDigit = c - '0';

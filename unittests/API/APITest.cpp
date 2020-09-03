@@ -6,6 +6,7 @@
  */
 
 #include <gtest/gtest.h>
+#include <hermes/BCGen/HBC/BytecodeFileFormat.h>
 #include <hermes/CompileJS.h>
 #include <hermes/hermes.h>
 
@@ -117,6 +118,8 @@ TEST_F(HermesRuntimeTest, BytecodeTest) {
   rt->evaluateJavaScript(
       std::unique_ptr<StringBuffer>(new StringBuffer(bytecode)), "");
   EXPECT_EQ(rt->global().getProperty(*rt, "x").getNumber(), 1);
+
+  EXPECT_EQ(HermesRuntime::getBytecodeVersion(), hermes::hbc::BYTECODE_VERSION);
 }
 
 TEST_F(HermesRuntimeTest, PreparedJavaScriptBytecodeTest) {
@@ -141,6 +144,22 @@ TEST_F(HermesRuntimeTest, PreparedJavaScriptInvalidSourceThrows) {
     caught = true;
   }
   EXPECT_TRUE(caught) << "prepareJavaScript should have thrown an exception";
+}
+
+TEST_F(HermesRuntimeTest, PreparedJavaScriptInvalidSourceBufferPrefix) {
+  // Construct a 0-terminated buffer that represents an invalid UTF-8 source.
+  char badSource[32];
+  memset((void *)badSource, '\xFE', sizeof(badSource));
+  badSource[31] = 0;
+  std::string prefix = "fefefefefefefefefefefefefefefefe";
+  std::string errMsg;
+  try {
+    rt->prepareJavaScript(std::make_unique<StringBuffer>(badSource), "");
+  } catch (const facebook::jsi::JSIException &err) {
+    errMsg = err.what();
+  }
+  // The error msg should include the prefix of buffer in expected formatting.
+  EXPECT_TRUE(errMsg.find(prefix) != std::string::npos);
 }
 
 TEST_F(HermesRuntimeTest, NoCorruptionOnJSError) {

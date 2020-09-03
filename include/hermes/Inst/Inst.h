@@ -8,7 +8,7 @@
 #ifndef HERMES_INST_INST_H
 #define HERMES_INST_INST_H
 
-#include "llvm/ADT/StringRef.h"
+#include "llvh/ADT/StringRef.h"
 
 namespace hermes {
 namespace inst {

@@ -8,7 +8,7 @@
 #ifndef HERMES_ADT_OWNINGARRAY_H
 #define HERMES_ADT_OWNINGARRAY_H
 
-#include "llvm/ADT/ArrayRef.h"
+#include "llvh/ADT/ArrayRef.h"
 
 namespace hermes {
 
@@ -16,9 +16,9 @@ namespace hermes {
 /// This is needed to provide a correct move constructor, due to a bug in
 /// LLVM's \c OwningArrayRef move constructor.
 template <typename T>
-class OwningArray : public llvm::OwningArrayRef<T> {
+class OwningArray : public llvh::OwningArrayRef<T> {
  public:
-  using llvm::OwningArrayRef<T>::OwningArrayRef;
+  using llvh::OwningArrayRef<T>::OwningArrayRef;
   /// Default constructors cannot be inherited with "using".
   OwningArray() = default;
   /// NOTE: this fixes a bug in llvm's OwningArrayRef move constructor, which
@@ -27,7 +27,7 @@ class OwningArray : public llvm::OwningArrayRef<T> {
     *this = std::move(Other);
   }
   OwningArray &operator=(OwningArray &&Other) {
-    llvm::OwningArrayRef<T>::operator=(std::move(Other));
+    llvh::OwningArrayRef<T>::operator=(std::move(Other));
     return *this;
   }
 };

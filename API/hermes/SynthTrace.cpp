@@ -17,9 +17,9 @@
 #include "hermes/VM/MockedEnvironment.h"
 #include "hermes/VM/StringPrimitive.h"
 
-#include "llvm/Support/Endian.h"
-#include "llvm/Support/NativeFormatting.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/Endian.h"
+#include "llvh/Support/NativeFormatting.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <cmath>
 
@@ -39,8 +39,8 @@ double decodeNumber(const std::string &numberAsString) {
   // Assume the original platform and the current platform are both little
   // endian for simplicity.
   static_assert(
-      llvm::support::endian::system_endianness() ==
-          llvm::support::endianness::little,
+      llvh::support::endian::system_endianness() ==
+          llvh::support::endianness::little,
       "Only little-endian decoding allowed");
   assert(
       numberAsString.substr(0, 2) == std::string("0x") && "Invalid hex number");
@@ -57,15 +57,15 @@ std::string doublePrinter(double x) {
   // NOTE: While this could use big-endian, it makes it more complicated for
   // JS to read out (forces use of a DataView rather than a Float64Array)
   static_assert(
-      llvm::support::endian::system_endianness() ==
-          llvm::support::endianness::little,
+      llvh::support::endian::system_endianness() ==
+          llvh::support::endianness::little,
       "Only little-endian encoding allowed");
   std::string result;
-  llvm::raw_string_ostream resultStream{result};
-  llvm::write_hex(
+  llvh::raw_string_ostream resultStream{result};
+  llvh::write_hex(
       resultStream,
       ::hermes::safeTypeCast<double, uint64_t>(x),
-      llvm::HexPrintStyle::PrefixLower,
+      llvh::HexPrintStyle::PrefixLower,
       16);
   resultStream.flush();
   return result;
@@ -95,7 +95,7 @@ bool SynthTrace::TraceValue::operator==(const TraceValue &that) const {
 SynthTrace::SynthTrace(
     ObjectID globalObjID,
     const ::hermes::vm::RuntimeConfig &conf,
-    std::unique_ptr<llvm::raw_ostream> traceStream)
+    std::unique_ptr<llvh::raw_ostream> traceStream)
     : traceStream_(std::move(traceStream)), globalObjID_(globalObjID) {
   if (traceStream_) {
     json_ = std::make_unique<JSONEmitter>(*traceStream_, /*pretty*/ true);
@@ -475,7 +475,7 @@ bool SynthTrace::GetNativePropertyNamesReturnRecord::operator==(
 
 void SynthTrace::Record::toJSONInternal(JSONEmitter &json) const {
   std::string storage;
-  llvm::raw_string_ostream os{storage};
+  llvh::raw_string_ostream os{storage};
   os << getType() << "Record";
   os.flush();
 
@@ -501,7 +501,7 @@ void SynthTrace::CreateStringRecord::toJSONInternal(JSONEmitter &json) const {
   Record::toJSONInternal(json);
   json.emitKeyValue("objID", objID_);
   json.emitKeyValue("encoding", encodingName(ascii_));
-  json.emitKeyValue("chars", llvm::StringRef(chars_.data(), chars_.size()));
+  json.emitKeyValue("chars", llvh::StringRef(chars_.data(), chars_.size()));
 }
 
 void SynthTrace::CreatePropNameIDRecord::toJSONInternal(
@@ -509,7 +509,7 @@ void SynthTrace::CreatePropNameIDRecord::toJSONInternal(
   Record::toJSONInternal(json);
   json.emitKeyValue("objID", propNameID_);
   json.emitKeyValue("encoding", encodingName(ascii_));
-  json.emitKeyValue("chars", llvm::StringRef(chars_.data(), chars_.size()));
+  json.emitKeyValue("chars", llvh::StringRef(chars_.data(), chars_.size()));
 }
 
 void SynthTrace::CreateHostFunctionRecord::toJSONInternal(
@@ -755,8 +755,8 @@ void SynthTrace::flushAndDisable(
   traceStream_.reset();
 }
 
-llvm::raw_ostream &operator<<(
-    llvm::raw_ostream &os,
+llvh::raw_ostream &operator<<(
+    llvh::raw_ostream &os,
     SynthTrace::RecordType type) {
 #define CASE(t)                   \
   case SynthTrace::RecordType::t: \

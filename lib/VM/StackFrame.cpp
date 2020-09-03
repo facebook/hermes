@@ -7,18 +7,18 @@
 
 #include "hermes/VM/StackFrame.h"
 
-#include "llvm/Support/Format.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/Format.h"
+#include "llvh/Support/raw_ostream.h"
 
 namespace hermes {
 namespace vm {
 
 void dumpStackFrame(
     ConstStackFramePtr frame,
-    llvm::raw_ostream &OS,
+    llvh::raw_ostream &OS,
     const PinnedHermesValue *next) {
   auto format_ptr = [](const void *p) {
-    return llvm::format_hex((uintptr_t)p, 10);
+    return llvh::format_hex((uintptr_t)p, 10);
   };
 
   OS << "Frame @" << format_ptr(frame.ptr()) << "\n";
@@ -45,12 +45,12 @@ void dumpStackFrame(
 
 LLVM_ATTRIBUTE_NOINLINE
 void dumpStackFrame(ConstStackFramePtr frame) {
-  dumpStackFrame(frame, llvm::errs());
+  dumpStackFrame(frame, llvh::errs());
 }
 
 LLVM_ATTRIBUTE_NOINLINE
 void dumpStackFrame(StackFramePtr frame) {
-  dumpStackFrame(frame, llvm::errs());
+  dumpStackFrame(frame, llvh::errs());
 }
 
 } // namespace vm

@@ -10,7 +10,7 @@
 
 #include "hermes/VM/instrumentation/ApproxIntegral.h"
 
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <chrono>
 
@@ -37,7 +37,7 @@ class ProcessStats {
     int64_t VAkB;
 
     /// Output a JSON representation of the statistics to \p os.
-    void printJSON(llvm::raw_ostream &os);
+    void printJSON(llvh::raw_ostream &os);
   };
 
   /// Create a new instance of this class.  Measurements are taken relative to

@@ -26,6 +26,7 @@
     "win64-bin/icuuc64.dll",
     "win64-bin/msvcp140.dll",
     "win64-bin/vcruntime140.dll",
+    "win64-bin/vcruntime140_1.dll",
     "win64-bin/hbcdump.exe",
     "win64-bin/hdb.exe",
     "win64-bin/hermes.exe",

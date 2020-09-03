@@ -9,14 +9,14 @@
 
 #include "JSParserImpl.h"
 
-using llvm::cast;
-using llvm::dyn_cast;
-using llvm::isa;
+using llvh::cast;
+using llvh::dyn_cast;
+using llvh::isa;
 
 namespace hermes {
 namespace parser {
 
-JSParser::JSParser(Context &context, std::unique_ptr<llvm::MemoryBuffer> input)
+JSParser::JSParser(Context &context, std::unique_ptr<llvh::MemoryBuffer> input)
     : impl_(new detail::JSParserImpl(context, std::move(input))) {}
 
 JSParser::JSParser(Context &context, uint32_t bufferId, ParserPass pass)
@@ -40,7 +40,7 @@ bool JSParser::getUseStaticBuiltin() const {
   return impl_->getUseStaticBuiltin();
 }
 
-llvm::Optional<ESTree::ProgramNode *> JSParser::parse() {
+llvh::Optional<ESTree::ProgramNode *> JSParser::parse() {
   return impl_->parse();
 }
 
@@ -56,7 +56,7 @@ bool JSParser::preParseBuffer(
       context, bufferId, useStaticBuiltinDetected);
 }
 
-llvm::Optional<ESTree::NodePtr> JSParser::parseLazyFunction(
+llvh::Optional<ESTree::NodePtr> JSParser::parseLazyFunction(
     ESTree::NodeKind kind,
     SMLoc start) {
   return impl_->parseLazyFunction(kind, start);

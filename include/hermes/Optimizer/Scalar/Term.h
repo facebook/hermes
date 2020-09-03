@@ -11,9 +11,9 @@
 #include "hermes/IR/IR.h"
 #include "hermes/IR/Instrs.h"
 #include "hermes/Support/OSCompat.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvh/ADT/DenseSet.h"
 
-using llvm::isa;
+using llvh::isa;
 
 namespace hermes {
 
@@ -59,10 +59,10 @@ class Term {
   }
 
   /// The set of terms that flow in into this term.
-  llvm::DenseSet<Term *> ins_;
+  llvh::DenseSet<Term *> ins_;
 
   /// The set of terms to which this term flows into.
-  llvm::DenseSet<Term *> outs_;
+  llvh::DenseSet<Term *> outs_;
 #ifndef NDEBUG
   virtual std::string getPrintStr() = 0;
 #endif
@@ -190,11 +190,11 @@ class EscapeTerm : public Term {
 class ObjectTerm : public Term {
  public:
   /// The set of properties created at Object creation time.
-  llvm::DenseSet<Literal *> owns_;
+  llvh::DenseSet<Literal *> owns_;
 
   // We use ObjectTerm also for allocations using ConstructInst, and
   // in future, plan to use it for Arrays as well.
-  ObjectTerm(Instruction *ai, llvm::DenseSet<Literal *> &owns, unsigned id)
+  ObjectTerm(Instruction *ai, llvh::DenseSet<Literal *> &owns, unsigned id)
       : Term(ai, id), owns_(owns) {
     kind_ = TermKind::ObjectTermKind;
   }
@@ -244,7 +244,7 @@ class LoadPropertyTerm : public Term {
   std::string getPrintStr() {
     std::string part1("Load(");
     StringRef printProp;
-    if (llvm::isa<LiteralString>(prop_))
+    if (llvh::isa<LiteralString>(prop_))
       printProp = ((LiteralString *)prop_)->getValue().str();
     else
       printProp = prop_->getKindStr();
@@ -271,7 +271,7 @@ class StoreOwnPropertyTerm : public Term {
   std::string getPrintStr() {
     std::string part1("StoreOwn(");
     StringRef printProp;
-    if (llvm::isa<LiteralString>(prop_))
+    if (llvh::isa<LiteralString>(prop_))
       printProp = ((LiteralString *)prop_)->getValue().str();
     else
       printProp = prop_->getKindStr();
@@ -298,7 +298,7 @@ class StorePropertyTerm : public Term {
   std::string getPrintStr() {
     std::string part1("Store(");
     StringRef tmp;
-    if (llvm::isa<LiteralString>(prop_))
+    if (llvh::isa<LiteralString>(prop_))
       tmp = ((LiteralString *)prop_)->getValue().str();
     else
       tmp = prop_->getKindStr();
@@ -327,7 +327,7 @@ class PropertyTerm : public Term {
   std::string getPrintStr() {
     std::string part1("Prop(");
     StringRef tmp;
-    if (llvm::isa<LiteralString>(prop_))
+    if (llvh::isa<LiteralString>(prop_))
       tmp = ((LiteralString *)prop_)->getValue().str();
     else
       tmp = prop_->getKindStr();

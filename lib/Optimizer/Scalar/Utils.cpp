@@ -14,7 +14,7 @@
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/Instrs.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 
 using namespace hermes;
 
@@ -22,10 +22,10 @@ Value *hermes::isStoreOnceVariable(Variable *V) {
   Value *res = nullptr;
 
   for (auto *U : V->getUsers()) {
-    if (llvm::isa<LoadFrameInst>(U)) {
+    if (llvh::isa<LoadFrameInst>(U)) {
       continue;
     }
-    if (auto *SF = llvm::dyn_cast<StoreFrameInst>(U)) {
+    if (auto *SF = llvh::dyn_cast<StoreFrameInst>(U)) {
       auto *val = SF->getValue();
 
       // We found a stored value. Make sure that there is only one stored value.
@@ -46,10 +46,10 @@ Value *hermes::isStoreOnceStackLocation(AllocStackInst *AS) {
   Value *res = nullptr;
 
   for (auto *U : AS->getUsers()) {
-    if (llvm::isa<LoadStackInst>(U)) {
+    if (llvh::isa<LoadStackInst>(U)) {
       continue;
     }
-    if (auto *SS = llvm::dyn_cast<StoreStackInst>(U)) {
+    if (auto *SS = llvh::dyn_cast<StoreStackInst>(U)) {
       // Theoretically someone might try storing a stack address in another
       // stack location. That is not allowed, but we might as well be correct
       // here.
@@ -74,18 +74,18 @@ Value *hermes::isStoreOnceStackLocation(AllocStackInst *AS) {
 
 Function *hermes::getCallee(Value *callee) {
   // This is a direct call.
-  if (auto *F = llvm::dyn_cast<Function>(callee)) {
+  if (auto *F = llvh::dyn_cast<Function>(callee)) {
     return F;
   }
 
   // This is a direct use of a closure.
-  if (auto *CFI = llvm::dyn_cast<CreateFunctionInst>(callee)) {
+  if (auto *CFI = llvh::dyn_cast<CreateFunctionInst>(callee)) {
     return CFI->getFunctionCode();
   }
 
   // If we load from a frame variable, check if this is a non-global store-only
   // variable.
-  if (auto *LFI = llvm::dyn_cast<LoadFrameInst>(callee)) {
+  if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(callee)) {
     auto *V = LFI->getLoadVariable();
 
     if (Value *singleValue = isStoreOnceVariable(V))
@@ -110,20 +110,20 @@ bool hermes::isDirectCallee(Value *C, CallInst *CI) {
 
 bool hermes::getCallSites(
     Function *F,
-    llvm::SmallVectorImpl<CallInst *> &callsites) {
+    llvh::SmallVectorImpl<CallInst *> &callsites) {
   for (auto *CU : F->getUsers()) {
     auto *CFI = cast<CreateFunctionInst>(CU);
 
     // Collect direct calls.
     for (auto *U : CFI->getUsers()) {
-      auto *CI = llvm::dyn_cast<CallInst>(U);
+      auto *CI = llvh::dyn_cast<CallInst>(U);
       if (CI && isDirectCallee(CFI, CI)) {
         callsites.push_back(CI);
         continue;
       }
 
       // Check if the variable is stored somewhere.
-      auto *SFI = llvm::dyn_cast<StoreFrameInst>(U);
+      auto *SFI = llvh::dyn_cast<StoreFrameInst>(U);
       if (!SFI)
         return false;
 
@@ -134,12 +134,12 @@ bool hermes::getCallSites(
         return false;
 
       for (auto *VU : V->getUsers()) {
-        if (auto *LFI = llvm::dyn_cast<LoadFrameInst>(VU)) {
+        if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(VU)) {
           if (!LFI->hasOneUser())
             return false;
 
           Value *loadUser = LFI->getUsers()[0];
-          if (auto *loadUserCI = llvm::dyn_cast<CallInst>(loadUser)) {
+          if (auto *loadUserCI = llvh::dyn_cast<CallInst>(loadUser)) {
             if (loadUserCI && isDirectCallee(LFI, loadUserCI)) {
               callsites.push_back(loadUserCI);
               continue;
@@ -161,7 +161,7 @@ bool hermes::deleteIncomingBlockFromPhis(
     BasicBlock *incoming) {
   bool changed = false;
   for (auto &I : *blockToModify) {
-    auto *phi = llvm::dyn_cast<PhiInst>(&I);
+    auto *phi = llvh::dyn_cast<PhiInst>(&I);
     if (!phi)
       break;
 
@@ -184,7 +184,7 @@ void hermes::splitCriticalEdge(
   // Special case: If the target block is Catch block, there's only one
   // possible arrow and we can't insert anything between them. Just
   // start writing after the Catch statement.
-  if (auto *tryStart = llvm::dyn_cast<TryStartInst>(from->getTerminator())) {
+  if (auto *tryStart = llvh::dyn_cast<TryStartInst>(from->getTerminator())) {
     if (tryStart->getCatchTarget() == to) {
       builder->setInsertionPointAfter(&to->front());
       return;
@@ -202,7 +202,7 @@ void hermes::splitCriticalEdge(
     if (terminator->getOperand(i) == to) {
       terminator->setOperand(newBlock, i);
       for (auto &I : *to) {
-        auto *phi = llvm::dyn_cast<PhiInst>(&I);
+        auto *phi = llvh::dyn_cast<PhiInst>(&I);
         if (!phi)
           break;
         for (int j = 0, f = phi->getNumEntries(); j < f; j++) {

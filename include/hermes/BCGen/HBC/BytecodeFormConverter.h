@@ -10,7 +10,7 @@
 
 #include <string>
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
-#include "llvm/ADT/ArrayRef.h"
+#include "llvh/ADT/ArrayRef.h"
 
 namespace hermes {
 namespace hbc {
@@ -19,7 +19,7 @@ namespace hbc {
 /// \return true if successful, false if the file could not be intepreted.
 /// On a false return, an error is returned in outError.
 bool convertBytecodeToForm(
-    llvm::MutableArrayRef<uint8_t> buffer,
+    llvh::MutableArrayRef<uint8_t> buffer,
     BytecodeForm targetForm,
     std::string *outError);
 

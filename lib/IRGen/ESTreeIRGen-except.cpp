@@ -7,7 +7,7 @@
 
 #include "ESTreeIRGen.h"
 
-#include "llvm/Support/SaveAndRestore.h"
+#include "llvh/Support/SaveAndRestore.h"
 
 namespace hermes {
 namespace irgen {
@@ -25,7 +25,7 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
       nullptr,
       // emitBody.
       [this, tryStmt]() {
-        llvm::Optional<SurroundingTry> thisTry;
+        llvh::Optional<SurroundingTry> thisTry;
 
         if (tryStmt->_finalizer) {
           thisTry.emplace(
@@ -57,7 +57,7 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
         // If we have a catch block.
         if (tryStmt->_handler) {
           auto *catchClauseNode =
-              llvm::dyn_cast<ESTree::CatchClauseNode>(tryStmt->_handler);
+              llvh::dyn_cast<ESTree::CatchClauseNode>(tryStmt->_handler);
 
           // Catch takes a exception variable, hence we need to create a new
           // scope for it.
@@ -95,7 +95,7 @@ CatchInst *ESTreeIRGen::prepareCatch(ESTree::NodePtr catchParam) {
     return catchInst;
   }
 
-  if (!llvm::isa<ESTree::IdentifierNode>(catchParam)) {
+  if (!llvh::isa<ESTree::IdentifierNode>(catchParam)) {
     Builder.getModule()->getContext().getSourceErrorManager().error(
         catchParam->getSourceRange(),
         Twine("Destructuring in catch parameters is currently unsupported"));
@@ -157,7 +157,7 @@ void ESTreeIRGen::genFinallyBeforeControlChange(
 
     if (sourceTry->genFinalizer) {
       // Recreate the state of the try stack on entrance to the finally block.
-      llvm::SaveAndRestore<SurroundingTry *> sr{curFunction()->surroundingTry,
+      llvh::SaveAndRestore<SurroundingTry *> sr{curFunction()->surroundingTry,
                                                 sourceTry->outer};
       sourceTry->genFinalizer(sourceTry->node, cfc, continueTarget);
     }

@@ -8,7 +8,7 @@
 #ifndef HERMES_SUPPORT_ERRORHANDLING_H
 #define HERMES_SUPPORT_ERRORHANDLING_H
 
-#include "llvm/Support/ErrorHandling.h"
+#include "llvh/Support/ErrorHandling.h"
 
 #include <cstdlib>
 #include <system_error>

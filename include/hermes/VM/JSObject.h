@@ -415,7 +415,7 @@ class JSObject : public GCCell {
   /// direct property slots.
   /// \return a copy of self for convenience.
   template <typename T>
-  static inline T *initDirectPropStorage(T *self);
+  static inline T *initDirectPropStorage(Runtime *runtime, T *self);
 
   /// ES9 9.1 O.[[Extensible]] internal slot
   bool isExtensible() const {
@@ -629,7 +629,7 @@ class JSObject : public GCCell {
   /// \param propObj the object where the property was found (it could be
   ///   anywhere along the prototype chain).
   /// \param desc the property descriptor.
-  static CallResult<HermesValue> getNamedPropertyValue_RJS(
+  static CallResult<PseudoHandle<>> getNamedPropertyValue_RJS(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       Handle<JSObject> propObj,
@@ -663,7 +663,7 @@ class JSObject : public GCCell {
   /// \param propObj the object where the property was found (it could be
   ///   anywhere along the prototype chain).
   /// \param desc the property descriptor.
-  static CallResult<HermesValue> getComputedPropertyValue_RJS(
+  static CallResult<PseudoHandle<>> getComputedPropertyValue_RJS(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       Handle<JSObject> propObj,
@@ -676,7 +676,7 @@ class JSObject : public GCCell {
   /// trap.  If the has trap returns false, then this returns an empty
   /// HermesValue, otherwise, the get trap is called (also using \c
   /// nameValHandle) and its result is returned.
-  static CallResult<HermesValue> getComputedPropertyValue_RJS(
+  static CallResult<PseudoHandle<>> getComputedPropertyValue_RJS(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       Handle<JSObject> propObj,
@@ -697,7 +697,7 @@ class JSObject : public GCCell {
   /// implementation-dependent conditions are met, it can look up a property
   /// quickly and succeed. If it fails, the "slow path" - \c
   /// getOwnNamedDescriptor() must be used.
-  /// \return true or false if a definitive answer can be provided, llvm::None
+  /// \return true or false if a definitive answer can be provided, llvh::None
   /// if the result is unknown.
   static OptValue<bool> tryGetOwnNamedDescriptorFast(
       JSObject *self,
@@ -709,7 +709,7 @@ class JSObject : public GCCell {
   /// prototype chain.
   /// If the property cannot be found on this object or any of its prototypes,
   /// or if this object's HiddenClass has an uninitialized property map, returns
-  /// \p llvm::None.
+  /// \p llvh::None.
   static OptValue<HermesValue>
   tryGetNamedNoAlloc(JSObject *self, PointerBase *base, SymbolID name);
 
@@ -815,7 +815,7 @@ class JSObject : public GCCell {
   /// it is statically known that the SymbolID is not index-like.
   /// If \p cacheEntry is not null, and the result is suitable for use in a
   /// property cache, populate the cache.
-  static CallResult<HermesValue> getNamed_RJS(
+  static CallResult<PseudoHandle<>> getNamed_RJS(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       SymbolID name,
@@ -828,7 +828,7 @@ class JSObject : public GCCell {
   /// function call.  If a proxy trap is called, \c receiver is passed
   /// to the trap function.  Normally, \c receiver is the same as \c
   /// selfHandle, but it can be different when using \c Reflect.
-  static CallResult<HermesValue> getNamedWithReceiver_RJS(
+  static CallResult<PseudoHandle<>> getNamedWithReceiver_RJS(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       SymbolID name,
@@ -838,7 +838,7 @@ class JSObject : public GCCell {
 
   // getNamedOrIndexed accesses a property with a SymbolIDs which may be
   // index-like.
-  static CallResult<HermesValue> getNamedOrIndexed(
+  static CallResult<PseudoHandle<>> getNamedOrIndexed(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       SymbolID name,
@@ -846,14 +846,14 @@ class JSObject : public GCCell {
 
   /// getComputed accesses a property with an arbitrary object key, implementing
   /// ES5.1 8.12.3 in full generality.
-  static CallResult<HermesValue> getComputed_RJS(
+  static CallResult<PseudoHandle<>> getComputed_RJS(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       Handle<> nameValHandle);
 
   /// getComputed accesses a property with an arbitrary object key and
   /// receiver value.
-  static CallResult<HermesValue> getComputedWithReceiver_RJS(
+  static CallResult<PseudoHandle<>> getComputedWithReceiver_RJS(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       Handle<> nameValHandle,
@@ -1083,14 +1083,14 @@ class JSObject : public GCCell {
   /// flags.
   /// \p props is a list of SymbolIDs for properties that need to be
   /// updated. It should contain a subset of properties in the object, so
-  /// the SymbolIDs won't get freed by gc. It is optional; if it is llvm::None,
+  /// the SymbolIDs won't get freed by gc. It is optional; if it is llvh::None,
   /// update every property.
   static void updatePropertyFlagsWithoutTransitions(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       PropertyFlags flagsToClear,
       PropertyFlags flagsToSet,
-      OptValue<llvm::ArrayRef<SymbolID>> props);
+      OptValue<llvh::ArrayRef<SymbolID>> props);
 
   /// First call \p indexedCB, passing each indexed property's \c uint32_t
   /// index and \c ComputedPropertyDescriptor. Then call \p namedCB passing each
@@ -1407,7 +1407,7 @@ const GCHermesValue *JSObject::directProps() const {
 }
 
 constexpr size_t JSObject::directPropsOffset() {
-  return llvm::alignTo<alignof(GCHermesValue)>(sizeof(JSObject));
+  return llvh::alignTo<alignof(GCHermesValue)>(sizeof(JSObject));
 }
 
 constexpr size_t JSObject::cellSizeJSObject() {
@@ -1452,6 +1452,11 @@ class PropertyAccessor final : public GCCell {
 
   GCPointer<Callable> getter{};
   GCPointer<Callable> setter{};
+
+#if defined(HERMESVM_GC_HADES) && defined(HERMESVM_COMPRESSED_POINTERS)
+  // Unused padding just to meet the minimum allocation requirements from Hades.
+  int8_t _padding_[4];
+#endif
 
   static CallResult<HermesValue>
   create(Runtime *runtime, Handle<Callable> getter, Handle<Callable> setter);
@@ -1509,7 +1514,7 @@ class JSObjectAlloc {
     assert(JSObjectType::classof(obj) && "Mismatched CellKind");
 
     mem_ = nullptr;
-    return JSObjectType::initDirectPropStorage(obj);
+    return JSObjectType::initDirectPropStorage(runtime_, obj);
   }
 
   /// Runtime used for heap and handle allocation.
@@ -1583,16 +1588,17 @@ inline CallResult<PseudoHandle<JSObject>> JSObject::allocatePropStorage(
 }
 
 template <typename T>
-inline T *JSObject::initDirectPropStorage(T *self) {
+inline T *JSObject::initDirectPropStorage(Runtime *runtime, T *self) {
   constexpr auto count = numOverlapSlots<T>() + T::ANONYMOUS_PROPERTY_SLOTS +
       T::NAMED_PROPERTY_SLOTS;
   static_assert(
       count <= DIRECT_PROPERTY_SLOTS,
       "smallPropStorage size must fit in direct properties");
-  GCHermesValue::fill(
+  GCHermesValue::uninitialized_fill(
       self->directProps() + numOverlapSlots<T>(),
       self->directProps() + DIRECT_PROPERTY_SLOTS,
-      GCHermesValue());
+      GCHermesValue(),
+      &runtime->getHeap());
   return self;
 }
 
@@ -1687,7 +1693,7 @@ JSObject::tryGetNamedNoAlloc(JSObject *self, PointerBase *base, SymbolID name) {
   }
   // It wasn't found on any of the parents of this object, declare it
   // un-findable.
-  return llvm::None;
+  return llvh::None;
 }
 
 inline JSObject *JSObject::getNamedDescriptor(
@@ -1699,7 +1705,7 @@ inline JSObject *JSObject::getNamedDescriptor(
       selfHandle, runtime, name, PropertyFlags::invalid(), desc);
 }
 
-inline CallResult<HermesValue> JSObject::getNamed_RJS(
+inline CallResult<PseudoHandle<>> JSObject::getNamed_RJS(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     SymbolID name,
@@ -1709,7 +1715,7 @@ inline CallResult<HermesValue> JSObject::getNamed_RJS(
       selfHandle, runtime, name, selfHandle, opFlags, cacheEntry);
 }
 
-inline CallResult<HermesValue> JSObject::getComputed_RJS(
+inline CallResult<PseudoHandle<>> JSObject::getComputed_RJS(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     Handle<> nameValHandle) {

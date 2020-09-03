@@ -11,16 +11,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Process.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Config/llvm-config.h"
-#include "llvm/Config/config.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/Program.h"
+#include "llvh/Support/Process.h"
+#include "llvh/ADT/STLExtras.h"
+#include "llvh/ADT/StringExtras.h"
+#include "llvh/Config/llvm-config.h"
+#include "llvh/Config/config.h"
+#include "llvh/Support/FileSystem.h"
+#include "llvh/Support/Path.h"
+#include "llvh/Support/Program.h"
 
-using namespace llvm;
+using namespace llvh;
 using namespace sys;
 
 //===----------------------------------------------------------------------===//

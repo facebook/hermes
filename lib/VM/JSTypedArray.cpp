@@ -10,7 +10,7 @@
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/Callable.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 #define DEBUG_TYPE "serialize"
 
 namespace hermes {
@@ -83,7 +83,7 @@ OptValue<PropertyFlags> JSTypedArrayBase::_getOwnIndexedPropertyFlagsImpl(
   auto *self = vmcast<JSTypedArrayBase>(selfObj);
   // Check whether the index is within the storage.
   if (LLVM_UNLIKELY(index >= self->getLength())) {
-    return llvm::None;
+    return llvh::None;
   }
   PropertyFlags indexedElementFlags;
   indexedElementFlags.enumerable = 1;
@@ -363,7 +363,7 @@ CallResult<Handle<JSTypedArrayBase>> JSTypedArray<T, C>::_allocateSpeciesImpl(
   if (callRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto obj = runtime->makeHandle<JSObject>(*callRes);
+  auto obj = runtime->makeHandle<JSObject>(callRes->get());
   // validate that the constructed object is a TypedArray.
   if (JSTypedArrayBase::validateTypedArray(runtime, obj) ==
       ExecutionStatus::EXCEPTION) {

@@ -24,7 +24,7 @@
 ///
 /// An exponent of all 1-s (0x7ff) and a non-zero mantissa is used to encode
 /// NaN. So, as long as the top 12 bits are 0x7ff or 0xfff and the bottom 52
-/// bits are not 0, we can store any bit patterm in the bottom bits and it will
+/// bits are not 0, we can store any bit pattern in the bottom bits and it will
 /// be interpreted as NaN.
 ///
 /// This is what the "canonical quiet NaN" looks like:
@@ -85,13 +85,13 @@
 #include "hermes/VM/GCDecl.h"
 #include "hermes/VM/SymbolID.h"
 
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <cassert>
 #include <cmath>
 #include <cstdint>
 
-namespace llvm {
+namespace llvh {
 class raw_ostream;
 }
 
@@ -105,7 +105,7 @@ class PseudoHandle;
 template <typename T>
 class PseudoHandle;
 
-// Tags are defined as 17-bit values positioned at the high bits of a 64-bit
+// Tags are defined as 16-bit values positioned at the high bits of a 64-bit
 // word.
 
 using TagKind = uint32_t;
@@ -193,7 +193,7 @@ class HermesValue {
   }
 
   /// Dump the contents to stderr.
-  void dump(llvm::raw_ostream &stream = llvm::errs()) const;
+  void dump(llvh::raw_ostream &stream = llvh::errs()) const;
 
   inline TagKind getTag() const {
     return (TagKind)(raw_ >> kNumDataBits);
@@ -521,6 +521,14 @@ class PinnedHermesValue : public HermesValue {
 class GCHermesValue : public HermesValue {
  public:
   GCHermesValue() : HermesValue(HermesValue::encodeUndefinedValue()) {}
+  /// Initialize a GCHermesValue from another HV. Performs a write barrier.
+  template <typename NeedsBarriers = std::true_type>
+  GCHermesValue(HermesValue hv, GC *gc);
+  /// Initialize a GCHermesValue from a non-pointer HV. Might perform a write
+  /// barrier, depending on the GC.
+  /// NOTE: The last parameter is unused, but acts as an overload selector.
+  template <typename NeedsBarriers = std::true_type>
+  GCHermesValue(HermesValue hv, GC *gc, std::nullptr_t);
   GCHermesValue(const GCHermesValue &) = delete;
 
   /// The HermesValue \p hv may be an object pointer.  Assign the
@@ -530,19 +538,34 @@ class GCHermesValue : public HermesValue {
 
   /// The HermesValue \p hv must not be an object pointer.  Assign the
   /// value.
-  inline void setNonPtr(HermesValue hv);
+  /// Some GCs still need to do a write barrier though, so pass a GC parameter.
+  inline void setNonPtr(HermesValue hv, GC *gc);
 
-  /// Fills a region of GCHermesValues defined by [\p from, \p to) with the
+  /// Fills a region of GCHermesValues defined by [\p first, \p last) with the
   /// value \p fill.  If the fill value is an object pointer, must
   /// provide a non-null \p gc argument, to perform write barriers.
   template <typename InputIt>
   static inline void
-  fill(InputIt first, InputIt last, HermesValue fill, GC *gc = nullptr);
+  fill(InputIt first, InputIt last, HermesValue fill, GC *gc);
+
+  /// Same as \p fill except the range expressed by  [\p first, \p last) has not
+  /// been previously initialized. Cannot use this on previously initialized
+  /// memory, as it will use an incorrect write barrier.
+  template <typename InputIt>
+  static inline void
+  uninitialized_fill(InputIt first, InputIt last, HermesValue fill, GC *gc);
 
   /// Copies a range of values and performs a write barrier on each.
   template <typename InputIt, typename OutputIt>
   static inline OutputIt
   copy(InputIt first, InputIt last, OutputIt result, GC *gc);
+
+  /// Same as \p copy, but the range [result, result + (last - first)) has not
+  /// been previously initialized. Cannot use this on previously initialized
+  /// memory, as it will use an incorrect write barrier.
+  template <typename InputIt, typename OutputIt>
+  static inline OutputIt
+  uninitialized_copy(InputIt first, InputIt last, OutputIt result, GC *gc);
 
   /// Copies a range of values and performs a write barrier on each.
   template <typename InputIt, typename OutputIt>
@@ -556,7 +579,7 @@ class GCHermesValue : public HermesValue {
       PinnedHermesValue *result);
 };
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HermesValue hv);
+llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, HermesValue hv);
 
 /// SafeNumericEncoder can encode any numeric type into a numeric HermesValue,
 /// as well as safely encoding any possible untrusted floating-point values.

@@ -13,8 +13,8 @@
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSObject.h"
 
-#include "llvm/Support/Endian.h"
-#include "llvm/Support/SwapByteOrder.h"
+#include "llvh/Support/Endian.h"
+#include "llvh/Support/SwapByteOrder.h"
 
 namespace hermes {
 namespace vm {
@@ -131,10 +131,10 @@ T JSDataView::get(
       &result,
       buffer_.get(runtime)->getDataBlock() + offset_ + offset,
       sizeof(T));
-  return llvm::support::endian::byte_swap(
+  return llvh::support::endian::byte_swap(
       result,
-      littleEndian ? llvm::support::endianness::little
-                   : llvm::support::endianness::big);
+      littleEndian ? llvh::support::endianness::little
+                   : llvh::support::endianness::big);
 }
 
 template <typename T>
@@ -147,10 +147,10 @@ void JSDataView::set(
   assert(
       offset + sizeof(T) <= length_ &&
       "Trying to write past the end of the storage");
-  value = llvm::support::endian::byte_swap(
+  value = llvh::support::endian::byte_swap(
       value,
-      littleEndian ? llvm::support::endianness::little
-                   : llvm::support::endianness::big);
+      littleEndian ? llvh::support::endianness::little
+                   : llvh::support::endianness::big);
   memcpy(
       buffer_.get(runtime)->getDataBlock() + offset_ + offset,
       &value,

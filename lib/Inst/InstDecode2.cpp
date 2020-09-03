@@ -15,7 +15,7 @@
 namespace hermes {
 namespace inst {
 
-llvm::StringRef getOpCodeString(OpCode opCode) {
+llvh::StringRef getOpCodeString(OpCode opCode) {
   assert(opCode < OpCode::_last && "invalid OpCode");
 
   static const char *opCodeStrings[] = {

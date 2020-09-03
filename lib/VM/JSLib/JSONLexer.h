@@ -16,7 +16,7 @@
 #include "hermes/VM/StringView.h"
 #include "hermes/VM/TwineChar16.h"
 
-#include "llvm/ADT/Optional.h"
+#include "llvh/ADT/Optional.h"
 
 namespace hermes {
 namespace vm {
@@ -149,7 +149,7 @@ class JSONLexer {
   LLVM_NODISCARD ExecutionStatus scanWord(const char *word, JSONTokenKind kind);
 
   /// Parse a unicode code point and \return the char16 value.
-  /// On error, \return llvm::None.
+  /// On error, \return llvh::None.
   CallResult<char16_t> consumeUnicode();
 };
 

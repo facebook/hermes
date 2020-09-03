@@ -10,8 +10,8 @@
 
 #include "hermes/Public/GCConfig.h"
 
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/Support/CommandLine.h"
 
 #include <string>
 
@@ -21,8 +21,8 @@
 
 namespace cl {
 
-using llvm::cl::Option;
-using llvm::cl::parser;
+using llvh::cl::Option;
+using llvh::cl::parser;
 
 struct MemorySize {
   hermes::vm::gcheapsize_t bytes;
@@ -35,7 +35,7 @@ struct MemorySizeParser : public parser<MemorySize> {
   // parse - Return true on error.
   bool parse(
       cl::Option &O,
-      llvm::StringRef ArgName,
+      llvh::StringRef ArgName,
       const std::string &ArgValue,
       MemorySize &Val);
 };

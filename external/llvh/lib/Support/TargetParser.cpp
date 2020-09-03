@@ -12,14 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/ARMBuildAttributes.h"
-#include "llvm/Support/TargetParser.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Twine.h"
+#include "llvh/Support/ARMBuildAttributes.h"
+#include "llvh/Support/TargetParser.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/StringSwitch.h"
+#include "llvh/ADT/Twine.h"
 #include <cctype>
 
-using namespace llvm;
+using namespace llvh;
 using namespace ARM;
 using namespace AArch64;
 using namespace AMDGPU;
@@ -42,7 +42,7 @@ static const struct {
 } FPUNames[] = {
 #define ARM_FPU(NAME, KIND, VERSION, NEON_SUPPORT, RESTRICTION) \
   { NAME, sizeof(NAME) - 1, KIND, VERSION, NEON_SUPPORT, RESTRICTION },
-#include "llvm/Support/ARMTargetParser.def"
+#include "llvh/Support/ARMTargetParser.def"
 };
 
 // List of canonical arch names (use getArchSynonym).
@@ -77,14 +77,14 @@ ArchNames<ARM::ArchKind> ARCHNames[] = {
 #define ARM_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_FPU, ARCH_BASE_EXT)       \
   {NAME, sizeof(NAME) - 1, CPU_ATTR, sizeof(CPU_ATTR) - 1, SUB_ARCH,       \
    sizeof(SUB_ARCH) - 1, ARCH_FPU, ARCH_BASE_EXT, ARM::ArchKind::ID, ARCH_ATTR},
-#include "llvm/Support/ARMTargetParser.def"
+#include "llvh/Support/ARMTargetParser.def"
 };
 
 ArchNames<AArch64::ArchKind> AArch64ARCHNames[] = {
  #define AARCH64_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_FPU, ARCH_BASE_EXT)       \
    {NAME, sizeof(NAME) - 1, CPU_ATTR, sizeof(CPU_ATTR) - 1, SUB_ARCH,       \
     sizeof(SUB_ARCH) - 1, ARCH_FPU, ARCH_BASE_EXT, AArch64::ArchKind::ID, ARCH_ATTR},
- #include "llvm/Support/AArch64TargetParser.def"
+ #include "llvh/Support/AArch64TargetParser.def"
  };
 
 
@@ -101,11 +101,11 @@ static const struct {
 } ARCHExtNames[] = {
 #define ARM_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE) \
   { NAME, sizeof(NAME) - 1, ID, FEATURE, NEGFEATURE },
-#include "llvm/Support/ARMTargetParser.def"
+#include "llvh/Support/ARMTargetParser.def"
 },AArch64ARCHExtNames[] = {
 #define AARCH64_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE) \
   { NAME, sizeof(NAME) - 1, ID, FEATURE, NEGFEATURE },
-#include "llvm/Support/AArch64TargetParser.def"
+#include "llvh/Support/AArch64TargetParser.def"
 };
 
 // List of HWDiv names (use getHWDivSynonym) and which architectural
@@ -119,7 +119,7 @@ static const struct {
   StringRef getName() const { return StringRef(NameCStr, NameLength); }
 } HWDivNames[] = {
 #define ARM_HW_DIV_NAME(NAME, ID) { NAME, sizeof(NAME) - 1, ID },
-#include "llvm/Support/ARMTargetParser.def"
+#include "llvh/Support/ARMTargetParser.def"
 };
 
 // List of CPU names and their arches.
@@ -139,13 +139,13 @@ template <typename T> struct CpuNames {
 CpuNames<ARM::ArchKind> CPUNames[] = {
 #define ARM_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT) \
   { NAME, sizeof(NAME) - 1, ARM::ArchKind::ID, IS_DEFAULT, DEFAULT_EXT },
-#include "llvm/Support/ARMTargetParser.def"
+#include "llvh/Support/ARMTargetParser.def"
 };
 
 CpuNames<AArch64::ArchKind> AArch64CPUNames[] = {
  #define AARCH64_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT) \
    { NAME, sizeof(NAME) - 1, AArch64::ArchKind::ID, IS_DEFAULT, DEFAULT_EXT },
- #include "llvm/Support/AArch64TargetParser.def"
+ #include "llvh/Support/AArch64TargetParser.def"
  };
 
 } // namespace
@@ -178,18 +178,18 @@ ARM::FPURestriction ARM::getFPURestriction(unsigned FPUKind) {
   return FPUNames[FPUKind].Restriction;
 }
 
-unsigned llvm::ARM::getDefaultFPU(StringRef CPU, ArchKind AK) {
+unsigned llvh::ARM::getDefaultFPU(StringRef CPU, ArchKind AK) {
   if (CPU == "generic")
     return ARCHNames[static_cast<unsigned>(AK)].DefaultFPU;
 
   return StringSwitch<unsigned>(CPU)
 #define ARM_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT) \
     .Case(NAME, DEFAULT_FPU)
-#include "llvm/Support/ARMTargetParser.def"
+#include "llvh/Support/ARMTargetParser.def"
     .Default(ARM::FK_INVALID);
 }
 
-unsigned llvm::ARM::getDefaultExtensions(StringRef CPU, ArchKind AK) {
+unsigned llvh::ARM::getDefaultExtensions(StringRef CPU, ArchKind AK) {
   if (CPU == "generic")
     return ARCHNames[static_cast<unsigned>(AK)].ArchBaseExtensions;
 
@@ -197,11 +197,11 @@ unsigned llvm::ARM::getDefaultExtensions(StringRef CPU, ArchKind AK) {
 #define ARM_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT) \
     .Case(NAME, ARCHNames[static_cast<unsigned>(ARM::ArchKind::ID)]\
             .ArchBaseExtensions | DEFAULT_EXT)
-#include "llvm/Support/ARMTargetParser.def"
+#include "llvh/Support/ARMTargetParser.def"
     .Default(ARM::AEK_INVALID);
 }
 
-bool llvm::ARM::getHWDivFeatures(unsigned HWDivKind,
+bool llvh::ARM::getHWDivFeatures(unsigned HWDivKind,
                                  std::vector<StringRef> &Features) {
 
   if (HWDivKind == ARM::AEK_INVALID)
@@ -220,7 +220,7 @@ bool llvm::ARM::getHWDivFeatures(unsigned HWDivKind,
   return true;
 }
 
-bool llvm::ARM::getExtensionFeatures(unsigned Extensions,
+bool llvh::ARM::getExtensionFeatures(unsigned Extensions,
                                      std::vector<StringRef> &Features) {
 
   if (Extensions == ARM::AEK_INVALID)
@@ -254,7 +254,7 @@ bool llvm::ARM::getExtensionFeatures(unsigned Extensions,
   return getHWDivFeatures(Extensions, Features);
 }
 
-bool llvm::ARM::getFPUFeatures(unsigned FPUKind,
+bool llvh::ARM::getFPUFeatures(unsigned FPUKind,
                                std::vector<StringRef> &Features) {
 
   if (FPUKind >= ARM::FK_LAST || FPUKind == ARM::FK_INVALID)
@@ -336,23 +336,23 @@ bool llvm::ARM::getFPUFeatures(unsigned FPUKind,
   return true;
 }
 
-StringRef llvm::ARM::getArchName(ArchKind AK) {
+StringRef llvh::ARM::getArchName(ArchKind AK) {
   return ARCHNames[static_cast<unsigned>(AK)].getName();
 }
 
-StringRef llvm::ARM::getCPUAttr(ArchKind AK) {
+StringRef llvh::ARM::getCPUAttr(ArchKind AK) {
   return ARCHNames[static_cast<unsigned>(AK)].getCPUAttr();
 }
 
-StringRef llvm::ARM::getSubArch(ArchKind AK) {
+StringRef llvh::ARM::getSubArch(ArchKind AK) {
   return ARCHNames[static_cast<unsigned>(AK)].getSubArch();
 }
 
-unsigned llvm::ARM::getArchAttr(ArchKind AK) {
+unsigned llvh::ARM::getArchAttr(ArchKind AK) {
   return ARCHNames[static_cast<unsigned>(AK)].ArchAttr;
 }
 
-StringRef llvm::ARM::getArchExtName(unsigned ArchExtKind) {
+StringRef llvh::ARM::getArchExtName(unsigned ArchExtKind) {
   for (const auto AE : ARCHExtNames) {
     if (ArchExtKind == AE.ID)
       return AE.getName();
@@ -360,7 +360,7 @@ StringRef llvm::ARM::getArchExtName(unsigned ArchExtKind) {
   return StringRef();
 }
 
-StringRef llvm::ARM::getArchExtFeature(StringRef ArchExt) {
+StringRef llvh::ARM::getArchExtFeature(StringRef ArchExt) {
   if (ArchExt.startswith("no")) {
     StringRef ArchExtBase(ArchExt.substr(2));
     for (const auto AE : ARCHExtNames) {
@@ -376,7 +376,7 @@ StringRef llvm::ARM::getArchExtFeature(StringRef ArchExt) {
   return StringRef();
 }
 
-StringRef llvm::ARM::getHWDivName(unsigned HWDivKind) {
+StringRef llvh::ARM::getHWDivName(unsigned HWDivKind) {
   for (const auto D : HWDivNames) {
     if (HWDivKind == D.ID)
       return D.getName();
@@ -384,7 +384,7 @@ StringRef llvm::ARM::getHWDivName(unsigned HWDivKind) {
   return StringRef();
 }
 
-StringRef llvm::ARM::getDefaultCPU(StringRef Arch) {
+StringRef llvh::ARM::getDefaultCPU(StringRef Arch) {
   ArchKind AK = parseArch(Arch);
   if (AK == ARM::ArchKind::INVALID)
     return StringRef();
@@ -399,7 +399,7 @@ StringRef llvm::ARM::getDefaultCPU(StringRef Arch) {
   return "generic";
 }
 
-StringRef llvm::AArch64::getFPUName(unsigned FPUKind) {
+StringRef llvh::AArch64::getFPUName(unsigned FPUKind) {
   return ARM::getFPUName(FPUKind);
 }
 
@@ -415,18 +415,18 @@ ARM::FPURestriction AArch64::getFPURestriction(unsigned FPUKind) {
   return ARM::getFPURestriction(FPUKind);
 }
 
-unsigned llvm::AArch64::getDefaultFPU(StringRef CPU, ArchKind AK) {
+unsigned llvh::AArch64::getDefaultFPU(StringRef CPU, ArchKind AK) {
   if (CPU == "generic")
     return AArch64ARCHNames[static_cast<unsigned>(AK)].DefaultFPU;
 
   return StringSwitch<unsigned>(CPU)
 #define AARCH64_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT) \
     .Case(NAME, DEFAULT_FPU)
-#include "llvm/Support/AArch64TargetParser.def"
+#include "llvh/Support/AArch64TargetParser.def"
     .Default(ARM::FK_INVALID);
 }
 
-unsigned llvm::AArch64::getDefaultExtensions(StringRef CPU, ArchKind AK) {
+unsigned llvh::AArch64::getDefaultExtensions(StringRef CPU, ArchKind AK) {
   if (CPU == "generic")
     return AArch64ARCHNames[static_cast<unsigned>(AK)].ArchBaseExtensions;
 
@@ -436,22 +436,22 @@ unsigned llvm::AArch64::getDefaultExtensions(StringRef CPU, ArchKind AK) {
         AArch64ARCHNames[static_cast<unsigned>(AArch64::ArchKind::ID)] \
             .ArchBaseExtensions | \
             DEFAULT_EXT)
-#include "llvm/Support/AArch64TargetParser.def"
+#include "llvh/Support/AArch64TargetParser.def"
     .Default(AArch64::AEK_INVALID);
 }
 
-AArch64::ArchKind llvm::AArch64::getCPUArchKind(StringRef CPU) {
+AArch64::ArchKind llvh::AArch64::getCPUArchKind(StringRef CPU) {
   if (CPU == "generic")
     return AArch64::ArchKind::ARMV8A;
 
   return StringSwitch<AArch64::ArchKind>(CPU)
 #define AARCH64_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT) \
   .Case(NAME, AArch64::ArchKind:: ID)
-#include "llvm/Support/AArch64TargetParser.def"
+#include "llvh/Support/AArch64TargetParser.def"
     .Default(AArch64::ArchKind::INVALID);
 }
 
-bool llvm::AArch64::getExtensionFeatures(unsigned Extensions,
+bool llvh::AArch64::getExtensionFeatures(unsigned Extensions,
                                      std::vector<StringRef> &Features) {
 
   if (Extensions == AArch64::AEK_INVALID)
@@ -487,12 +487,12 @@ bool llvm::AArch64::getExtensionFeatures(unsigned Extensions,
   return true;
 }
 
-bool llvm::AArch64::getFPUFeatures(unsigned FPUKind,
+bool llvh::AArch64::getFPUFeatures(unsigned FPUKind,
                                std::vector<StringRef> &Features) {
   return ARM::getFPUFeatures(FPUKind, Features);
 }
 
-bool llvm::AArch64::getArchFeatures(AArch64::ArchKind AK,
+bool llvh::AArch64::getArchFeatures(AArch64::ArchKind AK,
                                     std::vector<StringRef> &Features) {
   if (AK == AArch64::ArchKind::ARMV8_1A)
     Features.push_back("+v8.1a");
@@ -508,30 +508,30 @@ bool llvm::AArch64::getArchFeatures(AArch64::ArchKind AK,
   return AK != AArch64::ArchKind::INVALID;
 }
 
-StringRef llvm::AArch64::getArchName(ArchKind AK) {
+StringRef llvh::AArch64::getArchName(ArchKind AK) {
   return AArch64ARCHNames[static_cast<unsigned>(AK)].getName();
 }
 
-StringRef llvm::AArch64::getCPUAttr(ArchKind AK) {
+StringRef llvh::AArch64::getCPUAttr(ArchKind AK) {
   return AArch64ARCHNames[static_cast<unsigned>(AK)].getCPUAttr();
 }
 
-StringRef llvm::AArch64::getSubArch(ArchKind AK) {
+StringRef llvh::AArch64::getSubArch(ArchKind AK) {
   return AArch64ARCHNames[static_cast<unsigned>(AK)].getSubArch();
 }
 
-unsigned llvm::AArch64::getArchAttr(ArchKind AK) {
+unsigned llvh::AArch64::getArchAttr(ArchKind AK) {
   return AArch64ARCHNames[static_cast<unsigned>(AK)].ArchAttr;
 }
 
-StringRef llvm::AArch64::getArchExtName(unsigned ArchExtKind) {
+StringRef llvh::AArch64::getArchExtName(unsigned ArchExtKind) {
   for (const auto &AE : AArch64ARCHExtNames)
     if (ArchExtKind == AE.ID)
       return AE.getName();
   return StringRef();
 }
 
-StringRef llvm::AArch64::getArchExtFeature(StringRef ArchExt) {
+StringRef llvh::AArch64::getArchExtFeature(StringRef ArchExt) {
   if (ArchExt.startswith("no")) {
     StringRef ArchExtBase(ArchExt.substr(2));
     for (const auto &AE : AArch64ARCHExtNames) {
@@ -546,7 +546,7 @@ StringRef llvm::AArch64::getArchExtFeature(StringRef ArchExt) {
   return StringRef();
 }
 
-StringRef llvm::AArch64::getDefaultCPU(StringRef Arch) {
+StringRef llvh::AArch64::getDefaultCPU(StringRef Arch) {
   AArch64::ArchKind AK = parseArch(Arch);
   if (AK == ArchKind::INVALID)
     return StringRef();
@@ -560,7 +560,7 @@ StringRef llvm::AArch64::getDefaultCPU(StringRef Arch) {
   return "generic";
 }
 
-unsigned llvm::AArch64::checkArchVersion(StringRef Arch) {
+unsigned llvh::AArch64::checkArchVersion(StringRef Arch) {
   if (Arch.size() >= 2 && Arch[0] == 'v' && std::isdigit(Arch[1]))
     return (Arch[1] - 48);
   return 0;
@@ -621,7 +621,7 @@ static StringRef getArchSynonym(StringRef Arch) {
 // (iwmmxt|xscale)(eb)? is also permitted. If the former, return
 // "v.+", if the latter, return unmodified string, minus 'eb'.
 // If invalid, return empty string.
-StringRef llvm::ARM::getCanonicalArchName(StringRef Arch) {
+StringRef llvh::ARM::getCanonicalArchName(StringRef Arch) {
   size_t offset = StringRef::npos;
   StringRef A = Arch;
   StringRef Error = "";
@@ -670,7 +670,7 @@ StringRef llvm::ARM::getCanonicalArchName(StringRef Arch) {
   return A;
 }
 
-unsigned llvm::ARM::parseHWDiv(StringRef HWDiv) {
+unsigned llvh::ARM::parseHWDiv(StringRef HWDiv) {
   StringRef Syn = getHWDivSynonym(HWDiv);
   for (const auto D : HWDivNames) {
     if (Syn == D.getName())
@@ -679,7 +679,7 @@ unsigned llvm::ARM::parseHWDiv(StringRef HWDiv) {
   return ARM::AEK_INVALID;
 }
 
-unsigned llvm::ARM::parseFPU(StringRef FPU) {
+unsigned llvh::ARM::parseFPU(StringRef FPU) {
   StringRef Syn = getFPUSynonym(FPU);
   for (const auto F : FPUNames) {
     if (Syn == F.getName())
@@ -699,7 +699,7 @@ ARM::ArchKind ARM::parseArch(StringRef Arch) {
   return ARM::ArchKind::INVALID;
 }
 
-unsigned llvm::ARM::parseArchExt(StringRef ArchExt) {
+unsigned llvh::ARM::parseArchExt(StringRef ArchExt) {
   for (const auto A : ARCHExtNames) {
     if (ArchExt == A.getName())
       return A.ID;
@@ -707,7 +707,7 @@ unsigned llvm::ARM::parseArchExt(StringRef ArchExt) {
   return ARM::AEK_INVALID;
 }
 
-ARM::ArchKind llvm::ARM::parseCPUArch(StringRef CPU) {
+ARM::ArchKind llvh::ARM::parseCPUArch(StringRef CPU) {
   for (const auto C : CPUNames) {
     if (CPU == C.getName())
       return C.ArchID;
@@ -715,14 +715,14 @@ ARM::ArchKind llvm::ARM::parseCPUArch(StringRef CPU) {
   return ARM::ArchKind::INVALID;
 }
 
-void llvm::ARM::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
+void llvh::ARM::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
   for (const CpuNames<ARM::ArchKind> &Arch : CPUNames) {
     if (Arch.ArchID != ARM::ArchKind::INVALID)
       Values.push_back(Arch.getName());
   }
 }
 
-void llvm::AArch64::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
+void llvh::AArch64::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
   for (const CpuNames<AArch64::ArchKind> &Arch : AArch64CPUNames) {
     if (Arch.ArchID != AArch64::ArchKind::INVALID)
       Values.push_back(Arch.getName());
@@ -805,7 +805,7 @@ ARM::ProfileKind ARM::parseArchProfile(StringRef Arch) {
 }
 
 // Version number (ex. v7 = 7).
-unsigned llvm::ARM::parseArchVersion(StringRef Arch) {
+unsigned llvh::ARM::parseArchVersion(StringRef Arch) {
   Arch = getCanonicalArchName(Arch);
   switch (parseArch(Arch)) {
   case ARM::ArchKind::ARMV2:
@@ -854,14 +854,14 @@ unsigned llvm::ARM::parseArchVersion(StringRef Arch) {
   llvm_unreachable("Unhandled architecture");
 }
 
-StringRef llvm::ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
+StringRef llvh::ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
   StringRef ArchName =
       CPU.empty() ? TT.getArchName() : ARM::getArchName(ARM::parseCPUArch(CPU));
 
   if (TT.isOSBinFormatMachO()) {
     if (TT.getEnvironment() == Triple::EABI ||
         TT.getOS() == Triple::UnknownOS ||
-        llvm::ARM::parseArchProfile(ArchName) == ARM::ProfileKind::M)
+        llvh::ARM::parseArchProfile(ArchName) == ARM::ProfileKind::M)
       return "aapcs";
     if (TT.isWatchABI())
       return "aapcs16";
@@ -890,11 +890,11 @@ StringRef llvm::ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
   }
 }
 
-StringRef llvm::AArch64::getCanonicalArchName(StringRef Arch) {
+StringRef llvh::AArch64::getCanonicalArchName(StringRef Arch) {
   return ARM::getCanonicalArchName(Arch);
 }
 
-unsigned llvm::AArch64::parseFPU(StringRef FPU) {
+unsigned llvh::AArch64::parseFPU(StringRef FPU) {
   return ARM::parseFPU(FPU);
 }
 
@@ -912,7 +912,7 @@ AArch64::ArchKind AArch64::parseArch(StringRef Arch) {
   return ArchKind::INVALID;
 }
 
-AArch64::ArchExtKind llvm::AArch64::parseArchExt(StringRef ArchExt) {
+AArch64::ArchExtKind llvh::AArch64::parseArchExt(StringRef ArchExt) {
   for (const auto A : AArch64ARCHExtNames) {
     if (ArchExt == A.getName())
       return static_cast<ArchExtKind>(A.ID);
@@ -920,7 +920,7 @@ AArch64::ArchExtKind llvm::AArch64::parseArchExt(StringRef ArchExt) {
   return AArch64::AEK_INVALID;
 }
 
-AArch64::ArchKind llvm::AArch64::parseCPUArch(StringRef CPU) {
+AArch64::ArchKind llvh::AArch64::parseCPUArch(StringRef CPU) {
   for (const auto C : AArch64CPUNames) {
     if (CPU == C.getName())
       return C.ArchID;
@@ -944,11 +944,11 @@ ARM::ProfileKind AArch64::parseArchProfile(StringRef Arch) {
 }
 
 // Version number (ex. v8 = 8).
-unsigned llvm::AArch64::parseArchVersion(StringRef Arch) {
+unsigned llvh::AArch64::parseArchVersion(StringRef Arch) {
   return ARM::parseArchVersion(Arch);
 }
 
-bool llvm::AArch64::isX18ReservedByDefault(const Triple &TT) {
+bool llvh::AArch64::isX18ReservedByDefault(const Triple &TT) {
   return TT.isAndroid() || TT.isOSDarwin() || TT.isOSFuchsia() ||
          TT.isOSWindows();
 }
@@ -1047,19 +1047,19 @@ const GPUInfo *getArchEntry(AMDGPU::GPUKind AK, ArrayRef<GPUInfo> Table) {
 
 } // namespace
 
-StringRef llvm::AMDGPU::getArchNameAMDGCN(GPUKind AK) {
+StringRef llvh::AMDGPU::getArchNameAMDGCN(GPUKind AK) {
   if (const auto *Entry = getArchEntry(AK, AMDGCNGPUs))
     return Entry->CanonicalName;
   return "";
 }
 
-StringRef llvm::AMDGPU::getArchNameR600(GPUKind AK) {
+StringRef llvh::AMDGPU::getArchNameR600(GPUKind AK) {
   if (const auto *Entry = getArchEntry(AK, R600GPUs))
     return Entry->CanonicalName;
   return "";
 }
 
-AMDGPU::GPUKind llvm::AMDGPU::parseArchAMDGCN(StringRef CPU) {
+AMDGPU::GPUKind llvh::AMDGPU::parseArchAMDGCN(StringRef CPU) {
   for (const auto C : AMDGCNGPUs) {
     if (CPU == C.Name)
       return C.Kind;
@@ -1068,7 +1068,7 @@ AMDGPU::GPUKind llvm::AMDGPU::parseArchAMDGCN(StringRef CPU) {
   return AMDGPU::GPUKind::GK_NONE;
 }
 
-AMDGPU::GPUKind llvm::AMDGPU::parseArchR600(StringRef CPU) {
+AMDGPU::GPUKind llvh::AMDGPU::parseArchR600(StringRef CPU) {
   for (const auto C : R600GPUs) {
     if (CPU == C.Name)
       return C.Kind;

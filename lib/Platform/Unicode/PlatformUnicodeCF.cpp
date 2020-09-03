@@ -73,8 +73,8 @@ double localTZA() {
 } // namespace
 
 int localeCompare(
-    llvm::ArrayRef<char16_t> left,
-    llvm::ArrayRef<char16_t> right) {
+    llvh::ArrayRef<char16_t> left,
+    llvh::ArrayRef<char16_t> right) {
   auto s1 = CFStringCreateWithCharacters(
       nullptr, reinterpret_cast<const UniChar *>(left.data()), left.size());
   auto s2 = CFStringCreateWithCharacters(
@@ -112,7 +112,7 @@ void dateFormat(
     double unixtimeMs,
     bool formatDate,
     bool formatTime,
-    llvm::SmallVectorImpl<char16_t> &buf) {
+    llvh::SmallVectorImpl<char16_t> &buf) {
   CFDateFormatterStyle dateStyle =
       formatDate ? kCFDateFormatterMediumStyle : kCFDateFormatterNoStyle;
   CFDateFormatterStyle timeStyle =
@@ -143,7 +143,7 @@ void dateFormat(
 }
 
 void convertToCase(
-    llvm::SmallVectorImpl<char16_t> &buf,
+    llvh::SmallVectorImpl<char16_t> &buf,
     CaseConversion targetCase,
     bool useCurrentLocale) {
   // UniChar is 16 bits, so a cast works.
@@ -170,7 +170,7 @@ void convertToCase(
   CFRelease(cfstr);
 }
 
-void normalize(llvm::SmallVectorImpl<char16_t> &buf, NormalizationForm form) {
+void normalize(llvh::SmallVectorImpl<char16_t> &buf, NormalizationForm form) {
   // UniChar is 16 bits, so a cast works.
   static_assert(sizeof(UniChar) == sizeof(char16_t), "Unexpected UniChar size");
 

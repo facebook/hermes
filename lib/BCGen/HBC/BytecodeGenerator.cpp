@@ -12,9 +12,9 @@
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/UTF8.h"
 
-#include "llvm/ADT/SmallString.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/SmallString.h"
+#include "llvh/Support/Format.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <locale>
 #include <unordered_map>
@@ -275,7 +275,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
 #ifdef HERMESVM_LEAN
       llvm_unreachable("Lazy support compiled out");
 #else
-      auto lazyData = llvm::make_unique<LazyCompilationData>();
+      auto lazyData = llvh::make_unique<LazyCompilationData>();
       lazyData->parentScope = F->getLazyScope();
       lazyData->nodeKind = F->getLazySource().nodeKind;
       lazyData->bufferId = F->getLazySource().bufferId;

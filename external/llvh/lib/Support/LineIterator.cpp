@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/LineIterator.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvh/Support/LineIterator.h"
+#include "llvh/Support/MemoryBuffer.h"
 
-using namespace llvm;
+using namespace llvh;
 
 static bool isAtLineEnd(const char *P) {
   if (*P == '\n')

@@ -8,12 +8,12 @@
 #ifndef HERMES_SUPPORT_SCOPECHAIN_H
 #define HERMES_SUPPORT_SCOPECHAIN_H
 
-#include "llvm/ADT/ArrayRef.h"
+#include "llvh/ADT/ArrayRef.h"
 
 #include <vector>
 
 namespace hermes {
-using llvm::StringRef;
+using llvh::StringRef;
 
 /// A ScopeChainItem represents variables available in a scope.
 struct ScopeChainItem {

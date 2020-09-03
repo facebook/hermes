@@ -23,14 +23,14 @@ struct VLQ {
   int32_t val;
 };
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, VLQ vlq) {
+llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, VLQ vlq) {
   return base64vlq::encode(OS, vlq.val);
 }
 } // namespace
 
 uint32_t SourceMapGenerator::addSource(
-    llvm::StringRef filename,
-    llvm::Optional<SourceMap::MetadataEntry> metadata) {
+    llvh::StringRef filename,
+    llvh::Optional<SourceMap::MetadataEntry> metadata) {
   uint32_t index = filenameTable_.insert(filename);
   if (sourcesMetadata_.size() <= index) {
     sourcesMetadata_.resize(index + 1);
@@ -42,7 +42,7 @@ uint32_t SourceMapGenerator::addSource(
   return index;
 }
 
-llvm::Optional<std::pair<SourceMap::Segment, const SourceMap *>>
+llvh::Optional<std::pair<SourceMap::Segment, const SourceMap *>>
 SourceMapGenerator::getInputSegmentForSegment(
     const SourceMap::Segment &seg) const {
   if (seg.representedLocation.hasValue()) {
@@ -57,7 +57,7 @@ SourceMapGenerator::getInputSegmentForSegment(
       inputSourceMaps_[seg.representedLocation->sourceIndex] != nullptr;
 
   if (!hasInput) {
-    return llvm::None;
+    return llvh::None;
   }
 
   const SourceMap *inputMap =
@@ -66,7 +66,7 @@ SourceMapGenerator::getInputSegmentForSegment(
       seg.representedLocation->lineIndex + 1,
       seg.representedLocation->columnIndex + 1);
   if (!inputSeg.hasValue()) {
-    return llvm::None;
+    return llvh::None;
   }
 
   return std::make_pair(inputSeg.getValue(), inputMap);
@@ -84,8 +84,8 @@ bool SourceMapGenerator::hasSourcesMetadata() const {
 
 SourceMapGenerator::State SourceMapGenerator::encodeSourceLocations(
     const SourceMapGenerator::State &lastState,
-    llvm::ArrayRef<SourceMap::Segment> segments,
-    llvm::raw_ostream &OS) {
+    llvh::ArrayRef<SourceMap::Segment> segments,
+    llvh::raw_ostream &OS) {
   // Currently we only support a single source, so the source ID (and its delta)
   // is always 0.
   SourceMapGenerator::State state = lastState, prevState = lastState;
@@ -116,7 +116,7 @@ SourceMapGenerator::State SourceMapGenerator::encodeSourceLocations(
 
 std::string SourceMapGenerator::getVLQMappingsString() const {
   std::string result;
-  llvm::raw_string_ostream OS(result);
+  llvh::raw_string_ostream OS(result);
   State state;
   for (const SourceMap::SegmentList &segments : lines_) {
     // The generated column (unlike other fields) resets with each new line.
@@ -128,8 +128,8 @@ std::string SourceMapGenerator::getVLQMappingsString() const {
   return result;
 }
 
-std::vector<llvm::StringRef> SourceMapGenerator::getSources() const {
-  return std::vector<llvm::StringRef>(
+std::vector<llvh::StringRef> SourceMapGenerator::getSources() const {
+  return std::vector<llvh::StringRef>(
       filenameTable_.begin(), filenameTable_.end());
 }
 
@@ -148,7 +148,7 @@ SourceMapGenerator SourceMapGenerator::mergedWithInputSourceMaps() const {
 
     for (const auto &seg : lines_[i]) {
       SourceMap::Segment newSeg = seg;
-      newSeg.representedLocation = llvm::None;
+      newSeg.representedLocation = llvh::None;
 
       if (auto pair = getInputSegmentForSegment(seg)) {
         // We have an input source map and were able to find a merged source
@@ -189,7 +189,7 @@ SourceMapGenerator SourceMapGenerator::mergedWithInputSourceMaps() const {
   return merged;
 }
 
-void SourceMapGenerator::outputAsJSON(llvm::raw_ostream &OS) const {
+void SourceMapGenerator::outputAsJSON(llvh::raw_ostream &OS) const {
   if (inputSourceMaps_.empty()) {
     this->outputAsJSONImpl(OS);
   } else {
@@ -199,14 +199,14 @@ void SourceMapGenerator::outputAsJSON(llvm::raw_ostream &OS) const {
   }
 }
 
-void SourceMapGenerator::outputAsJSONImpl(llvm::raw_ostream &OS) const {
+void SourceMapGenerator::outputAsJSONImpl(llvh::raw_ostream &OS) const {
   JSONEmitter json(OS);
   json.openDict();
   json.emitKeyValue("version", 3);
 
   json.emitKey("sources");
   json.openArray();
-  json.emitValues(llvm::makeArrayRef(getSources()));
+  json.emitValues(llvh::makeArrayRef(getSources()));
   json.closeArray();
 
   if (hasSourcesMetadata()) {
@@ -231,7 +231,7 @@ void SourceMapGenerator::outputAsJSONImpl(llvm::raw_ostream &OS) const {
       const auto &segmentFunctionOffsets = entry.second;
       json.emitKey(oscompat::to_string(entry.first));
       json.openArray();
-      json.emitValues((llvm::ArrayRef<uint32_t>)segmentFunctionOffsets);
+      json.emitValues((llvh::ArrayRef<uint32_t>)segmentFunctionOffsets);
       json.closeArray();
     }
     json.closeDict();

@@ -12,7 +12,7 @@
 #include "hermes/VM/PropertyDescriptor.h"
 #include "hermes/VM/Runtime.h"
 
-#include "llvm/Support/TrailingObjects.h"
+#include "llvh/Support/TrailingObjects.h"
 
 namespace hermes {
 namespace vm {
@@ -144,7 +144,7 @@ class DPMHashPair {
 } // namespace detail
 
 class DictPropertyMap final : public VariableSizeRuntimeCell,
-                              private llvm::TrailingObjects<
+                              private llvh::TrailingObjects<
                                   DictPropertyMap,
                                   std::pair<SymbolID, NamedPropertyDescriptor>,
                                   detail::DPMHashPair> {
@@ -287,7 +287,7 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
 
   /// How many entries have been added to the descriptor array (including
   /// deleted).
-  size_type numDescriptors_{0};
+  AtomicIfConcurrentGC<size_type> numDescriptors_{0};
 
   /// Number of valid properties in the map.
   size_type numProperties_{0};
@@ -317,7 +317,7 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
         (cap <= std::numeric_limits<size_type>::max() / 4) &&
         "size will cause integer overflow in calcHashCapacity");
 
-    return llvm::PowerOf2Ceil(cap * 4 / 3 + 1);
+    return llvh::PowerOf2Ceil(cap * 4 / 3 + 1);
   }
 
   /// A const-expr version of \c calcHashCapacity() using 64-bit arithmetic.
@@ -326,7 +326,7 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
     return constPowerOf2Ceil(cap * 4 / 3 + 1);
   }
 
-  /// A constexpr compatible version of llvm::PowerOf2Ceil().
+  /// A constexpr compatible version of llvh::PowerOf2Ceil().
   /// NOTE: it must not be used at runtime since it might be slow.
   static constexpr uint64_t constPowerOf2Ceil(uint64_t A, uint64_t ceil = 1) {
     return ceil >= A ? ceil : constPowerOf2Ceil(A, ceil << 1);
@@ -496,7 +496,11 @@ void DictPropertyMap::forEachProperty(
     Runtime *runtime,
     const CallbackFunction &callback) {
   GCScopeMarkerRAII gcMarker{runtime};
-  for (size_type i = 0, e = selfHandle->numDescriptors_; i != e; ++i) {
+  for (size_type
+           i = 0,
+           e = selfHandle->numDescriptors_.load(std::memory_order_relaxed);
+       i != e;
+       ++i) {
     auto const *descPair = selfHandle->getDescriptorPairs() + i;
     if (descPair->first.isValid()) {
       callback(descPair->first, descPair->second);
@@ -509,7 +513,10 @@ template <typename CallbackFunction>
 void DictPropertyMap::forEachPropertyNoAlloc(
     DictPropertyMap *self,
     const CallbackFunction &callback) {
-  for (size_type i = 0, e = self->numDescriptors_; i != e; ++i) {
+  for (size_type i = 0,
+                 e = self->numDescriptors_.load(std::memory_order_relaxed);
+       i != e;
+       ++i) {
     auto const *descPair = self->getDescriptorPairs() + i;
     if (descPair->first.isValid()) {
       callback(descPair->first, descPair->second);
@@ -523,7 +530,11 @@ bool DictPropertyMap::forEachPropertyWhile(
     Runtime *runtime,
     const CallbackFunction &callback) {
   GCScopeMarkerRAII gcMarker{runtime};
-  for (size_type i = 0, e = selfHandle->numDescriptors_; i != e; ++i) {
+  for (size_type
+           i = 0,
+           e = selfHandle->numDescriptors_.load(std::memory_order_relaxed);
+       i != e;
+       ++i) {
     auto const *descPair = selfHandle->getDescriptorPairs() + i;
     if (descPair->first.isValid()) {
       if (!callback(runtime, descPair->first, descPair->second))
@@ -539,7 +550,11 @@ void DictPropertyMap::forEachMutablePropertyDescriptor(
     Handle<DictPropertyMap> selfHandle,
     Runtime *runtime,
     const CallbackFunction &callback) {
-  for (size_type i = 0, e = selfHandle->numDescriptors_; i != e; ++i) {
+  for (size_type
+           i = 0,
+           e = selfHandle->numDescriptors_.load(std::memory_order_relaxed);
+       i != e;
+       ++i) {
     auto *descPair = selfHandle->getDescriptorPairs() + i;
     if (descPair->first.isValid()) {
       callback(descPair->second);
@@ -555,7 +570,9 @@ inline DictPropertyMap::DescriptorPair *DictPropertyMap::getDescriptorPair(
 
   auto *hashPair = self->getHashPairs() + pos.hashPairIndex;
   auto descIndex = hashPair->getDescIndex();
-  assert(descIndex < self->numDescriptors_ && "descriptor index out of range");
+  assert(
+      descIndex < self->numDescriptors_.load(std::memory_order_relaxed) &&
+      "descriptor index out of range");
 
   auto *res = self->getDescriptorPairs() + descIndex;
   assert(hashPair->mayBe(res->first) && "accessing incorrect descriptor pair");
@@ -572,7 +589,7 @@ inline OptValue<DictPropertyMap::PropertyPos> DictPropertyMap::find(
   auto *mutableSelf = const_cast<DictPropertyMap *>(self);
   auto found = lookupEntryFor(mutableSelf, id);
   if (!found.first)
-    return llvm::None;
+    return llvh::None;
   return PropertyPos{(size_type)(found.second - mutableSelf->getHashPairs())};
 }
 

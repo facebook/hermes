@@ -17,7 +17,7 @@ namespace vm {
     ExecutionStatus status) {
   if (status == ExecutionStatus::EXCEPTION) {
     std::string s;
-    llvm::raw_string_ostream os(s);
+    llvh::raw_string_ostream os(s);
     runtime->printException(os, runtime->makeHandle(runtime->getThrownValue()));
     os.flush();
     return ::testing::AssertionSuccess() << "An exception occurred: " << s;
@@ -69,7 +69,7 @@ void DummyRuntime::markRoots(RootAcceptor &acceptor, bool) {
 }
 
 void DummyRuntime::markWeakRoots(WeakRootAcceptor &acceptor) {
-  for (void **ptr : weakRoots) {
+  for (WeakRoot<void> *ptr : weakRoots) {
     acceptor.acceptWeak(*ptr);
   }
   if (markExtraWeak)

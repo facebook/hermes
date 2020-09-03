@@ -21,8 +21,8 @@
 #include "hermes/VM/PointerBase.h"
 #include "hermes/VM/YoungGenNC-inline.h"
 
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
+#include "llvh/Support/Debug.h"
+#include "llvh/Support/MathExtras.h"
 
 #include <algorithm>
 #include <iterator>
@@ -80,12 +80,13 @@ OldGen::Size::adjustSizeWithBounds(size_t desired, size_t min, size_t max) {
   const auto alignment = clamped <= AlignedHeapSegment::maxSize()
       ? PS
       : AlignedHeapSegment::maxSize();
-  return llvm::alignTo(clamped, alignment);
+  return llvh::alignTo(clamped, alignment);
 }
 
 OldGen::OldGen(GenGC *gc, Size sz, bool releaseUnused)
     : GCGeneration(gc), sz_(sz), releaseUnused_(releaseUnused) {
-  auto result = AlignedStorage::create(&gc_->storageProvider_, kSegmentName);
+  auto result =
+      AlignedStorage::create(gc_->storageProvider_.get(), kSegmentName);
   if (!result) {
     gc_->oom(result.getError());
   }
@@ -678,7 +679,8 @@ bool OldGen::seedSegmentCacheForSize(size_t size) {
 
   // Try and seed the segment cache with enough segments to fit the request.
   for (; segAlloc < segReq; ++segAlloc) {
-    auto result = AlignedStorage::create(&gc_->storageProvider_, kSegmentName);
+    auto result =
+        AlignedStorage::create(gc_->storageProvider_.get(), kSegmentName);
     if (!result) {
       // We could not allocate all the segments we needed, so give back the ones
       // we were able to allocate.
@@ -713,7 +715,8 @@ bool OldGen::materializeNextSegment() {
     exchangeActiveSegment(std::move(segmentCache_.back()), filledSegSlot);
     segmentCache_.pop_back();
   } else {
-    auto result = AlignedStorage::create(&gc_->storageProvider_, kSegmentName);
+    auto result =
+        AlignedStorage::create(gc_->storageProvider_.get(), kSegmentName);
     if (!result) {
       filledSegments_.pop_back();
       return false;
@@ -966,7 +969,7 @@ void OldGen::updateCrashManagerHeapExtents(
   // (This will only happen after a full GC, and the segments that
   // remain will retain their recorded extents.)
   if (numCurSegments < crashMgrRecordedSegments_) {
-    for (unsigned toDel = llvm::alignTo(numCurSegments, kSegmentsPerKey);
+    for (unsigned toDel = llvh::alignTo(numCurSegments, kSegmentsPerKey);
          toDel < crashMgrRecordedSegments_;
          toDel += kSegmentsPerKey) {
       (void)snprintf(keyBuffer, N, kOgKeyFormat, runtimeName.c_str(), toDel);
@@ -980,7 +983,7 @@ void OldGen::updateCrashManagerHeapExtents(
   // Now redo any keys whose segment sequences might have changed.
   // (They might have gotten smaller, because of GC, or larger, because
   // of segment allocation.)
-  const unsigned firstKeyWithPossiblyChangedSegments = llvm::alignDown(
+  const unsigned firstKeyWithPossiblyChangedSegments = llvh::alignDown(
       std::min(numCurSegments, crashMgrRecordedSegments_), kSegmentsPerKey);
   for (unsigned toRedo = firstKeyWithPossiblyChangedSegments;
        toRedo < numCurSegments;

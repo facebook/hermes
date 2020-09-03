@@ -10,7 +10,7 @@
 
 #include "hermes/Support/OptValue.h"
 
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <vector>
 
@@ -22,7 +22,7 @@ namespace base64vlq {
 
 /// Encode \p value into \p OS as a Base64 variable-length quantity.
 /// \return OS.
-llvm::raw_ostream &encode(llvm::raw_ostream &OS, int32_t value);
+llvh::raw_ostream &encode(llvh::raw_ostream &OS, int32_t value);
 
 /// Decode a Base64 variable-length quantity from the range starting at \p begin
 /// and ending at \p end (whose length is end - begin).

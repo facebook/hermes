@@ -8,16 +8,16 @@
 #ifndef HERMES_PARSER_PREPARSER_H
 #define HERMES_PARSER_PREPARSER_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/SMLoc.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/Support/SMLoc.h"
 
 namespace hermes {
 namespace parser {
-using llvm::SMLoc;
+using llvh::SMLoc;
 
-/// Allow using \p SMLoc in \p llvm::DenseMaps.
-struct SMLocInfo : llvm::DenseMapInfo<SMLoc> {
+/// Allow using \p SMLoc in \p llvh::DenseMaps.
+struct SMLocInfo : llvh::DenseMapInfo<SMLoc> {
   static inline SMLoc getEmptyKey() {
     return SMLoc::getFromPointer(0);
   }
@@ -35,13 +35,13 @@ struct SMLocInfo : llvm::DenseMapInfo<SMLoc> {
 /// Per buffer information from preparsing.
 struct PreParsedBufferInfo {
   /// Map from function body start to end.
-  llvm::DenseMap<SMLoc, SMLoc, SMLocInfo> bodyStartToEnd{};
+  llvh::DenseMap<SMLoc, SMLoc, SMLocInfo> bodyStartToEnd{};
 };
 
 /// Per \p Context information from preparsing.
 struct PreParsedData {
   /// Vector from source buffer id to that buffer's \p PreParsedBufferInfo.
-  llvm::SmallVector<std::unique_ptr<PreParsedBufferInfo>, 4> bufferInfo{};
+  llvh::SmallVector<std::unique_ptr<PreParsedBufferInfo>, 4> bufferInfo{};
 
   /// Get the \p PreParsedBufferInfo for a source buffer, allocating it if
   /// necessary.
@@ -50,7 +50,7 @@ struct PreParsedData {
       bufferInfo.resize(bufferId + 1);
     }
     if (!bufferInfo[bufferId]) {
-      bufferInfo[bufferId] = llvm::make_unique<PreParsedBufferInfo>();
+      bufferInfo[bufferId] = llvh::make_unique<PreParsedBufferInfo>();
     }
     return bufferInfo[bufferId].get();
   }

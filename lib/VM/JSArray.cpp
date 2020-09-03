@@ -13,7 +13,7 @@
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/StringView.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 #define DEBUG_TYPE "serialize"
 
 namespace hermes {
@@ -46,7 +46,7 @@ void ArrayImpl::_snapshotAddEdgesImpl(
   const auto len = self->endIndex_ - self->beginIndex_;
   for (uint32_t i = 0; i < len; i++) {
     const auto &elem = indexedStorage->at(i);
-    const llvm::Optional<HeapSnapshot::NodeID> elemID = gc->getSnapshotID(elem);
+    const llvh::Optional<HeapSnapshot::NodeID> elemID = gc->getSnapshotID(elem);
     if (!elemID) {
       continue;
     }
@@ -113,7 +113,7 @@ OptValue<PropertyFlags> ArrayImpl::_getOwnIndexedPropertyFlagsImpl(
     return indexedElementFlags;
   }
 
-  return llvm::None;
+  return llvh::None;
 }
 
 std::pair<uint32_t, uint32_t> ArrayImpl::_getOwnIndexedRangeImpl(
@@ -166,11 +166,12 @@ ExecutionStatus ArrayImpl::setStorageEndIndex(
       // the new length is prior to beginIndex, clearing the storage.
       selfHandle->endIndex_ = beginIndex;
       // Remove the storage. If this array grows again it can be re-allocated.
-      self->indexedStorage_ = nullptr;
+      self->indexedStorage_.setNull(&runtime->getHeap());
       return ExecutionStatus::RETURNED;
     } else if (newLength - beginIndex <= indexedStorage->capacity()) {
       selfHandle->endIndex_ = newLength;
-      StorageType::resizeWithinCapacity(indexedStorage, newLength - beginIndex);
+      StorageType::resizeWithinCapacity(
+          indexedStorage, runtime, newLength - beginIndex);
       return ExecutionStatus::RETURNED;
     }
   }
@@ -232,7 +233,8 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     // Can we do it without reallocation for sure?
     if (index >= endIndex && index - beginIndex < indexedStorage->capacity()) {
       self->endIndex_ = index + 1;
-      StorageType::resizeWithinCapacity(indexedStorage, index - beginIndex + 1);
+      StorageType::resizeWithinCapacity(
+          indexedStorage, runtime, index - beginIndex + 1);
       // self shouldn't have moved since there haven't been any allocations.
       indexedStorage->at(index - beginIndex)
           .set(value.get(), &runtime->getHeap());
@@ -328,7 +330,7 @@ bool ArrayImpl::_deleteOwnIndexedImpl(
       if (!elem.isEmpty())
         return false;
 
-    elem.setNonPtr(HermesValue::encodeEmptyValue());
+    elem.setNonPtr(HermesValue::encodeEmptyValue(), &runtime->getHeap());
   }
 
   return true;
@@ -699,7 +701,7 @@ CallResult<bool> JSArray::setLength(
     // highest non-deletable would have terminated the deletion process.
 
     using IndexProp = std::pair<uint32_t, SymbolID>;
-    llvm::SmallVector<IndexProp, 8> toBeDeleted;
+    llvh::SmallVector<IndexProp, 8> toBeDeleted;
 
     HiddenClass::forEachProperty(
         runtime->makeHandle(selfHandle->clazz_),
@@ -850,7 +852,7 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto lenRes = toLength(runtime, runtime->makeHandle(*propRes));
+    auto lenRes = toLength(runtime, runtime->makeHandle(std::move(*propRes)));
     if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -861,7 +863,7 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
     // 10. If index ≥ len, then
     // a. Set the value of the [[IteratedObject]] internal slot of O to
     // undefined.
-    self->iteratedObject_ = nullptr;
+    self->iteratedObject_.setNull(&runtime->getHeap());
     // b. Return CreateIterResultObject(undefined, true).
     return createIterResultObject(runtime, Runtime::getUndefinedValue(), true)
         .getHermesValue();
@@ -880,11 +882,12 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
 
   // 13. Let elementKey be ToString(index).
   // 14. Let elementValue be Get(a, elementKey).
-  auto valueRes = JSObject::getComputed_RJS(a, runtime, indexHandle);
+  CallResult<PseudoHandle<>> valueRes =
+      JSObject::getComputed_RJS(a, runtime, indexHandle);
   if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto valueHandle = runtime->makeHandle(*valueRes);
+  Handle<> valueHandle = runtime->makeHandle(std::move(*valueRes));
 
   switch (self->iterationKind_) {
     case IterationKind::Key:

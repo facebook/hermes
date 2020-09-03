@@ -9,9 +9,10 @@
 #ifndef HERMES_VM_WEAKVALUEMAP_H
 #define HERMES_VM_WEAKVALUEMAP_H
 
+#include "hermes/VM/HandleRootOwner.h"
 #include "hermes/VM/WeakRef.h"
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvh/ADT/DenseMap.h"
 
 namespace hermes {
 namespace vm {
@@ -25,17 +26,14 @@ class WeakValueMap {
   /// TODO: this is wasteful in terms of code size because it will be
   /// specialized for different kinds of ValueT while technically the underlying
   /// hash table always stores instances of WeakRefBase.
-  using DenseMapT = llvm::SmallDenseMap<KeyT, WeakRef<ValueT>, 8>;
+  using DenseMapT = llvh::SmallDenseMap<KeyT, WeakRef<ValueT>, 8>;
   using InternalIterator = typename DenseMapT::iterator;
-  using const_iterator = typename DenseMapT::const_iterator;
 
  public:
   using key_type = typename DenseMapT::mapped_type;
   using mapped_type = typename DenseMapT::mapped_type;
   using value_type = typename DenseMapT::value_type;
   using size_type = typename DenseMapT::size_type;
-
-  class iterator;
 
   WeakValueMap() : map_() {}
 
@@ -50,64 +48,35 @@ class WeakValueMap {
     return map_.empty();
   }
 
-  iterator begin() {
-    return makeIterator(map_.begin(), true);
-  }
-  iterator end() {
-    return makeIterator(map_.end());
-  }
-
-  /// Read only iterator. Don't skip or erase invalid entries.
-  const_iterator const_begin() const {
-    return map_.begin();
-  }
-
-  /// Read only iterator. Don't skip or erase invalid entries.
-  const_iterator const_end() const {
-    return map_.end();
-  }
-
   /// Invoke \p callback on each (const) key and value. Values may be invalid.
   template <typename CallbackFunction>
   void forEachEntry(const CallbackFunction &callback) const {
-    for (auto it = const_begin(); it != const_end(); it++) {
+    for (auto it = map_.begin(), e = map_.end(); it != e; ++it) {
       callback(it->first, it->second);
     }
   }
 
-  /// Lookup a value by key. The returned iterator must be used right away,
-  /// either to access the found element or to erase it.
-  iterator find(const KeyT &key) {
-    return makeIterator(internalFind(key));
-  }
-
   /// Return true if there is an entry with the given key and a valid value.
   bool containsKey(const KeyT &key) {
-    return find(key) != end();
+    return internalFind(key) != map_.end();
   }
 
-  /// Look for a key and return the value as Handle<T> if found or llvm::None if
+  /// Look for a key and return the value as Handle<T> if found or llvh::None if
   /// not found.
-  llvm::Optional<Handle<ValueT>> lookup(
-      HandleRootOwner *runtime,
-      const KeyT &key) {
+  llvh::Optional<Handle<ValueT>>
+  lookup(HandleRootOwner *runtime, GC *gc, const KeyT &key) {
     auto it = internalFind(key);
     if (it == map_.end())
-      return llvm::None;
-    return it->second.get(runtime);
-  }
-
-  /// Remove the element at position \p it.
-  void erase(iterator it) {
-    map_.erase(it.it_);
-    recalcPruneLimit();
+      return llvh::None;
+    return it->second.get(runtime, gc);
   }
 
   /// Remove the element with key \p key and return true if it was found.
-  bool erase(const KeyT &key) {
+  bool erase(const KeyT &key, GC *gc) {
     auto it = internalFind(key);
     if (it == map_.end())
       return false;
+    WeakRefLock lk{gc->weakRefMutex()};
     map_.erase(it);
     recalcPruneLimit();
     return true;
@@ -116,9 +85,20 @@ class WeakValueMap {
   /// Insert a key/value into the map if the key is not already there.
   /// \return true if the pair was inserted, false if the key was already there.
   bool insertNew(GC *gc, const KeyT &key, Handle<ValueT> value) {
-    if (!map_.try_emplace(key, WeakRef<ValueT>(gc, value)).second)
-      return false;
-    pruneInvalid();
+    WeakRefLock lk{gc->weakRefMutex()};
+    return insertNewLocked(gc, key, value);
+  }
+
+  bool insertNewLocked(GC *gc, const KeyT &key, Handle<ValueT> value) {
+    auto itAndInserted = map_.try_emplace(key, WeakRef<ValueT>(gc, value));
+    if (!itAndInserted.second) {
+      // The key already exists and the value is valid, this isn't a new entry.
+      if (itAndInserted.first->second.isValid()) {
+        return false;
+      }
+      itAndInserted.first->second = WeakRef<ValueT>(gc, value);
+    }
+    pruneInvalid(gc);
     return true;
   }
 
@@ -135,68 +115,13 @@ class WeakValueMap {
   /// the acceptor with every valid WeakRef in the map.
   void markWeakRefs(WeakRefAcceptor &acceptor) {
     for (auto it = map_.begin(), e = map_.end(); it != e; ++it) {
-      if (it->second.isValid())
-        acceptor.accept(it->second);
-      else
-        map_.erase(it);
+      acceptor.accept(it->second);
     }
   }
 
   size_t getMemorySize() const {
     return map_.getMemorySize();
   }
-
-  class iterator {
-    friend class WeakValueMap;
-    /// The map we are iterating. We need it so we can skip and delete
-    /// invalidated entries. This is sub-optimal since DenseMap::iterator
-    /// already stores an "end" pointer.
-    DenseMapT *map_;
-    InternalIterator it_;
-
-    iterator(DenseMapT &map, InternalIterator it, bool skipInvalid)
-        : map_(&map), it_(it) {
-      if (skipInvalid)
-        skipPastInvalid();
-    }
-
-    iterator &skipPastInvalid() {
-      auto e = map_->end();
-      // Skip over and delete invalid entries.
-      while (it_ != e && !it_->second.isValid()) {
-        // NOTE: DenseMap's erase() operation doesn't invalidate any iterators,
-        // (and has a void return type), so this is safe to do. If we were using
-        // a std::map<>, we would have to do "it = map_.erase(it)"
-        map_->erase(it_);
-        ++it_;
-      }
-      return *this;
-    }
-
-   public:
-    value_type *operator->() const {
-      assert(
-          it_ != map_->end() && it_->second.isValid() &&
-          "iterator points to invalid entry");
-      return it_.operator->();
-    }
-    value_type &operator*() const {
-      return *this->operator->();
-    }
-
-    iterator &operator++() {
-      assert(it_ != map_->end() && "iterator points to end()");
-      ++it_;
-      return skipPastInvalid();
-    }
-
-    bool operator==(const iterator &other) const {
-      return it_ == other.it_;
-    }
-    bool operator!=(const iterator &other) const {
-      return it_ != other.it_;
-    }
-  };
 
  private:
   DenseMapT map_;
@@ -206,14 +131,9 @@ class WeakValueMap {
   /// When the map grows beyond this size, the invalid WeakRef-s are deleted.
   size_type pruneLimit_{kMinPruneLimit};
 
-  /// Construct a public iterator from an internal one.
-  iterator makeIterator(InternalIterator it, bool skipInvalid = false) {
-    return iterator{map_, it, skipInvalid};
-  }
-
   /// Look for the specified key \p key in the internal map and return it if
-  /// it is there and if the value is still valid. If the value is invalid
-  /// delete it.
+  /// it is there and if the value is still valid. If the value is invalid, say
+  /// it wasn't found.
   /// \return the internal iterator or map_.end() if not found.
   InternalIterator internalFind(const KeyT &key) {
     auto it = map_.find(key);
@@ -223,7 +143,6 @@ class WeakValueMap {
 
     // The value was garbage collected, so pretend that we didn't find it.
     if (!it->second.isValid()) {
-      map_.erase(it);
       return map_.end();
     }
 
@@ -232,15 +151,19 @@ class WeakValueMap {
 
   /// If the size of the map has exceeded the prune limit, scan the map and
   /// delete the invalid WeakRef-s. Then recalculate the prune limit.
-  void pruneInvalid() {
+  void pruneInvalid(GC *gc) {
+    assert(
+        gc->weakRefMutex() &&
+        "Weak ref mutex must be held before calling this function");
     if (map_.size() <= pruneLimit_)
       return;
 
     for (auto it = map_.begin(), e = map_.end(); it != e; ++it) {
       if (!it->second.isValid()) {
-        // NOTE: DenseMap's erase() operation doesn't invalidate any iterators,
-        // (and has a void return type), so this is safe to do. If we were using
-        // a std::map<>, we would have to do "it = map_.erase(it)"
+        // NOTE: DenseMap's erase() operation doesn't invalidate any
+        // iterators, (and has a void return type), so this is safe to do. If
+        // we were using a std::map<>, we would have to do
+        // "it = map_.erase(it)".
         map_.erase(it);
       }
     }

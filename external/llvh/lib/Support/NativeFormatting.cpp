@@ -7,16 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/NativeFormatting.h"
+#include "llvh/Support/NativeFormatting.h"
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Format.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/SmallString.h"
+#include "llvh/ADT/StringExtras.h"
+#include "llvh/Support/Format.h"
 
 #include <float.h>
 
-using namespace llvm;
+using namespace llvh;
 
 template<typename T, std::size_t N>
 static int format_to_buffer(T Value, char (&Buffer)[N]) {
@@ -101,37 +101,37 @@ static void write_signed(raw_ostream &S, T N, size_t MinDigits,
   write_unsigned(S, UN, MinDigits, Style, true);
 }
 
-void llvm::write_integer(raw_ostream &S, unsigned int N, size_t MinDigits,
+void llvh::write_integer(raw_ostream &S, unsigned int N, size_t MinDigits,
                          IntegerStyle Style) {
   write_unsigned(S, N, MinDigits, Style);
 }
 
-void llvm::write_integer(raw_ostream &S, int N, size_t MinDigits,
+void llvh::write_integer(raw_ostream &S, int N, size_t MinDigits,
                          IntegerStyle Style) {
   write_signed(S, N, MinDigits, Style);
 }
 
-void llvm::write_integer(raw_ostream &S, unsigned long N, size_t MinDigits,
+void llvh::write_integer(raw_ostream &S, unsigned long N, size_t MinDigits,
                          IntegerStyle Style) {
   write_unsigned(S, N, MinDigits, Style);
 }
 
-void llvm::write_integer(raw_ostream &S, long N, size_t MinDigits,
+void llvh::write_integer(raw_ostream &S, long N, size_t MinDigits,
                          IntegerStyle Style) {
   write_signed(S, N, MinDigits, Style);
 }
 
-void llvm::write_integer(raw_ostream &S, unsigned long long N, size_t MinDigits,
+void llvh::write_integer(raw_ostream &S, unsigned long long N, size_t MinDigits,
                          IntegerStyle Style) {
   write_unsigned(S, N, MinDigits, Style);
 }
 
-void llvm::write_integer(raw_ostream &S, long long N, size_t MinDigits,
+void llvh::write_integer(raw_ostream &S, long long N, size_t MinDigits,
                          IntegerStyle Style) {
   write_signed(S, N, MinDigits, Style);
 }
 
-void llvm::write_hex(raw_ostream &S, uint64_t N, HexPrintStyle Style,
+void llvh::write_hex(raw_ostream &S, uint64_t N, HexPrintStyle Style,
                      Optional<size_t> Width) {
   const size_t kMaxWidth = 128u;
 
@@ -147,7 +147,7 @@ void llvm::write_hex(raw_ostream &S, uint64_t N, HexPrintStyle Style,
       std::max(static_cast<unsigned>(W), std::max(1u, Nibbles) + PrefixChars);
 
   char NumberBuffer[kMaxWidth];
-  ::memset(NumberBuffer, '0', llvm::array_lengthof(NumberBuffer));
+  ::memset(NumberBuffer, '0', llvh::array_lengthof(NumberBuffer));
   if (Prefix)
     NumberBuffer[1] = 'x';
   char *EndPtr = NumberBuffer + NumChars;
@@ -161,7 +161,7 @@ void llvm::write_hex(raw_ostream &S, uint64_t N, HexPrintStyle Style,
   S.write(NumberBuffer, NumChars);
 }
 
-void llvm::write_double(raw_ostream &S, double N, FloatStyle Style,
+void llvh::write_double(raw_ostream &S, double N, FloatStyle Style,
                         Optional<size_t> Precision) {
   size_t Prec = Precision.getValueOr(getDefaultPrecision(Style));
 
@@ -182,7 +182,7 @@ void llvm::write_double(raw_ostream &S, double N, FloatStyle Style,
     Letter = 'f';
 
   SmallString<8> Spec;
-  llvm::raw_svector_ostream Out(Spec);
+  llvh::raw_svector_ostream Out(Spec);
   Out << "%." << Prec << Letter;
 
   if (Style == FloatStyle::Exponent || Style == FloatStyle::ExponentUpper) {
@@ -247,11 +247,11 @@ void llvm::write_double(raw_ostream &S, double N, FloatStyle Style,
     S << '%';
 }
 
-bool llvm::isPrefixedHexStyle(HexPrintStyle S) {
+bool llvh::isPrefixedHexStyle(HexPrintStyle S) {
   return (S == HexPrintStyle::PrefixLower || S == HexPrintStyle::PrefixUpper);
 }
 
-size_t llvm::getDefaultPrecision(FloatStyle Style) {
+size_t llvh::getDefaultPrecision(FloatStyle Style) {
   switch (Style) {
   case FloatStyle::Exponent:
   case FloatStyle::ExponentUpper:

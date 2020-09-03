@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// Updated Jan 28, 2019
-#define NATIVE_FUNCTION_VERSION_VALUE 8
+// Updated May 6, 2020
+#define NATIVE_FUNCTION_VERSION_VALUE 9
 
 #ifndef NATIVE_FUNCTION
 #define NATIVE_FUNCTION(func)
@@ -36,6 +36,8 @@ NATIVE_FUNCTION(arrayBufferPrototypeSlice)
 
 NATIVE_FUNCTION(arrayConstructor)
 NATIVE_FUNCTION(arrayIsArray)
+NATIVE_FUNCTION(arrayFrom)
+NATIVE_FUNCTION(arrayOf)
 NATIVE_FUNCTION(arrayIteratorPrototypeNext)
 NATIVE_FUNCTION(arrayPrototypeConcat)
 NATIVE_FUNCTION(arrayPrototypeForEach)
@@ -47,10 +49,6 @@ NATIVE_FUNCTION(arrayPrototypeFlat)
 NATIVE_FUNCTION(arrayPrototypeFlatMap)
 NATIVE_FUNCTION(arrayPrototypeToLocaleString)
 NATIVE_FUNCTION(arrayPrototypeToString)
-
-#ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
-NATIVE_FUNCTION(arrayFrom)
-NATIVE_FUNCTION(arrayOf)
 NATIVE_FUNCTION(arrayPrototypeCopyWithin)
 NATIVE_FUNCTION(arrayPrototypeEvery)
 NATIVE_FUNCTION(arrayPrototypeFill)
@@ -69,7 +67,6 @@ NATIVE_FUNCTION(arrayPrototypeSlice)
 NATIVE_FUNCTION(arrayPrototypeSome)
 NATIVE_FUNCTION(arrayPrototypeUnshift)
 NATIVE_FUNCTION(arrayPrototypeSplice)
-#endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 
 NATIVE_FUNCTION(booleanConstructor)
 NATIVE_FUNCTION(booleanPrototypeToString)
@@ -137,6 +134,7 @@ NATIVE_FUNCTION(hermesBuiltinCopyRestArgs)
 NATIVE_FUNCTION(hermesBuiltinArraySpread)
 NATIVE_FUNCTION(hermesBuiltinApply)
 NATIVE_FUNCTION(hermesBuiltinEnsureObject)
+NATIVE_FUNCTION(hermesBuiltinGetMethod)
 NATIVE_FUNCTION(hermesBuiltinExportAll)
 NATIVE_FUNCTION(hermesBuiltinThrowTypeError)
 NATIVE_FUNCTION(hermesBuiltinGeneratorSetDelegated)
@@ -155,21 +153,6 @@ NATIVE_FUNCTION(hermesInternalGetWeakSize)
 NATIVE_FUNCTION(hermesInternalIsProxy)
 NATIVE_FUNCTION(hermesInternalTTIReached)
 NATIVE_FUNCTION(hermesInternalTTRCReached)
-
-#ifdef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
-NATIVE_FUNCTION(hermesInternalExecuteCall)
-NATIVE_FUNCTION(hermesInternalGetSubstitution)
-NATIVE_FUNCTION(hermesInternalIsConstructor)
-NATIVE_FUNCTION(hermesInternalIsRegExp)
-NATIVE_FUNCTION(hermesInternalJSArraySetElementAt)
-NATIVE_FUNCTION(hermesInternalRegExpCreate)
-NATIVE_FUNCTION(hermesInternalRegExpExec)
-NATIVE_FUNCTION(hermesInternalSearchString)
-NATIVE_FUNCTION(hermesInternalToInteger)
-NATIVE_FUNCTION(hermesInternalToLength)
-NATIVE_FUNCTION(hermesInternalToObject)
-NATIVE_FUNCTION(hermesInternalToString)
-#endif
 
 #ifdef HERMES_ENABLE_DEBUGGER
 NATIVE_FUNCTION(isDebuggerAttached)
@@ -224,6 +207,7 @@ NATIVE_FUNCTION(objectEntries)
 NATIVE_FUNCTION(objectFreeze)
 NATIVE_FUNCTION(objectFromEntries)
 NATIVE_FUNCTION(objectGetOwnPropertyDescriptor)
+NATIVE_FUNCTION(objectGetOwnPropertyDescriptors)
 NATIVE_FUNCTION(objectGetOwnPropertyNames)
 NATIVE_FUNCTION(objectGetOwnPropertySymbols)
 NATIVE_FUNCTION(objectGetPrototypeOf)
@@ -276,17 +260,16 @@ NATIVE_FUNCTION(regExpLastParenGetter)
 NATIVE_FUNCTION(regExpLeftContextGetter)
 NATIVE_FUNCTION(regExpPrototypeExec)
 NATIVE_FUNCTION(regExpPrototypeTest)
+NATIVE_FUNCTION(regExpPrototypeSymbolMatchAll)
 NATIVE_FUNCTION(regExpRightContextGetter)
 NATIVE_FUNCTION(regExpSourceGetter)
-
-#ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+NATIVE_FUNCTION(regExpStringIteratorPrototypeNext)
 NATIVE_FUNCTION(regExpFlagsGetter)
 NATIVE_FUNCTION(regExpPrototypeSymbolMatch)
 NATIVE_FUNCTION(regExpPrototypeSymbolReplace)
 NATIVE_FUNCTION(regExpPrototypeSymbolSearch)
 NATIVE_FUNCTION(regExpPrototypeSymbolSplit)
 NATIVE_FUNCTION(regExpPrototypeToString)
-#endif
 
 NATIVE_FUNCTION(require)
 NATIVE_FUNCTION(requireFast)
@@ -304,6 +287,7 @@ NATIVE_FUNCTION(setPrototypeSizeGetter)
 NATIVE_FUNCTION(setPrototypeValues)
 NATIVE_FUNCTION(silentObjectSetPrototypeOf)
 NATIVE_FUNCTION(stringConstructor)
+NATIVE_FUNCTION(stringRaw)
 NATIVE_FUNCTION(stringFromCharCode)
 NATIVE_FUNCTION(stringFromCodePoint)
 NATIVE_FUNCTION(stringIteratorPrototypeNext)
@@ -324,9 +308,7 @@ NATIVE_FUNCTION(stringPrototypeToUpperCase)
 NATIVE_FUNCTION(stringPrototypeTrim)
 NATIVE_FUNCTION(stringPrototypeTrimEnd)
 NATIVE_FUNCTION(stringPrototypeTrimStart)
-NATIVE_FUNCTION(stringRaw)
-
-#ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+NATIVE_FUNCTION(stringPrototypeMatchAll)
 NATIVE_FUNCTION(stringPrototypeCharAt)
 NATIVE_FUNCTION(stringPrototypeEndsWith)
 NATIVE_FUNCTION(stringPrototypeIncludesOrStartsWith)
@@ -338,7 +320,6 @@ NATIVE_FUNCTION(stringPrototypeReplace)
 NATIVE_FUNCTION(stringPrototypeSearch)
 NATIVE_FUNCTION(stringPrototypeSlice)
 NATIVE_FUNCTION(stringPrototypeSplit)
-#endif
 
 NATIVE_FUNCTION(symbolConstructor)
 NATIVE_FUNCTION(symbolFor)
@@ -420,6 +401,39 @@ NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSGeneratorFunction>)
       NativeConstructor::creatorFunction)
 #include "hermes/VM/TypedArrays.def"
 #undef TYPED_ARRAY
+
+#ifdef HERMES_PLATFORM_INTL
+// TODO T65916424: Consider how we can move these somewhere more modular.
+// I would prefer these be in the ::hermes::intl namespace, but the current
+// macros make that difficult.
+NATIVE_FUNCTION(intlCollatorCompare)
+NATIVE_FUNCTION(intlCollatorConstructor)
+NATIVE_FUNCTION(intlCollatorSupportedLocalesOf)
+NATIVE_FUNCTION(intlCollatorPrototypeCompareGetter)
+NATIVE_FUNCTION(intlCollatorPrototypeResolvedOptions)
+
+NATIVE_FUNCTION(intlDateTimeFormatConstructor)
+NATIVE_FUNCTION(intlDateTimeFormatFormat)
+NATIVE_FUNCTION(intlDateTimeFormatSupportedLocalesOf)
+NATIVE_FUNCTION(intlDateTimeFormatPrototypeFormatGetter)
+NATIVE_FUNCTION(intlDateTimeFormatPrototypeFormatToParts)
+NATIVE_FUNCTION(intlDateTimeFormatPrototypeResolvedOptions)
+
+NATIVE_FUNCTION(intlNumberFormatConstructor)
+NATIVE_FUNCTION(intlNumberFormatFormat)
+NATIVE_FUNCTION(intlNumberFormatSupportedLocalesOf)
+NATIVE_FUNCTION(intlNumberFormatPrototypeFormatGetter)
+NATIVE_FUNCTION(intlNumberFormatPrototypeFormatToParts)
+NATIVE_FUNCTION(intlNumberFormatPrototypeResolvedOptions)
+
+NATIVE_FUNCTION(intlDatePrototypeToLocaleDateString)
+NATIVE_FUNCTION(intlDatePrototypeToLocaleString)
+NATIVE_FUNCTION(intlDatePrototypeToLocaleTimeString)
+NATIVE_FUNCTION(intlNumberPrototypeToLocaleString)
+NATIVE_FUNCTION(intlStringPrototypeLocaleCompare)
+NATIVE_FUNCTION(intlStringPrototypeToLocaleLowerCase)
+NATIVE_FUNCTION(intlStringPrototypeToLocaleUpperCase)
+#endif
 
 #undef NATIVE_FUNCTION
 #undef NATIVE_CONSTRUCTOR

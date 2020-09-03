@@ -24,8 +24,7 @@ var t1 = a => 1;
 //CHECK-NEXT:              "params": [
 //CHECK-NEXT:                {
 //CHECK-NEXT:                  "type": "Identifier",
-//CHECK-NEXT:                  "name": "a",
-//CHECK-NEXT:                  "typeAnnotation": null
+//CHECK-NEXT:                  "name": "a"
 //CHECK-NEXT:                }
 //CHECK-NEXT:              ],
 //CHECK-NEXT:              "body": {
@@ -38,8 +37,7 @@ var t1 = a => 1;
 //CHECK-NEXT:            },
 //CHECK-NEXT:            "id": {
 //CHECK-NEXT:              "type": "Identifier",
-//CHECK-NEXT:              "name": "t1",
-//CHECK-NEXT:              "typeAnnotation": null
+//CHECK-NEXT:              "name": "t1"
 //CHECK-NEXT:            }
 //CHECK-NEXT:          }
 //CHECK-NEXT:        ]
@@ -58,8 +56,7 @@ var t2 = (a) => 1;
 //CHECK-NEXT:              "params": [
 //CHECK-NEXT:                {
 //CHECK-NEXT:                  "type": "Identifier",
-//CHECK-NEXT:                  "name": "a",
-//CHECK-NEXT:                  "typeAnnotation": null
+//CHECK-NEXT:                  "name": "a"
 //CHECK-NEXT:                }
 //CHECK-NEXT:              ],
 //CHECK-NEXT:              "body": {
@@ -72,8 +69,7 @@ var t2 = (a) => 1;
 //CHECK-NEXT:            },
 //CHECK-NEXT:            "id": {
 //CHECK-NEXT:              "type": "Identifier",
-//CHECK-NEXT:              "name": "t2",
-//CHECK-NEXT:              "typeAnnotation": null
+//CHECK-NEXT:              "name": "t2"
 //CHECK-NEXT:            }
 //CHECK-NEXT:          }
 //CHECK-NEXT:        ]
@@ -92,8 +88,7 @@ var t3 = a => { return 20; }
 //CHECK-NEXT:              "params": [
 //CHECK-NEXT:                {
 //CHECK-NEXT:                  "type": "Identifier",
-//CHECK-NEXT:                  "name": "a",
-//CHECK-NEXT:                  "typeAnnotation": null
+//CHECK-NEXT:                  "name": "a"
 //CHECK-NEXT:                }
 //CHECK-NEXT:              ],
 //CHECK-NEXT:              "body": {
@@ -114,8 +109,7 @@ var t3 = a => { return 20; }
 //CHECK-NEXT:            },
 //CHECK-NEXT:            "id": {
 //CHECK-NEXT:              "type": "Identifier",
-//CHECK-NEXT:              "name": "t3",
-//CHECK-NEXT:              "typeAnnotation": null
+//CHECK-NEXT:              "name": "t3"
 //CHECK-NEXT:            }
 //CHECK-NEXT:          }
 //CHECK-NEXT:        ]
@@ -134,32 +128,27 @@ var t4 = (a,b,c) => a;
 //CHECK-NEXT:              "params": [
 //CHECK-NEXT:                {
 //CHECK-NEXT:                  "type": "Identifier",
-//CHECK-NEXT:                  "name": "a",
-//CHECK-NEXT:                  "typeAnnotation": null
+//CHECK-NEXT:                  "name": "a"
 //CHECK-NEXT:                },
 //CHECK-NEXT:                {
 //CHECK-NEXT:                  "type": "Identifier",
-//CHECK-NEXT:                  "name": "b",
-//CHECK-NEXT:                  "typeAnnotation": null
+//CHECK-NEXT:                  "name": "b"
 //CHECK-NEXT:                },
 //CHECK-NEXT:                {
 //CHECK-NEXT:                  "type": "Identifier",
-//CHECK-NEXT:                  "name": "c",
-//CHECK-NEXT:                  "typeAnnotation": null
+//CHECK-NEXT:                  "name": "c"
 //CHECK-NEXT:                }
 //CHECK-NEXT:              ],
 //CHECK-NEXT:              "body": {
 //CHECK-NEXT:                "type": "Identifier",
-//CHECK-NEXT:                "name": "a",
-//CHECK-NEXT:                "typeAnnotation": null
+//CHECK-NEXT:                "name": "a"
 //CHECK-NEXT:              },
 //CHECK-NEXT:              "expression": true,
 //CHECK-NEXT:              "async": false
 //CHECK-NEXT:            },
 //CHECK-NEXT:            "id": {
 //CHECK-NEXT:              "type": "Identifier",
-//CHECK-NEXT:              "name": "t4",
-//CHECK-NEXT:              "typeAnnotation": null
+//CHECK-NEXT:              "name": "t4"
 //CHECK-NEXT:            }
 //CHECK-NEXT:          }
 //CHECK-NEXT:        ]
@@ -186,8 +175,7 @@ var t5 = () => 3;
 //CHECK-NEXT:            },
 //CHECK-NEXT:            "id": {
 //CHECK-NEXT:              "type": "Identifier",
-//CHECK-NEXT:              "name": "t5",
-//CHECK-NEXT:              "typeAnnotation": null
+//CHECK-NEXT:              "name": "t5"
 //CHECK-NEXT:            }
 //CHECK-NEXT:          }
 //CHECK-NEXT:        ]
@@ -206,8 +194,7 @@ var t6 = (a,) => 3;
 //CHECK-NEXT:              "params": [
 //CHECK-NEXT:                {
 //CHECK-NEXT:                  "type": "Identifier",
-//CHECK-NEXT:                  "name": "a",
-//CHECK-NEXT:                  "typeAnnotation": null
+//CHECK-NEXT:                  "name": "a"
 //CHECK-NEXT:                }
 //CHECK-NEXT:              ],
 //CHECK-NEXT:              "body": {
@@ -220,8 +207,7 @@ var t6 = (a,) => 3;
 //CHECK-NEXT:            },
 //CHECK-NEXT:            "id": {
 //CHECK-NEXT:              "type": "Identifier",
-//CHECK-NEXT:              "name": "t6",
-//CHECK-NEXT:              "typeAnnotation": null
+//CHECK-NEXT:              "name": "t6"
 //CHECK-NEXT:            }
 //CHECK-NEXT:          }
 //CHECK-NEXT:        ]

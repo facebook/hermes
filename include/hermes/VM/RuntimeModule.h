@@ -17,7 +17,7 @@
 #include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/WeakRef.h"
 
-#include "llvm/ADT/simple_ilist.h"
+#include "llvh/ADT/simple_ilist.h"
 
 namespace hermes {
 namespace vm {
@@ -67,7 +67,7 @@ union RuntimeModuleFlags {
 ///
 /// All RuntimeModule-s associated with a \c Runtime are kept together in a
 /// linked list which can be walked to perform memory management tasks.
-class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
+class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
  private:
   friend StringID detail::mapStringMayAllocate(
       RuntimeModule &module,
@@ -116,10 +116,10 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// During hashing, keyBufferIndex takes the top 24bits while numLiterals
   /// becomes the lower 8bits of the key.
   /// Cacheing will be skipped if keyBufferIndex is >= 2^24.
-  llvm::DenseMap<uint32_t, HiddenClass *> objectLiteralHiddenClasses_;
+  llvh::DenseMap<uint32_t, WeakRoot<HiddenClass>> objectLiteralHiddenClasses_;
 
   /// A map from template object ids to template objects.
-  llvm::DenseMap<uint32_t, JSObject *> templateMap_;
+  llvh::DenseMap<uint32_t, JSObject *> templateMap_;
 
   /// Registers the created RuntimeModule with \p domain, resulting in
   /// \p domain owning it. The RuntimeModule will be freed when the
@@ -128,7 +128,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
       Runtime *runtime,
       Handle<Domain> domain,
       RuntimeModuleFlags flags,
-      llvm::StringRef sourceURL,
+      llvh::StringRef sourceURL,
       facebook::hermes::debugger::ScriptID scriptID);
 
   CodeBlock *getCodeBlockSlowPath(unsigned index);
@@ -165,7 +165,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
       facebook::hermes::debugger::ScriptID scriptID,
       std::shared_ptr<hbc::BCProvider> &&bytecode = nullptr,
       RuntimeModuleFlags flags = {},
-      llvm::StringRef sourceURL = {});
+      llvh::StringRef sourceURL = {});
 
   /// Creates a new RuntimeModule that is not yet initialized. It may be
   /// initialized later through lazy compilation.
@@ -176,9 +176,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
       Handle<Domain> domain,
       RuntimeModuleFlags flags = {},
       facebook::hermes::debugger::ScriptID scriptID =
-          facebook::hermes::debugger::kInvalidLocation) {
-    return new RuntimeModule(runtime, domain, flags, "", scriptID);
-  }
+          facebook::hermes::debugger::kInvalidLocation);
 
 #ifndef HERMESVM_LEAN
   /// Crates a lazy RuntimeModule as part of lazy compilation. This module
@@ -254,7 +252,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
     if (LLVM_UNLIKELY(!id.isValid())) {
       // Materialize this lazily created symbol.
       auto entry = bcProvider_->getStringTableEntry(stringID);
-      id = createSymbolFromStringIDMayAllocate(stringID, entry, llvm::None);
+      id = createSymbolFromStringIDMayAllocate(stringID, entry, llvh::None);
     }
     assert(id.isValid() && "Failed to create symbol for stringID");
     return id;
@@ -269,7 +267,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   std::string getStringFromStringID(StringID stringID);
 
   /// \return the RegExp bytecode for a given regexp ID.
-  llvm::ArrayRef<uint8_t> getRegExpBytecodeFromRegExpID(
+  llvh::ArrayRef<uint8_t> getRegExpBytecodeFromRegExpID(
       uint32_t regExpId) const;
 
   /// \return the number of functions in the function map.
@@ -318,7 +316,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   inline Handle<Domain> getDomain(Runtime *);
 
   /// \return a raw pointer to the domain which owns this RuntimeModule.
-  inline Domain *getDomainUnsafe();
+  inline Domain *getDomainUnsafe(Runtime *);
 
   /// \return the Runtime of this module.
   Runtime *getRuntime() {
@@ -331,7 +329,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   }
 
   /// \return the sourceURL, or an empty string if none.
-  llvm::StringRef getSourceURL() const {
+  llvh::StringRef getSourceURL() const {
     return sourceURL_;
   }
 
@@ -342,7 +340,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   }
 
   /// \return any trailing data after the real bytecode.
-  llvm::ArrayRef<uint8_t> getEpilogue() const {
+  llvh::ArrayRef<uint8_t> getEpilogue() const {
     return bcProvider_->getEpilogue();
   }
 
@@ -368,7 +366,8 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// \param numLiterals number of literals used from key buffer of
   /// NewObjectWithBuffer instruction.
   /// \return the cached hidden class.
-  llvm::Optional<Handle<HiddenClass>> findCachedLiteralHiddenClass(
+  llvh::Optional<Handle<HiddenClass>> findCachedLiteralHiddenClass(
+      Runtime *runtime,
       unsigned keyBufferIndex,
       unsigned numLiterals) const;
 
@@ -376,7 +375,10 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// be skipped if keyBufferIndex is >= 2^24.
   /// \param keyBufferIndex value of NewObjectWithBuffer instruction.
   /// \param clazz the hidden class to cache.
-  void tryCacheLiteralHiddenClass(unsigned keyBufferIndex, HiddenClass *clazz);
+  void tryCacheLiteralHiddenClass(
+      Runtime *runtime,
+      unsigned keyBufferIndex,
+      HiddenClass *clazz);
 
   /// Given \p templateObjectID, retrieve the cached template object.
   /// if it doesn't exist, return a nullptr.
@@ -424,7 +426,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// identifier table, and \return the symbol ID.
   /// Computes the hash of the string when it's not supplied.
   template <typename T>
-  SymbolID mapStringMayAllocate(llvm::ArrayRef<T> str, StringID stringID) {
+  SymbolID mapStringMayAllocate(llvh::ArrayRef<T> str, StringID stringID) {
     return mapStringMayAllocate(str, stringID, hermes::hashString(str));
   }
 
@@ -432,7 +434,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// identifier table, and \return the symbol ID.
   template <typename T>
   SymbolID
-  mapStringMayAllocate(llvm::ArrayRef<T> str, StringID stringID, uint32_t hash);
+  mapStringMayAllocate(llvh::ArrayRef<T> str, StringID stringID, uint32_t hash);
 
   /// Create a symbol from a given \p stringID, which is an index to the
   /// string table, corresponding to the entry \p entry. If \p mhash is not
@@ -468,7 +470,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   }
 };
 
-using RuntimeModuleList = llvm::simple_ilist<RuntimeModule>;
+using RuntimeModuleList = llvh::simple_ilist<RuntimeModule>;
 
 } // namespace vm
 } // namespace hermes

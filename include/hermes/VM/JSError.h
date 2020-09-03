@@ -162,7 +162,7 @@ class JSError final : public JSObject {
       Runtime *runtime,
       Handle<JSError> selfHandle,
       size_t index,
-      llvm::SmallVectorImpl<char16_t> &str);
+      llvh::SmallVectorImpl<char16_t> &str);
 };
 
 } // namespace vm

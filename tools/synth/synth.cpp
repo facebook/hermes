@@ -11,23 +11,23 @@
 #include <hermes/TraceInterpreter.h>
 #include <hermes/hermes.h>
 
-#include "llvm/ADT/Statistic.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/Signals.h"
+#include "llvh/ADT/Statistic.h"
+#include "llvh/Support/CommandLine.h"
+#include "llvh/Support/PrettyStackTrace.h"
+#include "llvh/Support/Signals.h"
 
 #include <iostream>
 #include <tuple>
 
 namespace cl {
 
-using llvm::cl::desc;
-using llvm::cl::init;
-using llvm::cl::list;
-using llvm::cl::OneOrMore;
-using llvm::cl::opt;
-using llvm::cl::Positional;
-using llvm::cl::Required;
+using llvh::cl::desc;
+using llvh::cl::init;
+using llvh::cl::list;
+using llvh::cl::OneOrMore;
+using llvh::cl::opt;
+using llvh::cl::Positional;
+using llvh::cl::Required;
 
 /// @name Synth benchmark specific flags
 /// @{
@@ -39,8 +39,8 @@ static list<std::string>
     BytecodeFiles(desc("input bytecode files"), Positional, OneOrMore);
 
 static opt<std::string> Marker("marker", desc("marker to stop at"), init(""));
-static llvm::cl::alias
-    MarkerA("m", desc("alias for -marker"), llvm::cl::aliasopt(Marker));
+static llvh::cl::alias
+    MarkerA("m", desc("alias for -marker"), llvh::cl::aliasopt(Marker));
 
 static opt<std::string> SnapshotMarker(
     "snapshot-at-marker",
@@ -112,7 +112,7 @@ static opt<::hermes::vm::ReleaseUnused> ShouldReleaseUnused(
     "release-unused",
     desc("How aggressively to return unused memory to the OS."),
     init(GCConfig::getDefaultShouldReleaseUnused()),
-    llvm::cl::values(
+    llvh::cl::values(
         clEnumValN(
             ::hermes::vm::kReleaseUnusedNone,
             "none",
@@ -136,31 +136,31 @@ static opt<::hermes::vm::ReleaseUnused> ShouldReleaseUnused(
 
 // Helper functions.
 template <typename T>
-static llvm::Optional<T> execOption(const cl::opt<T> &clOpt) {
+static llvh::Optional<T> execOption(const cl::opt<T> &clOpt) {
   if (clOpt.getNumOccurrences() > 0) {
     return static_cast<T>(clOpt);
   } else {
-    return llvm::None;
+    return llvh::None;
   }
 }
 
 // Must do this special case explicitly, because of the MemorySizeParser.
-static llvm::Optional<::hermes::vm::gcheapsize_t> execOption(
+static llvh::Optional<::hermes::vm::gcheapsize_t> execOption(
     const cl::opt<cl::MemorySize, false, cl::MemorySizeParser> &clOpt) {
   if (clOpt.getNumOccurrences() > 0) {
     return clOpt.bytes;
   } else {
-    return llvm::None;
+    return llvh::None;
   }
 }
 
 int main(int argc, char **argv) {
   // Print a stack trace if we signal out.
-  llvm::sys::PrintStackTraceOnErrorSignal("Hermes synth");
-  llvm::PrettyStackTraceProgram X(argc, argv);
+  llvh::sys::PrintStackTraceOnErrorSignal("Hermes synth");
+  llvh::PrettyStackTraceProgram X(argc, argv);
   // Call llvm_shutdown() on exit to print stats and free memory.
-  llvm::llvm_shutdown_obj Y;
-  llvm::cl::ParseCommandLineOptions(argc, argv, "Hermes synth trace driver\n");
+  llvh::llvm_shutdown_obj Y;
+  llvh::cl::ParseCommandLineOptions(argc, argv, "Hermes synth trace driver\n");
 
   using namespace facebook::hermes::tracing;
   try {
@@ -173,8 +173,8 @@ int main(int argc, char **argv) {
     options.marker = cl::Marker;
     std::string snapshotMarkerFileName;
     if (!cl::SnapshotMarker.empty()) {
-      llvm::SmallVector<char, 16> tmpfile;
-      llvm::sys::fs::createTemporaryFile(
+      llvh::SmallVector<char, 16> tmpfile;
+      llvh::sys::fs::createTemporaryFile(
           cl::SnapshotMarker, "heapsnapshot", tmpfile);
       snapshotMarkerFileName = std::string{tmpfile.begin(), tmpfile.end()};
       options.snapshotMarker = cl::SnapshotMarker;
@@ -189,65 +189,102 @@ int main(int argc, char **argv) {
     // if -gc-print-stats is specified false explicitly, and
     // -gc-before-stats is also false, or if we're trying to get
     // a stable instruction count.
-    options.shouldPrintGCStats = true;
+    bool shouldPrintGCStats = true;
     if (cl::GCPrintStats.getNumOccurrences() > 0) {
-      options.shouldPrintGCStats = (cl::GCPrintStats || cl::GCBeforeStats) &&
+      shouldPrintGCStats = (cl::GCPrintStats || cl::GCBeforeStats) &&
           !cl::StableInstructionCount;
     }
-    options.shouldPrintGCStats =
-        options.shouldPrintGCStats && !cl::StableInstructionCount;
+    shouldPrintGCStats = shouldPrintGCStats && !cl::StableInstructionCount;
 
-    options.minHeapSize = execOption(cl::MinHeapSize);
-    options.initHeapSize = execOption(cl::InitHeapSize);
-    options.maxHeapSize = execOption(cl::MaxHeapSize);
-    options.occupancyTarget = execOption(cl::OccupancyTarget);
-    options.shouldReleaseUnused = execOption(cl::ShouldReleaseUnused);
-    options.allocInYoung = execOption(cl::GCAllocYoung);
-    options.revertToYGAtTTI = execOption(cl::GCRevertToYGAtTTI);
+    llvh::Optional<::hermes::vm::gcheapsize_t> minHeapSize =
+        execOption(cl::MinHeapSize);
+    llvh::Optional<::hermes::vm::gcheapsize_t> initHeapSize =
+        execOption(cl::InitHeapSize);
+    llvh::Optional<::hermes::vm::gcheapsize_t> maxHeapSize =
+        execOption(cl::MaxHeapSize);
+    llvh::Optional<double> occupancyTarget = execOption(cl::OccupancyTarget);
+    llvh::Optional<::hermes::vm::ReleaseUnused> shouldReleaseUnused =
+        execOption(cl::ShouldReleaseUnused);
+    llvh::Optional<bool> allocInYoung = execOption(cl::GCAllocYoung);
+    llvh::Optional<bool> revertToYGAtTTI = execOption(cl::GCRevertToYGAtTTI);
     options.shouldTrackIO = execOption(cl::TrackBytecodeIO);
     options.bytecodeWarmupPercent = execOption(cl::BytecodeWarmupPercent);
-    options.sanitizeRate = execOption(cl::GCSanitizeRate);
+    llvh::Optional<double> sanitizeRate = execOption(cl::GCSanitizeRate);
     // The type of this case is complicated, so just do it explicitly.
+    llvh::Optional<int64_t> sanitizeRandomSeed;
     if (cl::GCSanitizeRandomSeed) {
-      options.sanitizeRandomSeed = cl::GCSanitizeRandomSeed;
+      sanitizeRandomSeed = cl::GCSanitizeRandomSeed;
     }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
     if (cl::PrintStats)
-      llvm::EnableStatistics();
+      llvh::EnableStatistics();
 #endif
+
+    options.gcConfigBuilder.withShouldRecordStats(shouldPrintGCStats);
+    if (minHeapSize) {
+      options.gcConfigBuilder.withMinHeapSize(*minHeapSize);
+    }
+    if (initHeapSize) {
+      options.gcConfigBuilder.withMinHeapSize(*initHeapSize);
+    }
+    if (maxHeapSize) {
+      options.gcConfigBuilder.withMaxHeapSize(*maxHeapSize);
+    }
+    if (occupancyTarget) {
+      options.gcConfigBuilder.withOccupancyTarget(*occupancyTarget);
+    }
+    if (shouldReleaseUnused) {
+      options.gcConfigBuilder.withShouldReleaseUnused(*shouldReleaseUnused);
+    }
+    if (allocInYoung) {
+      options.gcConfigBuilder.withAllocInYoung(*allocInYoung);
+    }
+    if (revertToYGAtTTI) {
+      options.gcConfigBuilder.withRevertToYGAtTTI(*revertToYGAtTTI);
+    }
+    if (sanitizeRate || sanitizeRandomSeed) {
+      auto sanitizeConfigBuilder = ::hermes::vm::GCSanitizeConfig::Builder();
+      if (sanitizeRate) {
+        sanitizeConfigBuilder.withSanitizeRate(*sanitizeRate);
+      }
+      if (sanitizeRandomSeed) {
+        sanitizeConfigBuilder.withRandomSeed(*sanitizeRandomSeed);
+      }
+      options.gcConfigBuilder.withSanitizeConfig(sanitizeConfigBuilder.build());
+    }
 
     std::vector<std::string> bytecodeFiles{cl::BytecodeFiles.begin(),
                                            cl::BytecodeFiles.end()};
     if (!cl::Trace.empty()) {
       // If this is tracing mode, get the trace instead of the stats.
-      options.shouldPrintGCStats = false;
+      options.gcConfigBuilder.withShouldRecordStats(false);
       options.shouldTrackIO = false;
       std::error_code ec;
-      auto os = ::hermes::make_unique<llvm::raw_fd_ostream>(
+      auto os = ::hermes::make_unique<llvh::raw_fd_ostream>(
           cl::Trace.c_str(),
           ec,
-          llvm::sys::fs::CD_CreateAlways,
-          llvm::sys::fs::FA_Write,
-          llvm::sys::fs::OF_Text);
+          llvh::sys::fs::CD_CreateAlways,
+          llvh::sys::fs::FA_Write,
+          llvh::sys::fs::OF_Text);
       if (ec) {
         throw std::system_error(ec);
       }
       TraceInterpreter::execAndTrace(
           cl::TraceFile, bytecodeFiles, options, std::move(os));
-      llvm::outs() << "\nWrote output trace to: " << cl::Trace << "\n";
+      llvh::outs() << "\nWrote output trace to: " << cl::Trace << "\n";
     } else {
-      llvm::outs() << TraceInterpreter::execAndGetStats(
+      llvh::outs() << TraceInterpreter::execAndGetStats(
                           cl::TraceFile, bytecodeFiles, options)
                    << "\n";
     }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
     if (cl::PrintStats)
-      llvm::PrintStatistics(llvm::outs());
+      llvh::PrintStatistics(llvh::outs());
 #endif
     if (!cl::SnapshotMarker.empty()) {
-      llvm::outs() << "Wrote heap snapshot for marker \"" << cl::SnapshotMarker
+      llvh::outs() << "Wrote heap snapshot for marker \"" << cl::SnapshotMarker
                    << "\" to " << snapshotMarkerFileName << "\n";
     }
     return 0;

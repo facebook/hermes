@@ -89,7 +89,8 @@ weakSetConstructor(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto adder = Handle<Callable>::dyn_vmcast(runtime->makeHandle(*propRes));
+  auto adder =
+      Handle<Callable>::dyn_vmcast(runtime->makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(!adder)) {
     return runtime->raiseTypeError(
         "Property 'add' for WeakSet is not callable");
@@ -120,7 +121,8 @@ weakSetConstructor(void *, Runtime *runtime, NativeArgs args) {
     }
 
     if (LLVM_UNLIKELY(
-            Callable::executeCall1(adder, runtime, selfHandle, *nextValueRes) ==
+            Callable::executeCall1(
+                adder, runtime, selfHandle, nextValueRes->get()) ==
             ExecutionStatus::EXCEPTION)) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }

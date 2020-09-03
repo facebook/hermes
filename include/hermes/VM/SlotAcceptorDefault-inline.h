@@ -11,9 +11,17 @@
 #include "hermes/VM/SlotAcceptorDefault.h"
 
 #include "hermes/VM/GCPointer-inline.h"
+#include "hermes/VM/WeakRef.h"
 
 namespace hermes {
 namespace vm {
+
+inline void WeakRootAcceptorDefault::acceptWeak(WeakRootBase &ptr) {
+  GCPointerBase::StorageType weakRootStorage = ptr.getNoBarrierUnsafe();
+  acceptWeak(weakRootStorage);
+  // Assign back to the input pointer location.
+  ptr = weakRootStorage;
+}
 
 #ifdef HERMESVM_COMPRESSED_POINTERS
 inline void SlotAcceptorDefault::accept(BasedPointer &ptr) {

@@ -21,6 +21,10 @@ print(Number("123"))
 // CHECK-NEXT: 123
 print(Number("123asdf"))
 // CHECK-NEXT: NaN
+print(Number("0xdead_beef"))
+// CHECK-NEXT: NaN
+print(Number("1_000"))
+// CHECK-NEXT: NaN
 var n = new Number(123);
 print(n, n.__proto__ === Number.prototype);
 // CHECK-NEXT: 123 true

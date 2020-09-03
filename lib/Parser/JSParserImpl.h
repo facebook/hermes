@@ -15,10 +15,10 @@
 #include "hermes/Parser/PreParser.h"
 #include "hermes/Support/Compiler.h"
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/Optional.h"
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/Support/DataTypes.h"
 
 #include <utility>
 
@@ -26,9 +26,9 @@ namespace hermes {
 namespace parser {
 namespace detail {
 
-using llvm::ArrayRef;
-using llvm::None;
-using llvm::Optional;
+using llvh::ArrayRef;
+using llvh::None;
+using llvh::Optional;
 
 /// A convenience class to encapsulate passing multiple boolean parameters
 /// between parser functions.
@@ -85,17 +85,17 @@ class JSParserImpl {
  public:
   explicit JSParserImpl(
       Context &context,
-      std::unique_ptr<llvm::MemoryBuffer> input);
+      std::unique_ptr<llvh::MemoryBuffer> input);
 
   explicit JSParserImpl(Context &context, uint32_t bufferId, ParserPass pass);
 
   JSParserImpl(Context &context, StringRef input)
       : JSParserImpl(
             context,
-            llvm::MemoryBuffer::getMemBuffer(input, "JavaScript")) {}
+            llvh::MemoryBuffer::getMemBuffer(input, "JavaScript")) {}
 
-  JSParserImpl(Context &context, llvm::MemoryBufferRef input)
-      : JSParserImpl(context, llvm::MemoryBuffer::getMemBuffer(input)) {}
+  JSParserImpl(Context &context, llvh::MemoryBufferRef input)
+      : JSParserImpl(context, llvh::MemoryBuffer::getMemBuffer(input)) {}
 
   Context &getContext() {
     return context_;
@@ -174,10 +174,8 @@ class JSParserImpl {
   static constexpr unsigned MAX_RECURSION_DEPTH =
 #ifdef HERMES_LIMIT_STACK_DEPTH
       128
-#elif defined(_MSC_VER) && defined(__clang__) && defined(HERMES_SLOW_DEBUG)
-      128
 #elif defined(_MSC_VER) && defined(HERMES_SLOW_DEBUG)
-      256
+      128
 #elif defined(_MSC_VER)
       512
 #else
@@ -195,6 +193,16 @@ class JSParserImpl {
   /// Set when the parser is inside an async function.
   /// This is used when checking if `await` is a valid Identifier name.
   bool paramAwait_{false};
+
+#if HERMES_PARSE_JSX
+  /// Incremented when inside a JSX tag and decremented when leaving it.
+  /// Used to know whether to lex JS values or JSX text.
+  uint32_t jsxDepth_{0};
+#endif
+
+#if HERMES_PARSE_FLOW
+  bool allowAnonFunctionType_{false};
+#endif
 
   // Certain known identifiers which we need to use when constructing the
   // ESTree or when parsing;
@@ -219,8 +227,37 @@ class JSParserImpl {
   UniqueString *yieldIdent_;
   UniqueString *newIdent_;
   UniqueString *targetIdent_;
+  UniqueString *valueIdent_;
+  UniqueString *typeIdent_;
   UniqueString *asyncIdent_;
   UniqueString *awaitIdent_;
+
+#if HERMES_PARSE_FLOW
+
+  UniqueString *typeofIdent_;
+  UniqueString *declareIdent_;
+  UniqueString *opaqueIdent_;
+  UniqueString *plusIdent_;
+  UniqueString *minusIdent_;
+  UniqueString *moduleIdent_;
+  UniqueString *exportsIdent_;
+  UniqueString *esIdent_;
+  UniqueString *commonJSIdent_;
+
+  UniqueString *anyIdent_;
+  UniqueString *mixedIdent_;
+  UniqueString *emptyIdent_;
+  UniqueString *booleanIdent_;
+  UniqueString *numberIdent_;
+  UniqueString *stringIdent_;
+  UniqueString *voidIdent_;
+  UniqueString *nullIdent_;
+  UniqueString *symbolIdent_;
+
+  UniqueString *checksIdent_;
+
+#endif
+
   /// String representation of all tokens.
   UniqueString *tokenIdent_[NUM_JS_TOKENS];
 
@@ -330,6 +367,27 @@ class JSParserImpl {
   /// documented in errorExpected().
   bool need(TokenKind kind, const char *where, const char *what, SMLoc whatLoc);
 
+  /// Report an error to the SourceErrorManager.
+  void error(SMLoc loc, const llvh::Twine &message) {
+    sm_.error(loc, message, Subsystem::Parser);
+  }
+
+  /// Report an error to the SourceErrorManager.
+  void error(SMRange range, const llvh::Twine &message) {
+    sm_.error(range, message, Subsystem::Parser);
+  }
+
+  /// Report an error using the current token's location.
+  void error(const llvh::Twine &msg) {
+    error(tok_->getSourceRange(), msg);
+  }
+
+  /// Emit an error at the specified source location and range. If the maximum
+  /// number of errors has been reached, return false and move the scanning
+  /// pointer to EOF.
+  /// \return false if too many errors have been emitted and we need to abort.
+  bool error(SMLoc loc, SMRange range, const llvh::Twine &msg);
+
   /// Check whether the current token is the specified one and if it is, consume
   /// it, otherwise an report an error. \returns false if it reported an error.
   /// \param grammarContext enable recognizing either "/" and "/=", or a regexp
@@ -345,10 +403,16 @@ class JSParserImpl {
 
   /// Check whether the current token is the specified one and consume it if so.
   /// \returns true if the token matched.
-  bool checkAndEat(TokenKind kind);
+  bool checkAndEat(
+      TokenKind kind,
+      JSLexer::GrammarContext grammarContext =
+          JSLexer::GrammarContext::AllowRegExp);
   /// Check whether the current token is the specified identifier and consume it
   /// if so. \returns true if the token matched.
-  bool checkAndEat(UniqueString *ident);
+  bool checkAndEat(
+      UniqueString *ident,
+      JSLexer::GrammarContext grammarContext =
+          JSLexer::GrammarContext::AllowRegExp);
   /// Check whether the current token is the specified one. \returns true if it
   /// is.
   bool check(TokenKind kind) const {
@@ -381,12 +445,50 @@ class JSParserImpl {
 
   /// Check whether the current token begins a Declaration.
   bool checkDeclaration() {
-    return checkN(
-               TokenKind::rw_function,
-               letIdent_,
-               TokenKind::rw_const,
-               TokenKind::rw_class) ||
-        (check(asyncIdent_) && checkAsyncFunction());
+    if (checkN(
+            TokenKind::rw_function,
+            letIdent_,
+            TokenKind::rw_const,
+            TokenKind::rw_class) ||
+        (check(asyncIdent_) && checkAsyncFunction())) {
+      return true;
+    }
+
+#if HERMES_PARSE_FLOW
+    if (context_.getParseFlow()) {
+      if (check(opaqueIdent_)) {
+        auto optNext = lexer_.lookahead1(llvh::None);
+        return optNext.hasValue() && (*optNext == TokenKind::identifier);
+      }
+      if (checkN(typeIdent_, interfaceIdent_)) {
+        auto optNext = lexer_.lookahead1(llvh::None);
+        return optNext.hasValue() && *optNext == TokenKind::identifier;
+      }
+      if (check(TokenKind::rw_interface)) {
+        return true;
+      }
+      if (check(TokenKind::rw_enum)) {
+        return true;
+      }
+    }
+#endif
+
+    return false;
+  }
+
+  bool checkDeclareType() {
+#if HERMES_PARSE_FLOW
+    if (check(declareIdent_)) {
+      auto optNext = lexer_.lookahead1(llvh::None);
+      if (!optNext)
+        return false;
+      TokenKind next = *optNext;
+      return next == TokenKind::identifier || next == TokenKind::rw_interface ||
+          next == TokenKind::rw_var || next == TokenKind::rw_function ||
+          next == TokenKind::rw_class || next == TokenKind::rw_export;
+    }
+#endif
+    return false;
   }
 
   /// Check whether the current token begins a template literal.
@@ -650,12 +752,14 @@ class JSParserImpl {
 
   /// \param startLoc the start location of the expression, used for error
   ///     display.
+  /// \param typeArgs the optional type arguments parsed before the '('.
   /// \param seenOptionalChain true when `?.` is used in the chain leading
   ///     to this call expression
   /// \param optional true when `?.` is used immediately prior to the Arguments.
   Optional<ESTree::Node *> parseCallExpression(
       SMLoc startLoc,
       ESTree::NodePtr expr,
+      ESTree::NodePtr typeArgs,
       bool seenOptionalChain,
       bool optional);
 
@@ -688,21 +792,39 @@ class JSParserImpl {
   /// recursion depth.
   Optional<ESTree::Node *> parseBinaryExpression(Param param);
 
-  Optional<ESTree::Node *> parseConditionalExpression(Param param = ParamIn);
+  /// Whether to allow a typed arrow function in the assignment expression.
+  enum class AllowTypedArrowFunction { No, Yes };
+
+  /// Whether to parse CoverTypedIdentifier nodes when seeing a `:`.
+  /// These can only be used as typed parameters in certain contexts.
+  enum class CoverTypedParameters { No, Yes };
+
+  Optional<ESTree::Node *> parseConditionalExpression(
+      Param param = ParamIn,
+      CoverTypedParameters coverTypedParameters = CoverTypedParameters::Yes);
   Optional<ESTree::YieldExpressionNode *> parseYieldExpression(
       Param param = ParamIn);
 
   Optional<ESTree::ClassDeclarationNode *> parseClassDeclaration(Param param);
   Optional<ESTree::ClassExpressionNode *> parseClassExpression();
-  Optional<ESTree::ClassBodyNode *> parseClassTail(
+
+  enum class ClassParseKind { Declaration, Expression };
+
+  /// Parse the class starting after the name (which is optional).
+  /// \param name the name if provided, nullptr if otherwise.
+  /// \param if the name is provided, the type params if provided, nullptr
+  /// otherwise.
+  /// \param kind whether the class is a declaration or expression.
+  Optional<ESTree::Node *> parseClassTail(
       SMLoc startLoc,
-      ESTree::NodePtr &superClass);
+      ESTree::Node *name,
+      ESTree::Node *typeParams,
+      ClassParseKind kind);
+
   Optional<ESTree::ClassBodyNode *> parseClassBody(SMLoc startLoc);
 
-  Optional<ESTree::MethodDefinitionNode *> parseMethodDefinition(
-      bool isStatic,
-      SMRange startRange,
-      bool eagerly = false);
+  Optional<ESTree::Node *>
+  parseClassElement(bool isStatic, SMRange startRange, bool eagerly = false);
 
   /// Reparse the specified node as arrow function parameter list and store the
   /// parameter list in \p paramList. Print an error and return false on error,
@@ -720,8 +842,22 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseArrowFunctionExpression(
       Param param,
       ESTree::Node *leftExpr,
+      ESTree::Node *returnType,
       SMLoc startLoc,
+      AllowTypedArrowFunction allowTypedArrowFunction,
       bool forceAsync);
+
+#if HERMES_PARSE_FLOW
+  Optional<ESTree::Node *> tryParseTypedAsyncArrowFunction(Param param);
+
+  /// Attempt to parse a CoverTypedIdentifierNode which consists of a
+  /// node which may be an arrow parameter, a colon, and a type.
+  /// \param test the LHS of the potential CoverTypedIdentifierNode.
+  /// \return nullptr if there was no error but attempting to parse the
+  ///   node is not possible because \p test can't be a formal parameter,
+  ///   or there wasn't a colon in the first place, None on error.
+  Optional<ESTree::Node *> tryParseCoverTypedIdentifierNode(ESTree::Node *test);
+#endif
 
   /// Reparse an ArrayExpression into an ArrayPattern.
   /// \param inDecl whether this is a declaration context or assignment.
@@ -742,14 +878,24 @@ class JSParserImpl {
       ESTree::Node *node,
       bool inDecl);
 
-  Optional<ESTree::Node *> parseAssignmentExpression(Param param = ParamIn);
-  Optional<ESTree::Node *> parseExpression(Param param = ParamIn);
+  Optional<ESTree::Node *> parseAssignmentExpression(
+      Param param = ParamIn,
+      AllowTypedArrowFunction allowTypedArrowFunction =
+          AllowTypedArrowFunction::Yes,
+      CoverTypedParameters coverTypedParameters = CoverTypedParameters::Yes,
+      ESTree::Node *typeParams = nullptr);
+  Optional<ESTree::Node *> parseExpression(
+      Param param = ParamIn,
+      CoverTypedParameters coverTypedParameters = CoverTypedParameters::Yes);
 
   /// Parse a FromClause and return the string literal representing the source.
   Optional<ESTree::StringLiteralNode *> parseFromClause();
 
   Optional<ESTree::Node *> parseImportDeclaration();
-  bool parseImportClause(ESTree::NodeList &specifiers);
+
+  /// \return the kind of the import.
+  Optional<UniqueString *> parseImportClause(ESTree::NodeList &specifiers);
+
   Optional<ESTree::Node *> parseNameSpaceImport();
   bool parseNamedImports(ESTree::NodeList &specifiers);
   Optional<ESTree::ImportSpecifierNode *> parseImportSpecifier(SMLoc importLoc);
@@ -763,14 +909,14 @@ class JSParserImpl {
   bool parseExportClause(
       ESTree::NodeList &specifiers,
       SMLoc &endLoc,
-      llvm::SmallVectorImpl<SMRange> &invalids);
+      llvh::SmallVectorImpl<SMRange> &invalids);
 
   /// \param[out] invalids ranges of potentially invalid exported symbols,
   ///             only if the clause is eventually followed by a FromClause.
   ///             Appended to if an exported name may be invalid.
   Optional<ESTree::Node *> parseExportSpecifier(
       SMLoc exportLoc,
-      llvm::SmallVectorImpl<SMRange> &invalids);
+      llvh::SmallVectorImpl<SMRange> &invalids);
 
   /// If the current token can be recognised as a directive (ES5.1 14.1),
   /// process the directive and return the allocated directive statement.
@@ -778,6 +924,180 @@ class JSParserImpl {
   /// \return the allocated directive statement if this is a directive, or
   ///    null if it isn't.
   ESTree::ExpressionStatementNode *parseDirective();
+
+#if HERMES_PARSE_JSX
+  Optional<ESTree::Node *> parseJSX();
+  Optional<ESTree::Node *> parseJSXElement(SMLoc start);
+  Optional<ESTree::Node *> parseJSXFragment(SMLoc start);
+
+  Optional<ESTree::JSXOpeningElementNode *> parseJSXOpeningElement(SMLoc start);
+  Optional<ESTree::Node *> parseJSXSpreadAttribute();
+  Optional<ESTree::Node *> parseJSXAttribute();
+
+  /// \param children populated with the JSX children.
+  /// \return the JSXClosingElement or JSXClosingFragment.
+  Optional<ESTree::Node *> parseJSXChildren(ESTree::NodeList &children);
+  Optional<ESTree::Node *> parseJSXChildExpression(SMLoc start);
+
+  /// Parse JSXClosingElement or JSXClosingFragment.
+  Optional<ESTree::Node *> parseJSXClosing(SMLoc start);
+
+  enum class AllowJSXMemberExpression { No, Yes };
+
+  /// \param allowMemberExpression whether JSXMemberExpression (foo.bar) is a
+  /// valid parse of the JSXElementName.
+  Optional<ESTree::Node *> parseJSXElementName(
+      AllowJSXMemberExpression allowJSXMemberExpression);
+#endif
+
+#if HERMES_PARSE_FLOW
+
+  enum class AllowAnonFunctionType { No, Yes };
+
+  /// \param wrapped true when the type annotation should be wrapped in a
+  /// TypeAnnotationNode.
+  Optional<ESTree::Node *> parseTypeAnnotation(
+      bool wrapped = false,
+      AllowAnonFunctionType allowAnonFunctionType = AllowAnonFunctionType::Yes);
+
+  Optional<ESTree::Node *> parseFlowDeclaration();
+  Optional<ESTree::Node *> parseDeclare(SMLoc start);
+
+  enum class TypeAliasKind { None, Declare, Opaque, DeclareOpaque };
+  Optional<ESTree::Node *> parseTypeAlias(SMLoc start, TypeAliasKind kind);
+
+  Optional<ESTree::Node *> parseInterfaceDeclaration(bool declare);
+
+  /// \pre current token is 'extends' or '{'.
+  /// \param[out] extends the super-interfaces for the parsed interface.
+  /// \return the body of the interface
+  Optional<ESTree::Node *> parseInterfaceTail(
+      SMLoc start,
+      ESTree::NodeList &extends);
+  bool parseInterfaceExtends(SMLoc start, ESTree::NodeList &extends);
+
+  Optional<ESTree::Node *> parseDeclareFunction(SMLoc start);
+  Optional<ESTree::Node *> parseDeclareClass(SMLoc start);
+  Optional<ESTree::Node *> parseDeclareExport(SMLoc start);
+  Optional<ESTree::Node *> parseDeclareModule(SMLoc start);
+
+  Optional<ESTree::Node *> parseExportTypeDeclaration(SMLoc start);
+
+  Optional<ESTree::Node *> parseUnionTypeAnnotation();
+  Optional<ESTree::Node *> parseIntersectionTypeAnnotation();
+  Optional<ESTree::Node *> parseAnonFunctionWithoutParensTypeAnnotation();
+  Optional<ESTree::Node *> parsePrefixTypeAnnotation();
+  Optional<ESTree::Node *> parsePostfixTypeAnnotation();
+  Optional<ESTree::Node *> parsePrimaryTypeAnnotation();
+  Optional<ESTree::Node *> parseTupleTypeAnnotation();
+  Optional<ESTree::Node *> parseFunctionTypeAnnotation();
+  Optional<ESTree::Node *> parseFunctionTypeAnnotationWithParams(
+      SMLoc start,
+      ESTree::NodeList &&params,
+      ESTree::Node *rest,
+      ESTree::Node *typeParams);
+  Optional<ESTree::Node *> parseFunctionOrGroupTypeAnnotation();
+
+  Optional<ESTree::Node *> parseObjectTypeAnnotation();
+  bool parseObjectTypeProperties(
+      ESTree::NodeList &properties,
+      ESTree::NodeList &indexers,
+      ESTree::NodeList &callProperties,
+      ESTree::NodeList &internalSlots,
+      bool &inexact);
+  bool parsePropertyTypeAnnotation(
+      ESTree::NodeList &properties,
+      ESTree::NodeList &indexers,
+      ESTree::NodeList &callProperties,
+      ESTree::NodeList &internalSlots);
+
+  /// Current token must be immediately after opening '['.
+  Optional<ESTree::Node *>
+  parseTypeIndexerProperty(SMLoc start, ESTree::Node *variance, bool isStatic);
+
+  Optional<ESTree::Node *> parseTypeProperty(
+      SMLoc start,
+      ESTree::Node *variance,
+      bool isStatic,
+      ESTree::Node *key);
+  Optional<ESTree::Node *> parseMethodTypeProperty(
+      SMLoc start,
+      ESTree::Node *variance,
+      bool isStatic,
+      ESTree::Node *key);
+  Optional<ESTree::Node *> parseGetOrSetTypeProperty(
+      SMLoc start,
+      bool isStatic,
+      bool isGetter,
+      ESTree::Node *key);
+
+  Optional<ESTree::Node *> parseTypeParams();
+  Optional<ESTree::Node *> parseTypeParam();
+  Optional<ESTree::Node *> parseTypeArgs();
+
+  /// \param[out] params the parameters, populated by reference.
+  /// \return the rest parameter if it exists, nullptr otherwise. None still
+  /// indicates an error.
+  Optional<ESTree::FunctionTypeParamNode *> parseFunctionTypeAnnotationParams(
+      ESTree::NodeList &params);
+  Optional<ESTree::FunctionTypeParamNode *> parseFunctionTypeAnnotationParam();
+
+  Optional<ESTree::Node *> parseTypeCallProperty(SMLoc start, bool isStatic);
+
+  Optional<ESTree::GenericTypeAnnotationNode *> parseGenericType();
+
+  Optional<ESTree::ClassImplementsNode *> parseClassImplements();
+
+  /// Parse a property which looks like a method, starting at the opening '('.
+  /// \param typeParams (optional) type params between '<' and '>' before '('.
+  Optional<ESTree::FunctionTypeAnnotationNode *> parseMethodishTypeAnnotation(
+      SMLoc start,
+      ESTree::Node *typeParams);
+
+  Optional<ESTree::Node *> parsePredicate();
+
+  Optional<ESTree::IdentifierNode *> reparseTypeAnnotationAsIdentifier(
+      ESTree::Node *typeAnnotation);
+
+  enum class EnumKind {
+    String,
+    Number,
+    Boolean,
+    Symbol,
+  };
+
+  static llvh::StringRef enumKindStr(EnumKind kind) {
+    switch (kind) {
+      case EnumKind::String:
+        return "string";
+      case EnumKind::Number:
+        return "number";
+      case EnumKind::Boolean:
+        return "boolean";
+      case EnumKind::Symbol:
+        return "symbol";
+    }
+  }
+
+  static OptValue<EnumKind> getMemberEnumKind(ESTree::Node *member) {
+    switch (member->getKind()) {
+      case ESTree::NodeKind::EnumStringMember:
+        return EnumKind::String;
+      case ESTree::NodeKind::EnumNumberMember:
+        return EnumKind::Number;
+      case ESTree::NodeKind::EnumBooleanMember:
+        return EnumKind::Boolean;
+      default:
+        return None;
+    }
+  }
+
+  Optional<ESTree::Node *> parseEnumDeclaration();
+  Optional<ESTree::Node *> parseEnumBody(
+      OptValue<EnumKind> optKind,
+      bool explicitType);
+  Optional<ESTree::Node *> parseEnumMember();
+#endif
 
   /// RAII to save and restore the current setting of "strict mode".
   class SaveStrictMode {

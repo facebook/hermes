@@ -23,7 +23,7 @@
 #include "hermes/Support/Math.h"
 #include "hermes/Support/OSCompat.h"
 
-#include "llvm/Support/MathExtras.h"
+#include "llvh/Support/MathExtras.h"
 
 namespace hermes {
 namespace vm {
@@ -248,7 +248,7 @@ CallResult<HermesValue> mathFround(void *, Runtime *runtime, NativeArgs args) {
 // ES6.0 20.2.2.18
 CallResult<HermesValue> mathHypot(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
-  llvm::SmallVector<double, 4> values{};
+  llvh::SmallVector<double, 4> values{};
   values.reserve(args.getArgCount());
 
   // Store the max abs(arg), since every argument will be squared anyway.
@@ -332,7 +332,7 @@ CallResult<HermesValue> mathClz32(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   uint32_t n = res->getNumberAs<uint32_t>();
-  uint32_t p = llvm::countLeadingZeros(n);
+  uint32_t p = llvh::countLeadingZeros(n);
   return HermesValue::encodeNumberValue(p);
 }
 

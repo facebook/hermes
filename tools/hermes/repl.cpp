@@ -7,13 +7,13 @@
 
 #include "repl.h"
 
-#include "llvm/ADT/SmallString.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/Signals.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/SmallString.h"
+#include "llvh/Support/CommandLine.h"
+#include "llvh/Support/FileSystem.h"
+#include "llvh/Support/Path.h"
+#include "llvh/Support/PrettyStackTrace.h"
+#include "llvh/Support/Signals.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include "hermes/ConsoleHost/ConsoleHost.h"
 #include "hermes/Parser/JSLexer.h"
@@ -51,15 +51,15 @@ static const int kHistoryMaxEntries = 500;
 
 using namespace hermes;
 
-static llvm::cl::opt<std::string> PromptString(
+static llvh::cl::opt<std::string> PromptString(
     "prompt",
-    llvm::cl::init(">> "),
-    llvm::cl::desc("Prompt string for the REPL."));
+    llvh::cl::init(">> "),
+    llvh::cl::desc("Prompt string for the REPL."));
 
-static llvm::cl::opt<std::string> Prompt2String(
+static llvh::cl::opt<std::string> Prompt2String(
     "prompt2",
-    llvm::cl::init("...  "),
-    llvm::cl::desc("Prompt string for continuation lines in the REPL."));
+    llvh::cl::init("...  "),
+    llvh::cl::desc("Prompt string for continuation lines in the REPL."));
 
 namespace {
 enum class ReadResult {
@@ -81,7 +81,7 @@ static ReadResult readInputLine(const char *prompt, std::string &line);
 #ifdef _WINDOWS
 
 static ReadResult readInputLine(const char *prompt, std::string &line) {
-  llvm::outs() << prompt;
+  llvh::outs() << prompt;
   std::string current{};
   bool success = !!std::getline(std::cin, current);
 
@@ -143,7 +143,7 @@ static ReadResult readInputLine(const char *prompt, std::string &line) {
   // Avoid unused function warnings.
   (void)handleSignal;
 #endif
-  llvm::outs() << prompt;
+  llvh::outs() << prompt;
   std::string current{};
   bool success = !!std::getline(std::cin, current);
 #ifndef __EMSCRIPTEN__
@@ -163,7 +163,7 @@ static ReadResult readInputLine(const char *prompt, std::string &line) {
 /// that haven't been closed, and that the preceding closing delimiter tokens
 /// are actually valid.
 /// Otherwise, simply returns false, and the line is fed as-is to eval().
-static bool needsAnotherLine(llvm::StringRef input) {
+static bool needsAnotherLine(llvh::StringRef input) {
   SourceErrorManager sm;
   SourceErrorManager::SaveAndSuppressMessages suppress(&sm);
   hermes::BumpPtrAllocator allocator{};
@@ -193,7 +193,64 @@ static bool needsAnotherLine(llvm::StringRef input) {
     }
   };
 
-  while (const parser::Token *token = lexer.advance()) {
+  // Look at the previous token to see if the next token could possibly be the
+  // beginning of a regular expression.
+  // https://github.com/mikesamuel/es5-lexer/blob/master/src/guess_is_regexp.js
+  auto isRegexPossible = [](OptValue<parser::TokenKind> previousTokenKind) {
+    if (!previousTokenKind) {
+      return true;
+    }
+    switch (*previousTokenKind) {
+      case parser::TokenKind::rw_break:
+      case parser::TokenKind::rw_case:
+      case parser::TokenKind::rw_continue:
+      case parser::TokenKind::rw_delete:
+      case parser::TokenKind::rw_do:
+      case parser::TokenKind::rw_else:
+      case parser::TokenKind::rw_finally:
+      case parser::TokenKind::rw_in:
+      case parser::TokenKind::rw_instanceof:
+      case parser::TokenKind::rw_return:
+      case parser::TokenKind::rw_throw:
+      case parser::TokenKind::rw_try:
+      case parser::TokenKind::rw_typeof:
+      case parser::TokenKind::rw_void:
+      case parser::TokenKind::plus:
+      case parser::TokenKind::minus:
+      case parser::TokenKind::period:
+      case parser::TokenKind::slash:
+      case parser::TokenKind::comma:
+      case parser::TokenKind::star:
+      case parser::TokenKind::exclaim:
+      case parser::TokenKind::percent:
+      case parser::TokenKind::amp:
+      case parser::TokenKind::l_paren:
+      case parser::TokenKind::colon:
+      case parser::TokenKind::semi:
+      case parser::TokenKind::less:
+      case parser::TokenKind::equal:
+      case parser::TokenKind::greater:
+      case parser::TokenKind::question:
+      case parser::TokenKind::l_square:
+      case parser::TokenKind::caret:
+      case parser::TokenKind::l_brace:
+      case parser::TokenKind::pipe:
+      case parser::TokenKind::r_brace:
+      case parser::TokenKind::tilde:
+        return true;
+      default:
+        return false;
+    }
+  };
+
+  OptValue<parser::TokenKind> previousTokenKind;
+
+  // Use AllowRegExp when a regular expression is possible and use AllowDiv
+  // otherwise so that division is correctly parsed.
+  while (const parser::Token *token = lexer.advance(
+             isRegexPossible(previousTokenKind)
+                 ? parser::JSLexer::GrammarContext::AllowRegExp
+                 : parser::JSLexer::GrammarContext::AllowDiv)) {
     if (token->getKind() == parser::TokenKind::eof) {
       break;
     }
@@ -223,6 +280,7 @@ static bool needsAnotherLine(llvm::StringRef input) {
         // Do nothing for the other tokens.
         break;
     }
+    previousTokenKind = token->getKind();
   }
 
   // If the stack is empty, then we can't recover from the error,
@@ -233,13 +291,13 @@ static bool needsAnotherLine(llvm::StringRef input) {
 
 #if HAVE_LIBREADLINE
 // Load history file or create it
-static std::error_code loadHistoryFile(llvm::SmallString<128> &historyFile) {
-  if (!llvm::sys::path::home_directory(historyFile)) {
+static std::error_code loadHistoryFile(llvh::SmallString<128> &historyFile) {
+  if (!llvh::sys::path::home_directory(historyFile)) {
     // Use ENOENT here since it could not found a home directory
     return std::error_code(ENOENT, std::system_category());
   }
 
-  llvm::sys::path::append(historyFile, kHistoryFileBaseName);
+  llvh::sys::path::append(historyFile, kHistoryFileBaseName);
 
   auto err = ::read_history(historyFile.c_str());
   if (err != 0) {
@@ -266,12 +324,12 @@ int repl(const vm::RuntimeConfig &config) {
       global, runtime.get(), vm::Predefined::getSymbolID(vm::Predefined::eval));
   if (propRes == vm::ExecutionStatus::EXCEPTION) {
     runtime->printException(
-        llvm::outs(), runtime->makeHandle(runtime->getThrownValue()));
+        llvh::outs(), runtime->makeHandle(runtime->getThrownValue()));
     return 1;
   }
-  auto evalFn = runtime->makeHandle<vm::Callable>(*propRes);
+  auto evalFn = runtime->makeHandle<vm::Callable>(std::move(*propRes));
 
-  llvm::StringRef evaluateLineString =
+  llvh::StringRef evaluateLineString =
 #include "evaluate-line.js"
       ;
   bool hasColors = oscompat::should_color(STDOUT_FILENO);
@@ -283,26 +341,27 @@ int repl(const vm::RuntimeConfig &config) {
       vm::StringPrimitive::createNoThrow(runtime.get(), evaluateLineString)
           .getHermesValue());
   if (callRes == vm::ExecutionStatus::EXCEPTION) {
-    llvm::raw_ostream &errs = hasColors
-        ? llvm::errs().changeColor(llvm::raw_ostream::Colors::RED)
-        : llvm::errs();
-    llvm::raw_ostream &outs = hasColors
-        ? llvm::outs().changeColor(llvm::raw_ostream::Colors::RED)
-        : llvm::outs();
+    llvh::raw_ostream &errs = hasColors
+        ? llvh::errs().changeColor(llvh::raw_ostream::Colors::RED)
+        : llvh::errs();
+    llvh::raw_ostream &outs = hasColors
+        ? llvh::outs().changeColor(llvh::raw_ostream::Colors::RED)
+        : llvh::outs();
     errs << "Unable to get REPL util function: evaluateLine.\n";
     runtime->printException(
         outs, runtime->makeHandle(runtime->getThrownValue()));
     return 1;
   }
-  auto evaluateLineFn = runtime->makeHandle<vm::JSFunction>(*callRes);
+  auto evaluateLineFn =
+      runtime->makeHandle<vm::JSFunction>(std::move(*callRes));
 
   runtime->getHeap().runtimeWillExecute();
 
 #if HAVE_LIBREADLINE
-  llvm::SmallString<128> historyFile{};
+  llvh::SmallString<128> historyFile{};
   auto historyErr = loadHistoryFile(historyFile);
   if (historyErr && historyErr.value() != ENOENT) {
-    llvm::errs() << "Could not load history file: " << historyErr.message()
+    llvh::errs() << "Could not load history file: " << historyErr.message()
                  << '\n';
   }
 #endif
@@ -310,7 +369,7 @@ int repl(const vm::RuntimeConfig &config) {
   // SetUnbuffered because there is no explicit flush after prompt (>>).
   // There is also no explicitly flush at end of line. (An automatic flush
   // mechanism is not guaranteed to be present, from my experiment on Windows)
-  llvm::outs().SetUnbuffered();
+  llvh::outs().SetUnbuffered();
   while (true) {
     // Main loop
     auto readResult = readInputLine(
@@ -318,7 +377,7 @@ int repl(const vm::RuntimeConfig &config) {
     if (readResult == ReadResult::FAILURE ||
         (readResult == ReadResult::INTERRUPT && code.empty())) {
       // EOF or user exit on non-continuation line.
-      llvm::outs() << '\n';
+      llvh::outs() << '\n';
 #if HAVE_LIBREADLINE
       if (history_length > 0) {
         ::stifle_history(kHistoryMaxEntries);
@@ -331,7 +390,7 @@ int repl(const vm::RuntimeConfig &config) {
     if (readResult == ReadResult::INTERRUPT) {
       // Interrupt the continuation line.
       code.clear();
-      llvm::outs() << '\n';
+      llvh::outs() << '\n';
       continue;
     }
 
@@ -352,15 +411,15 @@ int repl(const vm::RuntimeConfig &config) {
              vm::HermesValue::encodeBoolValue(hasColors))) ==
         vm::ExecutionStatus::EXCEPTION) {
       runtime->printException(
-          hasColors ? llvm::outs().changeColor(llvm::raw_ostream::Colors::RED)
-                    : llvm::outs(),
+          hasColors ? llvh::outs().changeColor(llvh::raw_ostream::Colors::RED)
+                    : llvh::outs(),
           runtime->makeHandle(runtime->getThrownValue()));
-      llvm::outs().resetColor();
+      llvh::outs().resetColor();
       code.clear();
       continue;
     }
 
-    if (callRes->isUndefined()) {
+    if ((*callRes)->isUndefined()) {
       code.clear();
       continue;
     }
@@ -368,11 +427,11 @@ int repl(const vm::RuntimeConfig &config) {
     // Operator resolution in the vm namespace.
     vm::SmallU16String<32> tmp;
     vm::operator<<(
-        llvm::outs(),
+        llvh::outs(),
         vm::StringPrimitive::createStringView(
             runtime.get(),
             vm::Handle<vm::StringPrimitive>::vmcast(
-                runtime->makeHandle(*callRes)))
+                runtime->makeHandle(std::move(*callRes))))
             .getUTF16Ref(tmp))
         << "\n";
     code.clear();
