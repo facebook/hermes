@@ -392,7 +392,7 @@ class MarkWorklist {
       return size_;
     }
 
-    constexpr size_t capacity() {
+    constexpr size_t capacity() const {
       return N;
     }
 
