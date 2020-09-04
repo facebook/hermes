@@ -149,7 +149,9 @@ CallResult<Handle<SymbolID>> IdentifierTable::getSymbolHandleFromPrimitive(
   assert(str && "null string primitive");
   if (str->isUniqued()) {
     // If the string was already uniqued, we can return directly.
-    return runtime->makeHandle(str->getUniqueID());
+    SymbolID id = str->getUniqueID();
+    symbolReadBarrier(id.unsafeGetIndex());
+    return runtime->makeHandle(id);
   }
   auto handle = runtime->makeHandle(std::move(str));
   // Force the string primitive to flatten if it's a rope.
