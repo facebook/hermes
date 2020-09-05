@@ -1024,6 +1024,14 @@ class GCBase {
       gcheapsize_t usedBefore,
       gcheapsize_t usedAfter);
 
+  /// Record statistics from a single GC, which are specified in the given
+  /// \p event, in the overall cumulative stats struct.
+  void recordGCStats(const GCAnalyticsEvent &event);
+
+  /// Record statistics from a single GC, which are specified in the given
+  /// \p event, in the given cumulative stats struct.
+  void recordGCStats(const GCAnalyticsEvent &event, CumulativeHeapStats *stats);
+
   /// Do any additional GC-specific logging that is useful before dying with
   /// out-of-memory.
   virtual void oomDetail(std::error_code reason);

@@ -694,6 +694,26 @@ void GCBase::recordGCStats(
       wallTime, cpuTime, finalHeapSize, usedBefore, usedAfter, &cumStats_);
 }
 
+void GCBase::recordGCStats(
+    const GCAnalyticsEvent &event,
+    CumulativeHeapStats *stats) {
+  stats->gcWallTime.record(
+      std::chrono::duration<double>(event.duration).count());
+  stats->gcCPUTime.record(
+      std::chrono::duration<double>(event.cpuDuration).count());
+  stats->finalHeapSize = event.postSize;
+  stats->usedBefore.record(event.preAllocated);
+  stats->usedAfter.record(event.postAllocated);
+  stats->numCollections++;
+}
+
+void GCBase::recordGCStats(const GCAnalyticsEvent &event) {
+  if (analyticsCallback_) {
+    analyticsCallback_(event);
+  }
+  recordGCStats(event, &cumStats_);
+}
+
 void GCBase::oom(std::error_code reason) {
 #ifdef HERMESVM_EXCEPTION_ON_OOM
   HeapInfo heapInfo;
