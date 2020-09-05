@@ -257,30 +257,18 @@ class HadesGC::CollectionStats final {
 };
 
 HadesGC::CollectionStats::~CollectionStats() {
-  gc_->recordGCStats(
-      std::chrono::duration_cast<std::chrono::duration<double>>(
-          endTime_ - beginTime_)
-          .count(),
-      std::chrono::duration_cast<std::chrono::duration<double>>(cpuDuration_)
-          .count(),
-      0,
-      allocatedBefore_,
-      allocatedAfter_);
-
-  if (gc_->analyticsCallback_) {
-    gc_->analyticsCallback_(GCAnalyticsEvent{
-        gc_->getName(),
-        kHeapNameForAnalytics,
-        extraInfo_,
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            endTime_ - beginTime_),
-        std::chrono::duration_cast<std::chrono::milliseconds>(cpuDuration_),
-        /*preAllocated*/ allocatedBefore_,
-        /*preSize*/ sizeBefore_,
-        /*postAllocated*/ allocatedAfter_,
-        /*postSize*/ sizeAfter_,
-        /*survivalRatio*/ survivalRatio()});
-  }
+  gc_->recordGCStats(GCAnalyticsEvent{
+      gc_->getName(),
+      kHeapNameForAnalytics,
+      extraInfo_,
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          endTime_ - beginTime_),
+      std::chrono::duration_cast<std::chrono::milliseconds>(cpuDuration_),
+      /*preAllocated*/ allocatedBefore_,
+      /*preSize*/ sizeBefore_,
+      /*postAllocated*/ allocatedAfter_,
+      /*postSize*/ sizeAfter_,
+      /*survivalRatio*/ survivalRatio()});
 }
 
 class HadesGC::EvacAcceptor final : public SlotAcceptorDefault {
