@@ -670,31 +670,6 @@ void GCBase::printStats(JSONEmitter &json) {
 }
 
 void GCBase::recordGCStats(
-    double wallTime,
-    double cpuTime,
-    gcheapsize_t finalHeapSize,
-    gcheapsize_t usedBefore,
-    gcheapsize_t usedAfter,
-    CumulativeHeapStats *stats) {
-  stats->gcWallTime.record(wallTime);
-  stats->gcCPUTime.record(cpuTime);
-  stats->finalHeapSize = finalHeapSize;
-  stats->usedBefore.record(usedBefore);
-  stats->usedAfter.record(usedAfter);
-  stats->numCollections++;
-}
-
-void GCBase::recordGCStats(
-    double wallTime,
-    double cpuTime,
-    gcheapsize_t usedBefore,
-    gcheapsize_t usedAfter,
-    gcheapsize_t finalHeapSize) {
-  recordGCStats(
-      wallTime, cpuTime, finalHeapSize, usedBefore, usedAfter, &cumStats_);
-}
-
-void GCBase::recordGCStats(
     const GCAnalyticsEvent &event,
     CumulativeHeapStats *stats) {
   stats->gcWallTime.record(

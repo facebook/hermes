@@ -1003,27 +1003,6 @@ class GCBase {
   /// Print the cumulative statistics.
   virtual void printStats(JSONEmitter &json);
 
-  /// Record statistics from a single GC, which took \p wallTime seconds wall
-  /// time and \p cpuTime seconds CPU time to run the gc and left the heap size
-  /// at the given \p finalHeapSize, in the given cumulative stats struct.
-  void recordGCStats(
-      double wallTime,
-      double cpuTime,
-      gcheapsize_t finalHeapSize,
-      gcheapsize_t usedBefore,
-      gcheapsize_t usedAfter,
-      CumulativeHeapStats *stats);
-
-  /// Record statistics from a single GC, which took \p wallTime seconds wall
-  /// time and \p cpuTime seconds CPU time to run the gc and left the heap size
-  /// at the given \p finalHeapSize, in the overall cumulative stats struct.
-  void recordGCStats(
-      double wallTime,
-      double cpuTime,
-      gcheapsize_t finalHeapSize,
-      gcheapsize_t usedBefore,
-      gcheapsize_t usedAfter);
-
   /// Record statistics from a single GC, which are specified in the given
   /// \p event, in the overall cumulative stats struct.
   void recordGCStats(const GCAnalyticsEvent &event);
