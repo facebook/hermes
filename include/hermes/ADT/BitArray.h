@@ -14,7 +14,6 @@
 #include <bitset>
 
 namespace hermes {
-namespace vm {
 
 /// This serves as a replacement for std::bitset that provides fast search and
 /// customisable alignment. The storage is fixed size and inline, unlike
@@ -75,7 +74,14 @@ class BitArray {
 
   /// Find the index of the first set bit at or after \p idx.
   size_t findNextSetBitFrom(size_t idx) const {
-    assert(idx < N && "precondition: ind is less than number of bits");
+    assert(
+        idx <= N &&
+        "precondition: idx is less than or equal to number of bits");
+    // If there are bits after N but in the same word, we do not need to
+    // generate this special case, since we will do a check on idx at the end.
+    if (N % kBitsPerWord == 0 && idx == N) {
+      return N;
+    }
     size_t wordIdx = idx / kBitsPerWord;
     size_t offset = idx % kBitsPerWord;
     // Start looking from the given idx. Set all bits before idx in the word to
@@ -102,7 +108,6 @@ class BitArray {
     return idx;
   }
 };
-} // namespace vm
 } // namespace hermes
 
 #endif // HERMES_ADT_BITARRAY_H

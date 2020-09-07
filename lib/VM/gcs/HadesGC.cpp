@@ -35,11 +35,6 @@ HadesGC::HeapSegment::HeapSegment(AlignedStorage &&storage)
   growToLimit();
 }
 
-void HadesGC::OldGen::transitionToFreelist(HeapSegment &seg) {
-  allocatedBytes_ += seg.used();
-  seg.transitionToFreelist(*this);
-}
-
 void HadesGC::HeapSegment::transitionToFreelist(OldGen &og) {
   assert(bumpAllocMode_ && "This segment has already been transitioned");
   // Add a free list cell that spans the distance from end to level.
@@ -243,6 +238,12 @@ class HadesGC::CollectionStats final {
     cpuDuration_ += cpuTime;
   }
 
+  double survivalRatio() const {
+    return allocatedBefore_
+        ? static_cast<double>(allocatedAfter_) / allocatedBefore_
+        : 0;
+  }
+
  private:
   HadesGC *gc_;
   std::string extraInfo_;
@@ -256,31 +257,18 @@ class HadesGC::CollectionStats final {
 };
 
 HadesGC::CollectionStats::~CollectionStats() {
-  gc_->recordGCStats(
-      std::chrono::duration_cast<std::chrono::duration<double>>(
-          endTime_ - beginTime_)
-          .count(),
-      std::chrono::duration_cast<std::chrono::duration<double>>(cpuDuration_)
-          .count(),
-      0,
-      allocatedBefore_,
-      allocatedAfter_);
-
-  if (gc_->analyticsCallback_) {
-    gc_->analyticsCallback_(GCAnalyticsEvent{
-        gc_->getName(),
-        kHeapNameForAnalytics,
-        extraInfo_,
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            endTime_ - beginTime_),
-        std::chrono::duration_cast<std::chrono::milliseconds>(cpuDuration_),
-        /*preAllocated*/ allocatedBefore_,
-        /*preSize*/ sizeBefore_,
-        /*postAllocated*/ allocatedAfter_,
-        /*postSize*/ sizeAfter_,
-        /*survivalRatio*/ static_cast<double>(allocatedAfter_) /
-            allocatedBefore_});
-  }
+  gc_->recordGCStats(GCAnalyticsEvent{
+      gc_->getName(),
+      kHeapNameForAnalytics,
+      extraInfo_,
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          endTime_ - beginTime_),
+      std::chrono::duration_cast<std::chrono::milliseconds>(cpuDuration_),
+      /*preAllocated*/ allocatedBefore_,
+      /*preSize*/ sizeBefore_,
+      /*postAllocated*/ allocatedAfter_,
+      /*postSize*/ sizeAfter_,
+      /*survivalRatio*/ survivalRatio()});
 }
 
 class HadesGC::EvacAcceptor final : public SlotAcceptorDefault {
@@ -324,6 +312,7 @@ class HadesGC::EvacAcceptor final : public SlotAcceptorDefault {
     // Copy the contents of the existing cell over before modifying it.
     std::memcpy(newCell, cell, sz);
     assert(newCell->isValid() && "Cell was copied incorrectly");
+    promotedBytes_ += sz;
     CopyListCell *const copyCell = static_cast<CopyListCell *>(cell);
     // Set the forwarding pointer in the old spot
     copyCell->setMarkedForwardingPointer(newCell);
@@ -348,6 +337,10 @@ class HadesGC::EvacAcceptor final : public SlotAcceptorDefault {
     }
   }
 
+  uint64_t promotedBytes() const {
+    return promotedBytes_;
+  }
+
   CopyListCell *pop() {
     if (!copyListHead_) {
       return nullptr;
@@ -363,6 +356,7 @@ class HadesGC::EvacAcceptor final : public SlotAcceptorDefault {
   /// The copy list is managed implicitly in the body of each copied YG object.
   CopyListCell *copyListHead_;
   const bool isTrackingIDs_;
+  uint64_t promotedBytes_{0};
 
   void push(CopyListCell *cell) {
     cell->next_ = copyListHead_;
@@ -386,7 +380,7 @@ class MarkWorklist {
       return size_;
     }
 
-    constexpr size_t capacity() {
+    constexpr size_t capacity() const {
       return N;
     }
 
@@ -778,7 +772,7 @@ HadesGC::HadesGC(
           // At least one YG segment and one OG segment.
           2 * AlignedStorage::size())},
       provider_(std::move(provider)),
-      youngGen_{createYoungGenSegment()},
+      youngGen_{createSegment("young-gen")},
       promoteYGToOG_{!gcConfig.getAllocInYoung()},
       revertToYGAtTTI_{gcConfig.getRevertToYGAtTTI()} {
   const size_t minHeapSegments =
@@ -797,7 +791,7 @@ HadesGC::HadesGC(
                 static_cast<size_t>(2)});
 
   for (size_t i = 0; i < initHeapSegments; ++i) {
-    oldGen_.createSegment();
+    oldGen_.addSegment(createSegment("old-gen"));
   }
 }
 
@@ -1188,8 +1182,7 @@ void HadesGC::sweep() {
     // Acquire and release the lock once per loop, to allow YG collections to
     // interrupt the sweeper.
     std::lock_guard<Mutex> lk{gcMutex_};
-    HeapSegment &seg = oldGen_[i];
-    seg.forAllObjs([this, isTracking, &seg](GCCell *cell) {
+    oldGen_[i].forAllObjs([this, isTracking](GCCell *cell) {
       // forAllObjs skips free list cells, so no need to check for those.
       assert(cell->isValid() && "Invalid cell in sweeping");
       if (HeapSegment::getCellMarkBit(cell)) {
@@ -1197,12 +1190,6 @@ void HadesGC::sweep() {
       }
       // Cell is dead, run its finalizer first if it has one.
       cell->getVT()->finalizeIfExists(cell, this);
-      if (seg.isBumpAllocMode()) {
-        // If anything was freed, transition from bump-alloc to freelist mode.
-        // This has to be done immediately in order for the addCellToFreelist
-        // function to work.
-        oldGen_.transitionToFreelist(seg);
-      }
       oldGen_.addCellToFreelist(cell);
       if (isTracking) {
         // There is no race condition here, because the object has already been
@@ -1529,11 +1516,15 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
   const auto maxNumOldGenSegments =
       (gc_->maxHeapSize_ / AlignedStorage::size()) - 1;
   if (segments_.size() < maxNumOldGenSegments) {
-    HeapSegment &seg = createSegment();
-    AllocResult res = seg.bumpAlloc(sz);
+    std::unique_ptr<HeapSegment> seg = gc_->createSegment("old-gen");
+    // Complete this allocation using a bump alloc.
+    AllocResult res = seg->bumpAlloc(sz);
     assert(
         res.success &&
         "A newly created segment should always be able to allocate");
+    // Add the segment to segments_ and add the remainder of the segment to the
+    // free list.
+    addSegment(std::move(seg));
     GCCell *newObj = static_cast<GCCell *>(res.ptr);
     HeapSegment::setCellMarkBit(newObj);
     return newObj;
@@ -1640,22 +1631,6 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
       cell = cell->next_;
     }
   }
-
-  // Free list exhausted, and nothing had enough space. Try bump-alloc as a last
-  // resort.
-  // TODO: Right now this iterates over all segments. Could instead have a
-  // separate data structure for bump-alloc segments. OldGen::allocatedBytes()
-  // could also use that data structure.
-  for (auto &seg : segments_) {
-    if (seg->isBumpAllocMode()) {
-      const AllocResult res = seg->bumpAlloc(sz);
-      if (res.success) {
-        GCCell *newCell = static_cast<GCCell *>(res.ptr);
-        HeapSegment::setCellMarkBit(newCell);
-        return newCell;
-      }
-    }
-  }
   return nullptr;
 }
 
@@ -1674,7 +1649,9 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
   // Check that the card tables are well-formed before the collection.
   verifyCardTable();
 #endif
+  uint64_t promotedBytes = 0;
   if (promoteYGToOG_) {
+    promotedBytes = youngGen().used();
     promoteYoungGenToOldGen();
   } else {
     auto &yg = youngGen();
@@ -1705,6 +1682,7 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
       GCCell *const cell = copyCell->getMarkedForwardingPointer();
       GCBase::markCell(cell, this, acceptor);
     }
+    promotedBytes = acceptor.promotedBytes();
     {
       WeakRefLock weakRefLock{weakRefMutex_};
       // Now that all YG objects have been marked, update weak references.
@@ -1758,8 +1736,11 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
   }
   // Give an existing background thread a chance to complete.
   yieldToOldGen();
-  // YG is always empty after a collection, it is fully evac'ed into OG.
-  stats.setAfterSizes(0, youngGen().size());
+  // Post-allocated has an ambiguous meaning for a young-gen GC, since the
+  // young gen must be completely evacuated. Since zeros aren't really
+  // useful here, instead put the number of bytes that were promoted into
+  // old gen, which is the amount that survived the collection.
+  stats.setAfterSizes(promotedBytes, youngGen().size());
   stats.setEndTime();
   auto cpuTimeEnd = oscompat::thread_cpu_time();
   stats.incrementCPUTime(cpuTimeEnd - cpuTimeStart);
@@ -1775,9 +1756,9 @@ void HadesGC::promoteYoungGenToOldGen() {
   // It is important that this operation is just a move of pointers to
   // segments. The addresses have to stay the same or else it would
   // require a marking pass through all objects.
-  oldGen_.moveSegment(std::move(youngGen_));
+  oldGen_.addSegment(std::move(youngGen_));
   // Replace YG with a new segment.
-  youngGen_ = createYoungGenSegment();
+  youngGen_ = createSegment("young-gen");
   // These objects will be finalized by an OG collection.
   youngGenFinalizables_.clear();
 }
@@ -1984,25 +1965,11 @@ uint64_t HadesGC::allocatedBytes() const {
 }
 
 uint64_t HadesGC::OldGen::allocatedBytes() const {
-  uint64_t totalAllocated = allocatedBytes_;
-  for (auto segit = segments_.begin(), end = segments_.end(); segit != end;
-       ++segit) {
-    // TODO: Should a fragmentation measurement be used as well?
-    HeapSegment &seg = **segit;
-    if (seg.isBumpAllocMode()) {
-      totalAllocated += seg.used();
-    }
-  }
-  return totalAllocated;
+  return allocatedBytes_;
 }
 
 uint64_t HadesGC::OldGen::size() const {
-  uint64_t totalBytes = 0;
-  for (auto segit = segments_.begin(), end = segments_.end(); segit != end;
-       ++segit) {
-    totalBytes += (*segit)->used();
-  }
-  return totalBytes;
+  return numSegments() * HeapSegment::maxSize();
 }
 
 HadesGC::HeapSegment &HadesGC::youngGen() {
@@ -2045,10 +2012,10 @@ HadesGC::HeapSegment &HadesGC::OldGen::operator[](size_t i) {
   return *segments_[i];
 }
 
-std::unique_ptr<HadesGC::HeapSegment> HadesGC::createYoungGenSegment() {
-  auto res = AlignedStorage::create(provider_.get(), "young-gen");
+std::unique_ptr<HadesGC::HeapSegment> HadesGC::createSegment(const char *name) {
+  auto res = AlignedStorage::create(provider_.get(), name);
   if (!res) {
-    hermes_fatal("Failed to alloc young gen");
+    hermes_fatal("Failed to alloc memory segment");
   }
   std::unique_ptr<HeapSegment> seg(new HeapSegment{std::move(res.get())});
 #ifdef HERMESVM_COMPRESSED_POINTERS
@@ -2058,21 +2025,16 @@ std::unique_ptr<HadesGC::HeapSegment> HadesGC::createYoungGenSegment() {
   return seg;
 }
 
-HadesGC::HeapSegment &HadesGC::OldGen::createSegment() {
-  auto res = AlignedStorage::create(gc_->provider_.get(), "old-gen");
-  if (!res) {
-    hermes_fatal("Failed to alloc old gen");
-  }
-  segments_.emplace_back(new HeapSegment{std::move(res.get())});
-  HeapSegment &seg = **segments_.rbegin();
-#ifdef HERMESVM_COMPRESSED_POINTERS
-  gc_->pointerBase_->setSegment(++gc_->numSegments_, seg.lowLim());
-#endif
-  return seg;
-}
-
-void HadesGC::OldGen::moveSegment(std::unique_ptr<HeapSegment> &&seg) {
+void HadesGC::OldGen::addSegment(std::unique_ptr<HeapSegment> seg) {
+  assert(
+      seg->isBumpAllocMode() &&
+      "Segments added to OG must be in bump alloc mode!");
   segments_.emplace_back(std::move(seg));
+  HeapSegment &newSeg = *segments_.back();
+  allocatedBytes_ += newSeg.used();
+  // Switch the segment from bump alloc mode to free list mode and add any
+  // remaining capacity to the free list.
+  newSeg.transitionToFreelist(*this);
 }
 
 bool HadesGC::inOldGen(const void *p) const {

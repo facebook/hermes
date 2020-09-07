@@ -670,28 +670,23 @@ void GCBase::printStats(JSONEmitter &json) {
 }
 
 void GCBase::recordGCStats(
-    double wallTime,
-    double cpuTime,
-    gcheapsize_t finalHeapSize,
-    gcheapsize_t usedBefore,
-    gcheapsize_t usedAfter,
+    const GCAnalyticsEvent &event,
     CumulativeHeapStats *stats) {
-  stats->gcWallTime.record(wallTime);
-  stats->gcCPUTime.record(cpuTime);
-  stats->finalHeapSize = finalHeapSize;
-  stats->usedBefore.record(usedBefore);
-  stats->usedAfter.record(usedAfter);
+  stats->gcWallTime.record(
+      std::chrono::duration<double>(event.duration).count());
+  stats->gcCPUTime.record(
+      std::chrono::duration<double>(event.cpuDuration).count());
+  stats->finalHeapSize = event.postSize;
+  stats->usedBefore.record(event.preAllocated);
+  stats->usedAfter.record(event.postAllocated);
   stats->numCollections++;
 }
 
-void GCBase::recordGCStats(
-    double wallTime,
-    double cpuTime,
-    gcheapsize_t usedBefore,
-    gcheapsize_t usedAfter,
-    gcheapsize_t finalHeapSize) {
-  recordGCStats(
-      wallTime, cpuTime, finalHeapSize, usedBefore, usedAfter, &cumStats_);
+void GCBase::recordGCStats(const GCAnalyticsEvent &event) {
+  if (analyticsCallback_) {
+    analyticsCallback_(event);
+  }
+  recordGCStats(event, &cumStats_);
 }
 
 void GCBase::oom(std::error_code reason) {

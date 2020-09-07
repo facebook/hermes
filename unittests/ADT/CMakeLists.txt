@@ -4,6 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 set(ADTSources
+  BitArrayTest.cpp
   CompactArrayTest.cpp
   ConsumableRangeTest.cpp
   ScopedHashTable.cpp

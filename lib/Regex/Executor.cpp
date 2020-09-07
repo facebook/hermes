@@ -114,6 +114,14 @@ class Cursor {
     return current_ - first_;
   }
 
+  /// \return the number of code units between the current position and the end
+  /// of the string.
+  /// This is called "offsetFromRight" and not "offsetFromEnd" to indicate that
+  /// it does not change under backwards tracking.
+  uint32_t offsetFromRight() const {
+    return last_ - current_;
+  }
+
   /// \return whether we are at the leftmost position.
   /// This does not change under backwards tracking.
   bool atLeft() const {
@@ -924,12 +932,14 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
 
   const CodeUnit *const startLoc = c.currentPointer();
 
-  const size_t charsToEnd = c.remaining();
+  // Use offsetFromRight() instead of remaining() here so that the length passed
+  // to advanceStringIndex is accurate even when the cursor is going backwards.
+  const size_t charsToRight = c.offsetFromRight();
 
   // Decide how many locations we'll need to check.
   // Note that we do want to check the empty range at the end, so add one to
-  // charsToEnd.
-  const size_t locsToCheckCount = onlyAtStart ? 1 : 1 + charsToEnd;
+  // charsToRight.
+  const size_t locsToCheckCount = onlyAtStart ? 1 : 1 + charsToRight;
 
   // If we are tracking backwards, we should only ever have one potential match
   // location. This is because advanceStringIndex only ever tracks forwards.
@@ -946,7 +956,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
   } while (0)
 
   for (size_t locIndex = 0; locIndex < locsToCheckCount;
-       locIndex = advanceStringIndex(startLoc, locIndex, charsToEnd)) {
+       locIndex = advanceStringIndex(startLoc, locIndex, charsToRight)) {
     const CodeUnit *potentialMatchLocation = startLoc + locIndex;
     c.setCurrentPointer(potentialMatchLocation);
     s->ip_ = startIp;

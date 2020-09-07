@@ -16,6 +16,7 @@
 #include "llvh/Support/MathExtras.h"
 
 #include <ios>
+#include <queue>
 #include <utility>
 #include <vector>
 
@@ -133,16 +134,20 @@ TEST_F(MarkBitArrayNCTest, NextMarkedBitImmediate) {
 TEST_F(MarkBitArrayNCTest, NextMarkedBit) {
   constexpr size_t FOUND_NONE = MarkBitArrayNC::kNumBits;
 
-  /// Empty case: No marked bits
+  // Empty case: No marked bits
   EXPECT_EQ(FOUND_NONE, mba->findNextMarkedBitFrom(0));
-
-  size_t from = 0;
+  std::queue<size_t> indices;
   for (char *addr : addrs) {
     auto ind = mba->addressToIndex(addr);
     mba->mark(ind);
-
-    EXPECT_EQ(ind, mba->findNextMarkedBitFrom(from));
-    from = ind + 1;
+    indices.push(ind);
+  }
+  // Use the same style of loop we use elsewhere for scanning the array.
+  for (size_t from = mba->findNextMarkedBitFrom(0);
+       from < MarkBitArrayNC::kNumBits;
+       from = mba->findNextMarkedBitFrom(from + 1)) {
+    EXPECT_EQ(indices.front(), from);
+    indices.pop();
   }
 }
 

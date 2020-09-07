@@ -615,10 +615,6 @@ class GenGC final : public GCBase {
     TimePoint wallStart_;
     std::chrono::microseconds cpuStart_;
     size_t gcUsedBefore_;
-    size_t usedBefore_;
-    size_t sizeBefore_;
-    size_t usedAfter_;
-    size_t sizeAfter_;
     // Initial value indicates unset.
     double wallElapsedSecs_{-1.0};
     double cpuElapsedSecs_{-1.0};

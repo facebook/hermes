@@ -285,12 +285,8 @@ class HadesGC final : public GCBase {
 
     HeapSegment &operator[](size_t i);
 
-    /// Create a new OG segment and attach it to the end of the OG segment
-    /// vector. \return a reference to the newly created segment.
-    HeapSegment &createSegment();
-
     /// Take ownership of the given segment.
-    void moveSegment(std::unique_ptr<HeapSegment> &&seg);
+    void addSegment(std::unique_ptr<HeapSegment> seg);
 
     /// Allocate into OG. Returns a pointer to the newly allocated space. That
     /// space must be filled before releasing the gcMutex_.
@@ -308,11 +304,6 @@ class HadesGC final : public GCBase {
     /// yet.
     /// \param alreadyFree If true, this location is not currently allocated.
     void addCellToFreelist(void *addr, uint32_t sz, bool alreadyFree);
-
-    /// Transitions the given segment from bump-alloc mode to freelist mode.
-    /// Can only be called once, when the segment is in bump-alloc mode. There
-    /// is no transitioning from freelist mode back to bump-alloc mode.
-    void transitionToFreelist(HeapSegment &seg);
 
     /// \return the total number of bytes that are in use by the OG section of
     /// the JS heap, excluding free list entries.
@@ -601,8 +592,8 @@ class HadesGC final : public GCBase {
   HeapSegment &youngGen();
   const HeapSegment &youngGen() const;
 
-  /// Create a new YG segment.
-  std::unique_ptr<HeapSegment> createYoungGenSegment();
+  /// Create a new segment (to be used by either YG or OG).
+  std::unique_ptr<HeapSegment> createSegment(const char *name);
 
   /// Searches the old gen for this pointer. This is O(number of OG segments).
   /// NOTE: In any non-debug case, \c inYoungGen should be used instead, because
