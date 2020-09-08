@@ -1279,22 +1279,19 @@ void ESTreeIRGen::addLexicalDebugInfo(
   addLexicalDebugInfo(current, global, scope->parentScope);
 }
 
-#ifndef HERMESVM_LEAN
-std::shared_ptr<SerializedScope> ESTreeIRGen::saveCurrentScope() {
-  auto *func = curFunction()->function;
-  assert(func && "Missing function when saving scope");
+std::shared_ptr<SerializedScope> ESTreeIRGen::serializeScope(
+    FunctionContext *ctx,
+    bool includeGlobal) {
+  // Serialize the global scope if and only if it's the only scope.
+  // We serialize the global scope to avoid re-declaring variables,
+  // and only do it once to avoid creating spurious scopes.
+  if (!ctx || (ctx->function->isGlobalScope() && !includeGlobal))
+    return lexicalScopeChain;
 
   auto scope = std::make_shared<SerializedScope>();
+  auto *func = ctx->function;
+  assert(func && "Missing function when saving scope");
 
-  // We currently only lazy compile a single level at a time. If we later start
-  // compiling multiple, this method would need to walk the scopes.
-  assert(
-      ((func->isGlobalScope() && !curFunction()->getPreviousContext()) ||
-       (!func->isGlobalScope() && curFunction()->getPreviousContext() &&
-        !curFunction()->getPreviousContext()->getPreviousContext())) &&
-      "Expected exactly one function on the stack.");
-
-  scope->parentScope = lexicalScopeChain;
   scope->originalName = func->getOriginalOrInferredName();
   if (auto *closure = func->getLazyClosureAlias()) {
     scope->closureAlias = closure->getName();
@@ -1302,9 +1299,9 @@ std::shared_ptr<SerializedScope> ESTreeIRGen::saveCurrentScope() {
   for (auto *var : func->getFunctionScope()->getVariables()) {
     scope->variables.push_back(var->getName());
   }
+  scope->parentScope = serializeScope(ctx->getPreviousContext(), false);
   return scope;
 }
-#endif
 
 } // namespace irgen
 } // namespace hermes

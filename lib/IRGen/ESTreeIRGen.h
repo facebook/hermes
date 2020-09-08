@@ -1007,7 +1007,15 @@ class ESTreeIRGen {
       const std::shared_ptr<const SerializedScope> &scope);
 
   /// Save all variables currently in scope, for lazy compilation.
-  std::shared_ptr<SerializedScope> saveCurrentScope();
+  std::shared_ptr<SerializedScope> saveCurrentScope() {
+    return serializeScope(curFunction(), true);
+  }
+
+  /// Recursively serialize scopes. The global scope is serialized
+  /// if and only if it's the first scope and includeGlobal is true.
+  std::shared_ptr<SerializedScope> serializeScope(
+      FunctionContext *ctx,
+      bool includeGlobal);
 };
 
 template <typename EB, typename EF, typename EH>
