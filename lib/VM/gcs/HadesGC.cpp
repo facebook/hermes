@@ -1240,7 +1240,7 @@ void HadesGC::writeBarrier(void *loc, HermesValue value) {
     return;
   }
   if (concurrentPhase_.load(std::memory_order_acquire) == Phase::Mark) {
-    snapshotWriteBarrier(*static_cast<HermesValue *>(loc));
+    snapshotWriteBarrierInternal(*static_cast<HermesValue *>(loc));
   }
   if (!value.isPointer()) {
     return;
@@ -1264,7 +1264,7 @@ void HadesGC::writeBarrier(void *loc, void *value) {
 #else
     GCCell *const oldValue = static_cast<GCCell *>(oldValueStorage);
 #endif
-    snapshotWriteBarrier(oldValue);
+    snapshotWriteBarrierInternal(oldValue);
   }
   // Always do the non-snapshot write barrier in order for YG to be able to
   // scan cards.
@@ -1294,7 +1294,30 @@ void HadesGC::constructorWriteBarrier(void *loc, void *value) {
   generationalWriteBarrier(loc, value);
 }
 
-void HadesGC::snapshotWriteBarrier(GCCell *oldValue) {
+void HadesGC::snapshotWriteBarrier(GCHermesValue *loc) {
+  if (inYoungGen(loc)) {
+    // A pointer that lives in YG never needs any write barriers.
+    return;
+  }
+  if (concurrentPhase_.load(std::memory_order_acquire) == Phase::Mark) {
+    snapshotWriteBarrierInternal(*loc);
+  }
+}
+
+void HadesGC::snapshotWriteBarrierRange(GCHermesValue *start, uint32_t numHVs) {
+  if (inYoungGen(start)) {
+    // A pointer that lives in YG never needs any write barriers.
+    return;
+  }
+  if (concurrentPhase_.load(std::memory_order_acquire) != Phase::Mark) {
+    return;
+  }
+  for (uint32_t i = 0; i < numHVs; ++i) {
+    snapshotWriteBarrierInternal(start[i]);
+  }
+}
+
+void HadesGC::snapshotWriteBarrierInternal(GCCell *oldValue) {
   assert(
       (!oldValue || oldValue->isValid()) &&
       "Invalid cell encountered in snapshotWriteBarrier");
@@ -1306,9 +1329,9 @@ void HadesGC::snapshotWriteBarrier(GCCell *oldValue) {
   }
 }
 
-void HadesGC::snapshotWriteBarrier(HermesValue oldValue) {
+void HadesGC::snapshotWriteBarrierInternal(HermesValue oldValue) {
   if (oldValue.isPointer()) {
-    snapshotWriteBarrier(static_cast<GCCell *>(oldValue.getPointer()));
+    snapshotWriteBarrierInternal(static_cast<GCCell *>(oldValue.getPointer()));
   }
 }
 
@@ -1339,7 +1362,7 @@ void HadesGC::weakRefReadBarrier(void *value) {
       return;
     case Phase::Mark:
       // Treat the value read from the weak reference as live.
-      snapshotWriteBarrier(static_cast<GCCell *>(value));
+      snapshotWriteBarrierInternal(static_cast<GCCell *>(value));
       return;
   }
   llvm_unreachable("All phases should be handled");

@@ -85,7 +85,10 @@ class SegmentedArray final
     /// It is the caller's responsibility to ensure that the newly used portion
     /// will contain valid values before they are accessed (including accesses
     /// by the GC).
+    /// \pre This cannot be called if kConcurrentGC is true, since the GC might
+    ///   read uninitialized memory even if the mutator wouldn't.
     void setLengthWithoutFilling(uint32_t newLength) {
+      assert(!kConcurrentGC && "Cannot avoid filling for a concurrent GC");
       assert(newLength <= kMaxLength && "Cannot set length to more than size");
       length_.store(newLength, std::memory_order_release);
     }

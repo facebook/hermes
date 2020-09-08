@@ -138,6 +138,9 @@ class HadesGC final : public GCBase {
   void constructorWriteBarrier(void *loc, HermesValue value);
   void constructorWriteBarrier(void *loc, void *value);
 
+  void snapshotWriteBarrier(GCHermesValue *loc);
+  void snapshotWriteBarrierRange(GCHermesValue *start, uint32_t numHVs);
+
   void weakRefReadBarrier(void *value);
   void weakRefReadBarrier(HermesValue value);
 
@@ -552,11 +555,12 @@ class HadesGC final : public GCBase {
   void scanDirtyCards(EvacAcceptor &acceptor);
 
   /// Common logic for doing the Snapshot At The Beginning (SATB) write barrier.
-  void snapshotWriteBarrier(GCCell *oldValue);
+  void snapshotWriteBarrierInternal(GCCell *oldValue);
 
   /// Common logic for doing the Snapshot At The Beginning (SATB) write barrier.
-  /// Forwards to \c snapshotWriteBarrier(GCCell *) if oldValue is a pointer.
-  void snapshotWriteBarrier(HermesValue oldValue);
+  /// Forwards to \c snapshotWriteBarrierInternal(GCCell *) if oldValue is a
+  /// pointer.
+  void snapshotWriteBarrierInternal(HermesValue oldValue);
 
   /// Common logic for doing the generational write barrier for detecting
   /// pointers into YG.

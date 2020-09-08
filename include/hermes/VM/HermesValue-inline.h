@@ -71,6 +71,13 @@ void GCHermesValue::setNonPtr(HermesValue hv, GC *gc) {
   setNoBarrier(hv);
 }
 
+void GCHermesValue::unreachableWriteBarrier(GC *gc) {
+#ifdef HERMESVM_GC_HADES
+  // Hades needs a snapshot barrier executed when something becomes unreachable.
+  gc->snapshotWriteBarrier(this);
+#endif
+}
+
 /*static*/
 template <typename InputIt>
 inline void
@@ -181,6 +188,15 @@ inline OutputIt GCHermesValue::copy_backward(
     (--result)->set(*--last, gc);
   }
   return result;
+}
+
+inline void GCHermesValue::rangeUnreachableWriteBarrier(
+    GCHermesValue *first,
+    GCHermesValue *last,
+    GC *gc) {
+#ifdef HERMESVM_GC_HADES
+  gc->snapshotWriteBarrierRange(first, last - first);
+#endif
 }
 
 inline void GCHermesValue::copyToPinned(

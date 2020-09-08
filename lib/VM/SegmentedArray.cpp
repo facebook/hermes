@@ -81,9 +81,13 @@ void SegmentedArray::Segment::setLength(Runtime *runtime, uint32_t newLength) {
         data_ + newLength,
         HermesValue::encodeEmptyValue(),
         &runtime->getHeap());
+    length_.store(newLength, std::memory_order_release);
+  } else if (newLength < len) {
+    // If length is decreasing a write barrier needs to be done.
+    GCHermesValue::rangeUnreachableWriteBarrier(
+        data_ + newLength, data_ + len, &runtime->getHeap());
+    length_.store(newLength, std::memory_order_release);
   }
-  // If length is decreasing nothing special needs to be done.
-  setLengthWithoutFilling(newLength);
 }
 
 VTable SegmentedArray::vt(
@@ -332,8 +336,9 @@ ExecutionStatus SegmentedArray::growLeft(
     return ExecutionStatus::EXCEPTION;
   }
   PseudoHandle<SegmentedArray> newSegmentedArray = std::move(*arrRes);
-  // Don't fill with empty values, most will be copied in.
-  newSegmentedArray = increaseSize</*Fill*/ false>(
+  // If it's not a concurrent GC, don't fill with empty values, most will be
+  // copied in.
+  newSegmentedArray = increaseSize</*Fill*/ kConcurrentGC>(
       runtime, std::move(newSegmentedArray), newSize);
   // Fill the beginning of the new array with empty values.
   GCHermesValue::uninitialized_fill(
@@ -389,6 +394,9 @@ void SegmentedArray::increaseSizeWithinCapacity(
     Runtime *runtime,
     size_type amount,
     bool fill) {
+  assert(
+      !kConcurrentGC ||
+      fill && "If kConcurrentGC is true, fill must also be true");
   // This function has the same logic as increaseSize, but removes some
   // complexity from avoiding dealing with alllocations.
   const auto empty = HermesValue::encodeEmptyValue();
@@ -435,6 +443,9 @@ PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
     Runtime *runtime,
     PseudoHandle<SegmentedArray> self,
     size_type amount) {
+  assert(
+      !kConcurrentGC ||
+      Fill && "If kConcurrentGC is true, fill must also be true");
   const auto empty = HermesValue::encodeEmptyValue();
   const auto currSize = self->size();
   const auto finalSize = currSize + amount;
@@ -530,18 +541,26 @@ PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
 }
 
 void SegmentedArray::decreaseSize(Runtime *runtime, size_type amount) {
-  assert(amount <= size() && "Cannot decrease size past zero");
-  const auto finalSize = size() - amount;
-  if (finalSize <= kValueToSegmentThreshold) {
-    // Just adjust the field and exit, no segments to compress.
-    numSlotsUsed_.store(finalSize, std::memory_order_release);
-    return;
+  const auto initialSize = size();
+  const auto initialNumSlots = numSlotsUsed_.load(std::memory_order_relaxed);
+  assert(amount <= initialSize && "Cannot decrease size past zero");
+  const auto finalSize = initialSize - amount;
+  const auto finalNumSlots = numSlotsForCapacity(finalSize);
+  assert(
+      finalNumSlots <= initialNumSlots &&
+      "Should not be increasing the number of slots");
+  if (finalSize > kValueToSegmentThreshold) {
+    // Set the new last used segment's length to be the leftover.
+    segmentAt(toSegment(finalSize - 1))
+        ->setLength(runtime, toInterior(finalSize - 1) + 1);
   }
-  // Set the new last used segment's length to be the leftover.
-  segmentAt(toSegment(finalSize - 1))
-      ->setLength(runtime, toInterior(finalSize - 1) + 1);
-  numSlotsUsed_.store(
-      numSlotsForCapacity(finalSize), std::memory_order_release);
+  // Before shrinking, do a snapshot write barrier for the elements being
+  // removed.
+  GCHermesValue::rangeUnreachableWriteBarrier(
+      inlineStorage() + finalNumSlots,
+      inlineStorage() + initialNumSlots,
+      &runtime->getHeap());
+  numSlotsUsed_.store(finalNumSlots, std::memory_order_release);
 }
 
 gcheapsize_t SegmentedArray::_trimSizeCallback(const GCCell *cell) {

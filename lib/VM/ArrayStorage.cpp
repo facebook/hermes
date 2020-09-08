@@ -169,17 +169,12 @@ void ArrayStorage::resizeWithinCapacity(
         HermesValue::encodeEmptyValue(),
         &runtime->getHeap());
   } else if (newSize < sz) {
-#ifdef HERMESVM_GC_HADES
     // Execute write barriers on elements about to be conceptually changed to
     // null.
     // This also means if an array is refilled, it can treat the memory here
     // as uninitialized safely.
-    GCHermesValue::fill(
-        self->data() + newSize,
-        self->data() + sz,
-        HermesValue::encodeEmptyValue(),
-        &runtime->getHeap());
-#endif
+    GCHermesValue::rangeUnreachableWriteBarrier(
+        self->data() + newSize, self->data() + sz, &runtime->getHeap());
   }
   self->size_.store(newSize, std::memory_order_release);
 }
@@ -191,6 +186,8 @@ ExecutionStatus ArrayStorage::shift(
     size_type toFirst,
     size_type toLast) {
   assert(toLast <= maxElements() && "size overflows 32-bit storage");
+  assert(toFirst <= toLast && "First must be before last");
+  assert(fromFirst <= selfHandle->size() && "fromFirst must be before size");
 
   // If we don't need to expand the capacity.
   if (toLast <= selfHandle->capacity_) {
@@ -227,6 +224,13 @@ ExecutionStatus ArrayStorage::shift(
           self->data() + toFirst + copySize,
           self->data() + toLast,
           HermesValue::encodeEmptyValue(),
+          &runtime->getHeap());
+    }
+    if (toLast < self->size()) {
+      // Some elements are becoming unreachable, let the GC know.
+      GCHermesValue::rangeUnreachableWriteBarrier(
+          self->data() + toLast,
+          self->data() + self->size(),
           &runtime->getHeap());
     }
     self->size_.store(toLast, std::memory_order_release);
