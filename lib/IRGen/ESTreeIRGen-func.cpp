@@ -215,6 +215,7 @@ Function *ESTreeIRGen::genES5Function(
       auto &lazySource = newFunction->getLazySource();
       lazySource.bufferId = bodyBlock->bufferId;
       lazySource.nodeKind = getLazyFunctionKind(functionNode);
+      lazySource.isGeneratorInnerFunction = isGeneratorInnerFunction;
       lazySource.functionRange = functionNode->getSourceRange();
 
       // Set the function's .length.
@@ -302,14 +303,17 @@ Function *ESTreeIRGen::genGeneratorFunction(
       ESTree::isStrict(functionNode->strictness),
       /* insertBefore */ nullptr);
 
-  auto *innerFn = genES5Function(
-      genAnonymousLabelName(originalName.isValid() ? originalName.str() : ""),
-      lazyClosureAlias,
-      functionNode,
-      true);
-
   {
     FunctionContext outerFnContext{this, outerFn, functionNode->getSemInfo()};
+
+    // Build the inner function. This must be done in the outerFnContext
+    // since it's lexically considered a child function.
+    auto *innerFn = genES5Function(
+        genAnonymousLabelName(originalName.isValid() ? originalName.str() : ""),
+        lazyClosureAlias,
+        functionNode,
+        true);
+
     emitFunctionPrologue(
         functionNode,
         Builder.createBasicBlock(outerFn),

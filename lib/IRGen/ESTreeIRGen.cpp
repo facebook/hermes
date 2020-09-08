@@ -349,7 +349,11 @@ std::pair<Function *, Function *> ESTreeIRGen::doLazyFunction(
       !llvh::isa<ESTree::ArrowFunctionExpressionNode>(node) &&
       "lazy compilation not supported for arrow functions");
 
-  auto *func = genES5Function(lazyData->originalName, parentVar, node);
+  auto *func = genES5Function(
+      lazyData->originalName,
+      parentVar,
+      node,
+      lazyData->isGeneratorInnerFunction);
   addLexicalDebugInfo(func, topLevel, lexicalScopeChain);
   return {func, topLevel};
 }
