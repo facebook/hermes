@@ -55,16 +55,27 @@ class TestCrashManager : public CrashManager {
   void setCustomData(const char *key, const char *value) override {
     customData_[std::string(key)] = std::string(value);
   }
+  void setContextualCustomData(const char *key, const char *value) override {
+    contextualCustomData_[std::string(key)] = std::string(value);
+  }
   void removeCustomData(const char *key) override {
     customData_.erase(std::string(key));
+  }
+  void removeContextualCustomData(const char *key) override {
+    contextualCustomData_.erase(std::string(key));
   }
 
   const std::unordered_map<std::string, std::string> &customData() {
     return customData_;
   }
 
+  const std::unordered_map<std::string, std::string> &contextualCustomData() {
+    return contextualCustomData_;
+  }
+
  private:
   std::unordered_map<std::string, std::string> customData_;
+  std::unordered_map<std::string, std::string> contextualCustomData_;
 };
 
 /// We are able to materialize every segment.
