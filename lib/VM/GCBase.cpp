@@ -667,6 +667,24 @@ void GCBase::printStats(JSONEmitter &json) {
   json.emitKeyValue(
       "totalAllocatedBytes", formatSize(info.totalAllocatedBytes).bytes);
   json.closeDict();
+
+  json.emitKey("collections");
+  json.openArray();
+  for (const auto &event : analyticsEvents_) {
+    json.openDict();
+    json.emitKeyValue("runtimeDescription", event.runtimeDescription);
+    json.emitKeyValue("gcKind", event.gcKind);
+    json.emitKeyValue("collectionType", event.collectionType);
+    json.emitKeyValue("duration", event.duration.count());
+    json.emitKeyValue("cpuDuration", event.cpuDuration.count());
+    json.emitKeyValue("preAllocated", event.preAllocated);
+    json.emitKeyValue("preSize", event.preSize);
+    json.emitKeyValue("postAllocated", event.postAllocated);
+    json.emitKeyValue("postSize", event.postSize);
+    json.emitKeyValue("survivalRatio", event.survivalRatio);
+    json.closeDict();
+  }
+  json.closeArray();
 }
 
 void GCBase::recordGCStats(
@@ -685,6 +703,9 @@ void GCBase::recordGCStats(
 void GCBase::recordGCStats(const GCAnalyticsEvent &event) {
   if (analyticsCallback_) {
     analyticsCallback_(event);
+  }
+  if (recordGcStats_) {
+    analyticsEvents_.push_back(event);
   }
   recordGCStats(event, &cumStats_);
 }

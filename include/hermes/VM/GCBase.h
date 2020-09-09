@@ -1108,6 +1108,9 @@ class GCBase {
   /// null if no analytics are requested.
   std::function<void(const GCAnalyticsEvent &)> analyticsCallback_;
 
+  /// Capture all analytics events to print stats at the end.
+  std::vector<GCAnalyticsEvent> analyticsEvents_;
+
   /// Whether to output GC statistics at the end of execution.
   bool recordGcStats_{false};
 
