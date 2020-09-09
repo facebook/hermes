@@ -789,10 +789,7 @@ HadesGC::HadesGC(
                 requestedInitHeapSegments,
                 // At least one YG segment and one OG segment.
                 static_cast<size_t>(2)});
-
-  for (size_t i = 0; i < initHeapSegments; ++i) {
-    oldGen_.addSegment(createSegment(/*isYoungGen*/ false));
-  }
+  oldGen_.reserveSegments(initHeapSegments);
 }
 
 HadesGC::~HadesGC() {
@@ -1748,8 +1745,7 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
       // If the OG is sufficiently full after the collection finishes, begin
       // an OG collection.
       const uint64_t totalAllocated = oldGen_.allocatedBytes();
-      const uint64_t totalBytes =
-          oldGen_.numSegments() * HeapSegment::maxSize();
+      const uint64_t totalBytes = oldGen_.capacityBytes();
       constexpr double kCollectionThreshold = 0.75;
       double allocatedRatio = static_cast<double>(totalAllocated) / totalBytes;
       if (allocatedRatio >= kCollectionThreshold) {
@@ -1996,6 +1992,10 @@ uint64_t HadesGC::OldGen::size() const {
   return numSegments() * HeapSegment::maxSize();
 }
 
+uint64_t HadesGC::OldGen::capacityBytes() const {
+  return numCapacitySegments_ * HeapSegment::maxSize();
+}
+
 HadesGC::HeapSegment &HadesGC::youngGen() {
   return *youngGen_;
 }
@@ -2060,11 +2060,16 @@ void HadesGC::OldGen::addSegment(std::unique_ptr<HeapSegment> seg) {
   segments_.emplace_back(std::move(seg));
   HeapSegment &newSeg = *segments_.back();
   allocatedBytes_ += newSeg.used();
+  reserveSegments(segments_.size());
   // Switch the segment from bump alloc mode to free list mode and add any
   // remaining capacity to the free list.
   newSeg.transitionToFreelist(*this);
   gc_->addSegmentExtentToCrashManager(
       newSeg, oscompat::to_string(numSegments()));
+}
+
+void HadesGC::OldGen::reserveSegments(size_t numCapacitySegments) {
+  numCapacitySegments_ = std::max(numCapacitySegments, numCapacitySegments_);
 }
 
 bool HadesGC::inOldGen(const void *p) const {
