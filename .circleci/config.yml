@@ -274,7 +274,7 @@ jobs:
             xcodebuild test \
               -workspace ApplePlatformsIntegrationTests.xcworkspace \
               -configuration Debug \
-              -destination 'platform=iOS Simulator,name=iPhone X' \
+              -destination 'platform=iOS Simulator,name=iPhone 11' \
               -scheme ApplePlatformsIntegrationMobileTests
           working_directory: test/ApplePlatformsIntegrationTestApp
       - save_cache:
