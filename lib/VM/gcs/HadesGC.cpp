@@ -210,14 +210,12 @@ class HadesGC::CollectionStats final {
   /// begins.
   void setBeforeSizes(uint64_t allocated, uint64_t sz) {
     allocatedBefore_ = allocated;
-    sizeBefore_ = sz;
+    size_ = sz;
   }
 
-  /// Record the allocated bytes in the heap and its size after a collection
-  /// ends.
-  void setAfterSizes(uint64_t allocated, uint64_t sz) {
-    allocatedAfter_ = allocated;
-    sizeAfter_ = sz;
+  /// Record how many bytes were swept during the collection.
+  void setSweptBytes(uint64_t sweptBytes) {
+    sweptBytes_ = sweptBytes;
   }
 
   /// Record that a collection is beginning right now.
@@ -238,9 +236,16 @@ class HadesGC::CollectionStats final {
     cpuDuration_ += cpuTime;
   }
 
+  /// Since Hades allows allocations during an old gen collection, use the
+  /// initially allocated bytes and the swept bytes to determine the actual
+  /// impact of the GC.
+  uint64_t afterAllocatedBytes() const {
+    return allocatedBefore_ - sweptBytes_;
+  }
+
   double survivalRatio() const {
     return allocatedBefore_
-        ? static_cast<double>(allocatedAfter_) / allocatedBefore_
+        ? static_cast<double>(afterAllocatedBytes()) / allocatedBefore_
         : 0;
   }
 
@@ -251,9 +256,8 @@ class HadesGC::CollectionStats final {
   TimePoint endTime_{};
   Duration cpuDuration_{};
   uint64_t allocatedBefore_{0};
-  uint64_t sizeBefore_{0};
-  uint64_t allocatedAfter_{0};
-  uint64_t sizeAfter_{0};
+  uint64_t size_{0};
+  uint64_t sweptBytes_{0};
 };
 
 HadesGC::CollectionStats::~CollectionStats() {
@@ -265,9 +269,11 @@ HadesGC::CollectionStats::~CollectionStats() {
           endTime_ - beginTime_),
       std::chrono::duration_cast<std::chrono::milliseconds>(cpuDuration_),
       /*preAllocated*/ allocatedBefore_,
-      /*preSize*/ sizeBefore_,
-      /*postAllocated*/ allocatedAfter_,
-      /*postSize*/ sizeAfter_,
+      /*preSize*/ size_,
+      /*postAllocated*/ afterAllocatedBytes(),
+      // Hades does not currently return segments to the system so the size
+      // does not change due to a collection.
+      /*postSize*/ size_,
       /*survivalRatio*/ survivalRatio()});
 }
 
@@ -1172,6 +1178,7 @@ void HadesGC::sweep() {
     segEnd = oldGen_.numSegments();
   }
 
+  uint64_t sweptBytes = 0;
   // The number of segments can change during this loop if a YG collection
   // interleaves. There's no need to sweep those extra segments since they are
   // full of newly promoted objects from YG (which have all their mark bits
@@ -1180,12 +1187,13 @@ void HadesGC::sweep() {
     // Acquire and release the lock once per loop, to allow YG collections to
     // interrupt the sweeper.
     std::lock_guard<Mutex> lk{gcMutex_};
-    oldGen_[i].forAllObjs([this, isTracking](GCCell *cell) {
+    oldGen_[i].forAllObjs([this, isTracking, &sweptBytes](GCCell *cell) {
       // forAllObjs skips free list cells, so no need to check for those.
       assert(cell->isValid() && "Invalid cell in sweeping");
       if (HeapSegment::getCellMarkBit(cell)) {
         return;
       }
+      sweptBytes += cell->getAllocatedSize();
       // Cell is dead, run its finalizer first if it has one.
       cell->getVT()->finalizeIfExists(cell, this);
       oldGen_.addCellToFreelist(cell);
@@ -1207,13 +1215,14 @@ void HadesGC::sweep() {
     // need to worry about their information being misused.
   }
   std::lock_guard<Mutex> lk{gcMutex_};
-  const size_t targetCapacity = oldGen_.allocatedBytes() / occupancyTarget_;
+  ogCollectionStats_->setSweptBytes(sweptBytes);
+  const size_t targetCapacity =
+      ogCollectionStats_->afterAllocatedBytes() / occupancyTarget_;
   const size_t targetSegments =
       llvh::divideCeil(targetCapacity, HeapSegment::maxSize());
   const size_t maxNumOldGenSegments = maxHeapSize_ / AlignedStorage::size() - 1;
   const size_t finalSegments = std::min(targetSegments, maxNumOldGenSegments);
   oldGen_.reserveSegments(finalSegments);
-  ogCollectionStats_->setAfterSizes(oldGen_.allocatedBytes(), oldGen_.size());
 }
 
 void HadesGC::finalizeAll() {
@@ -1676,9 +1685,9 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
   // Check that the card tables are well-formed before the collection.
   verifyCardTable();
 #endif
-  uint64_t promotedBytes = 0;
+  uint64_t promotedBytes = 0, usedBefore = youngGen().used();
   if (promoteYGToOG_) {
-    promotedBytes = youngGen().used();
+    promotedBytes = usedBefore;
     promoteYoungGenToOldGen();
   } else {
     auto &yg = youngGen();
@@ -1766,7 +1775,7 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
   // young gen must be completely evacuated. Since zeros aren't really
   // useful here, instead put the number of bytes that were promoted into
   // old gen, which is the amount that survived the collection.
-  stats.setAfterSizes(promotedBytes, youngGen().size());
+  stats.setSweptBytes(usedBefore - promotedBytes);
   stats.setEndTime();
   auto cpuTimeEnd = oscompat::thread_cpu_time();
   stats.incrementCPUTime(cpuTimeEnd - cpuTimeStart);
