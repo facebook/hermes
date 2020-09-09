@@ -1060,6 +1060,7 @@ const char *JSLexer::skipLineComment(const char *start) {
   assert(
       (start[0] == '/' && start[1] == '/') ||
       (start[0] == '#' && start[1] == '!'));
+  SMLoc lineCommentStart = getCurLoc();
   const char *cur = start + 2;
 
   for (;;) {
@@ -1100,7 +1101,9 @@ const char *JSLexer::skipLineComment(const char *start) {
 endLoop:
 
   if (storeComments_) {
-    commentStorage_.push_back(llvh::StringRef{start, (size_t)(cur - start)});
+    commentStorage_.emplace_back(
+        StoredComment::Kind::Line,
+        SMRange{lineCommentStart, SMLoc::getFromPointer(cur)});
   }
 
   return cur;
@@ -1159,7 +1162,9 @@ const char *JSLexer::skipBlockComment(const char *start) {
 endLoop:
 
   if (storeComments_) {
-    commentStorage_.push_back(llvh::StringRef{start, (size_t)(cur - start)});
+    commentStorage_.emplace_back(
+        StoredComment::Kind::Block,
+        SMRange{blockCommentStart, SMLoc::getFromPointer(cur)});
   }
 
   return cur;
