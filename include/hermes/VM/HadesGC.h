@@ -597,7 +597,7 @@ class HadesGC final : public GCBase {
   const HeapSegment &youngGen() const;
 
   /// Create a new segment (to be used by either YG or OG).
-  std::unique_ptr<HeapSegment> createSegment(const char *name);
+  std::unique_ptr<HeapSegment> createSegment(bool isYoungGen);
 
   /// Searches the old gen for this pointer. This is O(number of OG segments).
   /// NOTE: In any non-debug case, \c inYoungGen should be used instead, because
@@ -608,6 +608,13 @@ class HadesGC final : public GCBase {
   /// Give the background GC a chance to complete marking and finish the OG
   /// collection.
   void yieldToOldGen();
+
+  /// Adds the start address of the segment to the CrashManager's custom data.
+  /// \param extraName append this to the name of the segment. Must be
+  ///   non-empty.
+  void addSegmentExtentToCrashManager(
+      const HeapSegment &seg,
+      std::string extraName);
 
 #ifdef HERMES_SLOW_DEBUG
   /// Checks the heap to make sure all cells are valid.

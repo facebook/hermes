@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
+#if defined(HERMESVM_GC_NONCONTIG_GENERATIONAL) || defined(HERMESVM_GC_HADES)
 
 /// Parts of regex, at least as used by gmock, appear to be unsupported on
 /// Windows. So we'll exempt this test on Windows.
@@ -103,6 +103,7 @@ TEST(GCHeapExtentsInCrashManagerTest, HeapExtentsCorrect) {
     roots.push_back(SegmentCell::create(rt));
     rt.pointerRoots.push_back(&roots.back());
   }
+#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
   EXPECT_EQ(4, testCrashMgr->customData().size());
 
   const std::string expectedYgKeyStr = "XYZ:HeapSegments_YG";
@@ -197,10 +198,69 @@ TEST(GCHeapExtentsInCrashManagerTest, HeapExtentsCorrect) {
   EXPECT_THAT(
       testCrashMgr->customData().at(expectedOgKeyStr0),
       MatchesRegex(eightExtents + "$"));
+#elif defined(HERMESVM_GC_HADES)
+  const auto &contextualCustomData = testCrashMgr->contextualCustomData();
+  EXPECT_EQ(26, contextualCustomData.size());
+  const std::string expectedKeyBase = "XYZ:HeapSegment:";
+  for (int i = 0; i < 26; i++) {
+    const std::string expectedKey =
+        expectedKeyBase + (i == 0 ? std::string("YG") : oscompat::to_string(i));
+    std::string actual = contextualCustomData.at(expectedKey);
+    void *ptr = nullptr;
+    int numArgsWritten = std::sscanf(actual.c_str(), "%p", &ptr);
+    EXPECT_EQ(numArgsWritten, 1);
+    // The pointer value itself doesn't matter, as long as it is one of the
+    // segments in the heap. That would require exposing more GC APIs though,
+    // so just check that it was parsed as non-null.
+    EXPECT_NE(ptr, nullptr);
+  }
+#endif
 }
+
+#ifdef HERMESVM_GC_HADES
+TEST(GCHeapExtentsInCrashManagerTest, PromotedYGHasCorrectName) {
+  // Turn on the "direct to OG" allocation feature.
+  GCConfig gcConfig = GCConfig::Builder(kTestGCConfigBuilder)
+                          .withName("XYZ")
+                          .withInitHeapSize(kInitHeapLarge)
+                          .withMaxHeapSize(1 << 28)
+                          .withAllocInYoung(false)
+                          .withRevertToYGAtTTI(true)
+                          .build();
+  auto testCrashMgr = std::make_shared<TestCrashManager>();
+  auto runtime = DummyRuntime::create(
+      getMetadataTable(),
+      gcConfig,
+      DummyRuntime::defaultProvider(),
+      testCrashMgr);
+  DummyRuntime &rt = *runtime;
+
+  std::deque<GCCell *> roots;
+
+  // Fill up YG at least once, to make sure promotion keeps the right name.
+  for (size_t i = 0; i < 3; ++i) {
+    roots.push_back(SegmentCell::create(rt));
+    rt.pointerRoots.push_back(&roots.back());
+  }
+
+  const auto &contextualCustomData = testCrashMgr->contextualCustomData();
+  EXPECT_EQ(4, contextualCustomData.size());
+  // Make sure the value for YG is the actual YG segment.
+  const std::string ygAddress = contextualCustomData.at("XYZ:HeapSegment:YG");
+  void *ptr = nullptr;
+  int numArgsWritten = std::sscanf(ygAddress.c_str(), "%p", &ptr);
+  EXPECT_EQ(numArgsWritten, 1);
+  EXPECT_TRUE(rt.getHeap().inYoungGen(ptr));
+
+  // Test if the other segments are numbered correctly.
+  EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:1"), 1);
+  EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:2"), 1);
+  EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:3"), 1);
+}
+#endif
 
 } // namespace
 
 #endif // _WINDOWS
 
-#endif // HERMESVM_GC_NONCONTIG_GENERATIONAL
+#endif // HERMESVM_GC_NONCONTIG_GENERATIONAL || HERMESVM_GC_HADES
