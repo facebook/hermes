@@ -487,6 +487,9 @@ class HadesGC final : public GCBase {
   /// If true, turn off promoteYGToOG_ as soon as the first OG GC occurs.
   bool revertToYGAtTTI_;
 
+  /// Target OG occupancy ratio at the end of an OG collection.
+  const double occupancyTarget_;
+
   /// A collection section used to track the size of OG before and after an OG
   /// collection, as well as the time an OG collection takes.
   std::unique_ptr<CollectionStats> ogCollectionStats_;

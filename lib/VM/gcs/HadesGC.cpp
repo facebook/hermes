@@ -774,7 +774,8 @@ HadesGC::HadesGC(
       provider_(std::move(provider)),
       youngGen_{createSegment(/*isYoungGen*/ true)},
       promoteYGToOG_{!gcConfig.getAllocInYoung()},
-      revertToYGAtTTI_{gcConfig.getRevertToYGAtTTI()} {
+      revertToYGAtTTI_{gcConfig.getRevertToYGAtTTI()},
+      occupancyTarget_(gcConfig.getOccupancyTarget()) {
   const size_t minHeapSegments =
       // Align up first to round up.
       llvh::alignTo<AlignedStorage::size()>(gcConfig.getMinHeapSize()) /
@@ -1206,6 +1207,12 @@ void HadesGC::sweep() {
     // need to worry about their information being misused.
   }
   std::lock_guard<Mutex> lk{gcMutex_};
+  const size_t targetCapacity = oldGen_.allocatedBytes() / occupancyTarget_;
+  const size_t targetSegments =
+      llvh::divideCeil(targetCapacity, HeapSegment::maxSize());
+  const size_t maxNumOldGenSegments = maxHeapSize_ / AlignedStorage::size() - 1;
+  const size_t finalSegments = std::min(targetSegments, maxNumOldGenSegments);
+  oldGen_.reserveSegments(finalSegments);
   ogCollectionStats_->setAfterSizes(oldGen_.allocatedBytes(), oldGen_.size());
 }
 
