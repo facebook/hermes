@@ -20,21 +20,34 @@ workflows:
       - android
       - linux
       - macos
-      - build-macos-runtime
+      - test-apple-runtime
+      - apple-runtime:
+          requires:
+            - test-apple-runtime
       - windows
       - npm:
           requires:
             - android
             - linux
             - macos
-            - build-macos-runtime
+            - apple-runtime
             - windows
       - test-linux
       - test-macos
-      - test-macos-runtime-build-and-cocoapods-integration
       - test-e2e:
           requires:
             - npm
+
+# Default settings for Apple jobs (apple-runtime, test-apple-runtime)
+apple_defaults: &apple_defaults
+  macos:
+    xcode: "10.3.0"
+  working_directory: ~/hermes
+  environment:
+    - TERM: dumb
+    # Homebrew currently breaks while updating:
+    # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
+    - HOMEBREW_NO_AUTO_UPDATE: 1
 
 jobs:
   android:
@@ -228,41 +241,71 @@ jobs:
           paths:
             - .
 
-  build-macos-runtime:
-    macos:
-      xcode: "10.3.0"
-    environment:
-      - HERMES_WS_DIR: /tmp/hermes
-      - TERM: dumb
-      # Homebrew currently breaks while updating:
-      # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
-      - HOMEBREW_NO_AUTO_UPDATE: 1
+  # This job builds Hermes runtime for Apple (Mac, iPhone) and tests it.
+  # On success, build is persisted into workspace to make other jobs
+  # run faster.
+  test-apple-runtime:
+    <<: *apple_defaults
     steps:
       - checkout
+      - restore_cache:
+          key: v1-repo-{{ .Environment.CIRCLE_SHA1 }}
       - run:
           name: Install dependencies
           command: |
             brew install cmake ninja
       - run:
-          name: Set up workspace
+          name: Build the framework
           command: |
-            mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output" "$HERMES_WS_DIR/package-root"
-            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
+            pod install
+          working_directory: test/ApplePlatformsIntegrationTestApp
       - run:
-          name: Build Hermes for macOS as CocoaPods pod
+          name: Test MacOS application
           command: |
-            cd "$HERMES_WS_DIR"
-            hermes/utils/build/configure.py --distribute --cmake-flags="$(ruby -rcocoapods-core -e 'load %{hermes/hermes.podspec}; puts HermesHelper.cmake_configuration') -DCMAKE_INSTALL_PREFIX:PATH=../destroot"
-            cmake --build ./build_release --target hermes-runtime-darwin-cocoapods-release
+            xcodebuild test \
+              -workspace ApplePlatformsIntegrationTests.xcworkspace \
+              -configuration Debug \
+              -destination 'platform=macOS' \
+              -scheme ApplePlatformsIntegrationMacTests
+          working_directory: test/ApplePlatformsIntegrationTestApp
+      - run:
+          name: Test iPhone application
+          command: |
+            xcodebuild test \
+              -workspace ApplePlatformsIntegrationTests.xcworkspace \
+              -configuration Debug \
+              -destination 'platform=iOS Simulator,name=iPhone X' \
+              -scheme ApplePlatformsIntegrationMobileTests
+          working_directory: test/ApplePlatformsIntegrationTestApp
+      - save_cache:
+          key: v1-repo-{{ .Environment.CIRCLE_SHA1 }}
+          paths:
+            - ~/hermes
+
+  apple-runtime:
+    <<: *apple_defaults
+    steps:
+      - restore_cache:
+          key: v1-repo-{{ .Environment.CIRCLE_SHA1 }}
+      - run:
+          name: Set up workspace
+          command: mkdir -p /tmp/hermes/output
+      - run:
+          name: Install dependencies
+          command: |
+            brew install cmake ninja
+      - run:
+          name: Package the framework
+          command: |
+            cmake --build ./build_iphoneos --target hermes-runtime-darwin-cocoapods-release
       - run:
           name: Copy artifacts
           command: |
-            cd "$HERMES_WS_DIR"
-            cp "build_release/github"/hermes-runtime-darwin-*.tar.gz "output"
+            cp "build_iphoneos/github"/hermes-runtime-darwin-*.tar.gz /tmp/hermes/output
       - run:
           name: Checksum artifacts
           command: |
-            cd "$HERMES_WS_DIR/output"
+            cd /tmp/hermes/output
             for file in *
             do
               shasum -a 256 "$file" > "$file.sha256"
@@ -302,26 +345,6 @@ jobs:
             hermes/utils/build/configure.py
             cmake --build ./build
             cmake --build ./build --target check-hermes
-
-  test-macos-runtime-build-and-cocoapods-integration:
-    macos:
-      xcode: "10.3.0"
-    environment:
-      - TERM: dumb
-      # Homebrew currently breaks while updating:
-      # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
-      - HOMEBREW_NO_AUTO_UPDATE: 1
-    steps:
-      - checkout
-      - run:
-          name: Install dependencies
-          command: |
-            brew install cmake ninja
-      - run:
-          name: Run CocoaPods installation and test framework
-          command: |
-            cd test/ApplePlatformsIntegrationTestApp
-            ./run.sh
 
   windows:
     executor:

@@ -110,7 +110,7 @@ if(APPLE AND HERMES_BUILD_APPLE_FRAMEWORK)
     FRAMEWORK_VERSION ${PROJECT_VERSION_MAJOR}
     MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${PROJECT_VERSION}
     MACOSX_FRAMEWORK_BUNDLE_VERSION ${PROJECT_VERSION}
-    MACOSX_FRAMEWORK_IDENTIFIER dev.hermesengine.${CMAKE_SYSTEM_NAME}
+    MACOSX_FRAMEWORK_IDENTIFIER dev.hermesengine.${HERMES_APPLE_TARGET_PLATFORM}
   )
   # Install headers into `Headers` while keeping required directory structure
   set_source_files_properties(${api_headers} PROPERTIES
@@ -125,7 +125,7 @@ install(TARGETS libhermes
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
-  FRAMEWORK DESTINATION Library/Frameworks
+  FRAMEWORK DESTINATION Library/Frameworks/${HERMES_APPLE_TARGET_PLATFORM}
 )
 # Install headers into `include` while keeping required directory structure
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/API/hermes" DESTINATION include
@@ -155,7 +155,7 @@ if(HERMES_BUILD_APPLE_DSYM)
   )
 
   if(HERMES_BUILD_APPLE_FRAMEWORK)
-    install(DIRECTORY ${DSYM_PATH} DESTINATION Library/Frameworks)
+    install(DIRECTORY ${DSYM_PATH} DESTINATION Library/Frameworks/${HERMES_APPLE_TARGET_PLATFORM})
   else()
     install(DIRECTORY ${DSYM_PATH} DESTINATION lib)
   endif()

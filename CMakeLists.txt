@@ -58,6 +58,10 @@ if (POLICY CMP0026)
   cmake_policy(SET CMP0026 OLD)
 endif()
 
+# Has to be set before `project` as per documentation
+# https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_SYSROOT.html
+set(CMAKE_OSX_SYSROOT ${HERMES_APPLE_TARGET_PLATFORM})
+
 # This must be consistent with the release_version in:
 # - android/build.gradle
 # - npm/package.json
