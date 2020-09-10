@@ -78,7 +78,8 @@ loadSegment(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
 
   auto requireContext = args.dyncastArg<RequireContext>(0);
   if (!requireContext) {
-    runtime->raiseTypeError("First argument to loadSegment must be context");
+    return runtime->raiseTypeError(
+        "First argument to loadSegment must be context");
   }
 
   auto segmentRes = toUInt32_RJS(runtime, args.getArgHandle(1));
