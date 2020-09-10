@@ -159,6 +159,8 @@ ExecutionStatus amendPropAccessErrorMsgWithPropName(
     llvh::StringRef operationStr,
     SymbolID id);
 
+/// ES5 9.10 CheckObjectCoercible
+/// ES6+ 7.2.1 RequireObjectCoercible ( argument )
 inline ExecutionStatus checkObjectCoercible(
     Runtime *runtime,
     Handle<> valueHandle) {

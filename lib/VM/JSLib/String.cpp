@@ -2217,13 +2217,18 @@ CallResult<HermesValue> stringPrototypeIncludesOrStartsWith(
 /// This provides an implementation of ES5.1 15.5.4.7 (reverse=false),
 /// and ES5.1 15.5.4.8 (reverse=true)
 /// \param runtime  the runtime to use for argument coercions
-/// \param args     the arguments passed to indexOf / lastIndexOf
+/// \param thisValue  represent the "this" value of indexOf / lastIndexOf
+/// \param searchString  represent the "searchString" of indexOf / lastIndexOf
+/// \param position  represent the "position" of indexOf/lastIndexOf
 /// \param reverse  whether we are running lastIndexOf (true) or indexOf (false)
 /// \returns        Hermes-encoded index of the substring match, or -1 on
 ///                 failure
-static CallResult<HermesValue>
-stringDirectedIndexOf(Runtime *runtime, NativeArgs args, bool reverse) {
-  auto thisValue = args.getThisHandle();
+static CallResult<HermesValue> stringDirectedIndexOf(
+    Runtime *runtime,
+    Handle<> thisValue,
+    Handle<> searchString,
+    Handle<> position,
+    bool reverse) {
   // Call a function that may throw, let the runtime record it.
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, thisValue) ==
@@ -2236,7 +2241,7 @@ stringDirectedIndexOf(Runtime *runtime, NativeArgs args, bool reverse) {
   }
   auto S = runtime->makeHandle(std::move(*strRes));
 
-  auto searchStrRes = toString_RJS(runtime, args.getArgHandle(0));
+  auto searchStrRes = toString_RJS(runtime, searchString);
   if (searchStrRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2244,7 +2249,7 @@ stringDirectedIndexOf(Runtime *runtime, NativeArgs args, bool reverse) {
 
   double pos;
   if (reverse) {
-    auto intRes = toNumber_RJS(runtime, runtime->makeHandle(args.getArg(1)));
+    auto intRes = toNumber_RJS(runtime, position);
     if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -2260,7 +2265,7 @@ stringDirectedIndexOf(Runtime *runtime, NativeArgs args, bool reverse) {
       pos = intRes->getNumber();
     }
   } else {
-    auto intRes = toInteger(runtime, runtime->makeHandle(args.getArg(1)));
+    auto intRes = toInteger(runtime, position);
     if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -2301,12 +2306,18 @@ stringDirectedIndexOf(Runtime *runtime, NativeArgs args, bool reverse) {
 
 CallResult<HermesValue>
 stringPrototypeIndexOf(void *, Runtime *runtime, NativeArgs args) {
-  return stringDirectedIndexOf(runtime, args, false);
+  auto searchString = args.getArgHandle(0);
+  auto position = args.getArgHandle(1);
+  return stringDirectedIndexOf(
+      runtime, args.getThisHandle(), searchString, position, false);
 }
 
 CallResult<HermesValue>
 stringPrototypeLastIndexOf(void *, Runtime *runtime, NativeArgs args) {
-  return stringDirectedIndexOf(runtime, args, true);
+  auto searchString = args.getArgHandle(0);
+  auto position = args.getArgHandle(1);
+  return stringDirectedIndexOf(
+      runtime, args.getThisHandle(), searchString, position, true);
 }
 
 } // namespace vm
