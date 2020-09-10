@@ -225,8 +225,6 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
       ctx,
       stringPrototypeMatchAll,
       1);
-
-#ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
   defineMethod(
       runtime,
       stringPrototype,
@@ -318,7 +316,6 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
       (void *)true,
       stringPrototypeIncludesOrStartsWith,
       1);
-#endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 
   return cons;
 }
@@ -1344,7 +1341,6 @@ stringPrototypeMatchAll(void *, Runtime *runtime, NativeArgs args) {
       .toCallResultHermesValue();
 }
 
-#ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 CallResult<HermesValue>
 stringPrototypeMatch(void *, Runtime *runtime, NativeArgs args) {
   // 1. Let O be RequireObjectCoercible(this value).
@@ -2312,7 +2308,6 @@ CallResult<HermesValue>
 stringPrototypeLastIndexOf(void *, Runtime *runtime, NativeArgs args) {
   return stringDirectedIndexOf(runtime, args, true);
 }
-#endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 
 } // namespace vm
 } // namespace hermes
