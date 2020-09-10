@@ -1677,7 +1677,6 @@ PERMANENT_SKIP_LIST = [
 UNSUPPORTED_FEATURES = [
     "AggregateError",
     "Promise.prototype.finally",
-    "String.prototype.replaceAll",
     "Symbol.asyncIterator",
     "Symbol.species",
     "Symbol.prototype.description",
