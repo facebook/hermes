@@ -757,7 +757,9 @@ class HadesGC::MarkWeakRootsAcceptor final : public WeakRootAcceptor {
   PointerBase *const pointerBase_;
 };
 
-HadesGC::OldGen::OldGen(HadesGC *gc) : gc_(gc) {}
+HadesGC::OldGen::OldGen(HadesGC *gc)
+    // Assume about 70% of the OG will survive initially.
+    : gc_(gc), averageSurvivalRatio_{/*weight*/ 0.5, /*init*/ 0.7} {}
 
 HadesGC::HadesGC(
     MetadataTable metaTable,
@@ -781,7 +783,9 @@ HadesGC::HadesGC(
       youngGen_{createSegment(/*isYoungGen*/ true)},
       promoteYGToOG_{!gcConfig.getAllocInYoung()},
       revertToYGAtTTI_{gcConfig.getRevertToYGAtTTI()},
-      occupancyTarget_(gcConfig.getOccupancyTarget()) {
+      occupancyTarget_(gcConfig.getOccupancyTarget()),
+      // Assume about 30% of the YG will survive initially.
+      ygAverageSurvivalRatio_{/*weight*/ 0.5, /*init*/ 0.3} {
   const size_t minHeapSegments =
       // Align up first to round up.
       llvh::alignTo<AlignedStorage::size()>(gcConfig.getMinHeapSize()) /
@@ -1216,6 +1220,7 @@ void HadesGC::sweep() {
   }
   std::lock_guard<Mutex> lk{gcMutex_};
   ogCollectionStats_->setSweptBytes(sweptBytes);
+  oldGen_.updateAverageSurvivalRatio(ogCollectionStats_->survivalRatio());
   const size_t targetCapacity =
       ogCollectionStats_->afterAllocatedBytes() / occupancyTarget_;
   const size_t targetSegments =
@@ -1776,6 +1781,7 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
   // useful here, instead put the number of bytes that were promoted into
   // old gen, which is the amount that survived the collection.
   stats.setSweptBytes(usedBefore - promotedBytes);
+  ygAverageSurvivalRatio_.update(stats.survivalRatio());
   stats.setEndTime();
   auto cpuTimeEnd = oscompat::thread_cpu_time();
   stats.incrementCPUTime(cpuTimeEnd - cpuTimeStart);
@@ -2010,6 +2016,14 @@ uint64_t HadesGC::OldGen::size() const {
 
 uint64_t HadesGC::OldGen::capacityBytes() const {
   return numCapacitySegments_ * HeapSegment::maxSize();
+}
+
+double HadesGC::OldGen::averageSurvivalRatio() const {
+  return averageSurvivalRatio_;
+}
+
+void HadesGC::OldGen::updateAverageSurvivalRatio(double survivalRatio) {
+  averageSurvivalRatio_.update(survivalRatio);
 }
 
 HadesGC::HeapSegment &HadesGC::youngGen() {

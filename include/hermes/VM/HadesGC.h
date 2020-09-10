@@ -9,6 +9,7 @@
 #define HERMES_VM_HADESGC_H
 
 #include "hermes/ADT/BitArray.h"
+#include "hermes/ADT/ExponentialMovingAverage.h"
 #include "hermes/Support/SlowAssert.h"
 #include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/GCBase.h"
@@ -324,6 +325,12 @@ class HadesGC final : public GCBase {
     /// section of the JS heap, including free list entries.
     uint64_t capacityBytes() const;
 
+    /// \return the average survival ratio of the OG over time.
+    double averageSurvivalRatio() const;
+
+    /// Update the average survival ratio with a new instance.
+    void updateAverageSurvivalRatio(double survivalRatio);
+
     class FreelistCell final : public VariableSizeRuntimeCell {
      private:
       static const VTable vt;
@@ -370,6 +377,9 @@ class HadesGC final : public GCBase {
     /// bump-allocated segments. Use \c allocatedBytes() to include
     /// bump-allocated segments.
     uint64_t allocatedBytes_{0};
+
+    /// Tracks the average survival ratio over time of the OG.
+    ExponentialMovingAverage averageSurvivalRatio_;
 
     /// The freelist buckets are split into two sections. In the "small"
     /// section, there is one bucket for each size, in multiples of heapAlign.
@@ -497,6 +507,9 @@ class HadesGC final : public GCBase {
   /// Pointer to the first free weak reference slot. Free weak refs are chained
   /// together in a linked list.
   WeakRefSlot *firstFreeWeak_{nullptr};
+
+  /// The weighted average of the YG survival ratio over time.
+  ExponentialMovingAverage ygAverageSurvivalRatio_;
 
   /// The main entrypoint for all allocations.
   /// \param sz The size of allocation requested. This might be rounded up to
