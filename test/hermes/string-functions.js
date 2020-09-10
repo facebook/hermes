@@ -1037,6 +1037,39 @@ patternReplace[Symbol.replace] = "dumdidum";
 try {"abcde".replace(patternReplace, "x");} catch(e) {print(e.name);}
 // CHECK-NEXT: TypeError
 
+print('replaceAll');
+// CHECK-LABEL: replaceAll
+print('abcabc'.replaceAll('a', 'aa'));
+// CHECK-NEXT: aabcaabc
+print('abcabc'.replaceAll(/a/gi, 'aa'));
+// CHECK-NEXT: aabcaabc
+print('abcabc'.replaceAll('a', m => m + m));
+// CHECK-NEXT: aabcaabc
+print('abcabc'.replaceAll(/a/gi, m => m + m));
+// CHECK-NEXT: aabcaabc
+print('aa'.replaceAll('', '_'))
+// CHECK-NEXT: _a_a_
+
+print('abc-abc'.replaceAll('a', '$$'));
+// CHECK-NEXT: $bc-$bc
+print('abc-abc'.replaceAll('a', '$'));
+// CHECK-NEXT: $bc-$bc
+print('abc-abc'.replaceAll(/a/gi, '$&'));
+// CHECK-NEXT: abc-abc
+print('abc-abc'.replaceAll(/a/gi, "$'"));
+// CHECK-NEXT: bc-abcbc-bcbc
+print('abc-abc'.replaceAll('a', '$1'));
+// CHECK-NEXT: $1bc-$1bc
+print('foo bar'.replaceAll(/(\w+)/g, "$1"));
+// CHECK-NEXT: foo bar
+var regex = /(\w+)-(\w+)/g;
+print('foo-foo bar-bar'.replaceAll(regex, "$1-$2"));
+// CHECK-NEXT: foo-foo bar-bar
+print('foo-foo bar-bar'.replaceAll(regex, function (m, p1, p2, offset) {
+  return m + p1 + p2 + offset;
+}));
+// CHECK-NEXT: foo-foofoofoo0 bar-barbarbar8
+
 print('search');
 // CHECK-LABEL: search
 print('abcabc'.search('ca'));

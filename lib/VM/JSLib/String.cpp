@@ -228,6 +228,13 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       stringPrototype,
+      Predefined::getSymbolID(Predefined::replaceAll),
+      ctx,
+      stringPrototypeReplaceAll,
+      2);
+  defineMethod(
+      runtime,
+      stringPrototype,
       Predefined::getSymbolID(Predefined::match),
       ctx,
       stringPrototypeMatch,
@@ -1341,6 +1348,366 @@ stringPrototypeMatchAll(void *, Runtime *runtime, NativeArgs args) {
       .toCallResultHermesValue();
 }
 
+/// This provides a shared implementation of three operations in ES2021:
+/// 6.1.4.1 Runtime Semantics: StringIndexOf ( string, searchValue, fromIndex )
+///   when clampPostion=false,
+/// 21.1.3.8 String.prototype.indexOf ( searchString [ , position ] )
+///   when reverse=false, and
+/// 21.1.3.9 String.prototype.lastIndexOf ( searchString [ , position ] )
+///   when reverse=true.
+///
+/// Given a haystack ('string'), needle ('searchString'), and position, return
+/// the index of the first (reverse=false) or last (reverse=true) substring
+/// match of needle within haystack that is not smaller (normal) or larger
+/// (reverse) than position.
+///
+/// \param runtime  the runtime to use for argument coercions
+/// \param string  represent the string searching from, i.e. "this" of
+///   indexOf / lastIndexOf or "string" of StringIndexOf.
+/// \param searchString  represent the substring searching for, i.e.
+///   "searchString" of indexOf / lastIndexOf or "searchValue" of StringIndexOf.
+/// \param position  represent the starting index of the search, i.e.
+///   "position" of indexOf / lastIndexOf or "fromIndex" of StringIndexOf.
+/// \param reverse  whether we are running lastIndexOf (true) or indexOf (false)
+/// \param clampPosition  whether the "position" is clamped to [0, length)
+///   (true if running indexOf / lastIndexOf) or not (running StringIndexOf).
+/// \returns Hermes-encoded index of the substring match, or -1 on failure
+static CallResult<HermesValue> stringDirectedIndexOf(
+    Runtime *runtime,
+    Handle<> string,
+    Handle<> searchString,
+    Handle<> position,
+    bool reverse,
+    bool clampPosition = true) {
+  // 1. Let O be ? RequireObjectCoercible(this value).
+  // Call a function that may throw, let the runtime record it.
+  if (LLVM_UNLIKELY(
+          checkObjectCoercible(runtime, string) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // 2. Let S be ? ToString(O).
+  auto strRes = toString_RJS(runtime, string);
+  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto S = runtime->makeHandle(std::move(*strRes));
+
+  // 3. Let searchStr be ? ToString(searchString).
+  auto searchStrRes = toString_RJS(runtime, searchString);
+  if (searchStrRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto searchStr = runtime->makeHandle(std::move(*searchStrRes));
+
+  double pos;
+  if (reverse) {
+    // lastIndexOf
+    // 4. Let numPos be ? ToNumber(position).
+    auto intRes = toNumber_RJS(runtime, position);
+    if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    Handle<> numPos = runtime->makeHandle(intRes.getValue());
+    // 6. If numPos is NaN, let pos be +∞; otherwise, let pos be !
+    // ToInteger(numPos).
+    if (std::isnan(numPos->getNumber())) {
+      pos = std::numeric_limits<double>::infinity();
+    } else {
+      if (LLVM_UNLIKELY(
+              (intRes = toInteger(runtime, numPos)) ==
+              ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      pos = intRes->getNumber();
+    }
+  } else {
+    // indexOf
+    // 4. Let pos be ? ToInteger(position).
+    auto intRes = toInteger(runtime, position);
+    if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    pos = intRes->getNumber();
+  }
+
+  // Let len be the length of S.
+  double len = S->getStringLength();
+
+  // When pos > len and "searchString" is an empty string, StringIndexOf behaves
+  // differently than String.prototype.indexOf in terms of the "clampPosition":
+  //   'aa'.indexOf('', 3) => 2               3 is clamped to 2.
+  //    StringIndexOf('aa', '', 3) => -1      3 is not clamped thus -1.
+  // Also, when pos > len and "searchString" is non-empty, they both fail.
+  // Therefore, it's safe to early return -1 for the case of StringIndexOf
+  // (i.e. clampPosition=false) as soon as pos > len is observed.
+  if (!clampPosition && pos > len) {
+    return HermesValue::encodeNumberValue(-1);
+  }
+
+  // Let start be min(max(pos, 0), len).
+  uint32_t start = static_cast<uint32_t>(std::min(std::max(pos, 0.), len));
+
+  // TODO: good candidate for Boyer-Moore on large needles/haystacks
+  // TODO: good candidate for memchr on length-1 needles
+  auto SView = StringPrimitive::createStringView(runtime, S);
+  auto searchStrView = StringPrimitive::createStringView(runtime, searchStr);
+  double ret = -1;
+  if (reverse) {
+    // lastIndexOf
+    uint32_t lastPossibleMatchEnd =
+        std::min(SView.length(), start + searchStrView.length());
+    auto foundIter = std::search(
+        SView.rbegin() + (SView.length() - lastPossibleMatchEnd),
+        SView.rend(),
+        searchStrView.rbegin(),
+        searchStrView.rend());
+    if (foundIter != SView.rend() || searchStrView.empty()) {
+      ret = SView.rend() - foundIter - searchStrView.length();
+    }
+  } else {
+    // indexOf
+    auto foundIter = std::search(
+        SView.begin() + start,
+        SView.end(),
+        searchStrView.begin(),
+        searchStrView.end());
+    if (foundIter != SView.end() || searchStrView.empty()) {
+      ret = foundIter - SView.begin();
+    }
+  }
+  return HermesValue::encodeDoubleValue(ret);
+}
+
+/// ES12 6.1.4.1 Runtime Semantics: StringIndexOf ( string, searchValue,
+/// fromIndex )
+/// This is currently implemented as a wrapper of stringDirectedIndexOf.
+/// Ideally, this can be implemented with less runtime checks and provide a fast
+/// path than stringDirectedIndexOf. TODO(T74338730)
+static CallResult<HermesValue> stringIndexOf(
+    Runtime *runtime,
+    Handle<StringPrimitive> string,
+    Handle<StringPrimitive> searchValue,
+    uint32_t fromIndex) {
+  // 1. Assert: Type(string) is String.
+  // 2. Assert: Type(searchValue) is String.
+  // 3. Assert: ! IsNonNegativeInteger(fromIndex) is true.
+  return stringDirectedIndexOf(
+      runtime,
+      string,
+      searchValue,
+      runtime->makeHandle(HermesValue::encodeDoubleValue(fromIndex)),
+      false,
+      false);
+}
+
+/// ES12 21.1.3.18 String.prototype.replaceAll ( searchValue, replaceValue )
+CallResult<HermesValue>
+stringPrototypeReplaceAll(void *, Runtime *runtime, NativeArgs args) {
+  GCScope gcScope{runtime};
+
+  // 1. Let O be ? RequireObjectCoercible(this value).
+  auto O = args.getThisHandle();
+  if (LLVM_UNLIKELY(
+          checkObjectCoercible(runtime, O) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  auto searchValue = args.getArgHandle(0);
+  auto replaceValue = args.getArgHandle(1);
+  // 2. If searchValue is neither undefined nor null, then
+  if (!searchValue->isUndefined() && !searchValue->isNull()) {
+    // a. Let isRegExp be ? IsRegExp(searchValue).
+    auto isRegExpRes = isRegExp(runtime, searchValue);
+    if (LLVM_UNLIKELY(isRegExpRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    // b. If isRegExp is true, then
+    if (*isRegExpRes) {
+      Handle<JSObject> regexpObj = Handle<JSObject>::vmcast(searchValue);
+      // i. Let flags be ? Get(searchValue, "flags").
+      auto flagsPropRes = JSObject::getNamed_RJS(
+          regexpObj, runtime, Predefined::getSymbolID(Predefined::flags));
+      if (LLVM_UNLIKELY(flagsPropRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      auto flags = runtime->makeHandle(std::move(*flagsPropRes));
+      // ii. Perform ? RequireObjectCoercible(flags).
+      if (LLVM_UNLIKELY(
+              checkObjectCoercible(runtime, flags) ==
+              ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      // iii. If ? ToString(flags) does not contain "g", throw a TypeError
+      // exception.
+      auto strRes = toString_RJS(runtime, flags);
+      if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      auto strView = StringPrimitive::createStringView(
+          runtime, runtime->makeHandle(std::move(*strRes)));
+      bool isGlobal = false;
+      for (char16_t c : strView)
+        if (c == u'g')
+          isGlobal = true;
+      if (!isGlobal)
+        return runtime->raiseTypeError(
+            "String.prototype.replaceAll called with a non-global RegExp argument");
+    }
+    // c. Let replacer be ? GetMethod(searchValue, @@replace).
+    auto replacerRes = getMethod(
+        runtime,
+        searchValue,
+        runtime->makeHandle(
+            Predefined::getSymbolID(Predefined::SymbolReplace)));
+    if (LLVM_UNLIKELY(replacerRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    // d. If replacer is not undefined, then
+    if (!replacerRes->getHermesValue().isUndefined()) {
+      auto replacer = runtime->makeHandle<Callable>(std::move(*replacerRes));
+      // i. Return ? Call(replacer, searchValue, « O, replaceValue »)
+      return Callable::executeCall2(
+                 replacer,
+                 runtime,
+                 searchValue,
+                 O.getHermesValue(),
+                 replaceValue.getHermesValue())
+          .toCallResultHermesValue();
+    }
+  }
+
+  // 3. Let string be ? ToString(O).
+  auto strRes = toString_RJS(runtime, O);
+  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto string = runtime->makeHandle(std::move(*strRes));
+
+  // 4. Let searchString be ? ToString(searchValue).
+  auto searchStrRes = toString_RJS(runtime, searchValue);
+  if (LLVM_UNLIKELY(searchStrRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto searchString = runtime->makeHandle(std::move(*searchStrRes));
+
+  // 5. Let functionalReplace be IsCallable(replaceValue).
+  auto replaceFn = Handle<Callable>::dyn_vmcast(replaceValue);
+  bool functionalReplace = !!replaceFn;
+
+  // It need to mutable since it's written here but read below.
+  MutableHandle<StringPrimitive> replaceValueStr{runtime};
+  // 6. If functionalReplace is false, then
+  if (!functionalReplace) {
+    // a. Set replaceValue to ? ToString(replaceValue).
+    auto replaceValueStrRes = toString_RJS(runtime, replaceValue);
+    if (LLVM_UNLIKELY(replaceValueStrRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    replaceValueStr = std::move(*replaceValueStrRes);
+  }
+
+  // 7. Let searchLength be the length of searchString.
+  uint32_t searchLength = searchString->getStringLength();
+  // 8. Let advanceBy be max(1, searchLength).
+  uint32_t advanceBy = std::max(1u, searchLength);
+
+  // 9. Let matchPositions be a new empty List.
+  llvh::SmallVector<int32_t, 8> matchPositions{};
+
+  // 10. Let position be ! StringIndexOf(string, searchString, 0).
+  auto positionRes = stringIndexOf(runtime, string, searchString, 0);
+  int32_t position = positionRes->getNumberAs<int32_t>();
+
+  // 11. Repeat, while position is not -1,
+  while (position != -1) {
+    GCScopeMarkerRAII marker{runtime};
+    // a. Append position to the end of matchPositions.
+    matchPositions.push_back(position);
+    // b. Set position to ! StringIndexOf(string, searchString, position +
+    // advanceBy).
+    positionRes =
+        stringIndexOf(runtime, string, searchString, position + advanceBy);
+    assert(
+        positionRes == ExecutionStatus::RETURNED &&
+        "StringIndexOf cannot fail");
+    position = positionRes->getNumberAs<int32_t>();
+  }
+
+  // 12. Let endOfLastMatch be 0.
+  uint32_t endOfLastMatch = 0;
+  // 13. Let result be the empty String value.
+  SmallU16String<32> result{};
+
+  // 14. For each position in matchPositions, do
+  auto stringView = StringPrimitive::createStringView(runtime, string);
+  MutableHandle<StringPrimitive> replacement{runtime};
+  MutableHandle<> replacementCallRes{runtime};
+  for (uint32_t i = 0, size = matchPositions.size(); i < size; ++i) {
+    GCScopeMarkerRAII marker{runtime};
+    uint32_t position = matchPositions[i];
+    // a. Let preserved be the substring of string from endOfLastMatch to
+    // position.
+    // Noted that "substring" is from inclusiveStart to exclusiveEnd.
+    auto preserved =
+        stringView.slice(endOfLastMatch, position - endOfLastMatch);
+    // b. If functionalReplace is true, then
+    if (functionalReplace) {
+      // i. Let replacement be ? ToString(?
+      //   Call(replaceValue, undefined, « searchString, position, string »)).
+      auto callRes = Callable::executeCall3(
+                         replaceFn,
+                         runtime,
+                         Runtime::getUndefinedValue(),
+                         searchString.getHermesValue(),
+                         HermesValue::encodeNumberValue(position),
+                         string.getHermesValue())
+                         .toCallResultHermesValue();
+      if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      replacementCallRes = *callRes;
+      auto replacementStrRes = toString_RJS(runtime, replacementCallRes);
+      if (LLVM_UNLIKELY(replacementStrRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      replacement = std::move(*replacementStrRes);
+    } else {
+      // c. Else,
+      // i. Assert: Type(replaceValue) is String.
+      // ii. Let captures be a new empty List.
+      auto captures = Runtime::makeNullHandle<ArrayStorage>();
+      // iii. Let replacement be ! GetSubstitution(searchString, string,
+      // position, captures, undefined, replaceValue).
+      auto callRes = getSubstitution(
+          runtime,
+          searchString,
+          string,
+          (double)position,
+          captures,
+          replaceValueStr);
+      replacement = vmcast<StringPrimitive>(*callRes);
+    }
+
+    // d. Set result to the string-concatenation of result, preserved, and
+    // replacement.
+    preserved.appendUTF16String(result);
+    StringPrimitive::createStringView(runtime, replacement)
+        .appendUTF16String(result);
+    // e. Set endOfLastMatch to position + searchLength.
+    endOfLastMatch = position + searchLength;
+  }
+
+  // 15. If endOfLastMatch < the length of string, then
+  if (endOfLastMatch < string->getStringLength()) {
+    // a. Set result to the string-concatenation of result and the substring of
+    // string from endOfLastMatch.
+    stringView.slice(endOfLastMatch).appendUTF16String(result);
+  }
+  // 16. Return result.
+  return StringPrimitive::create(runtime, result);
+}
+
 CallResult<HermesValue>
 stringPrototypeMatch(void *, Runtime *runtime, NativeArgs args) {
   // 1. Let O be RequireObjectCoercible(this value).
@@ -2207,101 +2574,6 @@ CallResult<HermesValue> stringPrototypeIncludesOrStartsWith(
   // empty, searchStr is empty, and start = 0
   return HermesValue::encodeBoolValue(
       foundIter != SView.end() || searchStrView.empty());
-}
-
-/// Shared implementation of string.indexOf and string.lastIndexOf
-/// Given a haystack ('this'), needle, and position, return the index
-/// of the first (reverse=false) or last (reverse=true) substring match of
-/// needle within haystack that is not smaller (normal) or larger (reverse) than
-/// position.
-/// This provides an implementation of ES5.1 15.5.4.7 (reverse=false),
-/// and ES5.1 15.5.4.8 (reverse=true)
-/// \param runtime  the runtime to use for argument coercions
-/// \param thisValue  represent the "this" value of indexOf / lastIndexOf
-/// \param searchString  represent the "searchString" of indexOf / lastIndexOf
-/// \param position  represent the "position" of indexOf/lastIndexOf
-/// \param reverse  whether we are running lastIndexOf (true) or indexOf (false)
-/// \returns        Hermes-encoded index of the substring match, or -1 on
-///                 failure
-static CallResult<HermesValue> stringDirectedIndexOf(
-    Runtime *runtime,
-    Handle<> thisValue,
-    Handle<> searchString,
-    Handle<> position,
-    bool reverse) {
-  // Call a function that may throw, let the runtime record it.
-  if (LLVM_UNLIKELY(
-          checkObjectCoercible(runtime, thisValue) ==
-          ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto strRes = toString_RJS(runtime, thisValue);
-  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto S = runtime->makeHandle(std::move(*strRes));
-
-  auto searchStrRes = toString_RJS(runtime, searchString);
-  if (searchStrRes == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto searchStr = runtime->makeHandle(std::move(*searchStrRes));
-
-  double pos;
-  if (reverse) {
-    auto intRes = toNumber_RJS(runtime, position);
-    if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    Handle<> numPos = runtime->makeHandle(intRes.getValue());
-    if (std::isnan(numPos->getNumber())) {
-      pos = std::numeric_limits<double>::infinity();
-    } else {
-      if (LLVM_UNLIKELY(
-              (intRes = toInteger(runtime, numPos)) ==
-              ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      pos = intRes->getNumber();
-    }
-  } else {
-    auto intRes = toInteger(runtime, position);
-    if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    pos = intRes->getNumber();
-  }
-
-  double len = S->getStringLength();
-  uint32_t start = static_cast<uint32_t>(std::min(std::max(pos, 0.), len));
-
-  // TODO: good candidate for Boyer-Moore on large needles/haystacks
-  // TODO: good candidate for memchr on length-1 needles
-  auto SView = StringPrimitive::createStringView(runtime, S);
-  auto searchStrView = StringPrimitive::createStringView(runtime, searchStr);
-  double ret = -1;
-  if (reverse) {
-    uint32_t lastPossibleMatchEnd =
-        std::min(SView.length(), start + searchStrView.length());
-    auto foundIter = std::search(
-        SView.rbegin() + (SView.length() - lastPossibleMatchEnd),
-        SView.rend(),
-        searchStrView.rbegin(),
-        searchStrView.rend());
-    if (foundIter != SView.rend() || searchStrView.empty()) {
-      ret = SView.rend() - foundIter - searchStrView.length();
-    }
-  } else {
-    auto foundIter = std::search(
-        SView.begin() + start,
-        SView.end(),
-        searchStrView.begin(),
-        searchStrView.end());
-    if (foundIter != SView.end() || searchStrView.empty()) {
-      ret = foundIter - SView.begin();
-    }
-  }
-  return HermesValue::encodeDoubleValue(ret);
 }
 
 CallResult<HermesValue>
