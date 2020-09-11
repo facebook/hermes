@@ -2042,7 +2042,8 @@ void HermesRuntimeImpl::checkStatus(vm::ExecutionStatus status) {
     throw ex;
   }
 
-  runtime_.raiseStackOverflow(vm::Runtime::StackOverflowKind::NativeStack);
+  (void)runtime_.raiseStackOverflow(
+      vm::Runtime::StackOverflowKind::NativeStack);
   exception = valueFromHermesValue(runtime_.getThrownValue());
   runtime_.clearThrownValue();
   // Here, we give us a little more room so we can call into JS to

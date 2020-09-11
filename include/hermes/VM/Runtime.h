@@ -544,47 +544,48 @@ class Runtime : public HandleRootOwner,
   /// Flag the interpreter that a type error with the specified message must be
   /// thrown when execution resumes.
   /// If the message is not a string, it is converted using toString().
-  ExecutionStatus raiseTypeError(Handle<> message);
+  LLVM_NODISCARD ExecutionStatus raiseTypeError(Handle<> message);
 
   /// Flag the interpreter that a type error must be thrown when execution
   /// resumes.
   /// \return ExecutionResult::EXCEPTION
-  ExecutionStatus raiseTypeError(const TwineChar16 &msg);
+  LLVM_NODISCARD ExecutionStatus raiseTypeError(const TwineChar16 &msg);
 
   /// Flag the interpreter that a type error must be thrown when execution
   /// resumes. The string thrown concatenates a description of \p value
   /// with \p msg.
   /// \return ExecutionResult::EXCEPTION
-  ExecutionStatus raiseTypeErrorForValue(Handle<> value, llvh::StringRef msg) {
+  LLVM_NODISCARD ExecutionStatus
+  raiseTypeErrorForValue(Handle<> value, llvh::StringRef msg) {
     return raiseTypeErrorForValue("", value, msg);
   }
 
   /// Flag the interpreter that a type error must be thrown when execution
   /// resumes. The string thrown concatenates \p msg1, a description of \p
   /// value, and \p msg2. \return ExecutionResult::EXCEPTION
-  ExecutionStatus raiseTypeErrorForValue(
+  LLVM_NODISCARD ExecutionStatus raiseTypeErrorForValue(
       llvh::StringRef msg1,
       Handle<> value,
       llvh::StringRef msg2);
 
   /// Flag the interpreter that a syntax error must be thrown.
   /// \return ExecutionStatus::EXCEPTION
-  ExecutionStatus raiseSyntaxError(const TwineChar16 &msg);
+  LLVM_NODISCARD ExecutionStatus raiseSyntaxError(const TwineChar16 &msg);
 
   /// Raise a special SyntaxError when attempting to eval when disallowed.
-  ExecutionStatus raiseEvalUnsupported(llvh::StringRef code);
+  LLVM_NODISCARD ExecutionStatus raiseEvalUnsupported(llvh::StringRef code);
 
   /// Raise a \c RangeError exception.
   /// \return ExecutionStatus::EXCEPTION
-  ExecutionStatus raiseRangeError(const TwineChar16 &msg);
+  LLVM_NODISCARD ExecutionStatus raiseRangeError(const TwineChar16 &msg);
 
   /// Raise a \c ReferenceError exception.
   /// \return ExecutionStatus::EXCEPTION
-  ExecutionStatus raiseReferenceError(const TwineChar16 &msg);
+  LLVM_NODISCARD ExecutionStatus raiseReferenceError(const TwineChar16 &msg);
 
   /// Raise a \c URIError exception.
   /// \return ExecutionStatus::EXCEPTION
-  ExecutionStatus raiseURIError(const TwineChar16 &msg);
+  LLVM_NODISCARD ExecutionStatus raiseURIError(const TwineChar16 &msg);
 
   enum class StackOverflowKind {
     // The JS register stack was exhausted.
@@ -604,18 +605,17 @@ class Runtime : public HandleRootOwner,
   /// the object must not execute any custom or JavaScript code.  The
   /// argument influences the exception's message, to aid debugging.
   /// \return ExecutionStatus::EXCEPTION
-  ExecutionStatus raiseStackOverflow(StackOverflowKind kind);
+  LLVM_NODISCARD ExecutionStatus raiseStackOverflow(StackOverflowKind kind);
 
   /// Raise an error for the quit function. This error is not catchable.
-  ExecutionStatus raiseQuitError();
+  LLVM_NODISCARD ExecutionStatus raiseQuitError();
 
   /// Raise an error for execution timeout. This error is not catchable.
-  ExecutionStatus raiseTimeoutError();
+  LLVM_NODISCARD ExecutionStatus raiseTimeoutError();
 
   /// Utility function to raise a catchable JS error with \p errMessage.
-  ExecutionStatus raiseUncatchableError(
-      Handle<JSObject> prototype,
-      llvh::StringRef errMessage);
+  LLVM_NODISCARD ExecutionStatus
+  raiseUncatchableError(Handle<JSObject> prototype, llvh::StringRef errMessage);
 
   /// Interpret the current function until it returns or throws and return
   /// CallResult<HermesValue> or the thrown object in 'thrownObject'.
