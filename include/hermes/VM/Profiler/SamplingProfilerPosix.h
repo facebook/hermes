@@ -239,8 +239,8 @@ class SamplingProfiler {
   static StackCollectionRetcode collectStackForLoom(
       ucontext_t *ucontext,
       int64_t *frames,
-      uint8_t *depth,
-      uint8_t max_depth);
+      uint16_t *depth,
+      uint16_t max_depth);
 #endif
 
   /// Clear previous stored samples.
