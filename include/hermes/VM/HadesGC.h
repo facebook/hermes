@@ -483,10 +483,16 @@ class HadesGC final : public GCBase {
   enum class Phase : uint8_t { None, Mark, WeakMapScan, Sweep };
 
   /// Represents the current phase the concurrent GC is in. The main difference
-  /// between phases is their effect on read and write barriers.
-  /// Can be read with memory_order_acquire, or after acquiring gcMutex_ can
-  /// be read as relaxed. Should only be stored to if gcMutex_ is acquired.
-  AtomicIfConcurrentGC<Phase> concurrentPhase_{Phase::None};
+  /// between phases is their effect on read and write barriers. Should only be
+  /// accessed if gcMutex_ is acquired.
+  Phase concurrentPhase_{Phase::None};
+
+  /// Represents whether the background thread is currently marking. Should only
+  /// be accessed by the mutator thread or during a STW pause. isOldGenMarking_
+  /// is true if and only if concurrentPhase_ == Mark but is kept separate in
+  /// order to reduce synchronisation requirements for write barriers.
+  /// Prefer using concurrentPhase_ when acquiring gcMutex_ is not a concern.
+  bool isOldGenMarking_{false};
 
   /// Used by the write barrier to add items to the worklist.
   /// Protected by gcMutex_.

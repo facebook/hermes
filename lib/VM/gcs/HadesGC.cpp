@@ -918,7 +918,7 @@ void HadesGC::waitForCollectionToFinish() {
   assert(
       gcMutex_ &&
       "gcMutex_ must be held before calling waitForCollectionToFinish");
-  if (concurrentPhase_.load(std::memory_order_acquire) == Phase::None) {
+  if (concurrentPhase_ == Phase::None) {
     return;
   }
   GCCycle cycle{this, gcCallbacks_, "Old Gen (Direct)"};
@@ -939,11 +939,11 @@ void HadesGC::waitForCollectionToFinish() {
   stopTheWorldCondVar_.notify_all();
   // Wait for an existing collection to finish.
   oldGenCollectionThread_.join();
-  assert(concurrentPhase_.load(std::memory_order_acquire) == Phase::None);
   // Undo the worldStopped_ change, as the mutator will now resume. Can't rely
   // on completeMarking to set worldStopped_ to false, as the OG collection
   // might have already passed the stage where it was waiting for STW.
   lk.lock();
+  assert(concurrentPhase_ == Phase::None);
   worldStopped_ = false;
 
   assert(lk && "Lock must be re-acquired before exiting");
@@ -958,8 +958,9 @@ void HadesGC::oldGenCollection() {
   //  * Mark all live objects by iterating through a worklist.
   //  * Sweep dead objects onto the free lists.
   // This function must be called while the gcMutex_ is held.
+  assert(gcMutex_ && "gcMutex_ must be held when starting an OG collection");
   assert(
-      concurrentPhase_.load(std::memory_order_acquire) == Phase::None &&
+      concurrentPhase_ == Phase::None &&
       "Starting a second old gen collection");
   if (oldGenCollectionThread_.joinable()) {
     // This is just making sure the leftover thread is completed before starting
@@ -1015,9 +1016,11 @@ void HadesGC::oldGenCollection() {
     // Do not call markWeakRoots here, as weak roots can only be cleared
     // after liveness is known.
   }
+
+  concurrentPhase_ = Phase::Mark;
   // Before the thread starts up, make sure that any write barriers are aware
-  // that concurrent marking is happening by changing the phase.
-  concurrentPhase_.store(Phase::Mark, std::memory_order_release);
+  // that concurrent marking is happening.
+  isOldGenMarking_ = true;
   // NOTE: Since the "this" value (the HadesGC instance) is implicitly copied to
   // the new thread, the GC cannot be destructed until the new thread completes.
   // This means that before destroying the GC, waitForCollectionToFinish must
@@ -1051,12 +1054,13 @@ void HadesGC::oldGenCollectionWorker() {
   oldGenMarker_->drainMarkWorklist();
   completeMarking();
   sweep();
+  std::lock_guard<Mutex> g{gcMutex_};
   ogCollectionStats_->setEndTime();
   auto cpuTimeEnd = oscompat::thread_cpu_time();
   ogCollectionStats_->incrementCPUTime(cpuTimeEnd - cpuTimeStart);
   // TODO: Should probably check for cancellation, either via a
   // promise/future pair or a condition variable.
-  concurrentPhase_.store(Phase::None, std::memory_order_release);
+  concurrentPhase_ = Phase::None;
 }
 
 void HadesGC::completeNonConcurrentOldGenCollection() {
@@ -1069,7 +1073,7 @@ void HadesGC::completeNonConcurrentOldGenCollection() {
   // there's no performance cost.
   sweep();
   ogCollectionStats_->setEndTime();
-  concurrentPhase_.store(Phase::None, std::memory_order_release);
+  concurrentPhase_ = Phase::None;
 }
 
 void HadesGC::completeMarking() {
@@ -1106,7 +1110,9 @@ void HadesGC::completeMarkingAssumeLocks() {
   // examines them, regardless of whether the object they use is live or not. We
   // don't want to execute any read barriers during that time which would affect
   // the liveness of the object read out of the weak reference.
-  concurrentPhase_.store(Phase::WeakMapScan, std::memory_order_release);
+  concurrentPhase_ = Phase::WeakMapScan;
+  // NOTE: We can access this here since the world is stopped.
+  isOldGenMarking_ = false;
   completeWeakMapMarking(*oldGenMarker_);
   assert(
       oldGenMarker_->globalWorklist().empty() &&
@@ -1128,8 +1134,8 @@ void HadesGC::completeMarkingAssumeLocks() {
   // to an now-empty cell.
   updateWeakReferencesForOldGen();
   // Change the phase to sweep here, before the STW lock is released. This
-  // ensures that no mutator read barriers observer the WeakMapScan phase.
-  concurrentPhase_.store(Phase::Sweep, std::memory_order_release);
+  // ensures that no mutator read barriers observe the WeakMapScan phase.
+  concurrentPhase_ = Phase::Sweep;
 
   // Nothing needs oldGenMarker_ from this point onward.
   oldGenMarker_.reset();
@@ -1286,7 +1292,7 @@ void HadesGC::writeBarrier(void *loc, HermesValue value) {
     // A pointer that lives in YG never needs any write barriers.
     return;
   }
-  if (concurrentPhase_.load(std::memory_order_acquire) == Phase::Mark) {
+  if (isOldGenMarking_) {
     snapshotWriteBarrierInternal(*static_cast<HermesValue *>(loc));
   }
   if (!value.isPointer()) {
@@ -1300,7 +1306,7 @@ void HadesGC::writeBarrier(void *loc, void *value) {
     // A pointer that lives in YG never needs any write barriers.
     return;
   }
-  if (concurrentPhase_.load(std::memory_order_acquire) == Phase::Mark) {
+  if (isOldGenMarking_) {
     const GCPointerBase::StorageType oldValueStorage =
         *static_cast<GCPointerBase::StorageType *>(loc);
 #ifdef HERMESVM_COMPRESSED_POINTERS
@@ -1346,7 +1352,7 @@ void HadesGC::snapshotWriteBarrier(GCHermesValue *loc) {
     // A pointer that lives in YG never needs any write barriers.
     return;
   }
-  if (concurrentPhase_.load(std::memory_order_acquire) == Phase::Mark) {
+  if (isOldGenMarking_) {
     snapshotWriteBarrierInternal(*loc);
   }
 }
@@ -1356,7 +1362,7 @@ void HadesGC::snapshotWriteBarrierRange(GCHermesValue *start, uint32_t numHVs) {
     // A pointer that lives in YG never needs any write barriers.
     return;
   }
-  if (concurrentPhase_.load(std::memory_order_acquire) != Phase::Mark) {
+  if (!isOldGenMarking_) {
     return;
   }
   for (uint32_t i = 0; i < numHVs; ++i) {
@@ -1398,21 +1404,12 @@ void HadesGC::generationalWriteBarrier(void *loc, void *value) {
 }
 
 void HadesGC::weakRefReadBarrier(void *value) {
-  // If the GC is marking, conservatively mark the value as live.
-  const Phase phase = concurrentPhase_.load(std::memory_order_acquire);
-  switch (phase) {
-    case Phase::None:
-    case Phase::WeakMapScan:
-    case Phase::Sweep:
-      // If no GC is active at all, the weak ref must be alive.
-      // During sweeping there's no special handling either.
-      return;
-    case Phase::Mark:
-      // Treat the value read from the weak reference as live.
-      snapshotWriteBarrierInternal(static_cast<GCCell *>(value));
-      return;
+  if (isOldGenMarking_) {
+    // If the GC is marking, conservatively mark the value as live.
+    snapshotWriteBarrierInternal(static_cast<GCCell *>(value));
   }
-  llvm_unreachable("All phases should be handled");
+  // Otherwise, if no GC is active at all, the weak ref must be alive.
+  // During sweeping there's no special handling either.
 }
 
 void HadesGC::weakRefReadBarrier(HermesValue value) {
@@ -1443,17 +1440,12 @@ WeakRefSlot *HadesGC::allocWeakSlot(HermesValue init) {
     weakPointers_.push_back({init});
     slot = &weakPointers_.back();
   }
-  const Phase phase = concurrentPhase_.load(std::memory_order_acquire);
-  if (phase == Phase::Mark) {
+  if (isOldGenMarking_) {
     // During the mark phase, if a WeakRef is created, it might not be marked
     // if the object holding this new WeakRef has already been visited.
     // This doesn't need the WeakRefMutex because nothing is using this slot
     // yet.
     slot->mark();
-  } else {
-    assert(
-        (phase == Phase::None || phase == Phase::Sweep) &&
-        "WeakRef shouldn't be allocated during any other phase");
   }
   return slot;
 }
@@ -1794,7 +1786,7 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
   // The average survival ratio should be updated before starting an OG
   // collection.
   ygAverageSurvivalRatio_.update(stats.survivalRatio());
-  if (concurrentPhase_.load(std::memory_order_acquire) == Phase::None) {
+  if (concurrentPhase_ == Phase::None) {
     if (forceOldGenCollection) {
       oldGenCollection();
     } else {
@@ -1924,7 +1916,8 @@ void HadesGC::finalizeYoungGenObjects() {
 }
 
 void HadesGC::updateWeakReferencesForYoungGen() {
-  const Phase phase = concurrentPhase_.load(std::memory_order_acquire);
+  assert(gcMutex_ && "gcMutex must be held when updating weak refs");
+  const Phase phase = concurrentPhase_;
   // If an OG collection is active, it will be determining what weak references
   // are live. The YG collection shouldn't modify the state of any weak
   // references that OG is trying to track. Only fixup pointers that are
