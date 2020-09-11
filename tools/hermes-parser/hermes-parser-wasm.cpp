@@ -50,6 +50,8 @@ extern "C" ParseResult *hermesParse(const char *source, size_t sourceSize) {
       context->getSourceErrorManager().addNewSourceBuffer(std::move(fileBuf));
 
   parser::JSParser jsParser(*context, fileBufId, parser::FullParse);
+  jsParser.setStoreComments(true);
+
   llvh::Optional<ESTree::ProgramNode *> parsedJs = jsParser.parse();
 
   if (!parsedJs) {
@@ -58,7 +60,7 @@ extern "C" ParseResult *hermesParse(const char *source, size_t sourceSize) {
   }
 
   result->astReference_ =
-      buildProgram(*parsedJs, &context->getSourceErrorManager());
+      buildProgram(*parsedJs, &context->getSourceErrorManager(), &jsParser);
 
   return result.release();
 }

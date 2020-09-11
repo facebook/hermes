@@ -36,6 +36,14 @@ void JSParser::setStrictMode(bool mode) {
   return impl_->setStrictMode(mode);
 }
 
+llvh::ArrayRef<StoredComment> JSParser::getStoredComments() const {
+  return impl_->getStoredComments();
+}
+
+void JSParser::setStoreComments(bool storeComments) {
+  impl_->setStoreComments(storeComments);
+}
+
 bool JSParser::getUseStaticBuiltin() const {
   return impl_->getUseStaticBuiltin();
 }

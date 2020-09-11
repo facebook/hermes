@@ -10,10 +10,14 @@
 
 #include "HermesParserJSLibrary.h"
 #include "hermes/AST/ESTree.h"
+#include "hermes/Parser/JSParser.h"
 
 namespace hermes {
 
-JSReference buildProgram(ESTree::NodePtr rootNode, SourceErrorManager *sm);
+JSReference buildProgram(
+    ESTree::ProgramNode *programNode,
+    SourceErrorManager *sm,
+    parser::JSParser *parser);
 
 } // namespace hermes
 

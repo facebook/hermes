@@ -82,6 +82,23 @@ const HermesParserJSLibrary = {
     });
   },
 
+  buildComment: function(loc, isBlock, valuePtr, valueLength) {
+    return JSReferences.store({
+      loc: JSReferences.pop(loc),
+      type: isBlock ? 'Block' : 'Line',
+      value: UTF8ToString(valuePtr, valueLength),
+    });
+  },
+
+  buildProgramWithComments: function(loc, body, comments) {
+    return JSReferences.store({
+      type: 'Program',
+      loc: JSReferences.pop(loc),
+      body: JSReferences.pop(body),
+      comments: JSReferences.pop(comments),
+    });
+  },
+
   build_Program: function(loc, body) {
     return JSReferences.store({
       type: 'Program',

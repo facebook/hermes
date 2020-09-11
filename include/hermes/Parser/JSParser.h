@@ -10,6 +10,7 @@
 
 #include "hermes/AST/Context.h"
 #include "hermes/AST/ESTree.h"
+#include "hermes/Parser/JSLexer.h"
 
 #include "llvh/ADT/Optional.h"
 
@@ -57,6 +58,10 @@ class JSParser {
   bool isStrictMode() const;
 
   void setStrictMode(bool mode);
+
+  llvh::ArrayRef<StoredComment> getStoredComments() const;
+
+  void setStoreComments(bool storeComments);
 
   /// Return true if the parser detected 'use static builtin' directive from the
   /// source.
