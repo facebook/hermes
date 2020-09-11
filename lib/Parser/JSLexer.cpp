@@ -1060,20 +1060,24 @@ const char *JSLexer::skipLineComment(const char *start) {
   assert(
       (start[0] == '/' && start[1] == '/') ||
       (start[0] == '#' && start[1] == '!'));
-  SMLoc lineCommentStart = getCurLoc();
+  SMLoc lineCommentStart = SMLoc::getFromPointer(start);
+  SMLoc lineCommentEnd;
   const char *cur = start + 2;
 
   for (;;) {
     switch ((unsigned char)*cur) {
       case 0:
-        if (cur == bufferEnd_)
+        if (cur == bufferEnd_) {
+          lineCommentEnd = SMLoc::getFromPointer(cur);
           goto endLoop;
-        else
+        } else {
           ++cur;
+        }
         break;
 
       case '\r':
       case '\n':
+        lineCommentEnd = SMLoc::getFromPointer(cur);
         ++cur;
         newLineBeforeCurrentToken_ = true;
         goto endLoop;
@@ -1082,6 +1086,7 @@ const char *JSLexer::skipLineComment(const char *start) {
       // Paragraph separator \u2029 UTF8 encoded is: e2 80 a9
       case UTF8_LINE_TERMINATOR_CHAR0:
         if (matchUnicodeLineTerminatorOffset1(cur)) {
+          lineCommentEnd = SMLoc::getFromPointer(cur);
           cur += 3;
           newLineBeforeCurrentToken_ = true;
           goto endLoop;
@@ -1102,8 +1107,7 @@ endLoop:
 
   if (storeComments_) {
     commentStorage_.emplace_back(
-        StoredComment::Kind::Line,
-        SMRange{lineCommentStart, SMLoc::getFromPointer(cur)});
+        StoredComment::Kind::Line, SMRange{lineCommentStart, lineCommentEnd});
   }
 
   return cur;
