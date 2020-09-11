@@ -676,16 +676,43 @@ Handle<JSObject> createHermesInternalObject(
     Runtime *runtime,
     const JSLibFlags &flags) {
   Handle<JSObject> intern = runtime->makeHandle(JSObject::create(runtime));
-  if (!flags.enableHermesInternal) {
-    JSObject::preventExtensions(*intern);
-    return intern;
-  }
 
   DefinePropertyFlags constantDPF =
       DefinePropertyFlags::getDefaultNewPropertyFlags();
   constantDPF.enumerable = 0;
   constantDPF.writable = 0;
   constantDPF.configurable = 0;
+
+  // Make a copy of the original String.prototype.concat implementation that we
+  // can use internally.
+  // TODO: we can't make HermesInternal.concat a static builtin method now
+  // because this method should be called with a meaningful `this`, but
+  // CallBuiltin instruction does not support it.
+  auto propRes = JSObject::getNamed_RJS(
+      runtime->makeHandle<JSObject>(runtime->stringPrototype),
+      runtime,
+      Predefined::getSymbolID(Predefined::concat));
+  assert(
+      propRes != ExecutionStatus::EXCEPTION && !(*propRes)->isUndefined() &&
+      "Failed to get String.prototype.concat.");
+  auto putRes = JSObject::defineOwnProperty(
+      intern,
+      runtime,
+      Predefined::getSymbolID(Predefined::concat),
+      constantDPF,
+      runtime->makeHandle(std::move(*propRes)));
+  assert(
+      putRes != ExecutionStatus::EXCEPTION && *putRes &&
+      "Failed to set HermesInternal.concat.");
+  (void)putRes;
+
+  // If `enableHermesInternal=false`, hide functions that aren't considered
+  // safe. All functions that are known to be safe should be defined above this
+  // check.
+  if (!flags.enableHermesInternal) {
+    JSObject::preventExtensions(*intern);
+    return intern;
+  }
 
   auto defineInternMethod =
       [&](Predefined::Str symID, NativeFunctionPtr func, uint8_t count = 0) {
@@ -739,29 +766,6 @@ Handle<JSObject> createHermesInternalObject(
 #ifdef HERMESVM_EXCEPTION_ON_OOM
   defineInternMethodAndSymbol("getCallStack", hermesInternalGetCallStack, 0);
 #endif // HERMESVM_EXCEPTION_ON_OOM
-
-  // Make a copy of the original String.prototype.concat implementation that we
-  // can use internally.
-  // TODO: we can't make HermesInternal.concat a static builtin method now
-  // because this method should be called with a meaningful `this`, but
-  // CallBuiltin instruction does not support it.
-  auto propRes = JSObject::getNamed_RJS(
-      runtime->makeHandle<JSObject>(runtime->stringPrototype),
-      runtime,
-      Predefined::getSymbolID(Predefined::concat));
-  assert(
-      propRes != ExecutionStatus::EXCEPTION && !(*propRes)->isUndefined() &&
-      "Failed to get String.prototype.concat.");
-  auto putRes = JSObject::defineOwnProperty(
-      intern,
-      runtime,
-      Predefined::getSymbolID(Predefined::concat),
-      constantDPF,
-      runtime->makeHandle(std::move(*propRes)));
-  assert(
-      putRes != ExecutionStatus::EXCEPTION && *putRes &&
-      "Failed to set HermesInternal.concat.");
-  (void)putRes;
 
   JSObject::preventExtensions(*intern);
 

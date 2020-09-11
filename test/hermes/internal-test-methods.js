@@ -10,8 +10,11 @@
 // RUN: %hermes -Xhermes-internal-test-methods=true %s | %FileCheck --match-full-lines --check-prefix=CHKIME %s
 // RUN: %hermes -Xhermes-internal-test-methods=false %s | %FileCheck --match-full-lines --check-prefix=CHKIMD %s
 
-// Check that we can disable all fields of HermesInternal.
-print(Object.getOwnPropertyNames(HermesInternal).length !== 0);
+// HermesInternal.concat
+var SAFE_FIELDS_COUNT = 1;
+
+// Check that we can disable unsafe fields of HermesInternal.
+print(Object.getOwnPropertyNames(HermesInternal).length !== SAFE_FIELDS_COUNT);
 //CHKHIE: true
 //CHKHID: false
 //CHKIME: true
@@ -23,3 +26,15 @@ print(typeof HermesInternal.detachArrayBuffer);
 //CHKHID-NEXT: undefined
 //CHKIME-NEXT: function
 //CHKIMD-NEXT: undefined
+
+// Check that HermesInternal.concat is kept even HermesInternal is diabled.
+print(typeof HermesInternal.concat)
+//CHKHIE-NEXT: function
+//CHKHID-NEXT: function
+//CHKIME-NEXT: function
+//CHKIMD-NEXT: function
+print(`hello${1 + 1}world`);
+//CHKHIE-NEXT: hello2world
+//CHKHID-NEXT: hello2world
+//CHKIME-NEXT: hello2world
+//CHKIMD-NEXT: hello2world
