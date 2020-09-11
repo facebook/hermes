@@ -286,6 +286,7 @@ class HadesGC final : public GCBase {
     std::vector<std::unique_ptr<HeapSegment>>::const_iterator end() const;
 
     size_t numSegments() const;
+    size_t maxNumSegments() const;
 
     HeapSegment &operator[](size_t i);
 
@@ -330,6 +331,18 @@ class HadesGC final : public GCBase {
 
     /// Update the average survival ratio with a new instance.
     void updateAverageSurvivalRatio(double survivalRatio);
+
+    /// \return the number of bytes that we expect to need to mark before an
+    ///   OG collection finishes.
+    /// NOTE: This is determined once at the start of collection, and does not
+    /// change during a collection.
+    size_t bytesToMark() const {
+      return bytesToMark_;
+    }
+
+    void setBytesToMark(size_t bytesToMark) {
+      bytesToMark_ = bytesToMark;
+    }
 
     class FreelistCell final : public VariableSizeRuntimeCell {
      private:
@@ -380,6 +393,10 @@ class HadesGC final : public GCBase {
 
     /// Tracks the average survival ratio over time of the OG.
     ExponentialMovingAverage averageSurvivalRatio_;
+
+    /// An estimate of the number of bytes that need to be marked for a
+    /// collection to complete.
+    size_t bytesToMark_{0};
 
     /// The freelist buckets are split into two sections. In the "small"
     /// section, there is one bucket for each size, in multiples of heapAlign.
@@ -637,6 +654,11 @@ class HadesGC final : public GCBase {
   /// Give the background GC a chance to complete marking and finish the OG
   /// collection.
   void yieldToOldGen();
+
+  /// \return A number of bytes that should be drained on a per-YG basis to
+  ///   help ensure an incremental collection will finish before the next one is
+  ///   needed.
+  size_t getDrainRate();
 
   /// Adds the start address of the segment to the CrashManager's custom data.
   /// \param extraName append this to the name of the segment. Must be

@@ -481,7 +481,7 @@ class MarkWorklist {
 class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
                                     public WeakRefAcceptor {
  public:
-  MarkAcceptor(GC &gc) : SlotAcceptorDefault{gc} {
+  MarkAcceptor(GC &gc) : SlotAcceptorDefault{gc}, byteDrainRate_{0} {
     markedSymbols_.resize(gc.gcCallbacks_->getSymbolsEnd(), false);
   }
 
@@ -556,9 +556,18 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
     }
   }
 
+  /// Set the drain rate that'll be used for any future calls to drain APIs.
+  void setDrainRate(size_t rate) {
+    byteDrainRate_ = rate;
+  }
+
   /// Drain the mark stack of cells to be processed. This function periodically
   /// acquires and releases oldGenMutex_ and weakRefMutex_.
+  /// \pre Should only be called for concurrent collections.
   void drainMarkWorklist() {
+    assert(
+        kConcurrentGC &&
+        "drainMarkWorklist should only be called for concurrent GCs");
     // Use do-while to make sure both the global worklist and the local worklist
     // are examined at least once.
     do {
@@ -566,7 +575,8 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
       // chunks so that we're not constantly acquiring and releasing the lock.
       std::lock_guard<Mutex> ogLk{gc.gcMutex_};
       std::lock_guard<Mutex> wrLk{gc.weakRefMutex()};
-      constexpr size_t kConcurrentMarkLimit = 128;
+      // See the comment in setDrainRate for why the drain rate isn't used here.
+      constexpr size_t kConcurrentMarkLimit = 8192;
       drainSomeWork(kConcurrentMarkLimit);
       // It's ok to access localWorklist outside of the lock, since it is local
       // memory to only this thread.
@@ -584,8 +594,18 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
     assert(allWorkIsDrained() && "Some work left that wasn't completed");
   }
 
+  /// Drains some of the worklist, using a drain rate specified by
+  /// \c setDrainRate.
+  /// \pre Should only be called for non-concurrent collections.
+  void drainSomeWork() {
+    assert(
+        !kConcurrentGC &&
+        "drainSomeWork should only be called for non-concurrent GCs");
+    drainSomeWork(byteDrainRate_);
+  }
+
   /// Drain some of the work to be done for marking.
-  /// \param markLimit Only mark up to this many objects from the local
+  /// \param markLimit Only mark up to this many bytes from the local
   /// worklist.
   ///   NOTE: This does *not* guarantee that the marker thread
   ///   has upper bounds on the amount of work it does before reading from the
@@ -609,8 +629,8 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
       }
     }
 
-    for (size_t numMarked = 0; !localWorklist_.empty() && numMarked < markLimit;
-         ++numMarked) {
+    size_t numMarkedBytes = 0;
+    while (!localWorklist_.empty() && numMarkedBytes < markLimit) {
       GCCell *const cell = localWorklist_.top();
       localWorklist_.pop();
       assert(cell->isValid() && "Invalid cell in marking");
@@ -620,6 +640,8 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
           "Shouldn't ever traverse a YG object in this loop");
       HERMES_SLOW_ASSERT(
           gc.dbgContains(cell) && "Non-heap object discovered during marking");
+      const auto sz = cell->getAllocatedSize();
+      numMarkedBytes += sz;
       // There is a benign data race here, as the GC can read a pointer while
       // it's being modified by the mutator; however, the following rules we
       // obey prevent it from being a problem:
@@ -688,6 +710,10 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
   /// to IdentifierTable so that it can free symbols. If any new symbols are
   /// allocated after the collection began, assume they are live.
   std::vector<bool> markedSymbols_;
+
+  /// The number of bytes to drain per call to drainSomeWork. A higher rate
+  /// means more objects will be marked.
+  size_t byteDrainRate_;
 
   void push(GCCell *cell) {
     assert(
@@ -977,7 +1003,10 @@ void HadesGC::oldGenCollection() {
   // This assignment will reset any leftover memory from the last collection. We
   // leave the last marker alive to avoid a race condition with setting
   // concurrentPhase_, oldGenMarker_ and the write barrier.
+  oldGen_.setBytesToMark(
+      oldGen_.allocatedBytes() * oldGen_.averageSurvivalRatio());
   oldGenMarker_.reset(new MarkAcceptor{*this});
+  oldGenMarker_->setDrainRate(getDrainRate());
   {
     // Roots are marked before a marking thread is spun up, so that the root
     // marking is atomic.
@@ -1225,8 +1254,8 @@ void HadesGC::sweep() {
       ogCollectionStats_->afterAllocatedBytes() / occupancyTarget_;
   const size_t targetSegments =
       llvh::divideCeil(targetCapacity, HeapSegment::maxSize());
-  const size_t maxNumOldGenSegments = maxHeapSize_ / AlignedStorage::size() - 1;
-  const size_t finalSegments = std::min(targetSegments, maxNumOldGenSegments);
+  const size_t finalSegments =
+      std::min(targetSegments, oldGen_.maxNumSegments());
   oldGen_.reserveSegments(finalSegments);
 }
 
@@ -1554,9 +1583,7 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
   // Before waiting for a collection to finish, check if we're below the max
   // heap size and can simply allocate another segment. This will prevent
   // blocking the YG unnecessarily.
-  const auto maxNumOldGenSegments =
-      (gc_->maxHeapSize_ / AlignedStorage::size()) - 1;
-  if (segments_.size() < maxNumOldGenSegments) {
+  if (segments_.size() < maxNumSegments()) {
     std::unique_ptr<HeapSegment> seg = gc_->createSegment(/*isYoungGen*/ false);
     // Complete this allocation using a bump alloc.
     AllocResult res = seg->bumpAlloc(sz);
@@ -1759,6 +1786,14 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
   // Check that the card tables are well-formed after the collection.
   verifyCardTable();
 #endif
+  // Post-allocated has an ambiguous meaning for a young-gen GC, since the
+  // young gen must be completely evacuated. Since zeros aren't really
+  // useful here, instead put the number of bytes that were promoted into
+  // old gen, which is the amount that survived the collection.
+  stats.setSweptBytes(usedBefore - promotedBytes);
+  // The average survival ratio should be updated before starting an OG
+  // collection.
+  ygAverageSurvivalRatio_.update(stats.survivalRatio());
   if (concurrentPhase_.load(std::memory_order_acquire) == Phase::None) {
     if (forceOldGenCollection) {
       oldGenCollection();
@@ -1773,15 +1808,11 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
         oldGenCollection();
       }
     }
+  } else if (oldGenMarker_) {
+    oldGenMarker_->setDrainRate(getDrainRate());
   }
   // Give an existing background thread a chance to complete.
   yieldToOldGen();
-  // Post-allocated has an ambiguous meaning for a young-gen GC, since the
-  // young gen must be completely evacuated. Since zeros aren't really
-  // useful here, instead put the number of bytes that were promoted into
-  // old gen, which is the amount that survived the collection.
-  stats.setSweptBytes(usedBefore - promotedBytes);
-  ygAverageSurvivalRatio_.update(stats.survivalRatio());
   stats.setEndTime();
   auto cpuTimeEnd = oscompat::thread_cpu_time();
   stats.incrementCPUTime(cpuTimeEnd - cpuTimeStart);
@@ -2062,6 +2093,13 @@ size_t HadesGC::OldGen::numSegments() const {
   return segments_.size();
 }
 
+size_t HadesGC::OldGen::maxNumSegments() const {
+  assert(
+      gc_->maxHeapSize_ % AlignedStorage::size() == 0 &&
+      "maxHeapSize must be evenly disible by AlignedStorage::size");
+  return (gc_->maxHeapSize_ / AlignedStorage::size()) - 1;
+}
+
 HadesGC::HeapSegment &HadesGC::OldGen::operator[](size_t i) {
   return *segments_[i];
 }
@@ -2118,10 +2156,7 @@ void HadesGC::yieldToOldGen() {
     // A non-concurrent GC needs to check if there's any work to be done from
     // oldGenMarker_.
     if (oldGenMarker_) {
-      // TODO: This is currently the same as kConcurrentMarkLimit. Instead,
-      // choose this dynamically.
-      constexpr size_t kNonConcurrentMarkLimit = 128;
-      oldGenMarker_->drainSomeWork(kNonConcurrentMarkLimit);
+      oldGenMarker_->drainSomeWork();
       if (oldGenMarker_->allWorkIsDrained()) {
         // If the work has finished completely, finish the collection.
         completeNonConcurrentOldGenCollection();
@@ -2147,6 +2182,47 @@ void HadesGC::yieldToOldGen() {
       !stopTheWorldRequested_ &&
       "The request should be set to false after being completed");
   lk.release();
+}
+
+size_t HadesGC::getDrainRate() {
+  HERMES_SLOW_ASSERT(
+      gcMutex_ && "Must hold the GC mutex when calling this function");
+  if (kConcurrentGC) {
+    // Concurrent collections don't need to use the drain rate because they
+    // only yield the lock periodically to be interrupted, but otherwise will
+    // continuously churn through work regardless of the rate.
+    // Non-concurrent collections, on the other hand, can only make progress
+    // at YG collection intervals, so they need to be configured to mark the
+    // OG faster than it fills up.
+    return 0;
+  }
+  // Assume this many bytes are live in the OG. We want to make progress so
+  // that over all YG collections before the heap fills up, we are able to
+  // complete marking before OG fills up.
+  const size_t bytesToFill = oldGen_.capacityBytes() - oldGen_.allocatedBytes();
+  const double ygSurvivalRatio = ygAverageSurvivalRatio_;
+  size_t ygCollectionsUntilFull = ygSurvivalRatio
+      ? bytesToFill / (ygSurvivalRatio * HeapSegment::maxSize())
+      : std::numeric_limits<size_t>::max();
+  if (ygCollectionsUntilFull == 0) {
+    // If the bytes to fill is very small, integer division might give 0
+    // collections. In this case, round up to 1.
+    ygCollectionsUntilFull = 1;
+  } else if (ygCollectionsUntilFull > 1) {
+    // If all of the average survival ratios match the actual survival ratios,
+    // we'll finish marking exactly when OG is full. Instead, to account for
+    // both slightly off survival ratio estimates, as well as wanting to finish
+    // collecting before OG fills up, aim to finish marking all of OG one YG
+    // before we need to.
+    --ygCollectionsUntilFull;
+  }
+  assert(
+      ygCollectionsUntilFull != 0 && "Cannot have zero collections until full");
+  // If any of the above calculations end up being a tiny drain rate, make the
+  // lower limit at least 8 KB, to ensure collections eventually end.
+  constexpr size_t byteDrainRateMin = 8192;
+  return std::max(
+      oldGen_.bytesToMark() / ygCollectionsUntilFull, byteDrainRateMin);
 }
 
 void HadesGC::addSegmentExtentToCrashManager(
