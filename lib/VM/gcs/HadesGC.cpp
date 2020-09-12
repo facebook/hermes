@@ -299,6 +299,9 @@ class HadesGC::EvacAcceptor final : public SlotAcceptorDefault {
       return;
     }
     GCCell *&cell = reinterpret_cast<GCCell *&>(ptr);
+    assert(
+        HeapSegment::getCellMarkBit(cell) &&
+        "All young gen cells should be marked");
     if (cell->hasMarkedForwardingPointer()) {
       // Get the forwarding pointer from the header of the object.
       GCCell *const forwardedCell = cell->getMarkedForwardingPointer();
@@ -328,9 +331,6 @@ class HadesGC::EvacAcceptor final : public SlotAcceptorDefault {
     }
     // Push onto the copied list.
     push(copyCell);
-    // Mark the cell's bit in the mark bit array as well, so that OG can rely on
-    // that instead of checking the cell header.
-    HeapSegment::setCellMarkBit(cell);
     // Fixup the pointer.
     cell = newCell;
   }
@@ -1721,16 +1721,16 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
   // Check that the card tables are well-formed before the collection.
   verifyCardTable();
 #endif
+  assert(
+      youngGen().markBitArray().findNextUnmarkedBitFrom(0) ==
+          youngGen().markBitArray().size() &&
+      "Young gen segment must have all mark bits set");
   uint64_t promotedBytes = 0, usedBefore = youngGen().used();
   if (promoteYGToOG_) {
     promotedBytes = usedBefore;
     promoteYoungGenToOldGen();
   } else {
     auto &yg = youngGen();
-
-    // Clear the mark bits in the young gen first. They will be needed
-    // during YG collection, and they should've previously been all 1s.
-    yg.markBitArray().clear();
 
     // Marking each object puts it onto an embedded free list.
     EvacAcceptor acceptor{*this};
@@ -1781,9 +1781,10 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
     // Now the copy list is drained, and all references point to the old
     // gen. Clear the level of the young gen.
     yg.resetLevel();
-    // Set all bits to 1. This way an OG collection never thinks an object
-    // in YG needs to be marked.
-    youngGen().markBitArray().markAll();
+    assert(
+        youngGen().markBitArray().findNextUnmarkedBitFrom(0) ==
+            youngGen().markBitArray().size() &&
+        "Young gen segment must have all mark bits set");
   }
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormed();
