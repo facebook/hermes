@@ -314,6 +314,14 @@ try {
   print(e.name);
 }
 // CHECK-NEXT: RangeError
+var a = [];
+a[0xFFFFFFFE] = 1;
+print(a.length);
+// CHECK-NEXT: 4294967295
+print(a.pop());
+// CHECK-NEXT: 1
+print(a.length);
+// CHECK-NEXT: 4294967294
 
 print('push');
 // CHECK-LABEL: push
