@@ -531,7 +531,7 @@ SMLoc SourceErrorManager::findSMLocFromCoords(SourceCoords coords) {
 
 /// Given an SMDiagnostic, return {sourceLine, caretLine}, respecting the error
 /// output options
-static std::pair<std::string, std::string> buildSourceAndCaretLine(
+std::pair<std::string, std::string> SourceErrorManager::buildSourceAndCaretLine(
     const llvh::SMDiagnostic &diag,
     SourceErrorOutputOptions opts) {
   // Decode our source line to UTF-32

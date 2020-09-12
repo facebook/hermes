@@ -20,7 +20,22 @@ assert.strictEqual(ast.body[0].declarations[0].init.value, 1);
 // Parse error
 assert.throws(
   () => parser.parse(`const = 1`),
-  new Error('Failed to parse JS source'),
+  new Error(
+    `1:6: 'identifier' expected in declaration
+const = 1
+~~~~~~^
+`,
+  ),
+);
+
+// Parse error does not include caret line if non-ASCII characters are used
+assert.throws(
+  () => parser.parse(`/*\u0176*/ const = 1`),
+  new Error(
+    `1:13: 'identifier' expected in declaration
+/*\u0176*/ const = 1
+`,
+  ),
 );
 
 // Comments parsed

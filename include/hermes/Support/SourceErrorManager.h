@@ -265,6 +265,10 @@ class SourceErrorManager {
             : warningStatuses_.reset((unsigned)warning);
   }
 
+  SourceErrorOutputOptions getOutputOptions() const {
+    return outputOptions_;
+  }
+
   void setOutputOptions(SourceErrorOutputOptions opts) {
     outputOptions_ = opts;
   }
@@ -352,6 +356,12 @@ class SourceErrorManager {
 
   /// Find the SMLoc corresponding to the supplied source coordinates.
   SMLoc findSMLocFromCoords(SourceCoords coords);
+
+  /// Given an SMDiagnostic, return {sourceLine, caretLine}, respecting the
+  /// error output options
+  static std::pair<std::string, std::string> buildSourceAndCaretLine(
+      const llvh::SMDiagnostic &diag,
+      SourceErrorOutputOptions opts);
 
   /// Return an identifier for this buffer, typically the filename it was read
   /// from.

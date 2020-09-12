@@ -13,6 +13,7 @@
 #include "llvh/Support/MemoryBuffer.h"
 #include "llvh/Support/raw_ostream.h"
 
+#include "HermesParserDiagHandler.h"
 #include "HermesParserJSBuilder.h"
 
 #include <string>
@@ -44,18 +45,29 @@ extern "C" ParseResult *hermesParse(const char *source, size_t sourceSize) {
   context->setParseJSX(true);
   context->setParseFlow(true);
 
+  // Set up custom diagnostic handler for error reporting
+  auto &sm = context->getSourceErrorManager();
+  const auto &diagHandler = HermesParserDiagHandler(sm);
+
   auto fileBuf =
       llvh::MemoryBuffer::getMemBuffer(llvh::StringRef{source, sourceSize - 1});
-  int fileBufId =
-      context->getSourceErrorManager().addNewSourceBuffer(std::move(fileBuf));
+  int fileBufId = sm.addNewSourceBuffer(std::move(fileBuf));
 
   parser::JSParser jsParser(*context, fileBufId, parser::FullParse);
   jsParser.setStoreComments(true);
 
   llvh::Optional<ESTree::ProgramNode *> parsedJs = jsParser.parse();
 
+  // Return first error if there are any errors detected during parsing
+  if (diagHandler.hasError()) {
+    result->error_ = diagHandler.getErrorString();
+    return result.release();
+  }
+
+  // Return generic error message if no AST was returned, but no specific errors
+  // were detected.
   if (!parsedJs) {
-    result->error_ = "Failed to parse JS source";
+    result->error_ = "Failed to parse source";
     return result.release();
   }
 

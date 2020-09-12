@@ -50,8 +50,6 @@ function parse(code) {
       // Extract and throw error from parse result if parsing failed
       const err = hermesParseResult_getError(parseResult);
       if (err) {
-        const astReference = hermesParseResult_getASTReference(parseResult);
-        hermesParserWASM.JSReferences.pop(astReference);
         throw new Error(err);
       }
 
