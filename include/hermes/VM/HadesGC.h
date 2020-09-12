@@ -176,13 +176,18 @@ class HadesGC final : public GCBase {
   /// \name Debug APIs
   /// \{
 
+  bool calledByBackgroundThread() const {
+    // If the background thread is active, check if this thread matches the
+    // background thread.
+    return kConcurrentGC &&
+        oldGenCollectionThread_.get_id() == std::this_thread::get_id();
+  }
+
   /// See comment in GCBase.
   bool calledByGC() const {
-    // If the background thread is active, check if this thread matches the
-    // background thread. If this isn't called by the background thread, the
-    // inGC flag is sufficient.
-    return oldGenCollectionThread_.get_id() == std::this_thread::get_id() ||
-        inGC();
+    // Check if this is called by the background thread or the inGC flag is
+    // set.
+    return calledByBackgroundThread() || inGC();
   }
 
   /// Return true if \p ptr is currently pointing at valid accessable memory,
@@ -510,9 +515,11 @@ class HadesGC final : public GCBase {
   /// "stop the world" -- for example, to drain the final parts of the mark
   /// stack.
   std::condition_variable stopTheWorldCondVar_;
-  /// The boolean variables are protected by gcMutex_.
-  bool worldStopped_{false};
+  /// Indicates whether OG has requested an STW pause, protected by gcMutex_.
   bool stopTheWorldRequested_{false};
+  /// Indicates that the world is stopped, only access from the mutator or when
+  /// the world is stopped.
+  bool worldStopped_{false};
 
   /// If true, whenever YG fills up immediately put it into the OG.
   bool promoteYGToOG_;

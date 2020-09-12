@@ -1288,6 +1288,9 @@ void HadesGC::finalizeAllLocked() {
 }
 
 void HadesGC::writeBarrier(void *loc, HermesValue value) {
+  assert(
+      !calledByBackgroundThread() &&
+      "Write barrier invoked by background thread.");
   if (inYoungGen(loc)) {
     // A pointer that lives in YG never needs any write barriers.
     return;
@@ -1302,6 +1305,9 @@ void HadesGC::writeBarrier(void *loc, HermesValue value) {
 }
 
 void HadesGC::writeBarrier(void *loc, void *value) {
+  assert(
+      !calledByBackgroundThread() &&
+      "Write barrier invoked by background thread.");
   if (inYoungGen(loc)) {
     // A pointer that lives in YG never needs any write barriers.
     return;
@@ -1404,6 +1410,9 @@ void HadesGC::generationalWriteBarrier(void *loc, void *value) {
 }
 
 void HadesGC::weakRefReadBarrier(void *value) {
+  assert(
+      calledByBackgroundThread() == worldStopped_ &&
+      "Read barrier invoked by background thread outside STW.");
   if (isOldGenMarking_) {
     // If the GC is marking, conservatively mark the value as live.
     snapshotWriteBarrierInternal(static_cast<GCCell *>(value));
@@ -1426,6 +1435,9 @@ bool HadesGC::canAllocExternalMemory(uint32_t size) {
 void HadesGC::markSymbol(SymbolID) {}
 
 WeakRefSlot *HadesGC::allocWeakSlot(HermesValue init) {
+  assert(
+      !calledByBackgroundThread() &&
+      "allocWeakSlot should only be called from the mutator");
   // The weak ref mutex doesn't need to be held since weakPointers_ and
   // firstFreeWeak_ are only modified while the world is stopped.
   WeakRefSlot *slot;
