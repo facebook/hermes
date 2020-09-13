@@ -1,10 +1,13 @@
 package com.facebook.hermes.intl;
 
+import android.os.Build;
+
 import java.math.RoundingMode;
 import java.text.AttributedCharacterIterator;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.Currency;
 import java.util.Locale;
 
@@ -17,7 +20,9 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
     private ILocaleObject mLocaleObject;
     private IPlatformNumberFormatter.Style mStyle;
 
-    private PlatformNumberFormatterAndroid(DecimalFormat decimalFormat, ILocaleObject localeObject, IPlatformNumberFormatter.Style style) {
+    PlatformNumberFormatterAndroid() {}
+
+    private void initialize(DecimalFormat decimalFormat, ILocaleObject localeObject, IPlatformNumberFormatter.Style style) {
         mDecimalFormat = decimalFormat;
         mFinalFormat = decimalFormat;
         mLocaleObject = localeObject;
@@ -129,12 +134,14 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
         return result;
     }
 
+    @Override
     public PlatformNumberFormatterAndroid configureUnits(String unit, IPlatformNumberFormatter.UnitDisplay unitDisplay) throws JSRangeErrorException {
         // Not supported.
         return this;
     }
 
-    public static PlatformNumberFormatterAndroid createDecimalFormat(ILocaleObject localeObject, IPlatformNumberFormatter.Style style,
+    @Override
+    public PlatformNumberFormatterAndroid configureDecimalFormat(ILocaleObject localeObject, IPlatformNumberFormatter.Style style,
                                                                      IPlatformNumberFormatter.CurrencySign currencySign,
                                                                      IPlatformNumberFormatter.Notation notation,
                                                                      IPlatformNumberFormatter.CompactDisplay compactDisplay) throws JSRangeErrorException {
@@ -142,11 +149,35 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
         NumberFormat numberFormat = NumberFormat.getInstance((Locale)localeObject.getLocale());
         numberFormat.setRoundingMode(RoundingMode.HALF_UP);
 
-        return new PlatformNumberFormatterAndroid((DecimalFormat) numberFormat, localeObject, style);
+        initialize((DecimalFormat) numberFormat, localeObject, style);
+
+        return this;
     }
 
 
     public static String configureNumberingSystem(String inNumberingSystem, ILocaleObject locale) throws JSRangeErrorException {
+        return "latn";
+    }
+
+    @Override
+    public String[] getAvailableLocales() {
+
+        if(Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+            // Before L, Locale.toLanguageTag isn't available. Need to figure out how to get a locale id from locale object ... Currently resoring to support only en
+            return new String []{"en"};
+        }
+
+        ArrayList<String> availableLocaleIds = new ArrayList<>();
+        java.util.Locale[] availableLocales = NumberFormat.getAvailableLocales();
+        for(java.util.Locale locale: availableLocales) {
+            availableLocaleIds.add(locale.toLanguageTag()); // TODO:: Not available on platforms <= 20
+        }
+
+        return availableLocaleIds.toArray(new String[availableLocaleIds.size()]);
+    }
+
+    @Override
+    public String getDefaultNumberingSystem(ILocaleObject localeObject) throws JSRangeErrorException {
         return "latn";
     }
 }

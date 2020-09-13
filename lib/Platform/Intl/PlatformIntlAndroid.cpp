@@ -369,7 +369,6 @@ class JDateTimeFormat : public jni::JavaClass<JDateTimeFormat> {
   }
 
   static jni::local_ref<JLocalesList> supportedLocalesOf(
-      vm::Runtime *runtime,
       jni::alias_ref<JLocalesList> locales,
       jni::alias_ref<JOptionsMap> options) {
     static const auto method =
@@ -418,7 +417,7 @@ vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
   try {
     return localesFromJava(
         runtime,
-        JCollator::supportedLocalesOf(
+        JDateTimeFormat::supportedLocalesOf(
             localesToJava(locales), optionsToJava(options)));
   } catch (const std::exception &ex) {
     return runtime->raiseRangeError(ex.what());
@@ -433,7 +432,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
     impl_->jDateTimeFormat_ = jni::make_global(JDateTimeFormat::create(
         localesToJava(locales), optionsToJava(options)));
   } catch (const std::exception &ex) {
-    runtime->raiseRangeError(ex.what());
+    return runtime->raiseRangeError(ex.what());
   }
 
   return vm::ExecutionStatus::RETURNED;

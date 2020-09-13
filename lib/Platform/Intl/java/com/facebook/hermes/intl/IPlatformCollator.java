@@ -1,17 +1,83 @@
 package com.facebook.hermes.intl;
 
 public interface IPlatformCollator {
+
+    enum Sensitivity {
+        BASE,
+        ACCENT,
+        CASE,
+        VARIANT,
+        LOCALE;
+
+        @Override
+        public String toString() {
+            switch (this) {
+                case BASE:
+                    return "base";
+                case ACCENT:
+                    return "accent";
+                case CASE:
+                    return "case";
+                case VARIANT:
+                    return "variant";
+                case LOCALE:
+                    return ""; // The user should fill in the locale default.
+                default:
+                    throw new IllegalArgumentException();
+            }
+        }
+    }
+
+    enum Usage {
+        SORT,
+        SEARCH;
+
+        @Override
+        public String toString() {
+            switch (this) {
+                case SORT:
+                    return "sort";
+                case SEARCH:
+                    return "search";
+                default:
+                    throw new IllegalArgumentException();
+            }
+        }
+    }
+
+    enum CaseFirst {
+        UPPER,
+        LOWER,
+        FALSE;
+
+        @Override
+        public String toString() {
+            switch (this) {
+                case UPPER:
+                    return "upper";
+                case LOWER:
+                    return "lower";
+                case FALSE:
+                    return "false";
+                default:
+                    throw new IllegalArgumentException();
+            }
+        }
+    }
+
     int compare(String source, String target);
 
-    boolean isSensitiySupported(String sensitivity);
-    void setSensitivity(String sensitivity);
+    IPlatformCollator setLocale(ILocaleObject localeObject) throws JSRangeErrorException;
 
-    boolean isIgnorePunctuationSupported();
-    void setIgnorePunctuation(boolean ignore);
+    Sensitivity getSensitivity();
 
-    boolean isNumericCollationSupported();
-    void setNumericAttribute(boolean numeric);
+    IPlatformCollator setSensitivity(Sensitivity sensitivity);
 
-    boolean isCaseFirstCollationSupported();
-    void setCaseFirstAttribute(String caseFirst);
+    IPlatformCollator setIgnorePunctuation(boolean ignore);
+
+    IPlatformCollator setNumericAttribute(boolean numeric);
+
+    IPlatformCollator setCaseFirstAttribute(CaseFirst caseFirst);
+
+    String[] getAvailableLocales();
 }

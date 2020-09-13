@@ -181,6 +181,9 @@ CallResult<HermesValue> partsToJS(
   uint64_t index = 0;
   for (auto &part : *result) {
     CallResult<Handle<JSObject>> partRes = partToJS(runtime, std::move(part));
+    if (LLVM_UNLIKELY(partRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
     JSArray::setElementAt(array, runtime, index++, *partRes);
   }
   return array.getHermesValue();
@@ -264,8 +267,6 @@ const OptionData kCollatorOptions[] = {
 };
 
 const OptionData kDTFOptions[] = {
-        {u"dateStyle", platform_intl::Option::Kind::String, 0},
-        {u"timeStyle", platform_intl::Option::Kind::String, 0},
     {u"localeMatcher", platform_intl::Option::Kind::String, 0},
     {u"calendar", platform_intl::Option::Kind::String, 0},
     {u"numberingSystem", platform_intl::Option::Kind::String, 0},
@@ -273,7 +274,7 @@ const OptionData kDTFOptions[] = {
     {u"hourCycle", platform_intl::Option::Kind::String, 0},
     {u"timeZone", platform_intl::Option::Kind::String, 0},
     {u"formatMatcher", platform_intl::Option::Kind::String, 0},
-    {u"weekday", platform_intl::Option::Kind::String, kDateDefault},
+    {u"weekday", platform_intl::Option::Kind::String, 0},
     {u"era", platform_intl::Option::Kind::String, 0},
     {u"year",
      platform_intl::Option::Kind::String,
@@ -1383,7 +1384,7 @@ void toDateTimeOptions(platform_intl::Options &options, int dtoFlags) {
   for (const OptionData *pod = kDTFOptions; pod->name; ++pod) {
     if ((dtoFlags & kDTODate && pod->flags & kDateDefault) ||
         (dtoFlags & kDTOTime && pod->flags & kTimeDefault)) {
-      options.emplace(pod->name, u"numeric");
+      options.emplace(pod->name, std::u16string(u"numeric"));
     }
   }
 }

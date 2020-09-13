@@ -4,6 +4,7 @@ import android.icu.text.CompactDecimalFormat;
 import android.icu.text.DecimalFormat;
 import android.icu.text.DecimalFormatSymbols;
 import android.icu.text.MeasureFormat;
+import android.icu.text.NumberFormat;
 import android.icu.text.NumberingSystem;
 import android.icu.util.Currency;
 import android.icu.util.Measure;
@@ -22,7 +23,7 @@ import static com.facebook.hermes.intl.IPlatformNumberFormatter.Style.CURRENCY;
 //
 // The implementation has at least the following deficiencies,
 // 1. SignDisplay attribute implementation is partly hacky, and doesn't work in many cases.
-// 2. formatToParts does report the whole formatted string as a "literal"
+// 2. formatToParts does report the whole formatted string as a "literal" for "unit" styling.
 public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
 
     private java.text.Format mFinalFormat;
@@ -33,7 +34,9 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
     private MeasureUnit mMeasureUnit = null;
     private String mUnitId = null;
 
-    private PlatformNumberFormatterICU(DecimalFormat decimalFormat, ILocaleObject localeObject, IPlatformNumberFormatter.Style style) {
+    PlatformNumberFormatterICU() {}
+
+    private void initialize(DecimalFormat decimalFormat, ILocaleObject localeObject, IPlatformNumberFormatter.Style style) {
         mDecimalFormat = decimalFormat;
         mFinalFormat = decimalFormat;
         mLocaleObject = localeObject;
@@ -271,58 +274,64 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
         }
     }
 
-    public static PlatformNumberFormatterICU createDecimalFormat(ILocaleObject localeObject, IPlatformNumberFormatter.Style style,
+    @Override
+    public PlatformNumberFormatterICU configureDecimalFormat(ILocaleObject localeObject, IPlatformNumberFormatter.Style style,
                                                                  IPlatformNumberFormatter.CurrencySign currencySign,
                                                                  IPlatformNumberFormatter.Notation notation,
                                                                  IPlatformNumberFormatter.CompactDisplay compactDisplay) throws JSRangeErrorException {
-        PlatformNumberFormatterICU platformNumberFormatterICU;
+        // PlatformNumberFormatterICU platformNumberFormatterICU;
         switch (style) {
             case CURRENCY:
-                platformNumberFormatterICU = PlatformNumberFormatterICU.createDecimalFormatForCurrency(localeObject, currencySign, style);
+                confiureDecimalFormatForCurrency(localeObject, currencySign, style);
                 break;
             case PERCENT:
-                platformNumberFormatterICU = PlatformNumberFormatterICU.createDecimalFormatForPercent(localeObject, style);
+                configureDecimalFormatForPercent(localeObject, style);
                 break;
             case DECIMAL:
             case UNIT:
-                platformNumberFormatterICU = PlatformNumberFormatterICU.createDecimalFormatGerneric(localeObject, notation, compactDisplay, style);
+                configureDecimalFormatGerneric(localeObject, notation, compactDisplay, style);
                 break;
             default:
                 throw new JSRangeErrorException("Unrecognized formatting style requested.");
         }
 
-        return platformNumberFormatterICU;
+        return this;
     }
 
 
-    public static PlatformNumberFormatterICU createDecimalFormatForCurrency(ILocaleObject localeObject, IPlatformNumberFormatter.CurrencySign currencySign, IPlatformNumberFormatter.Style style) throws JSRangeErrorException {
+    private void confiureDecimalFormatForCurrency(ILocaleObject localeObject, IPlatformNumberFormatter.CurrencySign currencySign, IPlatformNumberFormatter.Style style) throws JSRangeErrorException {
         switch (currencySign) {
             case ACCOUNTING:
-                return new PlatformNumberFormatterICU((DecimalFormat) android.icu.text.NumberFormat.getInstance((ULocale) localeObject.getLocale(), android.icu.text.NumberFormat.ACCOUNTINGCURRENCYSTYLE),
+                initialize((DecimalFormat) android.icu.text.NumberFormat.getInstance((ULocale) localeObject.getLocale(), android.icu.text.NumberFormat.ACCOUNTINGCURRENCYSTYLE),
                         localeObject, style);
+                break;
             case STANDARD:
-                return new PlatformNumberFormatterICU((DecimalFormat) android.icu.text.NumberFormat.getInstance((ULocale) localeObject.getLocale(), android.icu.text.NumberFormat.CURRENCYSTYLE),
+                initialize((DecimalFormat) android.icu.text.NumberFormat.getInstance((ULocale) localeObject.getLocale(), android.icu.text.NumberFormat.CURRENCYSTYLE),
                         localeObject, style);
+                break;
             default:
                 throw new JSRangeErrorException("Unsupported currency sign !!");
         }
     }
 
-    public static PlatformNumberFormatterICU createDecimalFormatForPercent(ILocaleObject localeObject, IPlatformNumberFormatter.Style style) throws JSRangeErrorException {
-        return new PlatformNumberFormatterICU((DecimalFormat) DecimalFormat.getInstance((ULocale) localeObject.getLocale(), android.icu.text.NumberFormat.PERCENTSTYLE),
+    private void configureDecimalFormatForPercent(ILocaleObject localeObject, IPlatformNumberFormatter.Style style) throws JSRangeErrorException {
+        initialize((DecimalFormat) DecimalFormat.getInstance((ULocale) localeObject.getLocale(), android.icu.text.NumberFormat.PERCENTSTYLE),
                 localeObject, style);
     }
 
-    public static PlatformNumberFormatterICU createDecimalFormatGerneric(ILocaleObject localeObject, IPlatformNumberFormatter.Notation notation, IPlatformNumberFormatter.CompactDisplay compactDisplay, IPlatformNumberFormatter.Style style) throws JSRangeErrorException {
+    private void configureDecimalFormatGerneric(ILocaleObject localeObject, IPlatformNumberFormatter.Notation notation,
+                                                IPlatformNumberFormatter.CompactDisplay compactDisplay, IPlatformNumberFormatter.Style style) throws JSRangeErrorException {
         switch (notation) {
             case COMPACT:
-                return new PlatformNumberFormatterICU((DecimalFormat) CompactDecimalFormat.getInstance((ULocale) localeObject.getLocale(),
+                initialize((DecimalFormat) CompactDecimalFormat.getInstance((ULocale) localeObject.getLocale(),
                         compactDisplay == IPlatformNumberFormatter.CompactDisplay.SHORT ? CompactDecimalFormat.CompactStyle.SHORT : CompactDecimalFormat.CompactStyle.LONG),
                         localeObject, style);
+                break;
 
             case SCIENTIFIC:
-                return new PlatformNumberFormatterICU((DecimalFormat) CompactDecimalFormat.getInstance((ULocale) localeObject.getLocale(), SCIENTIFICSTYLE), // TODO :: Why CopactDecimalFormat
+                initialize((DecimalFormat) CompactDecimalFormat.getInstance((ULocale) localeObject.getLocale(), SCIENTIFICSTYLE), // TODO :: Why CopactDecimalFormat
                         localeObject, style);
+                break;
 
             case ENGINEERING:
                 DecimalFormat decimalFormat = (DecimalFormat) CompactDecimalFormat.getInstance((ULocale) localeObject.getLocale(), SCIENTIFICSTYLE);
@@ -330,21 +339,27 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
                 // Must read the scientific style properties to understand this: https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/classicu_1_1DecimalFormat.html
                 decimalFormat.setMaximumIntegerDigits(3);
 
-                return new PlatformNumberFormatterICU(decimalFormat, localeObject, style);
+                initialize(decimalFormat, localeObject, style);
+                break;
             case STANDARD:
             default:
-                return new PlatformNumberFormatterICU((DecimalFormat) DecimalFormat.getNumberInstance((ULocale) localeObject.getLocale()),
+                initialize((DecimalFormat) DecimalFormat.getNumberInstance((ULocale) localeObject.getLocale()),
                         localeObject, style);
+                break;
         }
     }
 
     public static String configureNumberingSystem(String inNumberingSystem, ILocaleObject locale) throws JSRangeErrorException {
         if (!inNumberingSystem.isEmpty()) {
+            NumberingSystem numberingSystemObject;
             try {
-                NumberingSystem numberingSystemObject = NumberingSystem.getInstanceByName(inNumberingSystem);
+                numberingSystemObject = NumberingSystem.getInstanceByName(inNumberingSystem);
             } catch (RuntimeException ex) {
                 throw new JSRangeErrorException("Invalid numbering system: " + inNumberingSystem);
             }
+
+            if(numberingSystemObject == null)
+                throw new JSRangeErrorException("Invalid numbering system: " + inNumberingSystem);
 
             ArrayList<String> numberingSystemList = new ArrayList<>();
             numberingSystemList.add(inNumberingSystem);
@@ -354,5 +369,21 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
         } else {
             return NumberingSystem.getInstance((ULocale) locale.getLocale()).getName();
         }
+    }
+
+    @Override
+    public String[] getAvailableLocales() {
+        ArrayList<String> availableLocaleIds = new ArrayList<>();
+        java.util.Locale[] availableLocales = NumberFormat.getAvailableLocales();
+        for(java.util.Locale locale: availableLocales) {
+            availableLocaleIds.add(locale.toLanguageTag()); // TODO:: Not available on platforms <= 20
+        }
+
+        return availableLocaleIds.toArray(new String[availableLocaleIds.size()]);
+    }
+
+    @Override
+    public String getDefaultNumberingSystem(ILocaleObject localeObject) throws JSRangeErrorException {
+        return NumberingSystem.getInstance((ULocale) localeObject.getLocale()).getName();
     }
 }

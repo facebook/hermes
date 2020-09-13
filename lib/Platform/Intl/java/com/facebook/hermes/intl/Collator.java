@@ -7,7 +7,10 @@
 
 package com.facebook.hermes.intl;
 
+import android.os.Build;
+
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,151 +44,109 @@ public class Collator {
     // And we add [[Numeric]] and [[CaseFirst]] slots unconditionally as described above.
 
     // 11.1.2 2-4
-    private String mResolvedUsage = null;
-    private String mResolvedSensitivity = null;
-    private boolean mResolvedIgnorePunctuation = false;
+    private IPlatformCollator.Usage mResolvedUsage = null;
+    private IPlatformCollator.Sensitivity mResolvedSensitivity;
+    private boolean mResolvedIgnorePunctuation;
     private String mResolvedCollation = Constants.COLLATION_DEFAULT;
 
     // These two slots needs to differentiate between "unset" and "default" .. These shouldn't be part of resolvedOptions if "unset"
     // And these can be set through options as well as extensions ..
-    private Boolean mResolvedNumeric = null;
+    private boolean mResolvedNumeric;
 
-    private String mResolvedCaseFirst = null;
+    private IPlatformCollator.CaseFirst mResolvedCaseFirst = null;
 
     // [[Locale]]
     private ILocaleObject mResolvedLocaleObject = null;
 
-    // The original locale provided by user which is matched.
-    private ILocaleObject mReolvedRequestedLocaleObject = null;
+    // This is a hacky way to avoid the "search" collation value from being shown in "resolvedOptions" ..
+    // ICU Collation object doesn't expose any API to specify the "search" collation .. hence we have to resort to adding "-co-search" extension to locale id, which is prohibited by the ECMAScript spec.
+    private ILocaleObject mResolvedLocaleObjectForResolvedOptions = null;
 
     // [[InitializedCollator]]
     private IPlatformCollator mPlatformCollatorObject = null;
 
-    private void resolveLocale(List<String> locales, String localeMatcher) throws JSRangeErrorException {
-        if (locales == null || locales.size() == 0) {
-            mResolvedLocaleObject = LocaleObject.createDefault();
-            mReolvedRequestedLocaleObject = mResolvedLocaleObject;
-        } else {
-            PlatformCollator.LocaleResolutionResult localeResolutionResult = PlatformCollator.resolveLocales(locales, localeMatcher);
-            mResolvedLocaleObject = localeResolutionResult.resolvedLocale;
-            mReolvedRequestedLocaleObject = localeResolutionResult.resolvedDesiredLocale;
-        }
-    }
 
     // https://tc39.es/ecma402/#sec-initializecollator
     private void initializeCollator(List<String> locales, Map<String, Object> options) throws JSRangeErrorException {
 
         // 1.
         // Canonicalize Locale List
-        // We don't explicitly canonicalize but it is implicitly happening while creating Locale objects from the tag.
+        // We don't explicitlULy canonicalize but it is implicitly happening while creating Locale objects from the tag.
 
         // 4 & 5
-        mResolvedUsage = OptionHelpers.resolveStringOption(options, Constants.COLLATION_OPTION_USAGE, Constants.COLLATOR_USAGE_POSSIBLE_VALUES, Constants.SORT);
+        Object usage = OptionHelpers.GetOption(options, "usage", OptionHelpers.OptionType.STRING, Constants.COLLATOR_USAGE_POSSIBLE_VALUES, Constants.SORT);
+        mResolvedUsage = OptionHelpers.searchEnum(IPlatformCollator.Usage.class, JSObjects.getJavaString(usage));
 
         // We don't have 6 & 7
         // Note: We don't know a way to map the 'usage' option to "LocaleData" parameter to be used while resolving locales, with ICU.
         // With ICU, the only way to specify 'search' usage is through 'co=search' unicode extension .. (which is explicitly deprecated in ecma402, but internally we use this ! )
 
-        // 9 & 10
-        String desiredLocaleMatcher = OptionHelpers.resolveStringOption(options, Constants.LOCALEMATCHER, Constants.LOCALEMATCHER_POSSIBLE_VALUES, Constants.LOCALEMATCHER_BESTFIT);
+        Object opt = JSObjects.newObject();
 
-        // 11,12,13
-        if (options.containsKey(Constants.COLLATION_OPTION_NUMERIC) && PlatformCollator.isNumericCollationSupported()) {
-            mResolvedNumeric = OptionHelpers.resolveBooleanOption(options, Constants.COLLATION_OPTION_NUMERIC, false);
+        Object matcher = OptionHelpers.GetOption(options, Constants.LOCALEMATCHER, OptionHelpers.OptionType.STRING, Constants.LOCALEMATCHER_POSSIBLE_VALUES, Constants.LOCALEMATCHER_BESTFIT);
+        JSObjects.Put(opt, "localeMatcher", matcher);
+
+        Object numeric = OptionHelpers.GetOption(options, "numeric", OptionHelpers.OptionType.BOOLEAN, JSObjects.Undefined(), JSObjects.Undefined());
+        if (!JSObjects.isUndefined(numeric))
+            numeric = JSObjects.newString(String.valueOf(JSObjects.getJavaBoolean(numeric)));
+        JSObjects.Put(opt, "kn", numeric);
+
+        Object caseFirst = OptionHelpers.GetOption(options, "caseFirst", OptionHelpers.OptionType.STRING, Constants.CASEFIRST_POSSIBLE_VALUES, JSObjects.Undefined());
+        JSObjects.Put(opt, "kf", caseFirst);
+
+        // https://tc39.es/ecma402/#sec-intl-collator-internal-slots
+        List<String> relevantExtensionKeys = Arrays.asList(new String[]{"co", "kf", "kn"});
+
+        HashMap<String, Object> r = LocaleResolver.resolveLocale(mPlatformCollatorObject.getAvailableLocales(), locales, opt, relevantExtensionKeys);
+
+        mResolvedLocaleObject = (ILocaleObject) JSObjects.getJavaMap(r).get("locale");
+        mResolvedLocaleObjectForResolvedOptions = mResolvedLocaleObject.cloneObject();
+
+        Object collation = JSObjects.Get(r, "co");
+        if(JSObjects.isNull(collation))
+            collation = JSObjects.newString(Constants.COLLATION_DEFAULT);
+        mResolvedCollation = JSObjects.getJavaString(collation);
+
+        Object numericCollation = JSObjects.Get(r, "kn");
+        if(JSObjects.isNull(numericCollation))
+            mResolvedNumeric = false;
+        else {
+            String numericCollationValue = JSObjects.getJavaString(numericCollation);
+            mResolvedNumeric = Boolean.valueOf(numericCollationValue);
         }
 
-        // 14 & 15
-        if (options.containsKey(Constants.COLLATION_OPTION_CASEFIRST) && PlatformCollator.isCaseFirstCollationSupported()) {
-            mResolvedCaseFirst = OptionHelpers.resolveStringOption(options, Constants.COLLATION_OPTION_CASEFIRST, Constants.CASEFIRST_POSSIBLE_VALUES, Constants.CASEFIRST_FALSE);
-        }
+        Object caseFirstCollation = JSObjects.Get(r, "kf");
+        if(JSObjects.isNull(caseFirstCollation))
+            caseFirstCollation = JSObjects.newString("false");
 
-        // 16, 17 & 18
-        // Let r be ResolveLocale(%Collator%.[[AvailableLocales]], requestedLocales, opt, relevantExtensionKeys, localeData).
-        resolveLocale(locales, desiredLocaleMatcher);
+        mResolvedCaseFirst = OptionHelpers.searchEnum(IPlatformCollator.CaseFirst.class, JSObjects.getJavaString(caseFirstCollation));
 
         // Note:: We can't find any other way to force the collator to use search locale data .. This is what other engines such as "V8" also does .
-        // TODO :: We need to make sure that this won't be shown in the resolvedLocales
-        if (mResolvedUsage.equals(Constants.SEARCH)) {
-            ArrayList<String> currentCollationExtensions = mReolvedRequestedLocaleObject.getUnicodeExtensions(Constants.COLLATION_EXTENSION_KEY_LONG);
+        if (mResolvedUsage == IPlatformCollator.Usage.SEARCH) {
+            ArrayList<String> currentCollationExtensions = mResolvedLocaleObject.getUnicodeExtensions(Constants.COLLATION_EXTENSION_KEY_LONG);
 
             ArrayList<String> currentResolvedCollationExtensions = new ArrayList<>();
             for (String currentCollationExtension : currentCollationExtensions) {
-                currentResolvedCollationExtensions.add(UnicodeLocaleKeywordUtils.resolveCollationKeyword(currentCollationExtension));
+                currentResolvedCollationExtensions.add(UnicodeLocaleKeywordUtils.resolveCollationAlias(currentCollationExtension));
             }
 
-            currentResolvedCollationExtensions.add(UnicodeLocaleKeywordUtils.resolveCollationKeyword(Constants.SEARCH));
+            currentResolvedCollationExtensions.add(UnicodeLocaleKeywordUtils.resolveCollationAlias(Constants.SEARCH));
             mResolvedLocaleObject.setUnicodeExtensions(Constants.COLLATION_EXTENSION_KEY_SHORT, currentResolvedCollationExtensions);
         }
 
-        mPlatformCollatorObject = PlatformCollator.createFromLocale(mResolvedLocaleObject);
+        Object sensitivity = OptionHelpers.GetOption(options, Constants.COLLATION_OPTION_SENSITIVITY, OptionHelpers.OptionType.STRING, Constants.SENSITIVITY_POSSIBLE_VALUES, JSObjects.Undefined());
+        if (!JSObjects.isUndefined(sensitivity)) {
+            mResolvedSensitivity = OptionHelpers.searchEnum(IPlatformCollator.Sensitivity.class, JSObjects.getJavaString(sensitivity));
+        } else {
 
-        // 19-21
-        // If the locale id has collation keys, then they should be added to resolvedOptions so that users can query.
-
-        ArrayList<String> collationExtension = mResolvedLocaleObject.getUnicodeExtensions(Constants.COLLATION_EXTENSION_KEY_LONG);
-        if (collationExtension != null && collationExtension.size() > 0 && !collationExtension.get(0).equals(Constants.COLLATION_SEARCH))
-            mResolvedCollation = collationExtension.get(0);
-
-        // if "kf" is not yet set through options, look for extensions in the desired locale.
-        if (mResolvedCaseFirst == null && PlatformCollator.isCaseFirstCollationSupported()) {
-            ArrayList<String> kfExtensions = mResolvedLocaleObject.getUnicodeExtensions(Constants.COLLATION_EXTENSION_PARAM_CASEFIRST_LONG);
-            if (kfExtensions != null && kfExtensions.size() > 0) {
-                mResolvedCaseFirst = kfExtensions.get(0);
-            }
-        }
-
-        // if "kn" is not yet set through options, look for extensions in the desired locale.
-        if (mResolvedNumeric == null && PlatformCollator.isNumericCollationSupported()) {
-            ArrayList<String> knExtensions = mResolvedLocaleObject.getUnicodeExtensions(Constants.COLLATION_EXTENSION_PARAM_NUMERIC_LONG);
-
-            // false if the "kf" is followed by a "false" .. true if not more tokens or "true"
-            if (knExtensions != null && knExtensions.size() > 0 && knExtensions.get(0).equals("false"))
-                mResolvedNumeric = false;
+            if (mResolvedUsage == IPlatformCollator.Usage.SORT)
+                mResolvedSensitivity = IPlatformCollator.Sensitivity.VARIANT;
             else
-                mResolvedNumeric = true;
-
+                mResolvedSensitivity = IPlatformCollator.Sensitivity.LOCALE;
         }
 
-        // 21 & 22
-        configureNumericCollation();
-
-        // 23
-        configureCaseFirst();
-
-        // 24 & 25
-        mResolvedSensitivity = OptionHelpers.resolveStringOption(options, Constants.COLLATION_OPTION_SENSITIVITY, Constants.SENSITIVITY_POSSIBLE_VALUES, "");
-        if (mResolvedSensitivity.isEmpty() && mResolvedUsage.equals(Constants.SORT)) {
-            mResolvedSensitivity = Constants.SENSITIVITY_VARIANT;
-
-            // Note:: We don't know how to map 25.b with ICU.
-        }
-
-        // 26
-        configureSensitivity();
-
-        // 27
-        mResolvedIgnorePunctuation = OptionHelpers.resolveBooleanOption(options, Constants.COLLATION_OPTION_IGNOREPUNCTUATION, false);
-
-        // 28
-        configureIgnorePunctuation();
-    }
-
-    private void configureNumericCollation() {
-        if (mResolvedNumeric != null)
-            mPlatformCollatorObject.setNumericAttribute(mResolvedNumeric);
-    }
-
-    private void configureCaseFirst() {
-        if (mResolvedCaseFirst != null)
-            mPlatformCollatorObject.setCaseFirstAttribute(mResolvedCaseFirst);
-    }
-
-    private void configureSensitivity() {
-        mPlatformCollatorObject.setSensitivity(mResolvedSensitivity);
-    }
-
-    private void configureIgnorePunctuation() {
-        mPlatformCollatorObject.setIgnorePunctuation(mResolvedIgnorePunctuation);
+        Object ignorePunctuation = OptionHelpers.GetOption(options, Constants.COLLATION_OPTION_IGNOREPUNCTUATION, OptionHelpers.OptionType.BOOLEAN, JSObjects.Undefined(), false);
+        mResolvedIgnorePunctuation = JSObjects.getJavaBoolean(ignorePunctuation);
     }
 
     // options are usage:string, localeMatcher:string, numeric:boolean, caseFirst:string,
@@ -197,7 +158,20 @@ public class Collator {
     public Collator(List<String> locales, Map<String, Object> options)
             throws JSRangeErrorException {
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            mPlatformCollatorObject =  new PlatformCollatorICU4J();
+        } else {
+            mPlatformCollatorObject =  new PlatformCollatorAndroid();
+        }
+
         initializeCollator(locales, options);
+
+        mPlatformCollatorObject
+                .setLocale(mResolvedLocaleObject)
+                .setNumericAttribute(mResolvedNumeric)
+                .setCaseFirstAttribute(mResolvedCaseFirst)
+                .setSensitivity(mResolvedSensitivity)
+                .setIgnorePunctuation(mResolvedIgnorePunctuation);
     }
 
     // options are localeMatcher:string
@@ -210,34 +184,39 @@ public class Collator {
     public static List<String> supportedLocalesOf(List<String> locales, Map<String, Object> options)
             throws JSRangeErrorException {
 
-        ArrayList<String> supportedLocales = new ArrayList<>();
+        String[] availableLocales;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
+            availableLocales = new PlatformCollatorICU4J().getAvailableLocales();
+        else
+            availableLocales = new PlatformCollatorAndroid().getAvailableLocales();
 
-        String localeMatcher = Constants.LOCALEMATCHER_BESTFIT;
-        if (options.containsKey(Constants.LOCALEMATCHER)) {
-            localeMatcher = (String) options.get(Constants.LOCALEMATCHER);
-        }
-
-        return PlatformCollator.filterLocales(locales, localeMatcher);
+        return Arrays.asList(LocaleMatcher.lookupSupportedLocales(availableLocales, locales.toArray(new String[locales.size()])));
     }
 
     // Implementer note: This method corresponds roughly to
     // https://tc39.es/ecma402/#sec-intl.collator.prototype.resolvedoptions
     public Map<String, Object> resolvedOptions() throws JSRangeErrorException {
         HashMap<String, Object> finalResolvedOptions = new HashMap<>();
-        finalResolvedOptions.put(Constants.LOCALE, mResolvedLocaleObject.toCanonicalTag());
-        finalResolvedOptions.put(Constants.COLLATION_OPTION_USAGE, mResolvedUsage);
+        String finalResolvedLocaleId = mResolvedLocaleObjectForResolvedOptions.toCanonicalTag();
+        // An example of going extra mile to adhere to spec !! .. It looks wierd though, but i believe it is the right thing to do ..
+        finalResolvedLocaleId = finalResolvedLocaleId.replace("-kn-true", "-kn");
+        finalResolvedOptions.put(Constants.LOCALE, finalResolvedLocaleId);
 
-        if (!mResolvedSensitivity.isEmpty())
-            finalResolvedOptions.put(Constants.COLLATION_OPTION_SENSITIVITY, mResolvedSensitivity);
+        finalResolvedOptions.put(Constants.COLLATION_OPTION_USAGE, mResolvedUsage.toString());
+
+        if(mResolvedSensitivity == IPlatformCollator.Sensitivity.LOCALE) {
+            IPlatformCollator.Sensitivity defaultSensitivity = mPlatformCollatorObject.getSensitivity();
+            finalResolvedOptions.put(Constants.COLLATION_OPTION_SENSITIVITY, defaultSensitivity.toString());
+        } else {
+            finalResolvedOptions.put(Constants.COLLATION_OPTION_SENSITIVITY, mResolvedSensitivity.toString());
+        }
 
         finalResolvedOptions.put(Constants.COLLATION_OPTION_IGNOREPUNCTUATION, mResolvedIgnorePunctuation);
         finalResolvedOptions.put(Constants.COLLATION, mResolvedCollation);
 
-        if (mResolvedNumeric != null)
-            finalResolvedOptions.put(Constants.COLLATION_OPTION_NUMERIC, mResolvedNumeric);
+        finalResolvedOptions.put(Constants.COLLATION_OPTION_NUMERIC, mResolvedNumeric);
 
-        if (mResolvedCaseFirst != null)
-            finalResolvedOptions.put(Constants.COLLATION_OPTION_CASEFIRST, mResolvedCaseFirst);
+        finalResolvedOptions.put(Constants.COLLATION_OPTION_CASEFIRST, mResolvedCaseFirst.toString());
 
         return finalResolvedOptions;
     }
@@ -245,7 +224,8 @@ public class Collator {
     // Implementer note: This method corresponds roughly to
     // https://tc39.es/ecma402/#sec-collator-comparestrings
     public double compare(String source, String target) {
-        return mPlatformCollatorObject.compare(source, target);
+        double result = mPlatformCollatorObject.compare(source, target);
+        return result;
     }
 }
 

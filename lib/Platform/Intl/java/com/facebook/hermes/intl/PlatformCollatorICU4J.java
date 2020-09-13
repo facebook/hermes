@@ -1,23 +1,35 @@
 package com.facebook.hermes.intl;
 
+import android.icu.text.Collator;
 import android.icu.text.RuleBasedCollator;
 import android.icu.util.ULocale;
 import android.os.Build;
 
+import java.util.ArrayList;
+
+import static com.facebook.hermes.intl.IPlatformCollator.Sensitivity.*;
+import static com.facebook.hermes.intl.IPlatformCollator.Sensitivity.BASE;
+
 public class PlatformCollatorICU4J implements IPlatformCollator{
 
     private android.icu.text.RuleBasedCollator mCollator = null;
+    private ILocaleObject mLocale = null;
 
-    private PlatformCollatorICU4J(ILocaleObject<ULocale> locale) throws JSRangeErrorException {
+    PlatformCollatorICU4J() throws JSRangeErrorException {
+    }
+
+    @Override
+    public IPlatformCollator setLocale(ILocaleObject localeObject) throws JSRangeErrorException {
+        mLocale = localeObject;
+
         assert (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N);
-        mCollator = (RuleBasedCollator) RuleBasedCollator.getInstance(locale.getLocale());
+        mCollator = (RuleBasedCollator) RuleBasedCollator.getInstance((ULocale) mLocale.getLocale());
 
         // Normalization is always on by the spec. We don't know whether the text is already normalized, hence we can't optimize as of now.
         mCollator.setDecomposition(android.icu.text.Collator.CANONICAL_DECOMPOSITION);
-    }
 
-    public static PlatformCollatorICU4J createFromLocale(ILocaleObject<ULocale> locale) throws JSRangeErrorException {
-        return new PlatformCollatorICU4J(locale);
+
+        return this;
     }
 
     @Override
@@ -26,70 +38,93 @@ public class PlatformCollatorICU4J implements IPlatformCollator{
     }
 
     @Override
-    public boolean isSensitiySupported(String sensitivity) {
-        return true;
+    public Sensitivity getSensitivity() {
+        if(mCollator == null) {
+            return LOCALE; // TODO: Ad-hoc default
+        }
+
+        int strength = mCollator.getStrength();
+        if(strength == android.icu.text.Collator.PRIMARY) {
+            if(mCollator.isCaseLevel())
+                return CASE;
+            else
+                return BASE;
+        }
+
+        if(strength== Collator.SECONDARY)
+            return ACCENT;
+
+        return VARIANT;
     }
 
     @Override
-    public void setSensitivity(String sensitivity) {
+    public IPlatformCollator setSensitivity(IPlatformCollator.Sensitivity sensitivity) {
         switch (sensitivity) {
-            case Constants.SENSITIVITY_BASE:
+            case BASE:
                 mCollator.setStrength(android.icu.text.Collator.PRIMARY);
                 break;
-            case Constants.SENSITIVITY_ACCENT:
+            case ACCENT:
                 mCollator.setStrength(android.icu.text.Collator.SECONDARY);
                 break;
-            case Constants.SENSITIVITY_CASE:
+            case CASE:
                 mCollator.setStrength(android.icu.text.Collator.PRIMARY);
                 mCollator.setCaseLevel(true);
                 break;
-            case Constants.SENSITIVITY_VARIANT:
+            case VARIANT:
                 mCollator.setStrength(android.icu.text.Collator.TERTIARY);
                 break;
         }
+
+        return this;
     }
 
     @Override
-    public void setIgnorePunctuation(boolean ignore) {
-        // TODO:: According to documentation, it should take effect only when the strength is se to "QUATERNARY". Need to test it.
-        mCollator.setAlternateHandlingShifted(ignore);
+    public IPlatformCollator setIgnorePunctuation(boolean ignore) {
+        if(ignore) {
+            // Read for an explanation: http://userguide.icu-project.org/collation/customization/ignorepunct
+            mCollator.setAlternateHandlingShifted(JSObjects.getJavaBoolean(ignore));
+        }
+
+        return this;
     }
 
     @Override
-    public boolean isIgnorePunctuationSupported() {
-        return true;
+    public IPlatformCollator setNumericAttribute(boolean numeric) {
+        if(numeric) {
+            mCollator.setNumericCollation(JSObjects.getJavaBoolean(numeric));
+        }
+
+        return this;
     }
 
     @Override
-    public boolean isNumericCollationSupported() {
-        return true;
-    }
-
-    @Override
-    public void setNumericAttribute(boolean numeric) {
-        mCollator.setNumericCollation(numeric);
-    }
-
-    @Override
-    public boolean isCaseFirstCollationSupported() {
-        return true;
-    }
-
-    @Override
-    public void setCaseFirstAttribute(String caseFirst) {
+    public IPlatformCollator setCaseFirstAttribute(CaseFirst caseFirst) {
         switch (caseFirst) {
-            case "upper":
+            case UPPER:
                 mCollator.setUpperCaseFirst(true);
                 break;
 
-            case "lower":
+            case LOWER:
                 mCollator.setLowerCaseFirst(true);
                 break;
 
-            case "false":
+            case FALSE:
             default:
                 mCollator.setCaseFirstDefault();
                 break;
         }
+
+        return this;
+    }
+
+    @Override
+    public String[] getAvailableLocales() {
+        ArrayList<String> availableLocaleIds = new ArrayList<>();
+        java.util.Locale[] availableLocales = android.icu.text.Collator.getAvailableLocales();
+        for(java.util.Locale locale: availableLocales) {
+            availableLocaleIds.add(locale.toLanguageTag()); // TODO:: Not available on platforms <= 20
+        }
+
+        return availableLocaleIds.toArray(new String[availableLocaleIds.size()]);
     }
 }

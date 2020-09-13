@@ -6,6 +6,8 @@ import android.text.TextUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
 
 public class LocaleObjectICU4J implements ILocaleObject<ULocale> {
 
@@ -49,12 +51,34 @@ public class LocaleObjectICU4J implements ILocaleObject<ULocale> {
     public ArrayList<String> getUnicodeExtensions(String key) throws JSRangeErrorException {
         ensureNotDirty();
 
+        // nu -> numers
+        // ca -> calendar
+        String icuKey = UnicodeExtensionKeys.CanonicalKeyToICUKey(key);
+
         ArrayList<String> extensionList = new ArrayList<>();
-        String keywordValue = m_icu4jLocale.getKeywordValue(key);
+        String keywordValue = m_icu4jLocale.getKeywordValue(icuKey);
         if (keywordValue != null && !keywordValue.isEmpty())
             Collections.addAll(extensionList, keywordValue.split("-|_"));
 
         return extensionList;
+    }
+
+    @Override
+    public HashMap<String, String> getUnicodeExtensions() throws JSRangeErrorException {
+        ensureNotDirty();
+
+        HashMap<String, String> keywordMap = new HashMap<>();
+        Iterator<String> keywords = m_icu4jLocale.getKeywords();
+        if(keywords != null ) {
+            while (keywords.hasNext()) {
+                String keyword = keywords.next();
+                String canonicalKeyword = UnicodeExtensionKeys.ICUKeyToCanonicalKey(keyword);
+                String value = m_icu4jLocale.getKeywordValue(keyword);
+                keywordMap.put(canonicalKeyword, value);
+            }
+        }
+
+        return keywordMap;
     }
 
     @Override
@@ -64,7 +88,7 @@ public class LocaleObjectICU4J implements ILocaleObject<ULocale> {
             m_icu4jLocaleBuilder = new ULocale.Builder().setLocale(m_icu4jLocale);
 
         try {
-                m_icu4jLocaleBuilder.setUnicodeLocaleKeyword(key, TextUtils.join("-", value));
+            m_icu4jLocaleBuilder.setUnicodeLocaleKeyword(key, TextUtils.join("-", value));
         } catch (RuntimeException ex) {
             throw new JSRangeErrorException(ex.getMessage());
         }
@@ -95,6 +119,7 @@ public class LocaleObjectICU4J implements ILocaleObject<ULocale> {
     @Override
     public String toCanonicalTagWithoutExtensions() throws JSRangeErrorException {
         return getLocaleWithoutExtensions().toLanguageTag();
+        // return getLocale().getBaseName();
     }
 
     @Override

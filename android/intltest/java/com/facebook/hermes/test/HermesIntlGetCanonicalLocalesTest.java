@@ -30,73 +30,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class HermesIntlGetCanonicalLocalesTest extends InstrumentationTestCase {
+public class HermesIntlGetCanonicalLocalesTest extends HermesIntlTest262Base {
 
-    private static final String LOG_TAG = "testintl";
-
-    private void evalScriptFromAsset(JSRuntime rt, String filename) throws IOException {
-        AssetManager assets = getInstrumentation().getContext().getAssets();
-        InputStream is = assets.open(filename);
-        String script = new BufferedReader(new InputStreamReader(is))
-                .lines().collect(Collectors.joining("\n"));
-        rt.evaluateJavaScript(script);
-
-    }
-
-    private void evaluateCommonScriptsFromAsset(JSRuntime rt) throws IOException {
-        evalScriptFromAsset(rt, "test262/intl/common/sta.js");
-        evalScriptFromAsset(rt, "test262/intl/common/assert.js");
-        evalScriptFromAsset(rt, "test262/intl/common/testintl.js");
-        evalScriptFromAsset(rt, "test262/intl/common/propertyHelpers.js");
-        evalScriptFromAsset(rt, "test262/intl/common/compareArray.js");
-        evalScriptFromAsset(rt, "test262/intl/common/testintl.js");
-
-    }
-
-    private void runTests(String basePath, Set<String> blackList) throws IOException {
-        String[] testFileList = getInstrumentation().getContext().getAssets().list(basePath);
-
-        ArrayList<String> ranTests = new ArrayList<>();
-        HashMap<String, String> failedTests = new HashMap<>();
-
-        for (String testFileName : testFileList) {
-            String testFilePath = basePath + testFileName;
-            Log.d(LOG_TAG, "Evaluating " + testFilePath);
-
-            try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
-                evaluateCommonScriptsFromAsset(rt);
-                ranTests.add(testFileName);
-                try {
-                    evalScriptFromAsset(rt, testFilePath);
-                } catch (FileNotFoundException ex) {
-                    //if (testFilePath.endsWith(".js"))
-                    //    throw ex;
-                    // Skip, they are likely subdirectories
-                } catch (com.facebook.jni.CppException ex) {
-                    if (!blackList.contains(testFileName))
-                        failedTests.put(testFilePath, ex.getMessage());
-                } catch (Exception ex) {
-                    if   (!blackList.contains(testFileName))
-                        failedTests.put(testFilePath, ex.getMessage());
-                }
-            }
-        }
-
-        Log.v(LOG_TAG, "Passed Tests: " + TextUtils.join("\n", ranTests));
-
-        for (Map.Entry<String, String> entry : failedTests.entrySet()) {
-            Log.v(LOG_TAG, "Failed Tests: " + entry.getKey() + " : " + entry.getValue());
-            assert (false);
-        }
-
-        assertThat(failedTests.entrySet().isEmpty()).isEqualTo(true);
-
-    }
-
+    private static final String LOG_TAG = "HermesIntlGetCanonicalLocalesTest";
 
     @Test
     public void testIntlGetCanonicalLocales() throws IOException {
-        String basePath = "test262/intl/getCanonicalLocales";
+        String basePath = "test262-main/test/intl402/Intl/getCanonicalLocales/";
+        Set<String> whiteList = new HashSet<>();
         Set<String> blackList = new HashSet<>(Arrays.asList("Locale-object.js"
                 , "canonicalized-tags.js" // All except one tag (cmn-hans-cn-u-ca-t-ca-x-t-u) passes. icu4j adds an extra 'yes' token to the unicode 'ca' extension!
                 , "complex-region-subtag-replacement.js" // We don't do complex region replacement.
@@ -109,6 +50,10 @@ public class HermesIntlGetCanonicalLocalesTest extends InstrumentationTestCase {
                 , "unicode-ext-canonicalize-subdivision.js"  // We don't canonicalize extensions yet.
                 , "unicode-ext-canonicalize-yes-to-true.js"  // We don't canonicalize extensions yet.
                 , "unicode-ext-key-with-digit.js"  // We don't canonicalize extensions yet.
+                , "grandfathered.js" // icu4j doesn't perform all grandfathered tag replacements.
+                , "preferred-grandfathered.js" // icu4j doesn't perform all grandfathered tag replacements.
+                , "invalid-tags.js" // // icu4j !
+                , "complex-language-subtag-replacement.js" // icu4j canonicalization doesn't perform complex subtag replacements.
         ));
 
         /*
@@ -142,6 +87,6 @@ public class HermesIntlGetCanonicalLocalesTest extends InstrumentationTestCase {
             weird-cases.js
         */
 
-        runTests(basePath, blackList);
+        runTests(basePath, blackList, whiteList);
     }
 }

@@ -4,8 +4,11 @@ import android.icu.util.ULocale;
 import android.os.Build;
 import android.text.TextUtils;
 
+import org.w3c.dom.Text;
+
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
@@ -200,7 +203,21 @@ public class LocaleObjectAndroid implements ILocaleObject<Locale> {
         ensureNotDirty();
         ensureParsedLocaleIdentifier();
 
-        return mParsedLocaleIdentifier.unicodeExtensionKeywords.get(key);
+        if(mParsedLocaleIdentifier.unicodeExtensionKeywords != null)
+            return mParsedLocaleIdentifier.unicodeExtensionKeywords.get(key);
+        return new ArrayList<>();
+    }
+
+    @Override
+    public HashMap<String, String> getUnicodeExtensions() throws JSRangeErrorException {
+        HashMap<String, String> extensions = new HashMap<>();
+        if(mParsedLocaleIdentifier.unicodeExtensionKeywords != null) {
+            for (String key : mParsedLocaleIdentifier.unicodeExtensionKeywords.keySet()) {
+                ArrayList<String> values = mParsedLocaleIdentifier.unicodeExtensionKeywords.get(key);
+                extensions.put(key, TextUtils.join("-", values));
+            }
+        }
+        return extensions;
     }
 
     @Override

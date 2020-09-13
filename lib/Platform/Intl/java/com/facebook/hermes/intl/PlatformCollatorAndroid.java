@@ -1,23 +1,35 @@
 package com.facebook.hermes.intl;
 
 import java.text.RuleBasedCollator;
+import java.util.ArrayList;
 import java.util.Locale;
+
+import android.icu.text.Collator;
+import android.icu.util.ULocale;
 import android.os.Build;
+
+import static com.facebook.hermes.intl.IPlatformCollator.Sensitivity.*;
+import static com.facebook.hermes.intl.IPlatformCollator.Sensitivity.VARIANT;
 
 public class PlatformCollatorAndroid implements IPlatformCollator{
 
     private RuleBasedCollator mCollator = null;
+    private ILocaleObject mLocale = null;
 
-    private PlatformCollatorAndroid(ILocaleObject<Locale> locale) throws JSRangeErrorException {
-        assert (Build.VERSION.SDK_INT < Build.VERSION_CODES.N);
-        mCollator = (RuleBasedCollator) RuleBasedCollator.getInstance(locale.getLocale());
-
-        // Normalization is always on by the spec. We don't know whether the text is already normalized, hence we can't optimize as of now.
-        mCollator.setDecomposition(android.icu.text.Collator.CANONICAL_DECOMPOSITION);
+    PlatformCollatorAndroid() throws JSRangeErrorException {
     }
 
-    public static PlatformCollatorAndroid createFromLocale(ILocaleObject<Locale> locale) throws JSRangeErrorException {
-        return new PlatformCollatorAndroid(locale);
+    @Override
+    public IPlatformCollator setLocale(ILocaleObject localeObject) throws JSRangeErrorException {
+        mLocale = localeObject;
+
+        assert (Build.VERSION.SDK_INT < Build.VERSION_CODES.N);
+        mCollator = (RuleBasedCollator) RuleBasedCollator.getInstance((Locale) mLocale.getLocale());
+
+        // TODO :: I can't find a way to set the decomposition mode.
+        // mCollator.setDecomposition(android.icu.text.Collator.CANONICAL_DECOMPOSITION);
+
+        return this;
     }
 
     @Override
@@ -26,59 +38,71 @@ public class PlatformCollatorAndroid implements IPlatformCollator{
     }
 
     @Override
-    public boolean isSensitiySupported(String sensitivity) {
-        assert (Build.VERSION.SDK_INT < Build.VERSION_CODES.N);
-        if(sensitivity.equals(Constants.SENSITIVITY_CASE))
-            return false;
+    public Sensitivity getSensitivity() {
+        if(mCollator == null) {
+            return LOCALE; // TODO: Ad-hoc default
+        }
 
-        return true;
+        int strength = mCollator.getStrength();
+        if(strength == android.icu.text.Collator.PRIMARY) {
+            return BASE;
+        }
+
+        if(strength== Collator.SECONDARY)
+            return ACCENT;
+
+        return VARIANT;
     }
 
     @Override
-    public void setSensitivity(String sensitivity) {
+    public IPlatformCollator setSensitivity(Sensitivity sensitivity) {
         assert (Build.VERSION.SDK_INT < Build.VERSION_CODES.N);
+
         switch (sensitivity) {
-            case Constants.SENSITIVITY_BASE:
+            case BASE:
                 mCollator.setStrength(android.icu.text.Collator.PRIMARY);
                 break;
-            case Constants.SENSITIVITY_ACCENT:
+            case ACCENT:
                 mCollator.setStrength(android.icu.text.Collator.SECONDARY);
                 break;
-            case Constants.SENSITIVITY_CASE:
-                throw new UnsupportedOperationException("Unsupported Sensitivity option is Collator");
-            case Constants.SENSITIVITY_VARIANT:
+            case VARIANT:
                 mCollator.setStrength(android.icu.text.Collator.TERTIARY);
                 break;
         }
+
+        return this;
     }
 
     @Override
-    public void setIgnorePunctuation(boolean ignore) {
-        throw new UnsupportedOperationException("IgnorePunctuation collation not supported !");
+    public IPlatformCollator setIgnorePunctuation(boolean ignore) {
+        return this;
     }
 
     @Override
-    public boolean isIgnorePunctuationSupported() {
-        return false;
+    public IPlatformCollator setNumericAttribute(boolean numeric) {
+        return this;
     }
 
     @Override
-    public boolean isNumericCollationSupported() {
-        return false;
+    public IPlatformCollator setCaseFirstAttribute(CaseFirst caseFirst) {
+        return this;
     }
 
     @Override
-    public void setNumericAttribute(boolean numeric) {
-        throw new UnsupportedOperationException("Numeric collation not supported !");
+    public String[] getAvailableLocales() {
+
+        if(Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+            // Before L, Locale.toLanguageTag isn't available. Need to figure out how to get a locale id from locale object ... Currently resoring to support only en
+            return new String []{"en"};
+        }
+
+        ArrayList<String> availableLocaleIds = new ArrayList<>();
+        java.util.Locale[] availableLocales = java.text.Collator.getAvailableLocales();
+        for(java.util.Locale locale: availableLocales) {
+            availableLocaleIds.add(locale.toLanguageTag()); // TODO:: Not available on platforms <= 20
+        }
+
+        return availableLocaleIds.toArray(new String[availableLocaleIds.size()]);
     }
 
-    @Override
-    public boolean isCaseFirstCollationSupported() {
-        return false;
-    }
-
-    @Override
-    public void setCaseFirstAttribute(String caseFirst) {
-        throw new UnsupportedOperationException("CaseFirst collation not supported !");
-    }
 }

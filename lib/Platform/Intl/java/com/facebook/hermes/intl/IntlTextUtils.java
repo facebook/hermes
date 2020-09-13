@@ -3,7 +3,20 @@ package com.facebook.hermes.intl;
 import java.util.Arrays;
 import java.util.function.Predicate;
 
-public class TextUtils {
+public class IntlTextUtils {
+
+    public static boolean isASCIILetter(char c) {
+        return ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'));
+    }
+
+    public static boolean isASCIIDigit(char c) {
+        return (c >= '0' && c <= '9');
+    }
+
+    public static boolean isASCIILetterOrDigit(char c) {
+        return isASCIILetter(c) || isASCIIDigit(c);
+    }
+
     public static boolean isAlphaNum(CharSequence name, int start, int end, int min, int max) {
         assert (start >= 0 && end >= 0 && start <= name.length() && end <= name.length());
 
@@ -17,7 +30,7 @@ public class TextUtils {
 
         for (int idx = start; idx <= end; idx++) {
             char c = name.charAt(idx);
-            if (!Character.isLetter(c) && !Character.isDigit(c)) {
+            if (!isASCIILetterOrDigit(c)) {
                 return false;
             }
         }
@@ -38,7 +51,7 @@ public class TextUtils {
 
         for (int idx = start; idx <= end; idx++) {
             char c = name.charAt(idx);
-            if (!Character.isLetter(c)) {
+            if (!isASCIILetter(c)) {
                 return false;
             }
         }
@@ -59,7 +72,7 @@ public class TextUtils {
 
         for (int idx = start; idx <= end; idx++) {
             char c = name.charAt(idx);
-            if (!Character.isDigit(c)) {
+            if (!isASCIIDigit(c)) {
                 return false;
             }
         }
@@ -68,7 +81,7 @@ public class TextUtils {
     }
 
     public static boolean isDigitAlphanum3(CharSequence token, int start, int end) {
-        return end - start + 1 == 4 && Character.isDigit(token.charAt(start)) && isAlphaNum(token, start + 1, end, 3, 3);
+        return end - start + 1 == 4 && isASCIILetter(token.charAt(start)) && isAlphaNum(token, start + 1, end, 3, 3);
     }
 
     public static boolean isUnicodeLanguageSubtag(CharSequence token, int start, int end) {
@@ -114,7 +127,7 @@ public class TextUtils {
         if (end != start + 1)
             return false;
 
-        return Character.isLetterOrDigit(token.charAt(start)) && Character.isAlphabetic(token.charAt(end));
+        return isASCIILetterOrDigit(token.charAt(start)) && isASCIILetter(token.charAt(end));
     }
 
     public static boolean isUnicodeExtensionKeyTypeItem(CharSequence token, int start, int end) {
@@ -129,7 +142,7 @@ public class TextUtils {
         if (end != start + 1)
             return false;
 
-        return Character.isLetter(token.charAt(start)) && Character.isDigit(token.charAt(end));
+        return isASCIILetter(token.charAt(start)) && isASCIIDigit(token.charAt(end));
     }
 
     public static boolean isTranformedExtensionTValueItem(CharSequence token, int start, int end) {

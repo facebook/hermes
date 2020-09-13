@@ -152,74 +152,74 @@ class LocaleIdTokenizer {
         }
 
         public boolean isUnicodeLanguageSubtag() {
-            return TextUtils.isUnicodeLanguageSubtag(mLocaleIdBuffer, mSubtagStart, mSubtagEnd);
+            return IntlTextUtils.isUnicodeLanguageSubtag(mLocaleIdBuffer, mSubtagStart, mSubtagEnd);
         }
 
 
         public boolean isExtensionSingleton() {
-            return TextUtils.isExtensionSingleton(mLocaleIdBuffer, mSubtagStart, mSubtagEnd);
+            return IntlTextUtils.isExtensionSingleton(mLocaleIdBuffer, mSubtagStart, mSubtagEnd);
         }
 
         public boolean isUnicodeScriptSubtag() {
             // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
             // = alpha{4};
-            return TextUtils.isUnicodeScriptSubtag(mLocaleIdBuffer, mSubtagStart, mSubtagEnd);
+            return IntlTextUtils.isUnicodeScriptSubtag(mLocaleIdBuffer, mSubtagStart, mSubtagEnd);
         }
 
         public boolean isUnicodeRegionSubtag() {
             // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
             //= (alpha{2} | digit{3}) ;
-            return TextUtils.isUnicodeRegionSubtag(mLocaleIdBuffer, mSubtagStart, mSubtagEnd);
+            return IntlTextUtils.isUnicodeRegionSubtag(mLocaleIdBuffer, mSubtagStart, mSubtagEnd);
         }
 
         public boolean isUnicodeVariantSubtag() {
             // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
             // = (alphanum{5,8}
             // | digit alphanum{3}) ;
-            return TextUtils.isUnicodeVariantSubtag(mLocaleIdBuffer, mSubtagStart, mSubtagEnd);
+            return IntlTextUtils.isUnicodeVariantSubtag(mLocaleIdBuffer, mSubtagStart, mSubtagEnd);
         }
 
         public boolean isUnicodeExtensionAttribute() {
             // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
             // = (alphanum{3,8}
-            return TextUtils.isUnicodeExtensionAttribute(mLocaleIdBuffer, mSubtagStart, mSubtagEnd);
+            return IntlTextUtils.isUnicodeExtensionAttribute(mLocaleIdBuffer, mSubtagStart, mSubtagEnd);
         }
 
         public boolean isUnicodeExtensionKey() {
             // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
             // = alphanum alpha ;
 
-            return TextUtils.isUnicodeExtensionKey(mLocaleIdBuffer, mSubtagStart, mSubtagEnd);
+            return IntlTextUtils.isUnicodeExtensionKey(mLocaleIdBuffer, mSubtagStart, mSubtagEnd);
         }
 
         public boolean isUnicodeExtensionKeyTypeItem() {
             // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
             // = alphanum alpha ;
-            return TextUtils.isUnicodeExtensionKeyTypeItem(mLocaleIdBuffer, mSubtagStart, mSubtagEnd);
+            return IntlTextUtils.isUnicodeExtensionKeyTypeItem(mLocaleIdBuffer, mSubtagStart, mSubtagEnd);
         }
 
         public boolean isTranformedExtensionTKey() {
             // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
             //  	= alpha digit ;
-            return TextUtils.isTranformedExtensionTKey(mLocaleIdBuffer, mSubtagStart, mSubtagEnd);
+            return IntlTextUtils.isTranformedExtensionTKey(mLocaleIdBuffer, mSubtagStart, mSubtagEnd);
         }
 
         public boolean isTranformedExtensionTValueItem() {
             // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
             // = (sep alphanum{3,8})+ ;
-            return TextUtils.isTranformedExtensionTValueItem(mLocaleIdBuffer, mSubtagStart, mSubtagEnd);
+            return IntlTextUtils.isTranformedExtensionTValueItem(mLocaleIdBuffer, mSubtagStart, mSubtagEnd);
         }
 
         public boolean isPrivateUseExtension() {
             // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
             // = (sep alphanum{1,8})+ ;
-            return TextUtils.isPrivateUseExtension(mLocaleIdBuffer, mSubtagStart, mSubtagEnd);
+            return IntlTextUtils.isPrivateUseExtension(mLocaleIdBuffer, mSubtagStart, mSubtagEnd);
         }
 
         public boolean isOtherExtension() {
             // https://unicode.org/reports/tr35/#Unicode_Language_and_Locale_Identifiers
             // = (sep alphanum{2,8})+ ;
-            return TextUtils.isOtherExtension(mLocaleIdBuffer, mSubtagStart, mSubtagEnd);
+            return IntlTextUtils.isOtherExtension(mLocaleIdBuffer, mSubtagStart, mSubtagEnd);
         }
 
     }

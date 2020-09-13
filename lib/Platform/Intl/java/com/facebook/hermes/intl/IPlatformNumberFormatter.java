@@ -1,5 +1,8 @@
 package com.facebook.hermes.intl;
 
+import android.icu.text.DecimalFormat;
+import android.icu.util.ULocale;
+
 import java.text.AttributedCharacterIterator;
 
 public interface IPlatformNumberFormatter {
@@ -31,7 +34,6 @@ public interface IPlatformNumberFormatter {
                     throw new IllegalArgumentException();
             }
         }
-
     }
 
     // [[Notation ]]
@@ -179,6 +181,12 @@ public interface IPlatformNumberFormatter {
         COMPACT_ROUNDING
     }
 
+
+    IPlatformNumberFormatter configureDecimalFormat(ILocaleObject localeObject, IPlatformNumberFormatter.Style style,
+                                                                 IPlatformNumberFormatter.CurrencySign currencySign,
+                                                                 IPlatformNumberFormatter.Notation notation,
+                                                                 IPlatformNumberFormatter.CompactDisplay compactDisplay) throws JSRangeErrorException;
+
     IPlatformNumberFormatter configureCurrency(String currencyCode, CurrencyDisplay currencyDisplay) throws JSRangeErrorException;
 
     IPlatformNumberFormatter configureGrouping(boolean mGroupingUsed);
@@ -193,10 +201,15 @@ public interface IPlatformNumberFormatter {
 
     IPlatformNumberFormatter configureUnits(String unit, IPlatformNumberFormatter.UnitDisplay unitDisplay) throws JSRangeErrorException;
 
+
+    String getDefaultNumberingSystem(ILocaleObject localeObject) throws JSRangeErrorException;
+
     String format(double n) throws JSRangeErrorException;
 
     String fieldToString(AttributedCharacterIterator.Attribute attribute, double x);
 
     AttributedCharacterIterator formatToParts(double n) throws JSRangeErrorException;
+
+    String[] getAvailableLocales();
 }
 

@@ -2,142 +2,128 @@ package com.facebook.hermes.intl;
 
 import android.icu.util.ULocale;
 import android.os.Build;
-
 import java.util.ArrayList;
-import java.util.Locale;
+import java.util.Arrays;
+import java.util.HashMap;
 
-public class LocaleMatcher <T> {
-    public class LocaleMatchResult {
+public class LocaleMatcher {
+
+    public static class LocaleMatchResult {
         public ILocaleObject matchedLocale;
-        public ILocaleObject matchedRequestedLocale;
-        public String matcher;
-        public boolean isDefault;
+        public HashMap<String, String> extensions = new HashMap<>();
     }
 
-    public LocaleMatchResult match (String[] requestedLocales, T[] availableLocales, String matcher) throws JSRangeErrorException {
-        if(matcher.equals(Constants.LOCALEMATCHER_BESTFIT))
-            return bestFitMatch(requestedLocales, availableLocales);
-        else if (matcher.equals(Constants.LOCALEMATCHER_LOOKUP))
-            return lookupMatch(requestedLocales, availableLocales);
-        else
-            throw new JSRangeErrorException("Unrecognized locale matcher");
-    }
-
-    private LocaleMatchResult bestFitMatch(String[] requestedLocales, T[] availableLocales) throws JSRangeErrorException {
-
-        LocaleMatchResult result = new LocaleMatchResult();
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-
-            // Note:: We are trying one candidate at a time so that we know which of the requested locales matched.
-            for (String requestedLocale : requestedLocales) {
-                ArrayList<ULocale> candidateLocales = new ArrayList<>();
-                ILocaleObject localeObject = LocaleObjectICU4J.createFromLocaleId(requestedLocale);
-
-                candidateLocales.add(ULocale.forLanguageTag(localeObject.toCanonicalTagWithoutExtensions()));
-                ULocale[] candidateLocaleArray = candidateLocales.toArray(new ULocale[candidateLocales.size()]);
-
-                // Note: We assume that this method does "best fit" matching, which is not yet verified.
-                // Note: ICU4J's LocaleMatcher (https://unicode-org.github.io/icu-docs/apidoc/released/icu4j/com/ibm/icu/util/LocaleMatcher.html) is not available on Android !
-                android.icu.util.ULocale acceptedLocale = android.icu.util.ULocale.acceptLanguage(candidateLocaleArray, (ULocale[]) availableLocales, null);
-
-                if (acceptedLocale != null) {
-                    result.matcher = Constants.LOCALEMATCHER_BESTFIT;
-                    result.matchedLocale = LocaleObjectICU4J.createFromULocale(acceptedLocale);
-                    result.matchedRequestedLocale = LocaleObjectICU4J.createFromLocaleId(requestedLocale);
-                    result.isDefault = false;
-
-                    return result;
-                }
-            }
-        } else {
-            // We don't have best fit matcher available on older platforms.
-            result = lookupMatch(requestedLocales, availableLocales);
-            result.matcher = Constants.LOCALEMATCHER_BESTFIT; // Lookup fit is the best fit that we have.
-            return result;
+    public static android.icu.util.ULocale[] getULocaleArrayFromLocaleArrray(java.util.Locale[] localeArray) {
+        ArrayList<android.icu.util.ULocale> result = new ArrayList<>();
+        for(java.util.Locale locale : localeArray) {
+            result.add(ULocale.forLanguageTag(locale.toLanguageTag())); // Note: Locale.toLanguageTag() is introduced in API 21.
         }
 
-        result.matcher = Constants.LOCALEMATCHER_BESTFIT;
-        result.matchedLocale = LocaleObjectICU4J.createDefault();
-        result.matchedRequestedLocale = result.matchedLocale;
-        result.isDefault = true;
+        return result.toArray(new android.icu.util.ULocale[result.size()]);
+    }
 
+    // https://tc39.es/ecma402/#sec-bestavailablelocale
+    public static String BestAvailableLocale(String[] availableLocales, String locale) {
+        String candidate = locale;
+        while (true) {
+            // TODO:: Method take String list as argument to avoid conversions between array and list?
+            // TODO:: AvailableLocales list always seems to be sorted. Is it guaranteed so that we can binary search int it ? Can we cheaply ensure that it is sorted ? Do we do multiple searches to justify sorting ?
+            if (Arrays.asList(availableLocales).indexOf(candidate) > -1)
+                return candidate;
+
+            int pos = candidate.lastIndexOf("-");
+            if (pos < 0)
+                return ""; // We treat empty string as "undefined"
+
+            if (pos >= 2 && candidate.charAt(pos - 2) == '-') // This is very likely unnecessary as this function is called after removing extensions.
+                pos -= 2;
+
+            candidate = candidate.substring(0, pos);
+        }
+    }
+
+    public static String BestAvailableLocale(java.util.Locale[] availableLocales, String locale) {
+        ArrayList<String> availableLocaleIds = new ArrayList<>();
+        for (java.util.Locale availableLocale: availableLocales) {
+            availableLocaleIds.add(availableLocale.toLanguageTag());
+        }
+
+        return BestAvailableLocale(availableLocaleIds.toArray(new String[availableLocaleIds.size()]), locale);
+    }
+
+    // https://tc39.es/ecma402/#sec-lookupmatcher
+    public static LocaleMatchResult lookupMatch(String[] requestedLocales, String[] availableLocales) throws JSRangeErrorException {
+
+        LocaleMatchResult result = new LocaleMatchResult();
+        for (String locale : requestedLocales) {
+            ILocaleObject requestedLocaleObject = LocaleObject.createFromLocaleId(locale);
+            String noExtensionLocale = requestedLocaleObject.toCanonicalTagWithoutExtensions();
+
+            String availableLocale = BestAvailableLocale(availableLocales, noExtensionLocale);
+            if (!availableLocale.isEmpty()) {
+                result.matchedLocale = LocaleObject.createFromLocaleId(availableLocale);
+                result.extensions = requestedLocaleObject.getUnicodeExtensions();
+                return result;
+            }
+        }
+
+        result.matchedLocale = LocaleObject.createDefault();
         return result;
     }
 
-    private LocaleMatchResult lookupMatch(String[] requestedLocales, T[] availableLocales) throws JSRangeErrorException {
+    public static ULocale bestFitBestAvailableLocale(String requestedLocale, android.icu.util.ULocale[] availableLocales) throws JSRangeErrorException {
+        assert (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N);
 
-        LocaleMatchResult result = new LocaleMatchResult();
+        ILocaleObject requestedLocaleObject = LocaleObject.createFromLocaleId(requestedLocale);
+        return bestFitBestAvailableLocale(requestedLocaleObject, availableLocales);
+    }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+    public static ULocale bestFitBestAvailableLocale(ILocaleObject requestedLocaleObject, android.icu.util.ULocale[] availableLocales) throws JSRangeErrorException {
+        assert (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N);
 
-            ArrayList<String> availableLocaleTags = new ArrayList<>();
-            for (T availableLocale: availableLocales)
-                availableLocaleTags.add(((ULocale)availableLocale).toLanguageTag());
+        android.icu.util.ULocale requestedULocaleWithoutExtensions = (android.icu.util.ULocale) requestedLocaleObject.getLocaleWithoutExtensions();
+        android.icu.util.ULocale[] requestedLocalesArray = new android.icu.util.ULocale[]{(android.icu.util.ULocale) requestedULocaleWithoutExtensions};
+        boolean[] fallback = new boolean[1];
 
-            for (String locale : requestedLocales) {
-                ILocaleObject requestedLocaleObject = LocaleObjectICU4J.createFromLocaleId(locale);
-                String requestedLocaleCanonicalTag = requestedLocaleObject.toCanonicalTagWithoutExtensions();
+        // Note: We assume that this method does "best fit" matching, which is not yet verified.
+        // Note: Based on documentation, it is a thin wrapper over LocaleMatcher (https://unicode-org.github.io/icu-docs/apidoc/released/icu4j/com/ibm/icu/util/LocaleMatcher.html) class which is not yet available on Android !
+        android.icu.util.ULocale acceptedLocale = android.icu.util.ULocale.acceptLanguage(requestedLocalesArray, availableLocales, fallback);
 
-                while (!requestedLocaleCanonicalTag.isEmpty()) {
-                    int idx = availableLocaleTags.indexOf(requestedLocaleCanonicalTag);
-                    if(idx > -1) {
-                        result.matcher = Constants.LOCALEMATCHER_LOOKUP;
-                        result.matchedLocale = LocaleObjectICU4J.createFromLocaleId(requestedLocaleCanonicalTag);
-                        result.matchedRequestedLocale = requestedLocaleObject;
-                        result.isDefault = false;
-                        return result;
-                    }
-
-                    int lastSepIndex = requestedLocaleCanonicalTag.lastIndexOf("-");
-                    if(lastSepIndex > -1)
-                        requestedLocaleCanonicalTag = requestedLocaleCanonicalTag.substring(0, lastSepIndex);
-                    else
-                        break;
-                }
-            }
-
-            result.matcher = Constants.LOCALEMATCHER_LOOKUP;
-            result.matchedLocale = LocaleObjectICU4J.createDefault();
-            result.matchedRequestedLocale = result.matchedLocale;
-            result.isDefault = true;
-
-            return result;
-
-        } else {
-
-            ArrayList<String> availableLocaleTags = new ArrayList<>();
-            for (T availableLocale: availableLocales)
-                availableLocaleTags.add(((Locale)availableLocale).toLanguageTag());
-
-            for (String locale : requestedLocales) {
-                ILocaleObject requestedLocaleObject = LocaleObjectAndroid.createFromLocaleId(locale);
-                String requestedLocaleCanonicalTag = requestedLocaleObject.toCanonicalTagWithoutExtensions();
-
-                while (!requestedLocaleCanonicalTag.isEmpty()) {
-                    int idx = availableLocaleTags.indexOf(requestedLocaleCanonicalTag);
-                    if(idx > -1) {
-                        result.matcher = Constants.LOCALEMATCHER_LOOKUP;
-                        result.matchedLocale = LocaleObjectAndroid.createFromLocaleId(requestedLocaleCanonicalTag);
-                        result.matchedRequestedLocale = requestedLocaleObject;
-                        result.isDefault = false;
-                        return result;
-                    }
-
-                    int lastSepIndex = requestedLocaleCanonicalTag.lastIndexOf("-");
-                    if(lastSepIndex > -1)
-                        requestedLocaleCanonicalTag = requestedLocaleCanonicalTag.substring(0, lastSepIndex);
-                    else
-                        break;
-                }
-            }
-
-            result.matcher = Constants.LOCALEMATCHER_LOOKUP;
-            result.matchedLocale = LocaleObjectAndroid.createDefault();
-            result.matchedRequestedLocale = result.matchedLocale;
-            result.isDefault = true;
-
-            return result;
+        // Process if there is a match without fallback to ROOT
+        if (!fallback[0] && acceptedLocale != null) {
+            return acceptedLocale;
         }
+
+        return null;
+    }
+
+    public static LocaleMatchResult bestFitMatch(String[] requestedLocales, android.icu.util.ULocale[] availableLocales) throws JSRangeErrorException {
+        assert (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N);
+        LocaleMatchResult result = new LocaleMatchResult();
+        for (String requestedLocale : requestedLocales) {
+            ILocaleObject requestedLocaleObject = LocaleObject.createFromLocaleId(requestedLocale);
+            ULocale availableLocale = bestFitBestAvailableLocale(requestedLocaleObject, availableLocales);
+            if(availableLocale != null) {
+                result.matchedLocale = LocaleObjectICU4J.createFromULocale(availableLocale);
+                result.extensions = requestedLocaleObject.getUnicodeExtensions();
+                return result;
+            }
+        }
+
+        result.matchedLocale = LocaleObjectICU4J.createDefault();
+        return result;
+    }
+
+    // https://tc39.es/ecma402/#sec-lookupsupportedlocales
+    public static String[] lookupSupportedLocales(String[] availableLocales, String[] requestedLocales) throws JSRangeErrorException {
+        ArrayList<String> subset = new ArrayList<>();
+        for (String requestedLocale : requestedLocales) {
+            String noExtensionLocale = LocaleObject.createFromLocaleId(requestedLocale).toCanonicalTagWithoutExtensions();
+            String availableLocale = BestAvailableLocale(availableLocales, noExtensionLocale);
+            if(availableLocale != null && !availableLocale.isEmpty())
+                subset.add(requestedLocale);
+        }
+
+        return subset.toArray(new String[subset.size()]);
     }
 }
