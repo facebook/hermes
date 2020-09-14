@@ -14,20 +14,19 @@ import static com.facebook.hermes.intl.IPlatformCollator.Sensitivity.VARIANT;
 public class PlatformCollatorAndroid implements IPlatformCollator{
 
     private RuleBasedCollator mCollator = null;
-    private ILocaleObject mLocale = null;
+    private LocaleObjectAndroid mLocale = null;
 
     PlatformCollatorAndroid() throws JSRangeErrorException {
     }
 
     @Override
-    public IPlatformCollator setLocale(ILocaleObject localeObject) throws JSRangeErrorException {
-        mLocale = localeObject;
+    public IPlatformCollator configure(ILocaleObject localeObject) throws JSRangeErrorException {
+        mLocale = (LocaleObjectAndroid) localeObject;
 
         assert (Build.VERSION.SDK_INT < Build.VERSION_CODES.N);
         mCollator = (RuleBasedCollator) RuleBasedCollator.getInstance((Locale) mLocale.getLocale());
 
         // TODO :: I can't find a way to set the decomposition mode.
-        // mCollator.setDecomposition(android.icu.text.Collator.CANONICAL_DECOMPOSITION);
 
         return this;
     }

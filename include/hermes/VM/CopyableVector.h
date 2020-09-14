@@ -12,7 +12,7 @@
 #include "hermes/Support/CheckedMalloc.h"
 #include "hermes/VM/GC.h"
 
-#include "llvm/Support/Compiler.h"
+#include "llvh/Support/Compiler.h"
 
 #include <algorithm>
 #include <cassert>
@@ -93,7 +93,7 @@ class CopyableVector {
   /// Currently this does not invoke operator= of its contained elements;
   /// instead it destroys all contained elements and reinitializes via
   /// placement new.
-  void operator=(llvm::ArrayRef<T> arr) {
+  void operator=(llvh::ArrayRef<T> arr) {
     assert(
         (arr.data() < this->begin() || arr.data() >= this->end()) &&
         "Cannot assign a subarray of self");
@@ -197,8 +197,8 @@ class CopyableVector {
   }
 
   /// Conversion to an ArrayRef.
-  /* implicit */ operator llvm::ArrayRef<T>() const {
-    return llvm::makeArrayRef(begin(), size());
+  /* implicit */ operator llvh::ArrayRef<T>() const {
+    return llvh::makeArrayRef(begin(), size());
   }
 
  private:

@@ -10,9 +10,9 @@
 
 #ifdef HERMESVM_JIT_DISASSEMBLER
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/Optional.h"
+#include "llvh/ADT/StringRef.h"
 
 namespace hermes {
 namespace vm {
@@ -38,8 +38,8 @@ class LLVMDisassembler {
   /// \param[out] size is initialized with the byte size of the decoded
   ///   instruction.
   /// \return the instruction string on success or an empty optional on error.
-  llvm::Optional<llvm::StringRef> formatInstruction(
-      llvm::ArrayRef<uint8_t> bytes,
+  llvh::Optional<llvh::StringRef> formatInstruction(
+      llvh::ArrayRef<uint8_t> bytes,
       uint64_t address,
       uint64_t &size);
 };

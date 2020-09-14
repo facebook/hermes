@@ -1,0 +1,32 @@
+{
+  "name": "Hermes Playground",
+  "short_name": "Hermes Playground",
+  "lang": "en",
+  "start_url": "/playground/",
+  "background_color": "#242526",
+  "theme_color": "#242526",
+  "display": "standalone",
+  "icons": [
+    {
+      "src": "img/logo.svg",
+      "sizes": "256x256",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "img/logo-48-48.png",
+      "sizes": "48x48",
+      "types": "image/png"
+    },
+    {
+      "src": "img/logo-128-128.png",
+      "sizes": "128x128",
+      "types": "image/png"
+    },
+    {
+      "src": "img/logo-512-512.png",
+      "sizes": "512x512",
+      "types": "image/png"
+    }
+  ]
+}
+

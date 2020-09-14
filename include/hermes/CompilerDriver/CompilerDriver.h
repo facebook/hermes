@@ -10,7 +10,7 @@
 
 #include "hermes/BCGen/HBC/BytecodeDataProvider.h"
 #include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/raw_ostream.h"
 
 namespace hermes {
 namespace driver {
@@ -80,22 +80,22 @@ OutputFormatKind outputFormatFromCommandLineOptions();
 CompileResult compileFromCommandLineOptions();
 
 /// Print the Hermes version (with VM) to the given stream \p s.
-void printHermesCompilerVMVersion(llvm::raw_ostream &s);
+void printHermesCompilerVMVersion(llvh::raw_ostream &s);
 
 /// Print the Hermes version (without VM) to the given stream \p s.
-void printHermesCompilerVersion(llvm::raw_ostream &s);
+void printHermesCompilerVersion(llvh::raw_ostream &s);
 
 } // namespace driver
 } // namespace hermes
 
 namespace cl {
 /// The following flags are used by both the compiler and the VM driver.
-extern llvm::cl::opt<bool> BasicBlockProfiling;
-extern llvm::cl::opt<bool> EnableEval;
-extern llvm::cl::opt<bool> VerifyIR;
-extern llvm::cl::opt<bool> EmitAsyncBreakCheck;
-extern llvm::cl::opt<bool> AllowFunctionToString;
-extern llvm::cl::list<std::string> InputFilenames;
-extern llvm::cl::opt<bool> OptimizedEval;
+extern llvh::cl::opt<bool> BasicBlockProfiling;
+extern llvh::cl::opt<bool> EnableEval;
+extern llvh::cl::opt<bool> VerifyIR;
+extern llvh::cl::opt<bool> EmitAsyncBreakCheck;
+extern llvh::cl::opt<bool> AllowFunctionToString;
+extern llvh::cl::list<std::string> InputFilenames;
+extern llvh::cl::opt<bool> OptimizedEval;
 } // namespace cl
 #endif

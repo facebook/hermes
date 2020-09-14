@@ -19,7 +19,7 @@
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/VM/Profiler/SamplingProfiler.h"
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvh/ADT/DenseMap.h"
 
 #include <thread>
 
@@ -204,7 +204,7 @@ class ChromeTraceSerializer {
   explicit ChromeTraceSerializer(ChromeTraceFormat &&chromeTrace);
 
   /// Serialize chrome trace to \p OS.
-  void serialize(llvm::raw_ostream &OS) const;
+  void serialize(llvh::raw_ostream &OS) const;
 };
 
 } // namespace vm

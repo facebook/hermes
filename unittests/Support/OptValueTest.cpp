@@ -18,7 +18,7 @@ void run1BasicTest() {
   T val1{};
   T val2 = !val1;
   OptValue<T> empty1{};
-  OptValue<T> empty2(llvm::None);
+  OptValue<T> empty2(llvh::None);
   OptValue<T> filled1(val1);
   OptValue<T> filled2(val2);
   ASSERT_EQ(empty1, empty2);

@@ -43,8 +43,15 @@ class CrashManager {
   virtual void setCustomData(const char *key, const char *val) = 0;
 
   /// If the given \p key has an associated custom data string, remove the
-  /// association.
+  /// association. If the key hasn't been set before, is a no-op.
   virtual void removeCustomData(const char *key) = 0;
+
+  /// Same as \c setCustomData, except it is only set for the current thread.
+  virtual void setContextualCustomData(const char *key, const char *val) = 0;
+
+  /// Same as \c removeCustomData, except it is for keys set with \c
+  /// setContextualCustomData.
+  virtual void removeContextualCustomData(const char *key) = 0;
 
   /// Registers a function to be called after a crash has occurred. This
   /// function can examine memory and serialize this to a JSON output stream.
@@ -82,6 +89,8 @@ class NopCrashManager final : public CrashManager {
   void unregisterMemory(void *) override {}
   void setCustomData(const char *, const char *) override {}
   void removeCustomData(const char *) override {}
+  void setContextualCustomData(const char *, const char *) override {}
+  void removeContextualCustomData(const char *) override {}
   CallbackKey registerCallback(CallbackFunc /*callback*/) override {
     return 0;
   }

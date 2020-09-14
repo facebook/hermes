@@ -19,9 +19,9 @@
 namespace hermes {
 namespace hbc {
 
-using llvm::cast;
-using llvm::dyn_cast;
-using llvm::isa;
+using llvh::cast;
+using llvh::dyn_cast;
+using llvh::isa;
 
 class LoadConstants : public FunctionPass {
   /// Check whether a particular operand of an instruction must stay

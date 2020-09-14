@@ -8,7 +8,7 @@
 #ifndef HERMES_SUPPORT_STRINGKIND_H
 #define HERMES_SUPPORT_STRINGKIND_H
 
-#include "llvm/ADT/ArrayRef.h"
+#include "llvh/ADT/ArrayRef.h"
 
 #include <cassert>
 #include <cstdint>
@@ -69,7 +69,7 @@ class StringKind {
     void push_back(Kind k);
 
     /// View the sequence so far.
-    inline llvm::ArrayRef<Entry> entries() const &;
+    inline llvh::ArrayRef<Entry> entries() const &;
 
     /// Move the sequence out of the accumulator, leaving it empty.
     inline std::vector<Entry> entries() &&;
@@ -87,7 +87,7 @@ inline uint32_t StringKind::Entry::count() const {
   return datum_ & MaxCount;
 }
 
-inline llvm::ArrayRef<StringKind::Entry> StringKind::Accumulator::entries()
+inline llvh::ArrayRef<StringKind::Entry> StringKind::Accumulator::entries()
     const & {
   return entries_;
 }

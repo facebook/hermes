@@ -7,40 +7,40 @@
 
 //===----------------------------------------------------------------------===//
 /// \file
-/// Wrapper around llvm::SmallVector<> for easier u16 string construction.
+/// Wrapper around llvh::SmallVector<> for easier u16 string construction.
 //===----------------------------------------------------------------------===//
 
 #ifndef HERMES_VM_SMALLXSTRING_H
 #define HERMES_VM_SMALLXSTRING_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/ADT/StringRef.h"
 
 namespace hermes {
 namespace vm {
 
 template <typename T, unsigned N>
-class SmallXString : public llvm::SmallVector<T, N> {
-  using Super = llvm::SmallVector<T, N>;
+class SmallXString : public llvh::SmallVector<T, N> {
+  using Super = llvh::SmallVector<T, N>;
 
  public:
   /// Construct empty.
   SmallXString() {}
   /// Construct from ArrayRef.
-  SmallXString(llvm::ArrayRef<T> ref) : Super(ref.begin(), ref.end()) {}
+  SmallXString(llvh::ArrayRef<T> ref) : Super(ref.begin(), ref.end()) {}
   /// Construct from zero-terminated string.
   SmallXString(const T *strz)
       : Super(strz, strz + std::char_traits<T>::length(strz)) {}
   /// Construct from StringRef.
-  SmallXString(llvm::StringRef strRef)
+  SmallXString(llvh::StringRef strRef)
       : Super(strRef.bytes_begin(), strRef.bytes_end()) {}
   /// Construct from a pair of iterators.
   template <typename It>
   SmallXString(It first, It end) : Super(first, end) {}
 
   /// Append an ArrayRef.
-  SmallXString &append(llvm::ArrayRef<T> ref) {
+  SmallXString &append(llvh::ArrayRef<T> ref) {
     Super::append(ref.begin(), ref.end());
     return *this;
   }
@@ -52,7 +52,7 @@ class SmallXString : public llvm::SmallVector<T, N> {
   }
 
   /// Append a StringRef.
-  SmallXString &append(llvm::StringRef strRef) {
+  SmallXString &append(llvh::StringRef strRef) {
     Super::append(strRef.bytes_begin(), strRef.bytes_end());
     return *this;
   }
@@ -75,8 +75,8 @@ class SmallXString : public llvm::SmallVector<T, N> {
     return *this;
   }
 
-  llvm::ArrayRef<T> arrayRef() const {
-    return llvm::ArrayRef<T>(Super::begin(), Super::end());
+  llvh::ArrayRef<T> arrayRef() const {
+    return llvh::ArrayRef<T>(Super::begin(), Super::end());
   }
 };
 

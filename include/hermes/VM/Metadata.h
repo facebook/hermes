@@ -192,10 +192,10 @@ struct Metadata final {
 /// @name Formatters
 /// @{
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Metadata &meta);
-llvm::raw_ostream &operator<<(llvm::raw_ostream &os, Metadata::ArrayData array);
-llvm::raw_ostream &operator<<(
-    llvm::raw_ostream &os,
+llvh::raw_ostream &operator<<(llvh::raw_ostream &os, const Metadata &meta);
+llvh::raw_ostream &operator<<(llvh::raw_ostream &os, Metadata::ArrayData array);
+llvh::raw_ostream &operator<<(
+    llvh::raw_ostream &os,
     Metadata::ArrayData::ArrayType arraytype);
 
 /// @}

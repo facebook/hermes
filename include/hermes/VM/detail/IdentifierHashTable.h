@@ -14,7 +14,7 @@
 #include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/SymbolID.h"
 
-#include "llvm/Support/MathExtras.h"
+#include "llvh/Support/MathExtras.h"
 
 namespace hermes {
 namespace vm {
@@ -55,7 +55,7 @@ class IdentifierHashTable {
   /// Check whether we need to grow the hash table.
   bool shouldGrow() const {
     auto cap = capacity();
-    assert(llvm::isPowerOf2_32(cap) && "capacity must be power of 2");
+    assert(llvh::isPowerOf2_32(cap) && "capacity must be power of 2");
     // This is essentially cap * 0.75 < size.
     return cap - (cap >> 2) < nonEmptyEntryCount_;
   }
@@ -121,11 +121,11 @@ class IdentifierHashTable {
   /// twice large than \p count.
   void reserve(uint32_t count) {
     auto cap = capacity();
-    assert(llvm::isPowerOf2_32(cap) && "capacity must be power of 2");
+    assert(llvh::isPowerOf2_32(cap) && "capacity must be power of 2");
     if ((cap >> 1) < count) {
       // Calculate new capacity needed to contain all identifiers.
       // Always align it with power of 2.
-      uint32_t newCapacity = llvm::NextPowerOf2(count * 2);
+      uint32_t newCapacity = llvh::NextPowerOf2(count * 2);
       growAndRehash(newCapacity);
     }
   }
@@ -136,7 +136,7 @@ class IdentifierHashTable {
   /// table and we don't need to compare it with existing strings at all.
   /// \return index if found. If not found, \return the index to insert at.
   template <typename T>
-  uint32_t lookupString(llvm::ArrayRef<T> str, bool mustBeNew = false) const {
+  uint32_t lookupString(llvh::ArrayRef<T> str, bool mustBeNew = false) const {
     return lookupString(str, hermes::hashString(str), mustBeNew);
   }
 
@@ -147,16 +147,16 @@ class IdentifierHashTable {
   /// \return index if found. If not found, \return the index to insert at.
   template <typename T>
   uint32_t lookupString(
-      llvm::ArrayRef<T> str,
+      llvh::ArrayRef<T> str,
       uint32_t hash,
       bool mustBeNew = false) const;
 
-  /// Similar to lookupString(llvm::ArrayRef<T>...), but provided
+  /// Similar to lookupString(llvh::ArrayRef<T>...), but provided
   /// a StringPrimitive argument.
   uint32_t lookupString(const StringPrimitive *str, bool mustBeNew = false)
       const;
 
-  /// Similar to lookupString(llvm::ArrayRef<T>...), but provided
+  /// Similar to lookupString(llvh::ArrayRef<T>...), but provided
   /// a StringPrimitive argument, and the string hash.
   uint32_t lookupString(
       const StringPrimitive *str,
@@ -186,11 +186,11 @@ class IdentifierHashTable {
   /// Remove string \p ref from the hash table.
   /// Asserts that the string exists in the table.
   template <typename T>
-  void remove(llvm::ArrayRef<T> ref) {
+  void remove(llvh::ArrayRef<T> ref) {
     remove(lookupString(ref));
   }
 
-  /// Similar to remove(llvm::ArrayRef<T> ref), but given a StringPrimitive
+  /// Similar to remove(llvh::ArrayRef<T> ref), but given a StringPrimitive
   /// as argument. This function can only be called when removing an
   /// exisiting identifier, and hence the str must not be a rope.
   void remove(const StringPrimitive *str);

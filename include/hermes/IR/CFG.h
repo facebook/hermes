@@ -8,13 +8,13 @@
 #ifndef HERMES_IR_CFG_H
 #define HERMES_IR_CFG_H
 
-#include "llvm/ADT/GraphTraits.h"
-#include "llvm/Support/GenericDomTree.h"
+#include "llvh/ADT/GraphTraits.h"
+#include "llvh/Support/GenericDomTree.h"
 
 #include "hermes/IR/IR.h"
 #include "hermes/IR/Instrs.h"
 
-using llvm::cast;
+using llvh::cast;
 
 namespace hermes {
 
@@ -34,7 +34,7 @@ class PredIterator
 
   inline void advancePastNonTerminators() {
     // Loop to ignore non-terminator uses (for example BlockAddresses).
-    while (It != ItEnd && !llvm::dyn_cast<TerminatorInst>(*It))
+    while (It != ItEnd && !llvh::dyn_cast<TerminatorInst>(*It))
       ++It;
   }
 
@@ -86,8 +86,8 @@ class PredIterator
 typedef PredIterator<BasicBlock, Value::iterator> pred_iterator;
 typedef PredIterator<const BasicBlock, Value::const_iterator>
     const_pred_iterator;
-using pred_range = llvm::iterator_range<pred_iterator>;
-using pred_const_range = llvm::iterator_range<const_pred_iterator>;
+using pred_range = llvh::iterator_range<pred_iterator>;
+using pred_const_range = llvh::iterator_range<const_pred_iterator>;
 
 inline pred_iterator pred_begin(BasicBlock *BB) {
   return pred_iterator(BB);
@@ -126,7 +126,7 @@ inline unsigned pred_count(const BasicBlock *BB) {
 }
 
 inline unsigned pred_count_unique(const BasicBlock *BB) {
-  llvm::SmallPtrSet<const BasicBlock *, 8> preds(pred_begin(BB), pred_end(BB));
+  llvh::SmallPtrSet<const BasicBlock *, 8> preds(pred_begin(BB), pred_end(BB));
   return preds.size();
 }
 
@@ -134,11 +134,11 @@ inline unsigned pred_count_unique(const BasicBlock *BB) {
 // BasicBlock succ_iterator helpers
 //===----------------------------------------------------------------------===//
 
-typedef llvm::SuccIterator<TerminatorInst, BasicBlock> succ_iterator;
-typedef llvm::SuccIterator<const TerminatorInst, const BasicBlock>
+typedef llvh::SuccIterator<TerminatorInst, BasicBlock> succ_iterator;
+typedef llvh::SuccIterator<const TerminatorInst, const BasicBlock>
     succ_const_iterator;
-using succ_range = llvm::iterator_range<succ_iterator>;
-using succ_const_range = llvm::iterator_range<succ_const_iterator>;
+using succ_range = llvh::iterator_range<succ_iterator>;
+using succ_const_range = llvh::iterator_range<succ_const_iterator>;
 
 inline succ_iterator succ_begin(BasicBlock *BB) {
   return succ_iterator(BB->getTerminator());
@@ -178,7 +178,7 @@ inline unsigned succ_count(const BasicBlock *BB) {
 
 } // end namespace hermes
 
-namespace llvm {
+namespace llvh {
 
 //===----------------------------------------------------------------------===//
 // GraphTraits for BasicBlock
@@ -262,21 +262,21 @@ struct GraphTraits<Inverse<hermes::Function *>>
   }
 };
 
-} // namespace llvm
+} // namespace llvh
 
 //===----------------------------------------------------------------------===//
 // Dominators
 //===----------------------------------------------------------------------===//
 
-extern template class llvm::DominatorTreeBase<hermes::BasicBlock, false>;
-extern template class llvm::DomTreeNodeBase<hermes::BasicBlock>;
+extern template class llvh::DominatorTreeBase<hermes::BasicBlock, false>;
+extern template class llvh::DomTreeNodeBase<hermes::BasicBlock>;
 
 namespace hermes {
 
-using DominanceInfoNode = llvm::DomTreeNodeBase<BasicBlock>;
+using DominanceInfoNode = llvh::DomTreeNodeBase<BasicBlock>;
 
 /// A class for computing basic dominance info.
-class DominanceInfo : public llvm::DominatorTreeBase<BasicBlock, false> {
+class DominanceInfo : public llvh::DominatorTreeBase<BasicBlock, false> {
  public:
   explicit DominanceInfo(Function *F);
 
@@ -289,7 +289,7 @@ class DominanceInfo : public llvm::DominatorTreeBase<BasicBlock, false> {
   }
 
   void reset() {
-    llvm::DominatorTreeBase<BasicBlock, false>::reset();
+    llvh::DominatorTreeBase<BasicBlock, false>::reset();
   }
 };
 

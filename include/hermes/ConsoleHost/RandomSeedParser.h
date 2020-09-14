@@ -10,15 +10,15 @@
 
 #include "hermes/Public/GCConfig.h"
 
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/Support/CommandLine.h"
 
 #include <string>
 
 namespace cl {
 
-using llvm::cl::Option;
-using llvm::cl::parser;
+using llvh::cl::Option;
+using llvh::cl::parser;
 
 // Define a custom parser for large integers. LLVM does not support parsing
 // large ints.
@@ -28,7 +28,7 @@ struct RandomSeedParser : public parser<int64_t> {
   // parse - Return true on error.
   bool parse(
       cl::Option &O,
-      llvm::StringRef ArgName,
+      llvh::StringRef ArgName,
       const std::string &ArgValue,
       int64_t &Val);
 };

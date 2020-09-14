@@ -9,7 +9,7 @@
 
 #include "hermes/VM/BuildMetadata.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 #define DEBUG_TYPE "serialize"
 
 namespace hermes {
@@ -45,12 +45,12 @@ void FinalizableNativeFunctionBuildMeta(
 
 #ifdef HERMESVM_SERIALIZE
 void FinalizableNativeFunctionSerialize(Serializer &s, const GCCell *cell) {
-  llvm::outs()
+  llvh::outs()
       << "Serialize function not implemented for FinalizableNativeFunction\n";
 }
 
 void FinalizableNativeFunctionDeserialize(Deserializer &d, CellKind kind) {
-  llvm::outs()
+  llvh::outs()
       << "Deserialize function not implemented for FinalizableNativeFunction\n";
 }
 #endif
@@ -117,12 +117,12 @@ void HostObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 #ifdef HERMESVM_SERIALIZE
 void HostObjectSerialize(Serializer &s, const GCCell *cell) {
   LLVM_DEBUG(
-      llvm::dbgs() << "Serialize function not implemented for HostObject\n");
+      llvh::dbgs() << "Serialize function not implemented for HostObject\n");
 }
 
 void HostObjectDeserialize(Deserializer &d, CellKind kind) {
   LLVM_DEBUG(
-      llvm::dbgs() << "Deserialize function not implemented for HostObject\n");
+      llvh::dbgs() << "Deserialize function not implemented for HostObject\n");
 }
 #endif
 

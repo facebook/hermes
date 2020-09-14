@@ -7,15 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/Triple.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Host.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvh/ADT/Triple.h"
+#include "llvh/ADT/STLExtras.h"
+#include "llvh/ADT/SmallString.h"
+#include "llvh/ADT/StringSwitch.h"
+#include "llvh/Support/ErrorHandling.h"
+#include "llvh/Support/Host.h"
+#include "llvh/Support/TargetParser.h"
 #include <cstring>
-using namespace llvm;
+using namespace llvh;
 
 StringRef Triple::getArchTypeName(ArchType Kind) {
   switch (Kind) {
@@ -928,7 +928,7 @@ std::string Triple::normalize(StringRef Str) {
   }
 
   // SUSE uses "gnueabi" to mean "gnueabihf"
-  if (Vendor == Triple::SUSE && Environment == llvm::Triple::GNUEABI)
+  if (Vendor == Triple::SUSE && Environment == llvh::Triple::GNUEABI)
     Components[3] = "gnueabihf";
 
   if (OS == Triple::Win32) {
@@ -1205,65 +1205,65 @@ void Triple::setOSAndEnvironmentName(StringRef Str) {
   setTriple(getArchName() + "-" + getVendorName() + "-" + Str);
 }
 
-static unsigned getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
+static unsigned getArchPointerBitWidth(llvh::Triple::ArchType Arch) {
   switch (Arch) {
-  case llvm::Triple::UnknownArch:
+  case llvh::Triple::UnknownArch:
     return 0;
 
-  case llvm::Triple::avr:
-  case llvm::Triple::msp430:
+  case llvh::Triple::avr:
+  case llvh::Triple::msp430:
     return 16;
 
-  case llvm::Triple::arc:
-  case llvm::Triple::arm:
-  case llvm::Triple::armeb:
-  case llvm::Triple::hexagon:
-  case llvm::Triple::le32:
-  case llvm::Triple::mips:
-  case llvm::Triple::mipsel:
-  case llvm::Triple::nios2:
-  case llvm::Triple::nvptx:
-  case llvm::Triple::ppc:
-  case llvm::Triple::r600:
-  case llvm::Triple::riscv32:
-  case llvm::Triple::sparc:
-  case llvm::Triple::sparcel:
-  case llvm::Triple::tce:
-  case llvm::Triple::tcele:
-  case llvm::Triple::thumb:
-  case llvm::Triple::thumbeb:
-  case llvm::Triple::x86:
-  case llvm::Triple::xcore:
-  case llvm::Triple::amdil:
-  case llvm::Triple::hsail:
-  case llvm::Triple::spir:
-  case llvm::Triple::kalimba:
-  case llvm::Triple::lanai:
-  case llvm::Triple::shave:
-  case llvm::Triple::wasm32:
-  case llvm::Triple::renderscript32:
+  case llvh::Triple::arc:
+  case llvh::Triple::arm:
+  case llvh::Triple::armeb:
+  case llvh::Triple::hexagon:
+  case llvh::Triple::le32:
+  case llvh::Triple::mips:
+  case llvh::Triple::mipsel:
+  case llvh::Triple::nios2:
+  case llvh::Triple::nvptx:
+  case llvh::Triple::ppc:
+  case llvh::Triple::r600:
+  case llvh::Triple::riscv32:
+  case llvh::Triple::sparc:
+  case llvh::Triple::sparcel:
+  case llvh::Triple::tce:
+  case llvh::Triple::tcele:
+  case llvh::Triple::thumb:
+  case llvh::Triple::thumbeb:
+  case llvh::Triple::x86:
+  case llvh::Triple::xcore:
+  case llvh::Triple::amdil:
+  case llvh::Triple::hsail:
+  case llvh::Triple::spir:
+  case llvh::Triple::kalimba:
+  case llvh::Triple::lanai:
+  case llvh::Triple::shave:
+  case llvh::Triple::wasm32:
+  case llvh::Triple::renderscript32:
     return 32;
 
-  case llvm::Triple::aarch64:
-  case llvm::Triple::aarch64_be:
-  case llvm::Triple::amdgcn:
-  case llvm::Triple::bpfel:
-  case llvm::Triple::bpfeb:
-  case llvm::Triple::le64:
-  case llvm::Triple::mips64:
-  case llvm::Triple::mips64el:
-  case llvm::Triple::nvptx64:
-  case llvm::Triple::ppc64:
-  case llvm::Triple::ppc64le:
-  case llvm::Triple::riscv64:
-  case llvm::Triple::sparcv9:
-  case llvm::Triple::systemz:
-  case llvm::Triple::x86_64:
-  case llvm::Triple::amdil64:
-  case llvm::Triple::hsail64:
-  case llvm::Triple::spir64:
-  case llvm::Triple::wasm64:
-  case llvm::Triple::renderscript64:
+  case llvh::Triple::aarch64:
+  case llvh::Triple::aarch64_be:
+  case llvh::Triple::amdgcn:
+  case llvh::Triple::bpfel:
+  case llvh::Triple::bpfeb:
+  case llvh::Triple::le64:
+  case llvh::Triple::mips64:
+  case llvh::Triple::mips64el:
+  case llvh::Triple::nvptx64:
+  case llvh::Triple::ppc64:
+  case llvh::Triple::ppc64le:
+  case llvh::Triple::riscv64:
+  case llvh::Triple::sparcv9:
+  case llvh::Triple::systemz:
+  case llvh::Triple::x86_64:
+  case llvh::Triple::amdil64:
+  case llvh::Triple::hsail64:
+  case llvh::Triple::spir64:
+  case llvh::Triple::wasm64:
+  case llvh::Triple::renderscript64:
     return 64;
   }
   llvm_unreachable("Invalid architecture value");
@@ -1580,18 +1580,18 @@ StringRef Triple::getARMCPUForArch(StringRef MArch) const {
 
   // Some defaults are forced.
   switch (getOS()) {
-  case llvm::Triple::FreeBSD:
-  case llvm::Triple::NetBSD:
+  case llvh::Triple::FreeBSD:
+  case llvh::Triple::NetBSD:
     if (!MArch.empty() && MArch == "v6")
       return "arm1176jzf-s";
     break;
-  case llvm::Triple::Win32:
+  case llvh::Triple::Win32:
     // FIXME: this is invalid for WindowsCE
     return "cortex-a9";
-  case llvm::Triple::MacOSX:
-  case llvm::Triple::IOS:
-  case llvm::Triple::WatchOS:
-  case llvm::Triple::TvOS:
+  case llvh::Triple::MacOSX:
+  case llvh::Triple::IOS:
+  case llvh::Triple::WatchOS:
+  case llvh::Triple::TvOS:
     if (MArch == "v7k")
       return "cortex-a7";
     break;
@@ -1609,24 +1609,24 @@ StringRef Triple::getARMCPUForArch(StringRef MArch) const {
   // If no specific architecture version is requested, return the minimum CPU
   // required by the OS and environment.
   switch (getOS()) {
-  case llvm::Triple::NetBSD:
+  case llvh::Triple::NetBSD:
     switch (getEnvironment()) {
-    case llvm::Triple::GNUEABIHF:
-    case llvm::Triple::GNUEABI:
-    case llvm::Triple::EABIHF:
-    case llvm::Triple::EABI:
+    case llvh::Triple::GNUEABIHF:
+    case llvh::Triple::GNUEABI:
+    case llvh::Triple::EABIHF:
+    case llvh::Triple::EABI:
       return "arm926ej-s";
     default:
       return "strongarm";
     }
-  case llvm::Triple::NaCl:
-  case llvm::Triple::OpenBSD:
+  case llvh::Triple::NaCl:
+  case llvh::Triple::OpenBSD:
     return "cortex-a8";
   default:
     switch (getEnvironment()) {
-    case llvm::Triple::EABIHF:
-    case llvm::Triple::GNUEABIHF:
-    case llvm::Triple::MuslEABIHF:
+    case llvh::Triple::EABIHF:
+    case llvh::Triple::GNUEABIHF:
+    case llvh::Triple::MuslEABIHF:
       return "arm1176jzf-s";
     default:
       return "arm7tdmi";

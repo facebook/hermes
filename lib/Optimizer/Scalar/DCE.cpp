@@ -15,13 +15,13 @@
 #include "hermes/IR/Instrs.h"
 #include "hermes/Support/Statistic.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/Support/Debug.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/DenseSet.h"
+#include "llvh/Support/Debug.h"
 
 using namespace hermes;
-using llvm::dbgs;
-using llvm::isa;
+using llvh::dbgs;
+using llvh::isa;
 
 STATISTIC(NumDCE, "Number of instructions DCE'd");
 STATISTIC(NumFuncDCE, "Number of functions DCE'd");
@@ -44,7 +44,7 @@ static bool performFunctionDCE(Function *F) {
       // If the instruction writes to memory then we can't remove it. Notice
       // that it is okay to delete instructions that only read memory and are
       // unused.
-      if (I->mayWriteMemory() || llvm::isa<TerminatorInst>(I))
+      if (I->mayWriteMemory() || llvh::isa<TerminatorInst>(I))
         continue;
 
       // If some other instruction is using the result of this instruction then
@@ -72,7 +72,7 @@ bool DCE::runOnModule(Module *M) {
   // function (which will also become dead once the outer function is removed).
   // However we cannot destroy the outer function right away until we destroy
   // the inner function.
-  llvm::SmallVector<Function *, 16> toDestroy;
+  llvh::SmallVector<Function *, 16> toDestroy;
 
   // Perform per-function DCE.
   for (auto &F : *M) {
@@ -86,7 +86,7 @@ bool DCE::runOnModule(Module *M) {
   do {
     // A list of unused functions to remove from the module without being
     // destroyed.
-    llvm::SmallVector<Function *, 16> toRemove;
+    llvh::SmallVector<Function *, 16> toRemove;
     localChanged = false;
     for (auto &F : *M) {
       // Try to remove unused functions. Notice that the top-level-function has

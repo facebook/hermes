@@ -51,10 +51,10 @@ TEST(IRScopeChainTest, BasicScopeChainTest) {
   for (const auto &F : M) {
     for (const auto &BB : F.getBasicBlockList()) {
       for (const auto &Ins : BB) {
-        if (llvm::isa<LoadFrameInst>(&Ins)) {
+        if (llvh::isa<LoadFrameInst>(&Ins)) {
           loadsFromNonglobals++;
-        } else if (const auto *LP = llvm::dyn_cast<LoadPropertyInst>(&Ins)) {
-          if (llvm::isa<GlobalObject>(LP->getObject()))
+        } else if (const auto *LP = llvh::dyn_cast<LoadPropertyInst>(&Ins)) {
+          if (llvh::isa<GlobalObject>(LP->getObject()))
             loadsFromGlobals++;
         }
       }

@@ -11,8 +11,8 @@
 
 namespace {
 
-using Table = hermes::ScopedHashTable<llvm::StringRef, llvm::StringRef>;
-using Scope = hermes::ScopedHashTableScope<llvm::StringRef, llvm::StringRef>;
+using Table = hermes::ScopedHashTable<llvh::StringRef, llvh::StringRef>;
+using Scope = hermes::ScopedHashTableScope<llvh::StringRef, llvh::StringRef>;
 
 TEST(ScopedHashTable, SmokeTest) {
   Table table;

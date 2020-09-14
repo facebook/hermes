@@ -18,7 +18,7 @@
 #include "hermes/VM/SlotAcceptorDefault-inline.h"
 #include "hermes/VM/SlotAcceptorDefault.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 
 #include <algorithm>
 
@@ -92,8 +92,7 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
         worklist_.push_back(newLocation);
       }
       gc.newPointers_.insert(newLocation);
-      if (gc.idTracker_.isTrackingIDs() ||
-          gc.allocationLocationTracker_.isEnabled()) {
+      if (gc.isTrackingIDs()) {
         gc.idTracker_.moveObject(cell, newLocation->data());
         gc.allocationLocationTracker_.moveAlloc(cell, newLocation->data());
       }
@@ -158,11 +157,7 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
   }
 
   void accept(WeakRefBase &wr) override {
-    wr.unsafeGetSlot(mutexRef())->mark();
-  }
-
-  const WeakRefMutex &mutexRef() override {
-    return gc.weakRefMutex();
+    wr.unsafeGetSlot()->mark();
   }
 };
 
@@ -261,7 +256,7 @@ void MallocGC::clearUnmarkedPropertyMaps() {
 void MallocGC::collect() {
   assert(noAllocLevel_ == 0 && "no GC allowed right now");
   using std::chrono::steady_clock;
-  LLVM_DEBUG(llvm::dbgs() << "Beginning collection");
+  LLVM_DEBUG(llvh::dbgs() << "Beginning collection");
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormed();
 #endif
@@ -374,14 +369,23 @@ void MallocGC::collect() {
   const auto cpuEnd = oscompat::thread_cpu_time();
   const auto wallEnd = steady_clock::now();
 
-  double wallElapsedSecs = GCBase::clockDiffSeconds(wallStart, wallEnd);
-  double cpuElapsedSecs = GCBase::clockDiffSeconds(cpuStart, cpuEnd);
-  recordGCStats(
-      wallElapsedSecs,
-      cpuElapsedSecs,
-      allocatedBytes_,
-      allocatedBefore,
-      allocatedBytes_);
+  GCAnalyticsEvent event{
+      getName(),
+      "malloc",
+      "full",
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          wallEnd - wallStart),
+      std::chrono::duration_cast<std::chrono::milliseconds>(cpuEnd - cpuStart),
+      // MallocGC only allocates memory as it is used so there is no distinction
+      // between the allocated bytes and the heap size.
+      /*preAllocated*/ allocatedBefore,
+      /*preSize*/ allocatedBefore,
+      /*postAllocated*/ allocatedBytes_,
+      /*postSize*/ allocatedBytes_,
+      /*survivalRatio*/
+      allocatedBefore ? (allocatedBytes_ * 1.0) / allocatedBefore : 0};
+
+  recordGCStats(event);
   checkTripwire(allocatedBytes_);
 }
 
@@ -438,20 +442,15 @@ void MallocGC::finalizeAll() {
   }
 }
 
-void MallocGC::printStats(llvm::raw_ostream &os, bool trailingComma) {
-  if (!recordGcStats_) {
-    return;
-  }
-  GCBase::printStats(os, true);
-  os << "\t\"specific\": {\n"
-     << "\t\t\"collector\": \"malloc\",\n"
-     << "\t\t\"stats\": {}\n"
-     << "\t},\n";
-  gcCallbacks_->printRuntimeGCStats(os);
-  if (trailingComma) {
-    os << ",";
-  }
-  os << "\n";
+void MallocGC::printStats(JSONEmitter &json) {
+  GCBase::printStats(json);
+  json.emitKey("specific");
+  json.openDict();
+  json.emitKeyValue("collector", "malloc");
+  json.emitKey("stats");
+  json.openDict();
+  json.closeDict();
+  json.closeDict();
 }
 
 void MallocGC::resetStats() {
@@ -578,7 +577,7 @@ bool MallocGC::isMostRecentFinalizableObj(const GCCell *cell) const {
 }
 #endif
 
-void MallocGC::createSnapshot(llvm::raw_ostream &os) {
+void MallocGC::createSnapshot(llvh::raw_ostream &os) {
   GCCycle cycle{this};
   GCBase::createSnapshot(this, os);
 }

@@ -13,7 +13,7 @@
 #include "hermes/VM/GCDecl.h"
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/HermesValueTraits.h"
-#include "llvm/Support/type_traits.h"
+#include "llvh/Support/type_traits.h"
 
 namespace hermes {
 namespace vm {
@@ -511,20 +511,20 @@ inline PseudoHandle<> createPseudoHandle(HermesValue value) {
 } // namespace hermes
 
 /// When we updated LLVM most recently (2/2019), we had build failures.
-/// Apparently, llvm::Optional<T> asks whether T "isPodLike", to
+/// Apparently, llvh::Optional<T> asks whether T "isPodLike", to
 /// determine whether it can use an instantiation that invokes a copy
 /// ctor of T.  isPodLike is implemented as isTriviallyCopyable.  The
-/// inference by llvm::Optional is wrong, since isTriviallyCopyable<T> does
+/// inference by llvh::Optional is wrong, since isTriviallyCopyable<T> does
 /// not imply that T has a copy ctor.  We get around this by explicitly
 /// declaring that the particular instantiation that causes the failures
 /// is *not* PodLike.
 /// TODO(T40600161): when we next change LLVM version, see if this is
 /// still necessary.
-namespace llvm {
+namespace llvh {
 template <>
 struct isPodLike<hermes::vm::PseudoHandle<hermes::vm::HermesValue>> {
   static const bool value = false;
 };
-} // namespace llvm
+} // namespace llvh
 
 #endif // HERMES_VM_HANDLE_H

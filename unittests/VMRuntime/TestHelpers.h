@@ -285,6 +285,12 @@ struct DummyRuntime final : public HandleRootOwner,
   static std::unique_ptr<StorageProvider> defaultProvider();
 
   ~DummyRuntime() override {
+#ifndef NDEBUG
+    gc.getIDTracker().forEachID(
+        [this](const void *mem, HeapSnapshot::NodeID id) {
+          EXPECT_TRUE(gc.validPointer(mem));
+        });
+#endif
     gc.finalizeAll();
   }
 
@@ -313,6 +319,8 @@ struct DummyRuntime final : public HandleRootOwner,
     return 0;
   }
 
+  void unmarkSymbols() override {}
+
   void freeSymbols(const std::vector<bool> &) override {}
 
 #ifdef HERMES_SLOW_DEBUG
@@ -321,7 +329,7 @@ struct DummyRuntime final : public HandleRootOwner,
   }
 #endif
 
-  void printRuntimeGCStats(llvm::raw_ostream &) const override {}
+  void printRuntimeGCStats(JSONEmitter &) const override {}
 
   void visitIdentifiers(
       const std::function<void(UTF16Ref, uint32_t)> &acceptor) override {

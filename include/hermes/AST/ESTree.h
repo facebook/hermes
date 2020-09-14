@@ -11,18 +11,18 @@
 #include "hermes/AST/Context.h"
 #include "hermes/Support/StringTable.h"
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/ilist.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/SMLoc.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/Optional.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/ADT/ilist.h"
+#include "llvh/Support/Casting.h"
+#include "llvh/Support/ErrorHandling.h"
+#include "llvh/Support/SMLoc.h"
 
 namespace hermes {
 
-using llvm::ArrayRef;
-using llvm::StringRef;
+using llvh::ArrayRef;
+using llvh::StringRef;
 
 namespace sem {
 class FunctionInfo;
@@ -30,16 +30,16 @@ class FunctionInfo;
 
 namespace ESTree {
 
-using llvm::cast;
-using llvm::SMLoc;
-using llvm::SMRange;
+using llvh::cast;
+using llvh::SMLoc;
+using llvh::SMRange;
 
 class Node;
 using NodeLabel = UniqueString *;
 using NodeBoolean = bool;
 using NodeNumber = double;
 using NodePtr = Node *;
-using NodeList = llvm::simple_ilist<Node>;
+using NodeList = llvh::simple_ilist<Node>;
 
 enum class NodeKind {
 #define ESTREE_FIRST(NAME, ...) _##NAME##_First,
@@ -57,7 +57,7 @@ enum class NodeKind {
 };
 
 /// This is the base class of all ESTree nodes.
-class Node : public llvm::ilist_node<Node> {
+class Node : public llvh::ilist_node<Node> {
   Node(const Node &) = delete;
   void operator=(const Node &) = delete;
 

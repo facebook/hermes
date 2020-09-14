@@ -9,8 +9,8 @@
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IR.h"
 #include "hermes/Utils/Dumper.h"
-#include "llvm/ADT/PriorityQueue.h"
-#include "llvm/Support/Debug.h"
+#include "llvh/ADT/PriorityQueue.h"
+#include "llvh/Support/Debug.h"
 
 #include <utility>
 
@@ -21,10 +21,10 @@
 
 using namespace hermes;
 
-using llvm::dbgs;
-using llvm::isa;
-using llvm::Optional;
-using llvm::outs;
+using llvh::dbgs;
+using llvh::isa;
+using llvh::Optional;
+using llvh::outs;
 
 void PostOrderAnalysis::visitPostOrder(BasicBlock *BB, BlockList &order) {
   struct State {
@@ -34,8 +34,8 @@ void PostOrderAnalysis::visitPostOrder(BasicBlock *BB, BlockList &order) {
         : BB(BB), cur(succ_begin(BB)), end(succ_end(BB)) {}
   };
 
-  llvm::SmallPtrSet<BasicBlock *, 16> visited{};
-  llvm::SmallVector<State, 32> stack{};
+  llvh::SmallPtrSet<BasicBlock *, 16> visited{};
+  llvh::SmallVector<State, 32> stack{};
 
   stack.emplace_back(BB);
   do {
@@ -88,8 +88,8 @@ LoopAnalysis::LoopAnalysis(Function *F, const DominanceInfo &dominanceInfo) {
   // TinyBlockSet is only used for headerSets (defined below); it has a smaller
   // inline size because we store BLOCK -> {SET OF HEADERS} for every block, and
   // very deeply nested loops (leading to many headers) are not that common.
-  using BlockSet = llvm::SmallPtrSet<const BasicBlock *, 16>;
-  using TinyBlockSet = llvm::SmallPtrSet<BasicBlock *, 2>;
+  using BlockSet = llvh::SmallPtrSet<const BasicBlock *, 16>;
+  using TinyBlockSet = llvh::SmallPtrSet<BasicBlock *, 2>;
 
   int dfsTime = 0;
   // Maps each block to its DFS discovery time (value of dfsTime).
@@ -102,7 +102,7 @@ LoopAnalysis::LoopAnalysis(Function *F, const DominanceInfo &dominanceInfo) {
   BlockMap<TinyBlockSet> headerSets;
 
   // Explicit stack for depth-first search.
-  llvm::SmallVector<BasicBlock *, 16> stack;
+  llvh::SmallVector<BasicBlock *, 16> stack;
   stack.push_back(&*F->begin());
   while (stack.size()) {
     BasicBlock *BB = stack.back();
@@ -223,9 +223,9 @@ FunctionScopeAnalysis::calculateFunctionScopeData(Function *F) {
     // will be 1 more than the scope depth of the CreateFunctionInst.
     const CreateFunctionInst *Inst = nullptr;
     for (auto *user : F->getUsers()) {
-      if (llvm::isa<CreateFunctionInst>(user)) {
+      if (llvh::isa<CreateFunctionInst>(user)) {
         assert(Inst == nullptr && "Function has multiple CreateFunctionInst");
-        Inst = llvm::dyn_cast<CreateFunctionInst>(user);
+        Inst = llvh::dyn_cast<CreateFunctionInst>(user);
       }
     }
     // Because the calculation is done lazily, any function requested
@@ -249,12 +249,12 @@ FunctionScopeAnalysis::calculateFunctionScopeData(Function *F) {
 }
 
 Optional<int32_t> FunctionScopeAnalysis::getScopeDepth(VariableScope *VS) {
-  if (ExternalScope *ES = llvm::dyn_cast<ExternalScope>(VS)) {
+  if (ExternalScope *ES = llvh::dyn_cast<ExternalScope>(VS)) {
     return ES->getDepth();
   } else {
     ScopeData sd = calculateFunctionScopeData(VS->getFunction());
     if (sd.orphaned)
-      return llvm::None;
+      return llvh::None;
     return sd.depth;
   }
 }

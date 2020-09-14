@@ -12,7 +12,7 @@
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/Profiler/SamplingProfiler.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 #define DEBUG_TYPE "serialize"
 
 namespace hermes {
@@ -38,7 +38,7 @@ Domain::Domain(Deserializer &d) : GCCell(&d.getRuntime()->getHeap(), &vt) {
         Domain::deserializeArrayStorage(d),
         &d.getRuntime()->getHeap());
   }
-  // Field llvm::DenseMap<SymbolID, uint32_t> cjsModuleTable_{};
+  // Field llvh::DenseMap<SymbolID, uint32_t> cjsModuleTable_{};
   size_t size = d.readInt<size_t>();
   for (size_t i = 0; i < size; i++) {
     auto res = cjsModuleTable_
@@ -69,7 +69,7 @@ void DomainSerialize(Serializer &s, const GCCell *cell) {
   if (hasArray) {
     Domain::serializeArrayStorage(s, self->cjsModules_.get(s.getRuntime()));
   }
-  // Field llvm::DenseMap<SymbolID, uint32_t> cjsModuleTable_{};
+  // Field llvh::DenseMap<SymbolID, uint32_t> cjsModuleTable_{};
   size_t size = self->cjsModuleTable_.size();
   s.writeInt<size_t>(size);
   for (auto it = self->cjsModuleTable_.begin();

@@ -8,8 +8,8 @@
 #ifndef HERMES_PLATFORMUNICODE_PLATFORMUNICODE_H
 #define HERMES_PLATFORMUNICODE_PLATFORMUNICODE_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/SmallVector.h"
 
 /// Decide on which Unicode implementation to use.
 #define HERMES_PLATFORM_UNICODE_JAVA 1
@@ -36,8 +36,8 @@ namespace platform_unicode {
 /// locale. \return -1, 0, or 1 corresponding to whether \p left compares less
 /// than, equal to, or greater than \p right.
 int localeCompare(
-    llvm::ArrayRef<char16_t> left,
-    llvm::ArrayRef<char16_t> right);
+    llvh::ArrayRef<char16_t> left,
+    llvh::ArrayRef<char16_t> right);
 
 /// Format the given timestamp \p unixtimeMs according to the user's preferred
 /// locale. Include date and time formatting corresponding to \p formatDate and
@@ -46,7 +46,7 @@ void dateFormat(
     double unixtimeMs,
     bool formatDate,
     bool formatTime,
-    llvm::SmallVectorImpl<char16_t> &buf);
+    llvh::SmallVectorImpl<char16_t> &buf);
 
 /// Options for case conversions: to uppercase or to lowercase.
 enum class CaseConversion { ToUpper, ToLower };
@@ -55,7 +55,7 @@ enum class CaseConversion { ToUpper, ToLower };
 /// If \p useCurrentLocale is true, do this using the user's locale; otherwise
 /// use a locale-independent conversion.
 void convertToCase(
-    llvm::SmallVectorImpl<char16_t> &cs,
+    llvh::SmallVectorImpl<char16_t> &cs,
     CaseConversion targetCase,
     bool useCurrentLocale);
 
@@ -67,7 +67,7 @@ enum class NormalizationForm { C, D, KC, KD };
 /// Normalize Unicode string \p buf into the given \p form, returning in place.
 /// Use the normalization forms described in Technical Report #15.
 /// http://www.unicode.org/reports/tr15/
-void normalize(llvm::SmallVectorImpl<char16_t> &buf, NormalizationForm form);
+void normalize(llvh::SmallVectorImpl<char16_t> &buf, NormalizationForm form);
 
 } // namespace platform_unicode
 } // namespace hermes

@@ -13,6 +13,7 @@
 #include "JSLibInternal.h"
 
 #include "hermes/VM/Operations.h"
+#include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringPrimitive.h"
 
 namespace hermes {
@@ -133,23 +134,32 @@ static CallResult<HermesValue> constructErrorObject(
   }
 #include "hermes/VM/NativeErrorTypes.def"
 
+/// ES11.0 19.5.3.4
 CallResult<HermesValue>
 errorPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
-  auto objRes = toObject(runtime, args.getThisHandle());
-  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto error = runtime->makeHandle<JSObject>(objRes.getValue());
+  GCScope gcScope{runtime};
 
+  // 1. Let O be the this value.
+  auto O = args.dyncastThis<JSObject>();
+
+  // 2. If Type(O) is not Object, throw a TypeError exception.
+  if (LLVM_UNLIKELY(!O)) {
+    return runtime->raiseTypeErrorForValue(
+        "Error.prototype.toString called on incompatible receiver ", O, "");
+  }
+
+  // 3. Let name be ? Get(O, "name").
   auto propRes = JSObject::getNamed_RJS(
-      error, runtime, Predefined::getSymbolID(Predefined::name), PropOpFlags());
+      O, runtime, Predefined::getSymbolID(Predefined::name), PropOpFlags());
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   Handle<> name = runtime->makeHandle(std::move(*propRes));
+
+  // 4. If name is undefined, set name to "Error"; otherwise set name to ?
+  // ToString(name).
   MutableHandle<StringPrimitive> nameStr{runtime};
   if (name->isUndefined()) {
-    // If name is undefined, then let name be "Error"
     nameStr = runtime->getPredefinedString(Predefined::Error);
   } else {
     auto strRes = toString_RJS(runtime, name);
@@ -159,51 +169,56 @@ errorPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
     nameStr = strRes->get();
   }
 
+  // 5. Let msg be ? Get(O, "message").
   if (LLVM_UNLIKELY(
           (propRes = JSObject::getNamed_RJS(
-               error,
+               O,
                runtime,
                Predefined::getSymbolID(Predefined::message),
                PropOpFlags())) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<> message = runtime->makeHandle(std::move(*propRes));
-  MutableHandle<StringPrimitive> messageStr{runtime};
-  if (message->isUndefined()) {
+  Handle<> msg = runtime->makeHandle(std::move(*propRes));
+
+  // 6. If msg is undefined, set msg to the empty String;
+  //    otherwise set msg to ? ToString(msg).
+  MutableHandle<StringPrimitive> msgStr{runtime};
+  if (msg->isUndefined()) {
     // If msg is undefined, then let msg be the empty String.
-    messageStr = runtime->getPredefinedString(Predefined::emptyString);
+    msgStr = runtime->getPredefinedString(Predefined::emptyString);
   } else {
-    auto strRes = toString_RJS(runtime, message);
+    auto strRes = toString_RJS(runtime, msg);
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    messageStr = strRes->get();
+    msgStr = strRes->get();
   }
 
+  // 7. If name is the empty String, return msg.
   if (nameStr->getStringLength() == 0) {
-    // According to ES5.1, if both name and message are the empty string,
-    // we should return "Error". However all modern VMs are now using the
-    // ES6 semantics, and this condition was dropped in ES6.
-    return messageStr.getHermesValue();
+    return msgStr.getHermesValue();
   }
-  if (messageStr->getStringLength() == 0) {
-    return nameStr.getHermesValue();
-  } else {
-    auto separator = runtime->makeHandle<StringPrimitive>(
-        runtime->getPredefinedString(Predefined::errorSeparator));
 
-    auto strRes = StringPrimitive::concat(runtime, nameStr, separator);
-    if (strRes == ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    if ((strRes = StringPrimitive::concat(
-             runtime,
-             runtime->makeHandle<StringPrimitive>(*strRes),
-             messageStr)) == ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    return strRes;
+  // 8. If msg is the empty String, return name.
+  if (msgStr->getStringLength() == 0) {
+    return nameStr.getHermesValue();
   }
+
+  // 9. Return the string-concatenation of name, the code unit 0x003A (COLON),
+  // the code unit 0x0020 (SPACE), and msg.
+  SafeUInt32 length{nameStr->getStringLength()};
+  length.add(2);
+  length.add(msgStr->getStringLength());
+  CallResult<StringBuilder> builderRes =
+      StringBuilder::createStringBuilder(runtime, length);
+  if (LLVM_UNLIKELY(builderRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto builder = std::move(*builderRes);
+  builder.appendStringPrim(nameStr);
+  builder.appendASCIIRef({": ", 2});
+  builder.appendStringPrim(msgStr);
+  return builder.getStringPrimitive().getHermesValue();
 }
 
 } // namespace vm

@@ -16,7 +16,7 @@
 namespace hermes {
 
 using namespace hermes::irgen;
-using llvm::dbgs;
+using llvh::dbgs;
 
 bool generateIRFromESTree(
     ESTree::NodePtr node,
@@ -34,7 +34,7 @@ bool generateIRFromESTree(
 void generateIRForCJSModule(
     ESTree::FunctionExpressionNode *node,
     uint32_t id,
-    llvm::StringRef filename,
+    llvh::StringRef filename,
     Module *M,
     Function *topLevelFunction,
     const DeclarationFileListTy &declFileList) {
@@ -47,7 +47,7 @@ void generateIRForCJSModule(
 std::pair<Function *, Function *> generateLazyFunctionIR(
     hbc::BytecodeFunction *bcFunction,
     Module *M,
-    llvm::SMRange sourceRange) {
+    llvh::SMRange sourceRange) {
   auto &context = M->getContext();
   auto lazyData = bcFunction->getLazyCompilationData();
   SimpleDiagHandlerRAII diagHandler{context.getSourceErrorManager()};
@@ -70,7 +70,7 @@ std::pair<Function *, Function *> generateLazyFunctionIR(
       !sem::validateFunctionAST(
           context, semCtx, *parsed, lazyData->strictMode)) {
     LLVM_DEBUG(
-        llvm::dbgs() << "Lazy AST parsing/validation failed with error: "
+        llvh::dbgs() << "Lazy AST parsing/validation failed with error: "
                      << diagHandler.getErrorString());
 
     auto *error = ESTreeIRGen::genSyntaxErrorFunction(

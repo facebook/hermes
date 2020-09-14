@@ -39,7 +39,7 @@ bool FuncCallNOpts::runOnFunction(Function *F) {
     for (Instruction &insn : BB) {
       // We can only operate on CallInst, not its subclasses.
       if (insn.getKind() == ValueKind::CallInstKind) {
-        auto *call = llvm::cast<CallInst>(&insn);
+        auto *call = llvh::cast<CallInst>(&insn);
         unsigned argCount = call->getNumArguments();
         if (HBCCallNInst::kMinArgs <= argCount &&
             argCount <= HBCCallNInst::kMaxArgs) {

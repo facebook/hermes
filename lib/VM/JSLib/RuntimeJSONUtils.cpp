@@ -21,8 +21,8 @@
 
 #include "JSONLexer.h"
 
-#include "llvm/ADT/SmallString.h"
-#include "llvm/Support/SaveAndRestore.h"
+#include "llvh/ADT/SmallString.h"
+#include "llvh/Support/SaveAndRestore.h"
 
 namespace hermes {
 namespace vm {
@@ -165,7 +165,7 @@ class JSONStringifyer {
       RuntimeJSONParser::MAX_RECURSION_DEPTH};
 
   /// The output buffer. The serialization process will append into it.
-  llvm::SmallVector<char16_t, 32> output_{};
+  llvh::SmallVector<char16_t, 32> output_{};
 
  public:
   explicit JSONStringifyer(Runtime *runtime)
@@ -282,7 +282,7 @@ CallResult<HermesValue> RuntimeJSONParser::parse() {
 }
 
 CallResult<HermesValue> RuntimeJSONParser::parseValue() {
-  llvm::SaveAndRestore<decltype(remainingDepth_)> oldDepth{remainingDepth_,
+  llvh::SaveAndRestore<decltype(remainingDepth_)> oldDepth{remainingDepth_,
                                                            remainingDepth_ - 1};
   if (remainingDepth_ <= 0) {
     return runtime_->raiseStackOverflow(Runtime::StackOverflowKind::JSONParser);
@@ -478,7 +478,7 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
   // The operation is recursive so it needs a GCScope.
   GCScope gcScope(runtime_);
 
-  llvm::SaveAndRestore<decltype(remainingDepth_)> oldDepth{remainingDepth_,
+  llvh::SaveAndRestore<decltype(remainingDepth_)> oldDepth{remainingDepth_,
                                                            remainingDepth_ - 1};
   if (remainingDepth_ <= 0) {
     return runtime_->raiseStackOverflow(Runtime::StackOverflowKind::JSONParser);
@@ -501,6 +501,8 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
     if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
+
+    GCScopeMarkerRAII marker(runtime_);
     for (uint64_t index = 0, e = *lenRes; index < e; ++index) {
       tmpHandle = HermesValue::encodeDoubleValue(index);
       // Note that deleting elements doesn't affect array length.
@@ -508,6 +510,7 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
               filter(objHandle, tmpHandle) == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
+      marker.flush();
     }
   } else if (auto scopedObject = Handle<JSObject>::dyn_vmcast(valHandle)) {
     auto cr = JSObject::getOwnPropertyNames(scopedObject, runtime_, true);
@@ -515,12 +518,14 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
       return ExecutionStatus::EXCEPTION;
     }
     auto keys = *cr;
+    GCScopeMarkerRAII marker(runtime_);
     for (uint32_t index = 0, e = keys->getEndIndex(); index < e; ++index) {
       tmpHandle = keys->at(runtime_, index);
       if (LLVM_UNLIKELY(
               filter(scopedObject, tmpHandle) == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
+      marker.flush();
     }
   }
   // We have delayed converting the property to a string if it was index.
@@ -575,7 +580,7 @@ CallResult<HermesValue> runtimeJSONParse(
     ref = jsonString->getStringRef<char16_t>();
   } else {
     StringPrimitive::createStringView(runtime, jsonString)
-        .copyUTF16String(storage);
+        .appendUTF16String(storage);
     ref = storage;
   }
 
@@ -699,7 +704,7 @@ ExecutionStatus JSONStringifyer::initializeSpace(Handle<> space) {
         static_cast<int>(std::max(0.0, std::min(10.0, intRes->getNumber())));
     if (spaceCount > 0) {
       // Construct a string with spaceCount spaces.
-      llvm::SmallString<32> spaces;
+      llvh::SmallString<32> spaces;
       for (int i = 0; i < spaceCount; ++i) {
         spaces.push_back(' ');
       }
@@ -943,19 +948,6 @@ ExecutionStatus JSONStringifyer::operationJA() {
   return ExecutionStatus::RETURNED;
 }
 
-static ExecutionStatus propStoragePushBack(
-    MutableHandle<PropStorage> &self,
-    Runtime *runtime,
-    Handle<> value) {
-  if (LLVM_UNLIKELY(
-          PropStorage::resize(self, runtime, self->size() + 1) ==
-          ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  self->at(self->size() - 1).set(value.get(), &runtime->getHeap());
-  return ExecutionStatus::RETURNED;
-}
-
 ExecutionStatus JSONStringifyer::operationJO() {
   GCScopeMarkerRAII marker{runtime_};
 
@@ -1048,7 +1040,7 @@ ExecutionStatus JSONStringifyer::operationJO() {
         vmcast<JSObject>(stackValue_->at(stackValue_->size() - 1));
 
     tmpHandle2_ = operationJOK_.getHermesValue();
-    if (propStoragePushBack(stackJO_, runtime_, tmpHandle2_) ==
+    if (PropStorage::push_back(stackJO_, runtime_, tmpHandle2_) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1057,9 +1049,7 @@ ExecutionStatus JSONStringifyer::operationJO() {
     marker.flush();
     auto result = operationStr(*tmpHandle_);
 
-    operationJOK_ = vmcast<JSArray>(stackJO_->at(stackJO_->size() - 1));
-    assert(stackJO_->size() && "Cannot pop from an empty stack");
-    stackJO_->pop_back();
+    operationJOK_ = vmcast<JSArray>(stackJO_->pop_back(runtime_));
 
     if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1105,7 +1095,7 @@ CallResult<bool> JSONStringifyer::pushValueToStack(HermesValue value) {
   }
 
   tmpHandle_ = value;
-  if (propStoragePushBack(stackValue_, runtime_, tmpHandle_) ==
+  if (PropStorage::push_back(stackValue_, runtime_, tmpHandle_) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1114,7 +1104,7 @@ CallResult<bool> JSONStringifyer::pushValueToStack(HermesValue value) {
 
 void JSONStringifyer::popValueFromStack() {
   assert(stackValue_->size() && "Cannot pop from an empty stack");
-  stackValue_->pop_back();
+  stackValue_->pop_back(runtime_);
 }
 
 void JSONStringifyer::appendToOutput(SymbolID identifierID) {
@@ -1122,7 +1112,7 @@ void JSONStringifyer::appendToOutput(SymbolID identifierID) {
 }
 
 void JSONStringifyer::appendToOutput(const StringPrimitive *str) {
-  str->copyUTF16String(output_);
+  str->appendUTF16String(output_);
 }
 
 CallResult<HermesValue> JSONStringifyer::stringify(Handle<> value) {

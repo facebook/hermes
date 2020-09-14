@@ -16,9 +16,9 @@
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
 
-#include "llvm/ADT/ArrayRef.h"
+#include "llvh/ADT/ArrayRef.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 #define DEBUG_TYPE "serialize"
 
 namespace hermes {
@@ -350,7 +350,7 @@ CallResult<PseudoHandle<>> Callable::executeCall(
     return ExecutionStatus::EXCEPTION;
   }
   if (*nRes > UINT32_MAX) {
-    runtime->raiseRangeError("Too many arguments for apply");
+    return runtime->raiseRangeError("Too many arguments for apply");
   }
   uint32_t n = static_cast<uint32_t>(*nRes);
   ScopedNativeCallFrame newFrame{
@@ -653,7 +653,7 @@ ExecutionStatus BoundFunction::initializeLengthAndName(
       ? runtime->makeHandle<StringPrimitive>(propRes->getHermesValue())
       : runtime->getPredefinedStringHandle(Predefined::emptyString);
   auto nameView = StringPrimitive::createStringView(runtime, nameHandle);
-  llvm::SmallU16String<32> boundName{"bound "};
+  llvh::SmallU16String<32> boundName{"bound "};
   boundName.append(nameView.begin(), nameView.end());
   // Share name strings for repeatedly bound functions by using the
   // identifier table. If a new symbol is created, it will disappear
@@ -794,9 +794,8 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
           runtime->getStackPointer() == originalCalleeFrame.ptr() &&
           "Stack wasn't restored properly");
 
-      runtime->raiseStackOverflow(Runtime::StackOverflowKind::JSRegisterStack);
-
-      res = ExecutionStatus::EXCEPTION;
+      res = runtime->raiseStackOverflow(
+          Runtime::StackOverflowKind::JSRegisterStack);
       goto bail;
     }
 
@@ -811,7 +810,7 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
       std::uninitialized_copy_n(
           self->getArgsWithThis(runtime) + 1,
           boundArgCount,
-          llvm::make_reverse_iterator(stack + 1));
+          llvh::make_reverse_iterator(stack + 1));
     }
 
     // Loop while the target is another bound function.

@@ -37,7 +37,7 @@ class Debugger;
 class EventObserver;
 
 /// Represents a variable in the debugger.
-struct VariableInfo {
+struct HERMES_EXPORT VariableInfo {
   /// Name of the variable in the source.
   String name;
 
@@ -46,7 +46,7 @@ struct VariableInfo {
 };
 
 /// An EvalResult represents the result of an Eval command.
-struct EvalResult {
+struct HERMES_EXPORT EvalResult {
   /// The resulting JavaScript object, or the thrown exception.
   ::facebook::jsi::Value value;
 
@@ -71,7 +71,7 @@ struct EvalResult {
 /// ProgramState represents the state of a paused program. An instance of
 /// ProgramState is available as the getProgramState() member function of class
 /// Debugger.
-class ProgramState {
+class HERMES_EXPORT ProgramState {
  public:
   /// \return the reason for the Pause.
   PauseReason getPauseReason() const {
@@ -154,7 +154,7 @@ class ProgramState {
 
 /// Command represents an action that you can request the debugger to perform
 /// when returned from didPause().
-class Command {
+class HERMES_EXPORT Command {
  public:
   /// Commands may be moved.
   Command(Command &&);
@@ -180,7 +180,7 @@ class Command {
 /// Debugger allows access to the Hermes debugging functionality. An instance of
 /// Debugger is available from HermesRuntime, and also passed to your
 /// EventObserver.
-class Debugger {
+class HERMES_EXPORT Debugger {
  public:
   /// Set the Debugger event observer. The event observer is notified of
   /// debugging event, specifically when the program pauses. This is simply a
@@ -276,7 +276,7 @@ class Debugger {
 
 /// A subclass of EventObserver may be set on the Debugger via
 /// setEventObserver(). It receives notifications when the Debugger pauses.
-class EventObserver {
+class HERMES_EXPORT EventObserver {
  public:
   /// didPause() is invoked when the JavaScript program has paused. The
   /// The Debugger \p debugger can be used to manipulate breakpoints and enqueue

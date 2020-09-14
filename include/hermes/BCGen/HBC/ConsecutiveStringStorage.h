@@ -12,10 +12,10 @@
 #include "hermes/Support/StringSetVector.h"
 #include "hermes/Support/StringTableEntry.h"
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/DenseSet.h"
+#include "llvh/ADT/StringRef.h"
 
 #include <cstdint>
 #include <deque>
@@ -30,9 +30,9 @@ namespace hbc {
 /// storage \p storage, converting UTF16 strings to UTF8 using
 /// \p utf8ConversionStorage if necessary.
 /// \return a StringRef of the string.
-llvm::StringRef getStringFromEntry(
+llvh::StringRef getStringFromEntry(
     const StringTableEntry &entry,
-    llvm::ArrayRef<unsigned char> storage,
+    llvh::ArrayRef<unsigned char> storage,
     std::string &utf8ConversionStorage);
 
 /// A data structure for storing a serialized list of strings.
@@ -79,7 +79,7 @@ class ConsecutiveStringStorage {
 
   /// Construct from a list of unique strings.
   explicit ConsecutiveStringStorage(
-      llvm::ArrayRef<llvm::StringRef> strings,
+      llvh::ArrayRef<llvh::StringRef> strings,
       bool optimize = false)
       : ConsecutiveStringStorage(strings.begin(), strings.end(), optimize) {}
 
@@ -135,7 +135,7 @@ class ConsecutiveStringStorage {
   /// UTF16 strings to UTF8 using \p storage if necessary.
   /// \return a StringRef of the string, which may or may not reference
   /// \p storage.
-  llvm::StringRef getStringAtIndex(
+  llvh::StringRef getStringAtIndex(
       uint32_t idx,
       std::string &utf8ConversionStorage) const;
 };

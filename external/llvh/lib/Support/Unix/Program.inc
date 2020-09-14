@@ -17,14 +17,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "Unix.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Config/config.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/Errc.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/StringSaver.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/StringExtras.h"
+#include "llvh/Config/config.h"
+#include "llvh/Support/Compiler.h"
+#include "llvh/Support/Errc.h"
+#include "llvh/Support/FileSystem.h"
+#include "llvh/Support/Path.h"
+#include "llvh/Support/StringSaver.h"
+#include "llvh/Support/raw_ostream.h"
 #if HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
@@ -85,7 +85,7 @@ int posix_spawn_file_actions_adddup2(posix_spawn_file_actions_t *file_actions, i
 }
 #endif
 
-namespace llvm {
+namespace llvh {
 
 using namespace sys;
 
@@ -203,7 +203,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
                     ArrayRef<StringRef> Args, Optional<ArrayRef<StringRef>> Env,
                     ArrayRef<Optional<StringRef>> Redirects,
                     unsigned MemoryLimit, std::string *ErrMsg) {
-  if (!llvm::sys::fs::exists(Program)) {
+  if (!llvh::sys::fs::exists(Program)) {
     if (ErrMsg)
       *ErrMsg = std::string("Executable \"") + Program.str() +
                 std::string("\" doesn't exist!");
@@ -352,7 +352,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
   return true;
 }
 
-namespace llvm {
+namespace llvh {
 
 ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
                       bool WaitUntilTerminates, std::string *ErrMsg) {
@@ -427,7 +427,7 @@ ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
 
     if (result == 127) {
       if (ErrMsg)
-        *ErrMsg = llvm::sys::StrError(ENOENT);
+        *ErrMsg = llvh::sys::StrError(ENOENT);
       WaitResult.ReturnCode = -1;
       return WaitResult;
     }
@@ -463,10 +463,10 @@ std::error_code sys::ChangeStdoutToBinary() {
 }
 
 std::error_code
-llvm::sys::writeFileWithEncoding(StringRef FileName, StringRef Contents,
+llvh::sys::writeFileWithEncoding(StringRef FileName, StringRef Contents,
                                  WindowsEncodingMethod Encoding /*unused*/) {
   std::error_code EC;
-  llvm::raw_fd_ostream OS(FileName, EC, llvm::sys::fs::OpenFlags::F_Text);
+  llvh::raw_fd_ostream OS(FileName, EC, llvh::sys::fs::OpenFlags::F_Text);
 
   if (EC)
     return EC;
@@ -479,7 +479,7 @@ llvm::sys::writeFileWithEncoding(StringRef FileName, StringRef Contents,
   return EC;
 }
 
-bool llvm::sys::commandLineFitsWithinSystemLimits(StringRef Program,
+bool llvh::sys::commandLineFitsWithinSystemLimits(StringRef Program,
                                                   ArrayRef<StringRef> Args) {
   static long ArgMax = sysconf(_SC_ARG_MAX);
   // POSIX requires that _POSIX_ARG_MAX is 4096, which is the lowest possible

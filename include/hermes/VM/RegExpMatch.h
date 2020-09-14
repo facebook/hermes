@@ -10,7 +10,7 @@
 
 #include "hermes/Support/OptValue.h"
 
-#include "llvm/ADT/SmallVector.h"
+#include "llvh/ADT/SmallVector.h"
 
 namespace hermes {
 namespace vm {
@@ -27,7 +27,7 @@ struct RegExpMatchRange {
 /// A RegExpMatch represents a list of (sub)RegExpMatchRanges. If the range is
 /// None, it means nothing matched for that submatch.
 /// In a successful match, the first element is never None.
-using RegExpMatch = llvm::SmallVector<OptValue<RegExpMatchRange>, 4>;
+using RegExpMatch = llvh::SmallVector<OptValue<RegExpMatchRange>, 4>;
 
 } // namespace vm
 } // namespace hermes

@@ -16,9 +16,9 @@
 //===          is guaranteed to work on *all* Windows variants.
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/WindowsError.h"
+#include "llvh/ADT/STLExtras.h"
+#include "llvh/Support/ConvertUTF.h"
+#include "llvh/Support/WindowsError.h"
 #include <fcntl.h>
 #include <io.h>
 #include <sys/stat.h>
@@ -43,12 +43,12 @@ typedef int errno_t;
 # pragma comment(lib, "ole32.lib")     // This provides CoTaskMemFree
 #endif
 
-using namespace llvm;
+using namespace llvh;
 
-using llvm::sys::windows::UTF8ToUTF16;
-using llvm::sys::windows::CurCPToUTF16;
-using llvm::sys::windows::UTF16ToUTF8;
-using llvm::sys::path::widenPath;
+using llvh::sys::windows::UTF8ToUTF16;
+using llvh::sys::windows::CurCPToUTF16;
+using llvh::sys::windows::UTF16ToUTF8;
+using llvh::sys::path::widenPath;
 
 static bool is_separator(const wchar_t value) {
   switch (value) {
@@ -60,7 +60,7 @@ static bool is_separator(const wchar_t value) {
   }
 }
 
-namespace llvm {
+namespace llvh {
 namespace sys  {
 namespace path {
 
@@ -78,7 +78,7 @@ std::error_code widenPath(const Twine &Path8,
 
   // If we made this path absolute, how much longer would it get?
   size_t CurPathLen;
-  if (llvm::sys::path::is_absolute(Twine(Path8Str)))
+  if (llvh::sys::path::is_absolute(Twine(Path8Str)))
     CurPathLen = 0; // No contribution from current_path needed.
   else {
     CurPathLen = ::GetCurrentDirectoryW(0, NULL);
@@ -92,7 +92,7 @@ std::error_code widenPath(const Twine &Path8,
     SmallString<2*MAX_PATH> FullPath("\\\\?\\");
     if (CurPathLen) {
       SmallString<80> CurPath;
-      if (std::error_code EC = llvm::sys::fs::current_path(CurPath))
+      if (std::error_code EC = llvh::sys::fs::current_path(CurPath))
         return EC;
       FullPath.append(CurPath);
     }
@@ -101,17 +101,17 @@ std::error_code widenPath(const Twine &Path8,
     // separators, which can be returned from the iterator if the path has a
     // drive name.  We don't need to call native() on the result since append()
     // always attaches preferred_separator.
-    for (llvm::sys::path::const_iterator I = llvm::sys::path::begin(Path8Str),
-                                         E = llvm::sys::path::end(Path8Str);
+    for (llvh::sys::path::const_iterator I = llvh::sys::path::begin(Path8Str),
+                                         E = llvh::sys::path::end(Path8Str);
                                          I != E; ++I) {
       if (I->size() == 1 && is_separator((*I)[0]))
         continue;
       if (I->size() == 1 && *I == ".")
         continue;
       if (I->size() == 2 && *I == "..")
-        llvm::sys::path::remove_filename(FullPath);
+        llvh::sys::path::remove_filename(FullPath);
       else
-        llvm::sys::path::append(FullPath, *I);
+        llvh::sys::path::append(FullPath, *I);
     }
     return UTF8ToUTF16(FullPath, Path16);
   }
@@ -335,7 +335,7 @@ static std::error_code is_local_internal(SmallVectorImpl<wchar_t> &Path,
 }
 
 std::error_code is_local(const Twine &path, bool &result) {
-  if (!llvm::sys::fs::exists(path) || !llvm::sys::path::has_root_path(path))
+  if (!llvh::sys::fs::exists(path) || !llvh::sys::path::has_root_path(path))
     return make_error_code(errc::no_such_file_or_directory);
 
   SmallString<128> Storage;
@@ -1250,7 +1250,7 @@ std::error_code real_path(const Twine &path, SmallVectorImpl<char> &dest,
 
   int fd;
   if (std::error_code EC =
-          llvm::sys::fs::openFileForRead(path, fd, OF_None, &dest))
+          llvh::sys::fs::openFileForRead(path, fd, OF_None, &dest))
     return EC;
   ::close(fd);
   return std::error_code();
@@ -1322,8 +1322,8 @@ void system_temp_directory(bool ErasedOnReboot, SmallVectorImpl<char> &Result) {
 
 namespace windows {
 std::error_code CodePageToUTF16(unsigned codepage,
-                                llvm::StringRef original,
-                                llvm::SmallVectorImpl<wchar_t> &utf16) {
+                                llvh::StringRef original,
+                                llvh::SmallVectorImpl<wchar_t> &utf16) {
   if (!original.empty()) {
     int len = ::MultiByteToWideChar(codepage, MB_ERR_INVALID_CHARS, original.begin(),
                                     original.size(), utf16.begin(), 0);
@@ -1350,20 +1350,20 @@ std::error_code CodePageToUTF16(unsigned codepage,
   return std::error_code();
 }
 
-std::error_code UTF8ToUTF16(llvm::StringRef utf8,
-                            llvm::SmallVectorImpl<wchar_t> &utf16) {
+std::error_code UTF8ToUTF16(llvh::StringRef utf8,
+                            llvh::SmallVectorImpl<wchar_t> &utf16) {
   return CodePageToUTF16(CP_UTF8, utf8, utf16);
 }
 
-std::error_code CurCPToUTF16(llvm::StringRef curcp,
-                            llvm::SmallVectorImpl<wchar_t> &utf16) {
+std::error_code CurCPToUTF16(llvh::StringRef curcp,
+                            llvh::SmallVectorImpl<wchar_t> &utf16) {
   return CodePageToUTF16(CP_ACP, curcp, utf16);
 }
 
 static
 std::error_code UTF16ToCodePage(unsigned codepage, const wchar_t *utf16,
                                 size_t utf16_len,
-                                llvm::SmallVectorImpl<char> &converted) {
+                                llvh::SmallVectorImpl<char> &converted) {
   if (utf16_len) {
     // Get length.
     int len = ::WideCharToMultiByte(codepage, 0, utf16, utf16_len, converted.begin(),
@@ -1393,15 +1393,15 @@ std::error_code UTF16ToCodePage(unsigned codepage, const wchar_t *utf16,
 }
 
 std::error_code UTF16ToUTF8(const wchar_t *utf16, size_t utf16_len,
-                            llvm::SmallVectorImpl<char> &utf8) {
+                            llvh::SmallVectorImpl<char> &utf8) {
   return UTF16ToCodePage(CP_UTF8, utf16, utf16_len, utf8);
 }
 
 std::error_code UTF16ToCurCP(const wchar_t *utf16, size_t utf16_len,
-                             llvm::SmallVectorImpl<char> &curcp) {
+                             llvh::SmallVectorImpl<char> &curcp) {
   return UTF16ToCodePage(CP_ACP, utf16, utf16_len, curcp);
 }
 
 } // end namespace windows
 } // end namespace sys
-} // end namespace llvm
+} // end namespace llvh

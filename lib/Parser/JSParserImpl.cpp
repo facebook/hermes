@@ -10,11 +10,11 @@
 #include "hermes/AST/ESTreeJSONDumper.h"
 #include "hermes/Support/PerfSection.h"
 
-#include "llvm/Support/SaveAndRestore.h"
+#include "llvh/Support/SaveAndRestore.h"
 
-using llvm::cast;
-using llvm::dyn_cast;
-using llvm::isa;
+using llvh::cast;
+using llvh::dyn_cast;
+using llvh::isa;
 
 namespace hermes {
 namespace parser {
@@ -26,15 +26,15 @@ static const int PreemptiveCompilationThresholdBytes = 160;
 
 /// Declare a RAII recursion tracker. Check whether the recursion limit has
 /// been exceeded, and if so generate an error and return an empty
-/// llvm::Optional<>.
+/// llvh::Optional<>.
 #define CHECK_RECURSION                \
   TrackRecursion trackRecursion{this}; \
   if (recursionDepthCheck())           \
-    return llvm::None;
+    return llvh::None;
 
 JSParserImpl::JSParserImpl(
     Context &context,
-    std::unique_ptr<llvm::MemoryBuffer> input)
+    std::unique_ptr<llvh::MemoryBuffer> input)
     : context_(context),
       sm_(context.getSourceErrorManager()),
       lexer_(
@@ -135,8 +135,8 @@ void JSParserImpl::errorExpected(
     const char *where,
     const char *what,
     SMLoc whatLoc) {
-  llvm::SmallString<4> str;
-  llvm::raw_svector_ostream ss{str};
+  llvh::SmallString<4> str;
+  llvh::raw_svector_ostream ss{str};
 
   for (unsigned i = 0; i < toks.size(); ++i) {
     // Insert a separator after the first token.
@@ -240,6 +240,9 @@ bool JSParserImpl::checkAssign() const {
       TokenKind::greatergreaterequal,
       TokenKind::greatergreatergreaterequal,
       TokenKind::starstarequal,
+      TokenKind::pipepipeequal,
+      TokenKind::ampampequal,
+      TokenKind::questionquestionequal,
       TokenKind::ampequal,
       TokenKind::caretequal,
       TokenKind::pipeequal);
@@ -269,7 +272,7 @@ bool JSParserImpl::checkAsyncFunction() {
   // This function must also be idempotent to allow for branching based on its
   // result in parseStatementListItem without having to store another flag,
   // for example.
-  OptValue<TokenKind> optNext = lexer_.lookahead1(llvm::None);
+  OptValue<TokenKind> optNext = lexer_.lookahead1(llvh::None);
   return optNext.hasValue() && *optNext == TokenKind::rw_function;
 }
 
@@ -365,9 +368,9 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
   // AsyncGeneratorDeclaration: BindingIdentifier[?Yield, ?Await]
   // AsyncGeneratorExpression: BindingIdentifier[+Yield, +Await]
   bool nameParamYield = isDeclaration ? paramYield_ : isGenerator;
-  llvm::SaveAndRestore<bool> saveNameParamYield(paramYield_, nameParamYield);
+  llvh::SaveAndRestore<bool> saveNameParamYield(paramYield_, nameParamYield);
   bool nameParamAwait = isDeclaration ? paramAwait_ : isAsync;
-  llvm::SaveAndRestore<bool> saveNameParamAwait(paramAwait_, nameParamAwait);
+  llvh::SaveAndRestore<bool> saveNameParamAwait(paramAwait_, nameParamAwait);
 
   // identifier
   auto optId = parseBindingIdentifier(Param{});
@@ -405,9 +408,9 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
 
   ESTree::NodeList paramList;
 
-  llvm::SaveAndRestore<bool> saveArgsAndBodyParamYield(
+  llvh::SaveAndRestore<bool> saveArgsAndBodyParamYield(
       paramYield_, isGenerator);
-  llvm::SaveAndRestore<bool> saveArgsAndBodyParamAwait(paramAwait_, isAsync);
+  llvh::SaveAndRestore<bool> saveArgsAndBodyParamAwait(paramAwait_, isAsync);
 
   if (!parseFormalParameters(param, paramList))
     return None;
@@ -652,7 +655,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclaration(Param param) {
     return *fdecl;
   }
 
-  if (tok_->getKind() == TokenKind::rw_class) {
+  if (check(TokenKind::rw_class)) {
     auto optClass = parseClassDeclaration(Param{});
     if (!optClass)
       return None;
@@ -660,60 +663,25 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclaration(Param param) {
     return *optClass;
   }
 
+  if (checkN(TokenKind::rw_const, letIdent_)) {
+    auto optLexDecl = parseLexicalDeclaration(ParamIn);
+    if (!optLexDecl)
+      return None;
+
+    return *optLexDecl;
+  }
+
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow()) {
-    SMLoc start = tok_->getStartLoc();
-
-    if (check(TokenKind::rw_enum)) {
-      auto optEnum = parseEnumDeclaration();
-      if (!optEnum)
-        return None;
-      return *optEnum;
-    }
-
-    TypeAliasKind kind = TypeAliasKind::None;
-    if (checkAndEat(declareIdent_))
-      kind = TypeAliasKind::Declare;
-    else if (checkAndEat(opaqueIdent_))
-      kind = TypeAliasKind::Opaque;
-
-    if (kind == TypeAliasKind::Declare &&
-        !checkN(typeIdent_, interfaceIdent_, TokenKind::rw_interface)) {
-      error(tok_->getSourceRange(), "invalid token in type declaration");
+    auto optDecl = parseFlowDeclaration();
+    if (!optDecl)
       return None;
-    }
-    if (kind == TypeAliasKind::Opaque && !check(typeIdent_)) {
-      error(tok_->getSourceRange(), "invalid token in opaque type declaration");
-      return None;
-    }
-
-    if (checkAndEat(typeIdent_)) {
-      auto optType = parseTypeAlias(start, kind);
-      if (!optType)
-        return None;
-      return *optType;
-    }
-    if (checkN(interfaceIdent_, TokenKind::rw_interface)) {
-      auto optType = parseInterfaceDeclaration(kind == TypeAliasKind::Declare);
-      if (!optType)
-        return None;
-      return *optType;
-    }
-    assert(
-        kind == TypeAliasKind::None &&
-        "checkDeclaration() returned true without 'type' or 'interface'");
+    return *optDecl;
   }
 #endif
 
-  assert(
-      (check(TokenKind::rw_const) || check(letIdent_)) &&
-      "declaration can only be let or const");
-
-  auto optLexDecl = parseLexicalDeclaration(ParamIn);
-  if (!optLexDecl)
-    return None;
-
-  return *optLexDecl;
+  assert(false && "checkDeclaration() returned true without a declaration");
+  return None;
 }
 
 bool JSParserImpl::parseStatementListItem(
@@ -2711,8 +2679,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
     // MethodDefinition:
     // PropertyName "(" UniqueFormalParameters ")" "{" FunctionBody "}"
     //               ^
-    llvm::SaveAndRestore<bool> oldParamYield(paramYield_, generator);
-    llvm::SaveAndRestore<bool> oldParamAwait(paramAwait_, async);
+    llvh::SaveAndRestore<bool> oldParamYield(paramYield_, generator);
+    llvh::SaveAndRestore<bool> oldParamAwait(paramAwait_, async);
 
     ESTree::Node *typeParams = nullptr;
 #if HERMES_PARSE_FLOW
@@ -2832,7 +2800,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyName() {
               "at end of computed property key",
               "start of property key",
               start)) {
-        return llvm::None;
+        return llvh::None;
       }
       advance();
       return *optExpr;
@@ -2964,7 +2932,7 @@ Optional<ESTree::Node *> JSParserImpl::parseOptionalExpressionExceptNew_tail(
     SMLoc objectLoc,
     ESTree::Node *expr) {
   bool seenOptionalChain = false;
-  llvm::SaveAndRestore<unsigned> savedRecursionDepth{recursionDepth_,
+  llvh::SaveAndRestore<unsigned> savedRecursionDepth{recursionDepth_,
                                                      recursionDepth_};
   while (
       checkN(TokenKind::l_square, TokenKind::period, TokenKind::questiondot) ||
@@ -3199,6 +3167,10 @@ Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
       auto debugLoc = tok_->getStartLoc();
       ESTree::NodeList argList;
       SMLoc endLoc;
+
+      // parseArguments can result in another call to parseCallExpression
+      // without parsing another primary or declaration.
+      CHECK_RECURSION;
       if (!parseArguments(argList, endLoc))
         return None;
 
@@ -3370,8 +3342,8 @@ Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpression() {
 
   bool optional = checkAndEat(TokenKind::questiondot);
   bool seenOptionalChain = optional ||
-      llvm::isa<ESTree::OptionalMemberExpressionNode>(expr) ||
-      llvm::isa<ESTree::OptionalCallExpressionNode>(expr);
+      llvh::isa<ESTree::OptionalMemberExpressionNode>(expr) ||
+      llvh::isa<ESTree::OptionalCallExpressionNode>(expr);
 
   ESTree::Node *typeArgs = nullptr;
 #if HERMES_PARSE_FLOW
@@ -3538,7 +3510,7 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
   constexpr unsigned STACK_SIZE = 16;
 
   // Operator and value stack.
-  llvm::SmallVector<std::pair<ESTree::NodePtr, TokenKind>, STACK_SIZE> stack{};
+  llvh::SmallVector<std::pair<ESTree::NodePtr, TokenKind>, STACK_SIZE> stack{};
 
   // True upon encountering a '??' operator.
   bool hasNullish = false;
@@ -3604,7 +3576,6 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
         break;
       }
       topExpr = newBinNode(stack.back().first, stack.back().second, topExpr);
-      recursionDepth_--;
       stack.pop_back();
     }
 
@@ -3614,10 +3585,6 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
     //                     ^
     //                 We are here
     // Push topExpr and the '*', so we can parse rightExpr.
-    ++recursionDepth_;
-    if (LLVM_UNLIKELY(recursionDepthCheck())) {
-      return None;
-    }
     stack.emplace_back(topExpr, tok_->getKind());
     advance();
 
@@ -3631,13 +3598,13 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
   // We have consumed all binary operators. Pop the stack, creating expressions.
   while (!stack.empty()) {
     topExpr = newBinNode(stack.back().first, stack.back().second, topExpr);
-    --recursionDepth_;
     stack.pop_back();
   }
 
   assert(
       stack.empty() &&
       "Stack must be empty when done parsing binary expression");
+
   return topExpr;
 }
 
@@ -3882,7 +3849,7 @@ Optional<ESTree::ClassDeclarationNode *> JSParserImpl::parseClassDeclaration(
       parseClassTail(startLoc, name, typeParams, ClassParseKind::Declaration);
   if (!optClass)
     return None;
-  return llvm::cast<ESTree::ClassDeclarationNode>(*optClass);
+  return llvh::cast<ESTree::ClassDeclarationNode>(*optClass);
 }
 
 Optional<ESTree::ClassExpressionNode *> JSParserImpl::parseClassExpression() {
@@ -3923,7 +3890,7 @@ Optional<ESTree::ClassExpressionNode *> JSParserImpl::parseClassExpression() {
       parseClassTail(start, name, typeParams, ClassParseKind::Expression);
   if (!optClass)
     return None;
-  return llvm::cast<ESTree::ClassExpressionNode>(*optClass);
+  return llvh::cast<ESTree::ClassExpressionNode>(*optClass);
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseClassTail(
@@ -4266,12 +4233,12 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     return None;
   ESTree::NodeList args{};
 
-  llvm::SaveAndRestore<bool> saveArgsAndBodyParamYield(
+  llvh::SaveAndRestore<bool> saveArgsAndBodyParamYield(
       paramYield_,
       special == SpecialKind::Generator ||
           special == SpecialKind::AsyncGenerator);
 
-  llvm::SaveAndRestore<bool> saveArgsAndBodyParamAwait(
+  llvh::SaveAndRestore<bool> saveArgsAndBodyParamAwait(
       paramAwait_,
       special == SpecialKind::Async || special == SpecialKind::AsyncGenerator);
 
@@ -4403,7 +4370,7 @@ bool JSParserImpl::reparseArrowParameters(
     nodeList.push_back(*node);
   }
 
-  llvm::SaveAndRestore<bool> oldParamAwait(
+  llvh::SaveAndRestore<bool> oldParamAwait(
       paramAwait_, paramAwait_ || reparsedAsync);
 
   // If the node has 0 parentheses, return true, otherwise print an error and
@@ -4499,7 +4466,7 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
       check(TokenKind::equalgreater) && !lexer_.isNewLineBeforeCurrentToken() &&
       "ArrowFunctionExpression expects [no new line] '=>'");
 
-  llvm::SaveAndRestore<bool> argsParamAwait(paramAwait_, forceAsync);
+  llvh::SaveAndRestore<bool> argsParamAwait(paramAwait_, forceAsync);
 
   if (!eat(
           TokenKind::equalgreater,
@@ -4518,8 +4485,8 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
   ESTree::Node *body;
   bool expression;
 
-  llvm::SaveAndRestore<bool> oldParamYield(paramYield_, false);
-  llvm::SaveAndRestore<bool> bodyParamAwait(
+  llvh::SaveAndRestore<bool> oldParamYield(paramYield_, false);
+  llvh::SaveAndRestore<bool> bodyParamAwait(
       paramAwait_, forceAsync || reparsedAsync);
   if (check(TokenKind::l_brace)) {
     auto optBody = parseFunctionBody(Param{}, true, JSLexer::AllowDiv, true);
@@ -4857,10 +4824,12 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
     auto optYieldExpr = parseYieldExpression(param.get(ParamIn));
     if (!optYieldExpr)
       return None;
-    assert(
-        checkEndAssignmentExpression() &&
-        "invalid end token in AssignmentExpression");
-    return *optYieldExpr;
+    ESTree::YieldExpressionNode *yieldExpr = *optYieldExpr;
+    if (!checkEndAssignmentExpression()) {
+      error(tok_->getStartLoc(), "unexpected token after yield expression");
+      return None;
+    }
+    return yieldExpr;
   }
 
   SMLoc startLoc = tok_->getStartLoc();
@@ -5274,7 +5243,7 @@ bool JSParserImpl::parseNamedImports(ESTree::NodeList &specifiers) {
 
   // BoundNames to check for duplicate entries in ImportDeclaration.
   // Values are the actual IdentifierNodes, used for error reporting.
-  llvm::DenseMap<UniqueString *, ESTree::IdentifierNode *> boundNames{};
+  llvh::DenseMap<UniqueString *, ESTree::IdentifierNode *> boundNames{};
 
   while (!check(TokenKind::r_brace)) {
     auto optSpecifier = parseImportSpecifier(startLoc);
@@ -5580,7 +5549,7 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
     // export ExportClause ;
     ESTree::NodeList specifiers{};
     SMLoc endLoc;
-    llvm::SmallVector<SMRange, 2> invalids{};
+    llvh::SmallVector<SMRange, 2> invalids{};
 
     auto optExportClause = parseExportClause(specifiers, endLoc, invalids);
     if (!optExportClause) {
@@ -5642,23 +5611,25 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
   ESTree::Node *decl = *optDecl;
 
   UniqueString *kind = valueIdent_;
+#if HERMES_PARSE_FLOW
   if (isa<ESTree::TypeAliasNode>(decl) || isa<ESTree::OpaqueTypeNode>(decl) ||
       isa<ESTree::DeclareTypeAliasNode>(decl) ||
       isa<ESTree::InterfaceDeclarationNode>(decl)) {
     kind = typeIdent_;
   }
+#endif
 
   return setLocation(
       startLoc,
-      *optDecl,
+      decl,
       new (context_)
-          ESTree::ExportNamedDeclarationNode(*optDecl, {}, nullptr, kind));
+          ESTree::ExportNamedDeclarationNode(decl, {}, nullptr, kind));
 }
 
 bool JSParserImpl::parseExportClause(
     ESTree::NodeList &specifiers,
     SMLoc &endLoc,
-    llvm::SmallVectorImpl<SMRange> &invalids) {
+    llvh::SmallVectorImpl<SMRange> &invalids) {
   // ExportClause:
   //   { }
   //   { ExportsList }
@@ -5691,7 +5662,7 @@ bool JSParserImpl::parseExportClause(
 
 Optional<ESTree::Node *> JSParserImpl::parseExportSpecifier(
     SMLoc exportLoc,
-    llvm::SmallVectorImpl<SMRange> &invalids) {
+    llvh::SmallVectorImpl<SMRange> &invalids) {
   // ExportSpecifier:
   //   IdentifierName
   //   IdentifierName as IdentifierName

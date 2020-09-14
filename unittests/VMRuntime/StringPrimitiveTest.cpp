@@ -8,7 +8,7 @@
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
 
-#include "llvm/Support/AlignOf.h"
+#include "llvh/Support/AlignOf.h"
 
 #include "TestHelpers.h"
 
@@ -165,7 +165,7 @@ void test1StringMemcpySafety(const StringType &s) {
 
   // memcpy our string and verify the buffer, when interpreted as a string, is
   // equal to the original.
-  llvm::AlignedCharArrayUnion<StringType> mb;
+  llvh::AlignedCharArrayUnion<StringType> mb;
   memcpy(mb.buffer, &s, sizeof(StringType));
   const StringType *memcpydStr =
       reinterpret_cast<const StringType *>(mb.buffer);
@@ -184,10 +184,10 @@ void test1StringMemcpySafety(const StringType &s) {
   // string into a buffer, and then use placement new with move ctor; this
   // ensures that any ignored bytes have the same contents in both strings.
   StringType s1 = s;
-  llvm::AlignedCharArrayUnion<StringType> savedBits;
+  llvh::AlignedCharArrayUnion<StringType> savedBits;
   memcpy(savedBits.buffer, &s1, sizeof(StringType));
 
-  llvm::AlignedCharArrayUnion<StringType> b = savedBits;
+  llvh::AlignedCharArrayUnion<StringType> b = savedBits;
   StringType *movedString = new (b.buffer) StringType(std::move(s1));
   // We expect the move-constructed string to be bitwise identical to the string
   // before it was moved from. That is, the move ctor should be a memcpy.

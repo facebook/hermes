@@ -21,7 +21,7 @@ TEST(x86_64_EmitterTest, Test) {
   Emitter emitter{buf};
 
   std::string str;
-  llvm::raw_string_ostream OS{str};
+  llvh::raw_string_ostream OS{str};
   // OS.SetUnbuffered();
   auto dis =
       NativeDisassembler::create(NativeDisassembler::x86_64_unknown_linux_gnu);
@@ -50,7 +50,7 @@ TEST(x86_64_EmitterTest, Test) {
 #define CHECK(expected)                                         \
   str.clear();                                                  \
   dis->disassembleBuffer(                                       \
-      OS, llvm::makeArrayRef(buf, emitter.current()), 0, true); \
+      OS, llvh::makeArrayRef(buf, emitter.current()), 0, true); \
   emitter = Emitter{buf};                                       \
   EXPECT_STREQ(expected, trim(OS.str()).c_str())
 

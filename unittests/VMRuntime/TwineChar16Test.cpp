@@ -20,7 +20,7 @@ namespace {
 #define EXPECT_TWINE_OUTPUT(expectedSize, expected, twine)            \
   do {                                                                \
     EXPECT_EQ(expectedSize, (twine).size());                          \
-    auto vec = llvm::SmallVector<char16_t, 32>();                     \
+    auto vec = llvh::SmallVector<char16_t, 32>();                     \
     auto utf16Ref = createUTF16Ref(expected);                         \
     (twine).toVector(vec);                                            \
     EXPECT_EQ(utf16Ref, UTF16Ref(vec));                               \
@@ -64,7 +64,7 @@ TEST_F(TwineChar16Test, ConcatTest) {
       4u, u"abcd", TwineChar16(createUTF16Ref(u"ab"), createUTF16Ref(u"cd")));
   EXPECT_TWINE_OUTPUT(4u, u"abcd", TwineChar16(u"ab", createUTF16Ref(u"cd")));
   EXPECT_TWINE_OUTPUT(6u, u"ab1842", TwineChar16("ab", 1842));
-  EXPECT_TWINE_OUTPUT(6u, u"ab1842", llvm::StringRef("ab") + 1842);
+  EXPECT_TWINE_OUTPUT(6u, u"ab1842", llvh::StringRef("ab") + 1842);
   EXPECT_TWINE_OUTPUT(4u, u"abcd", TwineChar16(createUTF16Ref(u"ab"), u"cd"));
   EXPECT_TWINE_OUTPUT(
       8u,

@@ -1,9 +1,15 @@
 package com.facebook.hermes.intl;
 
-import android.icu.text.DecimalFormat;
-import android.icu.util.ULocale;
+import android.icu.text.MeasureFormat;
+import android.icu.util.Currency;
 
 import java.text.AttributedCharacterIterator;
+
+import static android.icu.text.NumberFormat.ACCOUNTINGCURRENCYSTYLE;
+import static android.icu.text.NumberFormat.CURRENCYSTYLE;
+import static android.icu.text.NumberFormat.NUMBERSTYLE;
+import static android.icu.text.NumberFormat.PERCENTSTYLE;
+import static android.icu.text.NumberFormat.SCIENTIFICSTYLE;
 
 public interface IPlatformNumberFormatter {
 
@@ -33,6 +39,35 @@ public interface IPlatformNumberFormatter {
                 default:
                     throw new IllegalArgumentException();
             }
+        }
+
+        public int getInitialNumberFormatStyle(Notation notation, CurrencySign currencySign) throws JSRangeErrorException {
+            int numberFormatStyle;
+            switch (this) {
+                case CURRENCY:
+                    if (currencySign == CurrencySign.ACCOUNTING)
+                        numberFormatStyle = ACCOUNTINGCURRENCYSTYLE;
+                    else if (currencySign == CurrencySign.STANDARD)
+                        numberFormatStyle = CURRENCYSTYLE;
+                    else
+                        throw new JSRangeErrorException("Unrecognized formatting style requested.");
+                    break;
+
+                case PERCENT:
+                    numberFormatStyle = PERCENTSTYLE;
+                    break;
+
+                case UNIT:
+                case DECIMAL:
+                default:
+
+                    if (notation == Notation.SCIENTIFIC || notation == Notation.ENGINEERING) {
+                        numberFormatStyle = SCIENTIFICSTYLE;
+                    } else {
+                        numberFormatStyle = NUMBERSTYLE;
+                    }
+            }
+            return numberFormatStyle;
         }
     }
 
@@ -126,6 +161,20 @@ public interface IPlatformNumberFormatter {
                     throw new IllegalArgumentException();
             }
         }
+
+        public MeasureFormat.FormatWidth getFormatWidth() {
+            MeasureFormat.FormatWidth formatWidth;
+            switch (this) {
+                case LONG:
+                    return MeasureFormat.FormatWidth.WIDE;
+                case NARROW:
+                    return MeasureFormat.FormatWidth.NARROW;
+                case SHORT:
+                default:
+                    return MeasureFormat.FormatWidth.SHORT;
+            }
+        }
+
     }
 
     // How to display the currency in currency formatting. Possible values are:
@@ -152,6 +201,17 @@ public interface IPlatformNumberFormatter {
                     return "name";
                 default:
                     throw new IllegalArgumentException();
+            }
+        }
+
+        public int getNameStyle() {
+            switch (this) {
+                case NAME:
+                    return Currency.LONG_NAME;
+                case SYMBOL:
+                case NARROWSYMBOL:
+                default:
+                    return Currency.SYMBOL_NAME;
             }
         }
     }
@@ -182,27 +242,26 @@ public interface IPlatformNumberFormatter {
     }
 
 
-    IPlatformNumberFormatter configureDecimalFormat(ILocaleObject localeObject, IPlatformNumberFormatter.Style style,
-                                                                 IPlatformNumberFormatter.CurrencySign currencySign,
-                                                                 IPlatformNumberFormatter.Notation notation,
-                                                                 IPlatformNumberFormatter.CompactDisplay compactDisplay) throws JSRangeErrorException;
-
-    IPlatformNumberFormatter configureCurrency(String currencyCode, CurrencyDisplay currencyDisplay) throws JSRangeErrorException;
-
-    IPlatformNumberFormatter configureGrouping(boolean mGroupingUsed);
-
-    IPlatformNumberFormatter configureMinIntergerDigits(int minimumIntegerDigits);
-
-    IPlatformNumberFormatter configureSignificantDigits(IPlatformNumberFormatter.RoundingType roundingType, int minimumSignificantDigits, int maximumSignificantDigits) throws JSRangeErrorException;
-
-    IPlatformNumberFormatter configureFractinDigits(IPlatformNumberFormatter.RoundingType roundingType, int minimumFractionDigits, int maximumFractionDigits);
-
-    IPlatformNumberFormatter configureSignDisplay(IPlatformNumberFormatter.SignDisplay signDisplay);
-
-    IPlatformNumberFormatter configureUnits(String unit, IPlatformNumberFormatter.UnitDisplay unitDisplay) throws JSRangeErrorException;
-
+    IPlatformNumberFormatter configure(ILocaleObject localeObject, String numberingSystem, IPlatformNumberFormatter.Style style,
+                                       IPlatformNumberFormatter.CurrencySign currencySign,
+                                       IPlatformNumberFormatter.Notation notation,
+                                       IPlatformNumberFormatter.CompactDisplay compactDisplay) throws JSRangeErrorException;
 
     String getDefaultNumberingSystem(ILocaleObject localeObject) throws JSRangeErrorException;
+
+    IPlatformNumberFormatter setCurrency(String currencyCode, CurrencyDisplay currencyDisplay) throws JSRangeErrorException;
+
+    IPlatformNumberFormatter setGrouping(boolean mGroupingUsed);
+
+    IPlatformNumberFormatter setMinIntergerDigits(int minimumIntegerDigits);
+
+    IPlatformNumberFormatter setSignificantDigits(IPlatformNumberFormatter.RoundingType roundingType, int minimumSignificantDigits, int maximumSignificantDigits) throws JSRangeErrorException;
+
+    IPlatformNumberFormatter setFractionDigits(IPlatformNumberFormatter.RoundingType roundingType, int minimumFractionDigits, int maximumFractionDigits);
+
+    IPlatformNumberFormatter setSignDisplay(IPlatformNumberFormatter.SignDisplay signDisplay);
+
+    IPlatformNumberFormatter setUnits(String unit, IPlatformNumberFormatter.UnitDisplay unitDisplay) throws JSRangeErrorException;
 
     String format(double n) throws JSRangeErrorException;
 

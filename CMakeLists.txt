@@ -51,11 +51,23 @@ if (POLICY CMP0023)
   cmake_policy(SET CMP0023 OLD)
 endif()
 
+# Allow reading the LOCATION property of a target to determine the eventual
+# location of build targets. This is needed when building the debugging symbols
+# bundles for Apple platforms.
+if (POLICY CMP0026)
+  cmake_policy(SET CMP0026 OLD)
+endif()
 
-# This must be consistent with the release_version in
-# android/build.gradle and npm/package.json
+# Has to be set before `project` as per documentation
+# https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_SYSROOT.html
+set(CMAKE_OSX_SYSROOT ${HERMES_APPLE_TARGET_PLATFORM})
+
+# This must be consistent with the release_version in:
+# - android/build.gradle
+# - npm/package.json
+# - hermes.podspec
 project(Hermes
-        VERSION 0.5.0
+        VERSION 0.7.0
         LANGUAGES C CXX)
 # Optional suffix like "-rc3"
 set(VERSION_SUFFIX "")
@@ -127,6 +139,13 @@ set(HERMES_ENABLE_ADDRESS_SANITIZER OFF CACHE BOOL
 set(HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER OFF CACHE BOOL
   "Enable -fsanitize=undefined")
 
+# Enable Thread Sanitizer
+set(HERMES_ENABLE_THREAD_SANITIZER OFF CACHE BOOL
+  "Enable -fsanitize=thread")
+
+set(HERMES_ENABLE_FUZZING OFF CACHE BOOL
+  "Enable fuzzing")
+
 # Set linker flag for building the fuzzer
 set(HERMES_FUZZING_FLAG "-fsanitize=fuzzer" CACHE STRING
   "Linker argument to link fuzz targets against a given fuzzer.")
@@ -144,7 +163,7 @@ set(HERMES_STATIC_LINK OFF CACHE BOOL
 set(HERMES_USE_STATIC_ICU OFF CACHE BOOL
   "Force static linking of ICU. May only work on GNU/Linux.")
 
-set(HERMES_ENABLE_DEBUGGER_DEFAULT OFF)
+set(HERMES_ENABLE_DEBUGGER_DEFAULT ON)
 if (NOT HERMES_IS_MOBILE_BUILD)
     set(HERMES_ENABLE_DEBUGGER_DEFAULT ON)
 endif()
@@ -165,9 +184,6 @@ set(HERMESVM_PLATFORM_LOGGING OFF CACHE BOOL
 
 set(HERMESVM_JIT OFF CACHE BOOL
   "Enable the JIT")
-
-set(HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION OFF CACHE BOOL
-  "Enable using JS to implement parts of Hermes")
 
 set(HERMESVM_JIT_DISASSEMBLER OFF CACHE BOOL
   "Enable the JIT disassembler")
@@ -197,6 +213,15 @@ set(EMSCRIPTEN_FASTCOMP ON CACHE BOOL
 set(HERMES_ENABLE_INTL OFF CACHE BOOL
   "Enable JS Intl support (WIP)")
 
+set(HERMES_ENABLE_TEST_SUITE ON CACHE BOOL
+  "Enable the test suite")
+
+set(HERMES_BUILD_APPLE_FRAMEWORK ON CACHE BOOL
+  "Whether to build the libhermes target as a framework bundle or dylib on Apple platforms")
+
+set(HERMES_BUILD_APPLE_DSYM OFF CACHE BOOL
+  "Whether to build a DWARF debugging symbols bundle")
+
 if (HERMES_IS_ANDROID)
   set(HERMES_IS_MOBILE_BUILD TRUE)
 
@@ -218,7 +243,10 @@ if (HERMES_IS_ANDROID)
     # https://github.com/android-ndk/ndk/issues/242
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fuse-ld=gold")
   endif()
+endif()
 
+if(HERMES_BUILD_APPLE_DSYM)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gdwarf")
 endif()
 
 if (HERMES_IS_MOBILE_BUILD)
@@ -308,13 +336,17 @@ if(HERMESVM_SANITIZE_HANDLES)
     add_definitions(-DHERMESVM_SANITIZE_HANDLES)
 endif()
 if (HERMES_ENABLE_ADDRESS_SANITIZER)
+    append("-fsanitize=address" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
     # GCC does not automatically link libpthread when using ASAN
-    append("-fsanitize=address -lpthread" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
+    append("-lpthread" CMAKE_EXE_LINKER_FLAGS)
 endif()
 if (HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER)
     add_definitions(-DHERMES_UBSAN)
     # Do not enable the vptr sanitizer, as it requires RTTI.
     append("-fsanitize=undefined -fno-sanitize=vptr -fno-sanitize-recover=undefined" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
+endif()
+if (HERMES_ENABLE_THREAD_SANITIZER)
+    append("-fsanitize=thread" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
 endif()
 if(HERMES_FACEBOOK_BUILD)
     add_definitions(-DHERMES_FACEBOOK_BUILD)
@@ -330,9 +362,6 @@ if(HERMESVM_JIT)
 endif()
 if(HERMESVM_JIT_DISASSEMBLER)
   add_definitions(-DHERMESVM_JIT_DISASSEMBLER)
-endif()
-if(HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION)
-  add_definitions(-DHERMESVM_USE_JS_LIBRARY_IMPLEMENTATION)
 endif()
 if (NOT (ANDROID_LINUX_PERF_PATH STREQUAL ""))
   add_definitions(-DANDROID_LINUX_PERF_PATH="${ANDROID_LINUX_PERF_PATH}")
@@ -565,8 +594,8 @@ add_subdirectory(utils/hermes-lit)
 add_subdirectory(tools)
 add_subdirectory(include)
 add_subdirectory(lib)
+add_subdirectory(public)
 add_subdirectory(external)
-add_subdirectory(unittests)
 add_subdirectory(API)
 add_subdirectory(android/intltest/java/com/facebook/hermes/test)
 
@@ -582,55 +611,58 @@ endif()
 
 # Configure the test suites
 #
-list(APPEND HERMES_TEST_DEPS
-  HermesUnitTests
-  hermes
-  hermesc
-  hvm
-  interp-dispatch-bench
-  hdb
-  hbcdump
-  hbc-attribute
-  hbc-deltaprep
-  hbc-diff
-  dependency-extractor
-  )
+if(HERMES_ENABLE_TEST_SUITE)
+  add_subdirectory(unittests)
 
-set(HERMES_LIT_TEST_PARAMS
-  test_exec_root=${HERMES_BINARY_DIR}/test
-  unittests_dir=${HERMES_BINARY_DIR}/unittests
-  debugger_enabled=${HERMES_ENABLE_DEBUGGER}
-  use_flowparser=${HERMES_USE_FLOWPARSER}
-  jit_enabled=${HERMESVM_JIT}
-  jit_disassembler_enabled=${HERMESVM_JIT_DISASSEMBLER}
-  hbc_deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
-  dependency_extractor=${HERMES_TOOLS_OUTPUT_DIR}/dependency-extractor
-  FileCheck=${HERMES_TOOLS_OUTPUT_DIR}//FileCheck
-  hermes=${HERMES_TOOLS_OUTPUT_DIR}/hermes
-  hermesc=${HERMES_TOOLS_OUTPUT_DIR}/hermesc
-  hdb=${HERMES_TOOLS_OUTPUT_DIR}/hdb
-  hbcdump=${HERMES_TOOLS_OUTPUT_DIR}/hbcdump
-  hbc-deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
-  hbc_diff=${HERMES_TOOLS_OUTPUT_DIR}/hbc-diff
-  build_mode=${HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST}
-  exception_on_oom_enabled=${HERMESVM_EXCEPTION_ON_OOM}
-  serialize_enabled=${HERMESVM_SERIALIZE}
-  profiler=${HERMES_PROFILER_MODE_IN_LIT_TEST}
-  use_js_library_implementation=${HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION}
-  gc=${HERMESVM_GCKIND}
-  ubsan=${HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER}
-  )
+  list(APPEND HERMES_TEST_DEPS
+    HermesUnitTests
+    hermes
+    hermesc
+    hvm
+    interp-dispatch-bench
+    hdb
+    hbcdump
+    hbc-attribute
+    hbc-deltaprep
+    hbc-diff
+    dependency-extractor
+    )
 
-set(LLVH_LIT_ARGS "-sv")
+  set(HERMES_LIT_TEST_PARAMS
+    test_exec_root=${HERMES_BINARY_DIR}/test
+    unittests_dir=${HERMES_BINARY_DIR}/unittests
+    debugger_enabled=${HERMES_ENABLE_DEBUGGER}
+    use_flowparser=${HERMES_USE_FLOWPARSER}
+    jit_enabled=${HERMESVM_JIT}
+    jit_disassembler_enabled=${HERMESVM_JIT_DISASSEMBLER}
+    hbc_deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
+    dependency_extractor=${HERMES_TOOLS_OUTPUT_DIR}/dependency-extractor
+    FileCheck=${HERMES_TOOLS_OUTPUT_DIR}//FileCheck
+    hermes=${HERMES_TOOLS_OUTPUT_DIR}/hermes
+    hermesc=${HERMES_TOOLS_OUTPUT_DIR}/hermesc
+    hdb=${HERMES_TOOLS_OUTPUT_DIR}/hdb
+    hbcdump=${HERMES_TOOLS_OUTPUT_DIR}/hbcdump
+    hbc-deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
+    hbc_diff=${HERMES_TOOLS_OUTPUT_DIR}/hbc-diff
+    build_mode=${HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST}
+    exception_on_oom_enabled=${HERMESVM_EXCEPTION_ON_OOM}
+    serialize_enabled=${HERMESVM_SERIALIZE}
+    profiler=${HERMES_PROFILER_MODE_IN_LIT_TEST}
+    gc=${HERMESVM_GCKIND}
+    ubsan=${HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER}
+    )
 
-add_lit_testsuite(check-hermes "Running the Hermes regression tests"
-  ${HERMES_SOURCE_DIR}/test
-  ${HERMES_SOURCE_DIR}/unittests
-  PARAMS ${HERMES_LIT_TEST_PARAMS}
-  DEPENDS ${HERMES_TEST_DEPS}
-  ARGS ${HERMES_TEST_EXTRA_ARGS}
-  )
-set_target_properties(check-hermes PROPERTIES FOLDER "Hermes regression tests")
+  set(LLVH_LIT_ARGS "-sv")
+
+  add_lit_testsuite(check-hermes "Running the Hermes regression tests"
+    ${HERMES_SOURCE_DIR}/test
+    ${HERMES_SOURCE_DIR}/unittests
+    PARAMS ${HERMES_LIT_TEST_PARAMS}
+    DEPENDS ${HERMES_TEST_DEPS}
+    ARGS ${HERMES_TEST_EXTRA_ARGS}
+    )
+  set_target_properties(check-hermes PROPERTIES FOLDER "Hermes regression tests")
+endif()
 
 # This is how github release files are built.
 
@@ -671,3 +703,24 @@ add_custom_command(
 add_custom_target(
   github-cli-release
   DEPENDS ${HERMES_GITHUB_DIR}/${HERMES_CLI_GITHUB_FILE})
+
+set(HERMES_PKG_ROOT ${HERMES_GITHUB_DIR}/package-root)
+set(HERMES_PKG_FRAMEWORK ${HERMES_PKG_ROOT}/destroot/Library/Frameworks/hermes.framework)
+
+add_custom_target(
+  hermes-runtime-darwin-cocoapods-release
+  COMMAND
+    ${CMAKE_COMMAND} --build . --target install/strip
+  COMMAND
+    mkdir -p ${HERMES_PKG_ROOT}/destroot/bin
+  COMMAND
+    cp ${CMAKE_INSTALL_PREFIX}/bin/hermesc ${HERMES_PKG_ROOT}/destroot/bin/
+  COMMAND
+    cp -R ${CMAKE_INSTALL_PREFIX}/Library ${HERMES_PKG_ROOT}/destroot/
+  COMMAND
+    cp -R ${CMAKE_INSTALL_PREFIX}/include ${HERMES_PKG_ROOT}/destroot/
+  COMMAND
+    cp ${CMAKE_CURRENT_SOURCE_DIR}/hermes.podspec ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE ${HERMES_PKG_ROOT}
+  COMMAND
+    tar -C ${HERMES_PKG_ROOT}/ -czvf ${HERMES_GITHUB_DIR}/hermes-runtime-${HERMES_GITHUB_SYSTEM_NAME}-v${HERMES_RELEASE_VERSION}.tar.gz .
+)

@@ -10,16 +10,10 @@
 
 #include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/AlignedStorage.h"
+#include "hermes/VM/PointerBase.h"
 
 #include <cassert>
 #include <cstdint>
-
-#if defined(HERMESVM_ALLOW_COMPRESSED_POINTERS) && LLVM_PTR_SIZE == 8 && \
-    defined(HERMESVM_GC_NONCONTIG_GENERATIONAL)
-/// \macro HERMESVM_COMPRESSED_POINTERS
-/// \brief If defined, store pointers as 32 bits in GC-managed Hermes objects.
-#define HERMESVM_COMPRESSED_POINTERS
-#endif
 
 #ifdef HERMESVM_COMPRESSED_POINTERS
 
@@ -33,6 +27,11 @@ inline BasedPointer::BasedPointer(std::nullptr_t) : segAndOffset_(0) {}
 
 inline BasedPointer::BasedPointer(void *heapAddr)
     : segAndOffset_(computeSegmentAndOffset(heapAddr)) {}
+
+inline BasedPointer &BasedPointer::operator=(std::nullptr_t) {
+  segAndOffset_ = 0;
+  return *this;
+}
 
 /*static*/
 inline uint32_t BasedPointer::computeSegmentAndOffset(const void *heapAddr) {

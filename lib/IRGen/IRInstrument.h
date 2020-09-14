@@ -27,7 +27,7 @@ class IRInstrument {
   Value *getIID(ESTree::Node *node);
 
   /// Conveniently invoke a JS instrumentation hook by name.
-  Value *invokeHook(llvm::StringRef name, llvm::ArrayRef<Value *> args);
+  Value *invokeHook(llvh::StringRef name, llvh::ArrayRef<Value *> args);
 
   Value *undefinedIfNull(Value *v) {
     return v ? v : builder_.getLiteralUndefined();

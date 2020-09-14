@@ -121,3 +121,18 @@ runIterator(a[Symbol.iterator]());
 // CHECK-NEXT: 📓 false
 // CHECK-NEXT: y false
 // CHECK-NEXT: undefined true
+
+print('RegExp String Iterator');
+// CHECK-LABEL: RegExp String Iterator
+var a = 'foo bar baz';
+var re = /\w+/g
+runIterator(a.matchAll(re));
+// CHECK-NEXT: [object RegExp String Iterator]
+// CHECK-NEXT: foo false
+// CHECK-NEXT: bar false
+// CHECK-NEXT: baz false
+// CHECK-NEXT: undefined true
+var a = '';
+runIterator(a.matchAll(re));
+// CHECK-NEXT: [object RegExp String Iterator]
+// CHECK-NEXT: undefined true

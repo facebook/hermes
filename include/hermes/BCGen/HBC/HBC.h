@@ -16,15 +16,15 @@
 #include "hermes/Utils/Dumper.h"
 #include "hermes/Utils/Options.h"
 
-namespace llvm {
+namespace llvh {
 class raw_ostream;
-} // namespace llvm
+} // namespace llvh
 
 namespace hermes {
 class SourceMapGenerator;
 namespace hbc {
 
-using llvm::raw_ostream;
+using llvh::raw_ostream;
 
 /// Generates a BytecodeModule from a module \p M, and will return a unique_ptr
 /// to the new module. The \p options parameter controls bytecode generation. If
@@ -38,7 +38,7 @@ std::unique_ptr<BytecodeModule> generateBytecodeModule(
     Module *M,
     Function *entryPoint,
     const BytecodeGenerationOptions &options,
-    OptValue<Context::SegmentRange> range = llvm::None,
+    OptValue<Context::SegmentRange> range = llvh::None,
     SourceMapGenerator *sourceMap = nullptr,
     std::unique_ptr<BCProviderBase> baseBCProvider = nullptr);
 
@@ -47,7 +47,7 @@ std::unique_ptr<BytecodeModule> generateBytecodeModule(
     Function *lexicalTopLevel,
     Function *entryPoint,
     const BytecodeGenerationOptions &options,
-    OptValue<Context::SegmentRange> range = llvm::None,
+    OptValue<Context::SegmentRange> range = llvh::None,
     SourceMapGenerator *sourceMap = nullptr,
     std::unique_ptr<BCProviderBase> baseBCProvider = nullptr);
 
@@ -63,7 +63,7 @@ std::unique_ptr<BytecodeModule> generateBytecode(
     raw_ostream &OS,
     const BytecodeGenerationOptions &options,
     const SHA1 &sourceHash,
-    OptValue<Context::SegmentRange> range = llvm::None,
+    OptValue<Context::SegmentRange> range = llvh::None,
     SourceMapGenerator *sourceMap = nullptr,
     std::unique_ptr<BCProviderBase> baseBCProvider = nullptr);
 } // namespace hbc

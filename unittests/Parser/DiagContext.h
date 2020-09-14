@@ -46,11 +46,11 @@ class DiagContext {
   }
 
  private:
-  static void handler(const llvm::SMDiagnostic &msg, void *ctx) {
+  static void handler(const llvh::SMDiagnostic &msg, void *ctx) {
     DiagContext *diag = static_cast<DiagContext *>(ctx);
-    if (msg.getKind() == llvm::SourceMgr::DK_Error)
+    if (msg.getKind() == llvh::SourceMgr::DK_Error)
       ++diag->errCount_;
-    else if (msg.getKind() == llvm::SourceMgr::DK_Warning)
+    else if (msg.getKind() == llvh::SourceMgr::DK_Warning)
       ++diag->warnCount_;
   }
 };

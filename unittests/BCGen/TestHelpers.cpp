@@ -13,7 +13,7 @@
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Utils/Options.h"
-#include "llvm/Support/SHA1.h"
+#include "llvh/Support/SHA1.h"
 
 #include "gtest/gtest.h"
 
@@ -54,12 +54,12 @@ std::vector<uint8_t> hermes::bytecodeForSource(
   assert(BM != nullptr && "Failed to generate bytecode module");
 
   /* Serialize it */
-  llvm::SmallVector<char, 0> bytecodeVector;
-  llvm::raw_svector_ostream OS(bytecodeVector);
+  llvh::SmallVector<char, 0> bytecodeVector;
+  llvh::raw_svector_ostream OS(bytecodeVector);
   BytecodeSerializer BS{OS, bytecodeGenOpts};
   BS.serialize(
       *BM,
-      llvm::SHA1::hash(llvm::ArrayRef<uint8_t>{
+      llvh::SHA1::hash(llvh::ArrayRef<uint8_t>{
           reinterpret_cast<const uint8_t *>(source), strlen(source)}));
   return std::vector<uint8_t>{bytecodeVector.begin(), bytecodeVector.end()};
 }

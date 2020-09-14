@@ -86,7 +86,7 @@ class Domain final : public GCCell {
   /// Map of { StringID => CJS module index }.
   /// Used when doing a slow require() call that needs to resolve a filename.
   /// The index is used to look up the actual CJSModule in cjsModules_.
-  llvm::DenseMap<SymbolID, uint32_t> cjsModuleTable_{};
+  llvh::DenseMap<SymbolID, uint32_t> cjsModuleTable_{};
 
   /// RuntimeModules owned by this Domain.
   /// These will be freed from the Domain destructor.
@@ -143,7 +143,7 @@ class Domain final : public GCCell {
     assert(cjsModules_ && "CJS Modules not initialized");
     auto it = cjsModuleTable_.find(filename);
     return it != cjsModuleTable_.end() ? OptValue<uint32_t>{it->second}
-                                       : llvm::None;
+                                       : llvh::None;
   }
 
   /// \return the offset of the CJS module with ID \p index, None if a CJS
@@ -152,14 +152,14 @@ class Domain final : public GCCell {
     assert(cjsModules_ && "CJS Modules not initialized");
     if (LLVM_UNLIKELY(id >= cjsModules_.get(runtime)->size() / CJSModuleSize)) {
       // Out of bounds.
-      return llvm::None;
+      return llvh::None;
     }
     uint32_t offset = id * CJSModuleSize;
     if (LLVM_UNLIKELY(cjsModules_.get(runtime)
                           ->at(offset + FunctionIndexOffset)
                           .isEmpty())) {
       // The entry has not been populated yet.
-      return llvm::None;
+      return llvh::None;
     }
     return offset;
   }

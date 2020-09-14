@@ -16,7 +16,7 @@
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/PointerBase.h"
 
-#include "llvm/Support/MathExtras.h"
+#include "llvh/Support/MathExtras.h"
 
 #include <cassert>
 
@@ -70,7 +70,7 @@ class CardTable {
 
   /// The size of the card table: round up to the maximum page size.
   static constexpr size_t kCardTableSize =
-      llvm::alignTo<pagesize::kExpectedPageSize>(kValidIndices);
+      llvh::alignTo<pagesize::kExpectedPageSize>(kValidIndices);
 
   /// A prefix of every segment is occupied by auxilary data
   /// structures.  The card table is the first such data structure.

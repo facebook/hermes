@@ -7,11 +7,11 @@
 
 #include "JSParserImpl.h"
 
-#include "llvm/Support/SaveAndRestore.h"
+#include "llvh/Support/SaveAndRestore.h"
 
-using llvm::cast;
-using llvm::dyn_cast;
-using llvm::isa;
+using llvh::cast;
+using llvh::dyn_cast;
+using llvh::isa;
 
 namespace hermes {
 namespace parser {
@@ -21,7 +21,7 @@ namespace detail {
 
 Optional<ESTree::Node *> JSParserImpl::parseJSX() {
   assert(check(TokenKind::less));
-  llvm::SaveAndRestore<uint32_t> saveDepth(jsxDepth_, 0);
+  llvh::SaveAndRestore<uint32_t> saveDepth(jsxDepth_, 0);
   SMLoc start = advance(JSLexer::GrammarContext::AllowJSXIdentifier).Start;
   if (check(TokenKind::greater)) {
     return parseJSXFragment(start);
@@ -75,7 +75,7 @@ static bool tagNamesMatch(
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseJSXElement(SMLoc start) {
-  llvm::SaveAndRestore<uint32_t> saveDepth(jsxDepth_, jsxDepth_ + 1);
+  llvh::SaveAndRestore<uint32_t> saveDepth(jsxDepth_, jsxDepth_ + 1);
   auto optOpening = parseJSXOpeningElement(start);
   if (!optOpening)
     return None;
@@ -163,7 +163,7 @@ Optional<ESTree::Node *> JSParserImpl::parseJSXFragment(SMLoc start) {
   // JSXFragment:
   // < > JSXChildren[opt] < / >
   //   ^
-  llvm::SaveAndRestore<uint32_t> saveDepth(jsxDepth_, jsxDepth_ + 1);
+  llvh::SaveAndRestore<uint32_t> saveDepth(jsxDepth_, jsxDepth_ + 1);
   ESTree::Node *opening =
       setLocation(start, tok_, new (context_) ESTree::JSXOpeningFragmentNode());
   lexer_.advanceInJSXChild();

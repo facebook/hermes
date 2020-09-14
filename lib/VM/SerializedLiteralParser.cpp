@@ -11,7 +11,7 @@
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/RuntimeModule.h"
 
-#include "llvm/Support/Endian.h"
+#include "llvh/Support/Endian.h"
 
 namespace hermes {
 namespace vm {
@@ -51,8 +51,8 @@ HermesValue SerializedLiteralParser::get(Runtime *) {
   // just return the StringID rather than find a String Primitive.
   switch (lastTag_) {
     case SLG::ByteStringTag: {
-      uint8_t val = llvm::support::endian::read<uint8_t, 1>(
-          buffer_.data() + currIdx_, llvm::support::endianness::little);
+      uint8_t val = llvh::support::endian::read<uint8_t, 1>(
+          buffer_.data() + currIdx_, llvh::support::endianness::little);
       lastValue_ = runtimeModule_ == nullptr
           ? HermesValue::encodeSymbolValue(SymbolID::unsafeCreate(val))
           : HermesValue::encodeStringValue(
@@ -61,8 +61,8 @@ HermesValue SerializedLiteralParser::get(Runtime *) {
       break;
     }
     case SLG::ShortStringTag: {
-      uint16_t val = llvm::support::endian::read<uint16_t, 1>(
-          buffer_.data() + currIdx_, llvm::support::endianness::little);
+      uint16_t val = llvh::support::endian::read<uint16_t, 1>(
+          buffer_.data() + currIdx_, llvh::support::endianness::little);
       lastValue_ = runtimeModule_ == nullptr
           ? HermesValue::encodeSymbolValue(SymbolID::unsafeCreate(val))
           : HermesValue::encodeStringValue(
@@ -71,8 +71,8 @@ HermesValue SerializedLiteralParser::get(Runtime *) {
       break;
     }
     case SLG::LongStringTag: {
-      uint32_t val = llvm::support::endian::read<uint32_t, 1>(
-          buffer_.data() + currIdx_, llvm::support::endianness::little);
+      uint32_t val = llvh::support::endian::read<uint32_t, 1>(
+          buffer_.data() + currIdx_, llvh::support::endianness::little);
       lastValue_ = runtimeModule_ == nullptr
           ? HermesValue::encodeSymbolValue(SymbolID::unsafeCreate(val))
           : HermesValue::encodeStringValue(
@@ -81,15 +81,15 @@ HermesValue SerializedLiteralParser::get(Runtime *) {
       break;
     }
     case SLG::NumberTag: {
-      double val = llvm::support::endian::read<double, 1>(
-          buffer_.data() + currIdx_, llvm::support::endianness::little);
+      double val = llvh::support::endian::read<double, 1>(
+          buffer_.data() + currIdx_, llvh::support::endianness::little);
       lastValue_ = HermesValue::encodeNumberValue(val);
       currIdx_ += 8;
       break;
     }
     case SLG::IntegerTag: {
-      int32_t val = llvm::support::endian::read<int32_t, 1>(
-          buffer_.data() + currIdx_, llvm::support::endianness::little);
+      int32_t val = llvh::support::endian::read<int32_t, 1>(
+          buffer_.data() + currIdx_, llvh::support::endianness::little);
       lastValue_ = HermesValue::encodeNumberValue((double)val);
       currIdx_ += 4;
       break;

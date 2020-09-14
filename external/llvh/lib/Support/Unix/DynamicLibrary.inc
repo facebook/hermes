@@ -16,7 +16,7 @@
 
 DynamicLibrary::HandleSet::~HandleSet() {
   // Close the libraries in reverse order.
-  for (void *Handle : llvm::reverse(Handles))
+  for (void *Handle : llvh::reverse(Handles))
     ::dlclose(Handle);
   if (Process)
     ::dlclose(Process);

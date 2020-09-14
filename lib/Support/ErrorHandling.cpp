@@ -7,7 +7,7 @@
 
 #include "hermes/Support/ErrorHandling.h"
 
-#include "llvm/ADT/Twine.h"
+#include "llvh/ADT/Twine.h"
 
 namespace hermes {
 
@@ -47,18 +47,18 @@ std::error_code make_error_code(OOMError err) {
 }
 
 std::string convert_error_to_message(std::error_code code) {
-  return (llvm::Twine("error_code(value = ") + llvm::Twine(code.value()) +
+  return (llvh::Twine("error_code(value = ") + llvh::Twine(code.value()) +
           ", category = " + code.category().name() +
           ", message = " + code.message() + ")")
       .str();
 }
 
 LLVM_ATTRIBUTE_NORETURN void hermes_fatal(const char *msg) {
-  llvm::report_fatal_error(msg);
+  llvh::report_fatal_error(msg);
 }
 
 LLVM_ATTRIBUTE_NORETURN void hermes_fatal(const std::string &msg) {
-  llvm::report_fatal_error(msg.c_str());
+  llvh::report_fatal_error(msg.c_str());
 }
 
 } // namespace hermes

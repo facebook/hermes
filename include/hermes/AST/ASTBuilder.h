@@ -13,17 +13,17 @@
 #include "hermes/Parser/JSONParser.h"
 #include "hermes/Support/SourceErrorManager.h"
 
-#include "llvm/ADT/Optional.h"
-#include "llvm/Support/Allocator.h"
+#include "llvh/ADT/Optional.h"
+#include "llvh/Support/Allocator.h"
 
-namespace llvm {
+namespace llvh {
 class MemoryBuffer;
-} // namespace llvm
+} // namespace llvh
 
 namespace hermes {
 namespace ESTree {
 
-using Allocator = llvm::BumpPtrAllocator;
+using Allocator = llvh::BumpPtrAllocator;
 
 /// Deserialize the ESTree from the input JSON. Reports an error and fails the
 /// Optional result on error.
@@ -32,10 +32,10 @@ using Allocator = llvm::BumpPtrAllocator;
 /// \param jsSource  an optional buffer containing the input JavaScript source
 ///     for the ESTree. It is used for correlating source locations.
 /// \returns the deserialized data structure.
-llvm::Optional<Node *> buildAST(
+llvh::Optional<Node *> buildAST(
     Context &context,
     const parser::JSONValue *node,
-    const llvm::MemoryBuffer *jsSource = nullptr);
+    const llvh::MemoryBuffer *jsSource = nullptr);
 
 } // namespace ESTree
 } // namespace hermes

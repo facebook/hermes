@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Signals.h"
+#include "llvh/Support/CommandLine.h"
+#include "llvh/Support/Signals.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -22,13 +22,13 @@
 const char *TestMainArgv0;
 
 int main(int argc, char **argv) {
-  llvm::sys::PrintStackTraceOnErrorSignal(argv[0],
+  llvh::sys::PrintStackTraceOnErrorSignal(argv[0],
                                           true /* Disable crash reporting */);
 
   // Initialize both gmock and gtest.
   testing::InitGoogleMock(&argc, argv);
 
-  llvm::cl::ParseCommandLineOptions(argc, argv);
+  llvh::cl::ParseCommandLineOptions(argc, argv);
 
   // Make it easy for a test to re-execute itself by saving argv[0].
   TestMainArgv0 = argv[0];

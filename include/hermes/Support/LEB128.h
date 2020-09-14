@@ -8,8 +8,8 @@
 #ifndef HERMES_SUPPORT_LEB128_H
 #define HERMES_SUPPORT_LEB128_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/Support/raw_ostream.h"
 
 namespace hermes {
 
@@ -17,13 +17,13 @@ namespace hermes {
 // to raw_ostream, so here's our own.
 void appendSignedLEB128(std::vector<uint8_t> &vector, int64_t value);
 unsigned readSignedLEB128(
-    llvm::ArrayRef<uint8_t> data,
+    llvh::ArrayRef<uint8_t> data,
     unsigned offset,
     int64_t *output);
 
 // An implementation of signed 32bit LEB128 encoding with padding (LLVM's
 // implementation does not have this.)
-void encodeSLEB128(int32_t input, llvm::raw_ostream &os, size_t minBytes = 0);
+void encodeSLEB128(int32_t input, llvh::raw_ostream &os, size_t minBytes = 0);
 
 } // namespace hermes
 

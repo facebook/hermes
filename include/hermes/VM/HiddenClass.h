@@ -17,7 +17,7 @@
 #include "hermes/VM/WeakValueMap.h"
 
 #include <functional>
-#include "llvm/ADT/ArrayRef.h"
+#include "llvh/ADT/ArrayRef.h"
 
 namespace hermes {
 namespace vm {
@@ -39,13 +39,13 @@ struct ClassFlags {
   uint8_t dictionaryMode : 1;
 
   /// If dictionaryMode is set, this indicates whether the hidden class can
-  /// be used as the key in inline caches.  If we delete properties, or update
+  /// be used as the key in property caches.  If we delete properties, or update
   /// properties, we create a new hidden class for the owning object
-  /// (to invalidate any inline caches referencing the old hidden
+  /// (to invalidate any property caches referencing the old hidden
   /// class).  We may decide to limit the number of hidden classes
   /// created this way (currently we allow just one).  To do this, we
   /// set this property of the hidden class property, so that the new
-  /// hidden class is never added to an inline cache.
+  /// hidden class is never added to an property cache.
   uint8_t dictionaryNoCacheMode : 1;
 
   /// Set when we have index-like named properties (e.g. "0", "1", etc) defined
@@ -130,7 +130,7 @@ namespace detail {
 /// Encode a transition from a hidden class to a child, keyed on the
 /// name of the property and its property flags.
 /// This is an internal type but has to be made public so we can define
-/// a llvm::DenseMapInfo<> trait for it.
+/// a llvh::DenseMapInfo<> trait for it.
 class Transition {
  public:
   SymbolID symbolID;
@@ -158,21 +158,19 @@ class TransitionMap {
 
   /// Return true if there is an entry with the given key and a valid value.
   bool containsKey(const Transition &key, GC *gc) {
-    WeakRefLock lk{gc->weakRefMutex()};
-    return (smallKey_ == key && smallValue().isValid(gc->weakRefMutex())) ||
-        (isLarge() && large()->containsKeyLocked(key, gc));
+    return (smallKey_ == key && smallValue().isValid()) ||
+        (isLarge() && large()->containsKey(key));
   }
 
   /// Look for key and return the value as Handle<T> if found or None if not.
-  llvm::Optional<Handle<HiddenClass>>
+  llvh::Optional<Handle<HiddenClass>>
   lookup(HandleRootOwner *runtime, GC *gc, const Transition &key) {
-    WeakRefLock lk{gc->weakRefMutex()};
     if (smallKey_ == key) {
-      return smallValue().getLocked(runtime, gc);
+      return smallValue().get(runtime, gc);
     } else if (isLarge()) {
-      return large()->lookupLocked(runtime, gc, key);
+      return large()->lookup(runtime, gc, key);
     } else {
-      return llvm::None;
+      return llvh::None;
     }
   }
 
@@ -182,15 +180,18 @@ class TransitionMap {
       Runtime *runtime,
       const Transition &key,
       Handle<HiddenClass> value) {
+    assert(
+        key.symbolID != SymbolID::empty() &&
+        "Should never insert an empty key");
+    if (smallKey_ == key && smallValue().isValid()) {
+      return false;
+    }
+    // Need to hold the lock when mutating smallKey and smallValue.
     WeakRefLock lk{runtime->getHeap().weakRefMutex()};
     if (isClean()) {
       smallKey_ = key;
       smallValue() = WeakRef<HiddenClass>(&runtime->getHeap(), value);
       return true;
-    } else if (
-        smallKey_ == key &&
-        smallValue().isValid(runtime->getHeap().weakRefMutex())) {
-      return false;
     }
     if (!isLarge())
       uncleanMakeLarge(runtime);
@@ -220,10 +221,10 @@ class TransitionMap {
   /// Invoke \p callback on each (const) key and value. Values may be invalid.
   template <typename CallbackFunction>
   void forEachEntry(const CallbackFunction &callback) const {
-    if (smallKey_.symbolID.isValid()) {
-      callback(smallKey_, smallValue());
-    } else if (isLarge()) {
+    if (isLarge()) {
       large()->forEachEntry(callback);
+    } else if (!isClean()) {
+      callback(smallKey_, smallValue());
     }
   }
 
@@ -394,12 +395,12 @@ class HiddenClass final : public GCCell {
   /// Same operation as \p findProperty, but does not do any allocations.
   /// This is slower than \p findProperty because it needs to traverse the full
   /// hidden class chain in the worst case.
-  static llvm::Optional<NamedPropertyDescriptor>
+  static llvh::Optional<NamedPropertyDescriptor>
   findPropertyNoAlloc(HiddenClass *self, PointerBase *base, SymbolID name);
 
   /// An optimistic fast path for \c findProperty(). If there is an allocated
   /// property map, this will return an OptValue containing either true or
-  /// false. If there was no allocated property map, this returns llvm::None. If
+  /// false. If there was no allocated property map, this returns llvh::None. If
   /// this fails by returning None, the "slow path", \c findProperty() itself,
   /// must be used.
   static OptValue<bool> tryFindPropertyFast(
@@ -459,15 +460,15 @@ class HiddenClass final : public GCCell {
   /// flags.
   /// \p props is a list of SymbolIDs for properties that need to be updated
   /// made read-only. It should contain a subset of properties in the hidden
-  /// class, so the SymbolIDs won't get freed by gc. It can be llvm::None; if it
-  /// is llvm::None, update every property.
+  /// class, so the SymbolIDs won't get freed by gc. It can be llvh::None; if it
+  /// is llvh::None, update every property.
   /// \return the resulting hidden class.
   static Handle<HiddenClass> updatePropertyFlagsWithoutTransitions(
       Handle<HiddenClass> selfHandle,
       Runtime *runtime,
       PropertyFlags flagsToClear,
       PropertyFlags flagsToSet,
-      OptValue<llvm::ArrayRef<SymbolID>> props);
+      OptValue<llvh::ArrayRef<SymbolID>> props);
 
   /// Create a new class where the next slot is reserved, by calling addProperty
   /// with an internal property name. Only slots with index less than
@@ -649,14 +650,14 @@ inline OptValue<bool> HiddenClass::tryFindPropertyFast(
   } else if (self->numProperties_ == 0) {
     return false;
   }
-  return llvm::None;
+  return llvh::None;
 }
 
 } // namespace vm
 } // namespace hermes
 
 // Enable using HiddenClass::Transition in DenseMap.
-namespace llvm {
+namespace llvh {
 
 using namespace hermes::vm;
 
@@ -681,6 +682,6 @@ struct DenseMapInfo<HiddenClass::Transition> {
   }
 };
 
-} // namespace llvm
+} // namespace llvh
 
 #endif // HERMES_VM_HIDDENCLASS_H

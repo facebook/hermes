@@ -11,29 +11,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/GraphWriter.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Config/config.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Program.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/GraphWriter.h"
+#include "llvh/ADT/SmallString.h"
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/Config/config.h"
+#include "llvh/Support/CommandLine.h"
+#include "llvh/Support/Compiler.h"
+#include "llvh/Support/ErrorHandling.h"
+#include "llvh/Support/ErrorOr.h"
+#include "llvh/Support/FileSystem.h"
+#include "llvh/Support/Program.h"
+#include "llvh/Support/raw_ostream.h"
 #include <cassert>
 #include <system_error>
 #include <string>
 #include <vector>
 
-using namespace llvm;
+using namespace llvh;
 
 static cl::opt<bool> ViewBackground("view-background", cl::Hidden,
   cl::desc("Execute graph viewer in the background. Creates tmp file litter."));
 
-std::string llvm::DOT::EscapeString(const std::string &Label) {
+std::string llvh::DOT::EscapeString(const std::string &Label) {
   std::string Str(Label);
   for (unsigned i = 0; i != Str.length(); ++i)
   switch (Str[i]) {
@@ -68,7 +68,7 @@ std::string llvm::DOT::EscapeString(const std::string &Label) {
 
 /// Get a color string for this node number. Simply round-robin selects
 /// from a reasonable number of colors.
-StringRef llvm::DOT::getColorString(unsigned ColorNumber) {
+StringRef llvh::DOT::getColorString(unsigned ColorNumber) {
   static const int NumColors = 20;
   static const char* Colors[NumColors] = {
     "aaaaaa", "aa0000", "00aa00", "aa5500", "0055ff", "aa00aa", "00aaaa",
@@ -77,7 +77,7 @@ StringRef llvm::DOT::getColorString(unsigned ColorNumber) {
   return Colors[ColorNumber % NumColors];
 }
 
-std::string llvm::createGraphFilename(const Twine &Name, int &FD) {
+std::string llvh::createGraphFilename(const Twine &Name, int &FD) {
   FD = -1;
   SmallString<128> Filename;
   std::error_code EC = sys::fs::createTemporaryFile(Name, "dot", FD, Filename);
@@ -146,7 +146,7 @@ static const char *getProgramName(GraphProgram::Name program) {
   llvm_unreachable("bad kind");
 }
 
-bool llvm::DisplayGraph(StringRef FilenameRef, bool wait,
+bool llvh::DisplayGraph(StringRef FilenameRef, bool wait,
                         GraphProgram::Name program) {
   std::string Filename = FilenameRef;
   std::string ErrMsg;

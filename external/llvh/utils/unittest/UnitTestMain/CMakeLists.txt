@@ -5,5 +5,5 @@ add_hermes_library(gtest_main
   gtest
 
   LINK_LIBS
-  LLVHSupport # Depends on llvm::cl
+  LLVHSupport # Depends on llvh::cl
   )

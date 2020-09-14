@@ -17,9 +17,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "WindowsSupport.h"
-#include "llvm/Support/ThreadLocal.h"
+#include "llvh/Support/ThreadLocal.h"
 
-namespace llvm {
+namespace llvh {
 
 sys::ThreadLocalImpl::ThreadLocalImpl() : data() {
   static_assert(sizeof(DWORD) <= sizeof(data), "size too big");

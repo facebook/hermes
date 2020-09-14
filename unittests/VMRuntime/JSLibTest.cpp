@@ -272,8 +272,8 @@ TEST_F(JSLibTest, ObjectPreventExtensionsTest) {
   auto obj = createObject(runtime);
 
   GET_GLOBAL(Object);
-  auto objectCons =
-      Handle<JSObject>::vmcast(runtime->makeHandle(std::move(*propRes)));
+
+  auto objectCons = runtime->makeHandle<JSObject>(std::move(*propRes));
 
   ASSERT_RETURNED((propRes = JSObject::getNamed_RJS(
                        objectCons,
@@ -1055,7 +1055,7 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
     ASSERT_NE(val, ExecutionStatus::EXCEPTION)
         << "Exception executing the call on Date()";
     SmallU16String<32> tmp;
-    val->get().getString()->copyUTF16String(tmp);
+    val->get().getString()->appendUTF16String(tmp);
     std::u16string str(tmp.begin(), tmp.end());
     EXPECT_EQ(str, dateAsFuncU16);
   }
@@ -1150,11 +1150,11 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
   EXPECT_EQ(
       affinityMaskValue,
       callToHermesInternalGetInstrumentedStats
-          [llvm::StringRef(affinityMaskKey.c_str(), affinityMaskKey.size())]
+          [llvh::StringRef(affinityMaskKey.c_str(), affinityMaskKey.size())]
               .str());
   EXPECT_EQ(
       totalAllocBytesValue,
-      callToHermesInternalGetInstrumentedStats[llvm::StringRef(
+      callToHermesInternalGetInstrumentedStats[llvh::StringRef(
                                                    totalAllocBytesKey.c_str(),
                                                    totalAllocBytesKey.size())]
           .num());

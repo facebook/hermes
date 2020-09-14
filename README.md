@@ -13,7 +13,7 @@ If you want to know how to build and hack on Hermes directly, and/or integrate H
 The instructions here very briefly cover steps to build the Hermes CLI. They assume you have typical native development tools setup for your OS, and support for cmake and Ninja. For more details of required dependencies, building Hermes with different options, etc. follow these links instead:
 
 * [Building and Running Hermes](doc/BuildingAndRunning.md)
-* [Using a custom Hermes build in a React Native app](doc/ReactNativeIntegration.md)
+* [Using a custom Hermes build in a React Native app](doc/ReactNativeIntegration.md#using-a-custom-hermes-build-in-a-react-native-app)
 
 To build a local debug version of the Hermes CLI tools the following steps should get you started on macOS/Linux:
 

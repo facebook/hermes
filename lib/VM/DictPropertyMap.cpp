@@ -360,7 +360,7 @@ SlotIndex DictPropertyMap::allocatePropertySlot(DictPropertyMap *self) {
 }
 
 void DictPropertyMap::dump() {
-  auto &OS = llvm::errs();
+  auto &OS = llvh::errs();
 
   OS << "DictPropertyMap:" << getDebugAllocationId() << "\n";
   OS << "  HashPairs[" << hashCapacity_ << "]:\n";

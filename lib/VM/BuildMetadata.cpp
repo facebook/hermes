@@ -8,7 +8,7 @@
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/CellKind.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 
 #include <cstdint>
 
@@ -60,7 +60,7 @@ Metadata buildMetadata(CellKind kind, BuildMetadataCallback *builder) {
   builder(base, mb);
   Metadata meta = mb.build();
   LLVM_DEBUG(
-      llvm::dbgs() << "Initialized metadata for cell kind " << cellKindStr(kind)
+      llvh::dbgs() << "Initialized metadata for cell kind " << cellKindStr(kind)
                    << ": " << meta << "\n");
   return meta;
 }

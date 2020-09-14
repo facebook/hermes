@@ -59,7 +59,8 @@ public class NumberFormat {
 
     private IPlatformNumberFormatter mPlatformNumberFormatter = null;
 
-    private Object mResolvedNumberingSystem = null;
+    private boolean mUseDefaultNumberSystem;
+    private String mResolvedNumberingSystem = null;
 
     private IPlatformNumberFormatter.Notation mResolvedNotation = null;
     private IPlatformNumberFormatter.CompactDisplay mResolvedCompactDisplay;
@@ -282,11 +283,13 @@ public class NumberFormat {
         mResolvedLocaleObject = (ILocaleObject) JSObjects.getJavaMap(r).get("locale");
         mResolvedLocaleObjectForResolvedOptions = mResolvedLocaleObject.cloneObject();
 
-        mResolvedLocaleObject = (ILocaleObject) JSObjects.getJavaMap(r).get("locale");
-        mResolvedNumberingSystem = JSObjects.Get(r, "nu");
-
-        if(JSObjects.isNull(mResolvedNumberingSystem)) {
-            mResolvedNumberingSystem = JSObjects.newString(mPlatformNumberFormatter.getDefaultNumberingSystem(mResolvedLocaleObject));
+        Object numeringSystemResolved  = JSObjects.Get(r, "nu");
+        if(!JSObjects.isNull(numeringSystemResolved)) {
+            mUseDefaultNumberSystem = false;
+            mResolvedNumberingSystem = JSObjects.getJavaString(numeringSystemResolved);
+        } else {
+            mUseDefaultNumberSystem = true;
+            mResolvedNumberingSystem = mPlatformNumberFormatter.getDefaultNumberingSystem(mResolvedLocaleObject);
         }
 
         // 5,6
@@ -343,26 +346,17 @@ public class NumberFormat {
         else
             mPlatformNumberFormatter = new PlatformNumberFormatterAndroid();
 
-
         initializeNumberFormat(locales, options);
 
-        // TODO
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            mResolvedNumberingSystem = PlatformNumberFormatterICU.configureNumberingSystem(JSObjects.getJavaString(mResolvedNumberingSystem), mResolvedLocaleObject);
-            mPlatformNumberFormatter = mPlatformNumberFormatter.configureDecimalFormat(mResolvedLocaleObject, mResolvedStyle, mResolvedCurrencySign,
-                    mResolvedNotation, mResolvedCompactDisplay);
-        } else {
-            mResolvedNumberingSystem = PlatformNumberFormatterAndroid.configureNumberingSystem(JSObjects.getJavaString(mResolvedNumberingSystem), mResolvedLocaleObject);
-            mPlatformNumberFormatter = mPlatformNumberFormatter.configureDecimalFormat(mResolvedLocaleObject, mResolvedStyle, mResolvedCurrencySign, mResolvedNotation, mResolvedCompactDisplay);
-        }
-
-        mPlatformNumberFormatter.configureCurrency(mResolvedCurrency, mResolvedCurrencyDisplay)
-                .configureGrouping(mGroupingUsed)
-                .configureMinIntergerDigits(mResolvedMinimumIntegerDigits)
-                .configureSignificantDigits(mRoundingType, mResolvedMinimumSignificantDigits, mResolvedMaximumSignificantDigits)
-                .configureFractinDigits(mRoundingType, mResolvedMinimumFractionDigits, mResolvedMaximumFractionDigits)
-                .configureSignDisplay(mResolvedSignDisplay)
-                .configureUnits(mResolvedUnit, mResolvedUnitDisplay);
+        mPlatformNumberFormatter.configure(mResolvedLocaleObject, mUseDefaultNumberSystem ? "" : mResolvedNumberingSystem, mResolvedStyle, mResolvedCurrencySign,
+                mResolvedNotation, mResolvedCompactDisplay)
+                .setCurrency(mResolvedCurrency, mResolvedCurrencyDisplay)
+                .setGrouping(mGroupingUsed)
+                .setMinIntergerDigits(mResolvedMinimumIntegerDigits)
+                .setSignificantDigits(mRoundingType, mResolvedMinimumSignificantDigits, mResolvedMaximumSignificantDigits)
+                .setFractionDigits(mRoundingType, mResolvedMinimumFractionDigits, mResolvedMaximumFractionDigits)
+                .setSignDisplay(mResolvedSignDisplay)
+                .setUnits(mResolvedUnit, mResolvedUnitDisplay);
     }
 
     // options are localeMatcher:string
@@ -389,8 +383,6 @@ public class NumberFormat {
     //
     // Also see the implementer notes on DateTimeFormat#resolvedOptions()
     public Map<String, Object> resolvedOptions() throws JSRangeErrorException {
-
-        // TODO :: We are currently reporting all options that we resoled, including what the implementation don't support.
 
         HashMap<String, Object> finalResolvedOptions = new HashMap<>();
 
@@ -425,7 +417,6 @@ public class NumberFormat {
 
             if (mResolvedMaximumFractionDigits != -1)
                 finalResolvedOptions.put("maximumFractionDigits", mResolvedMaximumFractionDigits);
-
         }
 
         finalResolvedOptions.put("useGrouping", mGroupingUsed);
@@ -436,7 +427,6 @@ public class NumberFormat {
         }
 
         finalResolvedOptions.put("signDisplay", mResolvedSignDisplay.toString());
-
 
         return finalResolvedOptions;
     }

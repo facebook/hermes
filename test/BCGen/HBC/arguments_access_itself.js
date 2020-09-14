@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -dump-bytecode
+// RUN: %hermes -O -dump-bytecode %s
 while (arguments[arguments]) {
 }
 

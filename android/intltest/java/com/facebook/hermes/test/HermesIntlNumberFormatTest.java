@@ -62,7 +62,6 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
         );
         Set<String> blackList = new HashSet<>();
 
-
         runTests(basePath, blackList, whiteList);
     }
 

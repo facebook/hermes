@@ -289,7 +289,7 @@ TEST(HermesValueTest, EqualityTest) {
 
 TEST(HermesValueTest, OutputStreamTest) {
   std::string result;
-  llvm::raw_string_ostream OS(result);
+  llvh::raw_string_ostream OS(result);
 
   result.clear();
   OS << HermesValue::encodeObjectValue(nullptr);

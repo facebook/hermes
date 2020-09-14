@@ -25,7 +25,7 @@
 
 #include "dtoa/dtoa.h"
 
-#include "llvm/ADT/SmallString.h"
+#include "llvh/ADT/SmallString.h"
 
 #include <cfloat>
 #include <cmath>
@@ -445,7 +445,7 @@ static inline double stringToNumber(
   }
 
   // Finally, copy 16 bit chars into 8 bit chars and call dtoa.
-  llvm::SmallVector<char, 32> str8(len + 1);
+  llvh::SmallVector<char, 32> str8(len + 1);
   uint32_t i = 0;
   for (auto c16 : str16) {
     // Check to ensure we only have valid number characters now.
@@ -730,7 +730,7 @@ CallResult<HermesValue> toObject(Runtime *runtime, Handle<> valueHandle) {
 ExecutionStatus amendPropAccessErrorMsgWithPropName(
     Runtime *runtime,
     Handle<> valueHandle,
-    llvm::StringRef operationStr,
+    llvh::StringRef operationStr,
     SymbolID id) {
   if (!valueHandle->isNull() && !valueHandle->isUndefined()) {
     // If value is not null/undefined, fall back to the original exception.
@@ -741,7 +741,7 @@ ExecutionStatus amendPropAccessErrorMsgWithPropName(
   runtime->clearThrownValue();
 
   // Construct an error message that contains the property name.
-  llvm::StringRef valueStr = valueHandle->isNull() ? "null" : "undefined";
+  llvh::StringRef valueStr = valueHandle->isNull() ? "null" : "undefined";
   return runtime->raiseTypeError(
       TwineChar16("Cannot ") + operationStr + " property '" +
       runtime->getIdentifierTable().getStringView(runtime, id) + "' of " +
@@ -990,10 +990,10 @@ numberToStringWithRadix(Runtime *runtime, double number, unsigned radix) {
   (void)MAX_RADIX;
   assert(MIN_RADIX <= radix && radix <= MAX_RADIX && "Invalid radix");
   // Two parts of the final result: integer part and fractional part.
-  llvm::SmallString<64> result{};
+  llvh::SmallString<64> result{};
 
   // Used to store just the fractional part of the string (not including '.').
-  llvm::SmallString<32> fStr{};
+  llvh::SmallString<32> fStr{};
 
   // If negative, treat as if positive and add a '-' later.
   bool negative = false;
@@ -1141,7 +1141,7 @@ getMethod(Runtime *runtime, Handle<> O, Handle<> key) {
 CallResult<IteratorRecord> getIterator(
     Runtime *runtime,
     Handle<> obj,
-    llvm::Optional<Handle<Callable>> methodOpt) {
+    llvh::Optional<Handle<Callable>> methodOpt) {
   MutableHandle<Callable> method{runtime};
   if (LLVM_LIKELY(!methodOpt.hasValue())) {
     auto methodRes = getMethod(
@@ -1166,8 +1166,7 @@ CallResult<IteratorRecord> getIterator(
   if (LLVM_UNLIKELY(!(*iteratorRes)->isObject())) {
     return runtime->raiseTypeError("iterator is not an object");
   }
-  Handle<JSObject> iterator =
-      Handle<JSObject>::vmcast(runtime->makeHandle(std::move(*iteratorRes)));
+  auto iterator = runtime->makeHandle<JSObject>(std::move(*iteratorRes));
 
   CallResult<PseudoHandle<>> nextMethodRes = JSObject::getNamed_RJS(
       iterator, runtime, Predefined::getSymbolID(Predefined::next));
@@ -1191,7 +1190,7 @@ CallResult<IteratorRecord> getIterator(
 CallResult<PseudoHandle<JSObject>> iteratorNext(
     Runtime *runtime,
     const IteratorRecord &iteratorRecord,
-    llvm::Optional<Handle<>> value) {
+    llvh::Optional<Handle<>> value) {
   GCScopeMarkerRAII marker{runtime};
   auto resultRes = value
       ? Callable::executeCall1(
@@ -1236,36 +1235,57 @@ ExecutionStatus iteratorClose(
   ExecutionStatus completionStatus = completion->isEmpty()
       ? ExecutionStatus::RETURNED
       : ExecutionStatus::EXCEPTION;
+
+  // 4. Let innerResult be GetMethod(iterator, "return").
+  // Do this lazily: innerResult is only actually used if GetMethod returns
+  // a callable which, when called, doesn't throw. Defer storing to innerResult
+  // until that point.
   auto returnRes = getMethod(
       runtime,
       iterator,
       runtime->makeHandle(Predefined::getSymbolID(Predefined::returnStr)));
-  if (LLVM_UNLIKELY(returnRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+
+  MutableHandle<> innerResult{runtime};
+  if (LLVM_LIKELY(returnRes != ExecutionStatus::EXCEPTION)) {
+    if (!vmisa<Callable>(returnRes->getHermesValue())) {
+      runtime->setThrownValue(*completion);
+      return completionStatus;
+    }
+    Handle<Callable> returnFn =
+        runtime->makeHandle(vmcast<Callable>(returnRes->getHermesValue()));
+    auto innerResultRes = Callable::executeCall0(returnFn, runtime, iterator);
+    if (LLVM_UNLIKELY(innerResultRes == ExecutionStatus::EXCEPTION)) {
+      if (isUncatchableError(runtime->getThrownValue())) {
+        // If the call to return threw an uncatchable exception, that overrides
+        // the completion, since the point of an uncatchable exception is to
+        // prevent more JS from executing.
+        return ExecutionStatus::EXCEPTION;
+      }
+      // If the error is catchable, suppress it temporarily below in lieu
+      // of the returnRes exception by writing to innerResultException.
+      // Spec text overwrites the value in `innerResult`.
+    } else {
+      innerResult = std::move(*innerResultRes);
+    }
   }
-  if (!vmisa<Callable>(returnRes->getHermesValue())) {
-    runtime->setThrownValue(*completion);
-    return completionStatus;
-  }
-  Handle<Callable> returnFn =
-      runtime->makeHandle(vmcast<Callable>(returnRes->getHermesValue()));
-  auto innerResultRes = Callable::executeCall0(returnFn, runtime, iterator);
-  if (innerResultRes == ExecutionStatus::EXCEPTION &&
-      isUncatchableError(runtime->getThrownValue())) {
-    // If the call to return threw an uncatchable exception, that overrides
-    // the completion, since the point of an uncatchable exception is to prevent
-    // more JS from executing.
-    return ExecutionStatus::EXCEPTION;
-  }
+  // Runtime::thrownValue now contains the innerResult's exception if it
+  // was thrown.
+  // GetMethod error here is deliberately suppressed (no "?" in the spec).
   if (completionStatus == ExecutionStatus::EXCEPTION) {
-    // Rethrow the error in the completion.
+    // 6. If completion.[[Type]] is throw, return Completion(completion).
+    // Note: Overrides the innerResult exception.
     runtime->setThrownValue(*completion);
     return ExecutionStatus::EXCEPTION;
   }
-  if (innerResultRes == ExecutionStatus::EXCEPTION) {
+  if (LLVM_UNLIKELY(!runtime->getThrownValue().isEmpty())) {
+    // 7. If innerResult.[[Type]] is throw, return Completion(innerResult).
+    // Note: innerResult exception is still in Runtime::thrownValue,
+    // so there is no need to set it again.
     return ExecutionStatus::EXCEPTION;
   }
-  if (!(*innerResultRes)->isObject()) {
+  if (!innerResult->isObject()) {
+    // 8. If Type(innerResult.[[Value]]) is not Object,
+    //    throw a TypeError exception.
     return runtime->raiseTypeError(
         "iterator.return() did not return an object");
   }

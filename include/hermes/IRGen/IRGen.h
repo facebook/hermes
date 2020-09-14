@@ -42,6 +42,9 @@ struct LazyCompilationData {
   /// The type of function, e.g. statement or expression.
   ESTree::NodeKind nodeKind;
 
+  /// Whether or not this is the inner function of a generator.
+  bool isGeneratorInnerFunction;
+
   /// Whether or not the function is strict.
   bool strictMode;
 };
@@ -65,7 +68,7 @@ bool generateIRFromESTree(
 void generateIRForCJSModule(
     ESTree::FunctionExpressionNode *node,
     uint32_t id,
-    llvm::StringRef filename,
+    llvh::StringRef filename,
     Module *M,
     Function *topLevelFunction,
     const DeclarationFileListTy &declFileList);
@@ -77,7 +80,7 @@ void generateIRForCJSModule(
 std::pair<Function *, Function *> generateLazyFunctionIR(
     hbc::BytecodeFunction *bcFunction,
     Module *M,
-    llvm::SMRange sourceRange);
+    llvh::SMRange sourceRange);
 
 } // namespace hermes
 

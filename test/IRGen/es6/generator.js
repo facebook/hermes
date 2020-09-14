@@ -47,11 +47,11 @@ function *useResult() {
 //CHECK-NEXT:frame = [x]
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [x]
-//CHECK-NEXT:  %1 = CreateGeneratorInst %?anon_1_useResult()
+//CHECK-NEXT:  %1 = CreateGeneratorInst %?anon_0_useResult()
 //CHECK-NEXT:  %2 = ReturnInst %1 : object
 //CHECK-NEXT:function_end
 
-//CHECK-LABEL:function ?anon_1_useResult()
+//CHECK-LABEL:function ?anon_0_useResult()
 //CHECK-NEXT:frame = [x]
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = StartGeneratorInst
@@ -86,11 +86,11 @@ function *loop(x) {
 //CHECK-NEXT:frame = [i]
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [i]
-//CHECK-NEXT:  %1 = CreateGeneratorInst %?anon_2_loop()
+//CHECK-NEXT:  %1 = CreateGeneratorInst %?anon_0_loop()
 //CHECK-NEXT:  %2 = ReturnInst %1 : object
 //CHECK-NEXT:function_end
 
-//CHECK-LABEL:function ?anon_2_loop(x)
+//CHECK-LABEL:function ?anon_0_loop(x)
 //CHECK-NEXT:frame = [i, x]
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = StartGeneratorInst
@@ -139,11 +139,11 @@ var simple2 = function*() {
 //CHECK-LABEL:function simple2()
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:%BB0:
-//CHECK-NEXT:  %0 = CreateGeneratorInst %?anon_4_simple2()
+//CHECK-NEXT:  %0 = CreateGeneratorInst %?anon_0_simple2()
 //CHECK-NEXT:  %1 = ReturnInst %0 : object
 //CHECK-NEXT:function_end
 
-//CHECK-LABEL:function ?anon_4_simple2()
+//CHECK-LABEL:function ?anon_0_simple2()
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = StartGeneratorInst
@@ -172,11 +172,11 @@ var yieldStar = function*() {
 //CHECK-LABEL:function yieldStar()
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:%BB0:
-//CHECK-NEXT:  %0 = CreateGeneratorInst %?anon_5_yieldStar()
+//CHECK-NEXT:  %0 = CreateGeneratorInst %?anon_0_yieldStar()
 //CHECK-NEXT:  %1 = ReturnInst %0 : object
 //CHECK-NEXT:function_end
 
-//CHECK-LABEL:function ?anon_5_yieldStar()
+//CHECK-LABEL:function ?anon_0_yieldStar()
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = StartGeneratorInst
@@ -220,7 +220,7 @@ var yieldStar = function*() {
 //CHECK-NEXT:  %32 = CondBranchInst %31, %BB9, %BB3
 //CHECK-NEXT:%BB6:
 //CHECK-NEXT:  %33 = CatchInst
-//CHECK-NEXT:  %34 = LoadPropertyInst %10, "throw" : string
+//CHECK-NEXT:  %34 = CallBuiltinInst [HermesBuiltin.getMethod] : number, undefined : undefined, %10, "throw" : string
 //CHECK-NEXT:  %35 = CompareBranchInst '===', %34, undefined : undefined, %BB10, %BB11
 //CHECK-NEXT:%BB7:
 //CHECK-NEXT:  %36 = CallBuiltinInst [HermesBuiltin.generatorSetDelegated] : number, undefined : undefined
@@ -230,7 +230,7 @@ var yieldStar = function*() {
 //CHECK-NEXT:  %39 = BranchInst %BB12
 //CHECK-NEXT:%BB12:
 //CHECK-NEXT:  %40 = TryEndInst
-//CHECK-NEXT:  %41 = LoadPropertyInst %10, "return" : string
+//CHECK-NEXT:  %41 = CallBuiltinInst [HermesBuiltin.getMethod] : number, undefined : undefined, %10, "return" : string
 //CHECK-NEXT:  %42 = CompareBranchInst '===', %41, undefined : undefined, %BB13, %BB14
 //CHECK-NEXT:%BB14:
 //CHECK-NEXT:  %43 = LoadStackInst %13
@@ -257,7 +257,7 @@ var yieldStar = function*() {
 //CHECK-NEXT:  %58 = LoadPropertyInst %56, "done" : string
 //CHECK-NEXT:  %59 = CondBranchInst %58, %BB19, %BB20
 //CHECK-NEXT:%BB10:
-//CHECK-NEXT:  %60 = LoadPropertyInst %10, "return" : string
+//CHECK-NEXT:  %60 = CallBuiltinInst [HermesBuiltin.getMethod] : number, undefined : undefined, %10, "return" : string
 //CHECK-NEXT:  %61 = CompareBranchInst '===', %60, undefined : undefined, %BB21, %BB22
 //CHECK-NEXT:%BB19:
 //CHECK-NEXT:  %62 = StoreStackInst %56, %16
@@ -281,13 +281,13 @@ var destr = function*([x]) {
 //CHECK-LABEL:function destr()
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:%BB0:
-//CHECK-NEXT:  %0 = CreateGeneratorInst %?anon_6_destr()
+//CHECK-NEXT:  %0 = CreateGeneratorInst %?anon_0_destr()
 //CHECK-NEXT:  %1 = LoadPropertyInst %0 : object, "next" : string
 //CHECK-NEXT:  %2 = CallInst %1, %0 : object
 //CHECK-NEXT:  %3 = ReturnInst %0 : object
 //CHECK-NEXT:function_end
 
-//CHECK-LABEL:function ?anon_6_destr(?anon_2_param)
+//CHECK-LABEL:function ?anon_0_destr(?anon_2_param)
 //CHECK-NEXT:frame = [x]
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = StartGeneratorInst
@@ -355,13 +355,13 @@ var initializer = function*(x = foo()) {
 //CHECK-LABEL:function initializer()
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:%BB0:
-//CHECK-NEXT:  %0 = CreateGeneratorInst %?anon_7_initializer()
+//CHECK-NEXT:  %0 = CreateGeneratorInst %?anon_0_initializer()
 //CHECK-NEXT:  %1 = LoadPropertyInst %0 : object, "next" : string
 //CHECK-NEXT:  %2 = CallInst %1, %0 : object
 //CHECK-NEXT:  %3 = ReturnInst %0 : object
 //CHECK-NEXT:function_end
 
-//CHECK-LABEL:function ?anon_7_initializer(x)
+//CHECK-LABEL:function ?anon_0_initializer(x)
 //CHECK-NEXT:frame = [x]
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = StartGeneratorInst

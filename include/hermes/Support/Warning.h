@@ -8,7 +8,7 @@
 #ifndef HERMES_SUPPORT_WARNINGS_H
 #define HERMES_SUPPORT_WARNINGS_H
 
-#include "llvm/ADT/DenseMapInfo.h"
+#include "llvh/ADT/DenseMapInfo.h"
 
 #include <type_traits>
 
@@ -27,7 +27,7 @@ enum class Warning {
 
 } // namespace hermes
 
-namespace llvm {
+namespace llvh {
 
 using hermes::Warning;
 
@@ -55,6 +55,6 @@ struct DenseMapInfo<Warning> {
   }
 };
 
-} // namespace llvm
+} // namespace llvh
 
 #endif // HERMES_SUPPORT_SOURCEERRORMANAGER_H

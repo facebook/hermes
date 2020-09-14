@@ -30,3 +30,10 @@ Some copied files were omitted because we don't use them
 
 The current LLVM 9 release is v9.0.1,
 commit hash `c1a0a213378a458fbea1a5c77b315c7dce08fd05`, from November 27, 2019.
+
+## Rename to LLVH
+
+To avoid conflicts when linking with mainline LLVM, the namespace and include directories were
+manually renamed to `llvh`. That left renaming some C public symbols. Unused files under `llvh-c/`
+were removed and lastly a manual rename of the remaining global symbols was performed. The last
+step is recorded in `patches/rename-c-interface.patch`.

@@ -42,8 +42,8 @@ auto printable(const T &V) -> decltype(StreamSwitch<T>::printable(V)) {
 // If raw_ostream support is enabled, we specialize for types with operator<<
 // that takes a raw_ostream.
 #if !GTEST_NO_LLVM_RAW_OSTREAM
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/raw_os_ostream.h"
+#include "llvh/Support/raw_ostream.h"
+#include "llvh/Support/raw_os_ostream.h"
 #include <ostream>
 namespace llvm_gtest {
 
@@ -53,7 +53,7 @@ template <typename T>
 struct RawStreamProxy {
   const T& V;
   friend std::ostream &operator<<(std::ostream &S, const RawStreamProxy<T> &V) {
-    llvm::raw_os_ostream OS(S);
+    llvh::raw_os_ostream OS(S);
     OS << V.V;
     return S;
   }
@@ -64,7 +64,7 @@ struct RawStreamProxy {
 // the possible conversion by passing something convertible to const T& instead.
 template <typename T> struct ConvertibleTo { operator T(); };
 template <typename T>
-struct StreamSwitch<T, decltype((void)(std::declval<llvm::raw_ostream &>()
+struct StreamSwitch<T, decltype((void)(std::declval<llvh::raw_ostream &>()
                                        << ConvertibleTo<const T &>()))> {
   static const RawStreamProxy<T> printable(const T &V) { return {V}; }
 };

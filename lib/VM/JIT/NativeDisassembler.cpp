@@ -9,8 +9,8 @@
 
 #include "hermes/VM/JIT/LLVMDisassembler.h"
 
-#include "llvm/Support/Format.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/Format.h"
+#include "llvh/Support/raw_ostream.h"
 
 namespace hermes {
 namespace vm {
@@ -25,8 +25,8 @@ class NativeDisassemblerImpl : public NativeDisassembler {
       : llvmDis_(triple, asmOutputVariant) {}
 
   int disassembleBuffer(
-      llvm::raw_ostream &OS,
-      llvm::ArrayRef<uint8_t> bytes,
+      llvh::raw_ostream &OS,
+      llvh::ArrayRef<uint8_t> bytes,
       uint64_t address,
       bool withAddr) override;
 
@@ -35,8 +35,8 @@ class NativeDisassemblerImpl : public NativeDisassembler {
 };
 
 int NativeDisassemblerImpl::disassembleBuffer(
-    llvm::raw_ostream &OS,
-    llvm::ArrayRef<uint8_t> bytes,
+    llvh::raw_ostream &OS,
+    llvh::ArrayRef<uint8_t> bytes,
     uint64_t address,
     bool withAddr) {
   int errors = 0;
@@ -51,13 +51,13 @@ int NativeDisassemblerImpl::disassembleBuffer(
       constexpr unsigned maxBytes = 10;
 
       // Print the address.
-      OS << llvm::format("%05lu: ", (long)address);
+      OS << llvh::format("%05lu: ", (long)address);
 
       // Print the instruction bytes.
       for (unsigned i = 0, end = std::max(maxBytes, (unsigned)size); i < end;
            ++i) {
         if (i < size)
-          OS << " " << llvm::format_hex_no_prefix(bytes[index + i], 2);
+          OS << " " << llvh::format_hex_no_prefix(bytes[index + i], 2);
         else
           OS << "   ";
       }
@@ -85,8 +85,8 @@ class NativeDisassemblerImpl : public NativeDisassembler {
       unsigned asmOutputVariant) {}
 
   int disassembleBuffer(
-      llvm::raw_ostream &OS,
-      llvm::ArrayRef<uint8_t> bytes,
+      llvh::raw_ostream &OS,
+      llvh::ArrayRef<uint8_t> bytes,
       uint64_t address,
       bool withAddr) override {
     return 0;
@@ -104,7 +104,7 @@ NativeDisassembler::~NativeDisassembler() {}
 std::unique_ptr<NativeDisassembler> NativeDisassembler::create(
     const char *triple,
     unsigned int asmOutputVariant) {
-  return llvm::make_unique<NativeDisassemblerImpl>(triple, asmOutputVariant);
+  return llvh::make_unique<NativeDisassemblerImpl>(triple, asmOutputVariant);
 }
 
 } // namespace vm

@@ -10,7 +10,7 @@
 
 #include "hermes/IR/IR.h"
 #include "hermes/IR/Instrs.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvh/ADT/DenseSet.h"
 
 namespace hermes {
 
@@ -27,7 +27,7 @@ class CallGraphProvider {
   /// from this CallInst.  If complete set is not known, the mapping
   /// does not exist.  The information contained is for CallInst
   /// in the scope of the analysis.
-  llvm::DenseMap<CallInst *, llvm::DenseSet<Function *>> callees_;
+  llvh::DenseMap<CallInst *, llvh::DenseSet<Function *>> callees_;
 
   /// Map of Function to (full) set of CallInst's from where this
   /// Function may be called.  If complete set is not known, the
@@ -35,7 +35,7 @@ class CallGraphProvider {
   /// is one function, the mapping will contain information only for
   /// that one function; but when we move to module-level analysis
   /// such a map would carry information for multiple functions.
-  llvm::DenseMap<Function *, llvm::DenseSet<CallInst *>> callsites_;
+  llvh::DenseMap<Function *, llvh::DenseSet<CallInst *>> callsites_;
 
   /// Given a CallInst, are there callees that we do not know?
   /// For example, a callee could be read off of an object property
@@ -55,7 +55,7 @@ class CallGraphProvider {
   /// from a call site.  If that information is not available,
   /// then there may have been unknown callees. The protocol is to
   /// call hasUnknownCallees(CI) before this function.
-  llvm::DenseSet<Function *> &getKnownCallees(CallInst *CI) {
+  llvh::DenseSet<Function *> &getKnownCallees(CallInst *CI) {
     auto a = callees_.find(CI);
     assert(a != callees_.end() && "Did not find CallInst in callees map.");
     return a->second;
@@ -65,7 +65,7 @@ class CallGraphProvider {
   /// may be invoked.  If that information is not available, then
   /// there may have been unknown call sites. The protocol is to
   /// call hasUnknownCallsites(F) before this function.
-  llvm::DenseSet<CallInst *> &getKnownCallsites(Function *F) {
+  llvh::DenseSet<CallInst *> &getKnownCallsites(Function *F) {
     auto a = callsites_.find(F);
     assert(a != callsites_.end() && "Did not find Function in callsites map.");
     return a->second;
@@ -76,13 +76,13 @@ class CallGraphProvider {
 
   /// A mapping from LoadPropertyInstruction to the set of Object (or Array)
   /// allocation instructions that may be the receiver of the LPI.
-  llvm::DenseMap<LoadPropertyInst *, llvm::DenseSet<Instruction *>> receivers_;
+  llvh::DenseMap<LoadPropertyInst *, llvh::DenseSet<Instruction *>> receivers_;
 
   bool hasUnknownReceivers(LoadPropertyInst *LPI) {
     return receivers_.count(LPI) == 0;
   }
 
-  llvm::DenseSet<Instruction *> &getKnownReceivers(LoadPropertyInst *LPI) {
+  llvh::DenseSet<Instruction *> &getKnownReceivers(LoadPropertyInst *LPI) {
     auto a = receivers_.find(LPI);
     assert(a != receivers_.end() && "Did not find LPI in receivers map.");
     return a->second;
@@ -90,14 +90,14 @@ class CallGraphProvider {
 
   /// A mapping from an Object (or Array) allocation instruction to the
   /// set of store instructions that store a property into the object.
-  llvm::DenseMap<Instruction *, llvm::DenseSet<Instruction *>> stores_;
+  llvh::DenseMap<Instruction *, llvh::DenseSet<Instruction *>> stores_;
 
   bool hasUnknownStores(Instruction *I) {
     return stores_.count(I) == 0;
   }
 
-  llvm::DenseSet<Instruction *> &getKnownStores(Instruction *I) {
-    assert(llvm::isa<AllocObjectInst>(I) || llvm::isa<AllocArrayInst>(I));
+  llvh::DenseSet<Instruction *> &getKnownStores(Instruction *I) {
+    assert(llvh::isa<AllocObjectInst>(I) || llvh::isa<AllocArrayInst>(I));
     auto a = stores_.find(I);
     assert(a != stores_.end() && "Did not find I in stores map");
     return a->second;

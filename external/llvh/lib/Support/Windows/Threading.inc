@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/Twine.h"
+#include "llvh/ADT/SmallString.h"
+#include "llvh/ADT/Twine.h"
 
 #include "Windows/WindowsSupport.h"
 #include <process.h>
@@ -36,7 +36,7 @@ static unsigned __stdcall ThreadCallback(void *param) {
   return 0;
 }
 
-void llvm::llvm_execute_on_thread(void(*Fn)(void*), void *UserData,
+void llvh::llvm_execute_on_thread(void(*Fn)(void*), void *UserData,
   unsigned RequestedStackSize) {
   struct ThreadInfo param = { Fn, UserData };
 
@@ -55,11 +55,11 @@ void llvm::llvm_execute_on_thread(void(*Fn)(void*), void *UserData,
   }
 }
 
-uint64_t llvm::get_threadid() {
+uint64_t llvh::get_threadid() {
   return uint64_t(::GetCurrentThreadId());
 }
 
-uint32_t llvm::get_max_thread_name_length() { return 0; }
+uint32_t llvh::get_max_thread_name_length() { return 0; }
 
 #if defined(_MSC_VER)
 static void SetThreadName(DWORD Id, LPCSTR Name) {
@@ -89,7 +89,7 @@ static void SetThreadName(DWORD Id, LPCSTR Name) {
 }
 #endif
 
-void llvm::set_thread_name(const Twine &Name) {
+void llvh::set_thread_name(const Twine &Name) {
 #if defined(_MSC_VER)
   // Make sure the input is null terminated.
   SmallString<64> Storage;
@@ -98,7 +98,7 @@ void llvm::set_thread_name(const Twine &Name) {
 #endif
 }
 
-void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
+void llvh::get_thread_name(SmallVectorImpl<char> &Name) {
   // "Name" is not an inherent property of a thread on Windows.  In fact, when
   // you "set" the name, you are only firing a one-time message to a debugger
   // which it interprets as a program setting its threads' name.  We may be

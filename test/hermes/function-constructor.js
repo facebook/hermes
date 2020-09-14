@@ -148,3 +148,7 @@ print(Function().name);
 // Line comment at the end of the body
 print(Function('x', 'return x // comment')(1));
 // CHECK-NEXT: 1
+
+// Hashbang comments are not supported in function bodies
+try {Function('#! comment')} catch (e) {print('caught', e.name, e.message)}
+// CHECK-NEXT: caught SyntaxError {{.*}}

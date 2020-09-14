@@ -9,7 +9,7 @@
 #include "hermes/VM/Predefined.h"
 #include "hermes/VM/SymbolID.h"
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvh/ADT/DenseMap.h"
 
 #include <array>
 #include <tuple>
@@ -17,7 +17,7 @@
 namespace {
 
 using namespace hermes::vm;
-using StringIDMap = llvm::DenseMap<llvm::StringRef, SymbolID>;
+using StringIDMap = llvh::DenseMap<llvh::StringRef, SymbolID>;
 
 StringIDMap createPredefinedStringSet() {
   namespace P = Predefined;
@@ -50,7 +50,7 @@ StringIDMap createPredefinedStringSet() {
 namespace hermes {
 namespace vm {
 
-llvm::Optional<SymbolID> getPredefinedStringID(llvm::StringRef str) {
+llvh::Optional<SymbolID> getPredefinedStringID(llvh::StringRef str) {
   static const auto predefined = createPredefinedStringSet();
   auto it = predefined.find(str);
   if (it == predefined.end()) {
@@ -71,10 +71,10 @@ static constexpr uint8_t _predefSymbolLengths[] = {
 #include "hermes/VM/PredefinedSymbols.def"
 };
 
-const llvm::ArrayRef<uint8_t> predefSymbolLengths = _predefSymbolLengths;
-const llvm::ArrayRef<uint8_t> predefStringLengths = _predefStringLengths;
+const llvh::ArrayRef<uint8_t> predefSymbolLengths = _predefSymbolLengths;
+const llvh::ArrayRef<uint8_t> predefStringLengths = _predefStringLengths;
 
-const llvm::ArrayRef<char> predefStringAndSymbolChars =
+const llvh::ArrayRef<char> predefStringAndSymbolChars =
 // One buffer contains all strings.
 // This ensures that all the strings live together in memory,
 // and that we don't touch multiple separate pages on startup.

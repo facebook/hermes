@@ -96,7 +96,7 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
   M->setLowered(true);
 
   if (options.verifyIR &&
-      verifyModule(*M, &llvm::errs(), VerificationMode::IR_VALID)) {
+      verifyModule(*M, &llvh::errs(), VerificationMode::IR_VALID)) {
     M->dump();
     llvm_unreachable("IR verification failed");
   }
@@ -176,8 +176,8 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
 
   // Empty if all functions should be generated (i.e. bundle splitting was not
   // requested).
-  llvm::DenseSet<Function *> functionsToGenerate =
-      range ? M->getFunctionsInSegment(*range) : llvm::DenseSet<Function *>{};
+  llvh::DenseSet<Function *> functionsToGenerate =
+      range ? M->getFunctionsInSegment(*range) : llvh::DenseSet<Function *>{};
 
   /// \return true if we should generate function \p f.
   std::function<bool(const Function *)> shouldGenerate;
@@ -196,11 +196,11 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
         ? stringAccumulatorFromBCProvider(*baseBCProvider)
         : UniquingStringLiteralAccumulator{};
 
-    auto addStringOrIdent = [&strings](llvm::StringRef str, bool isIdentifier) {
+    auto addStringOrIdent = [&strings](llvh::StringRef str, bool isIdentifier) {
       strings.addString(str, isIdentifier);
     };
 
-    auto addString = [&strings](llvm::StringRef str) {
+    auto addString = [&strings](llvh::StringRef str) {
       strings.addString(str, /* isIdentifier */ false);
     };
 
@@ -244,6 +244,10 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
 
   // Construct the relative function scope depth map.
   FunctionScopeAnalysis scopeAnalysis{lexicalTopLevel};
+
+  // Allow reusing the debug cache between functions
+  HBCISelDebugCache debugCache;
+
   // Bytecode generation for each function.
   for (auto &F : *M) {
     if (!shouldGenerate(&F)) {
@@ -263,7 +267,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
       PostOrderAnalysis PO(&F);
       /// The order of the blocks is reverse-post-order, which is a simply
       /// topological sort.
-      llvm::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
+      llvh::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
       RA.allocate(order);
 
       if (options.format == DumpRA) {
@@ -294,8 +298,10 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
 
       funcGen =
           BytecodeFunctionGenerator::create(BMGen, RA.getMaxRegisterUsage());
-      HBCISel hbciSel(&F, funcGen.get(), RA, scopeAnalysis);
+      HBCISel hbciSel(&F, funcGen.get(), RA, scopeAnalysis, options);
+      hbciSel.populateDebugCache(debugCache);
       hbciSel.generate(sourceMapGen);
+      debugCache = hbciSel.getDebugCache();
     }
 
     BMGen.setFunctionGenerator(&F, std::move(funcGen));

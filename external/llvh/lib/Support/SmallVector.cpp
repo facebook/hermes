@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallVector.h"
-using namespace llvm;
+#include "llvh/ADT/SmallVector.h"
+using namespace llvh;
 
 // Check that no bytes are wasted and everything is well-aligned.
 namespace {

@@ -10,9 +10,9 @@
 
 #include "hermes/Support/CheckedMalloc.h"
 
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/MathExtras.h"
+#include "llvh/ADT/STLExtras.h"
+#include "llvh/Support/Compiler.h"
+#include "llvh/Support/MathExtras.h"
 
 #include <cstdint>
 #include <memory>
@@ -48,7 +48,7 @@ class BacktrackingBumpPtrAllocator {
     /// The current offset within the slab.
     uintptr_t offset;
     /// A place to store allocations that can't fit into the slabs, if any.
-    llvm::SmallVector<std::unique_ptr<void, decltype(free) *>, 0> hugeAllocs{};
+    llvh::SmallVector<std::unique_ptr<void, decltype(free) *>, 0> hugeAllocs{};
     /// The state of the previous scope.
     State *previous;
 
@@ -73,7 +73,7 @@ class BacktrackingBumpPtrAllocator {
   /// Align an offset from a base pointer.
   static uintptr_t
   alignOffset(uintptr_t base, uintptr_t offset, uintptr_t alignment) {
-    return llvm::alignTo(base + offset, alignment) - base;
+    return llvh::alignTo(base + offset, alignment) - base;
   }
 
   /// Allocate a size in a new slab. This is the Allocate slow path.
@@ -82,7 +82,7 @@ class BacktrackingBumpPtrAllocator {
  public:
   explicit BacktrackingBumpPtrAllocator() {
     state_ = new State();
-    slabs_.push_back(llvm::make_unique<Slab>());
+    slabs_.push_back(llvh::make_unique<Slab>());
   }
   ~BacktrackingBumpPtrAllocator() {
     while (state_)
@@ -146,7 +146,7 @@ class AllocationScope {
   }
 };
 
-// To more conveniently replace llvm::BumpPtrAllocator.
+// To more conveniently replace llvh::BumpPtrAllocator.
 using BumpPtrAllocator = BacktrackingBumpPtrAllocator;
 } // namespace hermes
 

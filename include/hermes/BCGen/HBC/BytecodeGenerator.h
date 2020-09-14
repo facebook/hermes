@@ -8,7 +8,7 @@
 #ifndef HERMES_BCGEN_HBC_BYTECODEGENERATOR_H
 #define HERMES_BCGEN_HBC_BYTECODEGENERATOR_H
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvh/ADT/DenseMap.h"
 
 #include "hermes/BCGen/Exceptions.h"
 #include "hermes/BCGen/HBC/Bytecode.h"
@@ -26,8 +26,8 @@
 
 namespace hermes {
 namespace hbc {
-using llvm::DenseMap;
-using llvm::SmallVector;
+using llvh::DenseMap;
+using llvh::SmallVector;
 using std::move;
 using std::unique_ptr;
 
@@ -170,7 +170,7 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   }
 
   /// \return the list of debug variable names.
-  llvm::ArrayRef<Identifier> getDebugVariableNames() const {
+  llvh::ArrayRef<Identifier> getDebugVariableNames() const {
     return debugVariableNames_;
   }
 

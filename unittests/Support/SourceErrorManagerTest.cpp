@@ -16,7 +16,7 @@ namespace {
 TEST(SourceErrorManagerTest, testFindSMLocFromCoords) {
   SourceErrorManager mgr{};
   auto buf =
-      llvm::MemoryBuffer::getMemBuffer("01\n34567\n\n\n\n", "TEST", false);
+      llvh::MemoryBuffer::getMemBuffer("01\n34567\n\n\n\n", "TEST", false);
   auto *start = buf->getBufferStart();
   auto *end = buf->getBufferEnd();
 

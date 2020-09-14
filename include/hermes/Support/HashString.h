@@ -10,7 +10,7 @@
 
 #include "hermes/Support/JenkinsHash.h"
 
-#include "llvm/ADT/ArrayRef.h"
+#include "llvh/ADT/ArrayRef.h"
 
 namespace hermes {
 
@@ -18,16 +18,16 @@ namespace hermes {
 /// execution of the compiled bytecode.
 /// Use the Jenkins hash for now, but that may be changed internally later.
 ///
-/// We cannot directly call llvm::hash_value(str) because each element of
+/// We cannot directly call llvh::hash_value(str) because each element of
 /// str can be either char or char16_t. The default iterator of
-/// llvm::ArrayRef will return different types for each element, leading to
+/// llvh::ArrayRef will return different types for each element, leading to
 /// different hash values even when an ASCII string has the same content as
 /// an UTF16 string. hashString() takes advantage of the abstraction of
 /// StringView::const_iterator to always return char16_t in the iterator.
 ///
 /// NOTE: If hashString is changed, the bytecode version must be bumped.
 template <typename T>
-uint32_t hashString(llvm::ArrayRef<T> str) {
+uint32_t hashString(llvh::ArrayRef<T> str) {
   static_assert(
       sizeof(JenkinsHash) == sizeof(uint32_t), "Jenkins Hash must be 32-bit");
   hermes::JenkinsHash hash = 0;

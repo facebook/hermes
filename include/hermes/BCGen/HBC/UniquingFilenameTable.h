@@ -11,7 +11,7 @@
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
 #include "hermes/Support/StringSetVector.h"
 
-#include "llvm/ADT/StringRef.h"
+#include "llvh/ADT/StringRef.h"
 
 namespace hermes {
 namespace hbc {
@@ -21,7 +21,7 @@ struct UniquingFilenameTable {
   /// Given a \p filename, add it to the table if it does not exist. \return
   /// the index at which the filename will be found in the string storage
   /// instance this table will eventually be converted into.
-  uint32_t addFilename(llvm::StringRef filename);
+  uint32_t addFilename(llvh::StringRef filename);
 
   /// Converts \p table into a string storage instance.  The order of index
   /// entries in the resulting storage reflects the indices returned by calls to

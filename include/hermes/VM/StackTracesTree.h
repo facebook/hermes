@@ -120,7 +120,7 @@ struct StackTracesTree {
   /// rather than allowing the data to avoid an excessive call-stack when
   /// deallocating the tree. Wihtout this, Hermes tests which exercise
   /// JS stack overflow cause C++ stack overflow.
-  llvm::SmallVector<std::unique_ptr<StackTracesTreeNode>, 1024> nodes_;
+  llvh::SmallVector<std::unique_ptr<StackTracesTreeNode>, 1024> nodes_;
 };
 
 #else // !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES)

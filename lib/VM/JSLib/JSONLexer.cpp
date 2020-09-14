@@ -95,7 +95,7 @@ CallResult<char16_t> JSONLexer::consumeUnicode() {
 }
 
 ExecutionStatus JSONLexer::scanNumber() {
-  llvm::SmallVector<char, 32> str8;
+  llvh::SmallVector<char, 32> str8;
   while (curCharPtr_.hasChar()) {
     auto ch = *curCharPtr_;
     if (!(ch == u'-' || ch == u'+' || ch == u'.' || (ch | 32) == u'e' ||

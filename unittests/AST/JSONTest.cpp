@@ -5,15 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/SourceMgr.h"
+#include "llvh/Support/Casting.h"
+#include "llvh/Support/SourceMgr.h"
 
 #include "hermes/AST/ASTBuilder.h"
 #include "hermes/Parser/JSONParser.h"
 
 #include "gtest/gtest.h"
-using llvm::cast;
-using llvm::dyn_cast;
+using llvh::cast;
+using llvh::dyn_cast;
 
 using namespace hermes;
 

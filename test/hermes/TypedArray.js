@@ -848,6 +848,15 @@ cons.forEach(function(TypedArray) {
   arr[1] = 50;
   assert.equal(arr.indexOf(50), 0);
   assert.equal(arr.lastIndexOf(50), 1);
+
+  assert.throws(function() {
+    arr.includes(0, {
+      valueOf() {
+        HermesInternal.detachArrayBuffer(arr.buffer);
+        return 0;
+      },
+    });
+  }, TypeError);
 });
 /// @}
 

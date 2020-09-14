@@ -13,13 +13,13 @@
 #include "hermes/Optimizer/Scalar/Utils.h"
 #include "hermes/Support/Statistic.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopedHashTable.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/RecyclingAllocator.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/DenseSet.h"
+#include "llvh/ADT/Hashing.h"
+#include "llvh/ADT/STLExtras.h"
+#include "llvh/ADT/ScopedHashTable.h"
+#include "llvh/Support/Debug.h"
+#include "llvh/Support/RecyclingAllocator.h"
 
 STATISTIC(NumTDZFrameDedup, "Number of TDZ frame checks eliminated");
 STATISTIC(NumTDZStackDedup, "Number of TDZ stack checks eliminated");
@@ -28,18 +28,18 @@ STATISTIC(NumTDZDedup, "Number of TDZ instructions eliminated");
 
 namespace hermes {
 
-using llvm::dbgs;
-using llvm::isa;
+using llvh::dbgs;
+using llvh::isa;
 
 namespace {
 
 class TDZDedupContext;
 
-using TDZDedupValueHTType = llvm::ScopedHashTableVal<Value *, Value *>;
+using TDZDedupValueHTType = llvh::ScopedHashTableVal<Value *, Value *>;
 using AllocatorTy =
-    llvm::RecyclingAllocator<llvm::BumpPtrAllocator, TDZDedupValueHTType>;
-using ScopedHTType = llvm::
-    ScopedHashTable<Value *, Value *, llvm::DenseMapInfo<Value *>, AllocatorTy>;
+    llvh::RecyclingAllocator<llvh::BumpPtrAllocator, TDZDedupValueHTType>;
+using ScopedHTType = llvh::
+    ScopedHashTable<Value *, Value *, llvh::DenseMapInfo<Value *>, AllocatorTy>;
 
 // StackNode - contains all the needed information to create a stack for doing
 // a depth first traversal of the tree. This includes scopes for values and
@@ -72,7 +72,7 @@ class TDZDedupContext : public DomTreeDFS::Visitor<TDZDedupContext, StackNode> {
   Function *const F_;
 
   /// All TDZ state variables are collected here.
-  llvm::DenseSet<Value *> tdzState_{};
+  llvh::DenseSet<Value *> tdzState_{};
 
   /// AvailableValues - This scoped hash table contains the TDZ flags that are
   /// known to be true. It is instances of Variable, AllocStackInst, or
@@ -92,16 +92,16 @@ bool TDZDedupContext::run() {
   // First, collect all TDZ state variables.
   for (auto &BB : *F_) {
     for (auto &I : BB) {
-      auto *TIU = llvm::dyn_cast<ThrowIfUndefinedInst>(&I);
+      auto *TIU = llvh::dyn_cast<ThrowIfUndefinedInst>(&I);
       if (!TIU)
         continue;
 
       Value *checkedValue = TIU->getCheckedValue();
       Value *tdzStorage;
 
-      if (auto *LFI = llvm::dyn_cast<LoadFrameInst>(checkedValue)) {
+      if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(checkedValue)) {
         tdzStorage = LFI->getSingleOperand();
-      } else if (auto *LSI = llvm::dyn_cast<LoadStackInst>(checkedValue)) {
+      } else if (auto *LSI = llvh::dyn_cast<LoadStackInst>(checkedValue)) {
         tdzStorage = LSI->getSingleOperand();
       } else {
         continue;
@@ -127,17 +127,17 @@ bool TDZDedupContext::processNode(StackNode *SN) {
   for (auto &inst : *BB) {
     Value *checkedValue = nullptr;
     Value *tdzStorage = nullptr;
-    if (auto *TIU = llvm::dyn_cast<ThrowIfUndefinedInst>(&inst)) {
+    if (auto *TIU = llvh::dyn_cast<ThrowIfUndefinedInst>(&inst)) {
       checkedValue = TIU->getCheckedValue();
 
-      if (auto *LFI = llvm::dyn_cast<LoadFrameInst>(checkedValue)) {
+      if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(checkedValue)) {
         tdzStorage = LFI->getSingleOperand();
-      } else if (auto *LSI = llvm::dyn_cast<LoadStackInst>(checkedValue)) {
+      } else if (auto *LSI = llvh::dyn_cast<LoadStackInst>(checkedValue)) {
         tdzStorage = LSI->getSingleOperand();
       } else {
         tdzStorage = checkedValue;
       }
-    } else if (auto *SF = llvm::dyn_cast<StoreFrameInst>(&inst)) {
+    } else if (auto *SF = llvh::dyn_cast<StoreFrameInst>(&inst)) {
       // Check whether it is setting the target to non-undefined.
       if (SF->getValue()->getType().canBeUndefined())
         continue;
@@ -145,7 +145,7 @@ bool TDZDedupContext::processNode(StackNode *SN) {
       // Is the target a TDZ state variable?
       if (!tdzState_.count(tdzStorage))
         continue;
-    } else if (auto *SS = llvm::dyn_cast<StoreStackInst>(&inst)) {
+    } else if (auto *SS = llvh::dyn_cast<StoreStackInst>(&inst)) {
       // Check whether it is setting the target to non-undefined.
       if (SS->getValue()->getType().canBeUndefined())
         continue;
@@ -172,11 +172,11 @@ bool TDZDedupContext::processNode(StackNode *SN) {
 
     // Attempt to destroy the load too, to save work in other passes.
     if (checkedValue) {
-      if (auto *LFI = llvm::dyn_cast<LoadFrameInst>(checkedValue)) {
+      if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(checkedValue)) {
         ++NumTDZFrameDedup;
         if (LFI->hasOneUser())
           destroyer.add(LFI);
-      } else if (auto *LSI = llvm::dyn_cast<LoadStackInst>(checkedValue)) {
+      } else if (auto *LSI = llvh::dyn_cast<LoadStackInst>(checkedValue)) {
         ++NumTDZStackDedup;
         if (LSI->hasOneUser())
           destroyer.add(LSI);

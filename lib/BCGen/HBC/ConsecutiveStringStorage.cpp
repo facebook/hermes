@@ -15,16 +15,16 @@
 #include "hermes/Support/Timer.h"
 #include "hermes/Support/UTF8.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/Endian.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/Support/Endian.h"
 
 #include <algorithm>
 #include <climits>
 #include <deque>
 
 using namespace hermes;
-using llvm::ArrayRef;
-using llvm::MutableArrayRef;
+using llvh::ArrayRef;
+using llvh::MutableArrayRef;
 
 STATISTIC(StringTableSize, "Size of the packed String table");
 STATISTIC(
@@ -79,14 +79,14 @@ class StringPacker {
 
     /// Entries that may not be set as our next_, because they would introduce
     /// a cycle.
-    llvm::DenseSet<const StringEntry *> potentialCycles_;
+    llvh::DenseSet<const StringEntry *> potentialCycles_;
 
     StringEntry(uint32_t stringID, ArrayRef<CharT> chars)
         : stringID_(stringID), chars_(chars) {}
   };
 
   /// A Trigram represents three packed characters.
-  /// Note that Trigrams are keys in an llvm::DenseSet, which reserves the
+  /// Note that Trigrams are keys in an llvh::DenseSet, which reserves the
   /// values ~0 and ~0+1 as sentinel values. We must not use the MSB.
   using Trigram =
       typename std::conditional<sizeof(CharT) == 1, uint32_t, uint64_t>::type;
@@ -101,10 +101,10 @@ class StringPacker {
   }
 
   /// \return a set of all Trigrams of all 3 character prefixes of \p strings.
-  static llvm::DenseSet<Trigram> buildPrefixTrigramSet(
+  static llvh::DenseSet<Trigram> buildPrefixTrigramSet(
       ArrayRef<StringEntry> strings) {
     // A rough experiment showed 8 strings per prefix is a reasonable estimate.
-    llvm::DenseSet<Trigram> result(strings.size() / 8);
+    llvh::DenseSet<Trigram> result(strings.size() / 8);
     for (const StringEntry &entry : strings) {
       ArrayRef<CharT> chars = entry.chars_;
       if (chars.size() >= TrigramCharCount) {
@@ -127,13 +127,13 @@ class StringPacker {
 
     /// DenseMapInfo interface. \return the empty key, deferring to ArrayRef.
     static HashedSuffix getEmptyKey() {
-      return {llvm::DenseMapInfo<ArrayRef<CharT>>::getEmptyKey(), 0};
+      return {llvh::DenseMapInfo<ArrayRef<CharT>>::getEmptyKey(), 0};
     }
 
     /// DenseMapInfo interface. \return the tombstone key, deferring to
     /// ArrayRef.
     static HashedSuffix getTombstoneKey() {
-      return {llvm::DenseMapInfo<ArrayRef<CharT>>::getTombstoneKey(), 0};
+      return {llvh::DenseMapInfo<ArrayRef<CharT>>::getTombstoneKey(), 0};
     }
 
     /// DenseMapInfo interface. \return the hash, which we have cached.
@@ -220,11 +220,11 @@ class StringPacker {
   /// shorter than TrigramCharCount) are included.
   static std::vector<SuffixArrayEntry> buildSuffixArray(
       MutableArrayRef<StringEntry> strings,
-      const llvm::DenseSet<Trigram> &prefixesOfInterest) {
+      const llvh::DenseSet<Trigram> &prefixesOfInterest) {
     // Unique each suffix, that is, for each suffix that begins with
     // prefixOfInterest construct the list of strings containing it. A rough
     // test showed 8 suffixes per string is a reasonable initial capacity.
-    llvm::DenseMap<HashedSuffix, std::vector<StringEntry *>, HashedSuffix>
+    llvh::DenseMap<HashedSuffix, std::vector<StringEntry *>, HashedSuffix>
         suffixMap(8 * strings.size());
     for (StringEntry &entry : strings) {
       size_t charsSize = entry.chars_.size();
@@ -684,7 +684,7 @@ class StringTableBuilder {
   static size_t appendU16Storage(
       ArrayRef<char16_t> u16Storage,
       std::vector<unsigned char> *output) {
-    using namespace llvm::support;
+    using namespace llvh::support;
     static_assert(sizeof(char16_t) == 2, "sizeof char16_t unexpectedly not 2");
     if (u16Storage.empty()) {
       // Nothing to do, don't even bother aligning.
@@ -749,8 +749,8 @@ template ConsecutiveStringStorage::ConsecutiveStringStorage(
     bool optimize);
 
 template ConsecutiveStringStorage::ConsecutiveStringStorage(
-    ArrayRef<llvm::StringRef>::const_iterator begin,
-    ArrayRef<llvm::StringRef>::const_iterator end,
+    ArrayRef<llvh::StringRef>::const_iterator begin,
+    ArrayRef<llvh::StringRef>::const_iterator end,
     bool optimize);
 
 uint32_t ConsecutiveStringStorage::getEntryHash(size_t i) const {
@@ -789,7 +789,7 @@ void ConsecutiveStringStorage::appendStorage(ConsecutiveStringStorage &&rhs) {
   storage_.insert(storage_.end(), rhs.storage_.begin(), rhs.storage_.end());
 }
 
-llvm::StringRef ConsecutiveStringStorage::getStringAtIndex(
+llvh::StringRef ConsecutiveStringStorage::getStringAtIndex(
     uint32_t idx,
     std::string &utf8ConversionStorage) const {
   ensureTableValid();
@@ -798,9 +798,9 @@ llvm::StringRef ConsecutiveStringStorage::getStringAtIndex(
   return getStringFromEntry(strTable_[idx], storage_, utf8ConversionStorage);
 }
 
-llvm::StringRef getStringFromEntry(
+llvh::StringRef getStringFromEntry(
     const StringTableEntry &entry,
-    llvm::ArrayRef<unsigned char> storage,
+    llvh::ArrayRef<unsigned char> storage,
     std::string &utf8ConversionStorage) {
   uint32_t offset = entry.getOffset();
   uint32_t length = entry.getLength();
@@ -812,7 +812,7 @@ llvm::StringRef getStringFromEntry(
   } else {
     const char16_t *s =
         reinterpret_cast<const char16_t *>(storage.data() + offset);
-    llvm::ArrayRef<char16_t> u16String(s, length);
+    llvh::ArrayRef<char16_t> u16String(s, length);
     convertUTF16ToUTF8WithSingleSurrogates(utf8ConversionStorage, u16String);
     return utf8ConversionStorage;
   }

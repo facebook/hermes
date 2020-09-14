@@ -7,9 +7,9 @@
 
 #include "hermes/Support/SimpleDiagHandler.h"
 
-#include "llvm/ADT/Twine.h"
+#include "llvh/ADT/Twine.h"
 
-using llvm::Twine;
+using llvh::Twine;
 
 namespace hermes {
 
@@ -17,9 +17,9 @@ void SimpleDiagHandler::installInto(hermes::SourceErrorManager &sm) {
   sm.setDiagHandler(handler, this);
 }
 
-void SimpleDiagHandler::handler(const llvm::SMDiagnostic &msg, void *ctx) {
+void SimpleDiagHandler::handler(const llvh::SMDiagnostic &msg, void *ctx) {
   auto *mgr = static_cast<SimpleDiagHandler *>(ctx);
-  if (msg.getKind() == llvm::SourceMgr::DK_Error) {
+  if (msg.getKind() == llvh::SourceMgr::DK_Error) {
     if (!mgr->haveErrors()) {
       mgr->firstMessage_ = msg;
     }

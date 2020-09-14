@@ -14,7 +14,7 @@
 #include "hermes/VM/SmallXString.h"
 
 #include <memory>
-#include "llvm/ADT/SmallString.h"
+#include "llvh/ADT/SmallString.h"
 
 namespace hermes {
 namespace vm {
@@ -27,8 +27,30 @@ class JSRegExp final : public JSObject {
     return cell->getKind() == CellKind::RegExpKind;
   }
 
-  /// Create a JSRegExp, with the empty string for pattern and flags
+  /// Create a JSRegExp, with the empty string for pattern and flags.
   static Handle<JSRegExp> create(Runtime *runtime, Handle<JSObject> prototype);
+
+  /// Create a JSRegExp, with the standard RegExp prototype and the empty string
+  /// for pattern and flags.
+  static Handle<JSRegExp> create(Runtime *runtime) {
+    return create(runtime, Handle<JSObject>::vmcast(&runtime->regExpPrototype));
+  }
+
+  /// Initialize the internal properties of the RegExp such as the pattern and
+  /// lastIndex.
+  static void initializeProperties(
+      Handle<JSRegExp> selfHandle,
+      Runtime *runtime,
+      Handle<StringPrimitive> pattern);
+
+  /// Initialize a RegExp based on another RegExp \p otherHandle. If \p flags
+  /// matches the internal flags of the other RegExp, this lets us avoid
+  /// recompiling by just copying the bytecode.
+  static ExecutionStatus initialize(
+      Handle<JSRegExp> selfHandle,
+      Runtime *runtime,
+      Handle<JSRegExp> otherHandle,
+      Handle<StringPrimitive> flags);
 
   /// Perform validation of the pattern and flags and throw \c SyntaxError on
   /// error. If valid, set the source and flags to the given strings, and set
@@ -41,7 +63,7 @@ class JSRegExp final : public JSObject {
       Runtime *runtime,
       Handle<StringPrimitive> pattern,
       Handle<StringPrimitive> flags,
-      OptValue<llvm::ArrayRef<uint8_t>> bytecode = llvm::None);
+      OptValue<llvh::ArrayRef<uint8_t>> bytecode = llvh::None);
 
   /// \return the pattern string used to initialize this RegExp.
   /// Note this is not suitable for interpolation between //, nor for
@@ -59,6 +81,11 @@ class JSRegExp final : public JSObject {
   /// \return the flag bits used to initialize this RegExp
   static regex::SyntaxFlags getSyntaxFlags(JSRegExp *self) {
     return self->syntaxFlags_;
+  }
+
+  /// Set the flag bits for this RegExp to \p flags
+  static void setSyntaxFlags(JSRegExp *self, regex::SyntaxFlags flags) {
+    self->syntaxFlags_ = flags;
   }
 
   /// Searches self for a match for \str.
@@ -92,7 +119,7 @@ class JSRegExp final : public JSObject {
 
   /// Store a copy of the \p bytecode array.
   ExecutionStatus initializeBytecode(
-      llvm::ArrayRef<uint8_t> bytecode,
+      llvh::ArrayRef<uint8_t> bytecode,
       Runtime *runtime);
 
   uint8_t *bytecode_{};

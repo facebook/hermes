@@ -12,15 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/Support/MathExtras.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvh/ADT/SmallPtrSet.h"
+#include "llvh/ADT/DenseMapInfo.h"
+#include "llvh/Support/MathExtras.h"
+#include "llvh/Support/ErrorHandling.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
 
-using namespace llvm;
+using namespace llvh;
 
 void SmallPtrSetImplBase::shrink_and_clear() {
   assert(!isSmall() && "Can't shrink a small set!");

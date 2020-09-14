@@ -34,8 +34,8 @@ EM_JS(int, js_platform_unicode_localeCompare, (
 // clang-format on
 
 int localeCompare(
-    llvm::ArrayRef<char16_t> left,
-    llvm::ArrayRef<char16_t> right) {
+    llvh::ArrayRef<char16_t> left,
+    llvh::ArrayRef<char16_t> right) {
   return js_platform_unicode_localeCompare(
       left.data(), left.size(), right.data(), right.size());
 }
@@ -44,20 +44,20 @@ void dateFormat(
     double unixtimeMs,
     bool formatDate,
     bool formatTime,
-    llvm::SmallVectorImpl<char16_t> &buf) {
+    llvh::SmallVectorImpl<char16_t> &buf) {
   // FIXME: implement this.
-  llvm::ArrayRef<char> str{"dateFormat not implemented"};
+  llvh::ArrayRef<char> str{"dateFormat not implemented"};
   buf.assign(str.begin(), str.end());
 }
 
 void convertToCase(
-    llvm::SmallVectorImpl<char16_t> &str,
+    llvh::SmallVectorImpl<char16_t> &str,
     CaseConversion targetCase,
     bool useCurrentLocale) {
   // FIXME: implement this.
 }
 
-void normalize(llvm::SmallVectorImpl<char16_t> &buf, NormalizationForm form) {
+void normalize(llvh::SmallVectorImpl<char16_t> &buf, NormalizationForm form) {
   // FIXME: implement this.
 }
 

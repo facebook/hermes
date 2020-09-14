@@ -10,8 +10,9 @@
 namespace hermes {
 namespace vm {
 
-llvm::ArrayRef<uint8_t> getInternalBytecode() {
-#ifdef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+llvh::ArrayRef<uint8_t> getInternalBytecode() {
+// TODO: remove the guard
+#if 0
   static const uint8_t InternalBytecode[] = {
 #ifdef HERMES_CMAKE_BUILD
 #include "InternalBytecode.inc"
@@ -20,9 +21,9 @@ llvm::ArrayRef<uint8_t> getInternalBytecode() {
 #endif
   };
 
-  return llvm::makeArrayRef(InternalBytecode, sizeof(InternalBytecode));
+  return llvh::makeArrayRef(InternalBytecode, sizeof(InternalBytecode));
 #else
-  return llvm::ArrayRef<uint8_t>{};
+  return llvh::ArrayRef<uint8_t>{};
 #endif
 }
 } // namespace vm

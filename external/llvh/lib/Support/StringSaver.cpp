@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/StringSaver.h"
+#include "llvh/Support/StringSaver.h"
 
-using namespace llvm;
+using namespace llvh;
 
 StringRef StringSaver::save(StringRef S) {
   char *P = Alloc.Allocate<char>(S.size() + 1);

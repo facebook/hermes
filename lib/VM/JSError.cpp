@@ -468,7 +468,7 @@ static OptValue<hbc::DebugSourceLocation> getDebugInfo(
     uint32_t bytecodeOffset) {
   auto offset = codeBlock->getDebugSourceLocationsOffset();
   if (!offset.hasValue()) {
-    return llvm::None;
+    return llvh::None;
   }
 
   return codeBlock->getRuntimeModule()
@@ -481,7 +481,7 @@ bool JSError::appendFunctionNameAtIndex(
     Runtime *runtime,
     Handle<JSError> selfHandle,
     size_t index,
-    llvm::SmallVectorImpl<char16_t> &str) {
+    llvh::SmallVectorImpl<char16_t> &str) {
   IdentifierTable &idt = runtime->getIdentifierTable();
   MutableHandle<StringPrimitive> name{
       runtime, runtime->getPredefinedString(Predefined::emptyString)};
@@ -507,7 +507,7 @@ bool JSError::appendFunctionNameAtIndex(
   if (!name || name->getStringLength() == 0)
     return false;
 
-  name->copyUTF16String(str);
+  name->appendUTF16String(str);
   return true;
 }
 
@@ -530,14 +530,14 @@ ExecutionStatus JSError::constructStackTraceString(
     // sufficient to tell what happened here.
     runtime->clearThrownValue();
   } else {
-    res->get()->copyUTF16String(stack);
+    res->get()->appendUTF16String(stack);
   }
 
   // Virtual offsets are computed by walking the list of bytecode functions. If
   // we have an extremely deep stack, this could get expensive. Assume that very
   // deep stacks are most likely due to runaway recursion and so use a local
   // cache of virtual offsets.
-  llvm::DenseMap<const CodeBlock *, uint32_t> virtualOffsetCache;
+  llvh::DenseMap<const CodeBlock *, uint32_t> virtualOffsetCache;
 
   // Append each function location in the call stack to stack trace.
   auto marker = gcScope.createMarker();

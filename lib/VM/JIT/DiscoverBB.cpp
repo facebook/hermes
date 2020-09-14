@@ -12,7 +12,7 @@
 #include "hermes/Inst/InstDecode.h"
 #include "hermes/VM/CodeBlock.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 
 namespace hermes {
 namespace vm {
@@ -23,11 +23,11 @@ using hermes::inst::OperandType;
 void discoverBasicBlocks(
     CodeBlock *codeBlock,
     std::vector<uint32_t> &basicBlocks,
-    llvm::DenseMap<uint32_t, unsigned> &labels) {
+    llvh::DenseMap<uint32_t, unsigned> &labels) {
   auto const begin = codeBlock->begin();
   auto const end = codeBlock->end();
 
-  llvm::DenseSet<uint32_t> labelSet{};
+  llvh::DenseSet<uint32_t> labelSet{};
 
   auto addLabel = [begin, &labelSet](const uint8_t *label) {
     labelSet.insert((uint32_t)(label - begin));
@@ -75,12 +75,12 @@ void discoverBasicBlocks(
   std::sort(basicBlocks.begin(), basicBlocks.end());
 
   // Create a mapping from a label to a basic block number.
-  LLVM_DEBUG(llvm::dbgs() << "Discovered Basic Blocks:\n");
+  LLVM_DEBUG(llvh::dbgs() << "Discovered Basic Blocks:\n");
   labels.clear();
   labels.reserve(labelSet.size());
   for (unsigned i = 0, size = basicBlocks.size(); i != size; ++i) {
     labels.try_emplace(basicBlocks[i], i);
-    LLVM_DEBUG(llvm::dbgs() << "  BB" << i << " at " << basicBlocks[i] << "\n");
+    LLVM_DEBUG(llvh::dbgs() << "  BB" << i << " at " << basicBlocks[i] << "\n");
   }
 }
 

@@ -11,25 +11,25 @@
 #include "hermes/VM/Predefined.h"
 #include "hermes/VM/SymbolID.h"
 
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvh/ADT/Optional.h"
+#include "llvh/ADT/StringRef.h"
 
 namespace hermes {
 namespace vm {
 
 /// \return the SymbolID corresponding to string \p str if it is one of the
 /// predefined strings.  Returns None otherwise.
-llvm::Optional<vm::SymbolID> getPredefinedStringID(llvm::StringRef str);
+llvh::Optional<vm::SymbolID> getPredefinedStringID(llvh::StringRef str);
 
 /// the length of each predefined string.
-extern const llvm::ArrayRef<uint8_t> predefStringLengths;
+extern const llvh::ArrayRef<uint8_t> predefStringLengths;
 
 /// the length of each predefined string.
-extern const llvm::ArrayRef<uint8_t> predefSymbolLengths;
+extern const llvh::ArrayRef<uint8_t> predefSymbolLengths;
 
 /// an array of all concatenated predefined strings immediately
 /// followed by all concatenated predefined symbols, all ASCII.
-extern const llvm::ArrayRef<char> predefStringAndSymbolChars;
+extern const llvh::ArrayRef<char> predefStringAndSymbolChars;
 
 } // namespace vm
 } // namespace hermes

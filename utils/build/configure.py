@@ -22,6 +22,8 @@ def build_dir_suffix(args):
         suffices += ["asan"]
     if args.enable_ubsan:
         suffices += ["ubsan"]
+    if args.enable_tsan:
+        suffices += ["tsan"]
     if args.distribute:
         suffices += ["release"]
     if args.is_32_bit:
@@ -66,6 +68,7 @@ def parse_args():
     parser.add_argument("--32-bit", dest="is_32_bit", action="store_true")
     parser.add_argument("--enable-asan", dest="enable_asan", action="store_true")
     parser.add_argument("--enable-ubsan", dest="enable_ubsan", action="store_true")
+    parser.add_argument("--enable-tsan", dest="enable_tsan", action="store_true")
     parser.add_argument("--icu", type=str, dest="icu_root", default="")
     parser.add_argument("--fbsource", type=str, dest="fbsource_dir", default="")
     parser.add_argument("--opcode-stats", dest="opcode_stats", action="store_true")
@@ -214,7 +217,7 @@ def main():
         and platform.machine().endswith("64")
         and "Visual Studio" in args.build_system
     ):
-        cmake_flags += ["-Thost=x64"]
+        cmake_flags += ["-Ax64"]
     if args.opcode_stats:
         cmake_flags += ["-DHERMESVM_PROFILER_OPCODE=ON"]
     if args.basic_block_profiler:
@@ -227,6 +230,8 @@ def main():
         cmake_flags += ["-DHERMES_ENABLE_ADDRESS_SANITIZER=ON"]
     if args.enable_ubsan:
         cmake_flags += ["-DHERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER=ON"]
+    if args.enable_tsan:
+        cmake_flags += ["-DHERMES_ENABLE_THREAD_SANITIZER=ON"]
     if args.fbsource_dir:
         cmake_flags += ["-DFBSOURCE_DIR=" + args.fbsource_dir]
     if args.wasm:

@@ -15,9 +15,9 @@ namespace {
 using namespace facebook::hermes::tracing;
 
 struct SynthTraceParserTest : public ::testing::Test {
-  std::unique_ptr<llvm::MemoryBuffer> bufFromStr(const std::string &str) {
-    llvm::StringRef ref{str.data(), str.size()};
-    return llvm::MemoryBuffer::getMemBufferCopy(ref);
+  std::unique_ptr<llvh::MemoryBuffer> bufFromStr(const std::string &str) {
+    llvh::StringRef ref{str.data(), str.size()};
+    return llvh::MemoryBuffer::getMemBufferCopy(ref);
   }
 };
 

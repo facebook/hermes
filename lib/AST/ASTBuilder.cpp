@@ -13,12 +13,12 @@
 
 using namespace hermes;
 
-using llvm::cast;
-using llvm::dyn_cast;
-using llvm::dyn_cast_or_null;
-using llvm::isa;
-using llvm::None;
-using llvm::StringRef;
+using llvh::cast;
+using llvh::dyn_cast;
+using llvh::dyn_cast_or_null;
+using llvh::isa;
+using llvh::None;
+using llvh::StringRef;
 using parser::JSONArray;
 using parser::JSONBoolean;
 using parser::JSONNumber;
@@ -39,10 +39,10 @@ class ASTBuilder {
   Context &context_;
   SourceErrorManager &sm_;
   /// The optional JavaScript source of the ESTree.
-  const llvm::MemoryBuffer *jsSource_;
+  const llvh::MemoryBuffer *jsSource_;
 
  public:
-  explicit ASTBuilder(Context &context, const llvm::MemoryBuffer *jsSource)
+  explicit ASTBuilder(Context &context, const llvh::MemoryBuffer *jsSource)
       : context_(context),
         sm_(context.getSourceErrorManager()),
         jsSource_(jsSource) {}
@@ -50,7 +50,7 @@ class ASTBuilder {
   /// Deserialize the ESTree from the input JSON.
   /// \returns the deserialized data structure. The program asserts and crashes
   /// if the data structure is malformed.
-  llvm::Optional<Node *> build(const parser::JSONValue *node);
+  llvh::Optional<Node *> build(const parser::JSONValue *node);
 
  private:
   // Extractors for the different types of ESTree fields that we support.
@@ -81,11 +81,11 @@ class ASTBuilder {
 
   /// Convert an ESTree Literal node into a type-specific tttLiteral node.
   /// Report an error and return None on error.
-  llvm::Optional<ESTree::Node *> convertLiteral(const parser::JSONObject *lit);
+  llvh::Optional<ESTree::Node *> convertLiteral(const parser::JSONObject *lit);
 
   /// Flatten an ESTree TemplateElement node so we get rid of the 'value' field.
   /// Report an error and return None on error.
-  llvm::Optional<ESTree::Node *> convertTemplateElement(
+  llvh::Optional<ESTree::Node *> convertTemplateElement(
       const parser::JSONObject *obj);
 };
 
@@ -160,7 +160,7 @@ bool ASTBuilder::extractNodeList(
   return true;
 }
 
-llvm::Optional<ESTree::Node *> ASTBuilder::convertTemplateElement(
+llvh::Optional<ESTree::Node *> ASTBuilder::convertTemplateElement(
     const parser::JSONObject *obj) {
   NodeBoolean tail{};
   if (!extractNodeBoolean(obj, "tail", tail)) {
@@ -186,7 +186,7 @@ llvm::Optional<ESTree::Node *> ASTBuilder::convertTemplateElement(
   return new (context_) TemplateElementNode(tail, cooked, raw);
 }
 
-llvm::Optional<Node *> ASTBuilder::convertLiteral(
+llvh::Optional<Node *> ASTBuilder::convertLiteral(
     const parser::JSONObject *lit) {
   // First check if it is a RegExpLiteral, which is determined by the presence
   // of the 'regex' value.
@@ -233,7 +233,7 @@ llvm::Optional<Node *> ASTBuilder::convertLiteral(
 
 /// Constructs an ESTree object from the node \p Node and sets the parent of the
 /// node to \p Parent, that may be null.
-llvm::Optional<Node *> ASTBuilder::build(const JSONValue *node) {
+llvh::Optional<Node *> ASTBuilder::build(const JSONValue *node) {
   if (isa<parser::JSONNull>(node))
     return new (context_) EmptyNode();
 
@@ -743,10 +743,10 @@ struct DebugLocationSynthesizer {
 
 } // namespace
 
-llvm::Optional<Node *> buildAST(
+llvh::Optional<Node *> buildAST(
     Context &context,
     const parser::JSONValue *node,
-    const llvm::MemoryBuffer *jsSource) {
+    const llvh::MemoryBuffer *jsSource) {
   auto result = ASTBuilder(context, jsSource).build(node);
   DebugLocationSynthesizer synthesizer;
   ESTreeVisit(synthesizer, result.getValue());

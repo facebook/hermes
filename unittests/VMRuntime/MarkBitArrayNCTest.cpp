@@ -13,9 +13,10 @@
 #include "hermes/VM/HeapAlign.h"
 #include "hermes/VM/MarkBitArrayNC.h"
 #include "hermes/VM/StorageProvider.h"
-#include "llvm/Support/MathExtras.h"
+#include "llvh/Support/MathExtras.h"
 
 #include <ios>
+#include <queue>
 #include <utility>
 #include <vector>
 
@@ -41,7 +42,7 @@ MarkBitArrayNCTest::MarkBitArrayNCTest()
       mba(new (as.lowLim()) MarkBitArrayNC()) {
   auto first = as.lowLim();
   auto last = reinterpret_cast<char *>(
-      llvm::alignDown(reinterpret_cast<uintptr_t>(as.hiLim() - 1), HeapAlign));
+      llvh::alignDown(reinterpret_cast<uintptr_t>(as.hiLim() - 1), HeapAlign));
 
   addrs = {first,
            first + HeapAlign,
@@ -57,7 +58,7 @@ MarkBitArrayNCTest::MarkBitArrayNCTest()
 TEST_F(MarkBitArrayNCTest, AddressToIndex) {
   // Expected indices in the mark bit array corresponding to the probe
   // addresses into the storage.
-  size_t lastIx = MarkBitArrayNC::kValidIndices - 1;
+  size_t lastIx = MarkBitArrayNC::kNumBits - 1;
   std::vector<size_t> indices{0, 1, 42, lastIx - 42, lastIx - 1, lastIx};
 
   for (unsigned i = 0; i < addrs.size(); i++) {
@@ -72,7 +73,7 @@ TEST_F(MarkBitArrayNCTest, AddressToIndex) {
 }
 
 TEST_F(MarkBitArrayNCTest, MarkGet) {
-  const size_t lastIx = MarkBitArrayNC::kValidIndices - 1;
+  const size_t lastIx = MarkBitArrayNC::kNumBits - 1;
 
   for (char *addr : addrs) {
     size_t ind = mba->addressToIndex(addr);
@@ -131,18 +132,51 @@ TEST_F(MarkBitArrayNCTest, NextMarkedBitImmediate) {
 }
 
 TEST_F(MarkBitArrayNCTest, NextMarkedBit) {
-  constexpr size_t FOUND_NONE = MarkBitArrayNC::kValidIndices;
+  constexpr size_t FOUND_NONE = MarkBitArrayNC::kNumBits;
 
-  /// Empty case: No marked bits
+  // Empty case: No marked bits
   EXPECT_EQ(FOUND_NONE, mba->findNextMarkedBitFrom(0));
-
-  size_t from = 0;
+  std::queue<size_t> indices;
   for (char *addr : addrs) {
     auto ind = mba->addressToIndex(addr);
     mba->mark(ind);
+    indices.push(ind);
+  }
+  // Use the same style of loop we use elsewhere for scanning the array.
+  for (size_t from = mba->findNextMarkedBitFrom(0);
+       from < MarkBitArrayNC::kNumBits;
+       from = mba->findNextMarkedBitFrom(from + 1)) {
+    EXPECT_EQ(indices.front(), from);
+    indices.pop();
+  }
+}
 
-    EXPECT_EQ(ind, mba->findNextMarkedBitFrom(from));
-    from = ind + 1;
+TEST_F(MarkBitArrayNCTest, NextUnmarkedBitImmediate) {
+  char *addr = addrs.at(addrs.size() / 2);
+  size_t ind = mba->addressToIndex(addr);
+  mba->markAll();
+  mba->bitArray_.set(ind, false);
+  EXPECT_EQ(ind, mba->findNextUnmarkedBitFrom(ind));
+}
+
+TEST_F(MarkBitArrayNCTest, NextUnmarkedBit) {
+  constexpr size_t FOUND_NONE = MarkBitArrayNC::kNumBits;
+  mba->markAll();
+  /// Full case: No unmarked bits
+  EXPECT_EQ(FOUND_NONE, mba->findNextUnmarkedBitFrom(0));
+  std::queue<size_t> indices;
+  for (char *addr : addrs) {
+    auto ind = mba->addressToIndex(addr);
+    mba->bitArray_.set(ind, false);
+    indices.push(ind);
+  }
+
+  // Use the same style of loop we use elsewhere for scanning the array.
+  for (size_t from = mba->findNextUnmarkedBitFrom(0);
+       from < MarkBitArrayNC::kNumBits;
+       from = mba->findNextUnmarkedBitFrom(from + 1)) {
+    EXPECT_EQ(indices.front(), from);
+    indices.pop();
   }
 }
 

@@ -38,7 +38,7 @@ RUNTIME_HV_FIELD_PROTOTYPE(dataViewPrototype)
 RUNTIME_HV_FIELD_PROTOTYPE(typedArrayBasePrototype)
 
 /// %TypedArray%.prototype and constructor for each typed array.
-#define TYPED_ARRAY(name, type)          \
+#define TYPED_ARRAY(name, type)                    \
   RUNTIME_HV_FIELD_PROTOTYPE(name##ArrayPrototype) \
   RUNTIME_HV_FIELD_PROTOTYPE(name##ArrayConstructor)
 #include "hermes/VM/TypedArrays.def"
@@ -63,6 +63,7 @@ RUNTIME_HV_FIELD_PROTOTYPE(iteratorPrototype)
 RUNTIME_HV_FIELD_PROTOTYPE(arrayIteratorPrototype)
 RUNTIME_HV_FIELD_PROTOTYPE(arrayPrototypeValues)
 RUNTIME_HV_FIELD_PROTOTYPE(stringIteratorPrototype)
+RUNTIME_HV_FIELD_PROTOTYPE(regExpStringIteratorPrototype)
 RUNTIME_HV_FIELD_PROTOTYPE(generatorPrototype)
 RUNTIME_HV_FIELD_PROTOTYPE(generatorFunctionPrototype)
 RUNTIME_HV_FIELD_PROTOTYPE(parseIntFunction)
@@ -70,9 +71,9 @@ RUNTIME_HV_FIELD_PROTOTYPE(parseFloatFunction)
 RUNTIME_HV_FIELD_PROTOTYPE(requireFunction)
 RUNTIME_HV_FIELD_PROTOTYPE(jsErrorStackAccessor)
 
-// TODO: for Serialization/Deserialization  after global object initialization we record
-// specialCodeBlockDomain_ and create runtimemodule later need to revisit this
-// in stage 2
+// TODO: for Serialization/Deserialization  after global object initialization
+// we record specialCodeBlockDomain_ and create runtimemodule later need to
+// revisit this in stage 2
 RUNTIME_HV_FIELD_RUNTIMEMODULE(specialCodeBlockDomain_)
 
 RUNTIME_HV_FIELD_INSTANCE(stringCycleCheckVisited_)

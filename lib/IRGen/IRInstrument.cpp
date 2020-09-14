@@ -34,8 +34,8 @@ Value *IRInstrument::getIID(ESTree::Node *node) {
 }
 
 Value *IRInstrument::invokeHook(
-    llvm::StringRef name,
-    llvm::ArrayRef<Value *> args) {
+    llvh::StringRef name,
+    llvh::ArrayRef<Value *> args) {
   TryLoadGlobalPropertyInst *instrument =
       builder_.createTryLoadGlobalPropertyInst(globalName_);
   auto *hook = builder_.createLoadPropertyInst(instrument, name);

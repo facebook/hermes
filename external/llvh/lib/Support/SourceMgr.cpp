@@ -13,18 +13,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/SourceMgr.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/Locale.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/SMLoc.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/SourceMgr.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/STLExtras.h"
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/ADT/Twine.h"
+#include "llvh/Support/ErrorOr.h"
+#include "llvh/Support/Locale.h"
+#include "llvh/Support/MemoryBuffer.h"
+#include "llvh/Support/Path.h"
+#include "llvh/Support/SMLoc.h"
+#include "llvh/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -33,7 +33,7 @@
 #include <string>
 #include <utility>
 
-using namespace llvm;
+using namespace llvh;
 
 static const size_t TabStop = 8;
 
@@ -269,7 +269,7 @@ SMDiagnostic::SMDiagnostic(const SourceMgr &sm, SMLoc L, StringRef FN,
   : SM(&sm), Loc(L), Filename(FN), LineNo(Line), ColumnNo(Col), Kind(Kind),
     Message(Msg), LineContents(LineStr), Ranges(Ranges.vec()),
     FixIts(Hints.begin(), Hints.end()) {
-  llvm::sort(FixIts);
+  llvh::sort(FixIts);
 }
 
 static void buildFixItLine(std::string &CaretLine, std::string &FixItLine,

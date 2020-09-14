@@ -34,17 +34,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "Unix.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Config/config.h"
-#include "llvm/Demangle/Demangle.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Mutex.h"
-#include "llvm/Support/Program.h"
-#include "llvm/Support/UniqueLock.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/STLExtras.h"
+#include "llvh/Config/config.h"
+#include "llvh/Demangle/Demangle.h"
+#include "llvh/Support/FileSystem.h"
+#include "llvh/Support/FileUtilities.h"
+#include "llvh/Support/Format.h"
+#include "llvh/Support/MemoryBuffer.h"
+#include "llvh/Support/Mutex.h"
+#include "llvh/Support/Program.h"
+#include "llvh/Support/UniqueLock.h"
+#include "llvh/Support/raw_ostream.h"
 #include <algorithm>
 #include <string>
 #if defined(HAVE_BACKTRACE) && ENABLE_BACKTRACES
@@ -77,7 +77,7 @@
 #endif
 #endif
 
-using namespace llvm;
+using namespace llvh;
 
 static RETSIGTYPE SignalHandler(int Sig);  // defined below.
 
@@ -340,7 +340,7 @@ static RETSIGTYPE SignalHandler(int Sig) {
   }
 
   // Otherwise if it is a fault (like SEGV) run any handler.
-  llvm::sys::RunSignalHandlers();
+  llvh::sys::RunSignalHandlers();
 
 #ifdef __s390__
   // On S/390, certain signals are delivered with PSW Address pointing to
@@ -352,17 +352,17 @@ static RETSIGTYPE SignalHandler(int Sig) {
 #endif
 }
 
-void llvm::sys::RunInterruptHandlers() {
+void llvh::sys::RunInterruptHandlers() {
   RemoveFilesToRemove();
 }
 
-void llvm::sys::SetInterruptFunction(void (*IF)()) {
+void llvh::sys::SetInterruptFunction(void (*IF)()) {
   InterruptFunction.exchange(IF);
   RegisterHandlers();
 }
 
 // The public API
-bool llvm::sys::RemoveFileOnSignal(StringRef Filename,
+bool llvh::sys::RemoveFileOnSignal(StringRef Filename,
                                    std::string* ErrMsg) {
   // Ensure that cleanup will occur as soon as one file is added.
   static ManagedStatic<FilesToRemoveCleanup> FilesToRemoveCleanup;
@@ -373,14 +373,14 @@ bool llvm::sys::RemoveFileOnSignal(StringRef Filename,
 }
 
 // The public API
-void llvm::sys::DontRemoveFileOnSignal(StringRef Filename) {
+void llvh::sys::DontRemoveFileOnSignal(StringRef Filename) {
   FileToRemoveList::erase(FilesToRemove, Filename.str());
 }
 
 /// Add a function to be called when a signal is delivered to the process. The
 /// handler can have a cookie passed to it to identify what instance of the
 /// handler it is.
-void llvm::sys::AddSignalHandler(sys::SignalHandlerCallback FnPtr,
+void llvh::sys::AddSignalHandler(sys::SignalHandlerCallback FnPtr,
                                  void *Cookie) { // Signal-safe.
   insertSignalHandler(FnPtr, Cookie);
   RegisterHandlers();
@@ -480,7 +480,7 @@ static int unwindBacktrace(void **StackTrace, int MaxEntries) {
 //
 // On glibc systems we have the 'backtrace' function, which works nicely, but
 // doesn't demangle symbols.
-void llvm::sys::PrintStackTrace(raw_ostream &OS) {
+void llvh::sys::PrintStackTrace(raw_ostream &OS) {
 #if ENABLE_BACKTRACES
   static void *StackTrace[256];
   int depth = 0;
@@ -550,14 +550,14 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS) {
 }
 
 static void PrintStackTraceSignalHandler(void *) {
-  sys::PrintStackTrace(llvm::errs());
+  sys::PrintStackTrace(llvh::errs());
 }
 
-void llvm::sys::DisableSystemDialogsOnCrash() {}
+void llvh::sys::DisableSystemDialogsOnCrash() {}
 
 /// When an error signal (such as SIGABRT or SIGSEGV) is delivered to the
 /// process, print a stack trace and then exit.
-void llvm::sys::PrintStackTraceOnErrorSignal(StringRef Argv0,
+void llvh::sys::PrintStackTraceOnErrorSignal(StringRef Argv0,
                                              bool DisableCrashReporting) {
   ::Argv0 = Argv0;
 

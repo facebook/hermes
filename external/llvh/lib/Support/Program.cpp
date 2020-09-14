@@ -11,11 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Program.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Config/llvm-config.h"
+#include "llvh/Support/Program.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/Config/llvm-config.h"
 #include <system_error>
-using namespace llvm;
+using namespace llvh;
 using namespace sys;
 
 //===----------------------------------------------------------------------===//

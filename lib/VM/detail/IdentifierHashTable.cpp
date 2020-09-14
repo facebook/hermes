@@ -24,13 +24,13 @@ using hermes::vm::SymbolID;
 
 template <typename T>
 uint32_t IdentifierHashTable::lookupString(
-    llvm::ArrayRef<T> str,
+    llvh::ArrayRef<T> str,
     uint32_t hash,
     bool mustBeNew) const {
   assert(identifierTable_ && "identifier table pointer is not initialized");
 
   auto cap = capacity();
-  assert(llvm::isPowerOf2_32(cap) && "capacity must be power of 2");
+  assert(llvh::isPowerOf2_32(cap) && "capacity must be power of 2");
   assert(size_ < cap && "The hash table can never be full");
 
 #ifdef HERMES_SLOW_DEBUG
@@ -95,12 +95,12 @@ uint32_t IdentifierHashTable::lookupString(
 // Instantiate the templated method so it can be called from other files.
 
 template uint32_t IdentifierHashTable::lookupString(
-    llvm::ArrayRef<char> str,
+    llvh::ArrayRef<char> str,
     uint32_t hash,
     bool mustBeNew) const;
 
 template uint32_t IdentifierHashTable::lookupString(
-    llvm::ArrayRef<char16_t> str,
+    llvh::ArrayRef<char16_t> str,
     uint32_t hash,
     bool mustBeNew) const;
 
@@ -144,7 +144,7 @@ void IdentifierHashTable::remove(const StringPrimitive *str) {
 }
 
 void IdentifierHashTable::growAndRehash(uint32_t newCapacity) {
-  assert(llvm::isPowerOf2_32(newCapacity) && "capacity must be power of 2");
+  assert(llvh::isPowerOf2_32(newCapacity) && "capacity must be power of 2");
   CompactTable tmpTable(newCapacity, table_.getCurrentScale());
   tmpTable.swap(table_);
   for (uint32_t oldIdx = 0; oldIdx < tmpTable.size(); ++oldIdx) {

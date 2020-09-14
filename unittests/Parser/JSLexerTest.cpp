@@ -9,17 +9,17 @@
 
 #include "DiagContext.h"
 
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/APInt.h"
-#include "llvm/ADT/SmallString.h"
+#include "llvh/ADT/APFloat.h"
+#include "llvh/ADT/APInt.h"
+#include "llvh/ADT/SmallString.h"
 
 #include "gtest/gtest.h"
 
 using namespace hermes;
 using namespace hermes::parser;
 
-using llvm::APFloat;
-using llvm::APInt;
+using llvh::APFloat;
+using llvh::APInt;
 
 namespace {
 
@@ -140,6 +140,28 @@ TEST(JSLexerTest, CommentTest) {
   ASSERT_TRUE(lex.isNewLineBeforeCurrentToken());
 }
 
+TEST(JSLexerTest, HashbangTest) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext diag(sm);
+
+  JSLexer lex(
+      "#! hashbang comment\n"
+      ";\n"
+      "#! // not a hashbang comment\n",
+      sm,
+      alloc);
+  ASSERT_EQ(TokenKind::semi, lex.advance()->getKind());
+  ASSERT_TRUE(lex.isNewLineBeforeCurrentToken());
+
+  ASSERT_EQ(TokenKind::exclaim, lex.advance()->getKind());
+  ASSERT_EQ(1, diag.getErrCountClear());
+  ASSERT_TRUE(lex.isNewLineBeforeCurrentToken());
+
+  ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+  ASSERT_TRUE(lex.isNewLineBeforeCurrentToken());
+}
+
 TEST(JSLexerTest, NumberTest) {
   JSLexer::Allocator alloc;
   SourceErrorManager sm;
@@ -155,7 +177,7 @@ TEST(JSLexerTest, NumberTest) {
 #define _FLT(num)                                                        \
   {                                                                      \
     APFloat fval(APFloat::IEEEdouble(), #num);                           \
-    llvm::SmallString<16> actual, expected;                              \
+    llvh::SmallString<16> actual, expected;                              \
                                                                          \
     const Token *tok = lex.advance();                                    \
     ASSERT_EQ(TokenKind::numeric_literal, tok->getKind());               \
@@ -172,7 +194,7 @@ TEST(JSLexerTest, NumberTest) {
   {                                                                      \
     APInt ival;                                                          \
     APFloat fval(APFloat::IEEEdouble());                                 \
-    llvm::SmallString<16> actual, expected;                              \
+    llvh::SmallString<16> actual, expected;                              \
                                                                          \
     const Token *tok = lex.advance();                                    \
     ASSERT_EQ(TokenKind::numeric_literal, tok->getKind());               \
@@ -282,7 +304,7 @@ TEST(JSLexerTest, BigIntegerTest) {
   // Test more then 52 bits of integer
   {
     ASSERT_EQ(TokenKind::numeric_literal, lex.advance()->getKind());
-    llvm::SmallString<32> actual;
+    llvh::SmallString<32> actual;
     APFloat(lex.getCurToken()->getNumericLiteral()).toString(actual, 20);
     // We need dtoa.c for the correct string representation
     // EXPECT_STREQ("18446744073709552000", actual.c_str());
@@ -291,7 +313,7 @@ TEST(JSLexerTest, BigIntegerTest) {
 
   {
     ASSERT_EQ(TokenKind::numeric_literal, lex.advance()->getKind());
-    llvm::SmallString<32> actual;
+    llvh::SmallString<32> actual;
     APFloat(lex.getCurToken()->getNumericLiteral()).toString(actual, 30, 30);
     EXPECT_STREQ("100000000000000000000", actual.c_str());
   }
@@ -885,7 +907,7 @@ TEST(JSLexerTest, LookaheadNewlineTest) {
   {
     // Revert since there is no expected token
     // Expect None returned since there is a newline before the next token
-    auto optNext = lex.lookahead1(llvm::None);
+    auto optNext = lex.lookahead1(llvh::None);
     ASSERT_FALSE(optNext.hasValue());
   }
 
@@ -908,7 +930,7 @@ TEST(JSLexerTest, LookaheadTest) {
 
   {
     // Without the expected token, always revert.
-    auto optNext = lex.lookahead1(llvm::None);
+    auto optNext = lex.lookahead1(llvh::None);
     ASSERT_TRUE(optNext.hasValue());
     EXPECT_EQ(TokenKind::l_paren, optNext.getValue());
   }
@@ -957,6 +979,58 @@ TEST(JSLexerTest, RegressConsumeBadHexTest) {
   ASSERT_EQ(0, diag.getErrCountClear());
 }
 
+TEST(JSLexerTest, ConsumeBadBracedCodePoint) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext diag(sm);
+
+  // Test an invalid curly brace escape without a terminating curly brace
+  // This catches an out of bounds read where we hit the error limit and
+  // curCharPtr_ was set to eof, but JSLexer::consumeBracedCodePoint continued
+  // to operate on curCharPtr_
+  // We configure a low error limit to reach the interesting code path faster
+  // then we use invalid characters in a non terminated curly brace code point
+  // to trigger JSLexer:error
+  sm.setErrorLimit(1);
+  JSLexer lex("'\\u{12XXXXXXXXXXX'", sm, alloc);
+
+  ASSERT_EQ(TokenKind::string_literal, lex.advance()->getKind());
+  ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+}
+
+TEST(JSLexerTest, AtSignTest) {
+  {
+    JSLexer::Allocator alloc;
+    SourceErrorManager sm;
+    DiagContext diag(sm);
+    sm.setErrorLimit(10);
+    JSLexer lex("`${{}@", sm, alloc);
+
+    ASSERT_EQ(TokenKind::template_head, lex.advance()->getKind());
+
+    ASSERT_EQ(TokenKind::l_brace, lex.advance()->getKind());
+    ASSERT_EQ(TokenKind::r_brace, lex.advance()->getKind());
+
+    ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+    EXPECT_EQ(1, sm.getErrorCount());
+  }
+  {
+    JSLexer::Allocator alloc;
+    SourceErrorManager sm;
+    DiagContext diag(sm);
+    sm.setErrorLimit(1);
+    JSLexer lex("`${{}@", sm, alloc);
+
+    ASSERT_EQ(TokenKind::template_head, lex.advance()->getKind());
+
+    ASSERT_EQ(TokenKind::l_brace, lex.advance()->getKind());
+    ASSERT_EQ(TokenKind::r_brace, lex.advance()->getKind());
+
+    ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+    EXPECT_EQ(1, sm.getErrorCount());
+  }
+}
+
 TEST(JSLexerTest, JSXTest) {
   JSLexer::Allocator alloc;
   SourceErrorManager sm;
@@ -974,6 +1048,40 @@ TEST(JSLexerTest, JSXTest) {
   ASSERT_EQ(TokenKind::less, lex.advanceInJSXChild()->getKind());
   ASSERT_EQ(TokenKind::jsx_text, lex.advanceInJSXChild()->getKind());
   EXPECT_STREQ("qwerty", lex.getCurToken()->getJSXTextRaw()->c_str());
+}
+
+TEST(JSLexerTest, StoreCommentsTest) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext diag(sm);
+
+  {
+    JSLexer lex("// hello\n;\n// world", sm, alloc, nullptr, true, false);
+    lex.setStoreComments(true);
+
+    ASSERT_EQ(TokenKind::semi, lex.advance()->getKind());
+    ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+
+    ASSERT_EQ(2, lex.getStoredComments().size());
+    EXPECT_EQ(StoredComment::Kind::Line, lex.getStoredComments()[0].getKind());
+    EXPECT_EQ(" hello", lex.getStoredComments()[0].getString());
+    EXPECT_EQ(StoredComment::Kind::Line, lex.getStoredComments()[1].getKind());
+    EXPECT_EQ(" world", lex.getStoredComments()[1].getString());
+  }
+
+  {
+    JSLexer lex("/* hello */;/*world*/", sm, alloc, nullptr, true, false);
+    lex.setStoreComments(true);
+
+    ASSERT_EQ(TokenKind::semi, lex.advance()->getKind());
+    ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+
+    ASSERT_EQ(2, lex.getStoredComments().size());
+    EXPECT_EQ(StoredComment::Kind::Block, lex.getStoredComments()[0].getKind());
+    EXPECT_EQ(" hello ", lex.getStoredComments()[0].getString());
+    EXPECT_EQ(StoredComment::Kind::Block, lex.getStoredComments()[1].getKind());
+    EXPECT_EQ("world", lex.getStoredComments()[1].getString());
+  }
 }
 
 } // namespace

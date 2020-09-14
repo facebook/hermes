@@ -22,7 +22,7 @@ namespace hermes {
 namespace vm {
 
 #ifdef HERMESVM_PROFILER_OPCODE
-void Runtime::dumpOpcodeStats(llvm::raw_ostream &os) const {
+void Runtime::dumpOpcodeStats(llvh::raw_ostream &os) const {
   std::ostringstream stream;
   // Get all non-zero occurence opcodes.
   std::vector<size_t> idx;
@@ -111,7 +111,7 @@ const ProfilerFunctionInfo *Runtime::getProfilerInfo(ProfilerID id) {
 
 #if defined(HERMESVM_PROFILER_JSFUNCTION)
 /// Aggregate JS Function Profiling results by adding total time spent
-/// per stacktrace and dump it to llvm::outs(). Each line of the output
+/// per stacktrace and dump it to llvh::outs(). Each line of the output
 /// includes a stacktrace with function names separated by semicolon,
 /// followed by a tab, and then the total time (in terms of number of clock
 /// cycles) spent in this stack trace. Each function name is displayed with
@@ -125,7 +125,7 @@ void Runtime::dumpJSFunctionStats(ProfileType type) {
     dumpJSFunctionStats(ProfileType::TIME);
     dumpJSFunctionStats(ProfileType::OPCODES);
     // The peak number of registers on the stack.
-    llvm::outs() << "\nPeak stack usage: " << maxStackLevel << "\n";
+    llvh::outs() << "\nPeak stack usage: " << maxStackLevel << "\n";
     return;
   }
   const bool opcodes = type == ProfileType::OPCODES;
@@ -168,7 +168,7 @@ void Runtime::dumpJSFunctionStats(ProfileType type) {
   if (!(functionStack.empty() && enterTimes.empty() && childrenTimes.empty())) {
     llvm_unreachable("Function stack corrupted");
   }
-  llvm::outs() << (opcodes ? "==Opcode Profile==\n" : " ==Time Profile==\n");
+  llvh::outs() << (opcodes ? "==Opcode Profile==\n" : " ==Time Profile==\n");
   GCScope gcScope{this};
   for (const auto &kv : funcTimeSpent) {
     gcScope.clearAllHandles();
@@ -178,21 +178,21 @@ void Runtime::dumpJSFunctionStats(ProfileType type) {
     bool isFirst = true;
     for (auto profID : kv.first) {
       if (!isFirst) {
-        llvm::outs() << ";";
+        llvh::outs() << ";";
       }
       isFirst = false;
       const auto *info = getProfilerInfo(profID);
       assert(info);
-      llvm::outs() << "[" << profID << "]" << info->functionName;
+      llvh::outs() << "[" << profID << "]" << info->functionName;
     }
-    llvm::outs() << " " << kv.second << "\n";
+    llvh::outs() << " " << kv.second << "\n";
   }
 }
 #endif
 
 #ifdef HERMESVM_PROFILER_NATIVECALL
 
-void Runtime::dumpNativeCallStats(llvm::raw_ostream &OS) {
+void Runtime::dumpNativeCallStats(llvh::raw_ostream &OS) {
   // Pick an arbitrary static function in Hermes to use as a base.
   const auto base = reinterpret_cast<uintptr_t>(ArrayStorage::ensureCapacity);
 
@@ -212,7 +212,7 @@ void Runtime::dumpNativeCallStats(llvm::raw_ostream &OS) {
   // Map from a C++ function pointer to stats for that function. We need to
   // cast to "void *" because DenseMapInfo uses alignOf() by default and that
   // fails with pointers to function.
-  using MapTy = llvm::DenseMap<void *, Info>;
+  using MapTy = llvh::DenseMap<void *, Info>;
 
   // There could be multiple ones pointing to the same native code, so we need
   // to merge them.
@@ -244,17 +244,17 @@ void Runtime::dumpNativeCallStats(llvm::raw_ostream &OS) {
   for (const auto &entry : funcs) {
     auto ofs = reinterpret_cast<uintptr_t>(entry.first);
 
-    OS << llvm::format_decimal(entry.second.count, 6) << " "
-       << llvm::format_decimal(entry.second.duration, 8) << " "
-       << llvm::format_decimal(entry.second.durationPerCall(), 8) << " ";
+    OS << llvh::format_decimal(entry.second.count, 6) << " "
+       << llvh::format_decimal(entry.second.duration, 8) << " "
+       << llvh::format_decimal(entry.second.durationPerCall(), 8) << " ";
 
     // We have to deal with the possibility that the base has a larger address.
     // If that happens, we want to output a small negative number instead of
     // a 64-bit two's complement.
     if (ofs < base)
-      OS << "-" << llvm::format_hex(base - ofs, 10);
+      OS << "-" << llvh::format_hex(base - ofs, 10);
     else
-      OS << llvm::format_hex(ofs - base, 10);
+      OS << llvh::format_hex(ofs - base, 10);
 
     OS << " NativeCall\n";
   }

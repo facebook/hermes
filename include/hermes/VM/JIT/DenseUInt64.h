@@ -10,12 +10,12 @@
 
 #include "hermes/VM/HermesValue.h"
 
-#include "llvm/ADT/DenseMapInfo.h"
+#include "llvh/ADT/DenseMapInfo.h"
 
 namespace hermes {
 namespace vm {
 
-/// A wrapper for using uint64_t with llvm::DenseMap/Set.
+/// A wrapper for using uint64_t with llvh::DenseMap/Set.
 class DenseUInt64 {
  public:
   /// Enum to differentiate between LLVM's empty/tombstone and normal values.
@@ -69,8 +69,8 @@ class DenseUInt64 {
 } // namespace vm
 } // namespace hermes
 
-namespace llvm {
-/// Traits to enable using UInt64Constant with llvm::DenseSet/Map.
+namespace llvh {
+/// Traits to enable using UInt64Constant with llvh::DenseSet/Map.
 template <>
 struct DenseMapInfo<hermes::vm::DenseUInt64> {
   using UInt64Constant = hermes::vm::DenseUInt64;
@@ -89,6 +89,6 @@ struct DenseMapInfo<hermes::vm::DenseUInt64> {
     return a == b;
   }
 };
-} // namespace llvm
+} // namespace llvh
 
 #endif // HERMES_VM_JIT_DENSEUINT64_H

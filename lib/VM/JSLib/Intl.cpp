@@ -1509,7 +1509,7 @@ intlNumberPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
 CallResult<HermesValue>
 intlStringPrototypeLocaleCompare(void *, Runtime *runtime, NativeArgs args) {
   if (args.getThisArg().isUndefined() || args.getThisArg().isNumber()) {
-    runtime->raiseTypeError(
+    return runtime->raiseTypeError(
         "String.prototype.localeCompare called on null or undefined");
   }
   CallResult<std::u16string> thisRes =
@@ -1548,7 +1548,7 @@ CallResult<HermesValue> intlStringPrototypeToLocaleLowerCase(
     Runtime *runtime,
     NativeArgs args) {
   if (args.getThisArg().isUndefined() || args.getThisArg().isNumber()) {
-    runtime->raiseTypeError(
+    return runtime->raiseTypeError(
         "String.prototype.localeCompare called on null or undefined");
   }
   CallResult<std::u16string> thisRes =
@@ -1576,7 +1576,7 @@ CallResult<HermesValue> intlStringPrototypeToLocaleUpperCase(
     Runtime *runtime,
     NativeArgs args) {
   if (args.getThisArg().isUndefined() || args.getThisArg().isNumber()) {
-    runtime->raiseTypeError(
+    return runtime->raiseTypeError(
         "String.prototype.localeCompare called on null or undefined");
   }
   CallResult<std::u16string> thisRes =

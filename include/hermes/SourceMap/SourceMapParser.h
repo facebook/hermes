@@ -10,7 +10,7 @@
 
 #include "hermes/SourceMap/SourceMapGenerator.h"
 
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvh/Support/MemoryBuffer.h"
 
 namespace hermes {
 
@@ -21,13 +21,13 @@ class SourceMapParser {
  public:
   /// Parse input \p sourceMap and return parsed SourceMap.
   /// On failure if malformed, prints an error message and returns nullptr.
-  static std::unique_ptr<SourceMap> parse(llvm::MemoryBufferRef sourceMap);
+  static std::unique_ptr<SourceMap> parse(llvh::MemoryBufferRef sourceMap);
 
   /// Parse input \p sourceMapContent and return parsed SourceMap.
   /// Set the filename of the map file to "<source map>".
   /// On failure if malformed, prints an error message and returns nullptr.
-  static std::unique_ptr<SourceMap> parse(llvm::StringRef sourceMapContent) {
-    return parse(llvm::MemoryBufferRef(sourceMapContent, "<source map>"));
+  static std::unique_ptr<SourceMap> parse(llvh::StringRef sourceMapContent) {
+    return parse(llvh::MemoryBufferRef(sourceMapContent, "<source map>"));
   }
 
  private:
@@ -49,11 +49,11 @@ class SourceMapParser {
   /// Parse "mappings" section from \p sourceMappings. The parsed line mappings
   /// are returned in \p lines.
   static bool parseMappings(
-      llvm::StringRef sourceMappings,
+      llvh::StringRef sourceMappings,
       std::vector<SourceMap::SegmentList> &lines);
 
   /// Parse single segment in mapping.
-  static llvm::Optional<SourceMap::Segment>
+  static llvh::Optional<SourceMap::Segment>
   parseSegment(const State &state, const char *&pCur, const char *pSegEnd);
 };
 

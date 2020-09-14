@@ -53,7 +53,6 @@ struct SlotAcceptor {
 struct WeakRefAcceptor {
   virtual ~WeakRefAcceptor() {}
   virtual void accept(WeakRefBase &wr) = 0;
-  virtual const WeakRefMutex &mutexRef() = 0;
 };
 
 struct SlotAcceptorWithNames : public SlotAcceptor {

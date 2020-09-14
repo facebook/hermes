@@ -8,7 +8,7 @@
 #ifndef HERMES_ADT_WORDBITSET_H
 #define HERMES_ADT_WORDBITSET_H
 
-#include "llvm/Support/MathExtras.h"
+#include "llvh/Support/MathExtras.h"
 
 #include <cassert>
 #include <climits>
@@ -60,7 +60,7 @@ class WordBitSet {
 
   /// \return the index of the first set bit, or -1 if no bit is set.
   int findFirst() const {
-    return !value_ ? -1 : llvm::countTrailingZeros(value_, llvm::ZB_Undefined);
+    return !value_ ? -1 : llvh::countTrailingZeros(value_, llvh::ZB_Undefined);
   }
 
   /// \return the index of the next set bit following \p prev, or -1 if the next
@@ -71,7 +71,7 @@ class WordBitSet {
     T tmp = value_ >> prev;
     tmp >>= 1;
     return !tmp ? -1
-                : llvm::countTrailingZeros(tmp, llvm::ZB_Undefined) + prev + 1;
+                : llvh::countTrailingZeros(tmp, llvh::ZB_Undefined) + prev + 1;
   }
 
   class const_iterator {
@@ -81,7 +81,7 @@ class WordBitSet {
 
     const_iterator(T value) : value_(value) {
       if (value) {
-        unsigned tmp = llvm::countTrailingZeros(value_, llvm::ZB_Undefined);
+        unsigned tmp = llvh::countTrailingZeros(value_, llvh::ZB_Undefined);
         value_ >>= tmp;
         pos_ = tmp;
       } else {
@@ -104,7 +104,7 @@ class WordBitSet {
       assert(pos_ >= 0 && "Can't increment end() iterator");
       value_ >>= 1;
       if (value_) {
-        unsigned tmp = llvm::countTrailingZeros(value_, llvm::ZB_Undefined);
+        unsigned tmp = llvh::countTrailingZeros(value_, llvh::ZB_Undefined);
         value_ >>= tmp;
         pos_ += tmp + 1;
       } else {

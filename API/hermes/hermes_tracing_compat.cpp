@@ -6,7 +6,7 @@
  */
 
 #include "hermes_tracing.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvh/Support/ErrorHandling.h"
 
 namespace facebook {
 namespace hermes {

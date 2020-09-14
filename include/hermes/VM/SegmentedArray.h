@@ -11,7 +11,7 @@
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/Runtime.h"
 
-#include "llvm/Support/TrailingObjects.h"
+#include "llvh/Support/TrailingObjects.h"
 
 #include <limits>
 
@@ -42,7 +42,7 @@ namespace vm {
 ///   * Sharing segments with multiple spines (copy-on-write)
 class SegmentedArray final
     : public VariableSizeRuntimeCell,
-      private llvm::TrailingObjects<SegmentedArray, GCHermesValue> {
+      private llvh::TrailingObjects<SegmentedArray, GCHermesValue> {
  public:
   /// A segment is just a blob of raw memory with a fixed size.
   class Segment final : public GCCell {
@@ -85,7 +85,10 @@ class SegmentedArray final
     /// It is the caller's responsibility to ensure that the newly used portion
     /// will contain valid values before they are accessed (including accesses
     /// by the GC).
+    /// \pre This cannot be called if kConcurrentGC is true, since the GC might
+    ///   read uninitialized memory even if the mutator wouldn't.
     void setLengthWithoutFilling(uint32_t newLength) {
+      assert(!kConcurrentGC && "Cannot avoid filling for a concurrent GC");
       assert(newLength <= kMaxLength && "Cannot set length to more than size");
       length_.store(newLength, std::memory_order_release);
     }
@@ -421,7 +424,7 @@ class SegmentedArray final
         ? capacity
         :
         // Enough segments to hold the capacity without inline storage.
-        (llvm::alignTo<Segment::kMaxLength>(
+        (llvh::alignTo<Segment::kMaxLength>(
              capacity - kValueToSegmentThreshold) /
          Segment::kMaxLength) +
             // The slots for inline storage plus the slots need to hold the

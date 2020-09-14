@@ -7,8 +7,8 @@
 
 //===----------------------------------------------------------------------===//
 /// \file
-/// A simple replacement of llvm::Optional<> to be used with trivially copyable
-/// types in performance-sensitive context because llvm::Optional<> is not
+/// A simple replacement of llvh::Optional<> to be used with trivially copyable
+/// types in performance-sensitive context because llvh::Optional<> is not
 /// trivially copyable.
 //===----------------------------------------------------------------------===//
 
@@ -17,14 +17,14 @@
 
 #include "hermes/Support/Compiler.h"
 
-#include "llvm/ADT/None.h"
+#include "llvh/ADT/None.h"
 
 #include <cassert>
 #include <type_traits>
 
 namespace hermes {
 
-/// A simple trivially copyable replacement for llvm::Optional<>. Trivially
+/// A simple trivially copyable replacement for llvh::Optional<>. Trivially
 /// copyable objects use a more efficient ABI passing convenient (can be passed
 /// directly in registers) and simplify some situations involving goto-s due to
 /// their trivial destructors.
@@ -39,7 +39,7 @@ class OptValue {
  public:
   typedef T value_type;
 
-  OptValue(llvm::NoneType) : hasValue_(false) {}
+  OptValue(llvh::NoneType) : hasValue_(false) {}
   explicit OptValue() : hasValue_(false) {}
   OptValue(const T &v) : value_(v), hasValue_(true) {}
 
@@ -78,7 +78,7 @@ class OptValue<bool> {
 
  public:
   typedef bool value_type;
-  OptValue(llvm::NoneType) : value_(-1) {}
+  OptValue(llvh::NoneType) : value_(-1) {}
   explicit OptValue() : value_(-1) {}
   OptValue(bool v) : value_(v ? 1 : 0) {}
 
@@ -119,7 +119,7 @@ bool operator!=(const OptValue<T> &a, const OptValue<U> &b) {
 }
 } // namespace hermes
 
-namespace llvm {
+namespace llvh {
 template <typename T>
 struct isPodLike;
 template <typename T>
@@ -127,6 +127,6 @@ struct isPodLike<hermes::OptValue<T>> {
   // An OptValue<T> is pod-like if T is.
   static const bool value = isPodLike<T>::value;
 };
-} // namespace llvm
+} // namespace llvh
 
 #endif // HERMES_SUPPORT_OPTVALUE_H

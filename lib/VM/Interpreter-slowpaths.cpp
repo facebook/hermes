@@ -223,7 +223,7 @@ ExecutionStatus Interpreter::caseIteratorNext(
                             Handle<Callable>::vmcast(&O3REG(IteratorNext))};
 
   CallResult<PseudoHandle<JSObject>> resultObjRes =
-      iteratorNext(runtime, iterRecord, llvm::None);
+      iteratorNext(runtime, iterRecord, llvh::None);
   if (LLVM_UNLIKELY(resultObjRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

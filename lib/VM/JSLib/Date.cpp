@@ -30,7 +30,7 @@ struct ToStringOptions {
   /// \param t the local time since Jan 1 1970 UTC.
   /// \param tza the offset from UTC that \p t has been adjusted by.
   /// \param buf[out] the buffer into which to output the result string.
-  void (*toStringFn)(double t, double tza, llvm::SmallVectorImpl<char> &buf);
+  void (*toStringFn)(double t, double tza, llvh::SmallVectorImpl<char> &buf);
   bool isUTC;
   /// Throw if the internal value of this Date is not finite.
   bool throwOnError;
@@ -42,7 +42,7 @@ struct ToLocaleStringOptions {
   /// \param t the local time since Jan 1 1970 UTC.
   /// \param locale the locale to convert in (the current locale).
   /// \param buf[out] the buffer into which to output the result string.
-  void (*toStringFn)(double t, llvm::SmallVectorImpl<char16_t> &buf);
+  void (*toStringFn)(double t, llvh::SmallVectorImpl<char16_t> &buf);
 };
 
 struct GetterOptions {
@@ -476,7 +476,7 @@ dateConstructor(void *, Runtime *runtime, NativeArgs args) {
     return self.getHermesValue();
   }
 
-  llvm::SmallString<32> str{};
+  llvh::SmallString<32> str{};
   if (storage->env) {
     if (storage->env->callsToDateAsFunction.empty()) {
       return runtime->raiseTypeError(
@@ -574,7 +574,7 @@ datePrototypeToStringHelper(void *ctx, Runtime *runtime, NativeArgs args) {
     return HermesValue::encodeStringValue(
         runtime->getPredefinedString(Predefined::InvalidDate));
   }
-  llvm::SmallString<32> str{};
+  llvh::SmallString<32> str{};
   if (!opts->isUTC) {
     double local = localTime(t);
     opts->toStringFn(local, local - t, str);

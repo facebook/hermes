@@ -16,7 +16,7 @@
 //===          is guaranteed to work on *all* UNIX variants.
 //===----------------------------------------------------------------------===//
 
-namespace llvm {
+namespace llvh {
 namespace sys {
 
 InitializeCOMRAII::InitializeCOMRAII(COMThreadingMode Threading,

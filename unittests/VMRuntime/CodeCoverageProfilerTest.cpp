@@ -5,17 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// Disable this test for JS lib feature because it will change the number of
-// executed JS functions.
-#ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
-
 #include "TestHelpers.h"
 #include "gtest/gtest.h"
 
 #include "hermes/VM/Profiler/CodeCoverageProfiler.h"
 
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <algorithm>
 
@@ -101,6 +97,7 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleModules) {
   CallResult<HermesValue> res1 =
       runtime->run("function foo() {}; foo(); foo;", "file:///fake1.js", flags);
   EXPECT_FALSE(isException(res1));
+  Handle<JSFunction> funcFoo = runtime->makeHandle(vmcast<JSFunction>(*res1));
 
   CallResult<HermesValue> res2 = runtime->run(
       "\n  function bar() {}; function bar() {}; function unused() {}; bar(); [bar, unused];",
@@ -110,8 +107,6 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleModules) {
 
   std::vector<CodeCoverageProfiler::FuncInfo> executedFuncInfos =
       profiler->getExecutedFunctions();
-
-  Handle<JSFunction> funcFoo = runtime->makeHandle(vmcast<JSFunction>(*res1));
 
   Handle<JSArray> funcArr = runtime->makeHandle(vmcast<JSArray>(*res2));
   Handle<JSFunction> funcBar =
@@ -165,5 +160,3 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleDomains) {
 } // namespace CodeCoverageTest
 } // namespace unittest
 } // namespace hermes
-
-#endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION

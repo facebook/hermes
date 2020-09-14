@@ -71,7 +71,7 @@ diff --git a/lib/Support/ErrorHandling.cpp b/lib/Support/ErrorHandling.cpp
 index 21712c5c039..e18c0bd037d 100644
 --- a/lib/Support/ErrorHandling.cpp
 +++ b/lib/Support/ErrorHandling.cpp
-@@ -198,6 +198,8 @@ void llvm::install_out_of_memory_new_handler() {
+@@ -198,6 +198,8 @@ void llvh::install_out_of_memory_new_handler() {
    }
  }
  
@@ -86,13 +86,13 @@ index 21712c5c039..e18c0bd037d 100644
  #endif
 +#endif
  
- void llvm::llvm_unreachable_internal(const char *msg, const char *file,
+ void llvh::llvm_unreachable_internal(const char *msg, const char *file,
                                       unsigned line) {
 diff --git a/lib/Support/Signals.cpp b/lib/Support/Signals.cpp
 index 6534ff69b84..720105f3d18 100644
 --- a/lib/Support/Signals.cpp
 +++ b/lib/Support/Signals.cpp
-@@ -38,10 +38,12 @@ using namespace llvm;
+@@ -38,10 +38,12 @@ using namespace llvh;
  
  // Use explicit storage to avoid accessing cl::opt in a signal handler.
  static bool DisableSymbolicationFlag = false;
@@ -110,7 +110,7 @@ index de26695d64e..df10abbb3d2 100644
 --- a/lib/Support/Unix/Signals.inc
 +++ b/lib/Support/Unix/Signals.inc
 @@ -47,7 +47,7 @@
- #include "llvm/Support/raw_ostream.h"
+ #include "llvh/Support/raw_ostream.h"
  #include <algorithm>
  #include <string>
 -#ifdef HAVE_BACKTRACE

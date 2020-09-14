@@ -2,7 +2,6 @@ package com.facebook.hermes.intl;
 
 import android.icu.text.DateFormat;
 import android.icu.text.NumberingSystem;
-import android.icu.text.SimpleDateFormat;
 import android.icu.util.Calendar;
 import android.icu.util.TimeZone;
 import android.icu.util.ULocale;
@@ -11,20 +10,9 @@ import java.text.AttributedCharacterIterator;
 import java.util.ArrayList;
 import java.util.Date;
 
-import static com.facebook.hermes.intl.IPlatformDateTimeFormatter.Day.*;
-import static com.facebook.hermes.intl.IPlatformDateTimeFormatter.Era.*;
-import static com.facebook.hermes.intl.IPlatformDateTimeFormatter.Hour.*;
-import static com.facebook.hermes.intl.IPlatformDateTimeFormatter.Minute.*;
-import static com.facebook.hermes.intl.IPlatformDateTimeFormatter.Month.*;
-import static com.facebook.hermes.intl.IPlatformDateTimeFormatter.Second.*;
-import static com.facebook.hermes.intl.IPlatformDateTimeFormatter.TimeZoneName.*;
-import static com.facebook.hermes.intl.IPlatformDateTimeFormatter.WeekDay.*;
-import static com.facebook.hermes.intl.IPlatformDateTimeFormatter.WeekDay.LONG;
-import static com.facebook.hermes.intl.IPlatformDateTimeFormatter.Year.*;
-
 public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter{
     private DateFormat mDateFormat = null;
-    private ILocaleObject mLocale = null;
+    private LocaleObjectICU mLocale = null;
 
     @Override
     public String format(double n) throws JSRangeErrorException {
@@ -83,13 +71,10 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter{
     }
 
     @Override
-    public String getCalendarName() {
-        return mDateFormat.getCalendar().getType();
-    }
-
-    @Override
-    public String getTimeZoneName() throws JSRangeErrorException {
-        return mDateFormat.getTimeZone().getDisplayName(false, TimeZone.SHORT, (ULocale) mLocale.getLocale());
+    public String getDefaultCalendarName(ILocaleObject mResolvedLocaleObject) throws JSRangeErrorException {
+        String defaultCalendar =  DateFormat.getDateInstance(DateFormat.SHORT, (ULocale) mResolvedLocaleObject.getLocale()).getCalendar().getType();
+        defaultCalendar = UnicodeExtensionKeys.resolveCalendarAlias(defaultCalendar);
+        return defaultCalendar;
     }
 
     private static class PatternUtils {
@@ -122,21 +107,21 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter{
     }
 
     @Override
-    public String getDefaultHourCycle(ILocaleObject localeObject) throws JSRangeErrorException {
-        String hourCycle;
+    public HourCycle getDefaultHourCycle(ILocaleObject localeObject) throws JSRangeErrorException {
+        HourCycle hourCycle;
         try {
-            String dateFormatPattern = ((SimpleDateFormat) DateFormat.getTimeInstance(DateFormat.FULL, (ULocale) localeObject.getLocale())).toPattern();
+            String dateFormatPattern = ((android.icu.text.SimpleDateFormat) DateFormat.getTimeInstance(DateFormat.FULL, (ULocale) localeObject.getLocale())).toPattern();
             String dateFormatPatternWithoutLiterals = PatternUtils.getPatternWithoutLiterals(dateFormatPattern);
             if (dateFormatPatternWithoutLiterals.contains(String.valueOf('h')))
-                hourCycle = "h12";
+                hourCycle = HourCycle.H12;
             else if (dateFormatPatternWithoutLiterals.contains(String.valueOf('K')))
-                hourCycle = "h11";
+                hourCycle = HourCycle.H11;
             else if (dateFormatPatternWithoutLiterals.contains(String.valueOf('H')))
-                hourCycle = "h23";
+                hourCycle = HourCycle.H23;
             else // TODO :: Make it more tight.
-                hourCycle = "h24";
+                hourCycle = HourCycle.H24;
         } catch (ClassCastException ex) {
-            hourCycle = "h24";
+            hourCycle = HourCycle.H24;
         }
 
         return hourCycle;
@@ -153,147 +138,41 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter{
     }
 
     private static String getSkeleton(FormatMatcher mFormatMatcher
-            , WeekDay mWeekDay, Era mEra
-            , Year mYear, Month mMonth, Day mDay
-            , Hour mHour, Minute mMinute, Second mSecond
-            , TimeZoneName mTimeZoneName, boolean hour12) {
+            , WeekDay weekDay, Era era
+            , Year year, Month month, Day day
+            , Hour hour, Minute minute, Second second
+            , TimeZoneName timeZoneName, boolean hour12) {
 
         StringBuffer skeletonBuffer = new StringBuffer();
+        skeletonBuffer.append(weekDay.getSkeleonSymbol());
+        skeletonBuffer.append(era.getSkeleonSymbol());
+        skeletonBuffer.append(year.getSkeleonSymbol());
+        skeletonBuffer.append(month.getSkeleonSymbol());
+        skeletonBuffer.append(day.getSkeleonSymbol());
 
-        if (mWeekDay != null) {
-            switch (mWeekDay) {
-                case LONG:
-                    skeletonBuffer.append("EEEE");
-                    break;
-                case SHORT:
-                    skeletonBuffer.append("EEE");
-                    break;
-                case NARROW:
-                    skeletonBuffer.append("EEEEE");
-                    break;
-            }
-        }
+        if (hour12)
+            skeletonBuffer.append(hour.getSkeleonSymbol12());
+        else
+            skeletonBuffer.append(hour.getSkeleonSymbol24());
 
-        if (mEra != null) {
-            switch (mEra) {
-                case LONG:
-                    skeletonBuffer.append("GGGG");
-                    break;
-                case SHORT:
-                    skeletonBuffer.append("GGG");
-                    break;
-                case NARROW:
-                    skeletonBuffer.append("G5");
-                    break;
-            }
-        }
-
-        if (mYear != null) {
-            switch (mYear) {
-                case NUMERIC:
-                    skeletonBuffer.append("yyyy");
-                    break;
-                case DIGIT2:
-                    skeletonBuffer.append("yy");
-                    break;
-            }
-        }
-
-        if (mMonth != null) {
-            switch (mMonth) {
-                case NUMERIC:
-                    skeletonBuffer.append("M");
-                    break;
-                case DIGIT2:
-                    skeletonBuffer.append("MM");
-                    break;
-                case LONG:
-                    skeletonBuffer.append("MMMM");
-                    break;
-                case SHORT:
-                    skeletonBuffer.append("MMM");
-                    break;
-                case NARROW:
-                    skeletonBuffer.append("MMMMM");
-                    break;
-            }
-        }
-
-        if (mDay != null) {
-            switch (mDay) {
-                case NUMERIC:
-                    skeletonBuffer.append("d");
-                    break;
-                case DIGIT2:
-                    skeletonBuffer.append("dd");
-                    break;
-            }
-        }
-
-        if (mHour != null) {
-            switch (mHour) {
-                case NUMERIC:
-                    if (hour12)
-                        skeletonBuffer.append("h");
-                    else
-                        skeletonBuffer.append("k");
-                    break;
-                case DIGIT2:
-                    if (hour12)
-                        skeletonBuffer.append("hh");
-                    else
-                        skeletonBuffer.append("kk");
-                    break;
-            }
-        }
-
-        if (mMinute != null) {
-            switch (mMinute) {
-                case NUMERIC:
-                    skeletonBuffer.append("m");
-                    break;
-                case DIGIT2:
-                    skeletonBuffer.append("mm");
-                    break;
-            }
-        }
-
-        if (mSecond != null) {
-            switch (mSecond) {
-                case NUMERIC:
-                    skeletonBuffer.append("s");
-                    break;
-                case DIGIT2:
-                    skeletonBuffer.append("ss");
-                    break;
-            }
-        }
-
-        if (mTimeZoneName != null) {
-            switch (mTimeZoneName) {
-                case LONG:
-                    skeletonBuffer.append("VV");
-                    break;
-                case SHORT:
-                    skeletonBuffer.append("O");
-                    break;
-            }
-        }
+        skeletonBuffer.append(minute.getSkeleonSymbol());
+        skeletonBuffer.append(second.getSkeleonSymbol());
+        skeletonBuffer.append(timeZoneName.getSkeleonSymbol());
 
         return skeletonBuffer.toString();
     }
 
-    public void configure (ILocaleObject resolvedLocaleObject, Object calendar, Object numberingSystem
-            , FormatMatcher mFormatMatcher
-            , WeekDay mWeekDay, Era mEra
-            , Year mYear, Month mMonth, Day mDay
-            , Hour mHour, Minute mMinute, Second mSecond
-            , TimeZoneName mTimeZoneName, Object hourCycle, Object timeZone) throws JSRangeErrorException {
-        mLocale = resolvedLocaleObject;
-        String skeleton = getSkeleton(mFormatMatcher, mWeekDay, mEra, mYear, mMonth, mDay, mHour, mMinute, mSecond, mTimeZoneName, hourCycle.equals("h11") || hourCycle.equals("h12"));
+    public void configure (ILocaleObject resolvedLocaleObject, String calendar, String numberingSystem
+            , FormatMatcher formatMatcher
+            , WeekDay weekDay, Era era
+            , Year year, Month month, Day day
+            , Hour hour, Minute minute, Second second
+            , TimeZoneName timeZoneName, HourCycle hourCycle, Object timeZone) throws JSRangeErrorException {
+        mLocale = (LocaleObjectICU) resolvedLocaleObject;
+        String skeleton = getSkeleton(formatMatcher, weekDay, era, year, month, day, hour, minute, second, timeZoneName, hourCycle == HourCycle.H11 || hourCycle == HourCycle.H12);
 
         Calendar calendarInstance = null;
-        if (!JSObjects.isUndefined(calendar) && !JSObjects.isNull(calendar)) {
+        if (!calendar.isEmpty()) {
             ArrayList<String> calendarList = new ArrayList<>();
             calendarList.add(JSObjects.getJavaString(calendar));
 
@@ -303,7 +182,7 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter{
             calendarInstance = Calendar.getInstance((ULocale) modifiedLocaleObject.getLocale());
         }
 
-        if (!JSObjects.isUndefined(numberingSystem) && !JSObjects.isNull(numberingSystem)) {
+        if (!numberingSystem.isEmpty()) {
             NumberingSystem numberingSystemObject;
             try {
                 numberingSystemObject = NumberingSystem.getInstanceByName(JSObjects.getJavaString(numberingSystem));
@@ -343,7 +222,7 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter{
         ArrayList<String> availableLocaleIds = new ArrayList<>();
         java.util.Locale[] availableLocales = android.icu.text.DateFormat.getAvailableLocales();
         for(java.util.Locale locale: availableLocales) {
-            availableLocaleIds.add(locale.toLanguageTag()); // TODO:: Not available on platforms <= 20
+            availableLocaleIds.add(locale.toLanguageTag());
         }
 
         return availableLocaleIds.toArray(new String[availableLocaleIds.size()]);

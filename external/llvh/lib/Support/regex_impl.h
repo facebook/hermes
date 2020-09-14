@@ -52,7 +52,7 @@ typedef struct llvm_regex {
   struct re_guts *re_g;	/* none of your business :-) */
 } llvm_regex_t;
 
-/* llvm_regcomp() flags */
+/* llvh_regcomp() flags */
 #define	REG_BASIC	0000
 #define	REG_EXTENDED	0001
 #define	REG_ICASE	0002
@@ -62,7 +62,7 @@ typedef struct llvm_regex {
 #define	REG_PEND	0040
 #define	REG_DUMP	0200
 
-/* llvm_regerror() flags */
+/* llvh_regerror() flags */
 #define	REG_NOMATCH	 1
 #define	REG_BADPAT	 2
 #define	REG_ECOLLATE	 3
@@ -82,7 +82,7 @@ typedef struct llvm_regex {
 #define	REG_ATOI	255	/* convert name to number (!) */
 #define	REG_ITOA	0400	/* convert number to name (!) */
 
-/* llvm_regexec() flags */
+/* llvh_regexec() flags */
 #define	REG_NOTBOL	00001
 #define	REG_NOTEOL	00002
 #define	REG_STARTEND	00004
@@ -94,12 +94,12 @@ typedef struct llvm_regex {
 extern "C" {
 #endif
 
-int	llvm_regcomp(llvm_regex_t *, const char *, int);
-size_t	llvm_regerror(int, const llvm_regex_t *, char *, size_t);
-int	llvm_regexec(const llvm_regex_t *, const char *, size_t,
+int	llvh_regcomp(llvm_regex_t *, const char *, int);
+size_t	llvh_regerror(int, const llvm_regex_t *, char *, size_t);
+int	llvh_regexec(const llvm_regex_t *, const char *, size_t,
                      llvm_regmatch_t [], int);
-void	llvm_regfree(llvm_regex_t *);
-size_t  llvm_strlcpy(char *dst, const char *src, size_t siz);
+void	llvh_regfree(llvm_regex_t *);
+size_t  llvh_strlcpy(char *dst, const char *src, size_t siz);
 
 #ifdef __cplusplus
 }

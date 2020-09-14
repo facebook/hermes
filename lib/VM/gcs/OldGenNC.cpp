@@ -21,8 +21,8 @@
 #include "hermes/VM/PointerBase.h"
 #include "hermes/VM/YoungGenNC-inline.h"
 
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
+#include "llvh/Support/Debug.h"
+#include "llvh/Support/MathExtras.h"
 
 #include <algorithm>
 #include <iterator>
@@ -80,7 +80,7 @@ OldGen::Size::adjustSizeWithBounds(size_t desired, size_t min, size_t max) {
   const auto alignment = clamped <= AlignedHeapSegment::maxSize()
       ? PS
       : AlignedHeapSegment::maxSize();
-  return llvm::alignTo(clamped, alignment);
+  return llvh::alignTo(clamped, alignment);
 }
 
 OldGen::OldGen(GenGC *gc, Size sz, bool releaseUnused)
@@ -969,7 +969,7 @@ void OldGen::updateCrashManagerHeapExtents(
   // (This will only happen after a full GC, and the segments that
   // remain will retain their recorded extents.)
   if (numCurSegments < crashMgrRecordedSegments_) {
-    for (unsigned toDel = llvm::alignTo(numCurSegments, kSegmentsPerKey);
+    for (unsigned toDel = llvh::alignTo(numCurSegments, kSegmentsPerKey);
          toDel < crashMgrRecordedSegments_;
          toDel += kSegmentsPerKey) {
       (void)snprintf(keyBuffer, N, kOgKeyFormat, runtimeName.c_str(), toDel);
@@ -983,7 +983,7 @@ void OldGen::updateCrashManagerHeapExtents(
   // Now redo any keys whose segment sequences might have changed.
   // (They might have gotten smaller, because of GC, or larger, because
   // of segment allocation.)
-  const unsigned firstKeyWithPossiblyChangedSegments = llvm::alignDown(
+  const unsigned firstKeyWithPossiblyChangedSegments = llvh::alignDown(
       std::min(numCurSegments, crashMgrRecordedSegments_), kSegmentsPerKey);
   for (unsigned toRedo = firstKeyWithPossiblyChangedSegments;
        toRedo < numCurSegments;

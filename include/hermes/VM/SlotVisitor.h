@@ -146,7 +146,7 @@ struct SlotVisitor final : BaseVisitor {
   template <typename T>
   void visitSlots(
       char *const base,
-      llvm::ArrayRef<Metadata::offset_t> offsets) {
+      llvh::ArrayRef<Metadata::offset_t> offsets) {
     for (const auto offset : offsets) {
       assert(
           reinterpret_cast<uintptr_t>(base + offset) % alignof(T) == 0 &&
@@ -160,7 +160,7 @@ struct SlotVisitor final : BaseVisitor {
   template <typename T>
   void visitSlotsWithinRange(
       char *base,
-      llvm::ArrayRef<Metadata::offset_t> offsets,
+      llvh::ArrayRef<Metadata::offset_t> offsets,
       const char *begin,
       const char *end) {
     for (const auto offset : offsets) {
@@ -276,8 +276,8 @@ struct SlotVisitorWithNames final : BaseVisitor {
   template <typename T>
   void visitSlots(
       char *base,
-      llvm::ArrayRef<Metadata::offset_t> offsets,
-      llvm::ArrayRef<const char *> names) {
+      llvh::ArrayRef<Metadata::offset_t> offsets,
+      llvh::ArrayRef<const char *> names) {
     for (decltype(offsets.size()) i = 0; i < offsets.size(); ++i) {
       char *curr = base + offsets[i];
       assert(

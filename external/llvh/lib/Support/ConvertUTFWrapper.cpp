@@ -7,17 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/SwapByteOrder.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/Support/ConvertUTF.h"
+#include "llvh/Support/ErrorHandling.h"
+#include "llvh/Support/SwapByteOrder.h"
 #include <string>
 #include <vector>
 
-namespace llvm {
+namespace llvh {
 
-bool ConvertUTF8toWide(unsigned WideCharWidth, llvm::StringRef Source,
+bool ConvertUTF8toWide(unsigned WideCharWidth, llvh::StringRef Source,
                        char *&ResultPtr, const UTF8 *&ErrorPtr) {
   assert(WideCharWidth == 1 || WideCharWidth == 2 || WideCharWidth == 4);
   ConversionResult result = conversionOK;
@@ -103,7 +103,7 @@ bool convertUTF16ToUTF8String(ArrayRef<char> SrcBytes, std::string &Out) {
   if (Src[0] == UNI_UTF16_BYTE_ORDER_MARK_SWAPPED) {
     ByteSwapped.insert(ByteSwapped.end(), Src, SrcEnd);
     for (unsigned I = 0, E = ByteSwapped.size(); I != E; ++I)
-      ByteSwapped[I] = llvm::sys::SwapByteOrder_16(ByteSwapped[I]);
+      ByteSwapped[I] = llvh::sys::SwapByteOrder_16(ByteSwapped[I]);
     Src = &ByteSwapped[0];
     SrcEnd = &ByteSwapped[ByteSwapped.size() - 1] + 1;
   }
@@ -136,7 +136,7 @@ bool convertUTF16ToUTF8String(ArrayRef<char> SrcBytes, std::string &Out) {
 bool convertUTF16ToUTF8String(ArrayRef<UTF16> Src, std::string &Out)
 {
   return convertUTF16ToUTF8String(
-      llvm::ArrayRef<char>(reinterpret_cast<const char *>(Src.data()),
+      llvh::ArrayRef<char>(reinterpret_cast<const char *>(Src.data()),
       Src.size() * sizeof(UTF16)), Out);
 }
 
@@ -183,7 +183,7 @@ static_assert(sizeof(wchar_t) == 1 || sizeof(wchar_t) == 2 ||
               "Expected wchar_t to be 1, 2, or 4 bytes");
 
 template <typename TResult>
-static inline bool ConvertUTF8toWideInternal(llvm::StringRef Source,
+static inline bool ConvertUTF8toWideInternal(llvh::StringRef Source,
                                              TResult &Result) {
   // Even in the case of UTF-16, the number of bytes in a UTF-8 string is
   // at least as large as the number of elements in the resulting wide
@@ -199,7 +199,7 @@ static inline bool ConvertUTF8toWideInternal(llvm::StringRef Source,
   return true;
 }
 
-bool ConvertUTF8toWide(llvm::StringRef Source, std::wstring &Result) {
+bool ConvertUTF8toWide(llvh::StringRef Source, std::wstring &Result) {
   return ConvertUTF8toWideInternal(Source, Result);
 }
 
@@ -208,7 +208,7 @@ bool ConvertUTF8toWide(const char *Source, std::wstring &Result) {
     Result.clear();
     return true;
   }
-  return ConvertUTF8toWide(llvm::StringRef(Source), Result);
+  return ConvertUTF8toWide(llvh::StringRef(Source), Result);
 }
 
 bool convertWideToUTF8(const std::wstring &Source, std::string &Result) {
@@ -223,7 +223,7 @@ bool convertWideToUTF8(const std::wstring &Source, std::string &Result) {
     return true;
   } else if (sizeof(wchar_t) == 2) {
     return convertUTF16ToUTF8String(
-        llvm::ArrayRef<UTF16>(reinterpret_cast<const UTF16 *>(Source.data()),
+        llvh::ArrayRef<UTF16>(reinterpret_cast<const UTF16 *>(Source.data()),
                               Source.size()),
         Result);
   } else if (sizeof(wchar_t) == 4) {
@@ -247,5 +247,5 @@ bool convertWideToUTF8(const std::wstring &Source, std::string &Result) {
   }
 }
 
-} // end namespace llvm
+} // end namespace llvh
 

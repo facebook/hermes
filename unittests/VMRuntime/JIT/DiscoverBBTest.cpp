@@ -56,7 +56,7 @@ TEST(DiscoverBBTest, SmokeTest) {
   ASSERT_TRUE(cb);
 
   std::vector<uint32_t> basicBlocks;
-  llvm::DenseMap<uint32_t, unsigned> labels;
+  llvh::DenseMap<uint32_t, unsigned> labels;
 
   discoverBasicBlocks(cb, basicBlocks, labels);
   EXPECT_EQ(6, basicBlocks.size());

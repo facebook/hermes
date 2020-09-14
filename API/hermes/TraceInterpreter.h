@@ -14,8 +14,8 @@
 #include <hermes/SynthTrace.h>
 
 #include <jsi/jsi.h>
-#include <llvm/Support/MemoryBuffer.h>
-#include <llvm/Support/raw_ostream.h>
+#include <llvh/Support/MemoryBuffer.h>
+#include <llvh/Support/raw_ostream.h>
 
 #include <map>
 #include <unordered_map>
@@ -130,17 +130,17 @@ class TraceInterpreter final {
     std::string snapshotMarker;
     std::string snapshotMarkerFileName;
 
-    // These are the config parameters.  We wrap them in llvm::Optional
+    // These are the config parameters.  We wrap them in llvh::Optional
     // to indicate whether the corresponding command line flag was set
     // explicitly.  We override the trace's config only when that is true.
-    llvm::Optional<bool> shouldTrackIO;
-    llvm::Optional<unsigned> bytecodeWarmupPercent;
+    llvh::Optional<bool> shouldTrackIO;
+    llvh::Optional<unsigned> bytecodeWarmupPercent;
   };
 
  private:
   jsi::Runtime &rt_;
   ExecuteOptions options_;
-  llvm::raw_ostream *traceStream_;
+  llvh::raw_ostream *traceStream_;
   // Map from source hash to source file to run.
   std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles_;
   const SynthTrace &trace_;
@@ -198,7 +198,7 @@ class TraceInterpreter final {
       const std::string &traceFile,
       const std::vector<std::string> &bytecodeFiles,
       const ExecuteOptions &options,
-      std::unique_ptr<llvm::raw_ostream> traceStream);
+      std::unique_ptr<llvh::raw_ostream> traceStream);
 
   static ::hermes::vm::RuntimeConfig merge(
       ::hermes::vm::RuntimeConfig::Builder &,
@@ -210,16 +210,16 @@ class TraceInterpreter final {
   /// \param traceStream If non-null, write a trace of the execution into this
   /// stream.
   static std::string execFromMemoryBuffer(
-      std::unique_ptr<llvm::MemoryBuffer> &&traceBuf,
-      std::vector<std::unique_ptr<llvm::MemoryBuffer>> &&codeBufs,
+      std::unique_ptr<llvh::MemoryBuffer> &&traceBuf,
+      std::vector<std::unique_ptr<llvh::MemoryBuffer>> &&codeBufs,
       const ExecuteOptions &options,
-      std::unique_ptr<llvm::raw_ostream> traceStream);
+      std::unique_ptr<llvh::raw_ostream> traceStream);
 
   /// For test purposes, use the given runtime, execute once.
   /// Otherwise like execFromMemoryBuffer above.
   static std::string execFromMemoryBuffer(
-      std::unique_ptr<llvm::MemoryBuffer> &&traceBuf,
-      std::vector<std::unique_ptr<llvm::MemoryBuffer>> &&codeBufs,
+      std::unique_ptr<llvh::MemoryBuffer> &&traceBuf,
+      std::vector<std::unique_ptr<llvh::MemoryBuffer>> &&codeBufs,
       jsi::Runtime &runtime,
       const ExecuteOptions &options);
 
@@ -238,7 +238,7 @@ class TraceInterpreter final {
       const std::string &traceFile,
       const std::vector<std::string> &bytecodeFiles,
       const ExecuteOptions &options,
-      std::unique_ptr<llvm::raw_ostream> traceStream);
+      std::unique_ptr<llvh::raw_ostream> traceStream);
 
   static std::string exec(
       jsi::Runtime &rt,
@@ -254,7 +254,7 @@ class TraceInterpreter final {
   /// to indicate whether all the code is bytecode.
   static std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>>
   getSourceHashToBundleMap(
-      std::vector<std::unique_ptr<llvm::MemoryBuffer>> &&codeBufs,
+      std::vector<std::unique_ptr<llvh::MemoryBuffer>> &&codeBufs,
       const SynthTrace &trace,
       bool *codeIsMmapped = nullptr,
       bool *isBytecode = nullptr);

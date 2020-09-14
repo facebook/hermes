@@ -158,6 +158,7 @@ class JSString final : public PrimitiveBox {
 };
 
 /// StringIterator object.
+/// See ES6 21.1.5.3 for Properties of String Iterator Instances.
 class JSStringIterator : public JSObject {
   using Super = JSObject;
 
@@ -172,7 +173,7 @@ class JSStringIterator : public JSObject {
     return cell->getKind() == CellKind::StringIteratorKind;
   }
 
-  static CallResult<HermesValue> create(
+  static PseudoHandle<JSStringIterator> create(
       Runtime *runtime,
       Handle<StringPrimitive> string);
 

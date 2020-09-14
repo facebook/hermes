@@ -13,7 +13,7 @@
 #include "hermes/VM/JSCallableProxy.h"
 #include "hermes/VM/OrderedHashMap.h"
 
-#include "llvm/ADT/SmallSet.h"
+#include "llvh/ADT/SmallSet.h"
 
 namespace hermes {
 namespace vm {
@@ -1406,7 +1406,7 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
   // 13. Assert: targetKeys contains no duplicate entries.
   // 14. Let targetConfigurableKeys be a new empty List.
   // 15. Let targetNonconfigurableKeys be a new empty List.
-  llvm::SmallSet<uint32_t, 8> nonConfigurable;
+  llvh::SmallSet<uint32_t, 8> nonConfigurable;
   // 16. For each element key of targetKeys, do
   auto marker2 = runtime->getTopGCScope()->createMarker();
   for (uint32_t i = 0, len = JSArray::getLength(*targetKeys); i < len; ++i) {

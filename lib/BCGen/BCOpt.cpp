@@ -14,35 +14,35 @@
 #include "hermes/IR/Instrs.h"
 #include "hermes/Utils/Dumper.h"
 
-#include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/PostOrderIterator.h"
+#include "llvh/ADT/SmallPtrSet.h"
+#include "llvh/Support/Debug.h"
+#include "llvh/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "bcopt"
 
 using namespace hermes;
 
-using llvm::cast;
-using llvm::dbgs;
-using llvm::dyn_cast;
-using llvm::dyn_cast_or_null;
-using llvm::isa;
+using llvh::cast;
+using llvh::dbgs;
+using llvh::dyn_cast;
+using llvh::dyn_cast_or_null;
+using llvh::isa;
 
 bool MovElimination::runOnFunction(Function *F) {
   bool changed = false;
 
   // Keeps track of last assignment point of each register.
-  llvm::DenseMap<Register, unsigned> lastAssignment;
+  llvh::DenseMap<Register, unsigned> lastAssignment;
   // Keeps track of last use point of each register.
-  llvm::DenseMap<Register, unsigned> lastUse;
+  llvh::DenseMap<Register, unsigned> lastUse;
 
   IRBuilder::InstructionDestroyer destroyer;
 
   // For each basic block, do a forward scan and remember when each variable was
   // last assigned. Use this information to remove MOVs.
   PostOrderAnalysis PO(F);
-  llvm::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
+  llvh::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
   for (auto *BB : order) {
     unsigned index = 0;
     lastAssignment.clear();
@@ -58,12 +58,12 @@ bool MovElimination::runOnFunction(Function *F) {
       index++;
       Register dest = RA_.getRegister(&it);
 
-      if (auto *mov = llvm::dyn_cast<MovInst>(&it)) {
+      if (auto *mov = llvh::dyn_cast<MovInst>(&it)) {
         Value *op = mov->getSingleOperand();
         // If the operand is an instruction in the current basic block and it
         // has one user then maybe we can write it directly into the target
         // register.
-        auto *IOp = llvm::dyn_cast<Instruction>(op);
+        auto *IOp = llvh::dyn_cast<Instruction>(op);
 
         // Skip basic blocks with unallocated instructions.
         if (!RA_.isAllocated(op))
@@ -82,7 +82,7 @@ bool MovElimination::runOnFunction(Function *F) {
           // so we can't remove the MOV. Only if the dest was live before the
           // src can we remove it.
           // Additionally, dest must not have uses in the range (src..dest).
-          if (destIdx < srcIdx && !llvm::isa<PhiInst>(IOp) &&
+          if (destIdx < srcIdx && !llvh::isa<PhiInst>(IOp) &&
               destUseIdx <= srcIdx) {
             RA_.updateRegister(op, dest);
             destroyer.add(mov);

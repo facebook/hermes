@@ -6,7 +6,7 @@
  */
 
 #include "HBCParser.h"
-#include "llvm/Support/MD5.h"
+#include "llvh/Support/MD5.h"
 
 namespace hermes {
 
@@ -196,9 +196,9 @@ ProfileIndexMap HBCParser::buildProfileIndexMap(unsigned funcId) {
   return profileIndexVisitor.getProfileIndexMap();
 }
 
-static llvm::MD5::MD5Result doMD5Checksum(llvm::ArrayRef<uint8_t> bytecode) {
-  llvm::MD5 md5;
-  llvm::MD5::MD5Result checksum;
+static llvh::MD5::MD5Result doMD5Checksum(llvh::ArrayRef<uint8_t> bytecode) {
+  llvh::MD5 md5;
+  llvh::MD5::MD5Result checksum;
   md5.update(bytecode);
   md5.final(checksum);
   return checksum;
@@ -213,7 +213,7 @@ HBCParser::generateFunctionChecksumMap() {
         bcProvider_->getFunctionHeader(funcId);
     const uint8_t *bytecodeStart = bcProvider_->getBytecode(funcId);
     funcChecksumMap[funcId] =
-        doMD5Checksum(llvm::ArrayRef<uint8_t>(
+        doMD5Checksum(llvh::ArrayRef<uint8_t>(
                           bytecodeStart, functionHeader.bytecodeSizeInBytes()))
             .digest()
             .str();

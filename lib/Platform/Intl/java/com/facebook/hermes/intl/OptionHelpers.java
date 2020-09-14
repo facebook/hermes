@@ -62,10 +62,25 @@ public class OptionHelpers {
         return value;
     }
 
-    public static <T extends Enum<?>> T searchEnum(Class<T> enumeration,
-                                                   String search) {
+    public static <T extends Enum<?>> T searchEnum(Class<T> enumeration, Object value) {
 
-        if(search.equals("2-digit")) {
+        if(JSObjects.isUndefined(value)) {
+            // TODO :: there must be a better way to do this.
+            for (T each : enumeration.getEnumConstants()) {
+                if (each.name().compareToIgnoreCase("UNDEFINED") == 0) {
+                    return each;
+                }
+            }
+
+            return null;
+        }
+
+        if(JSObjects.isNull(value)) {
+            return null;
+        }
+
+        String valueString = JSObjects.getJavaString(value);
+        if(valueString.equals("2-digit")) {
             for (T each : enumeration.getEnumConstants()) {
                 if (each.name().equals("DIGIT2"))
                     return each;
@@ -73,13 +88,11 @@ public class OptionHelpers {
         }
 
         for (T each : enumeration.getEnumConstants()) {
-            if (each.name().compareToIgnoreCase(search) == 0) {
+            if (each.name().compareToIgnoreCase(valueString) == 0) {
                 return each;
             }
         }
 
         return null;
     }
-
-
 }

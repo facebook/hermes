@@ -203,7 +203,7 @@ CallResult<HermesValue> parseFloat(void *, Runtime *runtime, NativeArgs args) {
   // Copy 16 bit chars into 8 bit chars as long as the character is
   // still a valid decimal number character.
   auto len = str16.length();
-  llvm::SmallVector<char, 32> str8(len + 1);
+  llvh::SmallVector<char, 32> str8(len + 1);
   uint32_t i = 0;
   for (auto c : str16) {
     if ((c >= u'0' && c <= u'9') || c == '.' || letterToLower(c) == 'e' ||
@@ -523,6 +523,12 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
           runtime, Handle<JSObject>::vmcast(&runtime->iteratorPrototype))
           .getHermesValue();
 
+  // "Forward declaration" of %RegExpStringIteratorPrototype%.
+  runtime->regExpStringIteratorPrototype =
+      JSObject::create(
+          runtime, Handle<JSObject>::vmcast(&runtime->iteratorPrototype))
+          .getHermesValue();
+
   runtime->generatorPrototype =
       JSObject::create(
           runtime, Handle<JSObject>::vmcast(&runtime->iteratorPrototype))
@@ -611,6 +617,9 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
 
   /// String Iterator.
   populateStringIteratorPrototype(runtime);
+
+  /// RegExp String Iterator.
+  populateRegExpStringIteratorPrototype(runtime);
 
   // GeneratorFunction constructor (not directly exposed in the global object).
   createGeneratorFunctionConstructor(runtime);

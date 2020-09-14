@@ -36,7 +36,7 @@
  */
 
 /*
- * the outer shell of llvm_regexec()
+ * the outer shell of llvh_regexec()
  *
  * This file includes engine.inc *twice*, after muchos fiddling with the
  * macros that code uses.  This lets the same code operate on two different
@@ -55,7 +55,7 @@
 
 /* macros for manipulating states, small version */
 /* FIXME: 'states' is assumed as 'long' on small version. */
-#define	states1	long		/* for later use in llvm_regexec() decision */
+#define	states1	long		/* for later use in llvh_regexec() decision */
 #define	states	states1
 #define	CLEAR(v)	((v) = 0)
 #define	SET0(v, n)	((v) &= ~((unsigned long)1 << (n)))
@@ -131,14 +131,14 @@
 #include "regengine.inc"
 
 /*
- - llvm_regexec - interface for matching
+ - llvh_regexec - interface for matching
  *
  * We put this here so we can exploit knowledge of the state representation
  * when choosing which matcher to call.  Also, by this point the matchers
  * have been prototyped.
  */
 int				/* 0 success, REG_NOMATCH failure */
-llvm_regexec(const llvm_regex_t *preg, const char *string, size_t nmatch,
+llvh_regexec(const llvm_regex_t *preg, const char *string, size_t nmatch,
              llvm_regmatch_t pmatch[], int eflags)
 {
 	struct re_guts *g = preg->re_g;

@@ -132,7 +132,8 @@ weakMapConstructor(void *, Runtime *runtime, NativeArgs args) {
       return ExecutionStatus::EXCEPTION;
     }
     if (!vmisa<JSObject>(nextItemRes->get())) {
-      runtime->raiseTypeError("WeakMap([iterable]) elements must be objects");
+      (void)runtime->raiseTypeError(
+          "WeakMap([iterable]) elements must be objects");
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
     nextItem = vmcast<JSObject>(std::move(nextItemRes->get()));

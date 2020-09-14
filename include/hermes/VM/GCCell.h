@@ -25,7 +25,7 @@ class VariableSizeRuntimeCell;
 
 /// Return the allocation size for a fixed-size cell corresponding to class C.
 /// This must be used instead of the builtin sizeof operator, since classes
-/// further down the GCCell hirerarchy may add (fixed-size) trailing objects and
+/// further down the GCCell hierarchy may add (fixed-size) trailing objects and
 /// redefine this method. Example usage:
 ///
 /// CallResult<HermesValue> MyCell::create(Runtime *runtime, ...) {

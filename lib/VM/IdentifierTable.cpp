@@ -16,7 +16,7 @@
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 
 namespace hermes {
 namespace vm {
@@ -27,12 +27,12 @@ IdentifierTable::LookupEntry::LookupEntry(
     : strPrim_(str),
       isUTF16_(false),
       isNotUniqued_(isNotUniqued),
-      marked_(false),
+      marked_(true),
       num_(NON_LAZY_STRING_PRIM_TAG) {
   assert(str && "Invalid string primitive pointer");
-  llvm::SmallVector<char16_t, 32> storage{};
-  str->copyUTF16String(storage);
-  hash_ = hermes::hashString(llvm::ArrayRef<char16_t>(storage));
+  llvh::SmallVector<char16_t, 32> storage{};
+  str->appendUTF16String(storage);
+  hash_ = hermes::hashString(llvh::ArrayRef<char16_t>(storage));
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -149,7 +149,9 @@ CallResult<Handle<SymbolID>> IdentifierTable::getSymbolHandleFromPrimitive(
   assert(str && "null string primitive");
   if (str->isUniqued()) {
     // If the string was already uniqued, we can return directly.
-    return runtime->makeHandle(str->getUniqueID());
+    SymbolID id = str->getUniqueID();
+    symbolReadBarrier(id.unsafeGetIndex());
+    return runtime->makeHandle(id);
   }
   auto handle = runtime->makeHandle(std::move(str));
   // Force the string primitive to flatten if it's a rope.
@@ -211,8 +213,8 @@ std::string IdentifierTable::convertSymbolToUTF8(SymbolID id) {
   auto &vectorEntry = getLookupTableEntry(id);
   if (vectorEntry.isStringPrim()) {
     const StringPrimitive *stringPrim = vectorEntry.getStringPrim();
-    llvm::SmallVector<char16_t, 16> tmp;
-    stringPrim->copyUTF16String(tmp);
+    llvh::SmallVector<char16_t, 16> tmp;
+    stringPrim->appendUTF16String(tmp);
     std::string out;
     convertUTF16ToUTF8WithReplacements(out, UTF16Ref{tmp});
     return out;
@@ -254,7 +256,7 @@ void IdentifierTable::visitIdentifiers(
     if (vectorEntry.isStringPrim()) {
       allocator.clear();
       auto stringPrim = vectorEntry.getStringPrim();
-      stringPrim->copyUTF16String(allocator);
+      stringPrim->appendUTF16String(allocator);
       ref = allocator.arrayRef();
     } else if (vectorEntry.isLazyASCII()) {
       allocator.clear();
@@ -275,7 +277,7 @@ template <typename T, bool Unique>
 CallResult<PseudoHandle<StringPrimitive>>
 IdentifierTable::allocateDynamicString(
     Runtime *runtime,
-    llvm::ArrayRef<T> str,
+    llvh::ArrayRef<T> str,
     Handle<StringPrimitive> primHandle) {
   size_t length = str.size();
 
@@ -314,8 +316,6 @@ IdentifierTable::allocateDynamicString(
 }
 
 void IdentifierTable::symbolReadBarrier(uint32_t id) {
-  // Need to hold the lock to write to an entry that might be read by the GC.
-  std::lock_guard<Mutex> lk{lookupVectorMutex_};
   // Set the mark bool inside the symbol table entry so that this symbol isn't
   // garbage collected.
   // The reason this exists is that a Symbol can be retrieved via a string hash
@@ -339,7 +339,7 @@ uint32_t IdentifierTable::allocIDAndInsert(
   hashTable_.insert(hashTableIndex, symbolId);
 
   LLVM_DEBUG(
-      llvm::dbgs() << "allocated symbol " << nextId << " '" << strPrim
+      llvh::dbgs() << "allocated symbol " << nextId << " '" << strPrim
                    << "'\n");
 
   return nextId;
@@ -348,7 +348,7 @@ uint32_t IdentifierTable::allocIDAndInsert(
 template <typename T>
 CallResult<SymbolID> IdentifierTable::getOrCreateIdentifier(
     Runtime *runtime,
-    llvm::ArrayRef<T> str,
+    llvh::ArrayRef<T> str,
     Handle<StringPrimitive> maybeIncomingPrimHandle,
     uint32_t hash) {
   assert(
@@ -395,7 +395,7 @@ CallResult<SymbolID> IdentifierTable::getOrCreateIdentifier(
 
 StringPrimitive *IdentifierTable::getExistingStringPrimitiveOrNull(
     Runtime *runtime,
-    llvm::ArrayRef<char16_t> str) {
+    llvh::ArrayRef<char16_t> str) {
   auto idx = hashTable_.lookupString(str, hashString(str));
   if (!hashTable_.isValid(idx)) {
     return nullptr;
@@ -409,7 +409,7 @@ StringPrimitive *IdentifierTable::getExistingStringPrimitiveOrNull(
 
 template <typename T>
 SymbolID IdentifierTable::registerLazyIdentifierImpl(
-    llvm::ArrayRef<T> str,
+    llvh::ArrayRef<T> str,
     uint32_t hash) {
   auto idx = hashTable_.lookupString(str, hash);
   if (hashTable_.isValid(idx)) {
@@ -424,7 +424,7 @@ SymbolID IdentifierTable::registerLazyIdentifierImpl(
   new (&lookupVector_[nextId]) LookupEntry(str, hash);
   hashTable_.insert(idx, symbolId);
   LLVM_DEBUG(
-      llvm::dbgs() << "Allocated lazy identifier: " << nextId << " " << str
+      llvh::dbgs() << "Allocated lazy identifier: " << nextId << " " << str
                    << "\n");
   return symbolId;
 }
@@ -449,7 +449,7 @@ StringPrimitive *IdentifierTable::materializeLazyIdentifier(
                                 Runtime::makeNullHandle<StringPrimitive>()));
   if (id.isUniqued())
     strPrim->convertToUniqued(id);
-  LLVM_DEBUG(llvm::dbgs() << "Materializing lazy identifier " << id << "\n");
+  LLVM_DEBUG(llvh::dbgs() << "Materializing lazy identifier " << id << "\n");
   entry.materialize(strPrim.get());
   return strPrim.get();
 }
@@ -461,7 +461,7 @@ void IdentifierTable::freeSymbol(uint32_t index) {
       "The specified symbol cannot be freed");
 
   LLVM_DEBUG(
-      llvm::dbgs() << "Freeing symbol index " << index << " '"
+      llvh::dbgs() << "Freeing symbol index " << index << " '"
                    << lookupVector_[index].getStringPrim() << "'\n");
 
   if (LLVM_LIKELY(!lookupVector_[index].isNotUniqued())) {
@@ -474,43 +474,26 @@ void IdentifierTable::freeSymbol(uint32_t index) {
 }
 
 uint32_t IdentifierTable::allocNextID() {
-  // TODO: Move this inside the free list check.
-  // For now it's out here to make sure that entry.mark() below is covered.
-  // Alternative: make marked_ atomic, but that breaks the vector's copyable
-  // requirement.
-  std::lock_guard<Mutex> lk{lookupVectorMutex_};
   // If the free list is empty, grow the array.
   if (firstFreeID_ == LookupEntry::FREE_LIST_END) {
-    // Check if a GC had freed anything first.
-    if (firstGCFreeID_ != LookupEntry::FREE_LIST_END) {
-      // Take the whole free list populated by the GC.
-      firstFreeID_ = firstGCFreeID_;
-      firstGCFreeID_ = LookupEntry::FREE_LIST_END;
-      // Now continue to pull off the free list as normal.
-    } else {
-      // The GC hasn't free'd any symbols, grow the vector.
-      // TODO: Force this to grow by a multiplying factor here instead of 1-by-1
-      // so that the lock isn't taken often during growth.
-      uint32_t newID = lookupVector_.size();
-      if (LLVM_UNLIKELY(newID > LookupEntry::MAX_IDENTIFIER)) {
-        hermes_fatal("Failed to allocate Identifier: IdentifierTable is full");
-      }
-      lookupVector_.emplace_back();
-      LLVM_DEBUG(
-          llvm::dbgs() << "Allocated new symbol id at end " << newID << "\n");
-      // Don't need to tell the GC about this ID, it will assume any growth is
-      // live.
-      return newID;
+    uint32_t newID = lookupVector_.size();
+    if (LLVM_UNLIKELY(newID > LookupEntry::MAX_IDENTIFIER)) {
+      hermes_fatal("Failed to allocate Identifier: IdentifierTable is full");
     }
+    lookupVector_.emplace_back();
+    LLVM_DEBUG(
+        llvh::dbgs() << "Allocated new symbol id at end " << newID << "\n");
+    // Don't need to tell the GC about this ID, it will assume any growth is
+    // live.
+    return newID;
   }
 
   // Allocate from the free list.
   uint32_t nextId = firstFreeID_;
   auto &entry = getLookupTableEntry(nextId);
   assert(entry.isFreeSlot() && "firstFreeID_ is not a free slot");
-  entry.mark();
   firstFreeID_ = entry.getNextFreeSlot();
-  LLVM_DEBUG(llvm::dbgs() << "Allocated freed symbol id " << nextId << "\n");
+  LLVM_DEBUG(llvh::dbgs() << "Allocated freed symbol id " << nextId << "\n");
   return nextId;
 }
 
@@ -520,14 +503,19 @@ void IdentifierTable::freeID(uint32_t id) {
       "The specified symbol cannot be freed");
 
   // Add the freed index to the free list.
-  lookupVector_[id].free(firstGCFreeID_);
-  firstGCFreeID_ = id;
-  LLVM_DEBUG(llvm::dbgs() << "Freeing ID " << id << "\n");
+  lookupVector_[id].free(firstFreeID_);
+  firstFreeID_ = id;
+  LLVM_DEBUG(llvh::dbgs() << "Freeing ID " << id << "\n");
+}
+
+void IdentifierTable::unmarkSymbols() {
+  for (auto &entry : lookupVector_) {
+    entry.unmark();
+  }
 }
 
 void IdentifierTable::freeUnmarkedSymbols(
     const std::vector<bool> &markedSymbols) {
-  std::lock_guard<Mutex> lk{lookupVectorMutex_};
   assert(
       markedSymbols.size() <= lookupVector_.size() &&
       "Size of markedSymbols must be less than the current lookupVector");
@@ -593,7 +581,7 @@ CallResult<SymbolID> IdentifierTable::createNotUniquedSymbol(
   return SymbolID::unsafeCreateNotUniqued(nextID);
 }
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, SymbolID symbolID) {
+llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, SymbolID symbolID) {
   if (symbolID.isInvalid())
     return OS << "SymbolID(INVALID)";
   else if (symbolID == SymbolID::deleted())
@@ -608,8 +596,6 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, SymbolID symbolID) {
 void IdentifierTable::serialize(Serializer &s) {
   // Serialize uint32_t firstFreeID_;
   s.writeInt<uint32_t>(firstFreeID_);
-  // Serialize uint32_t firstGCFreeID_;
-  s.writeInt<uint32_t>(firstGCFreeID_);
   // Serialize IdentTableLookupVector lookupVector_;
   size_t size = lookupVector_.size();
   s.writeInt<uint32_t>(size);
@@ -623,7 +609,6 @@ void IdentifierTable::serialize(Serializer &s) {
 
 void IdentifierTable::deserialize(Deserializer &d) {
   firstFreeID_ = d.readInt<uint32_t>();
-  firstGCFreeID_ = d.readInt<uint32_t>();
   size_t size = d.readInt<uint32_t>();
   lookupVector_.resize(size);
   for (auto &entry : lookupVector_) {

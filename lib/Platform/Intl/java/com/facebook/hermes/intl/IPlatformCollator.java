@@ -65,12 +65,9 @@ public interface IPlatformCollator {
         }
     }
 
-    int compare(String source, String target);
-
-    IPlatformCollator setLocale(ILocaleObject localeObject) throws JSRangeErrorException;
+    IPlatformCollator configure(ILocaleObject localeObject) throws JSRangeErrorException;
 
     Sensitivity getSensitivity();
-
     IPlatformCollator setSensitivity(Sensitivity sensitivity);
 
     IPlatformCollator setIgnorePunctuation(boolean ignore);
@@ -78,6 +75,8 @@ public interface IPlatformCollator {
     IPlatformCollator setNumericAttribute(boolean numeric);
 
     IPlatformCollator setCaseFirstAttribute(CaseFirst caseFirst);
+
+    int compare(String source, String target);
 
     String[] getAvailableLocales();
 }

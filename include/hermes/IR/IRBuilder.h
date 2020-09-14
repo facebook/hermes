@@ -11,7 +11,7 @@
 #include <string>
 #include <utility>
 
-#include "llvm/ADT/SmallVector.h"
+#include "llvh/ADT/SmallVector.h"
 
 #include "hermes/AST/Context.h"
 #include "hermes/FrontEndDefs/Builtins.h"
@@ -236,7 +236,7 @@ class IRBuilder {
   /// \param operands the (updated) operands to use in the new instruction.
   Instruction *cloneInst(
       const Instruction *source,
-      llvm::ArrayRef<Value *> operands);
+      llvh::ArrayRef<Value *> operands);
 
   BranchInst *createBranchInst(BasicBlock *Destination);
 
@@ -578,7 +578,7 @@ class IRBuilder {
     InstructionDestroyer(const InstructionDestroyer &) = delete;
     void operator=(const InstructionDestroyer &) = delete;
 
-    llvm::SmallVector<Instruction *, 8> list{};
+    llvh::SmallVector<Instruction *, 8> list{};
 
    public:
     explicit InstructionDestroyer() = default;

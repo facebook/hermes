@@ -8,11 +8,11 @@
 #ifndef HERMES_VM_JIT_NATIVEDISASSEMBLER_H
 #define HERMES_VM_JIT_NATIVEDISASSEMBLER_H
 
-#include "llvm/ADT/ArrayRef.h"
+#include "llvh/ADT/ArrayRef.h"
 
-namespace llvm {
+namespace llvh {
 class raw_ostream;
-} // namespace llvm
+} // namespace llvh
 
 namespace hermes {
 namespace vm {
@@ -41,8 +41,8 @@ class NativeDisassembler {
   /// instructions.
   /// \return the number of errors encountered.
   virtual int disassembleBuffer(
-      llvm::raw_ostream &OS,
-      llvm::ArrayRef<uint8_t> bytes,
+      llvh::raw_ostream &OS,
+      llvh::ArrayRef<uint8_t> bytes,
       uint64_t address,
       bool withAddr) = 0;
 };

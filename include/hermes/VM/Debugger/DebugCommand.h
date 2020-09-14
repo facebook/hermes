@@ -12,10 +12,10 @@
 
 #include "hermes/Public/DebuggerTypes.h"
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/StringExtras.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <string>
 

@@ -22,8 +22,8 @@
 #include "hermes/VM/SweepResultNC.h"
 #include "hermes/VM/YoungGenNC.h"
 
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/iterator_range.h"
+#include "llvh/ADT/DenseSet.h"
+#include "llvh/ADT/iterator_range.h"
 
 #include <cstddef>
 #include <deque>
@@ -457,7 +457,7 @@ class OldGen : public GCGeneration {
   /// The set of addresses of card tables whose boundary tables have been
   /// protected.
   /// TODO(T48709128): remove this when the problem is diagnosed.
-  llvm::DenseSet<void *> protectedCardTables_;
+  llvh::DenseSet<void *> protectedCardTables_;
 #endif
 
 #ifdef HERMES_EXTRA_DEBUG

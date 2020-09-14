@@ -17,10 +17,10 @@
 #ifdef HERMESVM_SERIALIZE
 #include <vector>
 
-namespace llvm {
+namespace llvh {
 class MemoryBuffer;
 class raw_ostream;
-} // namespace llvm
+} // namespace llvh
 #endif
 
 namespace hermes {
@@ -120,12 +120,12 @@ using ExternalPointersVectorFunction = std::vector<void *>();
 #define RUNTIME_FIELDS_SD(F)                                       \
   /* Should serialize after initialization */                      \
   F(HERMES_NON_CONSTEXPR,                                          \
-    std::shared_ptr<llvm::raw_ostream>,                            \
+    std::shared_ptr<llvh::raw_ostream>,                            \
     SerializeAfterInitFile,                                        \
     nullptr)                                                       \
   /* Should deserialize instead of initialization */               \
   F(HERMES_NON_CONSTEXPR,                                          \
-    std::shared_ptr<llvm::MemoryBuffer>,                           \
+    std::shared_ptr<llvh::MemoryBuffer>,                           \
     DeserializeFile,                                               \
     nullptr)                                                       \
   /* A function to get pointer values not visible to Runtime. e.g. \

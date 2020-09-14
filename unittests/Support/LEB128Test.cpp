@@ -11,8 +11,8 @@
 #include "gtest/gtest.h"
 
 #include "hermes/Support/LEB128.h"
-#include "llvm/Support/LEB128.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/LEB128.h"
+#include "llvh/Support/raw_ostream.h"
 
 namespace {
 
@@ -59,7 +59,7 @@ TEST(LEB128, EncodeSLEB128) {
     const std::string &expected = kvp.second;
 
     std::string buf = "";
-    llvm::raw_string_ostream os{buf};
+    llvh::raw_string_ostream os{buf};
 
     hermes::encodeSLEB128(input, os);
     EXPECT_EQ(expected, os.str()) << "When writing " << input;
@@ -73,7 +73,7 @@ TEST(LEB128, EncodeSLEB128Padded) {
     const std::string &expected = kvp.second;
 
     std::string buf = "";
-    llvm::raw_string_ostream os{buf};
+    llvh::raw_string_ostream os{buf};
 
     hermes::encodeSLEB128(input, os, kMinSize);
 
@@ -88,7 +88,7 @@ TEST(LEB128, EncodeSLEB128Padded) {
     const uint8_t *cStr = reinterpret_cast<const uint8_t *>(encoded.c_str());
 
     unsigned written = 0;
-    int64_t decoded = llvm::decodeSLEB128(cStr, &written);
+    int64_t decoded = llvh::decodeSLEB128(cStr, &written);
 
     EXPECT_EQ(input, decoded) << "Encode then decode";
     EXPECT_EQ(written, encoded.size()) << "Consumed all of output";

@@ -87,15 +87,11 @@ struct FullMSCUpdateAcceptor final : public SlotAcceptorDefault,
   void accept(WeakRefBase &wr) override {
     // This acceptor is used once it is known where all live data is, so now is
     // the time to mark whether a weak ref is known.
-    WeakRefSlot *slot = wr.unsafeGetSlot(mutexRef());
+    WeakRefSlot *slot = wr.unsafeGetSlot();
     assert(
         slot->state() != WeakSlotState::Free &&
         "marking a freed weak ref slot");
     slot->mark();
-  }
-
-  const WeakRefMutex &mutexRef() override {
-    return gc.weakRefMutex();
   }
 };
 

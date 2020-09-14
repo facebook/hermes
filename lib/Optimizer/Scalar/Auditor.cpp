@@ -12,10 +12,10 @@
 #include "hermes/IR/CFG.h"
 #include "hermes/Support/Statistic.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 
 using namespace hermes;
-using llvm::dbgs;
+using llvh::dbgs;
 
 STATISTIC(
     CallsCreate,

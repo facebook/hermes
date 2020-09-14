@@ -12,7 +12,7 @@
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvh/ADT/DenseMap.h"
 
 #include <vector>
 
@@ -88,13 +88,13 @@ class CodeCoverageProfiler {
     /// Function bits array is a function id indexed bits array
     /// representing the executed state of all JS functions in single
     /// RuntimeModule.
-    llvm::DenseMap<RuntimeModule *, std::vector<bool>> executedFuncBitsArrayMap;
+    llvh::DenseMap<RuntimeModule *, std::vector<bool>> executedFuncBitsArrayMap;
     /// Domains to keep its RuntimeModules alive. Will be marked by markRoots().
-    llvm::DenseSet<Domain *> domains;
+    llvh::DenseSet<Domain *> domains;
   };
 
   /// Contain the code coverage info for each profiled runtime.
-  llvm::DenseMap<Runtime *, RuntimeCodeCoverageInfo> coverageInfo_;
+  llvh::DenseMap<Runtime *, RuntimeCodeCoverageInfo> coverageInfo_;
 
   /// Whether the profiler is enabled or not.
   bool enabled_{false};

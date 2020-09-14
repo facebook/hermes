@@ -17,7 +17,7 @@
 using namespace hermes;
 using namespace hermes::hbc;
 using namespace hermes::inst;
-using llvm::MutableArrayRef;
+using llvh::MutableArrayRef;
 
 namespace {
 
@@ -194,6 +194,7 @@ class BytecodeFormConverter {
     for (auto step : steps) {
       (this->*step)();
     }
+    hbc::BCProviderFromBuffer::updateBytecodeHash(bytes_);
   }
 };
 

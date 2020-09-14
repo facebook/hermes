@@ -9,11 +9,11 @@
 
 #include "hermes/Optimizer/Scalar/InstructionEscapeAnalysis.h"
 
-#include "llvm/Support/Casting.h"
+#include "llvh/Support/Casting.h"
 
 #include <utility>
 
-using llvm::dyn_cast;
+using llvh::dyn_cast;
 
 namespace hermes {
 
@@ -44,7 +44,7 @@ void InstructionEscapeAnalysis::addRange(BasicBlock::range range) {
     unsigned offset;
     unsigned numUsers;
   };
-  llvm::DenseMap<const Instruction *, Escape> escapes;
+  llvh::DenseMap<const Instruction *, Escape> escapes;
 
   unsigned instructionIndex = 0;
   for (auto iter = range.begin(), end = range.end(); iter != end;
@@ -54,7 +54,7 @@ void InstructionEscapeAnalysis::addRange(BasicBlock::range range) {
     // longer considered escapes when the prefix is extended to include inst.
     for (unsigned i = 0, e = inst->getNumOperands(); i < e; ++i) {
       Value *op = inst->getOperand(i);
-      if (auto *opInst = llvm::dyn_cast<Instruction>(op)) {
+      if (auto *opInst = llvh::dyn_cast<Instruction>(op)) {
         const auto it = escapes.find(opInst);
         if (it != escapes.end()) {
           assert(it->second.numUsers >= 1 && "Invalid entry in escapes!");
@@ -79,7 +79,7 @@ void InstructionEscapeAnalysis::addRange(BasicBlock::range range) {
     if (numEscapes <= 1) {
       const auto prefixLength = instructionIndex + 1;
       auto escapeOffset = numEscapes == 0
-          ? llvm::None
+          ? llvh::None
           : EscapeOffset(escapes.begin()->second.offset);
       // For the first range (when numRanges_ is 0), all prefixes are valid. For
       // subsequent ranges, make sure the prefix is compatible with past ranges.

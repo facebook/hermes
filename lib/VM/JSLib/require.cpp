@@ -15,7 +15,7 @@
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StringPrimitive.h"
 
-#include "llvm/Support/Path.h"
+#include "llvh/Support/Path.h"
 
 namespace hermes {
 namespace vm {
@@ -160,22 +160,22 @@ CallResult<HermesValue> requireFast(void *, Runtime *runtime, NativeArgs args) {
       *cjsModuleOffset);
 }
 
-static llvm::SmallString<32> canonicalizePath(
+static llvh::SmallString<32> canonicalizePath(
     Runtime *runtime,
     Handle<StringPrimitive> dirname,
     Handle<StringPrimitive> target) {
   // Copy the current path so we can modify it as necessary.
-  llvm::SmallString<32> canonicalPath{};
+  llvh::SmallString<32> canonicalPath{};
 
   auto appendToCanonical = [&canonicalPath](
                                Handle<StringPrimitive> strPrim,
                                uint32_t start = 0) {
     SmallU16String<32> u16String{};
-    strPrim->copyUTF16String(u16String);
+    strPrim->appendUTF16String(u16String);
     std::string str{};
     hermes::convertUTF16ToUTF8WithReplacements(
         str, UTF16Ref{u16String}.slice(start));
-    llvm::sys::path::append(canonicalPath, llvm::sys::path::Style::posix, str);
+    llvh::sys::path::append(canonicalPath, llvh::sys::path::Style::posix, str);
   };
 
   if (target->getStringLength() > 0 && target->at(0) == u'/') {
@@ -189,8 +189,8 @@ static llvm::SmallString<32> canonicalizePath(
   }
 
   // Remove all dots. This is done to get rid of ../ or anything like ././.
-  llvm::sys::path::remove_dots(
-      canonicalPath, true, llvm::sys::path::Style::posix);
+  llvh::sys::path::remove_dots(
+      canonicalPath, true, llvh::sys::path::Style::posix);
 
   return canonicalPath;
 }
@@ -230,8 +230,8 @@ CallResult<HermesValue> require(void *, Runtime *runtime, NativeArgs args) {
         TwineChar16("Unable to find module: ") + target.get());
   }
 
-  llvm::sys::path::remove_filename(
-      canonicalPath, llvm::sys::path::Style::posix);
+  llvh::sys::path::remove_filename(
+      canonicalPath, llvh::sys::path::Style::posix);
   auto dirnameRes = StringPrimitive::create(runtime, canonicalPath);
   if (LLVM_UNLIKELY(dirnameRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;

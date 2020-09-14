@@ -21,14 +21,14 @@ using namespace ::hermes::parser;
 
 namespace {
 
-::hermes::SHA1 parseHashStrAsNumber(llvm::StringRef hashStr) {
+::hermes::SHA1 parseHashStrAsNumber(llvh::StringRef hashStr) {
   ::hermes::SHA1 sourceHash{};
   // Each byte is 2 characters.
   if (hashStr.size() != 2 * sourceHash.size()) {
     throw std::runtime_error("sourceHash is not the right length");
   }
   for (size_t i = 0; i < sourceHash.size(); ++i) {
-    auto byte = llvm::StringRef{hashStr.data() + (i * 2), 2};
+    auto byte = llvh::StringRef{hashStr.data() + (i * 2), 2};
     sourceHash[i] =
         ::hermes::parseIntWithRadix</* AllowNumericSeparator */ false>(byte, 16)
             .getValue();
@@ -38,7 +38,7 @@ namespace {
 
 JSONObject *parseJSON(
     JSONFactory::Allocator &alloc,
-    std::unique_ptr<llvm::MemoryBuffer> stream) {
+    std::unique_ptr<llvh::MemoryBuffer> stream) {
   JSONFactory factory(alloc);
   ::hermes::SourceErrorManager sm;
   // Convert surrogates, since JSI deals in UTF-8.
@@ -48,7 +48,7 @@ JSONObject *parseJSON(
     // The source error manager will print to stderr.
     throw std::invalid_argument("JSON invalid");
   }
-  return llvm::cast<JSONObject>(rootObj.getValue());
+  return llvh::cast<JSONObject>(rootObj.getValue());
 }
 
 /// Get a number from a JSON value.
@@ -61,7 +61,7 @@ NumericType getNumberAs(const JSONValue *val) {
   if (val->getKind() != JSONKind::Number) {
     throw std::invalid_argument("value is not a number");
   }
-  return static_cast<NumericType>(llvm::cast<JSONNumber>(val)->getValue());
+  return static_cast<NumericType>(llvh::cast<JSONNumber>(val)->getValue());
 }
 
 /// Get a number from a JSON value.
@@ -87,7 +87,7 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
   if (val->getKind() != JSONKind::Object) {
     throw std::invalid_argument("gcConfig should be an object");
   }
-  auto *gcConfig = llvm::cast<JSONObject>(val);
+  auto *gcConfig = llvh::cast<JSONObject>(val);
   if (auto *sz = gcConfig->get("minHeapSize")) {
     gcconf.withMinHeapSize(getNumberAs<::hermes::vm::gcheapsize_t>(sz));
   }
@@ -105,17 +105,17 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
   }
   if (auto *shouldRelease = gcConfig->get("shouldReleaseUnused")) {
     gcconf.withShouldReleaseUnused(SynthTrace::releaseUnusedFromName(
-        llvm::cast<JSONString>(shouldRelease)->c_str()));
+        llvh::cast<JSONString>(shouldRelease)->c_str()));
   }
   if (auto *name = gcConfig->get("name")) {
-    gcconf.withName(llvm::cast<JSONString>(name)->str());
+    gcconf.withName(llvh::cast<JSONString>(name)->str());
   }
   if (auto *allocInYoung = gcConfig->get("allocInYoung")) {
-    gcconf.withAllocInYoung(llvm::cast<JSONBoolean>(allocInYoung)->getValue());
+    gcconf.withAllocInYoung(llvh::cast<JSONBoolean>(allocInYoung)->getValue());
   }
   if (auto *revertAtTTI = gcConfig->get("revertToYGAtTTI")) {
     gcconf.withRevertToYGAtTTI(
-        llvm::cast<JSONBoolean>(revertAtTTI)->getValue());
+        llvh::cast<JSONBoolean>(revertAtTTI)->getValue());
   }
   return gcconf;
 }
@@ -130,7 +130,7 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
   if (val->getKind() != JSONKind::Object) {
     throw std::invalid_argument("runtimeConfig should be an object");
   }
-  auto *rtConfig = llvm::cast<JSONObject>(val);
+  auto *rtConfig = llvh::cast<JSONObject>(val);
 
   // It is required to pass the unittest SynthTraceTest
   conf.withGCConfig(getGCConfig(rtConfig).build());
@@ -139,11 +139,11 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
     conf.withMaxNumRegisters(getNumberAs<unsigned>(maxNumRegisters));
   }
   if (auto *symbol = rtConfig->get("ES6Symbol")) {
-    conf.withES6Symbol(llvm::cast<JSONBoolean>(symbol)->getValue());
+    conf.withES6Symbol(llvh::cast<JSONBoolean>(symbol)->getValue());
   }
   if (auto *enableSampledStats = rtConfig->get("enableSampledStats")) {
     conf.withEnableSampledStats(
-        llvm::cast<JSONBoolean>(enableSampledStats)->getValue());
+        llvh::cast<JSONBoolean>(enableSampledStats)->getValue());
   }
   if (auto *vmExperimentFlags = rtConfig->get("vmExperimentFlags")) {
     conf.withVMExperimentFlags(getNumberAs<uint32_t>(vmExperimentFlags));
@@ -164,7 +164,7 @@ Collection<std::string, std::allocator<std::string>> getListOfStrings(
         if (value->getKind() != JSONKind::String) {
           throw std::invalid_argument("Array should contain only strings");
         }
-        return std::string(llvm::cast<JSONString>(value)->c_str());
+        return std::string(llvh::cast<JSONString>(value)->c_str());
       });
   return strings;
 }
@@ -190,17 +190,17 @@ getListOfStatsTable(JSONArray *array) {
         if (value->getKind() != JSONKind::Object) {
           throw std::invalid_argument("Stats table JSON rep is not object");
         }
-        const JSONObject *obj = llvm::cast<JSONObject>(value);
+        const JSONObject *obj = llvh::cast<JSONObject>(value);
         ::hermes::vm::MockedEnvironment::StatsTable result;
         for (auto name : *obj->getHiddenClass()) {
           auto valForName = obj->at(name->str());
           if (valForName->getKind() == JSONKind::Number) {
             result.try_emplace(
-                name->str(), llvm::cast<JSONNumber>(valForName)->getValue());
+                name->str(), llvh::cast<JSONNumber>(valForName)->getValue());
           } else if (valForName->getKind() == JSONKind::String) {
             result.try_emplace(
                 name->str(),
-                std::string(llvm::cast<JSONString>(valForName)->c_str()));
+                std::string(llvh::cast<JSONString>(valForName)->c_str()));
           } else {
             throw std::invalid_argument(
                 "Stats table kind is not num or string.");
@@ -222,19 +222,19 @@ getListOfStatsTable(JSONArray *array) {
     return calls;
   };
 
-  if (!llvm::dyn_cast_or_null<JSONNumber>(env->get("mathRandomSeed"))) {
+  if (!llvh::dyn_cast_or_null<JSONNumber>(env->get("mathRandomSeed"))) {
     throw std::invalid_argument("env.mathRandomSeed is not a number");
   }
   std::minstd_rand::result_type mathRandomSeed =
-      llvm::cast<JSONNumber>(env->at("mathRandomSeed"))->getValue();
+      llvh::cast<JSONNumber>(env->at("mathRandomSeed"))->getValue();
   auto callsToDateNow =
-      getListOfNumbers(llvm::cast<JSONArray>(env->at("callsToDateNow")));
+      getListOfNumbers(llvh::cast<JSONArray>(env->at("callsToDateNow")));
   auto callsToNewDate =
-      getListOfNumbers(llvm::cast<JSONArray>(env->at("callsToNewDate")));
+      getListOfNumbers(llvh::cast<JSONArray>(env->at("callsToNewDate")));
   auto callsToDateAsFunction = getListOfStrings<std::deque>(
-      llvm::cast<JSONArray>(env->at("callsToDateAsFunction")));
+      llvh::cast<JSONArray>(env->at("callsToDateAsFunction")));
   auto callsToHermesInternalGetInstrumentedStats =
-      getListOfStatsTable<std::deque>(llvm::cast_or_null<JSONArray>(
+      getListOfStatsTable<std::deque>(llvh::cast_or_null<JSONArray>(
           env->get("callsToHermesInternalGetInstrumentedStats")));
   return ::hermes::vm::MockedEnvironment{
       mathRandomSeed,
@@ -259,48 +259,48 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
           if (value->getKind() != JSONKind::String) {
             throw std::invalid_argument("Array should contain only strings");
           }
-          return trace.decode(llvm::cast<JSONString>(value)->c_str());
+          return trace.decode(llvh::cast<JSONString>(value)->c_str());
         });
     return values;
   };
   for (auto *val : *array) {
-    auto *obj = llvm::cast<JSONObject>(val);
+    auto *obj = llvh::cast<JSONObject>(val);
     auto timeFromStart =
         std::chrono::milliseconds(getNumberAs<uint64_t>(obj->get("time"), 0));
     std::stringstream ss;
     RecordType kind;
-    ss << llvm::cast<JSONString>(obj->get("type"))->c_str();
+    ss << llvh::cast<JSONString>(obj->get("type"))->c_str();
     ss >> kind;
     // Common properties, they may not exist on all objects so use a
     // dynamic cast.
-    auto *objID = llvm::dyn_cast_or_null<JSONNumber>(obj->get("objID"));
+    auto *objID = llvh::dyn_cast_or_null<JSONNumber>(obj->get("objID"));
     auto *hostObjID =
-        llvm::dyn_cast_or_null<JSONNumber>(obj->get("hostObjectID"));
-    auto *funcID = llvm::dyn_cast_or_null<JSONNumber>(obj->get("functionID"));
-    auto *propID = llvm::dyn_cast_or_null<JSONNumber>(obj->get("propID"));
+        llvh::dyn_cast_or_null<JSONNumber>(obj->get("hostObjectID"));
+    auto *funcID = llvh::dyn_cast_or_null<JSONNumber>(obj->get("functionID"));
+    auto *propID = llvh::dyn_cast_or_null<JSONNumber>(obj->get("propID"));
     auto *propNameID =
-        llvm::dyn_cast_or_null<JSONNumber>(obj->get("propNameID"));
-    auto *propName = llvm::dyn_cast_or_null<JSONString>(obj->get("propName"));
-    auto *propValue = llvm::dyn_cast_or_null<JSONString>(obj->get("value"));
-    auto *arrayIndex = llvm::dyn_cast_or_null<JSONNumber>(obj->get("index"));
-    auto *callArgs = llvm::dyn_cast_or_null<JSONArray>(obj->get("args"));
-    auto *thisArg = llvm::dyn_cast_or_null<JSONString>(obj->get("thisArg"));
-    auto *retval = llvm::dyn_cast_or_null<JSONString>(obj->get("retval"));
+        llvh::dyn_cast_or_null<JSONNumber>(obj->get("propNameID"));
+    auto *propName = llvh::dyn_cast_or_null<JSONString>(obj->get("propName"));
+    auto *propValue = llvh::dyn_cast_or_null<JSONString>(obj->get("value"));
+    auto *arrayIndex = llvh::dyn_cast_or_null<JSONNumber>(obj->get("index"));
+    auto *callArgs = llvh::dyn_cast_or_null<JSONArray>(obj->get("args"));
+    auto *thisArg = llvh::dyn_cast_or_null<JSONString>(obj->get("thisArg"));
+    auto *retval = llvh::dyn_cast_or_null<JSONString>(obj->get("retval"));
     switch (kind) {
       case RecordType::BeginExecJS: {
         std::string sourceURL;
         ::hermes::SHA1 hash{};
         bool sourceIsBytecode{false};
         if (JSONString *sourceURLJSON =
-                llvm::dyn_cast_or_null<JSONString>(obj->get("sourceURL"))) {
+                llvh::dyn_cast_or_null<JSONString>(obj->get("sourceURL"))) {
           sourceURL = sourceURLJSON->str();
         }
         if (JSONString *sourceHash =
-                llvm::dyn_cast_or_null<JSONString>(obj->get("sourceHash"))) {
+                llvh::dyn_cast_or_null<JSONString>(obj->get("sourceHash"))) {
           hash = parseHashStrAsNumber(sourceHash->str());
         }
         if (JSONBoolean *sourceIsBytecodeJson =
-                llvm::dyn_cast_or_null<JSONBoolean>(
+                llvh::dyn_cast_or_null<JSONBoolean>(
                     obj->get("sourceIsBytecode"))) {
           sourceIsBytecode = sourceIsBytecodeJson->getValue();
         }
@@ -317,7 +317,7 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
         break;
       case RecordType::Marker:
         trace.emplace_back<SynthTrace::MarkerRecord>(
-            timeFromStart, llvm::cast<JSONString>(obj->get("tag"))->c_str());
+            timeFromStart, llvh::cast<JSONString>(obj->get("tag"))->c_str());
         break;
       case RecordType::CreateObject:
         trace.emplace_back<SynthTrace::CreateObjectRecord>(
@@ -325,14 +325,14 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
         break;
       case RecordType::CreateString: {
         auto encoding =
-            llvm::dyn_cast_or_null<JSONString>(obj->get("encoding"));
+            llvh::dyn_cast_or_null<JSONString>(obj->get("encoding"));
         bool isAscii = false;
         if (encoding->str() == "ASCII") {
           isAscii = true;
         } else {
           assert(encoding->str() == "UTF-8");
         }
-        auto str = llvm::dyn_cast_or_null<JSONString>(obj->get("chars"));
+        auto str = llvh::dyn_cast_or_null<JSONString>(obj->get("chars"));
         if (isAscii) {
           trace.emplace_back<SynthTrace::CreateStringRecord>(
               timeFromStart,
@@ -349,16 +349,16 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
         break;
       }
       case RecordType::CreatePropNameID: {
-        auto id = llvm::dyn_cast_or_null<JSONNumber>(obj->get("objID"));
+        auto id = llvh::dyn_cast_or_null<JSONNumber>(obj->get("objID"));
         auto encoding =
-            llvm::dyn_cast_or_null<JSONString>(obj->get("encoding"));
+            llvh::dyn_cast_or_null<JSONString>(obj->get("encoding"));
         bool isAscii = false;
         if (encoding->str() == "ASCII") {
           isAscii = true;
         } else {
           assert(encoding->str() == "UTF-8");
         }
-        auto str = llvm::dyn_cast_or_null<JSONString>(obj->get("chars"));
+        auto str = llvh::dyn_cast_or_null<JSONString>(obj->get("chars"));
         if (isAscii) {
           trace.emplace_back<SynthTrace::CreatePropNameIDRecord>(
               timeFromStart,
@@ -380,13 +380,13 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
         break;
       case RecordType::CreateHostFunction: {
         unsigned paramCount = 0;
-        if (JSONNumber *jsonParamCount = llvm::dyn_cast_or_null<JSONNumber>(
+        if (JSONNumber *jsonParamCount = llvh::dyn_cast_or_null<JSONNumber>(
                 obj->get("parameterCount"))) {
           paramCount = jsonParamCount->getValue();
         }
         std::string functionName;
         if (JSONString *jsonFunctionName =
-                llvm::dyn_cast_or_null<JSONString>(obj->get("functionName"))) {
+                llvh::dyn_cast_or_null<JSONString>(obj->get("functionName"))) {
           functionName = jsonFunctionName->str();
         }
         trace.emplace_back<SynthTrace::CreateHostFunctionRecord>(
@@ -516,7 +516,7 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
         trace.emplace_back<SynthTrace::GetNativePropertyNamesReturnRecord>(
             timeFromStart,
             getListOfStrings<std::vector>(
-                llvm::cast<JSONArray>(obj->get("properties"))));
+                llvh::cast<JSONArray>(obj->get("properties"))));
         break;
     }
   }
@@ -530,20 +530,20 @@ std::tuple<
     ::hermes::vm::RuntimeConfig::Builder,
     ::hermes::vm::GCConfig::Builder,
     ::hermes::vm::MockedEnvironment>
-parseSynthTrace(std::unique_ptr<llvm::MemoryBuffer> trace) {
+parseSynthTrace(std::unique_ptr<llvh::MemoryBuffer> trace) {
   JSLexer::Allocator alloc;
-  JSONObject *root = llvm::cast<JSONObject>(parseJSON(alloc, std::move(trace)));
-  if (!llvm::dyn_cast_or_null<JSONNumber>(root->get("globalObjID"))) {
+  JSONObject *root = llvh::cast<JSONObject>(parseJSON(alloc, std::move(trace)));
+  if (!llvh::dyn_cast_or_null<JSONNumber>(root->get("globalObjID"))) {
     throw std::invalid_argument(
         "Trace does not have a \"globalObjID\" value that is a number");
   }
-  if (!llvm::dyn_cast_or_null<JSONObject>(root->get("env"))) {
+  if (!llvh::dyn_cast_or_null<JSONObject>(root->get("env"))) {
     throw std::invalid_argument(
         "Trace does not have an \"env\" value that is an object");
   }
   if (auto *ver = root->get("version")) {
     // Version exists, validate that it is a number, and the correct version.
-    if (auto *verNum = llvm::dyn_cast<JSONNumber>(ver)) {
+    if (auto *verNum = llvh::dyn_cast<JSONNumber>(ver)) {
       // version is a number.
       const uint32_t version = verNum->getValue();
       if (version != SynthTrace::synthVersion()) {
@@ -567,10 +567,10 @@ parseSynthTrace(std::unique_ptr<llvm::MemoryBuffer> trace) {
       getNumberAs<SynthTrace::ObjectID>(root->get("globalObjID"));
   // Get and parse the records list.
   return std::make_tuple(
-      getTrace(llvm::cast<JSONArray>(root->at("trace")), globalObjID),
+      getTrace(llvh::cast<JSONArray>(root->at("trace")), globalObjID),
       getRuntimeConfig(root),
       getGCConfig(root),
-      getMockedEnvironment(llvm::cast<JSONObject>(root->at("env"))));
+      getMockedEnvironment(llvh::cast<JSONObject>(root->at("env"))));
 }
 
 std::tuple<
@@ -580,7 +580,7 @@ std::tuple<
     ::hermes::vm::MockedEnvironment>
 parseSynthTrace(const std::string &tracefile) {
   return parseSynthTrace(
-      std::move(llvm::MemoryBuffer::getFile(tracefile).get()));
+      std::move(llvh::MemoryBuffer::getFile(tracefile).get()));
 }
 
 } // namespace tracing

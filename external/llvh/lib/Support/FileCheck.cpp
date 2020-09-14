@@ -14,12 +14,12 @@
 // as well as various unittests.
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/FileCheck.h"
-#include "llvm/ADT/StringSet.h"
+#include "llvh/Support/FileCheck.h"
+#include "llvh/ADT/StringSet.h"
 #include <list>
 #include <map>
 
-using namespace llvm;
+using namespace llvh;
 
 /// Parses the given string into the Pattern.
 ///
@@ -256,7 +256,7 @@ bool FileCheckPattern::EvaluateExpression(StringRef Expr, std::string &Value) co
     if (Expr.getAsInteger(10, Offset))
       return false;
   }
-  Value = llvm::itostr(LineNumber + Offset);
+  Value = llvh::itostr(LineNumber + Offset);
   return true;
 }
 
@@ -498,7 +498,7 @@ size_t FileCheckPattern::FindRegexVarEnd(StringRef Str, SourceMgr &SM) {
 /// Canonicalize whitespaces in the file. Line endings are replaced with
 /// UNIX-style '\n'.
 StringRef
-llvm::FileCheck::CanonicalizeFile(MemoryBuffer &MB,
+llvh::FileCheck::CanonicalizeFile(MemoryBuffer &MB,
                                   SmallVectorImpl<char> &OutputBuffer) {
   OutputBuffer.reserve(MB.getBufferSize());
 
@@ -711,7 +711,7 @@ static StringRef FindFirstMatchingPrefix(Regex &PrefixRE, StringRef &Buffer,
 ///
 /// The strings are added to the CheckStrings vector. Returns true in case of
 /// an error, false otherwise.
-bool llvm::FileCheck::ReadCheckFile(SourceMgr &SM, StringRef Buffer,
+bool llvh::FileCheck::ReadCheckFile(SourceMgr &SM, StringRef Buffer,
                                     Regex &PrefixRE,
                                     std::vector<FileCheckString> &CheckStrings) {
   std::vector<FileCheckPattern> ImplicitNegativeChecks;
@@ -1216,7 +1216,7 @@ static bool ValidateCheckPrefix(StringRef CheckPrefix) {
   return Validator.match(CheckPrefix);
 }
 
-bool llvm::FileCheck::ValidateCheckPrefixes() {
+bool llvh::FileCheck::ValidateCheckPrefixes() {
   StringSet<> PrefixSet;
 
   for (StringRef Prefix : Req.CheckPrefixes) {
@@ -1239,7 +1239,7 @@ bool llvm::FileCheck::ValidateCheckPrefixes() {
 //
 // The semantics are that the longest-match wins which matches our regex
 // library.
-Regex llvm::FileCheck::buildCheckPrefixRegex() {
+Regex llvh::FileCheck::buildCheckPrefixRegex() {
   // I don't think there's a way to specify an initial value for cl::list,
   // so if nothing was specified, add the default
   if (Req.CheckPrefixes.empty())
@@ -1274,7 +1274,7 @@ static void ClearLocalVars(StringMap<StringRef> &VariableTable) {
 /// CheckStrings read from the check file.
 ///
 /// Returns false if the input fails to satisfy the checks.
-bool llvm::FileCheck::CheckInput(SourceMgr &SM, StringRef Buffer,
+bool llvh::FileCheck::CheckInput(SourceMgr &SM, StringRef Buffer,
                 ArrayRef<FileCheckString> CheckStrings) {
   bool ChecksFailed = false;
 

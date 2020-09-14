@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/YAMLParser.h"
+#include "llvh/Support/Casting.h"
+#include "llvh/Support/SourceMgr.h"
+#include "llvh/Support/YAMLParser.h"
 
 #include "hermes/AST/Context.h"
 #include "hermes/BCGen/RegAlloc.h"

@@ -31,7 +31,7 @@ namespace hbc {
 #ifndef HERMESVM_LEAN
 namespace {
 bool isSingleFunctionExpression(ESTree::NodePtr ast) {
-  auto *prog = llvm::dyn_cast<ESTree::ProgramNode>(ast);
+  auto *prog = llvh::dyn_cast<ESTree::ProgramNode>(ast);
   if (!prog) {
     return false;
   }
@@ -40,13 +40,13 @@ bool isSingleFunctionExpression(ESTree::NodePtr ast) {
     return false;
   }
   auto *exprStatement =
-      llvm::dyn_cast<ESTree::ExpressionStatementNode>(&body.front());
+      llvh::dyn_cast<ESTree::ExpressionStatementNode>(&body.front());
   if (!exprStatement) {
     return false;
   }
-  return llvm::isa<ESTree::FunctionExpressionNode>(
+  return llvh::isa<ESTree::FunctionExpressionNode>(
              exprStatement->_expression) ||
-      llvm::isa<ESTree::ArrowFunctionExpressionNode>(
+      llvh::isa<ESTree::ArrowFunctionExpressionNode>(
              exprStatement->_expression);
 }
 } // namespace
@@ -87,7 +87,7 @@ BCProviderFromSrc::BCProviderFromSrc(
 std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
 BCProviderFromSrc::createBCProviderFromSrc(
     std::unique_ptr<Buffer> buffer,
-    llvm::StringRef sourceURL,
+    llvh::StringRef sourceURL,
     const CompileFlags &compileFlags) {
   return createBCProviderFromSrc(
       std::move(buffer), sourceURL, /*sourceMap*/ nullptr, compileFlags);
@@ -96,7 +96,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
 std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
 BCProviderFromSrc::createBCProviderFromSrc(
     std::unique_ptr<Buffer> buffer,
-    llvm::StringRef sourceURL,
+    llvh::StringRef sourceURL,
     std::unique_ptr<SourceMap> sourceMap,
     const CompileFlags &compileFlags) {
   return createBCProviderFromSrc(
@@ -106,7 +106,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
 std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
 BCProviderFromSrc::createBCProviderFromSrc(
     std::unique_ptr<Buffer> buffer,
-    llvm::StringRef sourceURL,
+    llvh::StringRef sourceURL,
     std::unique_ptr<SourceMap> sourceMap,
     const CompileFlags &compileFlags,
     const ScopeChain &scopeChain) {
@@ -130,12 +130,12 @@ BCProviderFromSrc::createBCProviderFromSrc(
 std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
 BCProviderFromSrc::createBCProviderFromSrc(
     std::unique_ptr<Buffer> buffer,
-    llvm::StringRef sourceURL,
+    llvh::StringRef sourceURL,
     std::unique_ptr<SourceMap> sourceMap,
     const CompileFlags &compileFlags,
     const ScopeChain &scopeChain,
     const std::function<void(Module &)> &runOptimizationPasses) {
-  using llvm::Twine;
+  using llvh::Twine;
 
   assert(
       buffer->data()[buffer->size()] == 0 &&
@@ -179,7 +179,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
   // Populate the declFileList.
   DeclarationFileListTy declFileList;
   if (compileFlags.includeLibHermes) {
-    auto libBuffer = llvm::MemoryBuffer::getMemBuffer(libhermes);
+    auto libBuffer = llvh::MemoryBuffer::getMemBuffer(libhermes);
     parser::JSParser libParser(*context, std::move(libBuffer));
     auto libParsed = libParser.parse();
     assert(libParsed && "Libhermes failed to parse");
@@ -187,7 +187,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
   }
 
   int fileBufId = context->getSourceErrorManager().addNewSourceBuffer(
-      llvm::make_unique<HermesLLVMMemoryBuffer>(std::move(buffer), sourceURL));
+      llvh::make_unique<HermesLLVMMemoryBuffer>(std::move(buffer), sourceURL));
   if (sourceMap != nullptr) {
     auto sourceMapTranslator =
         std::make_shared<SourceMapTranslator>(context->getSourceErrorManager());
@@ -265,8 +265,8 @@ void BCProviderFromSrc::serialize(Serializer &s) const {
   // than writing to Serializer directly but it's OK to slow down
   // serialization if it speeds up Deserializer.
   auto bytecodeGenOpts = BytecodeGenerationOptions::defaults();
-  llvm::SmallVector<char, 0> bytecodeVector;
-  llvm::raw_svector_ostream OS(bytecodeVector);
+  llvh::SmallVector<char, 0> bytecodeVector;
+  llvh::raw_svector_ostream OS(bytecodeVector);
   BytecodeSerializer BS{OS, bytecodeGenOpts};
   BS.serialize(*module_, getSourceHash());
   size_t size = bytecodeVector.size();

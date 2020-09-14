@@ -1367,13 +1367,13 @@ function multiTests(source, func, checkResult, checkTraps) {
 multiTests(
   source,
   Object.getOwnPropertyDescriptors,
-  checkUnimplemented({
+  checkDeep({
     ca:{value:21, writable:true, configurable:true, enumerable: true},
     cb:{value:22, writable:true, configurable:true, enumerable: false},
     [Symbol.for('cc')]:{value:23, writable:true, configurable:true, enumerable: true},
     [Symbol.for('cd')]:{value:24, writable:true, configurable:true, enumerable: false},
   }),
-  checkUnimplementedTraps([
+  checkArray([
     'ownKeys',
     'getOwnPropertyDescriptor:ca',
     'getOwnPropertyDescriptor:cb',
@@ -1383,13 +1383,13 @@ multiTests(
 multiTests(
   sourceArray,
   Object.getOwnPropertyDescriptors,
-  checkUnimplemented({
+  checkDeep({
     0:{value:10, writable:true, configurable:true, enumerable: true},
     1:{value:20, writable:true, configurable:true, enumerable: true},
     2:{value:30, writable:true, configurable:true, enumerable: true},
     length:{value:3, writable:true, configurable:false, enumerable: false},
   }),
-  checkUnimplementedTraps([
+  checkArray([
     'ownKeys',
     'getOwnPropertyDescriptor:0',
     'getOwnPropertyDescriptor:1',

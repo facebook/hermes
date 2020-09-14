@@ -10,9 +10,9 @@
 
 #include "gtest/gtest.h"
 
-using llvm::cast;
-using llvm::dyn_cast;
-using llvm::isa;
+using llvh::cast;
+using llvh::dyn_cast;
+using llvh::isa;
 
 using namespace hermes::parser;
 using namespace hermes;
@@ -49,10 +49,10 @@ TEST(JSParserTest, TestWith) {
   auto parsed = parser.parse();
   ASSERT_TRUE(parsed.hasValue());
 
-  auto *programNode = llvm::dyn_cast<ESTree::ProgramNode>(parsed.getValue());
+  auto *programNode = llvh::dyn_cast<ESTree::ProgramNode>(parsed.getValue());
   ASSERT_NE(nullptr, programNode);
 
-  ASSERT_TRUE(llvm::isa<ESTree::WithStatementNode>(programNode->_body.front()));
+  ASSERT_TRUE(llvh::isa<ESTree::WithStatementNode>(programNode->_body.front()));
 }
 
 TEST(JSParserTest, TestSwitch) {
@@ -61,11 +61,11 @@ TEST(JSParserTest, TestSwitch) {
   auto parsed = parser.parse();
   ASSERT_TRUE(parsed.hasValue());
 
-  auto *programNode = llvm::dyn_cast<ESTree::ProgramNode>(parsed.getValue());
+  auto *programNode = llvh::dyn_cast<ESTree::ProgramNode>(parsed.getValue());
   ASSERT_NE(nullptr, programNode);
 
   auto *switchNode =
-      llvm::dyn_cast<ESTree::SwitchStatementNode>(&programNode->_body.front());
+      llvh::dyn_cast<ESTree::SwitchStatementNode>(&programNode->_body.front());
   ASSERT_NE(nullptr, switchNode);
   ASSERT_EQ(2u, switchNode->_cases.size());
 }
@@ -85,11 +85,11 @@ TEST(JSParserTest, TestThrow) {
   auto parsed = parser.parse();
   ASSERT_TRUE(parsed.hasValue());
 
-  auto *programNode = llvm::dyn_cast<ESTree::ProgramNode>(parsed.getValue());
+  auto *programNode = llvh::dyn_cast<ESTree::ProgramNode>(parsed.getValue());
   ASSERT_NE(nullptr, programNode);
 
   ASSERT_TRUE(
-      llvm::isa<ESTree::ThrowStatementNode>(programNode->_body.front()));
+      llvh::isa<ESTree::ThrowStatementNode>(programNode->_body.front()));
 }
 
 TEST(JSParserTest, TestBadThrowNewLine) {
@@ -106,10 +106,10 @@ TEST(JSParserTest, TestTry) {
   auto parsed = parser.parse();
   ASSERT_TRUE(parsed.hasValue());
 
-  auto *programNode = llvm::dyn_cast<ESTree::ProgramNode>(parsed.getValue());
+  auto *programNode = llvh::dyn_cast<ESTree::ProgramNode>(parsed.getValue());
   ASSERT_NE(nullptr, programNode);
 
-  ASSERT_TRUE(llvm::isa<ESTree::TryStatementNode>(programNode->_body.front()));
+  ASSERT_TRUE(llvh::isa<ESTree::TryStatementNode>(programNode->_body.front()));
 }
 
 TEST(JSParserTest, TestBadTry) {
@@ -126,11 +126,11 @@ TEST(JSParserTest, TestDebugger) {
   auto parsed = parser.parse();
   ASSERT_TRUE(parsed.hasValue());
 
-  auto *programNode = llvm::dyn_cast<ESTree::ProgramNode>(parsed.getValue());
+  auto *programNode = llvh::dyn_cast<ESTree::ProgramNode>(parsed.getValue());
   ASSERT_NE(nullptr, programNode);
 
   ASSERT_TRUE(
-      llvm::isa<ESTree::DebuggerStatementNode>(programNode->_body.front()));
+      llvh::isa<ESTree::DebuggerStatementNode>(programNode->_body.front()));
 }
 
 TEST(JSParserTest, TestDiv) {

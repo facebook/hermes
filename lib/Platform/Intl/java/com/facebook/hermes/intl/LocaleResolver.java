@@ -14,6 +14,7 @@ public class LocaleResolver {
         String optionLocaleMatcher = JSObjects.getJavaString(JSObjects.Get(options, "localeMatcher"));
         LocaleMatcher.LocaleMatchResult localeMatchResult;
 
+        // TODO: We are currently not supporting "best fit" matching as it's a bit hard to generalize ..
 //        if (optionLocaleMatcher.equals("best fit")) {
 //            // android.icu.util.ULocale[] availableLocalesArray = ULocale.getAvailableLocales();
 //            localeMatchResult = LocaleMatcher2.bestFitMatch(requestedLocales.toArray(new String[requestedLocales.size()]), availableLocales);
@@ -36,12 +37,11 @@ public class LocaleResolver {
                     String requestedValue = localeMatchResult.extensions.get(key);
 
                     if(!requestedValue.isEmpty()) {
-                        value = localeMatchResult.extensions.get(key);
-                        supportedExtensionAdditionKeys.add(key);
+                        value = requestedValue;
                     } else {
                         value = JSObjects.newBoolean(true);
-                        supportedExtensionAdditionKeys.add(key);
                     }
+                    supportedExtensionAdditionKeys.add(key);
                 }
             }
 
@@ -58,26 +58,9 @@ public class LocaleResolver {
                 }
             }
 
-            if(key.equals("ca") && JSObjects.isString(value)) {
-                value = UnicodeLocaleKeywordUtils.resolveCalendarAlias((String) value);
-            }
+            value = UnicodeExtensionKeys.resolveKnownAliases(key, value);
 
-            if(key.equals("nu") && JSObjects.isString(value)) {
-                value = UnicodeLocaleKeywordUtils.resolveNumberSystemAlias((String) value);
-            }
-
-            if(key.equals("co") && JSObjects.isString(value)) {
-                value = UnicodeLocaleKeywordUtils.resolveCollationAlias((String) value);
-            }
-
-            if(value.equals("yes"))
-                value = "true";
-
-            if(value.equals("no"))
-                value = "false";
-
-
-            if(JSObjects.isString(value) && !UnicodeLocaleKeywordUtils.isValidKeyword(key, JSObjects.getJavaString(value))) {
+            if(JSObjects.isString(value) && !UnicodeExtensionKeys.isValidKeyword(key, JSObjects.getJavaString(value))) {
                 result.put(key, JSObjects.Null());
                 continue;
             }
@@ -89,29 +72,11 @@ public class LocaleResolver {
             ArrayList<String> valueList = new ArrayList<>();
             String keyValue = localeMatchResult.extensions.get(supportedExtendionKey);
 
-            if(supportedExtendionKey.equals("ca")) {
-                keyValue = UnicodeLocaleKeywordUtils.resolveCalendarAlias(keyValue);
-            }
+            keyValue = JSObjects.getJavaString(UnicodeExtensionKeys.resolveKnownAliases(supportedExtendionKey, JSObjects.newString(keyValue)));
 
-            if(supportedExtendionKey.equals("nu")) {
-                keyValue = UnicodeLocaleKeywordUtils.resolveNumberSystemAlias(keyValue);
-            }
-
-            if(supportedExtendionKey.equals("co")) {
-                keyValue = UnicodeLocaleKeywordUtils.resolveCollationAlias(keyValue);
-            }
-
-            if(JSObjects.isString(keyValue) && !UnicodeLocaleKeywordUtils.isValidKeyword(supportedExtendionKey, JSObjects.getJavaString(keyValue))) {
+            if(JSObjects.isString(keyValue) && !UnicodeExtensionKeys.isValidKeyword(supportedExtendionKey, JSObjects.getJavaString(keyValue))) {
                 continue;
             }
-
-            // TODO:: This needs to be standardized.
-            if(keyValue.equals("yes"))
-                keyValue = "";
-
-            if(keyValue.equals("no"))
-                keyValue = "false";
-
 
             valueList.add(keyValue);
             localeMatchResult.matchedLocale.setUnicodeExtensions(supportedExtendionKey, valueList);

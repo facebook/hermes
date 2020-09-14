@@ -697,7 +697,7 @@ class JSObject : public GCCell {
   /// implementation-dependent conditions are met, it can look up a property
   /// quickly and succeed. If it fails, the "slow path" - \c
   /// getOwnNamedDescriptor() must be used.
-  /// \return true or false if a definitive answer can be provided, llvm::None
+  /// \return true or false if a definitive answer can be provided, llvh::None
   /// if the result is unknown.
   static OptValue<bool> tryGetOwnNamedDescriptorFast(
       JSObject *self,
@@ -709,7 +709,7 @@ class JSObject : public GCCell {
   /// prototype chain.
   /// If the property cannot be found on this object or any of its prototypes,
   /// or if this object's HiddenClass has an uninitialized property map, returns
-  /// \p llvm::None.
+  /// \p llvh::None.
   static OptValue<HermesValue>
   tryGetNamedNoAlloc(JSObject *self, PointerBase *base, SymbolID name);
 
@@ -1083,14 +1083,14 @@ class JSObject : public GCCell {
   /// flags.
   /// \p props is a list of SymbolIDs for properties that need to be
   /// updated. It should contain a subset of properties in the object, so
-  /// the SymbolIDs won't get freed by gc. It is optional; if it is llvm::None,
+  /// the SymbolIDs won't get freed by gc. It is optional; if it is llvh::None,
   /// update every property.
   static void updatePropertyFlagsWithoutTransitions(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       PropertyFlags flagsToClear,
       PropertyFlags flagsToSet,
-      OptValue<llvm::ArrayRef<SymbolID>> props);
+      OptValue<llvh::ArrayRef<SymbolID>> props);
 
   /// First call \p indexedCB, passing each indexed property's \c uint32_t
   /// index and \c ComputedPropertyDescriptor. Then call \p namedCB passing each
@@ -1407,7 +1407,7 @@ const GCHermesValue *JSObject::directProps() const {
 }
 
 constexpr size_t JSObject::directPropsOffset() {
-  return llvm::alignTo<alignof(GCHermesValue)>(sizeof(JSObject));
+  return llvh::alignTo<alignof(GCHermesValue)>(sizeof(JSObject));
 }
 
 constexpr size_t JSObject::cellSizeJSObject() {
@@ -1452,6 +1452,11 @@ class PropertyAccessor final : public GCCell {
 
   GCPointer<Callable> getter{};
   GCPointer<Callable> setter{};
+
+#if defined(HERMESVM_GC_HADES) && defined(HERMESVM_COMPRESSED_POINTERS)
+  // Unused padding just to meet the minimum allocation requirements from Hades.
+  int8_t _padding_[4];
+#endif
 
   static CallResult<HermesValue>
   create(Runtime *runtime, Handle<Callable> getter, Handle<Callable> setter);
@@ -1688,7 +1693,7 @@ JSObject::tryGetNamedNoAlloc(JSObject *self, PointerBase *base, SymbolID name) {
   }
   // It wasn't found on any of the parents of this object, declare it
   // un-findable.
-  return llvm::None;
+  return llvh::None;
 }
 
 inline JSObject *JSObject::getNamedDescriptor(

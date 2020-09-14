@@ -65,7 +65,7 @@
 #endif
 #endif // __ANDROID__
 
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/raw_ostream.h"
 
 namespace hermes {
 namespace oscompat {
@@ -108,7 +108,7 @@ void unset_test_vm_allocate_limit() {
 }
 #endif // !NDEBUG
 
-static llvm::ErrorOr<void *> vm_allocate_impl(size_t sz) {
+static llvh::ErrorOr<void *> vm_allocate_impl(size_t sz) {
 #ifndef NDEBUG
   if (LLVM_UNLIKELY(sz > totalVMAllocLimit)) {
     return make_error_code(OOMError::TestVMLimitReached);
@@ -129,10 +129,10 @@ static llvm::ErrorOr<void *> vm_allocate_impl(size_t sz) {
 
 static char *alignAlloc(void *p, size_t alignment) {
   return reinterpret_cast<char *>(
-      llvm::alignTo(reinterpret_cast<uintptr_t>(p), alignment));
+      llvh::alignTo(reinterpret_cast<uintptr_t>(p), alignment));
 }
 
-llvm::ErrorOr<void *> vm_allocate(size_t sz) {
+llvh::ErrorOr<void *> vm_allocate(size_t sz) {
   assert(sz % page_size() == 0);
 #ifndef NDEBUG
   if (testPgSz != 0 && testPgSz > static_cast<size_t>(page_size_real())) {
@@ -142,7 +142,7 @@ llvm::ErrorOr<void *> vm_allocate(size_t sz) {
   return vm_allocate_impl(sz);
 }
 
-llvm::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment) {
+llvh::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment) {
   assert(sz > 0 && sz % page_size() == 0);
   assert(alignment > 0 && alignment % page_size() == 0);
 
@@ -277,7 +277,7 @@ bool vm_madvise(void *p, size_t sz, MAdvice advice) {
   return madvise(p, sz, param) == 0;
 }
 
-int pages_in_ram(const void *p, size_t sz, llvm::SmallVectorImpl<int> *runs) {
+int pages_in_ram(const void *p, size_t sz, llvh::SmallVectorImpl<int> *runs) {
   const auto PS = page_size();
   {
     // Align region start down to page boundary.
@@ -374,6 +374,44 @@ uint64_t current_private_dirty() {
 #else
   return 0;
 #endif
+}
+
+#if defined(__linux__)
+static bool overlap(uintptr_t a, size_t asize, uintptr_t b, size_t bsize) {
+  // An empty interval has no overlap.
+  if (asize == 0 || bsize == 0)
+    return false;
+  // Order by start address.
+  if (a > b)
+    return overlap(b, bsize, a, asize);
+  // Overlap iff the first interval extends beyond the start of the second.
+  return a + asize > b;
+}
+#endif
+
+std::vector<std::string> get_vm_protect_modes(const void *p, size_t sz) {
+  std::vector<std::string> modes;
+#if defined(__linux__)
+  FILE *fp = fopen("/proc/self/maps", "r");
+  unsigned long long begin;
+  unsigned long long end;
+  char mode[4 + 1];
+  while (fscanf(fp, "%llx-%llx %4s", &begin, &end, mode) == 3) {
+    if (overlap(
+            reinterpret_cast<uintptr_t>(p),
+            sz,
+            static_cast<uintptr_t>(begin),
+            static_cast<size_t>(end - begin))) {
+      modes.push_back(mode);
+    }
+    // Discard remainder of the line.
+    int result;
+    do {
+      result = fgetc(fp);
+    } while (result != '\n' && result > 0);
+  }
+#endif
+  return modes;
 }
 
 bool num_context_switches(long &voluntary, long &involuntary) {

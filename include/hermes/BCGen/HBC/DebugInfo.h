@@ -17,14 +17,14 @@
 #include "hermes/Support/OptValue.h"
 #include "hermes/Support/StringTable.h"
 #include "hermes/Support/UTF8.h"
-#include "llvm/Support/Format.h"
+#include "llvh/Support/Format.h"
 
 #include <string>
 #include <vector>
 
-namespace llvm {
+namespace llvh {
 class raw_ostream;
-} // namespace llvm
+} // namespace llvh
 
 namespace hermes {
 class SourceMapGenerator;
@@ -121,7 +121,7 @@ struct DebugSearchResult {
 /// A data structure for storing debug info.
 class DebugInfo {
  public:
-  using DebugFileRegionList = llvm::SmallVector<DebugFileRegion, 1>;
+  using DebugFileRegionList = llvh::SmallVector<DebugFileRegion, 1>;
 
  private:
   /// Filename table for mapping to offsets and lengths in filenameStorage_.
@@ -172,10 +172,10 @@ class DebugInfo {
   const StreamVector<uint8_t> &viewData() const {
     return data_;
   }
-  llvm::ArrayRef<StringTableEntry> getFilenameTable() const {
+  llvh::ArrayRef<StringTableEntry> getFilenameTable() const {
     return filenameTable_;
   }
-  llvm::ArrayRef<unsigned char> getFilenameStorage() const {
+  llvh::ArrayRef<unsigned char> getFilenameStorage() const {
     return filenameStorage_;
   }
 
@@ -208,7 +208,7 @@ class DebugInfo {
 
   /// Read variable names at \p offset into the lexical data section
   /// of the debug info. \return the list of variable names.
-  llvm::SmallVector<StringRef, 4> getVariableNames(uint32_t offset) const;
+  llvh::SmallVector<StringRef, 4> getVariableNames(uint32_t offset) const;
 
   /// Reads out the parent function ID of the function whose lexical debug data
   /// starts at \p offset. \return the ID of the parent function, or None if
@@ -221,21 +221,21 @@ class DebugInfo {
   ///                  ^ lexicalDataOffset_
 
   /// \return the slice of data_ reflecting the source locations.
-  llvm::ArrayRef<uint8_t> sourceLocationsData() const {
+  llvh::ArrayRef<uint8_t> sourceLocationsData() const {
     return data_.getData().slice(0, lexicalDataOffset_);
   }
 
   /// \return the slice of data_ reflecting the lexical data.
-  llvm::ArrayRef<uint8_t> lexicalData() const {
+  llvh::ArrayRef<uint8_t> lexicalData() const {
     return data_.getData().slice(lexicalDataOffset_);
   }
 
-  void disassembleFilenames(llvm::raw_ostream &OS) const;
-  void disassembleFilesAndOffsets(llvm::raw_ostream &OS) const;
-  void disassembleLexicalData(llvm::raw_ostream &OS) const;
+  void disassembleFilenames(llvh::raw_ostream &OS) const;
+  void disassembleFilesAndOffsets(llvh::raw_ostream &OS) const;
+  void disassembleLexicalData(llvh::raw_ostream &OS) const;
 
  public:
-  void disassemble(llvm::raw_ostream &OS) const {
+  void disassemble(llvh::raw_ostream &OS) const {
     disassembleFilenames(OS);
     disassembleFilesAndOffsets(OS);
     disassembleLexicalData(OS);
@@ -295,7 +295,7 @@ class DebugInfoGenerator {
 
   /// Appends a string \p str to the given \p data.
   /// This first appends the string's length, followed by the string bytes.
-  static void appendString(std::vector<uint8_t> &data, llvm::StringRef str) {
+  static void appendString(std::vector<uint8_t> &data, llvh::StringRef str) {
     appendSignedLEB128(data, int64_t(str.size()));
     data.insert(data.end(), str.begin(), str.end());
   }
@@ -314,14 +314,14 @@ class DebugInfoGenerator {
   uint32_t appendSourceLocations(
       const DebugSourceLocation &start,
       uint32_t functionIndex,
-      llvm::ArrayRef<DebugSourceLocation> offsets);
+      llvh::ArrayRef<DebugSourceLocation> offsets);
 
   /// Append lexical data including parent function \p parentFunctionIndex and
   /// list of variable names \p names to the debug data. \return the offset in
   /// the lexical section of the debug data.
   uint32_t appendLexicalData(
       OptValue<uint32_t> parentFunctionIndex,
-      llvm::ArrayRef<Identifier> names);
+      llvh::ArrayRef<Identifier> names);
 
   // Destructively move memory to a DebugInfo.
   DebugInfo serializeWithMove();

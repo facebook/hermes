@@ -86,20 +86,24 @@ public class DateTimeFormat {
     // This is a hacky way to avoid the extensions that we add from being shown in "resolvedOptions" ..
     private ILocaleObject mResolvedLocaleObjectForResolvedOptions = null;
 
-    private Object mCalendar = JSObjects.Undefined();
-    private Object mNumberingSystem = JSObjects.Undefined();
-    private Object mHourCycle = JSObjects.Undefined();
+    private boolean useDefaultCalendar;
+    private String mCalendar;
 
-    private IPlatformDateTimeFormatter.FormatMatcher mFormatMatcher = null;
-    private IPlatformDateTimeFormatter.WeekDay mWeekDay = null;
-    private IPlatformDateTimeFormatter.Era mEra = null;
-    private IPlatformDateTimeFormatter.Year mYear = null;
-    private IPlatformDateTimeFormatter.Month mMonth = null;
-    private IPlatformDateTimeFormatter.Day mDay = null;
-    private IPlatformDateTimeFormatter.Hour mHour = null;
-    private IPlatformDateTimeFormatter.Minute mMinute = null;
-    private IPlatformDateTimeFormatter.Second mSecond = null;
-    private IPlatformDateTimeFormatter.TimeZoneName mTimeZoneName = null;
+    private boolean useDefaultNumberSystem;
+    private String mNumberingSystem;
+
+    private IPlatformDateTimeFormatter.HourCycle mHourCycle;
+
+    private IPlatformDateTimeFormatter.FormatMatcher mFormatMatcher;
+    private IPlatformDateTimeFormatter.WeekDay mWeekDay;
+    private IPlatformDateTimeFormatter.Era mEra;
+    private IPlatformDateTimeFormatter.Year mYear;
+    private IPlatformDateTimeFormatter.Month mMonth;
+    private IPlatformDateTimeFormatter.Day mDay;
+    private IPlatformDateTimeFormatter.Hour mHour;
+    private IPlatformDateTimeFormatter.Minute mMinute;
+    private IPlatformDateTimeFormatter.Second mSecond;
+    private IPlatformDateTimeFormatter.TimeZoneName mTimeZoneName;
 
     private Object mTimeZone = null;
 
@@ -193,9 +197,25 @@ public class DateTimeFormat {
         mResolvedLocaleObject = (ILocaleObject) JSObjects.getJavaMap(r).get("locale");
         mResolvedLocaleObjectForResolvedOptions = mResolvedLocaleObject.cloneObject();
 
-        mCalendar = JSObjects.Get(r, "ca");
-        mNumberingSystem = JSObjects.Get(r, "nu");
-        mHourCycle = JSObjects.Get(r, "hc");
+        Object calendarResolved = JSObjects.Get(r, "ca");
+        if(!JSObjects.isNull(calendarResolved)) {
+            useDefaultCalendar = false;
+            mCalendar = JSObjects.getJavaString(calendarResolved);
+        } else {
+            useDefaultCalendar = true;
+            mCalendar = mPlatformDateTimeFormatter.getDefaultCalendarName(mResolvedLocaleObject);
+        }
+
+        Object numeringSystemResolved  = JSObjects.Get(r, "nu");
+        if(!JSObjects.isNull(numeringSystemResolved)) {
+            useDefaultNumberSystem = false;
+            mNumberingSystem = JSObjects.getJavaString(numeringSystemResolved);
+        } else {
+            useDefaultNumberSystem = true;
+            mNumberingSystem = mPlatformDateTimeFormatter.getDefaultNumberingSystem(mResolvedLocaleObject);
+        }
+
+        Object hourCycleResolved = JSObjects.Get(r, "hc");
 
         // 24 - 27
         Object timeZone = JSObjects.Get(options, "timeZone");
@@ -215,72 +235,56 @@ public class DateTimeFormat {
 
         // 29, 35
         Object weekDay = OptionHelpers.GetOption(options, "weekday", OptionHelpers.OptionType.STRING,  new String[]{"long", "short", "narrow"}, JSObjects.Undefined());
-        if(!JSObjects.isUndefined(weekDay)) {
-            mWeekDay = OptionHelpers.searchEnum(IPlatformDateTimeFormatter.WeekDay.class, JSObjects.getJavaString(weekDay));
-        }
+        mWeekDay = OptionHelpers.searchEnum(IPlatformDateTimeFormatter.WeekDay.class, weekDay);
 
         Object era = OptionHelpers.GetOption(options, "era", OptionHelpers.OptionType.STRING,  new String[]{"long", "short", "narrow"}, JSObjects.Undefined());
-        if(!JSObjects.isUndefined(era)) {
-            mEra = OptionHelpers.searchEnum(IPlatformDateTimeFormatter.Era.class, JSObjects.getJavaString(era));
-        }
+        mEra = OptionHelpers.searchEnum(IPlatformDateTimeFormatter.Era.class, era);
 
         Object year = OptionHelpers.GetOption(options, "year", OptionHelpers.OptionType.STRING,  new String[]{"numeric", "2-digit"}, JSObjects.Undefined());
-        if(!JSObjects.isUndefined(year)) {
-            mYear = OptionHelpers.searchEnum(IPlatformDateTimeFormatter.Year.class, JSObjects.getJavaString(year));
-        }
+        mYear = OptionHelpers.searchEnum(IPlatformDateTimeFormatter.Year.class, year);
 
         Object month = OptionHelpers.GetOption(options, "month", OptionHelpers.OptionType.STRING,  new String[]{"numeric", "2-digit", "long", "short", "narrow"}, JSObjects.Undefined());
-        if(!JSObjects.isUndefined(month)) {
-            mMonth = OptionHelpers.searchEnum(IPlatformDateTimeFormatter.Month.class, JSObjects.getJavaString(month));
-        }
+        mMonth = OptionHelpers.searchEnum(IPlatformDateTimeFormatter.Month.class, month);
 
         Object day = OptionHelpers.GetOption(options, "day", OptionHelpers.OptionType.STRING,  new String[]{"numeric", "2-digit"}, JSObjects.Undefined());
-        if(!JSObjects.isUndefined(day)) {
-            mDay = OptionHelpers.searchEnum(IPlatformDateTimeFormatter.Day.class, JSObjects.getJavaString(day));
-        }
+        mDay = OptionHelpers.searchEnum(IPlatformDateTimeFormatter.Day.class, day);
 
         Object hour = OptionHelpers.GetOption(options, "hour", OptionHelpers.OptionType.STRING,  new String[]{"numeric", "2-digit"}, JSObjects.Undefined());
-        if(!JSObjects.isUndefined(hour)) {
-            mHour = OptionHelpers.searchEnum(IPlatformDateTimeFormatter.Hour.class, JSObjects.getJavaString(hour));
-        }
+        mHour = OptionHelpers.searchEnum(IPlatformDateTimeFormatter.Hour.class, hour);
 
         Object minute = OptionHelpers.GetOption(options, "minute", OptionHelpers.OptionType.STRING,  new String[]{"numeric", "2-digit"}, JSObjects.Undefined());
-        if(!JSObjects.isUndefined(minute)) {
-            mMinute = OptionHelpers.searchEnum(IPlatformDateTimeFormatter.Minute.class, JSObjects.getJavaString(minute));
-        }
+        mMinute = OptionHelpers.searchEnum(IPlatformDateTimeFormatter.Minute.class, minute);
 
         Object second = OptionHelpers.GetOption(options, "second", OptionHelpers.OptionType.STRING,  new String[]{"numeric", "2-digit"}, JSObjects.Undefined());
-        if(!JSObjects.isUndefined(second)) {
-            mSecond = OptionHelpers.searchEnum(IPlatformDateTimeFormatter.Second.class, JSObjects.getJavaString(second));
-        }
+        mSecond = OptionHelpers.searchEnum(IPlatformDateTimeFormatter.Second.class, second);
 
         Object timeZoneName = OptionHelpers.GetOption(options, "timeZoneName", OptionHelpers.OptionType.STRING,  new String[]{"long", "short"}, JSObjects.Undefined());
-        if(!JSObjects.isUndefined(timeZoneName)) {
-            mTimeZoneName = OptionHelpers.searchEnum(IPlatformDateTimeFormatter.TimeZoneName.class, JSObjects.getJavaString(timeZoneName));
-        }
+        mTimeZoneName = OptionHelpers.searchEnum(IPlatformDateTimeFormatter.TimeZoneName.class, timeZoneName);
 
         // 36
         if (JSObjects.isUndefined(hour)) {
-            mHourCycle = JSObjects.Undefined();
+            mHourCycle = IPlatformDateTimeFormatter.HourCycle.UNDEFINED;
         } else {
-            Object hcDefault = mPlatformDateTimeFormatter.getDefaultHourCycle(mResolvedLocaleObject);
-            Object hc = mHourCycle;
+            IPlatformDateTimeFormatter.HourCycle hcDefault = mPlatformDateTimeFormatter.getDefaultHourCycle(mResolvedLocaleObject);
+            IPlatformDateTimeFormatter.HourCycle hc;
 
-            if (JSObjects.isNull(hc)) {
+            if (JSObjects.isNull(hourCycleResolved)) {
                 hc = hcDefault;
+            } else {
+                hc = OptionHelpers.searchEnum(IPlatformDateTimeFormatter.HourCycle.class, hourCycleResolved);
             }
 
             if(!JSObjects.isUndefined(hour12)) {
                 if(JSObjects.getJavaBoolean(hour12)) { // true
-                    if(JSObjects.getJavaString(hcDefault).equals("h11") || JSObjects.getJavaString(hcDefault).equals("h23"))
-                        hc = JSObjects.newString("h11");
+                    if(hcDefault == IPlatformDateTimeFormatter.HourCycle.H11 || hcDefault == IPlatformDateTimeFormatter.HourCycle.H23)
+                        hc = IPlatformDateTimeFormatter.HourCycle.H11;
                     else
-                        hc = JSObjects.newString("h12");
+                        hc = IPlatformDateTimeFormatter.HourCycle.H12;
                 } else {
-                    if(JSObjects.getJavaString(hcDefault).equals("h11") || JSObjects.getJavaString(hcDefault).equals("h23"))
-                        hc = JSObjects.newString("h23");
+                    if(hcDefault == IPlatformDateTimeFormatter.HourCycle.H11 || hcDefault == IPlatformDateTimeFormatter.HourCycle.H23)
+                        hc = IPlatformDateTimeFormatter.HourCycle.H23;
                     else
-                        hc = JSObjects.newString("h24");
+                        hc = IPlatformDateTimeFormatter.HourCycle.H24;
                 }
             }
 
@@ -320,7 +324,7 @@ public class DateTimeFormat {
 
         initializeDateTimeFormat(locales, options);
 
-        mPlatformDateTimeFormatter.configure(mResolvedLocaleObject, mCalendar, mNumberingSystem, mFormatMatcher, mWeekDay,
+        mPlatformDateTimeFormatter.configure(mResolvedLocaleObject, useDefaultCalendar ? "" : mCalendar, useDefaultNumberSystem ? "" : mNumberingSystem, mFormatMatcher, mWeekDay,
                 mEra, mYear, mMonth, mDay, mHour, mMinute, mSecond, mTimeZoneName, mHourCycle, mTimeZone);
 
     }
@@ -355,61 +359,44 @@ public class DateTimeFormat {
         HashMap<String, Object> finalResolvedOptions = new HashMap<String, Object>();
         finalResolvedOptions.put(Constants.LOCALE, mResolvedLocaleObjectForResolvedOptions.toCanonicalTag());
 
-        if (!JSObjects.isUndefined(mNumberingSystem) && !JSObjects.isNull(mNumberingSystem)) {
-            finalResolvedOptions.put("numberingSystem", mNumberingSystem);
-        } else {
-            String effectiveNumberingSystem = mPlatformDateTimeFormatter.getDefaultNumberingSystem(mResolvedLocaleObject);
-            finalResolvedOptions.put("numberingSystem", effectiveNumberingSystem);
-        }
+        finalResolvedOptions.put("numberingSystem", mNumberingSystem);
+        finalResolvedOptions.put("calendar", mCalendar);
+        finalResolvedOptions.put("timeZone", mTimeZone);
 
-        String effectiveCalendar;
-        if (!JSObjects.isUndefined(mCalendar) && !JSObjects.isNull(mCalendar)) {
-            effectiveCalendar = JSObjects.getJavaString(mCalendar);
-        } else {
-            effectiveCalendar = mPlatformDateTimeFormatter.getCalendarName();
-        }
+        if (mHourCycle != IPlatformDateTimeFormatter.HourCycle.UNDEFINED) {
+            finalResolvedOptions.put("hourCycle", mHourCycle.toString());
 
-        effectiveCalendar = UnicodeLocaleKeywordUtils.resolveCalendarAlias(effectiveCalendar);
-
-        finalResolvedOptions.put("calendar", effectiveCalendar);
-
-        String effectiveTimeZone = mPlatformDateTimeFormatter.getTimeZoneName();
-        finalResolvedOptions.put("timeZone", effectiveTimeZone);
-
-        if (!JSObjects.isUndefined(mHourCycle)) {
-            finalResolvedOptions.put("hourCycle", JSObjects.getJavaString(mHourCycle));
-
-            if (JSObjects.getJavaString(mHourCycle).equals("h11") || JSObjects.getJavaString(mHourCycle).equals("h12"))
+            if (mHourCycle == IPlatformDateTimeFormatter.HourCycle.H11 || mHourCycle == IPlatformDateTimeFormatter.HourCycle.H12)
                 finalResolvedOptions.put("hour12", true);
             else
                 finalResolvedOptions.put("hour12", false);
         }
 
-        if (mWeekDay != null)
+        if (mWeekDay != IPlatformDateTimeFormatter.WeekDay.UNDEFINED)
             finalResolvedOptions.put("weekday", mWeekDay.toString());
 
-        if (mEra != null)
+        if (mEra != IPlatformDateTimeFormatter.Era.UNDEFINED)
             finalResolvedOptions.put("era", mEra.toString());
 
-        if (mYear != null)
+        if (mYear != IPlatformDateTimeFormatter.Year.UNDEFINED)
             finalResolvedOptions.put("year", mYear.toString());
 
-        if (mMonth != null)
+        if (mMonth != IPlatformDateTimeFormatter.Month.UNDEFINED)
             finalResolvedOptions.put("month", mMonth.toString());
 
-        if (mDay != null)
+        if (mDay != IPlatformDateTimeFormatter.Day.UNDEFINED)
             finalResolvedOptions.put("day", mDay.toString());
 
-        if (mHour != null)
+        if (mHour != IPlatformDateTimeFormatter.Hour.UNDEFINED)
             finalResolvedOptions.put("hour", mHour.toString());
 
-        if (mMinute != null)
+        if (mMinute != IPlatformDateTimeFormatter.Minute.UNDEFINED)
             finalResolvedOptions.put("minute", mMinute.toString());
 
-        if (mSecond != null)
+        if (mSecond != IPlatformDateTimeFormatter.Second.UNDEFINED)
             finalResolvedOptions.put("second", mSecond.toString());
 
-        if (mTimeZoneName != null) {
+        if (mTimeZoneName != IPlatformDateTimeFormatter.TimeZoneName.UNDEFINED) {
             finalResolvedOptions.put("timeZoneName", mTimeZoneName.toString());
         }
 
@@ -425,7 +412,8 @@ public class DateTimeFormat {
     // exposed; it should be possible to create and use java
     // NumberFormat objects only.
     public String format(double jsTimeValue) throws JSRangeErrorException {
-        return mPlatformDateTimeFormatter.format(jsTimeValue);
+        String result = mPlatformDateTimeFormatter.format(jsTimeValue);
+        return result;
     }
 
     // Implementer note: This method corresponds roughly to

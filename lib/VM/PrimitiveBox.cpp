@@ -10,7 +10,7 @@
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/StringPrimitive.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvh/Support/Debug.h"
 #define DEBUG_TYPE "serialize"
 
 namespace hermes {
@@ -133,7 +133,7 @@ OptValue<PropertyFlags> JSString::_getOwnIndexedPropertyFlagsImpl(
     return flags;
   }
 
-  return llvm::None;
+  return llvh::None;
 }
 
 std::pair<uint32_t, uint32_t> JSString::_getOwnIndexedRangeImpl(
@@ -236,13 +236,14 @@ void StringIteratorDeserialize(Deserializer &d, CellKind kind) {
 }
 #endif
 
-CallResult<HermesValue> JSStringIterator::create(
+/// ES6.0 21.1.5.1 CreateStringIterator Abstract Operation
+PseudoHandle<JSStringIterator> JSStringIterator::create(
     Runtime *runtime,
     Handle<StringPrimitive> string) {
   auto proto = Handle<JSObject>::vmcast(&runtime->stringIteratorPrototype);
 
   JSObjectAlloc<JSStringIterator> mem{runtime};
-  return mem.initToHermesValue(new (mem) JSStringIterator(
+  return mem.initToPseudoHandle(new (mem) JSStringIterator(
       runtime,
       *proto,
       runtime->getHiddenClassForPrototypeRaw(
@@ -251,6 +252,7 @@ CallResult<HermesValue> JSStringIterator::create(
       *string));
 }
 
+/// ES6.0 21.1.5.2.1 %StringIteratorPrototype%.next ( ) 4-14
 CallResult<HermesValue> JSStringIterator::nextElement(
     Handle<JSStringIterator> self,
     Runtime *runtime) {

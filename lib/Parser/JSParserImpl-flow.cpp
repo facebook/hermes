@@ -7,17 +7,64 @@
 
 #include "JSParserImpl.h"
 
-#include "llvm/Support/SaveAndRestore.h"
+#include "llvh/Support/SaveAndRestore.h"
 
-using llvm::cast;
-using llvm::dyn_cast;
-using llvm::isa;
+using llvh::cast;
+using llvh::dyn_cast;
+using llvh::isa;
 
 namespace hermes {
 namespace parser {
 namespace detail {
 
 #if HERMES_PARSE_FLOW
+
+Optional<ESTree::Node *> JSParserImpl::parseFlowDeclaration() {
+  assert(checkDeclaration());
+  SMLoc start = tok_->getStartLoc();
+
+  if (check(TokenKind::rw_enum)) {
+    auto optEnum = parseEnumDeclaration();
+    if (!optEnum)
+      return None;
+    return *optEnum;
+  }
+
+  TypeAliasKind kind = TypeAliasKind::None;
+  if (checkAndEat(declareIdent_))
+    kind = TypeAliasKind::Declare;
+  else if (checkAndEat(opaqueIdent_))
+    kind = TypeAliasKind::Opaque;
+
+  if (kind == TypeAliasKind::Declare &&
+      !checkN(typeIdent_, interfaceIdent_, TokenKind::rw_interface)) {
+    error(tok_->getSourceRange(), "invalid token in type declaration");
+    return None;
+  }
+  if (kind == TypeAliasKind::Opaque && !check(typeIdent_)) {
+    error(tok_->getSourceRange(), "invalid token in opaque type declaration");
+    return None;
+  }
+
+  if (checkAndEat(typeIdent_)) {
+    auto optType = parseTypeAlias(start, kind);
+    if (!optType)
+      return None;
+    return *optType;
+  }
+
+  if (checkN(interfaceIdent_, TokenKind::rw_interface)) {
+    auto optType = parseInterfaceDeclaration(kind == TypeAliasKind::Declare);
+    if (!optType)
+      return None;
+    return *optType;
+  }
+
+  assert(
+      kind == TypeAliasKind::None &&
+      "checkDeclaration() returned true without 'type' or 'interface'");
+  return None;
+}
 
 Optional<ESTree::Node *> JSParserImpl::parseDeclare(SMLoc start) {
   if (checkAndEat(typeIdent_)) {
@@ -526,7 +573,7 @@ Optional<ESTree::Node *> JSParserImpl::parseExportTypeDeclaration(
   if (check(TokenKind::l_brace)) {
     ESTree::NodeList specifiers{};
     SMLoc endLoc;
-    llvm::SmallVector<SMRange, 2> invalids{};
+    llvh::SmallVector<SMRange, 2> invalids{};
 
     auto optExportClause = parseExportClause(specifiers, endLoc, invalids);
     if (!optExportClause) {
@@ -707,7 +754,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(SMLoc start) {
 
   ESTree::NodeList specifiers{};
   SMLoc end;
-  llvm::SmallVector<SMRange, 2> invalids{};
+  llvh::SmallVector<SMRange, 2> invalids{};
   if (!parseExportClause(specifiers, end, invalids))
     return None;
 
@@ -732,7 +779,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(SMLoc start) {
 Optional<ESTree::Node *> JSParserImpl::parseTypeAnnotation(
     bool wrapped,
     AllowAnonFunctionType allowAnonFunctionType) {
-  llvm::SaveAndRestore<bool> saveParam(
+  llvh::SaveAndRestore<bool> saveParam(
       allowAnonFunctionType_,
       allowAnonFunctionType == AllowAnonFunctionType::Yes);
   auto optType = parseUnionTypeAnnotation();
@@ -769,9 +816,11 @@ Optional<ESTree::Node *> JSParserImpl::parseUnionTypeAnnotation() {
     types.push_back(**optInt);
   }
 
+  SMLoc start = types.front().getStartLoc();
+  SMLoc end = types.back().getEndLoc();
   return setLocation(
-      types.front().getStartLoc(),
-      types.back().getEndLoc(),
+      start,
+      end,
       new (context_) ESTree::UnionTypeAnnotationNode(std::move(types)));
 }
 
@@ -797,9 +846,11 @@ Optional<ESTree::Node *> JSParserImpl::parseIntersectionTypeAnnotation() {
     types.push_back(**optInt);
   }
 
+  SMLoc start = types.front().getStartLoc();
+  SMLoc end = types.back().getEndLoc();
   return setLocation(
-      types.front().getStartLoc(),
-      types.back().getEndLoc(),
+      start,
+      end,
       new (context_) ESTree::IntersectionTypeAnnotationNode(std::move(types)));
 }
 
@@ -2020,7 +2071,7 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumDeclaration() {
     return None;
   ESTree::Node *id = *optIdent;
 
-  OptValue<EnumKind> optKind = llvm::None;
+  OptValue<EnumKind> optKind = llvh::None;
   if (checkAndEat(ofIdent_)) {
     if (checkAndEat(stringIdent_)) {
       optKind = EnumKind::String;
@@ -2079,7 +2130,7 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumBody(
         if (*optKind != *optMemberKind) {
           error(
               member->getSourceRange(),
-              llvm::Twine("cannot use ") + enumKindStr(*optMemberKind) +
+              llvh::Twine("cannot use ") + enumKindStr(*optMemberKind) +
                   " initializer in " + enumKindStr(*optKind) + " enum");
           sm_.note(start, "start of enum body", Subsystem::Parser);
           return None;

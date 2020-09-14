@@ -1,5 +1,6 @@
 package com.facebook.hermes.intl;
 
+import android.icu.text.NumberingSystem;
 import android.os.Build;
 
 import java.math.RoundingMode;
@@ -17,7 +18,7 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
 
     private java.text.Format  mFinalFormat;
     private DecimalFormat mDecimalFormat;
-    private ILocaleObject mLocaleObject;
+    private LocaleObjectAndroid mLocaleObject;
     private IPlatformNumberFormatter.Style mStyle;
 
     PlatformNumberFormatterAndroid() {}
@@ -25,12 +26,12 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
     private void initialize(DecimalFormat decimalFormat, ILocaleObject localeObject, IPlatformNumberFormatter.Style style) {
         mDecimalFormat = decimalFormat;
         mFinalFormat = decimalFormat;
-        mLocaleObject = localeObject;
+        mLocaleObject = (LocaleObjectAndroid) localeObject;
         mStyle = style;
     }
 
     @Override
-    public PlatformNumberFormatterAndroid configureCurrency(String currencyCode, IPlatformNumberFormatter.CurrencyDisplay currencyDisplay) throws JSRangeErrorException {
+    public PlatformNumberFormatterAndroid setCurrency(String currencyCode, CurrencyDisplay currencyDisplay) throws JSRangeErrorException {
         if (mStyle == CURRENCY) {
 
             Currency currency = Currency.getInstance(currencyCode);
@@ -39,7 +40,11 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
             String currencySymbol;
             switch (currencyDisplay) {
                 case NAME:
-                    currencySymbol = currency.getDisplayName((Locale) mLocaleObject.getLocale());
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                        currencySymbol = currency.getDisplayName((Locale) mLocaleObject.getLocale());
+                    } else {
+                        currencySymbol = currency.getSymbol((Locale) mLocaleObject.getLocale());
+                    }
                     break;
                 case CODE:
                     currencySymbol = currencyCode;
@@ -51,6 +56,10 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
                     break;
             }
 
+            DecimalFormatSymbols symbols = mDecimalFormat.getDecimalFormatSymbols();
+            symbols.setCurrencySymbol(currencySymbol);
+            mDecimalFormat.setDecimalFormatSymbols(symbols);
+
             mDecimalFormat.getDecimalFormatSymbols().setCurrencySymbol(currencySymbol);
         }
 
@@ -58,13 +67,13 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
     }
 
     @Override
-    public PlatformNumberFormatterAndroid configureGrouping(boolean mGroupingUsed) {
+    public PlatformNumberFormatterAndroid setGrouping(boolean mGroupingUsed) {
         mDecimalFormat.setGroupingUsed(mGroupingUsed);
         return this;
     }
 
     @Override
-    public PlatformNumberFormatterAndroid configureMinIntergerDigits(int minimumIntegerDigits) {
+    public PlatformNumberFormatterAndroid setMinIntergerDigits(int minimumIntegerDigits) {
         if (minimumIntegerDigits != -1)
             mDecimalFormat.setMinimumIntegerDigits(minimumIntegerDigits);
 
@@ -72,13 +81,13 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
     }
 
     @Override
-    public PlatformNumberFormatterAndroid configureSignificantDigits(IPlatformNumberFormatter.RoundingType roundingType, int minimumSignificantDigits, int maximumSignificantDigits) throws JSRangeErrorException {
+    public PlatformNumberFormatterAndroid setSignificantDigits(IPlatformNumberFormatter.RoundingType roundingType, int minimumSignificantDigits, int maximumSignificantDigits) throws JSRangeErrorException {
         // Not supported.
         return this;
     }
 
     @Override
-    public PlatformNumberFormatterAndroid configureFractinDigits(IPlatformNumberFormatter.RoundingType roundingType, int minimumFractionDigits, int maximumFractionDigits) {
+    public PlatformNumberFormatterAndroid setFractionDigits(IPlatformNumberFormatter.RoundingType roundingType, int minimumFractionDigits, int maximumFractionDigits) {
         if (roundingType == IPlatformNumberFormatter.RoundingType.FRACTION_DIGITS) {
             if (minimumFractionDigits >= 0)
                 mDecimalFormat.setMinimumFractionDigits(minimumFractionDigits);
@@ -91,7 +100,7 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
     }
 
     @Override
-    public PlatformNumberFormatterAndroid configureSignDisplay(IPlatformNumberFormatter.SignDisplay signDisplay) {
+    public PlatformNumberFormatterAndroid setSignDisplay(IPlatformNumberFormatter.SignDisplay signDisplay) {
         DecimalFormatSymbols symbols = mDecimalFormat.getDecimalFormatSymbols();
 
         switch (signDisplay) {
@@ -135,16 +144,33 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
     }
 
     @Override
-    public PlatformNumberFormatterAndroid configureUnits(String unit, IPlatformNumberFormatter.UnitDisplay unitDisplay) throws JSRangeErrorException {
+    public PlatformNumberFormatterAndroid setUnits(String unit, IPlatformNumberFormatter.UnitDisplay unitDisplay) throws JSRangeErrorException {
         // Not supported.
         return this;
     }
 
     @Override
-    public PlatformNumberFormatterAndroid configureDecimalFormat(ILocaleObject localeObject, IPlatformNumberFormatter.Style style,
-                                                                     IPlatformNumberFormatter.CurrencySign currencySign,
-                                                                     IPlatformNumberFormatter.Notation notation,
-                                                                     IPlatformNumberFormatter.CompactDisplay compactDisplay) throws JSRangeErrorException {
+    public PlatformNumberFormatterAndroid configure(ILocaleObject localeObject, String numberingSystem, IPlatformNumberFormatter.Style style,
+                                                    IPlatformNumberFormatter.CurrencySign currencySign,
+                                                    IPlatformNumberFormatter.Notation notation,
+                                                    IPlatformNumberFormatter.CompactDisplay compactDisplay) throws JSRangeErrorException {
+        if (!numberingSystem.isEmpty()) {
+
+            NumberingSystem numberingSystemObject;
+            try {
+                numberingSystemObject = NumberingSystem.getInstanceByName(JSObjects.getJavaString(numberingSystem));
+            } catch (RuntimeException ex) {
+                throw new JSRangeErrorException("Invalid numbering system: " + numberingSystem);
+            }
+
+            if (numberingSystemObject == null)
+                throw new JSRangeErrorException("Invalid numbering system: " + numberingSystem);
+
+            ArrayList<String> numberingSystemList = new ArrayList<>();
+            numberingSystemList.add(JSObjects.getJavaString(numberingSystem));
+
+            localeObject.setUnicodeExtensions("nu", numberingSystemList);
+        }
 
         NumberFormat numberFormat = NumberFormat.getInstance((Locale)localeObject.getLocale());
         numberFormat.setRoundingMode(RoundingMode.HALF_UP);

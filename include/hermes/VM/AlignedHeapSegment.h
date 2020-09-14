@@ -22,7 +22,7 @@
 #include "hermes/VM/PointerBase.h"
 #include "hermes/VM/SweepResultNC.h"
 
-#include "llvm/Support/MathExtras.h"
+#include "llvh/Support/MathExtras.h"
 
 #include <cstdint>
 #include <vector>
@@ -255,6 +255,10 @@ class AlignedHeapSegment {
 
   const MarkBitArrayNC &cellHeads() const {
     return contents()->startOfCells_;
+  }
+
+  static MarkBitArrayNC &cellHeadsCovering(const void *ptr) {
+    return contents(AlignedStorage::start(ptr))->startOfCells_;
   }
 #endif
 

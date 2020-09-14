@@ -121,16 +121,16 @@ public class Collator {
 
         mResolvedCaseFirst = OptionHelpers.searchEnum(IPlatformCollator.CaseFirst.class, JSObjects.getJavaString(caseFirstCollation));
 
-        // Note:: We can't find any other way to force the collator to use search locale data .. This is what other engines such as "V8" also does .
+        // Note:: We can't find any other way to force the collator to use search rules .
         if (mResolvedUsage == IPlatformCollator.Usage.SEARCH) {
             ArrayList<String> currentCollationExtensions = mResolvedLocaleObject.getUnicodeExtensions(Constants.COLLATION_EXTENSION_KEY_LONG);
 
             ArrayList<String> currentResolvedCollationExtensions = new ArrayList<>();
             for (String currentCollationExtension : currentCollationExtensions) {
-                currentResolvedCollationExtensions.add(UnicodeLocaleKeywordUtils.resolveCollationAlias(currentCollationExtension));
+                currentResolvedCollationExtensions.add(UnicodeExtensionKeys.resolveCollationAlias(currentCollationExtension));
             }
 
-            currentResolvedCollationExtensions.add(UnicodeLocaleKeywordUtils.resolveCollationAlias(Constants.SEARCH));
+            currentResolvedCollationExtensions.add(UnicodeExtensionKeys.resolveCollationAlias(Constants.SEARCH));
             mResolvedLocaleObject.setUnicodeExtensions(Constants.COLLATION_EXTENSION_KEY_SHORT, currentResolvedCollationExtensions);
         }
 
@@ -159,7 +159,7 @@ public class Collator {
             throws JSRangeErrorException {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            mPlatformCollatorObject =  new PlatformCollatorICU4J();
+            mPlatformCollatorObject =  new PlatformCollatorICU();
         } else {
             mPlatformCollatorObject =  new PlatformCollatorAndroid();
         }
@@ -167,7 +167,7 @@ public class Collator {
         initializeCollator(locales, options);
 
         mPlatformCollatorObject
-                .setLocale(mResolvedLocaleObject)
+                .configure(mResolvedLocaleObject)
                 .setNumericAttribute(mResolvedNumeric)
                 .setCaseFirstAttribute(mResolvedCaseFirst)
                 .setSensitivity(mResolvedSensitivity)
@@ -186,7 +186,7 @@ public class Collator {
 
         String[] availableLocales;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
-            availableLocales = new PlatformCollatorICU4J().getAvailableLocales();
+            availableLocales = new PlatformCollatorICU().getAvailableLocales();
         else
             availableLocales = new PlatformCollatorAndroid().getAvailableLocales();
 

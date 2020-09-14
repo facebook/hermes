@@ -10,7 +10,7 @@
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/Support/Statistic.h"
 
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvh/ADT/SmallPtrSet.h"
 
 #define DEBUG_TYPE "OptEnvironmentInit"
 
@@ -18,7 +18,7 @@ STATISTIC(
     NumStoreUndefinedRemoved,
     "Number of store undefined instructions removed");
 
-using llvm::dyn_cast;
+using llvh::dyn_cast;
 
 namespace hermes {
 namespace hbc {
@@ -31,22 +31,22 @@ bool OptEnvironmentInit::runOnFunction(Function *F) {
     IRBuilder::InstructionDestroyer destroyer{};
 
     // Environments created in the current BB.
-    llvm::SmallPtrSet<Value *, 2> createdEnvs{};
+    llvh::SmallPtrSet<Value *, 2> createdEnvs{};
 
     // Environment slots that have already been written to.
-    llvm::SmallPtrSet<Variable *, 8> writtenSlots{};
+    llvh::SmallPtrSet<Variable *, 8> writtenSlots{};
 
     for (auto &I : BB) {
       auto *inst = &I;
 
-      if (auto *CE = llvm::dyn_cast<HBCCreateEnvironmentInst>(inst)) {
+      if (auto *CE = llvh::dyn_cast<HBCCreateEnvironmentInst>(inst)) {
         createdEnvs.insert(CE);
         continue;
       }
 
       // Note that in practice we don't currently generate code to exercise
       // these checks below.
-      if (auto *SE = llvm::dyn_cast<HBCStoreToEnvironmentInst>(inst)) {
+      if (auto *SE = llvh::dyn_cast<HBCStoreToEnvironmentInst>(inst)) {
         // Are we storing in one of the environments created in this BB?
         // If not, we could be storing anywhere, including in the created
         // envs, so unfortunately we have to abort. This could happen if the
@@ -55,7 +55,7 @@ bool OptEnvironmentInit::runOnFunction(Function *F) {
           break;
 
         // If we are not storing undefined, mark the slot as written.
-        if (!llvm::isa<LiteralUndefined>(SE->getStoredValue())) {
+        if (!llvh::isa<LiteralUndefined>(SE->getStoredValue())) {
           writtenSlots.insert(SE->getResolvedName());
           continue;
         }

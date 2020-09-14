@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "WindowsSupport.h"
-#include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/ConvertUTF.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <psapi.h>
 
@@ -24,7 +24,7 @@
 
 
 DynamicLibrary::HandleSet::~HandleSet() {
-  for (void *Handle : llvm::reverse(Handles))
+  for (void *Handle : llvh::reverse(Handles))
     FreeLibrary(HMODULE(Handle));
 
   // 'Process' should not be released on Windows.
@@ -81,7 +81,7 @@ static bool GetProcessModules(HANDLE H, DWORD &Bytes, HMODULE *Data = nullptr) {
      ) {
     std::string Err;
     if (MakeErrMsg(&Err, "EnumProcessModules failure"))
-      llvm::errs() << Err << "\n";
+      llvh::errs() << Err << "\n";
     return false;
   }
   return true;

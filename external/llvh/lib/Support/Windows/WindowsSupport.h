@@ -34,13 +34,13 @@
 #define NOMINMAX
 #endif
 
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/Config/config.h" // Get build system configuration settings
-#include "llvm/Support/Chrono.h"
-#include "llvm/Support/Compiler.h"
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/ADT/StringExtras.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/ADT/Twine.h"
+#include "llvh/Config/config.h" // Get build system configuration settings
+#include "llvh/Support/Chrono.h"
+#include "llvh/Support/Compiler.h"
 #include <cassert>
 #include <string>
 #include <system_error>
@@ -84,7 +84,7 @@ inline bool MakeErrMsg(std::string *ErrMsg, const std::string &prefix) {
     *ErrMsg = prefix + ": " + buffer;
   else
     *ErrMsg = prefix + ": Unknown error";
-  *ErrMsg += " (0x" + llvm::utohexstr(LastError) + ")";
+  *ErrMsg += " (0x" + llvh::utohexstr(LastError) + ")";
 
   LocalFree(buffer);
   return R != 0;
@@ -201,7 +201,7 @@ typedef ScopedHandle<RegTraits>          ScopedRegHandle;
 typedef ScopedHandle<FindHandleTraits>   ScopedFindHandle;
 typedef ScopedHandle<JobHandleTraits>    ScopedJobHandle;
 
-namespace llvm {
+namespace llvh {
 template <class T>
 class SmallVectorImpl;
 
@@ -255,6 +255,6 @@ std::error_code GetCommandLineArguments(SmallVectorImpl<const char *> &Args,
                                         BumpPtrAllocator &Alloc);
 } // end namespace windows
 } // end namespace sys
-} // end namespace llvm.
+} // end namespace llvh.
 
 #endif

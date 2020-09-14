@@ -19,18 +19,18 @@
 #include "hermes/VM/SlotAcceptorDefault.h"
 #include "hermes/VM/VTable.h"
 
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/NativeFormatting.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/Debug.h"
+#include "llvh/Support/FileSystem.h"
+#include "llvh/Support/Format.h"
+#include "llvh/Support/NativeFormatting.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <inttypes.h>
 #include <stdexcept>
 #include <system_error>
 
-using llvm::dbgs;
-using llvm::format;
+using llvh::dbgs;
+using llvh::format;
 
 namespace hermes {
 namespace vm {
@@ -76,11 +76,11 @@ GCBase::GCBase(
       ? gcConfig.getSanitizeConfig().getRandomSeed()
       : std::random_device()();
   if (sanitizeRate_ > 0.0 && sanitizeRate_ < 1.0) {
-    llvm::errs()
+    llvh::errs()
         << "Warning: you are using handle sanitization with random sampling.\n"
         << "Sanitize Rate: ";
-    llvm::write_double(llvm::errs(), sanitizeRate_, llvm::FloatStyle::Percent);
-    llvm::errs() << "\n"
+    llvh::write_double(llvh::errs(), sanitizeRate_, llvh::FloatStyle::Percent);
+    llvh::errs() << "\n"
                  << "Sanitize Rate Seed: " << seed << "\n"
                  << "Re-run with -gc-sanitize-handles-random-seed=" << seed
                  << " for deterministic crashes.\n";
@@ -96,20 +96,26 @@ GCBase::GCCycle::GCCycle(
     : gc_(gc),
       gcCallbacksOpt_(gcCallbacksOpt),
       extraInfo_(std::move(extraInfo)),
-      previousInGC_(gc->inGC_.load(std::memory_order_seq_cst)) {
-  gc_->inGC_.store(true, std::memory_order_seq_cst);
-  if (gcCallbacksOpt_.hasValue()) {
-    gcCallbacksOpt_.getValue()->onGCEvent(
-        GCEventKind::CollectionStart, extraInfo_);
+      previousInGC_(gc_->inGC_.load(std::memory_order_acquire)) {
+  if (!previousInGC_) {
+    if (gcCallbacksOpt_.hasValue()) {
+      gcCallbacksOpt_.getValue()->onGCEvent(
+          GCEventKind::CollectionStart, extraInfo_);
+    }
+    bool wasInGC_ = gc_->inGC_.exchange(true, std::memory_order_acquire);
+    (void)wasInGC_;
+    assert(!wasInGC_ && "inGC_ should not be concurrently modified!");
   }
 }
 
 GCBase::GCCycle::~GCCycle() {
-  if (gcCallbacksOpt_.hasValue()) {
-    gcCallbacksOpt_.getValue()->onGCEvent(
-        GCEventKind::CollectionEnd, extraInfo_);
+  if (!previousInGC_) {
+    gc_->inGC_.store(false, std::memory_order_release);
+    if (gcCallbacksOpt_.hasValue()) {
+      gcCallbacksOpt_.getValue()->onGCEvent(
+          GCEventKind::CollectionEnd, extraInfo_);
+    }
   }
-  gc_->inGC_.store(previousInGC_, std::memory_order_seq_cst);
 }
 
 void GCBase::runtimeWillExecute() {
@@ -124,7 +130,7 @@ void GCBase::runtimeWillExecute() {
 
 std::error_code GCBase::createSnapshotToFile(const std::string &fileName) {
   std::error_code code;
-  llvm::raw_fd_ostream os(fileName, code, llvm::sys::fs::FileAccess::FA_Write);
+  llvh::raw_fd_ostream os(fileName, code, llvh::sys::fs::FileAccess::FA_Write);
   if (code) {
     return code;
   }
@@ -221,7 +227,7 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
       size_t len = hermes::numberToString(num, buf, sizeof(buf));
       snap_.endNode(
           HeapSnapshot::NodeType::Number,
-          llvm::StringRef{buf, len},
+          llvh::StringRef{buf, len},
           gc.getIDTracker().getNumberID(num),
           // Numbers are zero-sized in the heap because they're stored inline.
           0,
@@ -232,7 +238,7 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
  private:
   // Track all numbers that are seen in a heap pass, and only emit one node for
   // each of them.
-  llvm::DenseSet<double, GCBase::IDTracker::DoubleComparator> seenNumbers_;
+  llvh::DenseSet<double, GCBase::IDTracker::DoubleComparator> seenNumbers_;
 };
 
 struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
@@ -246,7 +252,7 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
     }
     snap_.addNamedEdge(
         HeapSnapshot::EdgeType::Internal,
-        llvm::StringRef::withNullAsEmpty(name),
+        llvh::StringRef::withNullAsEmpty(name),
         gc.getObjectID(ptr));
   }
 
@@ -257,13 +263,13 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
     } else if (auto id = gc.getSnapshotID(hv)) {
       snap_.addNamedEdge(
           HeapSnapshot::EdgeType::Internal,
-          llvm::StringRef::withNullAsEmpty(name),
+          llvh::StringRef::withNullAsEmpty(name),
           id.getValue());
     }
   }
 
   void accept(WeakRefBase &wr) override {
-    WeakRefSlot *slot = wr.unsafeGetSlot(mutexRef());
+    WeakRefSlot *slot = wr.unsafeGetSlot();
     if (slot->state() == WeakSlotState::Free) {
       // If the slot is free, there's no edge to add.
       return;
@@ -279,10 +285,6 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
         HeapSnapshot::EdgeType::Weak,
         indexName,
         gc.getObjectID(slot->getPointer()));
-  }
-
-  const WeakRefMutex &mutexRef() override {
-    return gc.weakRefMutex();
   }
 
  private:
@@ -323,10 +325,6 @@ struct SnapshotRootSectionAcceptor : public SnapshotAcceptor,
     // Do nothing for the end of the root section.
   }
 
-  const WeakRefMutex &mutexRef() override {
-    return gc.weakRefMutex();
-  }
-
  private:
   // v8's roots start numbering at 1.
   int rootSectionNum_{1};
@@ -349,7 +347,7 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
   }
 
   void accept(WeakRefBase &wr) override {
-    WeakRefSlot *slot = wr.unsafeGetSlot(mutexRef());
+    WeakRefSlot *slot = wr.unsafeGetSlot();
     if (slot->state() == WeakSlotState::Free) {
       // If the slot is free, there's no edge to add.
       return;
@@ -392,12 +390,8 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
     nextEdge_ = 0;
   }
 
-  const WeakRefMutex &mutexRef() override {
-    return gc.weakRefMutex();
-  }
-
  private:
-  llvm::DenseSet<uint64_t> seenIDs_;
+  llvh::DenseSet<uint64_t> seenIDs_;
   // For unnamed edges, use indices instead.
   unsigned nextEdge_{0};
   Section currentSection_{Section::InvalidSection};
@@ -415,7 +409,7 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
       // Already seen this node, don't add another edge.
       return;
     }
-    auto nameRef = llvm::StringRef::withNullAsEmpty(name);
+    auto nameRef = llvh::StringRef::withNullAsEmpty(name);
     if (!nameRef.empty()) {
       snap_.addNamedEdge(
           weak ? HeapSnapshot::EdgeType::Weak
@@ -434,7 +428,7 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
 
 } // namespace
 
-void GCBase::createSnapshot(GC *gc, llvm::raw_ostream &os) {
+void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
   JSONEmitter json(os);
   HeapSnapshot snap(json, gcCallbacks_->getStackTracesTree());
 
@@ -511,6 +505,20 @@ void GCBase::createSnapshot(GC *gc, llvm::raw_ostream &os) {
 
   snap.emitAllocationTraceInfo();
 
+  snap.beginSection(HeapSnapshot::Section::Samples);
+  GCBase::IDTracker::Sampler::TimePoint startTime;
+  GCBase::IDTracker::Sampler::Samples samples;
+  std::tie(startTime, samples) = gc->getIDTracker().endSamplingLastID();
+  for (auto sample : samples) {
+    uint64_t lastID = sample.second;
+    uint64_t timestampMicros =
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            sample.first - startTime)
+            .count();
+    json.emitValues({timestampMicros, lastID});
+  }
+  snap.endSection(HeapSnapshot::Section::Samples);
+
   snap.beginSection(HeapSnapshot::Section::Locations);
   gc->forAllObjs([&snap, gc](GCCell *cell) {
     cell->getVT()->snapshotMetaData.addLocations(cell, gc, snap);
@@ -540,17 +548,17 @@ void GCBase::checkTripwire(size_t dataSize) {
   tripwireCallback_(ctx);
 }
 
-void GCBase::printAllCollectedStats(llvm::raw_ostream &os) {
+void GCBase::printAllCollectedStats(llvh::raw_ostream &os) {
   if (!recordGcStats_)
     return;
 
   dump(os);
-  os << "GC stats:\n"
-     << "{\n"
-     << "\t\"type\": \"hermes\",\n"
-     << "\t\"version\": 0,\n";
-  printStats(os, false);
-  os << "}\n";
+  os << "GC stats:\n";
+  JSONEmitter json{os, /*pretty*/ true};
+  json.openDict();
+  printStats(json);
+  json.closeDict();
+  os << "\n";
 }
 
 void GCBase::getHeapInfo(HeapInfo &info) {
@@ -581,10 +589,14 @@ void GCBase::DebugHeapInfo::assertInvariants() const {
 }
 #endif
 
-void GCBase::dump(llvm::raw_ostream &, bool) { /* nop */
+void GCBase::dump(llvh::raw_ostream &, bool) { /* nop */
 }
 
-void GCBase::printStats(llvm::raw_ostream &os, bool trailingComma) {
+void GCBase::printStats(JSONEmitter &json) {
+  json.emitKeyValue("type", "hermes");
+  json.emitKeyValue("version", 0);
+  gcCallbacks_->printRuntimeGCStats(json);
+
   std::chrono::duration<double> elapsedTime =
       std::chrono::steady_clock::now() - execStartTime_;
   auto elapsedCPUSeconds =
@@ -603,30 +615,26 @@ void GCBase::printStats(llvm::raw_ostream &os, bool trailingComma) {
   getDebugHeapInfo(debugInfo);
 #endif
 
-  os << "\t\"heapInfo\": {\n"
+  json.emitKey("heapInfo");
+  json.openDict();
 #ifndef NDEBUG
-     << "\t\t\"Num allocated cells\": " << debugInfo.numAllocatedObjects
-     << ",\n"
-     << "\t\t\"Num reachable cells\": " << debugInfo.numReachableObjects
-     << ",\n"
-     << "\t\t\"Num collected cells\": " << debugInfo.numCollectedObjects
-     << ",\n"
-     << "\t\t\"Num finalized cells\": " << debugInfo.numFinalizedObjects
-     << ",\n"
-     << "\t\t\"Num marked symbols\": " << debugInfo.numMarkedSymbols << ",\n"
-     << "\t\t\"Num hidden classes\": " << debugInfo.numHiddenClasses << ",\n"
-     << "\t\t\"Num leaf classes\": " << debugInfo.numLeafHiddenClasses << ",\n"
-     << "\t\t\"Num weak references\": " << ((GC *)this)->countUsedWeakRefs()
-     << ",\n"
+  json.emitKeyValue("Num allocated cells", debugInfo.numAllocatedObjects);
+  json.emitKeyValue("Num reachable cells", debugInfo.numReachableObjects);
+  json.emitKeyValue("Num collected cells", debugInfo.numCollectedObjects);
+  json.emitKeyValue("Num finalized cells", debugInfo.numFinalizedObjects);
+  json.emitKeyValue("Num marked symbols", debugInfo.numMarkedSymbols);
+  json.emitKeyValue("Num hidden classes", debugInfo.numHiddenClasses);
+  json.emitKeyValue("Num leaf classes", debugInfo.numLeafHiddenClasses);
+  json.emitKeyValue("Num weak references", ((GC *)this)->countUsedWeakRefs());
 #endif
-     << "\t\t\"Peak RSS\": " << oscompat::peak_rss() << ",\n"
-     << "\t\t\"Current RSS\": " << oscompat::current_rss() << ",\n"
-     << "\t\t\"Current Dirty\": " << oscompat::current_private_dirty() << ",\n"
-     << "\t\t\"Heap size\": " << info.heapSize << ",\n"
-     << "\t\t\"Allocated bytes\": " << info.allocatedBytes << ",\n"
-     << "\t\t\"Num collections\": " << info.numCollections << ",\n"
-     << "\t\t\"Malloc size\": " << info.mallocSizeEstimate << "\n"
-     << "\t},\n";
+  json.emitKeyValue("Peak RSS", oscompat::peak_rss());
+  json.emitKeyValue("Current RSS", oscompat::current_rss());
+  json.emitKeyValue("Current Dirty", oscompat::current_private_dirty());
+  json.emitKeyValue("Heap size", info.heapSize);
+  json.emitKeyValue("Allocated bytes", info.allocatedBytes);
+  json.emitKeyValue("Num collections", info.numCollections);
+  json.emitKeyValue("Malloc size", info.mallocSizeEstimate);
+  json.closeDict();
 
   long vol = -1;
   long invol = -1;
@@ -635,63 +643,71 @@ void GCBase::printStats(llvm::raw_ostream &os, bool trailingComma) {
     invol -= startNumInvoluntaryContextSwitches_;
   }
 
-  os << "\t\"general\": {\n"
-     << "\t\t\"numCollections\": " << cumStats_.numCollections << ",\n"
-     << "\t\t\"totalTime\": " << elapsedTime.count() << ",\n"
-     << "\t\t\"totalCPUTime\": " << elapsedCPUSeconds << ",\n"
-     << "\t\t\"totalGCTime\": " << formatSecs(cumStats_.gcWallTime.sum()).secs
-     << ",\n"
-     << "\t\t\"volCtxSwitch\": " << vol << ",\n"
-     << "\t\t\"involCtxSwitch\": " << invol << ",\n"
-     << "\t\t\"avgGCPause\": "
-     << formatSecs(cumStats_.gcWallTime.average()).secs << ",\n"
-     << "\t\t\"maxGCPause\": " << formatSecs(cumStats_.gcWallTime.max()).secs
-     << ",\n"
-     << "\t\t\"totalGCCPUTime\": " << formatSecs(cumStats_.gcCPUTime.sum()).secs
-     << ",\n"
-     << "\t\t\"avgGCCPUPause\": "
-     << formatSecs(cumStats_.gcCPUTime.average()).secs << ",\n"
-     << "\t\t\"maxGCCPUPause\": " << formatSecs(cumStats_.gcCPUTime.max()).secs
-     << ",\n"
-     << "\t\t\"finalHeapSize\": " << formatSize(cumStats_.finalHeapSize).bytes
-     << ",\n"
-     << "\t\t\"peakAllocatedBytes\": "
-     << formatSize(getPeakAllocatedBytes()).bytes << ",\n"
-     << "\t\t\"peakLiveAfterGC\": " << formatSize(getPeakLiveAfterGC()).bytes
-     << ",\n"
-     << "\t\t\"totalAllocatedBytes\": "
-     << formatSize(info.totalAllocatedBytes).bytes << "\n"
-     << "\t}";
+  json.emitKey("general");
+  json.openDict();
+  json.emitKeyValue("numCollections", cumStats_.numCollections);
+  json.emitKeyValue("totalTime", elapsedTime.count());
+  json.emitKeyValue("totalCPUTime", elapsedCPUSeconds);
+  json.emitKeyValue("totalGCTime", formatSecs(cumStats_.gcWallTime.sum()).secs);
+  json.emitKeyValue("volCtxSwitch", vol);
+  json.emitKeyValue("involCtxSwitch", invol);
+  json.emitKeyValue(
+      "avgGCPause", formatSecs(cumStats_.gcWallTime.average()).secs);
+  json.emitKeyValue("maxGCPause", formatSecs(cumStats_.gcWallTime.max()).secs);
+  json.emitKeyValue(
+      "totalGCCPUTime", formatSecs(cumStats_.gcCPUTime.sum()).secs);
+  json.emitKeyValue(
+      "avgGCCPUPause", formatSecs(cumStats_.gcCPUTime.average()).secs);
+  json.emitKeyValue(
+      "maxGCCPUPause", formatSecs(cumStats_.gcCPUTime.max()).secs);
+  json.emitKeyValue("finalHeapSize", formatSize(cumStats_.finalHeapSize).bytes);
+  json.emitKeyValue(
+      "peakAllocatedBytes", formatSize(getPeakAllocatedBytes()).bytes);
+  json.emitKeyValue("peakLiveAfterGC", formatSize(getPeakLiveAfterGC()).bytes);
+  json.emitKeyValue(
+      "totalAllocatedBytes", formatSize(info.totalAllocatedBytes).bytes);
+  json.closeDict();
 
-  if (trailingComma) {
-    os << ",";
+  json.emitKey("collections");
+  json.openArray();
+  for (const auto &event : analyticsEvents_) {
+    json.openDict();
+    json.emitKeyValue("runtimeDescription", event.runtimeDescription);
+    json.emitKeyValue("gcKind", event.gcKind);
+    json.emitKeyValue("collectionType", event.collectionType);
+    json.emitKeyValue("duration", event.duration.count());
+    json.emitKeyValue("cpuDuration", event.cpuDuration.count());
+    json.emitKeyValue("preAllocated", event.preAllocated);
+    json.emitKeyValue("preSize", event.preSize);
+    json.emitKeyValue("postAllocated", event.postAllocated);
+    json.emitKeyValue("postSize", event.postSize);
+    json.emitKeyValue("survivalRatio", event.survivalRatio);
+    json.closeDict();
   }
-  os << "\n";
+  json.closeArray();
 }
 
 void GCBase::recordGCStats(
-    double wallTime,
-    double cpuTime,
-    gcheapsize_t finalHeapSize,
-    gcheapsize_t usedBefore,
-    gcheapsize_t usedAfter,
+    const GCAnalyticsEvent &event,
     CumulativeHeapStats *stats) {
-  stats->gcWallTime.record(wallTime);
-  stats->gcCPUTime.record(cpuTime);
-  stats->finalHeapSize = finalHeapSize;
-  stats->usedBefore.record(usedBefore);
-  stats->usedAfter.record(usedAfter);
+  stats->gcWallTime.record(
+      std::chrono::duration<double>(event.duration).count());
+  stats->gcCPUTime.record(
+      std::chrono::duration<double>(event.cpuDuration).count());
+  stats->finalHeapSize = event.postSize;
+  stats->usedBefore.record(event.preAllocated);
+  stats->usedAfter.record(event.postAllocated);
   stats->numCollections++;
 }
 
-void GCBase::recordGCStats(
-    double wallTime,
-    double cpuTime,
-    gcheapsize_t usedBefore,
-    gcheapsize_t usedAfter,
-    gcheapsize_t finalHeapSize) {
-  recordGCStats(
-      wallTime, cpuTime, finalHeapSize, usedBefore, usedAfter, &cumStats_);
+void GCBase::recordGCStats(const GCAnalyticsEvent &event) {
+  if (analyticsCallback_) {
+    analyticsCallback_(event);
+  }
+  if (recordGcStats_) {
+    analyticsEvents_.push_back(event);
+  }
+  recordGCStats(event, &cumStats_);
 }
 
 void GCBase::oom(std::error_code reason) {
@@ -710,7 +726,7 @@ void GCBase::oom(std::error_code reason) {
       gcCallbacks_->getCallStackNoAlloc());
 #else
   oomDetail(reason);
-  hermes_fatal((llvm::Twine("OOM: ") + convert_error_to_message(reason)).str());
+  hermes_fatal((llvh::Twine("OOM: ") + convert_error_to_message(reason)).str());
 #endif
 }
 
@@ -785,8 +801,8 @@ double GCBase::clockDiffSeconds(
   return elapsed.count();
 }
 
-llvm::raw_ostream &operator<<(
-    llvm::raw_ostream &os,
+llvh::raw_ostream &operator<<(
+    llvh::raw_ostream &os,
     const DurationFormatObj &dfo) {
   if (dfo.secs >= 1.0) {
     os << format("%5.3f", dfo.secs) << " s";
@@ -798,7 +814,7 @@ llvm::raw_ostream &operator<<(
   return os;
 }
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const SizeFormatObj &sfo) {
+llvh::raw_ostream &operator<<(llvh::raw_ostream &os, const SizeFormatObj &sfo) {
   double dblsize = static_cast<double>(sfo.bytes);
   if (sfo.bytes >= (1024 * 1024 * 1024)) {
     double gbs = dblsize / (1024.0 * 1024.0 * 1024.0);
@@ -819,7 +835,6 @@ GCBase::GCCallbacks::~GCCallbacks() {}
 
 GCBase::IDTracker::IDTracker() {
   assert(nextID_ % 2 == 1 && "First JS object ID isn't odd");
-  assert(nextNativeID_ % 2 == 0 && "First native object ID isn't even");
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -839,7 +854,6 @@ void GCBase::AllocationLocationTracker::deserialize(Deserializer &d) {
 
 void GCBase::IDTracker::serialize(Serializer &s) const {
   s.writeInt<HeapSnapshot::NodeID>(nextID_);
-  s.writeInt<HeapSnapshot::NodeID>(nextNativeID_);
   s.writeInt<size_t>(objectIDMap_.size());
   for (auto it = objectIDMap_.begin(); it != objectIDMap_.end(); it++) {
     s.writeRelocation(it->first);
@@ -849,7 +863,6 @@ void GCBase::IDTracker::serialize(Serializer &s) const {
 
 void GCBase::IDTracker::deserialize(Deserializer &d) {
   nextID_ = d.readInt<HeapSnapshot::NodeID>();
-  nextNativeID_ = d.readInt<HeapSnapshot::NodeID>();
   size_t size = d.readInt<size_t>();
   for (size_t i = 0; i < size; i++) {
     // Heap must have been deserialized before this function. All deserialized
@@ -886,7 +899,42 @@ HeapSnapshot::NodeID GCBase::IDTracker::getNumberID(double num) {
   return numberRef = nextNumberID();
 }
 
-llvm::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
+void GCBase::IDTracker::beginSamplingLastID(Sampler::Duration duration) {
+  endSamplingLastID();
+  sampler_ = llvh::make_unique<Sampler>(nextID_, duration);
+}
+
+std::pair<
+    GCBase::IDTracker::Sampler::TimePoint,
+    GCBase::IDTracker::Sampler::Samples>
+GCBase::IDTracker::endSamplingLastID() {
+  if (sampler_) {
+    std::pair<Sampler::TimePoint, Sampler::Samples> result =
+        make_pair(sampler_->startTime(), sampler_->stop());
+    sampler_.reset();
+    return result;
+  } else {
+    return std::make_pair(Sampler::TimePoint{}, Sampler::Samples{});
+  }
+}
+
+void GCBase::AllocationLocationTracker::enable() {
+  enabled_ = true;
+  GC *gc = reinterpret_cast<GC *>(gc_);
+  // For correct visualization of the allocation timeline, it's necessary that
+  // objects in the heap snapshot that existed before sampling was enabled have
+  // numerically lower IDs than those allocated during sampling. We ensure this
+  // by assigning IDs to everything here.
+  gc->forAllObjs([gc](GCCell *cell) { gc->getIDTracker().getObjectID(cell); });
+  gc->getIDTracker().beginSamplingLastID(std::chrono::milliseconds(50));
+}
+
+void GCBase::AllocationLocationTracker::disable() {
+  gc_->getIDTracker().endSamplingLastID();
+  enabled_ = false;
+}
+
+llvh::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
   if (val.isPointer() && val.getPointer()) {
     // Make nullptr HermesValue look like a JS null.
     // This should be rare, but is occasionally used by some parts of the VM.
@@ -905,7 +953,7 @@ llvm::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
         val.getBool() ? IDTracker::ReservedObjectID::True
                       : IDTracker::ReservedObjectID::False);
   } else {
-    return llvm::None;
+    return llvh::None;
   }
 }
 

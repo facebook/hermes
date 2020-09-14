@@ -9,6 +9,6 @@
 // RUN: cat %s | %hermes -prompt="" -prompt2="" | %FileCheck --match-full-lines %s
 
 new Set[1,2,3])
-// CHECK: SyntaxError: 1:15:';' expected
+// CHECK: Uncaught SyntaxError: 1:15:';' expected
 // CHECK-NEXT: at eval (native)
 // CHECK-NEXT: at evaluateLine ({{.*}})

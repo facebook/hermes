@@ -270,13 +270,6 @@ TEST_F(GCBasicsTest, WeakRefSlotTest) {
 }
 
 TEST_F(GCBasicsTest, WeakRefTest) {
-#ifdef HERMESVM_GC_HADES
-#define LOCK(mtx) mtx.lock()
-#define UNLOCK(mtx) mtx.unlock()
-#else
-#define LOCK(mtx)
-#define UNLOCK(mtx)
-#endif
   auto &gc = rt.gc;
   GCBase::DebugHeapInfo debugInfo;
 
@@ -290,15 +283,15 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   EXPECT_EQ(2u, debugInfo.numAllocatedObjects);
 
   WeakRefMutex &mtx = gc.weakRefMutex();
-  LOCK(mtx);
+  mtx.lock();
   WeakRef<Array> wr1{&gc, a1};
   WeakRef<Array> wr2{&gc, a2};
 
-  ASSERT_TRUE(wr1.isValid(mtx));
-  ASSERT_TRUE(wr2.isValid(mtx));
+  ASSERT_TRUE(wr1.isValid());
+  ASSERT_TRUE(wr2.isValid());
 
-  ASSERT_EQ(a1, getNoHandleLocked(wr1, &gc));
-  ASSERT_EQ(a2, getNoHandleLocked(wr2, &gc));
+  ASSERT_EQ(a1, getNoHandle(wr1, &gc));
+  ASSERT_EQ(a2, getNoHandle(wr2, &gc));
 
   // Test that freeing an object correctly "empties" the weak ref slot but
   // preserves the other slot.
@@ -312,31 +305,31 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   // the pointer to avoid mistakes.
   a1 = nullptr;
 
-  UNLOCK(mtx);
+  mtx.unlock();
   gc.collect();
   gc.getDebugHeapInfo(debugInfo);
-  LOCK(mtx);
+  mtx.lock();
   EXPECT_EQ(1u, debugInfo.numAllocatedObjects);
-  ASSERT_FALSE(wr1.isValid(mtx));
+  ASSERT_FALSE(wr1.isValid());
   // Though the slot is empty, it's still reachable, so must not be freed yet.
-  ASSERT_NE(WeakSlotState::Free, wr1.unsafeGetSlot(mtx)->state());
-  ASSERT_TRUE(wr2.isValid(mtx));
-  ASSERT_EQ(a2, getNoHandleLocked(wr2, &gc));
+  ASSERT_NE(WeakSlotState::Free, wr1.unsafeGetSlot()->state());
+  ASSERT_TRUE(wr2.isValid());
+  ASSERT_EQ(a2, getNoHandle(wr2, &gc));
 
   // Make the slot unreachable and test that it is freed.
-  UNLOCK(mtx);
+  mtx.unlock();
   rt.markExtraWeak = [&](WeakRefAcceptor &acceptor) { acceptor.accept(wr2); };
   gc.collect();
-  LOCK(mtx);
+  mtx.lock();
 
-  ASSERT_EQ(WeakSlotState::Free, wr1.unsafeGetSlot(mtx)->state());
+  ASSERT_EQ(WeakSlotState::Free, wr1.unsafeGetSlot()->state());
 
   // Create a new weak ref, possibly reusing the just freed slot.
   auto *a3 = Array::create(rt, 10);
   WeakRef<Array> wr3{&gc, a3};
 
-  ASSERT_TRUE(wr3.isValid(mtx));
-  ASSERT_EQ(a3, getNoHandleLocked(wr3, &gc));
+  ASSERT_TRUE(wr3.isValid());
+  ASSERT_EQ(a3, getNoHandle(wr3, &gc));
 #undef LOCK
 #undef UNLOCK
 }
@@ -369,13 +362,13 @@ TEST_F(GCBasicsTest, WeakRefYoungGenCollectionTest) {
   WeakRef<Dummy> wr1{&gc, d1};
   WeakRef<Dummy> wrOld{&gc, dOld};
 
-  ASSERT_TRUE(wr0.isValid(mtx));
-  ASSERT_TRUE(wr1.isValid(mtx));
-  ASSERT_TRUE(wrOld.isValid(mtx));
+  ASSERT_TRUE(wr0.isValid());
+  ASSERT_TRUE(wr1.isValid());
+  ASSERT_TRUE(wrOld.isValid());
 
-  ASSERT_EQ(d0, getNoHandleLocked(wr0, &gc));
-  ASSERT_EQ(d1, getNoHandleLocked(wr1, &gc));
-  ASSERT_EQ(dOld, getNoHandleLocked(wrOld, &gc));
+  ASSERT_EQ(d0, getNoHandle(wr0, &gc));
+  ASSERT_EQ(d1, getNoHandle(wr1, &gc));
+  ASSERT_EQ(dOld, getNoHandle(wrOld, &gc));
 
   // Create a root for d0.  We'll only be doing young-gen collections, so
   // we don't have to root dOld.
@@ -393,11 +386,11 @@ TEST_F(GCBasicsTest, WeakRefYoungGenCollectionTest) {
   gc.youngGenCollect();
   gc.getDebugHeapInfo(debugInfo);
   EXPECT_EQ(2u, debugInfo.numAllocatedObjects);
-  ASSERT_TRUE(wr0.isValid(mtx));
-  ASSERT_FALSE(wr1.isValid(mtx));
-  ASSERT_TRUE(wrOld.isValid(mtx));
-  ASSERT_EQ(d0, getNoHandleLocked(wr0, &gc));
-  ASSERT_EQ(dOld, getNoHandleLocked(wrOld, &gc));
+  ASSERT_TRUE(wr0.isValid());
+  ASSERT_FALSE(wr1.isValid());
+  ASSERT_TRUE(wrOld.isValid());
+  ASSERT_EQ(d0, getNoHandle(wr0, &gc));
+  ASSERT_EQ(dOld, getNoHandle(wrOld, &gc));
 }
 
 TEST_F(GCBasicsTest, TestYoungGenStats) {
@@ -444,8 +437,6 @@ TEST_F(GCBasicsTest, TestFixedRuntimeCell) {
 
 /// Test that the extra bytes in the heap are reported correctly.
 TEST_F(GCBasicsTest, ExtraBytes) {
-  // Hades doesn't do malloc size reporting yet.
-#ifndef HERMESVM_GC_HADES
   auto &gc = rt.gc;
 
   {
@@ -463,7 +454,6 @@ TEST_F(GCBasicsTest, ExtraBytes) {
     gc.getHeapInfoWithMallocSize(info);
     EXPECT_EQ(info.mallocSizeEstimate, getExtraSize(nullptr) * 2);
   }
-#endif
 }
 
 /// Test that the id is set to a unique number for each allocated object.
@@ -484,8 +474,15 @@ TEST_F(GCBasicsTest, TestIDPersistsAcrossCollections) {
   EXPECT_EQ(idBefore, idAfter);
 }
 
+/// Test that objects that die during (YG) GC are untracked.
+TEST_F(GCBasicsTest, TestIDDeathInYoung) {
+  GCScope scope{&rt};
+  rt.getHeap().getObjectID(Dummy::create(rt));
+  rt.getHeap().collect();
+  // ~DummyRuntime will verify all pointers in ID map.
+}
+
 // Hades doesn't do any GCEventKind monitoring.
-#ifndef HERMESVM_GC_HADES
 TEST(GCCallbackTest, TestCallbackInvoked) {
   std::vector<GCEventKind> ev;
   auto cb = [&ev](GCEventKind kind, const char *) { ev.push_back(kind); };
@@ -493,11 +490,20 @@ TEST(GCCallbackTest, TestCallbackInvoked) {
   auto rt =
       Runtime::create(RuntimeConfig::Builder().withGCConfig(config).build());
   rt->collect();
+  // Hades will record the YG and OG collections as separate events.
+#ifndef HERMESVM_GC_HADES
   EXPECT_EQ(2, ev.size());
-  EXPECT_EQ(GCEventKind::CollectionStart, ev[0]);
-  EXPECT_EQ(GCEventKind::CollectionEnd, ev[1]);
-}
+#else
+  EXPECT_EQ(4, ev.size());
 #endif
+  for (size_t i = 0; i < ev.size(); i++) {
+    if (i % 2 == 0) {
+      EXPECT_EQ(GCEventKind::CollectionStart, ev[i]);
+    } else {
+      EXPECT_EQ(GCEventKind::CollectionEnd, ev[i]);
+    }
+  }
+}
 
 #ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {

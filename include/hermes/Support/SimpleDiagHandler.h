@@ -25,7 +25,7 @@ class SimpleDiagHandler {
   }
 
   /// \return the first error message received.
-  const llvm::SMDiagnostic &getFirstMessage() const {
+  const llvh::SMDiagnostic &getFirstMessage() const {
     assert(haveErrors() && "getFirstMessage() called without errors");
     return firstMessage_;
   }
@@ -35,10 +35,10 @@ class SimpleDiagHandler {
 
  private:
   /// First error message given to handler(), if it exists.
-  llvm::SMDiagnostic firstMessage_;
+  llvh::SMDiagnostic firstMessage_;
 
   /// The actual handler callback.
-  static void handler(const llvm::SMDiagnostic &msg, void *ctx);
+  static void handler(const llvh::SMDiagnostic &msg, void *ctx);
 };
 
 /// A RAII wrapper around \c SimpleDiagHandler that automatically installs
@@ -53,7 +53,7 @@ class SimpleDiagHandlerRAII : public SimpleDiagHandler {
   SourceErrorManager &sourceErrorManager_;
 
   /// The previous handler, to be restored on destruction.
-  void (*const oldHandler_)(const llvm::SMDiagnostic &, void *);
+  void (*const oldHandler_)(const llvh::SMDiagnostic &, void *);
   /// The previous context, to be restoed on destruction.
   void *const oldContext_;
   /// The previous error limit.

@@ -101,6 +101,13 @@ Handle<JSObject> createSymbolConstructor(Runtime *runtime) {
   defineProperty(
       runtime,
       cons,
+      Predefined::getSymbolID(Predefined::matchAll),
+      runtime->makeHandle(Predefined::getSymbolID(Predefined::SymbolMatchAll)),
+      dpf);
+
+  defineProperty(
+      runtime,
+      cons,
       Predefined::getSymbolID(Predefined::search),
       runtime->makeHandle(Predefined::getSymbolID(Predefined::SymbolSearch)),
       dpf);

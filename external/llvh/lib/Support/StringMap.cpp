@@ -11,14 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/DJB.h"
-#include "llvm/Support/MathExtras.h"
+#include "llvh/ADT/StringMap.h"
+#include "llvh/ADT/StringExtras.h"
+#include "llvh/Support/Compiler.h"
+#include "llvh/Support/DJB.h"
+#include "llvh/Support/MathExtras.h"
 #include <cassert>
 
-using namespace llvm;
+using namespace llvh;
 
 /// Returns the number of buckets to allocate to ensure that the DenseMap can
 /// accommodate \p NumEntries without need to grow().

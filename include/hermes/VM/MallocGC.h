@@ -12,9 +12,9 @@
 #include "hermes/VM/GCBase.h"
 #include "hermes/VM/GCCell.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/DenseSet.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <deque>
 #include <limits>
@@ -106,12 +106,12 @@ class MallocGC final : public GCBase {
   /// pointers_ stores all of the objects managed by the GC. If a pointer is not
   /// in this set, then it is not a GC pointer, and thus invalid to be collected
   /// or marked.
-  llvm::DenseSet<CellHeader *> pointers_;
+  llvh::DenseSet<CellHeader *> pointers_;
   /// newPointers_ is the set of live objects at the end of a collection.
   /// Pointers are moved from pointers_ to this as they are discovered to be
   /// alive.
   /// This should be empty between collections.
-  llvm::DenseSet<CellHeader *> newPointers_;
+  llvh::DenseSet<CellHeader *> newPointers_;
   /// weakPointers_ is a list of all the weak pointers in the system. They are
   /// invalidated if they point to an object that is dead, and do not count
   /// towards whether an object is live or dead.
@@ -208,6 +208,11 @@ class MallocGC final : public GCBase {
   }
 
 #ifndef NDEBUG
+  /// See comment in GCBase.
+  bool calledByGC() const {
+    return inGC_.load(std::memory_order_seq_cst);
+  }
+
   /// \return true iff the pointer \p p is controlled by this GC.
   bool validPointer(const void *p) const;
 
@@ -216,7 +221,7 @@ class MallocGC final : public GCBase {
 #endif
 
   /// Same as in superclass GCBase.
-  virtual void createSnapshot(llvm::raw_ostream &os) override;
+  virtual void createSnapshot(llvh::raw_ostream &os) override;
 
 #ifdef HERMESVM_SERIALIZE
   /// Same as in superclass GCBase.
@@ -260,7 +265,8 @@ class MallocGC final : public GCBase {
     return maxSize_;
   }
 
-  /// For testing purposes the ability to iterate over all objects in the heap.
+  /// Iterate over all objects in the heap, and call \p callback on them.
+  /// \param callback A function to call on each found object.
   void forAllObjs(const std::function<void(GCCell *)> &callback);
 
   /// @}
@@ -278,7 +284,7 @@ class MallocGC final : public GCBase {
   void freeWeakSlot(WeakRefSlot *slot);
 
   /// See \c GCBase::printStats.
-  void printStats(llvm::raw_ostream &os, bool trailingComma) override;
+  void printStats(JSONEmitter &json) override;
 
   /// Reset the statistics used for reporting GC information.
   void resetStats();
@@ -311,16 +317,6 @@ class MallocGC final : public GCBase {
   /// dead objects.
   void updateWeakReferences();
 };
-
-/// @name Free standing functions
-/// @{
-
-template <class ToType>
-ToType *vmcast_during_gc(GCCell *cell, GC *gc) {
-  return static_cast<ToType *>(cell);
-}
-
-/// @}
 
 /// @name Inline implementations
 /// @{

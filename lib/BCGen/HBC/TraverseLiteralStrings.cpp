@@ -49,7 +49,7 @@ namespace hbc {
 void traverseFunctionNames(
     Module *M,
     std::function<bool(Function *)> shouldVisitFunction,
-    std::function<void(llvm::StringRef)> traversal) {
+    std::function<void(llvh::StringRef)> traversal) {
   for (auto &F : *M) {
     if (shouldVisitFunction(&F)) {
       traversal(F.getOriginalOrInferredName().str());
@@ -60,7 +60,7 @@ void traverseFunctionNames(
 void traverseCJSModuleNames(
     Module *M,
     std::function<bool(Function *)> shouldVisitFunction,
-    std::function<void(llvm::StringRef)> traversal) {
+    std::function<void(llvh::StringRef)> traversal) {
   for (auto &F : *M) {
     if (!shouldVisitFunction(&F)) {
       continue;
@@ -75,7 +75,7 @@ void traverseCJSModuleNames(
 void traverseLiteralStrings(
     Module *M,
     std::function<bool(Function *)> shouldVisitFunction,
-    std::function<void(llvm::StringRef, bool)> traversal) {
+    std::function<void(llvh::StringRef, bool)> traversal) {
   // Walk declared global properties.
   for (auto *prop : M->getGlobalProperties()) {
     if (prop->isDeclared()) {
@@ -94,7 +94,7 @@ void traverseLiteralStrings(
       for (auto &I : BB) {
         for (int i = 0, e = I.getNumOperands(); i < e; i++) {
           auto *op = I.getOperand(i);
-          if (auto *str = llvm::dyn_cast<LiteralString>(op)) {
+          if (auto *str = llvh::dyn_cast<LiteralString>(op)) {
             traversal(str->getValue().str(), isIdOperand(&I, i));
           }
         }

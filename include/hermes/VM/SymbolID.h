@@ -8,11 +8,11 @@
 #ifndef HERMES_VM_SYMBOLID_H
 #define HERMES_VM_SYMBOLID_H
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvh/ADT/DenseMap.h"
 
 #include <cstdint>
 
-namespace llvm {
+namespace llvh {
 class raw_ostream;
 }
 
@@ -42,7 +42,7 @@ class SymbolID {
   static constexpr RawType EMPTY_ID = LAST_INVALID_ID - 0;
 
   /// Represents an ID that's deleted/garbage collected. Also used as a
-  /// 'tombstone' key in llvm::DenseMap.
+  /// 'tombstone' key in llvh::DenseMap.
   static constexpr RawType DELETED_ID = LAST_INVALID_ID - 1;
 
   constexpr SymbolID() : id_(EMPTY_ID) {}
@@ -131,13 +131,13 @@ class SymbolID {
   explicit constexpr SymbolID(RawType id) : id_(id) {}
 };
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, SymbolID symbolID);
+llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, SymbolID symbolID);
 
 } // namespace vm
 } // namespace hermes
 
 // Enable using SymbolID in DenseMap.
-namespace llvm {
+namespace llvh {
 
 using namespace hermes::vm;
 
@@ -158,6 +158,6 @@ struct DenseMapInfo<SymbolID> {
   }
 };
 
-} // namespace llvm
+} // namespace llvh
 
 #endif // HERMES_VM_SYMBOLID_H

@@ -17,8 +17,8 @@ namespace hermes {
 namespace platform_unicode {
 
 int localeCompare(
-    llvm::ArrayRef<char16_t> left,
-    llvm::ArrayRef<char16_t> right) {
+    llvh::ArrayRef<char16_t> left,
+    llvh::ArrayRef<char16_t> right) {
   UErrorCode err{U_ZERO_ERROR};
   UCollator *coll = ucol_open(uloc_getDefault(), &err);
   if (U_FAILURE(err)) {
@@ -57,19 +57,28 @@ void dateFormat(
     double unixtimeMs,
     bool formatDate,
     bool formatTime,
-    llvm::SmallVectorImpl<char16_t> &buf) {
-  ::tzset();
+    llvh::SmallVectorImpl<char16_t> &buf) {
   UDateFormatStyle dateStyle = formatDate ? UDAT_MEDIUM : UDAT_NONE;
   UDateFormatStyle timeStyle = formatTime ? UDAT_MEDIUM : UDAT_NONE;
 
   UErrorCode err{U_ZERO_ERROR};
-  // Get the tzname manually to allow stable testing.
-  llvm::SmallVector<char16_t, 32> tzstr;
-#ifdef _WINDOWS
-  const char *tz = _tzname[0];
-#else
-  const char *tz = ::tzname[0];
-#endif
+
+  llvh::SmallVector<char16_t, 32> tzstr;
+
+  // We have to use this roundabout method to get the timezone name because
+  // tzname cannot be concurrently accessed. Specifically, we have previously
+  // observed cases where calls to tzset (and functions that call tzset, such as
+  // localtime), may set elements of tzname to null. In this case, any thread
+  // directly reading tzname at the same time may read the null value, causing
+  // a segfault.
+  char tz[50];
+  time_t t;
+  struct tm *timeInfo;
+  timeInfo = localtime(&t);
+  auto numChars = strftime(tz, sizeof(tz), "%Z", timeInfo);
+  (void)numChars;
+  assert(numChars < sizeof(tz) && "Chars written must fit within buffer");
+
   tzstr.append(tz, tz + strlen(tz));
 
   auto *df = udat_open(
@@ -103,7 +112,7 @@ void dateFormat(
 }
 
 void convertToCase(
-    llvm::SmallVectorImpl<char16_t> &buf,
+    llvh::SmallVectorImpl<char16_t> &buf,
     CaseConversion targetCase,
     bool useCurrentLocale) {
   // To be able to call the converters, we have to get a pointer.
@@ -117,7 +126,7 @@ void convertToCase(
 
   // First, try to uppercase without changing the length.
   // This will likely work.
-  llvm::SmallVector<char16_t, 64> dest{};
+  llvh::SmallVector<char16_t, 64> dest{};
   dest.resize(srcLen);
   UErrorCode err = U_ZERO_ERROR;
   size_t resultLen =
@@ -133,7 +142,7 @@ void convertToCase(
   buf = dest;
 }
 
-void normalize(llvm::SmallVectorImpl<char16_t> &buf, NormalizationForm form) {
+void normalize(llvh::SmallVectorImpl<char16_t> &buf, NormalizationForm form) {
   // To be able to call the converters, we have to get a pointer.
   // UChar is 16 bits, so a cast works.
   const UChar *src = (const UChar *)buf.data();
@@ -160,7 +169,7 @@ void normalize(llvm::SmallVectorImpl<char16_t> &buf, NormalizationForm form) {
   // First, try to normalize without changing the length.
   // This will likely work; note that this is an optimization for the
   // non-enlarging case.
-  llvm::SmallVector<char16_t, 64> dest{};
+  llvh::SmallVector<char16_t, 64> dest{};
   dest.resize(srcLen);
   err = U_ZERO_ERROR;
   size_t resultLen =

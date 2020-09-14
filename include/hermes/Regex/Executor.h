@@ -61,7 +61,7 @@ struct CapturedRange {
 /// the bytecode, false otherwise.
 /// This is the char16_t overload.
 MatchRuntimeResult searchWithBytecode(
-    llvm::ArrayRef<uint8_t> bytecode,
+    llvh::ArrayRef<uint8_t> bytecode,
     const char16_t *first,
     uint32_t start,
     uint32_t length,
@@ -70,7 +70,7 @@ MatchRuntimeResult searchWithBytecode(
 
 /// This is the ASCII overload.
 MatchRuntimeResult searchWithBytecode(
-    llvm::ArrayRef<uint8_t> bytecode,
+    llvh::ArrayRef<uint8_t> bytecode,
     const char *first,
     uint32_t start,
     uint32_t length,

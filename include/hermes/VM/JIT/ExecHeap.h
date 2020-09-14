@@ -10,17 +10,17 @@
 
 #include "hermes/VM/JIT/PoolHeap.h"
 
-#include "llvm/ADT/Optional.h"
-#include "llvm/Support/Memory.h"
+#include "llvh/ADT/Optional.h"
+#include "llvh/Support/Memory.h"
 
 #include <algorithm>
 #include <list>
 #include <memory>
 #include <utility>
 
-namespace llvm {
+namespace llvh {
 class raw_ostream;
-} // namespace llvm
+} // namespace llvh
 
 namespace hermes {
 namespace vm {
@@ -63,7 +63,7 @@ class ExecHeap {
   // block. Fail if there is not enough memory in the currently allocated
   // pools; in that case the caller will typically invoke \c addPool() and retry
   // the allocation.
-  llvm::Optional<BlockPair> alloc(SizePair sizes);
+  llvh::Optional<BlockPair> alloc(SizePair sizes);
 
   /// Split the specified previously allocated blocks (which must have been
   /// allocated together by a call to \c alloc()) at offset keepSizes.first/
@@ -78,7 +78,7 @@ class ExecHeap {
   /// Invalidate the instruction cache for a JIT-ted block of code before
   /// executing it.
   inline void invalidateInstructionCache(void *addr, size_t len) {
-    llvm::sys::Memory::InvalidateInstructionCache(addr, len);
+    llvh::sys::Memory::InvalidateInstructionCache(addr, len);
     // Possibly use  __builtin___clear_cache() for better performance?
   }
 
@@ -86,18 +86,18 @@ class ExecHeap {
   /// \param OS the output stream to dump to.
   /// \param relativePointers if true all pointers are printed relative to the
   ///   start of the buffer.
-  void dump(llvm::raw_ostream &OS, bool relativePointers = false);
+  void dump(llvh::raw_ostream &OS, bool relativePointers = false);
 
   /// A block of executable memory split into two heaps allowing separate
   /// allocation/deallocation.
   class DualPool {
-    llvm::sys::OwningMemoryBlock memBlock_;
+    llvh::sys::OwningMemoryBlock memBlock_;
     PoolHeap firstHeap_;
     PoolHeap secondHeap_;
 
    public:
     DualPool(
-        llvm::sys::OwningMemoryBlock &&memBlock,
+        llvh::sys::OwningMemoryBlock &&memBlock,
         size_t firstSize,
         size_t secondSize);
 
@@ -119,7 +119,7 @@ class ExecHeap {
     // Allocate a pair of blocks with the specified sizes. If the size is 0,
     // don't allocate from the corresponding pool and return nullptr for that
     // block.
-    llvm::Optional<BlockPair> alloc(SizePair sizes);
+    llvh::Optional<BlockPair> alloc(SizePair sizes);
 
     /// Split the specified previously allocated blocks (which must have been
     /// allocated together by a call to \c alloc()) at offset keepSizes.first/

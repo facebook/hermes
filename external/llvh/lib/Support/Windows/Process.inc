@@ -11,12 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Allocator.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/StringSaver.h"
-#include "llvm/Support/WindowsError.h"
+#include "llvh/Support/Allocator.h"
+#include "llvh/Support/CommandLine.h"
+#include "llvh/Support/ConvertUTF.h"
+#include "llvh/Support/ErrorHandling.h"
+#include "llvh/Support/StringSaver.h"
+#include "llvh/Support/WindowsError.h"
 #include <malloc.h>
 
 // The Windows.h header must be after LLVM and standard headers.
@@ -42,7 +42,7 @@
 #  define _HEAPOK (-2)
 #endif
 
-using namespace llvm;
+using namespace llvh;
 
 // This function retrieves the page size using GetNativeSystemInfo() and is
 // present solely so it can be called once to initialize the self_process member
@@ -188,7 +188,7 @@ static std::error_code WildcardExpand(StringRef Arg,
       break;
 
     // Append FileName to Dir, and remove it afterwards.
-    llvm::sys::path::append(Dir, FileName);
+    llvh::sys::path::append(Dir, FileName);
     Args.push_back(Saver.save(StringRef(Dir)).data());
     Dir.resize(DirSize);
   } while (FindNextFileW(FindHandle, &FileData));

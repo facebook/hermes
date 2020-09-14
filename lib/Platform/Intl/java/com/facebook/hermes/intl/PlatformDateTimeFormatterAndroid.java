@@ -1,10 +1,10 @@
 package com.facebook.hermes.intl;
 
+import android.icu.util.ULocale;
 import android.os.Build;
 
 import java.text.AttributedCharacterIterator;
 import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -13,7 +13,7 @@ import java.util.TimeZone;
 
 public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormatter{
     private DateFormat mDateFormat = null;
-    private ILocaleObject mLocale = null;
+    private LocaleObjectAndroid mLocale = null;
 
     @Override
     public String format(double n) throws JSRangeErrorException {
@@ -72,13 +72,8 @@ public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormat
     }
 
     @Override
-    public String getCalendarName() {
-        return mDateFormat.getCalendar().toString();
-    }
-
-    @Override
-    public String getTimeZoneName() throws JSRangeErrorException {
-        return mDateFormat.getTimeZone().getDisplayName(false, TimeZone.SHORT, (Locale) mLocale.getLocale());
+    public String getDefaultCalendarName(ILocaleObject mResolvedLocaleObject) throws JSRangeErrorException {
+        return DateFormat.getDateInstance(android.icu.text.DateFormat.SHORT, (Locale) mResolvedLocaleObject.getLocale()).getCalendar().toString();
     }
 
     private static class PatternUtils {
@@ -111,21 +106,21 @@ public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormat
     }
 
     @Override
-    public String getDefaultHourCycle(ILocaleObject localeObject) throws JSRangeErrorException {
-        String hourCycle;
+    public HourCycle getDefaultHourCycle(ILocaleObject localeObject) throws JSRangeErrorException {
+        HourCycle hourCycle;
         try {
-            String dateFormatPattern = ((SimpleDateFormat) DateFormat.getTimeInstance(DateFormat.FULL, (Locale) localeObject.getLocale())).toPattern();
+            String dateFormatPattern = ((java.text.SimpleDateFormat) DateFormat.getTimeInstance(DateFormat.FULL, (Locale) localeObject.getLocale())).toPattern();
             String dateFormatPatternWithoutLiterals = PatternUtils.getPatternWithoutLiterals(dateFormatPattern);
             if (dateFormatPatternWithoutLiterals.contains(String.valueOf('h')))
-                hourCycle = "h12";
+                hourCycle = HourCycle.H12;
             else if (dateFormatPatternWithoutLiterals.contains(String.valueOf('K')))
-                hourCycle = "h11";
+                hourCycle = HourCycle.H11;
             else if (dateFormatPatternWithoutLiterals.contains(String.valueOf('H')))
-                hourCycle = "h23";
+                hourCycle = HourCycle.H23;
             else // TODO :: Make it more tight.
-                hourCycle = "h24";
+                hourCycle = HourCycle.H24;
         } catch (ClassCastException ex) {
-            hourCycle = "h24";
+            hourCycle = HourCycle.H24;
         }
 
         return hourCycle;
@@ -141,20 +136,20 @@ public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormat
         return "latn";
     }
 
-    public void configure (ILocaleObject resolvedLocaleObject, Object calendar, Object numberingSystem, FormatMatcher formatMatcher
+    public void configure (ILocaleObject resolvedLocaleObject, String calendar, String numberingSystem, FormatMatcher formatMatcher
             , WeekDay weekDay, Era era
             , Year year, Month month, Day day
             , Hour hour, Minute minute, Second second
-            , TimeZoneName timeZoneName, Object hourCycle, Object timeZone) throws JSRangeErrorException {
-        mLocale = resolvedLocaleObject;
-        if (!JSObjects.isUndefined(calendar) && !JSObjects.isNull(calendar)) {
+            , TimeZoneName timeZoneName, HourCycle hourCycle, Object timeZone) throws JSRangeErrorException {
+        mLocale = (LocaleObjectAndroid) resolvedLocaleObject;
+        if (!calendar.isEmpty()) {
             ArrayList<String> calendarList = new ArrayList<>();
             calendarList.add(JSObjects.getJavaString(calendar));
 
             resolvedLocaleObject.setUnicodeExtensions("ca", calendarList);
         }
 
-        if (!JSObjects.isUndefined(numberingSystem) && !JSObjects.isNull(numberingSystem)) {
+        if (!numberingSystem.isEmpty()) {
 
             ArrayList<String> numberingSystemList = new ArrayList<>();
             numberingSystemList.add(JSObjects.getJavaString(numberingSystem));

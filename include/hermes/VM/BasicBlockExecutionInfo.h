@@ -10,8 +10,8 @@
 #ifndef HERMES_VM_BASICBLOCKEXECUTIONINFO_H
 #define HERMES_VM_BASICBLOCKEXECUTIONINFO_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/Support/raw_ostream.h"
 
 namespace hermes {
 namespace vm {
@@ -33,7 +33,7 @@ class BasicBlockExecutionInfo {
   /// executes the first time(1-based).
   using FunctionStatisticMap = std::vector<std::pair<uint64_t, uint64_t>>;
   /// Maps from function's CodeBlock to its profiling statistics.
-  using RuntimeStatisticMap = llvm::DenseMap<CodeBlock *, FunctionStatisticMap>;
+  using RuntimeStatisticMap = llvh::DenseMap<CodeBlock *, FunctionStatisticMap>;
 
  private:
   /// A global sequence number to assign the next basic block first time
@@ -91,7 +91,7 @@ class BasicBlockExecutionInfo {
   }
 
   /// Dump the statistics to \p OS in json format.
-  void dump(llvm::raw_ostream &OS);
+  void dump(llvh::raw_ostream &OS);
 };
 
 } // namespace vm

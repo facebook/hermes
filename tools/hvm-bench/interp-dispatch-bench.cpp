@@ -42,11 +42,11 @@
 #include "hermes/VM/SmallXString.h"
 #include "hermes/VM/StringView.h"
 
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/Signals.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/CommandLine.h"
+#include "llvh/Support/ManagedStatic.h"
+#include "llvh/Support/PrettyStackTrace.h"
+#include "llvh/Support/Signals.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <map>
 
@@ -176,22 +176,22 @@ L1:
 }
 } // namespace
 
-static llvm::cl::opt<double> LoopCount{llvm::cl::Positional,
-                                       llvm::cl::init(4e6),
-                                       llvm::cl::desc("(loop count)")};
-static llvm::cl::opt<int> FactValue{llvm::cl::Positional,
-                                    llvm::cl::init(100),
-                                    llvm::cl::desc("(factorial value)")};
+static llvh::cl::opt<double> LoopCount{llvh::cl::Positional,
+                                       llvh::cl::init(4e6),
+                                       llvh::cl::desc("(loop count)")};
+static llvh::cl::opt<int> FactValue{llvh::cl::Positional,
+                                    llvh::cl::init(100),
+                                    llvh::cl::desc("(factorial value)")};
 
 int main(int argc, char **argv) {
   // Print a stack trace if we signal out.
-  llvm::sys::PrintStackTraceOnErrorSignal("Hermes driver");
-  llvm::PrettyStackTraceProgram X(argc, argv);
+  llvh::sys::PrintStackTraceOnErrorSignal("Hermes driver");
+  llvh::PrettyStackTraceProgram X(argc, argv);
   // Call llvm_shutdown() on exit to print stats and free memory.
-  llvm::llvm_shutdown_obj Y;
-  llvm::cl::ParseCommandLineOptions(argc, argv, "Hermes vm driver\n");
+  llvh::llvm_shutdown_obj Y;
+  llvh::cl::ParseCommandLineOptions(argc, argv, "Hermes vm driver\n");
 
-  llvm::outs() << "Running " << (uint64_t)LoopCount << " loops of factorial("
+  llvh::outs() << "Running " << (uint64_t)LoopCount << " loops of factorial("
                << FactValue << ")\n";
 
   auto runtime =
@@ -205,11 +205,11 @@ int main(int argc, char **argv) {
   GCScope scope(runtime.get());
   auto res = benchmark(runtime.get(), LoopCount, FactValue);
   SmallU16String<32> tmp;
-  llvm::outs()
+  llvh::outs()
       << StringPrimitive::createStringView(runtime.get(), res).getUTF16Ref(tmp)
       << "\n";
 #ifdef HERMESVM_OPCODE_STATS
-  Runtime::dumpOpcodeStats(llvm::outs());
+  Runtime::dumpOpcodeStats(llvh::outs());
 #endif
   return 0;
 }

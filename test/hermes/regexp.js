@@ -338,6 +338,11 @@ print(/(?<!$ab)\d/.exec("ab1ab2"));
 // CHECK-NEXT: 1
 print(/(?<!^ab)\d/.exec("ab1ab2"));
 // CHECK-NEXT: 2
+print(/a(?<=(\1))/.exec("a"));
+// CHECK-NEXT: a,
+print(/a(?<=((?!\1)))/.exec("a"));
+// CHECK-NEXT: null
+
 
 // Sticky support
 print(/abc/y.exec("abc"));
@@ -457,6 +462,20 @@ try { new RegExp("["); } catch (e) { print(e.message); }
 try { new RegExp("\\"); } catch (e) { print(e.message); }
 // CHECK-NEXT: Invalid RegExp: Incomplete escape
 
+// textual 'undefined' flag is invalid.
+try {
+  RegExp(/1/g, 'undefined');
+} catch (e) {
+  print (e);
+}
+// CHECK-NEXT: SyntaxError: Invalid RegExp: Invalid flags
+// actual undefined flag would result in empty pattern.
+var obj = {
+  get [Symbol.match]() { return () => 1 }
+}
+print(RegExp(obj))
+// CHECK-NEXT: /(?:)/
+
 print("RegExp.prototype[Symbol.match]");
 // CHECK-LABEL: RegExp.prototype[Symbol.match]
 print(/[0-9]+/g[Symbol.match]('2016-01-02'));
@@ -465,6 +484,36 @@ print(/[0-9]+/g[Symbol.match]('hello'));
 // CHECK-NEXT: null
 print(RegExp.prototype[Symbol.match].name);
 // CHECK-NEXT: [Symbol.match]
+
+print("RegExp.prototype[Symbol.matchAll]");
+// CHECK-LABEL: RegExp.prototype[Symbol.matchAll]
+var it = /[0-9]+/g[Symbol.matchAll]('2016-01-02')
+var y = it.next()
+var m = it.next()
+var d = it.next()
+var nil = it.next()
+print(y.value, y.done)
+// CHECK-NEXT: 2016 false
+print(m.value, m.done)
+// CHECK-NEXT: 01 false
+print(d.value, d.done)
+// CHECK-NEXT: 02 false
+print(nil.value, nil.done)
+// CHECK-NEXT: undefined true
+print([.../[0-9]+/g[Symbol.matchAll]('2016-01-02')])
+// CHECK-NEXT: 2016,01,02
+var it = /[0-9]+/g[Symbol.matchAll]('hello')
+var nil = it.next()
+print(nil.value, nil.done)
+// CHECK-NEXT: undefined true
+print(RegExp.prototype[Symbol.matchAll].name);
+// CHECK-NEXT: [Symbol.matchAll]
+try {
+  RegExp.prototype[Symbol.matchAll].call(1);
+} catch (e) {
+  print(e)
+}
+// CHECK-NEXT: TypeError: RegExp.prototype[@@matchAll] should be called on a js object
 
 print("RegExp.prototype[Symbol.search]");
 // CHECK-LABEL: RegExp.prototype[Symbol.search]
@@ -490,3 +539,11 @@ print(RegExp.prototype[Symbol.split].name);
 // CHECK-NEXT: [Symbol.split]
 print(/-/[Symbol.split]('a-b-c'));
 // CHECK-NEXT: a,b,c
+
+// Check UTF-16 string matching executes correctly
+print(/abc/u.exec("\u20ac\u20ac\u20ac\u20ac"));
+// CHECK-LABEL: null
+
+// Check that lookbehind searches stay within bounds
+print(/(?<=a)/u[Symbol.match](["\u00E9",34534502349000]))
+// CHECK-LABEL: null

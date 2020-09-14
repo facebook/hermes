@@ -9,11 +9,11 @@
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/Support/Math.h"
 
-#include "llvm/ADT/SmallString.h"
+#include "llvh/ADT/SmallString.h"
 
 using namespace hermes;
-using llvm::isa;
-using llvm::SmallString;
+using llvh::isa;
+using llvh::SmallString;
 
 namespace {
 
@@ -28,7 +28,7 @@ bool disjointComparisonTypes(Type A, Type B) {
 }
 
 bool isNaN(Literal *lit) {
-  if (auto *number = llvm::dyn_cast<LiteralNumber>(lit)) {
+  if (auto *number = llvh::dyn_cast<LiteralNumber>(lit)) {
     return std::isnan(number->getValue());
   }
   return false;
@@ -37,12 +37,12 @@ bool isNaN(Literal *lit) {
 enum class NumericOrder { LessThan, Equal, GreaterThan, Unordered };
 
 /// \returns the numeric ordering of two values.
-llvm::Optional<NumericOrder> getNumericOrder(Literal *LHS, Literal *RHS) {
-  auto *L = llvm::dyn_cast<LiteralNumber>(LHS);
-  auto *R = llvm::dyn_cast<LiteralNumber>(RHS);
+llvh::Optional<NumericOrder> getNumericOrder(Literal *LHS, Literal *RHS) {
+  auto *L = llvh::dyn_cast<LiteralNumber>(LHS);
+  auto *R = llvh::dyn_cast<LiteralNumber>(RHS);
 
   if (!L || !R)
-    return llvm::None;
+    return llvh::None;
 
   double l = L->getValue();
   double r = R->getValue();
@@ -74,7 +74,7 @@ Literal *hermes::evalUnaryOperator(
       // Negate constant integers.
       switch (operand->getKind()) {
         case ValueKind::LiteralNumberKind:
-          if (auto *literalNum = llvm::dyn_cast<LiteralNumber>(operand)) {
+          if (auto *literalNum = llvh::dyn_cast<LiteralNumber>(operand)) {
             auto V = -literalNum->getValue();
             return builder.getLiteralNumber(V);
           }
@@ -144,17 +144,17 @@ Literal *hermes::evalBinaryOperator(
   Type leftTy = lhs->getType();
   Type rightTy = rhs->getType();
 
-  auto *leftLiteralNum = llvm::dyn_cast<LiteralNumber>(lhs);
-  auto *rightLiteralNum = llvm::dyn_cast<LiteralNumber>(rhs);
+  auto *leftLiteralNum = llvh::dyn_cast<LiteralNumber>(lhs);
+  auto *rightLiteralNum = llvh::dyn_cast<LiteralNumber>(rhs);
 
-  auto *leftNull = llvm::dyn_cast<LiteralNull>(lhs);
-  auto *rightNull = llvm::dyn_cast<LiteralNull>(rhs);
+  auto *leftNull = llvh::dyn_cast<LiteralNull>(lhs);
+  auto *rightNull = llvh::dyn_cast<LiteralNull>(rhs);
 
-  auto *leftUndef = llvm::dyn_cast<LiteralUndefined>(lhs);
-  auto *rightUndef = llvm::dyn_cast<LiteralUndefined>(rhs);
+  auto *leftUndef = llvh::dyn_cast<LiteralUndefined>(lhs);
+  auto *rightUndef = llvh::dyn_cast<LiteralUndefined>(rhs);
 
-  auto *leftStr = llvm::dyn_cast<LiteralString>(lhs);
-  auto *rightStr = llvm::dyn_cast<LiteralString>(rhs);
+  auto *leftStr = llvh::dyn_cast<LiteralString>(lhs);
+  auto *rightStr = llvh::dyn_cast<LiteralString>(rhs);
 
   auto leftNaN = isNaN(lhs);
   auto rightNaN = isNaN(rhs);
@@ -614,9 +614,9 @@ LiteralBool *hermes::evalToBoolean(IRBuilder &builder, Literal *operand) {
 }
 
 LiteralString *hermes::evalToString(IRBuilder &builder, Literal *operand) {
-  if (auto *str = llvm::dyn_cast<LiteralString>(operand))
+  if (auto *str = llvh::dyn_cast<LiteralString>(operand))
     return str;
-  if (auto *num = llvm::dyn_cast<LiteralNumber>(operand)) {
+  if (auto *num = llvh::dyn_cast<LiteralNumber>(operand)) {
     char buf[NUMBER_TO_STRING_BUF_SIZE];
     auto len = numberToString(num->getValue(), buf, sizeof(buf));
     return builder.getLiteralString(StringRef(buf, len));
@@ -625,10 +625,10 @@ LiteralString *hermes::evalToString(IRBuilder &builder, Literal *operand) {
 }
 
 LiteralNumber *hermes::evalToNumber(IRBuilder &builder, Literal *operand) {
-  if (auto *numLiteral = llvm::dyn_cast<LiteralNumber>(operand)) {
+  if (auto *numLiteral = llvh::dyn_cast<LiteralNumber>(operand)) {
     return numLiteral;
   }
-  if (auto *boolLiteral = llvm::dyn_cast<LiteralBool>(operand)) {
+  if (auto *boolLiteral = llvh::dyn_cast<LiteralBool>(operand)) {
     return builder.getLiteralNumber(boolLiteral->getValue());
   }
   if (operand->getType().isUndefinedType()) {
@@ -651,7 +651,7 @@ LiteralNumber *hermes::evalToInt32(IRBuilder &builder, Literal *operand) {
 }
 
 LiteralBool *hermes::evalToBoolean(IRBuilder &builder, Value *operand) {
-  if (auto *L = llvm::dyn_cast<Literal>(operand)) {
+  if (auto *L = llvh::dyn_cast<Literal>(operand)) {
     return evalToBoolean(builder, L);
   }
 

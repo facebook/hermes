@@ -8,9 +8,9 @@
 #ifndef HERMES_OPTIMIZER_SCALAR_BUNDLER_UTILS_H
 #define HERMES_OPTIMIZER_SCALAR_BUNDLER_UTILS_H
 
-#include <llvm/ADT/DenseSet.h>
+#include <llvh/ADT/DenseSet.h>
 #include "hermes/IR/IR.h"
-#include "llvm/ADT/SetVector.h"
+#include "llvh/ADT/SetVector.h"
 
 namespace hermes {
 /// This class contains code that is specific to the bundler.
@@ -18,16 +18,16 @@ class BundlerUtils {
   typedef unsigned int ModuleID;
 
   /// Map of a JSmodule number to an anonymous fun representing the JSmodule.
-  llvm::DenseMap<ModuleID, Function *> JSmoduleTable_;
-  llvm::DenseMap<Function *, ModuleID> revJSmoduleTable_;
+  llvh::DenseMap<ModuleID, Function *> JSmoduleTable_;
+  llvh::DenseMap<Function *, ModuleID> revJSmoduleTable_;
 
   /// Map of the set of other JSmodules that a JSmodule imports.
-  llvm::DenseMap<ModuleID, llvm::DenseSet<ModuleID>> importsMap_;
-  llvm::DenseMap<ModuleID, llvm::DenseSet<ModuleID>> revImportsMap_;
+  llvh::DenseMap<ModuleID, llvh::DenseSet<ModuleID>> importsMap_;
+  llvh::DenseMap<ModuleID, llvh::DenseSet<ModuleID>> revImportsMap_;
 
   /// Set of JSmodules that we can process with the unique JSmodule that
   /// requires it.  This expands the scope of the set constraint analysis.
-  llvm::SetVector<ModuleID> inlineableJSmodules_;
+  llvh::SetVector<ModuleID> inlineableJSmodules_;
 
   /// A bundler-specific function to figure out 'require' dependencies between
   /// functions defined at the top level. These functions (called JSModules)
@@ -49,9 +49,9 @@ class BundlerUtils {
   bool isJSModuleDefine(Instruction *, ModuleID &, Function *&);
 
   /// Finds the requires statements inside the function F.
-  void findFunctionRequires(Function *F, llvm::DenseSet<ModuleID> &requires);
+  void findFunctionRequires(Function *F, llvh::DenseSet<ModuleID> &requires);
 
-  llvm::DenseMap<Function *, llvm::SetVector<Function *>> nestedMap_;
+  llvh::DenseMap<Function *, llvh::SetVector<Function *>> nestedMap_;
 
   /// Which kind of bundling are we handling?
   BundlerKind xmform_;
@@ -63,7 +63,7 @@ class BundlerUtils {
  public:
   void initialize(
       Module *M,
-      llvm::DenseMap<Function *, llvm::SetVector<Function *>> &nm,
+      llvh::DenseMap<Function *, llvh::SetVector<Function *>> &nm,
       BundlerKind xmform) {
     nestedMap_ = nm;
     xmform_ = xmform;
@@ -114,7 +114,7 @@ class BundlerUtils {
 
   /// If a module modId has imports, return the set in imports and return true.
   /// Else return false;
-  bool getImportsOfModule(ModuleID modId, llvm::DenseSet<ModuleID> &imports) {
+  bool getImportsOfModule(ModuleID modId, llvh::DenseSet<ModuleID> &imports) {
     auto im_it = importsMap_.find(modId);
     if (im_it != importsMap_.end()) {
       imports = im_it->second;

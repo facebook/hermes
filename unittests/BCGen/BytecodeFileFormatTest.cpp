@@ -9,7 +9,7 @@
 #include "hermes/Regex/RegexBytecode.h"
 #include "hermes/Support/StringTableEntry.h"
 
-#include "llvm/Support/Endian.h"
+#include "llvh/Support/Endian.h"
 
 #include "gtest/gtest.h"
 
@@ -39,8 +39,8 @@
 using namespace hermes;
 using namespace hermes::hbc;
 using namespace hermes::regex;
-using namespace llvm::support;
-using namespace llvm::support::endian;
+using namespace llvh::support;
+using namespace llvh::support::endian;
 
 namespace {
 

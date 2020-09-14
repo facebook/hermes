@@ -104,13 +104,13 @@ public class LocaleMatcher {
             ILocaleObject requestedLocaleObject = LocaleObject.createFromLocaleId(requestedLocale);
             ULocale availableLocale = bestFitBestAvailableLocale(requestedLocaleObject, availableLocales);
             if(availableLocale != null) {
-                result.matchedLocale = LocaleObjectICU4J.createFromULocale(availableLocale);
+                result.matchedLocale = LocaleObjectICU.createFromULocale(availableLocale);
                 result.extensions = requestedLocaleObject.getUnicodeExtensions();
                 return result;
             }
         }
 
-        result.matchedLocale = LocaleObjectICU4J.createDefault();
+        result.matchedLocale = LocaleObjectICU.createDefault();
         return result;
     }
 

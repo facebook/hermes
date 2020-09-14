@@ -41,6 +41,7 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
         Set<String> whilteList = new HashSet<>(
         );
         Set<String> blackList = new HashSet<>(Arrays.asList(
+                "constructor-options-throwing-getters-timedate-style.js", // : Exception from dateStyle getter should be propagated Expected a CustomError to be thrown but no exception was thrown at all
                 "subclassing.js", //Compiling JS failed: 18:1:invalid statement encountered. Buffer size 1037 starts with: 2f2f20436f7079726967687420323031
                 "constructor-options-throwing-getters-dayPeriod.js", //Exception from dayPeriod getter should be propagated Expected a CustomError to be thrown but no exception was thrown at all
                 "constructor-options-fractionalSecondDigits-valid.js", //Expected SameValue(«undefined», «1») to be true

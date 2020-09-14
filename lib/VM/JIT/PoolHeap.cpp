@@ -7,9 +7,9 @@
 
 #include "hermes/VM/JIT/PoolHeap.h"
 
-#include "llvm/Support/Format.h"
-#include "llvm/Support/MathExtras.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/Format.h"
+#include "llvh/Support/MathExtras.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <cassert>
 
@@ -17,9 +17,9 @@ namespace hermes {
 namespace vm {
 
 PoolHeap::PoolHeap(void *buffer, size_t size)
-    : bufferStart_((char *)llvm::alignAddr(buffer, kAlignment)),
+    : bufferStart_((char *)llvh::alignAddr(buffer, kAlignment)),
       bufferEnd_(
-          (char *)llvm::alignDown((uintptr_t)buffer + size, kAlignment)) {
+          (char *)llvh::alignDown((uintptr_t)buffer + size, kAlignment)) {
   assert(bufferStart_ < bufferEnd_ && "buffer is too small");
 
   // Insert the the whole heap as the only free block.
@@ -27,7 +27,7 @@ PoolHeap::PoolHeap(void *buffer, size_t size)
 }
 
 void *PoolHeap::alloc(size_t size) {
-  size = llvm::alignTo<kAlignment>(size);
+  size = llvh::alignTo<kAlignment>(size);
 
   for (auto it = freeList_.begin(), end = freeList_.end(); it != end; ++it) {
     // Skip smaller blocks.
@@ -53,7 +53,7 @@ void *PoolHeap::alloc(size_t size) {
 void PoolHeap::freeRemaining(void *block, size_t keepSize) {
   assert(block && "block must be valid");
 
-  keepSize = llvm::alignTo<kAlignment>(keepSize);
+  keepSize = llvh::alignTo<kAlignment>(keepSize);
 
   // Find the block in the allocated list so we can obtain its size.
   auto allocIt = allocList_.find((char *)block);
@@ -124,12 +124,12 @@ void PoolHeap::freeHelper(BlockMap::iterator allocIt, size_t keepSize) {
   freeList_[cblock] = size;
 }
 
-void PoolHeap::dump(llvm::raw_ostream &OS, bool relativePointers) {
+void PoolHeap::dump(llvh::raw_ostream &OS, bool relativePointers) {
   auto formatPtr = [relativePointers, this](const void *p) {
     if (relativePointers)
-      return llvm::format_hex((const char *)p - bufferStart_, 8);
+      return llvh::format_hex((const char *)p - bufferStart_, 8);
     else
-      return llvm::format_hex((uintptr_t)p, 10);
+      return llvh::format_hex((uintptr_t)p, 10);
   };
 
   OS << "== PoolHeap\n"
@@ -146,7 +146,7 @@ void PoolHeap::dump(llvm::raw_ostream &OS, bool relativePointers) {
       assert(it != freeList_.end() && "PoolHeap is corrupt");
       OS << "  Free at ";
     }
-    OS << llvm::format_decimal(cur - bufferStart_, 8) << " size " << it->second
+    OS << llvh::format_decimal(cur - bufferStart_, 8) << " size " << it->second
        << "\n";
     cur += it->second;
   }

@@ -19,14 +19,14 @@ using namespace hermes::parser;
 namespace hermes {
 
 std::unique_ptr<SourceMap> SourceMapParser::parse(
-    llvm::MemoryBufferRef sourceMap) {
+    llvh::MemoryBufferRef sourceMap) {
   std::shared_ptr<parser::JSLexer::Allocator> alloc =
       std::make_shared<parser::JSLexer::Allocator>();
   parser::JSONFactory factory(*alloc);
   SourceErrorManager sm;
   parser::JSONParser jsonParser(factory, sourceMap, sm);
 
-  llvm::Optional<JSONValue *> parsedMap = jsonParser.parse();
+  llvh::Optional<JSONValue *> parsedMap = jsonParser.parse();
   if (!parsedMap.hasValue()) {
     // This does not need an error since `parse` should have emitted one.
     return nullptr;
@@ -41,13 +41,13 @@ std::unique_ptr<SourceMap> SourceMapParser::parse(
   //  3. 'sourcesContent' field.
   //  4. Index map.
   //  5. Facebook segments extension.
-  auto *json = llvm::dyn_cast_or_null<JSONObject>(parsedMap.getValue());
+  auto *json = llvh::dyn_cast_or_null<JSONObject>(parsedMap.getValue());
   if (json == nullptr) {
     sm.error(genericLoc, "Expected a source map object");
     return nullptr;
   }
 
-  auto *version = llvm::dyn_cast_or_null<JSONNumber>(json->get("version"));
+  auto *version = llvh::dyn_cast_or_null<JSONNumber>(json->get("version"));
   if (version == nullptr) {
     sm.error(genericLoc, "Source map does not contain a version field");
     return nullptr;
@@ -60,24 +60,24 @@ std::unique_ptr<SourceMap> SourceMapParser::parse(
   // sourceRoot is optional.
   std::string sourceRoot;
   auto *sourceRootJson =
-      llvm::dyn_cast_or_null<JSONString>(json->get("sourceRoot"));
+      llvh::dyn_cast_or_null<JSONString>(json->get("sourceRoot"));
   if (sourceRootJson != nullptr) {
     sourceRoot = sourceRootJson->str();
   }
 
-  auto *sourcesJson = llvm::dyn_cast_or_null<JSONArray>(json->get("sources"));
+  auto *sourcesJson = llvh::dyn_cast_or_null<JSONArray>(json->get("sources"));
   if (sourcesJson == nullptr) {
     sm.error(genericLoc, "'sources' key missing from source map");
     return nullptr;
   }
   auto *fbSourcesJson =
-      llvm::dyn_cast_or_null<JSONArray>(json->get("x_facebook_sources"));
+      llvh::dyn_cast_or_null<JSONArray>(json->get("x_facebook_sources"));
   unsigned fbSourcesSize = fbSourcesJson ? fbSourcesJson->size() : 0;
 
   std::vector<std::string> sources(sourcesJson->size());
   SourceMap::MetadataList sourcesMetadata(fbSourcesSize);
   for (unsigned i = 0, e = sources.size(); i < e; ++i) {
-    auto *file = llvm::dyn_cast_or_null<JSONString>(sourcesJson->at(i));
+    auto *file = llvh::dyn_cast_or_null<JSONString>(sourcesJson->at(i));
     if (file == nullptr) {
       sm.error(
           genericLoc,
@@ -93,7 +93,7 @@ std::unique_ptr<SourceMap> SourceMapParser::parse(
     sources[i] = file->str();
   }
 
-  auto *mappings = llvm::dyn_cast_or_null<JSONString>(json->get("mappings"));
+  auto *mappings = llvh::dyn_cast_or_null<JSONString>(json->get("mappings"));
   if (mappings == nullptr) {
     sm.error(genericLoc, "'mappings' key missing from source map");
     return nullptr;
@@ -105,7 +105,7 @@ std::unique_ptr<SourceMap> SourceMapParser::parse(
     sm.error(genericLoc, "Failed to parse source map mappings");
     return nullptr;
   }
-  return llvm::make_unique<SourceMap>(
+  return llvh::make_unique<SourceMap>(
       sourceRoot,
       std::move(sources),
       std::move(lines),
@@ -113,7 +113,7 @@ std::unique_ptr<SourceMap> SourceMapParser::parse(
 }
 
 bool SourceMapParser::parseMappings(
-    llvm::StringRef sourceMappings,
+    llvh::StringRef sourceMappings,
     std::vector<SourceMap::SegmentList> &lines) {
   assert(lines.empty() && "lines is an out parameter so should be empty");
   SourceMap::SegmentList segments;
@@ -123,7 +123,7 @@ bool SourceMapParser::parseMappings(
   while (curSegOffset < sourceMappings.size()) {
     // Source map mappings may omit ";" for the last line.
     auto endSegOffset = sourceMappings.find_first_of(",;", curSegOffset);
-    if (endSegOffset == llvm::StringLiteral::npos) {
+    if (endSegOffset == llvh::StringLiteral::npos) {
       endSegOffset = sourceMappings.size();
     }
     assert(
@@ -139,7 +139,7 @@ bool SourceMapParser::parseMappings(
       // The line is empty, so avoid doing any extra work.
       lines.emplace_back(std::move(segments));
     } else {
-      llvm::Optional<SourceMap::Segment> segmentOpt =
+      llvh::Optional<SourceMap::Segment> segmentOpt =
           parseSegment(state, pCur, pSegEnd);
       if (!segmentOpt.hasValue()) {
         return false;
@@ -173,7 +173,7 @@ bool SourceMapParser::parseMappings(
   return true;
 }
 
-llvm::Optional<SourceMap::Segment> SourceMapParser::parseSegment(
+llvh::Optional<SourceMap::Segment> SourceMapParser::parseSegment(
     const SourceMapParser::State &state,
     const char *&pCur,
     const char *pSegEnd) {
@@ -182,7 +182,7 @@ llvm::Optional<SourceMap::Segment> SourceMapParser::parseSegment(
   // Parse 1st field: generatedColumn.
   OptValue<int32_t> val = base64vlq::decode(pCur, pSegEnd);
   if (!val.hasValue()) {
-    return llvm::None;
+    return llvh::None;
   }
   segment.generatedColumn = state.generatedColumn + val.getValue();
 
@@ -198,7 +198,7 @@ llvm::Optional<SourceMap::Segment> SourceMapParser::parseSegment(
   val = base64vlq::decode(pCur, pSegEnd);
   if (!val.hasValue()) {
     // Segment can only be 1, 4 or 5 length.
-    return llvm::None;
+    return llvh::None;
   }
   segment.representedLocation->lineIndex =
       state.representedLine + val.getValue();
@@ -207,7 +207,7 @@ llvm::Optional<SourceMap::Segment> SourceMapParser::parseSegment(
   val = base64vlq::decode(pCur, pSegEnd);
   if (!val.hasValue()) {
     // Segment can only be 1, 4 or 5 length.
-    return llvm::None;
+    return llvh::None;
   }
   segment.representedLocation->columnIndex =
       state.representedColumn + val.getValue();

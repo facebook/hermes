@@ -14,7 +14,7 @@
 
 #include "gtest/gtest.h"
 
-using llvm::errs;
+using llvh::errs;
 
 using namespace hermes;
 

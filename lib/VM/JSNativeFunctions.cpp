@@ -39,7 +39,7 @@ constexpr uint8_t u8sizeof(const char (&str)[N]) {
 #define NATIVE_CONSTRUCTOR_TYPED_STR(classname, type, type2, func) \
 #func "<" #classname "<" #type ", " #type2 ">>"
 
-static llvm::DenseMap<const void *, const char *> funcNames() {
+static llvh::DenseMap<const void *, const char *> funcNames() {
   static constexpr uint8_t nameLengths[] = {
 #define NATIVE_FUNCTION(func) u8sizeof(NATIVE_FUNCTION_STR(func)),
 #define NATIVE_FUNCTION_TYPED(func, type) \
@@ -94,7 +94,7 @@ static llvm::DenseMap<const void *, const char *> funcNames() {
   };
 
   size_t numFuncs = sizeof functionPointers / sizeof *functionPointers;
-  llvm::DenseMap<const void *, const char *> map(numFuncs);
+  llvh::DenseMap<const void *, const char *> map(numFuncs);
   const char *curStr = names;
   for (size_t i = 0; i < numFuncs; ++i) {
     map[functionPointers[i]] = curStr;

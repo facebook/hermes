@@ -15,7 +15,7 @@
 #include <cstdio>
 #include <string>
 
-using namespace llvm;
+using namespace llvh;
 
 static std::string updateTripleOSVersion(std::string Triple) {
   return Triple;

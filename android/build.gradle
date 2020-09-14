@@ -7,7 +7,7 @@
 
 // This must be consistent with the release_version in npm/package.json
 // and the HERMES_RELEASE_VERSION in CMakeLists.txt
-def release_version = "0.5.0"
+def release_version = "0.7.0"
 
 buildscript {
   ext {
@@ -19,16 +19,36 @@ buildscript {
     outputDir.mkdirs()
     file("${outputDir}/aar").mkdirs()
 
+    facebookBuild = System.getenv("FACEBOOK") ?: "0"
+    hermesHostBuild = System.getenv("HERMES_WS_DIR")
+
+    // Look for a hermes host build, either debug or release
+    // This is used as part of the Hermes build process
+    hermesC = ""
+    for (f in [
+        "${hermesHostBuild}/build/ImportHermesc.cmake",
+        "${hermesHostBuild}/build_release/ImportHermesc.cmake"]) {
+      if(file(f).exists()) hermesC = f;
+    }
+    assert hermesC != "" : "Hermes host build not found"
+
+    // For Facebook internal use:
+    fbsource = System.getenv("FBSOURCE_DIR") ?:
+    System.getenv("HOME") + "/fbsource"
+
     minSdkVersion = 16
     compileSdkVersion = 28
-    abis = ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
+    abis = project.hasProperty('abis') ?
+         project.getProperty("abis").split(",") :
+         ["x86"]
   }
   repositories {
     google()
     jcenter()
   }
   dependencies {
-    classpath 'com.android.tools.build:gradle:3.3.0'
+    classpath 'com.android.tools.build:gradle:4.0.0'
+    classpath("de.undercouch:gradle-download-task:4.0.2")
   }
 }
 
@@ -61,9 +81,9 @@ task copyPublicHeaders(type: Copy) {
 }
 
 task githubRelease(dependsOn: ['hermes:build', 'cppruntime:build', 'copyApiHeaders', 'copyJsiHeaders', 'copyPublicHeaders'], type: Tar) {
-  baseName = "hermes-runtime-android"
-  version = "v" + release_version
-  extension = "tar.gz"
+  archiveBaseName = "hermes-runtime-android"
+  archiveVersion = "v" + release_version
+  archiveExtension = "tar.gz"
   compression = Compression.GZIP
   destinationDirectory = file("${hermes_ws}/build_android/distributions")
   from "$outputDir"

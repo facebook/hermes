@@ -8,7 +8,7 @@
 #ifndef HERMES_VM_JIT_DISCOVERBB_H
 #define HERMES_VM_JIT_DISCOVERBB_H
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvh/ADT/DenseMap.h"
 
 #include <vector>
 
@@ -26,7 +26,7 @@ class CodeBlock;
 void discoverBasicBlocks(
     CodeBlock *codeBlock,
     std::vector<uint32_t> &basicBlocks,
-    llvm::DenseMap<uint32_t, unsigned> &labels);
+    llvh::DenseMap<uint32_t, unsigned> &labels);
 
 } // namespace vm
 } // namespace hermes

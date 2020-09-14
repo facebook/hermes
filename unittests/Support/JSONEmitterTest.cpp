@@ -15,7 +15,7 @@ namespace {
 
 TEST(JSONEmitterTest, SmokeTest) {
   std::string storage;
-  llvm::raw_string_ostream OS(storage);
+  llvh::raw_string_ostream OS(storage);
   JSONEmitter json(OS);
 
   json.openDict();
@@ -54,7 +54,7 @@ TEST(JSONEmitterTest, SmokeTest) {
 
 TEST(JSONEmitterTest, EmptyArray) {
   std::string storage;
-  llvm::raw_string_ostream OS(storage);
+  llvh::raw_string_ostream OS(storage);
   JSONEmitter json(OS);
   json.openArray();
   json.closeArray();
@@ -63,7 +63,7 @@ TEST(JSONEmitterTest, EmptyArray) {
 
 TEST(JSONEmitterTest, EmptyDict) {
   std::string storage;
-  llvm::raw_string_ostream OS(storage);
+  llvh::raw_string_ostream OS(storage);
   JSONEmitter json(OS);
   json.openDict();
   json.closeDict();
@@ -73,7 +73,7 @@ TEST(JSONEmitterTest, EmptyDict) {
 
 TEST(JSONEmitterTest, Sample) {
   std::string storage;
-  llvm::raw_string_ostream OS(storage);
+  llvh::raw_string_ostream OS(storage);
   JSONEmitter json(OS);
   json.openDict();
   json.emitKeyValue("name", "hermes");
@@ -92,7 +92,7 @@ TEST(JSONEmitterTest, Sample) {
 
 TEST(JSONEmitterTest, Escapes) {
   std::string storage;
-  llvm::raw_string_ostream OS(storage);
+  llvh::raw_string_ostream OS(storage);
   JSONEmitter json(OS);
   json.emitValue("x\"\\/\b\f\n\r\tx");
   const char *expected = R"#("x\"\\\/\b\f\n\r\tx")#";
@@ -101,7 +101,7 @@ TEST(JSONEmitterTest, Escapes) {
 
 TEST(JSONEmitterTest, NonAsciiEscapes) {
   std::string storage;
-  llvm::raw_string_ostream OS(storage);
+  llvh::raw_string_ostream OS(storage);
   JSONEmitter json(OS);
   json.openDict();
   json.emitKeyValue("ha", u8"\u54C8");
@@ -113,7 +113,7 @@ TEST(JSONEmitterTest, NonAsciiEscapes) {
 
 TEST(JSONEmitterTest, JSONL) {
   std::string storage;
-  llvm::raw_string_ostream OS(storage);
+  llvh::raw_string_ostream OS(storage);
   JSONEmitter json(OS);
   json.openDict();
   json.closeDict();
@@ -127,7 +127,7 @@ TEST(JSONEmitterTest, JSONL) {
 
 TEST(JSONEmitterTest, PrettyPrint) {
   std::string storage;
-  llvm::raw_string_ostream OS(storage);
+  llvh::raw_string_ostream OS(storage);
   JSONEmitter json(OS, true /*pretty*/);
   json.openDict();
   json.emitKeyValue("artist", "prince");
@@ -183,7 +183,7 @@ TEST(JSONEmitterTest, PrettyPrint) {
 
 TEST(JSONEmitterTest, NonFinite) {
   std::string storage;
-  llvm::raw_string_ostream OS(storage);
+  llvh::raw_string_ostream OS(storage);
   JSONEmitter json(OS);
 
   json.openArray();
@@ -198,7 +198,7 @@ TEST(JSONEmitterTest, NonFinite) {
 
 TEST(JSONEmitterTest, EmitGroupsOfForwardSlashes) {
   std::string storage;
-  llvm::raw_string_ostream OS(storage);
+  llvh::raw_string_ostream OS(storage);
   JSONEmitter json(OS);
 
   json.openDict();

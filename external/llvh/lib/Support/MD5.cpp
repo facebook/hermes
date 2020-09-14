@@ -37,12 +37,12 @@
  * compile-time configuration.
  */
 
-#include "llvm/Support/MD5.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Endian.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/Support/MD5.h"
+#include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/StringRef.h"
+#include "llvh/Support/Endian.h"
+#include "llvh/Support/Format.h"
+#include "llvh/Support/raw_ostream.h"
 #include <array>
 #include <cstdint>
 #include <cstring>
@@ -72,7 +72,7 @@
        ((MD5_u32plus) ptr[(n) * 4 + 3] << 24))
 #define GET(n) (block[(n)])
 
-using namespace llvm;
+using namespace llvh;
 
 /// This processes one or more 64-byte data blocks, but does NOT update
 ///the bit counters.  There are no alignment requirements.

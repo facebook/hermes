@@ -212,8 +212,8 @@ class NativeArgs final {
   ///     ...;
   ///   }
   /// \endcode
-  llvm::iterator_range<handle_iterator> handles() const {
-    return llvm::make_range(handle_iterator(begin()), handle_iterator(end()));
+  llvh::iterator_range<handle_iterator> handles() const {
+    return llvh::make_range(handle_iterator(begin()), handle_iterator(end()));
   };
 
   using const_iterator = const PinnedHermesValue *;

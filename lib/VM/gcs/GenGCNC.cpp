@@ -33,11 +33,11 @@
 #include "hermes/VM/SymbolID.h"
 
 #ifdef HERMES_SLOW_DEBUG
-#include "llvm/ADT/DenseSet.h"
+#include "llvh/ADT/DenseSet.h"
 #endif
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/MathExtras.h"
+#include "llvh/Support/Debug.h"
+#include "llvh/Support/Format.h"
+#include "llvh/Support/MathExtras.h"
 
 #include <algorithm>
 #include <array>
@@ -50,7 +50,7 @@
 
 #define DEBUG_TYPE "gc"
 
-using llvm::dbgs;
+using llvh::dbgs;
 using std::chrono::steady_clock;
 
 namespace hermes {
@@ -204,7 +204,7 @@ void GenGC::debitExternalMemory(GCCell *cell, uint32_t size) {
 }
 
 #ifndef NDEBUG
-void GenGC::printExtAllocStats(llvm::raw_ostream &os) {
+void GenGC::printExtAllocStats(llvh::raw_ostream &os) {
   os << "\nExternal allocation:\n";
   os << "   " << numExtAllocs_ << " allocs for " << totalExtAllocBytes_
      << " bytes; average = "
@@ -524,7 +524,7 @@ size_t GenGC::usedDirect() const {
 /// the acceptor on the same root location more than once, which is illegal.
 struct FullMSCDuplicateRootsDetectorAcceptor final
     : public SlotAcceptorDefault {
-  llvm::DenseSet<void *> markedLocs_;
+  llvh::DenseSet<void *> markedLocs_;
 
   using SlotAcceptorDefault::accept;
   using SlotAcceptorDefault::SlotAcceptorDefault;
@@ -1205,7 +1205,7 @@ void GenGC::getDebugHeapInfo(DebugHeapInfo &info) {
 }
 #endif
 
-void GenGC::dump(llvm::raw_ostream &os, bool verbose) {
+void GenGC::dump(llvh::raw_ostream &os, bool verbose) {
   AllocContextYieldThenClaim yielder(this);
   GCBase::dump(os, verbose);
 #ifndef NDEBUG
@@ -1273,7 +1273,7 @@ void GenGC::claimAllocContext() {
   targetGen->setTrueAllocContext(&allocContext_);
 }
 
-void GenGC::createSnapshot(llvm::raw_ostream &os) {
+void GenGC::createSnapshot(llvh::raw_ostream &os) {
   // We need to yield/claim at outer scope, to cover the calls to
   // forUsedSegments below.
   AllocContextYieldThenClaim yielder(this);
@@ -1355,13 +1355,13 @@ void GenGC::serializeHeap(Serializer &s) {
     // only its owner knows if this ArrayStorage has native pointer in it.
     if (cell->getKind() != CellKind::ArrayStorageKind) {
       LLVM_DEBUG(
-          llvm::dbgs() << "Heap Serialize Cell " << cellKindStr(cell->getKind())
+          llvh::dbgs() << "Heap Serialize Cell " << cellKindStr(cell->getKind())
                        << ", id " << cell->getDebugAllocationId() << "\n");
       s.writeInt<uint8_t>((uint8_t)cell->getKind());
       s.serializeCell(cell);
     } else {
       LLVM_DEBUG(
-          llvm::dbgs() << "Heap Serialize Skipped Cell "
+          llvh::dbgs() << "Heap Serialize Skipped Cell "
                        << cellKindStr(cell->getKind()) << ", id "
                        << cell->getDebugAllocationId() << "\n");
     }
@@ -1377,7 +1377,7 @@ void GenGC::deserializeHeap(Deserializer &d) {
   uint8_t kind;
   while ((kind = d.readInt<uint8_t>()) != 255) {
     LLVM_DEBUG(
-        llvm::dbgs() << "Heap Deserialize Cell " << cellKindStr((CellKind)kind)
+        llvh::dbgs() << "Heap Deserialize Cell " << cellKindStr((CellKind)kind)
                      << "\n");
     // ArrayStorage will be serialized/deserialized with its "owner" because
     // only its owner knows if this ArrayStorage has native pointer in it.
@@ -1409,81 +1409,78 @@ void GenGC::deserializeEnd() {
 }
 #endif
 
-void GenGC::printStats(llvm::raw_ostream &os, bool trailingComma) {
-  if (!recordGcStats_) {
-    return;
-  }
-  GCBase::printStats(os, true);
-  os << "\t\"specific\": {\n"
-     << "\t\t\"collector\": \"noncontig-generational\",\n"
-     << "\t\t\"stats\": {\n"
-     << "\t\t\t\"ygNumCollections\": "
-     << youngGenCollectionCumStats_.numCollections << ",\n"
-     << "\t\t\t\"ygTotalGCTime\": "
-     << formatSecs(youngGenCollectionCumStats_.gcWallTime.sum()).secs << ",\n"
-     << "\t\t\t\"ygAvgGCPause\": "
-     << formatSecs(youngGenCollectionCumStats_.gcWallTime.average()).secs
-     << ",\n"
-     << "\t\t\t\"ygMaxGCPause\": "
-     << formatSecs(youngGenCollectionCumStats_.gcWallTime.max()).secs << ",\n"
-     << "\t\t\t\"ygTotalGCCPUTime\": "
-     << formatSecs(youngGenCollectionCumStats_.gcCPUTime.sum()).secs << ",\n"
-     << "\t\t\t\"ygAvgGCCPUPause\": "
-     << formatSecs(youngGenCollectionCumStats_.gcCPUTime.average()).secs
-     << ",\n"
-     << "\t\t\t\"ygMaxGCCPUPause\": "
-     << formatSecs(youngGenCollectionCumStats_.gcCPUTime.max()).secs << ",\n"
-     << "\t\t\t\"ygFinalSize\": "
-     << formatSize(youngGenCollectionCumStats_.finalHeapSize).bytes << ",\n";
+void GenGC::printStats(JSONEmitter &json) {
+  GCBase::printStats(json);
+  json.emitKey("specific");
+  json.openDict();
+  json.emitKeyValue("collector", "noncontig-generational");
 
-  youngGen_.printStats(os, /*trailingComma*/ true);
-
-  os << "\t\t\t\"fullNumCollections\": "
-     << fullCollectionCumStats_.numCollections << ",\n"
-     << "\t\t\t\"fullTotalGCTime\": "
-     << formatSecs(fullCollectionCumStats_.gcWallTime.sum()).secs << ",\n"
-     << "\t\t\t\"fullAvgGCPause\": "
-     << formatSecs(fullCollectionCumStats_.gcWallTime.average()).secs << ",\n"
-     << "\t\t\t\"fullMaxGCPause\": "
-     << formatSecs(fullCollectionCumStats_.gcWallTime.max()).secs << ",\n"
-     << "\t\t\t\"fullTotalGCCPUTime\": "
-     << formatSecs(fullCollectionCumStats_.gcCPUTime.sum()).secs << ",\n"
-     << "\t\t\t\"fullAvgGCCPUPause\": "
-     << formatSecs(fullCollectionCumStats_.gcCPUTime.average()).secs << ",\n"
-     << "\t\t\t\"fullMaxGCCPUPause\": "
-     << formatSecs(fullCollectionCumStats_.gcCPUTime.max()).secs << ",\n"
-     << "\t\t\t\"fullFinalSize\": "
-     << formatSize(fullCollectionCumStats_.finalHeapSize).bytes << ",\n";
-
-  printFullCollectionStats(os, /*trailingComma*/ false);
-  os << "\t\t}\n"
-     << "\t},\n";
-  gcCallbacks_->printRuntimeGCStats(os);
-  if (trailingComma) {
-    os << ",";
-  }
-  os << "\n";
+  json.emitKey("stats");
+  json.openDict();
+  json.emitKeyValue(
+      "ygNumCollections", youngGenCollectionCumStats_.numCollections);
+  json.emitKeyValue(
+      "ygTotalGCTime",
+      formatSecs(youngGenCollectionCumStats_.gcWallTime.sum()).secs);
+  json.emitKeyValue(
+      "ygAvgGCPause",
+      formatSecs(youngGenCollectionCumStats_.gcWallTime.average()).secs);
+  json.emitKeyValue(
+      "ygMaxGCPause",
+      formatSecs(youngGenCollectionCumStats_.gcWallTime.max()).secs);
+  json.emitKeyValue(
+      "ygTotalGCCPUTime",
+      formatSecs(youngGenCollectionCumStats_.gcCPUTime.sum()).secs);
+  json.emitKeyValue(
+      "ygAvgGCCPUPause",
+      formatSecs(youngGenCollectionCumStats_.gcCPUTime.average()).secs);
+  json.emitKeyValue(
+      "ygMaxGCCPUPause",
+      formatSecs(youngGenCollectionCumStats_.gcCPUTime.max()).secs);
+  json.emitKeyValue(
+      "ygFinalSize",
+      formatSize(youngGenCollectionCumStats_.finalHeapSize).bytes);
+  youngGen_.printStats(json);
+  json.emitKeyValue(
+      "fullNumCollections", fullCollectionCumStats_.numCollections);
+  json.emitKeyValue(
+      "fullTotalGCTime",
+      formatSecs(fullCollectionCumStats_.gcWallTime.sum()).secs);
+  json.emitKeyValue(
+      "fullAvgGCPause",
+      formatSecs(fullCollectionCumStats_.gcWallTime.average()).secs);
+  json.emitKeyValue(
+      "fullMaxGCPause",
+      formatSecs(fullCollectionCumStats_.gcWallTime.max()).secs);
+  json.emitKeyValue(
+      "fullTotalGCCPUTime",
+      formatSecs(fullCollectionCumStats_.gcCPUTime.sum()).secs);
+  json.emitKeyValue(
+      "fullAvgGCCPUPause",
+      formatSecs(fullCollectionCumStats_.gcCPUTime.average()).secs);
+  json.emitKeyValue(
+      "fullMaxGCCPUPause",
+      formatSecs(fullCollectionCumStats_.gcCPUTime.max()).secs);
+  json.emitKeyValue(
+      "fullFinalSize", formatSize(fullCollectionCumStats_.finalHeapSize).bytes);
+  printFullCollectionStats(json);
+  json.closeDict();
+  json.closeDict();
 }
 
-void GenGC::printFullCollectionStats(llvm::raw_ostream &os, bool trailingComma)
-    const {
+void GenGC::printFullCollectionStats(JSONEmitter &json) const {
   double fullSurvivalPct = 0.0;
   if (cumPreBytes_ > 0) {
     fullSurvivalPct = 100.0 * static_cast<double>(cumPostBytes_) /
         static_cast<double>(cumPreBytes_);
   }
 
-  os << "\t\t\t\"fullMarkRootsTime\": " << markRootsSecs_ << ",\n"
-     << "\t\t\t\"fullMarkTransitiveTime\": " << markTransitiveSecs_ << ",\n"
-     << "\t\t\t\"fullSweepTime\": " << sweepSecs_ << ",\n"
-     << "\t\t\t\"fullUpdateRefsTime\": " << updateReferencesSecs_ << ",\n"
-     << "\t\t\t\"fullCompactTime\": " << compactSecs_ << ",\n"
-     << "\t\t\t\"fullSurvivalPct\": " << fullSurvivalPct;
-
-  if (trailingComma) {
-    os << ",";
-  }
-  os << "\n";
+  json.emitKeyValue("fullMarkRootsTime", markRootsSecs_);
+  json.emitKeyValue("fullMarkTransitiveTime", markTransitiveSecs_);
+  json.emitKeyValue("fullSweepTime", sweepSecs_);
+  json.emitKeyValue("fullUpdateRefsTime", updateReferencesSecs_);
+  json.emitKeyValue("fullCompactTime", compactSecs_);
+  json.emitKeyValue("fullSurvivalPct", fullSurvivalPct);
 }
 
 GenGC::CollectionSection::CollectionSection(
@@ -1531,22 +1528,6 @@ GenGC::CollectionSection::~CollectionSection() {
   hermesLog(
       "HermesGC", "    used = %zu, heap size = %zu.", gc_->used(), gc_->size());
 #endif
-
-  if (gc_->analyticsCallback_) {
-    gc_->analyticsCallback_(GCAnalyticsEvent{
-        gc_->getName(),
-        "gengc",
-        cycle_.extraInfo(),
-        std::chrono::milliseconds(static_cast<std::chrono::milliseconds::rep>(
-            wallElapsedSecs_ * 1000)),
-        std::chrono::milliseconds(static_cast<std::chrono::milliseconds::rep>(
-            cpuElapsedSecs_ * 1000)),
-        /*preAllocated*/ usedBefore_,
-        /*preSize*/ sizeBefore_,
-        /*postAllocated*/ usedAfter_,
-        /*postSize*/ sizeAfter_,
-        /*survivalRatio*/ (usedAfter_ * 1.0) / usedBefore_});
-  }
 }
 
 void GenGC::CollectionSection::recordGCStats(
@@ -1562,28 +1543,25 @@ void GenGC::CollectionSection::recordGCStats(
   const std::chrono::microseconds cpuEnd = oscompat::thread_cpu_time();
   cpuElapsedSecs_ = GCBase::clockDiffSeconds(cpuStart_, cpuEnd);
 
-  usedBefore_ = usedBefore;
-  sizeBefore_ = sizeBefore;
-  usedAfter_ = usedAfter;
-  sizeAfter_ = sizeAfter;
-
   addArgD("gcCPUTime", cpuElapsedSecs_);
 
   // Record as an overall collection.
-  gc_->recordGCStats(
-      wallElapsedSecs_,
-      cpuElapsedSecs_,
-      gc_->sizeDirect(),
-      gcUsedBefore_,
-      gc_->usedDirect());
+  GCAnalyticsEvent event{
+      gc_->getName(),
+      "gengc",
+      cycle_.extraInfo(),
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          wallEnd - wallStart_),
+      std::chrono::duration_cast<std::chrono::milliseconds>(cpuEnd - cpuStart_),
+      /*preAllocated*/ usedBefore,
+      /*preSize*/ sizeBefore,
+      /*postAllocated*/ usedAfter,
+      /*postSize*/ sizeAfter,
+      /*survivalRatio*/ usedBefore ? (usedAfter * 1.0) / usedBefore : 0};
+
+  gc_->recordGCStats(event);
   // Also record as a region-specific collection.
-  gc_->recordGCStats(
-      wallElapsedSecs_,
-      cpuElapsedSecs_,
-      regionSize,
-      usedBefore,
-      usedAfter,
-      regionStats);
+  gc_->recordGCStats(event, regionStats);
 
   LLVM_DEBUG(
       dbgs() << "End garbage collection. numCollected="
@@ -1605,7 +1583,7 @@ void GenGC::doAllocCensus() {
   oldGen_.forObjsAllocatedSinceGC(callback);
 }
 
-void GenGC::printCensusByKindStats(llvm::raw_ostream &os) const {
+void GenGC::printCensusByKindStats(llvh::raw_ostream &os) const {
   printCensusByKindStatsWork(
       os,
       "Allocs by cell kind, ranked by #allocs.",
@@ -1619,7 +1597,7 @@ void GenGC::printCensusByKindStats(llvm::raw_ostream &os) const {
 }
 
 void GenGC::printCensusByKindStatsWork(
-    llvm::raw_ostream &os,
+    llvh::raw_ostream &os,
     const char *msg,
     const uint64_t *allocs,
     const uint64_t *bytes) const {
@@ -1648,9 +1626,9 @@ void GenGC::printCensusByKindStatsWork(
   }
   os << "\n"
      << msg << "\n\n"
-     << "Total objs: " << llvm::format("%14lld", totAllocs)
-     << ", bytes = " << llvm::format("%14lld", totBytes) << ".\n\n"
-     << llvm::format(
+     << "Total objs: " << llvh::format("%14lld", totAllocs)
+     << ", bytes = " << llvh::format("%14lld", totBytes) << ".\n\n"
+     << llvh::format(
             "%35s%14s%8s%14s%8s\n",
             static_cast<const char *>("kind"),
             static_cast<const char *>("objects"),
@@ -1667,7 +1645,7 @@ void GenGC::printCensusByKindStatsWork(
       assert(std::get<2>(elem) == 0);
       continue;
     }
-    os << llvm::format(
+    os << llvh::format(
         "%35s%14lld%7.2f%%%14lld%7.2f%%\n",
         cellKindStr(static_cast<CellKind>(std::get<0>(elem))),
         std::get<1>(elem),
@@ -1776,8 +1754,8 @@ void GenGC::sizeDiagnosticCensus() {
              i < asciiStr.countPerSize.size();
              i++) {
           std::string tag;
-          llvm::raw_string_ostream stream(tag);
-          stream << llvm::format("StringPrimitive (size %1lu)", i);
+          llvh::raw_string_ostream stream(tag);
+          stream << llvh::format("StringPrimitive (size %1lu)", i);
           stream.flush();
           hermesLog(
               "HermesGC",
@@ -1799,8 +1777,8 @@ void GenGC::sizeDiagnosticCensus() {
              i < utf16Str.countPerSize.size();
              i++) {
           std::string tag;
-          llvm::raw_string_ostream stream(tag);
-          stream << llvm::format("StringPrimitive (size %1lu)", i);
+          llvh::raw_string_ostream stream(tag);
+          stream << llvh::format("StringPrimitive (size %1lu)", i);
           stream.flush();
           hermesLog(
               "HermesGC",

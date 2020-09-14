@@ -8,7 +8,7 @@
 #ifndef HERMES_VM_STORAGEPROVIDER_H
 #define HERMES_VM_STORAGEPROVIDER_H
 
-#include "llvm/Support/ErrorOr.h"
+#include "llvh/Support/ErrorOr.h"
 
 #include <limits>
 #include <memory>
@@ -35,13 +35,13 @@ class StorageProvider {
   /// @}
 
   /// Create a new segment memory space.
-  llvm::ErrorOr<void *> newStorage() {
+  llvh::ErrorOr<void *> newStorage() {
     return newStorage(nullptr);
   }
   /// Create a new segment memory space and give this memory the name \p name.
   /// \return A pointer to a block of memory that has AlignedStorage::size()
   ///   bytes, and is aligned on AlignedStorage::size().
-  llvm::ErrorOr<void *> newStorage(const char *name);
+  llvh::ErrorOr<void *> newStorage(const char *name);
 
   /// Delete the given segment's memory space, and make it available for re-use.
   /// \post Nothing in the range [storage, storage + AlignedStorage::size())
@@ -63,7 +63,7 @@ class StorageProvider {
   size_t numLiveAllocs() const;
 
  protected:
-  virtual llvm::ErrorOr<void *> newStorageImpl(const char *name) = 0;
+  virtual llvh::ErrorOr<void *> newStorageImpl(const char *name) = 0;
   virtual void deleteStorageImpl(void *storage) = 0;
 
  private:
@@ -81,7 +81,7 @@ class StorageProvider {
 /// \pre sz % alignment == 0 && minSz % alignment == 0.
 /// \post Returned size is always a multiple of the alignment.
 /// NOTE: Exposed for testing purposes.
-llvm::ErrorOr<std::pair<void *, size_t>>
+llvh::ErrorOr<std::pair<void *, size_t>>
 vmAllocateAllowLess(size_t sz, size_t minSz, size_t alignment);
 
 } // namespace vm

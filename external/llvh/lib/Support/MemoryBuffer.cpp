@@ -11,17 +11,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/Config/config.h"
-#include "llvm/Support/Errc.h"
-#include "llvm/Support/Errno.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MathExtras.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/Process.h"
-#include "llvm/Support/Program.h"
-#include "llvm/Support/SmallVectorMemoryBuffer.h"
+#include "llvh/Support/MemoryBuffer.h"
+#include "llvh/ADT/SmallString.h"
+#include "llvh/Config/config.h"
+#include "llvh/Support/Errc.h"
+#include "llvh/Support/Errno.h"
+#include "llvh/Support/FileSystem.h"
+#include "llvh/Support/MathExtras.h"
+#include "llvh/Support/Path.h"
+#include "llvh/Support/Process.h"
+#include "llvh/Support/Program.h"
+#include "llvh/Support/SmallVectorMemoryBuffer.h"
 #include <cassert>
 #include <cerrno>
 #include <cstring>
@@ -33,7 +33,7 @@
 #else
 #include <io.h>
 #endif
-using namespace llvm;
+using namespace llvh;
 
 //===----------------------------------------------------------------------===//
 // MemoryBuffer implementation itself.

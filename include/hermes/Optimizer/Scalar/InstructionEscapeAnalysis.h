@@ -68,7 +68,7 @@ class InstructionEscapeAnalysis {
     /// Offset of the single escaping instruction, or None.
     EscapeOffset offset;
 
-    explicit Prefix(unsigned length, EscapeOffset offset = llvm::None)
+    explicit Prefix(unsigned length, EscapeOffset offset = llvh::None)
         : length(length), offset(offset) {
       assert(
           (!offset.hasValue() || offset.getValue() < length) &&
@@ -108,7 +108,7 @@ class InstructionEscapeAnalysis {
   /// stored in a way that makes intersection with a new range efficient.
   struct PrefixSet {
     /// Mapping from prefix lengths to EscapeOffsets.
-    llvm::DenseMap<unsigned, EscapeOffset> lengthToOffset;
+    llvh::DenseMap<unsigned, EscapeOffset> lengthToOffset;
     /// The longest prefix in the map.
     Prefix longest{0};
 

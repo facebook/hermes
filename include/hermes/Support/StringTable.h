@@ -10,16 +10,16 @@
 
 #include "hermes/Support/Allocator.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/StringRef.h"
 
-namespace llvm {
+namespace llvh {
 class raw_ostream;
-} // namespace llvm
+} // namespace llvh
 
 namespace hermes {
 
-using llvm::StringRef;
+using llvh::StringRef;
 
 /// Allocate a StringRef with a '\0' following after the end.
 template <class Allocator>
@@ -98,17 +98,17 @@ class Identifier {
   }
 };
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &os, Identifier id);
+llvh::raw_ostream &operator<<(llvh::raw_ostream &os, Identifier id);
 
-using llvm::StringRef;
+using llvh::StringRef;
 /// Encapsulates a table of unique zero-terminated strings. Unlike
-/// llvm::StringMap it gives us access to the string itself and also provides
+/// llvh::StringMap it gives us access to the string itself and also provides
 /// convenient zero termination.
 class StringTable {
   using Allocator = hermes::BumpPtrAllocator;
   Allocator &allocator_;
 
-  llvm::DenseMap<StringRef, UniqueString *> strMap_{};
+  llvh::DenseMap<StringRef, UniqueString *> strMap_{};
 
   StringTable(const StringTable &) = delete;
   StringTable &operator=(const StringTable &_) = delete;
@@ -139,7 +139,7 @@ class StringTable {
 } // namespace hermes
 
 // Enable using Identifier in DenseMap.
-namespace llvm {
+namespace llvh {
 
 template <>
 struct DenseMapInfo<hermes::Identifier> {
@@ -160,6 +160,6 @@ struct DenseMapInfo<hermes::Identifier> {
   }
 };
 
-} // namespace llvm
+} // namespace llvh
 
 #endif // HERMES_SUPPORT_STRINGTABLE_H

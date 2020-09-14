@@ -24,7 +24,7 @@
 #include "hermes/Support/OptValue.h"
 #include "hermes/Support/StringSetVector.h"
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvh/ADT/DenseMap.h"
 
 #include <cstdint>
 #include <map>
@@ -61,7 +61,7 @@ struct StackTracesTreeNode {
     }
   };
 
-  /// Utility class for use with \c llvm::DenseMap .
+  /// Utility class for use with \c llvh::DenseMap .
   struct SourceLocMapInfo {
     static inline SourceLoc getEmptyKey() {
       return {SIZE_MAX, -1, -1};
@@ -78,16 +78,16 @@ struct StackTracesTreeNode {
   };
 
   /// Map to index of child in children_.
-  using ChildBytecodeMap = llvm::DenseMap<uint32_t, uint32_t>;
+  using ChildBytecodeMap = llvh::DenseMap<uint32_t, uint32_t>;
 
   // This is supposed to map a CodeBlock* to ChildBytecodeMap, but DenseMap
   // tries to do alignof() on CodeBlock* which isn't allowed on an incomplete
   // type. So I've worked around it by just using void* and casting as needed.
-  using ChildCodeblockMap = llvm::DenseMap<void *, ChildBytecodeMap>;
+  using ChildCodeblockMap = llvh::DenseMap<void *, ChildBytecodeMap>;
 
   /// Map to index of child in children_.
   using ChildSourceLocMap =
-      llvm::DenseMap<SourceLoc, uint32_t, SourceLocMapInfo>;
+      llvh::DenseMap<SourceLoc, uint32_t, SourceLocMapInfo>;
 
   StackTracesTreeNode(
       size_t id,
@@ -109,7 +109,7 @@ struct StackTracesTreeNode {
   const SourceLoc sourceLoc;
   const StringSetVector::size_type name;
 
-  llvm::ArrayRef<StackTracesTreeNode *> getChildren() const {
+  llvh::ArrayRef<StackTracesTreeNode *> getChildren() const {
     return children_;
   }
 

@@ -17,7 +17,7 @@
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/StringView.h"
 
-#include "llvm/ADT/SmallSet.h"
+#include "llvh/ADT/SmallSet.h"
 
 namespace hermes {
 namespace vm {
@@ -436,11 +436,11 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
   auto array = runtime->makeHandle(std::move(*arrayRes));
 
   // Optional array of SymbolIDs reported via host object API
-  llvm::Optional<Handle<JSArray>> hostObjectSymbols;
+  llvh::Optional<Handle<JSArray>> hostObjectSymbols;
   size_t hostObjectSymbolCount = 0;
 
   // If current object is a host object we need to deduplicate its properties
-  llvm::SmallSet<SymbolID::RawType, 16> dedupSet;
+  llvh::SmallSet<SymbolID::RawType, 16> dedupSet;
 
   // Output index.
   uint32_t index = 0;
@@ -453,7 +453,7 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
 
   // Regular properties with names that are array indexes are stashed here, if
   // encountered.
-  llvm::SmallVector<uint32_t, 8> indexNames{};
+  llvh::SmallVector<uint32_t, 8> indexNames{};
 
   // Iterate the named properties excluding those which use Symbols.
   if (okFlags.getIncludeNonSymbols()) {
@@ -1173,7 +1173,7 @@ CallResult<PseudoHandle<>> JSObject::getComputedWithReceiver_RJS(
   } else if (desc.flags.hostObject) {
     SymbolID id{};
     LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, id);
-    auto propRes = vmcast<HostObject>(selfHandle.get())->get(id);
+    auto propRes = vmcast<HostObject>(propObj.get())->get(id);
     if (propRes == ExecutionStatus::EXCEPTION)
       return ExecutionStatus::EXCEPTION;
     return createPseudoHandle(*propRes);
@@ -2408,7 +2408,7 @@ void JSObject::_snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
         // Else, it's a user-visible property.
         GCHermesValue &prop =
             namedSlotRef(self, gc->getPointerBase(), desc.slot);
-        const llvm::Optional<HeapSnapshot::NodeID> idForProp =
+        const llvh::Optional<HeapSnapshot::NodeID> idForProp =
             gc->getSnapshotID(prop);
         if (!idForProp) {
           return;
@@ -2462,7 +2462,7 @@ OptValue<PropertyFlags> JSObject::_getOwnIndexedPropertyFlagsImpl(
     JSObject *self,
     Runtime *runtime,
     uint32_t) {
-  return llvm::None;
+  return llvh::None;
 }
 
 HermesValue JSObject::_getOwnIndexedImpl(JSObject *, Runtime *, uint32_t) {
@@ -2556,7 +2556,7 @@ void JSObject::updatePropertyFlagsWithoutTransitions(
     Runtime *runtime,
     PropertyFlags flagsToClear,
     PropertyFlags flagsToSet,
-    OptValue<llvm::ArrayRef<SymbolID>> props) {
+    OptValue<llvh::ArrayRef<SymbolID>> props) {
   auto newClazz = HiddenClass::updatePropertyFlagsWithoutTransitions(
       runtime->makeHandle(selfHandle->clazz_),
       runtime,
@@ -3071,6 +3071,12 @@ ExecutionStatus setProtoClasses(
     if (!head->shouldCacheForIn(runtime)) {
       arr->clear(runtime);
       return ExecutionStatus::RETURNED;
+    }
+    if (JSObject::Helper::flags(*head).lazyObject) {
+      // Ensure all properties have been initialized before caching the hidden
+      // class. Not doing this will result in changes to the hidden class
+      // when getOwnPropertyKeys is called later.
+      JSObject::initializeLazyObject(runtime, head);
     }
     clazz = HermesValue::encodeObjectValue(head->getClass(runtime));
     if (LLVM_UNLIKELY(

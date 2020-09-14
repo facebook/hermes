@@ -14,16 +14,16 @@
 #endif
 #include "hermes/Support/UTF8.h"
 
-#include "llvm/ADT/SmallString.h"
-#include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvh/ADT/SmallString.h"
+#include "llvh/Support/ConvertUTF.h"
+#include "llvh/Support/raw_ostream.h"
 
 namespace hermes {
 namespace vm {
 
-using llvm::ConversionResult;
-using llvm::UTF16;
-using llvm::UTF8;
+using llvh::ConversionResult;
+using llvh::UTF16;
+using llvh::UTF8;
 
 UTF16Ref createUTF16Ref(const char16_t *str) {
   return UTF16Ref(str, utf16_traits::length(str));
@@ -33,14 +33,14 @@ ASCIIRef createASCIIRef(const char *str) {
   return ASCIIRef(str, ascii_traits::length(str));
 }
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, ASCIIRef asciiRef) {
-  return OS << llvm::StringRef(asciiRef.data(), asciiRef.size());
+llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, ASCIIRef asciiRef) {
+  return OS << llvh::StringRef(asciiRef.data(), asciiRef.size());
 }
 
 #if HERMES_PLATFORM_UNICODE != HERMES_PLATFORM_UNICODE_ICU
 /// Print the given UTF-16. We just assume UTF-8 output to avoid the increased
 /// binary size of supporting multiple encodings.
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, UTF16Ref u16ref) {
+llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, UTF16Ref u16ref) {
   // Note this assumes that the desired output encoding is UTF-8, which may
   // not be a valid assumption if outputting to a tty.
   std::string narrowStr;
@@ -52,7 +52,7 @@ namespace {
 /// Class to obtain and serve user's preferred output encoding.
 class OutputEncoding {
   /// User's preferred output encoding.
-  llvm::SmallString<16> preferredEncoding_;
+  llvh::SmallString<16> preferredEncoding_;
 
  public:
   /// Read in user's preferred encoding and store it for future use.
@@ -86,9 +86,9 @@ class OutputEncoding {
       // At this point we likely have a string like en_US.UTF-8,
       // unless it is "C" or "POSIX".
       // Let's trim the string if we can and get the second part.
-      llvm::StringRef localeStrRef(locale);
+      llvh::StringRef localeStrRef(locale);
       size_t dotLoc = localeStrRef.find('.');
-      if (dotLoc != llvm::StringRef::npos) {
+      if (dotLoc != llvh::StringRef::npos) {
         // This may return an empty string if targetEncoding's last character is
         // the only '.' in the string.
         localeStrRef = localeStrRef.substr(dotLoc + 1);
@@ -102,7 +102,7 @@ class OutputEncoding {
 
   /// \returns user's preferred encoding using user's locale.
   /// May return empty string if user's preferred encoding cannot be determined.
-  llvm::StringRef getPreferredEncoding() const {
+  llvh::StringRef getPreferredEncoding() const {
     return preferredEncoding_.str();
   }
 };
@@ -115,7 +115,7 @@ const OutputEncoding &getDefaultOutputEncodingObject() {
 }
 
 /// \returns the default output encoding.
-inline llvm::StringRef getDefaultOutputEncoding() {
+inline llvh::StringRef getDefaultOutputEncoding() {
   return getDefaultOutputEncodingObject().getPreferredEncoding();
 }
 } // anonymous namespace
@@ -126,7 +126,7 @@ inline llvm::StringRef getDefaultOutputEncoding() {
 /// \returns the converter if opening the converter succeeds; null otherwise.
 static inline UConverter *createEncodingConverter(UErrorCode *converterStatus) {
   // Get the target encoding from user's environment.
-  llvm::StringRef targetEncoding = getDefaultOutputEncoding();
+  llvh::StringRef targetEncoding = getDefaultOutputEncoding();
 
   // Create a converter from UTF-16 to user's encoding.
   // Note that targetEncoding may be empty or it may not make sense as it
@@ -159,7 +159,7 @@ static inline void freeEncodingConverter(UConverter *converter) {
 }
 
 /// Print given UTF-16 after converting to user's preferred encoding.
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, UTF16Ref u16ref) {
+llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, UTF16Ref u16ref) {
   // Get the converter to print in user's preferred encoding.
   UErrorCode converterStatus;
   UConverter *converter = createEncodingConverter(&converterStatus);
@@ -210,7 +210,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, UTF16Ref u16ref) {
     }
 
     // Actual print operation of the buffer.
-    OS << llvm::StringRef(buf, targetStart - buf);
+    OS << llvh::StringRef(buf, targetStart - buf);
   } while (converterStatus == U_BUFFER_OVERFLOW_ERROR);
 
   // Close the converter now that we are done with it.

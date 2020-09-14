@@ -10,9 +10,9 @@
 
 #include <map>
 
-namespace llvm {
+namespace llvh {
 class raw_ostream;
-} // namespace llvm
+} // namespace llvh
 
 namespace hermes {
 namespace vm {
@@ -56,7 +56,7 @@ class PoolHeap {
   /// \param OS the output stream to dump to.
   /// \param relativePointers if true all pointers are printed relative to the
   ///   start of the buffer.
-  void dump(llvm::raw_ostream &OS, bool relativePointers = false);
+  void dump(llvh::raw_ostream &OS, bool relativePointers = false);
 
  private:
   /// Points to the beginning of the heap buffer.

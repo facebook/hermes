@@ -12,9 +12,9 @@
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/AlignedStorage.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/Support/ErrorHandling.h"
+#include "llvh/Support/MathExtras.h"
 
 #include <cassert>
 #include <limits>
@@ -31,28 +31,28 @@ bool isAligned(void *p) {
 
 char *alignAlloc(void *p) {
   return reinterpret_cast<char *>(
-      llvm::alignTo(reinterpret_cast<uintptr_t>(p), AlignedStorage::size()));
+      llvh::alignTo(reinterpret_cast<uintptr_t>(p), AlignedStorage::size()));
 }
 
 class VMAllocateStorageProvider final : public StorageProvider {
  public:
-  llvm::ErrorOr<void *> newStorageImpl(const char *name) override;
+  llvh::ErrorOr<void *> newStorageImpl(const char *name) override;
   void deleteStorageImpl(void *storage) override;
 };
 
 class MallocStorageProvider final : public StorageProvider {
  public:
-  llvm::ErrorOr<void *> newStorageImpl(const char *name) override;
+  llvh::ErrorOr<void *> newStorageImpl(const char *name) override;
   void deleteStorageImpl(void *storage) override;
 
  private:
   /// Map aligned starts to actual starts for freeing.
   /// NOTE: Since this is only used for debugging purposes, and it is rare to
   /// create and delete storage, it's ok to use a map.
-  llvm::DenseMap<void *, void *> lowLimToAllocHandle_;
+  llvh::DenseMap<void *, void *> lowLimToAllocHandle_;
 };
 
-llvm::ErrorOr<void *> VMAllocateStorageProvider::newStorageImpl(
+llvh::ErrorOr<void *> VMAllocateStorageProvider::newStorageImpl(
     const char *name) {
   assert(AlignedStorage::size() % oscompat::page_size() == 0);
   // Allocate the space, hoping it will be the correct alignment.
@@ -77,7 +77,7 @@ void VMAllocateStorageProvider::deleteStorageImpl(void *storage) {
   oscompat::vm_free_aligned(storage, AlignedStorage::size());
 }
 
-llvm::ErrorOr<void *> MallocStorageProvider::newStorageImpl(const char *name) {
+llvh::ErrorOr<void *> MallocStorageProvider::newStorageImpl(const char *name) {
   // name is unused, can't name malloc memory.
   (void)name;
   void *mem = checkedMalloc2(AlignedStorage::size(), 2u);
@@ -107,7 +107,7 @@ std::unique_ptr<StorageProvider> StorageProvider::mallocProvider() {
   return std::unique_ptr<StorageProvider>(new MallocStorageProvider);
 }
 
-llvm::ErrorOr<void *> StorageProvider::newStorage(const char *name) {
+llvh::ErrorOr<void *> StorageProvider::newStorage(const char *name) {
   auto res = newStorageImpl(name);
 
   if (res) {
@@ -128,23 +128,23 @@ void StorageProvider::deleteStorage(void *storage) {
   deleteStorageImpl(storage);
 }
 
-llvm::ErrorOr<std::pair<void *, size_t>>
+llvh::ErrorOr<std::pair<void *, size_t>>
 vmAllocateAllowLess(size_t sz, size_t minSz, size_t alignment) {
   assert(sz >= minSz && "Shouldn't supply a lower size than the minimum");
   assert(minSz != 0 && "Minimum size must not be zero");
-  assert(sz == llvm::alignTo(sz, alignment));
-  assert(minSz == llvm::alignTo(minSz, alignment));
+  assert(sz == llvh::alignTo(sz, alignment));
+  assert(minSz == llvh::alignTo(minSz, alignment));
   // Try fractions of the requested size, down to the minimum.
   // We'll do it by eighths.
   assert(sz >= 8); // Since sz is page-aligned, safe assumption.
   const size_t increment = sz / 8;
   // Store the result for the case where all attempts fail.
-  llvm::ErrorOr<void *> result{std::error_code{}};
+  llvh::ErrorOr<void *> result{std::error_code{}};
   while (sz >= minSz) {
     result = oscompat::vm_allocate_aligned(sz, alignment);
     if (result) {
       assert(
-          sz == llvm::alignTo(sz, alignment) &&
+          sz == llvh::alignTo(sz, alignment) &&
           "Should not return an un-aligned size");
       return std::make_pair(result.get(), sz);
     }
@@ -153,7 +153,7 @@ vmAllocateAllowLess(size_t sz, size_t minSz, size_t alignment) {
       break;
     }
     sz = std::max(
-        static_cast<size_t>(llvm::alignDown(sz - increment, alignment)), minSz);
+        static_cast<size_t>(llvh::alignDown(sz - increment, alignment)), minSz);
   }
   assert(!result && "Must be an error if none of the allocations succeeded");
   return result.getError();

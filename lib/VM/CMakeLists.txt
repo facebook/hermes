@@ -33,6 +33,7 @@ set(source_files
   JSObject.cpp
   JSProxy.cpp
   JSRegExp.cpp
+  JSRegExpStringIterator.cpp
   JSMapImpl.cpp
   JSNativeFunctions.cpp
   JSTypedArray.cpp
@@ -101,6 +102,7 @@ set(source_files
   JSLib/Number.cpp
   JSLib/Boolean.cpp
   JSLib/RegExp.cpp
+  JSLib/RegExpStringIterator.cpp
   JSLib/DateUtil.cpp
   JSLib/Sorting.cpp
   JSLib/Symbol.cpp
@@ -128,14 +130,12 @@ set(HERMES_OPTIONAL_SOURCES
   gcs/FillerCell.cpp
   gcs/GenGC.cpp
   gcs/MallocGC.cpp
-  gcs/MarkBitArray.cpp
   gcs/OldGen.cpp
   gcs/Space.cpp
   gcs/YoungGen.cpp
   gcs/GCGeneration.cpp
   gcs/GCSegmentAddressIndex.cpp
   gcs/GenGCNC.cpp
-  gcs/MarkBitArrayNC.cpp
   gcs/OldGenNC.cpp
   gcs/OldGenSegmentRanges.cpp
   gcs/YoungGenNC.cpp
@@ -150,8 +150,8 @@ if (${HERMESVM_GCKIND} STREQUAL "NONCONTIG_GENERATIONAL")
                            gcs/CardTableNC.cpp gcs/FillerCell.cpp
                            gcs/CompleteMarkState.cpp gcs/GCGeneration.cpp
                            gcs/GCSegmentAddressIndex.cpp gcs/GenGCNC.cpp
-                           gcs/MarkBitArrayNC.cpp gcs/OldGenNC.cpp
-                           gcs/OldGenSegmentRanges.cpp gcs/YoungGenNC.cpp)
+                           gcs/OldGenNC.cpp gcs/OldGenSegmentRanges.cpp
+                           gcs/YoungGenNC.cpp)
 elseif (${HERMESVM_GCKIND} STREQUAL "MALLOC")
   list(APPEND source_files gcs/MallocGC.cpp gcs/FillerCell.cpp)
 elseif (${HERMESVM_GCKIND} STREQUAL "HADES")
@@ -162,7 +162,6 @@ elseif (${HERMESVM_GCKIND} STREQUAL "HADES")
             gcs/CompleteMarkState.cpp
             gcs/FillerCell.cpp
             gcs/HadesGC.cpp
-            gcs/MarkBitArrayNC.cpp
   )
 else()
   message(WARNING "Not linking garbage collector")
@@ -194,6 +193,7 @@ set(link_libs
   hermesPlatform
   hermesPlatformIntl
   hermesHBCBackend
+  # TODO: hermesInternalBytecode
   dtoa
   ${CORE_FOUNDATION}
 )
@@ -210,10 +210,6 @@ if(HERMESVM_JIT)
     MC
     MCParser
   )
-endif()
-
-if(HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION)
-  list(APPEND link_libs hermesInternalBytecode)
 endif()
 
 add_hermes_library(hermesVMRuntime STATIC ${source_files}

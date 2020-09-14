@@ -20,7 +20,7 @@
 #include "hermes/SourceMap/SourceMapParser.h"
 #include "hermes/Support/Algorithms.h"
 
-#include "llvm/Support/SHA1.h"
+#include "llvh/Support/SHA1.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -75,7 +75,7 @@ extern "C" const char *hermesGetProperties();
 class CompileResult {
  public:
   std::string error_;
-  llvm::SmallVector<char, 0> bytecode_;
+  llvh::SmallVector<char, 0> bytecode_;
 };
 
 EMSCRIPTEN_KEEPALIVE
@@ -153,7 +153,7 @@ extern "C" CompileResult *hermesCompileToBytecode(
     return compileRes.release();
   }
 
-  llvm::raw_svector_ostream bcstream{compileRes->bytecode_};
+  llvh::raw_svector_ostream bcstream{compileRes->bytecode_};
 
   BytecodeGenerationOptions opts(::hermes::EmitBundle);
   opts.optimizationEnabled = false;
@@ -161,7 +161,7 @@ extern "C" CompileResult *hermesCompileToBytecode(
   hbc::BytecodeSerializer BS{bcstream, opts};
   BS.serialize(
       *res.first->getBytecodeModule(),
-      llvm::SHA1::hash(llvm::makeArrayRef(
+      llvh::SHA1::hash(llvh::makeArrayRef(
           reinterpret_cast<const uint8_t *>(source), sourceSize - 1)));
 
   return compileRes.release();
@@ -169,7 +169,7 @@ extern "C" CompileResult *hermesCompileToBytecode(
 
 static std::string getPropertiesHelper() {
   std::string json{};
-  llvm::raw_string_ostream OS{json};
+  llvh::raw_string_ostream OS{json};
   OS << "{ \"BYTECODE_ALIGNMENT\":" << hbc::BYTECODE_ALIGNMENT
      << ", \"HEADER_SIZE\":" << sizeof(hbc::BytecodeFileHeader)
      << ", \"VERSION\":" << hbc::BYTECODE_VERSION << ", \"MAGIC\": ["
@@ -205,7 +205,7 @@ int main() {
   auto *res1 =
       hermesCompileToBytecode(src1, sizeof(src1), "x.js", map, sizeof(map));
   assert(!hermesCompileResult_getError(res1) && "success expected");
-  llvm::outs() << "Generated " << hermesCompileResult_getBytecodeSize(res1)
+  llvh::outs() << "Generated " << hermesCompileResult_getBytecodeSize(res1)
                << " bytecode bytes\n";
   hermesCompileResult_free(res1);
 
@@ -213,7 +213,7 @@ int main() {
   auto *res2 =
       hermesCompileToBytecode(src2, sizeof(src2), "x.js", map, sizeof(map));
   assert(hermesCompileResult_getError(res2) && "error expected");
-  llvm::outs() << "Error " << hermesCompileResult_getError(res2) << "\n";
+  llvh::outs() << "Error " << hermesCompileResult_getError(res2) << "\n";
   hermesCompileResult_free(res2);
 
   return 0;

@@ -8,10 +8,10 @@
 #ifndef HERMES_ADT_SCOPEDHASHTABLE_H
 #define HERMES_ADT_SCOPEDHASHTABLE_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/Allocator.h"
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/Support/Allocator.h"
 
-// hermes::ScopedHashTable is a drop-in replacement for llvm::ScopedHashTable,
+// hermes::ScopedHashTable is a drop-in replacement for llvh::ScopedHashTable,
 // but will allow us to export the current values in scope.
 
 namespace hermes {
@@ -59,7 +59,7 @@ class ScopedHashTable {
  private:
   /// Maps from keys to most current definition. All Nodes are owned by this.
   /// They are allocated by insertIntoScope and deleted by clearCurrentScope
-  llvm::DenseMap<K, ScopedHashTableNode<K, V> *> map_;
+  llvh::DenseMap<K, ScopedHashTableNode<K, V> *> map_;
   // The current scope. Owned by the user.
   ScopedHashTableScope<K, V> *scope_{nullptr};
 
@@ -141,9 +141,9 @@ class ScopedHashTable {
   }
 
   // Gets all values currently in scope.
-  std::unique_ptr<llvm::DenseMap<K, V>> flatten() const {
-    std::unique_ptr<llvm::DenseMap<K, V>> result{
-        new llvm::DenseMap<K, V>(map_.size())};
+  std::unique_ptr<llvh::DenseMap<K, V>> flatten() const {
+    std::unique_ptr<llvh::DenseMap<K, V>> result{
+        new llvh::DenseMap<K, V>(map_.size())};
     for (auto &pair : map_) {
       assert(pair.second && "Node is null");
       (*result)[pair.first] = pair.second->value_;

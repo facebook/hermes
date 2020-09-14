@@ -147,8 +147,8 @@ void defineAccessor(
   MutableHandle<NativeFunction> getter{runtime};
   if (getterFunc) {
     // Set the name by prepending "get ".
-    llvm::SmallString<32> getterName{"get "};
-    llvm::raw_svector_ostream os{getterName};
+    llvh::SmallString<32> getterName{"get "};
+    llvh::raw_svector_ostream os{getterName};
     os << nameView;
 
     auto strRes = runtime->ignoreAllocationFailure(
@@ -175,8 +175,8 @@ void defineAccessor(
   MutableHandle<NativeFunction> setter{runtime};
   if (setterFunc) {
     // Set the name by prepending "set ".
-    llvm::SmallString<32> setterName{"set "};
-    llvm::raw_svector_ostream os{setterName};
+    llvh::SmallString<32> setterName{"set "};
+    llvh::raw_svector_ostream os{setterName};
     os << nameView;
 
     auto strRes = runtime->ignoreAllocationFailure(

@@ -12,7 +12,7 @@
 #include "hermes/VM/AlignedStorage.h"
 #include "hermes/VM/LimitedStorageProvider.h"
 
-#include "llvm/ADT/STLExtras.h"
+#include "llvh/ADT/STLExtras.h"
 
 using namespace hermes;
 using namespace hermes::vm;
@@ -24,16 +24,16 @@ struct NullStorageProvider : public StorageProvider {
   static std::unique_ptr<NullStorageProvider> create();
 
  protected:
-  llvm::ErrorOr<void *> newStorageImpl(const char *) override;
+  llvh::ErrorOr<void *> newStorageImpl(const char *) override;
   void deleteStorageImpl(void *) override;
 };
 
 /* static */
 std::unique_ptr<NullStorageProvider> NullStorageProvider::create() {
-  return llvm::make_unique<NullStorageProvider>();
+  return llvh::make_unique<NullStorageProvider>();
 }
 
-llvm::ErrorOr<void *> NullStorageProvider::newStorageImpl(const char *) {
+llvh::ErrorOr<void *> NullStorageProvider::newStorageImpl(const char *) {
   // Doesn't matter what code is returned here.
   return make_error_code(OOMError::TestVMLimitReached);
 }

@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Memory.h"
-#include "llvm/Config/llvm-config.h"
-#include "llvm/Support/Valgrind.h"
+#include "llvh/Support/Memory.h"
+#include "llvh/Config/llvm-config.h"
+#include "llvh/Support/Valgrind.h"
 
 // Include the platform-specific parts of this class.
 #ifdef LLVM_ON_UNIX
