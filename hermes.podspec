@@ -12,11 +12,11 @@ module HermesHelper
   end
 
   def self.llvm_configure_command
-    "./utils/build/build_llvm.py #{"--distribute" if BUILD_TYPE == :release}"
+    "./utils/build/build_llvm.py #{"--distribute" if BUILD_TYPE == :release} --cmake-flags='-DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=10.13 -DCMAKE_OSX_ARCHITECTURES:STRING=x86_64;arm64'"
   end
 
   def self.cmake_configuration
-    "-DHERMES_ENABLE_DEBUGGER:BOOLEAN=true -DHERMES_ENABLE_TEST_SUITE:BOOLEAN=false -DHERMES_BUILD_APPLE_FRAMEWORK:BOOLEAN=true -DHERMES_BUILD_APPLE_DSYM:BOOLEAN=true"
+    "-DHERMES_ENABLE_DEBUGGER:BOOLEAN=true -DHERMES_ENABLE_TEST_SUITE:BOOLEAN=false -DHERMES_BUILD_APPLE_FRAMEWORK:BOOLEAN=true -DHERMES_BUILD_APPLE_DSYM:BOOLEAN=true -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=10.13 -DCMAKE_OSX_ARCHITECTURES:STRING=x86_64;arm64"
   end
 
   def self.configure_command
