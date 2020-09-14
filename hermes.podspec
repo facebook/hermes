@@ -49,7 +49,7 @@ Pod::Spec.new do |spec|
 
     # If MacOS framework does not exist, build one
     if [ ! -d destroot/Library/Frameworks/macosx/hermes.framework ]; then
-      build_apple_framework "macosx" "x86_64" "#{HermesHelper::OSX_DEPLOYMENT_TARGET}"
+      build_apple_framework "macosx" "x86_64;arm64" "#{HermesHelper::OSX_DEPLOYMENT_TARGET}"
     fi
   EOS
 end
