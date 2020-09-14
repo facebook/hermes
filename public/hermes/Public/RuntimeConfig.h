@@ -26,6 +26,12 @@ class raw_ostream;
 namespace hermes {
 namespace vm {
 
+enum CompilationMode {
+  SmartCompilation,
+  ForceEagerCompilation,
+  ForceLazyCompilation
+};
+
 class PinnedHermesValue;
 #ifdef HERMESVM_SERIALIZE
 class Serializer;
@@ -104,6 +110,12 @@ class Deserializer;
   /* if available. For this to work code must have been compiled at */         \
   /* runtime with CompileFlags::allowFunctionToStringWithRuntimeSource set. */ \
   F(constexpr, bool, AllowFunctionToStringWithRuntimeSource, false)            \
+                                                                               \
+  /* Choose lazy/eager compilation mode. */                                    \
+  F(constexpr,                                                                 \
+    CompilationMode,                                                           \
+    CompilationMode,                                                           \
+    CompilationMode::SmartCompilation)                                         \
                                                                                \
   /* An interface for managing crashes. */                                     \
   F(HERMES_NON_CONSTEXPR,                                                      \

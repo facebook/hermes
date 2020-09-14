@@ -47,7 +47,7 @@ CallResult<HermesValue> evalInEnvironment(
   compileFlags.includeLibHermes = false;
   compileFlags.optimize = runtime->optimizedEval;
   compileFlags.lazy =
-      utf8code.size() >= hbc::kDefaultSizeThresholdForLazyCompilation;
+      utf8code.size() >= compileFlags.preemptiveFileCompilationThreshold;
   compileFlags.allowFunctionToStringWithRuntimeSource =
       runtime->getAllowFunctionToStringWithRuntimeSource();
 #ifdef HERMES_ENABLE_DEBUGGER

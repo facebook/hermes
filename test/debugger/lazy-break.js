@@ -10,16 +10,12 @@
 
 function foo() {
   print('foo called');
-  /* Some text to pad out the function so that it won't be eagerly compiled
-   * for being too short. Lorem ipsum dolor sit amet, consectetur adipiscing
-   * elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-   */
 }
 
 debugger;
 foo();
 
-// CHECK: Break on 'debugger' statement in global: {{.*}}lazy-break.js[{{[0-9]+}}]:19:1
+// CHECK: Break on 'debugger' statement in global: {{.*}}lazy-break.js[{{[0-9]+}}]:15:1
 // CHECK-NEXT: Set breakpoint 1 at {{.*}}:12:3
 // CHECK-NEXT: 1 E {{.*}}:12:3
 // CHECK-NEXT: Continuing execution

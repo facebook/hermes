@@ -134,14 +134,15 @@ std::string chompToken(std::string *str, const char *separators = " \t") {
 
 void printUsageAndExit() {
   std::cerr
-      << "USAGE: hdb [--break-at-start] [--break-after <secs>] [--lazy] <input JS file>\n";
+      << "USAGE: hdb [--break-at-start] [--break-after <secs>] [--lazy|--eager|--smart] <input JS file>\n";
   exit(EXIT_FAILURE);
 }
 
 struct Options {
   std::string fileName{}; // required
   bool breakAtStart{false};
-  bool lazy{false};
+  hermes::vm::CompilationMode compilationMode{
+      hermes::vm::ForceEagerCompilation};
   double breakAfterDelay{-1.}; // -1 disables breakAfterDelay
 };
 
@@ -167,7 +168,11 @@ Options getCommandLineOptions(int argc, char **argv) {
     } else if (strcmp(arg, "--break-at-start") == 0) {
       result.breakAtStart = true;
     } else if (strcmp(arg, "--lazy") == 0) {
-      result.lazy = true;
+      result.compilationMode = hermes::vm::ForceLazyCompilation;
+    } else if (strcmp(arg, "--eager") == 0) {
+      result.compilationMode = hermes::vm::ForceEagerCompilation;
+    } else if (strcmp(arg, "--smart") == 0) {
+      result.compilationMode = hermes::vm::SmartCompilation;
     } else if (strcmp(arg, "--break-after") == 0) {
       char *endptr = nullptr;
       char *strValue = nextArg();
@@ -753,7 +758,6 @@ int main(int argc, char **argv) {
   Options options = getCommandLineOptions(argc, argv);
 
   HermesRuntime::DebugFlags debugFlags{};
-  debugFlags.lazy = options.lazy;
 
   // Read the file in 'filename'.
   std::ifstream fileStream(options.fileName);
