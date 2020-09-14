@@ -63,7 +63,7 @@ class Deserializer;
   F(constexpr, bool, OptimizedEval, false)                                     \
                                                                                \
   /* Support for ES6 Proxy. */                                                 \
-  F(constexpr, bool, ES6Proxy, false)                                          \
+  F(constexpr, bool, ES6Proxy, true)                                           \
                                                                                \
   /* Support for ES6 Symbol. */                                                \
   F(constexpr, bool, ES6Symbol, true)                                          \
