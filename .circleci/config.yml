@@ -196,7 +196,7 @@ jobs:
 
   macos:
     macos:
-      xcode: "10.0.0"
+      xcode: "12.0.0"
     environment:
       - HERMES_WS_DIR: /tmp/hermes
       - TERM: dumb
@@ -219,7 +219,7 @@ jobs:
           name: Build Hermes for macOS
           command: |
             cd "$HERMES_WS_DIR"
-            hermes/utils/build/configure.py --distribute --cmake-flags='-DHERMES_BUILD_APPLE_FRAMEWORK:BOOLEAN=false'
+            hermes/utils/build/configure.py --distribute --cmake-flags='-DHERMES_BUILD_APPLE_FRAMEWORK:BOOLEAN=false -DCMAKE_OSX_ARCHITECTURES:STRING=x86_64;arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=10.13'
             cmake --build ./build_release --target github-cli-release
       - run:
           name: Copy artifacts
