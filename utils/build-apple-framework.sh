@@ -27,6 +27,13 @@ fi
 
 # Utility function to configure an Apple framework
 function configure_apple_framework {
+  local build_cli_tools
+  if [[ $1 == iphone* ]]; then
+    build_cli_tools="false"
+  else
+    build_cli_tools="true"
+  fi
+
   local cmake_flags=" \
     -DHERMES_APPLE_TARGET_PLATFORM:STRING=$1 \
     -DCMAKE_OSX_ARCHITECTURES:STRING=$2 \
@@ -35,7 +42,8 @@ function configure_apple_framework {
     -DHERMES_ENABLE_FUZZING:BOOLEAN=false \
     -DHERMES_ENABLE_TEST_SUITE:BOOLEAN=false \
     -DHERMES_BUILD_APPLE_FRAMEWORK:BOOLEAN=true \
-    -DHERMES_BUILD_APPLE_DSYM:BOOLEAN=true
+    -DHERMES_BUILD_APPLE_DSYM:BOOLEAN=true \
+    -DHERMES_ENABLE_TOOLS:BOOLEAN=$build_cli_tools \
     -DCMAKE_INSTALL_PREFIX:PATH=../destroot"
 
   ./utils/build/configure.py "$BUILD_TYPE" --cmake-flags "$cmake_flags" --build-system="$BUILD_SYSTEM" "build_$1"
