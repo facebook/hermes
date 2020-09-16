@@ -4472,6 +4472,7 @@ bool JSParserImpl::reparseArrowParameters(
 Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
     Param param,
     ESTree::Node *leftExpr,
+    ESTree::Node *typeParams,
     ESTree::Node *returnType,
     ESTree::Node *predicate,
     SMLoc startLoc,
@@ -4526,7 +4527,7 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
       nullptr,
       std::move(paramList),
       body,
-      /* typeParameters */ nullptr,
+      typeParams,
       returnType,
       predicate,
       expression,
@@ -4778,12 +4779,14 @@ Optional<ESTree::Node *> JSParserImpl::tryParseTypedAsyncArrowFunction(
   SourceErrorManager::SaveAndSuppressMessages suppress{&sm_, Subsystem::Parser};
   SMLoc start = advance().Start;
 
+  ESTree::Node *typeParams = nullptr;
   if (check(TokenKind::less)) {
     auto optTypeParams = parseTypeParams();
     if (!optTypeParams) {
       savePoint.restore();
       return None;
     }
+    typeParams = *optTypeParams;
   }
 
   if (!check(TokenKind::l_paren)) {
@@ -4827,6 +4830,7 @@ Optional<ESTree::Node *> JSParserImpl::tryParseTypedAsyncArrowFunction(
   auto optArrow = parseArrowFunctionExpression(
       param,
       *optLeftExpr,
+      typeParams,
       returnType,
       predicate,
       start,
@@ -4979,10 +4983,10 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
   //   async [no line terminator] ArrowParameters [no line terminator] =>
   //   ConciseBody.
   if (check(TokenKind::equalgreater) && !lexer_.isNewLineBeforeCurrentToken()) {
-    // TODO: Pass typeParams along to arrow functions.
     return parseArrowFunctionExpression(
         param,
         *optLeftExpr,
+        typeParams,
         returnType,
         predicate,
         startLoc,

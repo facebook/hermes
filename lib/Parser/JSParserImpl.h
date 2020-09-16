@@ -850,6 +850,7 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseArrowFunctionExpression(
       Param param,
       ESTree::Node *leftExpr,
+      ESTree::Node *typeParams,
       ESTree::Node *returnType,
       ESTree::Node *predicate,
       SMLoc startLoc,
