@@ -945,6 +945,8 @@ void HadesGC::waitForCollectionToFinish() {
   lk.lock();
   assert(concurrentPhase_ == Phase::None);
   worldStopped_ = false;
+  // Check for a tripwire, since we know a collection just completed.
+  checkTripwireAndResetStats();
 
   assert(lk && "Lock must be re-acquired before exiting");
   assert(gcMutex_ && "GC mutex must be re-acquired before exiting");
@@ -974,7 +976,7 @@ void HadesGC::oldGenCollection() {
   // Note: This line calls the destructor for the previous CollectionStats (if
   // any) in addition to creating a new CollectionStats. It is desirable to
   // call the destructor here so that the analytics callback is invoked from the
-  // mutator thread.
+  // mutator thread. This might also be done from checkTripwireAndResetStats.
   ogCollectionStats_ = llvh::make_unique<CollectionStats>(this, "old");
   // NOTE: Leave CPU time as zero if the collection isn't concurrent, as the
   // times aren't useful.
@@ -1800,6 +1802,9 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
   // collection.
   ygAverageSurvivalRatio_.update(stats.survivalRatio());
   if (concurrentPhase_ == Phase::None) {
+    // There is no OG collection running, check the tripwire in case this is the
+    // first YG after an OG completed.
+    checkTripwireAndResetStats();
     if (forceOldGenCollection) {
       oldGenCollection();
     } else {
@@ -1839,6 +1844,29 @@ void HadesGC::promoteYoungGenToOldGen() {
   youngGen_ = createSegment(/*isYoungGen*/ true);
   // These objects will be finalized by an OG collection.
   youngGenFinalizables_.clear();
+}
+
+void HadesGC::checkTripwireAndResetStats() {
+  assert(
+      gcMutex_ &&
+      "gcMutex must be held before calling checkTripwireAndResetStats");
+  if (!ogCollectionStats_) {
+    return;
+  }
+  const auto afterAllocatedBytes = ogCollectionStats_->afterAllocatedBytes();
+  // Have to release the lock in case the tripwire callback calls
+  // createSnapshot.
+  std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
+  lk.unlock();
+  // We use the amount of live data from after a GC completed as the minimum
+  // bound of what is live.
+  checkTripwire(afterAllocatedBytes);
+  lk.lock();
+  // Resetting the stats both runs the destructor (submitting the stats), as
+  // well as prevent us from checking the tripwire every YG.
+  ogCollectionStats_.reset();
+  // Don't run the destructor to unlock the mutex.
+  lk.release();
 }
 
 void HadesGC::scanDirtyCards(EvacAcceptor &acceptor) {

@@ -23,6 +23,7 @@
 #include "llvh/Support/FileSystem.h"
 #include "llvh/Support/Format.h"
 #include "llvh/Support/NativeFormatting.h"
+#include "llvh/Support/raw_os_ostream.h"
 #include "llvh/Support/raw_ostream.h"
 
 #include <inttypes.h>
@@ -538,6 +539,12 @@ void GCBase::checkTripwire(size_t dataSize) {
 
     std::error_code createSnapshotToFile(const std::string &path) override {
       return gc_->createSnapshotToFile(path);
+    }
+
+    std::error_code createSnapshot(std::ostream &os) override {
+      llvh::raw_os_ostream ros(os);
+      gc_->createSnapshot(ros);
+      return std::error_code{};
     }
 
    private:

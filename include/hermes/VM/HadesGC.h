@@ -571,6 +571,12 @@ class HadesGC final : public GCBase {
   /// Old Gen without scanning for garbage.
   void promoteYoungGenToOldGen();
 
+  /// This function checks if the live bytes after the last OG GC is greater
+  /// than the tripwire limit. If the conditions are met, the tripwire is
+  /// triggered and tripwireCallback_ is called.
+  /// Also resets the stats counter, so that it calls the analytics callback.
+  void checkTripwireAndResetStats();
+
   /// Perform an OG garbage collection. All live objects in OG will be left
   /// untouched, all unreachable objects will be placed into a free list that
   /// can be used by \c oldGenAlloc.

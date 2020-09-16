@@ -12,8 +12,6 @@
 #include "TestHelpers.h"
 #include "gtest/gtest.h"
 
-// Hades doesn't support tripwires yet.
-#ifndef HERMESVM_GC_HADES
 using namespace hermes::vm;
 
 namespace {
@@ -139,5 +137,3 @@ TEST(InstrumentationAPITest, DontRunCallbackAfterAllocatingMemoryUnderLimit) {
 }
 
 } // namespace
-
-#endif
