@@ -46,17 +46,19 @@ ESTREE_NODE_7_ARGS(
     NodeBoolean, async, false)
 ESTREE_IGNORE_IF_EMPTY(FunctionExpression, typeParameters)
 ESTREE_IGNORE_IF_EMPTY(FunctionExpression, returnType)
-ESTREE_NODE_7_ARGS(
+ESTREE_NODE_8_ARGS(
     ArrowFunctionExpression, FunctionLike,
     NodePtr, id, true,
     NodeList, params, false,
     NodePtr, body, false,
     NodePtr, typeParameters, true,
     NodePtr, returnType, true,
+    NodePtr, predicate, true,
     NodeBoolean, expression, false,
     NodeBoolean, async, false)
 ESTREE_IGNORE_IF_EMPTY(ArrowFunctionExpression, typeParameters)
 ESTREE_IGNORE_IF_EMPTY(ArrowFunctionExpression, returnType)
+ESTREE_IGNORE_IF_EMPTY(ArrowFunctionExpression, predicate)
 ESTREE_NODE_7_ARGS(
     FunctionDeclaration, FunctionLike,
     NodePtr, id, true,

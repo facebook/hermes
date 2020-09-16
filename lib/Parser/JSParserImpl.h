@@ -851,6 +851,7 @@ class JSParserImpl {
       Param param,
       ESTree::Node *leftExpr,
       ESTree::Node *returnType,
+      ESTree::Node *predicate,
       SMLoc startLoc,
       AllowTypedArrowFunction allowTypedArrowFunction,
       bool forceAsync);

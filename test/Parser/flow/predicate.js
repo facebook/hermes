@@ -81,35 +81,6 @@ declare function foo(number): number %checks(x);
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
-((x): number %checks => 3);
-// CHECK-NEXT:     {
-// CHECK-NEXT:       "type": "ExpressionStatement",
-// CHECK-NEXT:       "expression": {
-// CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
-// CHECK-NEXT:         "params": [
-// CHECK-NEXT:           {
-// CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "x"
-// CHECK-NEXT:           }
-// CHECK-NEXT:         ],
-// CHECK-NEXT:         "body": {
-// CHECK-NEXT:           "type": "NumericLiteral",
-// CHECK-NEXT:           "value": 3,
-// CHECK-NEXT:           "raw": "3"
-// CHECK-NEXT:         },
-// CHECK-NEXT:         "returnType": {
-// CHECK-NEXT:           "type": "TypeAnnotation",
-// CHECK-NEXT:           "typeAnnotation": {
-// CHECK-NEXT:             "type": "NumberTypeAnnotation"
-// CHECK-NEXT:           }
-// CHECK-NEXT:         },
-// CHECK-NEXT:         "expression": true,
-// CHECK-NEXT:         "async": false
-// CHECK-NEXT:       },
-// CHECK-NEXT:       "directive": null
-// CHECK-NEXT:     },
-
 function foo(): number %checks {}
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "FunctionDeclaration",
@@ -154,6 +125,146 @@ function foo(): number %checks {}
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "generator": false,
 // CHECK-NEXT:         "async": false
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
+(x): %checks => x !== null;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "ArrowFunctionExpression",
+// CHECK-NEXT:         "id": null,
+// CHECK-NEXT:         "params": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "x"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "body": {
+// CHECK-NEXT:           "type": "BinaryExpression",
+// CHECK-NEXT:           "left": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "x"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "right": {
+// CHECK-NEXT:             "type": "NullLiteral"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "operator": "!=="
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "predicate": {
+// CHECK-NEXT:           "type": "InferredPredicate"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "expression": true,
+// CHECK-NEXT:         "async": false
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
+(x): number %checks => x !== null;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "ArrowFunctionExpression",
+// CHECK-NEXT:         "id": null,
+// CHECK-NEXT:         "params": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "x"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "body": {
+// CHECK-NEXT:           "type": "BinaryExpression",
+// CHECK-NEXT:           "left": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "x"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "right": {
+// CHECK-NEXT:             "type": "NullLiteral"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "operator": "!=="
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "returnType": {
+// CHECK-NEXT:           "type": "TypeAnnotation",
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "NumberTypeAnnotation"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "predicate": {
+// CHECK-NEXT:           "type": "InferredPredicate"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "expression": true,
+// CHECK-NEXT:         "async": false
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
+async (x): %checks => x !== null;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "ArrowFunctionExpression",
+// CHECK-NEXT:         "id": null,
+// CHECK-NEXT:         "params": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "x"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "body": {
+// CHECK-NEXT:           "type": "BinaryExpression",
+// CHECK-NEXT:           "left": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "x"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "right": {
+// CHECK-NEXT:             "type": "NullLiteral"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "operator": "!=="
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "predicate": {
+// CHECK-NEXT:           "type": "InferredPredicate"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "expression": true,
+// CHECK-NEXT:         "async": true
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
+async (x): number %checks => x !== null;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "ArrowFunctionExpression",
+// CHECK-NEXT:         "id": null,
+// CHECK-NEXT:         "params": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "x"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "body": {
+// CHECK-NEXT:           "type": "BinaryExpression",
+// CHECK-NEXT:           "left": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "x"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "right": {
+// CHECK-NEXT:             "type": "NullLiteral"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "operator": "!=="
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "returnType": {
+// CHECK-NEXT:           "type": "TypeAnnotation",
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "NumberTypeAnnotation"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "predicate": {
+// CHECK-NEXT:           "type": "InferredPredicate"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "expression": true,
+// CHECK-NEXT:         "async": true
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "directive": null
 // CHECK-NEXT:     }

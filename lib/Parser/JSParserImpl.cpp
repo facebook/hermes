@@ -4462,6 +4462,7 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
     Param param,
     ESTree::Node *leftExpr,
     ESTree::Node *returnType,
+    ESTree::Node *predicate,
     SMLoc startLoc,
     AllowTypedArrowFunction allowTypedArrowFunction,
     bool forceAsync) {
@@ -4516,6 +4517,7 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
       body,
       /* typeParameters */ nullptr,
       returnType,
+      predicate,
       expression,
       forceAsync || reparsedAsync);
 
@@ -4786,13 +4788,24 @@ Optional<ESTree::Node *> JSParserImpl::tryParseTypedAsyncArrowFunction(
   }
 
   ESTree::Node *returnType = nullptr;
+  ESTree::Node *predicate = nullptr;
   if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
-    auto optType = parseTypeAnnotation(true, AllowAnonFunctionType::No);
-    if (!optType) {
-      savePoint.restore();
-      return None;
+    if (!check(checksIdent_)) {
+      auto optType = parseTypeAnnotation(true, AllowAnonFunctionType::No);
+      if (!optType) {
+        savePoint.restore();
+        return None;
+      }
+      returnType = *optType;
     }
-    returnType = *optType;
+    if (check(checksIdent_)) {
+      auto optPredicate = parsePredicate();
+      if (!optPredicate) {
+        savePoint.restore();
+        return None;
+      }
+      predicate = *optPredicate;
+    }
   }
 
   if (!check(TokenKind::equalgreater)) {
@@ -4804,6 +4817,7 @@ Optional<ESTree::Node *> JSParserImpl::tryParseTypedAsyncArrowFunction(
       param,
       *optLeftExpr,
       returnType,
+      predicate,
       start,
       AllowTypedArrowFunction::Yes,
       /* forceAsync */ true);
@@ -4906,6 +4920,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
     return None;
 
   ESTree::Node *returnType = nullptr;
+  ESTree::Node *predicate = nullptr;
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow()) {
     if (allowTypedArrowFunction == AllowTypedArrowFunction::Yes &&
@@ -4918,17 +4933,22 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
       SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
                                                            Subsystem::Parser};
       advance(JSLexer::GrammarContext::Flow);
-      auto optType = parseTypeAnnotation(true, AllowAnonFunctionType::No);
-      if (optType) {
+      bool startsWithPredicate = check(checksIdent_);
+      auto optType = startsWithPredicate
+          ? llvh::None
+          : parseTypeAnnotation(true, AllowAnonFunctionType::No);
+      if (optType)
+        returnType = *optType;
+      if (optType || startsWithPredicate) {
         if (check(TokenKind::equalgreater)) {
+          assert(
+              !startsWithPredicate && "no returnType if startsWithPredicate");
           // Done parsing the return type and predicate.
-          returnType = *optType;
         } else if (check(checksIdent_)) {
           auto optPred = parsePredicate();
           if (optPred && check(TokenKind::equalgreater)) {
             // Done parsing the return type and predicate.
-            returnType = *optType;
-            // TODO: Store the predicate.
+            predicate = *optPred;
           } else {
             savePoint.restore();
           }
@@ -4953,6 +4973,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
         param,
         *optLeftExpr,
         returnType,
+        predicate,
         startLoc,
         allowTypedArrowFunction,
         isAsync);
