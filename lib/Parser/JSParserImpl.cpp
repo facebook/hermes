@@ -412,19 +412,22 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
     return None;
 
   ESTree::Node *returnType = nullptr;
+  ESTree::Node *predicate = nullptr;
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow() &&
       checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
-    auto optRet = parseTypeAnnotation(true);
-    if (!optRet)
-      return None;
-    returnType = *optRet;
+    if (!check(checksIdent_)) {
+      auto optRet = parseTypeAnnotation(true);
+      if (!optRet)
+        return None;
+      returnType = *optRet;
+    }
 
     if (check(checksIdent_)) {
       auto optPred = parsePredicate();
       if (!optPred)
         return None;
-      // TODO: Store the predicate.
+      predicate = *optPred;
     }
   }
 #endif
@@ -456,6 +459,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
           nullptr,
           typeParams,
           returnType,
+          predicate,
           isGenerator,
           isAsync);
       // Initialize the node with a blank body.
@@ -468,6 +472,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
           nullptr,
           typeParams,
           returnType,
+          predicate,
           isGenerator,
           isAsync);
       // Initialize the node with a blank body.
@@ -498,6 +503,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
         body,
         typeParams,
         returnType,
+        predicate,
         isGenerator,
         isAsync);
     decl->strictness = ESTree::makeStrictness(isStrictMode());
@@ -509,6 +515,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
         body,
         typeParams,
         returnType,
+        predicate,
         isGenerator,
         isAsync);
     expr->strictness = ESTree::makeStrictness(isStrictMode());
@@ -2472,6 +2479,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           block.getValue(),
           nullptr,
           returnType,
+          /* predicate */ nullptr,
           false,
           false);
       funcExpr->strictness = ESTree::makeStrictness(isStrictMode());
@@ -2571,6 +2579,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           block.getValue(),
           nullptr,
           returnType,
+          /* predicate */ nullptr,
           false,
           false);
       funcExpr->strictness = ESTree::makeStrictness(isStrictMode());
@@ -2727,6 +2736,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
         optBody.getValue(),
         typeParams,
         returnType,
+        /* predicate */ nullptr,
         generator,
         async);
     funcExpr->strictness = ESTree::makeStrictness(isStrictMode());
@@ -4280,6 +4290,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
           optBody.getValue(),
           typeParams,
           returnType,
+          /* predicate */ nullptr,
           special == SpecialKind::Generator ||
               special == SpecialKind::AsyncGenerator,
           special == SpecialKind::Async ||

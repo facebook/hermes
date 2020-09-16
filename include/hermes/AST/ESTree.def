@@ -35,17 +35,19 @@ ESTREE_NODE_0_ARGS(Metadata, Base)
 ESTREE_FIRST(FunctionLike, Base)
 ESTREE_NODE_1_ARGS(Program, FunctionLike,
     NodeList, body, false)
-ESTREE_NODE_7_ARGS(
+ESTREE_NODE_8_ARGS(
     FunctionExpression, FunctionLike,
     NodePtr, id, true,
     NodeList, params, false,
     NodePtr, body, false,
     NodePtr, typeParameters, true,
     NodePtr, returnType, true,
+    NodePtr, predicate, true,
     NodeBoolean, generator, false,
     NodeBoolean, async, false)
 ESTREE_IGNORE_IF_EMPTY(FunctionExpression, typeParameters)
 ESTREE_IGNORE_IF_EMPTY(FunctionExpression, returnType)
+ESTREE_IGNORE_IF_EMPTY(FunctionExpression, predicate)
 ESTREE_NODE_8_ARGS(
     ArrowFunctionExpression, FunctionLike,
     NodePtr, id, true,
@@ -59,17 +61,19 @@ ESTREE_NODE_8_ARGS(
 ESTREE_IGNORE_IF_EMPTY(ArrowFunctionExpression, typeParameters)
 ESTREE_IGNORE_IF_EMPTY(ArrowFunctionExpression, returnType)
 ESTREE_IGNORE_IF_EMPTY(ArrowFunctionExpression, predicate)
-ESTREE_NODE_7_ARGS(
+ESTREE_NODE_8_ARGS(
     FunctionDeclaration, FunctionLike,
     NodePtr, id, true,
     NodeList, params, false,
     NodePtr, body, false,
     NodePtr, typeParameters, true,
     NodePtr, returnType, true,
+    NodePtr, predicate, true,
     NodeBoolean, generator, false,
     NodeBoolean, async, false)
 ESTREE_IGNORE_IF_EMPTY(FunctionDeclaration, typeParameters)
 ESTREE_IGNORE_IF_EMPTY(FunctionDeclaration, returnType)
+ESTREE_IGNORE_IF_EMPTY(FunctionDeclaration, predicate)
 ESTREE_LAST(FunctionLike)
 
 ESTREE_FIRST(Statement, Base)

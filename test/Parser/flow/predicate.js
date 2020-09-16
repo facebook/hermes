@@ -81,6 +81,25 @@ declare function foo(number): number %checks(x);
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
+function foo(): %checks {}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "FunctionDeclaration",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "foo"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "params": [],
+// CHECK-NEXT:       "body": {
+// CHECK-NEXT:         "type": "BlockStatement",
+// CHECK-NEXT:         "body": []
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "predicate": {
+// CHECK-NEXT:         "type": "InferredPredicate"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "generator": false,
+// CHECK-NEXT:       "async": false
+// CHECK-NEXT:     },
+
 function foo(): number %checks {}
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "FunctionDeclaration",
@@ -99,8 +118,34 @@ function foo(): number %checks {}
 // CHECK-NEXT:           "type": "NumberTypeAnnotation"
 // CHECK-NEXT:         }
 // CHECK-NEXT:       },
+// CHECK-NEXT:       "predicate": {
+// CHECK-NEXT:         "type": "InferredPredicate"
+// CHECK-NEXT:       },
 // CHECK-NEXT:       "generator": false,
 // CHECK-NEXT:       "async": false
+// CHECK-NEXT:     },
+
+(function foo(): %checks {});
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "FunctionExpression",
+// CHECK-NEXT:         "id": {
+// CHECK-NEXT:           "type": "Identifier",
+// CHECK-NEXT:           "name": "foo"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "params": [],
+// CHECK-NEXT:         "body": {
+// CHECK-NEXT:           "type": "BlockStatement",
+// CHECK-NEXT:           "body": []
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "predicate": {
+// CHECK-NEXT:           "type": "InferredPredicate"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "generator": false,
+// CHECK-NEXT:         "async": false
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
 // CHECK-NEXT:     },
 
 (function foo(): number %checks {});
@@ -122,6 +167,9 @@ function foo(): number %checks {}
 // CHECK-NEXT:           "typeAnnotation": {
 // CHECK-NEXT:             "type": "NumberTypeAnnotation"
 // CHECK-NEXT:           }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "predicate": {
+// CHECK-NEXT:           "type": "InferredPredicate"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "generator": false,
 // CHECK-NEXT:         "async": false

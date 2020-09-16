@@ -36,6 +36,7 @@ ESTree::FunctionExpressionNode *wrapCJSModule(
       moduleBlock,
       nullptr,
       nullptr,
+      nullptr,
       false,
       false);
   wrappedFn->strictness = ESTree::Strictness::NonStrictMode;
