@@ -81,4 +81,39 @@ TYPED_TEST(BitArrayTest, NextZeroBit) {
   EXPECT_EQ(0, indices.size());
 }
 
+TYPED_TEST(BitArrayTest, PrevSetBit) {
+  constexpr size_t N = TypeParam::value;
+  BitArray<N> ba;
+  auto indices = this->getIndices();
+  // Empty case: No marked bits
+  EXPECT_EQ(N, ba.findPrevSetBitFrom(N));
+  for (auto idx : indices) {
+    ba.set(idx, true);
+  }
+  for (size_t from = ba.findPrevSetBitFrom(N); from != N;
+       from = ba.findPrevSetBitFrom(from)) {
+    EXPECT_EQ(indices.back(), from);
+    indices.pop_back();
+  }
+  EXPECT_EQ(0, indices.size());
+}
+
+TYPED_TEST(BitArrayTest, PrevZeroBit) {
+  constexpr size_t N = TypeParam::value;
+  BitArray<N> ba;
+  auto indices = this->getIndices();
+  ba.set();
+  // Full case: No unmarked bits
+  EXPECT_EQ(N, ba.findPrevZeroBitFrom(N));
+  for (auto idx : indices) {
+    ba.set(idx, false);
+  }
+  for (size_t from = ba.findPrevZeroBitFrom(N); from != N;
+       from = ba.findPrevZeroBitFrom(from)) {
+    EXPECT_EQ(indices.back(), from);
+    indices.pop_back();
+  }
+  EXPECT_EQ(0, indices.size());
+}
+
 } // namespace
