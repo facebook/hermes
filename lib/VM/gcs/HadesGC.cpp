@@ -135,13 +135,7 @@ GCCell *HadesGC::HeapSegment::getCellHead(const void *address) {
   auto ind = heads.addressToIndex(address);
   // Go backwards from the current address looking for a marked bit, which means
   // that the address contains a GCCell header.
-  // TODO: Optimize this with zero scanning.
-  while (!heads.at(ind)) {
-    // There is guaranteed to be a marked cell head before ind reaches 0,
-    // because the intial free list creation of the segment sets the first head.
-    assert(ind && "About to walk off the end of the object heads table");
-    --ind;
-  }
+  ind = heads.findPrevMarkedBitFrom(ind + 1);
   GCCell *cell = reinterpret_cast<GCCell *>(heads.indexToAddress(ind));
   assert(
       cell->isValid() && "Object heads table doesn't point to a valid object");
