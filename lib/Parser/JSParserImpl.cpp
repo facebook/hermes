@@ -2912,6 +2912,14 @@ Optional<ESTree::Node *> JSParserImpl::parseOptionalExpressionExceptNew(
     // must not have a TemplateLiteral immediately after the `super` keyword.
     expr = setLocation(tok_, tok_, new (context_) ESTree::SuperNode());
     advance();
+    if (!checkN(TokenKind::l_paren, TokenKind::l_square, TokenKind::period)) {
+      errorExpected(
+          {TokenKind::l_paren, TokenKind::l_square, TokenKind::period},
+          "after 'super' keyword",
+          "location of 'super'",
+          startLoc);
+      return None;
+    }
   } else {
     auto primExpr = parsePrimaryExpression();
     if (!primExpr)
