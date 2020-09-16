@@ -76,6 +76,19 @@ type A = void;
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
+type A = mixed;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "A"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "MixedTypeAnnotation"
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
 type A = boolean;
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "TypeAlias",

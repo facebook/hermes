@@ -969,7 +969,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotation() {
         return setLocation(
             start,
             advance(JSLexer::GrammarContext::Flow).End,
-            new (context_) ESTree::AnyTypeAnnotationNode());
+            new (context_) ESTree::MixedTypeAnnotationNode());
       }
       if (tok_->getResWordOrIdentifier() == emptyIdent_) {
         return setLocation(
