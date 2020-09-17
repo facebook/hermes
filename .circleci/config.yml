@@ -41,7 +41,7 @@ workflows:
 # Default settings for Apple jobs (apple-runtime, test-apple-runtime)
 apple_defaults: &apple_defaults
   macos:
-    xcode: "12.0.0"
+    xcode: "12.0.0-beta"
   working_directory: ~/hermes
   environment:
     - TERM: dumb
@@ -196,7 +196,7 @@ jobs:
 
   macos:
     macos:
-      xcode: "12.0.0"
+      xcode: "12.0.0-beta"
     environment:
       - HERMES_WS_DIR: /tmp/hermes
       - TERM: dumb
@@ -207,9 +207,7 @@ jobs:
       - checkout
       - run:
           name: Install dependencies
-          # Force homebrew to install cmake 3.7
-          command: |
-            brew install ninja https://raw.githubusercontent.com/Homebrew/homebrew-core/d25c628ff2510f68c89f4660fc93e86377ae61dc/Formula/cmake.rb
+          command: brew install ninja cmake
       - run:
           name: Set up workspace
           command: |
