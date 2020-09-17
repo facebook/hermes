@@ -22,7 +22,7 @@ module.exports = {
         alt: 'Hermes Logo',
         src: 'img/logo.svg',
       },
-      links: [
+      items: [
         { to: 'playground/', label: 'Playground', position: 'right' },
         {
           href: 'https://github.com/facebook/hermes',
