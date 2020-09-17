@@ -207,9 +207,7 @@ jobs:
       - checkout
       - run:
           name: Install dependencies
-          # Force homebrew to install cmake 3.7
-          command: |
-            brew install ninja https://raw.githubusercontent.com/Homebrew/homebrew-core/d25c628ff2510f68c89f4660fc93e86377ae61dc/Formula/cmake.rb
+          command: brew install ninja cmake
       - run:
           name: Set up workspace
           command: |
