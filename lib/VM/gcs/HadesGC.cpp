@@ -106,13 +106,6 @@ void HadesGC::OldGen::addCellToFreelist(
     allocatedBytes_ -= sz;
   }
   FreelistCell *newFreeCell = new (addr) FreelistCell{sz, nullptr};
-  // In ASAN builds, poison the memory outside of the FreelistCell so that
-  // accesses are flagged as illegal.
-  // Here, and in other places where FreelistCells are poisoned, use +1 on the
-  // pointer to skip towards the memory region directly after the FreelistCell
-  // header of a cell. This way the header is always intact and readable, and
-  // only the contents of the cell are poisoned.
-  __asan_poison_memory_region(newFreeCell + 1, sz - sizeof(FreelistCell));
   addCellToFreelist(newFreeCell);
 }
 
@@ -125,6 +118,34 @@ void HadesGC::OldGen::addCellToFreelist(FreelistCell *cell) {
   cell->next_ = freelistBuckets_[bucket];
   freelistBuckets_[bucket] = cell;
   freelistBucketBitArray_.set(bucket, true);
+
+  // In ASAN builds, poison the memory outside of the FreelistCell so that
+  // accesses are flagged as illegal while it is in the freelist.
+  // Here, and in other places where FreelistCells are poisoned, use +1 on the
+  // pointer to skip towards the memory region directly after the FreelistCell
+  // header of a cell. This way the header is always intact and readable, and
+  // only the contents of the cell are poisoned.
+  __asan_poison_memory_region(cell + 1, sz - sizeof(FreelistCell));
+}
+
+HadesGC::OldGen::FreelistCell *HadesGC::OldGen::removeCellFromFreelist(
+    size_t bucket) {
+  return removeCellFromFreelist(&freelistBuckets_[bucket], bucket);
+}
+
+HadesGC::OldGen::FreelistCell *HadesGC::OldGen::removeCellFromFreelist(
+    FreelistCell **prevLoc,
+    size_t bucket) {
+  FreelistCell *cell = *prevLoc;
+  assert(cell && "Cannot get a null cell from freelist");
+  // Update whatever was pointing to the cell we are removing.
+  *prevLoc = cell->next_;
+  // Update the bit in the freelistBucketBitArray_ if the list is now empty.
+  freelistBucketBitArray_.set(bucket, freelistBuckets_[bucket]);
+  // Unpoison the memory so that the mutator can use it.
+  __asan_unpoison_memory_region(
+      cell + 1, cell->getAllocatedSize() - sizeof(FreelistCell));
+  return cell;
 }
 
 /* static */
@@ -165,7 +186,6 @@ GCCell *HadesGC::OldGen::FreelistCell::carve(uint32_t sz) {
   const auto finalSize = origSize - sz;
   char *newCellAddress = reinterpret_cast<char *>(this) + finalSize;
   GCCell *const newCell = reinterpret_cast<GCCell *>(newCellAddress);
-  __asan_unpoison_memory_region(newCell, sz);
   setSizeFromGC(finalSize);
   HeapSegment::setCellHead(newCell);
   return newCell;
@@ -1616,15 +1636,12 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
   if (bucket < kNumSmallFreelistBuckets) {
     // Fast path: There already exists a size bucket for this alloc. Check if
     // there's a free cell to take and exit.
-    if (FreelistCell *cell = freelistBuckets_[bucket]) {
+    if (freelistBuckets_[bucket]) {
       // There is a free cell for this size class, take it and return.
+      FreelistCell *cell = removeCellFromFreelist(bucket);
       assert(
           cell->getAllocatedSize() == sz &&
           "Size bucket should be an exact match");
-      freelistBuckets_[bucket] = cell->next_;
-      freelistBucketBitArray_.set(bucket, freelistBuckets_[bucket]);
-      // Unpoison the memory so that the mutator can use it.
-      __asan_unpoison_memory_region(cell + 1, sz - sizeof(FreelistCell));
       return finishAlloc(cell, sz);
     }
     // Make sure we start searching at the smallest possible size that could fit
@@ -1656,10 +1673,7 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
       if (cellSize >= sz + minAllocationSize()) {
         // Split the free cell. In order to avoid initializing soon-to-be-unused
         // values like the size and the next pointer, copy the return path here.
-        *prevLoc = cell->next_;
-        // Update the bit in the bit array if freelistBuckets_[bucket] has
-        // changed
-        freelistBucketBitArray_.set(bucket, freelistBuckets_[bucket]);
+        removeCellFromFreelist(prevLoc, bucket);
         auto newCell = cell->carve(sz);
         // Since the size of cell has changed, we may need to add it to a
         // different free list bucket.
@@ -1667,10 +1681,7 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
         return finishAlloc(newCell, sz);
       } else if (cellSize == sz) {
         // Exact match, take it.
-        *prevLoc = cell->next_;
-        freelistBucketBitArray_.set(bucket, freelistBuckets_[bucket]);
-        // Unpoison the memory so that the mutator can use it.
-        __asan_unpoison_memory_region(cell + 1, sz - sizeof(FreelistCell));
+        removeCellFromFreelist(prevLoc, bucket);
         return finishAlloc(cell, sz);
       }
       // Non-exact matches, or anything just barely too small to fit, will need

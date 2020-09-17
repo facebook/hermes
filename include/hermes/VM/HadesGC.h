@@ -376,6 +376,16 @@ class HadesGC final : public GCBase {
     /// \pre this->contains(cell) is true.
     void addCellToFreelist(FreelistCell *cell);
 
+    /// Remove the cell pointed to by the pointer at \p prevLoc from
+    /// the given \p bucket in the freelist.
+    /// \return a pointer to the removed cell.
+    FreelistCell *removeCellFromFreelist(FreelistCell **prevLoc, size_t bucket);
+
+    /// Remove the first cell from the given \p bucket in the
+    /// freelist.
+    /// \return a pointer to the removed cell.
+    FreelistCell *removeCellFromFreelist(size_t bucket);
+
    private:
     /// \return the index of the bucket in freelistBuckets_ corresponding to
     /// \p size.
