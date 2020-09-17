@@ -45,6 +45,7 @@ apple_defaults: &apple_defaults
   working_directory: ~/hermes
   environment:
     - TERM: dumb
+    - HERMES_WS_DIR: /tmp/hermes
     # Homebrew currently breaks while updating:
     # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
     - HOMEBREW_NO_AUTO_UPDATE: 1
@@ -195,14 +196,7 @@ jobs:
             ninja check-hermes
 
   macos:
-    macos:
-      xcode: "12.0.0-beta"
-    environment:
-      - HERMES_WS_DIR: /tmp/hermes
-      - TERM: dumb
-      # Homebrew currently breaks while updating:
-      # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
-      - HOMEBREW_NO_AUTO_UPDATE: 1
+    <<: *apple_defaults
     steps:
       - checkout
       - run:
@@ -317,14 +311,7 @@ jobs:
 
   test-macos:
     # CheckedMalloc.Death fails in release mode, so build a debug version
-    macos:
-      xcode: "10.0.0"
-    environment:
-      - HERMES_WS_DIR: /tmp/hermes
-      - TERM: dumb
-      # Homebrew currently breaks while updating:
-      # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
-      - HOMEBREW_NO_AUTO_UPDATE: 1
+    <<: *apple_defaults
     steps:
       - checkout
       - run:
