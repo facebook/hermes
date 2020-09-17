@@ -105,7 +105,7 @@ void HadesGC::OldGen::addCellToFreelist(
         "Free'ing a cell that is larger than what is left allocated");
     allocatedBytes_ -= sz;
   }
-  FreelistCell *newFreeCell = new (addr) FreelistCell{sz, nullptr};
+  FreelistCell *newFreeCell = new (addr) FreelistCell{sz};
   addCellToFreelist(newFreeCell);
 }
 
@@ -1567,7 +1567,7 @@ void *HadesGC::allocLongLived(uint32_t sz) {
   // Need to initialize the memory here to a valid cell to prevent the case
   // where sweeping discovers the uninitialized memory while it's traversing
   // a segment. This only happens at the end of a bump-alloc segment.
-  new (res) OldGen::FreelistCell(sz, nullptr);
+  new (res) OldGen::FreelistCell(sz);
   return res;
 }
 

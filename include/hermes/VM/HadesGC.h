@@ -355,10 +355,9 @@ class HadesGC final : public GCBase {
 
      public:
       // If null, this is the tail of the free list.
-      FreelistCell *next_;
+      FreelistCell *next_{nullptr};
 
-      explicit FreelistCell(uint32_t sz, FreelistCell *next)
-          : VariableSizeRuntimeCell{&vt, sz}, next_{next} {}
+      explicit FreelistCell(uint32_t sz) : VariableSizeRuntimeCell{&vt, sz} {}
 
       /// Shrink this cell by carving out a region of size \p sz bytes. Unpoison
       /// the carved out region if necessary and return it (without any
