@@ -53,11 +53,9 @@ void HadesGC::HeapSegment::transitionToFreelist(OldGen &og) {
   og.addCellToFreelist(res.ptr, sz, /*alreadyFree*/ true);
 }
 
-GCCell *HadesGC::OldGen::finishAlloc(FreelistCell *cell, uint32_t sz) {
+GCCell *HadesGC::OldGen::finishAlloc(GCCell *cell, uint32_t sz) {
   // Track the number of allocated bytes in a segment.
   allocatedBytes_ += sz;
-  // Unpoison the memory so that the mutator can use it.
-  __asan_unpoison_memory_region(cell + 1, sz - sizeof(FreelistCell));
   // Write a mark bit so this entry doesn't get free'd by the sweeper.
   HeapSegment::setCellMarkBit(cell);
   // Could overwrite the VTable, but the allocator will write a new one in
@@ -100,14 +98,6 @@ void HadesGC::OldGen::addCellToFreelist(
   assert(
       sz >= sizeof(FreelistCell) &&
       "Cannot construct a FreelistCell into an allocation in the OG");
-  // Get the size bucket for the cell being added;
-  const uint32_t bucket = getFreelistBucket(sz);
-  // Push onto the size-specific free list and set the corresponding bit in the
-  // bit array.
-  FreelistCell *newFreeCell =
-      new (addr) FreelistCell{sz, freelistBuckets_[bucket]};
-  freelistBuckets_[bucket] = newFreeCell;
-  freelistBucketBitArray_.set(bucket, true);
   if (!alreadyFree) {
     // We free'd this many bytes.
     assert(
@@ -115,6 +105,7 @@ void HadesGC::OldGen::addCellToFreelist(
         "Free'ing a cell that is larger than what is left allocated");
     allocatedBytes_ -= sz;
   }
+  FreelistCell *newFreeCell = new (addr) FreelistCell{sz, nullptr};
   // In ASAN builds, poison the memory outside of the FreelistCell so that
   // accesses are flagged as illegal.
   // Here, and in other places where FreelistCells are poisoned, use +1 on the
@@ -122,6 +113,18 @@ void HadesGC::OldGen::addCellToFreelist(
   // header of a cell. This way the header is always intact and readable, and
   // only the contents of the cell are poisoned.
   __asan_poison_memory_region(newFreeCell + 1, sz - sizeof(FreelistCell));
+  addCellToFreelist(newFreeCell);
+}
+
+void HadesGC::OldGen::addCellToFreelist(FreelistCell *cell) {
+  const size_t sz = cell->getAllocatedSize();
+  // Get the size bucket for the cell being added;
+  const uint32_t bucket = getFreelistBucket(sz);
+  // Push onto the size-specific free list and set the corresponding bit in the
+  // bit array.
+  cell->next_ = freelistBuckets_[bucket];
+  freelistBuckets_[bucket] = cell;
+  freelistBucketBitArray_.set(bucket, true);
 }
 
 /* static */
@@ -154,40 +157,18 @@ void HadesGC::HeapSegment::forAllObjs(CallbackFunction callback) {
   }
 }
 
-void HadesGC::OldGen::FreelistCell::split(OldGen &og, uint32_t sz) {
+GCCell *HadesGC::OldGen::FreelistCell::carve(uint32_t sz) {
   const auto origSize = getAllocatedSize();
   assert(
       origSize >= sz + minAllocationSize() &&
       "Can't split if it would leave too small of a second cell");
-  char *nextCellAddress = reinterpret_cast<char *>(this) + sz;
-  // We're about to touch some memory in the newly split cell.
-  // All other memory should remain poisoned.
-  __asan_unpoison_memory_region(nextCellAddress, sizeof(FreelistCell));
-  // Adding the newly formed cell to the free list will add it to the
-  // appropriate size bucket.
-  og.addCellToFreelist(nextCellAddress, origSize - sz, /*alreadyFree*/ true);
-  GCCell *const newCell = reinterpret_cast<GCCell *>(nextCellAddress);
-#ifndef NDEBUG
-  const auto newSize = newCell->getAllocatedSize();
-  assert(
-      isSizeHeapAligned(newSize) && newSize >= minAllocationSize() &&
-      "Invalid size for a split cell");
-  assert(newSize + sz == origSize && "Space was wasted during a split");
-#endif
-  // TODO: Right now the card table boundaries are unused, because creating all
-  // of them is too expensive on every split, especially if the free list cell
-  // is huge (such as after compaction).
-  // Some reasonable options to speed this up:
-  // * Split free list cells at higher addresses instead of the lower addresses.
-  //    This requires updating fewer card table boundaries.
-  // * If a split cell is huge, consider updating only the closest boundaries,
-  //    taking advantage of the exponential encoding.
-  // Using cell heads as a MarkBitArray was chosen because it's the simplest
-  // code that is correct, and under the assumption that searching for the head
-  // of a cell extending into a dirty card is not a critical operation.
-  // This is the only operation in a segment that actually creates new cells,
-  // all other cells are already present.
+  const auto finalSize = origSize - sz;
+  char *newCellAddress = reinterpret_cast<char *>(this) + finalSize;
+  GCCell *const newCell = reinterpret_cast<GCCell *>(newCellAddress);
+  __asan_unpoison_memory_region(newCell, sz);
+  setSizeFromGC(finalSize);
   HeapSegment::setCellHead(newCell);
+  return newCell;
 }
 
 class HadesGC::CollectionStats final {
@@ -1642,6 +1623,8 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
           "Size bucket should be an exact match");
       freelistBuckets_[bucket] = cell->next_;
       freelistBucketBitArray_.set(bucket, freelistBuckets_[bucket]);
+      // Unpoison the memory so that the mutator can use it.
+      __asan_unpoison_memory_region(cell + 1, sz - sizeof(FreelistCell));
       return finishAlloc(cell, sz);
     }
     // Make sure we start searching at the smallest possible size that could fit
@@ -1677,12 +1660,17 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
         // Update the bit in the bit array if freelistBuckets_[bucket] has
         // changed
         freelistBucketBitArray_.set(bucket, freelistBuckets_[bucket]);
-        cell->split(*this, sz);
-        return finishAlloc(cell, sz);
+        auto newCell = cell->carve(sz);
+        // Since the size of cell has changed, we may need to add it to a
+        // different free list bucket.
+        addCellToFreelist(cell);
+        return finishAlloc(newCell, sz);
       } else if (cellSize == sz) {
         // Exact match, take it.
         *prevLoc = cell->next_;
         freelistBucketBitArray_.set(bucket, freelistBuckets_[bucket]);
+        // Unpoison the memory so that the mutator can use it.
+        __asan_unpoison_memory_region(cell + 1, sz - sizeof(FreelistCell));
         return finishAlloc(cell, sz);
       }
       // Non-exact matches, or anything just barely too small to fit, will need

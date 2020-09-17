@@ -360,22 +360,21 @@ class HadesGC final : public GCBase {
       explicit FreelistCell(uint32_t sz, FreelistCell *next)
           : VariableSizeRuntimeCell{&vt, sz}, next_{next} {}
 
-      /// Split this cell into two FreelistCells. The first cell will be the
-      /// requested size \p sz, but no guarantee is made about its next pointer.
-      /// The second cell will have the remainder that was left from the
-      /// original, and will be on the free list.
-      /// \param og The OldGen that this FreelistCell resides in.
+      /// Shrink this cell by carving out a region of size \p sz bytes. Unpoison
+      /// the carved out region if necessary and return it (without any
+      /// initialisation).
       /// \param sz The size that the newly-split cell should be.
       /// \pre getAllocatedSize() >= sz + minAllocationSize()
-      /// \post this will now point to the first cell, but without modifying
-      ///   this. this should no longer be used as a FreelistCell, and something
-      ///   else should be constructed into it immediately.
-      void split(OldGen &og, uint32_t sz);
+      GCCell *carve(uint32_t sz);
 
       static bool classof(const GCCell *cell) {
         return cell->getKind() == CellKind::FreelistKind;
       }
     };
+
+    /// Adds the given cell to the free list for this segment.
+    /// \pre this->contains(cell) is true.
+    void addCellToFreelist(FreelistCell *cell);
 
    private:
     /// \return the index of the bucket in freelistBuckets_ corresponding to
@@ -444,7 +443,7 @@ class HadesGC final : public GCBase {
     /// \param cell The free memory that will soon have an object allocated into
     ///   it.
     /// \param sz The number of bytes associated with the free memory.
-    GCCell *finishAlloc(FreelistCell *cell, uint32_t sz);
+    GCCell *finishAlloc(GCCell *cell, uint32_t sz);
   };
 
  private:
