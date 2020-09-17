@@ -547,3 +547,11 @@ print(/abc/u.exec("\u20ac\u20ac\u20ac\u20ac"));
 // Check that lookbehind searches stay within bounds
 print(/(?<=a)/u[Symbol.match](["\u00E9",34534502349000]))
 // CHECK-LABEL: null
+
+// Check that \B assertions are parsed as Assertions per the spec, as opposed to AtomEscapes.
+try {
+  new RegExp("\\B{1}")
+} catch (e) {
+  print(e)
+}
+// CHECK-LABEL: SyntaxError: Invalid RegExp: Quantifier has nothing to repeat
