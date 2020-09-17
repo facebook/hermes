@@ -393,7 +393,7 @@ void AlignedHeapSegment::compact(SweepResult::VTablesRemaining &vTables) {
       if (canBeCompacted) {
         // Set the new cell size.
         auto *newCell = reinterpret_cast<VariableSizeRuntimeCell *>(newAddr);
-        newCell->setSizeDuringGCCompaction(trimmedSize);
+        newCell->setSizeFromGC(trimmedSize);
         newCell->getVT()->trim(newCell);
       }
 

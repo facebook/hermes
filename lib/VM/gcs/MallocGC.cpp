@@ -79,7 +79,7 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
       if (canBeTrimmed) {
         auto *newVarCell =
             reinterpret_cast<VariableSizeRuntimeCell *>(newLocation->data());
-        newVarCell->setSizeDuringGCCompaction(trimmedSize);
+        newVarCell->setSizeFromGC(trimmedSize);
         newVarCell->getVT()->trim(newVarCell);
       }
       // Make sure to put an element on the worklist that is at the updated

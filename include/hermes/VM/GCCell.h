@@ -284,13 +284,12 @@ class VariableSizeRuntimeCell : public GCCell {
   }
 
   /// Sets the size of the current cell to be \p sz.
-  /// NOTE: This should only be used by the GC, and only during compaction to
-  /// shrink objects.
+  /// NOTE: This should only be used by the GC, and only to shrink objects.
   /// \pre sz is already heap-aligned.
-  void setSizeDuringGCCompaction(uint32_t sz) {
+  void setSizeFromGC(uint32_t sz) {
     assert(
         isVariableSize() &&
-        "Cannot call setSizeDuringGCCompaction on a non-variable size cell");
+        "Cannot call setSizeFromGC on a non-variable size cell");
     assert(
         sz >= sizeof(VariableSizeRuntimeCell) &&
         "Should not allocate a VariableSizeRuntimeCell of size less than "
