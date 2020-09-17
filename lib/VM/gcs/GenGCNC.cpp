@@ -203,6 +203,11 @@ void GenGC::debitExternalMemory(GCCell *cell, uint32_t size) {
   }
 }
 
+void GenGC::debitExternalMemoryFromFinalizer(GCCell *cell, uint32_t size) {
+  // GenGC doesn't do anything special here, take the normal path.
+  debitExternalMemory(cell, size);
+}
+
 #ifndef NDEBUG
 void GenGC::printExtAllocStats(llvh::raw_ostream &os) {
   os << "\nExternal allocation:\n";

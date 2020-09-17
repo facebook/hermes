@@ -108,7 +108,7 @@ class JSArrayBuffer final : public JSObject {
 
   JSArrayBuffer(Runtime *runtime, JSObject *parent, HiddenClass *clazz);
 
-  ~JSArrayBuffer();
+  ~JSArrayBuffer() = default;
 };
 
 } // namespace vm

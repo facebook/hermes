@@ -115,6 +115,16 @@ class HadesGC final : public GCBase {
   /// Run the finalizers for all heap objects.
   void finalizeAll();
 
+  /// Add some external memory cost to a cell.
+  /// (Part of general GC API defined in GCBase.h).
+  /// \pre canAllocExternalMemory(size) is true.
+  void creditExternalMemory(GCCell *alloc, uint32_t size);
+
+  /// Remove some external memory cost from a cell.
+  /// (Part of general GC API defined in GCBase.h).
+  void debitExternalMemory(GCCell *alloc, uint32_t size);
+  void debitExternalMemoryFromFinalizer(GCCell *alloc, uint32_t size);
+
   /// \name Write Barriers
   /// \{
 
@@ -257,10 +267,14 @@ class HadesGC final : public GCBase {
     void transitionToFreelist(OldGen &og);
 
     // APIs from AlignedHeapSegment that are safe to use on a HeapSegment.
+    using AlignedHeapSegment::available;
     using AlignedHeapSegment::cardTable;
     using AlignedHeapSegment::cardTableCovering;
     using AlignedHeapSegment::cellHeads;
+    using AlignedHeapSegment::clearExternalMemoryCharge;
     using AlignedHeapSegment::contains;
+    using AlignedHeapSegment::effectiveEnd;
+    using AlignedHeapSegment::end;
     using AlignedHeapSegment::getCellMarkBit;
     using AlignedHeapSegment::level;
     using AlignedHeapSegment::lowLim;
@@ -268,6 +282,7 @@ class HadesGC final : public GCBase {
     using AlignedHeapSegment::maxSize;
     using AlignedHeapSegment::resetLevel;
     using AlignedHeapSegment::setCellMarkBit;
+    using AlignedHeapSegment::setEffectiveEnd;
     using AlignedHeapSegment::size;
     using AlignedHeapSegment::start;
     using AlignedHeapSegment::used;
@@ -323,6 +338,10 @@ class HadesGC final : public GCBase {
     /// the JS heap, excluding free list entries.
     uint64_t allocatedBytes() const;
 
+    /// \return the total number of bytes that are held in external memory, kept
+    /// alive by objects in the OG.
+    uint64_t externalBytes() const;
+
     /// \return the total number of bytes that are in use by the OG section of
     /// the JS heap, including free list entries.
     uint64_t size() const;
@@ -347,6 +366,18 @@ class HadesGC final : public GCBase {
 
     void setBytesToMark(size_t bytesToMark) {
       bytesToMark_ = bytesToMark;
+    }
+
+    /// Add some external memory cost to the OG.
+    void creditExternalMemory(uint32_t size) {
+      externalBytes_ += size;
+    }
+
+    /// Remove some external memory cost from the OG.
+    void debitExternalMemory(uint32_t size) {
+      assert(
+          externalBytes_ >= size && "Debiting more memory than was credited");
+      externalBytes_ -= size;
     }
 
     class FreelistCell final : public VariableSizeRuntimeCell {
@@ -410,6 +441,9 @@ class HadesGC final : public GCBase {
     /// An estimate of the number of bytes that need to be marked for a
     /// collection to complete.
     size_t bytesToMark_{0};
+
+    /// The amount of bytes of external memory credited to objects in the OG.
+    uint64_t externalBytes_{0};
 
     /// The freelist buckets are split into two sections. In the "small"
     /// section, there is one bucket for each size, in multiples of heapAlign.
@@ -549,6 +583,9 @@ class HadesGC final : public GCBase {
   /// The weighted average of the YG survival ratio over time.
   ExponentialMovingAverage ygAverageSurvivalRatio_;
 
+  /// The amount of bytes of external memory credited to objects in the YG.
+  uint64_t ygExternalBytes_{0};
+
   /// The main entrypoint for all allocations.
   /// \param sz The size of allocation requested. This might be rounded up to
   ///   fit heap alignment requirements.
@@ -584,6 +621,10 @@ class HadesGC final : public GCBase {
   /// triggered and tripwireCallback_ is called.
   /// Also resets the stats counter, so that it calls the analytics callback.
   void checkTripwireAndResetStats();
+
+  /// Transfer any external memory charges from YG to OG. Used as part of YG
+  /// collection.
+  void transferExternalMemoryToOldGen();
 
   /// Perform an OG garbage collection. All live objects in OG will be left
   /// untouched, all unreachable objects will be placed into a free list that
@@ -664,6 +705,10 @@ class HadesGC final : public GCBase {
 
   /// Return the total number of bytes that are in use by the JS heap.
   uint64_t allocatedBytes() const;
+
+  /// \return the total number of bytes that are in use by objects on the JS
+  ///   heap, but is not in the heap itself.
+  uint64_t externalBytes() const;
 
   /// Accessor for the YG.
   HeapSegment &youngGen();
