@@ -28,10 +28,10 @@ fi
 # Utility function to configure an Apple framework
 function configure_apple_framework {
   local build_cli_tools
-  if [[ $1 == iphone* ]]; then
-    build_cli_tools="false"
-  else
+  if [[ $1 == macosx ]]; then
     build_cli_tools="true"
+  else
+    build_cli_tools="false"
   fi
 
   local cmake_flags=" \
