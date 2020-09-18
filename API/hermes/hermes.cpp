@@ -512,8 +512,8 @@ class HermesRuntimeImpl final : public HermesRuntime,
   }
 
   // Overridden from jsi::Instrumentation
-  void collectGarbage() override {
-    runtime_.getHeap().collect("forced");
+  void collectGarbage(std::string cause) override {
+    runtime_.collect(std::move(cause));
   }
 
   // Overridden from jsi::Instrumentation
