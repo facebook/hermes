@@ -5,6 +5,10 @@ import java.util.Map;
 
 public class JSObjects {
 
+    // This is a simulation Javascript like object semantics required for option parsing in Intl Services.
+    // The pseudo codes is the Intl spec are described assuming Javascript object semantics, with subtle meaning for undefine, null, empty string etc. which can be very tricky with Java object semantics.
+    // We use these object only for option parsing with the help of OptionHelpers class. At the end of the option parsing, all the options are resolved to strongly typed Java datatypes.
+
     private static class UndefinedObject extends Object { }
     private static class NullObject extends Object { }
 

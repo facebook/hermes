@@ -393,7 +393,7 @@ public interface IPlatformDateTimeFormatter {
 
     String format(double n) throws JSRangeErrorException;
 
-    String fieldToString(AttributedCharacterIterator.Attribute attribute);
+    String fieldToString(AttributedCharacterIterator.Attribute attribute, String fieldValue);
 
     AttributedCharacterIterator formatToParts(double n) throws JSRangeErrorException;
 

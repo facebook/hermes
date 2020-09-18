@@ -71,49 +71,6 @@ public class LocaleMatcher {
         return result;
     }
 
-    public static ULocale bestFitBestAvailableLocale(String requestedLocale, android.icu.util.ULocale[] availableLocales) throws JSRangeErrorException {
-        assert (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N);
-
-        ILocaleObject requestedLocaleObject = LocaleObject.createFromLocaleId(requestedLocale);
-        return bestFitBestAvailableLocale(requestedLocaleObject, availableLocales);
-    }
-
-    public static ULocale bestFitBestAvailableLocale(ILocaleObject requestedLocaleObject, android.icu.util.ULocale[] availableLocales) throws JSRangeErrorException {
-        assert (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N);
-
-        android.icu.util.ULocale requestedULocaleWithoutExtensions = (android.icu.util.ULocale) requestedLocaleObject.getLocaleWithoutExtensions();
-        android.icu.util.ULocale[] requestedLocalesArray = new android.icu.util.ULocale[]{(android.icu.util.ULocale) requestedULocaleWithoutExtensions};
-        boolean[] fallback = new boolean[1];
-
-        // Note: We assume that this method does "best fit" matching, which is not yet verified.
-        // Note: Based on documentation, it is a thin wrapper over LocaleMatcher (https://unicode-org.github.io/icu-docs/apidoc/released/icu4j/com/ibm/icu/util/LocaleMatcher.html) class which is not yet available on Android !
-        android.icu.util.ULocale acceptedLocale = android.icu.util.ULocale.acceptLanguage(requestedLocalesArray, availableLocales, fallback);
-
-        // Process if there is a match without fallback to ROOT
-        if (!fallback[0] && acceptedLocale != null) {
-            return acceptedLocale;
-        }
-
-        return null;
-    }
-
-    public static LocaleMatchResult bestFitMatch(String[] requestedLocales, android.icu.util.ULocale[] availableLocales) throws JSRangeErrorException {
-        assert (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N);
-        LocaleMatchResult result = new LocaleMatchResult();
-        for (String requestedLocale : requestedLocales) {
-            ILocaleObject requestedLocaleObject = LocaleObject.createFromLocaleId(requestedLocale);
-            ULocale availableLocale = bestFitBestAvailableLocale(requestedLocaleObject, availableLocales);
-            if(availableLocale != null) {
-                result.matchedLocale = LocaleObjectICU.createFromULocale(availableLocale);
-                result.extensions = requestedLocaleObject.getUnicodeExtensions();
-                return result;
-            }
-        }
-
-        result.matchedLocale = LocaleObjectICU.createDefault();
-        return result;
-    }
-
     // https://tc39.es/ecma402/#sec-lookupsupportedlocales
     public static String[] lookupSupportedLocales(String[] availableLocales, String[] requestedLocales) throws JSRangeErrorException {
         ArrayList<String> subset = new ArrayList<>();
@@ -126,4 +83,53 @@ public class LocaleMatcher {
 
         return subset.toArray(new String[subset.size()]);
     }
+
+
+    public static ULocale bestFitBestAvailableLocale(ILocaleObject requestedLocaleObject) throws JSRangeErrorException {
+        assert (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N);
+
+        ULocale[] availableLocales = ULocale.getAvailableLocales();
+
+        android.icu.util.ULocale requestedULocaleWithoutExtensions = (android.icu.util.ULocale) requestedLocaleObject.getLocaleWithoutExtensions();
+        android.icu.util.ULocale[] requestedLocalesArray = new android.icu.util.ULocale[]{(android.icu.util.ULocale) requestedULocaleWithoutExtensions};
+        boolean[] fallback = new boolean[1];
+
+        android.icu.util.ULocale acceptedLocale = android.icu.util.ULocale.acceptLanguage(requestedLocalesArray, availableLocales, fallback);
+
+        // Process if there is a match without fallback to ROOT
+        if (!fallback[0] && acceptedLocale != null) {
+            return acceptedLocale;
+        }
+
+        return null;
+    }
+
+    public static LocaleMatchResult bestFitMatch(String[] requestedLocales) throws JSRangeErrorException {
+        assert (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N);
+        LocaleMatchResult result = new LocaleMatchResult();
+        for (String requestedLocale : requestedLocales) {
+            ILocaleObject requestedLocaleObject = LocaleObject.createFromLocaleId(requestedLocale);
+            ULocale availableLocale = bestFitBestAvailableLocale(requestedLocaleObject);
+            if(availableLocale != null) {
+                result.matchedLocale = LocaleObjectICU.createFromULocale(availableLocale);
+                result.extensions = requestedLocaleObject.getUnicodeExtensions();
+                return result;
+            }
+        }
+
+        result.matchedLocale = LocaleObjectICU.createDefault();
+        return result;
+    }
+
+    public static String[] bestFitSupportedLocales(String[] requestedLocales) throws JSRangeErrorException {
+        ArrayList<String> subset = new ArrayList<>();
+        for (String requestedLocale : requestedLocales) {
+            ULocale uLocale = bestFitBestAvailableLocale(LocaleObject.createFromLocaleId(requestedLocale));
+            if(uLocale != null)
+                subset.add(requestedLocale);
+        }
+
+        return subset.toArray(new String[subset.size()]);
+    }
+
 }

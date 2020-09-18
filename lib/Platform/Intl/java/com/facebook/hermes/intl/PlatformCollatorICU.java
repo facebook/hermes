@@ -120,8 +120,17 @@ public class PlatformCollatorICU implements IPlatformCollator{
     @Override
     public String[] getAvailableLocales() {
         ArrayList<String> availableLocaleIds = new ArrayList<>();
-        java.util.Locale[] availableLocales = android.icu.text.Collator.getAvailableLocales();
-        for(java.util.Locale locale: availableLocales) {
+
+        // [[Comment copied here from NumberFormat]]
+        // NumberFormat.getAvailableLocales() returns a shorter list compared to ULocale.getAvailableLocales.
+        // For e.g. "zh-TW" is missing in the list returned by NumberFormat.getAvailableLocales() in my emulator.
+        // But, NumberFormatter is able to format specific to "zh-TW" .. for instance "NaN" is expected to be formatted as "非數值" in "zh-TW" by as "NaN" in "zh"
+        // In short, NumberFormat.getAvailableLocales() doesn't contain all the locales as the NumberFormat can format. Hence, using ULocale.getAvailableLocales()
+        //
+        //java.util.Locale[] availableLocales = android.icu.text.Collator.getAvailableLocales();
+        android.icu.util.ULocale[] availableLocales = android.icu.util.ULocale.getAvailableLocales();
+
+        for(android.icu.util.ULocale locale: availableLocales) {
             availableLocaleIds.add(locale.toLanguageTag()); // TODO:: Not available on platforms <= 20
         }
 

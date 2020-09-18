@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+// Run "./gradlew :intltest:preparetest262" from the root to download and copy the test files to the APK assets.
 public class HermesIntlCollatorTest extends HermesIntlTest262Base {
 
     private static final String LOG_TAG = "HermesIntlCollatorTest";
@@ -38,13 +39,20 @@ public class HermesIntlCollatorTest extends HermesIntlTest262Base {
     public void testIntlCollator() throws IOException {
 
         String basePath = "test262-main/test/intl402/Collator/";
-        Set<String> whilteList = new HashSet<>(
-        );
-        Set<String> blackList = new HashSet<>(Arrays.asList(
-                "subclassing.js",  // Test requires Javascript classes
-                "proto-from-ctor-realm.js", // ReferenceError: Property '$262' doesn't exist .. Test requires Reflect
+        Set<String> whilteList = new HashSet<>();
+
+        Set<String> deviations = new HashSet<>(Arrays.asList(
                 "ignore-invalid-unicode-ext-values.js" // TODO [Follow-up] Failing because Hermes array.sort sort is not stable. In-place sorting changes the order when the input is already sorted with call to array.sort.
         ));
+
+        Set<String> testIssueList = new HashSet<>(Arrays.asList(
+                "subclassing.js",  // Test requires Javascript classes
+                "proto-from-ctor-realm.js" // ReferenceError: Property '$262' doesn't exist .. Test requires Reflect
+        ));
+
+        Set<String> blackList = new HashSet<>();
+        blackList.addAll(testIssueList);
+        blackList.addAll(deviations);
 
         runTests(basePath, blackList, whilteList);
     }
@@ -59,13 +67,21 @@ public class HermesIntlCollatorTest extends HermesIntlTest262Base {
 
     public void testIntlCollator_prototype_resolvedOptions() throws IOException {
         String basePath = "test262-main/test/intl402/Collator/prototype/resolvedOptions/";
-        Set<String> whilteList = new HashSet<>(
-        );
-        Set<String> blackList = new HashSet<>(Arrays.asList
-                ("order.js",  // Expected [locale, sensitivity, ignorePunctuation, caseFirst, collation, numeric, usage] and [locale, usage, sensitivity, ignorePunctuation, collation, numeric, caseFirst] to have the same contents.
+
+        Set<String> whilteList = new HashSet<>();
+
+        Set<String> deviations = new HashSet<>(Arrays.asList(
+                "order.js"  // Expected [locale, sensitivity, ignorePunctuation, caseFirst, collation, numeric, usage] and [locale, usage, sensitivity, ignorePunctuation, collation, numeric, caseFirst] to have the same contents.
                 // TODO :: [Follow-up] We fail the above test above we use std::unordered_map to hold the options in the C++ binding layer between java/platform code and VM
+        ));
+
+        Set<String> testIssueList = new HashSet<>(Arrays.asList(
                 "builtin.js" // Property 'isConstructor' doesn't exist // needs Reflect.construct
         ));
+
+        Set<String> blackList = new HashSet<>();
+        blackList.addAll(deviations);
+        blackList.addAll(testIssueList);
 
         runTests(basePath, blackList, whilteList);
     }
@@ -81,12 +97,11 @@ public class HermesIntlCollatorTest extends HermesIntlTest262Base {
     public void testIntlCollator_prototype_compare() throws IOException {
         String basePath = "test262-main/test/intl402/Collator/prototype/compare/";
         Set<String> whilteList = new HashSet<>();
-        Set<String> blackList = new HashSet<>(Arrays.asList(
-                "compare-function-length.js", // [TODO] [Follow-up] Expected SameValue(«0», «2») to be true ..  Hermes Function.length doesn't seem to work correctly
-                "compare-function-builtin.js", // Property 'isConstructor' doesn't exist
-                "builtin.js" // Property 'isConstructor' doesn't exist
+        Set<String> testIssueList = new HashSet<>(Arrays.asList(
+                "compare-function-builtin.js", // Reflect
+                "builtin.js" // Reflect
         ));
 
-        runTests(basePath, blackList, whilteList);
+        runTests(basePath, testIssueList, whilteList);
     }
 }

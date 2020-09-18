@@ -14,10 +14,10 @@ buildDir = "${rootProject.ext.hermes_ws}/build_android/intl"
 buildDir.mkdirs()
 
 android {
-  compileSdkVersion = 28
+  compileSdkVersion = 24
 
   defaultConfig {
-    minSdkVersion = 16
+    minSdkVersion = 24
     ndk {
       abiFilters (*rootProject.ext.abis)
     }

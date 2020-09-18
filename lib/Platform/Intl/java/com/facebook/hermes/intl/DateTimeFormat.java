@@ -337,12 +337,12 @@ public class DateTimeFormat {
     // The notes on the ctor for Locales and Options also apply here.
     public static List<String> supportedLocalesOf(List<String> locales, Map<String, Object> options) throws JSRangeErrorException {
         String[] availableLocales;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
-            availableLocales = new PlatformDateTimeFormatterICU().getAvailableLocales();
-        else
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            return Arrays.asList(LocaleMatcher.bestFitSupportedLocales(locales.toArray(new String[locales.size()])));
+        } else {
             availableLocales = new PlatformDateTimeFormatterAndroid().getAvailableLocales();
-
-        return Arrays.asList(LocaleMatcher.lookupSupportedLocales(availableLocales, locales.toArray(new String[locales.size()])));
+            return Arrays.asList(LocaleMatcher.lookupSupportedLocales(availableLocales, locales.toArray(new String[locales.size()])));
+        }
     }
 
     // Implementer note: This method corresponds roughly to
@@ -428,7 +428,7 @@ public class DateTimeFormat {
                 Iterator<AttributedCharacterIterator.Attribute> keyIterator = iterator.getAttributes().keySet().iterator();
                 String key;
                 if (keyIterator.hasNext()) {
-                    key = mPlatformDateTimeFormatter.fieldToString( keyIterator.next());
+                    key = mPlatformDateTimeFormatter.fieldToString( keyIterator.next(), sb.toString());
                 } else {
                     key = "literal";
                 }

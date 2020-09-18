@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+// Run "./gradlew :intltest:preparetest262" from the root to download and copy the test files to the APK assets.
 public class HermesIntlGetCanonicalLocalesTest extends HermesIntlTest262Base {
 
     private static final String LOG_TAG = "HermesIntlGetCanonicalLocalesTest";
@@ -57,7 +58,8 @@ public class HermesIntlGetCanonicalLocalesTest extends HermesIntlTest262Base {
         ));
 
         /*
-            The following tests successfully completes as of now.
+            The following tests successfully completes as of now with ICU implementation.
+            Our own parsing implementation which is used for platform version before Lollypop passes most tests !
             Executed Tests:
             canonicalized-unicode-ext-seq.js
             complex-language-subtag-replacement.js

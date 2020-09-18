@@ -167,6 +167,7 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
     public PlatformNumberFormatterICU setUnits(String unit, IPlatformNumberFormatter.UnitDisplay unitDisplay) throws JSRangeErrorException {
         if (mStyle == Style.UNIT) {
             mUnitId = unit;
+            mMeasureUnit = parseUnit(mUnitId);
             mFinalFormat = MeasureFormat.getInstance((ULocale) mLocaleObject.getLocale(), unitDisplay.getFormatWidth(), mNumberFormat);
         }
 
@@ -176,11 +177,7 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
     @Override
     public String format(double n) throws JSRangeErrorException {
         String result;
-        if (mFinalFormat instanceof MeasureFormat && mUnitId != null) {
-
-            if (mMeasureUnit == null)
-                mMeasureUnit = parseUnit(mUnitId);
-
+        if (mFinalFormat instanceof MeasureFormat && mMeasureUnit != null) {
             result = mFinalFormat.format(new Measure(n, mMeasureUnit));
         } else
             result = mFinalFormat.format(n);
@@ -232,6 +229,11 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
         if (attribute == NumberFormat.Field.CURRENCY) {
             return "currency";
         }
+
+        // TODO:: There must be a better way to do this.
+        if(attribute.toString().equals("android.icu.text.NumberFormat$Field(compact)"))
+            return "compact";
+
         // Report unsupported/unexpected number fields as literal.
         return "literal";
     }
@@ -239,11 +241,7 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
     @Override
     public AttributedCharacterIterator formatToParts(double n) throws JSRangeErrorException {
         AttributedCharacterIterator iterator;
-        if (mFinalFormat instanceof MeasureFormat && mUnitId != null) {
-
-            if (mMeasureUnit == null)
-                mMeasureUnit = parseUnit(mUnitId);
-
+        if (mFinalFormat instanceof MeasureFormat && mMeasureUnit != null) {
             iterator = mFinalFormat.formatToCharacterIterator(new Measure(n, mMeasureUnit));
         } else {
             iterator = mFinalFormat.formatToCharacterIterator(n);
@@ -308,8 +306,17 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
     @Override
     public String[] getAvailableLocales() {
         ArrayList<String> availableLocaleIds = new ArrayList<>();
-        java.util.Locale[] availableLocales = NumberFormat.getAvailableLocales();
-        for(java.util.Locale locale: availableLocales) {
+
+        // NumberFormat.getAvailableLocales() returns a shorter list compared to ULocale.getAvailableLocales.
+        // For e.g. "zh-TW" is missing in the list returned by NumberFormat.getAvailableLocales() in my emulator.
+        // But, NumberFormatter is able to format specific to "zh-TW" .. for instance "NaN" is expected to be formatted as "非數值" in "zh-TW" by as "NaN" in "zh"
+        // In short, NumberFormat.getAvailableLocales() doesn't contain all the locales as the NumberFormat can format. Hence, using ULocale.getAvailableLocales()
+        //
+        // java.util.Locale[] availableLocales = NumberFormat.getAvailableLocales();
+        android.icu.util.ULocale[] availableLocales = ULocale.getAvailableLocales();
+
+
+        for(android.icu.util.ULocale locale: availableLocales) {
             availableLocaleIds.add(locale.toLanguageTag()); // TODO:: Not available on platforms <= 20
         }
 

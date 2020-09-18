@@ -1,6 +1,11 @@
 package com.facebook.hermes.intl;
 
+import android.icu.util.ULocale;
+import android.os.Build;
+
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -111,17 +116,41 @@ public class UnicodeExtensionKeys {
 
         // Ref:: https://github.com/unicode-org/cldr/blob/release-37/common/bcp47/collation.xml
         // -- Minus "standard" & "search" which are not allowed as per spec: https://tc39.es/ecma402/#sec-intl-collator-internal-slots
+        // This list can be replaced by https://developer.android.com/reference/android/icu/text/Collator#getKeywordValuesForLocale(java.lang.String,%20android.icu.util.ULocale,%20boolean)
         put("co", new String[]{"big5han", "compat", "dict", "direct", "ducet", "emoji", "eor", "gb2312", "phonebk", "phonetic", "pinyin", "reformed", "searchjl", "stroke", "trad", "unihan", "zhuyin"});
 
         put("ca", new String[]{"buddhist", "chinese", "coptic", "dangi", "ethioaa", "ethiopic", "gregory", "hebrew", "indian", "islamic", "islamic-umalqura", "islamic-tbla", "islamic-civil", "islamic-rgsa", "iso8601", "japanese", "persian", "roc"});
     }};
 
-    public static boolean isValidKeyword(String key, String value) {
-        if (s_validKeywords.containsKey(key)) {
-            return Arrays.asList(s_validKeywords.get(key)).contains(value);
+    public static boolean isValidKeyword(String key, String value, ILocaleObject localeObject) throws JSRangeErrorException {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+
+            android.icu.util.ULocale locale = (ULocale) localeObject.getLocale();
+            String[] availableValues = new String[]{};
+            if(key.equals("co")) {
+                // https://tc39.es/ecma402/#sec-intl-collator-internal-slots
+                if(value.equals("standard") || value.equals("search"))
+                    return false;
+                availableValues = android.icu.text.RuleBasedCollator.getKeywordValuesForLocale("co", locale, false);
+            } else if (key.equals("ca")) {
+                availableValues = android.icu.util.Calendar.getKeywordValuesForLocale("ca", locale, false);
+            } else if(key.equals("nu")) {
+                availableValues = android.icu.text.NumberingSystem.getAvailableNames();
+            }
+
+            if(availableValues.length == 0) {
+                return true; // When we don't have the list of valid values, assume everything is valid.
+            }
+
+            return Arrays.asList(availableValues).contains(value);
+
+        } else {
+            if (s_validKeywords.containsKey(key)) {
+                return Arrays.asList(s_validKeywords.get(key)).contains(value);
+            }
         }
 
-        return true;
+        return false;
     }
 
     public static Object resolveKnownAliases(String key, Object value) {

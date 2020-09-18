@@ -21,7 +21,7 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter{
     }
 
     @Override
-    public String fieldToString(AttributedCharacterIterator.Attribute field) {
+    public String fieldToString(AttributedCharacterIterator.Attribute field, String fieldValue) {
         if (field == DateFormat.Field.DAY_OF_WEEK) {
             return "weekday";
         }
@@ -29,7 +29,14 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter{
             return "era";
         }
         if (field == DateFormat.Field.YEAR) {
-            return "year";
+            // TODO:: I can't find the right rules to mark the type of the an year part as "yearName". Likely, the presense of another part with "relatedYear" is the decider ?
+            // Currently, i'm differentiating based on whether the value is numeric or not.
+            try {
+                double d = Double.parseDouble(fieldValue);
+                return "year";
+            } catch (NumberFormatException nfe) {
+                return "yearName";
+            }
         }
         if (field == DateFormat.Field.MONTH) {
             return "month";
@@ -61,6 +68,10 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter{
         if (field == DateFormat.Field.AM_PM) {
             return "dayPeriod";
         }
+        // TODO:: There must be a better way to do this.
+        if(field.toString().equals("android.icu.text.DateFormat$Field(related year)"))
+            return "relatedYear";
+
         // Report unsupported/unexpected date fields as literals.
         return "literal";
     }
@@ -220,8 +231,17 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter{
     @Override
     public String[] getAvailableLocales() {
         ArrayList<String> availableLocaleIds = new ArrayList<>();
-        java.util.Locale[] availableLocales = android.icu.text.DateFormat.getAvailableLocales();
-        for(java.util.Locale locale: availableLocales) {
+
+        // [[Comment copied here from NumberFormat]]
+        // NumberFormat.getAvailableLocales() returns a shorter list compared to ULocale.getAvailableLocales.
+        // For e.g. "zh-TW" is missing in the list returned by NumberFormat.getAvailableLocales() in my emulator.
+        // But, NumberFormatter is able to format specific to "zh-TW" .. for instance "NaN" is expected to be formatted as "非數值" in "zh-TW" by as "NaN" in "zh"
+        // In short, NumberFormat.getAvailableLocales() doesn't contain all the locales as the NumberFormat can format. Hence, using ULocale.getAvailableLocales()
+        //
+
+        // java.util.Locale[] availableLocales = android.icu.text.DateFormat.getAvailableLocales();
+        android.icu.util.ULocale[] availableLocales = ULocale.getAvailableLocales();
+        for(android.icu.util.ULocale locale: availableLocales) {
             availableLocaleIds.add(locale.toLanguageTag());
         }
 

@@ -93,8 +93,8 @@ elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
 endif()
 
 set_target_properties(libhermes PROPERTIES
-  COMPILE_FLAGS "${compile_flags} -Wl,--hash-style=both"
-  LINK_FLAGS "${link_flags} -Wl,--hash-style=both"
+  COMPILE_FLAGS "${compile_flags}"
+  LINK_FLAGS "${link_flags}"
   # Declare our dependency on std::make_unique
   CXX_STANDARD 14
   CXX_STANDARD_REQUIRED 14

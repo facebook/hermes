@@ -38,8 +38,7 @@ CallResult<std::u16string> stringFromJS(
     Runtime *runtime,
     PseudoHandle<> value) {
   Handle<> valueHandle = runtime->makeHandle(std::move(value));
-  TagKind kind = valueHandle.get().getTag();
-  if(kind != StrTag && kind != ObjectTag ) {
+  if (!valueHandle->isString() && !valueHandle->isObject()) {
     return runtime->raiseTypeError(
             "Incorrect object type");
   }
@@ -726,7 +725,7 @@ intlCollatorPrototypeCompareGetter(void *, Runtime *runtime, NativeArgs args) {
       nullptr,
       intlCollatorCompare,
       Predefined::getSymbolID(Predefined::emptyString),
-      0,
+      2,
       static_cast<unsigned int>(CollatorCompareSlotIndexes::COUNT));
   setCollator(compare, runtime, collatorHandle);
 
@@ -889,7 +888,7 @@ void defineIntlDateTimeFormat(Runtime *runtime, Handle<JSObject> intl) {
       Predefined::getSymbolID(Predefined::formatToParts),
       nullptr,
       intlDateTimeFormatPrototypeFormatToParts,
-      0);
+      1);
 
   defineMethod(
       runtime,
@@ -1017,7 +1016,7 @@ CallResult<HermesValue> intlDateTimeFormatPrototypeFormatGetter(
       nullptr,
       intlDateTimeFormatFormat,
       Predefined::getSymbolID(Predefined::emptyString),
-      0,
+      1,
       static_cast<unsigned int>(DTFFormatSlotIndexes::COUNT));
   setDateTimeFormat(format, runtime, dateTimeFormatHandle);
 
@@ -1205,7 +1204,7 @@ void defineIntlNumberFormat(Runtime *runtime, Handle<JSObject> intl) {
       Predefined::getSymbolID(Predefined::formatToParts),
       nullptr,
       intlNumberFormatPrototypeFormatToParts,
-      0);
+      1);
 
   defineMethod(
       runtime,
@@ -1296,7 +1295,7 @@ CallResult<HermesValue> intlNumberFormatPrototypeFormatGetter(
       nullptr,
       intlNumberFormatFormat,
       Predefined::getSymbolID(Predefined::emptyString),
-      0,
+      1,
       static_cast<unsigned int>(NFFormatSlotIndexes::COUNT));
   setNumberFormat(format, runtime, numberFormatHandle);
 
@@ -1486,7 +1485,7 @@ intlNumberPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   CallResult<platform_intl::Options> optionsRes =
-      normalizeOptions(runtime, args.getArgHandle(1), kDTFOptions);
+      normalizeOptions(runtime, args.getArgHandle(1), kNumberFormatOptions);
   if (LLVM_UNLIKELY(optionsRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

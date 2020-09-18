@@ -369,13 +369,13 @@ public class NumberFormat {
     public static List<String> supportedLocalesOf(List<String> locales, Map<String, Object> options) throws JSRangeErrorException {
 
         String[] availableLocales;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            return Arrays.asList(LocaleMatcher.bestFitSupportedLocales(locales.toArray(new String[locales.size()])));
+        }
+        else {
             availableLocales = new PlatformNumberFormatterICU().getAvailableLocales();
-        else
-            availableLocales = new PlatformNumberFormatterICU().getAvailableLocales();
-
-        return Arrays.asList(LocaleMatcher.lookupSupportedLocales(availableLocales, locales.toArray(new String[locales.size()])));
-
+            return Arrays.asList(LocaleMatcher.lookupSupportedLocales(availableLocales, locales.toArray(new String[locales.size()])));
+        }
     }
 
     // Implementer note: This method corresponds roughly to

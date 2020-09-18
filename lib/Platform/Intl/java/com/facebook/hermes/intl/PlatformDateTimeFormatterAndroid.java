@@ -22,7 +22,7 @@ public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormat
     }
 
     @Override
-    public String fieldToString(AttributedCharacterIterator.Attribute field) {
+    public String fieldToString(AttributedCharacterIterator.Attribute field, String fieldValue) {
         if (field == DateFormat.Field.DAY_OF_WEEK) {
             return "weekday";
         }
@@ -30,7 +30,14 @@ public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormat
             return "era";
         }
         if (field == DateFormat.Field.YEAR) {
-            return "year";
+            // TODO:: I can't find the right rules to mark the type of the an year part as "yearName". Likely, the presense of another part with "relatedYear" is the decider ?
+            // Currently, i'm differentiating based on whether the value is numeric or not.
+            try {
+                double d = Double.parseDouble(fieldValue);
+                return "year";
+            } catch (NumberFormatException nfe) {
+                return "yearName";
+            }
         }
         if (field == DateFormat.Field.MONTH) {
             return "month";
@@ -62,6 +69,9 @@ public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormat
         if (field == DateFormat.Field.AM_PM) {
             return "dayPeriod";
         }
+        // TODO:: There must be a better way to do this.
+        if(field.toString().equals("android.icu.text.DateFormat$Field(related year)"))
+            return "relatedYear";
         // Report unsupported/unexpected date fields as literals.
         return "literal";
     }

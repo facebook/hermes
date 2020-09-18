@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.List;
 import java.util.stream.Collectors;
 
+// Run "./gradlew :intltest:preparetest262" from the root to download and copy the test files to the APK assets.
 public class HermesIntlTest262Base extends InstrumentationTestCase {
 
     private static final String LOG_TAG = "HermesIntlNumberFormatTest";
@@ -38,9 +39,6 @@ public class HermesIntlTest262Base extends InstrumentationTestCase {
     protected void evalScriptFromAsset(JSRuntime rt, String filename) throws IOException {
         AssetManager assets = getInstrumentation().getContext().getAssets();
         InputStream is = assets.open(filename);
-
-//        String script = new BufferedReader(new InputStreamReader(is))
-//                .lines().collect(Collectors.joining("\n"));
 
         BufferedReader r = new BufferedReader(new InputStreamReader(is));
         StringBuilder total = new StringBuilder();
@@ -60,8 +58,9 @@ public class HermesIntlTest262Base extends InstrumentationTestCase {
         evalScriptFromAsset(rt, "test262-main/harness/testIntl.js");
         evalScriptFromAsset(rt, "test262-main/harness/propertyHelper.js");
         evalScriptFromAsset(rt, "test262-main/harness/compareArray.js");
-        // evalScriptFromAsset(rt, "test262/intl/common/testintl.js");
-
+        evalScriptFromAsset(rt, "test262-main/harness/dateConstants.js");
+        evalScriptFromAsset(rt, "test262-main/harness/isConstructor.js");
+        evalScriptFromAsset(rt, "test262-main/harness/arrayContains.js");
     }
 
     protected void runTests(String basePath, Set<String> blackList, Set<String> whiteList) throws IOException {
@@ -109,15 +108,9 @@ public class HermesIntlTest262Base extends InstrumentationTestCase {
 
         for (Map.Entry<String, String> entry : failedTests.entrySet()) {
             Log.v(LOG_TAG, "Failed Tests: " + entry.getKey() + " : " + entry.getValue());
-
         }
 
         assertThat(failedTests.entrySet().isEmpty()).isEqualTo(true);
-
-        if(ranTests.isEmpty()) {
-            Log.e(LOG_TAG, "No test was successfully executed at : " + basePath);
-            assertThat(!ranTests.isEmpty()).isEqualTo(true);
-        }
 
     }
 }
