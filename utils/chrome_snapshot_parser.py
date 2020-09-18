@@ -42,6 +42,7 @@ NODE_TYPES = [
     "bigint",
 ]
 LOCATION_FIELDS = ["object_index", "script_id", "line", "column"]
+SAMPLE_FIELDS = ["timestamp_us", "last_assigned_id"]
 
 
 def main():
@@ -103,8 +104,20 @@ def main():
         }
         curr_loc += len(LOCATION_FIELDS)
 
+    curr_loc = 0
+    samples = []
+    source_samples = root.get("samples", [])
+    while curr_loc < len(source_samples):
+        timestamp_us, last_assigned_id = source_samples[
+            curr_loc : curr_loc + len(SAMPLE_FIELDS)
+        ]
+        samples.append(
+            {"timestamp": timestamp_us, "last_assigned_id": last_assigned_id}
+        )
+        curr_loc += len(SAMPLE_FIELDS)
+
     with open(args.out, "w") as f:
-        json.dump(nodes, f, indent=2)
+        json.dump({"nodes": nodes, "samples": samples}, f, indent=2)
 
 
 if __name__ == "__main__":
