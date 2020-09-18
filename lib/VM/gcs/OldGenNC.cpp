@@ -613,7 +613,7 @@ void OldGen::recordLevelAfterCompaction(
 AllocResult OldGen::fullCollectThenAlloc(
     uint32_t allocSize,
     HasFinalizer hasFinalizer) {
-  gc_->collect(/* canEffectiveOOM */ true);
+  gc_->collect(GCBase::kNaturalCauseForAnalytics, /* canEffectiveOOM */ true);
   {
     AllocResult res = allocRaw(allocSize, hasFinalizer);
     if (LLVM_LIKELY(res.success)) {

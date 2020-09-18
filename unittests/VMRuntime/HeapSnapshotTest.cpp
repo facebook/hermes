@@ -366,7 +366,7 @@ static JSONObject *
 takeSnapshot(GC &gc, JSONFactory &factory, const char *file, int line) {
   std::string result("");
   llvh::raw_string_ostream str(result);
-  gc.collect();
+  gc.collect("snapshot");
   gc.createSnapshot(str);
   str.flush();
 

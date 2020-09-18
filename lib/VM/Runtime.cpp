@@ -1906,7 +1906,7 @@ HiddenClass *Runtime::resolveHiddenClassId(ClassId classId) {
 #ifdef HERMESVM_SERIALIZE
 void Runtime::serialize(Serializer &s) {
   // Full GC here.
-  heap_.collect();
+  heap_.collect("serialize");
 
   s.writeCurrentOffset();
   heap_.serializeWeakRefs(s);

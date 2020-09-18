@@ -181,7 +181,7 @@ TEST(GCHeapExtentsInCrashManagerTest, HeapExtentsCorrect) {
     roots.pop_back();
     rt.pointerRoots.pop_back();
   }
-  rt.gc.collect();
+  rt.collect();
 
   EXPECT_EQ(2, testCrashMgr->customData().size());
 

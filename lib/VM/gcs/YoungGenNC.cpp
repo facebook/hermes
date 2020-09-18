@@ -250,7 +250,7 @@ AllocResult YoungGen::fullCollectThenAlloc(
     uint32_t allocSize,
     HasFinalizer hasFinalizer,
     bool fixedSizeAlloc) {
-  gc_->collect(/* canEffectiveOOM */ true);
+  gc_->collect(GCBase::kNaturalCauseForAnalytics, /* canEffectiveOOM */ true);
   {
     AllocResult res = allocRaw(allocSize, hasFinalizer);
     if (LLVM_LIKELY(res.success)) {
@@ -302,7 +302,10 @@ YoungGen::recordAllocSizes() {
 void YoungGen::collect() {
   assert(gc_->noAllocLevel_ == 0 && "no GC allowed right now");
   GenGC::CollectionSection ygCollection(
-      gc_, "YoungGen collection", gc_->getGCCallbacks());
+      gc_,
+      "YoungGen collection",
+      GCBase::kNaturalCauseForAnalytics,
+      gc_->getGCCallbacks());
 
 #ifdef HERMES_EXTRA_DEBUG
   /// Protect the card table boundary table, to detect corrupting mutator
