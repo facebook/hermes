@@ -729,7 +729,6 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(SMLoc start) {
   if (checkAndEat(TokenKind::star, JSLexer::GrammarContext::Flow)) {
     // declare export * from 'foo';
     //                  ^
-    ESTree::Node *source = nullptr;
     if (!check(fromIdent_)) {
       error(
           tok_->getStartLoc(), "expected 'from' clause in export declaration");
@@ -738,7 +737,6 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(SMLoc start) {
     auto optSource = parseFromClause();
     if (!optSource)
       return None;
-    source = *optSource;
     SMLoc end;
     if (!eatSemi(end))
       return None;
@@ -2220,6 +2218,7 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumBody(
           end,
           new (context_) ESTree::EnumSymbolBodyNode(std::move(members)));
   }
+  llvm_unreachable("No other kind of enum");
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseEnumMember() {

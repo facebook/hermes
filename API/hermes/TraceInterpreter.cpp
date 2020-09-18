@@ -1086,7 +1086,7 @@ Value TraceInterpreter::execFunction(
                   Value::strictEquals(rt_, v, overallRetval) &&
                   "evaluateJavaScript() retval does not match trace");
             }
-            // FALLTHROUGH
+            LLVM_FALLTHROUGH;
           }
           case RecordType::Marker: {
             const auto &mr =

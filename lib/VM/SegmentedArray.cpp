@@ -395,8 +395,8 @@ void SegmentedArray::increaseSizeWithinCapacity(
     size_type amount,
     bool fill) {
   assert(
-      !kConcurrentGC ||
-      fill && "If kConcurrentGC is true, fill must also be true");
+      (!kConcurrentGC || fill) &&
+      "If kConcurrentGC is true, fill must also be true");
   // This function has the same logic as increaseSize, but removes some
   // complexity from avoiding dealing with alllocations.
   const auto empty = HermesValue::encodeEmptyValue();
@@ -444,8 +444,8 @@ PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
     PseudoHandle<SegmentedArray> self,
     size_type amount) {
   assert(
-      !kConcurrentGC ||
-      Fill && "If kConcurrentGC is true, fill must also be true");
+      (!kConcurrentGC || Fill) &&
+      "If kConcurrentGC is true, fill must also be true");
   const auto empty = HermesValue::encodeEmptyValue();
   const auto currSize = self->size();
   const auto finalSize = currSize + amount;

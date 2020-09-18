@@ -715,7 +715,7 @@ class Parser {
             if ((flags_.unicode) && tryConsume('-')) {
               return ClassAtom('-');
             }
-            // fallthrough
+            LLVM_FALLTHROUGH;
 
           default: {
             return ClassAtom(consumeCharacterEscape());

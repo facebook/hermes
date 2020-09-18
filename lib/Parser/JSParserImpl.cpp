@@ -3476,6 +3476,7 @@ Optional<ESTree::Node *> JSParserImpl::parseUnaryExpression() {
             new (context_) ESTree::AwaitExpressionNode(optExpr.getValue()));
       }
       // Fall-through to default for all other identifiers.
+      LLVM_FALLTHROUGH;
 
     default:
       return parsePostfixExpression();
@@ -4610,7 +4611,7 @@ Optional<ESTree::Node *> JSParserImpl::reparseArrayAsignmentPattern(
 
     // Every element in the array assignment pattern is optional,
     // because we can parse the Elision production.
-    if (auto *empty = dyn_cast<ESTree::EmptyNode>(elem)) {
+    if (isa<ESTree::EmptyNode>(elem)) {
       elements.push_back(*elem);
       continue;
     }
