@@ -513,7 +513,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
   // Overridden from jsi::Instrumentation
   void collectGarbage() override {
-    runtime_.getHeap().collect();
+    runtime_.getHeap().collect("forced");
   }
 
   // Overridden from jsi::Instrumentation

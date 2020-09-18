@@ -238,7 +238,7 @@ CallResult<HermesValue> parseFloat(void *, Runtime *runtime, NativeArgs args) {
 
 /// Customized global function. gc() forces a GC collect.
 CallResult<HermesValue> gc(void *, Runtime *runtime, NativeArgs) {
-  runtime->collect();
+  runtime->collect("forced");
   return HermesValue::encodeUndefinedValue();
 }
 

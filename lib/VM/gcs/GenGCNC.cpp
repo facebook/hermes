@@ -300,7 +300,7 @@ void GenGC::ttiReached() {
   }
 }
 
-void GenGC::collect(bool canEffectiveOOM) {
+void GenGC::collect(std::string cause, bool canEffectiveOOM) {
   assert(noAllocLevel_ == 0 && "no GC allowed right now");
   if (canEffectiveOOM && ++consecFullGCs_ >= oomThreshold_)
     oom(make_error_code(OOMError::Effective));
@@ -346,7 +346,8 @@ void GenGC::collect(bool canEffectiveOOM) {
              << ") garbage collection # " << numGCs() << "\n");
 
   {
-    CollectionSection fullCollection(this, "Full collection", gcCallbacks_);
+    CollectionSection fullCollection(
+        this, "Full collection", std::move(cause), gcCallbacks_);
 
     fullCollection.addArg("fullGCUsedBefore", usedBefore);
     fullCollection.addArg("fullGCSizeBefore", sizeBefore);
@@ -1491,10 +1492,12 @@ void GenGC::printFullCollectionStats(JSONEmitter &json) const {
 GenGC::CollectionSection::CollectionSection(
     GenGC *gc,
     const char *name,
+    std::string cause,
     OptValue<GCCallbacks *> gcCallbacksOpt)
     : PerfSection(name, gc->getName().c_str()),
       gc_(gc),
       cycle_(gc, gcCallbacksOpt, name),
+      cause_(std::move(cause)),
       wallStart_(steady_clock::now()),
       cpuStart_(oscompat::thread_cpu_time()),
       gcUsedBefore_(gc->usedDirect()),
@@ -1555,6 +1558,7 @@ void GenGC::CollectionSection::recordGCStats(
       gc_->getName(),
       "gengc",
       cycle_.extraInfo(),
+      std::move(cause_),
       std::chrono::duration_cast<std::chrono::milliseconds>(
           wallEnd - wallStart_),
       std::chrono::duration_cast<std::chrono::milliseconds>(cpuEnd - cpuStart_),

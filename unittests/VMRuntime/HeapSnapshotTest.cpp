@@ -393,7 +393,7 @@ static JSONObject *
 takeSnapshot(GC &gc, JSONFactory &factory, const char *file, int line) {
   std::string result("");
   llvh::raw_string_ostream str(result);
-  gc.collect();
+  gc.collect("test");
   gc.createSnapshot(str);
   str.flush();
   return parseSnapshot(result, factory, file, line);
@@ -667,7 +667,7 @@ TEST(HeapSnapshotTest, SnapshotFromCallbackContext) {
   GCScope scope{&rt};
   auto dummy = rt.makeHandle(DummyObject::create(rt));
   const auto dummyID = runtime->getHeap().getObjectID(dummy.get());
-  rt.gc.collect();
+  rt.gc.collect("test");
   ASSERT_TRUE(triggeredTripwire);
 
   JSONFactory::Allocator alloc;

@@ -95,7 +95,7 @@ TEST(GCFragmentationNCTest, Test) {
 
   { // (3) Force a full collection to make sure all the allocated cells so far
     //     end up in the old generation.
-    gc.collect();
+    rt.collect();
   }
 
   // The end of the old generation now looks like this:
@@ -173,7 +173,7 @@ TEST(GCFragmentationNCTest, ExternalMemoryTest) {
   { // (3) Force a full collection to make sure all the allocated cells so far
     //     end up in the old generation.  The external memory charge should also
     //     be transfered.
-    gc.collect();
+    rt.collect();
     EXPECT_EQ(1, gc.numFullGCs());
   }
 

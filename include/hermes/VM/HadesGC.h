@@ -110,7 +110,7 @@ class HadesGC final : public GCBase {
 
   /// Force a garbage collection cycle.
   /// (Part of general GC API defined in GCBase.h).
-  void collect();
+  void collect(std::string cause);
 
   /// Run the finalizers for all heap objects.
   void finalizeAll();
@@ -606,11 +606,12 @@ class HadesGC final : public GCBase {
 
   /// Perform a YG garbage collection. All live objects in YG will be evacuated
   /// to the OG.
+  /// \param cause The cause of the GC, used for logging.
   /// \param forceOldGenCollection If true, always start an old gen collection
   ///   if one is not already active.
   /// \post The YG is completely empty, and all bytes are available for new
   ///   allocations.
-  void youngGenCollection(bool forceOldGenCollection);
+  void youngGenCollection(std::string cause, bool forceOldGenCollection);
 
   /// In the "no GC before TTI" mode, move the Young Gen heap segment to the
   /// Old Gen without scanning for garbage.
@@ -629,7 +630,7 @@ class HadesGC final : public GCBase {
   /// Perform an OG garbage collection. All live objects in OG will be left
   /// untouched, all unreachable objects will be placed into a free list that
   /// can be used by \c oldGenAlloc.
-  void oldGenCollection();
+  void oldGenCollection(std::string cause);
 
   /// If there's an OG collection going on, wait for it to complete. This
   /// function is synchronous and will block the caller if the GC background

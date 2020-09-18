@@ -99,8 +99,9 @@ class Deserializer;
 ///   void debitExternalMemory(GCCell *alloc, uint32_t size);
 ///   void debitExternalMemoryFromFinalizer(GCCell *alloc, uint32_t size);
 ///
-/// Force a garbage collection cycle.
-///   void collect();
+/// Force a garbage collection cycle. The provided cause will be used in
+/// logging.
+///   void collect(std::string cause);
 ///
 /// The maximum size of any one allocation allowable by the GC in any state.
 ///   static constexpr uint32_t maxAllocationSize();
@@ -190,6 +191,9 @@ class Deserializer;
 ///
 class GCBase {
  public:
+  static const char kNaturalCauseForAnalytics[];
+  static const char kHandleSanCauseForAnalytics[];
+
   /// An interface enabling the garbage collector to mark roots and free
   /// symbols.
   struct GCCallbacks {

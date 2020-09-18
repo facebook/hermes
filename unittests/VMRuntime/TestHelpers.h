@@ -311,6 +311,10 @@ struct DummyRuntime final : public HandleRootOwner,
     return gc;
   }
 
+  void collect() {
+    gc.collect("test");
+  }
+
   void markRoots(RootAcceptor &acceptor, bool) override;
 
   void markWeakRoots(WeakRootAcceptor &weakAcceptor) override;
