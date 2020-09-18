@@ -740,6 +740,11 @@ class HadesGC final : public GCBase {
       const HeapSegment &seg,
       std::string extraName);
 
+  /// Unlocks any held mutexes, then aborts the program.
+  /// Should only be called by the GC, OOM from outside the GC can skip the
+  /// unlocks.
+  LLVM_ATTRIBUTE_NORETURN void oomInternal(std::error_code reason);
+
 #ifdef HERMES_SLOW_DEBUG
   /// Checks the heap to make sure all cells are valid.
   void checkWellFormed();

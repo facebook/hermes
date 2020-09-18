@@ -1695,7 +1695,7 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
   }
 
   // The GC didn't recover enough memory, OOM.
-  gc_->oom(make_error_code(OOMError::MaxHeapReached));
+  gc_->oomInternal(make_error_code(OOMError::MaxHeapReached));
 }
 
 uint32_t HadesGC::OldGen::getFreelistBucket(uint32_t size) {
@@ -1944,7 +1944,7 @@ void HadesGC::promoteYoungGenToOldGen() {
   // Replace YG with a new segment.
   youngGen_ = createSegment(/*isYoungGen*/ true);
   if (!youngGen_) {
-    oom(make_error_code(OOMError::MaxHeapReached));
+    oomInternal(make_error_code(OOMError::MaxHeapReached));
   }
   // These objects will be finalized by an OG collection.
   youngGenFinalizables_.clear();
@@ -2405,6 +2405,14 @@ void HadesGC::addSegmentExtentToCrashManager(
       segmentName.c_str(),
       segmentAddressBuffer);
 #endif
+}
+
+void HadesGC::oomInternal(std::error_code reason) {
+  std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
+  // Have to unlock before calling GCBase::oom, because it may access stats
+  // functions.
+  lk.unlock();
+  GCBase::oom(reason);
 }
 
 #ifdef HERMES_SLOW_DEBUG
