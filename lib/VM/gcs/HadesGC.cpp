@@ -71,7 +71,7 @@ AllocResult HadesGC::HeapSegment::bumpAlloc(uint32_t sz) {
   if (res.success) {
     // Set the cell head for any successful alloc, so that write barriers can
     // move from dirty cards to the head of the object.
-    setCellHead(static_cast<GCCell *>(res.ptr));
+    setCellHead(static_cast<GCCell *>(res.ptr), sz);
     // No need to change allocatedBytes_ here, as AlignedHeapSegment::used()
     // already tracks that. Once the cell is transitioned to freelist mode the
     // right value will be stored in OldGen::allocatedBytes_.
@@ -149,20 +149,24 @@ HadesGC::OldGen::FreelistCell *HadesGC::OldGen::removeCellFromFreelist(
 }
 
 /* static */
-void HadesGC::HeapSegment::setCellHead(const GCCell *cell) {
-  MarkBitArrayNC &heads = cellHeadsCovering(cell);
-  heads.mark(heads.addressToIndex(cell));
+void HadesGC::HeapSegment::setCellHead(
+    const GCCell *cellStart,
+    const size_t sz) {
+  const char *start = reinterpret_cast<const char *>(cellStart);
+  const char *end = start + sz;
+  CardTable *cards = cardTableCovering(start);
+  auto boundary = cards->nextBoundary(start);
+  // If this object crosses a card boundary, then update boundaries
+  // appropriately.
+  if (boundary.address() < end) {
+    cards->updateBoundaries(&boundary, start, end);
+  }
 }
 
-GCCell *HadesGC::HeapSegment::getCellHead(const void *address) {
-  MarkBitArrayNC &heads = cellHeads();
-  auto ind = heads.addressToIndex(address);
-  // Go backwards from the current address looking for a marked bit, which means
-  // that the address contains a GCCell header.
-  ind = heads.findPrevMarkedBitFrom(ind + 1);
-  GCCell *cell = reinterpret_cast<GCCell *>(heads.indexToAddress(ind));
-  assert(
-      cell->isValid() && "Object heads table doesn't point to a valid object");
+GCCell *HadesGC::HeapSegment::getFirstCellHead(size_t cardIdx) {
+  CardTable &cards = cardTable();
+  GCCell *cell = cards.firstObjForCard(cardIdx);
+  assert(cell->isValid() && "Object head doesn't point to a valid object");
   return cell;
 }
 
@@ -187,7 +191,7 @@ GCCell *HadesGC::OldGen::FreelistCell::carve(uint32_t sz) {
   char *newCellAddress = reinterpret_cast<char *>(this) + finalSize;
   GCCell *const newCell = reinterpret_cast<GCCell *>(newCellAddress);
   setSizeFromGC(finalSize);
-  HeapSegment::setCellHead(newCell);
+  HeapSegment::setCellHead(newCell, sz);
   return newCell;
 }
 
@@ -1935,7 +1939,9 @@ void HadesGC::promoteYoungGenToOldGen() {
   // Before promoting it, set the cell heads correctly for the segment
   // going into OG. This could be done at allocation time, but at a cost
   // to YG alloc times for a case that might not come up.
-  youngGen_->forAllObjs([this](GCCell *cell) { youngGen_->setCellHead(cell); });
+  youngGen_->forAllObjs([this](GCCell *cell) {
+    youngGen_->setCellHead(cell, cell->getAllocatedSize());
+  });
   // It is important that this operation is just a move of pointers to
   // segments. The addresses have to stay the same or else it would
   // require a marking pass through all objects.
@@ -2017,7 +2023,7 @@ void HadesGC::scanDirtyCards(EvacAcceptor &acceptor) {
 
       // Use the object heads rather than the card table to discover the head
       // of the object.
-      GCCell *const firstObj = seg.getCellHead(begin);
+      GCCell *const firstObj = seg.getFirstCellHead(iBegin);
       GCCell *obj = firstObj;
       // Throughout this loop, objects are being marked which could promote
       // other objects into the OG. Such objects might be promoted onto a dirty
@@ -2479,31 +2485,8 @@ void HadesGC::verifyCardTable() {
     GCBase::markCell(cell, this, acceptor);
   });
 
-  verifyCardTableBoundaries();
-}
-
-void HadesGC::verifyCardTableBoundaries() const {
-  for (auto segit = oldGen_.begin(), end = oldGen_.end(); segit != end;
-       ++segit) {
-    // The old gen heap segments use the object heads array instead of card
-    // table boundaries to track where objects start.
-    HeapSegment &seg = **segit;
-    seg.forAllObjs([&seg](GCCell *cell) {
-      // Check that each cell has a bit set.
-      MarkBitArrayNC &heads = seg.cellHeads();
-      assert(heads.at(heads.addressToIndex(cell)) && "Unmarked head");
-      // Also check that no other bits are set until the next object.
-      // Check in heap-aligned pointers since mark bits only work for aligned
-      // pointers.
-      uint64_t *ptr = reinterpret_cast<uint64_t *>(cell) + 1;
-      uint64_t *const nextCell = reinterpret_cast<uint64_t *>(cell->nextCell());
-      while (ptr < nextCell) {
-        assert(
-            !heads.at(heads.addressToIndex(ptr)) &&
-            "Non-cell has a head marked");
-        ++ptr;
-      }
-    });
+  for (const auto &segPtr : oldGen_) {
+    segPtr->cardTable().verifyBoundaries(segPtr->start(), segPtr->level());
   }
 }
 

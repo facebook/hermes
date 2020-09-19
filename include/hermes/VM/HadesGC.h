@@ -244,11 +244,13 @@ class HadesGC final : public GCBase {
     AllocResult youngGenBumpAlloc(uint32_t sz);
 
     /// Record the head of this cell so it can be found by the card scanner.
-    static void setCellHead(const GCCell *cell);
+    static void setCellHead(const GCCell *start, const size_t sz);
 
-    /// For a given address, find the head of the cell.
-    /// \return A cell such that cell <= address < cell->nextCell().
-    GCCell *getCellHead(const void *address);
+    /// Find the head of the first cell that extends into the card at index
+    /// \p cardIdx.
+    /// \return A cell such that
+    /// cell <= indexToAddress(cardIdx) < cell->nextCell().
+    GCCell *getFirstCellHead(const size_t cardIdx);
 
     /// Call \p callback on every cell allocated in this segment.
     /// NOTE: Overridden to skip free list entries.
@@ -270,7 +272,6 @@ class HadesGC final : public GCBase {
     using AlignedHeapSegment::available;
     using AlignedHeapSegment::cardTable;
     using AlignedHeapSegment::cardTableCovering;
-    using AlignedHeapSegment::cellHeads;
     using AlignedHeapSegment::clearExternalMemoryCharge;
     using AlignedHeapSegment::contains;
     using AlignedHeapSegment::effectiveEnd;
@@ -752,7 +753,6 @@ class HadesGC final : public GCBase {
   /// Verify that the card table used to find pointers from OG into YG has the
   /// correct cards dirtied, given the contents of the OG currently.
   void verifyCardTable();
-  void verifyCardTableBoundaries() const;
 #endif
 };
 
