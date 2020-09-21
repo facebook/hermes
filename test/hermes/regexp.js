@@ -462,6 +462,10 @@ try { new RegExp("["); } catch (e) { print(e.message); }
 try { new RegExp("\\"); } catch (e) { print(e.message); }
 // CHECK-NEXT: Invalid RegExp: Incomplete escape
 
+// Check that incomplete escapes don't cause an OOB read.
+try { new RegExp("                                \\"); } catch (e) { print(e.message); }
+// CHECK-NEXT: Invalid RegExp: Incomplete escape
+
 // textual 'undefined' flag is invalid.
 try {
   RegExp(/1/g, 'undefined');

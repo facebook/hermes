@@ -420,7 +420,10 @@ class Parser {
         case '\\': {
           consume('\\');
           // This may be an ES6 21.2.2.6 Assertion (\b or \B) or an AtomeEscape.
-          if (*current_ == 'b' || *current_ == 'B') {
+          if (current_ == end_) {
+            setError(constants::ErrorType::EscapeIncomplete);
+            return;
+          } else if (*current_ == 'b' || *current_ == 'B') {
             re_->pushWordBoundary(*current_ == 'B' /* invert */);
             consume(*current_);
             quantifierAllowed = false;
