@@ -1710,6 +1710,8 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeCallProperty(
     typeParams = *optTypeParams;
   }
   auto optValue = parseMethodishTypeAnnotation(start, typeParams);
+  if (!optValue)
+    return None;
   return setLocation(
       start,
       *optValue,
