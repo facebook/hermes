@@ -314,6 +314,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       token_.setStart(curCharPtr_);
         if (HERMES_PARSE_FLOW &&
             LLVM_UNLIKELY(grammarContext == GrammarContext::Flow) &&
+            curCharPtr_ + 7 <= bufferEnd_ &&
             llvh::StringRef(curCharPtr_, 7) == "%checks") {
           token_.setIdentifier(getStringLiteral("%checks"));
           curCharPtr_ += 7;
