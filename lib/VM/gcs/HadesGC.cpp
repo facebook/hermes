@@ -951,7 +951,7 @@ void HadesGC::waitForCollectionToFinish() {
   worldStopped_ = true;
   // Notify a waiting OG collection that it can complete.
   lk.unlock();
-  stopTheWorldCondVar_.notify_all();
+  stopTheWorldCondVar_.notify_one();
   // Wait for an existing collection to finish.
   oldGenCollectionThread_.join();
   // Undo the worldStopped_ change, as the mutator will now resume. Can't rely
@@ -1115,7 +1115,7 @@ void HadesGC::completeMarking() {
   // Let the thread that yielded know that the STW pause has completed.
   stopTheWorldRequested_ = false;
   worldStopped_ = false;
-  stopTheWorldCondVar_.notify_all();
+  stopTheWorldCondVar_.notify_one();
 }
 
 void HadesGC::completeMarkingAssumeLocks() {
@@ -2337,7 +2337,7 @@ void HadesGC::yieldToOldGen() {
   }
   worldStopped_ = true;
   // Notify a waiting OG collection that it can complete.
-  stopTheWorldCondVar_.notify_all();
+  stopTheWorldCondVar_.notify_one();
   std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
   waitForConditionVariable(
       stopTheWorldCondVar_, lk, [this]() { return !worldStopped_; });
