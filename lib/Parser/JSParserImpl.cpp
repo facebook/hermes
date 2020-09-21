@@ -699,7 +699,7 @@ bool JSParserImpl::parseStatementListItem(
 
     stmtList.push_back(*decl.getValue());
 #if HERMES_PARSE_FLOW
-  } else if (checkDeclareType()) {
+  } else if (context_.getParseFlow() && checkDeclareType()) {
     // declare var, declare function, declare interface, etc.
     SMLoc start = advance(JSLexer::GrammarContext::Flow).Start;
     auto decl = parseDeclare(start);
@@ -2711,7 +2711,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
 
     ESTree::Node *returnType = nullptr;
 #if HERMES_PARSE_FLOW
-    if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
+    if (context_.getParseFlow() &&
+        checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
       auto optRet = parseTypeAnnotation(true);
       if (!optRet)
         return None;
@@ -3752,6 +3753,7 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(
 #if HERMES_PARSE_FLOW
 Optional<ESTree::Node *> JSParserImpl::tryParseCoverTypedIdentifierNode(
     ESTree::Node *test) {
+  assert(context_.getParseFlow() && "must be parsing Flow");
   // In the case of flow types in arrow function parameters, we may have
   // optional parameters which look like:
   // Identifier ? : TypeAnnotation
@@ -4262,7 +4264,8 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
 
   ESTree::Node *returnType = nullptr;
 #if HERMES_PARSE_FLOW
-  if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
+  if (context_.getParseFlow() &&
+      checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
     auto optRet = parseTypeAnnotation(true);
     if (!optRet)
       return None;
