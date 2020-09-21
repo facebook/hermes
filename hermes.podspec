@@ -38,7 +38,7 @@ Pod::Spec.new do |spec|
 
     # In a release package, there are no utilities and source files, we exit
     # early as there is nothing to build 
-    if [ ! -f /utils/build-apple-framework.sh ]; then
+    if [ ! -f ./utils/build-apple-framework.sh ]; then
       exit 0;
     fi
 
