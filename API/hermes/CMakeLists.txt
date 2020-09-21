@@ -120,7 +120,7 @@ if(APPLE AND HERMES_BUILD_APPLE_FRAMEWORK)
     MACOSX_PACKAGE_LOCATION Headers/Public
   )
   if(HERMES_ENABLE_BITCODE)
-    target_compile_options(libhermes PUBLIC "")
+    target_compile_options(libhermes PUBLIC "-fembed-bitcode")
     target_link_libraries(libhermes PUBLIC "-fembed-bitcode")
   endif()
 endif()
