@@ -42,7 +42,7 @@ Pod::Spec.new do |spec|
     # If universal framework for iOS does not exist, build one
     if [ ! -d destroot/Library/Frameworks/iphoneos/hermes.framework ]; then
       build_apple_framework "iphoneos" "armv7;armv7s;arm64" "#{HermesHelper::IOS_DEPLOYMENT_TARGET}"
-      build_apple_framework "iphonesimulator" "x86_64" "#{HermesHelper::IOS_DEPLOYMENT_TARGET}"
+      build_apple_framework "iphonesimulator" "x86_64;i386" "#{HermesHelper::IOS_DEPLOYMENT_TARGET}"
 
       create_universal_framework "iphoneos" "iphonesimulator"
     fi
