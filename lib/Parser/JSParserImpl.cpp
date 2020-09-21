@@ -5745,6 +5745,7 @@ Optional<ESTree::Node *> JSParserImpl::parseExportSpecifier(
           "in export clause",
           "location of export clause",
           exportLoc);
+      return None;
     }
     exported = setLocation(
         tok_,
