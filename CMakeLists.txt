@@ -146,6 +146,10 @@ set(HERMES_ENABLE_THREAD_SANITIZER OFF CACHE BOOL
 set(HERMES_ENABLE_FUZZING OFF CACHE BOOL
   "Enable fuzzing")
 
+# Enable bitcode
+set(HERMES_ENABLE_BITCODE OFF CACHE BOOL
+  "Include bitcode with the framework")
+
 # Set linker flag for building the fuzzer
 set(HERMES_FUZZING_FLAG "-fsanitize=fuzzer" CACHE STRING
   "Linker argument to link fuzz targets against a given fuzzer.")
