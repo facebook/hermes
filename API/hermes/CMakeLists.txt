@@ -119,6 +119,10 @@ if(APPLE AND HERMES_BUILD_APPLE_FRAMEWORK)
   set_source_files_properties(${api_public_headers} PROPERTIES
     MACOSX_PACKAGE_LOCATION Headers/Public
   )
+  if(HERMES_ENABLE_BITCODE)
+    target_compile_options(libhermes PUBLIC "-fembed-bitcode")
+    target_link_libraries(libhermes PUBLIC "-fembed-bitcode")
+  endif()
 endif()
 
 install(TARGETS libhermes

@@ -27,6 +27,13 @@ fi
 
 # Utility function to configure an Apple framework
 function configure_apple_framework {
+  local enable_bitcode
+  if [[ $1 == "macosx" ]]; then
+    enable_bitcode="false"
+  else
+    enable_bitcode="true"
+  fi
+  
   local cmake_flags=" \
     -DHERMES_APPLE_TARGET_PLATFORM:STRING=$1 \
     -DCMAKE_OSX_ARCHITECTURES:STRING=$2 \
@@ -34,6 +41,7 @@ function configure_apple_framework {
     -DHERMES_ENABLE_DEBUGGER:BOOLEAN=true \
     -DHERMES_ENABLE_FUZZING:BOOLEAN=false \
     -DHERMES_ENABLE_TEST_SUITE:BOOLEAN=false \
+    -DHERMES_ENABLE_BITCODE:BOOLEAN=$enable_bitcode \
     -DHERMES_BUILD_APPLE_FRAMEWORK:BOOLEAN=true \
     -DHERMES_BUILD_APPLE_DSYM:BOOLEAN=true
     -DCMAKE_INSTALL_PREFIX:PATH=../destroot"
