@@ -36,6 +36,12 @@ Pod::Spec.new do |spec|
     # See `build-apple-framework.sh` for details
     DEBUG=#{HermesHelper::BUILD_TYPE == :debug}
 
+    # In a release package, there are no utilities and source files, we exit
+    # early as there is nothing to build 
+    if [ ! -f ./utils/build-apple-framework.sh ]; then
+      exit 0;
+    fi
+
     # Source utilities into the scope
     . ./utils/build-apple-framework.sh
 
