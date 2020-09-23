@@ -197,8 +197,8 @@ class MallocGC final : public GCBase {
     return std::numeric_limits<uint32_t>::max();
   }
 
-  /// Run the finalizers for all objects.
-  void finalizeAll();
+  /// Run the finalizers for all heap objects.
+  void finalizeAll() override;
 
   /// \return true iff this is collecting the entire heap, or false if it is
   /// only a portion of the heap.

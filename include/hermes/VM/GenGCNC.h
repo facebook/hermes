@@ -271,7 +271,7 @@ class GenGC final : public GCBase {
   }
 
   /// Run the finalizers for all heap objects.
-  void finalizeAll();
+  void finalizeAll() override;
 
 #ifndef NDEBUG
 

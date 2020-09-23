@@ -680,6 +680,9 @@ class GCBase {
   /// Dump detailed heap contents to the given output stream, \p os.
   virtual void dump(llvh::raw_ostream &os, bool verbose = false);
 
+  /// Run the finalizers for all heap objects.
+  virtual void finalizeAll() = 0;
+
   /// Do any logging of info about the heap that is useful, then dies with a
   /// fatal out-of-memory error.
   LLVM_ATTRIBUTE_NORETURN void oom(std::error_code reason);

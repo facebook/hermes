@@ -113,7 +113,7 @@ class HadesGC final : public GCBase {
   void collect(std::string cause);
 
   /// Run the finalizers for all heap objects.
-  void finalizeAll();
+  void finalizeAll() override;
 
   /// Add some external memory cost to a cell.
   /// (Part of general GC API defined in GCBase.h).
