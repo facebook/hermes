@@ -1024,19 +1024,18 @@ class StandardSortModel : public SortModel {
           return ExecutionStatus::EXCEPTION;
         }
         aHandle_ = keyRes->get();
-        CallResult<bool> hasPropRes =
-            JSProxy::getOwnProperty(obj_, runtime_, aHandle_, aDesc, nullptr);
+        CallResult<bool> hasPropRes = JSProxy::getOwnProperty(
+            aDescObjHandle_, runtime_, aHandle_, aDesc, nullptr);
         if (hasPropRes == ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
         }
         if (*hasPropRes) {
-          auto res = JSProxy::getComputed(obj_, runtime_, aHandle_, obj_);
+          auto res =
+              JSProxy::getComputed(aDescObjHandle_, runtime_, aHandle_, obj_);
           if (res == ExecutionStatus::EXCEPTION) {
             return ExecutionStatus::EXCEPTION;
           }
           aValue_ = std::move(*res);
-          // signal later code
-          aDescObjHandle_ = *obj_;
         } else {
           aDescObjHandle_ = nullptr;
         }
@@ -1058,19 +1057,18 @@ class StandardSortModel : public SortModel {
           return ExecutionStatus::EXCEPTION;
         }
         bHandle_ = keyRes->get();
-        CallResult<bool> hasPropRes =
-            JSProxy::getOwnProperty(obj_, runtime_, bHandle_, bDesc, nullptr);
+        CallResult<bool> hasPropRes = JSProxy::getOwnProperty(
+            bDescObjHandle_, runtime_, bHandle_, bDesc, nullptr);
         if (hasPropRes == ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
         }
         if (*hasPropRes) {
-          auto res = JSProxy::getComputed(obj_, runtime_, bHandle_, obj_);
+          auto res =
+              JSProxy::getComputed(bDescObjHandle_, runtime_, bHandle_, obj_);
           if (res == ExecutionStatus::EXCEPTION) {
             return ExecutionStatus::EXCEPTION;
           }
           bValue_ = std::move(*res);
-          // signal later code
-          bDescObjHandle_ = *obj_;
         } else {
           bDescObjHandle_ = nullptr;
         }
