@@ -45,6 +45,13 @@ LOCATION_FIELDS = ["object_index", "script_id", "line", "column"]
 SAMPLE_FIELDS = ["timestamp_us", "last_assigned_id"]
 
 
+def chunk(arr, chunk_size):
+    assert len(arr) % chunk_size == 0, "arr must be evenly divisible by the chunk size"
+    assert chunk_size >= 1, "chunk_size must be at least 1"
+    for i in range(0, len(arr), chunk_size):
+        yield arr[i : i + chunk_size]
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("heapsnapshot")
@@ -52,19 +59,14 @@ def main():
     args = parser.parse_args()
     with open(args.heapsnapshot, "r") as f:
         root = json.load(f)
-    curr_node = 0
-    curr_edge = 0
     nodes = []
-    while curr_node < len(root["nodes"]):
-        raw_type, name, id, self_size, edge_count, trace_node_id = root["nodes"][
-            curr_node : curr_node + len(NODE_FIELDS)
-        ]
+    curr_edge = iter(chunk(root["edges"], len(EDGE_FIELDS)))
+    for raw_type, name, id, self_size, edge_count, trace_node_id in chunk(
+        root["nodes"], len(NODE_FIELDS)
+    ):
         edges = []
-        end_edge = curr_edge + edge_count * len(EDGE_FIELDS)
-        while curr_edge < end_edge:
-            raw_edge_type, name_or_index, to_node = root["edges"][
-                curr_edge : curr_edge + len(EDGE_FIELDS)
-            ]
+        for _ in range(edge_count):
+            raw_edge_type, name_or_index, to_node = next(curr_edge)
             real_type = EDGE_TYPES[raw_edge_type]
             edges.append(
                 {
@@ -76,7 +78,6 @@ def main():
                     "to_node": to_node // len(NODE_FIELDS),
                 }
             )
-            curr_edge += len(EDGE_FIELDS)
         nodes.append(
             {
                 "type": NODE_TYPES[raw_type],
@@ -87,14 +88,12 @@ def main():
                 "trace_node_id": trace_node_id,
             }
         )
-        curr_node += len(NODE_FIELDS)
+    del root["edges"]
 
     # Iterate through locations and add the location resolution to nodes
-    curr_loc = 0
-    while curr_loc < len(root["locations"]):
-        object_index, script_id, line, column = root["locations"][
-            curr_loc : curr_loc + len(LOCATION_FIELDS)
-        ]
+    for object_index, script_id, line, column in chunk(
+        root.get("locations", []), len(LOCATION_FIELDS)
+    ):
         nodes[object_index // len(NODE_FIELDS)]["location"] = {
             "script_id": script_id,
             # Line numbers and column numbers are 0-based internally,
@@ -102,22 +101,19 @@ def main():
             "line": line + 1,
             "column": column + 1,
         }
-        curr_loc += len(LOCATION_FIELDS)
+    del root["locations"]
 
-    curr_loc = 0
-    samples = []
-    source_samples = root.get("samples", [])
-    while curr_loc < len(source_samples):
-        timestamp_us, last_assigned_id = source_samples[
-            curr_loc : curr_loc + len(SAMPLE_FIELDS)
-        ]
-        samples.append(
-            {"timestamp": timestamp_us, "last_assigned_id": last_assigned_id}
+    root["nodes"] = nodes
+    root["samples"] = [
+        {"timestamp": timestamp_us, "last_assigned_id": last_assigned_id}
+        for timestamp_us, last_assigned_id in chunk(
+            root.get("samples", []), len(SAMPLE_FIELDS)
         )
-        curr_loc += len(SAMPLE_FIELDS)
+    ]
 
+    del root["strings"]
     with open(args.out, "w") as f:
-        json.dump({"nodes": nodes, "samples": samples}, f, indent=2)
+        json.dump(root, f, indent=2)
 
 
 if __name__ == "__main__":
