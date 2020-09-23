@@ -169,7 +169,9 @@ CallResult<bool> JSString::_setOwnIndexedImpl(
       vr != ExecutionStatus::EXCEPTION &&
       "valueToIdentifier() failed for uint32_t value");
 
-  auto dr = JSObject::defineOwnProperty(
+  // Can't call defineOwnComputedPrimitive because it would infinitely recurse
+  // calling JSString::_setOwnIndexedImpl.
+  auto dr = JSObject::defineOwnPropertyInternal(
       selfHandle,
       runtime,
       **vr,

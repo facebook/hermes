@@ -15,7 +15,6 @@
 #include "hermes/VM/JSDate.h"
 #include "hermes/VM/JSProxy.h"
 #include "hermes/VM/Operations.h"
-#include "hermes/VM/StringView.h"
 
 #include "llvh/ADT/SmallSet.h"
 
@@ -1957,7 +1956,7 @@ CallResult<bool> JSObject::deleteComputed(
   return true;
 }
 
-CallResult<bool> JSObject::defineOwnProperty(
+CallResult<bool> JSObject::defineOwnPropertyInternal(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     SymbolID name,
@@ -2008,7 +2007,7 @@ CallResult<bool> JSObject::defineOwnProperty(
     // if the property was not found and the object is lazy we need to
     // initialize it and try again.
     JSObject::initializeLazyObject(runtime, selfHandle);
-    return defineOwnProperty(
+    return defineOwnPropertyInternal(
         selfHandle, runtime, name, dpFlags, valueOrAccessor, opFlags);
   }
 
@@ -2090,7 +2089,7 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
   // indexed storage, just pass to the named routine.
   if (!arrayIndex) {
     LAZY_TO_IDENTIFIER(runtime, nameValHandle, id);
-    return defineOwnProperty(
+    return defineOwnPropertyInternal(
         selfHandle, runtime, id, dpFlags, valueOrAccessor, opFlags);
   }
 
