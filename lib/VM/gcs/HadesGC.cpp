@@ -818,13 +818,14 @@ HadesGC::HadesGC(
           // At least one YG segment and one OG segment.
           2 * AlignedStorage::size())},
       provider_(std::move(provider)),
-      youngGen_{createSegment(/*isYoungGen*/ true)},
       promoteYGToOG_{!gcConfig.getAllocInYoung()},
       revertToYGAtTTI_{gcConfig.getRevertToYGAtTTI()},
       occupancyTarget_(gcConfig.getOccupancyTarget()),
       // Assume about 30% of the YG will survive initially.
       ygAverageSurvivalRatio_{/*weight*/ 0.5, /*init*/ 0.3} {
-  if (!youngGen_) {
+  // createSegment relies on member variables and should not be called until
+  // they are initialised.
+  if (!(youngGen_ = createSegment(/*isYoungGen*/ true))) {
     hermes_fatal("Failed to initialize the young gen");
   }
   const size_t minHeapSegments =
@@ -1816,12 +1817,11 @@ void HadesGC::youngGenCollection(
       "Young gen segment must have all mark bits set");
   uint64_t promotedBytes = 0, usedBefore = youngGen().used();
   const uint64_t externalBytesBefore = ygExternalBytes_;
-  uint64_t externalSweptBytes;
-  if (promoteYGToOG_) {
+  uint64_t externalSweptBytes = 0;
+  // Attempt to promote the YG segment to OG if the flag is set. If this call
+  // fails for any reason, proceed with a GC.
+  if (promoteYoungGenToOldGen()) {
     promotedBytes = usedBefore;
-    // We're promoting all external memory to OG, so nothing was swept.
-    externalSweptBytes = 0;
-    promoteYoungGenToOldGen();
   } else {
     auto &yg = youngGen();
 
@@ -1930,7 +1930,22 @@ void HadesGC::youngGenCollection(
   stats.incrementCPUTime(cpuTimeEnd - cpuTimeStart);
 }
 
-void HadesGC::promoteYoungGenToOldGen() {
+bool HadesGC::promoteYoungGenToOldGen() {
+  if (!promoteYGToOG_) {
+    return false;
+  }
+
+  // Attempt to create a new segment, if that fails, turn off the flag to
+  // disable GC and return false so we proceed with a GC.
+  // TODO: Add more stringent criteria for turning off this flag, for instance,
+  // once the heap reaches a certain size. That would avoid growing the heap to
+  // the maximum possible size before stopping promotions.
+  auto newYoungGen = createSegment(/*isYoungGen*/ true);
+  if (!newYoungGen) {
+    promoteYGToOG_ = false;
+    return false;
+  }
+
   // Move the external memory costs to the OG. Needs to happen here so that the
   // YG segment moved to OG is not left with an effective end.
   transferExternalMemoryToOldGen();
@@ -1948,12 +1963,10 @@ void HadesGC::promoteYoungGenToOldGen() {
   // This will also rename the segment in the crash data.
   oldGen_.addSegment(std::move(youngGen_));
   // Replace YG with a new segment.
-  youngGen_ = createSegment(/*isYoungGen*/ true);
-  if (!youngGen_) {
-    oomInternal(make_error_code(OOMError::MaxHeapReached));
-  }
+  youngGen_ = std::move(newYoungGen);
   // These objects will be finalized by an OG collection.
   youngGenFinalizables_.clear();
+  return true;
 }
 
 void HadesGC::checkTripwireAndResetStats() {
@@ -2264,7 +2277,7 @@ HadesGC::HeapSegment &HadesGC::OldGen::operator[](size_t i) {
 }
 
 std::unique_ptr<HadesGC::HeapSegment> HadesGC::createSegment(bool isYoungGen) {
-  if (!isYoungGen && allocatedBytes() + externalBytes() >= maxHeapSize_) {
+  if (allocatedBytes() + externalBytes() >= maxHeapSize_) {
     // Cannot grow the heap any further. Doesn't apply to YG creation.
     return nullptr;
   }

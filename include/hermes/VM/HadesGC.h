@@ -616,7 +616,8 @@ class HadesGC final : public GCBase {
 
   /// In the "no GC before TTI" mode, move the Young Gen heap segment to the
   /// Old Gen without scanning for garbage.
-  void promoteYoungGenToOldGen();
+  /// \return true if a promotion occurred, false if it did not.
+  bool promoteYoungGenToOldGen();
 
   /// This function checks if the live bytes after the last OG GC is greater
   /// than the tripwire limit. If the conditions are met, the tripwire is
