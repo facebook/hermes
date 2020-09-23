@@ -7,8 +7,6 @@
 
 #include "JSLibInternal.h"
 
-#include <android/log.h>
-
 #include "hermes/Platform/Intl/PlatformIntl.h"
 
 #ifdef HERMES_PLATFORM_INTL
@@ -38,12 +36,12 @@ CallResult<std::u16string> stringFromJS(
     Runtime *runtime,
     PseudoHandle<> value) {
   CallResult<PseudoHandle<StringPrimitive>> strRes =
-          toString_RJS(runtime, runtime->makeHandle(std::move(value)));
+      toString_RJS(runtime, runtime->makeHandle(std::move(value)));
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   auto view = vm::StringPrimitive::createStringView(
-          runtime, runtime->makeHandle(std::move(*strRes)));
+      runtime, runtime->makeHandle(std::move(*strRes)));
   return std::u16string(view.begin(), view.end());
 }
 
