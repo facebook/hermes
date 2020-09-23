@@ -37,7 +37,7 @@ public class HermesIntlGetCanonicalLocalesTest extends HermesIntlTest262Base {
 
     @Test
     public void testIntlGetCanonicalLocales() throws IOException {
-        String basePath = "test262-main/test/intl402/Intl/getCanonicalLocales/";
+        String basePath = "test262-main/test/intl402/Intl/getCanonicalLocales";
         Set<String> whiteList = new HashSet<>();
         Set<String> blackList = new HashSet<>(Arrays.asList("Locale-object.js"
                 , "canonicalized-tags.js" // All except one tag (cmn-hans-cn-u-ca-t-ca-x-t-u) passes. icu4j adds an extra 'yes' token to the unicode 'ca' extension!

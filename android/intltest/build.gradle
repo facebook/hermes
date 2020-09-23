@@ -51,10 +51,10 @@ def fbsource = System.getenv("FBSOURCE_DIR") ?:
 
 // TODO: Figure out how to deduplicate this file and intl/build.gradle
 android {
-  compileSdkVersion = 24
+  compileSdkVersion 24
 
   defaultConfig {
-    minSdkVersion 24
+    minSdkVersion 16
     ndk {
       abiFilters (*rootProject.ext.abis)
     }

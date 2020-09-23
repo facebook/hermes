@@ -37,19 +37,13 @@ namespace {
 CallResult<std::u16string> stringFromJS(
     Runtime *runtime,
     PseudoHandle<> value) {
-  Handle<> valueHandle = runtime->makeHandle(std::move(value));
-  if (!valueHandle->isString() && !valueHandle->isObject()) {
-    return runtime->raiseTypeError(
-            "Incorrect object type");
-  }
-
   CallResult<PseudoHandle<StringPrimitive>> strRes =
-      toString_RJS(runtime, valueHandle);
+          toString_RJS(runtime, runtime->makeHandle(std::move(value)));
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   auto view = vm::StringPrimitive::createStringView(
-      runtime, runtime->makeHandle(std::move(*strRes)));
+          runtime, runtime->makeHandle(std::move(*strRes)));
   return std::u16string(view.begin(), view.end());
 }
 
@@ -223,8 +217,12 @@ CallResult<std::vector<std::u16string>> normalizeLocales(
               runtime,
               *lengthRes,
               [&ret](Runtime *runtime, uint64_t index, PseudoHandle<> value) {
+    if (!value->isString() && !value->isObject()) {
+      return runtime->raiseTypeError(
+              "Incorrect object type");
+    }
     CallResult<std::u16string> strRes =
-                    stringFromJS(runtime, std::move(value));
+                                    stringFromJS(runtime, std::move(value));
                 if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
                   return ExecutionStatus::EXCEPTION;
                 }

@@ -82,7 +82,7 @@ public class HermesIntlTest262Base extends InstrumentationTestCase {
         }
 
         for (String testFileName : testFileList) {
-            String testFilePath = basePath + testFileName;
+            String testFilePath = basePath + "/" + testFileName;
             Log.d(LOG_TAG, "Evaluating " + testFilePath);
 
             try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {

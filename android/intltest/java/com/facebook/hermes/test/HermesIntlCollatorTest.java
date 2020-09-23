@@ -38,7 +38,7 @@ public class HermesIntlCollatorTest extends HermesIntlTest262Base {
     @Test
     public void testIntlCollator() throws IOException {
 
-        String basePath = "test262-main/test/intl402/Collator/";
+        String basePath = "test262-main/test/intl402/Collator";
         Set<String> whilteList = new HashSet<>();
 
         Set<String> deviations = new HashSet<>(Arrays.asList(
@@ -58,7 +58,7 @@ public class HermesIntlCollatorTest extends HermesIntlTest262Base {
     }
 
     public void testIntlCollator_prototype() throws IOException {
-        String basePath = "test262-main/test/intl402/Collator/prototype/";
+        String basePath = "test262-main/test/intl402/Collator/prototype";
         Set<String> whilteList = new HashSet<>();
         Set<String> blackList = new HashSet<>();
 
@@ -66,7 +66,7 @@ public class HermesIntlCollatorTest extends HermesIntlTest262Base {
     }
 
     public void testIntlCollator_prototype_resolvedOptions() throws IOException {
-        String basePath = "test262-main/test/intl402/Collator/prototype/resolvedOptions/";
+        String basePath = "test262-main/test/intl402/Collator/prototype/resolvedOptions";
 
         Set<String> whilteList = new HashSet<>();
 
@@ -87,7 +87,7 @@ public class HermesIntlCollatorTest extends HermesIntlTest262Base {
     }
 
     public void testIntlCollator_prototype_constructor() throws IOException {
-        String basePath = "test262-main/test/intl402/Collator/prototype/constructor/";
+        String basePath = "test262-main/test/intl402/Collator/prototype/constructor";
         Set<String> whilteList = new HashSet<>();
         Set<String> blackList = new HashSet<>();
 
@@ -95,7 +95,7 @@ public class HermesIntlCollatorTest extends HermesIntlTest262Base {
     }
 
     public void testIntlCollator_prototype_compare() throws IOException {
-        String basePath = "test262-main/test/intl402/Collator/prototype/compare/";
+        String basePath = "test262-main/test/intl402/Collator/prototype/compare";
         Set<String> whilteList = new HashSet<>();
         Set<String> testIssueList = new HashSet<>(Arrays.asList(
                 "compare-function-builtin.js", // Reflect

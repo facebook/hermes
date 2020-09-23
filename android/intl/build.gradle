@@ -17,7 +17,7 @@ android {
   compileSdkVersion = 24
 
   defaultConfig {
-    minSdkVersion = 24
+    minSdkVersion = 16
     ndk {
       abiFilters (*rootProject.ext.abis)
     }

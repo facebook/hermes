@@ -192,7 +192,7 @@ public class DateTimeFormat {
         JSObjects.Put(opt, "hc", hourCycle);
 
         // 16 - 23
-        HashMap<String, Object> r = LocaleResolver.resolveLocale(mPlatformDateTimeFormatter.getAvailableLocales(), locales, opt, relevantExtensionKeys);
+        HashMap<String, Object> r = LocaleResolver.resolveLocale(locales, opt, relevantExtensionKeys);
 
         mResolvedLocaleObject = (ILocaleObject) JSObjects.getJavaMap(r).get("locale");
         mResolvedLocaleObjectForResolvedOptions = mResolvedLocaleObject.cloneObject();
@@ -336,12 +336,11 @@ public class DateTimeFormat {
     //
     // The notes on the ctor for Locales and Options also apply here.
     public static List<String> supportedLocalesOf(List<String> locales, Map<String, Object> options) throws JSRangeErrorException {
-        String[] availableLocales;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        String matcher = JSObjects.getJavaString(OptionHelpers.GetOption(options, Constants.LOCALEMATCHER, OptionHelpers.OptionType.STRING, Constants.LOCALEMATCHER_POSSIBLE_VALUES, Constants.LOCALEMATCHER_BESTFIT));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && matcher.equals("best fit")) {
             return Arrays.asList(LocaleMatcher.bestFitSupportedLocales(locales.toArray(new String[locales.size()])));
         } else {
-            availableLocales = new PlatformDateTimeFormatterAndroid().getAvailableLocales();
-            return Arrays.asList(LocaleMatcher.lookupSupportedLocales(availableLocales, locales.toArray(new String[locales.size()])));
+            return Arrays.asList(LocaleMatcher.lookupSupportedLocales(locales.toArray(new String[locales.size()])));
         }
     }
 

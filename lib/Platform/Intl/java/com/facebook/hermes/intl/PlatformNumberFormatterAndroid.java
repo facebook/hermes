@@ -1,6 +1,5 @@
 package com.facebook.hermes.intl;
 
-import android.icu.text.NumberingSystem;
 import android.os.Build;
 
 import java.math.RoundingMode;
@@ -154,23 +153,14 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
                                                     IPlatformNumberFormatter.CurrencySign currencySign,
                                                     IPlatformNumberFormatter.Notation notation,
                                                     IPlatformNumberFormatter.CompactDisplay compactDisplay) throws JSRangeErrorException {
-        if (!numberingSystem.isEmpty()) {
-
-            NumberingSystem numberingSystemObject;
-            try {
-                numberingSystemObject = NumberingSystem.getInstanceByName(JSObjects.getJavaString(numberingSystem));
-            } catch (RuntimeException ex) {
-                throw new JSRangeErrorException("Invalid numbering system: " + numberingSystem);
-            }
-
-            if (numberingSystemObject == null)
-                throw new JSRangeErrorException("Invalid numbering system: " + numberingSystem);
-
-            ArrayList<String> numberingSystemList = new ArrayList<>();
-            numberingSystemList.add(JSObjects.getJavaString(numberingSystem));
-
-            localeObject.setUnicodeExtensions("nu", numberingSystemList);
-        }
+// Unfortunately sending -nu- extension with the locale id is badly crashing with SIGSEGV
+//        if (!numberingSystem.isEmpty()) {
+//            ArrayList<String> numberingSystemList = new ArrayList<>();
+//            numberingSystemList.add(JSObjects.getJavaString(numberingSystem));
+//
+//            localeObject.setUnicodeExtensions("nu", numberingSystemList);
+//        }
+//
 
         NumberFormat numberFormat = NumberFormat.getInstance((Locale)localeObject.getLocale());
         numberFormat.setRoundingMode(RoundingMode.HALF_UP);

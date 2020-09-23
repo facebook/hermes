@@ -1,5 +1,7 @@
 package com.facebook.hermes.intl;
 
+import android.os.Build;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -9,14 +11,14 @@ import java.util.Set;
 public class LocaleResolver {
     // This method corresponds to https://tc39.es/ecma402/#sec-resolvelocale
 
-    public static HashMap<String, Object> resolveLocale(String[] availableLocales, List<String> requestedLocales, Object options, List<String> relevantExtensionKeys) throws JSRangeErrorException {
+    public static HashMap<String, Object> resolveLocale(List<String> requestedLocales, Object options, List<String> relevantExtensionKeys) throws JSRangeErrorException {
 
         HashMap<String, Object> result = new HashMap<>();
         String optionLocaleMatcher = JSObjects.getJavaString(JSObjects.Get(options, "localeMatcher"));
         LocaleMatcher.LocaleMatchResult localeMatchResult;
 
-        if (optionLocaleMatcher.equals("lookup")) {
-            localeMatchResult = LocaleMatcher.lookupMatch(requestedLocales.toArray(new String[requestedLocales.size()]), availableLocales);
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N || optionLocaleMatcher.equals("lookup")) {
+            localeMatchResult = LocaleMatcher.lookupMatch(requestedLocales.toArray(new String[requestedLocales.size()]));
         } else {
             // Default is best-fit
             // Note that we don't pass the list of available locale ids for best fit match ... to avoid re-creation of ULocale for each of the IDs again. Instead, we directly call ULocale.getAvailableLocales() at the lowest platform aware method.

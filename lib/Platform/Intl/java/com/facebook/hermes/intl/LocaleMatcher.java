@@ -71,9 +71,35 @@ public class LocaleMatcher {
         return result;
     }
 
+    public static String[] getAvailableLocales() {
+
+        if(Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+            // Before L, Locale.toLanguageTag isn't available. Need to figure out how to get a locale id from locale object ... Currently resoring to support only en
+            return new String []{"en"};
+        }
+
+        ArrayList<String> availableLocaleIds = new ArrayList<>();
+        java.util.Locale[] availableLocales = java.util.Locale.getAvailableLocales();
+        for(java.util.Locale locale: availableLocales) {
+            availableLocaleIds.add(locale.toLanguageTag()); // TODO:: Not available on platforms <= 20
+        }
+
+        return availableLocaleIds.toArray(new String[availableLocaleIds.size()]);
+    }
+
+
+    // https://tc39.es/ecma402/#sec-lookupmatcher
+    public static LocaleMatchResult lookupMatch(String[] requestedLocales) throws JSRangeErrorException {
+
+        String[] availableLocales = getAvailableLocales();
+        return lookupMatch(requestedLocales, availableLocales);
+    }
+
     // https://tc39.es/ecma402/#sec-lookupsupportedlocales
-    public static String[] lookupSupportedLocales(String[] availableLocales, String[] requestedLocales) throws JSRangeErrorException {
+    public static String[] lookupSupportedLocales(String[] requestedLocales) throws JSRangeErrorException {
         ArrayList<String> subset = new ArrayList<>();
+        String[] availableLocales = getAvailableLocales();
+
         for (String requestedLocale : requestedLocales) {
             String noExtensionLocale = LocaleObject.createFromLocaleId(requestedLocale).toCanonicalTagWithoutExtensions();
             String availableLocale = BestAvailableLocale(availableLocales, noExtensionLocale);

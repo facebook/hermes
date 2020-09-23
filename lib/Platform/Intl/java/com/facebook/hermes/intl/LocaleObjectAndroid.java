@@ -231,6 +231,9 @@ public class LocaleObjectAndroid implements ILocaleObject<Locale> {
         if(!mParsedLocaleIdentifier.unicodeExtensionKeywords.containsKey(key))
             mParsedLocaleIdentifier.unicodeExtensionKeywords.put(key, new ArrayList<String>());
 
+        // Remove all existing values .. TODO:: Double check whether this is correct, i.e. double check whether adding multiple values makes sense for any keys.
+        mParsedLocaleIdentifier.unicodeExtensionKeywords.get(key).clear();
+
         mParsedLocaleIdentifier.unicodeExtensionKeywords.get(key).addAll(value);
         mIsDirty = true;
     }
@@ -269,7 +272,7 @@ public class LocaleObjectAndroid implements ILocaleObject<Locale> {
     }
 
     public static ILocaleObject<Locale> createDefault() {
-        return new LocaleObjectAndroid(Locale.getDefault(Locale.Category.FORMAT));
+        return new LocaleObjectAndroid(Locale.getDefault());
     }
 
     @Override

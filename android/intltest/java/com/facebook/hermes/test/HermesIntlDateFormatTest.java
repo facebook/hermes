@@ -37,7 +37,7 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
 
     public void testIntlDateTimeFormat() throws IOException {
 
-        String basePath = "test262-main/test/intl402/DateTimeFormat/";
+        String basePath = "test262-main/test/intl402/DateTimeFormat";
 
         Set<String> whilteList = new HashSet<>();
 
@@ -84,7 +84,7 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
 
     public void testIntlDateTimeFormat_supportedLocalesOf() throws IOException {
 
-        String basePath = "test262-main/test/intl402/DateTimeFormat/supportedLocalesOf/";
+        String basePath = "test262-main/test/intl402/DateTimeFormat/supportedLocalesOf";
 
         Set<String> whilteList = new HashSet<>();
 
@@ -97,7 +97,7 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
 
     public void testIntlDateTimeFormat_prototype_constructor() throws IOException {
 
-        String basePath = "test262-main/test/intl402/DateTimeFormat/prototype/constructor/";
+        String basePath = "test262-main/test/intl402/DateTimeFormat/prototype/constructor";
 
         Set<String> whilteList = new HashSet<>();
         Set<String> blackList = new HashSet<>();
@@ -107,7 +107,7 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
 
     public void testIntlDateTimeFormat_prototype_format() throws IOException {
 
-        String basePath = "test262-main/test/intl402/DateTimeFormat/prototype/format/";
+        String basePath = "test262-main/test/intl402/DateTimeFormat/prototype/format";
 
         Set<String> whiteList = new HashSet<>();
 
@@ -140,7 +140,7 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
 
     public void testIntlDateTimeFormat_prototype_formatToParts() throws IOException {
 
-        String basePath = "test262-main/test/intl402/DateTimeFormat/prototype/formatToParts/";
+        String basePath = "test262-main/test/intl402/DateTimeFormat/prototype/formatToParts";
 
         Set<String> whilteList = new HashSet<>();
 
@@ -161,7 +161,7 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
 
     public void testIntlDateTimeFormat_prototype_resolvedOptions() throws IOException {
 
-        String basePath = "test262-main/test/intl402/DateTimeFormat/prototype/resolvedOptions/";
+        String basePath = "test262-main/test/intl402/DateTimeFormat/prototype/resolvedOptions";
 
         Set<String> whilteList = new HashSet<>();
 
@@ -187,7 +187,7 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
 
     public void testIntlDateTimeFormat_prototype_toStringTag() throws IOException {
 
-        String basePath = "test262-main/test/intl402/DateTimeFormat/prototype/toStringTag/";
+        String basePath = "test262-main/test/intl402/DateTimeFormat/prototype/toStringTag";
 
         Set<String> whilteList = new HashSet<>();
 
@@ -204,7 +204,7 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
 
     public void testIntlDateTimeFormat_prototype() throws IOException {
 
-        String basePath = "test262-main/test/intl402/DateTimeFormat/prototype/";
+        String basePath = "test262-main/test/intl402/DateTimeFormat/prototype";
 
         Set<String> whilteList = new HashSet<>();
         Set<String> blackList = new HashSet<>();

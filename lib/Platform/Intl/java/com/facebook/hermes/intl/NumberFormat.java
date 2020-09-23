@@ -197,6 +197,13 @@ public class NumberFormat {
         }
     }
 
+    private Double max(double d1, double d2) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
+            return Double.max(d1, d2);
+        else return d1 >= d2 ? d1 : d2;
+
+    }
+
     // https://tc39.es/ecma402/#sec-setnfdigitoptions
     private void setNumberFormatDigitOptions(Map<String, Object> options, Object mnfdDefault, Object mxfdDefault, IPlatformNumberFormatter.Notation notation) throws JSRangeErrorException {
 
@@ -229,7 +236,7 @@ public class NumberFormat {
             mRoundingType = IPlatformNumberFormatter.RoundingType.FRACTION_DIGITS;
 
             mnfd = OptionHelpers.DefaultNumberOption(mnfd, JSObjects.newNumber(0), JSObjects.newNumber(20), mnfdDefault);
-            Object mxfdActualDefault = JSObjects.newNumber( Double.max(JSObjects.getJavaDouble(mnfd), JSObjects.getJavaDouble(mxfdDefault)));
+            Object mxfdActualDefault = JSObjects.newNumber( max(JSObjects.getJavaDouble(mnfd), JSObjects.getJavaDouble(mxfdDefault)));
 
             mxfd = OptionHelpers.DefaultNumberOption(mxfd, mnfd, JSObjects.newNumber(20), mxfdActualDefault);
 
@@ -278,7 +285,7 @@ public class NumberFormat {
         // Note:: "cu" won't be accepted.
         List<String> relevantExtensionKeys = Arrays.asList(new String[]{"nu"});
 
-        HashMap<String, Object> r = LocaleResolver.resolveLocale(mPlatformNumberFormatter.getAvailableLocales(), locales, opt, relevantExtensionKeys);
+        HashMap<String, Object> r = LocaleResolver.resolveLocale(locales, opt, relevantExtensionKeys);
 
         mResolvedLocaleObject = (ILocaleObject) JSObjects.getJavaMap(r).get("locale");
         mResolvedLocaleObjectForResolvedOptions = mResolvedLocaleObject.cloneObject();
@@ -367,14 +374,11 @@ public class NumberFormat {
     // The notes on DateTimeFormat#DateTimeFormat() for Locales and
     // Options also apply here.
     public static List<String> supportedLocalesOf(List<String> locales, Map<String, Object> options) throws JSRangeErrorException {
-
-        String[] availableLocales;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        String matcher = JSObjects.getJavaString(OptionHelpers.GetOption(options, Constants.LOCALEMATCHER, OptionHelpers.OptionType.STRING, Constants.LOCALEMATCHER_POSSIBLE_VALUES, Constants.LOCALEMATCHER_BESTFIT));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && matcher.equals("best fit")) {
             return Arrays.asList(LocaleMatcher.bestFitSupportedLocales(locales.toArray(new String[locales.size()])));
-        }
-        else {
-            availableLocales = new PlatformNumberFormatterICU().getAvailableLocales();
-            return Arrays.asList(LocaleMatcher.lookupSupportedLocales(availableLocales, locales.toArray(new String[locales.size()])));
+        } else {
+            return Arrays.asList(LocaleMatcher.lookupSupportedLocales(locales.toArray(new String[locales.size()])));
         }
     }
 
