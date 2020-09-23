@@ -83,7 +83,7 @@ struct StackTracesTreeNode {
   // This is supposed to map a CodeBlock* to ChildBytecodeMap, but DenseMap
   // tries to do alignof() on CodeBlock* which isn't allowed on an incomplete
   // type. So I've worked around it by just using void* and casting as needed.
-  using ChildCodeblockMap = llvh::DenseMap<void *, ChildBytecodeMap>;
+  using ChildCodeblockMap = llvh::DenseMap<const void *, ChildBytecodeMap>;
 
   /// Map to index of child in children_.
   using ChildSourceLocMap =

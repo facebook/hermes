@@ -699,7 +699,7 @@ bool JSParserImpl::parseStatementListItem(
 
     stmtList.push_back(*decl.getValue());
 #if HERMES_PARSE_FLOW
-  } else if (checkDeclareType()) {
+  } else if (context_.getParseFlow() && checkDeclareType()) {
     // declare var, declare function, declare interface, etc.
     SMLoc start = advance(JSLexer::GrammarContext::Flow).Start;
     auto decl = parseDeclare(start);
@@ -2711,7 +2711,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
 
     ESTree::Node *returnType = nullptr;
 #if HERMES_PARSE_FLOW
-    if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
+    if (context_.getParseFlow() &&
+        checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
       auto optRet = parseTypeAnnotation(true);
       if (!optRet)
         return None;
@@ -3476,6 +3477,7 @@ Optional<ESTree::Node *> JSParserImpl::parseUnaryExpression() {
             new (context_) ESTree::AwaitExpressionNode(optExpr.getValue()));
       }
       // Fall-through to default for all other identifiers.
+      LLVM_FALLTHROUGH;
 
     default:
       return parsePostfixExpression();
@@ -3751,6 +3753,7 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(
 #if HERMES_PARSE_FLOW
 Optional<ESTree::Node *> JSParserImpl::tryParseCoverTypedIdentifierNode(
     ESTree::Node *test) {
+  assert(context_.getParseFlow() && "must be parsing Flow");
   // In the case of flow types in arrow function parameters, we may have
   // optional parameters which look like:
   // Identifier ? : TypeAnnotation
@@ -4261,7 +4264,8 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
 
   ESTree::Node *returnType = nullptr;
 #if HERMES_PARSE_FLOW
-  if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
+  if (context_.getParseFlow() &&
+      checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Flow)) {
     auto optRet = parseTypeAnnotation(true);
     if (!optRet)
       return None;
@@ -4610,7 +4614,7 @@ Optional<ESTree::Node *> JSParserImpl::reparseArrayAsignmentPattern(
 
     // Every element in the array assignment pattern is optional,
     // because we can parse the Elision production.
-    if (auto *empty = dyn_cast<ESTree::EmptyNode>(elem)) {
+    if (isa<ESTree::EmptyNode>(elem)) {
       elements.push_back(*elem);
       continue;
     }
@@ -5741,6 +5745,7 @@ Optional<ESTree::Node *> JSParserImpl::parseExportSpecifier(
           "in export clause",
           "location of export clause",
           exportLoc);
+      return None;
     }
     exported = setLocation(
         tok_,

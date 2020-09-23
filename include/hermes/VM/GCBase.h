@@ -97,9 +97,11 @@ class Deserializer;
 ///
 ///   void creditExternalMemory(GCCell *alloc, uint32_t size);
 ///   void debitExternalMemory(GCCell *alloc, uint32_t size);
+///   void debitExternalMemoryFromFinalizer(GCCell *alloc, uint32_t size);
 ///
-/// Force a garbage collection cycle.
-///   void collect();
+/// Force a garbage collection cycle. The provided cause will be used in
+/// logging.
+///   void collect(std::string cause);
 ///
 /// The maximum size of any one allocation allowable by the GC in any state.
 ///   static constexpr uint32_t maxAllocationSize();
@@ -189,6 +191,9 @@ class Deserializer;
 ///
 class GCBase {
  public:
+  static const char kNaturalCauseForAnalytics[];
+  static const char kHandleSanCauseForAnalytics[];
+
   /// An interface enabling the garbage collector to mark roots and free
   /// symbols.
   struct GCCallbacks {
@@ -675,6 +680,9 @@ class GCBase {
   /// Dump detailed heap contents to the given output stream, \p os.
   virtual void dump(llvh::raw_ostream &os, bool verbose = false);
 
+  /// Run the finalizers for all heap objects.
+  virtual void finalizeAll() = 0;
+
   /// Do any logging of info about the heap that is useful, then dies with a
   /// fatal out-of-memory error.
   LLVM_ATTRIBUTE_NORETURN void oom(std::error_code reason);
@@ -713,6 +721,7 @@ class GCBase {
   /// nothing.
   void creditExternalMemory(GCCell *alloc, uint32_t size) {}
   void debitExternalMemory(GCCell *alloc, uint32_t size) {}
+  void debitExternalMemoryFromFinalizer(GCCell *alloc, uint32_t size) {}
 
   /// Default implementations for read and write barriers: do nothing.
   inline void writeBarrier(void *loc, HermesValue value) {}

@@ -444,8 +444,10 @@ hermesBuiltinCopyDataProperties(void *, Runtime *runtime, NativeArgs args) {
 
         valueHandle = std::move(*cr);
 
+        // sym can be an index-like property, so we have to bypass the assert in
+        // defineOwnPropertyInternal.
         if (LLVM_UNLIKELY(
-                JSObject::defineOwnProperty(
+                JSObject::defineOwnPropertyInternal(
                     target,
                     runtime,
                     sym,

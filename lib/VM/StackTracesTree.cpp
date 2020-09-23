@@ -72,7 +72,7 @@ void StackTracesTreeNode::addMapping(
     ChildBytecodeMap newBytecodeMapping;
     newBytecodeMapping.try_emplace(bytecodeOffset, childIndex);
     codeBlockToChildMap_.try_emplace(
-        (void *)codeBlock, std::move(newBytecodeMapping));
+        static_cast<const void *>(codeBlock), std::move(newBytecodeMapping));
   } else {
     auto &bytecodeMapping = matchingCodeBlockChildren->getSecond();
     assert(

@@ -33,6 +33,7 @@ def main():
         args.num_slowest_tests,
         args.keep_tmp,
         args.show_all,
+        args.lazy,
     )
 
 

@@ -164,6 +164,7 @@ class GenGC final : public GCBase {
   /// memory of the given \p size.  Decrease the external memory charge of the
   /// generation owning \p alloc by this amount.
   void debitExternalMemory(GCCell *alloc, uint32_t size);
+  void debitExternalMemoryFromFinalizer(GCCell *alloc, uint32_t size);
 
   /// Write barriers.
 
@@ -250,7 +251,7 @@ class GenGC final : public GCBase {
 
   /// \p canEffectiveOOM Indicates whether the GC can declare effective OOM as a
   ///     result of this collection.
-  void collect(bool canEffectiveOOM = false);
+  void collect(std::string cause, bool canEffectiveOOM = false);
 
   static constexpr uint32_t minAllocationSize() {
     // NCGen doesn't enforce a minimum allocation requirement.
@@ -270,7 +271,7 @@ class GenGC final : public GCBase {
   }
 
   /// Run the finalizers for all heap objects.
-  void finalizeAll();
+  void finalizeAll() override;
 
 #ifndef NDEBUG
 
@@ -589,6 +590,7 @@ class GenGC final : public GCBase {
     CollectionSection(
         GenGC *gc,
         const char *name,
+        std::string cause,
         OptValue<GCCallbacks *> gcCallbacksOpt = llvh::None);
     ~CollectionSection();
 
@@ -612,6 +614,7 @@ class GenGC final : public GCBase {
    private:
     GenGC *gc_;
     GCCycle cycle_;
+    std::string cause_;
     TimePoint wallStart_;
     std::chrono::microseconds cpuStart_;
     size_t gcUsedBefore_;
@@ -928,7 +931,7 @@ inline void *GenGC::alloc(uint32_t sz) {
     // MallocGC already implements that well though, and it is complicated and
     // slow to implement that for NCGen. So instead do a full collection which
     // is almost as good.
-    collect();
+    collect("handle-san");
   }
 
 #ifdef HERMESVM_GC_GENERATIONAL_MARKSWEEPCOMPACT
@@ -970,7 +973,7 @@ inline void *GenGC::allocLongLived(uint32_t size) {
     // MallocGC already implements that well though, and it is complicated and
     // slow to implement that for NCGen. So instead do a full collection which
     // is almost as good.
-    collect();
+    collect("handle-san");
   }
   AllocResult res;
   if (allocContextFromYG_) {

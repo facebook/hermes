@@ -247,8 +247,8 @@ class Runtime : public HandleRootOwner,
   void ttiReached();
 
   /// Force a garbage collection cycle.
-  void collect() {
-    heap_.collect();
+  void collect(std::string cause) {
+    heap_.collect(std::move(cause));
   }
 
   /// Potentially move the heap if handle sanitization is on.

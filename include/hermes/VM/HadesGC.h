@@ -110,10 +110,20 @@ class HadesGC final : public GCBase {
 
   /// Force a garbage collection cycle.
   /// (Part of general GC API defined in GCBase.h).
-  void collect();
+  void collect(std::string cause);
 
   /// Run the finalizers for all heap objects.
-  void finalizeAll();
+  void finalizeAll() override;
+
+  /// Add some external memory cost to a cell.
+  /// (Part of general GC API defined in GCBase.h).
+  /// \pre canAllocExternalMemory(size) is true.
+  void creditExternalMemory(GCCell *alloc, uint32_t size);
+
+  /// Remove some external memory cost from a cell.
+  /// (Part of general GC API defined in GCBase.h).
+  void debitExternalMemory(GCCell *alloc, uint32_t size);
+  void debitExternalMemoryFromFinalizer(GCCell *alloc, uint32_t size);
 
   /// \name Write Barriers
   /// \{
@@ -234,11 +244,13 @@ class HadesGC final : public GCBase {
     AllocResult youngGenBumpAlloc(uint32_t sz);
 
     /// Record the head of this cell so it can be found by the card scanner.
-    static void setCellHead(const GCCell *cell);
+    static void setCellHead(const GCCell *start, const size_t sz);
 
-    /// For a given address, find the head of the cell.
-    /// \return A cell such that cell <= address < cell->nextCell().
-    GCCell *getCellHead(const void *address);
+    /// Find the head of the first cell that extends into the card at index
+    /// \p cardIdx.
+    /// \return A cell such that
+    /// cell <= indexToAddress(cardIdx) < cell->nextCell().
+    GCCell *getFirstCellHead(const size_t cardIdx);
 
     /// Call \p callback on every cell allocated in this segment.
     /// NOTE: Overridden to skip free list entries.
@@ -257,10 +269,13 @@ class HadesGC final : public GCBase {
     void transitionToFreelist(OldGen &og);
 
     // APIs from AlignedHeapSegment that are safe to use on a HeapSegment.
+    using AlignedHeapSegment::available;
     using AlignedHeapSegment::cardTable;
     using AlignedHeapSegment::cardTableCovering;
-    using AlignedHeapSegment::cellHeads;
+    using AlignedHeapSegment::clearExternalMemoryCharge;
     using AlignedHeapSegment::contains;
+    using AlignedHeapSegment::effectiveEnd;
+    using AlignedHeapSegment::end;
     using AlignedHeapSegment::getCellMarkBit;
     using AlignedHeapSegment::level;
     using AlignedHeapSegment::lowLim;
@@ -268,6 +283,7 @@ class HadesGC final : public GCBase {
     using AlignedHeapSegment::maxSize;
     using AlignedHeapSegment::resetLevel;
     using AlignedHeapSegment::setCellMarkBit;
+    using AlignedHeapSegment::setEffectiveEnd;
     using AlignedHeapSegment::size;
     using AlignedHeapSegment::start;
     using AlignedHeapSegment::used;
@@ -323,6 +339,10 @@ class HadesGC final : public GCBase {
     /// the JS heap, excluding free list entries.
     uint64_t allocatedBytes() const;
 
+    /// \return the total number of bytes that are held in external memory, kept
+    /// alive by objects in the OG.
+    uint64_t externalBytes() const;
+
     /// \return the total number of bytes that are in use by the OG section of
     /// the JS heap, including free list entries.
     uint64_t size() const;
@@ -347,6 +367,18 @@ class HadesGC final : public GCBase {
 
     void setBytesToMark(size_t bytesToMark) {
       bytesToMark_ = bytesToMark;
+    }
+
+    /// Add some external memory cost to the OG.
+    void creditExternalMemory(uint32_t size) {
+      externalBytes_ += size;
+    }
+
+    /// Remove some external memory cost from the OG.
+    void debitExternalMemory(uint32_t size) {
+      assert(
+          externalBytes_ >= size && "Debiting more memory than was credited");
+      externalBytes_ -= size;
     }
 
     class FreelistCell final : public VariableSizeRuntimeCell {
@@ -410,6 +442,9 @@ class HadesGC final : public GCBase {
     /// An estimate of the number of bytes that need to be marked for a
     /// collection to complete.
     size_t bytesToMark_{0};
+
+    /// The amount of bytes of external memory credited to objects in the OG.
+    uint64_t externalBytes_{0};
 
     /// The freelist buckets are split into two sections. In the "small"
     /// section, there is one bucket for each size, in multiples of heapAlign.
@@ -549,6 +584,9 @@ class HadesGC final : public GCBase {
   /// The weighted average of the YG survival ratio over time.
   ExponentialMovingAverage ygAverageSurvivalRatio_;
 
+  /// The amount of bytes of external memory credited to objects in the YG.
+  uint64_t ygExternalBytes_{0};
+
   /// The main entrypoint for all allocations.
   /// \param sz The size of allocation requested. This might be rounded up to
   ///   fit heap alignment requirements.
@@ -569,15 +607,17 @@ class HadesGC final : public GCBase {
 
   /// Perform a YG garbage collection. All live objects in YG will be evacuated
   /// to the OG.
+  /// \param cause The cause of the GC, used for logging.
   /// \param forceOldGenCollection If true, always start an old gen collection
   ///   if one is not already active.
   /// \post The YG is completely empty, and all bytes are available for new
   ///   allocations.
-  void youngGenCollection(bool forceOldGenCollection);
+  void youngGenCollection(std::string cause, bool forceOldGenCollection);
 
   /// In the "no GC before TTI" mode, move the Young Gen heap segment to the
   /// Old Gen without scanning for garbage.
-  void promoteYoungGenToOldGen();
+  /// \return true if a promotion occurred, false if it did not.
+  bool promoteYoungGenToOldGen();
 
   /// This function checks if the live bytes after the last OG GC is greater
   /// than the tripwire limit. If the conditions are met, the tripwire is
@@ -585,10 +625,14 @@ class HadesGC final : public GCBase {
   /// Also resets the stats counter, so that it calls the analytics callback.
   void checkTripwireAndResetStats();
 
+  /// Transfer any external memory charges from YG to OG. Used as part of YG
+  /// collection.
+  void transferExternalMemoryToOldGen();
+
   /// Perform an OG garbage collection. All live objects in OG will be left
   /// untouched, all unreachable objects will be placed into a free list that
   /// can be used by \c oldGenAlloc.
-  void oldGenCollection();
+  void oldGenCollection(std::string cause);
 
   /// If there's an OG collection going on, wait for it to complete. This
   /// function is synchronous and will block the caller if the GC background
@@ -665,6 +709,10 @@ class HadesGC final : public GCBase {
   /// Return the total number of bytes that are in use by the JS heap.
   uint64_t allocatedBytes() const;
 
+  /// \return the total number of bytes that are in use by objects on the JS
+  ///   heap, but is not in the heap itself.
+  uint64_t externalBytes() const;
+
   /// Accessor for the YG.
   HeapSegment &youngGen();
   const HeapSegment &youngGen() const;
@@ -694,6 +742,11 @@ class HadesGC final : public GCBase {
       const HeapSegment &seg,
       std::string extraName);
 
+  /// Unlocks any held mutexes, then aborts the program.
+  /// Should only be called by the GC, OOM from outside the GC can skip the
+  /// unlocks.
+  LLVM_ATTRIBUTE_NORETURN void oomInternal(std::error_code reason);
+
 #ifdef HERMES_SLOW_DEBUG
   /// Checks the heap to make sure all cells are valid.
   void checkWellFormed();
@@ -701,7 +754,6 @@ class HadesGC final : public GCBase {
   /// Verify that the card table used to find pointers from OG into YG has the
   /// correct cards dirtied, given the contents of the OG currently.
   void verifyCardTable();
-  void verifyCardTableBoundaries() const;
 #endif
 };
 

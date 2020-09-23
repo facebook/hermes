@@ -1087,6 +1087,7 @@ class JSParserImpl {
       case EnumKind::Symbol:
         return "symbol";
     }
+    llvm_unreachable("No other kind of enum");
   }
 
   static OptValue<EnumKind> getMemberEnumKind(ESTree::Node *member) {

@@ -36,6 +36,9 @@ using llvh::format;
 namespace hermes {
 namespace vm {
 
+const char GCBase::kNaturalCauseForAnalytics[] = "natural";
+const char GCBase::kHandleSanCauseForAnalytics[] = "handle-san";
+
 GCBase::GCBase(
     MetadataTable metaTable,
     GCCallbacks *gcCallbacks,
@@ -682,6 +685,7 @@ void GCBase::printStats(JSONEmitter &json) {
     json.emitKeyValue("runtimeDescription", event.runtimeDescription);
     json.emitKeyValue("gcKind", event.gcKind);
     json.emitKeyValue("collectionType", event.collectionType);
+    json.emitKeyValue("cause", event.cause);
     json.emitKeyValue("duration", event.duration.count());
     json.emitKeyValue("cpuDuration", event.cpuDuration.count());
     json.emitKeyValue("preAllocated", event.preAllocated);
@@ -728,11 +732,17 @@ void GCBase::oom(std::error_code reason) {
       "Javascript heap memory exhausted: heap size = %d, allocated = %d.",
       heapInfo.heapSize,
       heapInfo.allocatedBytes);
+  // No need to run finalizeAll, the exception will propagate and eventually run
+  // ~Runtime.
   throw JSOutOfMemoryError(
       std::string(detailBuffer) + "\ncall stack:\n" +
       gcCallbacks_->getCallStackNoAlloc());
 #else
   oomDetail(reason);
+  // Run finalizeAll, to avoid reporting an ASAN leak on native memory held by
+  // heap objects. Run this after oomDetail in case oomDetail wants to examine
+  // any objects.
+  finalizeAll();
   hermes_fatal((llvh::Twine("OOM: ") + convert_error_to_message(reason)).str());
 #endif
 }

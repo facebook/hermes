@@ -118,7 +118,7 @@ TEST_F(GCBasicsTest, SmokeTest) {
   ASSERT_EQ(0u, info.allocatedBytes);
 
   // Collect an empty heap.
-  gc.collect();
+  rt.collect();
   gc.getHeapInfo(info);
   gc.getDebugHeapInfo(debugInfo);
   ASSERT_EQ(0u, debugInfo.numAllocatedObjects);
@@ -140,7 +140,7 @@ TEST_F(GCBasicsTest, SmokeTest) {
   ASSERT_EQ(sizeof(Dummy), info.allocatedBytes);
 
   // Now free the unreachable object.
-  gc.collect();
+  rt.collect();
   gc.getHeapInfo(info);
   gc.getDebugHeapInfo(debugInfo);
   ASSERT_EQ(0u, debugInfo.numAllocatedObjects);
@@ -164,7 +164,7 @@ TEST_F(GCBasicsTest, SmokeTest) {
 
   // Make only the second object reachable and collect.
   rt.pointerRoots.push_back(&o2);
-  gc.collect();
+  rt.collect();
   gc.getHeapInfo(info);
   gc.getDebugHeapInfo(debugInfo);
   ASSERT_EQ(1u, debugInfo.numAllocatedObjects);
@@ -205,7 +205,7 @@ TEST_F(GCBasicsTest, MovedObjectTest) {
   a1->values()[0].set(HermesValue::encodeObjectValue(a1), &gc);
   a1->values()[1].set(HermesValue::encodeObjectValue(a2), &gc);
 
-  gc.collect();
+  rt.collect();
   totalAlloc -= heapAlignSize(Array::allocSize(0));
   gc.getHeapInfo(info);
   gc.getDebugHeapInfo(debugInfo);
@@ -306,7 +306,7 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   a1 = nullptr;
 
   mtx.unlock();
-  gc.collect();
+  rt.collect();
   gc.getDebugHeapInfo(debugInfo);
   mtx.lock();
   EXPECT_EQ(1u, debugInfo.numAllocatedObjects);
@@ -319,7 +319,7 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   // Make the slot unreachable and test that it is freed.
   mtx.unlock();
   rt.markExtraWeak = [&](WeakRefAcceptor &acceptor) { acceptor.accept(wr2); };
-  gc.collect();
+  rt.collect();
   mtx.lock();
 
   ASSERT_EQ(WeakSlotState::Free, wr1.unsafeGetSlot()->state());
@@ -469,7 +469,7 @@ TEST_F(GCBasicsTest, TestIDPersistsAcrossCollections) {
   GCScope scope{&rt};
   auto handle = rt.makeHandle<Dummy>(Dummy::create(rt));
   const auto idBefore = rt.getHeap().getObjectID(*handle);
-  rt.getHeap().collect();
+  rt.collect();
   const auto idAfter = rt.getHeap().getObjectID(*handle);
   EXPECT_EQ(idBefore, idAfter);
 }
@@ -478,7 +478,7 @@ TEST_F(GCBasicsTest, TestIDPersistsAcrossCollections) {
 TEST_F(GCBasicsTest, TestIDDeathInYoung) {
   GCScope scope{&rt};
   rt.getHeap().getObjectID(Dummy::create(rt));
-  rt.getHeap().collect();
+  rt.collect();
   // ~DummyRuntime will verify all pointers in ID map.
 }
 
@@ -489,7 +489,7 @@ TEST(GCCallbackTest, TestCallbackInvoked) {
   GCConfig config = GCConfig::Builder().withCallback(cb).build();
   auto rt =
       Runtime::create(RuntimeConfig::Builder().withGCConfig(config).build());
-  rt->collect();
+  rt->collect("test");
   // Hades will record the YG and OG collections as separate events.
 #ifndef HERMESVM_GC_HADES
   EXPECT_EQ(2, ev.size());

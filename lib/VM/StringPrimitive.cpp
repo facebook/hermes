@@ -605,7 +605,7 @@ void ExternalStringPrimitive<T>::_finalizeImpl(GCCell *cell, GC *gc) {
   // Remove the external string from the snapshot tracking system if it's being
   // tracked.
   gc->getIDTracker().untrackNative(self->contents_.data());
-  gc->debitExternalMemory(self, self->calcExternalMemorySize());
+  gc->debitExternalMemoryFromFinalizer(self, self->calcExternalMemorySize());
   self->~ExternalStringPrimitive<T>();
 }
 

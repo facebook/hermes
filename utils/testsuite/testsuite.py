@@ -493,7 +493,7 @@ ESPRIMA_TEST_STATUS_MAP = {
 }
 
 
-def runTest(filename, test_skiplist, keep_tmp, binary_path, hvm, esprima_runner):
+def runTest(filename, test_skiplist, keep_tmp, binary_path, hvm, esprima_runner, lazy):
     """
     Runs a single js test pointed by filename
     """
@@ -576,144 +576,156 @@ def runTest(filename, test_skiplist, keep_tmp, binary_path, hvm, esprima_runner)
         printVerbose("Strict Mode: {}".format(str(strictEnabled)))
         printVerbose("Temp js file name: " + temp.name)
 
-        errString = ""
-        binfile = tempfile.NamedTemporaryFile(
-            prefix=splitext(baseFileName)[0] + "-", suffix=".hbc", delete=False
-        )
-        binfile.close()
-        for optEnabled in (True, False):
-            printVerbose("\nRunning with Hermes...")
-            printVerbose("Optimization: {}".format(str(optEnabled)))
+        if lazy:
             run_vm = True
+            fileToRun = temp.name
             start = time.time()
+        else:
+            errString = ""
+            binfile = tempfile.NamedTemporaryFile(
+                prefix=splitext(baseFileName)[0] + "-", suffix=".hbc", delete=False
+            )
+            binfile.close()
+            fileToRun = binfile.name
+            for optEnabled in (True, False):
+                printVerbose("\nRunning with Hermes...")
+                printVerbose("Optimization: {}".format(str(optEnabled)))
+                run_vm = True
+                start = time.time()
 
-            # Compile to bytecode with Hermes.
-            try:
-                printVerbose("Compiling: {} to {}".format(filename, binfile.name))
-                args = (
-                    [
-                        os.path.join(binary_path, "hermes"),
-                        temp.name,
-                        "-hermes-parser",
-                        "-emit-binary",
-                        "-out",
-                        binfile.name,
-                    ]
-                    + es6_args
-                    + extra_compile_flags
-                )
-                if optEnabled:
-                    args.append("-O")
-                else:
-                    args.append("-O0")
-                if strictEnabled:
-                    args.append("-strict")
-                else:
-                    args.append("-non-strict")
-                subprocess.check_output(
-                    args, timeout=TIMEOUT_COMPILER, stderr=subprocess.STDOUT
-                )
+                # Compile to bytecode with Hermes.
+                try:
+                    printVerbose("Compiling: {} to {}".format(filename, binfile.name))
+                    args = (
+                        [
+                            os.path.join(binary_path, "hermes"),
+                            temp.name,
+                            "-hermes-parser",
+                            "-emit-binary",
+                            "-out",
+                            binfile.name,
+                        ]
+                        + es6_args
+                        + extra_compile_flags
+                    )
+                    if optEnabled:
+                        args.append("-O")
+                    else:
+                        args.append("-O0")
+                    if strictEnabled:
+                        args.append("-strict")
+                    else:
+                        args.append("-non-strict")
+                    subprocess.check_output(
+                        args, timeout=TIMEOUT_COMPILER, stderr=subprocess.STDOUT
+                    )
 
-                if negativePhase == "early" or negativePhase == "parse":
+                    if negativePhase == "early" or negativePhase == "parse":
+                        run_vm = False
+                        printVerbose(
+                            "FAIL: Compilation failure expected on {} with Hermes".format(
+                                baseFileName
+                            )
+                        )
+                        # If the test was in the skiplist, it was possible a
+                        # compiler failure was expected. Else, it is unexpected and
+                        # will return a failure.
+                        return (
+                            (skippedType, "", 0)
+                            if skiplisted
+                            else (TestFlag.COMPILE_FAILED, "", 0)
+                        )
+                except subprocess.CalledProcessError as e:
                     run_vm = False
-                    printVerbose(
-                        "FAIL: Compilation failure expected on {} with Hermes".format(
-                            baseFileName
+                    if negativePhase != "early" and negativePhase != "parse":
+                        printVerbose(
+                            "FAIL: Compilation failed on {} with Hermes".format(
+                                baseFileName
+                            )
                         )
+                        errString = e.output.decode("utf-8").strip()
+                        printVerbose(textwrap.indent(errString, "\t"))
+                        return (
+                            (skippedType, "", 0)
+                            if skiplisted
+                            else (TestFlag.COMPILE_FAILED, errString, 0)
+                        )
+                    printVerbose("PASS: Hermes correctly failed to compile")
+                except subprocess.TimeoutExpired:
+                    printVerbose(
+                        "FAIL: Compilation timed out on {}".format(baseFileName)
                     )
-                    # If the test was in the skiplist, it was possible a
-                    # compiler failure was expected. Else, it is unexpected and
-                    # will return a failure.
                     return (
                         (skippedType, "", 0)
                         if skiplisted
-                        else (TestFlag.COMPILE_FAILED, "", 0)
+                        else (TestFlag.COMPILE_TIMEOUT, "", 0)
                     )
+
+        # If the compilation succeeded, run the bytecode with the specified VM.
+        if run_vm:
+            try:
+                printVerbose("Running with HBC VM: {}".format(filename))
+                # Run the hermes vm.
+                if lazy:
+                    binary = os.path.join(binary_path, "hermes")
+                else:
+                    binary = os.path.join(binary_path, hvm)
+                args = [binary, fileToRun] + es6_args + extra_run_args
+                if lazy:
+                    args.append("-lazy")
+                    if strictEnabled:
+                        args.append("-strict")
+                    else:
+                        args.append("-non-strict")
+                env = {"LC_ALL": "en_US.UTF-8"}
+                if sys.platform == "linux":
+                    env["ICU_DATA"] = binary_path
+                printVerbose(" ".join(args))
+                subprocess.check_output(
+                    args, timeout=TIMEOUT_VM, stderr=subprocess.STDOUT, env=env
+                )
+
+                if negativePhase == "runtime":
+                    printVerbose("FAIL: Expected execution to throw")
+                    return (
+                        (skippedType, "", 0)
+                        if skiplisted
+                        else (TestFlag.EXECUTE_FAILED, "", 0)
+                    )
+                else:
+                    printVerbose("PASS: Execution completed successfully")
             except subprocess.CalledProcessError as e:
-                run_vm = False
-                if negativePhase != "early" and negativePhase != "parse":
+                if negativePhase != "runtime":
                     printVerbose(
-                        "FAIL: Compilation failed on {} with Hermes".format(
-                            baseFileName
-                        )
+                        "FAIL: Execution of {} threw unexpected error".format(filename)
                     )
-                    errString = e.output.decode("utf-8").strip()
-                    printVerbose(textwrap.indent(errString, "\t"))
+                    printVerbose("Return code: {}".format(e.returncode))
+                    if e.output:
+                        printVerbose("Output:")
+                        errString = e.output.decode("utf-8").strip()
+                        printVerbose(textwrap.indent(errString, "\t"))
+                    else:
+                        printVerbose("No output received from process")
                     return (
                         (skippedType, "", 0)
                         if skiplisted
-                        else (TestFlag.COMPILE_FAILED, errString, 0)
+                        else (TestFlag.EXECUTE_FAILED, errString, 0)
                     )
-                printVerbose("PASS: Hermes correctly failed to compile")
+                else:
+                    printVerbose("PASS: Execution of binary threw an error as expected")
             except subprocess.TimeoutExpired:
-                printVerbose("FAIL: Compilation timed out on {}".format(baseFileName))
+                printVerbose("FAIL: Execution of binary timed out")
                 return (
                     (skippedType, "", 0)
                     if skiplisted
-                    else (TestFlag.COMPILE_TIMEOUT, "", 0)
+                    else (TestFlag.EXECUTE_TIMEOUT, "", 0)
                 )
-
-            # If the compilation succeeded, run the bytecode with the specified VM.
-            if run_vm:
-                try:
-                    printVerbose("Running with HBC VM: {}".format(filename))
-                    # Run the hermes vm.
-                    args = (
-                        [os.path.join(binary_path, hvm), binfile.name]
-                        + es6_args
-                        + extra_run_args
-                    )
-                    env = {"LC_ALL": "en_US.UTF-8"}
-                    if sys.platform == "linux":
-                        env["ICU_DATA"] = binary_path
-                    subprocess.check_output(
-                        args, timeout=TIMEOUT_VM, stderr=subprocess.STDOUT, env=env
-                    )
-
-                    if negativePhase == "runtime":
-                        printVerbose("FAIL: Expected execution to throw")
-                        return (
-                            (skippedType, "", 0)
-                            if skiplisted
-                            else (TestFlag.EXECUTE_FAILED, "", 0)
-                        )
-                    else:
-                        printVerbose("PASS: Execution completed successfully")
-                except subprocess.CalledProcessError as e:
-                    if negativePhase != "runtime":
-                        printVerbose(
-                            "FAIL: Execution of {} threw unexpected error".format(
-                                filename
-                            )
-                        )
-                        printVerbose("Return code: {}".format(e.returncode))
-                        if e.output:
-                            printVerbose("Output:")
-                            errString = e.output.decode("utf-8").strip()
-                            printVerbose(textwrap.indent(errString, "\t"))
-                        else:
-                            printVerbose("No output received from process")
-                        return (
-                            (skippedType, "", 0)
-                            if skiplisted
-                            else (TestFlag.EXECUTE_FAILED, errString, 0)
-                        )
-                    else:
-                        printVerbose(
-                            "PASS: Execution of binary threw an error as expected"
-                        )
-                except subprocess.TimeoutExpired:
-                    printVerbose("FAIL: Execution of binary timed out")
-                    return (
-                        (skippedType, "", 0)
-                        if skiplisted
-                        else (TestFlag.EXECUTE_TIMEOUT, "", 0)
-                    )
-            max_duration = max(max_duration, time.time() - start)
+        max_duration = max(max_duration, time.time() - start)
 
     if not keep_tmp:
         os.unlink(temp.name)
-        os.unlink(binfile.name)
+        if not lazy:
+            os.unlink(binfile.name)
 
     if skiplisted:
         # If the test was skiplisted, but it passed successfully, consider that
@@ -886,6 +898,13 @@ def get_arg_parser():
         action="store_true",
         help="Show intermediate output",
     )
+    parser.add_argument(
+        "--lazy",
+        dest="lazy",
+        default=False,
+        action="store_true",
+        help="Force lazy evaluation",
+    )
     return parser
 
 
@@ -903,6 +922,7 @@ def run(
     num_slowest_tests,
     keep_tmp,
     show_all,
+    lazy,
 ):
     global count
     global verbose
@@ -970,7 +990,7 @@ def run(
     esprima_runner = esprima.EsprimaTestRunner(verbose)
 
     calls = makeCalls(
-        (test_skiplist, keep_tmp, binary_path, hvm, esprima_runner),
+        (test_skiplist, keep_tmp, binary_path, hvm, esprima_runner, lazy),
         onlyfiles,
         rangeLeft,
         rangeRight,

@@ -36,13 +36,19 @@ Pod::Spec.new do |spec|
     # See `build-apple-framework.sh` for details
     DEBUG=#{HermesHelper::BUILD_TYPE == :debug}
 
+    # In a release package, there are no utilities and source files, we exit
+    # early as there is nothing to build 
+    if [ ! -f ./utils/build-apple-framework.sh ]; then
+      exit 0;
+    fi
+
     # Source utilities into the scope
     . ./utils/build-apple-framework.sh
 
     # If universal framework for iOS does not exist, build one
     if [ ! -d destroot/Library/Frameworks/iphoneos/hermes.framework ]; then
       build_apple_framework "iphoneos" "armv7;armv7s;arm64" "#{HermesHelper::IOS_DEPLOYMENT_TARGET}"
-      build_apple_framework "iphonesimulator" "x86_64" "#{HermesHelper::IOS_DEPLOYMENT_TARGET}"
+      build_apple_framework "iphonesimulator" "x86_64;i386" "#{HermesHelper::IOS_DEPLOYMENT_TARGET}"
 
       create_universal_framework "iphoneos" "iphonesimulator"
     fi

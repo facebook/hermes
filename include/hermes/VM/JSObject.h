@@ -14,6 +14,7 @@
 #include "hermes/VM/HiddenClass.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PropertyDescriptor.h"
+#include "hermes/VM/StringView.h"
 #include "hermes/VM/TypesafeFlags.h"
 #include "hermes/VM/VTable.h"
 
@@ -982,7 +983,30 @@ class JSObject : public GCCell {
   /// Note: This can throw even if ThrowOnError is false,
   /// because ThrowOnError is only for specific kinds of errors,
   /// and this function will not swallow other kinds of errors.
+  /// \pre Cannot call this function with a name that looks like a valid array
+  ///   index. Call \c defineOwnComputedPrimitive instead.
   static CallResult<bool> defineOwnProperty(
+      Handle<JSObject> selfHandle,
+      Runtime *runtime,
+      SymbolID name,
+      DefinePropertyFlags dpFlags,
+      Handle<> valueOrAccessor,
+      PropOpFlags opFlags = PropOpFlags()) {
+#ifdef HERMES_SLOW_DEBUG
+    // In slow debug, check if the symbol looks like an array index. If that's
+    // the case, it should be using defineOwnComputed instead.
+    auto nameView = runtime->getIdentifierTable().getStringView(runtime, name);
+    assert(
+        !toArrayIndex(nameView) &&
+        "Array index property should use defineOwnComputed instead");
+#endif
+    return defineOwnPropertyInternal(
+        selfHandle, runtime, name, dpFlags, valueOrAccessor, opFlags);
+  }
+
+  /// Same as \c defineOwnProperty, except the name can be a valid array index.
+  /// Prefer \c defineOwnProperty and \c defineOwnComputedPrimitive instead.
+  static CallResult<bool> defineOwnPropertyInternal(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       SymbolID name,
@@ -1001,6 +1025,8 @@ class JSObject : public GCCell {
   /// an object that the caller created since in that case the caller has full
   /// control over the properties in the object (and the prototype chain
   /// doesn't matter).
+  /// Don't call this function if you know the \p name is index-like, and the
+  /// \p selfHandle has indexedStorage, or it'll lose its fast indexed property.
   ///
   /// \param propertyFlags the actual, final, value of \c PropertyFlags that
   ///   will be stored in the property descriptor.

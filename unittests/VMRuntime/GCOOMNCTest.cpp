@@ -120,19 +120,19 @@ TEST(GCEffectiveOOMDeathTest, UnitTest) {
   auto &gc = rt.gc;
 
   // tick...
-  gc.collect(/* canEffectiveOOM */ true);
+  gc.collect("test", /* canEffectiveOOM */ true);
 
   // tick...
-  gc.collect(/* canEffectiveOOM */ true);
+  gc.collect("test", /* canEffectiveOOM */ true);
 
   // ...
-  gc.collect(/* canEffectiveOOM */ false);
+  gc.collect("test", /* canEffectiveOOM */ false);
 
   // ...
-  gc.collect(/* canEffectiveOOM */ false);
+  gc.collect("test", /* canEffectiveOOM */ false);
 
   // ...BOOM!
-  EXPECT_OOM(gc.collect(/* canEffectiveOOM */ true));
+  EXPECT_OOM(gc.collect("test", /* canEffectiveOOM */ true));
 }
 
 TEST(GCEffectiveOOMDeathTest, IntegrationTest) {

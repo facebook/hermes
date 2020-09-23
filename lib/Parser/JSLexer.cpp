@@ -314,6 +314,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       token_.setStart(curCharPtr_);
         if (HERMES_PARSE_FLOW &&
             LLVM_UNLIKELY(grammarContext == GrammarContext::Flow) &&
+            curCharPtr_ + 7 <= bufferEnd_ &&
             llvh::StringRef(curCharPtr_, 7) == "%checks") {
           token_.setIdentifier(getStringLiteral("%checks"));
           curCharPtr_ += 7;
@@ -604,6 +605,7 @@ const Token *JSLexer::advanceInJSXChild() {
           break;
         }
         // Fall-through to start scanning text.
+        LLVM_FALLTHROUGH;
 
       default: {
         token_.setStart(curCharPtr_);
@@ -754,8 +756,8 @@ const Token *JSLexer::rescanRBraceInTemplateLiteral() {
 
 OptValue<TokenKind> JSLexer::lookahead1(OptValue<TokenKind> expectedToken) {
   assert(
-      token_.getKind() == TokenKind::identifier ||
-      token_.isResWord() && "unsupported current token");
+      (token_.getKind() == TokenKind::identifier || token_.isResWord()) &&
+      "unsupported current token");
   UniqueString *savedIdent = token_.getResWordOrIdentifier();
   TokenKind savedKind = token_.getKind();
   SMLoc start = token_.getStartLoc();
@@ -1563,7 +1565,7 @@ void JSLexer::scanString() {
             appendUnicodeToStorage(0);
             break;
           }
-          // Fallthrough
+          LLVM_FALLTHROUGH;
         case '1':
         case '2':
         case '3':

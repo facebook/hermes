@@ -128,7 +128,7 @@ TEST_P(ExtMemTests, ExtMemInOldByAllocTest) {
     roots.push_back(YoungGenCell::create(rt));
     rt.pointerRoots.push_back(&roots.back());
   }
-  gc.collect();
+  rt.collect();
   size_t ygs0 = gc.numYoungGCs();
   EXPECT_EQ(1, gc.numFullGCs());
   // The OG now has 2 free segments.
@@ -152,7 +152,7 @@ TEST_P(ExtMemTests, ExtMemInOldByAllocTest) {
   rt.pointerRoots.push_back(&roots.back());
 
   // Get it in the old generation.
-  gc.collect();
+  rt.collect();
   EXPECT_EQ(ygs0 + 1, gc.numYoungGCs());
   EXPECT_EQ(2, gc.numFullGCs());
 
@@ -197,7 +197,7 @@ TEST_P(ExtMemTests, ExtMemInOldDirectTest) {
     roots.push_back(YoungGenCell::create(rt));
     rt.pointerRoots.push_back(&roots.back());
   }
-  gc.collect();
+  rt.collect();
   size_t ygs0 = gc.numYoungGCs();
   EXPECT_EQ(1, gc.numFullGCs());
   // The OG now has 2 free segments.
@@ -245,7 +245,6 @@ TEST(ExtMemNonParamTests, ExtMemDoesNotBreakFullGC) {
 
   auto runtime = DummyRuntime::create(getMetadataTable(), gcConfig);
   DummyRuntime &rt = *runtime;
-  auto &gc = rt.gc;
 
   using SegmentSizeCell = EmptyCell<AlignedHeapSegment::maxSize()>;
 
@@ -275,7 +274,7 @@ TEST(ExtMemNonParamTests, ExtMemDoesNotBreakFullGC) {
   // test any results here, beyond the GC completing successfully.
   // (At one point, there was a bug that caused it to OOM in this
   // situation -- this is a regression test.)
-  gc.collect();
+  rt.collect();
 }
 
 TEST(ExtMemNonParamDeathTest, SaturateYoungGen) {

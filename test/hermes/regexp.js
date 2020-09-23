@@ -462,6 +462,10 @@ try { new RegExp("["); } catch (e) { print(e.message); }
 try { new RegExp("\\"); } catch (e) { print(e.message); }
 // CHECK-NEXT: Invalid RegExp: Incomplete escape
 
+// Check that incomplete escapes don't cause an OOB read.
+try { new RegExp("                                \\"); } catch (e) { print(e.message); }
+// CHECK-NEXT: Invalid RegExp: Incomplete escape
+
 // textual 'undefined' flag is invalid.
 try {
   RegExp(/1/g, 'undefined');
@@ -547,3 +551,11 @@ print(/abc/u.exec("\u20ac\u20ac\u20ac\u20ac"));
 // Check that lookbehind searches stay within bounds
 print(/(?<=a)/u[Symbol.match](["\u00E9",34534502349000]))
 // CHECK-LABEL: null
+
+// Check that \B assertions are parsed as Assertions per the spec, as opposed to AtomEscapes.
+try {
+  new RegExp("\\B{1}")
+} catch (e) {
+  print(e)
+}
+// CHECK-LABEL: SyntaxError: Invalid RegExp: Quantifier has nothing to repeat

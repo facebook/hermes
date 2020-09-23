@@ -280,7 +280,7 @@ class StoredComment {
     // Conditionally ignore closing delimiter.
     const char *end = kind_ == Kind::Line ? range_.End.getPointer()
                                           : range_.End.getPointer() - 2;
-    assert(end > start && "invalid comment range");
+    assert(end >= start && "invalid comment range");
     return StringRef{start, (size_t)(end - start)};
   }
 

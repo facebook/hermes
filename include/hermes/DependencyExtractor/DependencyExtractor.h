@@ -49,6 +49,7 @@ inline const char *dependencyKindStr(DependencyKind kind) {
     case DependencyKind::GraphQL:
       return "GraphQL";
   }
+  llvm_unreachable("No other kind of dependency");
 }
 
 /// Represents a single dependency from a source file.
