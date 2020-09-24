@@ -68,6 +68,9 @@ def main():
         for _ in range(edge_count):
             raw_edge_type, name_or_index, to_node = next(curr_edge)
             real_type = EDGE_TYPES[raw_edge_type]
+            assert (
+                to_node % len(NODE_FIELDS) == 0
+            ), "to_node in an edge isn't divisible by {}".format(len(NODE_FIELDS))
             edges.append(
                 {
                     "type": real_type,
@@ -75,7 +78,11 @@ def main():
                     if real_type
                     in ("context", "property", "internal", "shortcut", "weak")
                     else name_or_index,
-                    "to_node": to_node // len(NODE_FIELDS),
+                    # Instead of printing the index, print the ID of the node
+                    # pointed to. to_node points to the start of a node chunk,
+                    # and the ID is the 3rd element in that chunk (zero-based
+                    # indexing so +2 to get to the third element).
+                    "to_node": root["nodes"][to_node + 2],
                 }
             )
         nodes.append(
