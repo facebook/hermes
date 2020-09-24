@@ -3803,7 +3803,7 @@ Optional<ESTree::YieldExpressionNode *> JSParserImpl::parseYieldExpression(
       "yield expression must start with 'yield'");
   SMRange yieldLoc = advance();
 
-  if (eatSemi(yieldLoc.End, true) || checkEndAssignmentExpression())
+  if (check(TokenKind::semi) || checkEndAssignmentExpression())
     return setLocation(
         yieldLoc,
         yieldLoc,
@@ -4862,7 +4862,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
     if (!optYieldExpr)
       return None;
     ESTree::YieldExpressionNode *yieldExpr = *optYieldExpr;
-    if (!checkEndAssignmentExpression()) {
+    if (yieldExpr->_argument && !checkEndAssignmentExpression()) {
       error(tok_->getStartLoc(), "unexpected token after yield expression");
       return None;
     }
