@@ -102,13 +102,15 @@ constexpr std::size_t checkOverflowOrNpos(std::size_t i, std::size_t max) {
 template <std::size_t N>
 constexpr const char (&checkNullTerminated(const char (&a)[N]) noexcept)[N] {
   // Strange decltype(a)(a) used to make MSVC happy.
-  return a[N - 1u] == '\0'
+  if (a[N - 1u] == '\0'
 #ifndef NDEBUG
           // In Debug mode, guard against embedded nulls:
           && N - 1u == detail::constexpr_strlen_internal(a, 0u)
 #endif
-      ? decltype(a)(a)
-      : (assertNotNullTerminated(), decltype(a)(a));
+      ) {
+    return decltype(a)(a);
+  }
+  return (assertNotNullTerminated(), decltype(a)(a));
 }
 
 struct Helper {
