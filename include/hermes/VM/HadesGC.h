@@ -14,6 +14,7 @@
 #include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/GCBase.h"
 
+#include "llvh/ADT/SparseBitVector.h"
 #include "llvh/Support/PointerLikeTypeTraits.h"
 
 #include <atomic>
@@ -266,7 +267,7 @@ class HadesGC final : public GCBase {
     /// Transitions this segment from bump-alloc mode to freelist mode.
     /// Can only be called once, when the segment is in bump-alloc mode. There
     /// is no transitioning from freelist mode back to bump-alloc mode.
-    void transitionToFreelist(OldGen &og);
+    void transitionToFreelist(OldGen &og, size_t segmentIdx);
 
     // APIs from AlignedHeapSegment that are safe to use on a HeapSegment.
     using AlignedHeapSegment::available;
@@ -328,12 +329,16 @@ class HadesGC final : public GCBase {
 
     /// Adds the given cell to the free list for this segment.
     /// \pre this->contains(cell) is true.
-    void addCellToFreelist(GCCell *cell);
+    void addCellToFreelist(GCCell *cell, size_t segmentIdx);
 
     /// Version of addCellToFreelist when nothing is initialized at the address
     /// yet.
     /// \param alreadyFree If true, this location is not currently allocated.
-    void addCellToFreelist(void *addr, uint32_t sz, bool alreadyFree);
+    void addCellToFreelist(
+        void *addr,
+        uint32_t sz,
+        size_t segmentIdx,
+        bool alreadyFree);
 
     /// \return the total number of bytes that are in use by the OG section of
     /// the JS heap, excluding free list entries.
@@ -405,17 +410,20 @@ class HadesGC final : public GCBase {
 
     /// Adds the given cell to the free list for this segment.
     /// \pre this->contains(cell) is true.
-    void addCellToFreelist(FreelistCell *cell);
+    void addCellToFreelist(FreelistCell *cell, size_t segmentIdx);
 
     /// Remove the cell pointed to by the pointer at \p prevLoc from
-    /// the given \p bucket in the freelist.
+    /// the given \p segmentIdx and \p bucket in the freelist.
     /// \return a pointer to the removed cell.
-    FreelistCell *removeCellFromFreelist(FreelistCell **prevLoc, size_t bucket);
+    FreelistCell *removeCellFromFreelist(
+        FreelistCell **prevLoc,
+        size_t bucket,
+        size_t segmentIdx);
 
-    /// Remove the first cell from the given \p bucket in the
+    /// Remove the first cell from the given \p segmentIdx and \p bucket in the
     /// freelist.
     /// \return a pointer to the removed cell.
-    FreelistCell *removeCellFromFreelist(size_t bucket);
+    FreelistCell *removeCellFromFreelist(size_t bucket, size_t segmentIdx);
 
    private:
     /// \return the index of the bucket in freelistBuckets_ corresponding to
@@ -473,10 +481,19 @@ class HadesGC final : public GCBase {
     static constexpr size_t kNumFreelistBuckets =
         kNumSmallFreelistBuckets + kNumLargeFreelistBuckets;
 
-    std::array<FreelistCell *, kNumFreelistBuckets> freelistBuckets_{};
+    /// Maintain a freelist as described above for every segment.
+    std::vector<std::array<FreelistCell *, kNumFreelistBuckets>>
+        freelistSegmentsBuckets_;
+
     /// Keep track of which freelist buckets have valid elements to make search
-    /// fast.
+    /// fast. This includes all segments.
     BitArray<kNumFreelistBuckets> freelistBucketBitArray_;
+
+    /// Keep track of which segments have a valid element in a particular
+    /// bucket. Combined with the above bit array, this allows us to quickly
+    /// index into a freelist bucket.
+    std::array<llvh::SparseBitVector<>, kNumFreelistBuckets>
+        freelistBucketSegmentBitArray_;
 
     /// Searches the OG for a space to allocate memory into.
     /// \return A pointer to uninitialized memory that can be written into, null
