@@ -57,7 +57,7 @@ GCScope::~GCScope() {
 #endif
 }
 
-PinnedHermesValue *GCScope::_newChunkAndHandle(HermesValue value) {
+PinnedHermesValue *GCScope::_newChunkAndPHV(HermesValue value) {
   assert(next_ == curChunkEnd_ && "current chunk is not exhaused");
 
   // Move to the next chunk.
