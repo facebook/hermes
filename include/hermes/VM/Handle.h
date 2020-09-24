@@ -201,6 +201,11 @@ class HandleBase {
   }
 
  public:
+  /// Allocate a new handle in the specified GCScope.
+  explicit HandleBase(
+      GCScope *inScope,
+      HermesValue value = HermesValue::encodeUndefinedValue());
+
   /// Allocate a new handle in the current GCScope
   explicit HandleBase(
       HandleRootOwner *runtime,
@@ -315,6 +320,10 @@ class Handle : public HandleBase {
       HandleRootOwner *runtime,
       value_type value = HermesValueTraits<T>::defaultValue())
       : HandleBase(runtime, HermesValueTraits<T>::encode(value)){};
+  explicit Handle(
+      GCScope *inScope,
+      value_type value = HermesValueTraits<T>::defaultValue())
+      : HandleBase(inScope, HermesValueTraits<T>::encode(value)){};
 
   /// Create a Handle aliasing a non-movable HermesValue without
   /// allocating a handle.
