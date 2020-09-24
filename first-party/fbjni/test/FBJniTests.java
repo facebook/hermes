@@ -715,6 +715,11 @@ public class FBJniTests extends BaseFBJniTests {
       nativeTestHandleNonStdExceptionThrow();
       Fail.failBecauseExceptionWasNotThrown(UnknownCppException.class);
     } catch (UnknownCppException ex) {
+      if (System.getProperty("os.name").startsWith("Windows")) {
+        // Unknown exception types not supported on Windows.
+        assertThat(ex.getMessage()).isEqualTo("Unknown");
+        return;
+      }
       // the actual string is implementation-defined and mangled, but in practice,
       // it has the name of the C++ type in it somewhere.
       assertThat(ex.getMessage()).startsWith("Unknown: ").contains("NonStdException");
