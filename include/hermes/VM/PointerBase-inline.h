@@ -15,23 +15,31 @@
 #include <cassert>
 #include <cstdint>
 
-#ifdef HERMESVM_COMPRESSED_POINTERS
-
 namespace hermes {
 namespace vm {
 
 /// @name Inline implementations
 /// @{
 
-inline BasedPointer::BasedPointer(std::nullptr_t) : segAndOffset_(0) {}
-
-inline BasedPointer::BasedPointer(void *heapAddr)
-    : segAndOffset_(computeSegmentAndOffset(heapAddr)) {}
+inline BasedPointer::BasedPointer(std::nullptr_t) : raw_(0) {}
 
 inline BasedPointer &BasedPointer::operator=(std::nullptr_t) {
-  segAndOffset_ = 0;
+  raw_ = 0;
   return *this;
 }
+
+inline BasedPointer::StorageType BasedPointer::getRawValue() const {
+  return raw_;
+}
+
+inline BasedPointer PointerBase::pointerToBasedNonNull(void *ptr) const {
+  assert(ptr && "Null pointer given to pointerToBasedNonNull");
+  return BasedPointer{ptr};
+}
+
+#ifdef HERMESVM_COMPRESSED_POINTERS
+inline BasedPointer::BasedPointer(void *heapAddr)
+    : raw_(computeSegmentAndOffset(heapAddr)) {}
 
 /*static*/
 inline uint32_t BasedPointer::computeSegmentAndOffset(const void *heapAddr) {
@@ -51,19 +59,14 @@ inline uint32_t BasedPointer::computeSegmentAndOffset(const void *heapAddr) {
 }
 
 inline uint32_t BasedPointer::getSegmentIndex() const {
-  return segAndOffset_ >> AlignedStorage::kLogSize;
+  return raw_ >> AlignedStorage::kLogSize;
 }
 
 inline uint32_t BasedPointer::getOffset() const {
-  return segAndOffset_ & ((1 << AlignedStorage::kLogSize) - 1);
-}
-
-inline uint32_t BasedPointer::getRawValue() const {
-  return segAndOffset_;
+  return raw_ & ((1 << AlignedStorage::kLogSize) - 1);
 }
 
 inline void *PointerBase::basedToPointer(BasedPointer ptr) const {
-  // The value
   char *segBase = reinterpret_cast<char *>(segmentMap_[ptr.getSegmentIndex()]);
   return segBase + ptr.getRawValue();
 }
@@ -77,11 +80,6 @@ inline BasedPointer PointerBase::pointerToBased(void *ptr) const {
   return pointerToBasedNonNull(ptr);
 }
 
-inline BasedPointer PointerBase::pointerToBasedNonNull(void *ptr) const {
-  assert(ptr && "Null pointer given to pointerToBasedNonNull");
-  return BasedPointer{ptr};
-}
-
 inline void PointerBase::setSegment(unsigned idx, void *segStart) {
   assert(segStart == AlignedStorage::start(segStart) && "Precondition");
   // See the explanation for the "bias" above the declaration of
@@ -92,11 +90,22 @@ inline void PointerBase::setSegment(unsigned idx, void *segStart) {
   AlignedHeapSegment::setSegmentIndexFromStart(segStart, idx);
 }
 
+#else
+inline BasedPointer::BasedPointer(void *heapAddr)
+    : raw_(reinterpret_cast<uintptr_t>(heapAddr)) {}
+
+inline void *PointerBase::basedToPointer(BasedPointer ptr) const {
+  return reinterpret_cast<void *>(ptr.getRawValue());
+}
+
+inline BasedPointer PointerBase::pointerToBased(void *ptr) const {
+  return BasedPointer{ptr};
+}
+#endif // HERMESVM_COMPRESSED_POINTERS
+
 /// @}
 
 } // namespace vm
 } // namespace hermes
-
-#endif // HERMESVM_COMPRESSED_POINTERS
 
 #endif

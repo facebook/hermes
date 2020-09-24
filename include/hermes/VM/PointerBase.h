@@ -25,10 +25,14 @@
 namespace hermes {
 namespace vm {
 
-#ifdef HERMESVM_COMPRESSED_POINTERS
-
 class BasedPointer final {
  public:
+  using StorageType =
+#ifdef HERMESVM_COMPRESSED_POINTERS
+      uint32_t;
+#else
+      uintptr_t;
+#endif
   explicit operator bool() const;
 
   bool operator==(BasedPointer other) const;
@@ -41,19 +45,22 @@ class BasedPointer final {
   explicit BasedPointer(std::nullptr_t);
 
   BasedPointer &operator=(std::nullptr_t);
-
+#ifdef HERMESVM_COMPRESSED_POINTERS
   inline uint32_t getSegmentIndex() const;
 
   inline uint32_t getOffset() const;
+#endif // HERMESVM_COMPRESSED_POINTERS
 
-  inline uint32_t getRawValue() const;
+  inline StorageType getRawValue() const;
 
  private:
-  static inline uint32_t computeSegmentAndOffset(const void *heapAddr);
-
+#ifdef HERMESVM_COMPRESSED_POINTERS
   // The low AlignedStorage::kLogSize bits are the offset, and the
   // remaining upper bits are the segment index.
-  uint32_t segAndOffset_{0};
+  static inline uint32_t computeSegmentAndOffset(const void *heapAddr);
+#endif // HERMESVM_COMPRESSED_POINTERS
+
+  StorageType raw_;
 
   inline explicit BasedPointer(void *heapAddr);
 
@@ -96,6 +103,7 @@ class PointerBase {
   static constexpr unsigned kFirstOGSegmentIndex = 2;
 
  private:
+#ifdef HERMESVM_COMPRESSED_POINTERS
   /// Returns the segment at the given index.
   inline void *segmentForIndex(unsigned idx) const;
 
@@ -133,6 +141,7 @@ class PointerBase {
   /// We add one entry so that segmentMap_[0] can contain the null pointer.
   static constexpr unsigned kSegmentMapSize = kMaxSegments + 1;
   SegmentPtr segmentMap_[kSegmentMapSize];
+#endif // HERMESVM_COMPRESSED_POINTERS
 };
 
 /// @name Inline implementations that don't depend on other include files.
@@ -140,19 +149,21 @@ class PointerBase {
 /// @{
 
 inline BasedPointer::operator bool() const {
-  return segAndOffset_ != 0;
+  return raw_ != 0;
 }
 
 inline bool BasedPointer::operator==(BasedPointer other) const {
-  return segAndOffset_ == other.segAndOffset_;
+  return raw_ == other.raw_;
 }
 
 inline bool BasedPointer::operator!=(BasedPointer other) const {
-  return !(segAndOffset_ == other.segAndOffset_);
+  return raw_ != other.raw_;
 }
 
 inline PointerBase::PointerBase() {
+#ifdef HERMESVM_COMPRESSED_POINTERS
   segmentMap_[kNullPtrSegmentIndex] = nullptr;
+#endif // HERMESVM_COMPRESSED_POINTERS
 }
 
 inline void *PointerBase::basedToPointerNonNull(BasedPointer ptr) const {
@@ -162,14 +173,6 @@ inline void *PointerBase::basedToPointerNonNull(BasedPointer ptr) const {
 }
 
 /// @}
-
-#else // ! HERMESVM_COMPRESSED_POINTERS
-
-/// If we're not using compressed pointers, we still need a null implementation
-/// of PointerBase.
-class PointerBase {};
-
-#endif // HERMESVM_COMPRESSED_POINTERS
 
 } // namespace vm
 } // namespace hermes

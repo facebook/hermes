@@ -31,9 +31,7 @@ class WeakRootBase;
 struct SlotAcceptor {
   virtual ~SlotAcceptor() {}
   virtual void accept(void *&ptr) = 0;
-#ifdef HERMESVM_COMPRESSED_POINTERS
   virtual void accept(BasedPointer &ptr) = 0;
-#endif
   virtual void accept(GCPointerBase &ptr) = 0;
   virtual void accept(HermesValue &hv) = 0;
   virtual void accept(SymbolID sym) = 0;
@@ -65,12 +63,10 @@ struct SlotAcceptorWithNames : public SlotAcceptor {
   }
   virtual void accept(void *&ptr, const char *name) = 0;
 
-#ifdef HERMESVM_COMPRESSED_POINTERS
   void accept(BasedPointer &ptr) override final {
     accept(ptr, nullptr);
   }
   virtual void accept(BasedPointer &ptr, const char *name) = 0;
-#endif
 
   void accept(GCPointerBase &ptr) override final {
     accept(ptr, nullptr);
@@ -132,11 +128,9 @@ struct DroppingAcceptor final : public RootAcceptor {
     acceptor.accept(ptr);
   }
 
-#ifdef HERMESVM_COMPRESSED_POINTERS
   void accept(BasedPointer &ptr, const char *) override {
     acceptor.accept(ptr);
   }
-#endif
 
   void accept(GCPointerBase &ptr, const char *) override {
     acceptor.accept(ptr);

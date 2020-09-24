@@ -781,12 +781,8 @@ class HadesGC::MarkWeakRootsAcceptor final : public WeakRootAcceptor {
       return;
     }
     GCPointerBase::StorageType &ptrStorage = wr.getNoBarrierUnsafe();
-#ifdef HERMESVM_COMPRESSED_POINTERS
     GCCell *const cell =
         static_cast<GCCell *>(pointerBase_->basedToPointerNonNull(ptrStorage));
-#else
-    GCCell *const cell = static_cast<GCCell *>(ptrStorage);
-#endif
     assert(!gc_.inYoungGen(cell) && "Pointer should be into the OG");
     HERMES_SLOW_ASSERT(gc_.dbgContains(cell) && "ptr not in heap");
     if (HeapSegment::getCellMarkBit(cell)) {
@@ -1188,9 +1184,9 @@ void HadesGC::findYoungGenSymbolsAndWeakRefs() {
 
     // Do nothing for pointers.
     void accept(void *&) override {}
-#ifdef HERMESVM_COMPRESSED_POINTERS
+
     void accept(BasedPointer &) override {}
-#endif
+
     void accept(GCPointerBase &ptr) override {}
 
     void accept(HermesValue &hvRef) override {
@@ -1421,14 +1417,10 @@ void HadesGC::writeBarrier(void *loc, void *value) {
   if (isOldGenMarking_) {
     const GCPointerBase::StorageType oldValueStorage =
         *static_cast<GCPointerBase::StorageType *>(loc);
-#ifdef HERMESVM_COMPRESSED_POINTERS
     // TODO: Pass in pointer base? Slows down the non-concurrent-marking case.
     // Or maybe always decode the old value? Also slows down the normal case.
     GCCell *const oldValue = static_cast<GCCell *>(
         getPointerBase()->basedToPointer(oldValueStorage));
-#else
-    GCCell *const oldValue = static_cast<GCCell *>(oldValueStorage);
-#endif
     snapshotWriteBarrierInternal(oldValue);
   }
   // Always do the non-snapshot write barrier in order for YG to be able to
@@ -2495,7 +2487,6 @@ void HadesGC::verifyCardTable() {
       acceptHelper(valuePtr, locPtr);
     }
 
-#ifdef HERMESVM_COMPRESSED_POINTERS
     void accept(BasedPointer &ptr) override {
       // Don't use the default from SlotAcceptorDefault since the address of
       // the reference is used.
@@ -2505,7 +2496,6 @@ void HadesGC::verifyCardTable() {
 
       acceptHelper(valuePtr, locPtr);
     }
-#endif
 
     void accept(HermesValue &hv) override {
       if (!hv.isPointer()) {

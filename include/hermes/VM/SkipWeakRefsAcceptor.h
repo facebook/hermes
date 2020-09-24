@@ -32,11 +32,9 @@ class SkipWeakRefsAcceptor final : public SlotAcceptorDefault {
   void accept(void *&ptr) override {
     acceptor_->accept(ptr);
   }
-#ifdef HERMESVM_COMPRESSED_POINTERS
   void accept(BasedPointer &ptr) override {
     acceptor_->accept(ptr);
   }
-#endif
   void accept(HermesValue &hv) override {
     acceptor_->accept(hv);
   }

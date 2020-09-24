@@ -18,13 +18,7 @@ namespace hermes {
 namespace vm {
 
 inline GCPointerBase::GCPointerBase(PointerBase *base, void *ptr)
-    : ptr_(
-#ifdef HERMESVM_COMPRESSED_POINTERS
-          base->pointerToBased(ptr)
-#else
-          ptr
-#endif
-      ) {
+    : ptr_(base->pointerToBased(ptr)) {
   // In some build configurations this parameter is unused.
   (void)base;
 }
@@ -34,12 +28,7 @@ inline void *GCPointerBase::get(PointerBase *base) const {
 }
 
 inline void *GCPointerBase::getNonNull(PointerBase *base) const {
-#ifdef HERMESVM_COMPRESSED_POINTERS
   return base->basedToPointerNonNull(ptr_);
-#else
-  (void)base;
-  return ptr_;
-#endif
 }
 
 template <typename T>
@@ -90,21 +79,13 @@ inline GCPointerBase::StorageType &GCPointerBase::getLoc(GC *gc) {
 inline void *GCPointerBase::storageTypeToPointer(
     StorageType st,
     PointerBase *base) {
-#ifdef HERMESVM_COMPRESSED_POINTERS
   return base->basedToPointer(st);
-#else
-  return st;
-#endif
 }
 
 inline GCPointerBase::StorageType GCPointerBase::pointerToStorageType(
     void *ptr,
     PointerBase *base) {
-#ifdef HERMESVM_COMPRESSED_POINTERS
   return base->pointerToBased(ptr);
-#else
-  return ptr;
-#endif
 }
 
 } // namespace vm

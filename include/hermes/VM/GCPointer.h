@@ -22,12 +22,7 @@ namespace vm {
 
 class GCPointerBase {
  public:
-  using StorageType =
-#ifdef HERMESVM_COMPRESSED_POINTERS
-      BasedPointer;
-#else
-      void *;
-#endif
+  using StorageType = BasedPointer;
 
  protected:
   StorageType ptr_;

@@ -23,7 +23,6 @@ inline void WeakRootAcceptorDefault::acceptWeak(WeakRootBase &ptr) {
   ptr = weakRootStorage;
 }
 
-#ifdef HERMESVM_COMPRESSED_POINTERS
 inline void SlotAcceptorDefault::accept(BasedPointer &ptr) {
   if (!ptr) {
     return;
@@ -49,7 +48,6 @@ inline void WeakRootAcceptorDefault::acceptWeak(BasedPointer &ptr) {
   // Assign back to the based pointer.
   ptr = base->pointerToBased(actualizedPointer);
 }
-#endif
 
 } // namespace vm
 } // namespace hermes

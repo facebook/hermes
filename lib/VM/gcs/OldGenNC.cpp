@@ -326,7 +326,7 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
                    ->isCardForAddressDirty(locPtr));
       }
     }
-#ifdef HERMESVM_COMPRESSED_POINTERS
+
     void accept(BasedPointer &ptr) override {
       // Don't use the default from SlotAcceptorDefault since the address of the
       // reference is used.
@@ -339,7 +339,7 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
                    ->isCardForAddressDirty(locPtr));
       }
     }
-#endif
+
     void accept(HermesValue &hv) override {
       if (!hv.isPointer()) {
         return;

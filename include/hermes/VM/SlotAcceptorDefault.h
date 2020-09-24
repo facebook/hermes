@@ -23,9 +23,7 @@ struct SlotAcceptorDefault : public SlotAcceptor {
 
   using SlotAcceptor::accept;
 
-#ifdef HERMESVM_COMPRESSED_POINTERS
   void accept(BasedPointer &ptr) override;
-#endif
 
   void accept(GCPointerBase &ptr) override final {
     accept(ptr.getLoc(&gc));
@@ -46,7 +44,6 @@ struct SlotAcceptorWithNamesDefault : public RootAcceptor {
 
   using SlotAcceptorWithNames::accept;
 
-#ifdef HERMESVM_COMPRESSED_POINTERS
   void accept(BasedPointer &ptr, const char *name) override {
     // See comments in SlotAcceptorDefault::accept(BasedPointer &) for
     // explanation.
@@ -58,7 +55,6 @@ struct SlotAcceptorWithNamesDefault : public RootAcceptor {
     accept(actualizedPointer, name);
     ptr = base->pointerToBasedNonNull(actualizedPointer);
   }
-#endif
 
   void accept(GCPointerBase &ptr, const char *name) override final {
     accept(ptr.getLoc(&gc), name);
@@ -81,11 +77,9 @@ struct WeakRootAcceptorDefault : public WeakRootAcceptor {
   /// Subclasses override this implementation instead of accept(WeakRootBase &).
   virtual void acceptWeak(void *&ptr) = 0;
 
-#ifdef HERMESVM_COMPRESSED_POINTERS
   /// This gets a default implementation: extract the real pointer to a local,
   /// call acceptWeak on that, write the result back as a BasedPointer.
   virtual void acceptWeak(BasedPointer &ptr);
-#endif
 };
 
 } // namespace vm
