@@ -91,8 +91,10 @@ struct CriticalMethod<R(*)(Args...)> {
 
 // Variadic template hacks to get macros with different numbers of
 // arguments. Usage instructions are in CoreClasses.h.
+// Extra level of expansion is needed for Visual Studio to treat VA_ARGS as multiple args.
+#define FBJNI_MACRO_EXPAND(tokens) tokens
 #define makeNativeMethodN(a, b, c, count, ...) makeNativeMethod ## count
-#define makeNativeMethod(...) makeNativeMethodN(__VA_ARGS__, 3, 2)(__VA_ARGS__)
+#define makeNativeMethod(...) FBJNI_MACRO_EXPAND(makeNativeMethodN(__VA_ARGS__, 3, 2)(__VA_ARGS__))
 
 
 // FAST CALLS / CRITICAL CALLS
@@ -180,7 +182,7 @@ struct CriticalMethod<R(*)(Args...)> {
 // YOU ALMOST CERTAINLY DO NOT NEED THIS AND IT IS DANGEROUS.
 // YOU ALMOST CERTAINLY DO NOT NEED THIS AND IT IS DANGEROUS.
 // See above for an explanation.
-#define makeCriticalNativeMethod_DO_NOT_USE_OR_YOU_WILL_BE_FIRED(...) makeCriticalNativeMethodN(__VA_ARGS__, 3, 2)(__VA_ARGS__)
+#define makeCriticalNativeMethod_DO_NOT_USE_OR_YOU_WILL_BE_FIRED(...) FBJNI_MACRO_EXPAND(makeCriticalNativeMethodN(__VA_ARGS__, 3, 2)(__VA_ARGS__))
 
 }}
 
