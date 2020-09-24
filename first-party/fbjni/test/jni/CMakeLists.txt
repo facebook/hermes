@@ -23,6 +23,9 @@ set(TEST_COMPILE_OPTIONS
   -UNDEBUG
 )
 
+# Set this globally for all test libraries.  It also seems to affect importing.
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
 add_library(inter_dso_exception_test_1 SHARED
   inter_dso_exception_test_1/Test.cpp
 )
@@ -84,7 +87,7 @@ target_link_libraries(modified_utf8_test
   fbjni
   gtest
   Threads::Threads
-  dl
+  ${CMAKE_DL_LIBS}
 )
 gtest_add_tests(TARGET modified_utf8_test)
 
@@ -96,6 +99,6 @@ target_link_libraries(utf16toUTF8_test
   fbjni
   gtest
   Threads::Threads
-  dl
+  ${CMAKE_DL_LIBS}
 )
 gtest_add_tests(TARGET utf16toUTF8_test)
