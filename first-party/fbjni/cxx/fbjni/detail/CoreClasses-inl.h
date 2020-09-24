@@ -364,13 +364,13 @@ inline ElementProxy<Target>& ElementProxy<Target>::operator=(const T& o) {
 }
 
 template<typename Target>
-inline ElementProxy<Target>& ElementProxy<Target>::operator=(alias_ref<T>& o) {
+inline ElementProxy<Target>& ElementProxy<Target>::operator=(alias_ref<typename Target::javaentry>& o) {
   target_->setElement(idx_, o.get());
   return *this;
 }
 
 template<typename Target>
-inline ElementProxy<Target>& ElementProxy<Target>::operator=(alias_ref<T>&& o) {
+inline ElementProxy<Target>& ElementProxy<Target>::operator=(alias_ref<typename Target::javaentry>&& o) {
   target_->setElement(idx_, o.get());
   return *this;
 }
@@ -383,12 +383,12 @@ inline ElementProxy<Target>& ElementProxy<Target>::operator=(const ElementProxy<
 }
 
 template<typename Target>
-inline ElementProxy<Target>::ElementProxy::operator const local_ref<T> () const {
+inline ElementProxy<Target>::ElementProxy::operator const local_ref<typename Target::javaentry> () const {
   return target_->getElement(idx_);
 }
 
 template<typename Target>
-inline ElementProxy<Target>::ElementProxy::operator local_ref<T> () {
+inline ElementProxy<Target>::ElementProxy::operator local_ref<typename Target::javaentry> () {
   return target_->getElement(idx_);
 }
 }
