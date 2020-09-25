@@ -1048,7 +1048,6 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
 
         case Opcode::U16MatchCharICase32: {
           const auto *insn = llvh::cast<U16MatchCharICase32Insn>(base);
-          assert(insn->c >= 0x010000 && "Character should be astral");
           bool matched = false;
           if (!c.atEnd()) {
             CodePoint cp = c.consumeUTF16();
