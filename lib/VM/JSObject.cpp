@@ -1447,14 +1447,9 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
             ->set(name, *valueHandle);
       }
       ComputedPropertyDescriptor desc;
+      Handle<> nameValHandle = runtime->makeHandle(name);
       CallResult<bool> descDefinedRes = getOwnComputedPrimitiveDescriptor(
-          receiverHandle,
-          runtime,
-          name.isUniqued() ? runtime->makeHandle(HermesValue::encodeStringValue(
-                                 runtime->getStringPrimFromSymbolID(name)))
-                           : runtime->makeHandle(name),
-          IgnoreProxy::No,
-          desc);
+          receiverHandle, runtime, nameValHandle, IgnoreProxy::No, desc);
       if (LLVM_UNLIKELY(descDefinedRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -1465,7 +1460,7 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
         dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
       }
       return JSProxy::defineOwnProperty(
-          receiverHandle, runtime, name, dpf, valueHandle, opFlags);
+          receiverHandle, runtime, nameValHandle, dpf, valueHandle, opFlags);
     }
   }
 
@@ -1725,7 +1720,12 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
         dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
       }
       return JSProxy::defineOwnProperty(
-          receiverHandle, runtime, id, dpf, valueHandle, opFlags);
+          receiverHandle,
+          runtime,
+          nameValPrimitiveHandle,
+          dpf,
+          valueHandle,
+          opFlags);
     }
   }
 
@@ -2001,7 +2001,14 @@ CallResult<bool> JSObject::defineOwnPropertyInternal(
           selfHandle->flags_.lazyObject || selfHandle->flags_.proxyObject)) {
     if (selfHandle->flags_.proxyObject) {
       return JSProxy::defineOwnProperty(
-          selfHandle, runtime, name, dpFlags, valueOrAccessor, opFlags);
+          selfHandle,
+          runtime,
+          name.isUniqued() ? runtime->makeHandle(HermesValue::encodeStringValue(
+                                 runtime->getStringPrimFromSymbolID(name)))
+                           : runtime->makeHandle(name),
+          dpFlags,
+          valueOrAccessor,
+          opFlags);
     }
     assert(selfHandle->flags_.lazyObject && "descriptor flags are impossible");
     // if the property was not found and the object is lazy we need to

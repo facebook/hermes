@@ -113,7 +113,7 @@ class JSProxy : public JSObject {
   static CallResult<bool> defineOwnProperty(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
-      SymbolID name,
+      Handle<> nameValHandle,
       DefinePropertyFlags dpFlags,
       Handle<> valueOrAccessor,
       PropOpFlags opFlags);
