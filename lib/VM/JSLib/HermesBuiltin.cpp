@@ -275,6 +275,15 @@ CallResult<HermesValue> copyDataPropertiesSlowPath_RJS(
        ++nextKeyIdx) {
     marker.flush();
     nextKeyHandle = keys->at(runtime, nextKeyIdx);
+    if (nextKeyHandle->isNumber()) {
+      CallResult<PseudoHandle<StringPrimitive>> strRes =
+          toString_RJS(runtime, nextKeyHandle);
+      if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      nextKeyHandle = strRes->getHermesValue();
+    }
+
     // b. For each element e of excludedItems in List order, do
     //   i. If SameValue(e, nextKey) is true, then
     //     1. Set excluded to true.
