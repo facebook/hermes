@@ -2141,7 +2141,10 @@ assert.equal(
 var f = function() { return 1; }
 f.a = 1;
 f.b = 2;
-checkDeep({...f})(_ => ({a:1, b:2}))
+checkDeep({...f})(_ => ({a:1, b:2}));
+
+// newTarget.prototype for Proxy ctor is !== Object.prototype does not throw
+Reflect.construct(Proxy, [{}, {}], WeakSet);
 
 // Check that defining a property in a Proxy target which is an array
 // uses fast array access (this will trip an assert otherwise)

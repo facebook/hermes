@@ -61,7 +61,9 @@ class JSProxy : public JSObject {
 
   static PseudoHandle<JSProxy> create(
       Runtime *runtime,
-      Handle<JSObject> prototype);
+      Handle<JSObject> /* prototype */) {
+    return create(runtime);
+  }
 
   static void setTargetAndHandler(
       Handle<JSObject> selfHandle,
