@@ -2102,12 +2102,34 @@ arrayTests(
 print('misc');
 // CHECK-LABEL: misc
 
-// Do a deep target recursion
+// Do a deep target recursion. This needs to be within the smallest
+// (ASAN) limit for tests to pass, but larger numbers will work in
+// production builds.
 var p = {a:1};
-for (var i = 0; i < 64; ++i) {
+for (var i = 0; i < 20; ++i) {
   p = new Proxy(p, {});
 }
 assert.equal(p.a, 1);
+
+// Do a really deep target recursion to test for stack overflow
+var p = {a:1};
+for (var i = 0; i < 10000; ++i) {
+  p = new Proxy({}, p);
+}
+checkThrows(RangeError)(_ => p.a);
+
+// Do a really deep handler recursion to test for stack overflow
+var p = {a:1};
+for (var i = 0; i < 10000; ++i) {
+  p = new Proxy(p, {});
+}
+checkThrows(RangeError)(_ => p.a);
+
+// Do an infinite recursion to test for stack overflow
+var p1 = [];
+var p2 = new Proxy(p1, {});
+p1.__proto__ = p2;
+checkThrows(RangeError)(_ => p1.a);
 
 // Test HermesInternal
 assert.equal(
