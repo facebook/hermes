@@ -2143,6 +2143,20 @@ f.a = 1;
 f.b = 2;
 checkDeep({...f})(_ => ({a:1, b:2}));
 
+// spread passes string not numeric arguments to traps
+var output = [];
+var p = new Proxy({1:""}, {
+        getOwnPropertyDescriptor(t, k) {
+            output.push(typeof k)
+            return Object.getOwnPropertyDescriptor(t, k);
+        },
+        get(t, k) {
+            output.push(typeof k)
+            return t[k];
+        }});
+({...p});
+assert.arrayEqual(output, ["string", "string"]);
+
 // newTarget.prototype for Proxy ctor is !== Object.prototype does not throw
 Reflect.construct(Proxy, [{}, {}], WeakSet);
 
