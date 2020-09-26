@@ -626,7 +626,7 @@ CallResult<bool> JSProxy::getOwnProperty(
 CallResult<bool> JSProxy::defineOwnProperty(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
-    SymbolID name,
+    Handle<> nameValHandle,
     DefinePropertyFlags dpFlags,
     Handle<> valueOrAccessor,
     PropOpFlags opFlags) {
@@ -642,8 +642,8 @@ CallResult<bool> JSProxy::defineOwnProperty(
   if (!*trapRes) {
     GCScope gcScope(runtime);
     //   a. Return ? target.[[GetOwnProperty]](P).
-    return JSObject::defineOwnProperty(
-        target, runtime, name, dpFlags, valueOrAccessor, opFlags);
+    return JSObject::defineOwnComputedPrimitive(
+        target, runtime, nameValHandle, dpFlags, valueOrAccessor, opFlags);
   }
   // 8. Let descObj be FromPropertyDescriptor(Desc).
   ComputedPropertyDescriptor desc;
@@ -663,7 +663,7 @@ CallResult<bool> JSProxy::defineOwnProperty(
       runtime,
       runtime->makeHandle(detail::slots(*selfHandle).handler),
       target.getHermesValue(),
-      HermesValue::encodeStringValue(runtime->getStringPrimFromSymbolID(name)),
+      nameValHandle.getHermesValue(),
       *descObjRes);
   if (trapResultRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -682,12 +682,7 @@ CallResult<bool> JSProxy::defineOwnProperty(
   ComputedPropertyDescriptor targetDesc;
   MutableHandle<> targetDescValueOrAccessor{runtime};
   CallResult<bool> targetDescRes = JSObject::getOwnComputedDescriptor(
-      target,
-      runtime,
-      runtime->makeHandle(HermesValue::encodeStringValue(
-          runtime->getStringPrimFromSymbolID(name))),
-      targetDesc,
-      targetDescValueOrAccessor);
+      target, runtime, nameValHandle, targetDesc, targetDescValueOrAccessor);
   if (targetDescRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }

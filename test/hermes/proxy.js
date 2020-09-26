@@ -2121,5 +2121,9 @@ f.a = 1;
 f.b = 2;
 checkDeep({...f})(_ => ({a:1, b:2}))
 
+// Check that defining a property in a Proxy target which is an array
+// uses fast array access (this will trip an assert otherwise)
+new Proxy([], {}).unshift(0);
+
 print('done');
 // CHECK-LABEL: done
