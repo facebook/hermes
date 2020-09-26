@@ -2125,5 +2125,14 @@ checkDeep({...f})(_ => ({a:1, b:2}))
 // uses fast array access (this will trip an assert otherwise)
 new Proxy([], {}).unshift(0);
 
+// If putComputed is called on a proxy whose target's prototype is an
+// array with a propname of 'length', then internalSetter will be
+// true, and the receiver will be a proxy.  In that case, proxy needs
+// to win; the behavior may assert or be UB otherwise.
+var p = new Proxy(Object.create([]), {});
+// using String() forces putComputed
+p[String('length')] = 0x123;
+p[0xABC] = 1111;
+
 print('done');
 // CHECK-LABEL: done
