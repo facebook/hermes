@@ -20,7 +20,7 @@ namespace unittest {
 namespace stacktracestreetest {
 
 namespace {
-struct StackTracesTreeTest : RuntimeTestFixtureBase {
+struct StackTracesTreeTest : public RuntimeTestFixtureBase {
   explicit StackTracesTreeTest()
       : RuntimeTestFixtureBase(
             RuntimeConfig::Builder(kTestRTConfigBuilder)
@@ -29,6 +29,9 @@ struct StackTracesTreeTest : RuntimeTestFixtureBase {
                                   .withAllocationLocationTrackerFromStart(true)
                                   .build())
                 .build()) {}
+
+  explicit StackTracesTreeTest(const RuntimeConfig &config)
+      : RuntimeTestFixtureBase(config) {}
 
   ::testing::AssertionResult eval(const std::string &code) {
     hbc::CompileFlags flags;
@@ -78,7 +81,84 @@ struct StackTracesTreeTest : RuntimeTestFixtureBase {
            << trimmedRes.str().c_str());
   };
 };
-}; // namespace
+
+// Used to inject a no-op function into JS.
+static CallResult<HermesValue> noop(void *, Runtime *runtime, NativeArgs) {
+  return HermesValue::encodeUndefinedValue();
+}
+
+static CallResult<HermesValue>
+enableAllocationLocationTracker(void *, Runtime *runtime, NativeArgs) {
+  runtime->enableAllocationLocationTracker();
+  return HermesValue::encodeUndefinedValue();
+}
+
+struct StackTracesTreeParameterizedTest
+    : public StackTracesTreeTest,
+      public ::testing::WithParamInterface<bool> {
+  StackTracesTreeParameterizedTest()
+      : StackTracesTreeTest(
+            RuntimeConfig::Builder(kTestRTConfigBuilder)
+                .withES6Proxy(true)
+                .withGCConfig(GCConfig::Builder(kTestGCConfigBuilder)
+                                  .withAllocationLocationTrackerFromStart(
+                                      trackerOnByDefault())
+                                  .build())
+                .build()) {}
+
+  bool trackerOnByDefault() const {
+    // If GetParam() is true, then allocation tracking is enabled from the
+    // start. If GetParam() is false, then allocation tracking begins when
+    // enableAllocationLocationTracker is called.
+    return GetParam();
+  }
+
+  /// Delete the existing tree and reset all state related to allocations.
+  void resetTree() {
+    // Calling this should clear all existing StackTracesTree data.
+    runtime->disableAllocationLocationTracker(true);
+    ASSERT_FALSE(runtime->getStackTracesTree());
+    // If the tracker was on by default, after cleaning it should be re-enabled,
+    // so the function doesn't need to be called.
+    if (trackerOnByDefault()) {
+      runtime->enableAllocationLocationTracker();
+    }
+  }
+
+  void SetUp() override {
+    // Add a JS function 'enableAllocationLocationTracker'
+    // The stack traces for objects allocated after the call to
+    // enableAllocationLocationTracker should be identical.
+    SymbolID enableAllocationLocationTrackerSym;
+    {
+      vm::GCScope gcScope(runtime);
+      enableAllocationLocationTrackerSym =
+          vm::stringToSymbolID(
+              runtime,
+              vm::StringPrimitive::createNoThrow(
+                  runtime, "enableAllocationLocationTracker"))
+              ->getHermesValue()
+              .getSymbol();
+    }
+
+    ASSERT_FALSE(isException(JSObject::putNamed_RJS(
+        runtime->getGlobal(),
+        runtime,
+        enableAllocationLocationTrackerSym,
+        runtime->makeHandle<NativeFunction>(
+            *NativeFunction::createWithoutPrototype(
+                runtime,
+                nullptr,
+                trackerOnByDefault() ? noop : enableAllocationLocationTracker,
+                enableAllocationLocationTrackerSym,
+                0)))));
+  }
+
+  // No need for a tear-down, because the runtime destructor will clear all
+  // memory.
+};
+
+} // namespace
 
 static std::string stackTraceToJSON(StackTracesTree &tree) {
   auto &stringTable = *tree.getStringTable();
@@ -195,234 +275,7 @@ global test.js:1:1
       stackTraceToJSON(*stackTracesTree).c_str(), expectedTree.str().c_str());
 }
 
-TEST_F(StackTracesTreeTest, TraceThroughNamedAnon) {
-  ASSERT_RUN_TRACE(
-      R"#(
-function foo() {
-  function bar() {
-    var anonVar = function() {
-      return new Object();
-    }
-    return anonVar();
-  }
-  return bar();
-}
-foo();
-)#",
-      R"#(
-anonVar test.js:5:24
-bar test.js:7:19
-foo test.js:9:13
-global test.js:11:4
-global test.js:2:1
-(invalid function name) (invalid script name):-1:-1
-)#");
-}
-
-TEST_F(StackTracesTreeTest, TraceThroughAnon) {
-  ASSERT_RUN_TRACE(
-      R"#(
-function foo() {
-  return (function() {
-    return new Object();
-  })();
-}
-foo();
-)#",
-      R"#(
-(anonymous) test.js:4:22
-foo test.js:5:5
-global test.js:7:4
-global test.js:2:1
-(invalid function name) (invalid script name):-1:-1
-)#");
-}
-
-TEST_F(StackTracesTreeTest, TraceThroughAssignedFunction) {
-  ASSERT_RUN_TRACE(
-      R"#(
-function foo() {
-  return new Object();
-}
-var bar = foo;
-bar();
-)#",
-      R"#(
-foo test.js:3:20
-global test.js:6:4
-global test.js:2:1
-(invalid function name) (invalid script name):-1:-1
-)#");
-}
-
-TEST_F(StackTracesTreeTest, TraceThroughGetter) {
-  ASSERT_RUN_TRACE(
-      R"#(
-const obj = {
-  get foo() {
-    return new Object();
-  }
-}
-obj.foo;
-)#",
-      R"#(
-get foo test.js:4:22
-global test.js:7:4
-global test.js:2:1
-(invalid function name) (invalid script name):-1:-1
-)#");
-}
-
-TEST_F(StackTracesTreeTest, TraceThroughProxy) {
-  ASSERT_RUN_TRACE(
-      R"#(
-const handler = {
-  get: function(obj, prop) {
-    return new Object();
-  }
-};
-const p = new Proxy({}, handler);
-p.something;
-)#",
-      R"#(
-get test.js:4:22
-global test.js:8:2
-global test.js:2:1
-(invalid function name) (invalid script name):-1:-1
-)#");
-}
-
-TEST_F(StackTracesTreeTest, TraceThroughEval) {
-  ASSERT_RUN_TRACE(
-      R"#(
-function returnit() { return new Object(); }
-eval("returnit()");
-)#",
-      R"#(
-returnit test.js:2:40
-eval JavaScript:1:9
-global test.js:3:5
-global test.js:2:1
-(invalid function name) (invalid script name):-1:-1
-)#");
-}
-
-TEST_F(StackTracesTreeTest, TraceThroughBoundFunctions) {
-  ASSERT_FALSE(eval("function foo() { return new Object(); }"));
-
-  ASSERT_RUN_TRACE("foo.bind(null)()", R"#(
-foo eval.js:1:35
-global test.js:1:15
-global test.js:1:1
-(invalid function name) (invalid script name):-1:-1
-)#");
-
-  ASSERT_RUN_TRACE("foo.bind(null).bind(null)()", R"#(
-foo eval.js:1:35
-global test.js:1:26
-global test.js:1:1
-(invalid function name) (invalid script name):-1:-1
-)#");
-
-  ASSERT_RUN_TRACE(
-      R"#(
-function chain1() {
-  return chain2bound();
-}
-
-function chain2() {
-  return new Object();
-}
-
-var chain2bound = chain2.bind(null);
-
-chain1.bind(null)();
-  )#",
-      R"#(
-chain2 test.js:7:20
-chain1 test.js:3:21
-global test.js:12:18
-global test.js:2:1
-(invalid function name) (invalid script name):-1:-1
-        )#");
-}
-
-TEST_F(StackTracesTreeTest, TraceThroughNative) {
-  ASSERT_RUN_TRACE(
-      R"#(
-function foo(x) { return new Object(); }
-([0].map(foo))[0];
-)#",
-      R"#(
-foo test.js:2:36
-global test.js:3:9
-global test.js:2:1
-(invalid function name) (invalid script name):-1:-1
-      )#");
-}
-
-TEST_F(StackTracesTreeTest, UnwindOnThrow) {
-  // This relies on ASSERT_RUN_TRACE implicitly checking the stack is cleared
-  ASSERT_RUN_TRACE(
-      R"#(
-function foo() {
-  try {
-    function throws() {
-      throw new Error();
-    }
-    ([0].map(throws.bind(null)))[0];
-  } catch(e) {
-    return e;
-  }
-  return false;
-}
-foo();
-)#",
-      R"#(
-throws test.js:5:22
-foo test.js:7:13
-global test.js:13:4
-global test.js:2:1
-(invalid function name) (invalid script name):-1:-1
-      )#");
-}
-
-static CallResult<HermesValue>
-enableAllocationLocationTacker(void *, Runtime *runtime, NativeArgs) {
-  runtime->enableAllocationLocationTracker();
-  return HermesValue::encodeUndefinedValue();
-}
-
-TEST_F(StackTracesTreeTest, EnableMidwayThroughExecution) {
-  // Add a JS function 'enableAllocationLocationTracker'
-  SymbolID enableAllocationLocationTackerSym;
-  {
-    vm::GCScope gcScope(runtime);
-    enableAllocationLocationTackerSym =
-        vm::stringToSymbolID(
-            runtime,
-            vm::StringPrimitive::createNoThrow(
-                runtime, "enableAllocationLocationTracker"))
-            ->getHermesValue()
-            .getSymbol();
-  }
-
-  ASSERT_FALSE(isException(JSObject::putNamed_RJS(
-      runtime->getGlobal(),
-      runtime,
-      enableAllocationLocationTackerSym,
-      runtime->makeHandle<NativeFunction>(
-          *NativeFunction::createWithoutPrototype(
-              runtime,
-              nullptr,
-              enableAllocationLocationTacker,
-              Predefined::getSymbolID(Predefined::emptyString),
-              0)))));
-
-  // Calling this should clear all existing StackTracesTree data.
-  runtime->disableAllocationLocationTracker(true);
-  ASSERT_FALSE(runtime->getStackTracesTree());
-
+TEST_P(StackTracesTreeParameterizedTest, GlobalScopeAlloc) {
   // Not only should the trace be correct but the stack trace should be
   // popped back down to the root. This is implicitly checked by
   // ASSERT_RUN_TRACE.
@@ -436,32 +289,252 @@ global test.js:3:11
 global test.js:2:1
 (invalid function name) (invalid script name):-1:-1
       )#");
+}
 
-  runtime->disableAllocationLocationTracker(true);
-  ASSERT_TRUE(!runtime->getStackTracesTree());
-
+TEST_P(StackTracesTreeParameterizedTest, TraceThroughNamedAnon) {
   ASSERT_RUN_TRACE(
       R"#(
 function foo() {
+  function bar() {
+    var anonVar = function() {
+      enableAllocationLocationTracker();
+      return new Object();
+    }
+    return anonVar();
+  }
+  return bar();
+}
+foo();
+)#",
+      R"#(
+anonVar test.js:6:24
+bar test.js:8:19
+foo test.js:10:13
+global test.js:12:4
+global test.js:2:1
+(invalid function name) (invalid script name):-1:-1
+)#");
+}
+
+TEST_P(StackTracesTreeParameterizedTest, TraceThroughAnon) {
+  ASSERT_RUN_TRACE(
+      R"#(
+function foo() {
+  return (function() {
+    enableAllocationLocationTracker();
+    return new Object();
+  })();
+}
+foo();
+)#",
+      R"#(
+(anonymous) test.js:5:22
+foo test.js:6:5
+global test.js:8:4
+global test.js:2:1
+(invalid function name) (invalid script name):-1:-1
+)#");
+}
+
+TEST_P(StackTracesTreeParameterizedTest, TraceThroughAssignedFunction) {
+  ASSERT_RUN_TRACE(
+      R"#(
+function foo() {
+  enableAllocationLocationTracker();
   return new Object();
 }
-function bar() {
-  enableAllocationLocationTracker();
-  return foo();
-}
+var bar = foo;
 bar();
 )#",
       R"#(
-foo test.js:3:20
-bar test.js:7:13
-global test.js:9:4
+foo test.js:4:20
+global test.js:7:4
+global test.js:2:1
+(invalid function name) (invalid script name):-1:-1
+)#");
+}
+
+TEST_P(StackTracesTreeParameterizedTest, TraceThroughGetter) {
+  ASSERT_RUN_TRACE(
+      R"#(
+const obj = {
+  get foo() {
+    enableAllocationLocationTracker();
+    return new Object();
+  }
+}
+obj.foo;
+)#",
+      R"#(
+get foo test.js:5:22
+global test.js:8:4
+global test.js:2:1
+(invalid function name) (invalid script name):-1:-1
+)#");
+}
+
+TEST_P(StackTracesTreeParameterizedTest, TraceThroughProxy) {
+  ASSERT_RUN_TRACE(
+      R"#(
+const handler = {
+  get: function(obj, prop) {
+    enableAllocationLocationTracker();
+    return new Object();
+  }
+};
+const p = new Proxy({}, handler);
+p.something;
+)#",
+      R"#(
+get test.js:5:22
+global test.js:9:2
+global test.js:2:1
+(invalid function name) (invalid script name):-1:-1
+)#");
+}
+
+TEST_P(StackTracesTreeParameterizedTest, TraceThroughEval) {
+  ASSERT_RUN_TRACE(
+      R"#(
+function returnit() {
+  enableAllocationLocationTracker();
+  return new Object();
+}
+eval("returnit()");
+)#",
+      R"#(
+returnit test.js:4:20
+eval JavaScript:1:9
+global test.js:6:5
+global test.js:2:1
+(invalid function name) (invalid script name):-1:-1
+)#");
+}
+
+TEST_P(StackTracesTreeParameterizedTest, TraceThroughBoundFunctions) {
+  ASSERT_FALSE(eval(
+      R"#(
+function foo() {
+  enableAllocationLocationTracker();
+  return new Object();
+})#"));
+
+  ASSERT_RUN_TRACE("foo.bind(null)()", R"#(
+foo eval.js:4:20
+global test.js:1:15
+global test.js:1:1
+(invalid function name) (invalid script name):-1:-1
+)#");
+  resetTree();
+
+  ASSERT_RUN_TRACE("foo.bind(null).bind(null)()", R"#(
+foo eval.js:4:20
+global test.js:1:26
+global test.js:1:1
+(invalid function name) (invalid script name):-1:-1
+)#");
+  resetTree();
+
+  ASSERT_RUN_TRACE(
+      R"#(
+function chain1() {
+  return chain2bound();
+}
+
+function chain2() {
+  enableAllocationLocationTracker();
+  return new Object();
+}
+
+var chain2bound = chain2.bind(null);
+
+chain1.bind(null)();
+  )#",
+      R"#(
+chain2 test.js:8:20
+chain1 test.js:3:21
+global test.js:13:18
+global test.js:2:1
+(invalid function name) (invalid script name):-1:-1
+        )#");
+  resetTree();
+}
+
+TEST_P(StackTracesTreeParameterizedTest, TraceThroughNative) {
+  ASSERT_RUN_TRACE(
+      R"#(
+function foo(x) {
+  enableAllocationLocationTracker();
+  return new Object();
+}
+([0].map(foo))[0];
+)#",
+      R"#(
+foo test.js:4:20
+global test.js:6:9
 global test.js:2:1
 (invalid function name) (invalid script name):-1:-1
       )#");
+}
 
-  runtime->disableAllocationLocationTracker(true);
-  ASSERT_TRUE(!runtime->getStackTracesTree());
+TEST_P(StackTracesTreeParameterizedTest, UnwindOnThrow) {
+  // This relies on ASSERT_RUN_TRACE implicitly checking the stack is cleared
+  ASSERT_RUN_TRACE(
+      R"#(
+function foo() {
+  try {
+    function throws() {
+      enableAllocationLocationTracker();
+      throw new Error();
+    }
+    ([0].map(throws.bind(null)))[0];
+  } catch(e) {
+    return e;
+  }
+  return false;
+}
+foo();
+)#",
+      R"#(
+throws test.js:6:22
+foo test.js:8:13
+global test.js:14:4
+global test.js:2:1
+(invalid function name) (invalid script name):-1:-1
+      )#");
+  resetTree();
 
+  // Test catching multiple blocks up.
+  ASSERT_RUN_TRACE(
+      R"#(
+function thrower() {
+  enableAllocationLocationTracker();
+  throw new Error();
+}
+function layerOne() { return thrower(); }
+function layerTwo() { return layerOne(); }
+function tryAlloc() {
+  try {
+    layerTwo();
+  } catch (e) {
+    return e;
+  }
+}
+tryAlloc();
+)#",
+      R"#(
+thrower test.js:4:18
+layerOne test.js:6:37
+layerTwo test.js:7:38
+tryAlloc test.js:10:13
+global test.js:15:9
+global test.js:2:1
+(invalid function name) (invalid script name):-1:-1
+      )#");
+}
+
+TEST_P(StackTracesTreeParameterizedTest, MultipleNativeLayers) {
+  // Multiple map and bind layers.
   ASSERT_RUN_TRACE(
       R"#(
 function foo() {
@@ -475,8 +548,38 @@ foo test.js:4:20
 global test.js:6:9
 global test.js:2:1
 (invalid function name) (invalid script name):-1:-1
-      )#");
+        )#");
+  resetTree();
+
+  // Multiple Function.prototype.apply layers.
+  ASSERT_RUN_TRACE(
+      R"#(
+function foo() {
+  enableAllocationLocationTracker();
+  return new Object();
 }
+function secondLayerApply() { return foo.apply(null, []); }
+function layered() { return secondLayerApply(); }
+function fooApply() { return layered.apply(null, []); }
+fooApply();
+)#",
+      R"#(
+foo test.js:4:20
+secondLayerApply test.js:6:47
+layered test.js:7:45
+fooApply test.js:8:43
+global test.js:9:9
+global test.js:2:1
+(invalid function name) (invalid script name):-1:-1
+      )#");
+  resetTree();
+}
+
+// Test with the allocation location tracker on and off.
+INSTANTIATE_TEST_CASE_P(
+    WithOrWithoutAllocationTracker,
+    StackTracesTreeParameterizedTest,
+    ::testing::Bool());
 
 TEST_F(StackTracesTreeTest, MultipleAllocationsMergeInTree) {
   ASSERT_FALSE(eval(R"#(
