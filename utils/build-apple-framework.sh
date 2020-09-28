@@ -28,10 +28,10 @@ fi
 # Utility function to configure an Apple framework
 function configure_apple_framework {
   local enable_bitcode
-  if [[ $1 == "macosx" ]]; then
-    enable_bitcode="false"
-  else
+  if [[ $1 == "iphoneos" ]]; then
     enable_bitcode="true"
+  else
+    enable_bitcode="false"
   fi
   
   local cmake_flags=" \
