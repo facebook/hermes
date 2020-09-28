@@ -93,29 +93,58 @@ StackTracesTree::StackTracesTree()
 void StackTracesTree::syncWithRuntimeStack(Runtime *runtime) {
   head_ = root_.get();
 
-  // Copy the frame pointers into a vector so we can iterate over them in
-  // reverse.
-  std::vector<StackFramePtr> frames(
-      runtime->getStackFrames().begin(), runtime->getStackFrames().end());
+  const StackFramePtr framesEnd = *runtime->getStackFrames().end();
+  std::vector<std::pair<CodeBlock *, const Inst *>> stack;
 
-  auto frameIt = frames.rbegin();
-  if (frameIt == frames.rend()) {
+  // Walk the current stack, and call pushCallStack for each JS frame (not
+  // native frames). The current frame is not included, because any allocs after
+  // this point will call pushCallStack which will get the most recent IP. Each
+  // stack frame tracks information about the caller.
+  for (StackFramePtr cf : runtime->getStackFrames()) {
+    CodeBlock *savedCodeBlock = cf.getSavedCodeBlock();
+    const Inst *savedIP = cf.getSavedIP();
+    // Go up one frame and get the callee code block but use the current
+    // frame's saved IP. This also allows us to account for bound functions,
+    // which have savedCodeBlock == nullptr in order to allow proper returns in
+    // the interpreter.
+    StackFramePtr prev = cf.getPreviousFrame();
+    if (prev != framesEnd) {
+      if (CodeBlock *parentCB = prev.getCalleeCodeBlock()) {
+        assert(
+            !savedCodeBlock ||
+            savedCodeBlock == parentCB &&
+                "If savedCodeBlock is non-null, it should match the parent's "
+                "callee code block");
+        savedCodeBlock = parentCB;
+      }
+    } else {
+      // The last frame is the entry into the global function, use the callee
+      // code block instead of the caller.
+      // TODO: This leaves an extra global call frame that doesn't make any
+      // sense laying around. But that matches the behavior of enabling from the
+      // beginning. When a fix for the non-synced version is found, remove this
+      // branch as well.
+      savedCodeBlock = cf.getCalleeCodeBlock();
+      savedIP = savedCodeBlock->getOffsetPtr(0);
+    }
+    stack.emplace_back(savedCodeBlock, savedIP);
+  }
+
+  // If the stack is empty, avoid the rend - 1 comparison issue by returning
+  // early.
+  if (stack.empty()) {
     return;
   }
-  // Stack frames tells us the current CodeBlock and the _previous_ IP. So we
-  // treat the first frame specially using the IP of the first bytecode in
-  // the CodeBlock.
-  const CodeBlock *codeBlock = (*frameIt)->getCalleeCodeBlock();
-  pushCallStack(runtime, codeBlock, codeBlock->getOffsetPtr(0));
-  ++frameIt;
-  // The rend() - 1 is to skip the last frame for now as the only way to
-  // enable allocationLocationTracker is via a native call triggered from JS. In
-  // future we may need to change this depending on how and when tracking is
-  // enabled.
-  for (; codeBlock && frameIt < frames.rend() - 1; ++frameIt) {
-    const Inst *ip = (*frameIt)->getSavedIP();
-    pushCallStack(runtime, codeBlock, ip);
-    codeBlock = (*frameIt)->getCalleeCodeBlock();
+
+  // Iterate over the stack in reverse to push calls. The final frame is ignored
+  // because that is the native frame where enableAllocationLocationTracker is
+  // called, which isn't poppped.
+  for (auto it = stack.rbegin(); it != stack.rend() - 1; ++it) {
+    // Check that both the code block and ip are non-null, which means it was a
+    // JS frame, and not a native frame.
+    if (it->first && it->second) {
+      pushCallStack(runtime, it->first, it->second);
+    }
   }
 }
 
