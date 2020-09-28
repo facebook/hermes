@@ -525,6 +525,10 @@ class HadesGC final : public GCBase {
   /// Protected by gcMutex_.
   std::unique_ptr<HeapSegment> youngGen_;
 
+  /// Should always be set to youngGen_->lowLim(). Used to save an indirection
+  /// in write barriers.
+  void *ygStart_;
+
   /// List of cells in YG that have finalizers. Iterate through this to clean
   /// them out.
   /// Protected by gcMutex_.

@@ -842,6 +842,7 @@ HadesGC::HadesGC(
   if (!(youngGen_ = createSegment(/*isYoungGen*/ true))) {
     hermes_fatal("Failed to initialize the young gen");
   }
+  ygStart_ = youngGen_->lowLim();
   const size_t minHeapSegments =
       // Align up first to round up.
       llvh::alignTo<AlignedStorage::size()>(gcConfig.getMinHeapSize()) /
@@ -1983,6 +1984,7 @@ bool HadesGC::promoteYoungGenToOldGen() {
   oldGen_.addSegment(std::move(youngGen_));
   // Replace YG with a new segment.
   youngGen_ = std::move(newYoungGen);
+  ygStart_ = youngGen_->lowLim();
   // These objects will be finalized by an OG collection.
   youngGenFinalizables_.clear();
   return true;
@@ -2257,7 +2259,7 @@ const HadesGC::HeapSegment &HadesGC::youngGen() const {
 }
 
 bool HadesGC::inYoungGen(const void *p) const {
-  return youngGen().contains(p);
+  return ygStart_ == AlignedStorage::start(p);
 }
 
 std::vector<std::unique_ptr<HadesGC::HeapSegment>>::iterator
