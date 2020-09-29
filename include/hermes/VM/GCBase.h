@@ -17,12 +17,12 @@
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/SamplingThread.h"
 #include "hermes/Support/StatsAccumulator.h"
+#include "hermes/VM/AllocOptions.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/GCDecl.h"
 #include "hermes/VM/GCExecTrace.h"
 #include "hermes/VM/GCPointer.h"
-#include "hermes/VM/HasFinalizer.h"
 #include "hermes/VM/HeapAlign.h"
 #include "hermes/VM/HeapSnapshot.h"
 #include "hermes/VM/HermesValue.h"
@@ -85,6 +85,18 @@ class Deserializer;
 ///
 ///   template <HasFinalizer hasFinalizer = HasFinalizer::No>
 ///   CallResult<GCCell *> allocLongLived(const VTable *vt, uint32_t size);
+///
+/// Allocate a new cell of type \p T and size \p size using the APIs above.
+/// Instantiate an object of type \p T in the newly allocated cell, using
+/// \p args as the arguments to its constructor.
+///
+///   template <
+///     typename T,
+///     bool fixedSize = true,
+///     HasFinalizer hasFinalizer = HasFinalizer::No,
+///     LongLived longLived = LongLived::No,
+///     class... Args>
+/// inline T *makeA(uint32_t size, Args &&... args);
 ///
 /// In some GCs, objects can have associated memory allocated outside the heap,
 /// and this memory can influence GC initiation and heap sizing heuristics.

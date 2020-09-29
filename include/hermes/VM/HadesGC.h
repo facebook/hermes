@@ -109,6 +109,18 @@ class HadesGC final : public GCBase {
   template <HasFinalizer hasFinalizer = HasFinalizer::No>
   inline void *allocLongLived(uint32_t sz);
 
+  /// Allocate a new cell of the specified size \p size by calling alloc.
+  /// Instantiate an object of type T with constructor arguments \p args in the
+  /// newly allocated cell.
+  /// \return a pointer to the newly created object in the GC heap.
+  template <
+      typename T,
+      bool fixedSize = true,
+      HasFinalizer hasFinalizer = HasFinalizer::No,
+      LongLived longLived = LongLived::No,
+      class... Args>
+  inline T *makeA(uint32_t size, Args &&... args);
+
   /// Force a garbage collection cycle.
   /// (Part of general GC API defined in GCBase.h).
   void collect(std::string cause);
@@ -789,6 +801,20 @@ void *HadesGC::alloc(uint32_t sz) {
 template <HasFinalizer hasFinalizer>
 void *HadesGC::allocLongLived(uint32_t sz) {
   return allocLongLived(sz);
+}
+
+template <
+    typename T,
+    bool fixedSize,
+    HasFinalizer hasFinalizer,
+    LongLived longLived,
+    class... Args>
+inline T *HadesGC::makeA(uint32_t size, Args &&... args) {
+  // TODO: Once all callers are using makeA, remove allocLongLived.
+  void *mem = longLived == LongLived::Yes
+      ? allocLongLived<hasFinalizer>(size)
+      : alloc<fixedSize, hasFinalizer>(size);
+  return new (mem) T(std::forward<Args>(args)...);
 }
 
 /// \}
