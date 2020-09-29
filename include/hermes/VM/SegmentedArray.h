@@ -43,9 +43,13 @@ namespace vm {
 class SegmentedArray final
     : public VariableSizeRuntimeCell,
       private llvh::TrailingObjects<SegmentedArray, GCHermesValue> {
+  friend GC;
+
  public:
   /// A segment is just a blob of raw memory with a fixed size.
   class Segment final : public GCCell {
+    friend GC;
+
    public:
     /// The max number of elements that can be held in a segment.
     static constexpr uint32_t kMaxLength = 1024;
