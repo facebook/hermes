@@ -1,9 +1,12 @@
 param(
     [string]$SourcesPath = $PSScriptRoot,
     [string]$OutputPath = "$PSScriptRoot\out",
-    [string]$Architecture = "all",
-    [string]$Configuration = "all",
-    [string]$Platform = "all"
+    [ValidateSet("x64", "x86", "arm", "arm64")]
+    [String[]]$Platform = @("x64"),
+    [ValidateSet("debug", "release")]
+    [String[]]$Configuration = @("debug"),
+    [ValidateSet("win32", "uwp")]
+    [String[]]$AppPlatform = @("win32")
 )
 
 function Find-Path($exename) {
@@ -82,8 +85,8 @@ function Invoke-Environment($Command, $arg) {
     }}
 }
 
-function Run-Build($SourcesPath, $OutputPath, $Platform, $Configuration, $Architecture) {
-    $Triplet = "$Architecture-$Platform-$Configuration"
+function Run-Build($SourcesPath, $OutputPath, $Platform, $Configuration, $AppPlatform) {
+    $Triplet = "$AppPlatform-$Platform-$Configuration"
 
     Write-Host "Building $Triplet..."
 
@@ -102,8 +105,9 @@ function Run-Build($SourcesPath, $OutputPath, $Platform, $Configuration, $Archit
 
     $genArgs += ('-DPYTHON_EXECUTABLE={0}' -f $PYTHON_PATH)
     $genArgs += ('-DCMAKE_BUILD_TYPE={0}' -f (Get-CMakeConfiguration $Configuration))
+    $genArgs += '-DHERMES_ENABLE_DEBUGGER=On'
 
-    if ($Architecture -eq "uwp") {
+    if ($AppPlatform -eq "uwp") {
         $genArgs += '-DCMAKE_CXX_STANDARD=17'
         $genArgs += '-DCMAKE_SYSTEM_NAME=WindowsStore'
         $genArgs += '-DCMAKE_SYSTEM_VERSION="10.0.15063"'
@@ -117,40 +121,22 @@ function Run-Build($SourcesPath, $OutputPath, $Platform, $Configuration, $Archit
     $Bug257260 = $false
 
     if ($Bug257260) {
-        Invoke-Environment $VCVARS_PATH (Get-VCVarsParam $Platform $Architecture)
+        Invoke-Environment $VCVARS_PATH (Get-VCVarsParam $Platform $AppPlatform)
         Invoke-Expression $genCall
         ninja
     } else {
-        cmd /c "`"$VCVARS_PATH`" $(Get-VCVarsParam $Platform $Architecture) && $genCall 2>&1 && ninja"
+        cmd /c "`"$VCVARS_PATH`" $(Get-VCVarsParam $Platform $AppPlatform) && $genCall 2>&1 && ninja"
     }
 
     # Now copy the needed build outputs
-    if (!(Test-Path -Path "$OutputPath\lib\$Architecture\$Configuration\$Platform")) {
-        New-Item -ItemType "directory" -Path "$OutputPath\lib\$Architecture\$Configuration\$Platform" | Out-Null
+    if (!(Test-Path -Path "$OutputPath\lib\$AppPlatform\$Configuration\$Platform")) {
+        New-Item -ItemType "directory" -Path "$OutputPath\lib\$AppPlatform\$Configuration\$Platform" | Out-Null
     }
 
-    Copy-Item "$buildPath\API\hermes\hermes.*" -Destination "$OutputPath\lib\$Architecture\$Configuration\$Platform"
-    Copy-Item "$buildPath\bin\hermes.*" -Destination "$OutputPath\lib\$Architecture\$Configuration\$Platform"
+    Copy-Item "$buildPath\API\hermes\hermes.*" -Destination "$OutputPath\lib\$AppPlatform\$Configuration\$Platform"
+    Copy-Item "$buildPath\bin\hermes.*" -Destination "$OutputPath\lib\$AppPlatform\$Configuration\$Platform"
 
     Pop-Location
-}
-
-if ($Architecture -eq "all") {
-    $Architectures = "win32", "uwp"
-} else {
-    $Architectures = @($Architecture)
-}
-
-if ($Configuration -eq "all") {
-    $Configurations = "debug", "release"
-} else {
-    $Configurations = @($Configuration)
-}
-
-if ($Platform -eq "all") {
-    $Platforms = "x64", "x86", "arm", "arm64"
-} else {
-    $Platforms = @($Platform)
 }
 
 $VCVARS_PATH = Find-VS-Path
@@ -169,15 +155,16 @@ if (!(Test-Path -Path "$OutputPath\build\native\include\jsi")) {
 }
 
 Copy-Item "$SourcesPath\API\jsi\jsi\*" -Destination "$OutputPath\build\native\include\jsi" -force -Recurse
-Copy-Item "$SourcesPath\API\hermes\hermes.h" -Destination "$OutputPath\build\native\include\hermes" -force 
+Copy-Item "$SourcesPath\API\hermes\hermes.h" -Destination "$OutputPath\build\native\include\hermes" -force
+Copy-Item "$SourcesPath\API\hermes\DebuggerAPI.h" -Destination "$OutputPath\build\native\include\hermes" -force
 Copy-Item "$SourcesPath\public\hermes\*" -Destination "$OutputPath\build\native\include\hermes" -force -Recurse
 
 # run the actual builds
 
-foreach ($Platform in $Platforms) {
-    foreach ($Configuration in $Configurations) {
-        foreach ($Architecture in $Architectures) {
-            Run-Build $SourcesPath $OutputPath $Platform $Configuration $Architecture
+foreach ($Plat in $Platform) {
+    foreach ($Config in $Configuration) {
+        foreach ($AppPlat in $AppPlatform) {
+            Run-Build -SourcesPath $SourcesPath -OutputPath $OutputPath -Platform $Plat -Configuration $Config -AppPlatform $AppPlat
         }
     }
 }

@@ -208,7 +208,7 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   // class in the .cpp file.
 };
 
-__declspec(dllexport) HERMES_EXPORT std::unique_ptr<HermesRuntime> makeHermesRuntime(
+HERMES_EXPORT std::unique_ptr<HermesRuntime> makeHermesRuntime(
     const ::hermes::vm::RuntimeConfig &runtimeConfig =
         ::hermes::vm::RuntimeConfig());
 HERMES_EXPORT std::unique_ptr<jsi::ThreadSafeRuntime>
