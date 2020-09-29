@@ -226,11 +226,6 @@ class Runtime : public HandleRootOwner,
   template <bool fixedSize = true, HasFinalizer hasFinalizer = HasFinalizer::No>
   void *alloc(uint32_t size);
 
-  /// Like the above, but if the GC makes a distinction between short- and
-  /// long-lived objects, allocates an object that is expected to be long-lived.
-  template <HasFinalizer hasFinalizer = HasFinalizer::No>
-  void *allocLongLived(uint32_t size);
-
   /// Create a fixed size object of type T.
   /// If necessary perform a GC cycle, which may potentially move
   /// allocated objects.
@@ -859,7 +854,7 @@ class Runtime : public HandleRootOwner,
   /// Called by the GC at the beginning of a collection. This method informs the
   /// GC of all runtime roots.  The \p markLongLived argument
   /// indicates whether root data structures that contain only
-  /// references to long-lived objects (allocated via allocLongLived)
+  /// references to long-lived objects (allocated directly as long lived)
   /// are required to be scanned.
   void markRoots(RootAcceptor &acceptor, bool markLongLived) override;
 
@@ -1626,24 +1621,6 @@ inline void *Runtime::alloc(uint32_t sz) {
   (void)getCurrentIP();
 #endif
   void *ptr = heap_.alloc<fixedSize, hasFinalizer>(sz);
-#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-  heap_.getAllocationLocationTracker().newAlloc(ptr);
-#endif
-  return ptr;
-}
-
-template <HasFinalizer hasFinalizer>
-inline void *Runtime::allocLongLived(uint32_t size) {
-#if !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && !defined(NDEBUG)
-  // If allocation location tracking is enabled we implicitly call
-  // getCurrentIP() via newAlloc() below. Even if this isn't enabled, we always
-  // call getCurrentIP() in a debug build as this has the effect of
-  // asserting the IP is correctly set (not invalidated) at this point. This
-  // allows us to leverage our whole test-suite to find missing cases of
-  // CAPTURE_IP* macros in the interpreter loop.
-  (void)getCurrentIP();
-#endif
-  void *ptr = heap_.allocLongLived<hasFinalizer>(size);
 #ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
   heap_.getAllocationLocationTracker().newAlloc(ptr);
 #endif

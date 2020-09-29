@@ -419,6 +419,7 @@ template <typename T, bool Uniqued>
 class DynamicStringPrimitive final
     : public OptSymbolStringPrimitive<Uniqued>,
       private llvh::TrailingObjects<DynamicStringPrimitive<T, Uniqued>, T> {
+  friend GC;
   friend class IdentifierTable;
   friend class llvh::TrailingObjects<DynamicStringPrimitive<T, Uniqued>, T>;
   friend class StringBuilder;
@@ -512,6 +513,7 @@ class DynamicStringPrimitive final
 /// metadata.
 template <typename T>
 class ExternalStringPrimitive final : public SymbolStringPrimitive {
+  friend GC;
   friend class IdentifierTable;
   friend class StringBuilder;
   friend class StringPrimitive;
