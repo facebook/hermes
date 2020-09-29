@@ -40,8 +40,8 @@ struct Dummy final : public GCCell {
         Dummy(&runtime.getHeap());
   }
   static Dummy *createLongLived(DummyRuntime &runtime) {
-    return new (runtime.allocLongLived<HasFinalizer::Yes>(sizeof(Dummy)))
-        Dummy(&runtime.getHeap());
+    return runtime.makeAFixed<Dummy, HasFinalizer::Yes, LongLived::Yes>(
+        &runtime.getHeap());
   }
   static bool classof(const GCCell *cell) {
     return cell->getVT() == &vt;
