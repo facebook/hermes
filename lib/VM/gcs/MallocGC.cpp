@@ -620,8 +620,6 @@ template void *MallocGC::alloc</*FixedSize*/ true, HasFinalizer::No>(
     uint32_t size);
 template void *MallocGC::alloc</*FixedSize*/ false, HasFinalizer::No>(
     uint32_t size);
-template void *MallocGC::allocLongLived<HasFinalizer::Yes>(uint32_t size);
-template void *MallocGC::allocLongLived<HasFinalizer::No>(uint32_t size);
 /// @}
 
 } // namespace vm

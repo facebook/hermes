@@ -79,13 +79,6 @@ class Deserializer;
 ///             HasFinalizer hasFinalizer = HasFinalizer::No>
 ///   CallResult<GCCell *> alloc(const VTable *vt, uint32_t size);
 ///
-/// Like the above, but if the GC makes a distinction between short- and
-/// long-lived objects, allocates an object that is expected to be
-/// long-lived.  Does not allow specification of fixed-sizeness.
-///
-///   template <HasFinalizer hasFinalizer = HasFinalizer::No>
-///   CallResult<GCCell *> allocLongLived(const VTable *vt, uint32_t size);
-///
 /// Allocate a new cell of type \p T and size \p size using the APIs above.
 /// Instantiate an object of type \p T in the newly allocated cell, using
 /// \p args as the arguments to its constructor.

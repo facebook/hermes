@@ -142,12 +142,6 @@ class GenGC final : public GCBase {
   debugAllocRandomize(uint32_t sz, HasFinalizer hasFinalizer, bool fixedSize);
 #endif
 
-  /// Like alloc above, but the resulting object is expected to be long-lived.
-  /// Allocate directly in the old generation (doing a full collection if
-  /// necessary to create room).
-  template <HasFinalizer hasFinalizer = HasFinalizer::No>
-  inline void *allocLongLived(uint32_t size);
-
   /// Allocate a new cell of the specified size \p size by calling alloc.
   /// Instantiate an object of type T with constructor arguments \p args in the
   /// newly allocated cell.
@@ -518,6 +512,12 @@ class GenGC final : public GCBase {
   /// albeit with the template arguments passed as explicit dynamic
   /// arguments.
   void *allocSlow(uint32_t sz, bool fixedSize, HasFinalizer hasFinalizer);
+
+  /// Like alloc above, but the resulting object is expected to be long-lived.
+  /// Allocate directly in the old generation (doing a full collection if
+  /// necessary to create room).
+  template <HasFinalizer hasFinalizer = HasFinalizer::No>
+  inline void *allocLongLived(uint32_t size);
 
   /// The given pointer value is being written at the given loc (required to
   /// be in the heap).  The value is may be null.  Execute a write
