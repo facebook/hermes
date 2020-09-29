@@ -1632,9 +1632,6 @@ void *HadesGC::allocWork(uint32_t sz) {
         !weakRefMutex() &&
         "WeakRef mutex should not be held when alloc is called");
   }
-  if (!fixedSize && LLVM_UNLIKELY(sz >= HeapSegment::maxSize() / 2)) {
-    return allocLongLived(sz);
-  }
   if (shouldSanitizeHandles()) {
     // The best way to sanitize uses of raw pointers outside handles is to force
     // the entire heap to move, and ASAN poison the old heap. That is too
@@ -1672,14 +1669,9 @@ void *HadesGC::allocLongLived(uint32_t sz) {
         !weakRefMutex() &&
         "WeakRef mutex should not be held when allocLongLived is called");
   }
+  assert(gcMutex_ && "GC mutex must be held when calling allocLongLived");
   // Alloc directly into the old gen.
-  std::lock_guard<Mutex> lk{gcMutex_};
-  void *res = oldGen_.alloc(heapAlignSize(sz));
-  // Need to initialize the memory here to a valid cell to prevent the case
-  // where sweeping discovers the uninitialized memory while it's traversing
-  // a segment. This only happens at the end of a bump-alloc segment.
-  new (res) OldGen::FreelistCell(sz);
-  return res;
+  return oldGen_.alloc(heapAlignSize(sz));
 }
 
 GCCell *HadesGC::OldGen::alloc(uint32_t sz) {

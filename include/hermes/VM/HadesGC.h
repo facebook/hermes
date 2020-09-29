@@ -101,14 +101,6 @@ class HadesGC final : public GCBase {
   template <bool fixedSize = true, HasFinalizer hasFinalizer = HasFinalizer::No>
   inline void *alloc(uint32_t sz);
 
-  /// Like alloc above, but the resulting object is expected to be long-lived.
-  /// Allocate directly in the old generation (doing a full collection if
-  /// necessary to create room).
-  /// \tparam hasFinalizer Indicates whether the object being allocated will
-  ///   have a finalizer. Unused by Hades, but used by other GCs.
-  template <HasFinalizer hasFinalizer = HasFinalizer::No>
-  inline void *allocLongLived(uint32_t sz);
-
   /// Allocate a new cell of the specified size \p size by calling alloc.
   /// Instantiate an object of type T with constructor arguments \p args in the
   /// newly allocated cell.
@@ -631,8 +623,9 @@ class HadesGC final : public GCBase {
   template <bool fixedSize, HasFinalizer hasFinalizer>
   void *allocWork(uint32_t sz);
 
-  /// Same as \c allocLongLived<hasFinalizer> but discards the finalizer
-  /// parameter that is unused anyway.
+  /// Like alloc, but the resulting object is expected to be long-lived.
+  /// Allocate directly in the old generation (doing a full collection if
+  /// necessary to create room).
   void *allocLongLived(uint32_t sz);
 
   /// Frees the weak slot, so it can be re-used by future WeakRef allocations.
@@ -798,11 +791,6 @@ void *HadesGC::alloc(uint32_t sz) {
   return allocWork<fixedSize, hasFinalizer>(heapAlignSize(sz));
 }
 
-template <HasFinalizer hasFinalizer>
-void *HadesGC::allocLongLived(uint32_t sz) {
-  return allocLongLived(sz);
-}
-
 template <
     typename T,
     bool fixedSize,
@@ -810,11 +798,13 @@ template <
     LongLived longLived,
     class... Args>
 inline T *HadesGC::makeA(uint32_t size, Args &&... args) {
-  // TODO: Once all callers are using makeA, remove allocLongLived.
-  void *mem = longLived == LongLived::Yes
-      ? allocLongLived<hasFinalizer>(size)
-      : alloc<fixedSize, hasFinalizer>(size);
-  return new (mem) T(std::forward<Args>(args)...);
+  if (longLived == LongLived::Yes) {
+    std::lock_guard<Mutex> lk{gcMutex_};
+    return new (allocLongLived(size)) T(std::forward<Args>(args)...);
+  }
+
+  return new (alloc<fixedSize, hasFinalizer>(size))
+      T(std::forward<Args>(args)...);
 }
 
 /// \}
