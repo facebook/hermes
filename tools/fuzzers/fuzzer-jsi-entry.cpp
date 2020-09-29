@@ -43,9 +43,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
       return String::createFromAscii(rt, "phoprop");
     }
 
-    void set(Runtime&, const PropNameID& name, const Value& value) override {
-      (void) name;
-      (void) value;
+    void set(Runtime &, const PropNameID &name, const Value &value) override {
+      (void)name;
+      (void)value;
       return;
     }
 
