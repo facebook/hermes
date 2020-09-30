@@ -944,10 +944,10 @@ baz();
   EXPECT_STREQ(
       fooStackStr.c_str(),
       R"#(
-global(1) @ test.js(4):2:1
-global(2) @ test.js(4):11:4
-baz(7) @ test.js(4):9:19
-foo(8) @ test.js(4):3:20)#");
+global(1) @ test.js(1):2:1
+global(2) @ test.js(1):11:4
+baz(7) @ test.js(1):9:19
+foo(8) @ test.js(1):3:20)#");
 
   auto barAllocNode = FIND_NODE_FOR_ID(barObjID, nodes, strings);
   auto barStackTreeNode = idNodeMap.find(barAllocNode.traceNodeID);
@@ -957,10 +957,10 @@ foo(8) @ test.js(4):3:20)#");
   ASSERT_STREQ(
       barStackStr.c_str(),
       R"#(
-global(1) @ test.js(4):2:1
-global(2) @ test.js(4):11:4
-baz(3) @ test.js(4):9:31
-bar(4) @ test.js(4):6:20)#");
+global(1) @ test.js(1):2:1
+global(2) @ test.js(1):11:4
+baz(3) @ test.js(1):9:31
+bar(4) @ test.js(1):6:20)#");
 }
 #endif // HERMES_ENABLE_DEBUGGER
 

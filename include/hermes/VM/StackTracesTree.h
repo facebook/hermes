@@ -107,7 +107,7 @@ struct StackTracesTree {
   std::unique_ptr<StackTracesTreeNode> root_{new StackTracesTreeNode(
       nextNodeID_++,
       nullptr, /* parent */
-      {invalidScriptNameID_, -1, -1},
+      {invalidScriptNameID_, 0, -1, -1},
       nullptr, /* codeBlock */
       nullptr, /* ip */
       invalidFunctionID_)};
