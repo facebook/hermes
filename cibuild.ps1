@@ -6,7 +6,7 @@ param(
     [ValidateSet("debug", "release")]
     [String[]]$Configuration = @("debug"),
     [ValidateSet("win32", "uwp")]
-    [String[]]$AppPlatform = @("win32")
+    [String[]]$AppPlatform = ("win32", "uwp")
 )
 
 function Find-Path($exename) {
