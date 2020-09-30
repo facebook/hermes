@@ -93,7 +93,7 @@ jni::local_ref<JOptionsMap> optionsToJava(const Options &options) {
     } else if (kv.second.isNumber()) {
       jvalue = jni::autobox(static_cast<jdouble>(kv.second.getNumber()));
     } else {
-      assert(kv.second.isString());
+      assert(kv.second.isString() && "Option is not valid type");
       jvalue = jni::make_jstring(kv.second.getString());
     }
     ret->put(jni::make_jstring(kv.first), jvalue);

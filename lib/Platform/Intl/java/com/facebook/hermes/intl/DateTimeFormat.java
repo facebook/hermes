@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -355,7 +356,7 @@ public class DateTimeFormat {
     // slots" are set (in the ctor), but in practice each "slot" should
     // correspond to a member with a well-defined Java type.
     public Map<String, Object> resolvedOptions() throws JSRangeErrorException {
-        HashMap<String, Object> finalResolvedOptions = new HashMap<String, Object>();
+        HashMap<String, Object> finalResolvedOptions = new LinkedHashMap<>();
         finalResolvedOptions.put(Constants.LOCALE, mResolvedLocaleObjectForResolvedOptions.toCanonicalTag());
 
         finalResolvedOptions.put("numberingSystem", mNumberingSystem);

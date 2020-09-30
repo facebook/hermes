@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -347,7 +348,6 @@ public class NumberFormat {
     }
 
     public NumberFormat(List<String> locales, Map<String, Object> options) throws JSRangeErrorException {
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
             mPlatformNumberFormatter = new PlatformNumberFormatterICU();
         else
@@ -388,7 +388,7 @@ public class NumberFormat {
     // Also see the implementer notes on DateTimeFormat#resolvedOptions()
     public Map<String, Object> resolvedOptions() throws JSRangeErrorException {
 
-        HashMap<String, Object> finalResolvedOptions = new HashMap<>();
+        HashMap<String, Object> finalResolvedOptions = new LinkedHashMap<>();
 
         finalResolvedOptions.put(Constants.LOCALE, mResolvedLocaleObjectForResolvedOptions.toCanonicalTag());
         finalResolvedOptions.put("numberingSystem", mResolvedNumberingSystem);

@@ -51,7 +51,7 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
             mNumberFormat.setCurrency(currency);
 
             String currencySymbol;
-            if(currencyDisplay == CurrencyDisplay.CODE)
+            if (currencyDisplay == CurrencyDisplay.CODE)
                 currencySymbol = currencyCode;
             else
                 currencySymbol = currency.getName((ULocale) mLocaleObject.getLocale(), currencyDisplay.getNameStyle(), null);
@@ -85,7 +85,7 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
     public PlatformNumberFormatterICU setSignificantDigits(IPlatformNumberFormatter.RoundingType roundingType, int minimumSignificantDigits, int maximumSignificantDigits) throws JSRangeErrorException {
         if (mNumberFormat instanceof android.icu.text.DecimalFormat) {
             if (roundingType == IPlatformNumberFormatter.RoundingType.SIGNIFICANT_DIGITS) {
-                android.icu.text.DecimalFormat decimalFormat = (android.icu.text.DecimalFormat)mNumberFormat;
+                android.icu.text.DecimalFormat decimalFormat = (android.icu.text.DecimalFormat) mNumberFormat;
                 if (minimumSignificantDigits >= 0)
                     decimalFormat.setMinimumSignificantDigits(minimumSignificantDigits);
 
@@ -112,7 +112,7 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
                 mNumberFormat.setMaximumFractionDigits(maximumFractionDigits);
 
             if (mNumberFormat instanceof android.icu.text.DecimalFormat) {
-                ((android.icu.text.DecimalFormat)mNumberFormat).setSignificantDigitsUsed(false);
+                ((android.icu.text.DecimalFormat) mNumberFormat).setSignificantDigitsUsed(false);
             }
         }
 
@@ -122,7 +122,7 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
     @Override
     public PlatformNumberFormatterICU setSignDisplay(IPlatformNumberFormatter.SignDisplay signDisplay) {
         if (mNumberFormat instanceof android.icu.text.DecimalFormat) {
-            android.icu.text.DecimalFormat decimalFormat = (android.icu.text.DecimalFormat)mNumberFormat;
+            android.icu.text.DecimalFormat decimalFormat = (android.icu.text.DecimalFormat) mNumberFormat;
             android.icu.text.DecimalFormatSymbols symbols = decimalFormat.getDecimalFormatSymbols();
 
             switch (signDisplay) {
@@ -177,10 +177,21 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
     @Override
     public String format(double n) throws JSRangeErrorException {
         String result;
-        if (mFinalFormat instanceof MeasureFormat && mMeasureUnit != null) {
-            result = mFinalFormat.format(new Measure(n, mMeasureUnit));
-        } else
-            result = mFinalFormat.format(n);
+        try {
+            if (mFinalFormat instanceof MeasureFormat && mMeasureUnit != null) {
+                result = mFinalFormat.format(new Measure(n, mMeasureUnit));
+            } else
+                result = mFinalFormat.format(n);
+        } catch (NumberFormatException ex) {
+            // For older API versions (Tested on API 26), java.lang.NumberFormatException is thrown when formatting special numbers values such as Infinity, Nan etc.
+            // on special locales such as "ja-u-nu-jpanfin". One observation is that the formatter employs "android.icu.RuleBasedNumberFormat" implementation (unlike "android.icu.DecimalFormat" for relatively simpler locales.)
+            // We are trying our best to avoid a crash here.
+            try {
+                return NumberFormat.getInstance(ULocale.getDefault()).format(n);
+            } catch (RuntimeException ex2) {
+                return NumberFormat.getInstance(ULocale.forLanguageTag("en")).format(n);
+            }
+        }
 
         return result;
     }
@@ -231,7 +242,7 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
         }
 
         // TODO:: There must be a better way to do this.
-        if(attribute.toString().equals("android.icu.text.NumberFormat$Field(compact)"))
+        if (attribute.toString().equals("android.icu.text.NumberFormat$Field(compact)"))
             return "compact";
 
         // Report unsupported/unexpected number fields as literal.
@@ -241,11 +252,26 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
     @Override
     public AttributedCharacterIterator formatToParts(double n) throws JSRangeErrorException {
         AttributedCharacterIterator iterator;
-        if (mFinalFormat instanceof MeasureFormat && mMeasureUnit != null) {
-            iterator = mFinalFormat.formatToCharacterIterator(new Measure(n, mMeasureUnit));
-        } else {
-            iterator = mFinalFormat.formatToCharacterIterator(n);
+        try {
+            if (mFinalFormat instanceof MeasureFormat && mMeasureUnit != null) {
+                iterator = mFinalFormat.formatToCharacterIterator(new Measure(n, mMeasureUnit));
+            } else {
+                iterator = mFinalFormat.formatToCharacterIterator(n);
+            }
+        } catch (NumberFormatException ex) {
+            // For older API versions (Tested on API 26), java.lang.NumberFormatException is thrown when formatting special numbers values such as Infinity, Nan etc.
+            // on special locales such as "ja-u-nu-jpanfin". One observation is that the formatter employs "android.icu.RuleBasedNumberFormat" implementation (unlike "android.icu.DecimalFormat" for relatively simpler locales.)
+            // We are trying our best to avoid a crash here.
+            try {
+                return NumberFormat.getInstance(ULocale.getDefault()).formatToCharacterIterator(n);
+            } catch (RuntimeException ex2) {
+                return NumberFormat.getInstance(ULocale.forLanguageTag("en")).formatToCharacterIterator(n);
+            }
+        } catch(Exception ex){
+            // Scarily, DecimalFormat.formatToCharacterIterator throws NullPointerEsception when parsing 0.0.
+            return NumberFormat.getInstance(ULocale.forLanguageTag("en")).formatToCharacterIterator(n);
         }
+
 
         return iterator;
     }
@@ -281,7 +307,7 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
             localeObject.setUnicodeExtensions("nu", numberingSystemList);
         }
 
-        if(notation == Notation.COMPACT && (style == DECIMAL || style == UNIT )) { // TODO :: Note sure whether the compact notation makes sense for other styles ..
+        if (notation == Notation.COMPACT && (style == DECIMAL || style == UNIT)) { // TODO :: Note sure whether the compact notation makes sense for other styles ..
             CompactDecimalFormat.CompactStyle compactStyle = compactDisplay == IPlatformNumberFormatter.CompactDisplay.SHORT
                     ? android.icu.text.CompactDecimalFormat.CompactStyle.SHORT
                     : android.icu.text.CompactDecimalFormat.CompactStyle.LONG;
@@ -292,7 +318,7 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
             int numberFormatStyle = style.getInitialNumberFormatStyle(notation, currencySign);
             NumberFormat numberFormat = NumberFormat.getInstance((ULocale) localeObject.getLocale(), numberFormatStyle);
 
-            if(notation == Notation.ENGINEERING) {
+            if (notation == Notation.ENGINEERING) {
                 // Must read the scientific style properties to understand this: https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/classicu_1_1DecimalFormat.html
                 numberFormat.setMaximumIntegerDigits(3);
             }
@@ -316,7 +342,7 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
         android.icu.util.ULocale[] availableLocales = ULocale.getAvailableLocales();
 
 
-        for(android.icu.util.ULocale locale: availableLocales) {
+        for (android.icu.util.ULocale locale : availableLocales) {
             availableLocaleIds.add(locale.toLanguageTag()); // TODO:: Not available on platforms <= 20
         }
 

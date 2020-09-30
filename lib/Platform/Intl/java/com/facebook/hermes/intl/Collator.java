@@ -12,6 +12,7 @@ import android.os.Build;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -194,7 +195,7 @@ public class Collator {
     // Implementer note: This method corresponds roughly to
     // https://tc39.es/ecma402/#sec-intl.collator.prototype.resolvedoptions
     public Map<String, Object> resolvedOptions() throws JSRangeErrorException {
-        HashMap<String, Object> finalResolvedOptions = new HashMap<>();
+        HashMap<String, Object> finalResolvedOptions = new LinkedHashMap<>();
         String finalResolvedLocaleId = mResolvedLocaleObjectForResolvedOptions.toCanonicalTag();
         // An example of going extra mile to adhere to spec !! .. It looks wierd though, but i believe it is the right thing to do ..
         finalResolvedLocaleId = finalResolvedLocaleId.replace("-kn-true", "-kn");
