@@ -171,6 +171,7 @@ StackTracesTreeNode::SourceLoc StackTracesTree::computeSourceLoc(
   // report unknown.
   RuntimeModule *runtimeModule = codeBlock->getRuntimeModule();
   std::string scriptName;
+  auto scriptID = runtimeModule->getScriptID();
   int32_t lineNo, columnNo;
   if (location) {
     scriptName = runtimeModule->getBytecode()->getDebugInfo()->getFilenameByID(
@@ -183,7 +184,7 @@ StackTracesTreeNode::SourceLoc StackTracesTree::computeSourceLoc(
     lineNo = -1;
     columnNo = -1;
   }
-  return {strings_->insert(scriptName), lineNo, columnNo};
+  return {strings_->insert(scriptName), scriptID, lineNo, columnNo};
 }
 
 void StackTracesTree::pushCallStack(
