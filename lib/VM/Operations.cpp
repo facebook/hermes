@@ -1436,6 +1436,15 @@ ordinaryHasInstance(Runtime *runtime, Handle<> constructor, Handle<> object) {
         "function's '.prototype' is not an object in 'instanceof'");
   }
 
+  // 6.1.7.3 Invariants of the Essential Internal Methods notes that
+  // detection of infinite prototype chains is not enforceable as an
+  // invariant if exotic objects exist in the chain.  Most of the
+  // time, ScopedNativeDepthTracker will detect this. Here, we need to
+  // check that we're not repeating forever.  Since ordinary object
+  // chains are verified at the time the parent is set, we count Proxy
+  // objects.  Thus, any length chain of ordinary objects is ok.
+  constexpr unsigned int kMaxProxyCount = 1024;
+  unsigned int proxyCount = 0;
   MutableHandle<JSObject> head{runtime, vmcast<JSObject>(object.get())};
   GCScopeMarkerRAII gcScope{runtime};
   // 6. Repeat
@@ -1453,6 +1462,13 @@ ordinaryHasInstance(Runtime *runtime, Handle<> constructor, Handle<> object) {
     // 6c. If SameValue(P, O) is true, return true.
     if (parentRes->get() == ctorPrototype.get()) {
       return true;
+    }
+    if (head->isProxyObject()) {
+      ++proxyCount;
+      if (proxyCount > kMaxProxyCount) {
+        return runtime->raiseRangeError(
+            "Maximum prototype chain length exceeded");
+      }
     }
     head = parentRes->get();
     gcScope.flush();
