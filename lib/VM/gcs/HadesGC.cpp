@@ -11,7 +11,6 @@
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCPointer.h"
-#include "hermes/VM/SlotAcceptorDefault-inline.h"
 #include "hermes/VM/SlotAcceptorDefault.h"
 
 #include <array>

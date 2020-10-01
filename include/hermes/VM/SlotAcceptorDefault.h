@@ -12,6 +12,7 @@
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/PointerBase.h"
 #include "hermes/VM/SlotAcceptor.h"
+#include "hermes/VM/WeakRef.h"
 
 namespace hermes {
 namespace vm {
@@ -24,7 +25,7 @@ struct SlotAcceptorDefault : public SlotAcceptor {
 
   using SlotAcceptor::accept;
 
-  void accept(BasedPointer &ptr) override;
+  inline void accept(BasedPointer &ptr) override;
 
   void accept(GCPointerBase &ptr) override final {
     accept(ptr.getLoc(&gc));
@@ -80,8 +81,46 @@ struct WeakRootAcceptorDefault : public WeakRootAcceptor {
 
   /// This gets a default implementation: extract the real pointer to a local,
   /// call acceptWeak on that, write the result back as a BasedPointer.
-  virtual void acceptWeak(BasedPointer &ptr);
+  inline virtual void acceptWeak(BasedPointer &ptr);
 };
+
+/// @name Inline implementations.
+/// @{
+
+inline void WeakRootAcceptorDefault::acceptWeak(WeakRootBase &ptr) {
+  GCPointerBase::StorageType weakRootStorage = ptr.getNoBarrierUnsafe();
+  acceptWeak(weakRootStorage);
+  // Assign back to the input pointer location.
+  ptr = weakRootStorage;
+}
+
+inline void SlotAcceptorDefault::accept(BasedPointer &ptr) {
+  if (!ptr) {
+    return;
+  }
+  // accept takes an l-value reference and potentially writes to it.
+  // Write the value back out to the BasedPointer.
+  PointerBase *const base = gc.getPointerBase();
+  void *actualizedPointer = base->basedToPointerNonNull(ptr);
+  accept(actualizedPointer);
+  // Assign back to the based pointer.
+  ptr = base->pointerToBased(actualizedPointer);
+}
+
+inline void WeakRootAcceptorDefault::acceptWeak(BasedPointer &ptr) {
+  if (!ptr) {
+    return;
+  }
+  // accept takes an l-value reference and potentially writes to it.
+  // Write the value back out to the BasedPointer.
+  PointerBase *const base = gcForWeakRootDefault.getPointerBase();
+  void *actualizedPointer = base->basedToPointerNonNull(ptr);
+  acceptWeak(actualizedPointer);
+  // Assign back to the based pointer.
+  ptr = base->pointerToBased(actualizedPointer);
+}
+
+/// @}
 
 } // namespace vm
 } // namespace hermes

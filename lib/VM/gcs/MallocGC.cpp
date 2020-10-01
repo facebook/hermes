@@ -15,7 +15,6 @@
 #include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/HiddenClass.h"
 #include "hermes/VM/JSWeakMapImpl.h"
-#include "hermes/VM/SlotAcceptorDefault-inline.h"
 #include "hermes/VM/SlotAcceptorDefault.h"
 
 #include "llvh/Support/Debug.h"
