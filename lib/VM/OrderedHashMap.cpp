@@ -59,9 +59,9 @@ void HashMapEntryDeserialize(Deserializer &d, CellKind kind) {
 }
 #endif
 
-CallResult<HermesValue> HashMapEntry::create(Runtime *runtime) {
+CallResult<PseudoHandle<HashMapEntry>> HashMapEntry::create(Runtime *runtime) {
   void *mem = runtime->alloc(cellSize<HashMapEntry>());
-  return HermesValue::encodeObjectValue(new (mem) HashMapEntry(runtime));
+  return createPseudoHandle(new (mem) HashMapEntry(runtime));
 }
 
 //===----------------------------------------------------------------------===//
@@ -127,7 +127,8 @@ OrderedHashMap::OrderedHashMap(
     : GCCell(&runtime->getHeap(), &vt),
       hashTable_(runtime, hashTableStorage.get(), &runtime->getHeap()) {}
 
-CallResult<HermesValue> OrderedHashMap::create(Runtime *runtime) {
+CallResult<PseudoHandle<OrderedHashMap>> OrderedHashMap::create(
+    Runtime *runtime) {
   auto arrRes =
       ArrayStorage::create(runtime, INITIAL_CAPACITY, INITIAL_CAPACITY);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
@@ -136,8 +137,8 @@ CallResult<HermesValue> OrderedHashMap::create(Runtime *runtime) {
   auto hashTableStorage = runtime->makeHandle<ArrayStorage>(*arrRes);
 
   void *mem = runtime->alloc(cellSize<OrderedHashMap>());
-  return HermesValue::encodeObjectValue(
-      new (mem) OrderedHashMap(runtime, hashTableStorage));
+  return createPseudoHandle(new (mem)
+                                OrderedHashMap(runtime, hashTableStorage));
 }
 
 void OrderedHashMap::removeLinkedListNode(
@@ -300,7 +301,7 @@ ExecutionStatus OrderedHashMap::insert(
   if (LLVM_UNLIKELY(crtRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto newMapEntry = runtime->makeHandle<HashMapEntry>(*crtRes);
+  auto newMapEntry = runtime->makeHandle(std::move(*crtRes));
   newMapEntry->key.set(key.get(), &runtime->getHeap());
   newMapEntry->value.set(value.get(), &runtime->getHeap());
   auto *curBucketFront =

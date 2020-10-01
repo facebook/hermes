@@ -22,8 +22,7 @@ namespace hermes {
 namespace vm {
 
 void SymbolRegistry::init(Runtime *runtime) {
-  stringMap_ = HermesValue::encodeObjectValue(
-      vmcast<OrderedHashMap>(*OrderedHashMap::create(runtime)));
+  stringMap_ = OrderedHashMap::create(runtime)->getHermesValue();
 }
 
 /// Mark the Strings and Symbols in the registry as roots.

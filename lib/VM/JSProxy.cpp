@@ -1423,12 +1423,13 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
     return ExecutionStatus::EXCEPTION;
   }
   Handle<JSArray> trapResult = runtime->makeHandle(std::move(*trapResultRes));
-  auto dupcheckRes = OrderedHashMap::create(runtime);
+  CallResult<PseudoHandle<OrderedHashMap>> dupcheckRes =
+      OrderedHashMap::create(runtime);
   if (LLVM_UNLIKELY(dupcheckRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   Handle<OrderedHashMap> dupcheck =
-      runtime->makeHandle(vmcast<OrderedHashMap>(*dupcheckRes));
+      runtime->makeHandle(std::move(*dupcheckRes));
   if (LLVM_UNLIKELY(
           createListFromArrayLike(
               trapResultArray,
