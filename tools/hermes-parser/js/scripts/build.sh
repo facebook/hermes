@@ -22,4 +22,13 @@ else
   WASM_PARSER="$1"
 fi
 
+# Use internal FB build or pass path to include path as second command line argument
+FB_GET_INCLUDE_PATH="$THIS_DIR/facebook/getIncludePath.sh"
+if [[ -f "$FB_GET_INCLUDE_PATH" ]]; then
+  INCLUDE_PATH=$("$FB_GET_INCLUDE_PATH")
+else
+  INCLUDE_PATH="$2"
+fi
+
 node "$THIS_DIR/genWasmParser.js" "$WASM_PARSER"
+node "$THIS_DIR/genVisitorKeys.js" "$INCLUDE_PATH"
