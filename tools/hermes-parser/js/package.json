@@ -1,0 +1,13 @@
+{
+  "name": "hermes-parser",
+  "private": true,
+  "version": "0.0.0",
+  "devDependencies": {
+    "jest": "^26.4.2",
+    "signedsource": "^2.0.0"
+  },
+  "scripts": {
+    "build": "./scripts/build.sh",
+    "test": "jest"
+  }
+}
