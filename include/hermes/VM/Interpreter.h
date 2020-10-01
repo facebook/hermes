@@ -37,6 +37,14 @@ class Interpreter {
       Handle<Environment> envHandle,
       NativeArgs args);
 
+  /// Suspend the generator function and yield to the caller.
+  /// \param resumeIP Is the IP where the generator should resume from when it
+  ///   is resumed.
+  static void saveGenerator(
+      Runtime *runtime,
+      PinnedHermesValue *frameRegs,
+      const Inst *resumeIP);
+
   /// Slow path for ReifyArguments resReg, lazyReg
   /// It assumes that he fast path has handled the case when 'lazyReg' is
   /// already initialized. It creates a new 'arguments' object and populates it

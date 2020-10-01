@@ -1001,6 +1001,16 @@ CallResult<HermesValue> Interpreter::interpretFunction(
 
 #endif // NDEBUG
 
+/// \def DONT_CAPTURE_IP(expr)
+/// \param expr A call expression to a function external to the interpreter. The
+///   expression should not make any allocations and the IP should be set
+///   immediately following this macro.
+#define DONT_CAPTURE_IP(expr)      \
+  do {                             \
+    NoAllocScope noAlloc(runtime); \
+    (void)expr;                    \
+  } while (false)
+
   LLVM_DEBUG(dbgs() << "interpretFunction() called\n");
 
   ScopedNativeDepthTracker depthTracker{runtime};
@@ -1798,24 +1808,17 @@ tailCall:
       }
 
       CASE(SaveGenerator) {
-        nextIP = IPADD(ip->iSaveGenerator.op1);
-        goto doSaveGen;
+        DONT_CAPTURE_IP(
+            saveGenerator(runtime, frameRegs, IPADD(ip->iSaveGenerator.op1)));
+        ip = NEXTINST(SaveGenerator);
+        DISPATCH;
       }
       CASE(SaveGeneratorLong) {
-        nextIP = IPADD(ip->iSaveGeneratorLong.op1);
-        goto doSaveGen;
+        DONT_CAPTURE_IP(saveGenerator(
+            runtime, frameRegs, IPADD(ip->iSaveGeneratorLong.op1)));
+        ip = NEXTINST(SaveGeneratorLong);
+        DISPATCH;
       }
-
-    doSaveGen : {
-      auto *innerFn = vmcast<GeneratorInnerFunction>(
-          runtime->getCurrentFrame().getCalleeClosure());
-
-      innerFn->saveStack(runtime);
-      innerFn->setNextIP(nextIP);
-      innerFn->setState(GeneratorInnerFunction::State::SuspendedYield);
-      ip = NEXTINST(SaveGenerator);
-      DISPATCH;
-    }
 
       CASE(StartGenerator) {
         auto *innerFn = vmcast<GeneratorInnerFunction>(
