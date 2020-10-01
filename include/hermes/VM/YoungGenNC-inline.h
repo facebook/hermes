@@ -25,6 +25,10 @@ struct YoungGen::EvacAcceptor final : public SlotAcceptorDefault {
 
   using SlotAcceptorDefault::accept;
 
+  void accept(BasedPointer &basedPtr) override {
+    gen.ensureReferentCopied(&basedPtr);
+  }
+
   void accept(void *&ptr) override {
     gen.ensureReferentCopied(reinterpret_cast<GCCell **>(&ptr));
   }
