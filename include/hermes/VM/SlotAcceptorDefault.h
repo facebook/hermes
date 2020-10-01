@@ -9,6 +9,7 @@
 #define HERMES_VM_SLOTACCEPTORDEFAULT_H
 
 #include "hermes/VM/GC.h"
+#include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/PointerBase.h"
 #include "hermes/VM/SlotAcceptor.h"
 
