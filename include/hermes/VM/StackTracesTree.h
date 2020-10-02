@@ -93,24 +93,24 @@ struct StackTracesTree {
   std::shared_ptr<StringSetVector> strings_;
 
   /// Pre-computed string IDs
-  const StringSetVector::size_type invalidFunctionID_;
-  const StringSetVector::size_type invalidScriptNameID_;
+  const StringSetVector::size_type rootFunctionID_;
+  const StringSetVector::size_type rootScriptNameID_;
   const StringSetVector::size_type nativeFunctionID_;
   const StringSetVector::size_type anonymousFunctionID_;
 
   /// Every node in the try gets an ID which is used when writing out snapshot
   /// data for Chrome.
-  size_t nextNodeID_{0};
+  size_t nextNodeID_{1};
 
   /// The root of the tree is a sentinel which is always present and does not
   /// represent a valid code location.
   std::unique_ptr<StackTracesTreeNode> root_{new StackTracesTreeNode(
       nextNodeID_++,
       nullptr, /* parent */
-      {invalidScriptNameID_, 0, -1, -1},
+      {rootScriptNameID_, 0, 0, 0},
       nullptr, /* codeBlock */
       nullptr, /* ip */
-      invalidFunctionID_)};
+      rootFunctionID_)};
 
   /// Current head of the tree, typically representing the last known call-site
   /// in bytecode execution.

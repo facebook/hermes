@@ -394,10 +394,7 @@ void HeapSnapshot::emitAllocationTraceInfo() {
   endSection(Section::TraceFunctionInfos);
 
   beginSection(Section::TraceTree);
-  // Start from the nodes below the sentinel node as this is always invalid
-  for (auto child : stackTracesTree_->getRootNode()->getChildren()) {
-    nodeStack.push(child);
-  }
+  nodeStack.push(stackTracesTree_->getRootNode());
   while (!nodeStack.empty()) {
     auto curNode = nodeStack.top();
     nodeStack.pop();

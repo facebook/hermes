@@ -853,6 +853,12 @@ struct ChromeStackTreeNode {
       ChromeStackTreeNode *parent,
       std::map<int, ChromeStackTreeNode *> &idNodeMap) {
     std::vector<std::unique_ptr<ChromeStackTreeNode>> res;
+    if (!parent) {
+      assert(
+          traceNodes.size() == 5 &&
+          "Allocation trace should only have a"
+          "single root node");
+    }
     for (size_t i = 0; i < traceNodes.size(); i += 5) {
       auto id = llvh::cast<JSONNumber>(traceNodes[i])->getValue();
       auto functionInfoIndex =
@@ -944,6 +950,7 @@ baz();
   EXPECT_STREQ(
       fooStackStr.c_str(),
       R"#(
+(root)(0) @ (0):0:0
 global(1) @ test.js(1):2:1
 global(2) @ test.js(1):11:4
 baz(7) @ test.js(1):9:19
@@ -957,6 +964,7 @@ foo(8) @ test.js(1):3:20)#");
   ASSERT_STREQ(
       barStackStr.c_str(),
       R"#(
+(root)(0) @ (0):0:0
 global(1) @ test.js(1):2:1
 global(2) @ test.js(1):11:4
 baz(3) @ test.js(1):9:31

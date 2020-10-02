@@ -84,8 +84,8 @@ void StackTracesTreeNode::addMapping(
 
 StackTracesTree::StackTracesTree()
     : strings_(std::make_shared<StringSetVector>()),
-      invalidFunctionID_(strings_->insert("(invalid function name)")),
-      invalidScriptNameID_(strings_->insert("(invalid script name)")),
+      rootFunctionID_(strings_->insert("(root)")),
+      rootScriptNameID_(strings_->insert("")),
       nativeFunctionID_(strings_->insert("(native)")),
       anonymousFunctionID_(strings_->insert("(anonymous)")),
       head_(root_.get()) {}
