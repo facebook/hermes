@@ -203,15 +203,15 @@ bar test.js:1:34
 foo test.js:1:66
 global test.js:1:75
 global test.js:1:1
-(invalid function name) (invalid script name):-1:-1
+(root) :0:0
     )#");
 
   const auto expectedTree = llvh::StringRef(R"#(
 {
-  "name": "(invalid function name)",
-  "scriptName": "(invalid script name)",
-  "line": -1,
-  "col": -1,
+  "name": "(root)",
+  "scriptName": "",
+  "line": 0,
+  "col": 0,
   "children": [
     {
       "name": "global",
@@ -287,7 +287,7 @@ new Object();
       R"#(
 global test.js:3:11
 global test.js:2:1
-(invalid function name) (invalid script name):-1:-1
+(root) :0:0
       )#");
 }
 
@@ -312,7 +312,7 @@ bar test.js:8:19
 foo test.js:10:13
 global test.js:12:4
 global test.js:2:1
-(invalid function name) (invalid script name):-1:-1
+(root) :0:0
 )#");
 }
 
@@ -332,7 +332,7 @@ foo();
 foo test.js:6:5
 global test.js:8:4
 global test.js:2:1
-(invalid function name) (invalid script name):-1:-1
+(root) :0:0
 )#");
 }
 
@@ -350,7 +350,7 @@ bar();
 foo test.js:4:20
 global test.js:7:4
 global test.js:2:1
-(invalid function name) (invalid script name):-1:-1
+(root) :0:0
 )#");
 }
 
@@ -369,7 +369,7 @@ obj.foo;
 get foo test.js:5:22
 global test.js:8:4
 global test.js:2:1
-(invalid function name) (invalid script name):-1:-1
+(root) :0:0
 )#");
 }
 
@@ -389,7 +389,7 @@ p.something;
 get test.js:5:22
 global test.js:9:2
 global test.js:2:1
-(invalid function name) (invalid script name):-1:-1
+(root) :0:0
 )#");
 }
 
@@ -407,7 +407,7 @@ returnit test.js:4:20
 eval JavaScript:1:9
 global test.js:6:5
 global test.js:2:1
-(invalid function name) (invalid script name):-1:-1
+(root) :0:0
 )#");
 }
 
@@ -423,7 +423,7 @@ function foo() {
 foo eval.js:4:20
 global test.js:1:15
 global test.js:1:1
-(invalid function name) (invalid script name):-1:-1
+(root) :0:0
 )#");
   resetTree();
 
@@ -431,7 +431,7 @@ global test.js:1:1
 foo eval.js:4:20
 global test.js:1:26
 global test.js:1:1
-(invalid function name) (invalid script name):-1:-1
+(root) :0:0
 )#");
   resetTree();
 
@@ -455,7 +455,7 @@ chain2 test.js:8:20
 chain1 test.js:3:21
 global test.js:13:18
 global test.js:2:1
-(invalid function name) (invalid script name):-1:-1
+(root) :0:0
         )#");
   resetTree();
 }
@@ -473,7 +473,7 @@ function foo(x) {
 foo test.js:4:20
 global test.js:6:9
 global test.js:2:1
-(invalid function name) (invalid script name):-1:-1
+(root) :0:0
       )#");
 }
 
@@ -500,7 +500,7 @@ throws test.js:6:22
 foo test.js:8:13
 global test.js:14:4
 global test.js:2:1
-(invalid function name) (invalid script name):-1:-1
+(root) :0:0
       )#");
   resetTree();
 
@@ -529,7 +529,7 @@ layerTwo test.js:7:38
 tryAlloc test.js:10:13
 global test.js:15:9
 global test.js:2:1
-(invalid function name) (invalid script name):-1:-1
+(root) :0:0
       )#");
 }
 
@@ -547,7 +547,7 @@ function foo() {
 foo test.js:4:20
 global test.js:6:9
 global test.js:2:1
-(invalid function name) (invalid script name):-1:-1
+(root) :0:0
         )#");
   resetTree();
 
@@ -570,7 +570,7 @@ layered test.js:7:45
 fooApply test.js:8:43
 global test.js:9:9
 global test.js:2:1
-(invalid function name) (invalid script name):-1:-1
+(root) :0:0
       )#");
   resetTree();
 }
@@ -600,10 +600,10 @@ function baz() {
 
   const auto expectedTree = llvh::StringRef(R"#(
 {
-  "name": "(invalid function name)",
-  "scriptName": "(invalid script name)",
-  "line": -1,
-  "col": -1,
+  "name": "(root)",
+  "scriptName": "",
+  "line": 0,
+  "col": 0,
   "children": [
     {
       "name": "global",
