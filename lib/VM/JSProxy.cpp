@@ -39,10 +39,6 @@ findTrap(Handle<JSObject> selfHandle, Runtime *runtime, Predefined::Str name) {
   if (!handlerPtr) {
     return runtime->raiseTypeError("Proxy handler is null");
   }
-  // 4. Assert: Type(handler) is Object.
-  // 5. Let target be O.[[ProxyTarget]].
-  // 6. Let trap be ? GetMethod(handler, « name »).
-  Handle<JSObject> handler = runtime->makeHandle(handlerPtr);
   // Calls to look up the trap are effectively recursion, and so
   // require their own scope.  They also need a
   // ScopedNativeDepthTracker, as it's possible to use up arbitrary
@@ -52,6 +48,10 @@ findTrap(Handle<JSObject> selfHandle, Runtime *runtime, Predefined::Str name) {
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
     return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
+  // 4. Assert: Type(handler) is Object.
+  // 5. Let target be O.[[ProxyTarget]].
+  // 6. Let trap be ? GetMethod(handler, « name »).
+  Handle<JSObject> handler = runtime->makeHandle(handlerPtr);
   CallResult<PseudoHandle<>> trapVal =
       JSObject::getNamed_RJS(handler, runtime, Predefined::getSymbolID(name));
   if (trapVal == ExecutionStatus::EXCEPTION) {
@@ -268,7 +268,7 @@ ExecutionStatus isCompatiblePropertyDescriptor(
 CallResult<PseudoHandle<JSObject>> JSProxy::getPrototypeOf(
     Handle<JSObject> selfHandle,
     Runtime *runtime) {
-  GCScopeMarkerRAII marker{runtime};
+  GCScope gcScope{runtime};
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::getPrototypeOf);
   if (LLVM_UNLIKELY(trapRes == ExecutionStatus::EXCEPTION)) {
@@ -338,7 +338,7 @@ CallResult<bool> JSProxy::setPrototypeOf(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     Handle<JSObject> parent) {
-  GCScopeMarkerRAII marker{runtime};
+  GCScope gcScope{runtime};
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::setPrototypeOf);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -399,7 +399,7 @@ CallResult<bool> JSProxy::setPrototypeOf(
 CallResult<bool> JSProxy::isExtensible(
     Handle<JSObject> selfHandle,
     Runtime *runtime) {
-  GCScopeMarkerRAII marker{runtime};
+  GCScope gcScope{runtime};
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::isExtensible);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -447,7 +447,7 @@ CallResult<bool> JSProxy::preventExtensions(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     PropOpFlags opFlags) {
-  GCScopeMarkerRAII marker{runtime};
+  GCScope gcScope{runtime};
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::preventExtensions);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -505,7 +505,7 @@ CallResult<bool> JSProxy::getOwnProperty(
     Handle<> nameValHandle,
     ComputedPropertyDescriptor &desc,
     MutableHandle<> *valueOrAccessor) {
-  GCScopeMarkerRAII marker{runtime};
+  GCScope gcScope{runtime};
   CallResult<Handle<Callable>> trapRes = detail::findTrap(
       selfHandle, runtime, Predefined::getOwnPropertyDescriptor);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -657,7 +657,7 @@ CallResult<bool> JSProxy::defineOwnProperty(
     DefinePropertyFlags dpFlags,
     Handle<> valueOrAccessor,
     PropOpFlags opFlags) {
-  GCScopeMarkerRAII marker{runtime};
+  GCScope gcScope{runtime};
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::defineProperty);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -826,7 +826,7 @@ CallResult<bool> JSProxy::hasNamed(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     SymbolID name) {
-  GCScopeMarkerRAII marker{runtime};
+  GCScope gcScope{runtime};
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::has);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -858,7 +858,7 @@ CallResult<bool> JSProxy::hasComputed(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     Handle<> nameValHandle) {
-  GCScopeMarkerRAII marker{runtime};
+  GCScope gcScope{runtime};
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::has);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -952,7 +952,7 @@ CallResult<PseudoHandle<>> JSProxy::getNamed(
     Runtime *runtime,
     SymbolID name,
     Handle<> receiver) {
-  GCScopeMarkerRAII marker{runtime};
+  GCScope gcScope{runtime};
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::get);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -987,7 +987,7 @@ CallResult<PseudoHandle<>> JSProxy::getComputed(
     Runtime *runtime,
     Handle<> nameValHandle,
     Handle<> receiver) {
-  GCScopeMarkerRAII marker{runtime};
+  GCScope gcScope{runtime};
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::get);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -1091,7 +1091,7 @@ CallResult<bool> JSProxy::setNamed(
     Handle<> valueHandle,
     // TODO could be HermesValue
     Handle<> receiver) {
-  GCScopeMarkerRAII marker{runtime};
+  GCScope gcScope{runtime};
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::set);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -1130,7 +1130,7 @@ CallResult<bool> JSProxy::setComputed(
     Handle<> valueHandle,
     // TODO could be HermesValue
     Handle<> receiver) {
-  GCScopeMarkerRAII marker{runtime};
+  GCScope gcScope{runtime};
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::set);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -1214,7 +1214,7 @@ CallResult<bool> JSProxy::deleteNamed(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     SymbolID name) {
-  GCScopeMarkerRAII marker{runtime};
+  GCScope gcScope{runtime};
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::deleteProperty);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -1246,7 +1246,7 @@ CallResult<bool> JSProxy::deleteComputed(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     Handle<> nameValHandle) {
-  GCScopeMarkerRAII marker{runtime};
+  GCScope gcScope{runtime};
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::deleteProperty);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -1357,7 +1357,7 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     OwnKeysFlags okFlags) {
-  GCScopeMarkerRAII marker{runtime};
+  GCScope gcScope{runtime};
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::ownKeys);
   if (trapRes == ExecutionStatus::EXCEPTION) {
