@@ -1903,7 +1903,6 @@ void HadesGC::youngGenCollection(
     transferExternalMemoryToOldGen();
   }
 #ifdef HERMES_SLOW_DEBUG
-  checkWellFormed();
   // Check that the card tables are well-formed after the collection.
   verifyCardTable();
 #endif
@@ -1943,6 +1942,11 @@ void HadesGC::youngGenCollection(
   }
   // Give an existing background thread a chance to complete.
   yieldToOldGen();
+#ifdef HERMES_SLOW_DEBUG
+  // Run a well-formed check after yieldToOldGen, as it may have run the
+  // completeMarking phase and started sweeping.
+  checkWellFormed();
+#endif
   stats.setEndTime();
   auto cpuTimeEnd = oscompat::thread_cpu_time();
   stats.incrementCPUTime(cpuTimeEnd - cpuTimeStart);
@@ -2463,14 +2467,20 @@ void HadesGC::oomInternal(std::error_code reason) {
 void HadesGC::checkWellFormed() {
   WeakRefLock lk{weakRefMutex()};
   CheckHeapWellFormedAcceptor acceptor(*this);
+  const Phase phase = concurrentPhase_;
   {
     DroppingAcceptor<CheckHeapWellFormedAcceptor> nameAcceptor{acceptor};
     markRoots(nameAcceptor, true);
   }
   markWeakRoots(acceptor);
-  forAllObjs([this, &acceptor](GCCell *cell) {
+  forAllObjs([this, phase, &acceptor](GCCell *cell) {
     assert(cell->isValid() && "Invalid cell encountered in heap");
-    GCBase::markCell(cell, this, acceptor);
+    // If we're doing this check during an OG GC, there might be some objects
+    // that are dead, and could potentially have garbage in them. There's no
+    // need to check the pointers of those objects.
+    if (phase == Phase::None || HeapSegment::getCellMarkBit(cell)) {
+      GCBase::markCell(cell, this, acceptor);
+    }
   });
 }
 
