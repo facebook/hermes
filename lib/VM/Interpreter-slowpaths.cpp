@@ -154,10 +154,11 @@ ExecutionStatus Interpreter::caseIteratorBegin(
         runtime,
         Predefined::getSymbolID(Predefined::SymbolIterator),
         desc);
-    if (propObj) {
+    if (LLVM_LIKELY(propObj) && LLVM_LIKELY(!propObj->isProxyObject())) {
       HermesValue slotValue =
           JSObject::getNamedSlotValue(propObj, runtime, desc);
-      if (slotValue.getRaw() == runtime->arrayPrototypeValues.getRaw()) {
+      if (LLVM_LIKELY(
+              slotValue.getRaw() == runtime->arrayPrototypeValues.getRaw())) {
         O1REG(IteratorBegin) = HermesValue::encodeNumberValue(0);
         return ExecutionStatus::RETURNED;
       }
