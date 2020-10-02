@@ -295,6 +295,11 @@ Function *ESTreeIRGen::genGeneratorFunction(
     ESTree::FunctionLikeNode *functionNode) {
   assert(functionNode && "Function AST cannot be null");
 
+  if (!Builder.getModule()->getContext().isGeneratorEnabled()) {
+    Builder.getModule()->getContext().getSourceErrorManager().error(
+        functionNode->getSourceRange(), "generator compilation is disabled");
+  }
+
   // Build the outer function which creates the generator.
   // Does not have an associated source range.
   auto *outerFn = Builder.createGeneratorFunction(

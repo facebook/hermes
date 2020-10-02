@@ -177,6 +177,9 @@ class Context {
   /// to be retained after compilation.
   bool allowFunctionToStringWithRuntimeSource_{false};
 
+  /// Allows generator functions to be compiled.
+  bool generatorEnabled_{true};
+
   /// If true, wrap each file in the CommonJS module wrapper function,
   /// and use that for requiring modules.
   bool useCJSModules_{false};
@@ -357,6 +360,14 @@ class Context {
 
   void setAllowFunctionToStringWithRuntimeSource(bool v) {
     allowFunctionToStringWithRuntimeSource_ = v;
+  }
+
+  bool isGeneratorEnabled() const {
+    return generatorEnabled_;
+  }
+
+  void setGeneratorEnabled(bool v) {
+    generatorEnabled_ = v;
   }
 
   void setStaticBuiltinOptimization(bool staticBuiltins) {

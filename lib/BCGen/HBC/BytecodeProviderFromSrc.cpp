@@ -173,6 +173,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
 
   context->setAllowFunctionToStringWithRuntimeSource(
       compileFlags.allowFunctionToStringWithRuntimeSource);
+  context->setGeneratorEnabled(compileFlags.enableGenerator);
 #ifdef HERMES_ENABLE_DEBUGGER
   context->setDebugInfoSetting(
       compileFlags.debug ? DebugInfoSetting::ALL : DebugInfoSetting::THROWING);

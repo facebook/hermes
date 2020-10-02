@@ -49,6 +49,8 @@ struct CompileFlags {
   bool includeLibHermes{true};
   /// If set, instrument the IR for dynamic checks.
   bool instrumentIR{false};
+  /// Enable generators.
+  bool enableGenerator{true};
 };
 
 #ifndef HERMESVM_LEAN

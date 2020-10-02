@@ -117,6 +117,9 @@ class Deserializer;
     CompilationMode,                                                           \
     CompilationMode::SmartCompilation)                                         \
                                                                                \
+  /* Choose whether generators are enabled. */                                 \
+  F(constexpr, bool, EnableGenerator, true)                                    \
+                                                                               \
   /* An interface for managing crashes. */                                     \
   F(HERMES_NON_CONSTEXPR,                                                      \
     std::shared_ptr<CrashManager>,                                             \
