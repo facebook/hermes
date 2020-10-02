@@ -3141,19 +3141,22 @@ CallResult<Handle<BigStorage>> getForInPropertyNames(
   Handle<HiddenClass> clazz(runtime, obj->getClass(runtime));
 
   // Fast case: Check the cache.
-  MutableHandle<BigStorage> arr(runtime, clazz->getForInCache(runtime));
-  if (arr) {
-    beginIndex = matchesProtoClasses(runtime, obj, arr);
-    if (beginIndex) {
-      // Cache is valid for this object, so use it.
-      endIndex = arr->size();
-      return arr;
+  MutableHandle<BigStorage> arr(runtime);
+  if (obj->shouldCacheForIn(runtime)) {
+    arr = clazz->getForInCache(runtime);
+    if (arr) {
+      beginIndex = matchesProtoClasses(runtime, obj, arr);
+      if (beginIndex) {
+        // Cache is valid for this object, so use it.
+        endIndex = arr->size();
+        return arr;
+      }
+      // Invalid for this object. We choose to clear the cache since the
+      // changes to the prototype chain probably affect other objects too.
+      clazz->clearForInCache(runtime);
+      // Clear arr to slightly reduce risk of OOM from allocation below.
+      arr = nullptr;
     }
-    // Invalid for this object. We choose to clear the cache since the
-    // changes to the prototype chain probably affect other objects too.
-    clazz->clearForInCache(runtime);
-    // Clear arr to slightly reduce risk of OOM from allocation below.
-    arr = nullptr;
   }
 
   // Slow case: Build the array of properties.
