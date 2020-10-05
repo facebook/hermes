@@ -27,7 +27,7 @@ fi
 
 # Utility function to configure an Apple framework
 function configure_apple_framework {
-  local enable_bitcode build_cli_tools
+  local build_cli_tools enable_bitcode
   
   if [[ $1 == iphoneos ]]; then
     enable_bitcode="true"
