@@ -128,6 +128,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAlias(
       tok_,
       tok_,
       new (context_) ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
+  SMLoc end = id->getEndLoc();
   advance(JSLexer::GrammarContext::Flow);
 
   ESTree::Node *typeParams = nullptr;
@@ -136,6 +137,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAlias(
     if (!optTypeParams)
       return None;
     typeParams = *optTypeParams;
+    end = typeParams->getEndLoc();
   }
 
   ESTree::Node *supertype = nullptr;
@@ -145,6 +147,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAlias(
     if (!optSuper)
       return None;
     supertype = *optSuper;
+    end = supertype->getEndLoc();
   }
 
   ESTree::Node *right = nullptr;
@@ -161,9 +164,9 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAlias(
     if (!optRight)
       return None;
     right = *optRight;
+    end = right->getEndLoc();
   }
 
-  SMLoc end;
   if (!eatSemi(end, true))
     return None;
 
