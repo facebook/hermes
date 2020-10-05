@@ -28,12 +28,15 @@ fi
 # Utility function to configure an Apple framework
 function configure_apple_framework {
   local build_cli_tools enable_bitcode
+  if [[ $1 == iphoneos ]]; then
+    enable_bitcode="true"
+  else
+    enable_bitcode="false"
+  fi
   if [[ $1 == macosx ]]; then
     build_cli_tools="true"
-    enable_bitcode="false"
   else
     build_cli_tools="false"
-    enable_bitcode="true"
   fi
 
   local cmake_flags=" \
