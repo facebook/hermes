@@ -3212,6 +3212,10 @@ Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
                    TokenKind::l_square,
                    TokenKind::period,
                    TokenKind::questiondot)) {
+      if (check(TokenKind::questiondot)) {
+        seenOptionalChain = true;
+      }
+
       SMLoc nextStartLoc = tok_->getStartLoc();
       auto msel = parseMemberSelect(startLoc, expr, seenOptionalChain);
       if (!msel)
