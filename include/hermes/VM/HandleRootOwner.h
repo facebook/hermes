@@ -465,7 +465,7 @@ class GCScope : public GCScopeDebugBase {
 
 /// A RAII class which records a GCScope marker on construction and flushes the
 /// scope to the marker on destruction.
-/// It is fuctionally equivalent to creating a nested GCScope but can be more
+/// It is functionally equivalent to creating a nested GCScope but can be more
 /// lightweight because it doesn't consume a lot of stack and because it behaves
 /// better in cases when more than GCScope::CHUNK_SIZE handles are allocated in
 /// a loop - they would be allocated once in the parent and reused on every
