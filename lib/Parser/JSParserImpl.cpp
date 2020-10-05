@@ -5481,7 +5481,7 @@ Optional<ESTree::ImportSpecifierNode *> JSParserImpl::parseImportSpecifier(
             ESTree::IdentifierNode(tok_->getResWordOrIdentifier(), nullptr));
     local = imported;
     localKind = tok_->getKind();
-    advance();
+    endLoc = advance().End;
 
     if (checkAndEat(asIdent_)) {
       if (!check(TokenKind::identifier) && !tok_->isResWord()) {
