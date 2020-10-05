@@ -411,3 +411,7 @@ print(Number.parseInt === parseInt);
 // CHECK-NEXT: true
 print(Number.parseFloat === parseFloat);
 // CHECK-NEXT: true
+
+// Make sure that we don't truncate Unicode chars when converting numbers.
+print(Number("0x100000000000000000000000000000000000000" + String.fromCharCode(304)));
+// CHECK-NEXT: NaN

@@ -71,11 +71,11 @@ const HermesParserJSLibrary = {
     return JSReferences.store({
       start: {
         line: startLine,
-        col: startCol,
+        column: startCol,
       },
       end: {
         line: endLine,
-        col: endCol,
+        column: endCol,
       },
       rangeStart: rangeStart,
       rangeEnd: rangeEnd,

@@ -482,4 +482,28 @@ TEST_F(HermesRuntimeTestWithAllowFunctionToString, WithAllowFunctionToString) {
       eval("fooLazy.toString()").getString(*rt).utf8(*rt), fooLazyFuncDef);
 }
 
+class HermesRuntimeTestWithDisableGenerator : public HermesRuntimeTestBase {
+ public:
+  HermesRuntimeTestWithDisableGenerator()
+      : HermesRuntimeTestBase(::hermes::vm::RuntimeConfig::Builder()
+                                  .withEnableGenerator(false)
+                                  .build()) {}
+};
+
+TEST_F(HermesRuntimeTestWithDisableGenerator, WithDisableGenerator) {
+  try {
+    rt->evaluateJavaScript(
+        std::make_unique<StringBuffer>("function* foo() {}"), "");
+    FAIL() << "Expected JSIException";
+  } catch (const facebook::jsi::JSIException &err) {
+  }
+
+  try {
+    rt->evaluateJavaScript(
+        std::make_unique<StringBuffer>("obj = {*foo() {}}"), "");
+    FAIL() << "Expected JSIException";
+  } catch (const facebook::jsi::JSIException &err) {
+  }
+}
+
 } // namespace

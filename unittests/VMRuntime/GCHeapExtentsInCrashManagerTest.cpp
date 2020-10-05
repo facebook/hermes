@@ -200,9 +200,9 @@ TEST(GCHeapExtentsInCrashManagerTest, HeapExtentsCorrect) {
       MatchesRegex(eightExtents + "$"));
 #elif defined(HERMESVM_GC_HADES)
   const auto &contextualCustomData = testCrashMgr->contextualCustomData();
-  EXPECT_EQ(26, contextualCustomData.size());
+  EXPECT_EQ(25, contextualCustomData.size());
   const std::string expectedKeyBase = "XYZ:HeapSegment:";
-  for (int i = 0; i < 26; i++) {
+  for (int i = 0; i < 25; i++) {
     const std::string expectedKey =
         expectedKeyBase + (i == 0 ? std::string("YG") : oscompat::to_string(i));
     std::string actual = contextualCustomData.at(expectedKey);
@@ -244,7 +244,7 @@ TEST(GCHeapExtentsInCrashManagerTest, PromotedYGHasCorrectName) {
   }
 
   const auto &contextualCustomData = testCrashMgr->contextualCustomData();
-  EXPECT_EQ(4, contextualCustomData.size());
+  EXPECT_EQ(3, contextualCustomData.size());
   // Make sure the value for YG is the actual YG segment.
   const std::string ygAddress = contextualCustomData.at("XYZ:HeapSegment:YG");
   void *ptr = nullptr;
@@ -255,7 +255,6 @@ TEST(GCHeapExtentsInCrashManagerTest, PromotedYGHasCorrectName) {
   // Test if the other segments are numbered correctly.
   EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:1"), 1);
   EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:2"), 1);
-  EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:3"), 1);
 }
 #endif
 

@@ -58,8 +58,9 @@ ExtStringForTest *ExtStringForTest::createLongLived(
     DummyRuntime &runtime,
     unsigned length) {
   auto res =
-      new (runtime.allocLongLived<HasFinalizer::Yes>(sizeof(ExtStringForTest)))
-          ExtStringForTest(&runtime.getHeap(), length);
+      runtime
+          .makeAVariable<ExtStringForTest, HasFinalizer::Yes, LongLived::Yes>(
+              sizeof(ExtStringForTest), &runtime.getHeap(), length);
   runtime.gc.creditExternalMemory(res, length);
   return res;
 }

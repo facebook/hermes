@@ -142,11 +142,17 @@ class GenGC final : public GCBase {
   debugAllocRandomize(uint32_t sz, HasFinalizer hasFinalizer, bool fixedSize);
 #endif
 
-  /// Like alloc above, but the resulting object is expected to be long-lived.
-  /// Allocate directly in the old generation (doing a full collection if
-  /// necessary to create room).
-  template <HasFinalizer hasFinalizer = HasFinalizer::No>
-  inline void *allocLongLived(uint32_t size);
+  /// Allocate a new cell of the specified size \p size by calling alloc.
+  /// Instantiate an object of type T with constructor arguments \p args in the
+  /// newly allocated cell.
+  /// \return a pointer to the newly created object in the GC heap.
+  template <
+      typename T,
+      bool fixedSize = true,
+      HasFinalizer hasFinalizer = HasFinalizer::No,
+      LongLived longLived = LongLived::No,
+      class... Args>
+  inline T *makeA(uint32_t size, Args &&... args);
 
   /// Returns whether an external allocation of the given \p size fits
   /// within the maximum heap size.  (Note that this does not guarantee that the
@@ -506,6 +512,12 @@ class GenGC final : public GCBase {
   /// albeit with the template arguments passed as explicit dynamic
   /// arguments.
   void *allocSlow(uint32_t sz, bool fixedSize, HasFinalizer hasFinalizer);
+
+  /// Like alloc above, but the resulting object is expected to be long-lived.
+  /// Allocate directly in the old generation (doing a full collection if
+  /// necessary to create room).
+  template <HasFinalizer hasFinalizer = HasFinalizer::No>
+  inline void *allocLongLived(uint32_t size);
 
   /// The given pointer value is being written at the given loc (required to
   /// be in the heap).  The value is may be null.  Execute a write
@@ -1000,6 +1012,20 @@ inline void *GenGC::allocLongLived(uint32_t size) {
       return res.ptr;
     }
   }
+}
+
+template <
+    typename T,
+    bool fixedSize,
+    HasFinalizer hasFinalizer,
+    LongLived longLived,
+    class... Args>
+inline T *GenGC::makeA(uint32_t size, Args &&... args) {
+  // TODO: Once all callers are using makeA, remove allocLongLived.
+  void *mem = longLived == LongLived::Yes
+      ? allocLongLived<hasFinalizer>(size)
+      : alloc<fixedSize, hasFinalizer>(size);
+  return new (mem) T(std::forward<Args>(args)...);
 }
 
 inline void GenGC::countWriteBarrier(bool hv, unsigned filterLevel) {

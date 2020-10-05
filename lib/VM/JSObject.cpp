@@ -1672,23 +1672,30 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
     if (!receiverHandle) {
       return false;
     }
+    ComputedPropertyDescriptor existingDesc;
     CallResult<bool> descDefinedRes = getOwnComputedPrimitiveDescriptor(
-        receiverHandle, runtime, nameValPrimitiveHandle, IgnoreProxy::No, desc);
+        receiverHandle,
+        runtime,
+        nameValPrimitiveHandle,
+        IgnoreProxy::No,
+        existingDesc);
     if (LLVM_UNLIKELY(descDefinedRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     DefinePropertyFlags dpf;
     if (*descDefinedRes) {
-      if (LLVM_UNLIKELY(desc.flags.accessor || !desc.flags.writable)) {
+      if (LLVM_UNLIKELY(
+              existingDesc.flags.accessor || !existingDesc.flags.writable)) {
         return false;
       }
 
       if (LLVM_LIKELY(
-              !desc.flags.internalSetter && !receiverHandle->isHostObject() &&
+              !existingDesc.flags.internalSetter &&
+              !receiverHandle->isHostObject() &&
               !receiverHandle->isProxyObject())) {
         if (LLVM_UNLIKELY(
                 setComputedSlotValue(
-                    receiverHandle, runtime, desc, valueHandle) ==
+                    receiverHandle, runtime, existingDesc, valueHandle) ==
                 ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
@@ -1696,8 +1703,11 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
       }
     }
 
+    // At this point, either the descriptor exists on the receiver,
+    // but it's a corner case; or, there was no descriptor.
     if (LLVM_UNLIKELY(
-            desc.flags.internalSetter || receiverHandle->isHostObject() ||
+            existingDesc.flags.internalSetter ||
+            receiverHandle->isHostObject() ||
             receiverHandle->isProxyObject())) {
       // If putComputed is called on a proxy whose target's prototype
       // is an array with a propname of 'length', then internalSetter
@@ -1719,12 +1729,12 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
       }
       SymbolID id{};
       LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, id);
-      if (desc.flags.internalSetter) {
+      if (existingDesc.flags.internalSetter) {
         return internalSetter(
             receiverHandle,
             runtime,
             id,
-            desc.castToNamedPropertyDescriptorRef(),
+            existingDesc.castToNamedPropertyDescriptorRef(),
             valueHandle,
             opFlags);
       }
@@ -3141,19 +3151,22 @@ CallResult<Handle<BigStorage>> getForInPropertyNames(
   Handle<HiddenClass> clazz(runtime, obj->getClass(runtime));
 
   // Fast case: Check the cache.
-  MutableHandle<BigStorage> arr(runtime, clazz->getForInCache(runtime));
-  if (arr) {
-    beginIndex = matchesProtoClasses(runtime, obj, arr);
-    if (beginIndex) {
-      // Cache is valid for this object, so use it.
-      endIndex = arr->size();
-      return arr;
+  MutableHandle<BigStorage> arr(runtime);
+  if (obj->shouldCacheForIn(runtime)) {
+    arr = clazz->getForInCache(runtime);
+    if (arr) {
+      beginIndex = matchesProtoClasses(runtime, obj, arr);
+      if (beginIndex) {
+        // Cache is valid for this object, so use it.
+        endIndex = arr->size();
+        return arr;
+      }
+      // Invalid for this object. We choose to clear the cache since the
+      // changes to the prototype chain probably affect other objects too.
+      clazz->clearForInCache(runtime);
+      // Clear arr to slightly reduce risk of OOM from allocation below.
+      arr = nullptr;
     }
-    // Invalid for this object. We choose to clear the cache since the
-    // changes to the prototype chain probably affect other objects too.
-    clazz->clearForInCache(runtime);
-    // Clear arr to slightly reduce risk of OOM from allocation below.
-    arr = nullptr;
   }
 
   // Slow case: Build the array of properties.

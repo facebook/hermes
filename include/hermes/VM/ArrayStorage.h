@@ -28,6 +28,7 @@ namespace vm {
 class ArrayStorage final
     : public VariableSizeRuntimeCell,
       private llvh::TrailingObjects<ArrayStorage, GCHermesValue> {
+  friend GC;
   friend TrailingObjects;
   friend void ArrayStorageBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
@@ -80,9 +81,9 @@ class ArrayStorage final
     if (LLVM_UNLIKELY(capacity > maxElements())) {
       return throwExcessiveCapacityError(runtime, capacity);
     }
-    void *mem = runtime->allocLongLived(allocationSize(capacity));
-    return HermesValue::encodeObjectValue(new (mem)
-                                              ArrayStorage(runtime, capacity));
+    return HermesValue::encodeObjectValue(
+        runtime->makeAVariable<ArrayStorage, HasFinalizer::No, LongLived::Yes>(
+            allocationSize(capacity), runtime, capacity));
   }
 
   /// Create a new instance with specified capacity and size.

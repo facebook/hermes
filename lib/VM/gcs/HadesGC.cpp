@@ -11,7 +11,6 @@
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCPointer.h"
-#include "hermes/VM/SlotAcceptorDefault-inline.h"
 #include "hermes/VM/SlotAcceptorDefault.h"
 
 #include <array>
@@ -530,7 +529,6 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
     push(cell);
   }
 
-#ifdef HERMESVM_COMPRESSED_POINTERS
   void accept(BasedPointer &ptrRef) override {
     // Copy into local variable in case it changes during evaluation.
     const BasedPointer ptr = ptrRef;
@@ -547,7 +545,6 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
         ptrCopy == actualizedPointer &&
         "MarkAcceptor::accept should not modify its argument");
   }
-#endif
 
   void accept(HermesValue &hvRef) override {
     const HermesValue hv = hvRef;
@@ -781,8 +778,12 @@ class HadesGC::MarkWeakRootsAcceptor final : public WeakRootAcceptor {
       return;
     }
     GCPointerBase::StorageType &ptrStorage = wr.getNoBarrierUnsafe();
+#ifdef HERMESVM_COMPRESSED_POINTERS
     GCCell *const cell =
         static_cast<GCCell *>(pointerBase_->basedToPointerNonNull(ptrStorage));
+#else
+    GCCell *const cell = static_cast<GCCell *>(ptrStorage);
+#endif
     assert(!gc_.inYoungGen(cell) && "Pointer should be into the OG");
     HERMES_SLOW_ASSERT(gc_.dbgContains(cell) && "ptr not in heap");
     if (HeapSegment::getCellMarkBit(cell)) {
@@ -1418,10 +1419,15 @@ void HadesGC::writeBarrier(void *loc, void *value) {
   if (isOldGenMarking_) {
     const GCPointerBase::StorageType oldValueStorage =
         *static_cast<GCPointerBase::StorageType *>(loc);
+
+#ifdef HERMESVM_COMPRESSED_POINTERS
     // TODO: Pass in pointer base? Slows down the non-concurrent-marking case.
     // Or maybe always decode the old value? Also slows down the normal case.
     GCCell *const oldValue = static_cast<GCCell *>(
         getPointerBase()->basedToPointer(oldValueStorage));
+#else
+    GCCell *const oldValue = static_cast<GCCell *>(oldValueStorage);
+#endif
     snapshotWriteBarrierInternal(oldValue);
   }
   // Always do the non-snapshot write barrier in order for YG to be able to
@@ -1625,9 +1631,6 @@ void *HadesGC::allocWork(uint32_t sz) {
         !weakRefMutex() &&
         "WeakRef mutex should not be held when alloc is called");
   }
-  if (!fixedSize && LLVM_UNLIKELY(sz >= HeapSegment::maxSize() / 2)) {
-    return allocLongLived(sz);
-  }
   if (shouldSanitizeHandles()) {
     // The best way to sanitize uses of raw pointers outside handles is to force
     // the entire heap to move, and ASAN poison the old heap. That is too
@@ -1665,14 +1668,9 @@ void *HadesGC::allocLongLived(uint32_t sz) {
         !weakRefMutex() &&
         "WeakRef mutex should not be held when allocLongLived is called");
   }
+  assert(gcMutex_ && "GC mutex must be held when calling allocLongLived");
   // Alloc directly into the old gen.
-  std::lock_guard<Mutex> lk{gcMutex_};
-  void *res = oldGen_.alloc(heapAlignSize(sz));
-  // Need to initialize the memory here to a valid cell to prevent the case
-  // where sweeping discovers the uninitialized memory while it's traversing
-  // a segment. This only happens at the end of a bump-alloc segment.
-  new (res) OldGen::FreelistCell(sz);
-  return res;
+  return oldGen_.alloc(heapAlignSize(sz));
 }
 
 GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
@@ -1905,7 +1903,6 @@ void HadesGC::youngGenCollection(
     transferExternalMemoryToOldGen();
   }
 #ifdef HERMES_SLOW_DEBUG
-  checkWellFormed();
   // Check that the card tables are well-formed after the collection.
   verifyCardTable();
 #endif
@@ -1945,6 +1942,11 @@ void HadesGC::youngGenCollection(
   }
   // Give an existing background thread a chance to complete.
   yieldToOldGen();
+#ifdef HERMES_SLOW_DEBUG
+  // Run a well-formed check after yieldToOldGen, as it may have run the
+  // completeMarking phase and started sweeping.
+  checkWellFormed();
+#endif
   stats.setEndTime();
   auto cpuTimeEnd = oscompat::thread_cpu_time();
   stats.incrementCPUTime(cpuTimeEnd - cpuTimeStart);
@@ -2465,14 +2467,20 @@ void HadesGC::oomInternal(std::error_code reason) {
 void HadesGC::checkWellFormed() {
   WeakRefLock lk{weakRefMutex()};
   CheckHeapWellFormedAcceptor acceptor(*this);
+  const Phase phase = concurrentPhase_;
   {
     DroppingAcceptor<CheckHeapWellFormedAcceptor> nameAcceptor{acceptor};
     markRoots(nameAcceptor, true);
   }
   markWeakRoots(acceptor);
-  forAllObjs([this, &acceptor](GCCell *cell) {
+  forAllObjs([this, phase, &acceptor](GCCell *cell) {
     assert(cell->isValid() && "Invalid cell encountered in heap");
-    GCBase::markCell(cell, this, acceptor);
+    // If we're doing this check during an OG GC, there might be some objects
+    // that are dead, and could potentially have garbage in them. There's no
+    // need to check the pointers of those objects.
+    if (phase == Phase::None || HeapSegment::getCellMarkBit(cell)) {
+      GCBase::markCell(cell, this, acceptor);
+    }
   });
 }
 

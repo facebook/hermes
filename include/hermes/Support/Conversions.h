@@ -154,7 +154,8 @@ const size_t NUMBER_TO_STRING_BUF_SIZE = 32;
 size_t numberToString(double m, char *dest, size_t destSize);
 
 /// Takes a letter (a-z or A-Z) and makes it lowercase.
-inline char charLetterToLower(char ch) {
+template <typename T>
+inline T charLetterToLower(T ch) {
   return ch | 32;
 }
 
@@ -171,7 +172,7 @@ OptValue<double> parseIntWithRadix(Iterable str, int radix) {
   assert(str.begin() != str.end() && "Empty string");
   double result = 0;
   for (auto it = str.begin(); it != str.end(); ++it) {
-    char c = *it;
+    auto c = *it;
     auto cLow = charLetterToLower(c);
     if ('0' <= c && c <= '9' && c < '0' + radix) {
       result *= radix;
@@ -230,7 +231,8 @@ OptValue<double> parseIntWithRadix(Iterable str, int radix) {
         if (itr == e) {
           break;
         }
-        auto c = *itr;
+        // We know it fits in 7 bits after the first pass.
+        char c = (char)*itr;
         if (AllowNumericSeparator && LLVM_UNLIKELY(c == '_')) {
           ++itr;
           continue;

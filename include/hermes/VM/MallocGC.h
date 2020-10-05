@@ -170,11 +170,17 @@ class MallocGC final : public GCBase {
   /// declared.
   void collectBeforeAlloc(std::string cause, uint32_t size);
 
-  /// Same as above, but tries to allocate in a long lived area of the heap.
-  /// Use this when the object is known to last for a long period of time.
-  /// NOTE: this does nothing different for MallocGC, but does for GenGC.
-  template <HasFinalizer hasFinalizer = HasFinalizer::No>
-  inline void *allocLongLived(uint32_t size);
+  /// Allocate a new cell of the specified size \p size by calling alloc.
+  /// Instantiate an object of type T with constructor arguments \p args in the
+  /// newly allocated cell.
+  /// \return a pointer to the newly created object in the GC heap.
+  template <
+      typename T,
+      bool fixedSize = true,
+      HasFinalizer hasFinalizer = HasFinalizer::No,
+      LongLived longLived = LongLived::Yes,
+      class... Args>
+  inline T *makeA(uint32_t size, Args &&... args);
 
   /// Returns whether an external allocation of the given \p size fits
   /// within the maximum heap size.  (Note that this does not guarantee that the
@@ -358,15 +364,21 @@ inline void *MallocGC::alloc(uint32_t size) {
   return mem;
 }
 
-template <HasFinalizer hasFinalizer>
-inline void *MallocGC::allocLongLived(uint32_t size) {
-  // Since there is no old generation in this collector, forward to the normal
-  // allocation.
-  return alloc<true, hasFinalizer>(size);
-}
-
 inline bool MallocGC::canAllocExternalMemory(uint32_t size) {
   return size <= maxSize_;
+}
+
+template <
+    typename T,
+    bool fixedSize,
+    HasFinalizer hasFinalizer,
+    LongLived longLived,
+    class... Args>
+inline T *MallocGC::makeA(uint32_t size, Args &&... args) {
+  // Since there is no old generation in this collector, always forward to the
+  // normal allocation.
+  void *mem = alloc<fixedSize, hasFinalizer>(size);
+  return new (mem) T(std::forward<Args>(args)...);
 }
 
 inline void MallocGC::initCell(GCCell *cell, uint32_t size) {

@@ -43,6 +43,15 @@ NODE_TYPES = [
 ]
 LOCATION_FIELDS = ["object_index", "script_id", "line", "column"]
 SAMPLE_FIELDS = ["timestamp_us", "last_assigned_id"]
+TRACE_FUNCTION_INFO_FIELDS = [
+    "function_id",
+    "name",
+    "script_name",
+    "script_id",
+    "line",
+    "column",
+]
+TRACE_NODE_FIELDS = ["id", "function_info_index", "count", "size", "children"]
 
 
 def chunk(arr, chunk_size):
@@ -59,6 +68,45 @@ def main():
     args = parser.parse_args()
     with open(args.heapsnapshot, "r") as f:
         root = json.load(f)
+
+    strings = root["strings"]
+    # First parse the trace fields, if present.
+    trace_functions = [
+        {
+            "function_id": function_id,
+            "name": strings[name],
+            "script_name": strings[script_name],
+            "script_id": script_id,
+            "line": line + 1,
+            "column": column + 1,
+        }
+        for function_id, name, script_name, script_id, line, column in chunk(
+            root.get("trace_function_infos", []), len(TRACE_FUNCTION_INFO_FIELDS)
+        )
+    ]
+    del root["trace_function_infos"]
+
+    # The result of this will be the node, and that node's parent, to ascend
+    # the stack.
+    trace_id_to_node = {}
+    # The root node has trace_node_id 0, to make it easy to break out.
+    trace_node_stack = [(root.get("trace_tree", []), 0)]
+    while trace_node_stack:
+        trace_node, parent_id = trace_node_stack.pop()
+        if not parent_id:
+            # Root node should be the only one at the top level.
+            assert len(trace_node) == len(
+                TRACE_NODE_FIELDS
+            ), "More than one node at the top of the tree"
+        for child in chunk(trace_node, len(TRACE_NODE_FIELDS)):
+            # Convert function_info_index into the actual function_info.
+            child[1] = trace_functions[child[1]]
+            trace_id_to_node[child[0]] = (child, parent_id)
+            # Children array is the last element.
+            if child[-1]:
+                # Add to the stack, to do a depth first traversal of the tree.
+                trace_node_stack.append((child[-1], child[0]))
+
     nodes = []
     curr_edge = iter(chunk(root["edges"], len(EDGE_FIELDS)))
     for raw_type, name, id, self_size, edge_count, trace_node_id in chunk(
@@ -74,7 +122,7 @@ def main():
             edges.append(
                 {
                     "type": real_type,
-                    "name_or_index": root["strings"][name_or_index]
+                    "name_or_index": strings[name_or_index]
                     if real_type
                     in ("context", "property", "internal", "shortcut", "weak")
                     else name_or_index,
@@ -85,17 +133,39 @@ def main():
                     "to_node": root["nodes"][to_node + 2],
                 }
             )
-        nodes.append(
-            {
-                "type": NODE_TYPES[raw_type],
-                "name": root["strings"][name],
-                "id": id,
-                "self_size": self_size,
-                "edges": edges,
-                "trace_node_id": trace_node_id,
-            }
-        )
+        node = {
+            "type": NODE_TYPES[raw_type],
+            "name": strings[name],
+            "id": id,
+            "self_size": self_size,
+            "edges": edges,
+        }
+        # Make an allocation stack for this object.
+        allocation_stack = []
+        # The root ID is zero, and so is the default ID if tracing isn't on.
+        while trace_node_id:
+            trace_node, trace_node_id = trace_id_to_node[trace_node_id]
+            function_info = trace_node[1]
+            allocation_stack.append(
+                "{} at {}:{}:{}".format(
+                    function_info["name"],
+                    function_info["script_name"],
+                    function_info["line"],
+                    function_info["column"],
+                )
+            )
+        if allocation_stack:
+            # Reverse the stack, so that the first element is the topmost entry
+            # point.
+            node["alloc_stack"] = list(reversed(allocation_stack))
+        nodes.append(node)
+    try:
+        next(curr_edge)
+        raise AssertionError("Next edge should be the end of the edges")
+    except StopIteration:
+        pass
     del root["edges"]
+    del root["trace_tree"]
 
     # Iterate through locations and add the location resolution to nodes
     for object_index, script_id, line, column in chunk(

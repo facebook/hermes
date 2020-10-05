@@ -2173,5 +2173,11 @@ var p = new Proxy(Object.create([]), {});
 p[String('length')] = 0x123;
 p[0xABC] = 1111;
 
+// Regression test for heavy handle allocation path
+for (var b in new Proxy([], {
+  ownKeys: Reflect.ownKeys,
+  getOwnPropertyDescriptor: Reflect.getOwnPropertyDescriptor,
+})) {}
+
 print('done');
 // CHECK-LABEL: done

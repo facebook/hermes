@@ -1102,6 +1102,7 @@ Optional<ESTree::ArrayPatternNode *> JSParserImpl::parseArrayBindingPattern(
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseBindingElement(Param param) {
+  CHECK_RECURSION;
   ESTree::Node *elem;
 
   if (check(TokenKind::l_square, TokenKind::l_brace)) {

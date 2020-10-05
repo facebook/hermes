@@ -146,6 +146,9 @@ set(HERMES_ENABLE_THREAD_SANITIZER OFF CACHE BOOL
 set(HERMES_ENABLE_FUZZING OFF CACHE BOOL
   "Enable fuzzing")
 
+set(HERMES_ENABLE_TOOLS ON CACHE BOOL
+  "Enable CLI tools")
+
 # Enable bitcode
 set(HERMES_ENABLE_BITCODE OFF CACHE BOOL
   "Include bitcode with the framework")
@@ -602,13 +605,16 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_subdirectory(external/llvh)
 add_subdirectory(utils/hermes-lit)
-add_subdirectory(tools)
 add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(public)
 add_subdirectory(external)
 add_subdirectory(API)
 add_subdirectory(android/intltest/java/com/facebook/hermes/test)
+
+if(HERMES_ENABLE_TOOLS)
+  add_subdirectory(tools)
+endif()
 
 # Make sure JSI is compiled with PIC
 set(save_CMAKE_POSITION_INDEPENDENT_CODE ${CMAKE_POSITION_INDEPENDENT_CODE})
@@ -623,6 +629,10 @@ endif()
 # Configure the test suites
 #
 if(HERMES_ENABLE_TEST_SUITE)
+  if(NOT HERMES_ENABLE_TOOLS)
+    message(FATAL_ERROR, "Running the test-suite requires the CLI tools to be built.")
+  endif()
+
   add_subdirectory(unittests)
 
   list(APPEND HERMES_TEST_DEPS
@@ -679,41 +689,44 @@ endif()
 
 set(HERMES_GITHUB_DIR ${HERMES_BINARY_DIR}/github)
 string(TOLOWER ${CMAKE_SYSTEM_NAME} HERMES_GITHUB_SYSTEM_NAME)
-set(HERMES_CLI_GITHUB_FILE hermes-cli-${HERMES_GITHUB_SYSTEM_NAME}-v${HERMES_RELEASE_VERSION}.tar.gz)
-set(HERMES_GITHUB_BUNDLE_DIR ${HERMES_BINARY_DIR}/bundle)
 
-# If the github release should include extra files (like dlls)
-if (HERMES_GITHUB_RESOURCE_DIR STREQUAL "")
-  set(HERMES_GITHUB_EXTRAS "")
-else()
-  if (IS_DIRECTORY ${HERMES_GITHUB_RESOURCE_DIR})
-    file(GLOB HERMES_GITHUB_EXTRAS "${HERMES_GITHUB_RESOURCE_DIR}/*")
+if(HERMES_ENABLE_TOOLS)
+  set(HERMES_CLI_GITHUB_FILE hermes-cli-${HERMES_GITHUB_SYSTEM_NAME}-v${HERMES_RELEASE_VERSION}.tar.gz)
+  set(HERMES_GITHUB_BUNDLE_DIR ${HERMES_BINARY_DIR}/bundle)
+
+  # If the github release should include extra files (like dlls)
+  if (HERMES_GITHUB_RESOURCE_DIR STREQUAL "")
+    set(HERMES_GITHUB_EXTRAS "")
   else()
-    message(FATAL_ERROR "Extra resource dir not found: ${HERMES_GITHUB_RESOURCE_DIR}")
+    if (IS_DIRECTORY ${HERMES_GITHUB_RESOURCE_DIR})
+      file(GLOB HERMES_GITHUB_EXTRAS "${HERMES_GITHUB_RESOURCE_DIR}/*")
+    else()
+      message(FATAL_ERROR "Extra resource dir not found: ${HERMES_GITHUB_RESOURCE_DIR}")
+    endif()
   endif()
+
+  # We need this as a separate target because Ninja doesn't run PRE_BUILD/PRE_LINKs in time
+  add_custom_command(
+    OUTPUT ${HERMES_GITHUB_BUNDLE_DIR}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${HERMES_GITHUB_BUNDLE_DIR})
+  add_custom_target(make_bundle_dir DEPENDS ${HERMES_GITHUB_BUNDLE_DIR})
+
+  add_custom_command(
+    OUTPUT ${HERMES_GITHUB_DIR}/${HERMES_CLI_GITHUB_FILE}
+    WORKING_DIRECTORY ${HERMES_GITHUB_BUNDLE_DIR}
+    DEPENDS hermes hermesc hdb hbcdump make_bundle_dir
+    VERBATIM
+    COMMAND
+      # We need bin/hermes or Release/bin/hermes.exe in a predictable location
+      ${CMAKE_COMMAND} -E copy $<TARGET_FILE:hermes> $<TARGET_FILE:hermesc> $<TARGET_FILE:hdb> $<TARGET_FILE:hbcdump> ${HERMES_GITHUB_EXTRAS} .
+    COMMAND
+      ${CMAKE_COMMAND} -E tar zcf ${HERMES_GITHUB_DIR}/${HERMES_CLI_GITHUB_FILE} .
+  )
+
+  add_custom_target(
+    github-cli-release
+    DEPENDS ${HERMES_GITHUB_DIR}/${HERMES_CLI_GITHUB_FILE})
 endif()
-
-# We need this as a separate target because Ninja doesn't run PRE_BUILD/PRE_LINKs in time
-add_custom_command(
-  OUTPUT ${HERMES_GITHUB_BUNDLE_DIR}
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${HERMES_GITHUB_BUNDLE_DIR})
-add_custom_target(make_bundle_dir DEPENDS ${HERMES_GITHUB_BUNDLE_DIR})
-
-add_custom_command(
-  OUTPUT ${HERMES_GITHUB_DIR}/${HERMES_CLI_GITHUB_FILE}
-  WORKING_DIRECTORY ${HERMES_GITHUB_BUNDLE_DIR}
-  DEPENDS hermes hermesc hdb hbcdump make_bundle_dir
-  VERBATIM
-  COMMAND
-    # We need bin/hermes or Release/bin/hermes.exe in a predictable location
-    ${CMAKE_COMMAND} -E copy $<TARGET_FILE:hermes> $<TARGET_FILE:hermesc> $<TARGET_FILE:hdb> $<TARGET_FILE:hbcdump> ${HERMES_GITHUB_EXTRAS} .
-  COMMAND
-    ${CMAKE_COMMAND} -E tar zcf ${HERMES_GITHUB_DIR}/${HERMES_CLI_GITHUB_FILE} .
-)
-
-add_custom_target(
-  github-cli-release
-  DEPENDS ${HERMES_GITHUB_DIR}/${HERMES_CLI_GITHUB_FILE})
 
 set(HERMES_PKG_ROOT ${HERMES_GITHUB_DIR}/package-root)
 set(HERMES_PKG_FRAMEWORK ${HERMES_PKG_ROOT}/destroot/Library/Frameworks/hermes.framework)

@@ -12,6 +12,7 @@
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/Support/Compiler.h"
 #include "hermes/Support/ErrorHandling.h"
+#include "hermes/VM/AllocOptions.h"
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/BasicBlockExecutionInfo.h"
 #include "hermes/VM/CallResult.h"
@@ -21,7 +22,6 @@
 #include "hermes/VM/GC.h"
 #include "hermes/VM/Handle-inline.h"
 #include "hermes/VM/HandleRootOwner-inline.h"
-#include "hermes/VM/HasFinalizer.h"
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/InternalProperty.h"
 #include "hermes/VM/InterpreterState.h"
@@ -226,10 +226,27 @@ class Runtime : public HandleRootOwner,
   template <bool fixedSize = true, HasFinalizer hasFinalizer = HasFinalizer::No>
   void *alloc(uint32_t size);
 
-  /// Like the above, but if the GC makes a distinction between short- and
-  /// long-lived objects, allocates an object that is expected to be long-lived.
-  template <HasFinalizer hasFinalizer = HasFinalizer::No>
-  void *allocLongLived(uint32_t size);
+  /// Create a fixed size object of type T.
+  /// If necessary perform a GC cycle, which may potentially move
+  /// allocated objects.
+  /// \return a pointer to the newly created object in the GC heap.
+  template <
+      typename T,
+      HasFinalizer hasFinalizer = HasFinalizer::No,
+      LongLived longLived = LongLived::No,
+      class... Args>
+  T *makeAFixed(Args &&... args);
+
+  /// Create a variable size object of type T and size \p size.
+  /// If necessary perform a GC cycle, which may potentially move
+  /// allocated objects.
+  /// \return a pointer to the newly created object in the GC heap.
+  template <
+      typename T,
+      HasFinalizer hasFinalizer = HasFinalizer::No,
+      LongLived longLived = LongLived::No,
+      class... Args>
+  T *makeAVariable(uint32_t size, Args &&... args);
 
   /// Used as a placeholder for places where we should be checking for OOM
   /// but aren't yet.
@@ -837,7 +854,7 @@ class Runtime : public HandleRootOwner,
   /// Called by the GC at the beginning of a collection. This method informs the
   /// GC of all runtime roots.  The \p markLongLived argument
   /// indicates whether root data structures that contain only
-  /// references to long-lived objects (allocated via allocLongLived)
+  /// references to long-lived objects (allocated directly as long lived)
   /// are required to be scanned.
   void markRoots(RootAcceptor &acceptor, bool markLongLived) override;
 
@@ -1610,18 +1627,46 @@ inline void *Runtime::alloc(uint32_t sz) {
   return ptr;
 }
 
-template <HasFinalizer hasFinalizer>
-inline void *Runtime::allocLongLived(uint32_t size) {
+template <
+    typename T,
+    HasFinalizer hasFinalizer,
+    LongLived longLived,
+    class... Args>
+T *Runtime::makeAFixed(Args &&... args) {
 #if !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && !defined(NDEBUG)
   // If allocation location tracking is enabled we implicitly call
-  // getCurrentIP() via newAlloc() below. Even if this isn't enabled, we always
-  // call getCurrentIP() in a debug build as this has the effect of
+  // getCurrentIP() via newAlloc() below. Even if this isn't enabled, we
+  // always call getCurrentIP() in a debug build as this has the effect of
   // asserting the IP is correctly set (not invalidated) at this point. This
   // allows us to leverage our whole test-suite to find missing cases of
   // CAPTURE_IP* macros in the interpreter loop.
   (void)getCurrentIP();
 #endif
-  void *ptr = heap_.allocLongLived<hasFinalizer>(size);
+  T *ptr = heap_.makeA<T, true /* fixedSize */, hasFinalizer, longLived>(
+      cellSize<T>(), std::forward<Args>(args)...);
+#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+  heap_.getAllocationLocationTracker().newAlloc(ptr);
+#endif
+  return ptr;
+}
+
+template <
+    typename T,
+    HasFinalizer hasFinalizer,
+    LongLived longLived,
+    class... Args>
+T *Runtime::makeAVariable(uint32_t size, Args &&... args) {
+#if !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && !defined(NDEBUG)
+  // If allocation location tracking is enabled we implicitly call
+  // getCurrentIP() via newAlloc() below. Even if this isn't enabled, we
+  // always call getCurrentIP() in a debug build as this has the effect of
+  // asserting the IP is correctly set (not invalidated) at this point. This
+  // allows us to leverage our whole test-suite to find missing cases of
+  // CAPTURE_IP* macros in the interpreter loop.
+  (void)getCurrentIP();
+#endif
+  T *ptr = heap_.makeA<T, false /* fixedSize */, hasFinalizer, longLived>(
+      size, std::forward<Args>(args)...);
 #ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
   heap_.getAllocationLocationTracker().newAlloc(ptr);
 #endif

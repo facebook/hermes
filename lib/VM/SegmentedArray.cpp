@@ -57,8 +57,7 @@ void SegmentSerialize(Serializer &s, const GCCell *cell) {
 
 void SegmentDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::SegmentKind && "Expected Segment");
-  void *mem = d.getRuntime()->alloc(cellSize<SegmentedArray::Segment>());
-  auto *cell = new (mem) SegmentedArray::Segment(d);
+  auto *cell = d.getRuntime()->makeAFixed<SegmentedArray::Segment>(d);
   d.endObject(cell);
 }
 #endif
@@ -68,8 +67,7 @@ PseudoHandle<SegmentedArray::Segment> SegmentedArray::Segment::create(
   // NOTE: This needs to live in the cpp file instead of the header because it
   // uses PseudoHandle, which requires a specialization of IsGCObject for the
   // type it constructs.
-  return createPseudoHandle(new (runtime->alloc(cellSize<Segment>()))
-                                Segment(runtime));
+  return createPseudoHandle(runtime->makeAFixed<Segment>(runtime));
 }
 
 void SegmentedArray::Segment::setLength(Runtime *runtime, uint32_t newLength) {
@@ -135,10 +133,11 @@ void SegmentedArrayDeserialize(Deserializer &d, CellKind kind) {
       d.readInt<SegmentedArray::size_type>();
   SegmentedArray::size_type numSlotsUsed =
       d.readInt<SegmentedArray::size_type>();
-  void *mem = d.getRuntime()->alloc<false /*fixedSize*/>(
-      SegmentedArray::allocationSizeForSlots(slotCapacity));
-  auto *cell =
-      new (mem) SegmentedArray(d.getRuntime(), slotCapacity, numSlotsUsed);
+  SegmentedArray *cell = d.getRuntime()->makeAVariable<SegmentedArray>(
+      SegmentedArray::allocationSizeForSlots(slotCapacity),
+      d.getRuntime(),
+      slotCapacity,
+      numSlotsUsed);
   for (auto it = cell->begin(); it != cell->end(); ++it) {
     d.readHermesValue(&*it);
   }
@@ -170,8 +169,9 @@ CallResult<PseudoHandle<SegmentedArray>> SegmentedArray::createLongLived(
   }
   // Leave the segments as null. Whenever the size is changed, the segments will
   // be allocated.
-  return createPseudoHandle(new (runtime->allocLongLived(
-      allocationSizeForCapacity(capacity))) SegmentedArray(runtime, capacity));
+  return createPseudoHandle(
+      runtime->makeAVariable<SegmentedArray, HasFinalizer::No, LongLived::Yes>(
+          allocationSizeForCapacity(capacity), runtime, capacity));
 }
 
 CallResult<PseudoHandle<SegmentedArray>>

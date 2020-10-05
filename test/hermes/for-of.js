@@ -104,3 +104,8 @@ catcher(iterable_to_array, iterable( {
     next: function() { return 10; }
 }));
 //CHECK-NEXT: caught: iterator.next() did not return an object
+
+var arr = [];
+arr.__proto__ = new Proxy({}, {});
+catcher(iterable_to_array, arr);
+//CHECK-NEXT: caught: iterator method is not callable

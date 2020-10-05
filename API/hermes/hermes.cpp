@@ -307,6 +307,8 @@ class HermesRuntimeImpl final : public HermesRuntime,
         break;
     }
 
+    compileFlags_.enableGenerator = runtimeConfig.getEnableGenerator();
+
 #ifndef HERMESJSI_ON_STACK
     // Register the memory for the runtime if it isn't stored on the stack.
     crashMgr_->registerMemory(&runtime_, sizeof(vm::Runtime));

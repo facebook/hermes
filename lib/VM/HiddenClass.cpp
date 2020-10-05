@@ -255,10 +255,10 @@ CallResult<HermesValue> HiddenClass::create(
   assert(
       (flags.dictionaryMode || numProperties == 0 || *parent) &&
       "non-empty non-dictionary orphan");
-  void *mem =
-      runtime->allocLongLived<HasFinalizer::Yes>(cellSize<HiddenClass>());
-  return HermesValue::encodeObjectValue(new (mem) HiddenClass(
-      runtime, flags, parent, symbolID, propertyFlags, numProperties));
+  auto *obj =
+      runtime->makeAFixed<HiddenClass, HasFinalizer::Yes, LongLived::Yes>(
+          runtime, flags, parent, symbolID, propertyFlags, numProperties);
+  return HermesValue::encodeObjectValue(obj);
 }
 
 Handle<HiddenClass> HiddenClass::copyToNewDictionary(

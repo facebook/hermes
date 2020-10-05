@@ -271,6 +271,7 @@ class TransitionMap {
 } // namespace detail
 
 class HiddenClass final : public GCCell {
+  friend GC;
   friend void HiddenClassBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
  public:

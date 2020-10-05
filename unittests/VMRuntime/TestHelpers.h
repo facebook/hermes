@@ -298,10 +298,26 @@ struct DummyRuntime final : public HandleRootOwner,
   void *alloc(uint32_t sz) {
     return gc.alloc<fixedSize>(sz);
   }
-  template <HasFinalizer hasFinalizer = HasFinalizer::No>
-  void *allocLongLived(uint32_t sz) {
-    return gc.allocLongLived<hasFinalizer>(sz);
+  template <
+      typename T,
+      HasFinalizer hasFinalizer = HasFinalizer::No,
+      LongLived longLived = LongLived::No,
+      class... Args>
+  T *makeAFixed(Args &&... args) {
+    return gc.makeA<T, true /* fixedSize */, hasFinalizer, longLived>(
+        cellSize<T>(), std::forward<Args>(args)...);
   }
+
+  template <
+      typename T,
+      HasFinalizer hasFinalizer = HasFinalizer::No,
+      LongLived longLived = LongLived::No,
+      class... Args>
+  T *makeAVariable(uint32_t size, Args &&... args) {
+    return gc.makeA<T, false /* fixedSize */, hasFinalizer, longLived>(
+        size, std::forward<Args>(args)...);
+  }
+
   template <bool fixedSize = true>
   void *allocWithFinalizer(uint32_t sz) {
     return gc.alloc<fixedSize, HasFinalizer::Yes>(sz);

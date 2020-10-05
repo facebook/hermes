@@ -9,12 +9,12 @@
 #define HERMES_VM_YOUNGGENNC_H
 
 #include "hermes/VM/AlignedHeapSegment.h"
+#include "hermes/VM/AllocOptions.h"
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/CompactionResult.h"
 #include "hermes/VM/GCGeneration.h"
 #include "hermes/VM/GCSegmentRange-inline.h"
 #include "hermes/VM/GCSegmentRange.h"
-#include "hermes/VM/HasFinalizer.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/SweepResultNC.h"
 
@@ -167,6 +167,8 @@ class YoungGen : public GCGeneration {
   /// slot of the referent.  If so, redirect *ptrLoc to point where the
   /// already-installed forwarding pointer points.
   void ensureReferentCopied(GCCell **ptrLoc);
+
+  void ensureReferentCopied(BasedPointer *ptrLoc);
 
   /// Print stats (in JSON format) specific to young-gen collection to an output
   /// stream.

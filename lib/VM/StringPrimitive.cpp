@@ -503,9 +503,11 @@ CallResult<HermesValue> DynamicStringPrimitive<T, Uniqued>::createLongLived(
     Runtime *runtime,
     Ref str) {
   assert(!isExternalLength(str.size()) && "length should not be external");
-  void *mem = runtime->allocLongLived(allocationSize((uint32_t)str.size()));
-  return HermesValue::encodeStringValue(
-      (new (mem) DynamicStringPrimitive<T, Uniqued>(runtime, str)));
+  auto *obj = runtime->makeAVariable<
+      DynamicStringPrimitive<T, Uniqued>,
+      HasFinalizer::No,
+      LongLived::Yes>(allocationSize((uint32_t)str.size()), runtime, str);
+  return HermesValue::encodeStringValue(obj);
 }
 
 template <typename T, bool Uniqued>
@@ -576,9 +578,10 @@ CallResult<HermesValue> ExternalStringPrimitive<T>::createLongLived(
     return runtime->raiseRangeError(
         "Cannot allocate an external string primitive.");
   }
-  void *mem = runtime->allocLongLived<HasFinalizer::Yes>(
-      cellSize<ExternalStringPrimitive<T>>());
-  auto *extStr = new (mem) ExternalStringPrimitive<T>(runtime, std::move(str));
+  auto *extStr = runtime->makeAFixed<
+      ExternalStringPrimitive<T>,
+      HasFinalizer::Yes,
+      LongLived::Yes>(runtime, std::move(str));
   runtime->getHeap().creditExternalMemory(
       extStr, extStr->calcExternalMemorySize());
   return HermesValue::encodeStringValue(extStr);

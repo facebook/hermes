@@ -11,25 +11,10 @@
 #include "hermes/VM/GCPointer.h"
 
 #include "hermes/VM/GC.h"
-#include "hermes/VM/PointerBase-inline.h"
 #include "hermes/VM/PointerBase.h"
 
 namespace hermes {
 namespace vm {
-
-inline GCPointerBase::GCPointerBase(PointerBase *base, void *ptr)
-    : ptr_(base->pointerToBased(ptr)) {
-  // In some build configurations this parameter is unused.
-  (void)base;
-}
-
-inline void *GCPointerBase::get(PointerBase *base) const {
-  return storageTypeToPointer(ptr_, base);
-}
-
-inline void *GCPointerBase::getNonNull(PointerBase *base) const {
-  return base->basedToPointerNonNull(ptr_);
-}
 
 template <typename T>
 template <typename NeedsBarriers>
@@ -67,25 +52,9 @@ inline void GCPointerBase::setNull(GC *gc) {
   ptr_ = StorageType{};
 }
 
-inline GCPointerBase::StorageType GCPointerBase::getStorageType() const {
-  return ptr_;
-}
-
 inline GCPointerBase::StorageType &GCPointerBase::getLoc(GC *gc) {
   assert(gc->calledByGC() && "Can only use GCPointer::getLoc within GC.");
   return ptr_;
-}
-
-inline void *GCPointerBase::storageTypeToPointer(
-    StorageType st,
-    PointerBase *base) {
-  return base->basedToPointer(st);
-}
-
-inline GCPointerBase::StorageType GCPointerBase::pointerToStorageType(
-    void *ptr,
-    PointerBase *base) {
-  return base->pointerToBased(ptr);
 }
 
 } // namespace vm

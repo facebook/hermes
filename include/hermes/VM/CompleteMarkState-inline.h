@@ -12,7 +12,7 @@
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HermesValue-inline.h"
-#include "hermes/VM/SlotAcceptorDefault-inline.h"
+#include "hermes/VM/SlotAcceptorDefault.h"
 
 namespace hermes {
 namespace vm {
