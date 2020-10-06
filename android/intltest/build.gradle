@@ -18,9 +18,6 @@ import de.undercouch.gradle.tasks.download.Download
 buildDir = "${rootProject.ext.hermes_ws}/build_android/intltest"
 buildDir.mkdirs()
 
-def facebookBuild = System.getenv("FACEBOOK") ?: "0"
-def hermesHostBuild = System.getenv("HERMES_WS_DIR")
-
 def test262DownloadsDirPath = "${rootProject.ext.hermes_ws}/build_android/intltest/downloads/test262"
 def test262Destination = "${rootProject.ext.hermes_ws}/hermes/android/intltest/java/com/facebook/hermes/test/assets"
 task createDownloadsDir {
@@ -44,10 +41,6 @@ task preparetest262(dependsOn: downloadTest262, type: Copy) {
   includeEmptyDirs = true
   into(test262Destination)
 }
-
-// For Facebook internal use:
-def fbsource = System.getenv("FBSOURCE_DIR") ?:
-    System.getenv("HOME") + "/fbsource"
 
 // TODO: Figure out how to deduplicate this file and intl/build.gradle
 android {
