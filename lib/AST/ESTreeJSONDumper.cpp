@@ -22,6 +22,7 @@ class ESTreeJSONDumper {
   JSONEmitter &json_;
   SourceErrorManager *sm_{nullptr};
   ESTreeDumpMode mode_;
+  LocationDumpMode locMode_;
 
   /// A collection of fields to ignore if they are empty (null or []).
   /// Mapping from node name to a set of ignored field names for that node.
@@ -31,8 +32,9 @@ class ESTreeJSONDumper {
   explicit ESTreeJSONDumper(
       JSONEmitter &json,
       SourceErrorManager *sm,
-      ESTreeDumpMode mode)
-      : json_(json), sm_(sm), mode_(mode) {
+      ESTreeDumpMode mode,
+      LocationDumpMode locMode)
+      : json_(json), sm_(sm), mode_(mode), locMode_(locMode) {
 #define ESTREE_NODE_0_ARGS(NAME, ...)
 #define ESTREE_NODE_1_ARGS(NAME, ...)
 #define ESTREE_NODE_2_ARGS(NAME, ...)
@@ -62,32 +64,38 @@ class ESTreeJSONDumper {
         !sm_->findBufferLineAndLoc(rng.End, end))
       return;
 
-    json_.emitKey("loc");
-    json_.openDict();
-    json_.emitKey("start");
-    json_.openDict();
-    json_.emitKeyValue("line", start.line);
-    json_.emitKeyValue("column", start.col);
-    json_.closeDict();
-    json_.emitKey("end");
-    json_.openDict();
-    json_.emitKeyValue("line", end.line);
-    json_.emitKeyValue("column", end.col);
-    json_.closeDict();
-    json_.closeDict();
+    if (locMode_ == LocationDumpMode::Loc ||
+        locMode_ == LocationDumpMode::LocAndRange) {
+      json_.emitKey("loc");
+      json_.openDict();
+      json_.emitKey("start");
+      json_.openDict();
+      json_.emitKeyValue("line", start.line);
+      json_.emitKeyValue("column", start.col);
+      json_.closeDict();
+      json_.emitKey("end");
+      json_.openDict();
+      json_.emitKeyValue("line", end.line);
+      json_.emitKeyValue("column", end.col);
+      json_.closeDict();
+      json_.closeDict();
+    }
 
-    const llvh::MemoryBuffer *buffer = sm_->findBufferForLoc(rng.Start);
-    assert(buffer && "The buffer must exist");
-    const char *bufStart = buffer->getBufferStart();
-    assert(
-        rng.Start.getPointer() >= bufStart &&
-        rng.End.getPointer() <= buffer->getBufferEnd() &&
-        "The range must be within the buffer");
-    json_.emitKey("range");
-    json_.openArray();
-    json_.emitValues(
-        {rng.Start.getPointer() - bufStart, rng.End.getPointer() - bufStart});
-    json_.closeArray();
+    if (locMode_ == LocationDumpMode::Range ||
+        locMode_ == LocationDumpMode::LocAndRange) {
+      const llvh::MemoryBuffer *buffer = sm_->findBufferForLoc(rng.Start);
+      assert(buffer && "The buffer must exist");
+      const char *bufStart = buffer->getBufferStart();
+      assert(
+          rng.Start.getPointer() >= bufStart &&
+          rng.End.getPointer() <= buffer->getBufferEnd() &&
+          "The range must be within the buffer");
+      json_.emitKey("range");
+      json_.openArray();
+      json_.emitValues(
+          {rng.Start.getPointer() - bufStart, rng.End.getPointer() - bufStart});
+      json_.closeArray();
+    }
   }
 
   void visit(Node *node, StringRef type) {
@@ -427,9 +435,10 @@ void dumpESTreeJSON(
     NodePtr rootNode,
     bool pretty,
     ESTreeDumpMode mode,
-    SourceErrorManager *sm) {
+    SourceErrorManager *sm,
+    LocationDumpMode locMode) {
   JSONEmitter json{os, pretty};
-  ESTreeJSONDumper(json, sm, mode).doIt(rootNode);
+  ESTreeJSONDumper(json, sm, mode, locMode).doIt(rootNode);
   json.endJSONL();
 }
 
@@ -437,8 +446,9 @@ void dumpESTreeJSON(
     JSONEmitter &json,
     NodePtr rootNode,
     ESTreeDumpMode mode,
-    SourceErrorManager *sm) {
-  ESTreeJSONDumper(json, sm, mode).doIt(rootNode);
+    SourceErrorManager *sm,
+    LocationDumpMode locMode) {
+  ESTreeJSONDumper(json, sm, mode, locMode).doIt(rootNode);
 }
 
 } // namespace hermes

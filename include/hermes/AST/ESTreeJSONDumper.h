@@ -25,6 +25,16 @@ enum class ESTreeDumpMode {
   DumpAll,
 };
 
+/// Specifies which location information should be dumped by ESTreeJSONDumper.
+enum class LocationDumpMode {
+  /// Only output locations: line and column.
+  Loc,
+  /// Only output byte ranges.
+  Range,
+  /// Output both locations and byte ranges.
+  LocAndRange,
+};
+
 /// Print out the contents of the given tree to \p os.
 /// \p pretty for pretty print the JSON.
 /// When \p sm is not null, print the source locations for the AST nodes.
@@ -33,7 +43,8 @@ void dumpESTreeJSON(
     ESTree::NodePtr rootNode,
     bool pretty,
     ESTreeDumpMode mode,
-    SourceErrorManager *sm = nullptr);
+    SourceErrorManager *sm = nullptr,
+    LocationDumpMode locMode = LocationDumpMode::LocAndRange);
 
 /// Print out the contents of \p rootNode to \p json.
 /// Does not call json.endJSONL(), caller should do that if necessary.
@@ -42,7 +53,8 @@ void dumpESTreeJSON(
     JSONEmitter &json,
     ESTree::NodePtr rootNode,
     ESTreeDumpMode mode,
-    SourceErrorManager *sm = nullptr);
+    SourceErrorManager *sm = nullptr,
+    LocationDumpMode locMode = LocationDumpMode::LocAndRange);
 
 } // namespace hermes
 
