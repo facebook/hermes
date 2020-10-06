@@ -34,6 +34,8 @@ class HermesToBabelAdapter extends HermesASTAdapter {
         return this.mapNodeWithDirectives(node);
       case 'Empty':
         return this.mapEmpty(node);
+      case 'TemplateElement':
+        return this.mapTemplateElement(node);
       default:
         return this.mapNodeDefault(node);
     }
@@ -94,6 +96,37 @@ class HermesToBabelAdapter extends HermesASTAdapter {
     }
 
     return node;
+  }
+
+  mapTemplateElement(node) {
+    // Adjust start loc to exclude "`" at beginning of template literal if this is the first quasi,
+    // otherwise exclude "}" from previous expression.
+    const startCharsToExclude = 1;
+
+    // Adjust end loc to exclude "`" at end of template literal if this is the last quasi,
+    // otherwise exclude "${" from next expression.
+    const endCharsToExclude = node.tail ? 1 : 2;
+
+    return {
+      type: 'TemplateElement',
+      loc: {
+        start: {
+          line: node.loc.start.line,
+          column: node.loc.start.column + startCharsToExclude,
+        },
+        end: {
+          line: node.loc.end.line,
+          column: node.loc.end.column - endCharsToExclude,
+        },
+      },
+      start: node.start + startCharsToExclude,
+      end: node.end - endCharsToExclude,
+      tail: node.tail,
+      value: {
+        cooked: node.cooked,
+        raw: node.raw,
+      },
+    };
   }
 }
 

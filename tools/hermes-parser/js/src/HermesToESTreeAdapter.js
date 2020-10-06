@@ -37,6 +37,8 @@ class HermesToESTreeAdapter extends HermesASTAdapter {
         return this.mapRegExpLiteral(node);
       case 'Empty':
         return this.mapEmpty(node);
+      case 'TemplateElement':
+        return this.mapTemplateElement(node);
       default:
         return this.mapNodeDefault(node);
     }
@@ -73,6 +75,19 @@ class HermesToESTreeAdapter extends HermesASTAdapter {
       regex: {
         pattern,
         flags,
+      },
+    };
+  }
+
+  mapTemplateElement(node) {
+    return {
+      type: 'TemplateElement',
+      loc: node.loc,
+      range: node.range,
+      tail: node.tail,
+      value: {
+        cooked: node.cooked,
+        raw: node.raw,
       },
     };
   }
