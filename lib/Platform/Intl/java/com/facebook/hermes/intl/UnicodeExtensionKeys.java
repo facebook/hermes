@@ -148,9 +148,9 @@ public class UnicodeExtensionKeys {
             if (s_validKeywords.containsKey(key)) {
                 return Arrays.asList(s_validKeywords.get(key)).contains(value);
             }
-        }
 
-        return false;
+            return true;
+        }
     }
 
     public static Object resolveKnownAliases(String key, Object value) {

@@ -94,9 +94,21 @@ public class HermesIntlCollatorTest extends HermesIntlTest262Base {
 
     public void testIntlCollator_prototype_compare() throws IOException {
         String basePath = "test262-main/test/intl402/Collator/prototype/compare";
-        Set<String> whilteList = new HashSet<>();
-        Set<String> testIssueList = new HashSet<>();
 
-        runTests(basePath, testIssueList, whilteList);
+        Set<String> whilteList = new HashSet<>();
+        Set<String> blackList = new HashSet<>();
+
+        // ICU APIs not available prior to 24.
+        Set<String> pre24Issues = new HashSet<>();
+        if(android.os.Build.VERSION.SDK_INT < 24) {
+            pre24Issues.addAll(Arrays.asList(
+                    "non-normative-sensitivity.js", // Expected [Aa] and [Aa, Aã] to have the same contents.. Pre-24 collator object doesn't expose an API to specifiy decomposition mode.
+                    "canonically-equivalent-strings.js" // Collator.compare considers ạ̈ (\u00e4\u0323) ≠ ạ̈ (\u0061\u0323\u0308). Expected SameValue(«-1», «0») to be true. Pre-24 collator object doesn't expose an API to specifiy decomposition mode.
+                ));
+        }
+
+        blackList.addAll(pre24Issues);
+
+        runTests(basePath, blackList, whilteList);
     }
 }

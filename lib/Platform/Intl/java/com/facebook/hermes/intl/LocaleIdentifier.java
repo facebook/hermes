@@ -769,9 +769,11 @@ public class LocaleIdentifier {
     static ParsedLocaleIdentifier parseLocaleId(String inLocaleId) throws JSRangeErrorException {
 
         // Handle grandfathered locales ..
-        int grandfatheredIndex = java.util.Arrays.binarySearch(LanguageTagsGenerated.regularGrandfatheredKeys, inLocaleId.toString());
-        if (grandfatheredIndex >= 0) {
-            inLocaleId = LanguageTagsGenerated.regularGrandfatheredReplacements[grandfatheredIndex];
+        if(LanguageTagsGenerated.regularGrandfatheredKeys != null) {
+            int grandfatheredIndex = java.util.Arrays.binarySearch(LanguageTagsGenerated.regularGrandfatheredKeys, inLocaleId.toString());
+            if (grandfatheredIndex >= 0) {
+                inLocaleId = LanguageTagsGenerated.regularGrandfatheredReplacements[grandfatheredIndex];
+            }
         }
 
         // Normalize input to lower case.

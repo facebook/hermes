@@ -203,8 +203,11 @@ public class LocaleObjectAndroid implements ILocaleObject<Locale> {
         ensureNotDirty();
         ensureParsedLocaleIdentifier();
 
-        if(mParsedLocaleIdentifier.unicodeExtensionKeywords != null)
-            return mParsedLocaleIdentifier.unicodeExtensionKeywords.get(key);
+        if(mParsedLocaleIdentifier.unicodeExtensionKeywords != null) {
+            ArrayList<String> extensions = mParsedLocaleIdentifier.unicodeExtensionKeywords.get(key);
+            if(extensions != null)
+                return extensions;
+        }
         return new ArrayList<>();
     }
 

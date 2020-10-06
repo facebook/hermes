@@ -54,8 +54,18 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
                 "subclassing.js" // Hermes doesn't support classes. Compiling JS failed: 18:1:invalid statement encountered. Buffer size 986 starts with: 2f2f20436f7079726967687420323031
         ));
 
+        Set<String> icuIssues = new HashSet<>();
+
+        // Requires Android 10 (API level 29) ICU: 63.2 	CLDR: 34 	UniCode: 11.0  (https://developer.android.com/guide/topics/resources/internationalization)
+        if(android.os.Build.VERSION.SDK_INT < 29) {
+            icuIssues.addAll(Arrays.asList(
+                    "constructor-unitDisplay.js" // com.facebook.hermes.intl.JSRangeErrorException: Unknown unit: percent
+            ));
+        }
+
         Set<String> blackList = testIssues;
         blackList.addAll(deviations);
+        blackList.addAll(icuIssues);
 
         runTests(basePath, blackList, whiteList);
     }
@@ -149,9 +159,58 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
             "units.js" // com.facebook.hermes.intl.JSRangeErrorException: Unknown unit: acre-per-acre .. We support only units directly known to https://developer.android.com/reference/android/icu/util/MeasureUnit .. MeasureFormat.format requires an instance of MeasureUnit.
         ));
 
+        Set<String> icuIssues = new HashSet<>();
+        // Requires Android 11 (API level 30)
+        if(android.os.Build.VERSION.SDK_INT < 30) {
+            icuIssues.addAll(Arrays.asList(
+                    "engineering-scientific-de-DE.js",  // Expected SameValue(«-∞E0», «-∞») to be true
+                    "engineering-scientific-zh-TW.js", // Expected SameValue(«-∞E0», «-∞») to be true
+                    "engineering-scientific-ja-JP.js", // Expected SameValue(«-∞E0», «-∞») to be true
+                    "numbering-systems.js", // numberingSystem: diak, digit: 0 Expected SameValue(«0», «𑥐») to be true
+                    "engineering-scientific-ko-KR.js", // Expected SameValue(«-∞E0», «-∞») to be true
+                    "engineering-scientific-en-US.js" // Expected SameValue(«-∞E0», «-∞») to be true
+            ));
+        }
+
+        // Requires Android 10 (API level 29) ICU: 63.2 	CLDR: 34 	UniCode: 11.0  (https://developer.android.com/guide/topics/resources/internationalization)
+        if(android.os.Build.VERSION.SDK_INT < 29) {
+            icuIssues.addAll(Arrays.asList(
+                    "format-significant-digits.js", // Formatted value for 0, en-US-u-nu-arab and options {"useGrouping":false,"minimumSignificantDigits":3,"maximumSignificantDigits":5} is ٠; expected ٠٫٠٠.
+                    "unit-en-US.js", // Expected SameValue(«-987 kph», «-987 km/h») to be true
+                    "notation-compact-de-DE.js", // Expected SameValue(«99 Tsd.», «98.765») to be true
+                    "format-significant-digits-precision.js" // Formatted value for 123.44500, en-US-u-nu-arab and options {"useGrouping":false,"minimumSignificantDigits":3,"maximumSignificantDigits":5} is ١٢٣٫٤٤٥; expected ١٢٣٫٤٥.
+            ));
+        }
+
+        // Requires Android 9 (API level 28) ICU: 60.2 	CLDR: 32.0.1 	UniCode: 10.0  (https://developer.android.com/guide/topics/resources/internationalization)
+        if(android.os.Build.VERSION.SDK_INT < 28) {
+            icuIssues.addAll(Arrays.asList(
+                    "notation-compact-ko-KR.js", // Expected SameValue(«9,900만», «9877만») to be true
+                    "notation-compact-en-US.js", // Expected SameValue(«990M», «988M») to be true
+                    "notation-compact-ja-JP.js", // Expected SameValue(«9,900万», «9877万») to be true
+                    "notation-compact-zh-TW.js" // Expected SameValue(«9,900萬», «9877萬») to be true
+            ));
+        }
+
+        // ICU APIs not available prior to 24.
+        Set<String> pre24Issues = new HashSet<>();
+        if(android.os.Build.VERSION.SDK_INT < 24) {
+            pre24Issues.addAll(Arrays.asList(
+                    "unit-ko-KR.js", // : Expected SameValue(«-987», «-987km/h») to be true
+                    "unit-de-DE.js", // : Expected SameValue(«-987», «-987 km/h») to be true
+                    "unit-zh-TW.js", // : Expected SameValue(«-987», «-987 公里/小時») to be true
+                    "format-fraction-digits-precision.js", // : Unexpected formatted 1.1 for en-US-u-nu-hanidec and options {"useGrouping":false,"minimumIntegerDigits":3,"minimumFractionDigits":1,"maximumFractionDigits":3}: 〇〇〈.〈
+                    "percent-formatter.js", // : Intl.NumberFormat's formatting of 20% does not include a formatting of 20 as a substring. Expected SameValue(«-1», «-1») to be false
+                    "format-fraction-digits.js", // : Unexpected formatted 1.1 for en-US-u-nu-hanidec and options {"useGrouping":false,"minimumIntegerDigits":3,"minimumFractionDigits":1,"maximumFractionDigits":3}: 〇〇〈.〈
+                    "unit-ja-JP.js" // : Expected SameValue(«-987», «-987 km/h») to be true
+                ));
+        }
+
         Set<String> blackList = new HashSet<>();
         blackList.addAll(signDisplayList);
         blackList.addAll(unitIssues);
+        blackList.addAll(icuIssues);
+        blackList.addAll(pre24Issues);
 
         runTests(basePath, blackList, whiteList);
     }
@@ -188,10 +247,38 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
                 "percent-en-US.js" // unit: length Expected SameValue(«1», «3») to be true .. We have issue when formatting percentage as unit .. i.e. {style: "unit", unit: "percent"} .. We could hack to create a formatter in percent style, but it's tricky to deal with the x100 multiplier.
         ));
 
+
+        Set<String> icuIssues = new HashSet<>();
+        // Requires Android 11 (API level 30)
+        if(android.os.Build.VERSION.SDK_INT < 30) {
+            icuIssues.addAll(Arrays.asList(
+                    "engineering-scientific-ko-KR.js", //-Infinity - engineering: length Expected SameValue(«4», «2») to be true
+                    "notation-compact-zh-TW.js", // Compact short: 987654321: parts[3].type Expected SameValue(«literal», «compact») to be true
+                    "engineering-scientific-en-US.js", // -Infinity - engineering: length Expected SameValue(«4», «2») to be true
+                    "notation-compact-de-DE.js", // Compact short: 987654321: length Expected SameValue(«2», «3») to be true
+                    "engineering-scientific-de-DE.js", // -Infinity - engineering: length Expected SameValue(«4», «2») to be true
+                    "notation-compact-en-US.js", // Compact short: 987654321: parts[1].type Expected SameValue(«literal», «compact») to be true
+                    "engineering-scientific-zh-TW.js", // -Infinity - engineering: length Expected SameValue(«4», «2») to be true
+                    "engineering-scientific-ja-JP.js", // -Infinity - engineering: length Expected SameValue(«4», «2») to be true
+                    "notation-compact-ja-JP.js", // Compact short: 987654321: parts[3].type Expected SameValue(«literal», «compact») to be true
+                    "notation-compact-ko-KR.js" // Compact short: 987654321: parts[3].type Expected SameValue(«literal», «compact») to be true
+                ));
+        }
+
+        // ICU APIs not available prior to 24.
+        Set<String> pre24Issues = new HashSet<>();
+        if(android.os.Build.VERSION.SDK_INT < 24) {
+            pre24Issues.addAll(Arrays.asList(
+                    "default-parameter.js" // : Both implicit and explicit calls should have the correct result
+            ));
+        }
+
         Set<String> blackList = new HashSet<>();
 
         blackList.addAll(signDisplayList);
         blackList.addAll(unitList);
+        blackList.addAll(icuIssues);
+        blackList.addAll(pre24Issues);
 
         runTests(basePath, blackList, whiteList);
     }

@@ -39,7 +39,7 @@ public class LocaleResolver {
                     if(!requestedValue.isEmpty()) {
                         value = requestedValue;
                     } else {
-                        value = JSObjects.newBoolean(true);
+                        value = JSObjects.newString("true");
                     }
                     supportedExtensionAdditionKeys.add(key);
                 }
@@ -58,7 +58,8 @@ public class LocaleResolver {
                 }
             }
 
-            value = UnicodeExtensionKeys.resolveKnownAliases(key, value);
+            if(!JSObjects.isNull(value))
+                value = UnicodeExtensionKeys.resolveKnownAliases(key, value);
 
             if(JSObjects.isString(value) && !UnicodeExtensionKeys.isValidKeyword(key, JSObjects.getJavaString(value), localeMatchResult.matchedLocale)) {
                 result.put(key, JSObjects.Null());
