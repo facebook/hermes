@@ -44,7 +44,7 @@ test('Can parse simple file', () => {
               name: 'x',
             }),
             init: expect.objectContaining({
-              type: 'NumericLiteral',
+              type: 'Literal',
               value: 1,
             }),
           }),
@@ -167,7 +167,7 @@ Foo;`;
         type: 'ExpressionStatement',
         loc: loc(1, 0, 1, 13),
         expression: {
-          type: 'StringLiteral',
+          type: 'Literal',
           value: 'use strict',
           loc: loc(1, 0, 1, 12),
         },
@@ -177,7 +177,7 @@ Foo;`;
         type: 'ExpressionStatement',
         loc: loc(2, 0, 2, 13),
         expression: {
-          type: 'StringLiteral',
+          type: 'Literal',
           value: 'use strict',
           loc: loc(2, 0, 2, 12),
         },
@@ -252,7 +252,7 @@ test('Function body directive', () => {
               type: 'ExpressionStatement',
               loc: loc(2, 4, 2, 17),
               expression: {
-                type: 'StringLiteral',
+                type: 'Literal',
                 value: 'use strict',
                 loc: loc(2, 4, 2, 16),
               },
@@ -303,6 +303,122 @@ test('Function body directive', () => {
               },
             },
           ],
+        },
+      },
+    ],
+  });
+});
+
+test('Literals', () => {
+  const source = `
+    null;
+    10;
+    "test";
+    true;
+    /foo/g;
+  `;
+
+  // ESTree AST literal nodes
+  expect(parse(source)).toMatchObject({
+    type: 'Program',
+    body: [
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'Literal',
+          value: null,
+        },
+      },
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'Literal',
+          value: 10,
+        },
+      },
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'Literal',
+          value: 'test',
+        },
+      },
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'Literal',
+          value: true,
+        },
+      },
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'Literal',
+          value: new RegExp('foo', 'g'),
+          regex: {
+            pattern: 'foo',
+            flags: 'g',
+          },
+        },
+      },
+    ],
+  });
+
+  // ESTree AST with invalid RegExp literal
+  expect(parse('/foo/qq')).toMatchObject({
+    type: 'Program',
+    body: [
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'Literal',
+          value: null,
+          regex: {
+            pattern: 'foo',
+            flags: 'qq',
+          },
+        },
+      },
+    ],
+  });
+
+  // Babel AST literal nodes
+  expect(parse(source, {babel: true})).toMatchObject({
+    type: 'Program',
+    body: [
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'NullLiteral',
+        },
+      },
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'NumericLiteral',
+          value: 10,
+        },
+      },
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'StringLiteral',
+          value: 'test',
+        },
+      },
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'BooleanLiteral',
+          value: true,
+        },
+      },
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'RegExpLiteral',
+          pattern: 'foo',
+          flags: 'g',
         },
       },
     ],
