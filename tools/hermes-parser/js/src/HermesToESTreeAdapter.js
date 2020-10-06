@@ -39,6 +39,8 @@ class HermesToESTreeAdapter extends HermesASTAdapter {
         return this.mapEmpty(node);
       case 'TemplateElement':
         return this.mapTemplateElement(node);
+      case 'GenericTypeAnnotation':
+        return this.mapGenericTypeAnnotation(node);
       default:
         return this.mapNodeDefault(node);
     }
@@ -90,6 +92,23 @@ class HermesToESTreeAdapter extends HermesASTAdapter {
         raw: node.raw,
       },
     };
+  }
+
+  mapGenericTypeAnnotation(node) {
+    // Convert simple `this` generic type to ThisTypeAnnotation
+    if (
+      node.typeParameters === null &&
+      node.id.type === 'Identifier' &&
+      node.id.name === 'this'
+    ) {
+      return {
+        type: 'ThisTypeAnnotation',
+        loc: node.loc,
+        range: node.range,
+      };
+    }
+
+    return this.mapNodeDefault(node);
   }
 }
 

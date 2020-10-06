@@ -678,3 +678,35 @@ test('Template literals', () => {
     },
   });
 });
+
+test('This type annotation', () => {
+  const source = `
+    type t1 = this;
+    type t2 = this<T>;
+    type t3 = T.this;
+    type t4 = this.T;
+  `;
+
+  const thisAlias = {
+    type: 'TypeAlias',
+    right: {
+      type: 'ThisTypeAnnotation',
+    },
+  };
+  const genericAlias = {
+    type: 'TypeAlias',
+    right: {
+      type: 'GenericTypeAnnotation',
+    },
+  };
+  const expectedProgram = {
+    type: 'Program',
+    body: [thisAlias, genericAlias, genericAlias, genericAlias],
+  };
+
+  expect(parse(source)).toMatchObject(expectedProgram);
+  expect(parse(source, {babel: true})).toMatchObject({
+    type: 'File',
+    program: expectedProgram,
+  });
+});
