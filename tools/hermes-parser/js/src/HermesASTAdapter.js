@@ -76,6 +76,10 @@ class HermesASTAdapter {
   fixSourceLocation(node) {
     throw new Error('Implemented in subclasses');
   }
+
+  mapEmpty(node) {
+    return null;
+  }
 }
 
 module.exports = HermesASTAdapter;

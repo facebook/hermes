@@ -35,6 +35,8 @@ class HermesToESTreeAdapter extends HermesASTAdapter {
         return this.mapSimpleLiteral(node);
       case 'RegExpLiteral':
         return this.mapRegExpLiteral(node);
+      case 'Empty':
+        return this.mapEmpty(node);
       default:
         return this.mapNodeDefault(node);
     }

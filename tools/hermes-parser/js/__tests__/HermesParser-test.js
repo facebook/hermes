@@ -424,3 +424,93 @@ test('Literals', () => {
     ],
   });
 });
+
+test('Arrays', () => {
+  const source = 'const [a,,b] = [1,,2];';
+
+  // ESTree AST array nodes
+  expect(parse(source)).toMatchObject({
+    type: 'Program',
+    body: [
+      {
+        type: 'VariableDeclaration',
+        declarations: [
+          {
+            type: 'VariableDeclarator',
+            id: {
+              type: 'ArrayPattern',
+              elements: [
+                {
+                  type: 'Identifier',
+                  name: 'a',
+                },
+                null,
+                {
+                  type: 'Identifier',
+                  name: 'b',
+                },
+              ],
+            },
+            init: {
+              type: 'ArrayExpression',
+              elements: [
+                {
+                  type: 'Literal',
+                  value: 1,
+                },
+                null,
+                {
+                  type: 'Literal',
+                  value: 2,
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  });
+
+  // Babel AST array nodes
+  expect(parse(source, {babel: true})).toMatchObject({
+    type: 'Program',
+    body: [
+      {
+        type: 'VariableDeclaration',
+        declarations: [
+          {
+            type: 'VariableDeclarator',
+            id: {
+              type: 'ArrayPattern',
+              elements: [
+                {
+                  type: 'Identifier',
+                  name: 'a',
+                },
+                null,
+                {
+                  type: 'Identifier',
+                  name: 'b',
+                },
+              ],
+            },
+            init: {
+              type: 'ArrayExpression',
+              elements: [
+                {
+                  type: 'NumericLiteral',
+                  value: 1,
+                },
+                null,
+                {
+                  type: 'NumericLiteral',
+                  value: 2,
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  });
+});

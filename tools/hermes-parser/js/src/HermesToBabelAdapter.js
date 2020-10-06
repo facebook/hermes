@@ -31,6 +31,8 @@ class HermesToBabelAdapter extends HermesASTAdapter {
       case 'Program':
       case 'BlockStatement':
         return this.mapNodeWithDirectives(node);
+      case 'Empty':
+        return this.mapEmpty(node);
       default:
         return this.mapNodeDefault(node);
     }
