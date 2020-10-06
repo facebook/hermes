@@ -72,7 +72,10 @@ test('Parse error does not include caret line for non-ASCII characters', () => {
 });
 
 test('Parsing comments', () => {
-  expect(parse('/*Block comment*/ 1; // Line comment')).toMatchObject({
+  const source = '/*Block comment*/ 1; // Line comment';
+
+  // ESTree comments in AST
+  expect(parse(source)).toMatchObject({
     type: 'Program',
     comments: [
       {
@@ -107,6 +110,51 @@ test('Parsing comments', () => {
       },
     ],
   });
+
+  // Babel comments in AST
+  expect(parse(source, {babel: true})).toMatchObject({
+    type: 'File',
+    program: {
+      type: 'Program',
+      body: [
+        {
+          type: 'ExpressionStatement',
+        },
+      ],
+    },
+    comments: [
+      {
+        type: 'Block',
+        value: 'Block comment',
+      },
+      {
+        type: 'Line',
+        value: ' Line comment',
+      },
+    ],
+  });
+});
+
+test('Babel root File node', () => {
+  expect(parse('test', {babel: true})).toMatchObject({
+    type: 'File',
+    loc: loc(1, 0, 1, 4),
+    start: 0,
+    end: 4,
+    program: {
+      type: 'Program',
+      loc: loc(1, 0, 1, 4),
+      start: 0,
+      end: 4,
+      body: [
+        {
+          type: 'ExpressionStatement',
+        },
+      ],
+      directives: [],
+    },
+    comments: [],
+  });
 });
 
 test('Source locations', () => {
@@ -133,24 +181,27 @@ test('Source locations', () => {
 
   // Babel source locations include start/end properties
   expect(parse('Foo', {babel: true})).toMatchObject({
-    type: 'Program',
-    body: [
-      {
-        type: 'ExpressionStatement',
-        loc: {
-          start: {
-            line: 1,
-            column: 0,
+    type: 'File',
+    program: {
+      type: 'Program',
+      body: [
+        {
+          type: 'ExpressionStatement',
+          loc: {
+            start: {
+              line: 1,
+              column: 0,
+            },
+            end: {
+              line: 1,
+              column: 3,
+            },
           },
-          end: {
-            line: 1,
-            column: 3,
-          },
+          start: 0,
+          end: 3,
         },
-        start: 0,
-        end: 3,
-      },
-    ],
+      ],
+    },
   });
 });
 
@@ -197,38 +248,41 @@ Foo;`;
 
   // Babel top level directive nodes
   expect(parse(source, {babel: true})).toMatchObject({
-    type: 'Program',
-    body: [
-      {
-        type: 'ExpressionStatement',
-        loc: loc(3, 0, 3, 4),
-        expression: {
-          type: 'Identifier',
-          name: 'Foo',
-          loc: loc(3, 0, 3, 3),
+    type: 'File',
+    program: {
+      type: 'Program',
+      body: [
+        {
+          type: 'ExpressionStatement',
+          loc: loc(3, 0, 3, 4),
+          expression: {
+            type: 'Identifier',
+            name: 'Foo',
+            loc: loc(3, 0, 3, 3),
+          },
         },
-      },
-    ],
-    directives: [
-      {
-        type: 'Directive',
-        loc: loc(1, 0, 1, 13),
-        value: {
-          type: 'DirectiveLiteral',
-          loc: loc(1, 0, 1, 12),
-          value: 'use strict',
+      ],
+      directives: [
+        {
+          type: 'Directive',
+          loc: loc(1, 0, 1, 13),
+          value: {
+            type: 'DirectiveLiteral',
+            loc: loc(1, 0, 1, 12),
+            value: 'use strict',
+          },
         },
-      },
-      {
-        type: 'Directive',
-        loc: loc(2, 0, 2, 13),
-        value: {
-          type: 'DirectiveLiteral',
-          loc: loc(2, 0, 2, 12),
-          value: 'use strict',
+        {
+          type: 'Directive',
+          loc: loc(2, 0, 2, 13),
+          value: {
+            type: 'DirectiveLiteral',
+            loc: loc(2, 0, 2, 12),
+            value: 'use strict',
+          },
         },
-      },
-    ],
+      ],
+    },
   });
 });
 
@@ -275,37 +329,40 @@ test('Function body directive', () => {
 
   // Babel directive node in function body
   expect(parse(source, {babel: true})).toMatchObject({
-    type: 'Program',
-    body: [
-      {
-        type: 'FunctionDeclaration',
-        body: {
-          type: 'BlockStatement',
-          body: [
-            {
-              type: 'ExpressionStatement',
-              loc: loc(3, 4, 3, 8),
-              expression: {
-                type: 'Identifier',
-                name: 'Foo',
-                loc: loc(3, 4, 3, 7),
+    type: 'File',
+    program: {
+      type: 'Program',
+      body: [
+        {
+          type: 'FunctionDeclaration',
+          body: {
+            type: 'BlockStatement',
+            body: [
+              {
+                type: 'ExpressionStatement',
+                loc: loc(3, 4, 3, 8),
+                expression: {
+                  type: 'Identifier',
+                  name: 'Foo',
+                  loc: loc(3, 4, 3, 7),
+                },
               },
-            },
-          ],
-          directives: [
-            {
-              type: 'Directive',
-              loc: loc(2, 4, 2, 17),
-              value: {
-                type: 'DirectiveLiteral',
-                loc: loc(2, 4, 2, 16),
-                value: 'use strict',
+            ],
+            directives: [
+              {
+                type: 'Directive',
+                loc: loc(2, 4, 2, 17),
+                value: {
+                  type: 'DirectiveLiteral',
+                  loc: loc(2, 4, 2, 16),
+                  value: 'use strict',
+                },
               },
-            },
-          ],
+            ],
+          },
         },
-      },
-    ],
+      ],
+    },
   });
 });
 
@@ -384,44 +441,47 @@ test('Literals', () => {
 
   // Babel AST literal nodes
   expect(parse(source, {babel: true})).toMatchObject({
-    type: 'Program',
-    body: [
-      {
-        type: 'ExpressionStatement',
-        expression: {
-          type: 'NullLiteral',
+    type: 'File',
+    program: {
+      type: 'Program',
+      body: [
+        {
+          type: 'ExpressionStatement',
+          expression: {
+            type: 'NullLiteral',
+          },
         },
-      },
-      {
-        type: 'ExpressionStatement',
-        expression: {
-          type: 'NumericLiteral',
-          value: 10,
+        {
+          type: 'ExpressionStatement',
+          expression: {
+            type: 'NumericLiteral',
+            value: 10,
+          },
         },
-      },
-      {
-        type: 'ExpressionStatement',
-        expression: {
-          type: 'StringLiteral',
-          value: 'test',
+        {
+          type: 'ExpressionStatement',
+          expression: {
+            type: 'StringLiteral',
+            value: 'test',
+          },
         },
-      },
-      {
-        type: 'ExpressionStatement',
-        expression: {
-          type: 'BooleanLiteral',
-          value: true,
+        {
+          type: 'ExpressionStatement',
+          expression: {
+            type: 'BooleanLiteral',
+            value: true,
+          },
         },
-      },
-      {
-        type: 'ExpressionStatement',
-        expression: {
-          type: 'RegExpLiteral',
-          pattern: 'foo',
-          flags: 'g',
+        {
+          type: 'ExpressionStatement',
+          expression: {
+            type: 'RegExpLiteral',
+            pattern: 'foo',
+            flags: 'g',
+          },
         },
-      },
-    ],
+      ],
+    },
   });
 });
 
@@ -473,44 +533,47 @@ test('Arrays', () => {
 
   // Babel AST array nodes
   expect(parse(source, {babel: true})).toMatchObject({
-    type: 'Program',
-    body: [
-      {
-        type: 'VariableDeclaration',
-        declarations: [
-          {
-            type: 'VariableDeclarator',
-            id: {
-              type: 'ArrayPattern',
-              elements: [
-                {
-                  type: 'Identifier',
-                  name: 'a',
-                },
-                null,
-                {
-                  type: 'Identifier',
-                  name: 'b',
-                },
-              ],
+    type: 'File',
+    program: {
+      type: 'Program',
+      body: [
+        {
+          type: 'VariableDeclaration',
+          declarations: [
+            {
+              type: 'VariableDeclarator',
+              id: {
+                type: 'ArrayPattern',
+                elements: [
+                  {
+                    type: 'Identifier',
+                    name: 'a',
+                  },
+                  null,
+                  {
+                    type: 'Identifier',
+                    name: 'b',
+                  },
+                ],
+              },
+              init: {
+                type: 'ArrayExpression',
+                elements: [
+                  {
+                    type: 'NumericLiteral',
+                    value: 1,
+                  },
+                  null,
+                  {
+                    type: 'NumericLiteral',
+                    value: 2,
+                  },
+                ],
+              },
             },
-            init: {
-              type: 'ArrayExpression',
-              elements: [
-                {
-                  type: 'NumericLiteral',
-                  value: 1,
-                },
-                null,
-                {
-                  type: 'NumericLiteral',
-                  value: 2,
-                },
-              ],
-            },
-          },
-        ],
-      },
-    ],
+          ],
+        },
+      ],
+    },
   });
 });

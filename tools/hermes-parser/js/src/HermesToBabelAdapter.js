@@ -29,6 +29,7 @@ class HermesToBabelAdapter extends HermesASTAdapter {
     this.fixSourceLocation(node);
     switch (node.type) {
       case 'Program':
+        return this.mapProgram(node);
       case 'BlockStatement':
         return this.mapNodeWithDirectives(node);
       case 'Empty':
@@ -36,6 +37,21 @@ class HermesToBabelAdapter extends HermesASTAdapter {
       default:
         return this.mapNodeDefault(node);
     }
+  }
+
+  mapProgram(node) {
+    // Visit child nodes and convert to directives
+    const {comments, ...program} = this.mapNodeWithDirectives(node);
+
+    // Rename root node to File node and move Program node under program property
+    return {
+      type: 'File',
+      loc: program.loc,
+      start: program.start,
+      end: program.end,
+      program,
+      comments,
+    };
   }
 
   mapNodeWithDirectives(node) {
