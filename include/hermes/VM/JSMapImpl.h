@@ -49,7 +49,8 @@ class JSMapImpl final : public JSObject {
     if (LLVM_UNLIKELY(crtRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto storageHandle = runtime->makeHandle<OrderedHashMap>(*crtRes);
+    auto storageHandle =
+        runtime->makeHandle<OrderedHashMap>(std::move(*crtRes));
     self->storage_.set(runtime, storageHandle.get(), &runtime->getHeap());
     return ExecutionStatus::RETURNED;
   }

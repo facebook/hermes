@@ -9,8 +9,10 @@
 #define HERMES_VM_SLOTACCEPTORDEFAULT_H
 
 #include "hermes/VM/GC.h"
+#include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/PointerBase.h"
 #include "hermes/VM/SlotAcceptor.h"
+#include "hermes/VM/WeakRef.h"
 
 namespace hermes {
 namespace vm {
@@ -23,9 +25,7 @@ struct SlotAcceptorDefault : public SlotAcceptor {
 
   using SlotAcceptor::accept;
 
-#ifdef HERMESVM_COMPRESSED_POINTERS
-  void accept(BasedPointer &ptr) override;
-#endif
+  inline void accept(BasedPointer &ptr) override;
 
   void accept(GCPointerBase &ptr) override final {
     accept(ptr.getLoc(&gc));
@@ -46,7 +46,6 @@ struct SlotAcceptorWithNamesDefault : public RootAcceptor {
 
   using SlotAcceptorWithNames::accept;
 
-#ifdef HERMESVM_COMPRESSED_POINTERS
   void accept(BasedPointer &ptr, const char *name) override {
     // See comments in SlotAcceptorDefault::accept(BasedPointer &) for
     // explanation.
@@ -58,7 +57,6 @@ struct SlotAcceptorWithNamesDefault : public RootAcceptor {
     accept(actualizedPointer, name);
     ptr = base->pointerToBasedNonNull(actualizedPointer);
   }
-#endif
 
   void accept(GCPointerBase &ptr, const char *name) override final {
     accept(ptr.getLoc(&gc), name);
@@ -81,12 +79,48 @@ struct WeakRootAcceptorDefault : public WeakRootAcceptor {
   /// Subclasses override this implementation instead of accept(WeakRootBase &).
   virtual void acceptWeak(void *&ptr) = 0;
 
-#ifdef HERMESVM_COMPRESSED_POINTERS
   /// This gets a default implementation: extract the real pointer to a local,
   /// call acceptWeak on that, write the result back as a BasedPointer.
-  virtual void acceptWeak(BasedPointer &ptr);
-#endif
+  inline virtual void acceptWeak(BasedPointer &ptr);
 };
+
+/// @name Inline implementations.
+/// @{
+
+inline void WeakRootAcceptorDefault::acceptWeak(WeakRootBase &ptr) {
+  GCPointerBase::StorageType weakRootStorage = ptr.getNoBarrierUnsafe();
+  acceptWeak(weakRootStorage);
+  // Assign back to the input pointer location.
+  ptr = weakRootStorage;
+}
+
+inline void SlotAcceptorDefault::accept(BasedPointer &ptr) {
+  if (!ptr) {
+    return;
+  }
+  // accept takes an l-value reference and potentially writes to it.
+  // Write the value back out to the BasedPointer.
+  PointerBase *const base = gc.getPointerBase();
+  void *actualizedPointer = base->basedToPointerNonNull(ptr);
+  accept(actualizedPointer);
+  // Assign back to the based pointer.
+  ptr = base->pointerToBased(actualizedPointer);
+}
+
+inline void WeakRootAcceptorDefault::acceptWeak(BasedPointer &ptr) {
+  if (!ptr) {
+    return;
+  }
+  // accept takes an l-value reference and potentially writes to it.
+  // Write the value back out to the BasedPointer.
+  PointerBase *const base = gcForWeakRootDefault.getPointerBase();
+  void *actualizedPointer = base->basedToPointerNonNull(ptr);
+  acceptWeak(actualizedPointer);
+  // Assign back to the based pointer.
+  ptr = base->pointerToBased(actualizedPointer);
+}
+
+/// @}
 
 } // namespace vm
 } // namespace hermes

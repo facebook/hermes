@@ -14,10 +14,6 @@ function f() {
   function* g() {
     var g_var = 32;
     function h() {
-      /* Some text to pad out the function so that it won't be eagerly compiled
-       * for being too short. Lorem ipsum dolor sit amet, consectetur adipiscing
-       * elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-       */
       return f_var + g_var;
     }
     yield h();

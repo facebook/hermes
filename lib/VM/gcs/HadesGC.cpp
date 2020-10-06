@@ -11,7 +11,6 @@
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCPointer.h"
-#include "hermes/VM/SlotAcceptorDefault-inline.h"
 #include "hermes/VM/SlotAcceptorDefault.h"
 
 #include <array>
@@ -35,7 +34,7 @@ HadesGC::HeapSegment::HeapSegment(AlignedStorage &&storage)
   growToLimit();
 }
 
-void HadesGC::HeapSegment::transitionToFreelist(OldGen &og) {
+void HadesGC::HeapSegment::transitionToFreelist(OldGen &og, size_t segmentIdx) {
   assert(bumpAllocMode_ && "This segment has already been transitioned");
   // Add a free list cell that spans the distance from end to level.
   const uint32_t sz = end() - level();
@@ -50,14 +49,12 @@ void HadesGC::HeapSegment::transitionToFreelist(OldGen &og) {
   AllocResult res = bumpAlloc(sz);
   assert(res.success && "Failed to bump the level to the end");
   bumpAllocMode_ = false;
-  og.addCellToFreelist(res.ptr, sz, /*alreadyFree*/ true);
+  og.addCellToFreelist(res.ptr, sz, segmentIdx, /*alreadyFree*/ true);
 }
 
-GCCell *HadesGC::OldGen::finishAlloc(FreelistCell *cell, uint32_t sz) {
+GCCell *HadesGC::OldGen::finishAlloc(GCCell *cell, uint32_t sz) {
   // Track the number of allocated bytes in a segment.
   allocatedBytes_ += sz;
-  // Unpoison the memory so that the mutator can use it.
-  __asan_unpoison_memory_region(cell + 1, sz - sizeof(FreelistCell));
   // Write a mark bit so this entry doesn't get free'd by the sweeper.
   HeapSegment::setCellMarkBit(cell);
   // Could overwrite the VTable, but the allocator will write a new one in
@@ -73,7 +70,7 @@ AllocResult HadesGC::HeapSegment::bumpAlloc(uint32_t sz) {
   if (res.success) {
     // Set the cell head for any successful alloc, so that write barriers can
     // move from dirty cards to the head of the object.
-    setCellHead(static_cast<GCCell *>(res.ptr));
+    setCellHead(static_cast<GCCell *>(res.ptr), sz);
     // No need to change allocatedBytes_ here, as AlignedHeapSegment::used()
     // already tracks that. Once the cell is transitioned to freelist mode the
     // right value will be stored in OldGen::allocatedBytes_.
@@ -89,25 +86,19 @@ AllocResult HadesGC::HeapSegment::youngGenBumpAlloc(uint32_t sz) {
   return AlignedHeapSegment::alloc(sz);
 }
 
-void HadesGC::OldGen::addCellToFreelist(GCCell *cell) {
-  addCellToFreelist(cell, cell->getAllocatedSize(), /*alreadyFree*/ false);
+void HadesGC::OldGen::addCellToFreelist(GCCell *cell, size_t segmentIdx) {
+  addCellToFreelist(
+      cell, cell->getAllocatedSize(), segmentIdx, /*alreadyFree*/ false);
 }
 
 void HadesGC::OldGen::addCellToFreelist(
     void *addr,
     uint32_t sz,
+    size_t segmentIdx,
     bool alreadyFree) {
   assert(
       sz >= sizeof(FreelistCell) &&
       "Cannot construct a FreelistCell into an allocation in the OG");
-  // Get the size bucket for the cell being added;
-  const uint32_t bucket = getFreelistBucket(sz);
-  // Push onto the size-specific free list and set the corresponding bit in the
-  // bit array.
-  FreelistCell *newFreeCell =
-      new (addr) FreelistCell{sz, freelistBuckets_[bucket]};
-  freelistBuckets_[bucket] = newFreeCell;
-  freelistBucketBitArray_.set(bucket, true);
   if (!alreadyFree) {
     // We free'd this many bytes.
     assert(
@@ -115,36 +106,84 @@ void HadesGC::OldGen::addCellToFreelist(
         "Free'ing a cell that is larger than what is left allocated");
     allocatedBytes_ -= sz;
   }
+  FreelistCell *newFreeCell = new (addr) FreelistCell{sz};
+  addCellToFreelist(newFreeCell, segmentIdx);
+}
+
+void HadesGC::OldGen::addCellToFreelist(FreelistCell *cell, size_t segmentIdx) {
+  const size_t sz = cell->getAllocatedSize();
+  // Get the size bucket for the cell being added;
+  const uint32_t bucket = getFreelistBucket(sz);
+  // Push onto the size-specific free list for this bucket and segment.
+  cell->next_ = freelistSegmentsBuckets_[segmentIdx][bucket];
+  freelistSegmentsBuckets_[segmentIdx][bucket] = cell;
+
+  // Set a bit indicating that there are now available blocks in this segment
+  // for the given bucket.
+  freelistBucketSegmentBitArray_[bucket].set(segmentIdx);
+  // Set a bit indicating that there are now available blocks for this bucket.
+  freelistBucketBitArray_.set(bucket, true);
+
   // In ASAN builds, poison the memory outside of the FreelistCell so that
-  // accesses are flagged as illegal.
+  // accesses are flagged as illegal while it is in the freelist.
   // Here, and in other places where FreelistCells are poisoned, use +1 on the
   // pointer to skip towards the memory region directly after the FreelistCell
   // header of a cell. This way the header is always intact and readable, and
   // only the contents of the cell are poisoned.
-  __asan_poison_memory_region(newFreeCell + 1, sz - sizeof(FreelistCell));
+  __asan_poison_memory_region(cell + 1, sz - sizeof(FreelistCell));
+}
+
+HadesGC::OldGen::FreelistCell *HadesGC::OldGen::removeCellFromFreelist(
+    size_t bucket,
+    size_t segmentIdx) {
+  return removeCellFromFreelist(
+      &freelistSegmentsBuckets_[segmentIdx][bucket], bucket, segmentIdx);
+}
+
+HadesGC::OldGen::FreelistCell *HadesGC::OldGen::removeCellFromFreelist(
+    FreelistCell **prevLoc,
+    size_t bucket,
+    size_t segmentIdx) {
+  FreelistCell *cell = *prevLoc;
+  assert(cell && "Cannot get a null cell from freelist");
+
+  // Update whatever was pointing to the cell we are removing.
+  *prevLoc = cell->next_;
+  // Update the bit arrays if the given freelist is now empty.
+  if (!freelistSegmentsBuckets_[segmentIdx][bucket]) {
+    // Set the bit for this segment and bucket to 0.
+    freelistBucketSegmentBitArray_[bucket].reset(segmentIdx);
+    // If setting the bit to 0 above made this bucket empty for all segments,
+    // set the bucket bit to 0 as well.
+    freelistBucketBitArray_.set(
+        bucket, !freelistBucketSegmentBitArray_[bucket].empty());
+  }
+
+  // Unpoison the memory so that the mutator can use it.
+  __asan_unpoison_memory_region(
+      cell + 1, cell->getAllocatedSize() - sizeof(FreelistCell));
+  return cell;
 }
 
 /* static */
-void HadesGC::HeapSegment::setCellHead(const GCCell *cell) {
-  MarkBitArrayNC &heads = cellHeadsCovering(cell);
-  heads.mark(heads.addressToIndex(cell));
+void HadesGC::HeapSegment::setCellHead(
+    const GCCell *cellStart,
+    const size_t sz) {
+  const char *start = reinterpret_cast<const char *>(cellStart);
+  const char *end = start + sz;
+  CardTable *cards = cardTableCovering(start);
+  auto boundary = cards->nextBoundary(start);
+  // If this object crosses a card boundary, then update boundaries
+  // appropriately.
+  if (boundary.address() < end) {
+    cards->updateBoundaries(&boundary, start, end);
+  }
 }
 
-GCCell *HadesGC::HeapSegment::getCellHead(const void *address) {
-  MarkBitArrayNC &heads = cellHeads();
-  auto ind = heads.addressToIndex(address);
-  // Go backwards from the current address looking for a marked bit, which means
-  // that the address contains a GCCell header.
-  // TODO: Optimize this with zero scanning.
-  while (!heads.at(ind)) {
-    // There is guaranteed to be a marked cell head before ind reaches 0,
-    // because the intial free list creation of the segment sets the first head.
-    assert(ind && "About to walk off the end of the object heads table");
-    --ind;
-  }
-  GCCell *cell = reinterpret_cast<GCCell *>(heads.indexToAddress(ind));
-  assert(
-      cell->isValid() && "Object heads table doesn't point to a valid object");
+GCCell *HadesGC::HeapSegment::getFirstCellHead(size_t cardIdx) {
+  CardTable &cards = cardTable();
+  GCCell *cell = cards.firstObjForCard(cardIdx);
+  assert(cell->isValid() && "Object head doesn't point to a valid object");
   return cell;
 }
 
@@ -160,40 +199,17 @@ void HadesGC::HeapSegment::forAllObjs(CallbackFunction callback) {
   }
 }
 
-void HadesGC::OldGen::FreelistCell::split(OldGen &og, uint32_t sz) {
+GCCell *HadesGC::OldGen::FreelistCell::carve(uint32_t sz) {
   const auto origSize = getAllocatedSize();
   assert(
       origSize >= sz + minAllocationSize() &&
       "Can't split if it would leave too small of a second cell");
-  char *nextCellAddress = reinterpret_cast<char *>(this) + sz;
-  // We're about to touch some memory in the newly split cell.
-  // All other memory should remain poisoned.
-  __asan_unpoison_memory_region(nextCellAddress, sizeof(FreelistCell));
-  // Adding the newly formed cell to the free list will add it to the
-  // appropriate size bucket.
-  og.addCellToFreelist(nextCellAddress, origSize - sz, /*alreadyFree*/ true);
-  GCCell *const newCell = reinterpret_cast<GCCell *>(nextCellAddress);
-#ifndef NDEBUG
-  const auto newSize = newCell->getAllocatedSize();
-  assert(
-      isSizeHeapAligned(newSize) && newSize >= minAllocationSize() &&
-      "Invalid size for a split cell");
-  assert(newSize + sz == origSize && "Space was wasted during a split");
-#endif
-  // TODO: Right now the card table boundaries are unused, because creating all
-  // of them is too expensive on every split, especially if the free list cell
-  // is huge (such as after compaction).
-  // Some reasonable options to speed this up:
-  // * Split free list cells at higher addresses instead of the lower addresses.
-  //    This requires updating fewer card table boundaries.
-  // * If a split cell is huge, consider updating only the closest boundaries,
-  //    taking advantage of the exponential encoding.
-  // Using cell heads as a MarkBitArray was chosen because it's the simplest
-  // code that is correct, and under the assumption that searching for the head
-  // of a cell extending into a dirty card is not a critical operation.
-  // This is the only operation in a segment that actually creates new cells,
-  // all other cells are already present.
-  HeapSegment::setCellHead(newCell);
+  const auto finalSize = origSize - sz;
+  char *newCellAddress = reinterpret_cast<char *>(this) + finalSize;
+  GCCell *const newCell = reinterpret_cast<GCCell *>(newCellAddress);
+  setSizeFromGC(finalSize);
+  HeapSegment::setCellHead(newCell, sz);
+  return newCell;
 }
 
 class HadesGC::CollectionStats final {
@@ -202,20 +218,25 @@ class HadesGC::CollectionStats final {
   using TimePoint = std::chrono::time_point<Clock>;
   using Duration = std::chrono::microseconds;
 
-  CollectionStats(HadesGC *gc, std::string extraInfo = "")
-      : gc_{gc}, extraInfo_{std::move(extraInfo)} {}
+  CollectionStats(HadesGC *gc, std::string cause, std::string extraInfo = "")
+      : gc_{gc}, cause_{std::move(cause)}, extraInfo_{std::move(extraInfo)} {}
   ~CollectionStats();
 
   /// Record the allocated bytes in the heap and its size before a collection
   /// begins.
-  void setBeforeSizes(uint64_t allocated, uint64_t sz) {
+  void setBeforeSizes(uint64_t allocated, uint64_t external, uint64_t sz) {
     allocatedBefore_ = allocated;
+    externalBefore_ = external;
     size_ = sz;
   }
 
   /// Record how many bytes were swept during the collection.
   void setSweptBytes(uint64_t sweptBytes) {
     sweptBytes_ = sweptBytes;
+  }
+
+  void setSweptExternalBytes(uint64_t externalBytes) {
+    sweptExternalBytes_ = externalBytes;
   }
 
   /// Record that a collection is beginning right now.
@@ -243,6 +264,10 @@ class HadesGC::CollectionStats final {
     return allocatedBefore_ - sweptBytes_;
   }
 
+  uint64_t afterExternalBytes() const {
+    return externalBefore_ - sweptExternalBytes_;
+  }
+
   double survivalRatio() const {
     return allocatedBefore_
         ? static_cast<double>(afterAllocatedBytes()) / allocatedBefore_
@@ -251,13 +276,16 @@ class HadesGC::CollectionStats final {
 
  private:
   HadesGC *gc_;
+  std::string cause_;
   std::string extraInfo_;
   TimePoint beginTime_{};
   TimePoint endTime_{};
   Duration cpuDuration_{};
   uint64_t allocatedBefore_{0};
+  uint64_t externalBefore_{0};
   uint64_t size_{0};
   uint64_t sweptBytes_{0};
+  uint64_t sweptExternalBytes_{0};
 };
 
 HadesGC::CollectionStats::~CollectionStats() {
@@ -265,6 +293,7 @@ HadesGC::CollectionStats::~CollectionStats() {
       gc_->getName(),
       kHeapNameForAnalytics,
       extraInfo_,
+      std::move(cause_),
       std::chrono::duration_cast<std::chrono::milliseconds>(
           endTime_ - beginTime_),
       std::chrono::duration_cast<std::chrono::milliseconds>(cpuDuration_),
@@ -500,7 +529,6 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
     push(cell);
   }
 
-#ifdef HERMESVM_COMPRESSED_POINTERS
   void accept(BasedPointer &ptrRef) override {
     // Copy into local variable in case it changes during evaluation.
     const BasedPointer ptr = ptrRef;
@@ -517,7 +545,6 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
         ptrCopy == actualizedPointer &&
         "MarkAcceptor::accept should not modify its argument");
   }
-#endif
 
   void accept(HermesValue &hvRef) override {
     const HermesValue hv = hvRef;
@@ -806,12 +833,17 @@ HadesGC::HadesGC(
           // At least one YG segment and one OG segment.
           2 * AlignedStorage::size())},
       provider_(std::move(provider)),
-      youngGen_{createSegment(/*isYoungGen*/ true)},
       promoteYGToOG_{!gcConfig.getAllocInYoung()},
       revertToYGAtTTI_{gcConfig.getRevertToYGAtTTI()},
       occupancyTarget_(gcConfig.getOccupancyTarget()),
       // Assume about 30% of the YG will survive initially.
       ygAverageSurvivalRatio_{/*weight*/ 0.5, /*init*/ 0.3} {
+  // createSegment relies on member variables and should not be called until
+  // they are initialised.
+  if (!(youngGen_ = createSegment(/*isYoungGen*/ true))) {
+    hermes_fatal("Failed to initialize the young gen");
+  }
+  ygStart_ = youngGen_->lowLim();
   const size_t minHeapSegments =
       // Align up first to round up.
       llvh::alignTo<AlignedStorage::size()>(gcConfig.getMinHeapSize()) /
@@ -900,7 +932,7 @@ void HadesGC::printStats(JSONEmitter &json) {
   json.closeDict();
 }
 
-void HadesGC::collect() {
+void HadesGC::collect(std::string cause) {
   {
     // Wait for any existing collections to finish before starting a new one.
     std::lock_guard<Mutex> lk{gcMutex_};
@@ -908,7 +940,7 @@ void HadesGC::collect() {
   }
   // This function should block until a collection finishes.
   // YG needs to be empty in order to do an OG collection.
-  youngGenCollection(/*forceOldGenCollection*/ true);
+  youngGenCollection(std::move(cause), /*forceOldGenCollection*/ true);
   // Wait for the collection to complete.
   std::lock_guard<Mutex> lk{gcMutex_};
   waitForCollectionToFinish();
@@ -936,7 +968,7 @@ void HadesGC::waitForCollectionToFinish() {
   worldStopped_ = true;
   // Notify a waiting OG collection that it can complete.
   lk.unlock();
-  stopTheWorldCondVar_.notify_all();
+  stopTheWorldCondVar_.notify_one();
   // Wait for an existing collection to finish.
   oldGenCollectionThread_.join();
   // Undo the worldStopped_ change, as the mutator will now resume. Can't rely
@@ -945,6 +977,8 @@ void HadesGC::waitForCollectionToFinish() {
   lk.lock();
   assert(concurrentPhase_ == Phase::None);
   worldStopped_ = false;
+  // Check for a tripwire, since we know a collection just completed.
+  checkTripwireAndResetStats();
 
   assert(lk && "Lock must be re-acquired before exiting");
   assert(gcMutex_ && "GC mutex must be re-acquired before exiting");
@@ -953,7 +987,7 @@ void HadesGC::waitForCollectionToFinish() {
   lk.release();
 }
 
-void HadesGC::oldGenCollection() {
+void HadesGC::oldGenCollection(std::string cause) {
   // Full collection:
   //  * Mark all live objects by iterating through a worklist.
   //  * Sweep dead objects onto the free lists.
@@ -974,13 +1008,15 @@ void HadesGC::oldGenCollection() {
   // Note: This line calls the destructor for the previous CollectionStats (if
   // any) in addition to creating a new CollectionStats. It is desirable to
   // call the destructor here so that the analytics callback is invoked from the
-  // mutator thread.
-  ogCollectionStats_ = llvh::make_unique<CollectionStats>(this, "old");
+  // mutator thread. This might also be done from checkTripwireAndResetStats.
+  ogCollectionStats_ =
+      llvh::make_unique<CollectionStats>(this, std::move(cause), "old");
   // NOTE: Leave CPU time as zero if the collection isn't concurrent, as the
   // times aren't useful.
   auto cpuTimeStart = oscompat::thread_cpu_time();
   ogCollectionStats_->setBeginTime();
-  ogCollectionStats_->setBeforeSizes(oldGen_.allocatedBytes(), oldGen_.size());
+  ogCollectionStats_->setBeforeSizes(
+      oldGen_.allocatedBytes(), oldGen_.externalBytes(), oldGen_.size());
 
   if (revertToYGAtTTI_) {
     // If we've reached the first OG collection, and reverting behavior is
@@ -1096,7 +1132,7 @@ void HadesGC::completeMarking() {
   // Let the thread that yielded know that the STW pause has completed.
   stopTheWorldRequested_ = false;
   worldStopped_ = false;
-  stopTheWorldCondVar_.notify_all();
+  stopTheWorldCondVar_.notify_one();
 }
 
 void HadesGC::completeMarkingAssumeLocks() {
@@ -1150,9 +1186,9 @@ void HadesGC::findYoungGenSymbolsAndWeakRefs() {
 
     // Do nothing for pointers.
     void accept(void *&) override {}
-#ifdef HERMESVM_COMPRESSED_POINTERS
+
     void accept(BasedPointer &) override {}
-#endif
+
     void accept(GCPointerBase &ptr) override {}
 
     void accept(HermesValue &hvRef) override {
@@ -1218,6 +1254,7 @@ void HadesGC::sweep() {
   }
 
   uint64_t sweptBytes = 0;
+  uint64_t sweptExternalBytes = 0;
   // The number of segments can change during this loop if a YG collection
   // interleaves. There's no need to sweep those extra segments since they are
   // full of newly promoted objects from YG (which have all their mark bits
@@ -1226,7 +1263,10 @@ void HadesGC::sweep() {
     // Acquire and release the lock once per loop, to allow YG collections to
     // interrupt the sweeper.
     std::lock_guard<Mutex> lk{gcMutex_};
-    oldGen_[i].forAllObjs([this, isTracking, &sweptBytes](GCCell *cell) {
+    // Re-evaluate this start point each time, as releasing the gcMutex_ allows
+    // allocations into the old gen, which might boost the credited memory.
+    const uint64_t externalBytesBefore = oldGen_.externalBytes();
+    oldGen_[i].forAllObjs([this, isTracking, &sweptBytes, i](GCCell *cell) {
       // forAllObjs skips free list cells, so no need to check for those.
       assert(cell->isValid() && "Invalid cell in sweeping");
       if (HeapSegment::getCellMarkBit(cell)) {
@@ -1235,15 +1275,16 @@ void HadesGC::sweep() {
       sweptBytes += cell->getAllocatedSize();
       // Cell is dead, run its finalizer first if it has one.
       cell->getVT()->finalizeIfExists(cell, this);
-      oldGen_.addCellToFreelist(cell);
+      oldGen_.addCellToFreelist(cell, i);
       if (isTracking) {
-        // There is no race condition here, because the object has already been
-        // determined to be dead, so nothing can be accessing it, or asking for
-        // its ID.
+        // There is no race condition here, because the object has already
+        // been determined to be dead, so nothing can be accessing it, or
+        // asking for its ID.
         getIDTracker().untrackObject(cell);
         getAllocationLocationTracker().freeAlloc(cell);
       }
     });
+    sweptExternalBytes += externalBytesBefore - oldGen_.externalBytes();
 
     // Do *not* clear the mark bits. This is important to have a cheaper
     // solution to a race condition in weakRefReadBarrier. If it gets
@@ -1255,9 +1296,18 @@ void HadesGC::sweep() {
   }
   std::lock_guard<Mutex> lk{gcMutex_};
   ogCollectionStats_->setSweptBytes(sweptBytes);
+  ogCollectionStats_->setSweptExternalBytes(sweptExternalBytes);
   oldGen_.updateAverageSurvivalRatio(ogCollectionStats_->survivalRatio());
-  const size_t targetCapacity =
-      ogCollectionStats_->afterAllocatedBytes() / occupancyTarget_;
+  // The formula for occupancyTarget_ is:
+  // occupancyTarget_ = (allocatedBytes + externalBytes) / (capacityBytes +
+  //  externalBytes)
+  // Solving for capacityBytes:
+  // capacityBytes = (allocatedBytes + externalBytes) / occupancyTarget_ -
+  //  externalBytes
+  const size_t targetCapacity = (ogCollectionStats_->afterAllocatedBytes() +
+                                 ogCollectionStats_->afterExternalBytes()) /
+          occupancyTarget_ -
+      ogCollectionStats_->afterExternalBytes();
   const size_t targetSegments =
       llvh::divideCeil(targetCapacity, HeapSegment::maxSize());
   const size_t finalSegments =
@@ -1284,6 +1334,60 @@ void HadesGC::finalizeAllLocked() {
       assert(cell->isValid() && "Invalid cell in finalizeAll");
       cell->getVT()->finalizeIfExists(cell, this);
     });
+  }
+}
+
+void HadesGC::creditExternalMemory(GCCell *cell, uint32_t sz) {
+  assert(canAllocExternalMemory(sz) && "Precondition");
+  if (inYoungGen(cell)) {
+    ygExternalBytes_ += sz;
+    // Instead of setting the effective end, which forces YG collections to
+    // happen sooner, check if the new total external bytes is large enough to
+    // maybe warrant an OG GC.
+    const uint64_t totalAllocated = allocatedBytes() + externalBytes();
+    // Add one heap segment for YG capacity bytes.
+    const uint64_t totalBytes =
+        (oldGen_.capacityBytes() + HeapSegment::maxSize()) + externalBytes();
+    constexpr double kCollectionThreshold = 0.75;
+    double allocatedRatio = static_cast<double>(totalAllocated) / totalBytes;
+    if (allocatedRatio >= kCollectionThreshold) {
+      // Set the effective end to the level, which will force a GC to occur
+      // on the next YG alloc.
+      youngGen_->setEffectiveEnd(youngGen_->level());
+    }
+  } else {
+    std::lock_guard<Mutex> lk{gcMutex_};
+    oldGen_.creditExternalMemory(sz);
+  }
+}
+
+void HadesGC::debitExternalMemoryFromFinalizer(GCCell *cell, uint32_t size) {
+  assert(
+      gcMutex_ &&
+      "debitExternalMemoryFromFinalizer should only be called while the lock "
+      "is held");
+  if (inYoungGen(cell)) {
+    assert(
+        ygExternalBytes_ >= size &&
+        "Finalizing more native memory than was registered");
+    ygExternalBytes_ -= size;
+  } else {
+    oldGen_.debitExternalMemory(size);
+  }
+}
+
+void HadesGC::debitExternalMemory(GCCell *cell, uint32_t sz) {
+  if (inYoungGen(cell)) {
+    assert(
+        ygExternalBytes_ >= sz &&
+        "Debiting more native memory than was credited");
+    ygExternalBytes_ -= sz;
+    // Don't modify the effective end here. creditExternalMemory is in charge
+    // of tracking this. We don't expect many debits to not be from finalizers
+    // anyway.
+  } else {
+    std::lock_guard<Mutex> lk{gcMutex_};
+    oldGen_.debitExternalMemory(sz);
   }
 }
 
@@ -1315,6 +1419,7 @@ void HadesGC::writeBarrier(void *loc, void *value) {
   if (isOldGenMarking_) {
     const GCPointerBase::StorageType oldValueStorage =
         *static_cast<GCPointerBase::StorageType *>(loc);
+
 #ifdef HERMESVM_COMPRESSED_POINTERS
     // TODO: Pass in pointer base? Slows down the non-concurrent-marking case.
     // Or maybe always decode the old value? Also slows down the normal case.
@@ -1526,9 +1631,6 @@ void *HadesGC::allocWork(uint32_t sz) {
         !weakRefMutex() &&
         "WeakRef mutex should not be held when alloc is called");
   }
-  if (!fixedSize && LLVM_UNLIKELY(sz >= HeapSegment::maxSize() / 2)) {
-    return allocLongLived(sz);
-  }
   if (shouldSanitizeHandles()) {
     // The best way to sanitize uses of raw pointers outside handles is to force
     // the entire heap to move, and ASAN poison the old heap. That is too
@@ -1536,12 +1638,14 @@ void *HadesGC::allocWork(uint32_t sz) {
     // more interesting aspect of Hades which is concurrent background
     // collections. So instead, do a youngGenCollection which force-starts an
     // oldGenCollection if one is not already running.
-    youngGenCollection(/*forceOldGenCollection*/ true);
+    youngGenCollection(
+        kHandleSanCauseForAnalytics, /*forceOldGenCollection*/ true);
   }
   AllocResult res = youngGen().youngGenBumpAlloc(sz);
   if (LLVM_UNLIKELY(!res.success)) {
     // Failed to alloc in young gen, do a young gen collection.
-    youngGenCollection(/*forceOldGenCollection*/ false);
+    youngGenCollection(
+        kNaturalCauseForAnalytics, /*forceOldGenCollection*/ false);
     res = youngGen().youngGenBumpAlloc(sz);
     assert(res.success && "Should never fail to allocate");
   }
@@ -1564,14 +1668,9 @@ void *HadesGC::allocLongLived(uint32_t sz) {
         !weakRefMutex() &&
         "WeakRef mutex should not be held when allocLongLived is called");
   }
+  assert(gcMutex_ && "GC mutex must be held when calling allocLongLived");
   // Alloc directly into the old gen.
-  std::lock_guard<Mutex> lk{gcMutex_};
-  void *res = oldGen_.alloc(heapAlignSize(sz));
-  // Need to initialize the memory here to a valid cell to prevent the case
-  // where sweeping discovers the uninitialized memory while it's traversing
-  // a segment. This only happens at the end of a bump-alloc segment.
-  new (res) OldGen::FreelistCell(sz, nullptr);
-  return res;
+  return oldGen_.alloc(heapAlignSize(sz));
 }
 
 GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
@@ -1587,8 +1686,8 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
   // Before waiting for a collection to finish, check if we're below the max
   // heap size and can simply allocate another segment. This will prevent
   // blocking the YG unnecessarily.
-  if (segments_.size() < maxNumSegments()) {
-    std::unique_ptr<HeapSegment> seg = gc_->createSegment(/*isYoungGen*/ false);
+  if (std::unique_ptr<HeapSegment> seg =
+          gc_->createSegment(/*isYoungGen*/ false)) {
     // Complete this allocation using a bump alloc.
     AllocResult res = seg->bumpAlloc(sz);
     assert(
@@ -1610,7 +1709,7 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
   }
 
   // The GC didn't recover enough memory, OOM.
-  gc_->oom(make_error_code(OOMError::MaxHeapReached));
+  gc_->oomInternal(make_error_code(OOMError::MaxHeapReached));
 }
 
 uint32_t HadesGC::OldGen::getFreelistBucket(uint32_t size) {
@@ -1639,13 +1738,15 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
   if (bucket < kNumSmallFreelistBuckets) {
     // Fast path: There already exists a size bucket for this alloc. Check if
     // there's a free cell to take and exit.
-    if (FreelistCell *cell = freelistBuckets_[bucket]) {
-      // There is a free cell for this size class, take it and return.
+    if (freelistBucketBitArray_.at(bucket)) {
+      int segmentIdx = freelistBucketSegmentBitArray_[bucket].find_first();
+      assert(
+          segmentIdx >= 0 &&
+          "Set bit in freelistBucketBitArray_ must correspond to segment index.");
+      FreelistCell *cell = removeCellFromFreelist(bucket, segmentIdx);
       assert(
           cell->getAllocatedSize() == sz &&
           "Size bucket should be an exact match");
-      freelistBuckets_[bucket] = cell->next_;
-      freelistBucketBitArray_.set(bucket, freelistBuckets_[bucket]);
       return finishAlloc(cell, sz);
     }
     // Make sure we start searching at the smallest possible size that could fit
@@ -1656,61 +1757,68 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
   bucket = freelistBucketBitArray_.findNextSetBitFrom(bucket);
   for (; bucket < kNumFreelistBuckets;
        bucket = freelistBucketBitArray_.findNextSetBitFrom(bucket + 1)) {
-    assert(freelistBuckets_[bucket] && "Empty bucket should not have bit set!");
-    // Need to track the previous entry in order to change the next pointer.
-    FreelistCell **prevLoc = &freelistBuckets_[bucket];
-    FreelistCell *cell = freelistBuckets_[bucket];
+    for (size_t segmentIdx : freelistBucketSegmentBitArray_[bucket]) {
+      assert(
+          freelistSegmentsBuckets_[segmentIdx][bucket] &&
+          "Empty bucket should not have bit set!");
+      // Need to track the previous entry in order to change the next pointer.
+      FreelistCell **prevLoc = &freelistSegmentsBuckets_[segmentIdx][bucket];
+      FreelistCell *cell = freelistSegmentsBuckets_[segmentIdx][bucket];
 
-    while (cell) {
-      assert(cell == *prevLoc && "prevLoc should be updated in each iteration");
-      assert(
-          vmisa<FreelistCell>(cell) &&
-          "Non-free-list cell found in the free list");
-      assert(
-          (!cell->next_ || cell->next_->isValid()) &&
-          "Next pointer points to an invalid cell");
-      const auto cellSize = cell->getAllocatedSize();
-      assert(
-          getFreelistBucket(cellSize) == bucket &&
-          "Found an incorrectly sized block in this bucket");
-      // Check if the size is large enough that the cell could be split.
-      if (cellSize >= sz + minAllocationSize()) {
-        // Split the free cell. In order to avoid initializing soon-to-be-unused
-        // values like the size and the next pointer, copy the return path here.
-        *prevLoc = cell->next_;
-        // Update the bit in the bit array if freelistBuckets_[bucket] has
-        // changed
-        freelistBucketBitArray_.set(bucket, freelistBuckets_[bucket]);
-        cell->split(*this, sz);
-        return finishAlloc(cell, sz);
-      } else if (cellSize == sz) {
-        // Exact match, take it.
-        *prevLoc = cell->next_;
-        freelistBucketBitArray_.set(bucket, freelistBuckets_[bucket]);
-        return finishAlloc(cell, sz);
+      while (cell) {
+        assert(
+            cell == *prevLoc && "prevLoc should be updated in each iteration");
+        assert(
+            vmisa<FreelistCell>(cell) &&
+            "Non-free-list cell found in the free list");
+        assert(
+            (!cell->next_ || cell->next_->isValid()) &&
+            "Next pointer points to an invalid cell");
+        const auto cellSize = cell->getAllocatedSize();
+        assert(
+            getFreelistBucket(cellSize) == bucket &&
+            "Found an incorrectly sized block in this bucket");
+        // Check if the size is large enough that the cell could be split.
+        if (cellSize >= sz + minAllocationSize()) {
+          // Split the free cell. In order to avoid initializing
+          // soon-to-be-unused values like the size and the next pointer, copy
+          // the return path here.
+          removeCellFromFreelist(prevLoc, bucket, segmentIdx);
+          auto newCell = cell->carve(sz);
+          // Since the size of cell has changed, we may need to add it to a
+          // different free list bucket.
+          addCellToFreelist(cell, segmentIdx);
+          return finishAlloc(newCell, sz);
+        } else if (cellSize == sz) {
+          // Exact match, take it.
+          removeCellFromFreelist(prevLoc, bucket, segmentIdx);
+          return finishAlloc(cell, sz);
+        }
+        // Non-exact matches, or anything just barely too small to fit, will
+        // need to find another block.
+        // NOTE: This is due to restrictions on the minimum cell size to keep
+        // the heap parseable, especially in debug mode. If this minimum size
+        // becomes smaller (smaller header, size becomes part of it
+        // automatically, debug magic field is handled differently), this
+        // decisions can be re-examined. An example alternative is to make a
+        // special fixed-size cell that is only as big as an empty GCCell. That
+        // alternative only works if the empty is small enough to fit in any gap
+        // in the heap. That's not true in debug modes currently.
+        prevLoc = &cell->next_;
+        cell = cell->next_;
       }
-      // Non-exact matches, or anything just barely too small to fit, will need
-      // to find another block.
-      // NOTE: This is due to restrictions on the minimum cell size to keep the
-      // heap parseable, especially in debug mode. If this minimum size becomes
-      // smaller (smaller header, size becomes part of it automatically, debug
-      // magic field is handled differently), this decisions can be re-examined.
-      // An example alternative is to make a special fixed-size cell that is
-      // only as big as an empty GCCell. That alternative only works if the
-      // empty is small enough to fit in any gap in the heap. That's not true in
-      // debug modes currently.
-      prevLoc = &cell->next_;
-      cell = cell->next_;
     }
   }
   return nullptr;
 }
 
-void HadesGC::youngGenCollection(bool forceOldGenCollection) {
-  CollectionStats stats{this, "young"};
+void HadesGC::youngGenCollection(
+    std::string cause,
+    bool forceOldGenCollection) {
+  CollectionStats stats{this, cause, "young"};
   auto cpuTimeStart = oscompat::thread_cpu_time();
   stats.setBeginTime();
-  stats.setBeforeSizes(youngGen().used(), youngGen().size());
+  stats.setBeforeSizes(youngGen().used(), ygExternalBytes_, youngGen().size());
   // Acquire the GC lock for the duration of the YG collection.
   std::lock_guard<Mutex> lk{gcMutex_};
   // The YG is not parseable while a collection is occurring.
@@ -1726,9 +1834,12 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
           youngGen().markBitArray().size() &&
       "Young gen segment must have all mark bits set");
   uint64_t promotedBytes = 0, usedBefore = youngGen().used();
-  if (promoteYGToOG_) {
+  const uint64_t externalBytesBefore = ygExternalBytes_;
+  uint64_t externalSweptBytes = 0;
+  // Attempt to promote the YG segment to OG if the flag is set. If this call
+  // fails for any reason, proceed with a GC.
+  if (promoteYoungGenToOldGen()) {
     promotedBytes = usedBefore;
-    promoteYoungGenToOldGen();
   } else {
     auto &yg = youngGen();
 
@@ -1778,6 +1889,9 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
     }
     // Run finalizers for young gen objects.
     finalizeYoungGenObjects();
+    // This was modified by debitExternalMemoryFromFinalizer, called by
+    // finalizers. The difference in the value before to now was the swept bytes
+    externalSweptBytes = externalBytesBefore - ygExternalBytes_;
     // Now the copy list is drained, and all references point to the old
     // gen. Clear the level of the young gen.
     yg.resetLevel();
@@ -1785,9 +1899,10 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
         youngGen().markBitArray().findNextUnmarkedBitFrom(0) ==
             youngGen().markBitArray().size() &&
         "Young gen segment must have all mark bits set");
+    // Move external memory accounting from YG to OG as well.
+    transferExternalMemoryToOldGen();
   }
 #ifdef HERMES_SLOW_DEBUG
-  checkWellFormed();
   // Check that the card tables are well-formed after the collection.
   verifyCardTable();
 #endif
@@ -1796,21 +1911,30 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
   // useful here, instead put the number of bytes that were promoted into
   // old gen, which is the amount that survived the collection.
   stats.setSweptBytes(usedBefore - promotedBytes);
+  stats.setSweptExternalBytes(externalSweptBytes);
   // The average survival ratio should be updated before starting an OG
   // collection.
   ygAverageSurvivalRatio_.update(stats.survivalRatio());
   if (concurrentPhase_ == Phase::None) {
+    // There is no OG collection running, check the tripwire in case this is the
+    // first YG after an OG completed.
+    checkTripwireAndResetStats();
     if (forceOldGenCollection) {
-      oldGenCollection();
+      oldGenCollection(std::move(cause));
     } else {
       // If the OG is sufficiently full after the collection finishes, begin
       // an OG collection.
-      const uint64_t totalAllocated = oldGen_.allocatedBytes();
-      const uint64_t totalBytes = oldGen_.capacityBytes();
+      // External bytes are part of the numerator and denominator, because they
+      // should not be included as part of determining the heap's occupancy, but
+      // instead just influence when collections begin.
+      const uint64_t totalAllocated =
+          oldGen_.allocatedBytes() + oldGen_.externalBytes();
+      const uint64_t totalBytes =
+          oldGen_.capacityBytes() + oldGen_.externalBytes();
       constexpr double kCollectionThreshold = 0.75;
       double allocatedRatio = static_cast<double>(totalAllocated) / totalBytes;
       if (allocatedRatio >= kCollectionThreshold) {
-        oldGenCollection();
+        oldGenCollection(kNaturalCauseForAnalytics);
       }
     }
   } else if (oldGenMarker_) {
@@ -1818,27 +1942,83 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
   }
   // Give an existing background thread a chance to complete.
   yieldToOldGen();
+#ifdef HERMES_SLOW_DEBUG
+  // Run a well-formed check after yieldToOldGen, as it may have run the
+  // completeMarking phase and started sweeping.
+  checkWellFormed();
+#endif
   stats.setEndTime();
   auto cpuTimeEnd = oscompat::thread_cpu_time();
   stats.incrementCPUTime(cpuTimeEnd - cpuTimeStart);
 }
 
-void HadesGC::promoteYoungGenToOldGen() {
+bool HadesGC::promoteYoungGenToOldGen() {
+  if (!promoteYGToOG_) {
+    return false;
+  }
+
+  // Attempt to create a new segment, if that fails, turn off the flag to
+  // disable GC and return false so we proceed with a GC.
+  // TODO: Add more stringent criteria for turning off this flag, for instance,
+  // once the heap reaches a certain size. That would avoid growing the heap to
+  // the maximum possible size before stopping promotions.
+  auto newYoungGen = createSegment(/*isYoungGen*/ true);
+  if (!newYoungGen) {
+    promoteYGToOG_ = false;
+    return false;
+  }
+
+  // Move the external memory costs to the OG. Needs to happen here so that the
+  // YG segment moved to OG is not left with an effective end.
+  transferExternalMemoryToOldGen();
   // The flag is on to prevent GC until TTI. Promote the whole YG segment
   // directly into OG.
   // Before promoting it, set the cell heads correctly for the segment
   // going into OG. This could be done at allocation time, but at a cost
   // to YG alloc times for a case that might not come up.
-  youngGen_->forAllObjs([this](GCCell *cell) { youngGen_->setCellHead(cell); });
+  youngGen_->forAllObjs([this](GCCell *cell) {
+    youngGen_->setCellHead(cell, cell->getAllocatedSize());
+  });
   // It is important that this operation is just a move of pointers to
   // segments. The addresses have to stay the same or else it would
   // require a marking pass through all objects.
   // This will also rename the segment in the crash data.
   oldGen_.addSegment(std::move(youngGen_));
   // Replace YG with a new segment.
-  youngGen_ = createSegment(/*isYoungGen*/ true);
+  youngGen_ = std::move(newYoungGen);
+  ygStart_ = youngGen_->lowLim();
   // These objects will be finalized by an OG collection.
   youngGenFinalizables_.clear();
+  return true;
+}
+
+void HadesGC::checkTripwireAndResetStats() {
+  assert(
+      gcMutex_ &&
+      "gcMutex must be held before calling checkTripwireAndResetStats");
+  if (!ogCollectionStats_) {
+    return;
+  }
+  const auto afterAllocatedBytes = ogCollectionStats_->afterAllocatedBytes();
+  // Have to release the lock in case the tripwire callback calls
+  // createSnapshot.
+  std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
+  lk.unlock();
+  // We use the amount of live data from after a GC completed as the minimum
+  // bound of what is live.
+  checkTripwire(afterAllocatedBytes);
+  lk.lock();
+  // Resetting the stats both runs the destructor (submitting the stats), as
+  // well as prevent us from checking the tripwire every YG.
+  ogCollectionStats_.reset();
+  // Don't run the destructor to unlock the mutex.
+  lk.release();
+}
+
+void HadesGC::transferExternalMemoryToOldGen() {
+  oldGen_.creditExternalMemory(ygExternalBytes_);
+  ygExternalBytes_ = 0;
+  youngGen_->clearExternalMemoryCharge();
 }
 
 void HadesGC::scanDirtyCards(EvacAcceptor &acceptor) {
@@ -1879,7 +2059,7 @@ void HadesGC::scanDirtyCards(EvacAcceptor &acceptor) {
 
       // Use the object heads rather than the card table to discover the head
       // of the object.
-      GCCell *const firstObj = seg.getCellHead(begin);
+      GCCell *const firstObj = seg.getFirstCellHead(iBegin);
       GCCell *obj = firstObj;
       // Throughout this loop, objects are being marked which could promote
       // other objects into the OG. Such objects might be promoted onto a dirty
@@ -1946,7 +2126,7 @@ void HadesGC::updateWeakReferencesForYoungGen() {
           // Set all allocated slots to unmarked.
           slot.unmark();
         }
-        // fallthrough
+        LLVM_FALLTHROUGH;
       case WeakSlotState::Unmarked: {
         // Both marked and unmarked weak ref slots need to be updated.
         if (!slot.hasPointer()) {
@@ -2040,11 +2220,20 @@ void HadesGC::completeWeakMapMarking(MarkAcceptor &acceptor) {
 }
 
 uint64_t HadesGC::allocatedBytes() const {
-  return youngGen().used() + oldGen_.allocatedBytes();
+  // This can be called very early in initialization, before YG is initialized.
+  return (youngGen_ ? youngGen_->used() : 0) + oldGen_.allocatedBytes();
+}
+
+uint64_t HadesGC::externalBytes() const {
+  return ygExternalBytes_ + oldGen_.externalBytes();
 }
 
 uint64_t HadesGC::OldGen::allocatedBytes() const {
   return allocatedBytes_;
+}
+
+uint64_t HadesGC::OldGen::externalBytes() const {
+  return externalBytes_;
 }
 
 uint64_t HadesGC::OldGen::size() const {
@@ -2072,7 +2261,7 @@ const HadesGC::HeapSegment &HadesGC::youngGen() const {
 }
 
 bool HadesGC::inYoungGen(const void *p) const {
-  return youngGen().contains(p);
+  return ygStart_ == AlignedStorage::start(p);
 }
 
 std::vector<std::unique_ptr<HadesGC::HeapSegment>>::iterator
@@ -2111,10 +2300,14 @@ HadesGC::HeapSegment &HadesGC::OldGen::operator[](size_t i) {
 }
 
 std::unique_ptr<HadesGC::HeapSegment> HadesGC::createSegment(bool isYoungGen) {
+  if (allocatedBytes() + externalBytes() >= maxHeapSize_) {
+    // Cannot grow the heap any further. Doesn't apply to YG creation.
+    return nullptr;
+  }
   auto res = AlignedStorage::create(
       provider_.get(), isYoungGen ? "young-gen" : "old-gen");
   if (!res) {
-    hermes_fatal("Failed to alloc memory segment");
+    return nullptr;
   }
   std::unique_ptr<HeapSegment> seg(new HeapSegment{std::move(res.get())});
 #ifdef HERMESVM_COMPRESSED_POINTERS
@@ -2135,9 +2328,14 @@ void HadesGC::OldGen::addSegment(std::unique_ptr<HeapSegment> seg) {
   HeapSegment &newSeg = *segments_.back();
   allocatedBytes_ += newSeg.used();
   reserveSegments(segments_.size());
+  // Add a set of freelist buckets for this segment.
+  freelistSegmentsBuckets_.emplace_back();
+  assert(
+      freelistSegmentsBuckets_.size() == segments_.size() &&
+      "Must have as many freelists as segments.");
   // Switch the segment from bump alloc mode to free list mode and add any
   // remaining capacity to the free list.
-  newSeg.transitionToFreelist(*this);
+  newSeg.transitionToFreelist(*this, segments_.size() - 1);
   gc_->addSegmentExtentToCrashManager(
       newSeg, oscompat::to_string(numSegments()));
 }
@@ -2180,7 +2378,7 @@ void HadesGC::yieldToOldGen() {
   }
   worldStopped_ = true;
   // Notify a waiting OG collection that it can complete.
-  stopTheWorldCondVar_.notify_all();
+  stopTheWorldCondVar_.notify_one();
   std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
   waitForConditionVariable(
       stopTheWorldCondVar_, lk, [this]() { return !worldStopped_; });
@@ -2205,6 +2403,7 @@ size_t HadesGC::getDrainRate() {
   // Assume this many bytes are live in the OG. We want to make progress so
   // that over all YG collections before the heap fills up, we are able to
   // complete marking before OG fills up.
+  // Don't include external memory since that doens't need to be marked.
   const size_t bytesToFill = oldGen_.capacityBytes() - oldGen_.allocatedBytes();
   const double ygSurvivalRatio = ygAverageSurvivalRatio_;
   size_t ygCollectionsUntilFull = ygSurvivalRatio
@@ -2255,19 +2454,33 @@ void HadesGC::addSegmentExtentToCrashManager(
 #endif
 }
 
+void HadesGC::oomInternal(std::error_code reason) {
+  std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
+  // Have to unlock before calling GCBase::oom, because it may access stats
+  // functions.
+  lk.unlock();
+  GCBase::oom(reason);
+}
+
 #ifdef HERMES_SLOW_DEBUG
 
 void HadesGC::checkWellFormed() {
   WeakRefLock lk{weakRefMutex()};
   CheckHeapWellFormedAcceptor acceptor(*this);
+  const Phase phase = concurrentPhase_;
   {
     DroppingAcceptor<CheckHeapWellFormedAcceptor> nameAcceptor{acceptor};
     markRoots(nameAcceptor, true);
   }
   markWeakRoots(acceptor);
-  forAllObjs([this, &acceptor](GCCell *cell) {
+  forAllObjs([this, phase, &acceptor](GCCell *cell) {
     assert(cell->isValid() && "Invalid cell encountered in heap");
-    GCBase::markCell(cell, this, acceptor);
+    // If we're doing this check during an OG GC, there might be some objects
+    // that are dead, and could potentially have garbage in them. There's no
+    // need to check the pointers of those objects.
+    if (phase == Phase::None || HeapSegment::getCellMarkBit(cell)) {
+      GCBase::markCell(cell, this, acceptor);
+    }
   });
 }
 
@@ -2284,7 +2497,6 @@ void HadesGC::verifyCardTable() {
       acceptHelper(valuePtr, locPtr);
     }
 
-#ifdef HERMESVM_COMPRESSED_POINTERS
     void accept(BasedPointer &ptr) override {
       // Don't use the default from SlotAcceptorDefault since the address of
       // the reference is used.
@@ -2294,7 +2506,6 @@ void HadesGC::verifyCardTable() {
 
       acceptHelper(valuePtr, locPtr);
     }
-#endif
 
     void accept(HermesValue &hv) override {
       if (!hv.isPointer()) {
@@ -2319,31 +2530,8 @@ void HadesGC::verifyCardTable() {
     GCBase::markCell(cell, this, acceptor);
   });
 
-  verifyCardTableBoundaries();
-}
-
-void HadesGC::verifyCardTableBoundaries() const {
-  for (auto segit = oldGen_.begin(), end = oldGen_.end(); segit != end;
-       ++segit) {
-    // The old gen heap segments use the object heads array instead of card
-    // table boundaries to track where objects start.
-    HeapSegment &seg = **segit;
-    seg.forAllObjs([&seg](GCCell *cell) {
-      // Check that each cell has a bit set.
-      MarkBitArrayNC &heads = seg.cellHeads();
-      assert(heads.at(heads.addressToIndex(cell)) && "Unmarked head");
-      // Also check that no other bits are set until the next object.
-      // Check in heap-aligned pointers since mark bits only work for aligned
-      // pointers.
-      uint64_t *ptr = reinterpret_cast<uint64_t *>(cell) + 1;
-      uint64_t *const nextCell = reinterpret_cast<uint64_t *>(cell->nextCell());
-      while (ptr < nextCell) {
-        assert(
-            !heads.at(heads.addressToIndex(ptr)) &&
-            "Non-cell has a head marked");
-        ++ptr;
-      }
-    });
+  for (const auto &segPtr : oldGen_) {
+    segPtr->cardTable().verifyBoundaries(segPtr->start(), segPtr->level());
   }
 }
 

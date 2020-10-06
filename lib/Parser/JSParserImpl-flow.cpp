@@ -128,6 +128,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAlias(
       tok_,
       tok_,
       new (context_) ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
+  SMLoc end = id->getEndLoc();
   advance(JSLexer::GrammarContext::Flow);
 
   ESTree::Node *typeParams = nullptr;
@@ -136,6 +137,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAlias(
     if (!optTypeParams)
       return None;
     typeParams = *optTypeParams;
+    end = typeParams->getEndLoc();
   }
 
   ESTree::Node *supertype = nullptr;
@@ -145,6 +147,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAlias(
     if (!optSuper)
       return None;
     supertype = *optSuper;
+    end = supertype->getEndLoc();
   }
 
   ESTree::Node *right = nullptr;
@@ -161,9 +164,9 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAlias(
     if (!optRight)
       return None;
     right = *optRight;
+    end = right->getEndLoc();
   }
 
-  SMLoc end;
   if (!eatSemi(end, true))
     return None;
 
@@ -729,7 +732,6 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(SMLoc start) {
   if (checkAndEat(TokenKind::star, JSLexer::GrammarContext::Flow)) {
     // declare export * from 'foo';
     //                  ^
-    ESTree::Node *source = nullptr;
     if (!check(fromIdent_)) {
       error(
           tok_->getStartLoc(), "expected 'from' clause in export declaration");
@@ -738,7 +740,6 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(SMLoc start) {
     auto optSource = parseFromClause();
     if (!optSource)
       return None;
-    source = *optSource;
     SMLoc end;
     if (!eatSemi(end))
       return None;
@@ -969,7 +970,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotation() {
         return setLocation(
             start,
             advance(JSLexer::GrammarContext::Flow).End,
-            new (context_) ESTree::AnyTypeAnnotationNode());
+            new (context_) ESTree::MixedTypeAnnotationNode());
       }
       if (tok_->getResWordOrIdentifier() == emptyIdent_) {
         return setLocation(
@@ -1712,6 +1713,8 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeCallProperty(
     typeParams = *optTypeParams;
   }
   auto optValue = parseMethodishTypeAnnotation(start, typeParams);
+  if (!optValue)
+    return None;
   return setLocation(
       start,
       *optValue,
@@ -2220,6 +2223,7 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumBody(
           end,
           new (context_) ESTree::EnumSymbolBodyNode(std::move(members)));
   }
+  llvm_unreachable("No other kind of enum");
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseEnumMember() {

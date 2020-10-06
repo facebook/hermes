@@ -12,8 +12,6 @@
 #include "TestHelpers.h"
 #include "gtest/gtest.h"
 
-// Hades doesn't support tripwires yet.
-#ifndef HERMESVM_GC_HADES
 using namespace hermes::vm;
 
 namespace {
@@ -52,7 +50,7 @@ TEST(InstrumentationAPITest, RunCallbackWhenCollecting) {
                   .build())
           .build());
   DummyRuntime &runtime = *rt;
-  runtime.gc.collect();
+  runtime.collect();
   EXPECT_TRUE(triggeredTripwire);
 }
 
@@ -70,7 +68,7 @@ TEST(InstrumentationAPITest, DontRunCallbackWhenCollecting_underSizeLimit) {
                   .build())
           .build());
   DummyRuntime &runtime = *rt;
-  runtime.gc.collect();
+  runtime.collect();
   EXPECT_FALSE(triggeredTripwire);
 }
 
@@ -108,11 +106,11 @@ TEST(InstrumentationAPITest, RunCallbackAfterAllocatingMemoryOverLimit) {
                   .build())
           .build());
   DummyRuntime &runtime = *rt;
-  runtime.gc.collect();
+  runtime.collect();
   EXPECT_FALSE(triggeredTripwire);
   GCCell *cell = Dummy::create(runtime);
   runtime.pointerRoots.push_back(&cell);
-  runtime.gc.collect();
+  runtime.collect();
   EXPECT_TRUE(triggeredTripwire);
 }
 
@@ -130,14 +128,12 @@ TEST(InstrumentationAPITest, DontRunCallbackAfterAllocatingMemoryUnderLimit) {
                   .build())
           .build());
   DummyRuntime &runtime = *rt;
-  runtime.gc.collect();
+  runtime.collect();
   EXPECT_FALSE(triggeredTripwire);
   GCCell *cell = Dummy::create(runtime);
   runtime.pointerRoots.push_back(&cell);
-  runtime.gc.collect();
+  runtime.collect();
   EXPECT_FALSE(triggeredTripwire);
 }
 
 } // namespace
-
-#endif

@@ -35,15 +35,15 @@ TEST_F(DecoratedObjectTest, DecoratedObjectFinalizerRunsOnce) {
         runtime,
         Handle<JSObject>::vmcast(&runtime->objectPrototype),
         llvh::make_unique<TestDecoration>(counter)));
-    runtime->getHeap().collect();
+    runtime->collect("test");
     // should not have been finalized yet
     EXPECT_EQ(0, *counter);
   }
   // should finalize once
-  runtime->getHeap().collect();
+  runtime->collect("test");
   EXPECT_EQ(1, *counter);
-  runtime->getHeap().collect();
-  runtime->getHeap().collect();
+  runtime->collect("test");
+  runtime->collect("test");
   EXPECT_EQ(1, *counter);
 }
 
@@ -61,7 +61,7 @@ TEST_F(DecoratedObjectTest, ChangeDecoration) {
     // Old decoration was deallocated.
     EXPECT_EQ(1, *counter);
   }
-  runtime->getHeap().collect();
+  runtime->collect("test");
   // Old and new deallocated.
   EXPECT_EQ(2, *counter);
 }
@@ -74,7 +74,7 @@ TEST_F(DecoratedObjectTest, NullDecoration) {
         runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype), nullptr));
     EXPECT_EQ(nullptr, handle->getDecoration());
   }
-  runtime->getHeap().collect();
+  runtime->collect("test");
 }
 
 TEST_F(DecoratedObjectTest, AdditionalSlots) {
@@ -92,7 +92,7 @@ TEST_F(DecoratedObjectTest, AdditionalSlots) {
   EXPECT_NE(strRes, ExecutionStatus::EXCEPTION);
   DecoratedObject::setAdditionalSlotValue(*handle, runtime, 1, *strRes);
   // Verify slot values survive GC.
-  runtime->getHeap().collect();
+  runtime->collect("test");
   EXPECT_EQ(
       DecoratedObject::getAdditionalSlotValue(*handle, runtime, 0).getNumber(),
       10);

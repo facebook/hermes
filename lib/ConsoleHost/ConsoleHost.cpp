@@ -432,7 +432,7 @@ bool executeHBCBytecodeImpl(
     statSampler->stop().printJSON(llvh::errs());
 
     if (options.forceGCBeforeStats) {
-      runtime->collect();
+      runtime->collect("forced for stats");
     }
     printStats(runtime.get(), llvh::errs());
   }

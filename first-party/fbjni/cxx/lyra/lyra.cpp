@@ -25,8 +25,8 @@
 
 #ifndef _WIN32
 #include <dlfcn.h>
-#endif
 #include <unwind.h>
+#endif
 
 #include <fbjni/detail/Log.h>
 
@@ -57,6 +57,7 @@ struct BacktraceState {
   vector<InstructionPointer>& stackTrace;
 };
 
+#ifndef _MSC_VER
 _Unwind_Reason_Code unwindCallback(struct _Unwind_Context* context, void* arg) {
   BacktraceState* state = reinterpret_cast<BacktraceState*>(arg);
   auto absoluteProgramCounter =
@@ -75,6 +76,7 @@ _Unwind_Reason_Code unwindCallback(struct _Unwind_Context* context, void* arg) {
 
   return _URC_NO_REASON;
 }
+#endif
 
 void captureBacktrace(size_t skip, vector<InstructionPointer>& stackTrace) {
   // Beware of a bug on some platforms, which makes the trace loop until the

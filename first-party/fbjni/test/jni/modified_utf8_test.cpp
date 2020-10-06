@@ -49,16 +49,17 @@ void testPair(const vector<uint8_t>& utf8, const vector<uint8_t>& modified, bool
 }
 
 void testFailForTooShortBuffer(const vector<uint8_t>& utf8, int out_len) {
+  const char* message =
+#ifdef __ANDROID__
+    "output buffer is too short";
+#else
+    "";
+#endif
+
   ASSERT_DEATH({
       vector<uint8_t> out(out_len);
       detail::utf8ToModifiedUTF8(utf8.data(), utf8.size(), out.data(), out.size());
-    },
-#ifdef __ANDROID__
-    "output buffer is too short"
-#else
-    ""
-#endif
-    );
+    }, message);
 }
 
 void vector_append(vector<uint8_t>& target, const vector<uint8_t>& source) {

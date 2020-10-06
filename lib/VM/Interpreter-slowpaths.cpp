@@ -9,6 +9,7 @@
 #include "JSLib/JSLibInternal.h"
 #include "hermes/VM/Casting.h"
 #include "hermes/VM/Interpreter.h"
+#include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringPrimitive.h"
 
 #include "Interpreter-internal.h"
@@ -17,6 +18,16 @@ using namespace hermes::inst;
 
 namespace hermes {
 namespace vm {
+
+void Interpreter::saveGenerator(
+    Runtime *runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *resumeIP) {
+  auto *innerFn = vmcast<GeneratorInnerFunction>(FRAME.getCalleeClosure());
+  innerFn->saveStack(runtime);
+  innerFn->setNextIP(resumeIP);
+  innerFn->setState(GeneratorInnerFunction::State::SuspendedYield);
+}
 
 ExecutionStatus Interpreter::caseDirectEval(
     Runtime *runtime,
@@ -143,10 +154,11 @@ ExecutionStatus Interpreter::caseIteratorBegin(
         runtime,
         Predefined::getSymbolID(Predefined::SymbolIterator),
         desc);
-    if (propObj) {
+    if (LLVM_LIKELY(propObj) && LLVM_LIKELY(!propObj->isProxyObject())) {
       HermesValue slotValue =
           JSObject::getNamedSlotValue(propObj, runtime, desc);
-      if (slotValue.getRaw() == runtime->arrayPrototypeValues.getRaw()) {
+      if (LLVM_LIKELY(
+              slotValue.getRaw() == runtime->arrayPrototypeValues.getRaw())) {
         O1REG(IteratorBegin) = HermesValue::encodeNumberValue(0);
         return ExecutionStatus::RETURNED;
       }

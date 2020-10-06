@@ -299,15 +299,19 @@ IdentifierTable::allocateDynamicString(
     }
     result = createPseudoHandle(vmcast<StringPrimitive>(*cr));
   } else {
-    void *mem = runtime->allocLongLived(
-        DynamicStringPrimitive<T, Unique>::allocationSize((uint32_t)length));
+    auto *tmp = runtime->makeAVariable<
+        DynamicStringPrimitive<T, Unique>,
+        HasFinalizer::No,
+        LongLived::Yes>(
+        DynamicStringPrimitive<T, Unique>::allocationSize((uint32_t)length),
+        runtime,
+        length);
     // Since we keep a raw pointer to mem, no more JS heap allocations after
     // this point.
     NoAllocScope _(runtime);
     if (primHandle) {
       str = primHandle->getStringRef<T>();
     }
-    auto *tmp = new (mem) DynamicStringPrimitive<T, Unique>(runtime, length);
     std::copy(str.begin(), str.end(), tmp->getRawPointerForWrite());
     result = createPseudoHandle<StringPrimitive>(tmp);
   }
@@ -574,7 +578,8 @@ CallResult<SymbolID> IdentifierTable::createNotUniquedSymbol(
     new (&lookupVector_[nextID]) LookupEntry(*desc, true);
   }
 #else
-  // No concept of generations, so there's no need to allocLongLived.
+  // No concept of generations, so there's no need to directly allocate long
+  // lived.
   new (&lookupVector_[nextID]) LookupEntry(*desc, true);
 #endif
 

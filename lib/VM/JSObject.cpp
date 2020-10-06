@@ -15,7 +15,6 @@
 #include "hermes/VM/JSDate.h"
 #include "hermes/VM/JSProxy.h"
 #include "hermes/VM/Operations.h"
-#include "hermes/VM/StringView.h"
 
 #include "llvh/ADT/SmallSet.h"
 
@@ -1448,14 +1447,9 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
             ->set(name, *valueHandle);
       }
       ComputedPropertyDescriptor desc;
+      Handle<> nameValHandle = runtime->makeHandle(name);
       CallResult<bool> descDefinedRes = getOwnComputedPrimitiveDescriptor(
-          receiverHandle,
-          runtime,
-          name.isUniqued() ? runtime->makeHandle(HermesValue::encodeStringValue(
-                                 runtime->getStringPrimFromSymbolID(name)))
-                           : runtime->makeHandle(name),
-          IgnoreProxy::No,
-          desc);
+          receiverHandle, runtime, nameValHandle, IgnoreProxy::No, desc);
       if (LLVM_UNLIKELY(descDefinedRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -1466,7 +1460,7 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
         dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
       }
       return JSProxy::defineOwnProperty(
-          receiverHandle, runtime, name, dpf, valueHandle, opFlags);
+          receiverHandle, runtime, nameValHandle, dpf, valueHandle, opFlags);
     }
   }
 
@@ -1678,23 +1672,30 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
     if (!receiverHandle) {
       return false;
     }
+    ComputedPropertyDescriptor existingDesc;
     CallResult<bool> descDefinedRes = getOwnComputedPrimitiveDescriptor(
-        receiverHandle, runtime, nameValPrimitiveHandle, IgnoreProxy::No, desc);
+        receiverHandle,
+        runtime,
+        nameValPrimitiveHandle,
+        IgnoreProxy::No,
+        existingDesc);
     if (LLVM_UNLIKELY(descDefinedRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     DefinePropertyFlags dpf;
     if (*descDefinedRes) {
-      if (LLVM_UNLIKELY(desc.flags.accessor || !desc.flags.writable)) {
+      if (LLVM_UNLIKELY(
+              existingDesc.flags.accessor || !existingDesc.flags.writable)) {
         return false;
       }
 
       if (LLVM_LIKELY(
-              !desc.flags.internalSetter && !receiverHandle->isHostObject() &&
+              !existingDesc.flags.internalSetter &&
+              !receiverHandle->isHostObject() &&
               !receiverHandle->isProxyObject())) {
         if (LLVM_UNLIKELY(
                 setComputedSlotValue(
-                    receiverHandle, runtime, desc, valueHandle) ==
+                    receiverHandle, runtime, existingDesc, valueHandle) ==
                 ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
@@ -1702,31 +1703,44 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
       }
     }
 
+    // At this point, either the descriptor exists on the receiver,
+    // but it's a corner case; or, there was no descriptor.
     if (LLVM_UNLIKELY(
-            desc.flags.internalSetter || receiverHandle->isHostObject() ||
+            existingDesc.flags.internalSetter ||
+            receiverHandle->isHostObject() ||
             receiverHandle->isProxyObject())) {
+      // If putComputed is called on a proxy whose target's prototype
+      // is an array with a propname of 'length', then internalSetter
+      // will be true, and the receiver will be a proxy.  In that case,
+      // proxy wins.
+      if (receiverHandle->isProxyObject()) {
+        if (*descDefinedRes) {
+          dpf.setValue = 1;
+        } else {
+          dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
+        }
+        return JSProxy::defineOwnProperty(
+            receiverHandle,
+            runtime,
+            nameValPrimitiveHandle,
+            dpf,
+            valueHandle,
+            opFlags);
+      }
       SymbolID id{};
       LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, id);
-      if (desc.flags.internalSetter) {
+      if (existingDesc.flags.internalSetter) {
         return internalSetter(
             receiverHandle,
             runtime,
             id,
-            desc.castToNamedPropertyDescriptorRef(),
+            existingDesc.castToNamedPropertyDescriptorRef(),
             valueHandle,
             opFlags);
-      } else if (receiverHandle->isHostObject()) {
-        return vmcast<HostObject>(receiverHandle.get())->set(id, *valueHandle);
       }
       assert(
-          receiverHandle->isProxyObject() && "descriptor flags are impossible");
-      if (*descDefinedRes) {
-        dpf.setValue = 1;
-      } else {
-        dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
-      }
-      return JSProxy::defineOwnProperty(
-          receiverHandle, runtime, id, dpf, valueHandle, opFlags);
+          receiverHandle->isHostObject() && "descriptor flags are impossible");
+      return vmcast<HostObject>(receiverHandle.get())->set(id, *valueHandle);
     }
   }
 
@@ -1957,7 +1971,7 @@ CallResult<bool> JSObject::deleteComputed(
   return true;
 }
 
-CallResult<bool> JSObject::defineOwnProperty(
+CallResult<bool> JSObject::defineOwnPropertyInternal(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     SymbolID name,
@@ -2002,13 +2016,20 @@ CallResult<bool> JSObject::defineOwnProperty(
           selfHandle->flags_.lazyObject || selfHandle->flags_.proxyObject)) {
     if (selfHandle->flags_.proxyObject) {
       return JSProxy::defineOwnProperty(
-          selfHandle, runtime, name, dpFlags, valueOrAccessor, opFlags);
+          selfHandle,
+          runtime,
+          name.isUniqued() ? runtime->makeHandle(HermesValue::encodeStringValue(
+                                 runtime->getStringPrimFromSymbolID(name)))
+                           : runtime->makeHandle(name),
+          dpFlags,
+          valueOrAccessor,
+          opFlags);
     }
     assert(selfHandle->flags_.lazyObject && "descriptor flags are impossible");
     // if the property was not found and the object is lazy we need to
     // initialize it and try again.
     JSObject::initializeLazyObject(runtime, selfHandle);
-    return defineOwnProperty(
+    return defineOwnPropertyInternal(
         selfHandle, runtime, name, dpFlags, valueOrAccessor, opFlags);
   }
 
@@ -2090,7 +2111,7 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
   // indexed storage, just pass to the named routine.
   if (!arrayIndex) {
     LAZY_TO_IDENTIFIER(runtime, nameValHandle, id);
-    return defineOwnProperty(
+    return defineOwnPropertyInternal(
         selfHandle, runtime, id, dpFlags, valueOrAccessor, opFlags);
   }
 
@@ -3130,19 +3151,22 @@ CallResult<Handle<BigStorage>> getForInPropertyNames(
   Handle<HiddenClass> clazz(runtime, obj->getClass(runtime));
 
   // Fast case: Check the cache.
-  MutableHandle<BigStorage> arr(runtime, clazz->getForInCache(runtime));
-  if (arr) {
-    beginIndex = matchesProtoClasses(runtime, obj, arr);
-    if (beginIndex) {
-      // Cache is valid for this object, so use it.
-      endIndex = arr->size();
-      return arr;
+  MutableHandle<BigStorage> arr(runtime);
+  if (obj->shouldCacheForIn(runtime)) {
+    arr = clazz->getForInCache(runtime);
+    if (arr) {
+      beginIndex = matchesProtoClasses(runtime, obj, arr);
+      if (beginIndex) {
+        // Cache is valid for this object, so use it.
+        endIndex = arr->size();
+        return arr;
+      }
+      // Invalid for this object. We choose to clear the cache since the
+      // changes to the prototype chain probably affect other objects too.
+      clazz->clearForInCache(runtime);
+      // Clear arr to slightly reduce risk of OOM from allocation below.
+      arr = nullptr;
     }
-    // Invalid for this object. We choose to clear the cache since the
-    // changes to the prototype chain probably affect other objects too.
-    clazz->clearForInCache(runtime);
-    // Clear arr to slightly reduce risk of OOM from allocation below.
-    arr = nullptr;
   }
 
   // Slow case: Build the array of properties.

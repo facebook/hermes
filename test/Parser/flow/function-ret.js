@@ -403,39 +403,6 @@ function foo(a?: number): number {}
 // CHECK-NEXT:       "directive": null
 // CHECK-NEXT:     },
 
-(async<T>(): number => {1});
-// CHECK-NEXT:     {
-// CHECK-NEXT:       "type": "ExpressionStatement",
-// CHECK-NEXT:       "expression": {
-// CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
-// CHECK-NEXT:         "params": [],
-// CHECK-NEXT:         "body": {
-// CHECK-NEXT:           "type": "BlockStatement",
-// CHECK-NEXT:           "body": [
-// CHECK-NEXT:             {
-// CHECK-NEXT:               "type": "ExpressionStatement",
-// CHECK-NEXT:               "expression": {
-// CHECK-NEXT:                 "type": "NumericLiteral",
-// CHECK-NEXT:                 "value": 1,
-// CHECK-NEXT:                 "raw": "1"
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "directive": null
-// CHECK-NEXT:             }
-// CHECK-NEXT:           ]
-// CHECK-NEXT:         },
-// CHECK-NEXT:         "returnType": {
-// CHECK-NEXT:           "type": "TypeAnnotation",
-// CHECK-NEXT:           "typeAnnotation": {
-// CHECK-NEXT:             "type": "NumberTypeAnnotation"
-// CHECK-NEXT:           }
-// CHECK-NEXT:         },
-// CHECK-NEXT:         "expression": false,
-// CHECK-NEXT:         "async": true
-// CHECK-NEXT:       },
-// CHECK-NEXT:       "directive": null
-// CHECK-NEXT:     },
-
 ((): (foo: () => void,) => number => { return; });
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "ExpressionStatement",

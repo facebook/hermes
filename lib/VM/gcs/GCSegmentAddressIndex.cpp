@@ -8,7 +8,6 @@
 #include "hermes/VM/GCSegmentAddressIndex.h"
 
 #include "hermes/VM/AlignedHeapSegment.h"
-#include "hermes/VM/PointerBase-inline.h"
 
 #include <algorithm>
 #include <iterator>

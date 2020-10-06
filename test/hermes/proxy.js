@@ -2102,12 +2102,34 @@ arrayTests(
 print('misc');
 // CHECK-LABEL: misc
 
-// Do a deep target recursion
+// Do a deep target recursion. This needs to be within the smallest
+// (ASAN) limit for tests to pass, but larger numbers will work in
+// production builds.
 var p = {a:1};
-for (var i = 0; i < 64; ++i) {
+for (var i = 0; i < 20; ++i) {
   p = new Proxy(p, {});
 }
 assert.equal(p.a, 1);
+
+// Do a really deep target recursion to test for stack overflow
+var p = {a:1};
+for (var i = 0; i < 10000; ++i) {
+  p = new Proxy({}, p);
+}
+checkThrows(RangeError)(_ => p.a);
+
+// Do a really deep handler recursion to test for stack overflow
+var p = {a:1};
+for (var i = 0; i < 10000; ++i) {
+  p = new Proxy(p, {});
+}
+checkThrows(RangeError)(_ => p.a);
+
+// Do an infinite recursion to test for stack overflow
+var p1 = [];
+var p2 = new Proxy(p1, {});
+p1.__proto__ = p2;
+checkThrows(RangeError)(_ => p1.a);
 
 // Test HermesInternal
 assert.equal(
@@ -2119,7 +2141,43 @@ assert.equal(
 var f = function() { return 1; }
 f.a = 1;
 f.b = 2;
-checkDeep({...f})(_ => ({a:1, b:2}))
+checkDeep({...f})(_ => ({a:1, b:2}));
+
+// spread passes string not numeric arguments to traps
+var output = [];
+var p = new Proxy({1:""}, {
+        getOwnPropertyDescriptor(t, k) {
+            output.push(typeof k)
+            return Object.getOwnPropertyDescriptor(t, k);
+        },
+        get(t, k) {
+            output.push(typeof k)
+            return t[k];
+        }});
+({...p});
+assert.arrayEqual(output, ["string", "string"]);
+
+// newTarget.prototype for Proxy ctor is !== Object.prototype does not throw
+Reflect.construct(Proxy, [{}, {}], WeakSet);
+
+// Check that defining a property in a Proxy target which is an array
+// uses fast array access (this will trip an assert otherwise)
+new Proxy([], {}).unshift(0);
+
+// If putComputed is called on a proxy whose target's prototype is an
+// array with a propname of 'length', then internalSetter will be
+// true, and the receiver will be a proxy.  In that case, proxy needs
+// to win; the behavior may assert or be UB otherwise.
+var p = new Proxy(Object.create([]), {});
+// using String() forces putComputed
+p[String('length')] = 0x123;
+p[0xABC] = 1111;
+
+// Regression test for heavy handle allocation path
+for (var b in new Proxy([], {
+  ownKeys: Reflect.ownKeys,
+  getOwnPropertyDescriptor: Reflect.getOwnPropertyDescriptor,
+})) {}
 
 print('done');
 // CHECK-LABEL: done

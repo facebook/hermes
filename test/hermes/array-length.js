@@ -81,6 +81,17 @@ arr.length = 0;
 print(arr.length, arr[5]);
 //CHECK-NEXT: 0 undefined
 
+// Check that shrinking the length on a big non-standard array works
+arr = [];
+for (var i = 0; i < 50; i++) {
+  Object.defineProperty(arr, i, {enumerable: false, configurable: true, value: i});
+}
+print(arr.length);
+//CHECK-NEXT: 50
+arr.length = 0;
+print(arr.length);
+//CHECK-NEXT: 0
+
 // Ensure that we can make the length read-only while changing it in the same
 // operation.
 var a = [];

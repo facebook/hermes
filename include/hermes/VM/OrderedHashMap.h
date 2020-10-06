@@ -44,7 +44,7 @@ class HashMapEntry final : public GCCell {
     return cell->getKind() == CellKind::HashMapEntryKind;
   }
 
-  static CallResult<HermesValue> create(Runtime *runtime);
+  static CallResult<PseudoHandle<HashMapEntry>> create(Runtime *runtime);
 
   /// Indicates whether this entry has been deleted.
   bool isDeleted() const {
@@ -101,7 +101,7 @@ class OrderedHashMap final : public GCCell {
     return cell->getKind() == CellKind::OrderedHashMapKind;
   }
 
-  static CallResult<HermesValue> create(Runtime *runtime);
+  static CallResult<PseudoHandle<OrderedHashMap>> create(Runtime *runtime);
 
   /// \return true if the map contains a given HermesValue.
   static bool has(Handle<OrderedHashMap> self, Runtime *runtime, Handle<> key);

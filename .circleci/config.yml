@@ -41,10 +41,11 @@ workflows:
 # Default settings for Apple jobs (apple-runtime, test-apple-runtime)
 apple_defaults: &apple_defaults
   macos:
-    xcode: "10.3.0"
+    xcode: "12.0.0-beta"
   working_directory: ~/hermes
   environment:
     - TERM: dumb
+    - HERMES_WS_DIR: /tmp/hermes
     # Homebrew currently breaks while updating:
     # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
     - HOMEBREW_NO_AUTO_UPDATE: 1
@@ -195,21 +196,12 @@ jobs:
             ninja check-hermes
 
   macos:
-    macos:
-      xcode: "10.0.0"
-    environment:
-      - HERMES_WS_DIR: /tmp/hermes
-      - TERM: dumb
-      # Homebrew currently breaks while updating:
-      # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
-      - HOMEBREW_NO_AUTO_UPDATE: 1
+    <<: *apple_defaults
     steps:
       - checkout
       - run:
           name: Install dependencies
-          # Force homebrew to install cmake 3.7
-          command: |
-            brew install ninja https://raw.githubusercontent.com/Homebrew/homebrew-core/d25c628ff2510f68c89f4660fc93e86377ae61dc/Formula/cmake.rb
+          command: brew install ninja cmake
       - run:
           name: Set up workspace
           command: |
@@ -219,7 +211,7 @@ jobs:
           name: Build Hermes for macOS
           command: |
             cd "$HERMES_WS_DIR"
-            hermes/utils/build/configure.py --distribute --cmake-flags='-DHERMES_BUILD_APPLE_FRAMEWORK:BOOLEAN=false'
+            hermes/utils/build/configure.py --distribute --cmake-flags='-DHERMES_BUILD_APPLE_FRAMEWORK:BOOLEAN=false -DCMAKE_OSX_ARCHITECTURES:STRING=x86_64;arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=10.13'
             cmake --build ./build_release --target github-cli-release
       - run:
           name: Copy artifacts
@@ -274,7 +266,7 @@ jobs:
             xcodebuild test \
               -workspace ApplePlatformsIntegrationTests.xcworkspace \
               -configuration Debug \
-              -destination 'platform=iOS Simulator,name=iPhone X' \
+              -destination 'platform=iOS Simulator,name=iPhone 11' \
               -scheme ApplePlatformsIntegrationMobileTests
           working_directory: test/ApplePlatformsIntegrationTestApp
       - save_cache:
@@ -319,14 +311,7 @@ jobs:
 
   test-macos:
     # CheckedMalloc.Death fails in release mode, so build a debug version
-    macos:
-      xcode: "10.0.0"
-    environment:
-      - HERMES_WS_DIR: /tmp/hermes
-      - TERM: dumb
-      # Homebrew currently breaks while updating:
-      # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
-      - HOMEBREW_NO_AUTO_UPDATE: 1
+    <<: *apple_defaults
     steps:
       - checkout
       - run:

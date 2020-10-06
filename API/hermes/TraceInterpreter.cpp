@@ -1086,7 +1086,7 @@ Value TraceInterpreter::execFunction(
                   Value::strictEquals(rt_, v, overallRetval) &&
                   "evaluateJavaScript() retval does not match trace");
             }
-            // FALLTHROUGH
+            LLVM_FALLTHROUGH;
           }
           case RecordType::Marker: {
             const auto &mr =
@@ -1592,7 +1592,7 @@ bool TraceInterpreter::ifObjectAddToDefs(
 
 std::string TraceInterpreter::printStats() {
   if (options_.forceGCBeforeStats) {
-    rt_.instrumentation().collectGarbage();
+    rt_.instrumentation().collectGarbage("forced for stats");
   }
   std::string stats = rt_.instrumentation().getRecordedGCStats();
   ::hermes::vm::instrumentation::PerfEvents::endAndInsertStats(stats);

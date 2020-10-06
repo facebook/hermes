@@ -83,9 +83,9 @@ class HermesParserJSBuilder {
 
     return buildSourceLocation(
         start.line,
-        start.col,
+        start.col - 1,
         end.line,
-        end.col,
+        end.col - 1,
         rng.Start.getPointer() - bufStart,
         rng.End.getPointer() - bufStart);
   }

@@ -9,12 +9,8 @@
 // REQUIRES: debugger
 
 function foo() {
-  /** This is a comment that is longer than PreemptiveCompilationThresholdBytes
-   * (160 bytes). This is to ensure that lazy compilation kicks in. Lorem ipsum. */
   var x = "a string";
   function bar() {
-    /** This is a comment that is longer than PreemptiveCompilationThresholdBytes
-     * (160 bytes). This is to ensure that lazy compilation kicks in. Lorem ipsum. */
     var y = 42;
     print("start");
     print(x);
@@ -23,8 +19,6 @@ function foo() {
   bar();
 }
 function baz() {
-  /** This is a comment that is longer than PreemptiveCompilationThresholdBytes
-   * (160 bytes). This is to ensure that lazy compilation kicks in. Lorem ipsum. */
   var z;
   foo();
 }

@@ -257,7 +257,13 @@ static opt<bool>
 static opt<bool> LazyCompilation(
     "lazy",
     init(false),
-    desc("Compile source lazily when executing (HBC only)"),
+    desc("Force fully lazy compilation"),
+    cat(CompilerCategory));
+
+static opt<bool> EagerCompilation(
+    "eager",
+    init(false),
+    desc("Force fully eager compilation"),
     cat(CompilerCategory));
 
 /// The following flags are exported so it may be used by the VM driver as well.
@@ -771,6 +777,9 @@ ESTree::NodePtr parseJS(
   // builtin' directive in the source.
   bool useStaticBuiltinDetected = false;
 
+  bool isLargeFile = fileBuf->getBufferSize() >=
+      context->getPreemptiveFileCompilationThreshold();
+
   int fileBufId =
       context->getSourceErrorManager().addNewSourceBuffer(std::move(fileBuf));
   if (sourceMap != nullptr && sourceMapTranslator != nullptr) {
@@ -779,7 +788,7 @@ ESTree::NodePtr parseJS(
 
   auto mode = parser::FullParse;
 
-  if (context->isLazyCompilation()) {
+  if (context->isLazyCompilation() && isLargeFile) {
     if (!parser::JSParser::preParseBuffer(
             *context, fileBufId, useStaticBuiltinDetected)) {
       return nullptr;
@@ -889,6 +898,10 @@ bool validateFlags() {
     // To skip this check and trash the terminal, use -out /dev/stdout.
     err("Refusing to write binary bundle to terminal.\n"
         "Specify output file with -out filename.");
+  }
+
+  if (cl::LazyCompilation && cl::EagerCompilation) {
+    err("Can't specify both -lazy and -eager");
   }
 
   // Validate lazy compilation flags.
@@ -1010,6 +1023,30 @@ std::shared_ptr<Context> createContext(
   if (cl::DisableAllWarnings)
     context->getSourceErrorManager().disableAllWarnings();
   context->getSourceErrorManager().setErrorLimit(cl::ErrorLimit);
+
+  {
+    // Set default lazy mode using defaults from CompileFlags to keep it in one
+    // place.
+    hermes::hbc::CompileFlags defaultFlags{};
+    context->setPreemptiveFileCompilationThreshold(
+        defaultFlags.preemptiveFileCompilationThreshold);
+    context->setPreemptiveFunctionCompilationThreshold(
+        defaultFlags.preemptiveFunctionCompilationThreshold);
+  }
+
+  if (cl::EagerCompilation || cl::DumpTarget == EmitBundle ||
+      cl::OptimizationLevel > cl::OptLevel::Og) {
+    // Make sure nothing is lazy
+    context->setLazyCompilation(false);
+  } else if (cl::LazyCompilation) {
+    // Make sure everything is lazy
+    context->setLazyCompilation(true);
+    context->setPreemptiveFileCompilationThreshold(0);
+    context->setPreemptiveFunctionCompilationThreshold(0);
+  } else {
+    // By default with no optimization, use lazy compilation for "large" files
+    context->setLazyCompilation(true);
+  }
 
   if (cl::CommonJS) {
     context->setUseCJSModules(true);
@@ -1632,9 +1669,6 @@ CompileResult processSourceFiles(
       return LoadGlobalsFailed;
     }
   }
-
-  // Enable lazy compilation if requested.
-  context->setLazyCompilation(cl::LazyCompilation);
 
   // Allows Function.toString() to return original source code. As with lazy
   // compilation this requires source buffers to be retained after compilation.

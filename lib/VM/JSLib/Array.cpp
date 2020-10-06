@@ -681,15 +681,11 @@ arrayPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
           if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
             tmpHandle = std::move(*propRes);
             nHandle = HermesValue::encodeDoubleValue(n);
-            auto cr = valueToSymbolID(runtime, nHandle);
-            if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
-              return ExecutionStatus::EXCEPTION;
-            }
             if (LLVM_UNLIKELY(
-                    JSArray::defineOwnProperty(
+                    JSArray::defineOwnComputedPrimitive(
                         A,
                         runtime,
-                        **cr,
+                        nHandle,
                         DefinePropertyFlags::getDefaultNewPropertyFlags(),
                         tmpHandle) == ExecutionStatus::EXCEPTION)) {
               return ExecutionStatus::EXCEPTION;
@@ -1028,19 +1024,18 @@ class StandardSortModel : public SortModel {
           return ExecutionStatus::EXCEPTION;
         }
         aHandle_ = keyRes->get();
-        CallResult<bool> hasPropRes =
-            JSProxy::getOwnProperty(obj_, runtime_, aHandle_, aDesc, nullptr);
+        CallResult<bool> hasPropRes = JSProxy::getOwnProperty(
+            aDescObjHandle_, runtime_, aHandle_, aDesc, nullptr);
         if (hasPropRes == ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
         }
         if (*hasPropRes) {
-          auto res = JSProxy::getComputed(obj_, runtime_, aHandle_, obj_);
+          auto res =
+              JSProxy::getComputed(aDescObjHandle_, runtime_, aHandle_, obj_);
           if (res == ExecutionStatus::EXCEPTION) {
             return ExecutionStatus::EXCEPTION;
           }
           aValue_ = std::move(*res);
-          // signal later code
-          aDescObjHandle_ = *obj_;
         } else {
           aDescObjHandle_ = nullptr;
         }
@@ -1062,19 +1057,18 @@ class StandardSortModel : public SortModel {
           return ExecutionStatus::EXCEPTION;
         }
         bHandle_ = keyRes->get();
-        CallResult<bool> hasPropRes =
-            JSProxy::getOwnProperty(obj_, runtime_, bHandle_, bDesc, nullptr);
+        CallResult<bool> hasPropRes = JSProxy::getOwnProperty(
+            bDescObjHandle_, runtime_, bHandle_, bDesc, nullptr);
         if (hasPropRes == ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
         }
         if (*hasPropRes) {
-          auto res = JSProxy::getComputed(obj_, runtime_, bHandle_, obj_);
+          auto res =
+              JSProxy::getComputed(bDescObjHandle_, runtime_, bHandle_, obj_);
           if (res == ExecutionStatus::EXCEPTION) {
             return ExecutionStatus::EXCEPTION;
           }
           bValue_ = std::move(*res);
-          // signal later code
-          bDescObjHandle_ = *obj_;
         } else {
           bDescObjHandle_ = nullptr;
         }
@@ -3256,7 +3250,6 @@ CallResult<HermesValue> arrayOf(void *, Runtime *runtime, NativeArgs args) {
   // 7. Let k be 0.
   MutableHandle<> k{runtime, HermesValue::encodeNumberValue(0)};
   MutableHandle<> kValue{runtime};
-  MutableHandle<SymbolID> pk{runtime};
 
   GCScopeMarkerRAII marker{gcScope};
   // 8. Repeat, while k < len
@@ -3264,19 +3257,12 @@ CallResult<HermesValue> arrayOf(void *, Runtime *runtime, NativeArgs args) {
     // a. Let kValue be items[k].
     kValue = args.getArg(k->getNumber());
 
-    // b. Let Pk be ToString(k).
-    auto pkRes = valueToSymbolID(runtime, k);
-    if (LLVM_UNLIKELY(pkRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    pk = pkRes->get();
-
     // c. Let defineStatus be CreateDataPropertyOrThrow(A,Pk, kValue).
     if (LLVM_UNLIKELY(
-            JSObject::defineOwnProperty(
+            JSObject::defineOwnComputedPrimitive(
                 A,
                 runtime,
-                *pk,
+                k,
                 DefinePropertyFlags::getDefaultNewPropertyFlags(),
                 kValue,
                 PropOpFlags().plusThrowOnError()) ==
@@ -3377,12 +3363,6 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
     MutableHandle<> nextValue{runtime};
     while (true) {
       GCScopeMarkerRAII marker1{runtime};
-      // i. Let Pk be ToString(k).
-      auto pkRes = valueToSymbolID(runtime, k);
-      if (LLVM_UNLIKELY(pkRes == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      auto pkHandle = pkRes.getValue();
       // ii. Let next be IteratorStep(iteratorRecord).
       // iii. ReturnIfAbrupt(next).
       auto next = iteratorStep(runtime, iteratorRecord);
@@ -3433,10 +3413,10 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
       // x. If defineStatus is an abrupt completion, return
       // IteratorClose(iterator, defineStatus).
       if (LLVM_UNLIKELY(
-              JSObject::defineOwnProperty(
+              JSObject::defineOwnComputedPrimitive(
                   A,
                   runtime,
-                  *pkHandle,
+                  k,
                   DefinePropertyFlags::getDefaultNewPropertyFlags(),
                   mappedValue,
                   PropOpFlags().plusThrowOnError()) ==
@@ -3497,12 +3477,6 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
   MutableHandle<> mappedValue{runtime};
   while (k->getNumberAs<uint32_t>() < len) {
     GCScopeMarkerRAII marker2{runtime};
-    // a. Let Pk be ToString(k).
-    auto pkRes = valueToSymbolID(runtime, k);
-    if (LLVM_UNLIKELY(pkRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    auto pkHandle = pkRes.getValue();
     // b. Let kValue be Get(arrayLike, Pk).
     propRes = JSObject::getComputed_RJS(arrayLike, runtime, k);
     // c. ReturnIfAbrupt(kValue).
@@ -3526,10 +3500,10 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
     // f. Let defineStatus be CreateDataPropertyOrThrow(A, Pk, mappedValue).
     // g. ReturnIfAbrupt(defineStatus).
     if (LLVM_UNLIKELY(
-            JSObject::defineOwnProperty(
+            JSObject::defineOwnComputedPrimitive(
                 A,
                 runtime,
-                *pkHandle,
+                k,
                 DefinePropertyFlags::getDefaultNewPropertyFlags(),
                 mappedValue,
                 PropOpFlags().plusThrowOnError()) ==

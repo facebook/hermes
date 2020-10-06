@@ -9,10 +9,10 @@
 #define HERMES_VM_GCGENERATION_H
 
 #include "hermes/VM/AlignedHeapSegment.h"
+#include "hermes/VM/AllocOptions.h"
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/GCBase.h"
 #include "hermes/VM/GCCell.h"
-#include "hermes/VM/HasFinalizer.h"
 
 #include <vector>
 

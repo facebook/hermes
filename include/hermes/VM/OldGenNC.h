@@ -10,6 +10,7 @@
 
 #include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/AlignedStorage.h"
+#include "hermes/VM/AllocOptions.h"
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/CardTableNC.h"
 #include "hermes/VM/CompactionResult.h"
@@ -17,7 +18,6 @@
 #include "hermes/VM/GCGeneration.h"
 #include "hermes/VM/GCSegmentRange-inline.h"
 #include "hermes/VM/GCSegmentRange.h"
-#include "hermes/VM/HasFinalizer.h"
 #include "hermes/VM/OldGenSegmentRanges.h"
 #include "hermes/VM/SweepResultNC.h"
 #include "hermes/VM/YoungGenNC.h"

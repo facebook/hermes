@@ -326,7 +326,7 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
                    ->isCardForAddressDirty(locPtr));
       }
     }
-#ifdef HERMESVM_COMPRESSED_POINTERS
+
     void accept(BasedPointer &ptr) override {
       // Don't use the default from SlotAcceptorDefault since the address of the
       // reference is used.
@@ -339,7 +339,7 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
                    ->isCardForAddressDirty(locPtr));
       }
     }
-#endif
+
     void accept(HermesValue &hv) override {
       if (!hv.isPointer()) {
         return;
@@ -370,25 +370,15 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
     using SlotAcceptorDefault::accept;
     using SlotAcceptorDefault::SlotAcceptorDefault;
 
-    // NOTE: C++ does not allow templates on local classes, so duplicate the
-    // body of \c helper for ensureReferentCopied.
-    void helper(GCCell **slotAddr, void *slotContents) {
-      if (gc.youngGen_.contains(slotContents)) {
-        gc.youngGen_.ensureReferentCopied(slotAddr);
-      }
+    void accept(BasedPointer &ptr) {
+      gc.youngGen_.ensureReferentCopied(&ptr);
     }
-    void helper(HermesValue *slotAddr, void *slotContents) {
-      if (gc.youngGen_.contains(slotContents)) {
-        gc.youngGen_.ensureReferentCopied(slotAddr);
-      }
-    }
-
     void accept(void *&ptr) {
-      helper(reinterpret_cast<GCCell **>(&ptr), ptr);
+      gc.youngGen_.ensureReferentCopied(reinterpret_cast<GCCell **>(&ptr));
     }
     void accept(HermesValue &hv) {
       if (hv.isPointer()) {
-        helper(&hv, hv.getPointer());
+        gc.youngGen_.ensureReferentCopied(&hv);
       }
     }
   };
@@ -613,7 +603,7 @@ void OldGen::recordLevelAfterCompaction(
 AllocResult OldGen::fullCollectThenAlloc(
     uint32_t allocSize,
     HasFinalizer hasFinalizer) {
-  gc_->collect(/* canEffectiveOOM */ true);
+  gc_->collect(GCBase::kNaturalCauseForAnalytics, /* canEffectiveOOM */ true);
   {
     AllocResult res = allocRaw(allocSize, hasFinalizer);
     if (LLVM_LIKELY(res.success)) {

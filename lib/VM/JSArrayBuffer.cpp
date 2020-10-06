@@ -163,18 +163,12 @@ JSArrayBuffer::JSArrayBuffer(
       size_(0),
       attached_(false) {}
 
-JSArrayBuffer::~JSArrayBuffer() {
-  // We expect this finalizer to be called only by _finalizerImpl,
-  // below.  That detaches the buffer; here we just assert that it
-  // has been detached, and that resources have been deallocated.
-  assert(!attached_ && !data_ && size_ == 0);
-}
-
 void JSArrayBuffer::_finalizeImpl(GCCell *cell, GC *gc) {
   auto *self = vmcast<JSArrayBuffer>(cell);
   // Need to untrack the native memory that may have been tracked by snapshots.
   gc->getIDTracker().untrackNative(self->data_);
-  self->detach(gc);
+  gc->debitExternalMemoryFromFinalizer(self, self->size_);
+  free(self->data_);
   self->~JSArrayBuffer();
 }
 

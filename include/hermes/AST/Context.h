@@ -164,10 +164,21 @@ class Context {
   /// first time.
   bool lazyCompilation_{false};
 
+  /// Even if lazily compiling, eagerly compile any functions under this size in
+  /// bytes.
+  unsigned preemptiveFunctionCompilationThreshold_{0};
+
+  /// Even if lazily compiling, eagerly compile any files under this size in
+  /// bytes.
+  unsigned preemptiveFileCompilationThreshold_{0};
+
   /// Allows Function.toString() to return original source code. As with lazy
   /// compilation this requires source buffers, and hence this Context instance
   /// to be retained after compilation.
   bool allowFunctionToStringWithRuntimeSource_{false};
+
+  /// Allows generator functions to be compiled.
+  bool generatorEnabled_{true};
 
   /// If true, wrap each file in the CommonJS module wrapper function,
   /// and use that for requiring modules.
@@ -327,12 +338,36 @@ class Context {
     lazyCompilation_ = lazyCompilation;
   }
 
+  unsigned getPreemptiveFunctionCompilationThreshold() {
+    return preemptiveFunctionCompilationThreshold_;
+  }
+
+  void setPreemptiveFunctionCompilationThreshold(unsigned byteCount) {
+    preemptiveFunctionCompilationThreshold_ = byteCount;
+  };
+
+  unsigned getPreemptiveFileCompilationThreshold() {
+    return preemptiveFileCompilationThreshold_;
+  }
+
+  void setPreemptiveFileCompilationThreshold(unsigned byteCount) {
+    preemptiveFileCompilationThreshold_ = byteCount;
+  };
+
   bool allowFunctionToStringWithRuntimeSource() const {
     return allowFunctionToStringWithRuntimeSource_;
   }
 
   void setAllowFunctionToStringWithRuntimeSource(bool v) {
     allowFunctionToStringWithRuntimeSource_ = v;
+  }
+
+  bool isGeneratorEnabled() const {
+    return generatorEnabled_;
+  }
+
+  void setGeneratorEnabled(bool v) {
+    generatorEnabled_ = v;
   }
 
   void setStaticBuiltinOptimization(bool staticBuiltins) {

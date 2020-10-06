@@ -15,7 +15,6 @@
 #include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/HiddenClass.h"
 #include "hermes/VM/JSWeakMapImpl.h"
-#include "hermes/VM/SlotAcceptorDefault-inline.h"
 #include "hermes/VM/SlotAcceptorDefault.h"
 
 #include "llvh/Support/Debug.h"
@@ -79,7 +78,7 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
       if (canBeTrimmed) {
         auto *newVarCell =
             reinterpret_cast<VariableSizeRuntimeCell *>(newLocation->data());
-        newVarCell->setSizeDuringGCCompaction(trimmedSize);
+        newVarCell->setSizeFromGC(trimmedSize);
         newVarCell->getVT()->trim(newVarCell);
       }
       // Make sure to put an element on the worklist that is at the updated
@@ -195,7 +194,7 @@ MallocGC::~MallocGC() {
   }
 }
 
-void MallocGC::collectBeforeAlloc(uint32_t size) {
+void MallocGC::collectBeforeAlloc(std::string cause, uint32_t size) {
   const auto growSizeLimit = [this, size](gcheapsize_t sizeLimit) {
     // Either double the size limit, or increase to size, at a max of maxSize_.
     return std::min(maxSize_, std::max(sizeLimit * 2, size));
@@ -220,7 +219,7 @@ void MallocGC::collectBeforeAlloc(uint32_t size) {
 #endif
   // Do a collection if the sanitization of handles is requested or if there
   // is memory pressure.
-  collect();
+  collect(std::move(cause));
   // While we still can't fill the allocation, keep growing.
   while (allocatedBytes_ >= sizeLimit_ - size) {
     if (sizeLimit_ == maxSize_) {
@@ -253,7 +252,7 @@ void MallocGC::clearUnmarkedPropertyMaps() {
 }
 #endif
 
-void MallocGC::collect() {
+void MallocGC::collect(std::string cause) {
   assert(noAllocLevel_ == 0 && "no GC allowed right now");
   using std::chrono::steady_clock;
   LLVM_DEBUG(llvh::dbgs() << "Beginning collection");
@@ -373,6 +372,7 @@ void MallocGC::collect() {
       getName(),
       "malloc",
       "full",
+      std::move(cause),
       std::chrono::duration_cast<std::chrono::milliseconds>(
           wallEnd - wallStart),
       std::chrono::duration_cast<std::chrono::milliseconds>(cpuEnd - cpuStart),
@@ -619,8 +619,6 @@ template void *MallocGC::alloc</*FixedSize*/ true, HasFinalizer::No>(
     uint32_t size);
 template void *MallocGC::alloc</*FixedSize*/ false, HasFinalizer::No>(
     uint32_t size);
-template void *MallocGC::allocLongLived<HasFinalizer::Yes>(uint32_t size);
-template void *MallocGC::allocLongLived<HasFinalizer::No>(uint32_t size);
 /// @}
 
 } // namespace vm

@@ -26,6 +26,12 @@ class raw_ostream;
 namespace hermes {
 namespace vm {
 
+enum CompilationMode {
+  SmartCompilation,
+  ForceEagerCompilation,
+  ForceLazyCompilation
+};
+
 class PinnedHermesValue;
 #ifdef HERMESVM_SERIALIZE
 class Serializer;
@@ -57,7 +63,7 @@ class Deserializer;
   F(constexpr, bool, OptimizedEval, false)                                     \
                                                                                \
   /* Support for ES6 Proxy. */                                                 \
-  F(constexpr, bool, ES6Proxy, false)                                          \
+  F(constexpr, bool, ES6Proxy, true)                                           \
                                                                                \
   /* Support for ES6 Symbol. */                                                \
   F(constexpr, bool, ES6Symbol, true)                                          \
@@ -104,6 +110,15 @@ class Deserializer;
   /* if available. For this to work code must have been compiled at */         \
   /* runtime with CompileFlags::allowFunctionToStringWithRuntimeSource set. */ \
   F(constexpr, bool, AllowFunctionToStringWithRuntimeSource, false)            \
+                                                                               \
+  /* Choose lazy/eager compilation mode. */                                    \
+  F(constexpr,                                                                 \
+    CompilationMode,                                                           \
+    CompilationMode,                                                           \
+    CompilationMode::SmartCompilation)                                         \
+                                                                               \
+  /* Choose whether generators are enabled. */                                 \
+  F(constexpr, bool, EnableGenerator, true)                                    \
                                                                                \
   /* An interface for managing crashes. */                                     \
   F(HERMES_NON_CONSTEXPR,                                                      \

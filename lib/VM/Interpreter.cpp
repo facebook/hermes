@@ -907,11 +907,11 @@ template <bool SingleStep>
 CallResult<HermesValue> Interpreter::interpretFunction(
     Runtime *runtime,
     InterpreterState &state) {
-  // The interepter is re-entrant and also saves/restores its IP via the runtime
-  // whenever a call out is made (see the CAPTURE_IP_* macros). As such, failure
-  // to preserve the IP across calls to interpeterFunction() disrupt interpreter
-  // calls further up the C++ callstack. The RAII utility class below makes sure
-  // we always do this correctly.
+  // The interpreter is re-entrant and also saves/restores its IP via the
+  // runtime whenever a call out is made (see the CAPTURE_IP_* macros). As such,
+  // failure to preserve the IP across calls to interpreterFunction() disrupt
+  // interpreter calls further up the C++ callstack. The RAII utility class
+  // below makes sure we always do this correctly.
   //
   // TODO: The IPs stored in the C++ callstack via this holder will generally be
   // the same as in the JS stack frames via the Saved IP field. We can probably
@@ -948,8 +948,8 @@ CallResult<HermesValue> Interpreter::interpretFunction(
 
   CodeBlock *curCodeBlock = state.codeBlock;
   const Inst *ip = nullptr;
-  // Holds runtime->currentFrame_.ptr()-1 which is the first local
-  // register. This eliminates the indirect load from Runtime and the -1 offset.
+  // Points to the first local register in the current frame.
+  // This eliminates the indirect load from Runtime and the -1 offset.
   PinnedHermesValue *frameRegs;
   // Strictness of current function.
   bool strictMode;
@@ -957,18 +957,18 @@ CallResult<HermesValue> Interpreter::interpretFunction(
   PropOpFlags defaultPropOpFlags;
 
 // These CAPTURE_IP* macros should wrap around any major calls out of the
-// interpeter loop. They stash and retrieve the IP via the current Runtime
+// interpreter loop. They stash and retrieve the IP via the current Runtime
 // allowing the IP to be externally observed and even altered to change the flow
 // of execution. Explicitly saving AND restoring the IP from the Runtime in this
 // way means the C++ compiler will keep IP in a register within the rest of the
-// interpeter loop.
+// interpreter loop.
 //
 // When assertions are enabled we take the extra step of "invalidating" the IP
 // between captures so we can detect if it's erroneously accessed.
 //
 // In some cases we explicitly don't want to invalidate the IP and instead want
 // it to stay set. For this we use the *NO_INVALIDATE variants. This comes up
-// when we're performing a call operation which may re-enter the interpeter
+// when we're performing a call operation which may re-enter the interpreter
 // loop, and so need the IP available for the saveCallerIPInStackFrame() call
 // when we next enter.
 #define CAPTURE_IP_ASSIGN_NO_INVALIDATE(dst, expr) \
@@ -1000,6 +1000,16 @@ CallResult<HermesValue> Interpreter::interpretFunction(
   runtime->invalidateCurrentIP();
 
 #endif // NDEBUG
+
+/// \def DONT_CAPTURE_IP(expr)
+/// \param expr A call expression to a function external to the interpreter. The
+///   expression should not make any allocations and the IP should be set
+///   immediately following this macro.
+#define DONT_CAPTURE_IP(expr)      \
+  do {                             \
+    NoAllocScope noAlloc(runtime); \
+    (void)expr;                    \
+  } while (false)
 
   LLVM_DEBUG(dbgs() << "interpretFunction() called\n");
 
@@ -1798,24 +1808,17 @@ tailCall:
       }
 
       CASE(SaveGenerator) {
-        nextIP = IPADD(ip->iSaveGenerator.op1);
-        goto doSaveGen;
+        DONT_CAPTURE_IP(
+            saveGenerator(runtime, frameRegs, IPADD(ip->iSaveGenerator.op1)));
+        ip = NEXTINST(SaveGenerator);
+        DISPATCH;
       }
       CASE(SaveGeneratorLong) {
-        nextIP = IPADD(ip->iSaveGeneratorLong.op1);
-        goto doSaveGen;
+        DONT_CAPTURE_IP(saveGenerator(
+            runtime, frameRegs, IPADD(ip->iSaveGeneratorLong.op1)));
+        ip = NEXTINST(SaveGeneratorLong);
+        DISPATCH;
       }
-
-    doSaveGen : {
-      auto *innerFn = vmcast<GeneratorInnerFunction>(
-          runtime->getCurrentFrame().getCalleeClosure());
-
-      innerFn->saveStack(runtime);
-      innerFn->setNextIP(nextIP);
-      innerFn->setState(GeneratorInnerFunction::State::SuspendedYield);
-      ip = NEXTINST(SaveGenerator);
-      DISPATCH;
-    }
 
       CASE(StartGenerator) {
         auto *innerFn = vmcast<GeneratorInnerFunction>(

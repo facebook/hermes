@@ -9,31 +9,28 @@
 #define HERMES_VM_POINTERBASE_H
 
 #include "hermes/VM/AlignedStorage.h"
+#include "hermes/VM/SegmentInfo.h"
 #include "llvh/Support/Compiler.h"
 
 #include <cassert>
 #include <cstdint>
 
-#if defined(HERMESVM_ALLOW_COMPRESSED_POINTERS) && LLVM_PTR_SIZE == 8 && \
-    (defined(HERMESVM_GC_NONCONTIG_GENERATIONAL) ||                      \
-     defined(HERMESVM_GC_HADES))
-/// \macro HERMESVM_COMPRESSED_POINTERS
-/// \brief If defined, store pointers as 32 bits in GC-managed Hermes objects.
-#define HERMESVM_COMPRESSED_POINTERS
-#endif
-
 namespace hermes {
 namespace vm {
 
-#ifdef HERMESVM_COMPRESSED_POINTERS
-
 class BasedPointer final {
  public:
+  using StorageType =
+#ifdef HERMESVM_COMPRESSED_POINTERS
+      uint32_t;
+#else
+      uintptr_t;
+#endif
   explicit operator bool() const;
 
-  bool operator==(BasedPointer other) const;
+  inline bool operator==(BasedPointer other) const;
 
-  bool operator!=(BasedPointer other) const;
+  inline bool operator!=(BasedPointer other) const;
 
   BasedPointer() = default;
 
@@ -41,19 +38,22 @@ class BasedPointer final {
   explicit BasedPointer(std::nullptr_t);
 
   BasedPointer &operator=(std::nullptr_t);
-
+#ifdef HERMESVM_COMPRESSED_POINTERS
   inline uint32_t getSegmentIndex() const;
 
   inline uint32_t getOffset() const;
+#endif // HERMESVM_COMPRESSED_POINTERS
 
-  inline uint32_t getRawValue() const;
+  inline StorageType getRawValue() const;
 
  private:
-  static inline uint32_t computeSegmentAndOffset(const void *heapAddr);
-
+#ifdef HERMESVM_COMPRESSED_POINTERS
   // The low AlignedStorage::kLogSize bits are the offset, and the
   // remaining upper bits are the segment index.
-  uint32_t segAndOffset_{0};
+  static inline uint32_t computeSegmentAndOffset(const void *heapAddr);
+#endif // HERMESVM_COMPRESSED_POINTERS
+
+  StorageType raw_;
 
   inline explicit BasedPointer(void *heapAddr);
 
@@ -77,28 +77,28 @@ class PointerBase {
   inline BasedPointer pointerToBased(void *ptr) const;
   /// Same as above, but has a precondition that the pointer is not null.
   /// \pre ptr is not null.
-  BasedPointer pointerToBasedNonNull(void *ptr) const;
+  inline BasedPointer pointerToBasedNonNull(void *ptr) const;
 
   /// Convert an offset from this PointerBase into a real pointer that can be
   /// de-referenced.
   /// \param ptr An offset (based pointer) to convert.
-  void *basedToPointer(BasedPointer ptr) const;
+  inline void *basedToPointer(BasedPointer ptr) const;
 
   /// Same as above, but has a precondition that the pointer is not null.
   /// \pre ptr is not null.
   inline void *basedToPointerNonNull(BasedPointer ptr) const;
 
+#ifdef HERMESVM_COMPRESSED_POINTERS
   /// Record \p segStart as the start address for the given segment index.
   inline void setSegment(unsigned idx, void *segStart);
+#endif
 
   static constexpr unsigned kNullPtrSegmentIndex = 0;
   static constexpr unsigned kYGSegmentIndex = 1;
   static constexpr unsigned kFirstOGSegmentIndex = 2;
 
  private:
-  /// Returns the segment at the given index.
-  inline void *segmentForIndex(unsigned idx) const;
-
+#ifdef HERMESVM_COMPRESSED_POINTERS
   /// To support 32-bit GC pointers in segmentIdx:offset form,
   /// segmentMap_ maps segment indices to "biased segment starts."
   /// This "bias" speeds up the decoding of a BasedPointer.  If the segmentMap_
@@ -133,26 +133,38 @@ class PointerBase {
   /// We add one entry so that segmentMap_[0] can contain the null pointer.
   static constexpr unsigned kSegmentMapSize = kMaxSegments + 1;
   SegmentPtr segmentMap_[kSegmentMapSize];
+#endif // HERMESVM_COMPRESSED_POINTERS
 };
 
-/// @name Inline implementations that don't depend on other include files.
-/// Implementations that do are in PointerBase-inline.h.
+/// @name Inline implementations.
 /// @{
 
+inline BasedPointer::BasedPointer(std::nullptr_t) : raw_(0) {}
+
+inline BasedPointer &BasedPointer::operator=(std::nullptr_t) {
+  raw_ = 0;
+  return *this;
+}
+
+inline BasedPointer::StorageType BasedPointer::getRawValue() const {
+  return raw_;
+}
+
+inline BasedPointer PointerBase::pointerToBasedNonNull(void *ptr) const {
+  assert(ptr && "Null pointer given to pointerToBasedNonNull");
+  return BasedPointer{ptr};
+}
+
 inline BasedPointer::operator bool() const {
-  return segAndOffset_ != 0;
+  return raw_ != 0;
 }
 
 inline bool BasedPointer::operator==(BasedPointer other) const {
-  return segAndOffset_ == other.segAndOffset_;
+  return raw_ == other.raw_;
 }
 
 inline bool BasedPointer::operator!=(BasedPointer other) const {
-  return !(segAndOffset_ == other.segAndOffset_);
-}
-
-inline PointerBase::PointerBase() {
-  segmentMap_[kNullPtrSegmentIndex] = nullptr;
+  return raw_ != other.raw_;
 }
 
 inline void *PointerBase::basedToPointerNonNull(BasedPointer ptr) const {
@@ -161,15 +173,79 @@ inline void *PointerBase::basedToPointerNonNull(BasedPointer ptr) const {
   return basedToPointer(ptr);
 }
 
+#ifdef HERMESVM_COMPRESSED_POINTERS
+inline PointerBase::PointerBase() {
+  segmentMap_[kNullPtrSegmentIndex] = nullptr;
+}
+
+inline BasedPointer::BasedPointer(void *heapAddr)
+    : raw_(computeSegmentAndOffset(heapAddr)) {}
+
+inline uint32_t BasedPointer::getSegmentIndex() const {
+  return raw_ >> AlignedStorage::kLogSize;
+}
+
+inline uint32_t BasedPointer::getOffset() const {
+  return raw_ & ((1 << AlignedStorage::kLogSize) - 1);
+}
+
+inline void *PointerBase::basedToPointer(BasedPointer ptr) const {
+  char *segBase = reinterpret_cast<char *>(segmentMap_[ptr.getSegmentIndex()]);
+  return segBase + ptr.getRawValue();
+}
+
+inline BasedPointer PointerBase::pointerToBased(void *ptr) const {
+  if (!ptr) {
+    // Null pointers are special and can't be "compressed" in the same
+    // way as non-null pointers.  So we make a special case for null.
+    return BasedPointer{};
+  }
+  return pointerToBasedNonNull(ptr);
+}
+
+/*static*/
+inline uint32_t BasedPointer::computeSegmentAndOffset(const void *heapAddr) {
+  assert(heapAddr != nullptr);
+  uintptr_t addrAsInt = reinterpret_cast<uintptr_t>(heapAddr);
+  void *segStart = AlignedStorage::start(heapAddr);
+  /// segStart is the start of the AlignedStorage containing
+  /// heapAddr, so its low AlignedStorage::kLogSize are zeros.
+  /// Thus, offset, below, will be the offset of heapAddr within the
+  /// segment; bits above AlignedStorage::kLogSize will be zero.
+  uintptr_t offset = addrAsInt - reinterpret_cast<uintptr_t>(segStart);
+  /// Now get the segment index, and shift it so that it's bits do not
+  /// overlap with those of offset.
+  return (SegmentInfo::segmentIndexFromStart(segStart)
+          << AlignedStorage::kLogSize) |
+      offset;
+}
+
+inline void PointerBase::setSegment(unsigned idx, void *segStart) {
+  assert(segStart == AlignedStorage::start(segStart) && "Precondition");
+  // See the explanation for the "bias" above the declaration of
+  // segmentMap_ in PointerBase.h.
+  char *bias =
+      reinterpret_cast<char *>(segStart) - (idx << AlignedStorage::kLogSize);
+  segmentMap_[idx] = bias;
+  SegmentInfo::setSegmentIndexFromStart(segStart, idx);
+}
+
+#else
+inline BasedPointer::BasedPointer(void *heapAddr)
+    : raw_(reinterpret_cast<uintptr_t>(heapAddr)) {}
+
+inline PointerBase::PointerBase() {}
+
+inline void *PointerBase::basedToPointer(BasedPointer ptr) const {
+  return reinterpret_cast<void *>(ptr.getRawValue());
+}
+
+inline BasedPointer PointerBase::pointerToBased(void *ptr) const {
+  return BasedPointer{ptr};
+}
+#endif
+
 /// @}
-
-#else // ! HERMESVM_COMPRESSED_POINTERS
-
-/// If we're not using compressed pointers, we still need a null implementation
-/// of PointerBase.
-class PointerBase {};
-
-#endif // HERMESVM_COMPRESSED_POINTERS
 
 } // namespace vm
 } // namespace hermes

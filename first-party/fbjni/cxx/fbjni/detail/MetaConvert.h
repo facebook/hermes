@@ -115,7 +115,7 @@ struct Convert<alias_ref<T>> {
   static jniType toJniRet(alias_ref<jniType> t) {
     return t.get();
   }
-  static jniType toCall(alias_ref<jniType> t) {
+  static jniType toCall(const alias_ref<jniType>& t) {
     return t.get();
   }
 };
@@ -128,7 +128,7 @@ struct Convert<local_ref<T>> {
   static jniType toJniRet(local_ref<jniType> t) {
     return t.release();
   }
-  static jniType toCall(local_ref<jniType> t) {
+  static jniType toCall(const local_ref<jniType>& t) {
     return t.get();
   }
 };
@@ -155,7 +155,7 @@ struct Convert<global_ref<T>> {
     // needing to make a local_ref.
     return t.get();
   }
-  static jniType toCall(global_ref<jniType> t) {
+  static jniType toCall(const global_ref<jniType>& t) {
     return t.get();
   }
 };

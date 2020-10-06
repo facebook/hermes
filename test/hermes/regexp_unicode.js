@@ -89,6 +89,13 @@ print(/.*/u.exec("\u0101bc\ndef")[0].length);
 // We should not match a low surrogate in a Unicode regexp.
 print(!! /\uDE42/u.exec("\uD83D\uDE42ZZZ"));
 // CHECK-NEXT: false
+// We should match an unpaired surrogate.
+print(!! /\uDC00/u.exec("\uDC00"));
+// CHECK-NEXT: true
+// Test the case insensitive variant.
+print(!! /\uDC00/iu.exec("\uDC00"));
+// CHECK-NEXT: true
+// We should match the low surrogate when Unicode is off.
 print(!! /\uDE42/.exec("\uD83D\uDE42ZZZ"));
 // CHECK-NEXT: true
 

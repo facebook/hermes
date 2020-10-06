@@ -5,12 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -gc-sanitize-handles=0 -target=HBC %s | %FileCheck --match-full-lines %s
-// RUN: %hermes -O -target=HBC -emit-binary -out %t.hbc %s && %hermes -gc-sanitize-handles=0 %t.hbc | %FileCheck --match-full-lines %s
-// REQUIRES: !slow_debug
-
-// This test took over 10 minutes with HandleSan, so -gc-sanitize-handles=0 is
-// passed to reduce the chances of tests timing out.
+// RUN: %hermes -O -target=HBC %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -target=HBC -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
 
 // Simple case
 var x = {};
@@ -113,14 +109,8 @@ for (var y in x) {
 //CHECK: s4 4
 //CHECK: s5 5
 
-// Large array (doesn't fit in single segment)
-var a = []
-for (var i = 0; i < 1000*1000; ++i) {
-  a[i] = i;
-}
-var t = 0;
-for (var p in a) {
-  t += 1;
-}
-print(t);
-//CHECK: 1000000
+// Don't probe parent chain of non-cacheable objects (proxy will assert)
+// 1. This creates a for-in cache entry for a particular hidden class
+for (var k in Number(0)) {}
+// 2. This Proxy uses the same hidden cache object internally.
+for (var k in new Proxy({},{})) {}

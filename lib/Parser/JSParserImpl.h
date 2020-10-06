@@ -850,7 +850,9 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseArrowFunctionExpression(
       Param param,
       ESTree::Node *leftExpr,
+      ESTree::Node *typeParams,
       ESTree::Node *returnType,
+      ESTree::Node *predicate,
       SMLoc startLoc,
       AllowTypedArrowFunction allowTypedArrowFunction,
       bool forceAsync);
@@ -1085,6 +1087,7 @@ class JSParserImpl {
       case EnumKind::Symbol:
         return "symbol";
     }
+    llvm_unreachable("No other kind of enum");
   }
 
   static OptValue<EnumKind> getMemberEnumKind(ESTree::Node *member) {

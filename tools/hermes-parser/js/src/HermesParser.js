@@ -7,27 +7,29 @@
  * @format
  */
 
-const hermesParserWASM = require('./hermes-parser-wasm.js');
+'use strict';
 
-const hermesParse = hermesParserWASM.cwrap('hermesParse', 'number', [
+const HermesParserWASM = require('./HermesParserWASM');
+
+const hermesParse = HermesParserWASM.cwrap('hermesParse', 'number', [
   'number',
   'number',
   'string',
 ]);
 
-const hermesParseResult_free = hermesParserWASM.cwrap(
+const hermesParseResult_free = HermesParserWASM.cwrap(
   'hermesParseResult_free',
   'void',
   ['number'],
 );
 
-const hermesParseResult_getError = hermesParserWASM.cwrap(
+const hermesParseResult_getError = HermesParserWASM.cwrap(
   'hermesParseResult_getError',
   'string',
   ['number'],
 );
 
-const hermesParseResult_getASTReference = hermesParserWASM.cwrap(
+const hermesParseResult_getASTReference = HermesParserWASM.cwrap(
   'hermesParseResult_getASTReference',
   'number',
   ['number'],
@@ -35,15 +37,15 @@ const hermesParseResult_getASTReference = hermesParserWASM.cwrap(
 
 function parse(code) {
   const buffer = Buffer.from(code, 'utf8');
-  const addr = hermesParserWASM._malloc(buffer.length + 1);
+  const addr = HermesParserWASM._malloc(buffer.length + 1);
   if (!addr) {
     throw new Error('Parser out of memory');
   }
 
   try {
     // Copy the string into the WASM heap and null-terminate
-    hermesParserWASM.HEAP8.set(buffer, addr);
-    hermesParserWASM.HEAP8[addr + buffer.length] = 0;
+    HermesParserWASM.HEAP8.set(buffer, addr);
+    HermesParserWASM.HEAP8[addr + buffer.length] = 0;
 
     const parseResult = hermesParse(addr, buffer.length + 1);
     try {
@@ -55,12 +57,12 @@ function parse(code) {
 
       // Find root AST mode from reference
       const astReference = hermesParseResult_getASTReference(parseResult);
-      return hermesParserWASM.JSReferences.pop(astReference);
+      return HermesParserWASM.JSReferences.pop(astReference);
     } finally {
       hermesParseResult_free(parseResult);
     }
   } finally {
-    hermesParserWASM._free(addr);
+    HermesParserWASM._free(addr);
   }
 }
 

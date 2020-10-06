@@ -106,15 +106,12 @@ TEST_F(IdentifierTableTest, NotUniquedSymbol) {
 }
 
 TEST_F(IdentifierTableTest, LazyExternalSymbolTooBig) {
-  // Hades doesn't handle external memory crediting/debiting yet.
-#ifndef HERMESVM_GC_HADES
   GCScope gcScope{runtime};
   auto &idTable = runtime->getIdentifierTable();
 
-  static const auto kExtStringThreshold =
-      StringPrimitive::EXTERNAL_STRING_THRESHOLD;
-  const auto extSize =
-      1 + std::max(kTestGCConfig.getMaxHeapSize(), kExtStringThreshold);
+  const auto extSize = (1 << 24) +
+      std::max(kTestGCConfig.getMaxHeapSize(),
+               toRValue(StringPrimitive::EXTERNAL_STRING_THRESHOLD));
 
   // A string of this size is definitely too big to be allocated.
   ASSERT_FALSE(runtime->getHeap().canAllocExternalMemory(extSize));
@@ -127,7 +124,6 @@ TEST_F(IdentifierTableTest, LazyExternalSymbolTooBig) {
   EXPECT_DEATH_IF_SUPPORTED(
       { idTable.getStringPrim(runtime, symbol); },
       "Unhandled out of memory exception");
-#endif
 }
 
 // Verifies that SymbolIDs are allocated consecutively, increasing from zero, as

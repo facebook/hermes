@@ -327,10 +327,13 @@ CallResult<HermesValue> createDynamicFunction(
   // If at least two arguments to the function (3 in total), there's a comma.
   SafeUInt32 size{paramCount > 0 ? paramCount - 1 : 0};
 
-  // Use the parent of the 'this' value passed by the caller as the parent.
-  // This will usually be the functionPrototype or generatorFunctionPrototype,
-  // but if this is called from reflectConstruct, it might be something else.
-  Handle<JSObject> parent = vmisa<JSObject>(args.getThisArg())
+  // es2020 19.2.1.1.1 Runtime Semantics: CreateDynamicFunction: If
+  // NewTarget is given, such as with Reflect.construct, use
+  // NewParent.prototype as the parent.  The prototype on NewParent
+  // has already been looked up to use as the parent of 'this', so
+  // instead of looking it up again, just use this's parent.  If
+  // NewTarget isn't given, fall back to a default.
+  Handle<JSObject> parent = !args.getNewTarget().isUndefined()
       ? runtime->makeHandle(
             vmcast<JSObject>(args.getThisArg())->getParent(runtime))
       : (isGeneratorFunction

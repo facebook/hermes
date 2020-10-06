@@ -215,12 +215,12 @@ class StackFramePtrT {
   }
 
   /// Initialize a new frame with the supplied values.
-  /// \param calleeClosureOrCB a HermesValue which may not neccessarily be of
+  /// \param calleeClosureOrCB a HermesValue which may not necessarily be of
   ///   the correct type. We use this occasionally when we want to initialize a
   ///   frame but delay the error checking. We never execute a frame with
   ///   the wrong type of callee though.
   /// \param newTarget `undefined` or the callable of the constructor being
-  ///   invoked dirctly by `new`.
+  ///   invoked directly by `new`.
   static StackFramePtrT<false> initFrame(
       PinnedHermesValue *stackPointer,
       StackFramePtrT previousFrame,

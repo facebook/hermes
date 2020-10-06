@@ -24,7 +24,7 @@ namespace {
 using WeakValueMapTest = LargeHeapRuntimeTestFixture;
 
 TEST_F(WeakValueMapTest, SmokeTest) {
-  runtime->collect();
+  runtime->collect("test");
 
   WeakValueMap<int, JSNumber> wvp{};
 
@@ -82,7 +82,7 @@ TEST_F(WeakValueMapTest, SmokeTest) {
   // Make sure no temporary handles exist.
   gcScope.flushToMarker(marker);
 
-  runtime->collect();
+  runtime->collect("test");
 #ifndef HERMESVM_GC_HADES
   // Hades doesn't support DebugHeapInfo yet.
   GCBase::DebugHeapInfo debugInfo;
@@ -99,7 +99,7 @@ TEST_F(WeakValueMapTest, SmokeTest) {
   // Make sure no temporary handles exist.
   gcScope.flushToMarker(marker);
 
-  runtime->collect();
+  runtime->collect("test");
 #ifndef HERMESVM_GC_HADES
   // Hades doesn't support debugInfo yet.
   runtime->getHeap().getDebugHeapInfo(debugInfo);

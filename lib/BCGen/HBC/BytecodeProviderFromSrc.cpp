@@ -162,12 +162,18 @@ BCProviderFromSrc::createBCProviderFromSrc(
 
   context->setStrictMode(compileFlags.strict);
   context->setEnableEval(true);
-  if (!compileFlags.optimize) {
-    context->setLazyCompilation(compileFlags.lazy);
+  context->setPreemptiveFunctionCompilationThreshold(
+      compileFlags.preemptiveFunctionCompilationThreshold);
+  context->setPreemptiveFileCompilationThreshold(
+      compileFlags.preemptiveFileCompilationThreshold);
+
+  if (compileFlags.lazy && !compileFlags.optimize) {
+    context->setLazyCompilation(true);
   }
 
   context->setAllowFunctionToStringWithRuntimeSource(
       compileFlags.allowFunctionToStringWithRuntimeSource);
+  context->setGeneratorEnabled(compileFlags.enableGenerator);
 #ifdef HERMES_ENABLE_DEBUGGER
   context->setDebugInfoSetting(
       compileFlags.debug ? DebugInfoSetting::ALL : DebugInfoSetting::THROWING);
@@ -186,6 +192,8 @@ BCProviderFromSrc::createBCProviderFromSrc(
     declFileList.push_back(libParsed.getValue());
   }
 
+  bool isLargeFile =
+      buffer->size() >= context->getPreemptiveFileCompilationThreshold();
   int fileBufId = context->getSourceErrorManager().addNewSourceBuffer(
       llvh::make_unique<HermesLLVMMemoryBuffer>(std::move(buffer), sourceURL));
   if (sourceMap != nullptr) {
@@ -197,7 +205,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
 
   auto parserMode = parser::FullParse;
   bool useStaticBuiltinDetected = false;
-  if (context->isLazyCompilation()) {
+  if (context->isLazyCompilation() && isLargeFile) {
     if (!parser::JSParser::preParseBuffer(
             *context, fileBufId, useStaticBuiltinDetected)) {
       return {nullptr, outputManager.getErrorString()};

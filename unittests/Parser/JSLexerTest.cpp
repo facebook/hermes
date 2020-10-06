@@ -1082,6 +1082,20 @@ TEST(JSLexerTest, StoreCommentsTest) {
     EXPECT_EQ(StoredComment::Kind::Block, lex.getStoredComments()[1].getKind());
     EXPECT_EQ("world", lex.getStoredComments()[1].getString());
   }
+
+  {
+    JSLexer lex("/**/;//\n", sm, alloc, nullptr, true, false);
+    lex.setStoreComments(true);
+
+    ASSERT_EQ(TokenKind::semi, lex.advance()->getKind());
+    ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+
+    ASSERT_EQ(2, lex.getStoredComments().size());
+    EXPECT_EQ(StoredComment::Kind::Block, lex.getStoredComments()[0].getKind());
+    EXPECT_EQ("", lex.getStoredComments()[0].getString());
+    EXPECT_EQ(StoredComment::Kind::Line, lex.getStoredComments()[1].getKind());
+    EXPECT_EQ("", lex.getStoredComments()[1].getString());
+  }
 }
 
 } // namespace

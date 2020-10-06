@@ -17,12 +17,12 @@
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/SamplingThread.h"
 #include "hermes/Support/StatsAccumulator.h"
+#include "hermes/VM/AllocOptions.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/GCDecl.h"
 #include "hermes/VM/GCExecTrace.h"
 #include "hermes/VM/GCPointer.h"
-#include "hermes/VM/HasFinalizer.h"
 #include "hermes/VM/HeapAlign.h"
 #include "hermes/VM/HeapSnapshot.h"
 #include "hermes/VM/HermesValue.h"
@@ -79,12 +79,17 @@ class Deserializer;
 ///             HasFinalizer hasFinalizer = HasFinalizer::No>
 ///   CallResult<GCCell *> alloc(const VTable *vt, uint32_t size);
 ///
-/// Like the above, but if the GC makes a distinction between short- and
-/// long-lived objects, allocates an object that is expected to be
-/// long-lived.  Does not allow specification of fixed-sizeness.
+/// Allocate a new cell of type \p T and size \p size using the APIs above.
+/// Instantiate an object of type \p T in the newly allocated cell, using
+/// \p args as the arguments to its constructor.
 ///
-///   template <HasFinalizer hasFinalizer = HasFinalizer::No>
-///   CallResult<GCCell *> allocLongLived(const VTable *vt, uint32_t size);
+///   template <
+///     typename T,
+///     bool fixedSize = true,
+///     HasFinalizer hasFinalizer = HasFinalizer::No,
+///     LongLived longLived = LongLived::No,
+///     class... Args>
+/// inline T *makeA(uint32_t size, Args &&... args);
 ///
 /// In some GCs, objects can have associated memory allocated outside the heap,
 /// and this memory can influence GC initiation and heap sizing heuristics.
@@ -97,9 +102,11 @@ class Deserializer;
 ///
 ///   void creditExternalMemory(GCCell *alloc, uint32_t size);
 ///   void debitExternalMemory(GCCell *alloc, uint32_t size);
+///   void debitExternalMemoryFromFinalizer(GCCell *alloc, uint32_t size);
 ///
-/// Force a garbage collection cycle.
-///   void collect();
+/// Force a garbage collection cycle. The provided cause will be used in
+/// logging.
+///   void collect(std::string cause);
 ///
 /// The maximum size of any one allocation allowable by the GC in any state.
 ///   static constexpr uint32_t maxAllocationSize();
@@ -189,6 +196,9 @@ class Deserializer;
 ///
 class GCBase {
  public:
+  static const char kNaturalCauseForAnalytics[];
+  static const char kHandleSanCauseForAnalytics[];
+
   /// An interface enabling the garbage collector to mark roots and free
   /// symbols.
   struct GCCallbacks {
@@ -675,6 +685,9 @@ class GCBase {
   /// Dump detailed heap contents to the given output stream, \p os.
   virtual void dump(llvh::raw_ostream &os, bool verbose = false);
 
+  /// Run the finalizers for all heap objects.
+  virtual void finalizeAll() = 0;
+
   /// Do any logging of info about the heap that is useful, then dies with a
   /// fatal out-of-memory error.
   LLVM_ATTRIBUTE_NORETURN void oom(std::error_code reason);
@@ -713,6 +726,7 @@ class GCBase {
   /// nothing.
   void creditExternalMemory(GCCell *alloc, uint32_t size) {}
   void debitExternalMemory(GCCell *alloc, uint32_t size) {}
+  void debitExternalMemoryFromFinalizer(GCCell *alloc, uint32_t size) {}
 
   /// Default implementations for read and write barriers: do nothing.
   inline void writeBarrier(void *loc, HermesValue value) {}

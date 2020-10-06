@@ -142,11 +142,17 @@ class GenGC final : public GCBase {
   debugAllocRandomize(uint32_t sz, HasFinalizer hasFinalizer, bool fixedSize);
 #endif
 
-  /// Like alloc above, but the resulting object is expected to be long-lived.
-  /// Allocate directly in the old generation (doing a full collection if
-  /// necessary to create room).
-  template <HasFinalizer hasFinalizer = HasFinalizer::No>
-  inline void *allocLongLived(uint32_t size);
+  /// Allocate a new cell of the specified size \p size by calling alloc.
+  /// Instantiate an object of type T with constructor arguments \p args in the
+  /// newly allocated cell.
+  /// \return a pointer to the newly created object in the GC heap.
+  template <
+      typename T,
+      bool fixedSize = true,
+      HasFinalizer hasFinalizer = HasFinalizer::No,
+      LongLived longLived = LongLived::No,
+      class... Args>
+  inline T *makeA(uint32_t size, Args &&... args);
 
   /// Returns whether an external allocation of the given \p size fits
   /// within the maximum heap size.  (Note that this does not guarantee that the
@@ -164,6 +170,7 @@ class GenGC final : public GCBase {
   /// memory of the given \p size.  Decrease the external memory charge of the
   /// generation owning \p alloc by this amount.
   void debitExternalMemory(GCCell *alloc, uint32_t size);
+  void debitExternalMemoryFromFinalizer(GCCell *alloc, uint32_t size);
 
   /// Write barriers.
 
@@ -250,7 +257,7 @@ class GenGC final : public GCBase {
 
   /// \p canEffectiveOOM Indicates whether the GC can declare effective OOM as a
   ///     result of this collection.
-  void collect(bool canEffectiveOOM = false);
+  void collect(std::string cause, bool canEffectiveOOM = false);
 
   static constexpr uint32_t minAllocationSize() {
     // NCGen doesn't enforce a minimum allocation requirement.
@@ -270,7 +277,7 @@ class GenGC final : public GCBase {
   }
 
   /// Run the finalizers for all heap objects.
-  void finalizeAll();
+  void finalizeAll() override;
 
 #ifndef NDEBUG
 
@@ -506,6 +513,12 @@ class GenGC final : public GCBase {
   /// arguments.
   void *allocSlow(uint32_t sz, bool fixedSize, HasFinalizer hasFinalizer);
 
+  /// Like alloc above, but the resulting object is expected to be long-lived.
+  /// Allocate directly in the old generation (doing a full collection if
+  /// necessary to create room).
+  template <HasFinalizer hasFinalizer = HasFinalizer::No>
+  inline void *allocLongLived(uint32_t size);
+
   /// The given pointer value is being written at the given loc (required to
   /// be in the heap).  The value is may be null.  Execute a write
   /// barrier.  The \p hv argument indicates whether this is being
@@ -589,6 +602,7 @@ class GenGC final : public GCBase {
     CollectionSection(
         GenGC *gc,
         const char *name,
+        std::string cause,
         OptValue<GCCallbacks *> gcCallbacksOpt = llvh::None);
     ~CollectionSection();
 
@@ -612,6 +626,7 @@ class GenGC final : public GCBase {
    private:
     GenGC *gc_;
     GCCycle cycle_;
+    std::string cause_;
     TimePoint wallStart_;
     std::chrono::microseconds cpuStart_;
     size_t gcUsedBefore_;
@@ -928,7 +943,7 @@ inline void *GenGC::alloc(uint32_t sz) {
     // MallocGC already implements that well though, and it is complicated and
     // slow to implement that for NCGen. So instead do a full collection which
     // is almost as good.
-    collect();
+    collect("handle-san");
   }
 
 #ifdef HERMESVM_GC_GENERATIONAL_MARKSWEEPCOMPACT
@@ -970,7 +985,7 @@ inline void *GenGC::allocLongLived(uint32_t size) {
     // MallocGC already implements that well though, and it is complicated and
     // slow to implement that for NCGen. So instead do a full collection which
     // is almost as good.
-    collect();
+    collect("handle-san");
   }
   AllocResult res;
   if (allocContextFromYG_) {
@@ -997,6 +1012,20 @@ inline void *GenGC::allocLongLived(uint32_t size) {
       return res.ptr;
     }
   }
+}
+
+template <
+    typename T,
+    bool fixedSize,
+    HasFinalizer hasFinalizer,
+    LongLived longLived,
+    class... Args>
+inline T *GenGC::makeA(uint32_t size, Args &&... args) {
+  // TODO: Once all callers are using makeA, remove allocLongLived.
+  void *mem = longLived == LongLived::Yes
+      ? allocLongLived<hasFinalizer>(size)
+      : alloc<fixedSize, hasFinalizer>(size);
+  return new (mem) T(std::forward<Args>(args)...);
 }
 
 inline void GenGC::countWriteBarrier(bool hv, unsigned filterLevel) {

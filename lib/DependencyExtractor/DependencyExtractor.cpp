@@ -169,7 +169,7 @@ class DependencyExtractor {
     // CallExpressionLike-based dependencies will need the first argument to be
     // a string indicating the source.
     auto *callee = getCallee(node);
-    if (auto *import = llvh::dyn_cast<ImportNode>(callee)) {
+    if (llvh::isa<ImportNode>(callee)) {
       if (auto *name = needFirstStringArgument(node)) {
         addDependency(name->_value->str(), DependencyKind::Async);
       }

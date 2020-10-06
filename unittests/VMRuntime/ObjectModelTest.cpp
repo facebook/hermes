@@ -807,8 +807,8 @@ TEST_F(ObjectModelTest, HasProperty) {
   ASSERT_TRUE(*JSObject::hasNamed(self, runtime, *nonIndexID));
 
   DefinePropertyFlags dpf{};
-  ASSERT_TRUE(*JSObject::defineOwnProperty(
-      self, runtime, *indexID2, dpf, Runtime::getUndefinedValue()));
+  ASSERT_TRUE(*JSObject::defineOwnComputedPrimitive(
+      self, runtime, indexID2Num, dpf, Runtime::getUndefinedValue()));
 
   ASSERT_TRUE(*JSObject::hasComputed(self, runtime, nonIndexIDString));
   ASSERT_TRUE(*JSObject::hasComputed(self, runtime, indexIDNum));

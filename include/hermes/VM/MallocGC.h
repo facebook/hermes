@@ -168,13 +168,19 @@ class MallocGC final : public GCBase {
   /// Checks if a requested \p size can fit in the heap. If it can't, a
   /// collection occurs. If it still can't after the collection, OOM is
   /// declared.
-  void collectBeforeAlloc(uint32_t size);
+  void collectBeforeAlloc(std::string cause, uint32_t size);
 
-  /// Same as above, but tries to allocate in a long lived area of the heap.
-  /// Use this when the object is known to last for a long period of time.
-  /// NOTE: this does nothing different for MallocGC, but does for GenGC.
-  template <HasFinalizer hasFinalizer = HasFinalizer::No>
-  inline void *allocLongLived(uint32_t size);
+  /// Allocate a new cell of the specified size \p size by calling alloc.
+  /// Instantiate an object of type T with constructor arguments \p args in the
+  /// newly allocated cell.
+  /// \return a pointer to the newly created object in the GC heap.
+  template <
+      typename T,
+      bool fixedSize = true,
+      HasFinalizer hasFinalizer = HasFinalizer::No,
+      LongLived longLived = LongLived::Yes,
+      class... Args>
+  inline T *makeA(uint32_t size, Args &&... args);
 
   /// Returns whether an external allocation of the given \p size fits
   /// within the maximum heap size.  (Note that this does not guarantee that the
@@ -185,7 +191,7 @@ class MallocGC final : public GCBase {
 
   /// Collect all of the dead objects and symbols in the heap. Also invalidate
   /// weak pointers that point to dead objects.
-  void collect();
+  void collect(std::string cause);
 
   static constexpr uint32_t minAllocationSize() {
     // MallocGC imposes no limit on individual allocations.
@@ -197,8 +203,8 @@ class MallocGC final : public GCBase {
     return std::numeric_limits<uint32_t>::max();
   }
 
-  /// Run the finalizers for all objects.
-  void finalizeAll();
+  /// Run the finalizers for all heap objects.
+  void finalizeAll() override;
 
   /// \return true iff this is collecting the entire heap, or false if it is
   /// only a portion of the heap.
@@ -325,10 +331,12 @@ template <bool fixedSizeIgnored, HasFinalizer hasFinalizer>
 inline void *MallocGC::alloc(uint32_t size) {
   assert(noAllocLevel_ == 0 && "no alloc allowed right now");
   size = heapAlignSize(size);
+  if (shouldSanitizeHandles()) {
+    collectBeforeAlloc(kHandleSanCauseForAnalytics, size);
+  }
   // Use subtraction to prevent overflow.
-  if (LLVM_UNLIKELY(
-          shouldSanitizeHandles() || size > sizeLimit_ - allocatedBytes_)) {
-    collectBeforeAlloc(size);
+  if (LLVM_UNLIKELY(size > sizeLimit_ - allocatedBytes_)) {
+    collectBeforeAlloc(kNaturalCauseForAnalytics, size);
   }
   // Add space for the header.
   auto *header = new (checkedMalloc(size + sizeof(CellHeader))) CellHeader();
@@ -356,15 +364,21 @@ inline void *MallocGC::alloc(uint32_t size) {
   return mem;
 }
 
-template <HasFinalizer hasFinalizer>
-inline void *MallocGC::allocLongLived(uint32_t size) {
-  // Since there is no old generation in this collector, forward to the normal
-  // allocation.
-  return alloc<true, hasFinalizer>(size);
-}
-
 inline bool MallocGC::canAllocExternalMemory(uint32_t size) {
   return size <= maxSize_;
+}
+
+template <
+    typename T,
+    bool fixedSize,
+    HasFinalizer hasFinalizer,
+    LongLived longLived,
+    class... Args>
+inline T *MallocGC::makeA(uint32_t size, Args &&... args) {
+  // Since there is no old generation in this collector, always forward to the
+  // normal allocation.
+  void *mem = alloc<fixedSize, hasFinalizer>(size);
+  return new (mem) T(std::forward<Args>(args)...);
 }
 
 inline void MallocGC::initCell(GCCell *cell, uint32_t size) {

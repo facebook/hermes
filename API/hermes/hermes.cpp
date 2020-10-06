@@ -292,6 +292,23 @@ class HermesRuntimeImpl final : public HermesRuntime,
     compileFlags_.debug = true;
 #endif
 
+    switch (runtimeConfig.getCompilationMode()) {
+      case vm::SmartCompilation:
+        compileFlags_.lazy = true;
+        // (Leaves thresholds at default values)
+        break;
+      case vm::ForceEagerCompilation:
+        compileFlags_.lazy = false;
+        break;
+      case vm::ForceLazyCompilation:
+        compileFlags_.lazy = true;
+        compileFlags_.preemptiveFileCompilationThreshold = 0;
+        compileFlags_.preemptiveFunctionCompilationThreshold = 0;
+        break;
+    }
+
+    compileFlags_.enableGenerator = runtimeConfig.getEnableGenerator();
+
 #ifndef HERMESJSI_ON_STACK
     // Register the memory for the runtime if it isn't stored on the stack.
     crashMgr_->registerMemory(&runtime_, sizeof(vm::Runtime));
@@ -497,8 +514,8 @@ class HermesRuntimeImpl final : public HermesRuntime,
   }
 
   // Overridden from jsi::Instrumentation
-  void collectGarbage() override {
-    runtime_.getHeap().collect();
+  void collectGarbage(std::string cause) override {
+    runtime_.collect(std::move(cause));
   }
 
   // Overridden from jsi::Instrumentation
@@ -1217,10 +1234,8 @@ void HermesRuntime::debugJavaScript(
     const DebugFlags &debugFlags) {
   vm::Runtime &runtime = impl(this)->runtime_;
   vm::GCScope gcScope(&runtime);
-  hbc::CompileFlags flags{};
-  flags.debug = true;
-  flags.lazy = debugFlags.lazy;
-  vm::ExecutionStatus res = runtime.run(src, sourceURL, flags).getStatus();
+  vm::ExecutionStatus res =
+      runtime.run(src, sourceURL, impl(this)->compileFlags_).getStatus();
   impl(this)->checkStatus(res);
 }
 #endif
@@ -1308,9 +1323,6 @@ HermesRuntimeImpl::prepareJavaScript(
     bcErr = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
         std::move(buffer));
   } else {
-    compileFlags_.lazy =
-        (buffer->size() >=
-         ::hermes::hbc::kDefaultSizeThresholdForLazyCompilation);
 #if defined(HERMESVM_LEAN)
     bcErr.second = "prepareJavaScript source compilation not supported";
 #else

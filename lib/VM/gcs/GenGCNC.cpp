@@ -27,7 +27,6 @@
 #include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/Serializer.h"
-#include "hermes/VM/SlotAcceptorDefault-inline.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/SweepResultNC.h"
 #include "hermes/VM/SymbolID.h"
@@ -203,6 +202,11 @@ void GenGC::debitExternalMemory(GCCell *cell, uint32_t size) {
   }
 }
 
+void GenGC::debitExternalMemoryFromFinalizer(GCCell *cell, uint32_t size) {
+  // GenGC doesn't do anything special here, take the normal path.
+  debitExternalMemory(cell, size);
+}
+
 #ifndef NDEBUG
 void GenGC::printExtAllocStats(llvh::raw_ostream &os) {
   os << "\nExternal allocation:\n";
@@ -295,7 +299,7 @@ void GenGC::ttiReached() {
   }
 }
 
-void GenGC::collect(bool canEffectiveOOM) {
+void GenGC::collect(std::string cause, bool canEffectiveOOM) {
   assert(noAllocLevel_ == 0 && "no GC allowed right now");
   if (canEffectiveOOM && ++consecFullGCs_ >= oomThreshold_)
     oom(make_error_code(OOMError::Effective));
@@ -341,7 +345,8 @@ void GenGC::collect(bool canEffectiveOOM) {
              << ") garbage collection # " << numGCs() << "\n");
 
   {
-    CollectionSection fullCollection(this, "Full collection", gcCallbacks_);
+    CollectionSection fullCollection(
+        this, "Full collection", std::move(cause), gcCallbacks_);
 
     fullCollection.addArg("fullGCUsedBefore", usedBefore);
     fullCollection.addArg("fullGCSizeBefore", sizeBefore);
@@ -1486,10 +1491,12 @@ void GenGC::printFullCollectionStats(JSONEmitter &json) const {
 GenGC::CollectionSection::CollectionSection(
     GenGC *gc,
     const char *name,
+    std::string cause,
     OptValue<GCCallbacks *> gcCallbacksOpt)
     : PerfSection(name, gc->getName().c_str()),
       gc_(gc),
       cycle_(gc, gcCallbacksOpt, name),
+      cause_(std::move(cause)),
       wallStart_(steady_clock::now()),
       cpuStart_(oscompat::thread_cpu_time()),
       gcUsedBefore_(gc->usedDirect()),
@@ -1550,6 +1557,7 @@ void GenGC::CollectionSection::recordGCStats(
       gc_->getName(),
       "gengc",
       cycle_.extraInfo(),
+      std::move(cause_),
       std::chrono::duration_cast<std::chrono::milliseconds>(
           wallEnd - wallStart_),
       std::chrono::duration_cast<std::chrono::milliseconds>(cpuEnd - cpuStart_),
@@ -1967,11 +1975,11 @@ void GenGC::sizeDiagnosticCensus() {
     void accept(void *&ptr) override {
       diagnostic.numPointer++;
     }
-#ifdef HERMESVM_COMPRESSED_POINTERS
+
     void accept(BasedPointer &ptr) override {
       diagnostic.numPointer++;
     }
-#endif
+
     void accept(GCPointerBase &ptr) override {
       diagnostic.numPointer++;
     }

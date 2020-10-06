@@ -200,20 +200,14 @@ TEST_F(StaticBuiltinsTest, UseStaticBuiltinDirectiveLazyCompilation) {
   std::string codeStaticBuiltin = R"(
     Array.isArray = 1;
     function func() {
-      /* Some text to pad out the function so that it won't be eagerly compiled
-       * for being too short. Lorem ipsum dolor sit amet, consectetur adipiscing
-       * elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-       */
-       /* Some text to pad out the function so that it won't be eagerly compiled
-        * for being too short. Lorem ipsum dolor sit amet, consectetur adipiscing
-        * elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-        */
       'use static builtin';
       return;
     }
   )";
   CompileFlags flagsAutoBuiltinLazy;
   flagsAutoBuiltinLazy.lazy = true;
+  flagsAutoBuiltinLazy.preemptiveFunctionCompilationThreshold = 0;
+  flagsAutoBuiltinLazy.preemptiveFileCompilationThreshold = 0;
   EXPECT_EQ(
       runtime->run(codeStaticBuiltin, "source/url", flagsAutoBuiltinLazy),
       ExecutionStatus::EXCEPTION);
@@ -223,14 +217,6 @@ TEST_F(StaticBuiltinsTest, ForceNoBuiltinFlagLazyCompilation) {
   std::string codeStaticBuiltin = R"(
     Array.isArray = 1;
     function func() {
-      /* Some text to pad out the function so that it won't be eagerly compiled
-       * for being too short. Lorem ipsum dolor sit amet, consectetur adipiscing
-       * elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-       */
-       /* Some text to pad out the function so that it won't be eagerly compiled
-        * for being too short. Lorem ipsum dolor sit amet, consectetur adipiscing
-        * elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-        */
       'use static builtin';
       return;
     }
@@ -238,6 +224,8 @@ TEST_F(StaticBuiltinsTest, ForceNoBuiltinFlagLazyCompilation) {
   CompileFlags flagsForceNoBuiltin;
   flagsForceNoBuiltin.staticBuiltins = false;
   flagsForceNoBuiltin.lazy = true;
+  flagsForceNoBuiltin.preemptiveFunctionCompilationThreshold = 0;
+  flagsForceNoBuiltin.preemptiveFileCompilationThreshold = 0;
   EXPECT_EQ(
       runtime->run(codeStaticBuiltin, "source/url", flagsForceNoBuiltin),
       ExecutionStatus::RETURNED);

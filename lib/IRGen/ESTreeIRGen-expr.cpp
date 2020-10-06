@@ -527,6 +527,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
       return MemberExpressionResult{
           Builder.createDeletePropertyInst(baseValue, prop), baseValue};
   }
+  llvm_unreachable("No other kind of member expression");
 }
 
 ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genOptionalMemberExpression(

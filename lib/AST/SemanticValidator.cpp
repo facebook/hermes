@@ -545,6 +545,7 @@ void SemanticValidator::visit(ExportDefaultDeclarationNode *exportDecl) {
               funcDecl->_body,
               funcDecl->_typeParameters,
               funcDecl->_returnType,
+              funcDecl->_predicate,
               funcDecl->_generator,
               /* async */ false);
       exportDecl->_declaration->copyLocationFrom(funcDecl);

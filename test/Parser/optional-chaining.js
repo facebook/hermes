@@ -341,6 +341,66 @@ new a().b?.c;
 // CHECK-NEXT:       "directive": null
 // CHECK-NEXT:     },
 
+a()?.b();
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "OptionalCallExpression",
+// CHECK-NEXT:         "callee": {
+// CHECK-NEXT:           "type": "OptionalMemberExpression",
+// CHECK-NEXT:           "object": {
+// CHECK-NEXT:             "type": "CallExpression",
+// CHECK-NEXT:             "callee": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "a"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "arguments": []
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "property": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "b"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "computed": false,
+// CHECK-NEXT:           "optional": true
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "arguments": [],
+// CHECK-NEXT:         "optional": false
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
+a()?.b.c;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "OptionalMemberExpression",
+// CHECK-NEXT:         "object": {
+// CHECK-NEXT:           "type": "OptionalMemberExpression",
+// CHECK-NEXT:           "object": {
+// CHECK-NEXT:             "type": "CallExpression",
+// CHECK-NEXT:             "callee": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "a"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "arguments": []
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "property": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "b"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "computed": false,
+// CHECK-NEXT:           "optional": true
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "property": {
+// CHECK-NEXT:           "type": "Identifier",
+// CHECK-NEXT:           "name": "c"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "computed": false,
+// CHECK-NEXT:         "optional": false
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
 a()?.b;
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "ExpressionStatement",

@@ -21,6 +21,7 @@
 #include "llvh/Support/raw_ostream.h"
 
 #include <set>
+#include <sstream>
 
 using namespace hermes::vm;
 using namespace hermes::parser;
@@ -362,21 +363,18 @@ static Location findLocationForID(
 #define FIND_LOCATION_FOR_ID(...) \
   findLocationForID(__VA_ARGS__, __FILE__, __LINE__)
 
-static JSONObject *
-takeSnapshot(GC &gc, JSONFactory &factory, const char *file, int line) {
-  std::string result("");
-  llvh::raw_string_ostream str(result);
-  gc.collect();
-  gc.createSnapshot(str);
-  str.flush();
-
-  if (result.empty()) {
+static JSONObject *parseSnapshot(
+    const std::string &json,
+    JSONFactory &factory,
+    const char *file,
+    int line) {
+  if (json.empty()) {
     ADD_FAILURE_AT(file, line) << "Snapshot wasn't written out";
     return nullptr;
   }
 
   SourceErrorManager sm;
-  JSONParser parser{factory, result, sm};
+  JSONParser parser{factory, json, sm};
   auto optSnapshot = parser.parse();
   if (!optSnapshot) {
     ADD_FAILURE_AT(file, line) << "Snapshot isn't valid JSON";
@@ -391,6 +389,17 @@ takeSnapshot(GC &gc, JSONFactory &factory, const char *file, int line) {
   return llvh::cast<JSONObject>(root);
 }
 
+static JSONObject *
+takeSnapshot(GC &gc, JSONFactory &factory, const char *file, int line) {
+  std::string result("");
+  llvh::raw_string_ostream str(result);
+  gc.collect("test");
+  gc.createSnapshot(str);
+  str.flush();
+  return parseSnapshot(result, factory, file, line);
+}
+
+#define PARSE_SNAPSHOT(...) parseSnapshot(__VA_ARGS__, __FILE__, __LINE__)
 #define TAKE_SNAPSHOT(...) takeSnapshot(__VA_ARGS__, __FILE__, __LINE__)
 
 TEST(HeapSnapshotTest, HeaderTest) {
@@ -639,6 +648,46 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
   // String table is checked by the nodes and edges checks.
 }
 
+TEST(HeapSnapshotTest, SnapshotFromCallbackContext) {
+  bool triggeredTripwire = false;
+  std::ostringstream stream;
+  auto runtime = DummyRuntime::create(
+      getMetadataTable(),
+      kTestGCConfigSmall.rebuild()
+          .withTripwireConfig(GCTripwireConfig::Builder()
+                                  .withLimit(32)
+                                  .withCallback([&triggeredTripwire, &stream](
+                                                    GCTripwireContext &ctx) {
+                                    triggeredTripwire = true;
+                                    ctx.createSnapshot(stream);
+                                  })
+                                  .build())
+          .build());
+  DummyRuntime &rt = *runtime;
+  GCScope scope{&rt};
+  auto dummy = rt.makeHandle(DummyObject::create(rt));
+  const auto dummyID = runtime->getHeap().getObjectID(dummy.get());
+  rt.gc.collect("test");
+  ASSERT_TRUE(triggeredTripwire);
+
+  JSONFactory::Allocator alloc;
+  JSONFactory jsonFactory{alloc};
+  JSONObject *root = PARSE_SNAPSHOT(stream.str(), jsonFactory);
+  ASSERT_NE(root, nullptr);
+
+  JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
+  const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
+
+  // Check that the dummy object is in the snapshot.
+  auto dummyNode = FIND_NODE_FOR_ID(dummyID, nodes, strings);
+  Node expected{HeapSnapshot::NodeType::Object,
+                "Uninitialized",
+                dummyID,
+                dummy->getAllocatedSize(),
+                4};
+  EXPECT_EQ(dummyNode, expected);
+}
+
 using HeapSnapshotRuntimeTest = RuntimeTestFixture;
 
 TEST_F(HeapSnapshotRuntimeTest, FunctionLocationForLazyCode) {
@@ -804,6 +853,12 @@ struct ChromeStackTreeNode {
       ChromeStackTreeNode *parent,
       std::map<int, ChromeStackTreeNode *> &idNodeMap) {
     std::vector<std::unique_ptr<ChromeStackTreeNode>> res;
+    if (!parent) {
+      assert(
+          traceNodes.size() == 5 &&
+          "Allocation trace should only have a"
+          "single root node");
+    }
     for (size_t i = 0; i < traceNodes.size(); i += 5) {
       auto id = llvh::cast<JSONNumber>(traceNodes[i])->getValue();
       auto functionInfoIndex =
@@ -895,10 +950,11 @@ baz();
   EXPECT_STREQ(
       fooStackStr.c_str(),
       R"#(
-global(1) @ test.js(4):2:1
-global(2) @ test.js(4):11:4
-baz(7) @ test.js(4):9:19
-foo(8) @ test.js(4):3:20)#");
+(root)(0) @ (0):0:0
+global(1) @ test.js(1):2:1
+global(2) @ test.js(1):11:4
+baz(7) @ test.js(1):9:19
+foo(8) @ test.js(1):3:20)#");
 
   auto barAllocNode = FIND_NODE_FOR_ID(barObjID, nodes, strings);
   auto barStackTreeNode = idNodeMap.find(barAllocNode.traceNodeID);
@@ -908,10 +964,11 @@ foo(8) @ test.js(4):3:20)#");
   ASSERT_STREQ(
       barStackStr.c_str(),
       R"#(
-global(1) @ test.js(4):2:1
-global(2) @ test.js(4):11:4
-baz(3) @ test.js(4):9:31
-bar(4) @ test.js(4):6:20)#");
+(root)(0) @ (0):0:0
+global(1) @ test.js(1):2:1
+global(2) @ test.js(1):11:4
+baz(3) @ test.js(1):9:31
+bar(4) @ test.js(1):6:20)#");
 }
 #endif // HERMES_ENABLE_DEBUGGER
 

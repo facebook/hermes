@@ -83,12 +83,11 @@ TEST(GCFinalizerTest, NoDeadFinalizables) {
   int finalized = 0;
   auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfigSmall);
   DummyRuntime &rt = *runtime;
-  auto &gc = rt.gc;
 
   DummyCell::create(rt);
   GCCell *r = FinalizerCell::create(rt, &finalized);
   rt.pointerRoots.push_back(&r);
-  gc.collect();
+  rt.collect();
 
   ASSERT_EQ(0, finalized);
 }
@@ -97,12 +96,11 @@ TEST(GCFinalizerTest, FinalizablesOnly) {
   int finalized = 0;
   auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfigSmall);
   DummyRuntime &rt = *runtime;
-  auto &gc = rt.gc;
 
   FinalizerCell::create(rt, &finalized);
   GCCell *r = FinalizerCell::create(rt, &finalized);
   rt.pointerRoots.push_back(&r);
-  gc.collect();
+  rt.collect();
 
   ASSERT_EQ(1, finalized);
 }
@@ -111,7 +109,6 @@ TEST(GCFinalizerTest, MultipleCollect) {
   int finalized = 0;
   auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfigSmall);
   DummyRuntime &rt = *runtime;
-  auto &gc = rt.gc;
 
   FinalizerCell::create(rt, &finalized);
   DummyCell::create(rt);
@@ -120,12 +117,12 @@ TEST(GCFinalizerTest, MultipleCollect) {
   GCCell *r2 = DummyCell::create(rt);
   rt.pointerRoots.push_back(&r1);
   rt.pointerRoots.push_back(&r2);
-  gc.collect();
+  rt.collect();
 
   ASSERT_EQ(2, finalized);
 
   rt.pointerRoots.clear();
-  gc.collect();
+  rt.collect();
 
   ASSERT_EQ(3, finalized);
 }
@@ -134,7 +131,6 @@ TEST(GCFinalizerTest, FinalizeAllOnRuntimeDestructDummyRuntime) {
   int finalized = 0;
   {
     auto rt = DummyRuntime::create(getMetadataTable(), kTestGCConfigSmall);
-    auto &gc = rt->gc;
 
     GCCell *r1 = FinalizerCell::create(*rt, &finalized);
     GCCell *r2 = FinalizerCell::create(*rt, &finalized);
@@ -143,8 +139,8 @@ TEST(GCFinalizerTest, FinalizeAllOnRuntimeDestructDummyRuntime) {
 
     // Collect once to get the objects into the old gen, then a second time
     // to get their mark bits set in their stable locations.
-    gc.collect();
-    gc.collect();
+    rt->collect();
+    rt->collect();
     ASSERT_EQ(0, finalized);
 
     // Now: does destructing the runtime with set mark bits run all the
@@ -158,7 +154,6 @@ TEST(GCFinalizerTest, FinalizeAllOnRuntimeDestructRealRuntime) {
   std::shared_ptr<Runtime> rt{Runtime::create(kTestRTConfig)};
   {
     GCScope gcScope(rt.get());
-    auto &gc = rt->getHeap();
 
     auto r1 = rt->makeHandle(
         HermesValue::encodeObjectValue(FinalizerCell::create(*rt, &finalized)));
@@ -167,8 +162,8 @@ TEST(GCFinalizerTest, FinalizeAllOnRuntimeDestructRealRuntime) {
 
     // Collect once to get the objects into the old gen, then a second time
     // to get their mark bits set in their stable locations.
-    gc.collect();
-    gc.collect();
+    rt->collect("test");
+    rt->collect("test");
     ASSERT_EQ(0, finalized);
     (void)r1;
     (void)r2;

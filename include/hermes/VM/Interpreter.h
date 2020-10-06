@@ -20,7 +20,7 @@ namespace vm {
 /// Runtime.
 class Interpreter {
  public:
-  /// Allocate a GeneratorFuncxtion for the specified function and the specified
+  /// Allocate a GeneratorFunction for the specified function and the specified
   /// environment. \param funcIndex function index in the global function table.
   static CallResult<PseudoHandle<JSGeneratorFunction>> createGeneratorClosure(
       Runtime *runtime,
@@ -37,8 +37,16 @@ class Interpreter {
       Handle<Environment> envHandle,
       NativeArgs args);
 
+  /// Suspend the generator function and yield to the caller.
+  /// \param resumeIP Is the IP where the generator should resume from when it
+  ///   is resumed.
+  static void saveGenerator(
+      Runtime *runtime,
+      PinnedHermesValue *frameRegs,
+      const Inst *resumeIP);
+
   /// Slow path for ReifyArguments resReg, lazyReg
-  /// It assumes that he fast path has handled the case when 'lazyReg' is
+  /// It assumes that the fast path has handled the case when 'lazyReg' is
   /// already initialized. It creates a new 'arguments' object and populates it
   /// with the argument values.
   static CallResult<Handle<Arguments>> reifyArgumentsSlowPath(

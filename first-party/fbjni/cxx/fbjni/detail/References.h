@@ -361,7 +361,7 @@ class base_owned_ref {
 
   void reset(javaobject reference) noexcept;
 
-  friend javaobject jni::getPlainJniReference<>(const base_owned_ref& ref);
+  friend javaobject jni::getPlainJniReference<>(const base_owned_ref<T, Alloc>& ref);
 
   template<typename U, typename UAlloc>
   friend class base_owned_ref;

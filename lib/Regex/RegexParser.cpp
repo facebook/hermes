@@ -419,7 +419,17 @@ class Parser {
 
         case '\\': {
           consume('\\');
-          consumeAtomEscape();
+          // This may be an ES6 21.2.2.6 Assertion (\b or \B) or an AtomeEscape.
+          if (current_ == end_) {
+            setError(constants::ErrorType::EscapeIncomplete);
+            return;
+          } else if (*current_ == 'b' || *current_ == 'B') {
+            re_->pushWordBoundary(*current_ == 'B' /* invert */);
+            consume(*current_);
+            quantifierAllowed = false;
+          } else {
+            consumeAtomEscape();
+          }
           break;
         }
 
@@ -708,7 +718,7 @@ class Parser {
             if ((flags_.unicode) && tryConsume('-')) {
               return ClassAtom('-');
             }
-            // fallthrough
+            LLVM_FALLTHROUGH;
 
           default: {
             return ClassAtom(consumeCharacterEscape());
@@ -990,12 +1000,6 @@ class Parser {
 
     CharT c = *current_;
     switch (c) {
-      case 'b':
-      case 'B':
-        consume(c);
-        re_->pushWordBoundary(c == 'B' /* invert */);
-        break;
-
       case 'd':
       case 'D':
         consume(c);
