@@ -25,39 +25,48 @@ class HermesASTAdapter {
    * This modifies the input AST in place instead of constructing a new AST.
    */
   transform(program) {
-    this.visitNode(program);
+    const transformedProgram = this.mapNode(program);
 
     // Comments are not traversed via visitor keys
-    for (const comment of program.comments) {
+    for (const comment of transformedProgram.comments) {
       this.fixSourceLocation(comment);
     }
 
-    return program;
+    return transformedProgram;
   }
 
-  visitNode(node) {
-    if (node == null) {
-      return;
-    }
-
+  /**
+   * Transform a Hermes AST node to the output AST format.
+   *
+   * This may modify the input node in-place and return that same node, or a completely
+   * new node may be constructed and returned. Overriden in child classes.
+   */
+  mapNode(node) {
     this.fixSourceLocation(node);
+    return this.mapNodeDefault(node);
+  }
 
+  mapNodeDefault(node) {
     const visitorKeys = HERMES_AST_VISITOR_KEYS[node.type];
     for (const key in visitorKeys) {
       const childType = visitorKeys[key];
       if (childType === NODE_CHILD) {
         const child = node[key];
         if (child != null) {
-          this.visitNode(node[key]);
+          node[key] = this.mapNode(child);
         }
       } else if (childType === NODE_LIST_CHILD) {
-        for (const child of node[key]) {
+        const children = node[key];
+        for (let i = 0; i < children.length; i++) {
+          const child = children[i];
           if (child != null) {
-            this.visitNode(child);
+            children[i] = this.mapNode(child);
           }
         }
       }
     }
+
+    return node;
   }
 
   /**

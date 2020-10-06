@@ -13,6 +13,22 @@ jest.disableAutomock();
 
 const {parse} = require('../build/index');
 
+/**
+ * Utility for quickly creating source locations inline.
+ */
+function loc(startLine, startColumn, endLine, endColumn) {
+  return {
+    start: {
+      line: startLine,
+      column: startColumn,
+    },
+    end: {
+      line: endLine,
+      column: endColumn,
+    },
+  };
+}
+
 test('Can parse simple file', () => {
   expect(parse('const x = 1')).toMatchObject({
     type: 'Program',
@@ -133,6 +149,161 @@ test('Source locations', () => {
         },
         start: 0,
         end: 3,
+      },
+    ],
+  });
+});
+
+test('Top level directives', () => {
+  const source = `'use strict';
+'use strict';
+Foo;`;
+
+  // ESTree top level directive nodes
+  expect(parse(source)).toMatchObject({
+    type: 'Program',
+    body: [
+      {
+        type: 'ExpressionStatement',
+        loc: loc(1, 0, 1, 13),
+        expression: {
+          type: 'StringLiteral',
+          value: 'use strict',
+          loc: loc(1, 0, 1, 12),
+        },
+        directive: 'use strict',
+      },
+      {
+        type: 'ExpressionStatement',
+        loc: loc(2, 0, 2, 13),
+        expression: {
+          type: 'StringLiteral',
+          value: 'use strict',
+          loc: loc(2, 0, 2, 12),
+        },
+        directive: 'use strict',
+      },
+      {
+        type: 'ExpressionStatement',
+        loc: loc(3, 0, 3, 4),
+        expression: {
+          type: 'Identifier',
+          name: 'Foo',
+          loc: loc(3, 0, 3, 3),
+        },
+      },
+    ],
+  });
+
+  // Babel top level directive nodes
+  expect(parse(source, {babel: true})).toMatchObject({
+    type: 'Program',
+    body: [
+      {
+        type: 'ExpressionStatement',
+        loc: loc(3, 0, 3, 4),
+        expression: {
+          type: 'Identifier',
+          name: 'Foo',
+          loc: loc(3, 0, 3, 3),
+        },
+      },
+    ],
+    directives: [
+      {
+        type: 'Directive',
+        loc: loc(1, 0, 1, 13),
+        value: {
+          type: 'DirectiveLiteral',
+          loc: loc(1, 0, 1, 12),
+          value: 'use strict',
+        },
+      },
+      {
+        type: 'Directive',
+        loc: loc(2, 0, 2, 13),
+        value: {
+          type: 'DirectiveLiteral',
+          loc: loc(2, 0, 2, 12),
+          value: 'use strict',
+        },
+      },
+    ],
+  });
+});
+
+test('Function body directive', () => {
+  const source = `function test() {
+    'use strict';
+    Foo;
+  }
+  `;
+
+  // ESTree directive node in function body
+  expect(parse(source)).toMatchObject({
+    type: 'Program',
+    body: [
+      {
+        type: 'FunctionDeclaration',
+        body: {
+          type: 'BlockStatement',
+          body: [
+            {
+              type: 'ExpressionStatement',
+              loc: loc(2, 4, 2, 17),
+              expression: {
+                type: 'StringLiteral',
+                value: 'use strict',
+                loc: loc(2, 4, 2, 16),
+              },
+              directive: 'use strict',
+            },
+            {
+              type: 'ExpressionStatement',
+              loc: loc(3, 4, 3, 8),
+              expression: {
+                type: 'Identifier',
+                name: 'Foo',
+                loc: loc(3, 4, 3, 7),
+              },
+            },
+          ],
+        },
+      },
+    ],
+  });
+
+  // Babel directive node in function body
+  expect(parse(source, {babel: true})).toMatchObject({
+    type: 'Program',
+    body: [
+      {
+        type: 'FunctionDeclaration',
+        body: {
+          type: 'BlockStatement',
+          body: [
+            {
+              type: 'ExpressionStatement',
+              loc: loc(3, 4, 3, 8),
+              expression: {
+                type: 'Identifier',
+                name: 'Foo',
+                loc: loc(3, 4, 3, 7),
+              },
+            },
+          ],
+          directives: [
+            {
+              type: 'Directive',
+              loc: loc(2, 4, 2, 17),
+              value: {
+                type: 'DirectiveLiteral',
+                loc: loc(2, 4, 2, 16),
+                value: 'use strict',
+              },
+            },
+          ],
+        },
       },
     ],
   });
