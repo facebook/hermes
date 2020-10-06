@@ -51,6 +51,11 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
                 "timezone-utc.js" // Time zone name UTC was not correctly accepted. Expected SameValue(«GMT», «UTC») to be true
         ));
 
+        // Our implementation corresponds to ECMA 402 2nd edition (https://www.ecma-international.org/ecma-402/2.0/index.html) which corresonds to ECMA-262 6th Edition (ES6)
+        // We dont' support the following,
+        //      dateStyle and timeStyle properties. These properties are in draft state AFAIK (https://tc39.es/proposal-intl-datetime-style/)
+        //      dayPeriod property was introduced in ECMA 402 4th edition (https://www.ecma-international.org/ecma-402/4.0/index.html)
+        //      fractionalSecondDigits property is still in PR ( https://github.com/tc39/ecma402/pull/347 )
         Set<String> unSupportedList = new HashSet<>(Arrays.asList(
                 "constructor-options-throwing-getters-timedate-style.js", // : Exception from dateStyle getter should be propagated Expected a CustomError to be thrown but no exception was thrown at all
                 "constructor-options-throwing-getters-dayPeriod.js", //Exception from dayPeriod getter should be propagated Expected a CustomError to be thrown but no exception was thrown at all
@@ -69,8 +74,8 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
         ));
 
         Set<String> testIssuesList = new HashSet<>(Arrays.asList(
-                "subclassing.js", //Compiling JS failed: 18:1:invalid statement encountered. Buffer size 1037 starts with: 2f2f20436f7079726967687420323031
-                "proto-from-ctor-realm.js" //Property '$262' doesn't exist ReferenceError: Property '$262' doesn't exist at global (:32:13)
+                "subclassing.js", // Hermes doesn't support Javascript classes .. Compiling JS failed: 18:1:invalid statement encountered. Buffer size 1037 starts with: 2f2f20436f7079726967687420323031
+                "proto-from-ctor-realm.js" // Hermes doesn' support realms (Isolated environments).
         ));
 
         Set<String> blackList = new HashSet<>();
@@ -87,10 +92,7 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
         String basePath = "test262-main/test/intl402/DateTimeFormat/supportedLocalesOf";
 
         Set<String> whilteList = new HashSet<>();
-
-        Set<String> testIssueList = new HashSet<>(Arrays.asList(
-                "builtin.js" // : Reflect
-        ));
+        Set<String> testIssueList = new HashSet<>();
 
         runTests(basePath, testIssueList, whilteList);
     }
@@ -112,10 +114,10 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
         Set<String> whiteList = new HashSet<>();
 
         Set<String> deviations = new HashSet<>(Arrays.asList(
-                "proleptic-gregorian-calendar.js", // Strangely icu4j returned date for -8640000000000000 (beginning of ECMAScript time) is November 271817 .. The expected is April 271822 .. Need to dig in.
-                "time-clip-near-time-boundaries.js" //Expected a RangeError but got a ReferenceError
+                "proleptic-gregorian-calendar.js" // Strangely icu4j returned date for -8640000000000000 (beginning of ECMAScript time) is November 271817 .. The expected is April 271822 .. Need to dig in.
         ));
 
+        // timeStyle, dateStyle, dayPeriod, fractionalSecondDigits properties are not supported. Please find details above.
         Set<String> unSupportedList = new HashSet<>(Arrays.asList(
                 "timedatestyle-en.js", //Result for full with {} Expected SameValue(«2:12:47 PM Coordinated Universal Time», «14:12:47 Coordinated Universal Time») to be true
                 "dayPeriod-narrow-en.js", //00:00, narrow format Expected SameValue(«12/12/2017», «at night») to be true
@@ -124,15 +126,9 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
                 "fractionalSecondDigits.js" //1 fractionalSecondDigits round down Expected SameValue(«02:03», «02:03.2») to be true
         ));
 
-        Set<String> testIssues = new HashSet<>(Arrays.asList(
-                "builtin.js", //Property 'isConstructor' doesn't exist ReferenceError: Property 'isConstructor' doesn't exist         at global (:30:18)
-                "format-function-builtin.js" //Property 'isConstructor' doesn't exist ReferenceError: Property 'isConstructor' doesn't exist at global (:30:18)
-        ));
-
         Set<String> blackList = new HashSet<>();
         blackList.addAll(deviations);
         blackList.addAll(unSupportedList);
-        blackList.addAll(testIssues);
 
         runTests(basePath, blackList, whiteList);
     }
@@ -144,13 +140,13 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
 
         Set<String> whilteList = new HashSet<>();
 
+        // timeStyle, dateStyle, dayPeriod, fractionalSecondDigits properties are not supported. Please find details above.
         Set<String> unSupportedList = new HashSet<>(Arrays.asList(
                 "fractionalSecondDigits.js", //length should be 5, 1 fractionalSecondDigits round down Expected SameValue(«3», «5») to be true
                 "dayPeriod-narrow-en.js", //length should be 1, 00:00, narrow format Expected SameValue(«5», «1») to be true
                 "dayPeriod-long-en.js", //length should be 1, 00:00, long format Expected SameValue(«5», «1») to be true
                 "dayPeriod-short-en.js" //length should be 1, 00:00, short format Expected SameValue(«5», «1») to be true
         ));
-
 
         Set<String> blackList = new HashSet<>();
         blackList.addAll(unSupportedList);
@@ -170,17 +166,17 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
                 "order-style.js" // Expected true but got false .. We don't have deterministic ordering of keys.
         ));
 
-        Set<String> testIssues = new HashSet<>(Arrays.asList(
-                "order-fractionalSecondDigits.js", //Property 'arrayContains' doesn't exist ReferenceError: Property 'arrayContains' doesn't exist at global (:31:8)
+        // timeStyle, dateStyle, dayPeriod, fractionalSecondDigits properties are not supported. Please find details above.
+        Set<String> unSupportedList = new HashSet<>(Arrays.asList(
+                "order-fractionalSecondDigits.js", // Expected true but got false
                 "hourCycle-dateStyle.js", //Should support dateStyle=full Expected SameValue(«undefined», «full») to be true
                 "hourCycle-timeStyle.js", //Should support timeStyle=full Expected SameValue(«undefined», «full») to be true
-                "builtin.js", // Reflect
                 "order-dayPeriod.js" // Expected true but got false .. We don't have deterministic ordering of keys.
         ));
 
         Set<String> blackList = new HashSet<>();
         blackList.addAll(deviations);
-        blackList.addAll(testIssues);
+        blackList.addAll(unSupportedList);
 
         runTests(basePath, blackList, whilteList);
     }
@@ -192,8 +188,8 @@ public class HermesIntlDateFormatTest extends HermesIntlTest262Base {
         Set<String> whilteList = new HashSet<>();
 
         Set<String> deviations = new HashSet<>(Arrays.asList(
-                "toString.js", //Expected SameValue(«[object Object]», «[object Intl.DateTimeFormat]») to be true
-                "toStringTag.js" //descriptor value should be Intl.DateTimeFormat
+                "toString.js", // Expected SameValue(«[object Object]», «[object Intl.DateTimeFormat]») to be true
+                "toStringTag.js" // descriptor value should be Intl.DateTimeFormat
         ));
 
         Set<String> blackList = new HashSet<>();

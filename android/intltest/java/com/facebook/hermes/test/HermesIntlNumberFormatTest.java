@@ -42,6 +42,7 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
         Set<String> whiteList = new HashSet<>();
 
         Set<String> deviations = new HashSet<>(Arrays.asList(
+                "constructor-locales-hasproperty.js", // Currently We/Hermes don't call the "has" trap in proxy.
                 "dft-currency-mnfd-range-check-mxfd.js", // This test is not correct based on spec. With ths currency in test, the default minfractiondigits is 2, and the maxfractiondigita cannot be set to 1. Both Firefox and Chrome also fails the test.
                 "constructor-order.js",  // When strictly following spec, the currency checks comes before unit check and the test will throw RangeError on currency validation before reaching the cdoe which throws TypeError on seeing undefined unit. But, we have a part of option validation in C++ code which throws all TypeErrors, which results in the TypeError getting thrown.
                 "currency-digits.js", // Didn't get correct minimumFractionDigts for currency AFN. Expected SameValue(«0», «2») to be true
@@ -49,10 +50,8 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
         ));
 
         Set<String> testIssues = new HashSet<>(Arrays.asList(
-                "proto-from-ctor-realm.js", // Property '$262' doesn't exist
-                "constructor-locales-get-tostring.js", // Property 'Proxy' doesn't exist
-                "subclassing.js", // Compiling JS failed: 18:1:invalid statement encountered. Buffer size 986 starts with: 2f2f20436f7079726967687420323031
-                "constructor-locales-hasproperty.js"  // Property 'Proxy' doesn't exist
+                "proto-from-ctor-realm.js", // Hermes doesn't support realms
+                "subclassing.js" // Hermes doesn't support classes. Compiling JS failed: 18:1:invalid statement encountered. Buffer size 986 starts with: 2f2f20436f7079726967687420323031
         ));
 
         Set<String> blackList = testIssues;
@@ -78,11 +77,7 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
         String basePath = "test262-main/test/intl402/NumberFormat/supportedLocalesOf";
 
         Set<String> whiteList = new HashSet<>();
-        Set<String> testIssues = new HashSet<>(Arrays.asList(
-                "builtin.js" // Property 'isConstructor' doesn't exist
-        ));
-
-        Set<String> blackList = testIssues;
+        Set<String> blackList = new HashSet<>();
         runTests(basePath, blackList, whiteList);
     }
 
@@ -104,15 +99,11 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
 
         Set<String> whiteList = new HashSet<>();
         Set<String> deviations = new HashSet<>(Arrays.asList(
-                "configurable.js" // // Expected SameValue(«Object», «Intl.NumberFormat») to be true .. Test expects new Intl.NumberFormat().toString() to return "[object Intl.NumberFormat]" which Firefox does.. but hermes (and Chrome) returns "[object Object]:
+                "prop-desc.js", // Test expects Object.getOwnPropertyDescriptor(Intl, "NumberFormat").value to be "Intl.NumberFormat", but we return "Object".
+                "configurable.js" // Expected SameValue(«Object», «Intl.NumberFormat») to be true .. Test expects new Intl.NumberFormat().toString() to return "[object Intl.NumberFormat]" which Firefox does.. but hermes (and Chrome) returns "[object Object]:
         ));
 
-        Set<String> testIssues = new HashSet<>(Arrays.asList(
-                "prop-desc.js" // Property 'isConstructor' doesn't exist
-        ));
-
-        Set<String> blackList = testIssues;
-        blackList.addAll(deviations);
+        Set<String> blackList = deviations;
 
         runTests(basePath, blackList, whiteList);
     }
@@ -127,12 +118,7 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
                 "order.js" // // Expected SameValue(«Object», «Intl.NumberFormat») to be true .. Test expects new Intl.NumberFormat().toString() to return "[object Intl.NumberFormat]" which Firefox does.. but hermes (and Chrome) returns "[object Object]:
         ));
 
-        Set<String> testIssues = new HashSet<>(Arrays.asList(
-                "builtin.js" // Property 'isConstructor' doesn't exist
-        ));
-
-        Set<String> blackList = testIssues;
-        blackList.addAll(deviations);
+        Set<String> blackList = deviations;
 
         runTests(basePath, blackList, whiteList);
     }
@@ -144,7 +130,7 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
 
         Set<String> whiteList = new HashSet<>();
 
-        // Our implementation doesn't support signDisplay.
+        // Our implementation doesn't support signDisplay as implementing with ICU APIs available in Android before API 30 is very involved and tricky (Requires explicit manipulation of patterns ) ..
         Set<String> signDisplayList = new HashSet<>(Arrays.asList(
                 "signDisplay-currency-zh-TW.js", //Expected SameValue(«US$0.00», «+US$0.00») to be true
                 "signDisplay-rounding.js", //Expected SameValue(«-0», «0») to be true
@@ -159,19 +145,13 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
                 "signDisplay-ja-JP.js" //0 (always) Expected SameValue(«0», «+0») to be true
         ));
 
-        Set<String> testIssues = new HashSet<>(Arrays.asList(
-                "builtin.js", //Property 'isConstructor' doesn't exist -- ReferenceError: Property 'isConstructor' doesn't exist
-                "format-function-builtin.js" //Property 'isConstructor' doesn't exist
-        ));
-
-        Set<String> unit = new HashSet<>(Arrays.asList(
+        Set<String> unitIssues = new HashSet<>(Arrays.asList(
             "units.js" // com.facebook.hermes.intl.JSRangeErrorException: Unknown unit: acre-per-acre .. We support only units directly known to https://developer.android.com/reference/android/icu/util/MeasureUnit .. MeasureFormat.format requires an instance of MeasureUnit.
         ));
 
         Set<String> blackList = new HashSet<>();
         blackList.addAll(signDisplayList);
-        blackList.addAll(testIssues);
-        blackList.addAll(unit);
+        blackList.addAll(unitIssues);
 
         runTests(basePath, blackList, whiteList);
     }
@@ -183,7 +163,7 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
 
         Set<String> whiteList = new HashSet<>();
 
-        // Our implementation doesn't support signDisplay.
+        // Our implementation doesn't support signDisplay as implementing with ICU APIs available in Android before API 30 is very involved and tricky (Requires explicit manipulation of patterns ) ..
         Set<String> signDisplayList = new HashSet<>(Arrays.asList(
                 "signDisplay-zh-TW.js", //NaN (auto): parts[0].value Expected SameValue(«NaN», «非數值») to be true
                 "signDisplay-currency-de-DE.js", //undefined: length Expected SameValue(«5», «6») to be true
@@ -197,7 +177,7 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
                 "signDisplay-en-US.js" //0 (always): length Expected SameValue(«1», «2») to be true
         ));
 
-        // https://developer.android.com/reference/android/icu/text/MeasureFormat doesn't implementat "formatToCharacterIterator" method correctly. It always returns the whole formatted text as a single literal.
+        // https://developer.android.com/reference/android/icu/text/MeasureFormat doesn't implement "formatToCharacterIterator" method. It always returns the whole formatted text as a single literal.
         Set<String> unitList = new HashSet<>(Arrays.asList(
                 "unit.js", //Expected SameValue(«false», «true») to be true
                 "unit-ja-JP.js", //undefined: length Expected SameValue(«1», «4») to be true

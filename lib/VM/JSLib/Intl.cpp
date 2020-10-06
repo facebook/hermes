@@ -209,12 +209,18 @@ CallResult<std::vector<std::u16string>> normalizeLocales(
 
   ret.reserve(*lengthRes);
 
+  bool isProxy = localeObj->isProxyObject();
   if (LLVM_UNLIKELY(
           createListFromArrayLike(
               localeObj,
               runtime,
               *lengthRes,
-              [&ret](Runtime *runtime, uint64_t index, PseudoHandle<> value) {
+              [&ret, isProxy](Runtime *runtime, uint64_t index, PseudoHandle<> value) {
+
+    // When the locales list is a proxy object, gaps are allowed.
+    if(isProxy && value->isUndefined())
+      return ExecutionStatus::RETURNED;
+
     if (!value->isString() && !value->isObject()) {
       return runtime->raiseTypeError(
               "Incorrect object type");

@@ -47,7 +47,7 @@ public class HermesIntlCollatorTest extends HermesIntlTest262Base {
 
         Set<String> testIssueList = new HashSet<>(Arrays.asList(
                 "subclassing.js",  // Test requires Javascript classes
-                "proto-from-ctor-realm.js" // ReferenceError: Property '$262' doesn't exist .. Test requires Reflect
+                "proto-from-ctor-realm.js" // Hermes doesn't support Realms (Isolated Environments).
         ));
 
         Set<String> blackList = new HashSet<>();
@@ -75,9 +75,7 @@ public class HermesIntlCollatorTest extends HermesIntlTest262Base {
                 // TODO :: [Follow-up] We fail the above test above we use std::unordered_map to hold the options in the C++ binding layer between java/platform code and VM
         ));
 
-        Set<String> testIssueList = new HashSet<>(Arrays.asList(
-                "builtin.js" // Property 'isConstructor' doesn't exist // needs Reflect.construct
-        ));
+        Set<String> testIssueList = new HashSet<>();
 
         Set<String> blackList = new HashSet<>();
         blackList.addAll(deviations);
@@ -97,10 +95,7 @@ public class HermesIntlCollatorTest extends HermesIntlTest262Base {
     public void testIntlCollator_prototype_compare() throws IOException {
         String basePath = "test262-main/test/intl402/Collator/prototype/compare";
         Set<String> whilteList = new HashSet<>();
-        Set<String> testIssueList = new HashSet<>(Arrays.asList(
-                "compare-function-builtin.js", // Reflect
-                "builtin.js" // Reflect
-        ));
+        Set<String> testIssueList = new HashSet<>();
 
         runTests(basePath, testIssueList, whilteList);
     }
