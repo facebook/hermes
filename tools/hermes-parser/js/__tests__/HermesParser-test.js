@@ -710,3 +710,199 @@ test('This type annotation', () => {
     program: expectedProgram,
   });
 });
+
+test('Method definitions', () => {
+  const source = `
+    class C {
+      foo() {}
+    }
+  `;
+
+  // ESTree AST contains MethodDefinition containing a FunctionExpression value
+  expect(parse(source)).toMatchObject({
+    type: 'Program',
+    body: [
+      {
+        type: 'ClassDeclaration',
+        body: {
+          type: 'ClassBody',
+          body: [
+            {
+              type: 'MethodDefinition',
+              key: {
+                type: 'Identifier',
+                name: 'foo',
+              },
+              value: {
+                type: 'FunctionExpression',
+                id: null,
+                params: [],
+                body: {
+                  type: 'BlockStatement',
+                  body: [],
+                },
+                async: false,
+                generator: false,
+                returnType: null,
+                typeParameters: null,
+                predicate: null,
+              },
+            },
+          ],
+        },
+      },
+    ],
+  });
+
+  // Babel AST has ClassMethod containing all properties of FunctionExpression
+  expect(parse(source, {babel: true})).toMatchObject({
+    type: 'File',
+    program: {
+      type: 'Program',
+      body: [
+        {
+          type: 'ClassDeclaration',
+          body: {
+            type: 'ClassBody',
+            body: [
+              {
+                type: 'ClassMethod',
+                key: {
+                  type: 'Identifier',
+                  name: 'foo',
+                },
+                id: null,
+                params: [],
+                body: {
+                  type: 'BlockStatement',
+                  body: [],
+                },
+                async: false,
+                generator: false,
+                returnType: null,
+                typeParameters: null,
+                predicate: null,
+              },
+            ],
+          },
+        },
+      ],
+    },
+  });
+});
+
+test('Object properties', () => {
+  const source = `
+    ({
+      prop1: 1,
+      prop2: function() {},
+      prop3() {},
+      get prop4() {},
+      set prop5(x) {},
+    })
+  `;
+
+  expect(parse(source, {babel: true})).toMatchObject({
+    type: 'File',
+    program: {
+      type: 'Program',
+      body: [
+        {
+          type: 'ExpressionStatement',
+          expression: {
+            type: 'ObjectExpression',
+            properties: [
+              {
+                type: 'ObjectProperty',
+                key: {
+                  type: 'Identifier',
+                  name: 'prop1',
+                },
+                value: {
+                  type: 'NumericLiteral',
+                  value: 1,
+                },
+                computed: false,
+                shorthand: false,
+              },
+              {
+                type: 'ObjectProperty',
+                key: {
+                  type: 'Identifier',
+                  name: 'prop2',
+                },
+                value: {
+                  type: 'FunctionExpression',
+                },
+                computed: false,
+                shorthand: false,
+              },
+              {
+                type: 'ObjectMethod',
+                key: {
+                  type: 'Identifier',
+                  name: 'prop3',
+                },
+                kind: 'method',
+                id: null,
+                params: [],
+                body: {
+                  type: 'BlockStatement',
+                  body: [],
+                },
+                async: false,
+                generator: false,
+                returnType: null,
+                typeParameters: null,
+                predicate: null,
+              },
+              {
+                type: 'ObjectMethod',
+                key: {
+                  type: 'Identifier',
+                  name: 'prop4',
+                },
+                kind: 'get',
+                id: null,
+                params: [],
+                body: {
+                  type: 'BlockStatement',
+                  body: [],
+                },
+                async: false,
+                generator: false,
+                returnType: null,
+                typeParameters: null,
+                predicate: null,
+              },
+              {
+                type: 'ObjectMethod',
+                key: {
+                  type: 'Identifier',
+                  name: 'prop5',
+                },
+                kind: 'set',
+                id: null,
+                params: [
+                  {
+                    type: 'Identifier',
+                    name: 'x',
+                  },
+                ],
+                body: {
+                  type: 'BlockStatement',
+                  body: [],
+                },
+                async: false,
+                generator: false,
+                returnType: null,
+                typeParameters: null,
+                predicate: null,
+              },
+            ],
+          },
+        },
+      ],
+    },
+  });
+});

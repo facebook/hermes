@@ -38,6 +38,10 @@ class HermesToBabelAdapter extends HermesASTAdapter {
         return this.mapTemplateElement(node);
       case 'GenericTypeAnnotation':
         return this.mapGenericTypeAnnotation(node);
+      case 'Property':
+        return this.mapProperty(node);
+      case 'MethodDefinition':
+        return this.mapMethodDefinition(node);
       default:
         return this.mapNodeDefault(node);
     }
@@ -147,6 +151,87 @@ class HermesToBabelAdapter extends HermesASTAdapter {
     }
 
     return this.mapNodeDefault(node);
+  }
+
+  mapProperty(node) {
+    const key = this.mapNode(node.key);
+    const value = this.mapNode(node.value);
+
+    // Convert methods, getters, and setters to ObjectMethod nodes
+    if (node.method || node.kind !== 'init') {
+      // Properties under the FunctionExpression value that should be moved
+      // to the ObjectMethod node itself.
+      const {
+        id,
+        params,
+        body,
+        async,
+        generator,
+        returnType,
+        typeParameters,
+        predicate,
+      } = value;
+
+      return {
+        type: 'ObjectMethod',
+        loc: node.loc,
+        start: node.start,
+        end: node.end,
+        // Non getter or setter methods have `kind = method`
+        kind: node.kind === 'init' ? 'method' : node.kind,
+        computed: node.computed,
+        key,
+        id,
+        params,
+        body,
+        async,
+        generator,
+        returnType,
+        typeParameters,
+        predicate,
+      };
+    } else {
+      // Non-method property nodes should be renamed to ObjectProperty
+      node.type = 'ObjectProperty';
+      return node;
+    }
+  }
+
+  mapMethodDefinition(node) {
+    const key = this.mapNode(node.key);
+    const value = this.mapNode(node.value);
+
+    // Properties under the FunctionExpression value that should be moved
+    // to the ClassMethod node itself.
+    const {
+      id,
+      params,
+      body,
+      async,
+      generator,
+      returnType,
+      typeParameters,
+      predicate,
+    } = value;
+
+    return {
+      type: 'ClassMethod',
+      loc: node.loc,
+      start: node.start,
+      end: node.end,
+      kind: node.kind,
+      computed: node.computed,
+      static: node.static,
+      key,
+      id,
+      params,
+      body,
+      async,
+      generator,
+      returnType,
+      typeParameters,
+      predicate,
+    };
   }
 }
 
