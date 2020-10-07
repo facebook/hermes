@@ -5048,6 +5048,9 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
   UniqueString *op = getTokenIdent(tok_->getKind());
   auto debugLoc = advance().Start;
 
+  // We are directly recursing on parseAssignmentExpression.
+  // That can overflow the stack, so check recursion here.
+  CHECK_RECURSION;
   auto optRightExpr = parseAssignmentExpression(
       param, AllowTypedArrowFunction::Yes, CoverTypedParameters::No, nullptr);
   if (!optRightExpr)
