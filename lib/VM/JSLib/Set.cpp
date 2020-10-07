@@ -203,6 +203,7 @@ setConstructor(void *, Runtime *runtime, NativeArgs args) {
   return selfHandle.getHermesValue();
 }
 
+// ES12 23.2.3.1 Set.prototype.add ( value )
 CallResult<HermesValue>
 setPrototypeAdd(void *, Runtime *runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSSet>();
@@ -215,7 +216,14 @@ setPrototypeAdd(void *, Runtime *runtime, NativeArgs args) {
         "Method Set.prototype.add called on incompatible receiver");
   }
   auto valueHandle = args.getArgHandle(0);
-  JSSet::addValue(selfHandle, runtime, valueHandle, valueHandle);
+  // 5. If value is -0, set value to +0.
+  // N.B. in the case of Set, the value is used as both the value and the key of
+  // the entry. They are both observed as normalized from Set iterators.
+  static const PinnedHermesValue zero = HermesValue::encodeNumberValue(0);
+  auto value = valueHandle->isNumber() && valueHandle->getNumber() == 0
+      ? Handle<>(&zero)
+      : valueHandle;
+  JSSet::addValue(selfHandle, runtime, value, value);
   return selfHandle.getHermesValue();
 }
 

@@ -298,6 +298,7 @@ mapPrototypeKeys(void *, Runtime *runtime, NativeArgs args) {
   return iterator.getHermesValue();
 }
 
+// ES12 23.1.3.9 Map.prototype.set ( key, value )
 CallResult<HermesValue>
 mapPrototypeSet(void *, Runtime *runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSMap>();
@@ -309,8 +310,14 @@ mapPrototypeSet(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Method Map.prototype.set called on incompatible receiver");
   }
-  JSMap::addValue(
-      selfHandle, runtime, args.getArgHandle(0), args.getArgHandle(1));
+  auto keyHandle = args.getArgHandle(0);
+  // 5. If key is -0, set key to +0.
+  // N.B. in the case of Map, only key should be normalized but not the value.
+  static const PinnedHermesValue zero = HermesValue::encodeNumberValue(0);
+  auto key = keyHandle->isNumber() && keyHandle->getNumber() == 0
+      ? Handle<>(&zero)
+      : keyHandle;
+  JSMap::addValue(selfHandle, runtime, key, args.getArgHandle(1));
   return selfHandle.getHermesValue();
 }
 
