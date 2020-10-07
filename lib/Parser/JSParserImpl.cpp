@@ -2212,7 +2212,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
             return None;
           ESTree::Node *type = *optType;
           expr = setLocation(
-              startLoc,
+              expr,
               type,
               new (context_) ESTree::TypeCastExpressionNode(expr, type));
         }
