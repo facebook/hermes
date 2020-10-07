@@ -4230,7 +4230,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
       return None;
     }
     return setLocation(
-        prop,
+        startRange,
         end,
         new (context_) ESTree::ClassPropertyNode(
             prop, value, computed, isStatic, variance, typeAnnotation));
@@ -4348,7 +4348,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
   }
 
   return setLocation(
-      startLoc,
+      startRange,
       optBody.getValue(),
       new (context_) ESTree::MethodDefinitionNode(
           prop, funcExpr, kind, computed, isStatic));
