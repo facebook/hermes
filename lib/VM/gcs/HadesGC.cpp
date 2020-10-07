@@ -34,25 +34,6 @@ HadesGC::HeapSegment::HeapSegment(AlignedStorage &&storage)
   growToLimit();
 }
 
-void HadesGC::HeapSegment::transitionToFreelist(OldGen &og, size_t segmentIdx) {
-  assert(bumpAllocMode_ && "This segment has already been transitioned");
-  // Add a free list cell that spans the distance from end to level.
-  const uint32_t sz = end() - level();
-  if (sz < minAllocationSize()) {
-    // There's not enough space to add a free list node.
-    // That's ok, the segment is still well-formed. To eventually reclaim this
-    // space, the sweeper should coalesce this tail space when the last object
-    // is free'd.
-    bumpAllocMode_ = false;
-    return;
-  }
-  AllocResult res = bumpAlloc(sz);
-  assert(res.success && "Failed to bump the level to the end");
-  setCellHead(static_cast<GCCell *>(res.ptr), sz);
-  bumpAllocMode_ = false;
-  og.addCellToFreelist(res.ptr, sz, segmentIdx, /*alreadyFree*/ true);
-}
-
 GCCell *HadesGC::OldGen::finishAlloc(GCCell *cell, uint32_t sz) {
   // Track the number of allocated bytes in a segment.
   allocatedBytes_ += sz;
@@ -64,8 +45,6 @@ GCCell *HadesGC::OldGen::finishAlloc(GCCell *cell, uint32_t sz) {
 }
 
 AllocResult HadesGC::HeapSegment::bumpAlloc(uint32_t sz) {
-  assert(
-      bumpAllocMode_ && "Shouldn't use bumpAlloc except on specific segments");
   return AlignedHeapSegment::alloc(sz);
 }
 
@@ -2307,9 +2286,6 @@ std::unique_ptr<HadesGC::HeapSegment> HadesGC::createSegment(bool isYoungGen) {
 }
 
 void HadesGC::OldGen::addSegment(std::unique_ptr<HeapSegment> seg) {
-  assert(
-      seg->isBumpAllocMode() &&
-      "Segments added to OG must be in bump alloc mode!");
   segments_.emplace_back(std::move(seg));
   HeapSegment &newSeg = *segments_.back();
   allocatedBytes_ += newSeg.used();
@@ -2319,9 +2295,16 @@ void HadesGC::OldGen::addSegment(std::unique_ptr<HeapSegment> seg) {
   assert(
       freelistSegmentsBuckets_.size() == segments_.size() &&
       "Must have as many freelists as segments.");
-  // Switch the segment from bump alloc mode to free list mode and add any
-  // remaining capacity to the free list.
-  newSeg.transitionToFreelist(*this, segments_.size() - 1);
+
+  // Add the remainder of the segment to the freelist.
+  uint32_t sz = newSeg.available();
+  if (sz >= minAllocationSize()) {
+    auto res = newSeg.bumpAlloc(sz);
+    assert(res.success);
+    HeapSegment::setCellHead(static_cast<GCCell *>(res.ptr), sz);
+    addCellToFreelist(res.ptr, sz, segments_.size() - 1, /*alreadyFree*/ true);
+  }
+
   gc_->addSegmentExtentToCrashManager(
       newSeg, oscompat::to_string(numSegments()));
 }

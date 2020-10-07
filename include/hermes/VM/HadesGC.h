@@ -241,7 +241,6 @@ class HadesGC final : public GCBase {
     ~HeapSegment() = default;
 
     /// Allocate space by bumping a level.
-    /// \pre isBumpAllocMode() must be true.
     AllocResult bumpAlloc(uint32_t sz);
 
     /// Record the head of this cell so it can be found by the card scanner.
@@ -259,15 +258,6 @@ class HadesGC final : public GCBase {
     void forAllObjs(CallbackFunction callback);
     template <typename CallbackFunction>
     void forAllObjs(CallbackFunction callback) const;
-
-    bool isBumpAllocMode() const {
-      return bumpAllocMode_;
-    }
-
-    /// Transitions this segment from bump-alloc mode to freelist mode.
-    /// Can only be called once, when the segment is in bump-alloc mode. There
-    /// is no transitioning from freelist mode back to bump-alloc mode.
-    void transitionToFreelist(OldGen &og, size_t segmentIdx);
 
     // APIs from AlignedHeapSegment that are safe to use on a HeapSegment.
     using AlignedHeapSegment::available;
@@ -288,14 +278,6 @@ class HadesGC final : public GCBase {
     using AlignedHeapSegment::size;
     using AlignedHeapSegment::start;
     using AlignedHeapSegment::used;
-
-   private:
-    /// If true, then allocations into this segment increment a level inside the
-    /// segment. Once the level reaches the end of the segment, no more
-    /// allocations can occur.
-    /// All segments begin in bumpAllocMode. If an OG segment has this mode set,
-    /// and sweeping frees an object, this mode will be unset.
-    bool bumpAllocMode_{true};
   };
 
   class OldGen final {
