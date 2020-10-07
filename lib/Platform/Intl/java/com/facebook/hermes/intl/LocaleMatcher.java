@@ -2,6 +2,9 @@ package com.facebook.hermes.intl;
 
 import android.icu.util.ULocale;
 import android.os.Build;
+
+import androidx.annotation.RequiresApi;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -9,17 +12,8 @@ import java.util.HashMap;
 public class LocaleMatcher {
 
     public static class LocaleMatchResult {
-        public ILocaleObject matchedLocale;
+        public ILocaleObject<?> matchedLocale;
         public HashMap<String, String> extensions = new HashMap<>();
-    }
-
-    public static android.icu.util.ULocale[] getULocaleArrayFromLocaleArrray(java.util.Locale[] localeArray) {
-        ArrayList<android.icu.util.ULocale> result = new ArrayList<>();
-        for(java.util.Locale locale : localeArray) {
-            result.add(ULocale.forLanguageTag(locale.toLanguageTag())); // Note: Locale.toLanguageTag() is introduced in API 21.
-        }
-
-        return result.toArray(new android.icu.util.ULocale[result.size()]);
     }
 
     // https://tc39.es/ecma402/#sec-bestavailablelocale
@@ -42,21 +36,12 @@ public class LocaleMatcher {
         }
     }
 
-    public static String BestAvailableLocale(java.util.Locale[] availableLocales, String locale) {
-        ArrayList<String> availableLocaleIds = new ArrayList<>();
-        for (java.util.Locale availableLocale: availableLocales) {
-            availableLocaleIds.add(availableLocale.toLanguageTag());
-        }
-
-        return BestAvailableLocale(availableLocaleIds.toArray(new String[availableLocaleIds.size()]), locale);
-    }
-
     // https://tc39.es/ecma402/#sec-lookupmatcher
     public static LocaleMatchResult lookupMatch(String[] requestedLocales, String[] availableLocales) throws JSRangeErrorException {
 
         LocaleMatchResult result = new LocaleMatchResult();
         for (String locale : requestedLocales) {
-            ILocaleObject requestedLocaleObject = LocaleObject.createFromLocaleId(locale);
+            ILocaleObject<?> requestedLocaleObject = LocaleObject.createFromLocaleId(locale);
             String noExtensionLocale = requestedLocaleObject.toCanonicalTagWithoutExtensions();
 
             String availableLocale = BestAvailableLocale(availableLocales, noExtensionLocale);
@@ -84,7 +69,8 @@ public class LocaleMatcher {
             availableLocaleIds.add(locale.toLanguageTag()); // TODO:: Not available on platforms <= 20
         }
 
-        return availableLocaleIds.toArray(new String[availableLocaleIds.size()]);
+        String[] availableLocaleIdsArray = new String[availableLocaleIds.size()];
+        return availableLocaleIds.toArray(availableLocaleIdsArray);
     }
 
 
@@ -107,17 +93,17 @@ public class LocaleMatcher {
                 subset.add(requestedLocale);
         }
 
-        return subset.toArray(new String[subset.size()]);
+        String[] subsetArray = new String[subset.size()];
+        return subset.toArray(subsetArray);
     }
 
 
-    public static ULocale bestFitBestAvailableLocale(ILocaleObject requestedLocaleObject) throws JSRangeErrorException {
-        assert (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N);
-
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    public static ULocale bestFitBestAvailableLocale(ILocaleObject<?> requestedLocaleObject) throws JSRangeErrorException {
         ULocale[] availableLocales = ULocale.getAvailableLocales();
 
         android.icu.util.ULocale requestedULocaleWithoutExtensions = (android.icu.util.ULocale) requestedLocaleObject.getLocaleWithoutExtensions();
-        android.icu.util.ULocale[] requestedLocalesArray = new android.icu.util.ULocale[]{(android.icu.util.ULocale) requestedULocaleWithoutExtensions};
+        android.icu.util.ULocale[] requestedLocalesArray = new android.icu.util.ULocale[]{requestedULocaleWithoutExtensions};
         boolean[] fallback = new boolean[1];
 
         android.icu.util.ULocale acceptedLocale = android.icu.util.ULocale.acceptLanguage(requestedLocalesArray, availableLocales, fallback);
@@ -130,11 +116,11 @@ public class LocaleMatcher {
         return null;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     public static LocaleMatchResult bestFitMatch(String[] requestedLocales) throws JSRangeErrorException {
-        assert (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N);
         LocaleMatchResult result = new LocaleMatchResult();
         for (String requestedLocale : requestedLocales) {
-            ILocaleObject requestedLocaleObject = LocaleObject.createFromLocaleId(requestedLocale);
+            ILocaleObject<?> requestedLocaleObject = LocaleObject.createFromLocaleId(requestedLocale);
             ULocale availableLocale = bestFitBestAvailableLocale(requestedLocaleObject);
             if(availableLocale != null) {
                 result.matchedLocale = LocaleObjectICU.createFromULocale(availableLocale);
@@ -147,6 +133,7 @@ public class LocaleMatcher {
         return result;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     public static String[] bestFitSupportedLocales(String[] requestedLocales) throws JSRangeErrorException {
         ArrayList<String> subset = new ArrayList<>();
         for (String requestedLocale : requestedLocales) {
@@ -155,7 +142,8 @@ public class LocaleMatcher {
                 subset.add(requestedLocale);
         }
 
-        return subset.toArray(new String[subset.size()]);
+        String[] subsetArray = new String[subset.size()];
+        return subset.toArray(subsetArray);
     }
 
 }

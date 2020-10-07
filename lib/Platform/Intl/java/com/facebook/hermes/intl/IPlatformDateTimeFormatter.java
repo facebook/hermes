@@ -383,7 +383,7 @@ public interface IPlatformDateTimeFormatter {
         }
     }
 
-    void configure(ILocaleObject resolvedLocaleObject, String calendar, String numberingSystem
+    void configure(ILocaleObject<?> resolvedLocaleObject, String calendar, String numberingSystem
             , FormatMatcher formatMatcher
             , WeekDay weekDay, Era era
             , Year year, Month month, Day day
@@ -397,13 +397,13 @@ public interface IPlatformDateTimeFormatter {
 
     AttributedCharacterIterator formatToParts(double n) throws JSRangeErrorException;
 
-    String getDefaultCalendarName(ILocaleObject mResolvedLocaleObject) throws JSRangeErrorException;
+    String getDefaultCalendarName(ILocaleObject<?> mResolvedLocaleObject) throws JSRangeErrorException;
 
-    HourCycle getDefaultHourCycle(ILocaleObject localeObject) throws JSRangeErrorException;
+    HourCycle getDefaultHourCycle(ILocaleObject<?> localeObject) throws JSRangeErrorException;
 
-    String getDefaultTimeZone(ILocaleObject localeObject) throws JSRangeErrorException;
+    String getDefaultTimeZone(ILocaleObject<?> localeObject) throws JSRangeErrorException;
 
-    String getDefaultNumberingSystem(ILocaleObject localeObject) throws JSRangeErrorException;
+    String getDefaultNumberingSystem(ILocaleObject<?> localeObject) throws JSRangeErrorException;
 
     boolean isValidTimeZone(String timeZone);
 

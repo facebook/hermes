@@ -90,6 +90,11 @@ android {
     androidTestImplementation 'com.facebook.yoga:proguard-annotations:1.14.1'
   }
 
+  dependencies {
+    implementation "androidx.annotation:annotation:1.1.0"
+    implementation "androidx.annotation:annotation-experimental:1.0.0"
+  }
+
   sourceSets {
     main {
       java {

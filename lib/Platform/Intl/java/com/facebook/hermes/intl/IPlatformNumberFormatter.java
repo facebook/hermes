@@ -2,6 +2,8 @@ package com.facebook.hermes.intl;
 
 import android.icu.text.MeasureFormat;
 import android.icu.util.Currency;
+import android.os.Build;
+import androidx.annotation.RequiresApi;
 
 import java.text.AttributedCharacterIterator;
 
@@ -162,6 +164,7 @@ public interface IPlatformNumberFormatter {
             }
         }
 
+        @RequiresApi(api = Build.VERSION_CODES.N)
         public MeasureFormat.FormatWidth getFormatWidth() {
             MeasureFormat.FormatWidth formatWidth;
             switch (this) {
@@ -242,12 +245,12 @@ public interface IPlatformNumberFormatter {
     }
 
 
-    IPlatformNumberFormatter configure(ILocaleObject localeObject, String numberingSystem, IPlatformNumberFormatter.Style style,
+    IPlatformNumberFormatter configure(ILocaleObject<?> localeObject, String numberingSystem, IPlatformNumberFormatter.Style style,
                                        IPlatformNumberFormatter.CurrencySign currencySign,
                                        IPlatformNumberFormatter.Notation notation,
                                        IPlatformNumberFormatter.CompactDisplay compactDisplay) throws JSRangeErrorException;
 
-    String getDefaultNumberingSystem(ILocaleObject localeObject) throws JSRangeErrorException;
+    String getDefaultNumberingSystem(ILocaleObject<?> localeObject) throws JSRangeErrorException;
 
     IPlatformNumberFormatter setCurrency(String currencyCode, CurrencyDisplay currencyDisplay) throws JSRangeErrorException;
 

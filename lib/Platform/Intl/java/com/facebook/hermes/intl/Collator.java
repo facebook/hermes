@@ -45,7 +45,7 @@ public class Collator {
     // And we add [[Numeric]] and [[CaseFirst]] slots unconditionally as described above.
 
     // 11.1.2 2-4
-    private IPlatformCollator.Usage mResolvedUsage = null;
+    private IPlatformCollator.Usage mResolvedUsage;
     private IPlatformCollator.Sensitivity mResolvedSensitivity;
     private boolean mResolvedIgnorePunctuation;
     private String mResolvedCollation = Constants.COLLATION_DEFAULT;
@@ -54,17 +54,17 @@ public class Collator {
     // And these can be set through options as well as extensions ..
     private boolean mResolvedNumeric;
 
-    private IPlatformCollator.CaseFirst mResolvedCaseFirst = null;
+    private IPlatformCollator.CaseFirst mResolvedCaseFirst;
 
     // [[Locale]]
-    private ILocaleObject mResolvedLocaleObject = null;
+    private ILocaleObject<?> mResolvedLocaleObject;
 
     // This is a hacky way to avoid the "search" collation value from being shown in "resolvedOptions" ..
     // ICU Collation object doesn't expose any API to specify the "search" collation .. hence we have to resort to adding "-co-search" extension to locale id, which is prohibited by the ECMAScript spec.
-    private ILocaleObject mResolvedLocaleObjectForResolvedOptions = null;
+    private ILocaleObject<?> mResolvedLocaleObjectForResolvedOptions;
 
     // [[InitializedCollator]]
-    private IPlatformCollator mPlatformCollatorObject = null;
+    private IPlatformCollator mPlatformCollatorObject;
 
 
     // https://tc39.es/ecma402/#sec-initializecollator
@@ -96,11 +96,11 @@ public class Collator {
         JSObjects.Put(opt, "kf", caseFirst);
 
         // https://tc39.es/ecma402/#sec-intl-collator-internal-slots
-        List<String> relevantExtensionKeys = Arrays.asList(new String[]{"co", "kf", "kn"});
+        List<String> relevantExtensionKeys = Arrays.asList("co", "kf", "kn");
 
         HashMap<String, Object> r = LocaleResolver.resolveLocale(locales, opt, relevantExtensionKeys);
 
-        mResolvedLocaleObject = (ILocaleObject) JSObjects.getJavaMap(r).get("locale");
+        mResolvedLocaleObject = (ILocaleObject<?>) JSObjects.getJavaMap(r).get("locale");
         mResolvedLocaleObjectForResolvedOptions = mResolvedLocaleObject.cloneObject();
 
         Object collation = JSObjects.Get(r, "co");
@@ -113,7 +113,7 @@ public class Collator {
             mResolvedNumeric = false;
         else {
             String numericCollationValue = JSObjects.getJavaString(numericCollation);
-            mResolvedNumeric = Boolean.valueOf(numericCollationValue);
+            mResolvedNumeric = Boolean.parseBoolean(numericCollationValue);
         }
 
         Object caseFirstCollation = JSObjects.Get(r, "kf");
@@ -182,6 +182,7 @@ public class Collator {
     //
     // The notes on DateTimeFormat#DateTimeFormat() for Locales and
     // Options also apply here.
+    @SuppressWarnings("unused")
     public static List<String> supportedLocalesOf(List<String> locales, Map<String, Object> options)
             throws JSRangeErrorException {
         String matcher = JSObjects.getJavaString(OptionHelpers.GetOption(options, Constants.LOCALEMATCHER, OptionHelpers.OptionType.STRING, Constants.LOCALEMATCHER_POSSIBLE_VALUES, Constants.LOCALEMATCHER_BESTFIT));
@@ -194,6 +195,7 @@ public class Collator {
 
     // Implementer note: This method corresponds roughly to
     // https://tc39.es/ecma402/#sec-intl.collator.prototype.resolvedoptions
+    @SuppressWarnings("unused")
     public Map<String, Object> resolvedOptions() throws JSRangeErrorException {
         HashMap<String, Object> finalResolvedOptions = new LinkedHashMap<>();
         String finalResolvedLocaleId = mResolvedLocaleObjectForResolvedOptions.toCanonicalTag();
@@ -222,9 +224,9 @@ public class Collator {
 
     // Implementer note: This method corresponds roughly to
     // https://tc39.es/ecma402/#sec-collator-comparestrings
+    @SuppressWarnings("unused")
     public double compare(String source, String target) {
-        double result = mPlatformCollatorObject.compare(source, target);
-        return result;
+        return mPlatformCollatorObject.compare(source, target);
     }
 }
 

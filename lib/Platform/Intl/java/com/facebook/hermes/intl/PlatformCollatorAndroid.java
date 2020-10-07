@@ -4,8 +4,6 @@ import java.text.RuleBasedCollator;
 import java.util.ArrayList;
 import java.util.Locale;
 
-import android.icu.text.Collator;
-import android.icu.util.ULocale;
 import android.os.Build;
 
 import static com.facebook.hermes.intl.IPlatformCollator.Sensitivity.*;
@@ -13,14 +11,14 @@ import static com.facebook.hermes.intl.IPlatformCollator.Sensitivity.VARIANT;
 
 public class PlatformCollatorAndroid implements IPlatformCollator{
 
-    private RuleBasedCollator mCollator = null;
-    private LocaleObjectAndroid mLocale = null;
+    private RuleBasedCollator mCollator;
+    private LocaleObjectAndroid mLocale;
 
-    PlatformCollatorAndroid() throws JSRangeErrorException {
+    PlatformCollatorAndroid() {
     }
 
     @Override
-    public IPlatformCollator configure(ILocaleObject localeObject) throws JSRangeErrorException {
+    public IPlatformCollator configure(ILocaleObject<?> localeObject) throws JSRangeErrorException {
         mLocale = (LocaleObjectAndroid) localeObject;
 
         assert (Build.VERSION.SDK_INT < Build.VERSION_CODES.N);
@@ -43,11 +41,11 @@ public class PlatformCollatorAndroid implements IPlatformCollator{
         }
 
         int strength = mCollator.getStrength();
-        if(strength == android.icu.text.Collator.PRIMARY) {
+        if(strength == java.text.Collator.PRIMARY) {
             return BASE;
         }
 
-        if(strength== Collator.SECONDARY)
+        if(strength == java.text.Collator.SECONDARY)
             return ACCENT;
 
         return VARIANT;
@@ -59,14 +57,17 @@ public class PlatformCollatorAndroid implements IPlatformCollator{
 
         switch (sensitivity) {
             case BASE:
-                mCollator.setStrength(android.icu.text.Collator.PRIMARY);
+                mCollator.setStrength(java.text.Collator.PRIMARY);
                 break;
             case ACCENT:
-                mCollator.setStrength(android.icu.text.Collator.SECONDARY);
+                mCollator.setStrength(java.text.Collator.SECONDARY);
                 break;
             case VARIANT:
-                mCollator.setStrength(android.icu.text.Collator.TERTIARY);
+                mCollator.setStrength(java.text.Collator.TERTIARY);
                 break;
+            case CASE:
+                mCollator.setStrength(android.icu.text.Collator.PRIMARY);
+                // TODO: setCaseLevel method is not available. Essentially, the "CASE" sensitivity won't work correctly on older platforms.
         }
 
         return this;
@@ -101,7 +102,8 @@ public class PlatformCollatorAndroid implements IPlatformCollator{
             availableLocaleIds.add(locale.toLanguageTag()); // TODO:: Not available on platforms <= 20
         }
 
-        return availableLocaleIds.toArray(new String[availableLocaleIds.size()]);
+        String[] availableLocaleIdsArray = new String[availableLocaleIds.size()];
+        return availableLocaleIds.toArray(availableLocaleIdsArray);
     }
 
 }

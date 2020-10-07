@@ -5,6 +5,8 @@ import android.icu.text.RuleBasedCollator;
 import android.icu.util.ULocale;
 import android.os.Build;
 
+import androidx.annotation.RequiresApi;
+
 import java.util.ArrayList;
 
 import static com.facebook.hermes.intl.IPlatformCollator.Sensitivity.*;
@@ -13,17 +15,16 @@ import static com.facebook.hermes.intl.IPlatformCollator.Sensitivity.BASE;
 public class PlatformCollatorICU implements IPlatformCollator{
 
     private android.icu.text.RuleBasedCollator mCollator = null;
-    private LocaleObjectICU mLocale = null;
 
-    PlatformCollatorICU() throws JSRangeErrorException {
+    PlatformCollatorICU() {
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
-    public IPlatformCollator configure(ILocaleObject localeObject) throws JSRangeErrorException {
-        mLocale = (LocaleObjectICU) localeObject;
+    public IPlatformCollator configure(ILocaleObject<?> localeObject) throws JSRangeErrorException {
+        LocaleObjectICU mLocale = (LocaleObjectICU) localeObject;
 
-        assert (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N);
-        mCollator = (RuleBasedCollator) RuleBasedCollator.getInstance((ULocale) mLocale.getLocale());
+        mCollator = (RuleBasedCollator) RuleBasedCollator.getInstance(mLocale.getLocale());
 
         // Normalization is always on by the spec. We don't know whether the text is already normalized, hence we can't optimize as of now.
         mCollator.setDecomposition(android.icu.text.Collator.CANONICAL_DECOMPOSITION);
@@ -32,11 +33,13 @@ public class PlatformCollatorICU implements IPlatformCollator{
         return this;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public int compare(String source, String target) {
         return mCollator.compare(source, target);
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public Sensitivity getSensitivity() {
         if(mCollator == null) {
@@ -57,6 +60,7 @@ public class PlatformCollatorICU implements IPlatformCollator{
         return VARIANT;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public IPlatformCollator setSensitivity(IPlatformCollator.Sensitivity sensitivity) {
         switch (sensitivity) {
@@ -78,25 +82,28 @@ public class PlatformCollatorICU implements IPlatformCollator{
         return this;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public IPlatformCollator setIgnorePunctuation(boolean ignore) {
         if(ignore) {
             // Read for an explanation: http://userguide.icu-project.org/collation/customization/ignorepunct
-            mCollator.setAlternateHandlingShifted(JSObjects.getJavaBoolean(ignore));
+            mCollator.setAlternateHandlingShifted(true);
         }
 
         return this;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public IPlatformCollator setNumericAttribute(boolean numeric) {
         if(numeric) {
-            mCollator.setNumericCollation(JSObjects.getJavaBoolean(numeric));
+            mCollator.setNumericCollation(JSObjects.getJavaBoolean(true));
         }
 
         return this;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public IPlatformCollator setCaseFirstAttribute(CaseFirst caseFirst) {
         switch (caseFirst) {
@@ -117,6 +124,7 @@ public class PlatformCollatorICU implements IPlatformCollator{
         return this;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public String[] getAvailableLocales() {
         ArrayList<String> availableLocaleIds = new ArrayList<>();
@@ -134,6 +142,7 @@ public class PlatformCollatorICU implements IPlatformCollator{
             availableLocaleIds.add(locale.toLanguageTag()); // TODO:: Not available on platforms <= 20
         }
 
-        return availableLocaleIds.toArray(new String[availableLocaleIds.size()]);
+        String[] availableLocaleIdsArray = new String[availableLocaleIds.size()];
+        return availableLocaleIds.toArray(availableLocaleIdsArray);
     }
 }

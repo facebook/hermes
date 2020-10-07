@@ -8,10 +8,13 @@ import android.icu.util.Currency;
 import android.icu.util.Measure;
 import android.icu.util.MeasureUnit;
 import android.icu.util.ULocale;
+import android.os.Build;
 
 import java.math.BigDecimal;
 import java.text.AttributedCharacterIterator;
 import java.util.ArrayList;
+
+import androidx.annotation.RequiresApi;
 
 import static com.facebook.hermes.intl.IPlatformNumberFormatter.Style.CURRENCY;
 import static com.facebook.hermes.intl.IPlatformNumberFormatter.Style.DECIMAL;
@@ -29,12 +32,12 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
     private LocaleObjectICU mLocaleObject;
     private IPlatformNumberFormatter.Style mStyle;
 
-    private MeasureUnit mMeasureUnit = null;
-    private String mUnitId = null;
+    private MeasureUnit mMeasureUnit;
 
     PlatformNumberFormatterICU() {}
 
-    private void initialize(NumberFormat numberFormat, ILocaleObject localeObject, IPlatformNumberFormatter.Style style) {
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    private void initialize(NumberFormat numberFormat, ILocaleObject<?> localeObject, IPlatformNumberFormatter.Style style) {
         mNumberFormat = numberFormat;
         mFinalFormat = numberFormat;
         mLocaleObject = (LocaleObjectICU) localeObject;
@@ -43,6 +46,7 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
         mNumberFormat.setRoundingMode(BigDecimal.ROUND_HALF_UP);
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public PlatformNumberFormatterICU setCurrency(String currencyCode, IPlatformNumberFormatter.CurrencyDisplay currencyDisplay) throws JSRangeErrorException {
         if (mStyle == CURRENCY) {
@@ -54,7 +58,7 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
             if (currencyDisplay == CurrencyDisplay.CODE)
                 currencySymbol = currencyCode;
             else
-                currencySymbol = currency.getName((ULocale) mLocaleObject.getLocale(), currencyDisplay.getNameStyle(), null);
+                currencySymbol = currency.getName(mLocaleObject.getLocale(), currencyDisplay.getNameStyle(), null);
 
             if (mNumberFormat instanceof android.icu.text.DecimalFormat) {
                 android.icu.text.DecimalFormat decimalFormat = (android.icu.text.DecimalFormat) mNumberFormat;
@@ -67,12 +71,14 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
         return this;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public PlatformNumberFormatterICU setGrouping(boolean mGroupingUsed) {
         mNumberFormat.setGroupingUsed(mGroupingUsed);
         return this;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public PlatformNumberFormatterICU setMinIntergerDigits(int minimumIntegerDigits) {
         if (minimumIntegerDigits != -1)
@@ -81,6 +87,7 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
         return this;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public PlatformNumberFormatterICU setSignificantDigits(IPlatformNumberFormatter.RoundingType roundingType, int minimumSignificantDigits, int maximumSignificantDigits) throws JSRangeErrorException {
         if (mNumberFormat instanceof android.icu.text.DecimalFormat) {
@@ -102,6 +109,7 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
         return this;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public PlatformNumberFormatterICU setFractionDigits(IPlatformNumberFormatter.RoundingType roundingType, int minimumFractionDigits, int maximumFractionDigits) {
         if (roundingType == IPlatformNumberFormatter.RoundingType.FRACTION_DIGITS) {
@@ -119,6 +127,7 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
         return this;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public PlatformNumberFormatterICU setSignDisplay(IPlatformNumberFormatter.SignDisplay signDisplay) {
         if (mNumberFormat instanceof android.icu.text.DecimalFormat) {
@@ -150,6 +159,7 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
         return this;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     private static MeasureUnit parseUnit(String inUnit) throws JSRangeErrorException {
 
         // http://unicode.org/reports/tr35/tr35-general.html#Unit_Identifiers
@@ -163,19 +173,20 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
         throw new JSRangeErrorException("Unknown unit: " + inUnit);
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public PlatformNumberFormatterICU setUnits(String unit, IPlatformNumberFormatter.UnitDisplay unitDisplay) throws JSRangeErrorException {
         if (mStyle == Style.UNIT) {
-            mUnitId = unit;
-            mMeasureUnit = parseUnit(mUnitId);
-            mFinalFormat = MeasureFormat.getInstance((ULocale) mLocaleObject.getLocale(), unitDisplay.getFormatWidth(), mNumberFormat);
+            mMeasureUnit = parseUnit(unit);
+            mFinalFormat = MeasureFormat.getInstance(mLocaleObject.getLocale(), unitDisplay.getFormatWidth(), mNumberFormat);
         }
 
         return this;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
-    public String format(double n) throws JSRangeErrorException {
+    public String format(double n) {
         String result;
         try {
             if (mFinalFormat instanceof MeasureFormat && mMeasureUnit != null) {
@@ -196,6 +207,7 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
         return result;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public String fieldToString(AttributedCharacterIterator.Attribute attribute, double x) {
         if (attribute == NumberFormat.Field.SIGN) {
@@ -249,8 +261,9 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
         return "literal";
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
-    public AttributedCharacterIterator formatToParts(double n) throws JSRangeErrorException {
+    public AttributedCharacterIterator formatToParts(double n) {
         AttributedCharacterIterator iterator;
         try {
             if (mFinalFormat instanceof MeasureFormat && mMeasureUnit != null) {
@@ -276,6 +289,7 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
         return iterator;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     public static int getCurrencyDigits(String currencyCode) throws JSRangeErrorException {
         try {
             return Currency.getInstance(currencyCode).getDefaultFractionDigits();
@@ -284,8 +298,9 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
         }
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
-    public PlatformNumberFormatterICU configure(ILocaleObject localeObject, String numberingSystem, IPlatformNumberFormatter.Style style,
+    public PlatformNumberFormatterICU configure(ILocaleObject<?> localeObject, String numberingSystem, IPlatformNumberFormatter.Style style,
                                                 IPlatformNumberFormatter.CurrencySign currencySign,
                                                 IPlatformNumberFormatter.Notation notation,
                                                 IPlatformNumberFormatter.CompactDisplay compactDisplay) throws JSRangeErrorException {
@@ -329,6 +344,7 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
         return this;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public String[] getAvailableLocales() {
         ArrayList<String> availableLocaleIds = new ArrayList<>();
@@ -346,11 +362,13 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
             availableLocaleIds.add(locale.toLanguageTag()); // TODO:: Not available on platforms <= 20
         }
 
-        return availableLocaleIds.toArray(new String[availableLocaleIds.size()]);
+        String[] availableLocaleIdsArray =  new String[availableLocaleIds.size()];
+        return availableLocaleIds.toArray(availableLocaleIdsArray);
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
-    public String getDefaultNumberingSystem(ILocaleObject localeObject) throws JSRangeErrorException {
+    public String getDefaultNumberingSystem(ILocaleObject<?> localeObject) throws JSRangeErrorException {
         return NumberingSystem.getInstance((ULocale) localeObject.getLocale()).getName();
     }
 }

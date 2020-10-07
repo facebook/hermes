@@ -675,7 +675,7 @@ public class LocaleIdentifier {
     static void parseLanguageId(CharSequence inLocaleId, LocaleIdTokenizer localeIdTokenizer, LocaleIdTokenizer.LocaleIdSubtag nextSubtag, boolean transformedExtMode, ParsedLocaleIdentifier parsedLocaleIdentifier)
             throws JSRangeErrorException, LocaleIdTokenizer.LocaleIdSubtagIterationFailed {
 
-        ParsedLocaleIdentifier.ParsedLanguageIdentifier parsedLanguageIdentifier = parsedLocaleIdentifier.new ParsedLanguageIdentifier();
+        ParsedLocaleIdentifier.ParsedLanguageIdentifier parsedLanguageIdentifier = new ParsedLocaleIdentifier.ParsedLanguageIdentifier();
 
         if(transformedExtMode)
             parsedLocaleIdentifier.transformedLanguageIdentifier = parsedLanguageIdentifier;

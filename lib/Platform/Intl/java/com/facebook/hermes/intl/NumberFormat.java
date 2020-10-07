@@ -13,6 +13,7 @@ import java.text.AttributedCharacterIterator;
 import java.text.CharacterIterator;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -58,7 +59,7 @@ public class NumberFormat {
 
     private IPlatformNumberFormatter.SignDisplay mResolvedSignDisplay = IPlatformNumberFormatter.SignDisplay.AUTO;
 
-    private IPlatformNumberFormatter mPlatformNumberFormatter = null;
+    private IPlatformNumberFormatter mPlatformNumberFormatter;
 
     private boolean mUseDefaultNumberSystem;
     private String mResolvedNumberingSystem = null;
@@ -66,10 +67,10 @@ public class NumberFormat {
     private IPlatformNumberFormatter.Notation mResolvedNotation = null;
     private IPlatformNumberFormatter.CompactDisplay mResolvedCompactDisplay;
 
-    private ILocaleObject mResolvedLocaleObject = null;
+    private ILocaleObject<?> mResolvedLocaleObject = null;
 
     // This is a hacky way to avoid the extensions that we add from being shown in "resolvedOptions" ..
-    private ILocaleObject mResolvedLocaleObjectForResolvedOptions = null;
+    private ILocaleObject<?> mResolvedLocaleObjectForResolvedOptions = null;
 
     // This list should be kept alphabetically ordered so that we can binary search in it.
     private static String[] s_sanctionedSimpleUnitIdentifiers = {"acre",
@@ -126,7 +127,7 @@ public class NumberFormat {
     private String normalizeCurrencyCode(String currencyCode) {
         // https://tc39.es/ecma402/#sec-case-sensitivity-and-case-mapping
         // Note that we should convert only upper case translation in ASCII range.
-        StringBuffer normalized = new StringBuffer(currencyCode.length());
+        StringBuilder normalized = new StringBuilder(currencyCode.length());
         int offset = 'a' - 'A';
         for (int idx = 0; idx < currencyCode.length(); idx++) {
             char c = currencyCode.charAt(idx);
@@ -156,7 +157,7 @@ public class NumberFormat {
         // 5
         Object currency = OptionHelpers.GetOption(options, "currency", OptionHelpers.OptionType.STRING, JSObjects.Undefined(), JSObjects.Undefined());
         if(JSObjects.isUndefined(currency)) {
-            if(mResolvedStyle.equals("currency")) {
+            if(mResolvedStyle == CURRENCY) {
                 // Note: This should be TypeError by spec. But. currently we don't allow throwing TypeError from Java code.
                 // This check and throwing TypeError is already coded in native code ahead of the flow reaching here.
                 throw new JSRangeErrorException("Expected currency style !");
@@ -173,9 +174,9 @@ public class NumberFormat {
 
         Object unit = OptionHelpers.GetOption(options, "unit", OptionHelpers.OptionType.STRING, JSObjects.Undefined(), JSObjects.Undefined());
         if(JSObjects.isUndefined(unit)) {
-            if(mResolvedStyle.equals("unit")) {
-                // Note: This should be TypeError by spec. But. currently we don't allow throwing TypeError from Java code.
-                // This check and throwing TypeError is already coded in native code ahead of the flow reaching here.
+            // Note: This should be TypeError by spec. But. currently we don't allow throwing TypeError from Java code.
+            // This check and throwing TypeError is already coded in native code ahead of the flow reaching here.
+            if(mResolvedStyle == UNIT) {
                 throw new JSRangeErrorException("Expected unit !");
             }
         } else {
@@ -198,19 +199,8 @@ public class NumberFormat {
         }
     }
 
-    private Double max(double d1, double d2) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
-            return Double.max(d1, d2);
-        else return d1 >= d2 ? d1 : d2;
-
-    }
-
     // https://tc39.es/ecma402/#sec-setnfdigitoptions
-    private void setNumberFormatDigitOptions(Map<String, Object> options, Object mnfdDefault, Object mxfdDefault, IPlatformNumberFormatter.Notation notation) throws JSRangeErrorException {
-
-        // TODO :: Add such asserts wherever we use JSObjects.
-        assert (JSObjects.isNumber(mnfdDefault));
-        assert (JSObjects.isNumber(mxfdDefault));
+    private void setNumberFormatDigitOptions(Map<String, Object> options, Object mnfdDefault, Object mxfdDefault) throws JSRangeErrorException {
 
         Object mnid = OptionHelpers.GetNumberOption(options, "minimumIntegerDigits", JSObjects.newNumber(1), JSObjects.newNumber(21), JSObjects.newNumber(1));
 
@@ -237,7 +227,7 @@ public class NumberFormat {
             mRoundingType = IPlatformNumberFormatter.RoundingType.FRACTION_DIGITS;
 
             mnfd = OptionHelpers.DefaultNumberOption(mnfd, JSObjects.newNumber(0), JSObjects.newNumber(20), mnfdDefault);
-            Object mxfdActualDefault = JSObjects.newNumber( max(JSObjects.getJavaDouble(mnfd), JSObjects.getJavaDouble(mxfdDefault)));
+            Object mxfdActualDefault = JSObjects.newNumber( Math.max(JSObjects.getJavaDouble(mnfd), JSObjects.getJavaDouble(mxfdDefault)));
 
             mxfd = OptionHelpers.DefaultNumberOption(mxfd, mnfd, JSObjects.newNumber(20), mxfdActualDefault);
 
@@ -284,11 +274,11 @@ public class NumberFormat {
 
         // https://tc39.es/ecma402/#sec-intl.numberformat-internal-slots
         // Note:: "cu" won't be accepted.
-        List<String> relevantExtensionKeys = Arrays.asList(new String[]{"nu"});
+        List<String> relevantExtensionKeys = Collections.singletonList("nu");
 
         HashMap<String, Object> r = LocaleResolver.resolveLocale(locales, opt, relevantExtensionKeys);
 
-        mResolvedLocaleObject = (ILocaleObject) JSObjects.getJavaMap(r).get("locale");
+        mResolvedLocaleObject = (ILocaleObject<?>) JSObjects.getJavaMap(r).get("locale");
         mResolvedLocaleObjectForResolvedOptions = mResolvedLocaleObject.cloneObject();
 
         Object numeringSystemResolved  = JSObjects.Get(r, "nu");
@@ -304,8 +294,8 @@ public class NumberFormat {
         setNumberFormatUnitOptions(options);
 
         // 17, 18
-        Object mnfdDefault = JSObjects.Undefined();
-        Object mxfdDefault = JSObjects.Undefined();
+        Object mnfdDefault;
+        Object mxfdDefault;
         if (mResolvedStyle == CURRENCY) {
 
             int cDigits;
@@ -332,7 +322,7 @@ public class NumberFormat {
         mResolvedNotation = OptionHelpers.searchEnum(IPlatformNumberFormatter.Notation.class, JSObjects.getJavaString(notation));
 
         // 21
-        setNumberFormatDigitOptions(options, mnfdDefault, mxfdDefault, mResolvedNotation);
+        setNumberFormatDigitOptions(options, mnfdDefault, mxfdDefault);
 
         // 22, 23
         Object compactDisplay = OptionHelpers.GetOption(options, "compactDisplay", OptionHelpers.OptionType.STRING, new String[]{"short", "long"}, "short");
@@ -373,12 +363,14 @@ public class NumberFormat {
     //
     // The notes on DateTimeFormat#DateTimeFormat() for Locales and
     // Options also apply here.
+    @SuppressWarnings("unused")
     public static List<String> supportedLocalesOf(List<String> locales, Map<String, Object> options) throws JSRangeErrorException {
         String matcher = JSObjects.getJavaString(OptionHelpers.GetOption(options, Constants.LOCALEMATCHER, OptionHelpers.OptionType.STRING, Constants.LOCALEMATCHER_POSSIBLE_VALUES, Constants.LOCALEMATCHER_BESTFIT));
+        String[] localeArray = new String[locales.size()];
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && matcher.equals("best fit")) {
-            return Arrays.asList(LocaleMatcher.bestFitSupportedLocales(locales.toArray(new String[locales.size()])));
+            return Arrays.asList(LocaleMatcher.bestFitSupportedLocales(locales.toArray(localeArray)));
         } else {
-            return Arrays.asList(LocaleMatcher.lookupSupportedLocales(locales.toArray(new String[locales.size()])));
+            return Arrays.asList(LocaleMatcher.lookupSupportedLocales(locales.toArray(localeArray)));
         }
     }
 
@@ -386,6 +378,7 @@ public class NumberFormat {
     // https://tc39.es/ecma402/#sec-intl.numberformat.prototype.resolvedoptions
     //
     // Also see the implementer notes on DateTimeFormat#resolvedOptions()
+    @SuppressWarnings("unused")
     public Map<String, Object> resolvedOptions() throws JSRangeErrorException {
 
         HashMap<String, Object> finalResolvedOptions = new LinkedHashMap<>();
@@ -437,13 +430,14 @@ public class NumberFormat {
 
     // Implementer note: This method corresponds roughly to
     // https://tc39.es/ecma402/#sec-formatnumber
+    @SuppressWarnings("unused")
     public String format(double n) throws JSRangeErrorException {
-        String result = mPlatformNumberFormatter.format(n);
-        return result;
+        return mPlatformNumberFormatter.format(n);
     }
 
     // Implementer note: This method corresponds roughly to
     // https://tc39.es/ecma402/#sec-formatnumbertoparts
+    @SuppressWarnings("unused")
     public List<Map<String, String>> formatToParts(double n) throws JSRangeErrorException {
         ArrayList<Map<String, String>> parts = new ArrayList<>();
 

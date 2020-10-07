@@ -162,13 +162,4 @@ public class IntlTextUtils {
         // = (sep alphanum{2,8})+ ;
         return isAlphaNum(token, start, end, 2, 8);
     }
-
-    public static boolean containsString(String[] list, final String testValue) {
-        return Arrays.stream(list).anyMatch(new Predicate<String>() {
-            @Override
-            public boolean test(String value) {
-                return value.equals(testValue);
-            }
-        });
-    }
 }

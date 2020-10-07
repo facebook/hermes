@@ -82,10 +82,10 @@ public class DateTimeFormat {
 
     IPlatformDateTimeFormatter mPlatformDateTimeFormatter;
 
-    private ILocaleObject mResolvedLocaleObject = null;
+    private ILocaleObject<?> mResolvedLocaleObject = null;
 
     // This is a hacky way to avoid the extensions that we add from being shown in "resolvedOptions" ..
-    private ILocaleObject mResolvedLocaleObjectForResolvedOptions = null;
+    private ILocaleObject<?> mResolvedLocaleObjectForResolvedOptions = null;
 
     private boolean useDefaultCalendar;
     private String mCalendar;
@@ -155,7 +155,7 @@ public class DateTimeFormat {
     // https://tc39.es/ecma402/#sec-initializedatetimeformat
     private void initializeDateTimeFormat(List<String> locales, Map<String, Object> inOptions) throws JSRangeErrorException {
 
-        List<String> relevantExtensionKeys = Arrays.asList(new String[]{"ca", "nu", "hc"});
+        List<String> relevantExtensionKeys = Arrays.asList("ca", "nu", "hc");
 
         // 2
         Object options = ToDateTimeOptions(inOptions, "any", "date");
@@ -195,7 +195,7 @@ public class DateTimeFormat {
         // 16 - 23
         HashMap<String, Object> r = LocaleResolver.resolveLocale(locales, opt, relevantExtensionKeys);
 
-        mResolvedLocaleObject = (ILocaleObject) JSObjects.getJavaMap(r).get("locale");
+        mResolvedLocaleObject = (ILocaleObject<?>) JSObjects.getJavaMap(r).get("locale");
         mResolvedLocaleObjectForResolvedOptions = mResolvedLocaleObject.cloneObject();
 
         Object calendarResolved = JSObjects.Get(r, "ca");
@@ -296,7 +296,7 @@ public class DateTimeFormat {
     private String normalizeTimeZoneName(String timeZoneName) {
         // https://tc39.es/ecma402/#sec-case-sensitivity-and-case-mapping
         // Note that we should convert only upper case translation in ASCII range.
-        StringBuffer normalized = new StringBuffer(timeZoneName.length());
+        StringBuilder normalized = new StringBuilder(timeZoneName.length());
         int offset = 'a' - 'A';
         for (int idx = 0; idx < timeZoneName.length(); idx++) {
             char c = timeZoneName.charAt(idx);
@@ -336,12 +336,14 @@ public class DateTimeFormat {
     // https://tc39.es/ecma402/#sec-intl.datetimeformat.supportedlocalesof.
     //
     // The notes on the ctor for Locales and Options also apply here.
+    @SuppressWarnings("unused")
     public static List<String> supportedLocalesOf(List<String> locales, Map<String, Object> options) throws JSRangeErrorException {
         String matcher = JSObjects.getJavaString(OptionHelpers.GetOption(options, Constants.LOCALEMATCHER, OptionHelpers.OptionType.STRING, Constants.LOCALEMATCHER_POSSIBLE_VALUES, Constants.LOCALEMATCHER_BESTFIT));
+        String[] localeArray = new String[locales.size()];
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && matcher.equals("best fit")) {
-            return Arrays.asList(LocaleMatcher.bestFitSupportedLocales(locales.toArray(new String[locales.size()])));
+            return Arrays.asList(LocaleMatcher.bestFitSupportedLocales(locales.toArray(localeArray)));
         } else {
-            return Arrays.asList(LocaleMatcher.lookupSupportedLocales(locales.toArray(new String[locales.size()])));
+            return Arrays.asList(LocaleMatcher.lookupSupportedLocales(locales.toArray(localeArray)));
         }
     }
 
@@ -355,6 +357,7 @@ public class DateTimeFormat {
     // String.  Note that the types are implied when the "internal
     // slots" are set (in the ctor), but in practice each "slot" should
     // correspond to a member with a well-defined Java type.
+    @SuppressWarnings("unused")
     public Map<String, Object> resolvedOptions() throws JSRangeErrorException {
         HashMap<String, Object> finalResolvedOptions = new LinkedHashMap<>();
         finalResolvedOptions.put(Constants.LOCALE, mResolvedLocaleObjectForResolvedOptions.toCanonicalTag());
@@ -411,15 +414,16 @@ public class DateTimeFormat {
     // NumberFormat JavaScript objects, but these objects are never
     // exposed; it should be possible to create and use java
     // NumberFormat objects only.
+    @SuppressWarnings("unused")
     public String format(double jsTimeValue) throws JSRangeErrorException {
-        String result = mPlatformDateTimeFormatter.format(jsTimeValue);
-        return result;
+        return mPlatformDateTimeFormatter.format(jsTimeValue);
     }
 
     // Implementer note: This method corresponds roughly to
     // https://tc39.es/ecma402/#sec-formatdatetimetoparts
+    @SuppressWarnings("unused")
     public List<Map<String, String>> formatToParts(double jsTimeValue) throws JSRangeErrorException {
-        ArrayList<Map<String, String>> ret = new ArrayList<Map<String, String>>();
+        ArrayList<Map<String, String>> ret = new ArrayList<>();
         AttributedCharacterIterator iterator = mPlatformDateTimeFormatter.formatToParts(jsTimeValue);
         StringBuilder sb = new StringBuilder();
         for (char ch = iterator.first(); ch != CharacterIterator.DONE; ch = iterator.next()) {

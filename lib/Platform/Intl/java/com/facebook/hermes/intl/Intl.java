@@ -10,7 +10,6 @@ package com.facebook.hermes.intl;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.regex.Pattern;
 
 public class Intl {
 
@@ -26,7 +25,7 @@ public class Intl {
         // Note:: Some other major input validation occurs closer to VM in 'normalizeLocales' in JSLib/Intl.cpp
 
         // 2. Let seen be a new empty List.
-        ArrayList<String> seen = new ArrayList<String>();
+        ArrayList<String> seen = new ArrayList<>();
 
         // 3. If Type(locales) is String or Type(locales) is Object and locales has an [[InitializedLocale]] internal slot, then
         // 4. Else
@@ -68,6 +67,7 @@ public class Intl {
     //
     // Also see the implementer notes on DateTimeFormat#DateTimeFormat()
     // for more discussion of locales and CanonicalizeLocaleList.
+    @SuppressWarnings("unused")
     public static List<String> getCanonicalLocales(List<String> locales)
             throws JSRangeErrorException {
         return canonicalizeLocaleList(locales);
@@ -75,12 +75,14 @@ public class Intl {
 
     // Implementer note: This method corresponds roughly to
     // https://tc39.es/ecma402/#sup-string.prototype.tolocalelowercase
+    @SuppressWarnings("unused")
     public static String toLocaleLowerCase(List<String> locales, String str) {
         return "lowered";
     }
 
     // Implementer note: This method corresponds roughly to
     // https://tc39.es/ecma402/#sup-string.prototype.tolocaleuppercase
+    @SuppressWarnings("unused")
     public static String toLocaleUpperCase(List<String> locales, String str) {
         return "uppered";
     }

@@ -9,6 +9,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import androidx.annotation.RequiresApi;
+
 public class LocaleObjectICU implements ILocaleObject<ULocale> {
 
     private ULocale m_icuLocale = null;
@@ -21,6 +23,7 @@ public class LocaleObjectICU implements ILocaleObject<ULocale> {
         m_icuLocale = uLocale;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     private LocaleObjectICU(String localeId) throws JSRangeErrorException {
         assert (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N);
 
@@ -35,6 +38,7 @@ public class LocaleObjectICU implements ILocaleObject<ULocale> {
         mIsDirty = true;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     private void ensureNotDirty() throws JSRangeErrorException {
         if (mIsDirty) {
             try {
@@ -47,6 +51,7 @@ public class LocaleObjectICU implements ILocaleObject<ULocale> {
         }
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public ArrayList<String> getUnicodeExtensions(String key) throws JSRangeErrorException {
         ensureNotDirty();
@@ -63,6 +68,7 @@ public class LocaleObjectICU implements ILocaleObject<ULocale> {
         return extensionList;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public HashMap<String, String> getUnicodeExtensions() throws JSRangeErrorException {
         ensureNotDirty();
@@ -81,6 +87,7 @@ public class LocaleObjectICU implements ILocaleObject<ULocale> {
         return keywordMap;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public void setUnicodeExtensions(String key, ArrayList<String> value) throws JSRangeErrorException {
         ensureNotDirty();
@@ -96,12 +103,14 @@ public class LocaleObjectICU implements ILocaleObject<ULocale> {
         mIsDirty = true;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public ULocale getLocale() throws JSRangeErrorException {
         ensureNotDirty();
         return m_icuLocale;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     public ULocale getLocaleWithoutExtensions() throws JSRangeErrorException {
         ensureNotDirty();
         ULocale.Builder localeBuilder = new ULocale.Builder();
@@ -111,23 +120,27 @@ public class LocaleObjectICU implements ILocaleObject<ULocale> {
         return localeBuilder.build();
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public String toCanonicalTag() throws JSRangeErrorException {
         return getLocale().toLanguageTag();
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public String toCanonicalTagWithoutExtensions() throws JSRangeErrorException {
         return getLocaleWithoutExtensions().toLanguageTag();
         // return getLocale().getBaseName();
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public ILocaleObject<ULocale> cloneObject() throws JSRangeErrorException {
         ensureNotDirty();
         return new LocaleObjectICU(m_icuLocale);
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     public static ILocaleObject<ULocale> createFromLocaleId(String localeId) throws JSRangeErrorException {
         return new LocaleObjectICU(localeId);
     }
@@ -136,6 +149,7 @@ public class LocaleObjectICU implements ILocaleObject<ULocale> {
         return new LocaleObjectICU(uLocale);
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     public static ILocaleObject<ULocale> createDefault() {
         return new LocaleObjectICU(ULocale.getDefault(ULocale.Category.FORMAT));
     }

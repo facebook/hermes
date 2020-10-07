@@ -65,7 +65,7 @@ public interface IPlatformCollator {
         }
     }
 
-    IPlatformCollator configure(ILocaleObject localeObject) throws JSRangeErrorException;
+    IPlatformCollator configure(ILocaleObject<?> localeObject) throws JSRangeErrorException;
 
     Sensitivity getSensitivity();
     IPlatformCollator setSensitivity(Sensitivity sensitivity);

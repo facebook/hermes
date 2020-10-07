@@ -5,6 +5,9 @@ import android.icu.text.NumberingSystem;
 import android.icu.util.Calendar;
 import android.icu.util.TimeZone;
 import android.icu.util.ULocale;
+import android.os.Build;
+
+import androidx.annotation.RequiresApi;
 
 import java.text.AttributedCharacterIterator;
 import java.util.ArrayList;
@@ -12,14 +15,14 @@ import java.util.Date;
 
 public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter{
     private DateFormat mDateFormat = null;
-    private LocaleObjectICU mLocale = null;
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
-    public String format(double n) throws JSRangeErrorException {
-        String result = mDateFormat.format(new Date((long) n));
-        return result;
+    public String format(double n) {
+        return mDateFormat.format(new Date((long) n));
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public String fieldToString(AttributedCharacterIterator.Attribute field, String fieldValue) {
         if (field == DateFormat.Field.DAY_OF_WEEK) {
@@ -32,7 +35,7 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter{
             // TODO:: I can't find the right rules to mark the type of the an year part as "yearName". Likely, the presense of another part with "relatedYear" is the decider ?
             // Currently, i'm differentiating based on whether the value is numeric or not.
             try {
-                double d = Double.parseDouble(fieldValue);
+                Double.parseDouble(fieldValue);
                 return "year";
             } catch (NumberFormatException nfe) {
                 return "yearName";
@@ -77,12 +80,13 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter{
     }
 
     @Override
-    public AttributedCharacterIterator formatToParts(double n) throws JSRangeErrorException {
+    public AttributedCharacterIterator formatToParts(double n) {
         return mDateFormat.formatToCharacterIterator(n);
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
-    public String getDefaultCalendarName(ILocaleObject mResolvedLocaleObject) throws JSRangeErrorException {
+    public String getDefaultCalendarName(ILocaleObject<?> mResolvedLocaleObject) throws JSRangeErrorException {
         String defaultCalendar =  DateFormat.getDateInstance(DateFormat.SHORT, (ULocale) mResolvedLocaleObject.getLocale()).getCalendar().getType();
         defaultCalendar = UnicodeExtensionKeys.resolveCalendarAlias(defaultCalendar);
         return defaultCalendar;
@@ -92,16 +96,12 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter{
 
         public static String getPatternWithoutLiterals(String pattern) {
 
-            StringBuffer segment = new StringBuffer();
+            StringBuilder segment = new StringBuilder();
             boolean literalSegmentRunning = false;
             for (int idx = 0; idx < pattern.length(); idx++) {
                 char c = pattern.charAt(idx);
                 if (c == '\'') {
-                    if (literalSegmentRunning) {
-                        literalSegmentRunning = false;
-                    } else {
-                        literalSegmentRunning = true;
-                    }
+                    literalSegmentRunning = !literalSegmentRunning;
                     continue;
                 }
 
@@ -117,8 +117,9 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter{
         }
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
-    public HourCycle getDefaultHourCycle(ILocaleObject localeObject) throws JSRangeErrorException {
+    public HourCycle getDefaultHourCycle(ILocaleObject<?> localeObject) throws JSRangeErrorException {
         HourCycle hourCycle;
         try {
             String dateFormatPattern = ((android.icu.text.SimpleDateFormat) DateFormat.getTimeInstance(DateFormat.FULL, (ULocale) localeObject.getLocale())).toPattern();
@@ -138,23 +139,24 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter{
         return hourCycle;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
-    public String getDefaultTimeZone(ILocaleObject localeObject) throws JSRangeErrorException {
+    public String getDefaultTimeZone(ILocaleObject<?> localeObject) throws JSRangeErrorException {
         return Calendar.getInstance((ULocale) localeObject.getLocale()).getTimeZone().getID();
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
-    public String getDefaultNumberingSystem(ILocaleObject localeObject) throws JSRangeErrorException {
+    public String getDefaultNumberingSystem(ILocaleObject<?> localeObject) throws JSRangeErrorException {
         return NumberingSystem.getInstance((ULocale) localeObject.getLocale()).getName();
     }
 
-    private static String getSkeleton(FormatMatcher mFormatMatcher
-            , WeekDay weekDay, Era era
+    private static String getSkeleton(WeekDay weekDay, Era era
             , Year year, Month month, Day day
             , Hour hour, Minute minute, Second second
             , TimeZoneName timeZoneName, boolean hour12) {
 
-        StringBuffer skeletonBuffer = new StringBuffer();
+        StringBuilder skeletonBuffer = new StringBuilder();
         skeletonBuffer.append(weekDay.getSkeleonSymbol());
         skeletonBuffer.append(era.getSkeleonSymbol());
         skeletonBuffer.append(year.getSkeleonSymbol());
@@ -173,21 +175,21 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter{
         return skeletonBuffer.toString();
     }
 
-    public void configure (ILocaleObject resolvedLocaleObject, String calendar, String numberingSystem
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    public void configure (ILocaleObject<?> resolvedLocaleObject, String calendar, String numberingSystem
             , FormatMatcher formatMatcher
             , WeekDay weekDay, Era era
             , Year year, Month month, Day day
             , Hour hour, Minute minute, Second second
             , TimeZoneName timeZoneName, HourCycle hourCycle, Object timeZone) throws JSRangeErrorException {
-        mLocale = (LocaleObjectICU) resolvedLocaleObject;
-        String skeleton = getSkeleton(formatMatcher, weekDay, era, year, month, day, hour, minute, second, timeZoneName, hourCycle == HourCycle.H11 || hourCycle == HourCycle.H12);
+        String skeleton = getSkeleton(weekDay, era, year, month, day, hour, minute, second, timeZoneName, hourCycle == HourCycle.H11 || hourCycle == HourCycle.H12);
 
         Calendar calendarInstance = null;
         if (!calendar.isEmpty()) {
             ArrayList<String> calendarList = new ArrayList<>();
             calendarList.add(JSObjects.getJavaString(calendar));
 
-            ILocaleObject modifiedLocaleObject = resolvedLocaleObject.cloneObject();
+            ILocaleObject<?> modifiedLocaleObject = resolvedLocaleObject.cloneObject();
             modifiedLocaleObject.setUnicodeExtensions("ca", calendarList);
 
             calendarInstance = Calendar.getInstance((ULocale) modifiedLocaleObject.getLocale());
@@ -211,7 +213,6 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter{
             resolvedLocaleObject.setUnicodeExtensions("nu", numberingSystemList);
         }
 
-        DateFormat dateFormat;
         if(calendarInstance != null)
             mDateFormat = DateFormat.getPatternInstance(calendarInstance, skeleton, (ULocale) resolvedLocaleObject.getLocale());
         else
@@ -223,11 +224,13 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter{
         }
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public boolean isValidTimeZone(String timeZone) {
         return TimeZone.getTimeZone(timeZone).getID().equals(timeZone);
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public String[] getAvailableLocales() {
         ArrayList<String> availableLocaleIds = new ArrayList<>();
@@ -245,7 +248,8 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter{
             availableLocaleIds.add(locale.toLanguageTag());
         }
 
-        return availableLocaleIds.toArray(new String[availableLocaleIds.size()]);
+        String[] availableLocaleIdsArray = new String[availableLocaleIds.size()];
+        return availableLocaleIds.toArray(availableLocaleIdsArray);
     }
 
 

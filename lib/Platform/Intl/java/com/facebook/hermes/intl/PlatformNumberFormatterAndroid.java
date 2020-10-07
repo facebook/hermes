@@ -22,7 +22,7 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
 
     PlatformNumberFormatterAndroid() {}
 
-    private void initialize(DecimalFormat decimalFormat, ILocaleObject localeObject, IPlatformNumberFormatter.Style style) {
+    private void initialize(DecimalFormat decimalFormat, ILocaleObject<?> localeObject, IPlatformNumberFormatter.Style style) {
         mDecimalFormat = decimalFormat;
         mFinalFormat = decimalFormat;
         mLocaleObject = (LocaleObjectAndroid) localeObject;
@@ -40,9 +40,9 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
             switch (currencyDisplay) {
                 case NAME:
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                        currencySymbol = currency.getDisplayName((Locale) mLocaleObject.getLocale());
+                        currencySymbol = currency.getDisplayName(mLocaleObject.getLocale());
                     } else {
-                        currencySymbol = currency.getSymbol((Locale) mLocaleObject.getLocale());
+                        currencySymbol = currency.getSymbol(mLocaleObject.getLocale());
                     }
                     break;
                 case CODE:
@@ -51,7 +51,7 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
                 case SYMBOL:
                 case NARROWSYMBOL:
                 default:
-                    currencySymbol = currency.getSymbol((Locale) mLocaleObject.getLocale());
+                    currencySymbol = currency.getSymbol(mLocaleObject.getLocale());
                     break;
             }
 
@@ -80,7 +80,7 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
     }
 
     @Override
-    public PlatformNumberFormatterAndroid setSignificantDigits(IPlatformNumberFormatter.RoundingType roundingType, int minimumSignificantDigits, int maximumSignificantDigits) throws JSRangeErrorException {
+    public PlatformNumberFormatterAndroid setSignificantDigits(IPlatformNumberFormatter.RoundingType roundingType, int minimumSignificantDigits, int maximumSignificantDigits) {
         // Not supported.
         return this;
     }
@@ -100,17 +100,12 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
 
     @Override
     public PlatformNumberFormatterAndroid setSignDisplay(IPlatformNumberFormatter.SignDisplay signDisplay) {
-        DecimalFormatSymbols symbols = mDecimalFormat.getDecimalFormatSymbols();
+        if(signDisplay == SignDisplay.NEVER) {
+            mDecimalFormat.setPositivePrefix("");
+            mDecimalFormat.setPositiveSuffix("");
 
-        switch (signDisplay) {
-            case NEVER:
-                mDecimalFormat.setPositivePrefix("");
-                mDecimalFormat.setPositiveSuffix("");
-
-                mDecimalFormat.setNegativePrefix("");
-                mDecimalFormat.setNegativeSuffix("");
-
-                break;
+            mDecimalFormat.setNegativePrefix("");
+            mDecimalFormat.setNegativeSuffix("");
         }
 
         return this;
@@ -126,8 +121,7 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
 
     @Override
     public String format(double n) {
-        String result = mFinalFormat.format(n);
-        return result;
+        return mFinalFormat.format(n);
     }
 
     @Override
@@ -138,18 +132,17 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
 
     @Override
     public AttributedCharacterIterator formatToParts(double n) {
-        AttributedCharacterIterator result = mFinalFormat.formatToCharacterIterator(n);
-        return result;
+        return mFinalFormat.formatToCharacterIterator(n);
     }
 
     @Override
-    public PlatformNumberFormatterAndroid setUnits(String unit, IPlatformNumberFormatter.UnitDisplay unitDisplay) throws JSRangeErrorException {
+    public PlatformNumberFormatterAndroid setUnits(String unit, IPlatformNumberFormatter.UnitDisplay unitDisplay) {
         // Not supported.
         return this;
     }
 
     @Override
-    public PlatformNumberFormatterAndroid configure(ILocaleObject localeObject, String numberingSystem, IPlatformNumberFormatter.Style style,
+    public PlatformNumberFormatterAndroid configure(ILocaleObject<?> localeObject, String numberingSystem, IPlatformNumberFormatter.Style style,
                                                     IPlatformNumberFormatter.CurrencySign currencySign,
                                                     IPlatformNumberFormatter.Notation notation,
                                                     IPlatformNumberFormatter.CompactDisplay compactDisplay) throws JSRangeErrorException {
@@ -170,11 +163,6 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
         return this;
     }
 
-
-    public static String configureNumberingSystem(String inNumberingSystem, ILocaleObject locale) throws JSRangeErrorException {
-        return "latn";
-    }
-
     @Override
     public String[] getAvailableLocales() {
 
@@ -189,11 +177,12 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
             availableLocaleIds.add(locale.toLanguageTag()); // TODO:: Not available on platforms <= 20
         }
 
-        return availableLocaleIds.toArray(new String[availableLocaleIds.size()]);
+        String[] availableLocaleIdsArray = new String[availableLocaleIds.size()];
+        return availableLocaleIds.toArray(availableLocaleIdsArray);
     }
 
     @Override
-    public String getDefaultNumberingSystem(ILocaleObject localeObject) throws JSRangeErrorException {
+    public String getDefaultNumberingSystem(ILocaleObject<?> localeObject) {
         return "latn";
     }
 }

@@ -1,17 +1,15 @@
 package com.facebook.hermes.intl;
 
-import android.icu.util.ULocale;
 import android.os.Build;
 import android.text.TextUtils;
 
-import org.w3c.dom.Text;
-
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
+
+import androidx.annotation.RequiresApi;
 
 public class LocaleObjectAndroid implements ILocaleObject<Locale> {
 
@@ -43,11 +41,19 @@ public class LocaleObjectAndroid implements ILocaleObject<Locale> {
 
     private void ensureParsedLocaleIdentifier() throws JSRangeErrorException {
         if(mParsedLocaleIdentifier == null) {
-            mParsedLocaleIdentifier = LocaleIdentifier.parseLocaleId(mLocale.toLanguageTag());
+            if(Build.VERSION.SDK_INT < 21)
+                mParsedLocaleIdentifier = LocaleIdentifier.parseLocaleId("en"); // hacky fallback!.
+            else
+                mParsedLocaleIdentifier = LocaleIdentifier.parseLocaleId(mLocale.toLanguageTag());
         }
     }
 
     private void reInitFromParsedLocaleIdentifier() throws JSRangeErrorException {
+
+        if(Build.VERSION.SDK_INT < 21) {
+            mLocale = Locale.ENGLISH; // Ugly hack for very old platforms ..
+            return;
+        }
 
         StringBuffer localeIdBuffer = new StringBuffer();
         StringBuffer languageSubtagBuffer = new StringBuffer(), scriptSubtagBuffer = new StringBuffer(), regionSubtagBuffer = new StringBuffer();
@@ -258,11 +264,19 @@ public class LocaleObjectAndroid implements ILocaleObject<Locale> {
 
     @Override
     public String toCanonicalTag() throws JSRangeErrorException {
+        if(Build.VERSION.SDK_INT < 21) { // Ugly hack for very old platforms
+            return "en";
+        }
+
         return getLocale().toLanguageTag();
     }
 
     @Override
     public String toCanonicalTagWithoutExtensions() throws JSRangeErrorException {
+        if(Build.VERSION.SDK_INT < 21) { // Ugly hack for very old platforms.
+            return "en";
+        }
+
         return getLocaleWithoutExtensions().toLanguageTag();
     }
 

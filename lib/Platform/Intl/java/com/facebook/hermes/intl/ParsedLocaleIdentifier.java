@@ -5,14 +5,12 @@ import java.util.TreeMap;
 
 public class ParsedLocaleIdentifier {
 
-    public class ParsedLanguageIdentifier {
+    public static class ParsedLanguageIdentifier {
         String languageSubtag;
         String scriptSubtag;
         String regionSubtag;
         ArrayList<String> variantSubtagList;
     }
-
-    String originalLocaleId;
 
     ParsedLanguageIdentifier languageIdentifier;
 

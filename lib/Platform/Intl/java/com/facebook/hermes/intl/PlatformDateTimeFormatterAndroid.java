@@ -1,7 +1,8 @@
 package com.facebook.hermes.intl;
 
-import android.icu.util.ULocale;
 import android.os.Build;
+
+import androidx.annotation.RequiresApi;
 
 import java.text.AttributedCharacterIterator;
 import java.text.DateFormat;
@@ -13,12 +14,10 @@ import java.util.TimeZone;
 
 public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormatter{
     private DateFormat mDateFormat = null;
-    private LocaleObjectAndroid mLocale = null;
 
     @Override
-    public String format(double n) throws JSRangeErrorException {
-        String result = mDateFormat.format(new Date((long) n));
-        return result;
+    public String format(double n) {
+        return mDateFormat.format(new Date((long) n));
     }
 
     @Override
@@ -33,7 +32,7 @@ public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormat
             // TODO:: I can't find the right rules to mark the type of the an year part as "yearName". Likely, the presense of another part with "relatedYear" is the decider ?
             // Currently, i'm differentiating based on whether the value is numeric or not.
             try {
-                double d = Double.parseDouble(fieldValue);
+                Double.parseDouble(fieldValue);
                 return "year";
             } catch (NumberFormatException nfe) {
                 return "yearName";
@@ -77,29 +76,25 @@ public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormat
     }
 
     @Override
-    public AttributedCharacterIterator formatToParts(double n) throws JSRangeErrorException {
+    public AttributedCharacterIterator formatToParts(double n) {
         return mDateFormat.formatToCharacterIterator(n);
     }
 
     @Override
-    public String getDefaultCalendarName(ILocaleObject mResolvedLocaleObject) throws JSRangeErrorException {
-        return DateFormat.getDateInstance(android.icu.text.DateFormat.SHORT, (Locale) mResolvedLocaleObject.getLocale()).getCalendar().toString();
+    public String getDefaultCalendarName(ILocaleObject<?> mResolvedLocaleObject) throws JSRangeErrorException {
+        return DateFormat.getDateInstance(java.text.DateFormat.SHORT, (Locale) mResolvedLocaleObject.getLocale()).getCalendar().toString();
     }
 
     private static class PatternUtils {
 
         public static String getPatternWithoutLiterals(String pattern) {
 
-            StringBuffer segment = new StringBuffer();
+            StringBuilder segment = new StringBuilder();
             boolean literalSegmentRunning = false;
             for (int idx = 0; idx < pattern.length(); idx++) {
                 char c = pattern.charAt(idx);
                 if (c == '\'') {
-                    if (literalSegmentRunning) {
-                        literalSegmentRunning = false;
-                    } else {
-                        literalSegmentRunning = true;
-                    }
+                    literalSegmentRunning = !literalSegmentRunning;
                     continue;
                 }
 
@@ -116,7 +111,7 @@ public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormat
     }
 
     @Override
-    public HourCycle getDefaultHourCycle(ILocaleObject localeObject) throws JSRangeErrorException {
+    public HourCycle getDefaultHourCycle(ILocaleObject<?> localeObject) throws JSRangeErrorException {
         HourCycle hourCycle;
         try {
             String dateFormatPattern = ((java.text.SimpleDateFormat) DateFormat.getTimeInstance(DateFormat.FULL, (Locale) localeObject.getLocale())).toPattern();
@@ -137,21 +132,20 @@ public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormat
     }
 
     @Override
-    public String getDefaultTimeZone(ILocaleObject localeObject) throws JSRangeErrorException {
+    public String getDefaultTimeZone(ILocaleObject<?> localeObject) throws JSRangeErrorException {
         return Calendar.getInstance((Locale) localeObject.getLocale()).getTimeZone().getID();
     }
 
     @Override
-    public String getDefaultNumberingSystem(ILocaleObject localeObject) throws JSRangeErrorException {
+    public String getDefaultNumberingSystem(ILocaleObject<?> localeObject) {
         return "latn";
     }
 
-    public void configure (ILocaleObject resolvedLocaleObject, String calendar, String numberingSystem, FormatMatcher formatMatcher
+    public void configure (ILocaleObject<?> resolvedLocaleObject, String calendar, String numberingSystem, FormatMatcher formatMatcher
             , WeekDay weekDay, Era era
             , Year year, Month month, Day day
             , Hour hour, Minute minute, Second second
             , TimeZoneName timeZoneName, HourCycle hourCycle, Object timeZone) throws JSRangeErrorException {
-        mLocale = (LocaleObjectAndroid) resolvedLocaleObject;
         if (!calendar.isEmpty()) {
             ArrayList<String> calendarList = new ArrayList<>();
             calendarList.add(JSObjects.getJavaString(calendar));
@@ -202,7 +196,8 @@ public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormat
             availableLocaleIds.add(locale.toLanguageTag()); // TODO:: Not available on platforms <= 20
         }
 
-        return availableLocaleIds.toArray(new String[availableLocaleIds.size()]);
+        String[] availableLocaleIdsArray = new String[availableLocaleIds.size()];
+        return availableLocaleIds.toArray(availableLocaleIdsArray);
     }
 
     PlatformDateTimeFormatterAndroid() { }

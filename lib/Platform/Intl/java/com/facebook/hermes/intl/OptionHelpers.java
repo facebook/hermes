@@ -22,8 +22,6 @@ public class OptionHelpers {
     }
 
     public static Object GetNumberOption(Object options, String property, Object minimum, Object maximum, Object fallback) throws JSRangeErrorException {
-        assert (JSObjects.isObject(options));
-
         Object value = JSObjects.Get(options, property);
         return DefaultNumberOption(value, minimum, maximum, fallback);
     }
