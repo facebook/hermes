@@ -553,7 +553,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareClass(SMLoc start) {
 Optional<ESTree::Node *> JSParserImpl::parseExportTypeDeclaration(
     SMLoc startLoc) {
   assert(check(typeIdent_));
-  advance();
+  SMLoc typeIdentLoc = advance().Start;
 
   if (checkAndEat(TokenKind::star)) {
     // export type * FromClause;
@@ -614,7 +614,7 @@ Optional<ESTree::Node *> JSParserImpl::parseExportTypeDeclaration(
   }
 
   if (check(TokenKind::identifier)) {
-    auto optAlias = parseTypeAlias(startLoc, TypeAliasKind::None);
+    auto optAlias = parseTypeAlias(typeIdentLoc, TypeAliasKind::None);
     if (!optAlias)
       return None;
     return setLocation(
