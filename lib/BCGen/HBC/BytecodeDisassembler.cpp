@@ -267,8 +267,10 @@ void BytecodeDisassembler::disassembleCJSModuleTable(raw_ostream &OS) {
   if (!cjsModulesStatic.empty()) {
     OS << "CommonJS Modules (Static):\n";
     for (uint32_t i = 0; i < cjsModulesStatic.size(); ++i) {
-      uint32_t functionID = cjsModulesStatic[i];
-      OS << "Module index " << i << " -> function ID " << functionID << '\n';
+      uint32_t moduleID = cjsModulesStatic[i].first;
+      uint32_t functionID = cjsModulesStatic[i].second;
+      OS << "Module ID " << moduleID << " -> function ID " << functionID
+         << '\n';
     }
     OS << '\n';
   }

@@ -127,15 +127,12 @@ class Domain final : public GCCell {
     self->runtimeModules_.push_back(runtimeModule, &runtime->getHeap());
   }
 
-  /// Import the CommonJS module table from the given \p runtimeModule.
-  /// Insert into the table starting at the \p cjsModuleOffset.
-  /// \pre the CommonJS module table must not already contain any of the module
-  /// IDs to be imported.
+  /// Import the CommonJS module table from the given \p runtimeModule,
+  /// ignoring modules with IDs / paths that have already been imported.
   LLVM_NODISCARD static ExecutionStatus importCJSModuleTable(
       Handle<Domain> self,
       Runtime *runtime,
-      RuntimeModule *runtimeModule,
-      uint32_t cjsModuleOffset);
+      RuntimeModule *runtimeModule);
 
   /// \return the offset of the CJS module corresponding to \p filename, None on
   /// failure.

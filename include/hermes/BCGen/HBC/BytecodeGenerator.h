@@ -272,8 +272,8 @@ class BytecodeModuleGenerator {
   std::vector<std::pair<uint32_t, uint32_t>> cjsModules_;
 
   /// A record of all the CJS modules resolved in this run of generation.
-  /// List of function indices.
-  std::vector<uint32_t> cjsModulesStatic_;
+  /// List of pairs: (module ID, function index).
+  std::vector<std::pair<uint32_t, uint32_t>> cjsModulesStatic_;
 
   /// Table of constants used to initialize constant arrays.
   /// They are stored as chars in order to shorten bytecode size.

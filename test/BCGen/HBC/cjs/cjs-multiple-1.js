@@ -36,8 +36,8 @@ print('module 1');
 // STATIC-NEXT: i4[ASCII, {{.*}}] #{{[0-9A-F]+}}: print
 // STATIC-NOT: cjs-multiple-1
 // STATIC: CommonJS Modules (Static):
-// STATIC-NEXT:  Module index 0 -> function ID 1
-// STATIC-NEXT:  Module index 1 -> function ID 2
+// STATIC-NEXT:  Module ID 0 -> function ID 1
+// STATIC-NEXT:  Module ID 1 -> function ID 2
 // STATIC: Debug filename table:
 // STATIC-NEXT:   0: {{.*}}/cjs-multiple-1.js
 // STATIC-NEXT:   1: {{.*}}/cjs-multiple-2.js

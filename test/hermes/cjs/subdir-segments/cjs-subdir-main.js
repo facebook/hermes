@@ -45,8 +45,8 @@ print(require('./cjs-subdir-2.js').alpha);
 // BC-NEXT:   i8[ASCII, {{.*}}] #{{.*}}: print
 
 // BC10-LABEL: CommonJS Modules (Static):
-// BC10-NEXT: Module index 0 -> function ID 1
-// BC10-NEXT: Module index 1 -> function ID 2
+// BC10-NEXT: Module ID 1 -> function ID 1
+// BC10-NEXT: Module ID 2 -> function ID 2
 
 // MANIFEST-LABEL: [
 // MANIFEST-NEXT:   {

@@ -134,8 +134,8 @@ class BCProviderBase {
   llvh::ArrayRef<std::pair<uint32_t, uint32_t>> cjsModuleTable_{};
 
   /// Table which indicates where to find the different CommonJS modules.
-  /// Vector of function indexes.
-  llvh::ArrayRef<uint32_t> cjsModuleTableStatic_{};
+  /// List of unsorted pairs from {global module ID => function index}.
+  llvh::ArrayRef<std::pair<uint32_t, uint32_t>> cjsModuleTableStatic_{};
 
   /// Pointer to the global debug info. This will not be eagerly initialized
   /// when loading bytecode from a buffer. Instead it will be constructed
@@ -193,7 +193,8 @@ class BCProviderBase {
   llvh::ArrayRef<std::pair<uint32_t, uint32_t>> getCJSModuleTable() const {
     return cjsModuleTable_;
   }
-  llvh::ArrayRef<uint32_t> getCJSModuleTableStatic() const {
+  llvh::ArrayRef<std::pair<uint32_t, uint32_t>> getCJSModuleTableStatic()
+      const {
     return cjsModuleTableStatic_;
   }
   const std::string getErrorStr() const {

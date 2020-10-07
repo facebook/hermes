@@ -199,7 +199,7 @@ void BytecodeModuleGenerator::addCJSModuleStatic(
       moduleID - cjsModuleOffset_ == cjsModulesStatic_.size() &&
       "Module ID out of order in cjsModulesStatic_");
   (void)moduleID;
-  cjsModulesStatic_.push_back(functionID);
+  cjsModulesStatic_.push_back({moduleID, functionID});
 }
 
 std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {

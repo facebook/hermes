@@ -314,8 +314,7 @@ void RuntimeModule::initializeFunctionMap() {
 
 ExecutionStatus RuntimeModule::importCJSModuleTable() {
   PerfSection perf("Import CJS Module Table");
-  return Domain::importCJSModuleTable(
-      getDomain(runtime_), runtime_, this, bcProvider_->getCJSModuleOffset());
+  return Domain::importCJSModuleTable(getDomain(runtime_), runtime_, this);
 }
 
 StringPrimitive *RuntimeModule::getStringPrimFromStringIDMayAllocate(

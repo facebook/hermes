@@ -298,8 +298,8 @@ bool BytecodeFileFields<Mutable>::populateFromBuffer(
       align(buf);
       if (h->options.cjsModulesStaticallyResolved) {
         // Modules have been statically resolved.
-        f.cjsModuleTableStatic =
-            castArrayRef<uint32_t>(buf, h->cjsModuleCount, end);
+        f.cjsModuleTableStatic = castArrayRef<std::pair<uint32_t, uint32_t>>(
+            buf, h->cjsModuleCount, end);
       } else {
         // Modules are not resolved, use the filename -> function ID mapping.
         f.cjsModuleTable = castArrayRef<std::pair<uint32_t, uint32_t>>(

@@ -228,8 +228,8 @@ class BytecodeModule {
 
   /// Table which indicates where to find the different CommonJS modules.
   /// Used if the modules have been statically resolved.
-  /// Element i contains the function index for module i + cjsModuleOffset.
-  std::vector<uint32_t> cjsModuleTableStatic_{};
+  /// Mapping from {global module ID => function index}.
+  std::vector<std::pair<uint32_t, uint32_t>> cjsModuleTableStatic_{};
 
   /// Storing information about the bytecode, needed when it is loaded by the
   /// runtime.
@@ -262,7 +262,7 @@ class BytecodeModule {
       std::vector<unsigned char> &&objValBuffer,
       uint32_t cjsModuleOffset,
       std::vector<std::pair<uint32_t, uint32_t>> &&cjsModuleTable,
-      std::vector<uint32_t> &&cjsModuleTableStatic,
+      std::vector<std::pair<uint32_t, uint32_t>> &&cjsModuleTableStatic,
       BytecodeOptions options)
       : globalFunctionIndex_(globalFunctionIndex),
         stringKinds_(std::move(stringKinds)),
@@ -351,7 +351,8 @@ class BytecodeModule {
     return cjsModuleTable_;
   }
 
-  llvh::ArrayRef<uint32_t> getCJSModuleTableStatic() const {
+  llvh::ArrayRef<std::pair<uint32_t, uint32_t>> getCJSModuleTableStatic()
+      const {
     return cjsModuleTableStatic_;
   }
 
