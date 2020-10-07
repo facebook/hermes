@@ -50,6 +50,13 @@ C_STRING((function() {
     return result;
   }
 
+  function prettyPrintNumber(value) {
+    if (Object.is(-0, value)) {
+      return "-0";
+    }
+    return String(value);
+  }
+
   function prettyPrintRec(value, visited) {
     // First, check for cycles.
     if (visited.has(value)) {
@@ -60,7 +67,7 @@ C_STRING((function() {
       case "undefined":
         return colors.white + "undefined" + colors.reset;
       case "number":
-        return colors.yellow + String(value) + colors.reset;
+        return colors.yellow + prettyPrintNumber(value) + colors.reset;
       case "string":
         // Wrap strings in quotes so we their type.
         return colors.green + '"' + value + '"' + colors.reset;
