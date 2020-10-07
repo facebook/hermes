@@ -272,7 +272,7 @@ Optional<ESTree::Node *> JSParserImpl::parseJSXChildExpression(SMLoc start) {
     return None;
   return setLocation(
       start,
-      *optAssign,
+      tok_,
       new (context_) ESTree::JSXExpressionContainerNode(*optAssign));
 }
 
@@ -295,6 +295,7 @@ Optional<ESTree::Node *> JSParserImpl::parseJSXSpreadAttribute() {
   if (!optAssign)
     return None;
 
+  SMLoc end = tok_->getEndLoc();
   if (!eat(
           TokenKind::r_brace,
           JSLexer::GrammarContext::AllowJSXIdentifier,
@@ -304,9 +305,7 @@ Optional<ESTree::Node *> JSParserImpl::parseJSXSpreadAttribute() {
     return None;
 
   return setLocation(
-      start,
-      *optAssign,
-      new (context_) ESTree::JSXSpreadAttributeNode(*optAssign));
+      start, end, new (context_) ESTree::JSXSpreadAttributeNode(*optAssign));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseJSXAttribute() {
