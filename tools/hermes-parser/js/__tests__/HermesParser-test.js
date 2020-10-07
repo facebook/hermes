@@ -124,11 +124,11 @@ test('Parsing comments', () => {
     },
     comments: [
       {
-        type: 'Block',
+        type: 'CommentBlock',
         value: 'Block comment',
       },
       {
-        type: 'Line',
+        type: 'CommentLine',
         value: ' Line comment',
       },
     ],

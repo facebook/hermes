@@ -85,7 +85,7 @@ const HermesParserJSLibrary = {
   buildComment: function(loc, isBlock, valuePtr, valueLength) {
     return JSReferences.store({
       loc: JSReferences.pop(loc),
-      type: isBlock ? 'Block' : 'Line',
+      type: isBlock ? 'CommentBlock' : 'CommentLine',
       value: UTF8ToString(valuePtr, valueLength),
     });
   },

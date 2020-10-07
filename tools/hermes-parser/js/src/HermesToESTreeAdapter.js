@@ -110,6 +110,16 @@ class HermesToESTreeAdapter extends HermesASTAdapter {
 
     return this.mapNodeDefault(node);
   }
+
+  mapComment(node) {
+    if (node.type === 'CommentBlock') {
+      node.type = 'Block';
+    } else if (node.type === 'CommentLine') {
+      node.type = 'Line';
+    }
+
+    return node;
+  }
 }
 
 module.exports = HermesToESTreeAdapter;

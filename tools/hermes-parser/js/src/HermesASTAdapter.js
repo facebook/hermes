@@ -28,8 +28,11 @@ class HermesASTAdapter {
     const transformedProgram = this.mapNode(program);
 
     // Comments are not traversed via visitor keys
-    for (const comment of transformedProgram.comments) {
+    const comments = transformedProgram.comments;
+    for (let i = 0; i < comments.length; i++) {
+      const comment = comments[i];
       this.fixSourceLocation(comment);
+      comments[i] = this.mapComment(comment);
     }
 
     return transformedProgram;
@@ -75,6 +78,10 @@ class HermesASTAdapter {
    */
   fixSourceLocation(node) {
     throw new Error('Implemented in subclasses');
+  }
+
+  mapComment(node) {
+    return node;
   }
 
   mapEmpty(node) {
