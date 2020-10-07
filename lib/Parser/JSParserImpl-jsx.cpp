@@ -217,16 +217,18 @@ Optional<ESTree::Node *> JSParserImpl::parseJSXChildren(
     } else if (check(TokenKind::l_brace)) {
       // { JSXChildExpression[opt] }
       // ^
-      SMLoc start = advance().Start;
+      SMRange startRange = advance();
+      SMLoc start = startRange.Start;
       if (check(TokenKind::r_brace)) {
         // { }
         //   ^
+        SMRange endRange = tok_->getSourceRange();
         children.push_back(*setLocation(
             start,
-            tok_,
+            endRange.End,
             new (context_) ESTree::JSXExpressionContainerNode(setLocation(
-                start,
-                tok_,
+                startRange.End,
+                endRange.Start,
                 new (context_) ESTree::JSXEmptyExpressionNode()))));
       } else {
         // { JSXChildExpression }
