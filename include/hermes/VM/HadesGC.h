@@ -244,10 +244,6 @@ class HadesGC final : public GCBase {
     /// \pre isBumpAllocMode() must be true.
     AllocResult bumpAlloc(uint32_t sz);
 
-    /// YG has a much simpler alloc path, which shortcuts some steps the normal
-    /// \p alloc takes.
-    AllocResult youngGenBumpAlloc(uint32_t sz);
-
     /// Record the head of this cell so it can be found by the card scanner.
     static void setCellHead(const GCCell *start, const size_t sz);
 

@@ -48,6 +48,7 @@ void HadesGC::HeapSegment::transitionToFreelist(OldGen &og, size_t segmentIdx) {
   }
   AllocResult res = bumpAlloc(sz);
   assert(res.success && "Failed to bump the level to the end");
+  setCellHead(static_cast<GCCell *>(res.ptr), sz);
   bumpAllocMode_ = false;
   og.addCellToFreelist(res.ptr, sz, segmentIdx, /*alreadyFree*/ true);
 }
@@ -65,24 +66,6 @@ GCCell *HadesGC::OldGen::finishAlloc(GCCell *cell, uint32_t sz) {
 AllocResult HadesGC::HeapSegment::bumpAlloc(uint32_t sz) {
   assert(
       bumpAllocMode_ && "Shouldn't use bumpAlloc except on specific segments");
-  // Don't use a free list for bump allocation.
-  AllocResult res = AlignedHeapSegment::alloc(sz);
-  if (res.success) {
-    // Set the cell head for any successful alloc, so that write barriers can
-    // move from dirty cards to the head of the object.
-    setCellHead(static_cast<GCCell *>(res.ptr), sz);
-    // No need to change allocatedBytes_ here, as AlignedHeapSegment::used()
-    // already tracks that. Once the cell is transitioned to freelist mode the
-    // right value will be stored in OldGen::allocatedBytes_.
-  }
-  return res;
-}
-
-AllocResult HadesGC::HeapSegment::youngGenBumpAlloc(uint32_t sz) {
-  assert(bumpAllocMode_ && "Shouldn't use youngGenBumpAlloc on an OG segment");
-  // The only difference between bumpAlloc and youngGenBumpAlloc is that the
-  // latter doesn't need to set cell heads because YG never has dirty cards that
-  // need to be scanned.
   return AlignedHeapSegment::alloc(sz);
 }
 
@@ -1641,12 +1624,12 @@ void *HadesGC::allocWork(uint32_t sz) {
     youngGenCollection(
         kHandleSanCauseForAnalytics, /*forceOldGenCollection*/ true);
   }
-  AllocResult res = youngGen().youngGenBumpAlloc(sz);
+  AllocResult res = youngGen().bumpAlloc(sz);
   if (LLVM_UNLIKELY(!res.success)) {
     // Failed to alloc in young gen, do a young gen collection.
     youngGenCollection(
         kNaturalCauseForAnalytics, /*forceOldGenCollection*/ false);
-    res = youngGen().youngGenBumpAlloc(sz);
+    res = youngGen().bumpAlloc(sz);
     assert(res.success && "Should never fail to allocate");
   }
   if (hasFinalizer == HasFinalizer::Yes) {
@@ -1693,6 +1676,9 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
     assert(
         res.success &&
         "A newly created segment should always be able to allocate");
+    // Set the cell head for any successful alloc, so that write barriers can
+    // move from dirty cards to the head of the object.
+    seg->setCellHead(static_cast<GCCell *>(res.ptr), sz);
     // Add the segment to segments_ and add the remainder of the segment to the
     // free list.
     addSegment(std::move(seg));
