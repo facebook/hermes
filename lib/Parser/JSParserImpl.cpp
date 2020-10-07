@@ -5219,12 +5219,11 @@ Optional<UniqueString *> JSParserImpl::parseImportClause(
             startLoc);
         return None;
       }
-      SMLoc endLoc = optDefaultBinding.getValue()->getEndLoc();
+      ESTree::IdentifierNode *defaultBinding = *optDefaultBinding;
       specifiers.push_back(*setLocation(
-          startLoc,
-          endLoc,
-          new (context_)
-              ESTree::ImportDefaultSpecifierNode(*optDefaultBinding)));
+          defaultBinding,
+          defaultBinding,
+          new (context_) ESTree::ImportDefaultSpecifierNode(defaultBinding)));
     }
     if (!checkAndEat(TokenKind::comma)) {
       // If there was no comma, there's no more bindings to parse,
