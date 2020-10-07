@@ -32,7 +32,7 @@ Or if you're using Windows, the following should get you going in a Git Bash she
 mkdir hermes_workingdir
 cd hermes_workingdir
 git -c core.autocrlf=false clone https://github.com/facebook/hermes.git
-hermes/utils/build/configure.py --build-system='Visual Studio 16 2019' --cmake-flags='-A x64 --distribute
+hermes/utils/build/configure.py --build-system='Visual Studio 16 2019' --cmake-flags='-A x64' --distribute
 cd build
 MSBuild.exe ALL_BUILD.vcxproj /p:Configuration=Release
 ```
