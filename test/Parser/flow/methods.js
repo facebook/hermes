@@ -46,7 +46,8 @@
 // CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
-// CHECK-NEXT:             "computed": false
+// CHECK-NEXT:             "computed": false,
+// CHECK-NEXT:             "method": true
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Property",
@@ -84,7 +85,8 @@
 // CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
-// CHECK-NEXT:             "computed": false
+// CHECK-NEXT:             "computed": false,
+// CHECK-NEXT:             "method": true
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Property",
@@ -122,7 +124,8 @@
 // CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
-// CHECK-NEXT:             "computed": false
+// CHECK-NEXT:             "computed": false,
+// CHECK-NEXT:             "method": true
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Property",
@@ -154,7 +157,8 @@
 // CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
-// CHECK-NEXT:             "computed": false
+// CHECK-NEXT:             "computed": false,
+// CHECK-NEXT:             "method": true
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },

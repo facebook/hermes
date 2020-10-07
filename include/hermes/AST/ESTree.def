@@ -449,12 +449,13 @@ ESTREE_NODE_3_ARGS(TemplateElement, Base,
                    NodeLabel, cooked, true,
                    NodeLabel, raw, false)
 
-ESTREE_NODE_4_ARGS(
+ESTREE_NODE_5_ARGS(
     Property, Base,
     NodePtr, key, false,
     NodePtr, value, false,
     NodeLabel, kind, false,
-    NodeBoolean, computed, false)
+    NodeBoolean, computed, false,
+    NodeBoolean, method, false)
 
 ESTREE_NODE_7_ARGS(
     ClassDeclaration, Base,

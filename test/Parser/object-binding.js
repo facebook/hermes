@@ -36,7 +36,8 @@ var {a} = x;
 //CHECK-NEXT:                     "name": "a"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "kind": "init",
-//CHECK-NEXT:                   "computed": false
+//CHECK-NEXT:                   "computed": false,
+//CHECK-NEXT:                   "method": false
 //CHECK-NEXT:                 }
 //CHECK-NEXT:               ]
 //CHECK-NEXT:             }
@@ -69,7 +70,8 @@ var {a,} = x;
 //CHECK-NEXT:                     "name": "a"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "kind": "init",
-//CHECK-NEXT:                   "computed": false
+//CHECK-NEXT:                   "computed": false,
+//CHECK-NEXT:                   "method": false
 //CHECK-NEXT:                 }
 //CHECK-NEXT:               ]
 //CHECK-NEXT:             }
@@ -102,7 +104,8 @@ var {a, b} = x;
 //CHECK-NEXT:                     "name": "a"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "kind": "init",
-//CHECK-NEXT:                   "computed": false
+//CHECK-NEXT:                   "computed": false,
+//CHECK-NEXT:                   "method": false
 //CHECK-NEXT:                 },
 //CHECK-NEXT:                 {
 //CHECK-NEXT:                   "type": "Property",
@@ -115,7 +118,8 @@ var {a, b} = x;
 //CHECK-NEXT:                     "name": "b"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "kind": "init",
-//CHECK-NEXT:                   "computed": false
+//CHECK-NEXT:                   "computed": false,
+//CHECK-NEXT:                   "method": false
 //CHECK-NEXT:                 }
 //CHECK-NEXT:               ]
 //CHECK-NEXT:             }
@@ -148,7 +152,8 @@ var {a: b, c: d, } = x;
 //CHECK-NEXT:                     "name": "b"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "kind": "init",
-//CHECK-NEXT:                   "computed": false
+//CHECK-NEXT:                   "computed": false,
+//CHECK-NEXT:                   "method": false
 //CHECK-NEXT:                 },
 //CHECK-NEXT:                 {
 //CHECK-NEXT:                   "type": "Property",
@@ -161,7 +166,8 @@ var {a: b, c: d, } = x;
 //CHECK-NEXT:                     "name": "d"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "kind": "init",
-//CHECK-NEXT:                   "computed": false
+//CHECK-NEXT:                   "computed": false,
+//CHECK-NEXT:                   "method": false
 //CHECK-NEXT:                 }
 //CHECK-NEXT:               ]
 //CHECK-NEXT:             }
@@ -202,7 +208,8 @@ var {a: b = 10} = x;
 //CHECK-NEXT:                     }
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "kind": "init",
-//CHECK-NEXT:                   "computed": false
+//CHECK-NEXT:                   "computed": false,
+//CHECK-NEXT:                   "method": false
 //CHECK-NEXT:                 }
 //CHECK-NEXT:               ]
 //CHECK-NEXT:             }
@@ -240,7 +247,8 @@ var {a: [b]} = x;
 //CHECK-NEXT:                     ]
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "kind": "init",
-//CHECK-NEXT:                   "computed": false
+//CHECK-NEXT:                   "computed": false,
+//CHECK-NEXT:                   "method": false
 //CHECK-NEXT:                 }
 //CHECK-NEXT:               ]
 //CHECK-NEXT:             }
@@ -292,7 +300,8 @@ var {a: [b] = [1]} = x;
 //CHECK-NEXT:                     }
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "kind": "init",
-//CHECK-NEXT:                   "computed": false
+//CHECK-NEXT:                   "computed": false,
+//CHECK-NEXT:                   "method": false
 //CHECK-NEXT:                 }
 //CHECK-NEXT:               ]
 //CHECK-NEXT:             }
@@ -352,7 +361,8 @@ var {a: [b = 2] = [1]} = x;
 //CHECK-NEXT:                     }
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "kind": "init",
-//CHECK-NEXT:                   "computed": false
+//CHECK-NEXT:                   "computed": false,
+//CHECK-NEXT:                   "method": false
 //CHECK-NEXT:                 }
 //CHECK-NEXT:               ]
 //CHECK-NEXT:             }

@@ -29,7 +29,8 @@
 // CHECK-NEXT:               "raw": "3"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
-// CHECK-NEXT:             "computed": true
+// CHECK-NEXT:             "computed": true,
+// CHECK-NEXT:             "method": false
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },
@@ -58,7 +59,8 @@ var {['x']: z} = {x: 3};
 // CHECK-NEXT:                   "raw": "3"
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "kind": "init",
-// CHECK-NEXT:                 "computed": false
+// CHECK-NEXT:                 "computed": false,
+// CHECK-NEXT:                 "method": false
 // CHECK-NEXT:               }
 // CHECK-NEXT:             ]
 // CHECK-NEXT:           },
@@ -76,7 +78,8 @@ var {['x']: z} = {x: 3};
 // CHECK-NEXT:                   "name": "z"
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "kind": "init",
-// CHECK-NEXT:                 "computed": true
+// CHECK-NEXT:                 "computed": true,
+// CHECK-NEXT:                 "method": false
 // CHECK-NEXT:               }
 // CHECK-NEXT:             ]
 // CHECK-NEXT:           }
@@ -104,7 +107,8 @@ var {['x']: z} = {x: 3};
 // CHECK-NEXT:                 "name": "z"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "init",
-// CHECK-NEXT:               "computed": true
+// CHECK-NEXT:               "computed": true,
+// CHECK-NEXT:               "method": false
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         },
@@ -123,7 +127,8 @@ var {['x']: z} = {x: 3};
 // CHECK-NEXT:                 "raw": "3"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "init",
-// CHECK-NEXT:               "computed": false
+// CHECK-NEXT:               "computed": false,
+// CHECK-NEXT:               "method": false
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         }
@@ -162,7 +167,8 @@ var {['x']: z} = {x: 3};
 // CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "get",
-// CHECK-NEXT:             "computed": true
+// CHECK-NEXT:             "computed": true,
+// CHECK-NEXT:             "method": false
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Property",
@@ -191,7 +197,8 @@ var {['x']: z} = {x: 3};
 // CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "set",
-// CHECK-NEXT:             "computed": true
+// CHECK-NEXT:             "computed": true,
+// CHECK-NEXT:             "method": false
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },

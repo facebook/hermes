@@ -64,7 +64,8 @@
 //CHECK-NEXT:                   }
 //CHECK-NEXT:                 },
 //CHECK-NEXT:                 "kind": "init",
-//CHECK-NEXT:                 "computed": false
+//CHECK-NEXT:                 "computed": false,
+//CHECK-NEXT:                 "method": false
 //CHECK-NEXT:               },
 //CHECK-NEXT:               {
 //CHECK-NEXT:                 "type": "Property",
@@ -77,7 +78,8 @@
 //CHECK-NEXT:                   "name": "b"
 //CHECK-NEXT:                 },
 //CHECK-NEXT:                 "kind": "init",
-//CHECK-NEXT:                 "computed": false
+//CHECK-NEXT:                 "computed": false,
+//CHECK-NEXT:                 "method": false
 //CHECK-NEXT:               }
 //CHECK-NEXT:             ]
 //CHECK-NEXT:           },
@@ -117,7 +119,8 @@
 //CHECK-NEXT:                  }
 //CHECK-NEXT:                },
 //CHECK-NEXT:                "kind": "init",
-//CHECK-NEXT:                "computed": false
+//CHECK-NEXT:                "computed": false,
+//CHECK-NEXT:                "method": false
 //CHECK-NEXT:              }
 //CHECK-NEXT:            ]
 //CHECK-NEXT:          },
@@ -149,7 +152,8 @@
 // CHECK-NEXT:                 "name": "b"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "init",
-// CHECK-NEXT:               "computed": false
+// CHECK-NEXT:               "computed": false,
+// CHECK-NEXT:               "method": false
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         },
@@ -182,7 +186,8 @@
 // CHECK-NEXT:                 "name": "b"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "init",
-// CHECK-NEXT:               "computed": false
+// CHECK-NEXT:               "computed": false,
+// CHECK-NEXT:               "method": false
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         },

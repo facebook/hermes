@@ -1294,7 +1294,8 @@ Optional<ESTree::PropertyNode *> JSParserImpl::parseBindingProperty(
   return setLocation(
       startLoc,
       value,
-      new (context_) ESTree::PropertyNode(key, value, initIdent_, computed));
+      new (context_)
+          ESTree::PropertyNode(key, value, initIdent_, computed, false));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseBindingRestProperty(
@@ -2396,6 +2397,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
   bool computed = false;
   bool generator = false;
   bool async = false;
+  bool method = false;
 
   if (check(getIdent_)) {
     UniqueString *ident = tok_->getResWordOrIdentifier();
@@ -2412,6 +2414,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
 #if HERMES_PARSE_FLOW
     } else if (context_.getParseFlow() && check(TokenKind::less)) {
       // This is a method definition.
+      method = true;
       key = setLocation(
           identRng,
           identRng,
@@ -2429,7 +2432,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       return setLocation(
           startLoc,
           value,
-          new (context_) ESTree::PropertyNode(key, value, initIdent_, false));
+          new (context_)
+              ESTree::PropertyNode(key, value, initIdent_, false, false));
     } else {
       // A getter method.
       computed = check(TokenKind::l_square);
@@ -2488,7 +2492,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       setLocation(startLoc, block.getValue(), funcExpr);
 
       auto *node = new (context_) ESTree::PropertyNode(
-          optKey.getValue(), funcExpr, getIdent_, computed);
+          optKey.getValue(), funcExpr, getIdent_, computed, false);
       return setLocation(startLoc, block.getValue(), node);
     }
   } else if (check(setIdent_)) {
@@ -2506,6 +2510,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
 #if HERMES_PARSE_FLOW
     } else if (context_.getParseFlow() && check(TokenKind::less)) {
       // This is a method definition.
+      method = true;
       key = setLocation(
           identRng,
           identRng,
@@ -2523,7 +2528,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       return setLocation(
           startLoc,
           value,
-          new (context_) ESTree::PropertyNode(key, value, initIdent_, false));
+          new (context_)
+              ESTree::PropertyNode(key, value, initIdent_, false, false));
     } else {
       // A setter method.
       computed = check(TokenKind::l_square);
@@ -2588,7 +2594,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       setLocation(startLoc, block.getValue(), funcExpr);
 
       auto *node = new (context_) ESTree::PropertyNode(
-          optKey.getValue(), funcExpr, setIdent_, computed);
+          optKey.getValue(), funcExpr, setIdent_, computed, false);
       return setLocation(startLoc, block.getValue(), node);
     }
   } else if (check(asyncIdent_)) {
@@ -2606,6 +2612,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
 #if HERMES_PARSE_FLOW
     } else if (context_.getParseFlow() && check(TokenKind::less)) {
       // This is a method definition.
+      method = true;
       key = setLocation(
           identRng,
           identRng,
@@ -2623,10 +2630,12 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       return setLocation(
           startLoc,
           value,
-          new (context_) ESTree::PropertyNode(key, value, initIdent_, false));
+          new (context_)
+              ESTree::PropertyNode(key, value, initIdent_, false, false));
     } else {
       // This is an async function, parse the key and set `async` to true.
       async = true;
+      method = true;
       generator = checkAndEat(TokenKind::star);
       computed = check(TokenKind::l_square);
       auto optKey = parsePropertyName();
@@ -2648,7 +2657,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       return setLocation(
           startLoc,
           value,
-          new (context_) ESTree::PropertyNode(key, value, initIdent_, false));
+          new (context_)
+              ESTree::PropertyNode(key, value, initIdent_, false, false));
     }
   } else {
     generator = checkAndEat(TokenKind::star);
@@ -2687,6 +2697,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
     //               ^
     llvh::SaveAndRestore<bool> oldParamYield(paramYield_, generator);
     llvh::SaveAndRestore<bool> oldParamAwait(paramAwait_, async);
+
+    method = true;
 
     ESTree::Node *typeParams = nullptr;
 #if HERMES_PARSE_FLOW
@@ -2764,7 +2776,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
   return setLocation(
       startLoc,
       value,
-      new (context_) ESTree::PropertyNode(key, value, initIdent_, computed));
+      new (context_)
+          ESTree::PropertyNode(key, value, initIdent_, computed, method));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parsePropertyName() {
