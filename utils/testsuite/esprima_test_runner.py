@@ -69,7 +69,6 @@ ESPRIMA_OMITTED_KEYS = {
     "FunctionDeclaration": {"expression"},
     "FunctionExpression": {"expression"},
     "ArrowFunctionExpression": {"generator"},
-    "Property": {"shorthand"},
     "ForInStatement": {"each"},
 }
 

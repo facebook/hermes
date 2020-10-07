@@ -74,7 +74,8 @@ function foo(a, [b = 1, c] = [], {c:d = 1, e:{f}}, ...[g,h = 1]) {}
 //CHECK-NEXT:                 },
 //CHECK-NEXT:                 "kind": "init",
 //CHECK-NEXT:                 "computed": false,
-//CHECK-NEXT:                 "method": false
+//CHECK-NEXT:                 "method": false,
+//CHECK-NEXT:                 "shorthand": false
 //CHECK-NEXT:               },
 //CHECK-NEXT:               {
 //CHECK-NEXT:                 "type": "Property",
@@ -97,13 +98,15 @@ function foo(a, [b = 1, c] = [], {c:d = 1, e:{f}}, ...[g,h = 1]) {}
 //CHECK-NEXT:                       },
 //CHECK-NEXT:                       "kind": "init",
 //CHECK-NEXT:                       "computed": false,
-//CHECK-NEXT:                       "method": false
+//CHECK-NEXT:                       "method": false,
+//CHECK-NEXT:                       "shorthand": true
 //CHECK-NEXT:                     }
 //CHECK-NEXT:                   ]
 //CHECK-NEXT:                 },
 //CHECK-NEXT:                 "kind": "init",
 //CHECK-NEXT:                 "computed": false,
-//CHECK-NEXT:                 "method": false
+//CHECK-NEXT:                 "method": false,
+//CHECK-NEXT:                 "shorthand": false
 //CHECK-NEXT:               }
 //CHECK-NEXT:             ]
 //CHECK-NEXT:           },

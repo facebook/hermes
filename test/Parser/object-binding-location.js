@@ -80,6 +80,7 @@ const {[a]: b} = c;
 // CHECK-NEXT:                 "kind": "init",
 // CHECK-NEXT:                 "computed": true,
 // CHECK-NEXT:                 "method": false,
+// CHECK-NEXT:                 "shorthand": false,
 // CHECK-NEXT:                 "loc": {
 // CHECK-NEXT:                   "start": {
 // CHECK-NEXT:                     "line": 14,

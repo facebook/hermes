@@ -1241,6 +1241,7 @@ Optional<ESTree::PropertyNode *> JSParserImpl::parseBindingProperty(
   ESTree::Node *key = optKey.getValue();
 
   ESTree::Node *value = nullptr;
+  bool shorthand = false;
 
   if (checkAndEat(TokenKind::colon)) {
     // PropertyName ":" BindingElement
@@ -1266,6 +1267,8 @@ Optional<ESTree::PropertyNode *> JSParserImpl::parseBindingProperty(
       error(startLoc, "identifier expected in object binding pattern");
       return None;
     }
+
+    shorthand = true;
 
     if (check(TokenKind::equal)) {
       // BindingIdentifier Initializer
@@ -1294,8 +1297,8 @@ Optional<ESTree::PropertyNode *> JSParserImpl::parseBindingProperty(
   return setLocation(
       startLoc,
       value,
-      new (context_)
-          ESTree::PropertyNode(key, value, initIdent_, computed, false));
+      new (context_) ESTree::PropertyNode(
+          key, value, initIdent_, computed, false, shorthand));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseBindingRestProperty(
@@ -2433,7 +2436,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           startLoc,
           value,
           new (context_)
-              ESTree::PropertyNode(key, value, initIdent_, false, false));
+              ESTree::PropertyNode(key, value, initIdent_, false, false, true));
     } else {
       // A getter method.
       computed = check(TokenKind::l_square);
@@ -2492,7 +2495,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       setLocation(startLoc, block.getValue(), funcExpr);
 
       auto *node = new (context_) ESTree::PropertyNode(
-          optKey.getValue(), funcExpr, getIdent_, computed, false);
+          optKey.getValue(), funcExpr, getIdent_, computed, false, false);
       return setLocation(startLoc, block.getValue(), node);
     }
   } else if (check(setIdent_)) {
@@ -2529,7 +2532,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           startLoc,
           value,
           new (context_)
-              ESTree::PropertyNode(key, value, initIdent_, false, false));
+              ESTree::PropertyNode(key, value, initIdent_, false, false, true));
     } else {
       // A setter method.
       computed = check(TokenKind::l_square);
@@ -2594,7 +2597,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       setLocation(startLoc, block.getValue(), funcExpr);
 
       auto *node = new (context_) ESTree::PropertyNode(
-          optKey.getValue(), funcExpr, setIdent_, computed, false);
+          optKey.getValue(), funcExpr, setIdent_, computed, false, false);
       return setLocation(startLoc, block.getValue(), node);
     }
   } else if (check(asyncIdent_)) {
@@ -2631,7 +2634,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           startLoc,
           value,
           new (context_)
-              ESTree::PropertyNode(key, value, initIdent_, false, false));
+              ESTree::PropertyNode(key, value, initIdent_, false, false, true));
     } else {
       // This is an async function, parse the key and set `async` to true.
       async = true;
@@ -2658,7 +2661,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           startLoc,
           value,
           new (context_)
-              ESTree::PropertyNode(key, value, initIdent_, false, false));
+              ESTree::PropertyNode(key, value, initIdent_, false, false, true));
     }
   } else {
     generator = checkAndEat(TokenKind::star);
@@ -2671,6 +2674,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
   }
 
   ESTree::Node *value;
+  bool shorthand = false;
 
   if (isa<ESTree::IdentifierNode>(key) && check(TokenKind::equal)) {
     // Check for CoverInitializedName: IdentifierReference Initializer
@@ -2678,6 +2682,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
     auto optInit = parseAssignmentExpression();
     if (!optInit)
       return None;
+
+    shorthand = true;
 
     value = setLocation(
         startLoc,
@@ -2776,8 +2782,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
   return setLocation(
       startLoc,
       value,
-      new (context_)
-          ESTree::PropertyNode(key, value, initIdent_, computed, method));
+      new (context_) ESTree::PropertyNode(
+          key, value, initIdent_, computed, method, shorthand));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parsePropertyName() {

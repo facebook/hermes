@@ -29,7 +29,8 @@ var tmp = { a : 1, b, c };
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "kind": "init",
 //CHECK-NEXT:                   "computed": false,
-//CHECK-NEXT:                   "method": false
+//CHECK-NEXT:                   "method": false,
+//CHECK-NEXT:                   "shorthand": false
 //CHECK-NEXT:                 },
 //CHECK-NEXT:                 {
 //CHECK-NEXT:                   "type": "Property",
@@ -43,7 +44,8 @@ var tmp = { a : 1, b, c };
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "kind": "init",
 //CHECK-NEXT:                   "computed": false,
-//CHECK-NEXT:                   "method": false
+//CHECK-NEXT:                   "method": false,
+//CHECK-NEXT:                   "shorthand": true
 //CHECK-NEXT:                 },
 //CHECK-NEXT:                 {
 //CHECK-NEXT:                   "type": "Property",
@@ -57,7 +59,8 @@ var tmp = { a : 1, b, c };
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "kind": "init",
 //CHECK-NEXT:                   "computed": false,
-//CHECK-NEXT:                   "method": false
+//CHECK-NEXT:                   "method": false,
+//CHECK-NEXT:                   "shorthand": true
 //CHECK-NEXT:                 }
 //CHECK-NEXT:               ]
 //CHECK-NEXT:             },
@@ -89,7 +92,8 @@ var tmp1 = { d };
 //CHECK-NEXT:                  },
 //CHECK-NEXT:                  "kind": "init",
 //CHECK-NEXT:                  "computed": false,
-//CHECK-NEXT:                  "method": false
+//CHECK-NEXT:                  "method": false,
+//CHECK-NEXT:                  "shorthand": true
 //CHECK-NEXT:                }
 //CHECK-NEXT:              ]
 //CHECK-NEXT:            },
@@ -122,7 +126,8 @@ var a1 = { async, x };
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "kind": "init",
 // CHECK-NEXT:                 "computed": false,
-// CHECK-NEXT:                 "method": false
+// CHECK-NEXT:                 "method": false,
+// CHECK-NEXT:                 "shorthand": true
 // CHECK-NEXT:               },
 // CHECK-NEXT:               {
 // CHECK-NEXT:                 "type": "Property",
@@ -136,7 +141,8 @@ var a1 = { async, x };
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "kind": "init",
 // CHECK-NEXT:                 "computed": false,
-// CHECK-NEXT:                 "method": false
+// CHECK-NEXT:                 "method": false,
+// CHECK-NEXT:                 "shorthand": true
 // CHECK-NEXT:               }
 // CHECK-NEXT:             ]
 // CHECK-NEXT:           },
@@ -169,7 +175,8 @@ var a2 = { x, async };
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "kind": "init",
 // CHECK-NEXT:                 "computed": false,
-// CHECK-NEXT:                 "method": false
+// CHECK-NEXT:                 "method": false,
+// CHECK-NEXT:                 "shorthand": true
 // CHECK-NEXT:               },
 // CHECK-NEXT:               {
 // CHECK-NEXT:                 "type": "Property",
@@ -183,7 +190,8 @@ var a2 = { x, async };
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "kind": "init",
 // CHECK-NEXT:                 "computed": false,
-// CHECK-NEXT:                 "method": false
+// CHECK-NEXT:                 "method": false,
+// CHECK-NEXT:                 "shorthand": true
 // CHECK-NEXT:               }
 // CHECK-NEXT:             ]
 // CHECK-NEXT:           },
@@ -218,7 +226,8 @@ var getset = {
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "kind": "init",
 // CHECK-NEXT:                 "computed": false,
-// CHECK-NEXT:                 "method": false
+// CHECK-NEXT:                 "method": false,
+// CHECK-NEXT:                 "shorthand": true
 // CHECK-NEXT:               },
 // CHECK-NEXT:               {
 // CHECK-NEXT:                 "type": "Property",
@@ -232,7 +241,8 @@ var getset = {
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "kind": "init",
 // CHECK-NEXT:                 "computed": false,
-// CHECK-NEXT:                 "method": false
+// CHECK-NEXT:                 "method": false,
+// CHECK-NEXT:                 "shorthand": true
 // CHECK-NEXT:               }
 // CHECK-NEXT:             ]
 // CHECK-NEXT:           },

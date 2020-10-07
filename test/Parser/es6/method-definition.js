@@ -56,7 +56,8 @@
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": false,
-// CHECK-NEXT:             "method": true
+// CHECK-NEXT:             "method": true,
+// CHECK-NEXT:             "shorthand": false
 // CHECK-NEXT:           },
 
   ['bar']() {},
@@ -79,7 +80,8 @@
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": true,
-// CHECK-NEXT:             "method": true
+// CHECK-NEXT:             "method": true,
+// CHECK-NEXT:             "shorthand": false
 // CHECK-NEXT:           },
 
   'baz'() {},
@@ -102,7 +104,8 @@
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": false,
-// CHECK-NEXT:             "method": true
+// CHECK-NEXT:             "method": true,
+// CHECK-NEXT:             "shorthand": false
 // CHECK-NEXT:           },
 
   123() {},
@@ -126,7 +129,8 @@
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": false,
-// CHECK-NEXT:             "method": true
+// CHECK-NEXT:             "method": true,
+// CHECK-NEXT:             "shorthand": false
 // CHECK-NEXT:           },
 
   *gen() { yield* 3 },
@@ -163,7 +167,8 @@
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": false,
-// CHECK-NEXT:             "method": true
+// CHECK-NEXT:             "method": true,
+// CHECK-NEXT:             "shorthand": false
 // CHECK-NEXT:           },
 
   get() {},
@@ -186,7 +191,8 @@
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": false,
-// CHECK-NEXT:             "method": true
+// CHECK-NEXT:             "method": true,
+// CHECK-NEXT:             "shorthand": false
 // CHECK-NEXT:           },
 
   set() {},
@@ -209,7 +215,8 @@
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": false,
-// CHECK-NEXT:             "method": true
+// CHECK-NEXT:             "method": true,
+// CHECK-NEXT:             "shorthand": false
 // CHECK-NEXT:           },
 
   set mySetter(x = 10) {},
@@ -245,7 +252,8 @@
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "set",
 // CHECK-NEXT:             "computed": false,
-// CHECK-NEXT:             "method": false
+// CHECK-NEXT:             "method": false,
+// CHECK-NEXT:             "shorthand": false
 // CHECK-NEXT:           },
 
   rest(a, ...b) {},
@@ -280,7 +288,8 @@
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": false,
-// CHECK-NEXT:             "method": true
+// CHECK-NEXT:             "method": true,
+// CHECK-NEXT:             "shorthand": false
 // CHECK-NEXT:           }
 
 });

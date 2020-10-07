@@ -215,7 +215,8 @@ class Clazz {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": false,
-// CHECK-NEXT:             "method": true
+// CHECK-NEXT:             "method": true,
+// CHECK-NEXT:             "shorthand": false
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Property",
@@ -237,7 +238,8 @@ class Clazz {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": false,
-// CHECK-NEXT:             "method": true
+// CHECK-NEXT:             "method": true,
+// CHECK-NEXT:             "shorthand": false
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Property",
@@ -258,7 +260,8 @@ class Clazz {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": false,
-// CHECK-NEXT:             "method": true
+// CHECK-NEXT:             "method": true,
+// CHECK-NEXT:             "shorthand": false
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Property",
@@ -279,7 +282,8 @@ class Clazz {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": false,
-// CHECK-NEXT:             "method": true
+// CHECK-NEXT:             "method": true,
+// CHECK-NEXT:             "shorthand": false
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Property",
@@ -300,7 +304,8 @@ class Clazz {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": true,
-// CHECK-NEXT:             "method": true
+// CHECK-NEXT:             "method": true,
+// CHECK-NEXT:             "shorthand": false
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Property",
@@ -321,7 +326,8 @@ class Clazz {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": true,
-// CHECK-NEXT:             "method": true
+// CHECK-NEXT:             "method": true,
+// CHECK-NEXT:             "shorthand": false
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },
