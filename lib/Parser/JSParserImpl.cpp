@@ -1292,7 +1292,7 @@ Optional<ESTree::PropertyNode *> JSParserImpl::parseBindingProperty(
   }
 
   return setLocation(
-      key,
+      startLoc,
       value,
       new (context_) ESTree::PropertyNode(key, value, initIdent_, computed));
 }
