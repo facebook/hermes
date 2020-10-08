@@ -269,6 +269,19 @@ TEST(HermesValueTest, NanTest) {
   EXPECT_EQ(v1_int, v2_int);
 }
 
+TEST(HermesValueTest, HVConstantsTest) {
+  auto A = HVConstants::kZero;
+  auto B = HVConstants::kOne;
+  auto C = HVConstants::kNegOne;
+  auto D = HermesValue::encodeDoubleValue(0);
+  auto E = HermesValue::encodeDoubleValue(1);
+  auto F = HermesValue::encodeNumberValue(-1);
+
+  EXPECT_TRUE(A == D);
+  EXPECT_TRUE(B == E);
+  EXPECT_TRUE(C == F);
+}
+
 TEST(HermesValueTest, EqualityTest) {
   auto A = HermesValue::encodeNullValue();
   auto B = HermesValue::encodeUndefinedValue();

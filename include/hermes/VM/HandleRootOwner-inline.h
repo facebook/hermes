@@ -105,6 +105,18 @@ inline Handle<HermesValue> HandleRootOwner::getBoolValue(bool b) {
   return Handle<HermesValue>(b ? &trueValue_ : &falseValue_);
 }
 
+inline Handle<HermesValue> HandleRootOwner::getZeroValue() {
+  return Handle<HermesValue>(&zeroValue_);
+}
+
+inline Handle<HermesValue> HandleRootOwner::getOneValue() {
+  return Handle<HermesValue>(&oneValue_);
+}
+
+inline Handle<HermesValue> HandleRootOwner::getNegOneValue() {
+  return Handle<HermesValue>(&negOneValue_);
+}
+
 inline GCScope *HandleRootOwner::getTopGCScope() {
   return topGCScope_;
 }

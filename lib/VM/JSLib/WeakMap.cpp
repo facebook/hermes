@@ -113,8 +113,8 @@ weakMapConstructor(void *, Runtime *runtime, NativeArgs args) {
   MutableHandle<JSObject> nextItem{runtime};
   MutableHandle<> keyHandle{runtime};
   MutableHandle<> valueHandle{runtime};
-  Handle<> zero{runtime, HermesValue::encodeNumberValue(0)};
-  Handle<> one{runtime, HermesValue::encodeNumberValue(1)};
+  Handle<> zero = HandleRootOwner::getZeroValue();
+  Handle<> one = HandleRootOwner::getOneValue();
   auto marker = gcScope.createMarker();
 
   for (;;) {

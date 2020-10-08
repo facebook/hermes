@@ -488,11 +488,20 @@ class HermesValue {
   uint64_t raw_;
 
   friend class PseudoHandle<HermesValue>;
+  friend struct HVConstants;
 }; // class HermesValue
 
 static_assert(
     std::is_trivial<HermesValue>::value,
     "HermesValue must be trivial");
+
+/// Encode common double constants to HermesValue.
+/// The tricks is that that we know the bit patterns of known constants.
+struct HVConstants {
+  static constexpr HermesValue kZero = HermesValue(0);
+  static constexpr HermesValue kOne = HermesValue(0x3ff0ull << 48);
+  static constexpr HermesValue kNegOne = HermesValue(0xbff0ull << 48);
+};
 
 /// A HermesValue which is stored in non-moveable memory and is known to the
 /// garbage collector.

@@ -120,6 +120,15 @@ class HandleRootOwner {
   /// An efficient way to pass bools to a function accepting Handle.
   static Handle<HermesValue> getBoolValue(bool b);
 
+  /// An efficient way to pass 0 to a function accepting Handle.
+  static Handle<HermesValue> getZeroValue();
+
+  /// An efficient way to pass 1 to a function accepting Handle.
+  static Handle<HermesValue> getOneValue();
+
+  /// An efficient way to pass -1 to a function accepting Handle.
+  static Handle<HermesValue> getNegOneValue();
+
   /// Return the top-most \c GCScope.
   GCScope *getTopGCScope();
 
@@ -130,14 +139,20 @@ class HandleRootOwner {
   /// Used for efficient construction of Handle<>(..., nullptr).
   static PinnedHermesValue nullPointer_;
   /// Used for efficient construction of Handle(undefined).
-  static PinnedHermesValue undefinedValue_;
+  static const PinnedHermesValue undefinedValue_;
   /// Used for efficient construction of Handle(null).
-  static PinnedHermesValue nullValue_;
+  static const PinnedHermesValue nullValue_;
   /// Used for efficient construction of Handle(empty).
-  static PinnedHermesValue emptyValue_;
+  static const PinnedHermesValue emptyValue_;
   /// Used for efficient construction of Handle(bool).
-  static PinnedHermesValue trueValue_;
-  static PinnedHermesValue falseValue_;
+  static const PinnedHermesValue trueValue_;
+  static const PinnedHermesValue falseValue_;
+  /// Used for efficient construction of Handle(0).
+  static const PinnedHermesValue zeroValue_;
+  /// Used for efficient construction of Handle(1).
+  static const PinnedHermesValue oneValue_;
+  /// Used for efficient construction of Handle(-1).
+  static const PinnedHermesValue negOneValue_;
 
   void markGCScopes(SlotAcceptor &acceptor);
 

@@ -136,8 +136,7 @@ CallResult<HermesValue> JSRegExpStringIterator::nextElement(
     // a. If global is true, then
     if (O->global_) {
       //  i. Let matchStr be ? ToString(? Get(match, "0")).
-      Handle<> zeroHandle =
-          runtime->makeHandle(HermesValue::encodeNumberValue(0));
+      Handle<> zeroHandle = HandleRootOwner::getZeroValue();
       auto propRes = JSObject::getComputed_RJS(matchObj, runtime, zeroHandle);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;

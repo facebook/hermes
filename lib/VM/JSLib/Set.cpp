@@ -219,9 +219,8 @@ setPrototypeAdd(void *, Runtime *runtime, NativeArgs args) {
   // 5. If value is -0, set value to +0.
   // N.B. in the case of Set, the value is used as both the value and the key of
   // the entry. They are both observed as normalized from Set iterators.
-  static const PinnedHermesValue zero = HermesValue::encodeNumberValue(0);
   auto value = valueHandle->isNumber() && valueHandle->getNumber() == 0
-      ? Handle<>(&zero)
+      ? HandleRootOwner::getZeroValue()
       : valueHandle;
   JSSet::addValue(selfHandle, runtime, value, value);
   return selfHandle.getHermesValue();

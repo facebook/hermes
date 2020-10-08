@@ -1195,7 +1195,7 @@ regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args) {
 
   // c. Let setStatus be Set(rx, "lastIndex", 0, true).
   // d. ReturnIfAbrupt(setStatus).
-  Handle<> zeroHandle = runtime->makeHandle(HermesValue::encodeNumberValue(0));
+  Handle<> zeroHandle = HandleRootOwner::getZeroValue();
   if (setLastIndex(rx, runtime, *zeroHandle) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1389,7 +1389,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
   bool fullUnicode = false;
 
   // 10. If global is true, then
-  Handle<> zeroHandle = runtime->makeHandle(HermesValue::encodeNumberValue(0));
+  Handle<> zeroHandle = HandleRootOwner::getZeroValue();
   if (global) {
     //   a. Let fullUnicode be ToBoolean(Get(rx, "unicode")).
     //   b. ReturnIfAbrupt(fullUnicode).

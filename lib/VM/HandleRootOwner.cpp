@@ -19,14 +19,19 @@ namespace vm {
 
 PinnedHermesValue HandleRootOwner::nullPointer_{
     HermesValue::encodeNullptrObjectValue()};
-PinnedHermesValue HandleRootOwner::undefinedValue_{
+const PinnedHermesValue HandleRootOwner::undefinedValue_{
     HermesValue::encodeUndefinedValue()};
-PinnedHermesValue HandleRootOwner::nullValue_{HermesValue::encodeNullValue()};
-PinnedHermesValue HandleRootOwner::emptyValue_{HermesValue::encodeEmptyValue()};
-PinnedHermesValue HandleRootOwner::trueValue_{
+const PinnedHermesValue HandleRootOwner::nullValue_{
+    HermesValue::encodeNullValue()};
+const PinnedHermesValue HandleRootOwner::emptyValue_{
+    HermesValue::encodeEmptyValue()};
+const PinnedHermesValue HandleRootOwner::trueValue_{
     HermesValue::encodeBoolValue(true)};
-PinnedHermesValue HandleRootOwner::falseValue_{
+const PinnedHermesValue HandleRootOwner::falseValue_{
     HermesValue::encodeBoolValue(false)};
+const PinnedHermesValue HandleRootOwner::zeroValue_{HVConstants::kZero};
+const PinnedHermesValue HandleRootOwner::oneValue_{HVConstants::kOne};
+const PinnedHermesValue HandleRootOwner::negOneValue_{HVConstants::kNegOne};
 
 void HandleRootOwner::markGCScopes(SlotAcceptor &acceptor) {
   for (GCScope *gcScope = topGCScope_; gcScope; gcScope = gcScope->prevScope_)

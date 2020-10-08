@@ -313,9 +313,8 @@ mapPrototypeSet(void *, Runtime *runtime, NativeArgs args) {
   auto keyHandle = args.getArgHandle(0);
   // 5. If key is -0, set key to +0.
   // N.B. in the case of Map, only key should be normalized but not the value.
-  static const PinnedHermesValue zero = HermesValue::encodeNumberValue(0);
   auto key = keyHandle->isNumber() && keyHandle->getNumber() == 0
-      ? Handle<>(&zero)
+      ? HandleRootOwner::getZeroValue()
       : keyHandle;
   JSMap::addValue(selfHandle, runtime, key, args.getArgHandle(1));
   return selfHandle.getHermesValue();

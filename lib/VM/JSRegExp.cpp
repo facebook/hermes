@@ -125,7 +125,7 @@ void JSRegExp::initializeProperties(
       runtime,
       Predefined::getSymbolID(Predefined::lastIndex),
       dpf,
-      runtime->makeHandle(HermesValue::encodeNumberValue(0)));
+      HandleRootOwner::getZeroValue());
   (void)res;
   assert(
       res != ExecutionStatus::EXCEPTION && *res &&
