@@ -12,6 +12,17 @@
 // CHECK-NEXT:     "body": [
 
 type T = number
+
+type T = number;
+
+declare opaque type T
+
+declare opaque type T<U>
+
+declare opaque type T: string
+
+export type T = string;
+
 // CHECK-NEXT:       {
 // CHECK-NEXT:         "type": "TypeAlias",
 // CHECK-NEXT:         "id": {
@@ -66,7 +77,6 @@ type T = number
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },
 
-type T = number;
 // CHECK-NEXT:       {
 // CHECK-NEXT:         "type": "TypeAlias",
 // CHECK-NEXT:         "id": {
@@ -74,17 +84,17 @@ type T = number;
 // CHECK-NEXT:           "name": "T",
 // CHECK-NEXT:           "loc": {
 // CHECK-NEXT:             "start": {
-// CHECK-NEXT:               "line": 69,
+// CHECK-NEXT:               "line": 16,
 // CHECK-NEXT:               "column": 6
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
-// CHECK-NEXT:               "line": 69,
+// CHECK-NEXT:               "line": 16,
 // CHECK-NEXT:               "column": 7
 // CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "range": [
-// CHECK-NEXT:             2264,
-// CHECK-NEXT:             2265
+// CHECK-NEXT:             437,
+// CHECK-NEXT:             438
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "typeParameters": null,
@@ -92,36 +102,35 @@ type T = number;
 // CHECK-NEXT:           "type": "NumberTypeAnnotation",
 // CHECK-NEXT:           "loc": {
 // CHECK-NEXT:             "start": {
-// CHECK-NEXT:               "line": 69,
+// CHECK-NEXT:               "line": 16,
 // CHECK-NEXT:               "column": 10
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
-// CHECK-NEXT:               "line": 69,
+// CHECK-NEXT:               "line": 16,
 // CHECK-NEXT:               "column": 16
 // CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "range": [
-// CHECK-NEXT:             2268,
-// CHECK-NEXT:             2274
+// CHECK-NEXT:             441,
+// CHECK-NEXT:             447
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "loc": {
 // CHECK-NEXT:           "start": {
-// CHECK-NEXT:             "line": 69,
+// CHECK-NEXT:             "line": 16,
 // CHECK-NEXT:             "column": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
-// CHECK-NEXT:             "line": 69,
+// CHECK-NEXT:             "line": 16,
 // CHECK-NEXT:             "column": 17
 // CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "range": [
-// CHECK-NEXT:           2259,
-// CHECK-NEXT:           2275
+// CHECK-NEXT:           432,
+// CHECK-NEXT:           448
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },
 
-declare opaque type T
 // CHECK-NEXT:       {
 // CHECK-NEXT:         "type": "DeclareOpaqueType",
 // CHECK-NEXT:         "id": {
@@ -129,17 +138,17 @@ declare opaque type T
 // CHECK-NEXT:           "name": "T",
 // CHECK-NEXT:           "loc": {
 // CHECK-NEXT:             "start": {
-// CHECK-NEXT:               "line": 124,
+// CHECK-NEXT:               "line": 18,
 // CHECK-NEXT:               "column": 21
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
-// CHECK-NEXT:               "line": 124,
+// CHECK-NEXT:               "line": 18,
 // CHECK-NEXT:               "column": 22
 // CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "range": [
-// CHECK-NEXT:             4130,
-// CHECK-NEXT:             4131
+// CHECK-NEXT:             470,
+// CHECK-NEXT:             471
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "typeParameters": null,
@@ -147,21 +156,20 @@ declare opaque type T
 // CHECK-NEXT:         "supertype": null,
 // CHECK-NEXT:         "loc": {
 // CHECK-NEXT:           "start": {
-// CHECK-NEXT:             "line": 124,
+// CHECK-NEXT:             "line": 18,
 // CHECK-NEXT:             "column": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
-// CHECK-NEXT:             "line": 124,
+// CHECK-NEXT:             "line": 18,
 // CHECK-NEXT:             "column": 22
 // CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "range": [
-// CHECK-NEXT:           4110,
-// CHECK-NEXT:           4131
+// CHECK-NEXT:           450,
+// CHECK-NEXT:           471
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },
 
-declare opaque type T<U>
 // CHECK-NEXT:       {
 // CHECK-NEXT:         "type": "DeclareOpaqueType",
 // CHECK-NEXT:         "id": {
@@ -169,17 +177,17 @@ declare opaque type T<U>
 // CHECK-NEXT:           "name": "T",
 // CHECK-NEXT:           "loc": {
 // CHECK-NEXT:             "start": {
-// CHECK-NEXT:               "line": 164,
+// CHECK-NEXT:               "line": 20,
 // CHECK-NEXT:               "column": 21
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
-// CHECK-NEXT:               "line": 164,
+// CHECK-NEXT:               "line": 20,
 // CHECK-NEXT:               "column": 22
 // CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "range": [
-// CHECK-NEXT:             5477,
-// CHECK-NEXT:             5478
+// CHECK-NEXT:             493,
+// CHECK-NEXT:             494
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "typeParameters": {
@@ -193,54 +201,53 @@ declare opaque type T<U>
 // CHECK-NEXT:               "default": null,
 // CHECK-NEXT:               "loc": {
 // CHECK-NEXT:                 "start": {
-// CHECK-NEXT:                   "line": 164,
+// CHECK-NEXT:                   "line": 20,
 // CHECK-NEXT:                   "column": 23
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
-// CHECK-NEXT:                   "line": 164,
+// CHECK-NEXT:                   "line": 20,
 // CHECK-NEXT:                   "column": 24
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "range": [
-// CHECK-NEXT:                 5479,
-// CHECK-NEXT:                 5480
+// CHECK-NEXT:                 495,
+// CHECK-NEXT:                 496
 // CHECK-NEXT:               ]
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "loc": {
 // CHECK-NEXT:             "start": {
-// CHECK-NEXT:               "line": 164,
+// CHECK-NEXT:               "line": 20,
 // CHECK-NEXT:               "column": 22
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
-// CHECK-NEXT:               "line": 164,
+// CHECK-NEXT:               "line": 20,
 // CHECK-NEXT:               "column": 25
 // CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "range": [
-// CHECK-NEXT:             5478,
-// CHECK-NEXT:             5481
+// CHECK-NEXT:             494,
+// CHECK-NEXT:             497
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "impltype": null,
 // CHECK-NEXT:         "supertype": null,
 // CHECK-NEXT:         "loc": {
 // CHECK-NEXT:           "start": {
-// CHECK-NEXT:             "line": 164,
+// CHECK-NEXT:             "line": 20,
 // CHECK-NEXT:             "column": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
-// CHECK-NEXT:             "line": 164,
+// CHECK-NEXT:             "line": 20,
 // CHECK-NEXT:             "column": 25
 // CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "range": [
-// CHECK-NEXT:           5457,
-// CHECK-NEXT:           5481
+// CHECK-NEXT:           473,
+// CHECK-NEXT:           497
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },
 
-declare opaque type T: string
 // CHECK-NEXT:       {
 // CHECK-NEXT:         "type": "DeclareOpaqueType",
 // CHECK-NEXT:         "id": {
@@ -248,17 +255,17 @@ declare opaque type T: string
 // CHECK-NEXT:           "name": "T",
 // CHECK-NEXT:           "loc": {
 // CHECK-NEXT:             "start": {
-// CHECK-NEXT:               "line": 243,
+// CHECK-NEXT:               "line": 22,
 // CHECK-NEXT:               "column": 21
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
-// CHECK-NEXT:               "line": 243,
+// CHECK-NEXT:               "line": 22,
 // CHECK-NEXT:               "column": 22
 // CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "range": [
-// CHECK-NEXT:             8304,
-// CHECK-NEXT:             8305
+// CHECK-NEXT:             519,
+// CHECK-NEXT:             520
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "typeParameters": null,
@@ -267,36 +274,35 @@ declare opaque type T: string
 // CHECK-NEXT:           "type": "StringTypeAnnotation",
 // CHECK-NEXT:           "loc": {
 // CHECK-NEXT:             "start": {
-// CHECK-NEXT:               "line": 243,
+// CHECK-NEXT:               "line": 22,
 // CHECK-NEXT:               "column": 24
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
-// CHECK-NEXT:               "line": 243,
+// CHECK-NEXT:               "line": 22,
 // CHECK-NEXT:               "column": 30
 // CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "range": [
-// CHECK-NEXT:             8307,
-// CHECK-NEXT:             8313
+// CHECK-NEXT:             522,
+// CHECK-NEXT:             528
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "loc": {
 // CHECK-NEXT:           "start": {
-// CHECK-NEXT:             "line": 243,
+// CHECK-NEXT:             "line": 22,
 // CHECK-NEXT:             "column": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
-// CHECK-NEXT:             "line": 243,
+// CHECK-NEXT:             "line": 22,
 // CHECK-NEXT:             "column": 30
 // CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "range": [
-// CHECK-NEXT:           8284,
-// CHECK-NEXT:           8313
+// CHECK-NEXT:           499,
+// CHECK-NEXT:           528
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },
 
-export type T = string;
 // CHECK-NEXT:       {
 // CHECK-NEXT:         "type": "ExportNamedDeclaration",
 // CHECK-NEXT:         "declaration": {
@@ -306,17 +312,17 @@ export type T = string;
 // CHECK-NEXT:             "name": "T",
 // CHECK-NEXT:             "loc": {
 // CHECK-NEXT:               "start": {
-// CHECK-NEXT:                 "line": 299,
+// CHECK-NEXT:                 "line": 24,
 // CHECK-NEXT:                 "column": 13
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
-// CHECK-NEXT:                 "line": 299,
+// CHECK-NEXT:                 "line": 24,
 // CHECK-NEXT:                 "column": 14
 // CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "range": [
-// CHECK-NEXT:               10221,
-// CHECK-NEXT:               10222
+// CHECK-NEXT:               542,
+// CHECK-NEXT:               543
 // CHECK-NEXT:             ]
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "typeParameters": null,
@@ -324,32 +330,32 @@ export type T = string;
 // CHECK-NEXT:             "type": "StringTypeAnnotation",
 // CHECK-NEXT:             "loc": {
 // CHECK-NEXT:               "start": {
-// CHECK-NEXT:                 "line": 299,
+// CHECK-NEXT:                 "line": 24,
 // CHECK-NEXT:                 "column": 17
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
-// CHECK-NEXT:                 "line": 299,
+// CHECK-NEXT:                 "line": 24,
 // CHECK-NEXT:                 "column": 23
 // CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "range": [
-// CHECK-NEXT:               10225,
-// CHECK-NEXT:               10231
+// CHECK-NEXT:               546,
+// CHECK-NEXT:               552
 // CHECK-NEXT:             ]
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "loc": {
 // CHECK-NEXT:             "start": {
-// CHECK-NEXT:               "line": 299,
+// CHECK-NEXT:               "line": 24,
 // CHECK-NEXT:               "column": 8
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
-// CHECK-NEXT:               "line": 299,
+// CHECK-NEXT:               "line": 24,
 // CHECK-NEXT:               "column": 24
 // CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "range": [
-// CHECK-NEXT:             10216,
-// CHECK-NEXT:             10232
+// CHECK-NEXT:             537,
+// CHECK-NEXT:             553
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "specifiers": [],
@@ -357,16 +363,16 @@ export type T = string;
 // CHECK-NEXT:         "exportKind": "type",
 // CHECK-NEXT:         "loc": {
 // CHECK-NEXT:           "start": {
-// CHECK-NEXT:             "line": 299,
+// CHECK-NEXT:             "line": 24,
 // CHECK-NEXT:             "column": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
-// CHECK-NEXT:             "line": 299,
+// CHECK-NEXT:             "line": 24,
 // CHECK-NEXT:             "column": 24
 // CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "range": [
-// CHECK-NEXT:           10209,
-// CHECK-NEXT:           10232
+// CHECK-NEXT:           530,
+// CHECK-NEXT:           553
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       }

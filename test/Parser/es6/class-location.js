@@ -12,6 +12,10 @@
 // CHECK-NEXT:   "body": [
 
 class C {
+  static a = 1;
+  static b() {}
+}
+
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "ClassDeclaration",
 // CHECK-NEXT:       "id": {
@@ -37,7 +41,6 @@ class C {
 // CHECK-NEXT:         "type": "ClassBody",
 // CHECK-NEXT:         "body": [
 
-  static a = 1;
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "ClassProperty",
 // CHECK-NEXT:             "key": {
@@ -45,17 +48,17 @@ class C {
 // CHECK-NEXT:               "name": "a",
 // CHECK-NEXT:               "loc": {
 // CHECK-NEXT:                 "start": {
-// CHECK-NEXT:                   "line": 40,
+// CHECK-NEXT:                   "line": 15,
 // CHECK-NEXT:                   "column": 10
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
-// CHECK-NEXT:                   "line": 40,
+// CHECK-NEXT:                   "line": 15,
 // CHECK-NEXT:                   "column": 11
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "range": [
-// CHECK-NEXT:                 1202,
-// CHECK-NEXT:                 1203
+// CHECK-NEXT:                 391,
+// CHECK-NEXT:                 392
 // CHECK-NEXT:               ]
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
@@ -64,38 +67,37 @@ class C {
 // CHECK-NEXT:               "raw": "1",
 // CHECK-NEXT:               "loc": {
 // CHECK-NEXT:                 "start": {
-// CHECK-NEXT:                   "line": 40,
+// CHECK-NEXT:                   "line": 15,
 // CHECK-NEXT:                   "column": 14
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
-// CHECK-NEXT:                   "line": 40,
+// CHECK-NEXT:                   "line": 15,
 // CHECK-NEXT:                   "column": 15
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "range": [
-// CHECK-NEXT:                 1206,
-// CHECK-NEXT:                 1207
+// CHECK-NEXT:                 395,
+// CHECK-NEXT:                 396
 // CHECK-NEXT:               ]
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "computed": false,
 // CHECK-NEXT:             "static": true,
 // CHECK-NEXT:             "loc": {
 // CHECK-NEXT:               "start": {
-// CHECK-NEXT:                 "line": 40,
+// CHECK-NEXT:                 "line": 15,
 // CHECK-NEXT:                 "column": 3
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
-// CHECK-NEXT:                 "line": 40,
+// CHECK-NEXT:                 "line": 15,
 // CHECK-NEXT:                 "column": 16
 // CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "range": [
-// CHECK-NEXT:               1195,
-// CHECK-NEXT:               1208
+// CHECK-NEXT:               384,
+// CHECK-NEXT:               397
 // CHECK-NEXT:             ]
 // CHECK-NEXT:           },
 
-  static b() {}
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "MethodDefinition",
 // CHECK-NEXT:             "key": {
@@ -103,17 +105,17 @@ class C {
 // CHECK-NEXT:               "name": "b",
 // CHECK-NEXT:               "loc": {
 // CHECK-NEXT:                 "start": {
-// CHECK-NEXT:                   "line": 98,
+// CHECK-NEXT:                   "line": 16,
 // CHECK-NEXT:                   "column": 10
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
-// CHECK-NEXT:                   "line": 98,
+// CHECK-NEXT:                   "line": 16,
 // CHECK-NEXT:                   "column": 11
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "range": [
-// CHECK-NEXT:                 3385,
-// CHECK-NEXT:                 3386
+// CHECK-NEXT:                 407,
+// CHECK-NEXT:                 408
 // CHECK-NEXT:               ]
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
@@ -125,34 +127,34 @@ class C {
 // CHECK-NEXT:                 "body": [],
 // CHECK-NEXT:                 "loc": {
 // CHECK-NEXT:                   "start": {
-// CHECK-NEXT:                     "line": 98,
+// CHECK-NEXT:                     "line": 16,
 // CHECK-NEXT:                     "column": 14
 // CHECK-NEXT:                   },
 // CHECK-NEXT:                   "end": {
-// CHECK-NEXT:                     "line": 98,
+// CHECK-NEXT:                     "line": 16,
 // CHECK-NEXT:                     "column": 16
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "range": [
-// CHECK-NEXT:                   3389,
-// CHECK-NEXT:                   3391
+// CHECK-NEXT:                   411,
+// CHECK-NEXT:                   413
 // CHECK-NEXT:                 ]
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "generator": false,
 // CHECK-NEXT:               "async": false,
 // CHECK-NEXT:               "loc": {
 // CHECK-NEXT:                 "start": {
-// CHECK-NEXT:                   "line": 98,
+// CHECK-NEXT:                   "line": 16,
 // CHECK-NEXT:                   "column": 10
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
-// CHECK-NEXT:                   "line": 98,
+// CHECK-NEXT:                   "line": 16,
 // CHECK-NEXT:                   "column": 16
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "range": [
-// CHECK-NEXT:                 3385,
-// CHECK-NEXT:                 3391
+// CHECK-NEXT:                 407,
+// CHECK-NEXT:                 413
 // CHECK-NEXT:               ]
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "method",
@@ -160,21 +162,20 @@ class C {
 // CHECK-NEXT:             "static": true,
 // CHECK-NEXT:             "loc": {
 // CHECK-NEXT:               "start": {
-// CHECK-NEXT:                 "line": 98,
+// CHECK-NEXT:                 "line": 16,
 // CHECK-NEXT:                 "column": 3
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
-// CHECK-NEXT:                 "line": 98,
+// CHECK-NEXT:                 "line": 16,
 // CHECK-NEXT:                 "column": 16
 // CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "range": [
-// CHECK-NEXT:               3378,
-// CHECK-NEXT:               3391
+// CHECK-NEXT:               400,
+// CHECK-NEXT:               413
 // CHECK-NEXT:             ]
 // CHECK-NEXT:           }
 
-}
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "loc": {
 // CHECK-NEXT:           "start": {
@@ -182,13 +183,13 @@ class C {
 // CHECK-NEXT:             "column": 9
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
-// CHECK-NEXT:             "line": 177,
+// CHECK-NEXT:             "line": 17,
 // CHECK-NEXT:             "column": 2
 // CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "range": [
 // CHECK-NEXT:           380,
-// CHECK-NEXT:           6451
+// CHECK-NEXT:           415
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "loc": {
@@ -197,13 +198,13 @@ class C {
 // CHECK-NEXT:           "column": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
-// CHECK-NEXT:           "line": 177,
+// CHECK-NEXT:           "line": 17,
 // CHECK-NEXT:           "column": 2
 // CHECK-NEXT:         }
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "range": [
 // CHECK-NEXT:         372,
-// CHECK-NEXT:         6451
+// CHECK-NEXT:         415
 // CHECK-NEXT:       ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],
@@ -213,12 +214,12 @@ class C {
 // CHECK-NEXT:       "column": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:       "line": 177,
+// CHECK-NEXT:       "line": 17,
 // CHECK-NEXT:       "column": 2
 // CHECK-NEXT:     }
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "range": [
 // CHECK-NEXT:     372,
-// CHECK-NEXT:     6451
+// CHECK-NEXT:     415
 // CHECK-NEXT:   ]
 // CHECK-NEXT: }

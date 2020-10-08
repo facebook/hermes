@@ -12,6 +12,9 @@
 // CHECK-NEXT:     "body": [
 
 import type Foo from 'foo';
+
+import typeof Foo, {bar} from 'foo';
+
 // CHECK-NEXT:       {
 // CHECK-NEXT:         "type": "ImportDeclaration",
 // CHECK-NEXT:         "specifiers": [
@@ -86,7 +89,6 @@ import type Foo from 'foo';
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },
 
-import typeof Foo, {bar} from 'foo';
 // CHECK-NEXT:       {
 // CHECK-NEXT:         "type": "ImportDeclaration",
 // CHECK-NEXT:         "specifiers": [
@@ -97,32 +99,32 @@ import typeof Foo, {bar} from 'foo';
 // CHECK-NEXT:               "name": "Foo",
 // CHECK-NEXT:               "loc": {
 // CHECK-NEXT:                 "start": {
-// CHECK-NEXT:                   "line": 89,
+// CHECK-NEXT:                   "line": 16,
 // CHECK-NEXT:                   "column": 15
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
-// CHECK-NEXT:                   "line": 89,
+// CHECK-NEXT:                   "line": 16,
 // CHECK-NEXT:                   "column": 18
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "range": [
-// CHECK-NEXT:                 3100,
-// CHECK-NEXT:                 3103
+// CHECK-NEXT:                 458,
+// CHECK-NEXT:                 461
 // CHECK-NEXT:               ]
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "loc": {
 // CHECK-NEXT:               "start": {
-// CHECK-NEXT:                 "line": 89,
+// CHECK-NEXT:                 "line": 16,
 // CHECK-NEXT:                 "column": 15
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
-// CHECK-NEXT:                 "line": 89,
+// CHECK-NEXT:                 "line": 16,
 // CHECK-NEXT:                 "column": 18
 // CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "range": [
-// CHECK-NEXT:               3100,
-// CHECK-NEXT:               3103
+// CHECK-NEXT:               458,
+// CHECK-NEXT:               461
 // CHECK-NEXT:             ]
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
@@ -132,17 +134,17 @@ import typeof Foo, {bar} from 'foo';
 // CHECK-NEXT:               "name": "bar",
 // CHECK-NEXT:               "loc": {
 // CHECK-NEXT:                 "start": {
-// CHECK-NEXT:                   "line": 89,
+// CHECK-NEXT:                   "line": 16,
 // CHECK-NEXT:                   "column": 21
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
-// CHECK-NEXT:                   "line": 89,
+// CHECK-NEXT:                   "line": 16,
 // CHECK-NEXT:                   "column": 24
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "range": [
-// CHECK-NEXT:                 3106,
-// CHECK-NEXT:                 3109
+// CHECK-NEXT:                 464,
+// CHECK-NEXT:                 467
 // CHECK-NEXT:               ]
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "local": {
@@ -150,33 +152,33 @@ import typeof Foo, {bar} from 'foo';
 // CHECK-NEXT:               "name": "bar",
 // CHECK-NEXT:               "loc": {
 // CHECK-NEXT:                 "start": {
-// CHECK-NEXT:                   "line": 89,
+// CHECK-NEXT:                   "line": 16,
 // CHECK-NEXT:                   "column": 21
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
-// CHECK-NEXT:                   "line": 89,
+// CHECK-NEXT:                   "line": 16,
 // CHECK-NEXT:                   "column": 24
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "range": [
-// CHECK-NEXT:                 3106,
-// CHECK-NEXT:                 3109
+// CHECK-NEXT:                 464,
+// CHECK-NEXT:                 467
 // CHECK-NEXT:               ]
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "importKind": "value",
 // CHECK-NEXT:             "loc": {
 // CHECK-NEXT:               "start": {
-// CHECK-NEXT:                 "line": 89,
+// CHECK-NEXT:                 "line": 16,
 // CHECK-NEXT:                 "column": 21
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
-// CHECK-NEXT:                 "line": 89,
+// CHECK-NEXT:                 "line": 16,
 // CHECK-NEXT:                 "column": 24
 // CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "range": [
-// CHECK-NEXT:               3106,
-// CHECK-NEXT:               3109
+// CHECK-NEXT:               464,
+// CHECK-NEXT:               467
 // CHECK-NEXT:             ]
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
@@ -185,32 +187,32 @@ import typeof Foo, {bar} from 'foo';
 // CHECK-NEXT:           "value": "foo",
 // CHECK-NEXT:           "loc": {
 // CHECK-NEXT:             "start": {
-// CHECK-NEXT:               "line": 89,
+// CHECK-NEXT:               "line": 16,
 // CHECK-NEXT:               "column": 31
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
-// CHECK-NEXT:               "line": 89,
+// CHECK-NEXT:               "line": 16,
 // CHECK-NEXT:               "column": 36
 // CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "range": [
-// CHECK-NEXT:             3116,
-// CHECK-NEXT:             3121
+// CHECK-NEXT:             474,
+// CHECK-NEXT:             479
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "importKind": "typeof",
 // CHECK-NEXT:         "loc": {
 // CHECK-NEXT:           "start": {
-// CHECK-NEXT:             "line": 89,
+// CHECK-NEXT:             "line": 16,
 // CHECK-NEXT:             "column": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
-// CHECK-NEXT:             "line": 89,
+// CHECK-NEXT:             "line": 16,
 // CHECK-NEXT:             "column": 37
 // CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "range": [
-// CHECK-NEXT:           3086,
-// CHECK-NEXT:           3122
+// CHECK-NEXT:           444,
+// CHECK-NEXT:           480
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       }
