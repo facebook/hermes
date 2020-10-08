@@ -1509,7 +1509,7 @@ intlNumberPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 intlStringPrototypeLocaleCompare(void *, Runtime *runtime, NativeArgs args) {
-  if (args.getThisArg().isUndefined() || args.getThisArg().isNumber()) {
+  if (args.getThisArg().isUndefined() || args.getThisArg().isNull()) {
     return runtime->raiseTypeError(
         "String.prototype.localeCompare called on null or undefined");
   }
@@ -1558,7 +1558,7 @@ CallResult<HermesValue> intlStringPrototypeToLocaleLowerCase(
     return ExecutionStatus::EXCEPTION;
   }
   CallResult<std::vector<std::u16string>> localesRes =
-      normalizeLocales(runtime, args.getArgHandle(1));
+      normalizeLocales(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(localesRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1586,7 +1586,7 @@ CallResult<HermesValue> intlStringPrototypeToLocaleUpperCase(
     return ExecutionStatus::EXCEPTION;
   }
   CallResult<std::vector<std::u16string>> localesRes =
-      normalizeLocales(runtime, args.getArgHandle(1));
+      normalizeLocales(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(localesRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

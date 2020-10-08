@@ -7,6 +7,8 @@
 
 package com.facebook.hermes.intl;
 
+import android.os.Build;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -76,14 +78,29 @@ public class Intl {
     // Implementer note: This method corresponds roughly to
     // https://tc39.es/ecma402/#sup-string.prototype.tolocalelowercase
     @SuppressWarnings("unused")
-    public static String toLocaleLowerCase(List<String> locales, String str) {
-        return "lowered";
+    public static String toLocaleLowerCase(List<String> locales, String str) throws JSRangeErrorException {
+        String[] localesArray = new String[locales.size()];
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            LocaleMatcher.LocaleMatchResult localeMatchResult = LocaleMatcher.bestFitMatch(locales.toArray(localesArray));
+            return android.icu.lang.UCharacter.toLowerCase((android.icu.util.ULocale) localeMatchResult.matchedLocale.getLocale(), str);
+        } else {
+            LocaleMatcher.LocaleMatchResult localeMatchResult = LocaleMatcher.lookupMatch(locales.toArray(localesArray));
+            return str.toLowerCase((java.util.Locale) localeMatchResult.matchedLocale.getLocale());
+        }
     }
 
     // Implementer note: This method corresponds roughly to
     // https://tc39.es/ecma402/#sup-string.prototype.tolocaleuppercase
     @SuppressWarnings("unused")
-    public static String toLocaleUpperCase(List<String> locales, String str) {
-        return "uppered";
+    public static String toLocaleUpperCase(List<String> locales, String str) throws JSRangeErrorException {
+        String[] localesArray = new String[locales.size()];
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            LocaleMatcher.LocaleMatchResult localeMatchResult = LocaleMatcher.bestFitMatch(locales.toArray(localesArray));
+            return android.icu.lang.UCharacter.toUpperCase((android.icu.util.ULocale) localeMatchResult.matchedLocale.getLocale(), str);
+        } else {
+            LocaleMatcher.LocaleMatchResult localeMatchResult = LocaleMatcher.lookupMatch(locales.toArray(localesArray));
+            return str.toUpperCase((java.util.Locale) localeMatchResult.matchedLocale.getLocale());
+        }
+
     }
 }

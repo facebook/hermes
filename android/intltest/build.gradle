@@ -36,6 +36,10 @@ task preparetest262(dependsOn: downloadTest262, type: Copy) {
   include("test262-main/test/intl402/Collator/**/*.js")
   include("test262-main/test/intl402/DateTimeFormat/**/*.js")
   include("test262-main/test/intl402/NumberFormat/**/*.js")
+  include("test262-main/test/intl402/String/**/*.js")
+  include("test262-main/test/intl402/Number/**/*.js")
+  include("test262-main/test/intl402/Array/**/*.js")
+  include("test262-main/test/intl402/Date/**/*.js")
   include("test262-main/test/intl402/Intl/**/*.js")
   include("test262-main/harness/*.js")
   includeEmptyDirs = true
