@@ -25,16 +25,16 @@ namespace hermes {
 std::pair<std::string, std::string> genSplitCode(
     std::string &mainCode,
     std::string &segmentCode) {
-  std::vector<hermes::Context::SegmentRange> ranges{
-      hermes::Context::SegmentRange{0, 0, 0},
-      hermes::Context::SegmentRange{1, 1, 1},
+  std::vector<hermes::Context::SegmentInfo> segments{
+      hermes::Context::SegmentInfo{0, {0}},
+      hermes::Context::SegmentInfo{1, {1}},
   };
 
   hermes::CodeGenerationSettings codeGenOpts;
   hermes::OptimizationSettings optimizationOpts;
 
   auto context = std::make_shared<hermes::Context>(
-      codeGenOpts, optimizationOpts, nullptr, ranges);
+      codeGenOpts, optimizationOpts, nullptr, segments);
   context->setUseCJSModules(true);
 
   hermes::Module M(context);
@@ -79,15 +79,15 @@ std::pair<std::string, std::string> genSplitCode(
   hermes::BytecodeGenerationOptions genOpts{hermes::EmitBundle};
   hermes::SHA1 sourceHash;
 
-  auto genBC = [&](hermes::Context::SegmentRange range) {
+  auto genBC = [&](const hermes::Context::SegmentInfo &segment) {
     std::string bc{};
     llvh::raw_string_ostream os{bc};
     hermes::hbc::generateBytecode(
-        &M, os, genOpts, sourceHash, range, nullptr, nullptr);
+        &M, os, genOpts, sourceHash, &segment, nullptr, nullptr);
     return os.str();
   };
 
-  return std::make_pair(genBC(ranges[0]), genBC(ranges[1]));
+  return std::make_pair(genBC(segments[0]), genBC(segments[1]));
 }
 
 } // namespace hermes

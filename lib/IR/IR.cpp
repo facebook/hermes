@@ -579,7 +579,7 @@ void Module::populateCJSModuleUseGraph() {
 }
 
 llvh::DenseSet<Function *> Module::getFunctionsInSegment(
-    Context::SegmentRange range) {
+    const Context::SegmentInfo &segmentInfo) {
   populateCJSModuleUseGraph();
 
   // Final set of functions which must be output when generating this segment.
@@ -590,9 +590,9 @@ llvh::DenseSet<Function *> Module::getFunctionsInSegment(
   llvh::SetVector<Function *> worklist{};
 
   // Populate the worklist initially with the wrapper functions for each module
-  // in the given range.
-  for (auto i = range.first; i <= range.last; ++i) {
-    worklist.insert(cjsModules_[i].function);
+  // in the given segment.
+  for (const auto &moduleID : segmentInfo.moduleIDs) {
+    worklist.insert(cjsModules_[moduleID].function);
   }
 
   while (!worklist.empty()) {

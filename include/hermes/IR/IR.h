@@ -1913,9 +1913,10 @@ class Module : public Value {
   }
 
   /// \return the set of functions which are used by the modules in the segment
-  /// specified by \p range. Order is unspecified, so the return value should
-  /// not be used for iteration, only for checking membership.
-  llvh::DenseSet<Function *> getFunctionsInSegment(Context::SegmentRange range);
+  /// specified by \p segmentInfo. Order is unspecified, so the return value
+  /// should not be used for iteration, only for checking membership.
+  llvh::DenseSet<Function *> getFunctionsInSegment(
+      const Context::SegmentInfo &segmentInfo);
 
   /// Given a list of raw strings from a template literal, get its unique id.
   uint32_t getTemplateObjectID(RawStringList &&rawStrings);

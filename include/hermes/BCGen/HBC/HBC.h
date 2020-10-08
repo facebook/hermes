@@ -38,7 +38,7 @@ std::unique_ptr<BytecodeModule> generateBytecodeModule(
     Module *M,
     Function *entryPoint,
     const BytecodeGenerationOptions &options,
-    OptValue<Context::SegmentRange> range = llvh::None,
+    const Context::SegmentInfo *segmentInfo = nullptr,
     SourceMapGenerator *sourceMap = nullptr,
     std::unique_ptr<BCProviderBase> baseBCProvider = nullptr);
 
@@ -47,7 +47,7 @@ std::unique_ptr<BytecodeModule> generateBytecodeModule(
     Function *lexicalTopLevel,
     Function *entryPoint,
     const BytecodeGenerationOptions &options,
-    OptValue<Context::SegmentRange> range = llvh::None,
+    const Context::SegmentInfo *segmentInfo = nullptr,
     SourceMapGenerator *sourceMap = nullptr,
     std::unique_ptr<BCProviderBase> baseBCProvider = nullptr);
 
@@ -63,7 +63,7 @@ std::unique_ptr<BytecodeModule> generateBytecode(
     raw_ostream &OS,
     const BytecodeGenerationOptions &options,
     const SHA1 &sourceHash,
-    OptValue<Context::SegmentRange> range = llvh::None,
+    const Context::SegmentInfo *segmentInfo = nullptr,
     SourceMapGenerator *sourceMap = nullptr,
     std::unique_ptr<BCProviderBase> baseBCProvider = nullptr);
 } // namespace hbc

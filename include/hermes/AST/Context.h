@@ -121,15 +121,14 @@ class Context {
   using ResolutionTable = llvh::DenseMap<llvh::StringRef, ResolutionTableEntry>;
 
   /// Represents a range of modules used in a given segment.
-  struct SegmentRange {
+  struct SegmentInfo {
     /// ID of the segment this range represents.
     uint32_t segment;
 
-    /// ID of the first module in this segment, inclusive.
-    uint32_t first;
-
-    /// ID of the last module in this segment, inclusive.
-    uint32_t last;
+    /// The module IDs to include in this segment. This is a subset, specified
+    /// in an arbitrary order, of the IDs of modules added to the IR. No two
+    /// segments may include the same module ID.
+    std::vector<uint32_t> moduleIDs;
   };
 
  private:
@@ -197,7 +196,7 @@ class Context {
   /// on the user's metadata input to the compiler when splitting the bundle.
   /// Determines which CJS modules are placed into which segment when splitting
   /// the result bundle.
-  const std::vector<SegmentRange> segmentRanges_;
+  const std::vector<SegmentInfo> segmentInfos_;
 
   /// The level of debug information we should emit. Defaults to
   /// DebugInfoSetting::THROWING.
@@ -220,10 +219,10 @@ class Context {
       CodeGenerationSettings codeGenOpts = CodeGenerationSettings(),
       OptimizationSettings optimizationOpts = OptimizationSettings(),
       std::unique_ptr<ResolutionTable> resolutionTable = nullptr,
-      std::vector<SegmentRange> segmentRanges = {})
+      std::vector<SegmentInfo> segmentInfos = {})
       : sm_(sm),
         resolutionTable_(std::move(resolutionTable)),
-        segmentRanges_(std::move(segmentRanges)),
+        segmentInfos_(std::move(segmentInfos)),
         codeGenerationSettings_(std::move(codeGenOpts)),
         optimizationSettings_(std::move(optimizationOpts)) {}
 
@@ -231,11 +230,11 @@ class Context {
       CodeGenerationSettings codeGenOpts = CodeGenerationSettings(),
       OptimizationSettings optimizationOpts = OptimizationSettings(),
       std::unique_ptr<ResolutionTable> resolutionTable = nullptr,
-      std::vector<SegmentRange> segmentRanges = {})
+      std::vector<SegmentInfo> segmentInfos = {})
       : ownSm_(new SourceErrorManager()),
         sm_(*ownSm_),
         resolutionTable_(std::move(resolutionTable)),
-        segmentRanges_(std::move(segmentRanges)),
+        segmentInfos_(std::move(segmentInfos)),
         codeGenerationSettings_(std::move(codeGenOpts)),
         optimizationSettings_(std::move(optimizationOpts)) {}
 
@@ -261,8 +260,8 @@ class Context {
   }
 
   /// \return the table for static require resolution, nullptr if not supplied.
-  const std::vector<SegmentRange> &getSegmentRanges() const {
-    return segmentRanges_;
+  const std::vector<SegmentInfo> &getSegmentInfos() const {
+    return segmentInfos_;
   }
 
   /// \return the table for static require resolution, nullptr if not supplied.

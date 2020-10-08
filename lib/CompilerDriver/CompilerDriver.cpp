@@ -963,7 +963,7 @@ bool validateFlags() {
 /// \return the Context.
 std::shared_ptr<Context> createContext(
     std::unique_ptr<Context::ResolutionTable> resolutionTable,
-    std::vector<Context::SegmentRange> segmentRanges) {
+    std::vector<Context::SegmentInfo> segmentInfos) {
   CodeGenerationSettings codeGenOpts;
   codeGenOpts.enableTDZ = cl::EnableTDZ;
   codeGenOpts.dumpOperandRegisters = cl::DumpOperandRegisters;
@@ -1009,7 +1009,7 @@ std::shared_ptr<Context> createContext(
       codeGenOpts,
       optimizationOpts,
       std::move(resolutionTable),
-      std::move(segmentRanges));
+      std::move(segmentInfos));
 
   // Default is non-strict mode.
   context->setStrictMode(!cl::NonStrictMode && cl::StrictMode);
@@ -1124,7 +1124,7 @@ std::unique_ptr<llvh::MemoryBuffer> getFileFromDirectoryOrZip(
 ::hermes::parser::JSONObject *readInputFilenamesFromDirectoryOrZip(
     llvh::StringRef inputPath,
     SegmentTable &fileBufs,
-    std::vector<Context::SegmentRange> &segmentRanges,
+    std::vector<Context::SegmentInfo> &segmentInfos,
     ::hermes::parser::JSLexer::Allocator &alloc,
     struct zip_t *zip) {
   auto metadataBuf = getFileFromDirectoryOrZip(zip, inputPath, "metadata.json");
@@ -1159,8 +1159,8 @@ std::unique_ptr<llvh::MemoryBuffer> getFileFromDirectoryOrZip(
   uint32_t moduleIdx = 0;
 
   for (auto it : *segments) {
-    Context::SegmentRange range;
-    if (it.first->str().getAsInteger(10, range.segment)) {
+    Context::SegmentInfo segmentInfo;
+    if (it.first->str().getAsInteger(10, segmentInfo.segment)) {
       // getAsInteger returns true to signal error.
       llvh::errs()
           << "Metadata segment indices must be unsigned integers: Found "
@@ -1173,8 +1173,6 @@ std::unique_ptr<llvh::MemoryBuffer> getFileFromDirectoryOrZip(
       llvh::errs() << "Metadata segment information must be an array\n";
       return nullptr;
     }
-
-    range.first = moduleIdx;
 
     SegmentTableEntry segmentBufs{};
     for (auto val : *segment) {
@@ -1190,20 +1188,20 @@ std::unique_ptr<llvh::MemoryBuffer> getFileFromDirectoryOrZip(
       auto mapBuf = getFileFromDirectoryOrZip(
           zip, inputPath, llvh::Twine(relPath->str(), ".map"), true);
       // mapBuf is optional, so simply pass it through if it's null.
-      segmentBufs.push_back(
-          {moduleIdx++, std::move(fileBuf), std::move(mapBuf)});
+      auto moduleID = moduleIdx++;
+      segmentInfo.moduleIDs.push_back(moduleID);
+      segmentBufs.push_back({moduleID, std::move(fileBuf), std::move(mapBuf)});
     }
 
-    range.last = moduleIdx - 1;
-
-    auto emplaceRes = fileBufs.emplace(range.segment, std::move(segmentBufs));
+    auto emplaceRes =
+        fileBufs.emplace(segmentInfo.segment, std::move(segmentBufs));
     if (!emplaceRes.second) {
-      llvh::errs() << "Duplicate segment entry in metadata: " << range.segment
-                   << "\n";
+      llvh::errs() << "Duplicate segment entry in metadata: "
+                   << segmentInfo.segment << "\n";
       return nullptr;
     }
 
-    segmentRanges.push_back(std::move(range));
+    segmentInfos.push_back(std::move(segmentInfo));
   }
 
   return metadata;
@@ -1571,13 +1569,13 @@ CompileResult generateBytecodeForSerialization(
     Module &M,
     const BytecodeGenerationOptions &genOptions,
     const SHA1 &sourceHash,
-    OptValue<Context::SegmentRange> range,
+    const Context::SegmentInfo *segmentInfo,
     SourceMapGenerator *sourceMapGenOrNull,
     BaseBytecodeMap &baseBytecodeMap) {
   // Serialize the bytecode to the file.
   if (cl::BytecodeFormat == cl::BytecodeFormatKind::HBC) {
     std::unique_ptr<hbc::BCProviderFromBuffer> baseBCProvider = nullptr;
-    auto itr = baseBytecodeMap.find(range ? range->segment : 0);
+    auto itr = baseBytecodeMap.find(segmentInfo ? segmentInfo->segment : 0);
     if (itr != baseBytecodeMap.end()) {
       baseBCProvider = std::move(itr->second);
       // We want to erase it from the map because unique_ptr can only
@@ -1589,7 +1587,7 @@ CompileResult generateBytecodeForSerialization(
         OS,
         genOptions,
         sourceHash,
-        range,
+        segmentInfo,
         sourceMapGenOrNull,
         std::move(baseBCProvider));
 
@@ -1818,7 +1816,7 @@ CompileResult processSourceFiles(
 
   CompileResult result{Success};
   StringRef base = cl::BytecodeOutputFilename;
-  if (context->getSegmentRanges().size() < 2) {
+  if (context->getSegmentInfos().size() < 2) {
     OutputStream fileOS{llvh::outs()};
     if (!base.empty() && !fileOS.open(base, F_None)) {
       return OutputFileError;
@@ -1828,7 +1826,7 @@ CompileResult processSourceFiles(
         M,
         genOptions,
         sourceHash,
-        llvh::None,
+        nullptr,
         sourceMapGen ? sourceMapGen.getPointer() : nullptr,
         baseBytecodeMap);
     if (result.status != Success) {
@@ -1847,12 +1845,13 @@ CompileResult processSourceFiles(
     JSONEmitter manifest{manifestOS.os(), /* pretty */ true};
     manifest.openArray();
 
-    for (const auto &range : context->getSegmentRanges()) {
+    for (const auto &segmentInfo : context->getSegmentInfos()) {
       std::string filename = base.str();
-      if (range.segment != 0) {
-        filename += "." + oscompat::to_string(range.segment);
+      if (segmentInfo.segment != 0) {
+        filename += "." + oscompat::to_string(segmentInfo.segment);
       }
-      std::string flavor = "hbc-seg-" + oscompat::to_string(range.segment);
+      std::string flavor =
+          "hbc-seg-" + oscompat::to_string(segmentInfo.segment);
 
       OutputStream fileOS{llvh::outs()};
       if (!base.empty() && !fileOS.open(filename, F_None)) {
@@ -1863,7 +1862,7 @@ CompileResult processSourceFiles(
           M,
           genOptions,
           sourceHash,
-          range,
+          &segmentInfo,
           sourceMapGen ? sourceMapGen.getPointer() : nullptr,
           baseBytecodeMap);
       if (segResult.status != Success) {
@@ -1961,7 +1960,7 @@ CompileResult compileFromCommandLineOptions() {
   std::unique_ptr<Context::ResolutionTable> resolutionTable = nullptr;
 
   // Segment table in metadata.
-  std::vector<Context::SegmentRange> segmentRanges;
+  std::vector<Context::SegmentInfo> segmentInfos;
 
   // Attempt to open the first file as a Zip file.
   struct zip_t *zip = zip_open(cl::InputFilenames[0].data(), 0, 'r');
@@ -1969,7 +1968,7 @@ CompileResult compileFromCommandLineOptions() {
   if (llvh::sys::fs::is_directory(cl::InputFilenames[0]) || zip) {
     ::hermes::parser::JSONObject *metadata =
         readInputFilenamesFromDirectoryOrZip(
-            cl::InputFilenames[0], fileBufs, segmentRanges, metadataAlloc, zip);
+            cl::InputFilenames[0], fileBufs, segmentInfos, metadataAlloc, zip);
 
     if (zip) {
       zip_close(zip);
@@ -1981,11 +1980,9 @@ CompileResult compileFromCommandLineOptions() {
     resolutionTable = readResolutionTable(metadata);
   } else {
     // If we aren't reading from a dir or a zip, we have only one segment.
-    Context::SegmentRange range;
-    range.first = 0;
-    range.last = cl::InputFilenames.size();
-    range.segment = 0;
-    segmentRanges.push_back(std::move(range));
+    Context::SegmentInfo segmentInfo;
+    segmentInfo.segment = 0;
+    segmentInfos.push_back(std::move(segmentInfo));
 
     uint32_t id = 0;
     SegmentTableEntry entry{};
@@ -1993,7 +1990,9 @@ CompileResult compileFromCommandLineOptions() {
       auto fileBuf = memoryBufferFromFile(filename, true);
       if (!fileBuf)
         return InputFileError;
-      entry.push_back({id++, std::move(fileBuf), nullptr});
+      auto moduleID = id++;
+      segmentInfo.moduleIDs.push_back(moduleID);
+      entry.push_back({moduleID, std::move(fileBuf), nullptr});
     }
 
     // Read input source map if available.
@@ -2020,7 +2019,7 @@ CompileResult compileFromCommandLineOptions() {
     return processBytecodeFile(std::move(fileBufs[0][0].file));
   } else {
     std::shared_ptr<Context> context =
-        createContext(std::move(resolutionTable), std::move(segmentRanges));
+        createContext(std::move(resolutionTable), std::move(segmentInfos));
     return processSourceFiles(context, std::move(fileBufs));
   }
 }
