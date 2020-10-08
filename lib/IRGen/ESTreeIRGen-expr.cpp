@@ -1732,13 +1732,6 @@ Value *ESTreeIRGen::genTemplateLiteralExpr(ESTree::TemplateLiteralNode *Expr) {
       exprItr == Expr->_expressions.end() &&
       "All the substitutions must have been collected.");
 
-  if (argList.size() == 1 && firstCookedStr->getValue().str().empty()) {
-    // If the template literal only has one substitution and the opening
-    // string is empty, it looks something like `${expr}` and we can just
-    // convert the argument to a string.
-    return Builder.createAddEmptyStringInst(argList[0]);
-  }
-
   // Generate a function call to HermesInternal.concat() with these arguments.
   return genHermesInternalCall("concat", firstCookedStr, argList);
 }
