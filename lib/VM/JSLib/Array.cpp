@@ -1201,6 +1201,115 @@ class StandardSortModel : public SortModel {
     }
   }
 };
+
+/// Perform a sort of a sparse object by querying its properties first.
+/// It cannot be a proxy or a host object because they are not guaranteed to
+/// be able to list their properties.
+CallResult<HermesValue> sortSparse(
+    Runtime *runtime,
+    Handle<JSObject> O,
+    Handle<Callable> compareFn,
+    uint64_t len) {
+  GCScope gcScope{runtime};
+
+  assert(
+      !O->isHostObject() && !O->isProxyObject() &&
+      "only non-exotic objects can be sparsely sorted");
+
+  // This is a "non-fast" object, meaning we need to create a symbol for every
+  // property name. On the assumption that it is sparse, get all properties
+  // first, so that we only have to read the existing properties.
+
+  auto crNames = JSObject::getOwnPropertyNames(O, runtime, false);
+  if (crNames == ExecutionStatus::EXCEPTION)
+    return ExecutionStatus::EXCEPTION;
+  // Get the underlying storage containing the names.
+  auto names = runtime->makeHandle((*crNames)->getIndexedStorage());
+
+  // Find out how many sortable numeric properties we have.
+  JSArray::StorageType::size_type numProps = 0;
+  for (JSArray::StorageType::size_type e = names->size(); numProps != e;
+       ++numProps) {
+    HermesValue hv = names->at(numProps);
+    // Stop at the first non-number.
+    if (!hv.isNumber())
+      break;
+    // Stop if the property name is beyond "len".
+    if (hv.getNumberAs<uint64_t>() >= len)
+      break;
+  }
+
+  // If we didn't find any numeric properties, there is nothing to do.
+  if (numProps == 0)
+    return O.getHermesValue();
+
+  // Create a new array which we will actually sort.
+  auto crArray = JSArray::create(runtime, numProps, numProps);
+  if (crArray == ExecutionStatus::EXCEPTION)
+    return ExecutionStatus::EXCEPTION;
+  auto array = runtime->makeHandle(std::move(*crArray));
+  if (JSArray::setStorageEndIndex(array, runtime, numProps) ==
+      ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  MutableHandle<> propName{runtime};
+  MutableHandle<> propVal{runtime};
+  GCScopeMarkerRAII gcMarker{gcScope};
+
+  // Copy all sortable properties into the array and delete them from the
+  // source. Deleting all sortable properties makes it easy to just copy the
+  // sorted result back in the end.
+  for (decltype(numProps) i = 0; i != numProps; ++i) {
+    gcMarker.flush();
+
+    propName = names->at(i);
+    auto res = JSObject::getComputed_RJS(O, runtime, propName);
+    if (res == ExecutionStatus::EXCEPTION)
+      return ExecutionStatus::EXCEPTION;
+    // Skip empty values.
+    if (res->getHermesValue().isEmpty())
+      continue;
+
+    JSArray::unsafeSetExistingElementAt(
+        *array, runtime, i, res->getHermesValue());
+
+    if (JSObject::deleteComputed(
+            O, runtime, propName, PropOpFlags().plusThrowOnError()) ==
+        ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  }
+  gcMarker.flush();
+
+  {
+    StandardSortModel sm(runtime, array, compareFn);
+    if (LLVM_UNLIKELY(
+            quickSort(&sm, 0u, numProps) == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+  }
+
+  // Time to copy back the values.
+  for (decltype(numProps) i = 0; i != numProps; ++i) {
+    gcMarker.flush();
+
+    auto hv = array->at(runtime, i);
+    assert(
+        !hv.isEmpty() &&
+        "empty values cannot appear in the array out of nowhere");
+    propVal = hv;
+
+    propName = HermesValue::encodeNumberValue(i);
+
+    if (JSObject::putComputed_RJS(
+            O, runtime, propName, propVal, PropOpFlags().plusThrowOnError()) ==
+        ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  }
+
+  return O.getHermesValue();
+}
 } // anonymous namespace
 
 /// ES5.1 15.4.4.11.
@@ -1229,6 +1338,13 @@ arrayPrototypeSort(void *, Runtime *runtime, NativeArgs args) {
   }
   uint64_t len = *intRes;
 
+  // If we are not sorting a regular dense array, use a special routine which
+  // first copies all properties into an array.
+  // Proxies  and host objects however are excluded because they are weird.
+  if (!O->isProxyObject() && !O->isHostObject() && !O->hasFastIndexProperties())
+    return sortSparse(runtime, O, compareFn, len);
+
+  // This is the "fast" path. We are sorting an array with indexed storage.
   StandardSortModel sm(runtime, O, compareFn);
 
   // Use our custom sort routine. We can't use std::sort because it performs

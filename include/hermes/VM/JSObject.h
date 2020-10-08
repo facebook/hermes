@@ -438,6 +438,12 @@ class JSObject : public GCCell {
     return flags_.proxyObject;
   }
 
+  /// \return true if this object has fast indexed storage, meaning no property
+  ///   checks need to be made when reading an indexed value.
+  bool hasFastIndexProperties() const {
+    return flags_.fastIndexProperties;
+  }
+
   /// \return the `__proto__` internal property, which may be nullptr.
   JSObject *getParent(Runtime *runtime) const {
     assert(
