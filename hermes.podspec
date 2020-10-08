@@ -33,7 +33,7 @@ Pod::Spec.new do |spec|
 
   spec.xcconfig            = { "CLANG_CXX_LANGUAGE_STANDARD" => "c++14", "CLANG_CXX_LIBRARY" => "compiler-default", "GCC_PREPROCESSOR_DEFINITIONS" => "HERMES_ENABLE_DEBUGGER=1" }
 
-  unless ENV['hermes-artefact-url']
+  unless ENV['hermes-artifact-url']
     spec.prepare_command = <<-EOS
       # When true, debug build will be used.
       # See `build-apple-framework.sh` for details
