@@ -20,6 +20,10 @@ const {
  * Extended by concrete adapters which output an ESTree or Babel AST.
  */
 class HermesASTAdapter {
+  constructor(options) {
+    this.sourceType = 'script';
+  }
+
   /**
    * Transform the input Hermes AST to the desired output format.
    * This modifies the input AST in place instead of constructing a new AST.
@@ -80,12 +84,45 @@ class HermesASTAdapter {
     throw new Error('Implemented in subclasses');
   }
 
+  setModuleSourceType() {
+    this.sourceType = 'module';
+  }
+
   mapComment(node) {
     return node;
   }
 
   mapEmpty(node) {
     return null;
+  }
+
+  mapImportDeclaration(node) {
+    if (node.importKind === 'value') {
+      this.setModuleSourceType();
+    }
+
+    return this.mapNodeDefault(node);
+  }
+
+  mapExportDefaultDeclaration(node) {
+    this.setModuleSourceType();
+    return this.mapNodeDefault(node);
+  }
+
+  mapExportNamedDeclaration(node) {
+    if (node.exportKind === 'value') {
+      this.setModuleSourceType();
+    }
+
+    return this.mapNodeDefault(node);
+  }
+
+  mapExportAllDeclaration(node) {
+    if (node.exportKind === 'value') {
+      this.setModuleSourceType();
+    }
+
+    return this.mapNodeDefault(node);
   }
 }
 

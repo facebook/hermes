@@ -42,6 +42,14 @@ class HermesToBabelAdapter extends HermesASTAdapter {
         return this.mapProperty(node);
       case 'MethodDefinition':
         return this.mapMethodDefinition(node);
+      case 'ImportDeclaration':
+        return this.mapImportDeclaration(node);
+      case 'ExportDefaultDeclaration':
+        return this.mapExportDefaultDeclaration(node);
+      case 'ExportNamedDeclaration':
+        return this.mapExportNamedDeclaration(node);
+      case 'ExportAllDeclaration':
+        return this.mapExportAllDeclaration(node);
       default:
         return this.mapNodeDefault(node);
     }
@@ -50,6 +58,8 @@ class HermesToBabelAdapter extends HermesASTAdapter {
   mapProgram(node) {
     // Visit child nodes and convert to directives
     const {comments, ...program} = this.mapNodeWithDirectives(node);
+
+    program.sourceType = this.sourceType;
 
     // Rename root node to File node and move Program node under program property
     return {

@@ -205,6 +205,46 @@ test('Source locations', () => {
   });
 });
 
+test('Program source type', () => {
+  const moduleProgram = {
+    type: 'Program',
+    sourceType: 'module',
+  };
+  const scriptProgram = {
+    type: 'Program',
+    sourceType: 'script',
+  };
+
+  // Verify that every value import or export results in module source type
+  const moduleSources = [
+    `import Foo from 'foo'`,
+    `export default 1`,
+    `export const foo = 1`,
+    `export * from 'foo'`,
+  ];
+
+  for (const moduleSource of moduleSources) {
+    expect(parse(moduleSource)).toMatchObject(moduleProgram);
+    expect(parse(moduleSource, {babel: true})).toMatchObject({
+      type: 'File',
+      program: moduleProgram,
+    });
+  }
+
+  // Verify that type imports and exports do not result in module source type
+  const scriptSource = `
+    import type Foo from 'foo';
+    export type T = any;
+    export type * from 'foo';
+  `;
+
+  expect(parse(scriptSource)).toMatchObject(scriptProgram);
+  expect(parse(scriptSource, {babel: true})).toMatchObject({
+    type: 'File',
+    program: scriptProgram,
+  });
+});
+
 test('Top level directives', () => {
   const source = `'use strict';
 'use strict';

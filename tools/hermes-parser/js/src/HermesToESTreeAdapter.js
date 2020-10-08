@@ -27,6 +27,8 @@ class HermesToESTreeAdapter extends HermesASTAdapter {
   mapNode(node) {
     this.fixSourceLocation(node);
     switch (node.type) {
+      case 'Program':
+        return this.mapProgram(node);
       case 'NullLiteral':
         return this.mapNullLiteral(node);
       case 'BooleanLiteral':
@@ -41,9 +43,24 @@ class HermesToESTreeAdapter extends HermesASTAdapter {
         return this.mapTemplateElement(node);
       case 'GenericTypeAnnotation':
         return this.mapGenericTypeAnnotation(node);
+      case 'ImportDeclaration':
+        return this.mapImportDeclaration(node);
+      case 'ExportDefaultDeclaration':
+        return this.mapExportDefaultDeclaration(node);
+      case 'ExportNamedDeclaration':
+        return this.mapExportNamedDeclaration(node);
+      case 'ExportAllDeclaration':
+        return this.mapExportAllDeclaration(node);
       default:
         return this.mapNodeDefault(node);
     }
+  }
+
+  mapProgram(node) {
+    node = this.mapNodeDefault(node);
+    node.sourceType = this.sourceType;
+
+    return node;
   }
 
   mapSimpleLiteral(node) {
