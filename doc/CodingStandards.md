@@ -9,24 +9,41 @@ This document provides guidance for the kind of code that should go in to
 the Hermes project. The rules in this document will allow us to scale the
 project and ensure that the code base remains readable and maintainable.
 
-### Use the LLVM coding standards
+### Language Features
 
-The project uses the LLVM coding standards for C++ code:
+Hermes uses C++11. 
 
-  '''
-  http://llvm.org/docs/CodingStandards.html
-  '''
+Exceptions or RTTI are prohibited, except where needed for 
+interfacing with other software that requires them.
 
-The compiler uses the LLVM data structures, described in the link below. The
-LLVM data structures and utilities are efficient, well documented and battle
-hardened. Use them.
+GCC language extensions are discouraged for compatibility with MSVC, or they
+should be conditionally enabled.
 
-  '''
-  http://llvm.org/docs/ProgrammersManual.html
-  '''
+### Code Style
 
-The project uses a reasonable subset of C++11. Just like LLVM, Hermes does
-not use exceptions and RTTI.
+TODO: This should be sorted and expanded.
+
+- Every declaration must have a doc-comment.
+
+Naming
+
+- Member variables use a "\_" suffix unless thay are public, where it is
+acceptable to omit the suffix.
+- Classes use pascal case (`MyClass`).
+- Functions and methods use camel case (`myFunc`).
+- Variables generally use camel case (`myVar`). We also allow "abbreviated
+case": "basic block" can be abbreviated as `BB`, "instruction" can be
+abbreviated as `I`, etc.
+- Constants use either capitalized snake case (`MY_CONST`) or camel case with
+"k" prefix (`kMyConst`).
+
+Misc
+
+- `struct` should be used only when it is a true POD - there are no constructors
+or destructors of any kind. For everything else use `class`.
+- Inlining: Only completely trivial (one line) methods can be defined in the
+class body. The rest should be declared as `inline` both at the declaration and
+the definition.
 
 ### Small incremental changes
 
@@ -51,7 +68,7 @@ they slow testing down. Tests need to be short and focused.
 
 ### Format your code
 
-We encourage the use of clang-format to enforce code style and formatting.
+clang-format is required to enforce code style and formatting.
 Commits that only change the formatting of code should go in independent of
 functional changes.
 
