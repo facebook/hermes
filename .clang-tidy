@@ -1,8 +1,27 @@
----
-Checks:          '*,clang-diagnostic-*,clang-analyzer-*,-clang-analyzer-alpha*,-readability-named-parameter,-misc-unused-parameters,-google-runtime-references,-google-build-using-namespace,-cppcoreguidelines-pro-type-union-access,-google-readability-casting,-readability-implicit-bool-cast,-google-readability-todo,-readability-braces-around-statements,-google-readability-braces-around-statements,-performance-unnecessary-value-param,-misc-unused-using-decls,-modernize-pass-by-value,-modernize-raw-string-literal,-readability-else-after-return'
-WarningsAsErrors: ''
-HeaderFilterRegex: 'include/hermes'
-AnalyzeTemporaryDtors: false
+Checks: >
+  modernize-use-nullptr,
+  readability-braces-around-statements,
+  readability-else-after-return,
+  readability-identifier-naming,
+  readability-inconsistent-declaration-parameter-name,
+  readability-static-accessed-through-instance,
+FormatStyle: file
+InheritParentConfig: true
+HeaderFilterRegex: include/hermes/.*
 CheckOptions:
-...
-
+  - { key: readability-identifier-naming.ClassCase, value: CamelCase }
+  - { key: readability-identifier-naming.StructCase, value: CamelCase }
+  - { key: readability-identifier-naming.ClassMemberCase, value: camelBack }
+  - { key: readability-identifier-naming.ClassMemberSuffix, value: '_' }
+  - { key: readability-identifier-naming.GlobalConstantCase, value: CamelCase }
+  - { key: readability-identifier-naming.GlobalConstantPrefix, value: 'k' }
+  - { key: readability-identifier-naming.StaticConstantCase, value: CamelCase }
+  - { key: readability-identifier-naming.StaticConstantPrefix, value: 'k' }
+  - { key: readability-identifier-naming.StaticVariableCase, value: camelBack }
+  - { key: readability-identifier-naming.LocalVariableCase, value: camelBack }
+  - { key: readability-identifier-naming.MethodCase, value: camelBack }
+  - { key: readability-identifier-naming.MemberCase, value: camelBack }
+  - { key: readability-identifier-naming.MemberSuffix, value: '_' }
+  - { key: readability-identifier-naming.NamespaceCase, value: lower_case }
+  - { key: readability-identifier-naming.ParameterCase, value: camelBack }
+  - { key: readability-braces-around-statements.ShortStatementLines, value: 2 }
