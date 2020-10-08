@@ -137,7 +137,7 @@ class HandleRootOwner {
 
  protected:
   /// Used for efficient construction of Handle<>(..., nullptr).
-  static PinnedHermesValue nullPointer_;
+  static const PinnedHermesValue nullPointer_;
   /// Used for efficient construction of Handle(undefined).
   static const PinnedHermesValue undefinedValue_;
   /// Used for efficient construction of Handle(null).

@@ -430,7 +430,6 @@ void Runtime::markRoots(RootAcceptor &acceptor, bool markLongLived) {
   {
     MarkRootsPhaseTimer timer(this, RootAcceptor::Section::RuntimeInstanceVars);
     acceptor.beginRootSection(RootAcceptor::Section::RuntimeInstanceVars);
-    acceptor.accept(nullPointer_, "nullPointer");
     for (auto &clazz : rootClazzRawPtr_)
       acceptor.acceptPtr(clazz, "rootClass");
 #define RUNTIME_HV_FIELD_INSTANCE(name) acceptor.accept((name), #name);
