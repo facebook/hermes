@@ -599,7 +599,7 @@ static CallResult<HermesValue> getCodeBlockFileName(
 /// * fileName (string)
 /// * lineNumber (number) - 1 based
 /// * columnNumber (number) - 1 based
-/// * cjsModuleOffset (number) - 0 based
+/// * segmentID (number) - 0 based
 /// * virtualOffset (number) - 0 based
 /// * isNative (boolean)
 /// TypeError if func is not a function.
@@ -651,15 +651,14 @@ hermesInternalGetFunctionLocation(void *, Runtime *runtime, NativeArgs args) {
       (void)res;
     } else {
       tmpHandle = HermesValue::encodeNumberValue(
-          codeBlock->getRuntimeModule()->getBytecode()->getCJSModuleOffset());
+          codeBlock->getRuntimeModule()->getBytecode()->getSegmentID());
       res = JSObject::defineOwnProperty(
           resultHandle,
           runtime,
-          Predefined::getSymbolID(Predefined::cjsModuleOffset),
+          Predefined::getSymbolID(Predefined::segmentID),
           DefinePropertyFlags::getDefaultNewPropertyFlags(),
           tmpHandle);
-      assert(
-          res != ExecutionStatus::EXCEPTION && "Failed to set cjsModuleOffset");
+      assert(res != ExecutionStatus::EXCEPTION && "Failed to set segmentID");
       (void)res;
 
       tmpHandle = HermesValue::encodeNumberValue(codeBlock->getVirtualOffset());

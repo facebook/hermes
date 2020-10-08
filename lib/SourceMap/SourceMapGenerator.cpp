@@ -242,9 +242,9 @@ void SourceMapGenerator::outputAsJSONImpl(llvh::raw_ostream &OS) const {
 
 void SourceMapGenerator::addFunctionOffsets(
     std::vector<uint32_t> &&functionOffsets,
-    uint32_t cjsModuleOffset) {
+    uint32_t segmentID) {
   assert(functionOffsets.size() > 0 && "functionOffsets can not be empty");
-  functionOffsets_[cjsModuleOffset] = std::move(functionOffsets);
+  functionOffsets_[segmentID] = std::move(functionOffsets);
 }
 
 } // namespace hermes

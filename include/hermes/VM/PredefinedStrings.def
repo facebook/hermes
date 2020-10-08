@@ -423,7 +423,7 @@ STR(getFunctionLocation, "getFunctionLocation")
 STR(isNative, "isNative")
 STR(lineNumber, "lineNumber")
 STR(columnNumber, "columnNumber")
-STR(cjsModuleOffset, "cjsModuleOffset")
+STR(segmentID, "segmentID")
 STR(virtualOffset, "virtualOffset")
 STR(fileName, "fileName")
 

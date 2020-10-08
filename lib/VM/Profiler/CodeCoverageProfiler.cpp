@@ -58,13 +58,13 @@ CodeCoverageProfiler::getExecutedFunctions() {
   }
   for (auto &entry : coverageInfoIter->second.executedFuncBitsArrayMap) {
     auto *bcProvider = entry.first->getBytecode();
-    const uint32_t moduleId = bcProvider->getCJSModuleOffset();
+    const uint32_t segmentID = bcProvider->getSegmentID();
     const std::vector<bool> &moduleFuncBitsArray = entry.second;
     for (uint32_t i = 0; i < moduleFuncBitsArray.size(); ++i) {
       if (moduleFuncBitsArray[i]) {
         const uint32_t funcVirtualOffset =
             bcProvider->getVirtualOffsetForFunction(i);
-        funcInfos.emplace_back(moduleId, funcVirtualOffset);
+        funcInfos.emplace_back(segmentID, funcVirtualOffset);
       }
     }
   }

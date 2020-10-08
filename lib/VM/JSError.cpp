@@ -607,12 +607,10 @@ ExecutionStatus JSError::constructStackTraceString(
         // Code block was not in the cache, update the cache.
         virtualOffset = sti.codeBlock->getVirtualOffset();
       }
-      // Add 1 to the CJSModuleOffset to account for 1-based indexing of
+      // Add 1 to the SegmentID to account for 1-based indexing of
       // symbolication tools.
-      lineNo = sti.codeBlock->getRuntimeModule()
-                   ->getBytecode()
-                   ->getCJSModuleOffset() +
-          1;
+      lineNo =
+          sti.codeBlock->getRuntimeModule()->getBytecode()->getSegmentID() + 1;
       columnNo = sti.bytecodeOffset + virtualOffset;
       isAddress = true;
     }

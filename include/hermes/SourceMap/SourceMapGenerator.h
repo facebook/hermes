@@ -27,14 +27,14 @@ class SourceMapGenerator {
  public:
   /// Add a line \p line represented as a list of Segments to the 'mappings'
   /// section.
-  /// \param cjsModuleOffset the offset of the module represented by the given
-  /// line, used as the "line" when reporting stack traces from the VM,
-  /// which doesn't have access to the segment IDs.
-  void addMappingsLine(SourceMap::SegmentList line, uint32_t cjsModuleOffset) {
-    if (lines_.size() <= cjsModuleOffset) {
-      lines_.resize(cjsModuleOffset + 1);
+  /// \param segmentID the ID of the segment ( = the BytecodeModule /
+  /// RuntimeModule), used as the "line" when reporting stack traces from the
+  /// VM.
+  void addMappingsLine(SourceMap::SegmentList line, uint32_t segmentID) {
+    if (lines_.size() <= segmentID) {
+      lines_.resize(segmentID + 1);
     }
-    lines_[cjsModuleOffset] = std::move(line);
+    lines_[segmentID] = std::move(line);
   }
 
   /// \return the list of mappings lines.
@@ -66,7 +66,7 @@ class SourceMapGenerator {
   /// SourceMapGenerator::outputAsJSON.
   void addFunctionOffsets(
       std::vector<uint32_t> &&functionOffsets,
-      uint32_t cjsModuleOffset);
+      uint32_t segmentID);
 
   /// Get the source index given the filename.
   uint32_t getSourceIndex(llvh::StringRef filename) const {
@@ -141,7 +141,7 @@ class SourceMapGenerator {
   /// x_facebook_sources field in the JSON source map.
   SourceMap::MetadataList sourcesMetadata_;
 
-  ///  Maps cjsModuleOffset to a vector of function offsets indexed by their
+  ///  Maps segmentID to a vector of function offsets indexed by their
   /// function id.
   llvh::DenseMap<uint32_t, std::vector<uint32_t>> functionOffsets_{};
 };

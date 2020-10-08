@@ -72,7 +72,7 @@ BCProviderFromSrc::BCProviderFromSrc(
   objKeyBuffer_ = module_->getObjectBuffer().first;
   objValueBuffer_ = module_->getObjectBuffer().second;
 
-  cjsModuleOffset_ = module_->getCJSModuleOffset();
+  segmentID_ = module_->getSegmentID();
   cjsModuleTable_ = module_->getCJSModuleTable();
   cjsModuleTableStatic_ = module_->getCJSModuleTableStatic();
 

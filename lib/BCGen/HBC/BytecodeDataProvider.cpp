@@ -580,7 +580,7 @@ BCProviderFromBuffer::BCProviderFromBuffer(
   objValueBuffer_ = fields.objValueBuffer;
   regExpTable_ = fields.regExpTable;
   regExpStorage_ = fields.regExpStorage;
-  cjsModuleOffset_ = fileHeader->cjsModuleOffset;
+  segmentID_ = fileHeader->segmentID;
   cjsModuleTable_ = fields.cjsModuleTable;
   cjsModuleTableStatic_ = fields.cjsModuleTableStatic;
 }

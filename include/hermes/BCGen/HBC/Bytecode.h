@@ -217,10 +217,11 @@ class BytecodeModule {
   /// Object Value Buffer table.
   SerializableBufferTy objValBuffer_;
 
-  /// The ID of the first CJS module in this BytecodeModule.
-  /// This is the first entry in the Domain's CJS module table that will be
-  /// populated by the corresponding RuntimeModule.
-  uint32_t cjsModuleOffset_;
+  /// The segment ID corresponding to this BytecodeModule.
+  /// This uniquely identifies this BytecodeModule within a set of modules
+  /// which were compiled at the same time (and will correspond to a set of
+  /// RuntimeModules in a Domain).
+  uint32_t segmentID_;
 
   /// Table which indicates where to find the different CommonJS modules.
   /// Mapping from {filename ID => function index}.
@@ -260,7 +261,7 @@ class BytecodeModule {
       std::vector<unsigned char> &&arrayBuffer,
       std::vector<unsigned char> &&objKeyBuffer,
       std::vector<unsigned char> &&objValBuffer,
-      uint32_t cjsModuleOffset,
+      uint32_t segmentID,
       std::vector<std::pair<uint32_t, uint32_t>> &&cjsModuleTable,
       std::vector<std::pair<uint32_t, uint32_t>> &&cjsModuleTableStatic,
       BytecodeOptions options)
@@ -274,7 +275,7 @@ class BytecodeModule {
         arrayBuffer_(std::move(arrayBuffer)),
         objKeyBuffer_(std::move(objKeyBuffer)),
         objValBuffer_(std::move(objValBuffer)),
-        cjsModuleOffset_(cjsModuleOffset),
+        segmentID_(segmentID),
         cjsModuleTable_(std::move(cjsModuleTable)),
         cjsModuleTableStatic_(std::move(cjsModuleTableStatic)),
         options_(options) {
@@ -343,8 +344,8 @@ class BytecodeModule {
     return regExpStorage_;
   }
 
-  uint32_t getCJSModuleOffset() const {
-    return cjsModuleOffset_;
+  uint32_t getSegmentID() const {
+    return segmentID_;
   }
 
   llvh::ArrayRef<std::pair<uint32_t, uint32_t>> getCJSModuleTable() const {

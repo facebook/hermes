@@ -1762,10 +1762,9 @@ void Runtime::crashWriteCallStack(JSONEmitter &json) {
                   .toStringRef(srcLocStorage));
         }
       }
-      uint32_t cjsModuleOffset =
-          runtimeModule->getBytecode()->getCJSModuleOffset();
+      uint32_t segmentID = runtimeModule->getBytecode()->getSegmentID();
       llvh::StringRef sourceURL = runtimeModule->getSourceURL();
-      json.emitKeyValue("CJSModuleOffset", cjsModuleOffset);
+      json.emitKeyValue("SegmentID", segmentID);
       json.emitKeyValue("SourceURL", sourceURL);
     } else {
       json.emitKeyValue("NativeCode", true);

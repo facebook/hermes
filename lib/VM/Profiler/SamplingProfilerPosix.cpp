@@ -363,8 +363,8 @@ uint32_t SamplingProfiler::walkRuntimeStack(
                                      stackFrame.jsFrame.functionId) +
             stackFrame.jsFrame.offset;
 
-        uint32_t moduleId = bcProvider->getCJSModuleOffset();
-        uint64_t frameAddress = ((uint64_t)moduleId << 32) + virtualOffset;
+        uint32_t segmentID = bcProvider->getSegmentID();
+        uint64_t frameAddress = ((uint64_t)segmentID << 32) + virtualOffset;
         assert(
             (frameAddress & kNativeFrameMask) == 0 &&
             "Module id should take less than 32 bits");

@@ -30,10 +30,10 @@ class CodeCoverageProfilerTest : public RuntimeTestFixture {
  protected:
   static CodeCoverageProfiler::FuncInfo getFuncInfo(Handle<JSFunction> func) {
     auto bcProvider = func->getCodeBlock()->getRuntimeModule()->getBytecode();
-    const uint32_t moduleId = bcProvider->getCJSModuleOffset();
+    const uint32_t segmentID = bcProvider->getSegmentID();
     const uint32_t funcVirtualOffset = bcProvider->getVirtualOffsetForFunction(
         func->getCodeBlock()->getFunctionID());
-    return {moduleId, funcVirtualOffset};
+    return {segmentID, funcVirtualOffset};
   }
 
   // Check if the function is executed or not.

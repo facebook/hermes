@@ -171,7 +171,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
   BytecodeModuleGenerator BMGen(options);
 
   if (range) {
-    BMGen.setCJSModuleOffset(range->first);
+    BMGen.setSegmentID(range->segment);
   }
 
   // Empty if all functions should be generated (i.e. bundle splitting was not
