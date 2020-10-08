@@ -121,6 +121,9 @@ set(HERMESVM_INDIRECT_THREADING ${DEFAULT_INTERPRETER_THREADING} CACHE BOOL
 set(HERMESVM_ALLOW_COMPRESSED_POINTERS ON CACHE BOOL
   "Enable compressed pointers. If this is on and the target is a 64-bit build, compressed pointers will be used.")
 
+set(HERMESVM_ALLOW_HUGE_PAGES OFF CACHE BOOL
+        "Enable huge pages to back the GC managed heap. Only useful on Linux.")
+
 set(HERMESVM_API_TRACE OFF CACHE BOOL
   "Enable tracing interactions via the API")
 
@@ -332,6 +335,9 @@ if(HERMESVM_INDIRECT_THREADING)
 endif()
 if(HERMESVM_ALLOW_COMPRESSED_POINTERS)
     add_definitions(-DHERMESVM_ALLOW_COMPRESSED_POINTERS)
+endif()
+if(HERMESVM_ALLOW_HUGE_PAGES)
+    add_definitions(-DHERMESVM_ALLOW_HUGE_PAGES)
 endif()
 if(HERMESVM_API_TRACE)
     add_definitions(-DHERMESVM_API_TRACE)

@@ -69,7 +69,9 @@ AlignedStorage::~AlignedStorage() {
 void AlignedStorage::markUnused(char *from, char *to) {
   assert(from <= to && "Unused region boundaries inverted");
   assert(lowLim() <= from && to <= hiLim() && "Unused region out-of-bounds");
+#ifndef HERMESVM_ALLOW_HUGE_PAGES
   oscompat::vm_unused(from, to - from);
+#endif
 }
 
 } // namespace vm

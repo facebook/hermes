@@ -79,6 +79,11 @@ void vm_free(void *p, size_t sz);
 /// \p vm_allocate_aligned.
 void vm_free_aligned(void *p, size_t sz);
 
+/// Mark the \p sz byte region of memory starting at \p p as being a good
+/// candidate for huge pages.
+/// \pre sz must be a multiple of oscompat::page_size().
+void vm_hugepage(void *p, size_t sz);
+
 /// Mark the \p sz byte region of memory starting at \p p as not currently in
 /// use, so that the OS may free it. \p p must be page-aligned.
 void vm_unused(void *p, size_t sz);

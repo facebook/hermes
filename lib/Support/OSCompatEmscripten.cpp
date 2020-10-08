@@ -155,6 +155,12 @@ void vm_free_aligned(void *p, size_t sz) {
   vm_free(p, sz);
 }
 
+void vm_hugepage(void *p, size_t sz) {
+  assert(
+      reinterpret_cast<uintptr_t>(p) % page_size() == 0 &&
+      "Precondition: pointer is page-aligned.");
+}
+
 void vm_unused(void *p, size_t sz) {
 #ifndef NDEBUG
   const size_t PS = page_size();

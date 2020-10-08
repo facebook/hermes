@@ -200,6 +200,17 @@ void vm_free_aligned(void *p, size_t sz) {
   vm_free(p, sz);
 }
 
+void vm_hugepage(void *p, size_t sz) {
+  assert(
+      reinterpret_cast<uintptr_t>(p) % page_size() == 0 &&
+      "Precondition: pointer is page-aligned.");
+
+#if defined(__linux__) || defined(__ANDROID__)
+  // Since the alloc is aligned, it may benefit from huge pages.
+  madvise(p, sz, MADV_HUGEPAGE);
+#endif
+}
+
 void vm_unused(void *p, size_t sz) {
 #ifndef NDEBUG
   const size_t PS = page_size();

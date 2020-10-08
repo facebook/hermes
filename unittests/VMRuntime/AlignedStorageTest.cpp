@@ -101,9 +101,10 @@ TEST_F(AlignedStorageTest, Offset) {
 }
 
 TEST_F(AlignedStorageTest, AdviseUnused) {
-// TODO(T40416012) Re-enable this test when vm_unused is fixed.
-// Skip this test in Windows because vm_unused has a no-op implementation.
-#ifndef _WINDOWS
+// TODO(T40416012) Re-enable this test on Windows when vm_unused is fixed.
+// Skip this test in Windows because vm_unused has a no-op implementation. Skip
+// it when huge pages are on because we do not return memory to the OS.
+#if !defined(_WINDOWS) && !defined(HERMESVM_ALLOW_HUGE_PAGES)
   const size_t FAILED = SIZE_MAX;
   const size_t PG_SIZE = oscompat::page_size();
 
