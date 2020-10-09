@@ -925,20 +925,21 @@ void HadesGC::waitForCollectionToFinish() {
     return;
   }
   std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
-  // Before waiting for the OG collection to finish, tell the OG collection
-  // that the world is stopped.
-  worldStopped_ = true;
-  // Notify a waiting OG collection that it can complete.
+  if (concurrentPhase_ == Phase::Mark) {
+    // The background thread is currently marking, wait until it is time for the
+    // STW pause.
+    waitForConditionVariable(
+        stopTheWorldCondVar_, lk, [this] { return stopTheWorldRequested_; });
+    completeMarking();
+    // Notify the waiting OG collection that it can complete.
+    stopTheWorldRequested_ = false;
+    stopTheWorldCondVar_.notify_one();
+  }
   lk.unlock();
-  stopTheWorldCondVar_.notify_one();
-  // Wait for an existing collection to finish.
+  // Wait for the collection to finish.
   oldGenCollectionThread_.join();
-  // Undo the worldStopped_ change, as the mutator will now resume. Can't rely
-  // on completeMarking to set worldStopped_ to false, as the OG collection
-  // might have already passed the stage where it was waiting for STW.
   lk.lock();
   assert(concurrentPhase_ == Phase::None);
-  worldStopped_ = false;
   // Check for a tripwire, since we know a collection just completed.
   checkTripwireAndResetStats();
 
@@ -1050,7 +1051,15 @@ void HadesGC::oldGenCollectionWorker() {
   oscompat::set_thread_name("hades");
   auto cpuTimeStart = oscompat::thread_cpu_time();
   oldGenMarker_->drainMarkWorklist();
-  completeMarking();
+
+  std::unique_lock<Mutex> lk{gcMutex_};
+  stopTheWorldRequested_ = true;
+  // If the mutator is in waitForCollectionToFinish, notify it that the OG
+  // thread is waiting for a STW pause.
+  stopTheWorldCondVar_.notify_one();
+  waitForConditionVariable(
+      stopTheWorldCondVar_, lk, [this] { return !stopTheWorldRequested_; });
+
   sweep();
   std::lock_guard<Mutex> g{gcMutex_};
   ogCollectionStats_->setEndTime();
@@ -1066,7 +1075,7 @@ void HadesGC::completeNonConcurrentOldGenCollection() {
       !kConcurrentGC &&
       "Shouldn't call completeNonConcurrentOldGenCollection if concurrency "
       "is enabled");
-  completeMarkingAssumeLocks();
+  completeMarking();
   // Sweeping will try to acquire mutexes, but they will be fake mutexes, so
   // there's no performance cost.
   sweep();
@@ -1075,29 +1084,9 @@ void HadesGC::completeNonConcurrentOldGenCollection() {
 }
 
 void HadesGC::completeMarking() {
-  // Both locks are held here for a few reasons.
-  //  * gcMutex_ is associated with the stopTheWorldCondVar and needs to be held
-  //  in order to stop the world. It also synchronises access to GC data
-  //  structures and if the mutator were still active, would prevent concurrent
-  //  access to them from YG.
-  //  * weakRefMutex_ synchronises access to WeakRef data structures and
-  //  prevents the mutator from accessing them.
-  // This lock order is required for any other lock acquisitions in this file.
-  std::unique_lock<Mutex> lk{gcMutex_};
-  stopTheWorldRequested_ = true;
-  waitForConditionVariable(
-      stopTheWorldCondVar_, lk, [this]() { return worldStopped_; });
   assert(inGC() && "inGC_ must be set during the STW pause");
-  WeakRefLock weakRefLock{weakRefMutex()};
-  completeMarkingAssumeLocks();
-
-  // Let the thread that yielded know that the STW pause has completed.
-  stopTheWorldRequested_ = false;
-  worldStopped_ = false;
-  stopTheWorldCondVar_.notify_one();
-}
-
-void HadesGC::completeMarkingAssumeLocks() {
+  // No locks are needed here because the world is stopped and there is only 1
+  // active thread.
   oldGenMarker_->globalWorklist().flushPushChunk();
   // Drain the marking queue.
   oldGenMarker_->drainMarkWorklistNoLocks();
@@ -1463,8 +1452,8 @@ void HadesGC::generationalWriteBarrier(void *loc, void *value) {
 
 void HadesGC::weakRefReadBarrier(void *value) {
   assert(
-      calledByBackgroundThread() == worldStopped_ &&
-      "Read barrier invoked by background thread outside STW.");
+      !calledByBackgroundThread() &&
+      "Read barrier invoked by background thread.");
   if (isOldGenMarking_) {
     // If the GC is marking, conservatively mark the value as live.
     snapshotWriteBarrierInternal(static_cast<GCCell *>(value));
@@ -2323,16 +2312,10 @@ void HadesGC::yieldToOldGen() {
     // If the OG isn't waiting for a STW pause yet, exit immediately.
     return;
   }
-  worldStopped_ = true;
-  // Notify a waiting OG collection that it can complete.
+  completeMarking();
+  // Notify the waiting OG collection that it can complete.
+  stopTheWorldRequested_ = false;
   stopTheWorldCondVar_.notify_one();
-  std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
-  waitForConditionVariable(
-      stopTheWorldCondVar_, lk, [this]() { return !worldStopped_; });
-  assert(
-      !stopTheWorldRequested_ &&
-      "The request should be set to false after being completed");
-  lk.release();
 }
 
 size_t HadesGC::getDrainRate() {

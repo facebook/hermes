@@ -554,17 +554,14 @@ class HadesGC final : public GCBase {
   /// that the STW pause handling is done correctly.
   std::thread oldGenCollectionThread_;
 
-  /// This condition variable and bool are used for the mutator to
-  /// signal the background marking thread when it's safe to try and complete.
-  /// Thus, the GC thread can wait for worldStopped_ to be true to
-  /// "stop the world" -- for example, to drain the final parts of the mark
-  /// stack.
+  /// This condition variable and bool are used for synchronising the STW pause
+  /// between the mutator and the background thread. When it is time for the STW
+  /// pause, the OG thread will set stopTheWorldRequested_ and wait on the
+  /// condition variable. Once the mutator finishes running completeMarking(),
+  /// it will wake the OG thread back up, so that it can resume with sweeping.
   std::condition_variable_any stopTheWorldCondVar_;
   /// Indicates whether OG has requested an STW pause, protected by gcMutex_.
   bool stopTheWorldRequested_{false};
-  /// Indicates that the world is stopped, only access from the mutator or when
-  /// the world is stopped.
-  bool worldStopped_{false};
 
   /// If true, whenever YG fills up immediately put it into the OG.
   bool promoteYGToOG_;
@@ -657,11 +654,8 @@ class HadesGC final : public GCBase {
   void completeNonConcurrentOldGenCollection();
 
   /// Finish the marking process. This requires a STW pause in order to do a
-  /// final marking worklist drain, and to update weak roots.
-  /// \pre Both gcMutex_ and weakRefMutex_ are held before entering.
-  void completeMarkingAssumeLocks();
-
-  /// Same as \c completeMarkingAssumeLocks, but acquires necessary locks first.
+  /// final marking worklist drain, and to update weak roots. It must be invoked
+  /// from the mutator.
   void completeMarking();
 
   /// As part of finishing the marking process, iterate through all of YG to
