@@ -65,7 +65,7 @@ set(CMAKE_OSX_SYSROOT ${HERMES_APPLE_TARGET_PLATFORM})
 # This must be consistent with the release_version in:
 # - android/build.gradle
 # - npm/package.json
-# - hermes.podspec
+# - hermes-engine.podspec
 project(Hermes
         VERSION 0.7.0
         LANGUAGES C CXX)
@@ -750,7 +750,7 @@ add_custom_target(
   COMMAND
     cp -R ${CMAKE_INSTALL_PREFIX}/include ${HERMES_PKG_ROOT}/destroot/
   COMMAND
-    cp ${CMAKE_CURRENT_SOURCE_DIR}/hermes.podspec ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE ${HERMES_PKG_ROOT}
+    cp ${CMAKE_CURRENT_SOURCE_DIR}/hermes-engine.podspec ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE ${HERMES_PKG_ROOT}
   COMMAND
     tar -C ${HERMES_PKG_ROOT}/ -czvf ${HERMES_GITHUB_DIR}/hermes-runtime-${HERMES_GITHUB_SYSTEM_NAME}-v${HERMES_RELEASE_VERSION}.tar.gz .
 )
