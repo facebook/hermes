@@ -102,7 +102,6 @@ class Deserializer;
 ///
 ///   void creditExternalMemory(GCCell *alloc, uint32_t size);
 ///   void debitExternalMemory(GCCell *alloc, uint32_t size);
-///   void debitExternalMemoryFromFinalizer(GCCell *alloc, uint32_t size);
 ///
 /// Force a garbage collection cycle. The provided cause will be used in
 /// logging.
@@ -726,7 +725,6 @@ class GCBase {
   /// nothing.
   void creditExternalMemory(GCCell *alloc, uint32_t size) {}
   void debitExternalMemory(GCCell *alloc, uint32_t size) {}
-  void debitExternalMemoryFromFinalizer(GCCell *alloc, uint32_t size) {}
 
   /// Default implementations for read and write barriers: do nothing.
   inline void writeBarrier(void *loc, HermesValue value) {}

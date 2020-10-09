@@ -128,7 +128,6 @@ class HadesGC final : public GCBase {
   /// Remove some external memory cost from a cell.
   /// (Part of general GC API defined in GCBase.h).
   void debitExternalMemory(GCCell *alloc, uint32_t size);
-  void debitExternalMemoryFromFinalizer(GCCell *alloc, uint32_t size);
 
   /// \name Write Barriers
   /// \{
@@ -560,7 +559,7 @@ class HadesGC final : public GCBase {
   /// Thus, the GC thread can wait for worldStopped_ to be true to
   /// "stop the world" -- for example, to drain the final parts of the mark
   /// stack.
-  std::condition_variable stopTheWorldCondVar_;
+  std::condition_variable_any stopTheWorldCondVar_;
   /// Indicates whether OG has requested an STW pause, protected by gcMutex_.
   bool stopTheWorldRequested_{false};
   /// Indicates that the world is stopped, only access from the mutator or when
@@ -627,6 +626,8 @@ class HadesGC final : public GCBase {
   /// than the tripwire limit. If the conditions are met, the tripwire is
   /// triggered and tripwireCallback_ is called.
   /// Also resets the stats counter, so that it calls the analytics callback.
+  /// WARNING: Do not call this while there is an ongoing collection. It can
+  /// cause a race condition and a deadlock.
   void checkTripwireAndResetStats();
 
   /// Transfer any external memory charges from YG to OG. Used as part of YG
@@ -745,11 +746,6 @@ class HadesGC final : public GCBase {
   void addSegmentExtentToCrashManager(
       const HeapSegment &seg,
       std::string extraName);
-
-  /// Unlocks any held mutexes, then aborts the program.
-  /// Should only be called by the GC, OOM from outside the GC can skip the
-  /// unlocks.
-  LLVM_ATTRIBUTE_NORETURN void oomInternal(std::error_code reason);
 
 #ifdef HERMES_SLOW_DEBUG
   /// Checks the heap to make sure all cells are valid.

@@ -167,7 +167,7 @@ void JSArrayBuffer::_finalizeImpl(GCCell *cell, GC *gc) {
   auto *self = vmcast<JSArrayBuffer>(cell);
   // Need to untrack the native memory that may have been tracked by snapshots.
   gc->getIDTracker().untrackNative(self->data_);
-  gc->debitExternalMemoryFromFinalizer(self, self->size_);
+  gc->debitExternalMemory(self, self->size_);
   free(self->data_);
   self->~JSArrayBuffer();
 }

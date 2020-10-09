@@ -30,7 +30,7 @@ const VTable ExtStringForTest::vt{
 
 void ExtStringForTest::_finalizeImpl(GCCell *cell, GC *gc) {
   ExtStringForTest *self = vmcast<ExtStringForTest>(cell);
-  gc->debitExternalMemoryFromFinalizer(self, self->length);
+  gc->debitExternalMemory(self, self->length);
   self->~ExtStringForTest();
 }
 gcheapsize_t ExtStringForTest::_externalMemorySizeImpl(const GCCell *cell) {

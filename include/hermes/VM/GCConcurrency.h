@@ -87,8 +87,8 @@ class FakeAtomic final {
   T data_;
 };
 
-/// A DebugMutex wraps a std::mutex and also tracks which thread currently has
-/// the mutex locked. Only available in debug modes.
+/// A DebugMutex wraps a std::recursive_mutex and also tracks which thread
+/// currently has the mutex locked. Only available in debug modes.
 class DebugMutex {
  public:
   DebugMutex() : tid_() {}
@@ -102,29 +102,31 @@ class DebugMutex {
 
   void lock() {
     inner_.lock();
+    depth_++;
     tid_ = std::this_thread::get_id();
   }
 
   void unlock() {
-    tid_ = std::thread::id{};
+    assert(depth_ && "Should not unlock an unlocked mutex");
+    assert(
+        tid_ == std::this_thread::get_id() &&
+        "Mutex should be acquired and unlocked on the same thread");
+    depth_--;
+    if (!depth_) {
+      tid_ = std::thread::id{};
+    }
     inner_.unlock();
   }
 
-  /// Allow bypassing the guards for special cases, like
-  /// std::condition_variable.
-  std::mutex &inner() {
-    return inner_;
-  }
-
-  /// If inner() is used to handle locking, use assignThread to get the
-  /// DebugMutex back in a consistent state.
-  void assignThread(std::thread::id tid) {
-    tid_ = tid;
+  uint32_t depth() const {
+    assert(*this && "Must hold the inner mutex to call depth");
+    return depth_;
   }
 
  private:
-  std::mutex inner_;
+  std::recursive_mutex inner_;
   std::thread::id tid_;
+  uint32_t depth_{0};
 };
 
 /// A FakeMutex has the same API as a std::mutex but does nothing.
@@ -149,30 +151,27 @@ class FakeMutex {
 
 template <typename Predicate>
 void waitForConditionVariable(
-    std::condition_variable &cv,
-    std::unique_lock<std::mutex> &lk,
+    std::condition_variable_any &cv,
+    std::unique_lock<std::recursive_mutex> &lk,
     Predicate pred) {
   cv.wait(lk, pred);
 }
 
 template <typename Predicate>
 void waitForConditionVariable(
-    std::condition_variable &cv,
+    std::condition_variable_any &cv,
     std::unique_lock<impl::DebugMutex> &lk,
     Predicate pred) {
-  std::unique_lock<std::mutex> waitableLock{lk.mutex()->inner(),
-                                            std::adopt_lock};
-  waitForConditionVariable(cv, waitableLock, pred);
-  // Since the condition_variable reacquires the lock before finishing wait,
-  // we need to assign the old thread id back to this DebugMutex.
-  lk.mutex()->assignThread(std::this_thread::get_id());
-  waitableLock.release();
+  assert(
+      lk.mutex()->depth() == 1 &&
+      "Must only lock recursive mutex once before waiting on CV");
+  cv.wait(lk, pred);
 }
 
 // This must exist for compilation purposes, but should never be called.
 template <typename Predicate>
 void waitForConditionVariable(
-    std::condition_variable &cv,
+    std::condition_variable_any &cv,
     std::unique_lock<impl::FakeMutex> &lk,
     Predicate pred) {
   (void)cv;
@@ -192,7 +191,7 @@ using Mutex = std::conditional<
 #ifndef NDEBUG
     impl::DebugMutex
 #else
-    std::mutex
+    std::recursive_mutex
 #endif
     ,
     impl::FakeMutex>::type;

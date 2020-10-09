@@ -170,7 +170,6 @@ class GenGC final : public GCBase {
   /// memory of the given \p size.  Decrease the external memory charge of the
   /// generation owning \p alloc by this amount.
   void debitExternalMemory(GCCell *alloc, uint32_t size);
-  void debitExternalMemoryFromFinalizer(GCCell *alloc, uint32_t size);
 
   /// Write barriers.
 

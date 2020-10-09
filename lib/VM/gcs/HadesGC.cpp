@@ -1323,21 +1323,6 @@ void HadesGC::creditExternalMemory(GCCell *cell, uint32_t sz) {
   }
 }
 
-void HadesGC::debitExternalMemoryFromFinalizer(GCCell *cell, uint32_t size) {
-  assert(
-      gcMutex_ &&
-      "debitExternalMemoryFromFinalizer should only be called while the lock "
-      "is held");
-  if (inYoungGen(cell)) {
-    assert(
-        ygExternalBytes_ >= size &&
-        "Finalizing more native memory than was registered");
-    ygExternalBytes_ -= size;
-  } else {
-    oldGen_.debitExternalMemory(size);
-  }
-}
-
 void HadesGC::debitExternalMemory(GCCell *cell, uint32_t sz) {
   if (inYoungGen(cell)) {
     assert(
@@ -1674,7 +1659,7 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
   }
 
   // The GC didn't recover enough memory, OOM.
-  gc_->oomInternal(make_error_code(OOMError::MaxHeapReached));
+  gc_->oom(make_error_code(OOMError::MaxHeapReached));
 }
 
 uint32_t HadesGC::OldGen::getFreelistBucket(uint32_t size) {
@@ -1965,19 +1950,12 @@ void HadesGC::checkTripwireAndResetStats() {
     return;
   }
   const auto afterAllocatedBytes = ogCollectionStats_->afterAllocatedBytes();
-  // Have to release the lock in case the tripwire callback calls
-  // createSnapshot.
-  std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
-  lk.unlock();
   // We use the amount of live data from after a GC completed as the minimum
   // bound of what is live.
   checkTripwire(afterAllocatedBytes);
-  lk.lock();
   // Resetting the stats both runs the destructor (submitting the stats), as
   // well as prevent us from checking the tripwire every YG.
   ogCollectionStats_.reset();
-  // Don't run the destructor to unlock the mutex.
-  lk.release();
 }
 
 void HadesGC::transferExternalMemoryToOldGen() {
@@ -2421,14 +2399,6 @@ void HadesGC::addSegmentExtentToCrashManager(
       segmentName.c_str(),
       segmentAddressBuffer);
 #endif
-}
-
-void HadesGC::oomInternal(std::error_code reason) {
-  std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
-  // Have to unlock before calling GCBase::oom, because it may access stats
-  // functions.
-  lk.unlock();
-  GCBase::oom(reason);
 }
 
 #ifdef HERMES_SLOW_DEBUG
