@@ -1336,7 +1336,15 @@ class Runtime : public HandleRootOwner,
 
   /// Enable allocation location tracking. Only works with
   /// HERMES_ENABLE_ALLOCATION_LOCATION_TRACES.
-  void enableAllocationLocationTracker();
+  void enableAllocationLocationTracker() {
+    enableAllocationLocationTracker(nullptr);
+  }
+  void enableAllocationLocationTracker(
+      std::function<void(
+          uint64_t,
+          std::chrono::microseconds,
+          std::vector<GCBase::AllocationLocationTracker::HeapStatsUpdate>)>
+          fragmentCallback);
 
   /// Disable allocation location tracking for new objects. Old objects tagged
   /// with stack traces continue to be tracked until they are freed.
@@ -1605,7 +1613,7 @@ inline void *Runtime::alloc(uint32_t sz) {
 #endif
   void *ptr = heap_.alloc<fixedSize, hasFinalizer>(sz);
 #ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-  heap_.getAllocationLocationTracker().newAlloc(ptr);
+  heap_.getAllocationLocationTracker().newAlloc(ptr, sz);
 #endif
   return ptr;
 }
@@ -1623,7 +1631,7 @@ inline void *Runtime::allocLongLived(uint32_t size) {
 #endif
   void *ptr = heap_.allocLongLived<hasFinalizer>(size);
 #ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-  heap_.getAllocationLocationTracker().newAlloc(ptr);
+  heap_.getAllocationLocationTracker().newAlloc(ptr, size);
 #endif
   return ptr;
 }

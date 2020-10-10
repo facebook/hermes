@@ -41,7 +41,7 @@ class HeapSnapshotAPITest : public ::testing::TestWithParam<bool> {
 
   void startTrackingHeapObjects() {
     if (!trackingFromBeginning()) {
-      rt->instrumentation().startTrackingHeapObjectStackTraces();
+      rt->instrumentation().startTrackingHeapObjectStackTraces(nullptr);
     }
   }
 

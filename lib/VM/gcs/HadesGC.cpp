@@ -1232,16 +1232,18 @@ void HadesGC::sweep() {
       if (HeapSegment::getCellMarkBit(cell)) {
         return;
       }
-      sweptBytes += cell->getAllocatedSize();
+      const auto sz = cell->getAllocatedSize();
+      sweptBytes += sz;
       // Cell is dead, run its finalizer first if it has one.
       cell->getVT()->finalizeIfExists(cell, this);
       oldGen_.addCellToFreelist(cell);
       if (isTracking) {
-        // There is no race condition here, because the object has already been
-        // determined to be dead, so nothing can be accessing it, or asking for
-        // its ID.
+        // FIXME: There could be a race condition here if newAlloc is being
+        // called at the same time and using a shared data structure with
+        // freeAlloc.
+        // freeAlloc relies on the ID, so call it before untrackObject.
+        getAllocationLocationTracker().freeAlloc(cell, sz);
         getIDTracker().untrackObject(cell);
-        getAllocationLocationTracker().freeAlloc(cell);
       }
     });
 
@@ -1770,9 +1772,11 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
           auto *fptr = cell->getMarkedForwardingPointer();
           ptr += reinterpret_cast<GCCell *>(fptr)->getAllocatedSize();
         } else {
-          ptr += cell->getAllocatedSize();
+          const auto sz = cell->getAllocatedSize();
+          ptr += sz;
+          // Have to call freeAlloc before untrackObject.
+          getAllocationLocationTracker().freeAlloc(cell, sz);
           getIDTracker().untrackObject(cell);
-          getAllocationLocationTracker().freeAlloc(cell);
         }
       }
     }

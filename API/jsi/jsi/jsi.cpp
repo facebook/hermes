@@ -99,7 +99,11 @@ Instrumentation& Runtime::instrumentation() {
 
     void collectGarbage() override {}
 
-    void startTrackingHeapObjectStackTraces() override {}
+    void startTrackingHeapObjectStackTraces(
+        std::function<void(
+            uint64_t,
+            std::chrono::microseconds,
+            std::vector<HeapStatsUpdate>)>) override {}
     void stopTrackingHeapObjectStackTraces() override {}
 
     void createSnapshotToFile(const std::string&) override {
