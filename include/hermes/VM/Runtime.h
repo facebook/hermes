@@ -1353,7 +1353,15 @@ class Runtime : public HandleRootOwner,
 
   /// Enable allocation location tracking. Only works with
   /// HERMES_ENABLE_ALLOCATION_LOCATION_TRACES.
-  void enableAllocationLocationTracker();
+  void enableAllocationLocationTracker() {
+    enableAllocationLocationTracker(nullptr);
+  }
+  void enableAllocationLocationTracker(
+      std::function<void(
+          uint64_t,
+          std::chrono::microseconds,
+          std::vector<GCBase::AllocationLocationTracker::HeapStatsUpdate>)>
+          fragmentCallback);
 
   /// Disable allocation location tracking for new objects. Old objects tagged
   /// with stack traces continue to be tracked until they are freed.
@@ -1622,7 +1630,7 @@ inline void *Runtime::alloc(uint32_t sz) {
 #endif
   void *ptr = heap_.alloc<fixedSize, hasFinalizer>(sz);
 #ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-  heap_.getAllocationLocationTracker().newAlloc(ptr);
+  heap_.getAllocationLocationTracker().newAlloc(ptr, sz);
 #endif
   return ptr;
 }
@@ -1642,10 +1650,11 @@ T *Runtime::makeAFixed(Args &&... args) {
   // CAPTURE_IP* macros in the interpreter loop.
   (void)getCurrentIP();
 #endif
+  const uint32_t sz = cellSize<T>();
   T *ptr = heap_.makeA<T, true /* fixedSize */, hasFinalizer, longLived>(
-      cellSize<T>(), std::forward<Args>(args)...);
+      sz, std::forward<Args>(args)...);
 #ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-  heap_.getAllocationLocationTracker().newAlloc(ptr);
+  heap_.getAllocationLocationTracker().newAlloc(ptr, sz);
 #endif
   return ptr;
 }
@@ -1668,7 +1677,7 @@ T *Runtime::makeAVariable(uint32_t size, Args &&... args) {
   T *ptr = heap_.makeA<T, false /* fixedSize */, hasFinalizer, longLived>(
       size, std::forward<Args>(args)...);
 #ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-  heap_.getAllocationLocationTracker().newAlloc(ptr);
+  heap_.getAllocationLocationTracker().newAlloc(ptr, size);
 #endif
   return ptr;
 }

@@ -2225,12 +2225,17 @@ StackTracesTreeNode *Runtime::getCurrentStackTracesTreeNode(
   return stackTracesTree_->getStackTrace(this, codeBlock, ip);
 }
 
-void Runtime::enableAllocationLocationTracker() {
+void Runtime::enableAllocationLocationTracker(
+    std::function<void(
+        uint64_t,
+        std::chrono::microseconds,
+        std::vector<GCBase::AllocationLocationTracker::HeapStatsUpdate>)>
+        fragmentCallback) {
   if (!stackTracesTree_) {
     stackTracesTree_ = make_unique<StackTracesTree>();
   }
   stackTracesTree_->syncWithRuntimeStack(this);
-  heap_.getAllocationLocationTracker().enable();
+  heap_.getAllocationLocationTracker().enable(std::move(fragmentCallback));
 }
 
 void Runtime::disableAllocationLocationTracker(bool clearExistingTree) {
@@ -2264,7 +2269,11 @@ StackTracesTreeNode *Runtime::getCurrentStackTracesTreeNode(
   return nullptr;
 }
 
-void Runtime::enableAllocationLocationTracker() {}
+void Runtime::enableAllocationLocationTracker(
+    std::function<void(
+        uint64_t,
+        std::chrono::microseconds,
+        std::vector<GCBase::AllocationLocationTracker::HeapStatsUpdate>)>) {}
 
 void Runtime::disableAllocationLocationTracker(bool) {}
 

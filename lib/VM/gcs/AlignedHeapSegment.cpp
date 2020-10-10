@@ -297,8 +297,10 @@ void AlignedHeapSegment::deleteDeadObjectIDs(GC *gc) {
     forAllObjs([&markBits, &idTracker, &allocationLocationTracker](
                    const GCCell *cell) {
       if (!markBits.at(markBits.addressToIndex(cell))) {
+        // The allocation tracker needs to use the ID, so this needs to come
+        // before untrackObject.
+        allocationLocationTracker.freeAlloc(cell, cell->getAllocatedSize());
         idTracker.untrackObject(cell);
-        allocationLocationTracker.freeAlloc(cell);
       }
     });
   }

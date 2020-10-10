@@ -376,15 +376,17 @@ void YoungGen::collect() {
     nextGen_->youngGenTransitiveClosure(toScan, acceptor);
   }
 
-  if (gc_->getIDTracker().isTrackingIDs()) {
-    PerfSection fixupTrackedObjectsSystraceRegion("updateIDTracker");
-    updateIDTracker();
-  }
-
+  // Have to delete allocation tracker before the ID tracker, because the
+  // allocation tracker uses the ID tracker.
   if (gc_->getAllocationLocationTracker().isEnabled()) {
     PerfSection updateAllocationLocationTrackerSystraceRegion(
         "updateAllocationLocationTracker");
     updateAllocationLocationTracker();
+  }
+
+  if (gc_->getIDTracker().isTrackingIDs()) {
+    PerfSection fixupTrackedObjectsSystraceRegion("updateIDTracker");
+    updateIDTracker();
   }
 
   // We've now determined reachability; find weak refs to young-gen
@@ -602,20 +604,23 @@ void YoungGen::updateTrackers() {
     GCCell *cell = reinterpret_cast<GCCell *>(ptr);
     if (cell->hasMarkedForwardingPointer()) {
       auto *fptr = cell->getMarkedForwardingPointer();
-      if (idTracker) {
-        gc_->getIDTracker().moveObject(cell, fptr);
-      }
       if (allocationLocationTracker) {
         gc_->getAllocationLocationTracker().moveAlloc(cell, fptr);
       }
+      if (idTracker) {
+        gc_->getIDTracker().moveObject(cell, fptr);
+      }
       ptr += reinterpret_cast<GCCell *>(fptr)->getAllocatedSize();
     } else {
-      ptr += cell->getAllocatedSize();
+      const auto sz = cell->getAllocatedSize();
+      ptr += sz;
+      // The allocation tracker needs to use the ID, so this needs to come
+      // before untrackObject.
+      if (allocationLocationTracker) {
+        gc_->getAllocationLocationTracker().freeAlloc(cell, sz);
+      }
       if (idTracker) {
         gc_->getIDTracker().untrackObject(cell);
-      }
-      if (allocationLocationTracker) {
-        gc_->getAllocationLocationTracker().freeAlloc(cell);
       }
     }
   }

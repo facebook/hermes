@@ -510,16 +510,9 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
   snap.emitAllocationTraceInfo();
 
   snap.beginSection(HeapSnapshot::Section::Samples);
-  GCBase::IDTracker::Sampler::TimePoint startTime;
-  GCBase::IDTracker::Sampler::Samples samples;
-  std::tie(startTime, samples) = gc->getIDTracker().endSamplingLastID();
-  for (auto sample : samples) {
-    uint64_t lastID = sample.second;
-    uint64_t timestampMicros =
-        std::chrono::duration_cast<std::chrono::microseconds>(
-            sample.first - startTime)
-            .count();
-    json.emitValues({timestampMicros, lastID});
+  for (const auto &fragment : getAllocationLocationTracker().fragments()) {
+    json.emitValues({static_cast<uint64_t>(fragment.timestamp_.count()),
+                     fragment.lastSeenObjectID_});
   }
   snap.endSection(HeapSnapshot::Section::Samples);
 
@@ -851,7 +844,7 @@ llvh::raw_ostream &operator<<(llvh::raw_ostream &os, const SizeFormatObj &sfo) {
 GCBase::GCCallbacks::~GCCallbacks() {}
 
 GCBase::IDTracker::IDTracker() {
-  assert(nextID_ % 2 == 1 && "First JS object ID isn't odd");
+  assert(lastID_ % 2 == 1 && "First JS object ID isn't odd");
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -870,7 +863,7 @@ void GCBase::AllocationLocationTracker::deserialize(Deserializer &d) {
 }
 
 void GCBase::IDTracker::serialize(Serializer &s) const {
-  s.writeInt<HeapSnapshot::NodeID>(nextID_);
+  s.writeInt<HeapSnapshot::NodeID>(lastID_);
   s.writeInt<size_t>(objectIDMap_.size());
   for (auto it = objectIDMap_.begin(); it != objectIDMap_.end(); it++) {
     s.writeRelocation(it->first);
@@ -879,7 +872,7 @@ void GCBase::IDTracker::serialize(Serializer &s) const {
 }
 
 void GCBase::IDTracker::deserialize(Deserializer &d) {
-  nextID_ = d.readInt<HeapSnapshot::NodeID>();
+  lastID_ = d.readInt<HeapSnapshot::NodeID>();
   size_t size = d.readInt<size_t>();
   for (size_t i = 0; i < size; i++) {
     // Heap must have been deserialized before this function. All deserialized
@@ -916,39 +909,169 @@ HeapSnapshot::NodeID GCBase::IDTracker::getNumberID(double num) {
   return numberRef = nextNumberID();
 }
 
-void GCBase::IDTracker::beginSamplingLastID(Sampler::Duration duration) {
-  endSamplingLastID();
-  sampler_ = llvh::make_unique<Sampler>(nextID_, duration);
-}
-
-std::pair<
-    GCBase::IDTracker::Sampler::TimePoint,
-    GCBase::IDTracker::Sampler::Samples>
-GCBase::IDTracker::endSamplingLastID() {
-  if (sampler_) {
-    std::pair<Sampler::TimePoint, Sampler::Samples> result =
-        make_pair(sampler_->startTime(), sampler_->stop());
-    sampler_.reset();
-    return result;
-  } else {
-    return std::make_pair(Sampler::TimePoint{}, Sampler::Samples{});
-  }
-}
-
-void GCBase::AllocationLocationTracker::enable() {
+void GCBase::AllocationLocationTracker::enable(
+    std::function<
+        void(uint64_t, std::chrono::microseconds, std::vector<HeapStatsUpdate>)>
+        callback) {
+  assert(!enabled_ && "Shouldn't enable twice");
   enabled_ = true;
-  GC *gc = reinterpret_cast<GC *>(gc_);
+  GC *gc = static_cast<GC *>(gc_);
   // For correct visualization of the allocation timeline, it's necessary that
   // objects in the heap snapshot that existed before sampling was enabled have
   // numerically lower IDs than those allocated during sampling. We ensure this
   // by assigning IDs to everything here.
-  gc->forAllObjs([gc](GCCell *cell) { gc->getIDTracker().getObjectID(cell); });
-  gc->getIDTracker().beginSamplingLastID(std::chrono::milliseconds(50));
+  uint64_t numObjects = 0;
+  uint64_t numBytes = 0;
+  gc->forAllObjs([gc, &numObjects, &numBytes](GCCell *cell) {
+    numObjects++;
+    numBytes += cell->getAllocatedSize();
+    gc->getIDTracker().getObjectID(cell);
+  });
+  fragmentCallback_ = std::move(callback);
+  startTime_ = std::chrono::steady_clock::now();
+  fragments_.clear();
+  // The first fragment has all objects that were live before the profiler was
+  // enabled.
+  // The ID and timestamp will be filled out via flushCallback.
+  fragments_.emplace_back(Fragment{
+      static_cast<HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::NoID),
+      std::chrono::microseconds(),
+      numObjects,
+      numBytes,
+      // Say the fragment is touched here so it is written out
+      // automatically by flushCallback.
+      true});
+  // Immediately flush the first fragment.
+  flushCallback();
 }
 
 void GCBase::AllocationLocationTracker::disable() {
-  gc_->getIDTracker().endSamplingLastID();
+  flushCallback();
   enabled_ = false;
+  fragmentCallback_ = nullptr;
+}
+
+void GCBase::AllocationLocationTracker::newAlloc(const void *ptr, uint32_t sz) {
+  // Note we always get the current IP even if allocation tracking is not
+  // enabled as it allows us to assert this feature works across many tests.
+  // Note it's not very slow, it's slower than the non-virtual version
+  // in Runtime though.
+  const auto *ip = gc_->gcCallbacks_->getCurrentIPSlow();
+  if (enabled_) {
+    // This is stateful and causes the object to have an ID assigned.
+    const auto id = gc_->getIDTracker().getObjectID(ptr);
+    HERMES_SLOW_ASSERT(
+        &findFragmentForID(id) == &fragments_.back() &&
+        "Should only ever be allocating into the newest fragment");
+    (void)id;
+    Fragment &lastFrag = fragments_.back();
+    HERMES_SLOW_ASSERT(
+        lastFrag.lastSeenObjectID_ ==
+            static_cast<HeapSnapshot::NodeID>(
+                IDTracker::ReservedObjectID::NoID) &&
+        "Last fragment should not have an ID assigned yet");
+    lastFrag.numObjects_++;
+    lastFrag.numBytes_ += sz;
+    lastFrag.touchedSinceLastFlush_ = true;
+    if (lastFrag.numBytes_ >= kFlushThreshold) {
+      flushCallback();
+    }
+    if (auto node = gc_->gcCallbacks_->getCurrentStackTracesTreeNode(ip)) {
+      auto itAndDidInsert = stackMap_.try_emplace(ptr, node);
+      assert(itAndDidInsert.second && "Failed to create a new node");
+      (void)itAndDidInsert;
+    }
+  }
+}
+
+void GCBase::AllocationLocationTracker::moveAlloc(
+    const void *oldPtr,
+    const void *newPtr) {
+  if (oldPtr == newPtr) {
+    // This can happen in old generations when compacting to the same location.
+    return;
+  }
+  auto oldIt = stackMap_.find(oldPtr);
+  if (oldIt == stackMap_.end()) {
+    // This can happen if the tracker is turned on between collections, and
+    // something is being moved that didn't have a stack entry.
+    return;
+  }
+  const auto oldStackTracesTreeNode = oldIt->second;
+  assert(
+      stackMap_.count(newPtr) == 0 &&
+      "Moving to a location that is already tracked");
+  stackMap_.erase(oldIt);
+  stackMap_[newPtr] = oldStackTracesTreeNode;
+}
+
+void GCBase::AllocationLocationTracker::freeAlloc(
+    const void *ptr,
+    uint32_t sz) {
+  stackMap_.erase(ptr);
+  if (!enabled_) {
+    // Fragments won't exist if the heap profiler isn't enabled.
+    return;
+  }
+  const auto id = gc_->getIDTracker().getObjectIDMustExist(ptr);
+  Fragment &frag = findFragmentForID(id);
+  assert(
+      frag.numObjects_ >= 1 && "Num objects decremented too much for fragment");
+  frag.numObjects_--;
+  assert(frag.numBytes_ >= sz && "Num bytes decremented too much for fragment");
+  frag.numBytes_ -= sz;
+  frag.touchedSinceLastFlush_ = true;
+}
+
+GCBase::AllocationLocationTracker::Fragment &
+GCBase::AllocationLocationTracker::findFragmentForID(HeapSnapshot::NodeID id) {
+  assert(fragments_.size() >= 1 && "Must have at least one fragment available");
+  for (auto it = fragments_.begin(); it != fragments_.end() - 1; ++it) {
+    if (it->lastSeenObjectID_ >= id) {
+      return *it;
+    }
+  }
+  // Since no previous fragments matched, it must be the last fragment.
+  return fragments_.back();
+}
+
+void GCBase::AllocationLocationTracker::flushCallback() {
+  Fragment &lastFrag = fragments_.back();
+  const auto lastID = gc_->getIDTracker().lastID();
+  const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+      std::chrono::steady_clock::now() - startTime_);
+  assert(
+      lastFrag.lastSeenObjectID_ ==
+          static_cast<HeapSnapshot::NodeID>(
+              IDTracker::ReservedObjectID::NoID) &&
+      "Last fragment should not have an ID assigned yet");
+  // In case a flush happens without any allocations occurring, don't add a new
+  // fragment.
+  if (lastFrag.touchedSinceLastFlush_) {
+    lastFrag.lastSeenObjectID_ = lastID;
+    lastFrag.timestamp_ = duration;
+    // Place an empty fragment at the end, for any new allocs.
+    fragments_.emplace_back(Fragment{
+        static_cast<HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::NoID),
+        std::chrono::microseconds(),
+        0,
+        0,
+        false});
+  }
+  if (fragmentCallback_) {
+    std::vector<HeapStatsUpdate> updatedFragments;
+    // Don't include the last fragment, which is newly created (or has no
+    // objects in it).
+    for (size_t i = 0; i < fragments_.size() - 1; ++i) {
+      auto &fragment = fragments_[i];
+      if (fragment.touchedSinceLastFlush_) {
+        updatedFragments.emplace_back(
+            i, fragment.numObjects_, fragment.numBytes_);
+        fragment.touchedSinceLastFlush_ = false;
+      }
+    }
+    fragmentCallback_(lastID, duration, std::move(updatedFragments));
+  }
 }
 
 llvh::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {

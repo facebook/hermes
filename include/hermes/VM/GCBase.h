@@ -15,7 +15,6 @@
 #include "hermes/Public/GCTripwireContext.h"
 #include "hermes/Support/CheckedMalloc.h"
 #include "hermes/Support/OSCompat.h"
-#include "hermes/Support/SamplingThread.h"
 #include "hermes/Support/StatsAccumulator.h"
 #include "hermes/VM/AllocOptions.h"
 #include "hermes/VM/BuildMetadata.h"
@@ -361,8 +360,7 @@ class GCBase {
 #endif
 
   /// When enabled, every allocation gets an attached stack-trace and an
-  /// object ID, and the latter is periodically sampled by the GCs IDTracker.
-  /// When disabled old allocations continue to be tracked but
+  /// object ID. When disabled old allocations continue to be tracked but
   /// no new allocations get a stack-trace.
   struct AllocationLocationTracker final {
     explicit inline AllocationLocationTracker(GCBase *gc);
@@ -370,22 +368,49 @@ class GCBase {
     /// Returns true if tracking is enabled for new allocations.
     inline bool isEnabled() const;
     /// Must be called by GC implementations whenever a new allocation is made.
-    inline void newAlloc(const void *ptr);
+    void newAlloc(const void *ptr, uint32_t sz);
     /// Must be called by GC implementations whenever an allocation is moved.
-    inline void moveAlloc(const void *oldPtr, const void *newPtr);
+    void moveAlloc(const void *oldPtr, const void *newPtr);
     /// Must be called by GC implementations whenever an allocation is freed.
-    inline void freeAlloc(const void *ptr);
+    void freeAlloc(const void *ptr, uint32_t sz);
     /// Returns data needed to reconstruct the JS stack used to create the
     /// specified allocation.
     inline StackTracesTreeNode *getStackTracesTreeNodeForAlloc(
         const void *ptr) const;
 
-    /// Enable location tracking and ID sampling.
-    void enable();
+    /// A Fragment is a time bound for when objects are allocated. Any
+    /// allocations that occur before the lastSeenObjectID_ are in this
+    /// fragment. Allocations increment the numObjects_ and numBytes_. Free'd
+    /// cells from this fragment decrement numObjects_ and numBytes_.
+    struct Fragment {
+      HeapSnapshot::NodeID lastSeenObjectID_;
+      std::chrono::microseconds timestamp_;
+      /// Number of objects still alive in this fragment. Incremented when
+      /// objects are created, decremented when objects are destroyed.
+      uint64_t numObjects_;
+      /// Total size of objects still alive in this fragment.
+      uint64_t numBytes_;
+      /// If true, one of numObjects or numBytes changed since the last flush.
+      bool touchedSinceLastFlush_;
+    };
+
+    /// This must match the definition in jsi::Instrumentation to avoid
+    /// unnecessary copying.
+    using HeapStatsUpdate = std::tuple<uint64_t, uint64_t, uint64_t>;
+
+    /// Enable location tracking.
+    void enable(std::function<void(
+                    uint64_t,
+                    std::chrono::microseconds,
+                    std::vector<HeapStatsUpdate>)> callback);
 
     /// Disable location tracking - turns \c newAlloc() into a no-op. Existing
     /// allocations continue to be tracked.
     void disable();
+
+    const std::vector<Fragment> &fragments() const {
+      return fragments_;
+    }
 
 #ifdef HERMESVM_SERIALIZE
     void serialize(Serializer &s) const;
@@ -393,14 +418,37 @@ class GCBase {
 #endif
 
    private:
+    /// Flush out heap profiler data to the callback after a new kFlushThreshold
+    /// bytes are allocated.
+    static constexpr uint64_t kFlushThreshold = 128 * (1 << 10);
     /// Associates allocations at their current location with their stack trace
     /// data.
     llvh::DenseMap<const void *, StackTracesTreeNode *> stackMap_;
     /// We need access to the GCBase to collect the current stack when nodes are
-    /// allocated and to sample IDs for the allocation timeline.
+    /// allocated.
     GCBase *gc_;
     /// Indicates if tracking of new allocations is enabled.
     bool enabled_{false};
+    /// Time when the profiler was started.
+    std::chrono::steady_clock::time_point startTime_;
+    /// This should be called periodically whenever the last seen object ID is
+    /// updated.
+    std::function<
+        void(uint64_t, std::chrono::microseconds, std::vector<HeapStatsUpdate>)>
+        fragmentCallback_;
+    /// All samples that have been flushed. Only needs the last object ID to be
+    /// written to the file.
+    std::vector<Fragment> fragments_;
+
+    /// Updates the last fragment to have the current last ID and timestamp,
+    /// then calls fragmentCallback_ with both the new fragment and any changed
+    /// fragments from freeAlloc.
+    void flushCallback();
+
+    /// Find the fragment corresponding to the given id.
+    /// \return fragments_.back() if none exists (it's the currently active
+    ///   fragment).
+    Fragment &findFragmentForID(HeapSnapshot::NodeID id);
   };
 
   class IDTracker final {
@@ -448,9 +496,6 @@ class GCBase {
       }
     };
 
-    /// Thread to periodically sample the last assigned ID.
-    using Sampler = SamplingThread<HeapSnapshot::NodeID>;
-
     explicit IDTracker();
 
     /// Return true if IDs are being tracked.
@@ -459,6 +504,10 @@ class GCBase {
     /// Get the unique object id of the given object.
     /// If one does not yet exist, start tracking it.
     inline HeapSnapshot::NodeID getObjectID(const void *cell);
+
+    /// Same as \c getObjectID, except it asserts if the cell doesn't have an
+    /// ID.
+    inline HeapSnapshot::NodeID getObjectIDMustExist(const void *cell);
 
     /// Get the unique object id of the symbol with the given index \b
     /// symIdx.  If one does not yet exist, start tracking it.
@@ -498,13 +547,9 @@ class GCBase {
     template <typename F>
     inline void forEachID(F callback);
 
-    /// Begin periodically sampling the most recently assigned object ID.
-    /// Restarts sampling from scratch if it was already in progress.
-    void beginSamplingLastID(Sampler::Duration duration);
-
-    /// End sampling and return all collected samples. Returns empty values
-    /// if sampling was not in progress.
-    std::pair<Sampler::TimePoint, Sampler::Samples> endSamplingLastID();
+    /// Get the current last ID. All other existing IDs are less than or equal
+    /// to this one.
+    inline HeapSnapshot::NodeID lastID() const;
 
 #ifdef HERMESVM_SERIALIZE
     /// Serialize this IDTracker to the output stream.
@@ -531,10 +576,9 @@ class GCBase {
     /// recycled so that snapshots don't confuse two objects with each other.
     /// NOTE: Need to ensure that this starts on an odd number, so check if
     /// the first non-reserved ID is odd, if not add one.
-    std::atomic<HeapSnapshot::NodeID> nextID_{
-        static_cast<HeapSnapshot::NodeID>(
-            ReservedObjectID::FirstNonReservedID) |
-        1};
+    HeapSnapshot::NodeID lastID_{static_cast<HeapSnapshot::NodeID>(
+                                     ReservedObjectID::FirstNonReservedID) |
+                                 1};
 
     /// Map of object pointers to IDs. Only populated once the first heap
     /// snapshot is requested, or the first time the memory profiler is turned
@@ -549,9 +593,6 @@ class GCBase {
     /// Map of numeric values to IDs. Used to give numbers in the heap a unique
     /// node.
     llvh::DenseMap<double, HeapSnapshot::NodeID, DoubleComparator> numberIDMap_;
-
-    /// Thread that periodically samples the last assigned ID.
-    std::unique_ptr<Sampler> sampler_;
   };
 
 #ifndef NDEBUG
@@ -1516,6 +1557,13 @@ inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(const void *cell) {
   return objID;
 }
 
+inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectIDMustExist(
+    const void *cell) {
+  auto iter = objectIDMap_.find(cell);
+  assert(iter != objectIDMap_.end() && "cell must already have an ID");
+  return iter->second;
+}
+
 inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(uint32_t symIdx) {
   auto iter = symbolIDMap_.find(symIdx);
   if (iter != symbolIDMap_.end()) {
@@ -1582,16 +1630,18 @@ inline void GCBase::IDTracker::forEachID(F callback) {
   }
 }
 
+inline HeapSnapshot::NodeID GCBase::IDTracker::lastID() const {
+  return lastID_;
+}
+
 inline HeapSnapshot::NodeID GCBase::IDTracker::nextObjectID() {
-  // fetch_add returns the old value.
-  uint64_t before = nextID_.fetch_add(kIDStep);
   // This must be unique for most features that rely on it, check for overflow.
   if (LLVM_UNLIKELY(
-          before >=
+          lastID_ >=
           std::numeric_limits<HeapSnapshot::NodeID>::max() - kIDStep)) {
     hermes_fatal("Ran out of object IDs");
   }
-  return before + kIDStep;
+  return lastID_ += kIDStep;
 }
 
 inline HeapSnapshot::NodeID GCBase::IDTracker::nextNativeID() {
@@ -1612,44 +1662,6 @@ GCBase::AllocationLocationTracker::AllocationLocationTracker(GCBase *gc)
 
 inline bool GCBase::AllocationLocationTracker::isEnabled() const {
   return enabled_;
-}
-
-inline void GCBase::AllocationLocationTracker::newAlloc(const void *ptr) {
-  // Note we always get the current IP even if allocation tracking is not
-  // enabled as it allows us to assert this feature works across many tests.
-  // Note it's not very slow, it's slower than the non-virtual version
-  // in Runtime though.
-  const auto *ip = gc_->gcCallbacks_->getCurrentIPSlow();
-  if (enabled_) {
-    // This is stateful and causes the object to have an ID assigned.
-    gc_->getIDTracker().getObjectID(ptr);
-    if (auto node = gc_->gcCallbacks_->getCurrentStackTracesTreeNode(ip)) {
-      stackMap_.try_emplace(ptr, node);
-    }
-  }
-}
-
-inline void GCBase::AllocationLocationTracker::moveAlloc(
-    const void *oldPtr,
-    const void *newPtr) {
-  if (oldPtr == newPtr) {
-    // This can happen in old generations when compacting to the same location.
-    return;
-  }
-  auto oldIt = stackMap_.find(oldPtr);
-  if (oldIt == stackMap_.end()) {
-    return;
-  }
-  const auto oldStackTracesTreeNode = oldIt->second;
-  assert(
-      stackMap_.count(newPtr) == 0 &&
-      "Moving to a location that is already tracked");
-  stackMap_.erase(oldIt);
-  stackMap_[newPtr] = oldStackTracesTreeNode;
-}
-
-inline void GCBase::AllocationLocationTracker::freeAlloc(const void *ptr) {
-  stackMap_.erase(ptr);
 }
 
 inline StackTracesTreeNode *

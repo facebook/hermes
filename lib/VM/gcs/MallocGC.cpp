@@ -298,10 +298,8 @@ void MallocGC::collect(std::string cause) {
       assert(!header->isMarked() && "Live pointer left in dead heap section");
 #endif
       GCCell *cell = header->data();
-#ifndef NDEBUG
       // Extract before running any potential finalizers.
       const auto freedSize = cell->getAllocatedSize();
-#endif
       // Run the finalizer if it exists and the cell is actually dead.
       if (!header->isMarked()) {
         cell->getVT()->finalizeIfExists(cell, this);
@@ -311,14 +309,11 @@ void MallocGC::collect(std::string cause) {
           ++numFinalizedObjects_;
         }
 #endif
-      }
-      if (idTracker_.isTrackingIDs() ||
-          allocationLocationTracker_.isEnabled()) {
-        idTracker_.untrackObject(cell);
-        allocationLocationTracker_.freeAlloc(cell);
-      }
-      if (allocationLocationTracker_.isEnabled()) {
-        allocationLocationTracker_.freeAlloc(cell);
+        // Pointers that aren't marked now weren't moved, and are dead instead.
+        if (isTrackingIDs()) {
+          allocationLocationTracker_.freeAlloc(cell, freedSize);
+          idTracker_.untrackObject(cell);
+        }
       }
 #ifndef NDEBUG
       // Before free'ing, fill with a dead value for debugging
