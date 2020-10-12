@@ -29,6 +29,17 @@ pr(a);
 pr([9,undefined,8,5,].sort());
 //CHECK-NEXT: 0=5 1=8 2=9 3=undefined
 
+// Sorting an empty object shouldn't crash or call the comparison function.
+try {
+  Array.prototype.sort.call({}, function() {
+    throw new Error("shouldn't be called");
+  });
+  print("Didn't throw");
+} catch (e) {
+  print(e);
+}
+//CHECK-NEXT: Didn't throw
+
 // A function to print an array/object.
 function pr(x) {
     var s = "";

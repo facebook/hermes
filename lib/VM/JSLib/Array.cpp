@@ -1225,6 +1225,10 @@ CallResult<HermesValue> sortSparse(
     return ExecutionStatus::EXCEPTION;
   // Get the underlying storage containing the names.
   auto names = runtime->makeHandle((*crNames)->getIndexedStorage());
+  if (!names) {
+    // Indexed storage can be null if there's nothing to store.
+    return O.getHermesValue();
+  }
 
   // Find out how many sortable numeric properties we have.
   JSArray::StorageType::size_type numProps = 0;
