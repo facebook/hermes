@@ -5,10 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-require('cjs-subdir-shared.js').immediatelyInvoke(
-  function mainInner() {
-    loadSegment(require.context, 2);
-    var unmin = require('cjs-subdir-unminified.js');
-    unmin.run();
-  }
-);
+// RUN: true
+
+print("init seg1.js");

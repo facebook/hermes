@@ -1883,6 +1883,11 @@ class Module : public Value {
     }
   }
 
+  /// \return whether a CommonJS module with the given ID exists.
+  bool hasCJSModule(uint32_t id) const {
+    return (cjsModules_.size() > id) && (cjsModules_[id].function != nullptr);
+  }
+
   /// \return the CommonJS module given the wrapping function if it is a module,
   /// else nullptr.
   const CJSModule *findCJSModule(Function *function) const {

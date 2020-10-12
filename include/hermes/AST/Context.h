@@ -126,8 +126,7 @@ class Context {
     uint32_t segment;
 
     /// The module IDs to include in this segment. This is a subset, specified
-    /// in an arbitrary order, of the IDs of modules added to the IR. No two
-    /// segments may include the same module ID.
+    /// in an arbitrary order, of the IDs of modules added to the IR.
     std::vector<uint32_t> moduleIDs;
   };
 

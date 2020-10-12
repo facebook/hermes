@@ -1156,7 +1156,8 @@ std::unique_ptr<llvh::MemoryBuffer> getFileFromDirectoryOrZip(
     return nullptr;
   }
 
-  uint32_t moduleIdx = 0;
+  uint32_t nextModuleID = 0;
+  llvh::DenseMap<llvh::StringRef, uint32_t> moduleIDs;
 
   for (auto it : *segments) {
     Context::SegmentInfo segmentInfo;
@@ -1188,7 +1189,12 @@ std::unique_ptr<llvh::MemoryBuffer> getFileFromDirectoryOrZip(
       auto mapBuf = getFileFromDirectoryOrZip(
           zip, inputPath, llvh::Twine(relPath->str(), ".map"), true);
       // mapBuf is optional, so simply pass it through if it's null.
-      auto moduleID = moduleIdx++;
+
+      auto emplaceRes = moduleIDs.try_emplace(relPath->str(), nextModuleID);
+      auto moduleID = emplaceRes.first->second;
+      if (emplaceRes.second) {
+        ++nextModuleID;
+      }
       segmentInfo.moduleIDs.push_back(moduleID);
       segmentBufs.push_back({moduleID, std::move(fileBuf), std::move(mapBuf)});
     }
@@ -1428,6 +1434,10 @@ bool generateIRForSourcesAsCJSModules(
   Function *topLevelFunction = M.getTopLevelFunction();
   for (auto &entry : fileBufs) {
     for (ModuleInSegment &moduleInSegment : entry.second) {
+      if (M.hasCJSModule(moduleInSegment.id)) {
+        // We've already generated this module as part of another segment.
+        continue;
+      }
       auto &fileBuf = moduleInSegment.file;
       llvh::SmallString<64> filename{fileBuf->getBufferIdentifier()};
       if (sourceMapGen) {
@@ -1984,13 +1994,18 @@ CompileResult compileFromCommandLineOptions() {
     segmentInfo.segment = 0;
     segmentInfos.push_back(std::move(segmentInfo));
 
-    uint32_t id = 0;
+    uint32_t nextModuleID = 0;
+    llvh::DenseMap<llvh::StringRef, uint32_t> moduleIDs;
     SegmentTableEntry entry{};
     for (const std::string &filename : cl::InputFilenames) {
       auto fileBuf = memoryBufferFromFile(filename, true);
       if (!fileBuf)
         return InputFileError;
-      auto moduleID = id++;
+      auto emplaceRes = moduleIDs.try_emplace(filename, nextModuleID);
+      auto moduleID = emplaceRes.first->second;
+      if (emplaceRes.second) {
+        ++nextModuleID;
+      }
       segmentInfo.moduleIDs.push_back(moduleID);
       entry.push_back({moduleID, std::move(fileBuf), nullptr});
     }
