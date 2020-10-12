@@ -251,6 +251,7 @@ jobs:
           command: |
             cd "$HERMES_WS_DIR"
             hermes/utils/build/configure.py --distribute --cmake-flags="$(ruby -rcocoapods-core -e 'load %{hermes/hermes.podspec}; puts HermesHelper.cmake_configuration') -DCMAKE_INSTALL_PREFIX:PATH=../destroot"
+            cmake --build ./build_release
             cmake --build ./build_release --target hermes-runtime-darwin-cocoapods-release
       - run:
           name: Copy artifacts
