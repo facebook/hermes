@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 #include "gtest/gtest.h"
 
 #include "EmptyCell.h"
@@ -27,6 +26,17 @@ MetadataTableForTests getMetadataTable() {
   return MetadataTableForTests(storage);
 }
 
+TEST(GCOOMDeathTest, SuperSegment) {
+  if (GC::maxAllocationSize() == std::numeric_limits<uint32_t>::max()) {
+    // This test won't work if there is no limit on allocation sizes.
+    return;
+  }
+  using SuperSegmentCell = EmptyCell<GC::maxAllocationSize() * 2>;
+  auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfig);
+  EXPECT_OOM(SuperSegmentCell::create(*runtime));
+}
+
+#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 /// A cell size (in bytes) that is likely to be larger than the alignment
 /// requirements on the size of the GC's young generation. So that when we try
 /// and request the young gen be half the size of this cell, we have a
@@ -35,7 +45,7 @@ static constexpr size_t kCellSize = 256 * 1024;
 
 /// Allocating a fixed size cell that is too big for the young gen should cause
 /// an OOM
-TEST(GCOOMFixedSizeDeathTest, Test) {
+TEST(GCOOMDeathTest, FixedSizeDeath) {
   const size_t kHeapSizeHint = kCellSize * GC::kYoungGenFractionDenom / 2;
   using FixedCell = EmptyCell<kCellSize>;
 
@@ -56,7 +66,7 @@ TEST(GCOOMFixedSizeDeathTest, Test) {
 
 // Allocating a variable sized cell that is too big for the young gen (but fits
 // in the old gen) should be fine.
-TEST(GCOOMVarSizeTest, Test) {
+TEST(GCOOMTest, VarSize) {
   const size_t kHeapSizeHint = kCellSize * GC::kYoungGenFractionDenom / 2;
   using VarCell = VarSizedEmptyCell<kCellSize>;
 
@@ -76,7 +86,7 @@ TEST(GCOOMVarSizeTest, Test) {
   VarCell::create(rt);
 }
 
-TEST(GCOOMFragmentationDeathTest, Test) {
+TEST(GCOOMDeathTest, Fragmentation) {
   const size_t kHeapSizeHint =
       AlignedHeapSegment::maxSize() * GC::kYoungGenFractionDenom;
   // Only one of these cells will fit into a segment, with the maximum amount of
@@ -106,7 +116,7 @@ TEST(GCOOMFragmentationDeathTest, Test) {
   EXPECT_OOM(AwkwardCell::create(rt));
 }
 
-TEST(GCEffectiveOOMDeathTest, UnitTest) {
+TEST(GCOOMDeathTest, Effective) {
   const size_t kHeapSizeHint =
       AlignedHeapSegment::maxSize() * GC::kYoungGenFractionDenom;
 
@@ -135,7 +145,7 @@ TEST(GCEffectiveOOMDeathTest, UnitTest) {
   EXPECT_OOM(gc.collect("test", /* canEffectiveOOM */ true));
 }
 
-TEST(GCEffectiveOOMDeathTest, IntegrationTest) {
+TEST(GCOOMDeathTest, EffectiveIntegration) {
   const size_t kHeapSizeHint =
       AlignedHeapSegment::maxSize() * GC::kYoungGenFractionDenom;
   using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
@@ -184,7 +194,7 @@ TEST(GCEffectiveOOMDeathTest, IntegrationTest) {
 /// be able to finish the GC.  This is a regression test as NCGen used to
 /// trigger an OOM if it could not materialise segments in the OldGen, during
 /// full collection, due to VA exhaustion.
-TEST(GCOOMVALimitFullGCTest, Test) {
+TEST(GCOOMTest, VALimitFullGC) {
   const size_t kHeapSizeHint =
       AlignedHeapSegment::maxSize() * GC::kYoungGenFractionDenom;
 
@@ -220,7 +230,6 @@ TEST(GCOOMVALimitFullGCTest, Test) {
   EXPECT_EQ(0, gc.numYoungGCs());
   EXPECT_EQ(1, gc.numFullGCs());
 }
+#endif // HERMESVM_GC_NONCONTIG_GENERATIONAL
 
 } // namespace
-
-#endif // HERMESVM_GC_NONCONTIG_GENERATIONAL

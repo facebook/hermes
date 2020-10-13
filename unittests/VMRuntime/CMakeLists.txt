@@ -32,7 +32,7 @@ set(RTSources
   GCHeapExtentsInCrashManagerTest.cpp
   GCMarkWeakTest.cpp
   GCObjectIterationTest.cpp
-  GCOOMNCTest.cpp
+  GCOOMTest.cpp
   GCReturnUnusedMemoryNCTest.cpp
   GCSanitizeHandlesTest.cpp
   GCSegmentAddressIndexTest.cpp

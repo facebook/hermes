@@ -1563,7 +1563,6 @@ void *HadesGC::allocWork(uint32_t sz) {
       isSizeHeapAligned(sz) &&
       "Should be aligned before entering this function");
   assert(sz >= minAllocationSize() && "Allocating too small of an object");
-  assert(sz <= maxAllocationSize() && "Allocating too large of an object");
   if (kConcurrentGC) {
     HERMES_SLOW_ASSERT(
         !weakRefMutex() &&
@@ -1585,7 +1584,15 @@ void *HadesGC::allocWork(uint32_t sz) {
     youngGenCollection(
         kNaturalCauseForAnalytics, /*forceOldGenCollection*/ false);
     res = youngGen().bumpAlloc(sz);
-    assert(res.success && "Should never fail to allocate");
+    if (LLVM_UNLIKELY(!res.success)) {
+      // A YG collection is guaranteed to fully evacuate, leaving all the space
+      // available, so the only way this could fail is if sz is greater than
+      // a segment size.
+      // This would be an error in VM code to ever allow such a size to be
+      // allocated, and thus there's an assert at the top of this function to
+      // disallow that. This case is for production, if we miss a test case.
+      oom(make_error_code(OOMError::SuperSegmentAlloc));
+    }
   }
   if (hasFinalizer == HasFinalizer::Yes) {
     youngGenFinalizables_.emplace_back(static_cast<GCCell *>(res.ptr));
