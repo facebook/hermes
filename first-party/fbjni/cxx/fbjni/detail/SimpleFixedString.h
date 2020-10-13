@@ -109,8 +109,10 @@ constexpr const char (&checkNullTerminated(const char (&a)[N]) noexcept)[N] {
 #endif
       ) {
     return decltype(a)(a);
+  } else {
+    assertNotNullTerminated();
+    return decltype(a)(a);
   }
-  return (assertNotNullTerminated(), decltype(a)(a));
 }
 
 struct Helper {
