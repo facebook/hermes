@@ -20,7 +20,7 @@ using namespace hermes::ESTree;
 
 class ESTreeJSONDumper {
   JSONEmitter &json_;
-  SourceErrorManager *sm_{nullptr};
+  SourceErrorManager *sm_;
   ESTreeDumpMode mode_;
   LocationDumpMode locMode_;
 
@@ -35,6 +35,9 @@ class ESTreeJSONDumper {
       ESTreeDumpMode mode,
       LocationDumpMode locMode)
       : json_(json), sm_(sm), mode_(mode), locMode_(locMode) {
+    if (locMode != LocationDumpMode::None) {
+      assert(sm && "SourceErrorManager required for dumping");
+    }
 #define ESTREE_NODE_0_ARGS(NAME, ...)
 #define ESTREE_NODE_1_ARGS(NAME, ...)
 #define ESTREE_NODE_2_ARGS(NAME, ...)
@@ -56,7 +59,7 @@ class ESTreeJSONDumper {
  private:
   /// Print the source location for the \p node.
   void printSourceLocation(Node *node) {
-    if (!sm_)
+    if (locMode_ == LocationDumpMode::None)
       return;
     SourceErrorManager::SourceCoords start, end;
     SMRange rng = node->getSourceRange();
@@ -434,11 +437,21 @@ void dumpESTreeJSON(
     llvh::raw_ostream &os,
     NodePtr rootNode,
     bool pretty,
+    ESTreeDumpMode mode) {
+  JSONEmitter json{os, pretty};
+  ESTreeJSONDumper(json, nullptr, mode, LocationDumpMode::None).doIt(rootNode);
+  json.endJSONL();
+}
+
+void dumpESTreeJSON(
+    llvh::raw_ostream &os,
+    NodePtr rootNode,
+    bool pretty,
     ESTreeDumpMode mode,
-    SourceErrorManager *sm,
+    SourceErrorManager &sm,
     LocationDumpMode locMode) {
   JSONEmitter json{os, pretty};
-  ESTreeJSONDumper(json, sm, mode, locMode).doIt(rootNode);
+  ESTreeJSONDumper(json, &sm, mode, locMode).doIt(rootNode);
   json.endJSONL();
 }
 
@@ -446,9 +459,9 @@ void dumpESTreeJSON(
     JSONEmitter &json,
     NodePtr rootNode,
     ESTreeDumpMode mode,
-    SourceErrorManager *sm,
+    SourceErrorManager &sm,
     LocationDumpMode locMode) {
-  ESTreeJSONDumper(json, sm, mode, locMode).doIt(rootNode);
+  ESTreeJSONDumper(json, &sm, mode, locMode).doIt(rootNode);
 }
 
 } // namespace hermes

@@ -835,7 +835,9 @@ ESTree::NodePtr parseJS(
         cl::PrettyJSON /* pretty */,
         cl::IncludeEmptyASTNodes ? ESTreeDumpMode::DumpAll
                                  : ESTreeDumpMode::HideEmpty,
-        cl::DumpSourceLocation ? &context->getSourceErrorManager() : nullptr);
+        context->getSourceErrorManager(),
+        cl::DumpSourceLocation ? LocationDumpMode::LocAndRange
+                               : LocationDumpMode::None);
   }
 
   if (!hermes::sem::validateAST(*context, semCtx, parsedAST)) {
@@ -849,7 +851,9 @@ ESTree::NodePtr parseJS(
         cl::PrettyJSON /* pretty */,
         cl::IncludeEmptyASTNodes ? ESTreeDumpMode::DumpAll
                                  : ESTreeDumpMode::HideEmpty,
-        cl::DumpSourceLocation ? &context->getSourceErrorManager() : nullptr);
+        context->getSourceErrorManager(),
+        cl::DumpSourceLocation ? LocationDumpMode::LocAndRange
+                               : LocationDumpMode::None);
   }
 
   return parsedAST;
