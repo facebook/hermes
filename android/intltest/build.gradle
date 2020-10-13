@@ -8,17 +8,50 @@
 // To run intltests, cd hermes/android and run:
 //   ./gradlew intl:connectedAndroidTest
 
-apply plugin: 'com.android.library'
+plugins {
+  id('com.android.library')
+  id("de.undercouch.download")
+}
+
+import de.undercouch.gradle.tasks.download.Download
 
 buildDir = "${rootProject.ext.hermes_ws}/build_android/intltest"
 buildDir.mkdirs()
 
+def test262DownloadsDirPath = "${rootProject.ext.hermes_ws}/build_android/intltest/downloads/test262"
+def test262Destination = "${rootProject.ext.hermes_ws}/hermes/android/intltest/java/com/facebook/hermes/test/assets"
+task createDownloadsDir {
+  new File(test262DownloadsDirPath).mkdirs()
+}
+
+task downloadTest262(dependsOn: createDownloadsDir, type: Download) {
+  src("https://github.com/tc39/test262/archive/main.zip")
+  onlyIfNewer(true)
+  overwrite(true)
+  dest(new File(test262DownloadsDirPath, "test262.zip"))
+}
+
+task preparetest262(dependsOn: downloadTest262, type: Copy) {
+  from(zipTree(downloadTest262.dest))
+  include("test262-main/test/intl402/Collator/**/*.js")
+  include("test262-main/test/intl402/DateTimeFormat/**/*.js")
+  include("test262-main/test/intl402/NumberFormat/**/*.js")
+  include("test262-main/test/intl402/String/**/*.js")
+  include("test262-main/test/intl402/Number/**/*.js")
+  include("test262-main/test/intl402/Array/**/*.js")
+  include("test262-main/test/intl402/Date/**/*.js")
+  include("test262-main/test/intl402/Intl/**/*.js")
+  include("test262-main/harness/*.js")
+  includeEmptyDirs = true
+  into(test262Destination)
+}
+
 // TODO: Figure out how to deduplicate this file and intl/build.gradle
 android {
-  compileSdkVersion = 24
+  compileSdkVersion 24
 
   defaultConfig {
-    minSdkVersion = 24
+    minSdkVersion 16
     ndk {
       abiFilters (*rootProject.ext.abis)
     }
@@ -59,6 +92,11 @@ android {
     androidTestImplementation 'com.facebook.fbjni:fbjni:0.0.2'
     androidTestImplementation 'com.facebook.soloader:soloader:0.9.0'
     androidTestImplementation 'com.facebook.yoga:proguard-annotations:1.14.1'
+  }
+
+  dependencies {
+    implementation "androidx.annotation:annotation:1.1.0"
+    implementation "androidx.annotation:annotation-experimental:1.0.0"
   }
 
   sourceSets {

@@ -48,7 +48,7 @@ class Option {
     assert(isBool() && "Option is not a bool");
     return num_ == 1.0;
   }
-  bool getNumber() const {
+  double getNumber() const {
     assert(isNumber() && "Option is not a number");
     return num_;
   }

@@ -17,7 +17,7 @@ android {
   compileSdkVersion = 24
 
   defaultConfig {
-    minSdkVersion = 24
+    minSdkVersion 16
     ndk {
       abiFilters (*rootProject.ext.abis)
     }
@@ -69,6 +69,12 @@ android {
     androidTestImplementation 'com.facebook.yoga:proguard-annotations:1.14.1'
     androidTestImplementation project(':cppruntime')
   }
+
+  dependencies {
+    implementation "androidx.annotation:annotation:1.1.0"
+    implementation "androidx.annotation:annotation-experimental:1.0.0"
+  }
+
 
   sourceSets {
     main {

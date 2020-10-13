@@ -96,6 +96,8 @@ CallResult<HermesValue> optionsToJS(
     key = *keyRes;
     if (kv.second.isBool()) {
       value = HermesValue::encodeBoolValue(kv.second.getBool());
+    } else if (kv.second.isNumber()) {
+      value = HermesValue::encodeNumberValue(kv.second.getNumber());
     } else {
       assert(kv.second.isString() && "Option is neither bool nor string");
       CallResult<HermesValue> strRes = StringPrimitive::createEfficient(
@@ -127,6 +129,7 @@ CallResult<Handle<JSObject>> partToJS(
   GCScopeMarkerRAII marker{runtime};
   for (auto &kv : result) {
     marker.flush();
+
     CallResult<HermesValue> keyRes = StringPrimitive::createEfficient(
         runtime, createUTF16Ref(kv.first.c_str()));
     if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION)) {
@@ -143,8 +146,10 @@ CallResult<Handle<JSObject>> partToJS(
     if (LLVM_UNLIKELY(putRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
+
     assert(*putRes && "put returned false on a plain object");
   }
+
   return obj;
 }
 
@@ -202,12 +207,21 @@ CallResult<std::vector<std::u16string>> normalizeLocales(
 
   ret.reserve(*lengthRes);
 
+  bool isProxy = localeObj->isProxyObject();
   if (LLVM_UNLIKELY(
           createListFromArrayLike(
               localeObj,
               runtime,
               *lengthRes,
-              [&ret](Runtime *runtime, uint64_t index, PseudoHandle<> value) {
+              [&ret, isProxy](
+                  Runtime *runtime, uint64_t index, PseudoHandle<> value) {
+                // When the locales list is a proxy object, gaps are allowed.
+                if (isProxy && value->isUndefined())
+                  return ExecutionStatus::RETURNED;
+
+                if (!value->isString() && !value->isObject()) {
+                  return runtime->raiseTypeError("Incorrect object type");
+                }
                 CallResult<std::u16string> strRes =
                     stringFromJS(runtime, std::move(value));
                 if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
@@ -258,7 +272,7 @@ const OptionData kDTFOptions[] = {
     {u"hourCycle", platform_intl::Option::Kind::String, 0},
     {u"timeZone", platform_intl::Option::Kind::String, 0},
     {u"formatMatcher", platform_intl::Option::Kind::String, 0},
-    {u"weekday", platform_intl::Option::Kind::String, kDateDefault},
+    {u"weekday", platform_intl::Option::Kind::String, 0},
     {u"era", platform_intl::Option::Kind::String, 0},
     {u"year",
      platform_intl::Option::Kind::String,
@@ -306,6 +320,9 @@ CallResult<platform_intl::Options> normalizeOptions(
     Handle<> options,
     const OptionData optionData[]) {
   platform_intl::Options ret;
+
+  if (options->isNull())
+    return runtime->raiseTypeError("Options object can't be null !");
 
   auto optionsObj = Handle<JSObject>::dyn_vmcast(options);
   if (!optionsObj) {
@@ -706,7 +723,7 @@ intlCollatorPrototypeCompareGetter(void *, Runtime *runtime, NativeArgs args) {
       nullptr,
       intlCollatorCompare,
       Predefined::getSymbolID(Predefined::emptyString),
-      0,
+      2,
       static_cast<unsigned int>(CollatorCompareSlotIndexes::COUNT));
   setCollator(compare, runtime, collatorHandle);
 
@@ -869,7 +886,7 @@ void defineIntlDateTimeFormat(Runtime *runtime, Handle<JSObject> intl) {
       Predefined::getSymbolID(Predefined::formatToParts),
       nullptr,
       intlDateTimeFormatPrototypeFormatToParts,
-      0);
+      1);
 
   defineMethod(
       runtime,
@@ -997,7 +1014,7 @@ CallResult<HermesValue> intlDateTimeFormatPrototypeFormatGetter(
       nullptr,
       intlDateTimeFormatFormat,
       Predefined::getSymbolID(Predefined::emptyString),
-      0,
+      1,
       static_cast<unsigned int>(DTFFormatSlotIndexes::COUNT));
   setDateTimeFormat(format, runtime, dateTimeFormatHandle);
 
@@ -1185,7 +1202,7 @@ void defineIntlNumberFormat(Runtime *runtime, Handle<JSObject> intl) {
       Predefined::getSymbolID(Predefined::formatToParts),
       nullptr,
       intlNumberFormatPrototypeFormatToParts,
-      0);
+      1);
 
   defineMethod(
       runtime,
@@ -1276,7 +1293,7 @@ CallResult<HermesValue> intlNumberFormatPrototypeFormatGetter(
       nullptr,
       intlNumberFormatFormat,
       Predefined::getSymbolID(Predefined::emptyString),
-      0,
+      1,
       static_cast<unsigned int>(NFFormatSlotIndexes::COUNT));
   setNumberFormat(format, runtime, numberFormatHandle);
 
@@ -1364,7 +1381,7 @@ void toDateTimeOptions(platform_intl::Options &options, int dtoFlags) {
   for (const OptionData *pod = kDTFOptions; pod->name; ++pod) {
     if ((dtoFlags & kDTODate && pod->flags & kDateDefault) ||
         (dtoFlags & kDTOTime && pod->flags & kTimeDefault)) {
-      options.emplace(pod->name, u"numeric");
+      options.emplace(pod->name, std::u16string(u"numeric"));
     }
   }
 }
@@ -1466,7 +1483,7 @@ intlNumberPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   CallResult<platform_intl::Options> optionsRes =
-      normalizeOptions(runtime, args.getArgHandle(1), kDTFOptions);
+      normalizeOptions(runtime, args.getArgHandle(1), kNumberFormatOptions);
   if (LLVM_UNLIKELY(optionsRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1488,7 +1505,7 @@ intlNumberPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 intlStringPrototypeLocaleCompare(void *, Runtime *runtime, NativeArgs args) {
-  if (args.getThisArg().isUndefined() || args.getThisArg().isNumber()) {
+  if (args.getThisArg().isUndefined() || args.getThisArg().isNull()) {
     return runtime->raiseTypeError(
         "String.prototype.localeCompare called on null or undefined");
   }
@@ -1537,7 +1554,7 @@ CallResult<HermesValue> intlStringPrototypeToLocaleLowerCase(
     return ExecutionStatus::EXCEPTION;
   }
   CallResult<std::vector<std::u16string>> localesRes =
-      normalizeLocales(runtime, args.getArgHandle(1));
+      normalizeLocales(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(localesRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1565,7 +1582,7 @@ CallResult<HermesValue> intlStringPrototypeToLocaleUpperCase(
     return ExecutionStatus::EXCEPTION;
   }
   CallResult<std::vector<std::u16string>> localesRes =
-      normalizeLocales(runtime, args.getArgHandle(1));
+      normalizeLocales(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(localesRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

@@ -95,7 +95,6 @@ jni::local_ref<JOptionsMap> optionsToJava(const Options &options) {
     } else {
       assert(kv.second.isString() && "Option is not valid type");
       jvalue = jni::make_jstring(kv.second.getString());
-      continue;
     }
     ret->put(jni::make_jstring(kv.first), jvalue);
   }
@@ -340,7 +339,7 @@ vm::ExecutionStatus Collator::initialize(
     impl_->jCollator_ = jni::make_global(
         JCollator::create(localesToJava(locales), optionsToJava(options)));
   } catch (const std::exception &ex) {
-    runtime->raiseRangeError(ex.what());
+    return runtime->raiseRangeError(ex.what());
   }
 
   return vm::ExecutionStatus::RETURNED;
@@ -370,7 +369,6 @@ class JDateTimeFormat : public jni::JavaClass<JDateTimeFormat> {
   }
 
   static jni::local_ref<JLocalesList> supportedLocalesOf(
-      vm::Runtime *runtime,
       jni::alias_ref<JLocalesList> locales,
       jni::alias_ref<JOptionsMap> options) {
     static const auto method =
@@ -419,7 +417,7 @@ vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
   try {
     return localesFromJava(
         runtime,
-        JCollator::supportedLocalesOf(
+        JDateTimeFormat::supportedLocalesOf(
             localesToJava(locales), optionsToJava(options)));
   } catch (const std::exception &ex) {
     return runtime->raiseRangeError(ex.what());
@@ -434,7 +432,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
     impl_->jDateTimeFormat_ = jni::make_global(JDateTimeFormat::create(
         localesToJava(locales), optionsToJava(options)));
   } catch (const std::exception &ex) {
-    runtime->raiseRangeError(ex.what());
+    return runtime->raiseRangeError(ex.what());
   }
 
   return vm::ExecutionStatus::RETURNED;
@@ -519,7 +517,7 @@ vm::CallResult<std::vector<std::u16string>> NumberFormat::supportedLocalesOf(
   try {
     return localesFromJava(
         runtime,
-        JCollator::supportedLocalesOf(
+        JNumberFormat::supportedLocalesOf(
             localesToJava(locales), optionsToJava(options)));
   } catch (const std::exception &ex) {
     return runtime->raiseRangeError(ex.what());
@@ -534,7 +532,7 @@ vm::ExecutionStatus NumberFormat::initialize(
     impl_->jNumberFormat_ = jni::make_global(
         JNumberFormat::create(localesToJava(locales), optionsToJava(options)));
   } catch (const std::exception &ex) {
-    runtime->raiseRangeError(ex.what());
+    return runtime->raiseRangeError(ex.what());
   }
 
   return vm::ExecutionStatus::RETURNED;
