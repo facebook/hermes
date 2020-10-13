@@ -2046,22 +2046,16 @@ void HadesGC::finalizeYoungGenObjects() {
 
 void HadesGC::updateWeakReferencesForYoungGen() {
   assert(gcMutex_ && "gcMutex must be held when updating weak refs");
-  const Phase phase = concurrentPhase_;
-  // If an OG collection is active, it will be determining what weak references
-  // are live. The YG collection shouldn't modify the state of any weak
-  // references that OG is trying to track. Only fixup pointers that are
-  // pointing to newly evac'ed YG objects.
-  const bool ogCollectionActive = phase != Phase::None;
   for (auto &slot : weakPointers_) {
     switch (slot.state()) {
       case WeakSlotState::Free:
         break;
 
       case WeakSlotState::Marked:
-        if (!ogCollectionActive) {
-          // Set all allocated slots to unmarked.
-          slot.unmark();
-        }
+        // WeakRefSlots may only be marked while an OG collection is in the mark
+        // phase or in the STW pause. The OG collection should unmark any slots
+        // after it is complete.
+        assert(isOldGenMarking_);
         LLVM_FALLTHROUGH;
       case WeakSlotState::Unmarked: {
         // Both marked and unmarked weak ref slots need to be updated.
