@@ -7,7 +7,7 @@
 
 // RUN: %hermes -dump-ast %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -dump-ast -pretty-json %s | %FileCheck --match-full-lines %s --check-prefix=CHECK-PRETTY
-// RUN: %hermes -dump-ast -dump-source-location -pretty-json %s | %FileCheck --match-full-lines %s --check-prefix=CHECK-SOURCE-LOC
+// RUN: %hermes -dump-ast -dump-source-location=both -pretty-json %s | %FileCheck --match-full-lines %s --check-prefix=CHECK-SOURCE-LOC
 // RUN: %hermes -dump-ast -Xinclude-empty-ast-nodes -pretty-json %s | %FileCheck --match-full-lines %s --check-prefix=CHECK-FULL
 
 function foo() {
@@ -188,8 +188,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:             }
 // CHECK-SOURCE-LOC:           },
 // CHECK-SOURCE-LOC:           "range": [
-// CHECK-SOURCE-LOC:             629,
-// CHECK-SOURCE-LOC:             632
+// CHECK-SOURCE-LOC:             634,
+// CHECK-SOURCE-LOC:             637
 // CHECK-SOURCE-LOC:           ]
 // CHECK-SOURCE-LOC:         },
 // CHECK-SOURCE-LOC:         "params": [],
@@ -216,8 +216,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                       }
 // CHECK-SOURCE-LOC:                     },
 // CHECK-SOURCE-LOC:                     "range": [
-// CHECK-SOURCE-LOC:                       646,
-// CHECK-SOURCE-LOC:                       650
+// CHECK-SOURCE-LOC:                       651,
+// CHECK-SOURCE-LOC:                       655
 // CHECK-SOURCE-LOC:                     ]
 // CHECK-SOURCE-LOC:                   },
 // CHECK-SOURCE-LOC:                   "property": {
@@ -234,8 +234,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                       }
 // CHECK-SOURCE-LOC:                     },
 // CHECK-SOURCE-LOC:                     "range": [
-// CHECK-SOURCE-LOC:                       651,
-// CHECK-SOURCE-LOC:                       657
+// CHECK-SOURCE-LOC:                       656,
+// CHECK-SOURCE-LOC:                       662
 // CHECK-SOURCE-LOC:                     ]
 // CHECK-SOURCE-LOC:                   },
 // CHECK-SOURCE-LOC:                   "computed": false,
@@ -250,8 +250,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                     }
 // CHECK-SOURCE-LOC:                   },
 // CHECK-SOURCE-LOC:                   "range": [
-// CHECK-SOURCE-LOC:                     646,
-// CHECK-SOURCE-LOC:                     657
+// CHECK-SOURCE-LOC:                     651,
+// CHECK-SOURCE-LOC:                     662
 // CHECK-SOURCE-LOC:                   ]
 // CHECK-SOURCE-LOC:                 },
 // CHECK-SOURCE-LOC:                 "arguments": [],
@@ -266,8 +266,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                   }
 // CHECK-SOURCE-LOC:                 },
 // CHECK-SOURCE-LOC:                 "range": [
-// CHECK-SOURCE-LOC:                   646,
-// CHECK-SOURCE-LOC:                   659
+// CHECK-SOURCE-LOC:                   651,
+// CHECK-SOURCE-LOC:                   664
 // CHECK-SOURCE-LOC:                 ]
 // CHECK-SOURCE-LOC:               },
 // CHECK-SOURCE-LOC:               "loc": {
@@ -281,8 +281,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                 }
 // CHECK-SOURCE-LOC:               },
 // CHECK-SOURCE-LOC:               "range": [
-// CHECK-SOURCE-LOC:                 639,
-// CHECK-SOURCE-LOC:                 660
+// CHECK-SOURCE-LOC:                 644,
+// CHECK-SOURCE-LOC:                 665
 // CHECK-SOURCE-LOC:               ]
 // CHECK-SOURCE-LOC:             }
 // CHECK-SOURCE-LOC:           ],
@@ -297,8 +297,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:             }
 // CHECK-SOURCE-LOC:           },
 // CHECK-SOURCE-LOC:           "range": [
-// CHECK-SOURCE-LOC:             635,
-// CHECK-SOURCE-LOC:             662
+// CHECK-SOURCE-LOC:             640,
+// CHECK-SOURCE-LOC:             667
 // CHECK-SOURCE-LOC:           ]
 // CHECK-SOURCE-LOC:         },
 // CHECK-SOURCE-LOC:         "generator": false,
@@ -314,8 +314,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:           }
 // CHECK-SOURCE-LOC:         },
 // CHECK-SOURCE-LOC:         "range": [
-// CHECK-SOURCE-LOC:           620,
-// CHECK-SOURCE-LOC:           662
+// CHECK-SOURCE-LOC:           625,
+// CHECK-SOURCE-LOC:           667
 // CHECK-SOURCE-LOC:         ]
 // CHECK-SOURCE-LOC:       },
 // CHECK-SOURCE-LOC:       {
@@ -336,8 +336,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:               }
 // CHECK-SOURCE-LOC:             },
 // CHECK-SOURCE-LOC:             "range": [
-// CHECK-SOURCE-LOC:               672,
-// CHECK-SOURCE-LOC:               675
+// CHECK-SOURCE-LOC:               677,
+// CHECK-SOURCE-LOC:               680
 // CHECK-SOURCE-LOC:             ]
 // CHECK-SOURCE-LOC:           },
 // CHECK-SOURCE-LOC:           "arguments": [],
@@ -352,8 +352,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:             }
 // CHECK-SOURCE-LOC:           },
 // CHECK-SOURCE-LOC:           "range": [
-// CHECK-SOURCE-LOC:             672,
-// CHECK-SOURCE-LOC:             677
+// CHECK-SOURCE-LOC:             677,
+// CHECK-SOURCE-LOC:             682
 // CHECK-SOURCE-LOC:           ]
 // CHECK-SOURCE-LOC:         },
 // CHECK-SOURCE-LOC:         "cases": [
@@ -374,8 +374,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                 }
 // CHECK-SOURCE-LOC:               },
 // CHECK-SOURCE-LOC:               "range": [
-// CHECK-SOURCE-LOC:                 688,
-// CHECK-SOURCE-LOC:                 689
+// CHECK-SOURCE-LOC:                 693,
+// CHECK-SOURCE-LOC:                 694
 // CHECK-SOURCE-LOC:               ]
 // CHECK-SOURCE-LOC:             },
 // CHECK-SOURCE-LOC:             "consequent": [
@@ -397,8 +397,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                       }
 // CHECK-SOURCE-LOC:                     },
 // CHECK-SOURCE-LOC:                     "range": [
-// CHECK-SOURCE-LOC:                       695,
-// CHECK-SOURCE-LOC:                       700
+// CHECK-SOURCE-LOC:                       700,
+// CHECK-SOURCE-LOC:                       705
 // CHECK-SOURCE-LOC:                     ]
 // CHECK-SOURCE-LOC:                   },
 // CHECK-SOURCE-LOC:                   "arguments": [
@@ -416,8 +416,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                         }
 // CHECK-SOURCE-LOC:                       },
 // CHECK-SOURCE-LOC:                       "range": [
-// CHECK-SOURCE-LOC:                         701,
-// CHECK-SOURCE-LOC:                         707
+// CHECK-SOURCE-LOC:                         706,
+// CHECK-SOURCE-LOC:                         712
 // CHECK-SOURCE-LOC:                       ]
 // CHECK-SOURCE-LOC:                     }
 // CHECK-SOURCE-LOC:                   ],
@@ -432,8 +432,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                     }
 // CHECK-SOURCE-LOC:                   },
 // CHECK-SOURCE-LOC:                   "range": [
-// CHECK-SOURCE-LOC:                     695,
-// CHECK-SOURCE-LOC:                     708
+// CHECK-SOURCE-LOC:                     700,
+// CHECK-SOURCE-LOC:                     713
 // CHECK-SOURCE-LOC:                   ]
 // CHECK-SOURCE-LOC:                 },
 // CHECK-SOURCE-LOC:                 "directive": null,
@@ -448,8 +448,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                   }
 // CHECK-SOURCE-LOC:                 },
 // CHECK-SOURCE-LOC:                 "range": [
-// CHECK-SOURCE-LOC:                   695,
-// CHECK-SOURCE-LOC:                   709
+// CHECK-SOURCE-LOC:                   700,
+// CHECK-SOURCE-LOC:                   714
 // CHECK-SOURCE-LOC:                 ]
 // CHECK-SOURCE-LOC:               },
 // CHECK-SOURCE-LOC:               {
@@ -466,8 +466,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                   }
 // CHECK-SOURCE-LOC:                 },
 // CHECK-SOURCE-LOC:                 "range": [
-// CHECK-SOURCE-LOC:                   714,
-// CHECK-SOURCE-LOC:                   720
+// CHECK-SOURCE-LOC:                   719,
+// CHECK-SOURCE-LOC:                   725
 // CHECK-SOURCE-LOC:                 ]
 // CHECK-SOURCE-LOC:               }
 // CHECK-SOURCE-LOC:             ],
@@ -482,8 +482,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:               }
 // CHECK-SOURCE-LOC:             },
 // CHECK-SOURCE-LOC:             "range": [
-// CHECK-SOURCE-LOC:               683,
-// CHECK-SOURCE-LOC:               720
+// CHECK-SOURCE-LOC:               688,
+// CHECK-SOURCE-LOC:               725
 // CHECK-SOURCE-LOC:             ]
 // CHECK-SOURCE-LOC:           },
 // CHECK-SOURCE-LOC:           {
@@ -503,8 +503,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                 }
 // CHECK-SOURCE-LOC:               },
 // CHECK-SOURCE-LOC:               "range": [
-// CHECK-SOURCE-LOC:                 728,
-// CHECK-SOURCE-LOC:                 729
+// CHECK-SOURCE-LOC:                 733,
+// CHECK-SOURCE-LOC:                 734
 // CHECK-SOURCE-LOC:               ]
 // CHECK-SOURCE-LOC:             },
 // CHECK-SOURCE-LOC:             "consequent": [
@@ -526,8 +526,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                       }
 // CHECK-SOURCE-LOC:                     },
 // CHECK-SOURCE-LOC:                     "range": [
-// CHECK-SOURCE-LOC:                       735,
-// CHECK-SOURCE-LOC:                       740
+// CHECK-SOURCE-LOC:                       740,
+// CHECK-SOURCE-LOC:                       745
 // CHECK-SOURCE-LOC:                     ]
 // CHECK-SOURCE-LOC:                   },
 // CHECK-SOURCE-LOC:                   "arguments": [
@@ -545,8 +545,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                         }
 // CHECK-SOURCE-LOC:                       },
 // CHECK-SOURCE-LOC:                       "range": [
-// CHECK-SOURCE-LOC:                         741,
-// CHECK-SOURCE-LOC:                         747
+// CHECK-SOURCE-LOC:                         746,
+// CHECK-SOURCE-LOC:                         752
 // CHECK-SOURCE-LOC:                       ]
 // CHECK-SOURCE-LOC:                     }
 // CHECK-SOURCE-LOC:                   ],
@@ -561,8 +561,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                     }
 // CHECK-SOURCE-LOC:                   },
 // CHECK-SOURCE-LOC:                   "range": [
-// CHECK-SOURCE-LOC:                     735,
-// CHECK-SOURCE-LOC:                     748
+// CHECK-SOURCE-LOC:                     740,
+// CHECK-SOURCE-LOC:                     753
 // CHECK-SOURCE-LOC:                   ]
 // CHECK-SOURCE-LOC:                 },
 // CHECK-SOURCE-LOC:                 "directive": null,
@@ -577,8 +577,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                   }
 // CHECK-SOURCE-LOC:                 },
 // CHECK-SOURCE-LOC:                 "range": [
-// CHECK-SOURCE-LOC:                   735,
-// CHECK-SOURCE-LOC:                   749
+// CHECK-SOURCE-LOC:                   740,
+// CHECK-SOURCE-LOC:                   754
 // CHECK-SOURCE-LOC:                 ]
 // CHECK-SOURCE-LOC:               },
 // CHECK-SOURCE-LOC:               {
@@ -595,8 +595,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                   }
 // CHECK-SOURCE-LOC:                 },
 // CHECK-SOURCE-LOC:                 "range": [
-// CHECK-SOURCE-LOC:                   754,
-// CHECK-SOURCE-LOC:                   760
+// CHECK-SOURCE-LOC:                   759,
+// CHECK-SOURCE-LOC:                   765
 // CHECK-SOURCE-LOC:                 ]
 // CHECK-SOURCE-LOC:               }
 // CHECK-SOURCE-LOC:             ],
@@ -611,8 +611,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:               }
 // CHECK-SOURCE-LOC:             },
 // CHECK-SOURCE-LOC:             "range": [
-// CHECK-SOURCE-LOC:               723,
-// CHECK-SOURCE-LOC:               760
+// CHECK-SOURCE-LOC:               728,
+// CHECK-SOURCE-LOC:               765
 // CHECK-SOURCE-LOC:             ]
 // CHECK-SOURCE-LOC:           },
 // CHECK-SOURCE-LOC:           {
@@ -637,8 +637,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                       }
 // CHECK-SOURCE-LOC:                     },
 // CHECK-SOURCE-LOC:                     "range": [
-// CHECK-SOURCE-LOC:                       776,
-// CHECK-SOURCE-LOC:                       781
+// CHECK-SOURCE-LOC:                       781,
+// CHECK-SOURCE-LOC:                       786
 // CHECK-SOURCE-LOC:                     ]
 // CHECK-SOURCE-LOC:                   },
 // CHECK-SOURCE-LOC:                   "arguments": [
@@ -658,8 +658,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                           }
 // CHECK-SOURCE-LOC:                         },
 // CHECK-SOURCE-LOC:                         "range": [
-// CHECK-SOURCE-LOC:                           782,
-// CHECK-SOURCE-LOC:                           785
+// CHECK-SOURCE-LOC:                           787,
+// CHECK-SOURCE-LOC:                           790
 // CHECK-SOURCE-LOC:                         ]
 // CHECK-SOURCE-LOC:                       },
 // CHECK-SOURCE-LOC:                       "arguments": [],
@@ -674,8 +674,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                         }
 // CHECK-SOURCE-LOC:                       },
 // CHECK-SOURCE-LOC:                       "range": [
-// CHECK-SOURCE-LOC:                         782,
-// CHECK-SOURCE-LOC:                         787
+// CHECK-SOURCE-LOC:                         787,
+// CHECK-SOURCE-LOC:                         792
 // CHECK-SOURCE-LOC:                       ]
 // CHECK-SOURCE-LOC:                     }
 // CHECK-SOURCE-LOC:                   ],
@@ -690,8 +690,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                     }
 // CHECK-SOURCE-LOC:                   },
 // CHECK-SOURCE-LOC:                   "range": [
-// CHECK-SOURCE-LOC:                     776,
-// CHECK-SOURCE-LOC:                     788
+// CHECK-SOURCE-LOC:                     781,
+// CHECK-SOURCE-LOC:                     793
 // CHECK-SOURCE-LOC:                   ]
 // CHECK-SOURCE-LOC:                 },
 // CHECK-SOURCE-LOC:                 "directive": null,
@@ -706,8 +706,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:                   }
 // CHECK-SOURCE-LOC:                 },
 // CHECK-SOURCE-LOC:                 "range": [
-// CHECK-SOURCE-LOC:                   776,
-// CHECK-SOURCE-LOC:                   789
+// CHECK-SOURCE-LOC:                   781,
+// CHECK-SOURCE-LOC:                   794
 // CHECK-SOURCE-LOC:                 ]
 // CHECK-SOURCE-LOC:               }
 // CHECK-SOURCE-LOC:             ],
@@ -722,8 +722,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:               }
 // CHECK-SOURCE-LOC:             },
 // CHECK-SOURCE-LOC:             "range": [
-// CHECK-SOURCE-LOC:               763,
-// CHECK-SOURCE-LOC:               789
+// CHECK-SOURCE-LOC:               768,
+// CHECK-SOURCE-LOC:               794
 // CHECK-SOURCE-LOC:             ]
 // CHECK-SOURCE-LOC:           }
 // CHECK-SOURCE-LOC:         ],
@@ -738,8 +738,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:           }
 // CHECK-SOURCE-LOC:         },
 // CHECK-SOURCE-LOC:         "range": [
-// CHECK-SOURCE-LOC:           664,
-// CHECK-SOURCE-LOC:           791
+// CHECK-SOURCE-LOC:           669,
+// CHECK-SOURCE-LOC:           796
 // CHECK-SOURCE-LOC:         ]
 // CHECK-SOURCE-LOC:       }
 // CHECK-SOURCE-LOC:     ],
@@ -754,8 +754,8 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:       }
 // CHECK-SOURCE-LOC:     },
 // CHECK-SOURCE-LOC:     "range": [
-// CHECK-SOURCE-LOC:       620,
-// CHECK-SOURCE-LOC:       791
+// CHECK-SOURCE-LOC:       625,
+// CHECK-SOURCE-LOC:       796
 // CHECK-SOURCE-LOC:     ]
 // CHECK-SOURCE-LOC:   }
 

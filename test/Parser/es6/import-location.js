@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -commonjs -dump-ast -dump-source-location -pretty-json %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -commonjs -dump-ast -dump-source-location=loc -pretty-json %s | %FileCheck --match-full-lines %s
 
 // CHECK-LABEL:  "body": {
 // CHECK-NEXT:     "type": "BlockStatement",
@@ -30,11 +30,7 @@ import {foo, bar as baz} from 'other';
 // CHECK-NEXT:                   "line": 14,
 // CHECK-NEXT:                   "column": 12
 // CHECK-NEXT:                 }
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "range": [
-// CHECK-NEXT:                 410,
-// CHECK-NEXT:                 413
-// CHECK-NEXT:               ]
+// CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "local": {
 // CHECK-NEXT:               "type": "Identifier",
@@ -48,11 +44,7 @@ import {foo, bar as baz} from 'other';
 // CHECK-NEXT:                   "line": 14,
 // CHECK-NEXT:                   "column": 12
 // CHECK-NEXT:                 }
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "range": [
-// CHECK-NEXT:                 410,
-// CHECK-NEXT:                 413
-// CHECK-NEXT:               ]
+// CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "importKind": "value",
 // CHECK-NEXT:             "loc": {
@@ -64,11 +56,7 @@ import {foo, bar as baz} from 'other';
 // CHECK-NEXT:                 "line": 14,
 // CHECK-NEXT:                 "column": 12
 // CHECK-NEXT:               }
-// CHECK-NEXT:             },
-// CHECK-NEXT:             "range": [
-// CHECK-NEXT:               410,
-// CHECK-NEXT:               413
-// CHECK-NEXT:             ]
+// CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "ImportSpecifier",
@@ -84,11 +72,7 @@ import {foo, bar as baz} from 'other';
 // CHECK-NEXT:                   "line": 14,
 // CHECK-NEXT:                   "column": 17
 // CHECK-NEXT:                 }
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "range": [
-// CHECK-NEXT:                 415,
-// CHECK-NEXT:                 418
-// CHECK-NEXT:               ]
+// CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "local": {
 // CHECK-NEXT:               "type": "Identifier",
@@ -102,11 +86,7 @@ import {foo, bar as baz} from 'other';
 // CHECK-NEXT:                   "line": 14,
 // CHECK-NEXT:                   "column": 24
 // CHECK-NEXT:                 }
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "range": [
-// CHECK-NEXT:                 422,
-// CHECK-NEXT:                 425
-// CHECK-NEXT:               ]
+// CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "importKind": "value",
 // CHECK-NEXT:             "loc": {
@@ -118,11 +98,7 @@ import {foo, bar as baz} from 'other';
 // CHECK-NEXT:                 "line": 14,
 // CHECK-NEXT:                 "column": 24
 // CHECK-NEXT:               }
-// CHECK-NEXT:             },
-// CHECK-NEXT:             "range": [
-// CHECK-NEXT:               415,
-// CHECK-NEXT:               425
-// CHECK-NEXT:             ]
+// CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "source": {
@@ -137,11 +113,7 @@ import {foo, bar as baz} from 'other';
 // CHECK-NEXT:               "line": 14,
 // CHECK-NEXT:               "column": 38
 // CHECK-NEXT:             }
-// CHECK-NEXT:           },
-// CHECK-NEXT:           "range": [
-// CHECK-NEXT:             432,
-// CHECK-NEXT:             439
-// CHECK-NEXT:           ]
+// CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "importKind": "value",
 // CHECK-NEXT:         "loc": {
@@ -153,11 +125,7 @@ import {foo, bar as baz} from 'other';
 // CHECK-NEXT:             "line": 14,
 // CHECK-NEXT:             "column": 39
 // CHECK-NEXT:           }
-// CHECK-NEXT:         },
-// CHECK-NEXT:         "range": [
-// CHECK-NEXT:           402,
-// CHECK-NEXT:           440
-// CHECK-NEXT:         ]
+// CHECK-NEXT:         }
 // CHECK-NEXT:       }
 // CHECK-NEXT:     ],
 // CHECK-NEXT:     "loc": {
@@ -169,11 +137,7 @@ import {foo, bar as baz} from 'other';
 // CHECK-NEXT:         "line": 14,
 // CHECK-NEXT:         "column": 39
 // CHECK-NEXT:       }
-// CHECK-NEXT:     },
-// CHECK-NEXT:     "range": [
-// CHECK-NEXT:       402,
-// CHECK-NEXT:       440
-// CHECK-NEXT:     ]
+// CHECK-NEXT:     }
 // CHECK-NEXT:   },
 
 // CHECK-NEXT:   "generator": false,
@@ -187,9 +151,5 @@ import {foo, bar as baz} from 'other';
 // CHECK-NEXT:       "line": 14,
 // CHECK-NEXT:       "column": 39
 // CHECK-NEXT:     }
-// CHECK-NEXT:   },
-// CHECK-NEXT:   "range": [
-// CHECK-NEXT:     402,
-// CHECK-NEXT:     440
-// CHECK-NEXT:   ]
+// CHECK-NEXT:   }
 // CHECK-NEXT: }

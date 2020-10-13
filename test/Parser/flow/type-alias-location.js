@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -parse-flow -commonjs -dump-ast -dump-source-location -pretty-json %s | %FileCheck %s --match-full-lines
+// RUN: %hermes -parse-flow -commonjs -dump-ast -dump-source-location=loc -pretty-json %s | %FileCheck %s --match-full-lines
 
 // CHECK-LABEL:   "body": {
 // CHECK-NEXT:     "type": "BlockStatement",
@@ -37,11 +37,7 @@ export type T = string;
 // CHECK-NEXT:               "line": 14,
 // CHECK-NEXT:               "column": 7
 // CHECK-NEXT:             }
-// CHECK-NEXT:           },
-// CHECK-NEXT:           "range": [
-// CHECK-NEXT:             420,
-// CHECK-NEXT:             421
-// CHECK-NEXT:           ]
+// CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "typeParameters": null,
 // CHECK-NEXT:         "right": {
@@ -55,11 +51,7 @@ export type T = string;
 // CHECK-NEXT:               "line": 14,
 // CHECK-NEXT:               "column": 16
 // CHECK-NEXT:             }
-// CHECK-NEXT:           },
-// CHECK-NEXT:           "range": [
-// CHECK-NEXT:             424,
-// CHECK-NEXT:             430
-// CHECK-NEXT:           ]
+// CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "loc": {
 // CHECK-NEXT:           "start": {
@@ -70,11 +62,7 @@ export type T = string;
 // CHECK-NEXT:             "line": 14,
 // CHECK-NEXT:             "column": 16
 // CHECK-NEXT:           }
-// CHECK-NEXT:         },
-// CHECK-NEXT:         "range": [
-// CHECK-NEXT:           415,
-// CHECK-NEXT:           430
-// CHECK-NEXT:         ]
+// CHECK-NEXT:         }
 // CHECK-NEXT:       },
 
 // CHECK-NEXT:       {
@@ -91,11 +79,7 @@ export type T = string;
 // CHECK-NEXT:               "line": 16,
 // CHECK-NEXT:               "column": 7
 // CHECK-NEXT:             }
-// CHECK-NEXT:           },
-// CHECK-NEXT:           "range": [
-// CHECK-NEXT:             437,
-// CHECK-NEXT:             438
-// CHECK-NEXT:           ]
+// CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "typeParameters": null,
 // CHECK-NEXT:         "right": {
@@ -109,11 +93,7 @@ export type T = string;
 // CHECK-NEXT:               "line": 16,
 // CHECK-NEXT:               "column": 16
 // CHECK-NEXT:             }
-// CHECK-NEXT:           },
-// CHECK-NEXT:           "range": [
-// CHECK-NEXT:             441,
-// CHECK-NEXT:             447
-// CHECK-NEXT:           ]
+// CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "loc": {
 // CHECK-NEXT:           "start": {
@@ -124,11 +104,7 @@ export type T = string;
 // CHECK-NEXT:             "line": 16,
 // CHECK-NEXT:             "column": 17
 // CHECK-NEXT:           }
-// CHECK-NEXT:         },
-// CHECK-NEXT:         "range": [
-// CHECK-NEXT:           432,
-// CHECK-NEXT:           448
-// CHECK-NEXT:         ]
+// CHECK-NEXT:         }
 // CHECK-NEXT:       },
 
 // CHECK-NEXT:       {
@@ -145,11 +121,7 @@ export type T = string;
 // CHECK-NEXT:               "line": 18,
 // CHECK-NEXT:               "column": 22
 // CHECK-NEXT:             }
-// CHECK-NEXT:           },
-// CHECK-NEXT:           "range": [
-// CHECK-NEXT:             470,
-// CHECK-NEXT:             471
-// CHECK-NEXT:           ]
+// CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "typeParameters": null,
 // CHECK-NEXT:         "impltype": null,
@@ -163,11 +135,7 @@ export type T = string;
 // CHECK-NEXT:             "line": 18,
 // CHECK-NEXT:             "column": 22
 // CHECK-NEXT:           }
-// CHECK-NEXT:         },
-// CHECK-NEXT:         "range": [
-// CHECK-NEXT:           450,
-// CHECK-NEXT:           471
-// CHECK-NEXT:         ]
+// CHECK-NEXT:         }
 // CHECK-NEXT:       },
 
 // CHECK-NEXT:       {
@@ -184,11 +152,7 @@ export type T = string;
 // CHECK-NEXT:               "line": 20,
 // CHECK-NEXT:               "column": 22
 // CHECK-NEXT:             }
-// CHECK-NEXT:           },
-// CHECK-NEXT:           "range": [
-// CHECK-NEXT:             493,
-// CHECK-NEXT:             494
-// CHECK-NEXT:           ]
+// CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "typeParameters": {
 // CHECK-NEXT:           "type": "TypeParameterDeclaration",
@@ -208,11 +172,7 @@ export type T = string;
 // CHECK-NEXT:                   "line": 20,
 // CHECK-NEXT:                   "column": 24
 // CHECK-NEXT:                 }
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "range": [
-// CHECK-NEXT:                 495,
-// CHECK-NEXT:                 496
-// CHECK-NEXT:               ]
+// CHECK-NEXT:               }
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "loc": {
@@ -224,11 +184,7 @@ export type T = string;
 // CHECK-NEXT:               "line": 20,
 // CHECK-NEXT:               "column": 25
 // CHECK-NEXT:             }
-// CHECK-NEXT:           },
-// CHECK-NEXT:           "range": [
-// CHECK-NEXT:             494,
-// CHECK-NEXT:             497
-// CHECK-NEXT:           ]
+// CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "impltype": null,
 // CHECK-NEXT:         "supertype": null,
@@ -241,11 +197,7 @@ export type T = string;
 // CHECK-NEXT:             "line": 20,
 // CHECK-NEXT:             "column": 25
 // CHECK-NEXT:           }
-// CHECK-NEXT:         },
-// CHECK-NEXT:         "range": [
-// CHECK-NEXT:           473,
-// CHECK-NEXT:           497
-// CHECK-NEXT:         ]
+// CHECK-NEXT:         }
 // CHECK-NEXT:       },
 
 // CHECK-NEXT:       {
@@ -262,11 +214,7 @@ export type T = string;
 // CHECK-NEXT:               "line": 22,
 // CHECK-NEXT:               "column": 22
 // CHECK-NEXT:             }
-// CHECK-NEXT:           },
-// CHECK-NEXT:           "range": [
-// CHECK-NEXT:             519,
-// CHECK-NEXT:             520
-// CHECK-NEXT:           ]
+// CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "typeParameters": null,
 // CHECK-NEXT:         "impltype": null,
@@ -281,11 +229,7 @@ export type T = string;
 // CHECK-NEXT:               "line": 22,
 // CHECK-NEXT:               "column": 30
 // CHECK-NEXT:             }
-// CHECK-NEXT:           },
-// CHECK-NEXT:           "range": [
-// CHECK-NEXT:             522,
-// CHECK-NEXT:             528
-// CHECK-NEXT:           ]
+// CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "loc": {
 // CHECK-NEXT:           "start": {
@@ -296,11 +240,7 @@ export type T = string;
 // CHECK-NEXT:             "line": 22,
 // CHECK-NEXT:             "column": 30
 // CHECK-NEXT:           }
-// CHECK-NEXT:         },
-// CHECK-NEXT:         "range": [
-// CHECK-NEXT:           499,
-// CHECK-NEXT:           528
-// CHECK-NEXT:         ]
+// CHECK-NEXT:         }
 // CHECK-NEXT:       },
 
 // CHECK-NEXT:       {
@@ -319,11 +259,7 @@ export type T = string;
 // CHECK-NEXT:                 "line": 24,
 // CHECK-NEXT:                 "column": 14
 // CHECK-NEXT:               }
-// CHECK-NEXT:             },
-// CHECK-NEXT:             "range": [
-// CHECK-NEXT:               542,
-// CHECK-NEXT:               543
-// CHECK-NEXT:             ]
+// CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "typeParameters": null,
 // CHECK-NEXT:           "right": {
@@ -337,11 +273,7 @@ export type T = string;
 // CHECK-NEXT:                 "line": 24,
 // CHECK-NEXT:                 "column": 23
 // CHECK-NEXT:               }
-// CHECK-NEXT:             },
-// CHECK-NEXT:             "range": [
-// CHECK-NEXT:               546,
-// CHECK-NEXT:               552
-// CHECK-NEXT:             ]
+// CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "loc": {
 // CHECK-NEXT:             "start": {
@@ -352,11 +284,7 @@ export type T = string;
 // CHECK-NEXT:               "line": 24,
 // CHECK-NEXT:               "column": 24
 // CHECK-NEXT:             }
-// CHECK-NEXT:           },
-// CHECK-NEXT:           "range": [
-// CHECK-NEXT:             537,
-// CHECK-NEXT:             553
-// CHECK-NEXT:           ]
+// CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "specifiers": [],
 // CHECK-NEXT:         "source": null,
@@ -370,9 +298,5 @@ export type T = string;
 // CHECK-NEXT:             "line": 24,
 // CHECK-NEXT:             "column": 24
 // CHECK-NEXT:           }
-// CHECK-NEXT:         },
-// CHECK-NEXT:         "range": [
-// CHECK-NEXT:           530,
-// CHECK-NEXT:           553
-// CHECK-NEXT:         ]
+// CHECK-NEXT:         }
 // CHECK-NEXT:       }

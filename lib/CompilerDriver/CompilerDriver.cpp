@@ -361,9 +361,17 @@ static opt<bool> DumpUseList(
     init(false),
     cat(CompilerCategory));
 
-static opt<bool> DumpSourceLocation(
+static opt<LocationDumpMode> DumpSourceLocation(
     "dump-source-location",
     desc("Print source location information in IR or AST dumps."),
+    init(LocationDumpMode::None),
+    values(
+        clEnumValN(
+            LocationDumpMode::LocAndRange,
+            "both",
+            "Print both source location and byte range"),
+        clEnumValN(LocationDumpMode::Loc, "loc", "Print only source location"),
+        clEnumValN(LocationDumpMode::Range, "range", "Print only byte range")),
     cat(CompilerCategory));
 
 static opt<bool> IncludeEmptyASTNodes(
@@ -836,8 +844,7 @@ ESTree::NodePtr parseJS(
         cl::IncludeEmptyASTNodes ? ESTreeDumpMode::DumpAll
                                  : ESTreeDumpMode::HideEmpty,
         context->getSourceErrorManager(),
-        cl::DumpSourceLocation ? LocationDumpMode::LocAndRange
-                               : LocationDumpMode::None);
+        cl::DumpSourceLocation);
   }
 
   if (!hermes::sem::validateAST(*context, semCtx, parsedAST)) {
@@ -852,8 +859,7 @@ ESTree::NodePtr parseJS(
         cl::IncludeEmptyASTNodes ? ESTreeDumpMode::DumpAll
                                  : ESTreeDumpMode::HideEmpty,
         context->getSourceErrorManager(),
-        cl::DumpSourceLocation ? LocationDumpMode::LocAndRange
-                               : LocationDumpMode::None);
+        cl::DumpSourceLocation);
   }
 
   return parsedAST;
@@ -972,7 +978,8 @@ std::shared_ptr<Context> createContext(
   codeGenOpts.enableTDZ = cl::EnableTDZ;
   codeGenOpts.dumpOperandRegisters = cl::DumpOperandRegisters;
   codeGenOpts.dumpUseList = cl::DumpUseList;
-  codeGenOpts.dumpSourceLocation = cl::DumpSourceLocation;
+  codeGenOpts.dumpSourceLocation =
+      cl::DumpSourceLocation != LocationDumpMode::None;
   codeGenOpts.dumpIRBetweenPasses = cl::DumpBetweenPasses;
   if (cl::BytecodeFormat == cl::BytecodeFormatKind::HBC) {
     codeGenOpts.unlimitedRegisters = false;

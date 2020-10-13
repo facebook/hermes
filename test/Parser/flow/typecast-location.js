@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -parse-flow -dump-ast -dump-source-location -pretty-json %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -parse-flow -dump-ast -dump-source-location=loc -pretty-json %s | %FileCheck --match-full-lines %s
 
 // CHECK-LABEL: {
 // CHECK-NEXT:   "type": "Program",
@@ -28,11 +28,7 @@
 // CHECK-NEXT:               "line": 14,
 // CHECK-NEXT:               "column": 5
 // CHECK-NEXT:             }
-// CHECK-NEXT:           },
-// CHECK-NEXT:           "range": [
-// CHECK-NEXT:             385,
-// CHECK-NEXT:             388
-// CHECK-NEXT:           ]
+// CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "typeAnnotation": {
 // CHECK-NEXT:           "type": "TypeAnnotation",
@@ -47,11 +43,7 @@
 // CHECK-NEXT:                 "line": 14,
 // CHECK-NEXT:                 "column": 13
 // CHECK-NEXT:               }
-// CHECK-NEXT:             },
-// CHECK-NEXT:             "range": [
-// CHECK-NEXT:               390,
-// CHECK-NEXT:               396
-// CHECK-NEXT:             ]
+// CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "loc": {
 // CHECK-NEXT:             "start": {
@@ -62,11 +54,7 @@
 // CHECK-NEXT:               "line": 14,
 // CHECK-NEXT:               "column": 13
 // CHECK-NEXT:             }
-// CHECK-NEXT:           },
-// CHECK-NEXT:           "range": [
-// CHECK-NEXT:             390,
-// CHECK-NEXT:             396
-// CHECK-NEXT:           ]
+// CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "loc": {
 // CHECK-NEXT:           "start": {
@@ -77,11 +65,7 @@
 // CHECK-NEXT:             "line": 14,
 // CHECK-NEXT:             "column": 13
 // CHECK-NEXT:           }
-// CHECK-NEXT:         },
-// CHECK-NEXT:         "range": [
-// CHECK-NEXT:           385,
-// CHECK-NEXT:           396
-// CHECK-NEXT:         ]
+// CHECK-NEXT:         }
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "directive": null,
 // CHECK-NEXT:       "loc": {
@@ -93,11 +77,7 @@
 // CHECK-NEXT:           "line": 14,
 // CHECK-NEXT:           "column": 15
 // CHECK-NEXT:         }
-// CHECK-NEXT:       },
-// CHECK-NEXT:       "range": [
-// CHECK-NEXT:         385,
-// CHECK-NEXT:         398
-// CHECK-NEXT:       ]
+// CHECK-NEXT:       }
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ],
@@ -110,9 +90,5 @@
 // CHECK-NEXT:       "line": 14,
 // CHECK-NEXT:       "column": 15
 // CHECK-NEXT:     }
-// CHECK-NEXT:   },
-// CHECK-NEXT:   "range": [
-// CHECK-NEXT:     384,
-// CHECK-NEXT:     398
-// CHECK-NEXT:   ]
+// CHECK-NEXT:   }
 // CHECK-NEXT: }

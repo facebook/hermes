@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -dump-ast -dump-source-location -pretty-json %s | %FileCheck %s --match-full-lines
+// RUN: %hermes -dump-ast -dump-source-location=loc -pretty-json %s | %FileCheck %s --match-full-lines
 
 // CHECK-LABEL: {
 // CHECK-NEXT:   "type": "Program",
@@ -30,11 +30,7 @@ class C {
 // CHECK-NEXT:             "line": 14,
 // CHECK-NEXT:             "column": 8
 // CHECK-NEXT:           }
-// CHECK-NEXT:         },
-// CHECK-NEXT:         "range": [
-// CHECK-NEXT:           378,
-// CHECK-NEXT:           379
-// CHECK-NEXT:         ]
+// CHECK-NEXT:         }
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "superClass": null,
 // CHECK-NEXT:       "body": {
@@ -55,11 +51,7 @@ class C {
 // CHECK-NEXT:                   "line": 15,
 // CHECK-NEXT:                   "column": 11
 // CHECK-NEXT:                 }
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "range": [
-// CHECK-NEXT:                 391,
-// CHECK-NEXT:                 392
-// CHECK-NEXT:               ]
+// CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "NumericLiteral",
@@ -74,11 +66,7 @@ class C {
 // CHECK-NEXT:                   "line": 15,
 // CHECK-NEXT:                   "column": 15
 // CHECK-NEXT:                 }
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "range": [
-// CHECK-NEXT:                 395,
-// CHECK-NEXT:                 396
-// CHECK-NEXT:               ]
+// CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "computed": false,
 // CHECK-NEXT:             "static": true,
@@ -91,11 +79,7 @@ class C {
 // CHECK-NEXT:                 "line": 15,
 // CHECK-NEXT:                 "column": 16
 // CHECK-NEXT:               }
-// CHECK-NEXT:             },
-// CHECK-NEXT:             "range": [
-// CHECK-NEXT:               384,
-// CHECK-NEXT:               397
-// CHECK-NEXT:             ]
+// CHECK-NEXT:             }
 // CHECK-NEXT:           },
 
 // CHECK-NEXT:           {
@@ -112,11 +96,7 @@ class C {
 // CHECK-NEXT:                   "line": 16,
 // CHECK-NEXT:                   "column": 11
 // CHECK-NEXT:                 }
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "range": [
-// CHECK-NEXT:                 407,
-// CHECK-NEXT:                 408
-// CHECK-NEXT:               ]
+// CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionExpression",
@@ -134,11 +114,7 @@ class C {
 // CHECK-NEXT:                     "line": 16,
 // CHECK-NEXT:                     "column": 16
 // CHECK-NEXT:                   }
-// CHECK-NEXT:                 },
-// CHECK-NEXT:                 "range": [
-// CHECK-NEXT:                   411,
-// CHECK-NEXT:                   413
-// CHECK-NEXT:                 ]
+// CHECK-NEXT:                 }
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "generator": false,
 // CHECK-NEXT:               "async": false,
@@ -151,11 +127,7 @@ class C {
 // CHECK-NEXT:                   "line": 16,
 // CHECK-NEXT:                   "column": 16
 // CHECK-NEXT:                 }
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "range": [
-// CHECK-NEXT:                 407,
-// CHECK-NEXT:                 413
-// CHECK-NEXT:               ]
+// CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "method",
 // CHECK-NEXT:             "computed": false,
@@ -169,11 +141,7 @@ class C {
 // CHECK-NEXT:                 "line": 16,
 // CHECK-NEXT:                 "column": 16
 // CHECK-NEXT:               }
-// CHECK-NEXT:             },
-// CHECK-NEXT:             "range": [
-// CHECK-NEXT:               400,
-// CHECK-NEXT:               413
-// CHECK-NEXT:             ]
+// CHECK-NEXT:             }
 // CHECK-NEXT:           }
 
 // CHECK-NEXT:         ],
@@ -186,11 +154,7 @@ class C {
 // CHECK-NEXT:             "line": 17,
 // CHECK-NEXT:             "column": 2
 // CHECK-NEXT:           }
-// CHECK-NEXT:         },
-// CHECK-NEXT:         "range": [
-// CHECK-NEXT:           380,
-// CHECK-NEXT:           415
-// CHECK-NEXT:         ]
+// CHECK-NEXT:         }
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "loc": {
 // CHECK-NEXT:         "start": {
@@ -201,11 +165,7 @@ class C {
 // CHECK-NEXT:           "line": 17,
 // CHECK-NEXT:           "column": 2
 // CHECK-NEXT:         }
-// CHECK-NEXT:       },
-// CHECK-NEXT:       "range": [
-// CHECK-NEXT:         372,
-// CHECK-NEXT:         415
-// CHECK-NEXT:       ]
+// CHECK-NEXT:       }
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "loc": {
@@ -217,9 +177,5 @@ class C {
 // CHECK-NEXT:       "line": 17,
 // CHECK-NEXT:       "column": 2
 // CHECK-NEXT:     }
-// CHECK-NEXT:   },
-// CHECK-NEXT:   "range": [
-// CHECK-NEXT:     372,
-// CHECK-NEXT:     415
-// CHECK-NEXT:   ]
+// CHECK-NEXT:   }
 // CHECK-NEXT: }

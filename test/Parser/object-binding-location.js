@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -dump-ast -dump-source-location -pretty-json %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -dump-ast -dump-source-location=loc -pretty-json %s | %FileCheck --match-full-lines %s
 
 // CHECK-LABEL: {
 // CHECK-NEXT:   "type": "Program",
@@ -30,11 +30,7 @@ const {[a]: b} = c;
 // CHECK-NEXT:                 "line": 14,
 // CHECK-NEXT:                 "column": 19
 // CHECK-NEXT:               }
-// CHECK-NEXT:             },
-// CHECK-NEXT:             "range": [
-// CHECK-NEXT:               389,
-// CHECK-NEXT:               390
-// CHECK-NEXT:             ]
+// CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "id": {
 // CHECK-NEXT:             "type": "ObjectPattern",
@@ -53,11 +49,7 @@ const {[a]: b} = c;
 // CHECK-NEXT:                       "line": 14,
 // CHECK-NEXT:                       "column": 10
 // CHECK-NEXT:                     }
-// CHECK-NEXT:                   },
-// CHECK-NEXT:                   "range": [
-// CHECK-NEXT:                     380,
-// CHECK-NEXT:                     381
-// CHECK-NEXT:                   ]
+// CHECK-NEXT:                   }
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "value": {
 // CHECK-NEXT:                   "type": "Identifier",
@@ -71,11 +63,7 @@ const {[a]: b} = c;
 // CHECK-NEXT:                       "line": 14,
 // CHECK-NEXT:                       "column": 14
 // CHECK-NEXT:                     }
-// CHECK-NEXT:                   },
-// CHECK-NEXT:                   "range": [
-// CHECK-NEXT:                     384,
-// CHECK-NEXT:                     385
-// CHECK-NEXT:                   ]
+// CHECK-NEXT:                   }
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "kind": "init",
 // CHECK-NEXT:                 "computed": true,
@@ -90,11 +78,7 @@ const {[a]: b} = c;
 // CHECK-NEXT:                     "line": 14,
 // CHECK-NEXT:                     "column": 14
 // CHECK-NEXT:                   }
-// CHECK-NEXT:                 },
-// CHECK-NEXT:                 "range": [
-// CHECK-NEXT:                   379,
-// CHECK-NEXT:                   385
-// CHECK-NEXT:                 ]
+// CHECK-NEXT:                 }
 // CHECK-NEXT:               }
 // CHECK-NEXT:             ],
 // CHECK-NEXT:             "loc": {
@@ -106,11 +90,7 @@ const {[a]: b} = c;
 // CHECK-NEXT:                 "line": 14,
 // CHECK-NEXT:                 "column": 15
 // CHECK-NEXT:               }
-// CHECK-NEXT:             },
-// CHECK-NEXT:             "range": [
-// CHECK-NEXT:               378,
-// CHECK-NEXT:               386
-// CHECK-NEXT:             ]
+// CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "loc": {
 // CHECK-NEXT:             "start": {
@@ -121,11 +101,7 @@ const {[a]: b} = c;
 // CHECK-NEXT:               "line": 14,
 // CHECK-NEXT:               "column": 19
 // CHECK-NEXT:             }
-// CHECK-NEXT:           },
-// CHECK-NEXT:           "range": [
-// CHECK-NEXT:             378,
-// CHECK-NEXT:             390
-// CHECK-NEXT:           ]
+// CHECK-NEXT:           }
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "loc": {
@@ -137,11 +113,7 @@ const {[a]: b} = c;
 // CHECK-NEXT:           "line": 14,
 // CHECK-NEXT:           "column": 20
 // CHECK-NEXT:         }
-// CHECK-NEXT:       },
-// CHECK-NEXT:       "range": [
-// CHECK-NEXT:         372,
-// CHECK-NEXT:         391
-// CHECK-NEXT:       ]
+// CHECK-NEXT:       }
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ],
@@ -154,9 +126,5 @@ const {[a]: b} = c;
 // CHECK-NEXT:       "line": 14,
 // CHECK-NEXT:       "column": 20
 // CHECK-NEXT:     }
-// CHECK-NEXT:   },
-// CHECK-NEXT:   "range": [
-// CHECK-NEXT:     372,
-// CHECK-NEXT:     391
-// CHECK-NEXT:   ]
+// CHECK-NEXT:   }
 // CHECK-NEXT: }

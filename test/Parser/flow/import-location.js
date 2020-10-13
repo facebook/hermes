@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -parse-flow -commonjs -dump-ast -dump-source-location -pretty-json %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -parse-flow -commonjs -dump-ast -dump-source-location=loc -pretty-json %s | %FileCheck --match-full-lines %s
 
 // CHECK-LABEL:   "body": {
 // CHECK-NEXT:     "type": "BlockStatement",
@@ -32,11 +32,7 @@ import typeof Foo, {bar} from 'foo';
 // CHECK-NEXT:                   "line": 14,
 // CHECK-NEXT:                   "column": 16
 // CHECK-NEXT:                 }
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "range": [
-// CHECK-NEXT:                 427,
-// CHECK-NEXT:                 430
-// CHECK-NEXT:               ]
+// CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "loc": {
 // CHECK-NEXT:               "start": {
@@ -47,11 +43,7 @@ import typeof Foo, {bar} from 'foo';
 // CHECK-NEXT:                 "line": 14,
 // CHECK-NEXT:                 "column": 16
 // CHECK-NEXT:               }
-// CHECK-NEXT:             },
-// CHECK-NEXT:             "range": [
-// CHECK-NEXT:               427,
-// CHECK-NEXT:               430
-// CHECK-NEXT:             ]
+// CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "source": {
@@ -66,11 +58,7 @@ import typeof Foo, {bar} from 'foo';
 // CHECK-NEXT:               "line": 14,
 // CHECK-NEXT:               "column": 27
 // CHECK-NEXT:             }
-// CHECK-NEXT:           },
-// CHECK-NEXT:           "range": [
-// CHECK-NEXT:             436,
-// CHECK-NEXT:             441
-// CHECK-NEXT:           ]
+// CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "importKind": "type",
 // CHECK-NEXT:         "loc": {
@@ -82,11 +70,7 @@ import typeof Foo, {bar} from 'foo';
 // CHECK-NEXT:             "line": 14,
 // CHECK-NEXT:             "column": 28
 // CHECK-NEXT:           }
-// CHECK-NEXT:         },
-// CHECK-NEXT:         "range": [
-// CHECK-NEXT:           415,
-// CHECK-NEXT:           442
-// CHECK-NEXT:         ]
+// CHECK-NEXT:         }
 // CHECK-NEXT:       },
 
 // CHECK-NEXT:       {
@@ -106,11 +90,7 @@ import typeof Foo, {bar} from 'foo';
 // CHECK-NEXT:                   "line": 16,
 // CHECK-NEXT:                   "column": 18
 // CHECK-NEXT:                 }
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "range": [
-// CHECK-NEXT:                 458,
-// CHECK-NEXT:                 461
-// CHECK-NEXT:               ]
+// CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "loc": {
 // CHECK-NEXT:               "start": {
@@ -121,11 +101,7 @@ import typeof Foo, {bar} from 'foo';
 // CHECK-NEXT:                 "line": 16,
 // CHECK-NEXT:                 "column": 18
 // CHECK-NEXT:               }
-// CHECK-NEXT:             },
-// CHECK-NEXT:             "range": [
-// CHECK-NEXT:               458,
-// CHECK-NEXT:               461
-// CHECK-NEXT:             ]
+// CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "ImportSpecifier",
@@ -141,11 +117,7 @@ import typeof Foo, {bar} from 'foo';
 // CHECK-NEXT:                   "line": 16,
 // CHECK-NEXT:                   "column": 24
 // CHECK-NEXT:                 }
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "range": [
-// CHECK-NEXT:                 464,
-// CHECK-NEXT:                 467
-// CHECK-NEXT:               ]
+// CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "local": {
 // CHECK-NEXT:               "type": "Identifier",
@@ -159,11 +131,7 @@ import typeof Foo, {bar} from 'foo';
 // CHECK-NEXT:                   "line": 16,
 // CHECK-NEXT:                   "column": 24
 // CHECK-NEXT:                 }
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "range": [
-// CHECK-NEXT:                 464,
-// CHECK-NEXT:                 467
-// CHECK-NEXT:               ]
+// CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "importKind": "value",
 // CHECK-NEXT:             "loc": {
@@ -175,11 +143,7 @@ import typeof Foo, {bar} from 'foo';
 // CHECK-NEXT:                 "line": 16,
 // CHECK-NEXT:                 "column": 24
 // CHECK-NEXT:               }
-// CHECK-NEXT:             },
-// CHECK-NEXT:             "range": [
-// CHECK-NEXT:               464,
-// CHECK-NEXT:               467
-// CHECK-NEXT:             ]
+// CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "source": {
@@ -194,11 +158,7 @@ import typeof Foo, {bar} from 'foo';
 // CHECK-NEXT:               "line": 16,
 // CHECK-NEXT:               "column": 36
 // CHECK-NEXT:             }
-// CHECK-NEXT:           },
-// CHECK-NEXT:           "range": [
-// CHECK-NEXT:             474,
-// CHECK-NEXT:             479
-// CHECK-NEXT:           ]
+// CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "importKind": "typeof",
 // CHECK-NEXT:         "loc": {
@@ -210,9 +170,5 @@ import typeof Foo, {bar} from 'foo';
 // CHECK-NEXT:             "line": 16,
 // CHECK-NEXT:             "column": 37
 // CHECK-NEXT:           }
-// CHECK-NEXT:         },
-// CHECK-NEXT:         "range": [
-// CHECK-NEXT:           444,
-// CHECK-NEXT:           480
-// CHECK-NEXT:         ]
+// CHECK-NEXT:         }
 // CHECK-NEXT:       }
