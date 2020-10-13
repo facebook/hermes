@@ -25,10 +25,10 @@ struct StackTracesTreeTest : public RuntimeTestFixtureBase {
       : RuntimeTestFixtureBase(
             RuntimeConfig::Builder(kTestRTConfigBuilder)
                 .withES6Proxy(true)
-                .withGCConfig(GCConfig::Builder(kTestGCConfigBuilder)
-                                  .withAllocationLocationTrackerFromStart(true)
-                                  .build())
-                .build()) {}
+                .withGCConfig(GCConfig::Builder(kTestGCConfigBuilder).build())
+                .build()) {
+    runtime->enableAllocationLocationTracker();
+  }
 
   explicit StackTracesTreeTest(const RuntimeConfig &config)
       : RuntimeTestFixtureBase(config) {}
@@ -100,11 +100,12 @@ struct StackTracesTreeParameterizedTest
       : StackTracesTreeTest(
             RuntimeConfig::Builder(kTestRTConfigBuilder)
                 .withES6Proxy(true)
-                .withGCConfig(GCConfig::Builder(kTestGCConfigBuilder)
-                                  .withAllocationLocationTrackerFromStart(
-                                      trackerOnByDefault())
-                                  .build())
-                .build()) {}
+                .withGCConfig(GCConfig::Builder(kTestGCConfigBuilder).build())
+                .build()) {
+    if (trackerOnByDefault()) {
+      runtime->enableAllocationLocationTracker();
+    }
+  }
 
   bool trackerOnByDefault() const {
     // If GetParam() is true, then allocation tracking is enabled from the

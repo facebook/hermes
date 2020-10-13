@@ -288,10 +288,6 @@ Runtime::Runtime(
     }
   }
 
-  if (runtimeConfig.getGCConfig().getAllocationLocationTrackerFromStart()) {
-    enableAllocationLocationTracker();
-  }
-
   global_ =
       JSObject::create(this, Handle<JSObject>(this, nullptr)).getHermesValue();
 

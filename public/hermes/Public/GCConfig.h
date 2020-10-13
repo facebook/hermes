@@ -138,9 +138,6 @@ enum class GCEventKind {
   /* Whether to use mprotect on GC metadata between GCs. */               \
   F(constexpr, bool, ProtectMetadata, false)                              \
                                                                           \
-  /* Whether to track allocation traces starting in the Runtime ctor. */  \
-  F(constexpr, bool, AllocationLocationTrackerFromStart, false)           \
-                                                                          \
   /* Callout for an analytics event. */                                   \
   F(HERMES_NON_CONSTEXPR,                                                 \
     std::function<void(const GCAnalyticsEvent &)>,                        \
