@@ -2075,7 +2075,10 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumDeclaration() {
   ESTree::Node *id = *optIdent;
 
   OptValue<EnumKind> optKind = llvh::None;
-  if (checkAndEat(ofIdent_)) {
+  Optional<SMLoc> explicitTypeStart = None;
+  if (check(ofIdent_)) {
+    explicitTypeStart = advance().Start;
+
     if (checkAndEat(stringIdent_)) {
       optKind = EnumKind::String;
     } else if (checkAndEat(numberIdent_)) {
@@ -2086,7 +2089,6 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumDeclaration() {
       optKind = EnumKind::Symbol;
     }
   }
-  bool explicitType = optKind.hasValue();
 
   if (!need(
           TokenKind::l_brace,
@@ -2095,7 +2097,7 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumDeclaration() {
           start))
     return None;
 
-  auto optBody = parseEnumBody(optKind, explicitType);
+  auto optBody = parseEnumBody(optKind, explicitTypeStart);
   if (!optBody)
     return None;
 
@@ -2107,7 +2109,7 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumDeclaration() {
 
 Optional<ESTree::Node *> JSParserImpl::parseEnumBody(
     OptValue<EnumKind> optKind,
-    bool explicitType) {
+    Optional<SMLoc> explicitTypeStart) {
   assert(check(TokenKind::l_brace));
   SMLoc start = advance().Start;
 
@@ -2188,12 +2190,17 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumBody(
           start))
     return None;
 
+  bool hasExplicitType = explicitTypeStart.hasValue();
+  if (hasExplicitType) {
+    start = *explicitTypeStart;
+  }
+
   if (!optKind.hasValue()) {
     return setLocation(
         start,
         end,
         new (context_)
-            ESTree::EnumStringBodyNode(std::move(members), explicitType));
+            ESTree::EnumStringBodyNode(std::move(members), hasExplicitType));
   }
 
   // There are different node kinds per enum kind.
@@ -2203,21 +2210,22 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumBody(
           start,
           end,
           new (context_)
-              ESTree::EnumStringBodyNode(std::move(members), explicitType));
+              ESTree::EnumStringBodyNode(std::move(members), hasExplicitType));
     case EnumKind::Number:
       return setLocation(
           start,
           end,
           new (context_)
-              ESTree::EnumNumberBodyNode(std::move(members), explicitType));
+              ESTree::EnumNumberBodyNode(std::move(members), hasExplicitType));
     case EnumKind::Boolean:
       return setLocation(
           start,
           end,
           new (context_)
-              ESTree::EnumBooleanBodyNode(std::move(members), explicitType));
+              ESTree::EnumBooleanBodyNode(std::move(members), hasExplicitType));
     case EnumKind::Symbol:
-      assert(explicitType && "symbol enums can only be made via explicit type");
+      assert(
+          hasExplicitType && "symbol enums can only be made via explicit type");
       return setLocation(
           start,
           end,

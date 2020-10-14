@@ -1106,7 +1106,7 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseEnumDeclaration();
   Optional<ESTree::Node *> parseEnumBody(
       OptValue<EnumKind> optKind,
-      bool explicitType);
+      Optional<SMLoc> explicitTypeStart);
   Optional<ESTree::Node *> parseEnumMember();
 #endif
 
