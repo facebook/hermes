@@ -764,6 +764,7 @@ OptValue<TokenKind> JSLexer::lookahead1(OptValue<TokenKind> expectedToken) {
   SMLoc end = token_.getEndLoc();
   const char *cur = curCharPtr_;
   SourceErrorManager::SaveAndSuppressMessages suppress(&sm_);
+  size_t savedCommentStorageSize = commentStorage_.size();
 
   advance();
   OptValue<TokenKind> kind = token_.getKind();
@@ -783,6 +784,13 @@ OptValue<TokenKind> JSLexer::lookahead1(OptValue<TokenKind> expectedToken) {
     token_.setResWord(savedKind, savedIdent);
   }
   seek(SMLoc::getFromPointer(cur));
+
+  // Remove any comments that were stored during the lookahead
+  if (storeComments_ && savedCommentStorageSize < commentStorage_.size()) {
+    commentStorage_.erase(
+        commentStorage_.begin() + savedCommentStorageSize,
+        commentStorage_.end());
+  }
 
   return kind;
 }

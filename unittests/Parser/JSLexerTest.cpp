@@ -1096,6 +1096,46 @@ TEST(JSLexerTest, StoreCommentsTest) {
     EXPECT_EQ(StoredComment::Kind::Line, lex.getStoredComments()[1].getKind());
     EXPECT_EQ("", lex.getStoredComments()[1].getString());
   }
+
+  {
+    JSLexer lex("/*one*/ < /*two*/ >", sm, alloc, nullptr, true, false);
+    lex.setStoreComments(true);
+
+    // Create save point between two comments
+    ASSERT_EQ(TokenKind::less, lex.advance()->getKind());
+    JSLexer::SavePoint savePoint{&lex};
+    ASSERT_EQ(TokenKind::greater, lex.advance()->getKind());
+
+    ASSERT_EQ(2, lex.getStoredComments().size());
+    EXPECT_EQ(StoredComment::Kind::Block, lex.getStoredComments()[0].getKind());
+    EXPECT_EQ("one", lex.getStoredComments()[0].getString());
+    EXPECT_EQ(StoredComment::Kind::Block, lex.getStoredComments()[1].getKind());
+    EXPECT_EQ("two", lex.getStoredComments()[1].getString());
+
+    // After restoring, comment after save point is removed from comment storage
+    savePoint.restore();
+
+    ASSERT_EQ(1, lex.getStoredComments().size());
+    EXPECT_EQ(StoredComment::Kind::Block, lex.getStoredComments()[0].getKind());
+    EXPECT_EQ("one", lex.getStoredComments()[0].getString());
+  }
+
+  {
+    JSLexer lex("/*one*/ A /*two*/ >", sm, alloc, nullptr, true, false);
+    lex.setStoreComments(true);
+
+    ASSERT_EQ(TokenKind::identifier, lex.advance()->getKind());
+    ASSERT_EQ(1, lex.getStoredComments().size());
+    EXPECT_EQ("one", lex.getStoredComments()[0].getString());
+
+    // Lookahead does not store comments
+    lex.lookahead1(TokenKind::semi);
+    ASSERT_EQ(1, lex.getStoredComments().size());
+    EXPECT_EQ("one", lex.getStoredComments()[0].getString());
+
+    ASSERT_EQ(TokenKind::greater, lex.advance()->getKind());
+    ASSERT_EQ(2, lex.getStoredComments().size());
+  }
 }
 
 } // namespace

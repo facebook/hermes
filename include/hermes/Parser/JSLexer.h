@@ -558,6 +558,10 @@ class JSLexer {
     /// Saved token range from the lexer.
     SMRange range_;
 
+    /// Saved size of comment storage within the lexer. If we restore this save
+    /// point, comments past this index should be removed from the lexer.
+    size_t commentStorageSize_;
+
    public:
     SavePoint(JSLexer *lexer)
         : lexer_(lexer),
@@ -567,7 +571,8 @@ class JSLexer {
                   ? lexer_->getCurToken()->getIdentifier()
                   : nullptr),
           loc_(lexer_->getCurLoc()),
-          range_(lexer_->getCurToken()->getSourceRange()) {
+          range_(lexer_->getCurToken()->getSourceRange()),
+          commentStorageSize_(lexer_->getStoredComments().size()) {
       assert(
           (isPunctuatorDbg(kind_) || kind_ == TokenKind::identifier) &&
           "SavePoint can only be used for punctuators");
@@ -579,6 +584,13 @@ class JSLexer {
         lexer_->unsafeSetIdentifier(ident_, loc_, range_);
       } else {
         lexer_->unsafeSetPunctuator(kind_, loc_, range_);
+      }
+
+      if (lexer_->storeComments_ &&
+          commentStorageSize_ < lexer_->commentStorage_.size()) {
+        lexer_->commentStorage_.erase(
+            lexer_->commentStorage_.begin() + commentStorageSize_,
+            lexer_->commentStorage_.end());
       }
     }
   };
