@@ -93,9 +93,7 @@ void DomainSerialize(Serializer &s, const GCCell *cell) {
 
 void DomainDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::DomainKind && "Expected Domain");
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      cellSize<Domain>());
-  auto *cell = new (mem) Domain(d);
+  auto *cell = d.getRuntime()->makeAFixed<Domain, HasFinalizer::Yes>(d);
   auto &samplingProfiler = SamplingProfiler::getInstance();
   samplingProfiler->increaseDomainCount();
   d.endObject(cell);
@@ -138,9 +136,8 @@ ArrayStorage *Domain::deserializeArrayStorage(Deserializer &d) {
 #endif
 
 PseudoHandle<Domain> Domain::create(Runtime *runtime) {
-  void *mem =
-      runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(cellSize<Domain>());
-  auto self = createPseudoHandle(new (mem) Domain(runtime));
+  auto *cell = runtime->makeAFixed<Domain, HasFinalizer::Yes>(runtime);
+  auto self = createPseudoHandle(cell);
   auto &samplingProfiler = SamplingProfiler::getInstance();
   samplingProfiler->increaseDomainCount();
   return self;
@@ -403,9 +400,7 @@ void RequireContextSerialize(Serializer &s, const GCCell *cell) {
 
 void RequireContextDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::RequireContextKind && "Expected RequireContext");
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::No>(
-      cellSize<RequireContext>());
-  auto *cell = new (mem) RequireContext(d);
+  auto *cell = d.getRuntime()->makeAFixed<RequireContext>(d);
   d.endObject(cell);
 }
 #endif
@@ -414,13 +409,12 @@ Handle<RequireContext> RequireContext::create(
     Runtime *runtime,
     Handle<Domain> domain,
     Handle<StringPrimitive> dirname) {
-  JSObjectAlloc<RequireContext> mem{runtime};
-  auto self = mem.initToHandle(new (mem) RequireContext(
+  auto objProto = Handle<JSObject>::vmcast(&runtime->objectPrototype);
+  auto *cell = runtime->makeAFixed<RequireContext>(
       runtime,
-      vmcast<JSObject>(runtime->objectPrototype),
-      runtime->getHiddenClassForPrototypeRaw(
-          vmcast<JSObject>(runtime->objectPrototype),
-          ANONYMOUS_PROPERTY_SLOTS)));
+      objProto,
+      runtime->getHiddenClassForPrototype(*objProto, ANONYMOUS_PROPERTY_SLOTS));
+  auto self = JSObjectInit::initToHandle(runtime, cell);
 
   JSObject::setInternalProperty(
       *self, runtime, domainPropIndex(), domain.getHermesValue());
