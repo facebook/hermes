@@ -733,24 +733,3 @@ if(HERMES_ENABLE_TOOLS)
     github-cli-release
     DEPENDS ${HERMES_GITHUB_DIR}/${HERMES_CLI_GITHUB_FILE})
 endif()
-
-set(HERMES_PKG_ROOT ${HERMES_GITHUB_DIR}/package-root)
-set(HERMES_PKG_FRAMEWORK ${HERMES_PKG_ROOT}/destroot/Library/Frameworks/hermes.framework)
-
-add_custom_target(
-  hermes-runtime-darwin-cocoapods-release
-  COMMAND
-    ${CMAKE_COMMAND} --build . --target install/strip
-  COMMAND
-    mkdir -p ${HERMES_PKG_ROOT}/destroot/bin
-  COMMAND
-    cp ${CMAKE_INSTALL_PREFIX}/bin/hermesc ${HERMES_PKG_ROOT}/destroot/bin/
-  COMMAND
-    cp -R ${CMAKE_INSTALL_PREFIX}/Library ${HERMES_PKG_ROOT}/destroot/
-  COMMAND
-    cp -R ${CMAKE_INSTALL_PREFIX}/include ${HERMES_PKG_ROOT}/destroot/
-  COMMAND
-    cp ${CMAKE_CURRENT_SOURCE_DIR}/hermes-engine.podspec ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE ${HERMES_PKG_ROOT}
-  COMMAND
-    tar -C ${HERMES_PKG_ROOT}/ -czvf ${HERMES_GITHUB_DIR}/hermes-runtime-${HERMES_GITHUB_SYSTEM_NAME}-v${HERMES_RELEASE_VERSION}.tar.gz .
-)

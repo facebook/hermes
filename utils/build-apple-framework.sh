@@ -25,6 +25,18 @@ else
   exit 1
 fi
 
+function get_release_version {
+  ruby -rcocoapods-core -rjson -e "puts Pod::Specification.from_file('hermes-engine.podspec').version"
+}
+
+function get_ios_deployment_target {
+  ruby -rcocoapods-core -rjson -e "puts Pod::Specification.from_file('hermes-engine.podspec').deployment_target('ios')"
+}
+
+function get_mac_deployment_target {
+  ruby -rcocoapods-core -rjson -e "puts Pod::Specification.from_file('hermes-engine.podspec').deployment_target('osx')"
+}
+
 # Utility function to configure an Apple framework
 function configure_apple_framework {
   local build_cli_tools enable_bitcode
