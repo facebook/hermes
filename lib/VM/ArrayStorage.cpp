@@ -62,9 +62,8 @@ void ArrayStorage::serializeArrayStorage(
 ArrayStorage *ArrayStorage::deserializeArrayStorage(Deserializer &d) {
   uint32_t capacity = d.readInt<size_type>();
   assert(capacity <= ArrayStorage::maxElements() && "invalid capacity");
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ false>(
-      ArrayStorage::allocationSize(capacity));
-  auto *cell = new (mem) ArrayStorage(d.getRuntime(), capacity);
+  auto *cell = d.getRuntime()->makeAVariable<ArrayStorage>(
+      ArrayStorage::allocationSize(capacity), d.getRuntime(), capacity);
   assert(cell->size() <= capacity && "size cannot be greater than capacity");
   cell->size_.store(d.readInt<size_type>(), std::memory_order_release);
 

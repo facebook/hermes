@@ -69,9 +69,9 @@ class ArrayStorage final
     if (LLVM_UNLIKELY(capacity > maxElements())) {
       return throwExcessiveCapacityError(runtime, capacity);
     }
-    void *mem = runtime->alloc</*fixedSize*/ false>(allocationSize(capacity));
-    return HermesValue::encodeObjectValue(new (mem)
-                                              ArrayStorage(runtime, capacity));
+    auto *cell = runtime->makeAVariable<ArrayStorage>(
+        allocationSize(capacity), runtime, capacity);
+    return HermesValue::encodeObjectValue(cell);
   }
 
   /// Create a new long-lived instance with specified capacity.
