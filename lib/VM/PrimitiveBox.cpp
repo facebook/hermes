@@ -49,9 +49,7 @@ void StringObjectSerialize(Serializer &s, const GCCell *cell) {
 
 void StringObjectDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::StringObjectKind && "Expected StringObject");
-  void *mem = d.getRuntime()->alloc(cellSize<JSString>());
-  auto *cell = new (mem) JSString(d, &JSString::vt.base);
-
+  auto *cell = d.getRuntime()->makeAFixed<JSString>(d, &JSString::vt.base);
   d.endObject(cell);
 }
 #endif
@@ -60,13 +58,11 @@ CallResult<Handle<JSString>> JSString::create(
     Runtime *runtime,
     Handle<StringPrimitive> value,
     Handle<JSObject> parentHandle) {
-  JSObjectAlloc<JSString> mem{runtime};
-  auto selfHandle = mem.initToHandle(new (mem) JSString(
-      runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle,
-          numOverlapSlots<JSString>() + ANONYMOUS_PROPERTY_SLOTS)));
+  auto clazzHandle = runtime->getHiddenClassForPrototype(
+      *parentHandle, numOverlapSlots<JSString>() + ANONYMOUS_PROPERTY_SLOTS);
+  auto obj = runtime->makeAFixed<JSString>(runtime, parentHandle, clazzHandle);
+
+  auto selfHandle = JSObjectInit::initToHandle(runtime, obj);
 
   JSObject::setInternalProperty(
       *selfHandle,
@@ -233,8 +229,7 @@ void StringIteratorSerialize(Serializer &s, const GCCell *cell) {
 
 void StringIteratorDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::StringIteratorKind && "Expected StringIterator");
-  void *mem = d.getRuntime()->alloc(cellSize<JSStringIterator>());
-  auto *cell = new (mem) JSStringIterator(d);
+  auto *cell = d.getRuntime()->makeAFixed<JSStringIterator>(d);
   d.endObject(cell);
 }
 #endif
@@ -244,15 +239,11 @@ PseudoHandle<JSStringIterator> JSStringIterator::create(
     Runtime *runtime,
     Handle<StringPrimitive> string) {
   auto proto = Handle<JSObject>::vmcast(&runtime->stringIteratorPrototype);
-
-  JSObjectAlloc<JSStringIterator> mem{runtime};
-  return mem.initToPseudoHandle(new (mem) JSStringIterator(
-      runtime,
-      *proto,
-      runtime->getHiddenClassForPrototypeRaw(
-          *proto,
-          numOverlapSlots<JSStringIterator>() + ANONYMOUS_PROPERTY_SLOTS),
-      *string));
+  auto clazzHandle = runtime->getHiddenClassForPrototype(
+      *proto, numOverlapSlots<JSStringIterator>() + ANONYMOUS_PROPERTY_SLOTS);
+  auto obj = runtime->makeAFixed<JSStringIterator>(
+      runtime, proto, clazzHandle, string);
+  return JSObjectInit::initToPseudoHandle(runtime, obj);
 }
 
 /// ES6.0 21.1.5.2.1 %StringIteratorPrototype%.next ( ) 4-14
@@ -346,8 +337,7 @@ void NumberObjectSerialize(Serializer &s, const GCCell *cell) {
 
 void NumberObjectDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::NumberObjectKind && "Expected NumberObject");
-  void *mem = d.getRuntime()->alloc(cellSize<JSNumber>());
-  auto *cell = new (mem) JSNumber(d, &JSNumber::vt.base);
+  auto *cell = d.getRuntime()->makeAFixed<JSNumber>(d, &JSNumber::vt.base);
   d.endObject(cell);
 }
 #endif
@@ -356,13 +346,10 @@ PseudoHandle<JSNumber> JSNumber::create(
     Runtime *runtime,
     double value,
     Handle<JSObject> parentHandle) {
-  JSObjectAlloc<JSNumber> mem{runtime};
-  auto self = mem.initToPseudoHandle(new (mem) JSNumber(
-      runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle,
-          numOverlapSlots<JSNumber>() + ANONYMOUS_PROPERTY_SLOTS)));
+  auto clazzHandle = runtime->getHiddenClassForPrototype(
+      *parentHandle, numOverlapSlots<JSNumber>() + ANONYMOUS_PROPERTY_SLOTS);
+  auto obj = runtime->makeAFixed<JSNumber>(runtime, parentHandle, clazzHandle);
+  auto self = JSObjectInit::initToPseudoHandle(runtime, obj);
 
   JSObject::setInternalProperty(
       self.get(),
@@ -403,21 +390,17 @@ void BooleanObjectSerialize(Serializer &s, const GCCell *cell) {
 
 void BooleanObjectDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::BooleanObjectKind && "Expected BooleanObject");
-  void *mem = d.getRuntime()->alloc(cellSize<JSBoolean>());
-  auto *cell = new (mem) JSBoolean(d, &JSBoolean::vt.base);
+  auto *cell = d.getRuntime()->makeAFixed<JSBoolean>(d, &JSBoolean::vt.base);
   d.endObject(cell);
 }
 #endif
 
 PseudoHandle<JSBoolean>
 JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> parentHandle) {
-  JSObjectAlloc<JSBoolean> mem{runtime};
-  auto self = mem.initToPseudoHandle(new (mem) JSBoolean(
-      runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle,
-          numOverlapSlots<JSBoolean>() + ANONYMOUS_PROPERTY_SLOTS)));
+  auto clazzHandle = runtime->getHiddenClassForPrototype(
+      *parentHandle, numOverlapSlots<JSBoolean>() + ANONYMOUS_PROPERTY_SLOTS);
+  auto obj = runtime->makeAFixed<JSBoolean>(runtime, parentHandle, clazzHandle);
+  auto self = JSObjectInit::initToPseudoHandle(runtime, obj);
 
   JSObject::setInternalProperty(
       self.get(),
@@ -456,8 +439,7 @@ void SymbolObjectSerialize(Serializer &s, const GCCell *cell) {
 
 void SymbolObjectDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::SymbolObjectKind && "Expected SymbolObject");
-  void *mem = d.getRuntime()->alloc(cellSize<JSSymbol>());
-  auto *cell = new (mem) JSSymbol(d);
+  auto *cell = d.getRuntime()->makeAFixed<JSSymbol>(d);
   d.endObject(cell);
 }
 #endif
@@ -466,13 +448,10 @@ PseudoHandle<JSSymbol> JSSymbol::create(
     Runtime *runtime,
     SymbolID value,
     Handle<JSObject> parentHandle) {
-  JSObjectAlloc<JSSymbol> mem{runtime};
-  auto self = mem.initToPseudoHandle(new (mem) JSSymbol(
-      runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle,
-          numOverlapSlots<JSSymbol>() + ANONYMOUS_PROPERTY_SLOTS)));
+  auto clazzHandle = runtime->getHiddenClassForPrototype(
+      *parentHandle, numOverlapSlots<JSSymbol>() + ANONYMOUS_PROPERTY_SLOTS);
+  auto *obj = runtime->makeAFixed<JSSymbol>(runtime, parentHandle, clazzHandle);
+  auto self = JSObjectInit::initToPseudoHandle(runtime, obj);
 
   JSObject::setInternalProperty(
       self.get(),
