@@ -252,7 +252,10 @@ jobs:
             sudo gem install cocoapods
       - run:
           name: Build the iOS frameworks
-          command: ./utils/build-ios-framework.sh
+          command: |
+            pwd
+            ls
+            ./utils/build-ios-framework.sh
       - run:
           name: Build the Mac frameworks
           command: ./utils/build-mac-framework.sh
