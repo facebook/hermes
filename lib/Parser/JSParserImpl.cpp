@@ -5017,7 +5017,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
         typeParams,
         returnType,
         predicate,
-        startLoc,
+        typeParams ? typeParams->getStartLoc() : startLoc,
         allowTypedArrowFunction,
         isAsync);
   }
