@@ -205,6 +205,10 @@ class Token {
     range_.End = SMLoc::getFromPointer(end);
   }
 
+  void setRange(SMRange range) {
+    range_ = range;
+  }
+
   void setPunctuator(TokenKind kind) {
     kind_ = kind;
   }
@@ -551,6 +555,9 @@ class JSLexer {
     /// Saved curCharPtr_ from the lexer.
     SMLoc loc_;
 
+    /// Saved token range from the lexer.
+    SMRange range_;
+
    public:
     SavePoint(JSLexer *lexer)
         : lexer_(lexer),
@@ -559,7 +566,8 @@ class JSLexer {
               kind_ == TokenKind::identifier
                   ? lexer_->getCurToken()->getIdentifier()
                   : nullptr),
-          loc_(lexer_->getCurLoc()) {
+          loc_(lexer_->getCurLoc()),
+          range_(lexer_->getCurToken()->getSourceRange()) {
       assert(
           (isPunctuatorDbg(kind_) || kind_ == TokenKind::identifier) &&
           "SavePoint can only be used for punctuators");
@@ -568,9 +576,9 @@ class JSLexer {
     /// Restore the state of the lexer to the originally saved state.
     void restore() {
       if (kind_ == TokenKind::identifier) {
-        lexer_->unsafeSetIdentifier(ident_, loc_);
+        lexer_->unsafeSetIdentifier(ident_, loc_, range_);
       } else {
-        lexer_->unsafeSetPunctuator(kind_, loc_);
+        lexer_->unsafeSetPunctuator(kind_, loc_, range_);
       }
     }
   };
@@ -768,17 +776,19 @@ class JSLexer {
   /// Set the current token kind to \p kind without any checks and seek to
   /// \p loc.
   /// Should only be used for save point use-cases.
-  void unsafeSetPunctuator(TokenKind kind, SMLoc loc) {
+  void unsafeSetPunctuator(TokenKind kind, SMLoc loc, SMRange range) {
     assert(isPunctuatorDbg(kind) && "must set a punctuator");
     token_.setPunctuator(kind);
+    token_.setRange(range);
     seek(loc);
   }
 
   /// Set the current token kind to \p kind without any checks and seek to
   /// \p loc.
   /// Should only be used for save point use-cases.
-  void unsafeSetIdentifier(UniqueString *ident, SMLoc loc) {
+  void unsafeSetIdentifier(UniqueString *ident, SMLoc loc, SMRange range) {
     token_.setIdentifier(ident);
+    token_.setRange(range);
     seek(loc);
   }
 
