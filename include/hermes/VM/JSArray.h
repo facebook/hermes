@@ -242,6 +242,7 @@ class ArrayImpl : public JSObject {
 };
 
 class Arguments final : public ArrayImpl {
+  friend GC;
   using Super = ArrayImpl;
 
  public:
@@ -272,14 +273,15 @@ class Arguments final : public ArrayImpl {
 
   Arguments(
       Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
-      StorageType *indexedStorage)
-      : ArrayImpl(runtime, &vt.base, parent, clazz, indexedStorage) {}
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
+      Handle<StorageType> indexedStorage)
+      : ArrayImpl(runtime, &vt.base, *parent, *clazz, *indexedStorage) {}
 };
 
 class JSArray final : public ArrayImpl {
   using Super = ArrayImpl;
+  friend GC;
 
  public:
 #ifdef HERMESVM_SERIALIZE
@@ -381,16 +383,16 @@ class JSArray final : public ArrayImpl {
   template <typename NeedsBarrier>
   JSArray(
       Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
-      StorageType *indexedStorage,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
+      Handle<StorageType> indexedStorage,
       NeedsBarrier needsBarrier)
       : ArrayImpl(
             runtime,
             &vt.base,
-            parent,
-            clazz,
-            indexedStorage,
+            *parent,
+            *clazz,
+            *indexedStorage,
             needsBarrier) {}
 
   /// A helper to update the named '.length' property.
@@ -427,6 +429,7 @@ class JSArray final : public ArrayImpl {
 class JSArrayIterator : public JSObject {
   using Super = JSObject;
 
+  friend GC;
   friend void ArrayIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
  public:
@@ -454,12 +457,12 @@ class JSArrayIterator : public JSObject {
 
   JSArrayIterator(
       Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
-      JSObject *iteratedObject,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
+      Handle<JSObject> iteratedObject,
       IterationKind iterationKind)
-      : JSObject(runtime, &vt.base, parent, clazz),
-        iteratedObject_(runtime, iteratedObject, &runtime->getHeap()),
+      : JSObject(runtime, &vt.base, *parent, *clazz),
+        iteratedObject_(runtime, *iteratedObject, &runtime->getHeap()),
         iterationKind_(iterationKind) {}
 
  private:

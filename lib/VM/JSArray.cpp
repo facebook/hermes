@@ -397,8 +397,7 @@ void ArgumentsSerialize(Serializer &s, const GCCell *cell) {
 
 void ArgumentsDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::ArgumentsKind && "Expected Arguments");
-  void *mem = d.getRuntime()->alloc(cellSize<Arguments>());
-  auto *cell = new (mem) Arguments(d);
+  auto *cell = d.getRuntime()->makeAFixed<Arguments>(d);
   d.endObject(cell);
 }
 #endif
@@ -414,14 +413,15 @@ CallResult<Handle<Arguments>> Arguments::create(
   }
   auto indexedStorage = runtime->makeHandle<StorageType>(std::move(*arrRes));
 
-  JSObjectAlloc<Arguments> mem{runtime};
-  auto selfHandle = mem.initToHandle(new (mem) Arguments(
-      runtime,
+  auto clazz = runtime->getHiddenClassForPrototype(
       runtime->objectPrototypeRawPtr,
-      runtime->getHiddenClassForPrototypeRaw(
-          runtime->objectPrototypeRawPtr,
-          numOverlapSlots<Arguments>() + ANONYMOUS_PROPERTY_SLOTS),
-      *indexedStorage));
+      numOverlapSlots<Arguments>() + ANONYMOUS_PROPERTY_SLOTS);
+  auto obj = runtime->makeAFixed<Arguments>(
+      runtime,
+      Handle<JSObject>::vmcast(&runtime->objectPrototype),
+      clazz,
+      indexedStorage);
+  auto selfHandle = JSObjectInit::initToHandle(runtime, obj);
 
   Arguments::setStorageEndIndex(selfHandle, runtime, length);
 
@@ -533,8 +533,7 @@ void ArraySerialize(Serializer &s, const GCCell *cell) {
 
 void ArrayDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::ArrayKind && "Expected Array");
-  void *mem = d.getRuntime()->alloc(cellSize<JSArray>());
-  auto *cell = new (mem) JSArray(d, &JSArray::vt.base);
+  auto *cell = d.getRuntime()->makeAFixed<JSArray>(d, &JSArray::vt.base);
   d.endObject(cell);
 }
 #endif
@@ -593,13 +592,14 @@ CallResult<PseudoHandle<JSArray>> JSArray::create(
     indexedStorage = std::move(*arrRes);
   }
 
-  JSObjectAlloc<JSArray> mem{runtime};
-  auto self = mem.initToPseudoHandle(new (mem) JSArray(
+  auto self = JSObjectInit::initToPseudoHandle(
       runtime,
-      *prototypeHandle,
-      *classHandle,
-      *indexedStorage,
-      GCPointerBase::NoBarriers()));
+      runtime->makeAFixed<JSArray>(
+          runtime,
+          prototypeHandle,
+          classHandle,
+          indexedStorage,
+          GCPointerBase::NoBarriers()));
   putLength(self.get(), runtime, length);
 
   return self;
@@ -799,8 +799,7 @@ void ArrayIteratorSerialize(Serializer &s, const GCCell *cell) {
 
 void ArrayIteratorDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::ArrayIteratorKind && "Expected ArrayIterator");
-  void *mem = d.getRuntime()->alloc(cellSize<JSArrayIterator>());
-  auto *cell = new (mem) JSArrayIterator(d);
+  auto *cell = d.getRuntime()->makeAFixed<JSArrayIterator>(d);
   d.endObject(cell);
 }
 #endif
@@ -810,16 +809,11 @@ PseudoHandle<JSArrayIterator> JSArrayIterator::create(
     Handle<JSObject> array,
     IterationKind iterationKind) {
   auto proto = Handle<JSObject>::vmcast(&runtime->arrayIteratorPrototype);
-
-  JSObjectAlloc<JSArrayIterator> mem{runtime};
-  return mem.initToPseudoHandle(new (mem) JSArrayIterator(
-      runtime,
-      *proto,
-      runtime->getHiddenClassForPrototypeRaw(
-          *proto,
-          numOverlapSlots<JSArrayIterator>() + ANONYMOUS_PROPERTY_SLOTS),
-      *array,
-      iterationKind));
+  auto clazz = runtime->getHiddenClassForPrototype(
+      *proto, numOverlapSlots<JSArrayIterator>() + ANONYMOUS_PROPERTY_SLOTS);
+  auto *obj = runtime->makeAFixed<JSArrayIterator>(
+      runtime, proto, clazz, array, iterationKind);
+  return JSObjectInit::initToPseudoHandle(runtime, obj);
 }
 
 /// Iterate to the next element and return.
