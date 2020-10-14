@@ -4782,8 +4782,10 @@ Optional<ESTree::Node *> JSParserImpl::reparseObjectAssignmentPattern(
 
       // If we have an initializer, create an AssignmentPattern.
       if (init) {
-        value = new (context_) ESTree::AssignmentPatternNode(value, init);
-        value->copyLocationFrom(propNode->_value);
+        value = setLocation(
+            value,
+            init,
+            new (context_) ESTree::AssignmentPatternNode(value, init));
       }
 
       propNode->_value = value;
