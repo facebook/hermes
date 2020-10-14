@@ -204,13 +204,13 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: v1-repo-{{ .Environment.CIRCLE_SHA1 }}
+          key: v1-repo-{{ .Environment.CI_PULL_REQUEST }}
       - run:
           name: Install dependencies
           command: |
             brew install cmake ninja
       - run:
-          name: Build the framework
+          name: Build the test application
           command: |
             pod install
           working_directory: test/ApplePlatformsIntegrationTestApp
@@ -233,7 +233,7 @@ jobs:
               -scheme ApplePlatformsIntegrationMobileTests
           working_directory: test/ApplePlatformsIntegrationTestApp
       - save_cache:
-          key: v1-repo-{{ .Environment.CIRCLE_SHA1 }}
+          key: v1-repo-{{ .Environment.CI_PULL_REQUEST }}
           paths:
             - ~/hermes
 
@@ -242,7 +242,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: v1-repo-{{ .Environment.CIRCLE_SHA1 }}
+          key: v1-repo-{{ .Environment.CI_PULL_REQUEST }}
       - run:
           name: Set up workspace
           command: mkdir -p /tmp/hermes/output
@@ -258,7 +258,7 @@ jobs:
           name: Build the Mac frameworks
           command: ./utils/build-mac-framework.sh
       - save_cache:
-          key: v1-repo-{{ .Environment.CIRCLE_SHA1 }}
+          key: v1-repo-{{ .Environment.CI_PULL_REQUEST }}
           paths:
             - ~/hermes
 
@@ -267,7 +267,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: v1-repo-{{ .Environment.CIRCLE_SHA1 }}
+          key: v1-repo-{{ .Environment.CI_PULL_REQUEST }}
       - run:
           name: Set up workspace
           command: mkdir -p /tmp/hermes/output
