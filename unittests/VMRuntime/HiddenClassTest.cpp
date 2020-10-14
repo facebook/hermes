@@ -453,9 +453,8 @@ TEST_F(HiddenClassTest, ReservedSlots) {
   auto aHnd = *runtime->getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"a"));
   for (unsigned i = 0; i <= InternalProperty::NumInternalProperties; ++i) {
-    Handle<HiddenClass> clazz{
-        runtime,
-        runtime->getHiddenClassForPrototypeRaw(*runtime->getGlobal(), i)};
+    Handle<HiddenClass> clazz =
+        runtime->getHiddenClassForPrototype(*runtime->getGlobal(), i);
     EXPECT_FALSE(clazz->isDictionary());
     auto addRes = HiddenClass::addProperty(
         clazz, runtime, *aHnd, PropertyFlags::defaultNewNamedPropertyFlags());

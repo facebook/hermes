@@ -8,6 +8,7 @@
 #include "hermes/VM/PrimitiveBox.h"
 
 #include "hermes/VM/BuildMetadata.h"
+#include "hermes/VM/Runtime-inline.h"
 #include "hermes/VM/StringPrimitive.h"
 
 #include "llvh/Support/Debug.h"

@@ -457,17 +457,16 @@ class Runtime : public HandleRootOwner,
 
   /// Return a hidden class corresponding to the specified prototype object
   /// and number of reserved slots. For now we only use the latter.
-  /// Takes and returns raw pointers: standard warnings apply!
+  inline Handle<HiddenClass> getHiddenClassForPrototype(
+      JSObject *proto,
+      unsigned reservedSlots);
+
+  /// Same as above but returns a raw pointer: standard warnings apply!
+  /// TODO: Delete this function once all callers are replaced with
+  /// getHiddenClassForPrototype.
   inline HiddenClass *getHiddenClassForPrototypeRaw(
       JSObject *proto,
-      unsigned reservedSlots) {
-    assert(
-        reservedSlots <= InternalProperty::NumInternalProperties &&
-        "out of bounds");
-    auto *clazz = rootClazzRawPtr_[reservedSlots];
-    assert(clazz && "must initialize root classes before use");
-    return clazz;
-  }
+      unsigned reservedSlots);
 
   /// Return the global object.
   Handle<JSObject> getGlobal();
@@ -1117,10 +1116,10 @@ class Runtime : public HandleRootOwner,
 #endif
       ;
 
-  /// rootClazzRawPtr_[i] is a raw pointer to a hidden class with its i first
-  /// slots pre-reserved.
-  HiddenClass *rootClazzRawPtr_[InternalProperty::NumInternalProperties + 1] = {
-      nullptr};
+  /// rootClazzes_[i] is a PinnedHermesValue pointing to a hidden class with
+  /// its i first slots pre-reserved.
+  std::array<PinnedHermesValue, InternalProperty::NumInternalProperties + 1>
+      rootClazzes_;
 
   /// Cache for property lookups in non-JS code.
   PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];

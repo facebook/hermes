@@ -277,14 +277,14 @@ Runtime::Runtime(
         this,
         vmcast<HiddenClass>(
             ignoreAllocationFailure(HiddenClass::createRoot(this))));
-    rootClazzRawPtr_[0] = *clazz;
+    rootClazzes_[0] = clazz.getHermesValue();
     for (unsigned i = 1; i <= InternalProperty::NumInternalProperties; ++i) {
       auto addResult = HiddenClass::reserveSlot(clazz, this);
       assert(
           addResult != ExecutionStatus::EXCEPTION &&
           "Could not possibly grow larger than the limit");
       clazz = *addResult->first;
-      rootClazzRawPtr_[i] = *clazz;
+      rootClazzes_[i] = clazz.getHermesValue();
     }
   }
 
@@ -426,8 +426,8 @@ void Runtime::markRoots(RootAcceptor &acceptor, bool markLongLived) {
   {
     MarkRootsPhaseTimer timer(this, RootAcceptor::Section::RuntimeInstanceVars);
     acceptor.beginRootSection(RootAcceptor::Section::RuntimeInstanceVars);
-    for (auto &clazz : rootClazzRawPtr_)
-      acceptor.acceptPtr(clazz, "rootClass");
+    for (auto &clazz : rootClazzes_)
+      acceptor.accept(clazz, "rootClass");
 #define RUNTIME_HV_FIELD_INSTANCE(name) acceptor.accept((name), #name);
 #include "hermes/VM/RuntimeHermesValueFields.def"
 #undef RUNTIME_HV_FIELD_INSTANCE
@@ -1974,9 +1974,9 @@ void Runtime::serializeRuntimeFields(Serializer &s) {
   /// are deserialized, they will add themselves to this list.
   s.writeRelocation(specialCodeBlockRuntimeModule_);
 
-  // Field rootClazzRawPtr_[];
-  for (auto clazz : rootClazzRawPtr_)
-    s.writeRelocation(clazz);
+  // Field rootClazzes_[];
+  for (const auto &clazz : rootClazzes_)
+    s.writeHermesValue(clazz);
 
   // Field PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];
   // Ignore for now.
@@ -2058,9 +2058,9 @@ void Runtime::deserializeRuntimeFields(Deserializer &d) {
   d.readRelocation(
       &specialCodeBlockRuntimeModule_, RelocationKind::NativePointer);
 
-  // Field rootClazzRawPtr_[];
-  for (auto &clazz : rootClazzRawPtr_)
-    d.readRelocation(&clazz, RelocationKind::NativePointer);
+  // Field rootClazzes_[];
+  for (auto &clazz : rootClazzes_)
+    d.readHermesValue(&clazz);
 
   // Field PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];
   // Ignore for now.

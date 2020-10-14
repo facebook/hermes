@@ -14,6 +14,7 @@
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/RegExpMatch.h"
+#include "hermes/VM/Runtime-inline.h"
 #include "hermes/VM/StringView.h"
 
 #include "llvh/Support/Debug.h"

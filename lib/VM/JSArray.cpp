@@ -542,11 +542,8 @@ void ArrayDeserialize(Deserializer &d, CellKind kind) {
 Handle<HiddenClass> JSArray::createClass(
     Runtime *runtime,
     Handle<JSObject> prototypeHandle) {
-  Handle<HiddenClass> classHandle{
-      runtime,
-      runtime->getHiddenClassForPrototypeRaw(
-          *prototypeHandle,
-          numOverlapSlots<JSArray>() + ANONYMOUS_PROPERTY_SLOTS)};
+  Handle<HiddenClass> classHandle = runtime->getHiddenClassForPrototype(
+      *prototypeHandle, numOverlapSlots<JSArray>() + ANONYMOUS_PROPERTY_SLOTS);
 
   PropertyFlags pf{};
   pf.enumerable = 0;

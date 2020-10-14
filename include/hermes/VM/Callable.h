@@ -13,6 +13,7 @@
 #include "hermes/VM/Handle.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/NativeArgs.h"
+#include "hermes/VM/Runtime-inline.h"
 
 namespace hermes {
 namespace vm {

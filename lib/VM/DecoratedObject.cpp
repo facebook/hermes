@@ -7,6 +7,8 @@
 
 #include "hermes/VM/DecoratedObject.h"
 
+#include "hermes/VM/Runtime-inline.h"
+
 namespace hermes {
 namespace vm {
 //===----------------------------------------------------------------------===//

@@ -8,6 +8,7 @@
 #include "hermes/VM/JSDate.h"
 
 #include "hermes/VM/BuildMetadata.h"
+#include "hermes/VM/Runtime-inline.h"
 
 #include "llvh/Support/Debug.h"
 #define DEBUG_TYPE "serialize"

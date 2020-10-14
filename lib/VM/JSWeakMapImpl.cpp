@@ -8,6 +8,7 @@
 #include "hermes/VM/JSWeakMapImpl.h"
 
 #include "hermes/VM/Casting.h"
+#include "hermes/VM/Runtime-inline.h"
 
 #include "llvh/Support/Debug.h"
 #define DEBUG_TYPE "serialize"

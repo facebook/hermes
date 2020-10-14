@@ -20,6 +20,23 @@ inline NativeFunction *Runtime::getBuiltinNativeFunction(
   return builtins_[builtinMethodID];
 }
 
+inline Handle<HiddenClass> Runtime::getHiddenClassForPrototype(
+    JSObject *proto,
+    unsigned reservedSlots) {
+  assert(
+      reservedSlots <= InternalProperty::NumInternalProperties &&
+      "out of bounds");
+  PinnedHermesValue *clazz = &rootClazzes_[reservedSlots];
+  assert(!clazz->isUndefined() && "must initialize root classes before use");
+  return Handle<HiddenClass>::vmcast(clazz);
+}
+
+inline HiddenClass *Runtime::getHiddenClassForPrototypeRaw(
+    JSObject *proto,
+    unsigned reservedSlots) {
+  return *getHiddenClassForPrototype(proto, reservedSlots);
+}
+
 } // namespace vm
 } // namespace hermes
 
