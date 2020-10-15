@@ -61,6 +61,19 @@ class HermesToBabelAdapter extends HermesASTAdapter {
 
     program.sourceType = this.sourceType;
 
+    // Adjust start loc to beginning of file
+    program.loc.start = {line: 1, column: 0};
+    program.start = 0;
+
+    // Adjust end loc to include last comment if program ends with a comment
+    if (comments.length > 0) {
+      const lastComment = comments[comments.length - 1];
+      if (lastComment.end > program.end) {
+        program.loc.end = lastComment.loc.end;
+        program.end = lastComment.end;
+      }
+    }
+
     // Rename root node to File node and move Program node under program property
     return {
       type: 'File',

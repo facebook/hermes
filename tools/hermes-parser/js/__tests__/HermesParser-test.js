@@ -205,6 +205,33 @@ test('Source locations', () => {
   });
 });
 
+test('Program source locations', () => {
+  const source = `
+A;
+/*comment*/`;
+
+  // ESTree program location only includes program body
+  expect(parse(source)).toMatchObject({
+    type: 'Program',
+    loc: loc(2, 0, 2, 2),
+    range: [1, 3],
+  });
+
+  // Babel program location starts at beginning of source and includes trailing comments
+  expect(parse(source, {babel: true})).toMatchObject({
+    type: 'File',
+    loc: loc(1, 0, 3, 11),
+    start: 0,
+    end: 15,
+    program: {
+      type: 'Program',
+      loc: loc(1, 0, 3, 11),
+      start: 0,
+      end: 15,
+    },
+  });
+});
+
 test('Program source type', () => {
   const moduleProgram = {
     type: 'Program',

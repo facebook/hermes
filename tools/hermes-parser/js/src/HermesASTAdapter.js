@@ -29,17 +29,15 @@ class HermesASTAdapter {
    * This modifies the input AST in place instead of constructing a new AST.
    */
   transform(program) {
-    const transformedProgram = this.mapNode(program);
-
     // Comments are not traversed via visitor keys
-    const comments = transformedProgram.comments;
+    const comments = program.comments;
     for (let i = 0; i < comments.length; i++) {
       const comment = comments[i];
       this.fixSourceLocation(comment);
       comments[i] = this.mapComment(comment);
     }
 
-    return transformedProgram;
+    return this.mapNode(program);
   }
 
   /**
