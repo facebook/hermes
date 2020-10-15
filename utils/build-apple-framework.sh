@@ -52,7 +52,7 @@ function configure_apple_framework {
     -DHERMES_ENABLE_TOOLS:BOOLEAN=$build_cli_tools \
     -DCMAKE_INSTALL_PREFIX:PATH=../destroot"
 
-  ./utils/build/configure.py "$BUILD_TYPE" --cmake-flags "$cmake_flags" --build-system="$BUILD_SYSTEM" "build_$1"
+  python3 ./utils/build/configure.py "$BUILD_TYPE" --cmake-flags "$cmake_flags" --build-system="$BUILD_SYSTEM" "build_$1"
 }
 
 # Utility function to build an Apple framework
