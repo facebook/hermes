@@ -326,18 +326,21 @@ Runtime::Runtime(
   }
 #endif // HERMESVM_SERIALIZE
 
+  // BB Profiler need to be ready before running internal bytecode.
+#ifdef HERMESVM_PROFILER_BB
+  inlineCacheProfiler_.setHiddenClassArray(
+      ignoreAllocationFailure(JSArray::create(this, 4, 4)).get());
+#endif
+
   // Execute our internal bytecode.
+  codeCoverageProfiler_->disable();
   runInternalBytecode();
+  codeCoverageProfiler_->enable();
 
   LLVM_DEBUG(llvh::dbgs() << "Runtime initialized\n");
 
   samplingProfiler_ = SamplingProfiler::getInstance();
   samplingProfiler_->registerRuntime(this);
-
-#ifdef HERMESVM_PROFILER_BB
-  inlineCacheProfiler_.setHiddenClassArray(
-      ignoreAllocationFailure(JSArray::create(this, 4, 4)).get());
-#endif
 }
 
 Runtime::~Runtime() {
@@ -1005,8 +1008,6 @@ ExecutionStatus Runtime::loadSegment(
 }
 
 void Runtime::runInternalBytecode() {
-// TODO: remove the guard
-#if 0
   auto module = getInternalBytecode();
   auto bcProvider = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
                         llvh::make_unique<Buffer>(module.data(), module.size()))
@@ -1025,7 +1026,6 @@ void Runtime::runInternalBytecode() {
   assert(
       res != ExecutionStatus::EXCEPTION && "Internal bytecode threw exception");
   (void)res;
-#endif
 }
 
 void Runtime::printException(llvh::raw_ostream &os, Handle<> valueHandle) {
