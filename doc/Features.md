@@ -7,11 +7,16 @@ Hermes plans to target ECMAScript 2015 (ES6), with some carefully considered exc
 - Symbols (including most well-known Symbols)
 - Iteration (with `[Symbol.iterator]`)
 - `for..of` loops
+- Array spread
+- Object rest/spread
+- Shorthand property and computed property on object literals
 - Destructuring assignment (with array and object "rest" properties)
 - Template string literals
 - Generators (`function*` and `yield`)
 - TypedArrays
 - Arrow functions
+- Optional chaining and nullish coalescing (`?.` and `??`)
+- Reflection (`Reflect` and `Proxy`) starting from [v0.7.0](https://github.com/facebook/hermes/releases/tag/v0.7.0)
 - All ES6 JS library functions
   - Set/Map
   - WeakSet/WeakMap
@@ -22,10 +27,10 @@ Hermes plans to target ECMAScript 2015 (ES6), with some carefully considered exc
 
 - `let` and `const` (block scoped variables, with support for the temporal dead zone)
 - Classes and method definitions
-- Computed property keys on object literals
 - ES modules (`import` and `export`)
 - `Intl` API glue for Android has been added, in order to enable community contribution of a complete, spec-compliant implementation.
-- Reflection (`Reflect` and `Proxy`) [is opt-in](https://github.com/facebook/hermes/issues/33#issuecomment-606963341) until it is stablilized.
+- Promise is opt-in (via `-Xes6-promise` flag or `withES6Promise` runtime config).
+- Async function (`async` and `await`).
 
 ## Excluded From Support
 
