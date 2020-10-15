@@ -157,6 +157,7 @@ Runtime::Runtime(
           runtimeConfig.getCrashMgr(),
           std::move(provider)),
       jitContext_(runtimeConfig.getEnableJIT(), (1 << 20) * 16, (1 << 20) * 32),
+      hasES6Promise_(runtimeConfig.getES6Promise()),
       hasES6Proxy_(runtimeConfig.getES6Proxy()),
       hasES6Symbol_(runtimeConfig.getES6Symbol()),
       shouldRandomizeMemoryLayout_(runtimeConfig.getRandomizeMemoryLayout()),
@@ -2153,6 +2154,7 @@ void Runtime::deserializeImpl(Deserializer &d, bool currentlyInYoung) {
 
 void Runtime::populateHeaderRuntimeConfig(SerializeHeader &header) {
   header.enableEval = enableEval;
+  header.hasES6Promise = hasES6Promise_;
   header.hasES6Proxy = hasES6Proxy_;
   header.hasES6Symbol = hasES6Symbol_;
   header.bytecodeWarmupPercent = bytecodeWarmupPercent_;
@@ -2163,6 +2165,10 @@ void Runtime::checkHeaderRuntimeConfig(SerializeHeader &header) const {
   if (header.enableEval != enableEval) {
     hermes_fatal(
         "serialize/deserialize Runtime Configs don't match (enableEval)");
+  }
+  if (header.hasES6Promise != hasES6Promise_) {
+    hermes_fatal(
+        "serialize/deserialize Runtime Configs don't match (es6Promise)");
   }
   if (header.hasES6Proxy != hasES6Proxy_) {
     hermes_fatal(
