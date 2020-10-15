@@ -546,6 +546,11 @@ hermesInternalIsProxy(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(obj && obj->isProxyObject());
 }
 
+CallResult<HermesValue>
+hermesInternalHasPromise(void *, Runtime *runtime, NativeArgs args) {
+  return HermesValue::encodeBoolValue(false);
+}
+
 #ifdef HERMESVM_EXCEPTION_ON_OOM
 /// Gets the current call stack as a JS String value.  Intended (only)
 /// to allow testing of Runtime::callStack() from JS code.
@@ -795,6 +800,7 @@ Handle<JSObject> createHermesInternalObject(
       "Failed to set HermesInternal.concat.");
   (void)putRes;
 
+  defineInternMethod(P::hasPromise, hermesInternalHasPromise);
   defineInternMethod(
       P::setPromiseRejectionTrackingHook,
       hermesInternalSetPromiseRejectionTrackingHook);
