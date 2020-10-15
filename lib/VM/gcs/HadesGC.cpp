@@ -1731,11 +1731,17 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
           // Split the free cell. In order to avoid initializing
           // soon-to-be-unused values like the size and the next pointer, copy
           // the return path here.
-          removeCellFromFreelist(prevLoc, bucket, segmentIdx);
           auto newCell = cell->carve(sz);
           // Since the size of cell has changed, we may need to add it to a
           // different free list bucket.
-          addCellToFreelist(cell, segmentIdx);
+          if (getFreelistBucket(cell->getAllocatedSize()) != bucket) {
+            removeCellFromFreelist(prevLoc, bucket, segmentIdx);
+            addCellToFreelist(cell, segmentIdx);
+          }
+          // Because we carved newCell out before removing cell from the
+          // freelist, newCell is still poisoned (regardless of whether the
+          // conditional above executed). Unpoison it.
+          __asan_unpoison_memory_region(newCell, sz);
           return finishAlloc(newCell, sz);
         } else if (cellSize == sz) {
           // Exact match, take it.
