@@ -93,10 +93,10 @@ command:
 
 ```shell
 # Install the Hermes NPM to be used by the project
-( cd ${AWESOME_PROJECT?} && yarn install $HERMES_WS_DIR/hermes/npm/hermes-engine-v*.tgz )
+( cd ${AWESOME_PROJECT?} && yarn add $HERMES_WS_DIR/hermes/npm/hermes-engine-v*.tgz )
 
 # If running react-native from source, install it there as well
-( cd ${AWESOME_PROJECT?}/node_modules/react-native && yarn install $HERMES_WS_DIR/hermes/npm/hermes-engine-v*.tgz )
+( cd ${AWESOME_PROJECT?}/node_modules/react-native && yarn add $HERMES_WS_DIR/hermes/npm/hermes-engine-v*.tgz )
 ```
 
 You can now develop your app in the normal way.
