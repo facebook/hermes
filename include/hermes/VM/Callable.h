@@ -22,6 +22,7 @@ namespace vm {
 class Environment final
     : public VariableSizeRuntimeCell,
       private llvh::TrailingObjects<Environment, GCHermesValue> {
+  friend GC;
   friend TrailingObjects;
   friend void EnvironmentBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
@@ -49,9 +50,9 @@ class Environment final
       Runtime *runtime,
       Handle<Environment> parentEnvironment,
       uint32_t size) {
-    void *mem = runtime->alloc</*fixedSize*/ false>(allocationSize(size));
-    return HermesValue::encodeObjectValue(
-        new (mem) Environment(runtime, parentEnvironment, size));
+    auto *cell = runtime->makeAVariable<Environment>(
+        allocationSize(size), runtime, parentEnvironment, size);
+    return HermesValue::encodeObjectValue(cell);
   }
 
   /// \return the parent lexical environment. This value will be nullptr if the
@@ -355,6 +356,7 @@ class Callable : public JSObject {
 /// A function produced by Function.prototype.bind(). It packages a function
 /// with values for some of its parameters.
 class BoundFunction final : public Callable {
+  friend GC;
   friend void BoundFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
   /// The target function to call.
@@ -418,11 +420,11 @@ class BoundFunction final : public Callable {
 
   BoundFunction(
       Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
       Handle<Callable> target,
       Handle<ArrayStorage> argStorage)
-      : Callable(runtime, &vt.base.base, parent, clazz),
+      : Callable(runtime, &vt.base.base, *parent, *clazz),
         target_(runtime, *target, &runtime->getHeap()),
         argStorage_(runtime, *argStorage, &runtime->getHeap()) {}
 
@@ -451,6 +453,8 @@ typedef CallResult<HermesValue> (
 /// This class represents a native function callable from JavaScript with
 /// context and the JavaScript arguments.
 class NativeFunction : public Callable {
+  friend GC;
+
  protected:
   /// Context to be passed to the native function.
   void *const context_;
@@ -676,22 +680,22 @@ class NativeFunction : public Callable {
   NativeFunction(
       Runtime *runtime,
       const VTable *vtp,
-      JSObject *parent,
-      HiddenClass *clazz,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
       void *context,
       NativeFunctionPtr functionPtr)
-      : Callable(runtime, vtp, parent, clazz),
+      : Callable(runtime, vtp, *parent, *clazz),
         context_(context),
         functionPtr_(functionPtr) {}
   NativeFunction(
       Runtime *runtime,
       const VTable *vtp,
-      JSObject *parent,
-      HiddenClass *clazz,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
       Handle<Environment> environment,
       void *context,
       NativeFunctionPtr functionPtr)
-      : Callable(runtime, vtp, parent, clazz, environment),
+      : Callable(runtime, vtp, *parent, *clazz, environment),
         context_(context),
         functionPtr_(functionPtr) {}
 
@@ -713,6 +717,8 @@ class NativeFunction : public Callable {
 /// A NativeFunction to be used as a constructor for native objects other than
 /// Object.
 class NativeConstructor final : public NativeFunction {
+  friend GC;
+
  public:
   /// A CreatorFunction is responsible for creating the 'this' object that the
   /// constructor function sees.
@@ -771,17 +777,17 @@ class NativeConstructor final : public NativeFunction {
       unsigned paramCount,
       CreatorFunction *creator,
       CellKind targetKind) {
-    void *mem = runtime->alloc(cellSize<NativeConstructor>());
-    return createPseudoHandle(new (mem) NativeConstructor(
+    auto *cell = runtime->makeAFixed<NativeConstructor>(
         runtime,
-        *parentHandle,
-        runtime->getHiddenClassForPrototypeRaw(
+        parentHandle,
+        runtime->getHiddenClassForPrototype(
             *parentHandle,
             numOverlapSlots<NativeConstructor>() + ANONYMOUS_PROPERTY_SLOTS),
         context,
         functionPtr,
         creator,
-        targetKind));
+        targetKind);
+    return createPseudoHandle(cell);
   }
 
   /// Create an instance of NativeConstructor.
@@ -797,18 +803,18 @@ class NativeConstructor final : public NativeFunction {
       NativeFunctionPtr functionPtr,
       CreatorFunction *creator,
       CellKind targetKind) {
-    void *mem = runtime->alloc(cellSize<NativeConstructor>());
-    return createPseudoHandle(new (mem) NativeConstructor(
+    auto *cell = runtime->makeAFixed<NativeConstructor>(
         runtime,
-        *parentHandle,
-        runtime->getHiddenClassForPrototypeRaw(
+        parentHandle,
+        runtime->getHiddenClassForPrototype(
             *parentHandle,
             numOverlapSlots<NativeConstructor>() + ANONYMOUS_PROPERTY_SLOTS),
         parentEnvHandle,
         context,
         functionPtr,
         creator,
-        targetKind));
+        targetKind);
+    return createPseudoHandle(cell);
   }
 
  private:
@@ -823,8 +829,8 @@ class NativeConstructor final : public NativeFunction {
 
   NativeConstructor(
       Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
       void *context,
       NativeFunctionPtr functionPtr,
       CreatorFunction *creator,
@@ -844,8 +850,8 @@ class NativeConstructor final : public NativeFunction {
 
   NativeConstructor(
       Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
       Handle<Environment> parentEnvHandle,
       void *context,
       NativeFunctionPtr functionPtr,
@@ -914,6 +920,7 @@ class NativeConstructor final : public NativeFunction {
 
 /// An interpreted callable function with environment.
 class JSFunction : public Callable {
+  friend GC;
   using Super = Callable;
   friend void FunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
@@ -939,14 +946,14 @@ class JSFunction : public Callable {
   JSFunction(
       Runtime *runtime,
       const VTable *vtp,
-      Domain *domain,
-      JSObject *parent,
-      HiddenClass *clazz,
+      Handle<Domain> domain,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
       Handle<Environment> environment,
       CodeBlock *codeBlock)
-      : Callable(runtime, vtp, parent, clazz, environment),
+      : Callable(runtime, vtp, *parent, *clazz, environment),
         codeBlock_(codeBlock),
-        domain_(runtime, domain, &runtime->getHeap()) {
+        domain_(runtime, *domain, &runtime->getHeap()) {
     assert(
         !vt.base.base.finalize_ == (kHasFinalizer != HasFinalizer::Yes) &&
         "kHasFinalizer invalid value");
@@ -954,9 +961,9 @@ class JSFunction : public Callable {
 
   JSFunction(
       Runtime *runtime,
-      Domain *domain,
-      JSObject *parent,
-      HiddenClass *clazz,
+      Handle<Domain> domain,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
       Handle<Environment> environment,
       CodeBlock *codeBlock)
       : JSFunction(
@@ -1038,6 +1045,7 @@ class JSFunction : public Callable {
 /// Needs a separate class because it must be a different CellKind from
 /// JSFunction.
 class JSGeneratorFunction final : public JSFunction {
+  friend GC;
   using Super = JSFunction;
 
   static constexpr auto kHasFinalizer = HasFinalizer::No;
@@ -1081,9 +1089,9 @@ class JSGeneratorFunction final : public JSFunction {
   JSGeneratorFunction(
       Runtime *runtime,
       const VTable *vtp,
-      Domain *domain,
-      JSObject *parent,
-      HiddenClass *clazz,
+      Handle<Domain> domain,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
       Handle<Environment> environment,
       CodeBlock *codeBlock)
       : Super(runtime, vtp, domain, parent, clazz, environment, codeBlock) {
@@ -1094,9 +1102,9 @@ class JSGeneratorFunction final : public JSFunction {
 
   JSGeneratorFunction(
       Runtime *runtime,
-      Domain *domain,
-      JSObject *parent,
-      HiddenClass *clazz,
+      Handle<Domain> domain,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
       Handle<Environment> environment,
       CodeBlock *codeBlock)
       : JSFunction(
@@ -1128,6 +1136,7 @@ class JSGeneratorFunction final : public JSFunction {
 /// - `argCount`: The number of arguments provided to the outer function when
 ///   creating the generator, used when restoring the context.
 class GeneratorInnerFunction final : public JSFunction {
+  friend GC;
   using Super = JSFunction;
   friend void GeneratorInnerFunctionBuildMeta(
       const GCCell *cell,
@@ -1251,9 +1260,9 @@ class GeneratorInnerFunction final : public JSFunction {
 
   GeneratorInnerFunction(
       Runtime *runtime,
-      Domain *domain,
-      JSObject *parent,
-      HiddenClass *clazz,
+      Handle<Domain> domain,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
       Handle<Environment> environment,
       CodeBlock *codeBlock,
       uint32_t argCount)

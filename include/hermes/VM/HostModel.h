@@ -22,6 +22,7 @@ typedef void (*FinalizeNativeFunctionPtr)(void *context);
 /// function pointer can do cleanup when the FinalizableNativeFunction is
 /// finalized.
 class FinalizableNativeFunction final : public NativeFunction {
+  friend GC;
   FinalizeNativeFunctionPtr finalizePtr_;
 
  public:
@@ -50,16 +51,16 @@ class FinalizableNativeFunction final : public NativeFunction {
  protected:
   FinalizableNativeFunction(
       Runtime *runtime,
-      PseudoHandle<JSObject> parent,
-      PseudoHandle<HiddenClass> clazz,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
       void *context,
       NativeFunctionPtr functionPtr,
       FinalizeNativeFunctionPtr finalizePtr)
       : NativeFunction(
             runtime,
             &vt.base.base,
-            parent.get(),
-            clazz.get(),
+            parent,
+            clazz,
             context,
             functionPtr),
         finalizePtr_(finalizePtr) {}

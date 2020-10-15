@@ -17,6 +17,8 @@ namespace vm {
 /// JSCallableProxy acts like both a Proxy and like a NativeFunction.
 /// See JSProxy for more discussion.
 class JSCallableProxy : public NativeFunction {
+  friend GC;
+
  public:
   friend void CallableProxyBuildMeta(const GCCell *cell, Metadata::Builder &mb);
   friend detail::ProxySlots &detail::slots(JSObject *selfHandle);
@@ -50,7 +52,10 @@ class JSCallableProxy : public NativeFunction {
   friend void CallableProxyDeserialize(Deserializer &d, CellKind kind);
 #endif
 
-  JSCallableProxy(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
+  JSCallableProxy(
+      Runtime *runtime,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz)
       : NativeFunction(
             runtime,
             &vt.base.base,

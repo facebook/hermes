@@ -60,25 +60,23 @@ void CallableProxySerialize(Serializer &s, const GCCell *cell) {
 
 void CallableProxyDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::CallableProxyKind && "Expected CallableProxy");
-  void *mem = d.getRuntime()->alloc(cellSize<JSCallableProxy>());
-  auto *cell = new (mem) JSCallableProxy(d);
+  auto *cell = d.getRuntime()->makeAFixed<JSCallableProxy>(d);
   d.endObject(cell);
 }
 #endif
 
 PseudoHandle<JSCallableProxy> JSCallableProxy::create(Runtime *runtime) {
-  JSObjectAlloc<JSCallableProxy> mem{runtime};
-  JSCallableProxy *cproxy = new (mem) JSCallableProxy(
+  auto *cproxy = runtime->makeAFixed<JSCallableProxy>(
       runtime,
-      runtime->objectPrototypeRawPtr,
-      runtime->getHiddenClassForPrototypeRaw(
+      Handle<JSObject>::vmcast(&runtime->objectPrototype),
+      runtime->getHiddenClassForPrototype(
           runtime->objectPrototypeRawPtr,
           JSObject::numOverlapSlots<JSCallableProxy>() +
               ANONYMOUS_PROPERTY_SLOTS));
 
   cproxy->flags_.proxyObject = true;
 
-  return mem.initToPseudoHandle(cproxy);
+  return JSObjectInit::initToPseudoHandle(runtime, cproxy);
 }
 
 CallResult<HermesValue> JSCallableProxy::create(

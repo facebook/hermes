@@ -64,17 +64,18 @@ CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
     unsigned paramCount) {
   auto parentHandle = Handle<JSObject>::vmcast(&runtime->functionPrototype);
 
-  JSObjectAlloc<FinalizableNativeFunction, HasFinalizer::Yes> mem{runtime};
-  auto selfHandle = mem.initToHandle(new (mem) FinalizableNativeFunction(
-      runtime,
-      parentHandle,
-      createPseudoHandle(runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle,
-          numOverlapSlots<FinalizableNativeFunction>() +
-              ANONYMOUS_PROPERTY_SLOTS)),
-      context,
-      functionPtr,
-      finalizePtr));
+  auto *cell =
+      runtime->makeAFixed<FinalizableNativeFunction, HasFinalizer::Yes>(
+          runtime,
+          parentHandle,
+          runtime->getHiddenClassForPrototype(
+              *parentHandle,
+              numOverlapSlots<FinalizableNativeFunction>() +
+                  ANONYMOUS_PROPERTY_SLOTS),
+          context,
+          functionPtr,
+          finalizePtr);
+  auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
 
   auto prototypeObjectHandle = Handle<JSObject>(runtime);
 
