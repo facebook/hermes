@@ -24,6 +24,14 @@
 
 namespace hermes {
 
+ConsoleHostContext::ConsoleHostContext(vm::Runtime *runtime) {
+  runtime->addCustomRootsFunction([this](vm::GC *, vm::SlotAcceptor &acceptor) {
+    for (auto &entry : queuedJobs_) {
+      acceptor.acceptPtr(entry.second);
+    }
+  });
+}
+
 /// Raises an uncatchable quit exception.
 static vm::CallResult<vm::HermesValue>
 quit(void *, vm::Runtime *runtime, vm::NativeArgs) {
@@ -110,6 +118,32 @@ loadSegment(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
+static vm::CallResult<vm::HermesValue>
+setTimeout(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
+  ConsoleHostContext *consoleHost = (ConsoleHostContext *)ctx;
+  using namespace hermes::vm;
+  Handle<Callable> callable = args.dyncastArg<Callable>(0);
+  if (!callable) {
+    return runtime->raiseTypeError("Argument to setTimeout must be a function");
+  }
+  CallResult<HermesValue> boundFunction = BoundFunction::create(
+      runtime, callable, args.getArgCount() - 1, args.begin() + 1);
+  uint32_t jobId = consoleHost->queueJob(
+      PseudoHandle<Callable>::vmcast(createPseudoHandle(*boundFunction)));
+  return HermesValue::encodeNumberValue(jobId);
+}
+
+static vm::CallResult<vm::HermesValue>
+clearTimeout(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
+  ConsoleHostContext *consoleHost = (ConsoleHostContext *)ctx;
+  using namespace hermes::vm;
+  if (!args.getArg(0).isNumber()) {
+    return runtime->raiseTypeError("Argument to clearTimeout must be a number");
+  }
+  consoleHost->clearJob(args.getArg(0).getNumberAs<uint32_t>());
+  return HermesValue::encodeUndefinedValue();
+}
+
 #ifdef HERMESVM_SERIALIZE
 static std::vector<void *> getNativeFunctionPtrs();
 
@@ -178,12 +212,15 @@ static std::vector<void *> getNativeFunctionPtrs() {
   res.push_back((void *)createHeapSnapshot);
   res.push_back((void *)serializeVM);
   res.push_back((void *)loadSegment);
+  res.push_back((void *)setTimeout);
+  res.push_back((void *)clearTimeout);
   return res;
 }
 #endif
 
 void installConsoleBindings(
     vm::Runtime *runtime,
+    ConsoleHostContext &ctx,
     vm::StatSamplingThread *statSampler,
 #ifdef HERMESVM_SERIALIZE
     const std::string *serializePath,
@@ -248,6 +285,41 @@ void installConsoleBindings(
       loadSegment,
       reinterpret_cast<void *>(const_cast<std::string *>(filename)),
       2);
+
+  defineGlobalFunc(
+      runtime
+          ->ignoreAllocationFailure(
+              runtime->getIdentifierTable().getSymbolHandle(
+                  runtime, llvh::createASCIIRef("setTimeout")))
+          .get(),
+      setTimeout,
+      &ctx,
+      2);
+  defineGlobalFunc(
+      runtime
+          ->ignoreAllocationFailure(
+              runtime->getIdentifierTable().getSymbolHandle(
+                  runtime, llvh::createASCIIRef("clearTimeout")))
+          .get(),
+      clearTimeout,
+      &ctx,
+      1);
+
+  // Define `setImmediate` to be the same as `setTimeout` here.
+  // `setTimeout` doesn't use the time provided to it, and due to this
+  // being CLI code, we don't have an event loop.
+  // This allows the Promise polyfill to work enough for testing in the
+  // terminal, though other hosts should provide their own implementation of the
+  // event loop.
+  defineGlobalFunc(
+      runtime
+          ->ignoreAllocationFailure(
+              runtime->getIdentifierTable().getSymbolHandle(
+                  runtime, llvh::createASCIIRef("setImmediate")))
+          .get(),
+      setTimeout,
+      &ctx,
+      1);
 }
 
 // If a function body might throw C++ exceptions other than
@@ -349,8 +421,11 @@ bool executeHBCBytecodeImpl(
   }
 
   vm::GCScope scope(runtime.get());
+  ConsoleHostContext ctx{runtime.get()};
+
   installConsoleBindings(
       runtime.get(),
+      ctx,
       statSampler.get(),
 #ifdef HERMESVM_SERIALIZE
       options.SerializeVMPath.empty() ? nullptr : &options.SerializeVMPath,
@@ -401,6 +476,24 @@ bool executeHBCBytecodeImpl(
     llvh::outs().flush();
     runtime->printException(
         llvh::errs(), runtime->makeHandle(runtime->getThrownValue()));
+  }
+
+  if (!threwException && !ctx.jobsEmpty()) {
+    vm::GCScopeMarkerRAII marker{scope};
+    // Run the jobs until there are no more.
+    vm::MutableHandle<vm::Callable> job{runtime.get()};
+    while (auto optJob = ctx.dequeueJob()) {
+      job = std::move(*optJob);
+      auto callRes = vm::Callable::executeCall0(
+          job, runtime.get(), vm::Runtime::getUndefinedValue(), false);
+      if (LLVM_UNLIKELY(callRes == vm::ExecutionStatus::EXCEPTION)) {
+        threwException = true;
+        llvh::outs().flush();
+        runtime->printException(
+            llvh::errs(), runtime->makeHandle(runtime->getThrownValue()));
+        break;
+      }
+    }
   }
 
   if (options.timeLimit > 0) {

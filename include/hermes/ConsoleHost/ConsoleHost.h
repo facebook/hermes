@@ -12,15 +12,60 @@
 #include "hermes/CompilerDriver/CompilerDriver.h"
 #include "hermes/ConsoleHost/MemorySizeParser.h"
 #include "hermes/Public/RuntimeConfig.h"
+#include "hermes/VM/Runtime.h"
 #include "hermes/VM/instrumentation/StatSamplingThread.h"
+
+#include "llvh/ADT/MapVector.h"
 
 #include <memory>
 
 namespace hermes {
 
-namespace vm {
-class Runtime;
-}
+/// Stores state used in certain NativeFunctions in the ConsoleHost.
+/// `ConsoleHostContext *` can be passed as the ctx pointer to NativeFunctions.
+/// In particular, it stores the job queue which powers setTimeout and friends,
+/// which are only available by default in Hermes when using the ConsoleHost.
+class ConsoleHostContext {
+  /// Queue of jobs that have been added via setTimeout and clearTimeout.
+  /// Values are marked by registering a custom roots function with the Runtime.
+  llvh::MapVector<uint32_t, vm::Callable *> queuedJobs_{};
+
+  /// Next job ID to be allocated by queueJob.
+  uint32_t nextJobId_{1};
+
+ public:
+  /// Registers the ConsoleHostContext roots with \p runtime.
+  ConsoleHostContext(vm::Runtime *runtime);
+
+  /// \return true when there are no queued jobs remaining.
+  bool jobsEmpty() const {
+    return queuedJobs_.empty();
+  }
+
+  /// Enqueue a job for setTimeout.
+  /// \return the ID of the job.
+  uint32_t queueJob(vm::PseudoHandle<vm::Callable> job) {
+    queuedJobs_.insert({nextJobId_, job.get()});
+    job.invalidate();
+    return nextJobId_++;
+  }
+
+  /// \param id the job to clear from the queue.
+  void clearJob(uint32_t id) {
+    queuedJobs_.erase(id);
+  }
+
+  /// Remove the first job from the queue.
+  /// \return the Callable which represents the queued job, None if empty queue.
+  llvh::Optional<vm::PseudoHandle<vm::Callable>> dequeueJob() {
+    if (queuedJobs_.empty())
+      return llvh::None;
+    vm::PseudoHandle<vm::Callable> result =
+        createPseudoHandle(queuedJobs_.front().second);
+    queuedJobs_.erase(queuedJobs_.begin());
+    return result;
+  }
+};
 
 /// Installs console host functions in Runtime \p runtime.
 /// Host functions installed:
@@ -35,6 +80,7 @@ class Runtime;
 ///    Used to find the other segments to be loaded at runtime.
 void installConsoleBindings(
     vm::Runtime *runtime,
+    ConsoleHostContext &ctx,
     vm::StatSamplingThread *statSampler = nullptr,
 #ifdef HERMESVM_SERIALIZE
     const std::string *serializePath = nullptr,

@@ -314,7 +314,8 @@ int repl(const vm::RuntimeConfig &config) {
   auto runtime = vm::Runtime::create(config);
 
   vm::GCScope gcScope(runtime.get());
-  installConsoleBindings(runtime.get());
+  ConsoleHostContext ctx{runtime.get()};
+  installConsoleBindings(runtime.get(), ctx);
 
   std::string code;
   code.reserve(256);
@@ -402,6 +403,8 @@ int repl(const vm::RuntimeConfig &config) {
     // Ensure we don't keep accumulating handles.
     vm::GCScopeMarkerRAII gcMarker{runtime.get()};
 
+    bool threwException = false;
+
     if ((callRes = evaluateLineFn->executeCall2(
              evaluateLineFn,
              runtime.get(),
@@ -416,6 +419,30 @@ int repl(const vm::RuntimeConfig &config) {
           runtime->makeHandle(runtime->getThrownValue()));
       llvh::outs().resetColor();
       code.clear();
+      threwException = true;
+    }
+
+    if (!ctx.jobsEmpty()) {
+      // Run the jobs until there are no more.
+      vm::MutableHandle<vm::Callable> job{runtime.get()};
+      while (auto optJob = ctx.dequeueJob()) {
+        job = std::move(*optJob);
+        auto callRes = vm::Callable::executeCall0(
+            job, runtime.get(), vm::Runtime::getUndefinedValue(), false);
+        if (LLVM_UNLIKELY(callRes == vm::ExecutionStatus::EXCEPTION)) {
+          threwException = true;
+          runtime->printException(
+              hasColors
+                  ? llvh::outs().changeColor(llvh::raw_ostream::Colors::RED)
+                  : llvh::outs(),
+              runtime->makeHandle(runtime->getThrownValue()));
+          llvh::outs().resetColor();
+          code.clear();
+        }
+      }
+    }
+
+    if (threwException) {
       continue;
     }
 
