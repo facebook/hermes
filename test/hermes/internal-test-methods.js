@@ -10,8 +10,10 @@
 // RUN: %hermes -Xhermes-internal-test-methods=true %s | %FileCheck --match-full-lines --check-prefix=CHKIME %s
 // RUN: %hermes -Xhermes-internal-test-methods=false %s | %FileCheck --match-full-lines --check-prefix=CHKIMD %s
 
-// HermesInternal.concat
-var SAFE_FIELDS_COUNT = 1;
+// concat
+// setPromiseRejectionTrackingHook
+// enablePromiseRejectionTracker
+var SAFE_FIELDS_COUNT = 3;
 
 // Check that we can disable unsafe fields of HermesInternal.
 print(Object.getOwnPropertyNames(HermesInternal).length !== SAFE_FIELDS_COUNT);

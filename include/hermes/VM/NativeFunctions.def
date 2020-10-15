@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// Updated May 6, 2020
-#define NATIVE_FUNCTION_VERSION_VALUE 9
+// Updated June 04, 2020
+#define NATIVE_FUNCTION_VERSION_VALUE 10
 
 #ifndef NATIVE_FUNCTION
 #define NATIVE_FUNCTION(func)
@@ -153,6 +153,9 @@ NATIVE_FUNCTION(hermesInternalGetWeakSize)
 NATIVE_FUNCTION(hermesInternalIsProxy)
 NATIVE_FUNCTION(hermesInternalTTIReached)
 NATIVE_FUNCTION(hermesInternalTTRCReached)
+
+NATIVE_FUNCTION(hermesInternalSetPromiseRejectionTrackingHook)
+NATIVE_FUNCTION(hermesInternalEnablePromiseRejectionTracker)
 
 #ifdef HERMES_ENABLE_DEBUGGER
 NATIVE_FUNCTION(isDebuggerAttached)
