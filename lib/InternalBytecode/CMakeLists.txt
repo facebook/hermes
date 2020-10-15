@@ -18,7 +18,7 @@ add_hermes_library(hermesInternalBytecode
     InternalBytecode.cpp
 )
 
-set(JS_COMPILER_FLAGS "-O")
+set(JS_COMPILER_FLAGS "-O" "-Wno-undefined-variable")
 
 # Concatenate all JS files into one source file for compilation.
 # This way there is only one RuntimeModule made for them.
@@ -31,6 +31,7 @@ endif()
 
 set(js_lib_sources
   header.js
+  Promise.js
   footer.js
 )
 
