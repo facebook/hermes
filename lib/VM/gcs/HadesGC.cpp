@@ -20,8 +20,6 @@
 namespace hermes {
 namespace vm {
 
-static const char kHeapNameForAnalytics[] = "hades";
-
 // A free list cell is always variable-sized.
 const VTable HadesGC::OldGen::FreelistCell::vt{CellKind::FreelistKind,
                                                /*variableSize*/ 0};
@@ -253,7 +251,7 @@ class HadesGC::CollectionStats final {
 HadesGC::CollectionStats::~CollectionStats() {
   gc_->recordGCStats(GCAnalyticsEvent{
       gc_->getName(),
-      kHeapNameForAnalytics,
+      kConcurrentGC ? "hades (concurrent)" : "hades (incremental)",
       extraInfo_,
       std::move(cause_),
       std::chrono::duration_cast<std::chrono::milliseconds>(
