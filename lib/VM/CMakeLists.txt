@@ -193,7 +193,7 @@ set(link_libs
   hermesPlatform
   hermesPlatformIntl
   hermesHBCBackend
-  hermesInternalBytecode
+  # TODO: hermesInternalBytecode
   dtoa
   ${CORE_FOUNDATION}
 )

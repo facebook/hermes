@@ -174,8 +174,8 @@ TEST_P(HeapSnapshotAPITest, HeapTimeline) {
       stackTreeNode->second->buildStackTrace(traceFunctionInfos, strings),
       R"#(
 (root)(0) @ (0):0:0
-global(1) @ test.js(2):1:1
-alloc(2) @ test.js(2):1:27)#");
+global(1) @ test.js(1):1:1
+alloc(2) @ test.js(1):1:27)#");
 }
 
 INSTANTIATE_TEST_CASE_P(

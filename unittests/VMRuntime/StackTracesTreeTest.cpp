@@ -175,10 +175,6 @@ static std::string stackTraceToJSON(StackTracesTree &tree) {
       json.closeDict();
       continue;
     }
-    llvh::StringRef scriptName{stringTable[curNode->sourceLoc.scriptName]};
-    if (scriptName.contains("InternalBytecode")) {
-      continue;
-    }
     json.openDict();
     json.emitKeyValue("name", stringTable[curNode->name]);
     json.emitKeyValue("scriptName", stringTable[curNode->sourceLoc.scriptName]);

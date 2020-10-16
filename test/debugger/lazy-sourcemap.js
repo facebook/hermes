@@ -17,7 +17,7 @@ function foo() {
 }
 foo();
 
-// CHECK: Break on 'debugger' statement in foo: {{.*}}
+// CHECK: Break on 'debugger' statement in foo: {{.*}}[1]{{.*}}
 // CHECK-NEXT: my://url
 // CHECK-NEXT: Continuing execution
 
