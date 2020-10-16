@@ -327,7 +327,12 @@ Runtime::Runtime(
 #endif // HERMESVM_SERIALIZE
 
   // Execute our internal bytecode.
+  bool codeCoverageProfilerIsEnabled = codeCoverageProfiler_->isEnabled();
+  if (codeCoverageProfilerIsEnabled)
+    codeCoverageProfiler_->disable();
   runInternalBytecode();
+  if (codeCoverageProfilerIsEnabled)
+    codeCoverageProfiler_->enable();
 
   LLVM_DEBUG(llvh::dbgs() << "Runtime initialized\n");
 
