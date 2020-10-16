@@ -38,8 +38,7 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
       "allocInYoung": false,
     },
     "maxNumRegisters": 100,
-    "ES6Promise": true,
-    "ES6Proxy": false,
+    "ES6Proxy": true,
     "ES6Symbol": false,
     "enableSampledStats": true,
     "vmExperimentFlags": 123
@@ -72,7 +71,6 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
   EXPECT_FALSE(gcconf.getAllocInYoung());
 
   EXPECT_EQ(rtconf.getMaxNumRegisters(), 100);
-  EXPECT_FALSE(rtconf.getES6Promise());
   EXPECT_TRUE(rtconf.getES6Proxy());
   EXPECT_FALSE(rtconf.getES6Symbol());
   EXPECT_TRUE(rtconf.getEnableSampledStats());

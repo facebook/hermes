@@ -24,7 +24,6 @@ struct StackTracesTreeTest : public RuntimeTestFixtureBase {
   explicit StackTracesTreeTest()
       : RuntimeTestFixtureBase(
             RuntimeConfig::Builder(kTestRTConfigBuilder)
-                .withES6Promise(true)
                 .withES6Proxy(true)
                 .withGCConfig(GCConfig::Builder(kTestGCConfigBuilder).build())
                 .build()) {

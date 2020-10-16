@@ -145,12 +145,6 @@ static opt<std::string> ProfilerSymbolsFile(
     cat(RuntimeCategory));
 #endif
 
-static opt<bool> ES6Promise(
-    "Xes6-promise",
-    desc("Enable support for ES6 Promise"),
-    init(RuntimeConfig::getDefaultES6Promise()),
-    cat(RuntimeCategory));
-
 static opt<bool> ES6Proxy(
     "Xes6-proxy",
     desc("Enable support for ES6 Proxy"),

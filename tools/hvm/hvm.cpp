@@ -120,7 +120,6 @@ int main(int argc, char **argv) {
                   .withShouldReleaseUnused(vm::kReleaseUnusedNone)
                   .withName("hvm")
                   .build())
-          .withES6Promise(cl::ES6Promise)
           .withES6Proxy(cl::ES6Proxy)
           .withES6Symbol(cl::ES6Symbol)
           .withTrackIO(cl::TrackBytecodeIO)

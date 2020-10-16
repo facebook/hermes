@@ -62,9 +62,6 @@ class Deserializer;
   /* Whether to optimize the code inside eval and Function ctor */             \
   F(constexpr, bool, OptimizedEval, false)                                     \
                                                                                \
-  /* Support for ES6 Promise. */                                               \
-  F(constexpr, bool, ES6Promise, false)                                        \
-                                                                               \
   /* Support for ES6 Proxy. */                                                 \
   F(constexpr, bool, ES6Proxy, true)                                           \
                                                                                \
