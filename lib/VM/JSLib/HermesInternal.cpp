@@ -459,12 +459,14 @@ hermesInternalGetRuntimeProperties(void *, Runtime *runtime, NativeArgs args) {
       "Release"
 #endif
       ;
-  auto buildModeVal = StringPrimitive::create(
+  auto buildModeRes = StringPrimitive::create(
       runtime, ASCIIRef(buildMode, sizeof(buildMode) - 1));
+  if (LLVM_UNLIKELY(buildModeRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  tmpHandle = *buildModeRes;
   if (LLVM_UNLIKELY(
-          buildModeVal == ExecutionStatus::EXCEPTION ||
-          addProperty(runtime->makeHandle(*buildModeVal), "Build") ==
-              ExecutionStatus::EXCEPTION)) {
+          addProperty(tmpHandle, "Build") == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
@@ -479,14 +481,30 @@ hermesInternalGetRuntimeProperties(void *, Runtime *runtime, NativeArgs args) {
 #error "Must handle all GC types here"
 #endif
       ;
-  auto gcKindVal =
+  auto gcKindRes =
       StringPrimitive::create(runtime, ASCIIRef(gcKind, sizeof(gcKind) - 1));
-  if (LLVM_UNLIKELY(
-          gcKindVal == ExecutionStatus::EXCEPTION ||
-          addProperty(runtime->makeHandle(*gcKindVal), "GC") ==
-              ExecutionStatus::EXCEPTION)) {
+  if (LLVM_UNLIKELY(gcKindRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
+  tmpHandle = *gcKindRes;
+  if (LLVM_UNLIKELY(
+          addProperty(tmpHandle, "GC") == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+#ifdef HERMES_RELEASE_VERSION
+  auto relVerRes =
+      StringPrimitive::create(runtime, createASCIIRef(HERMES_RELEASE_VERSION));
+  if (LLVM_UNLIKELY(relVerRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  tmpHandle = *relVerRes;
+  if (LLVM_UNLIKELY(
+          addProperty(tmpHandle, "OSS Release Version") ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+#endif
 
   return resultHandle.getHermesValue();
 }
