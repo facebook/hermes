@@ -470,11 +470,11 @@ hermesInternalGetRuntimeProperties(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  const char gcKind[] =
+  const char *gcKind =
 #ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
       "GenGC"
 #elif defined(HERMESVM_GC_HADES)
-      "Hades"
+      kConcurrentGC ? "Hades" : "Hades (incremental)"
 #elif defined(HERMESVM_GC_MALLOC)
       "Malloc"
 #else
@@ -482,7 +482,7 @@ hermesInternalGetRuntimeProperties(void *, Runtime *runtime, NativeArgs args) {
 #endif
       ;
   auto gcKindRes =
-      StringPrimitive::create(runtime, ASCIIRef(gcKind, sizeof(gcKind) - 1));
+      StringPrimitive::create(runtime, ASCIIRef(gcKind, strlen(gcKind)));
   if (LLVM_UNLIKELY(gcKindRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
