@@ -203,8 +203,8 @@ jobs:
     <<: *apple_defaults
     steps:
       - checkout
-      - restore_cache:
-          key: v1-repo-{{ .Environment.CI_PULL_REQUEST }}
+      - attach_workspace:
+          at: ~/hermes
       - run:
           name: Install dependencies
           command: |
@@ -232,17 +232,13 @@ jobs:
               -destination 'platform=iOS Simulator,name=iPhone 11' \
               -scheme ApplePlatformsIntegrationMobileTests
           working_directory: test/ApplePlatformsIntegrationTestApp
-      - save_cache:
-          key: v1-repo-{{ .Environment.CI_PULL_REQUEST }}
-          paths:
-            - ~/hermes
 
   build-apple-runtime:
     <<: *apple_defaults
     steps:
       - checkout
       - restore_cache:
-          key: v1-repo-{{ .Environment.CI_PULL_REQUEST }}
+          key: v2-repo-{{ .Environment.CIRCLE_PR_NUMBER }}
       - run:
           name: Set up workspace
           command: mkdir -p /tmp/hermes/output
@@ -257,19 +253,23 @@ jobs:
       - run:
           name: Build the Mac frameworks
           command: ./utils/build-mac-framework.sh
-      - store_artifacts:
-          path: ~/hermes/destroot/
-      - save_cache:
-          key: v1-repo-{{ .Environment.CI_PULL_REQUEST }}
+      - persist_to_workspace:
+          root: ~/hermes
           paths:
-            - ~/hermes
+            - destroot
+      - save_cache:
+          key: v2-repo-{{ .Environment.CIRCLE_PR_NUMBER }}
+          paths:
+            - ~/hermes/build_iphoneos
+            - ~/hermes/build_iphonesimulator
+            - ~/hermes/build_macosx
 
   package-apple-runtime:
     <<: *apple_defaults
     steps:
       - checkout
-      - restore_cache:
-          key: v1-repo-{{ .Environment.CI_PULL_REQUEST }}
+      - attach_workspace:
+          at: ~/hermes
       - run:
           name: Set up workspace
           command: mkdir -p /tmp/hermes/output
