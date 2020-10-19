@@ -1235,6 +1235,9 @@ TEST_F(SynthTraceSerializationTest, TraceHeader) {
       conf.getMaxNumRegisters(),
       llvh::cast<JSONNumber>(rtConfig->at("maxNumRegisters"))->getValue());
   EXPECT_EQ(
+      conf.getES6Promise(),
+      llvh::cast<JSONBoolean>(rtConfig->at("ES6Promise"))->getValue());
+  EXPECT_EQ(
       conf.getES6Proxy(),
       llvh::cast<JSONBoolean>(rtConfig->at("ES6Proxy"))->getValue());
   EXPECT_EQ(

@@ -45,9 +45,10 @@ class HermesRuntimeTestBase : public ::testing::Test {
 class HermesRuntimeTest : public HermesRuntimeTestBase {
  public:
   HermesRuntimeTest()
-      : HermesRuntimeTestBase(
-            ::hermes::vm::RuntimeConfig::Builder().withES6Proxy(true).build()) {
-  }
+      : HermesRuntimeTestBase(::hermes::vm::RuntimeConfig::Builder()
+                                  .withES6Proxy(true)
+                                  .withES6Promise(true)
+                                  .build()) {}
 };
 
 using HermesRuntimeDeathTest = HermesRuntimeTest;
@@ -466,6 +467,7 @@ class HermesRuntimeTestWithAllowFunctionToString
       : HermesRuntimeTestBase(
             ::hermes::vm::RuntimeConfig::Builder()
                 .withES6Proxy(true)
+                .withES6Promise(true)
                 .withAllowFunctionToStringWithRuntimeSource(true)
                 .build()) {}
 };
