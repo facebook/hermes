@@ -250,10 +250,6 @@ jobs:
       - run:
           name: Build the Mac frameworks
           command: ./utils/build-mac-framework.sh
-      - persist_to_workspace:
-          root: ~/hermes
-          paths:
-            - destroot
       - save_cache:
           key: v3-repo-{{ .Environment.CIRCLE_PR_NUMBER }}
           paths:
