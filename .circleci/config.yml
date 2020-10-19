@@ -250,6 +250,9 @@ jobs:
       - run:
           name: Build the Mac frameworks
           command: ./utils/build-mac-framework.sh
+      - run:
+          name: Build the CLI for Mac
+          command: cmake --build ./build_macosx --target github-cli-release
       - save_cache:
           key: v3-repo-{{ .Environment.CIRCLE_PR_NUMBER }}
           paths:
@@ -282,6 +285,10 @@ jobs:
             cp hermes-engine.podspec LICENSE /tmp/cocoapods-package-root
 
             tar -C /tmp/cocoapods-package-root/ -czvf /tmp/hermes/output/hermes-runtime-darwin-v$(get_release_version).tar.gz .
+      - run:
+          name: Package the CLI
+          command: |
+            cp ./build_macosx/github/hermes-cli-*.tar.gz /tmp/hermes/output
       - run:
           name: Checksum artifacts
           command: |
