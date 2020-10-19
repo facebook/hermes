@@ -196,15 +196,12 @@ jobs:
             ninja
             ninja check-hermes
 
-  # This job builds Hermes runtime for Apple (Mac, iPhone) and tests it.
-  # On success, build is persisted into workspace to make other jobs
-  # run faster.
   test-apple-runtime:
     <<: *apple_defaults
     steps:
       - checkout
-      - attach_workspace:
-          at: ~/hermes
+      - restore_cache:
+          key: v3-repo-{{ .Environment.CIRCLE_PR_NUMBER }}
       - run:
           name: Install dependencies
           command: |
@@ -238,7 +235,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_PR_NUMBER }}
+          key: v3-repo-{{ .Environment.CIRCLE_PR_NUMBER }}
       - run:
           name: Set up workspace
           command: mkdir -p /tmp/hermes/output
@@ -258,18 +255,19 @@ jobs:
           paths:
             - destroot
       - save_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_PR_NUMBER }}
+          key: v3-repo-{{ .Environment.CIRCLE_PR_NUMBER }}
           paths:
             - ~/hermes/build_iphoneos
             - ~/hermes/build_iphonesimulator
             - ~/hermes/build_macosx
+            - ~/hermes/destroot
 
   package-apple-runtime:
     <<: *apple_defaults
     steps:
       - checkout
-      - attach_workspace:
-          at: ~/hermes
+      - restore_cache:
+          key: v3-repo-{{ .Environment.CIRCLE_PR_NUMBER }}
       - run:
           name: Set up workspace
           command: mkdir -p /tmp/hermes/output
