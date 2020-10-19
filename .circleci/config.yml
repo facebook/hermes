@@ -278,7 +278,7 @@ jobs:
             . ./utils/build-apple-framework.sh
 
             mkdir -p /tmp/cocoapods-package-root/destroot
-            cp -R ./destroot /tmp/cocoapods-package-root/destroot
+            cp -R ./destroot /tmp/cocoapods-package-root
             cp hermes-engine.podspec LICENSE /tmp/cocoapods-package-root
 
             tar -C /tmp/cocoapods-package-root/ -czvf /tmp/hermes/output/hermes-runtime-darwin-v$(get_release_version).tar.gz .
@@ -288,7 +288,7 @@ jobs:
             . ./utils/build-apple-framework.sh
 
             mkdir -p /tmp/hermes-cli-root
-            cp -r ./destroot/bin /tmp/hermes-cli-root
+            cp -R ./destroot/bin/* /tmp/hermes-cli-root
 
             tar -C /tmp/hermes-cli-root/ -czvf /tmp/hermes/output/hermes-cli-darwin-v$(get_release_version).tar.gz .
       - run:
