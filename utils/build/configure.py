@@ -163,7 +163,7 @@ def which(cmd):
         resolved = shutil.which(cmd)
         if not resolved:
             raise Exception("{} not found on PATH".format(cmd))
-        return os.path.realpath(resolved)
+        return resolved
     else:
         # Manually check PATH
         for p in os.environ["PATH"].split(os.path.pathsep):
@@ -176,10 +176,10 @@ def which(cmd):
                     if os.path.exists(p_and_extension) and os.access(
                         p_and_extension, os.X_OK
                     ):
-                        return os.path.realpath(p_and_extension)
+                        return p_and_extension
             else:
                 if os.path.isfile(p) and os.access(p, os.X_OK):
-                    return os.path.realpath(p)
+                    return p
         raise Exception("{} not found on PATH".format(cmd))
 
 
