@@ -7,9 +7,12 @@
 
 #ifdef HERMES_ENABLE_DEBUGGER
 
+// gtest must come before folly, because folly/portability/Windows.h undefines
+// some windows standard library macros that gtest-port.h relies on.
+#include <gtest/gtest.h>
+
 #include <folly/dynamic.h>
 #include <folly/json.h>
-#include <gtest/gtest.h>
 #include <hermes/CompileJS.h>
 #include <hermes/hermes.h>
 #include <jsi/instrumentation.h>
