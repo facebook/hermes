@@ -249,7 +249,7 @@ jobs:
           command: ./utils/build-ios-framework.sh
       - run:
           name: Build the Mac frameworks
-          command: ./utils/build-mac-framework.sha
+          command: ./utils/build-mac-framework.sh
       - run:
           name: Build the CLI for Mac
           command: cmake --build ./build_macosx --target github-cli-release
