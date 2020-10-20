@@ -162,3 +162,6 @@ Math
 // CHECK-NEXT: Math {{{.*}}}
 JSON
 // CHECK-NEXT: JSON {{{.*}}}
+
+function Promise() { this.foo = 'foo' }; new Promise();
+// CHECK-NEXT: Promise { foo: "foo" }

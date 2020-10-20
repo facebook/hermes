@@ -10,6 +10,9 @@
 /// This is included into C++ file as a string literal at compilation time.
 C_STRING((function() {
   var colors = {};
+  // saved the global Promise in case REPL users later rebind it.
+  var HermesPromise = globalThis.Promise;
+
   function populateColors() {
     colors.red = '\033[31m';
     colors.green = '\033[32m';
@@ -179,6 +182,53 @@ C_STRING((function() {
         elementStrings.push(prettyPrintRec(i, visited));
       });
       return value.constructor.name + " [ " + elementStrings.join(", ") + " ]";
+    }
+
+    function isPromise(val) {
+      // HermesPromise is "undefined" if Hermes is not ran with `-Xes6-promise`.
+      return HermesInternal.hasPromise() && value instanceof HermesPromise;
+    }
+
+    if (isPromise(value)) {
+      var internalColor = colors.cyan;
+      var internals = "";
+      switch(value['_i']) {
+        case 0:
+          internals = "<pending>";
+          break;
+        case 1:
+          internals = "<fulfilled: " + colors.reset +
+                      prettyPrintRec(value['_j'], visited) +
+                      internalColor + ">";
+          break;
+        case 2:
+          internals = "<rejected: " + colors.reset +
+                      prettyPrintRec(value['_j'], visited) +
+                      internalColor + ">";
+          break;
+        case 3:
+          // this case seems to be internal and not observable from without
+          // Promise.js code, but left here for completeness.
+          internals = "<adopted>";
+          break;
+        default:
+          break;
+      };
+      var internalString = internalColor + internals + colors.reset;
+
+      var elements = [];
+      var propNames = Object.getOwnPropertyNames(value);
+      var internalNames = ['_h', '_i', '_j', '_k'];
+      for (var i = 0; i < propNames.length; ++i) {
+        var prop = propNames[i];
+        // hide internal properties.
+        if (!internalNames.includes(prop)) {
+          elements.push(prettyPrintProp(value, prop, visited));
+        }
+      }
+      var elementString =
+        elements.length === 0 ? "" : " { " + elements.join(', ') +  " }";
+      return "Promise " + internalString + elementString;
     }
 
     // Regular object. Print out its properties directly as a literal.
