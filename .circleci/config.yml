@@ -20,11 +20,13 @@ workflows:
       - android
       - linux
       - build-apple-runtime
+      - test-macos
       - test-apple-runtime:
           requires:
             - build-apple-runtime
       - package-apple-runtime:
           requires:
+            - test-macos
             - test-apple-runtime
       - windows
       - npm:
@@ -306,27 +308,28 @@ jobs:
           paths:
             - .
 
-  # test-macos:
-  #   # CheckedMalloc.Death fails in release mode, so build a debug version
-  #   <<: *apple_defaults
-  #   steps:
-  #     - checkout
-  #     - run:
-  #         name: Install dependencies
-  #         command: |
-  #           brew install cmake ninja
-  #     - run:
-  #         name: Set up workspace
-  #         command: |
-  #           mkdir -p "$HERMES_WS_DIR"
-  #           ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
-  #     - run:
-  #         name: Run MacOS regression tests in debug mode
-  #         command: |
-  #           cd "$HERMES_WS_DIR"
-  #           hermes/utils/build/configure.py
-  #           cmake --build ./build
-  #           cmake --build ./build --target check-hermes
+  test-macos:
+    # CheckedMalloc.Death fails in release mode, so build a debug version
+    # TODO: Switch to `release` and reuse `build_macosx` from previous job
+    <<: *apple_defaults
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            brew install cmake ninja
+      - run:
+          name: Set up workspace
+          command: |
+            mkdir -p "$HERMES_WS_DIR"
+            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
+      - run:
+          name: Run MacOS regression tests in debug mode
+          command: |
+            cd "$HERMES_WS_DIR"
+            hermes/utils/build/configure.py
+            cmake --build ./build
+            cmake --build ./build --target check-hermes
 
   windows:
     executor:
