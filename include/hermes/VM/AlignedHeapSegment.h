@@ -110,14 +110,6 @@ class AlignedHeapSegment {
   /// space, returns {nullptr, false}.
   inline AllocResult alloc(uint32_t size);
 
-  /// The given amount of external memory is credited to objects allocated in
-  /// this space.  Adjust the effective size of the space accordingly.
-  void creditExternalMemory(uint32_t size);
-
-  /// The given amount of external memory is debited to objects allocated in
-  /// this space.  Adjust the effective size of the space accordingly.
-  void debitExternalMemory(uint32_t size);
-
   /// Given the \p lowLim of some valid AlignedStorage's memory region, returns
   /// a pointer to the AlignedHeapSegment::Contents laid out in that storage,
   /// assuming it exists.
@@ -257,52 +249,6 @@ class AlignedHeapSegment {
   /// underlying storage).
   bool growToFit(size_t amount);
 
-  /// Assume that marking from the roots has marked some cells, and the
-  /// markStack found in markState is empty.  Traverse the objects in the space,
-  /// finding objects whose mark bits are set.  For each such object, push its
-  /// address on the markStack, then enter a loop in which we pop objects from
-  /// markStack while it is non-empty, and scan their pointers, marking unmarked
-  /// referents, and pushing their addresses on markStack.  If we overflow the
-  /// max size of markStack sets a flag and returns.
-  void completeMarking(GC *gc, CompleteMarkState *markState);
-
-  /// Assumes sweeping is complete.  Traverses the live objects, scanning their
-  /// pointers.  For each pointer to another heap object, update the pointer by
-  /// following the referent's forwarding pointer.  Marked cells are considered
-  /// live, and it is assumed that the first N pointers in the range
-  /// vTables are the VTables of the N remaining live cells in the segment.
-  /// This function is expected to consume N elements from this range,
-  /// denote that those pointers have been used and accounted for.
-  void updateReferences(
-      GC *gc,
-      FullMSCUpdateAcceptor *acceptor,
-      SweepResult::VTablesRemaining &vTables);
-
-  /// Assumes updateReferences is complete, there are N live cells in this
-  /// segment, and that the first N pointers in [*vTableBegin, vTableEnd) are
-  /// the VTable pointers of the N remaining live cells.  Moves each live cell
-  /// to the post-compaction address indicated by its forwarding pointer and
-  /// restores its displaced VTable pointer, consuming it in the process
-  /// (indicated by incrementing *vTableBegin).
-  void compact(SweepResult::VTablesRemaining &vTables);
-
-  /// TODO (T25573911): the next two methods are usually debug-only; exposed
-  /// in opt for temporary old-to-young pointer traversal.
-
-  /// Call \p callback on each cell between \p low and \p high.
-  void forObjsInRange(
-      const std::function<void(GCCell *)> &callback,
-      char *low,
-      const char *high);
-  void forObjsInRange(
-      const std::function<void(const GCCell *)> &callback,
-      const char *low,
-      const char *high) const;
-
-  /// Call \p callback on every cell allocated in this segment.
-  void forAllObjs(const std::function<void(GCCell *)> &callback);
-  void forAllObjs(const std::function<void(const GCCell *)> &callback) const;
-
   /// Adds a representation of segments address range to *\p buf,
   /// ensuring that we don't write more than \p sz characters.  Writes
   /// min(*sz, <length of string for seg>) characters.  Updates buf to
@@ -326,45 +272,10 @@ class AlignedHeapSegment {
   static void checkUnwritten(char *start, char *end);
 #endif
 
-#ifdef HERMES_SLOW_DEBUG
-  /// For debugging: iterates over objects, asserting that all GCCells have
-  /// vtables with valid cell kinds, and that all object pointers point to
-  /// GCCells whose vtables have valid cell kinds.  Sums the external memory
-  /// rooted by objects in the space, and, if \p externalMemory is non-null,
-  /// sets \p *externalMemory to that sum.
-  void checkWellFormed(const GC *gc, uint64_t *externalMemory = nullptr) const;
-#endif
-
-#ifdef HERMES_EXTRA_DEBUG
-  /// Extra debugging: at the end of GC we "summarize" the vtable pointers of
-  /// old-gen objects.  Conceptually, this means treat them as if they
-  /// were concatenated, and take the hash of a string form.
-  /// TODO(T56364255): remove these when the problem is diagnosed.
-
-  /// Summarize the vtables of objects in the segment, and record the results
-  /// (including the address after the last object summarized).
-  void summarizeVTables();
-
-  /// Resummarize the vtables of the old-gen objects, and return whether the
-  /// result is the same as the last summary.
-  bool checkSummarizedVTables() const;
-#endif
-
  protected:
   /// Return a pointer to the contents of the memory region managed by this
   /// segment.
   inline Contents *contents() const;
-
-  void deleteDeadObjectIDs(GC *gc);
-  void updateObjectIDs(GC *gc, SweepResult::VTablesRemaining &vTables);
-
-#ifdef HERMES_EXTRA_DEBUG
-  /// TODO(T56364255): remove these when the problem is diagnosed.
-
-  /// Summarize the vtables of objects in the segment, up to but not
-  /// including \p level.
-  size_t summarizeVTablesWork(const char *level) const;
-#endif
 
   AlignedStorage storage_;
 
