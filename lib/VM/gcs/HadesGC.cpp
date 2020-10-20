@@ -562,6 +562,9 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
       // chunks so that we're not constantly acquiring and releasing the lock.
       std::lock_guard<Mutex> ogLk{gc.gcMutex_};
       std::lock_guard<Mutex> wrLk{gc.weakRefMutex()};
+      assert(
+          gc.gcMutex_.depth() == 1 && gc.weakRefMutex().depth() == 1 &&
+          "Cannot yield to YG if mutexes are held before call to drainMarkWorklist.");
       // See the comment in setDrainRate for why the drain rate isn't used here.
       constexpr size_t kConcurrentMarkLimit = 8192;
       drainSomeWork(kConcurrentMarkLimit);
@@ -1049,15 +1052,7 @@ void HadesGC::oldGenCollectionWorker() {
   oscompat::set_thread_name("hades");
   auto cpuTimeStart = oscompat::thread_cpu_time();
   oldGenMarker_->drainMarkWorklist();
-
-  std::unique_lock<Mutex> lk{gcMutex_};
-  stopTheWorldRequested_ = true;
-  // If the mutator is in waitForCollectionToFinish, notify it that the OG
-  // thread is waiting for a STW pause.
-  stopTheWorldCondVar_.notify_one();
-  waitForConditionVariable(
-      stopTheWorldCondVar_, lk, [this] { return !stopTheWorldRequested_; });
-
+  waitForCompleteMarking();
   sweep();
   std::lock_guard<Mutex> g{gcMutex_};
   ogCollectionStats_->setEndTime();
@@ -1066,6 +1061,20 @@ void HadesGC::oldGenCollectionWorker() {
   // TODO: Should probably check for cancellation, either via a
   // promise/future pair or a condition variable.
   concurrentPhase_ = Phase::None;
+}
+
+void HadesGC::waitForCompleteMarking() {
+  assert(kConcurrentGC);
+  assert(
+      calledByBackgroundThread() &&
+      "Only background thread can block waiting for STW pause.");
+  std::unique_lock<Mutex> lk{gcMutex_};
+  stopTheWorldRequested_ = true;
+  // If the mutator is in waitForCollectionToFinish, notify it that the OG
+  // thread is waiting for a STW pause.
+  stopTheWorldCondVar_.notify_one();
+  waitForConditionVariable(
+      stopTheWorldCondVar_, lk, [this] { return !stopTheWorldRequested_; });
 }
 
 void HadesGC::completeNonConcurrentOldGenCollection() {
@@ -1199,6 +1208,9 @@ void HadesGC::sweep() {
   const bool isTracking = isTrackingIDs();
   {
     std::lock_guard<Mutex> lk{gcMutex_};
+    assert(
+        gcMutex_.depth() == 1 &&
+        "Cannot yield to YG if gcMutex_ is held before call to drainMarkWorklist.");
     segEnd = oldGen_.numSegments();
   }
 

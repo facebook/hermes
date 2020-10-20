@@ -140,6 +140,10 @@ class FakeMutex {
     return true;
   }
 
+  uint32_t depth() const {
+    return 1;
+  }
+
   void lock() {}
   bool try_lock() {
     return true;

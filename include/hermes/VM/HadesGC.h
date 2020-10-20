@@ -653,6 +653,11 @@ class HadesGC final : public GCBase {
   /// \pre kConcurrentGC must be false.
   void completeNonConcurrentOldGenCollection();
 
+  /// Should only be called from the background thread in a concurrent GC.
+  /// Requests the mutator to complete the STW pause during the next YG
+  /// collection, blocks the background thread until that is done.
+  void waitForCompleteMarking();
+
   /// Finish the marking process. This requires a STW pause in order to do a
   /// final marking worklist drain, and to update weak roots. It must be invoked
   /// from the mutator.
