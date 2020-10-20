@@ -6,9 +6,13 @@
 
 . ./utils/build-apple-framework.sh
 
-ios_deployment_target=$(get_ios_deployment_target)
+if [ ! -d destroot/Library/Frameworks/iphoneos/hermes.framework ]; then
+    ios_deployment_target=$(get_ios_deployment_target)
 
-build_apple_framework "iphoneos" "armv7;armv7s;arm64" "$ios_deployment_target"
-build_apple_framework "iphonesimulator" "x86_64;i386" "$ios_deployment_target"
+    build_apple_framework "iphoneos" "armv7;armv7s;arm64" "$ios_deployment_target"
+    build_apple_framework "iphonesimulator" "x86_64;i386" "$ios_deployment_target"
 
-create_universal_framework "iphoneos" "iphonesimulator"
+    create_universal_framework "iphoneos" "iphonesimulator"
+else
+    echo "Skipping; Clean \"destroot\" to rebuilt".
+fi

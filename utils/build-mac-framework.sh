@@ -6,6 +6,10 @@
 
 . ./utils/build-apple-framework.sh
             
-mac_deployment_target=$(get_mac_deployment_target)
+if [ ! -d destroot/Library/Frameworks/macosx/hermes.framework ]; then
+    mac_deployment_target=$(get_mac_deployment_target)
 
-build_apple_framework "macosx" "x86_64;arm64" "$mac_deployment_target"
+    build_apple_framework "macosx" "x86_64;arm64" "$mac_deployment_target"
+else
+    echo "Skipping; Clean \"destroot\" to rebuilt". 
+fi
