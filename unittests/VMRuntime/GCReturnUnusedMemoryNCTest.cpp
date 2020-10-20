@@ -13,7 +13,7 @@
 #include "Footprint.h"
 #include "TestHelpers.h"
 
-#include "hermes/VM/AlignedHeapSegment.h"
+#include "hermes/VM/GenGCHeapSegment.h"
 
 using namespace hermes::vm;
 using namespace hermes::vm::detail;
@@ -41,7 +41,7 @@ const MetadataTableForTests getMetadataTable() {
 /// to double count dirty pages in segments that share mappings.
 size_t gcRegionFootprint(const GC &gc) {
   size_t footprint = 0;
-  for (AlignedHeapSegment *seg : gc.segmentIndex()) {
+  for (GenGCHeapSegment *seg : gc.segmentIndex()) {
     const size_t segFootprint = regionFootprint(seg->start(), seg->hiLim());
     if (segFootprint == FAILED) {
       return FAILED;
@@ -64,7 +64,7 @@ TEST(GCReturnUnusedMemoryNCTest, CollectReturnsFreeMemory) {
   DummyRuntime &rt = *runtime;
   auto &gc = rt.gc;
 
-  using HalfCell = EmptyCell<AlignedHeapSegment::maxSize() / 2>;
+  using HalfCell = EmptyCell<GenGCHeapSegment::maxSize() / 2>;
 
   // Allocate cells directly in the old generation.
   auto *cell1 = HalfCell::createLongLived(rt);

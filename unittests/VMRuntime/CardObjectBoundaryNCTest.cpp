@@ -9,7 +9,7 @@
 
 #include "gtest/gtest.h"
 
-#include "hermes/VM/AlignedHeapSegment.h"
+#include "hermes/VM/GenGCHeapSegment.h"
 #include "hermes/VM/StorageProvider.h"
 
 using namespace hermes::vm;
@@ -33,7 +33,7 @@ struct CardObjectBoundaryNCTest : public ::testing::Test {
   }
 
   std::unique_ptr<StorageProvider> provider;
-  AlignedHeapSegment segment;
+  GenGCHeapSegment segment;
   CardTable::Boundary boundary;
 
   size_t segStartIndex;

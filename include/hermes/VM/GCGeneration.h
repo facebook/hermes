@@ -8,11 +8,11 @@
 #ifndef HERMES_VM_GCGENERATION_H
 #define HERMES_VM_GCGENERATION_H
 
-#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/AllocOptions.h"
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/GCBase.h"
 #include "hermes/VM/GCCell.h"
+#include "hermes/VM/GenGCHeapSegment.h"
 
 #include <vector>
 
@@ -154,7 +154,7 @@ class GenGC;
 /// bytes of the generation, in the order they were allocated into (That is, the
 /// filled segments followed by the active segment).  Template parameter \p F
 /// is a callable with void return type, accepting a reference to an \c
-/// AlignedHeapSegment.  The const variant accepts a const reference.
+/// GenGCHeapSegment.  The const variant accepts a const reference.
 ///   template <typename F> inline void forUsedSegments(F callback);
 ///   template <typename F> inline void forUsedSegments(F callback) const;
 ///
@@ -221,7 +221,7 @@ class GCGeneration {
   struct AllocContext {
     /// The segment that calls to GCGeneration::allocRaw currently allocate
     /// into.
-    AlignedHeapSegment activeSegment;
+    GenGCHeapSegment activeSegment;
 
     /// A list of all the cells in this generation with a finalizer.
     std::vector<GCCell *> cellsWithFinalizers;
@@ -372,20 +372,20 @@ class GCGeneration {
   ///     to \c nullptr, which indicates that the previously active segment
   ///     should be discarded.
   void exchangeActiveSegment(
-      AlignedHeapSegment &&newSeg,
-      AlignedHeapSegment *oldSegSlot = nullptr);
+      GenGCHeapSegment &&newSeg,
+      GenGCHeapSegment *oldSegSlot = nullptr);
 
   /// The segment that calls to GCGeneration::allocRaw currently allocate into.
   /// These versions require that the generation own the allocation context.
-  inline AlignedHeapSegment &activeSegment();
-  inline const AlignedHeapSegment &activeSegment() const;
+  inline GenGCHeapSegment &activeSegment();
+  inline const GenGCHeapSegment &activeSegment() const;
   /// These versions do require that the generation own the allocation context.
-  inline AlignedHeapSegment &activeSegmentRaw();
-  inline const AlignedHeapSegment &activeSegmentRaw() const;
+  inline GenGCHeapSegment &activeSegmentRaw();
+  inline const GenGCHeapSegment &activeSegmentRaw() const;
   /// This gets the generation's active segment, even if it has been claimed
   /// by the GC.
-  inline AlignedHeapSegment &trueActiveSegment();
-  inline const AlignedHeapSegment &trueActiveSegment() const;
+  inline GenGCHeapSegment &trueActiveSegment();
+  inline const GenGCHeapSegment &trueActiveSegment() const;
 
   /// A list of all the cells in this generation with a finalizer.
   inline std::vector<GCCell *> &cellsWithFinalizers();
@@ -423,29 +423,29 @@ class GCGeneration {
   AllocContext allocContext_;
 };
 
-inline AlignedHeapSegment &GCGeneration::activeSegment() {
+inline GenGCHeapSegment &GCGeneration::activeSegment() {
   assert(ownsAllocContext());
   return allocContext_.activeSegment;
 }
 
-inline const AlignedHeapSegment &GCGeneration::activeSegment() const {
+inline const GenGCHeapSegment &GCGeneration::activeSegment() const {
   assert(ownsAllocContext());
   return allocContext_.activeSegment;
 }
 
-inline AlignedHeapSegment &GCGeneration::activeSegmentRaw() {
+inline GenGCHeapSegment &GCGeneration::activeSegmentRaw() {
   return allocContext_.activeSegment;
 }
 
-inline const AlignedHeapSegment &GCGeneration::activeSegmentRaw() const {
+inline const GenGCHeapSegment &GCGeneration::activeSegmentRaw() const {
   return allocContext_.activeSegment;
 }
 
-inline AlignedHeapSegment &GCGeneration::trueActiveSegment() {
+inline GenGCHeapSegment &GCGeneration::trueActiveSegment() {
   return trueAllocContext_->activeSegment;
 }
 
-inline const AlignedHeapSegment &GCGeneration::trueActiveSegment() const {
+inline const GenGCHeapSegment &GCGeneration::trueActiveSegment() const {
   return trueAllocContext_->activeSegment;
 }
 

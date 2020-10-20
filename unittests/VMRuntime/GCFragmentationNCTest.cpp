@@ -11,9 +11,9 @@
 #include "EmptyCell.h"
 #include "ExtStringForTest.h"
 #include "TestHelpers.h"
-#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCCell.h"
+#include "hermes/VM/GenGCHeapSegment.h"
 
 #include <deque>
 
@@ -58,8 +58,8 @@ TEST(GCFragmentationNCTest, Test) {
   // last segment occupy less than a full segment, if the heap was exactly the
   // size given in the hint.
   static constexpr gcheapsize_t kHeapSizeHint =
-      AlignedHeapSegment::maxSize() * GC::kYoungGenFractionDenom +
-      AlignedHeapSegment::maxSize() / 2;
+      GenGCHeapSegment::maxSize() * GC::kYoungGenFractionDenom +
+      GenGCHeapSegment::maxSize() / 2;
 
   static const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSizeHint);
 
@@ -73,9 +73,9 @@ TEST(GCFragmentationNCTest, Test) {
       kHeapSizeHint - gc.youngGenSize(kHeapSizeHint);
 
   // A cell the size of a segment's allocation region.
-  using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
+  using SegmentCell = EmptyCell<GenGCHeapSegment::maxSize()>;
   // A cell whose size makes it awkward to pack into an allocation region.
-  using AwkwardCell = EmptyCell<AlignedHeapSegment::maxSize() / 2 + 1>;
+  using AwkwardCell = EmptyCell<GenGCHeapSegment::maxSize() / 2 + 1>;
 
   std::deque<GCCell *> roots;
 
@@ -133,21 +133,21 @@ TEST(GCFragmentationNCTest, ExternalMemoryTest) {
   // Allocate a heap whose young-gen is a full segment, and whose old gen size
   // is rounded up to a multiple of the segment size.
   static constexpr size_t kHeapSize =
-      AlignedHeapSegment::maxSize() * GC::kYoungGenFractionDenom;
+      GenGCHeapSegment::maxSize() * GC::kYoungGenFractionDenom;
   static const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSize);
 
   // Number of bytes allocatable in each generation, assuming the heap contains
   // \c kHeapSize bytes in total.
-  static constexpr size_t kOGSize = kHeapSize - AlignedHeapSegment::maxSize();
+  static constexpr size_t kOGSize = kHeapSize - GenGCHeapSegment::maxSize();
 
   auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);
   DummyRuntime &rt = *runtime;
   auto &gc = rt.gc;
 
   // A cell the size of a segment's allocation region.
-  using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
+  using SegmentCell = EmptyCell<GenGCHeapSegment::maxSize()>;
   // A cell whose size makes it awkward to pack into an allocation region.
-  using AwkwardCell = EmptyCell<AlignedHeapSegment::maxSize() / 2 + 1>;
+  using AwkwardCell = EmptyCell<GenGCHeapSegment::maxSize() / 2 + 1>;
 
   std::deque<GCCell *> roots;
 
@@ -167,7 +167,7 @@ TEST(GCFragmentationNCTest, ExternalMemoryTest) {
 
   // Now allocate an external string half as big as a segment.
   roots.push_back(
-      ExtStringForTest::create(rt, AlignedHeapSegment::maxSize() / 2));
+      ExtStringForTest::create(rt, GenGCHeapSegment::maxSize() / 2));
   rt.pointerRoots.push_back(&roots.back());
 
   { // (3) Force a full collection to make sure all the allocated cells so far

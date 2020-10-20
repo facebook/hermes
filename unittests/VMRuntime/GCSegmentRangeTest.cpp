@@ -10,9 +10,9 @@
 
 #include "gtest/gtest.h"
 
-#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/GCSegmentRange-inline.h"
 #include "hermes/VM/GCSegmentRange.h"
+#include "hermes/VM/GenGCHeapSegment.h"
 
 #include <vector>
 
@@ -23,7 +23,7 @@ namespace {
 
 struct GCSegmentRangeTest : public ::testing::Test {
   GCSegmentRangeTest();
-  AlignedHeapSegment newSegment();
+  GenGCHeapSegment newSegment();
 
  private:
   std::unique_ptr<StorageProvider> provider_;
@@ -32,10 +32,10 @@ struct GCSegmentRangeTest : public ::testing::Test {
 GCSegmentRangeTest::GCSegmentRangeTest()
     : provider_{StorageProvider::mmapProvider()} {}
 
-AlignedHeapSegment GCSegmentRangeTest::newSegment() {
+GenGCHeapSegment GCSegmentRangeTest::newSegment() {
   auto result = AlignedStorage::create(provider_.get());
   EXPECT_TRUE(result);
-  AlignedHeapSegment seg{std::move(result.get())};
+  GenGCHeapSegment seg{std::move(result.get())};
   EXPECT_TRUE(seg);
 
   return seg;
@@ -43,7 +43,7 @@ AlignedHeapSegment GCSegmentRangeTest::newSegment() {
 
 TEST_F(GCSegmentRangeTest, EmptyConsumable) {
   auto range =
-      GCSegmentRange::fromConsumable<AlignedHeapSegment *>(nullptr, nullptr);
+      GCSegmentRange::fromConsumable<GenGCHeapSegment *>(nullptr, nullptr);
   EXPECT_EQ(nullptr, range->next());
 }
 
@@ -57,7 +57,7 @@ TEST_F(GCSegmentRangeTest, SingletonConsumable) {
 
 TEST_F(GCSegmentRangeTest, IterConsumable) {
   constexpr size_t NUM = 10;
-  std::vector<AlignedHeapSegment> segs;
+  std::vector<GenGCHeapSegment> segs;
 
   for (size_t i = 0; i < NUM; ++i) {
     segs.emplace_back(newSegment());
@@ -74,7 +74,7 @@ TEST_F(GCSegmentRangeTest, IterConsumable) {
 
 TEST_F(GCSegmentRangeTest, FuseConsumable) {
   constexpr size_t NUM = 10;
-  std::vector<AlignedHeapSegment> segs;
+  std::vector<GenGCHeapSegment> segs;
 
   for (size_t i = 0; i < NUM; ++i) {
     segs.emplace_back(newSegment());
@@ -96,7 +96,7 @@ TEST_F(GCSegmentRangeTest, FuseEarlyTermination) {
   // A range that pretends to materialise segments on the fly, failing on the
   // FAIL-th allocation, but is able to continue afterwards.
   struct Generator : public GCSegmentRange {
-    AlignedHeapSegment *next() override {
+    GenGCHeapSegment *next() override {
       if (FAIL == allocs_++) {
         return nullptr;
       }
@@ -106,7 +106,7 @@ TEST_F(GCSegmentRangeTest, FuseEarlyTermination) {
 
    private:
     size_t allocs_{0};
-    AlignedHeapSegment seg_;
+    GenGCHeapSegment seg_;
   };
 
   { // First verify the behaviour of Generator.
@@ -144,7 +144,7 @@ TEST_F(GCSegmentRangeTest, SingletonConcat) {
 
 TEST_F(GCSegmentRangeTest, ConcatMultiple) {
   constexpr size_t NUM = 10;
-  std::vector<AlignedHeapSegment> init, tail;
+  std::vector<GenGCHeapSegment> init, tail;
   auto mid = newSegment();
 
   for (size_t i = 0; i < NUM; ++i) {

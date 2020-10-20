@@ -481,13 +481,13 @@ void GenGC::checkInvariants(
 
 #ifndef NDEBUG
 bool GenGC::dbgContains(const void *ptr) const {
-  AlignedHeapSegment *segment = segmentIndex_.segmentCovering(ptr);
+  GenGCHeapSegment *segment = segmentIndex_.segmentCovering(ptr);
   assert(!segment || segment->contains(ptr));
   return segment;
 }
 
 bool GenGC::validPointer(const void *ptr) const {
-  AlignedHeapSegment *segment = segmentIndex_.segmentCovering(ptr);
+  GenGCHeapSegment *segment = segmentIndex_.segmentCovering(ptr);
   return segment && segment->validPointer(ptr);
 }
 
@@ -553,7 +553,7 @@ void GenGC::markPhase() {
           hermes_fatal("HermesGC: marking pointer to invalid object.");
         }
 #endif
-        AlignedHeapSegment::setCellMarkBit(cell);
+        GenGCHeapSegment::setCellMarkBit(cell);
       }
     }
     void accept(HermesValue &hv) override {
@@ -567,7 +567,7 @@ void GenGC::markPhase() {
             hermes_fatal("HermesGC: marking pointer to invalid object.");
           }
 #endif
-          AlignedHeapSegment::setCellMarkBit(cell);
+          GenGCHeapSegment::setCellMarkBit(cell);
         }
       } else if (hv.isSymbol()) {
         gc.markSymbol(hv.getSymbol());
@@ -664,11 +664,11 @@ void GenGC::completeWeakMapMarking() {
       this,
       acceptor,
       markState_.reachableWeakMaps_,
-      /*objIsMarked*/ AlignedHeapSegment::getCellMarkBit,
+      /*objIsMarked*/ GenGCHeapSegment::getCellMarkBit,
       /*checkValIsMarked*/
       [this, &acceptor](GCCell *valCell, GCHermesValue &valRef) {
-        if (!AlignedHeapSegment::getCellMarkBit(valCell)) {
-          AlignedHeapSegment::setCellMarkBit(valCell);
+        if (!GenGCHeapSegment::getCellMarkBit(valCell)) {
+          GenGCHeapSegment::setCellMarkBit(valCell);
           markState_.pushCell(valCell);
           markState_.drainMarkStack(this, acceptor);
           return true;
@@ -745,7 +745,7 @@ void GenGC::compact(const SweepResult &sweepResult) {
   // preserve this order here, so that we re-associate the correct VTable
   // pointers, and match up the chunks we used with the segments they were
   // created from.
-  auto doCompaction = [&vTables](AlignedHeapSegment &segment) {
+  auto doCompaction = [&vTables](GenGCHeapSegment &segment) {
     segment.compact(vTables);
   };
 
@@ -806,7 +806,7 @@ void GenGC::checkWellFormedHeap() const {
 }
 #endif
 
-void GenGC::segmentMoved(AlignedHeapSegment *segment) {
+void GenGC::segmentMoved(GenGCHeapSegment *segment) {
   segmentIndex_.update(segment);
 }
 
@@ -904,7 +904,7 @@ void GenGC::updateWeakReference(WeakRefSlot *slotPtr, bool fullGC) {
   GCCell *cell = (GCCell *)slotPtr->getPointer();
 
   if (fullGC) {
-    if (AlignedHeapSegment::getCellMarkBit(cell)) {
+    if (GenGCHeapSegment::getCellMarkBit(cell)) {
       slotPtr->setPointer(cell->getForwardingPointer());
     } else {
       slotPtr->clearPointer();
@@ -1146,7 +1146,7 @@ void GenGC::writeBarrierRange(GCHermesValue *start, uint32_t numHVs) {
       AlignedStorage::start(firstPtr) == AlignedStorage::start(lastPtr) &&
       "Range should be contained in the same segment");
 
-  AlignedHeapSegment::cardTableCovering(firstPtr)->dirtyCardsForAddressRange(
+  GenGCHeapSegment::cardTableCovering(firstPtr)->dirtyCardsForAddressRange(
       firstPtr, lastPtr);
 }
 

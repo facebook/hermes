@@ -10,8 +10,8 @@
 
 #include "gtest/gtest.h"
 
-#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/GCSegmentAddressIndex.h"
+#include "hermes/VM/GenGCHeapSegment.h"
 
 #include <algorithm>
 #include <deque>
@@ -21,22 +21,22 @@ using namespace hermes::vm;
 
 namespace {
 
-/// Custom ordering for non-null AlignedHeapSegment pointers, by their lowLim
+/// Custom ordering for non-null GenGCHeapSegment pointers, by their lowLim
 /// address.
-bool lowLimOrder(const AlignedHeapSegment *a, const AlignedHeapSegment *b) {
+bool lowLimOrder(const GenGCHeapSegment *a, const GenGCHeapSegment *b) {
   assert(a && b);
   return a->lowLim() < b->lowLim();
 }
 
 struct GCSegmentAddressIndexTest : public ::testing::Test {
   void addSegments(size_t n);
-  AlignedHeapSegment *segment(size_t i);
+  GenGCHeapSegment *segment(size_t i);
 
   /// Expect the index to contain the given segments as values, sorted in order
   /// of their starting address.
   ///
   /// \p expected The expected segments
-  void expectSegments(std::vector<const AlignedHeapSegment *> expected);
+  void expectSegments(std::vector<const GenGCHeapSegment *> expected);
 
  protected:
   GCSegmentAddressIndex index{};
@@ -44,13 +44,13 @@ struct GCSegmentAddressIndexTest : public ::testing::Test {
   std::unique_ptr<StorageProvider> provider_{StorageProvider::mmapProvider()};
 
  private:
-  std::deque<AlignedHeapSegment> segments_{};
+  std::deque<GenGCHeapSegment> segments_{};
 };
 
 using GCSegmentAddressIndexDeathTest = GCSegmentAddressIndexTest;
 
 void GCSegmentAddressIndexTest::addSegments(size_t n) {
-  std::vector<AlignedHeapSegment *> insertions;
+  std::vector<GenGCHeapSegment *> insertions;
 
   // Create the requisite number of segments.
   for (size_t i = 0; i < n; ++i) {
@@ -80,17 +80,17 @@ void GCSegmentAddressIndexTest::addSegments(size_t n) {
   }
 
   // Insert them into the index out-of-order.
-  for (AlignedHeapSegment *segment : insertions) {
+  for (GenGCHeapSegment *segment : insertions) {
     index.update(segment);
   }
 }
 
-AlignedHeapSegment *GCSegmentAddressIndexTest::segment(size_t i) {
+GenGCHeapSegment *GCSegmentAddressIndexTest::segment(size_t i) {
   return &segments_.at(i);
 }
 
 void GCSegmentAddressIndexTest::expectSegments(
-    std::vector<const AlignedHeapSegment *> expected) {
+    std::vector<const GenGCHeapSegment *> expected) {
   std::sort(expected.begin(), expected.end(), lowLimOrder);
 
   EXPECT_EQ(expected.size(), std::distance(index.begin(), index.end()));
@@ -112,7 +112,7 @@ TEST_F(GCSegmentAddressIndexTest, Size) {
 
   // Updating an existing entry in the segment (because the segment was
   // std::move'd) should not cause the size of the index to increase.
-  AlignedHeapSegment s{std::move(*segment(0))};
+  GenGCHeapSegment s{std::move(*segment(0))};
   index.update(&s);
   EXPECT_EQ(3, index.size());
 
@@ -135,7 +135,7 @@ TEST_F(GCSegmentAddressIndexTest, Update) {
   addSegments(1);
   expectSegments({segment(0)});
 
-  AlignedHeapSegment s{std::move(*segment(0))};
+  GenGCHeapSegment s{std::move(*segment(0))};
   index.update(&s);
 
   expectSegments({&s});
@@ -148,7 +148,7 @@ TEST_F(GCSegmentAddressIndexTest, Ordering) {
   EXPECT_TRUE(std::is_sorted(
       index.begin(),
       index.end(),
-      [](const AlignedHeapSegment *a, const AlignedHeapSegment *b) {
+      [](const GenGCHeapSegment *a, const GenGCHeapSegment *b) {
         return a->lowLim() < b->lowLim();
       }));
 }
@@ -222,7 +222,7 @@ TEST_F(GCSegmentAddressIndexTest, CoveringNotInIndex) {
   addSegments(1);
   auto result = AlignedStorage::create(provider_.get());
   ASSERT_TRUE(result);
-  AlignedHeapSegment s{std::move(result.get())};
+  GenGCHeapSegment s{std::move(result.get())};
 
   void *ptr = s.start();
   EXPECT_EQ(nullptr, index.segmentCovering(ptr));
@@ -260,7 +260,7 @@ TEST_F(GCSegmentAddressIndexDeathTest, RemoveUnsorted) {
 TEST_F(GCSegmentAddressIndexDeathTest, Consistency) {
   addSegments(3);
 
-  AlignedHeapSegment v{std::move(*segment(1))};
+  GenGCHeapSegment v{std::move(*segment(1))};
 
   // The consistency check relies on the fact that when we move construct one
   // segment from another, their low lim addresses do not coincide.

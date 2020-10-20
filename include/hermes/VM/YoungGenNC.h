@@ -8,13 +8,13 @@
 #ifndef HERMES_VM_YOUNGGENNC_H
 #define HERMES_VM_YOUNGGENNC_H
 
-#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/AllocOptions.h"
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/CompactionResult.h"
 #include "hermes/VM/GCGeneration.h"
 #include "hermes/VM/GCSegmentRange-inline.h"
 #include "hermes/VM/GCSegmentRange.h"
+#include "hermes/VM/GenGCHeapSegment.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/SweepResultNC.h"
 
@@ -54,10 +54,10 @@ class YoungGen : public GCGeneration {
 
    private:
     /// The minimum size of the allocation region, in bytes.  This value will
-    /// not exceed \c AlignedHeapSegment::maxSize().
+    /// not exceed \c GenGCHeapSegment::maxSize().
     gcheapsize_t min_;
     /// The maximum size of the allocation region, in bytes.  This value will
-    /// not exceed \c AlignedHeapSegment::maxSize().
+    /// not exceed \c GenGCHeapSegment::maxSize().
     gcheapsize_t max_;
 
     static gcheapsize_t adjustSizeWithBounds(

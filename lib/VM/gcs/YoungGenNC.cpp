@@ -39,12 +39,12 @@ YoungGen::Size::Size(gcheapsize_t min, gcheapsize_t max)
       min_(adjustSizeWithBounds(
           min,
           2 * oscompat::page_size(),
-          AlignedHeapSegment::maxSize())),
+          GenGCHeapSegment::maxSize())),
       // Round up the maxSize as needed.
       max_(adjustSizeWithBounds(
           max,
           2 * oscompat::page_size(),
-          AlignedHeapSegment::maxSize())) {}
+          GenGCHeapSegment::maxSize())) {}
 
 gcheapsize_t YoungGen::Size::storageFootprint() const {
   // Young Gen always needs at most one storage.
@@ -74,7 +74,7 @@ gcheapsize_t YoungGen::Size::minStorageFootprint() const {
   //  - at most max bytes wide (which in turn is at most one segment's
   //    allocation region wide), up to alignment.
   assert(
-      max <= AlignedHeapSegment::maxSize() &&
+      max <= GenGCHeapSegment::maxSize() &&
       "segment must be able to hold at least 2 pages");
   auto clamped = std::max(min, std::min(desired, max));
   return llvh::alignTo(clamped, HeapAlign);

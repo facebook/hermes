@@ -14,8 +14,8 @@
 #include "TestHelpers.h"
 #include "hermes/Support/Compiler.h"
 #include "hermes/Support/OSCompat.h"
-#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/GC.h"
+#include "hermes/VM/GenGCHeapSegment.h"
 #include "hermes/VM/LimitedStorageProvider.h"
 #include "hermes/VM/PointerBase.h"
 
@@ -42,7 +42,7 @@ struct GCLazySegmentNCTest : public ::testing::Test {
 using GCLazySegmentNCDeathTest = GCLazySegmentNCTest;
 
 constexpr size_t kHeapSizeHint =
-    AlignedHeapSegment::maxSize() * GC::kYoungGenFractionDenom;
+    GenGCHeapSegment::maxSize() * GC::kYoungGenFractionDenom;
 
 const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSizeHint);
 
@@ -51,7 +51,7 @@ constexpr size_t kHeapVA =
 
 constexpr size_t kHeapVALimited = kHeapVA / 2 + AlignedStorage::size() - 1;
 
-using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
+using SegmentCell = EmptyCell<GenGCHeapSegment::maxSize()>;
 
 /// We are able to materialize every segment.
 TEST_F(GCLazySegmentNCTest, MaterializeAll) {

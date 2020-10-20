@@ -8,7 +8,6 @@
 #ifndef HERMES_VM_OLDGEN_H
 #define HERMES_VM_OLDGEN_H
 
-#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/AlignedStorage.h"
 #include "hermes/VM/AllocOptions.h"
 #include "hermes/VM/AllocResult.h"
@@ -18,6 +17,7 @@
 #include "hermes/VM/GCGeneration.h"
 #include "hermes/VM/GCSegmentRange-inline.h"
 #include "hermes/VM/GCSegmentRange.h"
+#include "hermes/VM/GenGCHeapSegment.h"
 #include "hermes/VM/OldGenSegmentRanges.h"
 #include "hermes/VM/SweepResultNC.h"
 #include "hermes/VM/YoungGenNC.h"
@@ -242,7 +242,7 @@ class OldGen : public GCGeneration {
   /// \p amount The sum of sizes in the sequence of allocations.
   ///
   /// \pre The largest allocation size is smaller than
-  ///     AlignedHeapSegment::maxSize()
+  ///     GenGCHeapSegment::maxSize()
   ///
   /// \return true if it was possible to guarantee the requested allocation
   ///     quota could be met, immediately following this call.
@@ -428,11 +428,11 @@ class OldGen : public GCGeneration {
 
   /// The segments in the old generation that are filled with allocations, but
   /// are not currently being allocated into.
-  std::deque<AlignedHeapSegment> filledSegments_;
+  std::deque<GenGCHeapSegment> filledSegments_;
 
   /// Segments in the old generation that are not currently in use, but we have
   /// retained to serve requests to materialize segments in the future.
-  std::vector<AlignedHeapSegment> segmentCache_;
+  std::vector<GenGCHeapSegment> segmentCache_;
 
   /// We allocate in segments in "logical" order, and compact to low "logical"
   /// addresses.  This member holds the sum of the used portions of all but the
@@ -476,7 +476,7 @@ size_t OldGen::Size::minSegments() const {
 }
 
 /*static*/ size_t OldGen::Size::segmentsForSize(size_t size) {
-  return size > 0 ? (size - 1) / AlignedHeapSegment::maxSize() + 1 : 1;
+  return size > 0 ? (size - 1) / GenGCHeapSegment::maxSize() + 1 : 1;
 }
 
 AllocResult OldGen::alloc(uint32_t size, HasFinalizer hasFinalizer) {
@@ -596,7 +596,7 @@ OldGen::Location OldGen::levelDirect() const {
 }
 
 size_t OldGen::levelOffset() const {
-  return filledSegments_.size() * AlignedHeapSegment::maxSize() +
+  return filledSegments_.size() * GenGCHeapSegment::maxSize() +
       activeSegment().used();
 }
 
@@ -604,7 +604,7 @@ size_t OldGen::fragmentationLoss() const {
   // Take the max size of all the filled segments, subtract the used to get
   // the fragmentation loss.
   size_t filledSegMaxSize =
-      filledSegments_.size() * AlignedHeapSegment::maxSize();
+      filledSegments_.size() * GenGCHeapSegment::maxSize();
   assert(filledSegMaxSize >= usedInFilledSegments_);
   return filledSegMaxSize - usedInFilledSegments_;
 }

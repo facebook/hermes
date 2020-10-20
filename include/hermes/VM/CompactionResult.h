@@ -21,7 +21,7 @@ namespace hermes {
 namespace vm {
 
 /// Forward declarations.
-class AlignedHeapSegment;
+class GenGCHeapSegment;
 class GCGeneration;
 
 /// A CompactionResult is a region of memory, split over a number of contiguous
@@ -70,7 +70,7 @@ class CompactionResult {
 
    public:
     /// Create a chunk corresponding to the allocation region of \p segment.
-    Chunk(AlignedHeapSegment *segment);
+    Chunk(GenGCHeapSegment *segment);
 
     /// \return An instance of allocator that allocates into this chunk.
     Allocator allocator();
@@ -83,7 +83,7 @@ class CompactionResult {
     /// \pre Assume \p segment is the up-to-date location of the segment this
     ///     Chunk was constructed with (it may have moved since that time).
     template <AdviseUnused MU = AdviseUnused::No>
-    void recordLevel(AlignedHeapSegment *segment) const;
+    void recordLevel(GenGCHeapSegment *segment) const;
 
     /// \return A pointer to the generation this chunk was created from.
     GCGeneration *generation() const;
@@ -99,7 +99,7 @@ class CompactionResult {
 
    private:
     char *level_;
-    AlignedHeapSegment *segment_;
+    GenGCHeapSegment *segment_;
     GCGeneration *generation_;
 
 #ifndef NDEBUG

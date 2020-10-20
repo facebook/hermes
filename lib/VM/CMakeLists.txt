@@ -151,7 +151,7 @@ if (${HERMESVM_GCKIND} STREQUAL "NONCONTIG_GENERATIONAL")
                            gcs/CompleteMarkState.cpp gcs/GCGeneration.cpp
                            gcs/GCSegmentAddressIndex.cpp gcs/GenGCNC.cpp
                            gcs/OldGenNC.cpp gcs/OldGenSegmentRanges.cpp
-                           gcs/YoungGenNC.cpp)
+                           gcs/YoungGenNC.cpp gcs/GenGCHeapSegment.cpp)
 elseif (${HERMESVM_GCKIND} STREQUAL "MALLOC")
   list(APPEND source_files gcs/MallocGC.cpp gcs/FillerCell.cpp)
 elseif (${HERMESVM_GCKIND} STREQUAL "HADES")

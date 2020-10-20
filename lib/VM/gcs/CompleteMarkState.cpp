@@ -10,6 +10,7 @@
 #include "hermes/VM/CompleteMarkState-inline.h"
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCBase.h"
+#include "hermes/VM/GenGCHeapSegment.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 
 namespace hermes {
@@ -21,7 +22,7 @@ void CompleteMarkState::markTransitive(void *ptr) {
     return;
   }
 
-  MarkBitArrayNC *markBits = AlignedHeapSegment::markBitArrayCovering(ptr);
+  MarkBitArrayNC *markBits = GenGCHeapSegment::markBitArrayCovering(ptr);
   size_t ind = markBits->addressToIndex(ptr);
 
   assert(ind < markBits->size());

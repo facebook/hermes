@@ -15,7 +15,7 @@
 namespace hermes {
 namespace vm {
 
-class AlignedHeapSegment;
+class GenGCHeapSegment;
 class OldGen;
 
 /// A class conforming to the interface described in the docs for
@@ -29,7 +29,7 @@ class OldGenFilledSegmentRange : public GCSegmentRange {
 
   inline OldGenFilledSegmentRange(OldGen *gen, size_t start);
 
-  AlignedHeapSegment *next() override;
+  GenGCHeapSegment *next() override;
 
  private:
   OldGen *gen_;
@@ -48,7 +48,7 @@ class OldGenMaterializingRange : public GCSegmentRange {
 
   inline OldGenMaterializingRange(OldGen *gen);
 
-  AlignedHeapSegment *next() override;
+  GenGCHeapSegment *next() override;
 
  private:
   OldGen *gen_;

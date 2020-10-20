@@ -12,8 +12,6 @@
 #include "EmptyCell.h"
 #include "TestHelpers.h"
 
-#include "hermes/VM/AlignedHeapSegment.h"
-
 using namespace hermes::vm;
 using namespace hermes::vm::detail;
 

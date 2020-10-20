@@ -7,7 +7,7 @@
 
 #include "hermes/VM/GCSegmentAddressIndex.h"
 
-#include "hermes/VM/AlignedHeapSegment.h"
+#include "hermes/VM/GenGCHeapSegment.h"
 
 #include <algorithm>
 #include <iterator>
@@ -21,7 +21,7 @@ GCSegmentAddressIndex::GCSegmentAddressIndex(size_t cap)
   segments_.reserve(cap);
 }
 
-void GCSegmentAddressIndex::update(AlignedHeapSegment *segment) {
+void GCSegmentAddressIndex::update(GenGCHeapSegment *segment) {
   assert(segment != nullptr);
   char *const key = segment->lowLim();
   // If the low lim is null, ignore.
@@ -41,7 +41,7 @@ void GCSegmentAddressIndex::update(AlignedHeapSegment *segment) {
   segments_.insert(its, segment);
 }
 
-AlignedHeapSegment *GCSegmentAddressIndex::segmentCovering(
+GenGCHeapSegment *GCSegmentAddressIndex::segmentCovering(
     const void *ptr) const {
   auto key = AlignedStorage::start(ptr);
   auto itk = std::lower_bound(keys_.begin(), keys_.end(), key);

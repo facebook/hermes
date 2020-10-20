@@ -31,9 +31,6 @@
 namespace hermes {
 namespace vm {
 
-class CompactionResult;
-class GCGeneration;
-
 // In this class:
 // TODO (T25527350): Debug Dump
 // TODO (T25527350): Heap Moving
@@ -57,19 +54,11 @@ class GCGeneration;
 /// The tables in (1), and (2) cover the contiguous allocation space (3)
 /// into which GCCells are bump allocated.
 class AlignedHeapSegment {
-  friend CompactionResult::Allocator;
-  friend CompactionResult::Chunk;
-
  public:
   /// Construct a null AlignedHeapSegment (one that does not own memory).
   AlignedHeapSegment() = default;
 
-  /// Construct a new AlignedHeapSegment.  Its allocation region is initially
-  /// empty, and must be grown to an appropriate size.
-  ///
-  /// \p storage The storage that this segment manages.
-  /// \p owner The generation that owns this segment.
-  AlignedHeapSegment(AlignedStorage &&storage, GCGeneration *owner = nullptr);
+  AlignedHeapSegment(AlignedStorage &&storage) : storage_(std::move(storage)) {}
 
   AlignedHeapSegment(AlignedHeapSegment &&) = default;
   AlignedHeapSegment &operator=(AlignedHeapSegment &&) = default;
@@ -95,6 +84,7 @@ class AlignedHeapSegment {
     /// the struct, to the end of the memory region that contains it.
     char allocRegion_[1];
 
+   public:
     /// Set the protection mode of guardPage_ (if system page size allows it).
     void protectGuardPage(oscompat::ProtectMode mode);
   };
@@ -276,20 +266,6 @@ class AlignedHeapSegment {
   /// max size of markStack sets a flag and returns.
   void completeMarking(GC *gc, CompleteMarkState *markState);
 
-  /// Assumes marking is complete.  Scans the heap, determining, for each live
-  /// object, the address to which it will later be compacted.  Objects are
-  /// compacted into chunks, in the order they are provided by
-  /// sweepResult->compactionResult.  The first object that doesn't fit in a
-  /// chunk causes this chunk to be complete, and further allocation to occur in
-  /// the next.  For each live object, installs a forwarding pointer to the
-  /// post-compaction address in the VTable slot, after saving the VTable value
-  /// in sweepResult->displacedVtablePtrs, which becomes the return result of
-  /// the call.  Dead objects with finalizers have their finalizers executed.
-  /// Sequences of dead objects have a DeadRegion containing a pointer to the
-  /// next live object inserted, allowing them to be skipped efficiently n
-  /// subsequent heap traversals.
-  void sweepAndInstallForwardingPointers(GC *gc, SweepResult *sweepResult);
-
   /// Assumes sweeping is complete.  Traverses the live objects, scanning their
   /// pointers.  For each pointer to another heap object, update the pointer by
   /// following the referent's forwarding pointer.  Marked cells are considered
@@ -374,7 +350,7 @@ class AlignedHeapSegment {
   bool checkSummarizedVTables() const;
 #endif
 
- private:
+ protected:
   /// Return a pointer to the contents of the memory region managed by this
   /// segment.
   inline Contents *contents() const;
@@ -402,9 +378,6 @@ class AlignedHeapSegment {
   /// The end of the allocation region.  Initially set to the start (making the
   /// allocation region empty), but fixed up in the body of the constructor.
   char *end_{start()};
-
-  /// Pointer to the generation that owns this segment.
-  GCGeneration *generation_{nullptr};
 
 #ifdef HERMES_EXTRA_DEBUG
   /// Support summarization of the vtables in the segment.

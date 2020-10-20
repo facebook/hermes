@@ -6,13 +6,13 @@
  */
 
 #include "hermes/VM/OldGenSegmentRanges.h"
-#include "hermes/VM/AlignedHeapSegment.h"
+#include "hermes/VM/GenGCHeapSegment.h"
 #include "hermes/VM/OldGenNC.h"
 
 namespace hermes {
 namespace vm {
 
-AlignedHeapSegment *OldGenFilledSegmentRange::next() {
+GenGCHeapSegment *OldGenFilledSegmentRange::next() {
   if (LLVM_LIKELY(cursor_ < gen_->filledSegments_.size())) {
     return &gen_->filledSegments_[cursor_++];
   }
@@ -20,7 +20,7 @@ AlignedHeapSegment *OldGenFilledSegmentRange::next() {
   return nullptr;
 }
 
-AlignedHeapSegment *OldGenMaterializingRange::next() {
+GenGCHeapSegment *OldGenMaterializingRange::next() {
   if (LLVM_LIKELY(gen_->materializeNextSegment())) {
     return &gen_->activeSegment();
   }

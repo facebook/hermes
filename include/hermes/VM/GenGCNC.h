@@ -13,7 +13,6 @@
 #include "hermes/Support/OptValue.h"
 #include "hermes/Support/PerfSection.h"
 #include "hermes/Support/SlowAssert.h"
-#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/AlignedStorage.h"
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/CellKind.h"
@@ -22,6 +21,7 @@
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/GCSegmentAddressIndex.h"
+#include "hermes/VM/GenGCHeapSegment.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/OldGenNC.h"
 #include "hermes/VM/SweepResultNC.h"
@@ -266,7 +266,7 @@ class GenGC final : public GCBase {
   static constexpr uint32_t maxAllocationSize() {
     // The largest allocation allowable in NCGen is the max size a single
     // segment supports.
-    return AlignedHeapSegment::maxSize();
+    return GenGCHeapSegment::maxSize();
   }
 
   /// The occupancy target guides heap sizing -- the fraction of the heap
@@ -750,7 +750,7 @@ class GenGC final : public GCBase {
   /// The memory region the segment owns did not move.
   ///
   /// \p segment A pointer to the new location of the segment.
-  void segmentMoved(AlignedHeapSegment *segment);
+  void segmentMoved(GenGCHeapSegment *segment);
 
   /// Notify the GC that it should stop tracking the given segments.
   ///
@@ -1094,7 +1094,7 @@ inline void GenGC::writeBarrierImpl(void *loc, void *value, bool hv) {
   countWriteBarrier(hv, kNumWriteBarrierWithDifferentSegsIdx);
   if (youngGen_.contains(value)) {
     countWriteBarrier(hv, kNumWriteBarrierPtrInYGIdx);
-    AlignedHeapSegment::cardTableCovering(locPtr)->dirtyCardForAddress(locPtr);
+    GenGCHeapSegment::cardTableCovering(locPtr)->dirtyCardForAddress(locPtr);
   }
 }
 

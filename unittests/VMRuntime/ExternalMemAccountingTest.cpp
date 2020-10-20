@@ -12,9 +12,9 @@
 #include "EmptyCell.h"
 #include "ExtStringForTest.h"
 #include "TestHelpers.h"
-#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCCell.h"
+#include "hermes/VM/GenGCHeapSegment.h"
 
 #include <deque>
 
@@ -54,7 +54,7 @@ MetadataTableForTests getMetadataTable() {
 }
 
 namespace {
-const size_t kMaxYoungGenSize = AlignedHeapSegment::maxSize();
+const size_t kMaxYoungGenSize = GenGCHeapSegment::maxSize();
 } // namespace
 
 /// A parameterized test class, for a set of tests that allocate
@@ -237,7 +237,7 @@ TEST(ExtMemNonParamTests, ExtMemDoesNotBreakFullGC) {
   // (YGSize + OGSize) / GC::kYoungGenFractionDenom).  We want the max
   // size to be considerably larger than this.
   const size_t kInitSize =
-      AlignedHeapSegment::maxSize() * GC::kYoungGenFractionDenom;
+      GenGCHeapSegment::maxSize() * GC::kYoungGenFractionDenom;
   GCConfig gcConfig = GCConfig::Builder(kTestGCConfigBuilder)
                           .withInitHeapSize(kInitSize)
                           .withMaxHeapSize(kInitSize * 4)
@@ -246,7 +246,7 @@ TEST(ExtMemNonParamTests, ExtMemDoesNotBreakFullGC) {
   auto runtime = DummyRuntime::create(getMetadataTable(), gcConfig);
   DummyRuntime &rt = *runtime;
 
-  using SegmentSizeCell = EmptyCell<AlignedHeapSegment::maxSize()>;
+  using SegmentSizeCell = EmptyCell<GenGCHeapSegment::maxSize()>;
 
   std::deque<GCCell *> roots;
 
@@ -262,7 +262,7 @@ TEST(ExtMemNonParamTests, ExtMemDoesNotBreakFullGC) {
   // After this, the effective size of the old gen should now be
   // greater than its current size.
   roots.push_back(ExtStringForTest::createLongLived(
-      rt, 5 * AlignedHeapSegment::maxSize() / 2));
+      rt, 5 * GenGCHeapSegment::maxSize() / 2));
   rt.pointerRoots.push_back(&roots.back());
 
   // Now allocate a YG object, filling the YG.
@@ -288,7 +288,7 @@ TEST(ExtMemNonParamDeathTest, SaturateYoungGen) {
   const auto kOGSize = kTotalSize - kYGSize;
 
   // A segment-sized cell, to fill out the generations.
-  using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
+  using SegmentCell = EmptyCell<GenGCHeapSegment::maxSize()>;
 
   // An external allocation size that will certainly saturate the young
   // generation.

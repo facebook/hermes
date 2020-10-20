@@ -8,8 +8,8 @@
 #ifndef HERMES_VM_GCSEGMENTRANGE_INLINE_H
 #define HERMES_VM_GCSEGMENTRANGE_INLINE_H
 
-#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/GCSegmentRange.h"
+#include "hermes/VM/GenGCHeapSegment.h"
 
 namespace hermes {
 namespace vm {
@@ -24,7 +24,7 @@ inline GCSegmentRange::Ptr GCSegmentRange::fuse(
   return std::unique_ptr<Fused>(new Fused{std::move(underlying)});
 }
 
-inline GCSegmentRange::Ptr GCSegmentRange::singleton(AlignedHeapSegment *seg) {
+inline GCSegmentRange::Ptr GCSegmentRange::singleton(GenGCHeapSegment *seg) {
   return fromConsumable(seg, seg + 1);
 }
 

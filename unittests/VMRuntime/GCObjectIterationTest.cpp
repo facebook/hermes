@@ -10,9 +10,9 @@
 
 #include "EmptyCell.h"
 #include "TestHelpers.h"
-#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/GC.h"
+#include "hermes/VM/GenGCHeapSegment.h"
 #include "hermes/VM/HeapAlign.h"
 
 #include "gtest/gtest.h"
@@ -33,7 +33,7 @@ TEST(GCObjectIterationTest, ForAllObjsGetsAllObjects) {
 
   // 2/3 the size of a segment.
   constexpr size_t kLargeSize =
-      heapAlignSize((AlignedHeapSegment::maxSize() / 3) * 2);
+      heapAlignSize((GenGCHeapSegment::maxSize() / 3) * 2);
   using LargeCell = VarSizedEmptyCell<kLargeSize>;
   // Divide by 8 bytes per HermesValue to get elements.
   GCCell *largeCell0 = LargeCell::create(rt);
