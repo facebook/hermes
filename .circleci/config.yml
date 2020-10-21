@@ -202,7 +202,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: v3-repo-{{ .Environment.CIRCLE_PR_NUMBER }}
+          key: v3-repo-{{ .Environment.CIRCLE_SHA1 }}
       - run:
           name: Install dependencies
           command: |
@@ -235,8 +235,10 @@ jobs:
     <<: *apple_defaults
     steps:
       - checkout
+      # TODO: Use a better cache key to avoid rebuilding whole framework
+      # when it is not necessary
       - restore_cache:
-          key: v3-repo-{{ .Environment.CIRCLE_PR_NUMBER }}
+          key: v3-repo-{{ .Environment.CIRCLE_SHA1 }}
       - run:
           name: Set up workspace
           command: mkdir -p /tmp/hermes/output
@@ -252,7 +254,7 @@ jobs:
           name: Build the Mac frameworks
           command: ./utils/build-mac-framework.sh
       - save_cache:
-          key: v3-repo-{{ .Environment.CIRCLE_PR_NUMBER }}
+          key: v3-repo-{{ .Environment.CIRCLE_SHA1 }}
           paths:
             - ~/hermes/build_iphoneos
             - ~/hermes/build_iphonesimulator
@@ -264,7 +266,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: v3-repo-{{ .Environment.CIRCLE_PR_NUMBER }}
+          key: v3-repo-{{ .Environment.CIRCLE_SHA1 }}
       - run:
           name: Set up workspace
           command: mkdir -p /tmp/hermes/output
