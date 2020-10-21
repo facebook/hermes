@@ -36,7 +36,6 @@ workflows:
             - package-apple-runtime
             - windows
       - test-linux
-      # - test-macos
       - test-e2e:
           requires:
             - npm
