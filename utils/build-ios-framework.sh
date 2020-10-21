@@ -14,5 +14,5 @@ if [ ! -d destroot/Library/Frameworks/iphoneos/hermes.framework ]; then
 
     create_universal_framework "iphoneos" "iphonesimulator"
 else
-    echo "Skipping; Clean \"destroot\" to rebuilt".
+    echo "Skipping; Clean \"destroot\" to rebuild".
 fi

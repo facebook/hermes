@@ -11,5 +11,5 @@ if [ ! -d destroot/Library/Frameworks/macosx/hermes.framework ]; then
 
     build_apple_framework "macosx" "x86_64;arm64" "$mac_deployment_target"
 else
-    echo "Skipping; Clean \"destroot\" to rebuilt". 
+    echo "Skipping; Clean \"destroot\" to rebuild". 
 fi
