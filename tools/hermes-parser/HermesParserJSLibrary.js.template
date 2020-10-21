@@ -66,7 +66,7 @@ const HermesParserJSLibrary = {
     endLine,
     endCol,
     rangeStart,
-    rangeEnd,
+    rangeEnd
   ) {
     return JSReferences.store({
       start: {
