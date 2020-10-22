@@ -83,9 +83,7 @@ class GCCell {
     // ExternalStringPrimitive<T> is special: it extends VariableSizeRuntimeCell
     // but it's actually fixed-size.
     static_assert(
-        !std::is_convertible<C *, VariableSizeRuntimeCell *>::value ||
-            std::is_same<C, ExternalStringPrimitive<char>>::value ||
-            std::is_same<C, ExternalStringPrimitive<char16_t>>::value,
+        !std::is_convertible<C *, VariableSizeRuntimeCell *>::value,
         "must be fixed-size");
     return sizeof(C);
   }

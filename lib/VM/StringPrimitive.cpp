@@ -176,8 +176,8 @@ void deserializeExternalStringImpl(Deserializer &d) {
   d.readData(&contents[0], length * sizeof(T));
 
   // Construct an ExternalStringPrimitive from what we deserialized.
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      cellSize<ExternalStringPrimitive<T>>());
+  void *mem = d.getRuntime()->alloc</*fixedSize*/ false, HasFinalizer::Yes>(
+      sizeof(ExternalStringPrimitive<T>));
   auto *cell =
       new (mem) ExternalStringPrimitive<T>(d.getRuntime(), std::move(contents));
   if (uniqued)
@@ -534,7 +534,7 @@ ExternalStringPrimitive<T>::ExternalStringPrimitive(
     : SymbolStringPrimitive(
           runtime,
           &vt,
-          cellSize<ExternalStringPrimitive<T>>(),
+          sizeof(ExternalStringPrimitive<T>),
           contents.size()),
       contents_(std::forward<BasicString>(contents)) {
   static_assert(
@@ -557,8 +557,11 @@ CallResult<HermesValue> ExternalStringPrimitive<T>::create(
       "ExternalStringPrimitive mismatched char type");
   if (LLVM_UNLIKELY(str.size() > MAX_STRING_LENGTH))
     return runtime->raiseRangeError("String length exceeds limit");
-  void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      cellSize<ExternalStringPrimitive<T>>());
+  // We have to use a variable sized alloc here even though the size is already
+  // known, because ExternalStringPrimitive is derived from
+  // VariableSizeRuntimeCell
+  void *mem = runtime->alloc</*fixedSize*/ false, HasFinalizer::Yes>(
+      sizeof(ExternalStringPrimitive<T>));
   auto *extStr = new (mem)
       ExternalStringPrimitive<T>(runtime, std::forward<BasicString>(str));
   runtime->getHeap().creditExternalMemory(
@@ -578,10 +581,13 @@ CallResult<HermesValue> ExternalStringPrimitive<T>::createLongLived(
     return runtime->raiseRangeError(
         "Cannot allocate an external string primitive.");
   }
-  auto *extStr = runtime->makeAFixed<
+  // Use variable size alloc since ExternalStringPrimitive is derived from
+  // VariableSizeRuntimeCell.
+  auto *extStr = runtime->makeAVariable<
       ExternalStringPrimitive<T>,
       HasFinalizer::Yes,
-      LongLived::Yes>(runtime, std::move(str));
+      LongLived::Yes>(
+      sizeof(ExternalStringPrimitive<T>), runtime, std::move(str));
   runtime->getHeap().creditExternalMemory(
       extStr, extStr->calcExternalMemorySize());
   return HermesValue::encodeStringValue(extStr);
@@ -684,7 +690,10 @@ PseudoHandle<StringPrimitive> BufferedStringPrimitive<T>::create(
     Runtime *runtime,
     uint32_t length,
     Handle<ExternalStringPrimitive<T>> storage) {
-  void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::No>(
+  // We have to use a variable sized alloc here even though the size is already
+  // known, because BufferedStringPrimitive is derived from
+  // VariableSizeRuntimeCell.
+  void *mem = runtime->alloc</*fixedSize*/ false, HasFinalizer::No>(
       sizeof(BufferedStringPrimitive<T>));
   return createPseudoHandle<StringPrimitive>(
       new (mem) BufferedStringPrimitive<T>(runtime, length, storage.get()));
