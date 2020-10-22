@@ -7,6 +7,7 @@
 
 // RUN: %hermes %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -lazy %s | %FileCheck --match-full-lines %s
 
 function show(iterResult) {
   print(iterResult.value, '|', iterResult.done);

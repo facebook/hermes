@@ -1492,16 +1492,7 @@ CallResult<Handle<GeneratorInnerFunction>> GeneratorInnerFunction::create(
       args.getArgCount());
   auto self = JSObjectInit::initToHandle(runtime, cell);
 
-  // We must store the entire frame, including the extra registers the callee
-  // had to allocate at the start.
-  const uint32_t frameSize =
-      codeBlock->getFrameSize() + StackFrameLayout::CalleeExtraRegistersAtStart;
-
-  // Size needed to store the complete context:
-  // - "this"
-  // - actual arguments
-  // - stack frame
-  const uint32_t ctxSize = 1 + args.getArgCount() + frameSize;
+  const uint32_t ctxSize = getContextSize(codeBlock, args.getArgCount());
 
   auto ctxRes = ArrayStorage::create(runtime, ctxSize, ctxSize);
   if (LLVM_UNLIKELY(ctxRes == ExecutionStatus::EXCEPTION)) {
@@ -1534,7 +1525,7 @@ CallResult<PseudoHandle<>> GeneratorInnerFunction::callInnerFunction(
   self->result_.set(arg.getHermesValue(), &runtime->getHeap());
   self->action_ = action;
 
-  auto ctx = runtime->makeHandle(selfHandle->savedContext_);
+  auto ctx = runtime->makeMutableHandle(selfHandle->savedContext_);
   // Account for the `this` argument stored as the first element of ctx.
   const uint32_t argCount = self->argCount_;
   // Generators cannot be used as constructors, so newTarget is always
@@ -1549,6 +1540,24 @@ CallResult<PseudoHandle<>> GeneratorInnerFunction::callInnerFunction(
     return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   for (ArrayStorage::size_type i = 0, e = argCount; i < e; ++i) {
     frame->getArgRef(i) = ctx->at(i + 1);
+  }
+
+  // Force lazy compilation immediately in order to size the context properly.
+  // We're about to call the function anyway, so this doesn't reduce laziness.
+  // Note that this will do nothing after the very first time a lazy function
+  // is called, so we only resize before we save any registers at all.
+  if (LLVM_UNLIKELY(selfHandle->getCodeBlock()->isLazy())) {
+    selfHandle->getCodeBlock()->lazyCompile(runtime);
+    if (LLVM_UNLIKELY(
+            ArrayStorage::resize(
+                ctx,
+                runtime,
+                getContextSize(
+                    selfHandle->getCodeBlock(), selfHandle->argCount_)) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    selfHandle->savedContext_.set(runtime, ctx.get(), &runtime->getHeap());
   }
 
   return JSFunction::_callImpl(selfHandle, runtime);

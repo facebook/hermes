@@ -1311,6 +1311,22 @@ class GeneratorInnerFunction final : public JSFunction {
   bool isDelegated_{false};
 
  private:
+  /// \param argCount the number of arguments provided to the generator
+  ///     function, not including 'this'.
+  /// \return the size required for a context array to hold the saved registers.
+  static uint32_t getContextSize(CodeBlock *codeBlock, uint32_t argCount) {
+    // We must store the entire frame, including the extra registers the callee
+    // had to allocate at the start.
+    const uint32_t frameSize = codeBlock->getFrameSize() +
+        StackFrameLayout::CalleeExtraRegistersAtStart;
+
+    // Size needed to store the complete context:
+    // - "this"
+    // - actual arguments
+    // - stack frame
+    return 1 + argCount + frameSize;
+  }
+
   /// \return the offset of the frame registers in the stored context.
   uint32_t getFrameOffsetInContext() const {
     // Account for `this` argument.
