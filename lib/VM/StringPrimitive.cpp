@@ -56,10 +56,11 @@ void deserializeDynamicStringImpl(Deserializer &d) {
     uniqueID = SymbolID::unsafeCreate(d.readInt<uint32_t>());
   }
 
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ false>(
-      DynamicStringPrimitive<T, Uniqued>::allocationSize(length));
   auto *cell =
-      new (mem) DynamicStringPrimitive<T, Uniqued>(d.getRuntime(), length);
+      d.getRuntime()->makeAVariable<DynamicStringPrimitive<T, Uniqued>>(
+          DynamicStringPrimitive<T, Uniqued>::allocationSize(length),
+          d.getRuntime(),
+          length);
   if (uniqued)
     cell->convertToUniqued(uniqueID);
   d.readData(cell->getRawPointerForWrite(), length * sizeof(T));
@@ -176,10 +177,12 @@ void deserializeExternalStringImpl(Deserializer &d) {
   d.readData(&contents[0], length * sizeof(T));
 
   // Construct an ExternalStringPrimitive from what we deserialized.
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ false, HasFinalizer::Yes>(
-      sizeof(ExternalStringPrimitive<T>));
   auto *cell =
-      new (mem) ExternalStringPrimitive<T>(d.getRuntime(), std::move(contents));
+      d.getRuntime()
+          ->makeAVariable<ExternalStringPrimitive<T>, HasFinalizer::Yes>(
+              sizeof(ExternalStringPrimitive<T>),
+              d.getRuntime(),
+              std::move(contents));
   if (uniqued)
     cell->convertToUniqued(uniqueID);
 
@@ -492,10 +495,9 @@ CallResult<HermesValue> DynamicStringPrimitive<T, Uniqued>::create(
     Runtime *runtime,
     Ref str) {
   assert(!isExternalLength(str.size()) && "length should not be external");
-  void *mem =
-      runtime->alloc</*fixedSize*/ false>(allocationSize((uint32_t)str.size()));
-  return HermesValue::encodeStringValue(
-      (new (mem) DynamicStringPrimitive<T, Uniqued>(runtime, str)));
+  auto *cell = runtime->makeAVariable<DynamicStringPrimitive<T, Uniqued>>(
+      allocationSize((uint32_t)str.size()), runtime, str);
+  return HermesValue::encodeStringValue(cell);
 }
 
 template <typename T, bool Uniqued>
@@ -514,9 +516,9 @@ template <typename T, bool Uniqued>
 CallResult<HermesValue> DynamicStringPrimitive<T, Uniqued>::create(
     Runtime *runtime,
     uint32_t length) {
-  void *mem = runtime->alloc</*fixedSize*/ false>(allocationSize(length));
-  return HermesValue::encodeStringValue(
-      (new (mem) DynamicStringPrimitive<T, Uniqued>(runtime, length)));
+  auto *cell = runtime->makeAVariable<DynamicStringPrimitive<T, Uniqued>>(
+      allocationSize(length), runtime, length);
+  return HermesValue::encodeStringValue(cell);
 }
 
 template class DynamicStringPrimitive<char16_t, true /* Uniqued */>;
@@ -560,10 +562,11 @@ CallResult<HermesValue> ExternalStringPrimitive<T>::create(
   // We have to use a variable sized alloc here even though the size is already
   // known, because ExternalStringPrimitive is derived from
   // VariableSizeRuntimeCell
-  void *mem = runtime->alloc</*fixedSize*/ false, HasFinalizer::Yes>(
-      sizeof(ExternalStringPrimitive<T>));
-  auto *extStr = new (mem)
-      ExternalStringPrimitive<T>(runtime, std::forward<BasicString>(str));
+  auto *extStr =
+      runtime->makeAVariable<ExternalStringPrimitive<T>, HasFinalizer::Yes>(
+          sizeof(ExternalStringPrimitive<T>),
+          runtime,
+          std::forward<BasicString>(str));
   runtime->getHeap().creditExternalMemory(
       extStr, extStr->calcExternalMemorySize());
   auto res = HermesValue::encodeStringValue(extStr);
@@ -693,10 +696,9 @@ PseudoHandle<StringPrimitive> BufferedStringPrimitive<T>::create(
   // We have to use a variable sized alloc here even though the size is already
   // known, because BufferedStringPrimitive is derived from
   // VariableSizeRuntimeCell.
-  void *mem = runtime->alloc</*fixedSize*/ false, HasFinalizer::No>(
-      sizeof(BufferedStringPrimitive<T>));
-  return createPseudoHandle<StringPrimitive>(
-      new (mem) BufferedStringPrimitive<T>(runtime, length, storage.get()));
+  auto *cell = runtime->makeAVariable<BufferedStringPrimitive<T>>(
+      sizeof(BufferedStringPrimitive<T>), runtime, length, storage);
+  return createPseudoHandle<StringPrimitive>(cell);
 }
 
 #ifndef NDEBUG

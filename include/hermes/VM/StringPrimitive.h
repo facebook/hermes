@@ -643,6 +643,7 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
 /// has an upper bound of the amount of extra memory it can keep alive.
 template <typename T>
 class BufferedStringPrimitive final : public StringPrimitive {
+  friend GC;
   friend class IdentifierTable;
   friend class StringBuilder;
   friend class StringPrimitive;
@@ -696,14 +697,14 @@ class BufferedStringPrimitive final : public StringPrimitive {
   BufferedStringPrimitive(
       Runtime *runtime,
       uint32_t length,
-      ExternalStringPrimitive<T> *concatBuffer)
+      Handle<ExternalStringPrimitive<T>> concatBuffer)
       : StringPrimitive(
             runtime,
             &vt,
             sizeof(BufferedStringPrimitive<T>),
             length) {
     concatBufferHV_.set(
-        HermesValue::encodeObjectValue(concatBuffer), &runtime->getHeap());
+        HermesValue::encodeObjectValue(*concatBuffer), &runtime->getHeap());
     assert(
         concatBuffer->contents_.size() >= length &&
         "length exceeds size of concatenation buffer");
