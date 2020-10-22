@@ -16,6 +16,7 @@ namespace vm {
 /// RegExpStringIterator object.
 /// See ES11 21.2.7.2 for Properties of RegExp String Iterator Instances.
 class JSRegExpStringIterator : public JSObject {
+  friend GC;
   using Super = JSObject;
 
   friend void RegExpStringIteratorBuildMeta(
@@ -51,15 +52,15 @@ class JSRegExpStringIterator : public JSObject {
 
   JSRegExpStringIterator(
       Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
-      JSObject *iteratedRegExp,
-      StringPrimitive *iteratedString,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
+      Handle<JSObject> iteratedRegExp,
+      Handle<StringPrimitive> iteratedString,
       bool global,
       bool unicode)
-      : JSObject(runtime, &vt.base, parent, clazz),
-        iteratedRegExp_(runtime, iteratedRegExp, &runtime->getHeap()),
-        iteratedString_(runtime, iteratedString, &runtime->getHeap()),
+      : JSObject(runtime, &vt.base, *parent, *clazz),
+        iteratedRegExp_(runtime, *iteratedRegExp, &runtime->getHeap()),
+        iteratedString_(runtime, *iteratedString, &runtime->getHeap()),
         global_(global),
         unicode_(unicode) {}
 

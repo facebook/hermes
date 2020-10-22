@@ -82,9 +82,7 @@ void RegExpSerialize(Serializer &s, const GCCell *cell) {
 
 void RegExpDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::RegExpKind && "Expected RegExp");
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      cellSize<JSRegExp>());
-  auto *cell = new (mem) JSRegExp(d);
+  auto *cell = d.getRuntime()->makeAFixed<JSRegExp, HasFinalizer::Yes>(d);
   d.endObject(cell);
 }
 #endif
@@ -92,13 +90,13 @@ void RegExpDeserialize(Deserializer &d, CellKind kind) {
 Handle<JSRegExp> JSRegExp::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  JSObjectAlloc<JSRegExp, HasFinalizer::Yes> mem{runtime};
-  auto selfHandle = mem.initToHandle(new (mem) JSRegExp(
+  auto *cell = runtime->makeAFixed<JSRegExp, HasFinalizer::Yes>(
       runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
+      parentHandle,
+      runtime->getHiddenClassForPrototype(
           *parentHandle,
-          numOverlapSlots<JSRegExp>() + ANONYMOUS_PROPERTY_SLOTS)));
+          numOverlapSlots<JSRegExp>() + ANONYMOUS_PROPERTY_SLOTS));
+  auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
 
   JSObject::setInternalProperty(
       *selfHandle,

@@ -20,6 +20,8 @@ namespace hermes {
 namespace vm {
 
 class JSRegExp final : public JSObject {
+  friend GC;
+
  public:
   using Super = JSObject;
   static ObjectVTable vt;
@@ -112,8 +114,8 @@ class JSRegExp final : public JSObject {
   friend void RegExpDeserialize(Deserializer &d, CellKind kind);
 #endif
 
-  JSRegExp(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
-      : JSObject(runtime, &vt.base, parent, clazz) {}
+  JSRegExp(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
+      : JSObject(runtime, &vt.base, *parent, *clazz) {}
 
   ~JSRegExp();
 
