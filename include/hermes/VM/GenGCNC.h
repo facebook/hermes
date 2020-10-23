@@ -945,14 +945,6 @@ inline void *GenGC::alloc(uint32_t sz) {
     collect("handle-san");
   }
 
-#ifdef HERMESVM_GC_GENERATIONAL_MARKSWEEPCOMPACT
-  AllocResult res = oldGen_.alloc(sz, hasFinalizer);
-  assert(res.success && "Should never fail to allocate at the top level");
-#ifdef HERMES_SLOW_DEBUG
-  totalAllocatedBytesDebug_ += heapAlignSize(sz);
-#endif
-  return res.ptr;
-#else
 #ifndef NDEBUG
   AllocResult res = debugAlloc(sz, hasFinalizer, fixedSize);
   assert(res.success && "Should never fail to allocate at the top level");
@@ -968,9 +960,7 @@ inline void *GenGC::alloc(uint32_t sz) {
     return res.ptr;
   }
   return allocSlow(sz, fixedSize, hasFinalizer);
-
 #endif // NDEBUG
-#endif // HERMESVM_GC_GENERATIONAL_MARKSWEEPCOMPACT
 }
 
 template <HasFinalizer hasFinalizer>
