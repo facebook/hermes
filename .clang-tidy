@@ -21,6 +21,8 @@ CheckOptions:
   - { key: readability-identifier-naming.MethodCase, value: camelBack }
   - { key: readability-identifier-naming.MemberCase, value: camelBack }
   - { key: readability-identifier-naming.MemberSuffix, value: '_' }
+  - { key: readability-identifier-naming.PublicMemberCase, value: camelBack }
+  - { key: readability-identifier-naming.PublicMemberSuffix, value: '' }
   - { key: readability-identifier-naming.NamespaceCase, value: lower_case }
   - { key: readability-identifier-naming.ParameterCase, value: camelBack }
   - { key: readability-braces-around-statements.ShortStatementLines, value: 3 }
