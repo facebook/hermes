@@ -71,6 +71,15 @@ test('Parse error does not include caret line for non-ASCII characters', () => {
   );
 });
 
+test('Parse error includes source filename', () => {
+  expect(() => parse('const = 1', {sourceFilename: 'FooTest.js'})).toThrow(
+    `FooTest.js:1:6: 'identifier' expected in declaration
+const = 1
+~~~~~~^
+`,
+  );
+});
+
 test('Parsing comments', () => {
   const source = '/*Block comment*/ 1; // Line comment';
 
@@ -165,6 +174,7 @@ test('Source locations', () => {
       {
         type: 'ExpressionStatement',
         loc: {
+          source: null,
           start: {
             line: 1,
             column: 0,
@@ -188,6 +198,7 @@ test('Source locations', () => {
         {
           type: 'ExpressionStatement',
           loc: {
+            source: null,
             start: {
               line: 1,
               column: 0,
@@ -202,6 +213,27 @@ test('Source locations', () => {
         },
       ],
     },
+  });
+
+  // Filename is included in source location if provided
+  expect(parse('Foo', {sourceFilename: 'FooTest.js'})).toMatchObject({
+    type: 'Program',
+    body: [
+      {
+        type: 'ExpressionStatement',
+        loc: {
+          source: 'FooTest.js',
+          start: {
+            line: 1,
+            column: 0,
+          },
+          end: {
+            line: 1,
+            column: 3,
+          },
+        },
+      },
+    ],
   });
 });
 

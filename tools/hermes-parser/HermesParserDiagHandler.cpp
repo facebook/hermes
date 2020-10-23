@@ -14,8 +14,10 @@ using llvh::Twine;
 
 namespace hermes {
 
-HermesParserDiagHandler::HermesParserDiagHandler(SourceErrorManager &sm)
-    : sm_(sm) {
+HermesParserDiagHandler::HermesParserDiagHandler(
+    SourceErrorManager &sm,
+    const char *filename)
+    : sm_(sm), filename_(filename) {
   sm_.setDiagHandler(handler, this);
   sm_.setErrorLimit(1);
 }
@@ -39,9 +41,11 @@ std::string HermesParserDiagHandler::getErrorString() const {
   }
 
   // Build lines to be used in error message
-  std::string messageLine = (Twine(lineNo) + ":" + Twine(columnNo) + ": " +
-                             firstError_.getMessage() + "\n")
-                                .str();
+  std::string messageLine =
+      ((filename_ != nullptr ? (Twine(filename_) + ":") : Twine("")) +
+       Twine(lineNo) + ":" + Twine(columnNo) + ": " + firstError_.getMessage() +
+       "\n")
+          .str();
 
   std::string sourceLine;
   std::string caretLine;

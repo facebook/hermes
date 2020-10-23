@@ -11,14 +11,24 @@ const HermesParser = require('./HermesParser');
 const HermesToBabelAdapter = require('./HermesToBabelAdapter');
 const HermesToESTreeAdapter = require('./HermesToESTreeAdapter');
 
-function getAdapter(options) {
-  return options.babel === true
-    ? new HermesToBabelAdapter()
-    : new HermesToESTreeAdapter();
+function getOptions(options) {
+  // Default filename to null if none was provided
+  if (options.sourceFilename == null) {
+    options.sourceFilename = null;
+  }
+
+  return options;
 }
 
-function parse(code, options = {}) {
-  const ast = HermesParser.parse(code);
+function getAdapter(options) {
+  return options.babel === true
+    ? new HermesToBabelAdapter(options)
+    : new HermesToESTreeAdapter(options);
+}
+
+function parse(code, opts = {}) {
+  const options = getOptions(opts);
+  const ast = HermesParser.parse(code, options.sourceFilename);
   const adapter = getAdapter(options);
 
   return adapter.transform(ast);

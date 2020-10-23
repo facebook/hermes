@@ -18,7 +18,7 @@ namespace hermes {
 /// errors.
 class HermesParserDiagHandler {
  public:
-  HermesParserDiagHandler(SourceErrorManager &sm);
+  HermesParserDiagHandler(SourceErrorManager &sm, const char *filename);
 
   /// \return true if an error has been tracked.
   bool hasError() const {
@@ -34,6 +34,9 @@ class HermesParserDiagHandler {
 
   /// First error given to handler(), if one exists.
   llvh::SMDiagnostic firstError_;
+
+  /// The name of the source file being parsed, if a filename was provided.
+  const char *filename_;
 
   /// The actual handler callback.
   static void handler(const llvh::SMDiagnostic &msg, void *ctx);

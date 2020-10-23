@@ -21,6 +21,7 @@ const {
  */
 class HermesASTAdapter {
   constructor(options) {
+    this.sourceFilename = options.sourceFilename;
     this.sourceType = 'script';
   }
 

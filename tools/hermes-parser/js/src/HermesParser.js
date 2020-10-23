@@ -14,7 +14,8 @@ const HermesParserWASM = require('./HermesParserWASM');
 const hermesParse = HermesParserWASM.cwrap('hermesParse', 'number', [
   'number',
   'number',
-  'string',
+  'number',
+  'number',
 ]);
 
 const hermesParseResult_free = HermesParserWASM.cwrap(
@@ -35,19 +36,53 @@ const hermesParseResult_getASTReference = HermesParserWASM.cwrap(
   ['number'],
 );
 
-function parse(code) {
-  const buffer = Buffer.from(code, 'utf8');
-  const addr = HermesParserWASM._malloc(buffer.length + 1);
-  if (!addr) {
+// Copy a string into the WASM heap and null-terminate
+function copyToHeap(buffer, addr) {
+  HermesParserWASM.HEAP8.set(buffer, addr);
+  HermesParserWASM.HEAP8[addr + buffer.length] = 0;
+}
+
+function parse(source, sourceFilename) {
+  // Allocate space on heap for source text
+  const sourceBuffer = Buffer.from(source, 'utf8');
+  const sourceAddr = HermesParserWASM._malloc(sourceBuffer.length + 1);
+
+  // Allocate space on heap for source filename if one was provided
+  let filenameBuffer = null;
+  let filenameAddr = 0;
+  let filenameSize = 0;
+  const hasFilename = sourceFilename != null;
+  if (hasFilename) {
+    filenameBuffer = Buffer.from(sourceFilename, 'utf8');
+    filenameSize = filenameBuffer.length;
+    filenameAddr = HermesParserWASM._malloc(filenameBuffer.length + 1);
+  }
+
+  // Throw error and free memory if either allocation failed
+  if (!sourceAddr || (hasFilename && !filenameAddr)) {
+    if (sourceAddr) {
+      HermesParserWASM._free(sourceAddr);
+    } else if (filenameAddr) {
+      HermesParserWASM._free(filenameAddr);
+    }
+
     throw new Error('Parser out of memory');
   }
 
   try {
-    // Copy the string into the WASM heap and null-terminate
-    HermesParserWASM.HEAP8.set(buffer, addr);
-    HermesParserWASM.HEAP8[addr + buffer.length] = 0;
+    // Copy source text and filename onto WASM heap
+    copyToHeap(sourceBuffer, sourceAddr);
+    if (hasFilename) {
+      copyToHeap(filenameBuffer, filenameAddr);
+    }
 
-    const parseResult = hermesParse(addr, buffer.length + 1);
+    const parseResult = hermesParse(
+      sourceAddr,
+      sourceBuffer.length + 1,
+      filenameAddr,
+      filenameSize + 1,
+    );
+
     try {
       // Extract and throw error from parse result if parsing failed
       const err = hermesParseResult_getError(parseResult);
@@ -62,7 +97,8 @@ function parse(code) {
       hermesParseResult_free(parseResult);
     }
   } finally {
-    HermesParserWASM._free(addr);
+    HermesParserWASM._free(sourceAddr);
+    HermesParserWASM._free(filenameAddr);
   }
 }
 
