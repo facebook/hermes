@@ -29,4 +29,18 @@ Pod::Spec.new do |spec|
   spec.osx.vendored_frameworks = "destroot/Library/Frameworks/macosx/hermes.framework"
 
   spec.xcconfig            = { "CLANG_CXX_LANGUAGE_STANDARD" => "c++14", "CLANG_CXX_LIBRARY" => "compiler-default", "GCC_PREPROCESSOR_DEFINITIONS" => "HERMES_ENABLE_DEBUGGER=1" }
+
+  unless ENV['hermes-artifact-url']
+    spec.prepare_command = <<-EOS
+      # When true, debug build will be used.
+      # See `build-apple-framework.sh` for details
+      DEBUG=#{HermesHelper::BUILD_TYPE == :debug}
+
+      # Build iOS framework
+      ./utils/build-ios-framework.sh
+      
+      # Build Mac framework
+      ./utils/build-mac-framework.sh
+    EOS
+  end
 end
