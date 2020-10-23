@@ -22,6 +22,7 @@ namespace vm {
 /// different CellKind.
 template <CellKind C>
 class JSMapImpl final : public JSObject {
+  friend GC;
   using Super = JSObject;
 
  public:
@@ -150,8 +151,11 @@ class JSMapImpl final : public JSObject {
   static void MapOrSetBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
  protected:
-  JSMapImpl(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
-      : JSObject(runtime, &vt.base, parent, clazz) {}
+  JSMapImpl(
+      Runtime *runtime,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz)
+      : JSObject(runtime, &vt.base, *parent, *clazz) {}
 
  private:
   /// The underlying storage.
@@ -176,6 +180,7 @@ struct JSMapTypeTraits<CellKind::MapIteratorKind> {
 
 template <CellKind C>
 class JSMapIteratorImpl final : public JSObject {
+  friend GC;
   using Super = JSObject;
 
  public:
@@ -276,8 +281,11 @@ class JSMapIteratorImpl final : public JSObject {
   friend void SetIteratorDeserialize(Deserializer &d, CellKind kind);
 #endif
 
-  JSMapIteratorImpl(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
-      : JSObject(runtime, &vt.base, parent, clazz) {}
+  JSMapIteratorImpl(
+      Runtime *runtime,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz)
+      : JSObject(runtime, &vt.base, *parent, *clazz) {}
 
  private:
   /// The internal pointer to the Map data. nullptr if the iterator has not been
