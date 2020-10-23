@@ -586,6 +586,9 @@ class HadesGC final : public GCBase {
   /// The amount of bytes of external memory credited to objects in the YG.
   uint64_t ygExternalBytes_{0};
 
+  /// The sum of all sizes in calls to alloc.
+  uint64_t totalAllocatedBytes_{0};
+
   /// The main entrypoint for all allocations.
   /// \param sz The size of allocation requested. This might be rounded up to
   ///   fit heap alignment requirements.

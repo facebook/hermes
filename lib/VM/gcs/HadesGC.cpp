@@ -845,7 +845,8 @@ void HadesGC::getHeapInfo(HeapInfo &info) {
   info.allocatedBytes = allocatedBytes();
   // Heap size includes fragmentation, which means every segment is fully used.
   info.heapSize = (oldGen_.numSegments() + 1) * AlignedStorage::size();
-  info.totalAllocatedBytes = 0;
+  // If YG isn't empty, its bytes haven't been accounted for yet, add them here.
+  info.totalAllocatedBytes = totalAllocatedBytes_ + youngGen().used();
   info.va = info.heapSize;
 }
 
@@ -1628,6 +1629,7 @@ void *HadesGC::allocLongLived(uint32_t sz) {
         "WeakRef mutex should not be held when allocLongLived is called");
   }
   assert(gcMutex_ && "GC mutex must be held when calling allocLongLived");
+  totalAllocatedBytes_ += heapAlignSize(sz);
   // Alloc directly into the old gen.
   return oldGen_.alloc(heapAlignSize(sz));
 }
@@ -1804,6 +1806,8 @@ void HadesGC::youngGenCollection(
   uint64_t promotedBytes = 0, usedBefore = youngGen().used();
   const uint64_t externalBytesBefore = ygExternalBytes_;
   uint64_t externalSweptBytes = 0;
+  // YG is about to be emptied, add all of the allocations.
+  totalAllocatedBytes_ += usedBefore;
   // Attempt to promote the YG segment to OG if the flag is set. If this call
   // fails for any reason, proceed with a GC.
   if (promoteYoungGenToOldGen()) {
