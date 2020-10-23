@@ -53,15 +53,13 @@ void HashMapEntrySerialize(Serializer &s, const GCCell *cell) {
 
 void HashMapEntryDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::HashMapEntryKind && "Expected HashMapEntry");
-  void *mem = d.getRuntime()->alloc(cellSize<HashMapEntry>());
-  auto *cell = new (mem) HashMapEntry(d);
+  auto *cell = d.getRuntime()->makeAFixed<HashMapEntry>(d);
   d.endObject(cell);
 }
 #endif
 
 CallResult<PseudoHandle<HashMapEntry>> HashMapEntry::create(Runtime *runtime) {
-  void *mem = runtime->alloc(cellSize<HashMapEntry>());
-  return createPseudoHandle(new (mem) HashMapEntry(runtime));
+  return createPseudoHandle(runtime->makeAFixed<HashMapEntry>(runtime));
 }
 
 //===----------------------------------------------------------------------===//
@@ -114,8 +112,7 @@ void OrderedHashMapSerialize(Serializer &s, const GCCell *cell) {
 
 void OrderedHashMapDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::OrderedHashMapKind && "ExpectedOrderedHashMap");
-  void *mem = d.getRuntime()->alloc(cellSize<OrderedHashMap>());
-  auto *cell = new (mem) OrderedHashMap(d);
+  auto *cell = d.getRuntime()->makeAFixed<OrderedHashMap>(d);
 
   d.endObject(cell);
 }
@@ -136,9 +133,8 @@ CallResult<PseudoHandle<OrderedHashMap>> OrderedHashMap::create(
   }
   auto hashTableStorage = runtime->makeHandle<ArrayStorage>(*arrRes);
 
-  void *mem = runtime->alloc(cellSize<OrderedHashMap>());
-  return createPseudoHandle(new (mem)
-                                OrderedHashMap(runtime, hashTableStorage));
+  return createPseudoHandle(
+      runtime->makeAFixed<OrderedHashMap>(runtime, hashTableStorage));
 }
 
 void OrderedHashMap::removeLinkedListNode(
