@@ -55,6 +55,8 @@ using std::chrono::steady_clock;
 namespace hermes {
 namespace vm {
 
+static const char *kGCName = "gengc";
+
 GenGC::Size::Size(const GCConfig &gcConfig)
     : Size(gcConfig.getMinHeapSize(), gcConfig.getMaxHeapSize()) {}
 
@@ -113,6 +115,7 @@ GenGC::GenGC(
       occupancyTarget_(gcConfig.getOccupancyTarget()),
       oomThreshold_(gcConfig.getEffectiveOOMThreshold()),
       weightedUsed_(static_cast<double>(gcConfig.getInitHeapSize())) {
+  crashMgr_->setCustomData("HermesGC", kGCName);
   growTo(gcConfig.getInitHeapSize());
   claimAllocContext();
   updateCrashManagerHeapExtents();
@@ -1413,7 +1416,7 @@ void GenGC::printStats(JSONEmitter &json) {
   GCBase::printStats(json);
   json.emitKey("specific");
   json.openDict();
-  json.emitKeyValue("collector", "noncontig-generational");
+  json.emitKeyValue("collector", kGCName);
 
   json.emitKey("stats");
   json.openDict();
@@ -1550,7 +1553,7 @@ void GenGC::CollectionSection::recordGCStats(
   // Record as an overall collection.
   GCAnalyticsEvent event{
       gc_->getName(),
-      "gengc",
+      kGCName,
       cycle_.extraInfo(),
       std::move(cause_),
       std::chrono::duration_cast<std::chrono::milliseconds>(

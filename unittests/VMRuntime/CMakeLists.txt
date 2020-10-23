@@ -17,6 +17,7 @@ set(RTSources
   CastingTest.cpp
   CodeCoverageProfilerTest.cpp
   CopyableVectorTest.cpp
+  CrashManagerTest.cpp
   DateUtilTest.cpp
   DecoratedObjectTest.cpp
   DictPropertyMapTest.cpp
@@ -29,7 +30,6 @@ set(RTSources
   GCGuardPageNCTest.cpp
   GCInitTest.cpp
   GCLazySegmentNCTest.cpp
-  GCHeapExtentsInCrashManagerTest.cpp
   GCMarkWeakTest.cpp
   GCObjectIterationTest.cpp
   GCOOMTest.cpp

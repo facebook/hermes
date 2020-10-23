@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#if defined(HERMESVM_GC_NONCONTIG_GENERATIONAL) || defined(HERMESVM_GC_HADES)
-
 /// Parts of regex, at least as used by gmock, appear to be unsupported on
 /// Windows. So we'll exempt this test on Windows.
 #ifndef _WINDOWS
@@ -79,7 +77,7 @@ class TestCrashManager : public CrashManager {
 };
 
 /// We are able to materialize every segment.
-TEST(GCHeapExtentsInCrashManagerTest, HeapExtentsCorrect) {
+TEST(CrashManagerTest, HeapExtentsCorrect) {
   /// We need a max heap that's bigger than normal
   GCConfig gcConfig = GCConfig::Builder(kTestGCConfigBuilder)
                           .withName("XYZ")
@@ -104,7 +102,7 @@ TEST(GCHeapExtentsInCrashManagerTest, HeapExtentsCorrect) {
     rt.pointerRoots.push_back(&roots.back());
   }
 #ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
-  EXPECT_EQ(4, testCrashMgr->customData().size());
+  EXPECT_EQ(5, testCrashMgr->customData().size());
 
   const std::string expectedYgKeyStr = "XYZ:HeapSegments_YG";
   const std::string oneExtent =
@@ -183,7 +181,7 @@ TEST(GCHeapExtentsInCrashManagerTest, HeapExtentsCorrect) {
   }
   rt.collect();
 
-  EXPECT_EQ(2, testCrashMgr->customData().size());
+  EXPECT_EQ(3, testCrashMgr->customData().size());
 
   EXPECT_NE(
       testCrashMgr->customData().end(),
@@ -218,7 +216,7 @@ TEST(GCHeapExtentsInCrashManagerTest, HeapExtentsCorrect) {
 }
 
 #ifdef HERMESVM_GC_HADES
-TEST(GCHeapExtentsInCrashManagerTest, PromotedYGHasCorrectName) {
+TEST(CrashManagerTest, PromotedYGHasCorrectName) {
   // Turn on the "direct to OG" allocation feature.
   GCConfig gcConfig = GCConfig::Builder(kTestGCConfigBuilder)
                           .withName("XYZ")
@@ -258,8 +256,25 @@ TEST(GCHeapExtentsInCrashManagerTest, PromotedYGHasCorrectName) {
 }
 #endif
 
+TEST(CrashManagerTest, GCNameIncluded) {
+  GCConfig gcConfig =
+      GCConfig::Builder(kTestGCConfigBuilder).withName("XYZ").build();
+  auto testCrashMgr = std::make_shared<TestCrashManager>();
+  auto runtime = DummyRuntime::create(
+      getMetadataTable(),
+      gcConfig,
+      DummyRuntime::defaultProvider(),
+      testCrashMgr);
+
+  const auto &crashData = testCrashMgr->customData();
+  auto gcName = crashData.find("HermesGC");
+  // Each GC can set its name as it likes, the only real requirement is that
+  // it exists and is distinct. Since we can test more than one GC per build,
+  // we'll just test the "exists" part.
+  ASSERT_NE(gcName, crashData.end()) << "HermesGC key not found in crash data";
+  EXPECT_NE(gcName->second, "") << "HermesGC value is empty";
+}
+
 } // namespace
 
 #endif // _WINDOWS
-
-#endif // HERMESVM_GC_NONCONTIG_GENERATIONAL || HERMESVM_GC_HADES

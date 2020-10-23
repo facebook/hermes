@@ -20,6 +20,9 @@
 namespace hermes {
 namespace vm {
 
+static const char *kGCName =
+    kConcurrentGC ? "hades (concurrent)" : "hades (incremental)";
+
 // A free list cell is always variable-sized.
 const VTable HadesGC::OldGen::FreelistCell::vt{CellKind::FreelistKind,
                                                /*variableSize*/ 0};
@@ -251,7 +254,7 @@ class HadesGC::CollectionStats final {
 HadesGC::CollectionStats::~CollectionStats() {
   gc_->recordGCStats(GCAnalyticsEvent{
       gc_->getName(),
-      kConcurrentGC ? "hades (concurrent)" : "hades (incremental)",
+      kGCName,
       extraInfo_,
       std::move(cause_),
       std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -801,6 +804,7 @@ HadesGC::HadesGC(
       occupancyTarget_(gcConfig.getOccupancyTarget()),
       // Assume about 30% of the YG will survive initially.
       ygAverageSurvivalRatio_{/*weight*/ 0.5, /*init*/ 0.3} {
+  crashMgr_->setCustomData("HermesGC", kGCName);
   // createSegment relies on member variables and should not be called until
   // they are initialised.
   if (!(youngGen_ = createSegment(/*isYoungGen*/ true))) {
@@ -888,7 +892,7 @@ void HadesGC::printStats(JSONEmitter &json) {
   GCBase::printStats(json);
   json.emitKey("specific");
   json.openDict();
-  json.emitKeyValue("collector", "hades");
+  json.emitKeyValue("collector", kGCName);
   json.emitKey("stats");
   json.openDict();
   json.closeDict();

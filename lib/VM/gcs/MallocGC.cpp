@@ -26,6 +26,8 @@
 namespace hermes {
 namespace vm {
 
+static const char *kGCName = "malloc";
+
 struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
                                          public WeakRootAcceptorDefault {
   std::vector<CellHeader *> worklist_;
@@ -186,7 +188,9 @@ MallocGC::MallocGC(
       pointers_(),
       weakPointers_(),
       maxSize_(Size(gcConfig).max()),
-      sizeLimit_(gcConfig.getInitHeapSize()) {}
+      sizeLimit_(gcConfig.getInitHeapSize()) {
+  crashMgr_->setCustomData("HermesGC", kGCName);
+}
 
 MallocGC::~MallocGC() {
   for (CellHeader *header : pointers_) {
@@ -365,7 +369,7 @@ void MallocGC::collect(std::string cause) {
 
   GCAnalyticsEvent event{
       getName(),
-      "malloc",
+      kGCName,
       "full",
       std::move(cause),
       std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -441,7 +445,7 @@ void MallocGC::printStats(JSONEmitter &json) {
   GCBase::printStats(json);
   json.emitKey("specific");
   json.openDict();
-  json.emitKeyValue("collector", "malloc");
+  json.emitKeyValue("collector", kGCName);
   json.emitKey("stats");
   json.openDict();
   json.closeDict();
