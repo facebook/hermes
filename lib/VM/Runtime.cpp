@@ -1013,16 +1013,20 @@ ExecutionStatus Runtime::loadSegment(
 
 void Runtime::runInternalBytecode() {
   auto module = getInternalBytecode();
-  auto bcProvider = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-                        llvh::make_unique<Buffer>(module.data(), module.size()))
-                        .first;
-  assert(bcProvider && "Failed to decode internal bytecode");
+  std::pair<std::unique_ptr<hbc::BCProvider>, std::string> bcResult =
+      hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
+          llvh::make_unique<Buffer>(module.data(), module.size()));
+  if (LLVM_UNLIKELY(!bcResult.first)) {
+    hermes_fatal((llvh::Twine("Error running internal bytecode: ") +
+                  bcResult.second.c_str())
+                     .str());
+  }
   // The bytes backing our buffer are immortal, so we can be persistent.
   RuntimeModuleFlags flags;
   flags.persistent = true;
   flags.hidesEpilogue = true;
   auto res = runBytecode(
-      std::move(bcProvider),
+      std::move(bcResult.first),
       flags,
       /*sourceURL*/ "",
       makeNullHandle<Environment>());
