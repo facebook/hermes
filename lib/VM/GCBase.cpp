@@ -779,10 +779,10 @@ bool GCBase::shouldSanitizeHandles() {
 #endif
 
 /*static*/
-std::list<detail::WeakRefKey *> GCBase::buildKeyList(
+std::vector<detail::WeakRefKey *> GCBase::buildKeyList(
     GC *gc,
     JSWeakMap *weakMap) {
-  std::list<detail::WeakRefKey *> res;
+  std::vector<detail::WeakRefKey *> res;
   for (auto iter = weakMap->keys_begin(), end = weakMap->keys_end();
        iter != end;
        iter++) {

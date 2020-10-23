@@ -833,7 +833,7 @@ class GCBase {
   /// \return a list of pointers to all the WeakRefKeys in \p weakMap.
   /// The \p gc argument is passed to methods that verify they're only
   /// called during GC.
-  static std::list<detail::WeakRefKey *> buildKeyList(
+  static std::vector<detail::WeakRefKey *> buildKeyList(
       GC *gc,
       JSWeakMap *weakMap);
 
@@ -878,7 +878,7 @@ class GCBase {
       GC *gc,
       JSWeakMap *weakMap,
       Acceptor &acceptor,
-      llvh::DenseMap<JSWeakMap *, std::list<detail::WeakRefKey *>>
+      llvh::DenseMap<JSWeakMap *, std::vector<detail::WeakRefKey *>>
           *unreachableKeys,
       ObjIsMarkedFunc objIsMarked,
       MarkFromValFunc markFromVal);

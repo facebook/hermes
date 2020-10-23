@@ -95,11 +95,11 @@ bool GCBase::markFromReachableWeakMapKeys(
     GC *gc,
     JSWeakMap *weakMap,
     Acceptor &acceptor,
-    llvh::DenseMap<JSWeakMap *, std::list<detail::WeakRefKey *>>
+    llvh::DenseMap<JSWeakMap *, std::vector<detail::WeakRefKey *>>
         *unreachableKeys,
     ObjIsMarkedFunc objIsMarked,
     MarkFromValFunc markFromVal) {
-  std::list<detail::WeakRefKey *> *keyList = nullptr;
+  std::vector<detail::WeakRefKey *> *keyList = nullptr;
   auto keyListIter = unreachableKeys->find(weakMap);
   if (keyListIter == unreachableKeys->end()) {
     (*unreachableKeys)[weakMap] = GCBase::buildKeyList(gc, weakMap);
@@ -109,33 +109,36 @@ bool GCBase::markFromReachableWeakMapKeys(
   }
   bool newlyMarkedValue = false;
   // Find any reachable keys, mark from the corresponding value, and
-  // remove them from the list.  (This removal is why we use a
-  // std::list for the keys -- this function is linear.)
-  keyList->remove_if([weakMap, gc, objIsMarked, markFromVal, &newlyMarkedValue](
-                         detail::WeakRefKey *key) {
-    GCCell *cell = key->getObject(gc);
-    if (!cell) {
-      // Remove key from list.
-      return true;
-    }
-
-    if (objIsMarked(cell)) {
-      GCHermesValue *valPtr = weakMap->getValueDirect(gc, *key);
-      assert(valPtr != nullptr && "Key is not in the map?");
-      if (valPtr->isPointer()) {
-        GCCell *valCell = reinterpret_cast<GCCell *>(valPtr->getPointer());
-
-        if (markFromVal(valCell, *valPtr)) {
-          newlyMarkedValue = true;
+  // remove them from the list.
+  auto eraseFrom = std::remove_if(
+      keyList->begin(),
+      keyList->end(),
+      [weakMap, gc, objIsMarked, markFromVal, &newlyMarkedValue](
+          detail::WeakRefKey *key) {
+        GCCell *cell = key->getObject(gc);
+        if (!cell) {
+          // Remove key from list.
+          return true;
         }
-      }
 
-      // Key was reachable; remove from list.
-      return true;
-    }
-    // Key was unreachable; do not remove from list.
-    return false;
-  });
+        if (objIsMarked(cell)) {
+          GCHermesValue *valPtr = weakMap->getValueDirect(gc, *key);
+          assert(valPtr != nullptr && "Key is not in the map?");
+          if (valPtr->isPointer()) {
+            GCCell *valCell = reinterpret_cast<GCCell *>(valPtr->getPointer());
+
+            if (markFromVal(valCell, *valPtr)) {
+              newlyMarkedValue = true;
+            }
+          }
+
+          // Key was reachable; remove from list.
+          return true;
+        }
+        // Key was unreachable; do not remove from list.
+        return false;
+      });
+  keyList->erase(eraseFrom, keyList->end());
   return newlyMarkedValue;
 }
 
@@ -157,7 +160,8 @@ gcheapsize_t GCBase::completeWeakMapMarking(
   // If a WeakMap is present as a key in this map, the corresponding list
   // is a superset of the unreachable keys in the WeakMap.  (The set last
   // found to be unreachable, some of which may now be reachable.)
-  llvh::DenseMap<JSWeakMap *, std::list<detail::WeakRefKey *>> unreachableKeys;
+  llvh::DenseMap<JSWeakMap *, std::vector<detail::WeakRefKey *>>
+      unreachableKeys;
 
   /// A specialized acceptor, which does not mark weak refs.  We will
   /// revisit the WeakMaps with an acceptor that does, at the end.
