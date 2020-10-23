@@ -50,6 +50,8 @@ class HermesToBabelAdapter extends HermesASTAdapter {
         return this.mapExportNamedDeclaration(node);
       case 'ExportAllDeclaration':
         return this.mapExportAllDeclaration(node);
+      case 'RestElement':
+        return this.mapRestElement(node);
       default:
         return this.mapNodeDefault(node);
     }
@@ -255,6 +257,20 @@ class HermesToBabelAdapter extends HermesASTAdapter {
       typeParameters,
       predicate,
     };
+  }
+
+  mapRestElement(node) {
+    const restElement = this.mapNodeDefault(node);
+
+    // Hermes puts type annotations on rest elements on the argument node,
+    // but Babel expects type annotations on the rest element node itself.
+    const annotation = restElement.argument.typeAnnotation;
+    if (annotation != null) {
+      restElement.typeAnnotation = annotation;
+      restElement.argument.typeAnnotation = null;
+    }
+
+    return restElement;
   }
 }
 

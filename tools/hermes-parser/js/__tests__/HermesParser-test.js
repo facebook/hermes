@@ -973,3 +973,52 @@ test('Object properties', () => {
     },
   });
 });
+
+test('Rest element', () => {
+  const source = `
+    function test1(...rest: string) {}
+    function test2([...rest: string]) {}
+  `;
+
+  expect(parse(source, {babel: true})).toMatchObject({
+    type: 'File',
+    program: {
+      type: 'Program',
+      body: [
+        {
+          type: 'FunctionDeclaration',
+          params: [
+            {
+              type: 'RestElement',
+              argument: {
+                type: 'Identifier',
+                name: 'rest',
+                typeAnnotation: null,
+              },
+              typeAnnotation: {type: 'TypeAnnotation'},
+            },
+          ],
+        },
+        {
+          type: 'FunctionDeclaration',
+          params: [
+            {
+              type: 'ArrayPattern',
+              elements: [
+                {
+                  type: 'RestElement',
+                  argument: {
+                    type: 'Identifier',
+                    name: 'rest',
+                    typeAnnotation: null,
+                  },
+                  typeAnnotation: {type: 'TypeAnnotation'},
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  });
+});
