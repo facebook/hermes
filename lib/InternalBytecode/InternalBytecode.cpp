@@ -6,12 +6,15 @@
  */
 
 #include "hermes/InternalBytecode/InternalBytecode.h"
+#include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 
 namespace hermes {
 namespace vm {
 
 llvh::ArrayRef<uint8_t> getInternalBytecode() {
-  static const uint8_t InternalBytecode[] = {
+  // Bytecode is required to be aligned, so ensure we don't fail to load it
+  // at runtime.
+  alignas(hbc::BYTECODE_ALIGNMENT) static const uint8_t InternalBytecode[] = {
 #ifdef HERMES_CMAKE_BUILD
 #include "InternalBytecode.inc"
 #else
