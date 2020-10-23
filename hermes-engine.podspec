@@ -6,9 +6,6 @@
 module HermesHelper
   # BUILD_TYPE = :debug
   BUILD_TYPE = :release
-
-  OSX_DEPLOYMENT_TARGET = "10.13"
-  IOS_DEPLOYMENT_TARGET = "10.0"
 end
 
 Pod::Spec.new do |spec|
@@ -22,7 +19,7 @@ Pod::Spec.new do |spec|
   # This env var should be supplied with a CDN URL for hermes-engine-darwin.tgz on the Github releases before pod push.
   # The podspec would be serialized to JSON and people will download prebuilt binaries instead of the source.
   spec.source      = ENV['hermes-artifact-url'] ? ENV['hermes-artifact-url'] : { git: "https://github.com/facebook/hermes.git", tag: "v#{spec.version}" }
-  spec.platforms   = { :osx => HermesHelper::OSX_DEPLOYMENT_TARGET, :ios => HermesHelper::IOS_DEPLOYMENT_TARGET }
+  spec.platforms   = { :osx => "10.13", :ios => "10.0" }
 
   spec.preserve_paths      = ["destroot/bin/*"].concat(HermesHelper::BUILD_TYPE == :debug ? ["**/*.{h,c,cpp}"] : [])
   spec.source_files        = "destroot/include/**/*.h"
@@ -32,34 +29,4 @@ Pod::Spec.new do |spec|
   spec.osx.vendored_frameworks = "destroot/Library/Frameworks/macosx/hermes.framework"
 
   spec.xcconfig            = { "CLANG_CXX_LANGUAGE_STANDARD" => "c++14", "CLANG_CXX_LIBRARY" => "compiler-default", "GCC_PREPROCESSOR_DEFINITIONS" => "HERMES_ENABLE_DEBUGGER=1" }
-
-  unless ENV['hermes-artifact-url']
-    spec.prepare_command = <<-EOS
-      # When true, debug build will be used.
-      # See `build-apple-framework.sh` for details
-      DEBUG=#{HermesHelper::BUILD_TYPE == :debug}
-
-      # In a release package, there are no utilities and source files, we exit
-      # early as there is nothing to build 
-      if [ ! -f ./utils/build-apple-framework.sh ]; then
-        exit 0;
-      fi
-
-      # Source utilities into the scope
-      . ./utils/build-apple-framework.sh
-
-      # If universal framework for iOS does not exist, build one
-      if [ ! -d destroot/Library/Frameworks/iphoneos/hermes.framework ]; then
-        build_apple_framework "iphoneos" "armv7;armv7s;arm64" "#{HermesHelper::IOS_DEPLOYMENT_TARGET}"
-        build_apple_framework "iphonesimulator" "x86_64;i386" "#{HermesHelper::IOS_DEPLOYMENT_TARGET}"
-
-        create_universal_framework "iphoneos" "iphonesimulator"
-      fi
-
-      # If MacOS framework does not exist, build one
-      if [ ! -d destroot/Library/Frameworks/macosx/hermes.framework ]; then
-        build_apple_framework "macosx" "x86_64;arm64" "#{HermesHelper::OSX_DEPLOYMENT_TARGET}"
-      fi
-    EOS
-  end
 end

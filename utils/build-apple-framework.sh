@@ -25,6 +25,18 @@ else
   exit 1
 fi
 
+function get_release_version {
+  ruby -rcocoapods-core -rjson -e "puts Pod::Specification.from_file('hermes-engine.podspec').version"
+}
+
+function get_ios_deployment_target {
+  ruby -rcocoapods-core -rjson -e "puts Pod::Specification.from_file('hermes-engine.podspec').deployment_target('ios')"
+}
+
+function get_mac_deployment_target {
+  ruby -rcocoapods-core -rjson -e "puts Pod::Specification.from_file('hermes-engine.podspec').deployment_target('osx')"
+}
+
 # Utility function to configure an Apple framework
 function configure_apple_framework {
   local build_cli_tools enable_bitcode
@@ -58,12 +70,12 @@ function configure_apple_framework {
 # Utility function to build an Apple framework
 function build_apple_framework {
   echo "Building framework for $1 with architectures: $2"
-  
+
   configure_apple_framework "$1" "$2" "$3"
 
   if [[ "$BUILD_SYSTEM" == "Ninja" ]]; then
     (cd "./build_$1" && ninja install/strip)
-  else 
+  else
     (cd "./build_$1" && make install/strip)
   fi
 }
@@ -93,6 +105,3 @@ function create_universal_framework {
 
   cd - || exit 1
 }
-
-
-
