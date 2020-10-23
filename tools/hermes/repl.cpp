@@ -367,6 +367,7 @@ int repl(const vm::RuntimeConfig &config) {
   }
 #endif
 
+  vm::MutableHandle<> resHandle{runtime.get()};
   // SetUnbuffered because there is no explicit flush after prompt (>>).
   // There is also no explicitly flush at end of line. (An automatic flush
   // mechanism is not guaranteed to be present, from my experiment on Windows)
@@ -420,6 +421,8 @@ int repl(const vm::RuntimeConfig &config) {
       llvh::outs().resetColor();
       code.clear();
       threwException = true;
+    } else {
+      resHandle = std::move(*callRes);
     }
 
     if (!ctx.jobsEmpty()) {
@@ -427,9 +430,9 @@ int repl(const vm::RuntimeConfig &config) {
       vm::MutableHandle<vm::Callable> job{runtime.get()};
       while (auto optJob = ctx.dequeueJob()) {
         job = std::move(*optJob);
-        auto callRes = vm::Callable::executeCall0(
+        auto jobCallRes = vm::Callable::executeCall0(
             job, runtime.get(), vm::Runtime::getUndefinedValue(), false);
-        if (LLVM_UNLIKELY(callRes == vm::ExecutionStatus::EXCEPTION)) {
+        if (LLVM_UNLIKELY(jobCallRes == vm::ExecutionStatus::EXCEPTION)) {
           threwException = true;
           runtime->printException(
               hasColors
@@ -446,7 +449,7 @@ int repl(const vm::RuntimeConfig &config) {
       continue;
     }
 
-    if ((*callRes)->isUndefined()) {
+    if (resHandle->isUndefined()) {
       code.clear();
       continue;
     }
@@ -456,9 +459,7 @@ int repl(const vm::RuntimeConfig &config) {
     vm::operator<<(
         llvh::outs(),
         vm::StringPrimitive::createStringView(
-            runtime.get(),
-            vm::Handle<vm::StringPrimitive>::vmcast(
-                runtime->makeHandle(std::move(*callRes))))
+            runtime.get(), vm::Handle<vm::StringPrimitive>::vmcast(resHandle))
             .getUTF16Ref(tmp))
         << "\n";
     code.clear();
