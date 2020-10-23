@@ -19,21 +19,23 @@ workflows:
     jobs:
       - android
       - linux
-      - macos
-      - test-apple-runtime
-      - apple-runtime:
+      - build-apple-runtime
+      - test-macos
+      - test-apple-runtime:
           requires:
+            - build-apple-runtime
+      - package-apple-runtime:
+          requires:
+            - test-macos
             - test-apple-runtime
       - windows
       - npm:
           requires:
             - android
             - linux
-            - macos
-            - apple-runtime
+            - package-apple-runtime
             - windows
       - test-linux
-      - test-macos
       - test-e2e:
           requires:
             - npm
@@ -195,59 +197,18 @@ jobs:
             ninja
             ninja check-hermes
 
-  macos:
-    <<: *apple_defaults
-    steps:
-      - checkout
-      - run:
-          name: Install dependencies
-          command: brew install ninja cmake
-      - run:
-          name: Set up workspace
-          command: |
-            mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
-            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
-      - run:
-          name: Build Hermes for macOS
-          command: |
-            cd "$HERMES_WS_DIR"
-            hermes/utils/build/configure.py --distribute --cmake-flags='-DHERMES_BUILD_APPLE_FRAMEWORK:BOOLEAN=false -DCMAKE_OSX_ARCHITECTURES:STRING=x86_64;arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=10.13'
-            cmake --build ./build_release --target github-cli-release
-      - run:
-          name: Copy artifacts
-          command: |
-            cd "$HERMES_WS_DIR"
-            cp "build_release/github"/hermes-cli-*.tar.gz "output"
-      - run:
-          name: Checksum artifacts
-          command: |
-            cd "$HERMES_WS_DIR/output"
-            for file in *
-            do
-              shasum -a 256 "$file" > "$file.sha256"
-            done
-      - store_artifacts:
-          path: /tmp/hermes/output/
-      - persist_to_workspace:
-          root: /tmp/hermes/output/
-          paths:
-            - .
-
-  # This job builds Hermes runtime for Apple (Mac, iPhone) and tests it.
-  # On success, build is persisted into workspace to make other jobs
-  # run faster.
   test-apple-runtime:
     <<: *apple_defaults
     steps:
       - checkout
       - restore_cache:
-          key: v1-repo-{{ .Environment.CIRCLE_SHA1 }}
+          key: v3-repo-{{ .Environment.CIRCLE_SHA1 }}
       - run:
           name: Install dependencies
           command: |
             brew install cmake ninja
       - run:
-          name: Build the framework
+          name: Build the test application
           command: |
             pod install
           working_directory: test/ApplePlatformsIntegrationTestApp
@@ -269,16 +230,15 @@ jobs:
               -destination 'platform=iOS Simulator,name=iPhone 11' \
               -scheme ApplePlatformsIntegrationMobileTests
           working_directory: test/ApplePlatformsIntegrationTestApp
-      - save_cache:
-          key: v1-repo-{{ .Environment.CIRCLE_SHA1 }}
-          paths:
-            - ~/hermes
 
-  apple-runtime:
+  build-apple-runtime:
     <<: *apple_defaults
     steps:
+      - checkout
+      # TODO: Use a better cache key to avoid rebuilding whole framework
+      # when it is not necessary
       - restore_cache:
-          key: v1-repo-{{ .Environment.CIRCLE_SHA1 }}
+          key: v3-repo-{{ .Environment.CIRCLE_SHA1 }}
       - run:
           name: Set up workspace
           command: mkdir -p /tmp/hermes/output
@@ -286,14 +246,54 @@ jobs:
           name: Install dependencies
           command: |
             brew install cmake ninja
+            sudo gem install cocoapods
+      - run:
+          name: Build the iOS frameworks
+          command: ./utils/build-ios-framework.sh
+      - run:
+          name: Build the Mac frameworks
+          command: ./utils/build-mac-framework.sh
+      - save_cache:
+          key: v3-repo-{{ .Environment.CIRCLE_SHA1 }}
+          paths:
+            - ~/hermes/build_iphoneos
+            - ~/hermes/build_iphonesimulator
+            - ~/hermes/build_macosx
+            - ~/hermes/destroot
+
+  package-apple-runtime:
+    <<: *apple_defaults
+    steps:
+      - checkout
+      - restore_cache:
+          key: v3-repo-{{ .Environment.CIRCLE_SHA1 }}
+      - run:
+          name: Set up workspace
+          command: mkdir -p /tmp/hermes/output
+      - run:
+          name: Install dependencies
+          command: |
+            brew install cmake ninja
+            sudo gem install cocoapods
       - run:
           name: Package the framework
           command: |
-            cmake --build ./build_iphoneos --target hermes-runtime-darwin-cocoapods-release
+            . ./utils/build-apple-framework.sh
+
+            mkdir -p /tmp/cocoapods-package-root/destroot
+            cp -R ./destroot /tmp/cocoapods-package-root
+            cp hermes-engine.podspec LICENSE /tmp/cocoapods-package-root
+
+            tar -C /tmp/cocoapods-package-root/ -czvf /tmp/hermes/output/hermes-runtime-darwin-v$(get_release_version).tar.gz .
       - run:
-          name: Copy artifacts
+          name: Package the CLI
           command: |
-            cp "build_iphoneos/github"/hermes-runtime-darwin-*.tar.gz /tmp/hermes/output
+            . ./utils/build-apple-framework.sh
+
+            mkdir -p /tmp/hermes-cli-root
+            cp -R ./destroot/bin/* /tmp/hermes-cli-root
+
+            tar -C /tmp/hermes-cli-root/ -czvf /tmp/hermes/output/hermes-cli-darwin-v$(get_release_version).tar.gz .
       - run:
           name: Checksum artifacts
           command: |
@@ -311,6 +311,7 @@ jobs:
 
   test-macos:
     # CheckedMalloc.Death fails in release mode, so build a debug version
+    # TODO: Switch to `release` and reuse `build_macosx` from previous job
     <<: *apple_defaults
     steps:
       - checkout
