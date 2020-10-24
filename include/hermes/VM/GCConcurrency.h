@@ -97,23 +97,23 @@ class DebugMutex {
   operator bool() const {
     // Check that this thread owns the mutex.
     // The mutex must be held in order to check this condition safely.
-    return tid_ == std::this_thread::get_id();
+    return tid_.load(std::memory_order_relaxed) == std::this_thread::get_id();
   }
 
   void lock() {
     inner_.lock();
     depth_++;
-    tid_ = std::this_thread::get_id();
+    tid_.store(std::this_thread::get_id(), std::memory_order_relaxed);
   }
 
   void unlock() {
     assert(depth_ && "Should not unlock an unlocked mutex");
     assert(
-        tid_ == std::this_thread::get_id() &&
+        tid_.load(std::memory_order_relaxed) == std::this_thread::get_id() &&
         "Mutex should be acquired and unlocked on the same thread");
     depth_--;
     if (!depth_) {
-      tid_ = std::thread::id{};
+      tid_.store(std::thread::id{}, std::memory_order_relaxed);
     }
     inner_.unlock();
   }
@@ -125,7 +125,12 @@ class DebugMutex {
 
  private:
   std::recursive_mutex inner_;
-  std::thread::id tid_;
+  // Sometimes we want to assert that the the current thread does not hold the
+  // mutex. Since the mutex is not held, TSAN complains that the access to tid_
+  // is not thread safe. It is safe to use this atomic with any memory ordering
+  // because all we care about is the last value assigned to tid_ by the
+  // *current* thread.
+  std::atomic<std::thread::id> tid_;
   uint32_t depth_{0};
 };
 
