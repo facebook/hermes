@@ -231,6 +231,7 @@ class HadesGC final : public GCBase {
   class EvacAcceptor;
   class MarkAcceptor;
   class MarkWeakRootsAcceptor;
+  class SweepIterator;
   class OldGen;
 
   /// Similar to AlignedHeapSegment except it uses a free list.
@@ -528,6 +529,11 @@ class HadesGC final : public GCBase {
   /// Protected by gcMutex_.
   std::unique_ptr<MarkAcceptor> oldGenMarker_;
 
+  /// Tracks the current progress of sweeping. next() can be called on it to
+  /// perform one sweeping task. Once next() returns false, complete() must be
+  /// called.
+  std::unique_ptr<SweepIterator> sweepIterator_;
+
   /// This is the background thread that does marking and sweeping concurrently
   /// with the mutator.
   /// It should only be joined via \c waitForCollectionToFinish, which ensures
@@ -649,9 +655,6 @@ class HadesGC final : public GCBase {
   /// As part of finishing the marking process, iterate through all of YG to
   /// find symbols and WeakRefs only pointed to from there.
   void findYoungGenSymbolsAndWeakRefs();
-
-  /// Put dead objects onto the free list, so their space can be re-used.
-  void sweep();
 
   /// Find all pointers from OG into YG during a YG collection. This is done
   /// quickly through use of write barriers that detect the creation of OG-to-YG

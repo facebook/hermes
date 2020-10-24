@@ -776,6 +776,95 @@ class HadesGC::MarkWeakRootsAcceptor final : public WeakRootAcceptor {
   PointerBase *const pointerBase_;
 };
 
+class HadesGC::SweepIterator final {
+ public:
+  explicit SweepIterator(HadesGC *gc, size_t numSegments)
+      : gc_{gc}, numSegments_{numSegments} {}
+
+  /// \return true if there's still more sweeping to do.
+  bool next() {
+    if (segNumber_ == numSegments_) {
+      // In case next is called too many times.
+      return false;
+    }
+    // Acquire and release the lock once per loop, to allow YG collections to
+    // interrupt the sweeper.
+    // NOTE: This is called in incremental GCs as well, which is a noop.
+    std::lock_guard<Mutex> lk{gc_->gcMutex_};
+    assert(
+        gc_->gcMutex_.depth() == 1 &&
+        "Cannot yield to YG if gcMutex_ is held before call to drainMarkWorklist.");
+    const bool isTracking = gc_->isTrackingIDs();
+    // Re-evaluate this start point each time, as releasing the gcMutex_ allows
+    // allocations into the old gen, which might boost the credited memory.
+    const uint64_t externalBytesBefore = gc_->oldGen_.externalBytes();
+    gc_->oldGen_[segNumber_].forAllObjs([this, isTracking](GCCell *cell) {
+      // forAllObjs skips free list cells, so no need to check for those.
+      assert(cell->isValid() && "Invalid cell in sweeping");
+      if (HeapSegment::getCellMarkBit(cell)) {
+        return;
+      }
+      const auto sz = cell->getAllocatedSize();
+      sweptBytes_ += sz;
+      // Cell is dead, run its finalizer first if it has one.
+      cell->getVT()->finalizeIfExists(cell, gc_);
+      gc_->oldGen_.addCellToFreelist(cell, segNumber_);
+      if (isTracking) {
+        // FIXME: There could be a race condition here if newAlloc is being
+        // called at the same time and using a shared data structure with
+        // freeAlloc.
+        // freeAlloc relies on the ID, so call it before untrackObject.
+        gc_->getAllocationLocationTracker().freeAlloc(cell, sz);
+        gc_->getIDTracker().untrackObject(cell);
+      }
+    });
+
+    sweptExternalBytes_ += externalBytesBefore - gc_->oldGen_.externalBytes();
+    // Do *not* clear the mark bits. This is important to have a cheaper
+    // solution to a race condition in weakRefReadBarrier. If it gets
+    // interrupted between reading the concurrentPhase_ and checking the mark
+    // bits, the GC might finish. In that case, the mark bits will then be
+    // read to determine if the weak ref is live.
+    // Mark bits are reset before any new collection occurs, so there's no
+    // need to worry about their information being misused.
+    return ++segNumber_ != numSegments_;
+  }
+
+  void complete() {
+    assert(gc_->gcMutex_ && "Mutex must be held when complete is called");
+    auto &stats = *gc_->ogCollectionStats_;
+    stats.setSweptBytes(sweptBytes_);
+    stats.setSweptExternalBytes(sweptExternalBytes_);
+    gc_->oldGen_.updateAverageSurvivalRatio(stats.survivalRatio());
+    // The formula for occupancyTarget_ is:
+    // occupancyTarget_ = (allocatedBytes + externalBytes) / (capacityBytes +
+    //  externalBytes)
+    // Solving for capacityBytes:
+    // capacityBytes = (allocatedBytes + externalBytes) / occupancyTarget_ -
+    //  externalBytes
+    const size_t targetCapacity =
+        (stats.afterAllocatedBytes() + stats.afterExternalBytes()) /
+            gc_->occupancyTarget_ -
+        stats.afterExternalBytes();
+    const size_t targetSegments =
+        llvh::divideCeil(targetCapacity, HeapSegment::maxSize());
+    const size_t finalSegments =
+        std::min(targetSegments, gc_->oldGen_.maxNumSegments());
+    gc_->oldGen_.reserveSegments(finalSegments);
+  }
+
+  size_t numSegments() const {
+    return numSegments_;
+  }
+
+ private:
+  HadesGC *gc_;
+  size_t segNumber_{0};
+  size_t numSegments_;
+  uint64_t sweptBytes_{0};
+  uint64_t sweptExternalBytes_{0};
+};
+
 HadesGC::OldGen::OldGen(HadesGC *gc)
     // Assume about 70% of the OG will survive initially.
     : gc_(gc), averageSurvivalRatio_{/*weight*/ 0.5, /*init*/ 0.7} {}
@@ -925,9 +1014,16 @@ void HadesGC::waitForCollectionToFinish() {
 
   if (!kConcurrentGC) {
     if (oldGenMarker_) {
-      // Complete the collection.
-      completeNonConcurrentOldGenCollection();
+      // If marking is still ongoing, complete marking first.
+      completeMarking();
     }
+    while (sweepIterator_->next()) {
+      // Nothing to do here, next is stateful.
+    }
+    sweepIterator_->complete();
+    sweepIterator_.reset();
+    // Complete the incremental collection.
+    completeNonConcurrentOldGenCollection();
     return;
   }
   std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
@@ -974,6 +1070,15 @@ void HadesGC::oldGenCollection(std::string cause) {
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormed();
 #endif
+  // Setup the sweep iterator when collection begins, because the number of
+  // segments can change if a YG collection interleaves. There's no need to
+  // sweep those extra segments since they are full of newly promoted objects
+  // from YG (which have all their mark bits set), thus the sweep iterator
+  // doesn't need to be updated. We also don't need to sweep any segments made
+  // since the start of the collection, since they won't have any unmarked
+  // objects anyway.
+  sweepIterator_ =
+      llvh::make_unique<SweepIterator>(this, oldGen_.numSegments());
   // Note: This line calls the destructor for the previous CollectionStats (if
   // any) in addition to creating a new CollectionStats. It is desirable to
   // call the destructor here so that the analytics callback is invoked from the
@@ -1058,8 +1163,15 @@ void HadesGC::oldGenCollectionWorker() {
   auto cpuTimeStart = oscompat::thread_cpu_time();
   oldGenMarker_->drainMarkWorklist();
   waitForCompleteMarking();
-  sweep();
+  // NOTE: Sweeper tasks could be done in parallel. If a future thread pool or
+  // event queue implementation makes it easy to do so, spawn these tasks in
+  // parallel.
+  while (sweepIterator_->next()) {
+    // Nothing to do here, next is stateful.
+  }
   std::lock_guard<Mutex> g{gcMutex_};
+  sweepIterator_->complete();
+  sweepIterator_.reset();
   ogCollectionStats_->setEndTime();
   auto cpuTimeEnd = oscompat::thread_cpu_time();
   ogCollectionStats_->incrementCPUTime(cpuTimeEnd - cpuTimeStart);
@@ -1087,10 +1199,6 @@ void HadesGC::completeNonConcurrentOldGenCollection() {
       !kConcurrentGC &&
       "Shouldn't call completeNonConcurrentOldGenCollection if concurrency "
       "is enabled");
-  completeMarking();
-  // Sweeping will try to acquire mutexes, but they will be fake mutexes, so
-  // there's no performance cost.
-  sweep();
   ogCollectionStats_->setEndTime();
   concurrentPhase_ = Phase::None;
 }
@@ -1204,83 +1312,6 @@ void HadesGC::findYoungGenSymbolsAndWeakRefs() {
       cell = cell->nextCell();
     }
   }
-}
-
-void HadesGC::sweep() {
-  // Sweep phase: iterate through dead objects and add them to the
-  // free list. Also finalize them at this point.
-  size_t segEnd;
-  const bool isTracking = isTrackingIDs();
-  {
-    std::lock_guard<Mutex> lk{gcMutex_};
-    assert(
-        gcMutex_.depth() == 1 &&
-        "Cannot yield to YG if gcMutex_ is held before call to drainMarkWorklist.");
-    segEnd = oldGen_.numSegments();
-  }
-
-  uint64_t sweptBytes = 0;
-  uint64_t sweptExternalBytes = 0;
-  // The number of segments can change during this loop if a YG collection
-  // interleaves. There's no need to sweep those extra segments since they are
-  // full of newly promoted objects from YG (which have all their mark bits
-  // set).
-  for (size_t i = 0; i < segEnd; ++i) {
-    // Acquire and release the lock once per loop, to allow YG collections to
-    // interrupt the sweeper.
-    std::lock_guard<Mutex> lk{gcMutex_};
-    // Re-evaluate this start point each time, as releasing the gcMutex_ allows
-    // allocations into the old gen, which might boost the credited memory.
-    const uint64_t externalBytesBefore = oldGen_.externalBytes();
-    oldGen_[i].forAllObjs([this, isTracking, &sweptBytes, i](GCCell *cell) {
-      // forAllObjs skips free list cells, so no need to check for those.
-      assert(cell->isValid() && "Invalid cell in sweeping");
-      if (HeapSegment::getCellMarkBit(cell)) {
-        return;
-      }
-      const auto sz = cell->getAllocatedSize();
-      sweptBytes += sz;
-      // Cell is dead, run its finalizer first if it has one.
-      cell->getVT()->finalizeIfExists(cell, this);
-      oldGen_.addCellToFreelist(cell, i);
-      if (isTracking) {
-        // FIXME: There could be a race condition here if newAlloc is being
-        // called at the same time and using a shared data structure with
-        // freeAlloc.
-        // freeAlloc relies on the ID, so call it before untrackObject.
-        getAllocationLocationTracker().freeAlloc(cell, sz);
-        getIDTracker().untrackObject(cell);
-      }
-    });
-    sweptExternalBytes += externalBytesBefore - oldGen_.externalBytes();
-
-    // Do *not* clear the mark bits. This is important to have a cheaper
-    // solution to a race condition in weakRefReadBarrier. If it gets
-    // interrupted between reading the concurrentPhase_ and checking the mark
-    // bits, the GC might finish. In that case, the mark bits will then be
-    // read to determine if the weak ref is live.
-    // Mark bits are reset before any new collection occurs, so there's no
-    // need to worry about their information being misused.
-  }
-  std::lock_guard<Mutex> lk{gcMutex_};
-  ogCollectionStats_->setSweptBytes(sweptBytes);
-  ogCollectionStats_->setSweptExternalBytes(sweptExternalBytes);
-  oldGen_.updateAverageSurvivalRatio(ogCollectionStats_->survivalRatio());
-  // The formula for occupancyTarget_ is:
-  // occupancyTarget_ = (allocatedBytes + externalBytes) / (capacityBytes +
-  //  externalBytes)
-  // Solving for capacityBytes:
-  // capacityBytes = (allocatedBytes + externalBytes) / occupancyTarget_ -
-  //  externalBytes
-  const size_t targetCapacity = (ogCollectionStats_->afterAllocatedBytes() +
-                                 ogCollectionStats_->afterExternalBytes()) /
-          occupancyTarget_ -
-      ogCollectionStats_->afterExternalBytes();
-  const size_t targetSegments =
-      llvh::divideCeil(targetCapacity, HeapSegment::maxSize());
-  const size_t finalSegments =
-      std::min(targetSegments, oldGen_.maxNumSegments());
-  oldGen_.reserveSegments(finalSegments);
 }
 
 void HadesGC::finalizeAll() {
@@ -2325,11 +2356,26 @@ void HadesGC::yieldToOldGen() {
     // A non-concurrent GC needs to check if there's any work to be done from
     // oldGenMarker_.
     if (oldGenMarker_) {
+      assert(concurrentPhase_ == Phase::Mark && "Collection must be marking");
       oldGenMarker_->drainSomeWork();
       if (oldGenMarker_->allWorkIsDrained()) {
-        // If the work has finished completely, finish the collection.
-        completeNonConcurrentOldGenCollection();
+        completeMarking();
+        // concurrentPhase_ is Sweep, blocking any new collections from
+        // beginning, and the write barrier will just be generational again.
+        assert(
+            concurrentPhase_ == Phase::Sweep &&
+            "Phase must be sweep to avoid starting a second collection before "
+            "completing the first");
       }
+    } else if (sweepIterator_ && !sweepIterator_->next()) {
+      assert(concurrentPhase_ == Phase::Sweep && "Collection must be sweeping");
+      // Sweep and finish any other collection bookkeeping.
+      sweepIterator_->complete();
+      // Save on memory usage and avoid triggering the next time yieldToOldGen
+      // is called.
+      sweepIterator_.reset();
+      completeNonConcurrentOldGenCollection();
+      assert(concurrentPhase_ == Phase::None && "Collection must be complete");
     }
     return;
   }
@@ -2378,7 +2424,15 @@ size_t HadesGC::getDrainRate() {
     // both slightly off survival ratio estimates, as well as wanting to finish
     // collecting before OG fills up, aim to finish marking all of OG one YG
     // before we need to.
-    --ygCollectionsUntilFull;
+    ygCollectionsUntilFull -= 1;
+    // Sweeping also will take exactly oldGen_.numSegments() YG collections to
+    // fully sweep. Subtract that from here to speed up marking so there's some
+    // extra time for sweeping. Don't go below 1 though.
+    if (ygCollectionsUntilFull > sweepIterator_->numSegments()) {
+      ygCollectionsUntilFull -= sweepIterator_->numSegments();
+    } else {
+      ygCollectionsUntilFull = 1;
+    }
   }
   assert(
       ygCollectionsUntilFull != 0 && "Cannot have zero collections until full");
