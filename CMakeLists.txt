@@ -121,6 +121,9 @@ set(HERMESVM_ALLOW_COMPRESSED_POINTERS ON CACHE BOOL
 set(HERMESVM_ALLOW_HUGE_PAGES OFF CACHE BOOL
         "Enable huge pages to back the GC managed heap. Only useful on Linux.")
 
+set(HERMESVM_ALLOW_CONCURRENT_GC ON CACHE BOOL
+        "Enable concurrency in the GC for 64-bit builds.")
+
 set(HERMESVM_API_TRACE OFF CACHE BOOL
   "Enable tracing interactions via the API")
 
@@ -332,6 +335,9 @@ if(HERMESVM_ALLOW_COMPRESSED_POINTERS)
 endif()
 if(HERMESVM_ALLOW_HUGE_PAGES)
     add_definitions(-DHERMESVM_ALLOW_HUGE_PAGES)
+endif()
+if(HERMESVM_ALLOW_CONCURRENT_GC)
+    add_definitions(-DHERMESVM_ALLOW_CONCURRENT_GC)
 endif()
 if(HERMESVM_API_TRACE)
     add_definitions(-DHERMESVM_API_TRACE)
