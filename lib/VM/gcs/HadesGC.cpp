@@ -1201,6 +1201,9 @@ void HadesGC::completeNonConcurrentOldGenCollection() {
       "is enabled");
   ogCollectionStats_->setEndTime();
   concurrentPhase_ = Phase::None;
+  // Check the tripwire here since we know the incremental collection will
+  // always end on the mutator thread.
+  checkTripwireAndResetStats();
 }
 
 void HadesGC::completeMarking() {
