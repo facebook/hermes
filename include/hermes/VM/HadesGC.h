@@ -234,7 +234,7 @@ class HadesGC final : public GCBase {
   class OldGen;
 
   /// Similar to AlignedHeapSegment except it uses a free list.
-  class HeapSegment final : private AlignedHeapSegment {
+  class HeapSegment final : public AlignedHeapSegment {
    public:
     explicit HeapSegment(AlignedStorage &&storage);
     ~HeapSegment() = default;
@@ -257,26 +257,6 @@ class HadesGC final : public GCBase {
     void forAllObjs(CallbackFunction callback);
     template <typename CallbackFunction>
     void forAllObjs(CallbackFunction callback) const;
-
-    // APIs from AlignedHeapSegment that are safe to use on a HeapSegment.
-    using AlignedHeapSegment::available;
-    using AlignedHeapSegment::cardTable;
-    using AlignedHeapSegment::cardTableCovering;
-    using AlignedHeapSegment::clearExternalMemoryCharge;
-    using AlignedHeapSegment::contains;
-    using AlignedHeapSegment::effectiveEnd;
-    using AlignedHeapSegment::end;
-    using AlignedHeapSegment::getCellMarkBit;
-    using AlignedHeapSegment::level;
-    using AlignedHeapSegment::lowLim;
-    using AlignedHeapSegment::markBitArray;
-    using AlignedHeapSegment::maxSize;
-    using AlignedHeapSegment::resetLevel;
-    using AlignedHeapSegment::setCellMarkBit;
-    using AlignedHeapSegment::setEffectiveEnd;
-    using AlignedHeapSegment::size;
-    using AlignedHeapSegment::start;
-    using AlignedHeapSegment::used;
   };
 
   class OldGen final {
