@@ -162,6 +162,27 @@ void HadesGC::HeapSegment::forAllObjs(CallbackFunction callback) {
   }
 }
 
+template <typename CallbackFunction>
+void HadesGC::HeapSegment::forCompactedObjs(CallbackFunction callback) {
+  void *const stop = level();
+  GCCell *cell = reinterpret_cast<GCCell *>(start());
+  while (cell < stop) {
+    if (cell->hasMarkedForwardingPointer()) {
+      // This cell has been evacuated, do nothing.
+      cell = reinterpret_cast<GCCell *>(
+          reinterpret_cast<char *>(cell) +
+          cell->getMarkedForwardingPointer()->getAllocatedSize());
+    } else {
+      // This cell is being compacted away, call the callback on it.
+      // NOTE: We do not check if it is a FreelistCell here in order to avoid
+      // the extra overhead of that check in YG. The callback should add that
+      // check if required.
+      callback(cell);
+      cell = cell->nextCell();
+    }
+  }
+}
+
 GCCell *HadesGC::OldGen::FreelistCell::carve(uint32_t sz) {
   const auto origSize = getAllocatedSize();
   assert(
@@ -1872,21 +1893,12 @@ void HadesGC::youngGenCollection(
     }
     // Inform trackers about objects that died during this YG collection.
     if (isTrackingIDs()) {
-      char *ptr = youngGen().start();
-      char *const lvl = youngGen().level();
-      while (ptr < lvl) {
-        GCCell *cell = reinterpret_cast<GCCell *>(ptr);
-        if (cell->hasMarkedForwardingPointer()) {
-          auto *fptr = cell->getMarkedForwardingPointer();
-          ptr += reinterpret_cast<GCCell *>(fptr)->getAllocatedSize();
-        } else {
-          const auto sz = cell->getAllocatedSize();
-          ptr += sz;
-          // Have to call freeAlloc before untrackObject.
-          getAllocationLocationTracker().freeAlloc(cell, sz);
-          getIDTracker().untrackObject(cell);
-        }
-      }
+      youngGen().forCompactedObjs([this](GCCell *cell) {
+        // Have to call freeAlloc before untrackObject.
+        getAllocationLocationTracker().freeAlloc(
+            cell, cell->getAllocatedSize());
+        getIDTracker().untrackObject(cell);
+      });
     }
     // Run finalizers for young gen objects.
     finalizeYoungGenObjects();
