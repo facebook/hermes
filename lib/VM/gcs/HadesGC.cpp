@@ -820,13 +820,6 @@ class HadesGC::SweepIterator final {
     });
 
     sweptExternalBytes_ += externalBytesBefore - gc_->oldGen_.externalBytes();
-    // Do *not* clear the mark bits. This is important to have a cheaper
-    // solution to a race condition in weakRefReadBarrier. If it gets
-    // interrupted between reading the concurrentPhase_ and checking the mark
-    // bits, the GC might finish. In that case, the mark bits will then be
-    // read to determine if the weak ref is live.
-    // Mark bits are reset before any new collection occurs, so there's no
-    // need to worry about their information being misused.
     return ++segNumber_ != numSegments_;
   }
 
@@ -1097,8 +1090,8 @@ void HadesGC::oldGenCollection(std::string cause) {
     // requested, switch back to YG mode.
     promoteYGToOG_ = false;
   }
-  // First, clear any mark bits that were set by direct-to-OG allocation, they
-  // aren't needed anymore.
+  // First, clear any mark bits that were set by a previous collection or
+  // direct-to-OG allocation, they aren't needed anymore.
   for (auto segit = oldGen_.begin(), segitend = oldGen_.end();
        segit != segitend;
        ++segit) {
