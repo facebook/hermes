@@ -168,16 +168,11 @@ class EsprimaTestRunner:
             and key in ESPRIMA_OMITTED_KEYS[node["type"]]
         )
 
-    def hermes_should_omit_keys_count(self, node):
-        omit_count = 0
-        for elt in HERMES_OMITTED_KEYS_COMMON:
-            if elt in node:
-                omit_count += 1
+    def hermes_should_omit_keys(self, node):
+        omit = HERMES_OMITTED_KEYS_COMMON & node.keys()
         if "type" in node and node["type"] in HERMES_OMITTED_KEYS:
-            for elt in HERMES_OMITTED_KEYS[node["type"]]:
-                if elt in node:
-                    omit_count += 1
-        return omit_count
+            omit |= HERMES_OMITTED_KEYS[node["type"]] & node.keys()
+        return omit
 
     # Compare two AST nodes from Hermes and ESPrima.
     # node1 is from hermes ast, node2 is from esprima ast
@@ -192,25 +187,26 @@ class EsprimaTestRunner:
                 self.printDebug(f"  in Hermes {node1['type']}")
             return False
         if isinstance(node1, dict):
-            expected_count = 0
+            # Check if Hermes is missing keys.
             for key, val in node2.items():
                 if self.should_omit_esprima_key(node2, key):
                     continue
                 if key not in node1:
                     self.printDebug(f"{node1['type']} missing property: {key}")
                     return False
-                expected_count += 1
                 if not self.compare_nodes(suite, node1[key], val):
                     return False
-            # check if key-val pair counts match
-            real_count = len(node1) - self.hermes_should_omit_keys_count(node1)
-            if real_count != expected_count:
-                self.printDebug(
-                    "AST node element count mismatch in {}".format(node1["type"])
-                )
-                self.printDebug("Hermes count:   {}".format(real_count, node1))
-                self.printDebug("Expected count: {}".format(expected_count))
-                return False
+            # Check if Hermes has extra keys.
+            hermes_omit = self.hermes_should_omit_keys(node1)
+            for key, val in node1.items():
+                if key in hermes_omit:
+                    continue
+                if key not in node2 and val is not None:
+                    # Flow omits some keys which are null in Hermes output.
+                    # Ignore these keys in Hermes if they don't show up in
+                    # the expected AST if they have no value anyway.
+                    self.printDebug(f"{node1['type']} extra property: {key}")
+                    return False
             return True
         elif isinstance(node1, list):
             if len(node1) != len(node2):
