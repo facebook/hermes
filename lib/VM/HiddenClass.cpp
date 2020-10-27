@@ -161,9 +161,7 @@ void HiddenClassDeserialize(Deserializer &d, CellKind kind) {
   d.readData(&classFlags, sizeof(ClassFlags));
   unsigned numProperties = d.readInt<uint32_t>();
 
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      cellSize<HiddenClass>());
-  auto *cell = new (mem) HiddenClass(
+  auto *cell = d.getRuntime()->makeAFixed<HiddenClass, HasFinalizer::Yes>(
       d.getRuntime(),
       classFlags,
       d.getRuntime()->makeNullHandle<HiddenClass>(),

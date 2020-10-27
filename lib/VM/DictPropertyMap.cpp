@@ -72,10 +72,9 @@ CallResult<PseudoHandle<DictPropertyMap>> DictPropertyMap::create(
         " properties");
   }
   size_type hashCapacity = calcHashCapacity(capacity);
-  void *mem = runtime->alloc</*fixedSize*/ false>(
-      allocationSize(capacity, hashCapacity));
-  return createPseudoHandle(
-      new (mem) DictPropertyMap(runtime, capacity, hashCapacity));
+  auto *cell = runtime->makeAVariable<DictPropertyMap>(
+      allocationSize(capacity, hashCapacity), runtime, capacity, hashCapacity);
+  return createPseudoHandle(cell);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -115,10 +114,11 @@ void DictPropertyMapDeserialize(Deserializer &d, CellKind kind) {
       "deserialized hash capacity does not match with calculated hashCapacity");
 #endif
 
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ false>(
-      DictPropertyMap::allocationSize(descriptorCapacity, hashCapacity));
-  auto *cell = new (mem)
-      DictPropertyMap(d.getRuntime(), descriptorCapacity, hashCapacity);
+  auto *cell = d.getRuntime()->makeAVariable<DictPropertyMap>(
+      DictPropertyMap::allocationSize(descriptorCapacity, hashCapacity),
+      d.getRuntime(),
+      descriptorCapacity,
+      hashCapacity);
 
   cell->numDescriptors_.store(d.readInt<uint32_t>(), std::memory_order_release);
   cell->numProperties_ = d.readInt<uint32_t>();

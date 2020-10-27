@@ -148,6 +148,7 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
                                   DictPropertyMap,
                                   std::pair<SymbolID, NamedPropertyDescriptor>,
                                   detail::DPMHashPair> {
+  friend GC;
   friend TrailingObjects;
   friend void DictPropertyMapBuildMeta(
       const GCCell *cell,
