@@ -45,6 +45,7 @@ HERMES_OMITTED_KEYS = {
     # Some literals support "raw" and others don't.
     # ESPrima doesn't distinguish.
     "Literal": {"raw"},
+    "StringLiteralTypeAnnotation": {"raw"},
 }
 ESPRIMA_OMITTED_KEYS = {
     "Program": {"tokens", "sourceType", "comments"},

@@ -184,7 +184,7 @@ type A = 'foo';
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "typeParameters": null,
 // CHECK-NEXT:       "right": {
-// CHECK-NEXT:         "type": "StringLiteral",
+// CHECK-NEXT:         "type": "StringLiteralTypeAnnotation",
 // CHECK-NEXT:         "value": "foo"
 // CHECK-NEXT:       }
 // CHECK-NEXT:     }

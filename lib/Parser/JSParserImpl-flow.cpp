@@ -1021,7 +1021,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotation() {
       return setLocation(
           start,
           advance(JSLexer::GrammarContext::Flow).End,
-          new (context_) ESTree::StringLiteralNode(str));
+          new (context_) ESTree::StringLiteralTypeAnnotationNode(str));
     }
 
     case TokenKind::numeric_literal: {
