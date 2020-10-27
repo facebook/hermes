@@ -132,18 +132,17 @@ CallResult<HermesValue> HostObject::createWithoutPrototype(
     std::unique_ptr<HostObjectProxy> proxy) {
   auto parentHandle = Handle<JSObject>::vmcast(&runtime->objectPrototype);
 
-  JSObjectAlloc<HostObject, HasFinalizer::Yes> mem{runtime};
-  HostObject *hostObj = new (mem) HostObject(
+  HostObject *hostObj = runtime->makeAFixed<HostObject, HasFinalizer::Yes>(
       runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
+      parentHandle,
+      runtime->getHiddenClassForPrototype(
           *parentHandle,
           numOverlapSlots<HostObject>() + ANONYMOUS_PROPERTY_SLOTS),
       std::move(proxy));
 
   hostObj->flags_.hostObject = true;
 
-  return mem.initToHermesValue(hostObj);
+  return JSObjectInit::initToHermesValue(runtime, hostObj);
 }
 
 } // namespace vm

@@ -97,6 +97,8 @@ class HostObjectProxy : public DecoratedObject::Decoration {
 };
 
 class HostObject final : public DecoratedObject {
+  friend GC;
+
  public:
   static ObjectVTable vt;
 
@@ -132,8 +134,8 @@ class HostObject final : public DecoratedObject {
  private:
   HostObject(
       Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
       std::unique_ptr<HostObjectProxy> proxy)
       : DecoratedObject(runtime, &vt, parent, clazz, std::move(proxy)) {}
 };

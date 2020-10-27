@@ -50,8 +50,7 @@ void DecoratedObjectSerialize(Serializer &s, const GCCell *cell) {
 
 void DecoratedObjectDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::DecoratedObjectKind && "Expected DecoratedObject");
-  void *mem = d.getRuntime()->alloc(cellSize<DecoratedObject>());
-  auto *cell = new (mem) DecoratedObject(d);
+  auto *cell = d.getRuntime()->makeAFixed<DecoratedObject>(d);
   d.endObject(cell);
 }
 #endif
@@ -62,16 +61,16 @@ PseudoHandle<DecoratedObject> DecoratedObject::create(
     Handle<JSObject> parentHandle,
     std::unique_ptr<Decoration> decoration,
     unsigned int additionalSlotCount) {
-  JSObjectAlloc<DecoratedObject, HasFinalizer::Yes> mem{runtime};
-  return mem.initToPseudoHandle(new (mem) DecoratedObject(
+  auto *cell = runtime->makeAFixed<DecoratedObject, HasFinalizer::Yes>(
       runtime,
       &vt,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
+      parentHandle,
+      runtime->getHiddenClassForPrototype(
           *parentHandle,
           numOverlapSlots<DecoratedObject>() + ANONYMOUS_PROPERTY_SLOTS +
               additionalSlotCount),
-      std::move(decoration)));
+      std::move(decoration));
+  return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
 // static

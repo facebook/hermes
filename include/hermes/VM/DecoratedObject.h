@@ -21,6 +21,8 @@ namespace vm {
 /// include additional internal slots, as in OrdinaryObjectCreate's
 /// additionalInternalSlotsList).
 class DecoratedObject : public JSObject {
+  friend GC;
+
  public:
   struct Decoration {
     /// The destructor is called when the decorated object is finalized.
@@ -103,10 +105,10 @@ class DecoratedObject : public JSObject {
   DecoratedObject(
       Runtime *runtime,
       const ObjectVTable *vt,
-      JSObject *parent,
-      HiddenClass *clazz,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
       std::unique_ptr<Decoration> decoration)
-      : JSObject(runtime, &vt->base, parent, clazz),
+      : JSObject(runtime, &vt->base, *parent, *clazz),
         decoration_(std::move(decoration)) {}
 
   static void _finalizeImpl(GCCell *cell, GC *);
