@@ -316,7 +316,7 @@ featuresMatcher2 = re.compile(r"\s*features:\s*\n(.*)\*\/", re.MULTILINE | re.DO
 def getSuite(filename):
     suite = None
     # Try all possible test suites to see which one we're in.
-    for s in ["test262", "mjsunit", "CVEs", "esprima"]:
+    for s in ["test262", "mjsunit", "CVEs", "esprima", "flow"]:
         if (s + "/") in filename:
             suite = filename[: filename.find(s) + len(s)]
             break
@@ -519,9 +519,9 @@ def runTest(filename, test_skiplist, keep_tmp, binary_path, hvm, esprima_runner,
 
     showStatus(filename)
 
-    if "esprima" in suite:
+    if "esprima" in suite or "flow" in suite:
         hermes_path = os.path.join(binary_path, "hermes")
-        test_res = esprima_runner.run_test(filename, hermes_path)
+        test_res = esprima_runner.run_test(suite, filename, hermes_path)
         return (
             ESPRIMA_TEST_STATUS_MAP[test_res[0]],
             "" if test_res[0] == esprima.TestStatus.TEST_PASSED else test_res[1],
