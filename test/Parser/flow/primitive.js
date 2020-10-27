@@ -102,6 +102,19 @@ type A = boolean;
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
+type A = bool;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "A"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "BooleanTypeAnnotation"
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
 type A = B;
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "TypeAlias",

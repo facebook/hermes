@@ -100,6 +100,7 @@ void JSParserImpl::initializeIdentifiers() {
   mixedIdent_ = lexer_.getIdentifier("mixed");
   emptyIdent_ = lexer_.getIdentifier("empty");
   booleanIdent_ = lexer_.getIdentifier("boolean");
+  boolIdent_ = lexer_.getIdentifier("bool");
   numberIdent_ = lexer_.getIdentifier("number");
   stringIdent_ = lexer_.getIdentifier("string");
   voidIdent_ = lexer_.getIdentifier("void");

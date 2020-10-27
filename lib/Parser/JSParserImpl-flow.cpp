@@ -978,7 +978,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotation() {
             advance(JSLexer::GrammarContext::Flow).End,
             new (context_) ESTree::EmptyTypeAnnotationNode());
       }
-      if (tok_->getResWordOrIdentifier() == booleanIdent_) {
+      if (tok_->getResWordOrIdentifier() == booleanIdent_ ||
+          tok_->getResWordOrIdentifier() == boolIdent_) {
         return setLocation(
             start,
             advance(JSLexer::GrammarContext::Flow).End,

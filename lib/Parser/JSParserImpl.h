@@ -256,6 +256,7 @@ class JSParserImpl {
   UniqueString *mixedIdent_;
   UniqueString *emptyIdent_;
   UniqueString *booleanIdent_;
+  UniqueString *boolIdent_;
   UniqueString *numberIdent_;
   UniqueString *stringIdent_;
   UniqueString *voidIdent_;
