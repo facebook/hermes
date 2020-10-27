@@ -53,6 +53,8 @@ class HermesToBabelAdapter extends HermesASTAdapter {
         return this.mapExportAllDeclaration(node);
       case 'RestElement':
         return this.mapRestElement(node);
+      case 'ImportExpression':
+        return this.mapImportExpression(node);
       default:
         return this.mapNodeDefault(node);
     }
@@ -272,6 +274,24 @@ class HermesToBabelAdapter extends HermesASTAdapter {
     }
 
     return restElement;
+  }
+
+  mapImportExpression(node) {
+    // Babel expects ImportExpression to be structued as a regular
+    // CallExpression where the callee is an Import node.
+    return {
+      type: 'CallExpression',
+      loc: node.loc,
+      start: node.start,
+      end: node.end,
+      callee: {
+        type: 'Import',
+        loc: node.loc,
+        start: node.start,
+        end: node.end,
+      },
+      arguments: [this.mapNode(node.source)],
+    };
   }
 }
 

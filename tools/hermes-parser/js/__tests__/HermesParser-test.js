@@ -1054,3 +1054,42 @@ test('Rest element', () => {
     },
   });
 });
+
+test('Import expression', () => {
+  const source = `import('foo')`;
+  expect(parse(source)).toMatchObject({
+    type: 'Program',
+    body: [
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'ImportExpression',
+          source: {
+            type: 'Literal',
+            value: 'foo',
+          },
+        },
+      },
+    ],
+  });
+
+  // Babel converts ImportExpression to CallExpression with Import callee
+  expect(parse(source, {babel: true})).toMatchObject({
+    type: 'File',
+    program: {
+      type: 'Program',
+      body: [
+        {
+          type: 'ExpressionStatement',
+          expression: {
+            type: 'CallExpression',
+            callee: {
+              type: 'Import',
+            },
+            arguments: [{type: 'StringLiteral', value: 'foo'}],
+          },
+        },
+      ],
+    },
+  });
+});
