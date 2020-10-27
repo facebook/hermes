@@ -1677,12 +1677,23 @@ Optional<ESTree::Node *> JSParserImpl::parseGetOrSetTypeProperty(
   if (!optValue)
     return None;
 
-  ESTree::Node *value = *optValue;
+  ESTree::FunctionTypeAnnotationNode *value = *optValue;
   bool method = false;
   bool optional = false;
   bool proto = false;
   ESTree::Node *variance = nullptr;
   UniqueString *kind = isGetter ? getIdent_ : setIdent_;
+
+  // Check the number of parameters, but we can continue parsing anyway.
+  if (isGetter) {
+    if (value->_params.size() != 0) {
+      error(value->getSourceRange(), "Getter must have 0 parameters");
+    }
+  } else {
+    if (value->_params.size() != 1) {
+      error(value->getSourceRange(), "Setter must have 1 parameter");
+    }
+  }
 
   return setLocation(
       start,
