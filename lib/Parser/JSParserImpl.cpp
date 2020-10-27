@@ -3857,7 +3857,7 @@ Optional<ESTree::ClassDeclarationNode *> JSParserImpl::parseClassDeclaration(
   ESTree::Node *name = nullptr;
   ESTree::Node *typeParams = nullptr;
 
-  if (!check(TokenKind::rw_extends, TokenKind::l_brace)) {
+  if (check(TokenKind::identifier)) {
     auto optName = parseBindingIdentifier(Param{});
     if (!optName) {
       errorExpected(
@@ -3868,14 +3868,6 @@ Optional<ESTree::ClassDeclarationNode *> JSParserImpl::parseClassDeclaration(
       return None;
     }
     name = *optName;
-#if HERMES_PARSE_FLOW
-    if (context_.getParseFlow() && check(TokenKind::less)) {
-      auto optParams = parseTypeParams();
-      if (!optParams)
-        return None;
-      typeParams = *optParams;
-    }
-#endif
   } else if (!param.has(ParamDefault)) {
     // Identifier is required unless we have +Default parameter.
     errorExpected(
@@ -3885,6 +3877,15 @@ Optional<ESTree::ClassDeclarationNode *> JSParserImpl::parseClassDeclaration(
         startLoc);
     return None;
   }
+
+#if HERMES_PARSE_FLOW
+  if (context_.getParseFlow() && check(TokenKind::less)) {
+    auto optParams = parseTypeParams();
+    if (!optParams)
+      return None;
+    typeParams = *optParams;
+  }
+#endif
 
   auto optClass =
       parseClassTail(startLoc, name, typeParams, ClassParseKind::Declaration);

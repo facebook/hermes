@@ -14,6 +14,6 @@ class let {}
 // CHECK:       ^~~
 
 class static {}
-// CHECK: {{.*}}:16:7: error: 'identifier' expected in class declaration
+// CHECK: {{.*}}:16:7: error: 'identifier' expected after 'class'
 // CHECK: class static {}
 // CHECK: ~~~~~~^
