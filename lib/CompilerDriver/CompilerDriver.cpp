@@ -845,6 +845,7 @@ ESTree::NodePtr parseJS(
                                  : ESTreeDumpMode::HideEmpty,
         context->getSourceErrorManager(),
         cl::DumpSourceLocation);
+    return parsedAST;
   }
 
   if (!hermes::sem::validateAST(*context, semCtx, parsedAST)) {
@@ -1409,7 +1410,8 @@ std::unique_ptr<Context::ResolutionTable> readResolutionTable(
 }
 
 /// Generate IR for CJS modules into the Module \p M for the source files in
-/// \p fileBufs. Treat the first element in fileBufs as the entry point.
+/// \p fileBufs if IR generation was requested. Otherwise, just parse the files.
+/// Treat the first element in fileBufs as the entry point.
 /// \param sourceMapGen the parsed versions of the input source maps,
 /// in the order in which the files were compiled.
 /// \return true on success, false on error, in which case an error will be
@@ -1423,6 +1425,7 @@ bool generateIRForSourcesAsCJSModules(
   auto context = M.shareContext();
   llvh::SmallString<64> rootPath{fileBufs[0][0].file->getBufferIdentifier()};
   llvh::sys::path::remove_filename(rootPath, llvh::sys::path::Style::posix);
+  bool generateIR = cl::DumpTarget >= DumpIR;
 
   // Construct a MemoryBuffer for our global entry point.
   llvh::SmallString<64> entryPointFilename{
@@ -1436,13 +1439,17 @@ bool generateIRForSourcesAsCJSModules(
   auto globalMemBuffer = llvh::MemoryBuffer::getMemBufferCopy("", "<global>");
 
   auto *globalAST = parseJS(context, semCtx, std::move(globalMemBuffer));
-  generateIRFromESTree(globalAST, &M, declFileList, {});
+  if (generateIR) {
+    // If we aren't planning to do anything with the IR,
+    // don't attempt to generate it.
+    generateIRFromESTree(globalAST, &M, declFileList, {});
+  }
 
   std::vector<std::unique_ptr<SourceMap>> inputSourceMaps{};
   inputSourceMaps.push_back(nullptr);
   std::vector<std::string> sources{"<global>"};
 
-  Function *topLevelFunction = M.getTopLevelFunction();
+  Function *topLevelFunction = generateIR ? M.getTopLevelFunction() : nullptr;
   for (auto &entry : fileBufs) {
     for (ModuleInSegment &moduleInSegment : entry.second) {
       if (M.hasCJSModule(moduleInSegment.id)) {
@@ -1467,7 +1474,7 @@ bool generateIRForSourcesAsCJSModules(
       if (!ast) {
         return false;
       }
-      if (cl::DumpTarget < DumpIR) {
+      if (!generateIR) {
         continue;
       }
       generateIRForCJSModule(
