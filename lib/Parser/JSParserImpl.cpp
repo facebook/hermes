@@ -3382,8 +3382,9 @@ Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpression() {
 
   bool optional = checkAndEat(TokenKind::questiondot);
   bool seenOptionalChain = optional ||
-      llvh::isa<ESTree::OptionalMemberExpressionNode>(expr) ||
-      llvh::isa<ESTree::OptionalCallExpressionNode>(expr);
+      (expr->getParens() == 0 &&
+       (llvh::isa<ESTree::OptionalMemberExpressionNode>(expr) ||
+        llvh::isa<ESTree::OptionalCallExpressionNode>(expr)));
 
   ESTree::Node *typeArgs = nullptr;
 #if HERMES_PARSE_FLOW

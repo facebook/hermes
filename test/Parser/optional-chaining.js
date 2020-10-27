@@ -424,6 +424,26 @@ a()?.b;
 // CHECK-NEXT:       "directive": null
 // CHECK-NEXT:     },
 
+// Parenthesized expressions don't carry optional chains over.
+(x?.())();
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "CallExpression",
+// CHECK-NEXT:         "callee": {
+// CHECK-NEXT:           "type": "OptionalCallExpression",
+// CHECK-NEXT:           "callee": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "x"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "arguments": [],
+// CHECK-NEXT:           "optional": true
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "arguments": []
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
 // Ensure we don't do optional chaining when it should be a conditional.
 x ? .3 : .4;
 // CHECK-NEXT:     {
