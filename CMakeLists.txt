@@ -63,10 +63,10 @@ endif()
 # - npm/package.json
 # - hermes.podspec
 project(Hermes
-        VERSION 0.5.2
+        VERSION 0.5.3
         LANGUAGES C CXX)
 # Optional suffix like "-rc3"
-set(VERSION_SUFFIX "-rc1")
+set(VERSION_SUFFIX "")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/")
 
