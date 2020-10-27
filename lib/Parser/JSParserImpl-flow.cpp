@@ -66,7 +66,9 @@ Optional<ESTree::Node *> JSParserImpl::parseFlowDeclaration() {
   return None;
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseDeclare(SMLoc start) {
+Optional<ESTree::Node *> JSParserImpl::parseDeclare(
+    SMLoc start,
+    AllowDeclareExportType allowDeclareExportType) {
   if (checkAndEat(typeIdent_)) {
     return parseTypeAlias(start, TypeAliasKind::Declare);
   }
@@ -114,7 +116,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclare(SMLoc start) {
     return None;
   }
 
-  return parseDeclareExport(start);
+  return parseDeclareExport(start, allowDeclareExportType);
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeAlias(
@@ -423,7 +425,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareModule(SMLoc start) {
       return None;
     }
     SMLoc declarationStart = advance(JSLexer::GrammarContext::Flow).Start;
-    auto optDecl = parseDeclare(declarationStart);
+    auto optDecl = parseDeclare(declarationStart, AllowDeclareExportType::Yes);
     if (!optDecl)
       return None;
     ESTree::Node *decl = *optDecl;
@@ -437,6 +439,28 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareModule(SMLoc start) {
         kind = commonJSIdent_;
         break;
       case ESTree::NodeKind::DeclareExportDeclaration:
+        if (llvh::dyn_cast_or_null<ESTree::InterfaceDeclarationNode>(
+                llvh::cast<ESTree::DeclareExportDeclarationNode>(decl)
+                    ->_declaration)) {
+          // declare export interface can show up in either module kind.
+          // Ignore it.
+          break;
+        }
+        if (llvh::dyn_cast_or_null<ESTree::TypeAliasNode>(
+                llvh::cast<ESTree::DeclareExportDeclarationNode>(decl)
+                    ->_declaration)) {
+          // declare export type can show up in either module kind.
+          // Ignore it.
+          break;
+        }
+        if (kind != nullptr && kind != esIdent_) {
+          error(
+              decl->getSourceRange(),
+              "cannot use ESM export in CommonJS module");
+        }
+        kind = esIdent_;
+        break;
+      case ESTree::NodeKind::DeclareExportAllDeclaration:
         if (kind != nullptr && kind != esIdent_) {
           error(
               decl->getSourceRange(),
@@ -632,7 +656,9 @@ Optional<ESTree::Node *> JSParserImpl::parseExportTypeDeclaration(
   return None;
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(SMLoc start) {
+Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(
+    SMLoc start,
+    AllowDeclareExportType allowDeclareExportType) {
   assert(check(TokenKind::rw_export));
   advance(JSLexer::GrammarContext::Flow);
   SMLoc declareStart = tok_->getStartLoc();
@@ -727,6 +753,30 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(SMLoc start) {
         *optType,
         new (context_)
             ESTree::DeclareExportDeclarationNode(*optType, {}, nullptr, false));
+  }
+
+  if (allowDeclareExportType == AllowDeclareExportType::Yes &&
+      check(typeIdent_)) {
+    advance(JSLexer::GrammarContext::Flow);
+    auto optType = parseTypeAlias(declareStart, TypeAliasKind::None);
+    if (!optType)
+      return None;
+    return setLocation(
+        start,
+        *optType,
+        new (context_)
+            ESTree::DeclareExportDeclarationNode(*optType, {}, nullptr, false));
+  }
+
+  if (checkN(TokenKind::rw_interface, interfaceIdent_)) {
+    auto optInterface = parseInterfaceDeclaration(/* declare */ false);
+    if (!optInterface)
+      return None;
+    return setLocation(
+        start,
+        *optInterface,
+        new (context_) ESTree::DeclareExportDeclarationNode(
+            *optInterface, {}, nullptr, false));
   }
 
   if (checkAndEat(TokenKind::star, JSLexer::GrammarContext::Flow)) {

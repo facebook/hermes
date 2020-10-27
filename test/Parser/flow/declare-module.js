@@ -50,6 +50,125 @@ declare module "Foo" {}
 // CHECK-NEXT:       "kind": "CommonJS"
 // CHECK-NEXT:     },
 
+declare module Mod {
+  declare export type T = string;
+}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "DeclareModule",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "Mod"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "body": {
+// CHECK-NEXT:         "type": "BlockStatement",
+// CHECK-NEXT:         "body": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "DeclareExportDeclaration",
+// CHECK-NEXT:             "declaration": {
+// CHECK-NEXT:               "type": "TypeAlias",
+// CHECK-NEXT:               "id": {
+// CHECK-NEXT:                 "type": "Identifier",
+// CHECK-NEXT:                 "name": "T"
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "typeParameters": null,
+// CHECK-NEXT:               "right": {
+// CHECK-NEXT:                 "type": "StringTypeAnnotation"
+// CHECK-NEXT:               }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "specifiers": [],
+// CHECK-NEXT:             "source": null,
+// CHECK-NEXT:             "default": false
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ]
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "kind": "CommonJS"
+// CHECK-NEXT:     },
+
+declare module Mod {
+  declare export * from 'foo';
+}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "DeclareModule",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "Mod"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "body": {
+// CHECK-NEXT:         "type": "BlockStatement",
+// CHECK-NEXT:         "body": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "DeclareExportAllDeclaration",
+// CHECK-NEXT:             "source": {
+// CHECK-NEXT:               "type": "StringLiteral",
+// CHECK-NEXT:               "value": "foo"
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ]
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "kind": "ES"
+// CHECK-NEXT:     },
+
+declare module Mod {
+  declare export interface bar {}
+  declare export var baz: number;
+}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "DeclareModule",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "Mod"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "body": {
+// CHECK-NEXT:         "type": "BlockStatement",
+// CHECK-NEXT:         "body": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "DeclareExportDeclaration",
+// CHECK-NEXT:             "declaration": {
+// CHECK-NEXT:               "type": "InterfaceDeclaration",
+// CHECK-NEXT:               "id": {
+// CHECK-NEXT:                 "type": "Identifier",
+// CHECK-NEXT:                 "name": "bar"
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "typeParameters": null,
+// CHECK-NEXT:               "extends": [],
+// CHECK-NEXT:               "body": {
+// CHECK-NEXT:                 "type": "ObjectTypeAnnotation",
+// CHECK-NEXT:                 "properties": [],
+// CHECK-NEXT:                 "indexers": [],
+// CHECK-NEXT:                 "callProperties": [],
+// CHECK-NEXT:                 "internalSlots": [],
+// CHECK-NEXT:                 "inexact": false,
+// CHECK-NEXT:                 "exact": false
+// CHECK-NEXT:               }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "specifiers": [],
+// CHECK-NEXT:             "source": null,
+// CHECK-NEXT:             "default": false
+// CHECK-NEXT:           },
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "DeclareExportDeclaration",
+// CHECK-NEXT:             "declaration": {
+// CHECK-NEXT:               "type": "DeclareVariable",
+// CHECK-NEXT:               "id": {
+// CHECK-NEXT:                 "type": "Identifier",
+// CHECK-NEXT:                 "name": "baz",
+// CHECK-NEXT:                 "typeAnnotation": {
+// CHECK-NEXT:                   "type": "TypeAnnotation",
+// CHECK-NEXT:                   "typeAnnotation": {
+// CHECK-NEXT:                     "type": "NumberTypeAnnotation"
+// CHECK-NEXT:                   }
+// CHECK-NEXT:                 }
+// CHECK-NEXT:               }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "specifiers": [],
+// CHECK-NEXT:             "source": null,
+// CHECK-NEXT:             "default": false
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ]
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "kind": "ES"
+// CHECK-NEXT:     },
+
 declare module Bar {
   declare module.exports: number;
   declare type T = number;
