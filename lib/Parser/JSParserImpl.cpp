@@ -2952,6 +2952,34 @@ Optional<ESTree::Node *> JSParserImpl::parseOptionalExpressionExceptNew(
           startLoc);
       return None;
     }
+  } else if (check(TokenKind::rw_import)) {
+    // ImportCall must be a call with an AssignmentExpression as the
+    // argument.
+    advance();
+    if (!eat(
+            TokenKind::l_paren,
+            JSLexer::AllowRegExp,
+            "in import call",
+            "location of 'import'",
+            startLoc))
+      return None;
+
+    auto optSource = parseAssignmentExpression(ParamIn);
+    if (!optSource)
+      return None;
+    ESTree::Node *source = *optSource;
+
+    SMLoc endLoc = tok_->getEndLoc();
+    if (!eat(
+            TokenKind::r_paren,
+            JSLexer::AllowRegExp,
+            "in import call",
+            "location of 'import'",
+            startLoc))
+      return None;
+
+    expr = setLocation(
+        startLoc, endLoc, new (context_) ESTree::ImportExpressionNode(source));
   } else {
     auto primExpr = parsePrimaryExpression();
     if (!primExpr)
@@ -3360,20 +3388,6 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrOptionalExpression(
 
 Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpression() {
   SMLoc startLoc = tok_->getStartLoc();
-
-  if (check(TokenKind::rw_import)) {
-    ESTree::Node *import =
-        setLocation(tok_, tok_, new (context_) ESTree::ImportNode());
-    advance();
-    if (!need(
-            TokenKind::l_paren,
-            "in import call",
-            "location of 'import'",
-            startLoc))
-      return None;
-
-    return parseCallExpression(startLoc, import, nullptr, false, false);
-  }
 
   auto optExpr = parseNewExpressionOrOptionalExpression(IsConstructorCall::No);
   if (!optExpr)

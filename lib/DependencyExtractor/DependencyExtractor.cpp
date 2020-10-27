@@ -165,15 +165,18 @@ class DependencyExtractor {
     visitESTreeChildren(*this, node);
   }
 
+  void visit(ImportExpressionNode *node) {
+    if (StringLiteralNode *name =
+            llvh::dyn_cast<StringLiteralNode>(node->_source)) {
+      addDependency(name->_value->str(), DependencyKind::Async);
+    }
+  }
+
   void visit(CallExpressionLikeNode *node) {
     // CallExpressionLike-based dependencies will need the first argument to be
     // a string indicating the source.
     auto *callee = getCallee(node);
-    if (llvh::isa<ImportNode>(callee)) {
-      if (auto *name = needFirstStringArgument(node)) {
-        addDependency(name->_value->str(), DependencyKind::Async);
-      }
-    } else if (auto *ident = llvh::dyn_cast<IdentifierNode>(callee)) {
+    if (auto *ident = llvh::dyn_cast<IdentifierNode>(callee)) {
       if (ident->_name == requireIdent_) {
         if (auto *name = needFirstStringArgument(node)) {
           addDependency(name->_value->str(), DependencyKind::Require);

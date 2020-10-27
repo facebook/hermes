@@ -229,7 +229,6 @@ ESTREE_NODE_2_ARGS(
 
 ESTREE_NODE_0_ARGS(ThisExpression, Base)
 ESTREE_NODE_0_ARGS(Super, Base)
-ESTREE_NODE_0_ARGS(Import, Base)
 ESTREE_NODE_1_ARGS(SequenceExpression, Base, NodeList, expressions, false)
 ESTREE_NODE_1_ARGS(ObjectExpression, Base, NodeList, properties, false)
 ESTREE_NODE_2_ARGS(ArrayExpression, Base,
@@ -256,6 +255,9 @@ ESTREE_NODE_2_ARGS(
 ESTREE_NODE_1_ARGS(
     AwaitExpression, Base,
     NodePtr, argument, false)
+ESTREE_NODE_1_ARGS(
+    ImportExpression, Base,
+    NodePtr, source, false)
 
 ESTREE_FIRST(CallExpressionLike, Base)
 ESTREE_NODE_3_ARGS(
