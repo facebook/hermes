@@ -533,7 +533,18 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareClass(SMLoc start) {
   }
 
   ESTree::NodeList mixins{};
-  // TODO: Parse mixins.
+  if (checkAndEat(mixinsIdent_)) {
+    do {
+      if (!need(
+              TokenKind::identifier,
+              "in class 'mixins'",
+              "start of declaration",
+              start))
+        return None;
+      if (!parseInterfaceExtends(start, mixins))
+        return None;
+    } while (checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Flow));
+  }
 
   ESTree::NodeList implements{};
   if (checkAndEat(TokenKind::rw_implements)) {

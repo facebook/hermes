@@ -95,6 +95,7 @@ void JSParserImpl::initializeIdentifiers() {
   exportsIdent_ = lexer_.getIdentifier("exports");
   esIdent_ = lexer_.getIdentifier("ES");
   commonJSIdent_ = lexer_.getIdentifier("CommonJS");
+  mixinsIdent_ = lexer_.getIdentifier("mixins");
 
   anyIdent_ = lexer_.getIdentifier("any");
   mixedIdent_ = lexer_.getIdentifier("mixed");

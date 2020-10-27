@@ -251,6 +251,7 @@ class JSParserImpl {
   UniqueString *exportsIdent_;
   UniqueString *esIdent_;
   UniqueString *commonJSIdent_;
+  UniqueString *mixinsIdent_;
 
   UniqueString *anyIdent_;
   UniqueString *mixedIdent_;
