@@ -82,7 +82,7 @@ for k in list(HERMES_OMITTED_KEYS.keys()) + list(ESPRIMA_OMITTED_KEYS.keys()):
 OMITTED_KEYS_COMMON = HERMES_OMITTED_KEYS_COMMON.union(ESPRIMA_OMITTED_KEYS_COMMON)
 
 HERMES_TIMEOUT = 40
-COMPILER_ARGS = ["-hermes-parser", "-dump-ast"]
+COMPILER_ARGS = ["-hermes-parser"]
 
 
 class EsprimaTestRunner:
@@ -299,12 +299,13 @@ class EsprimaTestRunner:
         raise TypeError("Can't find expected file.")
 
     # Run Hermes parser on the test and return the result from the subprocess.
-    def parseSource(self, suite, hermes, filename):
+    def parseSource(self, suite, hermes, filename, transformed=False):
         extra_args = []
         if "flow" in suite:
             extra_args.append("-parse-flow")
             extra_args.append("-parse-jsx")
             extra_args.append("-Xinclude-empty-ast-nodes")
+        extra_args.append("-dump-transformed-ast" if transformed else "-dump-ast")
         args = [hermes] + COMPILER_ARGS + extra_args
         # ".source.js" files has the format of "var source = \"...\";", and
         # the value of the 'source' variable should be the input to the parser.
@@ -366,6 +367,16 @@ class EsprimaTestRunner:
                     expected_content = expected_file.read()
                     # If the expected file has an 'errors' field, Hermes parser should fail.
                     if '"errors":' in expected_content:
+                        if res.returncode == 0:
+                            # If it should error and it didn't,
+                            # try again with semantic validation.
+                            # Some tests only error in semantic validation,
+                            # but we want to avoid running it because it also
+                            # outputs errors for unsupported compiler features
+                            # that Hermes does parse correctly.
+                            res = self.parseSource(
+                                suite, hermes, filename, transformed=True
+                            )
                         if res.returncode != 0:
                             return (TestStatus.TEST_PASSED, "expected failure")
                         else:
@@ -375,6 +386,9 @@ class EsprimaTestRunner:
                         suite, res.stdout.decode("utf-8"), expected_content
                     )
             elif expected_filename.endswith(".failure.json"):
+                if res.returncode == 0:
+                    # Retry with validation, as above.
+                    res = self.parseSource(suite, hermes, filename, transformed=True)
                 if res.returncode != 0:
                     return (TestStatus.TEST_PASSED, "expected failure")
                 else:
