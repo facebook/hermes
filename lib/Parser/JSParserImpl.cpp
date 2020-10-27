@@ -4128,6 +4128,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     if (!checkN(
             TokenKind::less,
             TokenKind::l_paren,
+            TokenKind::r_brace,
             TokenKind::equal,
             TokenKind::colon,
             TokenKind::semi)) {
@@ -4145,6 +4146,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     if (!checkN(
             TokenKind::less,
             TokenKind::l_paren,
+            TokenKind::r_brace,
             TokenKind::equal,
             TokenKind::colon,
             TokenKind::semi)) {
@@ -4162,10 +4164,13 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     if (!checkN(
             TokenKind::less,
             TokenKind::l_paren,
+            TokenKind::r_brace,
             TokenKind::equal,
             TokenKind::colon,
-            TokenKind::semi)) {
+            TokenKind::semi) &&
+        !lexer_.isNewLineBeforeCurrentToken()) {
       // If we don't see '(' then this was actually an async method.
+      // Async methods cannot have a newline between 'async' and the name.
       // These can be either Async or AsyncGenerator, so check for that.
       special = checkAndEat(TokenKind::star) ? SpecialKind::AsyncGenerator
                                              : SpecialKind::Async;
@@ -4221,8 +4226,11 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
   bool isConstructor =
       !isStatic && !computed && propName && propName->str() == "constructor";
 
-  if (checkN(TokenKind::colon, TokenKind::equal, TokenKind::semi)) {
-    // Parse a class property.
+  if (special == SpecialKind::None &&
+      !check(TokenKind::less, TokenKind::l_paren)) {
+    // Parse a class property, because this can't be a method definition.
+    // Attempt ASI after the fact, and continue on, letting the next iteration
+    // error if it wasn't actually a class property.
     // TODO: Account for private properties.
     // FieldDefinition ;
     //                 ^
@@ -4246,7 +4254,13 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
       value = *optValue;
     }
     SMLoc end;
-    if (!eatSemi(end)) {
+    // ASI is allowed for separating class elements.
+    if (!eatSemi(end, true) && !typeAnnotation) {
+      errorExpected(
+          TokenKind::semi,
+          "after class property",
+          "start of class property",
+          startRange.Start);
       return None;
     }
     return setLocation(
