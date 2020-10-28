@@ -54,8 +54,7 @@ void DataViewSerialize(Serializer &s, const GCCell *cell) {
 
 void DataViewDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::DataViewKind && "Expected DataView");
-  void *mem = d.getRuntime()->alloc(cellSize<JSDataView>());
-  auto *cell = new (mem) JSDataView(d);
+  auto *cell = d.getRuntime()->makeAFixed<JSDataView>(d);
   d.endObject(cell);
 }
 #endif
@@ -63,17 +62,20 @@ void DataViewDeserialize(Deserializer &d, CellKind kind) {
 PseudoHandle<JSDataView> JSDataView::create(
     Runtime *runtime,
     Handle<JSObject> prototype) {
-  JSObjectAlloc<JSDataView> mem{runtime};
-  return mem.initToPseudoHandle(new (mem) JSDataView(
+  auto *cell = runtime->makeAFixed<JSDataView>(
       runtime,
-      *prototype,
-      runtime->getHiddenClassForPrototypeRaw(
+      prototype,
+      runtime->getHiddenClassForPrototype(
           *prototype,
-          numOverlapSlots<JSDataView>() + ANONYMOUS_PROPERTY_SLOTS)));
+          numOverlapSlots<JSDataView>() + ANONYMOUS_PROPERTY_SLOTS));
+  return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
-JSDataView::JSDataView(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
-    : JSObject(runtime, &vt.base, parent, clazz),
+JSDataView::JSDataView(
+    Runtime *runtime,
+    Handle<JSObject> parent,
+    Handle<HiddenClass> clazz)
+    : JSObject(runtime, &vt.base, *parent, *clazz),
       buffer_(nullptr),
       offset_(0),
       length_(0) {}

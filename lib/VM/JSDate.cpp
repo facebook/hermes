@@ -45,21 +45,19 @@ void DateSerialize(Serializer &s, const GCCell *cell) {
 
 void DateDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::DateKind && "Expected Date");
-  void *mem = d.getRuntime()->alloc(cellSize<JSDate>());
-  auto *cell = new (mem) JSDate(d);
+  auto *cell = d.getRuntime()->makeAFixed<JSDate>(d);
   d.endObject(cell);
 }
 #endif
 
 PseudoHandle<JSDate>
 JSDate::create(Runtime *runtime, double value, Handle<JSObject> parentHandle) {
-  JSObjectAlloc<JSDate> mem{runtime};
-  return mem.initToPseudoHandle(new (mem) JSDate(
+  auto *cell = runtime->makeAFixed<JSDate>(
       runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle,
-          numOverlapSlots<JSDate>() + ANONYMOUS_PROPERTY_SLOTS)));
+      parentHandle,
+      runtime->getHiddenClassForPrototype(
+          *parentHandle, numOverlapSlots<JSDate>() + ANONYMOUS_PROPERTY_SLOTS));
+  return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
 } // namespace vm

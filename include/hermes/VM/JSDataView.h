@@ -20,6 +20,8 @@ namespace hermes {
 namespace vm {
 
 class JSDataView final : public JSObject {
+  friend GC;
+
  public:
   using size_type = JSArrayBuffer::size_type;
   using Super = JSObject;
@@ -111,7 +113,10 @@ class JSDataView final : public JSObject {
   /// length_ is the amount of bytes the DataView views inside the storage.
   size_type length_;
 
-  JSDataView(Runtime *runtime, JSObject *parent, HiddenClass *clazz);
+  JSDataView(
+      Runtime *runtime,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz);
 };
 
 /// @name Implementations

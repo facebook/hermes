@@ -15,6 +15,7 @@ namespace vm {
 
 /// Date object.
 class JSDate final : public JSObject {
+  friend GC;
   using Super = JSObject;
 
  public:
@@ -57,8 +58,8 @@ class JSDate final : public JSObject {
   friend void DateDeserialize(Deserializer &d, CellKind kind);
 #endif
 
-  JSDate(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
-      : JSObject(runtime, &vt.base, parent, clazz) {}
+  JSDate(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
+      : JSObject(runtime, &vt.base, *parent, *clazz) {}
 
  protected:
   static constexpr SlotIndex primitiveValuePropIndex() {

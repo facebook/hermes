@@ -73,10 +73,7 @@ void ErrorSerialize(Serializer &s, const GCCell *cell) {
 
 void ErrorDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::ErrorKind && "Expected JSError");
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      cellSize<JSError>());
-
-  auto *cell = new (mem) JSError(d);
+  auto *cell = d.getRuntime()->makeAFixed<JSError, HasFinalizer::Yes>(d);
   d.endObject(cell);
 }
 
@@ -202,13 +199,13 @@ PseudoHandle<JSError> JSError::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle,
     bool catchable) {
-  JSObjectAlloc<JSError, HasFinalizer::Yes> mem{runtime};
-  return mem.initToPseudoHandle(new (mem) JSError(
+  auto *cell = runtime->makeAFixed<JSError, HasFinalizer::Yes>(
       runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
+      parentHandle,
+      runtime->getHiddenClassForPrototype(
           *parentHandle, numOverlapSlots<JSError>() + ANONYMOUS_PROPERTY_SLOTS),
-      catchable));
+      catchable);
+  return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
 ExecutionStatus JSError::setupStack(
