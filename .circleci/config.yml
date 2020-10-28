@@ -182,7 +182,7 @@ jobs:
 
   macos:
     macos:
-      xcode: "10.0.0"
+      xcode: "12.0.0-beta"
     environment:
       - HERMES_WS_DIR: /tmp/hermes
       - TERM: dumb
@@ -204,7 +204,7 @@ jobs:
           name: Build Hermes for macOS
           command: |
             cd "$HERMES_WS_DIR"
-            hermes/utils/build/configure.py --distribute --cmake-flags='-DHERMES_BUILD_APPLE_FRAMEWORK:BOOLEAN=false'
+            hermes/utils/build/configure.py --distribute --cmake-flags='-DHERMES_BUILD_APPLE_FRAMEWORK:BOOLEAN=false -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=10.13 -DCMAKE_OSX_ARCHITECTURES:STRING=x86_64;arm64'
             cmake --build ./build_release --target github-cli-release
       - run:
           name: Copy artifacts
@@ -228,7 +228,7 @@ jobs:
 
   build-macos-runtime:
     macos:
-      xcode: "10.3.0"
+      xcode: "12.0.0-beta"
     environment:
       - HERMES_WS_DIR: /tmp/hermes
       - TERM: dumb
@@ -251,6 +251,7 @@ jobs:
           command: |
             cd "$HERMES_WS_DIR"
             hermes/utils/build/configure.py --distribute --cmake-flags="$(ruby -rcocoapods-core -e 'load %{hermes/hermes.podspec}; puts HermesHelper.cmake_configuration') -DCMAKE_INSTALL_PREFIX:PATH=../destroot"
+            cmake --build ./build_release
             cmake --build ./build_release --target hermes-runtime-darwin-cocoapods-release
       - run:
           name: Copy artifacts
@@ -302,7 +303,7 @@ jobs:
 
   test-macos-runtime-build-and-cocoapods-integration:
     macos:
-      xcode: "10.3.0"
+      xcode: "12.0.0-beta"
     environment:
       - TERM: dumb
       # Homebrew currently breaks while updating:
