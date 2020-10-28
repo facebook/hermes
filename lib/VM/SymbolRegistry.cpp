@@ -28,6 +28,8 @@ void SymbolRegistry::init(Runtime *runtime) {
 /// Mark the Strings and Symbols in the registry as roots.
 void SymbolRegistry::markRoots(SlotAcceptor &acceptor) {
   acceptor.accept(stringMap_);
+  // registeredSymbols_ doesn't need to be marked, because its contents are a
+  // copy of the symbols present in the stringMap_.
 }
 
 CallResult<SymbolID> SymbolRegistry::getSymbolForKey(
