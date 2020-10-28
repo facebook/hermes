@@ -113,11 +113,11 @@ class JSWeakMapImplBase : public JSObject {
   JSWeakMapImplBase(
       Runtime *runtime,
       const VTable *vtp,
-      JSObject *parent,
-      HiddenClass *clazz,
-      BigStorage *valueStorage)
-      : JSObject(runtime, vtp, parent, clazz),
-        valueStorage_(runtime, valueStorage, &runtime->getHeap()) {}
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
+      Handle<BigStorage> valueStorage)
+      : JSObject(runtime, vtp, *parent, *clazz),
+        valueStorage_(runtime, *valueStorage, &runtime->getHeap()) {}
 
  public:
   static const ObjectVTable vt;
@@ -302,6 +302,7 @@ class JSWeakMapImplBase : public JSObject {
 /// Currently, we never shrink it.
 template <CellKind C>
 class JSWeakMapImpl final : public JSWeakMapImplBase {
+  friend GC;
   using Super = JSWeakMapImplBase;
 
  public:
@@ -328,9 +329,9 @@ class JSWeakMapImpl final : public JSWeakMapImplBase {
 
   JSWeakMapImpl(
       Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
-      BigStorage *valueStorage)
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
+      Handle<BigStorage> valueStorage)
       : JSWeakMapImplBase(runtime, &vt.base, parent, clazz, valueStorage) {}
 };
 

@@ -359,17 +359,13 @@ JSWeakMapImpl<C>::JSWeakMapImpl(Deserializer &d)
 
 void WeakMapDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::WeakMapKind && "Expected WeakMap.");
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      cellSize<JSWeakMap>());
-  auto *cell = new (mem) JSWeakMap(d);
+  auto *cell = d.getRuntime()->makeAFixed<JSWeakMap, HasFinalizer::Yes>(d);
   d.endObject(cell);
 }
 
 void WeakSetDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::WeakSetKind && "Expected WeakSet.");
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      cellSize<JSWeakSet>());
-  auto *cell = new (mem) JSWeakSet(d);
+  auto *cell = d.getRuntime()->makeAFixed<JSWeakSet, HasFinalizer::Yes>(d);
   d.endObject(cell);
 }
 #endif
@@ -401,14 +397,14 @@ CallResult<PseudoHandle<JSWeakMapImpl<C>>> JSWeakMapImpl<C>::create(
   }
   auto valueStorage = runtime->makeHandle<BigStorage>(std::move(*valueRes));
 
-  JSObjectAlloc<JSWeakMapImpl<C>, HasFinalizer::Yes> mem{runtime};
-  return mem.initToPseudoHandle(new (mem) JSWeakMapImpl<C>(
+  auto *cell = runtime->makeAFixed<JSWeakMapImpl<C>, HasFinalizer::Yes>(
       runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
+      parentHandle,
+      runtime->getHiddenClassForPrototype(
           *parentHandle,
           numOverlapSlots<JSWeakMapImpl>() + ANONYMOUS_PROPERTY_SLOTS),
-      *valueStorage));
+      valueStorage);
+  return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
 template class JSWeakMapImpl<CellKind::WeakMapKind>;

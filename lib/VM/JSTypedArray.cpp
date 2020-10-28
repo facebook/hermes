@@ -22,9 +22,9 @@ namespace vm {
 JSTypedArrayBase::JSTypedArrayBase(
     Runtime *runtime,
     const VTable *vt,
-    JSObject *parent,
-    HiddenClass *clazz)
-    : JSObject(runtime, vt, parent, clazz),
+    Handle<JSObject> parent,
+    Handle<HiddenClass> clazz)
+    : JSObject(runtime, vt, *parent, *clazz),
       buffer_(nullptr),
       length_(0),
       byteWidth_(0),
@@ -308,8 +308,7 @@ JSTypedArray<T, C>::JSTypedArray(Deserializer &d)
 
 template <typename T, CellKind C>
 void deserializeTypedArray(Deserializer &d, CellKind kind) {
-  void *mem = d.getRuntime()->alloc(cellSize<JSTypedArray<T, C>>());
-  auto *cell = new (mem) JSTypedArray<T, C>(d);
+  auto *cell = d.getRuntime()->makeAFixed<JSTypedArray<T, C>>(d);
   d.endObject(cell);
 }
 
@@ -376,13 +375,13 @@ template <typename T, CellKind C>
 PseudoHandle<JSTypedArray<T, C>> JSTypedArray<T, C>::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  JSObjectAlloc<JSTypedArray<T, C>> mem{runtime};
-  return mem.initToPseudoHandle(new (mem) JSTypedArray<T, C>(
+  auto *cell = runtime->makeAFixed<JSTypedArray<T, C>>(
       runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
+      parentHandle,
+      runtime->getHiddenClassForPrototype(
           *parentHandle,
-          numOverlapSlots<JSTypedArray>() + ANONYMOUS_PROPERTY_SLOTS)));
+          numOverlapSlots<JSTypedArray>() + ANONYMOUS_PROPERTY_SLOTS));
+  return JSObjectInit::initToPseudoHandle(runtime, cell);
   // NOTE: If any fields are ever added beyond the base class, then the
   // *BuildMeta functions must be updated to call addJSObjectOverlapSlots.
   static_assert(
@@ -424,8 +423,8 @@ PseudoHandle<JSTypedArray<T, C>> JSTypedArray<T, C>::create(
 template <typename T, CellKind C>
 JSTypedArray<T, C>::JSTypedArray(
     Runtime *runtime,
-    JSObject *parent,
-    HiddenClass *clazz)
+    Handle<JSObject> parent,
+    Handle<HiddenClass> clazz)
     : JSTypedArrayBase(runtime, &vt.base.base, parent, clazz) {
   byteWidth_ = sizeof(T);
 }

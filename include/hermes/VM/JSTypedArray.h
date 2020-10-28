@@ -198,8 +198,8 @@ class JSTypedArrayBase : public JSObject {
   explicit JSTypedArrayBase(
       Runtime *runtime,
       const VTable *vt,
-      JSObject *parent,
-      HiddenClass *clazz);
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz);
 
   /// Sets the current buffer's contents to the contents of a buffer from
   /// another TypedArray \p src.
@@ -250,6 +250,8 @@ class JSTypedArrayBase : public JSObject {
 /// for example Int8Array is JSTypedArray<int8_t, CellKind::Int8ArrayKind>
 template <typename T, CellKind C>
 class JSTypedArray final : public JSTypedArrayBase {
+  friend GC;
+
  public:
   using iterator = T *;
 
@@ -324,7 +326,10 @@ class JSTypedArray final : public JSTypedArrayBase {
   friend void deserializeTypedArray(Deserializer &d, CellKind kind);
 #endif
 
-  explicit JSTypedArray(Runtime *runtime, JSObject *parent, HiddenClass *clazz);
+  explicit JSTypedArray(
+      Runtime *runtime,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz);
 };
 
 /// @name toDestType specializations
