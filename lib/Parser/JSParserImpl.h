@@ -966,10 +966,11 @@ class JSParserImpl {
 
   enum class AllowAnonFunctionType { No, Yes };
 
-  /// \param wrapped true when the type annotation should be wrapped in a
-  /// TypeAnnotationNode.
+  /// \param wrappedStart if set, the type annotation should be wrapped in a
+  /// TypeAnnotationNode starting at this location. If not set, the type
+  /// annotation should not be wrapped in a TypeAnnotationNode.
   Optional<ESTree::Node *> parseTypeAnnotation(
-      bool wrapped = false,
+      Optional<SMLoc> wrappedStart = None,
       AllowAnonFunctionType allowAnonFunctionType = AllowAnonFunctionType::Yes);
 
   /// Allow 'declare export type', which is only allowed in 'declare module'.

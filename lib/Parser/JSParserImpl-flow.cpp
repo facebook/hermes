@@ -365,6 +365,8 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareModule(SMLoc start) {
       error(tok_->getSourceRange(), "expected module.exports declaration");
       return None;
     }
+
+    SMLoc annotStart = tok_->getStartLoc();
     if (!eat(
             TokenKind::colon,
             JSLexer::GrammarContext::Flow,
@@ -372,7 +374,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareModule(SMLoc start) {
             "start of declaration",
             start))
       return None;
-    auto optType = parseTypeAnnotation(/* wrapped */ true);
+    auto optType = parseTypeAnnotation(annotStart);
     if (!optType)
       return None;
     SMLoc end;
@@ -839,7 +841,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeAnnotation(
-    bool wrapped,
+    Optional<SMLoc> wrappedStart,
     AllowAnonFunctionType allowAnonFunctionType) {
   llvh::SaveAndRestore<bool> saveParam(
       allowAnonFunctionType_,
@@ -847,9 +849,9 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAnnotation(
   auto optType = parseUnionTypeAnnotation();
   if (!optType)
     return None;
-  if (wrapped) {
+  if (wrappedStart) {
     return setLocation(
-        *optType,
+        *wrappedStart,
         *optType,
         new (context_) ESTree::TypeAnnotationNode(*optType));
   }
@@ -1315,7 +1317,7 @@ Optional<ESTree::Node *> JSParserImpl::parseFunctionOrGroupTypeAnnotation() {
   }
 
   auto optReturnType = parseTypeAnnotation(
-      false,
+      None,
       allowAnonFunctionType_ ? AllowAnonFunctionType::Yes
                              : AllowAnonFunctionType::No);
   if (!optReturnType)
