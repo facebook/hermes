@@ -42,10 +42,8 @@ struct FinalizerCell final : public GCCell {
   }
 
   static FinalizerCell *create(Runtime &runtime, int *numFinalized) {
-    return new (
-        runtime.alloc</*fixedSize*/ true, /*hasFinalizers*/ HasFinalizer::Yes>(
-            sizeof(FinalizerCell)))
-        FinalizerCell(&runtime.getHeap(), numFinalized);
+    return runtime.makeAFixed<FinalizerCell, HasFinalizer::Yes>(
+        &runtime.getHeap(), numFinalized);
   }
 
   FinalizerCell(GC *gc, int *numFinalized)

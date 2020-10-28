@@ -89,9 +89,7 @@ void ArrayBufferSerialize(Serializer &s, const GCCell *cell) {
 }
 
 void ArrayBufferDeserialize(Deserializer &d, CellKind kind) {
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      cellSize<JSArrayBuffer>());
-  auto *cell = new (mem) JSArrayBuffer(d);
+  auto *cell = d.getRuntime()->makeAFixed<JSArrayBuffer, HasFinalizer::Yes>(d);
   d.endObject(cell);
 }
 #endif
@@ -99,13 +97,13 @@ void ArrayBufferDeserialize(Deserializer &d, CellKind kind) {
 PseudoHandle<JSArrayBuffer> JSArrayBuffer::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  JSObjectAlloc<JSArrayBuffer, HasFinalizer::Yes> mem{runtime};
-  return mem.initToPseudoHandle(new (mem) JSArrayBuffer(
+  auto *cell = runtime->makeAFixed<JSArrayBuffer, HasFinalizer::Yes>(
       runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
+      parentHandle,
+      runtime->getHiddenClassForPrototype(
           *parentHandle,
-          numOverlapSlots<JSArrayBuffer>() + ANONYMOUS_PROPERTY_SLOTS)));
+          numOverlapSlots<JSArrayBuffer>() + ANONYMOUS_PROPERTY_SLOTS));
+  return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
 CallResult<Handle<JSArrayBuffer>> JSArrayBuffer::clone(
@@ -157,9 +155,9 @@ void JSArrayBuffer::copyDataBlockBytes(
 
 JSArrayBuffer::JSArrayBuffer(
     Runtime *runtime,
-    JSObject *parent,
-    HiddenClass *clazz)
-    : JSObject(runtime, &vt.base, parent, clazz),
+    Handle<JSObject> parent,
+    Handle<HiddenClass> clazz)
+    : JSObject(runtime, &vt.base, *parent, *clazz),
       data_(nullptr),
       size_(0),
       attached_(false) {}
