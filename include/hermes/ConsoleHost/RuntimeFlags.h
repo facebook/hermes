@@ -185,7 +185,7 @@ static opt<bool> StableInstructionCount(
 static opt<uint32_t> VMExperimentFlags(
     "Xvm-experiment-flags",
     llvh::cl::desc("VM experiment flags."),
-    llvh::cl::init(0),
+    llvh::cl::init(RuntimeConfig::getDefaultVMExperimentFlags()),
     llvh::cl::Hidden,
     cat(RuntimeCategory));
 

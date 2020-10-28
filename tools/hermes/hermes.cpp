@@ -182,6 +182,7 @@ static vm::RuntimeConfig getReplRuntimeConfig() {
                                       .build())
               .withShouldRecordStats(cl::GCPrintStats)
               .build())
+      .withVMExperimentFlags(cl::VMExperimentFlags)
       .withES6Promise(cl::ES6Promise)
       .withES6Proxy(cl::ES6Proxy)
       .withES6Symbol(cl::ES6Symbol)
