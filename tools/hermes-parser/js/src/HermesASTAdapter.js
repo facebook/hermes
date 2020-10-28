@@ -38,6 +38,12 @@ class HermesASTAdapter {
       comments[i] = this.mapComment(comment);
     }
 
+    // The first comment may be an interpreter directive and is stored directly on the program node
+    program.interpreter =
+      comments.length > 0 && comments[0].type === 'InterpreterDirective'
+        ? comments.shift()
+        : null;
+
     return this.mapNode(program);
   }
 

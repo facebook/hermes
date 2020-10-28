@@ -144,6 +144,49 @@ test('Parsing comments', () => {
   });
 });
 
+test('Interpreter directives', () => {
+  // Parsing interpreter directive
+  const sourceWithDirective = `#! interpreter comment
+    1; /*block comment*/
+  `;
+
+  const interpreter = {
+    type: 'InterpreterDirective',
+    loc: loc(1, 0, 1, 22),
+    value: ' interpreter comment',
+  };
+
+  expect(parse(sourceWithDirective)).toMatchObject({
+    type: 'Program',
+    interpreter,
+    comments: [{type: 'Block', value: 'block comment'}],
+  });
+  expect(parse(sourceWithDirective, {babel: true})).toMatchObject({
+    type: 'File',
+    program: {
+      type: 'Program',
+      interpreter,
+    },
+    comments: [{type: 'CommentBlock', value: 'block comment'}],
+  });
+
+  // No interpreter directive
+  const sourceWithoutDirective = '// Line comment';
+  expect(parse(sourceWithoutDirective)).toMatchObject({
+    type: 'Program',
+    interpreter: null,
+    comments: [{type: 'Line', value: ' Line comment'}],
+  });
+  expect(parse(sourceWithoutDirective, {babel: true})).toMatchObject({
+    type: 'File',
+    program: {
+      type: 'Program',
+      interpreter: null,
+    },
+    comments: [{type: 'CommentLine', value: ' Line comment'}],
+  });
+});
+
 test('Babel root File node', () => {
   expect(parse('test', {babel: true})).toMatchObject({
     type: 'File',

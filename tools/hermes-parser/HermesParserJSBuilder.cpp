@@ -104,10 +104,7 @@ class HermesParserJSBuilder {
       // Comment values not null terminated so pass both their pointer and size
       auto value = storedComment.getString();
       auto commentReference = buildComment(
-          loc,
-          storedComment.getKind() == parser::StoredComment::Kind::Block,
-          value.data(),
-          value.size());
+          loc, (int)storedComment.getKind(), value.data(), value.size());
 
       appendToArray(commentsReference, commentReference);
     }

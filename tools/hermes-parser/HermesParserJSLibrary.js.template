@@ -13,6 +13,9 @@ const HermesParserJSLibrary = {
     currentID: 1,
     references: {},
 
+    // Matches StoredComment::Kind enum in JSLexer.h
+    commentTypes: ['CommentLine', 'CommentBlock', 'InterpreterDirective'],
+
     /**
      * Store the given value and return a reference to it.
      */
@@ -82,10 +85,10 @@ const HermesParserJSLibrary = {
     });
   },
 
-  buildComment: function(loc, isBlock, valuePtr, valueLength) {
+  buildComment: function(loc, typeIdx, valuePtr, valueLength) {
     return JSReferences.store({
       loc: JSReferences.pop(loc),
-      type: isBlock ? 'CommentBlock' : 'CommentLine',
+      type: JSReferences.commentTypes[typeIdx],
       value: UTF8ToString(valuePtr, valueLength),
     });
   },
