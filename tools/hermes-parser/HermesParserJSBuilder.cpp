@@ -43,15 +43,17 @@ class HermesParserJSBuilder {
     return num;
   }
 
-  /// Pointers to null-terminated strings can be passed directly to a JS library
-  /// call. The caller in JS must then read the null-terminated string off the
-  /// WASM heap.
-  const char *buildNode(NodeLabel label) {
+  /// Decode a string within JS and return a reference to it from this function.
+  /// We must pass the size along with the pointer as the string may contain
+  /// null bytes.
+  JSReference buildNode(NodeLabel label) {
     if (label == nullptr) {
-      return nullptr;
+      return 0;
     }
 
-    return label->c_str();
+    auto str = label->str();
+
+    return buildString(str.begin(), str.size());
   }
 
   /// Arrays cannot be passed directly to a JS library call. Instead, an array

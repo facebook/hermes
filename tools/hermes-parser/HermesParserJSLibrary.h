@@ -10,7 +10,7 @@
 
 using JSReference = int;
 
-using NodeLabel = const char *;
+using NodeLabel = JSReference;
 using NodeBoolean = bool;
 using NodeNumber = double;
 using NodePtr = JSReference;
@@ -19,6 +19,7 @@ using NodeList = JSReference;
 /// Definitions of JS Library functions that can be called from WASM
 
 extern "C" {
+JSReference buildString(const char *, size_t);
 JSReference buildArray();
 void appendToArray(JSReference, JSReference);
 JSReference buildSourceLocation(int, int, int, int, int, int);

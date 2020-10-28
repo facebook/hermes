@@ -41,18 +41,18 @@ const HermesParserJSLibrary = {
 
       return value;
     },
+  },
 
-    /**
-     * Return the string at a given pointer, returning null if the pointer is 0
-     * (corresponding to the null pointer).
-     */
-    getString: function(pointer) {
-      if (pointer == 0) {
-        return null;
-      }
+  /**
+   * Return a reference to the decoded string at a given pointer, returning 0
+   * if the pointer is 0 (corresponding to the null pointer).
+   */
+  buildString: function(pointer, size) {
+    if (pointer == 0) {
+      return 0;
+    }
 
-      return UTF8ToString(pointer);
-    },
+    return JSReferences.store(UTF8ToString(pointer, size));
   },
 
   buildArray: function() {
@@ -104,7 +104,7 @@ const HermesParserJSLibrary = {
 
 // Define wrapper functions for each node type. Numbers do not need to be wrapped.
 #define NodeNumber
-#define NodeLabel JSReferences.getString
+#define NodeLabel JSReferences.pop
 #define NodeBoolean Boolean
 #define NodePtr JSReferences.pop
 #define NodeList JSReferences.pop
