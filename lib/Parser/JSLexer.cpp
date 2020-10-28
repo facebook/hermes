@@ -1521,7 +1521,7 @@ void JSLexer::scanString() {
     if (*curCharPtr_ == quoteCh) {
       ++curCharPtr_;
       break;
-    } else if (*curCharPtr_ == '\\') {
+    } else if (!JSX && *curCharPtr_ == '\\') {
       escapes = true;
       ++curCharPtr_;
       switch ((unsigned char)*curCharPtr_) {

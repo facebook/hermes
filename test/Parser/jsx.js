@@ -906,6 +906,103 @@
 // CHECK-NEXT:         }
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
+<a foo="\" bar="\'" baz="\t\n"/>;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "JSXElement",
+// CHECK-NEXT:         "openingElement": {
+// CHECK-NEXT:           "type": "JSXOpeningElement",
+// CHECK-NEXT:           "name": {
+// CHECK-NEXT:             "type": "JSXIdentifier",
+// CHECK-NEXT:             "name": "a"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "attributes": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "JSXAttribute",
+// CHECK-NEXT:               "name": {
+// CHECK-NEXT:                 "type": "JSXIdentifier",
+// CHECK-NEXT:                 "name": "foo"
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "value": {
+// CHECK-NEXT:                 "type": "StringLiteral",
+// CHECK-NEXT:                 "value": "\\"
+// CHECK-NEXT:               }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "JSXAttribute",
+// CHECK-NEXT:               "name": {
+// CHECK-NEXT:                 "type": "JSXIdentifier",
+// CHECK-NEXT:                 "name": "bar"
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "value": {
+// CHECK-NEXT:                 "type": "StringLiteral",
+// CHECK-NEXT:                 "value": "\\'"
+// CHECK-NEXT:               }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "JSXAttribute",
+// CHECK-NEXT:               "name": {
+// CHECK-NEXT:                 "type": "JSXIdentifier",
+// CHECK-NEXT:                 "name": "baz"
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "value": {
+// CHECK-NEXT:                 "type": "StringLiteral",
+// CHECK-NEXT:                 "value": "\\t\\n"
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           ],
+// CHECK-NEXT:           "selfClosing": true
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "children": [],
+// CHECK-NEXT:         "closingElement": null
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
+<a foo='\' bar='\"' />;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "JSXElement",
+// CHECK-NEXT:         "openingElement": {
+// CHECK-NEXT:           "type": "JSXOpeningElement",
+// CHECK-NEXT:           "name": {
+// CHECK-NEXT:             "type": "JSXIdentifier",
+// CHECK-NEXT:             "name": "a"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "attributes": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "JSXAttribute",
+// CHECK-NEXT:               "name": {
+// CHECK-NEXT:                 "type": "JSXIdentifier",
+// CHECK-NEXT:                 "name": "foo"
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "value": {
+// CHECK-NEXT:                 "type": "StringLiteral",
+// CHECK-NEXT:                 "value": "\\"
+// CHECK-NEXT:               }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "JSXAttribute",
+// CHECK-NEXT:               "name": {
+// CHECK-NEXT:                 "type": "JSXIdentifier",
+// CHECK-NEXT:                 "name": "bar"
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "value": {
+// CHECK-NEXT:                 "type": "StringLiteral",
+// CHECK-NEXT:                 "value": "\\\""
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           ],
+// CHECK-NEXT:           "selfClosing": true
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "children": [],
+// CHECK-NEXT:         "closingElement": null
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]
