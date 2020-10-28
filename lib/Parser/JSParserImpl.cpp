@@ -875,23 +875,27 @@ Optional<ESTree::IdentifierNode *> JSParserImpl::parseBindingIdentifier(
 
   ESTree::Node *type = nullptr;
   bool optional = false;
+  SMLoc end = identRng.End;
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow()) {
-    optional = checkAndEat(TokenKind::question);
+    if (check(TokenKind::question)) {
+      optional = true;
+      end = advance(JSLexer::GrammarContext::Flow).End;
+    }
+
     if (check(TokenKind::colon)) {
       SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
       auto optType = parseTypeAnnotation(annotStart);
       if (!optType)
         return None;
       type = *optType;
+      end = type->getEndLoc();
     }
   }
 #endif
 
   return setLocation(
-      identRng,
-      type ? type->getSourceRange() : identRng,
-      new (context_) ESTree::IdentifierNode(id, type, optional));
+      identRng, end, new (context_) ESTree::IdentifierNode(id, type, optional));
 }
 
 Optional<ESTree::VariableDeclarationNode *>
@@ -3722,7 +3726,7 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(
   }
 
   ESTree::Node *consequent = nullptr;
-  SMLoc questionLoc = tok_->getStartLoc();
+  SMRange questionRange = tok_->getSourceRange();
 
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow()) {
@@ -3754,7 +3758,7 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(
         checkN(TokenKind::comma, TokenKind::r_paren, TokenKind::equal)) {
       return setLocation(
           test,
-          questionLoc,
+          questionRange,
           new (context_) ESTree::CoverTypedIdentifierNode(test, nullptr, true));
     }
 
@@ -3803,7 +3807,7 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(
           JSLexer::AllowRegExp,
           "in conditional expression after '... ? ...'",
           "location of '?'",
-          questionLoc))
+          questionRange.Start))
     return None;
 
   auto optAlternate = parseAssignmentExpression(
@@ -4638,16 +4642,16 @@ Optional<ESTree::Node *> JSParserImpl::reparseAssignmentPattern(
         return None;
       if (auto *apn = dyn_cast<ESTree::ArrayPatternNode>(*optAssn)) {
         apn->_typeAnnotation = type;
-        return apn;
+        return setLocation(cover, cover, apn);
       }
       if (auto *opn = dyn_cast<ESTree::ObjectPatternNode>(*optAssn)) {
         opn->_typeAnnotation = type;
-        return opn;
+        return setLocation(cover, cover, opn);
       }
       if (auto *id = dyn_cast<ESTree::IdentifierNode>(*optAssn)) {
         id->_typeAnnotation = type;
         id->_optional = cover->_optional;
-        return id;
+        return setLocation(cover, cover, id);
       }
     }
     if (auto *typecast = dyn_cast<ESTree::TypeCastExpressionNode>(node)) {
@@ -4657,15 +4661,15 @@ Optional<ESTree::Node *> JSParserImpl::reparseAssignmentPattern(
         return None;
       if (auto *apn = dyn_cast<ESTree::ArrayPatternNode>(*optAssn)) {
         apn->_typeAnnotation = type;
-        return apn;
+        return setLocation(apn, type, apn);
       }
       if (auto *opn = dyn_cast<ESTree::ObjectPatternNode>(*optAssn)) {
         opn->_typeAnnotation = type;
-        return opn;
+        return setLocation(opn, type, opn);
       }
       if (auto *id = dyn_cast<ESTree::IdentifierNode>(*optAssn)) {
         id->_typeAnnotation = type;
-        return id;
+        return setLocation(id, type, id);
       }
     }
 #endif
