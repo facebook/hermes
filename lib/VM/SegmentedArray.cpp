@@ -157,8 +157,8 @@ CallResult<PseudoHandle<SegmentedArray>> SegmentedArray::create(
   // if it is larger than the inline storage space. That is in order to avoid
   // having an extra field to track, and the upper bound of "size" can be used
   // instead.
-  return createPseudoHandle(new (runtime->alloc<false /*fixedSize*/>(
-      allocationSizeForCapacity(capacity))) SegmentedArray(runtime, capacity));
+  return createPseudoHandle(runtime->makeAVariable<SegmentedArray>(
+      allocationSizeForCapacity(capacity), runtime, capacity));
 }
 
 CallResult<PseudoHandle<SegmentedArray>> SegmentedArray::createLongLived(

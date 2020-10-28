@@ -109,24 +109,22 @@ void ProxySerialize(Serializer &s, const GCCell *cell) {
 
 void ProxyDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::ProxyKind && "Expected Proxy");
-  void *mem = d.getRuntime()->alloc(cellSize<JSProxy>());
-  auto *cell = new (mem) JSProxy(d);
+  auto *cell = d.getRuntime()->makeAFixed<JSProxy>(d);
   d.endObject(cell);
 }
 #endif
 
 PseudoHandle<JSProxy> JSProxy::create(Runtime *runtime) {
-  JSObjectAlloc<JSProxy> mem{runtime};
-  JSProxy *proxy = new (mem) JSProxy(
+  JSProxy *proxy = runtime->makeAFixed<JSProxy>(
       runtime,
-      runtime->objectPrototypeRawPtr,
-      runtime->getHiddenClassForPrototypeRaw(
+      Handle<JSObject>::vmcast(&runtime->objectPrototype),
+      runtime->getHiddenClassForPrototype(
           runtime->objectPrototypeRawPtr,
           JSObject::numOverlapSlots<JSProxy>() + ANONYMOUS_PROPERTY_SLOTS));
 
   proxy->flags_.proxyObject = true;
 
-  return mem.initToPseudoHandle(proxy);
+  return JSObjectInit::initToPseudoHandle(runtime, proxy);
 }
 
 void JSProxy::setTargetAndHandler(

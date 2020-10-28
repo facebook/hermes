@@ -23,6 +23,7 @@ namespace vm {
 /// in large amounts of code duplication in terms of calling convention and
 /// field storage.
 class JSGenerator final : public JSObject {
+  friend GC;
   using Super = JSObject;
   friend void GeneratorBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
@@ -53,8 +54,11 @@ class JSGenerator final : public JSObject {
   friend void GeneratorDeserialize(Deserializer &d, CellKind kind);
 #endif
 
-  JSGenerator(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
-      : JSObject(runtime, &vt.base, parent, clazz) {}
+  JSGenerator(
+      Runtime *runtime,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz)
+      : JSObject(runtime, &vt.base, *parent, *clazz) {}
 
  private:
   /// The GeneratorInnerFunction that is called when this generator is advanced.
