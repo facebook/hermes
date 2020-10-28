@@ -106,7 +106,7 @@ class SegmentedArray final
 #endif
 
     friend void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb);
-    static VTable vt;
+    static const VTable vt;
 
     AtomicIfConcurrentGC<uint32_t> length_;
     GCHermesValue data_[kMaxLength];
@@ -357,7 +357,7 @@ class SegmentedArray final
   }
 
  private:
-  static VTable vt;
+  static const VTable vt;
 
   friend TrailingObjects;
   friend void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb);

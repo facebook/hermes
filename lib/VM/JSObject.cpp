@@ -21,7 +21,7 @@
 namespace hermes {
 namespace vm {
 
-ObjectVTable JSObject::vt{
+const ObjectVTable JSObject::vt{
     VTable(
         CellKind::ObjectKind,
         cellSize<JSObject>(),
@@ -3206,8 +3206,8 @@ CallResult<Handle<BigStorage>> getForInPropertyNames(
 //===----------------------------------------------------------------------===//
 // class PropertyAccessor
 
-VTable PropertyAccessor::vt{CellKind::PropertyAccessorKind,
-                            cellSize<PropertyAccessor>()};
+const VTable PropertyAccessor::vt{CellKind::PropertyAccessorKind,
+                                  cellSize<PropertyAccessor>()};
 
 void PropertyAccessorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const PropertyAccessor *>(cell);

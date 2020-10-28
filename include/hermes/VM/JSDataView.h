@@ -24,7 +24,7 @@ class JSDataView final : public JSObject {
   using size_type = JSArrayBuffer::size_type;
   using Super = JSObject;
 
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::DataViewKind;

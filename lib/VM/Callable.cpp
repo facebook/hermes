@@ -27,7 +27,7 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 // class Environment
 
-VTable Environment::vt{CellKind::EnvironmentKind, 0};
+const VTable Environment::vt{CellKind::EnvironmentKind, 0};
 
 void EnvironmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const Environment *>(cell);
@@ -483,7 +483,7 @@ CallResult<double> Callable::extractOwnLengthProperty_RJS(
 //===----------------------------------------------------------------------===//
 // class BoundFunction
 
-CallableVTable BoundFunction::vt{
+const CallableVTable BoundFunction::vt{
     {
         VTable(
             CellKind::BoundFunctionKind,
@@ -887,7 +887,7 @@ CallResult<PseudoHandle<>> BoundFunction::_callImpl(
 //===----------------------------------------------------------------------===//
 // class NativeFunction
 
-CallableVTable NativeFunction::vt{
+const CallableVTable NativeFunction::vt{
     {
         VTable(
             CellKind::NativeFunctionKind,
@@ -1183,7 +1183,7 @@ CallResult<PseudoHandle<>> NativeConstructor::_callImpl(
 //===----------------------------------------------------------------------===//
 // class JSFunction
 
-CallableVTable JSFunction::vt{
+const CallableVTable JSFunction::vt{
     {
         VTable(
             CellKind::FunctionKind,
@@ -1315,7 +1315,7 @@ void JSFunction::_snapshotAddLocationsImpl(
 //===----------------------------------------------------------------------===//
 // class JSGeneratorFunction
 
-CallableVTable JSGeneratorFunction::vt{
+const CallableVTable JSGeneratorFunction::vt{
     {
         VTable(
             CellKind::GeneratorFunctionKind,
@@ -1391,7 +1391,7 @@ PseudoHandle<JSGeneratorFunction> JSGeneratorFunction::create(
 //===----------------------------------------------------------------------===//
 // class GeneratorInnerFunction
 
-CallableVTable GeneratorInnerFunction::vt{
+const CallableVTable GeneratorInnerFunction::vt{
     {
         VTable(
             CellKind::GeneratorInnerFunctionKind,

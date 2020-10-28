@@ -26,7 +26,7 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 // class JSRegExp
 
-ObjectVTable JSRegExp::vt{
+const ObjectVTable JSRegExp::vt{
     VTable(
         CellKind::RegExpKind,
         cellSize<JSRegExp>(),

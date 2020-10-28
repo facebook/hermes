@@ -19,7 +19,7 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 // class JSDate
 
-ObjectVTable JSDate::vt{
+const ObjectVTable JSDate::vt{
     VTable(CellKind::DateKind, cellSize<JSDate>()),
     JSDate::_getOwnIndexedRangeImpl,
     JSDate::_haveOwnIndexedImpl,

@@ -49,7 +49,7 @@ class JSError final : public JSObject {
 #endif
 
   using Super = JSObject;
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::ErrorKind;
   }

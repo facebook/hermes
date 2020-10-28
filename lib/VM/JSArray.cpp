@@ -358,7 +358,7 @@ bool ArrayImpl::_checkAllOwnIndexedImpl(
 //===----------------------------------------------------------------------===//
 // class Arguments
 
-ObjectVTable Arguments::vt{
+const ObjectVTable Arguments::vt{
     VTable(
         CellKind::ArgumentsKind,
         cellSize<Arguments>(),
@@ -490,7 +490,7 @@ CallResult<Handle<Arguments>> Arguments::create(
 //===----------------------------------------------------------------------===//
 // class JSArray
 
-ObjectVTable JSArray::vt{
+const ObjectVTable JSArray::vt{
     VTable(
         CellKind::ArrayKind,
         cellSize<JSArray>(),
@@ -762,7 +762,7 @@ CallResult<bool> JSArray::setLength(
 //===----------------------------------------------------------------------===//
 // class JSArrayIterator
 
-ObjectVTable JSArrayIterator::vt{
+const ObjectVTable JSArrayIterator::vt{
     VTable(CellKind::ArrayIteratorKind, cellSize<JSArrayIterator>()),
     JSArrayIterator::_getOwnIndexedRangeImpl,
     JSArrayIterator::_haveOwnIndexedImpl,

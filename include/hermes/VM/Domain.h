@@ -44,7 +44,7 @@ class Domain final : public GCCell {
   using Super = GCCell;
   friend void DomainBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
-  static VTable vt;
+  static const VTable vt;
 
   /// Offsets for fields in the cjsModules_ ArrayStorage which contain
   /// information about each individual module.
@@ -245,7 +245,7 @@ class RequireContext final : public JSObject {
   friend GC;
   using Super = JSObject;
 
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
   friend void RequireContextBuildMeta(
       const GCCell *cell,
       Metadata::Builder &mb);

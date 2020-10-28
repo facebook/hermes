@@ -39,7 +39,7 @@ class Environment final
   friend void EnvironmentDeserialize(Deserializer &d, CellKind kind);
 #endif
 
-  static VTable vt;
+  static const VTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::EnvironmentKind;
@@ -367,7 +367,7 @@ class BoundFunction final : public Callable {
 
  public:
   using Super = Callable;
-  static CallableVTable vt;
+  static const CallableVTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::BoundFunctionKind;
@@ -484,7 +484,7 @@ class NativeFunction : public Callable {
 #endif
 
   using Super = Callable;
-  static CallableVTable vt;
+  static const CallableVTable vt;
 
   static bool classof(const GCCell *cell) {
     return kindInRange(
@@ -976,7 +976,7 @@ class JSFunction : public Callable {
             codeBlock) {}
 
  public:
-  static CallableVTable vt;
+  static const CallableVTable vt;
 
   static bool classof(const GCCell *cell) {
     return kindInRange(
@@ -1051,7 +1051,7 @@ class JSGeneratorFunction final : public JSFunction {
   static constexpr auto kHasFinalizer = HasFinalizer::No;
 
  public:
-  static CallableVTable vt;
+  static const CallableVTable vt;
 
   /// Create a GeneratorFunction.
   static PseudoHandle<JSGeneratorFunction> create(
@@ -1145,7 +1145,7 @@ class GeneratorInnerFunction final : public JSFunction {
   static constexpr auto kHasFinalizer = HasFinalizer::No;
 
  public:
-  static CallableVTable vt;
+  static const CallableVTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::GeneratorInnerFunctionKind;

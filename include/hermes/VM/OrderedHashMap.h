@@ -25,7 +25,7 @@ class HashMapEntry final : public GCCell {
   friend GC;
 
  public:
-  static VTable vt;
+  static const VTable vt;
 
   /// The key.
   GCHermesValue key;
@@ -92,7 +92,7 @@ class OrderedHashMap final : public GCCell {
       Metadata::Builder &mb);
 
  public:
-  static VTable vt;
+  static const VTable vt;
 
 #ifdef HERMESVM_SERIALIZE
   OrderedHashMap(Deserializer &d);

@@ -16,7 +16,7 @@
 namespace hermes {
 namespace vm {
 
-ObjectVTable JSDataView::vt{
+const ObjectVTable JSDataView::vt{
     VTable(CellKind::DataViewKind, cellSize<JSDataView>()),
     JSDataView::_getOwnIndexedRangeImpl,
     JSDataView::_haveOwnIndexedImpl,

@@ -91,7 +91,7 @@ void TransitionMap::uncleanMakeLarge(Runtime *runtime) {
 
 } // namespace detail
 
-VTable HiddenClass::vt{
+const VTable HiddenClass::vt{
     CellKind::HiddenClassKind,
     cellSize<HiddenClass>(),
     _finalizeImpl,

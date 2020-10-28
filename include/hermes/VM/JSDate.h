@@ -18,7 +18,7 @@ class JSDate final : public JSObject {
   using Super = JSObject;
 
  public:
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
   /// Need one anonymous slot for the [[PrimitiveValue]] internal property.
   static const PropStorage::size_type ANONYMOUS_PROPERTY_SLOTS =

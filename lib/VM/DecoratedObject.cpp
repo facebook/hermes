@@ -18,7 +18,7 @@ size_t DecoratedObject::Decoration::getMallocSize() const {
   return sizeof *this;
 }
 
-ObjectVTable DecoratedObject::vt{
+const ObjectVTable DecoratedObject::vt{
     VTable(
         CellKind::DecoratedObjectKind,
         cellSize<DecoratedObject>(),

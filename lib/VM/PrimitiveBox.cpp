@@ -20,7 +20,7 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 // class JSString
 
-ObjectVTable JSString::vt{
+const ObjectVTable JSString::vt{
     VTable(CellKind::StringObjectKind, cellSize<JSString>()),
     JSString::_getOwnIndexedRangeImpl,
     JSString::_haveOwnIndexedImpl,
@@ -194,7 +194,7 @@ bool JSString::_deleteOwnIndexedImpl(
 //===----------------------------------------------------------------------===//
 // class JSStringIterator
 
-ObjectVTable JSStringIterator::vt{
+const ObjectVTable JSStringIterator::vt{
     VTable(CellKind::StringIteratorKind, cellSize<JSStringIterator>()),
     JSStringIterator::_getOwnIndexedRangeImpl,
     JSStringIterator::_haveOwnIndexedImpl,
@@ -311,7 +311,7 @@ CallResult<HermesValue> JSStringIterator::nextElement(
 //===----------------------------------------------------------------------===//
 // class JSNumber
 
-ObjectVTable JSNumber::vt{
+const ObjectVTable JSNumber::vt{
     VTable(CellKind::NumberObjectKind, cellSize<JSNumber>()),
     JSNumber::_getOwnIndexedRangeImpl,
     JSNumber::_haveOwnIndexedImpl,
@@ -363,7 +363,7 @@ PseudoHandle<JSNumber> JSNumber::create(
 //===----------------------------------------------------------------------===//
 // class JSBoolean
 
-ObjectVTable JSBoolean::vt{
+const ObjectVTable JSBoolean::vt{
     VTable(CellKind::BooleanObjectKind, cellSize<JSBoolean>()),
     JSBoolean::_getOwnIndexedRangeImpl,
     JSBoolean::_haveOwnIndexedImpl,
@@ -413,7 +413,7 @@ JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> parentHandle) {
 //===----------------------------------------------------------------------===//
 // class JSSymbol
 
-ObjectVTable JSSymbol::vt{
+const ObjectVTable JSSymbol::vt{
     VTable(CellKind::SymbolObjectKind, cellSize<JSSymbol>()),
     _getOwnIndexedRangeImpl,
     _haveOwnIndexedImpl,

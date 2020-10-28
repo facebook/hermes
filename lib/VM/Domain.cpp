@@ -18,11 +18,11 @@
 namespace hermes {
 namespace vm {
 
-VTable Domain::vt{CellKind::DomainKind,
-                  cellSize<Domain>(),
-                  _finalizeImpl,
-                  _markWeakImpl,
-                  _mallocSizeImpl};
+const VTable Domain::vt{CellKind::DomainKind,
+                        cellSize<Domain>(),
+                        _finalizeImpl,
+                        _markWeakImpl,
+                        _mallocSizeImpl};
 
 void DomainBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const Domain *>(cell);
@@ -373,7 +373,7 @@ ExecutionStatus Domain::importCJSModuleTable(
   return ExecutionStatus::RETURNED;
 }
 
-ObjectVTable RequireContext::vt{
+const ObjectVTable RequireContext::vt{
     VTable(CellKind::RequireContextKind, cellSize<RequireContext>()),
     RequireContext::_getOwnIndexedRangeImpl,
     RequireContext::_haveOwnIndexedImpl,

@@ -20,7 +20,7 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 // class JSError
 
-ObjectVTable JSError::vt{
+const ObjectVTable JSError::vt{
     VTable(
         CellKind::ErrorKind,
         cellSize<JSError>(),

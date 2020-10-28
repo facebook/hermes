@@ -359,7 +359,7 @@ class JSObject : public GCCell {
   serializeObjectImpl(Serializer &s, const GCCell *cell, unsigned overlapSlots);
 #endif
 
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
   /// Default capacity of indirect property storage.
   static const PropStorage::size_type DEFAULT_PROPERTY_CAPACITY = 4;
@@ -1476,7 +1476,7 @@ class PropertyAccessor final : public GCCell {
   PropertyAccessor(Deserializer &d);
 #endif
 
-  static VTable vt;
+  static const VTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::PropertyAccessorKind;

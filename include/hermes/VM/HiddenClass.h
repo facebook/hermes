@@ -280,7 +280,7 @@ class HiddenClass final : public GCCell {
   /// mode".
   static constexpr unsigned kDictionaryThreshold = 64;
 
-  static VTable vt;
+  static const VTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::HiddenClassKind;

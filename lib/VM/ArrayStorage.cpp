@@ -15,7 +15,7 @@
 namespace hermes {
 namespace vm {
 
-VTable ArrayStorage::vt(
+const VTable ArrayStorage::vt(
     CellKind::ArrayStorageKind,
     0,
     nullptr,

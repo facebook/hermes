@@ -91,7 +91,7 @@ class DecoratedObject : public JSObject {
   }
 
   using Super = JSObject;
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
   static bool classof(const GCCell *cell) {
     return kindInRange(
         cell->getKind(),

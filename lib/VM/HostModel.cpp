@@ -18,7 +18,7 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 // class FinalizableNativeFunction
 
-CallableVTable FinalizableNativeFunction::vt{
+const CallableVTable FinalizableNativeFunction::vt{
     {
         VTable(
             CellKind::FinalizableNativeFunctionKind,
@@ -96,7 +96,7 @@ CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
 
 HostObjectProxy::~HostObjectProxy() {}
 
-ObjectVTable HostObject::vt{
+const ObjectVTable HostObject::vt{
     VTable(
         CellKind::HostObjectKind,
         cellSize<HostObject>(),

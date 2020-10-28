@@ -36,7 +36,7 @@ class ArrayStorage final
   using size_type = uint32_t;
   using iterator = GCHermesValue *;
 
-  static VTable vt;
+  static const VTable vt;
 
 #ifdef HERMESVM_SERIALIZE
   /// A convinience method to serialize an ArrayStorage which does not contain

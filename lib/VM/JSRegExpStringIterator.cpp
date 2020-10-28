@@ -20,7 +20,7 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 // class JSRegExpStringIterator
 
-ObjectVTable JSRegExpStringIterator::vt{
+const ObjectVTable JSRegExpStringIterator::vt{
     VTable(
         CellKind::RegExpStringIteratorKind,
         cellSize<JSRegExpStringIterator>()),

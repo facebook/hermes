@@ -75,7 +75,7 @@ class JSString final : public PrimitiveBox {
   // We need one more slot for the length property.
   static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
       Super::NAMED_PROPERTY_SLOTS + 1;
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::StringObjectKind;
@@ -172,7 +172,7 @@ class JSStringIterator : public JSObject {
       Metadata::Builder &mb);
 
  public:
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::StringIteratorKind;
@@ -217,7 +217,7 @@ class JSNumber final : public PrimitiveBox {
   friend GC;
 
  public:
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
 #ifdef HERMESVM_SERIALIZE
   JSNumber(Deserializer &d, const VTable *vt);
@@ -246,7 +246,7 @@ class JSBoolean final : public PrimitiveBox {
   friend GC;
 
  public:
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
 #ifdef HERMESVM_SERIALIZE
   JSBoolean(Deserializer &d, const VTable *vt);
@@ -278,7 +278,7 @@ class JSSymbol final : public PrimitiveBox {
   friend GC;
 
  public:
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::SymbolObjectKind;

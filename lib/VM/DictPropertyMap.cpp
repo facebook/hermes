@@ -49,7 +49,7 @@ struct DictPropertyMap::detail {
       "too few bits to store max possible descriptor index");
 };
 
-VTable DictPropertyMap::vt{CellKind::DictPropertyMapKind, 0};
+const VTable DictPropertyMap::vt{CellKind::DictPropertyMapKind, 0};
 
 void DictPropertyMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const DictPropertyMap *>(cell);

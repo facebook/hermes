@@ -246,7 +246,7 @@ class Arguments final : public ArrayImpl {
   using Super = ArrayImpl;
 
  public:
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
   // We need one more slot for the '.length' property.
   static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
@@ -290,7 +290,7 @@ class JSArray final : public ArrayImpl {
   friend void ArraySerialize(Serializer &s, const GCCell *cell);
 #endif
 
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
   // We need one more slot for the '.length' property.
   static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
@@ -433,7 +433,7 @@ class JSArrayIterator : public JSObject {
   friend void ArrayIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
  public:
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::ArrayIteratorKind;

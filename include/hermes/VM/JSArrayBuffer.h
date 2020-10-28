@@ -26,7 +26,7 @@ class JSArrayBuffer final : public JSObject {
   // amount is larger than the native platform's `size_t`
   using size_type = std::size_t;
 
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::ArrayBufferKind;

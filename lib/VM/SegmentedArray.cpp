@@ -16,7 +16,7 @@
 namespace hermes {
 namespace vm {
 
-VTable SegmentedArray::Segment::vt(
+const VTable SegmentedArray::Segment::vt(
     CellKind::SegmentKind,
     cellSize<SegmentedArray::Segment>(),
     nullptr,
@@ -88,7 +88,7 @@ void SegmentedArray::Segment::setLength(Runtime *runtime, uint32_t newLength) {
   }
 }
 
-VTable SegmentedArray::vt(
+const VTable SegmentedArray::vt(
     CellKind::SegmentedArrayKind,
     /*variableSize*/ 0,
     nullptr,

@@ -26,7 +26,7 @@ class FinalizableNativeFunction final : public NativeFunction {
   FinalizeNativeFunctionPtr finalizePtr_;
 
  public:
-  static CallableVTable vt;
+  static const CallableVTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::FinalizableNativeFunctionKind;
@@ -100,7 +100,7 @@ class HostObject final : public DecoratedObject {
   friend GC;
 
  public:
-  static ObjectVTable vt;
+  static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::HostObjectKind;

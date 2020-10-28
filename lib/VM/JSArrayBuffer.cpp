@@ -19,7 +19,7 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 // class JSArrayBuffer
 
-ObjectVTable JSArrayBuffer::vt{
+const ObjectVTable JSArrayBuffer::vt{
     VTable(
         CellKind::ArrayBufferKind,
         cellSize<JSArrayBuffer>(),

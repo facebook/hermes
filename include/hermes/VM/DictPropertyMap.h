@@ -179,7 +179,7 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
     friend class OptValue<PropertyPos>;
   };
 
-  static VTable vt;
+  static const VTable vt;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::DictPropertyMapKind;
