@@ -129,7 +129,8 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAlias(
   ESTree::Node *id = setLocation(
       tok_,
       tok_,
-      new (context_) ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
+      new (context_)
+          ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
   SMLoc end = id->getEndLoc();
   advance(JSLexer::GrammarContext::Flow);
 
@@ -210,7 +211,8 @@ Optional<ESTree::Node *> JSParserImpl::parseInterfaceDeclaration(bool declare) {
   auto *id = setLocation(
       tok_,
       tok_,
-      new (context_) ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
+      new (context_)
+          ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
   advance(JSLexer::GrammarContext::Flow);
 
   ESTree::Node *typeParams = nullptr;
@@ -349,7 +351,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFunction(SMLoc start) {
           new (context_) ESTree::FunctionTypeAnnotationNode(
               std::move(params), returnType, *optRest, typeParams))));
   auto *ident = setLocation(
-      idStart, func, new (context_) ESTree::IdentifierNode(id, func));
+      idStart, func, new (context_) ESTree::IdentifierNode(id, func, false));
   return setLocation(
       start,
       ident,
@@ -401,7 +403,8 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareModule(SMLoc start) {
     id = setLocation(
         tok_,
         tok_,
-        new (context_) ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
+        new (context_)
+            ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
   }
   advance(JSLexer::GrammarContext::Flow);
 
@@ -511,7 +514,8 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareClass(SMLoc start) {
   auto *id = setLocation(
       tok_,
       tok_,
-      new (context_) ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
+      new (context_)
+          ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
   advance(JSLexer::GrammarContext::Flow);
 
   ESTree::Node *typeParams = nullptr;
@@ -1463,8 +1467,8 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
       ESTree::IdentifierNode *id = setLocation(
           tok_,
           tok_,
-          new (context_)
-              ESTree::IdentifierNode(tok_->getResWordOrIdentifier(), nullptr));
+          new (context_) ESTree::IdentifierNode(
+              tok_->getResWordOrIdentifier(), nullptr, false));
       advance(JSLexer::GrammarContext::Flow);
 
       if (!eat(
@@ -1552,7 +1556,7 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
     key = setLocation(
         startRange,
         startRange,
-        new (context_) ESTree::IdentifierNode(staticIdent_, nullptr));
+        new (context_) ESTree::IdentifierNode(staticIdent_, nullptr, false));
     auto optProp = parseTypeProperty(start, variance, isStatic, key);
     if (!optProp)
       return false;
@@ -2023,8 +2027,8 @@ Optional<ESTree::GenericTypeAnnotationNode *> JSParserImpl::parseGenericType() {
   ESTree::Node *id = setLocation(
       tok_,
       tok_,
-      new (context_)
-          ESTree::IdentifierNode(tok_->getResWordOrIdentifier(), nullptr));
+      new (context_) ESTree::IdentifierNode(
+          tok_->getResWordOrIdentifier(), nullptr, false));
   advance(JSLexer::GrammarContext::Flow);
 
   while (checkAndEat(TokenKind::period, JSLexer::GrammarContext::Flow)) {
@@ -2039,8 +2043,8 @@ Optional<ESTree::GenericTypeAnnotationNode *> JSParserImpl::parseGenericType() {
     ESTree::Node *next = setLocation(
         tok_,
         tok_,
-        new (context_)
-            ESTree::IdentifierNode(tok_->getResWordOrIdentifier(), nullptr));
+        new (context_) ESTree::IdentifierNode(
+            tok_->getResWordOrIdentifier(), nullptr, false));
     advance(JSLexer::GrammarContext::Flow);
     id = setLocation(
         id, next, new (context_) ESTree::QualifiedTypeIdentifierNode(id, next));
@@ -2069,7 +2073,8 @@ Optional<ESTree::ClassImplementsNode *> JSParserImpl::parseClassImplements() {
   ESTree::Node *id = setLocation(
       tok_,
       tok_,
-      new (context_) ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
+      new (context_)
+          ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
   SMLoc end = advance(JSLexer::GrammarContext::Flow).End;
 
   ESTree::Node *typeParams = nullptr;
@@ -2137,7 +2142,7 @@ JSParserImpl::reparseTypeAnnotationAsIdentifier(ESTree::Node *typeAnnotation) {
   return setLocation(
       typeAnnotation,
       typeAnnotation,
-      new (context_) ESTree::IdentifierNode(id, nullptr));
+      new (context_) ESTree::IdentifierNode(id, nullptr, false));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseEnumDeclaration() {
@@ -2314,7 +2319,8 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumMember() {
   ESTree::Node *id = setLocation(
       tok_,
       tok_,
-      new (context_) ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
+      new (context_)
+          ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
   advance();
 
   ESTree::Node *member = nullptr;

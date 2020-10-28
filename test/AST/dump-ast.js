@@ -767,7 +767,8 @@ switch (foo()) {
 // CHECK-FULL:       "id": {
 // CHECK-FULL:         "type": "Identifier",
 // CHECK-FULL:         "name": "foo",
-// CHECK-FULL:         "typeAnnotation": null
+// CHECK-FULL:         "typeAnnotation": null,
+// CHECK-FULL:         "optional": false
 // CHECK-FULL:       },
 // CHECK-FULL:       "params": [],
 // CHECK-FULL:       "body": {
@@ -782,12 +783,14 @@ switch (foo()) {
 // CHECK-FULL:                 "object": {
 // CHECK-FULL:                   "type": "Identifier",
 // CHECK-FULL:                   "name": "Math",
-// CHECK-FULL:                   "typeAnnotation": null
+// CHECK-FULL:                   "typeAnnotation": null,
+// CHECK-FULL:                   "optional": false
 // CHECK-FULL:                 },
 // CHECK-FULL:                 "property": {
 // CHECK-FULL:                   "type": "Identifier",
 // CHECK-FULL:                   "name": "random",
-// CHECK-FULL:                   "typeAnnotation": null
+// CHECK-FULL:                   "typeAnnotation": null,
+// CHECK-FULL:                   "optional": false
 // CHECK-FULL:                 },
 // CHECK-FULL:                 "computed": false
 // CHECK-FULL:               },
@@ -809,7 +812,8 @@ switch (foo()) {
 // CHECK-FULL:         "callee": {
 // CHECK-FULL:           "type": "Identifier",
 // CHECK-FULL:           "name": "foo",
-// CHECK-FULL:           "typeAnnotation": null
+// CHECK-FULL:           "typeAnnotation": null,
+// CHECK-FULL:           "optional": false
 // CHECK-FULL:         },
 // CHECK-FULL:         "typeArguments": null,
 // CHECK-FULL:         "arguments": []
@@ -830,7 +834,8 @@ switch (foo()) {
 // CHECK-FULL:                 "callee": {
 // CHECK-FULL:                   "type": "Identifier",
 // CHECK-FULL:                   "name": "print",
-// CHECK-FULL:                   "typeAnnotation": null
+// CHECK-FULL:                   "typeAnnotation": null,
+// CHECK-FULL:                   "optional": false
 // CHECK-FULL:                 },
 // CHECK-FULL:                 "typeArguments": null,
 // CHECK-FULL:                 "arguments": [
@@ -863,7 +868,8 @@ switch (foo()) {
 // CHECK-FULL:                 "callee": {
 // CHECK-FULL:                   "type": "Identifier",
 // CHECK-FULL:                   "name": "print",
-// CHECK-FULL:                   "typeAnnotation": null
+// CHECK-FULL:                   "typeAnnotation": null,
+// CHECK-FULL:                   "optional": false
 // CHECK-FULL:                 },
 // CHECK-FULL:                 "typeArguments": null,
 // CHECK-FULL:                 "arguments": [
@@ -892,7 +898,8 @@ switch (foo()) {
 // CHECK-FULL:                 "callee": {
 // CHECK-FULL:                   "type": "Identifier",
 // CHECK-FULL:                   "name": "print",
-// CHECK-FULL:                   "typeAnnotation": null
+// CHECK-FULL:                   "typeAnnotation": null,
+// CHECK-FULL:                   "optional": false
 // CHECK-FULL:                 },
 // CHECK-FULL:                 "typeArguments": null,
 // CHECK-FULL:                 "arguments": [
@@ -901,7 +908,8 @@ switch (foo()) {
 // CHECK-FULL:                     "callee": {
 // CHECK-FULL:                       "type": "Identifier",
 // CHECK-FULL:                       "name": "foo",
-// CHECK-FULL:                       "typeAnnotation": null
+// CHECK-FULL:                       "typeAnnotation": null,
+// CHECK-FULL:                       "optional": false
 // CHECK-FULL:                     },
 // CHECK-FULL:                     "typeArguments": null,
 // CHECK-FULL:                     "arguments": []

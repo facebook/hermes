@@ -43,7 +43,8 @@
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "foo"
+// CHECK-NEXT:             "name": "foo",
+// CHECK-NEXT:             "optional": true
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "body": {
@@ -72,7 +73,8 @@
 // CHECK-NEXT:               "typeAnnotation": {
 // CHECK-NEXT:                 "type": "NumberTypeAnnotation"
 // CHECK-NEXT:               }
-// CHECK-NEXT:             }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "optional": true
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "body": {
@@ -97,7 +99,8 @@
 // CHECK-NEXT:             "type": "AssignmentPattern",
 // CHECK-NEXT:             "left": {
 // CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "foo"
+// CHECK-NEXT:               "name": "foo",
+// CHECK-NEXT:               "optional": true
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "right": {
 // CHECK-NEXT:               "type": "NumericLiteral",
@@ -134,7 +137,8 @@
 // CHECK-NEXT:                 "typeAnnotation": {
 // CHECK-NEXT:                   "type": "NumberTypeAnnotation"
 // CHECK-NEXT:                 }
-// CHECK-NEXT:               }
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "optional": true
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "right": {
 // CHECK-NEXT:               "type": "NumericLiteral",

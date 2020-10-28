@@ -372,16 +372,13 @@ ESTREE_NODE_3_ARGS(
 ESTREE_NODE_1_ARGS(Directive, Base, NodePtr, value, false)
 ESTREE_NODE_1_ARGS(DirectiveLiteral, Base, NodeLabel, value, false)
 
-ESTREE_NODE_2_ARGS(
-    Identifier,
-    Base,
-    NodeLabel,
-    name,
-    false,
-    NodePtr,
-    typeAnnotation,
-    true)
+ESTREE_NODE_3_ARGS(
+    Identifier, Base,
+    NodeLabel, name, false,
+    NodePtr, typeAnnotation, true,
+    NodeBoolean, optional, false)
 ESTREE_IGNORE_IF_EMPTY(Identifier, typeAnnotation)
+ESTREE_IGNORE_IF_EMPTY(Identifier, optional)
 
 ESTREE_NODE_2_ARGS(
     MetaProperty,
@@ -942,10 +939,11 @@ ESTREE_NODE_1_ARGS(
 // 'right' is the type which is either the cast target or the type annotation,
 //   which may be null if the identifier was simply given a '?' and no ':'
 //   with a type annotation.
-ESTREE_NODE_2_ARGS(
+ESTREE_NODE_3_ARGS(
     CoverTypedIdentifier, Cover,
     NodePtr, left, false,
-    NodePtr, right, true)
+    NodePtr, right, true,
+    NodeBoolean, optional, false)
 
 ESTREE_LAST(Cover)
 

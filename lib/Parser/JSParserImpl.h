@@ -865,10 +865,14 @@ class JSParserImpl {
   /// Attempt to parse a CoverTypedIdentifierNode which consists of a
   /// node which may be an arrow parameter, a colon, and a type.
   /// \param test the LHS of the potential CoverTypedIdentifierNode.
+  /// \param optional whether the potential CoverTypedIdentifierNode is
+  /// optional, meaning there was a question mark preceding the type annotation
   /// \return nullptr if there was no error but attempting to parse the
   ///   node is not possible because \p test can't be a formal parameter,
   ///   or there wasn't a colon in the first place, None on error.
-  Optional<ESTree::Node *> tryParseCoverTypedIdentifierNode(ESTree::Node *test);
+  Optional<ESTree::Node *> tryParseCoverTypedIdentifierNode(
+      ESTree::Node *test,
+      bool optional);
 #endif
 
   /// Reparse an ArrayExpression into an ArrayPattern.

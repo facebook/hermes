@@ -133,7 +133,7 @@ class ESTreeJSONDumper {
   }
 
   static bool isEmpty(NodeBoolean val) {
-    return false;
+    return !val;
   }
 
   static bool isEmpty(NodeNumber num) {

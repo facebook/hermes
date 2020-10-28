@@ -21,11 +21,11 @@ ESTree::FunctionExpressionNode *wrapCJSModule(
 
   // Identifiers for function arguments.
   auto *exports = new (*context) ESTree::IdentifierNode(
-      context->getIdentifier("exports").getUnderlyingPointer(), nullptr);
+      context->getIdentifier("exports").getUnderlyingPointer(), nullptr, false);
   auto *require = new (*context) ESTree::IdentifierNode(
-      context->getIdentifier("require").getUnderlyingPointer(), nullptr);
+      context->getIdentifier("require").getUnderlyingPointer(), nullptr, false);
   auto *module = new (*context) ESTree::IdentifierNode(
-      context->getIdentifier("module").getUnderlyingPointer(), nullptr);
+      context->getIdentifier("module").getUnderlyingPointer(), nullptr, false);
   argNames.push_back(*exports);
   argNames.push_back(*require);
   argNames.push_back(*module);

@@ -128,7 +128,36 @@ function foo(a?: number): number {}
 // CHECK-NEXT:             "typeAnnotation": {
 // CHECK-NEXT:               "type": "NumberTypeAnnotation"
 // CHECK-NEXT:             }
-// CHECK-NEXT:           }
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "optional": true
+// CHECK-NEXT:         }
+// CHECK-NEXT:       ],
+// CHECK-NEXT:       "body": {
+// CHECK-NEXT:         "type": "BlockStatement",
+// CHECK-NEXT:         "body": []
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "returnType": {
+// CHECK-NEXT:         "type": "TypeAnnotation",
+// CHECK-NEXT:         "typeAnnotation": {
+// CHECK-NEXT:           "type": "NumberTypeAnnotation"
+// CHECK-NEXT:         }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "generator": false,
+// CHECK-NEXT:       "async": false
+// CHECK-NEXT:     },
+
+function foo(a?): number {}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "FunctionDeclaration",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "foo"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "params": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:           "type": "Identifier",
+// CHECK-NEXT:           "name": "a",
+// CHECK-NEXT:           "optional": true
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "body": {
@@ -341,7 +370,8 @@ function foo(a?: number): number {}
 // CHECK-NEXT:               "typeAnnotation": {
 // CHECK-NEXT:                 "type": "NumberTypeAnnotation"
 // CHECK-NEXT:               }
-// CHECK-NEXT:             }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "optional": true
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "body": {
@@ -376,7 +406,8 @@ function foo(a?: number): number {}
 // CHECK-NEXT:               "typeAnnotation": {
 // CHECK-NEXT:                 "type": "NumberTypeAnnotation"
 // CHECK-NEXT:               }
-// CHECK-NEXT:             }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "optional": true
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "body": {
