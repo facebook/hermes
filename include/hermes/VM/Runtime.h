@@ -104,6 +104,7 @@ enum {
   MAdviseStringsRandom = 1 << 5,
   MAdviseStringsWillNeed = 1 << 6,
   VerifyBytecodeChecksum = 1 << 7,
+  ES6Promise = 1 << 8,
 };
 /// Set of flags for active VM experiments.
 using VMExperimentFlags = uint32_t;
@@ -748,6 +749,10 @@ class Runtime : public HandleRootOwner,
   }
 
   bool hasES6Promise() const {
+    // TODO(T78352970): clean up when QE finished.
+    if (getVMExperimentFlags() & experiments::ES6Promise) {
+      return true;
+    }
     return hasES6Promise_;
   }
 
