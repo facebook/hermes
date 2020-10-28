@@ -3143,7 +3143,7 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberSelect(
             ESTree::MemberExpressionNode(expr, propExpr.getValue(), true));
   } else if (
       checkAndEat(TokenKind::period) ||
-      (optional && !check(TokenKind::l_paren))) {
+      (optional && !check(TokenKind::l_paren, TokenKind::less))) {
     if (tok_->getKind() != TokenKind::identifier && !tok_->isResWord()) {
       // Just use the pattern here, even though we know it will fail.
       if (!need(
@@ -3176,11 +3176,25 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberSelect(
         new (context_) ESTree::MemberExpressionNode(expr, id, false));
   } else {
     assert(
-        optional && check(TokenKind::l_paren) && "must be ?.() at this point");
+        optional && check(TokenKind::l_paren, TokenKind::less) &&
+        "must be ?.() at this point");
     // ?. Arguments :
     // ?. ( ArgumentList )
     //      ^
     auto debugLoc = tok_->getStartLoc();
+
+    ESTree::NodePtr typeArgs = nullptr;
+#if HERMES_PARSE_FLOW
+    if (context_.getParseFlow() && check(TokenKind::less)) {
+      auto optTypeArgs = parseTypeArgs();
+      if (!optTypeArgs) {
+        return None;
+      }
+
+      typeArgs = *optTypeArgs;
+    }
+#endif
+
     ESTree::NodeList argList;
     SMLoc endLoc;
     if (!parseArguments(argList, endLoc))
@@ -3191,7 +3205,7 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberSelect(
         endLoc,
         debugLoc,
         new (context_) ESTree::OptionalCallExpressionNode(
-            expr, nullptr, std::move(argList), true));
+            expr, typeArgs, std::move(argList), true));
   }
 
   llvm_unreachable("Invalid token in parseMemberSelect");

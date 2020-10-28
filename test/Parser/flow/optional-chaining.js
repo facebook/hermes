@@ -11,6 +11,29 @@
 // CHECK-NEXT:   "type": "Program",
 // CHECK-NEXT:   "body": [
 
+a?.<string>();
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "OptionalCallExpression",
+// CHECK-NEXT:         "callee": {
+// CHECK-NEXT:           "type": "Identifier",
+// CHECK-NEXT:           "name": "a"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "typeArguments": {
+// CHECK-NEXT:           "type": "TypeParameterInstantiation",
+// CHECK-NEXT:           "params": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "StringTypeAnnotation"
+// CHECK-NEXT:             }
+// CHECK-NEXT:           ]
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "arguments": [],
+// CHECK-NEXT:         "optional": true
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
 a?.b<string>();
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "ExpressionStatement",
