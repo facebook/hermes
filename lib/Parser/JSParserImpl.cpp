@@ -3253,10 +3253,11 @@ Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
             debugLoc,
             new (context_)
                 ESTree::CallExpressionNode(expr, typeArgs, std::move(argList)));
-        // typeArgs have been used, discard them so the next item in the call
-        // chain can populate them if necessary.
-        typeArgs = nullptr;
       }
+
+      // typeArgs have been used, discard them so the next item in the call
+      // chain can populate them if necessary.
+      typeArgs = nullptr;
     } else if (checkN(
                    TokenKind::l_square,
                    TokenKind::period,
