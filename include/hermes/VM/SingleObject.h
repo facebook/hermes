@@ -16,6 +16,8 @@ namespace vm {
 /// JavaScript single object, include Math and JSON.
 template <CellKind kind>
 class SingleObject final : public JSObject {
+  friend GC;
+
  public:
   using Super = JSObject;
   static const ObjectVTable vt;
@@ -32,18 +34,21 @@ class SingleObject final : public JSObject {
   static CallResult<HermesValue> create(
       Runtime *runtime,
       Handle<JSObject> parentHandle) {
-    JSObjectAlloc<SingleObject> mem{runtime};
-    return mem.initToHermesValue(new (mem) SingleObject(
+    auto *cell = runtime->makeAFixed<SingleObject>(
         runtime,
-        *parentHandle,
-        runtime->getHiddenClassForPrototypeRaw(
+        parentHandle,
+        runtime->getHiddenClassForPrototype(
             *parentHandle,
-            numOverlapSlots<SingleObject>() + ANONYMOUS_PROPERTY_SLOTS)));
+            numOverlapSlots<SingleObject>() + ANONYMOUS_PROPERTY_SLOTS));
+    return JSObjectInit::initToHermesValue(runtime, cell);
   }
 
  protected:
-  SingleObject(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
-      : JSObject(runtime, &vt.base, parent, clazz) {}
+  SingleObject(
+      Runtime *runtime,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz)
+      : JSObject(runtime, &vt.base, *parent, *clazz) {}
 };
 
 template <CellKind kind>
