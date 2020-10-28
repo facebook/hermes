@@ -268,6 +268,8 @@ class StoredComment {
     Line,
     /// Comment that is delimited by "/*" and "*/".
     Block,
+    /// Comment that begins with "#!" and starts at the first byte of the file
+    Hashbang,
   };
 
   StoredComment(Kind kind, SMRange range) : kind_(kind), range_(range) {}
@@ -276,14 +278,14 @@ class StoredComment {
     return kind_;
   }
 
-  /// \return the comment with delimiters (//, /*, */) stripped,
+  /// \return the comment with delimiters (//, /*, */, #!) stripped,
   /// as a StringRef which points into the source buffer.
   StringRef getString() const {
     // Ignore opening delimiter.
     const char *start = range_.Start.getPointer() + 2;
     // Conditionally ignore closing delimiter.
-    const char *end = kind_ == Kind::Line ? range_.End.getPointer()
-                                          : range_.End.getPointer() - 2;
+    const char *end = kind_ == Kind::Block ? range_.End.getPointer() - 2
+                                           : range_.End.getPointer();
     assert(end >= start && "invalid comment range");
     return StringRef{start, (size_t)(end - start)};
   }

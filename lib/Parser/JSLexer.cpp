@@ -1117,7 +1117,9 @@ endLoop:
 
   if (storeComments_) {
     commentStorage_.emplace_back(
-        StoredComment::Kind::Line, SMRange{lineCommentStart, lineCommentEnd});
+        start[0] == '/' ? StoredComment::Kind::Line
+                        : StoredComment::Kind::Hashbang,
+        SMRange{lineCommentStart, lineCommentEnd});
   }
 
   return cur;

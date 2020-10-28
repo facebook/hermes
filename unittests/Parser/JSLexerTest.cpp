@@ -1084,6 +1084,18 @@ TEST(JSLexerTest, StoreCommentsTest) {
   }
 
   {
+    JSLexer lex("#! hello world\n;", sm, alloc, nullptr, true, false);
+    lex.setStoreComments(true);
+
+    ASSERT_EQ(TokenKind::semi, lex.advance()->getKind());
+
+    ASSERT_EQ(1, lex.getStoredComments().size());
+    EXPECT_EQ(
+        StoredComment::Kind::Hashbang, lex.getStoredComments()[0].getKind());
+    EXPECT_EQ(" hello world", lex.getStoredComments()[0].getString());
+  }
+
+  {
     JSLexer lex("/**/;//\n", sm, alloc, nullptr, true, false);
     lex.setStoreComments(true);
 
