@@ -397,6 +397,32 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
 #undef SET_PROP_NEW
 }
 
+/// \return a static string summarising the presence and resolution type of
+/// CommonJS modules across all RuntimeModules that have been loaded into \c
+/// runtime.
+static const char *getCJSModuleModeDescription(Runtime *runtime) {
+  bool hasCJSModulesDynamic = false;
+  bool hasCJSModulesStatic = false;
+  for (const auto &runtimeModule : runtime->getRuntimeModules()) {
+    if (runtimeModule.hasCJSModules()) {
+      hasCJSModulesDynamic = true;
+    }
+    if (runtimeModule.hasCJSModulesStatic()) {
+      hasCJSModulesStatic = true;
+    }
+  }
+  if (hasCJSModulesDynamic && hasCJSModulesStatic) {
+    return "Mixed dynamic/static";
+  }
+  if (hasCJSModulesDynamic) {
+    return "Dynamically resolved";
+  }
+  if (hasCJSModulesStatic) {
+    return "Statically resolved";
+  }
+  return "None";
+}
+
 /// \return an object mapping keys to runtime property values.
 CallResult<HermesValue>
 hermesInternalGetRuntimeProperties(void *, Runtime *runtime, NativeArgs args) {
@@ -505,6 +531,19 @@ hermesInternalGetRuntimeProperties(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 #endif
+
+  const char *cjsModuleMode = getCJSModuleModeDescription(runtime);
+  auto cjsModuleModeRes =
+      StringPrimitive::create(runtime, createASCIIRef(cjsModuleMode));
+  if (LLVM_UNLIKELY(cjsModuleModeRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  tmpHandle = *cjsModuleModeRes;
+  if (LLVM_UNLIKELY(
+          addProperty(tmpHandle, "CommonJS Modules") ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
 
   return resultHandle.getHermesValue();
 }
