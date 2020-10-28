@@ -52,7 +52,7 @@ const HermesParserJSLibrary = {
       return 0;
     }
 
-    return JSReferences.store(UTF8ToString(pointer, size));
+    return JSReferences.store(HermesDecodeUTF8String(pointer, size));
   },
 
   buildArray: function() {
@@ -89,7 +89,7 @@ const HermesParserJSLibrary = {
     return JSReferences.store({
       loc: JSReferences.pop(loc),
       type: JSReferences.commentTypes[typeIdx],
-      value: UTF8ToString(valuePtr, valueLength),
+      value: HermesDecodeUTF8String(valuePtr, valueLength),
     });
   },
 

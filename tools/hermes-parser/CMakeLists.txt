@@ -36,4 +36,6 @@ if (EMSCRIPTEN)
     "SHELL: -s BINARYEN_ASYNC_COMPILATION=0 -s SINGLE_FILE=1 -s WASM_ASYNC_COMPILATION=0")
   target_link_options(hermes-parser-wasm PRIVATE
     --js-library ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/HermesParserJSLibrary.js)
+  target_link_options(hermes-parser-wasm PRIVATE
+    --pre-js ${CMAKE_CURRENT_LIST_DIR}/HermesParserJSUtils.js)
 endif ()
