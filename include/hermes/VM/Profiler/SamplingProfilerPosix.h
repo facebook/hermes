@@ -264,11 +264,7 @@ class SamplingProfiler {
   void decreaseDomainCount();
 
   /// Mark roots that are kept alive by the SamplingProfiler.
-  void markRoots(SlotAcceptorWithNames &acceptor) {
-    for (Domain *&domain : domains_) {
-      acceptor.acceptPtr(domain);
-    }
-  }
+  void markRoots(SlotAcceptorWithNames &acceptor);
 
   /// Dump sampled stack to \p OS.
   /// NOTE: this is for manual testing purpose.
