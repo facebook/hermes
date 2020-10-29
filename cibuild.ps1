@@ -30,10 +30,13 @@ function Find-VS-Path() {
 
     if (Test-Path $vsWhere) {
         $versionJson = & $vsWhere -format json 
+        $versionJson = & $vsWhere -format json -version 16
         $versionJson = $versionJson | ConvertFrom-Json 
     } else {
         $versionJson = @()
     }
+
+    if ($versionJson.Length -gt 1) { Write-Warning 'More than one VS install detected, picking the first one'; $versionJson = $versionJson[0]; }
 
     if ($versionJson.installationPath) {
         $vcVarsPath = "$($versionJson.installationPath)\VC\Auxiliary\Build\vcvarsall.bat"
@@ -41,6 +44,7 @@ function Find-VS-Path() {
             return $vcVarsPath
         } else {
             throw "Could not find vcvarsall.bat at expected Visual Studio installation path"
+            throw "Could not find vcvarsall.bat at expected Visual Studio installation path: $vcVarsPath"
         }
     } else {
         throw "Could not find Visual Studio installation path"
