@@ -30,6 +30,8 @@ enum CompileStatus {
   InputFileError,
   /// An output file could not be written.
   OutputFileError,
+  /// An error occured during optimization.
+  OptimizationFailed,
 };
 
 /// Information about a bytecode file that is loaded into a buffer.

@@ -21,6 +21,8 @@ VerificationFailed=3
 LoadGlobalsFailed=4
 InputFileError=5
 OutputFileError=6
+# shellcheck disable=SC2034
+OptimizationFailed=7
 
 set -x
 

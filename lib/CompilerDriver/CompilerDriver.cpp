@@ -1788,6 +1788,12 @@ CompileResult processSourceFiles(
     }
   }
 
+  // Bail out if there were any errors during optimization.
+  if (auto N = context->getSourceErrorManager().getErrorCount()) {
+    llvh::errs() << "Emitted " << N << " errors. exiting.\n";
+    return OptimizationFailed;
+  }
+
   // In dbg builds, verify the module before we emit bytecode.
   if (cl::VerifyIR) {
     bool failedVerification = verifyModule(M, &llvh::errs());

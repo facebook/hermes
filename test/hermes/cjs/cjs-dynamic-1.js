@@ -7,6 +7,9 @@
 
 // RUN: %hermes -commonjs %S/cjs-dynamic-1.js %S/cjs-dynamic-2.js | %FileCheck --match-full-lines %s
 // RUN: %hermes -commonjs -fstatic-require -fstatic-builtins -O %S/cjs-dynamic-1.js %S/cjs-dynamic-2.js | %FileCheck --match-full-lines %s --check-prefix=STATIC
+// RUN: ( ! %hermes -Werror -commonjs -fstatic-require -fstatic-builtins -O %S/cjs-dynamic-1.js %S/cjs-dynamic-2.js 2>&1 ) | %FileCheck --match-full-lines %s --check-prefix ERROR
+
+// ERROR: {{.*}}/cjs-dynamic-1.js:18:14: error: require() argument cannot be coerced to constant string at compile time
 
 print(require('./cjs-dynamic-2.js'))
 // CHECK: 3
