@@ -2241,6 +2241,11 @@ uint64_t HadesGC::externalBytes() const {
   return ygExternalBytes_ + oldGen_.externalBytes();
 }
 
+uint64_t HadesGC::heapFootprint() const {
+  size_t totalSegments = oldGen_.numSegments() + (youngGen_ ? 1 : 0);
+  return totalSegments * AlignedStorage::size() + externalBytes();
+}
+
 uint64_t HadesGC::OldGen::allocatedBytes() const {
   return allocatedBytes_;
 }
@@ -2313,8 +2318,7 @@ HadesGC::HeapSegment &HadesGC::OldGen::operator[](size_t i) {
 }
 
 std::unique_ptr<HadesGC::HeapSegment> HadesGC::createSegment(bool isYoungGen) {
-  if (allocatedBytes() + externalBytes() >= maxHeapSize_) {
-    // Cannot grow the heap any further. Doesn't apply to YG creation.
+  if (heapFootprint() >= maxHeapSize_) {
     return nullptr;
   }
   auto res = AlignedStorage::create(
