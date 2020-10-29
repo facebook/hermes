@@ -685,7 +685,9 @@ def runTest(filename, test_skiplist, keep_tmp, binary_path, hvm, esprima_runner,
                     args, timeout=TIMEOUT_VM, stderr=subprocess.STDOUT, env=env
                 )
 
-                if negativePhase == "runtime":
+                if (not lazy and negativePhase == "runtime") or (
+                    lazy and negativePhase != ""
+                ):
                     printVerbose("FAIL: Expected execution to throw")
                     return (
                         (skippedType, "", 0)
@@ -695,7 +697,9 @@ def runTest(filename, test_skiplist, keep_tmp, binary_path, hvm, esprima_runner,
                 else:
                     printVerbose("PASS: Execution completed successfully")
             except subprocess.CalledProcessError as e:
-                if negativePhase != "runtime":
+                if (not lazy and negativePhase != "runtime") or (
+                    lazy and negativePhase == ""
+                ):
                     printVerbose(
                         "FAIL: Execution of {} threw unexpected error".format(filename)
                     )
