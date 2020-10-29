@@ -641,9 +641,10 @@ class HadesGC final : public GCBase {
   void oldGenCollectionWorker();
 
   /// For 32-bit systems, Hades runs on a single thread, interleaving OG work
-  /// with YG collections. This function completes that OG collection.
+  /// with YG collections. This function performs a single step of that
+  /// collection.
   /// \pre kConcurrentGC must be false.
-  void completeNonConcurrentOldGenCollection();
+  void incrementalCollect();
 
   /// Should only be called from the background thread in a concurrent GC.
   /// Requests the mutator to complete the STW pause during the next YG

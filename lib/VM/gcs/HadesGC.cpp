@@ -1027,17 +1027,9 @@ void HadesGC::waitForCollectionToFinish() {
   GCCycle cycle{this, gcCallbacks_, "Old Gen (Direct)"};
 
   if (!kConcurrentGC) {
-    if (oldGenMarker_) {
-      // If marking is still ongoing, complete marking first.
-      completeMarking();
+    while (concurrentPhase_ != Phase::None) {
+      incrementalCollect();
     }
-    while (sweepIterator_->next()) {
-      // Nothing to do here, next is stateful.
-    }
-    sweepIterator_->complete();
-    sweepIterator_.reset();
-    // Complete the incremental collection.
-    completeNonConcurrentOldGenCollection();
     return;
   }
   std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
@@ -1194,6 +1186,39 @@ void HadesGC::oldGenCollectionWorker() {
   concurrentPhase_ = Phase::None;
 }
 
+void HadesGC::incrementalCollect() {
+  switch (concurrentPhase_) {
+    case Phase::None:
+      break;
+    case Phase::Mark:
+      oldGenMarker_->drainSomeWork();
+      // If the work has finished completely, finish the collection.
+      if (oldGenMarker_->allWorkIsDrained()) {
+        completeMarking();
+        assert(
+            concurrentPhase_ == Phase::Sweep &&
+            "completeMarking should advance concurrentPhase_ to sweep");
+      }
+      break;
+    case Phase::Sweep:
+      // Calling sweepIterator->next() will sweep the next segment and advance
+      // the iterator.
+      if (!sweepIterator_->next()) {
+        // Sweep and finish any other collection bookkeeping.
+        sweepIterator_->complete();
+        sweepIterator_.reset();
+        ogCollectionStats_->setEndTime();
+        concurrentPhase_ = Phase::None;
+        // Check the tripwire here since we know the incremental collection will
+        // always end on the mutator thread.
+        checkTripwireAndResetStats();
+      }
+      break;
+    default:
+      llvm_unreachable("No other possible state between iterations");
+  }
+}
+
 void HadesGC::waitForCompleteMarking() {
   assert(kConcurrentGC);
   assert(
@@ -1206,18 +1231,6 @@ void HadesGC::waitForCompleteMarking() {
   stopTheWorldCondVar_.notify_one();
   waitForConditionVariable(
       stopTheWorldCondVar_, lk, [this] { return !stopTheWorldRequested_; });
-}
-
-void HadesGC::completeNonConcurrentOldGenCollection() {
-  assert(
-      !kConcurrentGC &&
-      "Shouldn't call completeNonConcurrentOldGenCollection if concurrency "
-      "is enabled");
-  ogCollectionStats_->setEndTime();
-  concurrentPhase_ = Phase::None;
-  // Check the tripwire here since we know the incremental collection will
-  // always end on the mutator thread.
-  checkTripwireAndResetStats();
 }
 
 void HadesGC::completeMarking() {
@@ -2361,35 +2374,10 @@ bool HadesGC::inOldGen(const void *p) const {
 void HadesGC::yieldToOldGen() {
   assert(inGC() && "Must be in GC when yielding to old gen");
   if (!kConcurrentGC) {
-    // A non-concurrent GC needs to check if there's any work to be done from
-    // oldGenMarker_.
-    if (oldGenMarker_) {
-      assert(concurrentPhase_ == Phase::Mark && "Collection must be marking");
-      oldGenMarker_->drainSomeWork();
-      if (oldGenMarker_->allWorkIsDrained()) {
-        completeMarking();
-        // concurrentPhase_ is Sweep, blocking any new collections from
-        // beginning, and the write barrier will just be generational again.
-        assert(
-            concurrentPhase_ == Phase::Sweep &&
-            "Phase must be sweep to avoid starting a second collection before "
-            "completing the first");
-      }
-    } else if (sweepIterator_ && !sweepIterator_->next()) {
-      assert(concurrentPhase_ == Phase::Sweep && "Collection must be sweeping");
-      // Sweep and finish any other collection bookkeeping.
-      sweepIterator_->complete();
-      // Save on memory usage and avoid triggering the next time yieldToOldGen
-      // is called.
-      sweepIterator_.reset();
-      completeNonConcurrentOldGenCollection();
-      assert(concurrentPhase_ == Phase::None && "Collection must be complete");
-    }
+    incrementalCollect();
     return;
   }
-  assert(
-      gcMutex_ &&
-      "Must hold the GC mutex when calling yieldToBackgroundThread");
+  assert(gcMutex_ && "Must hold the GC mutex when calling yieldToOldGen");
 
   if (!stopTheWorldRequested_) {
     // If the OG isn't waiting for a STW pause yet, exit immediately.
