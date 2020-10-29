@@ -1521,10 +1521,20 @@ SKIP_LIST = [
     "esprima/test_fixtures/directive-prolog/migrated_0000.js",
     "esprima/test_fixtures/directive-prolog/migrated_0001.js",
     "esprima/test_fixtures/statement/with/",
+    # Hermes does not yet support HTML entities in JSX
+    "esprima/test_fixtures/JSX/attribute-entity-hex.js",
+    "esprima/test_fixtures/JSX/attribute-non-hex-entity.js",
+    "esprima/test_fixtures/JSX/attribute-entity-decimal.js",
+    "esprima/test_fixtures/JSX/attribute-non-numeric-entity.js",
+    "esprima/test_fixtures/JSX/attribute-entity.js",
+    "esprima/test_fixtures/JSX/attribute-multi-entities.js",
+    # Hermes does not support JSX elements in attributes
+    "esprima/test_fixtures/JSX/attribute-element.js",
+    # ESPrima strips `\n` from CRLF in multiline JSX text
+    "esprima/test_fixtures/JSX/multiline-crlf-text.js",
     # unsupported features
     "esprima/test_fixtures/ES2016/",
     "esprima/test_fixtures/es2018/",
-    "esprima/test_fixtures/JSX/",
     # not sure why they fail yet
     "esprima/test_fixtures/statement/iteration/migrated_0003.js",
     "esprima/test_fixtures/expression/unary/migrated_0005.js",

@@ -306,6 +306,8 @@ class EsprimaTestRunner:
             extra_args.append("-parse-flow")
             extra_args.append("-parse-jsx")
             extra_args.append("-Xinclude-empty-ast-nodes")
+        elif "JSX" in filename:
+            extra_args.append("-parse-jsx")
         extra_args.append("-dump-transformed-ast" if transformed else "-dump-ast")
         args = [hermes] + COMPILER_ARGS + extra_args
         # ".source.js" files has the format of "var source = \"...\";", and
