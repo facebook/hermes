@@ -158,13 +158,6 @@ class MallocGC final : public GCBase {
 
   ~MallocGC();
 
-  /// Allocate an object in the GC controlled heap with the size to allocate
-  /// given by \p size.
-  template <
-      bool fixedSizeIgnored = true,
-      HasFinalizer hasFinalizer = HasFinalizer::No>
-  inline void *alloc(uint32_t size);
-
   /// Checks if a requested \p size can fit in the heap. If it can't, a
   /// collection occurs. If it still can't after the collection, OOM is
   /// declared.
@@ -282,6 +275,13 @@ class MallocGC final : public GCBase {
   void checkWellFormed();
   void clearUnmarkedPropertyMaps();
 #endif
+
+  /// Allocate an object in the GC controlled heap with the size to allocate
+  /// given by \p size.
+  template <
+      bool fixedSizeIgnored = true,
+      HasFinalizer hasFinalizer = HasFinalizer::No>
+  inline void *alloc(uint32_t size);
 
   /// Initialize a cell with the required basic data for any cell.
   inline void initCell(GCCell *cell, uint32_t size);

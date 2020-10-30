@@ -120,16 +120,6 @@ class GenGC final : public GCBase {
 
   ~GenGC();
 
-  /// Allocate a new cell of the specified size \p size.
-  /// If necessary perform a GC cycle, which may potentially move allocated
-  /// objects.
-  /// The \p fixedSize template argument indicates whether the allocation is for
-  /// a fixed-size cell, which can assumed to be small if true.  The
-  /// \p hasFinalizer template argument indicates whether the object
-  /// being allocated will have a finalizer.
-  template <bool fixedSize = true, HasFinalizer hasFinalizer = HasFinalizer::No>
-  inline void *alloc(uint32_t sz);
-
 #ifndef NDEBUG
   /// Allocation path we use in debug builds, where we potentially follow
   /// different code paths to test things.
@@ -506,6 +496,16 @@ class GenGC final : public GCBase {
   friend class GCGeneration;
   friend class YoungGen;
   friend class OldGen;
+
+  /// Allocate a new cell of the specified size \p size.
+  /// If necessary perform a GC cycle, which may potentially move allocated
+  /// objects.
+  /// The \p fixedSize template argument indicates whether the allocation is for
+  /// a fixed-size cell, which can assumed to be small if true.  The
+  /// \p hasFinalizer template argument indicates whether the object
+  /// being allocated will have a finalizer.
+  template <bool fixedSize = true, HasFinalizer hasFinalizer = HasFinalizer::No>
+  inline void *alloc(uint32_t sz);
 
   /// The slow path for allocation.  Same specification as alloc(),
   /// albeit with the template arguments passed as explicit dynamic

@@ -91,16 +91,6 @@ class HadesGC final : public GCBase {
   /// \name GC non-virtual API
   /// \{
 
-  /// Allocate a new cell of the specified size \p size.
-  /// If necessary perform a GC cycle, which may potentially move allocated
-  /// objects.
-  /// \tparam fixedSize Indicates whether the allocation is for a fixed-size
-  ///   cell, which can assumed to be small if true.
-  /// \tparam hasFinalizer Indicates whether the object being allocated will
-  ///   have a finalizer.
-  template <bool fixedSize = true, HasFinalizer hasFinalizer = HasFinalizer::No>
-  inline void *alloc(uint32_t sz);
-
   /// Allocate a new cell of the specified size \p size by calling alloc.
   /// Instantiate an object of type T with constructor arguments \p args in the
   /// newly allocated cell.
@@ -753,11 +743,6 @@ class HadesGC final : public GCBase {
 /// \name Inline implementations
 /// \{
 
-template <bool fixedSize, HasFinalizer hasFinalizer>
-void *HadesGC::alloc(uint32_t sz) {
-  return allocWork<fixedSize, hasFinalizer>(heapAlignSize(sz));
-}
-
 template <
     typename T,
     bool fixedSize,
@@ -770,7 +755,7 @@ inline T *HadesGC::makeA(uint32_t size, Args &&... args) {
     return new (allocLongLived(size)) T(std::forward<Args>(args)...);
   }
 
-  return new (alloc<fixedSize, hasFinalizer>(size))
+  return new (allocWork<fixedSize, hasFinalizer>(heapAlignSize(size)))
       T(std::forward<Args>(args)...);
 }
 
