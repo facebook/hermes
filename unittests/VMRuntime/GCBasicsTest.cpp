@@ -36,8 +36,7 @@ struct Dummy final : public GCCell {
 #endif
 
   static Dummy *create(DummyRuntime &runtime) {
-    return new (runtime.allocWithFinalizer(sizeof(Dummy)))
-        Dummy(&runtime.getHeap());
+    return runtime.makeAFixed<Dummy, HasFinalizer::Yes>(&runtime.getHeap());
   }
   static Dummy *createLongLived(DummyRuntime &runtime) {
     return runtime.makeAFixed<Dummy, HasFinalizer::Yes, LongLived::Yes>(

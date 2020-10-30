@@ -19,7 +19,7 @@ namespace vm {
 
 const VTable ExtStringForTest::vt{
     ExternalStringPrimitive<char>::getCellKind(),
-    heapAlignSize(sizeof(ExtStringForTest)),
+    0,
     ExtStringForTest::_finalizeImpl,
     nullptr,
     nullptr,
@@ -47,8 +47,8 @@ void ExtStringForTest::releaseMem(GC *gc) {
 ExtStringForTest *ExtStringForTest::create(
     DummyRuntime &runtime,
     unsigned length) {
-  auto res = new (runtime.allocWithFinalizer(sizeof(ExtStringForTest)))
-      ExtStringForTest(&runtime.getHeap(), length);
+  auto res = runtime.makeAVariable<ExtStringForTest, HasFinalizer::Yes>(
+      sizeof(ExtStringForTest), &runtime.getHeap(), length);
   runtime.gc.creditExternalMemory(res, length);
   return res;
 }

@@ -29,8 +29,7 @@ struct EmptyCell final : public GCCell {
   }
 
   static EmptyCell *create(DummyRuntime &runtime) {
-    return new (runtime.alloc</*FixedSize*/ true>(size()))
-        EmptyCell(&runtime.getHeap());
+    return runtime.makeAFixed<EmptyCell>(&runtime.getHeap());
   }
 
   static EmptyCell *createLongLived(DummyRuntime &runtime) {
@@ -66,8 +65,7 @@ struct VarSizedEmptyCell final : public VariableSizeRuntimeCell {
   }
 
   static VarSizedEmptyCell *create(DummyRuntime &runtime) {
-    return new (runtime.alloc</*FixedSize*/ false>(size()))
-        VarSizedEmptyCell(&runtime.getHeap());
+    return runtime.makeAVariable<VarSizedEmptyCell>(size(), &runtime.getHeap());
   }
 
   VarSizedEmptyCell(GC *gc) : VariableSizeRuntimeCell(gc, &vt, Size) {}

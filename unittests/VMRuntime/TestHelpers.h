@@ -294,10 +294,6 @@ struct DummyRuntime final : public HandleRootOwner,
     gc.finalizeAll();
   }
 
-  template <bool fixedSize = true>
-  void *alloc(uint32_t sz) {
-    return gc.alloc<fixedSize>(sz);
-  }
   template <
       typename T,
       HasFinalizer hasFinalizer = HasFinalizer::No,
@@ -316,11 +312,6 @@ struct DummyRuntime final : public HandleRootOwner,
   T *makeAVariable(uint32_t size, Args &&... args) {
     return gc.makeA<T, false /* fixedSize */, hasFinalizer, longLived>(
         size, std::forward<Args>(args)...);
-  }
-
-  template <bool fixedSize = true>
-  void *allocWithFinalizer(uint32_t sz) {
-    return gc.alloc<fixedSize, HasFinalizer::Yes>(sz);
   }
 
   GC &getHeap() {

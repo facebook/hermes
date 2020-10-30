@@ -35,8 +35,7 @@ class TestCell final : public GCCell {
   }
 
   static TestCell *create(DummyRuntime &runtime, int *numMarkWeakCalls) {
-    return new (runtime.alloc(sizeof(TestCell)))
-        TestCell(&runtime.getHeap(), numMarkWeakCalls);
+    return runtime.makeAFixed<TestCell>(&runtime.getHeap(), numMarkWeakCalls);
   }
 
   static void _markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {

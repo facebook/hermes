@@ -27,7 +27,7 @@ struct Type1 : public GCCell {
   explicit Type1(GC *gc, int64_t tag) : GCCell(gc, &vt), tag1(tag) {}
 
   static Type1 *create(DummyRuntime *runtime, int64_t tag) {
-    return new (runtime->alloc(sizeof(Type1))) Type1(&runtime->getHeap(), tag);
+    return runtime->makeAFixed<Type1>(&runtime->getHeap(), tag);
   }
   static bool classof(const GCCell *cell) {
     return cell->getVT() == &vt;
@@ -46,7 +46,7 @@ struct Type2 : public GCCell {
 
   explicit Type2(GC *gc, int64_t tag) : GCCell(gc, &vt), tag2(tag) {}
   static Type2 *create(DummyRuntime *runtime, int64_t tag) {
-    return new (runtime->alloc(sizeof(Type2))) Type2(&runtime->getHeap(), tag);
+    return runtime->makeAFixed<Type2>(&runtime->getHeap(), tag);
   }
   static bool classof(const GCCell *cell) {
     return cell->getVT() == &vt;

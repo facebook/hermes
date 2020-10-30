@@ -71,8 +71,7 @@ struct DummyObject final : public GCCell {
   }
 
   static DummyObject *create(DummyRuntime &runtime) {
-    return new (runtime.alloc(sizeof(DummyObject)))
-        DummyObject(&runtime.getHeap());
+    return runtime.makeAFixed<DummyObject>(&runtime.getHeap());
   }
 
   static bool classof(const GCCell *cell) {

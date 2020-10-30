@@ -37,8 +37,8 @@ struct FinalizerCell final : public GCCell {
   }
 
   static FinalizerCell *create(DummyRuntime &runtime, int *numFinalized) {
-    return new (runtime.allocWithFinalizer(sizeof(FinalizerCell)))
-        FinalizerCell(&runtime.getHeap(), numFinalized);
+    return runtime.makeAFixed<FinalizerCell, HasFinalizer::Yes>(
+        &runtime.getHeap(), numFinalized);
   }
 
   static FinalizerCell *create(Runtime &runtime, int *numFinalized) {
@@ -59,7 +59,7 @@ struct DummyCell final : public GCCell {
 #endif
 
   static DummyCell *create(DummyRuntime &runtime) {
-    return new (runtime.alloc(sizeof(DummyCell))) DummyCell(&runtime.getHeap());
+    return runtime.makeAFixed<DummyCell>(&runtime.getHeap());
   }
 
   DummyCell(GC *gc) : GCCell(gc, &vt) {}

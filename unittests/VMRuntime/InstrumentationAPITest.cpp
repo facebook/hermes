@@ -25,16 +25,22 @@ struct Dummy final : public GCCell {
   static const VTable vt;
 
   static Dummy *create(DummyRuntime &runtime) {
-    return new (runtime.alloc(128)) Dummy(&runtime.getHeap());
+    return runtime.makeAFixed<Dummy>(&runtime.getHeap());
   }
   static bool classof(const GCCell *cell) {
     return cell->getVT() == &vt;
   }
 
+  template <class C>
+  static constexpr uint32_t cellSizeImpl() {
+    static_assert(std::is_convertible<C *, Dummy *>::value, "must be a Dummy");
+    return 128;
+  }
+
   Dummy(GC *gc) : GCCell(gc, &vt) {}
 };
 
-const VTable Dummy::vt{CellKind::UninitializedKind, 128};
+const VTable Dummy::vt{CellKind::UninitializedKind, cellSize<Dummy>()};
 
 TEST(InstrumentationAPITest, RunCallbackWhenCollecting) {
   bool triggeredTripwire = false;
