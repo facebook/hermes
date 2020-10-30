@@ -91,10 +91,12 @@ elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
   set(compile_flags "")
   set(link_flags "/O2 ${OPTIONAL_GC_SECTIONS} ${OPTIONAL_JNI_ONLOAD}")
 
-  # Generate a PDB for debug builds
+  # Generate PDBs
+  set(compile_flags "${compile_flags} /Zi")
   if("{CMAKE_BUILD_TYPE}" MATCHES "Debug")
-    set(compile_flags "${compile_flags} /Zi")
     set(link_flags "${link_flags} /DEBUG")
+  else()
+    set(link_flags "${link_flags} /DEBUG /OPT:REF /OPT:ICF")
   endif()
 
 endif()

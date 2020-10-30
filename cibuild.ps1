@@ -137,8 +137,16 @@ function Run-Build($SourcesPath, $OutputPath, $Platform, $Configuration, $AppPla
         New-Item -ItemType "directory" -Path "$OutputPath\lib\$AppPlatform\$Configuration\$Platform" | Out-Null
     }
 
+    if (!(Test-Path -Path "$OutputPath\tools")) {
+        New-Item -ItemType "directory" -Path "$OutputPath\tools" | Out-Null
+    }
+
     Copy-Item "$buildPath\API\hermes\hermes.*" -Destination "$OutputPath\lib\$AppPlatform\$Configuration\$Platform"
-    Copy-Item "$buildPath\bin\hermes.*" -Destination "$OutputPath\lib\$AppPlatform\$Configuration\$Platform"
+
+    # The Hermes bytecode is platform-independent, so only copy the compiler once
+    if ($AppPlatform -eq "win32" -And $Platform -eq "x86" -And $Configuration -eq "release") {
+        Copy-Item "$buildPath\bin\hermes.*" -Destination "$OutputPath\tools"
+    }
 
     Pop-Location
 }

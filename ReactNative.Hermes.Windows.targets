@@ -9,10 +9,11 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link>
-      <AdditionalLibraryDirectories Condition="'$(Configuration)' == 'Debug'">$(MSBuildThisFileDirectory)..\..\lib\$(HermesAppPlatform)\debug\$(HermesPlatform);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalLibraryDirectories Condition="'$(Configuration)' == 'Release'">$(MSBuildThisFileDirectory)..\..\lib\$(HermesAppPlatform)\release\$(HermesPlatform);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>hermes.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs>hermes.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)' == 'Debug'">%(AdditionalLibraryDirectories);$(MSBuildThisFileDirectory)..\..\lib\$(HermesAppPlatform)\debug\$(HermesPlatform)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)' == 'Release'">%(AdditionalLibraryDirectories);$(MSBuildThisFileDirectory)..\..\lib\$(HermesAppPlatform)\release\$(HermesPlatform)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>%(AdditionalDependencies);hermes.lib</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(HermesAppPlatform)' == 'uwp'">%(AdditionalDependencies);dloadhelper.lib</AdditionalDependencies>
+      <DelayLoadDLLs>%(DelayLoadDLLs);hermes.dll</DelayLoadDLLs>
     </Link>
     <ClCompile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)include</AdditionalIncludeDirectories>
@@ -24,7 +25,6 @@
   </ItemGroup>
   <ItemGroup Condition="'$(Configuration)' == 'Release' And '$(HermesNoDLLCopy)' == ''">
     <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\..\lib\$(HermesAppPlatform)\release\$(HermesPlatform)\hermes.dll" />
-    <!--  We don't currently build a PDB for release builds
-    <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\..\lib\$(HermesAppPlatform)\release\$(HermesPlatform)\hermes.pdb" / -->
+    <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\..\lib\$(HermesAppPlatform)\release\$(HermesPlatform)\hermes.pdb" />
   </ItemGroup>
 </Project>

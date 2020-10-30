@@ -13,5 +13,6 @@
     <file src="$nugetroot$\lib\**\*.*" target="lib" exclude="**\*.manifest;**\*.iobj;**\*.ipdb;**\*.exp;**\*.ilk" />
     <file src="$nugetroot$\build\**\*.*" target="build"/>
     <file src="$nugetroot$\license\*.*" target="license"/>
+    <file src="$nugetroot$\tools\*.*" target="tools"/>
   </files>
 </package>

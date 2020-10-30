@@ -1,5 +1,5 @@
 {
-  "version": "0.6.3",
+  "version": "0.6.4",
   "scripts": {
     "unpack-builds": "node unpack-builds.js",
     "unpack-builds-dev": "node unpack-builds.js --dev",
