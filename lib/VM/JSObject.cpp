@@ -97,9 +97,7 @@ void ObjectSerialize(Serializer &s, const GCCell *cell) {
 
 void ObjectDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::ObjectKind && "Expected JSObject");
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ true>(cellSize<JSObject>());
-  auto *obj = new (mem) JSObject(d, &JSObject::vt.base);
-
+  auto *obj = d.getRuntime()->makeAFixed<JSObject>(d, &JSObject::vt.base);
   d.endObject(obj);
 }
 
@@ -125,41 +123,25 @@ JSObject::JSObject(Deserializer &d, const VTable *vtp)
 PseudoHandle<JSObject> JSObject::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  JSObjectAlloc<JSObject> mem{runtime};
-  return mem.initToPseudoHandle(new (mem) JSObject(
+  auto *cell = runtime->makeAFixed<JSObject>(
       runtime,
       &vt.base,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
+      parentHandle,
+      runtime->getHiddenClassForPrototype(
           *parentHandle,
           numOverlapSlots<JSObject>() + ANONYMOUS_PROPERTY_SLOTS),
-      GCPointerBase::NoBarriers()));
+      GCPointerBase::NoBarriers());
+  return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
 PseudoHandle<JSObject> JSObject::create(Runtime *runtime) {
-  JSObjectAlloc<JSObject> mem{runtime};
-  JSObject *objProto = runtime->objectPrototypeRawPtr;
-  return mem.initToPseudoHandle(new (mem) JSObject(
-      runtime,
-      &vt.base,
-      objProto,
-      runtime->getHiddenClassForPrototypeRaw(
-          objProto, numOverlapSlots<JSObject>() + ANONYMOUS_PROPERTY_SLOTS),
-      GCPointerBase::NoBarriers()));
+  return create(runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype));
 }
 
 PseudoHandle<JSObject> JSObject::create(
     Runtime *runtime,
     unsigned propertyCount) {
-  JSObjectAlloc<JSObject> mem{runtime};
-  JSObject *objProto = runtime->objectPrototypeRawPtr;
-  auto self = mem.initToPseudoHandle(new (mem) JSObject(
-      runtime,
-      &vt.base,
-      objProto,
-      runtime->getHiddenClassForPrototypeRaw(
-          objProto, numOverlapSlots<JSObject>() + ANONYMOUS_PROPERTY_SLOTS),
-      GCPointerBase::NoBarriers()));
+  auto self = create(runtime);
 
   return runtime->ignoreAllocationFailure(
       JSObject::allocatePropStorage(std::move(self), runtime, propertyCount));
@@ -3231,8 +3213,7 @@ void PropertyAccessorSerialize(Serializer &s, const GCCell *cell) {
 
 void PropertyAccessorDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::PropertyAccessorKind && "Expected PropertyAccessor");
-  void *mem = d.getRuntime()->alloc(cellSize<PropertyAccessor>());
-  auto *cell = new (mem) PropertyAccessor(d);
+  auto *cell = d.getRuntime()->makeAFixed<PropertyAccessor>(d);
   d.endObject(cell);
 }
 #endif
@@ -3241,9 +3222,8 @@ CallResult<HermesValue> PropertyAccessor::create(
     Runtime *runtime,
     Handle<Callable> getter,
     Handle<Callable> setter) {
-  void *mem = runtime->alloc(cellSize<PropertyAccessor>());
-  return HermesValue::encodeObjectValue(
-      new (mem) PropertyAccessor(runtime, *getter, *setter));
+  auto *cell = runtime->makeAFixed<PropertyAccessor>(runtime, getter, setter);
+  return HermesValue::encodeObjectValue(cell);
 }
 
 } // namespace vm

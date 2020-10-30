@@ -311,6 +311,7 @@ struct ObjectVTable {
 /// integer values are detected and used with the "indexed storage", if
 /// available.
 class JSObject : public GCCell {
+  friend GC;
   friend void ObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
  protected:
@@ -327,6 +328,20 @@ class JSObject : public GCCell {
       : GCCell(&runtime->getHeap(), vtp),
         parent_(runtime, parent, &runtime->getHeap(), needsBarriers),
         clazz_(runtime, clazz, &runtime->getHeap(), needsBarriers),
+        propStorage_(runtime, nullptr, &runtime->getHeap(), needsBarriers) {
+    // Direct property slots are initialized by initDirectPropStorage.
+  }
+
+  template <typename NeedsBarriers>
+  JSObject(
+      Runtime *runtime,
+      const VTable *vtp,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
+      NeedsBarriers needsBarriers)
+      : GCCell(&runtime->getHeap(), vtp),
+        parent_(runtime, *parent, &runtime->getHeap(), needsBarriers),
+        clazz_(runtime, *clazz, &runtime->getHeap(), needsBarriers),
         propStorage_(runtime, nullptr, &runtime->getHeap(), needsBarriers) {
     // Direct property slots are initialized by initDirectPropStorage.
   }
@@ -1463,11 +1478,16 @@ CallResult<Handle<BigStorage>> getForInPropertyNames(
 
 /// This object is the value of a property which has a getter and/or setter.
 class PropertyAccessor final : public GCCell {
+  friend GC;
+
  protected:
-  PropertyAccessor(Runtime *runtime, Callable *getter, Callable *setter)
+  PropertyAccessor(
+      Runtime *runtime,
+      Handle<Callable> getter,
+      Handle<Callable> setter)
       : GCCell(&runtime->getHeap(), &vt),
-        getter(runtime, getter, &runtime->getHeap()),
-        setter(runtime, setter, &runtime->getHeap()) {}
+        getter(runtime, *getter, &runtime->getHeap()),
+        setter(runtime, *setter, &runtime->getHeap()) {}
 
  public:
 #ifdef HERMESVM_SERIALIZE
