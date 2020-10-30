@@ -6,6 +6,7 @@
  */
 
 #include "hermes/DependencyExtractor/DependencyExtractor.h"
+#include "hermes/DependencyExtractor/GraphQLDependencyExtractor.h"
 
 #include "hermes/AST/RecursiveVisitor.h"
 #include "hermes/Regex/Executor.h"
@@ -74,15 +75,12 @@ class DependencyExtractor {
         requireActualIdent_(
             astContext.getStringTable().getString("requireActual")),
         requireMockIdent_(astContext.getStringTable().getString("requireMock")),
-        graphqlIdent_(astContext.getStringTable().getString("graphql")) {
+        graphqlIdent_(astContext.getStringTable().getString("graphql")),
+        graphqlQueryRegexBytecode_(graphql::getCompiledGraphQLRegex()) {
     for (uint32_t i = 0; i < NUM_RESOURCE_CALLEES; ++i) {
       llvh::StringLiteral callee = RESOURCE_CALLEES[i].callee;
       resourceIdents_[i] = astContext.getStringTable().getString(callee);
     }
-
-    regex::Regex<regex::UTF16RegexTraits> graphqlQueryRegex{
-        u"(?:^\\s*?(?:query|fragment|mutation|subscription) +(\\w+))", u"m"};
-    graphqlQueryRegexBytecode_ = graphqlQueryRegex.compile();
   }
 
   std::vector<Dependency> &getDeps() {
@@ -275,25 +273,11 @@ class DependencyExtractor {
     if (!elem->_cooked)
       return;
     llvh::StringRef string = elem->_cooked->str();
-    std::vector<regex::CapturedRange> captures{};
-    uint32_t searchStart = 0;
-    for (;;) {
-      captures.clear();
-      regex::MatchRuntimeResult matchResult = regex::searchWithBytecode(
-          graphqlQueryRegexBytecode_,
-          string.data(),
-          searchStart,
-          string.size(),
-          &captures,
-          regex::constants::MatchFlagType::matchDefault);
-      if (matchResult != regex::MatchRuntimeResult::Match) {
-        return;
-      }
-      addDependency(
-          string.slice(captures[1].start, captures[1].end),
-          DependencyKind::GraphQL);
-      searchStart = captures[0].end;
-    }
+
+    graphql::getGraphQLDependencies(
+        string, graphqlQueryRegexBytecode_, [&](llvh::StringRef result) {
+          addDependency(result, DependencyKind::GraphQL);
+        });
   }
 
   /// If we have not seen JSX before, add the relevant JSX dependencies to the
