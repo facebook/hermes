@@ -647,8 +647,8 @@ class HadesGC final : public GCBase {
   void completeMarking();
 
   /// As part of finishing the marking process, iterate through all of YG to
-  /// find symbols and WeakRefs only pointed to from there.
-  void findYoungGenSymbolsAndWeakRefs();
+  /// find symbols only pointed to from there.
+  void findYoungGenSymbols();
 
   /// Find all pointers from OG into YG during a YG collection. This is done
   /// quickly through use of write barriers that detect the creation of OG-to-YG

@@ -1261,7 +1261,7 @@ void HadesGC::completeMarking() {
 
   // In order to free symbols and weak refs, we need to know if any are in use
   // by YG. Iterate through YG's objects and mark their symbols.
-  findYoungGenSymbolsAndWeakRefs();
+  findYoungGenSymbols();
 
   // Now free symbols and weak refs.
   gcCallbacks_->freeSymbols(oldGenMarker_->markedSymbols());
@@ -1278,11 +1278,10 @@ void HadesGC::completeMarking() {
   oldGenMarker_.reset();
 }
 
-void HadesGC::findYoungGenSymbolsAndWeakRefs() {
-  class SymbolAndWeakRefAcceptor final : public SlotAcceptor,
-                                         public WeakRefAcceptor {
+void HadesGC::findYoungGenSymbols() {
+  class SymbolAcceptor final : public SlotAcceptor {
    public:
-    explicit SymbolAndWeakRefAcceptor(GC &gc, std::vector<bool> &markedSymbols)
+    explicit SymbolAcceptor(GC &gc, std::vector<bool> &markedSymbols)
         : markedSymbols_{markedSymbols} {}
 
     // Do nothing for pointers.
@@ -1308,21 +1307,11 @@ void HadesGC::findYoungGenSymbolsAndWeakRefs() {
       markedSymbols_[sym.unsafeGetIndex()] = true;
     }
 
-    void accept(WeakRefBase &wr) override {
-      WeakRefSlot *slot = wr.unsafeGetSlot();
-      assert(
-          slot->state() != WeakSlotState::Free &&
-          "marking a freed weak ref slot");
-      if (slot->state() != WeakSlotState::Marked) {
-        slot->mark();
-      }
-    }
-
    private:
     std::vector<bool> &markedSymbols_;
   };
 
-  SymbolAndWeakRefAcceptor acceptor{*this, oldGenMarker_->markedSymbols()};
+  SymbolAcceptor acceptor{*this, oldGenMarker_->markedSymbols()};
   // We're scanning YG while it might be in the middle of its own collection,
   // if it is waiting for an OG GC to complete.
   // During a YG GC, the VTables might be replaced by fowarding pointers,
