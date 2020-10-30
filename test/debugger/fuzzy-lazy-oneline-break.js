@@ -9,7 +9,7 @@
 // REQUIRES: debugger
 
 // @nolint
-function foo() { print('foo called'); /** * Some text to pad out the function so that it won't be eagerly compiled * for being too short. Lorem ipsum dolor sit amet, consectetur adipiscing * elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.  */ function bar() { print('bar called'); /** * Some text to pad out the function so that it won't be eagerly compiled * for being too short. Lorem ipsum dolor sit amet, consectetur adipiscing * elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.  */ } function baz() { print('baz called'); /** * Some text to pad out the function so that it won't be eagerly compiled * for being too short. Lorem ipsum dolor sit amet, consectetur adipiscing * elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.  */ }; bar(); baz(); }
+function foo() { print('foo called'); function bar() { print('bar called'); } function baz() { print('baz called'); }; bar(); baz(); }
 
 debugger;
 foo();
@@ -23,15 +23,15 @@ foo();
 // CHECK: Break on 'debugger' statement in global: {{.*}}:14:1
 
 // Breakpoint is in the middle of the 'print' for 'bar called'
-// CHECK-NEXT: Set breakpoint 1 at {{.*}}:12:286
+// CHECK-NEXT: Set breakpoint 1 at {{.*}}:12:56
 // Breakpoint is in the middle of the 'print' for 'baz called'
-// CHECK-NEXT: Set breakpoint 2 at {{.*}}:12:556
+// CHECK-NEXT: Set breakpoint 2 at {{.*}}:12:96
 
 // CHECK-NEXT: Continuing execution
 // CHECK-NEXT: foo called
-// CHECK-NEXT: Break on breakpoint 1 in bar: {{.*}}:12:286
+// CHECK-NEXT: Break on breakpoint 1 in bar: {{.*}}:12:56
 // CHECK-NEXT: Continuing execution
 // CHECK-NEXT: bar called
-// CHECK-NEXT: Break on breakpoint 2 in baz: {{.*}}:12:556
+// CHECK-NEXT: Break on breakpoint 2 in baz: {{.*}}:12:96
 // CHECK-NEXT: Continuing execution
 // CHECK-NEXT: baz called

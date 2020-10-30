@@ -21,6 +21,7 @@ out
 
 # CocoaPods testing
 build
+build_*
 destroot
 test/ApplePlatformsIntegrationTestApp/Podfile.lock
 test/ApplePlatformsIntegrationTestApp/Pods

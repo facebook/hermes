@@ -71,13 +71,6 @@ In order to make good use of these properties, the compiler counts the occurrenc
 ## Delta Optimizing Mode
 
 In delta-optimizing mode Hermes tries to minimise the effect of incremental changes to the source on the bytecode bundle.  Outside of this mode, small changes to string usage can cause the output bytecode's string table to be re-ordered.  This has knock-on effects throughout the instruction stream wherever strings are referred to.  When delta-optimizing mode is enabled, the order of strings that existed in the bundle before the change is preserved.
-=======
----
-id: string-packing
-title: String Packing
----
-
->>>>>>> source: 3f32249149c8 - pca: [Hermes] Add docusaurus headers to our docs
 
 ## How Hermes Packs Strings
 

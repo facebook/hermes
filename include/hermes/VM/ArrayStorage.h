@@ -156,14 +156,10 @@ class ArrayStorage final
     const size_type sz = size();
     assert(sz > 0 && "Can't pop from empty ArrayStorage");
     HermesValue val = data()[sz - 1];
-#ifdef HERMESVM_GC_HADES
     // In Hades, a snapshot write barrier must be executed on the value that is
     // conceptually being changed to null. The write doesn't need to occur, but
     // it is the only correct way to use the write barrier.
-    data()[sz - 1].set(HermesValue::encodeEmptyValue(), &runtime->getHeap());
-#else
-    (void)runtime;
-#endif
+    data()[sz - 1].unreachableWriteBarrier(&runtime->getHeap());
     // The background thread can't mutate size, so we don't need fetch_sub here.
     // Relaxed is fine, because the GC doesn't care about the order of seeing
     // the length and the individual elements, as long as illegal HermesValues

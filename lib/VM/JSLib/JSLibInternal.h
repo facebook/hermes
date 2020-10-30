@@ -478,7 +478,7 @@ CallResult<HermesValue> addEntriesFromIterable(
       // d. If Type(nextItem) is not Object, then
       // i.     Let error be ThrowCompletion(a newly created TypeError object).
       // ii.     Return ? IteratorClose(iteratorRecord, error).
-      runtime->raiseTypeError("Iterator value must be an object");
+      (void)runtime->raiseTypeError("Iterator value must be an object");
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
     nextItem = PseudoHandle<JSObject>::vmcast(std::move(*nextItemRes));

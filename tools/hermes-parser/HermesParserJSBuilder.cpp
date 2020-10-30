@@ -16,12 +16,20 @@ using namespace hermes::ESTree;
 
 class HermesParserJSBuilder {
   SourceErrorManager *sm_{nullptr};
+  parser::JSParser *parser_{nullptr};
 
  public:
-  explicit HermesParserJSBuilder(SourceErrorManager *sm) : sm_(sm) {}
+  explicit HermesParserJSBuilder(
+      SourceErrorManager *sm,
+      parser::JSParser *parser)
+      : sm_(sm), parser_(parser) {}
 
-  JSReference buildProgram(NodePtr rootNode) {
-    return buildNode(rootNode);
+  JSReference buildProgram(ProgramNode *programNode) {
+    auto loc = buildLoc(programNode);
+    auto body = buildNode(programNode->_body);
+    auto comments = buildComments();
+
+    return buildProgramWithComments(loc, body, comments);
   }
 
  private:
@@ -59,9 +67,8 @@ class HermesParserJSBuilder {
 
   /// Build a source location in JS, returning a JS reference to the source
   /// location object.
-  JSReference buildLoc(Node *node) {
+  JSReference buildLoc(SMRange rng) {
     SourceErrorManager::SourceCoords start, end;
-    SMRange rng = node->getSourceRange();
     if (!sm_->findBufferLineAndLoc(rng.Start, start) ||
         !sm_->findBufferLineAndLoc(rng.End, end))
       return 0;
@@ -81,6 +88,31 @@ class HermesParserJSBuilder {
         end.col,
         rng.Start.getPointer() - bufStart,
         rng.End.getPointer() - bufStart);
+  }
+
+  JSReference buildLoc(Node *node) {
+    return buildLoc(node->getSourceRange());
+  }
+
+  /// Build an array in JS of all comments in the source file.
+  JSReference buildComments() {
+    JSReference commentsReference = buildArray();
+
+    for (auto &storedComment : parser_->getStoredComments()) {
+      auto loc = buildLoc(storedComment.getSourceRange());
+
+      // Comment values not null terminated so pass both their pointer and size
+      auto value = storedComment.getString();
+      auto commentReference = buildComment(
+          loc,
+          storedComment.getKind() == parser::StoredComment::Kind::Block,
+          value.data(),
+          value.size());
+
+      appendToArray(commentsReference, commentReference);
+    }
+
+    return commentsReference;
   }
 
   /// Objects cannot be passed directly to a JS library call. Instead, the
@@ -319,8 +351,11 @@ class HermesParserJSBuilder {
 #include "hermes/AST/ESTree.def"
 };
 
-JSReference buildProgram(NodePtr rootNode, SourceErrorManager *sm) {
-  return HermesParserJSBuilder(sm).buildProgram(rootNode);
+JSReference buildProgram(
+    ProgramNode *programNode,
+    SourceErrorManager *sm,
+    parser::JSParser *parser) {
+  return HermesParserJSBuilder(sm, parser).buildProgram(programNode);
 }
 
 } // namespace hermes

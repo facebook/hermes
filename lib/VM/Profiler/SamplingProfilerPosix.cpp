@@ -324,8 +324,8 @@ uint32_t SamplingProfiler::walkRuntimeStack(
 /*static*/ StackCollectionRetcode SamplingProfiler::collectStackForLoom(
     ucontext_t *ucontext,
     int64_t *frames,
-    uint8_t *depth,
-    uint8_t max_depth) {
+    uint16_t *depth,
+    uint16_t max_depth) {
   auto profilerInstance = sProfilerInstance_.load();
   Runtime *curThreadRuntime = profilerInstance->threadLocalRuntime_.get();
   if (curThreadRuntime == nullptr) {

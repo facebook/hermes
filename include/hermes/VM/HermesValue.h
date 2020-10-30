@@ -541,6 +541,13 @@ class GCHermesValue : public HermesValue {
   /// Some GCs still need to do a write barrier though, so pass a GC parameter.
   inline void setNonPtr(HermesValue hv, GC *gc);
 
+  /// Force a write barrier to occur on this value, as if the value was being
+  /// set to null. This should be used when a value is becoming unreachable by
+  /// the GC, without having anything written to its memory.
+  /// NOTE: This barrier is typically used when a variable-sized object's length
+  /// decreases.
+  inline void unreachableWriteBarrier(GC *gc);
+
   /// Fills a region of GCHermesValues defined by [\p first, \p last) with the
   /// value \p fill.  If the fill value is an object pointer, must
   /// provide a non-null \p gc argument, to perform write barriers.
@@ -571,6 +578,13 @@ class GCHermesValue : public HermesValue {
   template <typename InputIt, typename OutputIt>
   static inline OutputIt
   copy_backward(InputIt first, InputIt last, OutputIt result, GC *gc);
+
+  /// Same as \c unreachableWriteBarrier, but for a range of values all becoming
+  /// unreachable.
+  static inline void rangeUnreachableWriteBarrier(
+      GCHermesValue *first,
+      GCHermesValue *last,
+      GC *gc);
 
   /// Copies a range of values to a non-heap location, e.g., the JS stack.
   static inline void copyToPinned(

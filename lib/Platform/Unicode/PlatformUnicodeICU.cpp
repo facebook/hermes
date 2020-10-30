@@ -58,18 +58,27 @@ void dateFormat(
     bool formatDate,
     bool formatTime,
     llvh::SmallVectorImpl<char16_t> &buf) {
-  ::tzset();
   UDateFormatStyle dateStyle = formatDate ? UDAT_MEDIUM : UDAT_NONE;
   UDateFormatStyle timeStyle = formatTime ? UDAT_MEDIUM : UDAT_NONE;
 
   UErrorCode err{U_ZERO_ERROR};
-  // Get the tzname manually to allow stable testing.
+
   llvh::SmallVector<char16_t, 32> tzstr;
-#ifdef _WINDOWS
-  const char *tz = _tzname[0];
-#else
-  const char *tz = ::tzname[0];
-#endif
+
+  // We have to use this roundabout method to get the timezone name because
+  // tzname cannot be concurrently accessed. Specifically, we have previously
+  // observed cases where calls to tzset (and functions that call tzset, such as
+  // localtime), may set elements of tzname to null. In this case, any thread
+  // directly reading tzname at the same time may read the null value, causing
+  // a segfault.
+  char tz[50];
+  time_t t;
+  struct tm *timeInfo;
+  timeInfo = localtime(&t);
+  auto numChars = strftime(tz, sizeof(tz), "%Z", timeInfo);
+  (void)numChars;
+  assert(numChars < sizeof(tz) && "Chars written must fit within buffer");
+
   tzstr.append(tz, tz + strlen(tz));
 
   auto *df = udat_open(

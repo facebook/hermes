@@ -109,6 +109,14 @@ class JSParserImpl {
     lexer_.setStrictMode(mode);
   }
 
+  llvh::ArrayRef<StoredComment> getStoredComments() const {
+    return lexer_.getStoredComments();
+  }
+
+  void setStoreComments(bool storeComments) {
+    lexer_.setStoreComments(storeComments);
+  }
+
   Optional<ESTree::ProgramNode *> parse();
 
   void seek(SMLoc startPos) {

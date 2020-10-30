@@ -11,12 +11,10 @@
 
 #include "llvh/Support/MathExtras.h"
 
-#include <cstdio>
-
 namespace hermes {
 namespace vm {
 
-SortModel::~SortModel(){};
+SortModel::~SortModel() = default;
 
 namespace {
 
@@ -116,50 +114,49 @@ ExecutionStatus insertionSort(SortModel *sm, uint32_t begin, uint32_t end) {
 const uint32_t INSERTION_THRESHOLD = 6;
 
 /// Performs the partition for quickSort between elements [l,r].
-/// The pivot must be at element [l+1].
+/// Pre-condition: [l] <= [l+1] <= [r] and [l+1] is the pivot.
+/// This routine is guaranteed to complete even with an inconsistent comparison
+/// routine because it always makes forward progress and doesn't rely on
+/// sentinels.
 /// \return the new index of the pivot.
 CallResult<uint32_t> quickSortPartition(SortModel *sm, uint32_t l, uint32_t r) {
   CallResult<bool> res{false};
   // Now [l] <= [l+1] <= [r]
-  // [l+1] is our pivot and [r] is a sentinel
+  // [l+1] is our pivot.
   uint32_t pivot = l + 1;
 
-  uint32_t i = pivot, j = r + 1;
-  // The pivot is at [l+1]
-  while (true) {
-    while (true) {
-      ++i;
+  uint32_t i = pivot + 1, j = r;
+  for (;;) {
+    for (; i <= j; ++i) {
       res = sm->less(i, pivot);
-      if (res == ExecutionStatus::EXCEPTION) {
+      if (res == ExecutionStatus::EXCEPTION)
         return ExecutionStatus::EXCEPTION;
-      }
-      if (!*res) {
+      if (!*res)
         break;
-      }
     }
-    while (true) {
-      --j;
+    assert(i <= r + 1 && "i is out of range");
+
+    for (; i <= j; --j) {
       res = sm->less(pivot, j);
-      if (res == ExecutionStatus::EXCEPTION) {
+      if (res == ExecutionStatus::EXCEPTION)
         return ExecutionStatus::EXCEPTION;
-      }
-      if (!*res) {
+      if (!*res)
         break;
-      }
     }
-    if (i >= j) {
+    assert(j > l && "j is out of range");
+
+    if (i >= j)
       break;
-    }
-    if (sm->swap(i, j) == ExecutionStatus::EXCEPTION) {
+    if (sm->swap(i, j) == ExecutionStatus::EXCEPTION)
       return ExecutionStatus::EXCEPTION;
-    }
+    ++i;
+    --j;
   }
 
-  // put the pivot in its final position
+  // [j] <= [pivot], we can put the pivot in its final position
   if (j != pivot) {
-    if (sm->swap(pivot, j) == ExecutionStatus::EXCEPTION) {
+    if (sm->swap(pivot, j) == ExecutionStatus::EXCEPTION)
       return ExecutionStatus::EXCEPTION;
-    }
   }
 
   return j;

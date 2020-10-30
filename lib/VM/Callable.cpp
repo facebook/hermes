@@ -350,7 +350,7 @@ CallResult<PseudoHandle<>> Callable::executeCall(
     return ExecutionStatus::EXCEPTION;
   }
   if (*nRes > UINT32_MAX) {
-    runtime->raiseRangeError("Too many arguments for apply");
+    return runtime->raiseRangeError("Too many arguments for apply");
   }
   uint32_t n = static_cast<uint32_t>(*nRes);
   ScopedNativeCallFrame newFrame{
@@ -794,9 +794,8 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
           runtime->getStackPointer() == originalCalleeFrame.ptr() &&
           "Stack wasn't restored properly");
 
-      runtime->raiseStackOverflow(Runtime::StackOverflowKind::JSRegisterStack);
-
-      res = ExecutionStatus::EXCEPTION;
+      res = runtime->raiseStackOverflow(
+          Runtime::StackOverflowKind::JSRegisterStack);
       goto bail;
     }
 

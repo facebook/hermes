@@ -255,6 +255,47 @@ class Token {
   friend class JSLexer;
 };
 
+/// Represents a comment stored while lexing the file.
+class StoredComment {
+ public:
+  /// The kind of the stored comment.
+  enum class Kind {
+    /// Comment that begins with "//".
+    Line,
+    /// Comment that is delimited by "/*" and "*/".
+    Block,
+  };
+
+  StoredComment(Kind kind, SMRange range) : kind_(kind), range_(range) {}
+
+  Kind getKind() const {
+    return kind_;
+  }
+
+  /// \return the comment with delimiters (//, /*, */) stripped,
+  /// as a StringRef which points into the source buffer.
+  StringRef getString() const {
+    // Ignore opening delimiter.
+    const char *start = range_.Start.getPointer() + 2;
+    // Conditionally ignore closing delimiter.
+    const char *end = kind_ == Kind::Line ? range_.End.getPointer()
+                                          : range_.End.getPointer() - 2;
+    assert(end > start && "invalid comment range");
+    return StringRef{start, (size_t)(end - start)};
+  }
+
+  SMRange getSourceRange() const {
+    return range_;
+  }
+
+ private:
+  /// Kind of the stored comment.
+  Kind kind_;
+
+  /// Source range of the stored comment.
+  SMRange range_;
+};
+
 class JSLexer {
  public:
   using Allocator = hermes::BumpPtrAllocator;
@@ -309,7 +350,7 @@ class JSLexer {
   /// Elements of commentStorage_ are pointers into the file buffer
   /// and have the same lifetime as pointers such as bufferStart_ and
   /// bufferEnd_.
-  std::vector<StringRef> commentStorage_{};
+  std::vector<StoredComment> commentStorage_{};
 
  public:
   /// \param convertSurrogates See member variable \p convertSurrogates_.
@@ -491,7 +532,7 @@ class JSLexer {
   }
 
   /// \return any stored comments to this point.
-  llvh::ArrayRef<StringRef> getStoredComments() const {
+  llvh::ArrayRef<StoredComment> getStoredComments() const {
     return commentStorage_;
   }
 

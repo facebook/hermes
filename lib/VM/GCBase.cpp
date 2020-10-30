@@ -667,31 +667,47 @@ void GCBase::printStats(JSONEmitter &json) {
   json.emitKeyValue(
       "totalAllocatedBytes", formatSize(info.totalAllocatedBytes).bytes);
   json.closeDict();
+
+  json.emitKey("collections");
+  json.openArray();
+  for (const auto &event : analyticsEvents_) {
+    json.openDict();
+    json.emitKeyValue("runtimeDescription", event.runtimeDescription);
+    json.emitKeyValue("gcKind", event.gcKind);
+    json.emitKeyValue("collectionType", event.collectionType);
+    json.emitKeyValue("duration", event.duration.count());
+    json.emitKeyValue("cpuDuration", event.cpuDuration.count());
+    json.emitKeyValue("preAllocated", event.preAllocated);
+    json.emitKeyValue("preSize", event.preSize);
+    json.emitKeyValue("postAllocated", event.postAllocated);
+    json.emitKeyValue("postSize", event.postSize);
+    json.emitKeyValue("survivalRatio", event.survivalRatio);
+    json.closeDict();
+  }
+  json.closeArray();
 }
 
 void GCBase::recordGCStats(
-    double wallTime,
-    double cpuTime,
-    gcheapsize_t finalHeapSize,
-    gcheapsize_t usedBefore,
-    gcheapsize_t usedAfter,
+    const GCAnalyticsEvent &event,
     CumulativeHeapStats *stats) {
-  stats->gcWallTime.record(wallTime);
-  stats->gcCPUTime.record(cpuTime);
-  stats->finalHeapSize = finalHeapSize;
-  stats->usedBefore.record(usedBefore);
-  stats->usedAfter.record(usedAfter);
+  stats->gcWallTime.record(
+      std::chrono::duration<double>(event.duration).count());
+  stats->gcCPUTime.record(
+      std::chrono::duration<double>(event.cpuDuration).count());
+  stats->finalHeapSize = event.postSize;
+  stats->usedBefore.record(event.preAllocated);
+  stats->usedAfter.record(event.postAllocated);
   stats->numCollections++;
 }
 
-void GCBase::recordGCStats(
-    double wallTime,
-    double cpuTime,
-    gcheapsize_t usedBefore,
-    gcheapsize_t usedAfter,
-    gcheapsize_t finalHeapSize) {
-  recordGCStats(
-      wallTime, cpuTime, finalHeapSize, usedBefore, usedAfter, &cumStats_);
+void GCBase::recordGCStats(const GCAnalyticsEvent &event) {
+  if (analyticsCallback_) {
+    analyticsCallback_(event);
+  }
+  if (recordGcStats_) {
+    analyticsEvents_.push_back(event);
+  }
+  recordGCStats(event, &cumStats_);
 }
 
 void GCBase::oom(std::error_code reason) {

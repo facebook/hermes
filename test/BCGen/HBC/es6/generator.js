@@ -74,7 +74,7 @@ function *args() {
 // CHECK-NEXT:     CreateGenerator   r1, r0, 4
 // CHECK-NEXT:     Ret               r1
 
-// CHECK-LABEL: Function<?anon_1_args>(1 params, 7 registers, 0 symbols):
+// CHECK-LABEL: Function<?anon_0_args>(1 params, 7 registers, 0 symbols):
 // CHECK-NEXT: Offset in debug table: source 0x{{.*}}, lexical 0x0000
 // CHECK-NEXT:     StartGenerator
 // CHECK-NEXT:     CreateEnvironment r0

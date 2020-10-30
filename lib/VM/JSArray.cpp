@@ -136,8 +136,11 @@ ExecutionStatus ArrayImpl::setStorageEndIndex(
     uint32_t newLength) {
   auto *self = selfHandle.get();
 
-  if (LLVM_UNLIKELY(newLength > StorageType::maxElements()))
+  if (LLVM_UNLIKELY(
+          newLength > self->beginIndex_ &&
+          newLength - self->beginIndex_ > StorageType::maxElements())) {
     return runtime->raiseRangeError("Out of memory for array elements");
+  }
 
   // If indexedStorage hasn't even been allocated.
   if (LLVM_UNLIKELY(!self->indexedStorage_)) {

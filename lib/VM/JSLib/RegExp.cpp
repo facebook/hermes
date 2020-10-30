@@ -136,7 +136,6 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
   defineGetter(cons, Predefined::dollarPlus, regExpLastParenGetter);
   defineGetter(cons, Predefined::lastParen, regExpLastParenGetter);
 
-#ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
   defineMethod(
       runtime,
       proto,
@@ -182,7 +181,6 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
       dpf);
 
   defineGetter(proto, Predefined::flags, regExpFlagsGetter);
-#endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 
   return cons;
 }
@@ -1103,7 +1101,6 @@ regExpPrototypeSymbolMatchAll(void *, Runtime *runtime, NativeArgs args) {
       .getHermesValue();
 }
 
-#ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 // ES6 21.2.5.14
 // Note there is no requirement that 'this' be a RegExp object.
 CallResult<HermesValue>
@@ -1984,7 +1981,6 @@ regExpFlagsGetter(void *ctx, Runtime *runtime, NativeArgs args) {
   }
   return StringPrimitive::create(runtime, result);
 }
-#endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 
 } // namespace vm
 } // namespace hermes

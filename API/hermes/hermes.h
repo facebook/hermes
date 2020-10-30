@@ -169,7 +169,9 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   debugger::Debugger &getDebugger();
 
   struct DebugFlags {
-    bool lazy{false};
+    // Looking for the .lazy flag? It's no longer necessary.
+    // Source is evaluated lazily by default. See
+    // RuntimeConfig::CompilationMode.
   };
 
   /// Evaluate the given code in an unoptimized form,

@@ -10,28 +10,12 @@
 
 function foo() {
   print('foo called');
-  /**
-   * Some text to pad out the function so that it won't be eagerly compiled
-   * for being too short. Lorem ipsum dolor sit amet, consectetur adipiscing
-   * elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-   */
 
   function bar() {
     print('bar called');
-    /**
-     * Some text to pad out the function so that it won't be eagerly compiled
-     * for being too short. Lorem ipsum dolor sit amet, consectetur adipiscing
-     * elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-     */
   }
-
   function baz() {
     print('baz called');
-    /**
-     * Some text to pad out the function so that it won't be eagerly compiled
-     * for being too short. Lorem ipsum dolor sit amet, consectetur adipiscing
-     * elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-     */
   }
 
   bar();
@@ -41,14 +25,14 @@ function foo() {
 debugger;
 foo();
 
-// CHECK: Break on 'debugger' statement in global: {{.*}}:41:1
-// CHECK-NEXT: Set breakpoint 1 at {{.*}}:20:5
-// CHECK-NEXT: Set breakpoint 2 at {{.*}}:29:5
+// CHECK: Break on 'debugger' statement in global: {{.*}}:25:1
+// CHECK-NEXT: Set breakpoint 1 at {{.*}}:15:5
+// CHECK-NEXT: Set breakpoint 2 at {{.*}}:18:5
 // CHECK-NEXT: Continuing execution
 // CHECK-NEXT: foo called
-// CHECK-NEXT: Break on breakpoint 1 in bar: {{.*}}lazy-break-nested.js[{{[0-9]+}}]:20:5
+// CHECK-NEXT: Break on breakpoint 1 in bar: {{.*}}lazy-break-nested.js[{{[0-9]+}}]:15:5
 // CHECK-NEXT: Continuing execution
 // CHECK-NEXT: bar called
-// CHECK-NEXT: Break on breakpoint 2 in baz: {{.*}}lazy-break-nested.js[{{[0-9]+}}]:29:5
+// CHECK-NEXT: Break on breakpoint 2 in baz: {{.*}}lazy-break-nested.js[{{[0-9]+}}]:18:5
 // CHECK-NEXT: Continuing execution
 // CHECK-NEXT: baz called

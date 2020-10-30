@@ -22,6 +22,7 @@ int main(void) {
 #include <signal.h>
 #include <chrono>
 #include <cmath>
+#include <condition_variable>
 #include <cstdlib>
 #include <deque>
 #include <fstream>
@@ -29,6 +30,7 @@ int main(void) {
 #include <iostream>
 #include <iterator>
 #include <map>
+#include <mutex>
 #include <thread>
 
 // hdb is a sample of using Hermes. Therefore, it should avoid introducing
@@ -132,14 +134,15 @@ std::string chompToken(std::string *str, const char *separators = " \t") {
 
 void printUsageAndExit() {
   std::cerr
-      << "USAGE: hdb [--break-at-start] [--break-after <secs>] [--lazy] <input JS file>\n";
+      << "USAGE: hdb [--break-at-start] [--break-after <secs>] [--lazy|--eager|--smart] <input JS file>\n";
   exit(EXIT_FAILURE);
 }
 
 struct Options {
   std::string fileName{}; // required
   bool breakAtStart{false};
-  bool lazy{false};
+  hermes::vm::CompilationMode compilationMode{
+      hermes::vm::ForceEagerCompilation};
   double breakAfterDelay{-1.}; // -1 disables breakAfterDelay
 };
 
@@ -165,7 +168,11 @@ Options getCommandLineOptions(int argc, char **argv) {
     } else if (strcmp(arg, "--break-at-start") == 0) {
       result.breakAtStart = true;
     } else if (strcmp(arg, "--lazy") == 0) {
-      result.lazy = true;
+      result.compilationMode = hermes::vm::ForceLazyCompilation;
+    } else if (strcmp(arg, "--eager") == 0) {
+      result.compilationMode = hermes::vm::ForceEagerCompilation;
+    } else if (strcmp(arg, "--smart") == 0) {
+      result.compilationMode = hermes::vm::SmartCompilation;
     } else if (strcmp(arg, "--break-after") == 0) {
       char *endptr = nullptr;
       char *strValue = nextArg();
@@ -191,6 +198,14 @@ Options getCommandLineOptions(int argc, char **argv) {
 /// Pointer to debugger for use in our async break signal handlers.
 debugger::Debugger *volatile gDebugger = nullptr;
 
+/// Mutex used to control access to gDebugger.
+std::mutex gDebuggerMutex;
+
+/// Controls the wait in the scheduled pause thread.
+/// Notified when JS is done executing and gDebugger has been set to nullptr,
+/// to allow the sleeping thread to complete.
+std::condition_variable delayPauseCondVar;
+
 // A signal handler that triggers an async pause in the debugger.
 void triggerAsyncPause(int sig) {
   if (gDebugger)
@@ -205,17 +220,29 @@ void setSIGINTShouldPause(bool flag) {
 
 /// Trigger an asynchrous pause after the given \p delaySecs. If \p delaySecs is
 /// 0, trigger an async pause immediately.
-void schedulePause(double delaySecs) {
+/// \return the thread object representing the pause. This may not represent an
+/// actual joinable thread.
+std::thread schedulePause(double delaySecs) {
   assert(delaySecs >= 0 && std::isfinite(delaySecs) && "Invalid delay");
   if (delaySecs == 0) {
     gDebugger->triggerAsyncPause(debugger::AsyncPauseKind::Explicit);
-  } else {
-    std::thread t([=] {
-      std::this_thread::sleep_for(std::chrono::duration<double>(delaySecs));
-      gDebugger->triggerAsyncPause(debugger::AsyncPauseKind::Explicit);
-    });
-    t.detach();
+    return {};
   }
+
+  return std::thread([delaySecs] {
+    std::unique_lock<std::mutex> lk{gDebuggerMutex};
+    // Wait for the main thread to be done running JS and send data, or if JS
+    // is still executing, take the lock and trigger the async pause.
+    delayPauseCondVar.wait_for(
+        lk, std::chrono::duration<double>(delaySecs), []() -> bool {
+          return !gDebugger;
+        });
+    // If JS is done being run then gDebugger will have been set to nullptr.
+    // If not, then we want to trigger the async pause.
+    if (gDebugger) {
+      gDebugger->triggerAsyncPause(debugger::AsyncPauseKind::Explicit);
+    }
+  });
 }
 
 } // namespace
@@ -731,7 +758,6 @@ int main(int argc, char **argv) {
   Options options = getCommandLineOptions(argc, argv);
 
   HermesRuntime::DebugFlags debugFlags{};
-  debugFlags.lazy = options.lazy;
 
   // Read the file in 'filename'.
   std::ifstream fileStream(options.fileName);
@@ -749,20 +775,36 @@ int main(int argc, char **argv) {
   runtime->getDebugger().setEventObserver(&debugger);
   runtime->getDebugger().setShouldPauseOnScriptLoad(options.breakAtStart);
   gDebugger = &runtime->getDebugger();
+  int statusCode = 0;
+  std::thread delayThread;
+  setSIGINTShouldPause(true);
   try {
-    setSIGINTShouldPause(true);
     if (options.breakAfterDelay >= 0) {
-      schedulePause(options.breakAfterDelay);
+      delayThread = schedulePause(options.breakAfterDelay);
     }
     runtime->debugJavaScript(fileContents, options.fileName, debugFlags);
   } catch (const facebook::jsi::JSIException &e) {
     std::cout << "JavaScript terminated via uncaught exception: " << e.what()
               << '\n';
-    gDebugger = nullptr;
-    return EXIT_FAILURE;
+    statusCode = EXIT_FAILURE;
   }
-  gDebugger = nullptr;
-  return 0;
+
+  // Clean up the delay thread.
+  {
+    std::lock_guard<std::mutex> lk{gDebuggerMutex};
+    setSIGINTShouldPause(false);
+    gDebugger = nullptr;
+  }
+  // Let the thread finish running.
+  delayPauseCondVar.notify_all();
+  // Join it to avoid destructors running while the thread finishes.
+  // Note: delayThread is only NOT joinable if it doesn't actually represent a
+  // thread: see schedulePause.
+  if (delayThread.joinable()) {
+    delayThread.join();
+  }
+
+  return statusCode;
 }
 
 #endif // HERMES_ENABLE_DEBUGGER

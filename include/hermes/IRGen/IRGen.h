@@ -42,6 +42,9 @@ struct LazyCompilationData {
   /// The type of function, e.g. statement or expression.
   ESTree::NodeKind nodeKind;
 
+  /// Whether or not this is the inner function of a generator.
+  bool isGeneratorInnerFunction;
+
   /// Whether or not the function is strict.
   bool strictMode;
 };

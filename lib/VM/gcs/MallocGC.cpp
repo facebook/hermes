@@ -369,14 +369,23 @@ void MallocGC::collect() {
   const auto cpuEnd = oscompat::thread_cpu_time();
   const auto wallEnd = steady_clock::now();
 
-  double wallElapsedSecs = GCBase::clockDiffSeconds(wallStart, wallEnd);
-  double cpuElapsedSecs = GCBase::clockDiffSeconds(cpuStart, cpuEnd);
-  recordGCStats(
-      wallElapsedSecs,
-      cpuElapsedSecs,
-      allocatedBytes_,
-      allocatedBefore,
-      allocatedBytes_);
+  GCAnalyticsEvent event{
+      getName(),
+      "malloc",
+      "full",
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          wallEnd - wallStart),
+      std::chrono::duration_cast<std::chrono::milliseconds>(cpuEnd - cpuStart),
+      // MallocGC only allocates memory as it is used so there is no distinction
+      // between the allocated bytes and the heap size.
+      /*preAllocated*/ allocatedBefore,
+      /*preSize*/ allocatedBefore,
+      /*postAllocated*/ allocatedBytes_,
+      /*postSize*/ allocatedBytes_,
+      /*survivalRatio*/
+      allocatedBefore ? (allocatedBytes_ * 1.0) / allocatedBefore : 0};
+
+  recordGCStats(event);
   checkTripwire(allocatedBytes_);
 }
 

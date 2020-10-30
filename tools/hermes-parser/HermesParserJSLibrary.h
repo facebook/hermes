@@ -22,6 +22,8 @@ extern "C" {
 JSReference buildArray();
 void appendToArray(JSReference, JSReference);
 JSReference buildSourceLocation(int, int, int, int, int, int);
+JSReference buildComment(JSReference, bool, const char *, size_t);
+JSReference buildProgramWithComments(JSReference, JSReference, JSReference);
 }
 
 /// Builder function for each node in the AST

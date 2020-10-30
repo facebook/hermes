@@ -151,6 +151,35 @@ TEST_F(MarkBitArrayNCTest, NextMarkedBit) {
   }
 }
 
+TEST_F(MarkBitArrayNCTest, NextUnmarkedBitImmediate) {
+  char *addr = addrs.at(addrs.size() / 2);
+  size_t ind = mba->addressToIndex(addr);
+  mba->markAll();
+  mba->bitArray_.set(ind, false);
+  EXPECT_EQ(ind, mba->findNextUnmarkedBitFrom(ind));
+}
+
+TEST_F(MarkBitArrayNCTest, NextUnmarkedBit) {
+  constexpr size_t FOUND_NONE = MarkBitArrayNC::kNumBits;
+  mba->markAll();
+  /// Full case: No unmarked bits
+  EXPECT_EQ(FOUND_NONE, mba->findNextUnmarkedBitFrom(0));
+  std::queue<size_t> indices;
+  for (char *addr : addrs) {
+    auto ind = mba->addressToIndex(addr);
+    mba->bitArray_.set(ind, false);
+    indices.push(ind);
+  }
+
+  // Use the same style of loop we use elsewhere for scanning the array.
+  for (size_t from = mba->findNextUnmarkedBitFrom(0);
+       from < MarkBitArrayNC::kNumBits;
+       from = mba->findNextUnmarkedBitFrom(from + 1)) {
+    EXPECT_EQ(indices.front(), from);
+    indices.pop();
+  }
+}
+
 } // namespace
 
 #endif // HERMESVM_GC_NONCONTIG_GENERATIONAL

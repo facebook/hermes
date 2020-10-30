@@ -61,4 +61,24 @@ TYPED_TEST(BitArrayTest, NextSetBit) {
   EXPECT_EQ(0, indices.size());
 }
 
+TYPED_TEST(BitArrayTest, NextZeroBit) {
+  constexpr size_t N = TypeParam::value;
+  BitArray<N> ba;
+  auto indices = this->getIndices();
+  ba.set();
+  // Full case: No unmarked bits
+  EXPECT_EQ(N, ba.findNextZeroBitFrom(0));
+  for (auto idx : indices) {
+    ba.set(idx, false);
+  }
+
+  // Use the same style of loop we use elsewhere for scanning the array.
+  for (size_t from = ba.findNextZeroBitFrom(0); from < N;
+       from = ba.findNextZeroBitFrom(from + 1)) {
+    EXPECT_EQ(indices.front(), from);
+    indices.pop_front();
+  }
+  EXPECT_EQ(0, indices.size());
+}
+
 } // namespace

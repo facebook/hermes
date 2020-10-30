@@ -66,6 +66,11 @@ class MarkBitArrayNC {
   /// past the last array index if there is not another marked bit.
   inline size_t findNextMarkedBitFrom(size_t ind);
 
+  /// Finds the next bit in the MarkBitArray that is set to 0, starting at and
+  /// including \p ind, the index from which to begin searching. Returns one
+  /// past the last array index if there is not another marked bit.
+  inline size_t findNextUnmarkedBitFrom(size_t ind);
+
 // Mangling scheme used by MSVC encode public/private into the name.
 // As a result, vanilla "ifdef public" trick leads to link errors.
 #if defined(UNIT_TEST) || defined(_MSC_VER)
@@ -138,6 +143,10 @@ void MarkBitArrayNC::markAll() {
 
 size_t MarkBitArrayNC::findNextMarkedBitFrom(size_t ind) {
   return bitArray_.findNextSetBitFrom(ind);
+}
+
+size_t MarkBitArrayNC::findNextUnmarkedBitFrom(size_t ind) {
+  return bitArray_.findNextZeroBitFrom(ind);
 }
 
 char *MarkBitArrayNC::base() const {

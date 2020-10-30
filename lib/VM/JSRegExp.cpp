@@ -183,10 +183,9 @@ ExecutionStatus JSRegExp::initialize(
     regex::Regex<regex::UTF16RegexTraits> regex(patternText16, flagsText16);
 
     if (!regex.valid()) {
-      runtime->raiseSyntaxError(
+      return runtime->raiseSyntaxError(
           TwineChar16("Invalid RegExp: ") +
           regex::constants::messageForError(regex.getError()));
-      return ExecutionStatus::EXCEPTION;
     }
     // The regex is valid. Compile and store its bytecode.
     auto bytecode = regex.compile();
@@ -199,8 +198,7 @@ ExecutionStatus JSRegExp::initializeBytecode(
     Runtime *runtime) {
   size_t sz = bytecode.size();
   if (sz > std::numeric_limits<decltype(bytecodeSize_)>::max()) {
-    runtime->raiseRangeError("RegExp size overflow");
-    return ExecutionStatus::EXCEPTION;
+    return runtime->raiseRangeError("RegExp size overflow");
   }
   auto header =
       reinterpret_cast<const regex::RegexBytecodeHeader *>(bytecode.data());
@@ -236,8 +234,7 @@ CallResult<RegExpMatch> performSearch(
       &nativeMatchRanges,
       matchFlags);
   if (matchResult == regex::MatchRuntimeResult::StackOverflow) {
-    runtime->raiseRangeError("Maximum regex stack depth reached");
-    return ExecutionStatus::EXCEPTION;
+    return runtime->raiseRangeError("Maximum regex stack depth reached");
   } else if (matchResult == regex::MatchRuntimeResult::NoMatch) {
     return RegExpMatch{}; // not found.
   }

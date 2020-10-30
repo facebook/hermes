@@ -1528,22 +1528,6 @@ GenGC::CollectionSection::~CollectionSection() {
   hermesLog(
       "HermesGC", "    used = %zu, heap size = %zu.", gc_->used(), gc_->size());
 #endif
-
-  if (gc_->analyticsCallback_) {
-    gc_->analyticsCallback_(GCAnalyticsEvent{
-        gc_->getName(),
-        "gengc",
-        cycle_.extraInfo(),
-        std::chrono::milliseconds(static_cast<std::chrono::milliseconds::rep>(
-            wallElapsedSecs_ * 1000)),
-        std::chrono::milliseconds(static_cast<std::chrono::milliseconds::rep>(
-            cpuElapsedSecs_ * 1000)),
-        /*preAllocated*/ usedBefore_,
-        /*preSize*/ sizeBefore_,
-        /*postAllocated*/ usedAfter_,
-        /*postSize*/ sizeAfter_,
-        /*survivalRatio*/ (usedAfter_ * 1.0) / usedBefore_});
-  }
 }
 
 void GenGC::CollectionSection::recordGCStats(
@@ -1559,28 +1543,25 @@ void GenGC::CollectionSection::recordGCStats(
   const std::chrono::microseconds cpuEnd = oscompat::thread_cpu_time();
   cpuElapsedSecs_ = GCBase::clockDiffSeconds(cpuStart_, cpuEnd);
 
-  usedBefore_ = usedBefore;
-  sizeBefore_ = sizeBefore;
-  usedAfter_ = usedAfter;
-  sizeAfter_ = sizeAfter;
-
   addArgD("gcCPUTime", cpuElapsedSecs_);
 
   // Record as an overall collection.
-  gc_->recordGCStats(
-      wallElapsedSecs_,
-      cpuElapsedSecs_,
-      gc_->sizeDirect(),
-      gcUsedBefore_,
-      gc_->usedDirect());
+  GCAnalyticsEvent event{
+      gc_->getName(),
+      "gengc",
+      cycle_.extraInfo(),
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          wallEnd - wallStart_),
+      std::chrono::duration_cast<std::chrono::milliseconds>(cpuEnd - cpuStart_),
+      /*preAllocated*/ usedBefore,
+      /*preSize*/ sizeBefore,
+      /*postAllocated*/ usedAfter,
+      /*postSize*/ sizeAfter,
+      /*survivalRatio*/ usedBefore ? (usedAfter * 1.0) / usedBefore : 0};
+
+  gc_->recordGCStats(event);
   // Also record as a region-specific collection.
-  gc_->recordGCStats(
-      wallElapsedSecs_,
-      cpuElapsedSecs_,
-      regionSize,
-      usedBefore,
-      usedAfter,
-      regionStats);
+  gc_->recordGCStats(event, regionStats);
 
   LLVM_DEBUG(
       dbgs() << "End garbage collection. numCollected="

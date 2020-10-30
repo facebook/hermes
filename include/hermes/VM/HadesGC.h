@@ -9,6 +9,7 @@
 #define HERMES_VM_HADESGC_H
 
 #include "hermes/ADT/BitArray.h"
+#include "hermes/ADT/ExponentialMovingAverage.h"
 #include "hermes/Support/SlowAssert.h"
 #include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/GCBase.h"
@@ -138,6 +139,9 @@ class HadesGC final : public GCBase {
   void constructorWriteBarrier(void *loc, HermesValue value);
   void constructorWriteBarrier(void *loc, void *value);
 
+  void snapshotWriteBarrier(GCHermesValue *loc);
+  void snapshotWriteBarrierRange(GCHermesValue *start, uint32_t numHVs);
+
   void weakRefReadBarrier(void *value);
   void weakRefReadBarrier(HermesValue value);
 
@@ -172,13 +176,18 @@ class HadesGC final : public GCBase {
   /// \name Debug APIs
   /// \{
 
+  bool calledByBackgroundThread() const {
+    // If the background thread is active, check if this thread matches the
+    // background thread.
+    return kConcurrentGC &&
+        oldGenCollectionThread_.get_id() == std::this_thread::get_id();
+  }
+
   /// See comment in GCBase.
   bool calledByGC() const {
-    // If the background thread is active, check if this thread matches the
-    // background thread. If this isn't called by the background thread, the
-    // inGC flag is sufficient.
-    return oldGenCollectionThread_.get_id() == std::this_thread::get_id() ||
-        inGC();
+    // Check if this is called by the background thread or the inGC flag is
+    // set.
+    return calledByBackgroundThread() || inGC();
   }
 
   /// Return true if \p ptr is currently pointing at valid accessable memory,
@@ -282,15 +291,16 @@ class HadesGC final : public GCBase {
     std::vector<std::unique_ptr<HeapSegment>>::const_iterator end() const;
 
     size_t numSegments() const;
+    size_t maxNumSegments() const;
 
     HeapSegment &operator[](size_t i);
 
-    /// Create a new OG segment and attach it to the end of the OG segment
-    /// vector. \return a reference to the newly created segment.
-    HeapSegment &createSegment();
-
     /// Take ownership of the given segment.
-    void moveSegment(std::unique_ptr<HeapSegment> &&seg);
+    void addSegment(std::unique_ptr<HeapSegment> seg);
+
+    /// Indicate that OG has a capacity of up to \p numCapacitySegments, some of
+    /// which may be allocated as needed.
+    void reserveSegments(size_t numCapacitySegments);
 
     /// Allocate into OG. Returns a pointer to the newly allocated space. That
     /// space must be filled before releasing the gcMutex_.
@@ -309,11 +319,6 @@ class HadesGC final : public GCBase {
     /// \param alreadyFree If true, this location is not currently allocated.
     void addCellToFreelist(void *addr, uint32_t sz, bool alreadyFree);
 
-    /// Transitions the given segment from bump-alloc mode to freelist mode.
-    /// Can only be called once, when the segment is in bump-alloc mode. There
-    /// is no transitioning from freelist mode back to bump-alloc mode.
-    void transitionToFreelist(HeapSegment &seg);
-
     /// \return the total number of bytes that are in use by the OG section of
     /// the JS heap, excluding free list entries.
     uint64_t allocatedBytes() const;
@@ -321,6 +326,28 @@ class HadesGC final : public GCBase {
     /// \return the total number of bytes that are in use by the OG section of
     /// the JS heap, including free list entries.
     uint64_t size() const;
+
+    /// \return the total number of bytes that we are willing to use in the OG
+    /// section of the JS heap, including free list entries.
+    uint64_t capacityBytes() const;
+
+    /// \return the average survival ratio of the OG over time.
+    double averageSurvivalRatio() const;
+
+    /// Update the average survival ratio with a new instance.
+    void updateAverageSurvivalRatio(double survivalRatio);
+
+    /// \return the number of bytes that we expect to need to mark before an
+    ///   OG collection finishes.
+    /// NOTE: This is determined once at the start of collection, and does not
+    /// change during a collection.
+    size_t bytesToMark() const {
+      return bytesToMark_;
+    }
+
+    void setBytesToMark(size_t bytesToMark) {
+      bytesToMark_ = bytesToMark;
+    }
 
     class FreelistCell final : public VariableSizeRuntimeCell {
      private:
@@ -359,10 +386,22 @@ class HadesGC final : public GCBase {
     HadesGC *gc_;
     std::vector<std::unique_ptr<HeapSegment>> segments_;
 
+    /// This is the number of segments we should allow the OG to grow to before
+    /// needing to wait on an OG collection. This represents the effective size
+    /// of the OG but the actual segments can be allocated lazily.
+    size_t numCapacitySegments_{0};
+
     /// This is the sum of all bytes currently allocated in the heap, excluding
     /// bump-allocated segments. Use \c allocatedBytes() to include
     /// bump-allocated segments.
     uint64_t allocatedBytes_{0};
+
+    /// Tracks the average survival ratio over time of the OG.
+    ExponentialMovingAverage averageSurvivalRatio_;
+
+    /// An estimate of the number of bytes that need to be marked for a
+    /// collection to complete.
+    size_t bytesToMark_{0};
 
     /// The freelist buckets are split into two sections. In the "small"
     /// section, there is one bucket for each size, in multiples of heapAlign.
@@ -449,10 +488,16 @@ class HadesGC final : public GCBase {
   enum class Phase : uint8_t { None, Mark, WeakMapScan, Sweep };
 
   /// Represents the current phase the concurrent GC is in. The main difference
-  /// between phases is their effect on read and write barriers.
-  /// Can be read with memory_order_acquire, or after acquiring gcMutex_ can
-  /// be read as relaxed. Should only be stored to if gcMutex_ is acquired.
-  AtomicIfConcurrentGC<Phase> concurrentPhase_{Phase::None};
+  /// between phases is their effect on read and write barriers. Should only be
+  /// accessed if gcMutex_ is acquired.
+  Phase concurrentPhase_{Phase::None};
+
+  /// Represents whether the background thread is currently marking. Should only
+  /// be accessed by the mutator thread or during a STW pause. isOldGenMarking_
+  /// is true if and only if concurrentPhase_ == Mark but is kept separate in
+  /// order to reduce synchronisation requirements for write barriers.
+  /// Prefer using concurrentPhase_ when acquiring gcMutex_ is not a concern.
+  bool isOldGenMarking_{false};
 
   /// Used by the write barrier to add items to the worklist.
   /// Protected by gcMutex_.
@@ -470,15 +515,20 @@ class HadesGC final : public GCBase {
   /// "stop the world" -- for example, to drain the final parts of the mark
   /// stack.
   std::condition_variable stopTheWorldCondVar_;
-  /// The boolean variables are protected by gcMutex_.
-  bool worldStopped_{false};
+  /// Indicates whether OG has requested an STW pause, protected by gcMutex_.
   bool stopTheWorldRequested_{false};
+  /// Indicates that the world is stopped, only access from the mutator or when
+  /// the world is stopped.
+  bool worldStopped_{false};
 
   /// If true, whenever YG fills up immediately put it into the OG.
   bool promoteYGToOG_;
 
   /// If true, turn off promoteYGToOG_ as soon as the first OG GC occurs.
   bool revertToYGAtTTI_;
+
+  /// Target OG occupancy ratio at the end of an OG collection.
+  const double occupancyTarget_;
 
   /// A collection section used to track the size of OG before and after an OG
   /// collection, as well as the time an OG collection takes.
@@ -487,6 +537,9 @@ class HadesGC final : public GCBase {
   /// Pointer to the first free weak reference slot. Free weak refs are chained
   /// together in a linked list.
   WeakRefSlot *firstFreeWeak_{nullptr};
+
+  /// The weighted average of the YG survival ratio over time.
+  ExponentialMovingAverage ygAverageSurvivalRatio_;
 
   /// The main entrypoint for all allocations.
   /// \param sz The size of allocation requested. This might be rounded up to
@@ -561,11 +614,12 @@ class HadesGC final : public GCBase {
   void scanDirtyCards(EvacAcceptor &acceptor);
 
   /// Common logic for doing the Snapshot At The Beginning (SATB) write barrier.
-  void snapshotWriteBarrier(GCCell *oldValue);
+  void snapshotWriteBarrierInternal(GCCell *oldValue);
 
   /// Common logic for doing the Snapshot At The Beginning (SATB) write barrier.
-  /// Forwards to \c snapshotWriteBarrier(GCCell *) if oldValue is a pointer.
-  void snapshotWriteBarrier(HermesValue oldValue);
+  /// Forwards to \c snapshotWriteBarrierInternal(GCCell *) if oldValue is a
+  /// pointer.
+  void snapshotWriteBarrierInternal(HermesValue oldValue);
 
   /// Common logic for doing the generational write barrier for detecting
   /// pointers into YG.
@@ -601,8 +655,8 @@ class HadesGC final : public GCBase {
   HeapSegment &youngGen();
   const HeapSegment &youngGen() const;
 
-  /// Create a new YG segment.
-  std::unique_ptr<HeapSegment> createYoungGenSegment();
+  /// Create a new segment (to be used by either YG or OG).
+  std::unique_ptr<HeapSegment> createSegment(bool isYoungGen);
 
   /// Searches the old gen for this pointer. This is O(number of OG segments).
   /// NOTE: In any non-debug case, \c inYoungGen should be used instead, because
@@ -613,6 +667,18 @@ class HadesGC final : public GCBase {
   /// Give the background GC a chance to complete marking and finish the OG
   /// collection.
   void yieldToOldGen();
+
+  /// \return A number of bytes that should be drained on a per-YG basis to
+  ///   help ensure an incremental collection will finish before the next one is
+  ///   needed.
+  size_t getDrainRate();
+
+  /// Adds the start address of the segment to the CrashManager's custom data.
+  /// \param extraName append this to the name of the segment. Must be
+  ///   non-empty.
+  void addSegmentExtentToCrashManager(
+      const HeapSegment &seg,
+      std::string extraName);
 
 #ifdef HERMES_SLOW_DEBUG
   /// Checks the heap to make sure all cells are valid.
