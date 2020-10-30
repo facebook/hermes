@@ -15,6 +15,7 @@
 
 #include <array>
 #include <forward_list>
+#include <functional>
 #include <stack>
 
 namespace hermes {
@@ -495,7 +496,9 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
                                     public WeakRefAcceptor {
  public:
   MarkAcceptor(GC &gc) : SlotAcceptorDefault{gc}, byteDrainRate_{0} {
-    markedSymbols_.resize(gc.gcCallbacks_->getSymbolsEnd(), false);
+    const auto symbolsEnd = gc.gcCallbacks_->getSymbolsEnd();
+    markedSymbols_.resize(symbolsEnd, false);
+    writeBarrierMarkedSymbols_.resize(symbolsEnd, false);
   }
 
   using SlotAcceptorDefault::accept;
@@ -549,12 +552,27 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
   }
 
   void accept(SymbolID sym) override {
-    if (sym.isInvalid() || sym.unsafeGetIndex() >= markedSymbols_.size()) {
+    const uint32_t idx = sym.unsafeGetIndex();
+    if (sym.isInvalid() || idx >= markedSymbols_.size()) {
       // Ignore symbols that aren't valid or are pointing outside of the range
       // when the collection began.
       return;
     }
-    markedSymbols_[sym.unsafeGetIndex()] = true;
+    markedSymbols_[idx] = true;
+  }
+
+  /// Interface for symbols marked by a write barrier.
+  void markSymbol(SymbolID sym) {
+    assert(
+        !gc.calledByBackgroundThread() &&
+        "Write barrier invoked by background thread.");
+    const uint32_t idx = sym.unsafeGetIndex();
+    if (sym.isInvalid() || idx >= writeBarrierMarkedSymbols_.size()) {
+      // Ignore symbols that aren't valid or are pointing outside of the range
+      // when the collection began.
+      return;
+    }
+    writeBarrierMarkedSymbols_[idx] = true;
   }
 
   void accept(WeakRefBase &wr) override {
@@ -702,6 +720,22 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
     return markedSymbols_;
   }
 
+  /// Merge the symbols marked by the MarkAcceptor and by the write barrier.
+  /// WARN: This should only be called when the mutator is paused, as
+  /// otherwise there is a race condition between reading this and a symbol
+  /// write barrier getting executed.
+  void mergeMarkedSymbols() {
+    assert(gc.gcMutex_ && "Cannot call mergeMarkedSymbols without a lock");
+    // Bitwise-or two vector<bool> together. Using llvh::BitVector might result
+    // in a more optimized merge.
+    std::transform(
+        writeBarrierMarkedSymbols_.begin(),
+        writeBarrierMarkedSymbols_.end(),
+        markedSymbols_.begin(),
+        markedSymbols_.begin(),
+        std::bit_or<bool>());
+  }
+
  private:
   /// A worklist local to the marking thread, that is only pushed onto by the
   /// marking thread. If this is empty, the global worklist must be consulted
@@ -724,6 +758,11 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
   /// to IdentifierTable so that it can free symbols. If any new symbols are
   /// allocated after the collection began, assume they are live.
   std::vector<bool> markedSymbols_;
+
+  /// A vector the same size as markedSymbols_ that will collect all symbols
+  /// marked by write barriers. Merge this with markedSymbols_ to have complete
+  /// information about marked symbols. Kept separate to avoid synchronization.
+  std::vector<bool> writeBarrierMarkedSymbols_;
 
   /// The number of bytes to drain per call to drainSomeWork. A higher rate
   /// means more objects will be marked.
@@ -1259,11 +1298,8 @@ void HadesGC::completeMarking() {
   MarkWeakRootsAcceptor acceptor{*this};
   markWeakRoots(acceptor);
 
-  // In order to free symbols and weak refs, we need to know if any are in use
-  // by YG. Iterate through YG's objects and mark their symbols.
-  findYoungGenSymbols();
-
   // Now free symbols and weak refs.
+  oldGenMarker_->mergeMarkedSymbols();
   gcCallbacks_->freeSymbols(oldGenMarker_->markedSymbols());
   // NOTE: If sweeping is done concurrently with YG collection, weak references
   // could be handled during the sweep pass instead of the mark pass. The read
@@ -1276,61 +1312,6 @@ void HadesGC::completeMarking() {
 
   // Nothing needs oldGenMarker_ from this point onward.
   oldGenMarker_.reset();
-}
-
-void HadesGC::findYoungGenSymbols() {
-  class SymbolAcceptor final : public SlotAcceptor {
-   public:
-    explicit SymbolAcceptor(GC &gc, std::vector<bool> &markedSymbols)
-        : markedSymbols_{markedSymbols} {}
-
-    // Do nothing for pointers.
-    void accept(void *&) override {}
-
-    void accept(BasedPointer &) override {}
-
-    void accept(GCPointerBase &ptr) override {}
-
-    void accept(HermesValue &hvRef) override {
-      const HermesValue hv = hvRef;
-      if (hv.isSymbol()) {
-        accept(hv.getSymbol());
-      }
-    }
-
-    void accept(SymbolID sym) override {
-      if (sym.isInvalid() || sym.unsafeGetIndex() >= markedSymbols_.size()) {
-        // Ignore symbols that aren't valid or are pointing outside of the range
-        // when the collection began.
-        return;
-      }
-      markedSymbols_[sym.unsafeGetIndex()] = true;
-    }
-
-   private:
-    std::vector<bool> &markedSymbols_;
-  };
-
-  SymbolAcceptor acceptor{*this, oldGenMarker_->markedSymbols()};
-  // We're scanning YG while it might be in the middle of its own collection,
-  // if it is waiting for an OG GC to complete.
-  // During a YG GC, the VTables might be replaced by fowarding pointers,
-  // check the forwarded cell instead of the invalid current cell.
-  void *const stop = youngGen().level();
-  for (GCCell *cell = reinterpret_cast<GCCell *>(youngGen().start());
-       cell < stop;) {
-    if (cell->hasMarkedForwardingPointer()) {
-      GCCell *const forwardedCell = cell->getMarkedForwardingPointer();
-      // Just need to mark symbols and WeakRefs, doesn't need to worry about
-      // un-updated pointers.
-      GCBase::markCell(forwardedCell, this, acceptor);
-      cell = reinterpret_cast<GCCell *>(
-          reinterpret_cast<char *>(cell) + forwardedCell->getAllocatedSize());
-    } else {
-      GCBase::markCell(cell, this, acceptor);
-      cell = cell->nextCell();
-    }
-  }
 }
 
 void HadesGC::finalizeAll() {
@@ -1438,6 +1419,17 @@ void HadesGC::writeBarrier(void *loc, void *value) {
   generationalWriteBarrier(loc, value);
 }
 
+void HadesGC::writeBarrier(SymbolID symbol) {
+  assert(
+      !calledByBackgroundThread() &&
+      "Write barrier invoked by background thread.");
+  if (isOldGenMarking_) {
+    snapshotWriteBarrierInternal(symbol);
+  }
+  // No need for a generational write barrier for symbols, they always point
+  // to long-lived strings.
+}
+
 void HadesGC::constructorWriteBarrier(void *loc, HermesValue value) {
   if (inYoungGen(loc)) {
     // A pointer that lives in YG never needs any write barriers.
@@ -1499,7 +1491,17 @@ void HadesGC::snapshotWriteBarrierInternal(GCCell *oldValue) {
 void HadesGC::snapshotWriteBarrierInternal(HermesValue oldValue) {
   if (oldValue.isPointer()) {
     snapshotWriteBarrierInternal(static_cast<GCCell *>(oldValue.getPointer()));
+  } else if (oldValue.isSymbol()) {
+    // Symbols need snapshot write barriers.
+    snapshotWriteBarrierInternal(oldValue.getSymbol());
   }
+}
+
+void HadesGC::snapshotWriteBarrierInternal(SymbolID symbol) {
+  HERMES_SLOW_ASSERT(
+      isOldGenMarking_ &&
+      "snapshotWriteBarrier should only be called while the OG is marking");
+  oldGenMarker_->markSymbol(symbol);
 }
 
 void HadesGC::generationalWriteBarrier(void *loc, void *value) {
@@ -1540,6 +1542,7 @@ bool HadesGC::canAllocExternalMemory(uint32_t size) {
   return size <= maxHeapSize_;
 }
 
+// Only exists to prevent linker errors, do not call.
 void HadesGC::markSymbol(SymbolID) {}
 
 WeakRefSlot *HadesGC::allocWeakSlot(HermesValue init) {

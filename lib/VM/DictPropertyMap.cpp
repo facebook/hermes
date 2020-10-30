@@ -53,8 +53,8 @@ const VTable DictPropertyMap::vt{CellKind::DictPropertyMapKind, 0};
 
 void DictPropertyMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const DictPropertyMap *>(cell);
-  mb.addArray<Metadata::ArrayData::ArrayType::Symbol>(
-      self->getDescriptorPairs(),
+  mb.addArray(
+      &self->getDescriptorPairs()->first,
       &self->numDescriptors_,
       sizeof(DictPropertyMap::DescriptorPair));
 }
@@ -203,9 +203,11 @@ ExecutionStatus DictPropertyMap::grow(
     if (src->first.isInvalid())
       continue;
 
-    auto key = src->first;
+    const SymbolID key = src->first;
 
-    dst->first = key;
+    // The new property map doesn't have any valid symbols in it yet, use a
+    // constructor instead of assignment to avoid an invalid write barrier.
+    new (&dst->first) GCSymbolID(key);
     dst->second = src->second;
 
     auto result = lookupEntryFor(newSelf, key);
@@ -233,7 +235,9 @@ ExecutionStatus DictPropertyMap::grow(
           src->first == SymbolID::deleted() &&
           "pair in the deleted list is not marked as deleted");
 
-      dst->first = SymbolID::deleted();
+      // The new property map doesn't have any valid symbols in it yet, use a
+      // constructor instead of assignment to avoid an invalid write barrier.
+      new (&dst->first) GCSymbolID(SymbolID::deleted());
       dst->second.slot = src->second.slot;
 
       deletedIndex = getNextDeletedIndex(src);
@@ -308,13 +312,16 @@ DictPropertyMap::findOrAdd(
 
   auto *descPair = self->getDescriptorPairs() + numDescriptors;
 
-  descPair->first = id;
+  descPair->first.set(id, &runtime->getHeap());
   self->numDescriptors_.fetch_add(1, std::memory_order_acq_rel);
 
   return std::make_pair(&descPair->second, true);
 }
 
-void DictPropertyMap::erase(DictPropertyMap *self, PropertyPos pos) {
+void DictPropertyMap::erase(
+    DictPropertyMap *self,
+    Runtime *runtime,
+    PropertyPos pos) {
   auto *hashPair = self->getHashPairs() + pos.hashPairIndex;
   auto descIndex = hashPair->getDescIndex();
   assert(
@@ -327,7 +334,7 @@ void DictPropertyMap::erase(DictPropertyMap *self, PropertyPos pos) {
       "accessing deleted descriptor pair");
 
   hashPair->setDeleted();
-  descPair->first = SymbolID::deleted();
+  descPair->first.set(SymbolID::deleted(), &runtime->getHeap());
   // Add the descriptor to the deleted list.
   setNextDeletedIndex(descPair, self->deletedListHead_);
   self->deletedListHead_ = descIndex;
@@ -338,7 +345,9 @@ void DictPropertyMap::erase(DictPropertyMap *self, PropertyPos pos) {
   self->incDeletedHashCount();
 }
 
-SlotIndex DictPropertyMap::allocatePropertySlot(DictPropertyMap *self) {
+SlotIndex DictPropertyMap::allocatePropertySlot(
+    DictPropertyMap *self,
+    Runtime *runtime) {
   // If there are no deleted properties, the number of properties corresponds
   // exactly to the number of slots.
   if (self->deletedListHead_ == END_OF_LIST)
@@ -354,7 +363,8 @@ SlotIndex DictPropertyMap::allocatePropertySlot(DictPropertyMap *self) {
   --self->deletedListSize_;
 
   // Mark the pair as "invalid" instead of "deleted".
-  deletedPair->first = SymbolID::empty();
+  // No need for symbol write barrier because the previous value was deleted.
+  new (&deletedPair->first) GCSymbolID(SymbolID::empty());
 
   return deletedPair->second.slot;
 }

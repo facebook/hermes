@@ -18,6 +18,10 @@ CheckHeapWellFormedAcceptor::CheckHeapWellFormedAcceptor(GC &gc)
     : SlotAcceptorDefault(gc), WeakRootAcceptorDefault(gc) {}
 
 void CheckHeapWellFormedAcceptor::accept(void *&ptr) {
+  accept(static_cast<const void *>(ptr));
+}
+
+void CheckHeapWellFormedAcceptor::accept(const void *ptr) {
   assert(
       (!ptr || gc.validPointer(ptr)) &&
       "A pointer is pointing outside of the valid region");
@@ -45,6 +49,8 @@ void CheckHeapWellFormedAcceptor::accept(SymbolID sym) {
   assert(
       gc.getCallbacks()->isSymbolLive(sym) &&
       "Symbol is marked but is not live");
+  // Check that the string used by this symbol is valid.
+  accept(gc.getCallbacks()->getStringForSymbol(sym));
 }
 
 void CheckHeapWellFormedAcceptor::accept(WeakRefBase &wr) {

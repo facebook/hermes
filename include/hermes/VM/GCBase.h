@@ -273,6 +273,10 @@ class GCBase {
     /// NOTE: Used by CheckHeapWellFormedAcceptor to make sure a symbol
     /// that is discovered live is marked as live.
     virtual bool isSymbolLive(SymbolID id) = 0;
+
+    /// \return An associated heap cell for the symbol if one exists, null
+    /// otherwise.
+    virtual const void *getStringForSymbol(SymbolID id) = 0;
 #endif
   };
 
@@ -763,6 +767,7 @@ class GCBase {
   /// Default implementations for read and write barriers: do nothing.
   inline void writeBarrier(void *loc, HermesValue value) {}
   inline void writeBarrier(void *loc, void *value) {}
+  inline void writeBarrier(SymbolID symbol) {}
   inline void constructorWriteBarrier(void *loc, HermesValue value) {}
   inline void constructorWriteBarrier(void *loc, void *value) {}
   inline void writeBarrierRange(GCHermesValue *start, uint32_t numHVs) {}

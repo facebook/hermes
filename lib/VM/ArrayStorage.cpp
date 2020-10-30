@@ -32,8 +32,7 @@ const VTable ArrayStorage::vt(
 
 void ArrayStorageBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const ArrayStorage *>(cell);
-  mb.addArray<Metadata::ArrayData::ArrayType::HermesValue>(
-      "storage", self->data(), &self->size_, sizeof(GCHermesValue));
+  mb.addArray("storage", self->data(), &self->size_, sizeof(GCHermesValue));
 }
 
 #ifdef HERMESVM_SERIALIZE

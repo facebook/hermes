@@ -133,10 +133,14 @@ class HadesGC final : public GCBase {
   void writeBarrier(void *loc, HermesValue value);
 
   /// The given pointer value is being written at the given loc (required to
-  /// be in the heap). The value is may be null. Execute a write barrier.
+  /// be in the heap). The value may be null. Execute a write barrier.
   /// NOTE: The write barrier call must be placed *before* the write to the
   /// pointer, so that the current value can be fetched.
   void writeBarrier(void *loc, void *value);
+
+  /// The given symbol is being written at the given loc (required to be in the
+  /// heap).
+  void writeBarrier(SymbolID symbol);
 
   /// Special versions of \p writeBarrier for when there was no previous value
   /// initialized into the space.
@@ -158,7 +162,8 @@ class HadesGC final : public GCBase {
   /// succeed.)
   bool canAllocExternalMemory(uint32_t size);
 
-  /// Mark a symbol id as being used.
+  /// Only exists to prevent linker errors from CompleteMarkState-inline, do not
+  /// call.
   void markSymbol(SymbolID symbolID);
 
   WeakRefSlot *allocWeakSlot(HermesValue init);
@@ -646,10 +651,6 @@ class HadesGC final : public GCBase {
   /// from the mutator.
   void completeMarking();
 
-  /// As part of finishing the marking process, iterate through all of YG to
-  /// find symbols only pointed to from there.
-  void findYoungGenSymbols();
-
   /// Find all pointers from OG into YG during a YG collection. This is done
   /// quickly through use of write barriers that detect the creation of OG-to-YG
   /// pointers.
@@ -659,9 +660,14 @@ class HadesGC final : public GCBase {
   void snapshotWriteBarrierInternal(GCCell *oldValue);
 
   /// Common logic for doing the Snapshot At The Beginning (SATB) write barrier.
-  /// Forwards to \c snapshotWriteBarrierInternal(GCCell *) if oldValue is a
-  /// pointer.
+  /// Forwards to \c snapshotWriteBarrierInternal(GCCell*) if oldValue is a
+  /// pointer. Forwards to \c snapshotWriteBarrierInternal(SymbolID) is oldValue
+  /// is a symbol.
   void snapshotWriteBarrierInternal(HermesValue oldValue);
+
+  /// Performs a Snapshot At The Beginning (SATB) write barrier for a symbol,
+  /// which assumes the old symbol was reachable at the start of the collection.
+  void snapshotWriteBarrierInternal(SymbolID symbol);
 
   /// Common logic for doing the generational write barrier for detecting
   /// pointers into YG.

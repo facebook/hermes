@@ -906,6 +906,10 @@ class Runtime : public HandleRootOwner,
   /// \return true if the given symbol is a live entry in the identifier
   /// table.
   virtual bool isSymbolLive(SymbolID id) override;
+
+  /// \return An associated heap cell for the symbol if one exists, null
+  /// otherwise.
+  virtual const void *getStringForSymbol(SymbolID id) override;
 #endif
 
   /// See \c GCCallbacks for details.

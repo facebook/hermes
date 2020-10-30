@@ -338,6 +338,10 @@ struct DummyRuntime final : public HandleRootOwner,
   bool isSymbolLive(SymbolID) override {
     return true;
   }
+
+  const void *getStringForSymbol(SymbolID) override {
+    return nullptr;
+  }
 #endif
 
   void printRuntimeGCStats(JSONEmitter &) const override {}

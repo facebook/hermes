@@ -8,6 +8,7 @@
 #include "hermes/VM/Metadata.h"
 
 #include "hermes/VM/BuildMetadata.h"
+#include "hermes/VM/GCSymbolID.h"
 
 #include "gtest/gtest.h"
 
@@ -22,6 +23,7 @@ struct DummyCell final {
   GCPointerBase x_;
   GCPointerBase y_;
   GCPointerBase z_;
+  GCSymbolID sym_;
 };
 
 static_assert(
@@ -33,12 +35,13 @@ void DummyCell::buildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("x", &self->x_);
   mb.addField("y", &self->y_);
   mb.addField("z", &self->z_);
+  mb.addField("sym", &self->sym_);
 }
 
 struct DummyArrayCell {
  public:
   AtomicIfConcurrentGC<std::uint32_t> length_{3};
-  DummyCell data_[3];
+  GCPointerBase data_[3];
 
   static void buildMeta(const GCCell *cell, Metadata::Builder &mb);
 };
@@ -49,27 +52,29 @@ static_assert(
 
 void DummyArrayCell::buildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = reinterpret_cast<const DummyArrayCell *>(cell);
-  mb.addArray<Metadata::ArrayData::ArrayType::Pointer>(
-      "dummystorage", &self->data_, &self->length_, sizeof(DummyCell));
+  mb.addArray("dummystorage", self->data_, &self->length_, sizeof(DummyCell));
 }
 
 TEST(MetadataTest, TestNormalFields) {
   const auto meta =
       buildMetadata(CellKind::UninitializedKind, DummyCell::buildMeta);
   ASSERT_FALSE(meta.array_);
+
   auto &fields = meta.pointers_;
   ASSERT_EQ(fields.size(), 3u);
   EXPECT_STREQ(fields.names[0], "x");
   EXPECT_STREQ(fields.names[1], "y");
   EXPECT_STREQ(fields.names[2], "z");
-
   EXPECT_EQ(fields.offsets[0], offsetof(DummyCell, x_));
   EXPECT_EQ(fields.offsets[1], offsetof(DummyCell, y_));
   EXPECT_EQ(fields.offsets[2], offsetof(DummyCell, z_));
 
   EXPECT_EQ(meta.pointers_.size(), 3u);
   EXPECT_EQ(meta.values_.size(), 0u);
-  EXPECT_EQ(meta.symbols_.size(), 0u);
+
+  EXPECT_EQ(meta.symbols_.size(), 1u);
+  EXPECT_STREQ(meta.symbols_.names[0], "sym");
+  EXPECT_EQ(meta.symbols_.offsets[0], offsetof(DummyCell, sym_));
 }
 
 TEST(MetadataTest, TestArray) {

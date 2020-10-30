@@ -570,7 +570,7 @@ class HiddenClass final : public GCCell {
 #endif
  private:
   /// The symbol that was added when transitioning to this hidden class.
-  const SymbolID symbolID_;
+  const GCSymbolID symbolID_;
   /// The flags of the added symbol.
   const PropertyFlags propertyFlags_;
 

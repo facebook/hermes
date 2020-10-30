@@ -7,6 +7,8 @@
 
 #include "hermes/VM/Metadata.h"
 
+#include "hermes/VM/GCSymbolID.h"
+
 namespace hermes {
 namespace vm {
 
@@ -78,17 +80,30 @@ void Metadata::Builder::addField(
   values_[offset] = std::make_pair(name, size);
 }
 
-void Metadata::Builder::addField(const SymbolID *fieldLocation) {
+void Metadata::Builder::addField(const GCSymbolID *fieldLocation) {
   addField(nullptr, fieldLocation);
 }
 
 void Metadata::Builder::addField(
     const char *name,
-    const SymbolID *fieldLocation) {
+    const GCSymbolID *fieldLocation) {
   offset_t offset = reinterpret_cast<const char *>(fieldLocation) - base_;
-  size_t size = sizeof(SymbolID);
+  size_t size = sizeof(GCSymbolID);
   assert(!fieldConflicts(offset, size) && "fields should not overlap");
   symbols_[offset] = std::make_pair(name, size);
+}
+
+void Metadata::Builder::addArray(
+    const char *name,
+    ArrayData::ArrayType type,
+    const void *startLocation,
+    const AtomicIfConcurrentGC<uint32_t> *lengthLocation,
+    std::size_t stride) {
+  array_ = ArrayData(
+      type,
+      reinterpret_cast<const char *>(startLocation) - base_,
+      reinterpret_cast<const char *>(lengthLocation) - base_,
+      stride);
 }
 
 Metadata Metadata::Builder::build() {

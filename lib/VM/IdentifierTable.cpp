@@ -545,6 +545,14 @@ bool IdentifierTable::isSymbolLive(SymbolID id) const {
   // If the entry is not a free slot, then it is live.
   return !entry.isFreeSlot();
 }
+
+const StringPrimitive *IdentifierTable::getStringForSymbol(SymbolID id) const {
+  auto &entry = getLookupTableEntry(id);
+  if (entry.isStringPrim()) {
+    return entry.getStringPrim();
+  }
+  return nullptr;
+}
 #endif
 
 SymbolID IdentifierTable::createNotUniquedLazySymbol(ASCIIRef desc) {

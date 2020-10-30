@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_DICTPROPERTYMAP_H
 #define HERMES_VM_DICTPROPERTYMAP_H
 
+#include "hermes/VM/GCSymbolID.h"
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/PropertyDescriptor.h"
 #include "hermes/VM/Runtime.h"
@@ -143,11 +144,12 @@ class DPMHashPair {
 
 } // namespace detail
 
-class DictPropertyMap final : public VariableSizeRuntimeCell,
-                              private llvh::TrailingObjects<
-                                  DictPropertyMap,
-                                  std::pair<SymbolID, NamedPropertyDescriptor>,
-                                  detail::DPMHashPair> {
+class DictPropertyMap final
+    : public VariableSizeRuntimeCell,
+      private llvh::TrailingObjects<
+          DictPropertyMap,
+          std::pair<GCSymbolID, NamedPropertyDescriptor>,
+          detail::DPMHashPair> {
   friend GC;
   friend TrailingObjects;
   friend void DictPropertyMapBuildMeta(
@@ -163,7 +165,7 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
   friend void DictPropertyMapDeserialize(Deserializer &d, CellKind kind);
 #endif
 
-  using DescriptorPair = std::pair<SymbolID, NamedPropertyDescriptor>;
+  using DescriptorPair = std::pair<GCSymbolID, NamedPropertyDescriptor>;
 
   static const size_type DEFAULT_CAPACITY = 2;
 
@@ -269,12 +271,14 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
 
   /// Remove the property at the specified position. This invalidates all
   /// positions.
-  static void erase(DictPropertyMap *self, PropertyPos pos);
+  static void erase(DictPropertyMap *self, Runtime *runtime, PropertyPos pos);
 
   /// Allocate a new property slot. Either pop the first entry in the deleted
   /// list, or, if the deleted list is empty, return slot \c numProperties_,
   /// which is the next slot at the end of the currently allocated storage.
-  static SlotIndex allocatePropertySlot(DictPropertyMap *self);
+  static SlotIndex allocatePropertySlot(
+      DictPropertyMap *self,
+      Runtime *runtime);
 
   void dump();
 

@@ -125,7 +125,7 @@ class SymbolID {
     return SymbolID{index | 0x80000000};
   }
 
- private:
+ protected:
   RawType id_;
 
   explicit constexpr SymbolID(RawType id) : id_(id) {}

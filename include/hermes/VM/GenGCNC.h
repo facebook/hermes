@@ -171,6 +171,9 @@ class GenGC final : public GCBase {
   /// be in the heap).  The value is may be null.  Execute a write barrier.
   void writeBarrier(void *loc, void *value);
 
+  /// Write barriers for symbols are no-ops in GenGC.
+  void writeBarrier(SymbolID) {}
+
   /// The given value is being written at the given loc (required to
   /// be in the heap).  If value is a pointer, execute a write barrier.
   /// The memory pointed to by \p loc is guaranteed to not have a valid pointer.

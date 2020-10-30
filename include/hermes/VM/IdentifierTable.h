@@ -171,6 +171,10 @@ class IdentifierTable {
   ///   table. A live symbol means that it is still active and won't be re-used
   ///   for any new identifiers.
   bool isSymbolLive(SymbolID id) const;
+
+  /// \return An associated StringPrimitive for a symbol if one exists, else
+  /// null.
+  const StringPrimitive *getStringForSymbol(SymbolID id) const;
 #endif
 
   /// Allocate a new SymbolID without adding an entry to the

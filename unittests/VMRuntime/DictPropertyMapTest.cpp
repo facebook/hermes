@@ -90,7 +90,7 @@ TEST_F(DictPropertyMapTest, SmokeTest) {
 
   // Delete prop2.
   found = DictPropertyMap::find(*map, id2);
-  DictPropertyMap::erase(*map, *found);
+  DictPropertyMap::erase(*map, runtime, *found);
   ASSERT_EQ(saveMap, map.get());
   ASSERT_EQ(3u, map->size());
 

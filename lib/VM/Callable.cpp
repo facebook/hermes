@@ -32,8 +32,7 @@ const VTable Environment::vt{CellKind::EnvironmentKind, 0};
 void EnvironmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const Environment *>(cell);
   mb.addField("parentEnvironment", &self->parentEnvironment_);
-  mb.addArray<Metadata::ArrayData::ArrayType::HermesValue>(
-      self->getSlots(), &self->size_, sizeof(GCHermesValue));
+  mb.addArray(self->getSlots(), &self->size_, sizeof(GCHermesValue));
 }
 
 #ifdef HERMESVM_SERIALIZE

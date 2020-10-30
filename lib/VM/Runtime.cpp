@@ -765,6 +765,10 @@ void Runtime::freeSymbols(const std::vector<bool> &markedSymbols) {
 bool Runtime::isSymbolLive(SymbolID id) {
   return identifierTable_.isSymbolLive(id);
 }
+
+const void *Runtime::getStringForSymbol(SymbolID id) {
+  return identifierTable_.getStringForSymbol(id);
+}
 #endif
 
 size_t Runtime::mallocSize() const {

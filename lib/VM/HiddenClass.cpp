@@ -439,7 +439,7 @@ Handle<HiddenClass> HiddenClass::deleteProperty(
 
   --newHandle->numProperties_;
 
-  DictPropertyMap::erase(newHandle->propertyMap_.get(runtime), pos);
+  DictPropertyMap::erase(newHandle->propertyMap_.get(runtime), runtime, pos);
 
   LLVM_DEBUG(
       dbgs() << "Deleting from Class:" << selfHandle->getDebugAllocationId()
@@ -469,7 +469,7 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
     // but not consume until we are sure (which is less efficient, but more
     // robust). T31555339.
     SlotIndex newSlot = DictPropertyMap::allocatePropertySlot(
-        selfHandle->propertyMap_.get(runtime));
+        selfHandle->propertyMap_.get(runtime), runtime);
 
     if (LLVM_UNLIKELY(
             addToPropertyMap(
