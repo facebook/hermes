@@ -86,18 +86,8 @@ class ESTreeJSONDumper {
 
     if (locMode_ == LocationDumpMode::Range ||
         locMode_ == LocationDumpMode::LocAndRange) {
-      const llvh::MemoryBuffer *buffer = sm_->findBufferForLoc(rng.Start);
-      assert(buffer && "The buffer must exist");
-      const char *bufStart = buffer->getBufferStart();
-      assert(
-          rng.Start.getPointer() >= bufStart &&
-          rng.End.getPointer() <= buffer->getBufferEnd() &&
-          "The range must be within the buffer");
       json_.emitKey("range");
-      json_.openArray();
-      json_.emitValues(
-          {rng.Start.getPointer() - bufStart, rng.End.getPointer() - bufStart});
-      json_.closeArray();
+      dumpSMRangeJSON(json_, rng, sm_->findBufferForLoc(rng.Start));
     }
   }
 
@@ -432,6 +422,22 @@ class ESTreeJSONDumper {
 }; // namespace
 
 } // namespace
+
+void dumpSMRangeJSON(
+    JSONEmitter &json,
+    llvh::SMRange rng,
+    const llvh::MemoryBuffer *buffer) {
+  assert(buffer && "The buffer must exist");
+  const char *bufStart = buffer->getBufferStart();
+  assert(
+      rng.Start.getPointer() >= bufStart &&
+      rng.End.getPointer() <= buffer->getBufferEnd() &&
+      "The range must be within the buffer");
+  json.openArray();
+  json.emitValues(
+      {rng.Start.getPointer() - bufStart, rng.End.getPointer() - bufStart});
+  json.closeArray();
+}
 
 void dumpESTreeJSON(
     llvh::raw_ostream &os,

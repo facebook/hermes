@@ -37,6 +37,13 @@ enum class LocationDumpMode {
   LocAndRange,
 };
 
+/// Print the contents of \p rng to \p json using offsets computed relative to
+/// \p buffer. Range is printed as an 2-array [start, end]
+void dumpSMRangeJSON(
+    JSONEmitter &json,
+    llvh::SMRange rng,
+    const llvh::MemoryBuffer *buffer);
+
 /// Print out the contents of \p rootNode to \p json without locations.
 void dumpESTreeJSON(
     llvh::raw_ostream &os,
