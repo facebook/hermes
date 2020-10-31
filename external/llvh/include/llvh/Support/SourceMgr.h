@@ -95,6 +95,24 @@ private:
   /// This is all of the buffers that we are reading from.
   std::vector<SrcBuffer> Buffers;
 
+  /// This describes the end address of one buffer and which buffer it is.
+  struct BufferEnd {
+    /// The end address (exclusive) of the corresponding buffer.
+    const char * End;
+    /// The id of the corresponding buffer.
+    unsigned BufId;
+
+    BufferEnd(char const *End, unsigned BufId)
+        : End(End), BufId(BufId) {}
+  };
+
+  /// The end addresses of all buffers, possibly sorted.
+  mutable std::vector<BufferEnd> BufferEnds;
+
+  /// Is the BufferEnds vector sorted. We clear this when we add a new buffer,
+  /// and sort and set it when we need to find a buffer by address.
+  mutable bool BufferEndsSorted = false;
+
   // This is the list of directories we should search for include files in.
   std::vector<std::string> IncludeDirectories;
 
@@ -151,11 +169,15 @@ public:
   /// the memory buffer.
   unsigned AddNewSourceBuffer(std::unique_ptr<MemoryBuffer> F,
                               SMLoc IncludeLoc) {
+    const char * End = F->getBufferEnd();
     SrcBuffer NB;
     NB.Buffer = std::move(F);
     NB.IncludeLoc = IncludeLoc;
     Buffers.push_back(std::move(NB));
-    return Buffers.size();
+    unsigned BufId = Buffers.size();
+    BufferEnds.emplace_back(End, BufId);
+    BufferEndsSorted = false;
+    return BufId;
   }
 
   /// Search for a file with the specified name in the current directory or in

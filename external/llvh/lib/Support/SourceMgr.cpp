@@ -59,12 +59,40 @@ unsigned SourceMgr::AddIncludeFile(const std::string &Filename,
 }
 
 unsigned SourceMgr::FindBufferContainingLoc(SMLoc Loc) const {
-  for (unsigned i = 0, e = Buffers.size(); i != e; ++i)
-    if (Loc.getPointer() >= Buffers[i].Buffer->getBufferStart() &&
-        // Use <= here so that a pointer to the null at the end of the buffer
-        // is included as part of the buffer.
-        Loc.getPointer() <= Buffers[i].Buffer->getBufferEnd())
-      return i + 1;
+  if (Buffers.size() <= 4) {
+    for (unsigned i = 0, e = Buffers.size(); i != e; ++i)
+      if (Loc.getPointer() >= Buffers[i].Buffer->getBufferStart() &&
+          // Use <= here so that a pointer to the null at the end of the buffer
+          // is included as part of the buffer.
+          Loc.getPointer() <= Buffers[i].Buffer->getBufferEnd())
+        return i + 1;
+    return 0;
+  }
+
+  if (!BufferEndsSorted) {
+    // Use qsort() to save some binary size.
+    ::qsort(
+        BufferEnds.data(),
+        BufferEnds.size(),
+        sizeof(BufferEnds[0]),
+        [](const void *a, const void *b) -> int {
+          const auto *EndA = reinterpret_cast<const BufferEnd *>(a)->End;
+          const auto *EndB = reinterpret_cast<const BufferEnd *>(b)->End;
+          return EndA < EndB ? -1 : EndA == EndB ? 0 : +1;
+        });
+    BufferEndsSorted = true;
+  }
+
+  auto it = std::lower_bound(
+      BufferEnds.begin(),
+      BufferEnds.end(),
+      Loc.getPointer(),
+      [](const BufferEnd &a, const char *loc) { return a.End < loc; });
+  if (it != BufferEnds.end() &&
+      Loc.getPointer() >= Buffers[it->BufId - 1].Buffer->getBufferStart()) {
+    return it->BufId;
+  }
+
   return 0;
 }
 
