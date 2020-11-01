@@ -203,9 +203,15 @@ class HadesGC::CollectionStats final {
   using TimePoint = std::chrono::time_point<Clock>;
   using Duration = std::chrono::microseconds;
 
-  CollectionStats(HadesGC *gc, std::string cause, std::string extraInfo = "")
-      : gc_{gc}, cause_{std::move(cause)}, extraInfo_{std::move(extraInfo)} {}
+  CollectionStats(HadesGC *gc, std::string cause, std::string collectionType)
+      : gc_{gc},
+        cause_{std::move(cause)},
+        collectionType_{std::move(collectionType)} {}
   ~CollectionStats();
+
+  void addCollectionType(const std::string &collectionType) {
+    collectionType_ += " " + collectionType;
+  }
 
   /// Record the allocated bytes in the heap and its size before a collection
   /// begins.
@@ -262,7 +268,7 @@ class HadesGC::CollectionStats final {
  private:
   HadesGC *gc_;
   std::string cause_;
-  std::string extraInfo_;
+  std::string collectionType_;
   TimePoint beginTime_{};
   TimePoint endTime_{};
   Duration cpuDuration_{};
@@ -277,7 +283,7 @@ HadesGC::CollectionStats::~CollectionStats() {
   gc_->recordGCStats(GCAnalyticsEvent{
       gc_->getName(),
       kGCName,
-      extraInfo_,
+      collectionType_,
       std::move(cause_),
       std::chrono::duration_cast<std::chrono::milliseconds>(
           endTime_ - beginTime_),
@@ -1064,6 +1070,10 @@ void HadesGC::waitForCollectionToFinish() {
     return;
   }
   GCCycle cycle{this, gcCallbacks_, "Old Gen (Direct)"};
+  if (ygCollectionStats_) {
+    // If this wait happened during a YG collection, add a "(waiting)" suffix.
+    ygCollectionStats_->addCollectionType("(waiting)");
+  }
 
   if (!kConcurrentGC) {
     while (concurrentPhase_ != Phase::None) {
@@ -1838,10 +1848,11 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
 void HadesGC::youngGenCollection(
     std::string cause,
     bool forceOldGenCollection) {
-  CollectionStats stats{this, cause, "young"};
+  ygCollectionStats_ = llvh::make_unique<CollectionStats>(this, cause, "young");
   auto cpuTimeStart = oscompat::thread_cpu_time();
-  stats.setBeginTime();
-  stats.setBeforeSizes(youngGen().used(), ygExternalBytes_, youngGen().size());
+  ygCollectionStats_->setBeginTime();
+  ygCollectionStats_->setBeforeSizes(
+      youngGen().used(), ygExternalBytes_, youngGen().size());
   // Acquire the GC lock for the duration of the YG collection.
   std::lock_guard<Mutex> lk{gcMutex_};
   // The YG is not parseable while a collection is occurring.
@@ -1865,6 +1876,7 @@ void HadesGC::youngGenCollection(
   // fails for any reason, proceed with a GC.
   if (promoteYoungGenToOldGen()) {
     promotedBytes = usedBefore;
+    ygCollectionStats_->addCollectionType("(promotion)");
   } else {
     auto &yg = youngGen();
 
@@ -1928,11 +1940,11 @@ void HadesGC::youngGenCollection(
   // young gen must be completely evacuated. Since zeros aren't really
   // useful here, instead put the number of bytes that were promoted into
   // old gen, which is the amount that survived the collection.
-  stats.setSweptBytes(usedBefore - promotedBytes);
-  stats.setSweptExternalBytes(externalSweptBytes);
+  ygCollectionStats_->setSweptBytes(usedBefore - promotedBytes);
+  ygCollectionStats_->setSweptExternalBytes(externalSweptBytes);
   // The average survival ratio should be updated before starting an OG
   // collection.
-  ygAverageSurvivalRatio_.update(stats.survivalRatio());
+  ygAverageSurvivalRatio_.update(ygCollectionStats_->survivalRatio());
   if (concurrentPhase_ == Phase::None) {
     // There is no OG collection running, check the tripwire in case this is the
     // first YG after an OG completed.
@@ -1965,9 +1977,10 @@ void HadesGC::youngGenCollection(
   // completeMarking phase and started sweeping.
   checkWellFormed();
 #endif
-  stats.setEndTime();
+  ygCollectionStats_->setEndTime();
   auto cpuTimeEnd = oscompat::thread_cpu_time();
-  stats.incrementCPUTime(cpuTimeEnd - cpuTimeStart);
+  ygCollectionStats_->incrementCPUTime(cpuTimeEnd - cpuTimeStart);
+  ygCollectionStats_.reset();
 }
 
 bool HadesGC::promoteYoungGenToOldGen() {

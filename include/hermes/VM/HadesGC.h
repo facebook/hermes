@@ -556,6 +556,10 @@ class HadesGC final : public GCBase {
   /// Target OG occupancy ratio at the end of an OG collection.
   const double occupancyTarget_;
 
+  /// A collection section used to track the size of YG before and after a YG
+  /// collection, as well as the time a YG collection takes.
+  std::unique_ptr<CollectionStats> ygCollectionStats_;
+
   /// A collection section used to track the size of OG before and after an OG
   /// collection, as well as the time an OG collection takes.
   std::unique_ptr<CollectionStats> ogCollectionStats_;
