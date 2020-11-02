@@ -1393,6 +1393,7 @@ void GenGC::deserializeHeap(Deserializer &d) {
 #undef DEBUG_TYPE
 #define DEBUG_TYPE "gc"
 void GenGC::deserializeStart() {
+  GCBase::deserializeStart();
   // First, yield the allocation context, so the heap is well-formed.
   yieldAllocContext();
 
@@ -1409,6 +1410,7 @@ void GenGC::deserializeEnd() {
   // Now switch to doing YG alloc, and claim the alloc context from the YG.
   allocContextFromYG_ = true;
   claimAllocContext();
+  GCBase::deserializeEnd();
 }
 #endif
 

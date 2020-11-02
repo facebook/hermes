@@ -753,10 +753,14 @@ class GCBase {
 
   /// Signal GC we are deserializing. Switch to oldgen if necessary for GenGC
   /// Otherwise do nothing.
-  virtual void deserializeStart() = 0;
+  virtual void deserializeStart() {
+    deserializeInProgress_ = true;
+  }
 
   /// Signal GC we are serializing. Switch to youngGen if necessary
-  virtual void deserializeEnd() = 0;
+  virtual void deserializeEnd() {
+    deserializeInProgress_ = false;
+  }
 #endif
 
   /// Default implementations for the external memory credit/debit APIs: do
@@ -1200,6 +1204,12 @@ class GCBase {
 
   /// Attaches stack-traces to objects when enabled.
   AllocationLocationTracker allocationLocationTracker_;
+
+#ifdef HERMESVM_SERIALIZE
+  /// If true, then the runtime is currently deserializing heap data structures
+  /// from a file. Don't run any garbage collections.
+  bool deserializeInProgress_{false};
+#endif
 
 #ifndef NDEBUG
   /// The number of reasons why no allocation is allowed in this heap right

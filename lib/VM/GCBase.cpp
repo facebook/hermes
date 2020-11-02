@@ -774,7 +774,11 @@ bool GCBase::isMostRecentCellInFinalizerVector(
 #ifdef HERMESVM_SANITIZE_HANDLES
 bool GCBase::shouldSanitizeHandles() {
   static std::uniform_real_distribution<> dist(0.0, 1.0);
-  return dist(randomEngine_) < sanitizeRate_;
+  return dist(randomEngine_) < sanitizeRate_
+#ifdef HERMESVM_SERIALIZE
+      && !deserializeInProgress_
+#endif
+      ;
 }
 #endif
 
