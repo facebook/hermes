@@ -211,11 +211,6 @@ bool HBCISel::getDebugSourceLocation(
   }
 
   if (debugIdCache_.currentBufId != coords.bufId) {
-    // This buffer is different from the last one. Refresh the source id cache.
-    auto *buffer = manager.getSourceBuffer(coords.bufId);
-    if (!buffer)
-      return false;
-
     StringRef filename = manager.getSourceUrl(coords.bufId);
     debugIdCache_.currentFilenameId = BCFGen_->addFilename(filename);
 

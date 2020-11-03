@@ -307,10 +307,27 @@ void SourceErrorManager::disableBuffering() {
   bufferedNotes_.clear();
 }
 
-uint32_t SourceErrorManager::addNewVirtualSourceBuffer(
-    llvh::StringRef bufferName) {
-  return addNewSourceBuffer(
-      llvh::MemoryBuffer::getMemBuffer("", bufferName, true));
+unsigned SourceErrorManager::addNewSourceBuffer(
+    std::unique_ptr<llvh::MemoryBuffer> f) {
+  unsigned bufId = sm_.AddNewSourceBuffer(std::move(f), SMLoc{});
+  assert(
+      !isVirtualBufferId(bufId) && "unexpected virtual buf id from SourceMgr");
+  return bufId;
+}
+
+/// Add a source buffer which maps to a filename. It doesn't contain any
+/// source and the only operation that can be performed on that buffer is to
+/// obtain the filename.
+unsigned SourceErrorManager::addNewVirtualSourceBuffer(
+    llvh::StringRef fileName) {
+  return indexToVirtualBufferId(virtualBufferNames_.insert(fileName));
+}
+
+llvh::StringRef SourceErrorManager::getBufferFileName(unsigned bufId) const {
+  if (isVirtualBufferId(bufId))
+    return virtualBufferNames_[virtualBufferIdToIndex(bufId)];
+  else
+    return sm_.getMemoryBuffer(bufId)->getBufferIdentifier();
 }
 
 void SourceErrorManager::dumpCoords(
