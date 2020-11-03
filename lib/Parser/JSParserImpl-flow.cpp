@@ -329,6 +329,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFunction(SMLoc start) {
   if (!optReturn)
     return None;
   ESTree::Node *returnType = *optReturn;
+  SMLoc end = returnType->getEndLoc();
 
   ESTree::Node *predicate = nullptr;
   if (check(checksIdent_)) {
@@ -336,26 +337,24 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFunction(SMLoc start) {
     if (!optPred)
       return None;
     predicate = *optPred;
+    end = predicate->getEndLoc();
   }
 
-  SMLoc end;
   if (!eatSemi(end))
     return None;
 
   auto *func = setLocation(
       funcStart,
-      end,
+      returnType,
       new (context_) ESTree::TypeAnnotationNode(setLocation(
           funcStart,
-          end,
+          returnType,
           new (context_) ESTree::FunctionTypeAnnotationNode(
               std::move(params), returnType, *optRest, typeParams))));
   auto *ident = setLocation(
       idStart, func, new (context_) ESTree::IdentifierNode(id, func, false));
   return setLocation(
-      start,
-      ident,
-      new (context_) ESTree::DeclareFunctionNode(ident, predicate));
+      start, end, new (context_) ESTree::DeclareFunctionNode(ident, predicate));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseDeclareModule(SMLoc start) {
