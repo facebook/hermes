@@ -96,7 +96,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclare(
     auto optIdent = parseBindingIdentifier(Param{});
     if (!optIdent)
       return None;
-    SMLoc end;
+    SMLoc end = (*optIdent)->getEndLoc();
     if (!eatSemi(end))
       return None;
     return setLocation(
@@ -378,7 +378,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareModule(SMLoc start) {
     auto optType = parseTypeAnnotation(annotStart);
     if (!optType)
       return None;
-    SMLoc end;
+    SMLoc end = (*optType)->getEndLoc();
     eatSemi(end, true);
     return setLocation(
         start, end, new (context_) ESTree::DeclareModuleExportsNode(*optType));
