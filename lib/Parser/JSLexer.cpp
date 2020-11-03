@@ -409,15 +409,17 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
         }
         break;
 
-      // #! (hashbang) at the very start of the buffer.
       case '#':
         if (LLVM_UNLIKELY(
                 curCharPtr_ == bufferStart_ && curCharPtr_[1] == '!')) {
+          // #! (hashbang) at the very start of the buffer.
           curCharPtr_ = skipLineComment(curCharPtr_);
           continue;
-        } else {
-          goto default_label;
         }
+        if (!scanPrivateIdentifier()) {
+          continue;
+        }
+        break;
 
       // <  <= << <<=
       case '<':
@@ -1506,6 +1508,35 @@ void JSLexer::scanIdentifierParts() {
   consumeIdentifierParts<Mode>();
   token_.setEnd(curCharPtr_);
   token_.setIdentifier(getIdentifier(tmpStorage_.str()));
+}
+
+bool JSLexer::scanPrivateIdentifier() {
+  assert(*curCharPtr_ == '#');
+
+  // Skip the '#'.
+  const char *start = curCharPtr_;
+  ++curCharPtr_;
+
+  // Scan the actual identifier.
+  if (LLVM_LIKELY(isASCIIIdentifierStart(*curCharPtr_))) {
+    scanIdentifierFastPath<IdentifierMode::JS>(curCharPtr_);
+  } else if (consumeIdentifierStart()) {
+    // curCharPtr_ has been updated by consumeIdentifierStart.
+    scanIdentifierParts<IdentifierMode::JS>();
+  } else {
+    error(SMLoc::getFromPointer(start), "empty private identifier");
+    return false;
+  }
+
+  // Reset the start to the '#' because the scanIdentifier functions were
+  // not aware of the true start of the token.
+  token_.setStart(start);
+  // Parsed a resword or identifier.
+  // Convert the TokenKind to private_identifier after the fact.
+  // This avoids adding another Mode to IdentifierMode.
+  token_.setPrivateIdentifier(token_.getResWordOrIdentifier());
+
+  return true;
 }
 
 template <bool JSX>

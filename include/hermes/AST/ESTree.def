@@ -380,6 +380,10 @@ ESTREE_NODE_3_ARGS(
 ESTREE_IGNORE_IF_EMPTY(Identifier, typeAnnotation)
 ESTREE_IGNORE_IF_EMPTY(Identifier, optional)
 
+ESTREE_NODE_1_ARGS(
+    PrivateName, Base,
+    NodePtr, id, false)
+
 ESTREE_NODE_2_ARGS(
     MetaProperty,
     Base,
@@ -494,6 +498,16 @@ ESTREE_NODE_6_ARGS(
     NodePtr, key, false,
     NodePtr, value, true,
     NodeBoolean, computed, false,
+    NodeBoolean, static, false,
+    NodePtr, variance, true,
+    NodePtr, typeAnnotation, true)
+ESTREE_IGNORE_IF_EMPTY(ClassProperty, variance)
+ESTREE_IGNORE_IF_EMPTY(ClassProperty, typeAnnotation)
+
+ESTREE_NODE_5_ARGS(
+    ClassPrivateProperty, Base,
+    NodePtr, key, false,
+    NodePtr, value, true,
     NodeBoolean, static, false,
     NodePtr, variance, true,
     NodePtr, typeAnnotation, true)

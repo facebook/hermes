@@ -33,6 +33,7 @@
 
 TOK(none, "<none>")
 TOK(identifier, "identifier")
+TOK(private_identifier, "private identifier")
 
 RANGE_MARKER(_first_resword)
 RESWORD(function)

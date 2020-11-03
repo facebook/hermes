@@ -146,6 +146,10 @@ class Token {
     assert(getKind() == TokenKind::identifier);
     return ident_;
   }
+  UniqueString *getPrivateIdentifier() const {
+    assert(getKind() == TokenKind::private_identifier);
+    return ident_;
+  }
   UniqueString *getResWordIdentifier() const {
     assert(isResWord());
     return ident_;
@@ -222,6 +226,10 @@ class Token {
   }
   void setIdentifier(UniqueString *ident) {
     kind_ = TokenKind::identifier;
+    ident_ = ident;
+  }
+  void setPrivateIdentifier(UniqueString *ident) {
+    kind_ = TokenKind::private_identifier;
     ident_ = ident;
   }
   void setStringLiteral(UniqueString *literal, bool containsEscapes) {
@@ -644,6 +652,7 @@ class JSLexer {
   /// \return the decoded value and the incremented current pointer
   inline std::pair<uint32_t, const char *> _peekUTF8() const;
 
+  static inline bool isASCIIIdentifierStart(uint32_t ch);
   static inline bool isUnicodeIdentifierStart(uint32_t ch);
   static inline bool isUnicodeIdentifierPart(uint32_t ch);
 
@@ -768,6 +777,11 @@ class JSLexer {
     }
   }
 
+  /// Scan a private identifier.
+  /// \pre curCharPtr_ is on the '#'.
+  /// \return true on success, false on error.
+  bool scanPrivateIdentifier();
+
   template <bool JSX>
   void scanString();
   void scanStringInContext(GrammarContext grammarContext) {
@@ -889,9 +903,12 @@ inline std::pair<uint32_t, const char *> JSLexer::_peekUTF8() const {
   return _peekUTF8(curCharPtr_);
 }
 
+inline bool JSLexer::isASCIIIdentifierStart(uint32_t ch) {
+  return ch == '_' || ch == '$' || ((ch | 32) >= 'a' && (ch | 32) <= 'z');
+}
+
 inline bool JSLexer::isUnicodeIdentifierStart(uint32_t ch) {
-  return ch == '_' || ch == '$' || ((ch | 32) >= 'a' && (ch | 32) <= 'z') ||
-      isUnicodeOnlyLetter(ch);
+  return isASCIIIdentifierStart(ch) || isUnicodeOnlyLetter(ch);
 }
 
 inline bool JSLexer::isUnicodeIdentifierPart(uint32_t ch) {

@@ -651,6 +651,9 @@ class JSParserImpl {
   Optional<ESTree::VariableDeclarationNode *> parseVariableStatement(
       Param param);
 
+  /// Parse a PrivateName starting with the '#'.
+  Optional<ESTree::PrivateNameNode *> parsePrivateName();
+
   /// Parse a list of variable declarations. \returns a dummy value but the
   /// optionality still encodes the error condition.
   /// \param param [In, Yield]

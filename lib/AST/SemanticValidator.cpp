@@ -476,6 +476,16 @@ void SemanticValidator::visit(ClassDeclarationNode *node) {
   visitESTreeChildren(*this, node);
 }
 
+void SemanticValidator::visit(PrivateNameNode *node) {
+  sm_.error(node->getSourceRange(), "private properties are not supported");
+  visitESTreeChildren(*this, node);
+}
+
+void SemanticValidator::visit(ClassPrivatePropertyNode *node) {
+  sm_.error(node->getSourceRange(), "private properties are not supported");
+  visitESTreeChildren(*this, node);
+}
+
 void SemanticValidator::visit(ImportDeclarationNode *importDecl) {
   // Like variable declarations, imported names must be hoisted.
   if (!astContext_.getUseCJSModules()) {

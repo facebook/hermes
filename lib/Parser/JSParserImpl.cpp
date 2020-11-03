@@ -951,6 +951,18 @@ JSParserImpl::parseVariableStatement(Param param) {
   return parseLexicalDeclaration(ParamIn);
 }
 
+Optional<ESTree::PrivateNameNode *> JSParserImpl::parsePrivateName() {
+  assert(check(TokenKind::private_identifier));
+  ESTree::Node *ident = setLocation(
+      tok_,
+      tok_,
+      new (context_)
+          ESTree::IdentifierNode(tok_->getPrivateIdentifier(), nullptr, false));
+  SMLoc start = advance().Start;
+  return setLocation(
+      start, ident, new (context_) ESTree::PrivateNameNode(ident));
+}
+
 Optional<const char *> JSParserImpl::parseVariableDeclarationList(
     Param param,
     ESTree::NodeList &declList,
@@ -3162,7 +3174,8 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberSelect(
   } else if (
       checkAndEat(TokenKind::period) ||
       (optional && !check(TokenKind::l_paren, TokenKind::less))) {
-    if (tok_->getKind() != TokenKind::identifier && !tok_->isResWord()) {
+    if (!check(TokenKind::identifier, TokenKind::private_identifier) &&
+        !tok_->isResWord()) {
       // Just use the pattern here, even though we know it will fail.
       if (!need(
               TokenKind::identifier,
@@ -3172,12 +3185,20 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberSelect(
         return None;
     }
 
-    auto *id = setLocation(
-        tok_,
-        tok_,
-        new (context_) ESTree::IdentifierNode(
-            tok_->getResWordOrIdentifier(), nullptr, false));
-    advance(JSLexer::AllowDiv);
+    ESTree::Node *id = nullptr;
+    if (check(TokenKind::private_identifier)) {
+      auto optId = parsePrivateName();
+      if (!optId)
+        return None;
+      id = *optId;
+    } else {
+      id = setLocation(
+          tok_,
+          tok_,
+          new (context_) ESTree::IdentifierNode(
+              tok_->getResWordOrIdentifier(), nullptr, false));
+      advance(JSLexer::AllowDiv);
+    }
 
     if (optional || seenOptionalChain) {
       return setLocation(
@@ -4248,12 +4269,23 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
 #endif
 
   bool computed = false;
+  bool isPrivate = false;
   if (doParsePropertyName) {
-    computed = check(TokenKind::l_square);
-    auto optProp = parsePropertyName();
-    if (!optProp)
-      return None;
-    prop = *optProp;
+    if (check(TokenKind::private_identifier)) {
+      isPrivate = true;
+      prop = setLocation(
+          tok_,
+          tok_,
+          new (context_) ESTree::IdentifierNode(
+              tok_->getPrivateIdentifier(), nullptr, false));
+      advance();
+    } else {
+      computed = check(TokenKind::l_square);
+      auto optProp = parsePropertyName();
+      if (!optProp)
+        return None;
+      prop = *optProp;
+    }
   }
 
   // Store the propName for comparisons, used for SyntaxErrors.
@@ -4263,6 +4295,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
   } else if (auto *str = dyn_cast<ESTree::StringLiteralNode>(prop)) {
     propName = str->_value;
   }
+
   bool isConstructor =
       !isStatic && !computed && propName && propName->str() == "constructor";
 
@@ -4271,7 +4304,6 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     // Parse a class property, because this can't be a method definition.
     // Attempt ASI after the fact, and continue on, letting the next iteration
     // error if it wasn't actually a class property.
-    // TODO: Account for private properties.
     // FieldDefinition ;
     //                 ^
     ESTree::Node *typeAnnotation = nullptr;
@@ -4302,6 +4334,13 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
           "start of class property",
           startRange.Start);
       return None;
+    }
+    if (isPrivate) {
+      return setLocation(
+          prop,
+          end,
+          new (context_) ESTree::ClassPrivatePropertyNode(
+              prop, value, isStatic, variance, typeAnnotation));
     }
     return setLocation(
         startRange,
@@ -4419,6 +4458,11 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     kind = getIdent_;
   } else if (special == SpecialKind::Set) {
     kind = setIdent_;
+  }
+
+  if (isPrivate) {
+    prop = setLocation(
+        startLoc, prop, new (context_) ESTree::PrivateNameNode(prop));
   }
 
   return setLocation(

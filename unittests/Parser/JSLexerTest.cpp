@@ -446,6 +446,30 @@ TEST(JSLexerTest, IdentifierTest) {
   ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
 }
 
+TEST(JSLexerTest, PrivateIdentifierTest) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext diag(sm);
+
+  JSLexer lex(
+      " #foo"
+      " # foo"
+      " #64",
+      sm,
+      alloc);
+
+  ASSERT_EQ(TokenKind::private_identifier, lex.advance()->getKind());
+  EXPECT_EQ("foo", lex.getCurToken()->getPrivateIdentifier()->str());
+
+  ASSERT_EQ(TokenKind::identifier, lex.advance()->getKind());
+  EXPECT_EQ(1, diag.getErrCountClear());
+  EXPECT_EQ("foo", lex.getCurToken()->getIdentifier()->str());
+
+  ASSERT_EQ(TokenKind::numeric_literal, lex.advance()->getKind());
+  EXPECT_EQ(1, diag.getErrCountClear());
+  EXPECT_EQ(64, lex.getCurToken()->getNumericLiteral());
+}
+
 TEST(JSLexerTest, StringTest1) {
   JSLexer::Allocator alloc;
   SourceErrorManager sm;
