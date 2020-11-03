@@ -4306,6 +4306,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     // error if it wasn't actually a class property.
     // FieldDefinition ;
     //                 ^
+    SMLoc end = prop->getEndLoc();
     ESTree::Node *typeAnnotation = nullptr;
 #if HERMES_PARSE_FLOW
     if (context_.getParseFlow() && check(TokenKind::colon)) {
@@ -4314,6 +4315,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
       if (!optType)
         return None;
       typeAnnotation = *optType;
+      end = typeAnnotation->getEndLoc();
     }
 #endif
     ESTree::Node *value = nullptr;
@@ -4324,8 +4326,8 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
       if (!optValue)
         return None;
       value = *optValue;
+      end = value->getEndLoc();
     }
-    SMLoc end;
     // ASI is allowed for separating class elements.
     if (!eatSemi(end, true) && !typeAnnotation) {
       errorExpected(
