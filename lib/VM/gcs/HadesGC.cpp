@@ -1115,6 +1115,9 @@ void HadesGC::oldGenCollection(std::string cause) {
     // ongoing.
     oldGenCollectionThread_.join();
   }
+  // We know ygCollectionStats_ exists because oldGenCollection is only called
+  // by youngGenCollection.
+  ygCollectionStats_->addCollectionType("(old gen start)");
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormed();
 #endif
@@ -1277,6 +1280,9 @@ void HadesGC::waitForCompleteMarking() {
 
 void HadesGC::completeMarking() {
   assert(inGC() && "inGC_ must be set during the STW pause");
+  if (ygCollectionStats_) {
+    ygCollectionStats_->addCollectionType("(complete marking)");
+  }
   // No locks are needed here because the world is stopped and there is only 1
   // active thread.
   oldGenMarker_->globalWorklist().flushPushChunk();
