@@ -34,6 +34,7 @@
 #include "hermes/VM/VTable.h"
 
 #include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/BitVector.h"
 #include "llvh/ADT/DenseMap.h"
 #include "llvh/Support/ErrorHandling.h"
 
@@ -221,7 +222,7 @@ class GCBase {
 
     /// Free all symbols which are not marked as \c true in \p markedSymbols.
     /// Optionally invoked at the end of a garbage collection.
-    virtual void freeSymbols(const std::vector<bool> &markedSymbols) = 0;
+    virtual void freeSymbols(const llvh::BitVector &markedSymbols) = 0;
 
     /// Prints any statistics maintained in the Runtime about GC to \p
     /// os.  At present, this means the breakdown of markRoots time by
@@ -530,7 +531,7 @@ class GCBase {
     /// For a symbol index \p i, \p markedSymbols[i] indicates whether
     /// the symbol was reachable in a GC.  Untrack all symbols whose
     /// index is not marked.
-    void untrackUnmarkedSymbols(const std::vector<bool> &markedSymbols);
+    void untrackUnmarkedSymbols(const llvh::BitVector &markedSymbols);
 
     /// Remove the native memory from being tracked. This should be done to keep
     /// the tracking working set small. It is also required to be done when

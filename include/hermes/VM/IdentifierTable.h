@@ -21,6 +21,7 @@
 #include <mutex>
 #include <vector>
 
+#include "llvh/ADT/BitVector.h"
 #include "llvh/ADT/DenseMap.h"
 
 namespace hermes {
@@ -164,7 +165,7 @@ class IdentifierTable {
   void unmarkSymbols();
 
   /// Invoked at the end of a GC to free all unmarked symbols.
-  void freeUnmarkedSymbols(const std::vector<bool> &markedSymbols);
+  void freeUnmarkedSymbols(const llvh::BitVector &markedSymbols);
 
 #ifdef HERMES_SLOW_DEBUG
   /// \return true if the given symbol is a live entry in the identifier
@@ -217,7 +218,7 @@ class IdentifierTable {
   ///   Note that FREE_LIST_END is not a unique value, but it should only
   ///   be used when the union is nullptr, so that's not a problem.
   class LookupEntry {
-    static constexpr uint32_t LAZY_STRING_PRIM_TAG = (uint32_t)(1 << 29) - 1;
+    static constexpr uint32_t LAZY_STRING_PRIM_TAG = (uint32_t)(1 << 30) - 1;
     static constexpr uint32_t NON_LAZY_STRING_PRIM_TAG =
         LAZY_STRING_PRIM_TAG - 1;
 
@@ -240,9 +241,7 @@ class IdentifierTable {
     /// Set to true if the Identifier hasn't been added to the hashtable.
     bool isNotUniqued_ : 1;
 
-    bool marked_ : 1;
-
-    uint32_t num_ : 29;
+    uint32_t num_ : 30;
 
     /// Hash code for the represented string.
     uint32_t hash_{};
@@ -252,28 +251,24 @@ class IdentifierTable {
         : asciiPtr_(str.data()),
           isUTF16_(false),
           isNotUniqued_(isNotUniqued),
-          marked_(true),
           num_(str.size()),
           hash_(hermes::hashString(str)) {}
     explicit LookupEntry(ASCIIRef str, uint32_t hash, bool isNotUniqued = false)
         : asciiPtr_(str.data()),
           isUTF16_(false),
           isNotUniqued_(isNotUniqued),
-          marked_(true),
           num_(str.size()),
           hash_(hash) {}
     explicit LookupEntry(UTF16Ref str)
         : utf16Ptr_(str.data()),
           isUTF16_(true),
           isNotUniqued_(false),
-          marked_(true),
           num_(str.size()),
           hash_(hermes::hashString(str)) {}
     explicit LookupEntry(UTF16Ref str, uint32_t hash)
         : utf16Ptr_(str.data()),
           isUTF16_(true),
           isNotUniqued_(false),
-          marked_(true),
           num_(str.size()),
           hash_(hash) {}
     explicit LookupEntry(StringPrimitive *str, bool isNotUniqued = false);
@@ -284,7 +279,6 @@ class IdentifierTable {
         : strPrim_(str),
           isUTF16_(true),
           isNotUniqued_(isNotUniqued),
-          marked_(true),
           num_(NON_LAZY_STRING_PRIM_TAG),
           hash_(hash) {
       assert(str && "Invalid string primitive pointer");
@@ -316,9 +310,6 @@ class IdentifierTable {
     bool isNotUniqued() const {
       return isNotUniqued_;
     }
-    bool isMarked() const {
-      return marked_;
-    }
 
     /// Transform a lazy identifier into a StringPrimitive.
     void materialize(StringPrimitive *str) {
@@ -349,14 +340,6 @@ class IdentifierTable {
     const StringPrimitive *getStringPrim() const {
       assert(isStringPrim() && "Not a valid string primitive");
       return strPrim_;
-    }
-
-    void mark() {
-      marked_ = true;
-    }
-
-    void unmark() {
-      marked_ = false;
     }
 
     int32_t getNextFreeSlot() const {
@@ -402,6 +385,9 @@ class IdentifierTable {
   /// the number of identifiers created dynamically is small compared to
   /// the number of identifiers initialized from the module.
   ConservativeVector<LookupEntry> lookupVector_;
+
+  /// A bit vector representing if a symbol is new since the last collection.
+  llvh::BitVector markedSymbols_;
 
   /// The hash table.
   detail::IdentifierHashTable hashTable_{};

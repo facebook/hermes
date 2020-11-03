@@ -1192,9 +1192,7 @@ void GenGC::getHeapInfoWithMallocSize(HeapInfo &info) {
     info.mallocSizeEstimate += youngGen_.mallocSizeFromFinalizerList();
   }
 
-  // Assume that the vector implementation doesn't use a separate bool for each
-  // bool, but groups them together as bits.
-  info.mallocSizeEstimate += markedSymbols_.capacity() / CHAR_BIT;
+  info.mallocSizeEstimate += markedSymbols_.getMemorySize();
   // A deque doesn't have a capacity, so the size is the lower bound.
   info.mallocSizeEstimate +=
       weakSlots_.size() * sizeof(decltype(weakSlots_)::value_type);

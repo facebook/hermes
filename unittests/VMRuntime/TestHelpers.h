@@ -332,7 +332,7 @@ struct DummyRuntime final : public HandleRootOwner,
 
   void unmarkSymbols() override {}
 
-  void freeSymbols(const std::vector<bool> &) override {}
+  void freeSymbols(const llvh::BitVector &) override {}
 
 #ifdef HERMES_SLOW_DEBUG
   bool isSymbolLive(SymbolID) override {

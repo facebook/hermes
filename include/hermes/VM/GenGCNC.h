@@ -881,7 +881,7 @@ class GenGC final : public GCBase {
 
   /// Every bit corresponds to a symbol id. It is set to true if the symbol is
   /// in use (was marked).
-  std::vector<bool> markedSymbols_{};
+  llvh::BitVector markedSymbols_{};
 
   /// The weak reference slots.
   std::deque<WeakRefSlot> weakSlots_{};

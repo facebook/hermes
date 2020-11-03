@@ -900,7 +900,7 @@ class Runtime : public HandleRootOwner,
 
   /// Called by the GC at the end of a collection to free all symbols not set in
   /// markedSymbols.
-  virtual void freeSymbols(const std::vector<bool> &markedSymbols) override;
+  virtual void freeSymbols(const llvh::BitVector &markedSymbols) override;
 
 #ifdef HERMES_SLOW_DEBUG
   /// \return true if the given symbol is a live entry in the identifier

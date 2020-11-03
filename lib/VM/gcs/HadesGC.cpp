@@ -501,11 +501,11 @@ class MarkWorklist {
 class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
                                     public WeakRefAcceptor {
  public:
-  MarkAcceptor(GC &gc) : SlotAcceptorDefault{gc}, byteDrainRate_{0} {
-    const auto symbolsEnd = gc.gcCallbacks_->getSymbolsEnd();
-    markedSymbols_.resize(symbolsEnd, false);
-    writeBarrierMarkedSymbols_.resize(symbolsEnd, false);
-  }
+  MarkAcceptor(GC &gc)
+      : SlotAcceptorDefault{gc},
+        markedSymbols_{gc.gcCallbacks_->getSymbolsEnd()},
+        writeBarrierMarkedSymbols_{gc.gcCallbacks_->getSymbolsEnd()},
+        byteDrainRate_{0} {}
 
   using SlotAcceptorDefault::accept;
 
@@ -722,24 +722,17 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
     return reachableWeakMaps_;
   }
 
-  std::vector<bool> &markedSymbols() {
-    return markedSymbols_;
-  }
-
-  /// Merge the symbols marked by the MarkAcceptor and by the write barrier.
+  /// Merge the symbols marked by the MarkAcceptor and by the write barrier,
+  /// then return a reference to it.
   /// WARN: This should only be called when the mutator is paused, as
   /// otherwise there is a race condition between reading this and a symbol
   /// write barrier getting executed.
-  void mergeMarkedSymbols() {
-    assert(gc.gcMutex_ && "Cannot call mergeMarkedSymbols without a lock");
-    // Bitwise-or two vector<bool> together. Using llvh::BitVector might result
-    // in a more optimized merge.
-    std::transform(
-        writeBarrierMarkedSymbols_.begin(),
-        writeBarrierMarkedSymbols_.end(),
-        markedSymbols_.begin(),
-        markedSymbols_.begin(),
-        std::bit_or<bool>());
+  llvh::BitVector &markedSymbols() {
+    assert(gc.gcMutex_ && "Cannot call markedSymbols without a lock");
+    markedSymbols_ |= writeBarrierMarkedSymbols_;
+    // No need to clear writeBarrierMarkedSymbols_, or'ing it again won't change
+    // the bit vector.
+    return markedSymbols_;
   }
 
  private:
@@ -763,12 +756,12 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
   /// into this vector. Once the collection is finished, this vector is passed
   /// to IdentifierTable so that it can free symbols. If any new symbols are
   /// allocated after the collection began, assume they are live.
-  std::vector<bool> markedSymbols_;
+  llvh::BitVector markedSymbols_;
 
   /// A vector the same size as markedSymbols_ that will collect all symbols
   /// marked by write barriers. Merge this with markedSymbols_ to have complete
   /// information about marked symbols. Kept separate to avoid synchronization.
-  std::vector<bool> writeBarrierMarkedSymbols_;
+  llvh::BitVector writeBarrierMarkedSymbols_;
 
   /// The number of bytes to drain per call to drainSomeWork. A higher rate
   /// means more objects will be marked.
@@ -1309,7 +1302,6 @@ void HadesGC::completeMarking() {
   markWeakRoots(acceptor);
 
   // Now free symbols and weak refs.
-  oldGenMarker_->mergeMarkedSymbols();
   gcCallbacks_->freeSymbols(oldGenMarker_->markedSymbols());
   // NOTE: If sweeping is done concurrently with YG collection, weak references
   // could be handled during the sweep pass instead of the mark pass. The read

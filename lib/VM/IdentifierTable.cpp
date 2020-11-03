@@ -27,7 +27,6 @@ IdentifierTable::LookupEntry::LookupEntry(
     : strPrim_(str),
       isUTF16_(false),
       isNotUniqued_(isNotUniqued),
-      marked_(true),
       num_(NON_LAZY_STRING_PRIM_TAG) {
   assert(str && "Invalid string primitive pointer");
   llvh::SmallVector<char16_t, 32> storage{};
@@ -324,7 +323,7 @@ void IdentifierTable::symbolReadBarrier(uint32_t id) {
   // garbage collected.
   // The reason this exists is that a Symbol can be retrieved via a string hash
   // that doesn't otherwise keep the symbol alive while in the middle of a GC.
-  getLookupTableEntry(id).mark();
+  markedSymbols_.set(id);
 }
 
 uint32_t IdentifierTable::allocIDAndInsert(
@@ -485,6 +484,7 @@ uint32_t IdentifierTable::allocNextID() {
       hermes_fatal("Failed to allocate Identifier: IdentifierTable is full");
     }
     lookupVector_.emplace_back();
+    markedSymbols_.push_back(true);
     LLVM_DEBUG(
         llvh::dbgs() << "Allocated new symbol id at end " << newID << "\n");
     // Don't need to tell the GC about this ID, it will assume any growth is
@@ -497,6 +497,7 @@ uint32_t IdentifierTable::allocNextID() {
   auto &entry = getLookupTableEntry(nextId);
   assert(entry.isFreeSlot() && "firstFreeID_ is not a free slot");
   firstFreeID_ = entry.getNextFreeSlot();
+  markedSymbols_.set(nextId);
   LLVM_DEBUG(llvh::dbgs() << "Allocated freed symbol id " << nextId << "\n");
   return nextId;
 }
@@ -513,30 +514,34 @@ void IdentifierTable::freeID(uint32_t id) {
 }
 
 void IdentifierTable::unmarkSymbols() {
-  for (auto &entry : lookupVector_) {
-    entry.unmark();
-  }
+  markedSymbols_.reset();
 }
 
 void IdentifierTable::freeUnmarkedSymbols(
-    const std::vector<bool> &markedSymbols) {
+    const llvh::BitVector &markedSymbols) {
   assert(
       markedSymbols.size() <= lookupVector_.size() &&
       "Size of markedSymbols must be less than the current lookupVector");
-  for (uint32_t i = 0, e = markedSymbols.size(); i < e; ++i) {
+  assert(
+      markedSymbols_.size() == lookupVector_.size() &&
+      "Size of markedSymbols_ must be the same as the lookupVector");
+  markedSymbols_ |= markedSymbols;
+  // Flip and find set bits, which will correspond to symbols that weren't
+  // marked.
+  markedSymbols_.flip();
+  const uint32_t markedSymbolsSize = markedSymbols.size();
+  for (const uint32_t i : markedSymbols_.set_bits()) {
+    // Don't check any bits after the passed-in bits, which represent the number
+    // of symbols alive at the start of the collection.
+    if (i >= markedSymbolsSize) {
+      break;
+    }
     // We never free StringPrimitives that are materialized from a lazy
     // identifier.
-    if (!markedSymbols[i] && !lookupVector_[i].isMarked() &&
-        lookupVector_[i].isNonLazyStringPrim())
+    if (lookupVector_[i].isNonLazyStringPrim())
       freeSymbol(i);
-    lookupVector_[i].unmark();
   }
-  // Don't free any symbols that were newly created after the GC started.
-  for (uint32_t i = markedSymbols.size(), e = lookupVector_.size(); i < e;
-       ++i) {
-    // Unmark any symbols allocated after the GC started.
-    lookupVector_[i].unmark();
-  }
+  markedSymbols_.reset();
 }
 
 #ifdef HERMES_SLOW_DEBUG
@@ -628,6 +633,7 @@ void IdentifierTable::deserialize(Deserializer &d) {
     entry.deserialize(d);
   }
   d.endObject(&lookupVector_);
+  markedSymbols_.resize(size);
 
   hashTable_.deserialize(d);
 }

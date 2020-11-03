@@ -39,12 +39,12 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
   /// a collection. True means that it is live, false means that it could
   /// possibly be garbage. At the end of the collection, it is guaranteed that
   /// the falses are garbage.
-  std::vector<bool> markedSymbols_;
+  llvh::BitVector markedSymbols_;
 
   MarkingAcceptor(GC &gc)
-      : SlotAcceptorDefault(gc), WeakRootAcceptorDefault(gc) {
-    markedSymbols_.resize(gc.gcCallbacks_->getSymbolsEnd(), false);
-  }
+      : SlotAcceptorDefault(gc),
+        WeakRootAcceptorDefault(gc),
+        markedSymbols_(gc.gcCallbacks_->getSymbolsEnd()) {}
 
   using SlotAcceptorDefault::accept;
 
@@ -154,7 +154,7 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
     assert(
         sym.unsafeGetIndex() < markedSymbols_.size() &&
         "Tried to mark a symbol not in range");
-    markedSymbols_[sym.unsafeGetIndex()] = true;
+    markedSymbols_.set(sym.unsafeGetIndex());
   }
 
   void accept(WeakRefBase &wr) override {

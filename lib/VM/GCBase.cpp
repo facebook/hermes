@@ -891,10 +891,10 @@ void GCBase::IDTracker::deserialize(Deserializer &d) {
 #endif
 
 void GCBase::IDTracker::untrackUnmarkedSymbols(
-    const std::vector<bool> &markedSymbols) {
+    const llvh::BitVector &markedSymbols) {
   std::vector<uint32_t> toUntrack;
   for (const auto &pair : symbolIDMap_) {
-    if (!markedSymbols[pair.first]) {
+    if (!markedSymbols.test(pair.first)) {
       toUntrack.push_back(pair.first);
     }
   }

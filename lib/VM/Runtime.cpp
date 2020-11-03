@@ -757,7 +757,7 @@ void Runtime::unmarkSymbols() {
   identifierTable_.unmarkSymbols();
 }
 
-void Runtime::freeSymbols(const std::vector<bool> &markedSymbols) {
+void Runtime::freeSymbols(const llvh::BitVector &markedSymbols) {
   identifierTable_.freeUnmarkedSymbols(markedSymbols);
 }
 
