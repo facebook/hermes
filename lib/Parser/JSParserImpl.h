@@ -991,7 +991,10 @@ class JSParserImpl {
   enum class TypeAliasKind { None, Declare, Opaque, DeclareOpaque };
   Optional<ESTree::Node *> parseTypeAlias(SMLoc start, TypeAliasKind kind);
 
-  Optional<ESTree::Node *> parseInterfaceDeclaration(bool declare);
+  /// \param declareStart if set, parse a DeclareInterfaceNode starting at
+  /// this location. If not set, parse an InterfaceDeclarationNode.
+  Optional<ESTree::Node *> parseInterfaceDeclaration(
+      Optional<SMLoc> declareStart = None);
 
   /// \pre current token is 'extends' or '{'.
   /// \param[out] extends the super-interfaces for the parsed interface.

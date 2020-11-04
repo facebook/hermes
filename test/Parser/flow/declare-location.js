@@ -19,6 +19,8 @@ declare module.exports: any
 
 declare module.exports: any;
 
+declare interface I {}
+
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "DeclareVariable",
 // CHECK-NEXT:       "id": {
@@ -153,6 +155,55 @@ declare module.exports: any;
 // CHECK-NEXT:           "column": 29
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "DeclareInterface",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "I",
+// CHECK-NEXT:         "loc": {
+// CHECK-NEXT:           "start": {
+// CHECK-NEXT:             "line": 22,
+// CHECK-NEXT:             "column": 19
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "end": {
+// CHECK-NEXT:             "line": 22,
+// CHECK-NEXT:             "column": 20
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "extends": [],
+// CHECK-NEXT:       "body": {
+// CHECK-NEXT:         "type": "ObjectTypeAnnotation",
+// CHECK-NEXT:         "properties": [],
+// CHECK-NEXT:         "indexers": [],
+// CHECK-NEXT:         "callProperties": [],
+// CHECK-NEXT:         "internalSlots": [],
+// CHECK-NEXT:         "inexact": false,
+// CHECK-NEXT:         "exact": false,
+// CHECK-NEXT:         "loc": {
+// CHECK-NEXT:           "start": {
+// CHECK-NEXT:             "line": 22,
+// CHECK-NEXT:             "column": 21
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "end": {
+// CHECK-NEXT:             "line": 22,
+// CHECK-NEXT:             "column": 23
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "loc": {
+// CHECK-NEXT:         "start": {
+// CHECK-NEXT:           "line": 22,
+// CHECK-NEXT:           "column": 1
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "end": {
+// CHECK-NEXT:           "line": 22,
+// CHECK-NEXT:           "column": 23
+// CHECK-NEXT:         }
+// CHECK-NEXT:       }
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ],
@@ -162,8 +213,8 @@ declare module.exports: any;
 // CHECK-NEXT:       "column": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:       "line": 20,
-// CHECK-NEXT:       "column": 29
+// CHECK-NEXT:       "line": 22,
+// CHECK-NEXT:       "column": 23
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT: }

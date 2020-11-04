@@ -54,7 +54,8 @@ Optional<ESTree::Node *> JSParserImpl::parseFlowDeclaration() {
   }
 
   if (checkN(interfaceIdent_, TokenKind::rw_interface)) {
-    auto optType = parseInterfaceDeclaration(kind == TypeAliasKind::Declare);
+    auto optType = parseInterfaceDeclaration(
+        kind == TypeAliasKind::Declare ? Optional<SMLoc>(start) : None);
     if (!optType)
       return None;
     return *optType;
@@ -81,7 +82,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclare(
     return parseTypeAlias(start, TypeAliasKind::DeclareOpaque);
   }
   if (checkN(TokenKind::rw_interface, interfaceIdent_)) {
-    return parseInterfaceDeclaration(true);
+    return parseInterfaceDeclaration(start);
   }
   if (check(TokenKind::rw_class)) {
     return parseDeclareClass(start);
@@ -197,7 +198,8 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAlias(
       start, end, new (context_) ESTree::TypeAliasNode(id, typeParams, right));
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseInterfaceDeclaration(bool declare) {
+Optional<ESTree::Node *> JSParserImpl::parseInterfaceDeclaration(
+    Optional<SMLoc> declareStart) {
   assert(checkN(TokenKind::rw_interface, interfaceIdent_));
   SMLoc start = advance(JSLexer::GrammarContext::Flow).Start;
 
@@ -229,9 +231,9 @@ Optional<ESTree::Node *> JSParserImpl::parseInterfaceDeclaration(bool declare) {
   if (!optBody)
     return None;
 
-  if (declare) {
+  if (declareStart.hasValue()) {
     return setLocation(
-        start,
+        *declareStart,
         *optBody,
         new (context_) ESTree::DeclareInterfaceNode(
             id, typeParams, std::move(extends), *optBody));
@@ -787,7 +789,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(
   }
 
   if (checkN(TokenKind::rw_interface, interfaceIdent_)) {
-    auto optInterface = parseInterfaceDeclaration(/* declare */ false);
+    auto optInterface = parseInterfaceDeclaration();
     if (!optInterface)
       return None;
     return setLocation(
