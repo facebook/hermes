@@ -30,6 +30,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <map>
 
 namespace llvh {
 
@@ -95,23 +96,11 @@ private:
   /// This is all of the buffers that we are reading from.
   std::vector<SrcBuffer> Buffers;
 
-  /// This describes the end address of one buffer and which buffer it is.
-  struct BufferEnd {
-    /// The end address (exclusive) of the corresponding buffer.
-    const char * End;
-    /// The id of the corresponding buffer.
-    unsigned BufId;
+  /// The end addresses of all buffers.
+  std::map<const char *, unsigned> BufferEnds;
 
-    BufferEnd(char const *End, unsigned BufId)
-        : End(End), BufId(BufId) {}
-  };
-
-  /// The end addresses of all buffers, possibly sorted.
-  mutable std::vector<BufferEnd> BufferEnds;
-
-  /// Is the BufferEnds vector sorted. We clear this when we add a new buffer,
-  /// and sort and set it when we need to find a buffer by address.
-  mutable bool BufferEndsSorted = false;
+  /// The id of the buffer which FindBufferContainingLoc() found last.
+  mutable unsigned LastFoundBufId = 0;
 
   // This is the list of directories we should search for include files in.
   std::vector<std::string> IncludeDirectories;
@@ -175,8 +164,7 @@ public:
     NB.IncludeLoc = IncludeLoc;
     Buffers.push_back(std::move(NB));
     unsigned BufId = Buffers.size();
-    BufferEnds.emplace_back(End, BufId);
-    BufferEndsSorted = false;
+    BufferEnds.emplace(End, BufId);
     return BufId;
   }
 
