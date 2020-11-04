@@ -41,30 +41,7 @@ struct CodeGenerationSettings {
   bool instrumentIR{false};
 };
 
-struct OutliningSettings {
-  /// If true, place outlined functions near one of their callers. Otherwise,
-  /// put them all together at the end of the module.
-  bool placeNearCaller{true};
-  /// Maximum number of outlining rounds.
-  unsigned maxRounds{1};
-  /// Minimum length (number of instructions) to consider outlining.
-  unsigned minLength{64};
-  /// Minimum number of parameters for outlined functions.
-  unsigned minParameters{0};
-  /// Maximum number of parameters for outlined functions.
-  unsigned maxParameters{5};
-};
-
 struct OptimizationSettings {
-  /// Enable constant property optimization
-  bool constantPropertyOptimizations{false};
-
-  /// Enable unused method optimization
-  bool uncalledMethodOptimizations{false};
-
-  /// Enable cross-module closure analysis (if CLA is enabled)
-  BundlerKind crossModuleClosureAnalysis{BundlerKind::none};
-
   /// Enable aggressive non-strict mode optimizations. These optimizations
   /// assume that:
   ///   - function arguments are never modified indirectly
@@ -76,9 +53,6 @@ struct OptimizationSettings {
 
   /// Enable IR outlining.
   bool outlining{false};
-
-  /// Specific settings for the outliner.
-  OutliningSettings outliningSettings;
 
   /// Reuse property cache entries for same property name.
   bool reusePropCache{true};
