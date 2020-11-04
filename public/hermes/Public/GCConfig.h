@@ -33,6 +33,7 @@ struct GCAnalyticsEvent {
   std::string runtimeDescription;
   std::string gcKind;
   std::string collectionType;
+  std::string cause;
   std::chrono::milliseconds duration;
   std::chrono::milliseconds cpuDuration;
   uint64_t preAllocated;

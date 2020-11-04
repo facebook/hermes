@@ -128,7 +128,7 @@ TEST_F(GCSizingTest, TestOccupancyTarget) {
           headFollower->values()[kPrevFieldIndex].getObject());
     }
     if ((i % kGCFrequency) == 0) {
-      gc.collect();
+      rt.collect();
 
       GCBase::HeapInfo info;
       gc.getHeapInfo(info);
@@ -185,7 +185,7 @@ TEST_F(GCSizingTest, TestHeapShrinks) {
   tmpArr = nullptr;
 
   // Now do an explicit full GC, so we will resize when we have 50MB live.
-  gc.collect();
+  rt.collect();
 
   GCBase::HeapInfo info;
   gc.getHeapInfo(info);
@@ -201,11 +201,11 @@ TEST_F(GCSizingTest, TestHeapShrinks) {
 
   // Now do 5 full GCs; the heap size should start to approach 2X the live data;
   // we'll allow 3X to account for convergence, so 30 MB.
-  gc.collect();
-  gc.collect();
-  gc.collect();
-  gc.collect();
-  gc.collect();
+  rt.collect();
+  rt.collect();
+  rt.collect();
+  rt.collect();
+  rt.collect();
   gc.getHeapInfo(info);
 
   gcheapsize_t expectedSmallHeap = 30 * 1000000;
@@ -252,7 +252,7 @@ TEST(GCSizingMinHeapTest, TestHeapDoesNotShrinkPastMinSize) {
   tmpArr = nullptr;
 
   // Now do an explicit full GC, so we will resize when we have 50MB live.
-  gc.collect();
+  rt.collect();
 
   GCBase::HeapInfo info;
   gc.getHeapInfo(info);
@@ -270,7 +270,7 @@ TEST(GCSizingMinHeapTest, TestHeapDoesNotShrinkPastMinSize) {
   // live data, or 20MB.  But we've specified the minimum heap at
   // 40MB, so it should not shrink beyond that.
   for (unsigned i = 0; i < 10; i++) {
-    gc.collect();
+    rt.collect();
   }
   gc.getHeapInfo(info);
 

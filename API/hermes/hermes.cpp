@@ -512,13 +512,17 @@ class HermesRuntimeImpl final : public HermesRuntime,
   }
 
   // Overridden from jsi::Instrumentation
-  void collectGarbage() override {
-    runtime_.getHeap().collect();
+  void collectGarbage(std::string cause) override {
+    runtime_.collect(std::move(cause));
   }
 
   // Overridden from jsi::Instrumentation
-  void startTrackingHeapObjectStackTraces() override {
-    runtime_.enableAllocationLocationTracker();
+  void startTrackingHeapObjectStackTraces(
+      std::function<void(
+          uint64_t,
+          std::chrono::microseconds,
+          std::vector<HeapStatsUpdate>)> fragmentCallback) override {
+    runtime_.enableAllocationLocationTracker(std::move(fragmentCallback));
   }
 
   // Overridden from jsi::Instrumentation

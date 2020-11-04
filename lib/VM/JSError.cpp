@@ -429,7 +429,7 @@ ExecutionStatus JSError::recordStackTrace(
     // which have savedCodeBlock == nullptr in order to allow proper returns in
     // the interpreter.
     StackFramePtr prev = cf->getPreviousFrame();
-    if (prev && prev != framesEnd) {
+    if (prev != framesEnd) {
       if (CodeBlock *parentCB = prev->getCalleeCodeBlock()) {
         savedCodeBlock = parentCB;
       }

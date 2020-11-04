@@ -202,8 +202,8 @@ class HadesGC::CollectionStats final {
   using TimePoint = std::chrono::time_point<Clock>;
   using Duration = std::chrono::microseconds;
 
-  CollectionStats(HadesGC *gc, std::string extraInfo = "")
-      : gc_{gc}, extraInfo_{std::move(extraInfo)} {}
+  CollectionStats(HadesGC *gc, std::string cause, std::string extraInfo = "")
+      : gc_{gc}, cause_{std::move(cause)}, extraInfo_{std::move(extraInfo)} {}
   ~CollectionStats();
 
   /// Record the allocated bytes in the heap and its size before a collection
@@ -251,6 +251,7 @@ class HadesGC::CollectionStats final {
 
  private:
   HadesGC *gc_;
+  std::string cause_;
   std::string extraInfo_;
   TimePoint beginTime_{};
   TimePoint endTime_{};
@@ -265,6 +266,7 @@ HadesGC::CollectionStats::~CollectionStats() {
       gc_->getName(),
       kHeapNameForAnalytics,
       extraInfo_,
+      std::move(cause_),
       std::chrono::duration_cast<std::chrono::milliseconds>(
           endTime_ - beginTime_),
       std::chrono::duration_cast<std::chrono::milliseconds>(cpuDuration_),
@@ -900,7 +902,7 @@ void HadesGC::printStats(JSONEmitter &json) {
   json.closeDict();
 }
 
-void HadesGC::collect() {
+void HadesGC::collect(std::string cause) {
   {
     // Wait for any existing collections to finish before starting a new one.
     std::lock_guard<Mutex> lk{gcMutex_};
@@ -908,7 +910,7 @@ void HadesGC::collect() {
   }
   // This function should block until a collection finishes.
   // YG needs to be empty in order to do an OG collection.
-  youngGenCollection(/*forceOldGenCollection*/ true);
+  youngGenCollection(std::move(cause), /*forceOldGenCollection*/ true);
   // Wait for the collection to complete.
   std::lock_guard<Mutex> lk{gcMutex_};
   waitForCollectionToFinish();
@@ -953,7 +955,7 @@ void HadesGC::waitForCollectionToFinish() {
   lk.release();
 }
 
-void HadesGC::oldGenCollection() {
+void HadesGC::oldGenCollection(std::string cause) {
   // Full collection:
   //  * Mark all live objects by iterating through a worklist.
   //  * Sweep dead objects onto the free lists.
@@ -975,7 +977,8 @@ void HadesGC::oldGenCollection() {
   // any) in addition to creating a new CollectionStats. It is desirable to
   // call the destructor here so that the analytics callback is invoked from the
   // mutator thread.
-  ogCollectionStats_ = llvh::make_unique<CollectionStats>(this, "old");
+  ogCollectionStats_ =
+      llvh::make_unique<CollectionStats>(this, std::move(cause), "old");
   // NOTE: Leave CPU time as zero if the collection isn't concurrent, as the
   // times aren't useful.
   auto cpuTimeStart = oscompat::thread_cpu_time();
@@ -1232,16 +1235,18 @@ void HadesGC::sweep() {
       if (HeapSegment::getCellMarkBit(cell)) {
         return;
       }
-      sweptBytes += cell->getAllocatedSize();
+      const auto sz = cell->getAllocatedSize();
+      sweptBytes += sz;
       // Cell is dead, run its finalizer first if it has one.
       cell->getVT()->finalizeIfExists(cell, this);
       oldGen_.addCellToFreelist(cell);
       if (isTracking) {
-        // There is no race condition here, because the object has already been
-        // determined to be dead, so nothing can be accessing it, or asking for
-        // its ID.
+        // FIXME: There could be a race condition here if newAlloc is being
+        // called at the same time and using a shared data structure with
+        // freeAlloc.
+        // freeAlloc relies on the ID, so call it before untrackObject.
+        getAllocationLocationTracker().freeAlloc(cell, sz);
         getIDTracker().untrackObject(cell);
-        getAllocationLocationTracker().freeAlloc(cell);
       }
     });
 
@@ -1536,12 +1541,14 @@ void *HadesGC::allocWork(uint32_t sz) {
     // more interesting aspect of Hades which is concurrent background
     // collections. So instead, do a youngGenCollection which force-starts an
     // oldGenCollection if one is not already running.
-    youngGenCollection(/*forceOldGenCollection*/ true);
+    youngGenCollection(
+        kHandleSanCauseForAnalytics, /*forceOldGenCollection*/ true);
   }
   AllocResult res = youngGen().youngGenBumpAlloc(sz);
   if (LLVM_UNLIKELY(!res.success)) {
     // Failed to alloc in young gen, do a young gen collection.
-    youngGenCollection(/*forceOldGenCollection*/ false);
+    youngGenCollection(
+        kNaturalCauseForAnalytics, /*forceOldGenCollection*/ false);
     res = youngGen().youngGenBumpAlloc(sz);
     assert(res.success && "Should never fail to allocate");
   }
@@ -1706,8 +1713,10 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
   return nullptr;
 }
 
-void HadesGC::youngGenCollection(bool forceOldGenCollection) {
-  CollectionStats stats{this, "young"};
+void HadesGC::youngGenCollection(
+    std::string cause,
+    bool forceOldGenCollection) {
+  CollectionStats stats{this, cause, "young"};
   auto cpuTimeStart = oscompat::thread_cpu_time();
   stats.setBeginTime();
   stats.setBeforeSizes(youngGen().used(), youngGen().size());
@@ -1770,9 +1779,11 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
           auto *fptr = cell->getMarkedForwardingPointer();
           ptr += reinterpret_cast<GCCell *>(fptr)->getAllocatedSize();
         } else {
-          ptr += cell->getAllocatedSize();
+          const auto sz = cell->getAllocatedSize();
+          ptr += sz;
+          // Have to call freeAlloc before untrackObject.
+          getAllocationLocationTracker().freeAlloc(cell, sz);
           getIDTracker().untrackObject(cell);
-          getAllocationLocationTracker().freeAlloc(cell);
         }
       }
     }
@@ -1801,7 +1812,7 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
   ygAverageSurvivalRatio_.update(stats.survivalRatio());
   if (concurrentPhase_ == Phase::None) {
     if (forceOldGenCollection) {
-      oldGenCollection();
+      oldGenCollection(std::move(cause));
     } else {
       // If the OG is sufficiently full after the collection finishes, begin
       // an OG collection.
@@ -1810,7 +1821,7 @@ void HadesGC::youngGenCollection(bool forceOldGenCollection) {
       constexpr double kCollectionThreshold = 0.75;
       double allocatedRatio = static_cast<double>(totalAllocated) / totalBytes;
       if (allocatedRatio >= kCollectionThreshold) {
-        oldGenCollection();
+        oldGenCollection(kNaturalCauseForAnalytics);
       }
     }
   } else if (oldGenMarker_) {

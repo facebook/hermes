@@ -21,6 +21,7 @@
 #define HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
 #endif
 
+#include "hermes/Public/DebuggerTypes.h"
 #include "hermes/Support/OptValue.h"
 #include "hermes/Support/StringSetVector.h"
 
@@ -43,31 +44,36 @@ struct StackTracesTreeNode {
   /// nodes that would appear at the same "location".
   struct SourceLoc {
     StringSetVector::size_type scriptName;
+    ::facebook::hermes::debugger::ScriptID scriptID;
     int32_t lineNo;
     int32_t columnNo;
     SourceLoc(
         StringSetVector::size_type scriptName,
+        ::facebook::hermes::debugger::ScriptID scriptID,
         int32_t lineNo,
         int32_t columnNo)
-        : scriptName(scriptName), lineNo(lineNo), columnNo(columnNo){};
+        : scriptName(scriptName),
+          scriptID(scriptID),
+          lineNo(lineNo),
+          columnNo(columnNo) {}
 
     unsigned hash() const {
-      return scriptName ^ columnNo ^ lineNo;
+      return scriptName ^ scriptID ^ columnNo ^ lineNo;
     };
 
     bool operator==(const SourceLoc &r) const {
-      return scriptName == r.scriptName && lineNo == r.lineNo &&
-          columnNo == r.columnNo;
+      return scriptName == r.scriptName && scriptID == r.scriptID &&
+          lineNo == r.lineNo && columnNo == r.columnNo;
     }
   };
 
   /// Utility class for use with \c llvh::DenseMap .
   struct SourceLocMapInfo {
     static inline SourceLoc getEmptyKey() {
-      return {SIZE_MAX, -1, -1};
+      return {SIZE_MAX, 0, -1, -1};
     }
     static inline SourceLoc getTombstoneKey() {
-      return {SIZE_MAX - 1, -1, -1};
+      return {SIZE_MAX - 1, 0, -1, -1};
     }
     static unsigned getHashValue(const SourceLoc &v) {
       return v.hash();

@@ -42,14 +42,14 @@ TEST_F(NativeFrameTest, PoisonedStackTest) {
       runtime, 0, nullptr, false, HermesValue::encodeUndefinedValue()};
   ASSERT_FALSE(frame.overflowed());
   // We should not die after this because there were no arguments.
-  runtime->collect();
+  runtime->collect("test");
 
   // Now make a frame with arguments.
   ScopedNativeCallFrame frame2{
       runtime, 1, nullptr, false, HermesValue::encodeUndefinedValue()};
   ASSERT_FALSE(frame2.overflowed());
   // The frame should be poisoned; ensure we die after a GC.
-  EXPECT_DEATH(runtime->collect(), "Invalid");
+  EXPECT_DEATH(runtime->collect("test"), "Invalid");
 }
 #endif
 
