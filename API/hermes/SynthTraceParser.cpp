@@ -80,6 +80,9 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
   // This function should extract all fields from GCConfig that can affect
   // performance metrics. Configs for debugging can be ignored.
   ::hermes::vm::GCConfig::Builder gcconf;
+  if (!rtConfig) {
+    return gcconf;
+  }
   auto *val = rtConfig->get("gcConfig");
   if (!val) {
     return gcconf;
@@ -120,20 +123,12 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
   return gcconf;
 }
 
-::hermes::vm::RuntimeConfig::Builder getRuntimeConfig(JSONObject *root) {
-  JSONValue *val = root->get("runtimeConfig");
+::hermes::vm::RuntimeConfig::Builder getRuntimeConfig(JSONObject *rtConfig) {
   ::hermes::vm::RuntimeConfig::Builder conf;
-  if (!val) {
+  if (!rtConfig) {
     // If the config doesn't exist, return some default values.
     return conf;
   }
-  if (val->getKind() != JSONKind::Object) {
-    throw std::invalid_argument("runtimeConfig should be an object");
-  }
-  auto *rtConfig = llvh::cast<JSONObject>(val);
-
-  // It is required to pass the unittest SynthTraceTest
-  conf.withGCConfig(getGCConfig(rtConfig).build());
 
   if (auto *maxNumRegisters = rtConfig->get("maxNumRegisters")) {
     conf.withMaxNumRegisters(getNumberAs<unsigned>(maxNumRegisters));
@@ -566,10 +561,12 @@ parseSynthTrace(std::unique_ptr<llvh::MemoryBuffer> trace) {
   auto globalObjID =
       getNumberAs<SynthTrace::ObjectID>(root->get("globalObjID"));
   // Get and parse the records list.
+  JSONObject *const rtConfig =
+      llvh::cast_or_null<JSONObject>(root->get("runtimeConfig"));
   return std::make_tuple(
       getTrace(llvh::cast<JSONArray>(root->at("trace")), globalObjID),
-      getRuntimeConfig(root),
-      getGCConfig(root),
+      getRuntimeConfig(rtConfig),
+      getGCConfig(rtConfig),
       getMockedEnvironment(llvh::cast<JSONObject>(root->at("env"))));
 }
 
