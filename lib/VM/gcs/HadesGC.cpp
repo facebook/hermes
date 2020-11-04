@@ -14,7 +14,6 @@
 #include "hermes/VM/SlotAcceptorDefault.h"
 
 #include <array>
-#include <forward_list>
 #include <functional>
 #include <stack>
 
@@ -596,50 +595,25 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
     byteDrainRate_ = rate;
   }
 
-  /// Drain the mark stack of cells to be processed. This function periodically
-  /// acquires and releases oldGenMutex_ and weakRefMutex_.
-  /// \pre Should only be called for concurrent collections.
-  void drainMarkWorklist() {
-    assert(
-        kConcurrentGC &&
-        "drainMarkWorklist should only be called for concurrent GCs");
-    // Use do-while to make sure both the global worklist and the local worklist
-    // are examined at least once.
-    do {
-      // Hold the GC lock while setting mark bits. Grab it in big
-      // chunks so that we're not constantly acquiring and releasing the lock.
-      std::lock_guard<Mutex> ogLk{gc.gcMutex_};
-      std::lock_guard<Mutex> wrLk{gc.weakRefMutex()};
-      assert(
-          gc.gcMutex_.depth() == 1 && gc.weakRefMutex().depth() == 1 &&
-          "Cannot yield to YG if mutexes are held before call to drainMarkWorklist.");
-      // See the comment in setDrainRate for why the drain rate isn't used here.
-      constexpr size_t kConcurrentMarkLimit = 8192;
-      drainSomeWork(kConcurrentMarkLimit);
-      // It's ok to access localWorklist outside of the lock, since it is local
-      // memory to only this thread.
-    } while (!localWorklist_.empty());
-  }
-
-  /// Same as \c drainMarkWorklist, but assumes locks are already held, and
-  /// doesn't release them. Can be used in a non-concurrent GC, or during a STW
-  /// pause.
-  void drainMarkWorklistNoLocks() {
-    // This should only be called during a STW pause. This means no write
-    // barriers should occur, and there's no need to check the global worklist
-    // more than once.
+  /// Drain the mark stack of cells to be processed.
+  /// \post localWorklist is empty. Any flushed values in the global worklist at
+  /// the start of the call are drained.
+  void drainAllWork() {
+    // This should only be called from the mutator. This means no write barriers
+    // should occur, and there's no need to check the global worklist more than
+    // once.
     drainSomeWork(std::numeric_limits<size_t>::max());
-    assert(allWorkIsDrained() && "Some work left that wasn't completed");
+    assert(localWorklist_.empty() && "Some work left that wasn't completed");
   }
 
   /// Drains some of the worklist, using a drain rate specified by
-  /// \c setDrainRate.
-  /// \pre Should only be called for non-concurrent collections.
-  void drainSomeWork() {
-    assert(
-        !kConcurrentGC &&
-        "drainSomeWork should only be called for non-concurrent GCs");
-    drainSomeWork(byteDrainRate_);
+  /// \c setDrainRate or kConcurrentMarkLimit.
+  /// \return true if there is any remaining work in the local worklist.
+  bool drainSomeWork() {
+    // See the comment in setDrainRate for why the drain rate isn't used for
+    // concurrent collections.
+    constexpr size_t kConcurrentMarkLimit = 8192;
+    return drainSomeWork(kConcurrentGC ? kConcurrentMarkLimit : byteDrainRate_);
   }
 
   /// Drain some of the work to be done for marking.
@@ -648,9 +622,10 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
   ///   NOTE: This does *not* guarantee that the marker thread
   ///   has upper bounds on the amount of work it does before reading from the
   ///   global worklist. Any individual cell can be quite large (such as an
-  ///   ArrayStorage), which means there is a possibility of the global worklist
-  ///   filling up and blocking the mutator.
-  void drainSomeWork(const size_t markLimit) {
+  ///   ArrayStorage).
+  /// \return true if there is any remaining work in the local worklist.
+  bool drainSomeWork(const size_t markLimit) {
+    assert(gc.gcMutex_ && "Must hold the GC lock while accessing mark bits.");
     // Pull any new items off the global worklist.
     auto cells = globalWorklist_.drain();
     for (GCCell *cell : cells) {
@@ -667,6 +642,7 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
       }
     }
 
+    std::lock_guard<Mutex> wrLk{gc.weakRefMutex()};
     size_t numMarkedBytes = 0;
     while (!localWorklist_.empty() && numMarkedBytes < markLimit) {
       GCCell *const cell = localWorklist_.top();
@@ -704,14 +680,7 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
       GCBase::markCell(cell, &gc, *this);
       TsanIgnoreReadsEnd();
     }
-  }
-
-  /// \return true if there is no more work to be done for marking.
-  /// WARN: This should only be called when the mutator is paused, as
-  /// otherwise there is a race condition between reading this and new work
-  /// getting added.
-  bool allWorkIsDrained() {
-    return localWorklist_.empty() && !globalWorklist_.hasPendingWork();
+    return !localWorklist_.empty();
   }
 
   MarkWorklist &globalWorklist() {
@@ -846,13 +815,7 @@ class HadesGC::SweepIterator final {
       // In case next is called too many times.
       return false;
     }
-    // Acquire and release the lock once per loop, to allow YG collections to
-    // interrupt the sweeper.
-    // NOTE: This is called in incremental GCs as well, which is a noop.
-    std::lock_guard<Mutex> lk{gc_->gcMutex_};
-    assert(
-        gc_->gcMutex_.depth() == 1 &&
-        "Cannot yield to YG if gcMutex_ is held before call to drainMarkWorklist.");
+    assert(gc_->gcMutex_ && "gcMutex_ must be held while sweeping.");
     const bool isTracking = gc_->isTrackingIDs();
     // Re-evaluate this start point each time, as releasing the gcMutex_ allows
     // allocations into the old gen, which might boost the credited memory.
@@ -1212,23 +1175,18 @@ void HadesGC::oldGenCollection(std::string cause) {
 void HadesGC::oldGenCollectionWorker() {
   oscompat::set_thread_name("hades");
   auto cpuTimeStart = oscompat::thread_cpu_time();
-  oldGenMarker_->drainMarkWorklist();
-  waitForCompleteMarking();
-  // NOTE: Sweeper tasks could be done in parallel. If a future thread pool or
-  // event queue implementation makes it easy to do so, spawn these tasks in
-  // parallel.
-  while (sweepIterator_->next()) {
-    // Nothing to do here, next is stateful.
+  while (true) {
+    std::lock_guard<Mutex> lk(gcMutex_);
+    incrementalCollect();
+    if (concurrentPhase_ == Phase::None) {
+      // NOTE: These must be set before the lock is released. This is because
+      // the mutator might otherwise observe the change in concurrentPhase_ and
+      // attempt to reset ogCollectionStats_.
+      auto cpuTimeEnd = oscompat::thread_cpu_time();
+      ogCollectionStats_->incrementCPUTime(cpuTimeEnd - cpuTimeStart);
+      break;
+    }
   }
-  std::lock_guard<Mutex> g{gcMutex_};
-  sweepIterator_->complete();
-  sweepIterator_.reset();
-  ogCollectionStats_->setEndTime();
-  auto cpuTimeEnd = oscompat::thread_cpu_time();
-  ogCollectionStats_->incrementCPUTime(cpuTimeEnd - cpuTimeStart);
-  // TODO: Should probably check for cancellation, either via a
-  // promise/future pair or a condition variable.
-  concurrentPhase_ = Phase::None;
 }
 
 void HadesGC::incrementalCollect() {
@@ -1236,10 +1194,13 @@ void HadesGC::incrementalCollect() {
     case Phase::None:
       break;
     case Phase::Mark:
-      oldGenMarker_->drainSomeWork();
-      // If the work has finished completely, finish the collection.
-      if (oldGenMarker_->allWorkIsDrained()) {
-        completeMarking();
+      // Drain some work from the mark worklist. If the work has finished
+      // completely, finish the collection.
+      if (!oldGenMarker_->drainSomeWork()) {
+        if (!kConcurrentGC)
+          completeMarking();
+        else
+          waitForCompleteMarking();
         assert(
             concurrentPhase_ == Phase::Sweep &&
             "completeMarking should advance concurrentPhase_ to sweep");
@@ -1254,9 +1215,11 @@ void HadesGC::incrementalCollect() {
         sweepIterator_.reset();
         ogCollectionStats_->setEndTime();
         concurrentPhase_ = Phase::None;
-        // Check the tripwire here since we know the incremental collection will
-        // always end on the mutator thread.
-        checkTripwireAndResetStats();
+        if (!kConcurrentGC) {
+          // Check the tripwire here since we know the incremental collection
+          // will always end on the mutator thread.
+          checkTripwireAndResetStats();
+        }
       }
       break;
     default:
@@ -1269,13 +1232,15 @@ void HadesGC::waitForCompleteMarking() {
   assert(
       calledByBackgroundThread() &&
       "Only background thread can block waiting for STW pause.");
-  std::unique_lock<Mutex> lk{gcMutex_};
+  assert(gcMutex_);
+  std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
   stopTheWorldRequested_ = true;
   // If the mutator is in waitForCollectionToFinish, notify it that the OG
   // thread is waiting for a STW pause.
   stopTheWorldCondVar_.notify_one();
   waitForConditionVariable(
       stopTheWorldCondVar_, lk, [this] { return !stopTheWorldRequested_; });
+  lk.release();
 }
 
 void HadesGC::completeMarking() {
@@ -1287,7 +1252,7 @@ void HadesGC::completeMarking() {
   // active thread.
   oldGenMarker_->globalWorklist().flushPushChunk();
   // Drain the marking queue.
-  oldGenMarker_->drainMarkWorklistNoLocks();
+  oldGenMarker_->drainAllWork();
   assert(
       oldGenMarker_->globalWorklist().empty() &&
       "Marking worklist wasn't drained");
@@ -2219,14 +2184,14 @@ void HadesGC::completeWeakMapMarking(MarkAcceptor &acceptor) {
         acceptor.accept(valRef);
         // The weak ref lock is held throughout this entire section, so no need
         // to re-lock it.
-        acceptor.drainMarkWorklistNoLocks();
+        acceptor.drainAllWork();
         return true;
       },
       /*drainMarkStack*/
       [](MarkAcceptor &acceptor) {
         // The weak ref lock is held throughout this entire section, so no need
         // to re-lock it.
-        acceptor.drainMarkWorklistNoLocks();
+        acceptor.drainAllWork();
       },
       /*checkMarkStackOverflow (HadesGC does not have mark stack overflow)*/
       []() { return false; });

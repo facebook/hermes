@@ -642,7 +642,6 @@ class HadesGC final : public GCBase {
   /// For 32-bit systems, Hades runs on a single thread, interleaving OG work
   /// with YG collections. This function performs a single step of that
   /// collection.
-  /// \pre kConcurrentGC must be false.
   void incrementalCollect();
 
   /// Should only be called from the background thread in a concurrent GC.
