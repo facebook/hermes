@@ -680,6 +680,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(
   SMLoc declareStart = tok_->getStartLoc();
 
   if (checkAndEat(TokenKind::rw_default, JSLexer::GrammarContext::Flow)) {
+    declareStart = tok_->getStartLoc();
     if (check(TokenKind::rw_function)) {
       auto optFunc = parseDeclareFunction(declareStart);
       if (!optFunc)
@@ -703,7 +704,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(
     auto optType = parseTypeAnnotation();
     if (!optType)
       return None;
-    SMLoc end;
+    SMLoc end = (*optType)->getEndLoc();
     if (!eatSemi(end))
       return None;
     return setLocation(
@@ -735,11 +736,12 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(
             *optClass, {}, nullptr, false));
   }
 
-  if (checkAndEat(TokenKind::rw_var, JSLexer::GrammarContext::Flow)) {
+  if (check(TokenKind::rw_var)) {
+    SMLoc varStart = advance(JSLexer::GrammarContext::Flow).Start;
     auto optIdent = parseBindingIdentifier(Param{});
     if (!optIdent)
       return None;
-    SMLoc end;
+    SMLoc end = (*optIdent)->getEndLoc();
     if (!eatSemi(end))
       return None;
     return setLocation(
@@ -747,7 +749,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(
         end,
         new (context_) ESTree::DeclareExportDeclarationNode(
             setLocation(
-                start,
+                varStart,
                 end,
                 new (context_) ESTree::DeclareVariableNode(*optIdent)),
             {},
@@ -806,7 +808,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExport(
     auto optSource = parseFromClause();
     if (!optSource)
       return None;
-    SMLoc end;
+    SMLoc end = (*optSource)->getEndLoc();
     if (!eatSemi(end))
       return None;
     return setLocation(
