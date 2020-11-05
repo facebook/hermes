@@ -34,20 +34,32 @@ unsigned BytecodeFunctionGenerator::getIdentifierID(
 }
 
 uint32_t BytecodeFunctionGenerator::addRegExp(CompiledRegExp regexp) {
+  assert(
+      !complete_ &&
+      "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
   return BMGen_.addRegExp(std::move(regexp));
 }
 
 uint32_t BytecodeFunctionGenerator::addFilename(StringRef filename) {
+  assert(
+      !complete_ &&
+      "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
   return BMGen_.addFilename(filename);
 }
 
 void BytecodeFunctionGenerator::addExceptionHandler(
     HBCExceptionHandlerInfo info) {
+  assert(
+      !complete_ &&
+      "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
   exceptionHandlers_.push_back(info);
 }
 
 void BytecodeFunctionGenerator::addDebugSourceLocation(
     const DebugSourceLocation &info) {
+  assert(
+      !complete_ &&
+      "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
   // If an address is repeated, it means no actual bytecode was emitted for the
   // previous source location.
   if (!debugLocations_.empty() &&
@@ -60,6 +72,9 @@ void BytecodeFunctionGenerator::addDebugSourceLocation(
 
 void BytecodeFunctionGenerator::setJumpTable(
     std::vector<uint32_t> &&jumpTable) {
+  assert(
+      !complete_ &&
+      "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
   assert(!jumpTable.empty() && "invoked with no jump table");
 
   jumpTable_ = std::move(jumpTable);
@@ -85,6 +100,9 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
     uint32_t paramCount,
     uint32_t environmentSize,
     uint32_t nameID) {
+  if (!complete_) {
+    bytecodeGenerationComplete();
+  }
   return std::unique_ptr<BytecodeFunction>(new BytecodeFunction(
       std::move(opcodes_),
       definitionKind,

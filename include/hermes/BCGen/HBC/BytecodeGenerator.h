@@ -88,6 +88,10 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   /// The size (in bytes) of the bytecode array in this function.
   uint32_t bytecodeSize_{0};
 
+  /// Whether we are done generating this bytecode. Should be set to true by
+  /// bytecodeGenerationComplete.
+  bool complete_{false};
+
   /// Highest accessed property cache indices in this function.
   uint8_t highestReadCacheIndex_{0};
   uint8_t highestWriteCacheIndex_{0};
@@ -146,6 +150,9 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
 
   /// Set the source location of the function definition.
   void setSourceLocation(const DebugSourceLocation &location) {
+    assert(
+        !complete_ &&
+        "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
     sourceLocation_ = location;
   }
 
@@ -166,6 +173,9 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
 
   /// Add a debug variable named \name.
   void setDebugVariableNames(std::vector<Identifier> names) {
+    assert(
+        !complete_ &&
+        "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
     debugVariableNames_ = std::move(names);
   }
 
@@ -176,6 +186,9 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
 
   /// Set the lexical parent ID to \p parentId.
   void setLexicalParentID(OptValue<uint32_t> parentID) {
+    assert(
+        !complete_ &&
+        "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
     lexicalParentID_ = parentID;
   }
 
@@ -222,9 +235,15 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   }
 
   void setHighestReadCacheIndex(uint8_t sz) {
+    assert(
+        !complete_ &&
+        "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
     this->highestReadCacheIndex_ = sz;
   }
   void setHighestWriteCacheIndex(uint8_t sz) {
+    assert(
+        !complete_ &&
+        "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
     this->highestWriteCacheIndex_ = sz;
   }
 

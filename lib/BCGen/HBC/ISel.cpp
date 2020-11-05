@@ -1591,10 +1591,10 @@ void HBCISel::generate(SourceMapGenerator *outSourceMap) {
   resolveRelocations();
   resolveExceptionHandlers();
   addDebugSourceLocationInfo(outSourceMap);
-  BCFGen_->bytecodeGenerationComplete();
   generateJumpTable();
   addDebugLexicalInfo();
   populatePropertyCachingInfo();
+  BCFGen_->bytecodeGenerationComplete();
 }
 
 uint8_t HBCISel::acquirePropertyReadCacheIndex(unsigned id) {
