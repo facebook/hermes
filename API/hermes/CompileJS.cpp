@@ -20,6 +20,7 @@ bool compileJS(
     std::string &bytecode,
     bool optimize) {
   hbc::CompileFlags flags{};
+  flags.format = EmitBundle;
   flags.optimize = optimize;
 
   // Note that we are relying the zero termination provided by str.data(),

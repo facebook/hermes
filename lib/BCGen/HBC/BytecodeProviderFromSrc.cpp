@@ -52,7 +52,8 @@ bool isSingleFunctionExpression(ESTree::NodePtr ast) {
 } // namespace
 
 BCProviderFromSrc::BCProviderFromSrc(
-    std::unique_ptr<hbc::BytecodeModule> module)
+    std::unique_ptr<hbc::BytecodeModule> module,
+    CompileFlags compileFlags)
     : module_(std::move(module)) {
   options_ = module_->getBytecodeOptions();
 
@@ -78,10 +79,12 @@ BCProviderFromSrc::BCProviderFromSrc(
 
   debugInfo_ = &module_->getDebugInfo();
 
-  // Since we are executing from source, the serialization step that normally
-  // takes care of putting the jump table into the bytecode is not run and hence
-  // we do it here instead.
-  module_->inlineJumpTables();
+  if (compileFlags.format == Execute) {
+    // Since we are executing from source, the serialization step that normally
+    // takes care of putting the jump table into the bytecode is not run and
+    // hence we do it here instead.
+    module_->inlineJumpTables();
+  }
 }
 
 std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
@@ -235,13 +238,14 @@ BCProviderFromSrc::createBCProviderFromSrc(
   if (compileFlags.optimize && runOptimizationPasses)
     runOptimizationPasses(M);
 
-  BytecodeGenerationOptions opts{OutputFormatKind::Execute};
+  BytecodeGenerationOptions opts{compileFlags.format};
   opts.optimizationEnabled = compileFlags.optimize;
   opts.staticBuiltinsEnabled =
       context->getOptimizationSettings().staticBuiltins;
   opts.verifyIR = compileFlags.verifyIR;
   auto bytecode = createBCProviderFromSrc(
-      hbc::generateBytecodeModule(&M, M.getTopLevelFunction(), opts));
+      hbc::generateBytecodeModule(&M, M.getTopLevelFunction(), opts),
+      compileFlags);
   bytecode->singleFunction_ = isSingleFunctionExpression(parsed.getValue());
   return {std::move(bytecode), std::string{}};
 }

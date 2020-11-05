@@ -136,6 +136,32 @@ TEST_F(HermesRuntimeTest, PreparedJavaScriptBytecodeTest) {
   EXPECT_EQ(rt->global().getProperty(*rt, "q").getNumber(), 2);
 }
 
+TEST_F(HermesRuntimeTest, JumpTableBytecodeTest) {
+  std::string code = R"xyz(
+    (function(){
+var i = 0;
+    switch (i) {
+      case 0:
+        return 5;
+      case 1:
+      case 2:
+      case 3:
+      case 4:
+      case 5:
+      case 6:
+      case 7:
+      case 8:
+      case 9:
+    }
+})();
+)xyz";
+  std::string bytecode;
+  ASSERT_TRUE(hermes::compileJS(code, bytecode));
+  auto ret =
+      rt->evaluateJavaScript(std::make_unique<StringBuffer>(bytecode), "");
+  ASSERT_EQ(ret.asNumber(), 5.0);
+}
+
 TEST_F(HermesRuntimeTest, PreparedJavaScriptInvalidSourceThrows) {
   const char *badSource = "this is definitely not valid javascript";
   bool caught = false;
