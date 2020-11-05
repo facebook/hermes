@@ -40,26 +40,21 @@ void BytecodeModule::populateSourceMap(SourceMapGenerator *sourceMap) const {
       sourceMap, std::move(functionOffsets), segmentID_);
 }
 
-void BytecodeModule::inlineJumpTables() {
-  for (auto &f : this->getFunctionTable()) {
-    if (f->getJumpTables().empty())
-      continue;
+ArrayRef<uint32_t> BytecodeFunction::getJumpTablesOnly() const {
+  // The jump tables (if there are any) start at the nearest 4-byte boundary
+  // from the end of the opcodes.
+  uint32_t jumpTableStartIdx =
+      llvh::alignTo<sizeof(uint32_t)>(header_.bytecodeSizeInBytes);
 
-    f->inlineJumpTables();
-  }
-}
-
-void BytecodeFunction::inlineJumpTables() {
-  // pad opcode vector  to make 32bit aligned
-  while (opcodes_.size() % sizeof(uint32_t) != 0) {
-    opcodes_.push_back(0);
+  if (jumpTableStartIdx > opcodesAndJumpTables_.size()) {
+    return {};
   }
 
-  // copy in the jump tables
-  auto jmpTableStart = opcodes_.size();
-  opcodes_.resize(opcodes_.size() + jumpTables_.size() * sizeof(uint32_t));
-  memcpy(
-      opcodes_.data() + jmpTableStart,
-      jumpTables_.data(),
-      jumpTables_.size() * sizeof(uint32_t));
+  uint32_t jumpTableBytes = opcodesAndJumpTables_.size() - jumpTableStartIdx;
+  assert(jumpTableBytes % sizeof(uint32_t) == 0);
+  uint32_t jumpTableSize = jumpTableBytes / sizeof(uint32_t);
+  const uint32_t *jumpTableStart = reinterpret_cast<const uint32_t *>(
+      opcodesAndJumpTables_.data() + jumpTableStartIdx);
+
+  return {jumpTableStart, jumpTableSize};
 }

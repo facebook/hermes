@@ -52,8 +52,7 @@ bool isSingleFunctionExpression(ESTree::NodePtr ast) {
 } // namespace
 
 BCProviderFromSrc::BCProviderFromSrc(
-    std::unique_ptr<hbc::BytecodeModule> module,
-    CompileFlags compileFlags)
+    std::unique_ptr<hbc::BytecodeModule> module)
     : module_(std::move(module)) {
   options_ = module_->getBytecodeOptions();
 
@@ -78,13 +77,6 @@ BCProviderFromSrc::BCProviderFromSrc(
   cjsModuleTableStatic_ = module_->getCJSModuleTableStatic();
 
   debugInfo_ = &module_->getDebugInfo();
-
-  if (compileFlags.format == Execute) {
-    // Since we are executing from source, the serialization step that normally
-    // takes care of putting the jump table into the bytecode is not run and
-    // hence we do it here instead.
-    module_->inlineJumpTables();
-  }
 }
 
 std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
@@ -244,8 +236,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
       context->getOptimizationSettings().staticBuiltins;
   opts.verifyIR = compileFlags.verifyIR;
   auto bytecode = createBCProviderFromSrc(
-      hbc::generateBytecodeModule(&M, M.getTopLevelFunction(), opts),
-      compileFlags);
+      hbc::generateBytecodeModule(&M, M.getTopLevelFunction(), opts));
   bytecode->singleFunction_ = isSingleFunctionExpression(parsed.getValue());
   return {std::move(bytecode), std::string{}};
 }

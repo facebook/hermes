@@ -251,9 +251,7 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   void setJumpTable(std::vector<uint32_t> &&jumpTable);
 
   /// Signal that bytecode generation is finalized.
-  void bytecodeGenerationComplete() {
-    bytecodeSize_ = opcodes_.size();
-  }
+  void bytecodeGenerationComplete();
 
   friend class HBCISel;
   friend class BytecodeModuleGenerator;

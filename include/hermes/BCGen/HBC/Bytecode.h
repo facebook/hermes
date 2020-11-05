@@ -34,8 +34,15 @@ using llvh::ArrayRef;
 
 // This class represents the in-memory representation of the bytecode function.
 class BytecodeFunction {
-  /// The bytecode executable.
-  std::vector<opcode_atom_t> opcodes_;
+  /// The bytecode executable. If this function contains switch statements, then
+  /// the jump tables are also inlined in a 4-byte aligned block at the end of
+  /// this vector.
+  /// During execution, this vector can be executed directly because the vector
+  /// storage will be 4-byte aligned.
+  /// During serialisation, the jump tables and opcodes have to be separated so
+  /// that the jump tables can be realigned based on the overall bytecode
+  /// layout.
+  const std::vector<opcode_atom_t> opcodesAndJumpTables_;
 
   /// Header that stores all the metadata of this function.
   FunctionHeader header_;
@@ -49,26 +56,18 @@ class BytecodeFunction {
   /// Data to lazily compile this BytecodeFunction, if applicable.
   std::unique_ptr<LazyCompilationData> lazyCompilationData_{};
 
-  /// Jump table section. This vector consists of a jump table for each
-  /// SwitchImm instruction in the function, laid out sequentially.
-  /// Entries are jumps relative to the corresponding
-  /// SwitchImm instruction that the jump table segment belongs to.
-  std::vector<uint32_t> jumpTables_;
-
  public:
   /// Used during serialization. \p opcodes will be swapped after this call.
   explicit BytecodeFunction(
-      std::vector<opcode_atom_t> &&opcodes,
+      std::vector<opcode_atom_t> &&opcodesAndJumpTables,
       Function::DefinitionKind definitionKind,
       ValueKind valueKind,
       bool strictMode,
       FunctionHeader &&header,
-      std::vector<HBCExceptionHandlerInfo> &&exceptionHandlers,
-      std::vector<uint32_t> &&jumpTables)
-      : opcodes_(std::move(opcodes)),
+      std::vector<HBCExceptionHandlerInfo> &&exceptionHandlers)
+      : opcodesAndJumpTables_(std::move(opcodesAndJumpTables)),
         header_(std::move(header)),
-        exceptions_(std::move(exceptionHandlers)),
-        jumpTables_(std::move(jumpTables)) {
+        exceptions_(std::move(exceptionHandlers)) {
     switch (definitionKind) {
       case Function::DefinitionKind::ES6Arrow:
       case Function::DefinitionKind::ES6Method:
@@ -121,13 +120,21 @@ class BytecodeFunction {
     return header_.flags.strictMode;
   }
 
+  /// Return the entire opcode array for execution, including the inlined jump
+  /// tables.
   ArrayRef<opcode_atom_t> getOpcodeArray() const {
-    return opcodes_;
+    return opcodesAndJumpTables_;
   }
 
-  ArrayRef<uint32_t> getJumpTables() const {
-    return jumpTables_;
+  /// Return only the opcodes for serialisation. The jump tables need to be
+  /// accessed separately so they can be correctly inlined.
+  ArrayRef<opcode_atom_t> getOpcodesOnly() const {
+    return {opcodesAndJumpTables_.data(), header_.bytecodeSizeInBytes};
   }
+
+  /// Return the jump table portion of the opcode array. This is useful for the
+  /// bytecode serialisation code when it is aligning the jump tables.
+  ArrayRef<uint32_t> getJumpTablesOnly() const;
 
   bool hasExceptionHandlers() const {
     return exceptions_.size() > 0;
@@ -167,9 +174,6 @@ class BytecodeFunction {
   bool isLazy() const {
     return (bool)lazyCompilationData_;
   }
-
-  /// Inlines the jump tables (if any) into the bytecode array.
-  void inlineJumpTables();
 };
 
 // This class represents the in-memory representation of the bytecode module.
@@ -401,12 +405,6 @@ class BytecodeModule {
 
   /// Populate the source map \p sourceMap with the debug information.
   void populateSourceMap(SourceMapGenerator *sourceMap) const;
-
-  /// Jump tables are inlined into bytecode segment, however this does not
-  /// happen until serialization. If we are executing straight from source
-  /// however this step never happens, this function will inline the jump table
-  /// into the opcode vector instead.
-  void inlineJumpTables();
 
   BytecodeOptions getBytecodeOptions() const {
     return options_;

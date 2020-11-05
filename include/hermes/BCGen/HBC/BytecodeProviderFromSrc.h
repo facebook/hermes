@@ -69,9 +69,7 @@ class BCProviderFromSrc final : public BCProviderBase {
   /// Whether the module constitutes a single function
   bool singleFunction_;
 
-  explicit BCProviderFromSrc(
-      std::unique_ptr<hbc::BytecodeModule> module,
-      CompileFlags compileFlags);
+  explicit BCProviderFromSrc(std::unique_ptr<hbc::BytecodeModule> module);
 
   /// No need to do anything since it's already created as part of
   /// BytecodeModule and set to the local member.
@@ -79,10 +77,9 @@ class BCProviderFromSrc final : public BCProviderBase {
 
  public:
   static std::unique_ptr<BCProviderFromSrc> createBCProviderFromSrc(
-      std::unique_ptr<hbc::BytecodeModule> module,
-      CompileFlags compileFlags = {}) {
+      std::unique_ptr<hbc::BytecodeModule> module) {
     return std::unique_ptr<BCProviderFromSrc>(
-        new BCProviderFromSrc(std::move(module), compileFlags));
+        new BCProviderFromSrc(std::move(module)));
   }
 
   /// Creates a BCProviderFromSrc by compiling the given JavaScript.

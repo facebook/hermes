@@ -116,8 +116,7 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
           nameID,
           highestReadCacheIndex_,
           highestWriteCacheIndex_),
-      std::move(exceptionHandlers_),
-      std::move(jumpTable_)));
+      std::move(exceptionHandlers_)));
 }
 
 unsigned BytecodeFunctionGenerator::getFunctionID(Function *F) {
@@ -162,6 +161,25 @@ void BytecodeFunctionGenerator::updateJumpTableOffset(
       loc,
       opcodes_.size() + jumpTableOffset * sizeof(uint32_t) - instLoc,
       sizeof(uint32_t));
+}
+
+void BytecodeFunctionGenerator::bytecodeGenerationComplete() {
+  assert(!complete_ && "Can only call bytecodeGenerationComplete once");
+  complete_ = true;
+  bytecodeSize_ = opcodes_.size();
+
+  // Add the jump tables inline with the opcodes, as a 4-byte aligned section at
+  // the end of the opcode array.
+  if (!jumpTable_.empty()) {
+    uint32_t alignedOpcodes = llvh::alignTo<sizeof(uint32_t)>(bytecodeSize_);
+    uint32_t jumpTableBytes = jumpTable_.size() * sizeof(uint32_t);
+    opcodes_.reserve(alignedOpcodes + jumpTableBytes);
+    opcodes_.resize(alignedOpcodes, 0);
+    const opcode_atom_t *jumpTableStart =
+        reinterpret_cast<opcode_atom_t *>(jumpTable_.data());
+    opcodes_.insert(
+        opcodes_.end(), jumpTableStart, jumpTableStart + jumpTableBytes);
+  }
 }
 
 unsigned BytecodeModuleGenerator::addFunction(Function *F) {

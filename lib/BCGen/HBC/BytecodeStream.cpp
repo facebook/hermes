@@ -165,8 +165,7 @@ void BytecodeSerializer::serializeDebugOffsets(BytecodeFunction &BF) {
 // ============================ Function ============================
 void BytecodeSerializer::serializeFunctionsBytecode(BytecodeModule &BM) {
   // Map from opcodes and jumptables to offsets, used to deduplicate bytecode.
-  using DedupKey =
-      std::pair<llvh::ArrayRef<opcode_atom_t>, llvh::ArrayRef<uint32_t>>;
+  using DedupKey = llvh::ArrayRef<opcode_atom_t>;
   llvh::DenseMap<DedupKey, uint32_t> bcMap;
   for (auto &entry : BM.getFunctionTable()) {
     if (options_.optimizationEnabled) {
@@ -174,8 +173,7 @@ void BytecodeSerializer::serializeFunctionsBytecode(BytecodeModule &BM) {
       bool reuse = false;
       if (isLayout_) {
         // Deduplicate the bytecode during layout phase.
-        DedupKey key =
-            std::make_pair(entry->getOpcodeArray(), entry->getJumpTables());
+        DedupKey key = entry->getOpcodeArray();
         auto pair = bcMap.insert(std::make_pair(key, loc_));
         if (!pair.second) {
           reuse = true;
@@ -198,15 +196,15 @@ void BytecodeSerializer::serializeFunctionsBytecode(BytecodeModule &BM) {
     }
 
     // Serialize opcodes.
-    writeBinaryArray(entry->getOpcodeArray());
+    writeBinaryArray(entry->getOpcodesOnly());
 
     // Serialize any jump table after the opcode block.
-    if (!entry->getJumpTables().empty()) {
+    if (!entry->getJumpTablesOnly().empty()) {
       pad(sizeof(uint32_t));
-      writeBinaryArray(entry->getJumpTables());
+      writeBinaryArray(entry->getJumpTablesOnly());
     }
     if (options_.padFunctionBodiesPercent) {
-      size_t size = entry->getOpcodeArray().size();
+      size_t size = entry->getOpcodesOnly().size();
       size = (size * options_.padFunctionBodiesPercent) / 100;
       while (size--)
         writeBinary('\0');
