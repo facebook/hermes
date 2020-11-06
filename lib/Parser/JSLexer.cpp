@@ -39,6 +39,24 @@ const char *tokenKindStr(TokenKind kind) {
   assert(kind <= TokenKind::_last_token);
   return g_tokenStr[static_cast<unsigned>(kind)];
 }
+
+#if HERMES_PARSE_JSX
+static llvh::DenseMap<StringRef, uint32_t> initializeHTMLEntities() {
+  llvh::DenseMap<StringRef, uint32_t> entities{};
+
+#define HTML_ENTITY(NAME, VALUE) \
+  entities.insert({llvh::StringLiteral(#NAME), VALUE});
+#include "hermes/Parser/HTMLEntities.def"
+
+  return entities;
+}
+
+static const llvh::DenseMap<StringRef, uint32_t> &getHTMLEntities() {
+  static const auto entities = initializeHTMLEntities();
+  return entities;
+}
+#endif
+
 JSLexer::JSLexer(
     uint32_t bufId,
     SourceErrorManager &sm,
@@ -50,6 +68,9 @@ JSLexer::JSLexer(
       allocator_(allocator),
       ownStrTab_(strTab ? nullptr : new StringTable(allocator_)),
       strTab_(strTab ? *strTab : *ownStrTab_),
+#if HERMES_PARSE_JSX
+      htmlEntities_(getHTMLEntities()),
+#endif
       strictMode_(strictMode),
       convertSurrogates_(convertSurrogates) {
   initializeWithBufferId(bufId);
@@ -67,6 +88,9 @@ JSLexer::JSLexer(
       allocator_(allocator),
       ownStrTab_(strTab ? nullptr : new StringTable(allocator_)),
       strTab_(strTab ? *strTab : *ownStrTab_),
+#if HERMES_PARSE_JSX
+      htmlEntities_(getHTMLEntities()),
+#endif
       strictMode_(strictMode),
       convertSurrogates_(convertSurrogates) {
   auto bufId = sm_.addNewSourceBuffer(std::move(input));
@@ -593,6 +617,8 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
   return &token_;
 }
 
+#if HERMES_PARSE_JSX
+
 const Token *JSLexer::advanceInJSXChild() {
   token_.setStart(curCharPtr_);
   for (;;) {
@@ -610,18 +636,28 @@ const Token *JSLexer::advanceInJSXChild() {
         LLVM_FALLTHROUGH;
 
       default: {
-        token_.setStart(curCharPtr_);
-        // FIXME: Cook rawStorage_ into a value using XHTML entities.
-        rawStorage_.clear();
+        const char *start = curCharPtr_;
+        token_.setStart(start);
+
+        // Build up cooked value using XHTML entities
+        tmpStorage_.clear();
         for (;;) {
           char c = *curCharPtr_;
-          if ((c == 0 && curCharPtr_ == bufferEnd_) || c == '{' || c == '<') {
+
+          if (c == '&') {
+            auto codePoint = consumeHTMLEntityOptional();
+            if (codePoint.hasValue()) {
+              appendUnicodeToStorage(*codePoint);
+              continue;
+            }
+          } else if (
+              (c == 0 && curCharPtr_ == bufferEnd_) || c == '{' || c == '<') {
             token_.setJSXText(
-                getStringLiteral(rawStorage_.str()),
-                getStringLiteral(rawStorage_.str()));
+                getStringLiteral(tmpStorage_.str()),
+                getStringLiteral(StringRef(start, curCharPtr_ - start)));
             break;
           }
-          rawStorage_.push_back(c);
+          tmpStorage_.push_back(c);
           ++curCharPtr_;
         }
         break;
@@ -634,6 +670,106 @@ const Token *JSLexer::advanceInJSXChild() {
   token_.setEnd(curCharPtr_);
   return &token_;
 }
+
+llvh::Optional<uint32_t> JSLexer::consumeHTMLEntityOptional() {
+  assert(*curCharPtr_ == '&');
+  const char *start = curCharPtr_;
+
+  if (curCharPtr_[1] == '#') {
+    if (curCharPtr_[2] == 'x') {
+      // HTML entity with form &#xHEX>;
+      curCharPtr_ += 3;
+      const char *numberStart = curCharPtr_;
+
+      uint32_t codePoint = 0;
+      char ch = *curCharPtr_;
+
+      // Calculate code point from non-empty sequence of hex digits followed by
+      // a semicolon.
+      for (;;) {
+        if (ch == ';' && curCharPtr_ != numberStart) {
+          curCharPtr_++;
+          return codePoint;
+        } else if (isdigit(ch)) {
+          ch -= '0';
+        } else {
+          ch |= 32;
+          if (ch >= 'a' && ch <= 'f') {
+            ch -= 'a' - 10;
+          } else {
+            break;
+          }
+        }
+
+        // Check that this number is representable as a code point
+        codePoint = (codePoint << 4) + ch;
+        if (codePoint > UNICODE_MAX_VALUE) {
+          break;
+        }
+
+        ++curCharPtr_;
+        ch = *curCharPtr_;
+      }
+    } else {
+      // HTML entity with form &#NUMBER;
+      curCharPtr_ += 2;
+      const char *numberStart = curCharPtr_;
+
+      uint32_t codePoint = 0;
+      char ch = *curCharPtr_;
+
+      // Calculate code point from non-empty sequence of decimal digits followed
+      // by a semicolon.
+      for (;;) {
+        if (ch == ';' && curCharPtr_ != numberStart) {
+          curCharPtr_++;
+          return codePoint;
+        } else if (isdigit(ch)) {
+          // Check that this number is representable as a code point
+          codePoint = codePoint * 10 + (ch - '0');
+          if (codePoint > UNICODE_MAX_VALUE) {
+            break;
+          }
+        } else {
+          break;
+        }
+
+        ++curCharPtr_;
+        ch = *curCharPtr_;
+      }
+    }
+  } else {
+    // HTML entity with form &NAME;
+    ++curCharPtr_;
+
+    // Gather HTML entity name and lookup name in table. HTML entity names are
+    // composed of a sequence of up to 8 alphanumeric characters followed by a
+    // semicolon. To minimize backtracking due to an `&` without a following
+    // semicolon we only need to look at most 9 characters ahead (8 for the
+    // name, 1 for the semicolon).
+    for (int i = 0; i < 9; i++) {
+      char ch = *curCharPtr_;
+      if (ch == ';') {
+        auto it = htmlEntities_.find(StringRef(curCharPtr_ - i, i));
+        if (it == htmlEntities_.end()) {
+          break;
+        }
+
+        curCharPtr_++;
+        return it->second;
+      } else if (((ch | 32) >= 'a' && (ch | 32) <= 'z') || isdigit(ch)) {
+        ++curCharPtr_;
+      } else {
+        break;
+      }
+    }
+  }
+
+  curCharPtr_ = start;
+  return llvh::None;
+}
+
+#endif
 
 bool JSLexer::isCurrentTokenADirective() {
   // The current token must be a string literal without escapes.
@@ -1663,6 +1799,15 @@ void JSLexer::scanString() {
         sm_.note(token_.getStartLoc(), "string started here");
         break;
       }
+#if HERMES_PARSE_JSX
+    } else if (LLVM_UNLIKELY(JSX && *curCharPtr_ == '&')) {
+      auto codePoint = consumeHTMLEntityOptional();
+      if (codePoint.hasValue()) {
+        appendUnicodeToStorage(*codePoint);
+      } else {
+        tmpStorage_.push_back(*curCharPtr_++);
+      }
+#endif
     } else if (LLVM_UNLIKELY(*curCharPtr_ == 0 && curCharPtr_ == bufferEnd_)) {
       error(SMLoc::getFromPointer(curCharPtr_), "non-terminated string");
       sm_.note(token_.getStartLoc(), "string started here");

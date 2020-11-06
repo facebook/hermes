@@ -327,6 +327,11 @@ class JSLexer {
 
   StringTable &strTab_;
 
+#if HERMES_PARSE_JSX
+  /// Table of HTML entity names to their corresponding unicode code point.
+  const llvh::DenseMap<StringRef, uint32_t> &htmlEntities_;
+#endif
+
   bool strictMode_;
 
   /// Whether to store the comments instead of skipping them.
@@ -478,9 +483,11 @@ class JSLexer {
   /// \param grammarContext determines "/", "/=", regexp, and JSX identifiers.
   const Token *advance(GrammarContext grammarContext = AllowRegExp);
 
+#if HERMES_PARSE_JSX
   /// Consume the current token and scan a new one inside a JSX child.
   /// This scans JSXText or one of the punctuators: {, <, >, }.
   const Token *advanceInJSXChild();
+#endif
 
   /// Check whether the current token is a directive, in other words is it a
   /// string literal without escapes or new line continuations, followed by
@@ -718,6 +725,19 @@ class JSLexer {
   /// be updated to point after the closing }.
   /// \return the resultant number on success, None on failure.
   llvh::Optional<uint32_t> consumeBracedCodePoint(bool errorOnFail = true);
+
+#if HERMES_PARSE_JSX
+  /// Decode an HTML entity in the form "&NAME;", "&#NUMBER;", or "&xHEX;".
+  ///
+  /// \ref curCharPtr_  must point to the ampersand at the start of the entity.
+  /// It will be updated to point to the first character after the semicolon. On
+  /// failure, curCharPtr_ will be reset to where it was when the function was
+  /// called.
+  ///
+  /// \return the resultant code point on success, None on failure if the
+  /// ampersand is not the start of an HTML entity.
+  llvh::Optional<uint32_t> consumeHTMLEntityOptional();
+#endif
 
   /// Skip until after the end of the line terminating the line or hashbang
   /// comment.
