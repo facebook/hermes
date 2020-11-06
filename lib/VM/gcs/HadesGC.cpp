@@ -50,23 +50,15 @@ AllocResult HadesGC::HeapSegment::bumpAlloc(uint32_t sz) {
   return AlignedHeapSegment::alloc(sz);
 }
 
-void HadesGC::OldGen::addCellToFreelist(GCCell *cell, size_t segmentIdx) {
-  addCellToFreelist(
-      cell, cell->getAllocatedSize(), segmentIdx, /*alreadyFree*/ false);
-}
-
 void HadesGC::OldGen::addCellToFreelist(
     void *addr,
     uint32_t sz,
-    size_t segmentIdx,
-    bool alreadyFree) {
+    size_t segmentIdx) {
   assert(
       sz >= sizeof(FreelistCell) &&
       "Cannot construct a FreelistCell into an allocation in the OG");
-  if (!alreadyFree) {
-    incrementAllocatedBytes(-static_cast<int32_t>(sz), segmentIdx);
-  }
   FreelistCell *newFreeCell = new (addr) FreelistCell{sz};
+  HeapSegment::setCellHead(static_cast<GCCell *>(addr), sz);
   addCellToFreelist(newFreeCell, segmentIdx);
 }
 
@@ -157,15 +149,22 @@ GCCell *HadesGC::HeapSegment::getFirstCellHead(size_t cardIdx) {
 }
 
 template <typename CallbackFunction>
-void HadesGC::HeapSegment::forAllObjs(CallbackFunction callback) {
+void HadesGC::HeapSegment::forAllCells(CallbackFunction callback) {
   void *const stop = level();
   for (GCCell *cell = reinterpret_cast<GCCell *>(start()); cell < stop;
        cell = cell->nextCell()) {
+    callback(cell);
+  }
+}
+
+template <typename CallbackFunction>
+void HadesGC::HeapSegment::forAllObjs(CallbackFunction callback) {
+  forAllCells([callback](GCCell *cell) {
     // Skip free-list entries.
     if (!vmisa<OldGen::FreelistCell>(cell)) {
       callback(cell);
     }
-  }
+  });
 }
 
 template <typename CallbackFunction>
@@ -826,27 +825,59 @@ class HadesGC::SweepIterator final {
     // Re-evaluate this start point each time, as releasing the gcMutex_ allows
     // allocations into the old gen, which might boost the credited memory.
     const uint64_t externalBytesBefore = gc_->oldGen_.externalBytes();
-    gc_->oldGen_[segNumber_].forAllObjs([this, isTracking](GCCell *cell) {
-      // forAllObjs skips free list cells, so no need to check for those.
-      assert(cell->isValid() && "Invalid cell in sweeping");
-      if (HeapSegment::getCellMarkBit(cell)) {
-        return;
-      }
-      const auto sz = cell->getAllocatedSize();
-      sweptBytes_ += sz;
-      // Cell is dead, run its finalizer first if it has one.
-      cell->getVT()->finalizeIfExists(cell, gc_);
-      gc_->oldGen_.addCellToFreelist(cell, segNumber_);
-      if (isTracking) {
-        // FIXME: There could be a race condition here if newAlloc is being
-        // called at the same time and using a shared data structure with
-        // freeAlloc.
-        // freeAlloc relies on the ID, so call it before untrackObject.
-        gc_->getAllocationLocationTracker().freeAlloc(cell, sz);
-        gc_->getIDTracker().untrackObject(cell);
-      }
-    });
 
+    gc_->oldGen_.clearFreelistForSegment(segNumber_);
+    char *freeRangeStart = nullptr, *freeRangeEnd = nullptr;
+    int32_t segmentSweptBytes = 0;
+    gc_->oldGen_[segNumber_].forAllCells(
+        [this, isTracking, &freeRangeStart, &freeRangeEnd, &segmentSweptBytes](
+            GCCell *cell) {
+          // forAllObjs skips free list cells, so no need to check for those.
+          assert(cell->isValid() && "Invalid cell in sweeping");
+          if (HeapSegment::getCellMarkBit(cell)) {
+            return;
+          }
+
+          const auto sz = cell->getAllocatedSize();
+          char *const cellCharPtr = reinterpret_cast<char *>(cell);
+
+          if (freeRangeEnd != cellCharPtr) {
+            assert(
+                freeRangeEnd < cellCharPtr &&
+                "Should not overshoot the start of an object");
+            // We are starting a new free range, flush the previous one.
+            if (LLVM_LIKELY(freeRangeStart))
+              gc_->oldGen_.addCellToFreelist(
+                  freeRangeStart, freeRangeEnd - freeRangeStart, segNumber_);
+            freeRangeEnd = freeRangeStart = cellCharPtr;
+          }
+          // Expand the current free range to include the current cell.
+          freeRangeEnd += sz;
+
+          if (cell->getKind() == CellKind::FreelistKind)
+            return;
+
+          segmentSweptBytes += sz;
+          // Cell is dead, run its finalizer first if it has one.
+          cell->getVT()->finalizeIfExists(cell, gc_);
+          if (isTracking) {
+            // FIXME: There could be a race condition here if newAlloc is
+            // being called at the same time and using a shared data structure
+            // with freeAlloc. freeAlloc relies on the ID, so call it before
+            // untrackObject.
+            gc_->getAllocationLocationTracker().freeAlloc(cell, sz);
+            gc_->getIDTracker().untrackObject(cell);
+          }
+        });
+
+    // Flush any free range that was left over.
+    if (freeRangeStart) {
+      gc_->oldGen_.addCellToFreelist(
+          freeRangeStart, freeRangeEnd - freeRangeStart, segNumber_);
+    }
+    // Correct the allocated byte count.
+    gc_->oldGen_.incrementAllocatedBytes(-segmentSweptBytes, segNumber_);
+    sweptBytes_ += segmentSweptBytes;
     sweptExternalBytes_ += externalBytesBefore - gc_->oldGen_.externalBytes();
     return ++segNumber_ != numSegments_;
   }
@@ -2345,8 +2376,7 @@ void HadesGC::OldGen::addSegment(std::unique_ptr<HeapSegment> seg) {
   if (sz >= minAllocationSize()) {
     auto res = newSeg.bumpAlloc(sz);
     assert(res.success);
-    HeapSegment::setCellHead(static_cast<GCCell *>(res.ptr), sz);
-    addCellToFreelist(res.ptr, sz, newSegIdx, /*alreadyFree*/ true);
+    addCellToFreelist(res.ptr, sz, segments_.size() - 1);
   }
 
   gc_->addSegmentExtentToCrashManager(

@@ -248,7 +248,9 @@ class HadesGC final : public GCBase {
     GCCell *getFirstCellHead(const size_t cardIdx);
 
     /// Call \p callback on every cell allocated in this segment.
-    /// NOTE: Overridden to skip free list entries.
+    template <typename CallbackFunction>
+    void forAllCells(CallbackFunction callback);
+    /// Call \p callback on every non-freelist cell allocated in this segment.
     template <typename CallbackFunction>
     void forAllObjs(CallbackFunction callback);
     template <typename CallbackFunction>
@@ -287,18 +289,8 @@ class HadesGC final : public GCBase {
     /// \post This function either successfully allocates, or reports OOM.
     GCCell *alloc(uint32_t sz);
 
-    /// Adds the given cell to the free list for this segment.
-    /// \pre this->contains(cell) is true.
-    void addCellToFreelist(GCCell *cell, size_t segmentIdx);
-
-    /// Version of addCellToFreelist when nothing is initialized at the address
-    /// yet.
-    /// \param alreadyFree If true, this location is not currently allocated.
-    void addCellToFreelist(
-        void *addr,
-        uint32_t sz,
-        size_t segmentIdx,
-        bool alreadyFree);
+    /// Adds the given region of memory to the free list for this segment.
+    void addCellToFreelist(void *addr, uint32_t sz, size_t segmentIdx);
 
     /// \return the total number of bytes that are in use by the OG section of
     /// the JS heap, excluding free list entries.
