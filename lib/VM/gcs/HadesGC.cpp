@@ -35,9 +35,10 @@ HadesGC::HeapSegment::HeapSegment(AlignedStorage &&storage)
   growToLimit();
 }
 
-GCCell *HadesGC::OldGen::finishAlloc(GCCell *cell, uint32_t sz) {
+GCCell *
+HadesGC::OldGen::finishAlloc(GCCell *cell, uint32_t sz, uint16_t segmentIdx) {
   // Track the number of allocated bytes in a segment.
-  allocatedBytes_ += sz;
+  incrementAllocatedBytes(sz, segmentIdx);
   // Write a mark bit so this entry doesn't get free'd by the sweeper.
   HeapSegment::setCellMarkBit(cell);
   // Could overwrite the VTable, but the allocator will write a new one in
@@ -63,11 +64,7 @@ void HadesGC::OldGen::addCellToFreelist(
       sz >= sizeof(FreelistCell) &&
       "Cannot construct a FreelistCell into an allocation in the OG");
   if (!alreadyFree) {
-    // We free'd this many bytes.
-    assert(
-        allocatedBytes_ >= sz &&
-        "Free'ing a cell that is larger than what is left allocated");
-    allocatedBytes_ -= sz;
+    incrementAllocatedBytes(-static_cast<int32_t>(sz), segmentIdx);
   }
   FreelistCell *newFreeCell = new (addr) FreelistCell{sz};
   addCellToFreelist(newFreeCell, segmentIdx);
@@ -1737,7 +1734,7 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
       assert(
           cell->getAllocatedSize() == sz &&
           "Size bucket should be an exact match");
-      return finishAlloc(cell, sz);
+      return finishAlloc(cell, sz, segmentIdx);
     }
     // Make sure we start searching at the smallest possible size that could fit
     bucket = getFreelistBucket(sz + minAllocationSize());
@@ -1784,11 +1781,11 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
           // freelist, newCell is still poisoned (regardless of whether the
           // conditional above executed). Unpoison it.
           __asan_unpoison_memory_region(newCell, sz);
-          return finishAlloc(newCell, sz);
+          return finishAlloc(newCell, sz, segmentIdx);
         } else if (cellSize == sz) {
           // Exact match, take it.
           removeCellFromFreelist(prevLoc, bucket, segmentIdx);
-          return finishAlloc(cell, sz);
+          return finishAlloc(cell, sz, segmentIdx);
         }
         // Non-exact matches, or anything just barely too small to fit, will
         // need to find another block.
@@ -2218,6 +2215,22 @@ uint64_t HadesGC::OldGen::allocatedBytes() const {
   return allocatedBytes_;
 }
 
+uint64_t HadesGC::OldGen::allocatedBytes(uint16_t segmentIdx) const {
+  return segmentAllocatedBytes_[segmentIdx];
+}
+
+void HadesGC::OldGen::incrementAllocatedBytes(
+    int32_t incr,
+    uint16_t segmentIdx) {
+  assert(segmentIdx < numSegments());
+  allocatedBytes_ += incr;
+  segmentAllocatedBytes_[segmentIdx] += incr;
+  assert(
+      allocatedBytes_ <= size() &&
+      segmentAllocatedBytes_[segmentIdx] <= HeapSegment::maxSize() &&
+      "Invalid increment");
+}
+
 uint64_t HadesGC::OldGen::externalBytes() const {
   return externalBytes_;
 }
@@ -2306,10 +2319,12 @@ std::unique_ptr<HadesGC::HeapSegment> HadesGC::createSegment(bool isYoungGen) {
 }
 
 void HadesGC::OldGen::addSegment(std::unique_ptr<HeapSegment> seg) {
+  uint16_t newSegIdx = segments_.size();
+  reserveSegments(newSegIdx + 1);
   segments_.emplace_back(std::move(seg));
+  segmentAllocatedBytes_.push_back(0);
   HeapSegment &newSeg = *segments_.back();
-  allocatedBytes_ += newSeg.used();
-  reserveSegments(segments_.size());
+  incrementAllocatedBytes(newSeg.used(), newSegIdx);
   // Add a set of freelist buckets for this segment.
   freelistSegmentsBuckets_.emplace_back();
   assert(
@@ -2322,7 +2337,7 @@ void HadesGC::OldGen::addSegment(std::unique_ptr<HeapSegment> seg) {
     auto res = newSeg.bumpAlloc(sz);
     assert(res.success);
     HeapSegment::setCellHead(static_cast<GCCell *>(res.ptr), sz);
-    addCellToFreelist(res.ptr, sz, segments_.size() - 1, /*alreadyFree*/ true);
+    addCellToFreelist(res.ptr, sz, newSegIdx, /*alreadyFree*/ true);
   }
 
   gc_->addSegmentExtentToCrashManager(

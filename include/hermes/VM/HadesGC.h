@@ -304,6 +304,15 @@ class HadesGC final : public GCBase {
     /// the JS heap, excluding free list entries.
     uint64_t allocatedBytes() const;
 
+    /// \return the total number of bytes that are in use by the segment with
+    /// index \p segmentIdx in the OG section of the JS heap, excluding free
+    /// list entries.
+    uint64_t allocatedBytes(uint16_t segmentIdx) const;
+
+    /// Increase the allocated bytes tracker for the segment at index \p
+    /// segmentIdx;
+    void incrementAllocatedBytes(int32_t incr, uint16_t segmentIdx);
+
     /// \return the total number of bytes that are held in external memory, kept
     /// alive by objects in the OG.
     uint64_t externalBytes() const;
@@ -404,6 +413,8 @@ class HadesGC final : public GCBase {
     /// bump-allocated segments.
     uint64_t allocatedBytes_{0};
 
+    std::vector<uint32_t> segmentAllocatedBytes_;
+
     /// Tracks the average survival ratio over time of the OG.
     ExponentialMovingAverage averageSurvivalRatio_;
 
@@ -464,7 +475,9 @@ class HadesGC final : public GCBase {
     /// \param cell The free memory that will soon have an object allocated into
     ///   it.
     /// \param sz The number of bytes associated with the free memory.
-    GCCell *finishAlloc(GCCell *cell, uint32_t sz);
+    /// \param segmentIdx An index into segments_ representing which segment the
+    /// allocation is being made in.
+    GCCell *finishAlloc(GCCell *cell, uint32_t sz, uint16_t segmentIdx);
   };
 
  private:
