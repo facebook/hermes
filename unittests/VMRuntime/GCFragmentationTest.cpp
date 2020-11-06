@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 #include "gtest/gtest.h"
 
 #include "EmptyCell.h"
@@ -52,7 +51,53 @@ MetadataTableForTests getMetadataTable() {
   return MetadataTableForTests(storage);
 }
 
-TEST(GCFragmentationNCTest, Test) {
+TEST(GCFragmentationTest, TestCoalescing) {
+  // Fill the heap with increasingly larger cells, in order to test
+  // defragmentation code.
+  static const size_t kNumSegments = 3;
+  static const size_t kHeapSize = AlignedHeapSegment::maxSize() * kNumSegments;
+  static const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSize);
+
+  auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);
+  DummyRuntime &rt = *runtime;
+
+  using SixteenthCell = EmptyCell<AlignedHeapSegment::maxSize() / 16>;
+  using EighthCell = EmptyCell<AlignedHeapSegment::maxSize() / 8>;
+  using QuarterCell = EmptyCell<AlignedHeapSegment::maxSize() / 4>;
+
+  {
+    GCScope scope(&rt);
+    for (size_t i = 0; i < 16 * kNumSegments; i++)
+      rt.makeHandle(SixteenthCell::create(rt));
+  }
+
+  // Hades needs a manually triggered full collection, since full collections
+  // are started at the end of a YG GC.
+#ifdef HERMESVM_GC_HADES
+  rt.collect();
+#endif
+
+  {
+    GCScope scope(&rt);
+    for (size_t i = 0; i < 8 * kNumSegments; i++)
+      rt.makeHandle(EighthCell::create(rt));
+  }
+
+  rt.pointerRoots.clear();
+
+#ifdef HERMESVM_GC_HADES
+  rt.collect();
+#endif
+
+  {
+    GCScope scope(&rt);
+    for (size_t i = 0; i < 4 * kNumSegments; i++)
+      rt.makeHandle(QuarterCell::create(rt));
+  }
+}
+
+#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
+TEST(GCFragmentationTest, Test) {
   // Ensure that the heap will be big enough for the YoungGen to accommodate its
   // full size and add some overhang on the end to make the size of OldGen's
   // last segment occupy less than a full segment, if the heap was exactly the
@@ -124,8 +169,8 @@ TEST(GCFragmentationNCTest, Test) {
   }
 }
 
-TEST(GCFragmentationNCTest, ExternalMemoryTest) {
-  // This is another version of GCFragmentationNCTest.Test.  It illustrates a
+TEST(GCFragmentationTest, ExternalMemoryTest) {
+  // This is another version of GCFragmentationTest.Test.  It illustrates a
   // problem with an early version of external memory accounting in GenGCNC.cpp:
   // the external memory charge can make use part of the last segment, thus
   // allowing fragmentation-based allocation failure.
@@ -206,7 +251,5 @@ TEST(GCFragmentationNCTest, ExternalMemoryTest) {
     EXPECT_EQ(1, gc.numFullGCs());
   }
 }
-
-} // namespace
-
 #endif // HERMESVM_GC_NONCONTIG_GENERATIONAL
+} // namespace

@@ -70,6 +70,7 @@ HERMES_VM_GCOBJECT(JSProxy);
 HERMES_VM_GCOBJECT(JSCallableProxy);
 HERMES_VM_GCOBJECT(DecoratedObject);
 HERMES_VM_GCOBJECT(HostObject);
+HERMES_VM_GCOBJECT(SegmentedArray);
 #ifdef UNIT_TEST
 HERMES_VM_GCOBJECT(TestCell);
 #endif
@@ -109,12 +110,13 @@ class BufferedStringPrimitive;
 template <typename T>
 struct IsGCObject<BufferedStringPrimitive<T>> : public std::true_type {};
 
+template <size_t Size>
+struct EmptyCell;
+template <size_t Size>
+struct IsGCObject<EmptyCell<Size>> : public std::true_type {};
+
 template <typename T, bool isGCObject = IsGCObject<T>::value>
 struct HermesValueTraits;
-
-class SegmentedArray;
-template <>
-struct IsGCObject<SegmentedArray> : public std::true_type {};
 
 template <>
 struct HermesValueTraits<HermesValue> {

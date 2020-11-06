@@ -26,7 +26,7 @@ set(RTSources
   Footprint.cpp
   GCBasicsTest.cpp
   GCFinalizerTest.cpp
-  GCFragmentationNCTest.cpp
+  GCFragmentationTest.cpp
   GCGuardPageNCTest.cpp
   GCInitTest.cpp
   GCLazySegmentNCTest.cpp
