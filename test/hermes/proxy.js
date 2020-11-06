@@ -2179,5 +2179,16 @@ for (var b in new Proxy([], {
   getOwnPropertyDescriptor: Reflect.getOwnPropertyDescriptor,
 })) {}
 
+// Test when the trap get revokes the proxy.
+var {
+  proxy,
+  revoke
+} = Proxy.revocable({}, new Proxy({}, {
+  get(t, k, r) {
+    revoke();
+  }
+}));
+Object.getPrototypeOf(proxy);
+
 print('done');
 // CHECK-LABEL: done
