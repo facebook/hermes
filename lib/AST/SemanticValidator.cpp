@@ -548,17 +548,19 @@ void SemanticValidator::visit(ExportDefaultDeclarationNode *exportDecl) {
     if (!funcDecl->_id) {
       // If the default function declaration has no name, then change it to a
       // FunctionExpression node for cleaner IRGen.
-      exportDecl->_declaration =
-          new (astContext_) ESTree::FunctionExpressionNode(
-              funcDecl->_id,
-              std::move(funcDecl->_params),
-              funcDecl->_body,
-              funcDecl->_typeParameters,
-              funcDecl->_returnType,
-              funcDecl->_predicate,
-              funcDecl->_generator,
-              /* async */ false);
-      exportDecl->_declaration->copyLocationFrom(funcDecl);
+      auto *funcExpr = new (astContext_) ESTree::FunctionExpressionNode(
+          funcDecl->_id,
+          std::move(funcDecl->_params),
+          funcDecl->_body,
+          funcDecl->_typeParameters,
+          funcDecl->_returnType,
+          funcDecl->_predicate,
+          funcDecl->_generator,
+          /* async */ false);
+      funcExpr->strictness = funcDecl->strictness;
+      funcExpr->copyLocationFrom(funcDecl);
+
+      exportDecl->_declaration = funcExpr;
     }
   }
 
