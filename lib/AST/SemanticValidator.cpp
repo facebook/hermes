@@ -461,6 +461,7 @@ void SemanticValidator::visit(SpreadElementNode *S, Node *parent) {
   if (!isa<ESTree::ObjectExpressionNode>(parent) &&
       !isa<ESTree::ArrayExpressionNode>(parent) &&
       !isa<ESTree::CallExpressionNode>(parent) &&
+      !isa<ESTree::OptionalCallExpressionNode>(parent) &&
       !isa<ESTree::NewExpressionNode>(parent))
     sm_.error(S->getSourceRange(), "spread operator is not supported");
   visitESTreeChildren(*this, S);
