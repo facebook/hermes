@@ -30,10 +30,41 @@ p = Promise.resolve(1)
 p.foo = 1; p;
 // CHECK-NEXT: Promise <fulfilled: 1> { foo: 1 }
 
+"Promise adoption"
+// CHECK-LABEL: "Promise adoption"
+
+new Promise((res) => { res(Promise.resolve(1)) })
+// CHECK-NEXT: Promise <fulfilled: 1>
+
+new Promise((res) => {
+    res(
+        new Promise((res) => { res(Promise.resolve(1)) })
+    )
+})
+// CHECK-NEXT: Promise <fulfilled: 1>
+
+new Promise((res, rej) => { rej(Promise.resolve(1)) })
+// CHECK-NEXT: Promise <rejected: Promise <fulfilled: 1>>
+
+new Promise((res, rej) => {
+    rej(
+        new Promise((res) => { res(Promise.resolve(1)) })
+    )
+})
+// CHECK-NEXT: Promise <rejected: Promise <fulfilled: 1>>
+
+
+"User-space Promise"
+// CHECK-LABEL: "User-space Promise"
+
 // User space Promise can override w/o problems and not break ours
+// NO Hermes Promise testing should go below here.
+
 p = Promise.resolve(1)
 // CHECK-NEXT: Promise <fulfilled: 1>
 function Promise() { this.foo = 'foo' }; new Promise();
 // CHECK-NEXT: Promise { foo: "foo" }
 p;
 // CHECK-NEXT: Promise <fulfilled: 1>
+
+

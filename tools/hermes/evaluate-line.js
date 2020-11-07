@@ -60,6 +60,46 @@ C_STRING((function() {
     return String(value);
   }
 
+  function prettyPrintPromise(value, visited) {
+    var internalColor = colors.cyan;
+    var internals = "";
+    switch(value['_i']) {
+      case 0:
+        internals = "<pending>";
+        break;
+      case 1:
+        internals = "<fulfilled: " + colors.reset +
+            prettyPrintRec(value['_j'], visited) +
+            internalColor + ">";
+        break;
+      case 2:
+        internals = "<rejected: " + colors.reset +
+            prettyPrintRec(value['_j'], visited) +
+            internalColor + ">";
+        break;
+      case 3:
+        // the case of an "adopted" promise; print the adoptee promise instead.
+        return prettyPrintPromise(value['_j'], visited);
+      default:
+        break;
+    };
+    var internalString = internalColor + internals + colors.reset;
+
+    var elements = [];
+    var propNames = Object.getOwnPropertyNames(value);
+    var internalNames = ['_h', '_i', '_j', '_k'];
+    for (var i = 0; i < propNames.length; ++i) {
+      var prop = propNames[i];
+      // hide internal properties.
+      if (!internalNames.includes(prop)) {
+        elements.push(prettyPrintProp(value, prop, visited));
+      }
+    }
+    var elementString =
+        elements.length === 0 ? "" : " { " + elements.join(', ') +  " }";
+    return "Promise " + internalString + elementString;
+  }
+
   function prettyPrintRec(value, visited) {
     // First, check for cycles.
     if (visited.has(value)) {
@@ -190,45 +230,7 @@ C_STRING((function() {
     }
 
     if (isPromise(value)) {
-      var internalColor = colors.cyan;
-      var internals = "";
-      switch(value['_i']) {
-        case 0:
-          internals = "<pending>";
-          break;
-        case 1:
-          internals = "<fulfilled: " + colors.reset +
-                      prettyPrintRec(value['_j'], visited) +
-                      internalColor + ">";
-          break;
-        case 2:
-          internals = "<rejected: " + colors.reset +
-                      prettyPrintRec(value['_j'], visited) +
-                      internalColor + ">";
-          break;
-        case 3:
-          // this case seems to be internal and not observable from without
-          // Promise.js code, but left here for completeness.
-          internals = "<adopted>";
-          break;
-        default:
-          break;
-      };
-      var internalString = internalColor + internals + colors.reset;
-
-      var elements = [];
-      var propNames = Object.getOwnPropertyNames(value);
-      var internalNames = ['_h', '_i', '_j', '_k'];
-      for (var i = 0; i < propNames.length; ++i) {
-        var prop = propNames[i];
-        // hide internal properties.
-        if (!internalNames.includes(prop)) {
-          elements.push(prettyPrintProp(value, prop, visited));
-        }
-      }
-      var elementString =
-        elements.length === 0 ? "" : " { " + elements.join(', ') +  " }";
-      return "Promise " + internalString + elementString;
+      return prettyPrintPromise(value, visited);
     }
 
     // Regular object. Print out its properties directly as a literal.
