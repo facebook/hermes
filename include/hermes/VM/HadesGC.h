@@ -250,8 +250,6 @@ class HadesGC final : public GCBase {
     /// Call \p callback on every non-freelist cell allocated in this segment.
     template <typename CallbackFunction>
     void forAllObjs(CallbackFunction callback);
-    template <typename CallbackFunction>
-    void forAllObjs(CallbackFunction callback) const;
     /// Only call the callback on cells without forwarding pointers.
     template <typename CallbackFunction>
     void forCompactedObjs(CallbackFunction callback);

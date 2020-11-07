@@ -1579,9 +1579,25 @@ void HadesGC::freeWeakSlot(WeakRefSlot *slot) {
 }
 
 void HadesGC::forAllObjs(const std::function<void(GCCell *)> &callback) {
+  std::lock_guard<Mutex> lk{gcMutex_};
+  // Since the lock is held, it's safe to store this phase.
+  const Phase phase = concurrentPhase_;
   youngGen().forAllObjs(callback);
-  for (auto seg = oldGen_.begin(), end = oldGen_.end(); seg != end; ++seg) {
-    (*seg)->forAllObjs(callback);
+  for (auto segit = oldGen_.begin(), end = oldGen_.end(); segit != end;
+       ++segit) {
+    HeapSegment &seg = **segit;
+    if (phase != Phase::Sweep) {
+      seg.forAllObjs(callback);
+      continue;
+    }
+    seg.forAllObjs([callback](GCCell *cell) {
+      // If we're doing this check during an OG GC, there might be some objects
+      // that are dead, and could potentially have garbage in them. There's no
+      // need to check the pointers of those objects.
+      if (HeapSegment::getCellMarkBit(cell)) {
+        callback(cell);
+      }
+    });
   }
 }
 
@@ -2483,20 +2499,14 @@ void HadesGC::addSegmentExtentToCrashManager(
 void HadesGC::checkWellFormed() {
   WeakRefLock lk{weakRefMutex()};
   CheckHeapWellFormedAcceptor acceptor(*this);
-  const Phase phase = concurrentPhase_;
   {
     DroppingAcceptor<CheckHeapWellFormedAcceptor> nameAcceptor{acceptor};
     markRoots(nameAcceptor, true);
   }
   markWeakRoots(acceptor);
-  forAllObjs([this, phase, &acceptor](GCCell *cell) {
+  forAllObjs([this, &acceptor](GCCell *cell) {
     assert(cell->isValid() && "Invalid cell encountered in heap");
-    // If we're doing this check during an OG GC, there might be some objects
-    // that are dead, and could potentially have garbage in them. There's no
-    // need to check the pointers of those objects.
-    if (phase == Phase::None || HeapSegment::getCellMarkBit(cell)) {
-      GCBase::markCell(cell, this, acceptor);
-    }
+    GCBase::markCell(cell, this, acceptor);
   });
 }
 
