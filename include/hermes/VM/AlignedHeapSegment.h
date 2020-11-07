@@ -89,6 +89,30 @@ class AlignedHeapSegment {
     void protectGuardPage(oscompat::ProtectMode mode);
   };
 
+  class HeapCellIterator : public llvh::iterator_facade_base<
+                               HeapCellIterator,
+                               std::forward_iterator_tag,
+                               GCCell *> {
+   public:
+    HeapCellIterator(GCCell *cell) : cell_(cell) {}
+
+    bool operator==(const HeapCellIterator &R) const {
+      return cell_ == R.cell_;
+    }
+
+    GCCell *const &operator*() const {
+      return cell_;
+    }
+
+    HeapCellIterator &operator++() {
+      cell_ = cell_->nextCell();
+      return *this;
+    }
+
+   private:
+    GCCell *cell_{nullptr};
+  };
+
   static_assert(
       sizeof(SegmentInfo) < CardTable::kUnusedPrefixSize,
       "SegmentInfo does not fit in available unused CardTable space.");
@@ -185,6 +209,9 @@ class AlignedHeapSegment {
 
   /// Returns the address at which the next allocation, if any, will occur.
   inline char *level() const;
+
+  /// Returns an iterator range corresponding to the cells in this segment.
+  inline llvh::iterator_range<HeapCellIterator> cells();
 
   /// Returns whether \p a and \p b are contained in the same
   /// AlignedHeapSegment.
@@ -409,6 +436,12 @@ char *AlignedHeapSegment::end() const {
 
 char *AlignedHeapSegment::level() const {
   return level_;
+}
+
+llvh::iterator_range<AlignedHeapSegment::HeapCellIterator>
+AlignedHeapSegment::cells() {
+  return {HeapCellIterator(reinterpret_cast<GCCell *>(start())),
+          HeapCellIterator(reinterpret_cast<GCCell *>(level()))};
 }
 
 /* static */

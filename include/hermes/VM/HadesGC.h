@@ -247,9 +247,6 @@ class HadesGC final : public GCBase {
     /// cell <= indexToAddress(cardIdx) < cell->nextCell().
     GCCell *getFirstCellHead(const size_t cardIdx);
 
-    /// Call \p callback on every cell allocated in this segment.
-    template <typename CallbackFunction>
-    void forAllCells(CallbackFunction callback);
     /// Call \p callback on every non-freelist cell allocated in this segment.
     template <typename CallbackFunction>
     void forAllObjs(CallbackFunction callback);

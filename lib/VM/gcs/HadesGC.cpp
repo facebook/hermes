@@ -149,22 +149,13 @@ GCCell *HadesGC::HeapSegment::getFirstCellHead(size_t cardIdx) {
 }
 
 template <typename CallbackFunction>
-void HadesGC::HeapSegment::forAllCells(CallbackFunction callback) {
-  void *const stop = level();
-  for (GCCell *cell = reinterpret_cast<GCCell *>(start()); cell < stop;
-       cell = cell->nextCell()) {
-    callback(cell);
-  }
-}
-
-template <typename CallbackFunction>
 void HadesGC::HeapSegment::forAllObjs(CallbackFunction callback) {
-  forAllCells([callback](GCCell *cell) {
+  for (GCCell *cell : cells()) {
     // Skip free-list entries.
     if (!vmisa<OldGen::FreelistCell>(cell)) {
       callback(cell);
     }
-  });
+  }
 }
 
 template <typename CallbackFunction>
@@ -829,46 +820,44 @@ class HadesGC::SweepIterator final {
     gc_->oldGen_.clearFreelistForSegment(segNumber_);
     char *freeRangeStart = nullptr, *freeRangeEnd = nullptr;
     int32_t segmentSweptBytes = 0;
-    gc_->oldGen_[segNumber_].forAllCells(
-        [this, isTracking, &freeRangeStart, &freeRangeEnd, &segmentSweptBytes](
-            GCCell *cell) {
-          // forAllObjs skips free list cells, so no need to check for those.
-          assert(cell->isValid() && "Invalid cell in sweeping");
-          if (HeapSegment::getCellMarkBit(cell)) {
-            return;
-          }
+    for (GCCell *cell : gc_->oldGen_[segNumber_].cells()) {
+      // forAllObjs skips free list cells, so no need to check for those.
+      assert(cell->isValid() && "Invalid cell in sweeping");
+      if (HeapSegment::getCellMarkBit(cell)) {
+        continue;
+      }
 
-          const auto sz = cell->getAllocatedSize();
-          char *const cellCharPtr = reinterpret_cast<char *>(cell);
+      const auto sz = cell->getAllocatedSize();
+      char *const cellCharPtr = reinterpret_cast<char *>(cell);
 
-          if (freeRangeEnd != cellCharPtr) {
-            assert(
-                freeRangeEnd < cellCharPtr &&
-                "Should not overshoot the start of an object");
-            // We are starting a new free range, flush the previous one.
-            if (LLVM_LIKELY(freeRangeStart))
-              gc_->oldGen_.addCellToFreelist(
-                  freeRangeStart, freeRangeEnd - freeRangeStart, segNumber_);
-            freeRangeEnd = freeRangeStart = cellCharPtr;
-          }
-          // Expand the current free range to include the current cell.
-          freeRangeEnd += sz;
+      if (freeRangeEnd != cellCharPtr) {
+        assert(
+            freeRangeEnd < cellCharPtr &&
+            "Should not overshoot the start of an object");
+        // We are starting a new free range, flush the previous one.
+        if (LLVM_LIKELY(freeRangeStart))
+          gc_->oldGen_.addCellToFreelist(
+              freeRangeStart, freeRangeEnd - freeRangeStart, segNumber_);
+        freeRangeEnd = freeRangeStart = cellCharPtr;
+      }
+      // Expand the current free range to include the current cell.
+      freeRangeEnd += sz;
 
-          if (cell->getKind() == CellKind::FreelistKind)
-            return;
+      if (cell->getKind() == CellKind::FreelistKind)
+        continue;
 
-          segmentSweptBytes += sz;
-          // Cell is dead, run its finalizer first if it has one.
-          cell->getVT()->finalizeIfExists(cell, gc_);
-          if (isTracking) {
-            // FIXME: There could be a race condition here if newAlloc is
-            // being called at the same time and using a shared data structure
-            // with freeAlloc. freeAlloc relies on the ID, so call it before
-            // untrackObject.
-            gc_->getAllocationLocationTracker().freeAlloc(cell, sz);
-            gc_->getIDTracker().untrackObject(cell);
-          }
-        });
+      segmentSweptBytes += sz;
+      // Cell is dead, run its finalizer first if it has one.
+      cell->getVT()->finalizeIfExists(cell, gc_);
+      if (isTracking) {
+        // FIXME: There could be a race condition here if newAlloc is
+        // being called at the same time and using a shared data structure
+        // with freeAlloc. freeAlloc relies on the ID, so call it before
+        // untrackObject.
+        gc_->getAllocationLocationTracker().freeAlloc(cell, sz);
+        gc_->getIDTracker().untrackObject(cell);
+      }
+    }
 
     // Flush any free range that was left over.
     if (freeRangeStart) {
