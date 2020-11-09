@@ -92,7 +92,8 @@ YoungGen::YoungGen(
   auto result = AlignedStorage::create(
       gc_->storageProvider_.get(), "hermes-younggen-segment");
   if (!result) {
-    gc_->oom(result.getError());
+    // Do not invoke oom() from here because the heap is not fully initialised.
+    hermes_fatal("Failed to initialize the young gen");
   }
   exchangeActiveSegment({std::move(result.get()), this});
   resetTrueAllocContext();
