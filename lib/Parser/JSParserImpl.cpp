@@ -4467,6 +4467,10 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
         startLoc, prop, new (context_) ESTree::PrivateNameNode(prop));
   }
 
+  if (variance) {
+    error(variance->getSourceRange(), "Unexpected variance sigil");
+  }
+
   return setLocation(
       startRange,
       optBody.getValue(),
