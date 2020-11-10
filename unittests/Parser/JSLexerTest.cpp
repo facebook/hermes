@@ -375,6 +375,20 @@ TEST(JSLexerTest, OctalLiteralTest) {
   ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
 }
 
+#if HERMES_PARSE_FLOW
+TEST(JSLexerTest, FlowOctalLiteralTest) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext diag(sm);
+
+  JSLexer lex("01", sm, alloc);
+  auto tok = lex.advance(JSLexer::GrammarContext::Flow);
+  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+  ASSERT_EQ(tok->getNumericLiteral(), 1.0);
+  ASSERT_EQ(1, diag.getErrCountClear());
+}
+#endif
+
 TEST(JSLexerTest, BinaryLiteralTest) {
   JSLexer::Allocator alloc;
   SourceErrorManager sm;

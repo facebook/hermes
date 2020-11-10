@@ -753,7 +753,7 @@ class JSLexer {
       llvh::StringRef name,
       const char *ptr);
 
-  void scanNumber();
+  void scanNumber(GrammarContext grammarContext);
 
   /// Recognise a reserved word depending on the mode (strict vs non-strict).
   /// \return \c TokenKind::identifier if the word wasn't recognized, or the

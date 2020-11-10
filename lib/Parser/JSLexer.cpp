@@ -508,7 +508,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       case '.':
         token_.setStart(curCharPtr_);
         if (curCharPtr_[1] >= '0' && curCharPtr_[1] <= '9') {
-          scanNumber();
+          scanNumber(grammarContext);
         } else if (curCharPtr_[1] == '.' && curCharPtr_[2] == '.') {
           token_.setPunctuator(TokenKind::dotdotdot);
           curCharPtr_ += 3;
@@ -523,7 +523,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       case '5': case '6': case '7': case '8': case '9':
         // clang-format on
         token_.setStart(curCharPtr_);
-        scanNumber();
+        scanNumber(grammarContext);
         break;
 
         // clang-format off
@@ -1346,7 +1346,7 @@ llvh::Optional<StringRef> JSLexer::tryReadMagicComment(
   return value;
 }
 
-void JSLexer::scanNumber() {
+void JSLexer::scanNumber(GrammarContext grammarContext) {
   // A somewhat ugly state machine for scanning a number
 
   unsigned radix = 10;
@@ -1507,7 +1507,9 @@ end:
       val = std::numeric_limits<double>::quiet_NaN();
     }
   } else {
-    if (legacyOctal && strictMode_ && curCharPtr_ - start > 1) {
+    if (legacyOctal &&
+        (strictMode_ || grammarContext == GrammarContext::Flow) &&
+        curCharPtr_ - start > 1) {
       if (!error(
               token_.getSourceRange(),
               "Octal literals must use '0o' in strict mode")) {
