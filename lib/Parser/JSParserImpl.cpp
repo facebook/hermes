@@ -3406,13 +3406,34 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrOptionalExpression(
     return None;
   ESTree::NodePtr expr = optExpr.getValue();
 
+  ESTree::Node *typeArgs = nullptr;
+#if HERMES_PARSE_FLOW
+  if (context_.getParseFlow() && check(TokenKind::less)) {
+    JSLexer::SavePoint savePoint{&lexer_};
+    // Attempt to parse type args upon encountering '<',
+    // but roll back if it just ended up being a comparison operator.
+    SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
+                                                         Subsystem::Parser};
+    auto optTypeArgs = parseTypeArgs();
+    if (optTypeArgs) {
+      // New expression with type arguments.
+      typeArgs = *optTypeArgs;
+    } else {
+      // Failed to parse a call expression with type arguments,
+      // simply roll back and start again.
+      savePoint.restore();
+    }
+  }
+#endif
+
   // Do we have arguments to a child MemberExpression? If yes, then it really
   // was a 'new MemberExpression(args)', otherwise it is a NewExpression
   if (!check(TokenKind::l_paren)) {
     return setLocation(
         newRange,
         expr,
-        new (context_) ESTree::NewExpressionNode(expr, ESTree::NodeList{}));
+        new (context_)
+            ESTree::NewExpressionNode(expr, typeArgs, ESTree::NodeList{}));
   }
 
   auto debugLoc = tok_->getStartLoc();
@@ -3425,7 +3446,8 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrOptionalExpression(
       newRange,
       endLoc,
       debugLoc,
-      new (context_) ESTree::NewExpressionNode(expr, std::move(argList)));
+      new (context_)
+          ESTree::NewExpressionNode(expr, typeArgs, std::move(argList)));
 
   SMLoc objectLoc = newRange.Start;
   while (

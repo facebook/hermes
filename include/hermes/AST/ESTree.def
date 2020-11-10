@@ -239,15 +239,12 @@ ESTREE_NODE_1_ARGS(
     SpreadElement, Base,
     NodePtr, argument, false)
 
-ESTREE_NODE_2_ARGS(
-    NewExpression,
-    Base,
-    NodePtr,
-    callee,
-    false,
-    NodeList,
-    arguments,
-    false)
+ESTREE_NODE_3_ARGS(
+    NewExpression, Base,
+    NodePtr, callee, false,
+    NodePtr, typeArguments, true,
+    NodeList, arguments, false)
+ESTREE_IGNORE_IF_EMPTY(NewExpression, typeArguments)
 ESTREE_NODE_2_ARGS(
     YieldExpression, Base,
     NodePtr, argument, true,
