@@ -116,6 +116,58 @@
 // CHECK-NEXT:         }
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
+(async (): A => B => C => { });
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "ArrowFunctionExpression",
+// CHECK-NEXT:         "id": null,
+// CHECK-NEXT:         "params": [],
+// CHECK-NEXT:         "body": {
+// CHECK-NEXT:           "type": "ArrowFunctionExpression",
+// CHECK-NEXT:           "id": null,
+// CHECK-NEXT:           "params": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "B"
+// CHECK-NEXT:             }
+// CHECK-NEXT:           ],
+// CHECK-NEXT:           "body": {
+// CHECK-NEXT:             "type": "ArrowFunctionExpression",
+// CHECK-NEXT:             "id": null,
+// CHECK-NEXT:             "params": [
+// CHECK-NEXT:               {
+// CHECK-NEXT:                 "type": "Identifier",
+// CHECK-NEXT:                 "name": "C"
+// CHECK-NEXT:               }
+// CHECK-NEXT:             ],
+// CHECK-NEXT:             "body": {
+// CHECK-NEXT:               "type": "BlockStatement",
+// CHECK-NEXT:               "body": []
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "expression": false,
+// CHECK-NEXT:             "async": false
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "expression": true,
+// CHECK-NEXT:           "async": false
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "returnType": {
+// CHECK-NEXT:           "type": "TypeAnnotation",
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "GenericTypeAnnotation",
+// CHECK-NEXT:             "id": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "A"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "typeParameters": null
+// CHECK-NEXT:           }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "expression": true,
+// CHECK-NEXT:         "async": true
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]

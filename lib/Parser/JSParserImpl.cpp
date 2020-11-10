@@ -4934,73 +4934,73 @@ Optional<ESTree::Node *> JSParserImpl::tryParseTypedAsyncArrowFunction(
   assert(context_.getParseFlow());
   assert(check(asyncIdent_));
   JSLexer::SavePoint savePoint{&lexer_};
-  SourceErrorManager::SaveAndSuppressMessages suppress{&sm_, Subsystem::Parser};
   SMLoc start = advance().Start;
 
+  ESTree::Node *leftExpr = nullptr;
   ESTree::Node *typeParams = nullptr;
-  if (check(TokenKind::less)) {
-    auto optTypeParams = parseTypeParams();
-    if (!optTypeParams) {
+  ESTree::Node *returnType = nullptr;
+  ESTree::Node *predicate = nullptr;
+  {
+    SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
+                                                         Subsystem::Parser};
+    if (check(TokenKind::less)) {
+      auto optTypeParams = parseTypeParams();
+      if (!optTypeParams) {
+        savePoint.restore();
+        return None;
+      }
+      typeParams = *optTypeParams;
+    }
+
+    if (!check(TokenKind::l_paren)) {
       savePoint.restore();
       return None;
     }
-    typeParams = *optTypeParams;
-  }
 
-  if (!check(TokenKind::l_paren)) {
-    savePoint.restore();
-    return None;
-  }
-
-  auto optLeftExpr =
-      parseConditionalExpression(param, CoverTypedParameters::Yes);
-  if (!optLeftExpr) {
-    savePoint.restore();
-    return None;
-  }
-
-  ESTree::Node *returnType = nullptr;
-  ESTree::Node *predicate = nullptr;
-  if (check(TokenKind::colon)) {
-    SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
-    if (!check(checksIdent_)) {
-      auto optType = parseTypeAnnotation(annotStart, AllowAnonFunctionType::No);
-      if (!optType) {
-        savePoint.restore();
-        return None;
-      }
-      returnType = *optType;
+    auto optLeftExpr =
+        parseConditionalExpression(param, CoverTypedParameters::Yes);
+    if (!optLeftExpr) {
+      savePoint.restore();
+      return None;
     }
-    if (check(checksIdent_)) {
-      auto optPredicate = parsePredicate();
-      if (!optPredicate) {
-        savePoint.restore();
-        return None;
+    leftExpr = *optLeftExpr;
+
+    if (check(TokenKind::colon)) {
+      SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
+      if (!check(checksIdent_)) {
+        auto optType =
+            parseTypeAnnotation(annotStart, AllowAnonFunctionType::No);
+        if (!optType) {
+          savePoint.restore();
+          return None;
+        }
+        returnType = *optType;
       }
-      predicate = *optPredicate;
+      if (check(checksIdent_)) {
+        auto optPredicate = parsePredicate();
+        if (!optPredicate) {
+          savePoint.restore();
+          return None;
+        }
+        predicate = *optPredicate;
+      }
+    }
+
+    if (!check(TokenKind::equalgreater)) {
+      savePoint.restore();
+      return None;
     }
   }
 
-  if (!check(TokenKind::equalgreater)) {
-    savePoint.restore();
-    return None;
-  }
-
-  auto optArrow = parseArrowFunctionExpression(
+  return parseArrowFunctionExpression(
       param,
-      *optLeftExpr,
+      leftExpr,
       typeParams,
       returnType,
       predicate,
       start,
       AllowTypedArrowFunction::Yes,
       /* forceAsync */ true);
-  if (!optArrow) {
-    savePoint.restore();
-    return None;
-  }
-
-  return *optArrow;
 }
 #endif
 
