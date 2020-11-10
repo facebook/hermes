@@ -1201,3 +1201,25 @@ test('Unicode strings and identifiers', () => {
     ],
   });
 });
+
+test('Symbol type annotation', () => {
+  expect(parse(`type T = symbol`, {babel: true})).toMatchObject({
+    type: 'File',
+    program: {
+      type: 'Program',
+      body: [
+        {
+          type: 'TypeAlias',
+          right: {
+            type: 'GenericTypeAnnotation',
+            id: {
+              type: 'Identifier',
+              name: 'symbol',
+            },
+          },
+          typeParameters: null,
+        },
+      ],
+    },
+  });
+});

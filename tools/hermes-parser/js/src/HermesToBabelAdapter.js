@@ -39,6 +39,8 @@ class HermesToBabelAdapter extends HermesASTAdapter {
         return this.mapTemplateElement(node);
       case 'GenericTypeAnnotation':
         return this.mapGenericTypeAnnotation(node);
+      case 'SymbolTypeAnnotation':
+        return this.mapSymbolTypeAnnotation(node);
       case 'Property':
         return this.mapProperty(node);
       case 'MethodDefinition':
@@ -179,6 +181,23 @@ class HermesToBabelAdapter extends HermesASTAdapter {
     }
 
     return this.mapNodeDefault(node);
+  }
+
+  mapSymbolTypeAnnotation(node) {
+    return {
+      type: 'GenericTypeAnnotation',
+      loc: node.loc,
+      start: node.start,
+      end: node.end,
+      id: {
+        type: 'Identifier',
+        loc: node.loc,
+        start: node.start,
+        end: node.end,
+        name: 'symbol',
+      },
+      typeParameters: null,
+    };
   }
 
   mapProperty(node) {
