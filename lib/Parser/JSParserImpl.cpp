@@ -1026,7 +1026,8 @@ JSParserImpl::parseVariableDeclaration(Param param, SMLoc declLoc) {
   // Parse the initializer.
   auto debugLoc = advance().Start;
 
-  auto expr = parseAssignmentExpression(param);
+  auto expr = parseAssignmentExpression(
+      param, AllowTypedArrowFunction::Yes, CoverTypedParameters::No);
   if (!expr)
     return None;
 
@@ -5064,7 +5065,8 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
       // Consume the type parameters and try again.
       savePoint.restore();
       auto optTypeParams = parseTypeParams();
-      if (optTypeParams) {
+      // Type parameters must be followed by a '(' to be meaningful.
+      if (optTypeParams && check(TokenKind::l_paren)) {
         typeParams = *optTypeParams;
         optAssign = parseAssignmentExpression(
             param,
