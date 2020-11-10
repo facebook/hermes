@@ -115,6 +115,19 @@ type A = bool;
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
+type A = symbol;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "A"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "SymbolTypeAnnotation"
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
 type A = B;
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "TypeAlias",

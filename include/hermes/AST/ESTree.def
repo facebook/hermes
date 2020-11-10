@@ -682,6 +682,7 @@ ESTREE_NODE_2_ARGS(
     NodeBoolean, value, false,
     NodeLabel, raw, false)
 ESTREE_NODE_0_ARGS(NullLiteralTypeAnnotation, Base)
+ESTREE_NODE_0_ARGS(SymbolTypeAnnotation, Base)
 ESTREE_NODE_0_ARGS(AnyTypeAnnotation, Base)
 ESTREE_NODE_0_ARGS(MixedTypeAnnotation, Base)
 ESTREE_NODE_0_ARGS(VoidTypeAnnotation, Base)

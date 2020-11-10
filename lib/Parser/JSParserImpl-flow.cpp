@@ -1061,6 +1061,12 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotation() {
             advance(JSLexer::GrammarContext::Flow).End,
             new (context_) ESTree::NumberTypeAnnotationNode());
       }
+      if (tok_->getResWordOrIdentifier() == symbolIdent_) {
+        return setLocation(
+            start,
+            advance(JSLexer::GrammarContext::Flow).End,
+            new (context_) ESTree::SymbolTypeAnnotationNode());
+      }
       if (tok_->getResWordOrIdentifier() == stringIdent_) {
         return setLocation(
             start,
@@ -2135,6 +2141,8 @@ JSParserImpl::reparseTypeAnnotationAsIdentifier(ESTree::Node *typeAnnotation) {
     id = numberIdent_;
   } else if (isa<ESTree::StringTypeAnnotationNode>(typeAnnotation)) {
     id = stringIdent_;
+  } else if (isa<ESTree::SymbolTypeAnnotationNode>(typeAnnotation)) {
+    id = symbolIdent_;
   } else if (isa<ESTree::NullLiteralTypeAnnotationNode>(typeAnnotation)) {
     id = nullIdent_;
   } else if (
