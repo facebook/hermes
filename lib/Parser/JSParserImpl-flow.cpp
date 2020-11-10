@@ -1353,6 +1353,13 @@ Optional<ESTree::Node *> JSParserImpl::parseObjectTypeAnnotation() {
           properties, indexers, callProperties, internalSlots, inexact))
     return None;
 
+  if (exact && inexact) {
+    // Doesn't prevent parsing from continuing, but it is an error.
+    error(
+        start,
+        "Explicit inexact syntax cannot appear inside an explicit exact object type");
+  }
+
   SMLoc end = tok_->getEndLoc();
   if (!eat(
           exact ? TokenKind::piper_brace : TokenKind::r_brace,
