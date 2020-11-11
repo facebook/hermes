@@ -39,7 +39,8 @@ enum E {
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
-// CHECK-NEXT:         "explicitType": false
+// CHECK-NEXT:         "explicitType": false,
+// CHECK-NEXT:         "hasUnknownMembers": false
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
@@ -70,7 +71,8 @@ enum E of symbol {
 // CHECK-NEXT:               "name": "B"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
-// CHECK-NEXT:         ]
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "hasUnknownMembers": false
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
@@ -112,7 +114,8 @@ enum E {
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
-// CHECK-NEXT:         "explicitType": false
+// CHECK-NEXT:         "explicitType": false,
+// CHECK-NEXT:         "hasUnknownMembers": false
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
@@ -146,7 +149,8 @@ enum E {
 // CHECK-NEXT:             "init": false
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
-// CHECK-NEXT:         "explicitType": false
+// CHECK-NEXT:         "explicitType": false,
+// CHECK-NEXT:         "hasUnknownMembers": false
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
@@ -186,7 +190,8 @@ enum E {
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
-// CHECK-NEXT:         "explicitType": false
+// CHECK-NEXT:         "explicitType": false,
+// CHECK-NEXT:         "hasUnknownMembers": false
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
@@ -200,7 +205,8 @@ enum E of number {}
 // CHECK-NEXT:       "body": {
 // CHECK-NEXT:         "type": "EnumNumberBody",
 // CHECK-NEXT:         "members": [],
-// CHECK-NEXT:         "explicitType": true
+// CHECK-NEXT:         "explicitType": true,
+// CHECK-NEXT:         "hasUnknownMembers": false
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
@@ -214,7 +220,8 @@ enum E of string {}
 // CHECK-NEXT:       "body": {
 // CHECK-NEXT:         "type": "EnumStringBody",
 // CHECK-NEXT:         "members": [],
-// CHECK-NEXT:         "explicitType": true
+// CHECK-NEXT:         "explicitType": true,
+// CHECK-NEXT:         "hasUnknownMembers": false
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
@@ -228,7 +235,8 @@ enum E of boolean {}
 // CHECK-NEXT:       "body": {
 // CHECK-NEXT:         "type": "EnumBooleanBody",
 // CHECK-NEXT:         "members": [],
-// CHECK-NEXT:         "explicitType": true
+// CHECK-NEXT:         "explicitType": true,
+// CHECK-NEXT:         "hasUnknownMembers": false
 // CHECK-NEXT:       }
 // CHECK-NEXT:     }
 

@@ -32,6 +32,7 @@ enum E of string {}
 // CHECK-NEXT:         "type": "EnumStringBody",
 // CHECK-NEXT:         "members": [],
 // CHECK-NEXT:         "explicitType": true,
+// CHECK-NEXT:         "hasUnknownMembers": false,
 // CHECK-NEXT:         "loc": {
 // CHECK-NEXT:           "start": {
 // CHECK-NEXT:             "line": 14,

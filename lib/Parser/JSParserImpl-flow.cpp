@@ -2212,7 +2212,20 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumBody(
   SMLoc start = advance().Start;
 
   ESTree::NodeList members{};
+  bool hasUnknownMembers = false;
   while (!check(TokenKind::r_brace)) {
+    if (check(TokenKind::dotdotdot)) {
+      SMLoc dotdotdotLoc = advance(JSLexer::GrammarContext::Flow).Start;
+      if (!check(TokenKind::r_brace)) {
+        error(
+            dotdotdotLoc,
+            "The `...` must come after all enum members. "
+            "Move it to the end of the enum body.");
+        return None;
+      }
+      hasUnknownMembers = true;
+      break;
+    }
     if (!need(
             TokenKind::identifier,
             "in enum declaration",
@@ -2297,8 +2310,8 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumBody(
     return setLocation(
         start,
         end,
-        new (context_)
-            ESTree::EnumStringBodyNode(std::move(members), hasExplicitType));
+        new (context_) ESTree::EnumStringBodyNode(
+            std::move(members), hasExplicitType, hasUnknownMembers));
   }
 
   // There are different node kinds per enum kind.
@@ -2307,27 +2320,28 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumBody(
       return setLocation(
           start,
           end,
-          new (context_)
-              ESTree::EnumStringBodyNode(std::move(members), hasExplicitType));
+          new (context_) ESTree::EnumStringBodyNode(
+              std::move(members), hasExplicitType, hasUnknownMembers));
     case EnumKind::Number:
       return setLocation(
           start,
           end,
-          new (context_)
-              ESTree::EnumNumberBodyNode(std::move(members), hasExplicitType));
+          new (context_) ESTree::EnumNumberBodyNode(
+              std::move(members), hasExplicitType, hasUnknownMembers));
     case EnumKind::Boolean:
       return setLocation(
           start,
           end,
-          new (context_)
-              ESTree::EnumBooleanBodyNode(std::move(members), hasExplicitType));
+          new (context_) ESTree::EnumBooleanBodyNode(
+              std::move(members), hasExplicitType, hasUnknownMembers));
     case EnumKind::Symbol:
       assert(
           hasExplicitType && "symbol enums can only be made via explicit type");
       return setLocation(
           start,
           end,
-          new (context_) ESTree::EnumSymbolBodyNode(std::move(members)));
+          new (context_) ESTree::EnumSymbolBodyNode(
+              std::move(members), hasUnknownMembers));
   }
   llvm_unreachable("No other kind of enum");
 }

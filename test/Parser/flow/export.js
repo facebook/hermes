@@ -151,7 +151,8 @@ export enum X {}
 // CHECK-NEXT:           "body": {
 // CHECK-NEXT:             "type": "EnumStringBody",
 // CHECK-NEXT:             "members": [],
-// CHECK-NEXT:             "explicitType": false
+// CHECK-NEXT:             "explicitType": false,
+// CHECK-NEXT:             "hasUnknownMembers": false
 // CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "specifiers": [],
@@ -171,7 +172,8 @@ export default enum X {}
 // CHECK-NEXT:           "body": {
 // CHECK-NEXT:             "type": "EnumStringBody",
 // CHECK-NEXT:             "members": [],
-// CHECK-NEXT:             "explicitType": false
+// CHECK-NEXT:             "explicitType": false,
+// CHECK-NEXT:             "hasUnknownMembers": false
 // CHECK-NEXT:           }
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }

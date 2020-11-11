@@ -882,21 +882,25 @@ ESTREE_NODE_2_ARGS(
     NodePtr, id, false,
     NodePtr, body, false)
 
-ESTREE_NODE_2_ARGS(
+ESTREE_NODE_3_ARGS(
     EnumStringBody, Base,
     NodeList, members, false,
-    NodeBoolean, explicitType, false)
-ESTREE_NODE_2_ARGS(
+    NodeBoolean, explicitType, false,
+    NodeBoolean, hasUnknownMembers, false)
+ESTREE_NODE_3_ARGS(
     EnumNumberBody, Base,
     NodeList, members, false,
-    NodeBoolean, explicitType, false)
-ESTREE_NODE_2_ARGS(
+    NodeBoolean, explicitType, false,
+    NodeBoolean, hasUnknownMembers, false)
+ESTREE_NODE_3_ARGS(
     EnumBooleanBody, Base,
     NodeList, members, false,
-    NodeBoolean, explicitType, false)
-ESTREE_NODE_1_ARGS(
+    NodeBoolean, explicitType, false,
+    NodeBoolean, hasUnknownMembers, false)
+ESTREE_NODE_2_ARGS(
     EnumSymbolBody, Base,
-    NodeList, members, false)
+    NodeList, members, false,
+    NodeBoolean, hasUnknownMembers, false)
 
 ESTREE_NODE_1_ARGS(
     EnumDefaultedMember, Base,
