@@ -1963,6 +1963,12 @@ void HadesGC::youngGenCollection(
   // Check that the card tables are well-formed after the collection.
   verifyCardTable();
 #endif
+  // Give an existing background thread a chance to complete.
+  // Do this before starting a new collection in case we need collections
+  // back-to-back. Also, don't check this after starting a collection to avoid
+  // waiting for something that is both unlikely, and will increase the pause
+  // time if it does happen.
+  yieldToOldGen();
   if (concurrentPhase_ == Phase::None) {
     // There is no OG collection running, check the tripwire in case this is the
     // first YG after an OG completed.
@@ -1988,11 +1994,8 @@ void HadesGC::youngGenCollection(
   } else if (oldGenMarker_) {
     oldGenMarker_->setDrainRate(getDrainRate());
   }
-  // Give an existing background thread a chance to complete.
-  yieldToOldGen();
 #ifdef HERMES_SLOW_DEBUG
-  // Run a well-formed check after yieldToOldGen, as it may have run the
-  // completeMarking phase and started sweeping.
+  // Run a well-formed check before exiting.
   checkWellFormed();
 #endif
   ygCollectionStats_->setEndTime();
