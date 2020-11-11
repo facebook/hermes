@@ -906,9 +906,21 @@ class HadesGC::SweepIterator final {
   uint64_t sweptExternalBytes_{0};
 };
 
-HadesGC::OldGen::OldGen(HadesGC *gc)
-    // Assume about 70% of the OG will survive initially.
-    : gc_(gc), averageSurvivalRatio_{/*weight*/ 0.5, /*init*/ 0.7} {}
+// Assume about 30% of the YG will survive initially.
+constexpr double kYGInitialSurvivalRatio = 0.3;
+// Assume about 70% of the OG will survive initially.
+constexpr double kOGInitialSurvivalRatio = 0.7;
+
+HadesGC::OldGen::OldGen(HadesGC *gc, bool promoteYGToOG)
+    : gc_(gc),
+      averageSurvivalRatio_{
+          /*weight*/ 0.5,
+          // If YG gets promoted into OG without collecting it, the OG would
+          // have an expected survival ratio similar to the average YG survival
+          // ratio. Since the average YG survival ratio hasn't been computed
+          // during promotion, we instead change the initial heuristic.
+          /*init*/
+          promoteYGToOG ? kYGInitialSurvivalRatio : kOGInitialSurvivalRatio} {}
 
 HadesGC::HadesGC(
     MetadataTable metaTable,
@@ -929,11 +941,12 @@ HadesGC::HadesGC(
           // At least one YG segment and one OG segment.
           2 * AlignedStorage::size())},
       provider_(std::move(provider)),
+      oldGen_{this, !gcConfig.getAllocInYoung()},
       promoteYGToOG_{!gcConfig.getAllocInYoung()},
       revertToYGAtTTI_{gcConfig.getRevertToYGAtTTI()},
       occupancyTarget_(gcConfig.getOccupancyTarget()),
-      // Assume about 30% of the YG will survive initially.
-      ygAverageSurvivalRatio_{/*weight*/ 0.5, /*init*/ 0.3} {
+      ygAverageSurvivalRatio_{/*weight*/ 0.5,
+                              /*init*/ kYGInitialSurvivalRatio} {
   crashMgr_->setCustomData("HermesGC", kGCName);
   // createSegment relies on member variables and should not be called until
   // they are initialised.
@@ -1872,18 +1885,19 @@ void HadesGC::youngGenCollection(
       youngGen().markBitArray().findNextUnmarkedBitFrom(0) ==
           youngGen().markBitArray().size() &&
       "Young gen segment must have all mark bits set");
-  uint64_t promotedBytes = 0, usedBefore = youngGen().used();
-  const uint64_t externalBytesBefore = ygExternalBytes_;
-  uint64_t externalSweptBytes = 0;
+  const uint64_t usedBefore = youngGen().used();
   // YG is about to be emptied, add all of the allocations.
   totalAllocatedBytes_ += usedBefore;
   // Attempt to promote the YG segment to OG if the flag is set. If this call
   // fails for any reason, proceed with a GC.
   if (promoteYoungGenToOldGen()) {
-    promotedBytes = usedBefore;
+    // Leave sweptBytes and sweptExternalBytes as defaults (which are 0).
+    // Don't update the average YG survival ratio since no liveness was
+    // calculated for the promotion case.
     ygCollectionStats_->addCollectionType("(promotion)");
   } else {
     auto &yg = youngGen();
+    const uint64_t externalBytesBefore = ygExternalBytes_;
 
     // Marking each object puts it onto an embedded free list.
     EvacAcceptor acceptor{*this};
@@ -1907,7 +1921,6 @@ void HadesGC::youngGenCollection(
       GCCell *const cell = copyCell->getMarkedForwardingPointer();
       GCBase::markCell(cell, this, acceptor);
     }
-    promotedBytes = acceptor.promotedBytes();
     {
       WeakRefLock weakRefLock{weakRefMutex_};
       // Now that all YG objects have been marked, update weak references.
@@ -1926,7 +1939,7 @@ void HadesGC::youngGenCollection(
     finalizeYoungGenObjects();
     // This was modified by debitExternalMemoryFromFinalizer, called by
     // finalizers. The difference in the value before to now was the swept bytes
-    externalSweptBytes = externalBytesBefore - ygExternalBytes_;
+    const uint64_t externalSweptBytes = externalBytesBefore - ygExternalBytes_;
     // Now the copy list is drained, and all references point to the old
     // gen. Clear the level of the young gen.
     yg.resetLevel();
@@ -1936,20 +1949,20 @@ void HadesGC::youngGenCollection(
         "Young gen segment must have all mark bits set");
     // Move external memory accounting from YG to OG as well.
     transferExternalMemoryToOldGen();
+    // Post-allocated has an ambiguous meaning for a young-gen GC, since the
+    // young gen must be completely evacuated. Since zeros aren't really
+    // useful here, instead put the number of bytes that were promoted into
+    // old gen, which is the amount that survived the collection.
+    ygCollectionStats_->setSweptBytes(usedBefore - acceptor.promotedBytes());
+    ygCollectionStats_->setSweptExternalBytes(externalSweptBytes);
+    // The average survival ratio should be updated before starting an OG
+    // collection.
+    ygAverageSurvivalRatio_.update(ygCollectionStats_->survivalRatio());
   }
 #ifdef HERMES_SLOW_DEBUG
   // Check that the card tables are well-formed after the collection.
   verifyCardTable();
 #endif
-  // Post-allocated has an ambiguous meaning for a young-gen GC, since the
-  // young gen must be completely evacuated. Since zeros aren't really
-  // useful here, instead put the number of bytes that were promoted into
-  // old gen, which is the amount that survived the collection.
-  ygCollectionStats_->setSweptBytes(usedBefore - promotedBytes);
-  ygCollectionStats_->setSweptExternalBytes(externalSweptBytes);
-  // The average survival ratio should be updated before starting an OG
-  // collection.
-  ygAverageSurvivalRatio_.update(ygCollectionStats_->survivalRatio());
   if (concurrentPhase_ == Phase::None) {
     // There is no OG collection running, check the tripwire in case this is the
     // first YG after an OG completed.
@@ -2438,36 +2451,24 @@ size_t HadesGC::getDrainRate() {
   // Don't include external memory since that doens't need to be marked.
   const size_t bytesToFill = oldGen_.capacityBytes() - oldGen_.allocatedBytes();
   const double ygSurvivalRatio = ygAverageSurvivalRatio_;
-  size_t ygCollectionsUntilFull = ygSurvivalRatio
-      ? bytesToFill / (ygSurvivalRatio * HeapSegment::maxSize())
+  const size_t ygCollectionsUntilFull = ygSurvivalRatio
+      ? llvh::divideCeil(bytesToFill, ygSurvivalRatio * HeapSegment::maxSize())
       : std::numeric_limits<size_t>::max();
-  if (ygCollectionsUntilFull == 0) {
-    // If the bytes to fill is very small, integer division might give 0
-    // collections. In this case, round up to 1.
-    ygCollectionsUntilFull = 1;
-  } else if (ygCollectionsUntilFull > 1) {
-    // If all of the average survival ratios match the actual survival ratios,
-    // we'll finish marking exactly when OG is full. Instead, to account for
-    // both slightly off survival ratio estimates, as well as wanting to finish
-    // collecting before OG fills up, aim to finish marking all of OG one YG
-    // before we need to.
-    ygCollectionsUntilFull -= 1;
-    // Sweeping also will take exactly oldGen_.numSegments() YG collections to
-    // fully sweep. Subtract that from here to speed up marking so there's some
-    // extra time for sweeping. Don't go below 1 though.
-    if (ygCollectionsUntilFull > sweepIterator_->numSegments()) {
-      ygCollectionsUntilFull -= sweepIterator_->numSegments();
-    } else {
-      ygCollectionsUntilFull = 1;
-    }
-  }
+  // Sweeping also will take exactly oldGen_.numSegments() YG collections to
+  // fully sweep. Subtract that from here to speed up marking so there's some
+  // extra time for sweeping. Leave at least 1 if there aren't enough to sweep
+  // segments fully.
+  const size_t markIterations =
+      ygCollectionsUntilFull > sweepIterator_->numSegments()
+      ? ygCollectionsUntilFull - sweepIterator_->numSegments()
+      : 1;
   assert(
-      ygCollectionsUntilFull != 0 && "Cannot have zero collections until full");
+      markIterations != 0 &&
+      "All of the math above should avoid a 0 markIterations");
   // If any of the above calculations end up being a tiny drain rate, make the
   // lower limit at least 8 KB, to ensure collections eventually end.
   constexpr size_t byteDrainRateMin = 8192;
-  return std::max(
-      oldGen_.bytesToMark() / ygCollectionsUntilFull, byteDrainRateMin);
+  return std::max(oldGen_.bytesToMark() / markIterations, byteDrainRateMin);
 }
 
 void HadesGC::addSegmentExtentToCrashManager(

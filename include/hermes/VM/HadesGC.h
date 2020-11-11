@@ -257,7 +257,7 @@ class HadesGC final : public GCBase {
 
   class OldGen final {
    public:
-    explicit OldGen(HadesGC *gc);
+    explicit OldGen(HadesGC *gc, bool promoteYGToOG);
 
     std::vector<std::unique_ptr<HeapSegment>>::iterator begin();
     std::vector<std::unique_ptr<HeapSegment>>::iterator end();
@@ -501,7 +501,7 @@ class HadesGC final : public GCBase {
   /// oldGen_ is a free list space, so it needs a different segment
   /// representation.
   /// Protected by gcMutex_.
-  OldGen oldGen_{this};
+  OldGen oldGen_;
 
   /// weakPointers_ is a list of all the weak pointers in the system. They are
   /// invalidated if they point to an object that is dead, and do not count
