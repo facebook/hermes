@@ -19,14 +19,16 @@ from os.path import basename, isdir, isfile, join, splitext
 
 
 try:
+    import testsuite.esprima_test_runner as esprima
     from testsuite.testsuite_skiplist import (
         SKIP_LIST,
         PERMANENT_SKIP_LIST,
         UNSUPPORTED_FEATURES,
         PERMANENT_UNSUPPORTED_FEATURES,
     )
-    import testsuite.esprima_test_runner as esprima
 except ImportError:
+    import esprima_test_runner as esprima
+
     # Hacky way to handle non-buck builds that call the file immediately.
     from testsuite_skiplist import (
         SKIP_LIST,
@@ -34,7 +36,6 @@ except ImportError:
         UNSUPPORTED_FEATURES,
         PERMANENT_UNSUPPORTED_FEATURES,
     )
-    import esprima_test_runner as esprima
 
 
 ## This is a simple script that runs the hermes compiler on
