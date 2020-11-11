@@ -25,7 +25,6 @@ android {
         arguments "-DFBSOURCE_DIR=${rootProject.ext.fbsource}"
         arguments "-DHERMES_SLOW_DEBUG=False"
         arguments "-DHERMES_ENABLE_INTL=False"
-        arguments "-DPYTHON_EXECUTABLE=python3"
         targets "libhermes"
       }
     }

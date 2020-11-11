@@ -81,6 +81,12 @@ include(Lit)
 
 set(HERMES_RELEASE_VERSION ${PROJECT_VERSION}${VERSION_SUFFIX})
 
+include(FindPythonInterp)
+if (NOT PYTHONINTERP_FOUND)
+  message(FATAL_ERROR "Unable to find Python interpreter, required for builds and testing.
+Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
+endif()
+
 # Project options.
 
 set(HERMES_IS_ANDROID OFF CACHE BOOL
