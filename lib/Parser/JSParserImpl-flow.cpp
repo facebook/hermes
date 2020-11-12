@@ -264,7 +264,8 @@ Optional<ESTree::Node *> JSParserImpl::parseInterfaceTail(
   if (!need(TokenKind::l_brace, "in interface", "location of interface", start))
     return None;
 
-  return parseObjectTypeAnnotation(AllowProtoProperty::Yes);
+  return parseObjectTypeAnnotation(
+      AllowProtoProperty::Yes, AllowSpreadProperty::No);
 }
 
 bool JSParserImpl::parseInterfaceExtends(
@@ -576,7 +577,8 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareClass(SMLoc start) {
           start))
     return None;
 
-  auto optBody = parseObjectTypeAnnotation(AllowProtoProperty::Yes);
+  auto optBody = parseObjectTypeAnnotation(
+      AllowProtoProperty::Yes, AllowSpreadProperty::No);
   if (!optBody)
     return None;
 
@@ -1002,7 +1004,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotation() {
       return parseFunctionOrGroupTypeAnnotation();
     case TokenKind::l_brace:
     case TokenKind::l_bracepipe:
-      return parseObjectTypeAnnotation(AllowProtoProperty::No);
+      return parseObjectTypeAnnotation(
+          AllowProtoProperty::No, AllowSpreadProperty::Yes);
     case TokenKind::rw_interface: {
       ESTree::NodeList extends{};
       auto optBody = parseInterfaceTail(start, extends);
@@ -1345,7 +1348,8 @@ Optional<ESTree::Node *> JSParserImpl::parseFunctionOrGroupTypeAnnotation() {
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseObjectTypeAnnotation(
-    AllowProtoProperty allowProtoProperty) {
+    AllowProtoProperty allowProtoProperty,
+    AllowSpreadProperty allowSpreadProperty) {
   assert(check(TokenKind::l_brace, TokenKind::l_bracepipe));
   bool exact = check(TokenKind::l_bracepipe);
   SMLoc start = advance(JSLexer::GrammarContext::Flow).Start;
@@ -1358,6 +1362,7 @@ Optional<ESTree::Node *> JSParserImpl::parseObjectTypeAnnotation(
 
   if (!parseObjectTypeProperties(
           allowProtoProperty,
+          allowSpreadProperty,
           properties,
           indexers,
           callProperties,
@@ -1395,6 +1400,7 @@ Optional<ESTree::Node *> JSParserImpl::parseObjectTypeAnnotation(
 
 bool JSParserImpl::parseObjectTypeProperties(
     AllowProtoProperty allowProtoProperty,
+    AllowSpreadProperty allowSpreadProperty,
     ESTree::NodeList &properties,
     ESTree::NodeList &indexers,
     ESTree::NodeList &callProperties,
@@ -1414,6 +1420,10 @@ bool JSParserImpl::parseObjectTypeProperties(
         inexact = true;
         return true;
       } else {
+        if (allowSpreadProperty == AllowSpreadProperty::No) {
+          error(
+              start, "Spreading a type is only allowed inside an object type");
+        }
         auto optType = parseTypeAnnotation();
         if (!optType)
           return false;
