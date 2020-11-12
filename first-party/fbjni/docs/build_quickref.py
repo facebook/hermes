@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # Copyright (c) Facebook, Inc. and its affiliates.
-import sys
-import re
 import collections
 import itertools
+import re
+import sys
 
 
 def main(argv):
