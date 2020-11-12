@@ -3989,7 +3989,9 @@ Optional<ESTree::ClassExpressionNode *> JSParserImpl::parseClassExpression() {
   ESTree::Node *name = nullptr;
   ESTree::Node *typeParams = nullptr;
 
-  if (!check(TokenKind::rw_extends, TokenKind::l_brace)) {
+  if (!check(TokenKind::rw_extends, TokenKind::l_brace) &&
+      !(context_.getParseFlow() &&
+        check(TokenKind::rw_implements, TokenKind::less))) {
     // Try to parse a BindingIdentifier if we did not see a ClassHeritage
     // or a '{'.
     auto optName = parseBindingIdentifier(Param{});
@@ -4002,15 +4004,16 @@ Optional<ESTree::ClassExpressionNode *> JSParserImpl::parseClassExpression() {
       return None;
     }
     name = *optName;
-#if HERMES_PARSE_FLOW
-    if (context_.getParseFlow() && check(TokenKind::less)) {
-      auto optParams = parseTypeParams();
-      if (!optParams)
-        return None;
-      typeParams = *optParams;
-    }
-#endif
   }
+
+#if HERMES_PARSE_FLOW
+  if (context_.getParseFlow() && check(TokenKind::less)) {
+    auto optParams = parseTypeParams();
+    if (!optParams)
+      return None;
+    typeParams = *optParams;
+  }
+#endif
 
   auto optClass =
       parseClassTail(start, name, typeParams, ClassParseKind::Expression);

@@ -236,6 +236,58 @@ class C {
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+(class implements A {});
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "ClassExpression",
+// CHECK-NEXT:         "id": null,
+// CHECK-NEXT:         "superClass": null,
+// CHECK-NEXT:         "implements": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "ClassImplements",
+// CHECK-NEXT:             "id": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "A"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "typeParameters": null
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "body": {
+// CHECK-NEXT:           "type": "ClassBody",
+// CHECK-NEXT:           "body": []
+// CHECK-NEXT:         }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
+(class <T> {});
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "ClassExpression",
+// CHECK-NEXT:         "id": null,
+// CHECK-NEXT:         "typeParameters": {
+// CHECK-NEXT:           "type": "TypeParameterDeclaration",
+// CHECK-NEXT:           "params": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "TypeParameter",
+// CHECK-NEXT:               "name": "T",
+// CHECK-NEXT:               "bound": null,
+// CHECK-NEXT:               "variance": null,
+// CHECK-NEXT:               "default": null
+// CHECK-NEXT:             }
+// CHECK-NEXT:           ]
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "superClass": null,
+// CHECK-NEXT:         "body": {
+// CHECK-NEXT:           "type": "ClassBody",
+// CHECK-NEXT:           "body": []
+// CHECK-NEXT:         }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]
