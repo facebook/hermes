@@ -392,8 +392,14 @@ void SourceErrorManager::message(
     hermes::Warning w,
     Subsystem subsystem) {
   assert(dk <= DK_Note);
-  if (suppressMessages_)
-    return;
+  if (suppressMessages_) {
+    if (*suppressMessages_ == Subsystem::Unspecified) {
+      return;
+    }
+    if (subsystem == *suppressMessages_) {
+      return;
+    }
+  }
   // Suppress all messages once the error limit has been reached.
   if (LLVM_UNLIKELY(errorLimitReached_))
     return;
