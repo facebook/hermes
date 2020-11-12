@@ -5330,7 +5330,8 @@ Optional<ESTree::StringLiteralNode *> JSParserImpl::parseFromClause() {
   return source;
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseImportDeclaration() {
+Optional<ESTree::ImportDeclarationNode *>
+JSParserImpl::parseImportDeclaration() {
   assert(
       check(TokenKind::rw_import) &&
       "import declaration must start with 'import'");

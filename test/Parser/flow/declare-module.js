@@ -169,6 +169,40 @@ declare module Mod {
 // CHECK-NEXT:       "kind": "ES"
 // CHECK-NEXT:     },
 
+declare module WithImport {
+  import type T from "Foo";
+}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "DeclareModule",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "WithImport"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "body": {
+// CHECK-NEXT:         "type": "BlockStatement",
+// CHECK-NEXT:         "body": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "ImportDeclaration",
+// CHECK-NEXT:             "specifiers": [
+// CHECK-NEXT:               {
+// CHECK-NEXT:                 "type": "ImportDefaultSpecifier",
+// CHECK-NEXT:                 "local": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "T"
+// CHECK-NEXT:                 }
+// CHECK-NEXT:               }
+// CHECK-NEXT:             ],
+// CHECK-NEXT:             "source": {
+// CHECK-NEXT:               "type": "StringLiteral",
+// CHECK-NEXT:               "value": "Foo"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "importKind": "type"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ]
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "kind": "CommonJS"
+// CHECK-NEXT:     },
+
 declare module Bar {
   declare module.exports: number;
   declare type T = number;

@@ -914,7 +914,7 @@ class JSParserImpl {
   /// Parse a FromClause and return the string literal representing the source.
   Optional<ESTree::StringLiteralNode *> parseFromClause();
 
-  Optional<ESTree::Node *> parseImportDeclaration();
+  Optional<ESTree::ImportDeclarationNode *> parseImportDeclaration();
 
   /// \return the kind of the import.
   Optional<UniqueString *> parseImportClause(ESTree::NodeList &specifiers);

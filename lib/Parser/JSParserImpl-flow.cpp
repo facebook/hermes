@@ -425,10 +425,25 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareModule(SMLoc start) {
   ESTree::NodeList declarations{};
 
   while (!check(TokenKind::r_brace)) {
+    if (check(TokenKind::rw_import)) {
+      // 'import' can be bare without a 'declare' before it.
+      auto optImport = parseImportDeclaration();
+      if (!optImport)
+        return None;
+      ESTree::ImportDeclarationNode *import = *optImport;
+      if (import->_importKind == valueIdent_) {
+        error(
+            import->getSourceRange(),
+            "imports within a `declare module` body must always be "
+            "`import type` or `import typeof`");
+      }
+      declarations.push_back(*import);
+      continue;
+    }
     if (!check(declareIdent_)) {
       error(
           tok_->getSourceRange(),
-          "expected 'declare' in module  declaration body");
+          "expected 'declare' in module declaration body");
       return None;
     }
     SMLoc declarationStart = advance(JSLexer::GrammarContext::Flow).Start;
