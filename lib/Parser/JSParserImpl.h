@@ -1035,14 +1035,19 @@ class JSParserImpl {
   /// Whether to allow 'proto' properties in an object type annotation.
   enum class AllowProtoProperty { No, Yes };
 
+  /// Whether to allow 'static' properties in an object type annotation.
+  enum class AllowStaticProperty { No, Yes };
+
   /// Whether to allow spread properties in an object type annotation.
   enum class AllowSpreadProperty { No, Yes };
 
   Optional<ESTree::Node *> parseObjectTypeAnnotation(
       AllowProtoProperty allowProtoProperty,
+      AllowStaticProperty allowStaticProperty,
       AllowSpreadProperty allowSpreadProperty);
   bool parseObjectTypeProperties(
       AllowProtoProperty allowProtoProperty,
+      AllowStaticProperty allowStaticProperty,
       AllowSpreadProperty allowSpreadProperty,
       ESTree::NodeList &properties,
       ESTree::NodeList &indexers,
@@ -1051,6 +1056,7 @@ class JSParserImpl {
       bool &inexact);
   bool parsePropertyTypeAnnotation(
       AllowProtoProperty allowProtoProperty,
+      AllowStaticProperty allowStaticProperty,
       ESTree::NodeList &properties,
       ESTree::NodeList &indexers,
       ESTree::NodeList &callProperties,

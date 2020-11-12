@@ -265,7 +265,9 @@ Optional<ESTree::Node *> JSParserImpl::parseInterfaceTail(
     return None;
 
   return parseObjectTypeAnnotation(
-      AllowProtoProperty::Yes, AllowSpreadProperty::No);
+      AllowProtoProperty::Yes,
+      AllowStaticProperty::No,
+      AllowSpreadProperty::No);
 }
 
 bool JSParserImpl::parseInterfaceExtends(
@@ -593,7 +595,9 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareClass(SMLoc start) {
     return None;
 
   auto optBody = parseObjectTypeAnnotation(
-      AllowProtoProperty::Yes, AllowSpreadProperty::No);
+      AllowProtoProperty::Yes,
+      AllowStaticProperty::Yes,
+      AllowSpreadProperty::No);
   if (!optBody)
     return None;
 
@@ -1020,7 +1024,9 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotation() {
     case TokenKind::l_brace:
     case TokenKind::l_bracepipe:
       return parseObjectTypeAnnotation(
-          AllowProtoProperty::No, AllowSpreadProperty::Yes);
+          AllowProtoProperty::No,
+          AllowStaticProperty::No,
+          AllowSpreadProperty::Yes);
     case TokenKind::rw_interface: {
       ESTree::NodeList extends{};
       auto optBody = parseInterfaceTail(start, extends);
@@ -1364,6 +1370,7 @@ Optional<ESTree::Node *> JSParserImpl::parseFunctionOrGroupTypeAnnotation() {
 
 Optional<ESTree::Node *> JSParserImpl::parseObjectTypeAnnotation(
     AllowProtoProperty allowProtoProperty,
+    AllowStaticProperty allowStaticProperty,
     AllowSpreadProperty allowSpreadProperty) {
   assert(check(TokenKind::l_brace, TokenKind::l_bracepipe));
   bool exact = check(TokenKind::l_bracepipe);
@@ -1377,6 +1384,7 @@ Optional<ESTree::Node *> JSParserImpl::parseObjectTypeAnnotation(
 
   if (!parseObjectTypeProperties(
           allowProtoProperty,
+          allowStaticProperty,
           allowSpreadProperty,
           properties,
           indexers,
@@ -1415,6 +1423,7 @@ Optional<ESTree::Node *> JSParserImpl::parseObjectTypeAnnotation(
 
 bool JSParserImpl::parseObjectTypeProperties(
     AllowProtoProperty allowProtoProperty,
+    AllowStaticProperty allowStaticProperty,
     AllowSpreadProperty allowSpreadProperty,
     ESTree::NodeList &properties,
     ESTree::NodeList &indexers,
@@ -1450,6 +1459,7 @@ bool JSParserImpl::parseObjectTypeProperties(
     } else {
       if (!parsePropertyTypeAnnotation(
               allowProtoProperty,
+              allowStaticProperty,
               properties,
               indexers,
               callProperties,
@@ -1479,6 +1489,7 @@ bool JSParserImpl::parseObjectTypeProperties(
 
 bool JSParserImpl::parsePropertyTypeAnnotation(
     AllowProtoProperty allowProtoProperty,
+    AllowStaticProperty allowStaticProperty,
     ESTree::NodeList &properties,
     ESTree::NodeList &indexers,
     ESTree::NodeList &callProperties,
@@ -1601,7 +1612,27 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
     return true;
   }
 
+  ESTree::Node *key = nullptr;
+
   if (check(TokenKind::less, TokenKind::l_paren)) {
+    if ((isStatic && allowStaticProperty == AllowStaticProperty::No) ||
+        (proto && allowProtoProperty == AllowProtoProperty::No)) {
+      key = setLocation(
+          startRange,
+          startRange,
+          new (context_) ESTree::IdentifierNode(
+              isStatic ? staticIdent_ : protoIdent_, nullptr, false));
+      isStatic = false;
+      proto = false;
+      if (variance) {
+        error(variance->getSourceRange(), "Unexpected variance sigil");
+      }
+      auto optProp = parseMethodTypeProperty(start, isStatic, key);
+      if (!optProp)
+        return false;
+      properties.push_back(**optProp);
+      return true;
+    }
     if (variance != nullptr) {
       error(
           variance->getSourceRange(),
@@ -1614,7 +1645,6 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
     return true;
   }
 
-  ESTree::Node *key = nullptr;
   if ((isStatic || proto) && check(TokenKind::colon, TokenKind::question)) {
     key = setLocation(
         startRange,
