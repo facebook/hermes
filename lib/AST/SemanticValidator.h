@@ -205,6 +205,9 @@ class SemanticValidator {
   void visit(CoverTrailingCommaNode *CTC);
   void visit(CoverInitializerNode *CI);
   void visit(CoverRestElementNode *R);
+#if HERMES_PARSE_FLOW
+  void visit(CoverTypedIdentifierNode *R);
+#endif
 
  private:
   inline bool haveActiveContext() const {

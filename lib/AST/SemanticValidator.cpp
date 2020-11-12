@@ -598,6 +598,12 @@ void SemanticValidator::visit(CoverRestElementNode *R) {
   sm_.error(R->getSourceRange(), "'...' not allowed in this context");
 }
 
+#if HERMES_PARSE_FLOW
+void SemanticValidator::visit(CoverTypedIdentifierNode *CTI) {
+  sm_.error(CTI->getSourceRange(), "typecast not allowed in this context");
+}
+#endif
+
 void SemanticValidator::visitFunction(
     FunctionLikeNode *node,
     Node *id,
