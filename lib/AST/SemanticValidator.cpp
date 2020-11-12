@@ -44,13 +44,15 @@ Keywords::Keywords(Context &astContext)
 
 SemanticValidator::SemanticValidator(
     Context &astContext,
-    sem::SemContext &semCtx)
+    sem::SemContext &semCtx,
+    bool compile)
     : astContext_(astContext),
       sm_(astContext.getSourceErrorManager()),
       bufferMessages_{&sm_},
       semCtx_(semCtx),
       initialErrorCount_(sm_.getErrorCount()),
-      kw_(astContext) {}
+      kw_(astContext),
+      compile_(compile) {}
 
 bool SemanticValidator::doIt(Node *rootNode) {
   visitESTreeNode(*this, rootNode);
@@ -140,7 +142,7 @@ void SemanticValidator::visit(FunctionExpressionNode *funcExpr) {
 
 void SemanticValidator::visit(ArrowFunctionExpressionNode *arrowFunc) {
   // Convert expression functions to a full-body to simplify IRGen.
-  if (arrowFunc->_expression) {
+  if (compile_ && arrowFunc->_expression) {
     auto *retStmt = new (astContext_) ReturnStatementNode(arrowFunc->_body);
     retStmt->copyLocationFrom(arrowFunc->_body);
 
@@ -263,7 +265,8 @@ void SemanticValidator::visit(LabeledStatementNode *labelStmt) {
 /// Check RegExp syntax.
 void SemanticValidator::visit(RegExpLiteralNode *regexp) {
   llvh::StringRef regexpError;
-  if (!CompiledRegExp::tryCompile(
+  if (compile_ &&
+      !CompiledRegExp::tryCompile(
           regexp->_pattern->str(), regexp->_flags->str(), &regexpError)) {
     sm_.error(
         regexp->getSourceRange(),
@@ -295,7 +298,7 @@ void SemanticValidator::visit(TryStatementNode *tryStatement) {
   //    } finally {
   //      finallyBody;
   //    }
-  if (tryStatement->_handler && tryStatement->_finalizer) {
+  if (compile_ && tryStatement->_handler && tryStatement->_finalizer) {
     auto *nestedTry = new (astContext_)
         TryStatementNode(tryStatement->_block, tryStatement->_handler, nullptr);
     nestedTry->copyLocationFrom(tryStatement);
@@ -478,12 +481,14 @@ void SemanticValidator::visit(ClassDeclarationNode *node) {
 }
 
 void SemanticValidator::visit(PrivateNameNode *node) {
-  sm_.error(node->getSourceRange(), "private properties are not supported");
+  if (compile_)
+    sm_.error(node->getSourceRange(), "private properties are not supported");
   visitESTreeChildren(*this, node);
 }
 
 void SemanticValidator::visit(ClassPrivatePropertyNode *node) {
-  sm_.error(node->getSourceRange(), "private properties are not supported");
+  if (compile_)
+    sm_.error(node->getSourceRange(), "private properties are not supported");
   visitESTreeChildren(*this, node);
 }
 
@@ -546,7 +551,7 @@ void SemanticValidator::visit(ExportDefaultDeclarationNode *exportDecl) {
 
   if (auto *funcDecl =
           dyn_cast<ESTree::FunctionDeclarationNode>(exportDecl->_declaration)) {
-    if (!funcDecl->_id) {
+    if (compile_ && !funcDecl->_id) {
       // If the default function declaration has no name, then change it to a
       // FunctionExpression node for cleaner IRGen.
       auto *funcExpr = new (astContext_) ESTree::FunctionExpressionNode(

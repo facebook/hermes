@@ -19,7 +19,12 @@ namespace sem {
 bool validateAST(Context &astContext, SemContext &semCtx, Node *root) {
   PerfSection validation("Validating JavaScript function AST");
   // Validate the entire AST.
-  SemanticValidator validator{astContext, semCtx};
+  SemanticValidator validator{astContext, semCtx, true};
+  return validator.doIt(root);
+}
+
+bool validateASTForParser(Context &astContext, SemContext &semCtx, Node *root) {
+  SemanticValidator validator{astContext, semCtx, false};
   return validator.doIt(root);
 }
 
@@ -29,7 +34,7 @@ bool validateFunctionAST(
     Node *function,
     bool strict) {
   PerfSection validation("Validating JavaScript function AST: Deep");
-  SemanticValidator validator{astContext, semCtx};
+  SemanticValidator validator{astContext, semCtx, true};
   return validator.doFunction(function, strict);
 }
 

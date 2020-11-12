@@ -73,6 +73,11 @@ class SemanticValidator {
   /// True if we are validating a formal parameter list.
   bool isFormalParams_{false};
 
+  /// True if we are preparing the AST to be compiled by Hermes, including
+  /// erroring on features which we parse but don't compile and transforming
+  /// the AST. False if we just want to validate the AST.
+  bool compile_;
+
 #ifndef NDEBUG
   /// Our parser detects strictness and initializes the flag in every node,
   /// but if we are reading an external AST, we must look for "use strict" and
@@ -97,7 +102,10 @@ class SemanticValidator {
   unsigned recursionDepth_ = MAX_RECURSION_DEPTH;
 
  public:
-  explicit SemanticValidator(Context &astContext, sem::SemContext &semCtx);
+  explicit SemanticValidator(
+      Context &astContext,
+      sem::SemContext &semCtx,
+      bool compile);
 
   // Perform the validation on whole AST.
   bool doIt(Node *rootNode);
