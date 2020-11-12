@@ -1487,8 +1487,10 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
   }
 
   if (checkAndEat(TokenKind::l_square, JSLexer::GrammarContext::Flow)) {
-    if (variance == nullptr &&
-        checkAndEat(TokenKind::l_square, JSLexer::GrammarContext::Flow)) {
+    if (checkAndEat(TokenKind::l_square, JSLexer::GrammarContext::Flow)) {
+      if (variance) {
+        error(variance->getSourceRange(), "Unexpected variance sigil");
+      }
       // Internal slot
       if (!check(TokenKind::identifier) && !tok_->isResWord()) {
         errorExpected(
@@ -1609,7 +1611,10 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
   key = *optKey;
 
   if (check(TokenKind::less, TokenKind::l_paren)) {
-    auto optProp = parseMethodTypeProperty(start, variance, isStatic, key);
+    if (variance) {
+      error(variance->getSourceRange(), "Unexpected variance sigil");
+    }
+    auto optProp = parseMethodTypeProperty(start, isStatic, key);
     if (!optProp)
       return false;
     if (proto) {
@@ -1703,7 +1708,6 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeProperty(
 
 Optional<ESTree::Node *> JSParserImpl::parseMethodTypeProperty(
     SMLoc start,
-    ESTree::Node *variance,
     bool isStatic,
     ESTree::Node *key) {
   assert(check(TokenKind::less, TokenKind::l_paren));
@@ -1730,7 +1734,14 @@ Optional<ESTree::Node *> JSParserImpl::parseMethodTypeProperty(
       start,
       value,
       new (context_) ESTree::ObjectTypePropertyNode(
-          key, value, method, optional, isStatic, proto, variance, kind));
+          key,
+          value,
+          method,
+          optional,
+          isStatic,
+          proto,
+          /* variance */ nullptr,
+          kind));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseGetOrSetTypeProperty(

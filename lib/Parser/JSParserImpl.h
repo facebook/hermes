@@ -1061,11 +1061,8 @@ class JSParserImpl {
       bool isStatic,
       bool proto,
       ESTree::Node *key);
-  Optional<ESTree::Node *> parseMethodTypeProperty(
-      SMLoc start,
-      ESTree::Node *variance,
-      bool isStatic,
-      ESTree::Node *key);
+  Optional<ESTree::Node *>
+  parseMethodTypeProperty(SMLoc start, bool isStatic, ESTree::Node *key);
   Optional<ESTree::Node *> parseGetOrSetTypeProperty(
       SMLoc start,
       bool isStatic,
