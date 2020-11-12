@@ -244,6 +244,7 @@ class JSParserImpl {
 
   UniqueString *typeofIdent_;
   UniqueString *declareIdent_;
+  UniqueString *protoIdent_;
   UniqueString *opaqueIdent_;
   UniqueString *plusIdent_;
   UniqueString *minusIdent_;
@@ -1031,14 +1032,20 @@ class JSParserImpl {
       ESTree::Node *typeParams);
   Optional<ESTree::Node *> parseFunctionOrGroupTypeAnnotation();
 
-  Optional<ESTree::Node *> parseObjectTypeAnnotation();
+  /// Whether to allow 'proto' properties in an object type annotation.
+  enum class AllowProtoProperty { No, Yes };
+
+  Optional<ESTree::Node *> parseObjectTypeAnnotation(
+      AllowProtoProperty allowProtoProperty);
   bool parseObjectTypeProperties(
+      AllowProtoProperty allowProtoProperty,
       ESTree::NodeList &properties,
       ESTree::NodeList &indexers,
       ESTree::NodeList &callProperties,
       ESTree::NodeList &internalSlots,
       bool &inexact);
   bool parsePropertyTypeAnnotation(
+      AllowProtoProperty allowProtoProperty,
       ESTree::NodeList &properties,
       ESTree::NodeList &indexers,
       ESTree::NodeList &callProperties,
@@ -1052,6 +1059,7 @@ class JSParserImpl {
       SMLoc start,
       ESTree::Node *variance,
       bool isStatic,
+      bool proto,
       ESTree::Node *key);
   Optional<ESTree::Node *> parseMethodTypeProperty(
       SMLoc start,

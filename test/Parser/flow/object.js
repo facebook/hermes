@@ -596,6 +596,7 @@ type T12 = {
 type T13 = {
   static?: number,
 }
+
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "TypeAlias",
 // CHECK-NEXT:       "id": {
@@ -617,6 +618,44 @@ type T13 = {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "method": false,
 // CHECK-NEXT:             "optional": true,
+// CHECK-NEXT:             "static": false,
+// CHECK-NEXT:             "proto": false,
+// CHECK-NEXT:             "variance": null,
+// CHECK-NEXT:             "kind": "init"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "indexers": [],
+// CHECK-NEXT:         "callProperties": [],
+// CHECK-NEXT:         "internalSlots": [],
+// CHECK-NEXT:         "inexact": false,
+// CHECK-NEXT:         "exact": false
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+type T14 = {
+  proto: number,
+}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "T14"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "ObjectTypeAnnotation",
+// CHECK-NEXT:         "properties": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "ObjectTypeProperty",
+// CHECK-NEXT:             "key": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "proto"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "value": {
+// CHECK-NEXT:               "type": "NumberTypeAnnotation"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "method": false,
+// CHECK-NEXT:             "optional": false,
 // CHECK-NEXT:             "static": false,
 // CHECK-NEXT:             "proto": false,
 // CHECK-NEXT:             "variance": null,

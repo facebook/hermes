@@ -264,7 +264,7 @@ Optional<ESTree::Node *> JSParserImpl::parseInterfaceTail(
   if (!need(TokenKind::l_brace, "in interface", "location of interface", start))
     return None;
 
-  return parseObjectTypeAnnotation();
+  return parseObjectTypeAnnotation(AllowProtoProperty::Yes);
 }
 
 bool JSParserImpl::parseInterfaceExtends(
@@ -576,7 +576,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareClass(SMLoc start) {
           start))
     return None;
 
-  auto optBody = parseObjectTypeAnnotation();
+  auto optBody = parseObjectTypeAnnotation(AllowProtoProperty::Yes);
   if (!optBody)
     return None;
 
@@ -1002,7 +1002,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotation() {
       return parseFunctionOrGroupTypeAnnotation();
     case TokenKind::l_brace:
     case TokenKind::l_bracepipe:
-      return parseObjectTypeAnnotation();
+      return parseObjectTypeAnnotation(AllowProtoProperty::No);
     case TokenKind::rw_interface: {
       ESTree::NodeList extends{};
       auto optBody = parseInterfaceTail(start, extends);
@@ -1344,7 +1344,8 @@ Optional<ESTree::Node *> JSParserImpl::parseFunctionOrGroupTypeAnnotation() {
           std::move(params), *optReturnType, rest, typeParams));
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseObjectTypeAnnotation() {
+Optional<ESTree::Node *> JSParserImpl::parseObjectTypeAnnotation(
+    AllowProtoProperty allowProtoProperty) {
   assert(check(TokenKind::l_brace, TokenKind::l_bracepipe));
   bool exact = check(TokenKind::l_bracepipe);
   SMLoc start = advance(JSLexer::GrammarContext::Flow).Start;
@@ -1356,7 +1357,12 @@ Optional<ESTree::Node *> JSParserImpl::parseObjectTypeAnnotation() {
   bool inexact = false;
 
   if (!parseObjectTypeProperties(
-          properties, indexers, callProperties, internalSlots, inexact))
+          allowProtoProperty,
+          properties,
+          indexers,
+          callProperties,
+          internalSlots,
+          inexact))
     return None;
 
   if (exact && inexact) {
@@ -1388,6 +1394,7 @@ Optional<ESTree::Node *> JSParserImpl::parseObjectTypeAnnotation() {
 }
 
 bool JSParserImpl::parseObjectTypeProperties(
+    AllowProtoProperty allowProtoProperty,
     ESTree::NodeList &properties,
     ESTree::NodeList &indexers,
     ESTree::NodeList &callProperties,
@@ -1417,7 +1424,11 @@ bool JSParserImpl::parseObjectTypeProperties(
       }
     } else {
       if (!parsePropertyTypeAnnotation(
-              properties, indexers, callProperties, internalSlots))
+              allowProtoProperty,
+              properties,
+              indexers,
+              callProperties,
+              internalSlots))
         return false;
     }
 
@@ -1442,6 +1453,7 @@ bool JSParserImpl::parseObjectTypeProperties(
 }
 
 bool JSParserImpl::parsePropertyTypeAnnotation(
+    AllowProtoProperty allowProtoProperty,
     ESTree::NodeList &properties,
     ESTree::NodeList &indexers,
     ESTree::NodeList &callProperties,
@@ -1451,6 +1463,12 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
 
   ESTree::Node *variance = nullptr;
   bool isStatic = false;
+  bool proto = false;
+
+  if (check(protoIdent_)) {
+    proto = true;
+    advance(JSLexer::GrammarContext::Flow);
+  }
 
   if (check(TokenKind::plus, TokenKind::minus)) {
     variance = setLocation(
@@ -1461,7 +1479,7 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
     advance(JSLexer::GrammarContext::Flow);
   }
 
-  if (variance == nullptr &&
+  if (variance == nullptr && !proto &&
       (check(TokenKind::rw_static) || check(staticIdent_))) {
     // 'static' disallowed when variance has been provided.
     isStatic = true;
@@ -1548,6 +1566,9 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
       auto optIndexer = parseTypeIndexerProperty(start, variance, isStatic);
       if (!optIndexer)
         return false;
+      if (proto) {
+        error(startRange, "invalid 'proto' modifier");
+      }
       indexers.push_back(**optIndexer);
     }
     return true;
@@ -1567,13 +1588,15 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
   }
 
   ESTree::Node *key = nullptr;
-  if (isStatic && check(TokenKind::colon, TokenKind::question)) {
-    isStatic = false;
+  if ((isStatic || proto) && check(TokenKind::colon, TokenKind::question)) {
     key = setLocation(
         startRange,
         startRange,
-        new (context_) ESTree::IdentifierNode(staticIdent_, nullptr, false));
-    auto optProp = parseTypeProperty(start, variance, isStatic, key);
+        new (context_) ESTree::IdentifierNode(
+            isStatic ? staticIdent_ : protoIdent_, nullptr, false));
+    isStatic = false;
+    proto = false;
+    auto optProp = parseTypeProperty(start, variance, isStatic, proto, key);
     if (!optProp)
       return false;
     properties.push_back(**optProp);
@@ -1589,12 +1612,18 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
     auto optProp = parseMethodTypeProperty(start, variance, isStatic, key);
     if (!optProp)
       return false;
+    if (proto) {
+      error(startRange, "invalid 'proto' modifier");
+    }
     properties.push_back(**optProp);
     return true;
   }
 
   if (check(TokenKind::colon, TokenKind::question)) {
-    auto optProp = parseTypeProperty(start, variance, isStatic, key);
+    if (proto && allowProtoProperty == AllowProtoProperty::No) {
+      error(startRange, "invalid 'proto' modifier");
+    }
+    auto optProp = parseTypeProperty(start, variance, isStatic, proto, key);
     if (!optProp)
       return false;
     properties.push_back(**optProp);
@@ -1629,7 +1658,10 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
         start);
     return false;
   }
-  auto optProp = parseTypeProperty(start, variance, isStatic, key);
+  if (proto && allowProtoProperty == AllowProtoProperty::No) {
+    error(startRange, "invalid 'proto' modifier");
+  }
+  auto optProp = parseTypeProperty(start, variance, isStatic, proto, key);
   if (!optProp)
     return false;
   properties.push_back(**optProp);
@@ -1640,6 +1672,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeProperty(
     SMLoc start,
     ESTree::Node *variance,
     bool isStatic,
+    bool proto,
     ESTree::Node *key) {
   assert(check(TokenKind::colon, TokenKind::question));
 
@@ -1659,7 +1692,6 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeProperty(
   ESTree::Node *value = *optValue;
 
   bool method = false;
-  bool proto = false;
   UniqueString *kind = initIdent_;
 
   return setLocation(

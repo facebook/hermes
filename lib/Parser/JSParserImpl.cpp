@@ -88,6 +88,7 @@ void JSParserImpl::initializeIdentifiers() {
 
   typeofIdent_ = lexer_.getIdentifier("typeof");
   declareIdent_ = lexer_.getIdentifier("declare");
+  protoIdent_ = lexer_.getIdentifier("proto");
   opaqueIdent_ = lexer_.getIdentifier("opaque");
   plusIdent_ = lexer_.getIdentifier("plus");
   minusIdent_ = lexer_.getIdentifier("minus");
