@@ -70,6 +70,7 @@ class C {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "computed": false,
 // CHECK-NEXT:             "static": true,
+// CHECK-NEXT:             "declare": false,
 // CHECK-NEXT:             "loc": {
 // CHECK-NEXT:               "start": {
 // CHECK-NEXT:                 "line": 15,

@@ -4121,6 +4121,22 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
   while (!check(TokenKind::r_brace)) {
     bool isStatic = false;
     SMRange startRange = tok_->getSourceRange();
+
+    bool declare = false;
+
+#if HERMES_PARSE_FLOW
+    if (context_.getParseFlow() && check(declareIdent_)) {
+      // Check for "declare" class properties.
+      auto optNext = lexer_.lookahead1(llvh::None);
+      if (optNext.hasValue() &&
+          (*optNext == TokenKind::rw_static ||
+           *optNext == TokenKind::identifier)) {
+        declare = true;
+        advance();
+      }
+    }
+#endif
+
     switch (tok_->getKind()) {
       case TokenKind::semi:
         advance();
@@ -4134,7 +4150,7 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
         // intentional fallthrough
       default: {
         // ClassElement
-        auto optElem = parseClassElement(isStatic, startRange);
+        auto optElem = parseClassElement(isStatic, startRange, declare);
         if (!optElem)
           return None;
         if (auto *method = dyn_cast<ESTree::MethodDefinitionNode>(*optElem)) {
@@ -4187,6 +4203,7 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
 Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     bool isStatic,
     SMRange startRange,
+    bool declare,
     bool eagerly) {
   SMLoc startLoc = tok_->getStartLoc();
 
@@ -4353,6 +4370,9 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
         return None;
       value = *optValue;
       end = value->getEndLoc();
+      if (declare) {
+        error(startRange, "Invalid 'declare' with initializer");
+      }
     }
     // ASI is allowed for separating class elements.
     if (!eatSemi(end, true) && !typeAnnotation) {
@@ -4368,13 +4388,23 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
           prop,
           end,
           new (context_) ESTree::ClassPrivatePropertyNode(
-              prop, value, isStatic, variance, typeAnnotation));
+              prop, value, isStatic, declare, variance, typeAnnotation));
     }
     return setLocation(
         startRange,
         end,
         new (context_) ESTree::ClassPropertyNode(
-            prop, value, computed, isStatic, variance, typeAnnotation));
+            prop,
+            value,
+            computed,
+            isStatic,
+            declare,
+            variance,
+            typeAnnotation));
+  }
+
+  if (declare) {
+    error(startRange, "Invalid 'declare' in class method");
   }
 
   ESTree::Node *typeParams = nullptr;

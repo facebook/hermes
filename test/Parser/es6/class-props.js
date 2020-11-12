@@ -34,7 +34,8 @@
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": null,
 // CHECK-NEXT:               "computed": false,
-// CHECK-NEXT:               "static": false
+// CHECK-NEXT:               "static": false,
+// CHECK-NEXT:               "declare": false
 // CHECK-NEXT:             },
 
   b = 3;
@@ -50,7 +51,8 @@
 // CHECK-NEXT:                 "raw": "3"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "computed": false,
-// CHECK-NEXT:               "static": false
+// CHECK-NEXT:               "static": false,
+// CHECK-NEXT:               "declare": false
 // CHECK-NEXT:             },
 
   static c = 4;
@@ -66,7 +68,8 @@
 // CHECK-NEXT:                 "raw": "4"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "computed": false,
-// CHECK-NEXT:               "static": true
+// CHECK-NEXT:               "static": true,
+// CHECK-NEXT:               "declare": false
 // CHECK-NEXT:             },
 
   [d];
@@ -78,7 +81,8 @@
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": null,
 // CHECK-NEXT:               "computed": true,
-// CHECK-NEXT:               "static": false
+// CHECK-NEXT:               "static": false,
+// CHECK-NEXT:               "declare": false
 // CHECK-NEXT:             },
 
   get;
@@ -90,7 +94,8 @@
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": null,
 // CHECK-NEXT:               "computed": false,
-// CHECK-NEXT:               "static": false
+// CHECK-NEXT:               "static": false,
+// CHECK-NEXT:               "declare": false
 // CHECK-NEXT:             },
 
   set = 4;
@@ -106,7 +111,8 @@
 // CHECK-NEXT:                 "raw": "4"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "computed": false,
-// CHECK-NEXT:               "static": false
+// CHECK-NEXT:               "static": false,
+// CHECK-NEXT:               "declare": false
 // CHECK-NEXT:             },
 
   async = 5;
@@ -122,7 +128,8 @@
 // CHECK-NEXT:                 "raw": "5"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "computed": false,
-// CHECK-NEXT:               "static": false
+// CHECK-NEXT:               "static": false,
+// CHECK-NEXT:               "declare": false
 // CHECK-NEXT:             }
 
 });
@@ -153,7 +160,8 @@ class C {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": null,
 // CHECK-NEXT:             "computed": false,
-// CHECK-NEXT:             "static": false
+// CHECK-NEXT:             "static": false,
+// CHECK-NEXT:             "declare": false
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       }
@@ -180,7 +188,8 @@ class C {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": null,
 // CHECK-NEXT:             "computed": false,
-// CHECK-NEXT:             "static": false
+// CHECK-NEXT:             "static": false,
+// CHECK-NEXT:             "declare": false
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       }
@@ -207,7 +216,8 @@ class C {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": null,
 // CHECK-NEXT:             "computed": false,
-// CHECK-NEXT:             "static": false
+// CHECK-NEXT:             "static": false,
+// CHECK-NEXT:             "declare": false
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       }
@@ -235,7 +245,8 @@ class C {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": null,
 // CHECK-NEXT:             "computed": false,
-// CHECK-NEXT:             "static": false
+// CHECK-NEXT:             "static": false,
+// CHECK-NEXT:             "declare": false
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "ClassProperty",
@@ -245,7 +256,8 @@ class C {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": null,
 // CHECK-NEXT:             "computed": false,
-// CHECK-NEXT:             "static": false
+// CHECK-NEXT:             "static": false,
+// CHECK-NEXT:             "declare": false
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       }

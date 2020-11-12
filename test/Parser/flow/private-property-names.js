@@ -34,6 +34,7 @@ class A {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": null,
 // CHECK-NEXT:             "static": false,
+// CHECK-NEXT:             "declare": false,
 // CHECK-NEXT:             "variance": null,
 // CHECK-NEXT:             "typeAnnotation": {
 // CHECK-NEXT:               "type": "TypeAnnotation",
@@ -50,6 +51,7 @@ class A {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": null,
 // CHECK-NEXT:             "static": false,
+// CHECK-NEXT:             "declare": false,
 // CHECK-NEXT:             "variance": null,
 // CHECK-NEXT:             "typeAnnotation": {
 // CHECK-NEXT:               "type": "TypeAnnotation",
@@ -71,6 +73,7 @@ class A {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": null,
 // CHECK-NEXT:             "static": false,
+// CHECK-NEXT:             "declare": false,
 // CHECK-NEXT:             "variance": null,
 // CHECK-NEXT:             "typeAnnotation": {
 // CHECK-NEXT:               "type": "TypeAnnotation",

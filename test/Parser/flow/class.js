@@ -109,6 +109,7 @@ class C {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "computed": false,
 // CHECK-NEXT:             "static": true,
+// CHECK-NEXT:             "declare": false,
 // CHECK-NEXT:             "typeAnnotation": {
 // CHECK-NEXT:               "type": "TypeAnnotation",
 // CHECK-NEXT:               "typeAnnotation": {

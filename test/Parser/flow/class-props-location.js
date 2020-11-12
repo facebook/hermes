@@ -58,6 +58,7 @@ class C {
 // CHECK-NEXT:             "value": null,
 // CHECK-NEXT:             "computed": false,
 // CHECK-NEXT:             "static": false,
+// CHECK-NEXT:             "declare": false,
 // CHECK-NEXT:             "loc": {
 // CHECK-NEXT:               "start": {
 // CHECK-NEXT:                 "line": 15,
@@ -89,6 +90,7 @@ class C {
 // CHECK-NEXT:             "value": null,
 // CHECK-NEXT:             "computed": false,
 // CHECK-NEXT:             "static": false,
+// CHECK-NEXT:             "declare": false,
 // CHECK-NEXT:             "typeAnnotation": {
 // CHECK-NEXT:               "type": "TypeAnnotation",
 // CHECK-NEXT:               "typeAnnotation": {
@@ -160,6 +162,7 @@ class C {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "computed": false,
 // CHECK-NEXT:             "static": false,
+// CHECK-NEXT:             "declare": false,
 // CHECK-NEXT:             "typeAnnotation": {
 // CHECK-NEXT:               "type": "TypeAnnotation",
 // CHECK-NEXT:               "typeAnnotation": {
@@ -217,6 +220,7 @@ class C {
 // CHECK-NEXT:             "value": null,
 // CHECK-NEXT:             "computed": false,
 // CHECK-NEXT:             "static": false,
+// CHECK-NEXT:             "declare": false,
 // CHECK-NEXT:             "loc": {
 // CHECK-NEXT:               "start": {
 // CHECK-NEXT:                 "line": 18,
