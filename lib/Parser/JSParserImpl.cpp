@@ -4494,6 +4494,15 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
             Twine(funcExpr->_params.size()));
   }
 
+#if HERMES_PARSE_FLOW
+  if ((special == SpecialKind::Get || special == SpecialKind::Set) &&
+      typeParams != nullptr) {
+    error(
+        funcExpr->getSourceRange(),
+        "accessor method may not have type parameters");
+  }
+#endif
+
   if (isStatic && propName && propName->str() == "prototype") {
     // ClassElement : static MethodDefinition
     // It is a Syntax Error if PropName of MethodDefinition is "prototype".
