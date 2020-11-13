@@ -1223,3 +1223,48 @@ test('Symbol type annotation', () => {
     },
   });
 });
+
+test('Semantic validation', () => {
+  // Semantic validator catches errors
+  expect(() => parse(`return 1;`)).toThrow(
+    `1:0: 'return' not in a function
+return 1;
+^~~~~~~~~
+`,
+  );
+
+  // But invalid regexps are not reported
+  expect(parse(`/(((/;`)).toMatchObject({
+    type: 'Program',
+    body: [
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'Literal',
+          value: null,
+          regex: {
+            pattern: '(((',
+            flags: '',
+          },
+        },
+      },
+    ],
+  });
+});
+
+test('Private properties', () => {
+  // Private property uses are not supported
+  expect(() => parse(`foo.#private`)).toThrow(
+    `1:4: Private properties are not supported`,
+  );
+
+  // Private property definitions are not supported
+  expect(() => parse(`class C { #private }`)).toThrow(
+    `1:10: Private properties are not supported`,
+  );
+
+  // Errors are formatted with filename
+  expect(() => parse(`foo.#private`, {sourceFilename: 'Foo.js'})).toThrow(
+    `Foo.js:1:4: Private properties are not supported`,
+  );
+});

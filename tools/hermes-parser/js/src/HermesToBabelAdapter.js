@@ -57,6 +57,9 @@ class HermesToBabelAdapter extends HermesASTAdapter {
         return this.mapRestElement(node);
       case 'ImportExpression':
         return this.mapImportExpression(node);
+      case 'PrivateName':
+      case 'ClassPrivateProperty':
+        return this.mapPrivateProperty(node);
       default:
         return this.mapNodeDefault(node);
     }

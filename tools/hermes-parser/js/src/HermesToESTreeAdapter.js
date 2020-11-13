@@ -52,6 +52,9 @@ class HermesToESTreeAdapter extends HermesASTAdapter {
         return this.mapExportNamedDeclaration(node);
       case 'ExportAllDeclaration':
         return this.mapExportAllDeclaration(node);
+      case 'PrivateName':
+      case 'ClassPrivateProperty':
+        return this.mapPrivateProperty(node);
       default:
         return this.mapNodeDefault(node);
     }

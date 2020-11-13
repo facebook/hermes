@@ -6,6 +6,7 @@
  */
 
 #include "hermes/AST/Context.h"
+#include "hermes/AST/SemValidate.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Support/Algorithms.h"
 
@@ -54,6 +55,7 @@ extern "C" ParseResult *hermesParse(
   auto context = std::make_shared<Context>();
   context->setParseJSX(true);
   context->setParseFlow(true);
+  context->setUseCJSModules(true);
 
   // Set up custom diagnostic handler for error reporting
   auto &sm = context->getSourceErrorManager();
@@ -83,6 +85,16 @@ extern "C" ParseResult *hermesParse(
 
   result->astReference_ =
       buildProgram(*parsedJs, &context->getSourceErrorManager(), &jsParser);
+
+  // Run semantic validation after AST has been transferred to JS
+  sem::SemContext semContext{};
+  validateASTForParser(*context, semContext, *parsedJs);
+
+  // Return first error if errors are detected during semantic validation
+  if (diagHandler.hasError()) {
+    result->error_ = diagHandler.getErrorString();
+    return result.release();
+  }
 
   return result.release();
 }
