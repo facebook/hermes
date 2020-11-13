@@ -11,6 +11,7 @@ set(RTSources
   Array.cpp
   ArrayTest.cpp
   ArrayStorageTest.cpp
+  BytecodeProviderTest.cpp
   CallResultTest.cpp
   CardObjectBoundaryNCTest.cpp
   CardTableNCTest.cpp
@@ -65,8 +66,8 @@ set(RTSources
   StringPrimitiveTest.cpp
   StringViewTest.cpp
   SymbolIDTest.cpp
-  TestHelpers.h
-  TestHelpers.cpp
+  TestHelpers.cpp TestHelpers.h
+  TestHelpers1.cpp TestHelpers1.h
   TwineChar16Test.cpp
   WeakValueMapTest.cpp
   MetadataTest.cpp

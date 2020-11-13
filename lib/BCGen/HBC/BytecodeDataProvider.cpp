@@ -530,17 +530,6 @@ void BCProviderFromBuffer::willNeedStringTable() {
   oscompat::vm_prefetch(start, prefetchLength);
 }
 
-void BCProviderFromBuffer::dontNeedIdentifierHashes() {
-  auto start = reinterpret_cast<uintptr_t>(identifierHashes_.begin());
-  auto end = reinterpret_cast<uintptr_t>(identifierHashes_.end());
-  const size_t PS = oscompat::page_size();
-  start = llvh::alignTo(start, PS);
-  end = llvh::alignDown(end, PS);
-  if (start < end) {
-    oscompat::vm_unused(reinterpret_cast<void *>(start), end - start);
-  }
-}
-
 #undef ASSERT_BOUNDED
 #undef ASSERT_TOTAL_ARRAY_LEN
 
