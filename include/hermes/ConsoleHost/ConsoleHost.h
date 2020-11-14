@@ -52,7 +52,9 @@ class ConsoleHostContext {
 
   /// \param id the job to clear from the queue.
   void clearJob(uint32_t id) {
-    queuedJobs_.erase(id);
+    queuedJobs_.remove_if([id](std::pair<uint32_t, vm::Callable *> it) {
+      return it.first == id;
+    });
   }
 
   /// Remove the first job from the queue.
