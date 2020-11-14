@@ -85,6 +85,26 @@ void HadesGC::OldGen::addCellToFreelist(FreelistCell *cell, size_t segmentIdx) {
   __asan_poison_memory_region(cell + 1, sz - sizeof(FreelistCell));
 }
 
+void HadesGC::OldGen::addCellToFreelistFromSweep(
+    char *freeRangeStart,
+    char *freeRangeEnd) {
+  assert(
+      gc_->concurrentPhase_ == Phase::Sweep &&
+      "addCellToFreelistFromSweep should only be called during sweeping.");
+  size_t newCellSize = freeRangeEnd - freeRangeStart;
+  // While coalescing, sweeping may generate new cells, so make sure the cell
+  // head is updated.
+  HeapSegment::setCellHead(
+      reinterpret_cast<GCCell *>(freeRangeStart), newCellSize);
+  FreelistCell *newCell = new (freeRangeStart) FreelistCell(newCellSize);
+  // Get the size bucket for the cell being added;
+  const uint32_t bucket = getFreelistBucket(newCellSize);
+  // Push onto the size-specific free list for this bucket and segment.
+  newCell->next_ = freelistSegmentsBuckets_[sweepIterator_.segNumber][bucket];
+  freelistSegmentsBuckets_[sweepIterator_.segNumber][bucket] = newCell;
+  __asan_poison_memory_region(newCell + 1, newCellSize - sizeof(FreelistCell));
+}
+
 HadesGC::OldGen::FreelistCell *HadesGC::OldGen::removeCellFromFreelist(
     size_t bucket,
     size_t segmentIdx) {
@@ -814,11 +834,16 @@ bool HadesGC::OldGen::sweepNext() {
   // allocations into the old gen, which might boost the credited memory.
   const uint64_t externalBytesBefore = externalBytes();
 
-  clearFreelistForSegment(sweepIterator_.segNumber);
+  // Clear the head pointers so that we can construct a new freelist. The
+  // freelist bits will be updated after the segment is swept. The bits will be
+  // inconsistent with the actual freelist for the duration of sweeping, but
+  // this is fine because gcMutex_ is during the entire period.
+  for (auto &head : freelistSegmentsBuckets_[sweepIterator_.segNumber])
+    head = nullptr;
+
   char *freeRangeStart = nullptr, *freeRangeEnd = nullptr;
   int32_t segmentSweptBytes = 0;
   for (GCCell *cell : segments_[sweepIterator_.segNumber]->cells()) {
-    // forAllObjs skips free list cells, so no need to check for those.
     assert(cell->isValid() && "Invalid cell in sweeping");
     if (HeapSegment::getCellMarkBit(cell)) {
       continue;
@@ -833,10 +858,8 @@ bool HadesGC::OldGen::sweepNext() {
           "Should not overshoot the start of an object");
       // We are starting a new free range, flush the previous one.
       if (LLVM_LIKELY(freeRangeStart))
-        addCellToFreelist(
-            freeRangeStart,
-            freeRangeEnd - freeRangeStart,
-            sweepIterator_.segNumber);
+        addCellToFreelistFromSweep(freeRangeStart, freeRangeEnd);
+
       freeRangeEnd = freeRangeStart = cellCharPtr;
     }
     // Expand the current free range to include the current cell.
@@ -859,12 +882,24 @@ bool HadesGC::OldGen::sweepNext() {
   }
 
   // Flush any free range that was left over.
-  if (freeRangeStart) {
-    addCellToFreelist(
-        freeRangeStart,
-        freeRangeEnd - freeRangeStart,
-        sweepIterator_.segNumber);
+  if (freeRangeStart)
+    addCellToFreelistFromSweep(freeRangeStart, freeRangeEnd);
+
+  // Update the freelist bit arrays to match the newly set freelist heads.
+  for (size_t bucket = 0; bucket < kNumFreelistBuckets; ++bucket) {
+    // For each bucket, set the bit for the current segment based on whether
+    // it has a non-null freelist head for that bucket.
+    if (freelistSegmentsBuckets_[sweepIterator_.segNumber][bucket])
+      freelistBucketSegmentBitArray_[bucket].set(sweepIterator_.segNumber);
+    else
+      freelistBucketSegmentBitArray_[bucket].reset(sweepIterator_.segNumber);
+
+    // In case the change above has changed the availability of a bucket across
+    // all segments, update the overall bit array.
+    freelistBucketBitArray_.set(
+        bucket, !freelistBucketSegmentBitArray_[bucket].empty());
   }
+
   // Correct the allocated byte count.
   incrementAllocatedBytes(-segmentSweptBytes, sweepIterator_.segNumber);
   sweepIterator_.sweptBytes += segmentSweptBytes;

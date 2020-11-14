@@ -405,6 +405,11 @@ class HadesGC final : public GCBase {
     /// \post The returned index is less than kNumFreelistBuckets.
     static uint32_t getFreelistBucket(uint32_t size);
 
+    /// Adds the given region of memory to the free list for the segment that is
+    /// currently being swept. This does not update the Freelist bits, those
+    /// should all be updated in a single pass at the end of sweeping.
+    void addCellToFreelistFromSweep(char *freeRangeStart, char *freeRangeEnd);
+
     HadesGC *gc_;
     std::vector<std::unique_ptr<HeapSegment>> segments_;
 
@@ -457,7 +462,17 @@ class HadesGC final : public GCBase {
     static constexpr size_t kNumFreelistBuckets =
         kNumSmallFreelistBuckets + kNumLargeFreelistBuckets;
 
-    /// Maintain a freelist as described above for every segment.
+    /// The below data structures should be used as follows.
+    /// 1. When looking for a given size, first find the smallest appropriate
+    ///    bucket that has any elements at all, by scanning
+    ///    freelistBucketBitArray_.
+    /// 2. Once a bucket is identified, find a segment that contains cells for
+    ///    that bucket using freelistBucketSegmentBitArray_.
+    /// 3. Finally, with the given pair of bucket and segment index, obtain the
+    ///    head of the freelist from freelistSegmentsBuckets_.
+
+    /// Maintain a freelist as described above for every segment. Each element
+    /// is the head of a freelist for the given segment + bucket pair.
     std::vector<std::array<FreelistCell *, kNumFreelistBuckets>>
         freelistSegmentsBuckets_;
 
