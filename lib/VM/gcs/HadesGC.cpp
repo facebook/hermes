@@ -800,111 +800,113 @@ class HadesGC::MarkWeakRootsAcceptor final : public WeakRootAcceptor {
   PointerBase *const pointerBase_;
 };
 
-class HadesGC::SweepIterator final {
- public:
-  explicit SweepIterator(HadesGC *gc, size_t numSegments)
-      : gc_{gc}, numSegments_{numSegments} {}
+bool HadesGC::OldGen::sweepNext() {
+  // Check if there are any more segments to sweep. Note that in the case where
+  // OG has zero segments, this also skips updating the stats and survival ratio
+  // at the end of this function, since they are not required.
+  if (!sweepIterator_.segNumber)
+    return false;
+  assert(gc_->gcMutex_ && "gcMutex_ must be held while sweeping.");
 
-  /// \return true if there's still more sweeping to do.
-  bool next() {
-    if (segNumber_ == numSegments_) {
-      // In case next is called too many times.
-      return false;
-    }
-    assert(gc_->gcMutex_ && "gcMutex_ must be held while sweeping.");
-    const bool isTracking = gc_->isTrackingIDs();
-    // Re-evaluate this start point each time, as releasing the gcMutex_ allows
-    // allocations into the old gen, which might boost the credited memory.
-    const uint64_t externalBytesBefore = gc_->oldGen_.externalBytes();
+  sweepIterator_.segNumber--;
+  const bool isTracking = gc_->isTrackingIDs();
+  // Re-evaluate this start point each time, as releasing the gcMutex_ allows
+  // allocations into the old gen, which might boost the credited memory.
+  const uint64_t externalBytesBefore = externalBytes();
 
-    gc_->oldGen_.clearFreelistForSegment(segNumber_);
-    char *freeRangeStart = nullptr, *freeRangeEnd = nullptr;
-    int32_t segmentSweptBytes = 0;
-    for (GCCell *cell : gc_->oldGen_[segNumber_].cells()) {
-      // forAllObjs skips free list cells, so no need to check for those.
-      assert(cell->isValid() && "Invalid cell in sweeping");
-      if (HeapSegment::getCellMarkBit(cell)) {
-        continue;
-      }
-
-      const auto sz = cell->getAllocatedSize();
-      char *const cellCharPtr = reinterpret_cast<char *>(cell);
-
-      if (freeRangeEnd != cellCharPtr) {
-        assert(
-            freeRangeEnd < cellCharPtr &&
-            "Should not overshoot the start of an object");
-        // We are starting a new free range, flush the previous one.
-        if (LLVM_LIKELY(freeRangeStart))
-          gc_->oldGen_.addCellToFreelist(
-              freeRangeStart, freeRangeEnd - freeRangeStart, segNumber_);
-        freeRangeEnd = freeRangeStart = cellCharPtr;
-      }
-      // Expand the current free range to include the current cell.
-      freeRangeEnd += sz;
-
-      if (cell->getKind() == CellKind::FreelistKind)
-        continue;
-
-      segmentSweptBytes += sz;
-      // Cell is dead, run its finalizer first if it has one.
-      cell->getVT()->finalizeIfExists(cell, gc_);
-      if (isTracking) {
-        // FIXME: There could be a race condition here if newAlloc is
-        // being called at the same time and using a shared data structure
-        // with freeAlloc. freeAlloc relies on the ID, so call it before
-        // untrackObject.
-        gc_->getAllocationLocationTracker().freeAlloc(cell, sz);
-        gc_->getIDTracker().untrackObject(cell);
-      }
+  clearFreelistForSegment(sweepIterator_.segNumber);
+  char *freeRangeStart = nullptr, *freeRangeEnd = nullptr;
+  int32_t segmentSweptBytes = 0;
+  for (GCCell *cell : segments_[sweepIterator_.segNumber]->cells()) {
+    // forAllObjs skips free list cells, so no need to check for those.
+    assert(cell->isValid() && "Invalid cell in sweeping");
+    if (HeapSegment::getCellMarkBit(cell)) {
+      continue;
     }
 
-    // Flush any free range that was left over.
-    if (freeRangeStart) {
-      gc_->oldGen_.addCellToFreelist(
-          freeRangeStart, freeRangeEnd - freeRangeStart, segNumber_);
+    const auto sz = cell->getAllocatedSize();
+    char *const cellCharPtr = reinterpret_cast<char *>(cell);
+
+    if (freeRangeEnd != cellCharPtr) {
+      assert(
+          freeRangeEnd < cellCharPtr &&
+          "Should not overshoot the start of an object");
+      // We are starting a new free range, flush the previous one.
+      if (LLVM_LIKELY(freeRangeStart))
+        addCellToFreelist(
+            freeRangeStart,
+            freeRangeEnd - freeRangeStart,
+            sweepIterator_.segNumber);
+      freeRangeEnd = freeRangeStart = cellCharPtr;
     }
-    // Correct the allocated byte count.
-    gc_->oldGen_.incrementAllocatedBytes(-segmentSweptBytes, segNumber_);
-    sweptBytes_ += segmentSweptBytes;
-    sweptExternalBytes_ += externalBytesBefore - gc_->oldGen_.externalBytes();
-    return ++segNumber_ != numSegments_;
+    // Expand the current free range to include the current cell.
+    freeRangeEnd += sz;
+
+    if (cell->getKind() == CellKind::FreelistKind)
+      continue;
+
+    segmentSweptBytes += sz;
+    // Cell is dead, run its finalizer first if it has one.
+    cell->getVT()->finalizeIfExists(cell, gc_);
+    if (isTracking) {
+      // FIXME: There could be a race condition here if newAlloc is
+      // being called at the same time and using a shared data structure
+      // with freeAlloc. freeAlloc relies on the ID, so call it before
+      // untrackObject.
+      gc_->getAllocationLocationTracker().freeAlloc(cell, sz);
+      gc_->getIDTracker().untrackObject(cell);
+    }
   }
 
-  void complete() {
-    assert(gc_->gcMutex_ && "Mutex must be held when complete is called");
-    auto &stats = *gc_->ogCollectionStats_;
-    stats.setSweptBytes(sweptBytes_);
-    stats.setSweptExternalBytes(sweptExternalBytes_);
-    gc_->oldGen_.updateAverageSurvivalRatio(stats.survivalRatio());
-    // The formula for occupancyTarget_ is:
-    // occupancyTarget_ = (allocatedBytes + externalBytes) / (capacityBytes +
-    //  externalBytes)
-    // Solving for capacityBytes:
-    // capacityBytes = (allocatedBytes + externalBytes) / occupancyTarget_ -
-    //  externalBytes
-    const size_t targetCapacity =
-        (stats.afterAllocatedBytes() + stats.afterExternalBytes()) /
-            gc_->occupancyTarget_ -
-        stats.afterExternalBytes();
-    const size_t targetSegments =
-        llvh::divideCeil(targetCapacity, HeapSegment::maxSize());
-    const size_t finalSegments =
-        std::min(targetSegments, gc_->oldGen_.maxNumSegments());
-    gc_->oldGen_.reserveSegments(finalSegments);
+  // Flush any free range that was left over.
+  if (freeRangeStart) {
+    addCellToFreelist(
+        freeRangeStart,
+        freeRangeEnd - freeRangeStart,
+        sweepIterator_.segNumber);
   }
+  // Correct the allocated byte count.
+  incrementAllocatedBytes(-segmentSweptBytes, sweepIterator_.segNumber);
+  sweepIterator_.sweptBytes += segmentSweptBytes;
+  sweepIterator_.sweptExternalBytes += externalBytesBefore - externalBytes();
 
-  size_t numSegments() const {
-    return numSegments_;
-  }
+  // There are more iterations to go.
+  if (sweepIterator_.segNumber)
+    return true;
 
- private:
-  HadesGC *gc_;
-  size_t segNumber_{0};
-  size_t numSegments_;
-  uint64_t sweptBytes_{0};
-  uint64_t sweptExternalBytes_{0};
-};
+  // This was the last sweep iteration, finish the collection.
+  auto &stats = *gc_->ogCollectionStats_;
+  stats.setSweptBytes(sweepIterator_.sweptBytes);
+  stats.setSweptExternalBytes(sweepIterator_.sweptExternalBytes);
+  updateAverageSurvivalRatio(stats.survivalRatio());
+  // The formula for occupancyTarget_ is:
+  // occupancyTarget_ = (allocatedBytes + externalBytes) / (capacityBytes +
+  //  externalBytes)
+  // Solving for capacityBytes:
+  // capacityBytes = (allocatedBytes + externalBytes) / occupancyTarget_ -
+  //  externalBytes
+  const size_t targetCapacity =
+      (stats.afterAllocatedBytes() + stats.afterExternalBytes()) /
+          gc_->occupancyTarget_ -
+      stats.afterExternalBytes();
+  const size_t targetSegments =
+      llvh::divideCeil(targetCapacity, HeapSegment::maxSize());
+  const size_t finalSegments = std::min(targetSegments, maxNumSegments());
+  reserveSegments(finalSegments);
+  sweepIterator_ = {};
+  return false;
+}
+
+void HadesGC::OldGen::initializeSweep() {
+  assert(
+      !sweepIterator_.segNumber && !sweepIterator_.sweptBytes &&
+      !sweepIterator_.sweptExternalBytes && "Sweep is already in progress.");
+  sweepIterator_.segNumber = segments_.size();
+}
+
+size_t HadesGC::OldGen::sweepSegmentsRemaining() const {
+  return sweepIterator_.segNumber;
+}
 
 // Assume about 30% of the YG will survive initially.
 constexpr double kYGInitialSurvivalRatio = 0.3;
@@ -1130,8 +1132,8 @@ void HadesGC::oldGenCollection(std::string cause) {
   // doesn't need to be updated. We also don't need to sweep any segments made
   // since the start of the collection, since they won't have any unmarked
   // objects anyway.
-  sweepIterator_ =
-      llvh::make_unique<SweepIterator>(this, oldGen_.numSegments());
+  oldGen_.initializeSweep();
+
   // Note: This line calls the destructor for the previous CollectionStats (if
   // any) in addition to creating a new CollectionStats. It is desirable to
   // call the destructor here so that the analytics callback is invoked from the
@@ -1246,12 +1248,9 @@ void HadesGC::incrementalCollect() {
       }
       break;
     case Phase::Sweep:
-      // Calling sweepIterator->next() will sweep the next segment and advance
-      // the iterator.
-      if (!sweepIterator_->next()) {
-        // Sweep and finish any other collection bookkeeping.
-        sweepIterator_->complete();
-        sweepIterator_.reset();
+      // Calling oldGen_.sweepNext() will sweep the next segment.
+      if (!oldGen_.sweepNext()) {
+        // Finish any collection bookkeeping.
         ogCollectionStats_->setEndTime();
         concurrentPhase_ = Phase::None;
         if (!kConcurrentGC) {
@@ -2457,13 +2456,13 @@ size_t HadesGC::getDrainRate() {
   const size_t ygCollectionsUntilFull = ygSurvivalRatio
       ? llvh::divideCeil(bytesToFill, ygSurvivalRatio * HeapSegment::maxSize())
       : std::numeric_limits<size_t>::max();
-  // Sweeping also will take exactly oldGen_.numSegments() YG collections to
-  // fully sweep. Subtract that from here to speed up marking so there's some
-  // extra time for sweeping. Leave at least 1 if there aren't enough to sweep
-  // segments fully.
+  // Sweeping also will take exactly oldGen_.sweepSegmentsRemaining() YG
+  // collections to fully sweep. Subtract that from here to speed up marking so
+  // there's some extra time for sweeping. Leave at least 1 if there aren't
+  // enough to sweep segments fully.
   const size_t markIterations =
-      ygCollectionsUntilFull > sweepIterator_->numSegments()
-      ? ygCollectionsUntilFull - sweepIterator_->numSegments()
+      ygCollectionsUntilFull > oldGen_.sweepSegmentsRemaining()
+      ? ygCollectionsUntilFull - oldGen_.sweepSegmentsRemaining()
       : 1;
   assert(
       markIterations != 0 &&

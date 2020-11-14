@@ -226,7 +226,6 @@ class HadesGC final : public GCBase {
   class EvacAcceptor;
   class MarkAcceptor;
   class MarkWeakRootsAcceptor;
-  class SweepIterator;
   class OldGen;
 
   /// Similar to AlignedHeapSegment except it uses a free list.
@@ -385,6 +384,21 @@ class HadesGC final : public GCBase {
     /// allocations take place in it.
     void clearFreelistForSegment(size_t segmentIdx);
 
+    /// Sweep the next segment and advance the internal sweep iterator. If there
+    /// are no more segments left to sweep, update OG collection stats with
+    /// numbers from the sweep.
+    bool sweepNext();
+
+    /// Initialize the internal sweep iterator. This will reset the internal
+    /// sweep stats to 0, and set the sweep iterator to the last segment in the
+    /// OG. The sweep iterator then works backwards from there, to avoid
+    /// sweeping newly added segments.
+    void initializeSweep();
+
+    /// Number of segments left to sweep. Useful for determining how many YG
+    /// collections it will take to complete an incremental OG collection.
+    size_t sweepSegmentsRemaining() const;
+
    private:
     /// \return the index of the bucket in freelistBuckets_ corresponding to
     /// \p size.
@@ -456,6 +470,19 @@ class HadesGC final : public GCBase {
     /// index into a freelist bucket.
     std::array<llvh::SparseBitVector<>, kNumFreelistBuckets>
         freelistBucketSegmentBitArray_;
+
+    /// Tracks the current progress of sweeping.
+    struct SweepIterator {
+      /// The current segment being swept, this should start at the end and move
+      /// to the front of the segment list, to avoid sweeping newly added
+      /// segments.
+      size_t segNumber{0};
+
+      /// The total number of GC-managed and external bytes swept in the current
+      /// sweep.
+      uint64_t sweptBytes{0};
+      uint64_t sweptExternalBytes{0};
+    } sweepIterator_;
 
     /// Searches the OG for a space to allocate memory into.
     /// \return A pointer to uninitialized memory that can be written into, null
@@ -530,11 +557,6 @@ class HadesGC final : public GCBase {
   /// Used by the write barrier to add items to the worklist.
   /// Protected by gcMutex_.
   std::unique_ptr<MarkAcceptor> oldGenMarker_;
-
-  /// Tracks the current progress of sweeping. next() can be called on it to
-  /// perform one sweeping task. Once next() returns false, complete() must be
-  /// called.
-  std::unique_ptr<SweepIterator> sweepIterator_;
 
   /// This is the background thread that does marking and sweeping concurrently
   /// with the mutator.
