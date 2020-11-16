@@ -87,15 +87,17 @@ void HadesGC::OldGen::addCellToFreelist(FreelistCell *cell, size_t segmentIdx) {
 
 void HadesGC::OldGen::addCellToFreelistFromSweep(
     char *freeRangeStart,
-    char *freeRangeEnd) {
+    char *freeRangeEnd,
+    bool setHead) {
   assert(
       gc_->concurrentPhase_ == Phase::Sweep &&
       "addCellToFreelistFromSweep should only be called during sweeping.");
   size_t newCellSize = freeRangeEnd - freeRangeStart;
   // While coalescing, sweeping may generate new cells, so make sure the cell
   // head is updated.
-  HeapSegment::setCellHead(
-      reinterpret_cast<GCCell *>(freeRangeStart), newCellSize);
+  if (setHead)
+    HeapSegment::setCellHead(
+        reinterpret_cast<GCCell *>(freeRangeStart), newCellSize);
   FreelistCell *newCell = new (freeRangeStart) FreelistCell(newCellSize);
   // Get the size bucket for the cell being added;
   const uint32_t bucket = getFreelistBucket(newCellSize);
@@ -842,6 +844,7 @@ bool HadesGC::OldGen::sweepNext() {
     head = nullptr;
 
   char *freeRangeStart = nullptr, *freeRangeEnd = nullptr;
+  size_t mergedCells = 0;
   int32_t segmentSweptBytes = 0;
   for (GCCell *cell : segments_[sweepIterator_.segNumber]->cells()) {
     assert(cell->isValid() && "Invalid cell in sweeping");
@@ -858,12 +861,15 @@ bool HadesGC::OldGen::sweepNext() {
           "Should not overshoot the start of an object");
       // We are starting a new free range, flush the previous one.
       if (LLVM_LIKELY(freeRangeStart))
-        addCellToFreelistFromSweep(freeRangeStart, freeRangeEnd);
+        addCellToFreelistFromSweep(
+            freeRangeStart, freeRangeEnd, mergedCells > 1);
 
+      mergedCells = 0;
       freeRangeEnd = freeRangeStart = cellCharPtr;
     }
     // Expand the current free range to include the current cell.
     freeRangeEnd += sz;
+    mergedCells++;
 
     if (cell->getKind() == CellKind::FreelistKind)
       continue;
@@ -883,7 +889,7 @@ bool HadesGC::OldGen::sweepNext() {
 
   // Flush any free range that was left over.
   if (freeRangeStart)
-    addCellToFreelistFromSweep(freeRangeStart, freeRangeEnd);
+    addCellToFreelistFromSweep(freeRangeStart, freeRangeEnd, mergedCells > 1);
 
   // Update the freelist bit arrays to match the newly set freelist heads.
   for (size_t bucket = 0; bucket < kNumFreelistBuckets; ++bucket) {

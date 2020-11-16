@@ -408,7 +408,10 @@ class HadesGC final : public GCBase {
     /// Adds the given region of memory to the free list for the segment that is
     /// currently being swept. This does not update the Freelist bits, those
     /// should all be updated in a single pass at the end of sweeping.
-    void addCellToFreelistFromSweep(char *freeRangeStart, char *freeRangeEnd);
+    void addCellToFreelistFromSweep(
+        char *freeRangeStart,
+        char *freeRangeEnd,
+        bool setHead);
 
     HadesGC *gc_;
     std::vector<std::unique_ptr<HeapSegment>> segments_;
