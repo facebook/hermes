@@ -23,8 +23,8 @@ namespace CodeCoverageTest {
 
 class CodeCoverageProfilerTest : public RuntimeTestFixture {
  public:
-  CodeCoverageProfilerTest() : profiler(CodeCoverageProfiler::getInstance()) {
-    profiler->enable();
+  CodeCoverageProfilerTest() {
+    CodeCoverageProfiler::enableGlobal();
   }
 
  protected:
@@ -59,9 +59,6 @@ class CodeCoverageProfilerTest : public RuntimeTestFixture {
       return ::testing::AssertionSuccess();
     }
   }
-
- protected:
-  std::shared_ptr<CodeCoverageProfiler> profiler;
 };
 
 TEST_F(CodeCoverageProfilerTest, BasicFunctionUsedUnused) {
@@ -74,7 +71,7 @@ TEST_F(CodeCoverageProfilerTest, BasicFunctionUsedUnused) {
   EXPECT_FALSE(isException(res));
 
   std::vector<CodeCoverageProfiler::FuncInfo> executedFuncInfos =
-      profiler->getExecutedFunctions();
+      CodeCoverageProfiler::getExecutedFunctions();
 
   Handle<JSArray> funcArr = runtime->makeHandle(vmcast<JSArray>(*res));
   Handle<JSFunction> funcUsed =
@@ -106,7 +103,7 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleModules) {
   EXPECT_FALSE(isException(res2));
 
   std::vector<CodeCoverageProfiler::FuncInfo> executedFuncInfos =
-      profiler->getExecutedFunctions();
+      CodeCoverageProfiler::getExecutedFunctions();
 
   Handle<JSArray> funcArr = runtime->makeHandle(vmcast<JSArray>(*res2));
   Handle<JSFunction> funcBar =
@@ -136,7 +133,7 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleDomains) {
   EXPECT_FALSE(isException(res));
 
   std::vector<CodeCoverageProfiler::FuncInfo> executedFuncInfos =
-      profiler->getExecutedFunctions();
+      CodeCoverageProfiler::getExecutedFunctions();
 
   Handle<JSArray> funcArr = runtime->makeHandle(vmcast<JSArray>(*res));
   Handle<JSFunction> funcUsed1 =

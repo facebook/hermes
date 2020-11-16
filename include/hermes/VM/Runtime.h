@@ -1169,8 +1169,8 @@ class Runtime : public HandleRootOwner,
   /// we are sure it's safe to unregisterRuntime in destructor.
   std::shared_ptr<SamplingProfiler> samplingProfiler_;
 
-  /// Reference to the code coverage profiler.
-  std::shared_ptr<CodeCoverageProfiler> codeCoverageProfiler_;
+  /// Pointer to the code coverage profiler.
+  const std::unique_ptr<CodeCoverageProfiler> codeCoverageProfiler_;
 
   /// A list of callbacks to call before runtime destruction.
   std::vector<DestructionCallback> destructionCallbacks_;

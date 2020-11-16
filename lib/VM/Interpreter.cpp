@@ -1050,7 +1050,7 @@ tailCall:
   runtime->getDebugger().willEnterCodeBlock(curCodeBlock);
 #endif
 
-  runtime->getCodeCoverageProfiler().markExecuted(runtime, curCodeBlock);
+  runtime->getCodeCoverageProfiler().markExecuted(curCodeBlock);
 
   // Update function executionCount_ count
   curCodeBlock->incrementExecutionCount();

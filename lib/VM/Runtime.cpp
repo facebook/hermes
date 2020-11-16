@@ -171,7 +171,7 @@ Runtime::Runtime(
       crashMgr_(runtimeConfig.getCrashMgr()),
       crashCallbackKey_(
           crashMgr_->registerCallback([this](int fd) { crashCallback(fd); })),
-      codeCoverageProfiler_(CodeCoverageProfiler::getInstance()),
+      codeCoverageProfiler_(hermes::make_unique<CodeCoverageProfiler>(this)),
       gcEventCallback_(runtimeConfig.getGCConfig().getCallback()),
       allowFunctionToStringWithRuntimeSource_(
           runtimeConfig.getAllowFunctionToStringWithRuntimeSource()) {
@@ -333,13 +333,10 @@ Runtime::Runtime(
       ignoreAllocationFailure(JSArray::create(this, 4, 4)).get());
 #endif
 
+  codeCoverageProfiler_->disable();
   // Execute our internal bytecode.
-  bool codeCoverageProfilerIsEnabled = codeCoverageProfiler_->isEnabled();
-  if (codeCoverageProfilerIsEnabled)
-    codeCoverageProfiler_->disable();
   runInternalBytecode();
-  if (codeCoverageProfilerIsEnabled)
-    codeCoverageProfiler_->enable();
+  codeCoverageProfiler_->restore();
 
   LLVM_DEBUG(llvh::dbgs() << "Runtime initialized\n");
 
@@ -351,10 +348,6 @@ Runtime::~Runtime() {
   if (samplingProfiler_) {
     samplingProfiler_->unregisterRuntime(this);
   }
-  if (codeCoverageProfiler_) {
-    codeCoverageProfiler_->clear(this);
-  }
-
   heap_.finalizeAll();
 #ifndef NDEBUG
   // Now that all objects are finalized, there shouldn't be any native memory
@@ -530,7 +523,7 @@ void Runtime::markRoots(RootAcceptor &acceptor, bool markLongLived) {
         this, RootAcceptor::Section::CodeCoverageProfiler);
     acceptor.beginRootSection(RootAcceptor::Section::CodeCoverageProfiler);
     if (codeCoverageProfiler_) {
-      codeCoverageProfiler_->markRoots(this, acceptor);
+      codeCoverageProfiler_->markRoots(acceptor);
     }
     acceptor.endRootSection();
   }

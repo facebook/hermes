@@ -14,14 +14,13 @@
 
 #include "llvh/ADT/DenseMap.h"
 
+#include <unordered_set>
 #include <vector>
 
 namespace hermes {
 namespace vm {
 
-class Callable;
-
-/// Singleton function code coverage profiler.
+/// Function code coverage profiler.
 class CodeCoverageProfiler {
  public:
   /// Executed function info of a single runtime.
@@ -35,69 +34,106 @@ class CodeCoverageProfiler {
     uint32_t funcVirtualOffset;
   };
 
-  /// Return the singleton profiler instance.
-  static std::shared_ptr<CodeCoverageProfiler> getInstance();
+  explicit CodeCoverageProfiler(Runtime *runtime) : runtime_(runtime) {
+    std::lock_guard<std::mutex> lk(globalMutex());
+    allProfilers().insert(this);
+  }
+
+  ~CodeCoverageProfiler() {
+    std::lock_guard<std::mutex> lk(globalMutex());
+    allProfilers().erase(this);
+  }
+
+  /// \return executed function information for a single runtime.
+  static std::vector<CodeCoverageProfiler::FuncInfo> getExecutedFunctions();
+
+  /// globally enable the code coverage profiler.
+  static void enableGlobal() {
+    globalEnabledFlag().store(true, std::memory_order_relaxed);
+  }
+
+  /// globally disable the code coverage profiler.
+  static void disableGlobal() {
+    globalEnabledFlag().store(false, std::memory_order_relaxed);
+  }
+
+  /// \return global enabled state for profiler.
+  static bool globallyEnabled() {
+    return globalEnabledFlag().load(std::memory_order_relaxed);
+  }
 
   /// \return enabled state for profiler.
   bool isEnabled() const {
-    return enabled_;
+    return !localDisabled_ && globallyEnabled();
   }
 
-  /// Enable code coverage profiling.
-  void enable() {
-    enabled_ = true;
+  /// Restore this runtime's profiler state to the global state.
+  void restore() {
+    localDisabled_ = false;
   }
 
-  /// Disable code coverage profiling.
+  /// Override global profiler state to disable code coverage profiling for this
+  /// runtime.
   void disable() {
-    enabled_ = false;
-  }
-
-  /// Clear code coverage data for \p runtime.
-  void clear(Runtime *runtime) {
-    coverageInfo_.erase(runtime);
+    localDisabled_ = true;
   }
 
   /// Mark roots that are kept alive by the CodeCoverageProfiler for \p runtime.
-  void markRoots(Runtime *runtime, SlotAcceptorWithNames &acceptor);
+  void markRoots(SlotAcceptorWithNames &acceptor);
 
   /// Record the executed JS function associated with \p codeBlock.
-  inline void markExecuted(Runtime *runtime, CodeBlock *codeBlock) {
-    if (LLVM_LIKELY(!enabled_)) {
+  inline void markExecuted(CodeBlock *codeBlock) {
+    if (LLVM_LIKELY(!isEnabled())) {
       return;
     }
-    markExecutedSlowPath(runtime, codeBlock);
+    markExecutedSlowPath(codeBlock);
   }
 
-  void markExecutedSlowPath(Runtime *runtime, CodeBlock *codeBlock);
-
-  /// \return executed function information.
-  std::vector<CodeCoverageProfiler::FuncInfo> getExecutedFunctions();
+  /// \return executed function information for this profiler.
+  std::vector<CodeCoverageProfiler::FuncInfo> getExecutedFunctionsLocal();
 
  private:
-  explicit CodeCoverageProfiler() = default;
+  static std::unordered_set<CodeCoverageProfiler *> &allProfilers() {
+    static std::unordered_set<CodeCoverageProfiler *> allProfilers;
+    return allProfilers;
+  }
+  static std::mutex &globalMutex() {
+    static std::mutex globalMutex;
+    return globalMutex;
+  }
+  static std::atomic<bool> &globalEnabledFlag() {
+    static std::atomic<bool> globalEnabledFlag;
+    return globalEnabledFlag;
+  }
 
+  void markExecutedSlowPath(CodeBlock *codeBlock);
+
+  /// \pre localMutex_ must be held.
   /// \return reference to function bits array map for \p module.
-  std::vector<bool> &getModuleFuncMapRef(
-      Runtime *runtime,
-      RuntimeModule *module);
+  std::vector<bool> &getModuleFuncMapRef(RuntimeModule *module);
 
- private:
-  struct RuntimeCodeCoverageInfo {
-    /// RuntimeModule => executed function bits array map.
-    /// Function bits array is a function id indexed bits array
-    /// representing the executed state of all JS functions in single
-    /// RuntimeModule.
-    llvh::DenseMap<RuntimeModule *, std::vector<bool>> executedFuncBitsArrayMap;
-    /// Domains to keep its RuntimeModules alive. Will be marked by markRoots().
-    llvh::DenseSet<Domain *> domains;
-  };
+  Runtime *runtime_;
 
-  /// Contain the code coverage info for each profiled runtime.
-  llvh::DenseMap<Runtime *, RuntimeCodeCoverageInfo> coverageInfo_;
+  /// Protect any local state of this code coverage profiler that can be
+  /// accessed by the static members. For now, this is only used to protect
+  /// executedFuncBitsArrayMap_.
+  std::mutex localMutex_;
 
-  /// Whether the profiler is enabled or not.
-  bool enabled_{false};
+  /// RuntimeModule => executed function bits array map.
+  /// Function bits array is a function id indexed bits array
+  /// representing the executed state of all JS functions in single
+  /// RuntimeModule.
+  llvh::DenseMap<RuntimeModule *, std::vector<bool>> executedFuncBitsArrayMap_;
+
+  /// Domains to keep its RuntimeModules alive. Will be marked by markRoots().
+  /// Does not require localMutex_ to be held since it is only modified and read
+  /// by the runtime.
+  llvh::DenseSet<Domain *> domains_;
+  /// Override the global enable for certain sections (such as when running
+  /// internal bytecode).
+  /// Does not require localMutex_ to be held since it is only modified and read
+  /// by the runtime.
+  bool localDisabled_{false};
 };
 
 bool operator==(

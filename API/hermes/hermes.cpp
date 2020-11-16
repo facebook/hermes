@@ -1107,7 +1107,7 @@ void HermesRuntime::dumpSampledTraceToStream(llvh::raw_ostream &stream) {
 
 /*static*/ std::vector<int64_t> HermesRuntime::getExecutedFunctions() {
   std::vector<::hermes::vm::CodeCoverageProfiler::FuncInfo> executedFuncs =
-      ::hermes::vm::CodeCoverageProfiler::getInstance()->getExecutedFunctions();
+      ::hermes::vm::CodeCoverageProfiler::getExecutedFunctions();
   std::vector<int64_t> res;
   std::transform(
       executedFuncs.begin(),
@@ -1120,15 +1120,15 @@ void HermesRuntime::dumpSampledTraceToStream(llvh::raw_ostream &stream) {
 }
 
 /*static*/ bool HermesRuntime::isCodeCoverageProfilerEnabled() {
-  return ::hermes::vm::CodeCoverageProfiler::getInstance()->isEnabled();
+  return ::hermes::vm::CodeCoverageProfiler::globallyEnabled();
 }
 
 /*static*/ void HermesRuntime::enableCodeCoverageProfiler() {
-  ::hermes::vm::CodeCoverageProfiler::getInstance()->enable();
+  ::hermes::vm::CodeCoverageProfiler::enableGlobal();
 }
 
 /*static*/ void HermesRuntime::disableCodeCoverageProfiler() {
-  ::hermes::vm::CodeCoverageProfiler::getInstance()->disable();
+  ::hermes::vm::CodeCoverageProfiler::disableGlobal();
 }
 
 void HermesRuntime::setFatalHandler(void (*handler)(const std::string &)) {

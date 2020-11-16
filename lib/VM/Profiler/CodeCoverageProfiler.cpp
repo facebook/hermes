@@ -14,30 +14,16 @@
 namespace hermes {
 namespace vm {
 
-/*static*/ std::shared_ptr<CodeCoverageProfiler>
-CodeCoverageProfiler::getInstance() {
-  static std::shared_ptr<CodeCoverageProfiler> instance(
-      new CodeCoverageProfiler());
-  return instance;
-}
-
-void CodeCoverageProfiler::markRoots(
-    Runtime *runtime,
-    SlotAcceptorWithNames &acceptor) {
-  auto coverageInfoIter = coverageInfo_.find(runtime);
-  if (LLVM_UNLIKELY(coverageInfoIter == coverageInfo_.end())) {
-    return;
-  }
-  for (Domain *&domain : coverageInfoIter->second.domains) {
+void CodeCoverageProfiler::markRoots(SlotAcceptorWithNames &acceptor) {
+  for (Domain *&domain : domains_) {
     acceptor.acceptPtr(domain);
   }
 }
 
-void CodeCoverageProfiler::markExecutedSlowPath(
-    Runtime *runtime,
-    CodeBlock *codeBlock) {
+void CodeCoverageProfiler::markExecutedSlowPath(CodeBlock *codeBlock) {
+  std::lock_guard<std::mutex> lk(localMutex_);
   std::vector<bool> &moduleFuncMap =
-      getModuleFuncMapRef(runtime, codeBlock->getRuntimeModule());
+      getModuleFuncMapRef(codeBlock->getRuntimeModule());
 
   const auto funcId = codeBlock->getFunctionID();
   assert(
@@ -46,17 +32,24 @@ void CodeCoverageProfiler::markExecutedSlowPath(
   moduleFuncMap[funcId] = true;
 }
 
-std::vector<CodeCoverageProfiler::FuncInfo>
+/* static */ std::vector<CodeCoverageProfiler::FuncInfo>
 CodeCoverageProfiler::getExecutedFunctions() {
-  std::vector<CodeCoverageProfiler::FuncInfo> funcInfos;
-
+  std::lock_guard<std::mutex> lk(globalMutex());
   // Since Hermes only supports symbolication for one runtime
   // we return coverage information for the first runtime here.
-  auto coverageInfoIter = coverageInfo_.begin();
-  if (coverageInfoIter == coverageInfo_.end()) {
-    return funcInfos;
+  auto &profilers = allProfilers();
+  if (profilers.size()) {
+    CodeCoverageProfiler *profiler = *profilers.begin();
+    return profiler->getExecutedFunctionsLocal();
   }
-  for (auto &entry : coverageInfoIter->second.executedFuncBitsArrayMap) {
+  return {};
+}
+
+std::vector<CodeCoverageProfiler::FuncInfo>
+CodeCoverageProfiler::getExecutedFunctionsLocal() {
+  std::vector<CodeCoverageProfiler::FuncInfo> funcInfos;
+  std::lock_guard<std::mutex> lk(localMutex_);
+  for (auto &entry : executedFuncBitsArrayMap_) {
     auto *bcProvider = entry.first->getBytecode();
     const uint32_t segmentID = bcProvider->getSegmentID();
     const std::vector<bool> &moduleFuncBitsArray = entry.second;
@@ -72,21 +65,17 @@ CodeCoverageProfiler::getExecutedFunctions() {
 }
 
 std::vector<bool> &CodeCoverageProfiler::getModuleFuncMapRef(
-    Runtime *runtime,
     RuntimeModule *module) {
-  auto &runtimeCoverageInfo = coverageInfo_[module->getRuntime()];
-  auto &funcBitsArrayMap = runtimeCoverageInfo.executedFuncBitsArrayMap;
-
-  auto funcMapIter = funcBitsArrayMap.find(module);
-  if (LLVM_LIKELY(funcMapIter != funcBitsArrayMap.end())) {
+  auto funcMapIter = executedFuncBitsArrayMap_.find(module);
+  if (LLVM_LIKELY(funcMapIter != executedFuncBitsArrayMap_.end())) {
     return funcMapIter->second;
   }
 
-  // For new module reigster its domain for marking.
-  runtimeCoverageInfo.domains.insert(module->getDomainUnsafe(runtime));
+  // For new module register its domain for marking.
+  domains_.insert(module->getDomainUnsafe(runtime_));
 
   const uint32_t funcCount = module->getBytecode()->getFunctionCount();
-  auto res = funcBitsArrayMap.insert(
+  auto res = executedFuncBitsArrayMap_.insert(
       std::make_pair(module, std::vector<bool>(funcCount)));
   return res.first->second;
 }
