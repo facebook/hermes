@@ -95,6 +95,8 @@ class RuntimeTestFixtureBase : public ::testing::Test {
   // Convenience accessor that points to rt.
   Runtime *runtime;
 
+  RuntimeConfig rtConfig;
+
   GCScope gcScope;
 
   Handle<Domain> domain;
@@ -102,6 +104,7 @@ class RuntimeTestFixtureBase : public ::testing::Test {
   RuntimeTestFixtureBase(const RuntimeConfig &runtimeConfig)
       : rt(Runtime::create(runtimeConfig)),
         runtime(rt.get()),
+        rtConfig(runtimeConfig),
         gcScope(runtime),
         domain(runtime->makeHandle(Domain::create(runtime))) {}
 
@@ -115,6 +118,10 @@ class RuntimeTestFixtureBase : public ::testing::Test {
 
   ::testing::AssertionResult isException(ExecutionStatus status) {
     return ::hermes::vm::isException(runtime, status);
+  }
+
+  std::shared_ptr<Runtime> newRuntime() {
+    return Runtime::create(rtConfig);
   }
 };
 
