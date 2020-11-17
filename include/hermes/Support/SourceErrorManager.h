@@ -27,10 +27,6 @@ using llvh::SMLoc;
 using llvh::SMRange;
 using llvh::Twine;
 
-/// Forward declaration of the private implementation of the source location
-/// cache.
-class SourceLocationCache;
-
 /// Options for outputting errors
 struct SourceErrorOutputOptions {
   /// Determine whether errors should be colorized
@@ -131,8 +127,6 @@ class SourceErrorManager {
 
   /// Set to true once the error limit has been reached.
   bool errorLimitReached_ = false;
-
-  std::shared_ptr<SourceLocationCache> cache_;
 
   /// Mapping from warnings to true if enabled, false if disabled.
   /// All warnings default to enabled, and the numerical value of the Warning
