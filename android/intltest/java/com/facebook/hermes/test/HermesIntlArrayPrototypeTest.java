@@ -5,9 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-
-
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -29,12 +26,12 @@ public class HermesIntlArrayPrototypeTest extends HermesIntlTest262Base {
         new HashSet<>(
             Arrays.asList(
                 "throws-same-exceptions-as-NumberFormat.js" // Number.prototype.toLocaleString
-                                                            // didn't throw exception for options
-                                                            // {"style":"currency"}. Expected a
-                                                            // TypeError but got a RangeError .. We
-                                                            // have the same bug in NumberFormat as
-                                                            // well.. This is because we don't throw
-                                                            // TypeError from java code yet.
+                // didn't throw exception for options
+                // {"style":"currency"}. Expected a
+                // TypeError but got a RangeError .. We
+                // have the same bug in NumberFormat as
+                // well.. This is because we don't throw
+                // TypeError from java code yet.
                 ));
 
     runTests(basePath, blackList, whilteList);

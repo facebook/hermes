@@ -5,9 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-
-
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -30,26 +27,27 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
         new HashSet<>(
             Arrays.asList(
                 "constructor-locales-hasproperty.js", // Currently We/Hermes don't call the "has"
-                                                      // trap in proxy.
+                // trap in proxy.
                 "dft-currency-mnfd-range-check-mxfd.js", // This test is not correct based on spec.
-                                                         // With ths currency in test, the default
-                                                         // minfractiondigits is 2, and the
-                                                         // maxfractiondigita cannot be set to 1.
-                                                         // Both Firefox and Chrome also fails the
-                                                         // test.
+                // With ths currency in test, the default
+                // minfractiondigits is 2, and the
+                // maxfractiondigita cannot be set to 1.
+                // Both Firefox and Chrome also fails the
+                // test.
                 "constructor-order.js", // When strictly following spec, the currency checks comes
-                                        // before unit check and the test will throw RangeError on
-                                        // currency validation before reaching the cdoe which throws
-                                        // TypeError on seeing undefined unit. But, we have a part
-                                        // of option validation in C++ code which throws all
-                                        // TypeErrors, which results in the TypeError getting
-                                        // thrown.
+                // before unit check and the test will throw RangeError on
+                // currency validation before reaching the cdoe which throws
+                // TypeError on seeing undefined unit. But, we have a part
+                // of option validation in C++ code which throws all
+                // TypeErrors, which results in the TypeError getting
+                // thrown.
                 "currency-digits.js", // Didn't get correct minimumFractionDigts for currency AFN.
-                                      // Expected SameValue(«0», «2») to be true
+                // Expected SameValue(«0», «2») to be true
                 "constructor-unit.js" // com.facebook.hermes.intl.JSRangeErrorException: Unknown
-                                      // unit: acre-per-acre .. We support only units directly known
-                                      // to
-                                      // https://developer.android.com/reference/android/icu/util/MeasureUnit .. MeasureFormat.format requires an instance of MeasureUnit.
+                // unit: acre-per-acre .. We support only units directly known
+                // to
+                // https://developer.android.com/reference/android/icu/util/MeasureUnit ..
+                // MeasureFormat.format requires an instance of MeasureUnit.
                 ));
 
     Set<String> testIssues =
@@ -57,8 +55,8 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
             Arrays.asList(
                 "proto-from-ctor-realm.js", // Hermes doesn't support realms
                 "subclassing.js" // Hermes doesn't support classes. Compiling JS failed:
-                                 // 18:1:invalid statement encountered. Buffer size 986 starts with:
-                                 // 2f2f20436f7079726967687420323031
+                // 18:1:invalid statement encountered. Buffer size 986 starts with:
+                // 2f2f20436f7079726967687420323031
                 ));
 
     Set<String> icuIssues = new HashSet<>();
@@ -69,7 +67,7 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
       icuIssues.addAll(
           Arrays.asList(
               "constructor-unitDisplay.js" // com.facebook.hermes.intl.JSRangeErrorException:
-                                           // Unknown unit: percent
+              // Unknown unit: percent
               ));
     }
 
@@ -122,12 +120,12 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
         new HashSet<>(
             Arrays.asList(
                 "prop-desc.js", // Test expects Object.getOwnPropertyDescriptor(Intl,
-                                // "NumberFormat").value to be "Intl.NumberFormat", but we return
-                                // "Object".
+                // "NumberFormat").value to be "Intl.NumberFormat", but we return
+                // "Object".
                 "configurable.js" // Expected SameValue(«Object», «Intl.NumberFormat») to be true ..
-                                  // Test expects new Intl.NumberFormat().toString() to return
-                                  // "[object Intl.NumberFormat]" which Firefox does.. but hermes
-                                  // (and Chrome) returns "[object Object]:
+                // Test expects new Intl.NumberFormat().toString() to return
+                // "[object Intl.NumberFormat]" which Firefox does.. but hermes
+                // (and Chrome) returns "[object Object]:
                 ));
 
     Set<String> blackList = deviations;
@@ -145,9 +143,9 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
         new HashSet<>(
             Arrays.asList(
                 "order.js" // // Expected SameValue(«Object», «Intl.NumberFormat») to be true ..
-                           // Test expects new Intl.NumberFormat().toString() to return "[object
-                           // Intl.NumberFormat]" which Firefox does.. but hermes (and Chrome)
-                           // returns "[object Object]:
+                // Test expects new Intl.NumberFormat().toString() to return "[object
+                // Intl.NumberFormat]" which Firefox does.. but hermes (and Chrome)
+                // returns "[object Object]:
                 ));
 
     Set<String> blackList = deviations;
@@ -169,19 +167,19 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
         new HashSet<>(
             Arrays.asList(
                 "signDisplay-currency-zh-TW.js", // Expected SameValue(«US$0.00», «+US$0.00») to be
-                                                 // true
+                // true
                 "signDisplay-rounding.js", // Expected SameValue(«-0», «0») to be true
                 "signDisplay-currency-de-DE.js", // Expected SameValue(«0,00 $», «+0,00 $») to be
-                                                 // true
+                // true
                 "signDisplay-de-DE.js", // 0 (always) Expected SameValue(«0», «+0») to be true
                 "signDisplay-ko-KR.js", // 0 (always) Expected SameValue(«0», «+0») to be true
                 "signDisplay-currency-en-US.js", // Expected SameValue(«$0.00», «+$0.00») to be true
                 "signDisplay-currency-ja-JP.js", // Expected SameValue(«$0.00», «+$0.00») to be true
                 "signDisplay-zh-TW.js", //  -0.0001 (exceptZero) Expected SameValue(«-0», «0») to be
-                                        // true
+                // true
                 "signDisplay-en-US.js", // 0 (always) Expected SameValue(«0», «+0») to be true
                 "signDisplay-currency-ko-KR.js", // Expected SameValue(«US$0.00», «+US$0.00») to be
-                                                 // true
+                // true
                 "signDisplay-ja-JP.js" // 0 (always) Expected SameValue(«0», «+0») to be true
                 ));
 
@@ -189,9 +187,9 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
         new HashSet<>(
             Arrays.asList(
                 "units.js" // com.facebook.hermes.intl.JSRangeErrorException: Unknown unit:
-                           // acre-per-acre .. We support only units directly known to
-                           // https://developer.android.com/reference/android/icu/util/MeasureUnit
-                           // .. MeasureFormat.format requires an instance of MeasureUnit.
+                // acre-per-acre .. We support only units directly known to
+                // https://developer.android.com/reference/android/icu/util/MeasureUnit
+                // .. MeasureFormat.format requires an instance of MeasureUnit.
                 ));
 
     Set<String> icuIssues = new HashSet<>();
@@ -203,7 +201,7 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
               "engineering-scientific-zh-TW.js", // Expected SameValue(«-∞E0», «-∞») to be true
               "engineering-scientific-ja-JP.js", // Expected SameValue(«-∞E0», «-∞») to be true
               "numbering-systems.js", // numberingSystem: diak, digit: 0 Expected SameValue(«0»,
-                                      // «𑥐») to be true
+              // «𑥐») to be true
               "engineering-scientific-ko-KR.js", // Expected SameValue(«-∞E0», «-∞») to be true
               "engineering-scientific-en-US.js" // Expected SameValue(«-∞E0», «-∞») to be true
               ));
@@ -215,12 +213,14 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
       icuIssues.addAll(
           Arrays.asList(
               "format-significant-digits.js", // Formatted value for 0, en-US-u-nu-arab and options
-                                              // {"useGrouping":false,"minimumSignificantDigits":3,"maximumSignificantDigits":5} is ٠; expected ٠٫٠٠.
+              // {"useGrouping":false,"minimumSignificantDigits":3,"maximumSignificantDigits":5} is
+              // ٠; expected ٠٫٠٠.
               "unit-en-US.js", // Expected SameValue(«-987 kph», «-987 km/h») to be true
               "notation-compact-de-DE.js", // Expected SameValue(«99 Tsd.», «98.765») to be true
               "format-significant-digits-precision.js" // Formatted value for 123.44500,
-                                                       // en-US-u-nu-arab and options
-                                                       // {"useGrouping":false,"minimumSignificantDigits":3,"maximumSignificantDigits":5} is ١٢٣٫٤٤٥; expected ١٢٣٫٤٥.
+              // en-US-u-nu-arab and options
+              // {"useGrouping":false,"minimumSignificantDigits":3,"maximumSignificantDigits":5} is
+              // ١٢٣٫٤٤٥; expected ١٢٣٫٤٥.
               ));
     }
 
@@ -245,14 +245,14 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
               "unit-de-DE.js", // : Expected SameValue(«-987», «-987 km/h») to be true
               "unit-zh-TW.js", // : Expected SameValue(«-987», «-987 公里/小時») to be true
               "format-fraction-digits-precision.js", // : Unexpected formatted 1.1 for
-                                                     // en-US-u-nu-hanidec and options
-                                                     // {"useGrouping":false,"minimumIntegerDigits":3,"minimumFractionDigits":1,"maximumFractionDigits":3}: 〇〇〈.〈
+              // en-US-u-nu-hanidec and options
+              // {"useGrouping":false,"minimumIntegerDigits":3,"minimumFractionDigits":1,"maximumFractionDigits":3}: 〇〇〈.〈
               "percent-formatter.js", // : Intl.NumberFormat's formatting of 20% does not include a
-                                      // formatting of 20 as a substring. Expected SameValue(«-1»,
-                                      // «-1») to be false
+              // formatting of 20 as a substring. Expected SameValue(«-1»,
+              // «-1») to be false
               "format-fraction-digits.js", // : Unexpected formatted 1.1 for en-US-u-nu-hanidec and
-                                           // options
-                                           // {"useGrouping":false,"minimumIntegerDigits":3,"minimumFractionDigits":1,"maximumFractionDigits":3}: 〇〇〈.〈
+              // options
+              // {"useGrouping":false,"minimumIntegerDigits":3,"minimumFractionDigits":1,"maximumFractionDigits":3}: 〇〇〈.〈
               "unit-ja-JP.js" // : Expected SameValue(«-987», «-987 km/h») to be true
               ));
     }
@@ -280,24 +280,24 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
         new HashSet<>(
             Arrays.asList(
                 "signDisplay-zh-TW.js", // NaN (auto): parts[0].value Expected SameValue(«NaN»,
-                                        // «非數值») to be true
+                // «非數值») to be true
                 "signDisplay-currency-de-DE.js", // undefined: length Expected SameValue(«5», «6»)
-                                                 // to be true
+                // to be true
                 "signDisplay-de-DE.js", // 0 (always): length Expected SameValue(«1», «2») to be
-                                        // true
+                // true
                 "signDisplay-currency-ko-KR.js", // undefined: length Expected SameValue(«4», «5»)
-                                                 // to be true
+                // to be true
                 "signDisplay-ko-KR.js", // 0 (always): length Expected SameValue(«1», «2») to be
-                                        // true
+                // true
                 "signDisplay-currency-en-US.js", // undefined: length Expected SameValue(«4», «5»)
-                                                 // to be true
+                // to be true
                 "signDisplay-currency-ja-JP.js", // undefined: length Expected SameValue(«4», «5»)
-                                                 // to be true//"unit-zh-TW.js", //undefined: length
-                                                 // Expected SameValue(«1», «4») to be true
+                // to be true//"unit-zh-TW.js", //undefined: length
+                // Expected SameValue(«1», «4») to be true
                 "signDisplay-ja-JP.js", // 0 (always): length Expected SameValue(«1», «2») to be
-                                        // true
+                // true
                 "signDisplay-currency-zh-TW.js", // undefined: length Expected SameValue(«4», «5»)
-                                                 // to be true
+                // to be true
                 "signDisplay-en-US.js" // 0 (always): length Expected SameValue(«1», «2») to be true
                 ));
 
@@ -314,10 +314,10 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
                 "unit-en-US.js", // undefined: length Expected SameValue(«1», «4») to be true
                 "unit-zh-TW.js", // undefined: length Expected SameValue(«1», «4») to be true
                 "percent-en-US.js" // unit: length Expected SameValue(«1», «3») to be true .. We
-                                   // have issue when formatting percentage as unit .. i.e. {style:
-                                   // "unit", unit: "percent"} .. We could hack to create a
-                                   // formatter in percent style, but it's tricky to deal with the
-                                   // x100 multiplier.
+                // have issue when formatting percentage as unit .. i.e. {style:
+                // "unit", unit: "percent"} .. We could hack to create a
+                // formatter in percent style, but it's tricky to deal with the
+                // x100 multiplier.
                 ));
 
     Set<String> icuIssues = new HashSet<>();
@@ -326,25 +326,25 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
       icuIssues.addAll(
           Arrays.asList(
               "engineering-scientific-ko-KR.js", // -Infinity - engineering: length Expected
-                                                 // SameValue(«4», «2») to be true
+              // SameValue(«4», «2») to be true
               "notation-compact-zh-TW.js", // Compact short: 987654321: parts[3].type Expected
-                                           // SameValue(«literal», «compact») to be true
+              // SameValue(«literal», «compact») to be true
               "engineering-scientific-en-US.js", // -Infinity - engineering: length Expected
-                                                 // SameValue(«4», «2») to be true
+              // SameValue(«4», «2») to be true
               "notation-compact-de-DE.js", // Compact short: 987654321: length Expected
-                                           // SameValue(«2», «3») to be true
+              // SameValue(«2», «3») to be true
               "engineering-scientific-de-DE.js", // -Infinity - engineering: length Expected
-                                                 // SameValue(«4», «2») to be true
+              // SameValue(«4», «2») to be true
               "notation-compact-en-US.js", // Compact short: 987654321: parts[1].type Expected
-                                           // SameValue(«literal», «compact») to be true
+              // SameValue(«literal», «compact») to be true
               "engineering-scientific-zh-TW.js", // -Infinity - engineering: length Expected
-                                                 // SameValue(«4», «2») to be true
+              // SameValue(«4», «2») to be true
               "engineering-scientific-ja-JP.js", // -Infinity - engineering: length Expected
-                                                 // SameValue(«4», «2») to be true
+              // SameValue(«4», «2») to be true
               "notation-compact-ja-JP.js", // Compact short: 987654321: parts[3].type Expected
-                                           // SameValue(«literal», «compact») to be true
+              // SameValue(«literal», «compact») to be true
               "notation-compact-ko-KR.js" // Compact short: 987654321: parts[3].type Expected
-                                          // SameValue(«literal», «compact») to be true
+              // SameValue(«literal», «compact») to be true
               ));
     }
 
@@ -354,7 +354,7 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
       pre24Issues.addAll(
           Arrays.asList(
               "default-parameter.js" // : Both implicit and explicit calls should have the correct
-                                     // result
+              // result
               ));
     }
 

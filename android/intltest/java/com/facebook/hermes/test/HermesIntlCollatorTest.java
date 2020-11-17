@@ -5,9 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-
-
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -30,9 +27,9 @@ public class HermesIntlCollatorTest extends HermesIntlTest262Base {
         new HashSet<>(
             Arrays.asList(
                 "ignore-invalid-unicode-ext-values.js" // TODO [Follow-up] Failing because Hermes
-                                                       // array.sort sort is not stable. In-place
-                                                       // sorting changes the order when the input
-                                                       // is already sorted with call to array.sort.
+                // array.sort sort is not stable. In-place
+                // sorting changes the order when the input
+                // is already sorted with call to array.sort.
                 ));
 
     Set<String> testIssueList =
@@ -66,9 +63,9 @@ public class HermesIntlCollatorTest extends HermesIntlTest262Base {
         new HashSet<>(
             Arrays.asList(
                 "order.js" // Expected [locale, sensitivity, ignorePunctuation, caseFirst,
-                           // collation, numeric, usage] and [locale, usage, sensitivity,
-                           // ignorePunctuation, collation, numeric, caseFirst] to have the same
-                           // contents.
+                // collation, numeric, usage] and [locale, usage, sensitivity,
+                // ignorePunctuation, collation, numeric, caseFirst] to have the same
+                // contents.
                 // TODO :: [Follow-up] We fail the above test above we use std::unordered_map to
                 // hold the options in the C++ binding layer between java/platform code and VM
                 ));
@@ -102,13 +99,13 @@ public class HermesIntlCollatorTest extends HermesIntlTest262Base {
       pre24Issues.addAll(
           Arrays.asList(
               "non-normative-sensitivity.js", // Expected [Aa] and [Aa, Aã] to have the same
-                                              // contents.. Pre-24 collator object doesn't expose an
-                                              // API to specifiy decomposition mode.
+              // contents.. Pre-24 collator object doesn't expose an
+              // API to specifiy decomposition mode.
               "canonically-equivalent-strings.js" // Collator.compare considers ạ̈ (\u00e4\u0323) ≠
-                                                  // ạ̈ (\u0061\u0323\u0308). Expected
-                                                  // SameValue(«-1», «0») to be true. Pre-24
-                                                  // collator object doesn't expose an API to
-                                                  // specifiy decomposition mode.
+              // ạ̈ (\u0061\u0323\u0308). Expected
+              // SameValue(«-1», «0») to be true. Pre-24
+              // collator object doesn't expose an API to
+              // specifiy decomposition mode.
               ));
     }
 

@@ -359,7 +359,7 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
         && (style == DECIMAL
             || style
                 == UNIT)) { // TODO :: Note sure whether the compact notation makes sense for other
-                            // styles ..
+      // styles ..
       CompactDecimalFormat.CompactStyle compactStyle =
           compactDisplay == IPlatformNumberFormatter.CompactDisplay.SHORT
               ? android.icu.text.CompactDecimalFormat.CompactStyle.SHORT
