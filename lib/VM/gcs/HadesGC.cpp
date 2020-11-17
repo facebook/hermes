@@ -2495,10 +2495,12 @@ size_t HadesGC::getDrainRate() {
   // complete marking before OG fills up.
   // Don't include external memory since that doesn't need to be marked.
   const size_t bytesToFill = oldGen_.capacityBytes() - oldGen_.allocatedBytes();
-  const double ygSurvivalRatio = ygAverageSurvivalRatio_;
-  const size_t ygCollectionsUntilFull = ygSurvivalRatio
-      ? llvh::divideCeil(bytesToFill, ygSurvivalRatio * HeapSegment::maxSize())
-      : std::numeric_limits<size_t>::max();
+  // On average, the number of bytes that survive a YG collection. Round it up
+  // to at least 1.
+  const uint64_t ygSurvivalBytes =
+      std::max(ygAverageSurvivalRatio_ * HeapSegment::maxSize(), 1.0);
+  const size_t ygCollectionsUntilFull =
+      llvh::divideCeil(bytesToFill, ygSurvivalBytes);
   // We need to account for the STW pause and sweeping. The STW pause requires 1
   // additional YG collection. Sweeping will take exactly
   // oldGen_.sweepSegmentsRemaining() YG collections to fully sweep. Subtract
