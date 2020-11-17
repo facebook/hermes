@@ -601,7 +601,7 @@ jobs:
           name: Run E2E Intl tests with master Hermes
           command: |
             cd test/intl
-            ./run.sh
+            chmod +x ./run.sh && ./run.sh
           # The react-native setup tool takes AGES "Installing CocoaPods dependencies"
           no_output_timeout: 45m
       - store_artifacts:
