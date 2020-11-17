@@ -1090,6 +1090,10 @@ void HadesGC::collect(std::string cause) {
   {
     // Wait for any existing collections to finish before starting a new one.
     std::lock_guard<Mutex> lk{gcMutex_};
+    // Disable the YG promotion mode. A forced GC via collect will do a full
+    // collection immediately anyway, so there's no need to avoid collecting YG.
+    // This is especially important when the forced GC is a memory warning.
+    promoteYGToOG_ = false;
     waitForCollectionToFinish();
   }
   // This function should block until a collection finishes.
