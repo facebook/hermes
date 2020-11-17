@@ -80,8 +80,9 @@ private:
     /// it points somewhere into \c Buffer. The static type parameter \p T
     /// must be an unsigned integer type from uint{8,16,32,64}_t large
     /// enough to store offsets inside \c Buffer.
+    /// \return a pointer to the start of the line and the line number.
     template<typename T>
-    unsigned getLineNumber(const char *Ptr) const;
+    std::pair<const char *, unsigned> getLineNumber(const char *Ptr) const;
 
     /// This is the location of the parent include, or null if at the top level.
     SMLoc IncludeLoc;

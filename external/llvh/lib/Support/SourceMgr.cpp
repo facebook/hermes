@@ -80,8 +80,8 @@ unsigned SourceMgr::FindBufferContainingLoc(SMLoc Loc) const {
 }
 
 template <typename T>
-unsigned SourceMgr::SrcBuffer::getLineNumber(const char *Ptr) const {
-
+std::pair<const char *, unsigned> SourceMgr::SrcBuffer::getLineNumber(
+    const char *Ptr) const {
   // Ensure OffsetCache is allocated and populated with offsets of all the
   // '\n' bytes.
   std::vector<T> *Offsets = nullptr;
@@ -112,8 +112,12 @@ unsigned SourceMgr::SrcBuffer::getLineNumber(const char *Ptr) const {
   // EOL, returns end().
   auto EOL = std::lower_bound(Offsets->begin(), Offsets->end(), PtrOffset);
 
+  // The start of the line is the previous line end + 1.
+  const char *LineStart =
+      EOL != Offsets->begin() ? BufStart + EOL[-1] + 1 : BufStart;
+
   // Lines count from 1, so add 1 to the distance from the 0th line.
-  return (1 + (EOL - Offsets->begin()));
+  return {LineStart, (1 + (EOL - Offsets->begin()))};
 }
 
 SourceMgr::SrcBuffer::SrcBuffer(SourceMgr::SrcBuffer &&Other)
@@ -147,20 +151,17 @@ SourceMgr::getLineAndColumn(SMLoc Loc, unsigned BufferID) const {
   const char *Ptr = Loc.getPointer();
 
   size_t Sz = SB.Buffer->getBufferSize();
-  unsigned LineNo;
+  std::pair<const char *, unsigned> StartAndLineNo;
   if (Sz <= std::numeric_limits<uint8_t>::max())
-    LineNo = SB.getLineNumber<uint8_t>(Ptr);
+    StartAndLineNo = SB.getLineNumber<uint8_t>(Ptr);
   else if (Sz <= std::numeric_limits<uint16_t>::max())
-    LineNo = SB.getLineNumber<uint16_t>(Ptr);
+    StartAndLineNo = SB.getLineNumber<uint16_t>(Ptr);
   else if (Sz <= std::numeric_limits<uint32_t>::max())
-    LineNo = SB.getLineNumber<uint32_t>(Ptr);
+    StartAndLineNo = SB.getLineNumber<uint32_t>(Ptr);
   else
-    LineNo = SB.getLineNumber<uint64_t>(Ptr);
+    StartAndLineNo = SB.getLineNumber<uint64_t>(Ptr);
 
-  const char *BufStart = SB.Buffer->getBufferStart();
-  size_t NewlineOffs = StringRef(BufStart, Ptr-BufStart).find_last_of("\n\r");
-  if (NewlineOffs == StringRef::npos) NewlineOffs = ~(size_t)0;
-  return std::make_pair(LineNo, Ptr-BufStart-NewlineOffs);
+  return std::make_pair(StartAndLineNo.second, Ptr - StartAndLineNo.first + 1);
 }
 
 void SourceMgr::PrintIncludeStack(SMLoc IncludeLoc, raw_ostream &OS) const {
