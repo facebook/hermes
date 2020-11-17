@@ -256,7 +256,7 @@ class HadesGC final : public GCBase {
 
   class OldGen final {
    public:
-    explicit OldGen(HadesGC *gc, bool promoteYGToOG);
+    explicit OldGen(HadesGC *gc);
 
     std::vector<std::unique_ptr<HeapSegment>>::iterator begin();
     std::vector<std::unique_ptr<HeapSegment>>::iterator end();
@@ -310,24 +310,6 @@ class HadesGC final : public GCBase {
     /// \return the total number of bytes that we are willing to use in the OG
     /// section of the JS heap, including free list entries.
     uint64_t capacityBytes() const;
-
-    /// \return the average survival ratio of the OG over time.
-    double averageSurvivalRatio() const;
-
-    /// Update the average survival ratio with a new instance.
-    void updateAverageSurvivalRatio(double survivalRatio);
-
-    /// \return the number of bytes that we expect to need to mark before an
-    ///   OG collection finishes.
-    /// NOTE: This is determined once at the start of collection, and does not
-    /// change during a collection.
-    size_t bytesToMark() const {
-      return bytesToMark_;
-    }
-
-    void setBytesToMark(size_t bytesToMark) {
-      bytesToMark_ = bytesToMark;
-    }
 
     /// Add some external memory cost to the OG.
     void creditExternalMemory(uint32_t size) {
@@ -427,13 +409,6 @@ class HadesGC final : public GCBase {
     uint64_t allocatedBytes_{0};
 
     std::vector<uint32_t> segmentAllocatedBytes_;
-
-    /// Tracks the average survival ratio over time of the OG.
-    ExponentialMovingAverage averageSurvivalRatio_;
-
-    /// An estimate of the number of bytes that need to be marked for a
-    /// collection to complete.
-    size_t bytesToMark_{0};
 
     /// The amount of bytes of external memory credited to objects in the OG.
     uint64_t externalBytes_{0};
