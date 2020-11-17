@@ -1131,14 +1131,14 @@ void HadesGC::waitForCollectionToFinish() {
     return;
   }
   std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
-  if (concurrentPhase_ == Phase::Mark) {
+  if (isOldGenMarking_) {
     // The background thread is currently marking, wait until it is time for the
     // STW pause.
-    waitForConditionVariable(
-        stopTheWorldCondVar_, lk, [this] { return stopTheWorldRequested_; });
+    waitForConditionVariable(stopTheWorldCondVar_, lk, [this] {
+      return concurrentPhase_ == Phase::CompleteMarking;
+    });
     completeMarking();
     // Notify the waiting OG collection that it can complete.
-    stopTheWorldRequested_ = false;
     stopTheWorldCondVar_.notify_one();
   }
   lk.unlock();
@@ -1286,16 +1286,18 @@ void HadesGC::incrementalCollect() {
       break;
     case Phase::Mark:
       // Drain some work from the mark worklist. If the work has finished
-      // completely, finish the collection.
-      if (!oldGenMarker_->drainSomeWork()) {
-        if (!kConcurrentGC)
-          completeMarking();
-        else
-          waitForCompleteMarking();
-        assert(
-            concurrentPhase_ == Phase::Sweep &&
-            "completeMarking should advance concurrentPhase_ to sweep");
-      }
+      // completely, move on to CompleteMarking.
+      if (!oldGenMarker_->drainSomeWork())
+        concurrentPhase_ = Phase::CompleteMarking;
+      break;
+    case Phase::CompleteMarking:
+      if (!kConcurrentGC)
+        completeMarking();
+      else
+        waitForCompleteMarking();
+      assert(
+          concurrentPhase_ == Phase::Sweep &&
+          "completeMarking should advance concurrentPhase_ to sweep");
       break;
     case Phase::Sweep:
       // Calling oldGen_.sweepNext() will sweep the next segment.
@@ -1322,12 +1324,12 @@ void HadesGC::waitForCompleteMarking() {
       "Only background thread can block waiting for STW pause.");
   assert(gcMutex_);
   std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
-  stopTheWorldRequested_ = true;
   // If the mutator is in waitForCollectionToFinish, notify it that the OG
   // thread is waiting for a STW pause.
   stopTheWorldCondVar_.notify_one();
-  waitForConditionVariable(
-      stopTheWorldCondVar_, lk, [this] { return !stopTheWorldRequested_; });
+  waitForConditionVariable(stopTheWorldCondVar_, lk, [this] {
+    return concurrentPhase_ == Phase::Sweep;
+  });
   lk.release();
 }
 
@@ -2470,13 +2472,12 @@ void HadesGC::yieldToOldGen() {
   }
   assert(gcMutex_ && "Must hold the GC mutex when calling yieldToOldGen");
 
-  if (!stopTheWorldRequested_) {
+  if (concurrentPhase_ != Phase::CompleteMarking) {
     // If the OG isn't waiting for a STW pause yet, exit immediately.
     return;
   }
   completeMarking();
   // Notify the waiting OG collection that it can complete.
-  stopTheWorldRequested_ = false;
   stopTheWorldCondVar_.notify_one();
 }
 
@@ -2498,13 +2499,14 @@ size_t HadesGC::getDrainRate() {
   const size_t ygCollectionsUntilFull = ygSurvivalRatio
       ? llvh::divideCeil(bytesToFill, ygSurvivalRatio * HeapSegment::maxSize())
       : std::numeric_limits<size_t>::max();
-  // Sweeping also will take exactly oldGen_.sweepSegmentsRemaining() YG
-  // collections to fully sweep. Subtract that from here to speed up marking so
-  // there's some extra time for sweeping. Leave at least 1 if there aren't
-  // enough to sweep segments fully.
-  const size_t markIterations =
-      ygCollectionsUntilFull > oldGen_.sweepSegmentsRemaining()
-      ? ygCollectionsUntilFull - oldGen_.sweepSegmentsRemaining()
+  // We need to account for the STW pause and sweeping. The STW pause requires 1
+  // additional YG collection. Sweeping will take exactly
+  // oldGen_.sweepSegmentsRemaining() YG collections to fully sweep. Subtract
+  // that from the iterations allowed for marking. Leave at least 1 if there
+  // aren't enough YG collections remaining.
+  const size_t postMarkIterations = oldGen_.sweepSegmentsRemaining() + 1;
+  const size_t markIterations = ygCollectionsUntilFull > postMarkIterations
+      ? ygCollectionsUntilFull - postMarkIterations
       : 1;
   assert(
       markIterations != 0 &&

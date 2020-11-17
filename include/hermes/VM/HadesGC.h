@@ -533,7 +533,13 @@ class HadesGC final : public GCBase {
   /// GC. This includes mark bits, free lists, etc.
   Mutex gcMutex_;
 
-  enum class Phase : uint8_t { None, Mark, WeakMapScan, Sweep };
+  enum class Phase : uint8_t {
+    None,
+    Mark,
+    CompleteMarking,
+    WeakMapScan,
+    Sweep
+  };
 
   /// Represents the current phase the concurrent GC is in. The main difference
   /// between phases is their effect on read and write barriers. Should only be
@@ -542,9 +548,10 @@ class HadesGC final : public GCBase {
 
   /// Represents whether the background thread is currently marking. Should only
   /// be accessed by the mutator thread or during a STW pause. isOldGenMarking_
-  /// is true if and only if concurrentPhase_ == Mark but is kept separate in
-  /// order to reduce synchronisation requirements for write barriers.
-  /// Prefer using concurrentPhase_ when acquiring gcMutex_ is not a concern.
+  /// is true if and only if (concurrentPhase_ == Mark || concurrentPhase ==
+  /// CompleteMarking) but is kept separate in order to reduce synchronisation
+  /// requirements for write barriers. Prefer using concurrentPhase_ when
+  /// acquiring gcMutex_ is not a concern.
   bool isOldGenMarking_{false};
 
   /// Used by the write barrier to add items to the worklist.
@@ -557,14 +564,13 @@ class HadesGC final : public GCBase {
   /// that the STW pause handling is done correctly.
   std::thread oldGenCollectionThread_;
 
-  /// This condition variable and bool are used for synchronising the STW pause
+  /// This condition variable is used for synchronising the STW pause
   /// between the mutator and the background thread. When it is time for the STW
-  /// pause, the OG thread will set stopTheWorldRequested_ and wait on the
-  /// condition variable. Once the mutator finishes running completeMarking(),
-  /// it will wake the OG thread back up, so that it can resume with sweeping.
+  /// pause, the OG thread will advance concurrentPhase_ to CompleteMarking and
+  /// wait on the condition variable. Once the mutator finishes running
+  /// completeMarking(), it will wake the OG thread back up, so that it can
+  /// resume with sweeping.
   std::condition_variable_any stopTheWorldCondVar_;
-  /// Indicates whether OG has requested an STW pause, protected by gcMutex_.
-  bool stopTheWorldRequested_{false};
 
   /// If true, whenever YG fills up immediately put it into the OG.
   bool promoteYGToOG_;
