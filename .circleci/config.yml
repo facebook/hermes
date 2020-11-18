@@ -571,29 +571,29 @@ jobs:
           command: |
             brew tap homebrew/cask
             brew cask install android-sdk
-            brew install python3
+            # brew install python3
             (yes | sdkmanager "platform-tools" "platforms;android-24" "platforms;android-26" "build-tools;29.0.1" --verbose) || true
-            (yes | sdkmanager "ndk;21.0.6113669" "cmake;3.10.2.4988404" --verbose) || true
+            # (yes | sdkmanager "ndk;21.0.6113669" "cmake;3.10.2.4988404" --verbose) || true
             echo 'export PATH="/usr/local/share/android-sdk/platform-tools:/usr/local/share/android-sdk/tools/bin:/usr/local/share/android-sdk/cmake/3.10.2.4988404/bin:$PATH"' >>  ~/.bash_profile
-      - run:
-          name: Set up workspace
-          command: |
-            mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
-            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
-      - run:
-          name: Build Hermes Compiler
-          command: |
-            cd "$HERMES_WS_DIR"
-            hermes/utils/build/configure.py ./build
-            # Build the Hermes compiler so that the cross compiler build can
-            # access it to build the VM
-            cmake --build ./build --target hermesc
-      - run:
-          name: Build Hermes for Android
-          command: |
-            export ANDROID_SDK="$ANDROID_HOME"
-            export ANDROID_NDK="$ANDROID_HOME/ndk/21.0.6113669"
-            cd "$HERMES_WS_DIR/hermes/android" && ./gradlew :intltest:preparetest262 && ./gradlew :intltest:assembleAndroidTest
+      # - run:
+      #     name: Set up workspace
+      #     command: |
+      #       mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
+      #       ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
+      # - run:
+      #     name: Build Hermes Compiler
+      #     command: |
+      #       cd "$HERMES_WS_DIR"
+      #       hermes/utils/build/configure.py ./build
+      #       # Build the Hermes compiler so that the cross compiler build can
+      #       # access it to build the VM
+      #       cmake --build ./build --target hermesc
+      # - run:
+      #     name: Build Hermes for Android
+      #     command: |
+      #       export ANDROID_SDK="$ANDROID_HOME"
+      #       export ANDROID_NDK="$ANDROID_HOME/ndk/21.0.6113669"
+      #       cd "$HERMES_WS_DIR/hermes/android" && ./gradlew :intltest:preparetest262 && ./gradlew :intltest:assembleAndroidTest
       - run:
           name: Install emulator dependencies
           command: (yes | sdkmanager "extras;intel;Hardware_Accelerated_Execution_Manager" "system-images;android-26;google_apis;x86" "emulator" --verbose) || true
@@ -610,19 +610,16 @@ jobs:
           command: |
             adb wait-for-device
             adb devices
-            brew install tree
-            ls -l /tmp/hermes
-            ls -l /tmp/hermes/build_android
-            ls -l /tmp/hermes/build_android/intltest
-            tree /tmp/hermes/build_android/intltest
-            adb install /tmp/hermes/build_android/intltest/outputs/apk/androidTest/debug/intltest-debug-androidTest.apk
+            adb shell pm list packages
+            adb logcat -d
+            # adb install /tmp/hermes/build_android/intltest/outputs/apk/androidTest/debug/intltest-debug-androidTest.apk
       - run:
           name: Run tests
           command: |
             adb logcat -c || true
-            adb shell am instrument -w -r -e debug false com.facebook.hermes.intltest.test/androidx.test.runner.AndroidJUnitRunner
-            sleep 30
-            adb logcat -d > /tmp/hermes/output/adblog.txt
+            # adb shell am instrument -w -r -e debug false com.facebook.hermes.intltest.test/androidx.test.runner.AndroidJUnitRunner
+            # sleep 30
+            # adb logcat -d > /tmp/hermes/output/adblog.txt
             echo "Tests Completed"
       - store_artifacts:
           path: /tmp/hermes/output/
