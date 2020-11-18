@@ -105,6 +105,7 @@ enum {
   MAdviseStringsWillNeed = 1 << 6,
   VerifyBytecodeChecksum = 1 << 7,
   ES6Promise = 1 << 8,
+  IgnoreMemoryWarnings = 1 << 9,
 };
 /// Set of flags for active VM experiments.
 using VMExperimentFlags = uint32_t;
