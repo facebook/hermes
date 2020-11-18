@@ -52,6 +52,7 @@ GeneratorFunction *IRBuilder::createGeneratorFunction(
     Identifier OriginalName,
     Function::DefinitionKind definitionKind,
     bool strictMode,
+    SMRange sourceRange,
     Function *insertBefore) {
   if (!OriginalName.isValid()) {
     // Function must have a name, even it's empty.
@@ -64,7 +65,7 @@ GeneratorFunction *IRBuilder::createGeneratorFunction(
       definitionKind,
       strictMode,
       /* isGlobal */ false,
-      /* sourceRange */ {},
+      sourceRange,
       insertBefore);
 }
 

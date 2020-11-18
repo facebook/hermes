@@ -339,7 +339,7 @@ struct LazySource {
   /// The type of node (such as a FunctionDeclaration or FunctionExpression).
   ESTree::NodeKind nodeKind{ESTree::NodeKind::Empty};
   /// Whether or not this is the inner function of a generator
-  bool isGeneratorInnerFunction;
+  bool isGenerator;
   /// The source buffer id in which this function can be find.
   uint32_t bufferId{0};
   /// The range of the function within the buffer (the whole function node, not

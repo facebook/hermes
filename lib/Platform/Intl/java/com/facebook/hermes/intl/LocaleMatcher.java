@@ -37,8 +37,8 @@ public class LocaleMatcher {
       if (pos >= 2
           && candidate.charAt(pos - 2)
               == '-') // This is very likely unnecessary as this function is called after removing
-                      // extensions.
-      pos -= 2;
+        // extensions.
+        pos -= 2;
 
       candidate = candidate.substring(0, pos);
     }

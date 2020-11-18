@@ -23,4 +23,3 @@ target_link_libraries(JITTests
  )
 
 hermes_link_icu(JITTests)
-

@@ -356,6 +356,17 @@ iterator.return(123);
 // CHECK-NEXT: 1
 // CHECK-NEXT: get return
 
+var gen = function* genAlias() { yield 1 };
+show(gen().next())
+// CHECK-NEXT: 1 | false
+
+var gen = function* genAlias() {
+  print(genAlias() !== undefined)
+};
+show(gen().next())
+// CHECK-NEXT: true
+// CHECK-NEXT: undefined | true
+
 // Make sure using SaveGeneratorLong works.
 function* saveGeneratorLong() {
     yield* [1];

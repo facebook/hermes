@@ -9,11 +9,11 @@ package com.facebook.hermes.test;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
+import androidx.test.InstrumentationRegistry;
 import com.facebook.jni.HybridData;
 import com.facebook.proguard.annotations.DoNotStrip;
 import com.facebook.soloader.SoLoader;
 import java.nio.charset.Charset;
-import androidx.test.InstrumentationRegistry;
 
 // This class is only used by tests.  If they fail on older APIs, I
 // don't care.
@@ -25,7 +25,7 @@ public class JSRuntime implements AutoCloseable {
       // The OSS build produces two .so files, so both need
       // to be loaded to initialize JNI context.
       SoLoader.loadLibrary("hermes");
-    } catch(UnsatisfiedLinkError e) {
+    } catch (UnsatisfiedLinkError e) {
       // FB Internal build doesn't produce a separate libhermes,
       // so just ignore this failure.
     }

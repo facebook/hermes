@@ -17,4 +17,3 @@ add_hermes_library(hermesParser
 )
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
-

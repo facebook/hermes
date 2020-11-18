@@ -90,22 +90,24 @@ def main():
     # the stack.
     trace_id_to_node = {}
     # The root node has trace_node_id 0, to make it easy to break out.
-    trace_node_stack = [(root.get("trace_tree", []), 0)]
-    while trace_node_stack:
-        trace_node, parent_id = trace_node_stack.pop()
-        if not parent_id:
-            # Root node should be the only one at the top level.
-            assert len(trace_node) == len(
-                TRACE_NODE_FIELDS
-            ), "More than one node at the top of the tree"
-        for child in chunk(trace_node, len(TRACE_NODE_FIELDS)):
-            # Convert function_info_index into the actual function_info.
-            child[1] = trace_functions[child[1]]
-            trace_id_to_node[child[0]] = (child, parent_id)
-            # Children array is the last element.
-            if child[-1]:
-                # Add to the stack, to do a depth first traversal of the tree.
-                trace_node_stack.append((child[-1], child[0]))
+    trace_tree = root.get("trace_tree", [])
+    if trace_tree:
+        trace_node_stack = [(trace_tree, 0)]
+        while trace_node_stack:
+            trace_node, parent_id = trace_node_stack.pop()
+            if not parent_id:
+                # Root node should be the only one at the top level.
+                assert len(trace_node) == len(
+                    TRACE_NODE_FIELDS
+                ), "More than one node at the top of the tree"
+            for child in chunk(trace_node, len(TRACE_NODE_FIELDS)):
+                # Convert function_info_index into the actual function_info.
+                child[1] = trace_functions[child[1]]
+                trace_id_to_node[child[0]] = (child, parent_id)
+                # Children array is the last element.
+                if child[-1]:
+                    # Add to the stack, to do a depth first traversal of the tree.
+                    trace_node_stack.append((child[-1], child[0]))
 
     nodes = []
     curr_edge = iter(chunk(root["edges"], len(EDGE_FIELDS)))

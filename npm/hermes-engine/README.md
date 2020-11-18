@@ -10,4 +10,3 @@ plus Android runtime libraries.
 
 Additional tools are available in
 [hermes-engine-cli](https://www.npmjs.com/package/hermes-engine-cli).
-
