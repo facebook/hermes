@@ -609,8 +609,13 @@ jobs:
           name: Install Instrumented Test Application
           command: |
             adb wait-for-device
+            sleep 60
             adb devices
+            adb -s emulator-5554 shell pm list packages
+            adb -s emulator-5554 shell pm list packages
+            sleep 30
             adb shell pm list packages
+            adb -s emulator-5554 shell pm list packages
             adb logcat -d
             # adb install /tmp/hermes/build_android/intltest/outputs/apk/androidTest/debug/intltest-debug-androidTest.apk
       - run:
