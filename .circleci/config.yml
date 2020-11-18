@@ -607,9 +607,17 @@ jobs:
           background: true
       - run:
           name: Install Instrumented Test Application
-          command: adb install ../../build_android/intltest/outputs/apk/androidTest/debug/intltest-debug-androidTest.apk -r
+          command: |
+            adb wait-for-device
+            adb devices
+            adb install ../../build_android/intltest/outputs/apk/androidTest/debug/intltest-debug-androidTest.apk -r
       - run:
           name: Run tests
-          command: adb shell am instrument -w -r -e debug false com.facebook.hermes.intltest.test/androidx.test.runner.AndroidJUnitRunner
+          command: |
+            adb logcat -c || true
+            adb shell am instrument -w -r -e debug false com.facebook.hermes.intltest.test/androidx.test.runner.AndroidJUnitRunner
+            sleep 30
+            adb logcat -d > /tmp/hermes/output/adblog.txt
+            echo "Tests Completed"
       - store_artifacts:
           path: /tmp/hermes/output/
