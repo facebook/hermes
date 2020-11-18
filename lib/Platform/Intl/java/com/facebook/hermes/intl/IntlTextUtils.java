@@ -7,7 +7,6 @@
 
 package com.facebook.hermes.intl;
 
-
 public class IntlTextUtils {
 
   public static boolean isASCIILetter(char c) {

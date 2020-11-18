@@ -15,4 +15,3 @@ add_hermes_tool(hermes-jsi
   ${ALL_HEADER_FILES}
   LINK_LIBS hermesapi
   )
-

@@ -11,9 +11,9 @@ project and ensure that the code base remains readable and maintainable.
 
 ### Language Features
 
-Hermes uses C++11. 
+Hermes uses C++11.
 
-Exceptions or RTTI are prohibited, except where needed for 
+Exceptions or RTTI are prohibited, except where needed for
 interfacing with other software that requires them.
 
 GCC language extensions are discouraged for compatibility with MSVC, or they
@@ -98,5 +98,3 @@ on patches.
 All changes, by all developers, must be reviewed before they are committed to
 the repository. Smaller changes (if the developer is the de-facto owner of the
 code base) can be reviewed after being committed.
-
-

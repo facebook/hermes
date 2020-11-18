@@ -5,9 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-
-
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -29,51 +26,51 @@ public class HermesIntlGetCanonicalLocalesTest extends HermesIntlTest262Base {
             Arrays.asList(
                 "Locale-object.js",
                 "canonicalized-tags.js" // All except one tag (cmn-hans-cn-u-ca-t-ca-x-t-u) passes.
-                                        // icu4j adds an extra 'yes' token to the unicode 'ca'
-                                        // extension!
+                // icu4j adds an extra 'yes' token to the unicode 'ca'
+                // extension!
                 ,
                 "complex-region-subtag-replacement.js" // Expected SameValue(«ru-SU», «ru-RU») to be
-                                                       // true; ICU4j don't do complex region
-                                                       // replacement.
+                // true; ICU4j don't do complex region
+                // replacement.
                 ,
                 "non-iana-canon.js" // The value of Intl.getCanonicalLocales(tag)[0] equals the
-                                    // value of `canonical` Expected SameValue(«mo», «ro») to be
-                                    // true; All except one tag (de-u-kf) passes. icu4j adds an
-                                    // extra 'yes' token to the unicode 'kf' extension !
+                // value of `canonical` Expected SameValue(«mo», «ro») to be
+                // true; All except one tag (de-u-kf) passes. icu4j adds an
+                // extra 'yes' token to the unicode 'kf' extension !
                 ,
                 "preferred-variant.js" // Expected SameValue(«ja-Latn-hepburn-heploc»,
-                                       // «ja-Latn-alalc97-hepburn») to be true; ICU4j don't do
-                                       // variant replacement.
+                // «ja-Latn-alalc97-hepburn») to be true; ICU4j don't do
+                // variant replacement.
                 ,
                 "transformed-ext-canonical.js" // SameValue(«sl-t-sl-rozaj-biske-1994»,
-                                               // «sl-t-sl-1994-biske-rozaj») to be true; ICU4j
-                                               // don't canonicalize extensions.
+                // «sl-t-sl-1994-biske-rozaj») to be true; ICU4j
+                // don't canonicalize extensions.
                 ,
                 "transformed-ext-invalid.js" // en-t-root Expected a RangeError to be thrown but no
-                                             // exception was thrown at all; ICU4j don't
-                                             // canonicalize extensions.
+                // exception was thrown at all; ICU4j don't
+                // canonicalize extensions.
                 ,
                 "unicode-ext-canonicalize-region.js" // Expected SameValue(«und-u-rg-no23»,
-                                                     // «und-u-rg-no50») to be true; ICU4j don't
-                                                     // canonicalize extensions.
+                // «und-u-rg-no50») to be true; ICU4j don't
+                // canonicalize extensions.
                 ,
                 "unicode-ext-canonicalize-subdivision.js" // Expected SameValue(«und-NO-u-sd-no23»,
-                                                          // «und-NO-u-sd-no50») to be true; ICU4j
-                                                          // don't canonicalize extensions.
+                // «und-NO-u-sd-no50») to be true; ICU4j
+                // don't canonicalize extensions.
                 ,
                 "unicode-ext-canonicalize-yes-to-true.js" // Expected SameValue(«und-u-kb-true»,
-                                                          // «und-u-kb») to be true; ICU4j don't
-                                                          // canonicalize extensions.
+                // «und-u-kb») to be true; ICU4j don't
+                // canonicalize extensions.
                 ,
                 "unicode-ext-key-with-digit.js" // Expected a RangeError to be thrown but no
-                                                // exception was thrown at all; ICU4j don't
-                                                // canonicalize extensions.
+                // exception was thrown at all; ICU4j don't
+                // canonicalize extensions.
                 ,
                 "grandfathered.js" // iExpected SameValue(«cmn», «zh») cu4j doesn't perform all
-                                   // grandfathered tag replacements.
+                // grandfathered tag replacements.
                 ,
                 "preferred-grandfathered.js" // Expected SameValue(«cmn», «zh») to be true .. icu4j
-                                             // doesn't perform all grandfathered tag replacements.
+                // doesn't perform all grandfathered tag replacements.
                 // Note:: CLDR has a list of grandfathered/language/script/region/variant
                 // replacements that must happen along with the canonicalization.
                 // (https://github.com/unicode-org/cldr/blob/master/common/supplemental/supplementalMetadata.xml)
@@ -91,13 +88,13 @@ public class HermesIntlGetCanonicalLocalesTest extends HermesIntlTest262Base {
                 // locale ids.
                 ,
                 "invalid-tags.js" // Language tag: de-gregory-gregory Expected a RangeError to be
-                                  // thrown but no exception was thrown at all; icu4j
-                                  // canonicalization doesn't reject all the locales that are
-                                  // invalid based on spec.
+                // thrown but no exception was thrown at all; icu4j
+                // canonicalization doesn't reject all the locales that are
+                // invalid based on spec.
                 ,
                 "complex-language-subtag-replacement.js" // Expected SameValue(«ru-SU», «ru-RU») to
-                                                         // be true; icu4j canonicalization doesn't
-                                                         // perform complex subtag replacements.
+                // be true; icu4j canonicalization doesn't
+                // perform complex subtag replacements.
                 ));
 
     Set<String> testIssuesList =
@@ -112,7 +109,7 @@ public class HermesIntlGetCanonicalLocalesTest extends HermesIntlTest262Base {
       icuIssues.addAll(
           Arrays.asList(
               "unicode-ext-canonicalize-timezone.js" // Expected SameValue(«und-u-tz-utc»,
-                                                     // «und-u-tz-gmt») to be true
+              // «und-u-tz-gmt») to be true
               ));
     }
 
@@ -121,8 +118,8 @@ public class HermesIntlGetCanonicalLocalesTest extends HermesIntlTest262Base {
       icuIssues.addAll(
           Arrays.asList(
               "unicode-ext-canonicalize-measurement-system.js" // Expected
-                                                               // SameValue(«und-u-ms-imperial»,
-                                                               // «und-u-ms-uksystem») to be true
+              // SameValue(«und-u-ms-imperial»,
+              // «und-u-ms-uksystem») to be true
               ));
     }
 
@@ -131,10 +128,10 @@ public class HermesIntlGetCanonicalLocalesTest extends HermesIntlTest262Base {
       pre24Issues.addAll(
           Arrays.asList(
               "unicode-ext-canonicalize-calendar.js", // Expected
-                                                      // SameValue(«und-u-ca-ethiopic-amete-alem»,
-                                                      // «und-u-ca-ethioaa») to be true
+              // SameValue(«und-u-ca-ethiopic-amete-alem»,
+              // «und-u-ca-ethioaa») to be true
               "unicode-ext-canonicalize-col-strength.js" // Expected SameValue(«und-u-ks-primary»,
-                                                         // «und-u-ks-level1») to be true
+              // «und-u-ks-level1») to be true
               ));
     }
 

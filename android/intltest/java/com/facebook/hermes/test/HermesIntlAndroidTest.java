@@ -21,8 +21,8 @@ public class HermesIntlAndroidTest extends InstrumentationTestCase {
   public void testIntlFromAsset() throws IOException {
     AssetManager assets = getInstrumentation().getContext().getAssets();
     InputStream is = assets.open("intl.js");
-    String script = new BufferedReader(new InputStreamReader(is))
-      .lines().collect(Collectors.joining("\n"));
+    String script =
+        new BufferedReader(new InputStreamReader(is)).lines().collect(Collectors.joining("\n"));
     try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
       rt.evaluateJavaScript(script);
     }

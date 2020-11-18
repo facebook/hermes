@@ -210,17 +210,10 @@ Function *ESTreeIRGen::genES5Function(
 
   if (auto *bodyBlock = llvh::dyn_cast<ESTree::BlockStatementNode>(body)) {
     if (bodyBlock->isLazyFunctionBody) {
-      // Set the AST position and variable context so we can continue later.
-      newFunction->setLazyScope(saveCurrentScope());
-      auto &lazySource = newFunction->getLazySource();
-      lazySource.bufferId = bodyBlock->bufferId;
-      lazySource.nodeKind = getLazyFunctionKind(functionNode);
-      lazySource.isGeneratorInnerFunction = isGeneratorInnerFunction;
-      lazySource.functionRange = functionNode->getSourceRange();
-
-      // Set the function's .length.
-      newFunction->setExpectedParamCountIncludingThis(
-          countExpectedArgumentsIncludingThis(functionNode));
+      assert(
+          !isGeneratorInnerFunction &&
+          "generator inner function should be included with outer function");
+      setupLazyScope(functionNode, newFunction, body, false);
       return newFunction;
     }
   }
@@ -306,7 +299,17 @@ Function *ESTreeIRGen::genGeneratorFunction(
       originalName,
       Function::DefinitionKind::ES5Function,
       ESTree::isStrict(functionNode->strictness),
+      functionNode->getSourceRange(),
       /* insertBefore */ nullptr);
+  outerFn->setLazyClosureAlias(lazyClosureAlias);
+
+  auto *body = ESTree::getBlockStatement(functionNode);
+  if (auto *bodyBlock = llvh::dyn_cast<ESTree::BlockStatementNode>(body)) {
+    if (bodyBlock->isLazyFunctionBody) {
+      setupLazyScope(functionNode, outerFn, body, true);
+      return outerFn;
+    }
+  }
 
   {
     FunctionContext outerFnContext{this, outerFn, functionNode->getSemInfo()};
@@ -315,7 +318,7 @@ Function *ESTreeIRGen::genGeneratorFunction(
     // since it's lexically considered a child function.
     auto *innerFn = genES5Function(
         genAnonymousLabelName(originalName.isValid() ? originalName.str() : ""),
-        lazyClosureAlias,
+        nullptr,
         functionNode,
         true);
 
@@ -339,6 +342,27 @@ Function *ESTreeIRGen::genGeneratorFunction(
   }
 
   return outerFn;
+}
+
+void ESTreeIRGen::setupLazyScope(
+    ESTree::FunctionLikeNode *functionNode,
+    Function *function,
+    ESTree::BlockStatementNode *bodyBlock,
+    bool isGenerator) {
+  assert(
+      bodyBlock->isLazyFunctionBody &&
+      "setupLazyScope can only be used with lazy function bodies");
+  // Set the AST position and variable context so we can continue later.
+  function->setLazyScope(saveCurrentScope());
+  auto &lazySource = function->getLazySource();
+  lazySource.bufferId = bodyBlock->bufferId;
+  lazySource.nodeKind = getLazyFunctionKind(functionNode);
+  lazySource.isGenerator = isGenerator;
+  lazySource.functionRange = functionNode->getSourceRange();
+
+  // Set the function's .length.
+  function->setExpectedParamCountIncludingThis(
+      countExpectedArgumentsIncludingThis(functionNode));
 }
 
 void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {

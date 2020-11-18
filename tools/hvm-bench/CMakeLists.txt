@@ -24,4 +24,3 @@ target_link_libraries(interp-dispatch-bench
 )
 
 hermes_link_icu(interp-dispatch-bench)
-

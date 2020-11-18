@@ -716,6 +716,16 @@ class ESTreeIRGen {
       Variable *lazyClosureAlias,
       ESTree::FunctionLikeNode *functionNode);
 
+  /// Set the current scope to the lazy scope on \p function
+  /// and assigns the proper source range and information in order to
+  /// continue later in lazy compilation.
+  /// \param bodyBlock the body of the function, must be a lazy function body.
+  void setupLazyScope(
+      ESTree::FunctionLikeNode *functionNode,
+      Function *function,
+      ESTree::BlockStatementNode *bodyBlock,
+      bool isGenerator);
+
   /// In the beginning of an ES5 function, initialize the special captured
   /// variables needed by arrow functions, constructors and methods.
   /// This is used only by \c genES5Function() and the global scope.

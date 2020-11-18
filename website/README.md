@@ -6,7 +6,7 @@ This directory contains the source code for the Hermes JS Engine website availab
 
 This project uses [Docusaurus v2](https://v2.docusaurus.io/).
 
-To develop locally run `yarn` to install dependencies and then `yarn start` to start the website and begin development. Docusaurus will watch the files and automatically compile changes and update the browser preview. 
+To develop locally run `yarn` to install dependencies and then `yarn start` to start the website and begin development. Docusaurus will watch the files and automatically compile changes and update the browser preview.
 
 For more information see the [Docusaurus website](https://v2.docusaurus.io/).
 
@@ -14,7 +14,7 @@ For more information see the [Docusaurus website](https://v2.docusaurus.io/).
 
 To deploy you must have push access.
 
-We deploy the website to the [gh-pages](https://github.com/facebook/hermes/tree/gh-pages) branch of this repo. At a high level, the process of deploying is to build the website assets using Docusaurus, copy the built files over to the `gh-pages` branch (replacing everything that's there except `hermes.js` and `hermes.mem`), verify the changes, and push to the `gh-pages` branch. 
+We deploy the website to the [gh-pages](https://github.com/facebook/hermes/tree/gh-pages) branch of this repo. At a high level, the process of deploying is to build the website assets using Docusaurus, copy the built files over to the `gh-pages` branch (replacing everything that's there except `hermes.js` and `hermes.mem`), verify the changes, and push to the `gh-pages` branch.
 
 The full steps are:
 - `git checkout master`

@@ -44,7 +44,7 @@ cmake --build /tmp/embuild_release_wasm_fastcomp --target hermes
 # Execute hermes
 node /tmp/embuild_release_wasm_fastcomp/bin/hermes.js --help
 ```
-    
+
 In the commands above, replace `${HermesSourcePath?}` with the path where you
 cloned Hermes, and `${EmscriptenRoot?}` with the path to your Emscripten
 install.
@@ -81,5 +81,5 @@ Each option is explained below:
 * `ALLOW_MEMORY_GROWTH`: whether to pre-allocate all memory, or let it grow over
   time
 
-You can customize the build generator by passing the `-G` option to CMake, for 
+You can customize the build generator by passing the `-G` option to CMake, for
 example `-G Ninja`.

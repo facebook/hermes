@@ -83,4 +83,3 @@ This section describes a few key concepts and ideas:
     optimizer transforms loop indices into non-consecutive accesses that fit with
     the hardware instruction set. Another example is loop versioning where the body
     of the loop is duplicated and versioned multiple times .
-
