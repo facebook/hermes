@@ -615,7 +615,7 @@ jobs:
             ls -l /tmp/hermes/build_android
             ls -l /tmp/hermes/build_android/intltest
             tree /tmp/hermes/build_android/intltest
-            adb install /tmp/hermes/build_android/intltest/outputs/apk/androidTest/debug/intltest-debug-androidTest.apk -r
+            adb install /tmp/hermes/build_android/intltest/outputs/apk/androidTest/debug/intltest-debug-androidTest.apk
       - run:
           name: Run tests
           command: |
