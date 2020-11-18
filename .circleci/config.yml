@@ -608,7 +608,7 @@ jobs:
       - run:
           name: Install Instrumented Test Application
           command: |
-            adb wait-for-device
+            adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done; input keyevent 82'
             sleep 60
             adb devices
             adb -s emulator-5554 shell pm list packages
