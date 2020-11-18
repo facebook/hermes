@@ -39,6 +39,7 @@ workflows:
       - test-e2e:
           requires:
             - npm
+      - test-e2e-intl
 
 # Default settings for Apple jobs (apple-runtime, test-apple-runtime)
 apple_defaults: &apple_defaults
@@ -538,5 +539,90 @@ jobs:
             ./run.sh --hermes-npm-package /tmp/hermes/input/hermes-engine-v*.tgz
           # The react-native setup tool takes AGES "Installing CocoaPods dependencies"
           no_output_timeout: 45m
+      - store_artifacts:
+          path: /tmp/hermes/output/
+
+  test-e2e-intl:
+    # For now we run E2E tests on MacOS as running an Android emulator on Linux is
+    # not supported with Circle CI:
+    # https://support.circleci.com/hc/en-us/articles/360000028928-Testing-with-Android-emulator-on-CircleCI-2-0
+    # Windows is another option, but I came across a convenient Mac OS example first:
+    # https://gist.github.com/DoguD/58b4b86a5d892130af84074078581b87
+    macos:
+      xcode: "10.0.0"
+    environment:
+      - TERM: dumb
+      # Homebrew currently breaks while updating:
+      # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
+      - HOMEBREW_NO_AUTO_UPDATE: 1
+      - JVM_OPTS: -Xmx3200m
+      - ANDROID_HOME: /usr/local/share/android-sdk
+      - ANDROID_SDK_HOME: /usr/local/share/android-sdk
+      - ANDROID_SDK_ROOT: /usr/local/share/android-sdk
+      - QEMU_AUDIO_DRV: none
+      - JAVA_HOME: /Library/Java/Home
+      - HERMES_WS_DIR: /tmp/hermes
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/hermes/input
+      - run:
+          name: Setup dependencies
+          command: |
+            brew tap homebrew/cask
+            brew cask install android-sdk
+            brew install python3
+            (yes | sdkmanager "platform-tools" "platforms;android-24" "platforms;android-26" "build-tools;29.0.1" --verbose) || true
+            (yes | sdkmanager "ndk;21.0.6113669" "cmake;3.10.2.4988404" --verbose) || true
+            echo 'export PATH="/usr/local/share/android-sdk/platform-tools:/usr/local/share/android-sdk/tools/bin:/usr/local/share/android-sdk/cmake/3.10.2.4988404/bin:$PATH"' >>  ~/.bash_profile
+      - run:
+          name: Set up workspace
+          command: |
+            mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
+            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
+      - run:
+          name: Build Hermes Compiler
+          command: |
+            cd "$HERMES_WS_DIR"
+            hermes/utils/build/configure.py ./build
+            # Build the Hermes compiler so that the cross compiler build can
+            # access it to build the VM
+            cmake --build ./build --target hermesc
+      - run:
+          name: Build Hermes for Android
+          command: |
+            export ANDROID_SDK="$ANDROID_HOME"
+            export ANDROID_NDK="$ANDROID_HOME/ndk/21.0.6113669"
+            cd "$HERMES_WS_DIR/hermes/android" && ./gradlew :intltest:preparetest262 && ./gradlew :intltest:assembleAndroidTest
+      - run:
+          name: Install emulator dependencies
+          command: (yes | sdkmanager "extras;intel;Hardware_Accelerated_Execution_Manager" "system-images;android-26;google_apis;x86" "emulator" --verbose) || true
+      - run:
+          name: Create emulator definition
+          command: |
+            avdmanager create avd -n Pixel_2_API_26 -k "system-images;android-26;google_apis;x86" -g google_apis -d "Nexus 5"
+      - run:
+          name: Run emulator in background
+          command: /usr/local/share/android-sdk/emulator/emulator @Pixel_2_API_26 -memory 2048 -noaudio
+          background: true
+      - run:
+          name: Install Instrumented Test Application
+          command: |
+            adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done; input keyevent 82'
+            # Wait a bit longer to ensure that the system is settled.
+            sleep 30 
+            adb devices
+            adb install /tmp/hermes/build_android/intltest/outputs/apk/androidTest/debug/intltest-debug-androidTest.apk
+      - run:
+          name: Run tests
+          command: |
+            adb logcat -c || true
+            # https://developer.android.com/studio/test/command-line
+            # -w : Forces am instrument to wait until the instrumentation terminates before terminating itself. 
+            # -r : Outputs results in raw format. 
+            # -e : Provides testing options as key-value pairs. Ref: https://developer.android.com/studio/test/command-line#AMOptionsSyntax
+            adb shell am instrument -w -r -e debug false com.facebook.hermes.intltest.test/androidx.test.runner.AndroidJUnitRunner
+            adb logcat -d > /tmp/hermes/output/adblog.txt
+            echo "Tests Completed"
       - store_artifacts:
           path: /tmp/hermes/output/
