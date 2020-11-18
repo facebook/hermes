@@ -85,6 +85,7 @@ class IRBuilder {
       Identifier OriginalName,
       Function::DefinitionKind definitionKind,
       bool strictMode,
+      SMRange sourceRange = SMRange{},
       Function *insertBefore = nullptr);
 
   /// Create a new GeneratorInnerFunction and add it to the Module.
