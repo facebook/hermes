@@ -610,7 +610,7 @@ jobs:
           command: |
             adb wait-for-device
             adb devices
-            adb install ../../build_android/intltest/outputs/apk/androidTest/debug/intltest-debug-androidTest.apk -r
+            adb install /tmp/hermes/build_android/intltest/outputs/apk/androidTest/debug/intltest-debug-androidTest.apk -r
       - run:
           name: Run tests
           command: |
