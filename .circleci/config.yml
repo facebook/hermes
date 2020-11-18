@@ -559,33 +559,44 @@ jobs:
       - ANDROID_HOME: /usr/local/share/android-sdk
       - ANDROID_SDK_HOME: /usr/local/share/android-sdk
       - ANDROID_SDK_ROOT: /usr/local/share/android-sdk
-      - ANDROID_NDK_HOME: /usr/local/share/android-ndk
       - QEMU_AUDIO_DRV: none
       - JAVA_HOME: /Library/Java/Home
+      - HERMES_WS_DIR: /tmp/hermes
     steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/hermes/input
       - run:
           name: Setup dependencies
           command: |
-            mkdir -p /tmp/hermes/output
-            # Node some version greater than 11 is needed by one of the app dependencies
-            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.1/install.sh | bash
-            NVM_DIR="$HOME/.nvm"
-            . "$NVM_DIR/nvm.sh"
-            echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
-            echo '. "$NVM_DIR/nvm.sh"' >> $BASH_ENV
-            nvm install 12
-            nvm use 12
-            brew install gnu-sed
-            brew install md5sha1sum
             brew tap homebrew/cask
             brew cask install android-sdk
-            brew cask install android-ndk
-            echo 'export PATH="/usr/local/share/android-sdk/platform-tools:/usr/local/share/android-sdk/tools/bin:$PATH"' >> $BASH_ENV
-            # At some point, adb ended up in platform-tools/platform-tools. Work around that.
-            echo 'export PATH="/usr/local/share/android-sdk/platform-tools/platform-tools:$PATH"' >> $BASH_ENV
+            brew cask install python
+            (yes | sdkmanager "platform-tools" "platforms;android-24" "platforms;android-26" "build-tools;29.0.1" --verbose) || true
+            (yes | sdkmanager "ndk;21.0.6113669" "cmake;3.10.2.4988404" --verbose) || true
+            echo 'export PATH="/usr/local/share/android-sdk/platform-tools:/usr/local/share/android-sdk/tools/bin:/usr/local/share/android-sdk/cmake/3.10.2.4988404/bin:$PATH"' >>  ~/.bash_profile
+      - run:
+          name: Set up workspace
+          command: |
+            mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
+            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
+      - run:
+          name: Build Hermes Compiler
+          command: |
+            cd "$HERMES_WS_DIR"
+            hermes/utils/build/configure.py ./build
+            # Build the Hermes compiler so that the cross compiler build can
+            # access it to build the VM
+            cmake --build ./build --target hermesc
+      - run:
+          name: Build Hermes for Android
+          command: |
+            export ANDROID_SDK="$ANDROID_HOME"
+            export ANDROID_NDK="$ANDROID_HOME/ndk/21.0.6113669"
+            cd "$HERMES_WS_DIR/hermes/android" && ./gradlew :intltest:preparetest262 && ./gradlew :intltest:assembleAndroidTest
       - run:
           name: Install emulator dependencies
-          command: (yes | sdkmanager "platform-tools" "platforms;android-26" "extras;intel;Hardware_Accelerated_Execution_Manager" "build-tools;26.0.0" "system-images;android-26;google_apis;x86" "emulator" --verbose) || true
+          command: (yes | sdkmanager "extras;intel;Hardware_Accelerated_Execution_Manager" "system-images;android-26;google_apis;x86" "emulator" --verbose) || true
       - run:
           name: Create emulator definition
           command: |
@@ -594,15 +605,11 @@ jobs:
           name: Run emulator in background
           command: /usr/local/share/android-sdk/emulator/emulator @Pixel_2_API_26 -memory 2048 -noaudio
           background: true
-      - checkout
-      - attach_workspace:
-          at: /tmp/hermes/input
       - run:
-          name: Run E2E Intl tests with master Hermes
-          command: |
-            cd test/intl
-            chmod +x ./run.sh && ./run.sh
-          # The react-native setup tool takes AGES "Installing CocoaPods dependencies"
-          no_output_timeout: 45m
+          name: Install Instrumented Test Application
+          command: adb install ../../build_android/intltest/outputs/apk/androidTest/debug/intltest-debug-androidTest.apk -r
+      - run:
+          name: Run tests
+          command: adb shell am instrument -w -r -e debug false com.facebook.hermes.intltest.test/androidx.test.runner.AndroidJUnitRunner
       - store_artifacts:
           path: /tmp/hermes/output/
