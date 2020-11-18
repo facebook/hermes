@@ -19,7 +19,7 @@ This is the design document for the Hermes Engine.
 The Hermes bytecode generator is responsible for translating the
 Hermes high-level IR into Hermes bytecode. This section only describes the
 generation of the opcode stream, not the whole bundle file format that is
-described in a separate document.  
+described in a separate document.
 
 The bytecode is a register-based bytecode. The number of registers is
 infinite, but there are some restrictions on the registers. For example,
@@ -41,7 +41,7 @@ exceptions: the handling of variables, the representation of constants and the
 representation of stack-allocated variables. Stack allocated registers are
 implemented as values that are pinned into a specific registers (at least during
 the lifetime of the stack allocation). Load/Store instructions from the stack
-allocation values are lowered into MOV instructions.  
+allocation values are lowered into MOV instructions.
 
 The current register allocation implementation is a very simple linear scan. The
 allocation has four main steps. First, we number the instructions in the

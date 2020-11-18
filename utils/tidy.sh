@@ -20,4 +20,3 @@ if [ $(which clang-tidy) ]; then
 fi
 
 echo "ERROR: can't find clang-tidy in your path."
-
