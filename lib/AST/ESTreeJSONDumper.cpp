@@ -38,6 +38,8 @@ class ESTreeJSONDumper {
     if (locMode != LocationDumpMode::None) {
       assert(sm && "SourceErrorManager required for dumping");
     }
+
+    if (mode == ESTreeDumpMode::HideEmpty) {
 #define ESTREE_NODE_0_ARGS(NAME, ...)
 #define ESTREE_NODE_1_ARGS(NAME, ...)
 #define ESTREE_NODE_2_ARGS(NAME, ...)
@@ -50,6 +52,7 @@ class ESTreeJSONDumper {
 #define ESTREE_IGNORE_IF_EMPTY(NAME, FIELD) \
   ignoredEmptyFields_[#NAME].insert(#FIELD);
 #include "hermes/AST/ESTree.def"
+    }
   }
 
   void doIt(NodePtr rootNode) {
