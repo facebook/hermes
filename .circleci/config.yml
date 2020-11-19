@@ -623,7 +623,7 @@ jobs:
             export ANDROID_SDK="$ANDROID_HOME"
             export ANDROID_NDK="$ANDROID_HOME/ndk/21.0.6113669"
             cd "$HERMES_WS_DIR/hermes/android"
-            echo 'abis="x86"' >> gradle.properties
+            echo 'abis=x86' >> gradle.properties
             ./gradlew :intltest:connectedAndroidTest
       - run:
           name: Run tests
