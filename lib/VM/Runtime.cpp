@@ -1875,7 +1875,7 @@ void Runtime::recordHiddenClass(
   ClassId objectHiddenClassId = heap_.getObjectID(objectHiddenClass);
   // prevent cached hidden class from being GC-ed
   ClassId cachedHiddenClassId =
-      static_cast<ClassId>(GCBase::IDTracker::ReservedObjectID::NoID);
+      static_cast<ClassId>(GCBase::IDTracker::kInvalidNode);
   if (cachedHiddenClass != nullptr) {
     preventHCGC(cachedHiddenClass);
     cachedHiddenClassId = heap_.getObjectID(cachedHiddenClass);
@@ -1890,8 +1890,7 @@ void Runtime::getInlineCacheProfilerInfo(llvh::raw_ostream &ostream) {
 }
 
 HiddenClass *Runtime::resolveHiddenClassId(ClassId classId) {
-  if (classId ==
-      static_cast<ClassId>(GCBase::IDTracker::ReservedObjectID::NoID)) {
+  if (classId == static_cast<ClassId>(GCBase::IDTracker::kInvalidNode)) {
     return nullptr;
   }
   auto &classIdToIdxMap = inlineCacheProfiler_.getClassIdtoIndexMap();

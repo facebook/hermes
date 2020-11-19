@@ -520,41 +520,39 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
   EXPECT_EQ(llvh::cast<JSONArray>(root->at("locations"))->size(), 0);
 
   // Common nodes.
-  Node gcRoots{HeapSnapshot::NodeType::Synthetic,
-               "(GC roots)",
-               static_cast<HeapSnapshot::NodeID>(
-                   GC::IDTracker::ReservedObjectID::GCRoots),
-               0,
-               1};
-  Node rootSection{HeapSnapshot::NodeType::Synthetic,
-                   "(Custom)",
-                   static_cast<HeapSnapshot::NodeID>(
-                       GC::IDTracker::ReservedObjectID::Custom),
-                   0,
-                   1};
+  Node gcRoots{
+      HeapSnapshot::NodeType::Synthetic,
+      "(GC roots)",
+      GC::IDTracker::reserved(GC::IDTracker::ReservedObjectID::GCRoots),
+      0,
+      1};
+  Node rootSection{
+      HeapSnapshot::NodeType::Synthetic,
+      "(Custom)",
+      GC::IDTracker::reserved(GC::IDTracker::ReservedObjectID::Custom),
+      0,
+      1};
   Node firstDummy{HeapSnapshot::NodeType::Object,
                   cellKindStr(dummy->getKind()),
                   gc.getObjectID(dummy.get()),
                   blockSize,
                   // One edge to the second dummy, 4 for primitive singletons.
                   5};
-  Node undefinedNode{HeapSnapshot::NodeType::Object,
-                     "undefined",
-                     static_cast<HeapSnapshot::NodeID>(
-                         GCBase::IDTracker::ReservedObjectID::Undefined),
-                     0,
-                     0};
+  Node undefinedNode{
+      HeapSnapshot::NodeType::Object,
+      "undefined",
+      GC::IDTracker::reserved(GC::IDTracker::ReservedObjectID::Undefined),
+      0,
+      0};
   Node nullNode{HeapSnapshot::NodeType::Object,
                 "null",
-                static_cast<HeapSnapshot::NodeID>(
-                    GCBase::IDTracker::ReservedObjectID::Null),
+                GC::IDTracker::reserved(GC::IDTracker::ReservedObjectID::Null),
                 0,
                 0};
   Node trueNode(
       HeapSnapshot::NodeType::Object,
       "true",
-      static_cast<HeapSnapshot::NodeID>(
-          GCBase::IDTracker::ReservedObjectID::True),
+      GC::IDTracker::reserved(GC::IDTracker::ReservedObjectID::True),
       0,
       0);
   Node numberNode{HeapSnapshot::NodeType::Number,
@@ -562,12 +560,12 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
                   gc.getIDTracker().getNumberID(dummy->hvDouble.getNumber()),
                   0,
                   0};
-  Node falseNode{HeapSnapshot::NodeType::Object,
-                 "false",
-                 static_cast<HeapSnapshot::NodeID>(
-                     GCBase::IDTracker::ReservedObjectID::False),
-                 0,
-                 0};
+  Node falseNode{
+      HeapSnapshot::NodeType::Object,
+      "false",
+      GC::IDTracker::reserved(GC::IDTracker::ReservedObjectID::False),
+      0,
+      0};
   Node secondDummy{HeapSnapshot::NodeType::Object,
                    cellKindStr(dummy->getKind()),
                    gc.getObjectID(dummy->other),
@@ -594,8 +592,7 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
   expectedNodes.emplace(
       HeapSnapshot::NodeType::Synthetic,
       "",
-      static_cast<HeapSnapshot::NodeID>(
-          GC::IDTracker::ReservedObjectID::SuperRoot),
+      GC::IDTracker::reserved(GC::IDTracker::ReservedObjectID::SuperRoot),
       0,
       1);
   expectedNodes.emplace(gcRoots);

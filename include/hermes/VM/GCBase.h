@@ -453,8 +453,6 @@ class GCBase {
    public:
     /// These are IDs that are reserved for special objects.
     enum class ReservedObjectID : HeapSnapshot::NodeID {
-      // For any object where an ID cannot be found.
-      NoID = 0,
       // The ID for the super root object.
       SuperRoot,
       // The ID for the (GC roots) object.
@@ -467,6 +465,16 @@ class GCBase {
       False,
       FirstNonReservedID,
     };
+
+    // 0 is guaranteed to never be a valid node ID.
+    static constexpr HeapSnapshot::NodeID kInvalidNode = 0;
+
+    static constexpr HeapSnapshot::NodeID reserved(ReservedObjectID id) {
+      // All reserved IDs should be odd numbers to signify that they're JS
+      // objects and not native objects. This follows v8's output.
+      return static_cast<std::underlying_type<ReservedObjectID>::type>(id) * 2 +
+          1;
+    }
 
     /// A comparator for doubles that allows NaN.
     struct DoubleComparator {
@@ -574,11 +582,9 @@ class GCBase {
 
     /// The last ID assigned to a non-native object. Object IDs are not
     /// recycled so that snapshots don't confuse two objects with each other.
-    /// NOTE: Need to ensure that this starts on an odd number, so check if
-    /// the first non-reserved ID is odd, if not add one.
-    HeapSnapshot::NodeID lastID_{static_cast<HeapSnapshot::NodeID>(
-                                     ReservedObjectID::FirstNonReservedID) |
-                                 1};
+    /// NOTE: Reserved guarantees that this is an odd number.
+    HeapSnapshot::NodeID lastID_{
+        reserved(ReservedObjectID::FirstNonReservedID)};
 
     /// Map of object pointers to IDs. Only populated once the first heap
     /// snapshot is requested, or the first time the memory profiler is turned

@@ -144,14 +144,15 @@ std::error_code GCBase::createSnapshotToFile(const std::string &fileName) {
 
 namespace {
 
-constexpr GCBase::IDTracker::ReservedObjectID objectIDForRootSection(
+constexpr HeapSnapshot::NodeID objectIDForRootSection(
     RootAcceptor::Section section) {
   // Since root sections start at zero, and in IDTracker the root sections
   // start one past the reserved GC root, this number can be added to
   // do conversions.
-  return static_cast<GCBase::IDTracker::ReservedObjectID>(
-      static_cast<uint64_t>(GCBase::IDTracker::ReservedObjectID::GCRoots) + 1 +
-      static_cast<uint64_t>(section));
+  return GCBase::IDTracker::reserved(
+      static_cast<GCBase::IDTracker::ReservedObjectID>(
+          static_cast<uint64_t>(GCBase::IDTracker::ReservedObjectID::GCRoots) +
+          1 + static_cast<uint64_t>(section)));
 }
 
 // Abstract base class for all snapshot acceptors.
@@ -194,7 +195,7 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
     snap_.endNode(
         HeapSnapshot::NodeType::Object,
         "undefined",
-        static_cast<HeapSnapshot::NodeID>(
+        GCBase::IDTracker::reserved(
             GCBase::IDTracker::ReservedObjectID::Undefined),
         0,
         0);
@@ -202,24 +203,21 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
     snap_.endNode(
         HeapSnapshot::NodeType::Object,
         "null",
-        static_cast<HeapSnapshot::NodeID>(
-            GCBase::IDTracker::ReservedObjectID::Null),
+        GCBase::IDTracker::reserved(GCBase::IDTracker::ReservedObjectID::Null),
         0,
         0);
     snap_.beginNode();
     snap_.endNode(
         HeapSnapshot::NodeType::Object,
         "true",
-        static_cast<HeapSnapshot::NodeID>(
-            GCBase::IDTracker::ReservedObjectID::True),
+        GCBase::IDTracker::reserved(GCBase::IDTracker::ReservedObjectID::True),
         0,
         0);
     snap_.beginNode();
     snap_.endNode(
         HeapSnapshot::NodeType::Object,
         "false",
-        static_cast<HeapSnapshot::NodeID>(
-            GCBase::IDTracker::ReservedObjectID::False),
+        GCBase::IDTracker::reserved(GCBase::IDTracker::ReservedObjectID::False),
         0,
         0);
     for (double num : seenNumbers_) {
@@ -322,7 +320,7 @@ struct SnapshotRootSectionAcceptor : public SnapshotAcceptor,
     snap_.addIndexedEdge(
         HeapSnapshot::EdgeType::Element,
         rootSectionNum_++,
-        static_cast<HeapSnapshot::NodeID>(objectIDForRootSection(section)));
+        objectIDForRootSection(section));
   }
 
   void endRootSection() override {
@@ -382,8 +380,7 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
     snap_.endNode(
         HeapSnapshot::NodeType::Synthetic,
         rootNames[static_cast<unsigned>(currentSection_)],
-        static_cast<HeapSnapshot::NodeID>(
-            objectIDForRootSection(currentSection_)),
+        objectIDForRootSection(currentSection_),
         // The heap visualizer doesn't like it when these synthetic nodes have a
         // size (it describes them as living in the heap).
         0,
@@ -447,13 +444,11 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
       snap.addIndexedEdge(
           HeapSnapshot::EdgeType::Element,
           1,
-          static_cast<HeapSnapshot::NodeID>(
-              IDTracker::ReservedObjectID::GCRoots));
+          IDTracker::reserved(IDTracker::ReservedObjectID::GCRoots));
       snap.endNode(
           HeapSnapshot::NodeType::Synthetic,
           "",
-          static_cast<HeapSnapshot::NodeID>(
-              IDTracker::ReservedObjectID::SuperRoot),
+          IDTracker::reserved(IDTracker::ReservedObjectID::SuperRoot),
           0,
           0);
       snap.beginNode();
@@ -463,7 +458,7 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
           HeapSnapshot::NodeType::Synthetic,
           "(GC roots)",
           static_cast<HeapSnapshot::NodeID>(
-              IDTracker::ReservedObjectID::GCRoots),
+              IDTracker::reserved(IDTracker::ReservedObjectID::GCRoots)),
           0,
           0);
     }
@@ -954,14 +949,14 @@ void GCBase::AllocationLocationTracker::enable(
   // The first fragment has all objects that were live before the profiler was
   // enabled.
   // The ID and timestamp will be filled out via flushCallback.
-  fragments_.emplace_back(Fragment{
-      static_cast<HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::NoID),
-      std::chrono::microseconds(),
-      numObjects,
-      numBytes,
-      // Say the fragment is touched here so it is written out
-      // automatically by flushCallback.
-      true});
+  fragments_.emplace_back(
+      Fragment{IDTracker::kInvalidNode,
+               std::chrono::microseconds(),
+               numObjects,
+               numBytes,
+               // Say the fragment is touched here so it is written out
+               // automatically by flushCallback.
+               true});
   // Immediately flush the first fragment.
   flushCallback();
 }
@@ -987,9 +982,7 @@ void GCBase::AllocationLocationTracker::newAlloc(const void *ptr, uint32_t sz) {
     (void)id;
     Fragment &lastFrag = fragments_.back();
     HERMES_SLOW_ASSERT(
-        lastFrag.lastSeenObjectID_ ==
-            static_cast<HeapSnapshot::NodeID>(
-                IDTracker::ReservedObjectID::NoID) &&
+        lastFrag.lastSeenObjectID_ == IDTracker::kInvalidNode &&
         "Last fragment should not have an ID assigned yet");
     lastFrag.numObjects_++;
     lastFrag.numBytes_ += sz;
@@ -1062,9 +1055,7 @@ void GCBase::AllocationLocationTracker::flushCallback() {
   const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
       std::chrono::steady_clock::now() - startTime_);
   assert(
-      lastFrag.lastSeenObjectID_ ==
-          static_cast<HeapSnapshot::NodeID>(
-              IDTracker::ReservedObjectID::NoID) &&
+      lastFrag.lastSeenObjectID_ == IDTracker::kInvalidNode &&
       "Last fragment should not have an ID assigned yet");
   // In case a flush happens without any allocations occurring, don't add a new
   // fragment.
@@ -1073,11 +1064,7 @@ void GCBase::AllocationLocationTracker::flushCallback() {
     lastFrag.timestamp_ = duration;
     // Place an empty fragment at the end, for any new allocs.
     fragments_.emplace_back(Fragment{
-        static_cast<HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::NoID),
-        std::chrono::microseconds(),
-        0,
-        0,
-        false});
+        IDTracker::kInvalidNode, std::chrono::microseconds(), 0, 0, false});
   }
   if (fragmentCallback_) {
     std::vector<HeapStatsUpdate> updatedFragments;
@@ -1101,18 +1088,19 @@ llvh::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
     // This should be rare, but is occasionally used by some parts of the VM.
     return val.getPointer()
         ? getObjectID(val.getPointer())
-        : static_cast<HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::Null);
+        : IDTracker::reserved(IDTracker::ReservedObjectID::Null);
   } else if (val.isNumber()) {
     return idTracker_.getNumberID(val.getNumber());
   } else if (val.isUndefined()) {
-    return static_cast<HeapSnapshot::NodeID>(
-        IDTracker::ReservedObjectID::Undefined);
+    return IDTracker::reserved(IDTracker::ReservedObjectID::Undefined);
   } else if (val.isNull()) {
-    return static_cast<HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::Null);
+    return static_cast<HeapSnapshot::NodeID>(
+        IDTracker::reserved(IDTracker::ReservedObjectID::Null));
   } else if (val.isBool()) {
     return static_cast<HeapSnapshot::NodeID>(
-        val.getBool() ? IDTracker::ReservedObjectID::True
-                      : IDTracker::ReservedObjectID::False);
+        val.getBool()
+            ? IDTracker::reserved(IDTracker::ReservedObjectID::True)
+            : IDTracker::reserved(IDTracker::ReservedObjectID::False));
   } else {
     return llvh::None;
   }
