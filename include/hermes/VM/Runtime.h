@@ -1652,7 +1652,7 @@ T *Runtime::makeAFixed(Args &&... args) {
   T *ptr = heap_.makeA<T, true /* fixedSize */, hasFinalizer, longLived>(
       sz, std::forward<Args>(args)...);
 #ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-  heap_.getAllocationLocationTracker().newAlloc(ptr, sz);
+  heap_.getAllocationLocationTracker().newAlloc(ptr, heapAlignSize(sz));
 #endif
   return ptr;
 }
@@ -1675,7 +1675,7 @@ T *Runtime::makeAVariable(uint32_t size, Args &&... args) {
   T *ptr = heap_.makeA<T, false /* fixedSize */, hasFinalizer, longLived>(
       size, std::forward<Args>(args)...);
 #ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-  heap_.getAllocationLocationTracker().newAlloc(ptr, size);
+  heap_.getAllocationLocationTracker().newAlloc(ptr, heapAlignSize(size));
 #endif
   return ptr;
 }
