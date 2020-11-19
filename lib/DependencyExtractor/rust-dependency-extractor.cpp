@@ -35,7 +35,7 @@ Dependencies *hermes::hermesExtractDependencies(
   context->setParseJSX(true);
 #endif
 #if HERMES_PARSE_FLOW
-  context->setParseFlow(true);
+  context->setParseFlow(ParseFlowSetting::ALL);
 #endif
 
   if (source[sourceSize - 1] != 0) {

@@ -1003,7 +1003,7 @@ std::shared_ptr<Context> createContext(
 
 #if HERMES_PARSE_FLOW
   if (cl::ParseFlow) {
-    context->setParseFlow(true);
+    context->setParseFlow(ParseFlowSetting::ALL);
   }
 #endif
 

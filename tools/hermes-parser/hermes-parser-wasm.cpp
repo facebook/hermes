@@ -54,7 +54,7 @@ extern "C" ParseResult *hermesParse(
 
   auto context = std::make_shared<Context>();
   context->setParseJSX(true);
-  context->setParseFlow(true);
+  context->setParseFlow(ParseFlowSetting::ALL);
   context->setUseCJSModules(true);
 
   // Set up custom diagnostic handler for error reporting

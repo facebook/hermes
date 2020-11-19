@@ -79,6 +79,23 @@ enum class DebugInfoSetting {
   ALL,
 };
 
+enum class ParseFlowSetting {
+  /// Do not parse any Flow type syntax.
+  NONE,
+
+  /// Parse all Flow type syntax.
+  ALL,
+
+  /// Parse all unambiguous Flow type syntax. Syntax that can be intepreted as
+  /// either Flow types or standard JavaScript is parsed as if it were standard
+  /// JavaScript.
+  ///
+  /// For example, `foo<T>(x)` is parsed as if it were standard JavaScript
+  /// containing two comparisons, even though it could otherwise be interpreted
+  /// as a call expression with Flow type arguments.
+  UNAMBIGUOUS,
+};
+
 /// Holds shared dependencies and state.
 class Context {
  public:
@@ -159,8 +176,8 @@ class Context {
   /// If true, allow parsing JSX as a primary expression.
   bool parseJSX_{false};
 
-  /// If true, allow parsing Flow type annotations.
-  bool parseFlow_{false};
+  /// Whether to parse Flow type syntax.
+  ParseFlowSetting parseFlow_{ParseFlowSetting::NONE};
 
   /// If non-null, the resolution table which resolves static require().
   const std::unique_ptr<ResolutionTable> resolutionTable_;
@@ -295,11 +312,14 @@ class Context {
     return parseJSX_;
   }
 
-  void setParseFlow(bool parseFlow) {
+  void setParseFlow(ParseFlowSetting parseFlow) {
     parseFlow_ = parseFlow;
   }
   bool getParseFlow() const {
-    return parseFlow_;
+    return parseFlow_ != ParseFlowSetting::NONE;
+  }
+  bool getParseFlowAmbiguous() const {
+    return parseFlow_ == ParseFlowSetting::ALL;
   }
 
   bool isLazyCompilation() const {

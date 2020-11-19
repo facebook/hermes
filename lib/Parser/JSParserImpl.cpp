@@ -3265,7 +3265,8 @@ Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
 
   for (;;) {
 #if HERMES_PARSE_FLOW
-    if (context_.getParseFlow() && !typeArgs && check(TokenKind::less)) {
+    if (context_.getParseFlowAmbiguous() && !typeArgs &&
+        check(TokenKind::less)) {
       JSLexer::SavePoint savePoint{&lexer_};
       // Each call in a chain may have type arguments.
       // As such, we must attempt to parse them upon encountering '<',
@@ -3410,7 +3411,7 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrOptionalExpression(
 
   ESTree::Node *typeArgs = nullptr;
 #if HERMES_PARSE_FLOW
-  if (context_.getParseFlow() && check(TokenKind::less)) {
+  if (context_.getParseFlowAmbiguous() && check(TokenKind::less)) {
     JSLexer::SavePoint savePoint{&lexer_};
     // Attempt to parse type args upon encountering '<',
     // but roll back if it just ended up being a comparison operator.
@@ -3481,7 +3482,10 @@ Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpression() {
 
   ESTree::Node *typeArgs = nullptr;
 #if HERMES_PARSE_FLOW
-  if (context_.getParseFlow() && check(TokenKind::less)) {
+  // If the less than sign is immediately following a question dot then it
+  // cannot be a binary expression and is unambiguously Flow type syntax.
+  if ((optional ? context_.getParseFlow() : context_.getParseFlowAmbiguous()) &&
+      check(TokenKind::less)) {
     JSLexer::SavePoint savePoint{&lexer_};
     // Suppress messages from the parser while still displaying lexer messages.
     SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
