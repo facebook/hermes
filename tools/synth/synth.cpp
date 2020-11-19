@@ -52,7 +52,7 @@ static opt<bool> UseTraceConfig(
     desc("Controls what RuntimeConfig as the default that the various config "
          "modify.  True says to use the recorded config of the trace, false "
          "means start from the default config."),
-    init(false));
+    init(true));
 
 static opt<std::string> Trace(
     "trace",

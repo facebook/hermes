@@ -650,7 +650,9 @@ TraceInterpreter::getSourceHashToBundleMap(
     rtConfigBuilder.withRandomizeMemoryLayout(true);
   }
 
-  gcConfigBuilder.update(gcConfigBuilderIn);
+  if (options.useTraceConfig) {
+    gcConfigBuilder.update(gcConfigBuilderIn);
+  }
   gcConfigBuilder.update(options.gcConfigBuilder);
   return rtConfigBuilder.withGCConfig(gcConfigBuilder.build()).build();
 }
