@@ -147,10 +147,10 @@ namespace {
 constexpr GCBase::IDTracker::ReservedObjectID objectIDForRootSection(
     RootAcceptor::Section section) {
   // Since root sections start at zero, and in IDTracker the root sections
-  // start one past the reserved super root, this number can be added to
+  // start one past the reserved GC root, this number can be added to
   // do conversions.
   return static_cast<GCBase::IDTracker::ReservedObjectID>(
-      static_cast<uint64_t>(GCBase::IDTracker::ReservedObjectID::Root) + 1 +
+      static_cast<uint64_t>(GCBase::IDTracker::ReservedObjectID::GCRoots) + 1 +
       static_cast<uint64_t>(section));
 }
 
@@ -440,13 +440,30 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
     {
       // Make the super root node and add edges to each root section.
       SnapshotRootSectionAcceptor rootSectionAcceptor(*gc, snap);
+      // The super root has a single element pointing to the "(GC roots)"
+      // synthetic node. v8 also has some "shortcut" edges to things like the
+      // global object, but those don't seem necessary for correctness.
+      snap.beginNode();
+      snap.addIndexedEdge(
+          HeapSnapshot::EdgeType::Element,
+          1,
+          static_cast<HeapSnapshot::NodeID>(
+              IDTracker::ReservedObjectID::GCRoots));
+      snap.endNode(
+          HeapSnapshot::NodeType::Synthetic,
+          "",
+          static_cast<HeapSnapshot::NodeID>(
+              IDTracker::ReservedObjectID::SuperRoot),
+          0,
+          0);
       snap.beginNode();
       gc->markRoots(rootSectionAcceptor, true);
       gc->markWeakRoots(rootSectionAcceptor);
       snap.endNode(
           HeapSnapshot::NodeType::Synthetic,
-          "(GC Roots)",
-          static_cast<HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::Root),
+          "(GC roots)",
+          static_cast<HeapSnapshot::NodeID>(
+              IDTracker::ReservedObjectID::GCRoots),
           0,
           0);
     }

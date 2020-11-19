@@ -456,7 +456,9 @@ class GCBase {
       // For any object where an ID cannot be found.
       NoID = 0,
       // The ID for the super root object.
-      Root,
+      SuperRoot,
+      // The ID for the (GC roots) object.
+      GCRoots,
 #define ROOT_SECTION(name) name,
 #include "hermes/VM/RootSections.def"
       Undefined,

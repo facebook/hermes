@@ -520,6 +520,12 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
   EXPECT_EQ(llvh::cast<JSONArray>(root->at("locations"))->size(), 0);
 
   // Common nodes.
+  Node gcRoots{HeapSnapshot::NodeType::Synthetic,
+               "(GC roots)",
+               static_cast<HeapSnapshot::NodeID>(
+                   GC::IDTracker::ReservedObjectID::GCRoots),
+               0,
+               1};
   Node rootSection{HeapSnapshot::NodeType::Synthetic,
                    "(Custom)",
                    static_cast<HeapSnapshot::NodeID>(
@@ -587,10 +593,12 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
   // First node is the roots object.
   expectedNodes.emplace(
       HeapSnapshot::NodeType::Synthetic,
-      "(GC Roots)",
-      static_cast<HeapSnapshot::NodeID>(GC::IDTracker::ReservedObjectID::Root),
+      "",
+      static_cast<HeapSnapshot::NodeID>(
+          GC::IDTracker::ReservedObjectID::SuperRoot),
       0,
       1);
+  expectedNodes.emplace(gcRoots);
   // Next node is the custom root section.
   expectedNodes.emplace(rootSection);
   // Next node is the first dummy object.
@@ -609,6 +617,8 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
   // Next node is the first number.
   expectedNodes.emplace(numberNode);
 
+  // Pointer from super root to gc roots.
+  expectedEdges.emplace(HeapSnapshot::EdgeType::Element, 1, gcRoots);
   // Pointer from root to root section.
   expectedEdges.emplace(HeapSnapshot::EdgeType::Element, 1, rootSection);
   // Pointer from root section to first dummy.
