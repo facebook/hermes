@@ -604,37 +604,15 @@ jobs:
             # access it to build the VM
             cmake --build ./build --target hermesc
       - run:
-          name: Build Hermes for Android
+          name: Build Hermes for Android and Run tests
           command: |
-            export ANDROID_SDK="$ANDROID_HOME"
-            export ANDROID_NDK="$ANDROID_HOME/ndk/21.0.6113669"
-            cd "$HERMES_WS_DIR/hermes/android"
-            echo 'abis=x86' >> gradle.properties
-            cp gradle.properties /tmp/hermes/output/gradle.properties
-            ./gradlew :intltest:preparetest262 && ./gradlew :intltest:assembleAndroidTest
-      - run:
-          name: Install Instrumented Test Application
-          command: |
+            # Ensure the emulator is ready.
             adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done; input keyevent 82'
-            # Wait a bit longer to ensure that the system is settled.
-            sleep 30 
-            adb devices
-            # adb install /tmp/hermes/build_android/intltest/outputs/apk/androidTest/debug/intltest-debug-androidTest.apk
             export ANDROID_SDK="$ANDROID_HOME"
             export ANDROID_NDK="$ANDROID_HOME/ndk/21.0.6113669"
             cd "$HERMES_WS_DIR/hermes/android"
+            # We need to build only x86 for running the tests. This saves a lot of computing resources.
             echo 'abis=x86' >> gradle.properties
-            ./gradlew :intltest:connectedAndroidTest
-      - run:
-          name: Run tests
-          command: |
-            adb logcat -c || true
-            # https://developer.android.com/studio/test/command-line
-            # -w : Forces am instrument to wait until the instrumentation terminates before terminating itself. 
-            # -r : Outputs results in raw format. 
-            # -e : Provides testing options as key-value pairs. Ref: https://developer.android.com/studio/test/command-line#AMOptionsSyntax
-            adb shell am instrument -w -r -e debug false com.facebook.hermes.intltest.test/androidx.test.runner.AndroidJUnitRunner
-            adb logcat -d > /tmp/hermes/output/adblog.txt
-            echo "Tests Completed"
+            ./gradlew :intltest:preparetest262 && ./gradlew :intltest:connectedAndroidTest
       - store_artifacts:
           path: /tmp/hermes/output/
