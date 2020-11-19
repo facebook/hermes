@@ -265,9 +265,7 @@ Optional<ESTree::Node *> JSParserImpl::parseInterfaceTail(
     return None;
 
   return parseObjectTypeAnnotation(
-      AllowProtoProperty::Yes,
-      AllowStaticProperty::No,
-      AllowSpreadProperty::No);
+      AllowProtoProperty::No, AllowStaticProperty::No, AllowSpreadProperty::No);
 }
 
 bool JSParserImpl::parseInterfaceExtends(
@@ -1506,6 +1504,11 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
     advance(JSLexer::GrammarContext::Flow);
   }
 
+  if (!proto && (check(TokenKind::rw_static) || check(staticIdent_))) {
+    isStatic = true;
+    advance(JSLexer::GrammarContext::Flow);
+  }
+
   if (check(TokenKind::plus, TokenKind::minus)) {
     variance = setLocation(
         tok_,
@@ -1515,17 +1518,16 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
     advance(JSLexer::GrammarContext::Flow);
   }
 
-  if (variance == nullptr && !proto &&
-      (check(TokenKind::rw_static) || check(staticIdent_))) {
-    // 'static' disallowed when variance has been provided.
-    isStatic = true;
-    advance(JSLexer::GrammarContext::Flow);
-  }
-
   if (checkAndEat(TokenKind::l_square, JSLexer::GrammarContext::Flow)) {
     if (checkAndEat(TokenKind::l_square, JSLexer::GrammarContext::Flow)) {
       if (variance) {
         error(variance->getSourceRange(), "Unexpected variance sigil");
+      }
+      if (proto) {
+        error(startRange, "invalid 'proto' modifier");
+      }
+      if (isStatic && allowStaticProperty == AllowStaticProperty::No) {
+        error(startRange, "invalid 'static' modifier");
       }
       // Internal slot
       if (!check(TokenKind::identifier) && !tok_->isResWord()) {
@@ -1607,6 +1609,9 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
       if (proto) {
         error(startRange, "invalid 'proto' modifier");
       }
+      if (isStatic && allowStaticProperty == AllowStaticProperty::No) {
+        error(startRange, "invalid 'static' modifier");
+      }
       indexers.push_back(**optIndexer);
     }
     return true;
@@ -1638,6 +1643,9 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
           variance->getSourceRange(),
           "call property must not specify variance");
     }
+    if (proto) {
+      error(startRange, "invalid 'proto' modifier");
+    }
     auto optCall = parseTypeCallProperty(start, isStatic);
     if (!optCall)
       return false;
@@ -1646,6 +1654,9 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
   }
 
   if ((isStatic || proto) && check(TokenKind::colon, TokenKind::question)) {
+    if (variance) {
+      error(variance->getSourceRange(), "Unexpected variance sigil");
+    }
     key = setLocation(
         startRange,
         startRange,
@@ -1669,12 +1680,15 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
     if (variance) {
       error(variance->getSourceRange(), "Unexpected variance sigil");
     }
-    auto optProp = parseMethodTypeProperty(start, isStatic, key);
-    if (!optProp)
-      return false;
     if (proto) {
       error(startRange, "invalid 'proto' modifier");
     }
+    if (isStatic && allowStaticProperty == AllowStaticProperty::No) {
+      error(startRange, "invalid 'static' modifier");
+    }
+    auto optProp = parseMethodTypeProperty(start, isStatic, key);
+    if (!optProp)
+      return false;
     properties.push_back(**optProp);
     return true;
   }
@@ -1682,6 +1696,9 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
   if (check(TokenKind::colon, TokenKind::question)) {
     if (proto && allowProtoProperty == AllowProtoProperty::No) {
       error(startRange, "invalid 'proto' modifier");
+    }
+    if (isStatic && allowStaticProperty == AllowStaticProperty::No) {
+      error(startRange, "invalid 'static' modifier");
     }
     auto optProp = parseTypeProperty(start, variance, isStatic, proto, key);
     if (!optProp)
@@ -1697,6 +1714,12 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
             variance->getSourceRange(),
             "accessor property must not specify variance");
       }
+      if (proto) {
+        error(startRange, "invalid 'proto' modifier");
+      }
+      if (isStatic && allowStaticProperty == AllowStaticProperty::No) {
+        error(startRange, "invalid 'static' modifier");
+      }
       auto optKey = parsePropertyName();
       if (!optKey)
         return false;
@@ -1710,22 +1733,12 @@ bool JSParserImpl::parsePropertyTypeAnnotation(
     }
   }
 
-  if (!check(TokenKind::colon, TokenKind::question)) {
-    errorExpected(
-        {TokenKind::colon, TokenKind::question},
-        "in property type annotation",
-        "start of properties",
-        start);
-    return false;
-  }
-  if (proto && allowProtoProperty == AllowProtoProperty::No) {
-    error(startRange, "invalid 'proto' modifier");
-  }
-  auto optProp = parseTypeProperty(start, variance, isStatic, proto, key);
-  if (!optProp)
-    return false;
-  properties.push_back(**optProp);
-  return true;
+  errorExpected(
+      {TokenKind::colon, TokenKind::question},
+      "in property type annotation",
+      "start of properties",
+      start);
+  return false;
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeProperty(

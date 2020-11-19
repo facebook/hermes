@@ -57,6 +57,55 @@ declare class A {
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
+declare class A {
+  +proto: T;
+}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "DeclareClass",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "A"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "extends": [],
+// CHECK-NEXT:       "implements": [],
+// CHECK-NEXT:       "mixins": [],
+// CHECK-NEXT:       "body": {
+// CHECK-NEXT:         "type": "ObjectTypeAnnotation",
+// CHECK-NEXT:         "properties": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "ObjectTypeProperty",
+// CHECK-NEXT:             "key": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "proto"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "value": {
+// CHECK-NEXT:               "type": "GenericTypeAnnotation",
+// CHECK-NEXT:               "id": {
+// CHECK-NEXT:                 "type": "Identifier",
+// CHECK-NEXT:                 "name": "T"
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "typeParameters": null
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "method": false,
+// CHECK-NEXT:             "optional": false,
+// CHECK-NEXT:             "static": false,
+// CHECK-NEXT:             "proto": false,
+// CHECK-NEXT:             "variance": {
+// CHECK-NEXT:               "type": "Variance",
+// CHECK-NEXT:               "kind": "plus"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "kind": "init"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "indexers": [],
+// CHECK-NEXT:         "callProperties": [],
+// CHECK-NEXT:         "internalSlots": [],
+// CHECK-NEXT:         "inexact": false,
+// CHECK-NEXT:         "exact": false
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
 declare class B {
   proto x: T;
 }
