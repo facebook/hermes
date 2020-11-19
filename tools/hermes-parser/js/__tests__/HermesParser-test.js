@@ -29,6 +29,11 @@ function loc(startLine, startColumn, endLine, endColumn) {
   };
 }
 
+function parseAsFlow(source, options = {}) {
+  options.flow = 'all';
+  return parse(source, options);
+}
+
 test('Can parse simple file', () => {
   expect(parse('const x = 1')).toMatchObject({
     type: 'Program',
@@ -340,8 +345,8 @@ test('Program source type', () => {
     export type * from 'foo';
   `;
 
-  expect(parse(scriptSource)).toMatchObject(scriptProgram);
-  expect(parse(scriptSource, {babel: true})).toMatchObject({
+  expect(parseAsFlow(scriptSource)).toMatchObject(scriptProgram);
+  expect(parseAsFlow(scriptSource, {babel: true})).toMatchObject({
     type: 'File',
     program: scriptProgram,
   });
@@ -846,8 +851,8 @@ test('This type annotation', () => {
     body: [thisAlias, genericAlias, genericAlias, genericAlias],
   };
 
-  expect(parse(source)).toMatchObject(expectedProgram);
-  expect(parse(source, {babel: true})).toMatchObject({
+  expect(parseAsFlow(source)).toMatchObject(expectedProgram);
+  expect(parseAsFlow(source, {babel: true})).toMatchObject({
     type: 'File',
     program: expectedProgram,
   });
@@ -1055,7 +1060,7 @@ test('Rest element', () => {
     function test2([...rest: string]) {}
   `;
 
-  expect(parse(source, {babel: true})).toMatchObject({
+  expect(parseAsFlow(source, {babel: true})).toMatchObject({
     type: 'File',
     program: {
       type: 'Program',
@@ -1266,5 +1271,91 @@ test('Private properties', () => {
   // Errors are formatted with filename
   expect(() => parse(`foo.#private`, {sourceFilename: 'Foo.js'})).toThrow(
     `Foo.js:1:4: Private properties are not supported`,
+  );
+});
+
+test('Flow pragma detection', () => {
+  const parsedAsFlow = {
+    type: 'File',
+    program: {
+      type: 'Program',
+      body: [
+        {
+          type: 'ExpressionStatement',
+          expression: {
+            type: 'CallExpression',
+          },
+        },
+      ],
+    },
+  };
+
+  const notParsedAsFlow = {
+    type: 'File',
+    program: {
+      type: 'Program',
+      body: [
+        {
+          type: 'ExpressionStatement',
+          expression: {
+            type: 'BinaryExpression',
+          },
+        },
+      ],
+    },
+  };
+
+  // In the presence of a Flow pragma, ambiguous expressions are parsed as Flow
+  const withFlowPragma = `
+    // @flow
+    foo<T>(x);
+  `;
+  expect(parse(withFlowPragma, {babel: true})).toMatchObject(parsedAsFlow);
+  expect(parse(withFlowPragma, {babel: true, flow: 'all'})).toMatchObject(
+    parsedAsFlow,
+  );
+
+  // Without a Flow pragma present, ambiguous expressions are not parsed as Flow
+  // by default, but are parsed as flow in `flow: all` mode.
+  const withoutFlowPragma = `
+    foo<T>(x);
+  `;
+  expect(parse(withoutFlowPragma, {babel: true})).toMatchObject(
+    notParsedAsFlow,
+  );
+  expect(parse(withoutFlowPragma, {babel: true, flow: 'all'})).toMatchObject(
+    parsedAsFlow,
+  );
+
+  // Flow pragma can appear after directives
+  const flowPragmaAfterDirective = `
+    'use strict';
+    /* @flow */
+    foo<T>(x);
+  `;
+  expect(parse(flowPragmaAfterDirective, {babel: true})).toMatchObject(
+    parsedAsFlow,
+  );
+
+  // Flow pragma must appear before the first statement, so ambiguous expression
+  // is not parsed as Flow type syntax.
+  const flowPragmaAfterStatement = `
+    foo<T>(x);
+    // @flow
+  `;
+  expect(parse(flowPragmaAfterStatement, {babel: true})).toMatchObject(
+    notParsedAsFlow,
+  );
+
+  // @flow must be followed by a word boundary for it to count as a Flow pragma
+  const malformedFlowPragmas = `
+    // @flo
+    // @floww
+    // @flow1
+    // @flow_strict
+    foo<T>(x);
+  `;
+  expect(parse(malformedFlowPragmas, {babel: true})).toMatchObject(
+    notParsedAsFlow,
   );
 });

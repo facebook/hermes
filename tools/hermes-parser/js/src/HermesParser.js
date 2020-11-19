@@ -16,6 +16,7 @@ const hermesParse = HermesParserWASM.cwrap('hermesParse', 'number', [
   'number',
   'number',
   'number',
+  'number',
 ]);
 
 const hermesParseResult_free = HermesParserWASM.cwrap(
@@ -42,7 +43,7 @@ function copyToHeap(buffer, addr) {
   HermesParserWASM.HEAP8[addr + buffer.length] = 0;
 }
 
-function parse(source, sourceFilename) {
+function parse(source, sourceFilename, options) {
   // Allocate space on heap for source text
   const sourceBuffer = Buffer.from(source, 'utf8');
   const sourceAddr = HermesParserWASM._malloc(sourceBuffer.length + 1);
@@ -81,6 +82,7 @@ function parse(source, sourceFilename) {
       sourceBuffer.length + 1,
       filenameAddr,
       filenameSize + 1,
+      options.flow === 'detect',
     );
 
     try {

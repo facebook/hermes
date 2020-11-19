@@ -17,6 +17,14 @@ function getOptions(options) {
     options.sourceFilename = null;
   }
 
+  // Default to detecting whether to parse Flow syntax by the presence
+  // of an @flow pragma.
+  if (options.flow == null) {
+    options.flow = 'detect';
+  } else if (options.flow != 'all' && options.flow != 'detect') {
+    throw new Error('flow option must be "all" or "detect"');
+  }
+
   return options;
 }
 
@@ -28,7 +36,7 @@ function getAdapter(options) {
 
 function parse(code, opts = {}) {
   const options = getOptions(opts);
-  const ast = HermesParser.parse(code, options.sourceFilename);
+  const ast = HermesParser.parse(code, options.sourceFilename, options);
   const adapter = getAdapter(options);
 
   return adapter.transform(ast);
