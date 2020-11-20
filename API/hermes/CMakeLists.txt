@@ -73,6 +73,7 @@ target_link_libraries(libhermes
   ${CORE_FOUNDATION}
 )
 hermes_link_icu(libhermes)
+set_property(TARGET libhermes PROPERTY VERSION ${HERMES_RELEASE_VERSION})
 
 # Export the required header directory
 target_include_directories(libhermes PUBLIC ..)
