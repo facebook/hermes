@@ -91,6 +91,13 @@ static CallResult<HermesValue> noop(void *, Runtime *runtime, NativeArgs) {
 static CallResult<HermesValue>
 enableAllocationLocationTracker(void *, Runtime *runtime, NativeArgs) {
   runtime->enableAllocationLocationTracker();
+  // syncWithRuntimeStack adds a native stack frame here, but the interpreter
+  // doesn't pop that frame. This seems to only be a problem if
+  // enableAllocationLocationTracker is called in a native callback within
+  // the JS stack.
+  // In practice, it is only ever called by the Chrome inspector, so this
+  // case isn't important to fix.
+  runtime->getStackTracesTree()->popCallStack();
   return HermesValue::encodeUndefinedValue();
 }
 

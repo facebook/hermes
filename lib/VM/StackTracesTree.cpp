@@ -130,16 +130,8 @@ void StackTracesTree::syncWithRuntimeStack(Runtime *runtime) {
     stack.emplace_back(savedCodeBlock, savedIP);
   }
 
-  // If the stack is empty, avoid the rend - 1 comparison issue by returning
-  // early.
-  if (stack.empty()) {
-    return;
-  }
-
-  // Iterate over the stack in reverse to push calls. The final frame is ignored
-  // because that is the native frame where enableAllocationLocationTracker is
-  // called, which isn't poppped.
-  for (auto it = stack.rbegin(); it != stack.rend() - 1; ++it) {
+  // Iterate over the stack in reverse to push calls.
+  for (auto it = stack.rbegin(); it != stack.rend(); ++it) {
     // Check that both the code block and ip are non-null, which means it was a
     // JS frame, and not a native frame.
     if (it->first && it->second) {
