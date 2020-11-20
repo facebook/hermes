@@ -131,10 +131,10 @@ var inputs = [
     name: "hermes-cli-linux-v" + releaseVersion + ".tar.gz",
     dest: "linux64-bin"
   },
-  {
-    name: "hermes-cli-darwin-v" + releaseVersion + ".tar.gz",
-    dest: "osx-bin"
-  }
+  // {
+  //   name: "hermes-cli-darwin-v" + releaseVersion + ".tar.gz",
+  //   dest: "osx-bin"
+  // }
 ]
 
 unpackAll(inputs)

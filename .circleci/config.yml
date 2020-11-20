@@ -33,7 +33,6 @@ workflows:
           requires:
             - android
             - linux
-            - package-apple-runtime
             - windows
       - test-linux
       - test-e2e:
