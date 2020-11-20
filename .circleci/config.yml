@@ -39,6 +39,7 @@ workflows:
       - test-e2e:
           requires:
             - npm
+      - test-e2e-intl
 
 # Default settings for Apple jobs (apple-runtime, test-apple-runtime)
 apple_defaults: &apple_defaults
@@ -538,5 +539,78 @@ jobs:
             ./run.sh --hermes-npm-package /tmp/hermes/input/hermes-engine-v*.tgz
           # The react-native setup tool takes AGES "Installing CocoaPods dependencies"
           no_output_timeout: 45m
+      - store_artifacts:
+          path: /tmp/hermes/output/
+
+  test-e2e-intl:
+    # This is mostly based on the last test-e2e job, hence the comments there holds.
+    macos:
+      xcode: "10.0.0"
+    environment:
+      - TERM: dumb
+      # Homebrew currently breaks while updating:
+      # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
+      - HOMEBREW_NO_AUTO_UPDATE: 1
+      - JVM_OPTS: -Xmx3200m
+      - ANDROID_HOME: /usr/local/share/android-sdk
+      - ANDROID_SDK_HOME: /usr/local/share/android-sdk
+      - ANDROID_SDK_ROOT: /usr/local/share/android-sdk
+      - QEMU_AUDIO_DRV: none
+      - JAVA_HOME: /Library/Java/Home
+      - HERMES_WS_DIR: /tmp/hermes
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/hermes/input
+      - run:
+          name: Setup dependencies
+          command: |
+            brew tap homebrew/cask
+            brew cask install android-sdk
+            (yes | sdkmanager "platform-tools" "platforms;android-26" --verbose) || true
+            echo 'export PATH="/usr/local/share/android-sdk/platform-tools:/usr/local/share/android-sdk/tools/bin:$PATH"' >>  ~/.bash_profile
+      - run:
+          name: Install emulator dependencies
+          command: (yes | sdkmanager "extras;intel;Hardware_Accelerated_Execution_Manager" "system-images;android-26;google_apis;x86" "emulator" --verbose) || true
+      - run:
+          name: Create emulator definition
+          command: |
+            avdmanager create avd -n Pixel_2_API_26 -k "system-images;android-26;google_apis;x86" -g google_apis -d "Nexus 5"
+      - run:
+          name: Run emulator in background
+          command: /usr/local/share/android-sdk/emulator/emulator @Pixel_2_API_26 -memory 2048 -noaudio
+          background: true
+      - run:
+          name: Set up build dependencies
+          command: |
+            brew install python3
+            (yes | sdkmanager "ndk;21.0.6113669" "cmake;3.10.2.4988404" --verbose) || true
+            echo 'export PATH="/usr/local/share/android-sdk/cmake/3.10.2.4988404/bin:$PATH"' >>  ~/.bash_profile
+      - run:
+          name: Set up workspace
+          command: |
+            mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
+            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
+      - run:
+          name: Build Hermes Compiler
+          command: |
+            cd "$HERMES_WS_DIR"
+            hermes/utils/build/configure.py ./build
+            # Build the Hermes compiler so that the cross compiler build can
+            # access it to build the VM
+            cmake --build ./build --target hermesc
+      - run:
+          name: Build Hermes for Android and Run tests
+          command: |
+            # Ensure the emulator is ready.
+            adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done; input keyevent 82'
+            export ANDROID_SDK="$ANDROID_HOME"
+            export ANDROID_NDK="$ANDROID_HOME/ndk/21.0.6113669"
+            cd "$HERMES_WS_DIR/hermes/android"
+            # We need to build only x86 for running the tests. This saves a lot of computing resources.
+            echo 'abis=x86' >> gradle.properties
+            adb logcat -c || true
+            ./gradlew :intltest:preparetest262 && ./gradlew :intltest:connectedAndroidTest
+            adb logcat -d > /tmp/hermes/output/adblog.txt
       - store_artifacts:
           path: /tmp/hermes/output/
