@@ -2280,9 +2280,7 @@ void HadesGC::completeWeakMapMarking(MarkAcceptor &acceptor) {
       acceptor,
       acceptor.reachableWeakMaps(),
       /*objIsMarked*/
-      // Wrap the call to getCellMarkBit in a lambda to work around potential
-      // issues building with Visual Studio
-      [](GCCell *cell) { return HeapSegment::getCellMarkBit(cell); },
+      HeapSegment::getCellMarkBit,
       /*markFromVal*/
       [&acceptor](GCCell *valCell, HermesValue &valRef) {
         if (HeapSegment::getCellMarkBit(valCell)) {
