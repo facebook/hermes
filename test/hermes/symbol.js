@@ -21,6 +21,26 @@ gc();
 print(String(sym));
 // CHECK-NEXT: Symbol(44912)
 
+print('description');
+// CHECK-LABEL: description
+print(Symbol().description);
+// CHECK-EMPTY:
+print(Symbol('asdf').description);
+// CHECK-NEXT: asdf
+print(Symbol({toString: function() {return 'asdf'}}).description)
+// CHECK-NEXT: asdf
+print(Object(Symbol('asdf')).description)
+// CHECK-NEXT: asdf
+try { print(Symbol.prototype.description.call(3)); }
+catch (e) { print('caught', e.name); }
+// CHECK-NEXT: caught TypeError
+print(Symbol.iterator.description)  // well-known Symbols
+// CHECK-NEXT: Symbol.iterator
+
+// TODO(The below cases need to return `undefined` to be fully conformant.)
+// print(Symbol().description)
+// print(Symbol(undefined).description)
+
 print('toString');
 // CHECK-LABEL: toString
 print(Symbol().toString());

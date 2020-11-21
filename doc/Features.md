@@ -31,6 +31,7 @@ Hermes plans to target ECMAScript 2015 (ES6), with some carefully considered exc
 - `Intl` API glue for Android has been added, in order to enable community contribution of a complete, spec-compliant implementation.
 - Promise is opt-in (via `-Xes6-promise` flag or `withES6Promise` runtime config).
 - Async function (`async` and `await`).
+- `Symbol.prototype.description` (it's not fully spec-conformant yet. `Symbol().description` should be `undefined` but it's currently `''`).
 
 ## Excluded From Support
 
