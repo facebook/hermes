@@ -96,28 +96,30 @@ TEST_F(CodeCoverageProfilerTest, BasicFunctionUsedUnusedTwoRuntimes) {
   GCScope scope{runtime2.get()};
   std::vector<Runtime *> runtimes = {runtime, runtime2.get()};
 
-  std::vector<std::future<CallResult<HermesValue>>> resFuts;
+  std::vector<std::future<PinnedHermesValue>> resFuts;
 
   for (auto *rt : runtimes) {
-    resFuts.push_back(std::async(std::launch::async, [rt]() {
-      hbc::CompileFlags flags;
-      flags.lazy = false;
-      return rt->run(
-          "function used() {}; function unused() {}; used(); [used, unused];",
-          "file:///fake.js",
-          flags);
-    }));
+    resFuts.push_back(
+        std::async(std::launch::async, [this, rt]() -> PinnedHermesValue {
+          hbc::CompileFlags flags;
+          flags.lazy = false;
+          CallResult<HermesValue> res = rt->run(
+              "function used() {}; function unused() {}; used(); [used, unused];",
+              "file:///fake.js",
+              flags);
+          EXPECT_FALSE(isException(res));
+          return *res;
+        }));
   }
 
   for (size_t i = 0; i < runtimes.size(); i++) {
     Runtime *rt = runtimes[i];
-    CallResult<HermesValue> res = resFuts[i].get();
-    EXPECT_FALSE(isException(res));
+    HermesValue res = resFuts[i].get();
 
     std::vector<CodeCoverageProfiler::FuncInfo> executedFuncInfos =
         rt->codeCoverageProfiler_->getExecutedFunctionsLocal();
 
-    Handle<JSArray> funcArr = rt->makeHandle(vmcast<JSArray>(*res));
+    Handle<JSArray> funcArr = rt->makeHandle(vmcast<JSArray>(res));
     Handle<JSFunction> funcUsed =
         rt->makeHandle(vmcast<JSFunction>(funcArr->at(rt, 0)));
     Handle<JSFunction> funcUnused =
