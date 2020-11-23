@@ -24,3 +24,7 @@ test/ApplePlatformsIntegrationTestApp/Podfile.lock
 test/ApplePlatformsIntegrationTestApp/Pods
 test/ApplePlatformsIntegrationTestApp/**/xcuserdata
 test/ApplePlatformsIntegrationTestApp/ApplePlatformsIntegrationTestApp.xcworkspace
+
+# For CLion users
+.idea
+cmake-build-debug/

@@ -194,6 +194,10 @@ class RuntimeDecorator : public Base, private jsi::Instrumentation {
     return plain_.utf8(s);
   }
 
+  Object createArrayBufferFromBytes(const void* bytes, size_t length) override {
+    return plain_.createArrayBufferFromBytes(bytes, length);
+  };
+
   Object createObject() override {
     return plain_.createObject();
   };
@@ -564,6 +568,11 @@ class WithRuntimeDecorator : public RuntimeDecorator<Plain, Base> {
     Around around{with_};
     return RD::utf8(s);
   }
+
+  Object createArrayBufferFromBytes(const void* bytes, size_t length) override {
+    Around around{with_};
+    return RD::createArrayBufferFromBytes(bytes, length);
+  };
 
   Object createObject() override {
     Around around{with_};

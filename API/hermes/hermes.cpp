@@ -730,6 +730,8 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsi::Value createValueFromJsonUtf8(const uint8_t *json, size_t length)
       override;
 
+  jsi::Object createArrayBufferFromBytes(const void* bytes, size_t length) override;
+
   jsi::Object createObject() override;
   jsi::Object createObject(std::shared_ptr<jsi::HostObject> ho) override;
   std::shared_ptr<jsi::HostObject> getHostObject(const jsi::Object &) override;
@@ -793,6 +795,8 @@ class HermesRuntimeImpl final : public HermesRuntime,
   vm::HermesValue stringHVFromUtf8(const uint8_t *utf8, size_t length);
   size_t getLength(vm::Handle<vm::ArrayImpl> arr);
   size_t getByteLength(vm::Handle<vm::JSArrayBuffer> arr);
+
+  vm::HermesValue arrayBufferHVFromBytes(const void *bytes, size_t length);
 
   struct JsiProxyBase : public vm::HostObjectProxy {
     JsiProxyBase(HermesRuntimeImpl &rt, std::shared_ptr<jsi::HostObject> ho)
@@ -1544,6 +1548,16 @@ jsi::String HermesRuntimeImpl::createStringFromUtf8(
   });
 }
 
+jsi::Object HermesRuntimeImpl::createArrayBufferFromBytes(
+    const void* bytes,
+    size_t length) {
+  vm::GCScope gcScope(&runtime_);
+  return maybeRethrow([&] {
+    vm::HermesValue value = vm::JSObject::create(&runtime_).getHermesValue();
+    return add<jsi::Object>(value);
+  });
+}
+
 std::string HermesRuntimeImpl::utf8(const jsi::String &str) {
   vm::GCScope gcScope(&runtime_);
   return maybeRethrow([&] {
@@ -2098,6 +2112,16 @@ vm::HermesValue HermesRuntimeImpl::stringHVFromUtf8(
   checkStatus(strRes.getStatus());
 
   return *strRes;
+}
+
+vm::HermesValue HermesRuntimeImpl::arrayBufferHVFromBytes(
+    const void* bytes,
+    size_t length) {
+  auto proto = llvh::Handle<vm::JSObject>::vmcast(&runtime_.arrayBufferPrototype);
+  auto bufRes = vm::JSArrayBuffer::create(&runtime_,proto);
+  bufRes->createDataBlock(&runtime_, length, false);
+  memcpy(bufRes->getDataBlock(), bytes, length);
+  return bufRes.getHermesValue();
 }
 
 size_t HermesRuntimeImpl::getLength(vm::Handle<vm::ArrayImpl> arr) {

@@ -258,6 +258,8 @@ class JSI_EXPORT Runtime {
   // implementation creates a \c String and invokes JSON.parse.
   virtual Value createValueFromJsonUtf8(const uint8_t* json, size_t length);
 
+  virtual Object createArrayBufferFromBytes(const void* bytes, size_t length);
+
   virtual Object createObject() = 0;
   virtual Object createObject(std::shared_ptr<HostObject> ho) = 0;
   virtual std::shared_ptr<HostObject> getHostObject(const jsi::Object&) = 0;
@@ -786,6 +788,11 @@ class JSI_EXPORT ArrayBuffer : public Object {
 
   uint8_t* data(Runtime& runtime) {
     return runtime.data(*this);
+  }
+
+  static Object
+  createFromBytes(Runtime& runtime, const void* bytes, size_t length) {
+    return runtime.createArrayBufferFromBytes(bytes, length);
   }
 
  private:

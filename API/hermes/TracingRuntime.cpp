@@ -192,6 +192,15 @@ jsi::String TracingRuntime::createStringFromUtf8(
   return res;
 };
 
+jsi::Object TracingRuntime::createArrayBufferFromBytes(
+    const void* bytes,
+    size_t length) {
+  jsi::Object res = RD::createArrayBufferFromBytes(bytes, length);
+  trace_.emplace_back<SynthTrace::CreateObjectRecord>(
+      getTimeSinceStart(), getUniqueID(res), bytes, length);
+  return res;
+};
+
 jsi::PropNameID TracingRuntime::createPropNameIDFromAscii(
     const char *str,
     size_t length) {

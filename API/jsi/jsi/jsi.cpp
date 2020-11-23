@@ -140,6 +140,10 @@ Value Runtime::createValueFromJsonUtf8(const uint8_t* json, size_t length) {
   return parseJson.call(*this, String::createFromUtf8(*this, json, length));
 }
 
+Object Runtime::createArrayBufferFromBytes(const void* bytes, size_t length) {
+  throw std::runtime_error{"Not implemented."};
+}
+
 Pointer& Pointer::operator=(Pointer&& other) {
   if (ptr_) {
     ptr_->invalidate();
