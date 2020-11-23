@@ -26,7 +26,8 @@ public class HermesIntlCollatorTest extends HermesIntlTest262Base {
     Set<String> deviations =
         new HashSet<>(
             Arrays.asList(
-                "constructor-options-throwing-getters.js", // TODO -- Need to investigate how this regressed.
+                "constructor-options-throwing-getters.js", // TODO -- Need to investigate how this
+                // regressed.
                 "ignore-invalid-unicode-ext-values.js" // TODO [Follow-up] Failing because Hermes
                 // array.sort sort is not stable. In-place
                 // sorting changes the order when the input
