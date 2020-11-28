@@ -7,16 +7,19 @@
 
 // @format
 
+// It requires EMHERMESC, the absolute path for emhermesc.js
+// see also HermesCompiler.js
+
 const hc = require("./HermesCompiler.js");
 const assert = require("assert");
 
 function compileOrError(str) {
     try {
-        let buffer = hc.compile(str, {});
-        console.log(JSON.stringify(buffer));
+        let buffer = hc.compile(str);
+        console.log("hc.compile:", buffer);
         console.log("bytecode buffer length", buffer.length)
     } catch (e) {
-        console.error("Hermes error:", e.message);
+        console.error("Hermes error:", e);
         return false;
     }
     return true;
@@ -46,3 +49,5 @@ badBuf = goodBuf.slice(0, 140);
 assert.equal(wrap(() => hc.validateBytecodeModule(badBuf, 0)), "bytecode buffer is too small");
 
 assert.notEqual(wrap(() => hc.validateBytecodeModule(goodBuf, 0)), 0);
+
+console.log("test.js: success");
