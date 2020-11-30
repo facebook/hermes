@@ -109,18 +109,12 @@ ESTREE_NODE_3_ARGS(
     NodePtr,
     body,
     false)
-ESTREE_NODE_3_ARGS(
-    ForOfStatement,
-    LoopStatement,
-    NodePtr,
-    left,
-    false,
-    NodePtr,
-    right,
-    false,
-    NodePtr,
-    body,
-    false)
+ESTREE_NODE_4_ARGS(
+    ForOfStatement, LoopStatement,
+    NodePtr, left, false,
+    NodePtr, right, false,
+    NodePtr, body, false,
+    NodeBoolean, await, false)
 ESTREE_NODE_4_ARGS(
     ForStatement,
     LoopStatement,

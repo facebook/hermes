@@ -1570,6 +1570,13 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
   assert(check(TokenKind::rw_for));
   SMLoc startLoc = advance().Start;
 
+  bool await = false;
+  SMRange awaitRng;
+  if (paramAwait_ && check(awaitIdent_)) {
+    awaitRng = advance();
+    await = true;
+  }
+
   SMLoc lparenLoc = tok_->getStartLoc();
   if (!eat(
           TokenKind::l_paren,
@@ -1585,7 +1592,7 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
   if (checkN(TokenKind::rw_var, TokenKind::rw_const, letIdent_)) {
     // Productions valid here:
     //   for ( var/let/const VariableDeclarationList
-    //   for ( var/let/const VariableDeclaration
+    //   for [await] ( var/let/const VariableDeclaration
     SMLoc varStartLoc = tok_->getStartLoc();
     auto *declIdent = tok_->getResWordOrIdentifier();
     advance();
@@ -1602,8 +1609,8 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
             ESTree::VariableDeclarationNode(declIdent, std::move(declList)));
   } else {
     // Productions valid here:
-    //   for ( Expression_opt
-    //   for ( LeftHandSideExpression
+    //   for [await] ( Expression_opt
+    //   for [await] ( LeftHandSideExpression
 
     if (!check(TokenKind::semi)) {
       auto optExpr1 = parseExpression(Param{});
@@ -1615,8 +1622,8 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
 
   if (checkN(TokenKind::rw_in, ofIdent_)) {
     // Productions valid here:
-    //   for ( var/let/const VariableDeclaration[In] in/of
-    //   for ( LeftHandSideExpression in/of
+    //   for [await] ( var/let/const VariableDeclaration[In] in/of
+    //   for [await] ( LeftHandSideExpression in/of
 
     if (decl && decl->_declarations.size() > 1) {
       error(
@@ -1639,6 +1646,9 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
     bool const forInLoop = check(TokenKind::rw_in);
     advance();
 
+    if (forInLoop && await)
+      error(awaitRng, "unexpected 'await' in for..in loop");
+
     auto optRightExpr =
         forInLoop ? parseExpression() : parseAssignmentExpression(ParamIn);
 
@@ -1660,7 +1670,10 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
           decl ? decl : expr1, optRightExpr.getValue(), optBody.getValue());
     } else {
       node = new (context_) ESTree::ForOfStatementNode(
-          decl ? decl : expr1, optRightExpr.getValue(), optBody.getValue());
+          decl ? decl : expr1,
+          optRightExpr.getValue(),
+          optBody.getValue(),
+          await);
     }
     return setLocation(startLoc, optBody.getValue(), node);
   } else if (checkAndEat(TokenKind::semi)) {
@@ -1669,6 +1682,9 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
     //   Expressionopt )
     //       Statement
     //   for ( Expression[In]opt ; Expressionopt ; Expressionopt ) Statement
+
+    if (await)
+      error(awaitRng, "unexpected 'await' in for loop without 'of'");
 
     if (decl)
       ensureDestructuringInitialized(decl);

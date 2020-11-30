@@ -169,6 +169,11 @@ void SemanticValidator::visit(ForInStatementNode *forIn) {
   visitForInOf(forIn, forIn->_left);
 }
 void SemanticValidator::visit(ForOfStatementNode *forOf) {
+  if (compile_ && forOf->_await)
+    sm_.error(
+        forOf->getSourceRange(),
+        "for await..of loops are currently unsupported");
+
   visitForInOf(forOf, forOf->_left);
 }
 
