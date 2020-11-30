@@ -189,6 +189,10 @@ class LoopNode final : public Node {
   /// The constraints on what the loopee can match.
   MatchConstraintSet loopeeConstraints_;
 
+  /// The function to call to emit the end instructions for a loop node. See
+  /// emitStep for usage.
+  std::function<void()> endLoop_;
+
  public:
   /// Construct a LoopNode with the given \p loopId.
   /// A successful loop executes at least \p min times but not more than \p max
@@ -234,53 +238,53 @@ class LoopNode final : public Node {
   }
 
  private:
-  /// Override of emit() to compile our looped expression and add a jump
+  /// Override of emitStep() to compile our looped expression and add a jump
   /// back to the loop.
-  virtual void emit(RegexBytecodeStream &bcs) override {
-    // The loop body comes immediately after, and we have a jump for the
-    // not-taken branch.
-    uint32_t loopEntryPosition = bcs.currentOffset();
-
-    if (isWidth1Loop()) {
-      assert(
-          mexpBegin_ == mexpEnd_ &&
-          "Width 1 loops should not contain capture groups");
-      auto loopInsn = bcs.emit<Width1LoopInsn>();
-      loopInsn->loopId = loopId_;
-      loopInsn->min = min_;
-      loopInsn->max = max_;
-      loopInsn->greedy = greedy_;
-
-      // Append the body. Width1 loops do not have or need a loop end.
-      compile(loopee_, bcs);
-
-      // Tell the loop how to exit.
-      loopInsn->notTakenTarget = bcs.currentOffset();
-    } else if (isSimpleLoop()) {
-      auto simpleLoopInsn = bcs.emit<BeginSimpleLoopInsn>();
-      simpleLoopInsn->loopeeConstraints = loopeeConstraints_;
-
-      compile(loopee_, bcs);
-      bcs.emit<EndSimpleLoopInsn>()->target = loopEntryPosition;
-
-      simpleLoopInsn->notTakenTarget = bcs.currentOffset();
-    } else {
-      auto loopInsn = bcs.emit<BeginLoopInsn>();
-      loopInsn->loopId = loopId_;
-      loopInsn->min = min_;
-      loopInsn->max = max_;
-      loopInsn->mexpBegin = mexpBegin_;
-      loopInsn->mexpEnd = mexpEnd_;
-      loopInsn->greedy = greedy_;
-      loopInsn->loopeeConstraints = loopeeConstraints_;
-
-      // Append the body and then the loop end.
-      compile(loopee_, bcs);
-      bcs.emit<EndLoopInsn>()->target = loopEntryPosition;
-
-      // Tell the loop how to exit.
-      loopInsn->notTakenTarget = bcs.currentOffset();
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
+    if (!endLoop_) {
+      // This is the first call to emitStep() for this node, set up the loop
+      // node
+      auto loopEntryPosition = bcs.currentOffset();
+      if (isWidth1Loop()) {
+        assert(
+            mexpBegin_ == mexpEnd_ &&
+            "Width 1 loops should not contain capture groups");
+        auto loopInsn = bcs.emit<Width1LoopInsn>();
+        loopInsn->loopId = loopId_;
+        loopInsn->min = min_;
+        loopInsn->max = max_;
+        loopInsn->greedy = greedy_;
+        endLoop_ = [loopInsn, &bcs]() mutable {
+          loopInsn->notTakenTarget = bcs.currentOffset();
+        };
+      } else if (isSimpleLoop()) {
+        auto loopInsn = bcs.emit<BeginSimpleLoopInsn>();
+        loopInsn->loopeeConstraints = loopeeConstraints_;
+        endLoop_ = [loopInsn, loopEntryPosition, &bcs]() mutable {
+          bcs.emit<EndSimpleLoopInsn>()->target = loopEntryPosition;
+          loopInsn->notTakenTarget = bcs.currentOffset();
+        };
+      } else {
+        auto loopInsn = bcs.emit<BeginLoopInsn>();
+        loopInsn->loopId = loopId_;
+        loopInsn->min = min_;
+        loopInsn->max = max_;
+        loopInsn->mexpBegin = mexpBegin_;
+        loopInsn->mexpEnd = mexpEnd_;
+        loopInsn->greedy = greedy_;
+        loopInsn->loopeeConstraints = loopeeConstraints_;
+        endLoop_ = [loopInsn, loopEntryPosition, &bcs]() mutable {
+          bcs.emit<EndLoopInsn>()->target = loopEntryPosition;
+          loopInsn->notTakenTarget = bcs.currentOffset();
+        };
+      }
+      return &loopee_;
     }
+    // This is the second call to emitStep, emit the end instructions and set
+    // notTakenTarget.
+    endLoop_();
+    endLoop_ = nullptr;
+    return nullptr;
   }
 
   // Checks if the loopee always matches exactly one character so that we can
