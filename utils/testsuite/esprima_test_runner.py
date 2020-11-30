@@ -43,6 +43,10 @@ HERMES_OMITTED_KEYS = {
     "ArrayExpression": {"trailingComma"},
     "ObjectTypeAnnotation": {"inexact"},
     "ForOfStatement": {"await"},
+    "EnumStringBody": {"hasUnknownMembers"},
+    "EnumNumberBody": {"hasUnknownMembers"},
+    "EnumBooleanBody": {"hasUnknownMembers"},
+    "EnumSymbolBody": {"hasUnknownMembers"},
     # Some literals support "raw" and others don't.
     # ESPrima doesn't distinguish.
     "Literal": {"raw"},

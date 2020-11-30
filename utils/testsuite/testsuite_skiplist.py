@@ -1496,8 +1496,6 @@ SKIP_LIST = [
     "esprima/test_fixtures/es2017/async/arrows/invalid-async-line-terminator3.js",
     "esprima/test_fixtures/es2017/async/arrows/invalid-async-line-terminator1.js",
     # super property
-    "esprima/test_fixtures/ES6/super-property/invalid_super_access.js",
-    "esprima/test_fixtures/ES6/super-property/invalid_super_id.js",
     "esprima/test_fixtures/ES6/binding-pattern/array-pattern/patterned-catch-dupe.js",
     "esprima/test_fixtures/ES6/super-property/invalid_super_not_inside_function.js",
     # object init
@@ -1568,6 +1566,58 @@ SKIP_LIST = [
     "esprima/test_fixtures/invalid-syntax/migrated_0041.source.js",
     "esprima/test_fixtures/expression/primary/literal/regular-expression/migrated_0006.source.js",
     ### Unsupported Esprima tests end ###
+    ### Failing Flow tests ###
+    # Legacy octal literals in string literals
+    "flow/types/string_literal_invalid/migrated_0000.js",
+    # JSX HTML entities
+    "flow/JSX/html_entity_at_start_of_child.js",
+    # 'export * as ....' proposal
+    "flow/ES6/modules/migrated_0008.js",
+    # Destructuring identifier validation
+    "flow/ES6/binding-pattern/object-pattern/yield-prop-alias-assignment-strict.js",
+    # flow compiler "options" which disable features
+    "flow/async_arrow_functions/with_type_parameters_types_disabled.js",
+    "flow/class_properties/migrated_0003.js",
+    "flow/class_properties/migrated_0008.js",
+    "flow/class_properties/migrated_0026.js",
+    "flow/nullish_coalescing/missing-plugin.js",
+    "flow/optional_chaining/missing-plugin.js",
+    "flow/typeapp_call/disabled_ambiguous_call.js",
+    "flow/typeapp_call/disabled_ambiguous_new.js",
+    "flow/typeapp_call/function_call_optional.js",
+    "flow/typeapp_call/method_call_optional2.js",
+    # Semantic validation
+    "flow/ES6/super-property/super-call-in-static-constructor.js",
+    "flow/class_properties/super-call-in-arrow.js",
+    "flow/enums/enum-duplicate-member-name.js",
+    "flow/enums/enum-invalid-member-name.js",
+    "flow/types/declare_module_exports_invalid/migrated_0001.js",
+    "flow/types/declare_module_invalid/migrated_0002.js",
+    "flow/types/parameter_defaults/migrated_0023.js",
+    "flow/uninitialized_const_bindings/migrated_0000.js",
+    "flow/uninitialized_const_bindings_invalid/migrated_0000.js",
+    # Reserved type names
+    "flow/types/aliases/reserved_type.js",
+    "flow/types/annotations/static_is_reserved_param.js",
+    "flow/types/annotations/static_is_reserved_type.js",
+    "flow/types/annotations/underscore_is_reserved_elsewhere.js",
+    "flow/types/import_type_shorthand/migrated_0002.js",
+    "flow/types/import_type_shorthand/typeof_reserved_value.js",
+    "flow/types/import_types/default_reserved_value.js",
+    "flow/types/import_types/named_reserved_value.js",
+    "flow/types/import_types/typeof_named_reserved_type_alias.js",
+    "flow/types/interfaces/implements_reserved_type.js",
+    "flow/types/interfaces/implements_reserved_value.js",
+    "flow/types/interfaces/reserved_type.js",
+    "flow/types/interfaces/reserved_value.js",
+    "flow/types/invalid_keywords/migrated_0000.js",
+    "flow/types/invalid_keywords/migrated_0001.js",
+    "flow/types/opaque_aliases/invalid/reserved_type.js",
+    "flow/types/opaque_aliases/valid/reserved_value.js",
+    # Potentially invalid JSX that is inconsistent across implementations.
+    "flow/JSX/invalid_unpaired_gt.js",
+    "flow/JSX/invalid_unpaired_rcurly.js",
+    ### Failing Flow tests end ###
 ]
 
 # This skiplist is specifically for tests that Hermes never intends to support,
@@ -1682,6 +1732,15 @@ PERMANENT_SKIP_LIST = [
     "mjsunit/wasm/",
     "mjsunit/es6/proxies-",
     "mjsunit/es6/proxies.js",
+    # Flow AST features.
+    "flow/bigint/",
+    "flow/comment_interning/",
+    "flow/decorators/",
+    "flow/types/annotations_in_comments/",
+    "flow/types/annotations_in_comments_invalid/",
+    "flow/types/bigint_literal/",
+    # Flow bug
+    "flow/JSX_invalid/migrated_0000.js",
 ]
 
 UNSUPPORTED_FEATURES = [
