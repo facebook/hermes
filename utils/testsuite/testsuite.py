@@ -523,6 +523,9 @@ def runTest(filename, test_skiplist, keep_tmp, binary_path, hvm, esprima_runner,
     if "esprima" in suite or "flow" in suite:
         hermes_path = os.path.join(binary_path, "hermes")
         test_res = esprima_runner.run_test(suite, filename, hermes_path)
+        if test_res[0] == esprima.TestStatus.TEST_PASSED and skiplisted:
+            printVerbose("FAIL: A skiplisted test completed successfully")
+            return (TestFlag.TEST_UNEXPECTED_PASSED, "", 0)
         return (
             ESPRIMA_TEST_STATUS_MAP[test_res[0]],
             "" if test_res[0] == esprima.TestStatus.TEST_PASSED else test_res[1],
