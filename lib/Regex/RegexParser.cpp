@@ -260,6 +260,10 @@ class Parser {
     // optimisation
     elem.quant = prepareQuantifier();
     elem.mexp = re_->incrementMarkedCount();
+    if (elem.mexp > constants::kMaxCaptureGroupCount) {
+      setError(constants::ErrorType::PatternExceedsParseLimits);
+      return;
+    }
     elem.splicePoint = re_->currentNode();
     stack.push_back(std::move(elem));
   }

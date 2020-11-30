@@ -235,8 +235,7 @@ constants::ErrorType Regex<Traits>::parse(
       first, last, constants::kMaxCaptureGroupCount, &maxBackRef);
 
   // Validate loop and capture group count.
-  if (markedCount_ > constants::kMaxCaptureGroupCount ||
-      loopCount_ > constants::kMaxLoopCount) {
+  if (loopCount_ > constants::kMaxLoopCount) {
     return constants::ErrorType::PatternExceedsParseLimits;
   }
 
