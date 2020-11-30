@@ -319,6 +319,16 @@ class AlternationNode final : public Node {
   // intersection of the constraints for all nodes, whereas the last element
   // contains the constraint for only that element.
   std::vector<MatchConstraintSet> restConstraints_;
+  // Used to keep track of the jump instructions produced while emitting, these
+  // jumps need to be set at the end of emitting so the executor can jump
+  // directly to the end when a match is found.
+  std::vector<RegexBytecodeStream::InstructionWrapper<Jump32Insn>> jumps_;
+  // This corresponds to a function that should be called at the start of the
+  // next call to emitStep_. It is mostly used as a convenience to keep the
+  // logic simpler and to wrap up the state that needs to be preserved between
+  // two calls. It returns a boolean corresponding to whether the current call
+  // to emitStep is the last.
+  std::function<bool()> callNext_;
 
  public:
   /// Constructor for an Alternation.
@@ -328,6 +338,8 @@ class AlternationNode final : public Node {
         elementConstraints_(alternatives_.size()),
         restConstraints_(alternatives_.size()) {
     assert(alternatives_.size() > 1 && "Must give at least 2 alternatives");
+
+    jumps_.reserve(alternatives_.size());
 
     // restConstraints_ needs to be set in reverse order, since each element
     // depends on the element after it.
@@ -356,31 +368,48 @@ class AlternationNode final : public Node {
     return ret;
   }
 
-  void emit(RegexBytecodeStream &bcs) override {
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     // Instruction stream looks like:
     //   [Alternation][PrimaryBranch][Jump][SecondaryBranch][...]
     //     |____________________________|____^               ^
     //                                  |____________________|
     // Where the Alternation has a JumpOffset to its secondary branch.
-    std::vector<RegexBytecodeStream::InstructionWrapper<Jump32Insn>> jumps;
-    jumps.reserve(alternatives_.size());
+
+    // Check if the callback is set, if so, call it and check whether this is
+    // the last call for emitStep
+    if (callNext_ && callNext_()) {
+      // This is the last call to emitStep, clean up and return nullptr
+      jumps_.clear();
+      callNext_ = nullptr;
+      return nullptr;
+    }
     // Do not emit an alternation instruction for the very last alternative
     // because it is simply the secondary option of the penultimate
-    // alternative.
-    for (size_t i = 0; i < alternatives_.size() - 1; ++i) {
+    // alternative. Note that jumps_.size() here is used to tell us how many
+    // times this function has already been called
+    if (jumps_.size() < alternatives_.size() - 1) {
       auto altInsn = bcs.emit<AlternationInsn>();
-      altInsn->primaryConstraints = elementConstraints_[i];
-      altInsn->secondaryConstraints = restConstraints_[i + 1];
-      compile(alternatives_[i], bcs);
-      jumps.push_back(bcs.emit<Jump32Insn>());
-      altInsn->secondaryBranch = bcs.currentOffset();
+      altInsn->primaryConstraints = elementConstraints_[jumps_.size()];
+      altInsn->secondaryConstraints = restConstraints_[jumps_.size() + 1];
+      callNext_ = [this, altInsn, &bcs]() mutable {
+        jumps_.push_back(bcs.emit<Jump32Insn>());
+        altInsn->secondaryBranch = bcs.currentOffset();
+        return false;
+      };
+      return &alternatives_[jumps_.size()];
     }
-    compile(alternatives_.back(), bcs);
-    // Set the jump instruction for every alternation to jump to the end of the
-    // block.
-    for (auto &jump : jumps) {
-      jump->target = bcs.currentOffset();
-    }
+    // If the program reaches here, it means that the current call to emitStep
+    // is for the last alternative. On the next call, it should just clean
+    // things up and return.
+    callNext_ = [this, &bcs]() mutable {
+      // Set the jump instruction for every
+      // alternation to jump to the end of the block.
+      for (auto &jump : jumps_) {
+        jump->target = bcs.currentOffset();
+      }
+      return true;
+    };
+    return &alternatives_.back();
   }
 
   void reverseChildren() override {
