@@ -18,7 +18,7 @@ namespace hermes {
 /// errors.
 class HermesParserDiagHandler {
  public:
-  HermesParserDiagHandler(SourceErrorManager &sm, const char *filename);
+  HermesParserDiagHandler(SourceErrorManager &sm);
 
   /// \return true if an error has been tracked.
   bool hasError() const {
@@ -35,11 +35,16 @@ class HermesParserDiagHandler {
   /// First error given to handler(), if one exists.
   llvh::SMDiagnostic firstError_;
 
-  /// The name of the source file being parsed, if a filename was provided.
-  const char *filename_;
+  /// Notes that follow the first error, if one exists.
+  std::vector<llvh::SMDiagnostic> firstErrorNotes_;
+
+  /// Whether notes for the first error can still be collected.
+  bool collectNotes_ = true;
 
   /// The actual handler callback.
   static void handler(const llvh::SMDiagnostic &msg, void *ctx);
+
+  std::string formatDiagnostic(const llvh::SMDiagnostic &diag) const;
 };
 
 } // namespace hermes

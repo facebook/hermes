@@ -36,7 +36,7 @@ function getAdapter(options) {
 
 function parse(code, opts = {}) {
   const options = getOptions(opts);
-  const ast = HermesParser.parse(code, options.sourceFilename, options);
+  const ast = HermesParser.parse(code, options);
   const adapter = getAdapter(options);
 
   return adapter.transform(ast);

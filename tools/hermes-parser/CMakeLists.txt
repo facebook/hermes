@@ -34,6 +34,7 @@ if (EMSCRIPTEN)
   target_link_options(hermes-parser-wasm PRIVATE "SHELL: -s EXPORT_NAME=hermes_parser_wasm")
   target_link_options(hermes-parser-wasm PRIVATE
     "SHELL: -s BINARYEN_ASYNC_COMPILATION=0 -s SINGLE_FILE=1 -s WASM_ASYNC_COMPILATION=0")
+  target_link_options(hermes-parser-wasm PRIVATE "SHELL: -s NODEJS_CATCH_EXIT=0")
   target_link_options(hermes-parser-wasm PRIVATE
     --js-library ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/HermesParserJSLibrary.js)
   target_link_options(hermes-parser-wasm PRIVATE

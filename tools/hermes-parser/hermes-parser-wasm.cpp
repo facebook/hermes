@@ -37,28 +37,18 @@ class ParseResult {
 };
 
 EMSCRIPTEN_KEEPALIVE
-extern "C" ParseResult *hermesParse(
-    const char *source,
-    size_t sourceSize,
-    const char *sourceFilename,
-    size_t sourceFilenameSize,
-    bool detectFlow) {
+extern "C" ParseResult *
+hermesParse(const char *source, size_t sourceSize, bool detectFlow) {
   std::unique_ptr<ParseResult> result = hermes::make_unique<ParseResult>();
   if (source[sourceSize - 1] != 0) {
     result->error_ = "Input source must be zero-terminated";
     return result.release();
   }
 
-  if (sourceFilename != nullptr &&
-      sourceFilename[sourceFilenameSize - 1] != 0) {
-    result->error_ = "Input source filename must be zero-terminated";
-    return result.release();
-  }
-
   // Set up custom diagnostic handler for error reporting
   auto context = std::make_shared<Context>();
   auto &sm = context->getSourceErrorManager();
-  const auto &diagHandler = HermesParserDiagHandler(sm, sourceFilename);
+  const auto &diagHandler = HermesParserDiagHandler(sm);
 
   auto fileBuf =
       llvh::MemoryBuffer::getMemBuffer(llvh::StringRef{source, sourceSize - 1});

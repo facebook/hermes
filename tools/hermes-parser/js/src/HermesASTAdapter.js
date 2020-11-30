@@ -131,15 +131,13 @@ class HermesASTAdapter {
   }
 
   mapPrivateProperty(node) {
-    throw new Error(
+    throw new SyntaxError(
       this.formatError(node, 'Private properties are not supported'),
     );
   }
 
   formatError(node, message) {
-    const filenamePrefix =
-      this.sourceFilename != null ? `${this.sourceFilename}:` : '';
-    return `${filenamePrefix}${node.loc.start.line}:${node.loc.start.column}: ${message}`;
+    return `${message} (${node.loc.start.line}:${node.loc.start.column})`;
   }
 }
 
