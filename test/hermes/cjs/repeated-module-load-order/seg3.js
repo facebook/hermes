@@ -10,3 +10,4 @@
 // RUN: true
 
 print('init seg3.js');
+require('./export34.js').doPrint();

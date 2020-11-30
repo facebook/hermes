@@ -341,12 +341,12 @@ Literal *ResolveStaticRequireImpl::resolveModuleTarget(
   assert(
       targetIdentifier.isValid() && "Failed to construct valid target string");
 
-  auto *targetModule = module->findCJSModule(targetIdentifier);
-  if (!targetModule) {
+  auto targetModuleID = module->findCJSModuleID(targetIdentifier);
+  if (!targetModuleID) {
     EM_.warning(errorLoc, "Cannot resolve target module of require");
     return nullptr;
   }
-  return builder.getLiteralNumber(targetModule->id);
+  return builder.getLiteralNumber(*targetModuleID);
 }
 
 } // anonymous namespace

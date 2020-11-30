@@ -393,6 +393,7 @@ class ESTreeIRGen {
   void doCJSModule(
       Function *topLevelFunction,
       sem::FunctionInfo *semInfo,
+      uint32_t segmentID,
       uint32_t id,
       llvh::StringRef filename);
 

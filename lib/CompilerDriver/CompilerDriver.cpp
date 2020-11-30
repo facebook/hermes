@@ -33,6 +33,7 @@
 #include "hermes/Support/Algorithms.h"
 #include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/OSCompat.h"
+#include "hermes/Support/OptValue.h"
 #include "hermes/Support/Warning.h"
 #include "hermes/Utils/Dumper.h"
 #include "hermes/Utils/Options.h"
@@ -916,7 +917,7 @@ bool validateFlags() {
 /// \return the Context.
 std::shared_ptr<Context> createContext(
     std::unique_ptr<Context::ResolutionTable> resolutionTable,
-    std::vector<Context::SegmentInfo> segmentInfos) {
+    std::vector<uint32_t> segments) {
   CodeGenerationSettings codeGenOpts;
   codeGenOpts.enableTDZ = cl::EnableTDZ;
   codeGenOpts.dumpOperandRegisters = cl::DumpOperandRegisters;
@@ -952,7 +953,7 @@ std::shared_ptr<Context> createContext(
       codeGenOpts,
       optimizationOpts,
       std::move(resolutionTable),
-      std::move(segmentInfos));
+      std::move(segments));
 
   // Default is non-strict mode.
   context->setStrictMode(!cl::NonStrictMode && cl::StrictMode);
@@ -1067,7 +1068,7 @@ std::unique_ptr<llvh::MemoryBuffer> getFileFromDirectoryOrZip(
 ::hermes::parser::JSONObject *readInputFilenamesFromDirectoryOrZip(
     llvh::StringRef inputPath,
     SegmentTable &fileBufs,
-    std::vector<Context::SegmentInfo> &segmentInfos,
+    std::vector<uint32_t> &segmentIDs,
     ::hermes::parser::JSLexer::Allocator &alloc,
     struct zip_t *zip) {
   auto metadataBuf = getFileFromDirectoryOrZip(zip, inputPath, "metadata.json");
@@ -1103,12 +1104,11 @@ std::unique_ptr<llvh::MemoryBuffer> getFileFromDirectoryOrZip(
   llvh::DenseMap<llvh::StringRef, uint32_t> moduleIDs;
 
   for (auto it : *segments) {
-    Context::SegmentInfo segmentInfo;
-    if (it.first->str().getAsInteger(10, segmentInfo.segment)) {
+    uint32_t segmentID;
+    if (it.first->str().getAsInteger(10, segmentID)) {
       // getAsInteger returns true to signal error.
-      llvh::errs()
-          << "Metadata segment indices must be unsigned integers: Found "
-          << it.first->str() << '\n';
+      llvh::errs() << "Metadata segment IDs must be unsigned integers: Found "
+                   << it.first->str() << '\n';
       return nullptr;
     }
 
@@ -1138,19 +1138,17 @@ std::unique_ptr<llvh::MemoryBuffer> getFileFromDirectoryOrZip(
       if (emplaceRes.second) {
         ++nextModuleID;
       }
-      segmentInfo.moduleIDs.push_back(moduleID);
       segmentBufs.push_back({moduleID, std::move(fileBuf), std::move(mapBuf)});
     }
 
-    auto emplaceRes =
-        fileBufs.emplace(segmentInfo.segment, std::move(segmentBufs));
+    auto emplaceRes = fileBufs.emplace(segmentID, std::move(segmentBufs));
     if (!emplaceRes.second) {
-      llvh::errs() << "Duplicate segment entry in metadata: "
-                   << segmentInfo.segment << "\n";
+      llvh::errs() << "Duplicate segment entry in metadata: " << segment
+                   << "\n";
       return nullptr;
     }
 
-    segmentInfos.push_back(std::move(segmentInfo));
+    segmentIDs.push_back(segmentID);
   }
 
   return metadata;
@@ -1381,17 +1379,30 @@ bool generateIRForSourcesAsCJSModules(
   std::vector<std::string> sources{"<global>"};
 
   Function *topLevelFunction = generateIR ? M.getTopLevelFunction() : nullptr;
+  llvh::DenseSet<uint32_t> generatedModuleIDs;
   for (auto &entry : fileBufs) {
+    uint32_t segmentID = entry.first;
     for (ModuleInSegment &moduleInSegment : entry.second) {
-      if (M.hasCJSModule(moduleInSegment.id)) {
-        // We've already generated this module as part of another segment.
-        continue;
-      }
       auto &fileBuf = moduleInSegment.file;
       llvh::SmallString<64> filename{fileBuf->getBufferIdentifier()};
-      if (sourceMapGen) {
-        sources.push_back(fileBuf->getBufferIdentifier());
+
+      if (generatedModuleIDs.count(moduleInSegment.id) == 0) {
+        // This is the first time we're generating IR for this module.
+        if (sourceMapGen) {
+          sources.push_back(fileBuf->getBufferIdentifier());
+        }
+        if (moduleInSegment.sourceMap) {
+          auto inputMap = SourceMapParser::parse(*moduleInSegment.sourceMap);
+          if (!inputMap) {
+            // parse() returns nullptr on failure and reports its own errors.
+            return false;
+          }
+          inputSourceMaps.push_back(std::move(inputMap));
+        } else {
+          inputSourceMaps.push_back(nullptr);
+        }
       }
+
       llvh::sys::path::replace_path_prefix(
           filename, rootPath, "./", llvh::sys::path::Style::posix);
       // TODO: use sourceMapTranslator for CJS module.
@@ -1410,21 +1421,12 @@ bool generateIRForSourcesAsCJSModules(
       }
       generateIRForCJSModule(
           cast<ESTree::FunctionExpressionNode>(ast),
+          segmentID,
           moduleInSegment.id,
           llvh::sys::path::remove_leading_dotslash(filename),
           &M,
           topLevelFunction,
           declFileList);
-      if (moduleInSegment.sourceMap) {
-        auto inputMap = SourceMapParser::parse(*moduleInSegment.sourceMap);
-        if (!inputMap) {
-          // parse() returns nullptr on failure and reports its own errors.
-          return false;
-        }
-        inputSourceMaps.push_back(std::move(inputMap));
-      } else {
-        inputSourceMaps.push_back(nullptr);
-      }
     }
   }
 
@@ -1528,13 +1530,13 @@ CompileResult generateBytecodeForSerialization(
     Module &M,
     const BytecodeGenerationOptions &genOptions,
     const SHA1 &sourceHash,
-    const Context::SegmentInfo *segmentInfo,
+    hermes::OptValue<uint32_t> segment,
     SourceMapGenerator *sourceMapGenOrNull,
     BaseBytecodeMap &baseBytecodeMap) {
   // Serialize the bytecode to the file.
   if (cl::BytecodeFormat == cl::BytecodeFormatKind::HBC) {
     std::unique_ptr<hbc::BCProviderFromBuffer> baseBCProvider = nullptr;
-    auto itr = baseBytecodeMap.find(segmentInfo ? segmentInfo->segment : 0);
+    auto itr = baseBytecodeMap.find(segment ? *segment : 0);
     if (itr != baseBytecodeMap.end()) {
       baseBCProvider = std::move(itr->second);
       // We want to erase it from the map because unique_ptr can only
@@ -1546,7 +1548,7 @@ CompileResult generateBytecodeForSerialization(
         OS,
         genOptions,
         sourceHash,
-        segmentInfo,
+        segment,
         sourceMapGenOrNull,
         std::move(baseBCProvider));
 
@@ -1781,7 +1783,7 @@ CompileResult processSourceFiles(
 
   CompileResult result{Success};
   StringRef base = cl::BytecodeOutputFilename;
-  if (context->getSegmentInfos().size() < 2) {
+  if (context->getSegments().size() < 2) {
     OutputStream fileOS{llvh::outs()};
     if (!base.empty() && !fileOS.open(base, F_None)) {
       return OutputFileError;
@@ -1791,7 +1793,7 @@ CompileResult processSourceFiles(
         M,
         genOptions,
         sourceHash,
-        nullptr,
+        llvh::None,
         sourceMapGen ? sourceMapGen.getPointer() : nullptr,
         baseBytecodeMap);
     if (result.status != Success) {
@@ -1810,13 +1812,12 @@ CompileResult processSourceFiles(
     JSONEmitter manifest{manifestOS.os(), /* pretty */ true};
     manifest.openArray();
 
-    for (const auto &segmentInfo : context->getSegmentInfos()) {
+    for (const auto segment : context->getSegments()) {
       std::string filename = base.str();
-      if (segmentInfo.segment != 0) {
-        filename += "." + oscompat::to_string(segmentInfo.segment);
+      if (segment != 0) {
+        filename += "." + oscompat::to_string(segment);
       }
-      std::string flavor =
-          "hbc-seg-" + oscompat::to_string(segmentInfo.segment);
+      std::string flavor = "hbc-seg-" + oscompat::to_string(segment);
 
       OutputStream fileOS{llvh::outs()};
       if (!base.empty() && !fileOS.open(filename, F_None)) {
@@ -1827,7 +1828,7 @@ CompileResult processSourceFiles(
           M,
           genOptions,
           sourceHash,
-          &segmentInfo,
+          segment,
           sourceMapGen ? sourceMapGen.getPointer() : nullptr,
           baseBytecodeMap);
       if (segResult.status != Success) {
@@ -1924,8 +1925,8 @@ CompileResult compileFromCommandLineOptions() {
   // Resolution table in metadata, null if none could be read.
   std::unique_ptr<Context::ResolutionTable> resolutionTable = nullptr;
 
-  // Segment table in metadata.
-  std::vector<Context::SegmentInfo> segmentInfos;
+  // Segment IDs in metadata.
+  std::vector<uint32_t> segments;
 
   // Attempt to open the first file as a Zip file.
   struct zip_t *zip = zip_open(cl::InputFilenames[0].data(), 0, 'r');
@@ -1933,7 +1934,7 @@ CompileResult compileFromCommandLineOptions() {
   if (llvh::sys::fs::is_directory(cl::InputFilenames[0]) || zip) {
     ::hermes::parser::JSONObject *metadata =
         readInputFilenamesFromDirectoryOrZip(
-            cl::InputFilenames[0], fileBufs, segmentInfos, metadataAlloc, zip);
+            cl::InputFilenames[0], fileBufs, segments, metadataAlloc, zip);
 
     if (zip) {
       zip_close(zip);
@@ -1945,9 +1946,7 @@ CompileResult compileFromCommandLineOptions() {
     resolutionTable = readResolutionTable(metadata);
   } else {
     // If we aren't reading from a dir or a zip, we have only one segment.
-    Context::SegmentInfo segmentInfo;
-    segmentInfo.segment = 0;
-    segmentInfos.push_back(std::move(segmentInfo));
+    segments.push_back(0);
 
     uint32_t nextModuleID = 0;
     llvh::DenseMap<llvh::StringRef, uint32_t> moduleIDs;
@@ -1961,7 +1960,6 @@ CompileResult compileFromCommandLineOptions() {
       if (emplaceRes.second) {
         ++nextModuleID;
       }
-      segmentInfo.moduleIDs.push_back(moduleID);
       entry.push_back({moduleID, std::move(fileBuf), nullptr});
     }
 
@@ -1989,7 +1987,7 @@ CompileResult compileFromCommandLineOptions() {
     return processBytecodeFile(std::move(fileBufs[0][0].file));
   } else {
     std::shared_ptr<Context> context =
-        createContext(std::move(resolutionTable), std::move(segmentInfos));
+        createContext(std::move(resolutionTable), std::move(segments));
     return processSourceFiles(context, std::move(fileBufs));
   }
 }

@@ -9,5 +9,12 @@
 
 // RUN: true
 
-print('init seg4.js');
-require('./export34.js').doPrint();
+var m = {
+  doPrint() {
+    print('in export34.js doPrint()');
+  },
+};
+
+for (var p in m) {
+  if (!exports.hasOwnProperty(p)) exports[p] = m[p];
+}
