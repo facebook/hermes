@@ -123,15 +123,35 @@ class Node {
 
   /// Emit this node into the bytecode compiler \p bcs. This is an overrideable
   /// function - subclasses should override this to emit node-specific bytecode.
-  /// The default emits nothing, so that base Node is just a no-op.
-  virtual void emit(RegexBytecodeStream &bcs) const {}
+  /// The default calls through to a user defined emitStep function. Every
+  /// derived class must define either emit or emitStep (but not both).
+  virtual void emit(RegexBytecodeStream &bcs) {
+    while (auto nodeListPtr = emitStep(bcs)) {
+      for (auto node : *nodeListPtr) {
+        node->emit(bcs);
+      }
+    }
+  }
+
+  /// Emit part of this node into the bytecode compiler \p bcs. This function
+  /// will be called repeatedly until it returns a nullptr. This is an
+  /// overrideable function - subclasses should override this to emit
+  /// node-specific bytecode. The default emits nothing, so that base Node is
+  /// just a no-op.
+  /// \return a pointer to a node that must be emitted fully before calling
+  /// emitStep again. If the returned pointer is null, this node has been fully
+  /// emitted and no further calls to emitStep are necessary.
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) {
+    return nullptr;
+  }
 };
 
 /// GoalNode is the terminal Node that represents successful execution.
 class GoalNode final : public Node {
  public:
-  void emit(RegexBytecodeStream &bcs) const override {
+  NodeList *emitStep(RegexBytecodeStream &bcs) override {
     bcs.emit<GoalInsn>();
+    return nullptr;
   }
 
  protected:
@@ -216,7 +236,7 @@ class LoopNode final : public Node {
  private:
   /// Override of emit() to compile our looped expression and add a jump
   /// back to the loop.
-  virtual void emit(RegexBytecodeStream &bcs) const override {
+  virtual void emit(RegexBytecodeStream &bcs) override {
     // The loop body comes immediately after, and we have a jump for the
     // not-taken branch.
     uint32_t loopEntryPosition = bcs.currentOffset();
@@ -332,7 +352,7 @@ class AlternationNode final : public Node {
     return ret;
   }
 
-  void emit(RegexBytecodeStream &bcs) const override {
+  void emit(RegexBytecodeStream &bcs) override {
     // Instruction stream looks like:
     //   [Alternation][PrimaryBranch][Jump][SecondaryBranch][...]
     //     |____________________________|____^               ^
@@ -385,7 +405,7 @@ class MarkedSubexpressionNode final : public Node {
         contentsConstraints_(matchConstraintsForList(contents_)),
         mexp_(mexp) {}
 
-  virtual void emit(RegexBytecodeStream &bcs) const override {
+  virtual void emit(RegexBytecodeStream &bcs) override {
     uint16_t mexp16 = static_cast<uint16_t>(mexp_);
     assert(mexp16 == mexp_ && "Subexpression too large");
     bcs.emit<BeginMarkedSubexpressionInsn>()->mexp = mexp16;
@@ -414,10 +434,11 @@ class BackRefNode final : public Node {
  public:
   explicit BackRefNode(unsigned mexp) : mexp_(mexp) {}
 
-  virtual void emit(RegexBytecodeStream &bcs) const override {
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     assert(mexp_ > 0 && "Subexpression cannot be zero");
     assert(static_cast<uint16_t>(mexp_) == mexp_ && "Subexpression too large");
     bcs.emit<BackRefInsn>()->mexp = static_cast<uint16_t>(mexp_);
+    return nullptr;
   }
 };
 
@@ -431,8 +452,9 @@ class WordBoundaryNode final : public Node {
  public:
   WordBoundaryNode(bool invert) : invert_(invert) {}
 
-  virtual void emit(RegexBytecodeStream &bcs) const override {
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     bcs.emit<WordBoundaryInsn>()->invert = invert_;
+    return nullptr;
   }
 };
 
@@ -455,8 +477,9 @@ class LeftAnchorNode final : public Node {
     return result | Super::matchConstraints();
   }
 
-  void emit(RegexBytecodeStream &bcs) const override {
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     bcs.emit<LeftAnchorInsn>();
+    return nullptr;
   }
 };
 
@@ -467,8 +490,9 @@ class RightAnchorNode : public Node {
  public:
   RightAnchorNode() {}
 
-  void emit(RegexBytecodeStream &bcs) const override {
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     bcs.emit<RightAnchorInsn>();
+    return nullptr;
   }
 };
 
@@ -489,7 +513,7 @@ class MatchAnyNode final : public Node {
     return MatchConstraintNonEmpty | Super::matchConstraints();
   }
 
-  void emit(RegexBytecodeStream &bcs) const override {
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     if (unicode_) {
       if (dotAll_) {
         bcs.emit<U16MatchAnyInsn>();
@@ -503,6 +527,7 @@ class MatchAnyNode final : public Node {
         bcs.emit<MatchAnyButNewlineInsn>();
       }
     }
+    return nullptr;
   }
 
   virtual bool matchesExactlyOneCharacter() const override {
@@ -543,7 +568,7 @@ class MatchCharNode final : public Node {
     return result | Super::matchConstraints();
   }
 
-  void emit(RegexBytecodeStream &bcs) const override {
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     llvh::ArrayRef<CodePoint> remaining{chars_};
     while (!remaining.empty()) {
       // Output any run (possibly empty) of ASCII chars.
@@ -556,6 +581,7 @@ class MatchCharNode final : public Node {
       emitNonASCIIList(nonAsciis, bcs);
       remaining = remaining.drop_front(nonAsciis.size());
     }
+    return nullptr;
   }
 
   void reverseChildren() override {
@@ -772,12 +798,13 @@ class BracketNode : public Node {
     return result | Super::matchConstraints();
   }
 
-  virtual void emit(RegexBytecodeStream &bcs) const override {
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     if (unicode_) {
       populateInstruction(bcs, bcs.emit<U16BracketInsn>());
     } else {
       populateInstruction(bcs, bcs.emit<BracketInsn>());
     }
+    return nullptr;
   }
 
   virtual bool matchesExactlyOneCharacter() const override {
@@ -846,7 +873,7 @@ class LookaroundNode : public Node {
   }
 
   // Override emit() to compile our lookahead expression.
-  virtual void emit(RegexBytecodeStream &bcs) const override {
+  virtual void emit(RegexBytecodeStream &bcs) override {
     auto lookaround = bcs.emit<LookaroundInsn>();
     lookaround->invert = invert_;
     lookaround->forwards = forwards_;
