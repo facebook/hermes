@@ -2167,22 +2167,24 @@ void HadesGC::scanDirtyCards(EvacAcceptor &acceptor) {
       // Mark the first object with respect to the dirty card boundaries.
       GCBase::markCellWithinRange(visitor, obj, obj->getVT(), this, begin, end);
 
-      // Mark the objects that are entirely contained within the dirty card
-      // boundaries.
-      for (GCCell *next = obj->nextCell(); next < boundary;
-           next = next->nextCell()) {
-        // Use a separate pointer for the loop condition so that the last
-        // object in range gets used with markCellWithinRange instead.
-        obj = next;
-        // Note that this object might be a FreelistCell. We could explicitly
-        // check for this, but since FreelistCell has an empty metadata this
-        // call ends up doing nothing anyway.
-        GCBase::markCell(visitor, obj, obj->getVT(), this);
-      }
+      obj = obj->nextCell();
+      // If there are additional objects in this card, scan them.
+      if (LLVM_LIKELY(obj < boundary)) {
+        // Mark the objects that are entirely contained within the dirty card
+        // boundaries. In a given iteration, obj is the start of a given object,
+        // and next is the start of the next object. Iterate until the last
+        // object where next is within the card.
+        for (GCCell *next = obj->nextCell(); next < boundary;
+             next = next->nextCell()) {
+          GCBase::markCell(visitor, obj, obj->getVT(), this);
+          obj = next;
+        }
 
-      // Mark the final object in the range with respect to the dirty card
-      // boundaries, as long as it does not coincide with the first object.
-      if (LLVM_LIKELY(obj != firstObj)) {
+        // Mark the final object in the range with respect to the dirty card
+        // boundaries.
+        assert(
+            obj < boundary && obj->nextCell() >= boundary &&
+            "Last object in card must touch or cross cross the card boundary");
         GCBase::markCellWithinRange(
             visitor, obj, obj->getVT(), this, begin, end);
       }
