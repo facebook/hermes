@@ -874,6 +874,9 @@ class LookaroundNode : public Node {
   uint16_t mexpBegin_;
   uint16_t mexpEnd_;
 
+  /// Callback to emit the end of a lookaround instruction
+  std::function<void()> endLookaround_;
+
  public:
   LookaroundNode(
       NodeList exp,
@@ -913,16 +916,23 @@ class LookaroundNode : public Node {
     return {&exp_};
   }
 
-  // Override emit() to compile our lookahead expression.
-  virtual void emit(RegexBytecodeStream &bcs) override {
+  // Override emitStep() to compile our lookahead expression.
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
+    if (endLookaround_) {
+      endLookaround_();
+      endLookaround_ = nullptr;
+      return nullptr;
+    }
     auto lookaround = bcs.emit<LookaroundInsn>();
     lookaround->invert = invert_;
     lookaround->forwards = forwards_;
     lookaround->constraints = expConstraints_;
     lookaround->mexpBegin = mexpBegin_;
     lookaround->mexpEnd = mexpEnd_;
-    compile(exp_, bcs);
-    lookaround->continuation = bcs.currentOffset();
+    endLookaround_ = [lookaround, &bcs]() mutable {
+      lookaround->continuation = bcs.currentOffset();
+    };
+    return &exp_;
   }
 };
 
