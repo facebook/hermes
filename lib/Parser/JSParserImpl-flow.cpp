@@ -2470,11 +2470,12 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumMember() {
   if (checkAndEat(TokenKind::equal)) {
     // Parse initializer.
     if (check(TokenKind::rw_true, TokenKind::rw_false)) {
-      member = setLocation(
-          id,
+      ESTree::Node *init = setLocation(
           tok_,
-          new (context_)
-              ESTree::EnumBooleanMemberNode(id, check(TokenKind::rw_true)));
+          tok_,
+          new (context_) ESTree::BooleanLiteralNode(check(TokenKind::rw_true)));
+      member = setLocation(
+          id, tok_, new (context_) ESTree::EnumBooleanMemberNode(id, init));
     } else if (check(TokenKind::string_literal)) {
       ESTree::Node *init = setLocation(
           tok_,

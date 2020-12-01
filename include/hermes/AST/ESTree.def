@@ -912,7 +912,7 @@ ESTREE_NODE_2_ARGS(
 ESTREE_NODE_2_ARGS(
     EnumBooleanMember, Base,
     NodePtr, id, false,
-    NodeBoolean, init, false)
+    NodePtr, init, false)
 
 #endif
 

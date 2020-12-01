@@ -138,7 +138,10 @@ enum E {
 // CHECK-NEXT:               "type": "Identifier",
 // CHECK-NEXT:               "name": "A"
 // CHECK-NEXT:             },
-// CHECK-NEXT:             "init": true
+// CHECK-NEXT:             "init": {
+// CHECK-NEXT:               "type": "BooleanLiteral",
+// CHECK-NEXT:               "value": true
+// CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "EnumBooleanMember",
@@ -146,7 +149,10 @@ enum E {
 // CHECK-NEXT:               "type": "Identifier",
 // CHECK-NEXT:               "name": "B"
 // CHECK-NEXT:             },
-// CHECK-NEXT:             "init": false
+// CHECK-NEXT:             "init": {
+// CHECK-NEXT:               "type": "BooleanLiteral",
+// CHECK-NEXT:               "value": false
+// CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "explicitType": false,
