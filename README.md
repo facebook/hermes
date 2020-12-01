@@ -8,6 +8,8 @@ Hermes is a JavaScript engine optimized for fast start-up of [React Native](http
 
 If you're only interested in using pre-built Hermes in a new or existing React Native app, you do not need to follow this guide or have direct access to the Hermes source. Instead, just follow [these instructions to enable Hermes](https://reactnative.dev/docs/hermes).
 
+> Noted that each Hermes release is aimed at a specific RN version. The rule of thumb is to always follow [Hermes releases](https://github.com/facebook/hermes/releases) strictly. Version mismatch can result in instant crash of your apps in the worst case scenario.
+
 If you want to know how to build and hack on Hermes directly, and/or integrate Hermes built from source into a React Native app then read on.
 
 The instructions here very briefly cover steps to build the Hermes CLI. They assume you have typical native development tools setup for your OS, and support for cmake and Ninja. For more details of required dependencies, building Hermes with different options, etc. follow these links instead:
