@@ -133,6 +133,7 @@ class Node {
     }
   }
 
+ private:
   /// Emit part of this node into the bytecode compiler \p bcs. This function
   /// will be called repeatedly until it returns a nullptr. This is an
   /// overrideable function - subclasses should override this to emit
@@ -148,7 +149,7 @@ class Node {
 
 /// GoalNode is the terminal Node that represents successful execution.
 class GoalNode final : public Node {
- public:
+ private:
   NodeList *emitStep(RegexBytecodeStream &bcs) override {
     bcs.emit<GoalInsn>();
     return nullptr;
@@ -368,6 +369,13 @@ class AlternationNode final : public Node {
     return ret;
   }
 
+  void reverseChildren() override {
+    for (auto &alternative : alternatives_) {
+      reverseNodeList(alternative);
+    }
+  }
+
+ private:
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     // Instruction stream looks like:
     //   [Alternation][PrimaryBranch][Jump][SecondaryBranch][...]
@@ -411,12 +419,6 @@ class AlternationNode final : public Node {
     };
     return &alternatives_.back();
   }
-
-  void reverseChildren() override {
-    for (auto &alternative : alternatives_) {
-      reverseNodeList(alternative);
-    }
-  }
 };
 
 /// MarkedSubexpressionNode is a capture group.
@@ -443,17 +445,6 @@ class MarkedSubexpressionNode final : public Node {
     assert(mexp_ == mexp32 && "Subexpression too large");
   }
 
-  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
-    if (!emitEnd_) {
-      bcs.emit<BeginMarkedSubexpressionInsn>()->mexp = mexp_;
-      emitEnd_ = true;
-      return &contents_;
-    }
-    emitEnd_ = false;
-    bcs.emit<EndMarkedSubexpressionInsn>()->mexp = mexp_;
-    return nullptr;
-  }
-
   void reverseChildren() override {
     reverseNodeList(contents_);
   }
@@ -465,6 +456,18 @@ class MarkedSubexpressionNode final : public Node {
   virtual MatchConstraintSet matchConstraints() const override {
     return contentsConstraints_ | Super::matchConstraints();
   }
+
+ private:
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
+    if (!emitEnd_) {
+      bcs.emit<BeginMarkedSubexpressionInsn>()->mexp = mexp_;
+      emitEnd_ = true;
+      return &contents_;
+    }
+    emitEnd_ = false;
+    bcs.emit<EndMarkedSubexpressionInsn>()->mexp = mexp_;
+    return nullptr;
+  }
 };
 
 /// BackRefNode represents a backreference node.
@@ -475,6 +478,7 @@ class BackRefNode final : public Node {
  public:
   explicit BackRefNode(unsigned mexp) : mexp_(mexp) {}
 
+ private:
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     assert(mexp_ > 0 && "Subexpression cannot be zero");
     assert(static_cast<uint16_t>(mexp_) == mexp_ && "Subexpression too large");
@@ -493,6 +497,7 @@ class WordBoundaryNode final : public Node {
  public:
   WordBoundaryNode(bool invert) : invert_(invert) {}
 
+ private:
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     bcs.emit<WordBoundaryInsn>()->invert = invert_;
     return nullptr;
@@ -518,6 +523,7 @@ class LeftAnchorNode final : public Node {
     return result | Super::matchConstraints();
   }
 
+ private:
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     bcs.emit<LeftAnchorInsn>();
     return nullptr;
@@ -531,6 +537,7 @@ class RightAnchorNode : public Node {
  public:
   RightAnchorNode() {}
 
+ private:
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     bcs.emit<RightAnchorInsn>();
     return nullptr;
@@ -541,6 +548,8 @@ class RightAnchorNode : public Node {
 /// flag is set).
 class MatchAnyNode final : public Node {
   using Super = Node;
+  bool unicode_;
+  bool dotAll_;
 
  public:
   /// Construct a MatchAny.
@@ -554,6 +563,12 @@ class MatchAnyNode final : public Node {
     return MatchConstraintNonEmpty | Super::matchConstraints();
   }
 
+  virtual bool matchesExactlyOneCharacter() const override {
+    // In Unicode we may match a surrogate pair.
+    return !unicode_;
+  }
+
+ private:
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     if (unicode_) {
       if (dotAll_) {
@@ -570,15 +585,6 @@ class MatchAnyNode final : public Node {
     }
     return nullptr;
   }
-
-  virtual bool matchesExactlyOneCharacter() const override {
-    // In Unicode we may match a surrogate pair.
-    return !unicode_;
-  }
-
- private:
-  bool unicode_;
-  bool dotAll_;
 };
 
 /// MatchChar matches one or more characters, specified as a parameter to the
@@ -594,6 +600,15 @@ class MatchCharNode final : public Node {
   /// The maximum number of characters supported in a MatchCharN instruction.
   static constexpr size_t kMaxMatchCharNCount = UINT8_MAX;
 
+  // The code points we wish to match against.
+  CodePointList chars_;
+
+  /// Whether we are case insensitive (true) or case sensitive (false).
+  const bool icase_;
+
+  /// Whether the unicode flag is set.
+  const bool unicode_;
+
  public:
   MatchCharNode(CodePointList chars, SyntaxFlags flags)
       : chars_(std::move(chars)),
@@ -607,22 +622,6 @@ class MatchCharNode final : public Node {
       result |= MatchConstraintNonASCII;
     }
     return result | Super::matchConstraints();
-  }
-
-  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
-    llvh::ArrayRef<CodePoint> remaining{chars_};
-    while (!remaining.empty()) {
-      // Output any run (possibly empty) of ASCII chars.
-      auto asciis = remaining.take_while(isASCII);
-      emitASCIIList(asciis, bcs);
-      remaining = remaining.drop_front(asciis.size());
-
-      // Output any run (possibly empty) of non-ASCII chars.
-      auto nonAsciis = remaining.take_until(isASCII);
-      emitNonASCIIList(nonAsciis, bcs);
-      remaining = remaining.drop_front(nonAsciis.size());
-    }
-    return nullptr;
   }
 
   void reverseChildren() override {
@@ -715,14 +714,21 @@ class MatchCharNode final : public Node {
   }
 
  private:
-  // The code points we wish to match against.
-  CodePointList chars_;
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
+    llvh::ArrayRef<CodePoint> remaining{chars_};
+    while (!remaining.empty()) {
+      // Output any run (possibly empty) of ASCII chars.
+      auto asciis = remaining.take_while(isASCII);
+      emitASCIIList(asciis, bcs);
+      remaining = remaining.drop_front(asciis.size());
 
-  /// Whether we are case insensitive (true) or case sensitive (false).
-  const bool icase_;
-
-  /// Whether the unicode flag is set.
-  const bool unicode_;
+      // Output any run (possibly empty) of non-ASCII chars.
+      auto nonAsciis = remaining.take_until(isASCII);
+      emitNonASCIIList(nonAsciis, bcs);
+      remaining = remaining.drop_front(nonAsciis.size());
+    }
+    return nullptr;
+  }
 };
 
 // BracketNode represents a character class: /[a-zA-Z]/...
@@ -839,6 +845,12 @@ class BracketNode : public Node {
     return result | Super::matchConstraints();
   }
 
+  virtual bool matchesExactlyOneCharacter() const override {
+    // A unicode bracket may match a surrogate pair.
+    return !unicode_;
+  }
+
+ private:
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     if (unicode_) {
       populateInstruction(bcs, bcs.emit<U16BracketInsn>());
@@ -846,11 +858,6 @@ class BracketNode : public Node {
       populateInstruction(bcs, bcs.emit<BracketInsn>());
     }
     return nullptr;
-  }
-
-  virtual bool matchesExactlyOneCharacter() const override {
-    // A unicode bracket may match a surrogate pair.
-    return !unicode_;
   }
 };
 
@@ -916,6 +923,7 @@ class LookaroundNode : public Node {
     return {&exp_};
   }
 
+ private:
   // Override emitStep() to compile our lookahead expression.
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     if (endLookaround_) {
