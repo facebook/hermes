@@ -430,20 +430,28 @@ class MarkedSubexpressionNode final : public Node {
   MatchConstraintSet contentsConstraints_;
 
   // The index of the marked subexpression.
-  uint32_t mexp_;
+  uint16_t mexp_;
+
+  // Whether to emit the beginning or the end in emitStep
+  bool emitEnd_ = false;
 
  public:
-  explicit MarkedSubexpressionNode(NodeList contents, uint32_t mexp)
+  explicit MarkedSubexpressionNode(NodeList contents, uint32_t mexp32)
       : contents_(std::move(contents)),
         contentsConstraints_(matchConstraintsForList(contents_)),
-        mexp_(mexp) {}
+        mexp_(static_cast<uint16_t>(mexp32)) {
+    assert(mexp_ == mexp32 && "Subexpression too large");
+  }
 
-  virtual void emit(RegexBytecodeStream &bcs) override {
-    uint16_t mexp16 = static_cast<uint16_t>(mexp_);
-    assert(mexp16 == mexp_ && "Subexpression too large");
-    bcs.emit<BeginMarkedSubexpressionInsn>()->mexp = mexp16;
-    compile(contents_, bcs);
-    bcs.emit<EndMarkedSubexpressionInsn>()->mexp = mexp16;
+  virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
+    if (!emitEnd_) {
+      bcs.emit<BeginMarkedSubexpressionInsn>()->mexp = mexp_;
+      emitEnd_ = true;
+      return &contents_;
+    }
+    emitEnd_ = false;
+    bcs.emit<EndMarkedSubexpressionInsn>()->mexp = mexp_;
+    return nullptr;
   }
 
   void reverseChildren() override {
