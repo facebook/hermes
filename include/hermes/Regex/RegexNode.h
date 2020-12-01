@@ -63,8 +63,14 @@ class Node {
 
   /// Compile a list of nodes \p nodes to a bytecode stream \p bcs.
   static void compile(const NodeList &nodes, RegexBytecodeStream &bcs) {
-    for (const auto &node : nodes) {
-      node->emit(bcs);
+    std::deque<Node *> stack;
+    stack.insert(stack.begin(), nodes.begin(), nodes.end());
+    while (!stack.empty()) {
+      if (auto n = stack.front()->emitStep(bcs)) {
+        stack.insert(stack.begin(), n->begin(), n->end());
+      } else {
+        stack.pop_front();
+      }
     }
   }
 
@@ -120,18 +126,6 @@ class Node {
   /// does nothing, but nodes which store a child list should reverse the order
   /// of that list and then recurse.
   virtual void reverseChildren() {}
-
-  /// Emit this node into the bytecode compiler \p bcs. This is an overrideable
-  /// function - subclasses should override this to emit node-specific bytecode.
-  /// The default calls through to a user defined emitStep function. Every
-  /// derived class must define either emit or emitStep (but not both).
-  virtual void emit(RegexBytecodeStream &bcs) {
-    while (auto nodeListPtr = emitStep(bcs)) {
-      for (auto node : *nodeListPtr) {
-        node->emit(bcs);
-      }
-    }
-  }
 
  private:
   /// Emit part of this node into the bytecode compiler \p bcs. This function
