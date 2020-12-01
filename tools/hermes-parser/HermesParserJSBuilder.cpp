@@ -14,9 +14,32 @@ namespace hermes {
 
 using namespace hermes::ESTree;
 
+/// A reference to the start or end position of a source location along with
+/// the handle of the corresponding source location object in JS.
+struct PositionInfo {
+  enum class Kind { Start, End };
+
+  Kind kind;
+
+  /// The location itself in the source text.
+  const char *ptr;
+
+  // Handle of the JS source location object.
+  JSReference jsRef;
+
+  PositionInfo(Kind kind, const char *ptr, JSReference jsRef)
+      : kind(kind), ptr(ptr), jsRef(jsRef) {}
+
+  /// Order by position in source text.
+  bool operator<(const PositionInfo &x) const {
+    return ptr < x.ptr;
+  }
+};
+
 class HermesParserJSBuilder {
   SourceErrorManager *sm_{nullptr};
   parser::JSParser *parser_{nullptr};
+  std::vector<PositionInfo> positions_;
 
  public:
   explicit HermesParserJSBuilder(
@@ -28,8 +51,10 @@ class HermesParserJSBuilder {
     auto loc = buildLoc(programNode);
     auto body = buildNode(programNode->_body);
     auto comments = buildComments();
+    auto program = buildProgramWithComments(loc, body, comments);
+    buildSourcePositions(programNode);
 
-    return buildProgramWithComments(loc, body, comments);
+    return program;
   }
 
  private:
@@ -67,29 +92,92 @@ class HermesParserJSBuilder {
     return arrayReference;
   }
 
-  /// Build a source location in JS, returning a JS reference to the source
-  /// location object.
+  /// Calculate line, column, and overall offset for every position encountered
+  /// in the AST and use these to fill in JS source location objects.
+  ///
+  /// Note that these source locations are meant to be consumed from JS, so they
+  /// are calculated as indices into a JS string. This means that a single
+  /// "column" corresponds to a single UTF-16 code unit, so code points of at
+  /// most U+FFFF count as one "column" whereas code points above U+FFFF count
+  /// as two "columns" since they take two UTF-16 code units to represent.
+  void buildSourcePositions(ProgramNode *programNode) {
+    // Sort all positions by their order in the source text
+    std::sort(positions_.begin(), positions_.end());
+    auto positionsIt = positions_.begin();
+    auto positionsEnd = positions_.end();
+
+    const llvh::MemoryBuffer *buffer =
+        sm_->findBufferForLoc(programNode->getStartLoc());
+    const char *ptr = buffer->getBufferStart();
+
+    unsigned line = 1;
+    unsigned col = 0;
+    unsigned offset = 0;
+
+    // Iterate through both sorted positions and source text to calculate the
+    // line, column, and offset for each position in JS.
+    while (positionsIt < positionsEnd) {
+      auto nextLoc = positionsIt->ptr;
+      while (ptr < nextLoc) {
+        char ch = *ptr;
+        if (ch == '\n') {
+          // Newline character translates to one UTF-16 code unit
+          ++offset;
+          ++line;
+          col = 0;
+
+          ++ptr;
+        } else if ((unsigned char)ch < 128) {
+          // One byte UTF-8 code point, translates to one UTF-16 code unit
+          ++offset;
+          ++col;
+
+          ++ptr;
+        } else if ((ch & 0xE0) == 0xC0) {
+          // Two byte UTF-8 code point, translates to one UTF-16 code unit
+          ++offset;
+          ++col;
+
+          ptr += 2;
+        } else if ((ch & 0xF0) == 0xE0) {
+          // Three byte UTF-8 code point, translates to one UTF-16 code unit
+          ++offset;
+          ++col;
+
+          ptr += 3;
+        } else {
+          // Four byte UTF-8 code point, corresponds to code points above U+FFFF
+          // which translate to two UTF-16 code units.
+          offset += 2;
+          col += 2;
+
+          ptr += 4;
+        }
+      }
+
+      // We found the position, so add the newly calcualted position to the JS
+      // source location
+      if (positionsIt->kind == PositionInfo::Kind::Start) {
+        addStartPosition(positionsIt->jsRef, line, col, offset);
+      } else {
+        addEndPosition(positionsIt->jsRef, line, col, offset);
+      }
+
+      ++positionsIt;
+    }
+  }
+
+  /// Build an empty source location in JS, and save references to the start
+  /// and end positions so they can be calculated and filled later.
   JSReference buildLoc(SMRange rng) {
-    SourceErrorManager::SourceCoords start, end;
-    if (!sm_->findBufferLineAndLoc(rng.Start, start) ||
-        !sm_->findBufferLineAndLoc(rng.End, end))
-      return 0;
+    JSReference locReference = buildSourceLocation();
 
-    const llvh::MemoryBuffer *buffer = sm_->getSourceBuffer(start.bufId);
-    assert(buffer && "The buffer must exist");
-    const char *bufStart = buffer->getBufferStart();
-    assert(
-        rng.Start.getPointer() >= bufStart &&
-        rng.End.getPointer() <= buffer->getBufferEnd() &&
-        "The range must be within the buffer");
+    positions_.emplace_back(
+        PositionInfo::Kind::Start, rng.Start.getPointer(), locReference);
+    positions_.emplace_back(
+        PositionInfo::Kind::End, rng.End.getPointer(), locReference);
 
-    return buildSourceLocation(
-        start.line,
-        start.col - 1,
-        end.line,
-        end.col - 1,
-        rng.Start.getPointer() - bufStart,
-        rng.End.getPointer() - bufStart);
+    return locReference;
   }
 
   JSReference buildLoc(Node *node) {

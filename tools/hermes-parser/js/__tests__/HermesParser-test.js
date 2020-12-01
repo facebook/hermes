@@ -291,6 +291,55 @@ test('Source locations', () => {
       },
     ],
   });
+
+  // Code points that will be encoded as 1, 2, 3, and 4 byte UTF-8 characters
+  // within Hermes are translated back to UTF-16 code unit source locations.
+  const unicode = `'foo1';
+'foo\u00a7';
+'foo\u2014';
+'foo\ud83d\udea6';
+`;
+  expect(parse(unicode)).toMatchObject({
+    type: 'Program',
+    body: [
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'Literal',
+          loc: loc(1, 0, 1, 6),
+          range: [0, 6],
+          value: 'foo1',
+        },
+      },
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'Literal',
+          loc: loc(2, 0, 2, 6),
+          range: [8, 14],
+          value: 'foo\u00a7',
+        },
+      },
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'Literal',
+          loc: loc(3, 0, 3, 6),
+          range: [16, 22],
+          value: 'foo\u2014',
+        },
+      },
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'Literal',
+          loc: loc(4, 0, 4, 7),
+          range: [24, 31],
+          value: 'foo\ud83d\udea6',
+        },
+      },
+    ],
+  });
 });
 
 test('Program source locations', () => {
