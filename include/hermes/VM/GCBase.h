@@ -1286,10 +1286,10 @@ inline DurationFormatObj formatSecs(double secs) {
 /// An object that, written to an ostream, formats the given # of
 /// bytes in appropriate units (bytes to GiB).
 struct SizeFormatObj {
-  gcheapsize_t bytes;
+  uint64_t bytes;
 };
 llvh::raw_ostream &operator<<(llvh::raw_ostream &os, const SizeFormatObj &sfo);
-inline SizeFormatObj formatSize(gcheapsize_t size) {
+inline SizeFormatObj formatSize(uint64_t size) {
   return {size};
 }
 

@@ -235,7 +235,7 @@ class HadesGC::CollectionStats final {
   void setBeforeSizes(uint64_t allocated, uint64_t external, uint64_t sz) {
     allocatedBefore_ = allocated;
     externalBefore_ = external;
-    size_ = sz;
+    sizeBefore_ = sz;
   }
 
   /// Record how many bytes were swept during the collection.
@@ -245,6 +245,10 @@ class HadesGC::CollectionStats final {
 
   void setSweptExternalBytes(uint64_t externalBytes) {
     sweptExternalBytes_ = externalBytes;
+  }
+
+  void setAfterSize(uint64_t sz) {
+    sizeAfter_ = sz;
   }
 
   /// Record that a collection is beginning right now.
@@ -291,7 +295,8 @@ class HadesGC::CollectionStats final {
   Duration cpuDuration_{};
   uint64_t allocatedBefore_{0};
   uint64_t externalBefore_{0};
-  uint64_t size_{0};
+  uint64_t sizeBefore_{0};
+  uint64_t sizeAfter_{0};
   uint64_t sweptBytes_{0};
   uint64_t sweptExternalBytes_{0};
 };
@@ -306,11 +311,9 @@ HadesGC::CollectionStats::~CollectionStats() {
           endTime_ - beginTime_),
       std::chrono::duration_cast<std::chrono::milliseconds>(cpuDuration_),
       /*preAllocated*/ allocatedBefore_,
-      /*preSize*/ size_,
+      /*preSize*/ sizeBefore_,
       /*postAllocated*/ afterAllocatedBytes(),
-      // Hades does not currently return segments to the system so the size
-      // does not change due to a collection.
-      /*postSize*/ size_,
+      /*postSize*/ sizeAfter_,
       /*survivalRatio*/ survivalRatio()});
 }
 
@@ -1197,7 +1200,7 @@ void HadesGC::oldGenCollection(std::string cause) {
   auto cpuTimeStart = oscompat::thread_cpu_time();
   ogCollectionStats_->setBeginTime();
   ogCollectionStats_->setBeforeSizes(
-      oldGen_.allocatedBytes(), oldGen_.externalBytes(), oldGen_.size());
+      oldGen_.allocatedBytes(), oldGen_.externalBytes(), heapFootprint());
 
   if (revertToYGAtTTI_) {
     // If we've reached the first OG collection, and reverting behavior is
@@ -1304,6 +1307,7 @@ void HadesGC::incrementalCollect() {
       if (!oldGen_.sweepNext()) {
         // Finish any collection bookkeeping.
         ogCollectionStats_->setEndTime();
+        ogCollectionStats_->setAfterSize(heapFootprint());
         concurrentPhase_ = Phase::None;
         if (!kConcurrentGC) {
           // Check the tripwire here since we know the incremental collection
@@ -1921,7 +1925,7 @@ void HadesGC::youngGenCollection(
   auto cpuTimeStart = oscompat::thread_cpu_time();
   ygCollectionStats_->setBeginTime();
   ygCollectionStats_->setBeforeSizes(
-      youngGen().used(), ygExternalBytes_, youngGen().size());
+      youngGen().used(), ygExternalBytes_, heapFootprint());
   // Acquire the GC lock for the duration of the YG collection.
   std::lock_guard<Mutex> lk{gcMutex_};
   // The YG is not parseable while a collection is occurring.
@@ -2006,6 +2010,7 @@ void HadesGC::youngGenCollection(
     // old gen, which is the amount that survived the collection.
     ygCollectionStats_->setSweptBytes(usedBefore - acceptor.promotedBytes());
     ygCollectionStats_->setSweptExternalBytes(externalSweptBytes);
+    ygCollectionStats_->setAfterSize(heapFootprint());
     // The average survival ratio should be updated before starting an OG
     // collection.
     ygAverageSurvivalRatio_.update(ygCollectionStats_->survivalRatio());
