@@ -58,21 +58,6 @@ class Parser {
   const uint32_t backRefLimit_;
   uint32_t maxBackRef_ = 0;
 
-  // Maximum depth of our parser. This is effectively the depth of C stack
-  // frames that the parser may use, and is the mechanism that prevents stack
-  // overflow for overly complex expressions.
-  static constexpr uint32_t kMaxParseDepth =
-#ifdef HERMES_LIMIT_STACK_DEPTH
-      256
-#elif defined(_MSC_VER) && defined(HERMES_SLOW_DEBUG)
-      256
-#elif defined(_MSC_VER)
-      512
-#else
-      1024
-#endif
-      ;
-
   /// Set the error \p err, if not already set to a different error.
   /// Also move our input to end, to abort parsing.
   /// \return false, for convenience.
@@ -386,11 +371,6 @@ class Parser {
           closeGroup(stack);
           break;
         }
-      }
-
-      if (stack.size() > kMaxParseDepth) {
-        setError(constants::ErrorType::PatternExceedsParseLimits);
-        return;
       }
       consumeTerm();
     }
