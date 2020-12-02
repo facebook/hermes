@@ -2,6 +2,9 @@
 *#
 TAGS
 
+android/.idea
+android/.gradle
+
 # Howtoeven
 .howtoeven
 

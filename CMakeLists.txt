@@ -623,6 +623,7 @@ add_subdirectory(public)
 add_subdirectory(external)
 add_subdirectory(API)
 add_subdirectory(android/intltest/java/com/facebook/hermes/test)
+add_subdirectory(android/intltestapp/cpp)
 
 if(HERMES_ENABLE_TOOLS)
   add_subdirectory(tools)

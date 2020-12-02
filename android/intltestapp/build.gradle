@@ -1,0 +1,172 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// To run intltests, cd hermes/android and run:
+//   ./gradlew intl:connectedAndroidTest
+
+plugins {
+  id('com.android.application')
+  id("de.undercouch.download")
+}
+
+import de.undercouch.gradle.tasks.download.Download
+
+buildDir = "${rootProject.ext.hermes_ws}/build_android/intltestapp"
+buildDir.mkdirs()
+
+def test262DownloadsDirPath = "${rootProject.ext.hermes_ws}/build_android/intltest/downloads/test262"
+def test262Destination = "${rootProject.ext.hermes_ws}/hermes/android/intltest/java/com/facebook/hermes/test/assets"
+task createDownloadsDir {
+  new File(test262DownloadsDirPath).mkdirs()
+}
+
+task downloadTest262(dependsOn: createDownloadsDir, type: Download) {
+  src("https://github.com/tc39/test262/archive/main.zip")
+  onlyIfNewer(true)
+  overwrite(true)
+  dest(new File(test262DownloadsDirPath, "test262.zip"))
+}
+
+task preparetest262(dependsOn: downloadTest262, type: Copy) {
+  from(zipTree(downloadTest262.dest))
+  include("test262-main/test/intl402/Collator/**/*.js")
+  include("test262-main/test/intl402/DateTimeFormat/**/*.js")
+  include("test262-main/test/intl402/NumberFormat/**/*.js")
+  include("test262-main/test/intl402/String/**/*.js")
+  include("test262-main/test/intl402/Number/**/*.js")
+  include("test262-main/test/intl402/Array/**/*.js")
+  include("test262-main/test/intl402/Date/**/*.js")
+  include("test262-main/test/intl402/Intl/**/*.js")
+  include("test262-main/harness/*.js")
+  includeEmptyDirs = true
+  into(test262Destination)
+}
+
+// TODO: Figure out how to deduplicate this file and intl/build.gradle
+android {
+  compileSdkVersion 28
+
+  defaultConfig {
+    minSdkVersion 16
+    ndk {
+      abiFilters (*rootProject.ext.abis)
+    }
+    testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+
+    ndk {
+      abiFilters (*rootProject.ext.abis)
+    }
+  }
+
+  signingConfigs {
+    debug {
+      storeFile file('debug.keystore')
+      storePassword 'android'
+      keyAlias 'androiddebugkey'
+      keyPassword 'android'
+    }
+  }
+
+  buildTypes {
+        debug {
+          applicationIdSuffix ".debug"
+          debuggable true
+        }
+
+        release {
+          debuggable false
+          signingConfig signingConfigs.debug
+          minifyEnabled true
+          proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+  externalNativeBuild {
+    cmake {
+      version "3.6.0"
+      path "../../CMakeLists.txt"
+      buildStagingDirectory = "${rootProject.ext.hermes_ws}/staging/intltestapp"
+      buildStagingDirectory.mkdirs()
+    }
+  }
+
+  flavorDimensions "featureset"
+  productFlavors  {
+    nointl {
+      dimension "featureset"
+      applicationIdSuffix ".vanilla"
+      versionNameSuffix "-vanilla"
+
+      externalNativeBuild {
+        cmake {
+          arguments "-DHERMES_IS_ANDROID=True"
+          arguments "-DHERMES_FACEBOOK_BUILD=${rootProject.ext.facebookBuild}"
+          arguments "-DANDROID_STL=c++_shared"
+          arguments "-DANDROID_PIE=True"
+          arguments "-DIMPORT_HERMESC=${rootProject.ext.hermesC}"
+          arguments "-DFBSOURCE_DIR=${rootProject.ext.fbsource}"
+          arguments "-DHERMES_SLOW_DEBUG=False"
+          arguments "-DHERMES_ENABLE_INTL=False"
+          targets "jsijniapp"
+        }
+      }
+    }
+    intl {
+      isDefault true
+      dimension "featureset"
+      applicationIdSuffix ".intl"
+      versionNameSuffix "-intl"
+
+      externalNativeBuild {
+        cmake {
+          arguments "-DHERMES_IS_ANDROID=True"
+          arguments "-DHERMES_FACEBOOK_BUILD=${rootProject.ext.facebookBuild}"
+          arguments "-DANDROID_STL=c++_shared"
+          arguments "-DANDROID_PIE=True"
+          arguments "-DIMPORT_HERMESC=${rootProject.ext.hermesC}"
+          arguments "-DFBSOURCE_DIR=${rootProject.ext.fbsource}"
+          arguments "-DHERMES_SLOW_DEBUG=False"
+          arguments "-DHERMES_ENABLE_INTL=True"
+          targets "jsijniapp"
+        }
+      }
+    }
+  }
+
+  dependencies {
+    implementation 'com.facebook.fbjni:fbjni:0.0.2'
+    implementation 'com.facebook.soloader:soloader:0.9.0'
+    implementation 'com.facebook.yoga:proguard-annotations:1.14.1'
+    implementation 'com.google.code.gson:gson:2.8.6'
+  }
+
+  dependencies {
+    implementation "androidx.annotation:annotation:1.1.0"
+    implementation "androidx.annotation:annotation-experimental:1.0.0"
+  }
+
+  sourceSets {
+    main {
+      java {
+        srcDirs = [
+          "java",
+          // Include AndroidUnicodeUtils, which would normally come from RN
+          "${rootProject.ext.hermes_ws}/hermes/lib/Platform/Unicode/java",
+          "${rootProject.ext.hermes_ws}/hermes/lib/Platform/Intl/java",
+        ]
+      }
+      resources {
+        srcDir "java/com/facebook/hermes/test"
+      }
+    }
+  }
+}
+
+dependencies {
+  implementation 'androidx.appcompat:appcompat:1.2.0'
+  implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
+}
