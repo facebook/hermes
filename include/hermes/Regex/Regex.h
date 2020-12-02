@@ -47,7 +47,7 @@ class Regex {
   SyntaxFlags flags_ = {};
 
   // Number of capture groups encountered so far.
-  uint32_t markedCount_ = 0;
+  uint16_t markedCount_ = 0;
 
   // Number of loops encountered so far.
   uint32_t loopCount_ = 0;
@@ -84,12 +84,15 @@ class Regex {
   }
 
   /// \return the number of marked subexpressions.
-  uint32_t markedCount() const {
+  uint16_t markedCount() const {
     return markedCount_;
   }
 
   /// \increment the number of marked subexpressions and return the value.
-  uint32_t incrementMarkedCount() {
+  uint16_t incrementMarkedCount() {
+    assert(
+        markedCount_ < std::numeric_limits<uint16_t>::max() &&
+        "markedCount_ will overflow");
     return ++markedCount_;
   }
 
@@ -117,13 +120,13 @@ class Regex {
   /// Compile the regex into bytecode. Return the resulting bytecode.
   std::vector<uint8_t> compile() const {
     assert(valid() && "Cannot compile invalid regex.");
-    // TODO: add validation for the loop and reduce the size of markedCount_ and
-    // loopCount_ to uint16_t.
+    // TODO: add validation for the loop and reduce the size of loopCount_ to
+    // uint16_t.
     assert(
         markedCount_ <= constants::kMaxCaptureGroupCount &&
         "Too many capture groups");
     assert(loopCount_ <= constants::kMaxLoopCount && "Too many loops");
-    RegexBytecodeHeader header = {static_cast<uint16_t>(markedCount_),
+    RegexBytecodeHeader header = {markedCount_,
                                   static_cast<uint16_t>(loopCount_),
                                   flags_.toByte(),
                                   matchConstraints_};

@@ -83,7 +83,7 @@ class Parser {
     /// The first marked subexpression of the term that this quantifies.
     /// For example, in the regex /(a)(b)((c)|d){3, 5}/ this would be 2, because
     /// we are quantifying the marked subexpression at index 2.
-    uint32_t startMarkedSubexprs_;
+    uint16_t startMarkedSubexprs_;
 
     /// The start node of the expression which we are quantifying. This is owned
     /// by the regex. The end node is always the last node of the regex.
@@ -244,11 +244,11 @@ class Parser {
     // because it uses the marked counter to perform the simple loop
     // optimisation
     elem.quant = prepareQuantifier();
-    elem.mexp = re_->incrementMarkedCount();
-    if (elem.mexp > constants::kMaxCaptureGroupCount) {
+    if (LLVM_UNLIKELY(re_->markedCount() >= constants::kMaxCaptureGroupCount)) {
       setError(constants::ErrorType::PatternExceedsParseLimits);
       return;
     }
+    elem.mexp = re_->incrementMarkedCount();
     elem.splicePoint = re_->currentNode();
     stack.push_back(std::move(elem));
   }

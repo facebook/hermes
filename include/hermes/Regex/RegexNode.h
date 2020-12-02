@@ -169,11 +169,11 @@ class LoopNode final : public Node {
   uint32_t loopId_;
 
   /// First marked subexpression contained in our looped expression.
-  uint32_t mexpBegin_;
+  uint16_t mexpBegin_;
 
   /// One past the last marked subexpression contained in our looped expression.
   /// Marked subexpressions are [begin, end).
-  uint32_t mexpEnd_;
+  uint16_t mexpEnd_;
 
   /// Whether this loop is greedy.
   bool greedy_;
@@ -201,8 +201,8 @@ class LoopNode final : public Node {
       uint32_t min,
       uint32_t max,
       bool greedy,
-      uint32_t mexpBegin,
-      uint32_t mexpEnd,
+      uint16_t mexpBegin,
+      uint16_t mexpEnd,
       NodeList loopee)
       : min_(min),
         max_(max),
@@ -432,12 +432,10 @@ class MarkedSubexpressionNode final : public Node {
   bool emitEnd_ = false;
 
  public:
-  explicit MarkedSubexpressionNode(NodeList contents, uint32_t mexp32)
+  explicit MarkedSubexpressionNode(NodeList contents, uint16_t mexp)
       : contents_(std::move(contents)),
         contentsConstraints_(matchConstraintsForList(contents_)),
-        mexp_(static_cast<uint16_t>(mexp32)) {
-    assert(mexp_ == mexp32 && "Subexpression too large");
-  }
+        mexp_(mexp) {}
 
   void reverseChildren() override {
     reverseNodeList(contents_);
@@ -467,7 +465,7 @@ class MarkedSubexpressionNode final : public Node {
 /// BackRefNode represents a backreference node.
 class BackRefNode final : public Node {
   // The backreference like \3.
-  uint32_t mexp_;
+  uint16_t mexp_;
 
  public:
   explicit BackRefNode(unsigned mexp) : mexp_(mexp) {}
@@ -475,8 +473,7 @@ class BackRefNode final : public Node {
  private:
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     assert(mexp_ > 0 && "Subexpression cannot be zero");
-    assert(static_cast<uint16_t>(mexp_) == mexp_ && "Subexpression too large");
-    bcs.emit<BackRefInsn>()->mexp = static_cast<uint16_t>(mexp_);
+    bcs.emit<BackRefInsn>()->mexp = mexp_;
     return nullptr;
   }
 };
@@ -881,8 +878,8 @@ class LookaroundNode : public Node {
  public:
   LookaroundNode(
       NodeList exp,
-      uint32_t mexpBegin,
-      uint32_t mexpEnd,
+      uint16_t mexpBegin,
+      uint16_t mexpEnd,
       bool invert,
       bool forwards)
       : exp_(move(exp)),
