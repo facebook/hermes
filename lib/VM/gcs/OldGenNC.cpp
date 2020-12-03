@@ -312,9 +312,9 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
   }
 
 #ifdef HERMES_SLOW_DEBUG
-  struct VerifyCardDirtyAcceptor final : public SlotAcceptorDefault {
-    using SlotAcceptorDefault::accept;
-    using SlotAcceptorDefault::SlotAcceptorDefault;
+  struct VerifyCardDirtyAcceptor final : public RootAndSlotAcceptorDefault {
+    using RootAndSlotAcceptorDefault::accept;
+    using RootAndSlotAcceptorDefault::RootAndSlotAcceptorDefault;
 
     void accept(void *&ptr) override {
       char *valuePtr = reinterpret_cast<char *>(ptr);
@@ -328,8 +328,8 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
     }
 
     void accept(BasedPointer &ptr) override {
-      // Don't use the default from SlotAcceptorDefault since the address of the
-      // reference is used.
+      // Don't use the default from RootAndSlotAcceptorDefault since the address
+      // of the reference is used.
       PointerBase *const base = gc.getPointerBase();
       char *valuePtr = reinterpret_cast<char *>(base->basedToPointer(ptr));
       char *locPtr = reinterpret_cast<char *>(&ptr);
@@ -368,9 +368,9 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
   verifyCardTableBoundaries();
 #endif // HERMES_SLOW_DEBUG
 
-  struct OldGenObjEvacAcceptor final : public SlotAcceptorDefault {
-    using SlotAcceptorDefault::accept;
-    using SlotAcceptorDefault::SlotAcceptorDefault;
+  struct OldGenObjEvacAcceptor final : public RootAndSlotAcceptorDefault {
+    using RootAndSlotAcceptorDefault::accept;
+    using RootAndSlotAcceptorDefault::RootAndSlotAcceptorDefault;
 
     void accept(BasedPointer &ptr) {
       gc.youngGen_.ensureReferentCopied(&ptr);

@@ -204,7 +204,7 @@ class GCBase {
     /// via allocLongLived) are required to be scanned.  A generational
     /// collector, for example, might take advantage of this.
     virtual void markRoots(
-        RootAcceptor &acceptor,
+        RootAndSlotAcceptorWithNames &acceptor,
         bool markLongLived = true) = 0;
 
     /// Callback that will be invoked by the GC to mark all weak roots in the
@@ -1054,7 +1054,7 @@ class GCBase {
   /// are required to be marked.  In this collector, such objects will
   /// be allocated in the old gen, and references to them need not be
   /// marked during young-gen collection.
-  void markRoots(RootAcceptor &acceptor, bool markLongLived) {
+  void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool markLongLived) {
     gcCallbacks_->markRoots(acceptor, markLongLived);
   }
 

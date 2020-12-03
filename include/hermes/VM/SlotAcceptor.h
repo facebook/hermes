@@ -29,22 +29,11 @@ class WeakRootBase;
 /// pointer.  For example, if the pointer is in compressed form.)
 /// This is used by a visitor, see \c SlotVisitor.
 struct SlotAcceptor {
-  virtual ~SlotAcceptor() {}
-  virtual void accept(void *&ptr) = 0;
+  virtual ~SlotAcceptor(){};
   virtual void accept(BasedPointer &ptr) = 0;
   virtual void accept(GCPointerBase &ptr) = 0;
-  virtual void accept(PinnedHermesValue &hv) = 0;
   virtual void accept(GCHermesValue &hv) = 0;
   virtual void accept(SymbolID sym) = 0;
-
-  /// When we want to call an acceptor on "raw" root pointers of
-  /// some JSObject subtype T, this method does the necessary
-  /// reinterpret_cast to allow us to call the "void *&" accept
-  /// method above.
-  template <typename T>
-  void acceptPtr(T *&ptr) {
-    accept(reinterpret_cast<void *&>(ptr));
-  }
 };
 
 /// Weak references are typically slower to find, and need to be done separately
@@ -52,47 +41,6 @@ struct SlotAcceptor {
 struct WeakRefAcceptor {
   virtual ~WeakRefAcceptor() {}
   virtual void accept(WeakRefBase &wr) = 0;
-};
-
-struct SlotAcceptorWithNames : public SlotAcceptor {
-  virtual ~SlotAcceptorWithNames() {}
-
-  using SlotAcceptor::acceptPtr;
-
-  void accept(void *&ptr) override final {
-    accept(ptr, nullptr);
-  }
-  virtual void accept(void *&ptr, const char *name) = 0;
-
-  void accept(BasedPointer &ptr) override final {
-    accept(ptr, nullptr);
-  }
-  virtual void accept(BasedPointer &ptr, const char *name) = 0;
-
-  void accept(GCPointerBase &ptr) override final {
-    accept(ptr, nullptr);
-  }
-  virtual void accept(GCPointerBase &ptr, const char *name) = 0;
-
-  void accept(PinnedHermesValue &hv) override final {
-    accept(hv, nullptr);
-  }
-  virtual void accept(PinnedHermesValue &hv, const char *name) = 0;
-
-  void accept(GCHermesValue &hv) override final {
-    accept(hv, nullptr);
-  }
-  virtual void accept(GCHermesValue &hv, const char *name) = 0;
-
-  void accept(SymbolID sym) override final {
-    accept(sym, nullptr);
-  }
-  virtual void accept(SymbolID sym, const char *name) = 0;
-
-  template <typename T>
-  void acceptPtr(T *&ptr, const char *name) {
-    accept(reinterpret_cast<void *&>(ptr), name);
-  }
 };
 
 struct RootSectionAcceptor {
@@ -110,7 +58,63 @@ struct RootSectionAcceptor {
   virtual void endRootSection() {}
 };
 
-struct RootAcceptor : public SlotAcceptorWithNames, RootSectionAcceptor {};
+struct RootAcceptor : public RootSectionAcceptor {
+  virtual void accept(void *&ptr) = 0;
+  virtual void accept(PinnedHermesValue &hv) = 0;
+
+  /// When we want to call an acceptor on "raw" root pointers of
+  /// some JSObject subtype T, this method does the necessary
+  /// reinterpret_cast to allow us to call the "void *&" accept
+  /// method above.
+  template <typename T>
+  void acceptPtr(T *&ptr) {
+    accept(reinterpret_cast<void *&>(ptr));
+  }
+};
+
+struct RootAndSlotAcceptor : public RootAcceptor, public SlotAcceptor {
+  using RootAcceptor::accept;
+  using SlotAcceptor::accept;
+};
+
+struct RootAndSlotAcceptorWithNames : public RootAndSlotAcceptor {
+  void accept(void *&ptr) override final {
+    accept(ptr, nullptr);
+  }
+  virtual void accept(void *&ptr, const char *name) = 0;
+
+  void accept(PinnedHermesValue &hv) override final {
+    accept(hv, nullptr);
+  }
+  virtual void accept(PinnedHermesValue &hv, const char *name) = 0;
+
+  using RootAndSlotAcceptor::acceptPtr;
+  template <typename T>
+  void acceptPtr(T *&ptr, const char *name) {
+    accept(reinterpret_cast<void *&>(ptr), name);
+  }
+
+  void accept(BasedPointer &ptr) override final {
+    accept(ptr, nullptr);
+  }
+  virtual void accept(BasedPointer &ptr, const char *name) = 0;
+
+  void accept(GCPointerBase &ptr) override final {
+    accept(ptr, nullptr);
+  }
+  virtual void accept(GCPointerBase &ptr, const char *name) = 0;
+
+  void accept(GCHermesValue &hv) override final {
+    accept(hv, nullptr);
+  }
+  virtual void accept(GCHermesValue &hv, const char *name) = 0;
+
+  void accept(SymbolID sym) override final {
+    accept(sym, nullptr);
+  }
+  virtual void accept(SymbolID sym, const char *name) = 0;
+};
+
 struct WeakRootAcceptor : public WeakRefAcceptor, RootSectionAcceptor {
   virtual ~WeakRootAcceptor() = default;
 
@@ -120,15 +124,15 @@ struct WeakRootAcceptor : public WeakRefAcceptor, RootSectionAcceptor {
 };
 
 template <typename Acceptor>
-struct DroppingAcceptor final : public RootAcceptor {
+struct DroppingAcceptor final : public RootAndSlotAcceptorWithNames {
   static_assert(
-      std::is_base_of<SlotAcceptor, Acceptor>::value,
-      "Can only use this with a subclass of SlotAcceptor");
+      std::is_base_of<RootAndSlotAcceptor, Acceptor>::value,
+      "Can only use this with a subclass of RootAndSlotAcceptor");
   Acceptor &acceptor;
 
   DroppingAcceptor(Acceptor &acceptor) : acceptor(acceptor) {}
 
-  using SlotAcceptorWithNames::accept;
+  using RootAndSlotAcceptorWithNames::accept;
 
   void accept(void *&ptr, const char *) override {
     acceptor.accept(ptr);

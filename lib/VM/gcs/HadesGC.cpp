@@ -11,7 +11,7 @@
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCPointer.h"
-#include "hermes/VM/SlotAcceptorDefault.h"
+#include "hermes/VM/RootAndSlotAcceptorDefault.h"
 
 #include <array>
 #include <functional>
@@ -317,7 +317,7 @@ HadesGC::CollectionStats::~CollectionStats() {
       /*survivalRatio*/ survivalRatio()});
 }
 
-class HadesGC::EvacAcceptor final : public SlotAcceptorDefault {
+class HadesGC::EvacAcceptor final : public RootAndSlotAcceptorDefault {
  public:
   struct CopyListCell final : public GCCell {
     // Linked list of cells pointing to the next cell that was copied.
@@ -325,13 +325,13 @@ class HadesGC::EvacAcceptor final : public SlotAcceptorDefault {
   };
 
   EvacAcceptor(GC &gc)
-      : SlotAcceptorDefault{gc},
+      : RootAndSlotAcceptorDefault{gc},
         copyListHead_{nullptr},
         isTrackingIDs_{gc.isTrackingIDs()} {}
 
   ~EvacAcceptor() {}
 
-  using SlotAcceptorDefault::accept;
+  using RootAndSlotAcceptorDefault::accept;
 
   void accept(void *&ptr) override {
     if (!ptr || !gc.inYoungGen(ptr)) {
@@ -518,16 +518,16 @@ class MarkWorklist {
   llvh::SmallVector<GCCell *, 0> worklist_;
 };
 
-class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
+class HadesGC::MarkAcceptor final : public RootAndSlotAcceptorDefault,
                                     public WeakRefAcceptor {
  public:
   MarkAcceptor(GC &gc)
-      : SlotAcceptorDefault{gc},
+      : RootAndSlotAcceptorDefault{gc},
         markedSymbols_{gc.gcCallbacks_->getSymbolsEnd()},
         writeBarrierMarkedSymbols_{gc.gcCallbacks_->getSymbolsEnd()},
         bytesToMark_{gc.oldGen_.allocatedBytes()} {}
 
-  using SlotAcceptorDefault::accept;
+  using RootAndSlotAcceptorDefault::accept;
 
   void accept(void *&ptr) override {
     GCCell *const cell = static_cast<GCCell *>(ptr);
@@ -2593,9 +2593,9 @@ void HadesGC::checkWellFormed() {
 
 void HadesGC::verifyCardTable() {
   assert(inGC() && "Must be in GC to call verifyCardTable");
-  struct VerifyCardDirtyAcceptor final : public SlotAcceptorDefault {
-    using SlotAcceptorDefault::accept;
-    using SlotAcceptorDefault::SlotAcceptorDefault;
+  struct VerifyCardDirtyAcceptor final : public RootAndSlotAcceptorDefault {
+    using RootAndSlotAcceptorDefault::accept;
+    using RootAndSlotAcceptorDefault::RootAndSlotAcceptorDefault;
 
     void accept(void *&ptr) override {
       char *valuePtr = reinterpret_cast<char *>(ptr);
@@ -2605,8 +2605,8 @@ void HadesGC::verifyCardTable() {
     }
 
     void accept(BasedPointer &ptr) override {
-      // Don't use the default from SlotAcceptorDefault since the address of
-      // the reference is used.
+      // Don't use the default from RootAndSlotAcceptorDefault since the address
+      // of the reference is used.
       PointerBase *const base = gc.getPointerBase();
       char *valuePtr = reinterpret_cast<char *>(base->basedToPointer(ptr));
       char *locPtr = reinterpret_cast<char *>(&ptr);

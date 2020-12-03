@@ -11,7 +11,7 @@
 #include "hermes/VM/YoungGenNC.h"
 
 #include "hermes/VM/GC.h"
-#include "hermes/VM/SlotAcceptorDefault.h"
+#include "hermes/VM/RootAndSlotAcceptorDefault.h"
 
 namespace hermes {
 namespace vm {
@@ -19,11 +19,12 @@ namespace vm {
 /// The acceptor used to evacuate the young generation.  For each
 /// pointer-containing slot, ensure that if it points to a young-gen
 /// object, that object is evacuated, and the slot updated.
-struct YoungGen::EvacAcceptor final : public SlotAcceptorDefault {
+struct YoungGen::EvacAcceptor final : public RootAndSlotAcceptorDefault {
   YoungGen &gen;
-  EvacAcceptor(GC &gc, YoungGen &gen) : SlotAcceptorDefault(gc), gen(gen) {}
+  EvacAcceptor(GC &gc, YoungGen &gen)
+      : RootAndSlotAcceptorDefault(gc), gen(gen) {}
 
-  using SlotAcceptorDefault::accept;
+  using RootAndSlotAcceptorDefault::accept;
 
   void accept(BasedPointer &basedPtr) override {
     gen.ensureReferentCopied(&basedPtr);

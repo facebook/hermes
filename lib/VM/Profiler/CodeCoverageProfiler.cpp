@@ -14,7 +14,7 @@
 namespace hermes {
 namespace vm {
 
-void CodeCoverageProfiler::markRoots(SlotAcceptorWithNames &acceptor) {
+void CodeCoverageProfiler::markRoots(RootAcceptor &acceptor) {
   for (Domain *&domain : domains_) {
     acceptor.acceptPtr(domain);
   }

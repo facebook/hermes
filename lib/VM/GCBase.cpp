@@ -15,8 +15,8 @@
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/JSWeakMapImpl.h"
+#include "hermes/VM/RootAndSlotAcceptorDefault.h"
 #include "hermes/VM/Runtime.h"
-#include "hermes/VM/SlotAcceptorDefault.h"
 #include "hermes/VM/VTable.h"
 
 #include "llvh/Support/Debug.h"
@@ -156,12 +156,13 @@ constexpr HeapSnapshot::NodeID objectIDForRootSection(
 }
 
 // Abstract base class for all snapshot acceptors.
-struct SnapshotAcceptor : public SlotAcceptorWithNamesDefault {
-  using SlotAcceptorWithNamesDefault::accept;
-  using SlotAcceptorWithNamesDefault::SlotAcceptorWithNamesDefault;
+struct SnapshotAcceptor : public RootAndSlotAcceptorWithNamesDefault {
+  using RootAndSlotAcceptorWithNamesDefault::accept;
+  using RootAndSlotAcceptorWithNamesDefault::
+      RootAndSlotAcceptorWithNamesDefault;
 
   SnapshotAcceptor(GC &gc, HeapSnapshot &snap)
-      : SlotAcceptorWithNamesDefault(gc), snap_(snap) {}
+      : RootAndSlotAcceptorWithNamesDefault(gc), snap_(snap) {}
 
   void acceptHV(HermesValue &hv, const char *name) override {
     if (hv.isPointer()) {

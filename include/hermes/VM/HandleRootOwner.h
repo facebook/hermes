@@ -154,7 +154,7 @@ class HandleRootOwner {
   /// Used for efficient construction of Handle(-1).
   static const PinnedHermesValue negOneValue_;
 
-  void markGCScopes(SlotAcceptor &acceptor);
+  void markGCScopes(RootAcceptor &acceptor);
 
   /// Mark the WeakRefs in the weakRefs_ list.
   void markWeakRefs(WeakRefAcceptor &acceptor);
@@ -475,7 +475,7 @@ class GCScope : public GCScopeDebugBase {
   PinnedHermesValue *_newChunkAndPHV(HermesValue value);
 
   /// Mark all handles in this scope.
-  void mark(SlotAcceptor &acceptor);
+  void mark(RootAcceptor &acceptor);
 };
 
 /// A RAII class which records a GCScope marker on construction and flushes the

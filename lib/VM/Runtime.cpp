@@ -412,7 +412,9 @@ class Runtime::MarkRootsPhaseTimer {
   std::chrono::time_point<std::chrono::steady_clock> start_;
 };
 
-void Runtime::markRoots(RootAcceptor &acceptor, bool markLongLived) {
+void Runtime::markRoots(
+    RootAndSlotAcceptorWithNames &acceptor,
+    bool markLongLived) {
   // The body of markRoots should be sequence of blocks, each of which starts
   // with the declaration of an appropriate RootSection instance.
   {

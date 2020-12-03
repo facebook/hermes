@@ -15,7 +15,7 @@
 #include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/HiddenClass.h"
 #include "hermes/VM/JSWeakMapImpl.h"
-#include "hermes/VM/SlotAcceptorDefault.h"
+#include "hermes/VM/RootAndSlotAcceptorDefault.h"
 
 #include "llvh/Support/Debug.h"
 
@@ -28,7 +28,7 @@ namespace vm {
 
 static const char *kGCName = "malloc";
 
-struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
+struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
                                          public WeakRootAcceptorDefault {
   std::vector<CellHeader *> worklist_;
 
@@ -42,11 +42,11 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
   llvh::BitVector markedSymbols_;
 
   MarkingAcceptor(GC &gc)
-      : SlotAcceptorDefault(gc),
+      : RootAndSlotAcceptorDefault(gc),
         WeakRootAcceptorDefault(gc),
         markedSymbols_(gc.gcCallbacks_->getSymbolsEnd()) {}
 
-  using SlotAcceptorDefault::accept;
+  using RootAndSlotAcceptorDefault::accept;
 
   void accept(void *&ptr) override {
     if (!ptr) {

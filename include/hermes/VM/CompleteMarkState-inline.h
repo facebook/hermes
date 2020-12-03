@@ -12,18 +12,18 @@
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HermesValue-inline.h"
-#include "hermes/VM/SlotAcceptorDefault.h"
+#include "hermes/VM/RootAndSlotAcceptorDefault.h"
 
 namespace hermes {
 namespace vm {
 
 struct CompleteMarkState::FullMSCMarkTransitiveAcceptor final
-    : public SlotAcceptorDefault {
+    : public RootAndSlotAcceptorDefault {
   CompleteMarkState *markState;
   FullMSCMarkTransitiveAcceptor(GC &gc, CompleteMarkState *markState)
-      : SlotAcceptorDefault(gc), markState(markState) {}
+      : RootAndSlotAcceptorDefault(gc), markState(markState) {}
 
-  using SlotAcceptorDefault::accept;
+  using RootAndSlotAcceptorDefault::accept;
 
   void accept(void *&ptr) override {
     if (ptr) {
@@ -46,13 +46,13 @@ struct CompleteMarkState::FullMSCMarkTransitiveAcceptor final
 
 /// This acceptor is used for updating pointers via forwarding pointers
 /// in mark/sweep/compact.
-struct FullMSCUpdateAcceptor final : public SlotAcceptorDefault,
+struct FullMSCUpdateAcceptor final : public RootAndSlotAcceptorDefault,
                                      public WeakRootAcceptorDefault {
-  using SlotAcceptorDefault::accept;
+  using RootAndSlotAcceptorDefault::accept;
   using WeakRootAcceptorDefault::acceptWeak;
 
   FullMSCUpdateAcceptor(GC &gc)
-      : SlotAcceptorDefault(gc), WeakRootAcceptorDefault(gc) {}
+      : RootAndSlotAcceptorDefault(gc), WeakRootAcceptorDefault(gc) {}
 
   void accept(void *&ptr) override {
     if (ptr) {

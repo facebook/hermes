@@ -9,7 +9,7 @@
 #define HERMES_VM_CHECKHEAPWELLFORMEDACCEPTOR_H
 
 #include "hermes/VM/HermesValue.h"
-#include "hermes/VM/SlotAcceptorDefault.h"
+#include "hermes/VM/RootAndSlotAcceptorDefault.h"
 
 namespace hermes {
 namespace vm {
@@ -18,9 +18,9 @@ namespace vm {
 
 /// An acceptor for checking that the heap is full of valid objects, with
 /// pointers to valid objects.
-struct CheckHeapWellFormedAcceptor final : public SlotAcceptorDefault,
+struct CheckHeapWellFormedAcceptor final : public RootAndSlotAcceptorDefault,
                                            public WeakRootAcceptorDefault {
-  using SlotAcceptorDefault::accept;
+  using RootAndSlotAcceptorDefault::accept;
   using WeakRootAcceptorDefault::acceptWeak;
 
   CheckHeapWellFormedAcceptor(GC &gc);

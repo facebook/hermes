@@ -57,7 +57,7 @@ class SymbolRegistry {
   void init(Runtime *runtime);
 
   /// Mark the Strings and Symbols in the registry as roots.
-  void markRoots(SlotAcceptor &acceptor);
+  void markRoots(RootAndSlotAcceptor &acceptor);
 
   /// Get the SymbolID for \p key, adding it if it doesn't exist.
   /// \param key the key for which to retrieve the SymbolID.

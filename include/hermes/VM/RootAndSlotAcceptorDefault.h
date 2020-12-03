@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_VM_SLOTACCEPTORDEFAULT_H
-#define HERMES_VM_SLOTACCEPTORDEFAULT_H
+#ifndef HERMES_VM_ROOTANDSLOTACCEPTORDEFAULT_H
+#define HERMES_VM_ROOTANDSLOTACCEPTORDEFAULT_H
 
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCPointer-inline.h"
@@ -17,13 +17,13 @@
 namespace hermes {
 namespace vm {
 
-/// A SlotAcceptorDefault provides a convenient overload for GCPointers to be
-/// lowered into raw pointers.
-struct SlotAcceptorDefault : public SlotAcceptor {
+/// A RootAndSlotAcceptorDefault provides a convenient overload for GCPointers
+/// to be lowered into raw pointers.
+struct RootAndSlotAcceptorDefault : public RootAndSlotAcceptor {
   GC &gc;
-  SlotAcceptorDefault(GC &gc) : gc(gc) {}
+  RootAndSlotAcceptorDefault(GC &gc) : gc(gc) {}
 
-  using SlotAcceptor::accept;
+  using RootAndSlotAcceptor::accept;
 
   inline void accept(BasedPointer &ptr) override;
 
@@ -48,16 +48,18 @@ struct SlotAcceptorDefault : public SlotAcceptor {
   virtual void acceptHV(HermesValue &hv) = 0;
 };
 
-/// A SlotAcceptorWithNamesDefault is similar to a SlotAcceptorDefault, except
-/// it provides an overload for the named acceptor of GCPointers.
-struct SlotAcceptorWithNamesDefault : public RootAcceptor {
+/// A RootAndSlotAcceptorWithNamesDefault is similar to a
+/// RootAndSlotAcceptorDefault, except it provides an overload for the named
+/// acceptor of GCPointers.
+struct RootAndSlotAcceptorWithNamesDefault
+    : public RootAndSlotAcceptorWithNames {
   GC &gc;
-  SlotAcceptorWithNamesDefault(GC &gc) : gc(gc) {}
+  RootAndSlotAcceptorWithNamesDefault(GC &gc) : gc(gc) {}
 
-  using SlotAcceptorWithNames::accept;
+  using RootAndSlotAcceptorWithNames::accept;
 
   void accept(BasedPointer &ptr, const char *name) override {
-    // See comments in SlotAcceptorDefault::accept(BasedPointer &) for
+    // See comments in RootAndSlotAcceptorDefault::accept(BasedPointer &) for
     // explanation.
     if (!ptr) {
       return;
@@ -114,7 +116,7 @@ inline void WeakRootAcceptorDefault::acceptWeak(WeakRootBase &ptr) {
   ptr = weakRootStorage;
 }
 
-inline void SlotAcceptorDefault::accept(BasedPointer &ptr) {
+inline void RootAndSlotAcceptorDefault::accept(BasedPointer &ptr) {
   if (!ptr) {
     return;
   }

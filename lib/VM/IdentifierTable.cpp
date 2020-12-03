@@ -232,7 +232,7 @@ std::string IdentifierTable::convertSymbolToUTF8(SymbolID id) {
   return "";
 }
 
-void IdentifierTable::markIdentifiers(SlotAcceptor &acceptor, GC *gc) {
+void IdentifierTable::markIdentifiers(RootAcceptor &acceptor, GC *gc) {
   for (auto &vectorEntry : lookupVector_) {
     if (!vectorEntry.isFreeSlot() && vectorEntry.isStringPrim()) {
 #if defined(HERMESVM_GC_NONCONTIG_GENERATIONAL) || defined(HERMESVM_GC_HADES)

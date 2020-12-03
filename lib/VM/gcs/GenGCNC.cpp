@@ -526,11 +526,11 @@ size_t GenGC::usedDirect() const {
 /// This is used to detect whether the Runtime::markRoots ever invokes
 /// the acceptor on the same root location more than once, which is illegal.
 struct FullMSCDuplicateRootsDetectorAcceptor final
-    : public SlotAcceptorDefault {
+    : public RootAndSlotAcceptorDefault {
   llvh::DenseSet<void *> markedLocs_;
 
-  using SlotAcceptorDefault::accept;
-  using SlotAcceptorDefault::SlotAcceptorDefault;
+  using RootAndSlotAcceptorDefault::accept;
+  using RootAndSlotAcceptorDefault::RootAndSlotAcceptorDefault;
 
   void accept(void *&ptr) override {
     assert(markedLocs_.count(&ptr) == 0);
@@ -544,9 +544,9 @@ struct FullMSCDuplicateRootsDetectorAcceptor final
 #endif
 
 void GenGC::markPhase() {
-  struct FullMSCMarkInitialAcceptor final : public SlotAcceptorDefault {
-    using SlotAcceptorDefault::accept;
-    using SlotAcceptorDefault::SlotAcceptorDefault;
+  struct FullMSCMarkInitialAcceptor final : public RootAndSlotAcceptorDefault {
+    using RootAndSlotAcceptorDefault::accept;
+    using RootAndSlotAcceptorDefault::RootAndSlotAcceptorDefault;
     void accept(void *&ptr) override {
       if (ptr) {
         assert(gc.dbgContains(ptr));
@@ -710,7 +710,7 @@ void GenGC::updateReferences(const SweepResult &sweepResult) {
   PerfSection fullGCUpdateReferencesSystraceRegion("fullGCUpdateReferences");
   std::unique_ptr<FullMSCUpdateAcceptor> acceptor =
       getFullMSCUpdateAcceptor(*this);
-  DroppingAcceptor<SlotAcceptor> nameAcceptor{*acceptor};
+  DroppingAcceptor<RootAndSlotAcceptor> nameAcceptor{*acceptor};
   markRoots(nameAcceptor, /*markLongLived*/ true);
   markWeakRoots(*acceptor);
 
@@ -1953,7 +1953,7 @@ void GenGC::sizeDiagnosticCensus() {
     }
   };
 
-  struct HeapSizeDiagnosticAcceptor final : public SlotAcceptor {
+  struct HeapSizeDiagnosticAcceptor final : public RootAndSlotAcceptor {
     // Can't be static in a local class.
     const int64_t HINT8_MIN = -(1 << 7);
     const int64_t HINT8_MAX = (1 << 7) - 1;

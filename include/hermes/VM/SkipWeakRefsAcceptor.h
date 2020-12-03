@@ -9,7 +9,7 @@
 #define HERMES_VM_SKIPWEAKACCEPTOR_H
 
 #include "hermes/VM/GC.h"
-#include "hermes/VM/SlotAcceptorDefault.h"
+#include "hermes/VM/RootAndSlotAcceptorDefault.h"
 
 namespace hermes {
 namespace vm {
@@ -26,18 +26,11 @@ class SkipWeakRefsAcceptor final : public SlotAcceptor {
  public:
   SkipWeakRefsAcceptor(GC &gc, TargetAcceptor *acceptor)
       : acceptor_(acceptor) {}
-
-  void accept(void *&ptr) override {
-    acceptor_->accept(ptr);
-  }
   void accept(BasedPointer &ptr) override {
     acceptor_->accept(ptr);
   }
   void accept(GCPointerBase &ptr) override {
     acceptor_->accept(ptr);
-  }
-  void accept(PinnedHermesValue &hv) override {
-    acceptor_->accept(hv);
   }
   void accept(GCHermesValue &hv) override {
     acceptor_->accept(hv);
