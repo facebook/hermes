@@ -161,7 +161,9 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
         if (call->getArgument(arg) == U.V) {
           // Oops, "require" is passed as parameter.
           EM_.warning(
-              call->getLocation(), "'require' used as function call argument");
+              Warning::UnresolvedStaticRequire,
+              call->getLocation(),
+              "'require' used as function call argument");
           // No need to analyze this usage anymore.
           fail = true;
           canResolve_ = false;
@@ -173,7 +175,10 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
         continue;
 
       if (llvh::isa<ConstructInst>(call) || llvh::isa<HBCConstructInst>(call)) {
-        EM_.warning(call->getLocation(), "'require' used as a constructor");
+        EM_.warning(
+            Warning::UnresolvedStaticRequire,
+            call->getLocation(),
+            "'require' used as a constructor");
         canResolve_ = false;
         continue;
       }
@@ -187,6 +192,7 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
 
       if (!isStoreOnceStackLocation(cast<AllocStackInst>(SS->getPtr()))) {
         EM_.warning(
+            Warning::UnresolvedStaticRequire,
             SS->getLocation(),
             "'require' stored into local cannot be resolved");
         canResolve_ = false;
@@ -203,6 +209,7 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
 
       if (!isStoreOnceVariable(SF->getVariable())) {
         EM_.warning(
+            Warning::UnresolvedStaticRequire,
             SF->getLocation(),
             "'require' is copied to a variable which cannot be analyzed");
         canResolve_ = false;
@@ -220,6 +227,7 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
         // because it could be used in a getter and escape.
         canResolve_ = false;
         EM_.warning(
+            Warning::UnresolvedStaticRequire,
             U.I->getLocation(),
             "'require' is used as a property key and cannot be analyzed");
       }
@@ -227,7 +235,10 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
       // In particular, require.context is used to load new segments.
     } else {
       canResolve_ = false;
-      EM_.warning(U.I->getLocation(), "'require' escapes or is modified");
+      EM_.warning(
+          Warning::UnresolvedStaticRequire,
+          U.I->getLocation(),
+          "'require' escapes or is modified");
     }
   }
 }
@@ -238,14 +249,19 @@ void ResolveStaticRequireImpl::resolveRequireCall(
   ++NumRequireCalls;
 
   if (call->getNumArguments() < 2) {
-    EM_.warning(call->getLocation(), "require() invoked without arguments");
+    EM_.warning(
+        Warning::UnresolvedStaticRequire,
+        call->getLocation(),
+        "require() invoked without arguments");
     canResolve_ = false;
     return;
   }
 
   if (call->getNumArguments() > 2) {
     EM_.warning(
-        call->getLocation(), "Additional require() arguments will be ignored");
+        Warning::UnresolvedStaticRequire,
+        call->getLocation(),
+        "Additional require() arguments will be ignored");
   }
 
   LiteralString *stringTarget = nullptr;
@@ -254,6 +270,7 @@ void ResolveStaticRequireImpl::resolveRequireCall(
 
   if (!stringTarget) {
     EM_.warning(
+        Warning::UnresolvedStaticRequire,
         call->getLocation(),
         "require() argument cannot be coerced to constant string at compile time");
     if (auto *inst = llvh::dyn_cast<Instruction>(call->getArgument(1)))
@@ -343,7 +360,10 @@ Literal *ResolveStaticRequireImpl::resolveModuleTarget(
 
   auto targetModuleID = module->findCJSModuleID(targetIdentifier);
   if (!targetModuleID) {
-    EM_.warning(errorLoc, "Cannot resolve target module of require");
+    EM_.warning(
+        Warning::UnresolvedStaticRequire,
+        errorLoc,
+        "Cannot resolve target module of require");
     return nullptr;
   }
   return builder.getLiteralNumber(*targetModuleID);
