@@ -599,6 +599,58 @@ class HadesGC final : public GCBase {
   /// The amount of bytes of external memory credited to objects in the YG.
   uint64_t ygExternalBytes_{0};
 
+  struct CompacteeState {
+    /// \return true if the pointer lives in the segment that is being marked or
+    /// evacuated for compaction.
+    bool contains(const void *p) const {
+      return start == AlignedStorage::start(p);
+    }
+
+    /// \return true if the pointer lives in the segment that is currently being
+    /// evacuated for compaction.
+    bool evacContains(const void *p) const {
+      return evacStart == AlignedStorage::start(p);
+    }
+
+    /// \return true if the compactee is ready to be evacuated.
+    bool evacActive() const {
+      return evacStart != reinterpret_cast<void *>(kInvalidCompacteeStart);
+    }
+
+#ifndef NDEBUG
+    /// \return true if the compactee has not been assigned.
+    bool empty() const {
+      void *const invalid = reinterpret_cast<void *>(kInvalidCompacteeStart);
+      return evacStart == invalid && start == invalid && !index;
+    }
+#endif
+
+    /// The following variables track the state of compactions.
+    /// 1. To trigger a compaction, index and start should be set at the
+    /// beginning of marking. This ensures that all cards containing pointers to
+    /// the compactee will be dirtied.
+    /// 2. Once marking is done, completeMarking should then set evacStart, so
+    /// that the next YG collection will evacuate the segment.
+    /// 3. On completion, the YG collection will reset all these variables.
+
+    /// In order to keep the "contains" check cheap, this can be any non-null
+    /// value that cannot correspond to the start of a segment.
+    static constexpr uintptr_t kInvalidCompacteeStart = 0x1;
+
+    /// The start address of the segment that will be compacted next. This is
+    /// used during marking and by write barriers to determine whether a pointer
+    /// is in the compactee segment.
+    void *start{reinterpret_cast<void *>(kInvalidCompacteeStart)};
+
+    /// The start address of the segment that is currently being compacted. When
+    /// this is set, the next YG will evacuate objects in this segment. This is
+    /// always going to be equal to compacteeStart_ or nullptr.
+    void *evacStart{reinterpret_cast<void *>(kInvalidCompacteeStart)};
+
+    /// The segment index that is going to be compacted next.
+    llvh::Optional<uint16_t> index;
+  } compactee_;
+
   /// The main entrypoint for all allocations.
   /// \param sz The size of allocation requested. This might be rounded up to
   ///   fit heap alignment requirements.
@@ -675,6 +727,10 @@ class HadesGC final : public GCBase {
   /// final marking worklist drain, and to update weak roots. It must be invoked
   /// from the mutator.
   void completeMarking();
+
+  /// Select a segment to compact and initialise any state needed for
+  /// compaction.
+  void prepareCompactee();
 
   /// Find all pointers from OG into YG during a YG collection. This is done
   /// quickly through use of write barriers that detect the creation of OG-to-YG

@@ -1238,6 +1238,10 @@ void HadesGC::oldGenCollection(std::string cause) {
   // Before the thread starts up, make sure that any write barriers are aware
   // that concurrent marking is happening.
   isOldGenMarking_ = true;
+  // prepareCompactee must be called before the new thread is spawned, in order
+  // to ensure that write barriers start operating immediately, and that any
+  // objects promoted during an intervening YG collection are correctly scanned.
+  prepareCompactee();
   // NOTE: Since the "this" value (the HadesGC instance) is implicitly copied to
   // the new thread, the GC cannot be destructed until the new thread completes.
   // This means that before destroying the GC, waitForCollectionToFinish must
@@ -1321,6 +1325,18 @@ void HadesGC::incrementalCollect() {
   }
 }
 
+void HadesGC::prepareCompactee() {
+  assert(gcMutex_);
+  assert(
+      compactee_.empty() &&
+      "Ongoing compaction at the start of an OG collection.");
+  // TODO: Determine segment to compact
+  if (compactee_.index) {
+    oldGen_.clearFreelistForSegment(*compactee_.index);
+    compactee_.start = oldGen_[*compactee_.index].lowLim();
+  }
+}
+
 void HadesGC::waitForCompleteMarking() {
   assert(kConcurrentGC);
   assert(
@@ -1358,6 +1374,9 @@ void HadesGC::completeMarking() {
   // NOTE: We can access this here since the world is stopped.
   isOldGenMarking_ = false;
   completeWeakMapMarking(*oldGenMarker_);
+  // Update the compactee tracking pointers so that the next YG collection will
+  // do a compaction.
+  compactee_.evacStart = compactee_.start;
   assert(
       oldGenMarker_->globalWorklist().empty() &&
       "Marking worklist wasn't drained");
@@ -1943,6 +1962,7 @@ void HadesGC::youngGenCollection(
   const uint64_t usedBefore = youngGen().used();
   // YG is about to be emptied, add all of the allocations.
   totalAllocatedBytes_ += usedBefore;
+  const bool doCompaction = compactee_.evacActive();
   // Attempt to promote the YG segment to OG if the flag is set. If this call
   // fails for any reason, proceed with a GC.
   if (promoteYoungGenToOldGen()) {
@@ -1950,6 +1970,7 @@ void HadesGC::youngGenCollection(
     // Don't update the average YG survival ratio since no liveness was
     // calculated for the promotion case.
     ygCollectionStats_->addCollectionType("(promotion)");
+    assert(!doCompaction && "Cannot do compactions during YG promotions.");
   } else {
     auto &yg = youngGen();
     const uint64_t externalBytesBefore = ygExternalBytes_;
@@ -1958,7 +1979,7 @@ void HadesGC::youngGenCollection(
     EvacAcceptor acceptor{*this};
     {
       DroppingAcceptor<EvacAcceptor> nameAcceptor{acceptor};
-      markRoots(nameAcceptor, /*markLongLived*/ false);
+      markRoots(nameAcceptor, /*markLongLived*/ doCompaction);
       // Do not call markWeakRoots here, as all weak roots point to
       // long-lived objects.
     }
@@ -1970,7 +1991,9 @@ void HadesGC::youngGenCollection(
       assert(
           copyCell->hasMarkedForwardingPointer() &&
           "Discovered unmarked object");
-      assert(inYoungGen(copyCell) && "Discovered OG object in YG collection");
+      assert(
+          (inYoungGen(copyCell) || compactee_.evacContains(copyCell)) &&
+          "Unexpected object in YG collection");
       // Update the pointers inside the forwarded object, since the old
       // object is only there for the forwarding pointer.
       GCCell *const cell = copyCell->getMarkedForwardingPointer();
@@ -2002,6 +2025,9 @@ void HadesGC::youngGenCollection(
         youngGen().markBitArray().findNextUnmarkedBitFrom(0) ==
             youngGen().markBitArray().size() &&
         "Young gen segment must have all mark bits set");
+    if (doCompaction) {
+      compactee_ = {};
+    }
     // Move external memory accounting from YG to OG as well.
     transferExternalMemoryToOldGen();
     // Post-allocated has an ambiguous meaning for a young-gen GC, since the
