@@ -32,7 +32,7 @@ void CheckHeapWellFormedAcceptor::acceptWeak(void *&ptr) {
   accept(ptr);
 }
 
-void CheckHeapWellFormedAcceptor::accept(HermesValue &hv) {
+void CheckHeapWellFormedAcceptor::acceptHV(HermesValue &hv) {
   assert(!hv.isInvalid() && "HermesValue with InvalidTag encountered by GC.");
   if (hv.isPointer()) {
     void *cell = hv.getPointer();

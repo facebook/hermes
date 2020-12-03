@@ -33,7 +33,7 @@ struct YoungGen::EvacAcceptor final : public SlotAcceptorDefault {
     gen.ensureReferentCopied(reinterpret_cast<GCCell **>(&ptr));
   }
 
-  void accept(HermesValue &hv) override {
+  void acceptHV(HermesValue &hv) override {
     if (hv.isPointer()) {
       gen.ensureReferentCopied(&hv);
     }

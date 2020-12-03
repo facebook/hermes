@@ -163,7 +163,7 @@ struct SnapshotAcceptor : public SlotAcceptorWithNamesDefault {
   SnapshotAcceptor(GC &gc, HeapSnapshot &snap)
       : SlotAcceptorWithNamesDefault(gc), snap_(snap) {}
 
-  void accept(HermesValue &hv, const char *name) override {
+  void acceptHV(HermesValue &hv, const char *name) override {
     if (hv.isPointer()) {
       auto ptr = hv.getPointer();
       accept(ptr, name);
@@ -183,7 +183,7 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
   // Do nothing for any value except a number.
   void accept(void *&ptr, const char *name) override {}
 
-  void accept(HermesValue &hv, const char *) override {
+  void acceptHV(HermesValue &hv, const char *) override {
     if (hv.isNumber()) {
       seenNumbers_.insert(hv.getNumber());
     }
@@ -258,7 +258,7 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
         gc.getObjectID(ptr));
   }
 
-  void accept(HermesValue &hv, const char *name) override {
+  void acceptHV(HermesValue &hv, const char *name) override {
     if (hv.isPointer()) {
       auto ptr = hv.getPointer();
       accept(ptr, name);

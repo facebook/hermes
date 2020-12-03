@@ -536,7 +536,7 @@ struct FullMSCDuplicateRootsDetectorAcceptor final
     assert(markedLocs_.count(&ptr) == 0);
     markedLocs_.insert(&ptr);
   }
-  void accept(HermesValue &hv) override {
+  void acceptHV(HermesValue &hv) override {
     assert(markedLocs_.count(&hv) == 0);
     markedLocs_.insert(&hv);
   }
@@ -559,7 +559,7 @@ void GenGC::markPhase() {
         GenGCHeapSegment::setCellMarkBit(cell);
       }
     }
-    void accept(HermesValue &hv) override {
+    void acceptHV(HermesValue &hv) override {
       if (hv.isPointer()) {
         void *ptr = hv.getPointer();
         if (ptr) {
@@ -1981,7 +1981,14 @@ void GenGC::sizeDiagnosticCensus() {
     void accept(GCPointerBase &ptr) override {
       diagnostic.numPointer++;
     }
-    void accept(HermesValue &hv) override {
+
+    void accept(PinnedHermesValue &hv) override {
+      acceptHV(hv);
+    }
+    void accept(GCHermesValue &hv) override {
+      acceptHV(hv);
+    }
+    void acceptHV(HermesValue &hv) {
       diagnostic.hv.count++;
       if (hv.isBool()) {
         diagnostic.hv.numBool++;

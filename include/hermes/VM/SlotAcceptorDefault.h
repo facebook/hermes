@@ -31,11 +31,21 @@ struct SlotAcceptorDefault : public SlotAcceptor {
     accept(ptr.getLoc(&gc));
   }
 
+  void accept(PinnedHermesValue &hv) override final {
+    acceptHV(hv);
+  }
+
+  void accept(GCHermesValue &hv) override final {
+    acceptHV(hv);
+  }
+
   void accept(SymbolID sym) override {
     // By default, symbol processing is a noop. Only a handful of acceptors
     // need to override it.
     // Not final because sometimes custom behavior is desired.
   }
+
+  virtual void acceptHV(HermesValue &hv) = 0;
 };
 
 /// A SlotAcceptorWithNamesDefault is similar to a SlotAcceptorDefault, except
@@ -61,6 +71,16 @@ struct SlotAcceptorWithNamesDefault : public RootAcceptor {
   void accept(GCPointerBase &ptr, const char *name) override final {
     accept(ptr.getLoc(&gc), name);
   }
+
+  void accept(PinnedHermesValue &hv, const char *name) override {
+    acceptHV(hv, name);
+  }
+
+  void accept(GCHermesValue &hv, const char *name) override {
+    acceptHV(hv, name);
+  }
+
+  virtual void acceptHV(HermesValue &hv, const char *name) = 0;
 
   void accept(SymbolID sym, const char *name) override {
     // By default, symbol processing is a noop. Only a handful of acceptors

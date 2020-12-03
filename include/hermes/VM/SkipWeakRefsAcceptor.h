@@ -22,12 +22,10 @@ namespace vm {
 /// the calls are delegated, is a template parameter so that those calls are
 /// non-virtual (since we know the exact type).
 template <typename TargetAcceptor>
-class SkipWeakRefsAcceptor final : public SlotAcceptorDefault {
+class SkipWeakRefsAcceptor final : public SlotAcceptor {
  public:
   SkipWeakRefsAcceptor(GC &gc, TargetAcceptor *acceptor)
-      : SlotAcceptorDefault(gc), acceptor_(acceptor) {}
-
-  using SlotAcceptorDefault::accept;
+      : acceptor_(acceptor) {}
 
   void accept(void *&ptr) override {
     acceptor_->accept(ptr);
@@ -35,7 +33,13 @@ class SkipWeakRefsAcceptor final : public SlotAcceptorDefault {
   void accept(BasedPointer &ptr) override {
     acceptor_->accept(ptr);
   }
-  void accept(HermesValue &hv) override {
+  void accept(GCPointerBase &ptr) override {
+    acceptor_->accept(ptr);
+  }
+  void accept(PinnedHermesValue &hv) override {
+    acceptor_->accept(hv);
+  }
+  void accept(GCHermesValue &hv) override {
     acceptor_->accept(hv);
   }
   void accept(SymbolID sym) override {

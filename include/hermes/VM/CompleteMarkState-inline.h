@@ -31,7 +31,7 @@ struct CompleteMarkState::FullMSCMarkTransitiveAcceptor final
       markState->markTransitive(ptr);
     }
   }
-  void accept(HermesValue &hv) override {
+  void acceptHV(HermesValue &hv) override {
     if (hv.isPointer()) {
       void *cell = hv.getPointer();
       accept(cell);
@@ -74,7 +74,7 @@ struct FullMSCUpdateAcceptor final : public SlotAcceptorDefault,
         : nullptr;
   }
 
-  void accept(HermesValue &hv) override {
+  void acceptHV(HermesValue &hv) override {
     if (hv.isPointer()) {
       auto *ptr = reinterpret_cast<GCCell *>(hv.getPointer());
       if (ptr) {

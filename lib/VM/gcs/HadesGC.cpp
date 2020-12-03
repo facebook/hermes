@@ -375,7 +375,7 @@ class HadesGC::EvacAcceptor final : public SlotAcceptorDefault {
     cell = newCell;
   }
 
-  void accept(HermesValue &hv) override {
+  void acceptHV(HermesValue &hv) override {
     if (hv.isPointer()) {
       void *ptr = hv.getPointer();
       accept(ptr);
@@ -559,7 +559,7 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
         "MarkAcceptor::accept should not modify its argument");
   }
 
-  void accept(HermesValue &hvRef) override {
+  void acceptHV(HermesValue &hvRef) override {
     const HermesValue hv = hvRef;
     if (hv.isPointer()) {
       void *ptr = hv.getPointer();
@@ -2315,7 +2315,7 @@ void HadesGC::completeWeakMapMarking(MarkAcceptor &acceptor) {
       /*objIsMarked*/
       HeapSegment::getCellMarkBit,
       /*markFromVal*/
-      [&acceptor](GCCell *valCell, HermesValue &valRef) {
+      [&acceptor](GCCell *valCell, GCHermesValue &valRef) {
         if (HeapSegment::getCellMarkBit(valCell)) {
           return false;
         }
@@ -2614,7 +2614,7 @@ void HadesGC::verifyCardTable() {
       acceptHelper(valuePtr, locPtr);
     }
 
-    void accept(HermesValue &hv) override {
+    void acceptHV(HermesValue &hv) override {
       if (!hv.isPointer()) {
         return;
       }

@@ -28,7 +28,7 @@ struct CheckHeapWellFormedAcceptor final : public SlotAcceptorDefault,
   void accept(void *&ptr) override;
   void accept(const void *ptr);
   void acceptWeak(void *&ptr) override;
-  void accept(HermesValue &hv) override;
+  void acceptHV(HermesValue &hv) override;
   void accept(WeakRefBase &wr) override;
   void accept(SymbolID sym) override;
 };

@@ -33,7 +33,8 @@ struct SlotAcceptor {
   virtual void accept(void *&ptr) = 0;
   virtual void accept(BasedPointer &ptr) = 0;
   virtual void accept(GCPointerBase &ptr) = 0;
-  virtual void accept(HermesValue &hv) = 0;
+  virtual void accept(PinnedHermesValue &hv) = 0;
+  virtual void accept(GCHermesValue &hv) = 0;
   virtual void accept(SymbolID sym) = 0;
 
   /// When we want to call an acceptor on "raw" root pointers of
@@ -73,10 +74,15 @@ struct SlotAcceptorWithNames : public SlotAcceptor {
   }
   virtual void accept(GCPointerBase &ptr, const char *name) = 0;
 
-  void accept(HermesValue &hv) override final {
+  void accept(PinnedHermesValue &hv) override final {
     accept(hv, nullptr);
   }
-  virtual void accept(HermesValue &hv, const char *name) = 0;
+  virtual void accept(PinnedHermesValue &hv, const char *name) = 0;
+
+  void accept(GCHermesValue &hv) override final {
+    accept(hv, nullptr);
+  }
+  virtual void accept(GCHermesValue &hv, const char *name) = 0;
 
   void accept(SymbolID sym) override final {
     accept(sym, nullptr);
@@ -136,7 +142,11 @@ struct DroppingAcceptor final : public RootAcceptor {
     acceptor.accept(ptr);
   }
 
-  void accept(HermesValue &hv, const char *) override {
+  void accept(PinnedHermesValue &hv, const char *) override {
+    acceptor.accept(hv);
+  }
+
+  void accept(GCHermesValue &hv, const char *) override {
     acceptor.accept(hv);
   }
 

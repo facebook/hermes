@@ -266,7 +266,7 @@ struct DummyRuntime final : public HandleRootOwner,
                             private GCBase::GCCallbacks {
   GC gc;
   std::vector<GCCell **> pointerRoots{};
-  std::vector<HermesValue *> valueRoots{};
+  std::vector<PinnedHermesValue *> valueRoots{};
   std::vector<WeakRoot<void> *> weakRoots{};
   std::function<void(WeakRefAcceptor &)> markExtraWeak{};
 

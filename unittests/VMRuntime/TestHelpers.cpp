@@ -63,7 +63,7 @@ void DummyRuntime::markRoots(RootAcceptor &acceptor, bool) {
   markGCScopes(acceptor);
   for (GCCell **pp : pointerRoots)
     acceptor.acceptPtr(*pp);
-  for (HermesValue *pp : valueRoots)
+  for (PinnedHermesValue *pp : valueRoots)
     acceptor.accept(*pp);
   acceptor.endRootSection();
 }

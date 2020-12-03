@@ -137,7 +137,7 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
 #endif
   }
 
-  void accept(HermesValue &hv) override {
+  void acceptHV(HermesValue &hv) override {
     if (hv.isPointer()) {
       void *ptr = hv.getPointer();
       accept(ptr);
@@ -407,7 +407,7 @@ void MallocGC::completeWeakMapMarking(MarkingAcceptor &acceptor) {
       /*objIsMarked*/
       [](GCCell *cell) { return CellHeader::from(cell)->isMarked(); },
       /*markFromVal*/
-      [this, &acceptor](GCCell *valCell, HermesValue &valRef) {
+      [this, &acceptor](GCCell *valCell, GCHermesValue &valRef) {
         CellHeader *valHeader = CellHeader::from(valCell);
         if (valHeader->isMarked()) {
 #ifdef HERMESVM_SANITIZE_HANDLES
