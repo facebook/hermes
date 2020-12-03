@@ -75,6 +75,7 @@ using llvh::cl::OptionCategory;
 using llvh::cl::Positional;
 using llvh::cl::value_desc;
 using llvh::cl::values;
+using llvh::cl::ValuesClass;
 
 /// Encapsulate a compiler flag: for example, "-fflag/-fno-flag", or
 /// "-Wflag/-Wno-flag".
@@ -436,25 +437,36 @@ static opt<unsigned> ErrorLimit(
     init(20),
     cat(CompilerCategory));
 
-static CLFlag Werror(
-    'W',
-    "error",
-    false,
-    "Treat all warnings as errors",
-    CompilerCategory);
+static ValuesClass warningValues{
+#define WARNING_CATEGORY_HIDDEN(name, specifier, description) \
+  clEnumValN(Warning::name, specifier, description),
+#include "hermes/Support/Warnings.def"
+};
+
+static list<hermes::Warning> Werror(
+    llvh::cl::ValueOptional,
+    "Werror",
+    value_desc("category"),
+    desc(
+        "Treat all warnings as errors, or treat warnings of a particular category as errors"),
+    warningValues,
+    cat(CompilerCategory));
+
+static list<hermes::Warning> Wnoerror(
+    llvh::cl::ValueOptional,
+    "Wno-error",
+    value_desc("category"),
+    Hidden,
+    desc(
+        "Treat no warnings as errors, or treat warnings of a particular category as warnings"),
+    warningValues,
+    cat(CompilerCategory));
 
 static opt<bool> DisableAllWarnings(
     "w",
     desc("Disable all warnings"),
     init(false),
     cat(CompilerCategory));
-
-static CLFlag UndefinedVariableWarning(
-    'W',
-    "undefined-variable",
-    true,
-    "Do not warn when an undefined variable is referenced.",
-    CompilerCategory);
 
 static opt<bool> ReusePropCache(
     "reuse-prop-cache",
@@ -485,12 +497,10 @@ static CLFlag EnableTDZ(
     "Enable TDZ checks for let/const",
     CompilerCategory);
 
-static CLFlag DirectEvalWarning(
-    'W',
-    "direct-eval",
-    true,
-    "Warning when attempting a direct (local) eval",
-    CompilerCategory);
+#define WARNING_CATEGORY(name, specifier, description) \
+  static CLFlag name##Warning(                         \
+      'W', specifier, true, description, CompilerCategory);
+#include "hermes/Support/Warnings.def"
 
 static opt<std::string> BaseBytecodeFile(
     "base-bytecode",
@@ -913,6 +923,49 @@ bool validateFlags() {
   return !errored;
 }
 
+/// Apply the -Werror, -Wno-error, -Werror=<category> and -Wno-error=<category>
+/// flags to \c sm from left to right.
+static void setWarningsAreErrorsFromFlags(SourceErrorManager &sm) {
+  std::vector<Warning>::iterator yesIt = cl::Werror.begin();
+  std::vector<Warning>::iterator noIt = cl::Wnoerror.begin();
+  // Argument positions are indices into argv and start at 1 (or 2 if there's a
+  // subcommand). See llvh::cl::CommandLineParser::ParseCommandLineOptions().
+  // In this loop, position 0 represents the lack of a value.
+  unsigned noPos = 0, yesPos = 0;
+  while (true) {
+    if (noIt != cl::Wnoerror.end()) {
+      noPos = cl::Wnoerror.getPosition(noIt - cl::Wnoerror.begin());
+    } else {
+      noPos = 0;
+    }
+    if (yesIt != cl::Werror.end()) {
+      yesPos = cl::Werror.getPosition(yesIt - cl::Werror.begin());
+    } else {
+      yesPos = 0;
+    }
+
+    Warning warning;
+    bool enable;
+    if (yesPos != 0 && (noPos == 0 || yesPos < noPos)) {
+      warning = *yesIt;
+      enable = true;
+      ++yesIt;
+    } else if (noPos != 0 && (yesPos == 0 || noPos < yesPos)) {
+      warning = *noIt;
+      enable = false;
+      ++noIt;
+    } else {
+      break;
+    }
+
+    if (warning == Warning::NoWarning) {
+      sm.setWarningsAreErrors(enable);
+    } else {
+      sm.setWarningIsError(warning, enable);
+    }
+  }
+}
+
 /// Create a Context, respecting the command line flags.
 /// \return the Context.
 std::shared_ptr<Context> createContext(
@@ -959,11 +1012,14 @@ std::shared_ptr<Context> createContext(
   context->setStrictMode(!cl::NonStrictMode && cl::StrictMode);
   context->setEnableEval(cl::EnableEval);
   context->getSourceErrorManager().setOutputOptions(guessErrorOutputOptions());
-  context->getSourceErrorManager().setWarningsAreErrors(cl::Werror);
-  context->getSourceErrorManager().setWarningStatus(
-      Warning::UndefinedVariable, cl::UndefinedVariableWarning);
-  context->getSourceErrorManager().setWarningStatus(
-      Warning::DirectEval, cl::DirectEvalWarning);
+
+  setWarningsAreErrorsFromFlags(context->getSourceErrorManager());
+
+#define WARNING_CATEGORY(name, specifier, description) \
+  context->getSourceErrorManager().setWarningStatus(   \
+      Warning::name, cl::name##Warning);
+#include "hermes/Support/Warnings.def"
+
   if (cl::DisableAllWarnings)
     context->getSourceErrorManager().disableAllWarnings();
   context->getSourceErrorManager().setErrorLimit(cl::ErrorLimit);

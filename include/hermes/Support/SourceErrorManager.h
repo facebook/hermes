@@ -133,8 +133,11 @@ class SourceErrorManager {
   /// enum is the index in this vector.
   llvh::SmallBitVector warningStatuses_;
 
-  /// If set, warnings are treated as errors.
-  bool warningsAreErrors_{false};
+  /// Mapping from warnings to true if should be treated as an error, false if
+  /// should be treated as a warning. All warnings default to being treated as
+  /// warnings, and the numerical value of the Warning enum is the index in this
+  /// vector.
+  llvh::SmallBitVector warningsAreErrors_;
 
   /// If set, messages from the given subsystem are ignored.
   /// If set to Subsystem::Unspecified, then all messages are ignored.
@@ -250,12 +253,26 @@ class SourceErrorManager {
     errorLimitReached_ = false;
   }
 
-  bool getWarningsAreErrors() const {
-    return warningsAreErrors_;
+  /// \return true if \c warning is treated as an error or false if it's treated
+  /// as a warning.
+  bool isWarningAnError(Warning warning) const {
+    return warningsAreErrors_.test((unsigned)warning);
   }
 
+  /// Set \c warning to be treated as an error if \c warningIsErrors is true
+  /// or as a warning if it's false.
+  void setWarningIsError(Warning warning, bool warningIsError) {
+    warningsAreErrors_[(unsigned)warning] = warningIsError;
+  }
+
+  /// Set all warnings to be treated as errors if \c warningsAreErrors is true
+  /// or as warnings if it's false.
   void setWarningsAreErrors(bool warningsAreErrors) {
-    warningsAreErrors_ = warningsAreErrors;
+    if (warningsAreErrors) {
+      warningsAreErrors_.set();
+    } else {
+      warningsAreErrors_.reset();
+    }
   }
 
   void disableAllWarnings() {
@@ -263,8 +280,7 @@ class SourceErrorManager {
   }
 
   void setWarningStatus(Warning warning, bool enabled) {
-    enabled ? warningStatuses_.set((unsigned)warning)
-            : warningStatuses_.reset((unsigned)warning);
+    warningStatuses_[(unsigned)warning] = enabled;
   }
 
   SourceErrorOutputOptions getOutputOptions() const {
@@ -547,13 +563,6 @@ class SourceErrorManager {
   };
 
  private:
-  /// Optionally upgrade warnings into errors.
-  void upgradeDiag(DiagKind &dk) {
-    assert(dk <= DK_Note && "invalid DiagKind");
-    if (warningsAreErrors_ && dk == DK_Warning)
-      dk = DK_Error;
-  }
-
   /// Implementation of generating a message.
   void doGenMessage(DiagKind dk, SMLoc loc, SMRange sm, const Twine &msg);
 
