@@ -30,7 +30,6 @@ class WeakRootBase;
 /// This is used by a visitor, see \c SlotVisitor.
 struct SlotAcceptor {
   virtual ~SlotAcceptor(){};
-  virtual void accept(BasedPointer &ptr) = 0;
   virtual void accept(GCPointerBase &ptr) = 0;
   virtual void accept(GCHermesValue &hv) = 0;
   virtual void accept(SymbolID sym) = 0;
@@ -94,11 +93,6 @@ struct RootAndSlotAcceptorWithNames : public RootAndSlotAcceptor {
     accept(reinterpret_cast<void *&>(ptr), name);
   }
 
-  void accept(BasedPointer &ptr) override final {
-    accept(ptr, nullptr);
-  }
-  virtual void accept(BasedPointer &ptr, const char *name) = 0;
-
   void accept(GCPointerBase &ptr) override final {
     accept(ptr, nullptr);
   }
@@ -135,10 +129,6 @@ struct DroppingAcceptor final : public RootAndSlotAcceptorWithNames {
   using RootAndSlotAcceptorWithNames::accept;
 
   void accept(void *&ptr, const char *) override {
-    acceptor.accept(ptr);
-  }
-
-  void accept(BasedPointer &ptr, const char *) override {
     acceptor.accept(ptr);
   }
 

@@ -1974,10 +1974,6 @@ void GenGC::sizeDiagnosticCensus() {
       diagnostic.numPointer++;
     }
 
-    void accept(BasedPointer &ptr) override {
-      diagnostic.numPointer++;
-    }
-
     void accept(GCPointerBase &ptr) override {
       diagnostic.numPointer++;
     }

@@ -26,9 +26,6 @@ class SkipWeakRefsAcceptor final : public SlotAcceptor {
  public:
   SkipWeakRefsAcceptor(GC &gc, TargetAcceptor *acceptor)
       : acceptor_(acceptor) {}
-  void accept(BasedPointer &ptr) override {
-    acceptor_->accept(ptr);
-  }
   void accept(GCPointerBase &ptr) override {
     acceptor_->accept(ptr);
   }

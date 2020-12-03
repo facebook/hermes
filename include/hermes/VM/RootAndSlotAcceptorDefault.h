@@ -25,7 +25,7 @@ struct RootAndSlotAcceptorDefault : public RootAndSlotAcceptor {
 
   using RootAndSlotAcceptor::accept;
 
-  inline void accept(BasedPointer &ptr) override;
+  virtual void accept(BasedPointer &ptr);
 
   void accept(GCPointerBase &ptr) override final {
     accept(ptr.getLoc(&gc));
@@ -58,7 +58,7 @@ struct RootAndSlotAcceptorWithNamesDefault
 
   using RootAndSlotAcceptorWithNames::accept;
 
-  void accept(BasedPointer &ptr, const char *name) override {
+  void accept(BasedPointer &ptr, const char *name) {
     // See comments in RootAndSlotAcceptorDefault::accept(BasedPointer &) for
     // explanation.
     if (!ptr) {
