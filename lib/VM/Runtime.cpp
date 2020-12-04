@@ -753,7 +753,7 @@ void Runtime::unmarkSymbols() {
 }
 
 void Runtime::freeSymbols(const llvh::BitVector &markedSymbols) {
-  identifierTable_.freeUnmarkedSymbols(markedSymbols);
+  identifierTable_.freeUnmarkedSymbols(markedSymbols, heap_.getIDTracker());
 }
 
 #ifdef HERMES_SLOW_DEBUG

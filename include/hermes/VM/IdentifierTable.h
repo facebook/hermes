@@ -165,7 +165,9 @@ class IdentifierTable {
   void unmarkSymbols();
 
   /// Invoked at the end of a GC to free all unmarked symbols.
-  void freeUnmarkedSymbols(const llvh::BitVector &markedSymbols);
+  void freeUnmarkedSymbols(
+      const llvh::BitVector &markedSymbols,
+      GC::IDTracker &gc);
 
 #ifdef HERMES_SLOW_DEBUG
   /// \return true if the given symbol is a live entry in the identifier

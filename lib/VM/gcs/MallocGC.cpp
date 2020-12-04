@@ -292,9 +292,6 @@ void MallocGC::collect(std::string cause) {
     resetWeakReferences();
     // Free the unused symbols.
     gcCallbacks_->freeSymbols(acceptor.markedSymbols_);
-    if (idTracker_.isTrackingIDs()) {
-      idTracker_.untrackUnmarkedSymbols(acceptor.markedSymbols_);
-    }
     // By the end of the marking loop, all pointers left in pointers_ are dead.
     for (CellHeader *header : pointers_) {
 #ifndef HERMESVM_SANITIZE_HANDLES

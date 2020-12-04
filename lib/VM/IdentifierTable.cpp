@@ -518,7 +518,8 @@ void IdentifierTable::unmarkSymbols() {
 }
 
 void IdentifierTable::freeUnmarkedSymbols(
-    const llvh::BitVector &markedSymbols) {
+    const llvh::BitVector &markedSymbols,
+    GC::IDTracker &tracker) {
   assert(
       markedSymbols.size() <= lookupVector_.size() &&
       "Size of markedSymbols must be less than the current lookupVector");
@@ -529,6 +530,7 @@ void IdentifierTable::freeUnmarkedSymbols(
   // Flip and find set bits, which will correspond to symbols that weren't
   // marked.
   markedSymbols_.flip();
+  const bool isTrackingIDs = tracker.isTrackingIDs();
   const uint32_t markedSymbolsSize = markedSymbols.size();
   for (const uint32_t i : markedSymbols_.set_bits()) {
     // Don't check any bits after the passed-in bits, which represent the number
@@ -538,8 +540,12 @@ void IdentifierTable::freeUnmarkedSymbols(
     }
     // We never free StringPrimitives that are materialized from a lazy
     // identifier.
-    if (lookupVector_[i].isNonLazyStringPrim())
+    if (lookupVector_[i].isNonLazyStringPrim()) {
+      if (isTrackingIDs) {
+        tracker.untrackSymbol(i);
+      }
       freeSymbol(i);
+    }
   }
   markedSymbols_.reset();
 }

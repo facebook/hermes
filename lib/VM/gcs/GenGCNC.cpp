@@ -377,9 +377,6 @@ void GenGC::collect(std::string cause, bool canEffectiveOOM) {
         /* youngGenIsEmpty */ youngGen_.usedDirect() == 0);
 
     gcCallbacks_->freeSymbols(markedSymbols_);
-    if (idTracker_.isTrackingIDs()) {
-      idTracker_.untrackUnmarkedSymbols(markedSymbols_);
-    }
 
     // Update the exponential weighted average of live size, which we'll
     // consult if we need to shrink the heap.

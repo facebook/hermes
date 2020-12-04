@@ -916,20 +916,6 @@ void GCBase::IDTracker::deserialize(Deserializer &d) {
 }
 #endif
 
-void GCBase::IDTracker::untrackUnmarkedSymbols(
-    const llvh::BitVector &markedSymbols) {
-  std::lock_guard<Mutex> lk{mtx_};
-  std::vector<uint32_t> toUntrack;
-  for (const auto &pair : symbolIDMap_) {
-    if (!markedSymbols.test(pair.first)) {
-      toUntrack.push_back(pair.first);
-    }
-  }
-  for (uint32_t symIdx : toUntrack) {
-    symbolIDMap_.erase(symIdx);
-  }
-}
-
 HeapSnapshot::NodeID GCBase::IDTracker::getNumberID(double num) {
   std::lock_guard<Mutex> lk{mtx_};
   auto &numberRef = numberIDMap_[num];

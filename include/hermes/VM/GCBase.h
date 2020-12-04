@@ -543,10 +543,9 @@ class GCBase {
     /// tracking working set small.
     inline void untrackObject(const void *cell);
 
-    /// For a symbol index \p i, \p markedSymbols[i] indicates whether
-    /// the symbol was reachable in a GC.  Untrack all symbols whose
-    /// index is not marked.
-    void untrackUnmarkedSymbols(const llvh::BitVector &markedSymbols);
+    /// Remove the symbol from being tracked. This needs to be done to allow
+    /// symbols to be re-used.
+    inline void untrackSymbol(uint32_t symIdx);
 
     /// Remove the native memory from being tracked. This should be done to keep
     /// the tracking working set small. It is also required to be done when
@@ -1665,6 +1664,11 @@ inline void GCBase::IDTracker::untrackNative(const void *mem) {
   // Since native memory and heap memory share the same map, this is the same
   // as untracking an object.
   untrackObject(mem);
+}
+
+inline void GCBase::IDTracker::untrackSymbol(uint32_t symIdx) {
+  std::lock_guard<Mutex> lk{mtx_};
+  symbolIDMap_.erase(symIdx);
 }
 
 inline const GCExecTrace &GCBase::getGCExecTrace() const {
