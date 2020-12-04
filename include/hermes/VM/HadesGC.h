@@ -84,6 +84,13 @@ class HadesGC final : public GCBase {
   void getHeapInfoWithMallocSize(HeapInfo &info) override;
   void getCrashManagerHeapInfo(CrashManager::HeapInformation &info) override;
   void createSnapshot(llvh::raw_ostream &os) override;
+  void enableHeapProfiler(
+      std::function<void(
+          uint64_t,
+          std::chrono::microseconds,
+          std::vector<GCBase::AllocationLocationTracker::HeapStatsUpdate>)>
+          fragmentCallback) override;
+  void disableHeapProfiler() override;
   void printStats(JSONEmitter &json) override;
 
   /// \}

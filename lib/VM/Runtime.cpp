@@ -2242,11 +2242,11 @@ void Runtime::enableAllocationLocationTracker(
     stackTracesTree_ = make_unique<StackTracesTree>();
   }
   stackTracesTree_->syncWithRuntimeStack(this);
-  heap_.getAllocationLocationTracker().enable(std::move(fragmentCallback));
+  heap_.enableHeapProfiler(std::move(fragmentCallback));
 }
 
 void Runtime::disableAllocationLocationTracker(bool clearExistingTree) {
-  heap_.getAllocationLocationTracker().disable();
+  heap_.disableHeapProfiler();
   if (clearExistingTree) {
     stackTracesTree_.reset();
   }

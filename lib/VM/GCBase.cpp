@@ -536,6 +536,19 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
   snap.endSection(HeapSnapshot::Section::Locations);
 }
 
+void GCBase::enableHeapProfiler(
+    std::function<void(
+        uint64_t,
+        std::chrono::microseconds,
+        std::vector<GCBase::AllocationLocationTracker::HeapStatsUpdate>)>
+        fragmentCallback) {
+  getAllocationLocationTracker().enable(std::move(fragmentCallback));
+}
+
+void GCBase::disableHeapProfiler() {
+  getAllocationLocationTracker().disable();
+}
+
 void GCBase::checkTripwire(size_t dataSize) {
   if (LLVM_LIKELY(!tripwireCallback_) ||
       LLVM_LIKELY(dataSize < tripwireLimit_) || tripwireCalled_) {
@@ -905,6 +918,7 @@ void GCBase::IDTracker::deserialize(Deserializer &d) {
 
 void GCBase::IDTracker::untrackUnmarkedSymbols(
     const llvh::BitVector &markedSymbols) {
+  std::lock_guard<Mutex> lk{mtx_};
   std::vector<uint32_t> toUntrack;
   for (const auto &pair : symbolIDMap_) {
     if (!markedSymbols.test(pair.first)) {
@@ -917,6 +931,7 @@ void GCBase::IDTracker::untrackUnmarkedSymbols(
 }
 
 HeapSnapshot::NodeID GCBase::IDTracker::getNumberID(double num) {
+  std::lock_guard<Mutex> lk{mtx_};
   auto &numberRef = numberIDMap_[num];
   // If the entry didn't exist, the value was initialized to 0.
   if (numberRef != 0) {
@@ -992,6 +1007,8 @@ void GCBase::AllocationLocationTracker::newAlloc(const void *ptr, uint32_t sz) {
       flushCallback();
     }
     if (auto node = gc_->gcCallbacks_->getCurrentStackTracesTreeNode(ip)) {
+      // Hold a lock while modifying stackMap_.
+      std::lock_guard<Mutex> lk{mtx_};
       auto itAndDidInsert = stackMap_.try_emplace(ptr, node);
       assert(itAndDidInsert.second && "Failed to create a new node");
       (void)itAndDidInsert;
@@ -1006,6 +1023,9 @@ void GCBase::AllocationLocationTracker::moveAlloc(
     // This can happen in old generations when compacting to the same location.
     return;
   }
+  // Hold a lock in case concurrent Hades tries to free an alloc at the same
+  // time.
+  std::lock_guard<Mutex> lk{mtx_};
   auto oldIt = stackMap_.find(oldPtr);
   if (oldIt == stackMap_.end()) {
     // This can happen if the tracker is turned on between collections, and
@@ -1023,6 +1043,9 @@ void GCBase::AllocationLocationTracker::moveAlloc(
 void GCBase::AllocationLocationTracker::freeAlloc(
     const void *ptr,
     uint32_t sz) {
+  // Hold a lock during freeAlloc because concurrent Hades might be creating an
+  // alloc (newAlloc) at the same time.
+  std::lock_guard<Mutex> lk{mtx_};
   stackMap_.erase(ptr);
   if (!enabled_) {
     // Fragments won't exist if the heap profiler isn't enabled.

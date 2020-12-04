@@ -900,10 +900,6 @@ bool HadesGC::OldGen::sweepNext() {
     // Cell is dead, run its finalizer first if it has one.
     cell->getVT()->finalizeIfExists(cell, gc_);
     if (isTracking) {
-      // FIXME: There could be a race condition here if newAlloc is
-      // being called at the same time and using a shared data structure
-      // with freeAlloc. freeAlloc relies on the ID, so call it before
-      // untrackObject.
       gc_->getAllocationLocationTracker().freeAlloc(cell, sz);
       gc_->getIDTracker().untrackObject(cell);
     }
@@ -1083,6 +1079,25 @@ void HadesGC::createSnapshot(llvh::raw_ostream &os) {
     WeakRefLock lk{weakRefMutex()};
     GCBase::createSnapshot(this, os);
   }
+}
+
+void HadesGC::enableHeapProfiler(
+    std::function<void(
+        uint64_t,
+        std::chrono::microseconds,
+        std::vector<GCBase::AllocationLocationTracker::HeapStatsUpdate>)>
+        fragmentCallback) {
+  std::lock_guard<Mutex> lk{gcMutex_};
+  // Let any existing collections complete before enabling the profiler.
+  waitForCollectionToFinish();
+  GCBase::enableHeapProfiler(std::move(fragmentCallback));
+}
+
+void HadesGC::disableHeapProfiler() {
+  std::lock_guard<Mutex> lk{gcMutex_};
+  // Let any existing collections complete before disabling the profiler.
+  waitForCollectionToFinish();
+  GCBase::disableHeapProfiler();
 }
 
 void HadesGC::printStats(JSONEmitter &json) {
