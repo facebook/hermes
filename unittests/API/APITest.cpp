@@ -48,6 +48,7 @@ class HermesRuntimeTest : public HermesRuntimeTestBase {
       : HermesRuntimeTestBase(::hermes::vm::RuntimeConfig::Builder()
                                   .withES6Proxy(true)
                                   .withES6Promise(true)
+                                  .withES6Intl(true)
                                   .build()) {}
 };
 
@@ -494,6 +495,7 @@ class HermesRuntimeTestWithAllowFunctionToString
             ::hermes::vm::RuntimeConfig::Builder()
                 .withES6Proxy(true)
                 .withES6Promise(true)
+                .withES6Intl(true)
                 .withAllowFunctionToStringWithRuntimeSource(true)
                 .build()) {}
 };

@@ -41,6 +41,7 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
     "ES6Promise": true,
     "ES6Proxy": false,
     "ES6Symbol": false,
+    "ES6Intl": false,
     "enableSampledStats": true,
     "vmExperimentFlags": 123
   },
@@ -76,6 +77,7 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
   EXPECT_FALSE(rtconf.getES6Promise());
   EXPECT_TRUE(rtconf.getES6Proxy());
   EXPECT_FALSE(rtconf.getES6Symbol());
+  EXPECT_FALSE(rtconf.getES6Intl());
   EXPECT_TRUE(rtconf.getEnableSampledStats());
   EXPECT_EQ(rtconf.getVMExperimentFlags(), 123);
 

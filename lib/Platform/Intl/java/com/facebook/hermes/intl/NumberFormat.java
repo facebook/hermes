@@ -12,6 +12,7 @@ import static com.facebook.hermes.intl.IPlatformNumberFormatter.Style.PERCENT;
 import static com.facebook.hermes.intl.IPlatformNumberFormatter.Style.UNIT;
 
 import android.os.Build;
+import com.facebook.proguard.annotations.DoNotStrip;
 import java.text.AttributedCharacterIterator;
 import java.text.CharacterIterator;
 import java.util.ArrayList;
@@ -31,6 +32,7 @@ import java.util.Map;
  *
  * <p>Also see the implementer' notes on DateTimeFormat.java.
  */
+@DoNotStrip
 public class NumberFormat {
   // options are localeMatcher:string, numberingSystem:string, notation:string,
   // compactDisplay:string, useGrouping:string, signDisplay:string
@@ -478,6 +480,7 @@ public class NumberFormat {
             IPlatformNumberFormatter.SignDisplay.class, JSObjects.getJavaString(signDisplay));
   }
 
+  @DoNotStrip
   public NumberFormat(List<String> locales, Map<String, Object> options)
       throws JSRangeErrorException {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
@@ -512,7 +515,7 @@ public class NumberFormat {
   //
   // The notes on DateTimeFormat#DateTimeFormat() for Locales and
   // Options also apply here.
-  @SuppressWarnings("unused")
+  @DoNotStrip
   public static List<String> supportedLocalesOf(List<String> locales, Map<String, Object> options)
       throws JSRangeErrorException {
     String matcher =
@@ -535,7 +538,7 @@ public class NumberFormat {
   // https://tc39.es/ecma402/#sec-intl.numberformat.prototype.resolvedoptions
   //
   // Also see the implementer notes on DateTimeFormat#resolvedOptions()
-  @SuppressWarnings("unused")
+  @DoNotStrip
   public Map<String, Object> resolvedOptions() throws JSRangeErrorException {
 
     HashMap<String, Object> finalResolvedOptions = new LinkedHashMap<>();
@@ -588,14 +591,14 @@ public class NumberFormat {
 
   // Implementer note: This method corresponds roughly to
   // https://tc39.es/ecma402/#sec-formatnumber
-  @SuppressWarnings("unused")
+  @DoNotStrip
   public String format(double n) throws JSRangeErrorException {
     return mPlatformNumberFormatter.format(n);
   }
 
   // Implementer note: This method corresponds roughly to
   // https://tc39.es/ecma402/#sec-formatnumbertoparts
-  @SuppressWarnings("unused")
+  @DoNotStrip
   public List<Map<String, String>> formatToParts(double n) throws JSRangeErrorException {
     ArrayList<Map<String, String>> parts = new ArrayList<>();
 
