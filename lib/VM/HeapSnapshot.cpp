@@ -119,6 +119,8 @@ void HeapSnapshot::endNode(
   json_.emitValue(selfSize);
   json_.emitValue(currEdgeCount_);
   json_.emitValue(traceNodeID);
+  // detachedness is always zero for hermes, since there's no DOM to attach to.
+  json_.emitValue(0);
 #ifndef NDEBUG
   expectedEdges_ += currEdgeCount_;
 #endif
