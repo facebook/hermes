@@ -1,4 +1,4 @@
-package com.facebook.hermes.intltest;
+package com.facebook.hermes.intltestapp;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -7,7 +7,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.os.Handler;
 import android.text.Html;
 import android.util.Pair;
 import android.view.KeyEvent;
@@ -30,7 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 
-public class MainActivity extends Activity {
+public class REPLActivity extends Activity {
 
     private ListView mScriptListView;
     private EditText mScriptEditText;
@@ -42,10 +41,10 @@ public class MainActivity extends Activity {
     @DoNotStrip
     private HybridData mHybridData;
 
-    private static MainActivity sActivity = null; // UGLY !
+    private static REPLActivity sActivity = null; // UGLY !
 
     static {
-        System.loadLibrary("jsijniapp");
+        System.loadLibrary("hermesreplapp");
     }
 
     class CustomAdapter extends BaseAdapter {
@@ -228,7 +227,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_repl);
 
         SoLoader.init(this, false);
         mHybridData = initHybrid();

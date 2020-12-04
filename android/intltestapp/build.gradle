@@ -5,168 +5,195 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// To run intltests, cd hermes/android and run:
-//   ./gradlew intl:connectedAndroidTest
-
 plugins {
-  id('com.android.application')
-  id("de.undercouch.download")
+    id('com.android.application')
 }
-
-import de.undercouch.gradle.tasks.download.Download
 
 buildDir = "${rootProject.ext.hermes_ws}/build_android/intltestapp"
 buildDir.mkdirs()
 
-def test262DownloadsDirPath = "${rootProject.ext.hermes_ws}/build_android/intltest/downloads/test262"
-def test262Destination = "${rootProject.ext.hermes_ws}/hermes/android/intltest/java/com/facebook/hermes/test/assets"
-task createDownloadsDir {
-  new File(test262DownloadsDirPath).mkdirs()
-}
+// Note: Set it to "nointl" to use hermes libraries without intl. (This is ugly !)
+def libintlmode = "intl"
 
-task downloadTest262(dependsOn: createDownloadsDir, type: Download) {
-  src("https://github.com/tc39/test262/archive/main.zip")
-  onlyIfNewer(true)
-  overwrite(true)
-  dest(new File(test262DownloadsDirPath, "test262.zip"))
-}
-
-task preparetest262(dependsOn: downloadTest262, type: Copy) {
-  from(zipTree(downloadTest262.dest))
-  include("test262-main/test/intl402/Collator/**/*.js")
-  include("test262-main/test/intl402/DateTimeFormat/**/*.js")
-  include("test262-main/test/intl402/NumberFormat/**/*.js")
-  include("test262-main/test/intl402/String/**/*.js")
-  include("test262-main/test/intl402/Number/**/*.js")
-  include("test262-main/test/intl402/Array/**/*.js")
-  include("test262-main/test/intl402/Date/**/*.js")
-  include("test262-main/test/intl402/Intl/**/*.js")
-  include("test262-main/harness/*.js")
-  includeEmptyDirs = true
-  into(test262Destination)
-}
-
-// TODO: Figure out how to deduplicate this file and intl/build.gradle
 android {
-  compileSdkVersion 28
 
-  defaultConfig {
-    minSdkVersion 16
-    ndk {
-      abiFilters (*rootProject.ext.abis)
+    compileSdkVersion 28
+
+    defaultConfig {
+        minSdkVersion 16
+
+        externalNativeBuild {
+            cmake {
+                arguments "-DHERMES_IS_ANDROID=True"
+                arguments "-DHERMES_FACEBOOK_BUILD=${rootProject.ext.facebookBuild}"
+                arguments "-DANDROID_STL=c++_shared"
+                arguments "-DANDROID_PIE=True"
+                arguments "-DIMPORT_HERMESC=${rootProject.ext.hermesC}"
+                arguments "-DFBSOURCE_DIR=${rootProject.ext.fbsource}"
+                arguments "-DHERMES_SLOW_DEBUG=False"
+            }
+        }
     }
-    testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
 
-    ndk {
-      abiFilters (*rootProject.ext.abis)
+    splits {
+
+        // Configures multiple APKs based on ABI.
+        abi {
+
+            // Enables building multiple APKs per ABI.
+            enable true
+
+            // By default all ABIs are included, so use reset() and include to specify that we only
+            // want APKs for x86 and x86_64.
+
+            // Resets the list of ABIs that Gradle should create APKs for to none.
+            reset()
+
+            // Specifies a list of ABIs that Gradle should create APKs for.
+            include "x86" , "x86_64", "armeabi-v7a", "arm64-v8a"
+
+            // Specifies that we do not want to also generate a universal APK that includes all ABIs.
+            universalApk false
+        }
     }
-  }
 
-  signingConfigs {
-    debug {
-      storeFile file('debug.keystore')
-      storePassword 'android'
-      keyAlias 'androiddebugkey'
-      keyPassword 'android'
-    }
-  }
-
-  buildTypes {
+    signingConfigs {
         debug {
-          applicationIdSuffix ".debug"
-          debuggable true
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix ".debug"
+            debuggable true
         }
 
         release {
-          debuggable false
-          signingConfig signingConfigs.debug
-          minifyEnabled true
-          proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            debuggable false
+            signingConfig signingConfigs.debug
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
 
-  externalNativeBuild {
-    cmake {
-      version "3.6.0"
-      path "../../CMakeLists.txt"
-      buildStagingDirectory = "${rootProject.ext.hermes_ws}/staging/intltestapp"
-      buildStagingDirectory.mkdirs()
-    }
-  }
-
-  flavorDimensions "featureset"
-  productFlavors  {
-    nointl {
-      dimension "featureset"
-      applicationIdSuffix ".vanilla"
-      versionNameSuffix "-vanilla"
-
-      externalNativeBuild {
+    externalNativeBuild {
         cmake {
-          arguments "-DHERMES_IS_ANDROID=True"
-          arguments "-DHERMES_FACEBOOK_BUILD=${rootProject.ext.facebookBuild}"
-          arguments "-DANDROID_STL=c++_shared"
-          arguments "-DANDROID_PIE=True"
-          arguments "-DIMPORT_HERMESC=${rootProject.ext.hermesC}"
-          arguments "-DFBSOURCE_DIR=${rootProject.ext.fbsource}"
-          arguments "-DHERMES_SLOW_DEBUG=False"
-          arguments "-DHERMES_ENABLE_INTL=False"
-          targets "jsijniapp"
+            version "3.6.0"
+            path "../../CMakeLists.txt"
+            buildStagingDirectory = "${rootProject.ext.hermes_ws}/staging/intltestapp"
+            buildStagingDirectory.mkdirs()
         }
-      }
     }
-    intl {
-      isDefault true
-      dimension "featureset"
-      applicationIdSuffix ".intl"
-      versionNameSuffix "-intl"
 
-      externalNativeBuild {
-        cmake {
-          arguments "-DHERMES_IS_ANDROID=True"
-          arguments "-DHERMES_FACEBOOK_BUILD=${rootProject.ext.facebookBuild}"
-          arguments "-DANDROID_STL=c++_shared"
-          arguments "-DANDROID_PIE=True"
-          arguments "-DIMPORT_HERMESC=${rootProject.ext.hermesC}"
-          arguments "-DFBSOURCE_DIR=${rootProject.ext.fbsource}"
-          arguments "-DHERMES_SLOW_DEBUG=False"
-          arguments "-DHERMES_ENABLE_INTL=True"
-          targets "jsijniapp"
+    flavorDimensions "featureset"
+    productFlavors {
+        nointl {
+            dimension "featureset"
+            applicationIdSuffix ".vanilla"
+            versionNameSuffix "-vanilla"
+
+            externalNativeBuild {
+                cmake {
+                    arguments "-DHERMES_ENABLE_INTL=False"
+                    targets "hermesreplapp"
+                }
+            }
         }
-      }
+
+        intl {
+            dimension "featureset"
+            applicationIdSuffix ".intl"
+            versionNameSuffix "-intl"
+
+            externalNativeBuild {
+                cmake {
+                    arguments "-DHERMES_ENABLE_INTL=True"
+                    targets "hermesreplapp"
+                }
+            }
+        }
+
+        // Intl APIs enabled. But, consumes hermes libraries as dependencies instead of building hermes and test app code together.
+        libintl {
+            dimension "featureset"
+            applicationIdSuffix ".libintl"
+            versionNameSuffix "-libintl"
+
+            externalNativeBuild {
+                cmake {
+                    arguments "-DINTLTESTAPP_MODE=${libintlmode}"
+                    targets "hermesevalapp"
+                }
+            }
+        }
+
+
+        // Intl APIs enabled. But, consumes hermes libraries as dependencies instead of building hermes and test app code together.
+        libnointl {
+            dimension "featureset"
+            applicationIdSuffix ".libnointl"
+            versionNameSuffix "-libnointl"
+
+            externalNativeBuild {
+                cmake {
+                    arguments "-DINTLTESTAPP_MODE=${libintlmode}"
+                    targets "hermesevalapp"
+                }
+            }
+        }
     }
-  }
 
-  dependencies {
-    implementation 'com.facebook.fbjni:fbjni:0.0.2'
-    implementation 'com.facebook.soloader:soloader:0.9.0'
-    implementation 'com.facebook.yoga:proguard-annotations:1.14.1'
-    implementation 'com.google.code.gson:gson:2.8.6'
-  }
-
-  dependencies {
-    implementation "androidx.annotation:annotation:1.1.0"
-    implementation "androidx.annotation:annotation-experimental:1.0.0"
-  }
-
-  sourceSets {
-    main {
-      java {
-        srcDirs = [
-          "java",
-          // Include AndroidUnicodeUtils, which would normally come from RN
-          "${rootProject.ext.hermes_ws}/hermes/lib/Platform/Unicode/java",
-          "${rootProject.ext.hermes_ws}/hermes/lib/Platform/Intl/java",
-        ]
-      }
-      resources {
-        srcDir "java/com/facebook/hermes/test"
-      }
+    sourceSets {
+        intl {
+            java {
+                srcDirs = [
+                        "java",
+                        "${rootProject.ext.hermes_ws}/hermes/lib/Platform/Intl/java",
+                ]
+            }
+        }
+        nointl {
+            java {
+                srcDirs = [
+                        "java",
+                ]
+            }
+        }
+        libintl {
+            java {
+                srcDirs = [
+                        "java",
+                ]
+            }
+        }
+        libnointl {
+            java {
+                srcDirs = [
+                        "java",
+                ]
+            }
+        }
     }
-  }
-}
 
-dependencies {
-  implementation 'androidx.appcompat:appcompat:1.2.0'
-  implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
+    repositories {
+        flatDir {
+            // dirs "${hermes_ws}/build_android/outputs/"
+            dirs "${hermes_ws}/build_android/distributions/hermes-runtime-android-${libintlmode}"
+        }
+    }
+
+    dependencies {
+        libintlImplementation(name: 'hermes-release', ext: 'aar')
+        libnointlImplementation(name: 'hermes-release', ext: 'aar')
+
+        implementation 'com.facebook.soloader:soloader:0.9.0'
+        implementation 'com.facebook.fbjni:fbjni:0.0.2'
+        implementation 'com.facebook.yoga:proguard-annotations:1.14.1'
+        implementation 'com.google.code.gson:gson:2.8.6'
+        implementation "androidx.annotation:annotation:1.1.0"
+    }
 }

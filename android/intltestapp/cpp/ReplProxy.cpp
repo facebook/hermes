@@ -8,21 +8,22 @@
 using namespace ::facebook;
 using namespace ::hermes;
 
-struct ReplWrapper : facebook::jni::HybridClass<ReplWrapper> {
+struct ReplProxy : facebook::jni::HybridClass<ReplProxy> {
 
-    static constexpr auto kJavaDescriptor = "Lcom/facebook/hermes/intltest/MainActivity;";
+    static constexpr auto kJavaDescriptor = "Lcom/facebook/hermes/intltestapp/REPLActivity;";
 
     std::shared_ptr<vm::Runtime> mRuntime;
 
     static void registerNatives() {
         javaClassStatic()->registerNatives({
                                                    makeNativeMethod("initHybrid",
-                                                                    ReplWrapper::initHybrid),
+                                                           ReplProxy::initHybrid),
                                                    makeNativeMethod("nativeEvalScript",
-                                                                    ReplWrapper::nativeEvalScript),
+                                                           ReplProxy::nativeEvalScript),
                                                    makeNativeMethod("nativeCollect",
-                                                                    ReplWrapper::nativeCollect),
-                                                   makeNativeMethod("nativeHeapStats", ReplWrapper::nativeHeapStats)
+                                                           ReplProxy::nativeCollect),
+                                                   makeNativeMethod("nativeHeapStats",
+                                                           ReplProxy::nativeHeapStats)
                                            });
     }
 
@@ -37,7 +38,7 @@ struct ReplWrapper : facebook::jni::HybridClass<ReplWrapper> {
         method(javaClassStatic(), facebook::jni::make_jstring(info));
     }
 
-    ReplWrapper() {
+    ReplProxy() {
         vm::RuntimeConfig config = vm::RuntimeConfig::Builder()
                 .withGCConfig(
                         vm::GCConfig::Builder()
@@ -67,7 +68,7 @@ struct ReplWrapper : facebook::jni::HybridClass<ReplWrapper> {
 
     }
 
-    static jni::local_ref<ReplWrapper::jhybriddata> initHybrid(jni::alias_ref<jclass>) {
+    static jni::local_ref<ReplProxy::jhybriddata> initHybrid(jni::alias_ref<jclass>) {
         return makeCxxInstance();
     }
 
@@ -172,6 +173,6 @@ struct ReplWrapper : facebook::jni::HybridClass<ReplWrapper> {
 
 extern "C" jint JNIEXPORT JNICALL JNI_OnLoad(JavaVM *jvm, void *reserved) {
     return facebook::jni::initialize(jvm, [] {
-        ReplWrapper::registerNatives();
+        ReplProxy::registerNatives();
     });
 }
