@@ -387,6 +387,13 @@ static opt<bool> IncludeEmptyASTNodes(
     Hidden,
     cat(CompilerCategory));
 
+static opt<bool> IncludeRawASTProp(
+    "Xinclude-raw-ast-prop",
+    desc("Print the 'raw' AST property, when available."),
+    init(true),
+    Hidden,
+    cat(CompilerCategory));
+
 static opt<bool> DumpBetweenPasses(
     "Xdump-between-passes",
     init(false),
@@ -802,7 +809,9 @@ ESTree::NodePtr parseJS(
         cl::IncludeEmptyASTNodes ? ESTreeDumpMode::DumpAll
                                  : ESTreeDumpMode::HideEmpty,
         context->getSourceErrorManager(),
-        cl::DumpSourceLocation);
+        cl::DumpSourceLocation,
+        cl::IncludeRawASTProp ? ESTreeRawProp::Include
+                              : ESTreeRawProp::Exclude);
     return parsedAST;
   }
 
@@ -818,7 +827,9 @@ ESTree::NodePtr parseJS(
         cl::IncludeEmptyASTNodes ? ESTreeDumpMode::DumpAll
                                  : ESTreeDumpMode::HideEmpty,
         context->getSourceErrorManager(),
-        cl::DumpSourceLocation);
+        cl::DumpSourceLocation,
+        cl::IncludeRawASTProp ? ESTreeRawProp::Include
+                              : ESTreeRawProp::Exclude);
   }
 
   return parsedAST;
