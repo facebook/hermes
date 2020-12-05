@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -dump-ast %s | %FileCheck --match-full-lines %s
-// RUN: %hermes -dump-ast -pretty-json %s | %FileCheck --match-full-lines %s --check-prefix=CHECK-PRETTY
-// RUN: %hermes -dump-ast -dump-source-location=both -pretty-json %s | %FileCheck --match-full-lines %s --check-prefix=CHECK-SOURCE-LOC
+// RUN: %hermes -dump-ast -pretty=0 %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -dump-ast -pretty %s | %FileCheck --match-full-lines %s --check-prefix=CHECK-PRETTY
+// RUN: %hermes -dump-ast -dump-source-location=both -pretty %s | %FileCheck --match-full-lines %s --check-prefix=CHECK-SOURCE-LOC
 // RUN: %hermes -dump-ast -Xinclude-empty-ast-nodes -pretty-json %s | %FileCheck --match-full-lines %s --check-prefix=CHECK-FULL
 
 function foo() {

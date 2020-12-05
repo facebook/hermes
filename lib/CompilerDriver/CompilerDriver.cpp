@@ -219,17 +219,22 @@ static opt<OutputFormatKind> DumpTarget(
         clEnumValN(EmitBundle, "emit-binary", "Emit compiled binary")),
     cat(CompilerCategory));
 
-static opt<bool> PrettyJSON(
-    "pretty-json",
-    init(false),
-    desc("Pretty print the JSON AST"),
+static opt<bool> Pretty(
+    "pretty",
+    init(true),
+    desc("Pretty print JSON or disassembled bytecode"),
     cat(CompilerCategory));
 
-static opt<bool> PrettyDisassemble(
+static llvh::cl::alias _PrettyJSON(
+    "pretty-json",
+    desc("Alias for --pretty"),
+    Hidden,
+    llvh::cl::aliasopt(Pretty));
+static llvh::cl::alias _PrettyDisassemble(
     "pretty-disassemble",
-    init(true),
-    desc("Pretty print the disassembled bytecode"),
-    cat(CompilerCategory));
+    desc("Alias for --pretty"),
+    Hidden,
+    llvh::cl::aliasopt(Pretty));
 
 /// Unused option kept for backwards compatibility.
 static opt<bool> unused_HermesParser(
@@ -793,7 +798,7 @@ ESTree::NodePtr parseJS(
     hermes::dumpESTreeJSON(
         llvh::outs(),
         parsedAST,
-        cl::PrettyJSON /* pretty */,
+        cl::Pretty /* pretty */,
         cl::IncludeEmptyASTNodes ? ESTreeDumpMode::DumpAll
                                  : ESTreeDumpMode::HideEmpty,
         context->getSourceErrorManager(),
@@ -809,7 +814,7 @@ ESTree::NodePtr parseJS(
     hermes::dumpESTreeJSON(
         llvh::outs(),
         parsedAST,
-        cl::PrettyJSON /* pretty */,
+        cl::Pretty /* pretty */,
         cl::IncludeEmptyASTNodes ? ESTreeDumpMode::DumpAll
                                  : ESTreeDumpMode::HideEmpty,
         context->getSourceErrorManager(),
@@ -1509,7 +1514,7 @@ CompileResult disassembleBytecode(std::unique_ptr<hbc::BCProvider> bytecode) {
     return OutputFileError;
   }
 
-  hbc::DisassemblyOptions disassemblyOptions = cl::PrettyDisassemble
+  hbc::DisassemblyOptions disassemblyOptions = cl::Pretty
       ? hbc::DisassemblyOptions::Pretty
       : hbc::DisassemblyOptions::None;
   hbc::BytecodeDisassembler disassembler(std::move(bytecode));
@@ -1807,7 +1812,7 @@ CompileResult processSourceFiles(
 
   BytecodeGenerationOptions genOptions{cl::DumpTarget};
   genOptions.optimizationEnabled = cl::OptimizationLevel > cl::OptLevel::Og;
-  genOptions.prettyDisassemble = cl::PrettyDisassemble;
+  genOptions.prettyDisassemble = cl::Pretty;
   genOptions.basicBlockProfiling = cl::BasicBlockProfiling;
   // The static builtin setting should be set correctly after command line
   // options parsing and js parsing. Set the bytecode header flag here.
