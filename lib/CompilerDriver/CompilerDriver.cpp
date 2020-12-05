@@ -11,6 +11,7 @@
 #include "hermes/AST/Context.h"
 #include "hermes/AST/ESTreeJSONDumper.h"
 #include "hermes/AST/SemValidate.h"
+#include "hermes/AST2JS/AST2JS.h"
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/RegAlloc.h"
@@ -201,6 +202,11 @@ static opt<OutputFormatKind> DumpTarget(
             DumpTransformedAST,
             "dump-transformed-ast",
             "Dump the transformed AST as text after validation"),
+        clEnumValN(DumpJS, "dump-js", "Dump the AST as JS"),
+        clEnumValN(
+            DumpTransformedJS,
+            "dump-transformed-js",
+            "Dump the transformed AST as JS after validation"),
 #ifndef NDEBUG
         clEnumValN(ViewCFG, "view-cfg", "View the CFG."),
 #endif
@@ -222,7 +228,7 @@ static opt<OutputFormatKind> DumpTarget(
 static opt<bool> Pretty(
     "pretty",
     init(true),
-    desc("Pretty print JSON or disassembled bytecode"),
+    desc("Pretty print JSON, JS or disassembled bytecode"),
     cat(CompilerCategory));
 
 static llvh::cl::alias _PrettyJSON(
@@ -814,6 +820,10 @@ ESTree::NodePtr parseJS(
                               : ESTreeRawProp::Exclude);
     return parsedAST;
   }
+  if (cl::DumpTarget == DumpJS) {
+    hermes::generateJS(llvh::outs(), parsedAST, cl::Pretty /* pretty */);
+    return parsedAST;
+  }
 
   if (!hermes::sem::validateAST(*context, semCtx, parsedAST)) {
     return nullptr;
@@ -830,6 +840,9 @@ ESTree::NodePtr parseJS(
         cl::DumpSourceLocation,
         cl::IncludeRawASTProp ? ESTreeRawProp::Include
                               : ESTreeRawProp::Exclude);
+  }
+  if (cl::DumpTarget == DumpTransformedJS) {
+    hermes::generateJS(llvh::outs(), parsedAST, cl::Pretty /* pretty */);
   }
 
   return parsedAST;
