@@ -344,6 +344,9 @@ class JSLexer {
 
   Token token_;
 
+  /// The ending source location for the previous token produced by the lexer.
+  SMLoc prevTokenEndLoc_;
+
   const char *bufferStart_;
   const char *curCharPtr_;
   const char *bufferEnd_;
@@ -463,6 +466,11 @@ class JSLexer {
     return SMLoc::getFromPointer(curCharPtr_);
   }
 
+  /// \return the end location of the previous token.
+  SMLoc getPrevTokenEndLoc() const {
+    return prevTokenEndLoc_;
+  }
+
   /// Force an EOF at the next token.
   void forceEOF() {
     curCharPtr_ = bufferEnd_;
@@ -575,6 +583,9 @@ class JSLexer {
     /// Saved token range from the lexer.
     SMRange range_;
 
+    // Saved previous token end location from the lexer.
+    SMLoc prevTokenEndLoc_;
+
     /// Saved size of comment storage within the lexer. If we restore this save
     /// point, comments past this index should be removed from the lexer.
     size_t commentStorageSize_;
@@ -589,6 +600,7 @@ class JSLexer {
                   : nullptr),
           loc_(lexer_->getCurLoc()),
           range_(lexer_->getCurToken()->getSourceRange()),
+          prevTokenEndLoc_(lexer->getPrevTokenEndLoc()),
           commentStorageSize_(lexer_->getStoredComments().size()) {
       assert(
           (isPunctuatorDbg(kind_) || kind_ == TokenKind::identifier) &&
@@ -602,6 +614,8 @@ class JSLexer {
       } else {
         lexer_->unsafeSetPunctuator(kind_, loc_, range_);
       }
+
+      lexer_->prevTokenEndLoc_ = prevTokenEndLoc_;
 
       if (lexer_->storeComments_ &&
           commentStorageSize_ < lexer_->commentStorage_.size()) {
@@ -838,6 +852,13 @@ class JSLexer {
     token_.setIdentifier(ident);
     token_.setRange(range);
     seek(loc);
+  }
+
+  /// Finish a new token, setting the new token's end location. Also save the
+  /// previous token's end location in prevTokenEndLoc_;
+  inline void finishToken(const char *end) {
+    prevTokenEndLoc_ = token_.getEndLoc();
+    token_.setEnd(end);
   }
 
   /// Initialize the parser for a given source buffer id.

@@ -327,6 +327,10 @@ class JSParserImpl {
     return rng.End;
   }
 
+  SMLoc getPrevTokenEndLoc() const {
+    return lexer_.getPrevTokenEndLoc();
+  }
+
   /// Obtain the next token from the lexer and store it in tok_.
   /// \param grammarContext enable recognizing either "/" and "/=", or a regexp.
   /// \return the source location of the just consumed (previous) token.

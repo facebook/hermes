@@ -1188,4 +1188,35 @@ TEST(JSLexerTest, StoreCommentsTest) {
   }
 }
 
+TEST(JSLexerTest, PrevTokenEndLocTest) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext diag(sm);
+
+  {
+    JSLexer lex("var x = 1", sm, alloc);
+
+    ASSERT_EQ(TokenKind::rw_var, lex.advance()->getKind());
+    SMLoc varEndLoc = lex.getCurToken()->getEndLoc();
+
+    ASSERT_EQ(TokenKind::identifier, lex.advance()->getKind());
+    ASSERT_EQ(varEndLoc, lex.getPrevTokenEndLoc());
+    SMLoc idEndLoc = lex.getCurToken()->getEndLoc();
+
+    // Create save point at identifier
+    JSLexer::SavePoint savePoint{&lex};
+
+    ASSERT_EQ(TokenKind::equal, lex.advance()->getKind());
+    ASSERT_EQ(idEndLoc, lex.getPrevTokenEndLoc());
+    SMLoc equalEndLoc = lex.getCurToken()->getEndLoc();
+
+    ASSERT_EQ(TokenKind::numeric_literal, lex.advance()->getKind());
+    ASSERT_EQ(equalEndLoc, lex.getPrevTokenEndLoc());
+
+    // Restoring to identifier. Last token is now the var keyword.
+    savePoint.restore();
+    ASSERT_EQ(varEndLoc, lex.getPrevTokenEndLoc());
+  }
+}
+
 } // namespace
