@@ -748,7 +748,7 @@ class JSParserImpl {
   /// to call it explicitly after parsing "new.target".
   Optional<ESTree::Node *> parseOptionalExpressionExceptNew_tail(
       IsConstructorCall isConstructorCall,
-      SMLoc objectLoc,
+      SMLoc startLoc,
       ESTree::Node *expr);
 
   /// Returns a dummy Optional<> just to indicate success or failure like all
@@ -757,11 +757,13 @@ class JSParserImpl {
       ESTree::NodeList &argList,
       SMLoc &endLoc);
 
+  /// \param startLoc the start location of the expression
   /// \param objectLoc the location of the object part of the expression and is
   ///     used for error display.
   /// \param seenOptionalChain true if there was a ?. leading up to the
   ///     member select (set by parseOptionalExpressionExceptNew)
   Optional<ESTree::Node *> parseMemberSelect(
+      SMLoc startLoc,
       SMLoc objectLoc,
       ESTree::NodePtr expr,
       bool seenOptionalChain);
