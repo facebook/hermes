@@ -22,7 +22,9 @@ extern "C" {
 JSReference buildString(const char *, size_t);
 JSReference buildArray();
 void appendToArray(JSReference, JSReference);
-JSReference buildSourceLocation(int, int, int, int, int, int);
+JSReference buildSourceLocation();
+JSReference addStartPosition(JSReference, int, int, int);
+JSReference addEndPosition(JSReference, int, int, int);
 JSReference buildComment(JSReference, int, const char *, size_t);
 JSReference buildProgramWithComments(JSReference, JSReference, JSReference);
 }

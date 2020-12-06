@@ -11,7 +11,7 @@
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCPointer.h"
-#include "hermes/VM/SlotAcceptorDefault.h"
+#include "hermes/VM/RootAndSlotAcceptorDefault.h"
 
 #include <array>
 #include <functional>
@@ -235,7 +235,7 @@ class HadesGC::CollectionStats final {
   void setBeforeSizes(uint64_t allocated, uint64_t external, uint64_t sz) {
     allocatedBefore_ = allocated;
     externalBefore_ = external;
-    size_ = sz;
+    sizeBefore_ = sz;
   }
 
   /// Record how many bytes were swept during the collection.
@@ -245,6 +245,10 @@ class HadesGC::CollectionStats final {
 
   void setSweptExternalBytes(uint64_t externalBytes) {
     sweptExternalBytes_ = externalBytes;
+  }
+
+  void setAfterSize(uint64_t sz) {
+    sizeAfter_ = sz;
   }
 
   /// Record that a collection is beginning right now.
@@ -291,7 +295,8 @@ class HadesGC::CollectionStats final {
   Duration cpuDuration_{};
   uint64_t allocatedBefore_{0};
   uint64_t externalBefore_{0};
-  uint64_t size_{0};
+  uint64_t sizeBefore_{0};
+  uint64_t sizeAfter_{0};
   uint64_t sweptBytes_{0};
   uint64_t sweptExternalBytes_{0};
 };
@@ -306,15 +311,13 @@ HadesGC::CollectionStats::~CollectionStats() {
           endTime_ - beginTime_),
       std::chrono::duration_cast<std::chrono::milliseconds>(cpuDuration_),
       /*preAllocated*/ allocatedBefore_,
-      /*preSize*/ size_,
+      /*preSize*/ sizeBefore_,
       /*postAllocated*/ afterAllocatedBytes(),
-      // Hades does not currently return segments to the system so the size
-      // does not change due to a collection.
-      /*postSize*/ size_,
+      /*postSize*/ sizeAfter_,
       /*survivalRatio*/ survivalRatio()});
 }
 
-class HadesGC::EvacAcceptor final : public SlotAcceptorDefault {
+class HadesGC::EvacAcceptor final : public RootAndSlotAcceptorDefault {
  public:
   struct CopyListCell final : public GCCell {
     // Linked list of cells pointing to the next cell that was copied.
@@ -322,13 +325,13 @@ class HadesGC::EvacAcceptor final : public SlotAcceptorDefault {
   };
 
   EvacAcceptor(GC &gc)
-      : SlotAcceptorDefault{gc},
+      : RootAndSlotAcceptorDefault{gc},
         copyListHead_{nullptr},
         isTrackingIDs_{gc.isTrackingIDs()} {}
 
   ~EvacAcceptor() {}
 
-  using SlotAcceptorDefault::accept;
+  using RootAndSlotAcceptorDefault::accept;
 
   void accept(void *&ptr) override {
     if (!ptr || !gc.inYoungGen(ptr)) {
@@ -372,7 +375,7 @@ class HadesGC::EvacAcceptor final : public SlotAcceptorDefault {
     cell = newCell;
   }
 
-  void accept(HermesValue &hv) override {
+  void acceptHV(HermesValue &hv) override {
     if (hv.isPointer()) {
       void *ptr = hv.getPointer();
       accept(ptr);
@@ -515,16 +518,16 @@ class MarkWorklist {
   llvh::SmallVector<GCCell *, 0> worklist_;
 };
 
-class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
+class HadesGC::MarkAcceptor final : public RootAndSlotAcceptorDefault,
                                     public WeakRefAcceptor {
  public:
   MarkAcceptor(GC &gc)
-      : SlotAcceptorDefault{gc},
+      : RootAndSlotAcceptorDefault{gc},
         markedSymbols_{gc.gcCallbacks_->getSymbolsEnd()},
         writeBarrierMarkedSymbols_{gc.gcCallbacks_->getSymbolsEnd()},
         bytesToMark_{gc.oldGen_.allocatedBytes()} {}
 
-  using SlotAcceptorDefault::accept;
+  using RootAndSlotAcceptorDefault::accept;
 
   void accept(void *&ptr) override {
     GCCell *const cell = static_cast<GCCell *>(ptr);
@@ -556,7 +559,7 @@ class HadesGC::MarkAcceptor final : public SlotAcceptorDefault,
         "MarkAcceptor::accept should not modify its argument");
   }
 
-  void accept(HermesValue &hvRef) override {
+  void acceptHV(HermesValue &hvRef) override {
     const HermesValue hv = hvRef;
     if (hv.isPointer()) {
       void *ptr = hv.getPointer();
@@ -897,10 +900,6 @@ bool HadesGC::OldGen::sweepNext() {
     // Cell is dead, run its finalizer first if it has one.
     cell->getVT()->finalizeIfExists(cell, gc_);
     if (isTracking) {
-      // FIXME: There could be a race condition here if newAlloc is
-      // being called at the same time and using a shared data structure
-      // with freeAlloc. freeAlloc relies on the ID, so call it before
-      // untrackObject.
       gc_->getAllocationLocationTracker().freeAlloc(cell, sz);
       gc_->getIDTracker().untrackObject(cell);
     }
@@ -1082,6 +1081,25 @@ void HadesGC::createSnapshot(llvh::raw_ostream &os) {
   }
 }
 
+void HadesGC::enableHeapProfiler(
+    std::function<void(
+        uint64_t,
+        std::chrono::microseconds,
+        std::vector<GCBase::AllocationLocationTracker::HeapStatsUpdate>)>
+        fragmentCallback) {
+  std::lock_guard<Mutex> lk{gcMutex_};
+  // Let any existing collections complete before enabling the profiler.
+  waitForCollectionToFinish();
+  GCBase::enableHeapProfiler(std::move(fragmentCallback));
+}
+
+void HadesGC::disableHeapProfiler() {
+  std::lock_guard<Mutex> lk{gcMutex_};
+  // Let any existing collections complete before disabling the profiler.
+  waitForCollectionToFinish();
+  GCBase::disableHeapProfiler();
+}
+
 void HadesGC::printStats(JSONEmitter &json) {
   GCBase::printStats(json);
   json.emitKey("specific");
@@ -1197,7 +1215,7 @@ void HadesGC::oldGenCollection(std::string cause) {
   auto cpuTimeStart = oscompat::thread_cpu_time();
   ogCollectionStats_->setBeginTime();
   ogCollectionStats_->setBeforeSizes(
-      oldGen_.allocatedBytes(), oldGen_.externalBytes(), oldGen_.size());
+      oldGen_.allocatedBytes(), oldGen_.externalBytes(), heapFootprint());
 
   if (revertToYGAtTTI_) {
     // If we've reached the first OG collection, and reverting behavior is
@@ -1235,6 +1253,10 @@ void HadesGC::oldGenCollection(std::string cause) {
   // Before the thread starts up, make sure that any write barriers are aware
   // that concurrent marking is happening.
   isOldGenMarking_ = true;
+  // prepareCompactee must be called before the new thread is spawned, in order
+  // to ensure that write barriers start operating immediately, and that any
+  // objects promoted during an intervening YG collection are correctly scanned.
+  prepareCompactee();
   // NOTE: Since the "this" value (the HadesGC instance) is implicitly copied to
   // the new thread, the GC cannot be destructed until the new thread completes.
   // This means that before destroying the GC, waitForCollectionToFinish must
@@ -1304,6 +1326,7 @@ void HadesGC::incrementalCollect() {
       if (!oldGen_.sweepNext()) {
         // Finish any collection bookkeeping.
         ogCollectionStats_->setEndTime();
+        ogCollectionStats_->setAfterSize(heapFootprint());
         concurrentPhase_ = Phase::None;
         if (!kConcurrentGC) {
           // Check the tripwire here since we know the incremental collection
@@ -1314,6 +1337,18 @@ void HadesGC::incrementalCollect() {
       break;
     default:
       llvm_unreachable("No other possible state between iterations");
+  }
+}
+
+void HadesGC::prepareCompactee() {
+  assert(gcMutex_);
+  assert(
+      compactee_.empty() &&
+      "Ongoing compaction at the start of an OG collection.");
+  // TODO: Determine segment to compact
+  if (compactee_.index) {
+    oldGen_.clearFreelistForSegment(*compactee_.index);
+    compactee_.start = oldGen_[*compactee_.index].lowLim();
   }
 }
 
@@ -1354,6 +1389,9 @@ void HadesGC::completeMarking() {
   // NOTE: We can access this here since the world is stopped.
   isOldGenMarking_ = false;
   completeWeakMapMarking(*oldGenMarker_);
+  // Update the compactee tracking pointers so that the next YG collection will
+  // do a compaction.
+  compactee_.evacStart = compactee_.start;
   assert(
       oldGenMarker_->globalWorklist().empty() &&
       "Marking worklist wasn't drained");
@@ -1921,7 +1959,7 @@ void HadesGC::youngGenCollection(
   auto cpuTimeStart = oscompat::thread_cpu_time();
   ygCollectionStats_->setBeginTime();
   ygCollectionStats_->setBeforeSizes(
-      youngGen().used(), ygExternalBytes_, youngGen().size());
+      youngGen().used(), ygExternalBytes_, heapFootprint());
   // Acquire the GC lock for the duration of the YG collection.
   std::lock_guard<Mutex> lk{gcMutex_};
   // The YG is not parseable while a collection is occurring.
@@ -1939,6 +1977,7 @@ void HadesGC::youngGenCollection(
   const uint64_t usedBefore = youngGen().used();
   // YG is about to be emptied, add all of the allocations.
   totalAllocatedBytes_ += usedBefore;
+  const bool doCompaction = compactee_.evacActive();
   // Attempt to promote the YG segment to OG if the flag is set. If this call
   // fails for any reason, proceed with a GC.
   if (promoteYoungGenToOldGen()) {
@@ -1946,6 +1985,7 @@ void HadesGC::youngGenCollection(
     // Don't update the average YG survival ratio since no liveness was
     // calculated for the promotion case.
     ygCollectionStats_->addCollectionType("(promotion)");
+    assert(!doCompaction && "Cannot do compactions during YG promotions.");
   } else {
     auto &yg = youngGen();
     const uint64_t externalBytesBefore = ygExternalBytes_;
@@ -1954,7 +1994,7 @@ void HadesGC::youngGenCollection(
     EvacAcceptor acceptor{*this};
     {
       DroppingAcceptor<EvacAcceptor> nameAcceptor{acceptor};
-      markRoots(nameAcceptor, /*markLongLived*/ false);
+      markRoots(nameAcceptor, /*markLongLived*/ doCompaction);
       // Do not call markWeakRoots here, as all weak roots point to
       // long-lived objects.
     }
@@ -1966,7 +2006,9 @@ void HadesGC::youngGenCollection(
       assert(
           copyCell->hasMarkedForwardingPointer() &&
           "Discovered unmarked object");
-      assert(inYoungGen(copyCell) && "Discovered OG object in YG collection");
+      assert(
+          (inYoungGen(copyCell) || compactee_.evacContains(copyCell)) &&
+          "Unexpected object in YG collection");
       // Update the pointers inside the forwarded object, since the old
       // object is only there for the forwarding pointer.
       GCCell *const cell = copyCell->getMarkedForwardingPointer();
@@ -1998,6 +2040,9 @@ void HadesGC::youngGenCollection(
         youngGen().markBitArray().findNextUnmarkedBitFrom(0) ==
             youngGen().markBitArray().size() &&
         "Young gen segment must have all mark bits set");
+    if (doCompaction) {
+      compactee_ = {};
+    }
     // Move external memory accounting from YG to OG as well.
     transferExternalMemoryToOldGen();
     // Post-allocated has an ambiguous meaning for a young-gen GC, since the
@@ -2006,6 +2051,7 @@ void HadesGC::youngGenCollection(
     // old gen, which is the amount that survived the collection.
     ygCollectionStats_->setSweptBytes(usedBefore - acceptor.promotedBytes());
     ygCollectionStats_->setSweptExternalBytes(externalSweptBytes);
+    ygCollectionStats_->setAfterSize(heapFootprint());
     // The average survival ratio should be updated before starting an OG
     // collection.
     ygAverageSurvivalRatio_.update(ygCollectionStats_->survivalRatio());
@@ -2167,22 +2213,24 @@ void HadesGC::scanDirtyCards(EvacAcceptor &acceptor) {
       // Mark the first object with respect to the dirty card boundaries.
       GCBase::markCellWithinRange(visitor, obj, obj->getVT(), this, begin, end);
 
-      // Mark the objects that are entirely contained within the dirty card
-      // boundaries.
-      for (GCCell *next = obj->nextCell(); next < boundary;
-           next = next->nextCell()) {
-        // Use a separate pointer for the loop condition so that the last
-        // object in range gets used with markCellWithinRange instead.
-        obj = next;
-        // Note that this object might be a FreelistCell. We could explicitly
-        // check for this, but since FreelistCell has an empty metadata this
-        // call ends up doing nothing anyway.
-        GCBase::markCell(visitor, obj, obj->getVT(), this);
-      }
+      obj = obj->nextCell();
+      // If there are additional objects in this card, scan them.
+      if (LLVM_LIKELY(obj < boundary)) {
+        // Mark the objects that are entirely contained within the dirty card
+        // boundaries. In a given iteration, obj is the start of a given object,
+        // and next is the start of the next object. Iterate until the last
+        // object where next is within the card.
+        for (GCCell *next = obj->nextCell(); next < boundary;
+             next = next->nextCell()) {
+          GCBase::markCell(visitor, obj, obj->getVT(), this);
+          obj = next;
+        }
 
-      // Mark the final object in the range with respect to the dirty card
-      // boundaries, as long as it does not coincide with the first object.
-      if (LLVM_LIKELY(obj != firstObj)) {
+        // Mark the final object in the range with respect to the dirty card
+        // boundaries.
+        assert(
+            obj < boundary && obj->nextCell() >= boundary &&
+            "Last object in card must touch or cross cross the card boundary");
         GCBase::markCellWithinRange(
             visitor, obj, obj->getVT(), this, begin, end);
       }
@@ -2282,7 +2330,7 @@ void HadesGC::completeWeakMapMarking(MarkAcceptor &acceptor) {
       /*objIsMarked*/
       HeapSegment::getCellMarkBit,
       /*markFromVal*/
-      [&acceptor](GCCell *valCell, HermesValue &valRef) {
+      [&acceptor](GCCell *valCell, GCHermesValue &valRef) {
         if (HeapSegment::getCellMarkBit(valCell)) {
           return false;
         }
@@ -2560,9 +2608,9 @@ void HadesGC::checkWellFormed() {
 
 void HadesGC::verifyCardTable() {
   assert(inGC() && "Must be in GC to call verifyCardTable");
-  struct VerifyCardDirtyAcceptor final : public SlotAcceptorDefault {
-    using SlotAcceptorDefault::accept;
-    using SlotAcceptorDefault::SlotAcceptorDefault;
+  struct VerifyCardDirtyAcceptor final : public RootAndSlotAcceptorDefault {
+    using RootAndSlotAcceptorDefault::accept;
+    using RootAndSlotAcceptorDefault::RootAndSlotAcceptorDefault;
 
     void accept(void *&ptr) override {
       char *valuePtr = reinterpret_cast<char *>(ptr);
@@ -2572,8 +2620,8 @@ void HadesGC::verifyCardTable() {
     }
 
     void accept(BasedPointer &ptr) override {
-      // Don't use the default from SlotAcceptorDefault since the address of
-      // the reference is used.
+      // Don't use the default from RootAndSlotAcceptorDefault since the address
+      // of the reference is used.
       PointerBase *const base = gc.getPointerBase();
       char *valuePtr = reinterpret_cast<char *>(base->basedToPointer(ptr));
       char *locPtr = reinterpret_cast<char *>(&ptr);
@@ -2581,7 +2629,7 @@ void HadesGC::verifyCardTable() {
       acceptHelper(valuePtr, locPtr);
     }
 
-    void accept(HermesValue &hv) override {
+    void acceptHV(HermesValue &hv) override {
       if (!hv.isPointer()) {
         return;
       }

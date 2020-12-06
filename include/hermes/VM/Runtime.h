@@ -140,7 +140,7 @@ class Runtime : public HandleRootOwner,
   /// collection to mark additional GC roots that may not be known to the
   /// Runtime.
   void addCustomRootsFunction(
-      std::function<void(GC *, SlotAcceptor &)> markRootsFn);
+      std::function<void(GC *, RootAndSlotAcceptor &)> markRootsFn);
 
   /// Add a custom function that will be executed sometime during garbage
   /// collection to mark additional weak GC roots that may not be known to the
@@ -865,7 +865,8 @@ class Runtime : public HandleRootOwner,
   /// indicates whether root data structures that contain only
   /// references to long-lived objects (allocated directly as long lived)
   /// are required to be scanned.
-  void markRoots(RootAcceptor &acceptor, bool markLongLived) override;
+  void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool markLongLived)
+      override;
 
   /// Called by the GC during collections that may reset weak references. This
   /// method informs the GC of all runtime weak roots.
@@ -1000,7 +1001,8 @@ class Runtime : public HandleRootOwner,
 
  private:
   GC heap_;
-  std::vector<std::function<void(GC *, SlotAcceptor &)>> customMarkRootFuncs_;
+  std::vector<std::function<void(GC *, RootAndSlotAcceptor &)>>
+      customMarkRootFuncs_;
   std::vector<std::function<void(GC *, WeakRefAcceptor &)>>
       customMarkWeakRootFuncs_;
 
@@ -1624,7 +1626,7 @@ class NoAllocScope {
 // Runtime inline methods.
 
 inline void Runtime::addCustomRootsFunction(
-    std::function<void(GC *, SlotAcceptor &)> markRootsFn) {
+    std::function<void(GC *, RootAndSlotAcceptor &)> markRootsFn) {
   customMarkRootFuncs_.emplace_back(std::move(markRootsFn));
 }
 

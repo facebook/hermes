@@ -42,6 +42,11 @@ HERMES_OMITTED_KEYS = {
     "ExportAllDeclaration": {"exportKind"},
     "ArrayExpression": {"trailingComma"},
     "ObjectTypeAnnotation": {"inexact"},
+    "ForOfStatement": {"await"},
+    "EnumStringBody": {"hasUnknownMembers"},
+    "EnumNumberBody": {"hasUnknownMembers"},
+    "EnumBooleanBody": {"hasUnknownMembers"},
+    "EnumSymbolBody": {"hasUnknownMembers"},
     # Some literals support "raw" and others don't.
     # ESPrima doesn't distinguish.
     "Literal": {"raw"},
@@ -62,6 +67,7 @@ ESPRIMA_OMITTED_KEYS = {
     "FunctionExpression": {"expression", "predicate"},
     "ArrowFunctionExpression": {"generator"},
     "ForInStatement": {"each"},
+    "ForOfStatement": {"await"},
     "Identifier": {"optional"},
     "MethodDefinition": {"decorators"},
     "ExportDefaultDeclaration": {"exportKind"},

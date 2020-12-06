@@ -26,6 +26,19 @@ const HermesParserJSLibrary = {
     },
 
     /**
+     * Lookup and return the stored value for a reference.
+     *
+     * If the reference is 0 (corresponding to the null pointer), return null.
+     */
+    get: function(ref) {
+      if (ref == 0) {
+        return null;
+      }
+
+      return JSReferences.references[ref];
+    },
+
+    /**
      * Lookup and return the stored value for a reference and remove it from the
      * internal references store.
      *
@@ -63,31 +76,39 @@ const HermesParserJSLibrary = {
     JSReferences.references[arrayRef].push(JSReferences.pop(elementRef));
   },
 
-  buildSourceLocation: function(
-    startLine,
-    startCol,
-    endLine,
-    endCol,
-    rangeStart,
-    rangeEnd
-  ) {
-    return JSReferences.store({
-      start: {
-        line: startLine,
-        column: startCol,
-      },
-      end: {
-        line: endLine,
-        column: endCol,
-      },
-      rangeStart: rangeStart,
-      rangeEnd: rangeEnd,
-    });
+  buildSourceLocation: function() {
+    return JSReferences.store({});
+  },
+
+  addStartPosition: function(locRef, line, column, offset) {
+    const loc = JSReferences.get(locRef);
+    loc.start = {
+      line: line,
+      column: column,
+    };
+    loc.rangeStart = offset;
+
+    if (loc.end != null) {
+      JSReferences.pop(locRef);
+    }
+  },
+
+  addEndPosition: function(locRef, line, column, offset) {
+    const loc = JSReferences.get(locRef);
+    loc.end = {
+      line: line,
+      column: column,
+    };
+    loc.rangeEnd = offset;
+
+    if (loc.start != null) {
+      JSReferences.pop(locRef);
+    }
   },
 
   buildComment: function(loc, typeIdx, valuePtr, valueLength) {
     return JSReferences.store({
-      loc: JSReferences.pop(loc),
+      loc: JSReferences.get(loc),
       type: JSReferences.commentTypes[typeIdx],
       value: HermesDecodeUTF8String(valuePtr, valueLength),
     });
@@ -96,7 +117,7 @@ const HermesParserJSLibrary = {
   buildProgramWithComments: function(loc, body, comments) {
     return JSReferences.store({
       type: 'Program',
-      loc: JSReferences.pop(loc),
+      loc: JSReferences.get(loc),
       body: JSReferences.pop(body),
       comments: JSReferences.pop(comments),
     });
@@ -114,7 +135,7 @@ const HermesParserJSLibrary = {
   build_##NAME : function(loc) {      \
     return JSReferences.store({       \
       type : #NAME,                   \
-      loc : JSReferences.pop(loc),    \
+      loc : JSReferences.get(loc),    \
     });                               \
   },
 
@@ -122,7 +143,7 @@ const HermesParserJSLibrary = {
   build_##NAME : function(loc, _##ARG0NM) {                     \
     return JSReferences.store({                                 \
       type : #NAME,                                             \
-      loc : JSReferences.pop(loc),                              \
+      loc : JSReferences.get(loc),                              \
       ARG0NM : ARG0TY(_##ARG0NM),                               \
     });                                                         \
   },
@@ -132,7 +153,7 @@ const HermesParserJSLibrary = {
   build_##NAME : function(loc, _##ARG0NM, _##ARG1NM) {           \
     return JSReferences.store({                                  \
       type : #NAME,                                              \
-      loc : JSReferences.pop(loc),                               \
+      loc : JSReferences.get(loc),                               \
       ARG0NM : ARG0TY(_##ARG0NM),                                \
       ARG1NM : ARG1TY(_##ARG1NM),                                \
     });                                                          \
@@ -153,7 +174,7 @@ const HermesParserJSLibrary = {
   build_##NAME : function(loc, _##ARG0NM, _##ARG1NM, _##ARG2NM) { \
     return JSReferences.store({                                   \
       type : #NAME,                                               \
-      loc : JSReferences.pop(loc),                                \
+      loc : JSReferences.get(loc),                                \
       ARG0NM : ARG0TY(_##ARG0NM),                                 \
       ARG1NM : ARG1TY(_##ARG1NM),                                 \
       ARG2NM : ARG2TY(_##ARG2NM),                                 \
@@ -178,7 +199,7 @@ const HermesParserJSLibrary = {
   build_##NAME : function(loc, _##ARG0NM, _##ARG1NM, _##ARG2NM, _##ARG3NM) { \
     return JSReferences.store({                                              \
       type : #NAME,                                                          \
-      loc : JSReferences.pop(loc),                                           \
+      loc : JSReferences.get(loc),                                           \
       ARG0NM : ARG0TY(_##ARG0NM),                                            \
       ARG1NM : ARG1TY(_##ARG1NM),                                            \
       ARG2NM : ARG2TY(_##ARG2NM),                                            \
@@ -208,7 +229,7 @@ const HermesParserJSLibrary = {
       : function(loc, _##ARG0NM, _##ARG1NM, _##ARG2NM, _##ARG3NM, _##ARG4NM) { \
     return JSReferences.store({                                                \
       type : #NAME,                                                            \
-      loc : JSReferences.pop(loc),                                             \
+      loc : JSReferences.get(loc),                                             \
       ARG0NM : ARG0TY(_##ARG0NM),                                              \
       ARG1NM : ARG1TY(_##ARG1NM),                                              \
       ARG2NM : ARG2TY(_##ARG2NM),                                              \
@@ -248,7 +269,7 @@ const HermesParserJSLibrary = {
                      _##ARG5NM) {  \
     return JSReferences.store({    \
       type : #NAME,                \
-      loc : JSReferences.pop(loc), \
+      loc : JSReferences.get(loc), \
       ARG0NM : ARG0TY(_##ARG0NM),  \
       ARG1NM : ARG1TY(_##ARG1NM),  \
       ARG2NM : ARG2TY(_##ARG2NM),  \
@@ -293,7 +314,7 @@ const HermesParserJSLibrary = {
                      _##ARG6NM) {  \
     return JSReferences.store({    \
       type : #NAME,                \
-      loc : JSReferences.pop(loc), \
+      loc : JSReferences.get(loc), \
       ARG0NM : ARG0TY(_##ARG0NM),  \
       ARG1NM : ARG1TY(_##ARG1NM),  \
       ARG2NM : ARG2TY(_##ARG2NM),  \
@@ -343,7 +364,7 @@ const HermesParserJSLibrary = {
                      _##ARG7NM) {  \
     return JSReferences.store({    \
       type : #NAME,                \
-      loc : JSReferences.pop(loc), \
+      loc : JSReferences.get(loc), \
       ARG0NM : ARG0TY(_##ARG0NM),  \
       ARG1NM : ARG1TY(_##ARG1NM),  \
       ARG2NM : ARG2TY(_##ARG2NM),  \

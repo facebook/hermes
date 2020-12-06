@@ -146,7 +146,7 @@ class IdentifierTable {
   }
 
   /// Mark all identifiers for the garbage collector.
-  void markIdentifiers(SlotAcceptor &acceptor, GC *gc);
+  void markIdentifiers(RootAcceptor &acceptor, GC *gc);
 
   /// Visits every entry in the identifier table and calls acceptor with
   /// the entry and its id as arguments. This is intended to be used only for
@@ -165,7 +165,9 @@ class IdentifierTable {
   void unmarkSymbols();
 
   /// Invoked at the end of a GC to free all unmarked symbols.
-  void freeUnmarkedSymbols(const llvh::BitVector &markedSymbols);
+  void freeUnmarkedSymbols(
+      const llvh::BitVector &markedSymbols,
+      GC::IDTracker &gc);
 
 #ifdef HERMES_SLOW_DEBUG
   /// \return true if the given symbol is a live entry in the identifier

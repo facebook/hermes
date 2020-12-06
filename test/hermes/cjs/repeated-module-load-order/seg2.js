@@ -8,3 +8,4 @@
 // RUN: true
 
 print("init seg2.js");
+require('./export12.js').doPrint();

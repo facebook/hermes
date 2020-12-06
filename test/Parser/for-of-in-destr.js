@@ -33,7 +33,8 @@ for([a, b] of x);
 //CHECK-NEXT:         },
 //CHECK-NEXT:         "body": {
 //CHECK-NEXT:           "type": "EmptyStatement"
-//CHECK-NEXT:         }
+//CHECK-NEXT:         },
+//CHECK-NEXT:         "await": false
 //CHECK-NEXT:       },
 
 for([a, b] in x);
@@ -105,7 +106,8 @@ for({a, b} of x);
 //CHECK-NEXT:         },
 //CHECK-NEXT:         "body": {
 //CHECK-NEXT:           "type": "EmptyStatement"
-//CHECK-NEXT:         }
+//CHECK-NEXT:         },
+//CHECK-NEXT:         "await": false
 //CHECK-NEXT:       }
 
 //CHECK-NEXT:     ]

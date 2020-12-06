@@ -18,7 +18,8 @@ static const char sTooManyErrors[] = "too many errors emitted";
 SourceErrorManager::ICoordTranslator::~ICoordTranslator() = default;
 
 SourceErrorManager::SourceErrorManager()
-    : warningStatuses_((unsigned)Warning::_NumWarnings, true) {
+    : warningStatuses_((unsigned)Warning::_NumWarnings, true),
+      warningsAreErrors_((unsigned)Warning::_NumWarnings, false) {
   sm_.setDiagHandler(SourceErrorManager::printDiagnostic, this);
 }
 
@@ -186,7 +187,10 @@ void SourceErrorManager::message(
     return;
   lastMessageSuppressed_ = false;
 
-  upgradeDiag(dk);
+  /// Optionally upgrade warnings into errors.
+  if (dk == DK_Warning && isWarningAnError(w)) {
+    dk = DK_Error;
+  }
   assert(static_cast<unsigned>(dk) < kMessageCountSize && "bounds check");
 
   ++messageCount_[dk];

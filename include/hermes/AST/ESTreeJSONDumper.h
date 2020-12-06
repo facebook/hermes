@@ -37,6 +37,9 @@ enum class LocationDumpMode {
   LocAndRange,
 };
 
+/// Specifies whether to include the "raw" property where available.
+enum class ESTreeRawProp { Exclude, Include };
+
 /// Print the contents of \p rng to \p json using offsets computed relative to
 /// \p buffer. Range is printed as an 2-array [start, end]
 void dumpSMRangeJSON(
@@ -60,7 +63,8 @@ void dumpESTreeJSON(
     bool pretty,
     ESTreeDumpMode mode,
     SourceErrorManager &sm,
-    LocationDumpMode locMode);
+    LocationDumpMode locMode,
+    ESTreeRawProp rawProp = ESTreeRawProp::Include);
 
 /// Print out the contents of \p rootNode to \p json.
 /// Does not call json.endJSONL(), caller should do that if necessary.

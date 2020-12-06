@@ -152,7 +152,7 @@ TEST_P(HeapSnapshotAPITest, HeapTimeline) {
          "the trace tree";
 
   // Search nodes for the objID.
-  const auto nodeTupleSize = 6;
+  const auto nodeTupleSize = 7;
   const auto nodeIDFieldIndex = 2;
   const auto nodeTraceIDFieldIndex = 5;
   uint64_t traceNodeID = 0;

@@ -204,7 +204,7 @@ class GCBase {
     /// via allocLongLived) are required to be scanned.  A generational
     /// collector, for example, might take advantage of this.
     virtual void markRoots(
-        RootAcceptor &acceptor,
+        RootAndSlotAcceptorWithNames &acceptor,
         bool markLongLived = true) = 0;
 
     /// Callback that will be invoked by the GC to mark all weak roots in the
@@ -419,6 +419,11 @@ class GCBase {
     /// Flush out heap profiler data to the callback after a new kFlushThreshold
     /// bytes are allocated.
     static constexpr uint64_t kFlushThreshold = 128 * (1 << 10);
+    /// This mutex protects stackMap_. Specifically does not protect enabled_,
+    /// because enabled_ should only be changed while the GC isn't running
+    /// anyway. Also doesn't protect fragments_ because only the allocator
+    /// modifies fragments_.
+    Mutex mtx_;
     /// Associates allocations at their current location with their stack trace
     /// data.
     llvh::DenseMap<const void *, StackTracesTreeNode *> stackMap_;
@@ -538,10 +543,9 @@ class GCBase {
     /// tracking working set small.
     inline void untrackObject(const void *cell);
 
-    /// For a symbol index \p i, \p markedSymbols[i] indicates whether
-    /// the symbol was reachable in a GC.  Untrack all symbols whose
-    /// index is not marked.
-    void untrackUnmarkedSymbols(const llvh::BitVector &markedSymbols);
+    /// Remove the symbol from being tracked. This needs to be done to allow
+    /// symbols to be re-used.
+    inline void untrackSymbol(uint32_t symIdx);
 
     /// Remove the native memory from being tracked. This should be done to keep
     /// the tracking working set small. It is also required to be done when
@@ -579,6 +583,11 @@ class GCBase {
     /// are represented with even-numbered IDs. This requirement is enforced by
     /// the Chrome snapshot viewer.
     static constexpr HeapSnapshot::NodeID kIDStep = 2;
+
+    /// This mutex protects objectIDMap_, symbolIDMap_, and numberIDMap_.
+    /// Specifically does not protect lastID_, since there's only one allocator
+    /// at a time, and only new allocations affect lastID_.
+    Mutex mtx_;
 
     /// The last ID assigned to a non-native object. Object IDs are not
     /// recycled so that snapshots don't confuse two objects with each other.
@@ -746,6 +755,21 @@ class GCBase {
   /// objects exist, their sizes, and what they point to.
   virtual void createSnapshot(llvh::raw_ostream &os) = 0;
   void createSnapshot(GC *gc, llvh::raw_ostream &os);
+
+  /// Turn on the heap profiler, which will track when allocations are made and
+  /// the stack trace of when they were created.
+  virtual void enableHeapProfiler(
+      std::function<void(
+          uint64_t,
+          std::chrono::microseconds,
+          std::vector<GCBase::AllocationLocationTracker::HeapStatsUpdate>)>
+          fragmentCallback);
+
+  /// Turn off the heap profiler, which will stop tracking new allocations and
+  /// not record any stack traces.
+  /// Disabling will not forget any objects that are still alive. This way
+  /// re-enabling later will still remember earlier objects.
+  virtual void disableHeapProfiler();
 
 #ifdef HERMESVM_SERIALIZE
   /// Serialize WeakRefs.
@@ -1054,7 +1078,7 @@ class GCBase {
   /// are required to be marked.  In this collector, such objects will
   /// be allocated in the old gen, and references to them need not be
   /// marked during young-gen collection.
-  void markRoots(RootAcceptor &acceptor, bool markLongLived) {
+  void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool markLongLived) {
     gcCallbacks_->markRoots(acceptor, markLongLived);
   }
 
@@ -1286,10 +1310,10 @@ inline DurationFormatObj formatSecs(double secs) {
 /// An object that, written to an ostream, formats the given # of
 /// bytes in appropriate units (bytes to GiB).
 struct SizeFormatObj {
-  gcheapsize_t bytes;
+  uint64_t bytes;
 };
 llvh::raw_ostream &operator<<(llvh::raw_ostream &os, const SizeFormatObj &sfo);
-inline SizeFormatObj formatSize(gcheapsize_t size) {
+inline SizeFormatObj formatSize(uint64_t size) {
   return {size};
 }
 
@@ -1564,6 +1588,7 @@ inline bool GCBase::IDTracker::isTrackingIDs() const {
 }
 
 inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(const void *cell) {
+  std::lock_guard<Mutex> lk{mtx_};
   auto iter = objectIDMap_.find(cell);
   if (iter != objectIDMap_.end()) {
     return iter->second;
@@ -1576,12 +1601,14 @@ inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(const void *cell) {
 
 inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectIDMustExist(
     const void *cell) {
+  std::lock_guard<Mutex> lk{mtx_};
   auto iter = objectIDMap_.find(cell);
   assert(iter != objectIDMap_.end() && "cell must already have an ID");
   return iter->second;
 }
 
 inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(uint32_t symIdx) {
+  std::lock_guard<Mutex> lk{mtx_};
   auto iter = symbolIDMap_.find(symIdx);
   if (iter != symbolIDMap_.end()) {
     return iter->second;
@@ -1593,6 +1620,7 @@ inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(uint32_t symIdx) {
 }
 
 inline HeapSnapshot::NodeID GCBase::IDTracker::getNativeID(const void *mem) {
+  std::lock_guard<Mutex> lk{mtx_};
   auto iter = objectIDMap_.find(mem);
   if (iter != objectIDMap_.end()) {
     return iter->second;
@@ -1612,6 +1640,7 @@ inline void GCBase::IDTracker::moveObject(
     // happen in old generations where it is compacted to the same location.
     return;
   }
+  std::lock_guard<Mutex> lk{mtx_};
   auto old = objectIDMap_.find(oldLocation);
   if (old == objectIDMap_.end()) {
     // Avoid making new keys for objects that don't need to be tracked.
@@ -1627,6 +1656,7 @@ inline void GCBase::IDTracker::moveObject(
 }
 
 inline void GCBase::IDTracker::untrackObject(const void *cell) {
+  std::lock_guard<Mutex> lk{mtx_};
   objectIDMap_.erase(cell);
 }
 
@@ -1636,12 +1666,18 @@ inline void GCBase::IDTracker::untrackNative(const void *mem) {
   untrackObject(mem);
 }
 
+inline void GCBase::IDTracker::untrackSymbol(uint32_t symIdx) {
+  std::lock_guard<Mutex> lk{mtx_};
+  symbolIDMap_.erase(symIdx);
+}
+
 inline const GCExecTrace &GCBase::getGCExecTrace() const {
   return execTrace_;
 }
 
 template <typename F>
 inline void GCBase::IDTracker::forEachID(F callback) {
+  std::lock_guard<Mutex> lk{mtx_};
   for (auto &p : objectIDMap_) {
     callback(p.first, p.second);
   }

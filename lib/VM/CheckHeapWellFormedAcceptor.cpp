@@ -15,7 +15,7 @@ namespace vm {
 #ifdef HERMES_SLOW_DEBUG
 
 CheckHeapWellFormedAcceptor::CheckHeapWellFormedAcceptor(GC &gc)
-    : SlotAcceptorDefault(gc), WeakRootAcceptorDefault(gc) {}
+    : RootAndSlotAcceptorDefault(gc), WeakRootAcceptorDefault(gc) {}
 
 void CheckHeapWellFormedAcceptor::accept(void *&ptr) {
   accept(static_cast<const void *>(ptr));
@@ -32,7 +32,7 @@ void CheckHeapWellFormedAcceptor::acceptWeak(void *&ptr) {
   accept(ptr);
 }
 
-void CheckHeapWellFormedAcceptor::accept(HermesValue &hv) {
+void CheckHeapWellFormedAcceptor::acceptHV(HermesValue &hv) {
   assert(!hv.isInvalid() && "HermesValue with InvalidTag encountered by GC.");
   if (hv.isPointer()) {
     void *cell = hv.getPointer();

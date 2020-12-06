@@ -349,7 +349,7 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   }
 
   /// Mark the non-weak roots owned by this RuntimeModule.
-  void markRoots(SlotAcceptor &acceptor, bool markLongLived);
+  void markRoots(RootAndSlotAcceptor &acceptor, bool markLongLived);
 
   /// Mark the weak roots owned by this RuntimeModule.
   void markWeakRoots(WeakRootAcceptor &acceptor);

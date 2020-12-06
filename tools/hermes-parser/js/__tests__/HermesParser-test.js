@@ -59,29 +59,37 @@ test('Can parse simple file', () => {
   });
 });
 
-test('Parse error is thrown', () => {
+test('Parse errors', () => {
   expect(() => parse('const = 1')).toThrow(
-    `1:6: 'identifier' expected in declaration
+    new SyntaxError(
+      `'identifier' expected in declaration (1:6)
 const = 1
-~~~~~~^
-`,
+~~~~~~^`,
+    ),
   );
-});
 
-test('Parse error does not include caret line for non-ASCII characters', () => {
+  // Parse error does not include caret line for non-ASCII characters
   expect(() => parse('/*\u0176*/ const = 1')).toThrow(
-    `1:13: 'identifier' expected in declaration
-/*\u0176*/ const = 1
-`,
+    new SyntaxError(
+      `'identifier' expected in declaration (1:13)
+/*\u0176*/ const = 1`,
+    ),
   );
-});
 
-test('Parse error includes source filename', () => {
-  expect(() => parse('const = 1', {sourceFilename: 'FooTest.js'})).toThrow(
-    `FooTest.js:1:6: 'identifier' expected in declaration
-const = 1
-~~~~~~^
-`,
+  // Parse error with additional notes
+  const source = `class C {
+  constructor() { 1 }
+  constructor() { 2 }
+}`;
+  expect(() => parse(source)).toThrow(
+    new SyntaxError(
+      `duplicate constructors in class (3:2)
+  constructor() { 2 }
+  ^~~~~~~~~~~~~~~~~~~
+note: first constructor definition (2:2)
+  constructor() { 1 }
+  ^~~~~~~~~~~~~~~~~~~`,
+    ),
   );
 });
 
@@ -279,6 +287,55 @@ test('Source locations', () => {
             line: 1,
             column: 3,
           },
+        },
+      },
+    ],
+  });
+
+  // Code points that will be encoded as 1, 2, 3, and 4 byte UTF-8 characters
+  // within Hermes are translated back to UTF-16 code unit source locations.
+  const unicode = `'foo1';
+'foo\u00a7';
+'foo\u2014';
+'foo\ud83d\udea6';
+`;
+  expect(parse(unicode)).toMatchObject({
+    type: 'Program',
+    body: [
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'Literal',
+          loc: loc(1, 0, 1, 6),
+          range: [0, 6],
+          value: 'foo1',
+        },
+      },
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'Literal',
+          loc: loc(2, 0, 2, 6),
+          range: [8, 14],
+          value: 'foo\u00a7',
+        },
+      },
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'Literal',
+          loc: loc(3, 0, 3, 6),
+          range: [16, 22],
+          value: 'foo\u2014',
+        },
+      },
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'Literal',
+          loc: loc(4, 0, 4, 7),
+          range: [24, 31],
+          value: 'foo\ud83d\udea6',
         },
       },
     ],
@@ -1232,10 +1289,11 @@ test('Symbol type annotation', () => {
 test('Semantic validation', () => {
   // Semantic validator catches errors
   expect(() => parse(`return 1;`)).toThrow(
-    `1:0: 'return' not in a function
+    new SyntaxError(
+      `'return' not in a function (1:0)
 return 1;
-^~~~~~~~~
-`,
+^~~~~~~~~`,
+    ),
   );
 
   // But invalid regexps are not reported
@@ -1260,17 +1318,12 @@ return 1;
 test('Private properties', () => {
   // Private property uses are not supported
   expect(() => parse(`foo.#private`)).toThrow(
-    `1:4: Private properties are not supported`,
+    new SyntaxError('Private properties are not supported (1:4)'),
   );
 
   // Private property definitions are not supported
   expect(() => parse(`class C { #private }`)).toThrow(
-    `1:10: Private properties are not supported`,
-  );
-
-  // Errors are formatted with filename
-  expect(() => parse(`foo.#private`, {sourceFilename: 'Foo.js'})).toThrow(
-    `Foo.js:1:4: Private properties are not supported`,
+    new SyntaxError('Private properties are not supported (1:10)'),
   );
 });
 

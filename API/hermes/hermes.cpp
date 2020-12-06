@@ -315,7 +315,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
     crashMgr_->registerMemory(&runtime_, sizeof(vm::Runtime));
 #endif
     runtime_.addCustomRootsFunction(
-        [this](vm::GC *, vm::SlotAcceptor &acceptor) {
+        [this](vm::GC *, vm::RootAcceptor &acceptor) {
           for (auto it = hermesValues_->begin(); it != hermesValues_->end();) {
             if (it->get() == 0) {
               it = hermesValues_->erase(it);

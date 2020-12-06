@@ -1726,17 +1726,20 @@ class Module : public Value {
   llvh::DenseMap<Identifier, unsigned> internalNamesMap_;
 
   /// Storage for the CJS modules.
-  /// Element i will have the CJS module ID of i.
-  /// Use a deque to allow for non-copying push_back, to avoid invaliding the
-  /// pointers in the two DenseMaps below.
+  /// Use a deque to allow for non-copying push_back, to avoid invalidating the
+  /// pointers in cjsModuleFunctionMap_ below.
   std::deque<CJSModule> cjsModules_{};
 
   using CJSModuleIterator = std::deque<CJSModule>::iterator;
 
   /// Map from functions to members of the CJS module storage.
   llvh::DenseMap<Function *, CJSModule *> cjsModuleFunctionMap_{};
-  /// Map from file names to members of the CJS module storage.
-  llvh::DenseMap<Identifier, CJSModule *> cjsModuleFilenameMap_{};
+  /// Map from file names to CJS module IDs.
+  llvh::DenseMap<Identifier, uint32_t> cjsModuleFilenameMap_{};
+  /// Map from segment IDs to CJS module wrapper functions.
+  /// The vectors in the map have no duplicates; this is enforced using
+  /// cjsModuleFunctionMap_.
+  llvh::DenseMap<uint32_t, std::vector<Function *>> cjsModuleSegmentMap_{};
 
   /// true if all CJS modules have been resolved.
   bool cjsModulesResolved_{false};
@@ -1862,30 +1865,27 @@ class Module : public Value {
   }
 
   /// Add a new CJS module entry, given the function representing the module.
-  void addCJSModule(uint32_t id, Identifier name, Function *function) {
-    if (cjsModules_.size() <= id) {
-      cjsModules_.resize(id + 1);
-    }
-    CJSModule &module = cjsModules_[id];
-    assert(module.function == nullptr && "duplicate IDs in addCJSModule");
-    module.id = id;
-    module.filename = name;
-    module.function = function;
+  void addCJSModule(
+      uint32_t segmentID,
+      uint32_t id,
+      Identifier name,
+      Function *function) {
+    cjsModules_.emplace_back(CJSModule{id, name, function});
+    CJSModule &module = cjsModules_.back();
     {
-      auto result = cjsModuleFilenameMap_.try_emplace(name, &module);
+      auto result = cjsModuleFilenameMap_.try_emplace(name, id);
       (void)result;
-      assert(result.second && "Should only insert CJS module once");
+      assert(
+          (result.second || result.first->second == id) &&
+          "Module must have the same ID for the same name");
     }
     {
       auto result = cjsModuleFunctionMap_.try_emplace(function, &module);
       (void)result;
-      assert(result.second && "Should only insert CJS module once");
+      assert(
+          result.second && "Should only insert each CJS wrapper function once");
     }
-  }
-
-  /// \return whether a CommonJS module with the given ID exists.
-  bool hasCJSModule(uint32_t id) const {
-    return (cjsModules_.size() > id) && (cjsModules_[id].function != nullptr);
+    cjsModuleSegmentMap_[segmentID].push_back(function);
   }
 
   /// \return the CommonJS module given the wrapping function if it is a module,
@@ -1895,11 +1895,14 @@ class Module : public Value {
     return it == cjsModuleFunctionMap_.end() ? nullptr : it->second;
   }
 
-  /// \return the CommonJS module given the filename if it is a module,
+  /// \return the CommonJS module ID given the filename if it is a module,
   /// else nullptr.
-  const CJSModule *findCJSModule(Identifier filename) const {
+  llvh::Optional<uint32_t> findCJSModuleID(Identifier filename) const {
     auto it = cjsModuleFilenameMap_.find(filename);
-    return it == cjsModuleFilenameMap_.end() ? nullptr : it->second;
+    if (it != cjsModuleFilenameMap_.end()) {
+      return it->second;
+    }
+    return llvh::None;
   }
 
   /// \return the registered CommonJS modules.
@@ -1918,10 +1921,9 @@ class Module : public Value {
   }
 
   /// \return the set of functions which are used by the modules in the segment
-  /// specified by \p segmentInfo. Order is unspecified, so the return value
+  /// specified by \p segment. Order is unspecified, so the return value
   /// should not be used for iteration, only for checking membership.
-  llvh::DenseSet<Function *> getFunctionsInSegment(
-      const Context::SegmentInfo &segmentInfo);
+  llvh::DenseSet<Function *> getFunctionsInSegment(uint32_t segment);
 
   /// Given a list of raw strings from a template literal, get its unique id.
   uint32_t getTemplateObjectID(RawStringList &&rawStrings);

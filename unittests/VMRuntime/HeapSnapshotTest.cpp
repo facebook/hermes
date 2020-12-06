@@ -104,6 +104,7 @@ struct Node {
   size_t selfSize;
   size_t edgeCount;
   size_t traceNodeID;
+  int detachedness;
 
   Node() = default;
 
@@ -113,13 +114,15 @@ struct Node {
       HeapSnapshot::NodeID id,
       size_t selfSize,
       size_t edgeCount,
-      size_t traceNodeID = 0)
+      size_t traceNodeID = 0,
+      int detachedness = 0)
       : type{type},
         name{std::move(name)},
         id{id},
         selfSize{selfSize},
         edgeCount{edgeCount},
-        traceNodeID{traceNodeID} {}
+        traceNodeID{traceNodeID},
+        detachedness{detachedness} {}
 
   static Node parse(JSONArray::iterator nodes, const JSONArray &strings) {
     // Need two levels of cast for enums because Windows complains about casting
@@ -147,14 +150,24 @@ struct Node {
 
     auto traceNodeID =
         static_cast<size_t>(llvh::cast<JSONNumber>(*nodes)->getValue());
+    nodes++;
 
-    return Node{type, std::move(name), id, selfSize, edgeCount, traceNodeID};
+    auto detachedness =
+        static_cast<int>(llvh::cast<JSONNumber>(*nodes)->getValue());
+
+    return Node{type,
+                std::move(name),
+                id,
+                selfSize,
+                edgeCount,
+                traceNodeID,
+                detachedness};
   }
 
   bool operator==(const Node &that) const {
     return type == that.type && name == that.name && id == that.id &&
         selfSize == that.selfSize && edgeCount == that.edgeCount &&
-        traceNodeID == that.traceNodeID;
+        traceNodeID == that.traceNodeID && detachedness == that.detachedness;
   }
 
   bool operator<(const Node &that) const {
@@ -170,7 +183,8 @@ std::ostream &operator<<(std::ostream &os, const Node &node) {
             << ", name=\"" << node.name << "\", id=" << node.id
             << ", selfSize=" << node.selfSize
             << ", edgeCount=" << node.edgeCount
-            << ", traceNodeID=" << node.traceNodeID << "}";
+            << ", traceNodeID=" << node.traceNodeID
+            << ", detachedness=" << node.detachedness << "}";
 }
 
 struct Edge {
@@ -441,7 +455,13 @@ TEST(HeapSnapshotTest, HeaderTest) {
   // Check that node_fields/types are correct.
   EXPECT_TRUE(testListOfStrings(
       nodeFields,
-      {"type", "name", "id", "self_size", "edge_count", "trace_node_id"}));
+      {"type",
+       "name",
+       "id",
+       "self_size",
+       "edge_count",
+       "trace_node_id",
+       "detachedness"}));
   const JSONArray &nodeTypeEnum = *llvh::cast<JSONArray>(nodeTypes[0]);
   EXPECT_TRUE(testListOfStrings(
       nodeTypeEnum,
@@ -462,7 +482,7 @@ TEST(HeapSnapshotTest, HeaderTest) {
   EXPECT_TRUE(testListOfStrings(
       nodeTypes.begin() + 1,
       nodeTypes.end(),
-      {"string", "number", "number", "number", "number"}));
+      {"string", "number", "number", "number", "number", "number"}));
   // Check that edge_fields/types are correct.
   EXPECT_TRUE(
       testListOfStrings(edgeFields, {"type", "name_or_index", "to_node"}));

@@ -412,7 +412,9 @@ class Runtime::MarkRootsPhaseTimer {
   std::chrono::time_point<std::chrono::steady_clock> start_;
 };
 
-void Runtime::markRoots(RootAcceptor &acceptor, bool markLongLived) {
+void Runtime::markRoots(
+    RootAndSlotAcceptorWithNames &acceptor,
+    bool markLongLived) {
   // The body of markRoots should be sequence of blocks, each of which starts
   // with the declaration of an appropriate RootSection instance.
   {
@@ -751,7 +753,7 @@ void Runtime::unmarkSymbols() {
 }
 
 void Runtime::freeSymbols(const llvh::BitVector &markedSymbols) {
-  identifierTable_.freeUnmarkedSymbols(markedSymbols);
+  identifierTable_.freeUnmarkedSymbols(markedSymbols, heap_.getIDTracker());
 }
 
 #ifdef HERMES_SLOW_DEBUG
@@ -2240,11 +2242,11 @@ void Runtime::enableAllocationLocationTracker(
     stackTracesTree_ = make_unique<StackTracesTree>();
   }
   stackTracesTree_->syncWithRuntimeStack(this);
-  heap_.getAllocationLocationTracker().enable(std::move(fragmentCallback));
+  heap_.enableHeapProfiler(std::move(fragmentCallback));
 }
 
 void Runtime::disableAllocationLocationTracker(bool clearExistingTree) {
-  heap_.getAllocationLocationTracker().disable();
+  heap_.disableHeapProfiler();
   if (clearExistingTree) {
     stackTracesTree_.reset();
   }

@@ -33,6 +33,7 @@ bool generateIRFromESTree(
 
 void generateIRForCJSModule(
     ESTree::FunctionExpressionNode *node,
+    uint32_t segmentID,
     uint32_t id,
     llvh::StringRef filename,
     Module *M,
@@ -41,7 +42,7 @@ void generateIRForCJSModule(
   // Generate IR into the module M.
   ESTreeIRGen generator(node, declFileList, M, {});
   return generator.doCJSModule(
-      topLevelFunction, node->getSemInfo(), id, filename);
+      topLevelFunction, node->getSemInfo(), segmentID, id, filename);
 }
 
 std::pair<Function *, Function *> generateLazyFunctionIR(

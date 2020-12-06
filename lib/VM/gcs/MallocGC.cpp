@@ -15,7 +15,7 @@
 #include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/HiddenClass.h"
 #include "hermes/VM/JSWeakMapImpl.h"
-#include "hermes/VM/SlotAcceptorDefault.h"
+#include "hermes/VM/RootAndSlotAcceptorDefault.h"
 
 #include "llvh/Support/Debug.h"
 
@@ -28,7 +28,7 @@ namespace vm {
 
 static const char *kGCName = "malloc";
 
-struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
+struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
                                          public WeakRootAcceptorDefault {
   std::vector<CellHeader *> worklist_;
 
@@ -42,11 +42,11 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
   llvh::BitVector markedSymbols_;
 
   MarkingAcceptor(GC &gc)
-      : SlotAcceptorDefault(gc),
+      : RootAndSlotAcceptorDefault(gc),
         WeakRootAcceptorDefault(gc),
         markedSymbols_(gc.gcCallbacks_->getSymbolsEnd()) {}
 
-  using SlotAcceptorDefault::accept;
+  using RootAndSlotAcceptorDefault::accept;
 
   void accept(void *&ptr) override {
     if (!ptr) {
@@ -137,7 +137,7 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
 #endif
   }
 
-  void accept(HermesValue &hv) override {
+  void acceptHV(HermesValue &hv) override {
     if (hv.isPointer()) {
       void *ptr = hv.getPointer();
       accept(ptr);
@@ -292,9 +292,6 @@ void MallocGC::collect(std::string cause) {
     resetWeakReferences();
     // Free the unused symbols.
     gcCallbacks_->freeSymbols(acceptor.markedSymbols_);
-    if (idTracker_.isTrackingIDs()) {
-      idTracker_.untrackUnmarkedSymbols(acceptor.markedSymbols_);
-    }
     // By the end of the marking loop, all pointers left in pointers_ are dead.
     for (CellHeader *header : pointers_) {
 #ifndef HERMESVM_SANITIZE_HANDLES
@@ -407,7 +404,7 @@ void MallocGC::completeWeakMapMarking(MarkingAcceptor &acceptor) {
       /*objIsMarked*/
       [](GCCell *cell) { return CellHeader::from(cell)->isMarked(); },
       /*markFromVal*/
-      [this, &acceptor](GCCell *valCell, HermesValue &valRef) {
+      [this, &acceptor](GCCell *valCell, GCHermesValue &valRef) {
         CellHeader *valHeader = CellHeader::from(valCell);
         if (valHeader->isMarked()) {
 #ifdef HERMESVM_SANITIZE_HANDLES

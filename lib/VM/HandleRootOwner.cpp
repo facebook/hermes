@@ -33,7 +33,7 @@ const PinnedHermesValue HandleRootOwner::zeroValue_{HVConstants::kZero};
 const PinnedHermesValue HandleRootOwner::oneValue_{HVConstants::kOne};
 const PinnedHermesValue HandleRootOwner::negOneValue_{HVConstants::kNegOne};
 
-void HandleRootOwner::markGCScopes(SlotAcceptor &acceptor) {
+void HandleRootOwner::markGCScopes(RootAcceptor &acceptor) {
   for (GCScope *gcScope = topGCScope_; gcScope; gcScope = gcScope->prevScope_)
     gcScope->mark(acceptor);
 }
@@ -87,7 +87,7 @@ PinnedHermesValue *GCScope::_newChunkAndPHV(HermesValue value) {
   return new (next_++) PinnedHermesValue(value);
 }
 
-void GCScope::mark(SlotAcceptor &acceptor) {
+void GCScope::mark(RootAcceptor &acceptor) {
   for (auto it = chunks_.begin(), e = it + curChunkIndex_ + 1; it != e; ++it) {
     PinnedHermesValue *first = *it;
     PinnedHermesValue *last = *it + CHUNK_SIZE;

@@ -23,6 +23,8 @@ class ESTreeJSONDumper {
   SourceErrorManager *sm_;
   ESTreeDumpMode mode_;
   LocationDumpMode locMode_;
+  /// Whether to include or exclude the "raw" property where available.
+  ESTreeRawProp const rawProp_;
 
   /// A collection of fields to ignore if they are empty (null or []).
   /// Mapping from node name to a set of ignored field names for that node.
@@ -33,8 +35,13 @@ class ESTreeJSONDumper {
       JSONEmitter &json,
       SourceErrorManager *sm,
       ESTreeDumpMode mode,
-      LocationDumpMode locMode)
-      : json_(json), sm_(sm), mode_(mode), locMode_(locMode) {
+      LocationDumpMode locMode,
+      ESTreeRawProp rawProp = ESTreeRawProp::Include)
+      : json_(json),
+        sm_(sm),
+        mode_(mode),
+        locMode_(locMode),
+        rawProp_(rawProp) {
     if (locMode != LocationDumpMode::None) {
       assert(sm && "SourceErrorManager required for dumping");
     }
@@ -107,7 +114,7 @@ class ESTreeJSONDumper {
     json_.emitKeyValue("type", type);
     dumpChildren(node);
     SMRange sr = node->getSourceRange();
-    if (sr.isValid()) {
+    if (sr.isValid() && rawProp_ == ESTreeRawProp::Include) {
       json_.emitKeyValue(
           "raw",
           StringRef{sr.Start.getPointer(),
@@ -458,9 +465,10 @@ void dumpESTreeJSON(
     bool pretty,
     ESTreeDumpMode mode,
     SourceErrorManager &sm,
-    LocationDumpMode locMode) {
+    LocationDumpMode locMode,
+    ESTreeRawProp rawProp) {
   JSONEmitter json{os, pretty};
-  ESTreeJSONDumper(json, &sm, mode, locMode).doIt(rootNode);
+  ESTreeJSONDumper(json, &sm, mode, locMode, rawProp).doIt(rootNode);
   json.endJSONL();
 }
 
