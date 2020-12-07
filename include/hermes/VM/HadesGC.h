@@ -230,6 +230,7 @@ class HadesGC final : public GCBase {
 #endif
 
   class CollectionStats;
+  class HeapMarkingAcceptor;
   class EvacAcceptor;
   class MarkAcceptor;
   class MarkWeakRootsAcceptor;
@@ -651,7 +652,7 @@ class HadesGC final : public GCBase {
 
     /// The start address of the segment that is currently being compacted. When
     /// this is set, the next YG will evacuate objects in this segment. This is
-    /// always going to be equal to compacteeStart_ or nullptr.
+    /// always going to be equal to "start" or nullptr.
     void *evacStart{reinterpret_cast<void *>(kInvalidCompacteeStart)};
 
     /// The segment index that is going to be compacted next.
@@ -739,9 +740,9 @@ class HadesGC final : public GCBase {
   /// compaction.
   void prepareCompactee();
 
-  /// Find all pointers from OG into YG during a YG collection. This is done
-  /// quickly through use of write barriers that detect the creation of OG-to-YG
-  /// pointers.
+  /// Find all pointers from OG into the YG/compactee during a YG collection.
+  /// This is done quickly through use of write barriers that detect the
+  /// creation of such pointers.
   void scanDirtyCards(EvacAcceptor &acceptor);
 
   /// Common logic for doing the Snapshot At The Beginning (SATB) write barrier.
@@ -757,9 +758,10 @@ class HadesGC final : public GCBase {
   /// which assumes the old symbol was reachable at the start of the collection.
   void snapshotWriteBarrierInternal(SymbolID symbol);
 
-  /// Common logic for doing the generational write barrier for detecting
-  /// pointers into YG.
-  void generationalWriteBarrier(void *loc, void *value);
+  /// Common logic for doing the relocation write barrier for detecting
+  /// pointers into YG and for tracking newly created pointers into the
+  /// compactee.
+  void relocationWriteBarrier(void *loc, void *value);
 
   /// Finalize all objects in YG that have finalizers.
   void finalizeYoungGenObjects();
