@@ -349,7 +349,7 @@ class HadesGC::HeapMarkingAcceptor : public RootAndSlotAcceptor {
   GC &gc;
 };
 
-class HadesGC::EvacAcceptor final : public RootAndSlotAcceptorDefault {
+class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor {
  public:
   struct CopyListCell final : public GCCell {
     // Linked list of cells pointing to the next cell that was copied.
@@ -357,23 +357,39 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptorDefault {
   };
 
   EvacAcceptor(GC &gc)
-      : RootAndSlotAcceptorDefault{gc},
+      : HeapMarkingAcceptor{gc},
         copyListHead_{nullptr},
         isTrackingIDs_{gc.isTrackingIDs()} {}
 
   ~EvacAcceptor() {}
 
-  using RootAndSlotAcceptorDefault::accept;
+  using HeapMarkingAcceptor::accept;
 
-  void accept(void *&ptr) override {
-    if (!ptr || !gc.inYoungGen(ptr)) {
-      // Ignore null and OG pointers.
+  void accept(void *&ptr, void *heapLoc) override {
+    // Ignore null pointers, and objects that are not in a segment being
+    // evacuated.
+    if (!ptr)
+      return;
+    else if (!gc.inYoungGen(ptr) && !gc.compactee_.evacContains(ptr)) {
+      // If a compaction is about to take place, dirty the card for any newly
+      // evacuated cells, since the marker may miss them.
+      if (heapLoc && gc.compactee_.contains(ptr)) {
+        HeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(heapLoc);
+      }
       return;
     }
+
     GCCell *&cell = reinterpret_cast<GCCell *&>(ptr);
-    assert(
-        HeapSegment::getCellMarkBit(cell) &&
-        "All young gen cells should be marked");
+    if (!HeapSegment::getCellMarkBit(cell)) {
+      // The only case in which we can encounter an unmarked cell is when the
+      // card table scan happens to find a dead object that points into the
+      // compactee but hasn't been swept yet.
+      assert(
+          HeapSegment::cardTableCovering(heapLoc)->isCardForAddressDirty(
+              heapLoc) &&
+          gc.compactee_.evacContains(cell));
+      return;
+    }
     if (cell->hasMarkedForwardingPointer()) {
       // Get the forwarding pointer from the header of the object.
       GCCell *const forwardedCell = cell->getMarkedForwardingPointer();
@@ -407,13 +423,25 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptorDefault {
     cell = newCell;
   }
 
-  void acceptHV(HermesValue &hv) override {
+  void accept(BasedPointer &ptr, void *heapLoc) override {
+    if (!ptr) {
+      return;
+    }
+    PointerBase *const base = gc.getPointerBase();
+    void *actualizedPointer = base->basedToPointerNonNull(ptr);
+    accept(actualizedPointer, heapLoc);
+    ptr = base->pointerToBasedNonNull(actualizedPointer);
+  }
+
+  void acceptHV(HermesValue &hv, void *heapLoc) override {
     if (hv.isPointer()) {
       void *ptr = hv.getPointer();
-      accept(ptr);
+      accept(ptr, heapLoc);
       hv.setInGC(hv.updatePointer(ptr), &gc);
     }
   }
+
+  void accept(SymbolID) override {}
 
   uint64_t promotedBytes() const {
     return promotedBytes_;
