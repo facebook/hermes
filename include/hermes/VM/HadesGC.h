@@ -230,6 +230,7 @@ class HadesGC final : public GCBase {
 #endif
 
   class CollectionStats;
+  class HeapMarkingAcceptor;
   class EvacAcceptor;
   class MarkAcceptor;
   class MarkWeakRootsAcceptor;
@@ -651,7 +652,7 @@ class HadesGC final : public GCBase {
 
     /// The start address of the segment that is currently being compacted. When
     /// this is set, the next YG will evacuate objects in this segment. This is
-    /// always going to be equal to compacteeStart_ or nullptr.
+    /// always going to be equal to "start" or nullptr.
     void *evacStart{reinterpret_cast<void *>(kInvalidCompacteeStart)};
 
     /// The segment index that is going to be compacted next.

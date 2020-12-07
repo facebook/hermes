@@ -317,6 +317,38 @@ HadesGC::CollectionStats::~CollectionStats() {
       /*survivalRatio*/ survivalRatio()});
 }
 
+/// This struct is used for acceptors that need to know whether they are marking
+/// heap addresses and track the original heap address of a given pointer. This
+/// is used by MarkAcceptor and EvacAcceptor to dirty cards during compaction.
+class HadesGC::HeapMarkingAcceptor : public RootAndSlotAcceptor {
+ public:
+  HeapMarkingAcceptor(GC &gc) : gc(gc) {}
+
+  using RootAndSlotAcceptor::accept;
+
+  void accept(void *&ptr) override final {
+    accept(ptr, nullptr);
+  }
+  virtual void accept(void *&ptr, void *heapLoc) = 0;
+
+  void accept(GCPointerBase &ptr) override final {
+    accept(ptr.getLoc(&gc), &ptr);
+  }
+  virtual void accept(BasedPointer &basedPtr, void *heapLoc) = 0;
+
+  void accept(PinnedHermesValue &hvRef) override final {
+    acceptHV(hvRef, nullptr);
+  }
+
+  void accept(GCHermesValue &hvRef) override final {
+    acceptHV(hvRef, &hvRef);
+  }
+  virtual void acceptHV(HermesValue &hvRef, void *heapLoc) = 0;
+
+ protected:
+  GC &gc;
+};
+
 class HadesGC::EvacAcceptor final : public RootAndSlotAcceptorDefault {
  public:
   struct CopyListCell final : public GCCell {
@@ -518,21 +550,27 @@ class MarkWorklist {
   llvh::SmallVector<GCCell *, 0> worklist_;
 };
 
-class HadesGC::MarkAcceptor final : public RootAndSlotAcceptorDefault,
+class HadesGC::MarkAcceptor final : public HeapMarkingAcceptor,
                                     public WeakRefAcceptor {
  public:
   MarkAcceptor(GC &gc)
-      : RootAndSlotAcceptorDefault{gc},
+      : HeapMarkingAcceptor{gc},
         markedSymbols_{gc.gcCallbacks_->getSymbolsEnd()},
         writeBarrierMarkedSymbols_{gc.gcCallbacks_->getSymbolsEnd()},
         bytesToMark_{gc.oldGen_.allocatedBytes()} {}
 
-  using RootAndSlotAcceptorDefault::accept;
+  using HeapMarkingAcceptor::accept;
 
-  void accept(void *&ptr) override {
+  void accept(void *&ptr, void *heapLoc) override {
     GCCell *const cell = static_cast<GCCell *>(ptr);
     if (!cell) {
       return;
+    }
+    if (heapLoc && gc.compactee_.contains(ptr) &&
+        !gc.compactee_.contains(heapLoc) && !gc.inYoungGen(heapLoc)) {
+      // This is a pointer in the heap pointing into the compactee, dirty the
+      // corresponding card.
+      HeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(heapLoc);
     }
     assert(cell->isValid() && "Encountered an invalid cell");
     if (HeapSegment::getCellMarkBit(cell)) {
@@ -542,7 +580,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptorDefault,
     push(cell);
   }
 
-  void accept(BasedPointer &ptrRef) override {
+  void accept(BasedPointer &ptrRef, void *heapLoc) override {
     // Copy into local variable in case it changes during evaluation.
     const BasedPointer ptr = ptrRef;
     if (!ptr) {
@@ -553,20 +591,20 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptorDefault,
 #ifndef NDEBUG
     void *const ptrCopy = actualizedPointer;
 #endif
-    accept(actualizedPointer);
+    accept(actualizedPointer, heapLoc);
     assert(
         ptrCopy == actualizedPointer &&
         "MarkAcceptor::accept should not modify its argument");
   }
 
-  void acceptHV(HermesValue &hvRef) override {
+  void acceptHV(HermesValue &hvRef, void *heapLoc) override {
     const HermesValue hv = hvRef;
     if (hv.isPointer()) {
       void *ptr = hv.getPointer();
 #ifndef NDEBUG
       void *const ptrCopy = ptr;
 #endif
-      accept(ptr);
+      accept(ptr, heapLoc);
       // ptr should never be modified by this acceptor, so there's no write-back
       // to do.
       assert(
