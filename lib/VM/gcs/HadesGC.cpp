@@ -2056,8 +2056,6 @@ void HadesGC::youngGenCollection(
   ygCollectionStats_ = llvh::make_unique<CollectionStats>(this, cause, "young");
   auto cpuTimeStart = oscompat::thread_cpu_time();
   ygCollectionStats_->setBeginTime();
-  ygCollectionStats_->setBeforeSizes(
-      youngGen().used(), ygExternalBytes_, heapFootprint());
   // Acquire the GC lock for the duration of the YG collection.
   std::lock_guard<Mutex> lk{gcMutex_};
   // The YG is not parseable while a collection is occurring.
@@ -2072,9 +2070,18 @@ void HadesGC::youngGenCollection(
       youngGen().markBitArray().findNextUnmarkedBitFrom(0) ==
           youngGen().markBitArray().size() &&
       "Young gen segment must have all mark bits set");
-  const uint64_t usedBefore = youngGen().used();
+  struct {
+    uint64_t before{0};
+    uint64_t after{0};
+  } heapBytes, externalBytes;
+  heapBytes.before = youngGen().used();
+  externalBytes.before = ygExternalBytes_;
+  // scannedSize tracks the total number of bytes that were involved in this
+  // collection. In a normal YG collection, this is just the YG size, during a
+  // compaction, also add in the size of the compactee.
+  uint64_t scannedSize = youngGen().size();
   // YG is about to be emptied, add all of the allocations.
-  totalAllocatedBytes_ += usedBefore;
+  totalAllocatedBytes_ += youngGen().used();
   const bool doCompaction = compactee_.evacActive();
   // Attempt to promote the YG segment to OG if the flag is set. If this call
   // fails for any reason, proceed with a GC.
@@ -2082,11 +2089,12 @@ void HadesGC::youngGenCollection(
     // Leave sweptBytes and sweptExternalBytes as defaults (which are 0).
     // Don't update the average YG survival ratio since no liveness was
     // calculated for the promotion case.
+    ygCollectionStats_->setBeforeSizes(
+        heapBytes.before, externalBytes.before, heapFootprint());
     ygCollectionStats_->addCollectionType("(promotion)");
     assert(!doCompaction && "Cannot do compactions during YG promotions.");
   } else {
     auto &yg = youngGen();
-    const uint64_t externalBytesBefore = ygExternalBytes_;
 
     // Marking each object puts it onto an embedded free list.
     EvacAcceptor acceptor{*this};
@@ -2136,7 +2144,10 @@ void HadesGC::youngGenCollection(
     finalizeYoungGenObjects();
     // This was modified by debitExternalMemoryFromFinalizer, called by
     // finalizers. The difference in the value before to now was the swept bytes
-    const uint64_t externalSweptBytes = externalBytesBefore - ygExternalBytes_;
+    externalBytes.after = ygExternalBytes_;
+    // The remaining bytes after the collection is just the number of bytes that
+    // were evacuated.
+    heapBytes.after = acceptor.evacuatedBytes();
     // Now the copy list is drained, and all references point to the old
     // gen. Clear the level of the young gen.
     yg.resetLevel();
@@ -2146,11 +2157,21 @@ void HadesGC::youngGenCollection(
         "Young gen segment must have all mark bits set");
 
     if (doCompaction) {
+      ygCollectionStats_->addCollectionType("(compact)");
+      heapBytes.before += oldGen_.allocatedBytes(*compactee_.index);
+      const uint64_t ogExternalBefore = oldGen_.externalBytes();
       HeapSegment &compactee = oldGen_[*compactee_.index];
+      scannedSize += compactee.size();
       // Run finalisers on compacted objects.
       compactee.forCompactedObjs([this](GCCell *cell) {
         cell->getVT()->finalizeIfExists(cell, this);
       });
+      const uint64_t externalCompactedBytes =
+          ogExternalBefore - oldGen_.externalBytes();
+      // Since we can't track the actual number of external bytes that were in
+      // this segment, just use the swept external byte count.
+      externalBytes.before += externalCompactedBytes;
+      externalBytes.after += externalCompactedBytes;
       // Create a new freelist cell for the entire segment.
       oldGen_.incrementAllocatedBytes(
           -oldGen_.allocatedBytes(*compactee_.index), *compactee_.index);
@@ -2164,16 +2185,24 @@ void HadesGC::youngGenCollection(
 
     // Move external memory accounting from YG to OG as well.
     transferExternalMemoryToOldGen();
-    // Post-allocated has an ambiguous meaning for a young-gen GC, since the
-    // young gen must be completely evacuated. Since zeros aren't really
-    // useful here, instead put the number of bytes that were promoted into
-    // old gen, which is the amount that survived the collection.
-    ygCollectionStats_->setSweptBytes(usedBefore - acceptor.evacuatedBytes());
-    ygCollectionStats_->setSweptExternalBytes(externalSweptBytes);
+
+    // We have to set these after the collection, in case a compaction took
+    // place
+    // and updated these metrics.
+    ygCollectionStats_->setBeforeSizes(
+        heapBytes.before, externalBytes.before, heapFootprint());
+
+    // The swept bytes are just the bytes that were not evacuated.
+    ygCollectionStats_->setSweptBytes(heapBytes.before - heapBytes.after);
+    ygCollectionStats_->setSweptExternalBytes(
+        externalBytes.before - externalBytes.after);
     ygCollectionStats_->setAfterSize(heapFootprint());
-    // The average survival ratio should be updated before starting an OG
-    // collection.
-    ygAverageSurvivalRatio_.update(ygCollectionStats_->survivalRatio());
+    // If this is not a compacting YG, the average survival ratio should be
+    // updated before starting an OG collection. In a compacting YG, since the
+    // evacuatedBytes counter tracks both segments, this survival ratio is not
+    // useful.
+    if (!doCompaction)
+      ygAverageSurvivalRatio_.update(ygCollectionStats_->survivalRatio());
   }
 #ifdef HERMES_SLOW_DEBUG
   // Check that the card tables are well-formed after the collection.
