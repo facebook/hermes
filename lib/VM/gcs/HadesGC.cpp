@@ -409,7 +409,7 @@ class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor {
     // Copy the contents of the existing cell over before modifying it.
     std::memcpy(newCell, cell, sz);
     assert(newCell->isValid() && "Cell was copied incorrectly");
-    promotedBytes_ += sz;
+    evacuatedBytes_ += sz;
     CopyListCell *const copyCell = static_cast<CopyListCell *>(cell);
     // Set the forwarding pointer in the old spot
     copyCell->setMarkedForwardingPointer(newCell);
@@ -443,8 +443,8 @@ class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor {
 
   void accept(SymbolID) override {}
 
-  uint64_t promotedBytes() const {
-    return promotedBytes_;
+  uint64_t evacuatedBytes() const {
+    return evacuatedBytes_;
   }
 
   CopyListCell *pop() {
@@ -462,7 +462,7 @@ class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor {
   /// The copy list is managed implicitly in the body of each copied YG object.
   CopyListCell *copyListHead_;
   const bool isTrackingIDs_;
-  uint64_t promotedBytes_{0};
+  uint64_t evacuatedBytes_{0};
 
   void push(CopyListCell *cell) {
     cell->next_ = copyListHead_;
@@ -919,81 +919,87 @@ bool HadesGC::OldGen::sweepNext() {
   assert(gc_->gcMutex_ && "gcMutex_ must be held while sweeping.");
 
   sweepIterator_.segNumber--;
-  const bool isTracking = gc_->isTrackingIDs();
-  // Re-evaluate this start point each time, as releasing the gcMutex_ allows
-  // allocations into the old gen, which might boost the credited memory.
-  const uint64_t externalBytesBefore = externalBytes();
+  // Do not sweep the compactee segment, since it is going to be evacuated
+  // anyway. Note that sweeping it will break compaction, since it will add
+  // cells to the compactee's freelist.
+  if (!gc_->compactee_.index ||
+      sweepIterator_.segNumber != *gc_->compactee_.index) {
+    const bool isTracking = gc_->isTrackingIDs();
+    // Re-evaluate this start point each time, as releasing the gcMutex_ allows
+    // allocations into the old gen, which might boost the credited memory.
+    const uint64_t externalBytesBefore = externalBytes();
 
-  // Clear the head pointers so that we can construct a new freelist. The
-  // freelist bits will be updated after the segment is swept. The bits will be
-  // inconsistent with the actual freelist for the duration of sweeping, but
-  // this is fine because gcMutex_ is during the entire period.
-  for (auto &head : freelistSegmentsBuckets_[sweepIterator_.segNumber])
-    head = nullptr;
+    // Clear the head pointers so that we can construct a new freelist. The
+    // freelist bits will be updated after the segment is swept. The bits will
+    // be inconsistent with the actual freelist for the duration of sweeping,
+    // but this is fine because gcMutex_ is during the entire period.
+    for (auto &head : freelistSegmentsBuckets_[sweepIterator_.segNumber])
+      head = nullptr;
 
-  char *freeRangeStart = nullptr, *freeRangeEnd = nullptr;
-  size_t mergedCells = 0;
-  int32_t segmentSweptBytes = 0;
-  for (GCCell *cell : segments_[sweepIterator_.segNumber]->cells()) {
-    assert(cell->isValid() && "Invalid cell in sweeping");
-    if (HeapSegment::getCellMarkBit(cell)) {
-      continue;
+    char *freeRangeStart = nullptr, *freeRangeEnd = nullptr;
+    size_t mergedCells = 0;
+    int32_t segmentSweptBytes = 0;
+    for (GCCell *cell : segments_[sweepIterator_.segNumber]->cells()) {
+      assert(cell->isValid() && "Invalid cell in sweeping");
+      if (HeapSegment::getCellMarkBit(cell)) {
+        continue;
+      }
+
+      const auto sz = cell->getAllocatedSize();
+      char *const cellCharPtr = reinterpret_cast<char *>(cell);
+
+      if (freeRangeEnd != cellCharPtr) {
+        assert(
+            freeRangeEnd < cellCharPtr &&
+            "Should not overshoot the start of an object");
+        // We are starting a new free range, flush the previous one.
+        if (LLVM_LIKELY(freeRangeStart))
+          addCellToFreelistFromSweep(
+              freeRangeStart, freeRangeEnd, mergedCells > 1);
+
+        mergedCells = 0;
+        freeRangeEnd = freeRangeStart = cellCharPtr;
+      }
+      // Expand the current free range to include the current cell.
+      freeRangeEnd += sz;
+      mergedCells++;
+
+      if (cell->getKind() == CellKind::FreelistKind)
+        continue;
+
+      segmentSweptBytes += sz;
+      // Cell is dead, run its finalizer first if it has one.
+      cell->getVT()->finalizeIfExists(cell, gc_);
+      if (isTracking) {
+        gc_->getAllocationLocationTracker().freeAlloc(cell, sz);
+        gc_->getIDTracker().untrackObject(cell);
+      }
     }
 
-    const auto sz = cell->getAllocatedSize();
-    char *const cellCharPtr = reinterpret_cast<char *>(cell);
+    // Flush any free range that was left over.
+    if (freeRangeStart)
+      addCellToFreelistFromSweep(freeRangeStart, freeRangeEnd, mergedCells > 1);
 
-    if (freeRangeEnd != cellCharPtr) {
-      assert(
-          freeRangeEnd < cellCharPtr &&
-          "Should not overshoot the start of an object");
-      // We are starting a new free range, flush the previous one.
-      if (LLVM_LIKELY(freeRangeStart))
-        addCellToFreelistFromSweep(
-            freeRangeStart, freeRangeEnd, mergedCells > 1);
+    // Update the freelist bit arrays to match the newly set freelist heads.
+    for (size_t bucket = 0; bucket < kNumFreelistBuckets; ++bucket) {
+      // For each bucket, set the bit for the current segment based on whether
+      // it has a non-null freelist head for that bucket.
+      if (freelistSegmentsBuckets_[sweepIterator_.segNumber][bucket])
+        freelistBucketSegmentBitArray_[bucket].set(sweepIterator_.segNumber);
+      else
+        freelistBucketSegmentBitArray_[bucket].reset(sweepIterator_.segNumber);
 
-      mergedCells = 0;
-      freeRangeEnd = freeRangeStart = cellCharPtr;
+      // In case the change above has changed the availability of a bucket
+      // across all segments, update the overall bit array.
+      freelistBucketBitArray_.set(
+          bucket, !freelistBucketSegmentBitArray_[bucket].empty());
     }
-    // Expand the current free range to include the current cell.
-    freeRangeEnd += sz;
-    mergedCells++;
 
-    if (cell->getKind() == CellKind::FreelistKind)
-      continue;
-
-    segmentSweptBytes += sz;
-    // Cell is dead, run its finalizer first if it has one.
-    cell->getVT()->finalizeIfExists(cell, gc_);
-    if (isTracking) {
-      gc_->getAllocationLocationTracker().freeAlloc(cell, sz);
-      gc_->getIDTracker().untrackObject(cell);
-    }
+    // Correct the allocated byte count.
+    incrementAllocatedBytes(-segmentSweptBytes, sweepIterator_.segNumber);
+    sweepIterator_.sweptBytes += segmentSweptBytes;
+    sweepIterator_.sweptExternalBytes += externalBytesBefore - externalBytes();
   }
-
-  // Flush any free range that was left over.
-  if (freeRangeStart)
-    addCellToFreelistFromSweep(freeRangeStart, freeRangeEnd, mergedCells > 1);
-
-  // Update the freelist bit arrays to match the newly set freelist heads.
-  for (size_t bucket = 0; bucket < kNumFreelistBuckets; ++bucket) {
-    // For each bucket, set the bit for the current segment based on whether
-    // it has a non-null freelist head for that bucket.
-    if (freelistSegmentsBuckets_[sweepIterator_.segNumber][bucket])
-      freelistBucketSegmentBitArray_[bucket].set(sweepIterator_.segNumber);
-    else
-      freelistBucketSegmentBitArray_[bucket].reset(sweepIterator_.segNumber);
-
-    // In case the change above has changed the availability of a bucket across
-    // all segments, update the overall bit array.
-    freelistBucketBitArray_.set(
-        bucket, !freelistBucketSegmentBitArray_[bucket].empty());
-  }
-
-  // Correct the allocated byte count.
-  incrementAllocatedBytes(-segmentSweptBytes, sweepIterator_.segNumber);
-  sweepIterator_.sweptBytes += segmentSweptBytes;
-  sweepIterator_.sweptExternalBytes += externalBytesBefore - externalBytes();
 
   // There are more iterations to go.
   if (sweepIterator_.segNumber)
@@ -1757,14 +1763,15 @@ void HadesGC::forAllObjs(const std::function<void(GCCell *)> &callback) {
   for (auto segit = oldGen_.begin(), end = oldGen_.end(); segit != end;
        ++segit) {
     HeapSegment &seg = **segit;
-    if (phase != Phase::Sweep) {
+    if (phase != Phase::Sweep && compactee_.evacStart != seg.lowLim()) {
       seg.forAllObjs(callback);
       continue;
     }
     seg.forAllObjs([callback](GCCell *cell) {
-      // If we're doing this check during an OG GC, there might be some objects
-      // that are dead, and could potentially have garbage in them. There's no
-      // need to check the pointers of those objects.
+      // If we're doing this check during sweeping, or between sweeping and
+      // compaction, there might be some objects that are dead, and could
+      // potentially have garbage in them. There's no need to check the
+      // pointers of those objects.
       if (HeapSegment::getCellMarkBit(cell)) {
         callback(cell);
       }
@@ -2118,7 +2125,7 @@ void HadesGC::youngGenCollection(
     // young gen must be completely evacuated. Since zeros aren't really
     // useful here, instead put the number of bytes that were promoted into
     // old gen, which is the amount that survived the collection.
-    ygCollectionStats_->setSweptBytes(usedBefore - acceptor.promotedBytes());
+    ygCollectionStats_->setSweptBytes(usedBefore - acceptor.evacuatedBytes());
     ygCollectionStats_->setSweptExternalBytes(externalSweptBytes);
     ygCollectionStats_->setAfterSize(heapFootprint());
     // The average survival ratio should be updated before starting an OG
