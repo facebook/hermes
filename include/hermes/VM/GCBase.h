@@ -626,16 +626,6 @@ class GCBase {
 
   virtual ~GCBase() {}
 
-  /// \return true if we should run handle sanitization and the coin flip with
-  /// probability sanitizeRate_ has passed.
-#ifdef HERMESVM_SANITIZE_HANDLES
-  bool shouldSanitizeHandles();
-#else
-  static constexpr bool shouldSanitizeHandles() {
-    return false;
-  }
-#endif
-
   /// \return true if the "target space" for allocations should be randomized
   /// (for GCs where that concept makes sense).
   bool shouldRandomizeAllocSpace() const {
@@ -1252,17 +1242,11 @@ class GCBase {
   friend class NoAllocScope;
 #endif
 
- private:
-  /// Callback called if it's not null when the Live Data Tripwire is triggered.
-  std::function<void(GCTripwireContext &)> tripwireCallback_;
-
-  /// Maximum size limit before the heap size tripwire will trigger.
-  gcheapsize_t tripwireLimit_;
-
-  /// True if the tripwire has already been called on this heap.
-  bool tripwireCalled_{false};
-
 #ifdef HERMESVM_SANITIZE_HANDLES
+  /// \return true if we should run handle sanitization and the coin flip with
+  /// probability sanitizeRate_ has passed.
+  bool shouldSanitizeHandles();
+
   /// Whether to keep moving the heap around to detect unsanitary GC handles.
   double sanitizeRate_{1.0};
 
@@ -1272,7 +1256,21 @@ class GCBase {
   /// Sanitize handles is completely disabled (and ignored at runtime) without
   /// a special build mode.
   static constexpr double sanitizeRate_{0.0};
+
+  static constexpr bool shouldSanitizeHandles() {
+    return false;
+  }
 #endif
+
+ private:
+  /// Callback called if it's not null when the Live Data Tripwire is triggered.
+  std::function<void(GCTripwireContext &)> tripwireCallback_;
+
+  /// Maximum size limit before the heap size tripwire will trigger.
+  gcheapsize_t tripwireLimit_;
+
+  /// True if the tripwire has already been called on this heap.
+  bool tripwireCalled_{false};
 
 /// Whether to randomize the "target space" for allocations, for GC's in which
 /// this concept makes sense. Only available in debug builds.

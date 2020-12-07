@@ -1439,7 +1439,14 @@ void HadesGC::prepareCompactee() {
   assert(
       compactee_.empty() &&
       "Ongoing compaction at the start of an OG collection.");
-  // TODO: Determine segment to compact
+  if (promoteYGToOG_ || oldGen_.numSegments() < 2)
+    return;
+
+#ifdef HERMESVM_SANITIZE_HANDLES
+  std::uniform_int_distribution<> distrib(0, oldGen_.numSegments() - 1);
+  compactee_.index = distrib(randomEngine_);
+#endif
+
   if (compactee_.index) {
     oldGen_.clearFreelistForSegment(*compactee_.index);
     compactee_.start = oldGen_[*compactee_.index].lowLim();
@@ -2604,9 +2611,13 @@ HadesGC::HeapSegment &HadesGC::OldGen::operator[](size_t i) {
 }
 
 std::unique_ptr<HadesGC::HeapSegment> HadesGC::createSegment(bool isYoungGen) {
+  // No heap size limit when Handle-SAN is on, to allow the heap enough room to
+  // keep moving things around.
+#ifndef HERMESVM_SANITIZE_HANDLES
   if (heapFootprint() >= maxHeapSize_) {
     return nullptr;
   }
+#endif
   auto res = AlignedStorage::create(
       provider_.get(), isYoungGen ? "young-gen" : "old-gen");
   if (!res) {

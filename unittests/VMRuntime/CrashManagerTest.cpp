@@ -76,6 +76,7 @@ class TestCrashManager : public CrashManager {
   std::unordered_map<std::string, std::string> contextualCustomData_;
 };
 
+#ifndef HERMESVM_SANITIZE_HANDLES
 /// We are able to materialize every segment.
 TEST(CrashManagerTest, HeapExtentsCorrect) {
   /// We need a max heap that's bigger than normal
@@ -214,6 +215,7 @@ TEST(CrashManagerTest, HeapExtentsCorrect) {
   }
 #endif
 }
+#endif
 
 #ifdef HERMESVM_GC_HADES
 TEST(CrashManagerTest, PromotedYGHasCorrectName) {

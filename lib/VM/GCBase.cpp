@@ -55,12 +55,11 @@ GCBase::GCBase(
       inGC_(false),
       name_(gcConfig.getName()),
       allocationLocationTracker_(this),
+#ifdef HERMESVM_SANITIZE_HANDLES
+      sanitizeRate_(gcConfig.getSanitizeConfig().getSanitizeRate()),
+#endif
       tripwireCallback_(gcConfig.getTripwireConfig().getCallback()),
       tripwireLimit_(gcConfig.getTripwireConfig().getLimit())
-#ifdef HERMESVM_SANITIZE_HANDLES
-      ,
-      sanitizeRate_(gcConfig.getSanitizeConfig().getSanitizeRate())
-#endif
 #ifndef NDEBUG
       ,
       randomizeAllocSpace_(gcConfig.getShouldRandomizeAllocSpace())
