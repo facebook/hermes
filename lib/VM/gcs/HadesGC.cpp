@@ -2121,12 +2121,16 @@ void HadesGC::youngGenCollection(
     }
     // Inform trackers about objects that died during this YG collection.
     if (isTrackingIDs()) {
-      youngGen().forCompactedObjs([this](GCCell *cell) {
+      auto trackerCallback = [this](GCCell *cell) {
         // Have to call freeAlloc before untrackObject.
         getAllocationLocationTracker().freeAlloc(
             cell, cell->getAllocatedSize());
         getIDTracker().untrackObject(cell);
-      });
+      };
+      youngGen().forCompactedObjs(trackerCallback);
+      if (doCompaction) {
+        oldGen_[*compactee_.index].forCompactedObjs(trackerCallback);
+      }
     }
     // Run finalizers for young gen objects.
     finalizeYoungGenObjects();
@@ -2140,9 +2144,24 @@ void HadesGC::youngGenCollection(
         youngGen().markBitArray().findNextUnmarkedBitFrom(0) ==
             youngGen().markBitArray().size() &&
         "Young gen segment must have all mark bits set");
+
     if (doCompaction) {
+      HeapSegment &compactee = oldGen_[*compactee_.index];
+      // Run finalisers on compacted objects.
+      compactee.forCompactedObjs([this](GCCell *cell) {
+        cell->getVT()->finalizeIfExists(cell, this);
+      });
+      // Create a new freelist cell for the entire segment.
+      oldGen_.incrementAllocatedBytes(
+          -oldGen_.allocatedBytes(*compactee_.index), *compactee_.index);
+      compactee.setLevel(compactee.end());
+      oldGen_.addCellToFreelist(
+          compactee.start(), compactee.used(), *compactee_.index);
+      HeapSegment::setCellHead(
+          reinterpret_cast<GCCell *>(compactee.start()), compactee.used());
       compactee_ = {};
     }
+
     // Move external memory accounting from YG to OG as well.
     transferExternalMemoryToOldGen();
     // Post-allocated has an ambiguous meaning for a young-gen GC, since the
