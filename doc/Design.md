@@ -3,7 +3,6 @@ id: design
 title: Design
 ---
 
-
 ## Hermes Design Document
 
 This is the design document for the Hermes Engine.

@@ -27,7 +27,7 @@ TODO: This should be sorted and expanded.
 
 Naming
 
-- Member variables use a "\_" suffix unless thay are public, where it is
+- Member variables use a "\_" suffix unless they are public, where it is
 acceptable to omit the suffix.
 - Classes use pascal case (`MyClass`).
 - Functions and methods use camel case (`myFunc`).

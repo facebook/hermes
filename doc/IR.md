@@ -3,7 +3,6 @@ id: ir
 title: IR
 ---
 
-
 ## Design of the Hermes high-level IR
 
 ### Introduction

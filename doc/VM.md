@@ -3,7 +3,6 @@ id: vm
 title: VM
 ---
 
-
 ## Hermes VM
 
 In which the general design of the Hermes VM is explained.

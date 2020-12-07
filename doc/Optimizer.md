@@ -3,7 +3,6 @@ id: optimizer
 title: Optimizer
 ---
 
-
 ## Design of the Hermes Optimizer
 
 ### Introduction

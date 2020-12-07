@@ -1,8 +1,13 @@
-# Language Features in Hermes
+---
+id: language-features
+title: Language Features
+---
+
+## Language Features in Hermes
 
 Hermes plans to target ECMAScript 2015 (ES6), with some carefully considered exceptions.
 
-## Supported
+### Supported
 
 - Symbols (including most well-known Symbols)
 - Iteration (with `[Symbol.iterator]`)
@@ -23,7 +28,7 @@ Hermes plans to target ECMAScript 2015 (ES6), with some carefully considered exc
   - ES6 String searching functions
   - ES6 Array searching functions
 
-## In Progress
+### In Progress
 
 - `let` and `const` (block scoped variables, with support for the temporal dead zone)
 - Classes and method definitions
@@ -33,7 +38,7 @@ Hermes plans to target ECMAScript 2015 (ES6), with some carefully considered exc
 - Async function (`async` and `await`).
 - `Symbol.prototype.description` (it's not fully spec-conformant yet. `Symbol().description` should be `undefined` but it's currently `''`).
 
-## Excluded From Support
+### Excluded From Support
 
 - Realms
 - `with` statements
@@ -43,7 +48,7 @@ Hermes plans to target ECMAScript 2015 (ES6), with some carefully considered exc
 - `Symbol.unscopables` (Hermes does not support `with`)
 - Other features added to ECMAScript after ES6 not listed under "Supported"
 
-## Miscellaneous Incompatibilities
+### Miscellaneous Incompatibilities
 
 - `Function.prototype.toString` cannot show source because Hermes executes from bytecode
 - `arguments` changes in non-strict mode will not sync with named parameters
