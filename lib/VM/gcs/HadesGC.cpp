@@ -349,7 +349,8 @@ class HadesGC::HeapMarkingAcceptor : public RootAndSlotAcceptor {
   GC &gc;
 };
 
-class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor {
+class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor,
+                                    public WeakRootAcceptorDefault {
  public:
   struct CopyListCell final : public GCCell {
     // Linked list of cells pointing to the next cell that was copied.
@@ -358,6 +359,7 @@ class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor {
 
   EvacAcceptor(GC &gc)
       : HeapMarkingAcceptor{gc},
+        WeakRootAcceptorDefault{gc},
         copyListHead_{nullptr},
         isTrackingIDs_{gc.isTrackingIDs()} {}
 
@@ -441,7 +443,27 @@ class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor {
     }
   }
 
+  void acceptWeak(void *&ptr) override {
+    assert(!gc.inYoungGen(ptr) && "Weak roots cannot point into YG");
+    if (!gc.compactee_.evacContains(ptr))
+      return;
+    GCCell *&cell = reinterpret_cast<GCCell *&>(ptr);
+
+    if (cell->hasMarkedForwardingPointer()) {
+      // Get the forwarding pointer from the header of the object.
+      GCCell *const forwardedCell = cell->getMarkedForwardingPointer();
+      assert(forwardedCell->isValid() && "Cell was forwarded incorrectly");
+      cell = forwardedCell;
+    } else {
+      cell = nullptr;
+    }
+  }
+
   void accept(SymbolID) override {}
+
+  /// There is no need to do anything with WeakRefs, since they are not
+  /// collected in a YG/compaction pass.
+  void accept(WeakRefBase &wr) override {}
 
   uint64_t evacuatedBytes() const {
     return evacuatedBytes_;
@@ -2071,8 +2093,6 @@ void HadesGC::youngGenCollection(
     {
       DroppingAcceptor<EvacAcceptor> nameAcceptor{acceptor};
       markRoots(nameAcceptor, /*markLongLived*/ doCompaction);
-      // Do not call markWeakRoots here, as all weak roots point to
-      // long-lived objects.
     }
     // Find old-to-young pointers, as they are considered roots for YG
     // collection.
@@ -2090,6 +2110,10 @@ void HadesGC::youngGenCollection(
       GCCell *const cell = copyCell->getMarkedForwardingPointer();
       GCBase::markCell(cell, this, acceptor);
     }
+    // All weak roots point into the OG, we only need to mark them if part of
+    // the OG is getting compacted.
+    if (doCompaction)
+      markWeakRoots(acceptor);
     {
       WeakRefLock weakRefLock{weakRefMutex_};
       // Now that all YG objects have been marked, update weak references.
@@ -2355,7 +2379,7 @@ void HadesGC::updateWeakReferencesForYoungGen() {
           break;
         }
         auto *const cell = static_cast<GCCell *>(slot.getPointer());
-        if (!inYoungGen(cell)) {
+        if (!inYoungGen(cell) && !compactee_.evacContains(cell)) {
           break;
         }
         // A young-gen GC doesn't know if a weak ref is reachable via old gen
