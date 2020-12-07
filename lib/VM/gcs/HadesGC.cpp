@@ -1556,7 +1556,7 @@ void HadesGC::writeBarrier(void *loc, HermesValue value) {
   if (!value.isPointer()) {
     return;
   }
-  generationalWriteBarrier(loc, value.getPointer());
+  relocationWriteBarrier(loc, value.getPointer());
 }
 
 void HadesGC::writeBarrier(void *loc, void *value) {
@@ -1583,7 +1583,7 @@ void HadesGC::writeBarrier(void *loc, void *value) {
   }
   // Always do the non-snapshot write barrier in order for YG to be able to
   // scan cards.
-  generationalWriteBarrier(loc, value);
+  relocationWriteBarrier(loc, value);
 }
 
 void HadesGC::writeBarrier(SymbolID symbol) {
@@ -1607,7 +1607,7 @@ void HadesGC::constructorWriteBarrier(void *loc, HermesValue value) {
   if (!value.isPointer()) {
     return;
   }
-  generationalWriteBarrier(loc, value.getPointer());
+  relocationWriteBarrier(loc, value.getPointer());
 }
 
 void HadesGC::constructorWriteBarrier(void *loc, void *value) {
@@ -1617,7 +1617,7 @@ void HadesGC::constructorWriteBarrier(void *loc, void *value) {
   }
   // A constructor never needs to execute a SATB write barrier, since its
   // previous value was definitely not live.
-  generationalWriteBarrier(loc, value);
+  relocationWriteBarrier(loc, value);
 }
 
 void HadesGC::snapshotWriteBarrier(GCHermesValue *loc) {
@@ -1671,13 +1671,16 @@ void HadesGC::snapshotWriteBarrierInternal(SymbolID symbol) {
   oldGenMarker_->markSymbol(symbol);
 }
 
-void HadesGC::generationalWriteBarrier(void *loc, void *value) {
+void HadesGC::relocationWriteBarrier(void *loc, void *value) {
   assert(!inYoungGen(loc) && "Pre-condition from other callers");
+  // Do not dirty cards for compactee->compactee, yg->yg, or yg->compactee
+  // pointers. But do dirty cards for compactee->yg pointers, since compaction
+  // may not happen in the next YG.
   if (AlignedStorage::containedInSame(loc, value)) {
     return;
   }
-  if (inYoungGen(value)) {
-    // Only dirty a card if it's an old-to-young pointer.
+  if (inYoungGen(value) || compactee_.contains(value)) {
+    // Only dirty a card if it's an old-to-young or old-to-compactee pointer.
     // This is fine to do since the GC never modifies card tables outside of
     // allocation.
     // Note that this *only* applies since the boundaries are updated separately
@@ -2238,6 +2241,11 @@ void HadesGC::scanDirtyCards(EvacAcceptor &acceptor) {
   const auto segEnd = oldGen_.numSegments();
   for (size_t i = 0; i < segEnd; ++i) {
     HeapSegment &seg = oldGen_[i];
+    // No need to scan cards in the compactee segment, since we will be fully
+    // scanning it.
+    if (seg.lowLim() == compactee_.evacStart) {
+      continue;
+    }
     const auto &cardTable = seg.cardTable();
     // Use level instead of end in case the OG segment is still in bump alloc
     // mode.
@@ -2303,7 +2311,11 @@ void HadesGC::scanDirtyCards(EvacAcceptor &acceptor) {
 
       from = iEnd;
     }
-    seg.cardTable().clear();
+    // Do not clear the card table if the OG thread is currently marking to
+    // prepare for a compaction. Note that we should clear the card tables if
+    // the compaction is currently ongoing.
+    if (!compactee_.index || compactee_.evacActive())
+      seg.cardTable().clear();
   }
 }
 
@@ -2706,7 +2718,11 @@ void HadesGC::verifyCardTable() {
     }
 
     void acceptHelper(char *valuePtr, char *locPtr) {
-      if (gc.inYoungGen(valuePtr) && !gc.inYoungGen(locPtr)) {
+      const bool crossRegionCompacteePtr =
+          !gc.compactee_.evacContains(locPtr) &&
+          gc.compactee_.evacContains(valuePtr);
+      if (!gc.inYoungGen(locPtr) &&
+          (gc.inYoungGen(valuePtr) || crossRegionCompacteePtr)) {
         assert(HeapSegment::cardTableCovering(locPtr)->isCardForAddressDirty(
             locPtr));
       }
