@@ -231,6 +231,8 @@ class HadesGC final : public GCBase {
 
   class CollectionStats;
   class HeapMarkingAcceptor;
+  struct CopyListCell;
+  template <bool CompactionEnabled>
   class EvacAcceptor;
   class MarkAcceptor;
   class MarkWeakRootsAcceptor;
@@ -687,6 +689,9 @@ class HadesGC final : public GCBase {
   ///   allocations.
   void youngGenCollection(std::string cause, bool forceOldGenCollection);
 
+  template <typename Acceptor>
+  void youngGenEvacuateImpl(Acceptor &acceptor, bool doCompaction);
+
   /// In the "no GC before TTI" mode, move the Young Gen heap segment to the
   /// Old Gen without scanning for garbage.
   /// \return true if a promotion occurred, false if it did not.
@@ -743,7 +748,8 @@ class HadesGC final : public GCBase {
   /// Find all pointers from OG into the YG/compactee during a YG collection.
   /// This is done quickly through use of write barriers that detect the
   /// creation of such pointers.
-  void scanDirtyCards(EvacAcceptor &acceptor);
+  template <typename Acceptor>
+  void scanDirtyCards(Acceptor &acceptor);
 
   /// Common logic for doing the Snapshot At The Beginning (SATB) write barrier.
   void snapshotWriteBarrierInternal(GCCell *oldValue);

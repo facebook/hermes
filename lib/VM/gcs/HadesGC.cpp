@@ -349,14 +349,15 @@ class HadesGC::HeapMarkingAcceptor : public RootAndSlotAcceptor {
   GC &gc;
 };
 
+struct HadesGC::CopyListCell final : public GCCell {
+  // Linked list of cells pointing to the next cell that was copied.
+  CopyListCell *next_;
+};
+
+template <bool CompactionEnabled>
 class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor,
                                     public WeakRootAcceptorDefault {
  public:
-  struct CopyListCell final : public GCCell {
-    // Linked list of cells pointing to the next cell that was copied.
-    CopyListCell *next_;
-  };
-
   EvacAcceptor(GC &gc)
       : HeapMarkingAcceptor{gc},
         WeakRootAcceptorDefault{gc},
@@ -372,17 +373,18 @@ class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor,
     // evacuated.
     if (!ptr)
       return;
-    else if (!gc.inYoungGen(ptr) && !gc.compactee_.evacContains(ptr)) {
+    if (!gc.inYoungGen(ptr) &&
+        (!CompactionEnabled || !gc.compactee_.evacContains(ptr))) {
       // If a compaction is about to take place, dirty the card for any newly
       // evacuated cells, since the marker may miss them.
-      if (heapLoc && gc.compactee_.contains(ptr)) {
+      if (CompactionEnabled && heapLoc && gc.compactee_.contains(ptr)) {
         HeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(heapLoc);
       }
       return;
     }
 
     GCCell *&cell = reinterpret_cast<GCCell *&>(ptr);
-    if (!HeapSegment::getCellMarkBit(cell)) {
+    if (CompactionEnabled && !HeapSegment::getCellMarkBit(cell)) {
       // The only case in which we can encounter an unmarked cell is when the
       // card table scan happens to find a dead object that points into the
       // compactee but hasn't been swept yet.
@@ -1121,8 +1123,8 @@ HadesGC::~HadesGC() {
 }
 
 uint32_t HadesGC::minAllocationSize() {
-  return heapAlignSize(std::max(
-      sizeof(OldGen::FreelistCell), sizeof(EvacAcceptor::CopyListCell)));
+  return heapAlignSize(
+      std::max(sizeof(OldGen::FreelistCell), sizeof(CopyListCell)));
 }
 
 void HadesGC::getHeapInfo(HeapInfo &info) {
@@ -2057,6 +2059,34 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
   return nullptr;
 }
 
+template <typename Acceptor>
+void HadesGC::youngGenEvacuateImpl(Acceptor &acceptor, bool doCompaction) {
+  // Marking each object puts it onto an embedded free list.
+  {
+    DroppingAcceptor<Acceptor> nameAcceptor{acceptor};
+    markRoots(nameAcceptor, /*markLongLived*/ doCompaction);
+  }
+  // Find old-to-young pointers, as they are considered roots for YG
+  // collection.
+  scanDirtyCards(acceptor);
+  // Iterate through the copy list to find new pointers.
+  while (CopyListCell *const copyCell = acceptor.pop()) {
+    assert(
+        copyCell->hasMarkedForwardingPointer() && "Discovered unmarked object");
+    assert(
+        (inYoungGen(copyCell) || compactee_.evacContains(copyCell)) &&
+        "Unexpected object in YG collection");
+    // Update the pointers inside the forwarded object, since the old
+    // object is only there for the forwarding pointer.
+    GCCell *const cell = copyCell->getMarkedForwardingPointer();
+    GCBase::markCell(cell, this, acceptor);
+  }
+  // All weak roots point into the OG, we only need to mark them if part of
+  // the OG is getting compacted.
+  if (doCompaction)
+    markWeakRoots(acceptor);
+}
+
 void HadesGC::youngGenCollection(
     std::string cause,
     bool forceOldGenCollection) {
@@ -2103,32 +2133,17 @@ void HadesGC::youngGenCollection(
   } else {
     auto &yg = youngGen();
 
-    // Marking each object puts it onto an embedded free list.
-    EvacAcceptor acceptor{*this};
-    {
-      DroppingAcceptor<EvacAcceptor> nameAcceptor{acceptor};
-      markRoots(nameAcceptor, /*markLongLived*/ doCompaction);
+    if (compactee_.index) {
+      EvacAcceptor<true> acceptor{*this};
+      youngGenEvacuateImpl(acceptor, doCompaction);
+      // The remaining bytes after the collection is just the number of bytes
+      // that were evacuated.
+      heapBytes.after = acceptor.evacuatedBytes();
+    } else {
+      EvacAcceptor<false> acceptor{*this};
+      youngGenEvacuateImpl(acceptor, false);
+      heapBytes.after = acceptor.evacuatedBytes();
     }
-    // Find old-to-young pointers, as they are considered roots for YG
-    // collection.
-    scanDirtyCards(acceptor);
-    // Iterate through the copy list to find new pointers.
-    while (EvacAcceptor::CopyListCell *const copyCell = acceptor.pop()) {
-      assert(
-          copyCell->hasMarkedForwardingPointer() &&
-          "Discovered unmarked object");
-      assert(
-          (inYoungGen(copyCell) || compactee_.evacContains(copyCell)) &&
-          "Unexpected object in YG collection");
-      // Update the pointers inside the forwarded object, since the old
-      // object is only there for the forwarding pointer.
-      GCCell *const cell = copyCell->getMarkedForwardingPointer();
-      GCBase::markCell(cell, this, acceptor);
-    }
-    // All weak roots point into the OG, we only need to mark them if part of
-    // the OG is getting compacted.
-    if (doCompaction)
-      markWeakRoots(acceptor);
     {
       WeakRefLock weakRefLock{weakRefMutex_};
       // Now that all YG objects have been marked, update weak references.
@@ -2142,7 +2157,7 @@ void HadesGC::youngGenCollection(
             cell, cell->getAllocatedSize());
         getIDTracker().untrackObject(cell);
       };
-      youngGen().forCompactedObjs(trackerCallback);
+      yg.forCompactedObjs(trackerCallback);
       if (doCompaction) {
         oldGen_[*compactee_.index].forCompactedObjs(trackerCallback);
       }
@@ -2152,15 +2167,12 @@ void HadesGC::youngGenCollection(
     // This was modified by debitExternalMemoryFromFinalizer, called by
     // finalizers. The difference in the value before to now was the swept bytes
     externalBytes.after = ygExternalBytes_;
-    // The remaining bytes after the collection is just the number of bytes that
-    // were evacuated.
-    heapBytes.after = acceptor.evacuatedBytes();
     // Now the copy list is drained, and all references point to the old
     // gen. Clear the level of the young gen.
     yg.resetLevel();
     assert(
-        youngGen().markBitArray().findNextUnmarkedBitFrom(0) ==
-            youngGen().markBitArray().size() &&
+        yg.markBitArray().findNextUnmarkedBitFrom(0) ==
+            yg.markBitArray().size() &&
         "Young gen segment must have all mark bits set");
 
     if (doCompaction) {
@@ -2316,8 +2328,9 @@ void HadesGC::transferExternalMemoryToOldGen() {
   youngGen_->clearExternalMemoryCharge();
 }
 
-void HadesGC::scanDirtyCards(EvacAcceptor &acceptor) {
-  SlotVisitor<EvacAcceptor> visitor{acceptor};
+template <typename Acceptor>
+void HadesGC::scanDirtyCards(Acceptor &acceptor) {
+  SlotVisitor<Acceptor> visitor{acceptor};
   // The acceptors in this loop can grow the old gen by adding another
   // segment, if there's not enough room to evac the YG objects discovered.
   // Since segments are always placed at the end, we can use indices instead
