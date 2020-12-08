@@ -327,23 +327,15 @@ class HadesGC::HeapMarkingAcceptor : public RootAndSlotAcceptor {
   using RootAndSlotAcceptor::accept;
 
   void accept(void *&ptr) override final {
-    accept(ptr, nullptr);
+    acceptRoot(ptr);
   }
-  virtual void accept(void *&ptr, void *heapLoc) = 0;
+  virtual void acceptHeap(void *&ptr, void *heapLoc) = 0;
+  virtual void acceptRoot(void *&ptr) = 0;
 
   void accept(GCPointerBase &ptr) override final {
-    accept(ptr.getLoc(&gc), &ptr);
+    acceptHeap(ptr.getLoc(&gc), &ptr);
   }
-  virtual void accept(BasedPointer &basedPtr, void *heapLoc) = 0;
-
-  void accept(PinnedHermesValue &hvRef) override final {
-    acceptHV(hvRef, nullptr);
-  }
-
-  void accept(GCHermesValue &hvRef) override final {
-    acceptHV(hvRef, &hvRef);
-  }
-  virtual void acceptHV(HermesValue &hvRef, void *heapLoc) = 0;
+  virtual void acceptHeap(BasedPointer &basedPtr, void *heapLoc) = 0;
 
  protected:
   GC &gc;
@@ -368,16 +360,21 @@ class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor,
 
   using HeapMarkingAcceptor::accept;
 
-  void accept(void *&ptr, void *heapLoc) override {
-    // Ignore null pointers, and objects that are not in a segment being
-    // evacuated.
-    if (!ptr)
-      return;
-    if (!gc.inYoungGen(ptr) &&
-        (!CompactionEnabled || !gc.compactee_.evacContains(ptr))) {
+  inline bool shouldForward(const void *ptr) const {
+    return gc.inYoungGen(ptr) ||
+        (CompactionEnabled && gc.compactee_.evacContains(ptr));
+  }
+
+  void acceptRoot(void *&ptr) override {
+    if (shouldForward(ptr))
+      forwardCell(reinterpret_cast<GCCell *&>(ptr));
+  }
+
+  void acceptHeap(void *&ptr, void *heapLoc) override {
+    if (!shouldForward(ptr)) {
       // If a compaction is about to take place, dirty the card for any newly
       // evacuated cells, since the marker may miss them.
-      if (CompactionEnabled && heapLoc && gc.compactee_.contains(ptr)) {
+      if (CompactionEnabled && gc.compactee_.contains(ptr)) {
         HeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(heapLoc);
       }
       return;
@@ -394,6 +391,12 @@ class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor,
           gc.compactee_.evacContains(cell));
       return;
     }
+    forwardCell(cell);
+  }
+
+  void forwardCell(GCCell *&cell) {
+    assert(
+        HeapSegment::getCellMarkBit(cell) && "Cannot forward unmarked object");
     if (cell->hasMarkedForwardingPointer()) {
       // Get the forwarding pointer from the header of the object.
       GCCell *const forwardedCell = cell->getMarkedForwardingPointer();
@@ -427,20 +430,28 @@ class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor,
     cell = newCell;
   }
 
-  void accept(BasedPointer &ptr, void *heapLoc) override {
+  void acceptHeap(BasedPointer &ptr, void *heapLoc) override {
     if (!ptr) {
       return;
     }
     PointerBase *const base = gc.getPointerBase();
     void *actualizedPointer = base->basedToPointerNonNull(ptr);
-    accept(actualizedPointer, heapLoc);
+    acceptHeap(actualizedPointer, heapLoc);
     ptr = base->pointerToBasedNonNull(actualizedPointer);
   }
 
-  void acceptHV(HermesValue &hv, void *heapLoc) override {
+  void accept(PinnedHermesValue &hv) override {
     if (hv.isPointer()) {
       void *ptr = hv.getPointer();
-      accept(ptr, heapLoc);
+      acceptRoot(ptr);
+      hv.setInGC(hv.updatePointer(ptr), &gc);
+    }
+  }
+
+  void accept(GCHermesValue &hv) override {
+    if (hv.isPointer()) {
+      void *ptr = hv.getPointer();
+      acceptHeap(ptr, &hv);
       hv.setInGC(hv.updatePointer(ptr), &gc);
     }
   }
@@ -613,13 +624,13 @@ class HadesGC::MarkAcceptor final : public HeapMarkingAcceptor,
 
   using HeapMarkingAcceptor::accept;
 
-  void accept(void *&ptr, void *heapLoc) override {
+  void acceptHeap(void *&ptr, void *heapLoc) override {
     GCCell *const cell = static_cast<GCCell *>(ptr);
     if (!cell) {
       return;
     }
-    if (heapLoc && gc.compactee_.contains(ptr) &&
-        !gc.compactee_.contains(heapLoc) && !gc.inYoungGen(heapLoc)) {
+    if (gc.compactee_.contains(cell) && !gc.compactee_.contains(heapLoc) &&
+        !gc.inYoungGen(heapLoc)) {
       // This is a pointer in the heap pointing into the compactee, dirty the
       // corresponding card.
       HeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(heapLoc);
@@ -632,7 +643,14 @@ class HadesGC::MarkAcceptor final : public HeapMarkingAcceptor,
     push(cell);
   }
 
-  void accept(BasedPointer &ptrRef, void *heapLoc) override {
+  void acceptRoot(void *&ptr) override {
+    GCCell *const cell = static_cast<GCCell *>(ptr);
+    assert((!cell || cell->isValid()) && "Encountered an invalid cell");
+    if (cell && !HeapSegment::getCellMarkBit(cell))
+      push(cell);
+  }
+
+  void acceptHeap(BasedPointer &ptrRef, void *heapLoc) override {
     // Copy into local variable in case it changes during evaluation.
     const BasedPointer ptr = ptrRef;
     if (!ptr) {
@@ -643,20 +661,28 @@ class HadesGC::MarkAcceptor final : public HeapMarkingAcceptor,
 #ifndef NDEBUG
     void *const ptrCopy = actualizedPointer;
 #endif
-    accept(actualizedPointer, heapLoc);
+    acceptHeap(actualizedPointer, heapLoc);
     assert(
         ptrCopy == actualizedPointer &&
         "MarkAcceptor::accept should not modify its argument");
   }
 
-  void acceptHV(HermesValue &hvRef, void *heapLoc) override {
+  template <typename HVType>
+  void acceptHV(HVType &hvRef) {
     const HermesValue hv = hvRef;
     if (hv.isPointer()) {
       void *ptr = hv.getPointer();
 #ifndef NDEBUG
       void *const ptrCopy = ptr;
 #endif
-      accept(ptr, heapLoc);
+      static_assert(
+          std::is_same<HVType, GCHermesValue>::value ||
+              std::is_same<HVType, PinnedHermesValue>::value,
+          "No other type of HermesValue");
+      if (std::is_same<HVType, PinnedHermesValue>::value)
+        acceptRoot(ptr);
+      else
+        acceptHeap(ptr, &hvRef);
       // ptr should never be modified by this acceptor, so there's no write-back
       // to do.
       assert(
@@ -665,6 +691,14 @@ class HadesGC::MarkAcceptor final : public HeapMarkingAcceptor,
     } else if (hv.isSymbol()) {
       accept(hv.getSymbol());
     }
+  }
+
+  void accept(GCHermesValue &hvRef) override {
+    acceptHV(hvRef);
+  }
+
+  void accept(PinnedHermesValue &hvRef) override {
+    acceptHV(hvRef);
   }
 
   void accept(SymbolID sym) override {
