@@ -61,7 +61,11 @@ class JSParser {
 
   llvh::ArrayRef<StoredComment> getStoredComments() const;
 
+  llvh::ArrayRef<StoredToken> getStoredTokens() const;
+
   void setStoreComments(bool storeComments);
+
+  void setStoreTokens(bool storeTokens);
 
   /// Return true if the parser detected 'use static builtin' directive from the
   /// source.

@@ -7,6 +7,7 @@
 
 #include "hermes/Parser/JSParser.h"
 #include "DiagContext.h"
+#include "hermes/AST/Config.h"
 
 #include "gtest/gtest.h"
 
@@ -231,6 +232,61 @@ TEST(JSParserTest, TestAmbiguousNewFlowSyntax) {
   assertFirstExpressionType(
       parsed2,
       llvh::isa<ESTree::BinaryExpressionNode, hermes::ESTree::NodePtr>);
+}
+
+TEST(JSParserTest, TestStoredTokens) {
+  Context context;
+#if HERMES_PARSE_FLOW
+  context.setParseFlow(ParseFlowSetting::ALL);
+#endif
+#if HERMES_PARSE_JSX
+  context.setParseJSX(true);
+#endif
+
+  {
+    JSParser parser(context, "1 + 2");
+    parser.setStoreTokens(true);
+    auto parsed = parser.parse();
+    ASSERT_TRUE(parsed.hasValue());
+    auto toks = parser.getStoredTokens();
+    ASSERT_EQ(4, toks.size());
+    EXPECT_EQ(TokenKind::numeric_literal, toks[0].getKind());
+    EXPECT_EQ(TokenKind::plus, toks[1].getKind());
+    EXPECT_EQ(TokenKind::numeric_literal, toks[2].getKind());
+    EXPECT_EQ(TokenKind::eof, toks[3].getKind());
+  }
+
+  {
+    JSParser parser(context, "async function foo() {}");
+    parser.setStoreTokens(true);
+    auto parsed = parser.parse();
+    ASSERT_TRUE(parsed.hasValue());
+    auto toks = parser.getStoredTokens();
+    ASSERT_EQ(8, toks.size());
+    EXPECT_EQ(TokenKind::identifier, toks[0].getKind());
+    EXPECT_EQ(TokenKind::rw_function, toks[1].getKind());
+    EXPECT_EQ(TokenKind::identifier, toks[2].getKind());
+    EXPECT_EQ(TokenKind::l_paren, toks[3].getKind());
+    EXPECT_EQ(TokenKind::r_paren, toks[4].getKind());
+    EXPECT_EQ(TokenKind::l_brace, toks[5].getKind());
+    EXPECT_EQ(TokenKind::r_brace, toks[6].getKind());
+    EXPECT_EQ(TokenKind::eof, toks[7].getKind());
+  }
+
+#if HERMES_PARSE_FLOW && HERMES_PARSE_JSX
+  {
+    JSParser parser(context, "async < 3");
+    parser.setStoreTokens(true);
+    auto parsed = parser.parse();
+    ASSERT_TRUE(parsed.hasValue());
+    auto toks = parser.getStoredTokens();
+    ASSERT_EQ(4, toks.size());
+    EXPECT_EQ(TokenKind::identifier, toks[0].getKind());
+    EXPECT_EQ(TokenKind::less, toks[1].getKind());
+    EXPECT_EQ(TokenKind::numeric_literal, toks[2].getKind());
+    EXPECT_EQ(TokenKind::eof, toks[3].getKind());
+  }
+#endif
 }
 
 }; // anonymous namespace

@@ -885,6 +885,10 @@ bool JSLexer::isCurrentTokenADirective() {
 const Token *JSLexer::rescanRBraceInTemplateLiteral() {
   assert(token_.getKind() == TokenKind::r_brace && "need } to rescan");
   --curCharPtr_;
+  // Undo the storage for the '}'.
+  if (LLVM_UNLIKELY(storeTokens_)) {
+    tokenStorage_.pop_back();
+  }
   assert(*curCharPtr_ == '}' && "non-} was scanned as r_brace");
   token_.setStart(curCharPtr_);
   scanTemplateLiteral();
@@ -928,6 +932,11 @@ OptValue<TokenKind> JSLexer::lookahead1(OptValue<TokenKind> expectedToken) {
     commentStorage_.erase(
         commentStorage_.begin() + savedCommentStorageSize,
         commentStorage_.end());
+  }
+
+  // Undo the storage for the token we just advanced to.
+  if (LLVM_UNLIKELY(storeTokens_)) {
+    tokenStorage_.pop_back();
   }
 
   return kind;

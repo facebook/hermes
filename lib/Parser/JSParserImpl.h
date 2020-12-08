@@ -113,8 +113,16 @@ class JSParserImpl {
     return lexer_.getStoredComments();
   }
 
+  llvh::ArrayRef<StoredToken> getStoredTokens() const {
+    return lexer_.getStoredTokens();
+  }
+
   void setStoreComments(bool storeComments) {
     lexer_.setStoreComments(storeComments);
+  }
+
+  void setStoreTokens(bool storeTokens) {
+    lexer_.setStoreTokens(storeTokens);
   }
 
   Optional<ESTree::ProgramNode *> parse();

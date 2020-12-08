@@ -310,6 +310,27 @@ class StoredComment {
   SMRange range_;
 };
 
+/// Stored token when lexing.
+class StoredToken {
+ public:
+  StoredToken(TokenKind kind, SMRange range) : kind_(kind), range_(range) {}
+
+  TokenKind getKind() const {
+    return kind_;
+  }
+
+  SMRange getSourceRange() const {
+    return range_;
+  }
+
+ private:
+  /// Kind of the token.
+  TokenKind kind_;
+
+  /// Source range of the token.
+  SMRange range_;
+};
+
 class JSLexer {
  public:
   using Allocator = hermes::BumpPtrAllocator;
@@ -336,6 +357,9 @@ class JSLexer {
 
   /// Whether to store the comments instead of skipping them.
   bool storeComments_{false};
+
+  /// Whether to store the tokens as we lex.
+  bool storeTokens_{false};
 
   /// If true, when a surrogate pair sequence is encountered in a string literal
   /// in the source, convert that string literal to its canonical UTF-8
@@ -373,6 +397,9 @@ class JSLexer {
   /// and have the same lifetime as pointers such as bufferStart_ and
   /// bufferEnd_.
   std::vector<StoredComment> commentStorage_{};
+
+  /// Storage for tokens we store when storeTokens_ == true.
+  std::vector<StoredToken> tokenStorage_{};
 
  public:
   /// \param convertSurrogates See member variable \p convertSurrogates_.
@@ -446,6 +473,20 @@ class JSLexer {
 
   void setStoreComments(bool storeComments) {
     storeComments_ = storeComments;
+  }
+
+  bool getStoreTokens() const {
+    return storeTokens_;
+  }
+
+  void setStoreTokens(bool storeTokens) {
+    storeTokens_ = storeTokens;
+  }
+
+  /// Unconditionally store the current token in the tokenStorage_.
+  void storeCurrentToken() {
+    assert(storeTokens_ && "Tokens shouldn't be stored unless the flag is set");
+    tokenStorage_.emplace_back(token_.getKind(), token_.getSourceRange());
   }
 
   /// \return true if a line terminator was consumed before the current token.
@@ -565,6 +606,11 @@ class JSLexer {
     return commentStorage_;
   }
 
+  /// \return any stored comments to this point.
+  llvh::ArrayRef<StoredToken> getStoredTokens() const {
+    return tokenStorage_;
+  }
+
   /// Store state of the lexer and allow rescanning from that point.
   /// Can only save state when the current token is a punctuator or
   /// TokenKind::identifier.
@@ -590,6 +636,10 @@ class JSLexer {
     /// point, comments past this index should be removed from the lexer.
     size_t commentStorageSize_;
 
+    /// Stored token storage size.
+    /// If we backtrack, we must also delete the previously stored tokens.
+    size_t tokenStorageSize_;
+
    public:
     SavePoint(JSLexer *lexer)
         : lexer_(lexer),
@@ -601,7 +651,8 @@ class JSLexer {
           loc_(lexer_->getCurLoc()),
           range_(lexer_->getCurToken()->getSourceRange()),
           prevTokenEndLoc_(lexer->getPrevTokenEndLoc()),
-          commentStorageSize_(lexer_->getStoredComments().size()) {
+          commentStorageSize_(lexer->getStoredComments().size()),
+          tokenStorageSize_(lexer_->getStoredTokens().size()) {
       assert(
           (isPunctuatorDbg(kind_) || kind_ == TokenKind::identifier) &&
           "SavePoint can only be used for punctuators");
@@ -622,6 +673,12 @@ class JSLexer {
         lexer_->commentStorage_.erase(
             lexer_->commentStorage_.begin() + commentStorageSize_,
             lexer_->commentStorage_.end());
+      }
+
+      if (LLVM_UNLIKELY(lexer_->getStoreTokens())) {
+        lexer_->tokenStorage_.erase(
+            lexer_->tokenStorage_.begin() + tokenStorageSize_,
+            lexer_->tokenStorage_.end());
       }
     }
   };
@@ -854,11 +911,15 @@ class JSLexer {
     seek(loc);
   }
 
-  /// Finish a new token, setting the new token's end location. Also save the
-  /// previous token's end location in prevTokenEndLoc_;
+  /// Finish a new token, setting the new token's end location.
+  /// Save the previous token's end location in prevTokenEndLoc_.
+  /// Store the current token in the storage if storeTokens_ is set.
   inline void finishToken(const char *end) {
     prevTokenEndLoc_ = token_.getEndLoc();
     token_.setEnd(end);
+    if (LLVM_UNLIKELY(storeTokens_)) {
+      storeCurrentToken();
+    }
   }
 
   /// Initialize the parser for a given source buffer id.
