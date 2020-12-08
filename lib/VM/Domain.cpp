@@ -18,11 +18,20 @@
 namespace hermes {
 namespace vm {
 
-const VTable Domain::vt{CellKind::DomainKind,
-                        cellSize<Domain>(),
-                        _finalizeImpl,
-                        _markWeakImpl,
-                        _mallocSizeImpl};
+const VTable Domain::vt{
+    CellKind::DomainKind,
+    cellSize<Domain>(),
+    _finalizeImpl,
+    _markWeakImpl,
+    _mallocSizeImpl,
+    nullptr,
+    nullptr,
+    nullptr,
+    VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Code,
+                                 nullptr,
+                                 Domain::_snapshotAddEdgesImpl,
+                                 Domain::_snapshotAddNodesImpl,
+                                 nullptr}};
 
 void DomainBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const Domain *>(cell);
@@ -145,6 +154,9 @@ PseudoHandle<Domain> Domain::create(Runtime *runtime) {
 
 void Domain::_finalizeImpl(GCCell *cell, GC *gc) {
   auto *self = vmcast<Domain>(cell);
+  for (RuntimeModule *rm : self->runtimeModules_) {
+    gc->getIDTracker().untrackNative(rm);
+  }
   self->~Domain();
   auto &samplingProfiler = SamplingProfiler::getInstance();
   samplingProfiler->decreaseDomainCount();
@@ -174,8 +186,33 @@ void Domain::markWeakRefs(WeakRefAcceptor &acceptor) {
 
 size_t Domain::_mallocSizeImpl(GCCell *cell) {
   auto *self = vmcast<Domain>(cell);
+  size_t rmSize = 0;
+  for (auto *rm : self->runtimeModules_)
+    rmSize += sizeof(RuntimeModule) + rm->additionalMemorySize();
+
   return self->cjsModuleTable_.getMemorySize() +
-      self->runtimeModules_.capacity_in_bytes();
+      self->runtimeModules_.capacity_in_bytes() + rmSize;
+}
+
+void Domain::_snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
+  auto *const self = vmcast<Domain>(cell);
+  for (RuntimeModule *rm : self->runtimeModules_)
+    snap.addNamedEdge(
+        HeapSnapshot::EdgeType::Internal, "RuntimeModule", gc->getNativeID(rm));
+}
+
+void Domain::_snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
+  auto *const self = vmcast<Domain>(cell);
+  for (RuntimeModule *rm : self->runtimeModules_) {
+    // Create a native node for each RuntimeModule owned by this domain.
+    snap.beginNode();
+    snap.endNode(
+        HeapSnapshot::NodeType::Native,
+        "RuntimeModule",
+        gc->getNativeID(rm),
+        sizeof(RuntimeModule) + rm->additionalMemorySize(),
+        0);
+  }
 }
 
 ExecutionStatus Domain::importCJSModuleTable(

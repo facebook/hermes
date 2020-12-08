@@ -767,18 +767,9 @@ const void *Runtime::getStringForSymbol(SymbolID id) {
 #endif
 
 size_t Runtime::mallocSize() const {
-  size_t totalSize = 0;
-
-  // Register stack uses mmap.
-
-  // IdentifierTable size
-  totalSize +=
-      sizeof(IdentifierTable) + identifierTable_.additionalMemorySize();
-  // Runtime modules
-  for (const RuntimeModule &rtm : runtimeModuleList_) {
-    totalSize += sizeof(RuntimeModule) + rtm.additionalMemorySize();
-  }
-  return totalSize;
+  // Register stack uses mmap and RuntimeModules are tracked by their owning
+  // Domains. So this only considers IdentifierTable size.
+  return sizeof(IdentifierTable) + identifierTable_.additionalMemorySize();
 }
 
 #ifdef HERMESVM_SANITIZE_HANDLES

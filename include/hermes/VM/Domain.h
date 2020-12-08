@@ -231,6 +231,10 @@ class Domain final : public GCCell {
   /// \return the amount of non-GC memory being used by the given \p cell.
   static size_t _mallocSizeImpl(GCCell *cell);
 
+  /// Heap snapshot callbacks.
+  static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
+  static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
+
   /// Mark the WeakRefs in associated RuntimeModules which point to this Domain.
   void markWeakRefs(WeakRefAcceptor &acceptor);
 };
