@@ -359,7 +359,7 @@ uint64_t current_rss() {
   }
   long rss = 0;
   // The first field is total program size, second field is resident set size.
-  if (fscanf(fp, "%*ld %ld", &rss) != 1) {
+  if (fscanf(fp, "%*d %ld", &rss) != 1) {
     fclose(fp);
     return 0;
   }
