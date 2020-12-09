@@ -44,6 +44,18 @@ AlignedHeapSegment::~AlignedHeapSegment() {
   __asan_unpoison_memory_region(start(), end() - start());
 }
 
+void AlignedHeapSegment::markUnused(char *start, char *end) {
+  assert(
+      !llvh::alignmentAdjustment(start, oscompat::page_size()) &&
+      !llvh::alignmentAdjustment(end, oscompat::page_size()));
+  // Some kernels seems to require all pages in the mapping to have the same
+  // permissions for the advise to "take", so suspend guard page protection
+  // temporarily.
+  contents()->protectGuardPage(oscompat::ProtectMode::ReadWrite);
+  storage_.markUnused(start, end);
+  contents()->protectGuardPage(oscompat::ProtectMode::None);
+}
+
 template <AdviseUnused MU>
 void AlignedHeapSegment::setLevel(char *lvl) {
   assert(dbgContainsLevel(lvl));
@@ -58,12 +70,7 @@ void AlignedHeapSegment::setLevel(char *lvl) {
       auto nextPageBefore = reinterpret_cast<char *>(
           llvh::alignTo(reinterpret_cast<uintptr_t>(level_), PS));
 
-      // Some kernels seems to require all pages in the mapping to have the same
-      // permissions for the advise to "take", so suspend guard page protection
-      // temporarily.
-      contents()->protectGuardPage(oscompat::ProtectMode::ReadWrite);
-      storage_.markUnused(nextPageAfter, nextPageBefore);
-      contents()->protectGuardPage(oscompat::ProtectMode::None);
+      markUnused(nextPageAfter, nextPageBefore);
     }
 #endif
   }

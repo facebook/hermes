@@ -236,6 +236,11 @@ class AlignedHeapSegment {
   /// maintained, and recreates it, ensuring that it's valid.
   void recreateCardTableBoundaries();
 
+  /// Mark a set of pages as unused.
+  ///
+  /// \pre start and end must be aligned to the page boundary.
+  void markUnused(char *start, char *end);
+
   /// Clear allocations after \p level in this segment.
   ///
   /// \p MU Indicate whether the newly freed pages should be returned to the OS.

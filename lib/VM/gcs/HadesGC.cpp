@@ -2251,6 +2251,10 @@ void HadesGC::youngGenCollection(
       compactee.setLevel(compactee.end());
       oldGen_.addCellToFreelist(
           compactee.start(), compactee.used(), *compactee_.index);
+      auto markUnusedFrom = reinterpret_cast<char *>(llvh::alignAddr(
+          compactee.start() + sizeof(OldGen::FreelistCell),
+          oscompat::page_size()));
+      compactee.markUnused(markUnusedFrom, compactee.end());
       HeapSegment::setCellHead(
           reinterpret_cast<GCCell *>(compactee.start()), compactee.used());
       compactee_ = {};
