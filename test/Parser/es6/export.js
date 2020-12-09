@@ -21,6 +21,26 @@ export * from 'foo.js';
 // CHECK-NEXT:         "exportKind": "value"
 // CHECK-NEXT:       },
 
+export * as bar from 'foo.js';
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExportNamedDeclaration",
+// CHECK-NEXT:       "declaration": null,
+// CHECK-NEXT:       "specifiers": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:           "type": "ExportNamespaceSpecifier",
+// CHECK-NEXT:           "exported": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "bar"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
+// CHECK-NEXT:       ],
+// CHECK-NEXT:       "source": {
+// CHECK-NEXT:         "type": "StringLiteral",
+// CHECK-NEXT:         "value": "foo.js"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "exportKind": "value"
+// CHECK-NEXT:     },
+
 export default function myFun() { return 3; }
 // CHECK-NEXT:       {
 // CHECK-NEXT:         "type": "ExportDefaultDeclaration",

@@ -5810,12 +5810,44 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
 
   if (checkAndEat(TokenKind::star)) {
     // export * FromClause;
+    // export * as IdentifierName FromClause;
+    ESTree::Node *exportAs = nullptr;
+    if (checkAndEat(asIdent_)) {
+      // export * as IdentifierName FromClause;
+      //             ^
+      if (!check(TokenKind::identifier) && !tok_->isResWord()) {
+        errorExpected(
+            TokenKind::identifier,
+            "in export clause",
+            "start of export",
+            startLoc);
+        return None;
+      }
+      exportAs = setLocation(
+          tok_,
+          tok_,
+          new (context_) ESTree::IdentifierNode(
+              tok_->getResWordOrIdentifier(), nullptr, false));
+      advance();
+    }
     auto optFromClause = parseFromClause();
     if (!optFromClause) {
       return None;
     }
     if (!eatSemi()) {
       return None;
+    }
+    if (exportAs) {
+      ESTree::NodeList specifiers{};
+      specifiers.push_back(*setLocation(
+          startLoc,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::ExportNamespaceSpecifierNode(exportAs)));
+      return setLocation(
+          startLoc,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::ExportNamedDeclarationNode(
+              nullptr, std::move(specifiers), *optFromClause, valueIdent_));
     }
     return setLocation(
         startLoc,

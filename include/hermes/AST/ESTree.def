@@ -551,6 +551,9 @@ ESTREE_NODE_2_ARGS(
     NodePtr, exported, false,
     NodePtr, local, false)
 ESTREE_NODE_1_ARGS(
+    ExportNamespaceSpecifier, Base,
+    NodePtr, exported, false)
+ESTREE_NODE_1_ARGS(
     ExportDefaultDeclaration, Base,
     NodePtr, declaration, false)
 ESTREE_NODE_2_ARGS(

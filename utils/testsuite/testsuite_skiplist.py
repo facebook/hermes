@@ -1571,8 +1571,6 @@ SKIP_LIST = [
     "flow/types/string_literal_invalid/migrated_0000.js",
     # JSX HTML entities
     "flow/JSX/html_entity_at_start_of_child.js",
-    # 'export * as ....' proposal
-    "flow/ES6/modules/migrated_0008.js",
     # Destructuring identifier validation
     "flow/ES6/binding-pattern/object-pattern/yield-prop-alias-assignment-strict.js",
     # flow compiler "options" which disable features
