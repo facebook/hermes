@@ -247,28 +247,14 @@ void IdentifierTable::markIdentifiers(RootAcceptor &acceptor, GC *gc) {
 }
 
 void IdentifierTable::visitIdentifiers(
-    const std::function<void(UTF16Ref, uint32_t)> &acceptor) {
+    const std::function<void(SymbolID, const StringPrimitive *)> &acceptor) {
   for (uint32_t i = 0; i < getSymbolsEnd(); ++i) {
     auto &vectorEntry = getLookupTableEntry(i);
-    vm::SmallU16String<16> allocator;
-    UTF16Ref ref;
-    if (vectorEntry.isStringPrim()) {
-      allocator.clear();
-      auto stringPrim = vectorEntry.getStringPrim();
-      stringPrim->appendUTF16String(allocator);
-      ref = allocator.arrayRef();
-    } else if (vectorEntry.isLazyASCII()) {
-      allocator.clear();
-      auto asciiRef = vectorEntry.getLazyASCIIRef();
-      std::copy(
-          asciiRef.begin(), asciiRef.end(), std::back_inserter(allocator));
-      ref = allocator.arrayRef();
-    } else if (vectorEntry.isLazyUTF16()) {
-      ref = vectorEntry.getLazyUTF16Ref();
-    } else {
-      continue;
+    if (!vectorEntry.isFreeSlot()) {
+      const StringPrimitive *str =
+          vectorEntry.isStringPrim() ? vectorEntry.getStringPrim() : nullptr;
+      acceptor(SymbolID::unsafeCreate(i), str);
     }
-    acceptor(ref, i);
   }
 }
 

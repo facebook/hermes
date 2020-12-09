@@ -153,7 +153,8 @@ class IdentifierTable {
   /// the entry and its id as arguments. This is intended to be used only for
   /// snapshots, as it is slow. The function passed as acceptor shouldn't
   /// perform any heap operations
-  void visitIdentifiers(const std::function<void(UTF16Ref, uint32_t)> &lambda);
+  void visitIdentifiers(
+      const std::function<void(SymbolID, const StringPrimitive *)> &lambda);
 
   /// \return one higher than the largest symbol in the identifier table. This
   /// enables the GC to size its internal structures for symbol marking.

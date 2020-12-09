@@ -553,7 +553,7 @@ void Runtime::markWeakRoots(WeakRootAcceptor &acceptor) {
 }
 
 void Runtime::visitIdentifiers(
-    const std::function<void(UTF16Ref, uint32_t)> &acceptor) {
+    const std::function<void(SymbolID, const StringPrimitive *)> &acceptor) {
   identifierTable_.visitIdentifiers(acceptor);
 }
 

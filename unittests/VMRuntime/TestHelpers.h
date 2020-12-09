@@ -354,9 +354,7 @@ struct DummyRuntime final : public HandleRootOwner,
   void printRuntimeGCStats(JSONEmitter &) const override {}
 
   void visitIdentifiers(
-      const std::function<void(UTF16Ref, uint32_t)> &acceptor) override {
-    acceptor(createUTF16Ref(u"DummyIdTableEntry0"), 0);
-    acceptor(createUTF16Ref(u"DummyIdTableEntry1"), 1);
+      const std::function<void(SymbolID, const StringPrimitive *)> &) override {
   }
 
   std::string convertSymbolToUTF8(SymbolID) override;

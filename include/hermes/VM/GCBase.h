@@ -238,7 +238,8 @@ class GCBase {
     /// as it is slow. The function passed as acceptor shouldn't perform any
     /// heap operations.
     virtual void visitIdentifiers(
-        const std::function<void(UTF16Ref, uint32_t id)> &acceptor) = 0;
+        const std::function<void(SymbolID, const StringPrimitive *)>
+            &acceptor) = 0;
 
     /// Convert the given symbol into its UTF-8 string representation.
     /// \post The implementation of this function must not perform any GC
@@ -522,9 +523,9 @@ class GCBase {
     /// ID.
     inline HeapSnapshot::NodeID getObjectIDMustExist(const void *cell);
 
-    /// Get the unique object id of the symbol with the given index \b
-    /// symIdx.  If one does not yet exist, start tracking it.
-    inline HeapSnapshot::NodeID getObjectID(uint32_t symIdx);
+    /// Get the unique object id of the symbol with the given symbol \p sym. If
+    /// one does not yet exist, start tracking it.
+    inline HeapSnapshot::NodeID getObjectID(SymbolID sym);
 
     /// Get the unique object id of the given native memory (non-JS-heap).
     /// If one does not yet exist, start tracking it.
@@ -991,7 +992,7 @@ class GCBase {
 
   inline HeapSnapshot::NodeID getObjectID(const void *cell);
   inline HeapSnapshot::NodeID getObjectID(const GCPointerBase &cell);
-  inline HeapSnapshot::NodeID getObjectID(const SymbolID &sym);
+  inline HeapSnapshot::NodeID getObjectID(SymbolID sym);
   inline HeapSnapshot::NodeID getNativeID(const void *mem);
   /// \return The ID for the given value. If the value cannot be represented
   ///   with an ID, returns None.
@@ -1566,8 +1567,8 @@ inline HeapSnapshot::NodeID GCBase::getObjectID(const GCPointerBase &cell) {
   return getObjectID(cell.get(pointerBase_));
 }
 
-inline HeapSnapshot::NodeID GCBase::getObjectID(const SymbolID &sym) {
-  return idTracker_.getObjectID(sym.unsafeGetIndex());
+inline HeapSnapshot::NodeID GCBase::getObjectID(SymbolID sym) {
+  return idTracker_.getObjectID(sym);
 }
 
 inline HeapSnapshot::NodeID GCBase::getNativeID(const void *mem) {
@@ -1605,15 +1606,15 @@ inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectIDMustExist(
   return iter->second;
 }
 
-inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(uint32_t symIdx) {
+inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(SymbolID sym) {
   std::lock_guard<Mutex> lk{mtx_};
-  auto iter = symbolIDMap_.find(symIdx);
+  auto iter = symbolIDMap_.find(sym.unsafeGetIndex());
   if (iter != symbolIDMap_.end()) {
     return iter->second;
   }
   // Else, assume it is a symbol that needs to be tracked and give it a new ID.
   const auto symID = nextObjectID();
-  symbolIDMap_[symIdx] = symID;
+  symbolIDMap_[sym.unsafeGetIndex()] = symID;
   return symID;
 }
 

@@ -877,7 +877,8 @@ class Runtime : public HandleRootOwner,
   /// snapshots, as it is slow. The function passed as acceptor shouldn't
   /// perform any heap operations.
   void visitIdentifiers(
-      const std::function<void(UTF16Ref, uint32_t id)> &acceptor) override;
+      const std::function<void(SymbolID, const StringPrimitive *)> &acceptor)
+      override;
 
 #ifdef HERMESVM_PROFILER_BB
  public:

@@ -108,7 +108,7 @@ const VTable HiddenClass::vt{
 
 void HiddenClassBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const HiddenClass *>(cell);
-  mb.addField(&self->symbolID_);
+  mb.addField("symbol", &self->symbolID_);
   mb.addField("parent", &self->parent_);
   mb.addField("propertyMap", &self->propertyMap_);
   mb.addField("forInCache", &self->forInCache_);

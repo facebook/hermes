@@ -259,10 +259,7 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
   }
 
   void acceptHV(HermesValue &hv, const char *name) override {
-    if (hv.isPointer()) {
-      auto ptr = hv.getPointer();
-      accept(ptr, name);
-    } else if (auto id = gc.getSnapshotID(hv)) {
+    if (auto id = gc.getSnapshotID(hv)) {
       snap_.addNamedEdge(
           HeapSnapshot::EdgeType::Internal,
           llvh::StringRef::withNullAsEmpty(name),
@@ -287,6 +284,16 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
         HeapSnapshot::EdgeType::Weak,
         indexName,
         gc.getObjectID(slot->getPointer()));
+  }
+
+  void accept(SymbolID sym, const char *name) override {
+    if (sym.isInvalid()) {
+      return;
+    }
+    snap_.addNamedEdge(
+        HeapSnapshot::EdgeType::Internal,
+        llvh::StringRef::withNullAsEmpty(name),
+        gc.getObjectID(sym));
   }
 
  private:
@@ -433,7 +440,7 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
   JSONEmitter json(os);
   HeapSnapshot snap(json, gcCallbacks_->getStackTracesTree());
 
-  const auto rootScan = [gc, &snap]() {
+  const auto rootScan = [gc, &snap, this]() {
     {
       // Make the super root node and add edges to each root section.
       SnapshotRootSectionAcceptor rootSectionAcceptor(*gc, snap);
@@ -471,6 +478,22 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
       gc->markRoots(rootAcceptor, true);
       gc->markWeakRoots(rootAcceptor);
     }
+    gcCallbacks_->visitIdentifiers(
+        [gc, &snap, this](SymbolID sym, const StringPrimitive *str) {
+          snap.beginNode();
+          if (str) {
+            snap.addNamedEdge(
+                HeapSnapshot::EdgeType::Internal,
+                "description",
+                gc->getObjectID(str));
+          }
+          snap.endNode(
+              HeapSnapshot::NodeType::Symbol,
+              gc->convertSymbolToUTF8(sym),
+              idTracker_.getObjectID(sym),
+              sizeof(SymbolID),
+              0);
+        });
   };
 
   snap.beginSection(HeapSnapshot::Section::Nodes);
@@ -1100,6 +1123,8 @@ llvh::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
         : IDTracker::reserved(IDTracker::ReservedObjectID::Null);
   } else if (val.isNumber()) {
     return idTracker_.getNumberID(val.getNumber());
+  } else if (val.isSymbol() && val.getSymbol().isValid()) {
+    return idTracker_.getObjectID(val.getSymbol());
   } else if (val.isUndefined()) {
     return IDTracker::reserved(IDTracker::ReservedObjectID::Undefined);
   } else if (val.isNull()) {

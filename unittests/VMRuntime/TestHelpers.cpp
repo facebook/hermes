@@ -77,7 +77,6 @@ void DummyRuntime::markWeakRoots(WeakRootAcceptor &acceptor) {
 }
 
 std::string DummyRuntime::convertSymbolToUTF8(SymbolID) {
-  assert(false && "Should never attempt to resolve a symbol on a DummyRuntime");
   return "";
 }
 
