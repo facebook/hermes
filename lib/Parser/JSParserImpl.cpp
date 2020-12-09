@@ -3992,7 +3992,10 @@ Optional<ESTree::YieldExpressionNode *> JSParserImpl::parseYieldExpression(
 
   bool delegate = checkAndEat(TokenKind::star);
 
-  auto optArg = parseAssignmentExpression(param.get(ParamIn));
+  auto optArg = parseAssignmentExpression(
+      param.get(ParamIn),
+      AllowTypedArrowFunction::Yes,
+      CoverTypedParameters::No);
   if (!optArg)
     return None;
 
