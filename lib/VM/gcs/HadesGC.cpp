@@ -1478,8 +1478,26 @@ void HadesGC::prepareCompactee() {
       "Ongoing compaction at the start of an OG collection.");
   if (promoteYGToOG_ || oldGen_.numSegments() < 2)
     return;
-
-#ifdef HERMESVM_SANITIZE_HANDLES
+#ifndef HERMESVM_SANITIZE_HANDLES
+  // Only compact a segment if it was at least 75% occupied at some point
+  // and is now at most at 1/3 of its peak. If multiple segments meet these
+  // criteria, then select the one with the fewest allocated bytes, to
+  // minimise scanning and copying.
+  constexpr size_t kMinPeakBytesForCompaction =
+      (HeapSegment::maxSize() * 3) / 4;
+  constexpr size_t kMinPeakRatioForCompaction = 3;
+  uint64_t minBytes = HeapSegment::maxSize();
+  for (size_t i = 0; i < oldGen_.numSegments(); ++i) {
+    const size_t curBytes = oldGen_.allocatedBytes(i);
+    const size_t peakBytes = oldGen_.peakAllocatedBytes(i);
+    if (peakBytes > kMinPeakBytesForCompaction &&
+        curBytes < peakBytes / kMinPeakRatioForCompaction &&
+        curBytes < minBytes) {
+      compactee_.index = i;
+      minBytes = curBytes;
+    }
+  }
+#else
   std::uniform_int_distribution<> distrib(0, oldGen_.numSegments() - 1);
   compactee_.index = distrib(randomEngine_);
 #endif
