@@ -3208,7 +3208,9 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberSelect(
             ESTree::MemberExpressionNode(expr, propExpr.getValue(), true));
   } else if (
       checkAndEat(TokenKind::period) ||
-      (optional && !check(TokenKind::l_paren, TokenKind::less))) {
+      (optional &&
+       !(check(TokenKind::l_paren) ||
+         (context_.getParseFlow() && check(TokenKind::less))))) {
     if (!check(TokenKind::identifier, TokenKind::private_identifier) &&
         !tok_->isResWord()) {
       // Just use the pattern here, even though we know it will fail.
@@ -3250,7 +3252,9 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberSelect(
         new (context_) ESTree::MemberExpressionNode(expr, id, false));
   } else {
     assert(
-        optional && check(TokenKind::l_paren, TokenKind::less) &&
+        optional &&
+        (check(TokenKind::l_paren) ||
+         (context_.getParseFlow() && check(TokenKind::less))) &&
         "must be ?.() at this point");
     // ?. Arguments :
     // ?. ( ArgumentList )
@@ -3266,6 +3270,13 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberSelect(
       }
 
       typeArgs = *optTypeArgs;
+
+      if (!need(
+              TokenKind::l_paren,
+              "after type arguments in optional call",
+              "start of optional call",
+              objectLoc))
+        return None;
     }
 #endif
 
