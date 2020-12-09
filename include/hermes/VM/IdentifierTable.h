@@ -136,13 +136,14 @@ class IdentifierTable {
   void reserve(uint32_t count) {
     lookupVector_.reserve(count);
     hashTable_.reserve(count);
+    markedSymbols_.reserve(count);
   }
 
   /// \return an estimate of the size of additional memory used by this
   /// IdentifierTable.
   size_t additionalMemorySize() const {
     return lookupVector_.capacity() * sizeof(LookupEntry) +
-        hashTable_.additionalMemorySize();
+        hashTable_.additionalMemorySize() + markedSymbols_.getMemorySize();
   }
 
   /// Mark all identifiers for the garbage collector.
