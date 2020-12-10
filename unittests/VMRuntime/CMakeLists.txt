@@ -33,7 +33,7 @@ set(RTSources
   GCMarkWeakTest.cpp
   GCObjectIterationTest.cpp
   GCOOMTest.cpp
-  GCReturnUnusedMemoryNCTest.cpp
+  GCReturnUnusedMemoryTest.cpp
   GCSanitizeHandlesTest.cpp
   GCSegmentAddressIndexTest.cpp
   GCSegmentRangeTest.cpp

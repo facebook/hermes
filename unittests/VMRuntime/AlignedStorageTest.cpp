@@ -5,8 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// This test requires files that are only linked in if NCGen is used.
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
+// This test requires files that are only linked in if either NCGen or Hades is
+// used.
+#if defined(HERMESVM_GC_NONCONTIG_GENERATIONAL) || defined(HERMESVM_GC_HADES)
 
 #include "gtest/gtest.h"
 

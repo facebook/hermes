@@ -2660,6 +2660,26 @@ bool HadesGC::inYoungGen(const void *p) const {
   return ygStart_ == AlignedStorage::start(p);
 }
 
+llvh::ErrorOr<size_t> HadesGC::getVMFootprintForTest() const {
+  // Start by adding the YG.
+  size_t footprint = 0;
+  auto ygFootprint =
+      hermes::oscompat::vm_footprint(youngGen_->start(), youngGen_->hiLim());
+  // Check if the call failed.
+  if (!ygFootprint)
+    return ygFootprint;
+
+  // Add each OG segment.
+  for (const auto &seg : oldGen_) {
+    auto segFootprint =
+        hermes::oscompat::vm_footprint(seg->start(), seg->hiLim());
+    if (!segFootprint)
+      return segFootprint;
+    footprint += *segFootprint;
+  }
+  return footprint;
+}
+
 std::vector<std::unique_ptr<HadesGC::HeapSegment>>::iterator
 HadesGC::OldGen::begin() {
   return segments_.begin();

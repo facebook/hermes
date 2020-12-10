@@ -5,14 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#if defined(HERMESVM_GC_NONCONTIG_GENERATIONAL) && defined(NDEBUG)
+#if (                                              \
+    defined(HERMESVM_GC_NONCONTIG_GENERATIONAL) || \
+    defined(HERMESVM_GC_HADES)) &&                 \
+    defined(NDEBUG) && !defined(HERMESVM_ALLOW_HUGE_PAGES)
 
 #include "gtest/gtest.h"
 
 #include "EmptyCell.h"
 #include "TestHelpers.h"
 
-#include "hermes/VM/GenGCHeapSegment.h"
+#include "hermes/VM/AlignedHeapSegment.h"
 
 using namespace hermes::vm;
 using namespace hermes::vm::detail;
@@ -26,7 +29,7 @@ const MetadataTableForTests getMetadataTable() {
   return MetadataTableForTests(table);
 }
 
-TEST(GCReturnUnusedMemoryNCTest, CollectReturnsFreeMemory) {
+TEST(GCReturnUnusedMemoryTest, CollectReturnsFreeMemory) {
   // TODO(T40416012) Re-enable this test when vm_unused is fixed.
   // Skip this test in Windows because vm_unused has a no-op implementation.
 #ifndef _WINDOWS
@@ -37,13 +40,13 @@ TEST(GCReturnUnusedMemoryNCTest, CollectReturnsFreeMemory) {
   DummyRuntime &rt = *runtime;
   auto &gc = rt.gc;
 
-  using HalfCell = EmptyCell<GenGCHeapSegment::maxSize() / 2>;
+  using SemiCell = EmptyCell<AlignedHeapSegment::maxSize() * 8 / 10>;
 
   // Allocate cells directly in the old generation.
-  auto *cell1 = HalfCell::createLongLived(rt);
+  auto *cell1 = SemiCell::createLongLived(rt);
   rt.pointerRoots.push_back(reinterpret_cast<GCCell **>(&cell1));
 
-  auto *cell2 = HalfCell::createLongLived(rt);
+  auto *cell2 = SemiCell::createLongLived(rt);
   rt.pointerRoots.push_back(reinterpret_cast<GCCell **>(&cell2));
 
   auto before = gc.getVMFootprintForTest();
@@ -60,6 +63,14 @@ TEST(GCReturnUnusedMemoryNCTest, CollectReturnsFreeMemory) {
 
   // Collect should return the unused memory back to the OS.
   rt.collect();
+#ifdef HERMESVM_GC_HADES
+  // Hades can only return memory after a compaction. The very first collection
+  // will just free up the originally allocated memory.
+  // This collection will identify the segment to compact and prepare it.
+  rt.collect();
+  // This collection will actually compact the segment.
+  rt.collect();
+#endif
 
   auto collected = gc.getVMFootprintForTest();
   ASSERT_TRUE(collected);
@@ -71,4 +82,4 @@ TEST(GCReturnUnusedMemoryNCTest, CollectReturnsFreeMemory) {
 
 } // namespace
 
-#endif // HERMESVM_GC_NONCONTIG_GENERATIONAL, NDEBUG
+#endif

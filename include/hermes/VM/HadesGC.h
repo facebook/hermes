@@ -188,6 +188,12 @@ class HadesGC final : public GCBase {
   /// \return true if the pointer lives in the young generation.
   bool inYoungGen(const void *p) const;
 
+  /// Approximate the dirty memory footprint of the GC's heap. Note that this
+  /// does not return the number of dirty pages in the heap, but instead returns
+  /// a number that goes up if pages are dirtied, and goes down if pages are
+  /// cleaned.
+  llvh::ErrorOr<size_t> getVMFootprintForTest() const;
+
 #ifndef NDEBUG
   /// \name Debug APIs
   /// \{
