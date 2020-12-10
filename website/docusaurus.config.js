@@ -57,7 +57,7 @@ module.exports = {
             },
             {
               label: 'Using Hermes custom build with React Native',
-              to: 'docs/react-native-integration#using-a-custom-hermes-build-in-a-react-native-app',
+              to: 'docs/react-native-integration',
             },
           ],
         },
@@ -84,8 +84,7 @@ module.exports = {
     },
     prism: {
       defaultLanguage: 'shell',
-      theme: require('prism-react-renderer/themes/github'),
-      darkTheme: require('prism-react-renderer/themes/dracula'),
+      theme: require('./src/prismTheme'),
     }
   },
   presets: [

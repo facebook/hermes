@@ -3,8 +3,6 @@ id: modules
 title: Modules
 ---
 
-## Hermes Modules
-
 In which we describe the module system and metadata input.
 
 ### Metadata Format

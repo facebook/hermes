@@ -3,8 +3,6 @@ id: language-features
 title: Language Features
 ---
 
-## Language Features in Hermes
-
 Hermes plans to target ECMAScript 2015 (ES6), with some carefully considered exceptions.
 
 ### Supported

@@ -4,19 +4,19 @@
       "building-and-running",
       "emscripten",
       "design",
-      "language-features",
-      "modules",
-      "optimizer",
-      "regexp",
-      "strings",
       "ir",
-      "vm"
-    ],
-    "Contributing": [
-      "coding-standards"
+      "optimizer",
+      "language-features",
+      "vm",
+      "modules",
+      "regexp",
+      "strings"
     ],
     "Integrations": [
       "react-native-integration"
+    ],
+    "Contributing": [
+      "coding-standards"
     ]
   }
 }
