@@ -73,6 +73,18 @@ gcheapsize_t GenGC::Size::minStorageFootprint() const {
   return ogs_.minStorageFootprint() + ygs_.minStorageFootprint();
 }
 
+llvh::ErrorOr<size_t> GenGC::getVMFootprintForTest() const {
+  size_t footprint = 0;
+  for (const auto &seg : segmentIndex_) {
+    auto segFootprint =
+        hermes::oscompat::vm_footprint(seg->start(), seg->hiLim());
+    if (!segFootprint)
+      return segFootprint;
+    footprint += *segFootprint;
+  }
+  return footprint;
+}
+
 std::pair<gcheapsize_t, gcheapsize_t> GenGC::Size::adjustSize(
     gcheapsize_t desired) const {
   const gcheapsize_t ygSize = ygs_.adjustSize(desired / kYoungGenFractionDenom);

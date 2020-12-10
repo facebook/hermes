@@ -113,6 +113,20 @@ enum class MAdvice { Random, Sequential };
 /// \return true on success, false on error.
 bool vm_madvise(void *p, size_t sz, MAdvice advice);
 
+/// Return the footprint of the memory-mapping starting at \p start (inclusive)
+/// and ending at \p end (exclusive). The notions of "footprint" and "mapping"
+/// are platform-specific, conforming to the following specification:
+///
+///  - "Mapping" refers to the abstraction from the kernel for contiguous chunks
+///    of virtual memory (i.e. from `mmap` or `vm_allocate`).
+///  - "Footprint" refers to the metric by which the platform measures the
+///    impact of a region on memory pressure. I.e. if this metric goes up, the
+///    likelihood that the process is killed due to memory pressure increases.
+///
+/// \return the footprint as a number of pages on success, and error on
+/// failure.
+llvh::ErrorOr<size_t> vm_footprint(char *start, char *end);
+
 /// Return the number of pages in the given region that are currently in RAM.
 /// If \p runs is provided, then populate it with the lengths of runs of
 /// consecutive pages with the same resident/non-resident status, alternating

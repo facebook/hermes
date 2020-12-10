@@ -10,8 +10,6 @@
 
 #include "gtest/gtest.h"
 
-#include "Footprint.h"
-
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/AlignedStorage.h"
 #include "hermes/VM/LimitedStorageProvider.h"
@@ -24,7 +22,6 @@
 
 using namespace hermes;
 using namespace hermes::vm;
-using namespace hermes::vm::detail;
 
 namespace {
 
@@ -105,7 +102,6 @@ TEST_F(AlignedStorageTest, AdviseUnused) {
 // Skip this test in Windows because vm_unused has a no-op implementation. Skip
 // it when huge pages are on because we do not return memory to the OS.
 #if !defined(_WINDOWS) && !defined(HERMESVM_ALLOW_HUGE_PAGES)
-  const size_t FAILED = SIZE_MAX;
   const size_t PG_SIZE = oscompat::page_size();
 
   AlignedStorage storage{
@@ -121,22 +117,22 @@ TEST_F(AlignedStorageTest, AdviseUnused) {
   // On some platforms, the mapping containing [start, end) can be larger than
   // [start, end) itself, and the extra space may already contribute to the
   // footprint, so we account for this in \c initial.
-  size_t initial = regionFootprint(start, end);
-  ASSERT_NE(initial, FAILED);
+  auto initial = oscompat::vm_footprint(start, end);
+  ASSERT_TRUE(initial);
 
   for (volatile char *p = start; p < end; p += PG_SIZE)
     *p = 1;
 
-  size_t touched = regionFootprint(start, end);
-  ASSERT_NE(touched, FAILED);
+  auto touched = oscompat::vm_footprint(start, end);
+  ASSERT_TRUE(touched);
 
   storage.markUnused(start, start + FREED_PAGES * PG_SIZE);
 
-  size_t marked = regionFootprint(start, end);
-  ASSERT_NE(marked, FAILED);
+  auto marked = oscompat::vm_footprint(start, end);
+  ASSERT_TRUE(marked);
 
-  EXPECT_EQ(initial + TOTAL_PAGES, touched);
-  EXPECT_EQ(touched - FREED_PAGES, marked);
+  EXPECT_EQ(*initial + TOTAL_PAGES, *touched);
+  EXPECT_EQ(*touched - FREED_PAGES, *marked);
 #endif
 }
 

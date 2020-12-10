@@ -479,11 +479,12 @@ class GenGC final : public GCBase {
 // As a result, vanilla "ifdef public" trick leads to link errors.
 #if defined(UNIT_TEST) || defined(_MSC_VER)
  public:
-  /// Return a reference to the segment index, for testing purposes.
-  inline const GCSegmentAddressIndex &segmentIndex() const;
 #else
  private:
 #endif
+
+  /// Return a number that is higher when the GC heap contains more dirty pages.
+  llvh::ErrorOr<size_t> getVMFootprintForTest() const;
 
   /// FIXME: This is for backwards compatibility, new users should use
   /// Size::kYoungGenFractionDenom.
@@ -1064,12 +1065,6 @@ inline GenGC::FixedSizeValue GenGC::lastAllocationWasFixedSize() const {
   return lastAllocWasFixedSize_;
 }
 #endif
-
-#ifdef UNIT_TEST
-const GCSegmentAddressIndex &GenGC::segmentIndex() const {
-  return segmentIndex_;
-}
-#endif // UNIT_TEST
 
 inline void GenGC::writeBarrierImpl(void *loc, void *value, bool hv) {
   HERMES_SLOW_ASSERT(dbgContains(loc));

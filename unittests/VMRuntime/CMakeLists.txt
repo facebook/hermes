@@ -24,7 +24,6 @@ set(RTSources
   DictPropertyMapTest.cpp
   ExtStringForTest.cpp
   ExternalMemAccountingTest.cpp
-  Footprint.cpp
   GCBasicsTest.cpp
   GCFinalizerTest.cpp
   GCFragmentationTest.cpp
