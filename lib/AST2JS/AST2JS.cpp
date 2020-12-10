@@ -742,6 +742,8 @@ class GenJS {
   }
 
   void printChild(Node *child, Node *parent, ChildPos childPosition) {
+    if (!child)
+      return;
     printParens(child, parent, needParens(parent, child, childPosition));
   }
 

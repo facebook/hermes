@@ -25,6 +25,7 @@ while (i < 10);
 
 for(a in b in c)
     ++a;
+for(;;) {}
 
 try { 1; } catch (e) {}
 
