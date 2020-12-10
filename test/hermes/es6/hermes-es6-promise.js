@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -Xes6-promise %s | %FileCheck --match-full-lines --check-prefix=ON %s
-// RUN: %hermes %s | %FileCheck --match-full-lines --check-prefix=OFF %s
+// RUN: %hermes %s | %FileCheck --match-full-lines --check-prefix=ON %s
+// RUN: %hermes -Xes6-promise=0 %s | %FileCheck --match-full-lines --check-prefix=OFF %s
 
 print(HermesInternal.hasPromise());
 // ON: true
