@@ -105,7 +105,7 @@ module.exports = {
       },
     ],
   ],
-  stylesheets: [
+  clientModules: [
     require.resolve('./node_modules/normalize.css/normalize.css'),
   ],
   plugins: [
