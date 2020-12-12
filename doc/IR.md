@@ -1,12 +1,10 @@
 ---
 id: ir
-title: IR
+title: Design of the IR
 ---
 
-
-## Design of the Hermes high-level IR
-
 ### Introduction
+
 This document is a reference manual for the Hermes High-level IR. The IR is a
 Static Single Assignment (SSA) based representation that captures the JavaScript
 language semantics. It features optional types (values may be annotated with

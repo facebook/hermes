@@ -1,1 +1,22 @@
-{}
+{
+  "docs": {
+    "Documentation": [
+      "building-and-running",
+      "emscripten",
+      "design",
+      "ir",
+      "optimizer",
+      "language-features",
+      "vm",
+      "modules",
+      "regexp",
+      "strings"
+    ],
+    "Integrations": [
+      "react-native-integration"
+    ],
+    "Contributing": [
+      "coding-standards"
+    ]
+  }
+}

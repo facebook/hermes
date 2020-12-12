@@ -1,10 +1,7 @@
 ---
 id: design
-title: Design
+title: Design Overview
 ---
-
-
-## Hermes Design Document
 
 This is the design document for the Hermes Engine.
 

@@ -3,12 +3,9 @@ id: modules
 title: Modules
 ---
 
-
-# Hermes Modules
-
 In which we describe the module system and metadata input.
 
-## Metadata Format
+### Metadata Format
 
 In order to provide a directory or zipfile to Hermes,
 it must contain a `metadata.json` file at the root.
@@ -32,7 +29,7 @@ The `metadata.json` file must be a JSON object, with the following fields:
     to their actual resolved file path relative to the directory or zip file root.
     These relative paths should be the same as in `segments`, with leading `./`.
 
-### Example Metadata File
+#### Example Metadata File
 
 ```js
 {
@@ -55,7 +52,7 @@ The `metadata.json` file must be a JSON object, with the following fields:
 }
 ```
 
-## Require system
+### Require system
 
 Modules can require each other using the `require` function provided as a local
 variable by the runtime. The argument to `require` must be an absolute path
@@ -67,13 +64,13 @@ const Foo = require('/subdir/foo.js');
 Foo.doSmth();
 ```
 
-## Source maps
+### Source maps
 
 Each JavaScript file can optionally provide a corresponding source map, which is
 the name of the source file with the suffix `.map`. For example `subdir/foo.js`
 might provide a `subdir/foo.js.map` file.
 
-## Complete design
+### Complete design
 
 Module mode is currently activated via passing `-commonjs` to Hermes while compiling.
 Hermes can then be given a directory and a `metadata.json` file,

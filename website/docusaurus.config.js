@@ -24,6 +24,7 @@ module.exports = {
       },
       items: [
         { to: 'playground/', label: 'Playground', position: 'right' },
+        { to: 'docs/building-and-running', label: 'Docs', position: 'right' },
         {
           href: 'https://github.com/facebook/hermes',
           label: 'GitHub',
@@ -38,18 +39,35 @@ module.exports = {
           title: 'Docs',
           items: [
             {
-              label: 'Using Hermes in a React Native app',
+              label: 'Building and Running Hermes',
+              to: 'docs/building-and-running',
+            },
+            {
+              label: 'Building Hermes with Emscripten',
+              to: 'docs/emscripten',
+            },
+          ],
+        },
+        {
+          title: 'Integrations',
+          items: [
+            {
+              label: 'Using Hermes with React Native',
               to: 'https://reactnative.dev/docs/hermes',
             },
             {
-              label: 'Hermes Development',
-              to: 'https://github.com/facebook/hermes',
+              label: 'Using Hermes custom build with React Native',
+              to: 'docs/react-native-integration',
             },
           ],
         },
         {
           title: 'Social',
           items: [
+            {
+              label: 'GitHub',
+              to: 'https://github.com/facebook/hermes',
+            },
             {
               label: 'Twitter',
               to: 'https://twitter.com/HermesEngine',
@@ -59,16 +77,28 @@ module.exports = {
       ],
       logo: {
         alt: 'Facebook Open Source Logo',
-        src: 'https://docusaurus.io/img/oss_logo.png',
+        src: 'img/oss_logo.png',
         href: 'https://opensource.facebook.com',
       },
       copyright: `Copyright © ${new Date().getFullYear()} Facebook, Inc. Built with Docusaurus.`,
     },
+    prism: {
+      defaultLanguage: 'shell',
+      theme: require('./src/prismTheme'),
+    }
   },
   presets: [
     [
       '@docusaurus/preset-classic',
       {
+        docs: {
+          showLastUpdateAuthor: false,
+          showLastUpdateTime: true,
+          editUrl:
+            'https://github.com/facebook/hermes/blob/master/website/',
+          path: '../doc',
+          sidebarPath: require.resolve('./sidebars.json'),
+        },
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
         },
