@@ -103,6 +103,12 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime *runtime, NativeArgs) {
   StackFramePtr callerFrame = runtime->getCurrentFrame();
   auto selfHandle =
       Handle<JSCallableProxy>::vmcast(&callerFrame.getCalleeClosureOrCBRef());
+  // detail::slots() will always return the slots_ field here, but
+  // this isn't a member, so it can't see it.  It doesn't seem to be
+  // worth tweaking the abstractions to avoid the small overhead in
+  // this case.
+  Handle<JSObject> target =
+      runtime->makeHandle(detail::slots(*selfHandle).target);
   Predefined::Str trapName = callerFrame->isConstructorCall()
       ? Predefined::construct
       : Predefined::apply;
@@ -111,12 +117,6 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime *runtime, NativeArgs) {
   if (trapRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  // detail::slots() will always return the slots_ field here, but
-  // this isn't a member, so it can't see it.  It doesn't seem to be
-  // worth tweaking the abstractions to avoid the small overhead in
-  // this case.
-  Handle<JSObject> target =
-      runtime->makeHandle(detail::slots(*selfHandle).target);
   // 6. If trap is undefined, then
   if (!*trapRes) {
     //   a. Return ? Call(target, thisArgument, argumentsList).

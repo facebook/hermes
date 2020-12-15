@@ -2190,5 +2190,22 @@ var {
 }));
 Object.getPrototypeOf(proxy);
 
+var targetRan = false;
+
+var {
+  proxy,
+  revoke
+} = Proxy.revocable(
+  function() { targetRan = true; },
+  new Proxy({}, {
+    get: function(t, k, r) {
+      revoke();
+    }
+  }
+));
+proxy();
+
+assert.ok(targetRan);
+
 print('done');
 // CHECK-LABEL: done
