@@ -671,6 +671,7 @@ Effects | May read and write memory. (may throw)
 ### IteratorBegin
 
 IteratorBegin | _
+--- | --- |
 Description | Begins array destructuring on a given iterable source.
 Example |  %0 = IteratorBegin %sourceOrNext
 Arguments | %sourceOrNext[in/out] is the stack location for source to destructure from. Is set to source if performing array iteration, else set to the `.next()` method of the iterator.
@@ -680,6 +681,7 @@ Effects | May read and write memory, may throw or execute.
 ### IteratorNext
 
 IteratorNext | _
+--- | --- |
 Description | Destructures the next value from a given iterator.
 Example |  %0 = IteratorNext %iterator %sourceOrNext
 Arguments | %iterator is the index or the iterator. %sourceOrNext is the input stack location (source to destructure from) or the next method.
@@ -707,6 +709,7 @@ Effects | May read and write memory, may throw or execute.
 ### IteratorClose
 
 IteratorClose | _
+--- | --- |
 Description | Closes an iterator if it exists.
 Example |  %0 = IteratorClose %iterator %ignoreInnerException
 Arguments | %iterator is the index or the iterator. %ignoreInnerException is a boolean literal.
