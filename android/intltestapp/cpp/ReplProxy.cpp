@@ -58,7 +58,7 @@ struct ReplProxy : facebook::jni::HybridClass<ReplProxy> {
                 .withES6Promise(vm::RuntimeConfig::getDefaultES6Promise())
                 .withES6Proxy(vm::RuntimeConfig::getDefaultES6Proxy())
                 .withES6Symbol(vm::RuntimeConfig::getDefaultES6Symbol())
-                .withES6Intl(true)
+                // .withES6Intl(true)
                 .withEnableHermesInternal(true)
                 .withEnableHermesInternalTestMethods(true)
                 .withAllowFunctionToStringWithRuntimeSource(false)
@@ -86,6 +86,7 @@ struct ReplProxy : facebook::jni::HybridClass<ReplProxy> {
     std::string nativeEvalScript(facebook::jni::alias_ref<facebook::jni::JString> jScript) {
         std::string script = jScript->toStdString();
         std::string response;
+        response.reserve(1024);
 
         vm::GCScope gcScope(mRuntime.get());
 
@@ -164,7 +165,12 @@ struct ReplProxy : facebook::jni::HybridClass<ReplProxy> {
             vm::SmallU16String<32> tmp;
             vm::UTF16Ref result = stringView.getUTF16Ref(tmp);
 
-            response.append(std::string(result.begin(), result.end()));
+            vm::SmallU16String<32> allocator;
+            std::string ret;
+            ::hermes::convertUTF16ToUTF8WithReplacements(
+                    ret, result);
+
+            response.append(ret);
         }
 
         return response;
