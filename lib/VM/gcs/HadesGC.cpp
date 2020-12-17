@@ -1176,9 +1176,9 @@ void HadesGC::getHeapInfo(HeapInfo &info) {
 void HadesGC::getHeapInfoWithMallocSize(HeapInfo &info) {
   // Get the usual heap info.
   getHeapInfo(info);
+  // Get GCBase's malloc size estimate.
+  GCBase::getHeapInfoWithMallocSize(info);
   std::lock_guard<Mutex> lk{gcMutex_};
-  // In case the info is being re-used, ensure the count starts at 0.
-  info.mallocSizeEstimate = 0;
   // First add the usage by the runtime's roots.
   info.mallocSizeEstimate += gcCallbacks_->mallocSize();
   // Scan all objects for their malloc size. This operation is what makes
@@ -1186,9 +1186,6 @@ void HadesGC::getHeapInfoWithMallocSize(HeapInfo &info) {
   forAllObjs([&info](GCCell *cell) {
     info.mallocSizeEstimate += cell->getVT()->getMallocSize(cell);
   });
-  // A deque doesn't have a capacity, so the size is the lower bound.
-  info.mallocSizeEstimate +=
-      weakPointers_.size() * sizeof(decltype(weakPointers_)::value_type);
 }
 
 void HadesGC::getCrashManagerHeapInfo(
@@ -1809,7 +1806,7 @@ WeakRefSlot *HadesGC::allocWeakSlot(HermesValue init) {
   assert(
       !calledByBackgroundThread() &&
       "allocWeakSlot should only be called from the mutator");
-  // The weak ref mutex doesn't need to be held since weakPointers_ and
+  // The weak ref mutex doesn't need to be held since weakSlots_ and
   // firstFreeWeak_ are only modified while the world is stopped.
   WeakRefSlot *slot;
   if (firstFreeWeak_) {
@@ -1820,8 +1817,8 @@ WeakRefSlot *HadesGC::allocWeakSlot(HermesValue init) {
     firstFreeWeak_ = firstFreeWeak_->nextFree();
     slot->reset(init);
   } else {
-    weakPointers_.push_back({init});
-    slot = &weakPointers_.back();
+    weakSlots_.push_back({init});
+    slot = &weakSlots_.back();
   }
   if (isOldGenMarking_) {
     // During the mark phase, if a WeakRef is created, it might not be marked
@@ -1881,7 +1878,7 @@ void HadesGC::trackReachable(CellKind kind, unsigned sz) {}
 
 size_t HadesGC::countUsedWeakRefs() const {
   size_t count = 0;
-  for (auto &slot : weakPointers_) {
+  for (auto &slot : weakSlots_) {
     if (slot.state() != WeakSlotState::Free) {
       ++count;
     }
@@ -2487,7 +2484,7 @@ void HadesGC::finalizeYoungGenObjects() {
 
 void HadesGC::updateWeakReferencesForYoungGen() {
   assert(gcMutex_ && "gcMutex must be held when updating weak refs");
-  for (auto &slot : weakPointers_) {
+  for (auto &slot : weakSlots_) {
     switch (slot.state()) {
       case WeakSlotState::Free:
         break;
@@ -2528,7 +2525,7 @@ void HadesGC::updateWeakReferencesForYoungGen() {
 }
 
 void HadesGC::updateWeakReferencesForOldGen() {
-  for (auto &slot : weakPointers_) {
+  for (auto &slot : weakSlots_) {
     switch (slot.state()) {
       case WeakSlotState::Free:
         // Skip free weak slots.

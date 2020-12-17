@@ -616,6 +616,13 @@ void GCBase::getHeapInfo(HeapInfo &info) {
   info.numCollections = cumStats_.numCollections;
 }
 
+void GCBase::getHeapInfoWithMallocSize(HeapInfo &info) {
+  // Assign to overwrite anything previously in the heap info.
+  // A deque doesn't have a capacity, so the size is the lower bound.
+  info.mallocSizeEstimate =
+      weakSlots_.size() * sizeof(decltype(weakSlots_)::value_type);
+}
+
 #ifndef NDEBUG
 void GCBase::getDebugHeapInfo(DebugHeapInfo &info) {
   recordNumAllocatedObjects();
@@ -626,6 +633,16 @@ void GCBase::getDebugHeapInfo(DebugHeapInfo &info) {
   info.numMarkedSymbols = numMarkedSymbols_;
   info.numHiddenClasses = numHiddenClasses_;
   info.numLeafHiddenClasses = numLeafHiddenClasses_;
+}
+
+size_t GCBase::countUsedWeakRefs() const {
+  size_t count = 0;
+  for (auto &slot : weakSlots_) {
+    if (slot.state() != WeakSlotState::Free) {
+      ++count;
+    }
+  }
+  return count;
 }
 #endif
 

@@ -317,12 +317,6 @@ class GenGC final : public GCBase {
   /// The largest the size of this heap could ever grow to.
   inline size_t maxSize() const;
 
-#ifndef NDEBUG
-  /// \return Number of weak ref slots currently in use.
-  /// Inefficient. For testing/debugging.
-  size_t countUsedWeakRefs() const;
-#endif
-
   /// Cumulative stats over time so far.
   size_t getPeakLiveAfterGC() const override;
 
@@ -883,9 +877,6 @@ class GenGC final : public GCBase {
   /// Every bit corresponds to a symbol id. It is set to true if the symbol is
   /// in use (was marked).
   llvh::BitVector markedSymbols_{};
-
-  /// The weak reference slots.
-  std::deque<WeakRefSlot> weakSlots_{};
 
   /// Pointers to the slots (elements of weakSlots_, above) that may
   /// possibly have pointer referents that point into the young generation.

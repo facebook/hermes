@@ -554,12 +554,6 @@ class HadesGC final : public GCBase {
   /// Protected by gcMutex_.
   OldGen oldGen_;
 
-  /// weakPointers_ is a list of all the weak pointers in the system. They are
-  /// invalidated if they point to an object that is dead, and do not count
-  /// towards whether an object is live or dead.
-  /// Protected by weakRefMutex().
-  std::deque<WeakRefSlot> weakPointers_;
-
   /// Whoever holds this lock is permitted to modify data structures around the
   /// GC. This includes mark bits, free lists, etc.
   Mutex gcMutex_;

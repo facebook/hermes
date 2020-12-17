@@ -869,18 +869,6 @@ void GenGC::shrinkTo(size_t hint) {
   oldGen_.shrinkTo(ogSize);
 }
 
-#ifndef NDEBUG
-size_t GenGC::countUsedWeakRefs() const {
-  size_t count = 0;
-  for (auto &slot : weakSlots_) {
-    if (slot.state() != WeakSlotState::Free) {
-      ++count;
-    }
-  }
-  return count;
-}
-#endif
-
 void GenGC::unmarkWeakReferences() {
   for (auto &slot : weakSlots_) {
     if (slot.state() == WeakSlotState::Marked) {
@@ -1186,6 +1174,7 @@ void GenGC::getCrashManagerHeapInfo(CrashManager::HeapInformation &info) {
 
 void GenGC::getHeapInfoWithMallocSize(HeapInfo &info) {
   getHeapInfo(info);
+  GCBase::getHeapInfoWithMallocSize(info);
   // In case the info is being re-used, ensure the count starts at 0.
   info.mallocSizeEstimate = 0;
 
@@ -1202,9 +1191,6 @@ void GenGC::getHeapInfoWithMallocSize(HeapInfo &info) {
   }
 
   info.mallocSizeEstimate += markedSymbols_.getMemorySize();
-  // A deque doesn't have a capacity, so the size is the lower bound.
-  info.mallocSizeEstimate +=
-      weakSlots_.size() * sizeof(decltype(weakSlots_)::value_type);
 }
 
 #ifndef NDEBUG

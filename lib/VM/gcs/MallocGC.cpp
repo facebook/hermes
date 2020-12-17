@@ -186,7 +186,6 @@ MallocGC::MallocGC(
           gcConfig,
           std::move(crashMgr)),
       pointers_(),
-      weakPointers_(),
       maxSize_(Size(gcConfig).max()),
       sizeLimit_(gcConfig.getInitHeapSize()) {
   crashMgr_->setCustomData("HermesGC", kGCName);
@@ -483,18 +482,6 @@ void MallocGC::getCrashManagerHeapInfo(CrashManager::HeapInformation &info) {
   info.size_ = 0;
 }
 
-#ifndef NDEBUG
-size_t MallocGC::countUsedWeakRefs() const {
-  size_t count = 0;
-  for (auto &slot : weakPointers_) {
-    if (slot.state() != WeakSlotState::Free) {
-      ++count;
-    }
-  }
-  return count;
-}
-#endif
-
 void MallocGC::forAllObjs(const std::function<void(GCCell *)> &callback) {
   for (auto *ptr : pointers_) {
     callback(ptr->data());
@@ -502,7 +489,7 @@ void MallocGC::forAllObjs(const std::function<void(GCCell *)> &callback) {
 }
 
 void MallocGC::resetWeakReferences() {
-  for (auto &slot : weakPointers_) {
+  for (auto &slot : weakSlots_) {
     // Set all allocated slots to unmarked.
     if (slot.state() == WeakSlotState::Marked)
       slot.unmark();
@@ -510,7 +497,7 @@ void MallocGC::resetWeakReferences() {
 }
 
 void MallocGC::updateWeakReferences() {
-  for (auto &slot : weakPointers_) {
+  for (auto &slot : weakSlots_) {
     switch (slot.state()) {
       case WeakSlotState::Free:
         break;
@@ -547,8 +534,8 @@ void MallocGC::updateWeakReferences() {
 }
 
 WeakRefSlot *MallocGC::allocWeakSlot(HermesValue init) {
-  weakPointers_.push_back({init});
-  return &weakPointers_.back();
+  weakSlots_.push_back({init});
+  return &weakSlots_.back();
 }
 
 void MallocGC::freeWeakSlot(WeakRefSlot *slot) {
