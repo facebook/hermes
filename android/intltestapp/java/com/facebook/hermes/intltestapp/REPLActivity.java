@@ -30,6 +30,10 @@ import java.util.Arrays;
 import java.util.Collections;
 
 public class REPLActivity extends Activity {
+    
+    // Please not that there are a lots of potentially improvement to the code organization and design here. 
+    // I've left it this way considering that this is a test tool.
+    // But any improvement would be nice !
 
     private ListView mScriptListView;
     private EditText mScriptEditText;
