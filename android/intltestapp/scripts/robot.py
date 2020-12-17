@@ -4,6 +4,13 @@ import os
 from datetime import datetime
 import re
 
+# This is a script to be used in conjunction with the android REPL test application, usable for automating tasks such as 
+# 1. launching and executing scripts in the repl application
+# 2. Issue adb shell commands, such as to measure the performance using dumpsys
+# etc..
+# Essentially, we can augment the script to interact and observer the apps through adb shell commands and android intents ..
+# Currently the default script runs the hardcoded scripts, and notes the memory footprint before and after the execution in text files.
+
 DEVICE_ID=""
 ADB_PATH="/home/hermes/Android/Sdk/platform-tools/adb"
 
@@ -143,15 +150,6 @@ def main():
     with open(os.path.join(perfFolderPath, 'dump.txt'), 'w') as output_dump:
         with open(os.path.join(perfFolderPath, 'summary.txt'), 'w') as output_summary:
             run(output_dump, output_summary)
-
-
-# ADB_PATH="e:\\nugetcache\\androidsdk.29.0.1\\platform-tools\\adb.exe"
-# with open('output.txt', 'w') as output_dump:
-# subprocess.call([ADB_PATH, "shell", "am", "start", "-n", "com.fluidhelloworld/.MultiActivity"])
-
-# for n in range(5):
-#     time.sleep(5)
-#     subprocess.call([ADB_PATH, "shell", "am", "broadcast", "-a", "com.fluidhelloworld.NEW_DICE", "--es", "mode", "RN_REUSE"])
 
 if __name__ == "__main__":
     main()

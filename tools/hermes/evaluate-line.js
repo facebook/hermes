@@ -14,15 +14,28 @@ C_STRING((function() {
   var HermesPromise = globalThis.Promise;
 
   function populateColors() {
-    colors.red = '\033[31m';
-    colors.green = '\033[32m';
-    colors.yellow = '\033[33m';
-    colors.blue = '\033[34m';
-    colors.magenta = '\033[35m';
-    colors.cyan = '\033[36m';
-    colors.white = '\033[37m';
 
-    colors.reset = '\033[0m';
+    if (typeof _replterminaltype !== "undefined" && _replterminaltype === "android") {
+      colors.red = "<font color='#FF0000'>";
+      colors.green = "<font color='#00FF00'>";
+      colors.yellow = "<font color='#FFFF00'>";
+      colors.blue = "<font color='#0000FF'>";
+      colors.magenta = "<font color='#FF00FF'>";
+      colors.cyan = "<font color='#00FFFF'>";
+      colors.white = "<font color='#FFFFFF'>";
+
+      colors.reset = '</font>';
+    } else {
+      colors.red = '\033[31m';
+      colors.green = '\033[32m';
+      colors.yellow = '\033[33m';
+      colors.blue = '\033[34m';
+      colors.magenta = '\033[35m';
+      colors.cyan = '\033[36m';
+      colors.white = '\033[37m';
+
+      colors.reset = '\033[0m';
+    }
   }
 
   function clearColors() {

@@ -100,11 +100,22 @@ struct ReplProxy : facebook::jni::HybridClass<ReplProxy> {
         }
         auto evalFn = mRuntime->makeHandle<vm::Callable>(std::move(*propRes));
 
-        bool hasColors = true; //oscompat::should_color(STDOUT_FILENO);
+        bool hasColors = true;
 
-        llvh::StringRef evaluateLineString =
+        // evaluate-line.js will color the output appropriately based on the available of this property in the global object.
+        vm::HermesValue terminalTypePropName = vm::HermesValue::encodeStringValue(vm::StringPrimitive::createNoThrow(mRuntime.get(), "_replterminaltype").get());
+        vm::HermesValue terminalTypePropVal = vm::HermesValue::encodeStringValue(vm::StringPrimitive::createNoThrow(mRuntime.get(), "android").get());
+        if(vm::ExecutionStatus::EXCEPTION ==
+            global->putComputed_RJS(global,
+                    mRuntime.get(),
+                    mRuntime->makeHandle(terminalTypePropName),
+                    mRuntime->makeHandle(terminalTypePropVal),
+                    vm::PropOpFlags().plusThrowOnError())) {
+                return "Unable to set the terminal type !";
+        }
 
-#include "evaluate-line.js"
+                llvh::StringRef evaluateLineString =
+#include "../../tools/hermes/evaluate-line.js"
         ;
 
         auto callRes = evalFn->executeCall1(

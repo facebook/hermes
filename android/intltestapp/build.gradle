@@ -12,14 +12,12 @@ plugins {
 buildDir = "${rootProject.ext.hermes_ws}/build_android/intltestapp"
 buildDir.mkdirs()
 
-// Note: Set it to "nointl" to use hermes libraries without intl. (This is ugly !)
-def libintlmode = "intl"
-
 android {
 
     compileSdkVersion 28
 
     defaultConfig {
+        applicationId "com.facebook.hermes.intltestapp"
         minSdkVersion 16
 
         externalNativeBuild {
@@ -68,7 +66,6 @@ android {
 
     buildTypes {
         debug {
-            applicationIdSuffix ".debug"
             debuggable true
         }
 
@@ -116,35 +113,6 @@ android {
                 }
             }
         }
-
-        // Intl APIs enabled. But, consumes hermes libraries as dependencies instead of building hermes and test app code together.
-        libintl {
-            dimension "featureset"
-            applicationIdSuffix ".libintl"
-            versionNameSuffix "-libintl"
-
-            externalNativeBuild {
-                cmake {
-                    arguments "-DINTLTESTAPP_MODE=${libintlmode}"
-                    targets "hermesevalapp"
-                }
-            }
-        }
-
-
-        // Intl APIs enabled. But, consumes hermes libraries as dependencies instead of building hermes and test app code together.
-        libnointl {
-            dimension "featureset"
-            applicationIdSuffix ".libnointl"
-            versionNameSuffix "-libnointl"
-
-            externalNativeBuild {
-                cmake {
-                    arguments "-DINTLTESTAPP_MODE=${libintlmode}"
-                    targets "hermesevalapp"
-                }
-            }
-        }
     }
 
     sourceSets {
@@ -163,33 +131,9 @@ android {
                 ]
             }
         }
-        libintl {
-            java {
-                srcDirs = [
-                        "java",
-                ]
-            }
-        }
-        libnointl {
-            java {
-                srcDirs = [
-                        "java",
-                ]
-            }
-        }
-    }
-
-    repositories {
-        flatDir {
-            // dirs "${hermes_ws}/build_android/outputs/"
-            dirs "${hermes_ws}/build_android/distributions/hermes-runtime-android-${libintlmode}"
-        }
     }
 
     dependencies {
-        libintlImplementation(name: 'hermes-release', ext: 'aar')
-        libnointlImplementation(name: 'hermes-release', ext: 'aar')
-
         implementation 'com.facebook.soloader:soloader:0.9.0'
         implementation 'com.facebook.fbjni:fbjni:0.0.2'
         implementation 'com.facebook.yoga:proguard-annotations:1.14.1'

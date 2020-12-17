@@ -18,18 +18,3 @@ add_hermes_library(hermesreplapp SHARED
 )
 target_compile_options(hermesreplapp PRIVATE -frtti -fexceptions)
 hermes_link_icu(hermesreplapp)
-
-add_library(hermesevalapp SHARED
-        EvalProxy.cpp
-)
-
-target_link_libraries(hermesevalapp
-        hermesfbjni
-)
-
-include_directories(${HERMES_SOURCE_DIR}/../build_android/outputs/include/)
-
-# This is no doubt ugly !
-# target_link_libraries(hermesevalapp "${HERMES_SOURCE_DIR}/../build_android/outputs/${INTLTESTAPP_MODE}/unstripped-debug/lib/${CMAKE_ANDROID_ARCH_ABI}/libhermes.so")
-target_link_libraries(hermesevalapp "${HERMES_SOURCE_DIR}/../build_android//distributions/hermes-runtime-android-${INTLTESTAPP_MODE}/unstripped-release/lib/${CMAKE_ANDROID_ARCH_ABI}/libhermes.so")
-target_compile_options(hermesevalapp PRIVATE -frtti -fexceptions)
