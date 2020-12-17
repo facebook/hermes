@@ -484,11 +484,19 @@ void Runtime::markRoots(
 
   {
     MarkRootsPhaseTimer timer(this, RootAcceptor::Section::IdentifierTable);
-    acceptor.beginRootSection(RootAcceptor::Section::IdentifierTable);
     if (markLongLived) {
+      // Need to add nodes before the root section, and edges during the root
+      // section.
+      acceptor.provideSnapshot([this](HeapSnapshot &snap) {
+        identifierTable_.snapshotAddNodes(snap);
+      });
+      acceptor.beginRootSection(RootAcceptor::Section::IdentifierTable);
       identifierTable_.markIdentifiers(acceptor, &getHeap());
+      acceptor.provideSnapshot([this](HeapSnapshot &snap) {
+        identifierTable_.snapshotAddEdges(snap);
+      });
+      acceptor.endRootSection();
     }
-    acceptor.endRootSection();
   }
 
   {

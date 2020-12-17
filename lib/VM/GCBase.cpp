@@ -368,6 +368,11 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
     pointerAccept(slot->getPointer(), nullptr, true);
   }
 
+  void provideSnapshot(
+      const std::function<void(HeapSnapshot &)> &func) override {
+    func(snap_);
+  }
+
   void beginRootSection(Section section) override {
     assert(
         currentSection_ == Section::InvalidSection &&

@@ -246,6 +246,53 @@ void IdentifierTable::markIdentifiers(RootAcceptor &acceptor, GC *gc) {
   }
 }
 
+void IdentifierTable::snapshotAddNodes(HeapSnapshot &snap) {
+  snap.beginNode();
+  snap.endNode(
+      HeapSnapshot::NodeType::Native,
+      "std::vector<LookupEntry>",
+      GCBase::IDTracker::reserved(
+          GCBase::IDTracker::ReservedObjectID::IdentifierTableLookupVector),
+      lookupVector_.capacity() * sizeof(LookupEntry),
+      0);
+
+  snap.beginNode();
+  snap.endNode(
+      HeapSnapshot::NodeType::Native,
+      "CompactArray",
+      GCBase::IDTracker::reserved(
+          GCBase::IDTracker::ReservedObjectID::IdentifierTableHashTable),
+      hashTable_.additionalMemorySize(),
+      0);
+
+  snap.beginNode();
+  snap.endNode(
+      HeapSnapshot::NodeType::Native,
+      "BitVector",
+      GCBase::IDTracker::reserved(
+          GCBase::IDTracker::ReservedObjectID::IdentifierTableMarkedSymbols),
+      markedSymbols_.getMemorySize(),
+      0);
+}
+
+void IdentifierTable::snapshotAddEdges(HeapSnapshot &snap) {
+  snap.addNamedEdge(
+      HeapSnapshot::EdgeType::Internal,
+      "lookupVector",
+      GCBase::IDTracker::reserved(
+          GCBase::IDTracker::ReservedObjectID::IdentifierTableLookupVector));
+  snap.addNamedEdge(
+      HeapSnapshot::EdgeType::Internal,
+      "hashTable",
+      GCBase::IDTracker::reserved(
+          GCBase::IDTracker::ReservedObjectID::IdentifierTableHashTable));
+  snap.addNamedEdge(
+      HeapSnapshot::EdgeType::Internal,
+      "markedSymbols",
+      GCBase::IDTracker::reserved(
+          GCBase::IDTracker::ReservedObjectID::IdentifierTableMarkedSymbols));
+}
+
 void IdentifierTable::visitIdentifiers(
     const std::function<void(SymbolID, const StringPrimitive *)> &acceptor) {
   for (uint32_t i = 0; i < getSymbolsEnd(); ++i) {

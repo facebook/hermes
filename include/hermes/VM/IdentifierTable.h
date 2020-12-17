@@ -149,6 +149,10 @@ class IdentifierTable {
   /// Mark all identifiers for the garbage collector.
   void markIdentifiers(RootAcceptor &acceptor, GC *gc);
 
+  /// Add native nodes and edges to heap snapshots.
+  void snapshotAddNodes(HeapSnapshot &snap);
+  void snapshotAddEdges(HeapSnapshot &snap);
+
   /// Visits every entry in the identifier table and calls acceptor with
   /// the entry and its id as arguments. This is intended to be used only for
   /// snapshots, as it is slow. The function passed as acceptor shouldn't

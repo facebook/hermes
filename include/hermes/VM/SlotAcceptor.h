@@ -107,6 +107,10 @@ struct RootAndSlotAcceptorWithNames : public RootAndSlotAcceptor {
     accept(sym, nullptr);
   }
   virtual void accept(SymbolID sym, const char *name) = 0;
+
+  /// Initiate the callback if this acceptor is part of heap snapshots.
+  virtual void provideSnapshot(
+      const std::function<void(HeapSnapshot &)> &func) {}
 };
 
 struct WeakRootAcceptor : public WeakRefAcceptor, RootSectionAcceptor {

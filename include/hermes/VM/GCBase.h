@@ -677,6 +677,9 @@ class GCBase {
       GCRoots,
 #define ROOT_SECTION(name) name,
 #include "hermes/VM/RootSections.def"
+      IdentifierTableLookupVector,
+      IdentifierTableHashTable,
+      IdentifierTableMarkedSymbols,
       Undefined,
       Null,
       True,
