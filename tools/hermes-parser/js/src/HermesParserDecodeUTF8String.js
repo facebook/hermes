@@ -15,33 +15,32 @@
  * - Allow UTF-8 encoded code points that are part of a surrogate pair, even though
  *   this is technically invalid UTF-8 that UTF8ToString would convert to 0xfffd.
  */
-function HermesDecodeUTF8String(ptr, length) {
+function HermesParserDecodeUTF8String(ptr, length, heap) {
   const endPtr = ptr + length;
   let str = '';
 
   while (ptr < endPtr) {
     // ASCII characters fit in single byte code point
-    let u0 = HEAPU8[ptr++];
+    let u0 = heap[ptr++];
     if (!(u0 & 0x80)) {
       str += String.fromCharCode(u0);
       continue;
     }
 
     // Two byte code point
-    const u1 = HEAPU8[ptr++] & 0x3f;
+    const u1 = heap[ptr++] & 0x3f;
     if ((u0 & 0xe0) == 0xc0) {
       str += String.fromCharCode(((u0 & 0x1f) << 6) | u1);
       continue;
     }
 
-    const u2 = HEAPU8[ptr++] & 0x3f;
+    const u2 = heap[ptr++] & 0x3f;
     if ((u0 & 0xf0) == 0xe0) {
       // Three byte code point
       u0 = ((u0 & 0x0f) << 12) | (u1 << 6) | u2;
     } else {
       // Four byte code point
-      u0 =
-        ((u0 & 0x07) << 18) | (u1 << 12) | (u2 << 6) | (HEAPU8[ptr++] & 0x3f);
+      u0 = ((u0 & 0x07) << 18) | (u1 << 12) | (u2 << 6) | (heap[ptr++] & 0x3f);
     }
 
     if (u0 < 0x10000) {
@@ -56,3 +55,5 @@ function HermesDecodeUTF8String(ptr, length) {
 
   return str;
 }
+
+module.exports = HermesParserDecodeUTF8String;

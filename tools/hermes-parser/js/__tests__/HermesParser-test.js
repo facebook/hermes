@@ -574,6 +574,7 @@ test('Literals', () => {
   const source = `
     null;
     10;
+    0.56283;
     "test";
     true;
     /foo/g;
@@ -595,6 +596,13 @@ test('Literals', () => {
         expression: {
           type: 'Literal',
           value: 10,
+        },
+      },
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'Literal',
+          value: 0.56283,
         },
       },
       {
@@ -660,6 +668,13 @@ test('Literals', () => {
           expression: {
             type: 'NumericLiteral',
             value: 10,
+          },
+        },
+        {
+          type: 'ExpressionStatement',
+          expression: {
+            type: 'NumericLiteral',
+            value: 0.56283,
           },
         },
         {

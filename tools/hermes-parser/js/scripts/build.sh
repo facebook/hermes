@@ -32,3 +32,4 @@ fi
 
 node "$THIS_DIR/genWasmParser.js" "$WASM_PARSER"
 node "$THIS_DIR/genVisitorKeys.js" "$INCLUDE_PATH"
+node "$THIS_DIR/genNodeDeserializers.js" "$INCLUDE_PATH"

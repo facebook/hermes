@@ -9,6 +9,7 @@
 
 'use strict';
 
+const HermesParserDeserializer = require('./HermesParserDeserializer');
 const HermesParserWASM = require('./HermesParserWASM');
 
 const hermesParse = HermesParserWASM.cwrap('hermesParse', 'number', [
@@ -31,8 +32,20 @@ const hermesParseResult_getError = HermesParserWASM.cwrap(
   ['number'],
 );
 
-const hermesParseResult_getASTReference = HermesParserWASM.cwrap(
-  'hermesParseResult_getASTReference',
+const hermesParseResult_getProgramBuffer = HermesParserWASM.cwrap(
+  'hermesParseResult_getProgramBuffer',
+  'number',
+  ['number'],
+);
+
+const hermesParseResult_getPositionBuffer = HermesParserWASM.cwrap(
+  'hermesParseResult_getPositionBuffer',
+  'number',
+  ['number'],
+);
+
+const hermesParseResult_getPositionBufferSize = HermesParserWASM.cwrap(
+  'hermesParseResult_getPositionBufferSize',
   'number',
   ['number'],
 );
@@ -68,9 +81,13 @@ function parse(source, options) {
         throw new SyntaxError(err);
       }
 
-      // Find root AST mode from reference
-      const astReference = hermesParseResult_getASTReference(parseResult);
-      return HermesParserWASM.JSReferences.pop(astReference);
+      const deserializer = new HermesParserDeserializer(
+        hermesParseResult_getProgramBuffer(parseResult),
+        hermesParseResult_getPositionBuffer(parseResult),
+        hermesParseResult_getPositionBufferSize(parseResult),
+        HermesParserWASM,
+      );
+      return deserializer.deserialize();
     } finally {
       hermesParseResult_free(parseResult);
     }
