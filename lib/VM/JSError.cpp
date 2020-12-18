@@ -156,13 +156,6 @@ errorStackGetter(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 errorStackSetter(void *, Runtime *runtime, NativeArgs args) {
-  if (auto *errorObject = dyn_vmcast<JSError>(args.getThisArg())) {
-    auto &stacktrace = errorObject->stacktrace_;
-    if (stacktrace) {
-      // Release stacktrace_ if it's already set.
-      stacktrace.reset();
-    }
-  }
   auto res = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;

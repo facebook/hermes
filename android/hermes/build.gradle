@@ -14,7 +14,8 @@ android {
   compileSdkVersion = rootProject.ext.compileSdkVersion
 
   defaultConfig {
-    minSdkVersion = rootProject.ext.minSdkVersion
+    minSdkVersion rootProject.ext.minSdkVersion
+
     externalNativeBuild {
       cmake {
         arguments "-DHERMES_IS_ANDROID=True"
@@ -24,7 +25,6 @@ android {
         arguments "-DIMPORT_HERMESC=${rootProject.ext.hermesC}"
         arguments "-DFBSOURCE_DIR=${rootProject.ext.fbsource}"
         arguments "-DHERMES_SLOW_DEBUG=False"
-        arguments "-DHERMES_ENABLE_INTL=False"
         targets "libhermes"
       }
     }
@@ -52,6 +52,44 @@ android {
     }
   }
 
+  flavorDimensions "featureset"
+  productFlavors {
+    intl {
+      isDefault true
+      dimension "featureset"
+      externalNativeBuild {
+        cmake {
+          arguments "-DHERMES_ENABLE_INTL=True"
+        }
+      }
+    }
+    nointl {
+      dimension "featureset"
+      externalNativeBuild {
+        cmake {
+          arguments "-DHERMES_ENABLE_INTL=False"
+        }
+      }
+    }
+  }
+
+  sourceSets {
+    intl {
+      java {
+        srcDirs = [
+                "${rootProject.ext.hermes_ws}/hermes/lib/Platform/Intl/java",
+        ]
+      }
+    }
+  }
+
+  dependencies {
+    intlImplementation 'com.facebook.fbjni:fbjni:0.0.2'
+    intlImplementation 'com.facebook.soloader:soloader:0.9.0'
+    intlImplementation 'com.facebook.yoga:proguard-annotations:1.14.1'
+    intlImplementation "androidx.annotation:annotation:1.1.0"
+  }
+
   packagingOptions {
     exclude "**/libc++_shared.so"
   }
@@ -62,19 +100,31 @@ android {
     // Unify the two by renaming the files afterwards.
     // Neither appear to care whether the original filename actually exists.
     def aarDir = "$buildDir/outputs/aar"
-    tasks.named("assembleDebug").configure {
+    tasks.named("assembleIntlDebug").configure {
       doLast {
-        file("$aarDir/hermes-debug.aar").renameTo("${rootProject.ext.outputDir}/hermes-debug.aar")
-        file("$aarDir/hermes.aar").renameTo("${rootProject.ext.outputDir}/hermes-debug.aar")
+        file("$aarDir/hermes-intl-debug.aar").renameTo("${rootProject.ext.outputDir}/hermes-debug.aar")
+        file("$aarDir/hermes-intl.aar").renameTo("${rootProject.ext.outputDir}/hermes-debug.aar")
       }
     }
-    tasks.named("assembleRelease").configure {
+    tasks.named("assembleIntlRelease").configure {
       doLast {
-        file("$aarDir/hermes-release.aar").renameTo("${rootProject.ext.outputDir}/hermes-release.aar")
-        file("$aarDir/hermes.aar").renameTo("${rootProject.ext.outputDir}/hermes-release.aar")
+        file("$aarDir/hermes-intl-release.aar").renameTo("${rootProject.ext.outputDir}/hermes-release.aar")
+        file("$aarDir/hermes-intl.aar").renameTo("${rootProject.ext.outputDir}/hermes-release.aar")
       }
     }
-    tasks.named("mergeDebugNativeLibs").configure {
+    tasks.named("assembleNointlDebug").configure {
+      doLast {
+        file("$aarDir/hermes-nointl-debug.aar").renameTo("${rootProject.ext.outputDir}/hermes-debug.aar")
+        file("$aarDir/hermes-nointl.aar").renameTo("${rootProject.ext.outputDir}/hermes-debug.aar")
+      }
+    }
+    tasks.named("assembleNointlRelease").configure {
+      doLast {
+        file("$aarDir/hermes-nointl-release.aar").renameTo("${rootProject.ext.outputDir}/hermes-release.aar")
+        file("$aarDir/hermes-nointl.aar").renameTo("${rootProject.ext.outputDir}/hermes-release.aar")
+      }
+    }
+    tasks.named("mergeIntlDebugNativeLibs").configure {
       doLast { task ->
         copy {
           from(task)
@@ -82,7 +132,23 @@ android {
         }
       }
     }
-    tasks.named("mergeReleaseNativeLibs").configure {
+    tasks.named("mergeIntlReleaseNativeLibs").configure {
+      doLast { task ->
+        copy {
+          from(task)
+          into("${rootProject.ext.outputDir}/unstripped-release")
+        }
+      }
+    }
+    tasks.named("mergeNointlDebugNativeLibs").configure {
+      doLast { task ->
+        copy {
+          from(task)
+          into("${rootProject.ext.outputDir}/unstripped-debug")
+        }
+      }
+    }
+    tasks.named("mergeNointlReleaseNativeLibs").configure {
       doLast { task ->
         copy {
           from(task)

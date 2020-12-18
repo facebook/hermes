@@ -99,7 +99,7 @@ void SamplingProfiler::registerDomain(Domain *domain) {
   llvm_unreachable("Cannot find a reserved null domain slot.");
 }
 
-void SamplingProfiler::markRoots(SlotAcceptorWithNames &acceptor) {
+void SamplingProfiler::markRoots(RootAcceptor &acceptor) {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
   for (Domain *&domain : domains_) {
     acceptor.acceptPtr(domain);

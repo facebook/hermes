@@ -25,6 +25,7 @@ class HeapSnapshotAPITest : public ::testing::TestWithParam<bool> {
   HeapSnapshotAPITest()
       : rt(makeHermesRuntime(::hermes::vm::RuntimeConfig::Builder()
                                  .withES6Proxy(true)
+                                 .withES6Intl(true)
                                  .build())) {
     if (trackingFromBeginning()) {
       rt->instrumentation().startTrackingHeapObjectStackTraces(nullptr);
@@ -152,7 +153,7 @@ TEST_P(HeapSnapshotAPITest, HeapTimeline) {
          "the trace tree";
 
   // Search nodes for the objID.
-  const auto nodeTupleSize = 6;
+  const auto nodeTupleSize = 7;
   const auto nodeIDFieldIndex = 2;
   const auto nodeTraceIDFieldIndex = 5;
   uint64_t traceNodeID = 0;

@@ -1,12 +1,7 @@
 ---
 id: vm
-title: VM
+title: Hermes VM
 ---
-
-
-## Hermes VM
-
-In which the general design of the Hermes VM is explained.
 
 ## Value Representation
 

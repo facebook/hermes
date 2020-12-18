@@ -113,8 +113,16 @@ class JSParserImpl {
     return lexer_.getStoredComments();
   }
 
+  llvh::ArrayRef<StoredToken> getStoredTokens() const {
+    return lexer_.getStoredTokens();
+  }
+
   void setStoreComments(bool storeComments) {
     lexer_.setStoreComments(storeComments);
+  }
+
+  void setStoreTokens(bool storeTokens) {
+    lexer_.setStoreTokens(storeTokens);
   }
 
   Optional<ESTree::ProgramNode *> parse();
@@ -327,6 +335,10 @@ class JSParserImpl {
     return rng.End;
   }
 
+  SMLoc getPrevTokenEndLoc() const {
+    return lexer_.getPrevTokenEndLoc();
+  }
+
   /// Obtain the next token from the lexer and store it in tok_.
   /// \param grammarContext enable recognizing either "/" and "/=", or a regexp.
   /// \return the source location of the just consumed (previous) token.
@@ -517,11 +529,9 @@ class JSParserImpl {
 
   /// Performs automatic semicolon insertion and optionally reports an error
   /// if a semicolon is missing and cannot be inserted.
-  /// \param endLoc is the previous end location before the semi. It will be
-  ///               updated with the location of the semi, if present.
   /// \param optional if set to true, an error will not be reported.
   /// \return false if a semi was not found and it could not be inserted.
-  bool eatSemi(SMLoc &endLoc, bool optional = false);
+  bool eatSemi(bool optional = false);
 
   /// Process a directive by updating internal flags appropriately. Currently
   /// we only care about "use strict".
@@ -746,7 +756,7 @@ class JSParserImpl {
   /// to call it explicitly after parsing "new.target".
   Optional<ESTree::Node *> parseOptionalExpressionExceptNew_tail(
       IsConstructorCall isConstructorCall,
-      SMLoc objectLoc,
+      SMLoc startLoc,
       ESTree::Node *expr);
 
   /// Returns a dummy Optional<> just to indicate success or failure like all
@@ -755,11 +765,13 @@ class JSParserImpl {
       ESTree::NodeList &argList,
       SMLoc &endLoc);
 
+  /// \param startLoc the start location of the expression
   /// \param objectLoc the location of the object part of the expression and is
   ///     used for error display.
   /// \param seenOptionalChain true if there was a ?. leading up to the
   ///     member select (set by parseOptionalExpressionExceptNew)
   Optional<ESTree::Node *> parseMemberSelect(
+      SMLoc startLoc,
       SMLoc objectLoc,
       ESTree::NodePtr expr,
       bool seenOptionalChain);
@@ -926,12 +938,10 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseExportDeclaration();
 
   /// \param[out] specifiers the list of parsed specifiers.
-  /// \param[out] endLoc end location after export clause has been parsed.
   /// \param[out] invalids ranges of potentially invalid exported symbols,
   ///             only if the clause is eventually followed by a FromClause.
   bool parseExportClause(
       ESTree::NodeList &specifiers,
-      SMLoc &endLoc,
       llvh::SmallVectorImpl<SMRange> &invalids);
 
   /// \param[out] invalids ranges of potentially invalid exported symbols,

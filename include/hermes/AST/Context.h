@@ -111,16 +111,6 @@ class Context {
   /// manage.
   using ResolutionTable = llvh::DenseMap<llvh::StringRef, ResolutionTableEntry>;
 
-  /// Represents a range of modules used in a given segment.
-  struct SegmentInfo {
-    /// ID of the segment this range represents.
-    uint32_t segment;
-
-    /// The module IDs to include in this segment. This is a subset, specified
-    /// in an arbitrary order, of the IDs of modules added to the IR.
-    std::vector<uint32_t> moduleIDs;
-  };
-
  private:
   /// The allocator for AST nodes, which may be rolled back to parse subtrees
   /// during pre-parsing (for lazy parsing).
@@ -182,11 +172,9 @@ class Context {
   /// If non-null, the resolution table which resolves static require().
   const std::unique_ptr<ResolutionTable> resolutionTable_;
 
-  /// The table of segment ranges. The ranges are contiguous and generated based
-  /// on the user's metadata input to the compiler when splitting the bundle.
-  /// Determines which CJS modules are placed into which segment when splitting
-  /// the result bundle.
-  const std::vector<SegmentInfo> segmentInfos_;
+  /// The list of segment IDs, based on the user's metadata input to the
+  /// compiler when splitting the bundle.
+  const std::vector<uint32_t> segments_;
 
   /// The level of debug information we should emit. Defaults to
   /// DebugInfoSetting::THROWING.
@@ -209,10 +197,10 @@ class Context {
       CodeGenerationSettings codeGenOpts = CodeGenerationSettings(),
       OptimizationSettings optimizationOpts = OptimizationSettings(),
       std::unique_ptr<ResolutionTable> resolutionTable = nullptr,
-      std::vector<SegmentInfo> segmentInfos = {})
+      std::vector<uint32_t> segments = {})
       : sm_(sm),
         resolutionTable_(std::move(resolutionTable)),
-        segmentInfos_(std::move(segmentInfos)),
+        segments_(std::move(segments)),
         codeGenerationSettings_(std::move(codeGenOpts)),
         optimizationSettings_(std::move(optimizationOpts)) {}
 
@@ -220,11 +208,11 @@ class Context {
       CodeGenerationSettings codeGenOpts = CodeGenerationSettings(),
       OptimizationSettings optimizationOpts = OptimizationSettings(),
       std::unique_ptr<ResolutionTable> resolutionTable = nullptr,
-      std::vector<SegmentInfo> segmentInfos = {})
+      std::vector<uint32_t> segments = {})
       : ownSm_(new SourceErrorManager()),
         sm_(*ownSm_),
         resolutionTable_(std::move(resolutionTable)),
-        segmentInfos_(std::move(segmentInfos)),
+        segments_(std::move(segments)),
         codeGenerationSettings_(std::move(codeGenOpts)),
         optimizationSettings_(std::move(optimizationOpts)) {}
 
@@ -250,8 +238,8 @@ class Context {
   }
 
   /// \return the table for static require resolution, nullptr if not supplied.
-  const std::vector<SegmentInfo> &getSegmentInfos() const {
-    return segmentInfos_;
+  const std::vector<uint32_t> &getSegments() const {
+    return segments_;
   }
 
   /// \return the table for static require resolution, nullptr if not supplied.

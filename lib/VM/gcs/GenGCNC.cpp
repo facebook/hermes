@@ -73,6 +73,18 @@ gcheapsize_t GenGC::Size::minStorageFootprint() const {
   return ogs_.minStorageFootprint() + ygs_.minStorageFootprint();
 }
 
+llvh::ErrorOr<size_t> GenGC::getVMFootprintForTest() const {
+  size_t footprint = 0;
+  for (const auto &seg : segmentIndex_) {
+    auto segFootprint =
+        hermes::oscompat::vm_footprint(seg->start(), seg->hiLim());
+    if (!segFootprint)
+      return segFootprint;
+    footprint += *segFootprint;
+  }
+  return footprint;
+}
+
 std::pair<gcheapsize_t, gcheapsize_t> GenGC::Size::adjustSize(
     gcheapsize_t desired) const {
   const gcheapsize_t ygSize = ygs_.adjustSize(desired / kYoungGenFractionDenom);
@@ -377,9 +389,6 @@ void GenGC::collect(std::string cause, bool canEffectiveOOM) {
         /* youngGenIsEmpty */ youngGen_.usedDirect() == 0);
 
     gcCallbacks_->freeSymbols(markedSymbols_);
-    if (idTracker_.isTrackingIDs()) {
-      idTracker_.untrackUnmarkedSymbols(markedSymbols_);
-    }
 
     // Update the exponential weighted average of live size, which we'll
     // consult if we need to shrink the heap.
@@ -526,17 +535,17 @@ size_t GenGC::usedDirect() const {
 /// This is used to detect whether the Runtime::markRoots ever invokes
 /// the acceptor on the same root location more than once, which is illegal.
 struct FullMSCDuplicateRootsDetectorAcceptor final
-    : public SlotAcceptorDefault {
+    : public RootAndSlotAcceptorDefault {
   llvh::DenseSet<void *> markedLocs_;
 
-  using SlotAcceptorDefault::accept;
-  using SlotAcceptorDefault::SlotAcceptorDefault;
+  using RootAndSlotAcceptorDefault::accept;
+  using RootAndSlotAcceptorDefault::RootAndSlotAcceptorDefault;
 
   void accept(void *&ptr) override {
     assert(markedLocs_.count(&ptr) == 0);
     markedLocs_.insert(&ptr);
   }
-  void accept(HermesValue &hv) override {
+  void acceptHV(HermesValue &hv) override {
     assert(markedLocs_.count(&hv) == 0);
     markedLocs_.insert(&hv);
   }
@@ -544,9 +553,9 @@ struct FullMSCDuplicateRootsDetectorAcceptor final
 #endif
 
 void GenGC::markPhase() {
-  struct FullMSCMarkInitialAcceptor final : public SlotAcceptorDefault {
-    using SlotAcceptorDefault::accept;
-    using SlotAcceptorDefault::SlotAcceptorDefault;
+  struct FullMSCMarkInitialAcceptor final : public RootAndSlotAcceptorDefault {
+    using RootAndSlotAcceptorDefault::accept;
+    using RootAndSlotAcceptorDefault::RootAndSlotAcceptorDefault;
     void accept(void *&ptr) override {
       if (ptr) {
         assert(gc.dbgContains(ptr));
@@ -559,7 +568,7 @@ void GenGC::markPhase() {
         GenGCHeapSegment::setCellMarkBit(cell);
       }
     }
-    void accept(HermesValue &hv) override {
+    void acceptHV(HermesValue &hv) override {
       if (hv.isPointer()) {
         void *ptr = hv.getPointer();
         if (ptr) {
@@ -710,7 +719,7 @@ void GenGC::updateReferences(const SweepResult &sweepResult) {
   PerfSection fullGCUpdateReferencesSystraceRegion("fullGCUpdateReferences");
   std::unique_ptr<FullMSCUpdateAcceptor> acceptor =
       getFullMSCUpdateAcceptor(*this);
-  DroppingAcceptor<SlotAcceptor> nameAcceptor{*acceptor};
+  DroppingAcceptor<RootAndSlotAcceptor> nameAcceptor{*acceptor};
   markRoots(nameAcceptor, /*markLongLived*/ true);
   markWeakRoots(*acceptor);
 
@@ -859,18 +868,6 @@ void GenGC::shrinkTo(size_t hint) {
   youngGen_.shrinkTo(ygSize);
   oldGen_.shrinkTo(ogSize);
 }
-
-#ifndef NDEBUG
-size_t GenGC::countUsedWeakRefs() const {
-  size_t count = 0;
-  for (auto &slot : weakSlots_) {
-    if (slot.state() != WeakSlotState::Free) {
-      ++count;
-    }
-  }
-  return count;
-}
-#endif
 
 void GenGC::unmarkWeakReferences() {
   for (auto &slot : weakSlots_) {
@@ -1177,6 +1174,7 @@ void GenGC::getCrashManagerHeapInfo(CrashManager::HeapInformation &info) {
 
 void GenGC::getHeapInfoWithMallocSize(HeapInfo &info) {
   getHeapInfo(info);
+  GCBase::getHeapInfoWithMallocSize(info);
   // In case the info is being re-used, ensure the count starts at 0.
   info.mallocSizeEstimate = 0;
 
@@ -1193,9 +1191,6 @@ void GenGC::getHeapInfoWithMallocSize(HeapInfo &info) {
   }
 
   info.mallocSizeEstimate += markedSymbols_.getMemorySize();
-  // A deque doesn't have a capacity, so the size is the lower bound.
-  info.mallocSizeEstimate +=
-      weakSlots_.size() * sizeof(decltype(weakSlots_)::value_type);
 }
 
 #ifndef NDEBUG
@@ -1953,7 +1948,7 @@ void GenGC::sizeDiagnosticCensus() {
     }
   };
 
-  struct HeapSizeDiagnosticAcceptor final : public SlotAcceptor {
+  struct HeapSizeDiagnosticAcceptor final : public RootAndSlotAcceptor {
     // Can't be static in a local class.
     const int64_t HINT8_MIN = -(1 << 7);
     const int64_t HINT8_MAX = (1 << 7) - 1;
@@ -1974,14 +1969,17 @@ void GenGC::sizeDiagnosticCensus() {
       diagnostic.numPointer++;
     }
 
-    void accept(BasedPointer &ptr) override {
-      diagnostic.numPointer++;
-    }
-
     void accept(GCPointerBase &ptr) override {
       diagnostic.numPointer++;
     }
-    void accept(HermesValue &hv) override {
+
+    void accept(PinnedHermesValue &hv) override {
+      acceptHV(hv);
+    }
+    void accept(GCHermesValue &hv) override {
+      acceptHV(hv);
+    }
+    void acceptHV(HermesValue &hv) {
       diagnostic.hv.count++;
       if (hv.isBool()) {
         diagnostic.hv.numBool++;

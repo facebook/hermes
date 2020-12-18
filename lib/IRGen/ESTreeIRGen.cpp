@@ -265,6 +265,7 @@ void ESTreeIRGen::doIt() {
 void ESTreeIRGen::doCJSModule(
     Function *topLevelFunction,
     sem::FunctionInfo *semInfo,
+    uint32_t segmentID,
     uint32_t id,
     llvh::StringRef filename) {
   assert(Root && "no root in ESTreeIRGen");
@@ -288,7 +289,7 @@ void ESTreeIRGen::doCJSModule(
   Function *newFunc = genES5Function(functionName, nullptr, func);
 
   Builder.getModule()->addCJSModule(
-      id, Builder.createIdentifier(filename), newFunc);
+      segmentID, id, Builder.createIdentifier(filename), newFunc);
 }
 
 static int getDepth(const std::shared_ptr<SerializedScope> chain) {

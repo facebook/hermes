@@ -24,7 +24,15 @@ EDGE_TYPES = [
     "shortcut",
     "weak",
 ]
-NODE_FIELDS = ["type", "name", "id", "self_size", "edge_count", "trace_node_id"]
+NODE_FIELDS = [
+    "type",
+    "name",
+    "id",
+    "self_size",
+    "edge_count",
+    "trace_node_id",
+    "detachedness",
+]
 NODE_TYPES = [
     "hidden",
     "array",
@@ -111,7 +119,7 @@ def main():
 
     nodes = []
     curr_edge = iter(chunk(root["edges"], len(EDGE_FIELDS)))
-    for raw_type, name, id, self_size, edge_count, trace_node_id in chunk(
+    for raw_type, name, id, self_size, edge_count, trace_node_id, detachedness in chunk(
         root["nodes"], len(NODE_FIELDS)
     ):
         edges = []
@@ -141,6 +149,7 @@ def main():
             "id": id,
             "self_size": self_size,
             "edges": edges,
+            "detachedness": detachedness,
         }
         # Make an allocation stack for this object.
         allocation_stack = []

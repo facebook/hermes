@@ -84,6 +84,13 @@ class HadesGC final : public GCBase {
   void getHeapInfoWithMallocSize(HeapInfo &info) override;
   void getCrashManagerHeapInfo(CrashManager::HeapInformation &info) override;
   void createSnapshot(llvh::raw_ostream &os) override;
+  void enableHeapProfiler(
+      std::function<void(
+          uint64_t,
+          std::chrono::microseconds,
+          std::vector<GCBase::AllocationLocationTracker::HeapStatsUpdate>)>
+          fragmentCallback) override;
+  void disableHeapProfiler() override;
   void printStats(JSONEmitter &json) override;
 
   /// \}
@@ -181,6 +188,12 @@ class HadesGC final : public GCBase {
   /// \return true if the pointer lives in the young generation.
   bool inYoungGen(const void *p) const;
 
+  /// Approximate the dirty memory footprint of the GC's heap. Note that this
+  /// does not return the number of dirty pages in the heap, but instead returns
+  /// a number that goes up if pages are dirtied, and goes down if pages are
+  /// cleaned.
+  llvh::ErrorOr<size_t> getVMFootprintForTest() const;
+
 #ifndef NDEBUG
   /// \name Debug APIs
   /// \{
@@ -223,6 +236,9 @@ class HadesGC final : public GCBase {
 #endif
 
   class CollectionStats;
+  class HeapMarkingAcceptor;
+  struct CopyListCell;
+  template <bool CompactionEnabled>
   class EvacAcceptor;
   class MarkAcceptor;
   class MarkWeakRootsAcceptor;
@@ -298,6 +314,17 @@ class HadesGC final : public GCBase {
     /// Increase the allocated bytes tracker for the segment at index \p
     /// segmentIdx;
     void incrementAllocatedBytes(int32_t incr, uint16_t segmentIdx);
+
+    /// Get the peak allocated bytes for the segment at \p segmentIdx.
+    uint64_t peakAllocatedBytes(uint16_t segmentIdx) const;
+
+    /// Trigger an update of the peak allocated bytes. This should be done right
+    /// before sweeping a particular segment so we have the true peak.
+    void updatePeakAllocatedBytes(uint16_t segmentIdx);
+
+    /// Clear the peak allocated bytes for the segment at \p segmentIdx. Should
+    /// only be used after compaction is complete.
+    void resetPeakAllocatedBytes(uint16_t segmentIdx);
 
     /// \return the total number of bytes that are held in external memory, kept
     /// alive by objects in the OG.
@@ -408,7 +435,11 @@ class HadesGC final : public GCBase {
     /// bump-allocated segments.
     uint64_t allocatedBytes_{0};
 
-    std::vector<uint32_t> segmentAllocatedBytes_;
+    /// Each element in the vector corresponds to the segment at the same index
+    /// in segments_. The first element in the pair represents the currently
+    /// allocated bytes in this segment, the second element represents the peak
+    /// allocated bytes in this segment, since it was created or compacted.
+    std::vector<std::pair<uint32_t, uint32_t>> segmentAllocatedBytes_;
 
     /// The amount of bytes of external memory credited to objects in the OG.
     uint64_t externalBytes_{0};
@@ -523,12 +554,6 @@ class HadesGC final : public GCBase {
   /// Protected by gcMutex_.
   OldGen oldGen_;
 
-  /// weakPointers_ is a list of all the weak pointers in the system. They are
-  /// invalidated if they point to an object that is dead, and do not count
-  /// towards whether an object is live or dead.
-  /// Protected by weakRefMutex().
-  std::deque<WeakRefSlot> weakPointers_;
-
   /// Whoever holds this lock is permitted to modify data structures around the
   /// GC. This includes mark bits, free lists, etc.
   Mutex gcMutex_;
@@ -599,8 +624,57 @@ class HadesGC final : public GCBase {
   /// The amount of bytes of external memory credited to objects in the YG.
   uint64_t ygExternalBytes_{0};
 
-  /// The sum of all sizes in calls to alloc.
-  uint64_t totalAllocatedBytes_{0};
+  struct CompacteeState {
+    /// \return true if the pointer lives in the segment that is being marked or
+    /// evacuated for compaction.
+    bool contains(const void *p) const {
+      return start == AlignedStorage::start(p);
+    }
+
+    /// \return true if the pointer lives in the segment that is currently being
+    /// evacuated for compaction.
+    bool evacContains(const void *p) const {
+      return evacStart == AlignedStorage::start(p);
+    }
+
+    /// \return true if the compactee is ready to be evacuated.
+    bool evacActive() const {
+      return evacStart != reinterpret_cast<void *>(kInvalidCompacteeStart);
+    }
+
+#ifndef NDEBUG
+    /// \return true if the compactee has not been assigned.
+    bool empty() const {
+      void *const invalid = reinterpret_cast<void *>(kInvalidCompacteeStart);
+      return evacStart == invalid && start == invalid && !index;
+    }
+#endif
+
+    /// The following variables track the state of compactions.
+    /// 1. To trigger a compaction, index and start should be set at the
+    /// beginning of marking. This ensures that all cards containing pointers to
+    /// the compactee will be dirtied.
+    /// 2. Once marking is done, completeMarking should then set evacStart, so
+    /// that the next YG collection will evacuate the segment.
+    /// 3. On completion, the YG collection will reset all these variables.
+
+    /// In order to keep the "contains" check cheap, this can be any non-null
+    /// value that cannot correspond to the start of a segment.
+    static constexpr uintptr_t kInvalidCompacteeStart = 0x1;
+
+    /// The start address of the segment that will be compacted next. This is
+    /// used during marking and by write barriers to determine whether a pointer
+    /// is in the compactee segment.
+    void *start{reinterpret_cast<void *>(kInvalidCompacteeStart)};
+
+    /// The start address of the segment that is currently being compacted. When
+    /// this is set, the next YG will evacuate objects in this segment. This is
+    /// always going to be equal to "start" or nullptr.
+    void *evacStart{reinterpret_cast<void *>(kInvalidCompacteeStart)};
+
+    /// The segment index that is going to be compacted next.
+    llvh::Optional<uint16_t> index;
+  } compactee_;
 
   /// The main entrypoint for all allocations.
   /// \param sz The size of allocation requested. This might be rounded up to
@@ -629,6 +703,9 @@ class HadesGC final : public GCBase {
   /// \post The YG is completely empty, and all bytes are available for new
   ///   allocations.
   void youngGenCollection(std::string cause, bool forceOldGenCollection);
+
+  template <typename Acceptor>
+  void youngGenEvacuateImpl(Acceptor &acceptor, bool doCompaction);
 
   /// In the "no GC before TTI" mode, move the Young Gen heap segment to the
   /// Old Gen without scanning for garbage.
@@ -679,10 +756,15 @@ class HadesGC final : public GCBase {
   /// from the mutator.
   void completeMarking();
 
-  /// Find all pointers from OG into YG during a YG collection. This is done
-  /// quickly through use of write barriers that detect the creation of OG-to-YG
-  /// pointers.
-  void scanDirtyCards(EvacAcceptor &acceptor);
+  /// Select a segment to compact and initialise any state needed for
+  /// compaction.
+  void prepareCompactee();
+
+  /// Find all pointers from OG into the YG/compactee during a YG collection.
+  /// This is done quickly through use of write barriers that detect the
+  /// creation of such pointers.
+  template <typename Acceptor>
+  void scanDirtyCards(Acceptor &acceptor);
 
   /// Common logic for doing the Snapshot At The Beginning (SATB) write barrier.
   void snapshotWriteBarrierInternal(GCCell *oldValue);
@@ -697,9 +779,10 @@ class HadesGC final : public GCBase {
   /// which assumes the old symbol was reachable at the start of the collection.
   void snapshotWriteBarrierInternal(SymbolID symbol);
 
-  /// Common logic for doing the generational write barrier for detecting
-  /// pointers into YG.
-  void generationalWriteBarrier(void *loc, void *value);
+  /// Common logic for doing the relocation write barrier for detecting
+  /// pointers into YG and for tracking newly created pointers into the
+  /// compactee.
+  void relocationWriteBarrier(void *loc, void *value);
 
   /// Finalize all objects in YG that have finalizers.
   void finalizeYoungGenObjects();

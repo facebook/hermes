@@ -136,23 +136,29 @@ class IdentifierTable {
   void reserve(uint32_t count) {
     lookupVector_.reserve(count);
     hashTable_.reserve(count);
+    markedSymbols_.reserve(count);
   }
 
   /// \return an estimate of the size of additional memory used by this
   /// IdentifierTable.
   size_t additionalMemorySize() const {
     return lookupVector_.capacity() * sizeof(LookupEntry) +
-        hashTable_.additionalMemorySize();
+        hashTable_.additionalMemorySize() + markedSymbols_.getMemorySize();
   }
 
   /// Mark all identifiers for the garbage collector.
-  void markIdentifiers(SlotAcceptor &acceptor, GC *gc);
+  void markIdentifiers(RootAcceptor &acceptor, GC *gc);
+
+  /// Add native nodes and edges to heap snapshots.
+  void snapshotAddNodes(HeapSnapshot &snap);
+  void snapshotAddEdges(HeapSnapshot &snap);
 
   /// Visits every entry in the identifier table and calls acceptor with
   /// the entry and its id as arguments. This is intended to be used only for
   /// snapshots, as it is slow. The function passed as acceptor shouldn't
   /// perform any heap operations
-  void visitIdentifiers(const std::function<void(UTF16Ref, uint32_t)> &lambda);
+  void visitIdentifiers(
+      const std::function<void(SymbolID, const StringPrimitive *)> &lambda);
 
   /// \return one higher than the largest symbol in the identifier table. This
   /// enables the GC to size its internal structures for symbol marking.
@@ -165,7 +171,9 @@ class IdentifierTable {
   void unmarkSymbols();
 
   /// Invoked at the end of a GC to free all unmarked symbols.
-  void freeUnmarkedSymbols(const llvh::BitVector &markedSymbols);
+  void freeUnmarkedSymbols(
+      const llvh::BitVector &markedSymbols,
+      GC::IDTracker &gc);
 
 #ifdef HERMES_SLOW_DEBUG
   /// \return true if the given symbol is a live entry in the identifier

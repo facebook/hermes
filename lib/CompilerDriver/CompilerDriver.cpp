@@ -11,6 +11,7 @@
 #include "hermes/AST/Context.h"
 #include "hermes/AST/ESTreeJSONDumper.h"
 #include "hermes/AST/SemValidate.h"
+#include "hermes/AST2JS/AST2JS.h"
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/RegAlloc.h"
@@ -33,6 +34,7 @@
 #include "hermes/Support/Algorithms.h"
 #include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/OSCompat.h"
+#include "hermes/Support/OptValue.h"
 #include "hermes/Support/Warning.h"
 #include "hermes/Utils/Dumper.h"
 #include "hermes/Utils/Options.h"
@@ -74,6 +76,7 @@ using llvh::cl::OptionCategory;
 using llvh::cl::Positional;
 using llvh::cl::value_desc;
 using llvh::cl::values;
+using llvh::cl::ValuesClass;
 
 /// Encapsulate a compiler flag: for example, "-fflag/-fno-flag", or
 /// "-Wflag/-Wno-flag".
@@ -199,6 +202,11 @@ static opt<OutputFormatKind> DumpTarget(
             DumpTransformedAST,
             "dump-transformed-ast",
             "Dump the transformed AST as text after validation"),
+        clEnumValN(DumpJS, "dump-js", "Dump the AST as JS"),
+        clEnumValN(
+            DumpTransformedJS,
+            "dump-transformed-js",
+            "Dump the transformed AST as JS after validation"),
 #ifndef NDEBUG
         clEnumValN(ViewCFG, "view-cfg", "View the CFG."),
 #endif
@@ -217,17 +225,22 @@ static opt<OutputFormatKind> DumpTarget(
         clEnumValN(EmitBundle, "emit-binary", "Emit compiled binary")),
     cat(CompilerCategory));
 
-static opt<bool> PrettyJSON(
-    "pretty-json",
-    init(false),
-    desc("Pretty print the JSON AST"),
+static opt<bool> Pretty(
+    "pretty",
+    init(true),
+    desc("Pretty print JSON, JS or disassembled bytecode"),
     cat(CompilerCategory));
 
-static opt<bool> PrettyDisassemble(
+static llvh::cl::alias _PrettyJSON(
+    "pretty-json",
+    desc("Alias for --pretty"),
+    Hidden,
+    llvh::cl::aliasopt(Pretty));
+static llvh::cl::alias _PrettyDisassemble(
     "pretty-disassemble",
-    init(true),
-    desc("Pretty print the disassembled bytecode"),
-    cat(CompilerCategory));
+    desc("Alias for --pretty"),
+    Hidden,
+    llvh::cl::aliasopt(Pretty));
 
 /// Unused option kept for backwards compatibility.
 static opt<bool> unused_HermesParser(
@@ -380,6 +393,13 @@ static opt<bool> IncludeEmptyASTNodes(
     Hidden,
     cat(CompilerCategory));
 
+static opt<bool> IncludeRawASTProp(
+    "Xinclude-raw-ast-prop",
+    desc("Print the 'raw' AST property, when available."),
+    init(true),
+    Hidden,
+    cat(CompilerCategory));
+
 static opt<bool> DumpBetweenPasses(
     "Xdump-between-passes",
     init(false),
@@ -435,25 +455,36 @@ static opt<unsigned> ErrorLimit(
     init(20),
     cat(CompilerCategory));
 
-static CLFlag Werror(
-    'W',
-    "error",
-    false,
-    "Treat all warnings as errors",
-    CompilerCategory);
+static ValuesClass warningValues{
+#define WARNING_CATEGORY_HIDDEN(name, specifier, description) \
+  clEnumValN(Warning::name, specifier, description),
+#include "hermes/Support/Warnings.def"
+};
+
+static list<hermes::Warning> Werror(
+    llvh::cl::ValueOptional,
+    "Werror",
+    value_desc("category"),
+    desc(
+        "Treat all warnings as errors, or treat warnings of a particular category as errors"),
+    warningValues,
+    cat(CompilerCategory));
+
+static list<hermes::Warning> Wnoerror(
+    llvh::cl::ValueOptional,
+    "Wno-error",
+    value_desc("category"),
+    Hidden,
+    desc(
+        "Treat no warnings as errors, or treat warnings of a particular category as warnings"),
+    warningValues,
+    cat(CompilerCategory));
 
 static opt<bool> DisableAllWarnings(
     "w",
     desc("Disable all warnings"),
     init(false),
     cat(CompilerCategory));
-
-static CLFlag UndefinedVariableWarning(
-    'W',
-    "undefined-variable",
-    true,
-    "Do not warn when an undefined variable is referenced.",
-    CompilerCategory);
 
 static opt<bool> ReusePropCache(
     "reuse-prop-cache",
@@ -484,12 +515,10 @@ static CLFlag EnableTDZ(
     "Enable TDZ checks for let/const",
     CompilerCategory);
 
-static CLFlag DirectEvalWarning(
-    'W',
-    "direct-eval",
-    true,
-    "Warning when attempting a direct (local) eval",
-    CompilerCategory);
+#define WARNING_CATEGORY(name, specifier, description) \
+  static CLFlag name##Warning(                         \
+      'W', specifier, true, description, CompilerCategory);
+#include "hermes/Support/Warnings.def"
 
 static opt<std::string> BaseBytecodeFile(
     "base-bytecode",
@@ -782,11 +811,17 @@ ESTree::NodePtr parseJS(
     hermes::dumpESTreeJSON(
         llvh::outs(),
         parsedAST,
-        cl::PrettyJSON /* pretty */,
+        cl::Pretty /* pretty */,
         cl::IncludeEmptyASTNodes ? ESTreeDumpMode::DumpAll
                                  : ESTreeDumpMode::HideEmpty,
         context->getSourceErrorManager(),
-        cl::DumpSourceLocation);
+        cl::DumpSourceLocation,
+        cl::IncludeRawASTProp ? ESTreeRawProp::Include
+                              : ESTreeRawProp::Exclude);
+    return parsedAST;
+  }
+  if (cl::DumpTarget == DumpJS) {
+    hermes::generateJS(llvh::outs(), parsedAST, cl::Pretty /* pretty */);
     return parsedAST;
   }
 
@@ -798,11 +833,16 @@ ESTree::NodePtr parseJS(
     hermes::dumpESTreeJSON(
         llvh::outs(),
         parsedAST,
-        cl::PrettyJSON /* pretty */,
+        cl::Pretty /* pretty */,
         cl::IncludeEmptyASTNodes ? ESTreeDumpMode::DumpAll
                                  : ESTreeDumpMode::HideEmpty,
         context->getSourceErrorManager(),
-        cl::DumpSourceLocation);
+        cl::DumpSourceLocation,
+        cl::IncludeRawASTProp ? ESTreeRawProp::Include
+                              : ESTreeRawProp::Exclude);
+  }
+  if (cl::DumpTarget == DumpTransformedJS) {
+    hermes::generateJS(llvh::outs(), parsedAST, cl::Pretty /* pretty */);
   }
 
   return parsedAST;
@@ -912,11 +952,54 @@ bool validateFlags() {
   return !errored;
 }
 
+/// Apply the -Werror, -Wno-error, -Werror=<category> and -Wno-error=<category>
+/// flags to \c sm from left to right.
+static void setWarningsAreErrorsFromFlags(SourceErrorManager &sm) {
+  std::vector<Warning>::iterator yesIt = cl::Werror.begin();
+  std::vector<Warning>::iterator noIt = cl::Wnoerror.begin();
+  // Argument positions are indices into argv and start at 1 (or 2 if there's a
+  // subcommand). See llvh::cl::CommandLineParser::ParseCommandLineOptions().
+  // In this loop, position 0 represents the lack of a value.
+  unsigned noPos = 0, yesPos = 0;
+  while (true) {
+    if (noIt != cl::Wnoerror.end()) {
+      noPos = cl::Wnoerror.getPosition(noIt - cl::Wnoerror.begin());
+    } else {
+      noPos = 0;
+    }
+    if (yesIt != cl::Werror.end()) {
+      yesPos = cl::Werror.getPosition(yesIt - cl::Werror.begin());
+    } else {
+      yesPos = 0;
+    }
+
+    Warning warning;
+    bool enable;
+    if (yesPos != 0 && (noPos == 0 || yesPos < noPos)) {
+      warning = *yesIt;
+      enable = true;
+      ++yesIt;
+    } else if (noPos != 0 && (yesPos == 0 || noPos < yesPos)) {
+      warning = *noIt;
+      enable = false;
+      ++noIt;
+    } else {
+      break;
+    }
+
+    if (warning == Warning::NoWarning) {
+      sm.setWarningsAreErrors(enable);
+    } else {
+      sm.setWarningIsError(warning, enable);
+    }
+  }
+}
+
 /// Create a Context, respecting the command line flags.
 /// \return the Context.
 std::shared_ptr<Context> createContext(
     std::unique_ptr<Context::ResolutionTable> resolutionTable,
-    std::vector<Context::SegmentInfo> segmentInfos) {
+    std::vector<uint32_t> segments) {
   CodeGenerationSettings codeGenOpts;
   codeGenOpts.enableTDZ = cl::EnableTDZ;
   codeGenOpts.dumpOperandRegisters = cl::DumpOperandRegisters;
@@ -952,17 +1035,20 @@ std::shared_ptr<Context> createContext(
       codeGenOpts,
       optimizationOpts,
       std::move(resolutionTable),
-      std::move(segmentInfos));
+      std::move(segments));
 
   // Default is non-strict mode.
   context->setStrictMode(!cl::NonStrictMode && cl::StrictMode);
   context->setEnableEval(cl::EnableEval);
   context->getSourceErrorManager().setOutputOptions(guessErrorOutputOptions());
-  context->getSourceErrorManager().setWarningsAreErrors(cl::Werror);
-  context->getSourceErrorManager().setWarningStatus(
-      Warning::UndefinedVariable, cl::UndefinedVariableWarning);
-  context->getSourceErrorManager().setWarningStatus(
-      Warning::DirectEval, cl::DirectEvalWarning);
+
+  setWarningsAreErrorsFromFlags(context->getSourceErrorManager());
+
+#define WARNING_CATEGORY(name, specifier, description) \
+  context->getSourceErrorManager().setWarningStatus(   \
+      Warning::name, cl::name##Warning);
+#include "hermes/Support/Warnings.def"
+
   if (cl::DisableAllWarnings)
     context->getSourceErrorManager().disableAllWarnings();
   context->getSourceErrorManager().setErrorLimit(cl::ErrorLimit);
@@ -1067,7 +1153,7 @@ std::unique_ptr<llvh::MemoryBuffer> getFileFromDirectoryOrZip(
 ::hermes::parser::JSONObject *readInputFilenamesFromDirectoryOrZip(
     llvh::StringRef inputPath,
     SegmentTable &fileBufs,
-    std::vector<Context::SegmentInfo> &segmentInfos,
+    std::vector<uint32_t> &segmentIDs,
     ::hermes::parser::JSLexer::Allocator &alloc,
     struct zip_t *zip) {
   auto metadataBuf = getFileFromDirectoryOrZip(zip, inputPath, "metadata.json");
@@ -1103,12 +1189,11 @@ std::unique_ptr<llvh::MemoryBuffer> getFileFromDirectoryOrZip(
   llvh::DenseMap<llvh::StringRef, uint32_t> moduleIDs;
 
   for (auto it : *segments) {
-    Context::SegmentInfo segmentInfo;
-    if (it.first->str().getAsInteger(10, segmentInfo.segment)) {
+    uint32_t segmentID;
+    if (it.first->str().getAsInteger(10, segmentID)) {
       // getAsInteger returns true to signal error.
-      llvh::errs()
-          << "Metadata segment indices must be unsigned integers: Found "
-          << it.first->str() << '\n';
+      llvh::errs() << "Metadata segment IDs must be unsigned integers: Found "
+                   << it.first->str() << '\n';
       return nullptr;
     }
 
@@ -1138,19 +1223,17 @@ std::unique_ptr<llvh::MemoryBuffer> getFileFromDirectoryOrZip(
       if (emplaceRes.second) {
         ++nextModuleID;
       }
-      segmentInfo.moduleIDs.push_back(moduleID);
       segmentBufs.push_back({moduleID, std::move(fileBuf), std::move(mapBuf)});
     }
 
-    auto emplaceRes =
-        fileBufs.emplace(segmentInfo.segment, std::move(segmentBufs));
+    auto emplaceRes = fileBufs.emplace(segmentID, std::move(segmentBufs));
     if (!emplaceRes.second) {
-      llvh::errs() << "Duplicate segment entry in metadata: "
-                   << segmentInfo.segment << "\n";
+      llvh::errs() << "Duplicate segment entry in metadata: " << segment
+                   << "\n";
       return nullptr;
     }
 
-    segmentInfos.push_back(std::move(segmentInfo));
+    segmentIDs.push_back(segmentID);
   }
 
   return metadata;
@@ -1381,17 +1464,30 @@ bool generateIRForSourcesAsCJSModules(
   std::vector<std::string> sources{"<global>"};
 
   Function *topLevelFunction = generateIR ? M.getTopLevelFunction() : nullptr;
+  llvh::DenseSet<uint32_t> generatedModuleIDs;
   for (auto &entry : fileBufs) {
+    uint32_t segmentID = entry.first;
     for (ModuleInSegment &moduleInSegment : entry.second) {
-      if (M.hasCJSModule(moduleInSegment.id)) {
-        // We've already generated this module as part of another segment.
-        continue;
-      }
       auto &fileBuf = moduleInSegment.file;
       llvh::SmallString<64> filename{fileBuf->getBufferIdentifier()};
-      if (sourceMapGen) {
-        sources.push_back(fileBuf->getBufferIdentifier());
+
+      if (generatedModuleIDs.count(moduleInSegment.id) == 0) {
+        // This is the first time we're generating IR for this module.
+        if (sourceMapGen) {
+          sources.push_back(fileBuf->getBufferIdentifier());
+        }
+        if (moduleInSegment.sourceMap) {
+          auto inputMap = SourceMapParser::parse(*moduleInSegment.sourceMap);
+          if (!inputMap) {
+            // parse() returns nullptr on failure and reports its own errors.
+            return false;
+          }
+          inputSourceMaps.push_back(std::move(inputMap));
+        } else {
+          inputSourceMaps.push_back(nullptr);
+        }
       }
+
       llvh::sys::path::replace_path_prefix(
           filename, rootPath, "./", llvh::sys::path::Style::posix);
       // TODO: use sourceMapTranslator for CJS module.
@@ -1410,21 +1506,12 @@ bool generateIRForSourcesAsCJSModules(
       }
       generateIRForCJSModule(
           cast<ESTree::FunctionExpressionNode>(ast),
+          segmentID,
           moduleInSegment.id,
           llvh::sys::path::remove_leading_dotslash(filename),
           &M,
           topLevelFunction,
           declFileList);
-      if (moduleInSegment.sourceMap) {
-        auto inputMap = SourceMapParser::parse(*moduleInSegment.sourceMap);
-        if (!inputMap) {
-          // parse() returns nullptr on failure and reports its own errors.
-          return false;
-        }
-        inputSourceMaps.push_back(std::move(inputMap));
-      } else {
-        inputSourceMaps.push_back(nullptr);
-      }
     }
   }
 
@@ -1451,7 +1538,7 @@ CompileResult disassembleBytecode(std::unique_ptr<hbc::BCProvider> bytecode) {
     return OutputFileError;
   }
 
-  hbc::DisassemblyOptions disassemblyOptions = cl::PrettyDisassemble
+  hbc::DisassemblyOptions disassemblyOptions = cl::Pretty
       ? hbc::DisassemblyOptions::Pretty
       : hbc::DisassemblyOptions::None;
   hbc::BytecodeDisassembler disassembler(std::move(bytecode));
@@ -1528,13 +1615,13 @@ CompileResult generateBytecodeForSerialization(
     Module &M,
     const BytecodeGenerationOptions &genOptions,
     const SHA1 &sourceHash,
-    const Context::SegmentInfo *segmentInfo,
+    hermes::OptValue<uint32_t> segment,
     SourceMapGenerator *sourceMapGenOrNull,
     BaseBytecodeMap &baseBytecodeMap) {
   // Serialize the bytecode to the file.
   if (cl::BytecodeFormat == cl::BytecodeFormatKind::HBC) {
     std::unique_ptr<hbc::BCProviderFromBuffer> baseBCProvider = nullptr;
-    auto itr = baseBytecodeMap.find(segmentInfo ? segmentInfo->segment : 0);
+    auto itr = baseBytecodeMap.find(segment ? *segment : 0);
     if (itr != baseBytecodeMap.end()) {
       baseBCProvider = std::move(itr->second);
       // We want to erase it from the map because unique_ptr can only
@@ -1546,7 +1633,7 @@ CompileResult generateBytecodeForSerialization(
         OS,
         genOptions,
         sourceHash,
-        segmentInfo,
+        segment,
         sourceMapGenOrNull,
         std::move(baseBCProvider));
 
@@ -1749,7 +1836,7 @@ CompileResult processSourceFiles(
 
   BytecodeGenerationOptions genOptions{cl::DumpTarget};
   genOptions.optimizationEnabled = cl::OptimizationLevel > cl::OptLevel::Og;
-  genOptions.prettyDisassemble = cl::PrettyDisassemble;
+  genOptions.prettyDisassemble = cl::Pretty;
   genOptions.basicBlockProfiling = cl::BasicBlockProfiling;
   // The static builtin setting should be set correctly after command line
   // options parsing and js parsing. Set the bytecode header flag here.
@@ -1781,7 +1868,7 @@ CompileResult processSourceFiles(
 
   CompileResult result{Success};
   StringRef base = cl::BytecodeOutputFilename;
-  if (context->getSegmentInfos().size() < 2) {
+  if (context->getSegments().size() < 2) {
     OutputStream fileOS{llvh::outs()};
     if (!base.empty() && !fileOS.open(base, F_None)) {
       return OutputFileError;
@@ -1791,7 +1878,7 @@ CompileResult processSourceFiles(
         M,
         genOptions,
         sourceHash,
-        nullptr,
+        llvh::None,
         sourceMapGen ? sourceMapGen.getPointer() : nullptr,
         baseBytecodeMap);
     if (result.status != Success) {
@@ -1810,13 +1897,12 @@ CompileResult processSourceFiles(
     JSONEmitter manifest{manifestOS.os(), /* pretty */ true};
     manifest.openArray();
 
-    for (const auto &segmentInfo : context->getSegmentInfos()) {
+    for (const auto segment : context->getSegments()) {
       std::string filename = base.str();
-      if (segmentInfo.segment != 0) {
-        filename += "." + oscompat::to_string(segmentInfo.segment);
+      if (segment != 0) {
+        filename += "." + oscompat::to_string(segment);
       }
-      std::string flavor =
-          "hbc-seg-" + oscompat::to_string(segmentInfo.segment);
+      std::string flavor = "hbc-seg-" + oscompat::to_string(segment);
 
       OutputStream fileOS{llvh::outs()};
       if (!base.empty() && !fileOS.open(filename, F_None)) {
@@ -1827,7 +1913,7 @@ CompileResult processSourceFiles(
           M,
           genOptions,
           sourceHash,
-          &segmentInfo,
+          segment,
           sourceMapGen ? sourceMapGen.getPointer() : nullptr,
           baseBytecodeMap);
       if (segResult.status != Success) {
@@ -1924,8 +2010,8 @@ CompileResult compileFromCommandLineOptions() {
   // Resolution table in metadata, null if none could be read.
   std::unique_ptr<Context::ResolutionTable> resolutionTable = nullptr;
 
-  // Segment table in metadata.
-  std::vector<Context::SegmentInfo> segmentInfos;
+  // Segment IDs in metadata.
+  std::vector<uint32_t> segments;
 
   // Attempt to open the first file as a Zip file.
   struct zip_t *zip = zip_open(cl::InputFilenames[0].data(), 0, 'r');
@@ -1933,7 +2019,7 @@ CompileResult compileFromCommandLineOptions() {
   if (llvh::sys::fs::is_directory(cl::InputFilenames[0]) || zip) {
     ::hermes::parser::JSONObject *metadata =
         readInputFilenamesFromDirectoryOrZip(
-            cl::InputFilenames[0], fileBufs, segmentInfos, metadataAlloc, zip);
+            cl::InputFilenames[0], fileBufs, segments, metadataAlloc, zip);
 
     if (zip) {
       zip_close(zip);
@@ -1945,9 +2031,7 @@ CompileResult compileFromCommandLineOptions() {
     resolutionTable = readResolutionTable(metadata);
   } else {
     // If we aren't reading from a dir or a zip, we have only one segment.
-    Context::SegmentInfo segmentInfo;
-    segmentInfo.segment = 0;
-    segmentInfos.push_back(std::move(segmentInfo));
+    segments.push_back(0);
 
     uint32_t nextModuleID = 0;
     llvh::DenseMap<llvh::StringRef, uint32_t> moduleIDs;
@@ -1961,7 +2045,6 @@ CompileResult compileFromCommandLineOptions() {
       if (emplaceRes.second) {
         ++nextModuleID;
       }
-      segmentInfo.moduleIDs.push_back(moduleID);
       entry.push_back({moduleID, std::move(fileBuf), nullptr});
     }
 
@@ -1989,7 +2072,7 @@ CompileResult compileFromCommandLineOptions() {
     return processBytecodeFile(std::move(fileBufs[0][0].file));
   } else {
     std::shared_ptr<Context> context =
-        createContext(std::move(resolutionTable), std::move(segmentInfos));
+        createContext(std::move(resolutionTable), std::move(segments));
     return processSourceFiles(context, std::move(fileBufs));
   }
 }

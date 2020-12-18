@@ -79,7 +79,7 @@ class CodeCoverageProfiler {
   }
 
   /// Mark roots that are kept alive by the CodeCoverageProfiler for \p runtime.
-  void markRoots(SlotAcceptorWithNames &acceptor);
+  void markRoots(RootAcceptor &acceptor);
 
   /// Record the executed JS function associated with \p codeBlock.
   inline void markExecuted(CodeBlock *codeBlock) {

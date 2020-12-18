@@ -8,6 +8,7 @@
 package com.facebook.hermes.intl;
 
 import android.os.Build;
+import com.facebook.proguard.annotations.DoNotStrip;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -23,6 +24,7 @@ import java.util.Map;
  *
  * <p>Also see the implementer' notes on DateTimeFormat.java.
  */
+@DoNotStrip
 public class Collator {
 
   // [[RelevantExtensionKeys]]
@@ -210,6 +212,7 @@ public class Collator {
   // Implementer note: The ctor corresponds roughly to
   // https://tc39.es/ecma402/#sec-initializecollator
   // Also see the implementer notes on DateTimeFormat#DateTimeFormat()
+  @DoNotStrip
   public Collator(List<String> locales, Map<String, Object> options) throws JSRangeErrorException {
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -235,7 +238,7 @@ public class Collator {
   //
   // The notes on DateTimeFormat#DateTimeFormat() for Locales and
   // Options also apply here.
-  @SuppressWarnings("unused")
+  @DoNotStrip
   public static List<String> supportedLocalesOf(List<String> locales, Map<String, Object> options)
       throws JSRangeErrorException {
     String matcher =
@@ -257,7 +260,7 @@ public class Collator {
 
   // Implementer note: This method corresponds roughly to
   // https://tc39.es/ecma402/#sec-intl.collator.prototype.resolvedoptions
-  @SuppressWarnings("unused")
+  @DoNotStrip
   public Map<String, Object> resolvedOptions() throws JSRangeErrorException {
     HashMap<String, Object> finalResolvedOptions = new LinkedHashMap<>();
     String finalResolvedLocaleId = mResolvedLocaleObjectForResolvedOptions.toCanonicalTag();
@@ -290,7 +293,7 @@ public class Collator {
 
   // Implementer note: This method corresponds roughly to
   // https://tc39.es/ecma402/#sec-collator-comparestrings
-  @SuppressWarnings("unused")
+  @DoNotStrip
   public double compare(String source, String target) {
     return mPlatformCollatorObject.compare(source, target);
   }

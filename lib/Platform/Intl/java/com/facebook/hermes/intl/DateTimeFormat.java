@@ -8,6 +8,7 @@
 package com.facebook.hermes.intl;
 
 import android.os.Build;
+import com.facebook.proguard.annotations.DoNotStrip;
 import java.text.AttributedCharacterIterator;
 import java.text.CharacterIterator;
 import java.util.ArrayList;
@@ -47,6 +48,7 @@ import java.util.Map;
  * terms of icu4j, and I've left much of the specifics of this up to the implementer. Comparison
  * with existing implementations may help.
  */
+@DoNotStrip
 public class DateTimeFormat {
   // options are localeMatcher:string, calendar:string, numberingSystem:string, hour12:boolean,
   // hourCycle:string, timeZone:string, formatMatcher:string, weekday:string, era:string,
@@ -398,6 +400,7 @@ public class DateTimeFormat {
     return mPlatformDateTimeFormatter.isValidTimeZone(timeZone);
   }
 
+  @DoNotStrip
   public DateTimeFormat(List<String> locales, Map<String, Object> options)
       throws JSRangeErrorException {
 
@@ -431,7 +434,7 @@ public class DateTimeFormat {
   // https://tc39.es/ecma402/#sec-intl.datetimeformat.supportedlocalesof.
   //
   // The notes on the ctor for Locales and Options also apply here.
-  @SuppressWarnings("unused")
+  @DoNotStrip
   public static List<String> supportedLocalesOf(List<String> locales, Map<String, Object> options)
       throws JSRangeErrorException {
     String matcher =
@@ -460,7 +463,7 @@ public class DateTimeFormat {
   // String.  Note that the types are implied when the "internal
   // slots" are set (in the ctor), but in practice each "slot" should
   // correspond to a member with a well-defined Java type.
-  @SuppressWarnings("unused")
+  @DoNotStrip
   public Map<String, Object> resolvedOptions() throws JSRangeErrorException {
     HashMap<String, Object> finalResolvedOptions = new LinkedHashMap<>();
     finalResolvedOptions.put(
@@ -518,14 +521,14 @@ public class DateTimeFormat {
   // NumberFormat JavaScript objects, but these objects are never
   // exposed; it should be possible to create and use java
   // NumberFormat objects only.
-  @SuppressWarnings("unused")
+  @DoNotStrip
   public String format(double jsTimeValue) throws JSRangeErrorException {
     return mPlatformDateTimeFormatter.format(jsTimeValue);
   }
 
   // Implementer note: This method corresponds roughly to
   // https://tc39.es/ecma402/#sec-formatdatetimetoparts
-  @SuppressWarnings("unused")
+  @DoNotStrip
   public List<Map<String, String>> formatToParts(double jsTimeValue) throws JSRangeErrorException {
     ArrayList<Map<String, String>> ret = new ArrayList<>();
     AttributedCharacterIterator iterator = mPlatformDateTimeFormatter.formatToParts(jsTimeValue);

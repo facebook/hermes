@@ -232,7 +232,7 @@ std::string IdentifierTable::convertSymbolToUTF8(SymbolID id) {
   return "";
 }
 
-void IdentifierTable::markIdentifiers(SlotAcceptor &acceptor, GC *gc) {
+void IdentifierTable::markIdentifiers(RootAcceptor &acceptor, GC *gc) {
   for (auto &vectorEntry : lookupVector_) {
     if (!vectorEntry.isFreeSlot() && vectorEntry.isStringPrim()) {
 #if defined(HERMESVM_GC_NONCONTIG_GENERATIONAL) || defined(HERMESVM_GC_HADES)
@@ -246,29 +246,62 @@ void IdentifierTable::markIdentifiers(SlotAcceptor &acceptor, GC *gc) {
   }
 }
 
+void IdentifierTable::snapshotAddNodes(HeapSnapshot &snap) {
+  snap.beginNode();
+  snap.endNode(
+      HeapSnapshot::NodeType::Native,
+      "std::vector<LookupEntry>",
+      GCBase::IDTracker::reserved(
+          GCBase::IDTracker::ReservedObjectID::IdentifierTableLookupVector),
+      lookupVector_.capacity() * sizeof(LookupEntry),
+      0);
+
+  snap.beginNode();
+  snap.endNode(
+      HeapSnapshot::NodeType::Native,
+      "CompactArray",
+      GCBase::IDTracker::reserved(
+          GCBase::IDTracker::ReservedObjectID::IdentifierTableHashTable),
+      hashTable_.additionalMemorySize(),
+      0);
+
+  snap.beginNode();
+  snap.endNode(
+      HeapSnapshot::NodeType::Native,
+      "BitVector",
+      GCBase::IDTracker::reserved(
+          GCBase::IDTracker::ReservedObjectID::IdentifierTableMarkedSymbols),
+      markedSymbols_.getMemorySize(),
+      0);
+}
+
+void IdentifierTable::snapshotAddEdges(HeapSnapshot &snap) {
+  snap.addNamedEdge(
+      HeapSnapshot::EdgeType::Internal,
+      "lookupVector",
+      GCBase::IDTracker::reserved(
+          GCBase::IDTracker::ReservedObjectID::IdentifierTableLookupVector));
+  snap.addNamedEdge(
+      HeapSnapshot::EdgeType::Internal,
+      "hashTable",
+      GCBase::IDTracker::reserved(
+          GCBase::IDTracker::ReservedObjectID::IdentifierTableHashTable));
+  snap.addNamedEdge(
+      HeapSnapshot::EdgeType::Internal,
+      "markedSymbols",
+      GCBase::IDTracker::reserved(
+          GCBase::IDTracker::ReservedObjectID::IdentifierTableMarkedSymbols));
+}
+
 void IdentifierTable::visitIdentifiers(
-    const std::function<void(UTF16Ref, uint32_t)> &acceptor) {
+    const std::function<void(SymbolID, const StringPrimitive *)> &acceptor) {
   for (uint32_t i = 0; i < getSymbolsEnd(); ++i) {
     auto &vectorEntry = getLookupTableEntry(i);
-    vm::SmallU16String<16> allocator;
-    UTF16Ref ref;
-    if (vectorEntry.isStringPrim()) {
-      allocator.clear();
-      auto stringPrim = vectorEntry.getStringPrim();
-      stringPrim->appendUTF16String(allocator);
-      ref = allocator.arrayRef();
-    } else if (vectorEntry.isLazyASCII()) {
-      allocator.clear();
-      auto asciiRef = vectorEntry.getLazyASCIIRef();
-      std::copy(
-          asciiRef.begin(), asciiRef.end(), std::back_inserter(allocator));
-      ref = allocator.arrayRef();
-    } else if (vectorEntry.isLazyUTF16()) {
-      ref = vectorEntry.getLazyUTF16Ref();
-    } else {
-      continue;
+    if (!vectorEntry.isFreeSlot()) {
+      const StringPrimitive *str =
+          vectorEntry.isStringPrim() ? vectorEntry.getStringPrim() : nullptr;
+      acceptor(SymbolID::unsafeCreate(i), str);
     }
-    acceptor(ref, i);
   }
 }
 
@@ -518,7 +551,8 @@ void IdentifierTable::unmarkSymbols() {
 }
 
 void IdentifierTable::freeUnmarkedSymbols(
-    const llvh::BitVector &markedSymbols) {
+    const llvh::BitVector &markedSymbols,
+    GC::IDTracker &tracker) {
   assert(
       markedSymbols.size() <= lookupVector_.size() &&
       "Size of markedSymbols must be less than the current lookupVector");
@@ -529,6 +563,7 @@ void IdentifierTable::freeUnmarkedSymbols(
   // Flip and find set bits, which will correspond to symbols that weren't
   // marked.
   markedSymbols_.flip();
+  const bool isTrackingIDs = tracker.isTrackingIDs();
   const uint32_t markedSymbolsSize = markedSymbols.size();
   for (const uint32_t i : markedSymbols_.set_bits()) {
     // Don't check any bits after the passed-in bits, which represent the number
@@ -538,8 +573,12 @@ void IdentifierTable::freeUnmarkedSymbols(
     }
     // We never free StringPrimitives that are materialized from a lazy
     // identifier.
-    if (lookupVector_[i].isNonLazyStringPrim())
+    if (lookupVector_[i].isNonLazyStringPrim()) {
+      if (isTrackingIDs) {
+        tracker.untrackSymbol(i);
+      }
       freeSymbol(i);
+    }
   }
   markedSymbols_.reset();
 }

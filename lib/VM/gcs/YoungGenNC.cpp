@@ -338,7 +338,7 @@ void YoungGen::collect() {
 #endif
   // Track the sum of the total pre-collection sizes of the young gens.
   const size_t youngGenUsedBefore = usedDirect();
-  const size_t youngGenSizeBefore = sizeDirect();
+  const size_t heapSizeBefore = gc_->size();
   ygCollection.addArg("ygUsedBefore", youngGenUsedBefore);
   ygCollection.addArg("ogUsedBefore", nextGen_->used());
   ygCollection.addArg("ogSize", nextGen_->size());
@@ -347,7 +347,7 @@ void YoungGen::collect() {
   cumPreBytes_ += youngGenUsedBefore;
 
   LLVM_DEBUG(
-      dbgs() << "\nStarting (young-gen, " << formatSize(youngGenSizeBefore)
+      dbgs() << "\nStarting (young-gen, " << formatSize(sizeDirect())
              << ") garbage collection; collection # " << gc_->numGCs() << "\n");
 
   // Remember the point in the older generation into which we started
@@ -457,14 +457,13 @@ void YoungGen::collect() {
   ygCollection.recordGCStats(
       sizeDirect(),
       youngGenUsedBefore,
-      youngGenSizeBefore,
+      heapSizeBefore,
       // Post-allocated has an ambiguous meaning for a young-gen GC, since the
       // young gen must be completely evacuated. Since zeros aren't really
       // useful here, instead put the number of bytes that were promoted into
       // old gen, which is the amount that survived the collection.
       promotedBytes,
-      // In young-gen collections, the size never changes.
-      youngGenSizeBefore,
+      gc_->size(),
       &gc_->youngGenCollectionCumStats_);
 
   markOldToYoungSecs_ +=

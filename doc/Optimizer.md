@@ -1,12 +1,10 @@
 ---
 id: optimizer
-title: Optimizer
+title: Design of the Optimizer
 ---
 
-
-## Design of the Hermes Optimizer
-
 ### Introduction
+
 This document describes the high-level design of the Hermes optimizer. The
 Hermes optimizer transforms the Hermes IR into a more efficient representation
 that preserves the original semantics of the program. The IR.md document describes

@@ -80,8 +80,20 @@ task copyPublicHeaders(type: Copy) {
   into "$outputDir/include/hermes/Public"
 }
 
-task githubRelease(dependsOn: ['hermes:build', 'cppruntime:build', 'copyApiHeaders', 'copyJsiHeaders', 'copyPublicHeaders'], type: Tar) {
+// TODO: With the Intl API implementation, we have  java class files inside the hermes library on Android,
+// Which has non-platform dependencies such as fbjni, facebook annotation library etc.
+// It is no longer appropriate or correct to publish hermes as a flat archive, instead we should publish as a maven library with proper POM file describing the dependencies.
+task githubRelease(dependsOn: ['hermes:assembleIntl', 'cppruntime:build', 'copyApiHeaders', 'copyJsiHeaders', 'copyPublicHeaders'], type: Tar) {
   archiveBaseName = "hermes-runtime-android"
+  archiveVersion = "v" + release_version
+  archiveExtension = "tar.gz"
+  compression = Compression.GZIP
+  destinationDirectory = file("${hermes_ws}/build_android/distributions")
+  from "$outputDir"
+}
+
+task githubReleaseNoIntl(dependsOn: ['hermes:assembleNointl', 'cppruntime:build', 'copyApiHeaders', 'copyJsiHeaders', 'copyPublicHeaders'], type: Tar) {
+  archiveBaseName = "hermes-runtime-android-nointl"
   archiveVersion = "v" + release_version
   archiveExtension = "tar.gz"
   compression = Compression.GZIP

@@ -317,12 +317,6 @@ class GenGC final : public GCBase {
   /// The largest the size of this heap could ever grow to.
   inline size_t maxSize() const;
 
-#ifndef NDEBUG
-  /// \return Number of weak ref slots currently in use.
-  /// Inefficient. For testing/debugging.
-  size_t countUsedWeakRefs() const;
-#endif
-
   /// Cumulative stats over time so far.
   size_t getPeakLiveAfterGC() const override;
 
@@ -479,11 +473,12 @@ class GenGC final : public GCBase {
 // As a result, vanilla "ifdef public" trick leads to link errors.
 #if defined(UNIT_TEST) || defined(_MSC_VER)
  public:
-  /// Return a reference to the segment index, for testing purposes.
-  inline const GCSegmentAddressIndex &segmentIndex() const;
 #else
  private:
 #endif
+
+  /// Return a number that is higher when the GC heap contains more dirty pages.
+  llvh::ErrorOr<size_t> getVMFootprintForTest() const;
 
   /// FIXME: This is for backwards compatibility, new users should use
   /// Size::kYoungGenFractionDenom.
@@ -883,9 +878,6 @@ class GenGC final : public GCBase {
   /// in use (was marked).
   llvh::BitVector markedSymbols_{};
 
-  /// The weak reference slots.
-  std::deque<WeakRefSlot> weakSlots_{};
-
   /// Pointers to the slots (elements of weakSlots_, above) that may
   /// possibly have pointer referents that point into the young generation.
   std::vector<WeakRefSlot *> weakRefSlotsWithPossibleYoungReferent_{};
@@ -1064,12 +1056,6 @@ inline GenGC::FixedSizeValue GenGC::lastAllocationWasFixedSize() const {
   return lastAllocWasFixedSize_;
 }
 #endif
-
-#ifdef UNIT_TEST
-const GCSegmentAddressIndex &GenGC::segmentIndex() const {
-  return segmentIndex_;
-}
-#endif // UNIT_TEST
 
 inline void GenGC::writeBarrierImpl(void *loc, void *value, bool hv) {
   HERMES_SLOW_ASSERT(dbgContains(loc));

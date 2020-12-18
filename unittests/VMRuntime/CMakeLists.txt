@@ -24,7 +24,6 @@ set(RTSources
   DictPropertyMapTest.cpp
   ExtStringForTest.cpp
   ExternalMemAccountingTest.cpp
-  Footprint.cpp
   GCBasicsTest.cpp
   GCFinalizerTest.cpp
   GCFragmentationTest.cpp
@@ -34,7 +33,7 @@ set(RTSources
   GCMarkWeakTest.cpp
   GCObjectIterationTest.cpp
   GCOOMTest.cpp
-  GCReturnUnusedMemoryNCTest.cpp
+  GCReturnUnusedMemoryTest.cpp
   GCSanitizeHandlesTest.cpp
   GCSegmentAddressIndexTest.cpp
   GCSegmentRangeTest.cpp

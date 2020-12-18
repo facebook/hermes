@@ -1,9 +1,9 @@
 ---
-id: Emscripten
-title: Building Hermes with Emscripten
+id: emscripten
+title: Building with Emscripten
 ---
 
-# Setting up Emscripten
+## Setting up Emscripten
 
 To setup Emscripten for building Hermes, we recommend using `emsdk`, which is
 the same way Emscripten recommends for most circumstances.
@@ -26,7 +26,7 @@ $EmscriptenRoot = ~/emsdk/fastcomp/emscripten
 If you use `latest` instead, replace `fastcomp` in the above instruction with
 `upstream`.
 
-# Building Hermes With configure.py
+## Building Hermes With configure.py
 
 ```
 # Configure the build. Here the build is output to a
@@ -55,7 +55,7 @@ via `emsdk activate`.
 
 See `configure.py --help` for more build options.
 
-# Build with CMake directly
+## Build with CMake directly
 
 The `configure.py` script runs CMake for you with options chosen by the Hermes
 project. If you want to customize your build, you can take this command as a

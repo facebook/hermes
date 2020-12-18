@@ -60,9 +60,9 @@ print(mod2.shared.value);
 // BC5-NEXT: Module ID 3 -> function ID 2
 
 // BC10-LABEL: CommonJS Modules (Static):
-// BC10-NEXT: Module ID 3 -> function ID 1
-// BC10-NEXT: Module ID 1 -> function ID 2
-// BC10-NEXT: Module ID 2 -> function ID 3
+// BC10-NEXT: Module ID 1 -> function ID 1
+// BC10-NEXT: Module ID 2 -> function ID 2
+// BC10-NEXT: Module ID 3 -> function ID 3
 
 // BC5:    LoadConstString   {{.*}}, "shared: init"
 // BC10:    LoadConstString   {{.*}}, "shared: init"

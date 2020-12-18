@@ -15,8 +15,8 @@
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/JSWeakMapImpl.h"
+#include "hermes/VM/RootAndSlotAcceptorDefault.h"
 #include "hermes/VM/Runtime.h"
-#include "hermes/VM/SlotAcceptorDefault.h"
 #include "hermes/VM/VTable.h"
 
 #include "llvh/Support/Debug.h"
@@ -55,12 +55,11 @@ GCBase::GCBase(
       inGC_(false),
       name_(gcConfig.getName()),
       allocationLocationTracker_(this),
+#ifdef HERMESVM_SANITIZE_HANDLES
+      sanitizeRate_(gcConfig.getSanitizeConfig().getSanitizeRate()),
+#endif
       tripwireCallback_(gcConfig.getTripwireConfig().getCallback()),
       tripwireLimit_(gcConfig.getTripwireConfig().getLimit())
-#ifdef HERMESVM_SANITIZE_HANDLES
-      ,
-      sanitizeRate_(gcConfig.getSanitizeConfig().getSanitizeRate())
-#endif
 #ifndef NDEBUG
       ,
       randomizeAllocSpace_(gcConfig.getShouldRandomizeAllocSpace())
@@ -156,14 +155,15 @@ constexpr HeapSnapshot::NodeID objectIDForRootSection(
 }
 
 // Abstract base class for all snapshot acceptors.
-struct SnapshotAcceptor : public SlotAcceptorWithNamesDefault {
-  using SlotAcceptorWithNamesDefault::accept;
-  using SlotAcceptorWithNamesDefault::SlotAcceptorWithNamesDefault;
+struct SnapshotAcceptor : public RootAndSlotAcceptorWithNamesDefault {
+  using RootAndSlotAcceptorWithNamesDefault::accept;
+  using RootAndSlotAcceptorWithNamesDefault::
+      RootAndSlotAcceptorWithNamesDefault;
 
   SnapshotAcceptor(GC &gc, HeapSnapshot &snap)
-      : SlotAcceptorWithNamesDefault(gc), snap_(snap) {}
+      : RootAndSlotAcceptorWithNamesDefault(gc), snap_(snap) {}
 
-  void accept(HermesValue &hv, const char *name) override {
+  void acceptHV(HermesValue &hv, const char *name) override {
     if (hv.isPointer()) {
       auto ptr = hv.getPointer();
       accept(ptr, name);
@@ -183,7 +183,7 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
   // Do nothing for any value except a number.
   void accept(void *&ptr, const char *name) override {}
 
-  void accept(HermesValue &hv, const char *) override {
+  void acceptHV(HermesValue &hv, const char *) override {
     if (hv.isNumber()) {
       seenNumbers_.insert(hv.getNumber());
     }
@@ -258,11 +258,8 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
         gc.getObjectID(ptr));
   }
 
-  void accept(HermesValue &hv, const char *name) override {
-    if (hv.isPointer()) {
-      auto ptr = hv.getPointer();
-      accept(ptr, name);
-    } else if (auto id = gc.getSnapshotID(hv)) {
+  void acceptHV(HermesValue &hv, const char *name) override {
+    if (auto id = gc.getSnapshotID(hv)) {
       snap_.addNamedEdge(
           HeapSnapshot::EdgeType::Internal,
           llvh::StringRef::withNullAsEmpty(name),
@@ -287,6 +284,16 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
         HeapSnapshot::EdgeType::Weak,
         indexName,
         gc.getObjectID(slot->getPointer()));
+  }
+
+  void accept(SymbolID sym, const char *name) override {
+    if (sym.isInvalid()) {
+      return;
+    }
+    snap_.addNamedEdge(
+        HeapSnapshot::EdgeType::Internal,
+        llvh::StringRef::withNullAsEmpty(name),
+        gc.getObjectID(sym));
   }
 
  private:
@@ -361,6 +368,11 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
     pointerAccept(slot->getPointer(), nullptr, true);
   }
 
+  void provideSnapshot(
+      const std::function<void(HeapSnapshot &)> &func) override {
+    func(snap_);
+  }
+
   void beginRootSection(Section section) override {
     assert(
         currentSection_ == Section::InvalidSection &&
@@ -433,7 +445,7 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
   JSONEmitter json(os);
   HeapSnapshot snap(json, gcCallbacks_->getStackTracesTree());
 
-  const auto rootScan = [gc, &snap]() {
+  const auto rootScan = [gc, &snap, this]() {
     {
       // Make the super root node and add edges to each root section.
       SnapshotRootSectionAcceptor rootSectionAcceptor(*gc, snap);
@@ -471,6 +483,22 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
       gc->markRoots(rootAcceptor, true);
       gc->markWeakRoots(rootAcceptor);
     }
+    gcCallbacks_->visitIdentifiers(
+        [gc, &snap, this](SymbolID sym, const StringPrimitive *str) {
+          snap.beginNode();
+          if (str) {
+            snap.addNamedEdge(
+                HeapSnapshot::EdgeType::Internal,
+                "description",
+                gc->getObjectID(str));
+          }
+          snap.endNode(
+              HeapSnapshot::NodeType::Symbol,
+              gc->convertSymbolToUTF8(sym),
+              idTracker_.getObjectID(sym),
+              sizeof(SymbolID),
+              0);
+        });
   };
 
   snap.beginSection(HeapSnapshot::Section::Nodes);
@@ -535,6 +563,19 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
   snap.endSection(HeapSnapshot::Section::Locations);
 }
 
+void GCBase::enableHeapProfiler(
+    std::function<void(
+        uint64_t,
+        std::chrono::microseconds,
+        std::vector<GCBase::AllocationLocationTracker::HeapStatsUpdate>)>
+        fragmentCallback) {
+  getAllocationLocationTracker().enable(std::move(fragmentCallback));
+}
+
+void GCBase::disableHeapProfiler() {
+  getAllocationLocationTracker().disable();
+}
+
 void GCBase::checkTripwire(size_t dataSize) {
   if (LLVM_LIKELY(!tripwireCallback_) ||
       LLVM_LIKELY(dataSize < tripwireLimit_) || tripwireCalled_) {
@@ -580,6 +621,13 @@ void GCBase::getHeapInfo(HeapInfo &info) {
   info.numCollections = cumStats_.numCollections;
 }
 
+void GCBase::getHeapInfoWithMallocSize(HeapInfo &info) {
+  // Assign to overwrite anything previously in the heap info.
+  // A deque doesn't have a capacity, so the size is the lower bound.
+  info.mallocSizeEstimate =
+      weakSlots_.size() * sizeof(decltype(weakSlots_)::value_type);
+}
+
 #ifndef NDEBUG
 void GCBase::getDebugHeapInfo(DebugHeapInfo &info) {
   recordNumAllocatedObjects();
@@ -590,6 +638,16 @@ void GCBase::getDebugHeapInfo(DebugHeapInfo &info) {
   info.numMarkedSymbols = numMarkedSymbols_;
   info.numHiddenClasses = numHiddenClasses_;
   info.numLeafHiddenClasses = numLeafHiddenClasses_;
+}
+
+size_t GCBase::countUsedWeakRefs() const {
+  size_t count = 0;
+  for (auto &slot : weakSlots_) {
+    if (slot.state() != WeakSlotState::Free) {
+      ++count;
+    }
+  }
+  return count;
 }
 #endif
 
@@ -902,20 +960,8 @@ void GCBase::IDTracker::deserialize(Deserializer &d) {
 }
 #endif
 
-void GCBase::IDTracker::untrackUnmarkedSymbols(
-    const llvh::BitVector &markedSymbols) {
-  std::vector<uint32_t> toUntrack;
-  for (const auto &pair : symbolIDMap_) {
-    if (!markedSymbols.test(pair.first)) {
-      toUntrack.push_back(pair.first);
-    }
-  }
-  for (uint32_t symIdx : toUntrack) {
-    symbolIDMap_.erase(symIdx);
-  }
-}
-
 HeapSnapshot::NodeID GCBase::IDTracker::getNumberID(double num) {
+  std::lock_guard<Mutex> lk{mtx_};
   auto &numberRef = numberIDMap_[num];
   // If the entry didn't exist, the value was initialized to 0.
   if (numberRef != 0) {
@@ -991,6 +1037,8 @@ void GCBase::AllocationLocationTracker::newAlloc(const void *ptr, uint32_t sz) {
       flushCallback();
     }
     if (auto node = gc_->gcCallbacks_->getCurrentStackTracesTreeNode(ip)) {
+      // Hold a lock while modifying stackMap_.
+      std::lock_guard<Mutex> lk{mtx_};
       auto itAndDidInsert = stackMap_.try_emplace(ptr, node);
       assert(itAndDidInsert.second && "Failed to create a new node");
       (void)itAndDidInsert;
@@ -1005,6 +1053,9 @@ void GCBase::AllocationLocationTracker::moveAlloc(
     // This can happen in old generations when compacting to the same location.
     return;
   }
+  // Hold a lock in case concurrent Hades tries to free an alloc at the same
+  // time.
+  std::lock_guard<Mutex> lk{mtx_};
   auto oldIt = stackMap_.find(oldPtr);
   if (oldIt == stackMap_.end()) {
     // This can happen if the tracker is turned on between collections, and
@@ -1022,6 +1073,9 @@ void GCBase::AllocationLocationTracker::moveAlloc(
 void GCBase::AllocationLocationTracker::freeAlloc(
     const void *ptr,
     uint32_t sz) {
+  // Hold a lock during freeAlloc because concurrent Hades might be creating an
+  // alloc (newAlloc) at the same time.
+  std::lock_guard<Mutex> lk{mtx_};
   stackMap_.erase(ptr);
   if (!enabled_) {
     // Fragments won't exist if the heap profiler isn't enabled.
@@ -1091,6 +1145,8 @@ llvh::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
         : IDTracker::reserved(IDTracker::ReservedObjectID::Null);
   } else if (val.isNumber()) {
     return idTracker_.getNumberID(val.getNumber());
+  } else if (val.isSymbol() && val.getSymbol().isValid()) {
+    return idTracker_.getObjectID(val.getSymbol());
   } else if (val.isUndefined()) {
     return IDTracker::reserved(IDTracker::ReservedObjectID::Undefined);
   } else if (val.isNull()) {

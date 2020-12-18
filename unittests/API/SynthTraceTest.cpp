@@ -1244,6 +1244,9 @@ TEST_F(SynthTraceSerializationTest, TraceHeader) {
       conf.getES6Symbol(),
       llvh::cast<JSONBoolean>(rtConfig->at("ES6Symbol"))->getValue());
   EXPECT_EQ(
+      conf.getES6Intl(),
+      llvh::cast<JSONBoolean>(rtConfig->at("ES6Intl"))->getValue());
+  EXPECT_EQ(
       conf.getEnableSampledStats(),
       llvh::cast<JSONBoolean>(rtConfig->at("enableSampledStats"))->getValue());
   EXPECT_EQ(

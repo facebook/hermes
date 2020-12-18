@@ -11,6 +11,7 @@ add_hermes_library(hermesCompilerDriver STATIC ${source_files}
   LINK_LIBS
   hermesADT
   hermesAST
+  hermesAST2JS
   hermesInst
   hermesHBCBackend
   hermesBackend

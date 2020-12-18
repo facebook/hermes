@@ -25,11 +25,12 @@
 namespace hermes {
 
 ConsoleHostContext::ConsoleHostContext(vm::Runtime *runtime) {
-  runtime->addCustomRootsFunction([this](vm::GC *, vm::SlotAcceptor &acceptor) {
-    for (auto &entry : queuedJobs_) {
-      acceptor.acceptPtr(entry.second);
-    }
-  });
+  runtime->addCustomRootsFunction(
+      [this](vm::GC *, vm::RootAndSlotAcceptor &acceptor) {
+        for (auto &entry : queuedJobs_) {
+          acceptor.acceptPtr(entry.second);
+        }
+      });
 }
 
 /// Raises an uncatchable quit exception.
@@ -128,6 +129,8 @@ setTimeout(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
   }
   CallResult<HermesValue> boundFunction = BoundFunction::create(
       runtime, callable, args.getArgCount() - 1, args.begin() + 1);
+  if (boundFunction == ExecutionStatus::EXCEPTION)
+    return ExecutionStatus::EXCEPTION;
   uint32_t jobId = consoleHost->queueJob(
       PseudoHandle<Callable>::vmcast(createPseudoHandle(*boundFunction)));
   return HermesValue::encodeNumberValue(jobId);

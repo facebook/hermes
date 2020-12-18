@@ -160,6 +160,7 @@ Runtime::Runtime(
       hasES6Promise_(runtimeConfig.getES6Promise()),
       hasES6Proxy_(runtimeConfig.getES6Proxy()),
       hasES6Symbol_(runtimeConfig.getES6Symbol()),
+      hasES6Intl_(runtimeConfig.getES6Intl()),
       shouldRandomizeMemoryLayout_(runtimeConfig.getRandomizeMemoryLayout()),
       bytecodeWarmupPercent_(runtimeConfig.getBytecodeWarmupPercent()),
       trackIO_(runtimeConfig.getTrackIO()),
@@ -412,7 +413,9 @@ class Runtime::MarkRootsPhaseTimer {
   std::chrono::time_point<std::chrono::steady_clock> start_;
 };
 
-void Runtime::markRoots(RootAcceptor &acceptor, bool markLongLived) {
+void Runtime::markRoots(
+    RootAndSlotAcceptorWithNames &acceptor,
+    bool markLongLived) {
   // The body of markRoots should be sequence of blocks, each of which starts
   // with the declaration of an appropriate RootSection instance.
   {
@@ -482,11 +485,19 @@ void Runtime::markRoots(RootAcceptor &acceptor, bool markLongLived) {
 
   {
     MarkRootsPhaseTimer timer(this, RootAcceptor::Section::IdentifierTable);
-    acceptor.beginRootSection(RootAcceptor::Section::IdentifierTable);
     if (markLongLived) {
+      // Need to add nodes before the root section, and edges during the root
+      // section.
+      acceptor.provideSnapshot([this](HeapSnapshot &snap) {
+        identifierTable_.snapshotAddNodes(snap);
+      });
+      acceptor.beginRootSection(RootAcceptor::Section::IdentifierTable);
       identifierTable_.markIdentifiers(acceptor, &getHeap());
+      acceptor.provideSnapshot([this](HeapSnapshot &snap) {
+        identifierTable_.snapshotAddEdges(snap);
+      });
+      acceptor.endRootSection();
     }
-    acceptor.endRootSection();
   }
 
   {
@@ -551,7 +562,7 @@ void Runtime::markWeakRoots(WeakRootAcceptor &acceptor) {
 }
 
 void Runtime::visitIdentifiers(
-    const std::function<void(UTF16Ref, uint32_t)> &acceptor) {
+    const std::function<void(SymbolID, const StringPrimitive *)> &acceptor) {
   identifierTable_.visitIdentifiers(acceptor);
 }
 
@@ -751,7 +762,7 @@ void Runtime::unmarkSymbols() {
 }
 
 void Runtime::freeSymbols(const llvh::BitVector &markedSymbols) {
-  identifierTable_.freeUnmarkedSymbols(markedSymbols);
+  identifierTable_.freeUnmarkedSymbols(markedSymbols, heap_.getIDTracker());
 }
 
 #ifdef HERMES_SLOW_DEBUG
@@ -765,18 +776,9 @@ const void *Runtime::getStringForSymbol(SymbolID id) {
 #endif
 
 size_t Runtime::mallocSize() const {
-  size_t totalSize = 0;
-
-  // Register stack uses mmap.
-
-  // IdentifierTable size
-  totalSize +=
-      sizeof(IdentifierTable) + identifierTable_.additionalMemorySize();
-  // Runtime modules
-  for (const RuntimeModule &rtm : runtimeModuleList_) {
-    totalSize += sizeof(RuntimeModule) + rtm.additionalMemorySize();
-  }
-  return totalSize;
+  // Register stack uses mmap and RuntimeModules are tracked by their owning
+  // Domains. So this only considers IdentifierTable size.
+  return sizeof(IdentifierTable) + identifierTable_.additionalMemorySize();
 }
 
 #ifdef HERMESVM_SANITIZE_HANDLES
@@ -2160,6 +2162,7 @@ void Runtime::populateHeaderRuntimeConfig(SerializeHeader &header) {
   header.hasES6Promise = hasES6Promise_;
   header.hasES6Proxy = hasES6Proxy_;
   header.hasES6Symbol = hasES6Symbol_;
+  header.hasES6Intl = hasES6Intl_;
   header.bytecodeWarmupPercent = bytecodeWarmupPercent_;
   header.trackIO = trackIO_;
 }
@@ -2181,6 +2184,10 @@ void Runtime::checkHeaderRuntimeConfig(SerializeHeader &header) const {
     hermes_fatal(
         "serialize/deserialize Runtime Configs don't match (es6Symbol)");
   }
+  if (header.hasES6Intl != hasES6Intl_) {
+    hermes_fatal("serialize/deserialize Runtime Configs don't match (es6Intl)");
+  }
+
   if (header.bytecodeWarmupPercent != bytecodeWarmupPercent_) {
     hermes_fatal(
         "serialize/deserialize Runtime Configs don't match (bytecodeWarmupPercent)");
@@ -2240,11 +2247,11 @@ void Runtime::enableAllocationLocationTracker(
     stackTracesTree_ = make_unique<StackTracesTree>();
   }
   stackTracesTree_->syncWithRuntimeStack(this);
-  heap_.getAllocationLocationTracker().enable(std::move(fragmentCallback));
+  heap_.enableHeapProfiler(std::move(fragmentCallback));
 }
 
 void Runtime::disableAllocationLocationTracker(bool clearExistingTree) {
-  heap_.getAllocationLocationTracker().disable();
+  heap_.disableHeapProfiler();
   if (clearExistingTree) {
     stackTracesTree_.reset();
   }

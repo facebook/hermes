@@ -12,8 +12,6 @@ import static org.fest.assertions.api.Assertions.assertThat;
 import android.test.InstrumentationTestCase;
 import java.util.Locale;
 import java.util.TimeZone;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.junit.Test;
 
 public class HermesInstrumentationTest extends InstrumentationTestCase {
@@ -130,37 +128,6 @@ public class HermesInstrumentationTest extends InstrumentationTestCase {
       assertThat(result2).isEqualTo("\u017F\u0323\u0307");
       assertThat(result3).isEqualTo("\u1E69");
       assertThat(result4).isEqualTo("\u0073\u0323\u0307");
-    }
-  }
-
-  // Gets the recorded GC stats from the runtime, finds the reported heap size,
-  // parses is a long, and returns that.
-  private long getHeapSize(JSRuntime rt) {
-    String pattern = "\"Heap size\": ([0-9]+),";
-    Pattern r = Pattern.compile(pattern, Pattern.MULTILINE);
-    Matcher m = r.matcher(rt.getRecordedGCStats());
-    assertThat(m.find()).isTrue();
-    return Long.parseLong(m.group(1));
-  }
-
-  @Test
-  public void testCreateRuntimeWithHeapSpec() {
-    long M = 1024 * 1024;
-    // The current default initial heap size is 32M.  Verify that.
-    // In doing such verifications, some heaps, especially NCGen, may round
-    // the requested size up to meet various constraints -- but never by as much
-    // as 8MB (the size of an NCGen segment).
-    try (JSRuntime rt = JSRuntime.makeHermesRuntime(/* shouldRecordGCStats */ true)) {
-      assertThat(getHeapSize(rt)).isGreaterThanOrEqualTo(32 * M);
-      assertThat(getHeapSize(rt)).isLessThan(32 * M + 8 * M);
-    }
-
-    // Now show that we can make runtime with a smaller heap with the alternate
-    // factory function:
-    try (JSRuntime rt =
-        JSRuntime.makeHermesRuntimeWithHeapSpec(8 * M, 8 * M, /* shouldRecordGCStats */ true)) {
-      assertThat(getHeapSize(rt)).isGreaterThanOrEqualTo(8 * M);
-      assertThat(getHeapSize(rt)).isLessThan(8 * M + 8 * M);
     }
   }
 

@@ -74,7 +74,7 @@ function foo(x: number): string {}
 // CHECK-NEXT:       "loc": {
 // CHECK-NEXT:         "start": {
 // CHECK-NEXT:           "line": 14,
-// CHECK-NEXT:           "column": 2
+// CHECK-NEXT:           "column": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:           "line": 14,

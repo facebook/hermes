@@ -578,8 +578,7 @@ void Module::populateCJSModuleUseGraph() {
   }
 }
 
-llvh::DenseSet<Function *> Module::getFunctionsInSegment(
-    const Context::SegmentInfo &segmentInfo) {
+llvh::DenseSet<Function *> Module::getFunctionsInSegment(uint32_t segment) {
   populateCJSModuleUseGraph();
 
   // Final set of functions which must be output when generating this segment.
@@ -591,8 +590,8 @@ llvh::DenseSet<Function *> Module::getFunctionsInSegment(
 
   // Populate the worklist initially with the wrapper functions for each module
   // in the given segment.
-  for (const auto &moduleID : segmentInfo.moduleIDs) {
-    worklist.insert(cjsModules_[moduleID].function);
+  for (Function *fn : cjsModuleSegmentMap_[segment]) {
+    worklist.insert(fn);
   }
 
   while (!worklist.empty()) {

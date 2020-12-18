@@ -264,7 +264,7 @@ class SamplingProfiler {
   void decreaseDomainCount();
 
   /// Mark roots that are kept alive by the SamplingProfiler.
-  void markRoots(SlotAcceptorWithNames &acceptor);
+  void markRoots(RootAcceptor &acceptor);
 
   /// Dump sampled stack to \p OS.
   /// NOTE: this is for manual testing purpose.

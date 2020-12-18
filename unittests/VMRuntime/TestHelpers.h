@@ -266,7 +266,7 @@ struct DummyRuntime final : public HandleRootOwner,
                             private GCBase::GCCallbacks {
   GC gc;
   std::vector<GCCell **> pointerRoots{};
-  std::vector<HermesValue *> valueRoots{};
+  std::vector<PinnedHermesValue *> valueRoots{};
   std::vector<WeakRoot<void> *> weakRoots{};
   std::function<void(WeakRefAcceptor &)> markExtraWeak{};
 
@@ -329,7 +329,7 @@ struct DummyRuntime final : public HandleRootOwner,
     gc.collect("test");
   }
 
-  void markRoots(RootAcceptor &acceptor, bool) override;
+  void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool) override;
 
   void markWeakRoots(WeakRootAcceptor &weakAcceptor) override;
 
@@ -354,9 +354,7 @@ struct DummyRuntime final : public HandleRootOwner,
   void printRuntimeGCStats(JSONEmitter &) const override {}
 
   void visitIdentifiers(
-      const std::function<void(UTF16Ref, uint32_t)> &acceptor) override {
-    acceptor(createUTF16Ref(u"DummyIdTableEntry0"), 0);
-    acceptor(createUTF16Ref(u"DummyIdTableEntry1"), 1);
+      const std::function<void(SymbolID, const StringPrimitive *)> &) override {
   }
 
   std::string convertSymbolToUTF8(SymbolID) override;

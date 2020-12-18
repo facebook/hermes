@@ -90,9 +90,9 @@ for (var i=0; i < 16; i++) longPattern += longPattern;
 try { new RegExp(longPattern, ""); } catch (err) { print(err.name); }
 // CHECK-NEXT: SyntaxError
 
-// Ensure very deep nesting produces an error.
-try { print(RegExp("(".repeat(50000) + "a" + ")".repeat(50000)).source.length); } catch (err) { print(err.name); }
-// CHECK-NEXT: SyntaxError
+// Ensure very deep nesting does not produce an error.
+print("dcba".search(RegExp("(".repeat(50000) + "a" + ")".repeat(50000))));
+// CHECK-NEXT: 3
 
 // Ensure a large number of alternations does not produce an error
 try { print(RegExp("a" + "|a".repeat(50000)).source.length); } catch (err) { print(err.name); }

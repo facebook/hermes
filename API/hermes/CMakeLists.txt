@@ -23,6 +23,12 @@ set(api_sources
 file(GLOB api_headers ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 file(GLOB api_public_headers ${PROJECT_SOURCE_DIR}/public/hermes/Public/*.h)
 
+if(HERMES_IS_ANDROID)
+  list(APPEND api_sources
+    JNI_OnLoad.cpp
+    )
+endif()
+
 if (HERMESVM_API_TRACE)
   list(APPEND api_sources
     hermes_tracing.cpp

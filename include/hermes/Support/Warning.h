@@ -17,10 +17,8 @@ namespace hermes {
 /// Categories of warnings the compiler might emit, that can be turned on or
 /// off.
 enum class Warning {
-  NoWarning,
-  UndefinedVariable,
-  DirectEval,
-  Misc,
+#define WARNING_CATEGORY_HIDDEN(name, specifier, description) name,
+#include "hermes/Support/Warnings.def"
 
   _NumWarnings,
 };

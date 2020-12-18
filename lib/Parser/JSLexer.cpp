@@ -612,7 +612,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
     break;
   } // for(;;)
 
-  token_.setEnd(curCharPtr_);
+  finishToken(curCharPtr_);
 
   return &token_;
 }
@@ -667,7 +667,7 @@ const Token *JSLexer::advanceInJSXChild() {
     // Always terminate the loop unless "continue" was used.
     break;
   }
-  token_.setEnd(curCharPtr_);
+  finishToken(curCharPtr_);
   return &token_;
 }
 
@@ -885,10 +885,14 @@ bool JSLexer::isCurrentTokenADirective() {
 const Token *JSLexer::rescanRBraceInTemplateLiteral() {
   assert(token_.getKind() == TokenKind::r_brace && "need } to rescan");
   --curCharPtr_;
+  // Undo the storage for the '}'.
+  if (LLVM_UNLIKELY(storeTokens_)) {
+    tokenStorage_.pop_back();
+  }
   assert(*curCharPtr_ == '}' && "non-} was scanned as r_brace");
   token_.setStart(curCharPtr_);
   scanTemplateLiteral();
-  token_.setEnd(curCharPtr_);
+  finishToken(curCharPtr_);
   return &token_;
 }
 
@@ -928,6 +932,11 @@ OptValue<TokenKind> JSLexer::lookahead1(OptValue<TokenKind> expectedToken) {
     commentStorage_.erase(
         commentStorage_.begin() + savedCommentStorageSize,
         commentStorage_.end());
+  }
+
+  // Undo the storage for the token we just advanced to.
+  if (LLVM_UNLIKELY(storeTokens_)) {
+    tokenStorage_.pop_back();
   }
 
   return kind;
@@ -1450,12 +1459,10 @@ end:
     consumeIdentifierParts<IdentifierMode::JS>();
   }
 
-  token_.setEnd(curCharPtr_);
-
   double val;
 
   if (!ok) {
-    error(token_.getSourceRange(), "invalid numeric literal");
+    errorRange(token_.getStartLoc(), "invalid numeric literal");
     val = std::numeric_limits<double>::quiet_NaN();
   } else if (
       !real && radix == 10 && curCharPtr_ - start <= 9 &&
@@ -1484,14 +1491,14 @@ end:
           char next = *(it + 1);
           if (!isdigit(prev) &&
               !(radix == 16 && 'a' <= (prev | 32) && (prev | 32) <= 'f')) {
-            error(
-                token_.getSourceRange(),
+            errorRange(
+                token_.getStartLoc(),
                 "numeric separator must come after a digit");
           } else if (
               !isdigit(next) &&
               !(radix == 16 && 'a' <= (next | 32) && (next | 32) <= 'f')) {
-            error(
-                token_.getSourceRange(),
+            errorRange(
+                token_.getStartLoc(),
                 "numeric separator must come before a digit");
           }
         }
@@ -1503,15 +1510,15 @@ end:
     char *endPtr;
     val = ::hermes_g_strtod(buf.data(), &endPtr);
     if (endPtr != &buf.back()) {
-      error(token_.getSourceRange(), "invalid numeric literal");
+      errorRange(token_.getStartLoc(), "invalid numeric literal");
       val = std::numeric_limits<double>::quiet_NaN();
     }
   } else {
     if (legacyOctal &&
         (strictMode_ || grammarContext == GrammarContext::Flow) &&
         curCharPtr_ - start > 1) {
-      if (!error(
-              token_.getSourceRange(),
+      if (!errorRange(
+              token_.getStartLoc(),
               "Octal literals must use '0o' in strict mode")) {
         val = std::numeric_limits<double>::quiet_NaN();
         goto done;
@@ -1521,8 +1528,8 @@ end:
     // Handle the zero-radix case. This could only happen with radix 16 because
     // otherwise start wouldn't have been changed.
     if (curCharPtr_ == start) {
-      error(
-          token_.getSourceRange(),
+      errorRange(
+          token_.getStartLoc(),
           llvh::Twine("No digits after ") + StringRef(start - 2, 2));
       val = std::numeric_limits<double>::quiet_NaN();
     } else {
@@ -1534,7 +1541,8 @@ end:
         for (auto *scanPtr = start; scanPtr < curCharPtr_; ++scanPtr) {
           if (LLVM_UNLIKELY(*scanPtr >= '8') && LLVM_LIKELY(*scanPtr != '_')) {
             sm_.warning(
-                token_.getSourceRange(),
+                SMRange(
+                    token_.getStartLoc(), SMLoc::getFromPointer(curCharPtr_)),
                 "Numeric literal starts with 0 but contains an 8 or 9 digit. "
                 "Interpreting as decimal (not octal).");
             radix = 10;
@@ -1544,15 +1552,15 @@ end:
 
         // LegacyOctalLikeDecimalIntegerLiteral cannot contain separators.
         if (LLVM_UNLIKELY(seenSeparator)) {
-          error(
-              token_.getSourceRange(),
+          errorRange(
+              token_.getStartLoc(),
               "Numeric separator cannot be used in literal after leading 0");
         }
       }
       auto parsedInt = parseIntWithRadix</* AllowNumericSeparator */ true>(
           llvh::ArrayRef<char>{start, (size_t)(curCharPtr_ - start)}, radix);
       if (!parsedInt) {
-        error(token_.getSourceRange(), "invalid integer literal");
+        errorRange(token_.getStartLoc(), "invalid integer literal");
         val = std::numeric_limits<double>::quiet_NaN();
       } else {
         val = parsedInt.getValue();
@@ -1629,7 +1637,6 @@ void JSLexer::scanIdentifierFastPath(const char *start) {
   }
 
   curCharPtr_ = end;
-  token_.setEnd(end);
 
   size_t length = end - start;
 
@@ -1644,7 +1651,6 @@ void JSLexer::scanIdentifierFastPath(const char *start) {
 template <JSLexer::IdentifierMode Mode>
 void JSLexer::scanIdentifierParts() {
   consumeIdentifierParts<Mode>();
-  token_.setEnd(curCharPtr_);
   token_.setIdentifier(getIdentifier(tmpStorage_.str()));
 }
 

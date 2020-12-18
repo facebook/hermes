@@ -15,7 +15,7 @@
 #include "llvh/Support/raw_ostream.h"
 
 #include "HermesParserDiagHandler.h"
-#include "HermesParserJSBuilder.h"
+#include "HermesParserJSSerializer.h"
 
 #include <string>
 
@@ -29,36 +29,19 @@ using namespace hermes;
 
 bool hasFlowPragma(Context &context, uint32_t bufferId);
 
-/// An opaque object containing the result of parsing
-class ParseResult {
- public:
-  std::string error_;
-  JSReference astReference_;
-};
-
 EMSCRIPTEN_KEEPALIVE
-extern "C" ParseResult *hermesParse(
-    const char *source,
-    size_t sourceSize,
-    const char *sourceFilename,
-    size_t sourceFilenameSize,
-    bool detectFlow) {
+extern "C" ParseResult *
+hermesParse(const char *source, size_t sourceSize, bool detectFlow) {
   std::unique_ptr<ParseResult> result = hermes::make_unique<ParseResult>();
   if (source[sourceSize - 1] != 0) {
     result->error_ = "Input source must be zero-terminated";
     return result.release();
   }
 
-  if (sourceFilename != nullptr &&
-      sourceFilename[sourceFilenameSize - 1] != 0) {
-    result->error_ = "Input source filename must be zero-terminated";
-    return result.release();
-  }
-
   // Set up custom diagnostic handler for error reporting
   auto context = std::make_shared<Context>();
   auto &sm = context->getSourceErrorManager();
-  const auto &diagHandler = HermesParserDiagHandler(sm, sourceFilename);
+  const auto &diagHandler = HermesParserDiagHandler(sm);
 
   auto fileBuf =
       llvh::MemoryBuffer::getMemBuffer(llvh::StringRef{source, sourceSize - 1});
@@ -71,10 +54,12 @@ extern "C" ParseResult *hermesParse(
   context->setParseJSX(true);
   context->setUseCJSModules(true);
 
-  parser::JSParser jsParser(*context, fileBufId, parser::FullParse);
-  jsParser.setStoreComments(true);
+  std::unique_ptr<parser::JSParser> jsParser =
+      hermes::make_unique<parser::JSParser>(
+          *context, fileBufId, parser::FullParse);
+  jsParser->setStoreComments(true);
 
-  llvh::Optional<ESTree::ProgramNode *> parsedJs = jsParser.parse();
+  llvh::Optional<ESTree::ProgramNode *> parsedJs = jsParser->parse();
 
   // Return first error if there are any errors detected during parsing
   if (diagHandler.hasError()) {
@@ -89,10 +74,11 @@ extern "C" ParseResult *hermesParse(
     return result.release();
   }
 
-  result->astReference_ =
-      buildProgram(*parsedJs, &context->getSourceErrorManager(), &jsParser);
+  result->context_ = context;
+  result->parser_ = std::move(jsParser);
+  serialize(*parsedJs, &context->getSourceErrorManager(), *result);
 
-  // Run semantic validation after AST has been transferred to JS
+  // Run semantic validation after AST has been serialized
   sem::SemContext semContext{};
   validateASTForParser(*context, semContext, *parsedJs);
 
@@ -120,13 +106,33 @@ extern "C" const char *hermesParseResult_getError(const ParseResult *result) {
 }
 
 EMSCRIPTEN_KEEPALIVE
-extern "C" JSReference hermesParseResult_getASTReference(
+extern "C" const uint32_t *hermesParseResult_getProgramBuffer(
     const ParseResult *result) {
   if (!result || !result->error_.empty()) {
     return 0;
   }
 
-  return result->astReference_;
+  return result->programBuffer_.data();
+}
+
+EMSCRIPTEN_KEEPALIVE
+extern "C" const PositionResult *hermesParseResult_getPositionBuffer(
+    const ParseResult *result) {
+  if (!result || !result->error_.empty()) {
+    return 0;
+  }
+
+  return result->positionBuffer_.data();
+}
+
+EMSCRIPTEN_KEEPALIVE
+extern "C" size_t hermesParseResult_getPositionBufferSize(
+    const ParseResult *result) {
+  if (!result || !result->error_.empty()) {
+    return 0;
+  }
+
+  return result->positionBuffer_.size();
 }
 
 bool hasFlowPragma(Context &context, uint32_t bufferId) {

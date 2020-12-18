@@ -7,8 +7,7 @@
 
 #include "hermes/VM/StackTracesTree-NoRuntime.h"
 
-#if defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) and \
-    !defined(HERMESVM_GC_HADES)
+#if defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES)
 
 #include "TestHelpers.h"
 
@@ -26,6 +25,7 @@ struct StackTracesTreeTest : public RuntimeTestFixtureBase {
             RuntimeConfig::Builder(kTestRTConfigBuilder)
                 .withES6Promise(true)
                 .withES6Proxy(true)
+                .withES6Intl(true)
                 .withGCConfig(GCConfig::Builder(kTestGCConfigBuilder).build())
                 .build()) {
     runtime->enableAllocationLocationTracker();
@@ -61,7 +61,7 @@ struct StackTracesTreeTest : public RuntimeTestFixtureBase {
     std::string res;
     llvh::raw_string_ostream resStream(res);
     auto stringTable = runtime->getStackTracesTree()->getStringTable();
-    auto allocationLocationTracker =
+    auto &allocationLocationTracker =
         runtime->getHeap().getAllocationLocationTracker();
     auto node = allocationLocationTracker.getStackTracesTreeNodeForAlloc(
         runRes->getPointer());
@@ -108,6 +108,7 @@ struct StackTracesTreeParameterizedTest
       : StackTracesTreeTest(
             RuntimeConfig::Builder(kTestRTConfigBuilder)
                 .withES6Proxy(true)
+                .withES6Intl(true)
                 .withGCConfig(GCConfig::Builder(kTestGCConfigBuilder).build())
                 .build()) {
     if (trackerOnByDefault()) {

@@ -1,8 +1,7 @@
 ---
 id: regexp
-title: regexp
+title: RegExp
 ---
-
 
 ## RegExp
 
@@ -12,7 +11,7 @@ The regexp engine proceeds as follows:
 
 1. *Parse phase.* The regexp parser emits a tree of nodes, effectively an IR.
 1. *Optimization phase.* The node tree is traversed and optimized in various ways.
-1. *Emitting phase.* The node tree is travered and emits regexp bytecode.
+1. *Emitting phase.* The node tree is traversed and emits regexp bytecode.
 1. *Execution phase.* The bytecode is executed against an input string.
 
 ## Supported Syntax

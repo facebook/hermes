@@ -56,14 +56,14 @@ std::unique_ptr<StorageProvider> DummyRuntime::defaultProvider() {
   return StorageProvider::mmapProvider();
 }
 
-void DummyRuntime::markRoots(RootAcceptor &acceptor, bool) {
+void DummyRuntime::markRoots(RootAndSlotAcceptorWithNames &acceptor, bool) {
   // DummyRuntime doesn't care what root section it is, but it needs one for
   // snapshot tests.
   acceptor.beginRootSection(RootAcceptor::Section::Custom);
   markGCScopes(acceptor);
   for (GCCell **pp : pointerRoots)
     acceptor.acceptPtr(*pp);
-  for (HermesValue *pp : valueRoots)
+  for (PinnedHermesValue *pp : valueRoots)
     acceptor.accept(*pp);
   acceptor.endRootSection();
 }
@@ -77,7 +77,6 @@ void DummyRuntime::markWeakRoots(WeakRootAcceptor &acceptor) {
 }
 
 std::string DummyRuntime::convertSymbolToUTF8(SymbolID) {
-  assert(false && "Should never attempt to resolve a symbol on a DummyRuntime");
   return "";
 }
 

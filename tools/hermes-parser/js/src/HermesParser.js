@@ -9,6 +9,7 @@
 
 'use strict';
 
+const HermesParserDeserializer = require('./HermesParserDeserializer');
 const HermesParserWASM = require('./HermesParserWASM');
 
 const hermesParse = HermesParserWASM.cwrap('hermesParse', 'number', [
@@ -31,8 +32,20 @@ const hermesParseResult_getError = HermesParserWASM.cwrap(
   ['number'],
 );
 
-const hermesParseResult_getASTReference = HermesParserWASM.cwrap(
-  'hermesParseResult_getASTReference',
+const hermesParseResult_getProgramBuffer = HermesParserWASM.cwrap(
+  'hermesParseResult_getProgramBuffer',
+  'number',
+  ['number'],
+);
+
+const hermesParseResult_getPositionBuffer = HermesParserWASM.cwrap(
+  'hermesParseResult_getPositionBuffer',
+  'number',
+  ['number'],
+);
+
+const hermesParseResult_getPositionBufferSize = HermesParserWASM.cwrap(
+  'hermesParseResult_getPositionBufferSize',
   'number',
   ['number'],
 );
@@ -43,45 +56,21 @@ function copyToHeap(buffer, addr) {
   HermesParserWASM.HEAP8[addr + buffer.length] = 0;
 }
 
-function parse(source, sourceFilename, options) {
+function parse(source, options) {
   // Allocate space on heap for source text
   const sourceBuffer = Buffer.from(source, 'utf8');
   const sourceAddr = HermesParserWASM._malloc(sourceBuffer.length + 1);
-
-  // Allocate space on heap for source filename if one was provided
-  let filenameBuffer = null;
-  let filenameAddr = 0;
-  let filenameSize = 0;
-  const hasFilename = sourceFilename != null;
-  if (hasFilename) {
-    filenameBuffer = Buffer.from(sourceFilename, 'utf8');
-    filenameSize = filenameBuffer.length;
-    filenameAddr = HermesParserWASM._malloc(filenameBuffer.length + 1);
-  }
-
-  // Throw error and free memory if either allocation failed
-  if (!sourceAddr || (hasFilename && !filenameAddr)) {
-    if (sourceAddr) {
-      HermesParserWASM._free(sourceAddr);
-    } else if (filenameAddr) {
-      HermesParserWASM._free(filenameAddr);
-    }
-
+  if (!sourceAddr) {
     throw new Error('Parser out of memory');
   }
 
   try {
-    // Copy source text and filename onto WASM heap
+    // Copy source text onto WASM heap
     copyToHeap(sourceBuffer, sourceAddr);
-    if (hasFilename) {
-      copyToHeap(filenameBuffer, filenameAddr);
-    }
 
     const parseResult = hermesParse(
       sourceAddr,
       sourceBuffer.length + 1,
-      filenameAddr,
-      filenameSize + 1,
       options.flow === 'detect',
     );
 
@@ -89,18 +78,21 @@ function parse(source, sourceFilename, options) {
       // Extract and throw error from parse result if parsing failed
       const err = hermesParseResult_getError(parseResult);
       if (err) {
-        throw new Error(err);
+        throw new SyntaxError(err);
       }
 
-      // Find root AST mode from reference
-      const astReference = hermesParseResult_getASTReference(parseResult);
-      return HermesParserWASM.JSReferences.pop(astReference);
+      const deserializer = new HermesParserDeserializer(
+        hermesParseResult_getProgramBuffer(parseResult),
+        hermesParseResult_getPositionBuffer(parseResult),
+        hermesParseResult_getPositionBufferSize(parseResult),
+        HermesParserWASM,
+      );
+      return deserializer.deserialize();
     } finally {
       hermesParseResult_free(parseResult);
     }
   } finally {
     HermesParserWASM._free(sourceAddr);
-    HermesParserWASM._free(filenameAddr);
   }
 }
 

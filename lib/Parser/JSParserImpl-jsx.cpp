@@ -265,9 +265,7 @@ Optional<ESTree::Node *> JSParserImpl::parseJSXChildExpression(SMLoc start) {
     if (!optAssign)
       return None;
     return setLocation(
-        start,
-        *optAssign,
-        new (context_) ESTree::JSXSpreadChildNode(*optAssign));
+        start, tok_, new (context_) ESTree::JSXSpreadChildNode(*optAssign));
   }
   auto optAssign = parseAssignmentExpression();
   if (!optAssign)

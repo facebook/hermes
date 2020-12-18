@@ -104,7 +104,6 @@ enum {
   MAdviseStringsRandom = 1 << 5,
   MAdviseStringsWillNeed = 1 << 6,
   VerifyBytecodeChecksum = 1 << 7,
-  ES6Promise = 1 << 8,
   IgnoreMemoryWarnings = 1 << 9,
 };
 /// Set of flags for active VM experiments.
@@ -140,7 +139,7 @@ class Runtime : public HandleRootOwner,
   /// collection to mark additional GC roots that may not be known to the
   /// Runtime.
   void addCustomRootsFunction(
-      std::function<void(GC *, SlotAcceptor &)> markRootsFn);
+      std::function<void(GC *, RootAndSlotAcceptor &)> markRootsFn);
 
   /// Add a custom function that will be executed sometime during garbage
   /// collection to mark additional weak GC roots that may not be known to the
@@ -750,10 +749,6 @@ class Runtime : public HandleRootOwner,
   }
 
   bool hasES6Promise() const {
-    // TODO(T78352970): clean up when QE finished.
-    if (getVMExperimentFlags() & experiments::ES6Promise) {
-      return true;
-    }
     return hasES6Promise_;
   }
 
@@ -763,6 +758,10 @@ class Runtime : public HandleRootOwner,
 
   bool hasES6Symbol() const {
     return hasES6Symbol_;
+  }
+
+  bool hasES6Intl() const {
+    return hasES6Intl_;
   }
 
   bool builtinsAreFrozen() const {
@@ -865,7 +864,8 @@ class Runtime : public HandleRootOwner,
   /// indicates whether root data structures that contain only
   /// references to long-lived objects (allocated directly as long lived)
   /// are required to be scanned.
-  void markRoots(RootAcceptor &acceptor, bool markLongLived) override;
+  void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool markLongLived)
+      override;
 
   /// Called by the GC during collections that may reset weak references. This
   /// method informs the GC of all runtime weak roots.
@@ -876,7 +876,8 @@ class Runtime : public HandleRootOwner,
   /// snapshots, as it is slow. The function passed as acceptor shouldn't
   /// perform any heap operations.
   void visitIdentifiers(
-      const std::function<void(UTF16Ref, uint32_t id)> &acceptor) override;
+      const std::function<void(SymbolID, const StringPrimitive *)> &acceptor)
+      override;
 
 #ifdef HERMESVM_PROFILER_BB
  public:
@@ -1000,7 +1001,8 @@ class Runtime : public HandleRootOwner,
 
  private:
   GC heap_;
-  std::vector<std::function<void(GC *, SlotAcceptor &)>> customMarkRootFuncs_;
+  std::vector<std::function<void(GC *, RootAndSlotAcceptor &)>>
+      customMarkRootFuncs_;
   std::vector<std::function<void(GC *, WeakRefAcceptor &)>>
       customMarkWeakRootFuncs_;
 
@@ -1015,6 +1017,9 @@ class Runtime : public HandleRootOwner,
 
   /// Set to true if we should enable ES6 Symbol.
   const bool hasES6Symbol_;
+
+  /// Set to true if we should enable ES6 Intl APIs.
+  const bool hasES6Intl_;
 
   /// Set to true if we should randomize stack placement etc.
   const bool shouldRandomizeMemoryLayout_;
@@ -1624,7 +1629,7 @@ class NoAllocScope {
 // Runtime inline methods.
 
 inline void Runtime::addCustomRootsFunction(
-    std::function<void(GC *, SlotAcceptor &)> markRootsFn) {
+    std::function<void(GC *, RootAndSlotAcceptor &)> markRootsFn) {
   customMarkRootFuncs_.emplace_back(std::move(markRootsFn));
 }
 

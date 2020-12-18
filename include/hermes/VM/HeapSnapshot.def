@@ -84,6 +84,7 @@ V8_NODE_FIELD(id, number)
 V8_NODE_FIELD(self_size, number)
 V8_NODE_FIELD(edge_count, number)
 V8_NODE_FIELD(trace_node_id, number)
+V8_NODE_FIELD(detachedness, number)
 
 /// The types of edges, again, aligned with V8's types.
 V8_EDGE_TYPE(Context, "context")

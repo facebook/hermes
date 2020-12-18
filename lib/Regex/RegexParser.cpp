@@ -58,21 +58,6 @@ class Parser {
   const uint32_t backRefLimit_;
   uint32_t maxBackRef_ = 0;
 
-  // Maximum depth of our parser. This is effectively the depth of C stack
-  // frames that the parser may use, and is the mechanism that prevents stack
-  // overflow for overly complex expressions.
-  static constexpr uint32_t kMaxParseDepth =
-#ifdef HERMES_LIMIT_STACK_DEPTH
-      256
-#elif defined(_MSC_VER) && defined(HERMES_SLOW_DEBUG)
-      256
-#elif defined(_MSC_VER)
-      512
-#else
-      1024
-#endif
-      ;
-
   /// Set the error \p err, if not already set to a different error.
   /// Also move our input to end, to abort parsing.
   /// \return false, for convenience.
@@ -98,7 +83,7 @@ class Parser {
     /// The first marked subexpression of the term that this quantifies.
     /// For example, in the regex /(a)(b)((c)|d){3, 5}/ this would be 2, because
     /// we are quantifying the marked subexpression at index 2.
-    uint32_t startMarkedSubexprs_;
+    uint16_t startMarkedSubexprs_;
 
     /// The start node of the expression which we are quantifying. This is owned
     /// by the regex. The end node is always the last node of the regex.
@@ -259,6 +244,10 @@ class Parser {
     // because it uses the marked counter to perform the simple loop
     // optimisation
     elem.quant = prepareQuantifier();
+    if (LLVM_UNLIKELY(re_->markedCount() >= constants::kMaxCaptureGroupCount)) {
+      setError(constants::ErrorType::PatternExceedsParseLimits);
+      return;
+    }
     elem.mexp = re_->incrementMarkedCount();
     elem.splicePoint = re_->currentNode();
     stack.push_back(std::move(elem));
@@ -382,11 +371,6 @@ class Parser {
           closeGroup(stack);
           break;
         }
-      }
-
-      if (stack.size() > kMaxParseDepth) {
-        setError(constants::ErrorType::PatternExceedsParseLimits);
-        return;
       }
       consumeTerm();
     }

@@ -315,6 +315,10 @@ bool vm_madvise(void *p, size_t sz, MAdvice advice) {
   return false;
 }
 
+llvh::ErrorOr<size_t> vm_footprint(char *start, char *end) {
+  return std::error_code(errno, std::generic_category());
+}
+
 int pages_in_ram(const void *p, size_t sz, llvh::SmallVectorImpl<int> *runs) {
   // Not yet supported.
   return -1;

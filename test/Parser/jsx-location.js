@@ -21,6 +21,8 @@
 
 <div>{   }</div>;
 
+<div>{...foo}</div>;
+
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
@@ -557,8 +559,121 @@
 // CHECK-NEXT:           "column": 18
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }
+// CHECK-NEXT:     },
 
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "JSXElement",
+// CHECK-NEXT:         "openingElement": {
+// CHECK-NEXT:           "type": "JSXOpeningElement",
+// CHECK-NEXT:           "name": {
+// CHECK-NEXT:             "type": "JSXIdentifier",
+// CHECK-NEXT:             "name": "div",
+// CHECK-NEXT:             "loc": {
+// CHECK-NEXT:               "start": {
+// CHECK-NEXT:                 "line": 24,
+// CHECK-NEXT:                 "column": 2
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "end": {
+// CHECK-NEXT:                 "line": 24,
+// CHECK-NEXT:                 "column": 5
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "attributes": [],
+// CHECK-NEXT:           "selfClosing": false,
+// CHECK-NEXT:           "loc": {
+// CHECK-NEXT:             "start": {
+// CHECK-NEXT:               "line": 24,
+// CHECK-NEXT:               "column": 1
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "end": {
+// CHECK-NEXT:               "line": 24,
+// CHECK-NEXT:               "column": 6
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "children": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "JSXSpreadChild",
+// CHECK-NEXT:             "expression": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "foo",
+// CHECK-NEXT:               "loc": {
+// CHECK-NEXT:                 "start": {
+// CHECK-NEXT:                   "line": 24,
+// CHECK-NEXT:                   "column": 10
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "end": {
+// CHECK-NEXT:                   "line": 24,
+// CHECK-NEXT:                   "column": 13
+// CHECK-NEXT:                 }
+// CHECK-NEXT:               }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "loc": {
+// CHECK-NEXT:               "start": {
+// CHECK-NEXT:                 "line": 24,
+// CHECK-NEXT:                 "column": 6
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "end": {
+// CHECK-NEXT:                 "line": 24,
+// CHECK-NEXT:                 "column": 14
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "closingElement": {
+// CHECK-NEXT:           "type": "JSXClosingElement",
+// CHECK-NEXT:           "name": {
+// CHECK-NEXT:             "type": "JSXIdentifier",
+// CHECK-NEXT:             "name": "div",
+// CHECK-NEXT:             "loc": {
+// CHECK-NEXT:               "start": {
+// CHECK-NEXT:                 "line": 24,
+// CHECK-NEXT:                 "column": 16
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "end": {
+// CHECK-NEXT:                 "line": 24,
+// CHECK-NEXT:                 "column": 19
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "loc": {
+// CHECK-NEXT:             "start": {
+// CHECK-NEXT:               "line": 24,
+// CHECK-NEXT:               "column": 14
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "end": {
+// CHECK-NEXT:               "line": 24,
+// CHECK-NEXT:               "column": 20
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "loc": {
+// CHECK-NEXT:           "start": {
+// CHECK-NEXT:             "line": 24,
+// CHECK-NEXT:             "column": 1
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "end": {
+// CHECK-NEXT:             "line": 24,
+// CHECK-NEXT:             "column": 20
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null,
+// CHECK-NEXT:       "loc": {
+// CHECK-NEXT:         "start": {
+// CHECK-NEXT:           "line": 24,
+// CHECK-NEXT:           "column": 1
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "end": {
+// CHECK-NEXT:           "line": 24,
+// CHECK-NEXT:           "column": 21
+// CHECK-NEXT:         }
+// CHECK-NEXT:       }
 // CHECK-NEXT:     }
+
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "loc": {
 // CHECK-NEXT:     "start": {
@@ -566,8 +681,8 @@
 // CHECK-NEXT:       "column": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:       "line": 22,
-// CHECK-NEXT:       "column": 18
+// CHECK-NEXT:       "line": 24,
+// CHECK-NEXT:       "column": 21
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT: }

@@ -112,10 +112,6 @@ class MallocGC final : public GCBase {
   /// alive.
   /// This should be empty between collections.
   llvh::DenseSet<CellHeader *> newPointers_;
-  /// weakPointers_ is a list of all the weak pointers in the system. They are
-  /// invalidated if they point to an object that is dead, and do not count
-  /// towards whether an object is live or dead.
-  std::deque<WeakRefSlot> weakPointers_;
   /// maxSize_ is the absolute highest amount of memory that MallocGC is allowed
   /// to allocate.
   const gcheapsize_t maxSize_;
@@ -252,12 +248,6 @@ class MallocGC final : public GCBase {
   /// Allocate a weak pointer slot for the value given.
   /// \pre \p init should not be empty or a native value.
   WeakRefSlot *allocWeakSlot(HermesValue init);
-
-#ifndef NDEBUG
-  /// \return Number of weak ref slots currently in use.
-  /// Inefficient. For testing/debugging.
-  size_t countUsedWeakRefs() const;
-#endif
 
   /// The largest the size of this heap could ever grow to.
   size_t maxSize() const {

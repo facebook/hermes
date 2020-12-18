@@ -13,72 +13,72 @@ print(e);
 //CHECK: Error
 
 print(e.hasOwnProperty(e, 'name'));
-//CHECK: false
+//CHECK-NEXT: false
 print(e.hasOwnProperty(e, 'message'));
-//CHECK: false
+//CHECK-NEXT: false
 print(e.__proto__.hasOwnProperty('name'));
-//CHECK: true
+//CHECK-NEXT: true
 print(e.__proto__.hasOwnProperty('message'));
-//CHECK: true
+//CHECK-NEXT: true
 
 try { Error.prototype.toString.call(undefined); } catch (e) { print(e.name); }
-//CHECK: TypeError
+//CHECK-NEXT: TypeError
 try { Error.prototype.toString.call('string'); } catch (e) { print(e.name); }
-//CHECK: TypeError
+//CHECK-NEXT: TypeError
 try { Error.prototype.toString.call(11); } catch (e) { print(e.name); }
-//CHECK: TypeError
+//CHECK-NEXT: TypeError
 try { Error.prototype.toString.call(Symbol()); } catch (e) { print(e.name); }
-//CHECK: TypeError
+//CHECK-NEXT: TypeError
 
 e.name = 'RandomError';
 print(e);
-//CHECK: RandomError
+//CHECK-NEXT: RandomError
 
 e.message = 'random-message';
 print(e);
-//CHECK: RandomError: random-message
+//CHECK-NEXT: RandomError: random-message
 
 e.name = '';
 print(e);
-//CHECK: random-message
+//CHECK-NEXT: random-message
 
 e = new Error(undefined);
 print(e.hasOwnProperty(e, 'message'));
-//CHECK: false
+//CHECK-NEXT: false
 
 e = new Error('another-message');
 print(e);
-//CHECK: Error: another-message
+//CHECK-NEXT: Error: another-message
 
 e = new TypeError();
 print(e);
-//CHECK: TypeError
+//CHECK-NEXT: TypeError
 
 print(e.hasOwnProperty(e, 'name'));
-//CHECK: false
+//CHECK-NEXT: false
 print(e.hasOwnProperty(e, 'message'));
-//CHECK: false
+//CHECK-NEXT: false
 print(e.__proto__.hasOwnProperty('name'));
-//CHECK: true
+//CHECK-NEXT: true
 print(e.__proto__.hasOwnProperty('message'));
-//CHECK: true
+//CHECK-NEXT: true
 
 e = new ReferenceError('ref');
 print(e);
-//CHECK: ReferenceError: ref
+//CHECK-NEXT: ReferenceError: ref
 
 print(ReferenceError.__proto__ === Error);
-//CHECK: true
+//CHECK-NEXT: true
 print(EvalError.__proto__ === Error);
-//CHECK: true
+//CHECK-NEXT: true
 
 e = new Error();
 e.name = 12345;
 print(e);
-// CHECK: 12345
+// CHECK-NEXT: 12345
 e.message = 67890;
 print(e);
-// CHECK: 12345: 67890
+// CHECK-NEXT: 12345: 67890
 
 // Check exception case of accessing Error.stack from a different 'this'
 try {
@@ -86,4 +86,16 @@ try {
 } catch (e) {
   print(e.name);
 }
-//CHECK: TypeError
+//CHECK-NEXT: TypeError
+
+
+// Regression test: setting the stack while getting the message causes a null dereference.
+e = new Error();
+Object.defineProperty(e, "message", {
+  get: function () {
+    e.stack = {}
+  },
+});
+print(e.stack);
+//CHECK-NEXT: Error
+//CHECK-NEXT:     at global{{.*}}

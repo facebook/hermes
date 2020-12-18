@@ -63,13 +63,16 @@ class Deserializer;
   F(constexpr, bool, OptimizedEval, false)                                     \
                                                                                \
   /* Support for ES6 Promise. */                                               \
-  F(constexpr, bool, ES6Promise, false)                                        \
+  F(constexpr, bool, ES6Promise, true)                                         \
                                                                                \
   /* Support for ES6 Proxy. */                                                 \
   F(constexpr, bool, ES6Proxy, true)                                           \
                                                                                \
   /* Support for ES6 Symbol. */                                                \
   F(constexpr, bool, ES6Symbol, true)                                          \
+                                                                               \
+  /* Support for ES6 Symbol. */                                                \
+  F(constexpr, bool, ES6Intl, false)                                           \
                                                                                \
   /* Enable synth trace. */                                                    \
   F(constexpr, bool, TraceEnabled, false)                                      \

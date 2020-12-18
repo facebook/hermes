@@ -8,10 +8,12 @@
 package com.facebook.hermes.intl;
 
 import android.os.Build;
+import com.facebook.proguard.annotations.DoNotStrip;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+@DoNotStrip
 public class Intl {
 
   // Implementation of https://tc39.es/ecma402/#sec-canonicalizelocalelist
@@ -70,7 +72,7 @@ public class Intl {
   //
   // Also see the implementer notes on DateTimeFormat#DateTimeFormat()
   // for more discussion of locales and CanonicalizeLocaleList.
-  @SuppressWarnings("unused")
+  @DoNotStrip
   public static List<String> getCanonicalLocales(List<String> locales)
       throws JSRangeErrorException {
     return canonicalizeLocaleList(locales);
@@ -78,7 +80,7 @@ public class Intl {
 
   // Implementer note: This method corresponds roughly to
   // https://tc39.es/ecma402/#sup-string.prototype.tolocalelowercase
-  @SuppressWarnings("unused")
+  @DoNotStrip
   public static String toLocaleLowerCase(List<String> locales, String str)
       throws JSRangeErrorException {
     String[] localesArray = new String[locales.size()];
@@ -96,7 +98,7 @@ public class Intl {
 
   // Implementer note: This method corresponds roughly to
   // https://tc39.es/ecma402/#sup-string.prototype.tolocaleuppercase
-  @SuppressWarnings("unused")
+  @DoNotStrip
   public static String toLocaleUpperCase(List<String> locales, String str)
       throws JSRangeErrorException {
     String[] localesArray = new String[locales.size()];

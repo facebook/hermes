@@ -12,6 +12,7 @@
 #include "hermes/BCGen/HBC/BytecodeDataProvider.h"
 #include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/IR/IR.h"
+#include "hermes/Support/OptValue.h"
 #include "hermes/Support/SHA1.h"
 #include "hermes/Utils/Dumper.h"
 #include "hermes/Utils/Options.h"
@@ -38,7 +39,7 @@ std::unique_ptr<BytecodeModule> generateBytecodeModule(
     Module *M,
     Function *entryPoint,
     const BytecodeGenerationOptions &options,
-    const Context::SegmentInfo *segmentInfo = nullptr,
+    hermes::OptValue<uint32_t> segment = llvh::None,
     SourceMapGenerator *sourceMap = nullptr,
     std::unique_ptr<BCProviderBase> baseBCProvider = nullptr);
 
@@ -47,7 +48,7 @@ std::unique_ptr<BytecodeModule> generateBytecodeModule(
     Function *lexicalTopLevel,
     Function *entryPoint,
     const BytecodeGenerationOptions &options,
-    const Context::SegmentInfo *segmentInfo = nullptr,
+    hermes::OptValue<uint32_t> segment = llvh::None,
     SourceMapGenerator *sourceMap = nullptr,
     std::unique_ptr<BCProviderBase> baseBCProvider = nullptr);
 
@@ -63,7 +64,7 @@ std::unique_ptr<BytecodeModule> generateBytecode(
     raw_ostream &OS,
     const BytecodeGenerationOptions &options,
     const SHA1 &sourceHash,
-    const Context::SegmentInfo *segmentInfo = nullptr,
+    hermes::OptValue<uint32_t> segment = llvh::None,
     SourceMapGenerator *sourceMap = nullptr,
     std::unique_ptr<BCProviderBase> baseBCProvider = nullptr);
 } // namespace hbc
