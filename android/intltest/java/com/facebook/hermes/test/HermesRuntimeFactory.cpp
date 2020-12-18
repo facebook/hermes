@@ -23,6 +23,7 @@ jni::local_ref<JSRuntime::jhybridobject> JSRuntime::makeHermesRuntime(
     bool shouldRecordGCStats) {
   return newObjectCxxArgs(hermes::makeHermesRuntime(
       ::hermes::vm::RuntimeConfig::Builder()
+          .withES6Intl(true)
           .withGCConfig(::hermes::vm::GCConfig::Builder()
                             .withShouldRecordStats(shouldRecordGCStats)
                             .build())

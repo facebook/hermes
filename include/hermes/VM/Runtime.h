@@ -760,6 +760,10 @@ class Runtime : public HandleRootOwner,
     return hasES6Symbol_;
   }
 
+  bool hasES6Intl() const {
+    return hasES6Intl_;
+  }
+
   bool builtinsAreFrozen() const {
     return builtinsFrozen_;
   }
@@ -1013,6 +1017,9 @@ class Runtime : public HandleRootOwner,
 
   /// Set to true if we should enable ES6 Symbol.
   const bool hasES6Symbol_;
+
+  /// Set to true if we should enable ES6 Intl APIs.
+  const bool hasES6Intl_;
 
   /// Set to true if we should randomize stack placement etc.
   const bool shouldRandomizeMemoryLayout_;

@@ -754,12 +754,15 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
 #ifdef HERMES_PLATFORM_INTL
   // Define the global Intl object
   // TODO T65916424: Consider how we can move this somewhere more modular.
-  runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
-      runtime->getGlobal(),
-      runtime,
-      Predefined::getSymbolID(Predefined::Intl),
-      normalDPF,
-      intl::createIntlObject(runtime)));
+
+  if (LLVM_UNLIKELY(runtime->hasES6Intl())) {
+    runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
+        runtime->getGlobal(),
+        runtime,
+        Predefined::getSymbolID(Predefined::Intl),
+        normalDPF,
+        intl::createIntlObject(runtime)));
+  }
 #endif
 }
 

@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-rootProject.name = 'Hermes'
+#include <fbjni/fbjni.h>
 
-include ':hermes'
-include ':cppruntime'
-include ':intltest'
+extern "C" jint JNIEXPORT JNICALL JNI_OnLoad(JavaVM *jvm, void *reserved) {
+  return facebook::jni::initialize(jvm, [] {});
+}
