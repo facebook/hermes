@@ -2405,8 +2405,79 @@ void HadesGC::transferExternalMemoryToOldGen() {
 }
 
 template <typename Acceptor>
+void HadesGC::scanDirtyCardsForSegment(
+    SlotVisitor<Acceptor> &visitor,
+    HeapSegment &seg) {
+  const auto &cardTable = seg.cardTable();
+  // Use level instead of end in case the OG segment is still in bump alloc
+  // mode.
+  const char *const origSegLevel = seg.level();
+  size_t from = cardTable.addressToIndex(seg.start());
+  const size_t to = cardTable.addressToIndex(origSegLevel - 1) + 1;
+
+  while (const auto oiBegin = cardTable.findNextDirtyCard(from, to)) {
+    const auto iBegin = *oiBegin;
+
+    const auto oiEnd = cardTable.findNextCleanCard(iBegin, to);
+    const auto iEnd = oiEnd ? *oiEnd : to;
+
+    assert(
+        (iEnd == to || !cardTable.isCardForIndexDirty(iEnd)) &&
+        cardTable.isCardForIndexDirty(iEnd - 1) &&
+        "end should either be the end of the card table, or the first "
+        "non-dirty card after a sequence of dirty cards");
+    assert(iBegin < iEnd && "Indices must be apart by at least one");
+
+    const char *const begin = cardTable.indexToAddress(iBegin);
+    const char *const end = cardTable.indexToAddress(iEnd);
+    // Don't try to mark any cell past the original boundary of the segment.
+    const void *const boundary = std::min(end, origSegLevel);
+
+    // Use the object heads rather than the card table to discover the head
+    // of the object.
+    GCCell *const firstObj = seg.getFirstCellHead(iBegin);
+    GCCell *obj = firstObj;
+    // Throughout this loop, objects are being marked which could promote
+    // other objects into the OG. Such objects might be promoted onto a dirty
+    // card, and be visited a second time. This is only a problem if the
+    // acceptor isn't idempotent. Luckily, EvacAcceptor happens to be
+    // idempotent, and so there's no correctness issue with visiting an object
+    // multiple times. If EvacAcceptor wasn't idempotent, we'd have to be able
+    // to identify objects promoted from YG in this loop, which would be
+    // expensive.
+
+    // Mark the first object with respect to the dirty card boundaries.
+    GCBase::markCellWithinRange(visitor, obj, obj->getVT(), this, begin, end);
+
+    obj = obj->nextCell();
+    // If there are additional objects in this card, scan them.
+    if (LLVM_LIKELY(obj < boundary)) {
+      // Mark the objects that are entirely contained within the dirty card
+      // boundaries. In a given iteration, obj is the start of a given object,
+      // and next is the start of the next object. Iterate until the last
+      // object where next is within the card.
+      for (GCCell *next = obj->nextCell(); next < boundary;
+           next = next->nextCell()) {
+        GCBase::markCell(visitor, obj, obj->getVT(), this);
+        obj = next;
+      }
+
+      // Mark the final object in the range with respect to the dirty card
+      // boundaries.
+      assert(
+          obj < boundary && obj->nextCell() >= boundary &&
+          "Last object in card must touch or cross cross the card boundary");
+      GCBase::markCellWithinRange(visitor, obj, obj->getVT(), this, begin, end);
+    }
+
+    from = iEnd;
+  }
+}
+
+template <typename Acceptor>
 void HadesGC::scanDirtyCards(Acceptor &acceptor) {
   SlotVisitor<Acceptor> visitor{acceptor};
+  const bool preparingCompaction = compactee_.index && !compactee_.evacActive();
   // The acceptors in this loop can grow the old gen by adding another
   // segment, if there's not enough room to evac the YG objects discovered.
   // Since segments are always placed at the end, we can use indices instead
@@ -2421,75 +2492,11 @@ void HadesGC::scanDirtyCards(Acceptor &acceptor) {
     if (seg.lowLim() == compactee_.evacStart) {
       continue;
     }
-    const auto &cardTable = seg.cardTable();
-    // Use level instead of end in case the OG segment is still in bump alloc
-    // mode.
-    const char *const origSegLevel = seg.level();
-    size_t from = cardTable.addressToIndex(seg.start());
-    const size_t to = cardTable.addressToIndex(origSegLevel - 1) + 1;
-
-    while (const auto oiBegin = cardTable.findNextDirtyCard(from, to)) {
-      const auto iBegin = *oiBegin;
-
-      const auto oiEnd = cardTable.findNextCleanCard(iBegin, to);
-      const auto iEnd = oiEnd ? *oiEnd : to;
-
-      assert(
-          (iEnd == to || !cardTable.isCardForIndexDirty(iEnd)) &&
-          cardTable.isCardForIndexDirty(iEnd - 1) &&
-          "end should either be the end of the card table, or the first "
-          "non-dirty card after a sequence of dirty cards");
-      assert(iBegin < iEnd && "Indices must be apart by at least one");
-
-      const char *const begin = cardTable.indexToAddress(iBegin);
-      const char *const end = cardTable.indexToAddress(iEnd);
-      // Don't try to mark any cell past the original boundary of the segment.
-      const void *const boundary = std::min(end, origSegLevel);
-
-      // Use the object heads rather than the card table to discover the head
-      // of the object.
-      GCCell *const firstObj = seg.getFirstCellHead(iBegin);
-      GCCell *obj = firstObj;
-      // Throughout this loop, objects are being marked which could promote
-      // other objects into the OG. Such objects might be promoted onto a dirty
-      // card, and be visited a second time. This is only a problem if the
-      // acceptor isn't idempotent. Luckily, EvacAcceptor happens to be
-      // idempotent, and so there's no correctness issue with visiting an object
-      // multiple times. If EvacAcceptor wasn't idempotent, we'd have to be able
-      // to identify objects promoted from YG in this loop, which would be
-      // expensive.
-
-      // Mark the first object with respect to the dirty card boundaries.
-      GCBase::markCellWithinRange(visitor, obj, obj->getVT(), this, begin, end);
-
-      obj = obj->nextCell();
-      // If there are additional objects in this card, scan them.
-      if (LLVM_LIKELY(obj < boundary)) {
-        // Mark the objects that are entirely contained within the dirty card
-        // boundaries. In a given iteration, obj is the start of a given object,
-        // and next is the start of the next object. Iterate until the last
-        // object where next is within the card.
-        for (GCCell *next = obj->nextCell(); next < boundary;
-             next = next->nextCell()) {
-          GCBase::markCell(visitor, obj, obj->getVT(), this);
-          obj = next;
-        }
-
-        // Mark the final object in the range with respect to the dirty card
-        // boundaries.
-        assert(
-            obj < boundary && obj->nextCell() >= boundary &&
-            "Last object in card must touch or cross cross the card boundary");
-        GCBase::markCellWithinRange(
-            visitor, obj, obj->getVT(), this, begin, end);
-      }
-
-      from = iEnd;
-    }
+    scanDirtyCardsForSegment(visitor, seg);
     // Do not clear the card table if the OG thread is currently marking to
     // prepare for a compaction. Note that we should clear the card tables if
     // the compaction is currently ongoing.
-    if (!compactee_.index || compactee_.evacActive())
+    if (!preparingCompaction)
       seg.cardTable().clear();
   }
 }

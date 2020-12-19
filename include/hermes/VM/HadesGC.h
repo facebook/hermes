@@ -775,6 +775,13 @@ class HadesGC final : public GCBase {
   /// compaction.
   void prepareCompactee();
 
+  /// Search a single segment for pointers that may need to be updated as the
+  /// YG/compactee are evacuated.
+  template <typename Acceptor>
+  void scanDirtyCardsForSegment(
+      SlotVisitor<Acceptor> &visitor,
+      HeapSegment &segment);
+
   /// Find all pointers from OG into the YG/compactee during a YG collection.
   /// This is done quickly through use of write barriers that detect the
   /// creation of such pointers.
