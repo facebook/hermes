@@ -15,7 +15,7 @@ C_STRING((function() {
 
   function populateColors() {
 
-    if (typeof _replterminaltype !== "undefined" && _replterminaltype === "android") {
+    if (typeof globalThis._replterminaltype !== "undefined" && globalThis._replterminaltype === "android") {
       colors.red = "<font color='#FF0000'>";
       colors.green = "<font color='#00FF00'>";
       colors.yellow = "<font color='#FFFF00'>";

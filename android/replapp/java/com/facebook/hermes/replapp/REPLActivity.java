@@ -1,4 +1,4 @@
-package com.facebook.hermes.intltestapp;
+package com.facebook.hermes.replapp;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
