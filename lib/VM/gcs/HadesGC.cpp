@@ -148,6 +148,27 @@ void HadesGC::OldGen::clearFreelistForSegment(size_t segmentIdx) {
   }
 }
 
+void HadesGC::OldGen::eraseSegmentFreelists(size_t segmentIdx) {
+  for (size_t bucket = 0; bucket < kNumFreelistBuckets; ++bucket) {
+    freelistBucketSegmentBitArray_[bucket].reset(segmentIdx);
+    auto iter = freelistBucketSegmentBitArray_[bucket].begin();
+    auto endIter = freelistBucketSegmentBitArray_[bucket].end();
+    while (iter != endIter && *iter <= segmentIdx)
+      iter++;
+
+    // Move all the set bits after segmentIdx down by 1.
+    for (; iter != endIter; iter++) {
+      size_t idx = *iter;
+      freelistBucketSegmentBitArray_[bucket].set(idx - 1);
+      freelistBucketSegmentBitArray_[bucket].reset(idx);
+    }
+
+    freelistBucketBitArray_.set(
+        bucket, !freelistBucketSegmentBitArray_[bucket].empty());
+  }
+  freelistSegmentsBuckets_.erase(freelistSegmentsBuckets_.begin() + segmentIdx);
+}
+
 /* static */
 void HadesGC::HeapSegment::setCellHead(
     const GCCell *cellStart,
@@ -2727,7 +2748,14 @@ std::unique_ptr<HadesGC::HeapSegment> HadesGC::createSegment(bool isYoungGen) {
   }
   std::unique_ptr<HeapSegment> seg(new HeapSegment{std::move(res.get())});
 #ifdef HERMESVM_COMPRESSED_POINTERS
-  pointerBase_->setSegment(++numSegments_, seg->lowLim());
+  size_t basedPtrIdx;
+  if (compressedPtrIndices_.size()) {
+    basedPtrIdx = compressedPtrIndices_.back();
+    compressedPtrIndices_.pop_back();
+  } else {
+    basedPtrIdx = ++numSegments_;
+  }
+  pointerBase_->setSegment(basedPtrIdx, seg->lowLim());
 #endif
   seg->markBitArray().markAll();
   if (isYoungGen) {
@@ -2759,6 +2787,23 @@ void HadesGC::OldGen::addSegment(std::unique_ptr<HeapSegment> seg) {
 
   gc_->addSegmentExtentToCrashManager(
       newSeg, oscompat::to_string(numSegments()));
+}
+
+std::unique_ptr<HadesGC::HeapSegment> HadesGC::OldGen::removeSegment(
+    size_t segmentIdx) {
+  assert(segmentIdx < segments_.size());
+  eraseSegmentFreelists(segmentIdx);
+  allocatedBytes_ -= segmentAllocatedBytes_[segmentIdx].first;
+  segmentAllocatedBytes_.erase(segmentAllocatedBytes_.begin() + segmentIdx);
+  auto oldSeg = std::move(segments_[segmentIdx]);
+  gc_->removeSegmentExtentFromCrashManager(
+      oscompat::to_string(segments_.size()));
+  segments_.erase(segments_.begin() + segmentIdx);
+  for (size_t i = segmentIdx; i < segments_.size(); i++) {
+    gc_->addSegmentExtentToCrashManager(
+        *segments_[i], oscompat::to_string(i + 1));
+  }
+  return oldSeg;
 }
 
 void HadesGC::OldGen::reserveSegments(size_t numCapacitySegments) {
@@ -2838,7 +2883,7 @@ size_t HadesGC::getDrainRate() {
 
 void HadesGC::addSegmentExtentToCrashManager(
     const HeapSegment &seg,
-    std::string extraName) {
+    const std::string &extraName) {
   assert(!extraName.empty() && "extraName can't be empty");
   if (!crashMgr_) {
     return;
@@ -2858,6 +2903,16 @@ void HadesGC::addSegmentExtentToCrashManager(
       segmentName.c_str(),
       segmentAddressBuffer);
 #endif
+}
+
+void HadesGC::removeSegmentExtentFromCrashManager(
+    const std::string &extraName) {
+  assert(!extraName.empty() && "extraName can't be empty");
+  if (!crashMgr_) {
+    return;
+  }
+  const std::string segmentName = name_ + ":HeapSegment:" + extraName;
+  crashMgr_->removeContextualCustomData(extraName.c_str());
 }
 
 #ifdef HERMES_SLOW_DEBUG

@@ -287,6 +287,13 @@ class HadesGC final : public GCBase {
     /// Take ownership of the given segment.
     void addSegment(std::unique_ptr<HeapSegment> seg);
 
+    /// Remove the segment at \p segmentIdx.
+    /// WARN: This is an expensive operation and should be used sparingly. It
+    /// calls eraseSegmentFreelists, which has a worst case time complexity of
+    /// O(#Freelist buckets * #Segments).
+    /// \return the segment previously at segmentIdx
+    std::unique_ptr<HeapSegment> removeSegment(size_t segmentIdx);
+
     /// Indicate that OG has a capacity of up to \p numCapacitySegments, some of
     /// which may be allocated as needed.
     void reserveSegments(size_t numCapacitySegments);
@@ -392,6 +399,10 @@ class HadesGC final : public GCBase {
     /// Unset all the bits for a given segment's freelist, so that no new
     /// allocations take place in it.
     void clearFreelistForSegment(size_t segmentIdx);
+
+    /// Remove a segment entirely from every freelist. This will shift all bits
+    /// after segmentIdx down by one.
+    void eraseSegmentFreelists(size_t segmentIdx);
 
     /// Sweep the next segment and advance the internal sweep iterator. If there
     /// are no more segments left to sweep, update OG collection stats with
@@ -531,6 +542,10 @@ class HadesGC final : public GCBase {
   /// This needs to be placed before youngGen_ and oldGen_, because those
   /// members use numSegments_ as part of being constructed.
   uint64_t numSegments_{0};
+
+  /// Stores previously allocated compressed pointer indices that have since
+  /// been freed. We can reuse them when another segment is allocated.
+  std::vector<size_t> compressedPtrIndices_;
 #endif
 
   /// Keeps the storage provider alive until after the GC is fully destructed.
@@ -845,7 +860,12 @@ class HadesGC final : public GCBase {
   ///   non-empty.
   void addSegmentExtentToCrashManager(
       const HeapSegment &seg,
-      std::string extraName);
+      const std::string &extraName);
+
+  /// Deletes a segment from the CrashManager's custom data.
+  /// \param extraName that was used to initially add this segment to the crash
+  /// manager.
+  void removeSegmentExtentFromCrashManager(const std::string &extraName);
 
 #ifdef HERMES_SLOW_DEBUG
   /// Checks the heap to make sure all cells are valid.
