@@ -557,12 +557,6 @@ SKIP_LIST = [
     "test262/test/built-ins/Array/prototype/reverse/length-exceeding-integer-limit-with-proxy.js",
     "test262/test/built-ins/Array/prototype/slice/length-exceeding-integer-limit-proxied-array.js",
     "test262/test/built-ins/Array/prototype/unshift/length-near-integer-limit.js",
-    # Very slow tests on some builds of Hermes. Handle-SAN, ASAN, and MallocGC
-    # make these very slow.
-    # TODO(T60938585): Make these conditional on the choice of build.
-    "test262/test/built-ins/decodeURI/S15.1.3.1_A2.5_T1.js",
-    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A2.5_T1.js",
-    "test262/test/built-ins/RegExp/character-class-escape-non-whitespace.js",
     # default arguments
     "esprima/test_fixtures/expression/primary/object/migrated_0038.js",
     "mjsunit/es6/default-parameters-debug.js",
@@ -1744,6 +1738,38 @@ PERMANENT_SKIP_LIST = [
     "flow/types/bigint_literal/",
     # Flow bug
     "flow/JSX_invalid/migrated_0000.js",
+]
+
+HANDLESAN_SKIP_LIST = [
+    # Very slow tests on some builds of Hermes. Handle-SAN, ASAN, and MallocGC
+    # make these very slow.
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A2.5_T1.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A2.5_T1.js",
+    "test262/test/built-ins/RegExp/character-class-escape-non-whitespace.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A1.11_T2.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A1.11_T1.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A1.12_T1.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A1.12_T3.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A1.12_T2.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A1.2_T1.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A1.2_T2.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A2.1_T1.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A2.4_T1.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A1.10_T1.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A1.10_T1.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A1.12_T3.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A1.12_T2.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A1.11_T2.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A1.11_T1.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A1.12_T1.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A1.2_T1.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A1.2_T2.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A2.1_T1.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A2.4_T1.js",
+    "test262/test/built-ins/encodeURI/S15.1.3.3_A2.3_T1.js",
+    "test262/test/built-ins/encodeURIComponent/S15.1.3.4_A2.3_T1.js",
+    "test262/test/built-ins/parseInt/S15.1.2.2_A8.js",
+    "test262/test/built-ins/parseFloat/S15.1.2.3_A6.js",
 ]
 
 UNSUPPORTED_FEATURES = [
