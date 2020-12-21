@@ -23,8 +23,9 @@ module.exports = {
         src: 'img/logo.svg',
       },
       items: [
-        { to: 'playground/', label: 'Playground', position: 'right' },
-        { to: 'docs/building-and-running', label: 'Docs', position: 'right' },
+        { to: 'docs/building-and-running', label: 'Docs', position: 'left' },
+        { to: 'playground/', label: 'Playground', position: 'left' },
+        // Please keep GitHub link to the right for consistency.
         {
           href: 'https://github.com/facebook/hermes',
           label: 'GitHub',
@@ -39,11 +40,15 @@ module.exports = {
           title: 'Docs',
           items: [
             {
-              label: 'Building and Running Hermes',
+              label: 'Language Features',
+              to: 'docs/language-features',
+            },
+            {
+              label: 'Building and Running',
               to: 'docs/building-and-running',
             },
             {
-              label: 'Building Hermes with Emscripten',
+              label: 'Building with Emscripten',
               to: 'docs/emscripten',
             },
           ],
@@ -52,25 +57,43 @@ module.exports = {
           title: 'Integrations',
           items: [
             {
-              label: 'Using Hermes with React Native',
+              label: 'Using with React Native',
               to: 'https://reactnative.dev/docs/hermes',
             },
             {
-              label: 'Using Hermes custom build with React Native',
+              label: 'Using a custom build with React Native',
               to: 'docs/react-native-integration',
             },
           ],
         },
         {
-          title: 'Social',
+          title: 'More',
           items: [
+            {
+              label: 'Twitter',
+              to: 'https://twitter.com/HermesEngine',
+            },
             {
               label: 'GitHub',
               to: 'https://github.com/facebook/hermes',
             },
+          ],
+        },
+        {
+          title: 'Legal',
+          // Please do not remove the privacy and terms, it's a legal requirement.
+          items: [
             {
-              label: 'Twitter',
-              to: 'https://twitter.com/HermesEngine',
+              label: 'Privacy',
+              href: 'https://opensource.facebook.com/legal/privacy/',
+            },
+            {
+              label: 'Terms',
+              href: 'https://opensource.facebook.com/legal/terms/',
+            },
+            {
+              label: 'Cookies',
+              href: 'https://opensource.facebook.com/legal/cookie-policy/',
             },
           ],
         },
@@ -104,9 +127,6 @@ module.exports = {
         },
       },
     ],
-  ],
-  clientModules: [
-    require.resolve('./node_modules/normalize.css/normalize.css'),
   ],
   plugins: [
     path.join(__dirname, '/plugins/monaco-editor'),
