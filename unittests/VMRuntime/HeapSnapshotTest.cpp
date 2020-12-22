@@ -15,6 +15,7 @@
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HermesValue.h"
+#include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/SymbolID.h"
 
 #include "llvh/ADT/StringRef.h"
@@ -850,6 +851,56 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionDisplayNameTest) {
                 func->getAllocatedSize(),
                 11};
   EXPECT_EQ(node, expected);
+}
+
+TEST_F(HeapSnapshotRuntimeTest, WeakMapTest) {
+  JSONFactory::Allocator alloc;
+  JSONFactory jsonFactory{alloc};
+  auto &tracker = runtime->getHeap().getIDTracker();
+  auto mapResult = JSWeakMap::create(
+      runtime, Handle<JSObject>::vmcast(&runtime->weakMapPrototype));
+  ASSERT_FALSE(isException(mapResult));
+  Handle<JSWeakMap> map = runtime->makeHandle(std::move(*mapResult));
+  Handle<JSObject> key = runtime->makeHandle(JSObject::create(runtime));
+  Handle<JSObject> value = runtime->makeHandle(JSObject::create(runtime));
+  // Add a key so the DenseMap will exist.
+  ASSERT_FALSE(isException(JSWeakMap::setValue(map, runtime, key, value)));
+
+  JSONObject *root = TAKE_SNAPSHOT(runtime->getHeap(), jsonFactory);
+  ASSERT_NE(root, nullptr);
+  const JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
+  const JSONArray &edges = *llvh::cast<JSONArray>(root->at("edges"));
+  const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
+
+  const auto mapID = tracker.getObjectID(map.get());
+  auto nodesAndEdges = FIND_NODE_AND_EDGES_FOR_ID(mapID, nodes, edges, strings);
+  EXPECT_EQ(
+      nodesAndEdges.first,
+      Node(
+          HeapSnapshot::NodeType::Object,
+          "WeakMap",
+          mapID,
+          map->getAllocatedSize(),
+          6));
+  EXPECT_EQ(nodesAndEdges.second.size(), 6);
+
+  // Test the weak edge.
+  EXPECT_EQ(
+      nodesAndEdges.second[3],
+      Edge(HeapSnapshot::EdgeType::Weak, "0", tracker.getObjectID(key.get())));
+  // Test the native edge.
+  const auto nativeMapID = map->getMapID(runtime->getHeap().getIDTracker());
+  EXPECT_EQ(
+      nodesAndEdges.second[5],
+      Edge(HeapSnapshot::EdgeType::Internal, "map", nativeMapID));
+  EXPECT_EQ(
+      FIND_NODE_FOR_ID(nativeMapID, nodes, strings),
+      Node(
+          HeapSnapshot::NodeType::Native,
+          "DenseMap",
+          nativeMapID,
+          map->getMallocSize(),
+          0));
 }
 
 #ifdef HERMES_ENABLE_DEBUGGER

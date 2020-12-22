@@ -960,6 +960,14 @@ void GCBase::IDTracker::deserialize(Deserializer &d) {
 }
 #endif
 
+llvh::SmallVector<HeapSnapshot::NodeID, 1>
+    &GCBase::IDTracker::getExtraNativeIDs(HeapSnapshot::NodeID node) {
+  std::lock_guard<Mutex> lk{mtx_};
+  // The operator[] will default construct the vector to be empty if it doesn't
+  // exist.
+  return extraNativeIDs_[node];
+}
+
 HeapSnapshot::NodeID GCBase::IDTracker::getNumberID(double num) {
   std::lock_guard<Mutex> lk{mtx_};
   auto &numberRef = numberIDMap_[num];

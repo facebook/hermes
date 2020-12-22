@@ -197,6 +197,46 @@ void JSWeakMapImplBase::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
   }
 }
 
+HeapSnapshot::NodeID JSWeakMapImplBase::getMapID(GCBase::IDTracker &tracker) {
+  assert(map_.size() && "Shouldn't call getMapID on an empty map");
+  const auto id = tracker.getObjectID(this);
+  auto &nativeIDList = tracker.getExtraNativeIDs(id);
+  if (nativeIDList.empty()) {
+    nativeIDList.push_back(tracker.nextNativeID());
+  }
+  return nativeIDList[0];
+}
+
+void JSWeakMapImplBase::_snapshotAddEdgesImpl(
+    GCCell *cell,
+    GC *gc,
+    HeapSnapshot &snap) {
+  auto *const self = vmcast<JSWeakMapImplBase>(cell);
+  JSObject::_snapshotAddEdgesImpl(self, gc, snap);
+  if (self->map_.size()) {
+    snap.addNamedEdge(
+        HeapSnapshot::EdgeType::Internal,
+        "map",
+        self->getMapID(gc->getIDTracker()));
+  }
+}
+
+void JSWeakMapImplBase::_snapshotAddNodesImpl(
+    GCCell *cell,
+    GC *gc,
+    HeapSnapshot &snap) {
+  auto *const self = vmcast<JSWeakMapImplBase>(cell);
+  if (self->map_.size()) {
+    snap.beginNode();
+    snap.endNode(
+        HeapSnapshot::NodeType::Native,
+        "DenseMap",
+        self->getMapID(gc->getIDTracker()),
+        self->map_.getMemorySize(),
+        0);
+  }
+}
+
 /// Mark weak references and remove any invalid weak refs.
 void JSWeakMapImplBase::findAndDeleteFreeSlots(PointerBase *base, GC *gc) {
   WeakRefLock lk{gc->weakRefMutex()};
@@ -377,7 +417,15 @@ const ObjectVTable JSWeakMapImpl<C>::vt{
         cellSize<JSWeakMapImpl>(),
         JSWeakMapImpl::_finalizeImpl,
         JSWeakMapImpl::_markWeakImpl,
-        JSWeakMapImpl::_mallocSizeImpl),
+        JSWeakMapImpl::_mallocSizeImpl,
+        nullptr,
+        nullptr,
+        nullptr,
+        VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
+                                     nullptr,
+                                     _snapshotAddEdgesImpl,
+                                     _snapshotAddNodesImpl,
+                                     nullptr}),
     JSWeakMapImpl::_getOwnIndexedRangeImpl,
     JSWeakMapImpl::_haveOwnIndexedImpl,
     JSWeakMapImpl::_getOwnIndexedPropertyFlagsImpl,

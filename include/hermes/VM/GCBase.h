@@ -748,6 +748,14 @@ class GCBase {
     /// If one does not yet exist, start tracking it.
     inline HeapSnapshot::NodeID getNativeID(const void *mem);
 
+    /// Get a list of IDs for native memory attached to the given node.
+    /// List will be empty if nothing is attached yet. Then push onto the end
+    /// with nextNativeID().
+    /// When the NodeID that these are attached to is untracked, so are the
+    /// attached native NodeIDs.
+    llvh::SmallVector<HeapSnapshot::NodeID, 1> &getExtraNativeIDs(
+        HeapSnapshot::NodeID node);
+
     /// Assign a unique ID to a literal number value that occurs in the heap.
     /// Can be used to make fake nodes that will display their numeric value.
     HeapSnapshot::NodeID getNumberID(double num);
@@ -789,11 +797,12 @@ class GCBase {
     void deserialize(Deserializer &d);
 #endif
 
+    /// Get the next unique native ID for a chunk of native memory.
+    inline HeapSnapshot::NodeID nextNativeID();
+
    private:
     /// Get the next unique object ID for a newly created object.
     inline HeapSnapshot::NodeID nextObjectID();
-    /// Get the next unique native ID for a chunk of native memory.
-    inline HeapSnapshot::NodeID nextNativeID();
     /// Get the next unique number ID for a number.
     inline HeapSnapshot::NodeID nextNumberID();
 
@@ -818,6 +827,15 @@ class GCBase {
     /// on, or if JSI tracing is in effect.
     /// NOTE: The same map is used for both JS heap and native heap IDs.
     llvh::DenseMap<const void *, HeapSnapshot::NodeID> objectIDMap_;
+
+    /// Map from a JS heap object ID to additional lazily created IDs for
+    /// objects. Most useful for native IDs that are attached to a heap object
+    /// but don't have a stable pointer to use (such as std::vector and
+    /// llvh::DenseMap).
+    llvh::DenseMap<
+        HeapSnapshot::NodeID,
+        llvh::SmallVector<HeapSnapshot::NodeID, 1>>
+        extraNativeIDs_;
 
     /// Map from symbol indices to unique IDs.  Populated according to
     /// the same rules as the objectIDMap_.
@@ -1671,7 +1689,11 @@ inline void GCBase::IDTracker::moveObject(
 
 inline void GCBase::IDTracker::untrackObject(const void *cell) {
   std::lock_guard<Mutex> lk{mtx_};
+  // It's ok if this didn't exist before, since erase will remove it anyway, and
+  // the default constructed zero ID won't be present in extraNativeIDs_.
+  const auto id = objectIDMap_[cell];
   objectIDMap_.erase(cell);
+  extraNativeIDs_.erase(id);
 }
 
 inline void GCBase::IDTracker::untrackNative(const void *mem) {

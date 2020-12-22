@@ -231,10 +231,8 @@ class JSWeakMapImplBase : public JSObject {
     return self->getMallocSize();
   }
 
-  /// \return the number of bytes allocated by this object on the heap.
-  size_t getMallocSize() const {
-    return map_.getMemorySize();
-  }
+  static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
+  static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
 
   /// Iterate the slots in map_ and call deleteInternal on any invalid
   /// references, adding all available slots to the free list.
@@ -252,6 +250,18 @@ class JSWeakMapImplBase : public JSObject {
   static CallResult<uint32_t> getFreeValueStorageIndex(
       Handle<JSWeakMapImplBase> self,
       Runtime *runtime);
+
+ public:
+  // Public for tests.
+
+  /// Lazily fetches the ID for the DenseMap used in this class. After it has
+  /// been assigned once it'll stay constant.
+  HeapSnapshot::NodeID getMapID(GCBase::IDTracker &tracker);
+
+  /// \return the number of bytes allocated by this object on the heap.
+  size_t getMallocSize() const {
+    return map_.getMemorySize();
+  }
 
  private:
   /// The underlying weak value map.
