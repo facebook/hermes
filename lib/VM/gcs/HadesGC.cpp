@@ -1092,14 +1092,13 @@ bool HadesGC::OldGen::sweepNext() {
   // Solving for capacityBytes:
   // capacityBytes = (allocatedBytes + externalBytes) / occupancyTarget_ -
   //  externalBytes
-  const size_t targetCapacity =
+  const uint64_t targetSizeBytes =
       (stats.afterAllocatedBytes() + stats.afterExternalBytes()) /
           gc_->occupancyTarget_ -
       stats.afterExternalBytes();
   const size_t targetSegments =
-      llvh::divideCeil(targetCapacity, HeapSegment::maxSize());
-  const size_t finalSegments = std::min(targetSegments, maxNumSegments());
-  reserveSegments(finalSegments);
+      llvh::divideCeil(targetSizeBytes, HeapSegment::maxSize());
+  setTargetSegments(std::min(targetSegments, maxNumSegments()));
   sweepIterator_ = {};
   return false;
 }
@@ -1166,7 +1165,7 @@ HadesGC::HadesGC(
                 requestedInitHeapSegments,
                 // At least one YG segment and one OG segment.
                 static_cast<size_t>(2)});
-  oldGen_.reserveSegments(initHeapSegments);
+  oldGen_.setTargetSegments(initHeapSegments);
 }
 
 HadesGC::~HadesGC() {
@@ -1634,7 +1633,7 @@ void HadesGC::creditExternalMemory(GCCell *cell, uint32_t sz) {
     const uint64_t totalAllocated = allocatedBytes() + externalBytes();
     // Add one heap segment for YG capacity bytes.
     const uint64_t totalBytes =
-        (oldGen_.capacityBytes() + HeapSegment::maxSize()) + externalBytes();
+        (oldGen_.targetSizeBytes() + HeapSegment::maxSize()) + externalBytes();
     constexpr double kCollectionThreshold = 0.75;
     double allocatedRatio = static_cast<double>(totalAllocated) / totalBytes;
     if (allocatedRatio >= kCollectionThreshold) {
@@ -2333,7 +2332,7 @@ void HadesGC::youngGenCollection(
       const uint64_t totalAllocated =
           oldGen_.allocatedBytes() + oldGen_.externalBytes();
       const uint64_t totalBytes =
-          oldGen_.capacityBytes() + oldGen_.externalBytes();
+          oldGen_.targetSizeBytes() + oldGen_.externalBytes();
       constexpr double kCollectionThreshold = 0.75;
       double allocatedRatio = static_cast<double>(totalAllocated) / totalBytes;
       if (allocatedRatio >= kCollectionThreshold) {
@@ -2637,6 +2636,11 @@ uint64_t HadesGC::heapFootprint() const {
   return totalSegments * AlignedStorage::size() + externalBytes();
 }
 
+uint64_t HadesGC::remainingBytes() const {
+  const auto footprint = heapFootprint();
+  return footprint > maxHeapSize_ ? 0 : maxHeapSize_ - footprint;
+}
+
 uint64_t HadesGC::OldGen::allocatedBytes() const {
   return allocatedBytes_;
 }
@@ -2675,8 +2679,8 @@ uint64_t HadesGC::OldGen::size() const {
   return numSegments() * HeapSegment::maxSize();
 }
 
-uint64_t HadesGC::OldGen::capacityBytes() const {
-  return numCapacitySegments_ * HeapSegment::maxSize();
+uint64_t HadesGC::OldGen::targetSizeBytes() const {
+  return targetSegments_ * HeapSegment::maxSize();
 }
 
 HadesGC::HeapSegment &HadesGC::youngGen() {
@@ -2736,10 +2740,9 @@ size_t HadesGC::OldGen::numSegments() const {
 }
 
 size_t HadesGC::OldGen::maxNumSegments() const {
-  assert(
-      gc_->maxHeapSize_ % AlignedStorage::size() == 0 &&
-      "maxHeapSize must be evenly disible by AlignedStorage::size");
-  return (gc_->maxHeapSize_ / AlignedStorage::size()) - 1;
+  const uint64_t ogMaxBytes =
+      numSegments() * AlignedStorage::size() + gc_->remainingBytes();
+  return llvh::divideCeil(ogMaxBytes, AlignedStorage::size());
 }
 
 HadesGC::HeapSegment &HadesGC::OldGen::operator[](size_t i) {
@@ -2779,7 +2782,6 @@ std::unique_ptr<HadesGC::HeapSegment> HadesGC::createSegment(bool isYoungGen) {
 
 void HadesGC::OldGen::addSegment(std::unique_ptr<HeapSegment> seg) {
   uint16_t newSegIdx = segments_.size();
-  reserveSegments(newSegIdx + 1);
   segments_.emplace_back(std::move(seg));
   segmentAllocatedBytes_.push_back({0, 0});
   HeapSegment &newSeg = *segments_.back();
@@ -2819,8 +2821,8 @@ std::unique_ptr<HadesGC::HeapSegment> HadesGC::OldGen::removeSegment(
   return oldSeg;
 }
 
-void HadesGC::OldGen::reserveSegments(size_t numCapacitySegments) {
-  numCapacitySegments_ = std::max(numCapacitySegments, numCapacitySegments_);
+void HadesGC::OldGen::setTargetSegments(size_t targetSegments) {
+  targetSegments_ = targetSegments;
 }
 
 bool HadesGC::inOldGen(const void *p) const {
@@ -2869,7 +2871,9 @@ size_t HadesGC::getDrainRate() {
   // that over all YG collections before the heap fills up, we are able to
   // complete marking before OG fills up.
   // Don't include external memory since that doesn't need to be marked.
-  const size_t bytesToFill = oldGen_.capacityBytes() - oldGen_.allocatedBytes();
+  const size_t bytesToFill =
+      std::max(oldGen_.targetSizeBytes(), oldGen_.size()) -
+      oldGen_.allocatedBytes();
   // On average, the number of bytes that survive a YG collection. Round it up
   // to at least 1.
   const uint64_t ygSurvivalBytes =

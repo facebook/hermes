@@ -294,9 +294,8 @@ class HadesGC final : public GCBase {
     /// \return the segment previously at segmentIdx
     std::unique_ptr<HeapSegment> removeSegment(size_t segmentIdx);
 
-    /// Indicate that OG has a capacity of up to \p numCapacitySegments, some of
-    /// which may be allocated as needed.
-    void reserveSegments(size_t numCapacitySegments);
+    /// Indicate that OG should target having \p targetSegments segments.
+    void setTargetSegments(size_t targetSegments);
 
     /// Allocate into OG. Returns a pointer to the newly allocated space. That
     /// space must be filled before releasing the gcMutex_.
@@ -337,9 +336,10 @@ class HadesGC final : public GCBase {
     /// the JS heap, including free list entries.
     uint64_t size() const;
 
-    /// \return the total number of bytes that we are willing to use in the OG
-    /// section of the JS heap, including free list entries.
-    uint64_t capacityBytes() const;
+    /// \return the total number of bytes that we aim to use in the OG
+    /// section of the JS heap, including free list entries. This may be smaller
+    /// or greater than size().
+    uint64_t targetSizeBytes() const;
 
     /// Add some external memory cost to the OG.
     void creditExternalMemory(uint32_t size) {
@@ -432,10 +432,10 @@ class HadesGC final : public GCBase {
     HadesGC *gc_;
     std::vector<std::unique_ptr<HeapSegment>> segments_;
 
-    /// This is the number of segments we should allow the OG to grow to before
-    /// needing to wait on an OG collection. This represents the effective size
-    /// of the OG but the actual segments can be allocated lazily.
-    size_t numCapacitySegments_{0};
+    /// This is the target number of segments in the OG JS heap. It does not
+    /// include external memory and may be larger or smaller than the actual
+    /// number of segments allocated.
+    size_t targetSegments_{0};
 
     /// This is the sum of all bytes currently allocated in the heap, excluding
     /// bump-allocated segments. Use \c allocatedBytes() to include
@@ -850,6 +850,10 @@ class HadesGC final : public GCBase {
   /// \return the total number of bytes used by the heap, including segment
   /// metadata and external memory.
   uint64_t heapFootprint() const;
+
+  /// \return the remaining available space we are allowed to use. That is, the
+  /// difference between maxHeapSize_ and heapFootprint.
+  uint64_t remainingBytes() const;
 
   /// Accessor for the YG.
   HeapSegment &youngGen();

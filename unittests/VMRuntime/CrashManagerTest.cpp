@@ -222,7 +222,7 @@ TEST(CrashManagerTest, PromotedYGHasCorrectName) {
   // Turn on the "direct to OG" allocation feature.
   GCConfig gcConfig = GCConfig::Builder(kTestGCConfigBuilder)
                           .withName("XYZ")
-                          .withInitHeapSize(kInitHeapLarge)
+                          .withInitHeapSize(1 << 26)
                           .withMaxHeapSize(1 << 28)
                           .withAllocInYoung(false)
                           .withRevertToYGAtTTI(true)
