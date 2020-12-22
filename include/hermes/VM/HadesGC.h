@@ -329,10 +329,6 @@ class HadesGC final : public GCBase {
     /// before sweeping a particular segment so we have the true peak.
     void updatePeakAllocatedBytes(uint16_t segmentIdx);
 
-    /// Clear the peak allocated bytes for the segment at \p segmentIdx. Should
-    /// only be used after compaction is complete.
-    void resetPeakAllocatedBytes(uint16_t segmentIdx);
-
     /// \return the total number of bytes that are held in external memory, kept
     /// alive by objects in the OG.
     uint64_t externalBytes() const;
@@ -687,16 +683,24 @@ class HadesGC final : public GCBase {
     /// always going to be equal to "start" or nullptr.
     void *evacStart{reinterpret_cast<void *>(kInvalidCompacteeStart)};
 
-    /// The segment index that is going to be compacted next.
-    llvh::Optional<uint16_t> index;
-
-    /// The segment being compacted.
-    HeapSegment *segment = nullptr;
+    /// The segment being compacted. This should be removed from the OG right
+    /// after it is identified, and freed entirely once the compaction is
+    /// complete.
+    std::shared_ptr<HeapSegment> segment;
 
     /// The number of bytes in the compactee, should be set before the compactee
     /// is removed from the OG.
     uint32_t allocatedBytes{0};
   } compactee_;
+
+  /// If compaction completes before sweeping, there is a possibility that
+  /// dangling pointers into the now freed compactee may remain in the OG heap
+  /// until sweeping finishes. In certain cases, like when scanning dirty cards,
+  /// this could cause a segfault if you attempt to say, compress a pointer. To
+  /// handle this case, if compaction completes while sweeping is still in
+  /// progress, this shared_ptr will keep the compactee segment alive until the
+  /// end of sweeping.
+  std::shared_ptr<HeapSegment> compacteeHandleForSweep_;
 
   /// The main entrypoint for all allocations.
   /// \param sz The size of allocation requested. This might be rounded up to

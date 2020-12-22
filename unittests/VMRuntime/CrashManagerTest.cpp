@@ -254,7 +254,15 @@ TEST(CrashManagerTest, PromotedYGHasCorrectName) {
 
   // Test if the other segments are numbered correctly.
   EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:1"), 1);
+
+  // If Handle-SAN is on, the other segment may be getting compacted.
+#ifdef HERMESVM_SANITIZE_HANDLES
+  EXPECT_TRUE(
+      contextualCustomData.count("XYZ:HeapSegment:COMPACT") == 1 ||
+      contextualCustomData.count("XYZ:HeapSegment:2") == 1);
+#else
   EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:2"), 1);
+#endif
 }
 #endif
 

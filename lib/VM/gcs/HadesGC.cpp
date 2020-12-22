@@ -23,6 +23,8 @@ namespace vm {
 static const char *kGCName =
     kConcurrentGC ? "hades (concurrent)" : "hades (incremental)";
 
+static const char *kCompacteeNameForCrashMgr = "COMPACT";
+
 // A free list cell is always variable-sized.
 const VTable HadesGC::OldGen::FreelistCell::vt{CellKind::FreelistKind,
                                                /*variableSize*/ 0};
@@ -998,88 +1000,83 @@ bool HadesGC::OldGen::sweepNext() {
   assert(gc_->gcMutex_ && "gcMutex_ must be held while sweeping.");
 
   sweepIterator_.segNumber--;
-  // Do not sweep the compactee segment, since it is going to be evacuated
-  // anyway. Note that sweeping it will break compaction, since it will add
-  // cells to the compactee's freelist.
-  if (!gc_->compactee_.index ||
-      sweepIterator_.segNumber != *gc_->compactee_.index) {
-    gc_->oldGen_.updatePeakAllocatedBytes(sweepIterator_.segNumber);
-    const bool isTracking = gc_->isTrackingIDs();
-    // Re-evaluate this start point each time, as releasing the gcMutex_ allows
-    // allocations into the old gen, which might boost the credited memory.
-    const uint64_t externalBytesBefore = externalBytes();
 
-    // Clear the head pointers so that we can construct a new freelist. The
-    // freelist bits will be updated after the segment is swept. The bits will
-    // be inconsistent with the actual freelist for the duration of sweeping,
-    // but this is fine because gcMutex_ is during the entire period.
-    for (auto &head : freelistSegmentsBuckets_[sweepIterator_.segNumber])
-      head = nullptr;
+  gc_->oldGen_.updatePeakAllocatedBytes(sweepIterator_.segNumber);
+  const bool isTracking = gc_->isTrackingIDs();
+  // Re-evaluate this start point each time, as releasing the gcMutex_ allows
+  // allocations into the old gen, which might boost the credited memory.
+  const uint64_t externalBytesBefore = externalBytes();
 
-    char *freeRangeStart = nullptr, *freeRangeEnd = nullptr;
-    size_t mergedCells = 0;
-    int32_t segmentSweptBytes = 0;
-    for (GCCell *cell : segments_[sweepIterator_.segNumber]->cells()) {
-      assert(cell->isValid() && "Invalid cell in sweeping");
-      if (HeapSegment::getCellMarkBit(cell)) {
-        continue;
-      }
+  // Clear the head pointers so that we can construct a new freelist. The
+  // freelist bits will be updated after the segment is swept. The bits will
+  // be inconsistent with the actual freelist for the duration of sweeping,
+  // but this is fine because gcMutex_ is during the entire period.
+  for (auto &head : freelistSegmentsBuckets_[sweepIterator_.segNumber])
+    head = nullptr;
 
-      const auto sz = cell->getAllocatedSize();
-      char *const cellCharPtr = reinterpret_cast<char *>(cell);
-
-      if (freeRangeEnd != cellCharPtr) {
-        assert(
-            freeRangeEnd < cellCharPtr &&
-            "Should not overshoot the start of an object");
-        // We are starting a new free range, flush the previous one.
-        if (LLVM_LIKELY(freeRangeStart))
-          addCellToFreelistFromSweep(
-              freeRangeStart, freeRangeEnd, mergedCells > 1);
-
-        mergedCells = 0;
-        freeRangeEnd = freeRangeStart = cellCharPtr;
-      }
-      // Expand the current free range to include the current cell.
-      freeRangeEnd += sz;
-      mergedCells++;
-
-      if (cell->getKind() == CellKind::FreelistKind)
-        continue;
-
-      segmentSweptBytes += sz;
-      // Cell is dead, run its finalizer first if it has one.
-      cell->getVT()->finalizeIfExists(cell, gc_);
-      if (isTracking) {
-        gc_->getAllocationLocationTracker().freeAlloc(cell, sz);
-        gc_->getIDTracker().untrackObject(cell);
-      }
+  char *freeRangeStart = nullptr, *freeRangeEnd = nullptr;
+  size_t mergedCells = 0;
+  int32_t segmentSweptBytes = 0;
+  for (GCCell *cell : segments_[sweepIterator_.segNumber]->cells()) {
+    assert(cell->isValid() && "Invalid cell in sweeping");
+    if (HeapSegment::getCellMarkBit(cell)) {
+      continue;
     }
 
-    // Flush any free range that was left over.
-    if (freeRangeStart)
-      addCellToFreelistFromSweep(freeRangeStart, freeRangeEnd, mergedCells > 1);
+    const auto sz = cell->getAllocatedSize();
+    char *const cellCharPtr = reinterpret_cast<char *>(cell);
 
-    // Update the freelist bit arrays to match the newly set freelist heads.
-    for (size_t bucket = 0; bucket < kNumFreelistBuckets; ++bucket) {
-      // For each bucket, set the bit for the current segment based on whether
-      // it has a non-null freelist head for that bucket.
-      if (freelistSegmentsBuckets_[sweepIterator_.segNumber][bucket])
-        freelistBucketSegmentBitArray_[bucket].set(sweepIterator_.segNumber);
-      else
-        freelistBucketSegmentBitArray_[bucket].reset(sweepIterator_.segNumber);
+    if (freeRangeEnd != cellCharPtr) {
+      assert(
+          freeRangeEnd < cellCharPtr &&
+          "Should not overshoot the start of an object");
+      // We are starting a new free range, flush the previous one.
+      if (LLVM_LIKELY(freeRangeStart))
+        addCellToFreelistFromSweep(
+            freeRangeStart, freeRangeEnd, mergedCells > 1);
 
-      // In case the change above has changed the availability of a bucket
-      // across all segments, update the overall bit array.
-      freelistBucketBitArray_.set(
-          bucket, !freelistBucketSegmentBitArray_[bucket].empty());
+      mergedCells = 0;
+      freeRangeEnd = freeRangeStart = cellCharPtr;
     }
+    // Expand the current free range to include the current cell.
+    freeRangeEnd += sz;
+    mergedCells++;
 
-    // Correct the allocated byte count.
-    incrementAllocatedBytes(-segmentSweptBytes, sweepIterator_.segNumber);
-    sweepIterator_.sweptBytes += segmentSweptBytes;
-    sweepIterator_.sweptExternalBytes += externalBytesBefore - externalBytes();
+    if (cell->getKind() == CellKind::FreelistKind)
+      continue;
+
+    segmentSweptBytes += sz;
+    // Cell is dead, run its finalizer first if it has one.
+    cell->getVT()->finalizeIfExists(cell, gc_);
+    if (isTracking) {
+      gc_->getAllocationLocationTracker().freeAlloc(cell, sz);
+      gc_->getIDTracker().untrackObject(cell);
+    }
   }
+
+  // Flush any free range that was left over.
+  if (freeRangeStart)
+    addCellToFreelistFromSweep(freeRangeStart, freeRangeEnd, mergedCells > 1);
+
+  // Update the freelist bit arrays to match the newly set freelist heads.
+  for (size_t bucket = 0; bucket < kNumFreelistBuckets; ++bucket) {
+    // For each bucket, set the bit for the current segment based on whether
+    // it has a non-null freelist head for that bucket.
+    if (freelistSegmentsBuckets_[sweepIterator_.segNumber][bucket])
+      freelistBucketSegmentBitArray_[bucket].set(sweepIterator_.segNumber);
+    else
+      freelistBucketSegmentBitArray_[bucket].reset(sweepIterator_.segNumber);
+
+    // In case the change above has changed the availability of a bucket
+    // across all segments, update the overall bit array.
+    freelistBucketBitArray_.set(
+        bucket, !freelistBucketSegmentBitArray_[bucket].empty());
+  }
+
+  // Correct the allocated byte count.
+  incrementAllocatedBytes(-segmentSweptBytes, sweepIterator_.segNumber);
+  sweepIterator_.sweptBytes += segmentSweptBytes;
+  sweepIterator_.sweptExternalBytes += externalBytesBefore - externalBytes();
 
   // There are more iterations to go.
   if (sweepIterator_.segNumber)
@@ -1344,15 +1341,6 @@ void HadesGC::oldGenCollection(std::string cause) {
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormed();
 #endif
-  // Setup the sweep iterator when collection begins, because the number of
-  // segments can change if a YG collection interleaves. There's no need to
-  // sweep those extra segments since they are full of newly promoted objects
-  // from YG (which have all their mark bits set), thus the sweep iterator
-  // doesn't need to be updated. We also don't need to sweep any segments made
-  // since the start of the collection, since they won't have any unmarked
-  // objects anyway.
-  oldGen_.initializeSweep();
-
   // Note: This line calls the destructor for the previous CollectionStats (if
   // any) in addition to creating a new CollectionStats. It is desirable to
   // call the destructor here so that the analytics callback is invoked from the
@@ -1406,6 +1394,18 @@ void HadesGC::oldGenCollection(std::string cause) {
   // to ensure that write barriers start operating immediately, and that any
   // objects promoted during an intervening YG collection are correctly scanned.
   prepareCompactee();
+
+  // Setup the sweep iterator when collection begins, because the number of
+  // segments can change if a YG collection interleaves. There's no need to
+  // sweep those extra segments since they are full of newly promoted
+  // objects from YG (which have all their mark bits set), thus the sweep
+  // iterator doesn't need to be updated. We also don't need to sweep any
+  // segments made since the start of the collection, since they won't have
+  // any unmarked objects anyway.
+  // NOTE: this must be called after prepareCompactee, which may remove segments
+  // from the heap.
+  oldGen_.initializeSweep();
+
   // NOTE: Since the "this" value (the HadesGC instance) is implicitly copied to
   // the new thread, the GC cannot be destructed until the new thread completes.
   // This means that before destroying the GC, waitForCollectionToFinish must
@@ -1477,6 +1477,7 @@ void HadesGC::incrementalCollect() {
         ogCollectionStats_->setEndTime();
         ogCollectionStats_->setAfterSize(heapFootprint());
         concurrentPhase_ = Phase::None;
+        compacteeHandleForSweep_.reset();
         if (!kConcurrentGC) {
           // Check the tripwire here since we know the incremental collection
           // will always end on the mutator thread.
@@ -1494,8 +1495,10 @@ void HadesGC::prepareCompactee() {
   assert(
       compactee_.empty() &&
       "Ongoing compaction at the start of an OG collection.");
-  if (promoteYGToOG_ || oldGen_.numSegments() < 2)
+  if (promoteYGToOG_)
     return;
+
+  llvh::Optional<size_t> compacteeIdx;
 #ifndef HERMESVM_SANITIZE_HANDLES
   // Only compact a segment if it was at least 75% occupied at some point
   // and is now at most at 1/3 of its peak. If multiple segments meet these
@@ -1511,20 +1514,24 @@ void HadesGC::prepareCompactee() {
     if (peakBytes > kMinPeakBytesForCompaction &&
         curBytes < peakBytes / kMinPeakRatioForCompaction &&
         curBytes < minBytes) {
-      compactee_.index = i;
+      compacteeIdx = i;
       minBytes = curBytes;
     }
   }
 #else
-  std::uniform_int_distribution<> distrib(0, oldGen_.numSegments() - 1);
-  compactee_.index = distrib(randomEngine_);
+  if (oldGen_.numSegments()) {
+    std::uniform_int_distribution<> distrib(0, oldGen_.numSegments() - 1);
+    compacteeIdx = distrib(randomEngine_);
+  }
 #endif
 
-  if (compactee_.index) {
-    oldGen_.clearFreelistForSegment(*compactee_.index);
-    compactee_.segment = &oldGen_[*compactee_.index];
+  if (compacteeIdx) {
+    compactee_.allocatedBytes = oldGen_.allocatedBytes(*compacteeIdx);
+    compactee_.segment = oldGen_.removeSegment(*compacteeIdx);
+    addSegmentExtentToCrashManager(
+        *compactee_.segment, kCompacteeNameForCrashMgr);
     compactee_.start = compactee_.segment->lowLim();
-    compactee_.allocatedBytes = oldGen_.allocatedBytes(*compactee_.index);
+    compacteeHandleForSweep_ = compactee_.segment;
   }
 }
 
@@ -1605,12 +1612,16 @@ void HadesGC::finalizeAllLocked() {
   // the OG, and some not. Only finalize objects that have not been promoted to
   // OG, and let the OG finalize the promoted objects.
   finalizeYoungGenObjects();
-  for (auto seg = oldGen_.begin(), end = oldGen_.end(); seg != end; ++seg) {
-    (*seg)->forAllObjs([this](GCCell *cell) {
-      assert(cell->isValid() && "Invalid cell in finalizeAll");
-      cell->getVT()->finalizeIfExists(cell, this);
-    });
-  }
+
+  const auto finalizeCallback = [this](GCCell *cell) {
+    assert(cell->isValid() && "Invalid cell in finalizeAll");
+    cell->getVT()->finalizeIfExists(cell, this);
+  };
+  if (compactee_.segment)
+    compactee_.segment->forCompactedObjs(finalizeCallback);
+
+  for (auto seg = oldGen_.begin(), end = oldGen_.end(); seg != end; ++seg)
+    (*seg)->forAllObjs(finalizeCallback);
 }
 
 void HadesGC::creditExternalMemory(GCCell *cell, uint32_t sz) {
@@ -1861,25 +1872,28 @@ void HadesGC::freeWeakSlot(WeakRefSlot *slot) {
 
 void HadesGC::forAllObjs(const std::function<void(GCCell *)> &callback) {
   std::lock_guard<Mutex> lk{gcMutex_};
-  // Since the lock is held, it's safe to store this phase.
-  const Phase phase = concurrentPhase_;
   youngGen().forAllObjs(callback);
-  for (auto segit = oldGen_.begin(), end = oldGen_.end(); segit != end;
-       ++segit) {
-    HeapSegment &seg = **segit;
-    if (phase != Phase::Sweep && compactee_.evacStart != seg.lowLim()) {
-      seg.forAllObjs(callback);
-      continue;
+
+  const auto skipGarbageCallback = [callback](GCCell *cell) {
+    // If we're doing this check during sweeping, or between sweeping and
+    // compaction, there might be some objects that are dead, and could
+    // potentially have garbage in them. There's no need to check the
+    // pointers of those objects.
+    if (HeapSegment::getCellMarkBit(cell)) {
+      callback(cell);
     }
-    seg.forAllObjs([callback](GCCell *cell) {
-      // If we're doing this check during sweeping, or between sweeping and
-      // compaction, there might be some objects that are dead, and could
-      // potentially have garbage in them. There's no need to check the
-      // pointers of those objects.
-      if (HeapSegment::getCellMarkBit(cell)) {
-        callback(cell);
-      }
-    });
+  };
+  for (const auto &seg : oldGen_) {
+    if (concurrentPhase_ != Phase::Sweep)
+      seg->forAllObjs(callback);
+    else
+      seg->forAllObjs(skipGarbageCallback);
+  }
+  if (compactee_.segment) {
+    if (isOldGenMarking_)
+      compactee_.segment->forAllObjs(callback);
+    else
+      compactee_.segment->forAllObjs(skipGarbageCallback);
   }
 }
 
@@ -2263,20 +2277,13 @@ void HadesGC::youngGenCollection(
       // this segment, just use the swept external byte count.
       externalBytes.before += externalCompactedBytes;
       externalBytes.after += externalCompactedBytes;
-      // Create a new freelist cell for the entire segment.
-      oldGen_.incrementAllocatedBytes(
-          -oldGen_.allocatedBytes(*compactee_.index), *compactee_.index);
-      oldGen_.resetPeakAllocatedBytes(*compactee_.index);
-      HeapSegment &compactee = *compactee_.segment;
-      compactee.setLevel(compactee.end());
-      oldGen_.addCellToFreelist(
-          compactee.start(), compactee.used(), *compactee_.index);
-      auto markUnusedFrom = reinterpret_cast<char *>(llvh::alignAddr(
-          compactee.start() + sizeof(OldGen::FreelistCell),
-          oscompat::page_size()));
-      compactee.markUnused(markUnusedFrom, compactee.end());
-      HeapSegment::setCellHead(
-          reinterpret_cast<GCCell *>(compactee.start()), compactee.used());
+
+#ifdef HERMESVM_COMPRESSED_POINTERS
+      compressedPtrIndices_.push_back(
+          SegmentInfo::segmentIndexFromStart(compactee_.segment->lowLim()));
+#endif
+
+      removeSegmentExtentFromCrashManager(kCompacteeNameForCrashMgr);
       compactee_ = {};
     }
 
@@ -2490,11 +2497,6 @@ void HadesGC::scanDirtyCards(Acceptor &acceptor) {
   const auto segEnd = oldGen_.numSegments();
   for (size_t i = 0; i < segEnd; ++i) {
     HeapSegment &seg = oldGen_[i];
-    // No need to scan cards in the compactee segment, since we will be fully
-    // scanning it.
-    if (seg.lowLim() == compactee_.evacStart) {
-      continue;
-    }
     scanDirtyCardsForSegment(visitor, seg);
     // Do not clear the card table if the OG thread is currently marking to
     // prepare for a compaction. Note that we should clear the card tables if
@@ -2502,6 +2504,11 @@ void HadesGC::scanDirtyCards(Acceptor &acceptor) {
     if (!preparingCompaction)
       seg.cardTable().clear();
   }
+
+  // No need to search dirty cards in the compactee segment if it is
+  // currently being evacuated, since it will be scanned fully.
+  if (preparingCompaction)
+    scanDirtyCardsForSegment(visitor, *compactee_.segment);
 }
 
 void HadesGC::finalizeYoungGenObjects() {
@@ -2658,10 +2665,6 @@ void HadesGC::OldGen::updatePeakAllocatedBytes(uint16_t segmentIdx) {
   segmentAllocatedBytes_[segmentIdx].second = std::max(
       segmentAllocatedBytes_[segmentIdx].second,
       segmentAllocatedBytes_[segmentIdx].first);
-}
-
-void HadesGC::OldGen::resetPeakAllocatedBytes(uint16_t segmentIdx) {
-  segmentAllocatedBytes_[segmentIdx].second = 0;
 }
 
 uint64_t HadesGC::OldGen::externalBytes() const {
@@ -2826,8 +2829,9 @@ bool HadesGC::inOldGen(const void *p) const {
       return true;
     }
   }
-  // None of the old gen segments matched the pointer.
-  return false;
+  // If it isn't in any OG segment or the compactee, then this pointer is not in
+  // the OG.
+  return compactee_.contains(p);
 }
 
 void HadesGC::yieldToOldGen() {
@@ -2922,7 +2926,7 @@ void HadesGC::removeSegmentExtentFromCrashManager(
     return;
   }
   const std::string segmentName = name_ + ":HeapSegment:" + extraName;
-  crashMgr_->removeContextualCustomData(extraName.c_str());
+  crashMgr_->removeContextualCustomData(segmentName.c_str());
 }
 
 #ifdef HERMES_SLOW_DEBUG
