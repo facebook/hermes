@@ -349,15 +349,16 @@ Runtime::~Runtime() {
   if (samplingProfiler_) {
     samplingProfiler_->unregisterRuntime(this);
   }
-  heap_.finalizeAll();
+  getHeap().finalizeAll();
 #ifndef NDEBUG
   // Now that all objects are finalized, there shouldn't be any native memory
   // keys left in the ID tracker for memory profiling. Assert that the only IDs
   // left are JS heap pointers.
-  heap_.getIDTracker().forEachID([this](
-                                     const void *mem, HeapSnapshot::NodeID id) {
+  getHeap().getIDTracker().forEachID([this](
+                                         const void *mem,
+                                         HeapSnapshot::NodeID id) {
     assert(
-        heap_.validPointer(mem) &&
+        getHeap().validPointer(mem) &&
         "A pointer is left in the ID tracker that is from non-JS memory. Was untrackNative called?");
   });
 #endif
@@ -770,7 +771,7 @@ void Runtime::unmarkSymbols() {
 }
 
 void Runtime::freeSymbols(const llvh::BitVector &markedSymbols) {
-  identifierTable_.freeUnmarkedSymbols(markedSymbols, heap_.getIDTracker());
+  identifierTable_.freeUnmarkedSymbols(markedSymbols, getHeap().getIDTracker());
 }
 
 #ifdef HERMES_SLOW_DEBUG
@@ -1856,7 +1857,7 @@ void Runtime::preventHCGC(HiddenClass *hc) {
   auto &classIdToIdxMap = inlineCacheProfiler_.getClassIdtoIndexMap();
   auto &hcIdx = inlineCacheProfiler_.getHiddenClassArrayIndex();
   auto ret = classIdToIdxMap.insert(
-      std::pair<ClassId, uint32_t>(heap_.getObjectID(hc), hcIdx));
+      std::pair<ClassId, uint32_t>(getHeap().getObjectID(hc), hcIdx));
   if (ret.second) {
     auto *hiddenClassArray = inlineCacheProfiler_.getHiddenClassArray();
     JSArray::setElementAt(
@@ -1882,13 +1883,13 @@ void Runtime::recordHiddenClass(
   assert(objectHiddenClass != nullptr && "object hidden class should exist");
   // prevent object hidden class from being GC-ed
   preventHCGC(objectHiddenClass);
-  ClassId objectHiddenClassId = heap_.getObjectID(objectHiddenClass);
+  ClassId objectHiddenClassId = getHeap().getObjectID(objectHiddenClass);
   // prevent cached hidden class from being GC-ed
   ClassId cachedHiddenClassId =
       static_cast<ClassId>(GCBase::IDTracker::kInvalidNode);
   if (cachedHiddenClass != nullptr) {
     preventHCGC(cachedHiddenClass);
-    cachedHiddenClassId = heap_.getObjectID(cachedHiddenClass);
+    cachedHiddenClassId = getHeap().getObjectID(cachedHiddenClass);
   }
   // add the record to inline caching profiler
   inlineCacheProfiler_.insertICMiss(
@@ -1914,10 +1915,10 @@ HiddenClass *Runtime::resolveHiddenClassId(ClassId classId) {
 #ifdef HERMESVM_SERIALIZE
 void Runtime::serialize(Serializer &s) {
   // Full GC here.
-  heap_.collect("serialize");
+  getHeap().collect("serialize");
 
   s.writeCurrentOffset();
-  heap_.serializeWeakRefs(s);
+  getHeap().serializeWeakRefs(s);
 
   s.writeCurrentOffset();
   serializeIdentifierTable(s);
@@ -1929,13 +1930,13 @@ void Runtime::serialize(Serializer &s) {
   serializeRuntimeFields(s);
 
   s.writeCurrentOffset();
-  heap_.serializeHeap(s);
+  getHeap().serializeHeap(s);
 
   s.writeCurrentOffset();
-  heap_.getIDTracker().serialize(s);
+  getHeap().getIDTracker().serialize(s);
 
   s.writeCurrentOffset();
-  heap_.getAllocationLocationTracker().serialize(s);
+  getHeap().getAllocationLocationTracker().serialize(s);
 
   // In the end record the size of the object table and flush the string
   // buffers, so the deserializer can read it. TODO: perhaps seek to the
@@ -2121,13 +2122,13 @@ void Runtime::deserializeRuntimeFields(Deserializer &d) {
 
 void Runtime::deserializeImpl(Deserializer &d, bool currentlyInYoung) {
   if (currentlyInYoung) {
-    heap_.deserializeStart();
+    getHeap().deserializeStart();
   }
 
   GCScope scope(this);
 
   d.readAndCheckOffset();
-  heap_.deserializeWeakRefs(d);
+  getHeap().deserializeWeakRefs(d);
 
   d.readAndCheckOffset();
   identifierTable_.deserialize(d);
@@ -2139,13 +2140,13 @@ void Runtime::deserializeImpl(Deserializer &d, bool currentlyInYoung) {
   deserializeRuntimeFields(d);
 
   d.readAndCheckOffset();
-  heap_.deserializeHeap(d);
+  getHeap().deserializeHeap(d);
 
   d.readAndCheckOffset();
-  heap_.getIDTracker().deserialize(d);
+  getHeap().getIDTracker().deserialize(d);
 
   d.readAndCheckOffset();
-  heap_.getAllocationLocationTracker().deserialize(d);
+  getHeap().getAllocationLocationTracker().deserialize(d);
 
   d.readAndCheckOffset();
   d.flushRelocationQueue();
@@ -2161,7 +2162,7 @@ void Runtime::deserializeImpl(Deserializer &d, bool currentlyInYoung) {
   if (currentlyInYoung) {
     // Only switch back now if the config says allocInYoung. Otherwise
     // wait until tti.
-    heap_.deserializeEnd();
+    getHeap().deserializeEnd();
   }
 }
 
@@ -2235,7 +2236,7 @@ StackTracesTreeNode *Runtime::getCurrentStackTracesTreeNode(
     const inst::Inst *ip) {
   assert(stackTracesTree_ && "Runtime not configured to track alloc stacks");
   assert(
-      heap_.getAllocationLocationTracker().isEnabled() &&
+      getHeap().getAllocationLocationTracker().isEnabled() &&
       "AllocationLocationTracker not enabled");
   if (!ip) {
     return nullptr;
@@ -2255,11 +2256,11 @@ void Runtime::enableAllocationLocationTracker(
     stackTracesTree_ = make_unique<StackTracesTree>();
   }
   stackTracesTree_->syncWithRuntimeStack(this);
-  heap_.enableHeapProfiler(std::move(fragmentCallback));
+  getHeap().enableHeapProfiler(std::move(fragmentCallback));
 }
 
 void Runtime::disableAllocationLocationTracker(bool clearExistingTree) {
-  heap_.disableHeapProfiler();
+  getHeap().disableHeapProfiler();
   if (clearExistingTree) {
     stackTracesTree_.reset();
   }

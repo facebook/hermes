@@ -204,7 +204,7 @@ class Runtime : public HandleRootOwner,
       RuntimeModuleFlags runtimeModuleFlags,
       llvh::StringRef sourceURL,
       Handle<Environment> environment) {
-    heap_.runtimeWillExecute();
+    getHeap().runtimeWillExecute();
     return runBytecode(
         std::move(bytecode),
         runtimeModuleFlags,
@@ -276,7 +276,7 @@ class Runtime : public HandleRootOwner,
 
   /// Force a garbage collection cycle.
   void collect(std::string cause) {
-    heap_.collect(std::move(cause));
+    getHeap().collect(std::move(cause));
   }
 
   /// Potentially move the heap if handle sanitization is on.
@@ -1676,7 +1676,7 @@ T *Runtime::makeAFixed(Args &&... args) {
   T *ptr = heap_.makeA<T, true /* fixedSize */, hasFinalizer, longLived>(
       sz, std::forward<Args>(args)...);
 #ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-  heap_.getAllocationLocationTracker().newAlloc(ptr, heapAlignSize(sz));
+  getHeap().getAllocationLocationTracker().newAlloc(ptr, heapAlignSize(sz));
 #endif
   return ptr;
 }
@@ -1699,7 +1699,7 @@ T *Runtime::makeAVariable(uint32_t size, Args &&... args) {
   T *ptr = heap_.makeA<T, false /* fixedSize */, hasFinalizer, longLived>(
       size, std::forward<Args>(args)...);
 #ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-  heap_.getAllocationLocationTracker().newAlloc(ptr, heapAlignSize(size));
+  getHeap().getAllocationLocationTracker().newAlloc(ptr, heapAlignSize(size));
 #endif
   return ptr;
 }
@@ -1721,7 +1721,7 @@ inline void Runtime::ignoreAllocationFailure(ExecutionStatus status) {
 
 inline void Runtime::ttiReached() {
   // Currently, only the heap_ behavior can change at TTI.
-  heap_.ttiReached();
+  getHeap().ttiReached();
 }
 
 template <class T>
