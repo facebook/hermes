@@ -150,8 +150,9 @@ constexpr HeapSnapshot::NodeID objectIDForRootSection(
   // do conversions.
   return GCBase::IDTracker::reserved(
       static_cast<GCBase::IDTracker::ReservedObjectID>(
-          static_cast<uint64_t>(GCBase::IDTracker::ReservedObjectID::GCRoots) +
-          1 + static_cast<uint64_t>(section)));
+          static_cast<HeapSnapshot::NodeID>(
+              GCBase::IDTracker::ReservedObjectID::GCRoots) +
+          1 + static_cast<HeapSnapshot::NodeID>(section)));
 }
 
 // Abstract base class for all snapshot acceptors.
@@ -404,7 +405,7 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
   }
 
  private:
-  llvh::DenseSet<uint64_t> seenIDs_;
+  llvh::DenseSet<HeapSnapshot::NodeID> seenIDs_;
   // For unnamed edges, use indices instead.
   unsigned nextEdge_{0};
   Section currentSection_{Section::InvalidSection};
@@ -552,7 +553,7 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
   snap.beginSection(HeapSnapshot::Section::Samples);
   for (const auto &fragment : getAllocationLocationTracker().fragments()) {
     json.emitValues({static_cast<uint64_t>(fragment.timestamp_.count()),
-                     fragment.lastSeenObjectID_});
+                     static_cast<uint64_t>(fragment.lastSeenObjectID_)});
   }
   snap.endSection(HeapSnapshot::Section::Samples);
 
