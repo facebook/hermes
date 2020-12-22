@@ -541,9 +541,17 @@ void Runtime::markRoots(
 
   {
     MarkRootsPhaseTimer timer(this, RootAcceptor::Section::Custom);
+    // Define nodes before the root section starts.
+    for (auto &fn : customSnapshotNodeFuncs_) {
+      acceptor.provideSnapshot(fn);
+    }
     acceptor.beginRootSection(RootAcceptor::Section::Custom);
     for (auto &fn : customMarkRootFuncs_)
       fn(&getHeap(), acceptor);
+    // Define edges while inside the root section.
+    for (auto &fn : customSnapshotEdgeFuncs_) {
+      acceptor.provideSnapshot(fn);
+    }
     acceptor.endRootSection();
   }
 }

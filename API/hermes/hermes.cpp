@@ -337,6 +337,39 @@ class HermesRuntimeImpl final : public HermesRuntime,
             }
           }
         });
+    runtime_.addCustomSnapshotFunction(
+        [this](vm::HeapSnapshot &snap) {
+          snap.beginNode();
+          snap.endNode(
+              vm::HeapSnapshot::NodeType::Native,
+              "ManagedValues",
+              vm::GCBase::IDTracker::reserved(
+                  vm::GCBase::IDTracker::ReservedObjectID::JSIHermesValueList),
+              hermesValues_->size() * sizeof(HermesPointerValue),
+              0);
+          snap.beginNode();
+          snap.endNode(
+              vm::HeapSnapshot::NodeType::Native,
+              "ManagedValues",
+              vm::GCBase::IDTracker::reserved(
+                  vm::GCBase::IDTracker::ReservedObjectID::
+                      JSIWeakHermesValueList),
+              weakHermesValues_->size() * sizeof(WeakRefPointerValue),
+              0);
+        },
+        [](vm::HeapSnapshot &snap) {
+          snap.addNamedEdge(
+              vm::HeapSnapshot::EdgeType::Internal,
+              "hermesValues",
+              vm::GCBase::IDTracker::reserved(
+                  vm::GCBase::IDTracker::ReservedObjectID::JSIHermesValueList));
+          snap.addNamedEdge(
+              vm::HeapSnapshot::EdgeType::Internal,
+              "weakHermesValues",
+              vm::GCBase::IDTracker::reserved(
+                  vm::GCBase::IDTracker::ReservedObjectID::
+                      JSIWeakHermesValueList));
+        });
   }
 
  public:

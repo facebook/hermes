@@ -680,6 +680,8 @@ class GCBase {
       IdentifierTableLookupVector,
       IdentifierTableHashTable,
       IdentifierTableMarkedSymbols,
+      JSIHermesValueList,
+      JSIWeakHermesValueList,
       Undefined,
       Null,
       True,

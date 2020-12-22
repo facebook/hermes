@@ -147,6 +147,16 @@ class Runtime : public HandleRootOwner,
   void addCustomWeakRootsFunction(
       std::function<void(GC *, WeakRefAcceptor &)> markRootsFn);
 
+  /// Add a custom function that will be executed when a heap snapshot is taken,
+  /// to add any extra nodes.
+  /// \param nodes Use snap.beginNode() and snap.endNode() to create nodes in
+  ///   snapshot graph.
+  /// \param edges Use snap.addNamedEdge() or snap.addIndexedEdge() to create
+  ///   edges to the nodes defined in \p nodes.
+  void addCustomSnapshotFunction(
+      std::function<void(HeapSnapshot &)> nodes,
+      std::function<void(HeapSnapshot &)> edges);
+
   /// Make the runtime read from \p env to replay its environment-dependent
   /// behavior.
   void setMockedEnvironment(const MockedEnvironment &env);
@@ -1005,6 +1015,8 @@ class Runtime : public HandleRootOwner,
       customMarkRootFuncs_;
   std::vector<std::function<void(GC *, WeakRefAcceptor &)>>
       customMarkWeakRootFuncs_;
+  std::vector<std::function<void(HeapSnapshot &)>> customSnapshotNodeFuncs_;
+  std::vector<std::function<void(HeapSnapshot &)>> customSnapshotEdgeFuncs_;
 
   /// All state related to JIT compilation.
   JITContext jitContext_;
@@ -1636,6 +1648,13 @@ inline void Runtime::addCustomRootsFunction(
 inline void Runtime::addCustomWeakRootsFunction(
     std::function<void(GC *, WeakRefAcceptor &)> markRootsFn) {
   customMarkWeakRootFuncs_.emplace_back(std::move(markRootsFn));
+}
+
+inline void Runtime::addCustomSnapshotFunction(
+    std::function<void(HeapSnapshot &)> nodes,
+    std::function<void(HeapSnapshot &)> edges) {
+  customSnapshotNodeFuncs_.emplace_back(std::move(nodes));
+  customSnapshotEdgeFuncs_.emplace_back(std::move(edges));
 }
 
 template <
