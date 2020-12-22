@@ -80,7 +80,7 @@ TEST(GCMarkWeakTest, MarkWeak) {
   int numMarkWeakCalls = 0;
   auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfigSmall);
   DummyRuntime &rt = *runtime;
-  auto &gc = rt.gc;
+  auto &gc = rt.getHeap();
   // Probably zero, but we only care about the increase/decrease.
   const int initUsedWeak = gc.countUsedWeakRefs();
 

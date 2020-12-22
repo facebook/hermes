@@ -46,13 +46,13 @@ static constexpr size_t kCellSize = 256 * 1024;
 /// Allocating a fixed size cell that is too big for the young gen should cause
 /// an OOM
 TEST(GCOOMDeathTest, FixedSizeDeath) {
-  const size_t kHeapSizeHint = kCellSize * GC::kYoungGenFractionDenom / 2;
+  const size_t kHeapSizeHint = kCellSize * GenGC::kYoungGenFractionDenom / 2;
   using FixedCell = EmptyCell<kCellSize>;
 
   auto runtime = DummyRuntime::create(
       getMetadataTable(), TestGCConfigFixedSize(kHeapSizeHint));
   DummyRuntime &rt = *runtime;
-  auto &gc = rt.gc;
+  GenGC &gc = rt.getHeap();
 
   const size_t kYGSize = gc.youngGenSize(kHeapSizeHint);
   const size_t kOGSizeHint = kHeapSizeHint - kYGSize;
@@ -67,13 +67,13 @@ TEST(GCOOMDeathTest, FixedSizeDeath) {
 // Allocating a variable sized cell that is too big for the young gen (but fits
 // in the old gen) should be fine.
 TEST(GCOOMTest, VarSize) {
-  const size_t kHeapSizeHint = kCellSize * GC::kYoungGenFractionDenom / 2;
+  const size_t kHeapSizeHint = kCellSize * GenGC::kYoungGenFractionDenom / 2;
   using VarCell = VarSizedEmptyCell<kCellSize>;
 
   auto runtime = DummyRuntime::create(
       getMetadataTable(), TestGCConfigFixedSize(kHeapSizeHint));
   DummyRuntime &rt = *runtime;
-  auto &gc = rt.gc;
+  GenGC &gc = rt.getHeap();
 
   const size_t kYGSize = gc.youngGenSize(kHeapSizeHint);
   const size_t kOGSizeHint = kHeapSizeHint - kYGSize;
@@ -88,7 +88,7 @@ TEST(GCOOMTest, VarSize) {
 
 TEST(GCOOMDeathTest, Fragmentation) {
   const size_t kHeapSizeHint =
-      AlignedHeapSegment::maxSize() * GC::kYoungGenFractionDenom;
+      AlignedHeapSegment::maxSize() * GenGC::kYoungGenFractionDenom;
   // Only one of these cells will fit into a segment, with the maximum amount of
   // space wasted in the segment.
   using AwkwardCell = EmptyCell<AlignedHeapSegment::maxSize() / 2 + 1>;
@@ -96,11 +96,11 @@ TEST(GCOOMDeathTest, Fragmentation) {
   auto runtime = DummyRuntime::create(
       getMetadataTable(), TestGCConfigFixedSize(kHeapSizeHint));
   DummyRuntime &rt = *runtime;
-  auto &gc = rt.gc;
+  GenGC &gc = rt.getHeap();
 
   // Ensure that the heap will be big enough for the YoungGen to accommodate its
   // full size, and the OldGen is segment aligned.
-  const size_t kSegments = GC::kYoungGenFractionDenom;
+  const size_t kSegments = GenGC::kYoungGenFractionDenom;
   ASSERT_EQ(kSegments * AlignedHeapSegment::maxSize(), gc.size());
 
   std::deque<GCCell *> roots;
@@ -118,7 +118,7 @@ TEST(GCOOMDeathTest, Fragmentation) {
 
 TEST(GCOOMDeathTest, Effective) {
   const size_t kHeapSizeHint =
-      AlignedHeapSegment::maxSize() * GC::kYoungGenFractionDenom;
+      AlignedHeapSegment::maxSize() * GenGC::kYoungGenFractionDenom;
 
   auto runtime = DummyRuntime::create(
       getMetadataTable(),
@@ -127,7 +127,7 @@ TEST(GCOOMDeathTest, Effective) {
           .withEffectiveOOMThreshold(3)
           .build());
   DummyRuntime &rt = *runtime;
-  auto &gc = rt.gc;
+  GenGC &gc = rt.getHeap();
 
   // tick...
   gc.collect("test", /* canEffectiveOOM */ true);
@@ -147,7 +147,7 @@ TEST(GCOOMDeathTest, Effective) {
 
 TEST(GCOOMDeathTest, EffectiveIntegration) {
   const size_t kHeapSizeHint =
-      AlignedHeapSegment::maxSize() * GC::kYoungGenFractionDenom;
+      AlignedHeapSegment::maxSize() * GenGC::kYoungGenFractionDenom;
   using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
 
   const unsigned kOOMThreshold = 3;
@@ -158,12 +158,12 @@ TEST(GCOOMDeathTest, EffectiveIntegration) {
           .withEffectiveOOMThreshold(kOOMThreshold)
           .build());
   DummyRuntime &rt = *runtime;
-  auto &gc = rt.gc;
+  GenGC &gc = rt.getHeap();
 
   std::deque<GCCell *> roots;
 
   // Fill up the heap.
-  unsigned numCells = GC::kYoungGenFractionDenom;
+  unsigned numCells = GenGC::kYoungGenFractionDenom;
   for (unsigned i = 0; i < numCells; ++i) {
     roots.push_back(SegmentCell::create(rt));
     rt.pointerRoots.push_back(&roots.back());
@@ -196,7 +196,7 @@ TEST(GCOOMDeathTest, EffectiveIntegration) {
 /// full collection, due to VA exhaustion.
 TEST(GCOOMTest, VALimitFullGC) {
   const size_t kHeapSizeHint =
-      AlignedHeapSegment::maxSize() * GC::kYoungGenFractionDenom;
+      AlignedHeapSegment::maxSize() * GenGC::kYoungGenFractionDenom;
 
   using FullCell = EmptyCell<AlignedHeapSegment::maxSize()>;
   using HalfCell = EmptyCell<AlignedHeapSegment::maxSize() / 2>;
@@ -210,7 +210,7 @@ TEST(GCOOMTest, VALimitFullGC) {
   auto runtime =
       DummyRuntime::create(getMetadataTable(), config, std::move(provider));
   DummyRuntime &rt = *runtime;
-  auto &gc = rt.gc;
+  GenGC &gc = rt.getHeap();
 
   std::deque<GCCell *> roots;
 

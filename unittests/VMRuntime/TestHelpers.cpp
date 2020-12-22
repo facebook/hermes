@@ -30,12 +30,22 @@ DummyRuntime::DummyRuntime(
     const GCConfig &gcConfig,
     std::shared_ptr<StorageProvider> storageProvider,
     std::shared_ptr<CrashManager> crashMgr)
-    : gc{metaTable,
-         this,
-         this,
-         gcConfig,
-         crashMgr,
-         std::move(storageProvider)} {}
+    : gc_{metaTable,
+          this,
+          this,
+          gcConfig,
+          crashMgr,
+          std::move(storageProvider)} {}
+
+DummyRuntime::~DummyRuntime() {
+#ifndef NDEBUG
+  getHeap().getIDTracker().forEachID(
+      [this](const void *mem, HeapSnapshot::NodeID id) {
+        EXPECT_TRUE(getHeap().validPointer(mem));
+      });
+#endif
+  getHeap().finalizeAll();
+}
 
 std::shared_ptr<DummyRuntime> DummyRuntime::create(
     MetadataTableForTests metaTable,
@@ -54,6 +64,10 @@ std::shared_ptr<DummyRuntime> DummyRuntime::create(
 
 std::unique_ptr<StorageProvider> DummyRuntime::defaultProvider() {
   return StorageProvider::mmapProvider();
+}
+
+void DummyRuntime::collect() {
+  getHeap().collect("test");
 }
 
 void DummyRuntime::markRoots(RootAndSlotAcceptorWithNames &acceptor, bool) {

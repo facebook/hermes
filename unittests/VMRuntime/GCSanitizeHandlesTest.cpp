@@ -49,7 +49,7 @@ struct DummyObject final : public GCCell {
   DummyObject(GC *gc) : GCCell(gc, &vt), pointer() {}
 
   void setPointer(DummyRuntime &rt, DummyObject *obj) {
-    pointer.set(&rt, obj, &rt.gc);
+    pointer.set(&rt, obj, &rt.getHeap());
   }
 
   static DummyObject *create(DummyRuntime &runtime) {

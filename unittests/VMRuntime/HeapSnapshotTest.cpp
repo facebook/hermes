@@ -68,7 +68,7 @@ struct DummyObject final : public GCCell {
   }
 
   void setPointer(DummyRuntime &rt, DummyObject *obj) {
-    other.set(&rt, obj, &rt.gc);
+    other.set(&rt, obj, &rt.getHeap());
   }
 
   static DummyObject *create(DummyRuntime &runtime) {
@@ -468,7 +468,7 @@ TEST(HeapSnapshotTest, HeaderTest) {
           .withMaxHeapSize(1024 * 100)
           .build());
   DummyRuntime &rt = *runtime;
-  auto &gc = rt.gc;
+  auto &gc = rt.getHeap();
 
   JSONObject *root = TAKE_SNAPSHOT(gc, jsonFactory);
   ASSERT_NE(root, nullptr);
@@ -599,7 +599,7 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
           .withMaxHeapSize(1024 * 100)
           .build());
   DummyRuntime &rt = *runtime;
-  auto &gc = rt.gc;
+  auto &gc = rt.getHeap();
   GCScope gcScope(&rt);
 
   auto dummy = rt.makeHandle(DummyObject::create(rt));
@@ -709,7 +709,7 @@ TEST(HeapSnapshotTest, SnapshotFromCallbackContext) {
   GCScope scope{&rt};
   auto dummy = rt.makeHandle(DummyObject::create(rt));
   const auto dummyID = runtime->getHeap().getObjectID(dummy.get());
-  rt.gc.collect("test");
+  rt.collect();
   ASSERT_TRUE(triggeredTripwire);
 
   JSONFactory::Allocator alloc;

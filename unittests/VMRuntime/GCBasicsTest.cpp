@@ -102,7 +102,7 @@ struct GCBasicsTest : public ::testing::Test {
 // Hades doesn't report its stats the same way as other GCs.
 #if !defined(NDEBUG) && !defined(HERMESVM_GC_HADES)
 TEST_F(GCBasicsTest, SmokeTest) {
-  auto &gc = rt.gc;
+  auto &gc = rt.getHeap();
   GCBase::HeapInfo info;
   GCBase::DebugHeapInfo debugInfo;
 
@@ -175,7 +175,7 @@ TEST_F(GCBasicsTest, SmokeTest) {
 }
 
 TEST_F(GCBasicsTest, MovedObjectTest) {
-  auto &gc = rt.gc;
+  auto &gc = rt.getHeap();
   GCBase::HeapInfo info;
   GCBase::DebugHeapInfo debugInfo;
 
@@ -269,7 +269,7 @@ TEST_F(GCBasicsTest, WeakRefSlotTest) {
 }
 
 TEST_F(GCBasicsTest, WeakRefTest) {
-  auto &gc = rt.gc;
+  auto &gc = rt.getHeap();
   GCBase::DebugHeapInfo debugInfo;
 
   gc.getDebugHeapInfo(debugInfo);
@@ -342,7 +342,7 @@ TEST_F(GCBasicsTest, WeakRefYoungGenCollectionTest) {
     Marked,
     Free,
   };
-  auto &gc = rt.gc;
+  GenGC &gc = rt.getHeap();
   GCBase::DebugHeapInfo debugInfo;
 
   gc.getDebugHeapInfo(debugInfo);
@@ -393,7 +393,7 @@ TEST_F(GCBasicsTest, WeakRefYoungGenCollectionTest) {
 }
 
 TEST_F(GCBasicsTest, TestYoungGenStats) {
-  auto &gc = rt.gc;
+  GenGC &gc = rt.getHeap();
 
   GCBase::DebugHeapInfo debugInfo;
 
@@ -436,7 +436,7 @@ TEST_F(GCBasicsTest, TestFixedRuntimeCell) {
 
 /// Test that the extra bytes in the heap are reported correctly.
 TEST_F(GCBasicsTest, ExtraBytes) {
-  auto &gc = rt.gc;
+  auto &gc = rt.getHeap();
 
   {
     GCBase::HeapInfo info;
@@ -507,7 +507,7 @@ TEST(GCCallbackTest, TestCallbackInvoked) {
 #ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
   constexpr size_t kHeapSizeHint =
-      AlignedHeapSegment::maxSize() * GC::kYoungGenFractionDenom;
+      AlignedHeapSegment::maxSize() * GenGC::kYoungGenFractionDenom;
 
   const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSizeHint);
   auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);

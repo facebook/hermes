@@ -261,10 +261,13 @@ class MetadataTableForTests final : public MetadataTable {
 };
 
 /// A Runtime that can take a custom VTableMap and Metadata table.
-struct DummyRuntime final : public HandleRootOwner,
-                            public PointerBase,
-                            private GCBase::GCCallbacks {
-  GC gc;
+class DummyRuntime final : public HandleRootOwner,
+                           public PointerBase,
+                           private GCBase::GCCallbacks {
+ private:
+  GC gc_;
+
+ public:
   std::vector<GCCell **> pointerRoots{};
   std::vector<PinnedHermesValue *> valueRoots{};
   std::vector<WeakRoot<void> *> weakRoots{};
@@ -291,15 +294,7 @@ struct DummyRuntime final : public HandleRootOwner,
   /// function.
   static std::unique_ptr<StorageProvider> defaultProvider();
 
-  ~DummyRuntime() override {
-#ifndef NDEBUG
-    gc.getIDTracker().forEachID(
-        [this](const void *mem, HeapSnapshot::NodeID id) {
-          EXPECT_TRUE(gc.validPointer(mem));
-        });
-#endif
-    gc.finalizeAll();
-  }
+  ~DummyRuntime();
 
   template <
       typename T,
@@ -307,7 +302,7 @@ struct DummyRuntime final : public HandleRootOwner,
       LongLived longLived = LongLived::No,
       class... Args>
   T *makeAFixed(Args &&... args) {
-    return gc.makeA<T, true /* fixedSize */, hasFinalizer, longLived>(
+    return getHeap().makeA<T, true /* fixedSize */, hasFinalizer, longLived>(
         cellSize<T>(), std::forward<Args>(args)...);
   }
 
@@ -317,17 +312,15 @@ struct DummyRuntime final : public HandleRootOwner,
       LongLived longLived = LongLived::No,
       class... Args>
   T *makeAVariable(uint32_t size, Args &&... args) {
-    return gc.makeA<T, false /* fixedSize */, hasFinalizer, longLived>(
+    return getHeap().makeA<T, false /* fixedSize */, hasFinalizer, longLived>(
         size, std::forward<Args>(args)...);
   }
 
   GC &getHeap() {
-    return gc;
+    return gc_;
   }
 
-  void collect() {
-    gc.collect("test");
-  }
+  void collect();
 
   void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool) override;
 

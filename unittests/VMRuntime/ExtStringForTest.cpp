@@ -49,7 +49,7 @@ ExtStringForTest *ExtStringForTest::create(
     unsigned length) {
   auto res = runtime.makeAVariable<ExtStringForTest, HasFinalizer::Yes>(
       sizeof(ExtStringForTest), &runtime.getHeap(), length);
-  runtime.gc.creditExternalMemory(res, length);
+  runtime.getHeap().creditExternalMemory(res, length);
   return res;
 }
 
@@ -61,7 +61,7 @@ ExtStringForTest *ExtStringForTest::createLongLived(
       runtime
           .makeAVariable<ExtStringForTest, HasFinalizer::Yes, LongLived::Yes>(
               sizeof(ExtStringForTest), &runtime.getHeap(), length);
-  runtime.gc.creditExternalMemory(res, length);
+  runtime.getHeap().creditExternalMemory(res, length);
   return res;
 }
 

@@ -29,7 +29,7 @@ const MetadataTableForTests getMetadataTable() {
 TEST(GCObjectIterationTest, ForAllObjsGetsAllObjects) {
   auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfigLarge);
   DummyRuntime &rt = *runtime;
-  auto &gc = rt.gc;
+  auto &gc = rt.getHeap();
 
   // 2/3 the size of a segment.
   constexpr size_t kLargeSize =
