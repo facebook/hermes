@@ -661,12 +661,12 @@ class HadesGC final : public GCBase {
     /// \return true if the compactee has not been assigned.
     bool empty() const {
       void *const invalid = reinterpret_cast<void *>(kInvalidCompacteeStart);
-      return evacStart == invalid && start == invalid && !index;
+      return evacStart == invalid && start == invalid && !segment;
     }
 #endif
 
     /// The following variables track the state of compactions.
-    /// 1. To trigger a compaction, index and start should be set at the
+    /// 1. To trigger a compaction, segment and start should be set at the
     /// beginning of marking. This ensures that all cards containing pointers to
     /// the compactee will be dirtied.
     /// 2. Once marking is done, completeMarking should then set evacStart, so
@@ -689,6 +689,13 @@ class HadesGC final : public GCBase {
 
     /// The segment index that is going to be compacted next.
     llvh::Optional<uint16_t> index;
+
+    /// The segment being compacted.
+    HeapSegment *segment = nullptr;
+
+    /// The number of bytes in the compactee, should be set before the compactee
+    /// is removed from the OG.
+    uint32_t allocatedBytes{0};
   } compactee_;
 
   /// The main entrypoint for all allocations.

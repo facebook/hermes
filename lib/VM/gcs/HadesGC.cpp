@@ -1522,7 +1522,9 @@ void HadesGC::prepareCompactee() {
 
   if (compactee_.index) {
     oldGen_.clearFreelistForSegment(*compactee_.index);
-    compactee_.start = oldGen_[*compactee_.index].lowLim();
+    compactee_.segment = &oldGen_[*compactee_.index];
+    compactee_.start = compactee_.segment->lowLim();
+    compactee_.allocatedBytes = oldGen_.allocatedBytes(*compactee_.index);
   }
 }
 
@@ -2204,7 +2206,7 @@ void HadesGC::youngGenCollection(
   } else {
     auto &yg = youngGen();
 
-    if (compactee_.index) {
+    if (compactee_.segment) {
       EvacAcceptor<true> acceptor{*this};
       youngGenEvacuateImpl(acceptor, doCompaction);
       // The remaining bytes after the collection is just the number of bytes
@@ -2230,7 +2232,7 @@ void HadesGC::youngGenCollection(
       };
       yg.forCompactedObjs(trackerCallback);
       if (doCompaction) {
-        oldGen_[*compactee_.index].forCompactedObjs(trackerCallback);
+        compactee_.segment->forCompactedObjs(trackerCallback);
       }
     }
     // Run finalizers for young gen objects.
@@ -2248,12 +2250,11 @@ void HadesGC::youngGenCollection(
 
     if (doCompaction) {
       ygCollectionStats_->addCollectionType("(compact)");
-      heapBytes.before += oldGen_.allocatedBytes(*compactee_.index);
-      const uint64_t ogExternalBefore = oldGen_.externalBytes();
-      HeapSegment &compactee = oldGen_[*compactee_.index];
-      scannedSize += compactee.size();
+      heapBytes.before += compactee_.allocatedBytes;
+      uint64_t ogExternalBefore = oldGen_.externalBytes();
+      scannedSize += compactee_.segment->size();
       // Run finalisers on compacted objects.
-      compactee.forCompactedObjs([this](GCCell *cell) {
+      compactee_.segment->forCompactedObjs([this](GCCell *cell) {
         cell->getVT()->finalizeIfExists(cell, this);
       });
       const uint64_t externalCompactedBytes =
@@ -2266,6 +2267,7 @@ void HadesGC::youngGenCollection(
       oldGen_.incrementAllocatedBytes(
           -oldGen_.allocatedBytes(*compactee_.index), *compactee_.index);
       oldGen_.resetPeakAllocatedBytes(*compactee_.index);
+      HeapSegment &compactee = *compactee_.segment;
       compactee.setLevel(compactee.end());
       oldGen_.addCellToFreelist(
           compactee.start(), compactee.used(), *compactee_.index);
@@ -2477,7 +2479,8 @@ void HadesGC::scanDirtyCardsForSegment(
 template <typename Acceptor>
 void HadesGC::scanDirtyCards(Acceptor &acceptor) {
   SlotVisitor<Acceptor> visitor{acceptor};
-  const bool preparingCompaction = compactee_.index && !compactee_.evacActive();
+  const bool preparingCompaction =
+      compactee_.segment && !compactee_.evacActive();
   // The acceptors in this loop can grow the old gen by adding another
   // segment, if there's not enough room to evac the YG objects discovered.
   // Since segments are always placed at the end, we can use indices instead
