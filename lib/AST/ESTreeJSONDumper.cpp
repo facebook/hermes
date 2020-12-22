@@ -228,18 +228,23 @@ class ESTreeJSONDumper {
     }
   }
 
-#define DUMP_KEY_VALUE_PAIR(PARENT, KEY, NODE)                 \
-  do {                                                         \
-    if (mode_ == ESTreeDumpMode::HideEmpty && isEmpty(NODE)) { \
-      auto it = ignoredEmptyFields_.find(#PARENT);             \
-      if (it != ignoredEmptyFields_.end()) {                   \
-        if (it->second.count(KEY)) {                           \
-          break;                                               \
-        }                                                      \
-      }                                                        \
-    }                                                          \
-    json_.emitKey(KEY);                                        \
-    dumpNode(NODE);                                            \
+#define DUMP_KEY_VALUE_PAIR(PARENT, KEY, NODE)       \
+  do {                                               \
+    if (isEmpty(NODE)) {                             \
+      if (mode_ == ESTreeDumpMode::Compact) {        \
+        break;                                       \
+      }                                              \
+      if (mode_ == ESTreeDumpMode::HideEmpty) {      \
+        auto it = ignoredEmptyFields_.find(#PARENT); \
+        if (it != ignoredEmptyFields_.end()) {       \
+          if (it->second.count(KEY)) {               \
+            break;                                   \
+          }                                          \
+        }                                            \
+      }                                              \
+    }                                                \
+    json_.emitKey(KEY);                              \
+    dumpNode(NODE);                                  \
   } while (0);
 
 /// Declare helper functions to recursively visit the children of a node.

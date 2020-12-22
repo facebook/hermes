@@ -18,6 +18,8 @@ class JSONEmitter;
 
 /// Specifies which fields should be dumped by ESTreeJSONDumper.
 enum class ESTreeDumpMode {
+  /// Hide every empty field, regardless of how common it is.
+  Compact,
   /// Hide empty fields (empty lists, nullptr, etc) which are rarely populated.
   /// See ignoredEmptyFields_ in the ESTreeJSONDumper class.
   HideEmpty,
