@@ -898,6 +898,24 @@ NodeList &getArguments(CallExpressionLikeNode *node);
 /// initializers.
 bool hasSimpleParams(FunctionLikeNode *node);
 
+/// Allow using \p NodeKind in \p llvh::DenseMaps.
+struct NodeKindInfo : llvh::DenseMapInfo<NodeKind> {
+  static inline NodeKind getEmptyKey() {
+    return (NodeKind)(-1);
+  }
+  static inline NodeKind getTombstoneKey() {
+    return (NodeKind)(-2);
+  }
+  static inline bool isEqual(const NodeKind &a, const NodeKind &b) {
+    return a == b;
+  }
+  static unsigned getHashValue(const NodeKind &Val) {
+    return (unsigned)Val;
+  }
+};
+
+using NodeKindSet = llvh::DenseSet<ESTree::NodeKind, NodeKindInfo>;
+
 } // namespace ESTree
 } // namespace hermes
 

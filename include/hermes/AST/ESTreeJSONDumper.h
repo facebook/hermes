@@ -71,12 +71,16 @@ void dumpESTreeJSON(
 /// Print out the contents of \p rootNode to \p json.
 /// Does not call json.endJSONL(), caller should do that if necessary.
 /// \p locMode how to print the source locations for the AST nodes.
+/// \p includeSourceLocs if non-null, only perform source loc printing on
+///   elements of includeSourceLocs. If null, it is ignored.
 void dumpESTreeJSON(
     JSONEmitter &json,
     ESTree::NodePtr rootNode,
     ESTreeDumpMode mode,
     SourceErrorManager &sm,
-    LocationDumpMode locMode);
+    LocationDumpMode locMode,
+    const ESTree::NodeKindSet *includeSourceLocs,
+    ESTreeRawProp rawProp = ESTreeRawProp::Include);
 
 } // namespace hermes
 
