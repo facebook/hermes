@@ -192,18 +192,24 @@ struct Edge {
   bool isNamed;
   std::string name;
   int index;
-  Node toNode;
+  HeapSnapshot::NodeID toNode;
 
   Edge() = default;
 
-  explicit Edge(HeapSnapshot::EdgeType type, std::string name, Node toNode)
+  explicit Edge(
+      HeapSnapshot::EdgeType type,
+      std::string name,
+      HeapSnapshot::NodeID toNode)
       : type{type},
         isNamed{true},
         name{std::move(name)},
         index{-1},
         toNode{toNode} {}
 
-  explicit Edge(HeapSnapshot::EdgeType type, int index, Node toNode)
+  explicit Edge(
+      HeapSnapshot::EdgeType type,
+      int index,
+      HeapSnapshot::NodeID toNode)
       : type{type}, isNamed{false}, name{}, index{index}, toNode{toNode} {}
 
   static Edge parse(
@@ -217,7 +223,11 @@ struct Edge {
         static_cast<unsigned>(llvh::cast<JSONNumber>(*edges)->getValue()));
     ++edges;
     switch (edge.type) {
+      case HeapSnapshot::EdgeType::Context:
       case HeapSnapshot::EdgeType::Internal:
+      case HeapSnapshot::EdgeType::Property:
+      case HeapSnapshot::EdgeType::Shortcut:
+      case HeapSnapshot::EdgeType::Weak:
         edge.isNamed = true;
         edge.name = llvh::cast<JSONString>(
                         strings[llvh::cast<JSONNumber>(*edges)->getValue()])
@@ -237,7 +247,7 @@ struct Edge {
         toNode % HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT == 0 &&
         "Invalid to node pointer");
     assert(toNode < nodes.size() && "Out-of-bounds node from edge");
-    edge.toNode = Node::parse(nodes.begin() + toNode, strings);
+    edge.toNode = Node::parse(nodes.begin() + toNode, strings).id;
     return edge;
   }
 
@@ -353,7 +363,39 @@ static Node findNodeForID(
   return Node{};
 }
 
+static std::pair<Node, std::vector<Edge>> findNodeAndEdgesForID(
+    HeapSnapshot::NodeID id,
+    const JSONArray &nodes,
+    const JSONArray &edges,
+    const JSONArray &strings,
+    const char *file,
+    int line) {
+  auto nodesIt = nodes.begin();
+  const auto nodesEnd = nodes.end();
+  auto edgesIt = edges.begin();
+  while (nodesIt != nodesEnd) {
+    auto node = Node::parse(nodesIt, strings);
+    const auto nextNodesEdges =
+        edgesIt + (HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT * node.edgeCount);
+    if (id == node.id) {
+      std::vector<Edge> retEdges;
+      for (; edgesIt != nextNodesEdges;
+           edgesIt += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT) {
+        assert(edgesIt != edges.end() && "Edges shouldn't roll off the end");
+        retEdges.emplace_back(Edge::parse(edgesIt, nodes, strings));
+      }
+      return {node, retEdges};
+    }
+    nodesIt += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
+    edgesIt = nextNodesEdges;
+  }
+  ADD_FAILURE_AT(file, line) << "No node found for id " << id;
+  return {Node{}, std::vector<Edge>{}};
+}
+
 #define FIND_NODE_FOR_ID(...) findNodeForID(__VA_ARGS__, __FILE__, __LINE__)
+#define FIND_NODE_AND_EDGES_FOR_ID(...) \
+  findNodeAndEdgesForID(__VA_ARGS__, __FILE__, __LINE__)
 
 static Location findLocationForID(
     HeapSnapshot::NodeID id,
@@ -451,6 +493,9 @@ TEST(HeapSnapshotTest, HeaderTest) {
       *llvh::cast<JSONArray>(meta->at("trace_node_fields"));
   JSONArray &locationFields =
       *llvh::cast<JSONArray>(meta->at("location_fields"));
+  JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
+  JSONArray &edges = *llvh::cast<JSONArray>(root->at("edges"));
+  const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
 
   // Check that node_fields/types are correct.
   EXPECT_TRUE(testListOfStrings(
@@ -506,6 +551,41 @@ TEST(HeapSnapshotTest, HeaderTest) {
       {"id", "function_info_index", "count", "size", "children"}));
   EXPECT_TRUE(testListOfStrings(
       locationFields, {"object_index", "script_id", "line", "column"}));
+
+  // Test the basic root nodes.
+  Node superRoot{
+      HeapSnapshot::NodeType::Synthetic,
+      "",
+      GC::IDTracker::reserved(GC::IDTracker::ReservedObjectID::SuperRoot),
+      0,
+      1};
+  Node gcRoots{
+      HeapSnapshot::NodeType::Synthetic,
+      "(GC roots)",
+      GC::IDTracker::reserved(GC::IDTracker::ReservedObjectID::GCRoots),
+      0,
+      1};
+  Node customRoots{
+      HeapSnapshot::NodeType::Synthetic,
+      "(Custom)",
+      GC::IDTracker::reserved(GC::IDTracker::ReservedObjectID::Custom),
+      0,
+      0};
+  EXPECT_EQ(
+      FIND_NODE_AND_EDGES_FOR_ID(superRoot.id, nodes, edges, strings),
+      std::make_pair(
+          superRoot,
+          std::vector<Edge>{
+              Edge{HeapSnapshot::EdgeType::Element, 1, gcRoots.id}}));
+  EXPECT_EQ(
+      FIND_NODE_AND_EDGES_FOR_ID(gcRoots.id, nodes, edges, strings),
+      std::make_pair(
+          gcRoots,
+          std::vector<Edge>{
+              Edge{HeapSnapshot::EdgeType::Element, 1, customRoots.id}}));
+  EXPECT_EQ(
+      FIND_NODE_AND_EDGES_FOR_ID(customRoots.id, nodes, edges, strings),
+      std::make_pair(customRoots, std::vector<Edge>{}));
 }
 
 TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
@@ -539,19 +619,6 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
   EXPECT_EQ(llvh::cast<JSONArray>(root->at("samples"))->size(), 0);
   EXPECT_EQ(llvh::cast<JSONArray>(root->at("locations"))->size(), 0);
 
-  // Common nodes.
-  Node gcRoots{
-      HeapSnapshot::NodeType::Synthetic,
-      "(GC roots)",
-      GC::IDTracker::reserved(GC::IDTracker::ReservedObjectID::GCRoots),
-      0,
-      1};
-  Node rootSection{
-      HeapSnapshot::NodeType::Synthetic,
-      "(Custom)",
-      GC::IDTracker::reserved(GC::IDTracker::ReservedObjectID::Custom),
-      0,
-      1};
   Node firstDummy{HeapSnapshot::NodeType::Object,
                   cellKindStr(dummy->getKind()),
                   gc.getObjectID(dummy.get()),
@@ -595,83 +662,31 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
 
   // Common edges.
   Edge trueEdge =
-      Edge(HeapSnapshot::EdgeType::Internal, "HermesBool", trueNode);
+      Edge(HeapSnapshot::EdgeType::Internal, "HermesBool", trueNode.id);
   Edge numberEdge =
-      Edge(HeapSnapshot::EdgeType::Internal, "HermesDouble", numberNode);
-  Edge undefinedEdge =
-      Edge(HeapSnapshot::EdgeType::Internal, "HermesUndefined", undefinedNode);
+      Edge(HeapSnapshot::EdgeType::Internal, "HermesDouble", numberNode.id);
+  Edge undefinedEdge = Edge(
+      HeapSnapshot::EdgeType::Internal, "HermesUndefined", undefinedNode.id);
   Edge nullEdge =
-      Edge(HeapSnapshot::EdgeType::Internal, "HermesNull", nullNode);
+      Edge(HeapSnapshot::EdgeType::Internal, "HermesNull", nullNode.id);
 
-  std::set<Node> expectedNodes;
-  std::set<Edge> expectedEdges;
-  std::set<Node> actualNodes;
-  std::set<Edge> actualEdges;
+  // Two dummy objects.
+  EXPECT_EQ(
+      FIND_NODE_AND_EDGES_FOR_ID(firstDummy.id, nodes, edges, strings),
+      std::make_pair(
+          firstDummy,
+          std::vector<Edge>{
+              Edge{HeapSnapshot::EdgeType::Internal, "other", secondDummy.id},
+              trueEdge,
+              numberEdge,
+              undefinedEdge,
+              nullEdge}));
 
-  // First node is the roots object.
-  expectedNodes.emplace(
-      HeapSnapshot::NodeType::Synthetic,
-      "",
-      GC::IDTracker::reserved(GC::IDTracker::ReservedObjectID::SuperRoot),
-      0,
-      1);
-  expectedNodes.emplace(gcRoots);
-  // Next node is the custom root section.
-  expectedNodes.emplace(rootSection);
-  // Next node is the first dummy object.
-  expectedNodes.emplace(firstDummy);
-  // Next node is the second dummy, which is only reachable via the first
-  // dummy.
-  expectedNodes.emplace(secondDummy);
-  // Next node is the undefined singleton.
-  expectedNodes.emplace(undefinedNode);
-  // Next node is the null singleton.
-  expectedNodes.emplace(nullNode);
-  // Next node is the true singleton.
-  expectedNodes.emplace(trueNode);
-  // Next node is the false singleton.
-  expectedNodes.emplace(falseNode);
-  // Next node is the first number.
-  expectedNodes.emplace(numberNode);
-
-  // Pointer from super root to gc roots.
-  expectedEdges.emplace(HeapSnapshot::EdgeType::Element, 1, gcRoots);
-  // Pointer from root to root section.
-  expectedEdges.emplace(HeapSnapshot::EdgeType::Element, 1, rootSection);
-  // Pointer from root section to first dummy.
-  expectedEdges.emplace(HeapSnapshot::EdgeType::Element, 0, firstDummy);
-  // Pointer from first dummy to second dummy.
-  expectedEdges.emplace(HeapSnapshot::EdgeType::Internal, "other", secondDummy);
-  // Pointer from first dummy to its bool field.
-  expectedEdges.emplace(trueEdge);
-  // Pointer from first dummy to its number field.
-  expectedEdges.emplace(numberEdge);
-  // Pointer from first dummy to its undefined field.
-  expectedEdges.emplace(undefinedEdge);
-  // Pointer from first dummy to its null field.
-  expectedEdges.emplace(nullEdge);
-  // Pointer from second dummy to its bool field.
-  expectedEdges.emplace(trueEdge);
-  // Pointer from second dummy to its number field.
-  expectedEdges.emplace(numberEdge);
-  // Pointer from second dummy to its undefined field.
-  expectedEdges.emplace(undefinedEdge);
-  // Pointer from second dummy to its null field.
-  expectedEdges.emplace(nullEdge);
-
-  for (auto nextNode = nodes.begin(); nextNode != nodes.end();
-       nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT) {
-    actualNodes.emplace(Node::parse(nextNode, strings));
-  }
-  for (auto nextEdge = edges.begin(); nextEdge != edges.end();
-       nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT) {
-    actualEdges.emplace(Edge::parse(nextEdge, nodes, strings));
-  }
-
-  EXPECT_EQ(expectedNodes, actualNodes);
-  EXPECT_EQ(expectedEdges, actualEdges);
-
-  // String table is checked by the nodes and edges checks.
+  EXPECT_EQ(
+      FIND_NODE_AND_EDGES_FOR_ID(secondDummy.id, nodes, edges, strings),
+      std::make_pair(
+          secondDummy,
+          std::vector<Edge>{trueEdge, numberEdge, undefinedEdge, nullEdge}));
 }
 
 TEST(HeapSnapshotTest, SnapshotFromCallbackContext) {
