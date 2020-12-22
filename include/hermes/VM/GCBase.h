@@ -580,14 +580,12 @@ class GCBase {
     inline bool isEnabled() const;
     /// Must be called by GC implementations whenever a new allocation is made.
     void newAlloc(const void *ptr, uint32_t sz);
-    /// Must be called by GC implementations whenever an allocation is moved.
-    void moveAlloc(const void *oldPtr, const void *newPtr);
     /// Must be called by GC implementations whenever an allocation is freed.
     void freeAlloc(const void *ptr, uint32_t sz);
     /// Returns data needed to reconstruct the JS stack used to create the
     /// specified allocation.
     inline StackTracesTreeNode *getStackTracesTreeNodeForAlloc(
-        const void *ptr) const;
+        HeapSnapshot::NodeID id) const;
 
     /// A Fragment is a time bound for when objects are allocated. Any
     /// allocations that occur before the lastSeenObjectID_ are in this
@@ -639,7 +637,7 @@ class GCBase {
     Mutex mtx_;
     /// Associates allocations at their current location with their stack trace
     /// data.
-    llvh::DenseMap<const void *, StackTracesTreeNode *> stackMap_;
+    llvh::DenseMap<HeapSnapshot::NodeID, StackTracesTreeNode *> stackMap_;
     /// We need access to the GCBase to collect the current stack when nodes are
     /// allocated.
     GCBase *gc_;
@@ -1755,8 +1753,8 @@ inline bool GCBase::AllocationLocationTracker::isEnabled() const {
 
 inline StackTracesTreeNode *
 GCBase::AllocationLocationTracker::getStackTracesTreeNodeForAlloc(
-    const void *ptr) const {
-  auto mapIt = stackMap_.find(ptr);
+    HeapSnapshot::NodeID id) const {
+  auto mapIt = stackMap_.find(id);
   return mapIt == stackMap_.end() ? nullptr : mapIt->second;
 }
 

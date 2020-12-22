@@ -604,9 +604,6 @@ void YoungGen::updateTrackers() {
     GCCell *cell = reinterpret_cast<GCCell *>(ptr);
     if (cell->hasMarkedForwardingPointer()) {
       auto *fptr = cell->getMarkedForwardingPointer();
-      if (allocationLocationTracker) {
-        gc_->getAllocationLocationTracker().moveAlloc(cell, fptr);
-      }
       if (idTracker) {
         gc_->getIDTracker().moveObject(cell, fptr);
       }

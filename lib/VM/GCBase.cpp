@@ -528,7 +528,8 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
     // Allow nodes to add custom edges not represented by metadata.
     cell->getVT()->snapshotMetaData.addEdges(cell, gc, snap);
     auto stackTracesTreeNode =
-        allocationLocationTracker.getStackTracesTreeNodeForAlloc(cell);
+        allocationLocationTracker.getStackTracesTreeNodeForAlloc(
+            gc->getObjectID(cell));
     snap.endNode(
         cell->getVT()->snapshotMetaData.nodeType(),
         cell->getVT()->snapshotMetaData.nameForNode(cell, gc),
@@ -1028,69 +1029,47 @@ void GCBase::AllocationLocationTracker::newAlloc(const void *ptr, uint32_t sz) {
   // Note it's not very slow, it's slower than the non-virtual version
   // in Runtime though.
   const auto *ip = gc_->gcCallbacks_->getCurrentIPSlow();
-  if (enabled_) {
-    // This is stateful and causes the object to have an ID assigned.
-    const auto id = gc_->getIDTracker().getObjectID(ptr);
-    HERMES_SLOW_ASSERT(
-        &findFragmentForID(id) == &fragments_.back() &&
-        "Should only ever be allocating into the newest fragment");
-    (void)id;
-    Fragment &lastFrag = fragments_.back();
-    HERMES_SLOW_ASSERT(
-        lastFrag.lastSeenObjectID_ == IDTracker::kInvalidNode &&
-        "Last fragment should not have an ID assigned yet");
-    lastFrag.numObjects_++;
-    lastFrag.numBytes_ += sz;
-    lastFrag.touchedSinceLastFlush_ = true;
-    if (lastFrag.numBytes_ >= kFlushThreshold) {
-      flushCallback();
-    }
-    if (auto node = gc_->gcCallbacks_->getCurrentStackTracesTreeNode(ip)) {
-      // Hold a lock while modifying stackMap_.
-      std::lock_guard<Mutex> lk{mtx_};
-      auto itAndDidInsert = stackMap_.try_emplace(ptr, node);
-      assert(itAndDidInsert.second && "Failed to create a new node");
-      (void)itAndDidInsert;
-    }
-  }
-}
-
-void GCBase::AllocationLocationTracker::moveAlloc(
-    const void *oldPtr,
-    const void *newPtr) {
-  if (oldPtr == newPtr) {
-    // This can happen in old generations when compacting to the same location.
+  if (!enabled_) {
     return;
   }
-  // Hold a lock in case concurrent Hades tries to free an alloc at the same
-  // time.
-  std::lock_guard<Mutex> lk{mtx_};
-  auto oldIt = stackMap_.find(oldPtr);
-  if (oldIt == stackMap_.end()) {
-    // This can happen if the tracker is turned on between collections, and
-    // something is being moved that didn't have a stack entry.
-    return;
-  }
-  const auto oldStackTracesTreeNode = oldIt->second;
+  // This is stateful and causes the object to have an ID assigned.
+  const auto id = gc_->getIDTracker().getObjectID(ptr);
+  HERMES_SLOW_ASSERT(
+      &findFragmentForID(id) == &fragments_.back() &&
+      "Should only ever be allocating into the newest fragment");
+  Fragment &lastFrag = fragments_.back();
   assert(
-      stackMap_.count(newPtr) == 0 &&
-      "Moving to a location that is already tracked");
-  stackMap_.erase(oldIt);
-  stackMap_[newPtr] = oldStackTracesTreeNode;
+      lastFrag.lastSeenObjectID_ == IDTracker::kInvalidNode &&
+      "Last fragment should not have an ID assigned yet");
+  lastFrag.numObjects_++;
+  lastFrag.numBytes_ += sz;
+  lastFrag.touchedSinceLastFlush_ = true;
+  if (lastFrag.numBytes_ >= kFlushThreshold) {
+    flushCallback();
+  }
+  if (auto node = gc_->gcCallbacks_->getCurrentStackTracesTreeNode(ip)) {
+    // Hold a lock while modifying stackMap_.
+    std::lock_guard<Mutex> lk{mtx_};
+    auto itAndDidInsert = stackMap_.try_emplace(id, node);
+    assert(itAndDidInsert.second && "Failed to create a new node");
+    (void)itAndDidInsert;
+  }
 }
 
 void GCBase::AllocationLocationTracker::freeAlloc(
     const void *ptr,
     uint32_t sz) {
-  // Hold a lock during freeAlloc because concurrent Hades might be creating an
-  // alloc (newAlloc) at the same time.
-  std::lock_guard<Mutex> lk{mtx_};
-  stackMap_.erase(ptr);
   if (!enabled_) {
     // Fragments won't exist if the heap profiler isn't enabled.
     return;
   }
+  // Hold a lock during freeAlloc because concurrent Hades might be creating an
+  // alloc (newAlloc) at the same time.
+  std::lock_guard<Mutex> lk{mtx_};
+  // The ID must exist here since the memory profiler guarantees everything has
+  // an ID (it does a heap pass at the beginning to assign them all).
   const auto id = gc_->getIDTracker().getObjectIDMustExist(ptr);
+  stackMap_.erase(id);
   Fragment &frag = findFragmentForID(id);
   assert(
       frag.numObjects_ >= 1 && "Num objects decremented too much for fragment");

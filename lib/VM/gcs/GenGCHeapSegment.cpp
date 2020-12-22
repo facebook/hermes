@@ -117,14 +117,12 @@ void GenGCHeapSegment::deleteDeadObjectIDs(GC *gc) {
 void GenGCHeapSegment::updateObjectIDs(
     GC *gc,
     SweepResult::VTablesRemaining &vTables) {
-  GCBase::IDTracker &idTracker = gc->getIDTracker();
-  GCBase::AllocationLocationTracker &allocationLocationTracker =
-      gc->getAllocationLocationTracker();
   if (!gc->isTrackingIDs()) {
     // If ID tracking isn't on, there's nothing to do here.
     return;
   }
 
+  GCBase::IDTracker &idTracker = gc->getIDTracker();
   SweepResult::VTablesRemaining vTablesCopy{vTables};
   MarkBitArrayNC &markBits = markBitArray();
   char *ptr = start();
@@ -133,7 +131,6 @@ void GenGCHeapSegment::updateObjectIDs(
     if (markBits.at(ind)) {
       auto *cell = reinterpret_cast<GCCell *>(ptr);
       idTracker.moveObject(cell, cell->getForwardingPointer());
-      allocationLocationTracker.moveAlloc(cell, cell->getForwardingPointer());
       const VTable *vtp = vTablesCopy.next();
       auto cellSize = cell->getAllocatedSize(vtp);
       ptr += cellSize;
