@@ -860,7 +860,12 @@ class HadesGC final : public GCBase {
   const HeapSegment &youngGen() const;
 
   /// Create a new segment (to be used by either YG or OG).
-  std::unique_ptr<HeapSegment> createSegment(bool isYoungGen);
+  std::unique_ptr<HeapSegment> createSegment();
+
+  /// Set a given segment as the YG segment.
+  /// \return the previous YG segment.
+  std::unique_ptr<HadesGC::HeapSegment> setYoungGen(
+      std::unique_ptr<HeapSegment> seg);
 
   /// Searches the old gen for this pointer. This is O(number of OG segments).
   /// NOTE: In any non-debug case, \c inYoungGen should be used instead, because

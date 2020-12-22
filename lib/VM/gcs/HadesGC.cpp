@@ -1146,10 +1146,10 @@ HadesGC::HadesGC(
   crashMgr_->setCustomData("HermesGC", kGCName);
   // createSegment relies on member variables and should not be called until
   // they are initialised.
-  if (!(youngGen_ = createSegment(/*isYoungGen*/ true))) {
+  if (auto newYoungGen = createSegment())
+    setYoungGen(std::move(newYoungGen));
+  else
     hermes_fatal("Failed to initialize the young gen");
-  }
-  ygStart_ = youngGen_->lowLim();
   const size_t minHeapSegments =
       // Align up first to round up.
       llvh::alignTo<AlignedStorage::size()>(gcConfig.getMinHeapSize()) /
@@ -2013,8 +2013,7 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
   // Before waiting for a collection to finish, check if we're below the max
   // heap size and can simply allocate another segment. This will prevent
   // blocking the YG unnecessarily.
-  if (std::unique_ptr<HeapSegment> seg =
-          gc_->createSegment(/*isYoungGen*/ false)) {
+  if (std::unique_ptr<HeapSegment> seg = gc_->createSegment()) {
     // Complete this allocation using a bump alloc.
     AllocResult res = seg->bumpAlloc(sz);
     assert(
@@ -2363,7 +2362,7 @@ bool HadesGC::promoteYoungGenToOldGen() {
   // TODO: Add more stringent criteria for turning off this flag, for instance,
   // once the heap reaches a certain size. That would avoid growing the heap to
   // the maximum possible size before stopping promotions.
-  auto newYoungGen = createSegment(/*isYoungGen*/ true);
+  auto newYoungGen = createSegment();
   if (!newYoungGen) {
     promoteYGToOG_ = false;
     return false;
@@ -2384,13 +2383,18 @@ bool HadesGC::promoteYoungGenToOldGen() {
   // segments. The addresses have to stay the same or else it would
   // require a marking pass through all objects.
   // This will also rename the segment in the crash data.
-  oldGen_.addSegment(std::move(youngGen_));
-  // Replace YG with a new segment.
-  youngGen_ = std::move(newYoungGen);
-  ygStart_ = youngGen_->lowLim();
-  // These objects will be finalized by an OG collection.
-  youngGenFinalizables_.clear();
+  oldGen_.addSegment(setYoungGen(std::move(newYoungGen)));
+
   return true;
+}
+
+std::unique_ptr<HadesGC::HeapSegment> HadesGC::setYoungGen(
+    std::unique_ptr<HeapSegment> seg) {
+  addSegmentExtentToCrashManager(*seg, "YG");
+  ygStart_ = seg->lowLim();
+  youngGenFinalizables_.clear();
+  std::swap(youngGen_, seg);
+  return seg;
 }
 
 void HadesGC::checkTripwireAndResetStats() {
@@ -2752,7 +2756,7 @@ HadesGC::HeapSegment &HadesGC::OldGen::operator[](size_t i) {
   return *segments_[i];
 }
 
-std::unique_ptr<HadesGC::HeapSegment> HadesGC::createSegment(bool isYoungGen) {
+std::unique_ptr<HadesGC::HeapSegment> HadesGC::createSegment() {
   // No heap size limit when Handle-SAN is on, to allow the heap enough room to
   // keep moving things around.
 #ifndef HERMESVM_SANITIZE_HANDLES
@@ -2760,8 +2764,7 @@ std::unique_ptr<HadesGC::HeapSegment> HadesGC::createSegment(bool isYoungGen) {
     return nullptr;
   }
 #endif
-  auto res = AlignedStorage::create(
-      provider_.get(), isYoungGen ? "young-gen" : "old-gen");
+  auto res = AlignedStorage::create(provider_.get(), "hades-segment");
   if (!res) {
     return nullptr;
   }
@@ -2777,9 +2780,6 @@ std::unique_ptr<HadesGC::HeapSegment> HadesGC::createSegment(bool isYoungGen) {
   pointerBase_->setSegment(basedPtrIdx, seg->lowLim());
 #endif
   seg->markBitArray().markAll();
-  if (isYoungGen) {
-    addSegmentExtentToCrashManager(*seg, "YG");
-  }
   return seg;
 }
 
