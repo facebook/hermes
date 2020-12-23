@@ -199,9 +199,9 @@ TEST(CrashManagerTest, HeapExtentsCorrect) {
       MatchesRegex(eightExtents + "$"));
 #elif defined(HERMESVM_GC_HADES)
   const auto &contextualCustomData = testCrashMgr->contextualCustomData();
-  EXPECT_EQ(25, contextualCustomData.size());
+  EXPECT_EQ(26, contextualCustomData.size());
   const std::string expectedKeyBase = "XYZ:HeapSegment:";
-  for (int i = 0; i < 25; i++) {
+  for (int i = 0; i < 26; i++) {
     const std::string expectedKey =
         expectedKeyBase + (i == 0 ? std::string("YG") : oscompat::to_string(i));
     std::string actual = contextualCustomData.at(expectedKey);
@@ -244,7 +244,7 @@ TEST(CrashManagerTest, PromotedYGHasCorrectName) {
   }
 
   const auto &contextualCustomData = testCrashMgr->contextualCustomData();
-  EXPECT_EQ(3, contextualCustomData.size());
+  EXPECT_EQ(4, contextualCustomData.size());
   // Make sure the value for YG is the actual YG segment.
   const std::string ygAddress = contextualCustomData.at("XYZ:HeapSegment:YG");
   void *ptr = nullptr;
@@ -252,17 +252,10 @@ TEST(CrashManagerTest, PromotedYGHasCorrectName) {
   EXPECT_EQ(numArgsWritten, 1);
   EXPECT_TRUE(rt.getHeap().inYoungGen(ptr));
 
-  // Test if the other segments are numbered correctly.
+  // Test if all the segments are numbered correctly.
   EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:1"), 1);
-
-  // If Handle-SAN is on, the other segment may be getting compacted.
-#ifdef HERMESVM_SANITIZE_HANDLES
-  EXPECT_TRUE(
-      contextualCustomData.count("XYZ:HeapSegment:COMPACT") == 1 ||
-      contextualCustomData.count("XYZ:HeapSegment:2") == 1);
-#else
   EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:2"), 1);
-#endif
+  EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:3"), 1);
 }
 #endif
 

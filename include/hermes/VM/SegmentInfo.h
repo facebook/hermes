@@ -27,8 +27,6 @@ namespace vm {
 /// contain segment-specific information. See AlignedHeapSegment for details on
 /// how it is stored.
 struct SegmentInfo {
-#ifdef HERMESVM_COMPRESSED_POINTERS
-
   /// Returns the index of the segment containing \p lowLim, which is required
   /// to be the start of its containing segment.  (This can allow extra
   /// efficiency, in cases where the segment start has already been computed.)
@@ -64,7 +62,6 @@ struct SegmentInfo {
   }
 
   unsigned index;
-#endif
 };
 
 } // namespace vm

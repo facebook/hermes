@@ -89,10 +89,8 @@ class PointerBase {
   /// \pre ptr is not null.
   inline void *basedToPointerNonNull(BasedPointer ptr) const;
 
-#ifdef HERMESVM_COMPRESSED_POINTERS
   /// Record \p segStart as the start address for the given segment index.
   inline void setSegment(unsigned idx, void *segStart);
-#endif
 
   static constexpr unsigned kNullPtrSegmentIndex = 0;
   static constexpr unsigned kYGSegmentIndex = 1;
@@ -244,6 +242,11 @@ inline void *PointerBase::basedToPointer(BasedPointer ptr) const {
 
 inline BasedPointer PointerBase::pointerToBased(const void *ptr) const {
   return BasedPointer{ptr};
+}
+
+inline void PointerBase::setSegment(unsigned idx, void *segStart) {
+  assert(segStart == AlignedStorage::start(segStart) && "Precondition");
+  SegmentInfo::setSegmentIndexFromStart(segStart, idx);
 }
 #endif
 

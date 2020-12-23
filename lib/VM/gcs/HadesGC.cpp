@@ -2279,12 +2279,12 @@ void HadesGC::youngGenCollection(
       externalBytes.before += externalCompactedBytes;
       externalBytes.after += externalCompactedBytes;
 
-#ifdef HERMESVM_COMPRESSED_POINTERS
-      compressedPtrIndices_.push_back(
-          SegmentInfo::segmentIndexFromStart(compactee_.segment->lowLim()));
-#endif
-
+      const size_t segIdx =
+          SegmentInfo::segmentIndexFromStart(compactee_.segment->lowLim());
+      segmentIndices_.push_back(segIdx);
+      removeSegmentExtentFromCrashManager(oscompat::to_string(segIdx));
       removeSegmentExtentFromCrashManager(kCompacteeNameForCrashMgr);
+
       compactee_ = {};
     }
 
@@ -2769,16 +2769,17 @@ std::unique_ptr<HadesGC::HeapSegment> HadesGC::createSegment() {
     return nullptr;
   }
   std::unique_ptr<HeapSegment> seg(new HeapSegment{std::move(res.get())});
-#ifdef HERMESVM_COMPRESSED_POINTERS
-  size_t basedPtrIdx;
-  if (compressedPtrIndices_.size()) {
-    basedPtrIdx = compressedPtrIndices_.back();
-    compressedPtrIndices_.pop_back();
+  // Even if compressed pointers are off, we still use the segment index for
+  // crash manager indices.
+  size_t segIdx;
+  if (segmentIndices_.size()) {
+    segIdx = segmentIndices_.back();
+    segmentIndices_.pop_back();
   } else {
-    basedPtrIdx = ++numSegments_;
+    segIdx = ++numSegments_;
   }
-  pointerBase_->setSegment(basedPtrIdx, seg->lowLim());
-#endif
+  pointerBase_->setSegment(segIdx, seg->lowLim());
+  addSegmentExtentToCrashManager(*seg, std::to_string(segIdx));
   seg->markBitArray().markAll();
   return seg;
 }
@@ -2814,13 +2815,7 @@ std::unique_ptr<HadesGC::HeapSegment> HadesGC::OldGen::removeSegment(
   allocatedBytes_ -= segmentAllocatedBytes_[segmentIdx].first;
   segmentAllocatedBytes_.erase(segmentAllocatedBytes_.begin() + segmentIdx);
   auto oldSeg = std::move(segments_[segmentIdx]);
-  gc_->removeSegmentExtentFromCrashManager(
-      oscompat::to_string(segments_.size()));
   segments_.erase(segments_.begin() + segmentIdx);
-  for (size_t i = segmentIdx; i < segments_.size(); i++) {
-    gc_->addSegmentExtentToCrashManager(
-        *segments_[i], oscompat::to_string(i + 1));
-  }
   return oldSeg;
 }
 

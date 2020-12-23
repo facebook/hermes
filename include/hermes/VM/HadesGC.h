@@ -534,15 +534,13 @@ class HadesGC final : public GCBase {
   /// been filled up, OOM will occur.
   const uint64_t maxHeapSize_;
 
-#ifdef HERMESVM_COMPRESSED_POINTERS
   /// This needs to be placed before youngGen_ and oldGen_, because those
   /// members use numSegments_ as part of being constructed.
   uint64_t numSegments_{0};
 
-  /// Stores previously allocated compressed pointer indices that have since
+  /// Stores previously allocated segment indices that have since
   /// been freed. We can reuse them when another segment is allocated.
-  std::vector<size_t> compressedPtrIndices_;
-#endif
+  std::vector<size_t> segmentIndices_;
 
   /// Keeps the storage provider alive until after the GC is fully destructed.
   std::shared_ptr<StorageProvider> provider_;
