@@ -84,6 +84,8 @@ class HadesGC final : public GCBase {
   void getHeapInfoWithMallocSize(HeapInfo &info) override;
   void getCrashManagerHeapInfo(CrashManager::HeapInformation &info) override;
   void createSnapshot(llvh::raw_ostream &os) override;
+  void snapshotAddGCNativeNodes(HeapSnapshot &snap) override;
+  void snapshotAddGCNativeEdges(HeapSnapshot &snap) override;
   void enableHeapProfiler(
       std::function<void(
           uint64_t,
@@ -415,6 +417,9 @@ class HadesGC final : public GCBase {
     /// collections it will take to complete an incremental OG collection.
     size_t sweepSegmentsRemaining() const;
 
+    /// \return The number of bytes of native memory in use by this OldGen.
+    size_t getMemorySize() const;
+
    private:
     /// \return the index of the bucket in freelistBuckets_ corresponding to
     /// \p size.
@@ -699,6 +704,11 @@ class HadesGC final : public GCBase {
   /// progress, this shared_ptr will keep the compactee segment alive until the
   /// end of sweeping.
   std::shared_ptr<HeapSegment> compacteeHandleForSweep_;
+
+  struct NativeIDs {
+    HeapSnapshot::NodeID ygFinalizables{IDTracker::kInvalidNode};
+    HeapSnapshot::NodeID og{IDTracker::kInvalidNode};
+  } nativeIDs_;
 
   /// The main entrypoint for all allocations.
   /// \param sz The size of allocation requested. This might be rounded up to

@@ -464,9 +464,11 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
           IDTracker::reserved(IDTracker::ReservedObjectID::SuperRoot),
           0,
           0);
+      snapshotAddGCNativeNodes(snap);
       snap.beginNode();
       gc->markRoots(rootSectionAcceptor, true);
       gc->markWeakRoots(rootSectionAcceptor);
+      snapshotAddGCNativeEdges(snap);
       snap.endNode(
           HeapSnapshot::NodeType::Synthetic,
           "(GC roots)",
@@ -563,6 +565,23 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
     cell->getVT()->snapshotMetaData.addLocations(cell, gc, snap);
   });
   snap.endSection(HeapSnapshot::Section::Locations);
+}
+
+void GCBase::snapshotAddGCNativeNodes(HeapSnapshot &snap) {
+  snap.beginNode();
+  snap.endNode(
+      HeapSnapshot::NodeType::Native,
+      "std::deque<WeakRefSlot>",
+      IDTracker::reserved(IDTracker::ReservedObjectID::WeakRefSlotStorage),
+      weakSlots_.size() * sizeof(decltype(weakSlots_)::value_type),
+      0);
+}
+
+void GCBase::snapshotAddGCNativeEdges(HeapSnapshot &snap) {
+  snap.addNamedEdge(
+      HeapSnapshot::EdgeType::Internal,
+      "weakRefSlots",
+      IDTracker::reserved(IDTracker::ReservedObjectID::WeakRefSlotStorage));
 }
 
 void GCBase::enableHeapProfiler(

@@ -680,6 +680,7 @@ class GCBase {
       IdentifierTableMarkedSymbols,
       JSIHermesValueList,
       JSIWeakHermesValueList,
+      WeakRefSlotStorage,
       Undefined,
       Null,
       True,
@@ -794,6 +795,8 @@ class GCBase {
 #endif
 
     /// Get the next unique native ID for a chunk of native memory.
+    /// NOTE: public to get assigned native ids without needing to reserve in
+    /// advance.
     inline HeapSnapshot::NodeID nextNativeID();
 
    private:
@@ -987,6 +990,12 @@ class GCBase {
   /// objects exist, their sizes, and what they point to.
   virtual void createSnapshot(llvh::raw_ostream &os) = 0;
   void createSnapshot(GC *gc, llvh::raw_ostream &os);
+
+  /// Subclasses can override and add more specific native memory usage.
+  virtual void snapshotAddGCNativeNodes(HeapSnapshot &snap);
+
+  /// Subclasses can override and add more specific edges.
+  virtual void snapshotAddGCNativeEdges(HeapSnapshot &snap);
 
   /// Turn on the heap profiler, which will track when allocations are made and
   /// the stack trace of when they were created.

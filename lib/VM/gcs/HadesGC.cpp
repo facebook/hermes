@@ -1113,6 +1113,18 @@ size_t HadesGC::OldGen::sweepSegmentsRemaining() const {
   return sweepIterator_.segNumber;
 }
 
+size_t HadesGC::OldGen::getMemorySize() const {
+  size_t memorySize = segments_.capacity() * sizeof(HeapSegment);
+  memorySize +=
+      segmentAllocatedBytes_.capacity() * sizeof(std::pair<uint32_t, uint32_t>);
+  memorySize += freelistSegmentsBuckets_.capacity() *
+      sizeof(std::array<FreelistCell *, kNumFreelistBuckets>);
+  memorySize +=
+      sizeof(std::array<llvh::SparseBitVector<>, kNumFreelistBuckets>);
+  // SparseBitVector doesn't have a getMemorySize function defined.
+  return memorySize;
+}
+
 // Assume about 30% of the YG will survive initially.
 constexpr double kYGInitialSurvivalRatio = 0.3;
 
@@ -1223,6 +1235,43 @@ void HadesGC::createSnapshot(llvh::raw_ostream &os) {
     WeakRefLock lk{weakRefMutex()};
     GCBase::createSnapshot(this, os);
   }
+}
+
+void HadesGC::snapshotAddGCNativeNodes(HeapSnapshot &snap) {
+  GCBase::snapshotAddGCNativeNodes(snap);
+  if (nativeIDs_.ygFinalizables == IDTracker::kInvalidNode) {
+    nativeIDs_.ygFinalizables = getIDTracker().nextNativeID();
+  }
+  if (nativeIDs_.og == IDTracker::kInvalidNode) {
+    nativeIDs_.og = getIDTracker().nextNativeID();
+  }
+  snap.beginNode();
+  snap.endNode(
+      HeapSnapshot::NodeType::Native,
+      "std::vector<GCCell *>",
+      nativeIDs_.ygFinalizables,
+      youngGenFinalizables_.capacity() * sizeof(GCCell *),
+      0);
+  snap.beginNode();
+  snap.endNode(
+      HeapSnapshot::NodeType::Native,
+      "OldGen",
+      nativeIDs_.og,
+      sizeof(oldGen_) + oldGen_.getMemorySize(),
+      0);
+}
+
+void HadesGC::snapshotAddGCNativeEdges(HeapSnapshot &snap) {
+  GCBase::snapshotAddGCNativeEdges(snap);
+  // All native ids should be lazily initialized in snapshotAddGCNativeNodes,
+  // because that is called first.
+  assert(nativeIDs_.ygFinalizables != IDTracker::kInvalidNode);
+  assert(nativeIDs_.og != IDTracker::kInvalidNode);
+  snap.addNamedEdge(
+      HeapSnapshot::EdgeType::Internal,
+      "youngGenFinalizables",
+      nativeIDs_.ygFinalizables);
+  snap.addNamedEdge(HeapSnapshot::EdgeType::Internal, "oldGen", nativeIDs_.og);
 }
 
 void HadesGC::enableHeapProfiler(

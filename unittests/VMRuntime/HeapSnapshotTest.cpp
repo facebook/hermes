@@ -578,12 +578,12 @@ TEST(HeapSnapshotTest, HeaderTest) {
           superRoot,
           std::vector<Edge>{
               Edge{HeapSnapshot::EdgeType::Element, 1, gcRoots.id}}));
-  EXPECT_EQ(
-      FIND_NODE_AND_EDGES_FOR_ID(gcRoots.id, nodes, edges, strings),
-      std::make_pair(
-          gcRoots,
-          std::vector<Edge>{
-              Edge{HeapSnapshot::EdgeType::Element, 1, customRoots.id}}));
+  // Don't test edges here because they contain GC-specific nodes.
+  auto actualGCRootsNode = FIND_NODE_FOR_ID(gcRoots.id, nodes, strings);
+  // Since each individual GC can choose what edges
+  // exist, don't test the edge count.
+  gcRoots.edgeCount = actualGCRootsNode.edgeCount;
+  EXPECT_EQ(actualGCRootsNode, gcRoots);
   EXPECT_EQ(
       FIND_NODE_AND_EDGES_FOR_ID(customRoots.id, nodes, edges, strings),
       std::make_pair(customRoots, std::vector<Edge>{}));
