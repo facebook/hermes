@@ -350,18 +350,13 @@ Runtime::~Runtime() {
     samplingProfiler_->unregisterRuntime(this);
   }
   getHeap().finalizeAll();
-#ifndef NDEBUG
   // Now that all objects are finalized, there shouldn't be any native memory
   // keys left in the ID tracker for memory profiling. Assert that the only IDs
   // left are JS heap pointers.
-  getHeap().getIDTracker().forEachID([this](
-                                         const void *mem,
-                                         HeapSnapshot::NodeID id) {
-    assert(
-        getHeap().validPointer(mem) &&
-        "A pointer is left in the ID tracker that is from non-JS memory. Was untrackNative called?");
-  });
-#endif
+  assert(
+      !heap_.getIDTracker().hasNativeIDs() &&
+      "A pointer is left in the ID tracker that is from non-JS memory. "
+      "Was untrackNative called?");
   crashMgr_->unregisterCallback(crashCallbackKey_);
   if (registerStackBytesToUnmap_ > 0) {
     crashMgr_->unregisterMemory(registerStack_);

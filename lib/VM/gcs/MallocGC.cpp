@@ -94,7 +94,7 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
       }
       gc.newPointers_.insert(newLocation);
       if (gc.isTrackingIDs()) {
-        gc.idTracker_.moveObject(cell, newLocation->data());
+        gc.moveObject(cell, newLocation->data());
       }
       cell = newLocation->data();
     }
@@ -311,7 +311,7 @@ void MallocGC::collect(std::string cause) {
         // Pointers that aren't marked now weren't moved, and are dead instead.
         if (isTrackingIDs()) {
           allocationLocationTracker_.freeAlloc(cell, freedSize);
-          idTracker_.untrackObject(cell);
+          untrackObject(cell);
         }
       }
 #ifndef NDEBUG

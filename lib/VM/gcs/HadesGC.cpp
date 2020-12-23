@@ -444,7 +444,7 @@ class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor,
     // Set the forwarding pointer in the old spot
     copyCell->setMarkedForwardingPointer(newCell);
     if (isTrackingIDs_) {
-      gc.getIDTracker().moveObject(cell, newCell);
+      gc.moveObject(cell, newCell);
     }
     // Push onto the copied list.
     push(copyCell);
@@ -1049,7 +1049,7 @@ bool HadesGC::OldGen::sweepNext() {
     cell->getVT()->finalizeIfExists(cell, gc_);
     if (isTracking) {
       gc_->getAllocationLocationTracker().freeAlloc(cell, sz);
-      gc_->getIDTracker().untrackObject(cell);
+      gc_->untrackObject(cell);
     }
   }
 
@@ -2243,7 +2243,7 @@ void HadesGC::youngGenCollection(
         // Have to call freeAlloc before untrackObject.
         getAllocationLocationTracker().freeAlloc(
             cell, cell->getAllocatedSize());
-        getIDTracker().untrackObject(cell);
+        untrackObject(cell);
       };
       yg.forCompactedObjs(trackerCallback);
       if (doCompaction) {

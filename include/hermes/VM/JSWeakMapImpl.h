@@ -256,7 +256,7 @@ class JSWeakMapImplBase : public JSObject {
 
   /// Lazily fetches the ID for the DenseMap used in this class. After it has
   /// been assigned once it'll stay constant.
-  HeapSnapshot::NodeID getMapID(GCBase::IDTracker &tracker);
+  HeapSnapshot::NodeID getMapID(GC *gc);
 
   /// \return the number of bytes allocated by this object on the heap.
   size_t getMallocSize() const {

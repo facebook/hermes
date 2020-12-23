@@ -605,7 +605,7 @@ void YoungGen::updateTrackers() {
     if (cell->hasMarkedForwardingPointer()) {
       auto *fptr = cell->getMarkedForwardingPointer();
       if (idTracker) {
-        gc_->getIDTracker().moveObject(cell, fptr);
+        gc_->moveObject(cell, fptr);
       }
       ptr += reinterpret_cast<GCCell *>(fptr)->getAllocatedSize();
     } else {
@@ -617,7 +617,7 @@ void YoungGen::updateTrackers() {
         gc_->getAllocationLocationTracker().freeAlloc(cell, sz);
       }
       if (idTracker) {
-        gc_->getIDTracker().untrackObject(cell);
+        gc_->untrackObject(cell);
       }
     }
   }

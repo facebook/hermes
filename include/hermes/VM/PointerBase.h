@@ -36,6 +36,7 @@ class BasedPointer final {
 
   /// Efficiently yields the representation of a null pointer.
   explicit BasedPointer(std::nullptr_t);
+  explicit BasedPointer(StorageType raw);
 
   BasedPointer &operator=(std::nullptr_t);
 #ifdef HERMESVM_COMPRESSED_POINTERS
@@ -55,7 +56,7 @@ class BasedPointer final {
 
   StorageType raw_;
 
-  inline explicit BasedPointer(void *heapAddr);
+  inline explicit BasedPointer(const void *heapAddr);
 
   // Only PointerBase needs to access this field and the constructor. To every
   // other part of the system this is an opaque type that PointerBase handles
@@ -74,10 +75,10 @@ class PointerBase {
   /// Convert a pointer to an offset from this.
   /// \param ptr A pointer to convert.
   /// \pre ptr must start after this, and must end before 2 ^ 32 after this.
-  inline BasedPointer pointerToBased(void *ptr) const;
+  inline BasedPointer pointerToBased(const void *ptr) const;
   /// Same as above, but has a precondition that the pointer is not null.
   /// \pre ptr is not null.
-  inline BasedPointer pointerToBasedNonNull(void *ptr) const;
+  inline BasedPointer pointerToBasedNonNull(const void *ptr) const;
 
   /// Convert an offset from this PointerBase into a real pointer that can be
   /// de-referenced.
@@ -140,6 +141,7 @@ class PointerBase {
 /// @{
 
 inline BasedPointer::BasedPointer(std::nullptr_t) : raw_(0) {}
+inline BasedPointer::BasedPointer(StorageType raw) : raw_(raw) {}
 
 inline BasedPointer &BasedPointer::operator=(std::nullptr_t) {
   raw_ = 0;
@@ -150,7 +152,7 @@ inline BasedPointer::StorageType BasedPointer::getRawValue() const {
   return raw_;
 }
 
-inline BasedPointer PointerBase::pointerToBasedNonNull(void *ptr) const {
+inline BasedPointer PointerBase::pointerToBasedNonNull(const void *ptr) const {
   assert(ptr && "Null pointer given to pointerToBasedNonNull");
   return BasedPointer{ptr};
 }
@@ -178,7 +180,7 @@ inline PointerBase::PointerBase() {
   segmentMap_[kNullPtrSegmentIndex] = nullptr;
 }
 
-inline BasedPointer::BasedPointer(void *heapAddr)
+inline BasedPointer::BasedPointer(const void *heapAddr)
     : raw_(computeSegmentAndOffset(heapAddr)) {}
 
 inline uint32_t BasedPointer::getSegmentIndex() const {
@@ -194,7 +196,7 @@ inline void *PointerBase::basedToPointer(BasedPointer ptr) const {
   return segBase + ptr.getRawValue();
 }
 
-inline BasedPointer PointerBase::pointerToBased(void *ptr) const {
+inline BasedPointer PointerBase::pointerToBased(const void *ptr) const {
   if (!ptr) {
     // Null pointers are special and can't be "compressed" in the same
     // way as non-null pointers.  So we make a special case for null.
@@ -231,7 +233,7 @@ inline void PointerBase::setSegment(unsigned idx, void *segStart) {
 }
 
 #else
-inline BasedPointer::BasedPointer(void *heapAddr)
+inline BasedPointer::BasedPointer(const void *heapAddr)
     : raw_(reinterpret_cast<uintptr_t>(heapAddr)) {}
 
 inline PointerBase::PointerBase() {}
@@ -240,7 +242,7 @@ inline void *PointerBase::basedToPointer(BasedPointer ptr) const {
   return reinterpret_cast<void *>(ptr.getRawValue());
 }
 
-inline BasedPointer PointerBase::pointerToBased(void *ptr) const {
+inline BasedPointer PointerBase::pointerToBased(const void *ptr) const {
   return BasedPointer{ptr};
 }
 #endif

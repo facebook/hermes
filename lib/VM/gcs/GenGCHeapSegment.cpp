@@ -95,20 +95,18 @@ void GenGCHeapSegment::completeMarking(GC *gc, CompleteMarkState *markState) {
 }
 
 void GenGCHeapSegment::deleteDeadObjectIDs(GC *gc) {
-  GCBase::IDTracker &idTracker = gc->getIDTracker();
   GCBase::AllocationLocationTracker &allocationLocationTracker =
       gc->getAllocationLocationTracker();
   if (gc->isTrackingIDs()) {
     MarkBitArrayNC &markBits = markBitArray();
     // Separate out the delete tracking into a different loop in order to keep
     // the normal case fast.
-    forAllObjs([&markBits, &idTracker, &allocationLocationTracker](
-                   const GCCell *cell) {
+    forAllObjs([&markBits, &allocationLocationTracker, gc](const GCCell *cell) {
       if (!markBits.at(markBits.addressToIndex(cell))) {
         // The allocation tracker needs to use the ID, so this needs to come
         // before untrackObject.
         allocationLocationTracker.freeAlloc(cell, cell->getAllocatedSize());
-        idTracker.untrackObject(cell);
+        gc->untrackObject(cell);
       }
     });
   }
@@ -122,7 +120,6 @@ void GenGCHeapSegment::updateObjectIDs(
     return;
   }
 
-  GCBase::IDTracker &idTracker = gc->getIDTracker();
   SweepResult::VTablesRemaining vTablesCopy{vTables};
   MarkBitArrayNC &markBits = markBitArray();
   char *ptr = start();
@@ -130,7 +127,7 @@ void GenGCHeapSegment::updateObjectIDs(
   while (ptr < level()) {
     if (markBits.at(ind)) {
       auto *cell = reinterpret_cast<GCCell *>(ptr);
-      idTracker.moveObject(cell, cell->getForwardingPointer());
+      gc->moveObject(cell, cell->getForwardingPointer());
       const VTable *vtp = vTablesCopy.next();
       auto cellSize = cell->getAllocatedSize(vtp);
       ptr += cellSize;

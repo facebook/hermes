@@ -856,7 +856,6 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionDisplayNameTest) {
 TEST_F(HeapSnapshotRuntimeTest, WeakMapTest) {
   JSONFactory::Allocator alloc;
   JSONFactory jsonFactory{alloc};
-  auto &tracker = runtime->getHeap().getIDTracker();
   auto mapResult = JSWeakMap::create(
       runtime, Handle<JSObject>::vmcast(&runtime->weakMapPrototype));
   ASSERT_FALSE(isException(mapResult));
@@ -872,7 +871,7 @@ TEST_F(HeapSnapshotRuntimeTest, WeakMapTest) {
   const JSONArray &edges = *llvh::cast<JSONArray>(root->at("edges"));
   const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
 
-  const auto mapID = tracker.getObjectID(map.get());
+  const auto mapID = runtime->getHeap().getObjectID(map.get());
   auto nodesAndEdges = FIND_NODE_AND_EDGES_FOR_ID(mapID, nodes, edges, strings);
   EXPECT_EQ(
       nodesAndEdges.first,
@@ -887,9 +886,12 @@ TEST_F(HeapSnapshotRuntimeTest, WeakMapTest) {
   // Test the weak edge.
   EXPECT_EQ(
       nodesAndEdges.second[3],
-      Edge(HeapSnapshot::EdgeType::Weak, "0", tracker.getObjectID(key.get())));
+      Edge(
+          HeapSnapshot::EdgeType::Weak,
+          "0",
+          runtime->getHeap().getObjectID(key.get())));
   // Test the native edge.
-  const auto nativeMapID = map->getMapID(runtime->getHeap().getIDTracker());
+  const auto nativeMapID = map->getMapID(&runtime->getHeap());
   EXPECT_EQ(
       nodesAndEdges.second[5],
       Edge(HeapSnapshot::EdgeType::Internal, "map", nativeMapID));

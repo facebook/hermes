@@ -197,9 +197,10 @@ void JSWeakMapImplBase::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
   }
 }
 
-HeapSnapshot::NodeID JSWeakMapImplBase::getMapID(GCBase::IDTracker &tracker) {
+HeapSnapshot::NodeID JSWeakMapImplBase::getMapID(GC *gc) {
   assert(map_.size() && "Shouldn't call getMapID on an empty map");
-  const auto id = tracker.getObjectID(this);
+  GCBase::IDTracker &tracker = gc->getIDTracker();
+  const auto id = gc->getObjectID(this);
   auto &nativeIDList = tracker.getExtraNativeIDs(id);
   if (nativeIDList.empty()) {
     nativeIDList.push_back(tracker.nextNativeID());
@@ -215,9 +216,7 @@ void JSWeakMapImplBase::_snapshotAddEdgesImpl(
   JSObject::_snapshotAddEdgesImpl(self, gc, snap);
   if (self->map_.size()) {
     snap.addNamedEdge(
-        HeapSnapshot::EdgeType::Internal,
-        "map",
-        self->getMapID(gc->getIDTracker()));
+        HeapSnapshot::EdgeType::Internal, "map", self->getMapID(gc));
   }
 }
 
@@ -231,7 +230,7 @@ void JSWeakMapImplBase::_snapshotAddNodesImpl(
     snap.endNode(
         HeapSnapshot::NodeType::Native,
         "DenseMap",
-        self->getMapID(gc->getIDTracker()),
+        self->getMapID(gc),
         self->map_.getMemorySize(),
         0);
   }

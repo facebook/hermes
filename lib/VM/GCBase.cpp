@@ -923,6 +923,29 @@ GCBase::IDTracker::IDTracker() {
   assert(lastID_ % 2 == 1 && "First JS object ID isn't odd");
 }
 
+void GCBase::IDTracker::moveObject(
+    BasedPointer oldLocation,
+    BasedPointer newLocation) {
+  if (oldLocation == newLocation) {
+    // Don't need to do anything if the object isn't moving anywhere. This can
+    // happen in old generations where it is compacted to the same location.
+    return;
+  }
+  std::lock_guard<Mutex> lk{mtx_};
+  auto old = objectIDMap_.find(oldLocation.getRawValue());
+  if (old == objectIDMap_.end()) {
+    // Avoid making new keys for objects that don't need to be tracked.
+    return;
+  }
+  const auto oldID = old->second;
+  assert(
+      objectIDMap_.count(newLocation.getRawValue()) == 0 &&
+      "Moving to a location that is already tracked");
+  // Have to erase first, because any other access can invalidate the iterator.
+  objectIDMap_.erase(old);
+  objectIDMap_[newLocation.getRawValue()] = oldID;
+}
+
 #ifdef HERMESVM_SERIALIZE
 void GCBase::AllocationLocationTracker::serialize(Serializer &s) const {
   if (enabled_) {
@@ -942,7 +965,8 @@ void GCBase::IDTracker::serialize(Serializer &s) const {
   s.writeInt<HeapSnapshot::NodeID>(lastID_);
   s.writeInt<size_t>(objectIDMap_.size());
   for (auto it = objectIDMap_.begin(); it != objectIDMap_.end(); it++) {
-    s.writeRelocation(it->first);
+    s.writeRelocation(
+        s.getRuntime()->basedToPointerNonNull(BasedPointer{it->first}));
     s.writeInt<HeapSnapshot::NodeID>(it->second);
   }
 }
@@ -953,9 +977,13 @@ void GCBase::IDTracker::deserialize(Deserializer &d) {
   for (size_t i = 0; i < size; i++) {
     // Heap must have been deserialized before this function. All deserialized
     // pointer must be non-null at this time.
-    const void *ptr = d.getNonNullPtr();
-    auto res =
-        objectIDMap_.try_emplace(ptr, d.readInt<HeapSnapshot::NodeID>()).second;
+    GCPointer<GCCell> ptr{nullptr};
+    d.readRelocation(&ptr, RelocationKind::GCPointer);
+    auto res = objectIDMap_
+                   .try_emplace(
+                       ptr.getStorageType().getRawValue(),
+                       d.readInt<HeapSnapshot::NodeID>())
+                   .second;
     (void)res;
     assert(res && "Shouldn't fail to insert during deserialization");
   }
@@ -981,6 +1009,11 @@ HeapSnapshot::NodeID GCBase::IDTracker::getNumberID(double num) {
   return numberRef = nextNumberID();
 }
 
+bool GCBase::IDTracker::hasNativeIDs() {
+  std::lock_guard<Mutex> lk{mtx_};
+  return !nativeIDMap_.empty();
+}
+
 void GCBase::AllocationLocationTracker::enable(
     std::function<
         void(uint64_t, std::chrono::microseconds, std::vector<HeapStatsUpdate>)>
@@ -997,7 +1030,7 @@ void GCBase::AllocationLocationTracker::enable(
   gc->forAllObjs([gc, &numObjects, &numBytes](GCCell *cell) {
     numObjects++;
     numBytes += cell->getAllocatedSize();
-    gc->getIDTracker().getObjectID(cell);
+    gc->getObjectID(cell);
   });
   fragmentCallback_ = std::move(callback);
   startTime_ = std::chrono::steady_clock::now();
@@ -1033,7 +1066,7 @@ void GCBase::AllocationLocationTracker::newAlloc(const void *ptr, uint32_t sz) {
     return;
   }
   // This is stateful and causes the object to have an ID assigned.
-  const auto id = gc_->getIDTracker().getObjectID(ptr);
+  const auto id = gc_->getObjectID(ptr);
   HERMES_SLOW_ASSERT(
       &findFragmentForID(id) == &fragments_.back() &&
       "Should only ever be allocating into the newest fragment");
@@ -1068,7 +1101,7 @@ void GCBase::AllocationLocationTracker::freeAlloc(
   std::lock_guard<Mutex> lk{mtx_};
   // The ID must exist here since the memory profiler guarantees everything has
   // an ID (it does a heap pass at the beginning to assign them all).
-  const auto id = gc_->getIDTracker().getObjectIDMustExist(ptr);
+  const auto id = gc_->getObjectIDMustExist(ptr);
   stackMap_.erase(id);
   Fragment &frag = findFragmentForID(id);
   assert(

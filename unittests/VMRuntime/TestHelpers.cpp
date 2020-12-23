@@ -38,12 +38,9 @@ DummyRuntime::DummyRuntime(
           std::move(storageProvider)} {}
 
 DummyRuntime::~DummyRuntime() {
-#ifndef NDEBUG
-  getHeap().getIDTracker().forEachID(
-      [this](const void *mem, HeapSnapshot::NodeID id) {
-        EXPECT_TRUE(getHeap().validPointer(mem));
-      });
-#endif
+  EXPECT_FALSE(getHeap().getIDTracker().hasNativeIDs())
+      << "A pointer is left in the ID tracker that is from non-JS memory. "
+         "Was untrackNative called?";
   getHeap().finalizeAll();
 }
 
