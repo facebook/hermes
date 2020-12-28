@@ -359,6 +359,8 @@ void ESTreeIRGen::setupLazyScope(
   lazySource.nodeKind = getLazyFunctionKind(functionNode);
   lazySource.isGenerator = isGenerator;
   lazySource.functionRange = functionNode->getSourceRange();
+  lazySource.paramYield = bodyBlock->paramYield;
+  lazySource.paramAwait = bodyBlock->paramAwait;
 
   // Set the function's .length.
   function->setExpectedParamCountIncludingThis(

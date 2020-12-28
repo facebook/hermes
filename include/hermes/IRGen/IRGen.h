@@ -47,6 +47,12 @@ struct LazyCompilationData {
 
   /// Whether or not the function is strict.
   bool strictMode;
+
+  /// The Yield param to restore when parsing.
+  bool paramYield;
+
+  /// The Await param to restore when parsing.
+  bool paramAwait;
 };
 } // namespace hbc
 

@@ -316,10 +316,14 @@ class LabeledStatementDecoration : public LabelDecorationBase {};
 
 class BlockStatementDecoration {
  public:
-  /// True if this is a function body that was pruned while pre-parsing.
-  bool isLazyFunctionBody{false};
   /// The source buffer id in which this block was found (see \p SourceMgr ).
   uint32_t bufferId;
+  /// True if this is a function body that was pruned while pre-parsing.
+  bool isLazyFunctionBody{false};
+  /// If this is a lazy block, the Yield param to restore when eagerly parsing.
+  bool paramYield{false};
+  /// If this is a lazy block, the Await param to restore when eagerly parsing.
+  bool paramAwait{false};
 };
 
 class PatternDecoration {};

@@ -147,6 +147,8 @@ class JSParserImpl {
   /// the first call.
   Optional<ESTree::NodePtr> parseLazyFunction(
       ESTree::NodeKind kind,
+      bool paramYield,
+      bool paramAwait,
       SMLoc start);
 
   /// Return true if the parser detected 'use static builtin' directive from the

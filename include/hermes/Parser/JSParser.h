@@ -90,6 +90,8 @@ class JSParser {
   /// the first call.
   llvh::Optional<ESTree::NodePtr> parseLazyFunction(
       ESTree::NodeKind kind,
+      bool paramYield,
+      bool paramAwait,
       SMLoc start);
 
  private:

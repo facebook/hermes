@@ -74,8 +74,10 @@ bool JSParser::preParseBuffer(
 
 llvh::Optional<ESTree::NodePtr> JSParser::parseLazyFunction(
     ESTree::NodeKind kind,
+    bool paramYield,
+    bool paramAwait,
     SMLoc start) {
-  return impl_->parseLazyFunction(kind, start);
+  return impl_->parseLazyFunction(kind, paramYield, paramAwait, start);
 }
 
 } // namespace parser

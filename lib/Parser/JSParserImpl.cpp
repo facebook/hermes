@@ -631,6 +631,8 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
 
       auto *body = new (context_) ESTree::BlockStatementNode({});
       body->isLazyFunctionBody = true;
+      body->paramYield = paramYield_;
+      body->paramAwait = paramAwait_;
       body->bufferId = lexer_.getBufferId();
       return setLocation(startLoc, endLoc, body);
     }
@@ -6129,8 +6131,13 @@ bool JSParserImpl::preParseBuffer(
 
 Optional<ESTree::NodePtr> JSParserImpl::parseLazyFunction(
     ESTree::NodeKind kind,
+    bool paramYield,
+    bool paramAwait,
     SMLoc start) {
   seek(start);
+
+  paramYield_ = paramYield;
+  paramAwait_ = paramAwait;
 
   switch (kind) {
     case ESTree::NodeKind::FunctionExpression:
