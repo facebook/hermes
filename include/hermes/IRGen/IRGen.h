@@ -42,9 +42,6 @@ struct LazyCompilationData {
   /// The type of function, e.g. statement or expression.
   ESTree::NodeKind nodeKind;
 
-  /// Whether or not this is a generator.
-  bool isGenerator;
-
   /// Whether or not the function is strict.
   bool strictMode;
 

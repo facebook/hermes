@@ -350,10 +350,12 @@ std::pair<Function *, Function *> ESTreeIRGen::doLazyFunction(
       !llvh::isa<ESTree::ArrowFunctionExpressionNode>(node) &&
       "lazy compilation not supported for arrow functions");
 
-  Function *func = lazyData->isGenerator
+  // Generators have had their lazy scope set up without setting one up
+  // for the inner functions. This means that we will never directly generate
+  // a GeneratorInnerFunction here.
+  Function *func = ESTree::isGenerator(node)
       ? genGeneratorFunction(lazyData->originalName, parentVar, node)
-      : genES5Function(
-            lazyData->originalName, parentVar, node, lazyData->isGenerator);
+      : genES5Function(lazyData->originalName, parentVar, node, false);
   addLexicalDebugInfo(func, topLevel, lexicalScopeChain);
   return {func, topLevel};
 }

@@ -724,8 +724,7 @@ class ESTreeIRGen {
   void setupLazyScope(
       ESTree::FunctionLikeNode *functionNode,
       Function *function,
-      ESTree::BlockStatementNode *bodyBlock,
-      bool isGenerator);
+      ESTree::BlockStatementNode *bodyBlock);
 
   /// In the beginning of an ES5 function, initialize the special captured
   /// variables needed by arrow functions, constructors and methods.

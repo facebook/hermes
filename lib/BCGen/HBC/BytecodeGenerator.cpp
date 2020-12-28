@@ -310,7 +310,6 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
       auto lazyData = llvh::make_unique<LazyCompilationData>();
       lazyData->parentScope = F->getLazyScope();
       lazyData->nodeKind = F->getLazySource().nodeKind;
-      lazyData->isGenerator = F->getLazySource().isGenerator;
       lazyData->paramYield = F->getLazySource().paramYield;
       lazyData->paramAwait = F->getLazySource().paramAwait;
       lazyData->bufferId = F->getLazySource().bufferId;

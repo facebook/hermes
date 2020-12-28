@@ -213,7 +213,7 @@ Function *ESTreeIRGen::genES5Function(
       assert(
           !isGeneratorInnerFunction &&
           "generator inner function should be included with outer function");
-      setupLazyScope(functionNode, newFunction, body, false);
+      setupLazyScope(functionNode, newFunction, body);
       return newFunction;
     }
   }
@@ -306,7 +306,7 @@ Function *ESTreeIRGen::genGeneratorFunction(
   auto *body = ESTree::getBlockStatement(functionNode);
   if (auto *bodyBlock = llvh::dyn_cast<ESTree::BlockStatementNode>(body)) {
     if (bodyBlock->isLazyFunctionBody) {
-      setupLazyScope(functionNode, outerFn, body, true);
+      setupLazyScope(functionNode, outerFn, body);
       return outerFn;
     }
   }
@@ -347,8 +347,7 @@ Function *ESTreeIRGen::genGeneratorFunction(
 void ESTreeIRGen::setupLazyScope(
     ESTree::FunctionLikeNode *functionNode,
     Function *function,
-    ESTree::BlockStatementNode *bodyBlock,
-    bool isGenerator) {
+    ESTree::BlockStatementNode *bodyBlock) {
   assert(
       bodyBlock->isLazyFunctionBody &&
       "setupLazyScope can only be used with lazy function bodies");
@@ -357,7 +356,6 @@ void ESTreeIRGen::setupLazyScope(
   auto &lazySource = function->getLazySource();
   lazySource.bufferId = bodyBlock->bufferId;
   lazySource.nodeKind = getLazyFunctionKind(functionNode);
-  lazySource.isGenerator = isGenerator;
   lazySource.functionRange = functionNode->getSourceRange();
   lazySource.paramYield = bodyBlock->paramYield;
   lazySource.paramAwait = bodyBlock->paramAwait;

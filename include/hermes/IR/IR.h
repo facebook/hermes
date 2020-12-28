@@ -343,8 +343,6 @@ struct LazySource {
   /// The range of the function within the buffer (the whole function node, not
   /// just the lazily parsed body).
   SMRange functionRange;
-  /// Whether or not this is the inner function of a generator
-  bool isGenerator;
   /// The Yield param to restore when eagerly parsing.
   bool paramYield{false};
   /// The Await param to restore when eagerly parsing.
