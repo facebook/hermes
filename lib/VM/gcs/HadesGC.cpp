@@ -2828,7 +2828,7 @@ std::unique_ptr<HadesGC::HeapSegment> HadesGC::createSegment() {
     segIdx = ++numSegments_;
   }
   pointerBase_->setSegment(segIdx, seg->lowLim());
-  addSegmentExtentToCrashManager(*seg, std::to_string(segIdx));
+  addSegmentExtentToCrashManager(*seg, oscompat::to_string(segIdx));
   seg->markBitArray().markAll();
   return seg;
 }
