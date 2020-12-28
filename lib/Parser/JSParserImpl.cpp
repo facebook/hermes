@@ -627,7 +627,7 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
     if ((unsigned)(endLoc.getPointer() - startLoc.getPointer()) >=
         context_.getPreemptiveFunctionCompilationThreshold()) {
       lexer_.seek(endLoc);
-      advance();
+      advance(grammarContext);
 
       auto *body = new (context_) ESTree::BlockStatementNode({});
       body->isLazyFunctionBody = true;
