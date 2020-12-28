@@ -26,7 +26,6 @@
 
 #include "llvh/ADT/SmallVector.h"
 
-#include <deque>
 #include <string>
 #include <vector>
 
@@ -38,7 +37,7 @@ class Node;
 /// A NodeList is list of Nodes.
 using NodeList = std::vector<Node *>;
 /// A NodeHolder is list of owned Nodes. Note it is move-only.
-using NodeHolder = std::deque<std::unique_ptr<Node>>;
+using NodeHolder = std::vector<std::unique_ptr<Node>>;
 
 /// Base class representing some part of a compiled regular expression.
 /// A Node is part of an expression that knows how to match against a State.
@@ -63,13 +62,13 @@ class Node {
 
   /// Compile a list of nodes \p nodes to a bytecode stream \p bcs.
   static void compile(const NodeList &nodes, RegexBytecodeStream &bcs) {
-    std::deque<Node *> stack;
-    stack.insert(stack.begin(), nodes.begin(), nodes.end());
+    std::vector<Node *> stack;
+    stack.insert(stack.end(), nodes.rbegin(), nodes.rend());
     while (!stack.empty()) {
-      if (auto n = stack.front()->emitStep(bcs)) {
-        stack.insert(stack.begin(), n->begin(), n->end());
+      if (auto n = stack.back()->emitStep(bcs)) {
+        stack.insert(stack.end(), n->rbegin(), n->rend());
       } else {
-        stack.pop_front();
+        stack.pop_back();
       }
     }
   }
@@ -961,7 +960,7 @@ void Node::optimizeNodeList(
     NodeList &rootNodes,
     SyntaxFlags flags,
     NodeHolder &nodeHolder) {
-  std::deque<NodeList *> stack;
+  std::vector<NodeList *> stack;
   stack.push_back(&rootNodes);
 
   while (!stack.empty()) {
