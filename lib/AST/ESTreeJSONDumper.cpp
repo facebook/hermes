@@ -106,7 +106,9 @@ class ESTreeJSONDumper {
     if (locMode_ == LocationDumpMode::Range ||
         locMode_ == LocationDumpMode::LocAndRange) {
       json_.emitKey("range");
+      json_.openArray();
       dumpSMRangeJSON(json_, rng, sm_->findBufferForLoc(rng.Start));
+      json_.closeArray();
     }
   }
 
@@ -457,10 +459,8 @@ void dumpSMRangeJSON(
       rng.Start.getPointer() >= bufStart &&
       rng.End.getPointer() <= buffer->getBufferEnd() &&
       "The range must be within the buffer");
-  json.openArray();
   json.emitValues(
       {rng.Start.getPointer() - bufStart, rng.End.getPointer() - bufStart});
-  json.closeArray();
 }
 
 void dumpESTreeJSON(
