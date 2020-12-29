@@ -196,8 +196,8 @@ struct BeginLoopInsn : public Insn {
   uint32_t max;
 
   /// Range of marked subexpressions enclosed by the loop, as [begin, end).
-  uint32_t mexpBegin;
-  uint32_t mexpEnd;
+  uint16_t mexpBegin;
+  uint16_t mexpEnd;
 
   /// Whether the loop is greedy (i.e. * instead of *?)
   bool greedy;

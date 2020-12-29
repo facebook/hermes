@@ -88,12 +88,13 @@ class Regex {
     return markedCount_;
   }
 
-  /// \increment the number of marked subexpressions and return the value.
+  /// Increment the number of marked subexpressions.
+  /// \return the previous value of markedCount_.
   uint16_t incrementMarkedCount() {
     assert(
         markedCount_ < std::numeric_limits<uint16_t>::max() &&
         "markedCount_ will overflow");
-    return ++markedCount_;
+    return markedCount_++;
   }
 
   /// Given that the node \p splicePoint is in our node list, remove all nodes

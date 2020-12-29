@@ -1157,12 +1157,12 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           if (!pushBacktrack(
                   backtrackStack,
                   BacktrackInsn::makeSetCaptureGroup(
-                      insn->mexp - 1, {kNotMatched, kNotMatched}))) {
+                      insn->mexp, {kNotMatched, kNotMatched}))) {
             return nullptr;
           }
           // When tracking backwards (in a lookbehind assertion) we traverse our
           // input backwards, so set the end before the start.
-          auto &range = s->getCapturedRange(insn->mexp - 1);
+          auto &range = s->getCapturedRange(insn->mexp);
           if (c.forwards()) {
             range.start = c.offsetFromLeft();
           } else {
@@ -1174,7 +1174,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
 
         case Opcode::EndMarkedSubexpression: {
           const auto *insn = llvh::cast<EndMarkedSubexpressionInsn>(base);
-          auto &range = s->getCapturedRange(insn->mexp - 1);
+          auto &range = s->getCapturedRange(insn->mexp);
           if (c.forwards()) {
             assert(
                 range.start != kNotMatched && "Capture group was not entered");
@@ -1193,7 +1193,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           const auto insn = llvh::cast<BackRefInsn>(base);
           // a. Let cap be x's captures List.
           // b. Let s be cap[n].
-          CapturedRange cr = s->getCapturedRange(insn->mexp - 1);
+          CapturedRange cr = s->getCapturedRange(insn->mexp);
 
           // c. If s is undefined, return c(x).
           // Note we have to check both cr.start and cr.end here. If we are

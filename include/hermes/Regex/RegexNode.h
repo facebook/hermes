@@ -471,7 +471,6 @@ class BackRefNode final : public Node {
 
  private:
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
-    assert(mexp_ > 0 && "Subexpression cannot be zero");
     bcs.emit<BackRefInsn>()->mexp = mexp_;
     return nullptr;
   }

@@ -241,8 +241,8 @@ class Parser {
   void openCapturingGroup(ParseStack &stack) {
     ParseStackElement elem(ParseStackElement::CapturingGroup);
     // Quantifier must be prepared before incrementing the marked counter
-    // because it uses the marked counter to perform the simple loop
-    // optimisation
+    // because the newly opened capture group is the first one being quantified
+    // by it.
     elem.quant = prepareQuantifier();
     if (LLVM_UNLIKELY(re_->markedCount() >= constants::kMaxCaptureGroupCount)) {
       setError(constants::ErrorType::PatternExceedsParseLimits);
@@ -1022,7 +1022,9 @@ class Parser {
         if (unicode || decimal <= backRefLimit_) {
           // Backreference.
           maxBackRef_ = std::max(maxBackRef_, decimal);
-          re_->pushBackRef(decimal);
+          // Subtract 1 so the marked subexpression index starts at zero, to
+          // line up with other instructions.
+          re_->pushBackRef(decimal - 1);
         } else if (c < '8' && !unicode) {
           // Octal.
           current_ = saved;
