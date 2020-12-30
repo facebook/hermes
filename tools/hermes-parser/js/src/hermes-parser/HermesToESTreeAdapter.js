@@ -10,6 +10,11 @@
 const HermesASTAdapter = require('./HermesASTAdapter');
 
 class HermesToESTreeAdapter extends HermesASTAdapter {
+  constructor(options, code) {
+    super(options);
+    this.code = code;
+  }
+
   fixSourceLocation(node) {
     const loc = node.loc;
     if (loc == null) {
@@ -69,12 +74,15 @@ class HermesToESTreeAdapter extends HermesASTAdapter {
 
   mapSimpleLiteral(node) {
     node.type = 'Literal';
+    node.raw = this.code.slice(node.range[0], node.range[1]);
+
     return node;
   }
 
   mapNullLiteral(node) {
     node.type = 'Literal';
     node.value = null;
+    node.raw = this.code.slice(node.range[0], node.range[1]);
 
     return node;
   }
@@ -95,6 +103,7 @@ class HermesToESTreeAdapter extends HermesASTAdapter {
       loc: node.loc,
       range: node.range,
       value,
+      raw: this.code.slice(node.range[0], node.range[1]),
       regex: {
         pattern,
         flags,

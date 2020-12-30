@@ -20,7 +20,7 @@ const {
  * Extended by concrete adapters which output an ESTree or Babel AST.
  */
 class HermesASTAdapter {
-  constructor(options) {
+  constructor(options, code) {
     this.sourceFilename = options.sourceFilename;
     this.sourceType = 'script';
   }

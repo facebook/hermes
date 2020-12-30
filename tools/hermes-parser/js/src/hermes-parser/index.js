@@ -30,16 +30,16 @@ function getOptions(options) {
   return options;
 }
 
-function getAdapter(options) {
+function getAdapter(options, code) {
   return options.babel === true
     ? new HermesToBabelAdapter(options)
-    : new HermesToESTreeAdapter(options);
+    : new HermesToESTreeAdapter(options, code);
 }
 
 function parse(code, opts = {}) {
   const options = getOptions(opts);
   const ast = HermesParser.parse(code, options);
-  const adapter = getAdapter(options);
+  const adapter = getAdapter(options, code);
 
   return adapter.transform(ast);
 }

@@ -587,6 +587,7 @@ test('Literals', () => {
         expression: {
           type: 'Literal',
           value: null,
+          raw: 'null',
         },
       },
       {
@@ -594,6 +595,7 @@ test('Literals', () => {
         expression: {
           type: 'Literal',
           value: 10,
+          raw: '10',
         },
       },
       {
@@ -601,6 +603,7 @@ test('Literals', () => {
         expression: {
           type: 'Literal',
           value: 0.56283,
+          raw: '0.56283',
         },
       },
       {
@@ -608,6 +611,7 @@ test('Literals', () => {
         expression: {
           type: 'Literal',
           value: 'test',
+          raw: '"test"',
         },
       },
       {
@@ -615,6 +619,7 @@ test('Literals', () => {
         expression: {
           type: 'Literal',
           value: true,
+          raw: 'true',
         },
       },
       {
@@ -622,6 +627,7 @@ test('Literals', () => {
         expression: {
           type: 'Literal',
           value: new RegExp('foo', 'g'),
+          raw: '/foo/g',
           regex: {
             pattern: 'foo',
             flags: 'g',
