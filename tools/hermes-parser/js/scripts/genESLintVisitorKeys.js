@@ -16,11 +16,11 @@ const {execSync} = require('child_process');
 
 const OUTPUT_FILE = path.resolve(
   __dirname,
-  '../build/hermes-parser/HermesASTVisitorKeys.js',
+  '../build/hermes-eslint/HermesESLintVisitorKeys.js',
 );
 const TEMPLATE_FILE = path.resolve(
   __dirname,
-  'templates/HermesASTVisitorKeys.template',
+  'templates/HermesESLintVisitorKeys.template',
 );
 
 // Create visitor keys file
@@ -38,17 +38,17 @@ const visitorKeysFileContents = `/**
 
 'use strict';
 
-const HERMES_AST_VISITOR_KEYS = {};
-const NODE_CHILD = 'Node';
-const NODE_LIST_CHILD = 'NodeList';
+const VISITOR_KEYS = {};
 
+// Add visitor keys for nodes produced by AST adapters that are not defined
+// in Hermes AST definitions.
+VISITOR_KEYS['Literal'] = [];
+VISITOR_KEYS['ThisTypeAnnotation'] = [];
+
+// Visitor keys generated from Hermes AST definitions
 ${visitorKeys}
 
-module.exports = {
-  HERMES_AST_VISITOR_KEYS,
-  NODE_CHILD,
-  NODE_LIST_CHILD,
-};
+module.exports = VISITOR_KEYS;
 `;
 
 // Format then sign file and write to disk

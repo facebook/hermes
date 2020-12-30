@@ -13,7 +13,7 @@ const {
   HERMES_AST_VISITOR_KEYS,
   NODE_CHILD,
   NODE_LIST_CHILD,
-} = require('./HermesASTVisitorKeys');
+} = require('./HermesParserVisitorKeys');
 
 /**
  * The base class for transforming the Hermes AST to the desired output format.

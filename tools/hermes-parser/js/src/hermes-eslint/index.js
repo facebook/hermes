@@ -8,12 +8,14 @@
  */
 
 const HermesParser = require('../hermes-parser');
+const VisitorKeys = require('./HermesESLintVisitorKeys');
 
 function parseForESLint(code) {
   const ast = HermesParser.parse(code, {tokens: true});
 
   return {
     ast,
+    visitorKeys: VisitorKeys,
   };
 }
 
