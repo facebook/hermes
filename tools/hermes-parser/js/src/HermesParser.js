@@ -72,6 +72,7 @@ function parse(source, options) {
       sourceAddr,
       sourceBuffer.length + 1,
       options.flow === 'detect',
+      options.tokens,
     );
 
     try {
@@ -86,6 +87,7 @@ function parse(source, options) {
         hermesParseResult_getPositionBuffer(parseResult),
         hermesParseResult_getPositionBufferSize(parseResult),
         HermesParserWASM,
+        options,
       );
       return deserializer.deserialize();
     } finally {

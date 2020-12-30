@@ -25,6 +25,8 @@ function getOptions(options) {
     throw new Error('flow option must be "all" or "detect"');
   }
 
+  options.tokens = options.tokens === true;
+
   return options;
 }
 

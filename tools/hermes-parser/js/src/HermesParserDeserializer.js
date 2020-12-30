@@ -11,7 +11,13 @@ const HermesParserDecodeUTF8String = require('./HermesParserDecodeUTF8String');
 const NODE_DESERIALIZERS = require('./HermesParserNodeDeserializers');
 
 class HermesParserDeserializer {
-  constructor(programBuffer, positionBuffer, positionBufferSize, wasmParser) {
+  constructor(
+    programBuffer,
+    positionBuffer,
+    positionBufferSize,
+    wasmParser,
+    options,
+  ) {
     // Program and position buffer are memory addresses, so we must convert
     // into indices into HEAPU32 (an array of 4-byte integers).
     this.programBufferIdx = programBuffer / 4;
@@ -23,6 +29,8 @@ class HermesParserDeserializer {
     this.HEAPU8 = wasmParser.HEAPU8;
     this.HEAPU32 = wasmParser.HEAPU32;
     this.HEAPF64 = wasmParser.HEAPF64;
+
+    this.options = options;
   }
 
   /**
@@ -40,6 +48,10 @@ class HermesParserDeserializer {
       body: this.deserializeNodeList(),
       comments: this.deserializeComments(),
     };
+
+    if (this.options.tokens) {
+      program.tokens = this.deserializeTokens();
+    }
 
     this.fillLocs();
 
@@ -124,6 +136,20 @@ class HermesParserDeserializer {
   // Matches StoredComment::Kind enum in JSLexer.h
   commentTypes = ['CommentLine', 'CommentBlock', 'InterpreterDirective'];
 
+  // Matches TokenType enum in HermesParserJSSerializer.h
+  tokenTypes = [
+    'Boolean',
+    'Identifier',
+    'Keyword',
+    'Null',
+    'Numeric',
+    'Punctuator',
+    'String',
+    'RegularExpression',
+    'Template',
+    'JSXText',
+  ];
+
   /**
    * Comments are serialized as a node list, where each comment is serialized
    * as a 4-byte integer denoting comment type, followed by a 4-byte value
@@ -145,6 +171,24 @@ class HermesParserDeserializer {
     }
 
     return comments;
+  }
+
+  deserializeTokens() {
+    const size = this.next();
+    const tokens = [];
+
+    for (let i = 0; i < size; i++) {
+      const tokenType = this.tokenTypes[this.next()];
+      const loc = this.addEmptyLoc();
+      const value = this.deserializeString();
+      tokens.push({
+        type: tokenType,
+        loc,
+        value,
+      });
+    }
+
+    return tokens;
   }
 
   /**

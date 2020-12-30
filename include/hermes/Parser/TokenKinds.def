@@ -25,6 +25,10 @@
 #define BINOP(name, str, precedence) PUNCTUATOR(name, str)
 #endif
 
+#ifndef TEMPLATE
+#define TEMPLATE(name, str) TOK(name, str)
+#endif
+
 #ifndef RANGE_MARKER
 #define RANGE_MARKER(name) TOK(name, "<" #name ">")
 #endif
@@ -156,10 +160,10 @@ TOK(string_literal, "string")
 TOK(regexp_literal, "regexp")
 TOK(jsx_text, "JSX text")
 
-TOK(no_substitution_template, "template literal")
-TOK(template_head, "template literal start")
-TOK(template_middle, "template literal resume")
-TOK(template_tail, "template literal end")
+TEMPLATE(no_substitution_template, "template literal")
+TEMPLATE(template_head, "template literal start")
+TEMPLATE(template_middle, "template literal resume")
+TEMPLATE(template_tail, "template literal end")
 
 TOK(eof, "<eof>")
 RANGE_MARKER(_last_token)
@@ -167,5 +171,7 @@ RANGE_MARKER(_last_token)
 #undef TOK
 #undef RESWORD
 #undef PUNCTUATOR
+#undef PUNCTUATOR_FLOW
 #undef BINOP
+#undef TEMPLATE
 #undef RANGE_MARKER

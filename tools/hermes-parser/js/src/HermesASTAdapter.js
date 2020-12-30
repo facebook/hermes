@@ -44,6 +44,14 @@ class HermesASTAdapter {
         ? comments.shift()
         : null;
 
+    // Tokens are not traversed via visitor keys
+    const tokens = program.tokens;
+    if (tokens) {
+      for (let i = 0; i < tokens.length; i++) {
+        this.fixSourceLocation(tokens[i]);
+      }
+    }
+
     return this.mapNode(program);
   }
 

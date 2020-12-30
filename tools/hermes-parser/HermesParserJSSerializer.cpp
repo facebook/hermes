@@ -12,6 +12,7 @@
 namespace hermes {
 
 using namespace hermes::ESTree;
+using namespace parser;
 
 class HermesParserJSSerializer {
   SourceErrorManager *sm_{nullptr};
@@ -25,10 +26,15 @@ class HermesParserJSSerializer {
   explicit HermesParserJSSerializer(SourceErrorManager *sm, ParseResult &result)
       : sm_(sm), result_(result) {}
 
-  void serializeProgram(ProgramNode *programNode) {
+  void serializeProgram(ProgramNode *programNode, bool tokens) {
     serializeLoc(programNode->getSourceRange());
     serializeNode(programNode->_body);
     serializeComments();
+
+    if (tokens) {
+      serializeTokens();
+    }
+
     serializeSourcePositions(programNode);
   }
 
@@ -184,6 +190,97 @@ class HermesParserJSSerializer {
       result_.programBuffer_.emplace_back((uint32_t)value.begin());
       result_.programBuffer_.emplace_back((uint32_t)value.size());
     }
+  }
+
+  /// The list of tokens begins with the number of tokens serialized as a 4-byte
+  /// integer, followed by a sequence of serialized tokens.
+  ///
+  /// We exclude the EOF token from this sequence and the total number of
+  /// tokens. The EOF token will always appear at the end of a successful parse.
+  void serializeTokens() {
+    auto tokens = result_.parser_->getStoredTokens();
+    result_.programBuffer_.emplace_back((uint32_t)tokens.size() - 1);
+
+    for (auto &token : tokens) {
+      TokenKind kind = token.getKind();
+
+      // Special case reserved words that are literals, to avoid treating them
+      // as keywords like all other reserved words.
+      if (kind == TokenKind::rw_null) {
+        serializeToken(token, TokenType::Null);
+        continue;
+      } else if (kind == TokenKind::rw_true || kind == TokenKind::rw_false) {
+        serializeToken(token, TokenType::Boolean);
+        continue;
+      }
+
+      switch (kind) {
+        case TokenKind::identifier:
+        case TokenKind::private_identifier:
+          serializeToken(token, TokenType::Identifier);
+          break;
+        case TokenKind::numeric_literal:
+          serializeToken(token, TokenType::Numeric);
+          break;
+        case TokenKind::string_literal:
+          serializeToken(token, TokenType::String);
+          break;
+        case TokenKind::regexp_literal:
+          serializeToken(token, TokenType::RegularExpression);
+          break;
+        case TokenKind::jsx_text:
+          serializeToken(token, TokenType::JSXText);
+          break;
+
+#define PUNCTUATOR(NAME, ...)                     \
+  case TokenKind::NAME:                           \
+    serializeToken(token, TokenType::Punctuator); \
+    break;
+
+#define PUNCTUATOR_FLOW(NAME, ...)                \
+  case TokenKind::NAME:                           \
+    serializeToken(token, TokenType::Punctuator); \
+    break;
+
+#define TEMPLATE(NAME, ...)                     \
+  case TokenKind::NAME:                         \
+    serializeToken(token, TokenType::Template); \
+    break;
+
+#define RESWORD(NAME, ...)                     \
+  case TokenKind::rw_##NAME:                   \
+    serializeToken(token, TokenType::Keyword); \
+    break;
+
+#include "hermes/Parser/TokenKinds.def"
+
+        // Exclude EOF token
+        case TokenKind::eof:
+        // Sigil tokens that are never created
+        case TokenKind::none:
+        case TokenKind::_first_resword:
+        case TokenKind::_last_resword:
+        case TokenKind::_first_binary:
+        case TokenKind::_last_binary:
+        case TokenKind::_last_token:
+          break;
+      }
+    }
+  }
+
+  /// Tokens are serialized as a 4-byte integer denoting token type,
+  /// followed by a 4-byte value denoting the loc ID, followed by a serialized
+  /// string for the token value.
+  void serializeToken(const StoredToken &token, TokenType type) {
+    result_.programBuffer_.emplace_back((uint32_t)type);
+
+    SMRange range = token.getSourceRange();
+    serializeLoc(range);
+
+    const char *start = range.Start.getPointer();
+    result_.programBuffer_.emplace_back((uint32_t)start);
+    result_.programBuffer_.emplace_back(
+        (uint32_t)(range.End.getPointer() - start));
   }
 
   /// AST nodes are serialized as a 4-byte node kind, followed by a 4-byte
@@ -412,8 +509,9 @@ class HermesParserJSSerializer {
 void serialize(
     ProgramNode *programNode,
     SourceErrorManager *sm,
-    ParseResult &result) {
-  HermesParserJSSerializer(sm, result).serializeProgram(programNode);
+    ParseResult &result,
+    bool tokens) {
+  HermesParserJSSerializer(sm, result).serializeProgram(programNode, tokens);
 }
 
 } // namespace hermes

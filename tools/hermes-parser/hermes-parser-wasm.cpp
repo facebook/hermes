@@ -30,8 +30,11 @@ using namespace hermes;
 bool hasFlowPragma(Context &context, uint32_t bufferId);
 
 EMSCRIPTEN_KEEPALIVE
-extern "C" ParseResult *
-hermesParse(const char *source, size_t sourceSize, bool detectFlow) {
+extern "C" ParseResult *hermesParse(
+    const char *source,
+    size_t sourceSize,
+    bool detectFlow,
+    bool tokens) {
   std::unique_ptr<ParseResult> result = hermes::make_unique<ParseResult>();
   if (source[sourceSize - 1] != 0) {
     result->error_ = "Input source must be zero-terminated";
@@ -58,6 +61,7 @@ hermesParse(const char *source, size_t sourceSize, bool detectFlow) {
       hermes::make_unique<parser::JSParser>(
           *context, fileBufId, parser::FullParse);
   jsParser->setStoreComments(true);
+  jsParser->setStoreTokens(tokens);
 
   llvh::Optional<ESTree::ProgramNode *> parsedJs = jsParser->parse();
 
@@ -76,7 +80,7 @@ hermesParse(const char *source, size_t sourceSize, bool detectFlow) {
 
   result->context_ = context;
   result->parser_ = std::move(jsParser);
-  serialize(*parsedJs, &context->getSourceErrorManager(), *result);
+  serialize(*parsedJs, &context->getSourceErrorManager(), *result, tokens);
 
   // Run semantic validation after AST has been serialized
   sem::SemContext semContext{};
