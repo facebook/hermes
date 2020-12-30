@@ -9,9 +9,7 @@
 
 'use strict';
 
-jest.disableAutomock();
-
-const {parse} = require('../build/index');
+const {parse} = require('../build/hermes-parser');
 
 /**
  * Utility for quickly creating source locations inline.

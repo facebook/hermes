@@ -14,7 +14,10 @@ const path = require('path');
 
 const {execSync} = require('child_process');
 
-const OUTPUT_FILE = path.resolve(__dirname, '../build/HermesASTVisitorKeys.js');
+const OUTPUT_FILE = path.resolve(
+  __dirname,
+  '../build/hermes-parser/HermesASTVisitorKeys.js',
+);
 const TEMPLATE_FILE = path.resolve(
   __dirname,
   'templates/HermesASTVisitorKeys.template',

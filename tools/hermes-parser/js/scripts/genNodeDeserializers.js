@@ -16,7 +16,7 @@ const {execSync} = require('child_process');
 
 const OUTPUT_FILE = path.resolve(
   __dirname,
-  '../build/HermesParserNodeDeserializers.js',
+  '../build/hermes-parser/HermesParserNodeDeserializers.js',
 );
 const TEMPLATE_FILE = path.resolve(
   __dirname,

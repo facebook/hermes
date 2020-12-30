@@ -12,7 +12,10 @@
 const fs = require('fs');
 const path = require('path');
 
-const OUTPUT_FILE = path.resolve(__dirname, '../build/HermesParserWASM.js');
+const OUTPUT_FILE = path.resolve(
+  __dirname,
+  '../build/hermes-parser/HermesParserWASM.js',
+);
 
 const HEADER = `/**
  * Copyright (c) Facebook, Inc. and its affiliates.

@@ -12,7 +12,7 @@ yarn install
 BUILD_DIR="$THIS_DIR/../build"
 rm -rf "$BUILD_DIR"
 mkdir "$BUILD_DIR"
-cp "$THIS_DIR"/../src/* "$BUILD_DIR"
+cp -r "$THIS_DIR"/../src/* "$BUILD_DIR"
 
 # Use internal FB build or pass path to WASM parser as first command line argument
 FB_BUILD_WASM_PARSER="$THIS_DIR/facebook/buildWasmParser.sh"
