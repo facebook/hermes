@@ -249,8 +249,7 @@ class HadesGC final : public GCBase {
   /// Similar to AlignedHeapSegment except it uses a free list.
   class HeapSegment final : public AlignedHeapSegment {
    public:
-    explicit HeapSegment(AlignedStorage &&storage);
-    ~HeapSegment() = default;
+    explicit HeapSegment(AlignedStorage storage);
 
     /// Allocate space by bumping a level.
     AllocResult bumpAlloc(uint32_t sz);
