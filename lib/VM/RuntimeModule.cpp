@@ -370,9 +370,7 @@ SymbolID RuntimeModule::mapStringMayAllocate(
   return id;
 }
 
-void RuntimeModule::markRoots(
-    RootAndSlotAcceptor &acceptor,
-    bool markLongLived) {
+void RuntimeModule::markRoots(RootAcceptor &acceptor, bool markLongLived) {
   for (auto &it : templateMap_) {
     acceptor.acceptPtr(it.second);
   }

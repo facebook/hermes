@@ -25,12 +25,11 @@
 namespace hermes {
 
 ConsoleHostContext::ConsoleHostContext(vm::Runtime *runtime) {
-  runtime->addCustomRootsFunction(
-      [this](vm::GC *, vm::RootAndSlotAcceptor &acceptor) {
-        for (auto &entry : queuedJobs_) {
-          acceptor.acceptPtr(entry.second);
-        }
-      });
+  runtime->addCustomRootsFunction([this](vm::GC *, vm::RootAcceptor &acceptor) {
+    for (auto &entry : queuedJobs_) {
+      acceptor.acceptPtr(entry.second);
+    }
+  });
 }
 
 /// Raises an uncatchable quit exception.

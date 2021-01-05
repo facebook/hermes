@@ -139,7 +139,7 @@ class Runtime : public HandleRootOwner,
   /// collection to mark additional GC roots that may not be known to the
   /// Runtime.
   void addCustomRootsFunction(
-      std::function<void(GC *, RootAndSlotAcceptor &)> markRootsFn);
+      std::function<void(GC *, RootAcceptor &)> markRootsFn);
 
   /// Add a custom function that will be executed sometime during garbage
   /// collection to mark additional weak GC roots that may not be known to the
@@ -1011,8 +1011,7 @@ class Runtime : public HandleRootOwner,
 
  private:
   GC heap_;
-  std::vector<std::function<void(GC *, RootAndSlotAcceptor &)>>
-      customMarkRootFuncs_;
+  std::vector<std::function<void(GC *, RootAcceptor &)>> customMarkRootFuncs_;
   std::vector<std::function<void(GC *, WeakRefAcceptor &)>>
       customMarkWeakRootFuncs_;
   std::vector<std::function<void(HeapSnapshot &)>> customSnapshotNodeFuncs_;
@@ -1641,7 +1640,7 @@ class NoAllocScope {
 // Runtime inline methods.
 
 inline void Runtime::addCustomRootsFunction(
-    std::function<void(GC *, RootAndSlotAcceptor &)> markRootsFn) {
+    std::function<void(GC *, RootAcceptor &)> markRootsFn) {
   customMarkRootFuncs_.emplace_back(std::move(markRootsFn));
 }
 
