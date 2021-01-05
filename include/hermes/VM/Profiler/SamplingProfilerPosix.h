@@ -172,14 +172,6 @@ class SamplingProfiler {
   std::unordered_set<std::string> gcEventExtraInfoSet_;
 
   /// Domains to be kept alive for sampled RuntimeModules.
-  /// Its storage size is increased/decreased by
-  /// increaseDomainCount/decreaseDomainCount outside signal handler.
-  /// New storage is initialized with null pointers.
-  /// This prevents any memory allocation to domains_ inside
-  /// signal handler.
-  /// domains_.size() >= number of constructed but not destructed Domain
-  /// objects.
-  /// registerDomain() keeps a Domain from being destructed.
   std::vector<Domain *> domains_;
 
   /// This thread starts in timerLoop_, and samples the stacks of registered
@@ -257,11 +249,6 @@ class SamplingProfiler {
 
   /// Unregister an active \p runtime and current thread with profiler.
   void unregisterRuntime(Runtime *runtime);
-
-  /// Reserve domain slots to avoid memory allocation in signal handler.
-  void increaseDomainCount();
-  /// Shrink domain storage to fit domains alive.
-  void decreaseDomainCount();
 
   /// Mark roots that are kept alive by the SamplingProfiler.
   void markRoots(RootAcceptor &acceptor);

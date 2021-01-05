@@ -52,6 +52,8 @@ void SamplingProfiler::registerRuntime(Runtime *runtime) {
 
 void SamplingProfiler::unregisterRuntime(Runtime *runtime) {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
+  // Clear data so we do not hold any pointers into the unregistered runtime.
+  clear();
   bool succeed = activeRuntimeThreads_.erase(runtime);
   // TODO: should we allow recursive style
   // register/register -> unregister/unregister call?
@@ -61,42 +63,11 @@ void SamplingProfiler::unregisterRuntime(Runtime *runtime) {
   threadLocalRuntime_.set(nullptr);
 }
 
-void SamplingProfiler::increaseDomainCount() {
-  std::lock_guard<std::mutex> lockGuard(profilerLock_);
-  // Reserve an empty slot. Use push_back to get exponential capacity expansion.
-  domains_.push_back(nullptr);
-}
-
-void SamplingProfiler::decreaseDomainCount() {
-  std::lock_guard<std::mutex> lockGuard(profilerLock_);
-  // Shrink domains_ because a Domain has been destroyed.
-  // The destroyed domain should not be held by SamplingProfiler so
-  // there must have a corresponding reserved empty slot in domains_. Since
-  // domains_ is used from front the last slot in domains_ should be null.
-  assert(!domains_.empty() && "Why there is no domain?");
-  assert(
-      domains_.back() == nullptr &&
-      "The destroyed domain should not be referenced.");
-  domains_.pop_back();
-}
-
 void SamplingProfiler::registerDomain(Domain *domain) {
-  // If domain is already registered do nothing, otherwise
-  // store domain in the first unused/empty slot.
-  // Invariant: domains_ are always filled from the front and the whole content
-  // are destroyed at once so the registered/used domains are always at the
-  // beginning of domains_.
-  for (size_t i = 0, e = domains_.size(); i < e; ++i) {
-    if (domains_[i] == domain) {
-      // Already registered.
-      return;
-    } else if (domains_[i] == nullptr) {
-      // Not registered before, fill in the first reserved empty slot.
-      domains_[i] = domain;
-      return;
-    }
-  }
-  llvm_unreachable("Cannot find a reserved null domain slot.");
+  // If domain is not already registered, add it to the list.
+  auto it = std::lower_bound(domains_.begin(), domains_.end(), domain);
+  if (it == domains_.end() || *it != domain)
+    domains_.insert(it, domain);
 }
 
 void SamplingProfiler::markRoots(RootAcceptor &acceptor) {
@@ -189,6 +160,11 @@ bool SamplingProfiler::sampleStack(std::unique_lock<std::mutex> &uniqueLock) {
   auto activeRuntimeThreadsCopy = activeRuntimeThreads_;
   for (const auto &entry : activeRuntimeThreadsCopy) {
     auto targetThreadId = entry.second;
+    // Ensure there are no allocations in the signal handler by keeping ample
+    // reserved space.
+    domains_.reserve(domains_.size() + kMaxStackDepth);
+    size_t domainCapacityBefore = domains_.capacity();
+    (void)domainCapacityBefore;
     // Signal target runtime thread to sample stack.
     pthread_kill(targetThreadId, SIGPROF);
 
@@ -217,6 +193,11 @@ bool SamplingProfiler::sampleStack(std::unique_lock<std::mutex> &uniqueLock) {
     if (!enabled_) {
       return false;
     }
+
+    assert(
+        domains_.capacity() == domainCapacityBefore &&
+        "Must not dynamically allocate in signal handler");
+
     if (sampledStackDepth_ > 0) {
       assert(
           sampledStackDepth_ <= sampleStorage_.stack.size() &&
@@ -505,10 +486,7 @@ bool SamplingProfiler::disable() {
 void SamplingProfiler::clear() {
   sampledStacks_.clear();
   // Release all strong roots to domains.
-  // Note: we can't clear domains_ because we have to maintain the storage size.
-  for (Domain *&domain : domains_) {
-    domain = nullptr;
-  }
+  domains_.clear();
   // TODO: keep thread names that are still in use.
   threadNames_.clear();
 }

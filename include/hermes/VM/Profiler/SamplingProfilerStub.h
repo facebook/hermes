@@ -29,12 +29,6 @@ class SamplingProfiler {
   /// Unregister an active \p runtime and current thread with profiler.
   void unregisterRuntime(Runtime *runtime) {}
 
-  /// Reserve domain slots to avoid memory allocation in signal handler.
-  void increaseDomainCount() {}
-
-  /// Shrink domain storage to fit domains alive.
-  void decreaseDomainCount() {}
-
   /// Mark roots that are kept alive by the SamplingProfiler.
   void markRoots(RootAcceptor &acceptor) {}
 

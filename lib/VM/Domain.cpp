@@ -103,8 +103,6 @@ void DomainSerialize(Serializer &s, const GCCell *cell) {
 void DomainDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::DomainKind && "Expected Domain");
   auto *cell = d.getRuntime()->makeAFixed<Domain, HasFinalizer::Yes>(d);
-  auto &samplingProfiler = SamplingProfiler::getInstance();
-  samplingProfiler->increaseDomainCount();
   d.endObject(cell);
 }
 
@@ -147,8 +145,6 @@ ArrayStorage *Domain::deserializeArrayStorage(Deserializer &d) {
 PseudoHandle<Domain> Domain::create(Runtime *runtime) {
   auto *cell = runtime->makeAFixed<Domain, HasFinalizer::Yes>(runtime);
   auto self = createPseudoHandle(cell);
-  auto &samplingProfiler = SamplingProfiler::getInstance();
-  samplingProfiler->increaseDomainCount();
   return self;
 }
 
@@ -158,8 +154,6 @@ void Domain::_finalizeImpl(GCCell *cell, GC *gc) {
     gc->getIDTracker().untrackNative(rm);
   }
   self->~Domain();
-  auto &samplingProfiler = SamplingProfiler::getInstance();
-  samplingProfiler->decreaseDomainCount();
 }
 
 Domain::~Domain() {
