@@ -32,7 +32,7 @@ class SkipWeakRefsAcceptor final : public SlotAcceptor {
   void accept(GCHermesValue &hv) override {
     acceptor_->accept(hv);
   }
-  void accept(SymbolID sym) override {
+  void accept(GCSymbolID sym) override {
     acceptor_->accept(sym);
   }
 

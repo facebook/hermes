@@ -585,7 +585,7 @@ void GenGC::markPhase() {
         gc.markSymbol(hv.getSymbol());
       }
     }
-    void accept(SymbolID sym) override {
+    void acceptSym(SymbolID sym) override {
       gc.markSymbol(sym);
     }
   };
@@ -2024,7 +2024,14 @@ void GenGC::sizeDiagnosticCensus() {
         assert(false && "Should be no other hermes values");
       }
     }
-    void accept(SymbolID sym) override {
+
+    void accept(PinnedSymbolID sym) override {
+      acceptSym(sym);
+    }
+    void accept(GCSymbolID sym) override {
+      acceptSym(sym);
+    }
+    void acceptSym(SymbolID sym) {
       diagnostic.numSymbol++;
     }
   };

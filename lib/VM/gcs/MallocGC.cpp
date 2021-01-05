@@ -142,11 +142,11 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
       accept(ptr);
       hv.setInGC(hv.updatePointer(ptr), &gc);
     } else if (hv.isSymbol()) {
-      accept(hv.getSymbol());
+      acceptSym(hv.getSymbol());
     }
   }
 
-  void accept(SymbolID sym) override {
+  void acceptSym(SymbolID sym) override {
     if (sym.isInvalid()) {
       return;
     }

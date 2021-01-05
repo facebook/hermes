@@ -287,7 +287,7 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
         gc.getObjectID(slot->getPointer()));
   }
 
-  void accept(SymbolID sym, const char *name) override {
+  void acceptSym(SymbolID sym, const char *name) override {
     if (sym.isInvalid()) {
       return;
     }

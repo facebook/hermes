@@ -30,7 +30,7 @@ struct CheckHeapWellFormedAcceptor final : public RootAndSlotAcceptorDefault,
   void acceptWeak(void *&ptr) override;
   void acceptHV(HermesValue &hv) override;
   void accept(WeakRefBase &wr) override;
-  void accept(SymbolID sym) override;
+  void acceptSym(SymbolID sym) override;
 };
 
 #endif

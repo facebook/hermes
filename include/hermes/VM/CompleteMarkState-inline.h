@@ -36,10 +36,10 @@ struct CompleteMarkState::FullMSCMarkTransitiveAcceptor final
       void *cell = hv.getPointer();
       accept(cell);
     } else if (hv.isSymbol()) {
-      accept(hv.getSymbol());
+      acceptSym(hv.getSymbol());
     }
   }
-  void accept(SymbolID sym) override {
+  void acceptSym(SymbolID sym) override {
     gc.markSymbol(sym);
   }
 };

@@ -32,7 +32,7 @@ struct SlotAcceptor {
   virtual ~SlotAcceptor(){};
   virtual void accept(GCPointerBase &ptr) = 0;
   virtual void accept(GCHermesValue &hv) = 0;
-  virtual void accept(SymbolID sym) = 0;
+  virtual void accept(GCSymbolID sym) = 0;
 };
 
 /// Weak references are typically slower to find, and need to be done separately
@@ -60,6 +60,7 @@ struct RootSectionAcceptor {
 struct RootAcceptor : public RootSectionAcceptor {
   virtual void accept(void *&ptr) = 0;
   virtual void accept(PinnedHermesValue &hv) = 0;
+  virtual void accept(PinnedSymbolID sym) = 0;
 
   /// When we want to call an acceptor on "raw" root pointers of
   /// some JSObject subtype T, this method does the necessary
@@ -87,6 +88,11 @@ struct RootAndSlotAcceptorWithNames : public RootAndSlotAcceptor {
   }
   virtual void accept(PinnedHermesValue &hv, const char *name) = 0;
 
+  void accept(PinnedSymbolID sym) override final {
+    accept(sym, nullptr);
+  }
+  virtual void accept(PinnedSymbolID sym, const char *name) = 0;
+
   using RootAndSlotAcceptor::acceptPtr;
   template <typename T>
   void acceptPtr(T *&ptr, const char *name) {
@@ -103,10 +109,10 @@ struct RootAndSlotAcceptorWithNames : public RootAndSlotAcceptor {
   }
   virtual void accept(GCHermesValue &hv, const char *name) = 0;
 
-  void accept(SymbolID sym) override final {
+  void accept(GCSymbolID sym) override final {
     accept(sym, nullptr);
   }
-  virtual void accept(SymbolID sym, const char *name) = 0;
+  virtual void accept(GCSymbolID sym, const char *name) = 0;
 
   /// Initiate the callback if this acceptor is part of heap snapshots.
   virtual void provideSnapshot(
@@ -148,7 +154,11 @@ struct DroppingAcceptor final : public RootAndSlotAcceptorWithNames {
     acceptor.accept(hv);
   }
 
-  void accept(SymbolID sym, const char *) override {
+  void accept(PinnedSymbolID sym, const char *) override {
+    acceptor.accept(sym);
+  }
+
+  void accept(GCSymbolID sym, const char *) override {
     acceptor.accept(sym);
   }
 };

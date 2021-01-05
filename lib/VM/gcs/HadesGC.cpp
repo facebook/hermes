@@ -360,6 +360,14 @@ class HadesGC::HeapMarkingAcceptor : public RootAndSlotAcceptor {
   }
   virtual void acceptHeap(BasedPointer &basedPtr, void *heapLoc) = 0;
 
+  void accept(PinnedSymbolID sym) override final {
+    acceptSym(sym);
+  }
+  void accept(GCSymbolID sym) override final {
+    acceptSym(sym);
+  }
+  virtual void acceptSym(SymbolID sym) = 0;
+
  protected:
   GC &gc;
 };
@@ -494,7 +502,7 @@ class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor,
     }
   }
 
-  void accept(SymbolID) override {}
+  void acceptSym(SymbolID) override {}
 
   /// There is no need to do anything with WeakRefs, since they are not
   /// collected in a YG/compaction pass.
@@ -711,7 +719,7 @@ class HadesGC::MarkAcceptor final : public HeapMarkingAcceptor,
           ptrCopy == ptr &&
           "ptr shouldn't be modified by accept in MarkAcceptor");
     } else if (hv.isSymbol()) {
-      accept(hv.getSymbol());
+      acceptSym(hv.getSymbol());
     }
   }
 
@@ -723,7 +731,7 @@ class HadesGC::MarkAcceptor final : public HeapMarkingAcceptor,
     acceptHV(hvRef);
   }
 
-  void accept(SymbolID sym) override {
+  void acceptSym(SymbolID sym) override {
     const uint32_t idx = sym.unsafeGetIndex();
     if (sym.isInvalid() || idx >= markedSymbols_.size()) {
       // Ignore symbols that aren't valid or are pointing outside of the range

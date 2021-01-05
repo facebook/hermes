@@ -38,11 +38,11 @@ void CheckHeapWellFormedAcceptor::acceptHV(HermesValue &hv) {
     void *cell = hv.getPointer();
     accept(cell);
   } else if (hv.isSymbol()) {
-    accept(hv.getSymbol());
+    acceptSym(hv.getSymbol());
   }
 }
 
-void CheckHeapWellFormedAcceptor::accept(SymbolID sym) {
+void CheckHeapWellFormedAcceptor::acceptSym(SymbolID sym) {
   if (!sym.isValid()) {
     return;
   }

@@ -39,13 +39,21 @@ struct RootAndSlotAcceptorDefault : public RootAndSlotAcceptor {
     acceptHV(hv);
   }
 
-  void accept(SymbolID sym) override {
+  virtual void acceptHV(HermesValue &hv) = 0;
+
+  void accept(GCSymbolID sym) override {
+    acceptSym(sym);
+  }
+
+  void accept(PinnedSymbolID sym) override {
+    acceptSym(sym);
+  }
+
+  virtual void acceptSym(SymbolID sym) {
     // By default, symbol processing is a noop. Only a handful of acceptors
     // need to override it.
     // Not final because sometimes custom behavior is desired.
   }
-
-  virtual void acceptHV(HermesValue &hv) = 0;
 };
 
 /// A RootAndSlotAcceptorWithNamesDefault is similar to a
@@ -84,7 +92,15 @@ struct RootAndSlotAcceptorWithNamesDefault
 
   virtual void acceptHV(HermesValue &hv, const char *name) = 0;
 
-  void accept(SymbolID sym, const char *name) override {
+  void accept(PinnedSymbolID sym, const char *name) override {
+    acceptSym(sym, name);
+  }
+
+  void accept(GCSymbolID sym, const char *name) override {
+    acceptSym(sym, name);
+  }
+
+  virtual void acceptSym(SymbolID sym, const char *name) {
     // By default, symbol processing is a noop. Only a handful of acceptors
     // need to override it.
     // Not final because sometimes custom behavior is desired.
