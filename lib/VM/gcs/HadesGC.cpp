@@ -2923,24 +2923,15 @@ size_t HadesGC::getDrainRate() {
   const uint64_t ygSurvivalBytes =
       std::max(ygAverageSurvivalRatio_ * HeapSegment::maxSize(), 1.0);
   const size_t ygCollectionsUntilFull =
-      llvh::divideCeil(bytesToFill, ygSurvivalBytes);
-  // We need to account for the STW pause and sweeping. The STW pause requires 1
-  // additional YG collection. Sweeping will take exactly
-  // oldGen_.sweepSegmentsRemaining() YG collections to fully sweep. Subtract
-  // that from the iterations allowed for marking. Leave at least 1 if there
-  // aren't enough YG collections remaining.
-  const size_t postMarkIterations = oldGen_.sweepSegmentsRemaining() + 1;
-  const size_t markIterations = ygCollectionsUntilFull > postMarkIterations
-      ? ygCollectionsUntilFull - postMarkIterations
-      : 1;
+      llvh::divideCeil(bytesToFill ? bytesToFill : 1, ygSurvivalBytes);
   assert(
-      markIterations != 0 &&
-      "All of the math above should avoid a 0 markIterations");
+      ygCollectionsUntilFull != 0 &&
+      "All of the math above should avoid a 0 ygCollectionsUntilFull");
   // If any of the above calculations end up being a tiny drain rate, make the
   // lower limit at least 8 KB, to ensure collections eventually end.
   constexpr uint64_t byteDrainRateMin = 8192;
   return std::max(
-      oldGenMarker_->bytesToMark() / markIterations, byteDrainRateMin);
+      oldGenMarker_->bytesToMark() / ygCollectionsUntilFull, byteDrainRateMin);
 }
 
 void HadesGC::addSegmentExtentToCrashManager(
