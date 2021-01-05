@@ -18,7 +18,7 @@ set(HERMES_OPTIONAL_SOURCES
 set(api_sources
   hermes.cpp
   DebuggerAPI.cpp
-  )
+        )
 
 file(GLOB api_headers ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 file(GLOB api_public_headers ${PROJECT_SOURCE_DIR}/public/hermes/Public/*.h)

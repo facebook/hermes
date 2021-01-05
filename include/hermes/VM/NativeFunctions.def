@@ -373,6 +373,10 @@ NATIVE_FUNCTION(instrumentDoNothing)
 NATIVE_FUNCTION(instrumentReturnNth)
 #endif
 
+#ifdef HERMES_ENABLE_FUZZILLI
+NATIVE_FUNCTION(fuzzilli)
+#endif // HERMES_ENABLE_FUZZILLI
+
 #define ALL_ERROR_TYPE(name) NATIVE_FUNCTION(name##Constructor)
 #include "hermes/VM/NativeErrorTypes.def"
 #undef ALL_ERROR_TYPE

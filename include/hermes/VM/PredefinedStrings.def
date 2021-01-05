@@ -466,6 +466,10 @@ STR(resolvedOptions, "resolvedOptions")
 STR(supportedLocalesOf, "supportedLocalesOf")
 #endif
 
+#ifdef HERMES_ENABLE_FUZZILLI
+STR(fuzzilli, "fuzzilli")
+#endif
+
 // Define strings like "[object Number]" for all classes.
 #define CELL_JS_NAME(name, jsClassName) \
   STR(squareObject_##name, "[object " jsClassName "]")

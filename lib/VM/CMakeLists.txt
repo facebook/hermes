@@ -212,6 +212,10 @@ if(HERMESVM_JIT)
   )
 endif()
 
+if(HERMES_ENABLE_FUZZILLI)
+  add_definitions(-DHERMES_ENABLE_FUZZILLI)
+endif()
+
 add_hermes_library(hermesVMRuntime STATIC ${source_files}
     LINK_LIBS
     ${link_libs}
