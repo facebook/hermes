@@ -154,6 +154,15 @@ class GCSymbolID final : public SymbolID {
   inline GCSymbolID &set(SymbolID sym, GC *gc);
 };
 
+/// A SymbolID which is stored in non-moveable memory and is known to the
+/// garbage collector.
+class PinnedSymbolID final : public SymbolID {
+ public:
+  constexpr PinnedSymbolID() : SymbolID() {}
+
+  explicit PinnedSymbolID(SymbolID id) : SymbolID(id) {}
+};
+
 } // namespace vm
 } // namespace hermes
 
