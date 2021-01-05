@@ -1155,6 +1155,7 @@ HadesGC::HadesGC(
       occupancyTarget_(gcConfig.getOccupancyTarget()),
       ygAverageSurvivalRatio_{/*weight*/ 0.5,
                               /*init*/ kYGInitialSurvivalRatio} {
+  std::lock_guard<Mutex> lk(gcMutex_);
   crashMgr_->setCustomData("HermesGC", kGCName);
   // createSegment relies on member variables and should not be called until
   // they are initialised.
@@ -1679,23 +1680,16 @@ void HadesGC::creditExternalMemory(GCCell *cell, uint32_t sz) {
   assert(canAllocExternalMemory(sz) && "Precondition");
   if (inYoungGen(cell)) {
     ygExternalBytes_ += sz;
-    // Instead of setting the effective end, which forces YG collections to
-    // happen sooner, check if the new total external bytes is large enough to
-    // maybe warrant an OG GC.
-    const uint64_t totalAllocated = allocatedBytes() + externalBytes();
-    // Add one heap segment for YG capacity bytes.
-    const uint64_t totalBytes =
-        (oldGen_.targetSizeBytes() + HeapSegment::maxSize()) + externalBytes();
-    constexpr double kCollectionThreshold = 0.75;
-    double allocatedRatio = static_cast<double>(totalAllocated) / totalBytes;
-    if (allocatedRatio >= kCollectionThreshold) {
-      // Set the effective end to the level, which will force a GC to occur
-      // on the next YG alloc.
+    // If the YG now contains an entire segment worth of external memory, set
+    // the effective end to the level, which will force a GC to occur on the
+    // next YG alloc.
+    if (ygExternalBytes_ >= HeapSegment::maxSize())
       youngGen_->setEffectiveEnd(youngGen_->level());
-    }
   } else {
     std::lock_guard<Mutex> lk{gcMutex_};
     oldGen_.creditExternalMemory(sz);
+    if (heapFootprint() > maxHeapSize_)
+      youngGen_->setEffectiveEnd(youngGen_->level());
   }
 }
 
@@ -2728,6 +2722,7 @@ void HadesGC::OldGen::updatePeakAllocatedBytes(uint16_t segmentIdx) {
 }
 
 uint64_t HadesGC::OldGen::externalBytes() const {
+  assert(gc_->gcMutex_ && "OG external bytes must be accessed under gcMutex_.");
   return externalBytes_;
 }
 
@@ -2736,6 +2731,7 @@ uint64_t HadesGC::OldGen::size() const {
 }
 
 uint64_t HadesGC::OldGen::targetSizeBytes() const {
+  assert(gc_->gcMutex_ && "Must hold gcMutex_ when accessing targetSegments_.");
   return targetSegments_ * HeapSegment::maxSize();
 }
 
@@ -2869,6 +2865,7 @@ std::unique_ptr<HadesGC::HeapSegment> HadesGC::OldGen::removeSegment(
 }
 
 void HadesGC::OldGen::setTargetSegments(size_t targetSegments) {
+  assert(gc_->gcMutex_ && "Must hold gcMutex_ when accessing targetSegments_.");
   targetSegments_ = targetSegments;
 }
 

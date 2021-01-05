@@ -344,6 +344,9 @@ class HadesGC final : public GCBase {
 
     /// Add some external memory cost to the OG.
     void creditExternalMemory(uint32_t size) {
+      assert(
+          gc_->gcMutex_ &&
+          "OG external bytes must be accessed under gcMutex_.");
       externalBytes_ += size;
     }
 
@@ -351,6 +354,9 @@ class HadesGC final : public GCBase {
     void debitExternalMemory(uint32_t size) {
       assert(
           externalBytes_ >= size && "Debiting more memory than was credited");
+      assert(
+          gc_->gcMutex_ &&
+          "OG external bytes must be accessed under gcMutex_.");
       externalBytes_ -= size;
     }
 
