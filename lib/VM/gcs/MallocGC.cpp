@@ -71,8 +71,9 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
       // It hasn't been seen before, move it.
       // At this point, also trim the object.
       const bool canBeTrimmed = cell->getVT()->canBeTrimmed();
-      const gcheapsize_t trimmedSize =
-          cell->getVT()->getTrimmedSize(cell, cell->getAllocatedSize());
+      const gcheapsize_t trimmedSize = canBeTrimmed
+          ? cell->getVT()->getTrimmedSize(cell)
+          : cell->getAllocatedSize();
       auto *newLocation =
           new (checkedMalloc(trimmedSize + sizeof(CellHeader))) CellHeader();
       newLocation->mark();

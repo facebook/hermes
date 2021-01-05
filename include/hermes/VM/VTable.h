@@ -194,13 +194,19 @@ struct VTable {
 
   /// Tell the \p cell to shrink itself, and return its new size. If the cell
   /// doesn't have any shrinking to do, return the \p origSize.
-  gcheapsize_t getTrimmedSize(GCCell *cell, gcheapsize_t origSize) const {
-    assert(isValid());
-    return canBeTrimmed() ? heapAlignSize(trimSize_(cell)) : origSize;
+  gcheapsize_t getTrimmedSize(GCCell *cell) const {
+    assert(
+        isValid() && canBeTrimmed() &&
+        "Called getTrimmedSize on a cell that can't be trimmed");
+    assert(isVariableSize() && "A trimmable cell must be variable sized");
+    return heapAlignSize(trimSize_(cell));
   }
 
   void trim(GCCell *cell) const {
-    assert(isValid());
+    assert(
+        isValid() && canBeTrimmed() &&
+        "Called trim on a cell that can't be trimmed");
+    assert(isVariableSize() && "A trimmable cell must be variable sized");
     trim_(cell);
   }
 
