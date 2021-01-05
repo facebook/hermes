@@ -250,6 +250,7 @@ class HadesGC final : public GCBase {
   class HeapSegment final : public AlignedHeapSegment {
    public:
     explicit HeapSegment(AlignedStorage storage);
+    HeapSegment() = default;
 
     /// Allocate space by bumping a level.
     AllocResult bumpAlloc(uint32_t sz);
@@ -275,10 +276,10 @@ class HadesGC final : public GCBase {
    public:
     explicit OldGen(HadesGC *gc);
 
-    std::vector<std::unique_ptr<HeapSegment>>::iterator begin();
-    std::vector<std::unique_ptr<HeapSegment>>::iterator end();
-    std::vector<std::unique_ptr<HeapSegment>>::const_iterator begin() const;
-    std::vector<std::unique_ptr<HeapSegment>>::const_iterator end() const;
+    std::deque<HeapSegment>::iterator begin();
+    std::deque<HeapSegment>::iterator end();
+    std::deque<HeapSegment>::const_iterator begin() const;
+    std::deque<HeapSegment>::const_iterator end() const;
 
     size_t numSegments() const;
     size_t maxNumSegments() const;
@@ -286,14 +287,14 @@ class HadesGC final : public GCBase {
     HeapSegment &operator[](size_t i);
 
     /// Take ownership of the given segment.
-    void addSegment(std::unique_ptr<HeapSegment> seg);
+    void addSegment(HeapSegment seg);
 
     /// Remove the segment at \p segmentIdx.
     /// WARN: This is an expensive operation and should be used sparingly. It
     /// calls eraseSegmentFreelists, which has a worst case time complexity of
     /// O(#Freelist buckets * #Segments).
     /// \return the segment previously at segmentIdx
-    std::unique_ptr<HeapSegment> removeSegment(size_t segmentIdx);
+    HeapSegment removeSegment(size_t segmentIdx);
 
     /// Indicate that OG should target having \p targetSegments segments.
     void setTargetSegments(size_t targetSegments);
@@ -440,7 +441,10 @@ class HadesGC final : public GCBase {
         bool setHead);
 
     HadesGC *gc_;
-    std::vector<std::unique_ptr<HeapSegment>> segments_;
+
+    /// Use a std::deque instead of a std::vector so that references into it
+    /// remain valid across a push_back.
+    std::deque<HeapSegment> segments_;
 
     /// This is the target number of segments in the OG JS heap. It does not
     /// include external memory and may be larger or smaller than the actual
@@ -557,11 +561,7 @@ class HadesGC final : public GCBase {
 
   /// youngGen is a bump-pointer space, so it can re-use AlignedHeapSegment.
   /// Protected by gcMutex_.
-  std::unique_ptr<HeapSegment> youngGen_;
-
-  /// Should always be set to youngGen_->lowLim(). Used to save an indirection
-  /// in write barriers.
-  void *ygStart_;
+  HeapSegment youngGen_;
 
   /// List of cells in YG that have finalizers. Iterate through this to clean
   /// them out.
@@ -873,12 +873,11 @@ class HadesGC final : public GCBase {
   const HeapSegment &youngGen() const;
 
   /// Create a new segment (to be used by either YG or OG).
-  std::unique_ptr<HeapSegment> createSegment();
+  HeapSegment createSegment();
 
   /// Set a given segment as the YG segment.
   /// \return the previous YG segment.
-  std::unique_ptr<HadesGC::HeapSegment> setYoungGen(
-      std::unique_ptr<HeapSegment> seg);
+  HeapSegment setYoungGen(HeapSegment seg);
 
   /// Searches the old gen for this pointer. This is O(number of OG segments).
   /// NOTE: In any non-debug case, \c inYoungGen should be used instead, because
