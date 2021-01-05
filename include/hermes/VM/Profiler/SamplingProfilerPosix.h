@@ -185,7 +185,7 @@ class SamplingProfiler {
 
   /// invoke sigaction() posix API to register \p handler.
   /// \return what sigaction() returns: 0 to indicate success.
-  int invokeSignalAction(void (*handler)(int));
+  static int invokeSignalAction(void (*handler)(int));
 
   /// Register sampling signal handler if not done yet.
   /// \return true to indicate success.

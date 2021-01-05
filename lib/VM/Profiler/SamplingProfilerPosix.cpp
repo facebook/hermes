@@ -18,15 +18,13 @@
 
 #include "llvh/Support/Compiler.h"
 
-#include <assert.h>
 #include <fcntl.h>
 #include <pthread.h>
-#include <signal.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <unistd.h>
+#include <cassert>
 #include <chrono>
 #include <cmath>
+#include <csignal>
 #include <random>
 #include <thread>
 
@@ -256,10 +254,9 @@ uint32_t SamplingProfiler::walkRuntimeStack(
 
   // TODO: capture leaf frame IP.
   const Inst *ip = nullptr;
-  // Whether we successfully captured a stack frame or not.
-  bool capturedFrame = true;
   for (ConstStackFramePtr frame : runtime->getStackFrames()) {
-    capturedFrame = true;
+    // Whether we successfully captured a stack frame or not.
+    bool capturedFrame = true;
     auto &frameStorage = sampleStorage.stack[count];
     // Check if it is pure JS frame.
     auto *calleeCodeBlock = frame.getCalleeCodeBlock();
@@ -272,18 +269,18 @@ uint32_t SamplingProfiler::walkRuntimeStack(
       assert(module != nullptr && "Cannot fetch runtimeModule for code block");
       frameStorage.jsFrame.module = module;
       registerDomain(module->getDomainUnsafe(runtime));
+    } else if (
+        auto *nativeFunction =
+            dyn_vmcast_or_null<NativeFunction>(frame.getCalleeClosure())) {
+      frameStorage.kind = vmisa<FinalizableNativeFunction>(nativeFunction)
+          ? StackFrame::FrameKind::FinalizableNativeFunction
+          : StackFrame::FrameKind::NativeFunction;
+      frameStorage.nativeFrame = nativeFunction->getFunctionPtr();
     } else {
-      if (auto *nativeFunction =
-              dyn_vmcast_or_null<NativeFunction>(frame.getCalleeClosure())) {
-        frameStorage.kind = vmisa<FinalizableNativeFunction>(nativeFunction)
-            ? StackFrame::FrameKind::FinalizableNativeFunction
-            : StackFrame::FrameKind::NativeFunction;
-        frameStorage.nativeFrame = nativeFunction->getFunctionPtr();
-      } else {
-        // TODO: handle BoundFunction.
-        capturedFrame = false;
-      }
+      // TODO: handle BoundFunction.
+      capturedFrame = false;
     }
+
     // Update ip to caller for next iteration.
     ip = frame.getSavedIP();
     if (capturedFrame) {
