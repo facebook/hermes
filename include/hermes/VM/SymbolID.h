@@ -8,6 +8,8 @@
 #ifndef HERMES_VM_SYMBOLID_H
 #define HERMES_VM_SYMBOLID_H
 
+#include "hermes/VM/GCDecl.h"
+
 #include "llvh/ADT/DenseMap.h"
 
 #include <cstdint>
@@ -132,6 +134,25 @@ class SymbolID {
 };
 
 llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, SymbolID symbolID);
+
+/// A SymbolID that lives on the JS heap. Hides the assignment operator, but
+/// provides set operations that do a write barrier.
+class GCSymbolID final : public SymbolID {
+ public:
+  constexpr GCSymbolID() : SymbolID() {}
+
+  /// No write barrier needed for construction.
+  explicit GCSymbolID(SymbolID id) : SymbolID(id) {}
+
+  GCSymbolID(const GCSymbolID &) = default;
+  ~GCSymbolID() = default;
+
+  /// Deleted so a write barrier is used instead.
+  GCSymbolID &operator=(const GCSymbolID &) = delete;
+
+  /// Write a new value into this. Performs a write barrier for some GCs.
+  inline GCSymbolID &set(SymbolID sym, GC *gc);
+};
 
 } // namespace vm
 } // namespace hermes

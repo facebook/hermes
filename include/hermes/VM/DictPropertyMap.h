@@ -8,10 +8,10 @@
 #ifndef HERMES_VM_DICTPROPERTYMAP_H
 #define HERMES_VM_DICTPROPERTYMAP_H
 
-#include "hermes/VM/GCSymbolID.h"
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/PropertyDescriptor.h"
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/SymbolID.h"
 
 #include "llvh/Support/TrailingObjects.h"
 

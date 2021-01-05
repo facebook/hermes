@@ -8,7 +8,7 @@
 #include "hermes/VM/Metadata.h"
 
 #include "hermes/VM/BuildMetadata.h"
-#include "hermes/VM/GCSymbolID.h"
+#include "hermes/VM/SymbolID.h"
 
 #include "gtest/gtest.h"
 
