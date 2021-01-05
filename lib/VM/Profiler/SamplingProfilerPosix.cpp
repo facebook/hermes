@@ -35,8 +35,6 @@ namespace vm {
 
 /// Name of the semaphore.
 const char *const kSamplingDoneSemaphoreName = "/samplingDoneSem";
-/// Maximum allowed GC event extra info count.
-constexpr uint32_t kMaxGCEventExtraInfoCount = 10;
 
 volatile std::atomic<SamplingProfiler *> SamplingProfiler::sProfilerInstance_{
     nullptr};
@@ -387,9 +385,6 @@ SamplingProfiler::SamplingProfiler() : sampleStorage_(kMaxStackDepth) {
       TRACER_TYPE_JAVASCRIPT, collectStackForLoom);
 #endif
   sProfilerInstance_.store(this);
-  // Reserve max possible unique GC event extra info count to
-  // avoid rehashing.
-  gcEventExtraInfoSet_.reserve(kMaxGCEventExtraInfoCount);
 }
 
 void SamplingProfiler::dumpSampledStack(llvh::raw_ostream &OS) {
@@ -520,13 +515,7 @@ void SamplingProfiler::recordPreGCStack(
     Runtime *runtime,
     const std::string &extraInfo) {
   GCFrameInfo gcExtraInfo = nullptr;
-  // Only record extra info if not exceeding max allowed count to prevent
-  // rehash.
-  assert(
-      gcEventExtraInfoSet_.size() < kMaxGCEventExtraInfoCount &&
-      "Need to increase kMaxGCEventExtraInfoCount.");
-  if (!extraInfo.empty() &&
-      gcEventExtraInfoSet_.size() < kMaxGCEventExtraInfoCount) {
+  if (!extraInfo.empty()) {
     std::pair<std::unordered_set<std::string>::iterator, bool> retPair =
         gcEventExtraInfoSet_.insert(extraInfo);
     gcExtraInfo = &(*(retPair.first));

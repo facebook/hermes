@@ -61,7 +61,6 @@ class SamplingProfiler {
   /// Captured FinalizableNativeFunction frame information for symbolication.
   using FinalizableNativeFunctionFrameInfo = NativeFunctionPtr;
   /// GC frame info. Pointing to string in gcEventExtraInfoSet_.
-  /// gcEventExtraInfoSet_ is structured to never invalidate this pointer.
   using GCFrameInfo = const std::string *;
 
   // This will break with more than one RuntimeModule(like FB4a, eval() call or
@@ -167,8 +166,6 @@ class SamplingProfiler {
   ThreadNamesMap threadNames_;
 
   /// Unique GC event extra info strings container.
-  /// GCFrameInfo pointer to item in this container will always be valid
-  /// because this container never rehashes.
   std::unordered_set<std::string> gcEventExtraInfoSet_;
 
   /// Domains to be kept alive for sampled RuntimeModules.
