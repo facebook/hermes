@@ -823,10 +823,6 @@ void GCBase::oom(std::error_code reason) {
       gcCallbacks_->getCallStackNoAlloc());
 #else
   oomDetail(reason);
-  // Run finalizeAll, to avoid reporting an ASAN leak on native memory held by
-  // heap objects. Run this after oomDetail in case oomDetail wants to examine
-  // any objects.
-  finalizeAll();
   hermes_fatal((llvh::Twine("OOM: ") + convert_error_to_message(reason)).str());
 #endif
 }
