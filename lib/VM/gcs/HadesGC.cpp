@@ -1189,6 +1189,11 @@ HadesGC::HadesGC(
 }
 
 HadesGC::~HadesGC() {
+  // finalizeAll calls waitForCollectionToFinish, so there should be no ongoing
+  // collection.
+  assert(
+      concurrentPhase_ == Phase::None &&
+      "Must call finalizeAll before destructor.");
   if (oldGenCollectionThread_.joinable()) {
     oldGenCollectionThread_.join();
   }
