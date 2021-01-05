@@ -37,6 +37,15 @@ HadesGC::HeapSegment::HeapSegment(AlignedStorage storage)
   growToLimit();
 }
 
+struct HadesGC::CopyListCell final : public GCCell {
+  // Linked list of cells pointing to the next cell that was copied.
+  CopyListCell *next_;
+  // If the cell was trimmed, this field will have the original size of the
+  // object stored. If the cell wasn't trimmed it'll have the same size as the
+  // forwarded pointer.
+  uint32_t originalSize_;
+};
+
 GCCell *
 HadesGC::OldGen::finishAlloc(GCCell *cell, uint32_t sz, uint16_t segmentIdx) {
   // Track the number of allocated bytes in a segment.
@@ -212,7 +221,7 @@ void HadesGC::HeapSegment::forCompactedObjs(CallbackFunction callback) {
       // This cell has been evacuated, do nothing.
       cell = reinterpret_cast<GCCell *>(
           reinterpret_cast<char *>(cell) +
-          cell->getMarkedForwardingPointer()->getAllocatedSize());
+          static_cast<CopyListCell *>(cell)->originalSize_);
     } else {
       // This cell is being compacted away, call the callback on it.
       // NOTE: We do not check if it is a FreelistCell here in order to avoid
@@ -372,11 +381,6 @@ class HadesGC::HeapMarkingAcceptor : public RootAndSlotAcceptor {
   GC &gc;
 };
 
-struct HadesGC::CopyListCell final : public GCCell {
-  // Linked list of cells pointing to the next cell that was copied.
-  CopyListCell *next_;
-};
-
 template <bool CompactionEnabled>
 class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor,
                                     public WeakRootAcceptorDefault {
@@ -436,8 +440,14 @@ class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor,
       return;
     }
     assert(cell->isValid() && "Encountered an invalid cell");
+    // If a cell is from a compacting segment, trim it before moving to a new
+    // location.
+    const bool shouldTrim = CompactionEnabled &&
+        gc.compactee_.evacContains(cell) && cell->getVT()->canBeTrimmed();
+    const auto originalSize = cell->getAllocatedSize();
+    const auto sz =
+        shouldTrim ? cell->getVT()->getTrimmedSize(cell) : originalSize;
     // Newly discovered cell, first forward into the old gen.
-    const auto sz = cell->getAllocatedSize();
     GCCell *const newCell = gc.oldGen_.alloc(sz);
     HERMES_SLOW_ASSERT(
         gc.inOldGen(newCell) && "Evacuated cell not in the old gen");
@@ -447,8 +457,15 @@ class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor,
     // Copy the contents of the existing cell over before modifying it.
     std::memcpy(newCell, cell, sz);
     assert(newCell->isValid() && "Cell was copied incorrectly");
+    if (shouldTrim) {
+      auto *const newVarSizeCell =
+          static_cast<VariableSizeRuntimeCell *>(newCell);
+      newVarSizeCell->setSizeFromGC(sz);
+      newVarSizeCell->getVT()->trim(newVarSizeCell);
+    }
     evacuatedBytes_ += sz;
     CopyListCell *const copyCell = static_cast<CopyListCell *>(cell);
+    copyCell->originalSize_ = originalSize;
     // Set the forwarding pointer in the old spot
     copyCell->setMarkedForwardingPointer(newCell);
     if (isTrackingIDs_) {

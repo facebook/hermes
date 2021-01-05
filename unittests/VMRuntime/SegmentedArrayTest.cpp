@@ -60,7 +60,8 @@ TEST_F(SegmentedArrayTest, AllocLargeArrayThrowsRangeError) {
 }
 
 TEST_F(SegmentedArrayTest, AllowTrimming) {
-  // Hades doesn't trim arrays.
+  // Hades only trims arrays when a segment is selected as a compaction
+  // candidate, so it isn't reliably selected just by calling collect().
 #ifndef HERMESVM_GC_HADES
   MutableHandle<SegmentedArray> array(runtime);
   constexpr SegmentedArray::size_type originalCapacity = 4;
