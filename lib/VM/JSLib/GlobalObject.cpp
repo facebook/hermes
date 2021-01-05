@@ -260,9 +260,7 @@ throwTypeError(void *ctx, Runtime *runtime, NativeArgs) {
 CallResult<HermesValue> fuzzilli(void *, Runtime *, NativeArgs args) {
   if (args.getArgCount() == 1 && args.getArg(0).isString()) {
     if (args.getArg(0).getString()->equals("FuzzilliCrash1")){
-      auto crashPtr = new int;
-      delete crashPtr;
-      *crashPtr = 2;
+      *((int*) 0x1) = 2;
     }
     else if (args.getArg(0).getString()->equals("FuzzilliCrash2"))
       assert(0);
@@ -779,6 +777,11 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
         intl::createIntlObject(runtime)));
   }
 #endif
+
+#ifdef HERMES_ENABLE_FUZZILLI
+  defineGlobalFunc(Predefined::getSymbolID(Predefined::fuzzilli), fuzzilli, 1);
+#endif
+
 }
 
 } // namespace vm
