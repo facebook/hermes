@@ -78,7 +78,7 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
 
   /// The table maps from a sequential string id in the bytecode to an
   /// SymbolID.
-  std::vector<PinnedSymbolID> stringIDMap_;
+  std::vector<RootSymbolID> stringIDMap_;
 
   /// Weak pointer to a GC-managed Domain that owns this RuntimeModule.
   /// NOTE: This will not be made invalid through marking, because the domain

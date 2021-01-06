@@ -2027,7 +2027,7 @@ void GenGC::sizeDiagnosticCensus() {
       }
     }
 
-    void accept(PinnedSymbolID sym) override {
+    void accept(RootSymbolID sym) override {
       acceptSym(sym);
     }
     void accept(GCSymbolID sym) override {

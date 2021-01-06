@@ -156,11 +156,11 @@ class GCSymbolID final : public SymbolID {
 
 /// A SymbolID which is stored in non-moveable memory and is known to the
 /// garbage collector.
-class PinnedSymbolID final : public SymbolID {
+class RootSymbolID final : public SymbolID {
  public:
-  constexpr PinnedSymbolID() : SymbolID() {}
+  constexpr RootSymbolID() : SymbolID() {}
 
-  explicit PinnedSymbolID(SymbolID id) : SymbolID(id) {}
+  explicit RootSymbolID(SymbolID id) : SymbolID(id) {}
 };
 
 } // namespace vm

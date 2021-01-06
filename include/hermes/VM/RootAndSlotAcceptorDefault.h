@@ -45,7 +45,7 @@ struct RootAndSlotAcceptorDefault : public RootAndSlotAcceptor {
     acceptSym(sym);
   }
 
-  void accept(PinnedSymbolID sym) override {
+  void accept(RootSymbolID sym) override {
     acceptSym(sym);
   }
 
@@ -92,7 +92,7 @@ struct RootAndSlotAcceptorWithNamesDefault
 
   virtual void acceptHV(HermesValue &hv, const char *name) = 0;
 
-  void accept(PinnedSymbolID sym, const char *name) override {
+  void accept(RootSymbolID sym, const char *name) override {
     acceptSym(sym, name);
   }
 

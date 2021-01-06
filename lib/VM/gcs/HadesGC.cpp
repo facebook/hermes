@@ -369,7 +369,7 @@ class HadesGC::HeapMarkingAcceptor : public RootAndSlotAcceptor {
   }
   virtual void acceptHeap(BasedPointer &basedPtr, void *heapLoc) = 0;
 
-  void accept(PinnedSymbolID sym) override final {
+  void accept(RootSymbolID sym) override final {
     acceptSym(sym);
   }
   void accept(GCSymbolID sym) override final {
