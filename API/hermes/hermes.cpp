@@ -1064,7 +1064,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   friend class debugger::Debugger;
   std::unique_ptr<debugger::Debugger> debugger_;
 #endif
-  uint32_t vmExperimentFlags_{0};
+  ::hermes::vm::experiments::VMExperimentFlags vmExperimentFlags_{0};
   std::shared_ptr<vm::CrashManager> crashMgr_;
 
   /// Compilation flags used by prepareJavaScript().

@@ -25,6 +25,7 @@
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/OldGenNC.h"
 #include "hermes/VM/SweepResultNC.h"
+#include "hermes/VM/VMExperiments.h"
 #include "hermes/VM/YoungGenNC.h"
 #include "llvh/Support/Casting.h"
 #include "llvh/Support/Compiler.h"
@@ -116,7 +117,8 @@ class GenGC final : public GCBase {
       PointerBase *pointerBase,
       const GCConfig &gcConfig,
       std::shared_ptr<CrashManager> crashMgr,
-      std::shared_ptr<StorageProvider> provider);
+      std::shared_ptr<StorageProvider> provider,
+      experiments::VMExperimentFlags vmExperimentFlags);
 
   ~GenGC();
 

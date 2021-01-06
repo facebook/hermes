@@ -1161,7 +1161,8 @@ HadesGC::HadesGC(
     PointerBase *pointerBase,
     const GCConfig &gcConfig,
     std::shared_ptr<CrashManager> crashMgr,
-    std::shared_ptr<StorageProvider> provider)
+    std::shared_ptr<StorageProvider> provider,
+    experiments::VMExperimentFlags vmExperimentFlags)
     : GCBase(
           metaTable,
           gcCallbacks,
@@ -1180,6 +1181,7 @@ HadesGC::HadesGC(
       occupancyTarget_(gcConfig.getOccupancyTarget()),
       ygAverageSurvivalRatio_{/*weight*/ 0.5,
                               /*init*/ kYGInitialSurvivalRatio} {
+  (void)vmExperimentFlags;
   std::lock_guard<Mutex> lk(gcMutex_);
   crashMgr_->setCustomData("HermesGC", kGCName);
   // createSegment relies on member variables and should not be called until

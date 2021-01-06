@@ -98,7 +98,8 @@ GenGC::GenGC(
     PointerBase *pointerBase,
     const GCConfig &gcConfig,
     std::shared_ptr<CrashManager> crashMgr,
-    std::shared_ptr<StorageProvider> provider)
+    std::shared_ptr<StorageProvider> provider,
+    experiments::VMExperimentFlags vmExperimentFlags)
     : GCBase(
           metaTable,
           gcCallbacks,
@@ -127,6 +128,7 @@ GenGC::GenGC(
       occupancyTarget_(gcConfig.getOccupancyTarget()),
       oomThreshold_(gcConfig.getEffectiveOOMThreshold()),
       weightedUsed_(static_cast<double>(gcConfig.getInitHeapSize())) {
+  (void)vmExperimentFlags;
   crashMgr_->setCustomData("HermesGC", kGCName);
   growTo(gcConfig.getInitHeapSize());
   claimAllocContext();

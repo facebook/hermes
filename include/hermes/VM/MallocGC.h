@@ -11,6 +11,7 @@
 #include "hermes/Public/GCConfig.h"
 #include "hermes/VM/GCBase.h"
 #include "hermes/VM/GCCell.h"
+#include "hermes/VM/VMExperiments.h"
 
 #include "llvh/ADT/DenseMap.h"
 #include "llvh/ADT/DenseSet.h"
@@ -150,7 +151,8 @@ class MallocGC final : public GCBase {
       PointerBase *pointerBase,
       const GCConfig &gcConfig,
       std::shared_ptr<CrashManager> crashMgr,
-      std::shared_ptr<StorageProvider> provider);
+      std::shared_ptr<StorageProvider> provider,
+      experiments::VMExperimentFlags vmExperimentFlags);
 
   ~MallocGC();
 

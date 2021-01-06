@@ -35,7 +35,8 @@ DummyRuntime::DummyRuntime(
           this,
           gcConfig,
           crashMgr,
-          std::move(storageProvider)} {}
+          std::move(storageProvider),
+          0} {}
 
 DummyRuntime::~DummyRuntime() {
   EXPECT_FALSE(getHeap().getIDTracker().hasNativeIDs())

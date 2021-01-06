@@ -39,6 +39,7 @@
 #include "hermes/VM/StackTracesTree.h"
 #include "hermes/VM/SymbolRegistry.h"
 #include "hermes/VM/TwineChar16.h"
+#include "hermes/VM/VMExperiments.h"
 
 #ifdef HERMESVM_PROFILER_BB
 #include "hermes/VM/Profiler/InlineCacheProfiler.h"
@@ -93,22 +94,6 @@ class JSArray;
 /// available. This is necessary so we can perform native calls with small
 /// number of arguments without checking.
 static const unsigned STACK_RESERVE = 32;
-
-/// List of active experiments, corresponding to getVMExperimentFlags().
-namespace experiments {
-enum {
-  Default = 0,
-  MAdviseSequential = 1 << 2,
-  MAdviseRandom = 1 << 3,
-  MAdviseStringsSequential = 1 << 4,
-  MAdviseStringsRandom = 1 << 5,
-  MAdviseStringsWillNeed = 1 << 6,
-  VerifyBytecodeChecksum = 1 << 7,
-  IgnoreMemoryWarnings = 1 << 9,
-};
-/// Set of flags for active VM experiments.
-using VMExperimentFlags = uint32_t;
-} // namespace experiments
 
 /// Type used to assign object unique integer identifiers.
 using ObjectID = uint32_t;

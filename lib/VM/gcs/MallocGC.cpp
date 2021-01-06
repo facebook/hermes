@@ -178,7 +178,8 @@ MallocGC::MallocGC(
     PointerBase *pointerBase,
     const GCConfig &gcConfig,
     std::shared_ptr<CrashManager> crashMgr,
-    std::shared_ptr<StorageProvider> provider)
+    std::shared_ptr<StorageProvider> provider,
+    experiments::VMExperimentFlags vmExperimentFlags)
     : GCBase(
           metaTable,
           gcCallbacks,
@@ -188,6 +189,7 @@ MallocGC::MallocGC(
       pointers_(),
       maxSize_(Size(gcConfig).max()),
       sizeLimit_(gcConfig.getInitHeapSize()) {
+  (void)vmExperimentFlags;
   crashMgr_->setCustomData("HermesGC", kGCName);
 }
 
