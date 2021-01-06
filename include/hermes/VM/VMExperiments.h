@@ -23,6 +23,7 @@ enum {
   MAdviseStringsWillNeed = 1 << 6,
   VerifyBytecodeChecksum = 1 << 7,
   IgnoreMemoryWarnings = 1 << 9,
+  HadesCompaction = 1 << 10,
 };
 
 /// Set of flags for active VM experiments.

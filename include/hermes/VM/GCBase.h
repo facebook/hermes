@@ -884,7 +884,7 @@ class GCBase {
   }
 #endif
 
-  /// Name to indentify this heap in logs.
+  /// Name to identify this heap in logs.
   const std::string &getName() const {
     return name_;
   }

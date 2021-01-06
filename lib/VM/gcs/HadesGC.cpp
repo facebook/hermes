@@ -336,7 +336,7 @@ class HadesGC::CollectionStats final {
 HadesGC::CollectionStats::~CollectionStats() {
   gc_->recordGCStats(GCAnalyticsEvent{
       gc_->getName(),
-      kGCName,
+      std::string(kGCName) + (gc_->compactionEnabled_ ? "(compacting)" : ""),
       collectionType_,
       std::move(cause_),
       std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -1180,7 +1180,8 @@ HadesGC::HadesGC(
       revertToYGAtTTI_{gcConfig.getRevertToYGAtTTI()},
       occupancyTarget_(gcConfig.getOccupancyTarget()),
       ygAverageSurvivalRatio_{/*weight*/ 0.5,
-                              /*init*/ kYGInitialSurvivalRatio} {
+                              /*init*/ kYGInitialSurvivalRatio},
+      compactionEnabled_{!!(vmExperimentFlags & experiments::HadesCompaction)} {
   (void)vmExperimentFlags;
   std::lock_guard<Mutex> lk(gcMutex_);
   crashMgr_->setCustomData("HermesGC", kGCName);
@@ -1576,6 +1577,8 @@ void HadesGC::prepareCompactee() {
 
   llvh::Optional<size_t> compacteeIdx;
 #ifndef HERMESVM_SANITIZE_HANDLES
+  if (!compactionEnabled_)
+    return;
   // There are two possible criteria for compacting a segment:
   // 1. If any segment was at least 75% occupied at some point
   // and is now at most at 1/3 of its peak.
