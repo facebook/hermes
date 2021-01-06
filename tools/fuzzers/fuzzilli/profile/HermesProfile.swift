@@ -18,7 +18,7 @@ let hermesProfile = Profile(
 
     ecmaVersion: ECMAScriptVersion.es6,
 
-    crashTests: ["fuzzilli('FuzzilliCrash2')", "fuzzilli('FuzzilliCrash1')"],
+    crashTests: ["FuzzilliCrash(1)", "FuzzilliCrash(2)"],
 
     additionalCodeGenerators: WeightedList<CodeGenerator>([]),
 
