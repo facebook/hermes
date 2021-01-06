@@ -827,16 +827,13 @@ class HermesRuntimeImpl final : public HermesRuntime,
   size_t getLength(vm::Handle<vm::ArrayImpl> arr);
   size_t getByteLength(vm::Handle<vm::JSArrayBuffer> arr);
 
-  struct JsiProxyBase : public vm::HostObjectProxy {
-    JsiProxyBase(HermesRuntimeImpl &rt, std::shared_ptr<jsi::HostObject> ho)
-        : rt_(rt), ho_(ho) {}
-
+  struct JsiProxy final : public vm::HostObjectProxy {
     HermesRuntimeImpl &rt_;
     std::shared_ptr<jsi::HostObject> ho_;
-  };
 
-  struct JsiProxy final : public JsiProxyBase {
-    using JsiProxyBase::JsiProxyBase;
+    JsiProxy(HermesRuntimeImpl &rt, std::shared_ptr<jsi::HostObject> ho)
+        : rt_(rt), ho_(ho) {}
+
     vm::CallResult<vm::HermesValue> get(vm::SymbolID id) override {
       auto &stats = rt_.runtime_.getRuntimeStats();
       const vm::instrumentation::RAIITimer timer{
@@ -952,16 +949,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
     };
   };
 
-  struct HFContextBase {
-    HFContextBase(jsi::HostFunctionType hf, HermesRuntimeImpl &hri)
+  struct HFContext final {
+    HFContext(jsi::HostFunctionType hf, HermesRuntimeImpl &hri)
         : hostFunction(std::move(hf)), hermesRuntimeImpl(hri) {}
-
-    jsi::HostFunctionType hostFunction;
-    HermesRuntimeImpl &hermesRuntimeImpl;
-  };
-
-  struct HFContext final : public HFContextBase {
-    using HFContextBase::HFContextBase;
 
     static vm::CallResult<vm::HermesValue>
     func(void *context, vm::Runtime *runtime, vm::NativeArgs hvArgs) {
@@ -1008,6 +998,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
     static void finalize(void *context) {
       delete reinterpret_cast<HFContext *>(context);
     }
+
+    jsi::HostFunctionType hostFunction;
+    HermesRuntimeImpl &hermesRuntimeImpl;
   };
 
   template <typename T>
@@ -1644,7 +1637,7 @@ std::shared_ptr<jsi::HostObject> HermesRuntimeImpl::getHostObject(
     const jsi::Object &obj) {
   const vm::HostObjectProxy *proxy =
       vm::vmcast<vm::HostObject>(phv(obj))->getProxy();
-  return static_cast<const JsiProxyBase *>(proxy)->ho_;
+  return static_cast<const JsiProxy *>(proxy)->ho_;
 }
 
 jsi::Value HermesRuntimeImpl::getProperty(
@@ -1902,7 +1895,7 @@ jsi::Function HermesRuntimeImpl::createFunctionFromHostFunction(
 
 jsi::HostFunctionType &HermesRuntimeImpl::getHostFunction(
     const jsi::Function &func) {
-  return static_cast<HFContextBase *>(
+  return static_cast<HFContext *>(
              vm::vmcast<vm::FinalizableNativeFunction>(phv(func))->getContext())
       ->hostFunction;
 }
