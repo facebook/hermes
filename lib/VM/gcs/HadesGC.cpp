@@ -1381,24 +1381,17 @@ void HadesGC::waitForCollectionToFinish() {
     ygCollectionStats_->addCollectionType("(waiting)");
   }
 
-  if (!kConcurrentGC) {
-    while (concurrentPhase_ != Phase::None) {
-      incrementalCollect(false);
-    }
+  while (concurrentPhase_ != Phase::None && concurrentPhase_ != Phase::Cleanup)
+    incrementalCollect(false);
+
+  if (!kConcurrentGC)
     return;
-  }
+
+  assert(gcMutex_.depth() == 1 && "Depth must be 1 to release the lock.");
   std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
-  if (isOldGenMarking_) {
-    // The background thread is currently marking, wait until it is time for the
-    // STW pause.
-    waitForConditionVariable(stopTheWorldCondVar_, lk, [this] {
-      return concurrentPhase_ == Phase::CompleteMarking;
-    });
-    completeMarking();
-    // Notify the waiting OG collection that it can complete.
-    stopTheWorldCondVar_.notify_one();
-  }
   lk.unlock();
+  // If the OG collection is waiting, notify it that it can complete.
+  stopTheWorldCondVar_.notify_one();
   // Wait for the collection to finish.
   oldGenCollectionThread_.join();
   lk.lock();
@@ -1548,13 +1541,13 @@ void HadesGC::incrementalCollect(bool backgroundThread) {
         concurrentPhase_ = Phase::CompleteMarking;
       break;
     case Phase::CompleteMarking:
-      if (!kConcurrentGC)
+      if (!backgroundThread)
         completeMarking();
       else
         waitForCompleteMarking();
       assert(
-          concurrentPhase_ == Phase::Sweep &&
-          "completeMarking should advance concurrentPhase_ to sweep");
+          concurrentPhase_ != Phase::CompleteMarking &&
+          "completeMarking should advance concurrentPhase_");
       break;
     case Phase::Sweep:
       // Calling oldGen_.sweepNext() will sweep the next segment.
@@ -1647,11 +1640,8 @@ void HadesGC::waitForCompleteMarking() {
       "Only background thread can block waiting for STW pause.");
   assert(gcMutex_);
   std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
-  // If the mutator is in waitForCollectionToFinish, notify it that the OG
-  // thread is waiting for a STW pause.
-  stopTheWorldCondVar_.notify_one();
   waitForConditionVariable(stopTheWorldCondVar_, lk, [this] {
-    return concurrentPhase_ == Phase::Sweep;
+    return concurrentPhase_ != Phase::CompleteMarking;
   });
   lk.release();
 }
