@@ -428,16 +428,9 @@ class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor,
     }
 
     GCCell *&cell = reinterpret_cast<GCCell *&>(ptr);
-    if (CompactionEnabled && !HeapSegment::getCellMarkBit(cell)) {
-      // The only case in which we can encounter an unmarked cell is when the
-      // card table scan happens to find a dead object that points into the
-      // compactee but hasn't been swept yet.
-      assert(
-          HeapSegment::cardTableCovering(heapLoc)->isCardForAddressDirty(
-              heapLoc) &&
-          gc.compactee_.evacContains(cell));
-      return;
-    }
+    assert(
+        HeapSegment::getCellMarkBit(cell) &&
+        "Should only evacuate marked objects.");
     forwardCell(cell);
   }
 
@@ -2502,9 +2495,9 @@ void HadesGC::transferExternalMemoryToOldGen() {
   youngGen_.clearExternalMemoryCharge();
 }
 
-template <typename Acceptor>
+template <bool CompactionEnabled>
 void HadesGC::scanDirtyCardsForSegment(
-    SlotVisitor<Acceptor> &visitor,
+    SlotVisitor<EvacAcceptor<CompactionEnabled>> &visitor,
     HeapSegment &seg) {
   const auto &cardTable = seg.cardTable();
   // Use level instead of end in case the OG segment is still in bump alloc
@@ -2512,6 +2505,13 @@ void HadesGC::scanDirtyCardsForSegment(
   const char *const origSegLevel = seg.level();
   size_t from = cardTable.addressToIndex(seg.start());
   const size_t to = cardTable.addressToIndex(origSegLevel - 1) + 1;
+
+  // If a compaction is taking place during sweeping, we may scan cards that
+  // contain dead objects which in turn point to dead objects in the compactee.
+  // In order to avoid promoting these dead objects, we should skip unmarked
+  // objects altogether when compaction and sweeping happen at the same time.
+  const bool visitUnmarked =
+      !CompactionEnabled || concurrentPhase_ != Phase::Sweep;
 
   while (const auto oiBegin = cardTable.findNextDirtyCard(from, to)) {
     const auto iBegin = *oiBegin;
@@ -2545,7 +2545,8 @@ void HadesGC::scanDirtyCardsForSegment(
     // expensive.
 
     // Mark the first object with respect to the dirty card boundaries.
-    GCBase::markCellWithinRange(visitor, obj, obj->getVT(), this, begin, end);
+    if (visitUnmarked || HeapSegment::getCellMarkBit(obj))
+      GCBase::markCellWithinRange(visitor, obj, obj->getVT(), this, begin, end);
 
     obj = obj->nextCell();
     // If there are additional objects in this card, scan them.
@@ -2556,7 +2557,8 @@ void HadesGC::scanDirtyCardsForSegment(
       // object where next is within the card.
       for (GCCell *next = obj->nextCell(); next < boundary;
            next = next->nextCell()) {
-        GCBase::markCell(visitor, obj, obj->getVT(), this);
+        if (visitUnmarked || HeapSegment::getCellMarkBit(obj))
+          GCBase::markCell(visitor, obj, obj->getVT(), this);
         obj = next;
       }
 
@@ -2565,18 +2567,20 @@ void HadesGC::scanDirtyCardsForSegment(
       assert(
           obj < boundary && obj->nextCell() >= boundary &&
           "Last object in card must touch or cross cross the card boundary");
-      GCBase::markCellWithinRange(visitor, obj, obj->getVT(), this, begin, end);
+      if (visitUnmarked || HeapSegment::getCellMarkBit(obj))
+        GCBase::markCellWithinRange(
+            visitor, obj, obj->getVT(), this, begin, end);
     }
 
     from = iEnd;
   }
 }
 
-template <typename Acceptor>
-void HadesGC::scanDirtyCards(Acceptor &acceptor) {
-  SlotVisitor<Acceptor> visitor{acceptor};
+template <bool CompactionEnabled>
+void HadesGC::scanDirtyCards(EvacAcceptor<CompactionEnabled> &acceptor) {
+  SlotVisitor<EvacAcceptor<CompactionEnabled>> visitor{acceptor};
   const bool preparingCompaction =
-      compactee_.segment && !compactee_.evacActive();
+      CompactionEnabled && !compactee_.evacActive();
   // The acceptors in this loop can grow the old gen by adding another
   // segment, if there's not enough room to evac the YG objects discovered.
   // Since segments are always placed at the end, we can use indices instead
