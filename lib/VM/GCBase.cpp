@@ -99,21 +99,19 @@ GCBase::GCCycle::GCCycle(
     : gc_(gc),
       gcCallbacksOpt_(gcCallbacksOpt),
       extraInfo_(std::move(extraInfo)),
-      previousInGC_(gc_->inGC_.load(std::memory_order_acquire)) {
+      previousInGC_(gc_->inGC_) {
   if (!previousInGC_) {
     if (gcCallbacksOpt_.hasValue()) {
       gcCallbacksOpt_.getValue()->onGCEvent(
           GCEventKind::CollectionStart, extraInfo_);
     }
-    bool wasInGC_ = gc_->inGC_.exchange(true, std::memory_order_acquire);
-    (void)wasInGC_;
-    assert(!wasInGC_ && "inGC_ should not be concurrently modified!");
+    gc_->inGC_ = true;
   }
 }
 
 GCBase::GCCycle::~GCCycle() {
   if (!previousInGC_) {
-    gc_->inGC_.store(false, std::memory_order_release);
+    gc_->inGC_ = false;
     if (gcCallbacksOpt_.hasValue()) {
       gcCallbacksOpt_.getValue()->onGCEvent(
           GCEventKind::CollectionEnd, extraInfo_);

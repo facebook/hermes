@@ -487,6 +487,9 @@ void SamplingProfiler::onGCEvent(
     Runtime *runtime,
     GCEventKind kind,
     const std::string &extraInfo) {
+  assert(
+      !runtime->getHeap().inGC() &&
+      "Cannot be in a GC when setting a GC event");
   switch (kind) {
     case GCEventKind::CollectionStart: {
       assert(

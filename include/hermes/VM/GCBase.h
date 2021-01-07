@@ -1225,9 +1225,7 @@ class GCBase {
   /// objects and unreachable objects may not have dereference-able VTable
   /// pointers, and any reads from JS heap memory may give strange results.
   bool inGC() const {
-    // This is only used in asserts and debugging purposes, make it as strict
-    // as possible.
-    return inGC_.load(std::memory_order_seq_cst);
+    return inGC_;
   }
 
   bool isTrackingIDs() {
@@ -1460,7 +1458,7 @@ class GCBase {
   bool recordGcStats_{false};
 
   /// Whether or not a GC cycle is currently occurring.
-  AtomicIfConcurrentGC<bool> inGC_;
+  bool inGC_{false};
 
   /// The block of fields below records values of various metrics at
   /// the start of execution, so that we can get the values at the end

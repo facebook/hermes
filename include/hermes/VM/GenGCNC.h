@@ -277,7 +277,7 @@ class GenGC final : public GCBase {
 
   /// See comment in GCBase.
   bool calledByGC() const {
-    return inGC_.load(std::memory_order_seq_cst);
+    return inGC();
   }
 
   /// Return true if \p ptr is within one of the virtual address ranges

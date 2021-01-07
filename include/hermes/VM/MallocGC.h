@@ -207,7 +207,7 @@ class MallocGC final : public GCBase {
 #ifndef NDEBUG
   /// See comment in GCBase.
   bool calledByGC() const {
-    return inGC_.load(std::memory_order_seq_cst);
+    return inGC();
   }
 
   /// \return true iff the pointer \p p is controlled by this GC.
