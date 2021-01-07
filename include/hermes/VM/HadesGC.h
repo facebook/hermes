@@ -584,7 +584,8 @@ class HadesGC final : public GCBase {
     Mark,
     CompleteMarking,
     WeakMapScan,
-    Sweep
+    Sweep,
+    Cleanup,
   };
 
   /// Represents the current phase the concurrent GC is in. The main difference
@@ -785,10 +786,9 @@ class HadesGC final : public GCBase {
   /// mutator.
   void oldGenCollectionWorker();
 
-  /// For 32-bit systems, Hades runs on a single thread, interleaving OG work
-  /// with YG collections. This function performs a single step of that
-  /// collection.
-  void incrementalCollect();
+  /// Perform a single step of an OG collection. \p backgroundThread indicates
+  /// whether this call was made from the background thread.
+  void incrementalCollect(bool backgroundThread);
 
   /// Should only be called from the background thread in a concurrent GC.
   /// Requests the mutator to complete the STW pause during the next YG

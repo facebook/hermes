@@ -1383,7 +1383,7 @@ void HadesGC::waitForCollectionToFinish() {
 
   if (!kConcurrentGC) {
     while (concurrentPhase_ != Phase::None) {
-      incrementalCollect();
+      incrementalCollect(false);
     }
     return;
   }
@@ -1531,18 +1531,13 @@ void HadesGC::oldGenCollectionWorker() {
   }
   while (true) {
     std::lock_guard<Mutex> lk(gcMutex_);
-    incrementalCollect();
-    if (concurrentPhase_ == Phase::None) {
-      // NOTE: These must be set before the lock is released. This is because
-      // the mutator might otherwise observe the change in concurrentPhase_ and
-      // attempt to reset ogCollectionStats_.
-      ogCollectionStats_->endCPUTimeSection();
+    incrementalCollect(true);
+    if (concurrentPhase_ == Phase::None)
       break;
-    }
   }
 }
 
-void HadesGC::incrementalCollect() {
+void HadesGC::incrementalCollect(bool backgroundThread) {
   switch (concurrentPhase_) {
     case Phase::None:
       break;
@@ -1567,13 +1562,25 @@ void HadesGC::incrementalCollect() {
         // Finish any collection bookkeeping.
         ogCollectionStats_->setEndTime();
         ogCollectionStats_->setAfterSize(heapFootprint());
-        concurrentPhase_ = Phase::None;
         compacteeHandleForSweep_.reset();
         if (!kConcurrentGC) {
+          // We can skip past Phase::Cleanup because we know !kConcurrentGC
+          // implies there's never a background thread.
+          concurrentPhase_ = Phase::None;
           // Check the tripwire here since we know the incremental collection
           // will always end on the mutator thread.
           checkTripwireAndResetStats();
+        } else {
+          concurrentPhase_ = Phase::Cleanup;
         }
+      }
+      break;
+    case Phase::Cleanup:
+      // For concurrent collections, the CPU time must be set from the
+      // background thread.
+      if (backgroundThread) {
+        ogCollectionStats_->endCPUTimeSection();
+        concurrentPhase_ = Phase::None;
       }
       break;
     default:
@@ -2927,7 +2934,7 @@ void HadesGC::yieldToOldGen() {
     if (concurrentPhase_ == Phase::Mark)
       oldGenMarker_->setDrainRate(getDrainRate());
 
-    incrementalCollect();
+    incrementalCollect(false);
     return;
   }
   assert(gcMutex_ && "Must hold the GC mutex when calling yieldToOldGen");
