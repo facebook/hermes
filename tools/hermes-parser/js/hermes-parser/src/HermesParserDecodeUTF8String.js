@@ -7,6 +7,8 @@
  * @format
  */
 
+'use strict';
+
 /**
  * Decode a UTF-8 encoded string from Hermes with a known length.
  * Based on Emscripten's UTF8ToString with the following differences:

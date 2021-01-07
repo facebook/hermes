@@ -1,0 +1,15 @@
+{
+  "name": "hermes-eslint",
+  "private": true,
+  "version": "%VERSION%",
+  "description": "A custom parser for ESLint using the Hermes parser",
+  "main": "dist/index.js",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:facebook/hermes.git"
+  },
+  "files": [
+    "dist"
+  ]
+}

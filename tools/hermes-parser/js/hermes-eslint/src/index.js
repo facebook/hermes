@@ -7,7 +7,9 @@
  * @format
  */
 
-const HermesParser = require('../hermes-parser');
+'use strict';
+
+const HermesParser = require('hermes-parser');
 const VisitorKeys = require('./HermesESLintVisitorKeys');
 
 function parseForESLint(code) {

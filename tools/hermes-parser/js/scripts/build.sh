@@ -6,13 +6,15 @@
 
 THIS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-yarn install
+PACKAGES=(hermes-parser hermes-eslint)
 
-# Create fresh build directory and copy source JS files in
-BUILD_DIR="$THIS_DIR/../build"
-rm -rf "$BUILD_DIR"
-mkdir "$BUILD_DIR"
-cp -r "$THIS_DIR"/../src/* "$BUILD_DIR"
+# Yarn install all packages
+yarn install
+for package in "${PACKAGES[@]}"; do
+  pushd "$THIS_DIR/../$package" || exit
+  yarn install
+  popd || exit
+done
 
 # Use internal FB build or pass path to WASM parser as first command line argument
 FB_BUILD_WASM_PARSER="$THIS_DIR/facebook/buildWasmParser.sh"
@@ -30,7 +32,20 @@ else
   INCLUDE_PATH="$2"
 fi
 
+# Create fresh dist directory for each package, and copy source files in
+for package in "${PACKAGES[@]}"; do
+  PACKAGE_DIR="$THIS_DIR/../$package"
+  rm -rf "$PACKAGE_DIR/dist"
+  cp -r "$PACKAGE_DIR/src" "$PACKAGE_DIR/dist"
+done
+
+# Generate code, written into package dist directories
 node "$THIS_DIR/genWasmParser.js" "$WASM_PARSER"
 node "$THIS_DIR/genParserVisitorKeys.js" "$INCLUDE_PATH"
 node "$THIS_DIR/genESLintVisitorKeys.js" "$INCLUDE_PATH"
 node "$THIS_DIR/genNodeDeserializers.js" "$INCLUDE_PATH"
+
+for package in "${PACKAGES[@]}"; do
+  PACKAGE_DIST_DIR="$THIS_DIR/../$package/dist"
+  babel --config-file="$THIS_DIR/../.babelrc" "$PACKAGE_DIST_DIR" --out-dir="$PACKAGE_DIST_DIR"
+done
