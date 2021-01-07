@@ -469,7 +469,7 @@ class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor,
     // Set the forwarding pointer in the old spot
     copyCell->setMarkedForwardingPointer(newCell);
     if (isTrackingIDs_) {
-      gc.moveObject(cell, newCell);
+      gc.moveObject(cell, originalSize, newCell, sz);
     }
     // Push onto the copied list.
     push(copyCell);

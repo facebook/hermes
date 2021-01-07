@@ -112,40 +112,10 @@ void GenGCHeapSegment::deleteDeadObjectIDs(GC *gc) {
   }
 }
 
-void GenGCHeapSegment::updateObjectIDs(
-    GC *gc,
-    SweepResult::VTablesRemaining &vTables) {
-  if (!gc->isTrackingIDs()) {
-    // If ID tracking isn't on, there's nothing to do here.
-    return;
-  }
-
-  SweepResult::VTablesRemaining vTablesCopy{vTables};
-  MarkBitArrayNC &markBits = markBitArray();
-  char *ptr = start();
-  size_t ind = markBits.addressToIndex(ptr);
-  while (ptr < level()) {
-    if (markBits.at(ind)) {
-      auto *cell = reinterpret_cast<GCCell *>(ptr);
-      gc->moveObject(cell, cell->getForwardingPointer());
-      const VTable *vtp = vTablesCopy.next();
-      auto cellSize = cell->getAllocatedSize(vtp);
-      ptr += cellSize;
-      ind += (cellSize >> LogHeapAlign);
-    } else {
-      auto *deadRegion = reinterpret_cast<DeadRegion *>(ptr);
-      ptr += deadRegion->size();
-      ind += (deadRegion->size() >> LogHeapAlign);
-    }
-  }
-}
-
 void GenGCHeapSegment::updateReferences(
     GC *gc,
     FullMSCUpdateAcceptor *acceptor,
     SweepResult::VTablesRemaining &vTables) {
-  updateObjectIDs(gc, vTables);
-
   MarkBitArrayNC &markBits = markBitArray();
   char *ptr = start();
   size_t ind = markBits.addressToIndex(ptr);
@@ -277,6 +247,10 @@ void GenGCHeapSegment::sweepAndInstallForwardingPointers(
 
       sweepResult->displacedVtablePtrs.push_back(cell->getVT());
       cell->setForwardingPointer(reinterpret_cast<GCCell *>(res.ptr));
+      if (gc->isTrackingIDs()) {
+        gc->moveObject(
+            cell, cellSize, cell->getForwardingPointer(), trimmedSize);
+      }
       adjacentPtr = ptr += cellSize;
     }
 

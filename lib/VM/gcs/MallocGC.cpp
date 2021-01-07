@@ -95,7 +95,8 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
       }
       gc.newPointers_.insert(newLocation);
       if (gc.isTrackingIDs()) {
-        gc.moveObject(cell, newLocation->data());
+        gc.moveObject(
+            cell, cell->getAllocatedSize(), newLocation->data(), trimmedSize);
       }
       cell = newLocation->data();
     }

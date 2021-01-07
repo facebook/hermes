@@ -1035,6 +1035,7 @@ void GCBase::AllocationLocationTracker::enable(
         callback) {
   assert(!enabled_ && "Shouldn't enable twice");
   enabled_ = true;
+  std::lock_guard<Mutex> lk{mtx_};
   GC *gc = static_cast<GC *>(gc_);
   // For correct visualization of the allocation timeline, it's necessary that
   // objects in the heap snapshot that existed before sampling was enabled have
@@ -1066,6 +1067,7 @@ void GCBase::AllocationLocationTracker::enable(
 }
 
 void GCBase::AllocationLocationTracker::disable() {
+  std::lock_guard<Mutex> lk{mtx_};
   flushCallback();
   enabled_ = false;
   fragmentCallback_ = nullptr;
@@ -1080,6 +1082,7 @@ void GCBase::AllocationLocationTracker::newAlloc(const void *ptr, uint32_t sz) {
   if (!enabled_) {
     return;
   }
+  std::lock_guard<Mutex> lk{mtx_};
   // This is stateful and causes the object to have an ID assigned.
   const auto id = gc_->getObjectID(ptr);
   HERMES_SLOW_ASSERT(
@@ -1096,12 +1099,26 @@ void GCBase::AllocationLocationTracker::newAlloc(const void *ptr, uint32_t sz) {
     flushCallback();
   }
   if (auto node = gc_->gcCallbacks_->getCurrentStackTracesTreeNode(ip)) {
-    // Hold a lock while modifying stackMap_.
-    std::lock_guard<Mutex> lk{mtx_};
     auto itAndDidInsert = stackMap_.try_emplace(id, node);
     assert(itAndDidInsert.second && "Failed to create a new node");
     (void)itAndDidInsert;
   }
+}
+
+void GCBase::AllocationLocationTracker::updateSize(
+    const void *ptr,
+    uint32_t oldSize,
+    uint32_t newSize) {
+  int32_t delta = static_cast<int32_t>(newSize) - static_cast<int32_t>(oldSize);
+  if (!delta || !enabled_) {
+    // Nothing to update.
+    return;
+  }
+  std::lock_guard<Mutex> lk{mtx_};
+  const auto id = gc_->getObjectIDMustExist(ptr);
+  Fragment &frag = findFragmentForID(id);
+  frag.numBytes_ += delta;
+  frag.touchedSinceLastFlush_ = true;
 }
 
 void GCBase::AllocationLocationTracker::freeAlloc(
