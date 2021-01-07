@@ -11,9 +11,11 @@ let hermesProfile = Profile(
     processEnv: ["UBSAN_OPTIONS": "handle_segv=0"],
 
     codePrefix: """
+                function main(){
                 """,
 
     codeSuffix: """
+                }; main();
                 """,
 
     ecmaVersion: ECMAScriptVersion.es6,
