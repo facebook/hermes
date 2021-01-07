@@ -296,9 +296,17 @@ class HadesGC::CollectionStats final {
   }
 
   /// Record this amount of CPU time was taken.
-  /// Call this in each thread that does work to correctly count CPU time.
-  void incrementCPUTime(Duration cpuTime) {
-    cpuDuration_ += cpuTime;
+  /// Call begin/end in each thread that does work to correctly count CPU time.
+  /// NOTE: Can only be used by one thread at a time.
+  void beginCPUTimeSection() {
+    assert(
+        cpuTimeSectionStart_ == Duration{} &&
+        "Must end cpu time section before starting another");
+    cpuTimeSectionStart_ = oscompat::thread_cpu_time();
+  }
+  void endCPUTimeSection() {
+    cpuTimeSectionStart_ = {};
+    cpuDuration_ += oscompat::thread_cpu_time() - cpuTimeSectionStart_;
   }
 
   /// Since Hades allows allocations during an old gen collection, use the
@@ -324,6 +332,7 @@ class HadesGC::CollectionStats final {
   std::string collectionType_;
   TimePoint beginTime_{};
   TimePoint endTime_{};
+  Duration cpuTimeSectionStart_{};
   Duration cpuDuration_{};
   uint64_t allocatedBefore_{0};
   uint64_t externalBefore_{0};
@@ -334,6 +343,9 @@ class HadesGC::CollectionStats final {
 };
 
 HadesGC::CollectionStats::~CollectionStats() {
+  assert(
+      cpuTimeSectionStart_ == Duration{} &&
+      "Must end cpu time section before logging");
   gc_->recordGCStats(GCAnalyticsEvent{
       gc_->getName(),
       std::string(kGCName) + (gc_->compactionEnabled_ ? "(compacting)" : ""),
@@ -1430,7 +1442,8 @@ void HadesGC::oldGenCollection(std::string cause) {
       llvh::make_unique<CollectionStats>(this, std::move(cause), "old");
   // NOTE: Leave CPU time as zero if the collection isn't concurrent, as the
   // times aren't useful.
-  auto cpuTimeStart = oscompat::thread_cpu_time();
+  if (kConcurrentGC)
+    ogCollectionStats_->beginCPUTimeSection();
   ogCollectionStats_->setBeginTime();
   ogCollectionStats_->setBeforeSizes(
       oldGen_.allocatedBytes(), oldGen_.externalBytes(), heapFootprint());
@@ -1499,8 +1512,7 @@ void HadesGC::oldGenCollection(std::string cause) {
     oldGenMarker_->setDrainRate(getDrainRate());
     return;
   }
-  auto cpuTimeEnd = oscompat::thread_cpu_time();
-  ogCollectionStats_->incrementCPUTime(cpuTimeEnd - cpuTimeStart);
+  ogCollectionStats_->endCPUTimeSection();
   // 64-bit system: 64-bit HermesValues can be updated in one atomic
   // instruction. Start up a separate thread for doing marking work.
   // NOTE: Since the "this" value (the HadesGC instance) is implicitly copied
@@ -1513,7 +1525,10 @@ void HadesGC::oldGenCollection(std::string cause) {
 
 void HadesGC::oldGenCollectionWorker() {
   oscompat::set_thread_name("hades");
-  auto cpuTimeStart = oscompat::thread_cpu_time();
+  {
+    std::lock_guard<Mutex> lk(gcMutex_);
+    ogCollectionStats_->beginCPUTimeSection();
+  }
   while (true) {
     std::lock_guard<Mutex> lk(gcMutex_);
     incrementalCollect();
@@ -1521,8 +1536,7 @@ void HadesGC::oldGenCollectionWorker() {
       // NOTE: These must be set before the lock is released. This is because
       // the mutator might otherwise observe the change in concurrentPhase_ and
       // attempt to reset ogCollectionStats_.
-      auto cpuTimeEnd = oscompat::thread_cpu_time();
-      ogCollectionStats_->incrementCPUTime(cpuTimeEnd - cpuTimeStart);
+      ogCollectionStats_->endCPUTimeSection();
       break;
     }
   }
@@ -2254,7 +2268,7 @@ void HadesGC::youngGenCollection(
     std::string cause,
     bool forceOldGenCollection) {
   ygCollectionStats_ = llvh::make_unique<CollectionStats>(this, cause, "young");
-  auto cpuTimeStart = oscompat::thread_cpu_time();
+  ygCollectionStats_->beginCPUTimeSection();
   ygCollectionStats_->setBeginTime();
   // Acquire the GC lock for the duration of the YG collection.
   std::lock_guard<Mutex> lk{gcMutex_};
@@ -2422,8 +2436,7 @@ void HadesGC::youngGenCollection(
   checkWellFormed();
 #endif
   ygCollectionStats_->setEndTime();
-  auto cpuTimeEnd = oscompat::thread_cpu_time();
-  ygCollectionStats_->incrementCPUTime(cpuTimeEnd - cpuTimeStart);
+  ygCollectionStats_->endCPUTimeSection();
   ygCollectionStats_.reset();
 }
 
