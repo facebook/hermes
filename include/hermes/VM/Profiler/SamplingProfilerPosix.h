@@ -204,7 +204,7 @@ class SamplingProfiler {
 
   /// Main routine to take a sample of runtime stack.
   /// \return false for failure which timer loop thread should stop.
-  bool sampleStack(std::unique_lock<std::mutex> &mtx);
+  bool sampleStack();
 
   /// Timer loop thread main routine.
   void timerLoop();

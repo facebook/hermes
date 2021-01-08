@@ -145,16 +145,8 @@ void SamplingProfiler::profilingSignalHandler(int signo) {
   errno = oldErrno;
 }
 
-bool SamplingProfiler::sampleStack(std::unique_lock<std::mutex> &uniqueLock) {
-  // Check profiling stopping request.
-  if (!enabled_) {
-    return false;
-  }
-
-  // Make a copy of activeRuntimeThreads_ because it may be modified by
-  // runtime threads during enumeration.
-  auto activeRuntimeThreadsCopy = activeRuntimeThreads_;
-  for (const auto &entry : activeRuntimeThreadsCopy) {
+bool SamplingProfiler::sampleStack() {
+  for (const auto &entry : activeRuntimeThreads_) {
     auto targetThreadId = entry.second;
     // Ensure there are no allocations in the signal handler by keeping ample
     // reserved space.
@@ -164,29 +156,9 @@ bool SamplingProfiler::sampleStack(std::unique_lock<std::mutex> &uniqueLock) {
     // Signal target runtime thread to sample stack.
     pthread_kill(targetThreadId, SIGPROF);
 
-    // Threading: samplingDoneSem_ will synchronize with signal handler to
-    // to make sure there will NOT be two SIGPROF signals sent to the same
-    // runtime thread at the same time which prevents signal coalescing.
-    // Also, release profilerLock_ before waiting because the runtime thread
-    // we try to signal may be trying to hold profilerLock_. Failing to unlock
-    // profilerLock_ may cause deadlock: timer thread waiting on
-    // samplingDoneSem_ while target runtime thread is waiting on timer thread
-    // to release profilerLock_.
-    uniqueLock.unlock();
+    // Threading: samplingDoneSem_ will synchronise this thread with the signal
+    // handler, so that we only have one active signal at a time.
     if (!samplingDoneSem_.wait()) {
-      return false;
-    }
-    // Reacquire profilerLock_ to protect the access to fields of
-    // SamplingProfiler.
-    // sampledStacks_/sampledStacks_/sampleStorage_ fields may be
-    // modified during the unlock peroid which is fine because,
-    // unlike activeRuntimeThreads_, their read/write operations
-    // do not overlap each other across unlock/lock boundary.
-    uniqueLock.lock();
-    // Enabled may have changed since the lock was released, and we should exit
-    // as early as possible before sending more signals to threads that no
-    // longer have signal handlers attached.
-    if (!enabled_) {
       return false;
     }
 
@@ -227,7 +199,7 @@ void SamplingProfiler::timerLoop() {
   std::unique_lock<std::mutex> uniqueLock(profilerLock_);
 
   while (true) {
-    if (!sampleStack(uniqueLock)) {
+    if (!sampleStack()) {
       return;
     }
 
