@@ -29,21 +29,22 @@ TEST(UnicodeTest, isUnicodeOnlySpace) {
         << "No ASCII character is a unicode-only space. (code: " << i << ")";
   }
 
-  std::vector<uint32_t> unicode_space_cps{0x1680,
-                                          0x2000,
-                                          0x2001,
-                                          0x2002,
-                                          0x2003,
-                                          0x2004,
-                                          0x2005,
-                                          0x2006,
-                                          0x2007,
-                                          0x2008,
-                                          0x2009,
-                                          0x200A,
-                                          0x202F,
-                                          0x205F,
-                                          0x3000};
+  std::vector<uint32_t> unicode_space_cps{
+      0x1680,
+      0x2000,
+      0x2001,
+      0x2002,
+      0x2003,
+      0x2004,
+      0x2005,
+      0x2006,
+      0x2007,
+      0x2008,
+      0x2009,
+      0x200A,
+      0x202F,
+      0x205F,
+      0x3000};
 
   for (auto cp : unicode_space_cps) {
     EXPECT_TRUE(hermes::isUnicodeOnlySpace(cp))
@@ -51,16 +52,17 @@ TEST(UnicodeTest, isUnicodeOnlySpace) {
   }
 
   // Test for off-by-one errors.
-  std::vector<uint32_t> unicode_non_space_cps{0x167f,
-                                              0x1681,
-                                              0x1fff,
-                                              0x200B,
-                                              0x202E,
-                                              0x2030,
-                                              0x205E,
-                                              0x2060,
-                                              0x2fff,
-                                              0x3001};
+  std::vector<uint32_t> unicode_non_space_cps{
+      0x167f,
+      0x1681,
+      0x1fff,
+      0x200B,
+      0x202E,
+      0x2030,
+      0x205E,
+      0x2060,
+      0x2fff,
+      0x3001};
 
   for (auto cp : unicode_non_space_cps) {
     EXPECT_FALSE(hermes::isUnicodeOnlySpace(cp))

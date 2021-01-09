@@ -16,26 +16,27 @@ void BytecodeSerializer::serialize(BytecodeModule &BM, const SHA1 &sourceHash) {
   uint32_t cjsModuleCount = BM.getBytecodeOptions().cjsModulesStaticallyResolved
       ? BM.getCJSModuleTableStatic().size()
       : BM.getCJSModuleTable().size();
-  BytecodeFileHeader header{MAGIC,
-                            BYTECODE_VERSION,
-                            sourceHash,
-                            fileLength_,
-                            BM.getGlobalFunctionIndex(),
-                            BM.getNumFunctions(),
-                            static_cast<uint32_t>(BM.getStringKinds().size()),
-                            BM.getIdentifierCount(),
-                            BM.getStringTableSize(),
-                            overflowStringEntryCount_,
-                            BM.getStringStorageSize(),
-                            static_cast<uint32_t>(BM.getRegExpTable().size()),
-                            static_cast<uint32_t>(BM.getRegExpStorage().size()),
-                            BM.getArrayBufferSize(),
-                            BM.getObjectKeyBufferSize(),
-                            BM.getObjectValueBufferSize(),
-                            BM.getSegmentID(),
-                            cjsModuleCount,
-                            debugInfoOffset_,
-                            BM.getBytecodeOptions()};
+  BytecodeFileHeader header{
+      MAGIC,
+      BYTECODE_VERSION,
+      sourceHash,
+      fileLength_,
+      BM.getGlobalFunctionIndex(),
+      BM.getNumFunctions(),
+      static_cast<uint32_t>(BM.getStringKinds().size()),
+      BM.getIdentifierCount(),
+      BM.getStringTableSize(),
+      overflowStringEntryCount_,
+      BM.getStringStorageSize(),
+      static_cast<uint32_t>(BM.getRegExpTable().size()),
+      static_cast<uint32_t>(BM.getRegExpStorage().size()),
+      BM.getArrayBufferSize(),
+      BM.getObjectKeyBufferSize(),
+      BM.getObjectValueBufferSize(),
+      BM.getSegmentID(),
+      cjsModuleCount,
+      debugInfoOffset_,
+      BM.getBytecodeOptions()};
   writeBinary(header);
   // Sizes of file and function headers are tuned for good cache line packing.
   // If you reorder the format, try to avoid headers crossing cache lines.
@@ -102,11 +103,12 @@ void BytecodeSerializer::serializeDebugInfo(BytecodeModule &BM) {
   const StreamVector<uint8_t> &data = info.viewData();
   uint32_t lexOffset = info.lexicalDataOffset();
 
-  DebugInfoHeader header{(uint32_t)filenameTable.size(),
-                         (uint32_t)filenameStorage.size(),
-                         (uint32_t)files.size(),
-                         lexOffset,
-                         (uint32_t)data.size()};
+  DebugInfoHeader header{
+      (uint32_t)filenameTable.size(),
+      (uint32_t)filenameStorage.size(),
+      (uint32_t)files.size(),
+      lexOffset,
+      (uint32_t)data.size()};
   writeBinary(header);
   writeBinaryArray(filenameTable);
   writeBinaryArray(filenameStorage);

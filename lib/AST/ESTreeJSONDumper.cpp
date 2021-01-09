@@ -128,8 +128,9 @@ class ESTreeJSONDumper {
     if (sr.isValid() && rawProp_ == ESTreeRawProp::Include) {
       json_.emitKeyValue(
           "raw",
-          StringRef{sr.Start.getPointer(),
-                    (size_t)(sr.End.getPointer() - sr.Start.getPointer())});
+          StringRef{
+              sr.Start.getPointer(),
+              (size_t)(sr.End.getPointer() - sr.Start.getPointer())});
     }
     printSourceLocation(node);
     json_.closeDict();

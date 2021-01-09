@@ -131,8 +131,8 @@ UniquingStringLiteralAccumulator stringAccumulatorFromBCProvider(
   auto strStorage = bcProvider.getStringStorage();
   ConsecutiveStringStorage css{std::move(entries), strStorage.vec()};
 
-  return UniquingStringLiteralAccumulator{std::move(css),
-                                          std::move(isIdentifier)};
+  return UniquingStringLiteralAccumulator{
+      std::move(css), std::move(isIdentifier)};
 }
 
 } // namespace

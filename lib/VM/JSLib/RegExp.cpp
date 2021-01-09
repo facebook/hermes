@@ -1603,11 +1603,12 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
         if (LLVM_UNLIKELY(replacerArgsCount >= UINT32_MAX))
           return runtime->raiseStackOverflow(
               Runtime::StackOverflowKind::JSRegisterStack);
-        ScopedNativeCallFrame newFrame{runtime,
-                                       static_cast<uint32_t>(replacerArgsCount),
-                                       *replaceFn,
-                                       false,
-                                       HermesValue::encodeUndefinedValue()};
+        ScopedNativeCallFrame newFrame{
+            runtime,
+            static_cast<uint32_t>(replacerArgsCount),
+            *replaceFn,
+            false,
+            HermesValue::encodeUndefinedValue()};
         if (LLVM_UNLIKELY(newFrame.overflowed()))
           return runtime->raiseStackOverflow(
               Runtime::StackOverflowKind::NativeStack);

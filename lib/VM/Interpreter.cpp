@@ -2965,8 +2965,8 @@ tailCall:
                 O2REG(NewObjectWithParent).isObject()
                     ? Handle<JSObject>::vmcast(&O2REG(NewObjectWithParent))
                     : O2REG(NewObjectWithParent).isNull()
-                        ? Runtime::makeNullHandle<JSObject>()
-                        : Handle<JSObject>::vmcast(&runtime->objectPrototype))
+                    ? Runtime::makeNullHandle<JSObject>()
+                    : Handle<JSObject>::vmcast(&runtime->objectPrototype))
                 .getHermesValue());
         assert(
             gcScope.getHandleCountDbg() == KEEP_HANDLES &&

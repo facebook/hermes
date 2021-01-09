@@ -163,13 +163,13 @@ static constexpr unsigned kMaxNumRegisters =
 void raw_ostream_append(llvh::raw_ostream &os) {}
 
 template <typename Arg0, typename... Args>
-void raw_ostream_append(llvh::raw_ostream &os, Arg0 &&arg0, Args &&... args) {
+void raw_ostream_append(llvh::raw_ostream &os, Arg0 &&arg0, Args &&...args) {
   os << arg0;
   raw_ostream_append(os, args...);
 }
 
 template <typename... Args>
-jsi::JSError makeJSError(jsi::Runtime &rt, Args &&... args) {
+jsi::JSError makeJSError(jsi::Runtime &rt, Args &&...args) {
   std::string s;
   llvh::raw_string_ostream os(s);
   raw_ostream_append(os, std::forward<Args>(args)...);
@@ -1920,11 +1920,12 @@ jsi::Value HermesRuntimeImpl::call(
     auto &stats = runtime_.getRuntimeStats();
     const vm::instrumentation::RAIITimer timer{
         "Incoming Function", stats, stats.incomingFunction};
-    vm::ScopedNativeCallFrame newFrame{&runtime_,
-                                       static_cast<uint32_t>(count),
-                                       handle.getHermesValue(),
-                                       vm::HermesValue::encodeUndefinedValue(),
-                                       hvFromValue(jsThis)};
+    vm::ScopedNativeCallFrame newFrame{
+        &runtime_,
+        static_cast<uint32_t>(count),
+        handle.getHermesValue(),
+        vm::HermesValue::encodeUndefinedValue(),
+        hvFromValue(jsThis)};
     if (LLVM_UNLIKELY(newFrame.overflowed())) {
       checkStatus(runtime_.raiseStackOverflow(
           ::hermes::vm::StackRuntime::StackOverflowKind::NativeStack));
@@ -1988,11 +1989,12 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
     //
     // For us result == res.
 
-    vm::ScopedNativeCallFrame newFrame{&runtime_,
-                                       static_cast<uint32_t>(count),
-                                       funcHandle.getHermesValue(),
-                                       funcHandle.getHermesValue(),
-                                       objHandle.getHermesValue()};
+    vm::ScopedNativeCallFrame newFrame{
+        &runtime_,
+        static_cast<uint32_t>(count),
+        funcHandle.getHermesValue(),
+        funcHandle.getHermesValue(),
+        objHandle.getHermesValue()};
     if (newFrame.overflowed()) {
       checkStatus(runtime_.raiseStackOverflow(
           ::hermes::vm::StackRuntime::StackOverflowKind::NativeStack));

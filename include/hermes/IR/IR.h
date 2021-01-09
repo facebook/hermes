@@ -64,14 +64,15 @@ class Type {
   /// Return the string representation of the type at index \p idx.
   StringRef getKindStr(TypeKind idx) const {
     // The strings below match the values in TypeKind.
-    const char *Names[] = {"undefined",
-                           "null",
-                           "boolean",
-                           "string",
-                           "number",
-                           "object",
-                           "closure",
-                           "regexp"};
+    const char *Names[] = {
+        "undefined",
+        "null",
+        "boolean",
+        "string",
+        "number",
+        "object",
+        "closure",
+        "regexp"};
     return Names[idx];
   }
 

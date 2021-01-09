@@ -31,11 +31,12 @@ const ObjectVTable JSObject::vt{
         nullptr,
         nullptr,
         nullptr, // externalMemorySize
-        VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
-                                     JSObject::_snapshotNameImpl,
-                                     JSObject::_snapshotAddEdgesImpl,
-                                     nullptr,
-                                     JSObject::_snapshotAddLocationsImpl}),
+        VTable::HeapSnapshotMetadata{
+            HeapSnapshot::NodeType::Object,
+            JSObject::_snapshotNameImpl,
+            JSObject::_snapshotAddEdgesImpl,
+            nullptr,
+            JSObject::_snapshotAddLocationsImpl}),
     JSObject::_getOwnIndexedRangeImpl,
     JSObject::_haveOwnIndexedImpl,
     JSObject::_getOwnIndexedPropertyFlagsImpl,
@@ -3188,8 +3189,9 @@ CallResult<Handle<BigStorage>> getForInPropertyNames(
 //===----------------------------------------------------------------------===//
 // class PropertyAccessor
 
-const VTable PropertyAccessor::vt{CellKind::PropertyAccessorKind,
-                                  cellSize<PropertyAccessor>()};
+const VTable PropertyAccessor::vt{
+    CellKind::PropertyAccessorKind,
+    cellSize<PropertyAccessor>()};
 
 void PropertyAccessorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const PropertyAccessor *>(cell);

@@ -98,8 +98,9 @@ void FastJIT::error(const llvh::Twine &msg) {
 llvh::Optional<ExecHeap::BlockPair> FastJIT::allocRWX(
     size_t bytecodeLength,
     ExecHeap::SizePair &sizes) {
-  sizes = ExecHeap::SizePair{bytecodeLength * 50 + kMinInstructionSpace,
-                             bytecodeLength * 50 + kMinInstructionSpace};
+  sizes = ExecHeap::SizePair{
+      bytecodeLength * 50 + kMinInstructionSpace,
+      bytecodeLength * 50 + kMinInstructionSpace};
 
   auto blocks = context_->getHeap().alloc(sizes);
   // If the allocation failed, add a new pool, initialize it and retry.

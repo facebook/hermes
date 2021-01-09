@@ -301,7 +301,7 @@ class DummyRuntime final : public HandleRootOwner,
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
       class... Args>
-  T *makeAFixed(Args &&... args) {
+  T *makeAFixed(Args &&...args) {
     return getHeap().makeA<T, true /* fixedSize */, hasFinalizer, longLived>(
         cellSize<T>(), std::forward<Args>(args)...);
   }
@@ -311,7 +311,7 @@ class DummyRuntime final : public HandleRootOwner,
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
       class... Args>
-  T *makeAVariable(uint32_t size, Args &&... args) {
+  T *makeAVariable(uint32_t size, Args &&...args) {
     return getHeap().makeA<T, false /* fixedSize */, hasFinalizer, longLived>(
         size, std::forward<Args>(args)...);
   }

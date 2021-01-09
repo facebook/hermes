@@ -174,8 +174,8 @@ void HBCISel::generateJumpTable() {
   std::vector<uint32_t> res{};
 
   // Sort the jump table entries so iteration order is deterministic.
-  llvh::SmallVector<SwitchInfoEntry, 1> infoVector{switchImmInfo_.begin(),
-                                                   switchImmInfo_.end()};
+  llvh::SmallVector<SwitchInfoEntry, 1> infoVector{
+      switchImmInfo_.begin(), switchImmInfo_.end()};
   std::sort(
       infoVector.begin(),
       infoVector.end(),
@@ -1546,9 +1546,10 @@ void HBCISel::generate(Instruction *ii, BasicBlock *next) {
     case DebugInfoSetting::SOURCE_MAP:
     case DebugInfoSetting::ALL:
       if (ii->hasLocation()) {
-        relocations_.push_back({BCFGen_->getCurrentLocation(),
-                                Relocation::RelocationType::DebugInfo,
-                                ii});
+        relocations_.push_back(
+            {BCFGen_->getCurrentLocation(),
+             Relocation::RelocationType::DebugInfo,
+             ii});
       }
       break;
   }

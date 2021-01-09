@@ -231,7 +231,7 @@ class Runtime : public HandleRootOwner,
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
       class... Args>
-  T *makeAFixed(Args &&... args);
+  T *makeAFixed(Args &&...args);
 
   /// Create a variable size object of type T and size \p size.
   /// If necessary perform a GC cycle, which may potentially move
@@ -242,7 +242,7 @@ class Runtime : public HandleRootOwner,
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
       class... Args>
-  T *makeAVariable(uint32_t size, Args &&... args);
+  T *makeAVariable(uint32_t size, Args &&...args);
 
   /// Used as a placeholder for places where we should be checking for OOM
   /// but aren't yet.
@@ -1646,7 +1646,7 @@ template <
     HasFinalizer hasFinalizer,
     LongLived longLived,
     class... Args>
-T *Runtime::makeAFixed(Args &&... args) {
+T *Runtime::makeAFixed(Args &&...args) {
 #if !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && !defined(NDEBUG)
   // If allocation location tracking is enabled we implicitly call
   // getCurrentIP() via newAlloc() below. Even if this isn't enabled, we
@@ -1670,7 +1670,7 @@ template <
     HasFinalizer hasFinalizer,
     LongLived longLived,
     class... Args>
-T *Runtime::makeAVariable(uint32_t size, Args &&... args) {
+T *Runtime::makeAVariable(uint32_t size, Args &&...args) {
 #if !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && !defined(NDEBUG)
   // If allocation location tracking is enabled we implicitly call
   // getCurrentIP() via newAlloc() below. Even if this isn't enabled, we
@@ -1822,14 +1822,15 @@ inline StackFramePtr Runtime::restoreStackAndPreviousFrame() {
 }
 
 inline llvh::iterator_range<StackFrameIterator> Runtime::getStackFrames() {
-  return {StackFrameIterator{currentFrame_},
-          StackFrameIterator{registerStackEnd_}};
+  return {
+      StackFrameIterator{currentFrame_}, StackFrameIterator{registerStackEnd_}};
 };
 
 inline llvh::iterator_range<ConstStackFrameIterator> Runtime::getStackFrames()
     const {
-  return {ConstStackFrameIterator{currentFrame_},
-          ConstStackFrameIterator{registerStackEnd_}};
+  return {
+      ConstStackFrameIterator{currentFrame_},
+      ConstStackFrameIterator{registerStackEnd_}};
 };
 
 inline ExecutionStatus Runtime::setThrownValue(HermesValue value) {

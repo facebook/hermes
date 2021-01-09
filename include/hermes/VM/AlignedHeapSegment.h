@@ -445,8 +445,9 @@ char *AlignedHeapSegment::level() const {
 
 llvh::iterator_range<AlignedHeapSegment::HeapCellIterator>
 AlignedHeapSegment::cells() {
-  return {HeapCellIterator(reinterpret_cast<GCCell *>(start())),
-          HeapCellIterator(reinterpret_cast<GCCell *>(level()))};
+  return {
+      HeapCellIterator(reinterpret_cast<GCCell *>(start())),
+      HeapCellIterator(reinterpret_cast<GCCell *>(level()))};
 }
 
 /* static */

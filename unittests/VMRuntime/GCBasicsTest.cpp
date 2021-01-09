@@ -57,11 +57,12 @@ void finalize(GCCell *, GC *) {}
 
 /// A virtual table with extra storage space, hence also a (dummy) finalizer,
 /// but no weak ref marker.
-const VTable Dummy::vt{CellKind::UninitializedKind,
-                       sizeof(Dummy),
-                       finalize,
-                       nullptr,
-                       getExtraSize};
+const VTable Dummy::vt{
+    CellKind::UninitializedKind,
+    sizeof(Dummy),
+    finalize,
+    nullptr,
+    getExtraSize};
 
 const MetadataTableForTests getMetadataTable() {
   // It would seem that the full namespace qualification below would not be

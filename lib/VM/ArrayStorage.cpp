@@ -24,11 +24,12 @@ const VTable ArrayStorage::vt(
     _trimSizeCallback,
     _trimCallback,
     nullptr,
-    VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Array,
-                                 nullptr,
-                                 nullptr,
-                                 nullptr,
-                                 nullptr});
+    VTable::HeapSnapshotMetadata{
+        HeapSnapshot::NodeType::Array,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr});
 
 void ArrayStorageBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const ArrayStorage *>(cell);

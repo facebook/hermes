@@ -884,11 +884,12 @@ CallResult<HermesValue> Runtime::runBytecode(
   // If we are constructed from serialize data with a ClosureFunction, execute
   // the function.
   if (!serializeClosure.isUndefined()) {
-    ScopedNativeCallFrame newFrame{this,
-                                   0,
-                                   serializeClosure,
-                                   HermesValue::encodeUndefinedValue(),
-                                   *thisArg};
+    ScopedNativeCallFrame newFrame{
+        this,
+        0,
+        serializeClosure,
+        HermesValue::encodeUndefinedValue(),
+        *thisArg};
     if (LLVM_UNLIKELY(newFrame.overflowed()))
       return raiseStackOverflow(StackOverflowKind::NativeStack);
     return shouldRandomizeMemoryLayout_
@@ -985,11 +986,12 @@ CallResult<HermesValue> Runtime::runBytecode(
         environment,
         globalCode);
 
-    ScopedNativeCallFrame newFrame{this,
-                                   0,
-                                   func.getHermesValue(),
-                                   HermesValue::encodeUndefinedValue(),
-                                   *thisArg};
+    ScopedNativeCallFrame newFrame{
+        this,
+        0,
+        func.getHermesValue(),
+        HermesValue::encodeUndefinedValue(),
+        *thisArg};
     if (LLVM_UNLIKELY(newFrame.overflowed()))
       return raiseStackOverflow(StackOverflowKind::NativeStack);
     return shouldRandomizeMemoryLayout_

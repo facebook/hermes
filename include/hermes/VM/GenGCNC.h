@@ -144,7 +144,7 @@ class GenGC final : public GCBase {
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
       class... Args>
-  inline T *makeA(uint32_t size, Args &&... args);
+  inline T *makeA(uint32_t size, Args &&...args);
 
   /// Returns whether an external allocation of the given \p size fits
   /// within the maximum heap size.  (Note that this does not guarantee that the
@@ -1006,7 +1006,7 @@ template <
     HasFinalizer hasFinalizer,
     LongLived longLived,
     class... Args>
-inline T *GenGC::makeA(uint32_t size, Args &&... args) {
+inline T *GenGC::makeA(uint32_t size, Args &&...args) {
   // TODO: Once all callers are using makeA, remove allocLongLived.
   void *mem = longLived == LongLived::Yes
       ? allocLongLived<hasFinalizer>(size)

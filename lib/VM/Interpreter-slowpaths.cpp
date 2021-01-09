@@ -231,8 +231,9 @@ ExecutionStatus Interpreter::caseIteratorNext(
 
   GCScopeMarkerRAII marker{runtime};
 
-  IteratorRecord iterRecord{Handle<JSObject>::vmcast(&O2REG(IteratorNext)),
-                            Handle<Callable>::vmcast(&O3REG(IteratorNext))};
+  IteratorRecord iterRecord{
+      Handle<JSObject>::vmcast(&O2REG(IteratorNext)),
+      Handle<Callable>::vmcast(&O3REG(IteratorNext))};
 
   CallResult<PseudoHandle<JSObject>> resultObjRes =
       iteratorNext(runtime, iterRecord, llvh::None);

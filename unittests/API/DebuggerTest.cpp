@@ -104,9 +104,10 @@ TEST_F(DebuggerAPITest, SingleFrameStackTraceTest) {
   }
 
   ASSERT_EQ(
-      std::vector<PauseReason>({PauseReason::Exception,
-                                PauseReason::Exception,
-                                PauseReason::Exception}),
+      std::vector<PauseReason>(
+          {PauseReason::Exception,
+           PauseReason::Exception,
+           PauseReason::Exception}),
       observer.pauseReasons);
 
   ASSERT_EQ(3, observer.stackTraces[2].callFrameCount());

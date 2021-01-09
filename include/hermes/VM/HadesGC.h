@@ -112,7 +112,7 @@ class HadesGC final : public GCBase {
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
       class... Args>
-  inline T *makeA(uint32_t size, Args &&... args);
+  inline T *makeA(uint32_t size, Args &&...args);
 
   /// Force a garbage collection cycle.
   /// (Part of general GC API defined in GCBase.h).
@@ -930,7 +930,7 @@ template <
     HasFinalizer hasFinalizer,
     LongLived longLived,
     class... Args>
-inline T *HadesGC::makeA(uint32_t size, Args &&... args) {
+inline T *HadesGC::makeA(uint32_t size, Args &&...args) {
   if (longLived == LongLived::Yes) {
     std::lock_guard<Mutex> lk{gcMutex_};
     return new (allocLongLived(size)) T(std::forward<Args>(args)...);

@@ -65,9 +65,10 @@ struct DummyCell final : public GCCell {
   DummyCell(GC *gc) : GCCell(gc, &vt) {}
 };
 
-const VTable FinalizerCell::vt{CellKind::FillerCellKind,
-                               sizeof(FinalizerCell),
-                               FinalizerCell::finalize};
+const VTable FinalizerCell::vt{
+    CellKind::FillerCellKind,
+    sizeof(FinalizerCell),
+    FinalizerCell::finalize};
 
 const VTable DummyCell::vt{CellKind::UninitializedKind, sizeof(DummyCell)};
 

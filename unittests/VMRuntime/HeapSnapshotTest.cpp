@@ -156,13 +156,14 @@ struct Node {
     auto detachedness =
         static_cast<int>(llvh::cast<JSONNumber>(*nodes)->getValue());
 
-    return Node{type,
-                std::move(name),
-                id,
-                selfSize,
-                edgeCount,
-                traceNodeID,
-                detachedness};
+    return Node{
+        type,
+        std::move(name),
+        id,
+        selfSize,
+        edgeCount,
+        traceNodeID,
+        detachedness};
   }
 
   bool operator==(const Node &that) const {
@@ -620,46 +621,50 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
   EXPECT_EQ(llvh::cast<JSONArray>(root->at("samples"))->size(), 0);
   EXPECT_EQ(llvh::cast<JSONArray>(root->at("locations"))->size(), 0);
 
-  Node firstDummy{HeapSnapshot::NodeType::Object,
-                  cellKindStr(dummy->getKind()),
-                  gc.getObjectID(dummy.get()),
-                  blockSize,
-                  // One edge to the second dummy, 4 for primitive singletons.
-                  5};
+  Node firstDummy{
+      HeapSnapshot::NodeType::Object,
+      cellKindStr(dummy->getKind()),
+      gc.getObjectID(dummy.get()),
+      blockSize,
+      // One edge to the second dummy, 4 for primitive singletons.
+      5};
   Node undefinedNode{
       HeapSnapshot::NodeType::Object,
       "undefined",
       GC::IDTracker::reserved(GC::IDTracker::ReservedObjectID::Undefined),
       0,
       0};
-  Node nullNode{HeapSnapshot::NodeType::Object,
-                "null",
-                GC::IDTracker::reserved(GC::IDTracker::ReservedObjectID::Null),
-                0,
-                0};
+  Node nullNode{
+      HeapSnapshot::NodeType::Object,
+      "null",
+      GC::IDTracker::reserved(GC::IDTracker::ReservedObjectID::Null),
+      0,
+      0};
   Node trueNode(
       HeapSnapshot::NodeType::Object,
       "true",
       GC::IDTracker::reserved(GC::IDTracker::ReservedObjectID::True),
       0,
       0);
-  Node numberNode{HeapSnapshot::NodeType::Number,
-                  "3.14",
-                  gc.getIDTracker().getNumberID(dummy->hvDouble.getNumber()),
-                  0,
-                  0};
+  Node numberNode{
+      HeapSnapshot::NodeType::Number,
+      "3.14",
+      gc.getIDTracker().getNumberID(dummy->hvDouble.getNumber()),
+      0,
+      0};
   Node falseNode{
       HeapSnapshot::NodeType::Object,
       "false",
       GC::IDTracker::reserved(GC::IDTracker::ReservedObjectID::False),
       0,
       0};
-  Node secondDummy{HeapSnapshot::NodeType::Object,
-                   cellKindStr(dummy->getKind()),
-                   gc.getObjectID(dummy->other),
-                   blockSize,
-                   // No edges except for the primitive singletons.
-                   4};
+  Node secondDummy{
+      HeapSnapshot::NodeType::Object,
+      cellKindStr(dummy->getKind()),
+      gc.getObjectID(dummy->other),
+      blockSize,
+      // No edges except for the primitive singletons.
+      4};
 
   // Common edges.
   Edge trueEdge =
@@ -722,11 +727,12 @@ TEST(HeapSnapshotTest, SnapshotFromCallbackContext) {
 
   // Check that the dummy object is in the snapshot.
   auto dummyNode = FIND_NODE_FOR_ID(dummyID, nodes, strings);
-  Node expected{HeapSnapshot::NodeType::Object,
-                "Uninitialized",
-                dummyID,
-                dummy->getAllocatedSize(),
-                4};
+  Node expected{
+      HeapSnapshot::NodeType::Object,
+      "Uninitialized",
+      dummyID,
+      dummy->getAllocatedSize(),
+      4};
   EXPECT_EQ(dummyNode, expected);
 }
 
@@ -760,11 +766,12 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionLocationForLazyCode) {
 
   // This test requires a location to be emitted.
   auto node = FIND_NODE_FOR_ID(funcID, nodes, strings);
-  Node expected{HeapSnapshot::NodeType::Closure,
-                "myGlobal",
-                funcID,
-                func->getAllocatedSize(),
-                6};
+  Node expected{
+      HeapSnapshot::NodeType::Closure,
+      "myGlobal",
+      funcID,
+      func->getAllocatedSize(),
+      6};
   EXPECT_EQ(node, expected);
   // Edges aren't tested in this test.
 
@@ -802,11 +809,12 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionLocationAndNameTest) {
 
   // This test requires a location to be emitted.
   auto node = FIND_NODE_FOR_ID(funcID, nodes, strings);
-  Node expected{HeapSnapshot::NodeType::Closure,
-                "foo",
-                funcID,
-                func->getAllocatedSize(),
-                6};
+  Node expected{
+      HeapSnapshot::NodeType::Closure,
+      "foo",
+      funcID,
+      func->getAllocatedSize(),
+      6};
   EXPECT_EQ(node, expected);
   // Edges aren't tested in this test.
 
@@ -844,12 +852,13 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionDisplayNameTest) {
   const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
 
   auto node = FIND_NODE_FOR_ID(funcID, nodes, strings);
-  Node expected{HeapSnapshot::NodeType::Closure,
-                // Make sure the name that is reported is "bar", not "foo".
-                "bar",
-                funcID,
-                func->getAllocatedSize(),
-                11};
+  Node expected{
+      HeapSnapshot::NodeType::Closure,
+      // Make sure the name that is reported is "bar", not "foo".
+      "bar",
+      funcID,
+      func->getAllocatedSize(),
+      11};
   EXPECT_EQ(node, expected);
 }
 

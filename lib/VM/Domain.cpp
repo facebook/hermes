@@ -27,11 +27,12 @@ const VTable Domain::vt{
     nullptr,
     nullptr,
     nullptr,
-    VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Code,
-                                 nullptr,
-                                 Domain::_snapshotAddEdgesImpl,
-                                 Domain::_snapshotAddNodesImpl,
-                                 nullptr}};
+    VTable::HeapSnapshotMetadata{
+        HeapSnapshot::NodeType::Code,
+        nullptr,
+        Domain::_snapshotAddEdgesImpl,
+        Domain::_snapshotAddNodesImpl,
+        nullptr}};
 
 void DomainBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const Domain *>(cell);

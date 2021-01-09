@@ -42,8 +42,9 @@ SourceErrorManager::BufferedMessage::notes(
     const std::vector<MessageData> &bufferedNotes) const {
   if (!noteCount_)
     return {nullptr, nullptr};
-  return {bufferedNotes.data() + firstNote_,
-          bufferedNotes.data() + firstNote_ + noteCount_};
+  return {
+      bufferedNotes.data() + firstNote_,
+      bufferedNotes.data() + firstNote_ + noteCount_};
 }
 
 void SourceErrorManager::enableBuffering() {

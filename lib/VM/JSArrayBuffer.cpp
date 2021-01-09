@@ -29,11 +29,12 @@ const ObjectVTable JSArrayBuffer::vt{
         nullptr,
         nullptr,
         _externalMemorySizeImpl, // externalMemorySize
-        VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
-                                     nullptr,
-                                     _snapshotAddEdgesImpl,
-                                     _snapshotAddNodesImpl,
-                                     nullptr}),
+        VTable::HeapSnapshotMetadata{
+            HeapSnapshot::NodeType::Object,
+            nullptr,
+            _snapshotAddEdgesImpl,
+            _snapshotAddNodesImpl,
+            nullptr}),
     _getOwnIndexedRangeImpl,
     _haveOwnIndexedImpl,
     _getOwnIndexedPropertyFlagsImpl,

@@ -553,8 +553,9 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
 
   snap.beginSection(HeapSnapshot::Section::Samples);
   for (const auto &fragment : getAllocationLocationTracker().fragments()) {
-    json.emitValues({static_cast<uint64_t>(fragment.timestamp_.count()),
-                     static_cast<uint64_t>(fragment.lastSeenObjectID_)});
+    json.emitValues(
+        {static_cast<uint64_t>(fragment.timestamp_.count()),
+         static_cast<uint64_t>(fragment.lastSeenObjectID_)});
   }
   snap.endSection(HeapSnapshot::Section::Samples);
 
@@ -1052,14 +1053,14 @@ void GCBase::AllocationLocationTracker::enable(
   // The first fragment has all objects that were live before the profiler was
   // enabled.
   // The ID and timestamp will be filled out via flushCallback.
-  fragments_.emplace_back(
-      Fragment{IDTracker::kInvalidNode,
-               std::chrono::microseconds(),
-               numObjects,
-               numBytes,
-               // Say the fragment is touched here so it is written out
-               // automatically by flushCallback.
-               true});
+  fragments_.emplace_back(Fragment{
+      IDTracker::kInvalidNode,
+      std::chrono::microseconds(),
+      numObjects,
+      numBytes,
+      // Say the fragment is touched here so it is written out
+      // automatically by flushCallback.
+      true});
   // Immediately flush the first fragment.
   flushCallback();
 }

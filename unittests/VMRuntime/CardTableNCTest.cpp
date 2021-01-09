@@ -63,13 +63,14 @@ CardTableNCTest::CardTableNCTest() {
   auto last = reinterpret_cast<char *>(llvh::alignDown(
       reinterpret_cast<uintptr_t>(as.hiLim() - 1), CardTable::kCardSize));
 
-  addrs = {first,
-           first + CardTable::kCardSize,
-           first + CardTable::kCardSize * 42,
+  addrs = {
+      first,
+      first + CardTable::kCardSize,
+      first + CardTable::kCardSize * 42,
 
-           last - CardTable::kCardSize * 42,
-           last - CardTable::kCardSize,
-           last};
+      last - CardTable::kCardSize * 42,
+      last - CardTable::kCardSize,
+      last};
 
   EXPECT_TRUE(std::is_sorted(addrs.begin(), addrs.end()));
 }
@@ -78,12 +79,13 @@ TEST_F(CardTableNCTest, AddressToIndex) {
   // Expected indices in the card table corresponding to the probe
   // addresses into the storage.
   const size_t lastIx = CardTable::kValidIndices - 1;
-  std::vector<size_t> indices{CardTable::kFirstUsedIndex,
-                              CardTable::kFirstUsedIndex + 1,
-                              CardTable::kFirstUsedIndex + 42,
-                              lastIx - 42,
-                              lastIx - 1,
-                              lastIx};
+  std::vector<size_t> indices{
+      CardTable::kFirstUsedIndex,
+      CardTable::kFirstUsedIndex + 1,
+      CardTable::kFirstUsedIndex + 42,
+      lastIx - 42,
+      lastIx - 1,
+      lastIx};
 
   for (unsigned i = 0; i < addrs.size(); i++) {
     char *addr = addrs.at(i);

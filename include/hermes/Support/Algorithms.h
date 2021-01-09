@@ -44,7 +44,7 @@ ForwardIt uninitializedCopyN(InputIt src, Size count, ForwardIt dst) {
 
 /// make_unique substitute that allows its use in C++11.
 template <class T, class... Args>
-std::unique_ptr<T> make_unique(Args &&... args) {
+std::unique_ptr<T> make_unique(Args &&...args) {
   return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 }
 

@@ -26,8 +26,9 @@ static const char *kGCName =
 static const char *kCompacteeNameForCrashMgr = "COMPACT";
 
 // A free list cell is always variable-sized.
-const VTable HadesGC::OldGen::FreelistCell::vt{CellKind::FreelistKind,
-                                               /*variableSize*/ 0};
+const VTable HadesGC::OldGen::FreelistCell::vt{
+    CellKind::FreelistKind,
+    /*variableSize*/ 0};
 
 void FreelistBuildMeta(const GCCell *, Metadata::Builder &) {}
 
@@ -1184,8 +1185,9 @@ HadesGC::HadesGC(
       promoteYGToOG_{!gcConfig.getAllocInYoung()},
       revertToYGAtTTI_{gcConfig.getRevertToYGAtTTI()},
       occupancyTarget_(gcConfig.getOccupancyTarget()),
-      ygAverageSurvivalRatio_{/*weight*/ 0.5,
-                              /*init*/ kYGInitialSurvivalRatio},
+      ygAverageSurvivalRatio_{
+          /*weight*/ 0.5,
+          /*init*/ kYGInitialSurvivalRatio},
       compactionEnabled_{!!(vmExperimentFlags & experiments::HadesCompaction)} {
   (void)vmExperimentFlags;
   std::lock_guard<Mutex> lk(gcMutex_);
@@ -1205,11 +1207,11 @@ HadesGC::HadesGC(
       llvh::alignTo<AlignedStorage::size()>(gcConfig.getInitHeapSize()) /
       AlignedStorage::size();
 
-  const size_t initHeapSegments =
-      std::max({minHeapSegments,
-                requestedInitHeapSegments,
-                // At least one YG segment and one OG segment.
-                static_cast<size_t>(2)});
+  const size_t initHeapSegments = std::max(
+      {minHeapSegments,
+       requestedInitHeapSegments,
+       // At least one YG segment and one OG segment.
+       static_cast<size_t>(2)});
   oldGen_.setTargetSegments(initHeapSegments);
 }
 

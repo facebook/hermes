@@ -141,11 +141,12 @@ struct VTable {
       TrimCallback *trim = nullptr,
       ExternalMemorySize *externalMemorySize = nullptr,
       HeapSnapshotMetadata snapshotMetaData =
-          HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
-                               nullptr,
-                               nullptr,
-                               nullptr,
-                               nullptr})
+          HeapSnapshotMetadata{
+              HeapSnapshot::NodeType::Object,
+              nullptr,
+              nullptr,
+              nullptr,
+              nullptr})
       : kind(kind),
         size(heapAlignSize(size)),
         finalize_(finalize),

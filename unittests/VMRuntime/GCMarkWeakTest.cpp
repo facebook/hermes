@@ -49,10 +49,11 @@ class TestCell final : public GCCell {
       : GCCell(gc, &vt), numMarkWeakCalls(numMarkWeakCalls), weak(gc, this) {}
 };
 
-const VTable TestCell::vt{CellKind::FillerCellKind,
-                          sizeof(TestCell),
-                          nullptr,
-                          TestCell::_markWeakImpl};
+const VTable TestCell::vt{
+    CellKind::FillerCellKind,
+    sizeof(TestCell),
+    nullptr,
+    TestCell::_markWeakImpl};
 
 } // namespace vm
 } // namespace hermes

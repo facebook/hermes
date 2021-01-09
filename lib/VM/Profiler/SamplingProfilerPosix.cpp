@@ -194,8 +194,8 @@ void SamplingProfiler::timerLoop() {
   // The amount of time that is spent sleeping comes from a normal distribution,
   // to avoid the case where the timer thread samples a stack at a predictable
   // period.
-  std::normal_distribution<> distribution{kMeanMilliseconds,
-                                          kStdDevMilliseconds};
+  std::normal_distribution<> distribution{
+      kMeanMilliseconds, kStdDevMilliseconds};
   std::unique_lock<std::mutex> uniqueLock(profilerLock_);
 
   while (true) {
