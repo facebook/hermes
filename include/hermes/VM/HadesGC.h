@@ -214,7 +214,7 @@ class HadesGC final : public GCBase {
 
   /// Return true if \p ptr is currently pointing at valid accessable memory,
   /// allocated to an object.
-  bool validPointer(const void *ptr) const;
+  bool validPointer(const void *ptr) const override;
 
   /// Return true if \p ptr is within one of the virtual address ranges
   /// allocated for the heap. Not intended for use in normal production GC

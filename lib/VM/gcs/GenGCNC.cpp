@@ -538,10 +538,13 @@ size_t GenGC::usedDirect() const {
 /// the acceptor on the same root location more than once, which is illegal.
 struct FullMSCDuplicateRootsDetectorAcceptor final
     : public RootAndSlotAcceptorDefault {
+  GenGC &gc;
   llvh::DenseSet<void *> markedLocs_;
 
+  FullMSCDuplicateRootsDetectorAcceptor(GenGC &gc)
+      : RootAndSlotAcceptorDefault(gc.getPointerBase()), gc(gc) {}
+
   using RootAndSlotAcceptorDefault::accept;
-  using RootAndSlotAcceptorDefault::RootAndSlotAcceptorDefault;
 
   void accept(void *&ptr) override {
     assert(markedLocs_.count(&ptr) == 0);
@@ -556,8 +559,12 @@ struct FullMSCDuplicateRootsDetectorAcceptor final
 
 void GenGC::markPhase() {
   struct FullMSCMarkInitialAcceptor final : public RootAndSlotAcceptorDefault {
+    GenGC &gc;
+    FullMSCMarkInitialAcceptor(GenGC &gc)
+        : RootAndSlotAcceptorDefault(gc.getPointerBase()), gc(gc) {}
+
     using RootAndSlotAcceptorDefault::accept;
-    using RootAndSlotAcceptorDefault::RootAndSlotAcceptorDefault;
+
     void accept(void *&ptr) override {
       if (ptr) {
         assert(gc.dbgContains(ptr));

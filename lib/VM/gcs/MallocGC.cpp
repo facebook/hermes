@@ -30,6 +30,7 @@ static const char *kGCName = "malloc";
 
 struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
                                          public WeakRootAcceptorDefault {
+  MallocGC &gc;
   std::vector<CellHeader *> worklist_;
 
   /// The WeakMap objects that have been discovered to be reachable.
@@ -41,9 +42,10 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
   /// the falses are garbage.
   llvh::BitVector markedSymbols_;
 
-  MarkingAcceptor(GC &gc)
-      : RootAndSlotAcceptorDefault(gc),
-        WeakRootAcceptorDefault(gc),
+  MarkingAcceptor(MallocGC &gc)
+      : RootAndSlotAcceptorDefault(gc.getPointerBase()),
+        WeakRootAcceptorDefault(gc.getPointerBase()),
+        gc(gc),
         markedSymbols_(gc.gcCallbacks_->getSymbolsEnd()) {}
 
   using RootAndSlotAcceptorDefault::accept;

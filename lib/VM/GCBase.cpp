@@ -156,11 +156,9 @@ constexpr HeapSnapshot::NodeID objectIDForRootSection(
 // Abstract base class for all snapshot acceptors.
 struct SnapshotAcceptor : public RootAndSlotAcceptorWithNamesDefault {
   using RootAndSlotAcceptorWithNamesDefault::accept;
-  using RootAndSlotAcceptorWithNamesDefault::
-      RootAndSlotAcceptorWithNamesDefault;
 
-  SnapshotAcceptor(GC &gc, HeapSnapshot &snap)
-      : RootAndSlotAcceptorWithNamesDefault(gc), snap_(snap) {}
+  SnapshotAcceptor(PointerBase *base, HeapSnapshot &snap)
+      : RootAndSlotAcceptorWithNamesDefault(base), snap_(snap) {}
 
   void acceptHV(HermesValue &hv, const char *name) override {
     if (hv.isPointer()) {
@@ -176,8 +174,11 @@ struct SnapshotAcceptor : public RootAndSlotAcceptorWithNamesDefault {
 struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
   using SnapshotAcceptor::accept;
 
-  PrimitiveNodeAcceptor(GC &gc, HeapSnapshot &snap)
-      : SnapshotAcceptor(gc, snap) {}
+  PrimitiveNodeAcceptor(
+      PointerBase *base,
+      HeapSnapshot &snap,
+      GCBase::IDTracker &tracker)
+      : SnapshotAcceptor(base, snap), tracker_(tracker) {}
 
   // Do nothing for any value except a number.
   void accept(void *&ptr, const char *name) override {}
@@ -229,7 +230,7 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
       snap_.endNode(
           HeapSnapshot::NodeType::Number,
           llvh::StringRef{buf, len},
-          gc.getIDTracker().getNumberID(num),
+          tracker_.getNumberID(num),
           // Numbers are zero-sized in the heap because they're stored inline.
           0,
           0);
@@ -237,6 +238,7 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
   }
 
  private:
+  GCBase::IDTracker &tracker_;
   // Track all numbers that are seen in a heap pass, and only emit one node for
   // each of them.
   llvh::DenseSet<double, GCBase::IDTracker::DoubleComparator> seenNumbers_;
@@ -245,7 +247,8 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
 struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
   using SnapshotAcceptor::accept;
 
-  EdgeAddingAcceptor(GC &gc, HeapSnapshot &snap) : SnapshotAcceptor(gc, snap) {}
+  EdgeAddingAcceptor(GCBase &gc, HeapSnapshot &snap)
+      : SnapshotAcceptor(gc.getPointerBase(), snap), gc_(gc) {}
 
   void accept(void *&ptr, const char *name) override {
     if (!ptr) {
@@ -254,11 +257,11 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
     snap_.addNamedEdge(
         HeapSnapshot::EdgeType::Internal,
         llvh::StringRef::withNullAsEmpty(name),
-        gc.getObjectID(ptr));
+        gc_.getObjectID(ptr));
   }
 
   void acceptHV(HermesValue &hv, const char *name) override {
-    if (auto id = gc.getSnapshotID(hv)) {
+    if (auto id = gc_.getSnapshotID(hv)) {
       snap_.addNamedEdge(
           HeapSnapshot::EdgeType::Internal,
           llvh::StringRef::withNullAsEmpty(name),
@@ -282,7 +285,7 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
     snap_.addNamedEdge(
         HeapSnapshot::EdgeType::Weak,
         indexName,
-        gc.getObjectID(slot->getPointer()));
+        gc_.getObjectID(slot->getPointer()));
   }
 
   void acceptSym(SymbolID sym, const char *name) override {
@@ -292,10 +295,11 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
     snap_.addNamedEdge(
         HeapSnapshot::EdgeType::Internal,
         llvh::StringRef::withNullAsEmpty(name),
-        gc.getObjectID(sym));
+        gc_.getObjectID(sym));
   }
 
  private:
+  GCBase &gc_;
   // For unnamed edges, use indices instead.
   unsigned nextEdge_{0};
 };
@@ -305,8 +309,8 @@ struct SnapshotRootSectionAcceptor : public SnapshotAcceptor,
   using SnapshotAcceptor::accept;
   using WeakRootAcceptor::acceptWeak;
 
-  SnapshotRootSectionAcceptor(GC &gc, HeapSnapshot &snap)
-      : SnapshotAcceptor(gc, snap), WeakRootAcceptorDefault(gc) {}
+  SnapshotRootSectionAcceptor(PointerBase *base, HeapSnapshot &snap)
+      : SnapshotAcceptor(base, snap), WeakRootAcceptorDefault(base) {}
 
   void accept(void *&, const char *) override {
     // While adding edges to root sections, there's no need to do anything for
@@ -343,8 +347,10 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
   using SnapshotAcceptor::accept;
   using WeakRootAcceptor::acceptWeak;
 
-  SnapshotRootAcceptor(GC &gc, HeapSnapshot &snap)
-      : SnapshotAcceptor(gc, snap), WeakRootAcceptorDefault(gc) {}
+  SnapshotRootAcceptor(GCBase &gc, HeapSnapshot &snap)
+      : SnapshotAcceptor(gc.getPointerBase(), snap),
+        WeakRootAcceptorDefault(gc.getPointerBase()),
+        gc_(gc) {}
 
   void accept(void *&ptr, const char *name) override {
     pointerAccept(ptr, name, false);
@@ -403,6 +409,7 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
   }
 
  private:
+  GCBase &gc_;
   llvh::DenseSet<HeapSnapshot::NodeID> seenIDs_;
   // For unnamed edges, use indices instead.
   unsigned nextEdge_{0};
@@ -416,7 +423,7 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
       return;
     }
 
-    const auto id = gc.getObjectID(ptr);
+    const auto id = gc_.getObjectID(ptr);
     if (!seenIDs_.insert(id).second) {
       // Already seen this node, don't add another edge.
       return;
@@ -447,7 +454,7 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
   const auto rootScan = [gc, &snap, this]() {
     {
       // Make the super root node and add edges to each root section.
-      SnapshotRootSectionAcceptor rootSectionAcceptor(*gc, snap);
+      SnapshotRootSectionAcceptor rootSectionAcceptor(getPointerBase(), snap);
       // The super root has a single element pointing to the "(GC roots)"
       // synthetic node. v8 also has some "shortcut" edges to things like the
       // global object, but those don't seem necessary for correctness.
@@ -510,7 +517,8 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
   // haven't been recorded yet.
   // The acceptor is recording some state between objects, so define it outside
   // the loop.
-  PrimitiveNodeAcceptor primitiveAcceptor(*gc, snap);
+  PrimitiveNodeAcceptor primitiveAcceptor(
+      getPointerBase(), snap, getIDTracker());
   SlotVisitorWithNames<PrimitiveNodeAcceptor> primitiveVisitor{
       primitiveAcceptor};
   // Add a node for each object in the heap.

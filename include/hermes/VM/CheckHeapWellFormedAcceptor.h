@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_CHECKHEAPWELLFORMEDACCEPTOR_H
 #define HERMES_VM_CHECKHEAPWELLFORMEDACCEPTOR_H
 
+#include "hermes/VM/GCBase.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/RootAndSlotAcceptorDefault.h"
 
@@ -23,7 +24,7 @@ struct CheckHeapWellFormedAcceptor final : public RootAndSlotAcceptorDefault,
   using RootAndSlotAcceptorDefault::accept;
   using WeakRootAcceptorDefault::acceptWeak;
 
-  CheckHeapWellFormedAcceptor(GC &gc);
+  CheckHeapWellFormedAcceptor(GCBase &gc);
 
   void accept(void *&ptr) override;
   void accept(const void *ptr);
@@ -31,6 +32,8 @@ struct CheckHeapWellFormedAcceptor final : public RootAndSlotAcceptorDefault,
   void acceptHV(HermesValue &hv) override;
   void accept(WeakRefBase &wr) override;
   void acceptSym(SymbolID sym) override;
+
+  GCBase &gc;
 };
 
 #endif

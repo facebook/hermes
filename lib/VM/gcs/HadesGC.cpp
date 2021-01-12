@@ -367,7 +367,7 @@ HadesGC::CollectionStats::~CollectionStats() {
 /// is used by MarkAcceptor and EvacAcceptor to dirty cards during compaction.
 class HadesGC::HeapMarkingAcceptor : public RootAndSlotAcceptor {
  public:
-  HeapMarkingAcceptor(GC &gc) : gc(gc) {}
+  HeapMarkingAcceptor(HadesGC &gc) : gc(gc) {}
 
   using RootAndSlotAcceptor::accept;
 
@@ -378,7 +378,7 @@ class HadesGC::HeapMarkingAcceptor : public RootAndSlotAcceptor {
   virtual void acceptRoot(void *&ptr) = 0;
 
   void accept(GCPointerBase &ptr) override final {
-    acceptHeap(ptr.getLoc(&gc), &ptr);
+    acceptHeap(ptr.getLoc(), &ptr);
   }
   virtual void acceptHeap(BasedPointer &basedPtr, void *heapLoc) = 0;
 
@@ -391,16 +391,16 @@ class HadesGC::HeapMarkingAcceptor : public RootAndSlotAcceptor {
   virtual void acceptSym(SymbolID sym) = 0;
 
  protected:
-  GC &gc;
+  HadesGC &gc;
 };
 
 template <bool CompactionEnabled>
 class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor,
                                     public WeakRootAcceptorDefault {
  public:
-  EvacAcceptor(GC &gc)
+  EvacAcceptor(HadesGC &gc)
       : HeapMarkingAcceptor{gc},
-        WeakRootAcceptorDefault{gc},
+        WeakRootAcceptorDefault{gc.getPointerBase()},
         copyListHead_{nullptr},
         isTrackingIDs_{gc.isTrackingIDs()} {}
 
@@ -669,7 +669,7 @@ class MarkWorklist {
 class HadesGC::MarkAcceptor final : public HeapMarkingAcceptor,
                                     public WeakRefAcceptor {
  public:
-  MarkAcceptor(GC &gc)
+  MarkAcceptor(HadesGC &gc)
       : HeapMarkingAcceptor{gc},
         markedSymbols_{gc.gcCallbacks_->getSymbolsEnd()},
         writeBarrierMarkedSymbols_{gc.gcCallbacks_->getSymbolsEnd()},
@@ -3026,8 +3026,12 @@ void HadesGC::checkWellFormed() {
 void HadesGC::verifyCardTable() {
   assert(inGC() && "Must be in GC to call verifyCardTable");
   struct VerifyCardDirtyAcceptor final : public RootAndSlotAcceptorDefault {
+    HadesGC &gc;
+
+    explicit VerifyCardDirtyAcceptor(HadesGC &gc)
+        : RootAndSlotAcceptorDefault(gc.getPointerBase()), gc(gc) {}
+
     using RootAndSlotAcceptorDefault::accept;
-    using RootAndSlotAcceptorDefault::RootAndSlotAcceptorDefault;
 
     void accept(void *&ptr) override {
       char *valuePtr = reinterpret_cast<char *>(ptr);
@@ -3039,8 +3043,8 @@ void HadesGC::verifyCardTable() {
     void accept(BasedPointer &ptr) override {
       // Don't use the default from RootAndSlotAcceptorDefault since the address
       // of the reference is used.
-      PointerBase *const base = gc.getPointerBase();
-      char *valuePtr = reinterpret_cast<char *>(base->basedToPointer(ptr));
+      char *valuePtr =
+          reinterpret_cast<char *>(pointerBase_->basedToPointer(ptr));
       char *locPtr = reinterpret_cast<char *>(&ptr);
 
       acceptHelper(valuePtr, locPtr);

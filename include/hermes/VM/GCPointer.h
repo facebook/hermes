@@ -61,9 +61,9 @@ class GCPointerBase {
 
   /// Get the location of the pointer. Should only be used within the
   /// implementation of garbage collection.
-  /// \param gc Used to assert that this is only used within the implementation
-  ///   of garbage collection.
-  inline StorageType &getLoc(GC *gc);
+  StorageType &getLoc() {
+    return ptr_;
+  }
 
   explicit operator bool() const {
     return static_cast<bool>(ptr_);

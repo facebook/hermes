@@ -19,9 +19,12 @@ namespace vm {
 
 struct CompleteMarkState::FullMSCMarkTransitiveAcceptor final
     : public RootAndSlotAcceptorDefault {
+  GenGC &gc;
   CompleteMarkState *markState;
-  FullMSCMarkTransitiveAcceptor(GC &gc, CompleteMarkState *markState)
-      : RootAndSlotAcceptorDefault(gc), markState(markState) {}
+  FullMSCMarkTransitiveAcceptor(GenGC &gc, CompleteMarkState *markState)
+      : RootAndSlotAcceptorDefault(gc.getPointerBase()),
+        gc(gc),
+        markState(markState) {}
 
   using RootAndSlotAcceptorDefault::accept;
 
@@ -48,11 +51,14 @@ struct CompleteMarkState::FullMSCMarkTransitiveAcceptor final
 /// in mark/sweep/compact.
 struct FullMSCUpdateAcceptor final : public RootAndSlotAcceptorDefault,
                                      public WeakRootAcceptorDefault {
+  GenGC &gc;
   using RootAndSlotAcceptorDefault::accept;
   using WeakRootAcceptorDefault::acceptWeak;
 
-  FullMSCUpdateAcceptor(GC &gc)
-      : RootAndSlotAcceptorDefault(gc), WeakRootAcceptorDefault(gc) {}
+  FullMSCUpdateAcceptor(GenGC &gc)
+      : RootAndSlotAcceptorDefault(gc.getPointerBase()),
+        WeakRootAcceptorDefault(gc.getPointerBase()),
+        gc(gc) {}
 
   void accept(void *&ptr) override {
     if (ptr) {

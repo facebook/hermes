@@ -973,6 +973,10 @@ class GCBase {
   /// \return Number of weak ref slots currently in use.
   /// Inefficient. For testing/debugging.
   size_t countUsedWeakRefs() const;
+
+  /// Return true if \p ptr is currently pointing at valid accessable memory,
+  /// allocated to an object.
+  virtual bool validPointer(const void *ptr) const = 0;
 #endif
 
   /// Dump detailed heap contents to the given output stream, \p os.
