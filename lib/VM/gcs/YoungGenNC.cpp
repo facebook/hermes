@@ -116,7 +116,7 @@ void YoungGen::sweepAndInstallForwardingPointers(
 }
 
 void YoungGen::updateReferences(
-    GC *gc,
+    GenGC *gc,
     SweepResult::VTablesRemaining &vTables) {
   auto acceptor = getFullMSCUpdateAcceptor(*gc);
 

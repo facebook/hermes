@@ -14,7 +14,6 @@
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/AllocSource.h"
 #include "hermes/VM/CardTableNC.h"
-#include "hermes/VM/CompleteMarkState.h"
 #include "hermes/VM/GCBase.h"
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/HeapAlign.h"

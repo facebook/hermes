@@ -9,6 +9,7 @@
 #define HERMES_VM_GENGCHEAPSEGMENT_H
 
 #include "hermes/VM/AlignedHeapSegment.h"
+#include "hermes/VM/CompleteMarkState.h"
 
 namespace hermes {
 namespace vm {

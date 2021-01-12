@@ -139,7 +139,7 @@ class YoungGen : public GCGeneration {
   void sweepAndInstallForwardingPointers(GC *gc, SweepResult *sweepResult);
 
   /// See GCGeneration.h for more information.
-  void updateReferences(GC *gc, SweepResult::VTablesRemaining &vTables);
+  void updateReferences(GenGC *gc, SweepResult::VTablesRemaining &vTables);
 
   /// Moves any objects on the young-gen's finalizable object list that have
   /// been moved to the old generation to that generation's finalizable object

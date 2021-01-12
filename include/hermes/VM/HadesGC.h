@@ -173,10 +173,6 @@ class HadesGC final : public GCBase {
   /// succeed.)
   bool canAllocExternalMemory(uint32_t size);
 
-  /// Only exists to prevent linker errors from CompleteMarkState-inline, do not
-  /// call.
-  void markSymbol(SymbolID symbolID);
-
   WeakRefSlot *allocWeakSlot(HermesValue init);
 
   /// Iterate over all objects in the heap, and call \p callback on them.

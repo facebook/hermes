@@ -1916,9 +1916,6 @@ bool HadesGC::canAllocExternalMemory(uint32_t size) {
   return size <= maxHeapSize_;
 }
 
-// Only exists to prevent linker errors, do not call.
-void HadesGC::markSymbol(SymbolID) {}
-
 WeakRefSlot *HadesGC::allocWeakSlot(HermesValue init) {
   assert(
       !calledByBackgroundThread() &&
