@@ -311,10 +311,9 @@ struct ObjectVTable {
 /// integer values are detected and used with the "indexed storage", if
 /// available.
 class JSObject : public GCCell {
-  friend GC;
   friend void ObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
- protected:
+ public:
   /// A light-weight constructor which performs no GC allocations. Its purpose
   /// to make sure all fields are initialized according to C++ without writing
   /// to them twice.
@@ -1478,9 +1477,7 @@ CallResult<Handle<BigStorage>> getForInPropertyNames(
 
 /// This object is the value of a property which has a getter and/or setter.
 class PropertyAccessor final : public GCCell {
-  friend GC;
-
- protected:
+ public:
   PropertyAccessor(
       Runtime *runtime,
       Handle<Callable> getter,
@@ -1489,7 +1486,6 @@ class PropertyAccessor final : public GCCell {
         getter(runtime, *getter, &runtime->getHeap()),
         setter(runtime, *setter, &runtime->getHeap()) {}
 
- public:
 #ifdef HERMESVM_SERIALIZE
   /// Fast constructor used by deserialization. Don't do any GC allocation. Only
   /// calls super Constructor.

@@ -40,7 +40,6 @@ namespace vm {
 /// and can be retrieved quickly using an index, while the string -> index table
 /// used for dynamic requires provides an index into the cjsModules_ storage.
 class Domain final : public GCCell {
-  friend GC;
   using Super = GCCell;
   friend void DomainBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
@@ -215,10 +214,10 @@ class Domain final : public GCCell {
   /// context for this domain.
   PseudoHandle<NativeFunction> getThrowingRequire(Runtime *runtime) const;
 
- private:
   /// Create a domain with no associated RuntimeModules.
   Domain(Runtime *runtime) : GCCell(&runtime->getHeap(), &vt) {}
 
+ private:
   /// Destroy associated RuntimeModules.
   ~Domain();
 
@@ -246,7 +245,6 @@ class Domain final : public GCCell {
 /// pointless, it is exposed to JS, and we assume that HermesValues which are
 /// objects are JSObjects.
 class RequireContext final : public JSObject {
-  friend GC;
   using Super = JSObject;
 
   static const ObjectVTable vt;
@@ -289,7 +287,6 @@ class RequireContext final : public JSObject {
         JSObject::getInternalProperty(self, runtime, dirnamePropIndex()));
   }
 
- private:
 #ifdef HERMESVM_SERIALIZE
   explicit RequireContext(Deserializer &d);
 

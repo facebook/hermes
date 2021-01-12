@@ -22,7 +22,6 @@ namespace vm {
 class Environment final
     : public VariableSizeRuntimeCell,
       private llvh::TrailingObjects<Environment, GCHermesValue> {
-  friend GC;
   friend TrailingObjects;
   friend void EnvironmentBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
@@ -76,7 +75,7 @@ class Environment final
     return totalSizeToAlloc<GCHermesValue>(size);
   }
 
- private:
+ public:
   /// \param parentEnvironment the parent lexical environment, or nullptr if the
   ///   parent is the global scope.
   /// \param size the number of entries in the environment.
@@ -106,6 +105,7 @@ class Environment final
         size_(size) {}
 #endif
 
+ private:
   /// \return a pointer to the array of HermesValue.
   GCHermesValue *getSlots() {
     return getTrailingObjects<GCHermesValue>();
@@ -356,7 +356,6 @@ class Callable : public JSObject {
 /// A function produced by Function.prototype.bind(). It packages a function
 /// with values for some of its parameters.
 class BoundFunction final : public Callable {
-  friend GC;
   friend void BoundFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
   /// The target function to call.
@@ -410,7 +409,7 @@ class BoundFunction final : public Callable {
     return argStorage_.get(runtime)->size();
   }
 
- private:
+ public:
 #ifdef HERMESVM_SERIALIZE
   explicit BoundFunction(Deserializer &d);
 
@@ -428,6 +427,7 @@ class BoundFunction final : public Callable {
         target_(runtime, *target, &runtime->getHeap()),
         argStorage_(runtime, *argStorage, &runtime->getHeap()) {}
 
+ private:
   /// Return a pointer to the stored arguments, including \c this. \c this is
   /// at index 0, followed by the rest.
   GCHermesValue *getArgsWithThis(Runtime *runtime) {
@@ -453,8 +453,6 @@ typedef CallResult<HermesValue> (
 /// This class represents a native function callable from JavaScript with
 /// context and the JavaScript arguments.
 class NativeFunction : public Callable {
-  friend GC;
-
  protected:
   /// Context to be passed to the native function.
   void *const context_;
@@ -676,7 +674,7 @@ class NativeFunction : public Callable {
         value);
   }
 
- protected:
+ public:
   NativeFunction(
       Runtime *runtime,
       const VTable *vtp,
@@ -699,6 +697,7 @@ class NativeFunction : public Callable {
         context_(context),
         functionPtr_(functionPtr) {}
 
+ protected:
   static std::string _snapshotNameImpl(GCCell *cell, GC *gc);
 
   /// Call the native function with arguments already on the stack.
@@ -717,8 +716,6 @@ class NativeFunction : public Callable {
 /// A NativeFunction to be used as a constructor for native objects other than
 /// Object.
 class NativeConstructor final : public NativeFunction {
-  friend GC;
-
  public:
   /// A CreatorFunction is responsible for creating the 'this' object that the
   /// constructor function sees.
@@ -827,6 +824,7 @@ class NativeConstructor final : public NativeFunction {
   /// Typically passed by invoking NativeConstructor::creatorFunction<T>.
   CreatorFunction *const creator_;
 
+ public:
   NativeConstructor(
       Runtime *runtime,
       Handle<JSObject> parent,
@@ -871,6 +869,7 @@ class NativeConstructor final : public NativeFunction {
         creator_(creator) {
   }
 
+ private:
   /// Create a an instance of an object from \c creator_ to be passed as the
   /// 'this' argument when invoking the constructor.
   static CallResult<PseudoHandle<JSObject>> _newObjectImpl(
@@ -920,7 +919,6 @@ class NativeConstructor final : public NativeFunction {
 
 /// An interpreted callable function with environment.
 class JSFunction : public Callable {
-  friend GC;
   using Super = Callable;
   friend void FunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
@@ -932,7 +930,7 @@ class JSFunction : public Callable {
   /// JSFunctions must keep their domains alive.
   GCPointer<Domain> domain_;
 
- protected:
+ public:
 #ifdef HERMESVM_SERIALIZE
   JSFunction(Deserializer &d, const VTable *vt);
 
@@ -1045,7 +1043,6 @@ class JSFunction : public Callable {
 /// Needs a separate class because it must be a different CellKind from
 /// JSFunction.
 class JSGeneratorFunction final : public JSFunction {
-  friend GC;
   using Super = JSFunction;
 
   static constexpr auto kHasFinalizer = HasFinalizer::No;
@@ -1079,7 +1076,7 @@ class JSGeneratorFunction final : public JSFunction {
     return cell->getKind() == CellKind::GeneratorFunctionKind;
   }
 
- protected:
+ public:
 #ifdef HERMESVM_SERIALIZE
   explicit JSGeneratorFunction(Deserializer &d);
 
@@ -1136,7 +1133,6 @@ class JSGeneratorFunction final : public JSFunction {
 /// - `argCount`: The number of arguments provided to the outer function when
 ///   creating the generator, used when restoring the context.
 class GeneratorInnerFunction final : public JSFunction {
-  friend GC;
   using Super = JSFunction;
   friend void GeneratorInnerFunctionBuildMeta(
       const GCCell *cell,
@@ -1248,7 +1244,7 @@ class GeneratorInnerFunction final : public JSFunction {
     return getCodeBlock()->getOffsetPtr(nextIPOffset_);
   }
 
- protected:
+ public:
 #ifdef HERMESVM_SERIALIZE
   explicit GeneratorInnerFunction(Deserializer &d);
 

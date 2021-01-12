@@ -314,7 +314,6 @@ class JSWeakMapImplBase : public JSObject {
 /// Currently, we never shrink it.
 template <CellKind C>
 class JSWeakMapImpl final : public JSWeakMapImplBase {
-  friend GC;
   using Super = JSWeakMapImplBase;
 
  public:
@@ -331,7 +330,6 @@ class JSWeakMapImpl final : public JSWeakMapImplBase {
 
   static void WeakMapOrSetBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
- protected:
 #ifdef HERMESVM_SERIALIZE
   explicit JSWeakMapImpl(Deserializer &d);
 

@@ -19,8 +19,6 @@ namespace vm {
 /// This should be used in combination with a typed array view over the buffer
 /// in order to extract its information in different ways.
 class JSArrayBuffer final : public JSObject {
-  friend GC;
-
  public:
   // NOTE: This restricts the max size of an ArrayBuffer to 2 ^ 32 - 1 on 32-bit
   // platforms.
@@ -101,6 +99,7 @@ class JSArrayBuffer final : public JSObject {
   size_type size_;
   bool attached_;
 
+ public:
 #ifdef HERMESVM_SERIALIZE
   explicit JSArrayBuffer(Deserializer &d);
 

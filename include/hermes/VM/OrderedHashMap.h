@@ -22,8 +22,6 @@ namespace vm {
 /// one that tracks the insertion order for iteration purpose, one
 /// tracks the list of entries in a hash table bucket for hash operations.
 class HashMapEntry final : public GCCell {
-  friend GC;
-
  public:
   static const VTable vt;
 
@@ -60,7 +58,7 @@ class HashMapEntry final : public GCCell {
     value.setNonPtr(HermesValue::encodeEmptyValue(), &runtime->getHeap());
   }
 
- protected:
+ public:
 #ifdef HERMESVM_SERIALIZE
   explicit HashMapEntry(Deserializer &d);
 
@@ -86,7 +84,6 @@ class HashMapEntry final : public GCCell {
 /// the "deleted" entries", free them when no more iterators are before
 /// that entry.
 class OrderedHashMap final : public GCCell {
-  friend GC;
   friend void OrderedHashMapBuildMeta(
       const GCCell *cell,
       Metadata::Builder &mb);
@@ -146,7 +143,6 @@ class OrderedHashMap final : public GCCell {
   HashMapEntry *iteratorNext(Runtime *runtime, HashMapEntry *entry = nullptr)
       const;
 
- protected:
   OrderedHashMap(Runtime *runtime, Handle<ArrayStorage> hashTableStorage);
 
  private:

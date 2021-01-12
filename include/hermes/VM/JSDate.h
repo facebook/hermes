@@ -15,7 +15,6 @@ namespace vm {
 
 /// Date object.
 class JSDate final : public JSObject {
-  friend GC;
   using Super = JSObject;
 
  public:
@@ -51,7 +50,7 @@ class JSDate final : public JSObject {
         self, runtime, JSDate::primitiveValuePropIndex(), value);
   }
 
- protected:
+ public:
 #ifdef HERMESVM_SERIALIZE
   explicit JSDate(Deserializer &d);
 

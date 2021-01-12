@@ -28,7 +28,6 @@ namespace vm {
 class ArrayStorage final
     : public VariableSizeRuntimeCell,
       private llvh::TrailingObjects<ArrayStorage, GCHermesValue> {
-  friend GC;
   friend TrailingObjects;
   friend void ArrayStorageBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
@@ -213,6 +212,7 @@ class ArrayStorage final
   size_type capacity_;
   AtomicIfConcurrentGC<size_type> size_{0};
 
+ public:
   ArrayStorage() = delete;
   ArrayStorage(const ArrayStorage &) = delete;
   void operator=(const ArrayStorage &) = delete;
@@ -225,6 +225,7 @@ class ArrayStorage final
             allocationSize(capacity)),
         capacity_(capacity) {}
 
+ private:
   /// Throws a RangeError with a descriptive message describing the attempted
   /// capacity allocated, and the max that is allowed.
   /// \returns ExecutionStatus::EXCEPTION always.

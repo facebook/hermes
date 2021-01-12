@@ -242,7 +242,6 @@ class ArrayImpl : public JSObject {
 };
 
 class Arguments final : public ArrayImpl {
-  friend GC;
   using Super = ArrayImpl;
 
  public:
@@ -264,7 +263,6 @@ class Arguments final : public ArrayImpl {
       Handle<Callable> curFunction,
       bool strictMode);
 
- private:
 #ifdef HERMESVM_SERIALIZE
   explicit Arguments(Deserializer &d);
 
@@ -281,7 +279,6 @@ class Arguments final : public ArrayImpl {
 
 class JSArray final : public ArrayImpl {
   using Super = ArrayImpl;
-  friend GC;
 
  public:
 #ifdef HERMESVM_SERIALIZE
@@ -380,6 +377,7 @@ class JSArray final : public ArrayImpl {
   /// time would be too slow.
   uint32_t shadowLength_{0};
 
+ public:
   template <typename NeedsBarrier>
   JSArray(
       Runtime *runtime,
@@ -395,6 +393,7 @@ class JSArray final : public ArrayImpl {
             *indexedStorage,
             needsBarrier) {}
 
+ private:
   /// A helper to update the named '.length' property.
   static void putLength(JSArray *self, Runtime *runtime, uint32_t newLength) {
     self->shadowLength_ = newLength;
@@ -429,7 +428,6 @@ class JSArray final : public ArrayImpl {
 class JSArrayIterator : public JSObject {
   using Super = JSObject;
 
-  friend GC;
   friend void ArrayIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
  public:
@@ -447,7 +445,7 @@ class JSArrayIterator : public JSObject {
       Handle<JSArrayIterator> self,
       Runtime *runtime);
 
- private:
+ public:
 #ifdef HERMESVM_SERIALIZE
   explicit JSArrayIterator(Deserializer &d);
 
