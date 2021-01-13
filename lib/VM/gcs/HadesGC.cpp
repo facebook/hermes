@@ -446,13 +446,12 @@ class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor,
       return;
     }
     assert(cell->isValid() && "Encountered an invalid cell");
+    const auto originalSize = cell->getAllocatedSize();
     // If a cell is from a compacting segment, trim it before moving to a new
     // location.
-    const bool shouldTrim = CompactionEnabled &&
-        gc.compactee_.evacContains(cell) && cell->getVT()->canBeTrimmed();
-    const auto originalSize = cell->getAllocatedSize();
-    const auto sz =
-        shouldTrim ? cell->getVT()->getTrimmedSize(cell) : originalSize;
+    const auto sz = CompactionEnabled && gc.compactee_.evacContains(cell)
+        ? cell->getVT()->getTrimmedSize(cell, originalSize)
+        : originalSize;
     // Newly discovered cell, first forward into the old gen.
     GCCell *const newCell = gc.oldGen_.alloc(sz);
     HERMES_SLOW_ASSERT(
@@ -463,7 +462,7 @@ class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor,
     // Copy the contents of the existing cell over before modifying it.
     std::memcpy(newCell, cell, sz);
     assert(newCell->isValid() && "Cell was copied incorrectly");
-    if (shouldTrim) {
+    if (originalSize != sz) {
       auto *const newVarSizeCell =
           static_cast<VariableSizeRuntimeCell *>(newCell);
       newVarSizeCell->setSizeFromGC(sz);

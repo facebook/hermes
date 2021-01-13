@@ -72,15 +72,14 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
     } else {
       // It hasn't been seen before, move it.
       // At this point, also trim the object.
-      const bool canBeTrimmed = cell->getVT()->canBeTrimmed();
-      const gcheapsize_t trimmedSize = canBeTrimmed
-          ? cell->getVT()->getTrimmedSize(cell)
-          : cell->getAllocatedSize();
+      const gcheapsize_t origSize = cell->getAllocatedSize();
+      const gcheapsize_t trimmedSize =
+          cell->getVT()->getTrimmedSize(cell, origSize);
       auto *newLocation =
           new (checkedMalloc(trimmedSize + sizeof(CellHeader))) CellHeader();
       newLocation->mark();
       memcpy(newLocation->data(), cell, trimmedSize);
-      if (canBeTrimmed) {
+      if (origSize != trimmedSize) {
         auto *newVarCell =
             reinterpret_cast<VariableSizeRuntimeCell *>(newLocation->data());
         newVarCell->setSizeFromGC(trimmedSize);
@@ -108,7 +107,8 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
       header->mark();
       // Trim the cell. This is fine to do with malloc'ed memory because the
       // original size is retained by malloc.
-      if (cell->getVT()->canBeTrimmed()) {
+      gcheapsize_t origSize = cell->getAllocatedSize();
+      if (cell->getVT()->getTrimmedSize(cell, origSize) != origSize) {
         cell->getVT()->trim(cell);
       }
       if (cell->getKind() == CellKind::WeakMapKind) {

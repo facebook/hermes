@@ -159,13 +159,11 @@ void GenGCHeapSegment::compact(SweepResult::VTablesRemaining &vTables) {
           "Cell was invalid after placing the vtable back in");
       // Must read this now, since the memmove below might overwrite it.
       auto cellSize = cell->getAllocatedSize();
-      const bool canBeTrimmed = cell->getVT()->canBeTrimmed();
-      const auto trimmedSize =
-          canBeTrimmed ? cell->getVT()->getTrimmedSize(cell) : cellSize;
+      const auto trimmedSize = cell->getVT()->getTrimmedSize(cell, cellSize);
       if (newAddr != ptr) {
         std::memmove(newAddr, ptr, trimmedSize);
       }
-      if (canBeTrimmed) {
+      if (trimmedSize != cellSize) {
         // Set the new cell size.
         auto *newCell = reinterpret_cast<VariableSizeRuntimeCell *>(newAddr);
         newCell->setSizeFromGC(trimmedSize);
@@ -222,9 +220,7 @@ void GenGCHeapSegment::sweepAndInstallForwardingPointers(
       ptr = markBits.indexToAddress(ind);
       GCCell *cell = reinterpret_cast<GCCell *>(ptr);
       auto cellSize = cell->getAllocatedSize();
-      auto trimmedSize = cell->getVT()->canBeTrimmed()
-          ? cell->getVT()->getTrimmedSize(cell)
-          : cellSize;
+      auto trimmedSize = cell->getVT()->getTrimmedSize(cell, cellSize);
       auto res = allocator.alloc(trimmedSize);
       if (!res.success) {
         // The current chunk is exhausted; must move on to the next.

@@ -188,26 +188,21 @@ struct VTable {
     return mallocSize_ ? mallocSize_(cell) : 0;
   }
 
-  bool canBeTrimmed() const {
-    assert(isValid());
-    return trim_;
-  }
-
-  /// Tell the \p cell to shrink itself, and return its new size. If the cell
-  /// doesn't have any shrinking to do, return the \p origSize.
-  gcheapsize_t getTrimmedSize(GCCell *cell) const {
+  /// If the cell can be trimmed, return the new size of the cell after
+  /// trimming. Otherwise, return \p origSize.
+  gcheapsize_t getTrimmedSize(GCCell *cell, size_t origSize) const {
+    const size_t trimmedSize =
+        trim_ ? heapAlignSize(trimSize_(cell)) : origSize;
     assert(
-        isValid() && canBeTrimmed() &&
-        "Called getTrimmedSize on a cell that can't be trimmed");
-    assert(isVariableSize() && "A trimmable cell must be variable sized");
-    return heapAlignSize(trimSize_(cell));
+        isValid() && trimmedSize <= origSize &&
+        "Growing objects is not supported.");
+    return trimmedSize;
   }
 
   void trim(GCCell *cell) const {
     assert(
-        isValid() && canBeTrimmed() &&
-        "Called trim on a cell that can't be trimmed");
-    assert(isVariableSize() && "A trimmable cell must be variable sized");
+        isValid() && isVariableSize() &&
+        "A trimmable cell must be variable sized");
     trim_(cell);
   }
 
