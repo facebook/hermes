@@ -344,9 +344,6 @@ class HadesGC::CollectionStats final {
 };
 
 HadesGC::CollectionStats::~CollectionStats() {
-  assert(
-      cpuTimeSectionStart_ == Duration{} &&
-      "Must end cpu time section before logging");
   gc_->recordGCStats(GCAnalyticsEvent{
       gc_->getName(),
       std::string(kGCName) + (gc_->compactionEnabled_ ? "(compacting)" : ""),
