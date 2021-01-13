@@ -19,9 +19,6 @@ namespace hbc {
 class BackendContext;
 }
 
-/// Choices for bundling format, applicable to cross module opts
-enum class BundlerKind { none, metromin };
-
 struct CodeGenerationSettings {
   /// Whether we should emit TDZ checks.
   bool enableTDZ{true};
