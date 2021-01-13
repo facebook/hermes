@@ -465,6 +465,16 @@ ASSERT_MONOTONE_INCREASING(
 /// thisArg is set to "undefined".
 DEFINE_OPCODE_3(CallBuiltin, Reg8, UInt8, UInt8)
 
+/// Call a builtin function.
+/// Note this is NOT marked as a Ret target, because the callee is native
+/// and therefore never JS.
+/// Arg1 is the destination of the return value.
+/// Arg2 is the builtin number.
+/// Arg3 is the number of arguments, assumed to be found in reverse order
+///      from the end of the current frame.
+/// thisArg is set to "undefined".
+DEFINE_OPCODE_3(CallBuiltinLong, Reg8, UInt8, UInt32)
+
 ///
 ///!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

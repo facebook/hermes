@@ -9,6 +9,7 @@
 #include "JSLib/JSLibInternal.h"
 #include "hermes/VM/Casting.h"
 #include "hermes/VM/Interpreter.h"
+#include "hermes/VM/Runtime-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringPrimitive.h"
 
@@ -293,6 +294,31 @@ ExecutionStatus Interpreter::caseGetPNameList(
   O1REG(GetPNameList) = arr.getHermesValue();
   O3REG(GetPNameList) = HermesValue::encodeNumberValue(beginIndex);
   O4REG(GetPNameList) = HermesValue::encodeNumberValue(endIndex);
+  return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus Interpreter::implCallBuiltin(
+    Runtime *runtime,
+    PinnedHermesValue *frameRegs,
+    CodeBlock *curCodeBlock,
+    uint32_t op3) {
+  const Inst *ip = runtime->getCurrentIP();
+  NativeFunction *nf = runtime->getBuiltinNativeFunction(ip->iCallBuiltin.op2);
+
+  auto newFrame = StackFramePtr::initFrame(
+      runtime->stackPointer_, FRAME, ip, curCodeBlock, op3 - 1, nf, false);
+  // "thisArg" is implicitly assumed to "undefined".
+  newFrame.getThisArgRef() = HermesValue::encodeUndefinedValue();
+
+  SLOW_DEBUG(dumpCallArguments(llvh::dbgs(), runtime, newFrame));
+
+  auto resPH = NativeFunction::_nativeCall(nf, runtime);
+  if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  O1REG(CallBuiltin) = std::move(resPH->get());
+  SLOW_DEBUG(
+      llvh::dbgs() << "native return value r" << (unsigned)ip->iCallBuiltin.op1
+                   << "=" << DumpHermesValue(O1REG(CallBuiltin)) << "\n");
   return ExecutionStatus::RETURNED;
 }
 

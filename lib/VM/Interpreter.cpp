@@ -25,7 +25,6 @@
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/Profiler.h"
 #include "hermes/VM/Profiler/CodeCoverageProfiler.h"
-#include "hermes/VM/Runtime-inline.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringPrimitive.h"
@@ -666,19 +665,8 @@ CallResult<PseudoHandle<>> Interpreter::createArrayFromBuffer(
 }
 
 #ifndef NDEBUG
-namespace {
-/// A tag used to instruct the output stream to dump more details about the
-/// HermesValue, like the length of the string, etc.
-struct DumpHermesValue {
-  const HermesValue hv;
-  DumpHermesValue(HermesValue hv) : hv(hv) {}
-};
 
-} // anonymous namespace.
-
-static llvh::raw_ostream &operator<<(
-    llvh::raw_ostream &OS,
-    DumpHermesValue dhv) {
+llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, DumpHermesValue dhv) {
   OS << dhv.hv;
   // If it is a string, dump the contents, truncated to 8 characters.
   if (dhv.hv.isString()) {
@@ -695,9 +683,7 @@ static llvh::raw_ostream &operator<<(
   return OS;
 }
 
-/// Dump the arguments from a callee frame.
-LLVM_ATTRIBUTE_UNUSED
-static void dumpCallArguments(
+void dumpCallArguments(
     llvh::raw_ostream &OS,
     Runtime *runtime,
     StackFramePtr calleeFrame) {
@@ -1729,31 +1715,25 @@ tailCall:
       }
 
       CASE(CallBuiltin) {
-        NativeFunction *nf =
-            runtime->getBuiltinNativeFunction(ip->iCallBuiltin.op2);
-
-        auto newFrame = StackFramePtr::initFrame(
-            runtime->stackPointer_,
-            FRAME,
-            ip,
-            curCodeBlock,
-            (uint32_t)ip->iCallBuiltin.op3 - 1,
-            nf,
-            false);
-        // "thisArg" is implicitly assumed to "undefined".
-        newFrame.getThisArgRef() = HermesValue::encodeUndefinedValue();
-
-        SLOW_DEBUG(dumpCallArguments(dbgs(), runtime, newFrame));
-
-        CAPTURE_IP(resPH = NativeFunction::_nativeCall(nf, runtime));
-        if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION))
+        CAPTURE_IP_ASSIGN(
+            auto cres,
+            implCallBuiltin(
+                runtime, frameRegs, curCodeBlock, ip->iCallBuiltin.op3));
+        if (LLVM_UNLIKELY(cres == ExecutionStatus::EXCEPTION))
           goto exception;
-        O1REG(CallBuiltin) = std::move(resPH->get());
-        SLOW_DEBUG(
-            dbgs() << "native return value r" << (unsigned)ip->iCallBuiltin.op1
-                   << "=" << DumpHermesValue(O1REG(CallBuiltin)) << "\n");
         gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(CallBuiltin);
+        DISPATCH;
+      }
+      CASE(CallBuiltinLong) {
+        CAPTURE_IP_ASSIGN(
+            auto cres,
+            implCallBuiltin(
+                runtime, frameRegs, curCodeBlock, ip->iCallBuiltinLong.op3));
+        if (LLVM_UNLIKELY(cres == ExecutionStatus::EXCEPTION))
+          goto exception;
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        ip = NEXTINST(CallBuiltinLong);
         DISPATCH;
       }
 

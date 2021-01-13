@@ -1176,11 +1176,13 @@ void HBCISel::generateCallBuiltinInst(CallBuiltinInst *Inst, BasicBlock *next) {
   auto output = encodeValue(Inst);
   verifyCall(Inst);
 
-  assert(
-      Inst->getNumArguments() <= UINT8_MAX &&
-      "too many arguments to CallBuiltin");
-  BCFGen_->emitCallBuiltin(
-      output, Inst->getBuiltinIndex(), Inst->getNumArguments());
+  if (Inst->getNumArguments() <= UINT8_MAX) {
+    BCFGen_->emitCallBuiltin(
+        output, Inst->getBuiltinIndex(), Inst->getNumArguments());
+  } else {
+    BCFGen_->emitCallBuiltinLong(
+        output, Inst->getBuiltinIndex(), Inst->getNumArguments());
+  }
 }
 void HBCISel::generateHBCCallDirectInst(
     HBCCallDirectInst *Inst,

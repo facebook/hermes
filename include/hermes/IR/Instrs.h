@@ -647,16 +647,11 @@ class CallBuiltinInst : public CallInst {
   void operator=(const CallBuiltinInst &) = delete;
 
  public:
-  static constexpr unsigned MAX_ARGUMENTS = UINT8_MAX;
-
   explicit CallBuiltinInst(
       LiteralNumber *callee,
       LiteralUndefined *thisValue,
       ArrayRef<Value *> args)
       : CallInst(ValueKind::CallBuiltinInstKind, callee, thisValue, args) {
-    assert(
-        getNumArguments() <= MAX_ARGUMENTS &&
-        "Too many arguments to CallBuiltin");
     assert(
         callee->getValue() == (int)callee->getValue() &&
         callee->getValue() < BuiltinMethod::_count && "invalid builtin call");
