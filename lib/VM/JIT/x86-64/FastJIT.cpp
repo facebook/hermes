@@ -2174,8 +2174,8 @@ Emitters FastJIT::compileNegate(Emitters emit, const Inst *ip) {
 
 Emitters FastJIT::compileGetPNameList(Emitters emit, const Inst *ip) {
   uint8_t *externAddr;
-  emit.slow = getConstant(
-      emit.slow, (void *)Interpreter::handleGetPNameList, externAddr);
+  emit.slow =
+      getConstant(emit.slow, (void *)Interpreter::caseGetPNameList, externAddr);
   // The frameRegs used in Interpreter::handleGetPNameList is actually the first
   // local variable, not the stack pointer; so we just pass the address of r0.
   emit.fast = leaHermesReg(emit.fast, 0, Reg::rsi);

@@ -82,11 +82,6 @@ class Interpreter {
       Handle<Callable> curFunction,
       bool strictMode);
 
-  static ExecutionStatus handleGetPNameList(
-      Runtime *runtime,
-      PinnedHermesValue *frameRegs,
-      const Inst *ip);
-
   /// Implement the slow path of OpCode::Call/CallLong/Construct/ConstructLong.
   /// The callee frame must have been initialized already and the fast path
   /// (calling a \c JSFunction) must have been handled.
@@ -223,6 +218,11 @@ class Interpreter {
       Runtime *runtime,
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);
+
+  static ExecutionStatus caseGetPNameList(
+      Runtime *runtime,
+      PinnedHermesValue *frameRegs,
+      const Inst *ip);
 };
 
 } // namespace vm

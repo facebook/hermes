@@ -265,5 +265,36 @@ ExecutionStatus Interpreter::caseIteratorNext(
   return ExecutionStatus::RETURNED;
 }
 
+ExecutionStatus Interpreter::caseGetPNameList(
+    Runtime *runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip) {
+  if (O2REG(GetPNameList).isUndefined() || O2REG(GetPNameList).isNull()) {
+    // Set the iterator to be undefined value.
+    O1REG(GetPNameList) = HermesValue::encodeUndefinedValue();
+    return ExecutionStatus::RETURNED;
+  }
+
+  // Convert to object and store it back to the register.
+  auto res = toObject(runtime, Handle<>(&O2REG(GetPNameList)));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  O2REG(GetPNameList) = res.getValue();
+
+  auto obj = runtime->makeMutableHandle(vmcast<JSObject>(res.getValue()));
+  uint32_t beginIndex;
+  uint32_t endIndex;
+  auto cr = getForInPropertyNames(runtime, obj, beginIndex, endIndex);
+  if (cr == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto arr = *cr;
+  O1REG(GetPNameList) = arr.getHermesValue();
+  O3REG(GetPNameList) = HermesValue::encodeNumberValue(beginIndex);
+  O4REG(GetPNameList) = HermesValue::encodeNumberValue(endIndex);
+  return ExecutionStatus::RETURNED;
+}
+
 } // namespace vm
 } // namespace hermes
