@@ -1120,11 +1120,11 @@ std::pair<const uint8_t *, size_t> HermesRuntime::getBytecodeEpilogue(
 }
 
 void HermesRuntime::enableSamplingProfiler() {
-  ::hermes::vm::SamplingProfiler::getInstance()->enable();
+  ::hermes::vm::SamplingProfiler::enable();
 }
 
 void HermesRuntime::disableSamplingProfiler() {
-  ::hermes::vm::SamplingProfiler::getInstance()->disable();
+  ::hermes::vm::SamplingProfiler::disable();
 }
 
 void HermesRuntime::dumpSampledTraceToFile(const std::string &fileName) {
@@ -1133,11 +1133,11 @@ void HermesRuntime::dumpSampledTraceToFile(const std::string &fileName) {
   if (ec) {
     throw std::system_error(ec);
   }
-  ::hermes::vm::SamplingProfiler::getInstance()->dumpChromeTrace(os);
+  ::hermes::vm::SamplingProfiler::dumpChromeTraceGlobal(os);
 }
 
 void HermesRuntime::dumpSampledTraceToStream(llvh::raw_ostream &stream) {
-  ::hermes::vm::SamplingProfiler::getInstance()->dumpChromeTrace(stream);
+  ::hermes::vm::SamplingProfiler::dumpChromeTraceGlobal(stream);
 }
 
 /*static*/ std::vector<int64_t> HermesRuntime::getExecutedFunctions() {

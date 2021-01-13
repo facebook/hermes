@@ -455,7 +455,7 @@ bool executeHBCBytecodeImpl(
   }
 
   if (options.runtimeConfig.getEnableSampleProfiling()) {
-    vm::SamplingProfiler::getInstance()->enable();
+    vm::SamplingProfiler::enable();
   }
 
   llvh::StringRef sourceURL{};
@@ -466,9 +466,8 @@ bool executeHBCBytecodeImpl(
       vm::Runtime::makeNullHandle<vm::Environment>());
 
   if (options.runtimeConfig.getEnableSampleProfiling()) {
-    auto profiler = vm::SamplingProfiler::getInstance();
-    profiler->dumpChromeTrace(llvh::errs());
-    profiler->disable();
+    vm::SamplingProfiler::disable();
+    vm::SamplingProfiler::dumpChromeTraceGlobal(llvh::errs());
   }
 
   bool threwException = status == vm::ExecutionStatus::EXCEPTION;

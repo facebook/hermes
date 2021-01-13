@@ -377,6 +377,10 @@ SamplingProfiler::SamplingProfiler() : sampleStorage_(kMaxStackDepth) {
   sProfilerInstance_.store(this);
 }
 
+void SamplingProfiler::dumpSampledStackGlobal(llvh::raw_ostream &OS) {
+  getInstance()->dumpSampledStack(OS);
+}
+
 void SamplingProfiler::dumpSampledStack(llvh::raw_ostream &OS) {
   // TODO: serialize to visualizable trace format.
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
@@ -416,6 +420,10 @@ void SamplingProfiler::dumpSampledStack(llvh::raw_ostream &OS) {
   }
 }
 
+void SamplingProfiler::dumpChromeTraceGlobal(llvh::raw_ostream &OS) {
+  getInstance()->dumpChromeTrace(OS);
+}
+
 void SamplingProfiler::dumpChromeTrace(llvh::raw_ostream &OS) {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
   auto pid = getpid();
@@ -426,6 +434,10 @@ void SamplingProfiler::dumpChromeTrace(llvh::raw_ostream &OS) {
 }
 
 bool SamplingProfiler::enable() {
+  return getInstance()->enableImpl();
+}
+
+bool SamplingProfiler::enableImpl() {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
   if (enabled_) {
     return true;
@@ -443,6 +455,10 @@ bool SamplingProfiler::enable() {
 }
 
 bool SamplingProfiler::disable() {
+  return getInstance()->disableImpl();
+}
+
+bool SamplingProfiler::disableImpl() {
   {
     std::lock_guard<std::mutex> lockGuard(profilerLock_);
     if (!enabled_) {

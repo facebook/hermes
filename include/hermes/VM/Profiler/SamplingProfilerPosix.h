@@ -213,6 +213,10 @@ class SamplingProfiler {
   /// Timer loop thread main routine.
   void timerLoop();
 
+  /// Implementation of SamplingProfiler::enable/disable.
+  bool enableImpl();
+  bool disableImpl();
+
   /// Walk runtime stack frames and store in \p sampleStorage.
   /// This function is called from signal handler so should obey all
   /// rules of signal handler(no lock, no memory allocation etc...)
@@ -261,11 +265,17 @@ class SamplingProfiler {
   /// Dump sampled stack to \p OS in chrome trace format.
   void dumpChromeTrace(llvh::raw_ostream &OS);
 
+  /// Static wrapper for dumpSampledStack.
+  static void dumpSampledStackGlobal(llvh::raw_ostream &OS);
+
+  /// Static wrapper for dumpChromeTrace.
+  static void dumpChromeTraceGlobal(llvh::raw_ostream &OS);
+
   /// Enable and start profiling.
-  bool enable();
+  static bool enable();
 
   /// Disable and stop profiling.
-  bool disable();
+  static bool disable();
 
   /// Called for various GC events.
   void
