@@ -37,6 +37,8 @@ const char *const kSamplingDoneSemaphoreName = "/samplingDoneSem";
 volatile std::atomic<SamplingProfiler *> SamplingProfiler::sProfilerInstance_{
     nullptr};
 
+std::atomic<bool> SamplingProfiler::handlerSyncFlag_{false};
+
 void SamplingProfiler::registerRuntime(Runtime *runtime) {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
 
@@ -108,6 +110,11 @@ bool SamplingProfiler::unregisterSignalHandler() {
 }
 
 void SamplingProfiler::profilingSignalHandler(int signo) {
+  // Ensure that writes made on the timer thread before setting this flag are
+  // correctly acquired.
+  while (!handlerSyncFlag_.load(std::memory_order_acquire)) {
+  }
+
   // Avoid spoiling errno in a signal handler by storing the old version and
   // re-assigning it.
   auto oldErrno = errno;
@@ -138,6 +145,10 @@ void SamplingProfiler::profilingSignalHandler(int signo) {
       profilerInstance->sampledStackDepth_ = 0;
     }
   }
+
+  // Ensure that writes made in the handler are visible to the timer thread.
+  handlerSyncFlag_.store(false, std::memory_order_release);
+
   if (!profilerInstance->samplingDoneSem_.notifyOne()) {
     errno = oldErrno;
     abort(); // Something is wrong.
@@ -153,6 +164,11 @@ bool SamplingProfiler::sampleStack() {
     domains_.reserve(domains_.size() + kMaxStackDepth);
     size_t domainCapacityBefore = domains_.capacity();
     (void)domainCapacityBefore;
+
+    // Guarantee that the runtime thread will not proceed until it has acquired
+    // the updates to domains_.
+    handlerSyncFlag_.store(true, std::memory_order_release);
+
     // Signal target runtime thread to sample stack.
     pthread_kill(targetThreadId, SIGPROF);
 
@@ -160,6 +176,11 @@ bool SamplingProfiler::sampleStack() {
     // handler, so that we only have one active signal at a time.
     if (!samplingDoneSem_.wait()) {
       return false;
+    }
+
+    // Guarantee that this thread will observe all changes made to data
+    // structures in the signal handler.
+    while (handlerSyncFlag_.load(std::memory_order_acquire)) {
     }
 
     assert(

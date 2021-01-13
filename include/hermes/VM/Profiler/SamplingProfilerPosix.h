@@ -121,6 +121,10 @@ class SamplingProfiler {
   /// signal handler is unsafe.
   static volatile std::atomic<SamplingProfiler *> sProfilerInstance_;
 
+  /// Used to synchronise data writes between the timer thread and the signal
+  /// handler in the runtime thread.
+  static std::atomic<bool> handlerSyncFlag_;
+
   /// Lock for profiler operations and access to member fields.
   std::mutex profilerLock_;
 
