@@ -966,16 +966,6 @@ CallResult<HermesValue> Interpreter::interpretFunction(
 // When assertions are enabled we take the extra step of "invalidating" the IP
 // between captures so we can detect if it's erroneously accessed.
 //
-// In some cases we explicitly don't want to invalidate the IP and instead want
-// it to stay set. For this we use the *NO_INVALIDATE variants. This comes up
-// when we're performing a call operation which may re-enter the interpreter
-// loop, and so need the IP available for the saveCallerIPInStackFrame() call
-// when we next enter.
-#define CAPTURE_IP_ASSIGN_NO_INVALIDATE(dst, expr) \
-  runtime->setCurrentIP(ip);                       \
-  dst = expr;                                      \
-  ip = runtime->getCurrentIP();
-
 #ifdef NDEBUG
 
 #define CAPTURE_IP(expr)     \
@@ -983,7 +973,10 @@ CallResult<HermesValue> Interpreter::interpretFunction(
   (void)expr;                \
   ip = runtime->getCurrentIP();
 
-#define CAPTURE_IP_ASSIGN(dst, expr) CAPTURE_IP_ASSIGN_NO_INVALIDATE(dst, expr)
+#define CAPTURE_IP_ASSIGN(dst, expr) \
+  runtime->setCurrentIP(ip);         \
+  dst = expr;                        \
+  ip = runtime->getCurrentIP();
 
 #else // !NDEBUG
 
@@ -1010,6 +1003,9 @@ CallResult<HermesValue> Interpreter::interpretFunction(
     NoAllocScope noAlloc(runtime); \
     (void)expr;                    \
   } while (false)
+
+// When performing a tail call, we need to set the runtime IP and leave it set.
+#define CAPTURE_IP_SET() runtime->setCurrentIP(ip)
 
   LLVM_DEBUG(dbgs() << "interpretFunction() called\n");
 
@@ -1637,16 +1633,14 @@ tailCall:
 
       // Subtract 1 from callArgCount as 'this' is considered an argument in the
       // instruction, but not in the frame.
-      CAPTURE_IP_ASSIGN_NO_INVALIDATE(
-          auto newFrame,
-          StackFramePtr::initFrame(
-              runtime->stackPointer_,
-              FRAME,
-              ip,
-              curCodeBlock,
-              callArgCount - 1,
-              O2REG(Call),
-              HermesValue::fromRaw(callNewTarget)));
+      auto newFrame = StackFramePtr::initFrame(
+          runtime->stackPointer_,
+          FRAME,
+          ip,
+          curCodeBlock,
+          callArgCount - 1,
+          O2REG(Call),
+          HermesValue::fromRaw(callNewTarget));
       (void)newFrame;
 
       SLOW_DEBUG(dumpCallArguments(dbgs(), runtime, newFrame));
@@ -1659,10 +1653,9 @@ tailCall:
 #endif
 
         CodeBlock *calleeBlock = func->getCodeBlock();
-        calleeBlock->lazyCompile(runtime);
+        CAPTURE_IP(calleeBlock->lazyCompile(runtime));
 #if defined(HERMESVM_PROFILER_EXTERN)
-        CAPTURE_IP_ASSIGN_NO_INVALIDATE(
-            res, runtime->interpretFunction(calleeBlock));
+        CAPTURE_IP_ASSIGN(res, runtime->interpretFunction(calleeBlock));
         if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
@@ -1672,7 +1665,7 @@ tailCall:
         DISPATCH;
 #else
         if (auto jitPtr = runtime->jitContext_.compile(runtime, calleeBlock)) {
-          res = (*jitPtr)(runtime);
+          CAPTURE_IP_ASSIGN(res, (*jitPtr)(runtime));
           if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
             goto exception;
           O1REG(Call) = *res;
@@ -1684,10 +1677,11 @@ tailCall:
           DISPATCH;
         }
         curCodeBlock = calleeBlock;
+        CAPTURE_IP_SET();
         goto tailCall;
 #endif
       }
-      CAPTURE_IP_ASSIGN_NO_INVALIDATE(
+      CAPTURE_IP_ASSIGN(
           resPH, Interpreter::handleCallSlowPath(runtime, &O2REG(Call)));
       if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
         goto exception;
@@ -1721,26 +1715,23 @@ tailCall:
                 : curCodeBlock->getRuntimeModule()->getCodeBlockMayAllocate(
                       ip->iCallDirectLongIndex.op3));
 
-        CAPTURE_IP_ASSIGN_NO_INVALIDATE(
-            auto newFrame,
-            StackFramePtr::initFrame(
-                runtime->stackPointer_,
-                FRAME,
-                ip,
-                curCodeBlock,
-                (uint32_t)ip->iCallDirect.op2 - 1,
-                HermesValue::encodeNativePointer(calleeBlock),
-                HermesValue::encodeUndefinedValue()));
+        auto newFrame = StackFramePtr::initFrame(
+            runtime->stackPointer_,
+            FRAME,
+            ip,
+            curCodeBlock,
+            (uint32_t)ip->iCallDirect.op2 - 1,
+            HermesValue::encodeNativePointer(calleeBlock),
+            HermesValue::encodeUndefinedValue());
         (void)newFrame;
 
         LLVM_DEBUG(dumpCallArguments(dbgs(), runtime, newFrame));
 
         assert(!SingleStep && "can't single-step a call");
 
-        calleeBlock->lazyCompile(runtime);
+        CAPTURE_IP(calleeBlock->lazyCompile(runtime));
 #if defined(HERMESVM_PROFILER_EXTERN)
-        CAPTURE_IP_ASSIGN_NO_INVALIDATE(
-            res, runtime->interpretFunction(calleeBlock));
+        CAPTURE_IP_ASSIGN(res, runtime->interpretFunction(calleeBlock));
         if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
@@ -1751,7 +1742,7 @@ tailCall:
         DISPATCH;
 #else
         if (auto jitPtr = runtime->jitContext_.compile(runtime, calleeBlock)) {
-          res = (*jitPtr)(runtime);
+          CAPTURE_IP_ASSIGN(res, (*jitPtr)(runtime));
           if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
             goto exception;
           O1REG(CallDirect) = *res;
@@ -1764,6 +1755,7 @@ tailCall:
           DISPATCH;
         }
         curCodeBlock = calleeBlock;
+        CAPTURE_IP_SET();
         goto tailCall;
 #endif
       }
@@ -1772,16 +1764,14 @@ tailCall:
         NativeFunction *nf =
             runtime->getBuiltinNativeFunction(ip->iCallBuiltin.op2);
 
-        CAPTURE_IP_ASSIGN(
-            auto newFrame,
-            StackFramePtr::initFrame(
-                runtime->stackPointer_,
-                FRAME,
-                ip,
-                curCodeBlock,
-                (uint32_t)ip->iCallBuiltin.op3 - 1,
-                nf,
-                false));
+        auto newFrame = StackFramePtr::initFrame(
+            runtime->stackPointer_,
+            FRAME,
+            ip,
+            curCodeBlock,
+            (uint32_t)ip->iCallBuiltin.op3 - 1,
+            nf,
+            false);
         // "thisArg" is implicitly assumed to "undefined".
         newFrame.getThisArgRef() = HermesValue::encodeUndefinedValue();
 
