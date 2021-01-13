@@ -306,8 +306,8 @@ class HadesGC::CollectionStats final {
     cpuTimeSectionStart_ = oscompat::thread_cpu_time();
   }
   void endCPUTimeSection() {
-    cpuTimeSectionStart_ = {};
     cpuDuration_ += oscompat::thread_cpu_time() - cpuTimeSectionStart_;
+    cpuTimeSectionStart_ = {};
   }
 
   /// Since Hades allows allocations during an old gen collection, use the
