@@ -434,6 +434,7 @@ class StoreStackInst : public Instruction {
 
   explicit StoreStackInst(Value *storedValue, AllocStackInst *ptr)
       : Instruction(ValueKind::StoreStackInstKind) {
+    setType(Type::createNoType());
     pushOperand(storedValue);
     pushOperand(ptr);
   }
@@ -736,6 +737,7 @@ class StorePropertyInst : public Instruction {
       Value *object,
       Value *property)
       : Instruction(kind) {
+    setType(Type::createNoType());
     pushOperand(storedValue);
     pushOperand(object);
     pushOperand(property);
@@ -831,6 +833,7 @@ class StoreOwnPropertyInst : public Instruction {
       Value *property,
       LiteralBool *isEnumerable)
       : Instruction(kind) {
+    setType(Type::createNoType());
     pushOperand(storedValue);
     pushOperand(object);
     pushOperand(property);
@@ -954,6 +957,7 @@ class StoreGetterSetterInst : public Instruction {
       Value *property,
       LiteralBool *isEnumerable)
       : Instruction(ValueKind::StoreGetterSetterInstKind) {
+    setType(Type::createNoType());
     pushOperand(storedGetter);
     pushOperand(storedSetter);
     pushOperand(object);
@@ -2047,7 +2051,9 @@ class DebuggerInst : public Instruction {
   void operator=(const DebuggerInst &) = delete;
 
  public:
-  explicit DebuggerInst() : Instruction(ValueKind::DebuggerInstKind) {}
+  explicit DebuggerInst() : Instruction(ValueKind::DebuggerInstKind) {
+    setType(Type::createNoType());
+  }
   explicit DebuggerInst(
       const DebuggerInst *src,
       llvh::ArrayRef<Value *> operands)
@@ -2608,7 +2614,9 @@ class HBCReifyArgumentsInst : public SingleOperandInst {
 
  public:
   explicit HBCReifyArgumentsInst(AllocStackInst *reg)
-      : SingleOperandInst(ValueKind::HBCReifyArgumentsInstKind, reg) {}
+      : SingleOperandInst(ValueKind::HBCReifyArgumentsInstKind, reg) {
+    setType(Type::createNoType());
+  }
   explicit HBCReifyArgumentsInst(
       const HBCReifyArgumentsInst *src,
       llvh::ArrayRef<Value *> operands)
