@@ -7,6 +7,7 @@
 
 #define DEBUG_TYPE "tdzdedup"
 #include "hermes/Optimizer/Scalar/TDZDedup.h"
+#include "hermes/ADT/ScopedHashTable.h"
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/Instrs.h"
@@ -17,7 +18,6 @@
 #include "llvh/ADT/DenseSet.h"
 #include "llvh/ADT/Hashing.h"
 #include "llvh/ADT/STLExtras.h"
-#include "llvh/ADT/ScopedHashTable.h"
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/RecyclingAllocator.h"
 
@@ -35,11 +35,8 @@ namespace {
 
 class TDZDedupContext;
 
-using TDZDedupValueHTType = llvh::ScopedHashTableVal<Value *, Value *>;
-using AllocatorTy =
-    llvh::RecyclingAllocator<llvh::BumpPtrAllocator, TDZDedupValueHTType>;
-using ScopedHTType = llvh::
-    ScopedHashTable<Value *, Value *, llvh::DenseMapInfo<Value *>, AllocatorTy>;
+using ScopedHTType = hermes::ScopedHashTable<Value *, bool>;
+using ScopeType = hermes::ScopedHashTableScope<Value *, bool>;
 
 // StackNode - contains all the needed information to create a stack for doing
 // a depth first traversal of the tree. This includes scopes for values and
@@ -52,7 +49,7 @@ class StackNode : public DomTreeDFS::StackNode<TDZDedupContext> {
  private:
   /// RAII to create and pop a scope when the stack node is created and
   /// destroyed.
-  ScopedHTType::ScopeTy scope_;
+  ScopeType scope_;
 };
 
 /// TDZDedupContext - This pass does a simple depth-first walk of the dominator
@@ -74,13 +71,18 @@ class TDZDedupContext : public DomTreeDFS::Visitor<TDZDedupContext, StackNode> {
   /// All TDZ state variables are collected here.
   llvh::DenseSet<Value *> tdzState_{};
 
-  /// AvailableValues - This scoped hash table contains the TDZ flags that are
-  /// known to be true. It is instances of Variable, AllocStackInst, or
-  /// theoretically an Instruction * if the value has been SSA-ed.
-  /// TDZ values are unique in the sense that once they are set to true, or
-  /// detected to be true, they can never go back to undefined. So, a check
-  /// that is dominated by a another check of the same value or storing true
-  /// to the same value, is always safe to eliminate.
+  /// AvailableValues - This scoped hash table conceptually contains the
+  /// TDZ-obeying values and whether they are known to be non-empty. It maps
+  /// from instances of Variable, AllocStackInst, or theoretically an
+  /// Instruction * if the value has been SSA-ed, to a boolean. True means the
+  /// value is known to be non-empty, false means it could be empty.
+  ///
+  /// Values can transition between these states as we walk the dominator tree.
+  /// Due to the recursive nature of the dominator walk, we must be careful
+  /// how we update them. If he value is in the current scope, we update its
+  /// value in-place. Otherwise, we insert a new key/value in the current scope.
+  ///
+  /// We eliminate checks to values that are known to be non-empty at the time.
   ScopedHTType availableValues_{};
 };
 
@@ -92,7 +94,7 @@ bool TDZDedupContext::run() {
   // First, collect all TDZ state variables.
   for (auto &BB : *F_) {
     for (auto &I : BB) {
-      auto *TIU = llvh::dyn_cast<ThrowIfUndefinedInst>(&I);
+      auto *TIU = llvh::dyn_cast<ThrowIfEmptyInst>(&I);
       if (!TIU)
         continue;
 
@@ -125,10 +127,11 @@ bool TDZDedupContext::processNode(StackNode *SN) {
   // See if any instructions in the block can be eliminated.  If so, do it.  If
   // not, add them to AvailableValues.
   for (auto &inst : *BB) {
-    Value *checkedValue = nullptr;
+    // The storage containing the value that can potentially be empty.
     Value *tdzStorage = nullptr;
-    if (auto *TIU = llvh::dyn_cast<ThrowIfUndefinedInst>(&inst)) {
-      checkedValue = TIU->getCheckedValue();
+    ThrowIfEmptyInst *TIE = nullptr;
+    if ((TIE = llvh::dyn_cast<ThrowIfEmptyInst>(&inst)) != nullptr) {
+      auto *checkedValue = TIE->getCheckedValue();
 
       if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(checkedValue)) {
         tdzStorage = LFI->getSingleOperand();
@@ -138,51 +141,60 @@ bool TDZDedupContext::processNode(StackNode *SN) {
         tdzStorage = checkedValue;
       }
     } else if (auto *SF = llvh::dyn_cast<StoreFrameInst>(&inst)) {
-      // Check whether it is setting the target to non-undefined.
-      if (SF->getValue()->getType().canBeUndefined())
-        continue;
       tdzStorage = SF->getVariable();
       // Is the target a TDZ state variable?
       if (!tdzState_.count(tdzStorage))
         continue;
-    } else if (auto *SS = llvh::dyn_cast<StoreStackInst>(&inst)) {
-      // Check whether it is setting the target to non-undefined.
-      if (SS->getValue()->getType().canBeUndefined())
+      // Check whether it is setting the target to empty, in which case we
+      // mark it is "unavailable".
+      if (SF->getValue()->getType().canBeEmpty()) {
+        availableValues_.setInCurrentScope(tdzStorage, false);
         continue;
+      }
+    } else if (auto *SS = llvh::dyn_cast<StoreStackInst>(&inst)) {
       tdzStorage = SS->getPtr();
       // Is the target a TDZ state variable?
       if (!tdzState_.count(tdzStorage))
         continue;
+      // Check whether it is setting the target to non-empty.
+      if (SS->getValue()->getType().canBeEmpty()) {
+        availableValues_.setInCurrentScope(tdzStorage, false);
+        continue;
+      }
     } else {
       continue;
     }
 
     // If the tdz state is not already known to be set to true, add it to
     // the map.
-    if (!availableValues_.count(tdzStorage)) {
-      availableValues_.insert(tdzStorage, tdzStorage);
+    if (!availableValues_.lookup(tdzStorage)) {
+      availableValues_.setInCurrentScope(tdzStorage, true);
       continue;
     }
 
-    // The TDZ state is known to be true, so we can eliminate the instruction,
-    // which is either a check, or a store to set the state to true.
-    destroyer.add(&inst);
+    // Handle only ThrowIfEmpty from here on.
+    if (!TIE)
+      continue;
+
+    // The TDZ state is known to be true, so we can eliminate the check
+    // instruction.
+    TIE->replaceAllUsesWith(TIE->getCheckedValue());
+    destroyer.add(TIE);
     changed = true;
     ++NumTDZDedup;
 
     // Attempt to destroy the load too, to save work in other passes.
-    if (checkedValue) {
-      if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(checkedValue)) {
-        ++NumTDZFrameDedup;
-        if (LFI->hasOneUser())
-          destroyer.add(LFI);
-      } else if (auto *LSI = llvh::dyn_cast<LoadStackInst>(checkedValue)) {
-        ++NumTDZStackDedup;
-        if (LSI->hasOneUser())
-          destroyer.add(LSI);
-      } else {
-        ++NumTDZOtherDedup;
-      }
+    if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(TIE->getCheckedValue())) {
+      ++NumTDZFrameDedup;
+      if (LFI->hasOneUser())
+        destroyer.add(LFI);
+    } else if (
+        auto *LSI = llvh::dyn_cast<LoadStackInst>(TIE->getCheckedValue())) {
+      ++NumTDZStackDedup;
+      if (LSI->hasOneUser())
+        destroyer.add(LSI);
+    } else {
+      ++NumTDZOtherDedup;
     }
   }
 
