@@ -521,6 +521,20 @@ OptValue<Value *> simplifyThrowIfUndefined(ThrowIfUndefinedInst *TIU) {
   return nullptr;
 }
 
+/// Try to simplify ThrowIfEmptyInst
+/// \returns one of:
+///   - nullptr if the instruction cannot be simplified.
+///   - the instruction itself, if it was changed inplace.
+///   - a new instruction to replace the original one
+///   - llvh::None if the instruction should be deleted.
+OptValue<Value *> simplifyThrowIfEmpty(ThrowIfEmptyInst *TIE) {
+  // If the operand does not contain the "poison" type, it can be safely
+  // eliminated.
+  if (!TIE->getCheckedValue()->getType().canBeEmpty())
+    return TIE->getCheckedValue();
+  return nullptr;
+}
+
 /// Try to simplify the instruction \p I.
 /// \returns one of:
 ///   - nullptr if the instruction cannot be simplified.
@@ -552,6 +566,8 @@ OptValue<Value *> simplifyInstruction(Instruction *I) {
       return simplifyCoerceThisNS(cast<CoerceThisNSInst>(I));
     case ValueKind::ThrowIfUndefinedInstKind:
       return simplifyThrowIfUndefined(cast<ThrowIfUndefinedInst>(I));
+    case ValueKind::ThrowIfEmptyInstKind:
+      return simplifyThrowIfEmpty(cast<ThrowIfEmptyInst>(I));
 
     default:
       // TODO: handle other kinds of instructions.
