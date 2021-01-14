@@ -419,7 +419,6 @@ template <typename T, bool Uniqued>
 class DynamicStringPrimitive final
     : public OptSymbolStringPrimitive<Uniqued>,
       private llvh::TrailingObjects<DynamicStringPrimitive<T, Uniqued>, T> {
-  friend GC;
   friend class IdentifierTable;
   friend class llvh::TrailingObjects<DynamicStringPrimitive<T, Uniqued>, T>;
   friend class StringBuilder;
@@ -454,6 +453,7 @@ class DynamicStringPrimitive final
  private:
   static const VTable vt;
 
+ public:
   /// Construct from a DynamicStringPrimitive, perhaps with a SymbolID.
   /// If a non-empty SymbolID is provided, we must be a Uniqued string.
   explicit DynamicStringPrimitive(Runtime *runtime, uint32_t length)
@@ -467,6 +467,7 @@ class DynamicStringPrimitive final
 
   explicit DynamicStringPrimitive(Runtime *runtime, Ref src);
 
+ private:
   /// Copy a UTF-16 sequence into a new StringPrim. Throw \c RangeError if the
   /// string is longer than \c MAX_STRING_LENGTH characters. The new string is
   static CallResult<HermesValue> create(Runtime *runtime, Ref str);
@@ -513,7 +514,6 @@ class DynamicStringPrimitive final
 /// metadata.
 template <typename T>
 class ExternalStringPrimitive final : public SymbolStringPrimitive {
-  friend GC;
   friend class IdentifierTable;
   friend class StringBuilder;
   friend class StringPrimitive;
@@ -562,11 +562,13 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
     return contents_.capacity() * sizeof(T);
   }
 
+ public:
   /// Construct an ExternalStringPrimitive from the given string \p contents,
   /// non-uniqued.
   template <class BasicString>
   ExternalStringPrimitive(Runtime *runtime, BasicString &&contents);
 
+ private:
   /// Destructor deallocates the contents_ string.
   ~ExternalStringPrimitive() = default;
 
@@ -643,7 +645,6 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
 /// has an upper bound of the amount of extra memory it can keep alive.
 template <typename T>
 class BufferedStringPrimitive final : public StringPrimitive {
-  friend GC;
   friend class IdentifierTable;
   friend class StringBuilder;
   friend class StringPrimitive;
@@ -691,6 +692,7 @@ class BufferedStringPrimitive final : public StringPrimitive {
  private:
   static const VTable vt;
 
+ public:
   /// Construct a BufferedStringPrimitive with the specified length \p length
   /// and the associated concatenation buffer \p storage. Note that the length
   /// of the primitive may be smaller than the length of the buffer.
@@ -710,6 +712,7 @@ class BufferedStringPrimitive final : public StringPrimitive {
         "length exceeds size of concatenation buffer");
   }
 
+ private:
   /// Allocate a BufferedStringPrimitive with the specified length \p length
   /// and the associated concatenation buffer \p storage. Note that the length
   /// of the primitive may be smaller than the length of the buffer.

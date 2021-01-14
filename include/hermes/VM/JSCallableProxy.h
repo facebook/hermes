@@ -17,8 +17,6 @@ namespace vm {
 /// JSCallableProxy acts like both a Proxy and like a NativeFunction.
 /// See JSProxy for more discussion.
 class JSCallableProxy : public NativeFunction {
-  friend GC;
-
  public:
   friend void CallableProxyBuildMeta(const GCCell *cell, Metadata::Builder &mb);
   friend detail::ProxySlots &detail::slots(JSObject *selfHandle);
@@ -44,7 +42,6 @@ class JSCallableProxy : public NativeFunction {
         runtime, vmcast_or_null<Callable>(slots_.target.get(runtime)));
   }
 
- private:
 #ifdef HERMESVM_SERIALIZE
   explicit JSCallableProxy(Deserializer &d);
 
@@ -64,6 +61,7 @@ class JSCallableProxy : public NativeFunction {
             nullptr /* context */,
             &JSCallableProxy::_proxyNativeCall) {}
 
+ private:
   static CallResult<HermesValue>
   _proxyNativeCall(void *, Runtime *runtime, NativeArgs);
 

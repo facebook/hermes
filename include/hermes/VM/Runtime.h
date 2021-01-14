@@ -39,6 +39,7 @@
 #include "hermes/VM/StackTracesTree.h"
 #include "hermes/VM/SymbolRegistry.h"
 #include "hermes/VM/TwineChar16.h"
+#include "hermes/VM/VMExperiments.h"
 
 #ifdef HERMESVM_PROFILER_BB
 #include "hermes/VM/Profiler/InlineCacheProfiler.h"
@@ -93,22 +94,6 @@ class JSArray;
 /// available. This is necessary so we can perform native calls with small
 /// number of arguments without checking.
 static const unsigned STACK_RESERVE = 32;
-
-/// List of active experiments, corresponding to getVMExperimentFlags().
-namespace experiments {
-enum {
-  Default = 0,
-  MAdviseSequential = 1 << 2,
-  MAdviseRandom = 1 << 3,
-  MAdviseStringsSequential = 1 << 4,
-  MAdviseStringsRandom = 1 << 5,
-  MAdviseStringsWillNeed = 1 << 6,
-  VerifyBytecodeChecksum = 1 << 7,
-  IgnoreMemoryWarnings = 1 << 9,
-};
-/// Set of flags for active VM experiments.
-using VMExperimentFlags = uint32_t;
-} // namespace experiments
 
 /// Type used to assign object unique integer identifiers.
 using ObjectID = uint32_t;
@@ -246,7 +231,7 @@ class Runtime : public HandleRootOwner,
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
       class... Args>
-  T *makeAFixed(Args &&... args);
+  T *makeAFixed(Args &&...args);
 
   /// Create a variable size object of type T and size \p size.
   /// If necessary perform a GC cycle, which may potentially move
@@ -257,7 +242,7 @@ class Runtime : public HandleRootOwner,
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
       class... Args>
-  T *makeAVariable(uint32_t size, Args &&... args);
+  T *makeAVariable(uint32_t size, Args &&...args);
 
   /// Used as a placeholder for places where we should be checking for OOM
   /// but aren't yet.
@@ -1661,7 +1646,7 @@ template <
     HasFinalizer hasFinalizer,
     LongLived longLived,
     class... Args>
-T *Runtime::makeAFixed(Args &&... args) {
+T *Runtime::makeAFixed(Args &&...args) {
 #if !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && !defined(NDEBUG)
   // If allocation location tracking is enabled we implicitly call
   // getCurrentIP() via newAlloc() below. Even if this isn't enabled, we
@@ -1685,7 +1670,7 @@ template <
     HasFinalizer hasFinalizer,
     LongLived longLived,
     class... Args>
-T *Runtime::makeAVariable(uint32_t size, Args &&... args) {
+T *Runtime::makeAVariable(uint32_t size, Args &&...args) {
 #if !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && !defined(NDEBUG)
   // If allocation location tracking is enabled we implicitly call
   // getCurrentIP() via newAlloc() below. Even if this isn't enabled, we
@@ -1837,14 +1822,15 @@ inline StackFramePtr Runtime::restoreStackAndPreviousFrame() {
 }
 
 inline llvh::iterator_range<StackFrameIterator> Runtime::getStackFrames() {
-  return {StackFrameIterator{currentFrame_},
-          StackFrameIterator{registerStackEnd_}};
+  return {
+      StackFrameIterator{currentFrame_}, StackFrameIterator{registerStackEnd_}};
 };
 
 inline llvh::iterator_range<ConstStackFrameIterator> Runtime::getStackFrames()
     const {
-  return {ConstStackFrameIterator{currentFrame_},
-          ConstStackFrameIterator{registerStackEnd_}};
+  return {
+      ConstStackFrameIterator{currentFrame_},
+      ConstStackFrameIterator{registerStackEnd_}};
 };
 
 inline ExecutionStatus Runtime::setThrownValue(HermesValue value) {

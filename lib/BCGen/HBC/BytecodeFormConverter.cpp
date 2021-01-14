@@ -176,12 +176,13 @@ class BytecodeFormConverter {
   void perform() {
     // The list of steps, as member function pointers.
     using Step = void (BytecodeFormConverter::*)(void);
-    Step steps[] = {&BytecodeFormConverter::processMagicNumber,
-                    &BytecodeFormConverter::processInstructions,
-                    &BytecodeFormConverter::processOverflowFunctionHeaders,
-                    &BytecodeFormConverter::processFunctionHeaders,
-                    &BytecodeFormConverter::processStringTable,
-                    &BytecodeFormConverter::processOverflowStringTable
+    Step steps[] = {
+        &BytecodeFormConverter::processMagicNumber,
+        &BytecodeFormConverter::processInstructions,
+        &BytecodeFormConverter::processOverflowFunctionHeaders,
+        &BytecodeFormConverter::processFunctionHeaders,
+        &BytecodeFormConverter::processStringTable,
+        &BytecodeFormConverter::processOverflowStringTable
 
     };
     // Some steps adjust values that are used in computing other values. For

@@ -36,11 +36,12 @@ const ObjectVTable JSRegExp::vt{
         nullptr,
         nullptr,
         nullptr, // externalMemorySize
-        VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Regexp,
-                                     JSRegExp::_snapshotNameImpl,
-                                     JSRegExp::_snapshotAddEdgesImpl,
-                                     JSRegExp::_snapshotAddNodesImpl,
-                                     nullptr}),
+        VTable::HeapSnapshotMetadata{
+            HeapSnapshot::NodeType::Regexp,
+            JSRegExp::_snapshotNameImpl,
+            JSRegExp::_snapshotAddEdgesImpl,
+            JSRegExp::_snapshotAddNodesImpl,
+            nullptr}),
     JSRegExp::_getOwnIndexedRangeImpl,
     JSRegExp::_haveOwnIndexedImpl,
     JSRegExp::_getOwnIndexedPropertyFlagsImpl,

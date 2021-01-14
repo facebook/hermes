@@ -22,7 +22,7 @@ namespace vm {
 struct YoungGen::EvacAcceptor final : public RootAndSlotAcceptorDefault {
   YoungGen &gen;
   EvacAcceptor(GC &gc, YoungGen &gen)
-      : RootAndSlotAcceptorDefault(gc), gen(gen) {}
+      : RootAndSlotAcceptorDefault(gc.getPointerBase()), gen(gen) {}
 
   using RootAndSlotAcceptorDefault::accept;
 

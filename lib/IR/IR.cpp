@@ -429,16 +429,7 @@ Variable::Variable(
   scope->addVariable(this);
 }
 
-Variable::~Variable() {
-  // Clear the related variable.
-  if (relatedVariable_) {
-    assert(
-        (!relatedVariable_->relatedVariable_ ||
-         relatedVariable_->relatedVariable_ == this) &&
-        "related variable should be null or point back to us");
-    relatedVariable_->relatedVariable_ = nullptr;
-  }
-}
+Variable::~Variable() {}
 
 int Variable::getIndexInVariableList() const {
   int index = 0;

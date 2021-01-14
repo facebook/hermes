@@ -155,6 +155,9 @@ class IRBuilder {
   /// Create a new literal bool of value \p value.
   LiteralBool *getLiteralBool(bool value);
 
+  /// Create a new literal 'empty'.
+  LiteralEmpty *getLiteralEmpty();
+
   /// Create a new literal 'undefined'.
   LiteralUndefined *getLiteralUndefined();
 
@@ -371,7 +374,7 @@ class IRBuilder {
 
   GetNewTargetInst *createGetNewTargetInst();
 
-  ThrowIfUndefinedInst *createThrowIfUndefinedInst(Value *checkedValue);
+  ThrowIfEmptyInst *createThrowIfEmptyInst(Value *checkedValue);
 
   HBCGetGlobalObjectInst *createHBCGetGlobalObjectInst();
 

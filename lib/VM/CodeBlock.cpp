@@ -166,9 +166,10 @@ int32_t CodeBlock::findCatchTargetOffset(uint32_t exceptionOffset) {
 
 SLP CodeBlock::getArrayBufferIter(uint32_t idx, unsigned int numLiterals)
     const {
-  return SLP{runtimeModule_->getBytecode()->getArrayBuffer().slice(idx),
-             numLiterals,
-             runtimeModule_};
+  return SLP{
+      runtimeModule_->getBytecode()->getArrayBuffer().slice(idx),
+      numLiterals,
+      runtimeModule_};
 }
 
 std::pair<SLP, SLP> CodeBlock::getObjectBufferIter(

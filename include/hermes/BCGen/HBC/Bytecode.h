@@ -391,16 +391,18 @@ class BytecodeModule {
   /// object keys and the second array represents the object values.
   std::pair<ArrayRef<unsigned char>, ArrayRef<unsigned char>> getObjectBuffer()
       const {
-    return {ArrayRef<unsigned char>(objKeyBuffer_),
-            ArrayRef<unsigned char>(objValBuffer_)};
+    return {
+        ArrayRef<unsigned char>(objKeyBuffer_),
+        ArrayRef<unsigned char>(objValBuffer_)};
   }
 
   /// Returns a pair, where the first element is the key buffer starting at
   /// keyIdx and the second element is the value buffer starting at valIdx
   std::pair<ArrayRef<unsigned char>, ArrayRef<unsigned char>>
   getObjectBufferAtOffset(unsigned keyIdx, unsigned valIdx) const {
-    return {ArrayRef<unsigned char>(objKeyBuffer_).slice(keyIdx),
-            ArrayRef<unsigned char>(objValBuffer_).slice(valIdx)};
+    return {
+        ArrayRef<unsigned char>(objKeyBuffer_).slice(keyIdx),
+        ArrayRef<unsigned char>(objValBuffer_).slice(valIdx)};
   }
 
   /// Populate the source map \p sourceMap with the debug information.

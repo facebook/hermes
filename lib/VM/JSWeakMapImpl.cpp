@@ -122,7 +122,7 @@ GCHermesValue *JSWeakMapImplBase::getValueDirect(
 
 GCPointerBase::StorageType &JSWeakMapImplBase::getValueStorageRef(GC *gc) {
   assert(gc->calledByGC() && "Should only be used by the GC implementation.");
-  return valueStorage_.getLoc(gc);
+  return valueStorage_.getLoc();
 }
 
 /// \return true if the \p key exists in the map.
@@ -420,11 +420,12 @@ const ObjectVTable JSWeakMapImpl<C>::vt{
         nullptr,
         nullptr,
         nullptr,
-        VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
-                                     nullptr,
-                                     _snapshotAddEdgesImpl,
-                                     _snapshotAddNodesImpl,
-                                     nullptr}),
+        VTable::HeapSnapshotMetadata{
+            HeapSnapshot::NodeType::Object,
+            nullptr,
+            _snapshotAddEdgesImpl,
+            _snapshotAddNodesImpl,
+            nullptr}),
     JSWeakMapImpl::_getOwnIndexedRangeImpl,
     JSWeakMapImpl::_haveOwnIndexedImpl,
     JSWeakMapImpl::_getOwnIndexedPropertyFlagsImpl,

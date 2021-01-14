@@ -22,7 +22,6 @@ typedef void (*FinalizeNativeFunctionPtr)(void *context);
 /// function pointer can do cleanup when the FinalizableNativeFunction is
 /// finalized.
 class FinalizableNativeFunction final : public NativeFunction {
-  friend GC;
   FinalizeNativeFunctionPtr finalizePtr_;
 
  public:
@@ -48,7 +47,6 @@ class FinalizableNativeFunction final : public NativeFunction {
     return context_;
   }
 
- protected:
   FinalizableNativeFunction(
       Runtime *runtime,
       Handle<JSObject> parent,
@@ -65,6 +63,7 @@ class FinalizableNativeFunction final : public NativeFunction {
             functionPtr),
         finalizePtr_(finalizePtr) {}
 
+ protected:
   ~FinalizableNativeFunction() {
     finalizePtr_(context_);
   }
@@ -97,8 +96,6 @@ class HostObjectProxy : public DecoratedObject::Decoration {
 };
 
 class HostObject final : public DecoratedObject {
-  friend GC;
-
  public:
   static const ObjectVTable vt;
 
@@ -131,7 +128,6 @@ class HostObject final : public DecoratedObject {
     return static_cast<const HostObjectProxy *>(this->getDecoration());
   }
 
- private:
   HostObject(
       Runtime *runtime,
       Handle<JSObject> parent,

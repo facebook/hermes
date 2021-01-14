@@ -3062,8 +3062,8 @@ Optional<ESTree::Node *> JSParserImpl::parseOptionalExpressionExceptNew_tail(
     ESTree::Node *expr) {
   SMLoc objectLoc = startLoc;
   bool seenOptionalChain = false;
-  llvh::SaveAndRestore<unsigned> savedRecursionDepth{recursionDepth_,
-                                                     recursionDepth_};
+  llvh::SaveAndRestore<unsigned> savedRecursionDepth{
+      recursionDepth_, recursionDepth_};
   while (
       checkN(TokenKind::l_square, TokenKind::period, TokenKind::questiondot) ||
       checkTemplateLiteral()) {
@@ -3319,8 +3319,8 @@ Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
       // Each call in a chain may have type arguments.
       // As such, we must attempt to parse them upon encountering '<',
       // but roll back if it just ended up being a comparison operator.
-      SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
-                                                           Subsystem::Parser};
+      SourceErrorManager::SaveAndSuppressMessages suppress{
+          &sm_, Subsystem::Parser};
       auto optTypeArgs = parseTypeArgs();
       if (optTypeArgs && check(TokenKind::l_paren)) {
         // Call expression with type arguments.
@@ -3464,8 +3464,8 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrOptionalExpression(
     JSLexer::SavePoint savePoint{&lexer_};
     // Attempt to parse type args upon encountering '<',
     // but roll back if it just ended up being a comparison operator.
-    SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
-                                                         Subsystem::Parser};
+    SourceErrorManager::SaveAndSuppressMessages suppress{
+        &sm_, Subsystem::Parser};
     auto optTypeArgs = parseTypeArgs();
     if (optTypeArgs) {
       // New expression with type arguments.
@@ -3537,8 +3537,8 @@ Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpression() {
       check(TokenKind::less)) {
     JSLexer::SavePoint savePoint{&lexer_};
     // Suppress messages from the parser while still displaying lexer messages.
-    SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
-                                                         Subsystem::Parser};
+    SourceErrorManager::SaveAndSuppressMessages suppress{
+        &sm_, Subsystem::Parser};
     auto optTypeArgs = parseTypeArgs();
     if (optTypeArgs && check(TokenKind::l_paren)) {
       // Call expression with type arguments.
@@ -3904,8 +3904,8 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(
     // see if there is a ':' afterwards. If there isn't, failure is assured,
     // so we restore to the '?' and try again below, with
     // AllowTypedArrowFunction::No.
-    SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
-                                                         Subsystem::Parser};
+    SourceErrorManager::SaveAndSuppressMessages suppress{
+        &sm_, Subsystem::Parser};
     CHECK_RECURSION;
     auto optConsequent = parseAssignmentExpression(
         ParamIn, AllowTypedArrowFunction::Yes, CoverTypedParameters::No);
@@ -5071,8 +5071,8 @@ Optional<ESTree::Node *> JSParserImpl::tryParseTypedAsyncArrowFunction(
   ESTree::Node *returnType = nullptr;
   ESTree::Node *predicate = nullptr;
   {
-    SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
-                                                         Subsystem::Parser};
+    SourceErrorManager::SaveAndSuppressMessages suppress{
+        &sm_, Subsystem::Parser};
     if (check(TokenKind::less)) {
       auto optTypeParams = parseTypeParams();
       if (!optTypeParams) {
@@ -5179,8 +5179,8 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
     JSLexer::SavePoint savePoint{&lexer_};
     // Suppress messages from the parser while still displaying lexer
     // messages.
-    SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
-                                                         Subsystem::Parser};
+    SourceErrorManager::SaveAndSuppressMessages suppress{
+        &sm_, Subsystem::Parser};
     // Do as the flow parser does due to JSX ambiguities.
     // First we try and parse as an assignment expression disallowing
     // typed arrow functions. If that fails, then try again while allowing
@@ -5236,8 +5236,8 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
       JSLexer::SavePoint savePoint{&lexer_};
       // Suppress messages from the parser while still displaying lexer
       // messages.
-      SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
-                                                           Subsystem::Parser};
+      SourceErrorManager::SaveAndSuppressMessages suppress{
+          &sm_, Subsystem::Parser};
       SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
       bool startsWithPredicate = check(checksIdent_);
       auto optType = startsWithPredicate

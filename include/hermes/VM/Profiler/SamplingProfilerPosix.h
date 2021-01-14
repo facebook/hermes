@@ -121,6 +121,10 @@ class SamplingProfiler {
   /// signal handler is unsafe.
   static volatile std::atomic<SamplingProfiler *> sProfilerInstance_;
 
+  /// Used to synchronise data writes between the timer thread and the signal
+  /// handler in the runtime thread.
+  static std::atomic<bool> handlerSyncFlag_;
+
   /// Lock for profiler operations and access to member fields.
   std::mutex profilerLock_;
 
@@ -204,10 +208,14 @@ class SamplingProfiler {
 
   /// Main routine to take a sample of runtime stack.
   /// \return false for failure which timer loop thread should stop.
-  bool sampleStack(std::unique_lock<std::mutex> &mtx);
+  bool sampleStack();
 
   /// Timer loop thread main routine.
   void timerLoop();
+
+  /// Implementation of SamplingProfiler::enable/disable.
+  bool enableImpl();
+  bool disableImpl();
 
   /// Walk runtime stack frames and store in \p sampleStorage.
   /// This function is called from signal handler so should obey all
@@ -257,11 +265,17 @@ class SamplingProfiler {
   /// Dump sampled stack to \p OS in chrome trace format.
   void dumpChromeTrace(llvh::raw_ostream &OS);
 
+  /// Static wrapper for dumpSampledStack.
+  static void dumpSampledStackGlobal(llvh::raw_ostream &OS);
+
+  /// Static wrapper for dumpChromeTrace.
+  static void dumpChromeTraceGlobal(llvh::raw_ostream &OS);
+
   /// Enable and start profiling.
-  bool enable();
+  static bool enable();
 
   /// Disable and stop profiling.
-  bool disable();
+  static bool disable();
 
   /// Called for various GC events.
   void

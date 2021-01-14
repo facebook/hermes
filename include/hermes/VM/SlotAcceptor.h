@@ -60,7 +60,7 @@ struct RootSectionAcceptor {
 struct RootAcceptor : public RootSectionAcceptor {
   virtual void accept(void *&ptr) = 0;
   virtual void accept(PinnedHermesValue &hv) = 0;
-  virtual void accept(PinnedSymbolID sym) = 0;
+  virtual void accept(RootSymbolID sym) = 0;
 
   /// When we want to call an acceptor on "raw" root pointers of
   /// some JSObject subtype T, this method does the necessary
@@ -88,10 +88,10 @@ struct RootAndSlotAcceptorWithNames : public RootAndSlotAcceptor {
   }
   virtual void accept(PinnedHermesValue &hv, const char *name) = 0;
 
-  void accept(PinnedSymbolID sym) override final {
+  void accept(RootSymbolID sym) override final {
     accept(sym, nullptr);
   }
-  virtual void accept(PinnedSymbolID sym, const char *name) = 0;
+  virtual void accept(RootSymbolID sym, const char *name) = 0;
 
   using RootAndSlotAcceptor::acceptPtr;
   template <typename T>
@@ -154,7 +154,7 @@ struct DroppingAcceptor final : public RootAndSlotAcceptorWithNames {
     acceptor.accept(hv);
   }
 
-  void accept(PinnedSymbolID sym, const char *) override {
+  void accept(RootSymbolID sym, const char *) override {
     acceptor.accept(sym);
   }
 

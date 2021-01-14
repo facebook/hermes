@@ -580,6 +580,10 @@ class GCBase {
     inline bool isEnabled() const;
     /// Must be called by GC implementations whenever a new allocation is made.
     void newAlloc(const void *ptr, uint32_t sz);
+
+    /// If an object's size changes, update the entry here.
+    void updateSize(const void *ptr, uint32_t oldSize, uint32_t newSize);
+
     /// Must be called by GC implementations whenever an allocation is freed.
     void freeAlloc(const void *ptr, uint32_t sz);
     /// Returns data needed to reconstruct the JS stack used to create the
@@ -630,10 +634,9 @@ class GCBase {
     /// Flush out heap profiler data to the callback after a new kFlushThreshold
     /// bytes are allocated.
     static constexpr uint64_t kFlushThreshold = 128 * (1 << 10);
-    /// This mutex protects stackMap_. Specifically does not protect enabled_,
-    /// because enabled_ should only be changed while the GC isn't running
-    /// anyway. Also doesn't protect fragments_ because only the allocator
-    /// modifies fragments_.
+    /// This mutex protects stackMap_ and fragments_. Specifically does not
+    /// protect enabled_, because enabled_ should only be changed while the GC
+    /// isn't running anyway.
     Mutex mtx_;
     /// Associates allocations at their current location with their stack trace
     /// data.
@@ -884,7 +887,7 @@ class GCBase {
   }
 #endif
 
-  /// Name to indentify this heap in logs.
+  /// Name to identify this heap in logs.
   const std::string &getName() const {
     return name_;
   }
@@ -970,6 +973,10 @@ class GCBase {
   /// \return Number of weak ref slots currently in use.
   /// Inefficient. For testing/debugging.
   size_t countUsedWeakRefs() const;
+
+  /// Return true if \p ptr is currently pointing at valid accessable memory,
+  /// allocated to an object.
+  virtual bool validPointer(const void *ptr) const = 0;
 #endif
 
   /// Dump detailed heap contents to the given output stream, \p os.
@@ -1222,9 +1229,7 @@ class GCBase {
   /// objects and unreachable objects may not have dereference-able VTable
   /// pointers, and any reads from JS heap memory may give strange results.
   bool inGC() const {
-    // This is only used in asserts and debugging purposes, make it as strict
-    // as possible.
-    return inGC_.load(std::memory_order_seq_cst);
+    return inGC_;
   }
 
   bool isTrackingIDs() {
@@ -1253,7 +1258,11 @@ class GCBase {
   /// \return The ID for the given value. If the value cannot be represented
   ///   with an ID, returns None.
   llvh::Optional<HeapSnapshot::NodeID> getSnapshotID(HermesValue val);
-  inline void moveObject(const void *oldPtr, const void *newPtr);
+  inline void moveObject(
+      const void *oldPtr,
+      uint32_t oldSize,
+      const void *newPtr,
+      uint32_t newSize);
   inline void untrackObject(const void *cell);
   /// \}
 
@@ -1453,7 +1462,7 @@ class GCBase {
   bool recordGcStats_{false};
 
   /// Whether or not a GC cycle is currently occurring.
-  AtomicIfConcurrentGC<bool> inGC_;
+  bool inGC_{false};
 
   /// The block of fields below records values of various metrics at
   /// the start of execution, so that we can get the values at the end
@@ -1639,10 +1648,16 @@ inline HeapSnapshot::NodeID GCBase::getNativeID(const void *mem) {
   return idTracker_.getNativeID(mem);
 }
 
-inline void GCBase::moveObject(const void *oldPtr, const void *newPtr) {
+inline void GCBase::moveObject(
+    const void *oldPtr,
+    uint32_t oldSize,
+    const void *newPtr,
+    uint32_t newSize) {
   idTracker_.moveObject(
       pointerBase_->pointerToBasedNonNull(oldPtr),
       pointerBase_->pointerToBasedNonNull(newPtr));
+  // Use newPtr here because the idTracker_ just moved it.
+  allocationLocationTracker_.updateSize(newPtr, oldSize, newSize);
 }
 
 inline void GCBase::untrackObject(const void *cell) {

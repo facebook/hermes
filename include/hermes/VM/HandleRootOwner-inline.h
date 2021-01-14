@@ -70,8 +70,8 @@ inline Handle<T> HandleRootOwner::makeHandleInParentScope(
 template <class T>
 inline Handle<T> HandleRootOwner::makeHandleInParentScope(
     PseudoHandle<HermesValue> &&pseudo) {
-  Handle<T> res{getTopGCScopesParent(),
-                PseudoHandle<T>::vmcast(std::move(pseudo)).get()};
+  Handle<T> res{
+      getTopGCScopesParent(), PseudoHandle<T>::vmcast(std::move(pseudo)).get()};
   return res;
 }
 

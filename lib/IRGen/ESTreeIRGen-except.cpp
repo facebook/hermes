@@ -157,8 +157,8 @@ void ESTreeIRGen::genFinallyBeforeControlChange(
 
     if (sourceTry->genFinalizer) {
       // Recreate the state of the try stack on entrance to the finally block.
-      llvh::SaveAndRestore<SurroundingTry *> sr{curFunction()->surroundingTry,
-                                                sourceTry->outer};
+      llvh::SaveAndRestore<SurroundingTry *> sr{
+          curFunction()->surroundingTry, sourceTry->outer};
       sourceTry->genFinalizer(sourceTry->node, cfc, continueTarget);
     }
   }

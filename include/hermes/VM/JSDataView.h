@@ -20,8 +20,6 @@ namespace hermes {
 namespace vm {
 
 class JSDataView final : public JSObject {
-  friend GC;
-
  public:
   using size_type = JSArrayBuffer::size_type;
   using Super = JSObject;
@@ -96,7 +94,7 @@ class JSDataView final : public JSObject {
     length_ = length;
   }
 
- private:
+ public:
 #ifdef HERMESVM_SERIALIZE
   explicit JSDataView(Deserializer &d);
 
@@ -106,6 +104,7 @@ class JSDataView final : public JSObject {
 
   friend void DataViewBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
+ private:
   /// buffer_ is the underlying storage of the bytes for a DataView.
   GCPointer<JSArrayBuffer> buffer_;
   /// offset_ is the position within the buffer that the DataView begins at.
@@ -113,6 +112,7 @@ class JSDataView final : public JSObject {
   /// length_ is the amount of bytes the DataView views inside the storage.
   size_type length_;
 
+ public:
   JSDataView(
       Runtime *runtime,
       Handle<JSObject> parent,

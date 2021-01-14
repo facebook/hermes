@@ -44,13 +44,14 @@ MarkBitArrayNCTest::MarkBitArrayNCTest()
   auto last = reinterpret_cast<char *>(
       llvh::alignDown(reinterpret_cast<uintptr_t>(as.hiLim() - 1), HeapAlign));
 
-  addrs = {first,
-           first + HeapAlign,
-           first + HeapAlign * 42,
+  addrs = {
+      first,
+      first + HeapAlign,
+      first + HeapAlign * 42,
 
-           last - HeapAlign * 42,
-           last - HeapAlign,
-           last};
+      last - HeapAlign * 42,
+      last - HeapAlign,
+      last};
 
   EXPECT_TRUE(std::is_sorted(addrs.begin(), addrs.end()));
 }

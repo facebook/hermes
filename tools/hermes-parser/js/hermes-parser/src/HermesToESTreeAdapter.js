@@ -7,6 +7,8 @@
  * @format
  */
 
+'use strict';
+
 const HermesASTAdapter = require('./HermesASTAdapter');
 
 class HermesToESTreeAdapter extends HermesASTAdapter {

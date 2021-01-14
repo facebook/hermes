@@ -1,8 +1,12 @@
 {
-  "name": "hermes-parser",
+  "name": "hermes-parser-packages",
   "private": true,
   "version": "0.0.0",
   "devDependencies": {
+    "@babel/core": "7.12.10",
+    "@babel/cli": "7.12.10",
+    "@babel/preset-env": "7.12.1",
+    "@babel/plugin-proposal-class-properties": "7.12.1",
     "jest": "^26.4.2"
   },
   "scripts": {

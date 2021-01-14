@@ -121,6 +121,8 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
       numberToString(LN->getValue(), buf, sizeof(buf));
       os << buf;
     }
+  } else if (isa<LiteralEmpty>(V)) {
+    os << "empty";
   } else if (isa<LiteralNull>(V)) {
     os << "null";
   } else if (isa<LiteralUndefined>(V)) {

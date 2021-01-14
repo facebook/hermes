@@ -47,8 +47,9 @@ class TerminatorInst;
 /// This is an instance of a JavaScript type.
 class Type {
   // Encodes the JavaScript type hierarchy.
-  // See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures
   enum TypeKind {
+    /// An uninitialized TDZ.
+    Empty,
     Undefined,
     Null,
     Boolean,
@@ -64,39 +65,41 @@ class Type {
   /// Return the string representation of the type at index \p idx.
   StringRef getKindStr(TypeKind idx) const {
     // The strings below match the values in TypeKind.
-    const char *Names[] = {"undefined",
-                           "null",
-                           "boolean",
-                           "string",
-                           "number",
-                           "object",
-                           "closure",
-                           "regexp"};
-    return Names[idx];
+    static const char *const names[] = {
+        "empty",
+        "undefined",
+        "null",
+        "boolean",
+        "string",
+        "number",
+        "object",
+        "closure",
+        "regexp"};
+    return names[idx];
   }
 
 #define BIT_TO_VAL(XX) (1 << TypeKind::XX)
 #define IS_VAL(XX) (bitmask_ == (1 << TypeKind::XX))
 
   // The 'Any' type means all possible types.
-  static constexpr uint8_t TYPE_ANY_MASK = (1u << TypeKind::LAST_TYPE) - 1;
+  static constexpr unsigned TYPE_ANY_MASK = (1u << TypeKind::LAST_TYPE) - 1;
 
-  static constexpr uint8_t PRIMITIVE_BITS = BIT_TO_VAL(Number) |
+  static constexpr unsigned PRIMITIVE_BITS = BIT_TO_VAL(Number) |
       BIT_TO_VAL(String) | BIT_TO_VAL(Null) | BIT_TO_VAL(Undefined) |
       BIT_TO_VAL(Boolean);
 
-  static constexpr uint8_t OBJECT_BITS =
+  static constexpr unsigned OBJECT_BITS =
       BIT_TO_VAL(Object) | BIT_TO_VAL(Closure) | BIT_TO_VAL(RegExp);
 
-  static constexpr uint8_t NONPTR_BITS = BIT_TO_VAL(Number) |
+  static constexpr unsigned NONPTR_BITS = BIT_TO_VAL(Number) |
       BIT_TO_VAL(Boolean) | BIT_TO_VAL(Null) | BIT_TO_VAL(Undefined);
 
   /// Each bit represent the possibility of the type being the type that's
   /// represented in the enum entry.
-  uint8_t bitmask_{TYPE_ANY_MASK};
+  unsigned bitmask_{TYPE_ANY_MASK};
 
   /// The constructor is only accessible by static builder methods.
-  constexpr explicit Type(uint8_t mask) : bitmask_(mask) {}
+  constexpr explicit Type(unsigned mask) : bitmask_(mask) {}
 
  public:
   constexpr Type() = default;
@@ -109,15 +112,23 @@ class Type {
     return Type(A.bitmask_ & B.bitmask_);
   }
 
-  constexpr bool isEmptyTy() const {
+  static constexpr Type subtractTy(Type A, Type B) {
+    return Type(A.bitmask_ & ~B.bitmask_);
+  }
+
+  constexpr bool isNoType() const {
     return bitmask_ == 0;
   }
 
-  static constexpr Type createEmptyType() {
+  static constexpr Type createNoType() {
     return Type(0);
   }
   static constexpr Type createAnyType() {
     return Type(TYPE_ANY_MASK);
+  }
+  /// Create an uninitialized TDZ type.
+  static constexpr Type createEmpty() {
+    return Type(BIT_TO_VAL(Empty));
   }
   static constexpr Type createUndefined() {
     return Type(BIT_TO_VAL(Undefined));
@@ -230,6 +241,11 @@ class Type {
   /// \returns true if this type can represent a boolean value.
   constexpr bool canBeBoolean() const {
     return canBeType(Type::createBoolean());
+  }
+
+  /// \returns true if this type can represent an "empty" value.
+  constexpr bool canBeEmpty() const {
+    return canBeType(Type::createEmpty());
   }
 
   /// \returns true if this type can represent an undefined value.
@@ -560,6 +576,20 @@ class Literal : public Value {
   }
 };
 
+class LiteralEmpty : public Literal {
+  LiteralEmpty(const LiteralEmpty &) = delete;
+  void operator=(const LiteralEmpty &) = delete;
+
+ public:
+  explicit LiteralEmpty() : Literal(ValueKind::LiteralEmptyKind) {
+    setType(Type::createEmpty());
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::LiteralEmptyKind;
+  }
+};
+
 class LiteralNull : public Literal {
   LiteralNull(const LiteralNull &) = delete;
   void operator=(const LiteralNull &) = delete;
@@ -793,10 +823,8 @@ class Variable : public Value {
   /// The scope that owns the variable.
   VariableScope *parent;
 
-  /// In a "let" or "const" variable this points to the validity flag.
-  /// In a "var" variable, if relatedVariable_ is non-null, then the variable is
-  /// itself the validity flag and relatedVariable_ points to the let/const.
-  Variable *relatedVariable_{};
+  /// If true, this variable obeys the TDZ rules.
+  bool obeysTDZ_ = false;
 
  protected:
   explicit Variable(
@@ -822,15 +850,11 @@ class Variable : public Value {
     return parent;
   }
 
-  Variable *getRelatedVariable() const {
-    return relatedVariable_;
+  bool getObeysTDZ() const {
+    return obeysTDZ_;
   }
-  void setRelatedVariable(Variable *relatedVariable) {
-    assert(
-        (!relatedVariable || !relatedVariable->relatedVariable_ ||
-         relatedVariable->relatedVariable_ == this) &&
-        "Related variable should be null or point back to us");
-    relatedVariable_ = relatedVariable;
+  void setObeysTDZ(bool value) {
+    obeysTDZ_ = value;
   }
 
   /// Return the index of this variable in the function's variable list.
@@ -1710,6 +1734,7 @@ class Module : public Value {
   llvh::DenseMap<Identifier, GlobalObjectProperty *> globalPropertyMap_{};
 
   GlobalObject globalObject_{};
+  LiteralEmpty literalEmpty{};
   LiteralUndefined literalUndefined{};
   LiteralNull literalNull{};
   LiteralBool literalFalse{false};
@@ -1845,6 +1870,11 @@ class Module : public Value {
 
   /// Create a new literal bool of value \p value.
   LiteralBool *getLiteralBool(bool value);
+
+  /// Create a new literal 'empty'.
+  LiteralEmpty *getLiteralEmpty() {
+    return &literalEmpty;
+  }
 
   /// Create a new literal 'undefined'.
   LiteralUndefined *getLiteralUndefined() {

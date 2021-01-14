@@ -133,10 +133,11 @@ PerfSection::~PerfSection() {
             return KVPair{pair.first, buf.c_str()};
           }
           case ArgType::STRINGREF:
-            return KVPair{pair.first,
-                          std::string(
-                              pair.second.value.stringref.data,
-                              pair.second.value.stringref.size)};
+            return KVPair{
+                pair.first,
+                std::string(
+                    pair.second.value.stringref.data,
+                    pair.second.value.stringref.size)};
           default:
             llvm_unreachable("Unhandled argtype");
         }

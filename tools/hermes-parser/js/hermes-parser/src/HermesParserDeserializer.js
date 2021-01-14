@@ -7,6 +7,8 @@
  * @format
  */
 
+'use strict';
+
 const HermesParserDecodeUTF8String = require('./HermesParserDecodeUTF8String');
 const NODE_DESERIALIZERS = require('./HermesParserNodeDeserializers');
 

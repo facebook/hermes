@@ -37,6 +37,8 @@ const char *const kSamplingDoneSemaphoreName = "/samplingDoneSem";
 volatile std::atomic<SamplingProfiler *> SamplingProfiler::sProfilerInstance_{
     nullptr};
 
+std::atomic<bool> SamplingProfiler::handlerSyncFlag_{false};
+
 void SamplingProfiler::registerRuntime(Runtime *runtime) {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
 
@@ -108,6 +110,11 @@ bool SamplingProfiler::unregisterSignalHandler() {
 }
 
 void SamplingProfiler::profilingSignalHandler(int signo) {
+  // Ensure that writes made on the timer thread before setting this flag are
+  // correctly acquired.
+  while (!handlerSyncFlag_.load(std::memory_order_acquire)) {
+  }
+
   // Avoid spoiling errno in a signal handler by storing the old version and
   // re-assigning it.
   auto oldErrno = errno;
@@ -138,6 +145,10 @@ void SamplingProfiler::profilingSignalHandler(int signo) {
       profilerInstance->sampledStackDepth_ = 0;
     }
   }
+
+  // Ensure that writes made in the handler are visible to the timer thread.
+  handlerSyncFlag_.store(false, std::memory_order_release);
+
   if (!profilerInstance->samplingDoneSem_.notifyOne()) {
     errno = oldErrno;
     abort(); // Something is wrong.
@@ -145,49 +156,31 @@ void SamplingProfiler::profilingSignalHandler(int signo) {
   errno = oldErrno;
 }
 
-bool SamplingProfiler::sampleStack(std::unique_lock<std::mutex> &uniqueLock) {
-  // Check profiling stopping request.
-  if (!enabled_) {
-    return false;
-  }
-
-  // Make a copy of activeRuntimeThreads_ because it may be modified by
-  // runtime threads during enumeration.
-  auto activeRuntimeThreadsCopy = activeRuntimeThreads_;
-  for (const auto &entry : activeRuntimeThreadsCopy) {
+bool SamplingProfiler::sampleStack() {
+  for (const auto &entry : activeRuntimeThreads_) {
     auto targetThreadId = entry.second;
     // Ensure there are no allocations in the signal handler by keeping ample
     // reserved space.
     domains_.reserve(domains_.size() + kMaxStackDepth);
     size_t domainCapacityBefore = domains_.capacity();
     (void)domainCapacityBefore;
+
+    // Guarantee that the runtime thread will not proceed until it has acquired
+    // the updates to domains_.
+    handlerSyncFlag_.store(true, std::memory_order_release);
+
     // Signal target runtime thread to sample stack.
     pthread_kill(targetThreadId, SIGPROF);
 
-    // Threading: samplingDoneSem_ will synchronize with signal handler to
-    // to make sure there will NOT be two SIGPROF signals sent to the same
-    // runtime thread at the same time which prevents signal coalescing.
-    // Also, release profilerLock_ before waiting because the runtime thread
-    // we try to signal may be trying to hold profilerLock_. Failing to unlock
-    // profilerLock_ may cause deadlock: timer thread waiting on
-    // samplingDoneSem_ while target runtime thread is waiting on timer thread
-    // to release profilerLock_.
-    uniqueLock.unlock();
+    // Threading: samplingDoneSem_ will synchronise this thread with the signal
+    // handler, so that we only have one active signal at a time.
     if (!samplingDoneSem_.wait()) {
       return false;
     }
-    // Reacquire profilerLock_ to protect the access to fields of
-    // SamplingProfiler.
-    // sampledStacks_/sampledStacks_/sampleStorage_ fields may be
-    // modified during the unlock peroid which is fine because,
-    // unlike activeRuntimeThreads_, their read/write operations
-    // do not overlap each other across unlock/lock boundary.
-    uniqueLock.lock();
-    // Enabled may have changed since the lock was released, and we should exit
-    // as early as possible before sending more signals to threads that no
-    // longer have signal handlers attached.
-    if (!enabled_) {
-      return false;
+
+    // Guarantee that this thread will observe all changes made to data
+    // structures in the signal handler.
+    while (handlerSyncFlag_.load(std::memory_order_acquire)) {
     }
 
     assert(
@@ -222,12 +215,12 @@ void SamplingProfiler::timerLoop() {
   // The amount of time that is spent sleeping comes from a normal distribution,
   // to avoid the case where the timer thread samples a stack at a predictable
   // period.
-  std::normal_distribution<> distribution{kMeanMilliseconds,
-                                          kStdDevMilliseconds};
+  std::normal_distribution<> distribution{
+      kMeanMilliseconds, kStdDevMilliseconds};
   std::unique_lock<std::mutex> uniqueLock(profilerLock_);
 
   while (true) {
-    if (!sampleStack(uniqueLock)) {
+    if (!sampleStack()) {
       return;
     }
 
@@ -384,6 +377,10 @@ SamplingProfiler::SamplingProfiler() : sampleStorage_(kMaxStackDepth) {
   sProfilerInstance_.store(this);
 }
 
+void SamplingProfiler::dumpSampledStackGlobal(llvh::raw_ostream &OS) {
+  getInstance()->dumpSampledStack(OS);
+}
+
 void SamplingProfiler::dumpSampledStack(llvh::raw_ostream &OS) {
   // TODO: serialize to visualizable trace format.
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
@@ -423,6 +420,10 @@ void SamplingProfiler::dumpSampledStack(llvh::raw_ostream &OS) {
   }
 }
 
+void SamplingProfiler::dumpChromeTraceGlobal(llvh::raw_ostream &OS) {
+  getInstance()->dumpChromeTrace(OS);
+}
+
 void SamplingProfiler::dumpChromeTrace(llvh::raw_ostream &OS) {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
   auto pid = getpid();
@@ -433,6 +434,10 @@ void SamplingProfiler::dumpChromeTrace(llvh::raw_ostream &OS) {
 }
 
 bool SamplingProfiler::enable() {
+  return getInstance()->enableImpl();
+}
+
+bool SamplingProfiler::enableImpl() {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
   if (enabled_) {
     return true;
@@ -450,6 +455,10 @@ bool SamplingProfiler::enable() {
 }
 
 bool SamplingProfiler::disable() {
+  return getInstance()->disableImpl();
+}
+
+bool SamplingProfiler::disableImpl() {
   {
     std::lock_guard<std::mutex> lockGuard(profilerLock_);
     if (!enabled_) {
@@ -487,6 +496,9 @@ void SamplingProfiler::onGCEvent(
     Runtime *runtime,
     GCEventKind kind,
     const std::string &extraInfo) {
+  assert(
+      !runtime->getHeap().inGC() &&
+      "Cannot be in a GC when setting a GC event");
   switch (kind) {
     case GCEventKind::CollectionStart: {
       assert(

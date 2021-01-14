@@ -159,7 +159,6 @@ elseif (${HERMESVM_GCKIND} STREQUAL "HADES")
             gcs/AlignedHeapSegment.cpp
             gcs/AlignedStorage.cpp
             gcs/CardTableNC.cpp
-            gcs/CompleteMarkState.cpp
             gcs/FillerCell.cpp
             gcs/HadesGC.cpp
   )

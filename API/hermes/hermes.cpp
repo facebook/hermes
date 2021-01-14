@@ -163,13 +163,13 @@ static constexpr unsigned kMaxNumRegisters =
 void raw_ostream_append(llvh::raw_ostream &os) {}
 
 template <typename Arg0, typename... Args>
-void raw_ostream_append(llvh::raw_ostream &os, Arg0 &&arg0, Args &&... args) {
+void raw_ostream_append(llvh::raw_ostream &os, Arg0 &&arg0, Args &&...args) {
   os << arg0;
   raw_ostream_append(os, args...);
 }
 
 template <typename... Args>
-jsi::JSError makeJSError(jsi::Runtime &rt, Args &&... args) {
+jsi::JSError makeJSError(jsi::Runtime &rt, Args &&...args) {
   std::string s;
   llvh::raw_string_ostream os(s);
   raw_ostream_append(os, std::forward<Args>(args)...);
@@ -827,16 +827,13 @@ class HermesRuntimeImpl final : public HermesRuntime,
   size_t getLength(vm::Handle<vm::ArrayImpl> arr);
   size_t getByteLength(vm::Handle<vm::JSArrayBuffer> arr);
 
-  struct JsiProxyBase : public vm::HostObjectProxy {
-    JsiProxyBase(HermesRuntimeImpl &rt, std::shared_ptr<jsi::HostObject> ho)
-        : rt_(rt), ho_(ho) {}
-
+  struct JsiProxy final : public vm::HostObjectProxy {
     HermesRuntimeImpl &rt_;
     std::shared_ptr<jsi::HostObject> ho_;
-  };
 
-  struct JsiProxy final : public JsiProxyBase {
-    using JsiProxyBase::JsiProxyBase;
+    JsiProxy(HermesRuntimeImpl &rt, std::shared_ptr<jsi::HostObject> ho)
+        : rt_(rt), ho_(ho) {}
+
     vm::CallResult<vm::HermesValue> get(vm::SymbolID id) override {
       auto &stats = rt_.runtime_.getRuntimeStats();
       const vm::instrumentation::RAIITimer timer{
@@ -952,16 +949,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
     };
   };
 
-  struct HFContextBase {
-    HFContextBase(jsi::HostFunctionType hf, HermesRuntimeImpl &hri)
+  struct HFContext final {
+    HFContext(jsi::HostFunctionType hf, HermesRuntimeImpl &hri)
         : hostFunction(std::move(hf)), hermesRuntimeImpl(hri) {}
-
-    jsi::HostFunctionType hostFunction;
-    HermesRuntimeImpl &hermesRuntimeImpl;
-  };
-
-  struct HFContext final : public HFContextBase {
-    using HFContextBase::HFContextBase;
 
     static vm::CallResult<vm::HermesValue>
     func(void *context, vm::Runtime *runtime, vm::NativeArgs hvArgs) {
@@ -1008,6 +998,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
     static void finalize(void *context) {
       delete reinterpret_cast<HFContext *>(context);
     }
+
+    jsi::HostFunctionType hostFunction;
+    HermesRuntimeImpl &hermesRuntimeImpl;
   };
 
   template <typename T>
@@ -1071,7 +1064,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   friend class debugger::Debugger;
   std::unique_ptr<debugger::Debugger> debugger_;
 #endif
-  uint32_t vmExperimentFlags_{0};
+  ::hermes::vm::experiments::VMExperimentFlags vmExperimentFlags_{0};
   std::shared_ptr<vm::CrashManager> crashMgr_;
 
   /// Compilation flags used by prepareJavaScript().
@@ -1127,11 +1120,11 @@ std::pair<const uint8_t *, size_t> HermesRuntime::getBytecodeEpilogue(
 }
 
 void HermesRuntime::enableSamplingProfiler() {
-  ::hermes::vm::SamplingProfiler::getInstance()->enable();
+  ::hermes::vm::SamplingProfiler::enable();
 }
 
 void HermesRuntime::disableSamplingProfiler() {
-  ::hermes::vm::SamplingProfiler::getInstance()->disable();
+  ::hermes::vm::SamplingProfiler::disable();
 }
 
 void HermesRuntime::dumpSampledTraceToFile(const std::string &fileName) {
@@ -1140,11 +1133,11 @@ void HermesRuntime::dumpSampledTraceToFile(const std::string &fileName) {
   if (ec) {
     throw std::system_error(ec);
   }
-  ::hermes::vm::SamplingProfiler::getInstance()->dumpChromeTrace(os);
+  ::hermes::vm::SamplingProfiler::dumpChromeTraceGlobal(os);
 }
 
 void HermesRuntime::dumpSampledTraceToStream(llvh::raw_ostream &stream) {
-  ::hermes::vm::SamplingProfiler::getInstance()->dumpChromeTrace(stream);
+  ::hermes::vm::SamplingProfiler::dumpChromeTraceGlobal(stream);
 }
 
 /*static*/ std::vector<int64_t> HermesRuntime::getExecutedFunctions() {
@@ -1644,7 +1637,7 @@ std::shared_ptr<jsi::HostObject> HermesRuntimeImpl::getHostObject(
     const jsi::Object &obj) {
   const vm::HostObjectProxy *proxy =
       vm::vmcast<vm::HostObject>(phv(obj))->getProxy();
-  return static_cast<const JsiProxyBase *>(proxy)->ho_;
+  return static_cast<const JsiProxy *>(proxy)->ho_;
 }
 
 jsi::Value HermesRuntimeImpl::getProperty(
@@ -1902,7 +1895,7 @@ jsi::Function HermesRuntimeImpl::createFunctionFromHostFunction(
 
 jsi::HostFunctionType &HermesRuntimeImpl::getHostFunction(
     const jsi::Function &func) {
-  return static_cast<HFContextBase *>(
+  return static_cast<HFContext *>(
              vm::vmcast<vm::FinalizableNativeFunction>(phv(func))->getContext())
       ->hostFunction;
 }
@@ -1927,11 +1920,12 @@ jsi::Value HermesRuntimeImpl::call(
     auto &stats = runtime_.getRuntimeStats();
     const vm::instrumentation::RAIITimer timer{
         "Incoming Function", stats, stats.incomingFunction};
-    vm::ScopedNativeCallFrame newFrame{&runtime_,
-                                       static_cast<uint32_t>(count),
-                                       handle.getHermesValue(),
-                                       vm::HermesValue::encodeUndefinedValue(),
-                                       hvFromValue(jsThis)};
+    vm::ScopedNativeCallFrame newFrame{
+        &runtime_,
+        static_cast<uint32_t>(count),
+        handle.getHermesValue(),
+        vm::HermesValue::encodeUndefinedValue(),
+        hvFromValue(jsThis)};
     if (LLVM_UNLIKELY(newFrame.overflowed())) {
       checkStatus(runtime_.raiseStackOverflow(
           ::hermes::vm::StackRuntime::StackOverflowKind::NativeStack));
@@ -1995,11 +1989,12 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
     //
     // For us result == res.
 
-    vm::ScopedNativeCallFrame newFrame{&runtime_,
-                                       static_cast<uint32_t>(count),
-                                       funcHandle.getHermesValue(),
-                                       funcHandle.getHermesValue(),
-                                       objHandle.getHermesValue()};
+    vm::ScopedNativeCallFrame newFrame{
+        &runtime_,
+        static_cast<uint32_t>(count),
+        funcHandle.getHermesValue(),
+        funcHandle.getHermesValue(),
+        objHandle.getHermesValue()};
     if (newFrame.overflowed()) {
       checkStatus(runtime_.raiseStackOverflow(
           ::hermes::vm::StackRuntime::StackOverflowKind::NativeStack));

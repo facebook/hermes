@@ -978,12 +978,12 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
 
   const std::deque<MockedEnvironment::StatsTable> instrumentedStats{statsTable};
 
-  runtime->setMockedEnvironment(
-      hermes::vm::MockedEnvironment{mathRandomSeed,
-                                    dateNowColl,
-                                    newDateColl,
-                                    dateAsFuncColl,
-                                    instrumentedStats});
+  runtime->setMockedEnvironment(hermes::vm::MockedEnvironment{
+      mathRandomSeed,
+      dateNowColl,
+      newDateColl,
+      dateAsFuncColl,
+      instrumentedStats});
 
   {
     // Call Math.random() and check that its output matches the one given.

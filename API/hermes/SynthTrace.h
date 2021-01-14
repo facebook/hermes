@@ -259,7 +259,7 @@ class SynthTrace {
       std::unique_ptr<llvh::raw_ostream> traceStream = nullptr);
 
   template <typename T, typename... Args>
-  void emplace_back(Args &&... args) {
+  void emplace_back(Args &&...args) {
     records_.emplace_back(new T(std::forward<Args>(args)...));
     flushRecordsIfNecessary();
   }

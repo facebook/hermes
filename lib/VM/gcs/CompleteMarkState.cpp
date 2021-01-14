@@ -74,7 +74,7 @@ void CompleteMarkState::pushCell(GCCell *cell) {
 }
 
 void CompleteMarkState::drainMarkStack(
-    GC *gc,
+    GenGC *gc,
     FullMSCMarkTransitiveAcceptor &acceptor) {
   while (!markStack_.empty() || !varSizeMarkStack_.empty()) {
     GCCell *cell;
@@ -109,7 +109,7 @@ void CompleteMarkState::drainMarkStack(
   }
 }
 
-std::unique_ptr<FullMSCUpdateAcceptor> getFullMSCUpdateAcceptor(GC &gc) {
+std::unique_ptr<FullMSCUpdateAcceptor> getFullMSCUpdateAcceptor(GenGC &gc) {
   return std::unique_ptr<FullMSCUpdateAcceptor>(new FullMSCUpdateAcceptor(gc));
 }
 

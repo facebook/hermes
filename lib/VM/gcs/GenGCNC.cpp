@@ -98,7 +98,8 @@ GenGC::GenGC(
     PointerBase *pointerBase,
     const GCConfig &gcConfig,
     std::shared_ptr<CrashManager> crashMgr,
-    std::shared_ptr<StorageProvider> provider)
+    std::shared_ptr<StorageProvider> provider,
+    experiments::VMExperimentFlags vmExperimentFlags)
     : GCBase(
           metaTable,
           gcCallbacks,
@@ -127,6 +128,7 @@ GenGC::GenGC(
       occupancyTarget_(gcConfig.getOccupancyTarget()),
       oomThreshold_(gcConfig.getEffectiveOOMThreshold()),
       weightedUsed_(static_cast<double>(gcConfig.getInitHeapSize())) {
+  (void)vmExperimentFlags;
   crashMgr_->setCustomData("HermesGC", kGCName);
   growTo(gcConfig.getInitHeapSize());
   claimAllocContext();
@@ -536,10 +538,13 @@ size_t GenGC::usedDirect() const {
 /// the acceptor on the same root location more than once, which is illegal.
 struct FullMSCDuplicateRootsDetectorAcceptor final
     : public RootAndSlotAcceptorDefault {
+  GenGC &gc;
   llvh::DenseSet<void *> markedLocs_;
 
+  FullMSCDuplicateRootsDetectorAcceptor(GenGC &gc)
+      : RootAndSlotAcceptorDefault(gc.getPointerBase()), gc(gc) {}
+
   using RootAndSlotAcceptorDefault::accept;
-  using RootAndSlotAcceptorDefault::RootAndSlotAcceptorDefault;
 
   void accept(void *&ptr) override {
     assert(markedLocs_.count(&ptr) == 0);
@@ -554,8 +559,12 @@ struct FullMSCDuplicateRootsDetectorAcceptor final
 
 void GenGC::markPhase() {
   struct FullMSCMarkInitialAcceptor final : public RootAndSlotAcceptorDefault {
+    GenGC &gc;
+    FullMSCMarkInitialAcceptor(GenGC &gc)
+        : RootAndSlotAcceptorDefault(gc.getPointerBase()), gc(gc) {}
+
     using RootAndSlotAcceptorDefault::accept;
-    using RootAndSlotAcceptorDefault::RootAndSlotAcceptorDefault;
+
     void accept(void *&ptr) override {
       if (ptr) {
         assert(gc.dbgContains(ptr));
@@ -2025,7 +2034,7 @@ void GenGC::sizeDiagnosticCensus() {
       }
     }
 
-    void accept(PinnedSymbolID sym) override {
+    void accept(RootSymbolID sym) override {
       acceptSym(sym);
     }
     void accept(GCSymbolID sym) override {

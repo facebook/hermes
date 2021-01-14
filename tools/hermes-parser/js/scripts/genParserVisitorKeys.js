@@ -16,7 +16,7 @@ const {execSync} = require('child_process');
 
 const OUTPUT_FILE = path.resolve(
   __dirname,
-  '../build/hermes-parser/HermesParserVisitorKeys.js',
+  '../hermes-parser/dist/HermesParserVisitorKeys.js',
 );
 const TEMPLATE_FILE = path.resolve(
   __dirname,

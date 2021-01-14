@@ -797,6 +797,7 @@ Handle<JSObject> createHermesInternalObject(
     const JSLibFlags &flags) {
   namespace P = Predefined;
   Handle<JSObject> intern = runtime->makeHandle(JSObject::create(runtime));
+  GCScope gcScope{runtime};
 
   DefinePropertyFlags constantDPF =
       DefinePropertyFlags::getDefaultNewPropertyFlags();

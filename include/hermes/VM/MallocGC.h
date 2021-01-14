@@ -11,6 +11,7 @@
 #include "hermes/Public/GCConfig.h"
 #include "hermes/VM/GCBase.h"
 #include "hermes/VM/GCCell.h"
+#include "hermes/VM/VMExperiments.h"
 
 #include "llvh/ADT/DenseMap.h"
 #include "llvh/ADT/DenseSet.h"
@@ -150,7 +151,8 @@ class MallocGC final : public GCBase {
       PointerBase *pointerBase,
       const GCConfig &gcConfig,
       std::shared_ptr<CrashManager> crashMgr,
-      std::shared_ptr<StorageProvider> provider);
+      std::shared_ptr<StorageProvider> provider,
+      experiments::VMExperimentFlags vmExperimentFlags);
 
   ~MallocGC();
 
@@ -169,7 +171,7 @@ class MallocGC final : public GCBase {
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::Yes,
       class... Args>
-  inline T *makeA(uint32_t size, Args &&... args);
+  inline T *makeA(uint32_t size, Args &&...args);
 
   /// Returns whether an external allocation of the given \p size fits
   /// within the maximum heap size.  (Note that this does not guarantee that the
@@ -205,11 +207,11 @@ class MallocGC final : public GCBase {
 #ifndef NDEBUG
   /// See comment in GCBase.
   bool calledByGC() const {
-    return inGC_.load(std::memory_order_seq_cst);
+    return inGC();
   }
 
   /// \return true iff the pointer \p p is controlled by this GC.
-  bool validPointer(const void *p) const;
+  bool validPointer(const void *p) const override;
 
   /// Returns true if \p cell is the most-recently allocated finalizable object.
   bool isMostRecentFinalizableObj(const GCCell *cell) const;
@@ -352,7 +354,7 @@ template <
     HasFinalizer hasFinalizer,
     LongLived longLived,
     class... Args>
-inline T *MallocGC::makeA(uint32_t size, Args &&... args) {
+inline T *MallocGC::makeA(uint32_t size, Args &&...args) {
   // Since there is no old generation in this collector, always forward to the
   // normal allocation.
   void *mem = alloc<fixedSize, hasFinalizer>(size);

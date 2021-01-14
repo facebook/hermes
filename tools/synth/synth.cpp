@@ -254,8 +254,8 @@ int main(int argc, char **argv) {
       options.gcConfigBuilder.withSanitizeConfig(sanitizeConfigBuilder.build());
     }
 
-    std::vector<std::string> bytecodeFiles{cl::BytecodeFiles.begin(),
-                                           cl::BytecodeFiles.end()};
+    std::vector<std::string> bytecodeFiles{
+        cl::BytecodeFiles.begin(), cl::BytecodeFiles.end()};
     if (!cl::Trace.empty()) {
       // If this is tracing mode, get the trace instead of the stats.
       options.gcConfigBuilder.withShouldRecordStats(false);

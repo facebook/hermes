@@ -250,8 +250,6 @@ class JSTypedArrayBase : public JSObject {
 /// for example Int8Array is JSTypedArray<int8_t, CellKind::Int8ArrayKind>
 template <typename T, CellKind C>
 class JSTypedArray final : public JSTypedArrayBase {
-  friend GC;
-
  public:
   using iterator = T *;
 
@@ -315,7 +313,7 @@ class JSTypedArray final : public JSTypedArrayBase {
       uint32_t index,
       Handle<> value);
 
- private:
+ public:
   // NOTE: If any fields are ever added beyond the base class, then the
   // *BuildMeta functions must be updated to call addJSObjectOverlapSlots.
 

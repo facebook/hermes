@@ -16,7 +16,6 @@ namespace vm {
 /// RegExpStringIterator object.
 /// See ES11 21.2.7.2 for Properties of RegExp String Iterator Instances.
 class JSRegExpStringIterator : public JSObject {
-  friend GC;
   using Super = JSObject;
 
   friend void RegExpStringIteratorBuildMeta(
@@ -42,7 +41,7 @@ class JSRegExpStringIterator : public JSObject {
       Handle<JSRegExpStringIterator> self,
       Runtime *runtime);
 
- private:
+ public:
 #ifdef HERMESVM_SERIALIZE
   explicit JSRegExpStringIterator(Deserializer &d);
 
@@ -64,6 +63,7 @@ class JSRegExpStringIterator : public JSObject {
         global_(global),
         unicode_(unicode) {}
 
+ private:
   /// [[IteratingRegExp]]
   // Note: despite what the name is suggesting, it's actually unsafe to use
   // JSRegExp here. See regExpConstructorInternal for more details.

@@ -52,11 +52,6 @@ inline void GCPointerBase::setNull(GC *gc) {
   ptr_ = StorageType{};
 }
 
-inline GCPointerBase::StorageType &GCPointerBase::getLoc(GC *gc) {
-  assert(gc->calledByGC() && "Can only use GCPointer::getLoc within GC.");
-  return ptr_;
-}
-
 } // namespace vm
 } // namespace hermes
 

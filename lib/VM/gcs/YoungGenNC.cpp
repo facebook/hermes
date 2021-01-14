@@ -116,7 +116,7 @@ void YoungGen::sweepAndInstallForwardingPointers(
 }
 
 void YoungGen::updateReferences(
-    GC *gc,
+    GenGC *gc,
     SweepResult::VTablesRemaining &vTables) {
   auto acceptor = getFullMSCUpdateAcceptor(*gc);
 
@@ -604,10 +604,12 @@ void YoungGen::updateTrackers() {
     GCCell *cell = reinterpret_cast<GCCell *>(ptr);
     if (cell->hasMarkedForwardingPointer()) {
       auto *fptr = cell->getMarkedForwardingPointer();
+      const auto sz = reinterpret_cast<GCCell *>(fptr)->getAllocatedSize();
       if (idTracker) {
-        gc_->moveObject(cell, fptr);
+        // YG promotions never change size.
+        gc_->moveObject(cell, sz, fptr, sz);
       }
-      ptr += reinterpret_cast<GCCell *>(fptr)->getAllocatedSize();
+      ptr += sz;
     } else {
       const auto sz = cell->getAllocatedSize();
       ptr += sz;

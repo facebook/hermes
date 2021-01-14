@@ -13,9 +13,10 @@ namespace {
 
 using namespace hermes;
 
-static constexpr CompactArray::Scale scales[] = {CompactArray::UINT8,
-                                                 CompactArray::UINT16,
-                                                 CompactArray::UINT32};
+static constexpr CompactArray::Scale scales[] = {
+    CompactArray::UINT8,
+    CompactArray::UINT16,
+    CompactArray::UINT32};
 
 TEST(CompactArrayTest, Construct) {
   for (auto scale : scales) {

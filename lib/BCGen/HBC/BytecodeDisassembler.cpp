@@ -47,8 +47,8 @@ static bool isOperandStringID(OpCode opCode, unsigned operandIndex) {
 std::pair<int, SLG::TagType> checkBufferTag(const unsigned char *buff) {
   auto keyTag = buff[0];
   if (keyTag & 0x80) {
-    return std::pair<int, SLG::TagType>{((keyTag & 0x0f) << 8) | (buff[1]),
-                                        keyTag & SLG::TagMask};
+    return std::pair<int, SLG::TagType>{
+        ((keyTag & 0x0f) << 8) | (buff[1]), keyTag & SLG::TagMask};
   } else {
     return std::pair<int, SLG::TagType>{keyTag & 0x0f, keyTag & SLG::TagMask};
   }

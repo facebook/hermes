@@ -112,40 +112,10 @@ void GenGCHeapSegment::deleteDeadObjectIDs(GC *gc) {
   }
 }
 
-void GenGCHeapSegment::updateObjectIDs(
-    GC *gc,
-    SweepResult::VTablesRemaining &vTables) {
-  if (!gc->isTrackingIDs()) {
-    // If ID tracking isn't on, there's nothing to do here.
-    return;
-  }
-
-  SweepResult::VTablesRemaining vTablesCopy{vTables};
-  MarkBitArrayNC &markBits = markBitArray();
-  char *ptr = start();
-  size_t ind = markBits.addressToIndex(ptr);
-  while (ptr < level()) {
-    if (markBits.at(ind)) {
-      auto *cell = reinterpret_cast<GCCell *>(ptr);
-      gc->moveObject(cell, cell->getForwardingPointer());
-      const VTable *vtp = vTablesCopy.next();
-      auto cellSize = cell->getAllocatedSize(vtp);
-      ptr += cellSize;
-      ind += (cellSize >> LogHeapAlign);
-    } else {
-      auto *deadRegion = reinterpret_cast<DeadRegion *>(ptr);
-      ptr += deadRegion->size();
-      ind += (deadRegion->size() >> LogHeapAlign);
-    }
-  }
-}
-
 void GenGCHeapSegment::updateReferences(
     GC *gc,
     FullMSCUpdateAcceptor *acceptor,
     SweepResult::VTablesRemaining &vTables) {
-  updateObjectIDs(gc, vTables);
-
   MarkBitArrayNC &markBits = markBitArray();
   char *ptr = start();
   size_t ind = markBits.addressToIndex(ptr);
@@ -189,13 +159,11 @@ void GenGCHeapSegment::compact(SweepResult::VTablesRemaining &vTables) {
           "Cell was invalid after placing the vtable back in");
       // Must read this now, since the memmove below might overwrite it.
       auto cellSize = cell->getAllocatedSize();
-      const bool canBeTrimmed = cell->getVT()->canBeTrimmed();
-      const auto trimmedSize =
-          canBeTrimmed ? cell->getVT()->getTrimmedSize(cell) : cellSize;
+      const auto trimmedSize = cell->getVT()->getTrimmedSize(cell, cellSize);
       if (newAddr != ptr) {
         std::memmove(newAddr, ptr, trimmedSize);
       }
-      if (canBeTrimmed) {
+      if (trimmedSize != cellSize) {
         // Set the new cell size.
         auto *newCell = reinterpret_cast<VariableSizeRuntimeCell *>(newAddr);
         newCell->setSizeFromGC(trimmedSize);
@@ -252,9 +220,7 @@ void GenGCHeapSegment::sweepAndInstallForwardingPointers(
       ptr = markBits.indexToAddress(ind);
       GCCell *cell = reinterpret_cast<GCCell *>(ptr);
       auto cellSize = cell->getAllocatedSize();
-      auto trimmedSize = cell->getVT()->canBeTrimmed()
-          ? cell->getVT()->getTrimmedSize(cell)
-          : cellSize;
+      auto trimmedSize = cell->getVT()->getTrimmedSize(cell, cellSize);
       auto res = allocator.alloc(trimmedSize);
       if (!res.success) {
         // The current chunk is exhausted; must move on to the next.
@@ -277,6 +243,10 @@ void GenGCHeapSegment::sweepAndInstallForwardingPointers(
 
       sweepResult->displacedVtablePtrs.push_back(cell->getVT());
       cell->setForwardingPointer(reinterpret_cast<GCCell *>(res.ptr));
+      if (gc->isTrackingIDs()) {
+        gc->moveObject(
+            cell, cellSize, cell->getForwardingPointer(), trimmedSize);
+      }
       adjacentPtr = ptr += cellSize;
     }
 

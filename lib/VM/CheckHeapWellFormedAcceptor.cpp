@@ -14,8 +14,10 @@ namespace vm {
 
 #ifdef HERMES_SLOW_DEBUG
 
-CheckHeapWellFormedAcceptor::CheckHeapWellFormedAcceptor(GC &gc)
-    : RootAndSlotAcceptorDefault(gc), WeakRootAcceptorDefault(gc) {}
+CheckHeapWellFormedAcceptor::CheckHeapWellFormedAcceptor(GCBase &gc)
+    : RootAndSlotAcceptorDefault(gc.getPointerBase()),
+      WeakRootAcceptorDefault(gc.getPointerBase()),
+      gc(gc) {}
 
 void CheckHeapWellFormedAcceptor::accept(void *&ptr) {
   accept(static_cast<const void *>(ptr));

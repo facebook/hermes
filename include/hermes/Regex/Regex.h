@@ -69,7 +69,7 @@ class Regex {
   /// list. The node should be constructible from \p args.
   /// \return an observer pointer to the new node.
   template <typename NodeType, typename... Args>
-  NodeType *appendNode(Args &&... args) {
+  NodeType *appendNode(Args &&...args) {
     std::unique_ptr<NodeType> node =
         hermes::make_unique<NodeType>(std::forward<Args>(args)...);
     NodeType *nodePtr = node.get();
@@ -127,10 +127,11 @@ class Regex {
         markedCount_ <= constants::kMaxCaptureGroupCount &&
         "Too many capture groups");
     assert(loopCount_ <= constants::kMaxLoopCount && "Too many loops");
-    RegexBytecodeHeader header = {markedCount_,
-                                  static_cast<uint16_t>(loopCount_),
-                                  flags_.toByte(),
-                                  matchConstraints_};
+    RegexBytecodeHeader header = {
+        markedCount_,
+        static_cast<uint16_t>(loopCount_),
+        flags_.toByte(),
+        matchConstraints_};
     RegexBytecodeStream bcs(header);
     Node::compile(nodes_, bcs);
     return bcs.acquireBytecode();

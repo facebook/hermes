@@ -1730,10 +1730,11 @@ arrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
   double relativeStart = intRes->getNumber();
   // Index that we're currently copying from.
   // Starts at the actual start value, computed from relativeStart.
-  MutableHandle<> k{runtime,
-                    HermesValue::encodeDoubleValue(
-                        relativeStart < 0 ? std::max(len + relativeStart, 0.0)
-                                          : std::min(relativeStart, len))};
+  MutableHandle<> k{
+      runtime,
+      HermesValue::encodeDoubleValue(
+          relativeStart < 0 ? std::max(len + relativeStart, 0.0)
+                            : std::min(relativeStart, len))};
 
   // End index. If negative, then offset from the right side of the array.
   double relativeEnd;
@@ -3026,8 +3027,8 @@ reduceHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
   }
 
   // Current index in the reduction iteration.
-  MutableHandle<> k{runtime,
-                    HermesValue::encodeDoubleValue(reverse ? len - 1 : 0)};
+  MutableHandle<> k{
+      runtime, HermesValue::encodeDoubleValue(reverse ? len - 1 : 0)};
   MutableHandle<JSObject> kDescObjHandle{runtime};
 
   MutableHandle<> accumulator{runtime};

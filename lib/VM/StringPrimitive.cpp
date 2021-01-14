@@ -465,10 +465,11 @@ std::string StringPrimitive::_snapshotNameImpl(GCCell *cell, GC *gc) {
   bool fullyWritten = true;
   if (self->isASCII()) {
     auto ref = self->castToASCIIRef();
-    out = std::string{ref.begin(),
-                      std::min(
-                          static_cast<uint32_t>(ref.size()),
-                          toRValue(EXTERNAL_STRING_THRESHOLD))};
+    out = std::string{
+        ref.begin(),
+        std::min(
+            static_cast<uint32_t>(ref.size()),
+            toRValue(EXTERNAL_STRING_THRESHOLD))};
     fullyWritten = ref.size() <= EXTERNAL_STRING_THRESHOLD;
   } else {
     fullyWritten = convertUTF16ToUTF8WithReplacements(

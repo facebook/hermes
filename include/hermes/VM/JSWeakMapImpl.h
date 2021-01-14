@@ -43,15 +43,17 @@ struct WeakRefInfo {
  public:
   /// \return Empty key which is simply null.
   static inline WeakRefKey getEmptyKey() {
-    return WeakRefKey{WeakRef<JSObject>(reinterpret_cast<WeakRefSlot *>(
-                          static_cast<uintptr_t>(kEmptyKey))),
-                      kEmptyKey};
+    return WeakRefKey{
+        WeakRef<JSObject>(
+            reinterpret_cast<WeakRefSlot *>(static_cast<uintptr_t>(kEmptyKey))),
+        kEmptyKey};
   }
   /// \return Empty key which is simply a pointer to 0x1 - don't dereference.
   static inline WeakRefKey getTombstoneKey() {
-    return WeakRefKey{WeakRef<JSObject>(reinterpret_cast<WeakRefSlot *>(
-                          static_cast<uintptr_t>(kTombstoneKey))),
-                      kTombstoneKey};
+    return WeakRefKey{
+        WeakRef<JSObject>(reinterpret_cast<WeakRefSlot *>(
+            static_cast<uintptr_t>(kTombstoneKey))),
+        kTombstoneKey};
   }
   /// \return the hash in \p key.
   static inline unsigned getHashValue(const WeakRefKey &key) {
@@ -312,7 +314,6 @@ class JSWeakMapImplBase : public JSObject {
 /// Currently, we never shrink it.
 template <CellKind C>
 class JSWeakMapImpl final : public JSWeakMapImplBase {
-  friend GC;
   using Super = JSWeakMapImplBase;
 
  public:
@@ -329,7 +330,6 @@ class JSWeakMapImpl final : public JSWeakMapImplBase {
 
   static void WeakMapOrSetBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
- protected:
 #ifdef HERMESVM_SERIALIZE
   explicit JSWeakMapImpl(Deserializer &d);
 

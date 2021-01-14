@@ -10,9 +10,13 @@
 #include "EmptyCell.h"
 #include "ExtStringForTest.h"
 #include "TestHelpers.h"
+#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCCell.h"
+
+#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 #include "hermes/VM/GenGCHeapSegment.h"
+#endif
 
 #include <deque>
 

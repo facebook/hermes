@@ -16,8 +16,6 @@ namespace vm {
 /// JavaScript single object, include Math and JSON.
 template <CellKind kind>
 class SingleObject final : public JSObject {
-  friend GC;
-
  public:
   using Super = JSObject;
   static const ObjectVTable vt;
@@ -43,7 +41,6 @@ class SingleObject final : public JSObject {
     return JSObjectInit::initToHermesValue(runtime, cell);
   }
 
- protected:
   SingleObject(
       Runtime *runtime,
       Handle<JSObject> parent,

@@ -99,21 +99,19 @@ GCBase::GCCycle::GCCycle(
     : gc_(gc),
       gcCallbacksOpt_(gcCallbacksOpt),
       extraInfo_(std::move(extraInfo)),
-      previousInGC_(gc_->inGC_.load(std::memory_order_acquire)) {
+      previousInGC_(gc_->inGC_) {
   if (!previousInGC_) {
     if (gcCallbacksOpt_.hasValue()) {
       gcCallbacksOpt_.getValue()->onGCEvent(
           GCEventKind::CollectionStart, extraInfo_);
     }
-    bool wasInGC_ = gc_->inGC_.exchange(true, std::memory_order_acquire);
-    (void)wasInGC_;
-    assert(!wasInGC_ && "inGC_ should not be concurrently modified!");
+    gc_->inGC_ = true;
   }
 }
 
 GCBase::GCCycle::~GCCycle() {
   if (!previousInGC_) {
-    gc_->inGC_.store(false, std::memory_order_release);
+    gc_->inGC_ = false;
     if (gcCallbacksOpt_.hasValue()) {
       gcCallbacksOpt_.getValue()->onGCEvent(
           GCEventKind::CollectionEnd, extraInfo_);
@@ -158,11 +156,9 @@ constexpr HeapSnapshot::NodeID objectIDForRootSection(
 // Abstract base class for all snapshot acceptors.
 struct SnapshotAcceptor : public RootAndSlotAcceptorWithNamesDefault {
   using RootAndSlotAcceptorWithNamesDefault::accept;
-  using RootAndSlotAcceptorWithNamesDefault::
-      RootAndSlotAcceptorWithNamesDefault;
 
-  SnapshotAcceptor(GC &gc, HeapSnapshot &snap)
-      : RootAndSlotAcceptorWithNamesDefault(gc), snap_(snap) {}
+  SnapshotAcceptor(PointerBase *base, HeapSnapshot &snap)
+      : RootAndSlotAcceptorWithNamesDefault(base), snap_(snap) {}
 
   void acceptHV(HermesValue &hv, const char *name) override {
     if (hv.isPointer()) {
@@ -178,8 +174,11 @@ struct SnapshotAcceptor : public RootAndSlotAcceptorWithNamesDefault {
 struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
   using SnapshotAcceptor::accept;
 
-  PrimitiveNodeAcceptor(GC &gc, HeapSnapshot &snap)
-      : SnapshotAcceptor(gc, snap) {}
+  PrimitiveNodeAcceptor(
+      PointerBase *base,
+      HeapSnapshot &snap,
+      GCBase::IDTracker &tracker)
+      : SnapshotAcceptor(base, snap), tracker_(tracker) {}
 
   // Do nothing for any value except a number.
   void accept(void *&ptr, const char *name) override {}
@@ -231,7 +230,7 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
       snap_.endNode(
           HeapSnapshot::NodeType::Number,
           llvh::StringRef{buf, len},
-          gc.getIDTracker().getNumberID(num),
+          tracker_.getNumberID(num),
           // Numbers are zero-sized in the heap because they're stored inline.
           0,
           0);
@@ -239,6 +238,7 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
   }
 
  private:
+  GCBase::IDTracker &tracker_;
   // Track all numbers that are seen in a heap pass, and only emit one node for
   // each of them.
   llvh::DenseSet<double, GCBase::IDTracker::DoubleComparator> seenNumbers_;
@@ -247,7 +247,8 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
 struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
   using SnapshotAcceptor::accept;
 
-  EdgeAddingAcceptor(GC &gc, HeapSnapshot &snap) : SnapshotAcceptor(gc, snap) {}
+  EdgeAddingAcceptor(GCBase &gc, HeapSnapshot &snap)
+      : SnapshotAcceptor(gc.getPointerBase(), snap), gc_(gc) {}
 
   void accept(void *&ptr, const char *name) override {
     if (!ptr) {
@@ -256,11 +257,11 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
     snap_.addNamedEdge(
         HeapSnapshot::EdgeType::Internal,
         llvh::StringRef::withNullAsEmpty(name),
-        gc.getObjectID(ptr));
+        gc_.getObjectID(ptr));
   }
 
   void acceptHV(HermesValue &hv, const char *name) override {
-    if (auto id = gc.getSnapshotID(hv)) {
+    if (auto id = gc_.getSnapshotID(hv)) {
       snap_.addNamedEdge(
           HeapSnapshot::EdgeType::Internal,
           llvh::StringRef::withNullAsEmpty(name),
@@ -284,7 +285,7 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
     snap_.addNamedEdge(
         HeapSnapshot::EdgeType::Weak,
         indexName,
-        gc.getObjectID(slot->getPointer()));
+        gc_.getObjectID(slot->getPointer()));
   }
 
   void acceptSym(SymbolID sym, const char *name) override {
@@ -294,10 +295,11 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
     snap_.addNamedEdge(
         HeapSnapshot::EdgeType::Internal,
         llvh::StringRef::withNullAsEmpty(name),
-        gc.getObjectID(sym));
+        gc_.getObjectID(sym));
   }
 
  private:
+  GCBase &gc_;
   // For unnamed edges, use indices instead.
   unsigned nextEdge_{0};
 };
@@ -307,8 +309,8 @@ struct SnapshotRootSectionAcceptor : public SnapshotAcceptor,
   using SnapshotAcceptor::accept;
   using WeakRootAcceptor::acceptWeak;
 
-  SnapshotRootSectionAcceptor(GC &gc, HeapSnapshot &snap)
-      : SnapshotAcceptor(gc, snap), WeakRootAcceptorDefault(gc) {}
+  SnapshotRootSectionAcceptor(PointerBase *base, HeapSnapshot &snap)
+      : SnapshotAcceptor(base, snap), WeakRootAcceptorDefault(base) {}
 
   void accept(void *&, const char *) override {
     // While adding edges to root sections, there's no need to do anything for
@@ -345,8 +347,10 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
   using SnapshotAcceptor::accept;
   using WeakRootAcceptor::acceptWeak;
 
-  SnapshotRootAcceptor(GC &gc, HeapSnapshot &snap)
-      : SnapshotAcceptor(gc, snap), WeakRootAcceptorDefault(gc) {}
+  SnapshotRootAcceptor(GCBase &gc, HeapSnapshot &snap)
+      : SnapshotAcceptor(gc.getPointerBase(), snap),
+        WeakRootAcceptorDefault(gc.getPointerBase()),
+        gc_(gc) {}
 
   void accept(void *&ptr, const char *name) override {
     pointerAccept(ptr, name, false);
@@ -405,6 +409,7 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
   }
 
  private:
+  GCBase &gc_;
   llvh::DenseSet<HeapSnapshot::NodeID> seenIDs_;
   // For unnamed edges, use indices instead.
   unsigned nextEdge_{0};
@@ -418,7 +423,7 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
       return;
     }
 
-    const auto id = gc.getObjectID(ptr);
+    const auto id = gc_.getObjectID(ptr);
     if (!seenIDs_.insert(id).second) {
       // Already seen this node, don't add another edge.
       return;
@@ -449,7 +454,7 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
   const auto rootScan = [gc, &snap, this]() {
     {
       // Make the super root node and add edges to each root section.
-      SnapshotRootSectionAcceptor rootSectionAcceptor(*gc, snap);
+      SnapshotRootSectionAcceptor rootSectionAcceptor(getPointerBase(), snap);
       // The super root has a single element pointing to the "(GC roots)"
       // synthetic node. v8 also has some "shortcut" edges to things like the
       // global object, but those don't seem necessary for correctness.
@@ -512,7 +517,8 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
   // haven't been recorded yet.
   // The acceptor is recording some state between objects, so define it outside
   // the loop.
-  PrimitiveNodeAcceptor primitiveAcceptor(*gc, snap);
+  PrimitiveNodeAcceptor primitiveAcceptor(
+      getPointerBase(), snap, getIDTracker());
   SlotVisitorWithNames<PrimitiveNodeAcceptor> primitiveVisitor{
       primitiveAcceptor};
   // Add a node for each object in the heap.
@@ -555,8 +561,9 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
 
   snap.beginSection(HeapSnapshot::Section::Samples);
   for (const auto &fragment : getAllocationLocationTracker().fragments()) {
-    json.emitValues({static_cast<uint64_t>(fragment.timestamp_.count()),
-                     static_cast<uint64_t>(fragment.lastSeenObjectID_)});
+    json.emitValues(
+        {static_cast<uint64_t>(fragment.timestamp_.count()),
+         static_cast<uint64_t>(fragment.lastSeenObjectID_)});
   }
   snap.endSection(HeapSnapshot::Section::Samples);
 
@@ -1035,6 +1042,7 @@ void GCBase::AllocationLocationTracker::enable(
         callback) {
   assert(!enabled_ && "Shouldn't enable twice");
   enabled_ = true;
+  std::lock_guard<Mutex> lk{mtx_};
   GC *gc = static_cast<GC *>(gc_);
   // For correct visualization of the allocation timeline, it's necessary that
   // objects in the heap snapshot that existed before sampling was enabled have
@@ -1053,19 +1061,20 @@ void GCBase::AllocationLocationTracker::enable(
   // The first fragment has all objects that were live before the profiler was
   // enabled.
   // The ID and timestamp will be filled out via flushCallback.
-  fragments_.emplace_back(
-      Fragment{IDTracker::kInvalidNode,
-               std::chrono::microseconds(),
-               numObjects,
-               numBytes,
-               // Say the fragment is touched here so it is written out
-               // automatically by flushCallback.
-               true});
+  fragments_.emplace_back(Fragment{
+      IDTracker::kInvalidNode,
+      std::chrono::microseconds(),
+      numObjects,
+      numBytes,
+      // Say the fragment is touched here so it is written out
+      // automatically by flushCallback.
+      true});
   // Immediately flush the first fragment.
   flushCallback();
 }
 
 void GCBase::AllocationLocationTracker::disable() {
+  std::lock_guard<Mutex> lk{mtx_};
   flushCallback();
   enabled_ = false;
   fragmentCallback_ = nullptr;
@@ -1080,6 +1089,7 @@ void GCBase::AllocationLocationTracker::newAlloc(const void *ptr, uint32_t sz) {
   if (!enabled_) {
     return;
   }
+  std::lock_guard<Mutex> lk{mtx_};
   // This is stateful and causes the object to have an ID assigned.
   const auto id = gc_->getObjectID(ptr);
   HERMES_SLOW_ASSERT(
@@ -1096,12 +1106,26 @@ void GCBase::AllocationLocationTracker::newAlloc(const void *ptr, uint32_t sz) {
     flushCallback();
   }
   if (auto node = gc_->gcCallbacks_->getCurrentStackTracesTreeNode(ip)) {
-    // Hold a lock while modifying stackMap_.
-    std::lock_guard<Mutex> lk{mtx_};
     auto itAndDidInsert = stackMap_.try_emplace(id, node);
     assert(itAndDidInsert.second && "Failed to create a new node");
     (void)itAndDidInsert;
   }
+}
+
+void GCBase::AllocationLocationTracker::updateSize(
+    const void *ptr,
+    uint32_t oldSize,
+    uint32_t newSize) {
+  int32_t delta = static_cast<int32_t>(newSize) - static_cast<int32_t>(oldSize);
+  if (!delta || !enabled_) {
+    // Nothing to update.
+    return;
+  }
+  std::lock_guard<Mutex> lk{mtx_};
+  const auto id = gc_->getObjectIDMustExist(ptr);
+  Fragment &frag = findFragmentForID(id);
+  frag.numBytes_ += delta;
+  frag.touchedSinceLastFlush_ = true;
 }
 
 void GCBase::AllocationLocationTracker::freeAlloc(

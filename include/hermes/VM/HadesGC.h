@@ -13,6 +13,7 @@
 #include "hermes/Support/SlowAssert.h"
 #include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/GCBase.h"
+#include "hermes/VM/VMExperiments.h"
 
 #include "llvh/ADT/SparseBitVector.h"
 #include "llvh/Support/PointerLikeTypeTraits.h"
@@ -65,7 +66,8 @@ class HadesGC final : public GCBase {
       PointerBase *pointerBase,
       const GCConfig &gcConfig,
       std::shared_ptr<CrashManager> crashMgr,
-      std::shared_ptr<StorageProvider> provider);
+      std::shared_ptr<StorageProvider> provider,
+      experiments::VMExperimentFlags vmExperimentFlags);
 
   ~HadesGC();
 
@@ -110,7 +112,7 @@ class HadesGC final : public GCBase {
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
       class... Args>
-  inline T *makeA(uint32_t size, Args &&... args);
+  inline T *makeA(uint32_t size, Args &&...args);
 
   /// Force a garbage collection cycle.
   /// (Part of general GC API defined in GCBase.h).
@@ -171,10 +173,6 @@ class HadesGC final : public GCBase {
   /// succeed.)
   bool canAllocExternalMemory(uint32_t size);
 
-  /// Only exists to prevent linker errors from CompleteMarkState-inline, do not
-  /// call.
-  void markSymbol(SymbolID symbolID);
-
   WeakRefSlot *allocWeakSlot(HermesValue init);
 
   /// Iterate over all objects in the heap, and call \p callback on them.
@@ -216,7 +214,7 @@ class HadesGC final : public GCBase {
 
   /// Return true if \p ptr is currently pointing at valid accessable memory,
   /// allocated to an object.
-  bool validPointer(const void *ptr) const;
+  bool validPointer(const void *ptr) const override;
 
   /// Return true if \p ptr is within one of the virtual address ranges
   /// allocated for the heap. Not intended for use in normal production GC
@@ -582,7 +580,8 @@ class HadesGC final : public GCBase {
     Mark,
     CompleteMarking,
     WeakMapScan,
-    Sweep
+    Sweep,
+    Cleanup,
   };
 
   /// Represents the current phase the concurrent GC is in. The main difference
@@ -642,6 +641,9 @@ class HadesGC final : public GCBase {
 
   /// The amount of bytes of external memory credited to objects in the YG.
   uint64_t ygExternalBytes_{0};
+
+  /// If true, Hades will occasionally compact OG segments.
+  bool compactionEnabled_{false};
 
   struct CompacteeState {
     /// \return true if the pointer lives in the segment that is being marked or
@@ -780,10 +782,9 @@ class HadesGC final : public GCBase {
   /// mutator.
   void oldGenCollectionWorker();
 
-  /// For 32-bit systems, Hades runs on a single thread, interleaving OG work
-  /// with YG collections. This function performs a single step of that
-  /// collection.
-  void incrementalCollect();
+  /// Perform a single step of an OG collection. \p backgroundThread indicates
+  /// whether this call was made from the background thread.
+  void incrementalCollect(bool backgroundThread);
 
   /// Should only be called from the background thread in a concurrent GC.
   /// Requests the mutator to complete the STW pause during the next YG
@@ -801,16 +802,16 @@ class HadesGC final : public GCBase {
 
   /// Search a single segment for pointers that may need to be updated as the
   /// YG/compactee are evacuated.
-  template <typename Acceptor>
+  template <bool CompactionEnabled>
   void scanDirtyCardsForSegment(
-      SlotVisitor<Acceptor> &visitor,
+      SlotVisitor<EvacAcceptor<CompactionEnabled>> &visitor,
       HeapSegment &segment);
 
   /// Find all pointers from OG into the YG/compactee during a YG collection.
   /// This is done quickly through use of write barriers that detect the
   /// creation of such pointers.
-  template <typename Acceptor>
-  void scanDirtyCards(Acceptor &acceptor);
+  template <bool CompactionEnabled>
+  void scanDirtyCards(EvacAcceptor<CompactionEnabled> &acceptor);
 
   /// Common logic for doing the Snapshot At The Beginning (SATB) write barrier.
   void snapshotWriteBarrierInternal(GCCell *oldValue);
@@ -925,7 +926,7 @@ template <
     HasFinalizer hasFinalizer,
     LongLived longLived,
     class... Args>
-inline T *HadesGC::makeA(uint32_t size, Args &&... args) {
+inline T *HadesGC::makeA(uint32_t size, Args &&...args) {
   if (longLived == LongLived::Yes) {
     std::lock_guard<Mutex> lk{gcMutex_};
     return new (allocLongLived(size)) T(std::forward<Args>(args)...);

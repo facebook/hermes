@@ -14,7 +14,7 @@ const path = require('path');
 
 const OUTPUT_FILE = path.resolve(
   __dirname,
-  '../build/hermes-parser/HermesParserWASM.js',
+  '../hermes-parser/dist/HermesParserWASM.js',
 );
 
 const HEADER = `/**
@@ -24,6 +24,7 @@ const HEADER = `/**
  * LICENSE file in the root directory of this source tree.
  */
 
+'use strict';
 `;
 
 // Add header and sign file before writing back to disk

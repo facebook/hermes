@@ -176,12 +176,14 @@ L1:
 }
 } // namespace
 
-static llvh::cl::opt<double> LoopCount{llvh::cl::Positional,
-                                       llvh::cl::init(4e6),
-                                       llvh::cl::desc("(loop count)")};
-static llvh::cl::opt<int> FactValue{llvh::cl::Positional,
-                                    llvh::cl::init(100),
-                                    llvh::cl::desc("(factorial value)")};
+static llvh::cl::opt<double> LoopCount{
+    llvh::cl::Positional,
+    llvh::cl::init(4e6),
+    llvh::cl::desc("(loop count)")};
+static llvh::cl::opt<int> FactValue{
+    llvh::cl::Positional,
+    llvh::cl::init(100),
+    llvh::cl::desc("(factorial value)")};
 
 int main(int argc, char **argv) {
   // Print a stack trace if we signal out.

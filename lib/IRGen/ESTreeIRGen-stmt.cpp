@@ -491,22 +491,23 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
       // emitBody.
       [this, forOfStmt, nextValue, &iteratorRecord, getNextBlock]() {
         // Generate IR for the body of Try
-        SurroundingTry thisTry{curFunction(),
-                               forOfStmt,
-                               {},
-                               [this, &iteratorRecord, getNextBlock](
-                                   ESTree::Node *,
-                                   ControlFlowChange cfc,
-                                   BasicBlock *continueTarget) {
-                                 // Only emit the iteratorClose if this is a
-                                 // 'break' or if the target of the control flow
-                                 // change is outside the current loop. If
-                                 // continuing the existing loop, do not close
-                                 // the iterator.
-                                 if (cfc == ControlFlowChange::Break ||
-                                     continueTarget != getNextBlock)
-                                   emitIteratorClose(iteratorRecord, false);
-                               }};
+        SurroundingTry thisTry{
+            curFunction(),
+            forOfStmt,
+            {},
+            [this, &iteratorRecord, getNextBlock](
+                ESTree::Node *,
+                ControlFlowChange cfc,
+                BasicBlock *continueTarget) {
+              // Only emit the iteratorClose if this is a
+              // 'break' or if the target of the control flow
+              // change is outside the current loop. If
+              // continuing the existing loop, do not close
+              // the iterator.
+              if (cfc == ControlFlowChange::Break ||
+                  continueTarget != getNextBlock)
+                emitIteratorClose(iteratorRecord, false);
+            }};
 
         // Note: obtaining the value is not protected, but storing it is.
         createLRef(forOfStmt->_left, false).emitStore(nextValue);

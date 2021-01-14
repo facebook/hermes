@@ -20,8 +20,6 @@ namespace hermes {
 namespace vm {
 
 class JSRegExp final : public JSObject {
-  friend GC;
-
  public:
   using Super = JSObject;
   static const ObjectVTable vt;
@@ -106,7 +104,7 @@ class JSRegExp final : public JSObject {
       Handle<StringPrimitive> strHandle,
       uint32_t searchStartOffset);
 
- private:
+ public:
 #ifdef HERMESVM_SERIALIZE
   explicit JSRegExp(Deserializer &d);
 
@@ -117,6 +115,7 @@ class JSRegExp final : public JSObject {
   JSRegExp(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
       : JSObject(runtime, &vt.base, *parent, *clazz) {}
 
+ private:
   ~JSRegExp();
 
   /// Store a copy of the \p bytecode array.

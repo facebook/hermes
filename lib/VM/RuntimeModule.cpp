@@ -235,7 +235,7 @@ void RuntimeModule::importStringIDMapMayAllocate() {
   stringIDMap_.clear();
 
   // Populate the string ID map with empty identifiers.
-  stringIDMap_.resize(strTableSize, PinnedSymbolID(SymbolID::empty()));
+  stringIDMap_.resize(strTableSize, RootSymbolID(SymbolID::empty()));
 
   if (runtime_->getVMExperimentFlags() &
       experiments::MAdviseStringsSequential) {
@@ -366,7 +366,7 @@ SymbolID RuntimeModule::mapStringMayAllocate(
     id = *runtime_->ignoreAllocationFailure(
         runtime_->getIdentifierTable().getSymbolHandle(runtime_, str, hash));
   }
-  stringIDMap_[stringID] = PinnedSymbolID(id);
+  stringIDMap_[stringID] = RootSymbolID(id);
   return id;
 }
 

@@ -313,8 +313,11 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
 
 #ifdef HERMES_SLOW_DEBUG
   struct VerifyCardDirtyAcceptor final : public RootAndSlotAcceptorDefault {
+    GenGC &gc;
+    VerifyCardDirtyAcceptor(GenGC &gc)
+        : RootAndSlotAcceptorDefault(gc.getPointerBase()), gc(gc) {}
+
     using RootAndSlotAcceptorDefault::accept;
-    using RootAndSlotAcceptorDefault::RootAndSlotAcceptorDefault;
 
     void accept(void *&ptr) override {
       char *valuePtr = reinterpret_cast<char *>(ptr);
@@ -369,8 +372,11 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
 #endif // HERMES_SLOW_DEBUG
 
   struct OldGenObjEvacAcceptor final : public RootAndSlotAcceptorDefault {
+    GenGC &gc;
+    OldGenObjEvacAcceptor(GenGC &gc)
+        : RootAndSlotAcceptorDefault(gc.getPointerBase()), gc(gc) {}
+
     using RootAndSlotAcceptorDefault::accept;
-    using RootAndSlotAcceptorDefault::RootAndSlotAcceptorDefault;
 
     void accept(BasedPointer &ptr) {
       gc.youngGen_.ensureReferentCopied(&ptr);

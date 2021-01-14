@@ -82,11 +82,6 @@ class Interpreter {
       Handle<Callable> curFunction,
       bool strictMode);
 
-  static ExecutionStatus handleGetPNameList(
-      Runtime *runtime,
-      PinnedHermesValue *frameRegs,
-      const Inst *ip);
-
   /// Implement the slow path of OpCode::Call/CallLong/Construct/ConstructLong.
   /// The callee frame must have been initialized already and the fast path
   /// (calling a \c JSFunction) must have been handled.
@@ -223,7 +218,40 @@ class Interpreter {
       Runtime *runtime,
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);
+
+  static ExecutionStatus caseGetPNameList(
+      Runtime *runtime,
+      PinnedHermesValue *frameRegs,
+      const Inst *ip);
+
+  /// Evaluate callBuiltin and store the result in the register stack. it must
+  /// must be invoked with CallBuiltin or CallBuiltinLong. \p op3 contains the
+  /// value of operand3, which is the only difference in encoding between the
+  /// two.
+  static ExecutionStatus implCallBuiltin(
+      Runtime *runtime,
+      PinnedHermesValue *frameRegs,
+      CodeBlock *curCodeBlock,
+      uint32_t op3);
 };
+
+#ifndef NDEBUG
+/// A tag used to instruct the output stream to dump more details about the
+/// HermesValue, like the length of the string, etc.
+struct DumpHermesValue {
+  const HermesValue hv;
+  DumpHermesValue(HermesValue hv) : hv(hv) {}
+};
+
+llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, DumpHermesValue dhv);
+
+/// Dump the arguments from a callee frame.
+void dumpCallArguments(
+    llvh::raw_ostream &OS,
+    Runtime *runtime,
+    StackFramePtr calleeFrame);
+
+#endif
 
 } // namespace vm
 } // namespace hermes

@@ -222,8 +222,7 @@ toPrimitive_RJS(Runtime *runtime, Handle<> valueHandle, PreferredType hint) {
         runtime,
         valueHandle,
         HermesValue::encodeStringValue(runtime->getPredefinedString(
-            hint == PreferredType::NONE
-                ? Predefined::defaultStr
+            hint == PreferredType::NONE         ? Predefined::defaultStr
                 : hint == PreferredType::STRING ? Predefined::string
                                                 : Predefined::number)));
     if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {

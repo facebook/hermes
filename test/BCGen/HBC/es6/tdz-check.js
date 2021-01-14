@@ -14,11 +14,9 @@ function foo() {
 //CHECK-LABEL:Function<foo>{{.*}}
 //CHECK-NEXT:Offset in debug table: {{.*}}
 //CHECK-NEXT:    CreateEnvironment r0
-//CHECK-NEXT:    LoadConstUndefined r1
-//CHECK-NEXT:    LoadConstTrue     r2
-//CHECK-NEXT:    StoreNPToEnvironment r0, 0, r1
-//CHECK-NEXT:    StoreNPToEnvironment r0, 1, r1
-//CHECK-NEXT:    LoadFromEnvironment r3, r0, 1
-//CHECK-NEXT:    ThrowIfUndefinedInst r3
-//CHECK-NEXT:    LoadFromEnvironment r4, r0, 0
+//CHECK-NEXT:    LoadConstEmpty    r1
+//CHECK-NEXT:    LoadConstUndefined r2
+//CHECK-NEXT:    StoreToEnvironment r0, 0, r1
+//CHECK-NEXT:    LoadFromEnvironment r3, r0, 0
+//CHECK-NEXT:    ThrowIfEmpty      r4, r3
 //CHECK-NEXT:    Ret               r4

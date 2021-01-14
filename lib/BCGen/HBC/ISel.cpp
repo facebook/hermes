@@ -174,8 +174,8 @@ void HBCISel::generateJumpTable() {
   std::vector<uint32_t> res{};
 
   // Sort the jump table entries so iteration order is deterministic.
-  llvh::SmallVector<SwitchInfoEntry, 1> infoVector{switchImmInfo_.begin(),
-                                                   switchImmInfo_.end()};
+  llvh::SmallVector<SwitchInfoEntry, 1> infoVector{
+      switchImmInfo_.begin(), switchImmInfo_.end()};
   std::sort(
       infoVector.begin(),
       infoVector.end(),
@@ -881,10 +881,11 @@ void HBCISel::generateReturnInst(ReturnInst *Inst, BasicBlock *next) {
 void HBCISel::generateThrowInst(ThrowInst *Inst, BasicBlock *next) {
   BCFGen_->emitThrow(encodeValue(Inst->getThrownValue()));
 }
-void HBCISel::generateThrowIfUndefinedInst(
-    hermes::ThrowIfUndefinedInst *Inst,
+void HBCISel::generateThrowIfEmptyInst(
+    hermes::ThrowIfEmptyInst *Inst,
     hermes::BasicBlock *next) {
-  BCFGen_->emitThrowIfUndefinedInst(encodeValue(Inst->getCheckedValue()));
+  BCFGen_->emitThrowIfEmpty(
+      encodeValue(Inst), encodeValue(Inst->getCheckedValue()));
 }
 void HBCISel::generateSwitchInst(SwitchInst *Inst, BasicBlock *next) {
   llvm_unreachable("SwitchInst should have been lowered");
@@ -1176,11 +1177,13 @@ void HBCISel::generateCallBuiltinInst(CallBuiltinInst *Inst, BasicBlock *next) {
   auto output = encodeValue(Inst);
   verifyCall(Inst);
 
-  assert(
-      Inst->getNumArguments() <= UINT8_MAX &&
-      "too many arguments to CallBuiltin");
-  BCFGen_->emitCallBuiltin(
-      output, Inst->getBuiltinIndex(), Inst->getNumArguments());
+  if (Inst->getNumArguments() <= UINT8_MAX) {
+    BCFGen_->emitCallBuiltin(
+        output, Inst->getBuiltinIndex(), Inst->getNumArguments());
+  } else {
+    BCFGen_->emitCallBuiltinLong(
+        output, Inst->getBuiltinIndex(), Inst->getNumArguments());
+  }
 }
 void HBCISel::generateHBCCallDirectInst(
     HBCCallDirectInst *Inst,
@@ -1263,6 +1266,9 @@ void HBCISel::generateHBCLoadConstInst(
   auto output = encodeValue(Inst);
   Literal *literal = Inst->getConst();
   switch (literal->getKind()) {
+    case ValueKind::LiteralEmptyKind:
+      BCFGen_->emitLoadConstEmpty(output);
+      break;
     case ValueKind::LiteralUndefinedKind:
       BCFGen_->emitLoadConstUndefined(output);
       break;
@@ -1546,9 +1552,10 @@ void HBCISel::generate(Instruction *ii, BasicBlock *next) {
     case DebugInfoSetting::SOURCE_MAP:
     case DebugInfoSetting::ALL:
       if (ii->hasLocation()) {
-        relocations_.push_back({BCFGen_->getCurrentLocation(),
-                                Relocation::RelocationType::DebugInfo,
-                                ii});
+        relocations_.push_back(
+            {BCFGen_->getCurrentLocation(),
+             Relocation::RelocationType::DebugInfo,
+             ii});
       }
       break;
   }

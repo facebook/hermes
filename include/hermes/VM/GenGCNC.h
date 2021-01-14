@@ -25,6 +25,7 @@
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/OldGenNC.h"
 #include "hermes/VM/SweepResultNC.h"
+#include "hermes/VM/VMExperiments.h"
 #include "hermes/VM/YoungGenNC.h"
 #include "llvh/Support/Casting.h"
 #include "llvh/Support/Compiler.h"
@@ -116,7 +117,8 @@ class GenGC final : public GCBase {
       PointerBase *pointerBase,
       const GCConfig &gcConfig,
       std::shared_ptr<CrashManager> crashMgr,
-      std::shared_ptr<StorageProvider> provider);
+      std::shared_ptr<StorageProvider> provider,
+      experiments::VMExperimentFlags vmExperimentFlags);
 
   ~GenGC();
 
@@ -142,7 +144,7 @@ class GenGC final : public GCBase {
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
       class... Args>
-  inline T *makeA(uint32_t size, Args &&... args);
+  inline T *makeA(uint32_t size, Args &&...args);
 
   /// Returns whether an external allocation of the given \p size fits
   /// within the maximum heap size.  (Note that this does not guarantee that the
@@ -275,7 +277,7 @@ class GenGC final : public GCBase {
 
   /// See comment in GCBase.
   bool calledByGC() const {
-    return inGC_.load(std::memory_order_seq_cst);
+    return inGC();
   }
 
   /// Return true if \p ptr is within one of the virtual address ranges
@@ -285,7 +287,7 @@ class GenGC final : public GCBase {
 
   /// Return true if \p ptr is currently pointing at valid accessable memory,
   /// allocated to an object.
-  bool validPointer(const void *ptr) const;
+  bool validPointer(const void *ptr) const override;
 
   /// Returns true if \p cell is the most-recently allocated finalizable object.
   bool isMostRecentFinalizableObj(const GCCell *cell) const;
@@ -1004,7 +1006,7 @@ template <
     HasFinalizer hasFinalizer,
     LongLived longLived,
     class... Args>
-inline T *GenGC::makeA(uint32_t size, Args &&... args) {
+inline T *GenGC::makeA(uint32_t size, Args &&...args) {
   // TODO: Once all callers are using makeA, remove allocLongLived.
   void *mem = longLived == LongLived::Yes
       ? allocLongLived<hasFinalizer>(size)

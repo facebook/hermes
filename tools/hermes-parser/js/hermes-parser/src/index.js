@@ -7,6 +7,8 @@
  * @format
  */
 
+'use strict';
+
 const HermesParser = require('./HermesParser');
 const HermesToBabelAdapter = require('./HermesToBabelAdapter');
 const HermesToESTreeAdapter = require('./HermesToESTreeAdapter');
