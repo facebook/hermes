@@ -9,6 +9,7 @@
 #include "hermes/Support/Compiler.h"
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
+#include "hermes/VM/FillerCell.h"
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/RootAndSlotAcceptorDefault.h"
@@ -1044,6 +1045,28 @@ bool HadesGC::OldGen::sweepNext() {
   for (GCCell *cell : segments_[sweepIterator_.segNumber].cells()) {
     assert(cell->isValid() && "Invalid cell in sweeping");
     if (HeapSegment::getCellMarkBit(cell)) {
+      const uint32_t cellSize = cell->getAllocatedSize();
+      const uint32_t trimmedSize =
+          cell->getVT()->getTrimmedSize(cell, cellSize);
+      assert(cellSize >= trimmedSize && "Growing objects is not supported.");
+      assert(
+          trimmedSize >= minAllocationSize() &&
+          "Trimmed object must still meet minimum size.");
+      const uint32_t trimmableBytes = cellSize - trimmedSize;
+
+      // If this cell has extra space we can trim, trim it.
+      if (LLVM_UNLIKELY(trimmableBytes >= minAllocationSize())) {
+        static_cast<VariableSizeRuntimeCell *>(cell)->setSizeFromGC(
+            trimmedSize);
+        cell->getVT()->trim(cell);
+        GCCell *newCell = cell->nextCell();
+        // Just create a FillerCell, the next iteration will free it.
+        new (newCell) FillerCell{gc_, trimmableBytes};
+        assert(
+            !HeapSegment::getCellMarkBit(newCell) &&
+            "Trimmed space cannot be marked");
+        HeapSegment::setCellHead(newCell, trimmableBytes);
+      }
       continue;
     }
 
@@ -1066,13 +1089,13 @@ bool HadesGC::OldGen::sweepNext() {
     freeRangeEnd += sz;
     mergedCells++;
 
-    if (cell->getKind() == CellKind::FreelistKind)
+    if (vmisa<FreelistCell>(cell))
       continue;
 
     segmentSweptBytes += sz;
     // Cell is dead, run its finalizer first if it has one.
     cell->getVT()->finalizeIfExists(cell, gc_);
-    if (isTracking) {
+    if (isTracking && !vmisa<FillerCell>(cell)) {
       gc_->getAllocationLocationTracker().freeAlloc(cell, sz);
       gc_->untrackObject(cell);
     }

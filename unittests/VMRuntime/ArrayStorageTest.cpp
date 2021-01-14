@@ -108,13 +108,10 @@ TEST_F(ArrayStorageTest, PushBackTest) {
 }
 
 TEST_F(ArrayStorageTest, AllowTrimming) {
-  // Hades only trims arrays when a segment is selected as a compaction
-  // candidate, so it isn't reliably selected just by calling collect().
-#ifndef HERMESVM_GC_HADES
   MutableHandle<ArrayStorage> st(runtime);
-  constexpr ArrayStorage::size_type originalCapacity = 4;
+  constexpr ArrayStorage::size_type originalCapacity = 8;
   // Create an array and put in an element so its size is 1 and its capacity
-  // is 4.
+  // is 8.
   st = vmcast<ArrayStorage>(*ArrayStorage::create(runtime, originalCapacity));
   EXPECT_LE(st->capacity(), originalCapacity);
   ASSERT_RETURNED(
@@ -128,7 +125,6 @@ TEST_F(ArrayStorageTest, AllowTrimming) {
 
   // The array should be trimmed.
   EXPECT_EQ(st->size(), st->capacity());
-#endif
 }
 
 using ArrayStorageBigHeapTest = LargeHeapRuntimeTestFixture;

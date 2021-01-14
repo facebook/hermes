@@ -60,13 +60,10 @@ TEST_F(SegmentedArrayTest, AllocLargeArrayThrowsRangeError) {
 }
 
 TEST_F(SegmentedArrayTest, AllowTrimming) {
-  // Hades only trims arrays when a segment is selected as a compaction
-  // candidate, so it isn't reliably selected just by calling collect().
-#ifndef HERMESVM_GC_HADES
   MutableHandle<SegmentedArray> array(runtime);
-  constexpr SegmentedArray::size_type originalCapacity = 4;
+  constexpr SegmentedArray::size_type originalCapacity = 8;
   // Create an array and put in an element so its size is 1 and its capacity
-  // is 4.
+  // is 8.
   array = std::move(*SegmentedArray::create(runtime, originalCapacity));
   // The capacity is not guaranteed to match the input parameter, it is taken
   // as a hint, so check for <=.
@@ -82,7 +79,6 @@ TEST_F(SegmentedArrayTest, AllowTrimming) {
 
   // The array should be trimmed.
   EXPECT_EQ(array->size(), array->capacity());
-#endif
 }
 
 } // namespace
