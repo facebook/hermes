@@ -129,37 +129,23 @@ extern "C" void __sanitizer_cov_trace_pc_guard(uint32_t *guard) {
 // END FUZZING CODE
 //
 
+Value CrashFunction(Runtime &rt, const Value &thisArg, const Value *args, size_t numArgs){
+  // crashes when calling FuzzilliCrash(1) and FuzzilliCrash(2)
+  if (numArgs != 1 || !args[0].isNumber())
+    return Value();
+  auto crashCode = args[0].getNumber();
+  if (crashCode == 1) {
+    *((int *)0x1) = 2;
+    exit(-1);
+  } else if (crashCode == 2)
+    assert(0);
+  else
+    return Value();
+}
 
 int main(int argc, char **argv) {
   if (argc != 2 || strcmp(argv[1], "--replr") != 0)
     return 0;
-  // replr mode
-  auto runtime = makeHermesRuntime();
-  // crashes when calling FuzzilliCrash(1) and FuzzilliCrash(2)
-  runtime->global().setProperty(
-    *runtime,
-    "FuzzilliCrash",
-    Function::createFromHostFunction(
-      *runtime,
-      facebook::jsi::PropNameID::forAscii(*runtime, "FuzzilliCrash"),
-      1,
-      [](Runtime &rt,
-        const Value &thisArg,
-        const Value *args,
-        size_t numArgs
-      ) -> Value {
-        if (numArgs != 1 || !args[0].isNumber())
-          return Value();
-        auto crashCode = args[0].getNumber();
-        if (crashCode == 1) {
-          *((int *)0x1) = 2;
-          exit(-1);
-        } else if (crashCode == 2)
-          assert(0);
-        else
-          return Value();
-      }));
-
   // get fuzzer arguments
   char helo[] = "HELO";
   if (write(REPRL_CWFD, helo, 4) != 4 || read(REPRL_CRFD, helo, 4) != 4) {
@@ -171,9 +157,20 @@ int main(int argc, char **argv) {
     printf("Invalid response from parent\n");
     exit(-1);
   }
-
   // fuzzing loop
   while (true) {
+    auto runtime = makeHermesRuntime(::hermes::vm::RuntimeConfig::Builder()
+                                         .withES6Proxy(true)
+                                         .withES6Intl(true)
+                                         .withES6Symbol(true)
+                                         .withEnableGenerator(true)
+                                         .withEnableHermesInternal(true)
+                                         .withEnableJIT(true)
+                                         .build());
+    auto crashFunctionName = "FuzzilliCrash";
+    auto crashFunctionProp = facebook::jsi::PropNameID::forAscii(*runtime, crashFunctionName);
+    auto crashFunctionDef = Function::createFromHostFunction(*runtime, crashFunctionProp, 1, CrashFunction);
+    runtime->global().setProperty(*runtime, crashFunctionName, crashFunctionDef);
     size_t script_size = 0;
     unsigned action;
     CHECK(read(REPRL_CRFD, &action, 4) == 4);
@@ -184,6 +181,7 @@ int main(int argc, char **argv) {
       exit(-1);
     }
     char *script_src = (char *)(malloc(script_size + 1));
+    if (script_src == nullptr) return 0;
     char *ptr = script_src;
     size_t remaining = script_size;
     while (remaining > 0) {
