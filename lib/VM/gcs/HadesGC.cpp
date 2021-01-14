@@ -30,8 +30,6 @@ const VTable HadesGC::OldGen::FreelistCell::vt{
     CellKind::FreelistKind,
     /*variableSize*/ 0};
 
-void FreelistBuildMeta(const GCCell *, Metadata::Builder &) {}
-
 HadesGC::HeapSegment::HeapSegment(AlignedStorage storage)
     : AlignedHeapSegment{std::move(storage)} {
   // Make sure end() is at the maxSize.
