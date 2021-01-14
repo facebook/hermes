@@ -112,6 +112,10 @@ class Type {
     return Type(A.bitmask_ & B.bitmask_);
   }
 
+  static constexpr Type subtractTy(Type A, Type B) {
+    return Type(A.bitmask_ & ~B.bitmask_);
+  }
+
   constexpr bool isNoType() const {
     return bitmask_ == 0;
   }
