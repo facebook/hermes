@@ -498,6 +498,11 @@ DEFINE_OPCODE_1(Throw, Reg8)
 /// Throw ReferenceError if the operand is HermesValue::undefined
 DEFINE_OPCODE_1(ThrowIfUndefinedInst, Reg8)
 
+/// If Arg2 is Empty, throw ReferenceError, otherwise move it into Arg1.
+/// Arg1 is the destination of the return value
+/// Arg2 is the value to check
+DEFINE_OPCODE_2(ThrowIfEmpty, Reg8, Reg8)
+
 /// Implementation dependent debugger action.
 DEFINE_OPCODE_0(Debugger)
 
@@ -562,6 +567,7 @@ OPERAND_STRING_ID(LoadConstString, 2)
 OPERAND_STRING_ID(LoadConstStringLongIndex, 2)
 
 /// Load common constants.
+DEFINE_OPCODE_1(LoadConstEmpty, Reg8)
 DEFINE_OPCODE_1(LoadConstUndefined, Reg8)
 DEFINE_OPCODE_1(LoadConstNull, Reg8)
 DEFINE_OPCODE_1(LoadConstTrue, Reg8)

@@ -1870,6 +1870,17 @@ tailCall:
         ip = NEXTINST(ThrowIfUndefinedInst);
         DISPATCH;
       }
+      CASE(ThrowIfEmpty) {
+        if (LLVM_UNLIKELY(O2REG(ThrowIfEmpty).isEmpty())) {
+          SLOW_DEBUG(dbgs() << "Throwing ReferenceError for empty variable");
+          CAPTURE_IP(runtime->raiseReferenceError(
+              "accessing an uninitialized variable"));
+          goto exception;
+        }
+        O1REG(ThrowIfEmpty) = O2REG(ThrowIfEmpty);
+        ip = NEXTINST(ThrowIfEmpty);
+        DISPATCH;
+      }
 
       CASE(Debugger) {
         SLOW_DEBUG(dbgs() << "debugger statement executed\n");
@@ -3338,6 +3349,7 @@ tailCall:
               curCodeBlock->getRuntimeModule()
                   ->getStringPrimFromStringIDMayAllocate(
                       ip->iLoadConstStringLongIndex.op2)));
+      LOAD_CONST(LoadConstEmpty, HermesValue::encodeEmptyValue());
       LOAD_CONST(LoadConstUndefined, HermesValue::encodeUndefinedValue());
       LOAD_CONST(LoadConstNull, HermesValue::encodeNullValue());
       LOAD_CONST(LoadConstTrue, HermesValue::encodeBoolValue(true));
