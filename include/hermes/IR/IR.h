@@ -47,8 +47,9 @@ class TerminatorInst;
 /// This is an instance of a JavaScript type.
 class Type {
   // Encodes the JavaScript type hierarchy.
-  // See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures
   enum TypeKind {
+    /// An uninitialized TDZ.
+    Empty,
     Undefined,
     Null,
     Boolean,
@@ -64,7 +65,8 @@ class Type {
   /// Return the string representation of the type at index \p idx.
   StringRef getKindStr(TypeKind idx) const {
     // The strings below match the values in TypeKind.
-    const char *Names[] = {
+    static const char *const names[] = {
+        "empty",
         "undefined",
         "null",
         "boolean",
@@ -73,31 +75,31 @@ class Type {
         "object",
         "closure",
         "regexp"};
-    return Names[idx];
+    return names[idx];
   }
 
 #define BIT_TO_VAL(XX) (1 << TypeKind::XX)
 #define IS_VAL(XX) (bitmask_ == (1 << TypeKind::XX))
 
   // The 'Any' type means all possible types.
-  static constexpr uint8_t TYPE_ANY_MASK = (1u << TypeKind::LAST_TYPE) - 1;
+  static constexpr unsigned TYPE_ANY_MASK = (1u << TypeKind::LAST_TYPE) - 1;
 
-  static constexpr uint8_t PRIMITIVE_BITS = BIT_TO_VAL(Number) |
+  static constexpr unsigned PRIMITIVE_BITS = BIT_TO_VAL(Number) |
       BIT_TO_VAL(String) | BIT_TO_VAL(Null) | BIT_TO_VAL(Undefined) |
       BIT_TO_VAL(Boolean);
 
-  static constexpr uint8_t OBJECT_BITS =
+  static constexpr unsigned OBJECT_BITS =
       BIT_TO_VAL(Object) | BIT_TO_VAL(Closure) | BIT_TO_VAL(RegExp);
 
-  static constexpr uint8_t NONPTR_BITS = BIT_TO_VAL(Number) |
+  static constexpr unsigned NONPTR_BITS = BIT_TO_VAL(Number) |
       BIT_TO_VAL(Boolean) | BIT_TO_VAL(Null) | BIT_TO_VAL(Undefined);
 
   /// Each bit represent the possibility of the type being the type that's
   /// represented in the enum entry.
-  uint8_t bitmask_{TYPE_ANY_MASK};
+  unsigned bitmask_{TYPE_ANY_MASK};
 
   /// The constructor is only accessible by static builder methods.
-  constexpr explicit Type(uint8_t mask) : bitmask_(mask) {}
+  constexpr explicit Type(unsigned mask) : bitmask_(mask) {}
 
  public:
   constexpr Type() = default;
@@ -119,6 +121,10 @@ class Type {
   }
   static constexpr Type createAnyType() {
     return Type(TYPE_ANY_MASK);
+  }
+  /// Create an uninitialized TDZ type.
+  static constexpr Type createEmpty() {
+    return Type(BIT_TO_VAL(Empty));
   }
   static constexpr Type createUndefined() {
     return Type(BIT_TO_VAL(Undefined));
@@ -231,6 +237,11 @@ class Type {
   /// \returns true if this type can represent a boolean value.
   constexpr bool canBeBoolean() const {
     return canBeType(Type::createBoolean());
+  }
+
+  /// \returns true if this type can represent an "empty" value.
+  constexpr bool canBeEmpty() const {
+    return canBeType(Type::createEmpty());
   }
 
   /// \returns true if this type can represent an undefined value.
