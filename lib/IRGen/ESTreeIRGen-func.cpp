@@ -433,12 +433,11 @@ void ESTreeIRGen::emitFunctionPrologue(
     if (!var || !res.second)
       continue;
 
-    // Otherwise, initialize it to undefined.
-    Builder.createStoreFrameInst(Builder.getLiteralUndefined(), var);
-    if (var->getRelatedVariable()) {
-      Builder.createStoreFrameInst(
-          Builder.getLiteralUndefined(), var->getRelatedVariable());
-    }
+    // Otherwise, initialize it to undefined or empty, depending on TDZ.
+    Builder.createStoreFrameInst(
+        var->getObeysTDZ() ? (Literal *)Builder.getLiteralEmpty()
+                           : (Literal *)Builder.getLiteralUndefined(),
+        var);
   }
   for (auto *fd : semInfo->closures) {
     declareVariableOrGlobalProperty(

@@ -823,10 +823,8 @@ class Variable : public Value {
   /// The scope that owns the variable.
   VariableScope *parent;
 
-  /// In a "let" or "const" variable this points to the validity flag.
-  /// In a "var" variable, if relatedVariable_ is non-null, then the variable is
-  /// itself the validity flag and relatedVariable_ points to the let/const.
-  Variable *relatedVariable_{};
+  /// If true, this variable obeys the TDZ rules.
+  bool obeysTDZ_ = false;
 
  protected:
   explicit Variable(
@@ -852,15 +850,11 @@ class Variable : public Value {
     return parent;
   }
 
-  Variable *getRelatedVariable() const {
-    return relatedVariable_;
+  bool getObeysTDZ() const {
+    return obeysTDZ_;
   }
-  void setRelatedVariable(Variable *relatedVariable) {
-    assert(
-        (!relatedVariable || !relatedVariable->relatedVariable_ ||
-         relatedVariable->relatedVariable_ == this) &&
-        "Related variable should be null or point back to us");
-    relatedVariable_ = relatedVariable;
+  void setObeysTDZ(bool value) {
+    obeysTDZ_ = value;
   }
 
   /// Return the index of this variable in the function's variable list.

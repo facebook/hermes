@@ -19,12 +19,10 @@ namespace irgen {
 
 Instruction *emitLoad(IRBuilder &builder, Value *from, bool inhibitThrow) {
   if (auto *var = llvh::dyn_cast<Variable>(from)) {
-    if (Variable::declKindNeedsTDZ(var->getDeclKind()) &&
-        var->getRelatedVariable()) {
-      builder.createThrowIfUndefinedInst(
-          builder.createLoadFrameInst(var->getRelatedVariable()));
-    }
-    return builder.createLoadFrameInst(var);
+    Instruction *res = builder.createLoadFrameInst(var);
+    if (var->getObeysTDZ())
+      res = builder.createThrowIfEmptyInst(res);
+    return res;
   } else if (auto *globalProp = llvh::dyn_cast<GlobalObjectProperty>(from)) {
     if (globalProp->isDeclared() || inhibitThrow)
       return builder.createLoadPropertyInst(
@@ -32,27 +30,18 @@ Instruction *emitLoad(IRBuilder &builder, Value *from, bool inhibitThrow) {
     else
       return builder.createTryLoadGlobalPropertyInst(globalProp);
   } else {
-    llvm_unreachable("unvalid value to load from");
+    llvm_unreachable("invalid value to load from");
   }
 }
 
 Instruction *
 emitStore(IRBuilder &builder, Value *storedValue, Value *ptr, bool declInit) {
   if (auto *var = llvh::dyn_cast<Variable>(ptr)) {
-    if (!declInit && Variable::declKindNeedsTDZ(var->getDeclKind()) &&
-        var->getRelatedVariable()) {
+    if (!declInit && var->getObeysTDZ()) {
       // Must verify whether the variable is initialized.
-      builder.createThrowIfUndefinedInst(
-          builder.createLoadFrameInst(var->getRelatedVariable()));
+      builder.createThrowIfEmptyInst(builder.createLoadFrameInst(var));
     }
-    auto *store = builder.createStoreFrameInst(storedValue, var);
-    if (declInit && Variable::declKindNeedsTDZ(var->getDeclKind()) &&
-        var->getRelatedVariable()) {
-      builder.createStoreFrameInst(
-          builder.getLiteralBool(true), var->getRelatedVariable());
-    }
-
-    return store;
+    return builder.createStoreFrameInst(storedValue, var);
   } else if (auto *globalProp = llvh::dyn_cast<GlobalObjectProperty>(ptr)) {
     if (globalProp->isDeclared() || !builder.getFunction()->isStrictMode())
       return builder.createStorePropertyInst(
@@ -401,15 +390,7 @@ std::pair<Value *, bool> ESTreeIRGen::declareVariableOrGlobalProperty(
     // For "let" and "const" create the related TDZ flag.
     if (Variable::declKindNeedsTDZ(vdc) &&
         Mod->getContext().getCodeGenerationSettings().enableTDZ) {
-      llvh::SmallString<32> strBuf{"tdz$"};
-      strBuf.append(name.str());
-
-      auto *related = Builder.createVariable(
-          var->getParent(),
-          Variable::DeclKind::Var,
-          genAnonymousLabelName(strBuf));
-      var->setRelatedVariable(related);
-      related->setRelatedVariable(var);
+      var->setObeysTDZ(true);
     }
 
     res = var;
