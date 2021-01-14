@@ -207,7 +207,7 @@ Value *simplifyBinOp(BinaryOperatorInst *binary) {
 
       // Operands of different types can't be strictly equal.
       if (leftTy.isPrimitive() && rightTy.isPrimitive()) {
-        if (Type::intersectTy(leftTy, rightTy).isEmptyTy()) {
+        if (Type::intersectTy(leftTy, rightTy).isNoType()) {
           return builder.getLiteralBool(false);
         }
       }

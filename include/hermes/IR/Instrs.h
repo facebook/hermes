@@ -2100,7 +2100,7 @@ class ThrowIfUndefinedInst : public Instruction {
   explicit ThrowIfUndefinedInst(Value *checkedValue)
       : Instruction(ValueKind::ThrowIfUndefinedInstKind) {
     pushOperand(checkedValue);
-    setType(Type::createEmptyType());
+    setType(Type::createNoType());
   }
   explicit ThrowIfUndefinedInst(
       const ThrowIfUndefinedInst *src,

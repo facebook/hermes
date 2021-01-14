@@ -110,11 +110,11 @@ class Type {
     return Type(A.bitmask_ & B.bitmask_);
   }
 
-  constexpr bool isEmptyTy() const {
+  constexpr bool isNoType() const {
     return bitmask_ == 0;
   }
 
-  static constexpr Type createEmptyType() {
+  static constexpr Type createNoType() {
     return Type(0);
   }
   static constexpr Type createAnyType() {

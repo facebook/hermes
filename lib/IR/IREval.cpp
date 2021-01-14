@@ -24,7 +24,7 @@ bool disjointComparisonTypes(Type A, Type B) {
     return false;
 
   // Check if types are disjoint.
-  return Type::intersectTy(A, B).isEmptyTy();
+  return Type::intersectTy(A, B).isNoType();
 }
 
 bool isNaN(Literal *lit) {
