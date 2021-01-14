@@ -618,6 +618,16 @@ Arguments | The value to check.
 Semantics | It is used to implement ES6 TDZ functionality. Variables declared with `let` are *poisoned* with undefined until they are initialized.
 Effects | Potentially throws an exception. Has no other side effects.
 
+### ThrowIfEmptyInst
+
+ThrowIfEmptyInst | _
+--- | --- |
+Description | Check whether the value is "empty", and if it is, throw ReferenceError, otherwise return it.
+Example |  %_ = ThrowIfEmptyInst %value
+Arguments | The value to check.
+Semantics | It is used to implement ES6 TDZ functionality. Variables declared with `let` are *poisoned* with *empty* until they are initialized.
+Effects | Potentially throws an exception. Has no other side effects.
+
 ### CoerceThisNS
 
 CoerceThisNS | _

@@ -191,6 +191,10 @@ LiteralBool *IRBuilder::getLiteralBool(bool value) {
   return M->getLiteralBool(value);
 }
 
+LiteralEmpty *IRBuilder::getLiteralEmpty() {
+  return M->getLiteralEmpty();
+}
+
 LiteralUndefined *IRBuilder::getLiteralUndefined() {
   return M->getLiteralUndefined();
 }
@@ -553,6 +557,12 @@ GetNewTargetInst *IRBuilder::createGetNewTargetInst() {
 ThrowIfUndefinedInst *IRBuilder::createThrowIfUndefinedInst(
     Value *checkedValue) {
   auto *inst = new ThrowIfUndefinedInst(checkedValue);
+  insert(inst);
+  return inst;
+}
+
+ThrowIfEmptyInst *IRBuilder::createThrowIfEmptyInst(Value *checkedValue) {
+  auto *inst = new ThrowIfEmptyInst(checkedValue);
   insert(inst);
   return inst;
 }

@@ -886,6 +886,12 @@ void HBCISel::generateThrowIfUndefinedInst(
     hermes::BasicBlock *next) {
   BCFGen_->emitThrowIfUndefinedInst(encodeValue(Inst->getCheckedValue()));
 }
+void HBCISel::generateThrowIfEmptyInst(
+    hermes::ThrowIfEmptyInst *Inst,
+    hermes::BasicBlock *next) {
+  BCFGen_->emitThrowIfEmpty(
+      encodeValue(Inst), encodeValue(Inst->getCheckedValue()));
+}
 void HBCISel::generateSwitchInst(SwitchInst *Inst, BasicBlock *next) {
   llvm_unreachable("SwitchInst should have been lowered");
 }
@@ -1265,6 +1271,9 @@ void HBCISel::generateHBCLoadConstInst(
   auto output = encodeValue(Inst);
   Literal *literal = Inst->getConst();
   switch (literal->getKind()) {
+    case ValueKind::LiteralEmptyKind:
+      BCFGen_->emitLoadConstEmpty(output);
+      break;
     case ValueKind::LiteralUndefinedKind:
       BCFGen_->emitLoadConstUndefined(output);
       break;

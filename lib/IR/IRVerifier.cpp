@@ -826,6 +826,7 @@ void Verifier::visitGetNewTargetInst(GetNewTargetInst const &Inst) {
 }
 
 void Verifier::visitThrowIfUndefinedInst(ThrowIfUndefinedInst const &Inst) {}
+void Verifier::visitThrowIfEmptyInst(const ThrowIfEmptyInst &Inst) {}
 
 } // namespace
 

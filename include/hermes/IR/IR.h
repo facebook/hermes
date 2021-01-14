@@ -572,6 +572,20 @@ class Literal : public Value {
   }
 };
 
+class LiteralEmpty : public Literal {
+  LiteralEmpty(const LiteralEmpty &) = delete;
+  void operator=(const LiteralEmpty &) = delete;
+
+ public:
+  explicit LiteralEmpty() : Literal(ValueKind::LiteralEmptyKind) {
+    setType(Type::createEmpty());
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::LiteralEmptyKind;
+  }
+};
+
 class LiteralNull : public Literal {
   LiteralNull(const LiteralNull &) = delete;
   void operator=(const LiteralNull &) = delete;
@@ -1722,6 +1736,7 @@ class Module : public Value {
   llvh::DenseMap<Identifier, GlobalObjectProperty *> globalPropertyMap_{};
 
   GlobalObject globalObject_{};
+  LiteralEmpty literalEmpty{};
   LiteralUndefined literalUndefined{};
   LiteralNull literalNull{};
   LiteralBool literalFalse{false};
@@ -1857,6 +1872,11 @@ class Module : public Value {
 
   /// Create a new literal bool of value \p value.
   LiteralBool *getLiteralBool(bool value);
+
+  /// Create a new literal 'empty'.
+  LiteralEmpty *getLiteralEmpty() {
+    return &literalEmpty;
+  }
 
   /// Create a new literal 'undefined'.
   LiteralUndefined *getLiteralUndefined() {

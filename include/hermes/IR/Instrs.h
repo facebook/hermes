@@ -2124,6 +2124,40 @@ class ThrowIfUndefinedInst : public Instruction {
   }
 };
 
+/// Throw if the operand is "empty", otherwise return it.
+class ThrowIfEmptyInst : public Instruction {
+  ThrowIfEmptyInst(const ThrowIfEmptyInst &) = delete;
+  void operator=(const ThrowIfEmptyInst &) = delete;
+
+ public:
+  enum { CheckedValueIdx };
+
+  explicit ThrowIfEmptyInst(Value *checkedValue)
+      : Instruction(ValueKind::ThrowIfEmptyInstKind) {
+    pushOperand(checkedValue);
+  }
+  explicit ThrowIfEmptyInst(
+      const ThrowIfEmptyInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  Value *getCheckedValue() {
+    return getOperand(CheckedValueIdx);
+  }
+
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::Unknown;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::ThrowIfEmptyInstKind);
+  }
+};
+
 class HBCResolveEnvironment : public SingleOperandInst {
   HBCResolveEnvironment(const HBCResolveEnvironment &) = delete;
   void operator=(const HBCResolveEnvironment &) = delete;
