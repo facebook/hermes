@@ -825,7 +825,6 @@ void Verifier::visitGetNewTargetInst(GetNewTargetInst const &Inst) {
       "GetNewTargetInst can only be used in ES6 constructors and ES5 functions");
 }
 
-void Verifier::visitThrowIfUndefinedInst(ThrowIfUndefinedInst const &Inst) {}
 void Verifier::visitThrowIfEmptyInst(const ThrowIfEmptyInst &Inst) {}
 
 } // namespace

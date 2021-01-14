@@ -608,16 +608,6 @@ Arguments | None
 Semantics | It must only be called from a ES6 class constructor or ES5 function. If the callee was invoked from `new`, it returns the function object of the direct constructor, otherwise `undefined`.
 Effects | Does not read or write memory
 
-### ThrowIfUndefinedInst
-
-ThrowIfUndefinedInst | _
---- | --- |
-Description | Check whether the value is undefined, and if it is, throw ReferenceError.
-Example |  %_ = ThrowIfUndefinedInst %value
-Arguments | The value to check.
-Semantics | It is used to implement ES6 TDZ functionality. Variables declared with `let` are *poisoned* with undefined until they are initialized.
-Effects | Potentially throws an exception. Has no other side effects.
-
 ### ThrowIfEmptyInst
 
 ThrowIfEmptyInst | _

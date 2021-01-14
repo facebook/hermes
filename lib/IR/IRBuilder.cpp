@@ -554,13 +554,6 @@ GetNewTargetInst *IRBuilder::createGetNewTargetInst() {
   return inst;
 }
 
-ThrowIfUndefinedInst *IRBuilder::createThrowIfUndefinedInst(
-    Value *checkedValue) {
-  auto *inst = new ThrowIfUndefinedInst(checkedValue);
-  insert(inst);
-  return inst;
-}
-
 ThrowIfEmptyInst *IRBuilder::createThrowIfEmptyInst(Value *checkedValue) {
   auto *inst = new ThrowIfEmptyInst(checkedValue);
   insert(inst);

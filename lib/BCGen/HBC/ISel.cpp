@@ -881,11 +881,6 @@ void HBCISel::generateReturnInst(ReturnInst *Inst, BasicBlock *next) {
 void HBCISel::generateThrowInst(ThrowInst *Inst, BasicBlock *next) {
   BCFGen_->emitThrow(encodeValue(Inst->getThrownValue()));
 }
-void HBCISel::generateThrowIfUndefinedInst(
-    hermes::ThrowIfUndefinedInst *Inst,
-    hermes::BasicBlock *next) {
-  BCFGen_->emitThrowIfUndefinedInst(encodeValue(Inst->getCheckedValue()));
-}
 void HBCISel::generateThrowIfEmptyInst(
     hermes::ThrowIfEmptyInst *Inst,
     hermes::BasicBlock *next) {

@@ -1859,17 +1859,6 @@ tailCall:
         goto exception;
       }
 
-      CASE(ThrowIfUndefinedInst) {
-        if (LLVM_UNLIKELY(O1REG(ThrowIfUndefinedInst).isUndefined())) {
-          SLOW_DEBUG(
-              dbgs() << "Throwing ReferenceError for undefined variable");
-          CAPTURE_IP(runtime->raiseReferenceError(
-              "accessing an uninitialized variable"));
-          goto exception;
-        }
-        ip = NEXTINST(ThrowIfUndefinedInst);
-        DISPATCH;
-      }
       CASE(ThrowIfEmpty) {
         if (LLVM_UNLIKELY(O2REG(ThrowIfEmpty).isEmpty())) {
           SLOW_DEBUG(dbgs() << "Throwing ReferenceError for empty variable");

@@ -495,9 +495,6 @@ DEFINE_OPCODE_2(DirectEval, Reg8, Reg8)
 /// throw Arg1;
 DEFINE_OPCODE_1(Throw, Reg8)
 
-/// Throw ReferenceError if the operand is HermesValue::undefined
-DEFINE_OPCODE_1(ThrowIfUndefinedInst, Reg8)
-
 /// If Arg2 is Empty, throw ReferenceError, otherwise move it into Arg1.
 /// Arg1 is the destination of the return value
 /// Arg2 is the value to check

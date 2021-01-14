@@ -2090,40 +2090,6 @@ class GetNewTargetInst : public Instruction {
   }
 };
 
-class ThrowIfUndefinedInst : public Instruction {
-  ThrowIfUndefinedInst(const ThrowIfUndefinedInst &) = delete;
-  void operator=(const ThrowIfUndefinedInst &) = delete;
-
- public:
-  enum { CheckedValueIdx };
-
-  explicit ThrowIfUndefinedInst(Value *checkedValue)
-      : Instruction(ValueKind::ThrowIfUndefinedInstKind) {
-    pushOperand(checkedValue);
-    setType(Type::createNoType());
-  }
-  explicit ThrowIfUndefinedInst(
-      const ThrowIfUndefinedInst *src,
-      llvh::ArrayRef<Value *> operands)
-      : Instruction(src, operands) {}
-
-  Value *getCheckedValue() {
-    return getOperand(CheckedValueIdx);
-  }
-
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
-  static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::ThrowIfUndefinedInstKind);
-  }
-};
-
 /// Throw if the operand is "empty", otherwise return it.
 class ThrowIfEmptyInst : public Instruction {
   ThrowIfEmptyInst(const ThrowIfEmptyInst &) = delete;
