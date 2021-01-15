@@ -41,35 +41,36 @@ else()
   set(concatenate "type")
 endif()
 
-set(js_lib_sources
+set(internal_bytecode_sources
   header.js
   Promise.js
   footer.js
 )
 
 add_custom_command(
-  OUTPUT JSLib.js
-  COMMAND ${concatenate} ${js_lib_sources} > ${CMAKE_CURRENT_BINARY_DIR}/JSLib.js
-  DEPENDS ${js_lib_sources}
+  OUTPUT InternalBytecode.js
+  COMMAND ${concatenate} ${internal_bytecode_sources} > ${CMAKE_CURRENT_BINARY_DIR}/InternalBytecode.js
+  DEPENDS ${internal_bytecode_sources}
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   VERBATIM
 )
 
+# Compile the one source file to Hermes bytecode.
 add_custom_command(
-  OUTPUT JSLib.hbc
-  COMMAND ${hermesc_EXE} ${JS_COMPILER_FLAGS} -emit-binary -out=${CMAKE_CURRENT_BINARY_DIR}/JSLib.hbc ${CMAKE_CURRENT_BINARY_DIR}/JSLib.js
-  DEPENDS ${hermesc_EXE} JSLib.js
+  OUTPUT InternalBytecode.hbc
+  COMMAND ${hermesc_EXE} ${JS_COMPILER_FLAGS} -emit-binary -out=${CMAKE_CURRENT_BINARY_DIR}/InternalBytecode.hbc ${CMAKE_CURRENT_BINARY_DIR}/InternalBytecode.js
+  DEPENDS ${hermesc_EXE} InternalBytecode.js
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   VERBATIM
 )
 
-# X.inc is a "C array" source file containing Hermes bytecode.
-# It's built by compiling X with hermesc, and then piping that through xxd -i.
 
+# X.inc is the hex dump of the compiled bytecode artifact that can be included
+# in the InternalBytecode.cpp as C/C++ hex literal to initialize a byte array.
 add_custom_command(
   OUTPUT InternalBytecode.inc
-  COMMAND ${PYTHON_EXECUTABLE} xxd.py ${CMAKE_CURRENT_BINARY_DIR}/JSLib.hbc > ${CMAKE_CURRENT_BINARY_DIR}/InternalBytecode.inc
-  DEPENDS xxd.py JSLib.hbc
+  COMMAND ${PYTHON_EXECUTABLE} xxd.py ${CMAKE_CURRENT_BINARY_DIR}/InternalBytecode.hbc > ${CMAKE_CURRENT_BINARY_DIR}/InternalBytecode.inc
+  DEPENDS xxd.py InternalBytecode.hbc
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   VERBATIM
 )
