@@ -132,8 +132,11 @@ class Interpreter {
       Handle<> value,
       bool strictMode);
 
+  /// Inlining this function is forbidden because it stores label values in a
+  /// local static variable. Due to a bug in LLVM, it may sometimes be inlined
+  /// anyway, so explicitly mark it as noinline.
   template <bool SingleStep>
-  static CallResult<HermesValue> interpretFunction(
+  LLVM_ATTRIBUTE_NOINLINE static CallResult<HermesValue> interpretFunction(
       Runtime *runtime,
       InterpreterState &state);
 
