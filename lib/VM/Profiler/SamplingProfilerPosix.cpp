@@ -34,24 +34,21 @@ namespace vm {
 /// Name of the semaphore.
 const char *const kSamplingDoneSemaphoreName = "/samplingDoneSem";
 
-volatile std::atomic<SamplingProfiler *> SamplingProfiler::sProfilerInstance_{
-    nullptr};
+std::atomic<SamplingProfiler::GlobalProfiler *>
+    SamplingProfiler::GlobalProfiler::instance_{nullptr};
 
-std::atomic<bool> SamplingProfiler::handlerSyncFlag_{false};
+std::atomic<bool> SamplingProfiler::GlobalProfiler::handlerSyncFlag_{false};
 
-void SamplingProfiler::registerRuntime(Runtime *runtime) {
+void SamplingProfiler::GlobalProfiler::registerRuntime(Runtime *runtime) {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
 
   // TODO: should we only register runtime when profiler is enabled?
   activeRuntimeThreads_[runtime] = pthread_self();
   threadLocalRuntime_.set(runtime);
-  threadNames_[oscompat::thread_id()] = oscompat::thread_name();
 }
 
-void SamplingProfiler::unregisterRuntime(Runtime *runtime) {
+void SamplingProfiler::GlobalProfiler::unregisterRuntime(Runtime *runtime) {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
-  // Clear data so we do not hold any pointers into the unregistered runtime.
-  clear();
   bool succeed = activeRuntimeThreads_.erase(runtime);
   // TODO: should we allow recursive style
   // register/register -> unregister/unregister call?
@@ -69,13 +66,13 @@ void SamplingProfiler::registerDomain(Domain *domain) {
 }
 
 void SamplingProfiler::markRoots(RootAcceptor &acceptor) {
-  std::lock_guard<std::mutex> lockGuard(profilerLock_);
+  std::lock_guard<std::mutex> lockGuard(runtimeDataLock_);
   for (Domain *&domain : domains_) {
     acceptor.acceptPtr(domain);
   }
 }
 
-int SamplingProfiler::invokeSignalAction(void (*handler)(int)) {
+int SamplingProfiler::GlobalProfiler::invokeSignalAction(void (*handler)(int)) {
   struct sigaction actions;
   memset(&actions, 0, sizeof(actions));
   sigemptyset(&actions.sa_mask);
@@ -84,7 +81,7 @@ int SamplingProfiler::invokeSignalAction(void (*handler)(int)) {
   return sigaction(SIGPROF, &actions, nullptr);
 }
 
-bool SamplingProfiler::registerSignalHandlers() {
+bool SamplingProfiler::GlobalProfiler::registerSignalHandlers() {
   if (isSigHandlerRegistered_) {
     return true;
   }
@@ -96,7 +93,7 @@ bool SamplingProfiler::registerSignalHandlers() {
   return true;
 }
 
-bool SamplingProfiler::unregisterSignalHandler() {
+bool SamplingProfiler::GlobalProfiler::unregisterSignalHandler() {
   if (!isSigHandlerRegistered_) {
     return true;
   }
@@ -109,7 +106,7 @@ bool SamplingProfiler::unregisterSignalHandler() {
   return true;
 }
 
-void SamplingProfiler::profilingSignalHandler(int signo) {
+void SamplingProfiler::GlobalProfiler::profilingSignalHandler(int signo) {
   // Ensure that writes made on the timer thread before setting this flag are
   // correctly acquired.
   while (!handlerSyncFlag_.load(std::memory_order_acquire)) {
@@ -119,8 +116,9 @@ void SamplingProfiler::profilingSignalHandler(int signo) {
   // re-assigning it.
   auto oldErrno = errno;
   // Fetch runtime used by this sampling thread.
-  auto profilerInstance = sProfilerInstance_.load();
+  auto profilerInstance = instance_.load();
   Runtime *curThreadRuntime = profilerInstance->threadLocalRuntime_.get();
+  auto *localProfiler = curThreadRuntime->samplingProfiler_.get();
   if (curThreadRuntime == nullptr) {
     // Runtime may have unregistered itself before signal.
     errno = oldErrno;
@@ -131,38 +129,41 @@ void SamplingProfiler::profilingSignalHandler(int signo) {
   if (LLVM_LIKELY(!curThreadRuntime->getHeap().inGC())) {
     assert(
         profilerInstance != nullptr &&
-        "Why is sProfilerInstance_ not initialized yet?");
-    profilerInstance->sampledStackDepth_ = profilerInstance->walkRuntimeStack(
+        "Why is GlobalProfiler::instance_ not initialized yet?");
+    profilerInstance->sampledStackDepth_ = localProfiler->walkRuntimeStack(
         curThreadRuntime, profilerInstance->sampleStorage_);
   } else {
     // GC in process. Copy pre-captured stack instead.
-    if (profilerInstance->preGCStackDepth_ > 0) {
-      profilerInstance->sampleStorage_ = profilerInstance->preGCStackStorage_;
-      profilerInstance->sampledStackDepth_ = profilerInstance->preGCStackDepth_;
+
+    if (localProfiler->preGCStackDepth_ > 0) {
+      profilerInstance->sampleStorage_ = localProfiler->preGCStackStorage_;
+      profilerInstance->sampledStackDepth_ = localProfiler->preGCStackDepth_;
     } else {
       // This GC (like mallocGC) did not record JS stack.
       // TODO: fix this for all GCs.
       profilerInstance->sampledStackDepth_ = 0;
     }
   }
-
   // Ensure that writes made in the handler are visible to the timer thread.
-  handlerSyncFlag_.store(false, std::memory_order_release);
+  handlerSyncFlag_.store(false);
 
-  if (!profilerInstance->samplingDoneSem_.notifyOne()) {
+  if (!instance_.load()->samplingDoneSem_.notifyOne()) {
     errno = oldErrno;
     abort(); // Something is wrong.
   }
   errno = oldErrno;
 }
 
-bool SamplingProfiler::sampleStack() {
+bool SamplingProfiler::GlobalProfiler::sampleStack() {
   for (const auto &entry : activeRuntimeThreads_) {
     auto targetThreadId = entry.second;
+    auto *localProfiler = entry.first->samplingProfiler_.get();
+    std::lock_guard<std::mutex> lk(localProfiler->runtimeDataLock_);
     // Ensure there are no allocations in the signal handler by keeping ample
     // reserved space.
-    domains_.reserve(domains_.size() + kMaxStackDepth);
-    size_t domainCapacityBefore = domains_.capacity();
+    localProfiler->domains_.reserve(
+        localProfiler->domains_.size() + kMaxStackDepth);
+    size_t domainCapacityBefore = localProfiler->domains_.capacity();
     (void)domainCapacityBefore;
 
     // Guarantee that the runtime thread will not proceed until it has acquired
@@ -184,28 +185,24 @@ bool SamplingProfiler::sampleStack() {
     }
 
     assert(
-        domains_.capacity() == domainCapacityBefore &&
+        localProfiler->domains_.capacity() == domainCapacityBefore &&
         "Must not dynamically allocate in signal handler");
 
     if (sampledStackDepth_ > 0) {
       assert(
           sampledStackDepth_ <= sampleStorage_.stack.size() &&
           "How can we sample more frames than storage?");
-      sampledStacks_.emplace_back(
+      localProfiler->sampledStacks_.emplace_back(
           sampleStorage_.tid,
           sampleStorage_.timeStamp,
           sampleStorage_.stack.begin(),
           sampleStorage_.stack.begin() + sampledStackDepth_);
     }
-
-    // Only sample the first thread for now.
-    // TODO: support sampling more than all active threads.
-    break;
   }
   return true;
 }
 
-void SamplingProfiler::timerLoop() {
+void SamplingProfiler::GlobalProfiler::timerLoop() {
   oscompat::set_thread_name("hermes-sampling-profiler");
 
   constexpr double kMeanMilliseconds = 10;
@@ -288,12 +285,20 @@ uint32_t SamplingProfiler::walkRuntimeStack(
   return count;
 }
 
-/*static*/ const std::shared_ptr<SamplingProfiler>
-    &SamplingProfiler::getInstance() {
-  // Do not use make_shared here because that requires
-  // making constructor public.
-  static std::shared_ptr<SamplingProfiler> instance(new SamplingProfiler());
-  return instance;
+/*static*/ SamplingProfiler::GlobalProfiler *
+SamplingProfiler::GlobalProfiler::get() {
+  static std::unique_ptr<GlobalProfiler> instance =
+      make_unique<GlobalProfiler>();
+  return instance.get();
+}
+
+SamplingProfiler::GlobalProfiler::GlobalProfiler() {
+  instance_.store(this);
+}
+
+bool SamplingProfiler::GlobalProfiler::enabled() {
+  std::lock_guard<std::mutex> lockGuard(profilerLock_);
+  return enabled_;
 }
 
 #if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
@@ -302,7 +307,7 @@ uint32_t SamplingProfiler::walkRuntimeStack(
     int64_t *frames,
     uint16_t *depth,
     uint16_t max_depth) {
-  auto profilerInstance = sProfilerInstance_.load();
+  auto profilerInstance = GlobalProfiler::instance_.load();
   Runtime *curThreadRuntime = profilerInstance->threadLocalRuntime_.get();
   if (curThreadRuntime == nullptr) {
     // No runtime in this thread.
@@ -314,8 +319,8 @@ uint32_t SamplingProfiler::walkRuntimeStack(
   if (!curThreadRuntime->getHeap().inGC()) {
     assert(
         profilerInstance != nullptr &&
-        "Why is sProfilerInstance_ not initialized yet?");
-    sampledStackDepth = profilerInstance->walkRuntimeStack(
+        "Why is GlobalProfiler::instance_ not initialized yet?");
+    sampledStackDepth = curThreadRuntime->samplingProfiler_->walkRuntimeStack(
         curThreadRuntime, profilerInstance->sampleStorage_);
   } else {
     // TODO: log "GC in process" meta event.
@@ -369,22 +374,31 @@ uint32_t SamplingProfiler::walkRuntimeStack(
 }
 #endif
 
-SamplingProfiler::SamplingProfiler() : sampleStorage_(kMaxStackDepth) {
+SamplingProfiler::SamplingProfiler(Runtime *runtime) : runtime_{runtime} {
 #if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
   profilo_api()->register_external_tracer_callback(
       TRACER_TYPE_JAVASCRIPT, collectStackForLoom);
 #endif
-  sProfilerInstance_.store(this);
+
+  GlobalProfiler::get()->registerRuntime(runtime);
+  threadNames_[oscompat::thread_id()] = oscompat::thread_name();
+}
+
+SamplingProfiler::~SamplingProfiler() {
+  GlobalProfiler::get()->unregisterRuntime(runtime_);
 }
 
 void SamplingProfiler::dumpSampledStackGlobal(llvh::raw_ostream &OS) {
-  getInstance()->dumpSampledStack(OS);
+  auto globalProfiler = GlobalProfiler::get();
+  std::lock_guard<std::mutex> lk(globalProfiler->profilerLock_);
+  if (!globalProfiler->activeRuntimeThreads_.empty()) {
+    Runtime *rt = globalProfiler->activeRuntimeThreads_.begin()->first;
+    rt->samplingProfiler_->dumpSampledStack(OS);
+  }
 }
 
 void SamplingProfiler::dumpSampledStack(llvh::raw_ostream &OS) {
-  // TODO: serialize to visualizable trace format.
-  std::lock_guard<std::mutex> lockGuard(profilerLock_);
-
+  std::lock_guard<std::mutex> lk(runtimeDataLock_);
   OS << "dumpSamples called from runtime\n";
   OS << "Total " << sampledStacks_.size() << " samples\n";
   for (unsigned i = 0; i < sampledStacks_.size(); ++i) {
@@ -421,11 +435,16 @@ void SamplingProfiler::dumpSampledStack(llvh::raw_ostream &OS) {
 }
 
 void SamplingProfiler::dumpChromeTraceGlobal(llvh::raw_ostream &OS) {
-  getInstance()->dumpChromeTrace(OS);
+  auto globalProfiler = GlobalProfiler::get();
+  std::lock_guard<std::mutex> lk(globalProfiler->profilerLock_);
+  if (!globalProfiler->activeRuntimeThreads_.empty()) {
+    Runtime *rt = globalProfiler->activeRuntimeThreads_.begin()->first;
+    rt->samplingProfiler_->dumpChromeTrace(OS);
+  }
 }
 
 void SamplingProfiler::dumpChromeTrace(llvh::raw_ostream &OS) {
-  std::lock_guard<std::mutex> lockGuard(profilerLock_);
+  std::lock_guard<std::mutex> lk(runtimeDataLock_);
   auto pid = getpid();
   ChromeTraceSerializer serializer(
       ChromeTraceFormat::create(pid, threadNames_, sampledStacks_));
@@ -434,10 +453,10 @@ void SamplingProfiler::dumpChromeTrace(llvh::raw_ostream &OS) {
 }
 
 bool SamplingProfiler::enable() {
-  return getInstance()->enableImpl();
+  return GlobalProfiler::get()->enable();
 }
 
-bool SamplingProfiler::enableImpl() {
+bool SamplingProfiler::GlobalProfiler::enable() {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
   if (enabled_) {
     return true;
@@ -450,15 +469,15 @@ bool SamplingProfiler::enableImpl() {
   }
   enabled_ = true;
   // Start timer thread.
-  timerThread_ = std::thread(&SamplingProfiler::timerLoop, this);
+  timerThread_ = std::thread(&GlobalProfiler::timerLoop, this);
   return true;
 }
 
 bool SamplingProfiler::disable() {
-  return getInstance()->disableImpl();
+  return GlobalProfiler::get()->disable();
 }
 
-bool SamplingProfiler::disableImpl() {
+bool SamplingProfiler::GlobalProfiler::disable() {
   {
     std::lock_guard<std::mutex> lockGuard(profilerLock_);
     if (!enabled_) {
@@ -503,8 +522,7 @@ void SamplingProfiler::onGCEvent(
     case GCEventKind::CollectionStart: {
       assert(
           preGCStackDepth_ == 0 && "preGCStackDepth_ is not reset after GC?");
-      std::lock_guard<std::mutex> lockGuard(profilerLock_);
-      if (LLVM_LIKELY(!enabled_)) {
+      if (LLVM_LIKELY(!GlobalProfiler::get()->enabled())) {
         return;
       }
       recordPreGCStack(runtime, extraInfo);

@@ -236,8 +236,7 @@ Runtime::Runtime(
 
     LLVM_DEBUG(llvh::dbgs() << "Runtime initialized\n");
 
-    samplingProfiler_ = SamplingProfiler::getInstance();
-    samplingProfiler_->registerRuntime(this);
+    samplingProfiler_ = make_unique<SamplingProfiler>(this);
 
     return;
   }
@@ -342,14 +341,11 @@ Runtime::Runtime(
 
   LLVM_DEBUG(llvh::dbgs() << "Runtime initialized\n");
 
-  samplingProfiler_ = SamplingProfiler::getInstance();
-  samplingProfiler_->registerRuntime(this);
+  samplingProfiler_ = make_unique<SamplingProfiler>(this);
 }
 
 Runtime::~Runtime() {
-  if (samplingProfiler_) {
-    samplingProfiler_->unregisterRuntime(this);
-  }
+  samplingProfiler_.reset();
   getHeap().finalizeAll();
   // Now that all objects are finalized, there shouldn't be any native memory
   // keys left in the ID tracker for memory profiling. Assert that the only IDs

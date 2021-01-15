@@ -1167,9 +1167,9 @@ class Runtime : public HandleRootOwner,
   /// This key will be unregistered in the destructor.
   const CrashManager::CallbackKey crashCallbackKey_;
 
-  /// Keep a strong reference to the SamplingProfiler so that
-  /// we are sure it's safe to unregisterRuntime in destructor.
-  std::shared_ptr<SamplingProfiler> samplingProfiler_;
+  /// Sampling profiler data for this runtime. The ctor/dtor of SamplingProfiler
+  /// will automatically register/unregister this runtime from profiling.
+  std::unique_ptr<SamplingProfiler> samplingProfiler_;
 
   /// Pointer to the code coverage profiler.
   const std::unique_ptr<CodeCoverageProfiler> codeCoverageProfiler_;

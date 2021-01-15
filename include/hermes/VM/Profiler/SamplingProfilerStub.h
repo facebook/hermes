@@ -15,19 +15,8 @@ namespace vm {
 
 /// No-op implementation of wall-time based JS sampling profiler.
 class SamplingProfiler {
- private:
-  SamplingProfiler() = default;
-
  public:
-  /// Return the singleton profiler instance.
-  static const std::shared_ptr<SamplingProfiler> &getInstance();
-
-  /// Register an active \p runtime and current thread with profiler.
-  /// Should only be called from the thread running hermes runtime.
-  void registerRuntime(Runtime *runtime) {}
-
-  /// Unregister an active \p runtime and current thread with profiler.
-  void unregisterRuntime(Runtime *runtime) {}
+  explicit SamplingProfiler(Runtime *){};
 
   /// Mark roots that are kept alive by the SamplingProfiler.
   void markRoots(RootAcceptor &acceptor) {}

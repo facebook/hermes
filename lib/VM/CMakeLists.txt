@@ -51,7 +51,6 @@ set(source_files
   Profiler/ChromeTraceSerializerPosix.cpp
   Profiler/CodeCoverageProfiler.cpp
   Profiler/InlineCacheProfiler.cpp
-  Profiler/SamplingProfilerStub.cpp
   Profiler/SamplingProfilerPosix.cpp
   Serializer.cpp
   SegmentedArray.cpp
