@@ -29,7 +29,7 @@ labels:
 
 Hermes version:
 React Native version (if any):
-Android version (if any):
+OS version (if any):
 Platform (most likely one of arm64-v8a, armeabi-v7a, x86, x86_64):
 
 ## Steps To Reproduce
