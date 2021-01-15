@@ -243,13 +243,10 @@ class SamplingProfiler {
   /// \param startIndex specifies the start index in \p sampleStorage to fill.
   /// \return total number of stack frames captured in \p sampleStorage
   /// including existing frames before \p startIndex.
-  uint32_t walkRuntimeStack(
-      Runtime *runtime,
-      StackTrace &sampleStorage,
-      uint32_t startIndex = 0);
+  uint32_t walkRuntimeStack(StackTrace &sampleStorage, uint32_t startIndex = 0);
 
   /// Record JS stack at time of the GC.
-  void recordPreGCStack(Runtime *runtime, const std::string &extraInfo);
+  void recordPreGCStack(const std::string &extraInfo);
 
 #if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
   /// Registered loom callback for collecting stack frames.
@@ -291,8 +288,7 @@ class SamplingProfiler {
   static bool disable();
 
   /// Called for various GC events.
-  void
-  onGCEvent(Runtime *runtime, GCEventKind kind, const std::string &extraInfo);
+  void onGCEvent(GCEventKind kind, const std::string &extraInfo);
 };
 
 bool operator==(

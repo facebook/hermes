@@ -130,8 +130,8 @@ void SamplingProfiler::GlobalProfiler::profilingSignalHandler(int signo) {
     assert(
         profilerInstance != nullptr &&
         "Why is GlobalProfiler::instance_ not initialized yet?");
-    profilerInstance->sampledStackDepth_ = localProfiler->walkRuntimeStack(
-        curThreadRuntime, profilerInstance->sampleStorage_);
+    profilerInstance->sampledStackDepth_ =
+        localProfiler->walkRuntimeStack(profilerInstance->sampleStorage_);
   } else {
     // GC in process. Copy pre-captured stack instead.
 
@@ -237,14 +237,13 @@ void SamplingProfiler::GlobalProfiler::timerLoop() {
 }
 
 uint32_t SamplingProfiler::walkRuntimeStack(
-    Runtime *runtime,
     StackTrace &sampleStorage,
     uint32_t startIndex) {
   unsigned count = startIndex;
 
   // TODO: capture leaf frame IP.
   const Inst *ip = nullptr;
-  for (ConstStackFramePtr frame : runtime->getStackFrames()) {
+  for (ConstStackFramePtr frame : runtime_->getStackFrames()) {
     // Whether we successfully captured a stack frame or not.
     bool capturedFrame = true;
     auto &frameStorage = sampleStorage.stack[count];
@@ -258,7 +257,7 @@ uint32_t SamplingProfiler::walkRuntimeStack(
       auto *module = calleeCodeBlock->getRuntimeModule();
       assert(module != nullptr && "Cannot fetch runtimeModule for code block");
       frameStorage.jsFrame.module = module;
-      registerDomain(module->getDomainUnsafe(runtime));
+      registerDomain(module->getDomainUnsafe(runtime_));
     } else if (
         auto *nativeFunction =
             dyn_vmcast_or_null<NativeFunction>(frame.getCalleeClosure())) {
@@ -321,7 +320,7 @@ bool SamplingProfiler::GlobalProfiler::enabled() {
         profilerInstance != nullptr &&
         "Why is GlobalProfiler::instance_ not initialized yet?");
     sampledStackDepth = curThreadRuntime->samplingProfiler_->walkRuntimeStack(
-        curThreadRuntime, profilerInstance->sampleStorage_);
+        profilerInstance->sampleStorage_);
   } else {
     // TODO: log "GC in process" meta event.
     sampledStackDepth = 0;
@@ -512,11 +511,10 @@ void SamplingProfiler::clear() {
 }
 
 void SamplingProfiler::onGCEvent(
-    Runtime *runtime,
     GCEventKind kind,
     const std::string &extraInfo) {
   assert(
-      !runtime->getHeap().inGC() &&
+      !runtime_->getHeap().inGC() &&
       "Cannot be in a GC when setting a GC event");
   switch (kind) {
     case GCEventKind::CollectionStart: {
@@ -525,7 +523,7 @@ void SamplingProfiler::onGCEvent(
       if (LLVM_LIKELY(!GlobalProfiler::get()->enabled())) {
         return;
       }
-      recordPreGCStack(runtime, extraInfo);
+      recordPreGCStack(extraInfo);
       break;
     }
 
@@ -538,9 +536,7 @@ void SamplingProfiler::onGCEvent(
   }
 }
 
-void SamplingProfiler::recordPreGCStack(
-    Runtime *runtime,
-    const std::string &extraInfo) {
+void SamplingProfiler::recordPreGCStack(const std::string &extraInfo) {
   GCFrameInfo gcExtraInfo = nullptr;
   if (!extraInfo.empty()) {
     std::pair<std::unordered_set<std::string>::iterator, bool> retPair =
@@ -553,7 +549,7 @@ void SamplingProfiler::recordPreGCStack(
   leafFrame.gcFrame = gcExtraInfo;
 
   // Leaf frame slot has been used, filling from index 1.
-  preGCStackDepth_ = walkRuntimeStack(runtime, preGCStackStorage_, 1);
+  preGCStackDepth_ = walkRuntimeStack(preGCStackStorage_, 1);
 }
 
 bool operator==(
