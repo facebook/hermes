@@ -72,6 +72,7 @@ class Domain final : public GCCell {
     CJSModuleSize,
   };
 
+  // TODO(T83098051): Consider optimising cjsModules_ for non-contiguous IDs.
   /// CJS Modules used when modules have been resolved ahead of time.
   /// Used during requireFast modules by index.
   /// Stores information on module i at entries (i * CJSModuleSize) through
@@ -97,6 +98,11 @@ class Domain final : public GCCell {
   /// to load new segments.
   /// Lazily allocated upon loading the first CJS modules into this domain.
   GCPointer<NativeFunction> throwingRequire_{};
+
+  /// The ID of the CJS module that should be evaluated immediately after the
+  /// first RuntimeModule has been loaded. This is set to the first CJS module
+  /// of the first RuntimeModule.
+  OptValue<uint32_t> cjsEntryModuleID_;
 
  public:
 #ifdef HERMESVM_SERIALIZE
@@ -133,6 +139,13 @@ class Domain final : public GCCell {
       Handle<Domain> self,
       Runtime *runtime,
       RuntimeModule *runtimeModule);
+
+  /// \return the ID of the entry CJS module.
+  /// \pre at least one RuntimeModule has been imported with
+  /// importCJSModuleTable().
+  uint32_t getCJSEntryModuleID() const {
+    return *cjsEntryModuleID_;
+  }
 
   /// \return the offset of the CJS module corresponding to \p filename, None on
   /// failure.

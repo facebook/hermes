@@ -567,6 +567,11 @@ using SegmentTableEntry = std::vector<ModuleInSegment>;
 /// the only input will be at table[0][0].
 using SegmentTable = std::map<uint32_t, SegmentTableEntry>;
 
+/// Mapping from file name to module ID. File names are relative to the input
+/// root path (directory / zip file) and normalized with
+/// remove_leading_dotslash.
+using ModuleIDsTable = llvh::DenseMap<llvh::StringRef, uint32_t>;
+
 /// Read a file at path \p path into a memory buffer. If \p stdinOk is set,
 /// allow "-" to mean stdin.
 /// \param silent if true, don't print an error message on failure.
@@ -1142,6 +1147,58 @@ std::unique_ptr<llvh::MemoryBuffer> getFileFromDirectoryOrZip(
              : memoryBufferFromFile(path, false, silent);
 }
 
+/// Read a module IDs table. It maps every file name to its unique global module
+/// ID. Prints out error messages to stderr in case of failure.
+/// \param metadata the full metadata JSONObject. Contains "moduleIDs".
+/// \return the module IDs table read from the metadata, None on failure.
+llvh::Optional<ModuleIDsTable> readModuleIDs(
+    ::hermes::parser::JSONObject *metadata) {
+  assert(metadata && "No metadata to read module IDs from");
+
+  using namespace ::hermes::parser;
+
+  JSONObject *moduleIDs =
+      llvh::dyn_cast_or_null<JSONObject>(metadata->get("moduleIDs"));
+  if (!moduleIDs) {
+    return llvh::None;
+  }
+
+  ModuleIDsTable result;
+
+  llvh::DenseMap<uint32_t, llvh::StringRef> filenameByModuleID;
+
+  for (auto itFile : *moduleIDs) {
+    llvh::StringRef filename =
+        llvh::sys::path::remove_leading_dotslash(itFile.first->str());
+    JSONNumber *moduleID = llvh::dyn_cast<JSONNumber>(itFile.second);
+    if (!moduleID) {
+      llvh::errs() << "Invalid value in module ID table for file: " << filename
+                   << '\n';
+      return llvh::None;
+    }
+    uint32_t uintModuleID = (uint32_t)moduleID->getValue();
+    if (uintModuleID != moduleID->getValue()) {
+      llvh::errs() << "Module IDs must be unsigned integers: Found "
+                   << moduleID->getValue() << '\n';
+      return llvh::None;
+    }
+    auto emplaceRes = result.try_emplace(filename, uintModuleID);
+    if (!emplaceRes.second) {
+      llvh::errs() << "Duplicate entry in module ID table for file: "
+                   << filename << '\n';
+      return llvh::None;
+    }
+    auto inverseRes = filenameByModuleID.try_emplace(uintModuleID, filename);
+    if (!inverseRes.second) {
+      llvh::errs() << "Duplicate entry in module ID table for ID: "
+                   << uintModuleID << '\n';
+      return llvh::None;
+    }
+  }
+
+  return result;
+}
+
 /// Read input filenames from the given path and populate the files in \p
 /// fileBufs.
 /// In case of failure, ensure fileBufs is empty.
@@ -1185,8 +1242,12 @@ std::unique_ptr<llvh::MemoryBuffer> getFileFromDirectoryOrZip(
     return nullptr;
   }
 
-  uint32_t nextModuleID = 0;
-  llvh::DenseMap<llvh::StringRef, uint32_t> moduleIDs;
+  // Module IDs in metadata, None if none could be read.
+  auto externalModuleIDs = readModuleIDs(metadata);
+  // Module ID table used for assigning auto-incrementing module IDs if we
+  // don't have external module IDs.
+  ModuleIDsTable automaticModuleIDs;
+  uint32_t nextAutomaticModuleID = 0;
 
   for (auto it : *segments) {
     uint32_t segmentID;
@@ -1210,19 +1271,31 @@ std::unique_ptr<llvh::MemoryBuffer> getFileFromDirectoryOrZip(
         llvh::errs() << "Segment paths must be strings\n";
         return nullptr;
       }
-      auto fileBuf = getFileFromDirectoryOrZip(zip, inputPath, relPath->str());
+      auto filename = llvh::sys::path::remove_leading_dotslash(relPath->str());
+      auto fileBuf = getFileFromDirectoryOrZip(zip, inputPath, filename);
       if (!fileBuf) {
         return nullptr;
       }
       auto mapBuf = getFileFromDirectoryOrZip(
-          zip, inputPath, llvh::Twine(relPath->str(), ".map"), true);
-      // mapBuf is optional, so simply pass it through if it's null.
-
-      auto emplaceRes = moduleIDs.try_emplace(relPath->str(), nextModuleID);
-      auto moduleID = emplaceRes.first->second;
-      if (emplaceRes.second) {
-        ++nextModuleID;
+          zip, inputPath, llvh::Twine(filename, ".map"), true);
+      uint32_t moduleID;
+      if (externalModuleIDs.hasValue()) {
+        auto itr = externalModuleIDs->find(filename);
+        if (itr == externalModuleIDs->end()) {
+          llvh::errs() << "Module is missing in externalModuleIDs: " << filename
+                       << "\n";
+          return nullptr;
+        }
+        moduleID = itr->second;
+      } else {
+        auto emplaceRes =
+            automaticModuleIDs.try_emplace(filename, nextAutomaticModuleID);
+        if (emplaceRes.second) {
+          ++nextAutomaticModuleID;
+        }
+        moduleID = emplaceRes.first->second;
       }
+      // mapBuf is optional, so simply pass it through if it's null.
       segmentBufs.push_back({moduleID, std::move(fileBuf), std::move(mapBuf)});
     }
 
@@ -2034,7 +2107,7 @@ CompileResult compileFromCommandLineOptions() {
     segments.push_back(0);
 
     uint32_t nextModuleID = 0;
-    llvh::DenseMap<llvh::StringRef, uint32_t> moduleIDs;
+    ModuleIDsTable moduleIDs;
     SegmentTableEntry entry{};
     for (const std::string &filename : cl::InputFilenames) {
       auto fileBuf = memoryBufferFromFile(filename, true);

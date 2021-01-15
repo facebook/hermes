@@ -351,11 +351,18 @@ ExecutionStatus Domain::importCJSModuleTable(
   /// \return The index into cjsModules where this module's record begins.
   /// \pre Space has been allocated for this module's record in cjsModules.
   /// \pre There is no module already registered under moduleID.
+  auto &cjsEntryModuleID = self->cjsEntryModuleID_;
   const auto registerModule =
-      [runtime, &cjsModules, runtimeModule, &isModuleRegistered](
-          uint32_t moduleID, uint32_t functionID) -> uint32_t {
+      [runtime,
+       &cjsModules,
+       runtimeModule,
+       &isModuleRegistered,
+       &cjsEntryModuleID](uint32_t moduleID, uint32_t functionID) -> uint32_t {
     assert(!isModuleRegistered(moduleID) && "CJS module ID collision occurred");
     (void)isModuleRegistered;
+    if (LLVM_UNLIKELY(!cjsEntryModuleID.hasValue())) {
+      cjsEntryModuleID = moduleID;
+    }
     uint32_t index = moduleID * CJSModuleSize;
     cjsModules->at(index + CachedExportsOffset)
         .set(HermesValue::encodeEmptyValue(), &runtime->getHeap());
