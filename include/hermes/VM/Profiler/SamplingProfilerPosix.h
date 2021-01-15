@@ -144,9 +144,6 @@ class SamplingProfiler {
   /// Semaphore to indicate all signal handlers have finished the sampling.
   Semaphore samplingDoneSem_;
 
-  /// Sampled stack traces overtime. Protected by profilerLock_.
-  std::vector<StackTrace> sampledStacks_;
-
   /// Threading: load/store of sampledStackDepth_ and sampleStorage_
   /// are protected by samplingDoneSem_.
   /// Actual sampled stack depth in sampleStorage_.
@@ -156,6 +153,43 @@ class SamplingProfiler {
   /// This storage does not need to be protected by lock because accessing to
   /// it is serialized by samplingDoneSem_.
   StackTrace sampleStorage_{kMaxStackDepth};
+
+  /// This thread starts in timerLoop_, and samples the stacks of registered
+  /// runtimes periodically. It is created in \p enable() and joined in
+  /// \p disable().
+  std::thread timerThread_;
+
+  /// This condition variable can be used to wait for a change in the enabled
+  /// member variable.
+  std::condition_variable enabledCondVar_;
+
+  /// invoke sigaction() posix API to register \p handler.
+  /// \return what sigaction() returns: 0 to indicate success.
+  static int invokeSignalAction(void (*handler)(int));
+
+  /// Register sampling signal handler if not done yet.
+  /// \return true to indicate success.
+  bool registerSignalHandlers();
+
+  /// Unregister sampling signal handler.
+  bool unregisterSignalHandler();
+
+  /// Signal handler to walk the stack frames.
+  static void profilingSignalHandler(int signo);
+
+  /// Main routine to take a sample of runtime stack.
+  /// \return false for failure which timer loop thread should stop.
+  bool sampleStack();
+
+  /// Timer loop thread main routine.
+  void timerLoop();
+
+  /// Implementation of SamplingProfiler::enable/disable.
+  bool enableImpl();
+  bool disableImpl();
+
+  /// Sampled stack traces overtime. Protected by profilerLock_.
+  std::vector<StackTrace> sampledStacks_;
 
   /// Threading: preGCStackDepth_/preGCStackStorage_ are only accessed from
   /// interpreter thread.
@@ -175,47 +209,13 @@ class SamplingProfiler {
   /// Domains to be kept alive for sampled RuntimeModules.
   std::vector<Domain *> domains_;
 
-  /// This thread starts in timerLoop_, and samples the stacks of registered
-  /// runtimes periodically. It is created in \p enable() and joined in
-  /// \p disable().
-  std::thread timerThread_;
-
-  /// This condition variable can be used to wait for a change in the enabled
-  /// member variable.
-  std::condition_variable enabledCondVar_;
-
  private:
   explicit SamplingProfiler();
-
-  /// invoke sigaction() posix API to register \p handler.
-  /// \return what sigaction() returns: 0 to indicate success.
-  static int invokeSignalAction(void (*handler)(int));
-
-  /// Register sampling signal handler if not done yet.
-  /// \return true to indicate success.
-  bool registerSignalHandlers();
-
-  /// Unregister sampling signal handler.
-  bool unregisterSignalHandler();
 
   /// Hold \p domain so that the RuntimeModule(s) used by profiler are not
   /// released during symbolication.
   /// Refer to Domain.h for relationship between Domain and RuntimeModule.
   void registerDomain(Domain *domain);
-
-  /// Signal handler to walk the stack frames.
-  static void profilingSignalHandler(int signo);
-
-  /// Main routine to take a sample of runtime stack.
-  /// \return false for failure which timer loop thread should stop.
-  bool sampleStack();
-
-  /// Timer loop thread main routine.
-  void timerLoop();
-
-  /// Implementation of SamplingProfiler::enable/disable.
-  bool enableImpl();
-  bool disableImpl();
 
   /// Walk runtime stack frames and store in \p sampleStorage.
   /// This function is called from signal handler so should obey all
