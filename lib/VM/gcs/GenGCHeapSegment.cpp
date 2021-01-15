@@ -126,7 +126,7 @@ void GenGCHeapSegment::updateReferences(
       assert(vTables.hasNext() && "Need a displaced vtable pointer");
       const VTable *vtp = vTables.next();
       // Scan the pointer fields, updating via forwarding pointers.
-      GCBase::markCell(cell, vtp, gc, *acceptor);
+      gc->markCell(cell, vtp, *acceptor);
       uint32_t cellSize = cell->getAllocatedSize(vtp);
       ptr += cellSize;
       ind += (cellSize >> LogHeapAlign);
@@ -326,7 +326,7 @@ void GenGCHeapSegment::checkWellFormed(const GC *gc, uint64_t *externalMemory)
     assert(cell->isValid() && "cell is invalid");
     // We assume that CheckHeapWellFormedAcceptor does not mutate the GC.  Thus
     // it's OK to cast away the const on \p gc.
-    GCBase::markCell(cell, const_cast<GC *>(gc), acceptor);
+    const_cast<GC *>(gc)->markCell(cell, acceptor);
     ptr += cell->getAllocatedSize();
     extSize += cell->externalMemorySize();
   }

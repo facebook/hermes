@@ -877,7 +877,7 @@ class HadesGC::MarkAcceptor final : public HeapMarkingAcceptor,
       //    allocator, or because something else's write barrier will catch
       //    the modification.
       TsanIgnoreReadsBegin();
-      GCBase::markCell(cell, &gc, *this);
+      gc.markCell(cell, *this);
       TsanIgnoreReadsEnd();
     }
     assert(
@@ -2262,7 +2262,7 @@ void HadesGC::youngGenEvacuateImpl(Acceptor &acceptor, bool doCompaction) {
     // Update the pointers inside the forwarded object, since the old
     // object is only there for the forwarding pointer.
     GCCell *const cell = copyCell->getMarkedForwardingPointer();
-    GCBase::markCell(cell, this, acceptor);
+    markCell(cell, acceptor);
   }
   // All weak roots point into the OG, we only need to mark them if part of
   // the OG is getting compacted.
@@ -2562,7 +2562,7 @@ void HadesGC::scanDirtyCardsForSegment(
 
     // Mark the first object with respect to the dirty card boundaries.
     if (visitUnmarked || HeapSegment::getCellMarkBit(obj))
-      GCBase::markCellWithinRange(visitor, obj, obj->getVT(), this, begin, end);
+      markCellWithinRange(visitor, obj, obj->getVT(), begin, end);
 
     obj = obj->nextCell();
     // If there are additional objects in this card, scan them.
@@ -2574,7 +2574,7 @@ void HadesGC::scanDirtyCardsForSegment(
       for (GCCell *next = obj->nextCell(); next < boundary;
            next = next->nextCell()) {
         if (visitUnmarked || HeapSegment::getCellMarkBit(obj))
-          GCBase::markCell(visitor, obj, obj->getVT(), this);
+          markCell(visitor, obj, obj->getVT());
         obj = next;
       }
 
@@ -2584,8 +2584,7 @@ void HadesGC::scanDirtyCardsForSegment(
           obj < boundary && obj->nextCell() >= boundary &&
           "Last object in card must touch or cross cross the card boundary");
       if (visitUnmarked || HeapSegment::getCellMarkBit(obj))
-        GCBase::markCellWithinRange(
-            visitor, obj, obj->getVT(), this, begin, end);
+        markCellWithinRange(visitor, obj, obj->getVT(), begin, end);
     }
 
     from = iEnd;
@@ -3036,7 +3035,7 @@ void HadesGC::checkWellFormed() {
   markWeakRoots(acceptor);
   forAllObjs([this, &acceptor](GCCell *cell) {
     assert(cell->isValid() && "Invalid cell encountered in heap");
-    GCBase::markCell(cell, this, acceptor);
+    markCell(cell, acceptor);
   });
 }
 
@@ -3090,9 +3089,7 @@ void HadesGC::verifyCardTable() {
   };
 
   VerifyCardDirtyAcceptor acceptor{*this};
-  forAllObjs([this, &acceptor](GCCell *cell) {
-    GCBase::markCell(cell, this, acceptor);
-  });
+  forAllObjs([this, &acceptor](GCCell *cell) { markCell(cell, acceptor); });
 
   for (const HeapSegment &seg : oldGen_) {
     seg.cardTable().verifyBoundaries(seg.start(), seg.level());

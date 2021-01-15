@@ -1073,43 +1073,36 @@ class GCBase {
 
   /// Marks a cell by its metadata.
   /// \p cell The heap object to mark.
-  /// \p gc The GC that owns the cell.
   /// \p acceptor The action to perform on each slot in the cell.
   template <typename Acceptor>
-  static inline void markCell(GCCell *cell, GC *gc, Acceptor &acceptor);
+  inline void markCell(GCCell *cell, Acceptor &acceptor);
 
   /// Same as the normal \c markCell, but for cells that don't have a valid
   /// vtable pointer.
   template <typename Acceptor>
-  static inline void
-  markCell(GCCell *cell, const VTable *vt, GC *gc, Acceptor &acceptor);
+  inline void markCell(GCCell *cell, const VTable *vt, Acceptor &acceptor);
 
   /// Same as the normal \c markCell, but takes a visitor instead.
   template <typename Acceptor>
-  static inline void markCell(
-      SlotVisitor<Acceptor> &visitor,
-      GCCell *cell,
-      const VTable *vt,
-      GC *gc);
+  inline void
+  markCell(SlotVisitor<Acceptor> &visitor, GCCell *cell, const VTable *vt);
 
   /// Marks a cell by its metadata, but only for the slots that point between
   /// [begin, end).
   template <typename Acceptor>
-  static inline void markCellWithinRange(
+  inline void markCellWithinRange(
       SlotVisitor<Acceptor> &visitor,
       GCCell *cell,
       const VTable *vt,
-      GC *gc,
       const char *begin,
       const char *end);
 
   /// Marks a cell by its metadata, and outputs the names of the slots.
   /// Meant to be used by heap snapshots.
   template <typename Acceptor>
-  static inline void markCellWithNames(
+  inline void markCellWithNames(
       SlotVisitorWithNames<Acceptor> &visitor,
-      GCCell *cell,
-      GC *gc);
+      GCCell *cell);
 
   /// Utilities for WeakMap marking.
 

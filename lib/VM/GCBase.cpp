@@ -522,29 +522,30 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
   SlotVisitorWithNames<PrimitiveNodeAcceptor> primitiveVisitor{
       primitiveAcceptor};
   // Add a node for each object in the heap.
-  const auto snapshotForObject = [&snap, &primitiveVisitor, gc](GCCell *cell) {
-    auto &allocationLocationTracker = gc->getAllocationLocationTracker();
-    // First add primitive nodes.
-    GCBase::markCellWithNames(primitiveVisitor, cell, gc);
-    EdgeAddingAcceptor acceptor(*gc, snap);
-    SlotVisitorWithNames<EdgeAddingAcceptor> visitor(acceptor);
-    // Allow nodes to add extra nodes not in the JS heap.
-    cell->getVT()->snapshotMetaData.addNodes(cell, gc, snap);
-    snap.beginNode();
-    // Add all internal edges first.
-    GCBase::markCellWithNames(visitor, cell, gc);
-    // Allow nodes to add custom edges not represented by metadata.
-    cell->getVT()->snapshotMetaData.addEdges(cell, gc, snap);
-    auto stackTracesTreeNode =
-        allocationLocationTracker.getStackTracesTreeNodeForAlloc(
-            gc->getObjectID(cell));
-    snap.endNode(
-        cell->getVT()->snapshotMetaData.nodeType(),
-        cell->getVT()->snapshotMetaData.nameForNode(cell, gc),
-        gc->getObjectID(cell),
-        cell->getAllocatedSize(),
-        stackTracesTreeNode ? stackTracesTreeNode->id : 0);
-  };
+  const auto snapshotForObject =
+      [&snap, &primitiveVisitor, gc, this](GCCell *cell) {
+        auto &allocationLocationTracker = gc->getAllocationLocationTracker();
+        // First add primitive nodes.
+        markCellWithNames(primitiveVisitor, cell);
+        EdgeAddingAcceptor acceptor(*gc, snap);
+        SlotVisitorWithNames<EdgeAddingAcceptor> visitor(acceptor);
+        // Allow nodes to add extra nodes not in the JS heap.
+        cell->getVT()->snapshotMetaData.addNodes(cell, gc, snap);
+        snap.beginNode();
+        // Add all internal edges first.
+        markCellWithNames(visitor, cell);
+        // Allow nodes to add custom edges not represented by metadata.
+        cell->getVT()->snapshotMetaData.addEdges(cell, gc, snap);
+        auto stackTracesTreeNode =
+            allocationLocationTracker.getStackTracesTreeNodeForAlloc(
+                gc->getObjectID(cell));
+        snap.endNode(
+            cell->getVT()->snapshotMetaData.nodeType(),
+            cell->getVT()->snapshotMetaData.nameForNode(cell, gc),
+            gc->getObjectID(cell),
+            cell->getAllocatedSize(),
+            stackTracesTreeNode ? stackTracesTreeNode->id : 0);
+      };
   gc->forAllObjs(snapshotForObject);
   // Write the singleton number nodes into the snapshot.
   primitiveAcceptor.writeAllNodes();

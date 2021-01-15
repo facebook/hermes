@@ -29,24 +29,23 @@ void GCBase::markWeakRefsIfNecessary(
 }
 
 template <typename Acceptor>
-inline void GCBase::markCell(GCCell *cell, GC *gc, Acceptor &acceptor) {
-  markCell(cell, cell->getVT(), gc, acceptor);
+inline void GCBase::markCell(GCCell *cell, Acceptor &acceptor) {
+  markCell(cell, cell->getVT(), acceptor);
 }
 
 template <typename Acceptor>
 inline void
-GCBase::markCell(GCCell *cell, const VTable *vt, GC *gc, Acceptor &acceptor) {
+GCBase::markCell(GCCell *cell, const VTable *vt, Acceptor &acceptor) {
   SlotVisitor<Acceptor> visitor(acceptor);
-  markCell(visitor, cell, vt, gc);
+  markCell(visitor, cell, vt);
 }
 
 template <typename Acceptor>
 inline void GCBase::markCell(
     SlotVisitor<Acceptor> &visitor,
     GCCell *cell,
-    const VTable *vt,
-    GC *gc) {
-  visitor.visit(cell, gc->metaTable_[static_cast<size_t>(vt->kind)]);
+    const VTable *vt) {
+  visitor.visit(cell, metaTable_[static_cast<size_t>(vt->kind)]);
   markWeakRefsIfNecessary(cell, vt, visitor.acceptor_);
 }
 
@@ -55,21 +54,19 @@ inline void GCBase::markCellWithinRange(
     SlotVisitor<Acceptor> &visitor,
     GCCell *cell,
     const VTable *vt,
-    GC *gc,
     const char *begin,
     const char *end) {
   visitor.visitWithinRange(
-      cell, gc->metaTable_[static_cast<size_t>(vt->kind)], begin, end);
+      cell, metaTable_[static_cast<size_t>(vt->kind)], begin, end);
   markWeakRefsIfNecessary(cell, vt, visitor.acceptor_);
 }
 
 template <typename Acceptor>
 inline void GCBase::markCellWithNames(
     SlotVisitorWithNames<Acceptor> &visitor,
-    GCCell *cell,
-    GC *gc) {
+    GCCell *cell) {
   const VTable *vt = cell->getVT();
-  visitor.visit(cell, gc->metaTable_[static_cast<size_t>(vt->kind)]);
+  visitor.visit(cell, metaTable_[static_cast<size_t>(vt->kind)]);
   markWeakRefsIfNecessary(cell, vt, visitor.acceptor_);
 }
 
@@ -197,7 +194,7 @@ gcheapsize_t GCBase::completeWeakMapMarking(
         auto &valueStorageRef = weakMap->getValueStorageRef(gc);
         GCPointerBase::StorageType valueStorage = valueStorageRef;
         valueStorageRef = GCPointer<BigStorage>(nullptr).getStorageType();
-        GCBase::markCell(weakMap, gc, skipWeakAcceptor);
+        gc->markCell(weakMap, skipWeakAcceptor);
         drainMarkStack(acceptor);
         valueStorageRef = valueStorage;
         scannedWeakMaps.insert(weakMap);
@@ -248,7 +245,7 @@ gcheapsize_t GCBase::completeWeakMapMarking(
     // segment objects.  Note that we might visit some already-visited
     // fields, pointing to already-marked objects; this is why we
     // require the acceptor to be idempotent.
-    GCBase::markCell(weakMap, gc, acceptor);
+    gc->markCell(weakMap, acceptor);
     drainMarkStack(acceptor);
   }
   // Because of the limited nature of the marking done above, we can

@@ -248,7 +248,7 @@ void MallocGC::checkWellFormed() {
   for (CellHeader *header : pointers_) {
     GCCell *cell = header->data();
     assert(cell->isValid() && "Invalid cell encountered in heap");
-    GCBase::markCell(cell, this, acceptor);
+    markCell(cell, acceptor);
   }
 }
 
@@ -395,7 +395,7 @@ void MallocGC::drainMarkStack(MarkingAcceptor &acceptor) {
     acceptor.worklist_.pop_back();
     assert(header->isMarked() && "Pointer on the worklist isn't marked");
     GCCell *cell = header->data();
-    GCBase::markCell(cell, this, acceptor);
+    markCell(cell, acceptor);
     allocatedBytes_ += cell->getAllocatedSize();
   }
 }

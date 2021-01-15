@@ -2053,9 +2053,8 @@ void GenGC::sizeDiagnosticCensus() {
 
   hermesLog("HermesGC", "%s:", "Heap contents");
   HeapSizeDiagnosticAcceptor acceptor;
-  GC *gc = this;
-  forAllObjs([gc, &acceptor](GCCell *cell) {
-    GCBase::markCell(cell, gc, acceptor);
+  forAllObjs([&acceptor, this](GCCell *cell) {
+    markCell(cell, acceptor);
     acceptor.diagnostic.numCell++;
     acceptor.diagnostic.numVariableSizedObject +=
         static_cast<int>(cell->isVariableSize());

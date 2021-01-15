@@ -363,9 +363,7 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
   if (kVerifyCardTable) {
     VerifyCardDirtyAcceptor acceptor(*gc_);
     GenGC *gc = gc_;
-    forAllObjs([gc, &acceptor](GCCell *cell) {
-      GCBase::markCell(cell, gc, acceptor);
-    });
+    forAllObjs([gc, &acceptor](GCCell *cell) { gc->markCell(cell, acceptor); });
   }
 
   verifyCardTableBoundaries();
@@ -470,7 +468,7 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
 #endif
 
       // Mark the first object with respect to the dirty card boundaries.
-      GCBase::markCellWithinRange(visitor, obj, obj->getVT(), gc_, begin, end);
+      gc_->markCellWithinRange(visitor, obj, obj->getVT(), begin, end);
 
       obj = obj->nextCell();
       // If there are additional objects in this card, scan them.
@@ -481,7 +479,7 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
         // object where next is within the card.
         for (GCCell *next = obj->nextCell(); next < boundary;
              next = next->nextCell()) {
-          GCBase::markCell(visitor, obj, obj->getVT(), gc_);
+          gc_->markCell(visitor, obj, obj->getVT());
           obj = next;
         }
 
@@ -490,8 +488,7 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
         assert(
             obj < boundary && obj->nextCell() >= boundary &&
             "Last object in card must touch or cross cross the card boundary");
-        GCBase::markCellWithinRange(
-            visitor, obj, obj->getVT(), gc_, begin, end);
+        gc_->markCellWithinRange(visitor, obj, obj->getVT(), begin, end);
       }
 
       from = iEnd;
@@ -526,7 +523,7 @@ void OldGen::youngGenTransitiveClosure(
         GCCell *cell = reinterpret_cast<GCCell *>(toScanPtr);
         toScanPtr += cell->getAllocatedSize();
         // Ask the object to mark the pointers it owns.
-        GCBase::markCell(cell, gc_, acceptor);
+        gc_->markCell(cell, acceptor);
       }
       toScanSegmentNum++;
       toScanPtr = isFilled(toScanSegmentNum)
@@ -548,7 +545,7 @@ void OldGen::youngGenTransitiveClosure(
         GCCell *cell = reinterpret_cast<GCCell *>(toScanPtr);
         toScanPtr += cell->getAllocatedSize();
         // Ask the object to mark the pointers it owns.
-        GCBase::markCell(cell, gc_, acceptor);
+        gc_->markCell(cell, acceptor);
       }
     }
 

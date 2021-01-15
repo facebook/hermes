@@ -97,7 +97,7 @@ void CompleteMarkState::drainMarkStack(
     if (cell->getKind() == CellKind::WeakMapKind) {
       reachableWeakMaps_.push_back(vmcast<JSWeakMap>(cell));
     } else {
-      GCBase::markCell(cell, gc, acceptor);
+      gc->markCell(cell, acceptor);
     }
 
     // All fields of a fixed-sized cell should be marked by this point, but var
