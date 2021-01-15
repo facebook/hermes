@@ -129,13 +129,13 @@ class SamplingProfiler {
     /// Lock for profiler operations and access to member fields.
     std::mutex profilerLock_;
 
-    /// Stores a list of active <thread, runtime> pair.
-    /// Protected by profilerLock_.
-    llvh::DenseMap<Runtime *, pthread_t> activeRuntimeThreads_;
+    /// Profiler instances for all the individual runtimes that are currently
+    /// registered.
+    std::unordered_set<SamplingProfiler *> profilers_;
 
-    /// Per-thread runtime instance for loom/local profiling.
+    /// Per-thread profiler instance for loom/local profiling.
     /// Limitations: No recursive runtimes in one thread.
-    ThreadLocal<Runtime> threadLocalRuntime_;
+    ThreadLocal<SamplingProfiler> threadLocalProfiler_;
 
     /// Whether profiler is enabled or not. Protected by profilerLock_.
     bool enabled_{false};
@@ -191,12 +191,13 @@ class SamplingProfiler {
     /// \return true if the sampling profiler is enabled, false otherwise.
     bool enabled();
 
-    /// Register an active \p runtime and current thread with profiler.
+    /// Register the \p profiler associated with an active runtime.
     /// Should only be called from the thread running hermes runtime.
-    void registerRuntime(Runtime *runtime);
+    void registerRuntime(SamplingProfiler *profiler);
 
-    /// Unregister an active \p runtime and current thread with profiler.
-    void unregisterRuntime(Runtime *runtime);
+    /// Unregister the active runtime and current thread associated with
+    /// \p profiler.
+    void unregisterRuntime(SamplingProfiler *profiler);
 
     GlobalProfiler();
     /// \return the singleton profiler instance.
@@ -221,6 +222,12 @@ class SamplingProfiler {
 
   /// Prellocated map that contains thread names mapping.
   ThreadNamesMap threadNames_;
+
+  /// Thread that this profiler instance represents. This can currently only be
+  /// set from the constructor of SamplingProfiler, so we need to construct a
+  /// new SamplingProfiler every time the runtime is moved to a different
+  /// thread.
+  pthread_t currentThread_;
 
   /// Unique GC event extra info strings container.
   std::unordered_set<std::string> gcEventExtraInfoSet_;

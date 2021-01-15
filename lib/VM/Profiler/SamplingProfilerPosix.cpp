@@ -39,23 +39,23 @@ std::atomic<SamplingProfiler::GlobalProfiler *>
 
 std::atomic<bool> SamplingProfiler::GlobalProfiler::handlerSyncFlag_{false};
 
-void SamplingProfiler::GlobalProfiler::registerRuntime(Runtime *runtime) {
+void SamplingProfiler::GlobalProfiler::registerRuntime(
+    SamplingProfiler *profiler) {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
-
-  // TODO: should we only register runtime when profiler is enabled?
-  activeRuntimeThreads_[runtime] = pthread_self();
-  threadLocalRuntime_.set(runtime);
+  profilers_.insert(profiler);
+  threadLocalProfiler_.set(profiler);
 }
 
-void SamplingProfiler::GlobalProfiler::unregisterRuntime(Runtime *runtime) {
+void SamplingProfiler::GlobalProfiler::unregisterRuntime(
+    SamplingProfiler *profiler) {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
-  bool succeed = activeRuntimeThreads_.erase(runtime);
+  bool succeed = profilers_.erase(profiler);
   // TODO: should we allow recursive style
   // register/register -> unregister/unregister call?
   assert(succeed && "How can runtime not registered yet?");
   (void)succeed;
 
-  threadLocalRuntime_.set(nullptr);
+  threadLocalProfiler_.set(nullptr);
 }
 
 void SamplingProfiler::registerDomain(Domain *domain) {
@@ -117,8 +117,8 @@ void SamplingProfiler::GlobalProfiler::profilingSignalHandler(int signo) {
   auto oldErrno = errno;
   // Fetch runtime used by this sampling thread.
   auto profilerInstance = instance_.load();
-  Runtime *curThreadRuntime = profilerInstance->threadLocalRuntime_.get();
-  auto *localProfiler = curThreadRuntime->samplingProfiler_.get();
+  auto *localProfiler = profilerInstance->threadLocalProfiler_.get();
+  auto *curThreadRuntime = localProfiler->runtime_;
   if (curThreadRuntime == nullptr) {
     // Runtime may have unregistered itself before signal.
     errno = oldErrno;
@@ -155,9 +155,8 @@ void SamplingProfiler::GlobalProfiler::profilingSignalHandler(int signo) {
 }
 
 bool SamplingProfiler::GlobalProfiler::sampleStack() {
-  for (const auto &entry : activeRuntimeThreads_) {
-    auto targetThreadId = entry.second;
-    auto *localProfiler = entry.first->samplingProfiler_.get();
+  for (SamplingProfiler *localProfiler : profilers_) {
+    auto targetThreadId = localProfiler->currentThread_;
     std::lock_guard<std::mutex> lk(localProfiler->runtimeDataLock_);
     // Ensure there are no allocations in the signal handler by keeping ample
     // reserved space.
@@ -293,6 +292,10 @@ SamplingProfiler::GlobalProfiler::get() {
 
 SamplingProfiler::GlobalProfiler::GlobalProfiler() {
   instance_.store(this);
+#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+  profilo_api()->register_external_tracer_callback(
+      TRACER_TYPE_JAVASCRIPT, collectStackForLoom);
+#endif
 }
 
 bool SamplingProfiler::GlobalProfiler::enabled() {
@@ -307,7 +310,9 @@ bool SamplingProfiler::GlobalProfiler::enabled() {
     uint16_t *depth,
     uint16_t max_depth) {
   auto profilerInstance = GlobalProfiler::instance_.load();
-  Runtime *curThreadRuntime = profilerInstance->threadLocalRuntime_.get();
+  SamplingProfiler *localProfiler =
+      profilerInstance->threadLocalProfiler_.get();
+  Runtime *curThreadRuntime = localProfiler->runtime_;
   if (curThreadRuntime == nullptr) {
     // No runtime in this thread.
     return StackCollectionRetcode::NO_STACK_FOR_THREAD;
@@ -319,8 +324,8 @@ bool SamplingProfiler::GlobalProfiler::enabled() {
     assert(
         profilerInstance != nullptr &&
         "Why is GlobalProfiler::instance_ not initialized yet?");
-    sampledStackDepth = curThreadRuntime->samplingProfiler_->walkRuntimeStack(
-        profilerInstance->sampleStorage_);
+    sampledStackDepth =
+        localProfiler->walkRuntimeStack(profilerInstance->sampleStorage_);
   } else {
     // TODO: log "GC in process" meta event.
     sampledStackDepth = 0;
@@ -373,26 +378,22 @@ bool SamplingProfiler::GlobalProfiler::enabled() {
 }
 #endif
 
-SamplingProfiler::SamplingProfiler(Runtime *runtime) : runtime_{runtime} {
-#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
-  profilo_api()->register_external_tracer_callback(
-      TRACER_TYPE_JAVASCRIPT, collectStackForLoom);
-#endif
-
-  GlobalProfiler::get()->registerRuntime(runtime);
+SamplingProfiler::SamplingProfiler(Runtime *runtime)
+    : currentThread_{pthread_self()}, runtime_{runtime} {
   threadNames_[oscompat::thread_id()] = oscompat::thread_name();
+  GlobalProfiler::get()->registerRuntime(this);
 }
 
 SamplingProfiler::~SamplingProfiler() {
-  GlobalProfiler::get()->unregisterRuntime(runtime_);
+  GlobalProfiler::get()->unregisterRuntime(this);
 }
 
 void SamplingProfiler::dumpSampledStackGlobal(llvh::raw_ostream &OS) {
   auto globalProfiler = GlobalProfiler::get();
   std::lock_guard<std::mutex> lk(globalProfiler->profilerLock_);
-  if (!globalProfiler->activeRuntimeThreads_.empty()) {
-    Runtime *rt = globalProfiler->activeRuntimeThreads_.begin()->first;
-    rt->samplingProfiler_->dumpSampledStack(OS);
+  if (!globalProfiler->profilers_.empty()) {
+    auto *localProfiler = *globalProfiler->profilers_.begin();
+    localProfiler->dumpSampledStack(OS);
   }
 }
 
@@ -436,9 +437,9 @@ void SamplingProfiler::dumpSampledStack(llvh::raw_ostream &OS) {
 void SamplingProfiler::dumpChromeTraceGlobal(llvh::raw_ostream &OS) {
   auto globalProfiler = GlobalProfiler::get();
   std::lock_guard<std::mutex> lk(globalProfiler->profilerLock_);
-  if (!globalProfiler->activeRuntimeThreads_.empty()) {
-    Runtime *rt = globalProfiler->activeRuntimeThreads_.begin()->first;
-    rt->samplingProfiler_->dumpChromeTrace(OS);
+  if (!globalProfiler->profilers_.empty()) {
+    auto *localProfiler = *globalProfiler->profilers_.begin();
+    localProfiler->dumpChromeTrace(OS);
   }
 }
 
