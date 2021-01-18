@@ -54,7 +54,7 @@ class IRVisitor : public IRVisitorBase<ImplClass, ValueRetTy> {
         llvm_unreachable("Invalid kind");
 #define DEF_VALUE(CLASS, PARENT) \
   case ValueKind::CLASS##Kind:   \
-    return asImpl().visit##CLASS(*llvh::dyn_cast<CLASS>(&V));
+    return asImpl().visit##CLASS(*llvh::cast<CLASS>(&V));
 #include "hermes/IR/ValueKinds.def"
     }
     llvm_unreachable("Not reachable, all cases handled");
@@ -84,7 +84,7 @@ class InstructionVisitor : public IRVisitorBase<ImplClass, ValueRetTy> {
         llvm_unreachable("Invalid kind");
 #define DEF_VALUE(CLASS, PARENT) \
   case ValueKind::CLASS##Kind:   \
-    return asImpl().visit##CLASS(*llvh::dyn_cast<CLASS>(&Inst));
+    return asImpl().visit##CLASS(*llvh::cast<CLASS>(&Inst));
 #include "hermes/IR/Instrs.def"
     }
     llvm_unreachable("Not reachable, all cases handled");
