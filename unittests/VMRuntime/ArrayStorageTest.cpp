@@ -122,7 +122,7 @@ TEST_F(ArrayStorageTest, AllowTrimming) {
 
   // Now force some GCs to happen.
   for (auto i = 0; i < 2; i++) {
-    runtime->collect();
+    runtime->collect("test");
   }
 
   // The array should be trimmed.

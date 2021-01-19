@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -Wno-direct-eval %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -Xes6-proxy -O -Wno-direct-eval %s | %FileCheck --match-full-lines %s
 "use strict";
 
 print('Function');
@@ -152,3 +152,30 @@ print(Function('x', 'return x // comment')(1));
 // Hashbang comments are not supported in function bodies
 try {Function('#! comment')} catch (e) {print('caught', e.name, e.message)}
 // CHECK-NEXT: caught SyntaxError {{.*}}
+
+// There was a bug where Function's ctor would set __proto__ of the result
+// to this's parent, instead of NewTarget's prototype property.  Make sure
+// no version of this still happens.
+// Check for this's parent not being used as __proto__
+print(Reflect.apply(Function, Object.create(Date.prototype), []).__proto__ !==
+      Date.prototype);
+// CHECK-NEXT: true
+
+// Check prototype of parent, not __proto__ of parent, is used.
+print(Reflect.construct(Function, [], Date).__proto__ ===
+      Date.prototype);
+// CHECK-NEXT: true
+
+// Check invalid prototype is not used.
+var F = function() {}
+F.prototype = 17;
+print(Reflect.construct(Function, [], F).__proto__ === Function.prototype);
+// CHECK-NEXT: true
+
+// Check that this's prototype and __proto__ are not referenced
+Reflect.apply(Function, {prototype() { throw new Error("die"); }}, []);
+Reflect.apply(Function,
+              new Proxy({}, {
+                  getPrototypeOf() { throw new Error("getPrototypeOf"); },
+                  get() { throw new Error("die"); }}),
+              [])

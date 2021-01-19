@@ -9,6 +9,7 @@
 #include "JSLib/JSLibInternal.h"
 #include "hermes/VM/Casting.h"
 #include "hermes/VM/Interpreter.h"
+#include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringPrimitive.h"
 
 #include "Interpreter-internal.h"
@@ -17,6 +18,16 @@ using namespace hermes::inst;
 
 namespace hermes {
 namespace vm {
+
+void Interpreter::saveGenerator(
+    Runtime *runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *resumeIP) {
+  auto *innerFn = vmcast<GeneratorInnerFunction>(FRAME.getCalleeClosure());
+  innerFn->saveStack(runtime);
+  innerFn->setNextIP(resumeIP);
+  innerFn->setState(GeneratorInnerFunction::State::SuspendedYield);
+}
 
 ExecutionStatus Interpreter::caseDirectEval(
     Runtime *runtime,

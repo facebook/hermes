@@ -344,10 +344,10 @@ void HeapSnapshot::emitAllocationTraceInfo() {
 
   struct FuncHashMapInfo {
     static StackTracesTreeNode::SourceLoc getEmptyKey() {
-      return {SIZE_MAX, -1, -1};
+      return {SIZE_MAX, 0, -1, -1};
     }
     static inline StackTracesTreeNode::SourceLoc getTombstoneKey() {
-      return {SIZE_MAX - 1, -1, -1};
+      return {SIZE_MAX - 1, 0, -1, -1};
     }
     static unsigned getHashValue(const StackTracesTreeNode::SourceLoc &v) {
       return v.hash();
@@ -383,7 +383,8 @@ void HeapSnapshot::emitAllocationTraceInfo() {
     json_.emitValue(functionId); // "function_id"
     json_.emitValue(curNode->name); // "name"
     json_.emitValue(curNode->sourceLoc.scriptName); // "script_name"
-    json_.emitValue(curNode->sourceLoc.scriptName); // "script_id"
+    json_.emitValue(curNode->sourceLoc.scriptID); // "script_id"
+    // These should be emitted as 1-based, not 0-based like locations.
     json_.emitValue(curNode->sourceLoc.lineNo); // "line"
     json_.emitValue(curNode->sourceLoc.columnNo); // "column"
     for (auto child : curNode->getChildren()) {
@@ -393,10 +394,7 @@ void HeapSnapshot::emitAllocationTraceInfo() {
   endSection(Section::TraceFunctionInfos);
 
   beginSection(Section::TraceTree);
-  // Start from the nodes below the sentinel node as this is always invalid
-  for (auto child : stackTracesTree_->getRootNode()->getChildren()) {
-    nodeStack.push(child);
-  }
+  nodeStack.push(stackTracesTree_->getRootNode());
   while (!nodeStack.empty()) {
     auto curNode = nodeStack.top();
     nodeStack.pop();

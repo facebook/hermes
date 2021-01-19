@@ -578,6 +578,13 @@ a.__defineGetter__(1, function() { a.length = 0; return 0; });
 a.sort();
 print('sorting', a, 'did not crash');
 // CHECK-NEXT: sorting  did not crash
+var a = new Array(2);
+// hole at 0
+a[1] = 1;
+a.__proto__ = new Proxy([],{});
+a.sort();
+print(a);
+// CHECK-NEXT: 1,
 
 print('splice');
 // CHECK-LABEL: splice

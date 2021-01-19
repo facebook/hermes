@@ -57,8 +57,9 @@ class HandleRootOwner {
 
   /// Convenience function to create a Handle.
   Handle<HermesValue> makeHandle(HermesValue value);
-  template <class T>
+
   /// Convenience function to create a Handle from a pointer.
+  template <class T>
   Handle<T> makeHandle(T *p);
 
   /// Convenience function to create typed Handle given a HermesValue.
@@ -70,19 +71,31 @@ class HandleRootOwner {
 
   /// Create a Handle from a valid PseudoHandle and invalidate the latter.
   template <class T>
-  Handle<T> makeHandle(PseudoHandle<T> &&pseudo) {
-    Handle<T> res{this, pseudo.get()};
-    pseudo.invalidate();
-    return res;
-  }
+  Handle<T> makeHandle(PseudoHandle<T> &&pseudo);
 
   /// Create a Handle from a valid PseudoHandle by vmcasting from HermesValue
   /// and invalidate the PseudoHandle<HermesValue>.
   template <class T>
-  Handle<T> makeHandle(PseudoHandle<HermesValue> &&pseudo) {
-    Handle<T> res{this, PseudoHandle<T>::vmcast(std::move(pseudo)).get()};
-    return res;
-  }
+  Handle<T> makeHandle(PseudoHandle<HermesValue> &&pseudo);
+
+  /// @name Creating handles in the parent scope
+  /// @{
+  Handle<HermesValue> makeHandleInParentScope(HermesValue value);
+
+  template <class T>
+  Handle<T> makeHandleInParentScope(T *p);
+
+  template <class T>
+  Handle<T> makeHandleInParentScope(HermesValue value);
+
+  Handle<SymbolID> makeHandleInParentScope(SymbolID value);
+
+  template <class T>
+  Handle<T> makeHandleInParentScope(PseudoHandle<T> &&pseudo);
+
+  template <class T>
+  Handle<T> makeHandleInParentScope(PseudoHandle<HermesValue> &&pseudo);
+  /// @}
 
   /// Convenience function to create a MutableHandle.
   MutableHandle<HermesValue> makeMutableHandle(HermesValue value);
@@ -108,9 +121,10 @@ class HandleRootOwner {
   static Handle<HermesValue> getBoolValue(bool b);
 
   /// Return the top-most \c GCScope.
-  GCScope *getTopGCScope() {
-    return topGCScope_;
-  }
+  GCScope *getTopGCScope();
+
+  /// Return the parent of the top-most \c GCScope.
+  GCScope *getTopGCScopesParent();
 
  protected:
   /// Used for efficient construction of Handle<>(..., nullptr).
@@ -137,9 +151,15 @@ class HandleRootOwner {
   /// The top-most GC scope.
   GCScope *topGCScope_{};
 
-  /// Allocate a new handle in the top-most GCScope and initialize with
-  /// \p value.
-  PinnedHermesValue *newHandle(HermesValue value);
+  /// Allocate storage for a new PinnedHermesValue in the specified GCScope and
+  /// initialize it with \p value.
+  static PinnedHermesValue *newPinnedHermesValue(
+      GCScope *inScope,
+      HermesValue value);
+
+  /// Allocate storage for a new PinnedHermesValye in the top-most GCScope and
+  /// initialize it with \p value.
+  PinnedHermesValue *newPinnedHermesValue(HermesValue value);
 };
 
 /// This class exists only for debugging purposes. We need to make
@@ -284,6 +304,11 @@ class GCScope : public GCScopeDebugBase {
 
   ~GCScope();
 
+  /// \return the parent scope of this scope.
+  GCScope *getParentScope() {
+    return prevScope_;
+  }
+
   /// \return the increment in which pages of handles are allocated. To be
   /// used for debugging and asserts.
   static constexpr size_t getChunkSize() {
@@ -407,18 +432,12 @@ class GCScope : public GCScopeDebugBase {
   }
 #endif
 
-  /// Allocate a new handle. The garbage collector knows about it and will be
-  /// able to mark it.
-  PinnedHermesValue *newHandle(HermesValue value) {
+  /// Allocate storage for a new PinnedHermesValue. The garbage collector knows
+  /// about it and will be able to mark it.
+  PinnedHermesValue *newPinnedHermesValue(HermesValue value) {
     assert(
         getHandleCountDbg() < handlesLimit_ &&
         "Too many handles allocated in GCScope");
-    // We currently only allocate handles in the top scope, although there is no
-    // current design constraint why we must. This assert serves to detect bugs
-    // early, and can be removed if we ever want to violate this invariant.
-    assert(
-        runtime_->getTopGCScope() == this &&
-        "Expect allocation only in top scope");
 
     setHandleCountDbg(getHandleCountDbg() + 1);
 #ifdef HERMESVM_DEBUG_TRACK_GCSCOPE_HANDLES
@@ -433,12 +452,12 @@ class GCScope : public GCScopeDebugBase {
     }
 
     /// Slow path: allocate a new chunk.
-    return _newChunkAndHandle(value);
+    return _newChunkAndPHV(value);
   }
 
-  /// The current chunk is full, so allocate a new chunk and allocate a handle
-  /// inside it. This is the allocation slow path.
-  PinnedHermesValue *_newChunkAndHandle(HermesValue value);
+  /// The current chunk is full, so allocate a new chunk and allocate a
+  /// PinnedHermesValue inside it. This is the allocation slow path.
+  PinnedHermesValue *_newChunkAndPHV(HermesValue value);
 
   /// Mark all handles in this scope.
   void mark(SlotAcceptor &acceptor);
