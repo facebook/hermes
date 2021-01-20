@@ -322,7 +322,9 @@ class MallocGC final : public GCBase {
 template <bool fixedSizeIgnored, HasFinalizer hasFinalizer>
 inline void *MallocGC::alloc(uint32_t size) {
   assert(noAllocLevel_ == 0 && "no alloc allowed right now");
-  size = heapAlignSize(size);
+  assert(
+      isSizeHeapAligned(size) &&
+      "Call to alloc must use a size aligned to HeapAlign");
   if (shouldSanitizeHandles()) {
     collectBeforeAlloc(kHandleSanCauseForAnalytics, size);
   }
@@ -355,6 +357,9 @@ template <
     LongLived longLived,
     class... Args>
 inline T *MallocGC::makeA(uint32_t size, Args &&...args) {
+  assert(
+      isSizeHeapAligned(size) &&
+      "Call to makeA must use a size aligned to HeapAlign");
   // Since there is no old generation in this collector, always forward to the
   // normal allocation.
   void *mem = alloc<fixedSize, hasFinalizer>(size);

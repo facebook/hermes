@@ -946,7 +946,7 @@ inline void *GenGC::alloc(uint32_t sz) {
   AllocResult res = debugAlloc(sz, hasFinalizer, fixedSize);
   assert(res.success && "Should never fail to allocate at the top level");
 #ifdef HERMES_SLOW_DEBUG
-  totalAllocatedBytesDebug_ += heapAlignSize(sz);
+  totalAllocatedBytesDebug_ += sz;
 #endif
   return res.ptr;
 #else
@@ -978,14 +978,14 @@ inline void *GenGC::allocLongLived(uint32_t size) {
     res = oldGen_.alloc(size, hasFinalizer);
     assert(res.success && "Should never fail to allocate at the top level");
 #ifdef HERMES_SLOW_DEBUG
-    totalAllocatedBytesDebug_ += heapAlignSize(size);
+    totalAllocatedBytesDebug_ += size;
 #endif
     return res.ptr;
   } else {
     res = allocContext_.alloc(size, hasFinalizer);
     if (LLVM_LIKELY(res.success)) {
 #ifdef HERMES_SLOW_DEBUG
-      totalAllocatedBytesDebug_ += heapAlignSize(size);
+      totalAllocatedBytesDebug_ += size;
 #endif
       return res.ptr;
     } else {
@@ -993,7 +993,7 @@ inline void *GenGC::allocLongLived(uint32_t size) {
       res = oldGen_.alloc(size, hasFinalizer);
       assert(res.success && "Should never fail to allocate at the top level");
 #ifdef HERMES_SLOW_DEBUG
-      totalAllocatedBytesDebug_ += heapAlignSize(size);
+      totalAllocatedBytesDebug_ += size;
 #endif
       return res.ptr;
     }
@@ -1007,6 +1007,9 @@ template <
     LongLived longLived,
     class... Args>
 inline T *GenGC::makeA(uint32_t size, Args &&...args) {
+  assert(
+      isSizeHeapAligned(size) &&
+      "Call to makeA must use a size aligned to HeapAlign");
   // TODO: Once all callers are using makeA, remove allocLongLived.
   void *mem = longLived == LongLived::Yes
       ? allocLongLived<hasFinalizer>(size)

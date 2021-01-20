@@ -1660,7 +1660,7 @@ T *Runtime::makeAFixed(Args &&...args) {
   T *ptr = heap_.makeA<T, true /* fixedSize */, hasFinalizer, longLived>(
       sz, std::forward<Args>(args)...);
 #ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-  getHeap().getAllocationLocationTracker().newAlloc(ptr, heapAlignSize(sz));
+  getHeap().getAllocationLocationTracker().newAlloc(ptr, sz);
 #endif
   return ptr;
 }
@@ -1680,10 +1680,11 @@ T *Runtime::makeAVariable(uint32_t size, Args &&...args) {
   // CAPTURE_IP* macros in the interpreter loop.
   (void)getCurrentIP();
 #endif
+  size = heapAlignSize(size);
   T *ptr = heap_.makeA<T, false /* fixedSize */, hasFinalizer, longLived>(
       size, std::forward<Args>(args)...);
 #ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-  getHeap().getAllocationLocationTracker().newAlloc(ptr, heapAlignSize(size));
+  getHeap().getAllocationLocationTracker().newAlloc(ptr, size);
 #endif
   return ptr;
 }

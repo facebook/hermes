@@ -336,7 +336,7 @@ class AlignedHeapSegment {
 AllocResult AlignedHeapSegment::alloc(uint32_t size) {
   assert(lowLim() != nullptr && "Cannot allocate in a null segment");
   assert(size >= sizeof(GCCell) && "cell must be larger than GCCell");
-  size = heapAlignSize(size);
+  assert(isSizeHeapAligned(size) && "size must be heap aligned");
 
   char *cellPtr; // Initialized in the if below.
 

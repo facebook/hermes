@@ -108,6 +108,9 @@ void AlignedHeapSegment::clearExternalMemoryCharge() {
 
 void AlignedHeapSegment::growTo(size_t desired) {
   assert(desired <= maxSize() && "Cannot request more than the max size");
+  assert(
+      isSizeHeapAligned(desired) &&
+      "Cannot grow to a size that's not heap aligned");
 
   if (size() >= desired) {
     return;
@@ -134,6 +137,9 @@ void AlignedHeapSegment::shrinkTo(size_t desired) {
 }
 
 bool AlignedHeapSegment::growToFit(size_t amount) {
+  assert(
+      isSizeHeapAligned(amount) &&
+      "Cannot grow by a size that's not heap aligned");
   // Insufficient space
   if (static_cast<size_t>(hiLim() - level_) < amount) {
     return false;

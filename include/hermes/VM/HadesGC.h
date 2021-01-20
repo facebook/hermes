@@ -927,12 +927,15 @@ template <
     LongLived longLived,
     class... Args>
 inline T *HadesGC::makeA(uint32_t size, Args &&...args) {
+  assert(
+      isSizeHeapAligned(size) &&
+      "Call to makeA must use a size aligned to HeapAlign");
   if (longLived == LongLived::Yes) {
     std::lock_guard<Mutex> lk{gcMutex_};
     return new (allocLongLived(size)) T(std::forward<Args>(args)...);
   }
 
-  return new (allocWork<fixedSize, hasFinalizer>(heapAlignSize(size)))
+  return new (allocWork<fixedSize, hasFinalizer>(size))
       T(std::forward<Args>(args)...);
 }
 

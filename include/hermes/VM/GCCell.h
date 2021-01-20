@@ -34,7 +34,7 @@ class VariableSizeRuntimeCell;
 template <class C>
 static constexpr uint32_t cellSize() {
   static_assert(HeapAlign % alignof(C) == 0, "insufficient heap alignment");
-  return C::template cellSizeImpl<C>();
+  return heapAlignSize(C::template cellSizeImpl<C>());
 }
 
 /// This include file defines a GCCell that allows forward heap

@@ -1052,6 +1052,9 @@ bool HadesGC::OldGen::sweepNext() {
       assert(
           trimmedSize >= minAllocationSize() &&
           "Trimmed object must still meet minimum size.");
+      assert(
+          isSizeHeapAligned(trimmedSize) &&
+          "Trimmed size must also be heap aligned");
       const uint32_t trimmableBytes = cellSize - trimmedSize;
 
       // If this cell has extra space we can trim, trim it.
@@ -2084,15 +2087,18 @@ template void *HadesGC::allocWork<true, HasFinalizer::No>(uint32_t);
 template void *HadesGC::allocWork<false, HasFinalizer::No>(uint32_t);
 
 void *HadesGC::allocLongLived(uint32_t sz) {
+  assert(
+      isSizeHeapAligned(sz) &&
+      "Call to allocLongLived must use a size aligned to HeapAlign");
   if (kConcurrentGC) {
     HERMES_SLOW_ASSERT(
         !weakRefMutex() &&
         "WeakRef mutex should not be held when allocLongLived is called");
   }
   assert(gcMutex_ && "GC mutex must be held when calling allocLongLived");
-  totalAllocatedBytes_ += heapAlignSize(sz);
+  totalAllocatedBytes_ += sz;
   // Alloc directly into the old gen.
-  return oldGen_.alloc(heapAlignSize(sz));
+  return oldGen_.alloc(sz);
 }
 
 GCCell *HadesGC::OldGen::alloc(uint32_t sz) {

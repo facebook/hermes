@@ -287,6 +287,7 @@ using WeakSlotState = WeakRefSlot::State;
 /// for a fixed-size, small object; some GCs may allow optimizations on this
 /// basis. \p hasFinalizer must be \p HasFinalizer::Yes if cells of the given
 /// type require a finalizer to be called.
+/// \pre size must be heap-aligned.
 ///
 ///   template <
 ///     typename T,

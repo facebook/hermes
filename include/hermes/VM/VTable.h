@@ -217,7 +217,7 @@ struct VTable {
   ///   * The magic_ field has the expected value.
   ///   * The kind that is within the range of valid CellKinds.
   bool isValid() const {
-    return magic_ == kMagic &&
+    return magic_ == kMagic && isSizeHeapAligned(size) &&
         kindInRange(
                kind, CellKind::AllCellsKind_first, CellKind::AllCellsKind_last);
   }
@@ -225,7 +225,7 @@ struct VTable {
   /// \return true iff this VTable has the correct magic_ value, and has the
   /// given \p expectedKind.
   bool isValid(CellKind expectedKind) const {
-    return magic_ == kMagic && kind == expectedKind;
+    return magic_ == kMagic && isSizeHeapAligned(size) && kind == expectedKind;
   }
 };
 

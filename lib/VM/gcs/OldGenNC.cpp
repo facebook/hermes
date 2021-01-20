@@ -117,6 +117,7 @@ size_t OldGen::available() const {
 
 void OldGen::growTo(size_t desired) {
   assert(desired == adjustSize(desired) && "Size must be adjusted.");
+  assert(isSizeHeapAligned(desired) && "Size must be heap aligned.");
 
   if (size() >= desired) {
     return;
@@ -139,6 +140,7 @@ void OldGen::shrinkTo(size_t desired) {
   assert(desired >= used());
   // Note that this assertion implies that desired >= sz_.min().
   assert(desired == adjustSize(desired) && "Size must be adjusted.");
+  assert(isSizeHeapAligned(desired) && "Size must be heap aligned.");
 
   if (size() <= desired) {
     return;
@@ -161,6 +163,7 @@ void OldGen::shrinkTo(size_t desired) {
 }
 
 bool OldGen::growToFit(size_t amount) {
+  assert(isSizeHeapAligned(amount) && "Amount must be heap aligned.");
   size_t unavailable = levelOffset() + trailingExternalMemory();
   size_t adjusted = adjustSize(unavailable + amount);
 
