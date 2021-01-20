@@ -454,7 +454,7 @@ bool executeHBCBytecodeImpl(
     return true;
   }
 
-  if (options.runtimeConfig.getEnableSampleProfiling()) {
+  if (options.sampleProfiling) {
     vm::SamplingProfiler::enable();
   }
 
@@ -465,7 +465,7 @@ bool executeHBCBytecodeImpl(
       sourceURL,
       vm::Runtime::makeNullHandle<vm::Environment>());
 
-  if (options.runtimeConfig.getEnableSampleProfiling()) {
+  if (options.sampleProfiling) {
     vm::SamplingProfiler::disable();
     vm::SamplingProfiler::dumpChromeTraceGlobal(llvh::errs());
   }

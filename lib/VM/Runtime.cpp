@@ -236,7 +236,8 @@ Runtime::Runtime(
 
     LLVM_DEBUG(llvh::dbgs() << "Runtime initialized\n");
 
-    samplingProfiler_ = make_unique<SamplingProfiler>(this);
+    if (runtimeConfig.getEnableSampleProfiling())
+      samplingProfiler_ = make_unique<SamplingProfiler>(this);
 
     return;
   }
@@ -339,9 +340,10 @@ Runtime::Runtime(
   runInternalBytecode();
   codeCoverageProfiler_->restore();
 
-  LLVM_DEBUG(llvh::dbgs() << "Runtime initialized\n");
+  if (runtimeConfig.getEnableSampleProfiling())
+    samplingProfiler_ = make_unique<SamplingProfiler>(this);
 
-  samplingProfiler_ = make_unique<SamplingProfiler>(this);
+  LLVM_DEBUG(llvh::dbgs() << "Runtime initialized\n");
 }
 
 Runtime::~Runtime() {

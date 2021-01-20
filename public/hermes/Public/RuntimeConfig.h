@@ -94,7 +94,7 @@ class Deserializer;
   F(constexpr, bool, EnableSampledStats, false)                                \
                                                                                \
   /* Whether to enable sampling profiler */                                    \
-  F(constexpr, bool, EnableSampleProfiling, false)                             \
+  F(constexpr, bool, EnableSampleProfiling, true)                              \
                                                                                \
   /* Whether to randomize stack placement etc. */                              \
   F(constexpr, bool, RandomizeMemoryLayout, false)                             \

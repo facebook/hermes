@@ -108,7 +108,7 @@ struct ExecuteOptions {
   std::string profilerSymbolsFile;
 #endif
 
-  /// Exectuion time limit.
+  /// Execution time limit.
   uint32_t timeLimit{0};
 
   /// Dump JIT'ed code.
@@ -123,6 +123,9 @@ struct ExecuteOptions {
   /// Try to execute the same number of CPU instructions
   /// across repeated invocations of the same JS.
   bool stabilizeInstructionCount{false};
+
+  /// Run the sampling profiler.
+  bool sampleProfiling{false};
 
 #ifdef HERMESVM_SERIALIZE
   /// Serialize VM state after global object initialization to file.
