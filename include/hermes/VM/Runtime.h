@@ -20,6 +20,7 @@
 #include "hermes/VM/Debugger/Debugger.h"
 #include "hermes/VM/Deserializer.h"
 #include "hermes/VM/GC.h"
+#include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/Handle-inline.h"
 #include "hermes/VM/HandleRootOwner-inline.h"
 #include "hermes/VM/IdentifierTable.h"
@@ -1647,22 +1648,15 @@ template <
     LongLived longLived,
     class... Args>
 T *Runtime::makeAFixed(Args &&...args) {
-#if !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && !defined(NDEBUG)
-  // If allocation location tracking is enabled we implicitly call
-  // getCurrentIP() via newAlloc() below. Even if this isn't enabled, we
-  // always call getCurrentIP() in a debug build as this has the effect of
+#ifndef NDEBUG
+  // We always call getCurrentIP() in a debug build as this has the effect of
   // asserting the IP is correctly set (not invalidated) at this point. This
   // allows us to leverage our whole test-suite to find missing cases of
   // CAPTURE_IP* macros in the interpreter loop.
   (void)getCurrentIP();
 #endif
-  const uint32_t sz = cellSize<T>();
-  T *ptr = heap_.makeA<T, true /* fixedSize */, hasFinalizer, longLived>(
-      sz, std::forward<Args>(args)...);
-#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-  getHeap().getAllocationLocationTracker().newAlloc(ptr, sz);
-#endif
-  return ptr;
+  return heap_.makeAFixed<T, hasFinalizer, longLived>(
+      std::forward<Args>(args)...);
 }
 
 template <
@@ -1671,22 +1665,15 @@ template <
     LongLived longLived,
     class... Args>
 T *Runtime::makeAVariable(uint32_t size, Args &&...args) {
-#if !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && !defined(NDEBUG)
-  // If allocation location tracking is enabled we implicitly call
-  // getCurrentIP() via newAlloc() below. Even if this isn't enabled, we
-  // always call getCurrentIP() in a debug build as this has the effect of
+#ifndef NDEBUG
+  // We always call getCurrentIP() in a debug build as this has the effect of
   // asserting the IP is correctly set (not invalidated) at this point. This
   // allows us to leverage our whole test-suite to find missing cases of
   // CAPTURE_IP* macros in the interpreter loop.
   (void)getCurrentIP();
 #endif
-  size = heapAlignSize(size);
-  T *ptr = heap_.makeA<T, false /* fixedSize */, hasFinalizer, longLived>(
+  return heap_.makeAVariable<T, hasFinalizer, longLived>(
       size, std::forward<Args>(args)...);
-#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-  getHeap().getAllocationLocationTracker().newAlloc(ptr, size);
-#endif
-  return ptr;
 }
 
 template <typename T>

@@ -871,6 +871,24 @@ class GCBase {
 
   virtual ~GCBase() {}
 
+  /// Create a fixed size object of type T.
+  /// \return a pointer to the newly created object in the GC heap.
+  template <
+      typename T,
+      HasFinalizer hasFinalizer = HasFinalizer::No,
+      LongLived longLived = LongLived::No,
+      class... Args>
+  T *makeAFixed(Args &&...args);
+
+  /// Create a variable size object of type T and size \p size.
+  /// \return a pointer to the newly created object in the GC heap.
+  template <
+      typename T,
+      HasFinalizer hasFinalizer = HasFinalizer::No,
+      LongLived longLived = LongLived::No,
+      class... Args>
+  T *makeAVariable(uint32_t size, Args &&...args);
+
   /// \return true if the "target space" for allocations should be randomized
   /// (for GCs where that concept makes sense).
   bool shouldRandomizeAllocSpace() const {

@@ -14,6 +14,38 @@
 namespace hermes {
 namespace vm {
 
+template <
+    typename T,
+    HasFinalizer hasFinalizer,
+    LongLived longLived,
+    class... Args>
+T *GCBase::makeAFixed(Args &&...args) {
+  const uint32_t size = cellSize<T>();
+  T *ptr = static_cast<GC *>(this)
+               ->makeA<T, true /* fixedSize */, hasFinalizer, longLived>(
+                   size, std::forward<Args>(args)...);
+#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+  getAllocationLocationTracker().newAlloc(ptr, size);
+#endif
+  return ptr;
+}
+
+template <
+    typename T,
+    HasFinalizer hasFinalizer,
+    LongLived longLived,
+    class... Args>
+T *GCBase::makeAVariable(uint32_t size, Args &&...args) {
+  size = heapAlignSize(size);
+  T *ptr = static_cast<GC *>(this)
+               ->makeA<T, false /* fixedSize */, hasFinalizer, longLived>(
+                   size, std::forward<Args>(args)...);
+#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+  getAllocationLocationTracker().newAlloc(ptr, size);
+#endif
+  return ptr;
+}
+
 template <typename Acceptor>
 void GCBase::markWeakRefsIfNecessary(
     GCCell *cell,
