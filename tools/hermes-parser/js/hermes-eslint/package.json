@@ -11,5 +11,9 @@
   },
   "files": [
     "dist"
-  ]
+  ],
+  "dependencies": {
+    "esrecurse": "^4.3.0",
+    "estraverse": "^4.1.1"
+  }
 }
