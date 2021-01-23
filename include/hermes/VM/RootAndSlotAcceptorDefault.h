@@ -26,25 +26,25 @@ class RootAndSlotAcceptorDefault : public RootAndSlotAcceptor {
 
   virtual void accept(BasedPointer &ptr);
 
-  void accept(GCPointerBase &ptr) override final {
+  void accept(GCPointerBase &ptr) final {
     accept(ptr.getLoc());
   }
 
-  void accept(PinnedHermesValue &hv) override final {
+  void accept(PinnedHermesValue &hv) final {
     acceptHV(hv);
   }
 
-  void accept(GCHermesValue &hv) override final {
+  void accept(GCHermesValue &hv) final {
     acceptHV(hv);
   }
 
   virtual void acceptHV(HermesValue &hv) = 0;
 
-  void accept(GCSymbolID sym) override {
+  void accept(GCSymbolID sym) final {
     acceptSym(sym);
   }
 
-  void accept(RootSymbolID sym) override {
+  void accept(RootSymbolID sym) final {
     acceptSym(sym);
   }
 
@@ -64,7 +64,7 @@ class RootAndSlotAcceptorDefault : public RootAndSlotAcceptor {
 class RootAndSlotAcceptorWithNamesDefault
     : public RootAndSlotAcceptorWithNames {
  public:
-  RootAndSlotAcceptorWithNamesDefault(PointerBase *pointerBase)
+  explicit RootAndSlotAcceptorWithNamesDefault(PointerBase *pointerBase)
       : pointerBase_(pointerBase) {}
 
   using RootAndSlotAcceptorWithNames::accept;
@@ -80,25 +80,25 @@ class RootAndSlotAcceptorWithNamesDefault
     ptr = pointerBase_->pointerToBasedNonNull(actualizedPointer);
   }
 
-  void accept(GCPointerBase &ptr, const char *name) override final {
+  void accept(GCPointerBase &ptr, const char *name) final {
     accept(ptr.getLoc(), name);
   }
 
-  void accept(PinnedHermesValue &hv, const char *name) override {
+  void accept(PinnedHermesValue &hv, const char *name) final {
     acceptHV(hv, name);
   }
 
-  void accept(GCHermesValue &hv, const char *name) override {
+  void accept(GCHermesValue &hv, const char *name) final {
     acceptHV(hv, name);
   }
 
   virtual void acceptHV(HermesValue &hv, const char *name) = 0;
 
-  void accept(RootSymbolID sym, const char *name) override {
+  void accept(RootSymbolID sym, const char *name) final {
     acceptSym(sym, name);
   }
 
-  void accept(GCSymbolID sym, const char *name) override {
+  void accept(GCSymbolID sym, const char *name) final {
     acceptSym(sym, name);
   }
 
@@ -114,9 +114,10 @@ class RootAndSlotAcceptorWithNamesDefault
 
 class WeakRootAcceptorDefault : public WeakRootAcceptor {
  public:
-  WeakRootAcceptorDefault(PointerBase *base) : pointerBaseForWeakRoot_(base) {}
+  explicit WeakRootAcceptorDefault(PointerBase *base)
+      : pointerBaseForWeakRoot_(base) {}
 
-  void acceptWeak(WeakRootBase &ptr) override final;
+  void acceptWeak(WeakRootBase &ptr) final;
 
   /// Subclasses override this implementation instead of accept(WeakRootBase &).
   virtual void acceptWeak(void *&ptr) = 0;

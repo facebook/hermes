@@ -29,7 +29,7 @@ class WeakRootBase;
 /// pointer.  For example, if the pointer is in compressed form.)
 /// This is used by a visitor, see \c SlotVisitor.
 struct SlotAcceptor {
-  virtual ~SlotAcceptor(){};
+  virtual ~SlotAcceptor() = default;
   virtual void accept(GCPointerBase &ptr) = 0;
   virtual void accept(GCHermesValue &hv) = 0;
   virtual void accept(GCSymbolID sym) = 0;
@@ -38,7 +38,7 @@ struct SlotAcceptor {
 /// Weak references are typically slower to find, and need to be done separately
 /// from normal references.
 struct WeakRefAcceptor {
-  virtual ~WeakRefAcceptor() {}
+  virtual ~WeakRefAcceptor() = default;
   virtual void accept(WeakRefBase &wr) = 0;
 };
 
@@ -78,17 +78,17 @@ struct RootAndSlotAcceptor : public RootAcceptor, public SlotAcceptor {
 };
 
 struct RootAndSlotAcceptorWithNames : public RootAndSlotAcceptor {
-  void accept(void *&ptr) override final {
+  void accept(void *&ptr) final {
     accept(ptr, nullptr);
   }
   virtual void accept(void *&ptr, const char *name) = 0;
 
-  void accept(PinnedHermesValue &hv) override final {
+  void accept(PinnedHermesValue &hv) final {
     accept(hv, nullptr);
   }
   virtual void accept(PinnedHermesValue &hv, const char *name) = 0;
 
-  void accept(RootSymbolID sym) override final {
+  void accept(RootSymbolID sym) final {
     accept(sym, nullptr);
   }
   virtual void accept(RootSymbolID sym, const char *name) = 0;
@@ -99,17 +99,17 @@ struct RootAndSlotAcceptorWithNames : public RootAndSlotAcceptor {
     accept(reinterpret_cast<void *&>(ptr), name);
   }
 
-  void accept(GCPointerBase &ptr) override final {
+  void accept(GCPointerBase &ptr) final {
     accept(ptr, nullptr);
   }
   virtual void accept(GCPointerBase &ptr, const char *name) = 0;
 
-  void accept(GCHermesValue &hv) override final {
+  void accept(GCHermesValue &hv) final {
     accept(hv, nullptr);
   }
   virtual void accept(GCHermesValue &hv, const char *name) = 0;
 
-  void accept(GCSymbolID sym) override final {
+  void accept(GCSymbolID sym) final {
     accept(sym, nullptr);
   }
   virtual void accept(GCSymbolID sym, const char *name) = 0;
@@ -120,7 +120,7 @@ struct RootAndSlotAcceptorWithNames : public RootAndSlotAcceptor {
 };
 
 struct WeakRootAcceptor : public WeakRefAcceptor, RootSectionAcceptor {
-  virtual ~WeakRootAcceptor() = default;
+  ~WeakRootAcceptor() override = default;
 
   /// NOTE: This is called acceptWeak in order to avoid clashing with accept
   /// from SlotAcceptor, for classes that inherit from both.
@@ -134,7 +134,7 @@ struct DroppingAcceptor final : public RootAndSlotAcceptorWithNames {
       "Can only use this with a subclass of RootAndSlotAcceptor");
   Acceptor &acceptor;
 
-  DroppingAcceptor(Acceptor &acceptor) : acceptor(acceptor) {}
+  explicit DroppingAcceptor(Acceptor &acceptor) : acceptor(acceptor) {}
 
   using RootAndSlotAcceptorWithNames::accept;
 
