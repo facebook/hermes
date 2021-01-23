@@ -309,6 +309,8 @@ class HermesRuntimeImpl final : public HermesRuntime,
     }
 
     compileFlags_.enableGenerator = runtimeConfig.getEnableGenerator();
+    compileFlags_.emitAsyncBreakCheck = defaultEmitAsyncBreakCheck_ =
+        runtimeConfig.getAsyncBreakCheckInEval();
 
 #ifndef HERMESJSI_ON_STACK
     // Register the memory for the runtime if it isn't stored on the stack.
@@ -1069,6 +1071,8 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
   /// Compilation flags used by prepareJavaScript().
   ::hermes::hbc::CompileFlags compileFlags_{};
+  /// The default setting of "emit async break check" in this runtime.
+  bool defaultEmitAsyncBreakCheck_{false};
 };
 
 namespace {
@@ -1296,7 +1300,9 @@ void HermesRuntime::watchTimeLimit(uint32_t timeoutInMs) {
 }
 
 void HermesRuntime::unwatchTimeLimit() {
-  impl(this)->compileFlags_.emitAsyncBreakCheck = false;
+  // Restore the default state.
+  impl(this)->compileFlags_.emitAsyncBreakCheck =
+      impl(this)->defaultEmitAsyncBreakCheck_;
   ::hermes::vm::TimeLimitMonitor::getInstance().unwatchRuntime(
       &(impl(this)->runtime_));
 }

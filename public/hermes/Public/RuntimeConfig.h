@@ -62,6 +62,9 @@ class Deserializer;
   /* Whether to optimize the code inside eval and Function ctor */             \
   F(constexpr, bool, OptimizedEval, false)                                     \
                                                                                \
+  /* Whether to emit async break check instructions in eval code */            \
+  F(constexpr, bool, AsyncBreakCheckInEval, false)                             \
+                                                                               \
   /* Support for ES6 Promise. */                                               \
   F(constexpr, bool, ES6Promise, true)                                         \
                                                                                \

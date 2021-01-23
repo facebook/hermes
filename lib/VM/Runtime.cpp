@@ -149,6 +149,7 @@ Runtime::Runtime(
     : enableEval(runtimeConfig.getEnableEval()),
       verifyEvalIR(runtimeConfig.getVerifyEvalIR()),
       optimizedEval(runtimeConfig.getOptimizedEval()),
+      asyncBreakCheckInEval(runtimeConfig.getAsyncBreakCheckInEval()),
       heap_(
           getMetadataTable(),
           this,
