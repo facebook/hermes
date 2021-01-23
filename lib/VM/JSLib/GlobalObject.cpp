@@ -16,6 +16,7 @@
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PrimitiveBox.h"
+#include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/StringView.h"
 
 #include "dtoa/dtoa.h"

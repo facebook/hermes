@@ -11,6 +11,7 @@
 #include "hermes/VM/JSDate.h"
 #include "hermes/VM/JSLib/RuntimeCommonStorage.h"
 #include "hermes/VM/MockedEnvironment.h"
+#include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/SmallXString.h"
 
 using namespace hermes::vm;

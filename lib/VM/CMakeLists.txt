@@ -45,6 +45,7 @@ set(source_files
   PredefinedStringIDs.cpp
   PrimitiveBox.cpp
   Profiler.cpp
+  PropertyAccessor.cpp
   Runtime.cpp Runtime-profilers.cpp
   RuntimeModule.cpp
   RuntimeStats.cpp

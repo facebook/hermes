@@ -23,13 +23,10 @@ GCPointer<T>::GCPointer(PointerBase *base, T *ptr, GC *gc, NeedsBarriers)
   assert(
       (!ptr || gc->validPointer(ptr)) &&
       "Cannot construct a GCPointer from an invalid pointer");
-  // TODO: Resolve circular dependencies in JSObject so this cast is not
-  // required.
-  GCCell *cellPtr = reinterpret_cast<GCCell *>(ptr);
   if (NeedsBarriers::value) {
-    gc->constructorWriteBarrier(this, cellPtr);
+    gc->constructorWriteBarrier(this, ptr);
   } else {
-    assert(!gc->needsWriteBarrier(&ptr_, cellPtr));
+    assert(!gc->needsWriteBarrier(&ptr_, ptr));
   }
 }
 

@@ -12,6 +12,7 @@
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSCallableProxy.h"
 #include "hermes/VM/OrderedHashMap.h"
+#include "hermes/VM/PropertyAccessor.h"
 
 #include "llvh/ADT/SmallSet.h"
 

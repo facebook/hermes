@@ -11,7 +11,7 @@
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/Operations.h"
-#include "hermes/VM/StringView.h"
+#include "hermes/VM/PropertyAccessor.h"
 
 #include "llvh/Support/Debug.h"
 #define DEBUG_TYPE "serialize"

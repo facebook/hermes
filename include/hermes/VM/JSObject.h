@@ -1475,41 +1475,6 @@ CallResult<Handle<BigStorage>> getForInPropertyNames(
     uint32_t &beginIndex,
     uint32_t &endIndex);
 
-/// This object is the value of a property which has a getter and/or setter.
-class PropertyAccessor final : public GCCell {
- public:
-  PropertyAccessor(
-      Runtime *runtime,
-      Handle<Callable> getter,
-      Handle<Callable> setter)
-      : GCCell(&runtime->getHeap(), &vt),
-        getter(runtime, *getter, &runtime->getHeap()),
-        setter(runtime, *setter, &runtime->getHeap()) {}
-
-#ifdef HERMESVM_SERIALIZE
-  /// Fast constructor used by deserialization. Don't do any GC allocation. Only
-  /// calls super Constructor.
-  PropertyAccessor(Deserializer &d);
-#endif
-
-  static const VTable vt;
-
-  static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::PropertyAccessorKind;
-  }
-
-  GCPointer<Callable> getter{};
-  GCPointer<Callable> setter{};
-
-#if defined(HERMESVM_GC_HADES) && defined(HERMESVM_COMPRESSED_POINTERS)
-  // Unused padding just to meet the minimum allocation requirements from Hades.
-  int8_t _padding_[4];
-#endif
-
-  static CallResult<HermesValue>
-  create(Runtime *runtime, Handle<Callable> getter, Handle<Callable> setter);
-};
-
 /// Helper functions for initialising any kind of JSObject. Ensures direct
 /// property slots are initialized. Should be used in a placement new expression
 /// or with GC::makeA, whose result is passed through one of the init* methods:
