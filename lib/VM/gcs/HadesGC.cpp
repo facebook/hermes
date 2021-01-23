@@ -6,6 +6,8 @@
  */
 
 #include "hermes/VM/HadesGC.h"
+
+#include "GCBase-WeakMap.h"
 #include "hermes/Support/Compiler.h"
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"

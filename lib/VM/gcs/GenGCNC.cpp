@@ -9,12 +9,11 @@
 // it is included only by GC.h.  (For example, it assumes GCBase is declared.)
 #include "hermes/VM/GC.h"
 
+#include "GCBase-WeakMap.h"
 #include "hermes/Platform/Logging.h"
-#include "hermes/Support/DebugHelpers.h"
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PerfSection.h"
-#include "hermes/VM/AllocSource.h"
 #include "hermes/VM/Casting.h"
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
 #include "hermes/VM/CompactionResult-inline.h"
@@ -22,9 +21,7 @@
 #include "hermes/VM/Deserializer.h"
 #include "hermes/VM/ExpectedPageSize.h"
 #include "hermes/VM/GCBase-inline.h"
-#include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HeapSnapshot.h"
-#include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/Serializer.h"
 #include "hermes/VM/StringPrimitive.h"
@@ -44,7 +41,6 @@
 #include <cinttypes>
 #include <clocale>
 #include <cstdint>
-#include <tuple>
 #include <utility>
 
 #define DEBUG_TYPE "gc"
