@@ -40,7 +40,7 @@ const Definition = require('./definition').Definition;
 const assert = require('assert');
 
 /**
- * Test if scope is struct
+ * Test if scope is strict
  * @param {Scope} scope - scope
  * @param {Block} block - block
  * @param {boolean} isMethodDefinition - is method definition
@@ -49,7 +49,7 @@ const assert = require('assert');
 function isStrictScope(scope, block, isMethodDefinition) {
   let body;
 
-  // When upper scope is exists and strict, inner scope is also strict.
+  // When upper scope exists and is strict, inner scope is also strict.
   if (scope.upper && scope.upper.isStrict) {
     return true;
   }
@@ -164,12 +164,6 @@ class Scope {
     this.set = new Map();
 
     /**
-     * The tainted variables of this scope, as <code>{ Variable.name :
-     * boolean }</code>.
-     * @member {Map} Scope#taints */
-    this.taints = new Map();
-
-    /**
      * Generally, through the lexical scoping of JS you can always know
      * which variable an identifier in the source code refers to. There are
      * a few exceptions to this rule. With 'global' and 'with' scopes you
@@ -236,7 +230,12 @@ class Scope {
      */
     this.thisFound = false;
 
-    this.__left = [];
+    /**
+     * List of {@link Reference}s that are left to be resolved (i.e. which
+     * need to be linked to the variable they refer to).
+     * @member {Reference[]} Scope#__referencesLeftToResolve
+     */
+    this.__referencesLeftToResolve = [];
 
     /**
      * Reference to the parent {@link Scope|scope}.
@@ -320,12 +319,12 @@ class Scope {
     }
 
     // Try Resolving all references in this scope.
-    for (let i = 0, iz = this.__left.length; i < iz; ++i) {
-      const ref = this.__left[i];
+    for (let i = 0, iz = this.__referencesLeftToResolve.length; i < iz; ++i) {
+      const ref = this.__referencesLeftToResolve[i];
 
       closeRef.call(this, ref);
     }
-    this.__left = null;
+    this.__referencesLeftToResolve = null;
 
     return this.upper;
   }
@@ -348,12 +347,6 @@ class Scope {
       return false;
     }
     variable.references.push(ref);
-    variable.stack =
-      variable.stack && ref.from.variableScope === this.variableScope;
-    if (ref.tainted) {
-      variable.tainted = true;
-      this.taints.set(variable.name, true);
-    }
     ref.resolved = variable;
 
     return true;
@@ -361,19 +354,19 @@ class Scope {
 
   __delegateToUpperScope(ref) {
     if (this.upper) {
-      this.upper.__left.push(ref);
+      this.upper.__referencesLeftToResolve.push(ref);
     }
     this.through.push(ref);
   }
 
   __addDeclaredVariablesOfNode(variable, node) {
-    if (node === null || node === undefined) {
+    if (node == null) {
       return;
     }
 
     let variables = this.__declaredVariables.get(node);
 
-    if (variables === null || variables === undefined) {
+    if (variables == null) {
       variables = [];
       this.__declaredVariables.set(node, variables);
     }
@@ -408,7 +401,7 @@ class Scope {
     }
   }
 
-  __referencing(node, assign, writeExpr, maybeImplicitGlobal, partial, init) {
+  __referencing(node, assign, writeExpr, maybeImplicitGlobal, init) {
     // because Array element may be null
     if (!node || node.type !== Syntax.Identifier) {
       return;
@@ -425,12 +418,11 @@ class Scope {
       assign || Reference.READ,
       writeExpr,
       maybeImplicitGlobal,
-      !!partial,
       !!init,
     );
 
     this.references.push(ref);
-    this.__left.push(ref);
+    this.__referencesLeftToResolve.push(ref);
   }
 
   __detectThis() {
@@ -438,7 +430,7 @@ class Scope {
   }
 
   __isClosed() {
-    return this.__left === null;
+    return this.__referencesLeftToResolve === null;
   }
 
   /**
@@ -507,21 +499,15 @@ class GlobalScope extends Scope {
     this.implicit = {
       set: new Map(),
       variables: [],
-
-      /**
-       * List of {@link Reference}s that are left to be resolved (i.e. which
-       * need to be linked to the variable they refer to).
-       * @member {Reference[]} Scope#implicit#left
-       */
-      left: [],
+      referencesLeftToResolve: [],
     };
   }
 
   __close(scopeManager) {
     const implicit = [];
 
-    for (let i = 0, iz = this.__left.length; i < iz; ++i) {
-      const ref = this.__left[i];
+    for (let i = 0, iz = this.__referencesLeftToResolve.length; i < iz; ++i) {
+      const ref = this.__referencesLeftToResolve[i];
 
       if (ref.__maybeImplicitGlobal && !this.set.has(ref.identifier.name)) {
         implicit.push(ref.__maybeImplicitGlobal);
@@ -545,7 +531,7 @@ class GlobalScope extends Scope {
       );
     }
 
-    this.implicit.left = this.__left;
+    this.implicit.referencesLeftToResolve = this.__referencesLeftToResolve;
 
     return super.__close(scopeManager);
   }
@@ -596,13 +582,12 @@ class WithScope extends Scope {
       return super.__close(scopeManager);
     }
 
-    for (let i = 0, iz = this.__left.length; i < iz; ++i) {
-      const ref = this.__left[i];
+    for (let i = 0, iz = this.__referencesLeftToResolve.length; i < iz; ++i) {
+      const ref = this.__referencesLeftToResolve[i];
 
-      ref.tainted = true;
       this.__delegateToUpperScope(ref);
     }
-    this.__left = null;
+    this.__referencesLeftToResolve = null;
 
     return this.upper;
   }
@@ -651,7 +636,7 @@ class FunctionScope extends Scope {
     const variable = this.set.get('arguments');
 
     assert(variable, 'Always have arguments variable.');
-    return variable.tainted || variable.references.length !== 0;
+    return variable.references.length !== 0;
   }
 
   isThisMaterialized() {
@@ -663,7 +648,6 @@ class FunctionScope extends Scope {
 
   __defineArguments() {
     this.__defineGeneric('arguments', this.set, this.variables, null, null);
-    this.taints.set('arguments', true);
   }
 
   // References in default parameters isn't resolved to variables which are in their function body.

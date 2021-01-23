@@ -67,14 +67,6 @@ class Variable {
      */
     this.defs = [];
 
-    this.tainted = false;
-
-    /**
-     * Whether this is a stack variable.
-     * @member {boolean} Variable#stack
-     */
-    this.stack = true;
-
     /**
      * Reference to the enclosing Scope.
      * @member {Scope} Variable#scope

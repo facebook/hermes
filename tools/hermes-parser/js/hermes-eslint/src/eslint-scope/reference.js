@@ -47,7 +47,6 @@ class Reference {
     flag,
     writeExpr,
     maybeImplicitGlobal,
-    partial,
     init,
   ) {
     /**
@@ -61,13 +60,6 @@ class Reference {
      * @member {Scope} Reference#from
      */
     this.from = scope;
-
-    /**
-     * Whether the reference comes from a dynamic scope (such as 'eval',
-     * 'with', etc.), and may be trapped by dynamic scopes.
-     * @member {boolean} Reference#tainted
-     */
-    this.tainted = false;
 
     /**
      * The variable this reference is resolved with.
@@ -90,12 +82,6 @@ class Reference {
       this.writeExpr = writeExpr;
 
       /**
-       * Whether the Reference might refer to a partial value of writeExpr.
-       * @member {boolean} Reference#partial
-       */
-      this.partial = partial;
-
-      /**
        * Whether the Reference is to write of initialization.
        * @member {boolean} Reference#init
        */
@@ -110,7 +96,7 @@ class Reference {
    * @returns {boolean} static
    */
   isStatic() {
-    return !this.tainted && this.resolved && this.resolved.scope.isStatic();
+    return this.resolved && this.resolved.scope.isStatic();
   }
 
   /**

@@ -166,7 +166,6 @@ class Referencer extends esrecurse.Visitor {
         Reference.WRITE,
         assignment.right,
         maybeImplicitGlobal,
-        pattern !== assignment.left,
         init,
       );
     });
@@ -331,7 +330,6 @@ class Referencer extends esrecurse.Visitor {
           node.right,
           null,
           true,
-          true,
         );
       });
     } else {
@@ -358,7 +356,6 @@ class Referencer extends esrecurse.Visitor {
             Reference.WRITE,
             node.right,
             maybeImplicitGlobal,
-            true,
             false,
           );
         },
@@ -390,7 +387,6 @@ class Referencer extends esrecurse.Visitor {
             Reference.WRITE,
             init,
             null,
-            !info.topLevel,
             true,
           );
         }
@@ -424,7 +420,6 @@ class Referencer extends esrecurse.Visitor {
               Reference.WRITE,
               node.right,
               maybeImplicitGlobal,
-              !info.topLevel,
               false,
             );
           },
