@@ -34,23 +34,20 @@
 
 'use strict';
 
-const {parse} = require('../../dist');
-const {analyze} = require('../../dist/eslint-scope');
+const {parseForESLint} = require('../../dist');
 
 describe("export * as ns from 'source'", () => {
   let scopes;
 
   beforeEach(() => {
-    const ast = parse("export * as ns from 'source'", {
-      ecmaVersion: 2020,
-      sourceType: 'module',
-    });
-    const manager = analyze(ast, {
-      ecmaVersion: 11,
+    const {ast, scopeManager} = parseForESLint("export * as ns from 'source'", {
       sourceType: 'module',
     });
 
-    scopes = [manager.globalScope, ...manager.globalScope.childScopes];
+    scopes = [
+      scopeManager.globalScope,
+      ...scopeManager.globalScope.childScopes,
+    ];
   });
 
   it('should not have any references', () => {

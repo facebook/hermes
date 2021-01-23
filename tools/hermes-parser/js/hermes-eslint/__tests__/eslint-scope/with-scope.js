@@ -32,12 +32,11 @@
 */
 'use strict';
 
-const {parse} = require('../../dist');
-const {analyze} = require('../../dist/eslint-scope');
+const {parseForESLint} = require('../../dist');
 
 describe('with', () => {
   it('creates scope', () => {
-    const ast = parse(
+    const {ast, scopeManager} = parseForESLint(
       `
             (function () {
                 with (obj) {
@@ -48,9 +47,7 @@ describe('with', () => {
       'script',
     );
 
-    const scopeManager = analyze(ast);
-
-    expect(scopeManager.scopes).toHaveLength(3);
+    expect(scopeManager.scopes).toHaveLength(4);
     const globalScope = scopeManager.scopes[0];
 
     expect(globalScope.type).toEqual('global');
@@ -68,6 +65,12 @@ describe('with', () => {
 
     scope = scopeManager.scopes[2];
     expect(scope.type).toEqual('with');
+    expect(scope.variables).toHaveLength(0);
+    expect(scope.isArgumentsMaterialized()).toBe(true);
+    expect(scope.references).toHaveLength(0);
+
+    scope = scopeManager.scopes[3];
+    expect(scope.type).toEqual('block');
     expect(scope.variables).toHaveLength(0);
     expect(scope.isArgumentsMaterialized()).toBe(true);
     expect(scope.references).toHaveLength(1);

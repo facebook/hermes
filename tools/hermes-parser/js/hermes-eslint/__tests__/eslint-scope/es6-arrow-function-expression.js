@@ -32,20 +32,17 @@
 */
 'use strict';
 
-const {parse} = require('../../dist');
-const {analyze} = require('../../dist/eslint-scope');
+const {parseForESLint} = require('../../dist');
 
 describe('ES6 arrow function expression', () => {
   it('materialize scope for arrow function expression', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             var arrow = () => {
                 let i = 0;
                 var j = 20;
                 console.log(i);
             }
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -68,9 +65,9 @@ describe('ES6 arrow function expression', () => {
   });
 
   it('generate bindings for parameters', () => {
-    const ast = parse('var arrow = (a, b, c, d) => {}');
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
+    const {ast, scopeManager} = parseForESLint(
+      'var arrow = (a, b, c, d) => {}',
+    );
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -95,12 +92,10 @@ describe('ES6 arrow function expression', () => {
   });
 
   it('inherits upper scope strictness', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             "use strict";
             var arrow = () => {};
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -120,13 +115,11 @@ describe('ES6 arrow function expression', () => {
   });
 
   it('is strict when a strictness directive is used', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             var arrow = () => {
                 "use strict";
             };
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -146,9 +139,7 @@ describe('ES6 arrow function expression', () => {
   });
 
   it('works with no body', () => {
-    const ast = parse('var arrow = a => a;');
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
+    const {ast, scopeManager} = parseForESLint('var arrow = a => a;');
 
     expect(scopeManager.scopes).toHaveLength(2);
 

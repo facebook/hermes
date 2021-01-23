@@ -32,12 +32,11 @@
 */
 'use strict';
 
-const {parse} = require('../../dist');
-const {analyze} = require('../../dist/eslint-scope');
+const {parseForESLint} = require('../../dist');
 
 describe('ES6 template literal', () => {
   it('refer variables', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 let i, j, k;
                 function testing() { }
@@ -45,8 +44,6 @@ describe('ES6 template literal', () => {
                 return template;
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(3);
 

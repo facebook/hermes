@@ -32,18 +32,15 @@
 */
 'use strict';
 
-const {parse} = require('../../dist');
-const {analyze} = require('../../dist/eslint-scope');
+const {parseForESLint} = require('../../dist');
 
 describe('ES6 rest arguments', () => {
   it('materialize rest argument in scope', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             function foo(...bar) {
                 return bar;
             }
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 

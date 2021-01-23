@@ -59,32 +59,8 @@ class ScopeManager {
     this.__declaredVariables = new WeakMap();
   }
 
-  __useDirective() {
-    return this.__options.directive;
-  }
-
-  __isOptimistic() {
-    return this.__options.optimistic;
-  }
-
-  __ignoreEval() {
-    return this.__options.ignoreEval;
-  }
-
-  __isNodejsScope() {
-    return this.__options.nodejsScope;
-  }
-
   isModule() {
     return this.__options.sourceType === 'module';
-  }
-
-  isImpliedStrict() {
-    return this.__options.impliedStrict;
-  }
-
-  isStrictModeSupported() {
-    return this.__options.ecmaVersion >= 5;
   }
 
   // Returns appropriate scope for this node.
@@ -245,10 +221,6 @@ class ScopeManager {
     return this.__nestScope(
       new FunctionExpressionNameScope(this, this.__currentScope, node),
     );
-  }
-
-  __isES6() {
-    return this.__options.ecmaVersion >= 6;
   }
 }
 

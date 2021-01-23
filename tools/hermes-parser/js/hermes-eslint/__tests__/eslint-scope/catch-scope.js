@@ -32,12 +32,11 @@
 */
 'use strict';
 
-const {parse} = require('../../dist');
-const {analyze} = require('../../dist/eslint-scope');
+const {parseForESLint} = require('../../dist');
 
 describe('catch', () => {
   it('creates scope', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 try {
                 } catch (e) {
@@ -45,9 +44,7 @@ describe('catch', () => {
             }());
         `);
 
-    const scopeManager = analyze(ast);
-
-    expect(scopeManager.scopes).toHaveLength(3);
+    expect(scopeManager.scopes).toHaveLength(5);
     const globalScope = scopeManager.scopes[0];
 
     expect(globalScope.type).toEqual('global');
@@ -63,10 +60,20 @@ describe('catch', () => {
     expect(scope.references).toHaveLength(0);
 
     scope = scopeManager.scopes[2];
+    expect(scope.type).toEqual('block');
+    expect(scope.variables).toHaveLength(0);
+    expect(scope.references).toHaveLength(0);
+
+    scope = scopeManager.scopes[3];
     expect(scope.type).toEqual('catch');
     expect(scope.variables).toHaveLength(1);
     expect(scope.variables[0].name).toEqual('e');
     expect(scope.isArgumentsMaterialized()).toBe(true);
+    expect(scope.references).toHaveLength(0);
+
+    scope = scopeManager.scopes[4];
+    expect(scope.type).toEqual('block');
+    expect(scope.variables).toHaveLength(0);
     expect(scope.references).toHaveLength(0);
   });
 });

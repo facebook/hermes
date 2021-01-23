@@ -32,16 +32,15 @@
 */
 'use strict';
 
-const {parse} = require('../../dist');
-const {analyze} = require('../../dist/eslint-scope');
+const {parseForESLint} = require('../../dist');
 
 describe('label', () => {
   it('should not create variables', () => {
-    const ast = parse('function bar() { q: for(;;) { break q; } }');
+    const {ast, scopeManager} = parseForESLint(
+      'function bar() { q: for(;;) { break q; } }',
+    );
 
-    const scopeManager = analyze(ast);
-
-    expect(scopeManager.scopes).toHaveLength(2);
+    expect(scopeManager.scopes).toHaveLength(3);
     const globalScope = scopeManager.scopes[0];
 
     expect(globalScope.type).toEqual('global');
@@ -49,17 +48,21 @@ describe('label', () => {
     expect(globalScope.variables[0].name).toEqual('bar');
     expect(globalScope.references).toHaveLength(0);
 
-    const scope = scopeManager.scopes[1];
-
+    let scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(1);
     expect(scope.variables[0].name).toEqual('arguments');
     expect(scope.isArgumentsMaterialized()).toBe(false);
     expect(scope.references).toHaveLength(0);
+
+    scope = scopeManager.scopes[2];
+    expect(scope.type).toEqual('block');
+    expect(scope.variables).toHaveLength(0);
+    expect(scope.references).toHaveLength(0);
   });
 
   it('should count child node references', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             var foo = 5;
 
             label: while (true) {
@@ -68,9 +71,7 @@ describe('label', () => {
             }
         `);
 
-    const scopeManager = analyze(ast);
-
-    expect(scopeManager.scopes).toHaveLength(1);
+    expect(scopeManager.scopes).toHaveLength(2);
     const globalScope = scopeManager.scopes[0];
 
     expect(globalScope.type).toEqual('global');
@@ -79,5 +80,10 @@ describe('label', () => {
     expect(globalScope.through.length).toEqual(3);
     expect(globalScope.through[2].identifier.name).toEqual('foo');
     expect(globalScope.through[2].isRead()).toBe(true);
+
+    const scope = scopeManager.scopes[1];
+    expect(scope.type).toEqual('block');
+    expect(scope.variables).toHaveLength(0);
+    expect(scope.references).toHaveLength(2);
   });
 });

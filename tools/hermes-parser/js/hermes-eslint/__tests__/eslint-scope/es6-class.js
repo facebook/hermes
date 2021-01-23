@@ -32,20 +32,17 @@
 */
 'use strict';
 
-const {parse} = require('../../dist');
-const {analyze} = require('../../dist/eslint-scope');
+const {parseForESLint} = require('../../dist');
 
 describe('ES6 class', () => {
   it('declaration name creates class scope', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             class Derived extends Base {
                 constructor() {
                 }
             }
             new Derived();
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(3);
 
@@ -78,14 +75,12 @@ describe('ES6 class', () => {
   });
 
   it('expression name creates class scope#1', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (class Derived extends Base {
                 constructor() {
                 }
             });
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(3);
 
@@ -112,14 +107,12 @@ describe('ES6 class', () => {
   });
 
   it('expression name creates class scope#2', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (class extends Base {
                 constructor() {
                 }
             });
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(3);
 
@@ -142,7 +135,7 @@ describe('ES6 class', () => {
   });
 
   it('computed property key may refer variables', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 var yuyushiki = 42;
                 (class {
@@ -154,8 +147,6 @@ describe('ES6 class', () => {
                 });
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(5);
 
@@ -186,7 +177,7 @@ describe('ES6 class', () => {
   });
 
   it('regression #49', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             class Shoe {
                 constructor() {
                     //Shoe.x = true;
@@ -194,8 +185,6 @@ describe('ES6 class', () => {
             }
             let shoe = new Shoe();
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(3);
 

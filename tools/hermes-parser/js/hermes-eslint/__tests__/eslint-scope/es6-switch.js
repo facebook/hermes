@@ -32,12 +32,11 @@
 */
 'use strict';
 
-const {parse} = require('../../dist');
-const {analyze} = require('../../dist/eslint-scope');
+const {parseForESLint} = require('../../dist');
 
 describe('ES6 switch', () => {
   it('materialize scope', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             switch (ok) {
                 case hello:
                     let i = 20;
@@ -49,8 +48,6 @@ describe('ES6 switch', () => {
                     test;
             }
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 

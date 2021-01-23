@@ -44,10 +44,9 @@ const assert = require('assert');
  * @param {Scope} scope - scope
  * @param {Block} block - block
  * @param {boolean} isMethodDefinition - is method definition
- * @param {boolean} useDirective - use directive
  * @returns {boolean} is strict scope
  */
-function isStrictScope(scope, block, isMethodDefinition, useDirective) {
+function isStrictScope(scope, block, isMethodDefinition) {
   let body;
 
   // When upper scope is exists and strict, inner scope is also strict.
@@ -91,40 +90,28 @@ function isStrictScope(scope, block, isMethodDefinition, useDirective) {
   }
 
   // Search 'use strict' directive.
-  if (useDirective) {
-    for (let i = 0, iz = body.body.length; i < iz; ++i) {
-      const stmt = body.body[i];
+  for (let i = 0, iz = body.body.length; i < iz; ++i) {
+    const stmt = body.body[i];
 
-      if (stmt.type !== Syntax.DirectiveStatement) {
-        break;
+    if (stmt.type !== Syntax.ExpressionStatement) {
+      break;
+    }
+    const expr = stmt.expression;
+
+    if (expr.type !== Syntax.Literal || typeof expr.value !== 'string') {
+      break;
+    }
+    if (expr.raw !== null && expr.raw !== undefined) {
+      if (expr.raw === '"use strict"' || expr.raw === "'use strict'") {
+        return true;
       }
-      if (stmt.raw === '"use strict"' || stmt.raw === "'use strict'") {
+    } else {
+      if (expr.value === 'use strict') {
         return true;
       }
     }
-  } else {
-    for (let i = 0, iz = body.body.length; i < iz; ++i) {
-      const stmt = body.body[i];
-
-      if (stmt.type !== Syntax.ExpressionStatement) {
-        break;
-      }
-      const expr = stmt.expression;
-
-      if (expr.type !== Syntax.Literal || typeof expr.value !== 'string') {
-        break;
-      }
-      if (expr.raw !== null && expr.raw !== undefined) {
-        if (expr.raw === '"use strict"' || expr.raw === "'use strict'") {
-          return true;
-        }
-      } else {
-        if (expr.value === 'use strict') {
-          return true;
-        }
-      }
-    }
   }
+
   return false;
 }
 
@@ -245,12 +232,6 @@ class Scope {
     this.functionExpressionScope = false;
 
     /**
-     * Whether this is a scope that contains an 'eval()' invocation.
-     * @member {boolean} Scope#directCallToEvalScope
-     */
-    this.directCallToEvalScope = false;
-
-    /**
      * @member {boolean} Scope#thisFound
      */
     this.thisFound = false;
@@ -267,12 +248,7 @@ class Scope {
      * Whether 'use strict' is in effect in this scope.
      * @member {boolean} Scope#isStrict
      */
-    this.isStrict = isStrictScope(
-      this,
-      block,
-      isMethodDefinition,
-      scopeManager.__useDirective(),
-    );
+    this.isStrict = isStrictScope(this, block, isMethodDefinition);
 
     /**
      * List of nested {@link Scope}s.
@@ -289,7 +265,7 @@ class Scope {
   }
 
   __shouldStaticallyClose(scopeManager) {
-    return !this.dynamic || scopeManager.__isOptimistic();
+    return !this.dynamic;
   }
 
   __shouldStaticallyCloseForGlobal(ref) {
@@ -455,16 +431,6 @@ class Scope {
 
     this.references.push(ref);
     this.__left.push(ref);
-  }
-
-  __detectEval() {
-    let current = this;
-
-    this.directCallToEvalScope = true;
-    do {
-      current.dynamic = true;
-      current = current.upper;
-    } while (current);
   }
 
   __detectThis() {

@@ -32,17 +32,14 @@
 */
 'use strict';
 
-const {parse} = require('../../dist');
-const {analyze} = require('../../dist/eslint-scope');
+const {parseForESLint} = require('../../dist');
 
 describe('function name', () => {
   it('should create its special scope', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function name() {
             }());
         `);
-
-    const scopeManager = analyze(ast);
 
     expect(scopeManager.scopes).toHaveLength(3);
     const globalScope = scopeManager.scopes[0];

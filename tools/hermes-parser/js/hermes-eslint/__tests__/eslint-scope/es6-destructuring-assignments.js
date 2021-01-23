@@ -32,18 +32,15 @@
 */
 'use strict';
 
-const {parse} = require('../../dist');
-const {analyze} = require('../../dist/eslint-scope');
+const {parseForESLint} = require('../../dist');
 
 describe('ES6 destructuring assignments', () => {
   it('Pattern in var in ForInStatement', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 for (var [a, b, c] in array);
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -80,13 +77,11 @@ describe('ES6 destructuring assignments', () => {
   });
 
   it('Pattern in let in ForInStatement', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 for (let [a, b, c] in array);
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(3); // [global, function, for]
 
@@ -123,13 +118,11 @@ describe('ES6 destructuring assignments', () => {
   });
 
   it('Pattern with default values in var in ForInStatement', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 for (var [a, b, c = d] in array);
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -175,13 +168,11 @@ describe('ES6 destructuring assignments', () => {
   });
 
   it('Pattern with default values in let in ForInStatement', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 for (let [a, b, c = d] in array);
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(3); // [global, function, for]
 
@@ -231,13 +222,11 @@ describe('ES6 destructuring assignments', () => {
   });
 
   it('Pattern with nested default values in var in ForInStatement', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 for (var [a, [b, c = d] = e] in array);
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -298,13 +287,11 @@ describe('ES6 destructuring assignments', () => {
   });
 
   it('Pattern with nested default values in let in ForInStatement', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 for (let [a, [b, c = d] = e] in array);
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(3); // [global, function, for]
 
@@ -368,14 +355,12 @@ describe('ES6 destructuring assignments', () => {
   });
 
   it('Pattern with default values in var in ForInStatement (separate declarations)', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 var a, b, c;
                 for ([a, b, c = d] in array);
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -421,14 +406,12 @@ describe('ES6 destructuring assignments', () => {
   });
 
   it('Pattern with default values in var in ForInStatement (separate declarations and with MemberExpression)', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 var obj;
                 for ([obj.a, obj.b, obj.c = d] in array);
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -468,13 +451,11 @@ describe('ES6 destructuring assignments', () => {
   });
 
   it('ArrayPattern in var', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 var [a, b, c] = array;
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -511,13 +492,11 @@ describe('ES6 destructuring assignments', () => {
   });
 
   it('SpreadElement in var', () => {
-    let ast = parse(`
+    let {ast, scopeManager} = parseForESLint(`
             (function () {
                 var [a, b, ...rest] = array;
             }());
         `);
-
-    let scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -552,13 +531,12 @@ describe('ES6 destructuring assignments', () => {
     expect(scope.references[3].identifier.name).toEqual('array');
     expect(scope.references[3].isWrite()).toBe(false);
 
-    ast = parse(`
+    ({ast, scopeManager} = parseForESLint(`
             (function () {
                 var [a, b, ...[c, d, ...rest]] = array;
             }());
-        `);
+        `));
 
-    scopeManager = analyze(ast, {ecmaVersion: 6});
     expect(scopeManager.scopes).toHaveLength(2);
 
     scope = scopeManager.scopes[0];
@@ -593,7 +571,7 @@ describe('ES6 destructuring assignments', () => {
   });
 
   it('ObjectPattern in var', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 var {
                     shorthand,
@@ -604,8 +582,6 @@ describe('ES6 destructuring assignments', () => {
                 } = object;
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -642,7 +618,7 @@ describe('ES6 destructuring assignments', () => {
   });
 
   it('complex pattern in var', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 var {
                     shorthand,
@@ -653,8 +629,6 @@ describe('ES6 destructuring assignments', () => {
                 } = object;
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -706,13 +680,11 @@ describe('ES6 destructuring assignments', () => {
   });
 
   it('ArrayPattern in AssignmentExpression', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 [a, b, c] = array;
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -751,14 +723,12 @@ describe('ES6 destructuring assignments', () => {
   });
 
   it('ArrayPattern with MemberExpression in AssignmentExpression', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 var obj;
                 [obj.a, obj.b, obj.c] = array;
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -794,13 +764,11 @@ describe('ES6 destructuring assignments', () => {
   });
 
   it('SpreadElement in AssignmentExpression', () => {
-    let ast = parse(`
+    let {ast, scopeManager} = parseForESLint(`
             (function () {
                 [a, b, ...rest] = array;
             }());
         `);
-
-    let scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -837,13 +805,12 @@ describe('ES6 destructuring assignments', () => {
     expect(scope.references[3].identifier.name).toEqual('array');
     expect(scope.references[3].isWrite()).toBe(false);
 
-    ast = parse(`
+    ({ast, scopeManager} = parseForESLint(`
             (function () {
                 [a, b, ...[c, d, ...rest]] = array;
             }());
-        `);
+        `));
 
-    scopeManager = analyze(ast, {ecmaVersion: 6});
     expect(scopeManager.scopes).toHaveLength(2);
 
     scope = scopeManager.scopes[0];
@@ -882,13 +849,11 @@ describe('ES6 destructuring assignments', () => {
   });
 
   it('SpreadElement with MemberExpression in AssignmentExpression', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 [a, b, ...obj.rest] = array;
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -925,7 +890,7 @@ describe('ES6 destructuring assignments', () => {
   });
 
   it('ObjectPattern in AssignmentExpression', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 ({
                     shorthand,
@@ -936,8 +901,6 @@ describe('ES6 destructuring assignments', () => {
                 } = object);
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -976,7 +939,7 @@ describe('ES6 destructuring assignments', () => {
   });
 
   it('complex pattern in AssignmentExpression', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 ({
                     shorthand,
@@ -987,8 +950,6 @@ describe('ES6 destructuring assignments', () => {
                 } = object);
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -1036,12 +997,10 @@ describe('ES6 destructuring assignments', () => {
   });
 
   it('ArrayPattern in parameters', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function ([a, b, c]) {
             }(array));
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -1065,12 +1024,10 @@ describe('ES6 destructuring assignments', () => {
   });
 
   it('SpreadElement in parameters', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function ([a, b, ...rest], ...rest2) {
             }(array));
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -1097,7 +1054,7 @@ describe('ES6 destructuring assignments', () => {
   });
 
   it('ObjectPattern in parameters', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function ({
                     shorthand,
                     key: value,
@@ -1107,8 +1064,6 @@ describe('ES6 destructuring assignments', () => {
                 }) {
             }(object));
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -1132,7 +1087,7 @@ describe('ES6 destructuring assignments', () => {
   });
 
   it('complex pattern in parameters', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function ({
                     shorthand,
                     key: [ a, b, c, d, e ],
@@ -1142,8 +1097,6 @@ describe('ES6 destructuring assignments', () => {
                 }) {
             }(object));
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -1177,13 +1130,11 @@ describe('ES6 destructuring assignments', () => {
   });
 
   it('default values and patterns in var', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 var [a, b, c, d = 20 ] = array;
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -1219,13 +1170,11 @@ describe('ES6 destructuring assignments', () => {
   });
 
   it('default values containing references and patterns in var', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 var [a, b, c, d = e ] = array;
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -1262,13 +1211,11 @@ describe('ES6 destructuring assignments', () => {
   });
 
   it('nested default values containing references and patterns in var', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 var [a, b, [c, d = e] = f ] = array;
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 

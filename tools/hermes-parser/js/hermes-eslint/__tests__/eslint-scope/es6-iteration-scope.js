@@ -32,12 +32,11 @@
 */
 'use strict';
 
-const {parse} = require('../../dist');
-const {analyze} = require('../../dist/eslint-scope');
+const {parseForESLint} = require('../../dist');
 
 describe('ES6 iteration scope', () => {
   it('let materialize iteration scope for ForInStatement#1', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 let i = 20;
                 for (let i in i) {
@@ -45,8 +44,6 @@ describe('ES6 iteration scope', () => {
                 }
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(4);
 
@@ -86,7 +83,7 @@ describe('ES6 iteration scope', () => {
   });
 
   it('let materialize iteration scope for ForInStatement#2', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 let i = 20;
                 for (let { i, j, k } in i) {
@@ -94,8 +91,6 @@ describe('ES6 iteration scope', () => {
                 }
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(4);
 
@@ -141,7 +136,7 @@ describe('ES6 iteration scope', () => {
   });
 
   it('let materialize iteration scope for ForStatement#2', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 let i = 20;
                 let obj = {};
@@ -150,8 +145,6 @@ describe('ES6 iteration scope', () => {
                 }
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(4);
 

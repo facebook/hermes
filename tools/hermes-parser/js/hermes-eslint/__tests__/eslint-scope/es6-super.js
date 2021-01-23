@@ -32,12 +32,11 @@
 */
 'use strict';
 
-const {parse} = require('../../dist');
-const {analyze} = require('../../dist/eslint-scope');
+const {parseForESLint} = require('../../dist');
 
 describe('ES6 super', () => {
   it('is not handled as reference', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             class Foo extends Bar {
                 constructor() {
                     super();
@@ -48,8 +47,6 @@ describe('ES6 super', () => {
                 }
             }
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(4);
 

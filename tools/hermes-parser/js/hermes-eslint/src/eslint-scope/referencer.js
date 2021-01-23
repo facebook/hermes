@@ -467,21 +467,8 @@ class Referencer extends esrecurse.Visitor {
   Program(node) {
     this.scopeManager.__nestGlobalScope(node);
 
-    if (this.scopeManager.__isNodejsScope()) {
-      // Force strictness of GlobalScope to false when using node.js scope.
-      this.currentScope().isStrict = false;
-      this.scopeManager.__nestFunctionScope(node, false);
-    }
-
-    if (this.scopeManager.__isES6() && this.scopeManager.isModule()) {
+    if (this.scopeManager.isModule()) {
       this.scopeManager.__nestModuleScope(node);
-    }
-
-    if (
-      this.scopeManager.isStrictModeSupported() &&
-      this.scopeManager.isImpliedStrict()
-    ) {
-      this.currentScope().isStrict = true;
     }
 
     this.visitChildren(node);
@@ -549,24 +536,8 @@ class Referencer extends esrecurse.Visitor {
     this.visitClass(node);
   }
 
-  CallExpression(node) {
-    // Check this is direct call to eval
-    if (
-      !this.scopeManager.__ignoreEval() &&
-      node.callee.type === Syntax.Identifier &&
-      node.callee.name === 'eval'
-    ) {
-      // NOTE: This should be `variableScope`. Since direct eval call always creates Lexical environment and
-      // let / const should be enclosed into it. Only VariableDeclaration affects on the caller's environment.
-      this.currentScope().variableScope.__detectEval();
-    }
-    this.visitChildren(node);
-  }
-
   BlockStatement(node) {
-    if (this.scopeManager.__isES6()) {
-      this.scopeManager.__nestBlockScope(node);
-    }
+    this.scopeManager.__nestBlockScope(node);
 
     this.visitChildren(node);
 
@@ -613,9 +584,7 @@ class Referencer extends esrecurse.Visitor {
   SwitchStatement(node) {
     this.visit(node.discriminant);
 
-    if (this.scopeManager.__isES6()) {
-      this.scopeManager.__nestSwitchScope(node);
-    }
+    this.scopeManager.__nestSwitchScope(node);
 
     for (let i = 0, iz = node.cases.length; i < iz; ++i) {
       this.visit(node.cases[i]);
@@ -646,7 +615,7 @@ class Referencer extends esrecurse.Visitor {
 
   ImportDeclaration(node) {
     assert(
-      this.scopeManager.__isES6() && this.scopeManager.isModule(),
+      this.scopeManager.isModule(),
       'ImportDeclaration should appear when the mode is ES6 and in the module context.',
     );
 

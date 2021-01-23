@@ -32,8 +32,7 @@
 */
 'use strict';
 
-const {parse} = require('../../dist');
-const {analyze} = require('../../dist/eslint-scope');
+const {parseForESLint} = require('../../dist');
 
 describe('ES6 default parameters:', () => {
   describe('a default parameter creates a writable reference for its initialization:', () => {
@@ -48,9 +47,7 @@ describe('ES6 default parameters:', () => {
 
       it(name, () => {
         const numVars = name === 'ArrowExpression' ? 2 : 3;
-        const ast = parse(code);
-
-        const scopeManager = analyze(ast, {ecmaVersion: 6});
+        const {ast, scopeManager} = parseForESLint(code);
 
         expect(scopeManager.scopes).toHaveLength(2); // [global, foo]
 
@@ -92,9 +89,7 @@ describe('ES6 default parameters:', () => {
 
       it(name, () => {
         const numVars = name === 'ArrowExpression' ? 1 : 2;
-        const ast = parse(code);
-
-        const scopeManager = analyze(ast, {ecmaVersion: 6});
+        const {ast, scopeManager} = parseForESLint(code);
 
         expect(scopeManager.scopes).toHaveLength(2); // [global, foo]
 
@@ -136,9 +131,7 @@ describe('ES6 default parameters:', () => {
 
       it(name, () => {
         const numVars = name === 'ArrowExpression' ? 1 : 2;
-        const ast = parse(code);
-
-        const scopeManager = analyze(ast, {ecmaVersion: 6});
+        const {ast, scopeManager} = parseForESLint(code);
 
         expect(scopeManager.scopes).toHaveLength(2); // [global, foo]
 
@@ -180,9 +173,7 @@ describe('ES6 default parameters:', () => {
 
       it(name, () => {
         const numVars = name === 'ArrowExpression' ? 1 : 2;
-        const ast = parse(code);
-
-        const scopeManager = analyze(ast, {ecmaVersion: 6});
+        const {ast, scopeManager} = parseForESLint(code);
 
         expect(scopeManager.scopes).toHaveLength(2); // [global, foo]
 
@@ -223,9 +214,7 @@ describe('ES6 default parameters:', () => {
       const code = patterns[name];
 
       it(name, () => {
-        const ast = parse(code);
-
-        const scopeManager = analyze(ast, {ecmaVersion: 6});
+        const {ast, scopeManager} = parseForESLint(code);
 
         expect(scopeManager.scopes).toHaveLength(3); // [global, foo, anonymous]
 
@@ -267,9 +256,7 @@ describe('ES6 default parameters:', () => {
 
       it(name, () => {
         const numVars = name === 'ArrowExpression' ? 2 : 3;
-        const ast = parse(code);
-
-        const scopeManager = analyze(ast, {ecmaVersion: 6});
+        const {ast, scopeManager} = parseForESLint(code);
 
         expect(scopeManager.scopes).toHaveLength(2); // [global, foo]
 
@@ -311,9 +298,7 @@ describe('ES6 default parameters:', () => {
 
       it(name, () => {
         const numVars = name === 'ArrowExpression' ? 2 : 3;
-        const ast = parse(code);
-
-        const scopeManager = analyze(ast, {ecmaVersion: 6});
+        const {ast, scopeManager} = parseForESLint(code);
 
         expect(scopeManager.scopes).toHaveLength(2); // [global, foo]
 
@@ -356,9 +341,7 @@ describe('ES6 default parameters:', () => {
       const code = patterns[name];
 
       it(name, () => {
-        const ast = parse(code);
-
-        const scopeManager = analyze(ast, {ecmaVersion: 6});
+        const {ast, scopeManager} = parseForESLint(code);
 
         expect(scopeManager.scopes).toHaveLength(3); // [global, foo, anonymous function]
 

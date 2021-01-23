@@ -32,12 +32,11 @@
 */
 'use strict';
 
-const {parse} = require('../../dist');
-const {analyze} = require('../../dist/eslint-scope');
+const {parseForESLint} = require('../../dist');
 
 describe('ES6 catch', () => {
   it('takes binding pattern', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             try {
             } catch ({ a, b, c, d }) {
                 let e = 20;
@@ -47,8 +46,6 @@ describe('ES6 catch', () => {
                 d;
             }
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(4);
 

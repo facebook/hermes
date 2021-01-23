@@ -32,20 +32,17 @@
 */
 'use strict';
 
-const {parse} = require('../../dist');
-const {analyze} = require('../../dist/eslint-scope');
+const {parseForESLint} = require('../../dist');
 
 describe('ES6 new.target', () => {
   it('should not make references of new.target', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             class A {
                 constructor() {
                     new.target;
                 }
             }
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(3);
 

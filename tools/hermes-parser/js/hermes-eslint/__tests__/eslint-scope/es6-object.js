@@ -32,18 +32,15 @@
 */
 'use strict';
 
-const {parse} = require('../../dist');
-const {analyze} = require('../../dist/eslint-scope');
+const {parseForESLint} = require('../../dist');
 
 describe('ES6 object', () => {
   it('method definition', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             ({
                 constructor() {
                 }
             })`);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -63,7 +60,7 @@ describe('ES6 object', () => {
   });
 
   it('computed property key may refer variables', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 var yuyushiki = 42;
                 ({
@@ -75,8 +72,6 @@ describe('ES6 object', () => {
                 })
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(4);
 

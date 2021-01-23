@@ -32,19 +32,16 @@
 */
 'use strict';
 
-const {parse} = require('../../dist');
-const {analyze} = require('../../dist/eslint-scope');
+const {parseForESLint} = require('../../dist');
 
 describe('ES6 block scope', () => {
   it('let is materialized in ES6 block scope#1', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             {
                 let i = 20;
                 i;
             }
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2); // Program and BlockStatement scope.
 
@@ -63,15 +60,13 @@ describe('ES6 block scope', () => {
   });
 
   it('function delaration is materialized in ES6 block scope', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             {
                 function test() {
                 }
                 test();
             }
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(3);
 
@@ -95,7 +90,7 @@ describe('ES6 block scope', () => {
   });
 
   it('let is not hoistable#1', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             var i = 42; (1)
             {
                 i;  // (2) ReferenceError at runtime.
@@ -103,8 +98,6 @@ describe('ES6 block scope', () => {
                 i;  // (2)
             }
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -127,7 +120,7 @@ describe('ES6 block scope', () => {
   });
 
   it('let is not hoistable#2', () => {
-    const ast = parse(`
+    const {ast, scopeManager} = parseForESLint(`
             (function () {
                 var i = 42; // (1)
                 i;  // (1)
@@ -144,8 +137,6 @@ describe('ES6 block scope', () => {
                 i;  // (1)
             }());
         `);
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6});
 
     expect(scopeManager.scopes).toHaveLength(4);
 

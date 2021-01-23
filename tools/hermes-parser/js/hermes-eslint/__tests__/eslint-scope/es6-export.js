@@ -32,15 +32,12 @@
 */
 'use strict';
 
-const {parse} = require('../../dist');
-const {analyze} = require('../../dist/eslint-scope');
+const {parseForESLint} = require('../../dist');
 
 describe('export declaration', () => {
   // http://people.mozilla.org/~jorendorff/es6-draft.html#sec-static-and-runtme-semantics-module-records
   it('should create variable bindings', () => {
-    const ast = parse('export var v;');
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6, sourceType: 'module'});
+    const {ast, scopeManager} = parseForESLint('export var v;');
 
     expect(scopeManager.scopes).toHaveLength(2);
     const globalScope = scopeManager.scopes[0];
@@ -59,9 +56,9 @@ describe('export declaration', () => {
   });
 
   it('should create function declaration bindings', () => {
-    const ast = parse('export default function f(){};');
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6, sourceType: 'module'});
+    const {ast, scopeManager} = parseForESLint(
+      'export default function f(){};',
+    );
 
     expect(scopeManager.scopes).toHaveLength(3);
     const globalScope = scopeManager.scopes[0];
@@ -86,9 +83,7 @@ describe('export declaration', () => {
   });
 
   it('should export function expression', () => {
-    const ast = parse('export default function(){};');
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6, sourceType: 'module'});
+    const {ast, scopeManager} = parseForESLint('export default function(){};');
 
     expect(scopeManager.scopes).toHaveLength(3);
     const globalScope = scopeManager.scopes[0];
@@ -111,9 +106,7 @@ describe('export declaration', () => {
   });
 
   it('should export literal', () => {
-    const ast = parse('export default 42;');
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6, sourceType: 'module'});
+    const {ast, scopeManager} = parseForESLint('export default 42;');
 
     expect(scopeManager.scopes).toHaveLength(2);
     const globalScope = scopeManager.scopes[0];
@@ -130,9 +123,7 @@ describe('export declaration', () => {
   });
 
   it('should refer exported references#1', () => {
-    const ast = parse('const x = 1; export {x};');
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6, sourceType: 'module'});
+    const {ast, scopeManager} = parseForESLint('const x = 1; export {x};');
 
     expect(scopeManager.scopes).toHaveLength(2);
     const globalScope = scopeManager.scopes[0];
@@ -151,9 +142,7 @@ describe('export declaration', () => {
   });
 
   it('should refer exported references#2', () => {
-    const ast = parse('const v = 1; export {v as x};');
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6, sourceType: 'module'});
+    const {ast, scopeManager} = parseForESLint('const v = 1; export {v as x};');
 
     expect(scopeManager.scopes).toHaveLength(2);
     const globalScope = scopeManager.scopes[0];
@@ -172,9 +161,7 @@ describe('export declaration', () => {
   });
 
   it('should not refer exported references from other source#1', () => {
-    const ast = parse('export {x} from "mod";');
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6, sourceType: 'module'});
+    const {ast, scopeManager} = parseForESLint('export {x} from "mod";');
 
     expect(scopeManager.scopes).toHaveLength(2);
     const globalScope = scopeManager.scopes[0];
@@ -191,9 +178,7 @@ describe('export declaration', () => {
   });
 
   it('should not refer exported references from other source#2', () => {
-    const ast = parse('export {v as x} from "mod";');
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6, sourceType: 'module'});
+    const {ast, scopeManager} = parseForESLint('export {v as x} from "mod";');
 
     expect(scopeManager.scopes).toHaveLength(2);
     const globalScope = scopeManager.scopes[0];
@@ -210,9 +195,7 @@ describe('export declaration', () => {
   });
 
   it('should not refer exported references from other source#3', () => {
-    const ast = parse('export * from "mod";');
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6, sourceType: 'module'});
+    const {ast, scopeManager} = parseForESLint('export * from "mod";');
 
     expect(scopeManager.scopes).toHaveLength(2);
     const globalScope = scopeManager.scopes[0];

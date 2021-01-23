@@ -10,17 +10,20 @@
 'use strict';
 
 const HermesParser = require('hermes-parser');
+const ScopeManager = require('./HermesScopeManager');
 const VisitorKeys = require('./HermesESLintVisitorKeys');
 
-function parse(code) {
-  return HermesParser.parse(code, {tokens: true});
+function parse(code, options = {}) {
+  const parserOptions = {sourceType: options.sourceType, tokens: true};
+  return HermesParser.parse(code, parserOptions);
 }
 
-function parseForESLint(code) {
-  const ast = parse(code);
+function parseForESLint(code, options = {}) {
+  const ast = parse(code, options);
 
   return {
     ast,
+    scopeManager: ScopeManager.create(ast),
     visitorKeys: VisitorKeys,
   };
 }

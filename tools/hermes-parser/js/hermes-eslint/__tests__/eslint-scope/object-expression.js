@@ -34,7 +34,7 @@
 
 'use strict';
 
-const {analyze} = require('../../dist/eslint-scope');
+const HermesScopeManager = require('../../dist/HermesScopeManager');
 
 describe('object expression', () => {
   it("doesn't require property type", () => {
@@ -75,7 +75,7 @@ describe('object expression', () => {
       ],
     };
 
-    const scope = analyze(ast).scopes[0];
+    const scope = HermesScopeManager.create(ast).scopes[0];
 
     expect(scope.variables).toHaveLength(1);
     expect(scope.references).toHaveLength(2);

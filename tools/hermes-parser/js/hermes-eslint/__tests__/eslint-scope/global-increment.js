@@ -32,14 +32,11 @@
 */
 'use strict';
 
-const {parse} = require('../../dist');
-const {analyze} = require('../../dist/eslint-scope');
+const {parseForESLint} = require('../../dist');
 
 describe('global increment', () => {
   it('becomes read/write', () => {
-    const ast = parse('b++;');
-
-    const scopeManager = analyze(ast);
+    const {ast, scopeManager} = parseForESLint('b++;');
 
     expect(scopeManager.scopes).toHaveLength(1);
     const globalScope = scopeManager.scopes[0];

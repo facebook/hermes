@@ -32,15 +32,12 @@
 */
 'use strict';
 
-const {parse} = require('../../dist');
-const {analyze} = require('../../dist/eslint-scope');
+const {parseForESLint} = require('../../dist');
 
 describe('import declaration', () => {
   // http://people.mozilla.org/~jorendorff/es6-draft.html#sec-static-and-runtme-semantics-module-records
   it('should import names from source', () => {
-    const ast = parse('import v from "mod";');
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6, sourceType: 'module'});
+    const {ast, scopeManager} = parseForESLint('import v from "mod";');
 
     expect(scopeManager.scopes).toHaveLength(2);
     const globalScope = scopeManager.scopes[0];
@@ -60,9 +57,7 @@ describe('import declaration', () => {
   });
 
   it('should import namespaces', () => {
-    const ast = parse('import * as ns from "mod";');
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6, sourceType: 'module'});
+    const {ast, scopeManager} = parseForESLint('import * as ns from "mod";');
 
     expect(scopeManager.scopes).toHaveLength(2);
     const globalScope = scopeManager.scopes[0];
@@ -82,9 +77,7 @@ describe('import declaration', () => {
   });
 
   it('should import insided names#1', () => {
-    const ast = parse('import {x} from "mod";');
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6, sourceType: 'module'});
+    const {ast, scopeManager} = parseForESLint('import {x} from "mod";');
 
     expect(scopeManager.scopes).toHaveLength(2);
     const globalScope = scopeManager.scopes[0];
@@ -104,9 +97,7 @@ describe('import declaration', () => {
   });
 
   it('should import insided names#2', () => {
-    const ast = parse('import {x as v} from "mod";');
-
-    const scopeManager = analyze(ast, {ecmaVersion: 6, sourceType: 'module'});
+    const {ast, scopeManager} = parseForESLint('import {x as v} from "mod";');
 
     expect(scopeManager.scopes).toHaveLength(2);
     const globalScope = scopeManager.scopes[0];
