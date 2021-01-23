@@ -315,17 +315,11 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
   }
 
 #ifdef HERMES_SLOW_DEBUG
-  struct VerifyCardDirtyAcceptor final : public RootAndSlotAcceptorDefault {
+  struct VerifyCardDirtyAcceptor final : public SlotAcceptor {
     GenGC &gc;
-    VerifyCardDirtyAcceptor(GenGC &gc)
-        : RootAndSlotAcceptorDefault(gc.getPointerBase()), gc(gc) {}
+    VerifyCardDirtyAcceptor(GenGC &gc) : gc(gc) {}
 
-    using RootAndSlotAcceptorDefault::accept;
-
-    void accept(void *&ptr) override {
-      char *valuePtr = reinterpret_cast<char *>(ptr);
-      char *locPtr = reinterpret_cast<char *>(&ptr);
-
+    void accept(void *valuePtr, void *locPtr) {
       if (gc.youngGen_.contains(valuePtr)) {
         assert(
             GenGCHeapSegment::cardTableCovering(locPtr)->isCardForAddressDirty(
@@ -333,34 +327,16 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
       }
     }
 
-    void accept(BasedPointer &ptr) override {
-      // Don't use the default from RootAndSlotAcceptorDefault since the address
-      // of the reference is used.
-      PointerBase *const base = gc.getPointerBase();
-      char *valuePtr = reinterpret_cast<char *>(base->basedToPointer(ptr));
-      char *locPtr = reinterpret_cast<char *>(&ptr);
-
-      if (gc.youngGen_.contains(valuePtr)) {
-        assert(
-            GenGCHeapSegment::cardTableCovering(locPtr)->isCardForAddressDirty(
-                locPtr));
-      }
+    void accept(GCPointerBase &ptr) override {
+      accept(ptr.get(gc.getPointerBase()), &ptr);
     }
 
-    void acceptHV(HermesValue &hv) override {
-      if (!hv.isPointer()) {
-        return;
-      }
-
-      char *valuePtr = reinterpret_cast<char *>(hv.getPointer());
-      char *locPtr = reinterpret_cast<char *>(&hv);
-
-      if (gc.youngGen_.contains(valuePtr)) {
-        assert(
-            GenGCHeapSegment::cardTableCovering(locPtr)->isCardForAddressDirty(
-                locPtr));
-      }
+    void accept(GCHermesValue &hv) override {
+      if (hv.isPointer())
+        accept(hv.getPointer(), &hv);
     }
+
+    void accept(GCSymbolID hv) override {}
   };
 
   if (kVerifyCardTable) {
