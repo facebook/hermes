@@ -27,6 +27,14 @@ function getOptions(options) {
     throw new Error('flow option must be "all" or "detect"');
   }
 
+  if (
+    options.sourceType != null &&
+    options.sourceType !== 'script' &&
+    options.sourceType !== 'module'
+  ) {
+    throw new Error('sourceType option must be "script" or "module" if set');
+  }
+
   options.tokens = options.tokens === true;
 
   return options;

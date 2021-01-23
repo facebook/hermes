@@ -367,7 +367,7 @@ A;
   });
 });
 
-test('Program source type', () => {
+describe('Program source type', () => {
   const moduleProgram = {
     type: 'Program',
     sourceType: 'module',
@@ -377,33 +377,42 @@ test('Program source type', () => {
     sourceType: 'script',
   };
 
-  // Verify that every value import or export results in module source type
-  const moduleSources = [
-    `import Foo from 'foo'`,
-    `export default 1`,
-    `export const foo = 1`,
-    `export * from 'foo'`,
-  ];
+  test('hardcoded', () => {
+    expect(parse('Foo', {sourceType: 'module'})).toMatchObject(moduleProgram);
+    expect(parse('Foo', {sourceType: 'script'})).toMatchObject(scriptProgram);
+  });
 
-  for (const moduleSource of moduleSources) {
-    expect(parse(moduleSource)).toMatchObject(moduleProgram);
-    expect(parse(moduleSource, {babel: true})).toMatchObject({
+  test('detect module type', () => {
+    // Verify that every value import or export results in module source type
+    const moduleSources = [
+      `import Foo from 'foo'`,
+      `export default 1`,
+      `export const foo = 1`,
+      `export * from 'foo'`,
+    ];
+
+    for (const moduleSource of moduleSources) {
+      expect(parse(moduleSource)).toMatchObject(moduleProgram);
+      expect(parse(moduleSource, {babel: true})).toMatchObject({
+        type: 'File',
+        program: moduleProgram,
+      });
+    }
+  });
+
+  test('detect script type', () => {
+    // Verify that type imports and exports do not result in module source type
+    const scriptSource = `
+      import type Foo from 'foo';
+      export type T = any;
+      export type * from 'foo';
+    `;
+
+    expect(parseAsFlow(scriptSource)).toMatchObject(scriptProgram);
+    expect(parseAsFlow(scriptSource, {babel: true})).toMatchObject({
       type: 'File',
-      program: moduleProgram,
+      program: scriptProgram,
     });
-  }
-
-  // Verify that type imports and exports do not result in module source type
-  const scriptSource = `
-    import type Foo from 'foo';
-    export type T = any;
-    export type * from 'foo';
-  `;
-
-  expect(parseAsFlow(scriptSource)).toMatchObject(scriptProgram);
-  expect(parseAsFlow(scriptSource, {babel: true})).toMatchObject({
-    type: 'File',
-    program: scriptProgram,
   });
 });
 

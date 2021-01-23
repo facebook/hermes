@@ -69,7 +69,7 @@ class HermesToESTreeAdapter extends HermesASTAdapter {
 
   mapProgram(node) {
     node = this.mapNodeDefault(node);
-    node.sourceType = this.sourceType;
+    node.sourceType = this.getSourceType();
 
     return node;
   }

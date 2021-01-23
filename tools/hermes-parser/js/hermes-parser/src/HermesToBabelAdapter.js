@@ -71,7 +71,7 @@ class HermesToBabelAdapter extends HermesASTAdapter {
     // Visit child nodes and convert to directives
     const {comments, ...program} = this.mapNodeWithDirectives(node);
 
-    program.sourceType = this.sourceType;
+    program.sourceType = this.getSourceType();
 
     // Adjust start loc to beginning of file
     program.loc.start = {line: 1, column: 0};

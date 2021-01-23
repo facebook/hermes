@@ -22,7 +22,7 @@ const {
 class HermesASTAdapter {
   constructor(options, code) {
     this.sourceFilename = options.sourceFilename;
-    this.sourceType = 'script';
+    this.sourceType = options.sourceType;
   }
 
   /**
@@ -97,8 +97,14 @@ class HermesASTAdapter {
     throw new Error('Implemented in subclasses');
   }
 
+  getSourceType() {
+    return this.sourceType ?? 'script';
+  }
+
   setModuleSourceType() {
-    this.sourceType = 'module';
+    if (this.sourceType == null) {
+      this.sourceType = 'module';
+    }
   }
 
   mapComment(node) {
