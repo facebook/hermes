@@ -96,44 +96,56 @@ class TraceInterpreter final {
       std::unordered_map<SynthTrace::ObjectID, HostObjectInfo>;
 
   /// Options for executing the trace.
-  /// \param useTraceConfig If true, command-line options override the
-  /// config options recorded in the trace.  If false, start from the default
-  /// config.
-  /// \param snapshotMarker If the given marker is seen, take a heap snapshot.
-  /// \param snapshotMarkerFileName If the marker given in snapshotMarker
-  ///   is seen, write the heap snapshot out to this file.
-  /// \param warmupReps Number of initial executions whose stats are discarded.
-  /// \param reps Number of repetitions of execution. Stats returned are those
-  ///   for the rep with the median totalTime.
-  /// \param minHeapSize if non-zero, the minimum heap size, overriding
-  ///   the value stored in the trace.
-  /// \param maxHeapSize if non-zero, the maximum heap size, overriding
-  ///   the value stored in the trace.
-  /// \param allocInYoung: determines whether the GC initially allocates in
-  ///   the young generation.
-  /// \param revertToYGAtTTI: if true, and if the GC was not allocating in the
-  ///   young generation, change back to young-gen allocation at TTI.
   struct ExecuteOptions {
-    // the embed RuntimeConfig instance that has all of the customization stuff
-    // it needs
-    // ::hermes::vm::RuntimeConfig::Builder rtConfigBuilder;
+    /// Customizes the GCConfig of the Runtime.
     ::hermes::vm::GCConfig::Builder gcConfigBuilder;
+
+    /// If true, trace again while replaying. After normalization (see
+    /// hermes/tools/synth/trace_normalize.py) the output trace should be
+    /// identical to the input trace. If they're not, there was a bug in replay.
     mutable bool traceEnabled{false};
 
-    // These are not config params.
+    /// If true, command-line options override the config options recorded in
+    /// the trace.  If false, start from the default config.
     bool useTraceConfig{false};
+
+    /// Number of initial executions whose stats are discarded.
     int warmupReps{0};
+
+    /// Number of repetitions of execution. Stats returned are those for the rep
+    /// with the median totalTime.
     int reps{1};
+
+    /// If true, run a complete collection before printing stats. Useful for
+    /// guaranteeing there's no garbage in heap size numbers.
     bool forceGCBeforeStats{false};
+
+    /// If true, make attempts to make the instruction count more stable. Useful
+    /// for using a tool like PIN to count instructions and compare runs.
     bool stabilizeInstructionCount{false};
+
+    /// A trace contains many MarkerRecords which have a name used to identify
+    /// them. If the replay encounters this given marker, stop execution and
+    /// collect stats then instead of completing the whole trace. The empty
+    /// string and the special marker "end" both mean don't stop.
     std::string marker;
+
+    /// If this marker is seen, take a heap snapshot.
     std::string snapshotMarker;
+
+    /// If the snapshotMarker is seen, write the heap snapshot out to this file.
     std::string snapshotMarkerFileName;
 
     // These are the config parameters.  We wrap them in llvh::Optional
     // to indicate whether the corresponding command line flag was set
     // explicitly.  We override the trace's config only when that is true.
+
+    /// If true, track all disk I/O done by the runtime and print a report at
+    /// the end to stdout.
     llvh::Optional<bool> shouldTrackIO;
+
+    /// If present, do a bytecode warmup run that touches a percentage of the
+    /// bytecode. A value of 50 here means 50% of the bytecode should be warmed.
     llvh::Optional<unsigned> bytecodeWarmupPercent;
   };
 
