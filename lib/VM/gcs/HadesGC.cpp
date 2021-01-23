@@ -1768,7 +1768,7 @@ void HadesGC::debitExternalMemory(GCCell *cell, uint32_t sz) {
   }
 }
 
-void HadesGC::writeBarrier(void *loc, HermesValue value) {
+void HadesGC::writeBarrier(const GCHermesValue *loc, HermesValue value) {
   assert(
       !calledByBackgroundThread() &&
       "Write barrier invoked by background thread.");
@@ -1777,7 +1777,7 @@ void HadesGC::writeBarrier(void *loc, HermesValue value) {
     return;
   }
   if (isOldGenMarking_) {
-    snapshotWriteBarrierInternal(*static_cast<HermesValue *>(loc));
+    snapshotWriteBarrierInternal(*loc);
   }
   if (!value.isPointer()) {
     return;
@@ -1785,7 +1785,7 @@ void HadesGC::writeBarrier(void *loc, HermesValue value) {
   relocationWriteBarrier(loc, value.getPointer());
 }
 
-void HadesGC::writeBarrier(void *loc, void *value) {
+void HadesGC::writeBarrier(const GCPointerBase *loc, const GCCell *value) {
   assert(
       !calledByBackgroundThread() &&
       "Write barrier invoked by background thread.");
@@ -1794,8 +1794,7 @@ void HadesGC::writeBarrier(void *loc, void *value) {
     return;
   }
   if (isOldGenMarking_) {
-    const GCPointerBase::StorageType oldValueStorage =
-        *static_cast<GCPointerBase::StorageType *>(loc);
+    const GCPointerBase::StorageType oldValueStorage = loc->getStorageType();
 
 #ifdef HERMESVM_COMPRESSED_POINTERS
     // TODO: Pass in pointer base? Slows down the non-concurrent-marking case.
@@ -1823,7 +1822,9 @@ void HadesGC::writeBarrier(SymbolID symbol) {
   // to long-lived strings.
 }
 
-void HadesGC::constructorWriteBarrier(void *loc, HermesValue value) {
+void HadesGC::constructorWriteBarrier(
+    const GCHermesValue *loc,
+    HermesValue value) {
   if (inYoungGen(loc)) {
     // A pointer that lives in YG never needs any write barriers.
     return;
@@ -1836,7 +1837,9 @@ void HadesGC::constructorWriteBarrier(void *loc, HermesValue value) {
   relocationWriteBarrier(loc, value.getPointer());
 }
 
-void HadesGC::constructorWriteBarrier(void *loc, void *value) {
+void HadesGC::constructorWriteBarrier(
+    const GCPointerBase *loc,
+    const GCCell *value) {
   if (inYoungGen(loc)) {
     // A pointer that lives in YG never needs any write barriers.
     return;
@@ -1846,7 +1849,7 @@ void HadesGC::constructorWriteBarrier(void *loc, void *value) {
   relocationWriteBarrier(loc, value);
 }
 
-void HadesGC::snapshotWriteBarrier(GCHermesValue *loc) {
+void HadesGC::snapshotWriteBarrier(const GCHermesValue *loc) {
   if (inYoungGen(loc)) {
     // A pointer that lives in YG never needs any write barriers.
     return;
@@ -1856,7 +1859,9 @@ void HadesGC::snapshotWriteBarrier(GCHermesValue *loc) {
   }
 }
 
-void HadesGC::snapshotWriteBarrierRange(GCHermesValue *start, uint32_t numHVs) {
+void HadesGC::snapshotWriteBarrierRange(
+    const GCHermesValue *start,
+    uint32_t numHVs) {
   if (inYoungGen(start)) {
     // A pointer that lives in YG never needs any write barriers.
     return;
@@ -1897,7 +1902,7 @@ void HadesGC::snapshotWriteBarrierInternal(SymbolID symbol) {
   oldGenMarker_->markSymbol(symbol);
 }
 
-void HadesGC::relocationWriteBarrier(void *loc, void *value) {
+void HadesGC::relocationWriteBarrier(const void *loc, const void *value) {
   assert(!inYoungGen(loc) && "Pre-condition from other callers");
   // Do not dirty cards for compactee->compactee, yg->yg, or yg->compactee
   // pointers. But do dirty cards for compactee->yg pointers, since compaction
@@ -1915,14 +1920,14 @@ void HadesGC::relocationWriteBarrier(void *loc, void *value) {
   }
 }
 
-void HadesGC::weakRefReadBarrier(void *value) {
+void HadesGC::weakRefReadBarrier(GCCell *value) {
   assert(
       !calledByBackgroundThread() &&
       "Read barrier invoked by background thread.");
-  if (isOldGenMarking_) {
-    // If the GC is marking, conservatively mark the value as live.
-    snapshotWriteBarrierInternal(static_cast<GCCell *>(value));
-  }
+  // If the GC is marking, conservatively mark the value as live.
+  if (isOldGenMarking_)
+    snapshotWriteBarrierInternal(value);
+
   // Otherwise, if no GC is active at all, the weak ref must be alive.
   // During sweeping there's no special handling either.
 }
@@ -1930,7 +1935,7 @@ void HadesGC::weakRefReadBarrier(void *value) {
 void HadesGC::weakRefReadBarrier(HermesValue value) {
   // Any non-pointer value is not going to be cleaned up by a GC anyway.
   if (value.isPointer()) {
-    weakRefReadBarrier(value.getPointer());
+    weakRefReadBarrier(static_cast<GCCell *>(value.getPointer()));
   }
 }
 

@@ -54,7 +54,8 @@ inline void GCHermesValue::set(HermesValue hv, GC *gc) {
         gc->validPointer(hv.getPointer()) &&
         "Setting an invalid pointer into a GCHermesValue");
     assert(
-        NeedsBarriers::value || !gc->needsWriteBarrier(this, hv.getPointer()));
+        NeedsBarriers::value ||
+        !gc->needsWriteBarrier(this, static_cast<GCCell *>(hv.getPointer())));
   }
   if (NeedsBarriers::value)
     gc->writeBarrier(this, hv);

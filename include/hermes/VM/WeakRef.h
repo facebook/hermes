@@ -107,7 +107,8 @@ class WeakRootBase {
   explicit WeakRootBase(const WeakRootBase &that) : ptr_(that.ptr_) {}
 
   void *get(PointerBase *base, GC *gc) const {
-    void *ptr = GCPointerBase::storageTypeToPointer(ptr_, base);
+    GCCell *ptr =
+        static_cast<GCCell *>(GCPointerBase::storageTypeToPointer(ptr_, base));
     gc->weakRefReadBarrier(ptr);
     return ptr;
   }

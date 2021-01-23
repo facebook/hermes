@@ -167,11 +167,11 @@ class GenGC final : public GCBase {
 
   /// The given value is being written at the given loc (required to
   /// be in the heap).  If value is a pointer, execute a write barrier.
-  void writeBarrier(void *loc, HermesValue value);
+  void writeBarrier(const GCHermesValue *loc, HermesValue value);
 
   /// The given pointer value is being written at the given loc (required to
   /// be in the heap).  The value is may be null.  Execute a write barrier.
-  void writeBarrier(void *loc, void *value);
+  void writeBarrier(const GCPointerBase *loc, const GCCell *value);
 
   /// Write barriers for symbols are no-ops in GenGC.
   void writeBarrier(SymbolID) {}
@@ -179,12 +179,12 @@ class GenGC final : public GCBase {
   /// The given value is being written at the given loc (required to
   /// be in the heap).  If value is a pointer, execute a write barrier.
   /// The memory pointed to by \p loc is guaranteed to not have a valid pointer.
-  void constructorWriteBarrier(void *loc, HermesValue value);
+  void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value);
 
   /// The given pointer value is being written at the given loc (required to
   /// be in the heap).  The value is may be null.  Execute a write barrier.
   /// The memory pointed to by \p loc is guaranteed to not have a valid pointer.
-  void constructorWriteBarrier(void *loc, void *value);
+  void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value);
 
 #ifndef NDEBUG
   /// Count the number of barriers executed.
@@ -205,7 +205,7 @@ class GenGC final : public GCBase {
   /// Returns whether a write of the given value into the given location
   /// requires a write barrier, assuming \p loc and \p value are both within the
   /// heap managed by this GC.
-  bool needsWriteBarrier(void *loc, void *value);
+  bool needsWriteBarrier(void *loc, GCCell *value);
 
   /// Statistics related to external memory associated with heap objects:
   ///   The number of objects with associated external memory.
@@ -233,11 +233,13 @@ class GenGC final : public GCBase {
   ///
   /// \pre The range described must be wholly contained within one segment of
   ///     the heap.
-  void writeBarrierRange(GCHermesValue *start, uint32_t numHVs);
+  void writeBarrierRange(const GCHermesValue *start, uint32_t numHVs);
 
   /// Same as \p writeBarrierRange, except this is for previously uninitialized
   /// memory.
-  void constructorWriteBarrierRange(GCHermesValue *start, uint32_t numHVs) {
+  void constructorWriteBarrierRange(
+      const GCHermesValue *start,
+      uint32_t numHVs) {
     // GenGC doesn't do anything special for uninitialized memory.
     writeBarrierRange(start, numHVs);
   }
@@ -523,7 +525,7 @@ class GenGC final : public GCBase {
   /// barrier.  The \p hv argument indicates whether this is being
   /// called from the HV (true) or void* (false) version of the write
   /// barrier; this is used only in debug builds, for statistics.
-  inline void writeBarrierImpl(void *loc, void *value, bool hv);
+  inline void writeBarrierImpl(const void *loc, const void *value, bool hv);
 
   /// Returns the desired heap size for the given number of used bytes --
   /// determined by the occupancyTarget() ratio and the max heap size
@@ -1062,10 +1064,11 @@ inline GenGC::FixedSizeValue GenGC::lastAllocationWasFixedSize() const {
 }
 #endif
 
-inline void GenGC::writeBarrierImpl(void *loc, void *value, bool hv) {
+inline void
+GenGC::writeBarrierImpl(const void *loc, const void *value, bool hv) {
   HERMES_SLOW_ASSERT(dbgContains(loc));
 
-  char *locPtr = reinterpret_cast<char *>(loc);
+  const char *locPtr = reinterpret_cast<const char *>(loc);
 
   // value may be null.  But if that occurs: locPtr and value will not
   // be in the same AlignedStorage, so the first test below will fail,

@@ -141,13 +141,13 @@ class HadesGC final : public GCBase {
   /// be in the heap). If value is a pointer, execute a write barrier.
   /// NOTE: The write barrier call must be placed *before* the write to the
   /// pointer, so that the current value can be fetched.
-  void writeBarrier(void *loc, HermesValue value);
+  void writeBarrier(const GCHermesValue *loc, HermesValue value);
 
   /// The given pointer value is being written at the given loc (required to
   /// be in the heap). The value may be null. Execute a write barrier.
   /// NOTE: The write barrier call must be placed *before* the write to the
   /// pointer, so that the current value can be fetched.
-  void writeBarrier(void *loc, void *value);
+  void writeBarrier(const GCPointerBase *loc, const GCCell *value);
 
   /// The given symbol is being written at the given loc (required to be in the
   /// heap).
@@ -155,13 +155,13 @@ class HadesGC final : public GCBase {
 
   /// Special versions of \p writeBarrier for when there was no previous value
   /// initialized into the space.
-  void constructorWriteBarrier(void *loc, HermesValue value);
-  void constructorWriteBarrier(void *loc, void *value);
+  void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value);
+  void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value);
 
-  void snapshotWriteBarrier(GCHermesValue *loc);
-  void snapshotWriteBarrierRange(GCHermesValue *start, uint32_t numHVs);
+  void snapshotWriteBarrier(const GCHermesValue *loc);
+  void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs);
 
-  void weakRefReadBarrier(void *value);
+  void weakRefReadBarrier(GCCell *value);
   void weakRefReadBarrier(HermesValue value);
 
   /// \}
@@ -829,7 +829,7 @@ class HadesGC final : public GCBase {
   /// Common logic for doing the relocation write barrier for detecting
   /// pointers into YG and for tracking newly created pointers into the
   /// compactee.
-  void relocationWriteBarrier(void *loc, void *value);
+  void relocationWriteBarrier(const void *loc, const void *value);
 
   /// Finalize all objects in YG that have finalizers.
   void finalizeYoungGenObjects();

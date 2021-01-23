@@ -18,19 +18,18 @@ namespace vm {
 
 template <typename T>
 template <typename NeedsBarriers>
-GCPointer<T>::GCPointer(
-    PointerBase *base,
-    T *ptr,
-    GC *gc,
-    NeedsBarriers needsBarrierUnused)
+GCPointer<T>::GCPointer(PointerBase *base, T *ptr, GC *gc, NeedsBarriers)
     : GCPointerBase(base, ptr) {
   assert(
       (!ptr || gc->validPointer(ptr)) &&
       "Cannot construct a GCPointer from an invalid pointer");
+  // TODO: Resolve circular dependencies in JSObject so this cast is not
+  // required.
+  GCCell *cellPtr = reinterpret_cast<GCCell *>(ptr);
   if (NeedsBarriers::value) {
-    gc->constructorWriteBarrier(&ptr_, ptr);
+    gc->constructorWriteBarrier(this, cellPtr);
   } else {
-    assert(!gc->needsWriteBarrier(&ptr_, ptr));
+    assert(!gc->needsWriteBarrier(&ptr_, cellPtr));
   }
 }
 
@@ -39,7 +38,7 @@ inline void GCPointerBase::set(PointerBase *base, void *ptr, GC *gc) {
       (!ptr || gc->validPointer(ptr)) &&
       "Cannot set a GCPointer to an invalid pointer");
   // Write barrier must happen before the write.
-  gc->writeBarrier(&ptr_, ptr);
+  gc->writeBarrier(this, static_cast<GCCell *>(ptr));
   ptr_ = pointerToStorageType(ptr, base);
 }
 
@@ -47,7 +46,7 @@ inline void GCPointerBase::setNull(GC *gc) {
 #ifdef HERMESVM_GC_HADES
   // Hades requires a write barrier here in case the previous value of ptr_ was
   // a pointer.
-  gc->writeBarrier(&ptr_, nullptr);
+  gc->writeBarrier(this, nullptr);
 #endif
   ptr_ = StorageType{};
 }

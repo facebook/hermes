@@ -1101,13 +1101,13 @@ void GenGC::trackReachable(CellKind kind, unsigned sz) {
 #endif
 
 #ifndef NDEBUG
-bool GenGC::needsWriteBarrier(void *loc, void *value) {
+bool GenGC::needsWriteBarrier(void *loc, GCCell *value) {
   return !youngGen_.contains(loc) && youngGen_.contains(value);
 }
 #endif
 
 LLVM_ATTRIBUTE_NOINLINE
-void GenGC::writeBarrier(void *loc, HermesValue value) {
+void GenGC::writeBarrier(const GCHermesValue *loc, HermesValue value) {
   countWriteBarrier(/*hv*/ true, kNumWriteBarrierTotalCountIdx);
   if (!value.isPointer()) {
     return;
@@ -1117,24 +1117,28 @@ void GenGC::writeBarrier(void *loc, HermesValue value) {
 }
 
 LLVM_ATTRIBUTE_NOINLINE
-void GenGC::writeBarrier(void *loc, void *value) {
+void GenGC::writeBarrier(const GCPointerBase *loc, const GCCell *value) {
   countWriteBarrier(/*hv*/ false, kNumWriteBarrierTotalCountIdx);
   writeBarrierImpl(loc, value, /*hv*/ false);
 }
 
 LLVM_ATTRIBUTE_NOINLINE
-void GenGC::constructorWriteBarrier(void *loc, HermesValue value) {
+void GenGC::constructorWriteBarrier(
+    const GCHermesValue *loc,
+    HermesValue value) {
   // There's no difference for GenGC between the constructor and an assignment.
   writeBarrier(loc, value);
 }
 
 LLVM_ATTRIBUTE_NOINLINE
-void GenGC::constructorWriteBarrier(void *loc, void *value) {
+void GenGC::constructorWriteBarrier(
+    const GCPointerBase *loc,
+    const GCCell *value) {
   // There's no difference for GenGC between the constructor and an assignment.
   writeBarrier(loc, value);
 }
 
-void GenGC::writeBarrierRange(GCHermesValue *start, uint32_t numHVs) {
+void GenGC::writeBarrierRange(const GCHermesValue *start, uint32_t numHVs) {
   countRangeWriteBarrier();
 
   // For now, in this case, we'll just dirty the cards in the range.  We could
@@ -1144,8 +1148,8 @@ void GenGC::writeBarrierRange(GCHermesValue *start, uint32_t numHVs) {
   // that the range to dirty is not in the young generation, but expect that in
   // most cases the cost of the check will be similar to the cost of dirtying
   // those addresses.
-  char *firstPtr = reinterpret_cast<char *>(start);
-  char *lastPtr = reinterpret_cast<char *>(start + numHVs) - 1;
+  const char *firstPtr = reinterpret_cast<const char *>(start);
+  const char *lastPtr = reinterpret_cast<const char *>(start + numHVs) - 1;
 
   assert(
       AlignedStorage::start(firstPtr) == AlignedStorage::start(lastPtr) &&

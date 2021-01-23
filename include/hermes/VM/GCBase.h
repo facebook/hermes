@@ -1069,20 +1069,24 @@ class GCBase {
   void debitExternalMemory(GCCell *alloc, uint32_t size) {}
 
   /// Default implementations for read and write barriers: do nothing.
-  inline void writeBarrier(void *loc, HermesValue value) {}
-  inline void writeBarrier(void *loc, void *value) {}
+  inline void writeBarrier(const GCHermesValue *loc, HermesValue value) {}
+  inline void writeBarrier(const GCPointerBase *loc, const GCCell *value) {}
   inline void writeBarrier(SymbolID symbol) {}
-  inline void constructorWriteBarrier(void *loc, HermesValue value) {}
-  inline void constructorWriteBarrier(void *loc, void *value) {}
-  inline void writeBarrierRange(GCHermesValue *start, uint32_t numHVs) {}
+  inline void constructorWriteBarrier(
+      const GCHermesValue *loc,
+      HermesValue value) {}
+  inline void constructorWriteBarrier(
+      const GCPointerBase *loc,
+      const GCCell *value) {}
+  inline void writeBarrierRange(const GCHermesValue *start, uint32_t numHVs) {}
   inline void constructorWriteBarrierRange(
-      GCHermesValue *start,
+      const GCHermesValue *start,
       uint32_t numHVs) {}
-  inline void weakRefReadBarrier(void *value) {}
+  inline void weakRefReadBarrier(GCCell *value) {}
   inline void weakRefReadBarrier(HermesValue value) {}
 
 #ifndef NDEBUG
-  bool needsWriteBarrier(void *loc, void *value) {
+  bool needsWriteBarrier(void *loc, GCCell *value) {
     return false;
   }
 #endif
