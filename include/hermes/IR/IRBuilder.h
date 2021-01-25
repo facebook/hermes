@@ -77,6 +77,17 @@ class IRBuilder {
       bool isGlobal = false,
       Function *insertBefore = nullptr);
 
+  /// Create a new AsyncFunction and add it to the Module.
+  /// \param OriginalName the original name specified by the user.
+  /// \param insertBefore Another function in the module where this function
+  ///   should be inserted before. If null, appends to the end of the module.
+  AsyncFunction *createAsyncFunction(
+      Identifier OriginalName,
+      Function::DefinitionKind definitionKind,
+      bool strictMode,
+      SMRange sourceRange = SMRange{},
+      Function *insertBefore = nullptr);
+
   /// Create a new GeneratorFunction and add it to the Module.
   /// \param OriginalName the original name specified by the user.
   /// \param insertBefore Another function in the module where this function

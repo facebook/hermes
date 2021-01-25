@@ -1682,6 +1682,31 @@ class GeneratorInnerFunction final : public Function {
   }
 };
 
+class AsyncFunction final : public Function {
+ public:
+  explicit AsyncFunction(
+      Module *parent,
+      Identifier originalName,
+      DefinitionKind definitionKind,
+      bool strictMode,
+      bool isGlobal,
+      SMRange sourceRange,
+      Function *insertBefore)
+      : Function(
+            ValueKind::AsyncFunctionKind,
+            parent,
+            originalName,
+            definitionKind,
+            strictMode,
+            isGlobal,
+            sourceRange,
+            insertBefore) {}
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::AsyncFunctionKind);
+  }
+};
+
 } // namespace hermes
 
 //===----------------------------------------------------------------------===//

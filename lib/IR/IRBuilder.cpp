@@ -127,6 +127,27 @@ Function *IRBuilder::createFunction(
       insertBefore);
 }
 
+AsyncFunction *IRBuilder::createAsyncFunction(
+    Identifier OriginalName,
+    Function::DefinitionKind definitionKind,
+    bool strictMode,
+    SMRange sourceRange,
+    Function *insertBefore) {
+  if (!OriginalName.isValid()) {
+    // Function must have a name, even it's empty.
+    // Eventually we will give it a properly inferred name.
+    OriginalName = createIdentifier("");
+  }
+  return new AsyncFunction(
+      M,
+      OriginalName,
+      definitionKind,
+      strictMode,
+      /* isGlobal */ false,
+      sourceRange,
+      insertBefore);
+}
+
 GlobalObjectProperty *IRBuilder::createGlobalObjectProperty(
     Identifier name,
     bool declared) {

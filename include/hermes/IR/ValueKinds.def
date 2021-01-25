@@ -53,6 +53,7 @@ MARK_FIRST(Function)
 DEF_VALUE(Function, Value)
 DEF_VALUE(GeneratorFunction, Function)
 DEF_VALUE(GeneratorInnerFunction, Function)
+DEF_VALUE(AsyncFunction, Function)
 MARK_LAST(Function)
 DEF_VALUE(Module, Value)
 
