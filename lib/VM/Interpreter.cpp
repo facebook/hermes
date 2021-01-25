@@ -130,20 +130,6 @@ static const WrapperFunc interpWrappers[] = {PROFILER_SYMBOLS(LIST_ITEM)};
     defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode); \
   } while (0)
 
-CallResult<PseudoHandle<JSGeneratorFunction>>
-Interpreter::createGeneratorClosure(
-    Runtime *runtime,
-    RuntimeModule *runtimeModule,
-    unsigned funcIndex,
-    Handle<Environment> envHandle) {
-  return JSGeneratorFunction::create(
-      runtime,
-      runtimeModule->getDomain(runtime),
-      Handle<JSObject>::vmcast(&runtime->generatorFunctionPrototype),
-      envHandle,
-      runtimeModule->getCodeBlockMayAllocate(funcIndex));
-}
-
 CallResult<PseudoHandle<JSGenerator>> Interpreter::createGenerator_RJS(
     Runtime *runtime,
     RuntimeModule *runtimeModule,
@@ -2007,40 +1993,30 @@ tailCall:
     }
 
       CASE(CreateGeneratorClosure) {
-        CAPTURE_IP_ASSIGN(
-            auto res,
-            createGeneratorClosure(
-                runtime,
-                curCodeBlock->getRuntimeModule(),
-                ip->iCreateClosure.op3,
-                Handle<Environment>::vmcast(&O2REG(CreateGeneratorClosure))));
-        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-          goto exception;
-        }
-        O1REG(CreateGeneratorClosure) = res->getHermesValue();
-        res->invalidate();
-        gcScope.flushToSmallCount(KEEP_HANDLES);
-        ip = NEXTINST(CreateGeneratorClosure);
-        DISPATCH;
+        idVal = ip->iCreateGeneratorClosure.op3;
+        nextIP = NEXTINST(CreateGeneratorClosure);
+        goto createGeneratorClosure;
       }
       CASE(CreateGeneratorClosureLongIndex) {
-        CAPTURE_IP_ASSIGN(
-            auto res,
-            createGeneratorClosure(
-                runtime,
-                curCodeBlock->getRuntimeModule(),
-                ip->iCreateClosureLongIndex.op3,
-                Handle<Environment>::vmcast(
-                    &O2REG(CreateGeneratorClosureLongIndex))));
-        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-          goto exception;
-        }
-        O1REG(CreateGeneratorClosureLongIndex) = res->getHermesValue();
-        res->invalidate();
-        gcScope.flushToSmallCount(KEEP_HANDLES);
-        ip = NEXTINST(CreateGeneratorClosureLongIndex);
-        DISPATCH;
+        idVal = ip->iCreateGeneratorClosureLongIndex.op3;
+        nextIP = NEXTINST(CreateGeneratorClosureLongIndex);
+        goto createGeneratorClosure;
       }
+    createGeneratorClosure : {
+      auto *runtimeModule = curCodeBlock->getRuntimeModule();
+      CAPTURE_IP_ASSIGN(
+          O1REG(CreateGeneratorClosure),
+          JSGeneratorFunction::create(
+              runtime,
+              runtimeModule->getDomain(runtime),
+              Handle<JSObject>::vmcast(&runtime->generatorFunctionPrototype),
+              Handle<Environment>::vmcast(&O2REG(CreateGeneratorClosure)),
+              runtimeModule->getCodeBlockMayAllocate(idVal))
+              .getHermesValue());
+      gcScope.flushToSmallCount(KEEP_HANDLES);
+      ip = nextIP;
+      DISPATCH;
+    }
 
       CASE(CreateGenerator) {
         CAPTURE_IP_ASSIGN(
