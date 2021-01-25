@@ -1558,7 +1558,7 @@ tailCall:
         callArgCount = (uint32_t)ip->iCall.op3;
         nextIP = NEXTINST(Call);
         callNewTarget = HermesValue::encodeUndefinedValue().getRaw();
-        // Fall through.
+        goto doCall;
       }
 
     doCall : {
