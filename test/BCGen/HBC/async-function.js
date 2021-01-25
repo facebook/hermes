@@ -11,7 +11,7 @@ async function simpleReturn() {
   return 1;
 }
 
-// CHECK-LABEL:Function<simpleReturn>(1 params, 19 registers, 0 symbols):
+// CHECK-LABEL:NCFunction<simpleReturn>(1 params, 19 registers, 0 symbols):
 // CHECK-NEXT:Offset in debug table: source 0x{{.*}}, lexical 0x0000
 // CHECK-NEXT:    CreateEnvironment r0
 // CHECK-NEXT:    LoadThisNS        r1
@@ -52,7 +52,7 @@ async function simpleAwait() {
   return x;
 }
 
-// CHECK-LABEL:Function<simpleAwait>(1 params, 19 registers, 1 symbols):
+// CHECK-LABEL:NCFunction<simpleAwait>(1 params, 19 registers, 1 symbols):
 // CHECK-NEXT:Offset in debug table: source 0x{{.*}}, lexical 0x0000
 // CHECK-NEXT:    CreateEnvironment r0
 // CHECK-NEXT:    LoadThisNS        r1
@@ -109,7 +109,7 @@ var simpleAsyncFE = async function () {
   return x;
 }
 
-// CHECK-LABEL:Function<simpleAsyncFE>(1 params, 19 registers, 1 symbols):
+// CHECK-LABEL:NCFunction<simpleAsyncFE>(1 params, 19 registers, 1 symbols):
 // CHECK-NEXT:Offset in debug table: source 0x{{.*}}, lexical 0x0000
 // CHECK-NEXT:    CreateEnvironment r0
 // CHECK-NEXT:    LoadThisNS        r1

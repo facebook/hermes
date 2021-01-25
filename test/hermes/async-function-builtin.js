@@ -14,6 +14,12 @@ print('AsyncFunction instance');
 async function af(){};
 print(Reflect.ownKeys(af));
 // CHECK-NEXT: name,length,prototype
+try {
+  new af();
+} catch (e){
+  print(e);
+}
+// CHECK-NEXT: TypeError: Function is not a constructor
 
 print('AsyncFunction prototype object');
 // CHECK-LABEL: AsyncFunction prototype object

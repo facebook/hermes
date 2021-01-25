@@ -77,8 +77,8 @@ class BytecodeFunction {
         header_.flags.prohibitInvoke = FunctionHeaderFlag::ProhibitCall;
         break;
       default:
-        // ES9.0 9.2.3 step 4 states that generator functions cannot be
-        // constructed.
+        // ES9.0 9.2.3 step 4 states that generator functions and async
+        // functions cannot be constructed.
         // We place this check outside the `DefinitionKind` because generator
         // functions may also be ES6 methods, for example, and are not included
         // in the DefinitionKind enum.
@@ -88,7 +88,8 @@ class BytecodeFunction {
         // As such, this is the only case in which we must change the
         // prohibitInvoke flag based on valueKind.
         header_.flags.prohibitInvoke =
-            valueKind == ValueKind::GeneratorFunctionKind
+            (valueKind == ValueKind::GeneratorFunctionKind ||
+             valueKind == ValueKind::AsyncFunctionKind)
             ? FunctionHeaderFlag::ProhibitConstruct
             : FunctionHeaderFlag::ProhibitNone;
         break;
