@@ -319,7 +319,6 @@ var iter = {
   }
 };
 
-var callCount = 0;
 var f = function*([x]) {
   print('START', x)
   return 5;
