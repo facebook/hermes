@@ -195,7 +195,6 @@ SKIP_LIST = [
     "test262/test/language/expressions/super/",
     "test262/test/language/module-code/",
     "test262/test/language/rest-parameters/",
-    "test262/test/language/statements/async-function/",
     "test262/test/language/statements/async-generator/",
     "test262/test/language/statements/class/",
     "test262/test/language/statements/let/",
@@ -298,6 +297,9 @@ SKIP_LIST = [
     "mjsunit/harmony/async-debug-caught-exception-cases1.js",
     "mjsunit/harmony/async-debug-caught-exception-cases2.js",
     "mjsunit/harmony/async-debug-caught-exception-cases3.js",
+    # async function missing errors: TODO(T80014951)
+    "test262/test/language/statements/async-function/escaped-async.js",
+    "test262/test/language/statements/async-function/early-errors-declaration-formals-body-duplicate.js",
     # let/const (block scope)
     "esprima/test_fixtures/declaration/let/",
     "esprima/test_fixtures/declaration/const/",
@@ -1779,8 +1781,6 @@ UNSUPPORTED_FEATURES = [
     "Symbol.species",
     "Symbol.prototype.description",
     "Symbol.unscopables",
-    "async",
-    "async-functions",
     "async-iteration",
     "caller",
     "class",
