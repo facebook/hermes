@@ -108,8 +108,12 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime *runtime) {
     auto prototypeParent = vmisa<JSGeneratorFunction>(*jsFun)
         ? Handle<JSObject>::vmcast(&runtime->generatorPrototype)
         : Handle<JSObject>::vmcast(&runtime->objectPrototype);
-    auto prototypeObjectHandle =
-        runtime->makeHandle(JSObject::create(runtime, prototypeParent));
+
+    // According to ES12 26.7.4, AsyncFunction instances do not have a
+    // 'prototype' property, hence we need to set an null handle here.
+    auto prototypeObjectHandle = vmisa<JSAsyncFunction>(*jsFun)
+        ? Runtime::makeNullHandle<JSObject>()
+        : runtime->makeHandle(JSObject::create(runtime, prototypeParent));
 
     auto cr = Callable::defineNameLengthAndPrototype(
         fn,

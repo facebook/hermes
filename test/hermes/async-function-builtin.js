@@ -13,7 +13,9 @@ print('AsyncFunction instance');
 
 async function af(){};
 print(Reflect.ownKeys(af));
-// CHECK-NEXT: name,length,prototype
+// CHECK-NEXT: name,length
+print(af.prototype);
+// CHECK-NEXT: undefined
 try {
   new af();
 } catch (e){
