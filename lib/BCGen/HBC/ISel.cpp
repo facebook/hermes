@@ -1185,6 +1185,14 @@ void HBCISel::generateCallBuiltinInst(CallBuiltinInst *Inst, BasicBlock *next) {
         output, Inst->getBuiltinIndex(), Inst->getNumArguments());
   }
 }
+
+void HBCISel::generateGetBuiltinClosureInst(
+    GetBuiltinClosureInst *Inst,
+    BasicBlock *next) {
+  auto output = encodeValue(Inst);
+  BCFGen_->emitGetBuiltinClosure(output, Inst->getBuiltinIndex());
+}
+
 void HBCISel::generateHBCCallDirectInst(
     HBCCallDirectInst *Inst,
     BasicBlock *next) {

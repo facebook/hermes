@@ -831,6 +831,13 @@ CallBuiltinInst *IRBuilder::createCallBuiltinInst(
   return inst;
 }
 
+GetBuiltinClosureInst *IRBuilder::createGetBuiltinClosureInst(
+    BuiltinMethod::Enum builtinIndex) {
+  auto *inst = new GetBuiltinClosureInst(getLiteralNumber(builtinIndex));
+  insert(inst);
+  return inst;
+}
+
 HBCCallDirectInst *IRBuilder::createHBCCallDirectInst(
     Function *callee,
     Value *thisValue,

@@ -359,6 +359,16 @@ Arguments | %builtinNumber is the builtin to execute. Arguments %arg0 ... %argN 
 Semantics | The instruction passes the control to the builtin in a VM-specific way. The arguments are mapped to the parameters. Unmapped parameters are initialized to 'undefined'.
 Effects | May read and write memory.
 
+### GetBuiltinClosureInst
+
+GetBuiltinClosureInst | _
+--- | --- |
+Description | Get a closure of a builtin function
+Example | %0 = GetBuiltinClosureInst %builtinNumber
+Arguments | %builtinNumber is the builtin to return the closure of.
+Semantics |
+Effects | Reads from memory.
+
 ### LoadPropertyInst
 
 LoadPropertyInst | _

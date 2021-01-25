@@ -488,6 +488,10 @@ class IRBuilder {
   CallBuiltinInst *createCallBuiltinInst(
       BuiltinMethod::Enum builtinIndex,
       ArrayRef<Value *> arguments);
+
+  GetBuiltinClosureInst *createGetBuiltinClosureInst(
+      BuiltinMethod::Enum builtinIndex);
+
   HBCCallDirectInst *createHBCCallDirectInst(
       Function *callee,
       Value *thisValue,

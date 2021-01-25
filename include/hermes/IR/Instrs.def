@@ -120,6 +120,7 @@ DEF_VALUE(HBCCallNInst, CallInst)
 #endif
 MARK_LAST(CallInst)
 
+DEF_VALUE(GetBuiltinClosureInst, Instruction)
 DEF_VALUE(StartGeneratorInst, Instruction)
 DEF_VALUE(ResumeGeneratorInst, Instruction)
 

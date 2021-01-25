@@ -671,6 +671,45 @@ class CallBuiltinInst : public CallInst {
   }
 };
 
+class GetBuiltinClosureInst : public Instruction {
+  GetBuiltinClosureInst(const GetBuiltinClosureInst &) = delete;
+  void operator=(const GetBuiltinClosureInst &) = delete;
+
+ public:
+  enum { BuiltinIndexIdx };
+
+  explicit GetBuiltinClosureInst(LiteralNumber *builtinIndex)
+      : Instruction(ValueKind::GetBuiltinClosureInstKind) {
+    assert(
+        builtinIndex->asInt32() &&
+        builtinIndex->getValue() < BuiltinMethod::_count &&
+        "invalid builtin call");
+    pushOperand(builtinIndex);
+    setType(Type::createClosure());
+  }
+  explicit GetBuiltinClosureInst(
+      const GetBuiltinClosureInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::None;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  BuiltinMethod::Enum getBuiltinIndex() const {
+    return static_cast<BuiltinMethod::Enum>(
+        cast<LiteralNumber>(getOperand(BuiltinIndexIdx))->asInt32());
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::GetBuiltinClosureInstKind);
+  }
+};
+
 class HBCCallNInst : public CallInst {
  public:
   /// The minimum number of args supported by a CallN instruction, including

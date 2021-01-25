@@ -444,8 +444,18 @@ void Verifier::visitHBCCallNInst(const HBCCallNInst &Inst) {
 }
 
 void Verifier::visitCallBuiltinInst(CallBuiltinInst const &Inst) {
+  assert(
+      isNativeBuiltin(Inst.getBuiltinIndex()) &&
+      "CallBuiltin must take a native builtin.");
   visitCallInst(Inst);
 }
+
+void Verifier::visitGetBuiltinClosureInst(GetBuiltinClosureInst const &Inst) {
+  assert(
+      Inst.getBuiltinIndex() < BuiltinMethod::_count &&
+      "Out of bound BuiltinMethod index.");
+}
+
 void Verifier::visitHBCCallDirectInst(HBCCallDirectInst const &Inst) {
   Assert(
       llvh::isa<Function>(Inst.getCallee()),

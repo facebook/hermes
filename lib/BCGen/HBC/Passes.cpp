@@ -189,6 +189,11 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
        opIndex == CallBuiltinInst::ThisIdx))
     return true;
 
+  /// GetBuiltinClosureInst's builtin index is always literal.
+  if (llvh::isa<GetBuiltinClosureInst>(Inst) &&
+      opIndex == GetBuiltinClosureInst::BuiltinIndexIdx)
+    return true;
+
   if (llvh::isa<IteratorCloseInst>(Inst) &&
       opIndex == IteratorCloseInst::IgnoreInnerExceptionIdx) {
     return true;
