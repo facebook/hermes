@@ -43,6 +43,17 @@ class StringBuffer : public Buffer {
   std::string string_;
 };
 
+class VectorBuffer : public Buffer {
+ public:
+  VectorBuffer(std::vector<uint8_t> buffer) : vec_(std::move(buffer)) {
+    data_ = reinterpret_cast<const uint8_t *>(vec_.data());
+    size_ = vec_.size();
+  }
+
+ private:
+  std::vector<uint8_t> vec_;
+};
+
 /// Create a string table appropriate (i.e. that contains all the necessary
 /// strings) for use with these tests.  Additionally adds the strings in
 /// \p strs if the test requires extra
@@ -446,17 +457,6 @@ TEST(HBCBytecodeGen, SerializeBytecodeOptions) {
   auto bytecodeVecStaticBuiltins =
       bytecodeForSource("print('hello world');", flags);
 
-  class VectorBuffer : public Buffer {
-   public:
-    VectorBuffer(std::vector<uint8_t> buffer) : vec_(std::move(buffer)) {
-      data_ = reinterpret_cast<const uint8_t *>(vec_.data());
-      size_ = vec_.size();
-    }
-
-   private:
-    std::vector<uint8_t> vec_;
-  };
-
   auto bytecodeDefault =
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
           llvh::make_unique<VectorBuffer>(bytecodeVecDefault))
@@ -469,6 +469,24 @@ TEST(HBCBytecodeGen, SerializeBytecodeOptions) {
   ASSERT_TRUE(bytecodeStaticBuiltins);
   EXPECT_FALSE(bytecodeDefault->getBytecodeOptions().staticBuiltins);
   EXPECT_TRUE(bytecodeStaticBuiltins->getBytecodeOptions().staticBuiltins);
+}
+
+TEST(HBCBytecodeGen, BytecodeOptionHasAsync) {
+  auto bytecodeVecNoAsync = bytecodeForSource("function foo(){}");
+  auto bytecodeVecHasAsync = bytecodeForSource("async function foo(){}");
+
+  auto bytecodeNoAsync =
+      hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
+          llvh::make_unique<VectorBuffer>(bytecodeVecNoAsync))
+          .first;
+  auto bytecodeHasAsync =
+      hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
+          llvh::make_unique<VectorBuffer>(bytecodeVecHasAsync))
+          .first;
+  ASSERT_TRUE(bytecodeNoAsync);
+  ASSERT_TRUE(bytecodeHasAsync);
+  EXPECT_FALSE(bytecodeNoAsync->getBytecodeOptions().hasAsync);
+  EXPECT_TRUE(bytecodeHasAsync->getBytecodeOptions().hasAsync);
 }
 
 } // end anonymous namespace

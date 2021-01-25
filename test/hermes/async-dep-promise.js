@@ -6,16 +6,12 @@
  */
 
 // RUN: %hermes %s | %FileCheck --match-full-lines --check-prefix=ON %s
-// RUN: %hermes -Xes6-promise=0 %s | %FileCheck --match-full-lines --check-prefix=OFF %s
+// RUN: (! %hermes -Xes6-promise=0 %s 2>&1) | %FileCheck --match-full-lines --check-prefix=OFF %s
+// RUN: %hermesc %s -emit-binary -out %t.hbc && (! %hermes -Xes6-promise=0 %t.hbc 2>&1) | %FileCheck --match-full-lines --check-prefix=OFF %s
 
-print('async depends on promise');;
-// CHECK-LABEL: async depends on promise
+// Async function depends on Hermes Promise.
 
 async function empty() {};
-try {
-    print(empty())
-} catch (e) {
-    print(e);
-}
+print(empty())
 // ON: [object Object]
-// OFF: Error: async function cannot be used with Promise disabled. spawnAsync not registered.
+// OFF: Uncaught TypeError: Cannot execute a bytecode having async functions when Promise is disabled.

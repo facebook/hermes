@@ -913,6 +913,11 @@ CallResult<HermesValue> Runtime::runBytecode(
     assert(builtinsFrozen_ && "Builtins must be frozen by now.");
   }
 
+  if (bytecode->getBytecodeOptions().hasAsync && !hasES6Promise_) {
+    return raiseTypeError(
+        "Cannot execute a bytecode having async functions when Promise is disabled.");
+  }
+
   if (flags.persistent) {
     persistentBCProviders_.push_back(bytecode);
     if (bytecodeWarmupPercent_ > 0) {

@@ -53,6 +53,7 @@ union BytecodeOptions {
   struct {
     bool staticBuiltins : 1;
     bool cjsModulesStaticallyResolved : 1;
+    bool hasAsync : 1;
   };
   uint8_t _flags;
 

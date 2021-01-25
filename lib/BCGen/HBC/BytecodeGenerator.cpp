@@ -184,6 +184,7 @@ void BytecodeFunctionGenerator::bytecodeGenerationComplete() {
 
 unsigned BytecodeModuleGenerator::addFunction(Function *F) {
   lazyFunctions_ |= F->isLazy();
+  asyncFunctions_ |= llvh::isa<AsyncFunction>(F);
   return functionIDMap_.allocate(F);
 }
 
@@ -248,6 +249,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
   auto hashes = stringTable_.getIdentifierHashes();
 
   BytecodeOptions bytecodeOptions;
+  bytecodeOptions.hasAsync = asyncFunctions_;
   bytecodeOptions.staticBuiltins = options_.staticBuiltinsEnabled;
   bytecodeOptions.cjsModulesStaticallyResolved = !cjsModulesStatic_.empty();
   std::unique_ptr<BytecodeModule> BM{new BytecodeModule(

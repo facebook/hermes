@@ -310,6 +310,9 @@ class BytecodeModuleGenerator {
   /// Whether there are any lazy functions present.
   bool lazyFunctions_{false};
 
+  /// Whether there are any async functions present.
+  bool asyncFunctions_{false};
+
   /// Indicate whether this generator is still valid.
   /// We need this because one can only call the generate() function
   /// once, and after that, this generator is no longer valid because
