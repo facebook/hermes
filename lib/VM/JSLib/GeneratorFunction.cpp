@@ -19,7 +19,7 @@ Handle<JSObject> createGeneratorFunctionConstructor(Runtime *runtime) {
 
   auto cons = runtime->makeHandle(NativeConstructor::create(
       runtime,
-      Handle<JSObject>::vmcast(&runtime->functionPrototype),
+      Handle<JSObject>::vmcast(&runtime->functionConstructor),
       nullptr,
       generatorFunctionConstructor,
       1,
