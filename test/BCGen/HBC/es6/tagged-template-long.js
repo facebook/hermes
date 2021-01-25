@@ -42,4 +42,4 @@ function long_tagged() {
 }
 
 //CHECK: Function<long_tagged>(1 params{{.*}}):
-//CHECK:    CallBuiltinLong   r{{.*}}, 42, 304
+//CHECK:    CallBuiltinLong   r{{.*}}, "HermesBuiltin.getTemplateObject", 304

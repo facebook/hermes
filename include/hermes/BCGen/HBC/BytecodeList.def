@@ -475,6 +475,11 @@ DEFINE_OPCODE_3(CallBuiltin, Reg8, UInt8, UInt8)
 /// thisArg is set to "undefined".
 DEFINE_OPCODE_3(CallBuiltinLong, Reg8, UInt8, UInt32)
 
+/// Get a closure from a builtin function.
+/// Arg1 is the destination of the return value.
+/// Arg2 is the builtin number.
+DEFINE_OPCODE_2(GetBuiltinClosure, Reg8, UInt8)
+
 ///
 ///!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

@@ -627,8 +627,11 @@ void PrettyDisassembleVisitor::visitOperand(
   }
   os_ << " ";
 
-  // Special handling for CallBuiltin.
-  if (operandIndex == 1 && opcode_ == inst::OpCode::CallBuiltin) {
+  // Special handling for CallBuiltin and GetBuiltinClosure.
+  if (operandIndex == 1 &&
+      (opcode_ == inst::OpCode::CallBuiltin ||
+       opcode_ == inst::OpCode::CallBuiltinLong ||
+       opcode_ == inst::OpCode::GetBuiltinClosure)) {
     uint8_t builtinIndex;
     decodeOperand(operandBuf, &builtinIndex);
     os_ << '"' << getBuiltinMethodName(builtinIndex) << '"';

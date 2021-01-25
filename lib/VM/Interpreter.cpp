@@ -1715,6 +1715,14 @@ tailCall:
 #endif
       }
 
+      CASE(GetBuiltinClosure) {
+        uint8_t methodIndex = ip->iCallBuiltin.op2;
+        Callable *closure = runtime->getBuiltinCallable(methodIndex);
+        O1REG(GetBuiltinClosure) = HermesValue::encodeObjectValue(closure);
+        ip = NEXTINST(GetBuiltinClosure);
+        DISPATCH;
+      }
+
       CASE(CallBuiltin) {
         CAPTURE_IP_ASSIGN(
             auto cres,
