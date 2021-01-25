@@ -386,7 +386,17 @@ Function *ESTreeIRGen::genAsyncFunction(
       ESTree::isStrict(functionNode->strictness),
       functionNode->getSourceRange(),
       /* insertBefore */ nullptr);
-  // TODO: make asyncFn lazy-compilable
+
+  // Setup lazy compilation
+  asyncFn->setLazyClosureAlias(lazyClosureAlias);
+
+  auto *body = ESTree::getBlockStatement(functionNode);
+  if (auto *bodyBlock = llvh::dyn_cast<ESTree::BlockStatementNode>(body)) {
+    if (bodyBlock->isLazyFunctionBody) {
+      setupLazyScope(functionNode, asyncFn, body);
+      return asyncFn;
+    }
+  }
 
   {
     FunctionContext asyncFnContext{this, asyncFn, functionNode->getSemInfo()};

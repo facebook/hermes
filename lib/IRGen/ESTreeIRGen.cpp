@@ -342,7 +342,9 @@ std::pair<Function *, Function *> ESTreeIRGen::doLazyFunction(
   // Generators have had their lazy scope set up without setting one up
   // for the inner functions. This means that we will never directly generate
   // a GeneratorInnerFunction here.
-  Function *func = ESTree::isGenerator(node)
+  Function *func = ESTree::isAsync(node)
+      ? genAsyncFunction(lazyData->originalName, parentVar, node)
+      : ESTree::isGenerator(node)
       ? genGeneratorFunction(lazyData->originalName, parentVar, node)
       : genES5Function(lazyData->originalName, parentVar, node, false);
   addLexicalDebugInfo(func, topLevel, lexicalScopeChain);

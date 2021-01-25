@@ -7,6 +7,7 @@
 
 // RUN: %hermes -Xes6-promise %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -Xes6-promise %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -lazy -Xes6-promise %s | %FileCheck --match-full-lines %s
 
 // Noted that the process of resolving Promise is asynchronous,
 // and deeper promise chain will take more microtask ticks to complete.

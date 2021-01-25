@@ -905,6 +905,9 @@ bool hasSimpleParams(FunctionLikeNode *node);
 /// \return true when \p node is a generator function.
 bool isGenerator(FunctionLikeNode *node);
 
+/// \return true when \p node is an async function.
+bool isAsync(FunctionLikeNode *node);
+
 /// Allow using \p NodeKind in \p llvh::DenseMaps.
 struct NodeKindInfo : llvh::DenseMapInfo<NodeKind> {
   static inline NodeKind getEmptyKey() {
