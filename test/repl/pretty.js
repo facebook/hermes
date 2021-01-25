@@ -26,6 +26,10 @@ null
 // CHECK-NEXT: "asdf"
 (function(){})
 // CHECK-NEXT: function () { [bytecode] }
+(function*(){})
+// CHECK-NEXT: function *() { [bytecode] }
+(async function(){})
+// CHECK-NEXT: async function () { [bytecode] }
 
 a = [1,2, function(){}, null]
 // CHECK-NEXT: [ 1, 2, [Function], null, [length]: 4 ]

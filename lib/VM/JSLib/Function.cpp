@@ -132,7 +132,13 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
 #endif
 
   SmallU16String<64> strBuf{};
-  strBuf.append("function ");
+  if (vmisa<JSAsyncFunction>(*func)) {
+    strBuf.append("async function ");
+  } else if (vmisa<JSGeneratorFunction>(*func)) {
+    strBuf.append("function *");
+  } else {
+    strBuf.append("function ");
+  }
 
   // Extract the name.
   auto propRes = JSObject::getNamed_RJS(
