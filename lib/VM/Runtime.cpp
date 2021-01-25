@@ -1019,7 +1019,7 @@ ExecutionStatus Runtime::loadSegment(
   return ExecutionStatus::RETURNED;
 }
 
-void Runtime::runInternalBytecode() {
+Handle<JSObject> Runtime::runInternalBytecode() {
   auto module = getInternalBytecode();
   std::pair<std::unique_ptr<hbc::BCProvider>, std::string> bcResult =
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
@@ -1041,7 +1041,11 @@ void Runtime::runInternalBytecode() {
   // It is a fatal error for the internal bytecode to throw an exception.
   assert(
       res != ExecutionStatus::EXCEPTION && "Internal bytecode threw exception");
-  (void)res;
+  assert(
+      res->isObject() &&
+      "Completion value of internal bytecode must be an object");
+
+  return makeHandle<JSObject>(*res);
 }
 
 void Runtime::printException(llvh::raw_ostream &os, Handle<> valueHandle) {

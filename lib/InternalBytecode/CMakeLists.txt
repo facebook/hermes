@@ -44,6 +44,7 @@ endif()
 set(internal_bytecode_sources
   header.js
   Promise.js
+  AsyncFn.js
   footer.js
 )
 

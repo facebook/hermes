@@ -205,7 +205,8 @@ class Runtime : public HandleRootOwner,
       RuntimeModuleFlags flags = {});
 
   /// Runs the internal bytecode. This is called once during initialization.
-  void runInternalBytecode();
+  /// \return the completion value of internal bytecode IIFE.
+  Handle<JSObject> runInternalBytecode();
 
   /// A convenience function to print an exception to a stream.
   void printException(llvh::raw_ostream &os, Handle<> valueHandle);
