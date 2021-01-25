@@ -304,7 +304,7 @@ static bool isReturnThis(Handle<StringPrimitive> str, Runtime *runtime) {
 CallResult<HermesValue> createDynamicFunction(
     Runtime *runtime,
     NativeArgs args,
-    bool isGeneratorFunction) {
+    DynamicFunctionKind kind) {
   GCScope gcScope(runtime);
 
   // Number of arguments supplied to Function().
@@ -334,12 +334,27 @@ CallResult<HermesValue> createDynamicFunction(
   // has already been looked up to use as the parent of 'this', so
   // instead of looking it up again, just use this's parent.  If
   // NewTarget isn't given, fall back to a default.
+  MutableHandle<JSObject> fallbackProto{runtime};
+  switch (kind) {
+    case DynamicFunctionKind::Normal:
+      fallbackProto = Handle<JSObject>::vmcast(&runtime->functionPrototype);
+      break;
+    case DynamicFunctionKind::Generator:
+      fallbackProto =
+          Handle<JSObject>::vmcast(&runtime->generatorFunctionPrototype);
+      break;
+    case DynamicFunctionKind::Async:
+      fallbackProto =
+          Handle<JSObject>::vmcast(&runtime->asyncFunctionPrototype);
+      break;
+    default:
+      llvm_unreachable("unknown kind for CreateDynamicFunction.");
+  }
+
   Handle<JSObject> parent = !args.getNewTarget().isUndefined()
       ? runtime->makeHandle(
             vmcast<JSObject>(args.getThisArg())->getParent(runtime))
-      : (isGeneratorFunction
-             ? Handle<JSObject>::vmcast(&runtime->generatorFunctionPrototype)
-             : Handle<JSObject>::vmcast(&runtime->functionPrototype));
+      : fallbackProto;
 
   if (argCount == 0) {
     // No arguments, just set body to be the empty string.
@@ -366,7 +381,8 @@ CallResult<HermesValue> createDynamicFunction(
     body = strRes->get();
     size.add(body->getStringLength());
 
-    if (!isGeneratorFunction && argCount == 1 && isReturnThis(body, runtime)) {
+    if (kind == DynamicFunctionKind::Normal && argCount == 1 &&
+        isReturnThis(body, runtime)) {
       // If this raises an exception, we still return immediately.
       return JSFunction::create(
                  runtime,
@@ -379,15 +395,27 @@ CallResult<HermesValue> createDynamicFunction(
   }
 
   // Constant parts of the function.
-  auto functionHeader = isGeneratorFunction ? createASCIIRef("(function*(")
-                                            : createASCIIRef("(function (");
+  ASCIIRef functionHeader;
+  switch (kind) {
+    case DynamicFunctionKind::Normal:
+      functionHeader = createASCIIRef("(function (");
+      break;
+    case DynamicFunctionKind::Generator:
+      functionHeader = createASCIIRef("(function*(");
+      break;
+    case DynamicFunctionKind::Async:
+      functionHeader = createASCIIRef("(async function (");
+      break;
+    default:
+      llvm_unreachable("unknown kind for CreateDynamicFunction.");
+  };
   size.add(functionHeader.size());
 
   auto bodyHeader = createASCIIRef("){");
   size.add(bodyHeader.size());
 
-  // Note: add a \n before the closing '}' in case the function body ends with a
-  // line comment.
+  // Note: add a \n before the closing '}' in case the
+  // function body ends with a line comment.
   auto functionFooter = createASCIIRef("\n})");
   size.add(functionFooter.size());
 

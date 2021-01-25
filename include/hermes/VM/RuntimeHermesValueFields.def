@@ -25,6 +25,7 @@ RUNTIME_HV_FIELD_PROTOTYPE(errorConstructor)
 #include "hermes/VM/NativeErrorTypes.def"
 #undef ALL_ERROR_TYPE
 RUNTIME_HV_FIELD_PROTOTYPE(functionPrototype)
+RUNTIME_HV_FIELD_PROTOTYPE(functionConstructor)
 
 RUNTIME_HV_FIELD_PROTOTYPE(stringPrototype)
 RUNTIME_HV_FIELD_PROTOTYPE(numberPrototype)
@@ -62,6 +63,7 @@ RUNTIME_HV_FIELD_PROTOTYPE(arrayClass)
 RUNTIME_HV_FIELD_PROTOTYPE(iteratorPrototype)
 RUNTIME_HV_FIELD_PROTOTYPE(arrayIteratorPrototype)
 RUNTIME_HV_FIELD_PROTOTYPE(arrayPrototypeValues)
+RUNTIME_HV_FIELD_PROTOTYPE(asyncFunctionPrototype)
 RUNTIME_HV_FIELD_PROTOTYPE(stringIteratorPrototype)
 RUNTIME_HV_FIELD_PROTOTYPE(regExpStringIteratorPrototype)
 RUNTIME_HV_FIELD_PROTOTYPE(generatorPrototype)

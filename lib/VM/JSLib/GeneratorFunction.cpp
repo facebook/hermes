@@ -72,7 +72,7 @@ Handle<JSObject> createGeneratorFunctionConstructor(Runtime *runtime) {
 
 CallResult<HermesValue>
 generatorFunctionConstructor(void *, Runtime *runtime, NativeArgs args) {
-  return createDynamicFunction(runtime, args, true);
+  return createDynamicFunction(runtime, args, DynamicFunctionKind::Generator);
 }
 
 } // namespace vm

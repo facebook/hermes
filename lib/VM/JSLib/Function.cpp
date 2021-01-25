@@ -88,7 +88,7 @@ Handle<JSObject> createFunctionConstructor(Runtime *runtime) {
 
 CallResult<HermesValue>
 functionConstructor(void *, Runtime *runtime, NativeArgs args) {
-  return createDynamicFunction(runtime, args, false);
+  return createDynamicFunction(runtime, args, DynamicFunctionKind::Normal);
 }
 
 CallResult<HermesValue>

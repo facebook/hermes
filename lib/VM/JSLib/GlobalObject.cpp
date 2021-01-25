@@ -260,7 +260,7 @@ throwTypeError(void *ctx, Runtime *runtime, NativeArgs) {
 // NOTE: when declaring more global symbols, don't forget to update
 // "Libhermes.h".
 void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
-  GCScope gcScope{runtime, "initGlobalObject", 300};
+  GCScope gcScope{runtime, "initGlobalObject", 310};
 
   // Not enumerable, not writable, not configurable.
   DefinePropertyFlags constantDPF =
@@ -530,13 +530,20 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
           runtime, Handle<JSObject>::vmcast(&runtime->iteratorPrototype))
           .getHermesValue();
 
+  // "Forward declaration" of "Generator prototype object"
   runtime->generatorPrototype =
       JSObject::create(
           runtime, Handle<JSObject>::vmcast(&runtime->iteratorPrototype))
           .getHermesValue();
 
-  // %Generator% intrinsic object.
+  // "Forward declaration" of %GeneratorFunction.prototype%
   runtime->generatorFunctionPrototype =
+      JSObject::create(
+          runtime, Handle<JSObject>::vmcast(&runtime->functionPrototype))
+          .getHermesValue();
+
+  // "Forward declaration" of %AsyncFunction.prototype%
+  runtime->asyncFunctionPrototype =
       JSObject::create(
           runtime, Handle<JSObject>::vmcast(&runtime->functionPrototype))
           .getHermesValue();
@@ -557,7 +564,8 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
   createStringConstructor(runtime);
 
   // Function constructor.
-  createFunctionConstructor(runtime);
+  runtime->functionConstructor =
+      createFunctionConstructor(runtime).getHermesValue();
 
   // Number constructor.
   createNumberConstructor(runtime);
@@ -624,6 +632,9 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
 
   // GeneratorFunction constructor (not directly exposed in the global object).
   createGeneratorFunctionConstructor(runtime);
+
+  // AsyncFunction constructor (not directly exposed in the global object).
+  createAsyncFunctionConstructor(runtime);
 
   // %GeneratorPrototype%.
   populateGeneratorPrototype(runtime);

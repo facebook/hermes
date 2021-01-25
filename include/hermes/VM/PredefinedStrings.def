@@ -371,6 +371,7 @@ STR(Generator, "Generator")
 STR(throwStr, "throw")
 
 STR(GeneratorFunction, "GeneratorFunction")
+STR(AsyncFunction, "AsyncFunction")
 
 STR(Proxy, "Proxy")
 STR(Reflect, "Reflect")
