@@ -30,7 +30,7 @@ NORM_FORM convertToWinNLSNormForm(NormalizationForm normForm) {
   }
 }
 
-bool IsNormalizedString(
+bool isNormalizedString(
     const char16_t *bufferPtr,
     uint32_t bufferLength,
     NormalizationForm normForm) {
@@ -41,8 +41,7 @@ bool IsNormalizedString(
       reinterpret_cast<const wchar_t *>(bufferPtr),
       bufferLength);
 }
-
-bool GetNormalizedString(
+bool getNormalizedString(
     const char16_t *bufferPtr,
     uint32_t bufferLength,
     NormalizationForm normForm,
@@ -67,13 +66,14 @@ bool GetNormalizedString(
   // cases the loop will not iterate more than 2 times.
 
   assert(
-      !IsNormalizedString(bufferPtr, bufferLength, normForm) &&
+      !isNormalizedString(bufferPtr, bufferLength, normForm) &&
       "It is unoptimal to call this function for normalized strings. The caller should first call IsNormalizedString.");
 
   static_assert(
       sizeof(wchar_t) == sizeof(char16_t), "sizeof(wchar_t) == sizeof(UChar)");
 
-  // 1. First query for the initial estimate of the output buffer size.
+
+  // First query for the initial estimate of the output buffer size.
   int sizeEstimate = NormalizeString(
       convertToWinNLSNormForm(normForm),
       reinterpret_cast<const wchar_t *>(bufferPtr),
@@ -97,9 +97,10 @@ bool GetNormalizedString(
         reinterpret_cast<wchar_t *>(output.data()),
         sizeEstimate);
 
-    // The normalization succeded if the return value is greter than zero.
+    // Normalization succeeded if the return value is greter than zero.
     if (newSizeEstimate > 0) {
-      output.resize(newSizeEstimate); // Compact the output buffer.
+      // Compact the output buffer before returning.
+      output.resize(newSizeEstimate); 
       return true;
     } else {
       // If the return value is less than zero and the error code is set to
@@ -108,14 +109,12 @@ bool GetNormalizedString(
       if (dwError != ERROR_INSUFFICIENT_BUFFER) {
         return false;
       }
-
       newSizeEstimate = -1 * newSizeEstimate;
       if (newSizeEstimate < sizeEstimate) {
         return false;
       }
     }
   }
-
   return false;
 }
 
@@ -123,9 +122,9 @@ int localeCompare(
     llvh::ArrayRef<char16_t> left,
     llvh::ArrayRef<char16_t> right) {
   llvh::SmallVector<char16_t, 16> normalizedLeft;
-  if (!IsNormalizedString(left.data(), left.size(), NormalizationForm::C)) {
+  if (!isNormalizedString(left.data(), left.size(), NormalizationForm::C)) {
     uint32_t sizeOfNormalizedStringWithoutNullTerminator;
-    bool success = GetNormalizedString(
+    bool success = getNormalizedString(
         left.data(),
         left.size(),
         NormalizationForm::C,
@@ -135,11 +134,10 @@ int localeCompare(
       left = llvh::ArrayRef<char16_t>(
           normalizedLeft.data(), normalizedLeft.size());
   }
-
   llvh::SmallVector<char16_t, 16> normalizedRight;
-  if (!IsNormalizedString(right.data(), right.size(), NormalizationForm::C)) {
+  if (!isNormalizedString(right.data(), right.size(), NormalizationForm::C)) {
     uint32_t sizeOfNormalizedStringWithoutNullTerminator;
-    bool success = GetNormalizedString(
+    bool success = getNormalizedString(
         right.data(),
         right.size(),
         NormalizationForm::C,
@@ -149,7 +147,6 @@ int localeCompare(
       right = llvh::ArrayRef<char16_t>(
           normalizedRight.data(), normalizedRight.size());
   }
-
   DWORD comparisonFlags = 0;
   int compareResult = CompareStringEx(
       LOCALE_NAME_USER_DEFAULT,
@@ -161,7 +158,6 @@ int localeCompare(
       nullptr /* lpReserved */,
       nullptr /*lParam*/,
       0);
-
   if (compareResult == CSTR_EQUAL) {
     return 0;
   } else if (compareResult == CSTR_LESS_THAN) {
@@ -430,17 +426,17 @@ void convertToCase(
 }
 
 void normalize(llvh::SmallVectorImpl<char16_t> &buf, NormalizationForm form) {
-  if (!IsNormalizedString(buf.data(), buf.size(), NormalizationForm::C)) {
+  if (!isNormalizedString(buf.data(), buf.size(), NormalizationForm::C)) {
     uint32_t sizeOfNormalizedStringWithoutNullTerminator;
 
     llvh::SmallVector<char16_t, 32> normalized;
-    bool success = GetNormalizedString(
+    bool success = getNormalizedString(
         buf.data(),
         buf.size(),
         NormalizationForm::C,
         normalized,
         sizeOfNormalizedStringWithoutNullTerminator);
-    assert(success && "GetNormalizedString failed !");
+    assert(success && "getNormalizedString failed !");
 
     if (success)
       buf = normalized;

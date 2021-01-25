@@ -1273,8 +1273,8 @@ static bool getKnownFolderPath(KNOWNFOLDERID folderId,
     return false;
 
   bool ok = !UTF16ToUTF8(path, ::wcslen(path), result);
-  ::CoTaskMemFree(path); 
-  return false;
+  ::CoTaskMemFree(path);
+  return ok;
 }
 
 bool home_directory(SmallVectorImpl<char> &result) {
