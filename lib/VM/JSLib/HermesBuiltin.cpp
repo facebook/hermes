@@ -762,7 +762,7 @@ hermesBuiltinExportAll(void *, Runtime *runtime, NativeArgs args) {
 
 void createHermesBuiltins(
     Runtime *runtime,
-    llvh::MutableArrayRef<NativeFunction *> builtins) {
+    llvh::MutableArrayRef<Callable *> builtins) {
   auto defineInternMethod = [&](BuiltinMethod::Enum builtinIndex,
                                 Predefined::Str symID,
                                 NativeFunctionPtr func,

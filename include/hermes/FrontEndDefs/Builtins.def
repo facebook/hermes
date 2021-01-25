@@ -7,8 +7,31 @@
 
 ///===----------------------------------------------------------------------===
 /// \file
-/// Define global objects and methods which the compiler can assume have not
-/// been overwritten and can be treated as builtins.
+/// Define Hermes builtin functions.
+///
+/// All builtin functions in Hermes are registered in a vector of `Callable *`
+/// in the runtime with an index as its builtin method id.
+///
+/// There are 3 kinds of builtins in Hermes:
+/// 1. (Public Native) Builtins: those are global objects and methods of JSLib
+///   implemented natively which the compiler can assume have not been
+///   overwritten and can be treated as builtins under the "static builtin"
+///   optimizations (`-fstatic-builtins` flag).
+///
+/// 2. Private (Native) Builtins: those are native functions meant to be only
+///   called internally by the compiler to help with implementing JS features
+///   without introducing extra opcodes. They are notationally written as
+///   `HermesBuiltin_name`.
+///
+/// 3. (Private) JS Builtins: those are JS functions returned from the result of
+///   executing internal bytecode. They are also there to help with implementing
+///   JS features.
+///
+/// At this moment,
+/// Native builtins are invoked via `CallBuiltin` instruction.
+/// JS builtins are invoked via `GetBuiltinClosure` followed by a `Call`.
+///
+/// We might separate them in the future.
 ///
 /// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 /// IMPORTANT: DO NOT FORGET TO INCREASE THE BYTECODE FILE FORMAT VERSION IF
@@ -27,6 +50,12 @@
 #endif
 #ifndef MARK_FIRST_PRIVATE_BUILTIN
 #define MARK_FIRST_PRIVATE_BUILTIN(name)
+#endif
+#ifndef JS_BUILTIN
+#define JS_BUILTIN(name)
+#endif
+#ifndef MARK_FIRST_JS_BUILTIN
+#define MARK_FIRST_JS_BUILTIN(name)
 #endif
 
 BUILTIN_OBJECT(Array)
@@ -109,7 +138,12 @@ PRIVATE_BUILTIN(apply)
 PRIVATE_BUILTIN(exportAll)
 PRIVATE_BUILTIN(exponentiationOperator)
 
+JS_BUILTIN(spawnAsync)
+MARK_FIRST_JS_BUILTIN(spawnAsync)
+
 #undef BUILTIN_OBJECT
 #undef BUILTIN_METHOD
 #undef PRIVATE_BUILTIN
 #undef MARK_FIRST_PRIVATE_BUILTIN
+#undef JS_BUILTIN
+#undef MARK_FIRST_JS_BUILTIN

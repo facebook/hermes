@@ -14,9 +14,10 @@
 namespace hermes {
 namespace vm {
 
-inline NativeFunction *Runtime::getBuiltinNativeFunction(
-    unsigned builtinMethodID) {
-  assert(builtinMethodID < BuiltinMethod::_count && "invalid builtinMethodID");
+inline Callable *Runtime::getBuiltinCallable(unsigned builtinMethodID) {
+  assert(
+      builtinMethodID < BuiltinMethod::_count &&
+      "out of bound builtinMethodID");
   return builtins_[builtinMethodID];
 }
 

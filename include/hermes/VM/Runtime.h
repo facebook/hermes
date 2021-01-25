@@ -314,10 +314,10 @@ class Runtime : public HandleRootOwner,
 
   /// @}
 
-  /// Return a pointer to a builtin native function builtin identified by id.
+  /// Return a pointer to a callable builtin identified by id.
   /// Unfortunately we can't use the enum here, since we don't want to include
   /// the builtins header header.
-  inline NativeFunction *getBuiltinNativeFunction(unsigned builtinMethodID);
+  inline Callable *getBuiltinCallable(unsigned builtinMethodID);
 
   IdentifierTable &getIdentifierTable() {
     return identifierTable_;
@@ -937,19 +937,27 @@ class Runtime : public HandleRootOwner,
   /// \param object is the object where the builtin method is defined as a
   ///   property.
   /// \param methodID is the SymbolID for the name of the method.
-  using ForEachBuiltinCallback = ExecutionStatus(
+  using ForEachPublicNativeBuiltinCallback = ExecutionStatus(
       unsigned methodIndex,
       Predefined::Str objectName,
       Handle<JSObject> &object,
       SymbolID methodID);
 
-  /// Enumerate the builtin methods, and invoke the callback on each method.
-  ExecutionStatus forEachBuiltin(
-      const std::function<ForEachBuiltinCallback> &callback);
+  /// Enumerate all public native builtin methods, and invoke the callback on
+  /// each method.
+  ExecutionStatus forEachPublicNativeBuiltin(
+      const std::function<ForEachPublicNativeBuiltinCallback> &callback);
 
-  /// Populate the builtins table by extracting the values from the global
-  /// object.
-  void initBuiltinTable();
+  /// Populate native builtins into the builtins table.
+  /// Public native builtins are added by extracting the values from the global
+  /// object. Private native builtins are added by \c createHermesBuiltins().
+  void initNativeBuiltins();
+
+  /// Populate JS builtins into the builtins table, after verifying they do
+  /// exist from the result of running internal bytecode.
+  void initJSBuiltins(
+      llvh::MutableArrayRef<Callable *> builtins,
+      Handle<JSObject> jsBuiltins);
 
   /// Walk all the builtin methods, assert that they are not overridden. If they
   /// are, throw an exception. This will be called at most once, before freezing
@@ -1151,8 +1159,8 @@ class Runtime : public HandleRootOwner,
   /// to be scanned as roots in young-gen collections.
   std::vector<PinnedHermesValue> charStrings_{};
 
-  /// Pointers to native implementations of builtins.
-  std::vector<NativeFunction *> builtins_{};
+  /// Pointers to callable implementations of builtins.
+  std::vector<Callable *> builtins_{};
 
   /// True if the builtins are all frozen (non-writable, non-configurable).
   bool builtinsFrozen_{false};

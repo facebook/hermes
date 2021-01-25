@@ -301,8 +301,9 @@ Runtime::Runtime(
       runtimeConfig.getEnableHermesInternalTestMethods();
   initGlobalObject(this, jsLibFlags);
 
-  // Once the global object has been initialized, populate the builtins table.
-  initBuiltinTable();
+  // Once the global object has been initialized, populate native builtins to
+  // the builtins table.
+  initNativeBuiltins();
 
   stringCycleCheckVisited_ =
       ignoreAllocationFailure(ArrayStorage::create(this, 8));
@@ -338,8 +339,11 @@ Runtime::Runtime(
 
   codeCoverageProfiler_->disable();
   // Execute our internal bytecode.
-  runInternalBytecode();
+  auto jsBuiltinsObj = runInternalBytecode();
   codeCoverageProfiler_->restore();
+
+  // Populate JS builtins returned from internal bytecode to the builtins table.
+  initJSBuiltins(builtins_, jsBuiltinsObj);
 
   if (runtimeConfig.getEnableSampleProfiling())
     samplingProfiler_ = make_unique<SamplingProfiler>(this);
@@ -457,8 +461,8 @@ void Runtime::markRoots(
   {
     MarkRootsPhaseTimer timer(this, RootAcceptor::Section::Builtins);
     acceptor.beginRootSection(RootAcceptor::Section::Builtins);
-    for (NativeFunction *&nf : builtins_)
-      acceptor.accept((void *&)nf);
+    for (Callable *&f : builtins_)
+      acceptor.accept((void *&)f);
     acceptor.endRootSection();
   }
 
@@ -1458,29 +1462,31 @@ static const struct {
   {(uint16_t)Predefined::object, (uint16_t)Predefined::method},
 #endif
 #define PRIVATE_BUILTIN(name)
-} builtinMethods[] = {
+#define JS_BUILTIN(name)
+} publicNativeBuiltins[] = {
 #include "hermes/FrontEndDefs/Builtins.def"
 };
 
 static_assert(
-    sizeof(builtinMethods) / sizeof(builtinMethods[0]) ==
+    sizeof(publicNativeBuiltins) / sizeof(publicNativeBuiltins[0]) ==
         BuiltinMethod::_firstPrivate,
     "builtin method table mismatch");
 
-ExecutionStatus Runtime::forEachBuiltin(const std::function<ExecutionStatus(
-                                            unsigned methodIndex,
-                                            Predefined::Str objectName,
-                                            Handle<JSObject> &object,
-                                            SymbolID methodID)> &callback) {
+ExecutionStatus Runtime::forEachPublicNativeBuiltin(
+    const std::function<ExecutionStatus(
+        unsigned methodIndex,
+        Predefined::Str objectName,
+        Handle<JSObject> &object,
+        SymbolID methodID)> &callback) {
   MutableHandle<JSObject> lastObject{this};
   Predefined::Str lastObjectName = Predefined::_STRING_AFTER_LAST;
 
   for (unsigned methodIndex = 0; methodIndex < BuiltinMethod::_firstPrivate;
        ++methodIndex) {
     GCScopeMarkerRAII marker{this};
-    LLVM_DEBUG(llvh::dbgs() << builtinMethods[methodIndex].name << "\n");
+    LLVM_DEBUG(llvh::dbgs() << publicNativeBuiltins[methodIndex].name << "\n");
     // Find the object first, if it changed.
-    auto objectName = (Predefined::Str)builtinMethods[methodIndex].object;
+    auto objectName = (Predefined::Str)publicNativeBuiltins[methodIndex].object;
     if (objectName != lastObjectName) {
       auto objectID = Predefined::getSymbolID(objectName);
       auto cr = JSObject::getNamed_RJS(getGlobal(), this, objectID);
@@ -1496,7 +1502,7 @@ ExecutionStatus Runtime::forEachBuiltin(const std::function<ExecutionStatus(
     }
 
     // Find the method.
-    auto methodName = (Predefined::Str)builtinMethods[methodIndex].method;
+    auto methodName = (Predefined::Str)publicNativeBuiltins[methodIndex].method;
     auto methodID = Predefined::getSymbolID(methodName);
 
     ExecutionStatus status =
@@ -1508,16 +1514,16 @@ ExecutionStatus Runtime::forEachBuiltin(const std::function<ExecutionStatus(
   return ExecutionStatus::RETURNED;
 }
 
-void Runtime::initBuiltinTable() {
+void Runtime::initNativeBuiltins() {
   GCScopeMarkerRAII gcScope{this};
 
   builtins_.resize(BuiltinMethod::_count);
 
-  (void)forEachBuiltin([this](
-                           unsigned methodIndex,
-                           Predefined::Str /* objectName */,
-                           Handle<JSObject> &currentObject,
-                           SymbolID methodID) {
+  (void)forEachPublicNativeBuiltin([this](
+                                       unsigned methodIndex,
+                                       Predefined::Str /* objectName */,
+                                       Handle<JSObject> &currentObject,
+                                       SymbolID methodID) {
     auto cr = JSObject::getNamed_RJS(currentObject, this, methodID);
     assert(
         cr.getStatus() != ExecutionStatus::EXCEPTION &&
@@ -1529,25 +1535,55 @@ void Runtime::initBuiltinTable() {
     return ExecutionStatus::RETURNED;
   });
 
-  // Now add the private builtins.
+  // Now add the private native builtins.
   createHermesBuiltins(this, builtins_);
 #ifndef NDEBUG
-  // Make sure they are all defined.
-  for (unsigned i = 0; i < BuiltinMethod::_count; ++i) {
-    assert(builtins_[i] && "builtin not initialized");
+  // Make sure native builtins are all defined.
+  for (unsigned i = 0; i < BuiltinMethod::_firstJS; ++i) {
+    assert(builtins_[i] && "native builtin not initialized");
   }
 #endif
+}
+
+static const struct JSBuiltin {
+  uint16_t symID, builtinIndex;
+} jsBuiltins[] = {
+#define BUILTIN_METHOD(object, method)
+#define PRIVATE_BUILTIN(name)
+#define JS_BUILTIN(name)                                \
+  {                                                     \
+    (uint16_t) Predefined::name,                        \
+        (uint16_t)BuiltinMethod::HermesBuiltin##_##name \
+  }
+#include "hermes/FrontEndDefs/Builtins.def"
+};
+
+void Runtime::initJSBuiltins(
+    llvh::MutableArrayRef<Callable *> builtins,
+    Handle<JSObject> jsBuiltinsObj) {
+  for (const JSBuiltin &jsBuiltin : jsBuiltins) {
+    auto symID = jsBuiltin.symID;
+    auto builtinIndex = jsBuiltin.builtinIndex;
+
+    // Try to get the JS function from jsBuiltinsObj.
+    auto getRes = JSObject::getNamed_RJS(
+        jsBuiltinsObj, this, Predefined::getSymbolID((Predefined::Str)symID));
+    assert(getRes == ExecutionStatus::RETURNED && "Failed to get JS builtin.");
+    JSFunction *jsFunc = vmcast<JSFunction>(getRes->getHermesValue());
+
+    builtins[builtinIndex] = jsFunc;
+  }
 }
 
 ExecutionStatus Runtime::assertBuiltinsUnmodified() {
   assert(!builtinsFrozen_ && "Builtins are already frozen.");
   GCScope gcScope(this);
 
-  return forEachBuiltin([this](
-                            unsigned methodIndex,
-                            Predefined::Str /* objectName */,
-                            Handle<JSObject> &currentObject,
-                            SymbolID methodID) {
+  return forEachPublicNativeBuiltin([this](
+                                        unsigned methodIndex,
+                                        Predefined::Str /* objectName */,
+                                        Handle<JSObject> &currentObject,
+                                        SymbolID methodID) {
     auto cr = JSObject::getNamed_RJS(currentObject, this, methodID);
     assert(
         cr.getStatus() != ExecutionStatus::EXCEPTION &&
@@ -1580,30 +1616,31 @@ void Runtime::freezeBuiltins() {
   PropertyFlags setFlags;
   setFlags.staticBuiltin = 1;
 
-  (void)forEachBuiltin([this, &objectList, &methodList, &clearFlags, &setFlags](
-                           unsigned methodIndex,
-                           Predefined::Str objectName,
-                           Handle<JSObject> &currentObject,
-                           SymbolID methodID) {
-    methodList.push_back(methodID);
-    // This is the last method on current object.
-    if (methodIndex + 1 == BuiltinMethod::_publicCount ||
-        objectName != builtinMethods[methodIndex + 1].object) {
-      // Store the object id in the object set.
-      SymbolID objectID = Predefined::getSymbolID(objectName);
-      objectList.push_back(objectID);
-      // Freeze all methods and mark them as static builtins on the current
-      // object.
-      JSObject::updatePropertyFlagsWithoutTransitions(
-          currentObject,
-          this,
-          clearFlags,
-          setFlags,
-          llvh::ArrayRef<SymbolID>(methodList));
-      methodList.clear();
-    }
-    return ExecutionStatus::RETURNED;
-  });
+  (void)forEachPublicNativeBuiltin(
+      [this, &objectList, &methodList, &clearFlags, &setFlags](
+          unsigned methodIndex,
+          Predefined::Str objectName,
+          Handle<JSObject> &currentObject,
+          SymbolID methodID) {
+        methodList.push_back(methodID);
+        // This is the last method on current object.
+        if (methodIndex + 1 == BuiltinMethod::_publicCount ||
+            objectName != publicNativeBuiltins[methodIndex + 1].object) {
+          // Store the object id in the object set.
+          SymbolID objectID = Predefined::getSymbolID(objectName);
+          objectList.push_back(objectID);
+          // Freeze all methods and mark them as static builtins on the current
+          // object.
+          JSObject::updatePropertyFlagsWithoutTransitions(
+              currentObject,
+              this,
+              clearFlags,
+              setFlags,
+              llvh::ArrayRef<SymbolID>(methodList));
+          methodList.clear();
+        }
+        return ExecutionStatus::RETURNED;
+      });
 
   // Freeze all builtin objects and mark them as static builtins on the global
   // object.

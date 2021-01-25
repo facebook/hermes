@@ -133,7 +133,7 @@ struct CallableVTable {
 
 /// The abstract base for callable entities, specifically NativeFunction and
 /// Function. It presents the ability to call a function with arguments already
-/// on the stack. Subclasses implement this for native funcitions and
+/// on the stack. Subclasses implement this for native functions and
 /// interpreted functions.
 class Callable : public JSObject {
   using Super = JSObject;

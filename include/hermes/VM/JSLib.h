@@ -42,7 +42,7 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags);
 /// \c BuiltinMethod::xxx index.
 void createHermesBuiltins(
     Runtime *runtime,
-    llvh::MutableArrayRef<NativeFunction *> builtins);
+    llvh::MutableArrayRef<Callable *> builtins);
 
 std::shared_ptr<RuntimeCommonStorage> createRuntimeCommonStorage(
     bool shouldTrace);

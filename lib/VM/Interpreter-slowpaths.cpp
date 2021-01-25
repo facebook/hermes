@@ -304,7 +304,12 @@ ExecutionStatus Interpreter::implCallBuiltin(
     CodeBlock *curCodeBlock,
     uint32_t op3) {
   const Inst *ip = runtime->getCurrentIP();
-  NativeFunction *nf = runtime->getBuiltinNativeFunction(ip->iCallBuiltin.op2);
+  uint8_t methodIndex = ip->iCallBuiltin.op2;
+  Callable *callable = runtime->getBuiltinCallable(methodIndex);
+  assert(
+      isNativeBuiltin(methodIndex) &&
+      "CallBuiltin must take a native builtin.");
+  NativeFunction *nf = vmcast<NativeFunction>(callable);
 
   auto newFrame = StackFramePtr::initFrame(
       runtime->stackPointer_, FRAME, ip, curCodeBlock, op3 - 1, nf, false);
