@@ -1182,6 +1182,7 @@ void closeFile(file_t &F) {
 }
 
 std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
+#if !defined(WINUWP)
   // Convert to utf-16.
   SmallVector<wchar_t, 128> Path16;
   std::error_code EC = widenPath(path, Path16);
@@ -1205,6 +1206,11 @@ std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
   if (result != 0 && !IgnoreErrors)
     return mapWindowsError(result);
   return std::error_code();
+#else
+  // There is no known scenarios which hits codepath in Hermes.
+  // Hence commenting it out.
+  std::abort();
+#endif
 }
 
 static void expandTildeExpr(SmallVectorImpl<char> &Path) {
@@ -1259,6 +1265,7 @@ std::error_code real_path(const Twine &path, SmallVectorImpl<char> &dest,
 } // end namespace fs
 
 namespace path {
+#if !defined(WINUWP)
 static bool getKnownFolderPath(KNOWNFOLDERID folderId,
                                SmallVectorImpl<char> &result) {
   wchar_t *path = nullptr;
@@ -1266,13 +1273,20 @@ static bool getKnownFolderPath(KNOWNFOLDERID folderId,
     return false;
 
   bool ok = !UTF16ToUTF8(path, ::wcslen(path), result);
-  ::CoTaskMemFree(path);
-  return ok;
+  ::CoTaskMemFree(path); 
+  return false;
 }
 
 bool home_directory(SmallVectorImpl<char> &result) {
   return getKnownFolderPath(FOLDERID_Profile, result);
 }
+#else
+bool home_directory(SmallVectorImpl<char> &result) {
+  // Implementating in winrt required Windows.Storage APIs, which can't be used without c++17 support.
+  // There is no known scenarios which hits codepath in Hermes. Hence stubbing it out.
+  std::abort();
+}
+#endif
 
 static bool getTempDirEnvVar(const wchar_t *Var, SmallVectorImpl<char> &Res) {
   SmallVector<wchar_t, 1024> Buf;

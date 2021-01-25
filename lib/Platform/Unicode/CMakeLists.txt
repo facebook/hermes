@@ -8,6 +8,7 @@ set(source_files
    PlatformUnicodeCF.cpp
    PlatformUnicodeICU.cpp
    PlatformUnicodeEmscripten.cpp
+   PlatformUnicodeWinGlob.cpp
    CharacterProperties.cpp
 )
 
