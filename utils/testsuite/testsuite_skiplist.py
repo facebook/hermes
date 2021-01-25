@@ -184,7 +184,6 @@ SKIP_LIST = [
     "test262/test/language/expressions/arrow-function/",
     "test262/test/language/expressions/assignment/destructuring/",
     "test262/test/language/expressions/async-arrow-function/",
-    "test262/test/language/expressions/async-function/",
     "test262/test/language/expressions/async-generator/",
     "test262/test/language/expressions/await/",
     "test262/test/language/expressions/class/",
@@ -300,6 +299,8 @@ SKIP_LIST = [
     # async function missing errors: TODO(T80014951)
     "test262/test/language/statements/async-function/escaped-async.js",
     "test262/test/language/statements/async-function/early-errors-declaration-formals-body-duplicate.js",
+    "test262/test/language/expressions/async-function/escaped-async.js",
+    "test262/test/language/expressions/async-function/early-errors-expression-formals-body-duplicate.js",
     # let/const (block scope)
     "esprima/test_fixtures/declaration/let/",
     "esprima/test_fixtures/declaration/const/",

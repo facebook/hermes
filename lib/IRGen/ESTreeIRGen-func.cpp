@@ -83,9 +83,9 @@ void ESTreeIRGen::genFunctionDeclaration(
 Value *ESTreeIRGen::genFunctionExpression(
     ESTree::FunctionExpressionNode *FE,
     Identifier nameHint) {
-  if (FE->_async) {
+  if (FE->_async && FE->_generator) {
     Builder.getModule()->getContext().getSourceErrorManager().error(
-        FE->getSourceRange(), Twine("async functions are unsupported"));
+        FE->getSourceRange(), Twine("async generators are unsupported"));
     return Builder.getLiteralUndefined();
   }
 
@@ -115,7 +115,9 @@ Value *ESTreeIRGen::genFunctionExpression(
     nameTable_.insert(originalNameIden, tempClosureVar);
   }
 
-  Function *newFunc = FE->_generator
+  Function *newFunc = FE->_async
+      ? genAsyncFunction(originalNameIden, tempClosureVar, FE)
+      : FE->_generator
       ? genGeneratorFunction(originalNameIden, tempClosureVar, FE)
       : genES5Function(originalNameIden, tempClosureVar, FE);
 

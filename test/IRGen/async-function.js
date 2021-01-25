@@ -189,3 +189,55 @@ async function nonSimpleArrayDestructuring([x]) {
 //CHECK-NEXT:%BB14:
 //CHECK-NEXT:  %46 = ReturnInst undefined : undefined
 //CHECK-NEXT:function_end
+
+var simpleAsyncFE = async function () {
+  var x = await 2;
+  return x;
+}
+
+//CHECK-LABEL:function simpleAsyncFE()
+//CHECK-NEXT:frame = [x]
+//CHECK-NEXT:%BB0:
+//CHECK-NEXT:  %0 = CreateArgumentsInst
+//CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [x]
+//CHECK-NEXT:  %2 = CreateFunctionInst %?anon_0_simpleAsyncFE()
+//CHECK-NEXT:  %3 = GetBuiltinClosureInst [HermesBuiltin.spawnAsync] : number
+//CHECK-NEXT:  %4 = CallInst %3 : closure, undefined : undefined, %2 : closure, %this, %0 : object
+//CHECK-NEXT:  %5 = ReturnInst %4
+//CHECK-NEXT:function_end
+
+//CHECK-LABEL:function ?anon_0_simpleAsyncFE()
+//CHECK-NEXT:frame = [x]
+//CHECK-NEXT:%BB0:
+//CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [x]
+//CHECK-NEXT:  %1 = CreateGeneratorInst %?anon_0_?anon_0_simpleAsyncFE()
+//CHECK-NEXT:  %2 = ReturnInst %1 : object
+//CHECK-NEXT:function_end
+
+//CHECK-LABEL:function ?anon_0_?anon_0_simpleAsyncFE()
+//CHECK-NEXT:frame = [x]
+//CHECK-NEXT:%BB0:
+//CHECK-NEXT:  %0 = StartGeneratorInst
+//CHECK-NEXT:  %1 = AllocStackInst $?anon_0_isReturn_prologue
+//CHECK-NEXT:  %2 = ResumeGeneratorInst %1
+//CHECK-NEXT:  %3 = LoadStackInst %1
+//CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+//CHECK-NEXT:%BB2:
+//CHECK-NEXT:  %5 = StoreFrameInst undefined : undefined, [x]
+//CHECK-NEXT:  %6 = AllocStackInst $?anon_1_isReturn
+//CHECK-NEXT:  %7 = SaveAndYieldInst 2 : number, %BB3
+//CHECK-NEXT:%BB1:
+//CHECK-NEXT:  %8 = ReturnInst %2
+//CHECK-NEXT:%BB3:
+//CHECK-NEXT:  %9 = ResumeGeneratorInst %6
+//CHECK-NEXT:  %10 = LoadStackInst %6
+//CHECK-NEXT:  %11 = CondBranchInst %10, %BB4, %BB5
+//CHECK-NEXT:%BB5:
+//CHECK-NEXT:  %12 = StoreFrameInst %9, [x]
+//CHECK-NEXT:  %13 = LoadFrameInst [x]
+//CHECK-NEXT:  %14 = ReturnInst %13
+//CHECK-NEXT:%BB4:
+//CHECK-NEXT:  %15 = ReturnInst %9
+//CHECK-NEXT:%BB6:
+//CHECK-NEXT:  %16 = ReturnInst undefined : undefined
+//CHECK-NEXT:function_end
