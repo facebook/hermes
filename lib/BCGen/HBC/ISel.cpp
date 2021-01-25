@@ -779,15 +779,20 @@ void HBCISel::generateHBCCreateFunctionInst(
   auto output = encodeValue(Inst);
   auto code = BCFGen_->getFunctionID(Inst->getFunctionCode());
   bool isGen = llvh::isa<GeneratorFunction>(Inst->getFunctionCode());
+  bool isAsync = llvh::isa<AsyncFunction>(Inst->getFunctionCode());
   if (LLVM_LIKELY(code <= UINT16_MAX)) {
     // Most of the cases, function index will be less than 2^16.
-    if (isGen) {
+    if (isAsync) {
+      BCFGen_->emitCreateAsyncClosure(output, env, code);
+    } else if (isGen) {
       BCFGen_->emitCreateGeneratorClosure(output, env, code);
     } else {
       BCFGen_->emitCreateClosure(output, env, code);
     }
   } else {
-    if (isGen) {
+    if (isAsync) {
+      BCFGen_->emitCreateAsyncClosureLongIndex(output, env, code);
+    } else if (isGen) {
       BCFGen_->emitCreateGeneratorClosureLongIndex(output, env, code);
     } else {
       BCFGen_->emitCreateClosureLongIndex(output, env, code);

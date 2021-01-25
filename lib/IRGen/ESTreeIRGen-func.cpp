@@ -380,13 +380,11 @@ Function *ESTreeIRGen::genAsyncFunction(
         "async function compilation requires enabling generator");
   }
 
-  // TODO: create an actual AsyncFunction as the outer function.
-  auto *asyncFn = Builder.createFunction(
+  auto *asyncFn = Builder.createAsyncFunction(
       originalName,
       Function::DefinitionKind::ES5Function,
       ESTree::isStrict(functionNode->strictness),
       functionNode->getSourceRange(),
-      /* isGlobal */ false,
       /* insertBefore */ nullptr);
   // TODO: make asyncFn lazy-compilable
 
