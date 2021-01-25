@@ -1314,6 +1314,80 @@ void JSFunction::_snapshotAddLocationsImpl(
 }
 
 //===----------------------------------------------------------------------===//
+// class JSAsyncFunction
+
+const CallableVTable JSAsyncFunction::vt{
+    {
+        VTable(
+            CellKind::AsyncFunctionKind,
+            cellSize<JSAsyncFunction>(),
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr, // externalMemorySize
+            VTable::HeapSnapshotMetadata{
+                HeapSnapshot::NodeType::Closure,
+                JSAsyncFunction::_snapshotNameImpl,
+                JSAsyncFunction::_snapshotAddEdgesImpl,
+                nullptr,
+                nullptr}),
+        JSAsyncFunction::_getOwnIndexedRangeImpl,
+        JSAsyncFunction::_haveOwnIndexedImpl,
+        JSAsyncFunction::_getOwnIndexedPropertyFlagsImpl,
+        JSAsyncFunction::_getOwnIndexedImpl,
+        JSAsyncFunction::_setOwnIndexedImpl,
+        JSAsyncFunction::_deleteOwnIndexedImpl,
+        JSAsyncFunction::_checkAllOwnIndexedImpl,
+    },
+    JSAsyncFunction::_newObjectImpl,
+    JSAsyncFunction::_callImpl};
+
+void AsyncFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSAsyncFunction>());
+  FunctionBuildMeta(cell, mb);
+}
+
+#ifdef HERMESVM_SERIALIZE
+JSAsyncFunction::JSAsyncFunction(Deserializer &d)
+    : JSFunction(d, &vt.base.base) {}
+
+void AsyncFunctionSerialize(Serializer &s, const GCCell *cell) {
+  // No additional fields compared to JSFunction.
+  serializeFunctionImpl(s, cell, JSObject::numOverlapSlots<JSAsyncFunction>());
+  s.endObject(cell);
+}
+
+void AsyncFunctionDeserialize(Deserializer &d, CellKind kind) {
+  assert(kind == CellKind::AsyncFunctionKind && "Expected AsyncFunction");
+
+  auto *cell = d.getRuntime()->makeAFixed<JSAsyncFunction>(d);
+  d.endObject(cell);
+}
+#endif
+
+PseudoHandle<JSAsyncFunction> JSAsyncFunction::create(
+    Runtime *runtime,
+    Handle<Domain> domain,
+    Handle<JSObject> parentHandle,
+    Handle<Environment> envHandle,
+    CodeBlock *codeBlock) {
+  auto *cell = runtime->makeAFixed<JSAsyncFunction, kHasFinalizer>(
+      runtime,
+      domain,
+      parentHandle,
+      runtime->getHiddenClassForPrototype(
+          *parentHandle,
+          numOverlapSlots<JSAsyncFunction>() + ANONYMOUS_PROPERTY_SLOTS),
+      envHandle,
+      codeBlock);
+  auto self = JSObjectInit::initToPseudoHandle(runtime, cell);
+  self->flags_.lazyObject = 1;
+  return self;
+}
+
+//===----------------------------------------------------------------------===//
 // class JSGeneratorFunction
 
 const CallableVTable JSGeneratorFunction::vt{

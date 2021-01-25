@@ -37,6 +37,7 @@ HERMES_VM_GCOBJECT(FinalizableNativeFunction);
 HERMES_VM_GCOBJECT(NativeConstructor);
 HERMES_VM_GCOBJECT(JSFunction);
 HERMES_VM_GCOBJECT(JSGeneratorFunction);
+HERMES_VM_GCOBJECT(JSAsyncFunction);
 HERMES_VM_GCOBJECT(GeneratorInnerFunction);
 HERMES_VM_GCOBJECT(ArrayImpl);
 HERMES_VM_GCOBJECT(Arguments);

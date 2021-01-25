@@ -87,6 +87,7 @@ CELL_CLASS(CallableProxy, "CallableProxy")
 CELL_KIND(FinalizableNativeFunction)
 CELL_KIND(GeneratorFunction)
 CELL_KIND(GeneratorInnerFunction)
+CELL_KIND(AsyncFunction)
 CELL_CLASS(Function, "Function")
 
 // Update AllCells, below, if new CellKinds are added.

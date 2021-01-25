@@ -1039,6 +1039,82 @@ class JSFunction : public Callable {
   _snapshotAddLocationsImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
 };
 
+/// A function which interprets code and returns a Async Function when called.
+/// Needs a separate class because it must be a different CellKind from
+/// JSFunction.
+class JSAsyncFunction final : public JSFunction {
+  friend GC;
+  using Super = JSFunction;
+
+  static constexpr auto kHasFinalizer = HasFinalizer::No;
+
+ public:
+  static const CallableVTable vt;
+
+  /// Create a AsyncFunction.
+  static PseudoHandle<JSAsyncFunction> create(
+      Runtime *runtime,
+      Handle<Domain> domain,
+      Handle<JSObject> parentHandle,
+      Handle<Environment> envHandle,
+      CodeBlock *codeBlock);
+
+  /// Create a AsyncFunction with no environment and a CodeBlock simply
+  /// returning undefined, with the prototype property auto-initialized to new
+  /// Object().
+  static PseudoHandle<JSAsyncFunction> create(
+      Runtime *runtime,
+      Handle<JSObject> parentHandle) {
+    return create(
+        runtime,
+        runtime->makeHandle(Domain::create(runtime)),
+        parentHandle,
+        runtime->makeNullHandle<Environment>(),
+        runtime->getEmptyCodeBlock());
+  }
+
+  static bool classof(const GCCell *cell) {
+    return cell->getKind() == CellKind::AsyncFunctionKind;
+  }
+
+ protected:
+#ifdef HERMESVM_SERIALIZE
+  explicit JSAsyncFunction(Deserializer &d);
+
+  friend void AsyncFunctionDeserialize(Deserializer &d, CellKind kind);
+#endif
+
+  JSAsyncFunction(
+      Runtime *runtime,
+      const VTable *vtp,
+      Handle<Domain> domain,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
+      Handle<Environment> environment,
+      CodeBlock *codeBlock)
+      : Super(runtime, vtp, domain, parent, clazz, environment, codeBlock) {
+    assert(
+        !vt.base.base.finalize_ == (kHasFinalizer != HasFinalizer::Yes) &&
+        "kHasFinalizer invalid value");
+  }
+
+  JSAsyncFunction(
+      Runtime *runtime,
+      Handle<Domain> domain,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
+      Handle<Environment> environment,
+      CodeBlock *codeBlock)
+      : JSFunction(
+            runtime,
+            &vt.base.base,
+            domain,
+            parent,
+            clazz,
+            environment,
+            codeBlock) {}
+};
+
 /// A function which interprets code and returns a Generator when called.
 /// Needs a separate class because it must be a different CellKind from
 /// JSFunction.
