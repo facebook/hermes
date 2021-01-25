@@ -175,7 +175,6 @@ SKIP_LIST = [
     "test262/test/language/statements/labeled/let-identifier-with-newline.js",
     "test262/test/language/statements/while/let-identifier-with-newline.js",
     "test262/test/language/statements/with/let-identifier-with-newline.js",
-    "test262/test/built-ins/AsyncFunction/",
     "test262/test/built-ins/Function/prototype/toString/",
     "test262/test/built-ins/Promise/",
     "test262/test/language/block-scope/",
