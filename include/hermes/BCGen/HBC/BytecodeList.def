@@ -534,6 +534,13 @@ DEFINE_OPCODE_3(CreateClosureLongIndex, Reg8, Reg8, UInt32)
 DEFINE_OPCODE_3(CreateGeneratorClosure, Reg8, Reg8, UInt16)
 DEFINE_OPCODE_3(CreateGeneratorClosureLongIndex, Reg8, Reg8, UInt32)
 
+/// Create a closure for an AsyncFunction.
+/// Arg1 is the register in which to store the closure.
+/// Arg2 is the current environment as loaded by GetEnvironment 0.
+/// Arg3 is index in the function table.
+DEFINE_OPCODE_3(CreateAsyncClosure, Reg8, Reg8, UInt16)
+DEFINE_OPCODE_3(CreateAsyncClosureLongIndex, Reg8, Reg8, UInt32)
+
 /// Allocate an empty, uninitialized object (immediately before a constructor).
 /// Arg1 is the destination register.
 /// Arg2 is the prototype to assign it.

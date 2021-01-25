@@ -1992,6 +1992,32 @@ tailCall:
       DISPATCH;
     }
 
+      CASE(CreateAsyncClosure) {
+        idVal = ip->iCreateAsyncClosure.op3;
+        nextIP = NEXTINST(CreateAsyncClosure);
+        goto createAsyncClosure;
+      }
+      CASE(CreateAsyncClosureLongIndex) {
+        idVal = ip->iCreateAsyncClosureLongIndex.op3;
+        nextIP = NEXTINST(CreateAsyncClosureLongIndex);
+        goto createAsyncClosure;
+      }
+    createAsyncClosure : {
+      auto *runtimeModule = curCodeBlock->getRuntimeModule();
+      CAPTURE_IP_ASSIGN(
+          O1REG(CreateAsyncClosure),
+          JSAsyncFunction::create(
+              runtime,
+              runtimeModule->getDomain(runtime),
+              Handle<JSObject>::vmcast(&runtime->asyncFunctionPrototype),
+              Handle<Environment>::vmcast(&O2REG(CreateAsyncClosure)),
+              runtimeModule->getCodeBlockMayAllocate(idVal))
+              .getHermesValue());
+      gcScope.flushToSmallCount(KEEP_HANDLES);
+      ip = nextIP;
+      DISPATCH;
+    }
+
       CASE(CreateGeneratorClosure) {
         idVal = ip->iCreateGeneratorClosure.op3;
         nextIP = NEXTINST(CreateGeneratorClosure);
