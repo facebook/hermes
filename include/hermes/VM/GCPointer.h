@@ -26,14 +26,14 @@ class GCPointerBase {
 #ifdef HERMESVM_COMPRESSED_POINTERS
       BasedPointer;
 #else
-      void *;
+      GCCell *;
 #endif
 
  protected:
   StorageType ptr_;
 
   explicit GCPointerBase(std::nullptr_t) : ptr_() {}
-  inline GCPointerBase(PointerBase *base, void *ptr);
+  inline GCPointerBase(PointerBase *base, GCCell *ptr);
 
  public:
   // These classes are used as arguments to GCPointer constructors, to
@@ -42,15 +42,15 @@ class GCPointerBase {
   class NoBarriers : public std::false_type {};
   class YesBarriers : public std::true_type {};
 
-  inline void *get(PointerBase *base) const;
+  inline GCCell *get(PointerBase *base) const;
 
-  inline void *getNonNull(PointerBase *base) const;
+  inline GCCell *getNonNull(PointerBase *base) const;
 
   /// This must be used to assign a new value to this GCPointer.
   /// \param ptr The memory being pointed to.
   /// \param base The base of ptr.
   /// \param gc Used for write barriers.
-  inline void set(PointerBase *base, void *ptr, GC *gc);
+  inline void set(PointerBase *base, GCCell *ptr, GC *gc);
 
   /// Set this pointer to null. This needs a write barrier in some types of
   /// garbage collectors.
@@ -77,8 +77,10 @@ class GCPointerBase {
     return !(*this == other);
   }
 
-  inline static void *storageTypeToPointer(StorageType st, PointerBase *base);
-  inline static StorageType pointerToStorageType(void *ptr, PointerBase *base);
+  inline static GCCell *storageTypeToPointer(StorageType st, PointerBase *base);
+  inline static StorageType pointerToStorageType(
+      GCCell *ptr,
+      PointerBase *base);
 };
 
 /// A class to represent "raw" pointers to heap objects.  Disallows assignment,
@@ -116,10 +118,10 @@ class GCPointer : public GCPointerBase {
   /// Get the raw pointer value.
   /// \param base The base of the address space that the GCPointer points into.
   T *get(PointerBase *base) const {
-    return vmcast_or_null<T>(static_cast<GCCell *>(GCPointerBase::get(base)));
+    return vmcast_or_null<T>(GCPointerBase::get(base));
   }
   T *getNonNull(PointerBase *base) const {
-    return vmcast<T>(static_cast<GCCell *>(GCPointerBase::getNonNull(base)));
+    return vmcast<T>(GCPointerBase::getNonNull(base));
   }
 
   /// Assign a new value to this GCPointer.
@@ -139,7 +141,7 @@ class GCPointer : public GCPointerBase {
 /// @name Inline implementations.
 /// @{
 
-inline GCPointerBase::GCPointerBase(PointerBase *base, void *ptr)
+inline GCPointerBase::GCPointerBase(PointerBase *base, GCCell *ptr)
     : ptr_(
 #ifdef HERMESVM_COMPRESSED_POINTERS
           base->pointerToBased(ptr)
@@ -151,13 +153,13 @@ inline GCPointerBase::GCPointerBase(PointerBase *base, void *ptr)
   (void)base;
 }
 
-inline void *GCPointerBase::get(PointerBase *base) const {
+inline GCCell *GCPointerBase::get(PointerBase *base) const {
   return storageTypeToPointer(ptr_, base);
 }
 
-inline void *GCPointerBase::getNonNull(PointerBase *base) const {
+inline GCCell *GCPointerBase::getNonNull(PointerBase *base) const {
 #ifdef HERMESVM_COMPRESSED_POINTERS
-  return base->basedToPointerNonNull(ptr_);
+  return reinterpret_cast<GCCell *>(base->basedToPointerNonNull(ptr_));
 #else
   (void)base;
   return ptr_;
@@ -168,18 +170,18 @@ inline GCPointerBase::StorageType GCPointerBase::getStorageType() const {
   return ptr_;
 }
 
-inline void *GCPointerBase::storageTypeToPointer(
+inline GCCell *GCPointerBase::storageTypeToPointer(
     StorageType st,
     PointerBase *base) {
 #ifdef HERMESVM_COMPRESSED_POINTERS
-  return base->basedToPointer(st);
+  return reinterpret_cast<GCCell *>(base->basedToPointer(st));
 #else
   return st;
 #endif
 }
 
 inline GCPointerBase::StorageType GCPointerBase::pointerToStorageType(
-    void *ptr,
+    GCCell *ptr,
     PointerBase *base) {
 #ifdef HERMESVM_COMPRESSED_POINTERS
   return base->pointerToBased(ptr);

@@ -462,7 +462,7 @@ void Runtime::markRoots(
     MarkRootsPhaseTimer timer(this, RootAcceptor::Section::Builtins);
     acceptor.beginRootSection(RootAcceptor::Section::Builtins);
     for (Callable *&f : builtins_)
-      acceptor.accept((void *&)f);
+      acceptor.acceptPtr(f);
     acceptor.endRootSection();
   }
 

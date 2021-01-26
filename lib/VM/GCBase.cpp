@@ -162,7 +162,7 @@ struct SnapshotAcceptor : public RootAndSlotAcceptorWithNamesDefault {
 
   void acceptHV(HermesValue &hv, const char *name) override {
     if (hv.isPointer()) {
-      auto ptr = hv.getPointer();
+      GCCell *ptr = static_cast<GCCell *>(hv.getPointer());
       accept(ptr, name);
     }
   }
@@ -181,7 +181,7 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
       : SnapshotAcceptor(base, snap), tracker_(tracker) {}
 
   // Do nothing for any value except a number.
-  void accept(void *&ptr, const char *name) override {}
+  void accept(GCCell *&ptr, const char *name) override {}
 
   void acceptHV(HermesValue &hv, const char *) override {
     if (hv.isNumber()) {
@@ -250,7 +250,7 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
   EdgeAddingAcceptor(GCBase &gc, HeapSnapshot &snap)
       : SnapshotAcceptor(gc.getPointerBase(), snap), gc_(gc) {}
 
-  void accept(void *&ptr, const char *name) override {
+  void accept(GCCell *&ptr, const char *name) override {
     if (!ptr) {
       return;
     }
@@ -312,7 +312,7 @@ struct SnapshotRootSectionAcceptor : public SnapshotAcceptor,
   SnapshotRootSectionAcceptor(PointerBase *base, HeapSnapshot &snap)
       : SnapshotAcceptor(base, snap), WeakRootAcceptorDefault(base) {}
 
-  void accept(void *&, const char *) override {
+  void accept(GCCell *&, const char *) override {
     // While adding edges to root sections, there's no need to do anything for
     // pointers.
   }
@@ -321,7 +321,7 @@ struct SnapshotRootSectionAcceptor : public SnapshotAcceptor,
     // Same goes for weak refs.
   }
 
-  void acceptWeak(void *&ptr) override {
+  void acceptWeak(GCCell *&ptr) override {
     // Same goes for weak pointers.
   }
 
@@ -352,11 +352,11 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
         WeakRootAcceptorDefault(gc.getPointerBase()),
         gc_(gc) {}
 
-  void accept(void *&ptr, const char *name) override {
+  void accept(GCCell *&ptr, const char *name) override {
     pointerAccept(ptr, name, false);
   }
 
-  void acceptWeak(void *&ptr) override {
+  void acceptWeak(GCCell *&ptr) override {
     pointerAccept(ptr, nullptr, true);
   }
 

@@ -49,11 +49,10 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
 
   using RootAndSlotAcceptorDefault::accept;
 
-  void accept(void *&ptr) override {
-    if (!ptr) {
+  void accept(GCCell *&cell) override {
+    if (!cell) {
       return;
     }
-    GCCell *&cell = reinterpret_cast<GCCell *&>(ptr);
     HERMES_SLOW_ASSERT(
         gc.validPointer(cell) &&
         "Marked a pointer that the GC didn't allocate");
@@ -124,12 +123,11 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
 #endif
   }
 
-  void acceptWeak(void *&ptr) override {
+  void acceptWeak(GCCell *&ptr) override {
     if (ptr == nullptr) {
       return;
     }
-    auto *cell = reinterpret_cast<GCCell *>(ptr);
-    CellHeader *header = CellHeader::from(cell);
+    CellHeader *header = CellHeader::from(ptr);
 
     // Reset weak root if target GCCell is dead.
 #ifdef HERMESVM_SANITIZE_HANDLES
@@ -141,7 +139,7 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
 
   void acceptHV(HermesValue &hv) override {
     if (hv.isPointer()) {
-      void *ptr = hv.getPointer();
+      GCCell *ptr = static_cast<GCCell *>(hv.getPointer());
       accept(ptr);
       hv.setInGC(hv.updatePointer(ptr), &gc);
     } else if (hv.isSymbol()) {

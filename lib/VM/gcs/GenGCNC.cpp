@@ -542,7 +542,7 @@ struct FullMSCDuplicateRootsDetectorAcceptor final
 
   using RootAndSlotAcceptorDefault::accept;
 
-  void accept(void *&ptr) override {
+  void accept(GCCell *&ptr) override {
     assert(markedLocs_.count(&ptr) == 0);
     markedLocs_.insert(&ptr);
   }
@@ -561,16 +561,15 @@ void GenGC::markPhase() {
 
     using RootAndSlotAcceptorDefault::accept;
 
-    void accept(void *&ptr) override {
+    void accept(GCCell *&ptr) override {
       if (ptr) {
         assert(gc.dbgContains(ptr));
-        GCCell *cell = reinterpret_cast<GCCell *>(ptr);
 #ifdef HERMES_EXTRA_DEBUG
-        if (!cell->isValid()) {
+        if (!ptr->isValid()) {
           hermes_fatal("HermesGC: marking pointer to invalid object.");
         }
 #endif
-        GenGCHeapSegment::setCellMarkBit(cell);
+        GenGCHeapSegment::setCellMarkBit(ptr);
       }
     }
     void acceptHV(HermesValue &hv) override {
@@ -1974,7 +1973,7 @@ void GenGC::sizeDiagnosticCensus() {
 
     using SlotAcceptor::accept;
 
-    void accept(void *&ptr) override {
+    void accept(GCCell *&ptr) override {
       diagnostic.numPointer++;
     }
 

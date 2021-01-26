@@ -30,8 +30,8 @@ struct YoungGen::EvacAcceptor final : public RootAndSlotAcceptorDefault {
     gen.ensureReferentCopied(&basedPtr);
   }
 
-  void accept(void *&ptr) override {
-    gen.ensureReferentCopied(reinterpret_cast<GCCell **>(&ptr));
+  void accept(GCCell *&ptr) override {
+    gen.ensureReferentCopied(&ptr);
   }
 
   void acceptHV(HermesValue &hv) override {

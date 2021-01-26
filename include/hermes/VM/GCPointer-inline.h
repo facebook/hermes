@@ -30,7 +30,7 @@ GCPointer<T>::GCPointer(PointerBase *base, T *ptr, GC *gc, NeedsBarriers)
   }
 }
 
-inline void GCPointerBase::set(PointerBase *base, void *ptr, GC *gc) {
+inline void GCPointerBase::set(PointerBase *base, GCCell *ptr, GC *gc) {
   assert(
       (!ptr || gc->validPointer(ptr)) &&
       "Cannot set a GCPointer to an invalid pointer");

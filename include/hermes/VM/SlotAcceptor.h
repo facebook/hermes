@@ -18,6 +18,7 @@ namespace vm {
 class GCPointerBase;
 class WeakRefBase;
 class WeakRootBase;
+class GCCell;
 
 /// SlotAcceptor is an interface to be implemented by acceptors of objects in
 /// the heap.
@@ -58,17 +59,17 @@ struct RootSectionAcceptor {
 };
 
 struct RootAcceptor : public RootSectionAcceptor {
-  virtual void accept(void *&ptr) = 0;
+  virtual void accept(GCCell *&ptr) = 0;
   virtual void accept(PinnedHermesValue &hv) = 0;
   virtual void accept(RootSymbolID sym) = 0;
 
   /// When we want to call an acceptor on "raw" root pointers of
   /// some JSObject subtype T, this method does the necessary
-  /// reinterpret_cast to allow us to call the "void *&" accept
+  /// reinterpret_cast to allow us to call the "GCCell *&" accept
   /// method above.
   template <typename T>
   void acceptPtr(T *&ptr) {
-    accept(reinterpret_cast<void *&>(ptr));
+    accept(reinterpret_cast<GCCell *&>(ptr));
   }
 };
 
@@ -78,10 +79,10 @@ struct RootAndSlotAcceptor : public RootAcceptor, public SlotAcceptor {
 };
 
 struct RootAndSlotAcceptorWithNames : public RootAndSlotAcceptor {
-  void accept(void *&ptr) final {
+  void accept(GCCell *&ptr) final {
     accept(ptr, nullptr);
   }
-  virtual void accept(void *&ptr, const char *name) = 0;
+  virtual void accept(GCCell *&ptr, const char *name) = 0;
 
   void accept(PinnedHermesValue &hv) final {
     accept(hv, nullptr);
@@ -96,7 +97,7 @@ struct RootAndSlotAcceptorWithNames : public RootAndSlotAcceptor {
   using RootAndSlotAcceptor::acceptPtr;
   template <typename T>
   void acceptPtr(T *&ptr, const char *name) {
-    accept(reinterpret_cast<void *&>(ptr), name);
+    accept(reinterpret_cast<GCCell *&>(ptr), name);
   }
 
   void accept(GCPointerBase &ptr) final {
@@ -138,7 +139,7 @@ struct DroppingAcceptor final : public RootAndSlotAcceptorWithNames {
 
   using RootAndSlotAcceptorWithNames::accept;
 
-  void accept(void *&ptr, const char *) override {
+  void accept(GCCell *&ptr, const char *) override {
     acceptor.accept(ptr);
   }
 

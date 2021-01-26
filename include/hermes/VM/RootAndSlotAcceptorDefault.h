@@ -75,7 +75,8 @@ class RootAndSlotAcceptorWithNamesDefault
     if (!ptr) {
       return;
     }
-    void *actualizedPointer = pointerBase_->basedToPointerNonNull(ptr);
+    GCCell *actualizedPointer =
+        static_cast<GCCell *>(pointerBase_->basedToPointerNonNull(ptr));
     accept(actualizedPointer, name);
     ptr = pointerBase_->pointerToBasedNonNull(actualizedPointer);
   }
@@ -120,7 +121,7 @@ class WeakRootAcceptorDefault : public WeakRootAcceptor {
   void acceptWeak(WeakRootBase &ptr) final;
 
   /// Subclasses override this implementation instead of accept(WeakRootBase &).
-  virtual void acceptWeak(void *&ptr) = 0;
+  virtual void acceptWeak(GCCell *&ptr) = 0;
 
   /// This gets a default implementation: extract the real pointer to a local,
   /// call acceptWeak on that, write the result back as a BasedPointer.
@@ -141,7 +142,8 @@ inline void RootAndSlotAcceptorDefault::accept(BasedPointer &ptr) {
   }
   // accept takes an l-value reference and potentially writes to it.
   // Write the value back out to the BasedPointer.
-  void *actualizedPointer = pointerBase_->basedToPointerNonNull(ptr);
+  GCCell *actualizedPointer =
+      static_cast<GCCell *>(pointerBase_->basedToPointerNonNull(ptr));
   accept(actualizedPointer);
   // Assign back to the based pointer.
   ptr = pointerBase_->pointerToBased(actualizedPointer);
@@ -160,7 +162,8 @@ inline void WeakRootAcceptorDefault::acceptWeak(BasedPointer &ptr) {
   }
   // accept takes an l-value reference and potentially writes to it.
   // Write the value back out to the BasedPointer.
-  void *actualizedPointer = pointerBaseForWeakRoot_->basedToPointerNonNull(ptr);
+  GCCell *actualizedPointer = static_cast<GCCell *>(
+      pointerBaseForWeakRoot_->basedToPointerNonNull(ptr));
   acceptWeak(actualizedPointer);
   // Assign back to the based pointer.
   ptr = pointerBaseForWeakRoot_->pointerToBased(actualizedPointer);

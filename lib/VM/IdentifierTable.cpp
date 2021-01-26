@@ -240,8 +240,7 @@ void IdentifierTable::markIdentifiers(RootAcceptor &acceptor, GC *gc) {
           !gc->inYoungGen(vectorEntry.getStringPrimRef()) &&
           "Identifiers must be allocated in the old gen");
 #endif
-      acceptor.accept(
-          reinterpret_cast<void *&>(vectorEntry.getStringPrimRef()));
+      acceptor.acceptPtr(vectorEntry.getStringPrimRef());
     }
   }
 }

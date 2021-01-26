@@ -358,8 +358,8 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
     void accept(BasedPointer &ptr) {
       gc.youngGen_.ensureReferentCopied(&ptr);
     }
-    void accept(void *&ptr) {
-      gc.youngGen_.ensureReferentCopied(reinterpret_cast<GCCell **>(&ptr));
+    void accept(GCCell *&ptr) {
+      gc.youngGen_.ensureReferentCopied(&ptr);
     }
     void acceptHV(HermesValue &hv) {
       if (hv.isPointer()) {

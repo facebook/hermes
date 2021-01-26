@@ -369,11 +369,11 @@ class HadesGC::HeapMarkingAcceptor : public RootAndSlotAcceptor {
 
   using RootAndSlotAcceptor::accept;
 
-  void accept(void *&ptr) override final {
+  void accept(GCCell *&ptr) override final {
     acceptRoot(ptr);
   }
-  virtual void acceptHeap(void *&ptr, void *heapLoc) = 0;
-  virtual void acceptRoot(void *&ptr) = 0;
+  virtual void acceptHeap(GCCell *&ptr, void *heapLoc) = 0;
+  virtual void acceptRoot(GCCell *&ptr) = 0;
 
   void accept(GCPointerBase &ptr) override final {
     acceptHeap(ptr.getLoc(), &ptr);
@@ -411,26 +411,22 @@ class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor,
         (CompactionEnabled && gc.compactee_.evacContains(ptr));
   }
 
-  void acceptRoot(void *&ptr) override {
+  void acceptRoot(GCCell *&ptr) override {
     if (shouldForward(ptr))
-      forwardCell(reinterpret_cast<GCCell *&>(ptr));
+      forwardCell(ptr);
   }
 
-  void acceptHeap(void *&ptr, void *heapLoc) override {
-    if (!shouldForward(ptr)) {
+  void acceptHeap(GCCell *&ptr, void *heapLoc) override {
+    if (shouldForward(ptr)) {
+      assert(
+          HeapSegment::getCellMarkBit(ptr) &&
+          "Should only evacuate marked objects.");
+      forwardCell(ptr);
+    } else if (CompactionEnabled && gc.compactee_.contains(ptr)) {
       // If a compaction is about to take place, dirty the card for any newly
       // evacuated cells, since the marker may miss them.
-      if (CompactionEnabled && gc.compactee_.contains(ptr)) {
-        HeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(heapLoc);
-      }
-      return;
+      HeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(heapLoc);
     }
-
-    GCCell *&cell = reinterpret_cast<GCCell *&>(ptr);
-    assert(
-        HeapSegment::getCellMarkBit(cell) &&
-        "Should only evacuate marked objects.");
-    forwardCell(cell);
   }
 
   void forwardCell(GCCell *&cell) {
@@ -485,14 +481,15 @@ class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor,
       return;
     }
     PointerBase *const base = gc.getPointerBase();
-    void *actualizedPointer = base->basedToPointerNonNull(ptr);
+    GCCell *actualizedPointer =
+        static_cast<GCCell *>(base->basedToPointerNonNull(ptr));
     acceptHeap(actualizedPointer, heapLoc);
     ptr = base->pointerToBasedNonNull(actualizedPointer);
   }
 
   void accept(PinnedHermesValue &hv) override {
     if (hv.isPointer()) {
-      void *ptr = hv.getPointer();
+      GCCell *ptr = static_cast<GCCell *>(hv.getPointer());
       acceptRoot(ptr);
       hv.setInGC(hv.updatePointer(ptr), &gc);
     }
@@ -500,25 +497,24 @@ class HadesGC::EvacAcceptor final : public HeapMarkingAcceptor,
 
   void accept(GCHermesValue &hv) override {
     if (hv.isPointer()) {
-      void *ptr = hv.getPointer();
+      GCCell *ptr = static_cast<GCCell *>(hv.getPointer());
       acceptHeap(ptr, &hv);
       hv.setInGC(hv.updatePointer(ptr), &gc);
     }
   }
 
-  void acceptWeak(void *&ptr) override {
+  void acceptWeak(GCCell *&ptr) override {
     assert(!gc.inYoungGen(ptr) && "Weak roots cannot point into YG");
     if (!gc.compactee_.evacContains(ptr))
       return;
-    GCCell *&cell = reinterpret_cast<GCCell *&>(ptr);
 
-    if (cell->hasMarkedForwardingPointer()) {
+    if (ptr->hasMarkedForwardingPointer()) {
       // Get the forwarding pointer from the header of the object.
-      GCCell *const forwardedCell = cell->getMarkedForwardingPointer();
+      GCCell *const forwardedCell = ptr->getMarkedForwardingPointer();
       assert(forwardedCell->isValid() && "Cell was forwarded incorrectly");
-      cell = forwardedCell;
+      ptr = forwardedCell;
     } else {
-      cell = nullptr;
+      ptr = nullptr;
     }
   }
 
@@ -674,8 +670,7 @@ class HadesGC::MarkAcceptor final : public HeapMarkingAcceptor,
 
   using HeapMarkingAcceptor::accept;
 
-  void acceptHeap(void *&ptr, void *heapLoc) override {
-    GCCell *const cell = static_cast<GCCell *>(ptr);
+  void acceptHeap(GCCell *&cell, void *heapLoc) override {
     if (!cell) {
       return;
     }
@@ -693,8 +688,7 @@ class HadesGC::MarkAcceptor final : public HeapMarkingAcceptor,
     push(cell);
   }
 
-  void acceptRoot(void *&ptr) override {
-    GCCell *const cell = static_cast<GCCell *>(ptr);
+  void acceptRoot(GCCell *&cell) override {
     assert((!cell || cell->isValid()) && "Encountered an invalid cell");
     if (cell && !HeapSegment::getCellMarkBit(cell))
       push(cell);
@@ -707,7 +701,8 @@ class HadesGC::MarkAcceptor final : public HeapMarkingAcceptor,
       return;
     }
     PointerBase *const base = gc.getPointerBase();
-    void *actualizedPointer = base->basedToPointerNonNull(ptr);
+    GCCell *actualizedPointer =
+        static_cast<GCCell *>(base->basedToPointerNonNull(ptr));
 #ifndef NDEBUG
     void *const ptrCopy = actualizedPointer;
 #endif
@@ -721,7 +716,7 @@ class HadesGC::MarkAcceptor final : public HeapMarkingAcceptor,
   void acceptHV(HVType &hvRef) {
     const HermesValue hv = hvRef;
     if (hv.isPointer()) {
-      void *ptr = hv.getPointer();
+      GCCell *ptr = static_cast<GCCell *>(hv.getPointer());
 #ifndef NDEBUG
       void *const ptrCopy = ptr;
 #endif
@@ -986,12 +981,8 @@ class HadesGC::MarkWeakRootsAcceptor final : public WeakRootAcceptor {
       return;
     }
     GCPointerBase::StorageType &ptrStorage = wr.getNoBarrierUnsafe();
-#ifdef HERMESVM_COMPRESSED_POINTERS
     GCCell *const cell =
-        static_cast<GCCell *>(pointerBase_->basedToPointerNonNull(ptrStorage));
-#else
-    GCCell *const cell = static_cast<GCCell *>(ptrStorage);
-#endif
+        GCPointerBase::storageTypeToPointer(ptrStorage, pointerBase_);
     assert(!gc_.inYoungGen(cell) && "Pointer should be into the OG");
     HERMES_SLOW_ASSERT(gc_.dbgContains(cell) && "ptr not in heap");
     if (HeapSegment::getCellMarkBit(cell)) {
