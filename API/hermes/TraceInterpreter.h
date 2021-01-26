@@ -125,16 +125,26 @@ class TraceInterpreter final {
     bool stabilizeInstructionCount{false};
 
     /// A trace contains many MarkerRecords which have a name used to identify
-    /// them. If the replay encounters this given marker, stop execution and
-    /// collect stats then instead of completing the whole trace. The empty
-    /// string and the special marker "end" both mean don't stop.
-    std::string marker;
+    /// them. If the replay encounters this given marker, perform an action
+    /// described by MarkerAction. All actions will stop the trace early and
+    /// collect stats at the marker point, unless the marker is set to the
+    /// special marker "end". In that case the trace will run to completion.
+    std::string marker{"end"};
 
-    /// If this marker is seen, take a heap snapshot.
-    std::string snapshotMarker;
+    enum class MarkerAction {
+      NONE,
+      /// Take a snapshot at marker.
+      SNAPSHOT,
+      /// Take a heap timeline that ends at marker.
+      TIMELINE,
+    };
 
-    /// If the snapshotMarker is seen, write the heap snapshot out to this file.
-    std::string snapshotMarkerFileName;
+    /// Sets the action to take upon encountering the marker. The action will
+    /// write results into the \p profileFileName.
+    MarkerAction action{MarkerAction::NONE};
+
+    /// Output file name for any profiling information.
+    std::string profileFileName;
 
     // These are the config parameters.  We wrap them in llvh::Optional
     // to indicate whether the corresponding command line flag was set
@@ -182,8 +192,6 @@ class TraceInterpreter final {
   std::string stats_;
   /// Whether the marker was reached.
   bool markerFound_{false};
-  /// Whether the snapshot marker was reached.
-  bool snapshotMarkerFound_{false};
   /// Depth in the execution stack. Zero is the outermost function.
   uint64_t depth_{0};
 
@@ -386,6 +394,11 @@ class TraceInterpreter final {
       const Call &call,
       uint64_t globalRecordNum,
       std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals);
+
+  /// Check if the \p marker is the one that is being searched for. If this is
+  /// the first time encountering the matching marker, perform the actions set
+  /// up for that marker.
+  void checkMarker(const std::string &marker);
 
   std::string printStats();
 

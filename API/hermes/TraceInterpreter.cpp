@@ -877,6 +877,15 @@ Object TraceInterpreter::createHostObject(ObjectID objID) {
 
 std::string TraceInterpreter::execEntryFunction(
     const TraceInterpreter::Call &entryFunc) {
+  if (options_.action == ExecuteOptions::MarkerAction::TIMELINE) {
+    if (auto *hermesRuntime = dynamic_cast<HermesRuntime *>(&rt_)) {
+      // Start tracking heap objects right before interpreting the trace.
+      // No need to handle fragment callbacks, as this is not live profiling
+      // being given to Chrome, it's just going to a file.
+      hermesRuntime->instrumentation().startTrackingHeapObjectStackTraces(
+          nullptr);
+    }
+  }
   execFunction(entryFunc, Value::undefined(), nullptr, 0);
 
 #ifdef HERMESVM_PROFILER_BB
@@ -885,35 +894,15 @@ std::string TraceInterpreter::execEntryFunction(
   }
 #endif
 
-  if (options_.snapshotMarker == "end") {
-    // Take a snapshot at the end if requested.
-    if (HermesRuntime *hermesRT = dynamic_cast<HermesRuntime *>(&rt_)) {
-      hermesRT->instrumentation().createSnapshotToFile(
-          options_.snapshotMarkerFileName);
-    } else {
-      llvh::errs() << "Heap snapshot requested from non-Hermes runtime\n";
-    }
-    snapshotMarkerFound_ = true;
-  }
-
-  if (!options_.snapshotMarker.empty() && !snapshotMarkerFound_) {
-    // Snapshot was requested at a marker but that marker wasn't found.
+  checkMarker(std::string("end"));
+  if (!markerFound_) {
+    // An action was requested at a marker but that marker wasn't found.
     throw std::runtime_error(
-        std::string("Requested a heap snapshot at \"") +
-        options_.snapshotMarker + "\", but that marker wasn't reached\n");
+        std::string("Marker \"") + options_.marker +
+        "\" specified but not found in trace");
   }
 
-  // If this was a trace then stats were already collected.
-  if (options_.marker.empty()) {
-    return printStats();
-  } else {
-    if (!markerFound_) {
-      throw std::runtime_error(
-          std::string("Marker \"") + options_.marker +
-          "\" specified but not found in trace");
-    }
-    return stats_;
-  }
+  return stats_;
 }
 
 Value TraceInterpreter::execFunction(
@@ -1095,23 +1084,7 @@ Value TraceInterpreter::execFunction(
                 dynamic_cast<const SynthTrace::MarkerRecord &>(*rec);
             // If the tag is the requested tag, and the stats have not already
             // been collected, collect them.
-            if (mr.tag_ == options_.marker && !markerFound_) {
-              if (stats_.empty()) {
-                stats_ = printStats();
-              }
-              markerFound_ = true;
-            }
-            if (mr.tag_ == options_.snapshotMarker && !snapshotMarkerFound_) {
-              if (HermesRuntime *hermesRT =
-                      dynamic_cast<HermesRuntime *>(&rt_)) {
-                hermesRT->instrumentation().createSnapshotToFile(
-                    options_.snapshotMarkerFileName);
-              } else {
-                llvh::errs()
-                    << "Heap snapshot requested from non-Hermes runtime\n";
-              }
-              snapshotMarkerFound_ = true;
-            }
+            checkMarker(mr.tag_);
             if (auto *tracingRT = dynamic_cast<TracingRuntime *>(&rt_)) {
               if (rec->getType() != RecordType::EndExecJS) {
                 // If tracing is on, re-emit the marker into the result stream.
@@ -1590,6 +1563,40 @@ bool TraceInterpreter::ifObjectAddToDefs(
     std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals) {
   return ifObjectAddToDefs(
       traceValue, Value{rt_, val}, call, globalRecordNum, locals);
+}
+
+void TraceInterpreter::checkMarker(const std::string &marker) {
+  // Return early in these cases:
+  // * If we've already found the marker
+  // * If the marker we've found doesn't match the one we're looking for
+  if (markerFound_ || marker != options_.marker) {
+    return;
+  }
+  switch (options_.action) {
+    case ExecuteOptions::MarkerAction::SNAPSHOT:
+      if (HermesRuntime *hermesRT = dynamic_cast<HermesRuntime *>(&rt_)) {
+        hermesRT->instrumentation().createSnapshotToFile(
+            options_.profileFileName);
+      } else {
+        llvh::errs() << "Heap snapshot requested from non-Hermes runtime\n";
+      }
+      break;
+    case ExecuteOptions::MarkerAction::TIMELINE:
+      if (HermesRuntime *hermesRT = dynamic_cast<HermesRuntime *>(&rt_)) {
+        hermesRT->instrumentation().stopTrackingHeapObjectStackTraces();
+        hermesRT->instrumentation().createSnapshotToFile(
+            options_.profileFileName);
+      } else {
+        llvh::errs() << "Heap timeline requested from non-Hermes runtime\n";
+      }
+      break;
+    case ExecuteOptions::MarkerAction::NONE:
+      // Nothing extra needs to be done for the None case. Handle here to avoid
+      // warnings.
+      break;
+  }
+  stats_ = printStats();
+  markerFound_ = true;
 }
 
 std::string TraceInterpreter::printStats() {

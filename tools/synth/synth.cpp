@@ -19,6 +19,9 @@
 #include <iostream>
 #include <tuple>
 
+using MarkerAction =
+    facebook::hermes::tracing::TraceInterpreter::ExecuteOptions::MarkerAction;
+
 namespace cl {
 
 using llvh::cl::desc;
@@ -38,14 +41,28 @@ static opt<std::string>
 static list<std::string>
     BytecodeFiles(desc("input bytecode files"), Positional, OneOrMore);
 
-static opt<std::string> Marker("marker", desc("marker to stop at"), init(""));
+static opt<std::string> Marker(
+    "marker",
+    desc("marker to stop at, \"end\" means end of trace"),
+    init("end"));
 static llvh::cl::alias
     MarkerA("m", desc("alias for -marker"), llvh::cl::aliasopt(Marker));
 
-static opt<std::string> SnapshotMarker(
-    "snapshot-at-marker",
+static opt<MarkerAction> Action(
+    "action-at-marker",
     desc("Take a snapshot at the given marker"),
-    init(""));
+    init(MarkerAction::NONE),
+    llvh::cl::values(
+        clEnumValN(MarkerAction::NONE, "stop", "Stop the trace and get stats"),
+        clEnumValN(
+            MarkerAction::SNAPSHOT,
+            "snapshot",
+            "Take a heap snapshot at the marker to stop at"),
+        clEnumValN(
+            MarkerAction::TIMELINE,
+            "timeline",
+            "Take a heap timeline from the beginning of execution until the "
+            "marker to stop at")));
 
 static opt<bool> UseTraceConfig(
     "use-trace-config",
@@ -171,14 +188,16 @@ int main(int argc, char **argv) {
     options.useTraceConfig = cl::UseTraceConfig;
     options.reps = cl::Reps;
     options.marker = cl::Marker;
-    std::string snapshotMarkerFileName;
-    if (!cl::SnapshotMarker.empty()) {
+    options.action = cl::Action;
+    if (options.action == MarkerAction::SNAPSHOT ||
+        options.action == MarkerAction::TIMELINE) {
       llvh::SmallVector<char, 16> tmpfile;
       llvh::sys::fs::createTemporaryFile(
-          cl::SnapshotMarker, "heapsnapshot", tmpfile);
-      snapshotMarkerFileName = std::string{tmpfile.begin(), tmpfile.end()};
-      options.snapshotMarker = cl::SnapshotMarker;
-      options.snapshotMarkerFileName = snapshotMarkerFileName;
+          options.marker,
+          options.action == MarkerAction::SNAPSHOT ? "heapsnapshot"
+                                                   : "heaptimeline",
+          tmpfile);
+      options.profileFileName = std::string{tmpfile.begin(), tmpfile.end()};
     }
     options.forceGCBeforeStats = cl::GCBeforeStats;
     options.stabilizeInstructionCount = cl::StableInstructionCount;
@@ -283,9 +302,9 @@ int main(int argc, char **argv) {
     if (cl::PrintStats)
       llvh::PrintStatistics(llvh::outs());
 #endif
-    if (!cl::SnapshotMarker.empty()) {
-      llvh::outs() << "Wrote heap snapshot for marker \"" << cl::SnapshotMarker
-                   << "\" to " << snapshotMarkerFileName << "\n";
+    if (!options.profileFileName.empty()) {
+      llvh::outs() << "Wrote profile for marker \"" << options.marker
+                   << "\" to " << options.profileFileName << "\n";
     }
     return 0;
   } catch (const std::invalid_argument &e) {
