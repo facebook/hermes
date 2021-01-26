@@ -12,5 +12,5 @@ globalThis.Promise = Promise;
 
 // register the JavaScript implemented `enable` function into
 // the Hermes' internal promise rejection tracker.
-let enableHook = require('promise/setimmediate/rejection-tracking').enable
+var enableHook = require('promise/setimmediate/rejection-tracking').enable
 HermesInternal?.setPromiseRejectionTrackingHook?.(enableHook);
