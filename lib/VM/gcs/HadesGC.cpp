@@ -3054,42 +3054,12 @@ void HadesGC::checkWellFormed() {
 
 void HadesGC::verifyCardTable() {
   assert(inGC() && "Must be in GC to call verifyCardTable");
-  struct VerifyCardDirtyAcceptor final : public RootAndSlotAcceptorDefault {
+  struct VerifyCardDirtyAcceptor final : public SlotAcceptor {
     HadesGC &gc;
 
-    explicit VerifyCardDirtyAcceptor(HadesGC &gc)
-        : RootAndSlotAcceptorDefault(gc.getPointerBase()), gc(gc) {}
+    explicit VerifyCardDirtyAcceptor(HadesGC &gc) : gc(gc) {}
 
-    using RootAndSlotAcceptorDefault::accept;
-
-    void accept(void *&ptr) override {
-      char *valuePtr = reinterpret_cast<char *>(ptr);
-      char *locPtr = reinterpret_cast<char *>(&ptr);
-
-      acceptHelper(valuePtr, locPtr);
-    }
-
-    void accept(BasedPointer &ptr) override {
-      // Don't use the default from RootAndSlotAcceptorDefault since the address
-      // of the reference is used.
-      char *valuePtr =
-          reinterpret_cast<char *>(pointerBase_->basedToPointer(ptr));
-      char *locPtr = reinterpret_cast<char *>(&ptr);
-
-      acceptHelper(valuePtr, locPtr);
-    }
-
-    void acceptHV(HermesValue &hv) override {
-      if (!hv.isPointer()) {
-        return;
-      }
-
-      char *valuePtr = reinterpret_cast<char *>(hv.getPointer());
-      char *locPtr = reinterpret_cast<char *>(&hv);
-      acceptHelper(valuePtr, locPtr);
-    }
-
-    void acceptHelper(char *valuePtr, char *locPtr) {
+    void acceptHelper(void *valuePtr, void *locPtr) {
       const bool crossRegionCompacteePtr =
           !gc.compactee_.evacContains(locPtr) &&
           gc.compactee_.evacContains(valuePtr);
@@ -3099,6 +3069,17 @@ void HadesGC::verifyCardTable() {
             locPtr));
       }
     }
+
+    void accept(GCPointerBase &ptr) override {
+      acceptHelper(ptr.get(gc.getPointerBase()), &ptr);
+    }
+
+    void accept(GCHermesValue &hv) override {
+      if (hv.isPointer())
+        acceptHelper(hv.getPointer(), &hv);
+    }
+
+    void accept(GCSymbolID hv) override {}
   };
 
   VerifyCardDirtyAcceptor acceptor{*this};
