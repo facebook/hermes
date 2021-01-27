@@ -1354,7 +1354,7 @@ void HadesGC::printStats(JSONEmitter &json) {
   json.closeDict();
 }
 
-void HadesGC::collect(std::string cause) {
+void HadesGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
   {
     // Wait for any existing collections to finish before starting a new one.
     std::lock_guard<Mutex> lk{gcMutex_};
@@ -2009,16 +2009,6 @@ bool HadesGC::dbgContains(const void *p) const {
 }
 
 void HadesGC::trackReachable(CellKind kind, unsigned sz) {}
-
-size_t HadesGC::countUsedWeakRefs() const {
-  size_t count = 0;
-  for (auto &slot : weakSlots_) {
-    if (slot.state() != WeakSlotState::Free) {
-      ++count;
-    }
-  }
-  return count;
-}
 
 bool HadesGC::isMostRecentFinalizableObj(const GCCell *cell) const {
   if (inYoungGen(cell)) {

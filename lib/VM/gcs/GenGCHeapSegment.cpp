@@ -54,7 +54,9 @@ void GenGCHeapSegment::debitExternalMemory(uint32_t size) {
   }
 }
 
-void GenGCHeapSegment::completeMarking(GC *gc, CompleteMarkState *markState) {
+void GenGCHeapSegment::completeMarking(
+    GenGC *gc,
+    CompleteMarkState *markState) {
   assert(!markState->markStackOverflow_);
 
   // Return early if nothing was allocated.
@@ -94,7 +96,7 @@ void GenGCHeapSegment::completeMarking(GC *gc, CompleteMarkState *markState) {
   assert(markState->varSizeMarkStack_.empty());
 }
 
-void GenGCHeapSegment::deleteDeadObjectIDs(GC *gc) {
+void GenGCHeapSegment::deleteDeadObjectIDs(GenGC *gc) {
   GCBase::AllocationLocationTracker &allocationLocationTracker =
       gc->getAllocationLocationTracker();
   if (gc->isTrackingIDs()) {
@@ -113,7 +115,7 @@ void GenGCHeapSegment::deleteDeadObjectIDs(GC *gc) {
 }
 
 void GenGCHeapSegment::updateReferences(
-    GC *gc,
+    GenGC *gc,
     FullMSCUpdateAcceptor *acceptor,
     SweepResult::VTablesRemaining &vTables) {
   MarkBitArrayNC &markBits = markBitArray();
@@ -195,7 +197,7 @@ void GenGCHeapSegment::forObjsInRange(
 }
 
 void GenGCHeapSegment::sweepAndInstallForwardingPointers(
-    GC *gc,
+    GenGC *gc,
     SweepResult *sweepResult) {
   deleteDeadObjectIDs(gc);
   MarkBitArrayNC &markBits = markBitArray();
@@ -316,9 +318,10 @@ bool GenGCHeapSegment::checkSummarizedVTables() const {
 #endif
 
 #ifdef HERMES_SLOW_DEBUG
-void GenGCHeapSegment::checkWellFormed(const GC *gc, uint64_t *externalMemory)
-    const {
-  CheckHeapWellFormedAcceptor acceptor(*const_cast<GC *>(gc));
+void GenGCHeapSegment::checkWellFormed(
+    const GenGC *gc,
+    uint64_t *externalMemory) const {
+  CheckHeapWellFormedAcceptor acceptor(*const_cast<GenGC *>(gc));
   char *ptr = start();
   uint64_t extSize = 0;
   while (ptr < level()) {
@@ -326,7 +329,7 @@ void GenGCHeapSegment::checkWellFormed(const GC *gc, uint64_t *externalMemory)
     assert(cell->isValid() && "cell is invalid");
     // We assume that CheckHeapWellFormedAcceptor does not mutate the GC.  Thus
     // it's OK to cast away the const on \p gc.
-    const_cast<GC *>(gc)->markCell(cell, acceptor);
+    const_cast<GenGC *>(gc)->markCell(cell, acceptor);
     ptr += cell->getAllocatedSize();
     extSize += cell->externalMemorySize();
   }

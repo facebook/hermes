@@ -46,7 +46,7 @@ class GenGCHeapSegment final : public AlignedHeapSegment {
   /// markStack while it is non-empty, and scan their pointers, marking unmarked
   /// referents, and pushing their addresses on markStack.  If we overflow the
   /// max size of markStack sets a flag and returns.
-  void completeMarking(GC *gc, CompleteMarkState *markState);
+  void completeMarking(GenGC *gc, CompleteMarkState *markState);
 
   /// Assumes sweeping is complete.  Traverses the live objects, scanning their
   /// pointers.  For each pointer to another heap object, update the pointer by
@@ -56,7 +56,7 @@ class GenGCHeapSegment final : public AlignedHeapSegment {
   /// This function is expected to consume N elements from this range,
   /// denote that those pointers have been used and accounted for.
   void updateReferences(
-      GC *gc,
+      GenGC *gc,
       FullMSCUpdateAcceptor *acceptor,
       SweepResult::VTablesRemaining &vTables);
 
@@ -80,7 +80,7 @@ class GenGCHeapSegment final : public AlignedHeapSegment {
   /// Sequences of dead objects have a DeadRegion containing a pointer to the
   /// next live object inserted, allowing them to be skipped efficiently n
   /// subsequent heap traversals.
-  void sweepAndInstallForwardingPointers(GC *gc, SweepResult *sweepResult);
+  void sweepAndInstallForwardingPointers(GenGC *gc, SweepResult *sweepResult);
 
   /// TODO (T25573911): the next two methods are usually debug-only; exposed
   /// in opt for temporary old-to-young pointer traversal.
@@ -105,7 +105,8 @@ class GenGCHeapSegment final : public AlignedHeapSegment {
   /// GCCells whose vtables have valid cell kinds.  Sums the external memory
   /// rooted by objects in the space, and, if \p externalMemory is non-null,
   /// sets \p *externalMemory to that sum.
-  void checkWellFormed(const GC *gc, uint64_t *externalMemory = nullptr) const;
+  void checkWellFormed(const GenGC *gc, uint64_t *externalMemory = nullptr)
+      const;
 #endif
 
 #ifdef HERMES_EXTRA_DEBUG
@@ -128,8 +129,8 @@ class GenGCHeapSegment final : public AlignedHeapSegment {
 #endif
 
  private:
-  void deleteDeadObjectIDs(GC *gc);
-  void updateObjectIDs(GC *gc, SweepResult::VTablesRemaining &vTables);
+  void deleteDeadObjectIDs(GenGC *gc);
+  void updateObjectIDs(GenGC *gc, SweepResult::VTablesRemaining &vTables);
 
   /// Pointer to the generation that owns this segment.
   GCGeneration *generation_{nullptr};

@@ -936,7 +936,7 @@ class GCBase {
   /// Inform the GC that TTI has been reached.  (In case, for example,
   /// behavior should change at that point.  Default behavior is to do
   /// nothing.)
-  void ttiReached() {}
+  virtual void ttiReached() {}
 
   /// Do anything necessary to record the current number of allocated
   /// objects in numAllocatedObjects_.  Default is to do nothing.
@@ -1004,6 +1004,45 @@ class GCBase {
   /// Run the finalizers for all heap objects.
   virtual void finalizeAll() = 0;
 
+  /// Force a garbage collection cycle. The provided cause will be used in
+  /// logging.
+  virtual void collect(std::string cause, bool canEffectiveOOM = false) = 0;
+
+  /// Iterate over all objects in the heap, and call \p callback on them.
+  /// \param callback A function to call on each found object.
+  virtual void forAllObjs(const std::function<void(GCCell *)> &callback) = 0;
+
+  /// \return true if the pointer lives in the young generation.
+  virtual bool inYoungGen(const void *p) const {
+    return false;
+  }
+
+  /// Returns whether an external allocation of the given \p size fits
+  /// within the maximum heap size. (Note that this does not guarantee that the
+  /// allocation will "succeed" -- the size plus the used() of the heap may
+  /// still exceed the max heap size. But if it fails, the allocation can never
+  /// succeed.)
+  virtual bool canAllocExternalMemory(uint32_t size) {
+    return true;
+  }
+
+  virtual WeakRefSlot *allocWeakSlot(HermesValue init) = 0;
+
+#ifndef NDEBUG
+  /// \name Debug APIs
+  /// \{
+  virtual bool calledByBackgroundThread() const {
+    return false;
+  }
+  virtual bool calledByGC() const {
+    return true;
+  }
+  virtual bool dbgContains(const void *ptr) const = 0;
+  virtual void trackReachable(CellKind kind, unsigned sz) {}
+  virtual bool isMostRecentFinalizableObj(const GCCell *cell) const = 0;
+  /// \}
+#endif
+
   /// Do any logging of info about the heap that is useful, then dies with a
   /// fatal out-of-memory error.
   LLVM_ATTRIBUTE_NORETURN void oom(std::error_code reason);
@@ -1065,33 +1104,33 @@ class GCBase {
 
   /// Default implementations for the external memory credit/debit APIs: do
   /// nothing.
-  void creditExternalMemory(GCCell *alloc, uint32_t size) {}
-  void debitExternalMemory(GCCell *alloc, uint32_t size) {}
+  virtual void creditExternalMemory(GCCell *alloc, uint32_t size) {}
+  virtual void debitExternalMemory(GCCell *alloc, uint32_t size) {}
 
   /// Default implementations for read and write barriers: do nothing.
-  inline void writeBarrier(const GCHermesValue *loc, HermesValue value) {}
-  inline void writeBarrier(const GCPointerBase *loc, const GCCell *value) {}
-  inline void writeBarrier(SymbolID symbol) {}
-  inline void constructorWriteBarrier(
+  virtual void writeBarrier(const GCHermesValue *loc, HermesValue value) {}
+  virtual void writeBarrier(const GCPointerBase *loc, const GCCell *value) {}
+  virtual void writeBarrier(SymbolID symbol) {}
+  virtual void constructorWriteBarrier(
       const GCHermesValue *loc,
       HermesValue value) {}
-  inline void constructorWriteBarrier(
+  virtual void constructorWriteBarrier(
       const GCPointerBase *loc,
       const GCCell *value) {}
-  inline void writeBarrierRange(const GCHermesValue *start, uint32_t numHVs) {}
-  inline void constructorWriteBarrierRange(
+  virtual void writeBarrierRange(const GCHermesValue *start, uint32_t numHVs) {}
+  virtual void constructorWriteBarrierRange(
       const GCHermesValue *start,
       uint32_t numHVs) {}
-  inline void snapshotWriteBarrier(const GCHermesValue *loc) {}
-  inline void snapshotWriteBarrier(const GCPointerBase *loc) {}
-  inline void snapshotWriteBarrierRange(
+  virtual void snapshotWriteBarrier(const GCHermesValue *loc) {}
+  virtual void snapshotWriteBarrier(const GCPointerBase *loc) {}
+  virtual void snapshotWriteBarrierRange(
       const GCHermesValue *start,
       uint32_t numHVs) {}
-  inline void weakRefReadBarrier(GCCell *value) {}
-  inline void weakRefReadBarrier(HermesValue value) {}
+  virtual void weakRefReadBarrier(GCCell *value) {}
+  virtual void weakRefReadBarrier(HermesValue value) {}
 
 #ifndef NDEBUG
-  bool needsWriteBarrier(void *loc, GCCell *value) {
+  virtual bool needsWriteBarrier(void *loc, GCCell *value) {
     return false;
   }
 #endif

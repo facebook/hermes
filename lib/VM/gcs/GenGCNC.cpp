@@ -1584,7 +1584,7 @@ void GenGC::doAllocCensus() {
   if (!recordGcStats_) {
     return;
   }
-  GC *gc = this;
+  GenGC *gc = this;
   auto callback = [gc](GCCell *cell) {
     gc->trackAlloc(cell->getKind(), cell->getAllocatedSize());
   };

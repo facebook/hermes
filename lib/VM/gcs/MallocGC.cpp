@@ -257,7 +257,7 @@ void MallocGC::clearUnmarkedPropertyMaps() {
 }
 #endif
 
-void MallocGC::collect(std::string cause) {
+void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
   assert(noAllocLevel_ == 0 && "no GC allowed right now");
   using std::chrono::steady_clock;
   LLVM_DEBUG(llvh::dbgs() << "Beginning collection");
@@ -546,6 +546,10 @@ void MallocGC::freeWeakSlot(WeakRefSlot *slot) {
 
 #ifndef NDEBUG
 bool MallocGC::validPointer(const void *p) const {
+  return dbgContains(p) && static_cast<const GCCell *>(p)->isValid();
+}
+
+bool MallocGC::dbgContains(const void *p) const {
   auto *ptr = reinterpret_cast<GCCell *>(const_cast<void *>(p));
   CellHeader *header = CellHeader::from(ptr);
   bool isValid = pointers_.find(header) != pointers_.end();

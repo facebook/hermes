@@ -471,8 +471,8 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
           0);
       snapshotAddGCNativeNodes(snap);
       snap.beginNode();
-      gc->markRoots(rootSectionAcceptor, true);
-      gc->markWeakRoots(rootSectionAcceptor);
+      markRoots(rootSectionAcceptor, true);
+      markWeakRoots(rootSectionAcceptor);
       snapshotAddGCNativeEdges(snap);
       snap.endNode(
           HeapSnapshot::NodeType::Synthetic,
@@ -488,25 +488,24 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
       // filters out duplicate edges because there cannot be duplicate edges to
       // nodes reachable from the super root.
       SnapshotRootAcceptor rootAcceptor(*gc, snap);
-      gc->markRoots(rootAcceptor, true);
-      gc->markWeakRoots(rootAcceptor);
+      markRoots(rootAcceptor, true);
+      markWeakRoots(rootAcceptor);
     }
-    gcCallbacks_->visitIdentifiers(
-        [gc, &snap, this](SymbolID sym, const StringPrimitive *str) {
-          snap.beginNode();
-          if (str) {
-            snap.addNamedEdge(
-                HeapSnapshot::EdgeType::Internal,
-                "description",
-                gc->getObjectID(str));
-          }
-          snap.endNode(
-              HeapSnapshot::NodeType::Symbol,
-              gc->convertSymbolToUTF8(sym),
-              idTracker_.getObjectID(sym),
-              sizeof(SymbolID),
-              0);
-        });
+    gcCallbacks_->visitIdentifiers([&snap, this](
+                                       SymbolID sym,
+                                       const StringPrimitive *str) {
+      snap.beginNode();
+      if (str) {
+        snap.addNamedEdge(
+            HeapSnapshot::EdgeType::Internal, "description", getObjectID(str));
+      }
+      snap.endNode(
+          HeapSnapshot::NodeType::Symbol,
+          convertSymbolToUTF8(sym),
+          idTracker_.getObjectID(sym),
+          sizeof(SymbolID),
+          0);
+    });
   };
 
   snap.beginSection(HeapSnapshot::Section::Nodes);
@@ -524,7 +523,7 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
   // Add a node for each object in the heap.
   const auto snapshotForObject =
       [&snap, &primitiveVisitor, gc, this](GCCell *cell) {
-        auto &allocationLocationTracker = gc->getAllocationLocationTracker();
+        auto &allocationLocationTracker = getAllocationLocationTracker();
         // First add primitive nodes.
         markCellWithNames(primitiveVisitor, cell);
         EdgeAddingAcceptor acceptor(*gc, snap);
@@ -555,7 +554,7 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
   rootScan();
   // No need to run the primitive scan again, as it only adds nodes, not edges.
   // Add edges between objects in the heap.
-  gc->forAllObjs(snapshotForObject);
+  forAllObjs(snapshotForObject);
   snap.endSection(HeapSnapshot::Section::Edges);
 
   snap.emitAllocationTraceInfo();
@@ -569,7 +568,7 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
   snap.endSection(HeapSnapshot::Section::Samples);
 
   snap.beginSection(HeapSnapshot::Section::Locations);
-  gc->forAllObjs([&snap, gc](GCCell *cell) {
+  forAllObjs([&snap, gc](GCCell *cell) {
     cell->getVT()->snapshotMetaData.addLocations(cell, gc, snap);
   });
   snap.endSection(HeapSnapshot::Section::Locations);
@@ -1044,17 +1043,16 @@ void GCBase::AllocationLocationTracker::enable(
   assert(!enabled_ && "Shouldn't enable twice");
   enabled_ = true;
   std::lock_guard<Mutex> lk{mtx_};
-  GC *gc = static_cast<GC *>(gc_);
   // For correct visualization of the allocation timeline, it's necessary that
   // objects in the heap snapshot that existed before sampling was enabled have
   // numerically lower IDs than those allocated during sampling. We ensure this
   // by assigning IDs to everything here.
   uint64_t numObjects = 0;
   uint64_t numBytes = 0;
-  gc->forAllObjs([gc, &numObjects, &numBytes](GCCell *cell) {
+  gc_->forAllObjs([&numObjects, &numBytes, this](GCCell *cell) {
     numObjects++;
     numBytes += cell->getAllocatedSize();
-    gc->getObjectID(cell);
+    gc_->getObjectID(cell);
   });
   fragmentCallback_ = std::move(callback);
   startTime_ = std::chrono::steady_clock::now();

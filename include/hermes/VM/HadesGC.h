@@ -116,7 +116,7 @@ class HadesGC final : public GCBase {
 
   /// Force a garbage collection cycle.
   /// (Part of general GC API defined in GCBase.h).
-  void collect(std::string cause);
+  void collect(std::string cause, bool canEffectiveOOM = false) override;
 
   /// Run the finalizers for all heap objects.
   void finalizeAll() override;
@@ -124,11 +124,11 @@ class HadesGC final : public GCBase {
   /// Add some external memory cost to a cell.
   /// (Part of general GC API defined in GCBase.h).
   /// \pre canAllocExternalMemory(size) is true.
-  void creditExternalMemory(GCCell *alloc, uint32_t size);
+  void creditExternalMemory(GCCell *alloc, uint32_t size) override;
 
   /// Remove some external memory cost from a cell.
   /// (Part of general GC API defined in GCBase.h).
-  void debitExternalMemory(GCCell *alloc, uint32_t size);
+  void debitExternalMemory(GCCell *alloc, uint32_t size) override;
 
   /// \name Write Barriers
   /// \{
@@ -141,29 +141,32 @@ class HadesGC final : public GCBase {
   /// be in the heap). If value is a pointer, execute a write barrier.
   /// NOTE: The write barrier call must be placed *before* the write to the
   /// pointer, so that the current value can be fetched.
-  void writeBarrier(const GCHermesValue *loc, HermesValue value);
+  void writeBarrier(const GCHermesValue *loc, HermesValue value) override;
 
   /// The given pointer value is being written at the given loc (required to
   /// be in the heap). The value may be null. Execute a write barrier.
   /// NOTE: The write barrier call must be placed *before* the write to the
   /// pointer, so that the current value can be fetched.
-  void writeBarrier(const GCPointerBase *loc, const GCCell *value);
+  void writeBarrier(const GCPointerBase *loc, const GCCell *value) override;
 
   /// The given symbol is being written at the given loc (required to be in the
   /// heap).
-  void writeBarrier(SymbolID symbol);
+  void writeBarrier(SymbolID symbol) override;
 
   /// Special versions of \p writeBarrier for when there was no previous value
   /// initialized into the space.
-  void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value);
-  void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value);
+  void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value)
+      override;
+  void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value)
+      override;
 
-  void snapshotWriteBarrier(const GCHermesValue *loc);
-  void snapshotWriteBarrier(const GCPointerBase *loc);
-  void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs);
+  void snapshotWriteBarrier(const GCHermesValue *loc) override;
+  void snapshotWriteBarrier(const GCPointerBase *loc) override;
+  void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs)
+      override;
 
-  void weakRefReadBarrier(GCCell *value);
-  void weakRefReadBarrier(HermesValue value);
+  void weakRefReadBarrier(GCCell *value) override;
+  void weakRefReadBarrier(HermesValue value) override;
 
   /// \}
 
@@ -172,22 +175,22 @@ class HadesGC final : public GCBase {
   /// allocation will "succeed" -- the size plus the used() of the heap may
   /// still exceed the max heap size. But if it fails, the allocation can never
   /// succeed.)
-  bool canAllocExternalMemory(uint32_t size);
+  bool canAllocExternalMemory(uint32_t size) override;
 
-  WeakRefSlot *allocWeakSlot(HermesValue init);
+  WeakRefSlot *allocWeakSlot(HermesValue init) override;
 
   /// Iterate over all objects in the heap, and call \p callback on them.
   /// \param callback A function to call on each found object.
-  void forAllObjs(const std::function<void(GCCell *)> &callback);
+  void forAllObjs(const std::function<void(GCCell *)> &callback) override;
 
   /// Inform the GC that TTI has been reached. This will transition the GC mode,
   /// if the GC was currently allocating directly into OG.
-  void ttiReached();
+  void ttiReached() override;
 
   /// \}
 
   /// \return true if the pointer lives in the young generation.
-  bool inYoungGen(const void *p) const;
+  bool inYoungGen(const void *p) const override;
 
   /// Approximate the dirty memory footprint of the GC's heap. Note that this
   /// does not return the number of dirty pages in the heap, but instead returns
@@ -199,7 +202,7 @@ class HadesGC final : public GCBase {
   /// \name Debug APIs
   /// \{
 
-  bool calledByBackgroundThread() const {
+  bool calledByBackgroundThread() const override {
     // If the background thread is active, check if this thread matches the
     // background thread.
     return kConcurrentGC &&
@@ -207,7 +210,7 @@ class HadesGC final : public GCBase {
   }
 
   /// See comment in GCBase.
-  bool calledByGC() const {
+  bool calledByGC() const override {
     // Check if this is called by the background thread or the inGC flag is
     // set.
     return calledByBackgroundThread() || inGC();
@@ -220,18 +223,14 @@ class HadesGC final : public GCBase {
   /// Return true if \p ptr is within one of the virtual address ranges
   /// allocated for the heap. Not intended for use in normal production GC
   /// operation, debug mode only.
-  bool dbgContains(const void *ptr) const;
+  bool dbgContains(const void *ptr) const override;
 
   /// Record that a cell of the given \p kind and size \p sz has been
   /// found reachable in a full GC.
-  void trackReachable(CellKind kind, unsigned sz);
-
-  /// \return Number of weak ref slots currently in use.
-  /// Inefficient. For testing/debugging.
-  size_t countUsedWeakRefs() const;
+  void trackReachable(CellKind kind, unsigned sz) override;
 
   /// Returns true if \p cell is the most-recently allocated finalizable object.
-  bool isMostRecentFinalizableObj(const GCCell *cell) const;
+  bool isMostRecentFinalizableObj(const GCCell *cell) const override;
 
   /// \}
 #endif

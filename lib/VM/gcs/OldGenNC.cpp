@@ -545,14 +545,16 @@ void OldGen::verifyCardTableBoundaries() const {
 #endif
 
 void OldGen::sweepAndInstallForwardingPointers(
-    GC *gc,
+    GenGC *gc,
     SweepResult *sweepResult) {
   forUsedSegments([gc, sweepResult](GenGCHeapSegment &segment) {
     segment.sweepAndInstallForwardingPointers(gc, sweepResult);
   });
 }
 
-void OldGen::updateReferences(GC *gc, SweepResult::VTablesRemaining &vTables) {
+void OldGen::updateReferences(
+    GenGC *gc,
+    SweepResult::VTablesRemaining &vTables) {
   auto acceptor = getFullMSCUpdateAcceptor(*gc);
   forUsedSegments([&acceptor, gc, &vTables](GenGCHeapSegment &segment) {
     segment.updateReferences(gc, acceptor.get(), vTables);
@@ -611,7 +613,7 @@ AllocResult OldGen::fullCollectThenAlloc(
   gc_->oom(make_error_code(OOMError::MaxHeapReached));
 }
 
-void OldGen::moveHeap(GC *gc, ptrdiff_t moveHeapDelta) {
+void OldGen::moveHeap(GenGC *gc, ptrdiff_t moveHeapDelta) {
   // TODO (T25686322): implement non-contig version of this.
 }
 
@@ -834,7 +836,7 @@ void OldGen::updateBoundariesAfterAlloc(char *alloc, char *nextAlloc) {
 }
 
 #ifdef HERMES_SLOW_DEBUG
-void OldGen::checkWellFormed(const GC *gc) const {
+void OldGen::checkWellFormed(const GenGC *gc) const {
   uint64_t totalExtSize = 0;
 
   forUsedSegments([&totalExtSize, gc](const GenGCHeapSegment &segment) {

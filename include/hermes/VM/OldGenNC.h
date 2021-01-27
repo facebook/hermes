@@ -266,7 +266,7 @@ class OldGen : public GCGeneration {
   /// Called after the GC's heap has been copied to a new location, in order to
   /// update the references in this space (and the space's own limits) to the
   /// new location.
-  void moveHeap(GC *gc, ptrdiff_t moveHeapDelta);
+  void moveHeap(GenGC *gc, ptrdiff_t moveHeapDelta);
 
   /// If youngIsEmpty is true, assume that full GC has completely emptied the
   /// young generation, and clear the card table.  Otherwise, the young
@@ -291,17 +291,17 @@ class OldGen : public GCGeneration {
 #endif
 
   /// See GCGeneration.h for more information.
-  void sweepAndInstallForwardingPointers(GC *gc, SweepResult *sweepResult);
+  void sweepAndInstallForwardingPointers(GenGC *gc, SweepResult *sweepResult);
 
   /// See GCGeneration.h for more information.
-  void updateReferences(GC *gc, SweepResult::VTablesRemaining &vTables);
+  void updateReferences(GenGC *gc, SweepResult::VTablesRemaining &vTables);
 
   /// See GCGeneration.h for more information.
   void recordLevelAfterCompaction(
       CompactionResult::ChunksRemaining &usedChunks);
 
 #ifdef HERMES_SLOW_DEBUG
-  void checkWellFormed(const GC *gc) const;
+  void checkWellFormed(const GenGC *gc) const;
 #endif
 
 #ifdef HERMES_EXTRA_DEBUG

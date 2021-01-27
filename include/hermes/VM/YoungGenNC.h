@@ -136,7 +136,7 @@ class YoungGen : public GCGeneration {
   inline size_t effectiveSize() const;
 
   /// See GCGeneration.h for more information.
-  void sweepAndInstallForwardingPointers(GC *gc, SweepResult *sweepResult);
+  void sweepAndInstallForwardingPointers(GenGC *gc, SweepResult *sweepResult);
 
   /// See GCGeneration.h for more information.
   void updateReferences(GenGC *gc, SweepResult::VTablesRemaining &vTables);
@@ -151,7 +151,7 @@ class YoungGen : public GCGeneration {
       CompactionResult::ChunksRemaining &usedChunks);
 
 #ifdef HERMES_SLOW_DEBUG
-  void checkWellFormed(const GC *gc) const;
+  void checkWellFormed(const GenGC *gc) const;
 #endif
 
   /// If *hv is a pointer into the current generation, check whether the
@@ -198,7 +198,7 @@ class YoungGen : public GCGeneration {
   ///
   /// This function assumes that \p gc is a valid pointer to this space's owning
   /// GC.
-  void moveHeap(GC *gc, ptrdiff_t moveHeapDelta);
+  void moveHeap(GenGC *gc, ptrdiff_t moveHeapDelta);
 
   /// Update the extents of the young-gen segments with \p crashMgr.  Labels
   /// the crash manager key with the given \p runtimeName.

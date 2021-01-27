@@ -110,7 +110,7 @@ YoungGen::YoungGen(
 }
 
 void YoungGen::sweepAndInstallForwardingPointers(
-    GC *gc,
+    GenGC *gc,
     SweepResult *sweepResult) {
   activeSegment().sweepAndInstallForwardingPointers(gc, sweepResult);
 }
@@ -176,7 +176,7 @@ void YoungGen::recordLevelAfterCompaction(
 }
 
 #ifdef HERMES_SLOW_DEBUG
-void YoungGen::checkWellFormed(const GC *gc) const {
+void YoungGen::checkWellFormed(const GenGC *gc) const {
   uint64_t extSize = 0;
   activeSegment().checkWellFormed(gc, &extSize);
   assert(extSize == externalMemory());
@@ -689,7 +689,7 @@ void YoungGen::forObjsAllocatedSinceGC(
 }
 #endif
 
-void YoungGen::moveHeap(GC *gc, ptrdiff_t moveHeapDelta) {
+void YoungGen::moveHeap(GenGC *gc, ptrdiff_t moveHeapDelta) {
 #if 0 // TODO (T25686322) Non-contiguous heap does not support moving the heap.
   ContigAllocGCSpace::moveHeap(gc, moveHeapDelta);
 #endif

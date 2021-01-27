@@ -178,11 +178,11 @@ class MallocGC final : public GCBase {
   /// allocation will "succeed" -- the size plus the used() of the heap may
   /// still exceed the max heap size.  But if it fails, the allocation can never
   /// succeed.)
-  bool canAllocExternalMemory(uint32_t size);
+  bool canAllocExternalMemory(uint32_t size) override;
 
   /// Collect all of the dead objects and symbols in the heap. Also invalidate
   /// weak pointers that point to dead objects.
-  void collect(std::string cause);
+  void collect(std::string cause, bool canEffectiveOOM = false) override;
 
   static constexpr uint32_t minAllocationSize() {
     // MallocGC imposes no limit on individual allocations.
@@ -206,15 +206,16 @@ class MallocGC final : public GCBase {
 
 #ifndef NDEBUG
   /// See comment in GCBase.
-  bool calledByGC() const {
+  bool calledByGC() const override {
     return inGC();
   }
 
   /// \return true iff the pointer \p p is controlled by this GC.
   bool validPointer(const void *p) const override;
+  bool dbgContains(const void *p) const override;
 
   /// Returns true if \p cell is the most-recently allocated finalizable object.
-  bool isMostRecentFinalizableObj(const GCCell *cell) const;
+  bool isMostRecentFinalizableObj(const GCCell *cell) const override;
 #endif
 
   /// Same as in superclass GCBase.
@@ -249,7 +250,7 @@ class MallocGC final : public GCBase {
 
   /// Allocate a weak pointer slot for the value given.
   /// \pre \p init should not be empty or a native value.
-  WeakRefSlot *allocWeakSlot(HermesValue init);
+  WeakRefSlot *allocWeakSlot(HermesValue init) override;
 
   /// The largest the size of this heap could ever grow to.
   size_t maxSize() const {
@@ -258,7 +259,7 @@ class MallocGC final : public GCBase {
 
   /// Iterate over all objects in the heap, and call \p callback on them.
   /// \param callback A function to call on each found object.
-  void forAllObjs(const std::function<void(GCCell *)> &callback);
+  void forAllObjs(const std::function<void(GCCell *)> &callback) override;
 
   /// @}
 

@@ -151,40 +151,42 @@ class GenGC final : public GCBase {
   /// allocation will "succeed" -- the size plus the used() of the heap may
   /// still exceed the max heap size.  But if it fails, the allocation can never
   /// succeed.)
-  bool canAllocExternalMemory(uint32_t size);
+  bool canAllocExternalMemory(uint32_t size) override;
 
   /// An allocation that yielded the given \p alloc has associated external
   /// memory of the given \p size.  Add that to the appropriate external memory
   /// charge.
-  void creditExternalMemory(GCCell *alloc, uint32_t size);
+  void creditExternalMemory(GCCell *alloc, uint32_t size) override;
 
   /// The object at \p alloc is being collected, and has associated external
   /// memory of the given \p size.  Decrease the external memory charge of the
   /// generation owning \p alloc by this amount.
-  void debitExternalMemory(GCCell *alloc, uint32_t size);
+  void debitExternalMemory(GCCell *alloc, uint32_t size) override;
 
   /// Write barriers.
 
   /// The given value is being written at the given loc (required to
   /// be in the heap).  If value is a pointer, execute a write barrier.
-  void writeBarrier(const GCHermesValue *loc, HermesValue value);
+  void writeBarrier(const GCHermesValue *loc, HermesValue value) override;
 
   /// The given pointer value is being written at the given loc (required to
   /// be in the heap).  The value is may be null.  Execute a write barrier.
-  void writeBarrier(const GCPointerBase *loc, const GCCell *value);
+  void writeBarrier(const GCPointerBase *loc, const GCCell *value) override;
 
   /// Write barriers for symbols are no-ops in GenGC.
-  void writeBarrier(SymbolID) {}
+  void writeBarrier(SymbolID) override {}
 
   /// The given value is being written at the given loc (required to
   /// be in the heap).  If value is a pointer, execute a write barrier.
   /// The memory pointed to by \p loc is guaranteed to not have a valid pointer.
-  void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value);
+  void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value)
+      override;
 
   /// The given pointer value is being written at the given loc (required to
   /// be in the heap).  The value is may be null.  Execute a write barrier.
   /// The memory pointed to by \p loc is guaranteed to not have a valid pointer.
-  void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value);
+  void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value)
+      override;
 
 #ifndef NDEBUG
   /// Count the number of barriers executed.
@@ -205,7 +207,7 @@ class GenGC final : public GCBase {
   /// Returns whether a write of the given value into the given location
   /// requires a write barrier, assuming \p loc and \p value are both within the
   /// heap managed by this GC.
-  bool needsWriteBarrier(void *loc, GCCell *value);
+  bool needsWriteBarrier(void *loc, GCCell *value) override;
 
   /// Statistics related to external memory associated with heap objects:
   ///   The number of objects with associated external memory.
@@ -233,27 +235,20 @@ class GenGC final : public GCBase {
   ///
   /// \pre The range described must be wholly contained within one segment of
   ///     the heap.
-  void writeBarrierRange(const GCHermesValue *start, uint32_t numHVs);
+  void writeBarrierRange(const GCHermesValue *start, uint32_t numHVs) override;
 
   /// Same as \p writeBarrierRange, except this is for previously uninitialized
   /// memory.
-  void constructorWriteBarrierRange(
-      const GCHermesValue *start,
-      uint32_t numHVs) {
+  void constructorWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs)
+      override {
     // GenGC doesn't do anything special for uninitialized memory.
     writeBarrierRange(start, numHVs);
   }
 
   /// Inform the GC that TTI has been reached.
-  void ttiReached();
+  void ttiReached() override;
 
-  /// Force a garbage collection cycle.
-  /// (Part of general GC API defined in GC.h).
-  /// Does a mark/sweep/compact collection of both generations.
-
-  /// \p canEffectiveOOM Indicates whether the GC can declare effective OOM as a
-  ///     result of this collection.
-  void collect(std::string cause, bool canEffectiveOOM = false);
+  void collect(std::string cause, bool canEffectiveOOM = false) override;
 
   static constexpr uint32_t minAllocationSize() {
     // NCGen doesn't enforce a minimum allocation requirement.
@@ -278,21 +273,21 @@ class GenGC final : public GCBase {
 #ifndef NDEBUG
 
   /// See comment in GCBase.
-  bool calledByGC() const {
+  bool calledByGC() const override {
     return inGC();
   }
 
   /// Return true if \p ptr is within one of the virtual address ranges
   /// allocated for the heap. Not intended for use in normal production GC
   /// operation, debug mode only.
-  bool dbgContains(const void *ptr) const;
+  bool dbgContains(const void *ptr) const override;
 
   /// Return true if \p ptr is currently pointing at valid accessable memory,
   /// allocated to an object.
   bool validPointer(const void *ptr) const override;
 
   /// Returns true if \p cell is the most-recently allocated finalizable object.
-  bool isMostRecentFinalizableObj(const GCCell *cell) const;
+  bool isMostRecentFinalizableObj(const GCCell *cell) const override;
 
   /// Whether the last allocation was fixed size.  Used to check that the
   /// FixedSize parameter used in allocation matches the fixed-size attribute of
@@ -302,7 +297,7 @@ class GenGC final : public GCBase {
 #endif
 
   /// \return true if \p is in the young generation.
-  bool inYoungGen(const void *ptr) const {
+  bool inYoungGen(const void *ptr) const override {
     return youngGen_.contains(ptr);
   }
 
@@ -377,7 +372,7 @@ class GenGC final : public GCBase {
 
   /// Iterate over all objects in the heap, and call \p callback on them.
   /// \param callback A function to call on each found object.
-  void forAllObjs(const std::function<void(GCCell *)> &callback);
+  void forAllObjs(const std::function<void(GCCell *)> &callback) override;
 
 #ifndef NDEBUG
   /// For testing purposes, we expose the ability to explicity request a
@@ -457,7 +452,7 @@ class GenGC final : public GCBase {
 
   /// Record that a cell of the given \p kind and size \p sz has been
   /// found reachable in a full GC.
-  void trackReachable(CellKind kind, unsigned sz);
+  void trackReachable(CellKind kind, unsigned sz) override;
 #endif
 
   /// Reset the number of finalized objects in each generation to zero.
@@ -561,7 +556,7 @@ class GenGC final : public GCBase {
   /// the constructor actually yielded it.
   class AllocContextYieldThenClaim {
    public:
-    AllocContextYieldThenClaim(GC *gc)
+    AllocContextYieldThenClaim(GenGC *gc)
         : gc_(gc), enable_(gc->allocContextClaimed()) {
       if (enable_) {
         gc_->yieldAllocContext();
@@ -574,7 +569,7 @@ class GenGC final : public GCBase {
     }
 
    private:
-    GC *gc_;
+    GenGC *gc_;
     bool enable_;
   };
 
@@ -785,7 +780,7 @@ class GenGC final : public GCBase {
   void unmarkWeakReferences();
 
   /// Allocate a new weak reference slot and return a pointer to it.
-  WeakRefSlot *allocWeakSlot(HermesValue init);
+  WeakRefSlot *allocWeakSlot(HermesValue init) override;
 
   /// Free a weak reference slot.
   void freeWeakSlot(WeakRefSlot *value);

@@ -35,7 +35,7 @@ inline void GCPointerBase::set(PointerBase *base, GCCell *ptr, GC *gc) {
       (!ptr || gc->validPointer(ptr)) &&
       "Cannot set a GCPointer to an invalid pointer");
   // Write barrier must happen before the write.
-  gc->writeBarrier(this, static_cast<GCCell *>(ptr));
+  gc->writeBarrier(this, ptr);
   ptr_ = pointerToStorageType(ptr, base);
 }
 
