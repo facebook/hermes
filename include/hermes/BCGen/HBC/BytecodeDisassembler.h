@@ -104,6 +104,12 @@ class BytecodeVisitor {
       const uint8_t *operandBuf,
       int operandIndex) {}
 
+  // Helper function to visit all instructions in a range of bytecode.
+  void visitInstructionsInBody(
+      const uint8_t *bytecodeStart,
+      const uint8_t *bytecodeEnd,
+      bool visitSwitchImmTargets);
+
  public:
   BytecodeVisitor(std::shared_ptr<hbc::BCProvider> bcProvider)
       : bcProvider_(bcProvider) {}

@@ -73,6 +73,11 @@ static llvh::cl::opt<DisassemblyFormat> DisassemblyOutputFormat(
             "objdump-disassemble",
             "Like objdump")));
 
+static llvh::cl::opt<bool> ListOpCodes(
+    "list-opcodes",
+    llvh::cl::init(false),
+    llvh::cl::desc("For objdump format, also include a list of all opcodes"));
+
 static llvh::cl::opt<std::string> AnalyzeMode(
     "mode",
     llvh::cl::desc(
@@ -212,6 +217,12 @@ static void enterCommandLoop(
     case DisassemblyFormat::Objdump:
       options = options | DisassemblyOptions::Objdump;
       break;
+  }
+  if (ListOpCodes) {
+    assert(
+        DisassemblyOutputFormat == DisassemblyFormat::Objdump &&
+        "only supported for objdump format");
+    options = options | DisassemblyOptions::IncludeOpCodeList;
   }
   disassembler.setOptions(options);
   ProfileAnalyzer analyzer(

@@ -20,6 +20,7 @@ enum class DisassemblyOptions : uint32_t {
   IncludeVirtualOffsets = 4, // Include virtual offsets in disassembly output.
   IncludeFunctionIds = 8,
   Objdump = 16, // Output in objdump mode.
+  IncludeOpCodeList = 32, // In objdump mode, also list all opcodes.
 };
 
 inline constexpr DisassemblyOptions operator|(
