@@ -921,8 +921,10 @@ static std::string functionInfoToString(
     const JSONArray &traceFunctionInfos,
     const JSONArray &strings) {
   auto base = idx * 6;
-  auto functionID =
-      llvh::cast<JSONNumber>(traceFunctionInfos[base])->getValue();
+  int functionID = llvh::cast<JSONNumber>(traceFunctionInfos[base])->getValue();
+  assert(
+      functionID == idx &&
+      "The function info must have a matching index and id");
 
   auto name = llvh::cast<JSONString>(
                   strings[llvh::cast<JSONNumber>(traceFunctionInfos[base + 1])
@@ -1073,6 +1075,66 @@ global(2) @ test.js(2):11:4
 baz(3) @ test.js(2):9:31
 bar(4) @ test.js(2):6:20)#");
 }
+
+TEST_F(HeapSnapshotRuntimeTest, TwoPathsToFunction) {
+  runtime->enableAllocationLocationTracker();
+  JSONFactory::Allocator alloc;
+  JSONFactory jsonFactory{alloc};
+  hbc::CompileFlags flags;
+  CallResult<HermesValue> res = runtime->run(
+      R"#(
+var objects = [];
+function A() {
+  B(A);
+}
+function B(allocatingFunction) {
+  objects.push({ AllocatingFunction: allocatingFunction });
+}
+function C() {
+  B(C);
+}
+function D() {
+  B(D);
+}
+A();
+C();
+D();
+objects[0];
+      )#",
+      "test.js",
+      flags);
+  ASSERT_FALSE(isException(res));
+  ASSERT_TRUE(res->isObject());
+  Handle<JSObject> obj = runtime->makeHandle(vmcast<JSObject>(*res));
+  auto objID = runtime->getHeap().getObjectID(*obj);
+
+  JSONObject *root = TAKE_SNAPSHOT(runtime->getHeap(), jsonFactory);
+  ASSERT_NE(root, nullptr);
+
+  const JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
+  const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
+  const JSONArray &traceFunctionInfos =
+      *llvh::cast<JSONArray>(root->at("trace_function_infos"));
+
+  std::map<int, ChromeStackTreeNode *> idNodeMap;
+  auto roots = ChromeStackTreeNode::parse(
+      *llvh::cast<JSONArray>(root->at("trace_tree")), nullptr, idNodeMap);
+
+  auto allocNode = FIND_NODE_FOR_ID(objID, nodes, strings);
+  auto stackTreeNode = idNodeMap.find(allocNode.traceNodeID);
+  ASSERT_NE(stackTreeNode, idNodeMap.end());
+  auto stackStr =
+      stackTreeNode->second->buildStackTrace(traceFunctionInfos, strings);
+  EXPECT_STREQ(
+      stackStr.c_str(),
+      R"#(
+(root)(0) @ (0):0:0
+global(1) @ test.js(2):2:1
+global(10) @ test.js(2):15:2
+A(11) @ test.js(2):4:4
+B(4) @ test.js(2):7:15)#");
+}
+
 #endif // HERMES_ENABLE_DEBUGGER
 
 } // namespace heapsnapshottest

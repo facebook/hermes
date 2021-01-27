@@ -85,14 +85,14 @@ def main():
             "name": strings[name],
             "script_name": strings[script_name],
             "script_id": script_id,
-            "line": line + 1,
-            "column": column + 1,
+            "line": line,
+            "column": column,
         }
         for function_id, name, script_name, script_id, line, column in chunk(
             root.get("trace_function_infos", []), len(TRACE_FUNCTION_INFO_FIELDS)
         )
     ]
-    del root["trace_function_infos"]
+    root["trace_function_infos"] = trace_functions
 
     # The result of this will be the node, and that node's parent, to ascend
     # the stack.
