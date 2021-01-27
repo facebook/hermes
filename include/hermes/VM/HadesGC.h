@@ -159,6 +159,7 @@ class HadesGC final : public GCBase {
   void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value);
 
   void snapshotWriteBarrier(const GCHermesValue *loc);
+  void snapshotWriteBarrier(const GCPointerBase *loc);
   void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs);
 
   void weakRefReadBarrier(GCCell *value);

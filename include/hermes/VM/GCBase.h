@@ -1082,6 +1082,11 @@ class GCBase {
   inline void constructorWriteBarrierRange(
       const GCHermesValue *start,
       uint32_t numHVs) {}
+  inline void snapshotWriteBarrier(const GCHermesValue *loc) {}
+  inline void snapshotWriteBarrier(const GCPointerBase *loc) {}
+  inline void snapshotWriteBarrierRange(
+      const GCHermesValue *start,
+      uint32_t numHVs) {}
   inline void weakRefReadBarrier(GCCell *value) {}
   inline void weakRefReadBarrier(HermesValue value) {}
 

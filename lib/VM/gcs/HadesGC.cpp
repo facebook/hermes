@@ -971,10 +971,7 @@ class HadesGC::MarkAcceptor final : public HeapMarkingAcceptor,
 /// writes of compressed pointers is important.
 class HadesGC::MarkWeakRootsAcceptor final : public WeakRootAcceptor {
  public:
-  MarkWeakRootsAcceptor(GC &gc) : gc_{gc}, pointerBase_{gc.getPointerBase()} {
-    // Only used in debug builds.
-    (void)gc_;
-  }
+  MarkWeakRootsAcceptor(HadesGC &gc) : gc_{gc} {}
 
   void acceptWeak(WeakRootBase &wr) override {
     if (!wr) {
@@ -982,7 +979,7 @@ class HadesGC::MarkWeakRootsAcceptor final : public WeakRootAcceptor {
     }
     GCPointerBase::StorageType &ptrStorage = wr.getNoBarrierUnsafe();
     GCCell *const cell =
-        GCPointerBase::storageTypeToPointer(ptrStorage, pointerBase_);
+        GCPointerBase::storageTypeToPointer(ptrStorage, gc_.getPointerBase());
     assert(!gc_.inYoungGen(cell) && "Pointer should be into the OG");
     HERMES_SLOW_ASSERT(gc_.dbgContains(cell) && "ptr not in heap");
     if (HeapSegment::getCellMarkBit(cell)) {
@@ -1005,8 +1002,7 @@ class HadesGC::MarkWeakRootsAcceptor final : public WeakRootAcceptor {
   }
 
  private:
-  GC &gc_;
-  PointerBase *const pointerBase_;
+  HadesGC &gc_;
 };
 
 bool HadesGC::OldGen::sweepNext() {
@@ -1785,16 +1781,8 @@ void HadesGC::writeBarrier(const GCPointerBase *loc, const GCCell *value) {
     return;
   }
   if (isOldGenMarking_) {
-    const GCPointerBase::StorageType oldValueStorage = loc->getStorageType();
-
-#ifdef HERMESVM_COMPRESSED_POINTERS
-    // TODO: Pass in pointer base? Slows down the non-concurrent-marking case.
-    // Or maybe always decode the old value? Also slows down the normal case.
-    GCCell *const oldValue = static_cast<GCCell *>(
-        getPointerBase()->basedToPointer(oldValueStorage));
-#else
-    GCCell *const oldValue = static_cast<GCCell *>(oldValueStorage);
-#endif
+    GCCell *const oldValue = GCPointerBase::storageTypeToPointer(
+        loc->getStorageType(), getPointerBase());
     snapshotWriteBarrierInternal(oldValue);
   }
   // Always do the non-snapshot write barrier in order for YG to be able to
@@ -1847,6 +1835,17 @@ void HadesGC::snapshotWriteBarrier(const GCHermesValue *loc) {
   }
   if (isOldGenMarking_) {
     snapshotWriteBarrierInternal(*loc);
+  }
+}
+
+void HadesGC::snapshotWriteBarrier(const GCPointerBase *loc) {
+  if (inYoungGen(loc)) {
+    // A pointer that lives in YG never needs any write barriers.
+    return;
+  }
+  if (isOldGenMarking_) {
+    snapshotWriteBarrierInternal(GCPointerBase::storageTypeToPointer(
+        loc->getStorageType(), getPointerBase()));
   }
 }
 

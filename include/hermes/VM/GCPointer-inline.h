@@ -40,11 +40,7 @@ inline void GCPointerBase::set(PointerBase *base, GCCell *ptr, GC *gc) {
 }
 
 inline void GCPointerBase::setNull(GC *gc) {
-#ifdef HERMESVM_GC_HADES
-  // Hades requires a write barrier here in case the previous value of ptr_ was
-  // a pointer.
-  gc->writeBarrier(this, nullptr);
-#endif
+  gc->snapshotWriteBarrier(this);
   ptr_ = StorageType{};
 }
 

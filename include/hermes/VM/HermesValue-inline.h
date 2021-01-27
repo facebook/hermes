@@ -39,11 +39,8 @@ template <typename NeedsBarriers>
 GCHermesValue::GCHermesValue(HermesValue hv, GC *gc, std::nullptr_t)
     : HermesValue{hv} {
   assert(!hv.isPointer() || !hv.getPointer());
-#ifdef HERMESVM_GC_HADES
-  // Only Hades needs a write barrier for a non-pointer hv
   if (NeedsBarriers::value)
     gc->constructorWriteBarrier(this, hv);
-#endif
 }
 
 template <typename NeedsBarriers>
@@ -65,18 +62,13 @@ inline void GCHermesValue::set(HermesValue hv, GC *gc) {
 void GCHermesValue::setNonPtr(HermesValue hv, GC *gc) {
   HERMES_SLOW_ASSERT(gc && "Need a GC parameter in case of a write barrier");
   assert(!hv.isPointer() || !hv.getPointer());
-#ifdef HERMESVM_GC_HADES
-  // Needs a write barrier in Hades in case the previous value was a pointer.
-  gc->writeBarrier(this, hv);
-#endif
+  gc->snapshotWriteBarrier(this);
   setNoBarrier(hv);
 }
 
 void GCHermesValue::unreachableWriteBarrier(GC *gc) {
-#ifdef HERMESVM_GC_HADES
   // Hades needs a snapshot barrier executed when something becomes unreachable.
   gc->snapshotWriteBarrier(this);
-#endif
 }
 
 /*static*/
@@ -195,9 +187,7 @@ inline void GCHermesValue::rangeUnreachableWriteBarrier(
     GCHermesValue *first,
     GCHermesValue *last,
     GC *gc) {
-#ifdef HERMESVM_GC_HADES
   gc->snapshotWriteBarrierRange(first, last - first);
-#endif
 }
 
 inline void GCHermesValue::copyToPinned(
