@@ -214,16 +214,6 @@ class Runtime : public HandleRootOwner,
   /// @name Heap management
   /// @{
 
-  /// Allocate a new cell of the specified size \p size.
-  /// If necessary perform a GC cycle, which may potentially move allocated
-  /// objects.
-  /// The \p fixedSize template argument indicates whether the allocation is for
-  /// a fixed-size cell, which can assumed to be small if true.  The
-  /// \p hasFinalizer template argument indicates whether the object
-  /// being allocated will have a finalizer.
-  template <bool fixedSize = true, HasFinalizer hasFinalizer = HasFinalizer::No>
-  void *alloc(uint32_t size);
-
   /// Create a fixed size object of type T.
   /// If necessary perform a GC cycle, which may potentially move
   /// allocated objects.

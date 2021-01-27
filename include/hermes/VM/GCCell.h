@@ -26,11 +26,7 @@ class VariableSizeRuntimeCell;
 /// Return the allocation size for a fixed-size cell corresponding to class C.
 /// This must be used instead of the builtin sizeof operator, since classes
 /// further down the GCCell hierarchy may add (fixed-size) trailing objects and
-/// redefine this method. Example usage:
-///
-/// CallResult<HermesValue> MyCell::create(Runtime *runtime, ...) {
-///   void *mem = runtime->alloc(cellSize<MyCell>());
-///   ...
+/// redefine this method.
 template <class C>
 static constexpr uint32_t cellSize() {
   static_assert(HeapAlign % alignof(C) == 0, "insufficient heap alignment");
