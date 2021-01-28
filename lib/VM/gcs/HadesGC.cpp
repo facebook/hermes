@@ -1780,11 +1780,8 @@ void HadesGC::writeBarrier(const GCPointerBase *loc, const GCCell *value) {
     // A pointer that lives in YG never needs any write barriers.
     return;
   }
-  if (isOldGenMarking_) {
-    GCCell *const oldValue = GCPointerBase::storageTypeToPointer(
-        loc->getStorageType(), getPointerBase());
-    snapshotWriteBarrierInternal(oldValue);
-  }
+  if (isOldGenMarking_)
+    snapshotWriteBarrierInternal(loc->get(getPointerBase()));
   // Always do the non-snapshot write barrier in order for YG to be able to
   // scan cards.
   relocationWriteBarrier(loc, value);
