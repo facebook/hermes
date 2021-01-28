@@ -215,23 +215,17 @@ void SamplingProfiler::GlobalProfiler::timerLoop() {
       kMeanMilliseconds, kStdDevMilliseconds};
   std::unique_lock<std::mutex> uniqueLock(profilerLock_);
 
-  while (true) {
+  while (enabled_) {
     if (!sampleStack()) {
       return;
     }
 
     const uint64_t millis = round(std::fabs(distribution(gen)));
     // TODO: make sampling rate configurable.
-    bool disabled = enabledCondVar_.wait_for(
+    enabledCondVar_.wait_for(
         uniqueLock, std::chrono::milliseconds(millis), [this]() {
           return !enabled_;
         });
-    if (disabled) {
-      // The sampling profiler was disabled: don't continue sampling.
-      return;
-    }
-    // Else there was a timeout, which means enabled_ wasn't changed while this
-    // function was waiting. Continue to sample the stack.
   }
 }
 
