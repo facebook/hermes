@@ -34,11 +34,18 @@
 
 const Variable = require('./variable');
 
-/**
- * @class Definition
- */
+const DefinitionType = {
+  CatchClause: 'CatchClause',
+  ClassName: 'ClassName',
+  FunctionName: 'FunctionName',
+  ImplicitGlobalVariable: 'ImplicitGlobalVariable',
+  ImportBinding: 'ImportBinding',
+  Parameter: 'Parameter',
+  Variable: 'Variable',
+};
+
 class Definition {
-  constructor(type, name, node, parent, index, kind) {
+  constructor({type, name, node, parent, index, kind}) {
     /**
      * @member {String} Definition#type - type of the occurrence (e.g. "Parameter", "Variable", ...).
      */
@@ -71,12 +78,65 @@ class Definition {
   }
 }
 
-/**
- * @class ParameterDefinition
- */
+class CatchClauseDefinition extends Definition {
+  constructor(catchNode) {
+    super({
+      type: DefinitionType.CatchClause,
+      name: catchNode.param,
+      node: catchNode,
+    });
+  }
+}
+
+class ClassNameDefinition extends Definition {
+  constructor(classNode) {
+    super({
+      type: DefinitionType.ClassName,
+      name: classNode.id,
+      node: classNode,
+    });
+  }
+}
+
+class FunctionNameDefinition extends Definition {
+  constructor(functionNode) {
+    super({
+      type: DefinitionType.FunctionName,
+      name: functionNode.id,
+      node: functionNode,
+    });
+  }
+}
+
+class ImplicitGlobalVariableDefinition extends Definition {
+  constructor(idNode, node) {
+    super({
+      type: DefinitionType.ImplicitGlobalVariable,
+      name: idNode,
+      node,
+    });
+  }
+}
+
+class ImportBindingDefinition extends Definition {
+  constructor(idNode, specifierNode, importDeclarationNode) {
+    super({
+      type: DefinitionType.ImportBinding,
+      name: idNode,
+      node: specifierNode,
+      parent: importDeclarationNode,
+    });
+  }
+}
+
 class ParameterDefinition extends Definition {
-  constructor(name, node, index, rest) {
-    super(Variable.Parameter, name, node, null, index, null);
+  constructor(idNode, functionNode, index, rest) {
+    super({
+      type: DefinitionType.Parameter,
+      name: idNode,
+      node: functionNode,
+      index,
+    });
 
     /**
      * Whether the parameter definition is a part of a rest parameter.
@@ -86,7 +146,26 @@ class ParameterDefinition extends Definition {
   }
 }
 
+class VariableDefinition extends Definition {
+  constructor(idNode, declaratorNode, declarationNode, index, kind) {
+    super({
+      type: DefinitionType.Variable,
+      name: idNode,
+      node: declaratorNode,
+      parent: declarationNode,
+      index,
+      kind,
+    });
+  }
+}
+
 module.exports = {
+  CatchClauseDefinition,
+  ClassNameDefinition,
+  DefinitionType,
+  FunctionNameDefinition,
+  ImplicitGlobalVariableDefinition,
+  ImportBindingDefinition,
   ParameterDefinition,
-  Definition,
+  VariableDefinition,
 };

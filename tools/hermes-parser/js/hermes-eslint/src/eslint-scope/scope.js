@@ -36,7 +36,11 @@ const Syntax = require('estraverse').Syntax;
 
 const Reference = require('./reference');
 const Variable = require('./variable');
-const Definition = require('./definition').Definition;
+const {
+  DefinitionType,
+  FunctionNameDefinition,
+  ImplicitGlobalVariableDefinition,
+} = require('./definition');
 const assert = require('assert');
 
 /**
@@ -140,8 +144,8 @@ function registerScope(scopeManager, scope) {
  */
 function shouldBeStatically(def) {
   return (
-    def.type === Variable.ClassName ||
-    (def.type === Variable.Variable && def.parent.kind !== 'var')
+    def.type === DefinitionType.ClassName ||
+    (def.type === DefinitionType.Variable && def.parent.kind !== 'var')
   );
 }
 
@@ -329,8 +333,10 @@ class Scope {
     return this.upper;
   }
 
-  // To override by function scopes.
-  // References in default parameters isn't resolved to variables which are in their function body.
+  /**
+   * Whether a given reference can be resolved to a given variable.
+   * May be overridden in scope implementations.
+   */
   __isValidResolution(ref, variable) {
     return true;
   }
@@ -401,7 +407,7 @@ class Scope {
     }
   }
 
-  __referencing(node, assign, writeExpr, maybeImplicitGlobal, init) {
+  __referencingValue(node, assign, writeExpr, maybeImplicitGlobal, init) {
     // because Array element may be null
     if (!node || node.type !== Syntax.Identifier) {
       return;
@@ -413,12 +419,28 @@ class Scope {
     }
 
     const ref = new Reference(
-      node,
-      this,
-      assign || Reference.READ,
-      writeExpr,
-      maybeImplicitGlobal,
-      !!init,
+      node /* identifier */,
+      this /* scope */,
+      assign || Reference.READ /* read-write flag */,
+      writeExpr /* writeExpr */,
+      maybeImplicitGlobal /* maybeImplicitGlobal */,
+      !!init /* init */,
+      false /* isTypeReference */,
+    );
+
+    this.references.push(ref);
+    this.__referencesLeftToResolve.push(ref);
+  }
+
+  __referencingType(node) {
+    const ref = new Reference(
+      node /* identifier */,
+      this /* scope */,
+      Reference.Read /* read-write flag */,
+      null /* writeExpr */,
+      null /* maybeImplicitGlobal */,
+      false /* init */,
+      true /* isTypeReference */,
     );
 
     this.references.push(ref);
@@ -520,14 +542,7 @@ class GlobalScope extends Scope {
 
       this.__defineImplicit(
         info.pattern,
-        new Definition(
-          Variable.ImplicitGlobalVariable,
-          info.pattern,
-          info.node,
-          null,
-          null,
-          null,
-        ),
+        new ImplicitGlobalVariableDefinition(info.pattern, info.node),
       );
     }
 
@@ -558,10 +573,7 @@ class ModuleScope extends Scope {
 class FunctionExpressionNameScope extends Scope {
   constructor(scopeManager, upperScope, block) {
     super(scopeManager, 'function-expression-name', upperScope, block, false);
-    this.__define(
-      block.id,
-      new Definition(Variable.FunctionName, block.id, block, null, null, null),
-    );
+    this.__define(block.id, new FunctionNameDefinition(block));
     this.functionExpressionScope = true;
   }
 }
@@ -657,6 +669,10 @@ class FunctionScope extends Scope {
   //         console.log(a)
   //     }
   __isValidResolution(ref, variable) {
+    if (!super.__isValidResolution(ref, variable)) {
+      return false;
+    }
+
     // If `options.nodejsScope` is true, `this.block` becomes a Program node.
     if (this.block.type === 'Program') {
       return true;

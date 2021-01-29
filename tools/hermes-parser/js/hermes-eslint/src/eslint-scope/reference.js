@@ -48,6 +48,7 @@ class Reference {
     writeExpr,
     maybeImplicitGlobal,
     init,
+    isTypeReference,
   ) {
     /**
      * Identifier syntax node.
@@ -88,6 +89,8 @@ class Reference {
       this.init = init;
     }
     this.__maybeImplicitGlobal = maybeImplicitGlobal;
+
+    this.__isTypeReference = isTypeReference;
   }
 
   /**
@@ -142,6 +145,20 @@ class Reference {
    */
   isReadWrite() {
     return this.flag === Reference.RW;
+  }
+
+  /**
+   * Whether the reference is for a value.
+   */
+  isValueReference() {
+    return !this.__isTypeReference;
+  }
+
+  /**
+   * Whether the reference is for a type.
+   */
+  isTypeReference() {
+    return this.__isTypeReference;
   }
 }
 
