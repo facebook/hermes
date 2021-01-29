@@ -31,10 +31,13 @@ SYM_TRACE="$TMPDIR/symbolicated_trace.txt"
 
 cat "$SYM_TRACE"
 # CHECK: Error: ERROR_FOR_TESTING
-# CHECK:     at mod2Inner ({{.*}}cjs-subdir-2.js:10:15)
-# CHECK:     at immediatelyInvoke ({{.*}}cjs-subdir-shared.js:9:5)
-# CHECK:     at mod2fun ({{.*}}cjs-subdir-2.js:9:35)
-# CHECK:     at run ({{.*}}cjs-subdir-unminified.js:11:20)
-# CHECK:     at mainInner ({{.*}}cjs-subdir-main.js:12:11)
-# CHECK:     at immediatelyInvoke ({{.*}}cjs-subdir-shared.js:9:5)
-# CHECK:     at cjs_module ({{.*}}cjs-subdir-main.js:8:33)
+# CHECK-NEXT:     at mod2Inner ({{.*}}cjs-subdir-2.js:11:17)
+# CHECK-NEXT:     at unmappedFunction (null:null:null)
+# CHECK-NEXT:     at mappedFunction (/fake/source/of/mappedFunction.js:1:1)
+# CHECK-NEXT:     at anonymous ({{.*}}cjs-subdir-2.js:10:47)
+# CHECK-NEXT:     at immediatelyInvoke ({{.*}}cjs-subdir-shared.js:9:3)
+# CHECK-NEXT:     at mod2fun ({{.*}}cjs-subdir-2.js:9:39)
+# CHECK-NEXT:     at run ({{.*}}cjs-subdir-unminified.js:11:20)
+# CHECK-NEXT:     at mainInner ({{.*}}cjs-subdir-main.js:12:11)
+# CHECK-NEXT:     at immediatelyInvoke ({{.*}}cjs-subdir-shared.js:9:3)
+# CHECK-NEXT:     at cjs_module ({{.*}}cjs-subdir-main.js:8:37)

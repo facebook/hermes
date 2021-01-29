@@ -3,10 +3,11 @@
     "0": [
       "cjs-subdir-main.min.js",
       "cjs-subdir-unminified.js",
-      "cjs-subdir-shared.js"
+      "cjs-subdir-shared.min.js",
+      "cjs-subdir-partially-mapped.js"
     ],
     "2": [
-      "cjs-subdir-shared.js",
+      "cjs-subdir-shared.min.js",
       "cjs-subdir-2.min.js"
     ]
   }

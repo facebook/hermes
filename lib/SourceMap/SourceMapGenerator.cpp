@@ -42,34 +42,29 @@ uint32_t SourceMapGenerator::addSource(
   return index;
 }
 
-llvh::Optional<std::pair<SourceMap::Segment, const SourceMap *>>
+std::pair<llvh::Optional<SourceMap::Segment>, const SourceMap *>
 SourceMapGenerator::getInputSegmentForSegment(
     const SourceMap::Segment &seg) const {
   if (seg.representedLocation.hasValue()) {
     assert(
         seg.representedLocation->sourceIndex >= 0 && "Negative source index");
   }
-  // True iff inputSourceMaps_ has a valid source map for
-  // seg.representedLocation->sourceIndex.
-  bool hasInput = seg.representedLocation.hasValue() &&
+
+  const SourceMap *inputMap = nullptr;
+  llvh::Optional<SourceMap::Segment> inputSeg;
+
+  if (seg.representedLocation.hasValue() &&
       (uint32_t)seg.representedLocation->sourceIndex <
-          inputSourceMaps_.size() &&
-      inputSourceMaps_[seg.representedLocation->sourceIndex] != nullptr;
-
-  if (!hasInput) {
-    return llvh::None;
+          inputSourceMaps_.size()) {
+    inputMap = inputSourceMaps_[seg.representedLocation->sourceIndex].get();
+    if (inputMap) {
+      inputSeg = inputMap->getSegmentForAddress(
+          seg.representedLocation->lineIndex + 1,
+          seg.representedLocation->columnIndex + 1);
+    }
   }
 
-  const SourceMap *inputMap =
-      inputSourceMaps_[seg.representedLocation->sourceIndex].get();
-  auto inputSeg = inputMap->getSegmentForAddress(
-      seg.representedLocation->lineIndex + 1,
-      seg.representedLocation->columnIndex + 1);
-  if (!inputSeg.hasValue()) {
-    return llvh::None;
-  }
-
-  return std::make_pair(inputSeg.getValue(), inputMap);
+  return std::make_pair(inputSeg, inputMap);
 }
 
 bool SourceMapGenerator::hasSourcesMetadata() const {
@@ -147,39 +142,44 @@ SourceMapGenerator SourceMapGenerator::mergedWithInputSourceMaps() const {
     SourceMap::SegmentList newLine{};
 
     for (const auto &seg : lines_[i]) {
+      auto pair = getInputSegmentForSegment(seg);
+      auto inputSeg = pair.first;
+      auto inputMap = pair.second;
+
       SourceMap::Segment newSeg = seg;
       newSeg.representedLocation = llvh::None;
 
-      if (auto pair = getInputSegmentForSegment(seg)) {
+      if (inputSeg.hasValue() && inputSeg->representedLocation.hasValue()) {
         // We have an input source map and were able to find a merged source
         // location.
-        auto inputSeg = pair->first;
-        auto inputMap = pair->second;
-        if (inputSeg.representedLocation.hasValue()) {
-          auto loc = inputSeg.representedLocation.getValue();
-          // Our _output_ sourceRoot is empty, so make sure to canonicalize
-          // the path based on the input map's sourceRoot.
-          std::string filename = inputMap->getSourceFullPath(loc.sourceIndex);
 
-          newSeg.representedLocation = SourceMap::Segment::SourceLocation(
-              merged.addSource(
-                  filename, inputMap->getSourceMetadata(loc.sourceIndex)),
-              loc.lineIndex,
-              loc.columnIndex
-              // TODO: Handle name index
-          );
-        }
+        auto loc = inputSeg->representedLocation.getValue();
+        // Our _output_ sourceRoot is empty, so make sure to canonicalize
+        // the path based on the input map's sourceRoot.
+        std::string filename = inputMap->getSourceFullPath(loc.sourceIndex);
+
+        newSeg.representedLocation = SourceMap::Segment::SourceLocation(
+            merged.addSource(
+                filename, inputMap->getSourceMetadata(loc.sourceIndex)),
+            loc.lineIndex,
+            loc.columnIndex
+            // TODO: Handle name index
+        );
       }
-      if (!newSeg.representedLocation.hasValue() &&
+
+      if (!inputMap && !newSeg.representedLocation.hasValue() &&
           seg.representedLocation.hasValue()) {
-        // Failed to find a merge location. Use the existing location,
-        // but copy over the source file name.
+        // Failed to find a merged location because there is no input source
+        // map. Use the existing location, but copy over the source file name.
         newSeg.representedLocation = seg.representedLocation;
         newSeg.representedLocation->sourceIndex = merged.addSource(
             sources[seg.representedLocation->sourceIndex],
             getSourceMetadata(seg.representedLocation->sourceIndex));
       }
 
+      // Push the new segment even if it has no represented location. If there
+      // is an input source map, all locations we emit will be in terms of it,
+      // or be explicitly unmapped.
       newLine.push_back(std::move(newSeg));
     }
 

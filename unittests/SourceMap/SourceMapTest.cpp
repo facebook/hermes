@@ -309,8 +309,9 @@ TEST(SourceMap, NoRepresentedLocation) {
 ///          (III)
 ///     output -> file1orig + file2orig (+ file1 + file2)
 ///
-/// In general, mappings to file1 and file2 may remain in (III) because some
-/// mappings in (II) point to unmapped locations in (I).
+/// No mappings to file1 and file2 may remain in (III) because we consider
+/// those to be intermediate artifacts (based on the fact that they have source
+/// maps).
 TEST(SourceMap, MergedWithInputSourceMaps) {
   static const char file1MapJson[] =
       R"#({
@@ -344,18 +345,17 @@ TEST(SourceMap, MergedWithInputSourceMaps) {
       loc(9, 1, 1, 6), // addr 1:9 -> file2:1:6 -> file2orig:3:1
   };
 
-  std::vector<std::string> expectedSources = {
-      "file1", "file1orig", "file2", "/foo/file2orig"};
+  std::vector<std::string> expectedSources = {"file1orig", "/foo/file2orig"};
   SourceMap::SegmentList expectedSegments = {
-      loc(0, 0, 1, 0), // addr 1:0 -> file1:1:0   (unmapped in file1orig)
-      loc(2, 1, 1, 0), // addr 1:2 -> file1:1:1 -> file1orig:1:0
-      loc(3, 1, 1, 0), // addr 1:3 -> file1:1:4 -> file1orig:1:0
-      loc(4, 0, 2, 0), // addr 1:4 -> file1:2:0   (unmapped in file1orig)
+      loc(0), //          addr 1:0(-> file1:1:0)-> unmapped
+      loc(2, 0, 1, 0), // addr 1:2 -> file1:1:1 -> file1orig:1:0
+      loc(3, 0, 1, 0), // addr 1:3 -> file1:1:4 -> file1orig:1:0
+      loc(4), //          addr 1:4(-> file1:2:0)-> unmapped
       loc(5), //          addr 1:5 -> unmapped
-      loc(6, 2, 1, 0), // addr 1:6 -> file2:1:0   (unmapped in file2orig)
-      loc(7, 3, 2, 0), // addr 1:7 -> file2:1:1 -> file2orig:2:0
-      loc(8, 3, 2, 0), // addr 1:8 -> file2:1:4 -> file2orig:2:0
-      loc(9, 3, 3, 1), // addr 1:9 -> file2:1:6 -> file2orig:3:1
+      loc(6), //          addr 1:6(-> file2:1:0)-> unmapped
+      loc(7, 1, 2, 0), // addr 1:7 -> file2:1:1 -> file2orig:2:0
+      loc(8, 1, 2, 0), // addr 1:8 -> file2:1:4 -> file2orig:2:0
+      loc(9, 1, 3, 1), // addr 1:9 -> file2:1:6 -> file2orig:3:1
   };
 
   SourceMapGenerator gen;
@@ -371,8 +371,8 @@ TEST(SourceMap, MergedWithInputSourceMaps) {
   gen.outputAsJSON(OS);
   EXPECT_EQ(
       OS.str(),
-      R"#({"version":3,"sources":["file1","file1orig","file2","\/foo\/file2orig"],)#"
-      R"#("mappings":"AAAA,ECAA,CAAA,CDCA,C,CEDA,CCCA,CAAA,CACC;"})#");
+      R"#({"version":3,"sources":["file1orig","\/foo\/file2orig"],)#"
+      R"#("mappings":"A,EAAA,CAAA,C,C,C,CCCA,CAAA,CACC;"})#");
 
   std::unique_ptr<SourceMap> sourceMap = SourceMapParser::parse(storage);
   for (uint32_t i = 0; i < expectedSegments.size(); ++i) {
@@ -463,10 +463,10 @@ TEST(SourceMap, PropagateFbMetadataFromInputs) {
   gen.outputAsJSON(OS);
   EXPECT_EQ(
       OS.str(),
-      R"#({"version":3,"sources":["file1","file1orig","file2","\/foo\/file2orig"],)#"
-      R"#("x_facebook_sources":[null,[{"mappings":"AAA,AAA","names":["FILE1ORIG"]}],)#"
-      R"#([{"mappings":"AAA","names":["FILE2"]},42],[{"mappings":"AAA","names":["FILE2ORIG"]}]],)#"
-      R"#("mappings":"AAAA,ECAA,CAAA,CDCA,C,CEDA,CCCA,CAAA,CACC;"})#");
+      R"#({"version":3,"sources":["file1orig","\/foo\/file2orig"],)#"
+      R"#("x_facebook_sources":[[{"mappings":"AAA,AAA","names":["FILE1ORIG"]}],)#"
+      R"#([{"mappings":"AAA","names":["FILE2ORIG"]}]],)#"
+      R"#("mappings":"A,EAAA,CAAA,C,C,C,CCCA,CAAA,CACC;"})#");
 }
 
 /// Test that we output the x_facebook_sources field if we have data for it
