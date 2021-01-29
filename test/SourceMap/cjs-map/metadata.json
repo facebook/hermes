@@ -6,8 +6,8 @@
       "cjs-subdir-shared.js"
     ],
     "2": [
-      "cjs-subdir-2.min.js",
-      "cjs-subdir-shared.js"
+      "cjs-subdir-shared.js",
+      "cjs-subdir-2.min.js"
     ]
   }
 }

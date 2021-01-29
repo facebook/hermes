@@ -1544,11 +1544,9 @@ bool generateIRForSourcesAsCJSModules(
       auto &fileBuf = moduleInSegment.file;
       llvh::SmallString<64> filename{fileBuf->getBufferIdentifier()};
 
-      if (generatedModuleIDs.count(moduleInSegment.id) == 0) {
+      if (sourceMapGen && generatedModuleIDs.count(moduleInSegment.id) == 0) {
         // This is the first time we're generating IR for this module.
-        if (sourceMapGen) {
-          sources.push_back(fileBuf->getBufferIdentifier());
-        }
+        sources.push_back(fileBuf->getBufferIdentifier());
         if (moduleInSegment.sourceMap) {
           auto inputMap = SourceMapParser::parse(*moduleInSegment.sourceMap);
           if (!inputMap) {
@@ -1560,6 +1558,8 @@ bool generateIRForSourcesAsCJSModules(
           inputSourceMaps.push_back(nullptr);
         }
       }
+
+      generatedModuleIDs.insert(moduleInSegment.id);
 
       llvh::sys::path::replace_path_prefix(
           filename, rootPath, "./", llvh::sys::path::Style::posix);
