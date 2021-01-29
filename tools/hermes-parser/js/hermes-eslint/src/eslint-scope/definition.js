@@ -41,6 +41,7 @@ const DefinitionType = {
   ImplicitGlobalVariable: 'ImplicitGlobalVariable',
   ImportBinding: 'ImportBinding',
   Parameter: 'Parameter',
+  Type: 'Type',
   Variable: 'Variable',
 };
 
@@ -146,6 +147,16 @@ class ParameterDefinition extends Definition {
   }
 }
 
+class TypeDefinition extends Definition {
+  constructor(idNode, declNode) {
+    super({
+      type: DefinitionType.Type,
+      name: idNode,
+      node: declNode,
+    });
+  }
+}
+
 class VariableDefinition extends Definition {
   constructor(idNode, declaratorNode, declarationNode, index, kind) {
     super({
@@ -167,5 +178,6 @@ module.exports = {
   ImplicitGlobalVariableDefinition,
   ImportBindingDefinition,
   ParameterDefinition,
+  TypeDefinition,
   VariableDefinition,
 };

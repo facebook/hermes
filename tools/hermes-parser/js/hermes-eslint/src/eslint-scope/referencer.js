@@ -44,6 +44,7 @@ const {
   FunctionNameDefinition,
   ImportBindingDefinition,
   ParameterDefinition,
+  TypeDefinition,
   VariableDefinition,
 } = require('./definition');
 const assert = require('assert');
@@ -167,6 +168,14 @@ class Referencer extends esrecurse.Visitor {
         init,
       );
     });
+  }
+
+  visitArray(arr) {
+    if (arr) {
+      for (const child of arr) {
+        this.visit(child);
+      }
+    }
   }
 
   visitPattern(node, options, callback) {
@@ -633,6 +642,43 @@ class Referencer extends esrecurse.Visitor {
 
   MetaProperty() {
     // do nothing.
+  }
+
+  GenericTypeAnnotation(node) {
+    if (node.id.type === Syntax.Identifier) {
+      this.currentScope().__referencingType(node.id);
+    } else {
+      this.visit(node.id);
+    }
+
+    this.visit(node.typeParameters);
+  }
+
+  createTypeDefinition(node) {
+    this.currentScope().__define(node.id, new TypeDefinition(node.id, node));
+  }
+
+  TypeAlias(node) {
+    this.createTypeDefinition(node);
+
+    this.visit(node.typeParameters);
+    this.visit(node.right);
+  }
+
+  OpaqueType(node) {
+    this.createTypeDefinition(node);
+
+    this.visit(node.typeParameters);
+    this.visit(node.impltype);
+    this.visit(node.supertype);
+  }
+
+  InterfaceDeclaration(node) {
+    this.createTypeDefinition(node);
+
+    this.visit(node.typeParameters);
+    this.visitArray(node.extends);
+    this.visit(node.body);
   }
 }
 

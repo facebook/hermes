@@ -138,13 +138,14 @@ function registerScope(scopeManager, scope) {
 }
 
 /**
- * Should be statically
+ * Should be statically closed
  * @param {Object} def - def
- * @returns {boolean} should be statically
+ * @returns {boolean} should be statically closed
  */
-function shouldBeStatically(def) {
+function shouldBeStaticallyClosed(def) {
   return (
     def.type === DefinitionType.ClassName ||
+    def.type === DefinitionType.Type ||
     (def.type === DefinitionType.Variable && def.parent.kind !== 'var')
   );
 }
@@ -282,7 +283,7 @@ class Scope {
     const variable = this.set.get(name);
     const defs = variable.defs;
 
-    return defs.length > 0 && defs.every(shouldBeStatically);
+    return defs.length > 0 && defs.every(shouldBeStaticallyClosed);
   }
 
   __staticCloseRef(ref) {
