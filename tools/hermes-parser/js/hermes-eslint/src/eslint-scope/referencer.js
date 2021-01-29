@@ -655,6 +655,49 @@ class Referencer extends esrecurse.Visitor {
     this.visit(node.typeParameters);
   }
 
+  QualifiedTypeIdentifier(node) {
+    // Only the first component of a qualified type identifier is a reference,
+    // e.g. 'Foo' in `type T = Foo.Bar.Baz`.
+    if (node.qualification.type === Syntax.Identifier) {
+      this.currentScope().__referencingValue(node.qualification);
+    } else {
+      this.visit(node.qualification);
+    }
+  }
+
+  ObjectTypeProperty(node) {
+    // Do not visit 'key' child if it is an identifier to prevent key being treated as a reference.
+    // e.g. 'foo' is a property name in `type T = { foo: string }`.
+    if (node.key.type !== Syntax.Identifier) {
+      this.visit(node.key);
+    }
+
+    this.visit(node.value);
+    this.visit(node.variance);
+  }
+
+  ObjectTypeIndexer(node) {
+    // Do not visit 'id' child to prevent id from being treated as a reference.
+    // e.g. 'foo' is an unreferenceable name for the indexer parameter in
+    // `type T = { [foo: string]: number }`.
+    this.visit(node.key);
+    this.visit(node.value);
+    this.visit(node.variance);
+  }
+
+  ObjectTypeInternalSlot(node) {
+    // Do not visit 'id' child to prevent id from being treated as a reference.
+    // e.g. 'foo' is an internal slot name in `type T = { [[foo]]: number }`.
+    this.visit(node.value);
+  }
+
+  FunctionTypeParam(node) {
+    // Do not visit 'name' child to prevent name from being treated as a reference.
+    // e.g. 'foo' is a parameter name in a type that should not be treated like a
+    // definition or reference in `type T = (foo: string) => void`.
+    this.visit(node.typeAnnotation);
+  }
+
   createTypeDefinition(node) {
     this.currentScope().__define(node.id, new TypeDefinition(node.id, node));
   }

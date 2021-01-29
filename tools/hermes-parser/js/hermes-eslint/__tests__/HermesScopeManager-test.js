@@ -156,22 +156,128 @@ describe('Enums', () => {
     expect(variable.defs).toHaveLength(1);
     expect(variable.defs[0].type).toEqual(DefinitionType.Enum);
   });
+});
 
-  test('No references in body', () => {
+describe('QualifiedTypeIdentifier', () => {
+  test('References value', () => {
     const {scopeManager} = parseForESLint(`
-      class Foo {};
-      enum E {
-        Foo
-      }
+      import * as Foo from 'Foo';
+      (1: Foo.Bar);
     `);
 
-    // Verify that scope contains variable 'Foo'
-    const scope = scopeManager.scopes[0];
-    expect(scope.variables).toHaveLength(2);
-    expect(scope.variables[0].name).toEqual('Foo');
+    // Verify that scope contains single value reference to 'Foo'
+    const scope = scopeManager.scopes[1];
+    expect(scope.variables).toHaveLength(1);
 
-    // But enum member does not count as reference to 'Foo'
-    expect(scope.references).toHaveLength(0);
-    expect(scope.variables[0].references).toHaveLength(0);
+    const variable = scope.variables[0];
+    expect(variable.name).toEqual('Foo');
+    expect(variable.references).toHaveLength(1);
+    expect(variable.references[0].isValueReference()).toBe(true);
+  });
+});
+
+describe('Identifiers not mistakenly treated as references', () => {
+  function verifyHasReferences(code, references) {
+    const {scopeManager} = parseForESLint(code, {sourceType: 'module'});
+
+    // Module scope should contain variables with the given reference counts
+    const scope = scopeManager.scopes[1];
+    expect(scope.variables).toHaveLength(references.length);
+
+    for (let i = 0; i < references.length; i++) {
+      const {name, count} = references[i];
+      const variable = scope.variables[i];
+
+      expect(variable.name).toEqual(name);
+      expect(variable.references).toHaveLength(count);
+    }
+  }
+
+  test('Enum body', () => {
+    verifyHasReferences(
+      `
+        import Foo from 'Foo';
+        enum E {
+          Foo
+        }
+      `,
+      [
+        {name: 'Foo', count: 0},
+        {name: 'E', count: 0},
+      ],
+    );
+  });
+
+  test('QualifiedTypeIdentifier', () => {
+    verifyHasReferences(
+      `
+        import * as Foo from 'Foo';
+        import Bar from 'Bar';
+        import Baz from 'Baz';
+
+        (1: Foo.Bar.Baz);
+      `,
+      [
+        {name: 'Foo', count: 1},
+        {name: 'Bar', count: 0},
+        {name: 'Baz', count: 0},
+      ],
+    );
+  });
+
+  test('ObjectTypeProperty', () => {
+    verifyHasReferences(
+      `
+        import Foo from 'Foo';
+        import Bar from 'Bar';
+        (1: { Foo: Bar });
+      `,
+      [
+        {name: 'Foo', count: 0},
+        {name: 'Bar', count: 1},
+      ],
+    );
+  });
+
+  test('ObjectTypeIndexer', () => {
+    verifyHasReferences(
+      `
+        import Foo from 'Foo';
+        import Bar from 'Bar';
+        (1: { [Foo: Bar]: string });
+      `,
+      [
+        {name: 'Foo', count: 0},
+        {name: 'Bar', count: 1},
+      ],
+    );
+  });
+
+  test('ObjectTypeInternalSlot', () => {
+    verifyHasReferences(
+      `
+        import Foo from 'Foo';
+        import Bar from 'Bar';
+        (1: { [[Foo]]: Bar });
+      `,
+      [
+        {name: 'Foo', count: 0},
+        {name: 'Bar', count: 1},
+      ],
+    );
+  });
+
+  test('FunctionTypeParam', () => {
+    verifyHasReferences(
+      `
+        import Foo from 'Foo';
+        import Bar from 'Bar';
+        (1: (Foo: Bar) => void);
+      `,
+      [
+        {name: 'Foo', count: 0},
+        {name: 'Bar', count: 1},
+      ],
+    );
   });
 });
