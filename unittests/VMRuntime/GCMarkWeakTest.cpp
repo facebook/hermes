@@ -61,7 +61,7 @@ const VTable TestCell::vt{
 namespace {
 
 // Hades doesn't call markWeak the same number of times as other GCs.
-#ifndef HERMESVM_GC_HADES
+#if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
 MetadataTableForTests getMetadataTable() {
   // Nothing to mark for either of them, leave a blank metadata.
   static const Metadata storage[] = {Metadata(), Metadata()};

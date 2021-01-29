@@ -299,7 +299,11 @@ class Runtime : public HandleRootOwner,
   FormatSymbolID formatSymbolID(SymbolID id);
 
   GC &getHeap() {
+#ifdef HERMESVM_GC_RUNTIME
+    return *heap_;
+#else
     return heap_;
+#endif
   }
 
   /// @}
@@ -848,6 +852,16 @@ class Runtime : public HandleRootOwner,
   CallResult<HermesValue> interpretFunctionImpl(CodeBlock *newCodeBlock);
 
  private:
+#ifdef HERMESVM_GC_RUNTIME
+  /// Create a pointer to a heap instance for this runtime. Used during
+  /// construction.
+  static std::unique_ptr<GC> makeHeap(
+      Runtime *runtime,
+      GCBase::HeapKind heapKind,
+      std::shared_ptr<StorageProvider> provider,
+      const RuntimeConfig &runtimeConfig);
+#endif
+
   /// Called by the GC at the beginning of a collection. This method informs the
   /// GC of all runtime roots.  The \p markLongLived argument
   /// indicates whether root data structures that contain only
@@ -997,7 +1011,11 @@ class Runtime : public HandleRootOwner,
 #endif
 
  private:
+#ifdef HERMESVM_GC_RUNTIME
+  std::unique_ptr<GC> heap_;
+#else
   GC heap_;
+#endif
   std::vector<std::function<void(GC *, RootAcceptor &)>> customMarkRootFuncs_;
   std::vector<std::function<void(GC *, WeakRefAcceptor &)>>
       customMarkWeakRootFuncs_;
@@ -1656,7 +1674,7 @@ T *Runtime::makeAFixed(Args &&...args) {
   // CAPTURE_IP* macros in the interpreter loop.
   (void)getCurrentIP();
 #endif
-  return heap_.makeAFixed<T, hasFinalizer, longLived>(
+  return getHeap().makeAFixed<T, hasFinalizer, longLived>(
       std::forward<Args>(args)...);
 }
 
@@ -1673,7 +1691,7 @@ T *Runtime::makeAVariable(uint32_t size, Args &&...args) {
   // CAPTURE_IP* macros in the interpreter loop.
   (void)getCurrentIP();
 #endif
-  return heap_.makeAVariable<T, hasFinalizer, longLived>(
+  return getHeap().makeAVariable<T, hasFinalizer, longLived>(
       size, std::forward<Args>(args)...);
 }
 

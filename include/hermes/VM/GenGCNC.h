@@ -122,6 +122,10 @@ class GenGC final : public GCBase {
 
   ~GenGC();
 
+  static bool classof(const GCBase *gc) {
+    return gc->getKind() == HeapKind::NCGEN;
+  }
+
 #ifndef NDEBUG
   /// Allocation path we use in debug builds, where we potentially follow
   /// different code paths to test things.

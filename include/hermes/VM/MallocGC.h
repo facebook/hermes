@@ -261,6 +261,10 @@ class MallocGC final : public GCBase {
   /// \param callback A function to call on each found object.
   void forAllObjs(const std::function<void(GCCell *)> &callback) override;
 
+  static bool classof(const GCBase *gc) {
+    return gc->getKind() == HeapKind::MALLOC;
+  }
+
   /// @}
 
  private:

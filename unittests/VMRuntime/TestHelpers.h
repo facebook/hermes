@@ -265,7 +265,7 @@ class DummyRuntime final : public HandleRootOwner,
                            public PointerBase,
                            private GCBase::GCCallbacks {
  private:
-  GC gc_;
+  std::unique_ptr<GC> gc_;
 
  public:
   std::vector<GCCell **> pointerRoots{};
@@ -317,7 +317,7 @@ class DummyRuntime final : public HandleRootOwner,
   }
 
   GC &getHeap() {
-    return gc_;
+    return *gc_;
   }
 
   void collect();
@@ -377,6 +377,14 @@ class DummyRuntime final : public HandleRootOwner,
   }
 
  private:
+  static std::unique_ptr<GC> makeHeap(
+      DummyRuntime *runtime,
+      MetadataTableForTests metaTable,
+      const GCConfig &gcConfig,
+      std::shared_ptr<CrashManager> crashMgr,
+      std::shared_ptr<StorageProvider> provider,
+      experiments::VMExperimentFlags experiments);
+
   DummyRuntime(
       MetadataTableForTests metaTable,
       const GCConfig &gcConfig,

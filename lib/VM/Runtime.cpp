@@ -142,6 +142,38 @@ ExecutionStatus Runtime::putNamedThrowOnError(
       .getStatus();
 }
 
+#ifdef HERMESVM_GC_RUNTIME
+std::unique_ptr<GC> Runtime::makeHeap(
+    Runtime *runtime,
+    GCBase::HeapKind heapKind,
+    std::shared_ptr<StorageProvider> provider,
+    const RuntimeConfig &runtimeConfig) {
+  switch (heapKind) {
+    case GCBase::HeapKind::HADES:
+      return llvh::make_unique<HadesGC>(
+          getMetadataTable(),
+          static_cast<GC::GCCallbacks *>(runtime),
+          runtime,
+          runtimeConfig.getGCConfig(),
+          runtimeConfig.getCrashMgr(),
+          std::move(provider),
+          runtimeConfig.getVMExperimentFlags());
+    case GCBase::HeapKind::NCGEN:
+      return llvh::make_unique<GenGC>(
+          getMetadataTable(),
+          static_cast<GC::GCCallbacks *>(runtime),
+          runtime,
+          runtimeConfig.getGCConfig(),
+          runtimeConfig.getCrashMgr(),
+          std::move(provider),
+          runtimeConfig.getVMExperimentFlags());
+    case GCBase::HeapKind::MALLOC:
+      llvm_unreachable(
+          "MallocGC should not be used with the RuntimeGC build config");
+  }
+}
+#endif
+
 Runtime::Runtime(
     std::shared_ptr<StorageProvider> provider,
     const RuntimeConfig &runtimeConfig)
@@ -150,6 +182,15 @@ Runtime::Runtime(
       verifyEvalIR(runtimeConfig.getVerifyEvalIR()),
       optimizedEval(runtimeConfig.getOptimizedEval()),
       asyncBreakCheckInEval(runtimeConfig.getAsyncBreakCheckInEval()),
+#ifdef HERMESVM_GC_RUNTIME
+      heap_(makeHeap(
+          this,
+          (runtimeConfig.getVMExperimentFlags() & experiments::Hades)
+              ? GCBase::HeapKind::HADES
+              : GCBase::HeapKind::NCGEN,
+          std::move(provider),
+          runtimeConfig)),
+#else
       heap_(
           getMetadataTable(),
           this,
@@ -158,6 +199,7 @@ Runtime::Runtime(
           runtimeConfig.getCrashMgr(),
           std::move(provider),
           runtimeConfig.getVMExperimentFlags()),
+#endif
       jitContext_(runtimeConfig.getEnableJIT(), (1 << 20) * 16, (1 << 20) * 32),
       hasES6Promise_(runtimeConfig.getES6Promise()),
       hasES6Proxy_(runtimeConfig.getES6Proxy()),
@@ -358,7 +400,7 @@ Runtime::~Runtime() {
   // keys left in the ID tracker for memory profiling. Assert that the only IDs
   // left are JS heap pointers.
   assert(
-      !heap_.getIDTracker().hasNativeIDs() &&
+      !getHeap().getIDTracker().hasNativeIDs() &&
       "A pointer is left in the ID tracker that is from non-JS memory. "
       "Was untrackNative called?");
   crashMgr_->unregisterCallback(crashCallbackKey_);

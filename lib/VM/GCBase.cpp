@@ -44,11 +44,13 @@ GCBase::GCBase(
     GCCallbacks *gcCallbacks,
     PointerBase *pointerBase,
     const GCConfig &gcConfig,
-    std::shared_ptr<CrashManager> crashMgr)
+    std::shared_ptr<CrashManager> crashMgr,
+    HeapKind kind)
     : metaTable_(metaTable),
       gcCallbacks_(gcCallbacks),
       pointerBase_(pointerBase),
       crashMgr_(crashMgr),
+      heapKind_(kind),
       analyticsCallback_(gcConfig.getAnalyticsCallback()),
       recordGcStats_(gcConfig.getShouldRecordStats()),
       // Start off not in GC.
@@ -91,6 +93,13 @@ GCBase::GCBase(
   randomEngine_.seed(seed);
 #endif
 }
+
+#ifdef HERMESVM_GC_RUNTIME
+/* static */
+uint32_t GCBase::minAllocationSize() {
+  return std::max({GenGC::minAllocationSize(), HadesGC::minAllocationSize()});
+}
+#endif
 
 GCBase::GCCycle::GCCycle(
     GCBase *gc,

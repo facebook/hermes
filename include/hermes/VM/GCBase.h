@@ -83,7 +83,7 @@ class WeakRefSlot {
     reset(v);
   }
 
-#ifndef HERMESVM_GC_HADES
+#if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
   /// Tagged pointer implementation. Only supports HermesValues with object tag.
 
   bool hasValue() const {
@@ -862,12 +862,15 @@ class GCBase {
   enum class FixedSizeValue { Yes, No, Unknown };
 #endif
 
+  enum class HeapKind { NCGEN, HADES, MALLOC };
+
   GCBase(
       MetadataTable metaTable,
       GCCallbacks *gcCallbacks,
       PointerBase *pointerBase,
       const GCConfig &gcConfig,
-      std::shared_ptr<CrashManager> crashMgr);
+      std::shared_ptr<CrashManager> crashMgr,
+      HeapKind kind);
 
   virtual ~GCBase() {}
 
@@ -888,6 +891,14 @@ class GCBase {
       LongLived longLived = LongLived::No,
       class... Args>
   T *makeAVariable(uint32_t size, Args &&...args);
+
+  template <
+      typename T,
+      bool fixedSize = true,
+      HasFinalizer hasFinalizer = HasFinalizer::No,
+      LongLived longLived = LongLived::No,
+      class... Args>
+  T *makeA(uint32_t size, Args &&...args);
 
   /// \return true if the "target space" for allocations should be randomized
   /// (for GCs where that concept makes sense).
@@ -996,6 +1007,12 @@ class GCBase {
   /// Return true if \p ptr is currently pointing at valid accessable memory,
   /// allocated to an object.
   virtual bool validPointer(const void *ptr) const = 0;
+#endif
+
+#ifdef HERMESVM_GC_RUNTIME
+  static uint32_t minAllocationSize();
+
+  static constexpr uint32_t maxAllocationSize();
 #endif
 
   /// Dump detailed heap contents to the given output stream, \p os.
@@ -1292,6 +1309,10 @@ class GCBase {
     return inGC_;
   }
 
+  HeapKind getKind() const {
+    return heapKind_;
+  }
+
   bool isTrackingIDs() {
     return getIDTracker().isTrackingIDs() ||
         getAllocationLocationTracker().isEnabled();
@@ -1510,6 +1531,8 @@ class GCBase {
 
   /// A place to log crash data if a crash is about to occur.
   std::shared_ptr<CrashManager> crashMgr_;
+
+  HeapKind heapKind_;
 
   /// Callback called once for each GC event that wants to be logged. Can be
   /// null if no analytics are requested.

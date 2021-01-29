@@ -20,14 +20,8 @@ template <
     LongLived longLived,
     class... Args>
 T *GCBase::makeAFixed(Args &&...args) {
-  const uint32_t size = cellSize<T>();
-  T *ptr = static_cast<GC *>(this)
-               ->makeA<T, true /* fixedSize */, hasFinalizer, longLived>(
-                   size, std::forward<Args>(args)...);
-#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-  getAllocationLocationTracker().newAlloc(ptr, size);
-#endif
-  return ptr;
+  return makeA<T, true /* fixedSize */, hasFinalizer, longLived>(
+      cellSize<T>(), std::forward<Args>(args)...);
 }
 
 template <
@@ -36,15 +30,57 @@ template <
     LongLived longLived,
     class... Args>
 T *GCBase::makeAVariable(uint32_t size, Args &&...args) {
-  size = heapAlignSize(size);
-  T *ptr = static_cast<GC *>(this)
-               ->makeA<T, false /* fixedSize */, hasFinalizer, longLived>(
-                   size, std::forward<Args>(args)...);
+  return makeA<T, false /* fixedSize */, hasFinalizer, longLived>(
+      heapAlignSize(size), std::forward<Args>(args)...);
+}
+
+template <
+    typename T,
+    bool fixedSize,
+    HasFinalizer hasFinalizer,
+    LongLived longLived,
+    class... Args>
+T *GCBase::makeA(uint32_t size, Args &&...args) {
+  assert(
+      isSizeHeapAligned(size) && "Size must be aligned before reaching here");
+#ifdef HERMESVM_GC_RUNTIME
+  T *ptr;
+  // Use static_cast below because we know the actual type of the heap.
+  switch (getKind()) {
+    case GCBase::HeapKind::HADES:
+      ptr = llvh::cast<HadesGC>(this)
+                ->makeA<T, fixedSize, hasFinalizer, longLived>(
+                    size, std::forward<Args>(args)...);
+      break;
+    case GCBase::HeapKind::NCGEN:
+      ptr =
+          llvh::cast<GenGC>(this)->makeA<T, fixedSize, hasFinalizer, longLived>(
+              size, std::forward<Args>(args)...);
+      break;
+    case GCBase::HeapKind::MALLOC:
+      llvm_unreachable(
+          "MallocGC should not be used with the RuntimeGC build config");
+      break;
+  }
+#else
+  T *ptr =
+      static_cast<GC *>(this)->makeA<T, fixedSize, hasFinalizer, longLived>(
+          size, std::forward<Args>(args)...);
+#endif
 #ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
   getAllocationLocationTracker().newAlloc(ptr, size);
 #endif
   return ptr;
 }
+
+#ifdef HERMESVM_GC_RUNTIME
+constexpr uint32_t GCBase::maxAllocationSize() {
+  // Return the lesser of the two GC options' max allowed sizes.
+  return HadesGC::maxAllocationSize() < GenGC::maxAllocationSize()
+      ? HadesGC::maxAllocationSize()
+      : GenGC::maxAllocationSize();
+}
+#endif
 
 template <typename Acceptor>
 void GCBase::markWeakRefsIfNecessary(

@@ -71,6 +71,10 @@ class HadesGC final : public GCBase {
 
   ~HadesGC();
 
+  static bool classof(const GCBase *gc) {
+    return gc->getKind() == HeapKind::HADES;
+  }
+
   static uint32_t minAllocationSize();
 
   static constexpr uint32_t maxAllocationSize() {

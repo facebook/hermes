@@ -1043,7 +1043,6 @@ class JSFunction : public Callable {
 /// Needs a separate class because it must be a different CellKind from
 /// JSFunction.
 class JSAsyncFunction final : public JSFunction {
-  friend GC;
   using Super = JSFunction;
 
   static constexpr auto kHasFinalizer = HasFinalizer::No;
@@ -1077,7 +1076,6 @@ class JSAsyncFunction final : public JSFunction {
     return cell->getKind() == CellKind::AsyncFunctionKind;
   }
 
- protected:
 #ifdef HERMESVM_SERIALIZE
   explicit JSAsyncFunction(Deserializer &d);
 

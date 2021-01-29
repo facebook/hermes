@@ -24,6 +24,7 @@ enum {
   VerifyBytecodeChecksum = 1 << 7,
   IgnoreMemoryWarnings = 1 << 9,
   HadesCompaction = 1 << 10,
+  Hades = 1 << 11,
 };
 
 /// Set of flags for active VM experiments.

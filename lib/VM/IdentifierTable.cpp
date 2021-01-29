@@ -235,11 +235,9 @@ std::string IdentifierTable::convertSymbolToUTF8(SymbolID id) {
 void IdentifierTable::markIdentifiers(RootAcceptor &acceptor, GC *gc) {
   for (auto &vectorEntry : lookupVector_) {
     if (!vectorEntry.isFreeSlot() && vectorEntry.isStringPrim()) {
-#if defined(HERMESVM_GC_NONCONTIG_GENERATIONAL) || defined(HERMESVM_GC_HADES)
       assert(
           !gc->inYoungGen(vectorEntry.getStringPrimRef()) &&
           "Identifiers must be allocated in the old gen");
-#endif
       acceptor.acceptPtr(vectorEntry.getStringPrimRef());
     }
   }
@@ -609,7 +607,6 @@ CallResult<SymbolID> IdentifierTable::createNotUniquedSymbol(
     Handle<StringPrimitive> desc) {
   uint32_t nextID = allocNextID();
 
-#if defined(HERMESVM_GC_NONCONTIG_GENERATIONAL) || defined(HERMESVM_GC_HADES)
   if (runtime->getHeap().inYoungGen(desc.get())) {
     // Need to reallocate in the old gen if the description is in the young gen.
     CallResult<PseudoHandle<StringPrimitive>> longLivedStr = desc->isASCII()
@@ -628,11 +625,6 @@ CallResult<SymbolID> IdentifierTable::createNotUniquedSymbol(
     // Description is already in the old gen, just point to it.
     new (&lookupVector_[nextID]) LookupEntry(*desc, true);
   }
-#else
-  // No concept of generations, so there's no need to directly allocate long
-  // lived.
-  new (&lookupVector_[nextID]) LookupEntry(*desc, true);
-#endif
 
   return SymbolID::unsafeCreateNotUniqued(nextID);
 }
