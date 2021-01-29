@@ -37,6 +37,7 @@ const Variable = require('./variable');
 const DefinitionType = {
   CatchClause: 'CatchClause',
   ClassName: 'ClassName',
+  Enum: 'Enum',
   FunctionName: 'FunctionName',
   ImplicitGlobalVariable: 'ImplicitGlobalVariable',
   ImportBinding: 'ImportBinding',
@@ -95,6 +96,16 @@ class ClassNameDefinition extends Definition {
       type: DefinitionType.ClassName,
       name: classNode.id,
       node: classNode,
+    });
+  }
+}
+
+class EnumDefinition extends Definition {
+  constructor(enumDeclarationNode) {
+    super({
+      type: DefinitionType.Enum,
+      name: enumDeclarationNode.id,
+      node: enumDeclarationNode,
     });
   }
 }
@@ -174,6 +185,7 @@ module.exports = {
   CatchClauseDefinition,
   ClassNameDefinition,
   DefinitionType,
+  EnumDefinition,
   FunctionNameDefinition,
   ImplicitGlobalVariableDefinition,
   ImportBindingDefinition,

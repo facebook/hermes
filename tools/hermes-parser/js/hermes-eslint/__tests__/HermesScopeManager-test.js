@@ -67,6 +67,16 @@ describe('Type and value references', () => {
     'V',
     DefinitionType.ImportBinding,
   );
+  verifyValueAndTypeReferences(
+    `
+      enum E {
+        A
+      }
+      (E.A: E);
+    `,
+    'E',
+    DefinitionType.Enum,
+  );
 });
 
 describe('Type definitions', () => {
@@ -115,5 +125,53 @@ describe('Type definitions', () => {
       (1: T);
     `);
     verifyTypeDefinition(scopeManager);
+  });
+});
+
+describe('Enums', () => {
+  test('Definition', () => {
+    const {scopeManager} = parseForESLint(`
+      enum E {}
+      E;
+    `);
+
+    // Verify there is a single scope, variable, and reference
+    expect(scopeManager.scopes).toHaveLength(1);
+
+    const scope = scopeManager.scopes[0];
+    expect(scope.variables).toHaveLength(1);
+    expect(scope.references).toHaveLength(1);
+
+    const variable = scope.variables[0];
+    const reference = scope.references[0];
+    expect(variable.name).toEqual('E');
+
+    // Verify that reference is resolved
+    expect(variable.references).toHaveLength(1);
+    expect(variable.references[0]).toBe(reference);
+    expect(reference.resolved).toBe(variable);
+    expect(reference.isValueReference()).toBe(true);
+
+    // Verify there is one Enum definition
+    expect(variable.defs).toHaveLength(1);
+    expect(variable.defs[0].type).toEqual(DefinitionType.Enum);
+  });
+
+  test('No references in body', () => {
+    const {scopeManager} = parseForESLint(`
+      class Foo {};
+      enum E {
+        Foo
+      }
+    `);
+
+    // Verify that scope contains variable 'Foo'
+    const scope = scopeManager.scopes[0];
+    expect(scope.variables).toHaveLength(2);
+    expect(scope.variables[0].name).toEqual('Foo');
+
+    // But enum member does not count as reference to 'Foo'
+    expect(scope.references).toHaveLength(0);
+    expect(scope.variables[0].references).toHaveLength(0);
   });
 });

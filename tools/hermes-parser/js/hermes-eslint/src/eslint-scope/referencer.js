@@ -41,6 +41,7 @@ const {
   CatchClauseDefinition,
   ClassNameDefinition,
   DefinitionType,
+  EnumDefinition,
   FunctionNameDefinition,
   ImportBindingDefinition,
   ParameterDefinition,
@@ -679,6 +680,12 @@ class Referencer extends esrecurse.Visitor {
     this.visit(node.typeParameters);
     this.visitArray(node.extends);
     this.visit(node.body);
+  }
+
+  EnumDeclaration(node) {
+    this.currentScope().__define(node.id, new EnumDefinition(node.id, node));
+
+    // Enum body cannot contain identifier references, so no need to visit body.
   }
 }
 

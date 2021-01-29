@@ -145,6 +145,7 @@ function registerScope(scopeManager, scope) {
 function shouldBeStaticallyClosed(def) {
   return (
     def.type === DefinitionType.ClassName ||
+    def.type === DefinitionType.Enum ||
     def.type === DefinitionType.Type ||
     (def.type === DefinitionType.Variable && def.parent.kind !== 'var')
   );
