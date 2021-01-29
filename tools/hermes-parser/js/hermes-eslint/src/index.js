@@ -14,7 +14,10 @@ const ScopeManager = require('./HermesScopeManager');
 const VisitorKeys = require('./HermesESLintVisitorKeys');
 
 function parse(code, options = {}) {
-  const parserOptions = {sourceType: options.sourceType, tokens: true};
+  const parserOptions = {
+    sourceType: options.sourceType ?? 'module',
+    tokens: true,
+  };
   return HermesParser.parse(code, parserOptions);
 }
 

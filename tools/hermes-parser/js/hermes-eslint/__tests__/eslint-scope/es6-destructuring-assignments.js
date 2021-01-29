@@ -32,7 +32,7 @@
 */
 'use strict';
 
-const {parseForESLint} = require('../../dist');
+const {parseForESLint} = require('./eslint-scope-test-utils');
 
 describe('ES6 destructuring assignments', () => {
   it('Pattern in var in ForInStatement', () => {

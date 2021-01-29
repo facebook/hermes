@@ -32,7 +32,7 @@
 */
 'use strict';
 
-const {parseForESLint} = require('../../dist');
+const {parseForESLint} = require('./eslint-scope-test-utils');
 
 describe('ES6 default parameters:', () => {
   describe('a default parameter creates a writable reference for its initialization:', () => {

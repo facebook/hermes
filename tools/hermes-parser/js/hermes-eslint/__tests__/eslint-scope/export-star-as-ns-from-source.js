@@ -34,7 +34,7 @@
 
 'use strict';
 
-const {parseForESLint} = require('../../dist');
+const {parseForESLint} = require('./eslint-scope-test-utils');
 
 describe("export * as ns from 'source'", () => {
   let scopes;

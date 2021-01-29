@@ -32,7 +32,7 @@
 */
 'use strict';
 
-const {parseForESLint} = require('../../dist');
+const {parseForESLint} = require('./eslint-scope-test-utils');
 
 describe('ES6 class', () => {
   it('declaration name creates class scope', () => {

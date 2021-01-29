@@ -32,7 +32,7 @@
 */
 'use strict';
 
-const {parseForESLint} = require('../../dist');
+const {parseForESLint} = require('./eslint-scope-test-utils');
 
 describe('ES6 block scope', () => {
   it('let is materialized in ES6 block scope#1', () => {

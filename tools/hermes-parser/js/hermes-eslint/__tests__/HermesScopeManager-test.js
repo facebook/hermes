@@ -21,7 +21,7 @@ const {ScopeType} = require('../dist/eslint-scope/scope');
  * an object with a name, optional reference count, and optional definition type.
  */
 function verifyHasScopes(code, expectedScopes) {
-  const {scopeManager} = parseForESLint(code, {sourceType: 'module'});
+  const {scopeManager} = parseForESLint(code);
 
   for (let i = 0; i < expectedScopes.length; i++) {
     // Skip global scope at index 0 and start at module scope at index 1
@@ -57,7 +57,7 @@ describe('Source type option', () => {
 
     expect(ast.sourceType).toEqual('script');
     expect(scopeManager.scopes).toHaveLength(1);
-    expect(scopeManager.scopes[0].type).toEqual('global');
+    expect(scopeManager.scopes[0].type).toEqual(ScopeType.Global);
   });
 
   test('module', () => {
@@ -65,14 +65,23 @@ describe('Source type option', () => {
 
     expect(ast.sourceType).toEqual('module');
     expect(scopeManager.scopes).toHaveLength(2);
-    expect(scopeManager.scopes[0].type).toEqual('global');
-    expect(scopeManager.scopes[1].type).toEqual('module');
+    expect(scopeManager.scopes[0].type).toEqual(ScopeType.Global);
+    expect(scopeManager.scopes[1].type).toEqual(ScopeType.Module);
+  });
+
+  test('defaults to module', () => {
+    const {ast, scopeManager} = parseForESLint('Foo');
+
+    expect(ast.sourceType).toEqual('module');
+    expect(scopeManager.scopes).toHaveLength(2);
+    expect(scopeManager.scopes[0].type).toEqual(ScopeType.Global);
+    expect(scopeManager.scopes[1].type).toEqual(ScopeType.Module);
   });
 });
 
 describe('Type and value references', () => {
   function verifyValueAndTypeReferences(code, name, definitionType) {
-    const {scopeManager} = parseForESLint(code, {sourceType: 'module'});
+    const {scopeManager} = parseForESLint(code);
 
     // Verify that scope contains a single variable
     const scope = scopeManager.scopes[1];
@@ -120,10 +129,11 @@ describe('Type and value references', () => {
 
 describe('Type definitions', () => {
   function verifyTypeDefinition(scopeManager) {
-    // Verify there is a single scope, variable, and reference
-    expect(scopeManager.scopes).toHaveLength(1);
+    // Verify there is a module scope, variable, and reference
+    expect(scopeManager.scopes).toHaveLength(2);
 
-    const scope = scopeManager.scopes[0];
+    const scope = scopeManager.scopes[1];
+    expect(scope.type).toEqual(ScopeType.Module);
     expect(scope.variables).toHaveLength(1);
     expect(scope.references).toHaveLength(1);
 
@@ -174,10 +184,11 @@ describe('Enums', () => {
       E;
     `);
 
-    // Verify there is a single scope, variable, and reference
-    expect(scopeManager.scopes).toHaveLength(1);
+    // Verify there is a module scope, variable, and reference
+    expect(scopeManager.scopes).toHaveLength(2);
 
-    const scope = scopeManager.scopes[0];
+    const scope = scopeManager.scopes[1];
+    expect(scope.type).toEqual(ScopeType.Module);
     expect(scope.variables).toHaveLength(1);
     expect(scope.references).toHaveLength(1);
 
@@ -217,7 +228,7 @@ describe('QualifiedTypeIdentifier', () => {
 
 describe('Identifiers not mistakenly treated as references', () => {
   function verifyHasReferences(code, references) {
-    const {scopeManager} = parseForESLint(code, {sourceType: 'module'});
+    const {scopeManager} = parseForESLint(code);
 
     // Module scope should contain variables with the given reference counts
     const scope = scopeManager.scopes[1];
@@ -323,9 +334,7 @@ describe('Identifiers not mistakenly treated as references', () => {
 
 describe('Type parameters', () => {
   test('Definition creates Identifier node', () => {
-    const {scopeManager} = parseForESLint(`type Foo<T> = T;`, {
-      sourceType: 'module',
-    });
+    const {scopeManager} = parseForESLint(`type Foo<T> = T;`);
 
     // Type parameter defined in type scope
     const scope = scopeManager.scopes[2];
@@ -348,9 +357,7 @@ describe('Type parameters', () => {
   });
 
   test('TypeScope not created if there are no type parameters', () => {
-    const {scopeManager} = parseForESLint(`type T = T;`, {
-      sourceType: 'module',
-    });
+    const {scopeManager} = parseForESLint(`type T = T;`);
 
     expect(scopeManager.scopes).toHaveLength(2);
     expect(scopeManager.scopes[0].type).toEqual(ScopeType.Global);

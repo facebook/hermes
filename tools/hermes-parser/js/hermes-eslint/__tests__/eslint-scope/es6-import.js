@@ -32,12 +32,14 @@
 */
 'use strict';
 
-const {parseForESLint} = require('../../dist');
+const {parseForESLint} = require('./eslint-scope-test-utils');
 
 describe('import declaration', () => {
   // http://people.mozilla.org/~jorendorff/es6-draft.html#sec-static-and-runtme-semantics-module-records
   it('should import names from source', () => {
-    const {ast, scopeManager} = parseForESLint('import v from "mod";');
+    const {ast, scopeManager} = parseForESLint('import v from "mod";', {
+      sourceType: 'module',
+    });
 
     expect(scopeManager.scopes).toHaveLength(2);
     const globalScope = scopeManager.scopes[0];
@@ -57,7 +59,9 @@ describe('import declaration', () => {
   });
 
   it('should import namespaces', () => {
-    const {ast, scopeManager} = parseForESLint('import * as ns from "mod";');
+    const {ast, scopeManager} = parseForESLint('import * as ns from "mod";', {
+      sourceType: 'module',
+    });
 
     expect(scopeManager.scopes).toHaveLength(2);
     const globalScope = scopeManager.scopes[0];
@@ -77,7 +81,9 @@ describe('import declaration', () => {
   });
 
   it('should import insided names#1', () => {
-    const {ast, scopeManager} = parseForESLint('import {x} from "mod";');
+    const {ast, scopeManager} = parseForESLint('import {x} from "mod";', {
+      sourceType: 'module',
+    });
 
     expect(scopeManager.scopes).toHaveLength(2);
     const globalScope = scopeManager.scopes[0];
@@ -97,7 +103,9 @@ describe('import declaration', () => {
   });
 
   it('should import insided names#2', () => {
-    const {ast, scopeManager} = parseForESLint('import {x as v} from "mod";');
+    const {ast, scopeManager} = parseForESLint('import {x as v} from "mod";', {
+      sourceType: 'module',
+    });
 
     expect(scopeManager.scopes).toHaveLength(2);
     const globalScope = scopeManager.scopes[0];

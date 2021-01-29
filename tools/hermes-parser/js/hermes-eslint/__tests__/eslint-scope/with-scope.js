@@ -32,7 +32,7 @@
 */
 'use strict';
 
-const {parseForESLint} = require('../../dist');
+const {parseForESLint} = require('./eslint-scope-test-utils');
 
 describe('with', () => {
   it('creates scope', () => {
@@ -44,7 +44,6 @@ describe('with', () => {
                 }
             }());
         `,
-      'script',
     );
 
     expect(scopeManager.scopes).toHaveLength(4);
