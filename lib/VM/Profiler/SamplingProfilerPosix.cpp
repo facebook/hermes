@@ -543,6 +543,7 @@ void SamplingProfiler::recordPreGCStack(const std::string &extraInfo) {
   leafFrame.kind = StackFrame::FrameKind::GCFrame;
   leafFrame.gcFrame = gcExtraInfo;
 
+  std::lock_guard<std::mutex> lk(runtimeDataLock_);
   // Leaf frame slot has been used, filling from index 1.
   preGCStackDepth_ = walkRuntimeStack(preGCStackStorage_, 1);
 }
