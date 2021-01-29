@@ -1034,6 +1034,9 @@ bool HadesGC::OldGen::sweepNext() {
   for (GCCell *cell : segments_[sweepIterator_.segNumber].cells()) {
     assert(cell->isValid() && "Invalid cell in sweeping");
     if (HeapSegment::getCellMarkBit(cell)) {
+      // Cannot concurrently trim storage.
+      if (kConcurrentGC)
+        continue;
       const uint32_t cellSize = cell->getAllocatedSize();
       const uint32_t trimmedSize =
           cell->getVT()->getTrimmedSize(cell, cellSize);
