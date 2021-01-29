@@ -43,6 +43,7 @@ const DefinitionType = {
   ImportBinding: 'ImportBinding',
   Parameter: 'Parameter',
   Type: 'Type',
+  TypeParameter: 'TypeParameter',
   Variable: 'Variable',
 };
 
@@ -168,6 +169,26 @@ class TypeDefinition extends Definition {
   }
 }
 
+class TypeParameterDefinition extends Definition {
+  constructor(typeParamNode) {
+    // The ScopeManager API expects an Identifier node that can be referenced
+    // for each definition. TypeParameter nodes do not actually contain an
+    // Identifier node, so we create a fake one with the correct name,
+    // location, and parent so that it is still usable with the ScopeManager.
+    const id = {
+      type: 'Identifier',
+      loc: typeParamNode.loc,
+      name: typeParamNode.name,
+      parent: typeParamNode,
+    };
+    super({
+      type: DefinitionType.TypeParameter,
+      name: id,
+      node: typeParamNode,
+    });
+  }
+}
+
 class VariableDefinition extends Definition {
   constructor(idNode, declaratorNode, declarationNode, index, kind) {
     super({
@@ -191,5 +212,6 @@ module.exports = {
   ImportBindingDefinition,
   ParameterDefinition,
   TypeDefinition,
+  TypeParameterDefinition,
   VariableDefinition,
 };

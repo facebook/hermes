@@ -46,6 +46,7 @@ const {
   ImportBindingDefinition,
   ParameterDefinition,
   TypeDefinition,
+  TypeParameterDefinition,
   VariableDefinition,
 } = require('./definition');
 const assert = require('assert');
@@ -238,6 +239,10 @@ class Referencer extends esrecurse.Visitor {
       that.referencingDefaultValue(pattern, info.assignments, null, true);
     }
 
+    // Add type parameter declarations before parameter declarations, as type
+    // parameters may be used in parameter declarations.
+    this.visit(node.typeParameters);
+
     // Process parameter declarations.
     for (i = 0, iz = node.params.length; i < iz; ++i) {
       this.visitPattern(
@@ -289,6 +294,8 @@ class Referencer extends esrecurse.Visitor {
     if (node.id) {
       this.currentScope().__define(node.id, new ClassNameDefinition(node));
     }
+
+    this.visit(node.typeParameters);
     this.visit(node.body);
 
     this.close(node);
@@ -655,6 +662,19 @@ class Referencer extends esrecurse.Visitor {
     this.visit(node.typeParameters);
   }
 
+  FunctionTypeAnnotation(node) {
+    const hasTypeScope = this.maybeCreateTypeScope(node);
+
+    this.visit(node.typeParameters);
+    this.visitArray(node.params);
+    this.visit(node.returnType);
+    this.visit(node.rest);
+
+    if (hasTypeScope) {
+      this.close(node);
+    }
+  }
+
   QualifiedTypeIdentifier(node) {
     // Only the first component of a qualified type identifier is a reference,
     // e.g. 'Foo' in `type T = Foo.Bar.Baz`.
@@ -705,30 +725,70 @@ class Referencer extends esrecurse.Visitor {
   TypeAlias(node) {
     this.createTypeDefinition(node);
 
+    const hasTypeScope = this.maybeCreateTypeScope(node);
+
     this.visit(node.typeParameters);
     this.visit(node.right);
+
+    if (hasTypeScope) {
+      this.close(node);
+    }
   }
 
   OpaqueType(node) {
     this.createTypeDefinition(node);
 
+    const hasTypeScope = this.maybeCreateTypeScope(node);
+
     this.visit(node.typeParameters);
     this.visit(node.impltype);
     this.visit(node.supertype);
+
+    if (hasTypeScope) {
+      this.close(node);
+    }
   }
 
   InterfaceDeclaration(node) {
     this.createTypeDefinition(node);
 
+    const hasTypeScope = this.maybeCreateTypeScope(node);
+
     this.visit(node.typeParameters);
     this.visitArray(node.extends);
     this.visit(node.body);
+
+    if (hasTypeScope) {
+      this.close(node);
+    }
   }
 
   EnumDeclaration(node) {
     this.currentScope().__define(node.id, new EnumDefinition(node.id, node));
 
     // Enum body cannot contain identifier references, so no need to visit body.
+  }
+
+  maybeCreateTypeScope(node) {
+    if (
+      node.typeParameters &&
+      node.typeParameters.params &&
+      node.typeParameters.params.length !== 0
+    ) {
+      this.scopeManager.__nestTypeScope(node);
+      return true;
+    }
+
+    return false;
+  }
+
+  TypeParameter(node) {
+    const def = new TypeParameterDefinition(node);
+    this.currentScope().__define(def.name, def);
+
+    this.visit(node.bound);
+    this.visit(node.variance);
+    this.visit(node.default);
   }
 }
 

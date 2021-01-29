@@ -11,6 +11,45 @@
 
 const {parseForESLint} = require('hermes-eslint');
 const {DefinitionType} = require('../dist/eslint-scope/definition');
+const {ScopeType} = require('../dist/eslint-scope/scope');
+
+/**
+ * Utility to check that scope manager produces correct scopes and variables.
+ *
+ * Scopes are passed as an array of objects, starting with the module scope,
+ * where each object has a scope type and array of variables, Each variable is
+ * an object with a name, optional reference count, and optional definition type.
+ */
+function verifyHasScopes(code, expectedScopes) {
+  const {scopeManager} = parseForESLint(code, {sourceType: 'module'});
+
+  for (let i = 0; i < expectedScopes.length; i++) {
+    // Skip global scope at index 0 and start at module scope at index 1
+    const actualScope = scopeManager.scopes[i + 1];
+    const expectedScope = expectedScopes[i];
+
+    expect(actualScope.type).toEqual(expectedScope.type);
+    expect(actualScope.variables).toHaveLength(expectedScope.variables.length);
+
+    for (let j = 0; j < expectedScope.variables.length; j++) {
+      const expectedVariable = expectedScope.variables[j];
+      const actualVariable = actualScope.variables[j];
+
+      expect(actualVariable.name).toEqual(expectedVariable.name);
+
+      if (expectedVariable.referenceCount != null) {
+        expect(actualVariable.references).toHaveLength(
+          expectedVariable.referenceCount,
+        );
+      }
+
+      if (expectedVariable.type != null) {
+        expect(actualVariable.defs).toHaveLength(1);
+        expect(actualVariable.defs[0].type).toEqual(expectedVariable.type);
+      }
+    }
+  }
+}
 
 describe('Source type option', () => {
   test('script', () => {
@@ -277,6 +316,221 @@ describe('Identifiers not mistakenly treated as references', () => {
       [
         {name: 'Foo', count: 0},
         {name: 'Bar', count: 1},
+      ],
+    );
+  });
+});
+
+describe('Type parameters', () => {
+  test('Definition creates Identifier node', () => {
+    const {scopeManager} = parseForESLint(`type Foo<T> = T;`, {
+      sourceType: 'module',
+    });
+
+    // Type parameter defined in type scope
+    const scope = scopeManager.scopes[2];
+    expect(scope.type).toEqual(ScopeType.Type);
+
+    // Definition contains Identifier with correct name and location
+    const id = scope.variables[0].defs[0].name;
+    expect(id.name).toEqual('T');
+    expect(id.loc).toMatchObject({
+      start: {
+        line: 1,
+        column: 9,
+      },
+      end: {
+        line: 1,
+        column: 10,
+      },
+    });
+    expect(id.parent.type).toEqual('TypeParameter');
+  });
+
+  test('TypeScope not created if there are no type parameters', () => {
+    const {scopeManager} = parseForESLint(`type T = T;`, {
+      sourceType: 'module',
+    });
+
+    expect(scopeManager.scopes).toHaveLength(2);
+    expect(scopeManager.scopes[0].type).toEqual(ScopeType.Global);
+    expect(scopeManager.scopes[1].type).toEqual(ScopeType.Module);
+  });
+
+  test('TypeAlias', () => {
+    // Type alias contains type parameter in Type scope
+    verifyHasScopes(`type Foo<T> = T;`, [
+      {
+        type: ScopeType.Module,
+        variables: [
+          {
+            name: 'Foo',
+            type: DefinitionType.Type,
+            referenceCount: 0,
+          },
+        ],
+      },
+      {
+        type: ScopeType.Type,
+        variables: [
+          {
+            name: 'T',
+            type: DefinitionType.TypeParameter,
+            referenceCount: 1,
+          },
+        ],
+      },
+    ]);
+  });
+
+  test('OpaqueType', () => {
+    // Opaque type contains type parameter in Type scope
+    verifyHasScopes(`opaque type Foo<T> = T;`, [
+      {
+        type: ScopeType.Module,
+        variables: [
+          {
+            name: 'Foo',
+            type: DefinitionType.Type,
+            referenceCount: 0,
+          },
+        ],
+      },
+      {
+        type: ScopeType.Type,
+        variables: [
+          {
+            name: 'T',
+            type: DefinitionType.TypeParameter,
+            referenceCount: 1,
+          },
+        ],
+      },
+    ]);
+  });
+
+  test('InterfaceDeclaration', () => {
+    // Interface declaration contains type parameter in Type scope
+    verifyHasScopes(`interface Foo<T> { prop: T }`, [
+      {
+        type: ScopeType.Module,
+        variables: [
+          {
+            name: 'Foo',
+            type: DefinitionType.Type,
+            referenceCount: 0,
+          },
+        ],
+      },
+      {
+        type: ScopeType.Type,
+        variables: [
+          {
+            name: 'T',
+            type: DefinitionType.TypeParameter,
+            referenceCount: 1,
+          },
+        ],
+      },
+    ]);
+  });
+
+  test('FunctionTypeAnnotation', () => {
+    // FunctionTypeAnnotation contains type parameter in Type scope
+    verifyHasScopes(`(1: <T>(T) => void);`, [
+      {
+        type: ScopeType.Module,
+        variables: [],
+      },
+      {
+        type: ScopeType.Type,
+        variables: [
+          {
+            name: 'T',
+            type: DefinitionType.TypeParameter,
+            referenceCount: 1,
+          },
+        ],
+      },
+    ]);
+  });
+
+  test('Function', () => {
+    // Function contains type parameter in Function scope alongside value parameter
+    verifyHasScopes(
+      `
+        function foo<T>(x) {
+          (x: T);
+        }
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'foo',
+              type: DefinitionType.Function,
+              referenceCount: 0,
+            },
+          ],
+        },
+        {
+          type: ScopeType.Function,
+          variables: [
+            {
+              name: 'arguments',
+              referenceCount: 0,
+            },
+            {
+              name: 'T',
+              type: DefinitionType.TypeParameter,
+              referenceCount: 1,
+            },
+            {
+              name: 'x',
+              type: DefinitionType.Parameter,
+              referenceCount: 1,
+            },
+          ],
+        },
+      ],
+    );
+  });
+
+  test('Class', () => {
+    // Class contains type parameter in Class scope
+    verifyHasScopes(
+      `
+        class C<T> {
+          prop: T;
+        }
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'C',
+              type: DefinitionType.Class,
+              referenceCount: 0,
+            },
+          ],
+        },
+        {
+          type: ScopeType.Class,
+          variables: [
+            {
+              name: 'C',
+              type: DefinitionType.Class,
+              referenceCount: 0,
+            },
+            {
+              name: 'T',
+              type: DefinitionType.TypeParameter,
+              referenceCount: 1,
+            },
+          ],
+        },
       ],
     );
   });

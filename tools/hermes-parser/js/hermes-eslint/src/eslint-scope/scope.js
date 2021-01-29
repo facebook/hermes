@@ -43,6 +43,20 @@ const {
 } = require('./definition');
 const assert = require('assert');
 
+const ScopeType = {
+  Block: 'block',
+  Catch: 'catch',
+  Class: 'class',
+  For: 'for',
+  Function: 'function',
+  FunctionExpressionName: 'function-expression-name',
+  Global: 'global',
+  Module: 'module',
+  Switch: 'switch',
+  Type: 'type',
+  With: 'with',
+};
+
 /**
  * Test if scope is strict
  * @param {Scope} scope - scope
@@ -62,15 +76,15 @@ function isStrictScope(scope, block, isMethodDefinition) {
     return true;
   }
 
-  if (scope.type === 'class' || scope.type === 'module') {
+  if (scope.type === ScopeType.Class || scope.type === ScopeType.Module) {
     return true;
   }
 
-  if (scope.type === 'block' || scope.type === 'switch') {
+  if (scope.type === ScopeType.Block || scope.type === ScopeType.Switch) {
     return false;
   }
 
-  if (scope.type === 'function') {
+  if (scope.type === ScopeType.Function) {
     if (
       block.type === Syntax.ArrowFunctionExpression &&
       block.body.type !== Syntax.BlockStatement
@@ -87,7 +101,7 @@ function isStrictScope(scope, block, isMethodDefinition) {
     if (!body) {
       return false;
     }
-  } else if (scope.type === 'global') {
+  } else if (scope.type === ScopeType.Global) {
     body = block;
   } else {
     return false;
@@ -179,7 +193,8 @@ class Scope {
      * All those scopes are considered 'dynamic'.
      * @member {boolean} Scope#dynamic
      */
-    this.dynamic = this.type === 'global' || this.type === 'with';
+    this.dynamic =
+      this.type === ScopeType.Global || this.type === ScopeType.With;
 
     /**
      * A reference to the scope-defining syntax node.
@@ -219,9 +234,9 @@ class Scope {
      * @member {Scope} Scope#variableScope
      */
     this.variableScope =
-      this.type === 'global' ||
-      this.type === 'function' ||
-      this.type === 'module'
+      this.type === ScopeType.Global ||
+      this.type === ScopeType.Function ||
+      this.type === ScopeType.Module
         ? this
         : upperScope.variableScope;
 
@@ -318,7 +333,7 @@ class Scope {
 
     if (this.__shouldStaticallyClose(scopeManager)) {
       closeRef = this.__staticCloseRef;
-    } else if (this.type !== 'global') {
+    } else if (this.type !== ScopeType.Global) {
       closeRef = this.__dynamicCloseRef;
     } else {
       closeRef = this.__globalCloseRef;
@@ -519,7 +534,7 @@ class Scope {
 
 class GlobalScope extends Scope {
   constructor(scopeManager, block) {
-    super(scopeManager, 'global', null, block, false);
+    super(scopeManager, ScopeType.Global, null, block, false);
     this.implicit = {
       set: new Map(),
       variables: [],
@@ -568,13 +583,19 @@ class GlobalScope extends Scope {
 
 class ModuleScope extends Scope {
   constructor(scopeManager, upperScope, block) {
-    super(scopeManager, 'module', upperScope, block, false);
+    super(scopeManager, ScopeType.Module, upperScope, block, false);
   }
 }
 
 class FunctionExpressionNameScope extends Scope {
   constructor(scopeManager, upperScope, block) {
-    super(scopeManager, 'function-expression-name', upperScope, block, false);
+    super(
+      scopeManager,
+      ScopeType.FunctionExpressionName,
+      upperScope,
+      block,
+      false,
+    );
     this.__define(block.id, new FunctionNameDefinition(block));
     this.functionExpressionScope = true;
   }
@@ -582,13 +603,13 @@ class FunctionExpressionNameScope extends Scope {
 
 class CatchScope extends Scope {
   constructor(scopeManager, upperScope, block) {
-    super(scopeManager, 'catch', upperScope, block, false);
+    super(scopeManager, ScopeType.Catch, upperScope, block, false);
   }
 }
 
 class WithScope extends Scope {
   constructor(scopeManager, upperScope, block) {
-    super(scopeManager, 'with', upperScope, block, false);
+    super(scopeManager, ScopeType.With, upperScope, block, false);
   }
 
   __close(scopeManager) {
@@ -609,19 +630,25 @@ class WithScope extends Scope {
 
 class BlockScope extends Scope {
   constructor(scopeManager, upperScope, block) {
-    super(scopeManager, 'block', upperScope, block, false);
+    super(scopeManager, ScopeType.Block, upperScope, block, false);
   }
 }
 
 class SwitchScope extends Scope {
   constructor(scopeManager, upperScope, block) {
-    super(scopeManager, 'switch', upperScope, block, false);
+    super(scopeManager, ScopeType.Switch, upperScope, block, false);
   }
 }
 
 class FunctionScope extends Scope {
   constructor(scopeManager, upperScope, block, isMethodDefinition) {
-    super(scopeManager, 'function', upperScope, block, isMethodDefinition);
+    super(
+      scopeManager,
+      ScopeType.Function,
+      upperScope,
+      block,
+      isMethodDefinition,
+    );
 
     // section 9.2.13, FunctionDeclarationInstantiation.
     // NOTE Arrow functions never have an arguments objects.
@@ -695,18 +722,25 @@ class FunctionScope extends Scope {
 
 class ForScope extends Scope {
   constructor(scopeManager, upperScope, block) {
-    super(scopeManager, 'for', upperScope, block, false);
+    super(scopeManager, ScopeType.For, upperScope, block, false);
   }
 }
 
 class ClassScope extends Scope {
   constructor(scopeManager, upperScope, block) {
-    super(scopeManager, 'class', upperScope, block, false);
+    super(scopeManager, ScopeType.Class, upperScope, block, false);
+  }
+}
+
+class TypeScope extends Scope {
+  constructor(scopeManager, upperScope, typeNode) {
+    super(scopeManager, ScopeType.Type, upperScope, typeNode, false);
   }
 }
 
 module.exports = {
   Scope,
+  ScopeType,
   GlobalScope,
   ModuleScope,
   FunctionExpressionNameScope,
@@ -717,4 +751,5 @@ module.exports = {
   FunctionScope,
   ForScope,
   ClassScope,
+  TypeScope,
 };

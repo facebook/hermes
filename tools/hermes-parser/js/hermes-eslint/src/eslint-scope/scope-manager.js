@@ -32,19 +32,20 @@
 */
 'use strict';
 
-const Scope = require('./scope');
+const {
+  BlockScope,
+  CatchScope,
+  ClassScope,
+  ForScope,
+  FunctionExpressionNameScope,
+  FunctionScope,
+  GlobalScope,
+  ModuleScope,
+  SwitchScope,
+  TypeScope,
+  WithScope,
+} = require('./scope');
 const assert = require('assert');
-
-const GlobalScope = Scope.GlobalScope;
-const CatchScope = Scope.CatchScope;
-const WithScope = Scope.WithScope;
-const ModuleScope = Scope.ModuleScope;
-const ClassScope = Scope.ClassScope;
-const SwitchScope = Scope.SwitchScope;
-const FunctionScope = Scope.FunctionScope;
-const ForScope = Scope.ForScope;
-const FunctionExpressionNameScope = Scope.FunctionExpressionNameScope;
-const BlockScope = Scope.BlockScope;
 
 /**
  * @class ScopeManager
@@ -96,7 +97,10 @@ class ScopeManager {
      * @returns {boolean} predicate
      */
     function predicate(testScope) {
-      if (testScope.type === 'function' && testScope.functionExpressionScope) {
+      if (
+        testScope.type === ScopeType.Function &&
+        testScope.functionExpressionScope
+      ) {
         return false;
       }
       return true;
@@ -215,6 +219,10 @@ class ScopeManager {
 
   __nestModuleScope(node) {
     return this.__nestScope(new ModuleScope(this, this.__currentScope, node));
+  }
+
+  __nestTypeScope(node) {
+    return this.__nestScope(new TypeScope(this, this.__currentScope, node));
   }
 
   __nestFunctionExpressionNameScope(node) {
