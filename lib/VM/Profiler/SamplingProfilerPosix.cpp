@@ -60,9 +60,9 @@ void SamplingProfiler::GlobalProfiler::unregisterRuntime(
 
 void SamplingProfiler::registerDomain(Domain *domain) {
   // If domain is not already registered, add it to the list.
-  auto it = std::lower_bound(domains_.begin(), domains_.end(), domain);
-  if (it == domains_.end() || *it != domain)
-    domains_.insert(it, domain);
+  auto it = std::find(domains_.begin(), domains_.end(), domain);
+  if (it == domains_.end())
+    domains_.push_back(domain);
 }
 
 void SamplingProfiler::markRoots(RootAcceptor &acceptor) {
