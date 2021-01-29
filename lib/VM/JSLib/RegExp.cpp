@@ -521,7 +521,7 @@ CallResult<Handle<JSArray>> directRegExpExec(
 
   const auto dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
 
-  auto arrRes = JSArray::create(runtime, match.size(), 0);
+  auto arrRes = JSArray::create(runtime, match.size(), match.size());
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -541,17 +541,6 @@ CallResult<Handle<JSArray>> directRegExpExec(
 
   defineResult = JSObject::defineOwnProperty(
       A, runtime, Predefined::getSymbolID(Predefined::input), dpf, S);
-  assert(
-      defineResult != ExecutionStatus::EXCEPTION &&
-      "defineOwnProperty() failed on a new object");
-  (void)defineResult;
-
-  defineResult = JSObject::defineOwnProperty(
-      A,
-      runtime,
-      Predefined::getSymbolID(Predefined::length),
-      dpf,
-      runtime->makeHandle(HermesValue::encodeNumberValue(match.size())));
   assert(
       defineResult != ExecutionStatus::EXCEPTION &&
       "defineOwnProperty() failed on a new object");
@@ -580,8 +569,6 @@ CallResult<Handle<JSArray>> directRegExpExec(
     }
     idx++;
   }
-  if (JSArray::setLengthProperty(A, runtime, idx) == ExecutionStatus::EXCEPTION)
-    return ExecutionStatus::EXCEPTION;
   return A;
 }
 
