@@ -622,12 +622,18 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
     bool parseDirectives) {
   if (pass_ == LazyParse && !eagerly) {
     auto startLoc = tok_->getStartLoc();
-    assert(preParsed_->bodyStartToEnd.count(startLoc) == 1);
-    auto endLoc = preParsed_->bodyStartToEnd[startLoc];
+    assert(
+        preParsed_->functionInfo.count(startLoc) == 1 &&
+        "no function info stored during preparse");
+    PreParsedFunctionInfo functionInfo = preParsed_->functionInfo[startLoc];
+    SMLoc endLoc = functionInfo.end;
     if ((unsigned)(endLoc.getPointer() - startLoc.getPointer()) >=
         context_.getPreemptiveFunctionCompilationThreshold()) {
       lexer_.seek(endLoc);
       advance(grammarContext);
+
+      // Emulate parsing the "use strict" directive in parseBlock.
+      setStrictMode(functionInfo.strictMode);
 
       auto *body = new (context_) ESTree::BlockStatementNode({});
       body->isLazyFunctionBody = true;
@@ -643,7 +649,8 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
     return None;
 
   if (pass_ == PreParse) {
-    preParsed_->bodyStartToEnd[(*body)->getStartLoc()] = (*body)->getEndLoc();
+    preParsed_->functionInfo[(*body)->getStartLoc()] =
+        PreParsedFunctionInfo{(*body)->getEndLoc(), isStrictMode()};
   }
 
   return body;
