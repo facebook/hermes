@@ -23,6 +23,7 @@ try:
     from testsuite.testsuite_skiplist import (
         SKIP_LIST,
         HANDLESAN_SKIP_LIST,
+        LAZY_SKIP_LIST,
         PERMANENT_SKIP_LIST,
         UNSUPPORTED_FEATURES,
         PERMANENT_UNSUPPORTED_FEATURES,
@@ -34,6 +35,7 @@ except ImportError:
     from testsuite_skiplist import (
         SKIP_LIST,
         HANDLESAN_SKIP_LIST,
+        LAZY_SKIP_LIST,
         PERMANENT_SKIP_LIST,
         UNSUPPORTED_FEATURES,
         PERMANENT_UNSUPPORTED_FEATURES,
@@ -496,6 +498,10 @@ def runTest(filename, test_skiplist, keep_tmp, binary_path, hvm, esprima_runner,
     baseFileName = basename(filename)
     suite = getSuite(filename)
     skiplisted = fileInSkiplist(filename, SKIP_LIST + PERMANENT_SKIP_LIST)
+
+    if lazy:
+        skiplisted = skiplisted or fileInSkiplist(filename, LAZY_SKIP_LIST)
+
     skippedType = (
         TestFlag.TEST_PERMANENTLY_SKIPPED
         if fileInSkiplist(filename, PERMANENT_SKIP_LIST)

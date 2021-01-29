@@ -1619,6 +1619,14 @@ SKIP_LIST = [
     ### Failing Flow tests end ###
 ]
 
+
+# Tests that we want to skip only when testing lazy compilation.
+LAZY_SKIP_LIST = [
+    # Variable resolution in catch handlers.
+    "test262/test/language/statements/try/scope-catch-param-lex-close.js",
+]
+
+
 # This skiplist is specifically for tests that Hermes never intends to support,
 # and so should not be counted in totals for targeting 100% coverage.
 PERMANENT_SKIP_LIST = [
