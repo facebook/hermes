@@ -332,6 +332,34 @@ describe('Identifiers not mistakenly treated as references', () => {
       ],
     );
   });
+
+  test('MemberExpression', () => {
+    verifyHasReferences(
+      `
+        import Foo from 'Foo';
+        import Bar from 'Bar';
+        Foo.Bar;
+      `,
+      [
+        {name: 'Foo', count: 1},
+        {name: 'Bar', count: 0},
+      ],
+    );
+  });
+
+  test('OptionalMemberExpression', () => {
+    verifyHasReferences(
+      `
+        import Foo from 'Foo';
+        import Bar from 'Bar';
+        Foo?.Bar;
+      `,
+      [
+        {name: 'Foo', count: 1},
+        {name: 'Bar', count: 0},
+      ],
+    );
+  });
 });
 
 describe('Type parameters', () => {

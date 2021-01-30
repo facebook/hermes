@@ -454,11 +454,19 @@ class Referencer extends esrecurse.Visitor {
     }
   }
 
-  MemberExpression(node) {
+  visitMemberExpression(node) {
     this.visit(node.object);
     if (node.computed) {
       this.visit(node.property);
     }
+  }
+
+  MemberExpression(node) {
+    this.visitMemberExpression(node);
+  }
+
+  OptionalMemberExpression(node) {
+    this.visitMemberExpression(node);
   }
 
   Property(node) {
