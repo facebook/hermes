@@ -250,6 +250,9 @@ class Referencer extends esrecurse.Visitor {
       );
     }
 
+    this.visit(node.returnType);
+    this.visit(node.predicate);
+
     // In TypeScript there are a number of function-like constructs which have no body,
     // so check it exists before traversing
     if (node.body) {
@@ -278,6 +281,8 @@ class Referencer extends esrecurse.Visitor {
     }
 
     this.visit(node.typeParameters);
+    this.visit(node.superTypeParameters);
+    this.visitArray(node.implements);
     this.visit(node.body);
 
     this.close(node);

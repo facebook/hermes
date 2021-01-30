@@ -1009,3 +1009,80 @@ describe('Declare statements', () => {
     );
   });
 });
+
+describe('Flow specific properties visited on non-Flow nodes', () => {
+  test('Function', () => {
+    // Return type and predicate are visited
+    verifyHasScopes(
+      `
+        type T = string;
+        function foo(V): T %checks(V) {}
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'T',
+              type: DefinitionType.Type,
+              referenceCount: 1,
+            },
+            {name: 'foo'},
+          ],
+        },
+        {
+          type: ScopeType.Function,
+          variables: [
+            {name: 'arguments'},
+            {
+              name: 'V',
+              type: DefinitionType.Parameter,
+              referenceCount: 1,
+            },
+          ],
+        },
+      ],
+    );
+  });
+
+  test('Class', () => {
+    // Supertype parameters and implements are visited
+    verifyHasScopes(
+      `
+        type T = string;
+        class B implements T {}
+        class C extends B<T> {}
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'T',
+              type: DefinitionType.Type,
+              referenceCount: 2,
+            },
+            {
+              name: 'B',
+              type: DefinitionType.ClassName,
+              referenceCount: 1,
+            },
+            {
+              name: 'C',
+              type: DefinitionType.ClassName,
+              referenceCount: 0,
+            },
+          ],
+        },
+        {
+          type: ScopeType.Class,
+          variables: [{name: 'B'}],
+        },
+        {
+          type: ScopeType.Class,
+          variables: [{name: 'C'}],
+        },
+      ],
+    );
+  });
+});
