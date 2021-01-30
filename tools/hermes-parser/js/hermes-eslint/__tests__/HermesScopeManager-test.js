@@ -824,4 +824,188 @@ describe('Declare statements', () => {
       ],
     );
   });
+
+  test('DeclareModule', () => {
+    verifyHasScopes(
+      `
+        declare module Foo {
+          declare var V: typeof V;
+        }
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [],
+        },
+        {
+          type: ScopeType.DeclareModule,
+          variables: [],
+        },
+        {
+          type: ScopeType.Block,
+          variables: [
+            {
+              name: 'V',
+              type: DefinitionType.Variable,
+              referenceCount: 1,
+            },
+          ],
+        },
+      ],
+    );
+  });
+
+  test('DeclareModule does not let definitions escape scope', () => {
+    const {scopeManager} = parseForESLint(`
+      declare module Foo {
+        declare var V: string;
+        declare type T = string;
+      }
+
+      (V: T);
+    `);
+
+    // All variables are defined in block scope within declare module scope
+    expect(scopeManager.scopes).toHaveLength(4);
+
+    expect(scopeManager.scopes[0].type).toEqual(ScopeType.Global);
+    expect(scopeManager.scopes[0].variables).toHaveLength(0);
+
+    expect(scopeManager.scopes[1].type).toEqual(ScopeType.Module);
+    expect(scopeManager.scopes[1].variables).toHaveLength(0);
+
+    expect(scopeManager.scopes[2].type).toEqual(ScopeType.DeclareModule);
+    expect(scopeManager.scopes[2].variables).toHaveLength(0);
+
+    expect(scopeManager.scopes[3].type).toEqual(ScopeType.Block);
+    expect(scopeManager.scopes[3].variables).toHaveLength(2);
+
+    // No references are resolved to the two variables in the declare module body
+    const variables = scopeManager.scopes[3].variables;
+    expect(variables[0].name).toEqual('V');
+    expect(variables[0].references).toHaveLength(0);
+    expect(variables[1].name).toEqual('T');
+    expect(variables[1].references).toHaveLength(0);
+
+    // Only the module scope contains references, however both are unresolved as they
+    // cannot be resolved to the names defined within the declare module body.
+    expect(scopeManager.scopes[0].references).toHaveLength(0);
+    expect(scopeManager.scopes[1].references).toHaveLength(2);
+    expect(scopeManager.scopes[2].references).toHaveLength(0);
+    expect(scopeManager.scopes[3].references).toHaveLength(0);
+
+    const references = scopeManager.scopes[1].references;
+    expect(references[0].identifier.name).toEqual('V');
+    expect(references[0].resolved).toBe(null);
+    expect(references[1].identifier.name).toEqual('T');
+    expect(references[1].resolved).toBe(null);
+  });
+
+  test('DeclareModuleExports', () => {
+    verifyHasScopes(
+      `
+        import {module, exports} from 'Foo';
+        type T = string;
+
+        declare module Foo {
+          declare module.exports: T;
+        }
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'module',
+              type: DefinitionType.ImportBinding,
+              referenceCount: 0,
+            },
+            {
+              name: 'exports',
+              type: DefinitionType.ImportBinding,
+              referenceCount: 0,
+            },
+            {
+              name: 'T',
+              type: DefinitionType.Type,
+              referenceCount: 1,
+            },
+          ],
+        },
+        {
+          type: ScopeType.DeclareModule,
+          variables: [],
+        },
+        {
+          type: ScopeType.Block,
+          variables: [],
+        },
+      ],
+    );
+  });
+
+  test('DeclareExportDeclaration', () => {
+    // Verify that all declare export nodes introduce a definition, with a single
+    // additional reference in the declare module body.
+    verifyHasScopes(
+      `
+        declare module Foo {
+          declare export type T = string;
+          declare export opaque type O: string;
+          declare export interface I {}
+
+          declare export var V: string;
+          declare export class C {}
+          declare export function F(T, O, I): void;
+
+          declare export {V, C, F}
+        }
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [],
+        },
+        {
+          type: ScopeType.DeclareModule,
+          variables: [],
+        },
+        {
+          type: ScopeType.Block,
+          variables: [
+            {
+              name: 'T',
+              type: DefinitionType.Type,
+              referenceCount: 1,
+            },
+            {
+              name: 'O',
+              type: DefinitionType.Type,
+              referenceCount: 1,
+            },
+            {
+              name: 'I',
+              type: DefinitionType.Type,
+              referenceCount: 1,
+            },
+            {
+              name: 'V',
+              type: DefinitionType.Variable,
+              referenceCount: 1,
+            },
+            {
+              name: 'C',
+              type: DefinitionType.ClassName,
+              referenceCount: 1,
+            },
+            {
+              name: 'F',
+              type: DefinitionType.Function,
+              referenceCount: 1,
+            },
+          ],
+        },
+      ],
+    );
+  });
 });

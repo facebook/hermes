@@ -36,11 +36,13 @@ const {
   BlockScope,
   CatchScope,
   ClassScope,
+  DeclareModuleScope,
   ForScope,
   FunctionExpressionNameScope,
   FunctionScope,
   GlobalScope,
   ModuleScope,
+  ScopeType,
   SwitchScope,
   TypeScope,
   WithScope,
@@ -223,6 +225,12 @@ class ScopeManager {
 
   __nestTypeScope(node) {
     return this.__nestScope(new TypeScope(this, this.__currentScope, node));
+  }
+
+  __nestDeclareModuleScope(node) {
+    return this.__nestScope(
+      new DeclareModuleScope(this, this.__currentScope, node),
+    );
   }
 
   __nestFunctionExpressionNameScope(node) {

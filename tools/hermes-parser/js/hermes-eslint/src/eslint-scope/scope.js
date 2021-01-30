@@ -47,6 +47,7 @@ const ScopeType = {
   Block: 'block',
   Catch: 'catch',
   Class: 'class',
+  DeclareModule: 'declare-module',
   For: 'for',
   Function: 'function',
   FunctionExpressionName: 'function-expression-name',
@@ -236,7 +237,8 @@ class Scope {
     this.variableScope =
       this.type === ScopeType.Global ||
       this.type === ScopeType.Function ||
-      this.type === ScopeType.Module
+      this.type === ScopeType.Module ||
+      this.type === ScopeType.DeclareModule
         ? this
         : upperScope.variableScope;
 
@@ -738,6 +740,18 @@ class TypeScope extends Scope {
   }
 }
 
+class DeclareModuleScope extends Scope {
+  constructor(scopeManager, upperScope, declareModuleNode) {
+    super(
+      scopeManager,
+      ScopeType.DeclareModule,
+      upperScope,
+      declareModuleNode,
+      false,
+    );
+  }
+}
+
 module.exports = {
   Scope,
   ScopeType,
@@ -752,4 +766,5 @@ module.exports = {
   ForScope,
   ClassScope,
   TypeScope,
+  DeclareModuleScope,
 };

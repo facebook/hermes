@@ -813,6 +813,16 @@ class Referencer extends esrecurse.Visitor {
       this.close(node);
     }
   }
+
+  DeclareModule(node) {
+    this.scopeManager.__nestDeclareModuleScope(node);
+
+    // Do not visit 'id', since module name is neither a reference nor a
+    // definition that can be referenced.
+    this.visit(node.body);
+
+    this.close(node);
+  }
 }
 
 module.exports = Referencer;
