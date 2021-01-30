@@ -63,12 +63,16 @@ class PatternVisitor extends esrecurse.Visitor {
     this.rootPattern = rootPattern;
     this.callback = callback;
     this.assignments = [];
-    this.rightHandNodes = [];
+    this.extraNodesToVisit = [];
     this.restElements = [];
   }
 
   Identifier(pattern) {
     const lastRestElement = getLast(this.restElements);
+
+    if (pattern.typeAnnotation != null) {
+      this.extraNodesToVisit.push(pattern.typeAnnotation);
+    }
 
     this.callback(pattern, {
       topLevel: pattern === this.rootPattern,
@@ -83,7 +87,7 @@ class PatternVisitor extends esrecurse.Visitor {
   Property(property) {
     // Computed property's key is a right hand node.
     if (property.computed) {
-      this.rightHandNodes.push(property.key);
+      this.extraNodesToVisit.push(property.key);
     }
 
     // If it's shorthand, its key is same as its value.
@@ -98,12 +102,26 @@ class PatternVisitor extends esrecurse.Visitor {
 
       this.visit(element);
     }
+
+    if (pattern.typeAnnotation != null) {
+      this.extraNodesToVisit.push(pattern.typeAnnotation);
+    }
+  }
+
+  ObjectPattern(pattern) {
+    for (const property of pattern.properties) {
+      this.visit(property);
+    }
+
+    if (pattern.typeAnnotation != null) {
+      this.extraNodesToVisit.push(pattern.typeAnnotation);
+    }
   }
 
   AssignmentPattern(pattern) {
     this.assignments.push(pattern);
     this.visit(pattern.left);
-    this.rightHandNodes.push(pattern.right);
+    this.extraNodesToVisit.push(pattern.right);
     this.assignments.pop();
   }
 
@@ -111,16 +129,20 @@ class PatternVisitor extends esrecurse.Visitor {
     this.restElements.push(pattern);
     this.visit(pattern.argument);
     this.restElements.pop();
+
+    if (pattern.typeAnnotation != null) {
+      this.extraNodesToVisit.push(pattern.typeAnnotation);
+    }
   }
 
   MemberExpression(node) {
     // Computed property's key is a right hand node.
     if (node.computed) {
-      this.rightHandNodes.push(node.property);
+      this.extraNodesToVisit.push(node.property);
     }
 
     // the object is only read, write to its property.
-    this.rightHandNodes.push(node.object);
+    this.extraNodesToVisit.push(node.object);
   }
 
   //
@@ -141,15 +163,19 @@ class PatternVisitor extends esrecurse.Visitor {
   AssignmentExpression(node) {
     this.assignments.push(node);
     this.visit(node.left);
-    this.rightHandNodes.push(node.right);
+    this.extraNodesToVisit.push(node.right);
     this.assignments.pop();
   }
 
   CallExpression(node) {
-    // arguments are right hand nodes.
+    // Arguments and type arguments may be visited later
     node.arguments.forEach(a => {
-      this.rightHandNodes.push(a);
+      this.extraNodesToVisit.push(a);
     });
+    if (node.typeArguments != null) {
+      this.extraNodesToVisit.push(node.typeArguments);
+    }
+
     this.visit(node.callee);
   }
 }

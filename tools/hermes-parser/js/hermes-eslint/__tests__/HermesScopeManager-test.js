@@ -542,3 +542,137 @@ describe('Type parameters', () => {
     );
   });
 });
+
+describe('Flow type nodes in Patterns', () => {
+  test('Identifier', () => {
+    verifyHasScopes(
+      `
+        type T = string;
+        const A: T = '';
+        (B: T) => {};
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'T',
+              type: DefinitionType.Type,
+              // In variable declaration and function parameter
+              referenceCount: 2,
+            },
+            {name: 'A'},
+          ],
+        },
+        {
+          type: ScopeType.Function,
+          variables: [{name: 'B'}],
+        },
+      ],
+    );
+  });
+
+  test('ArrayPattern', () => {
+    verifyHasScopes(
+      `
+        type T = string;
+        const [A]: T = '';
+        ([B]: T) => {};
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'T',
+              type: DefinitionType.Type,
+              // In variable declaration and function parameter
+              referenceCount: 2,
+            },
+            {name: 'A'},
+          ],
+        },
+        {
+          type: ScopeType.Function,
+          variables: [{name: 'B'}],
+        },
+      ],
+    );
+  });
+
+  test('ObjectPattern', () => {
+    verifyHasScopes(
+      `
+        type T = string;
+        const {A}: T = '';
+        ({B}: T) => {};
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'T',
+              type: DefinitionType.Type,
+              // In variable declaration and function parameter
+              referenceCount: 2,
+            },
+            {name: 'A'},
+          ],
+        },
+        {
+          type: ScopeType.Function,
+          variables: [{name: 'B'}],
+        },
+      ],
+    );
+  });
+
+  test('RestElement', () => {
+    verifyHasScopes(
+      `
+        type T = string;
+        const [...A: T] = [];
+        const {...B: T} = {};
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'T',
+              type: DefinitionType.Type,
+              referenceCount: 2,
+            },
+            {name: 'A'},
+            {name: 'B'},
+          ],
+        },
+      ],
+    );
+  });
+
+  test('Nested patterns', () => {
+    verifyHasScopes(
+      `
+        type T = string;
+        const [A: T, B = (1: T), {C}: T]: T = [];
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'T',
+              type: DefinitionType.Type,
+              referenceCount: 4,
+            },
+            {name: 'A'},
+            {name: 'B'},
+            {name: 'C'},
+          ],
+        },
+      ],
+    );
+  });
+});

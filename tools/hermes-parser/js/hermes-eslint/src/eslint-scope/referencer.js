@@ -51,31 +51,6 @@ const {
 } = require('./definition');
 const assert = require('assert');
 
-/**
- * Traverse identifier in pattern
- * @param {Object} options - options
- * @param {pattern} rootPattern - root pattern
- * @param {Refencer} referencer - referencer
- * @param {callback} callback - callback
- * @returns {void}
- */
-function traverseIdentifierInPattern(
-  options,
-  rootPattern,
-  referencer,
-  callback,
-) {
-  // Call the callback at left hand identifier nodes, and Collect right hand nodes.
-  const visitor = new PatternVisitor(options, rootPattern, callback);
-
-  visitor.visit(rootPattern);
-
-  // Process the right hand nodes recursively.
-  if (referencer !== null && referencer !== undefined) {
-    visitor.rightHandNodes.forEach(referencer.visit, referencer);
-  }
-}
-
 // Importing ImportDeclaration.
 // http://people.mozilla.org/~jorendorff/es6-draft.html#sec-moduledeclarationinstantiation
 // https://github.com/estree/estree/blob/master/es6.md#importdeclaration
@@ -186,15 +161,22 @@ class Referencer extends esrecurse.Visitor {
 
     if (typeof options === 'function') {
       visitPatternCallback = options;
-      visitPatternOptions = {processRightHandNodes: false};
+      visitPatternOptions = {visitAllNodes: false};
     }
 
-    traverseIdentifierInPattern(
+    // Call the callback at left hand identifier nodes, and collect extra nodes to visit.
+    const visitor = new PatternVisitor(
       this.options,
       node,
-      visitPatternOptions.processRightHandNodes ? this : null,
       visitPatternCallback,
     );
+
+    visitor.visit(node);
+
+    // Process all unvisited nodes recursively.
+    if (visitPatternOptions.visitAllNodes) {
+      visitor.extraNodesToVisit.forEach(this.visit, this);
+    }
   }
 
   visitFunction(node) {
@@ -247,7 +229,7 @@ class Referencer extends esrecurse.Visitor {
     for (i = 0, iz = node.params.length; i < iz; ++i) {
       this.visitPattern(
         node.params[i],
-        {processRightHandNodes: true},
+        {visitAllNodes: true},
         visitPatternCallback,
       );
     }
@@ -339,10 +321,63 @@ class Referencer extends esrecurse.Visitor {
         );
       });
     } else {
-      this.visitPattern(
-        node.left,
-        {processRightHandNodes: true},
-        (pattern, info) => {
+      this.visitPattern(node.left, {visitAllNodes: true}, (pattern, info) => {
+        let maybeImplicitGlobal = null;
+
+        if (!this.currentScope().isStrict) {
+          maybeImplicitGlobal = {
+            pattern,
+            node,
+          };
+        }
+        this.referencingDefaultValue(
+          pattern,
+          info.assignments,
+          maybeImplicitGlobal,
+          false,
+        );
+        this.currentScope().__referencingValue(
+          pattern,
+          Reference.WRITE,
+          node.right,
+          maybeImplicitGlobal,
+          false,
+        );
+      });
+    }
+    this.visit(node.right);
+    this.visit(node.body);
+
+    this.close(node);
+  }
+
+  visitVariableDeclaration(variableTargetScope, node, index) {
+    const decl = node.declarations[index];
+    const init = decl.init;
+
+    this.visitPattern(decl.id, {visitAllNodes: true}, (pattern, info) => {
+      variableTargetScope.__define(
+        pattern,
+        new VariableDefinition(pattern, decl, node, index, node.kind),
+      );
+
+      this.referencingDefaultValue(pattern, info.assignments, null, true);
+      if (init) {
+        this.currentScope().__referencingValue(
+          pattern,
+          Reference.WRITE,
+          init,
+          null,
+          true,
+        );
+      }
+    });
+  }
+
+  AssignmentExpression(node) {
+    if (PatternVisitor.isPattern(node.left)) {
+      if (node.operator === '=') {
+        this.visitPattern(node.left, {visitAllNodes: true}, (pattern, info) => {
           let maybeImplicitGlobal = null;
 
           if (!this.currentScope().isStrict) {
@@ -364,72 +399,7 @@ class Referencer extends esrecurse.Visitor {
             maybeImplicitGlobal,
             false,
           );
-        },
-      );
-    }
-    this.visit(node.right);
-    this.visit(node.body);
-
-    this.close(node);
-  }
-
-  visitVariableDeclaration(variableTargetScope, node, index) {
-    const decl = node.declarations[index];
-    const init = decl.init;
-
-    this.visitPattern(
-      decl.id,
-      {processRightHandNodes: true},
-      (pattern, info) => {
-        variableTargetScope.__define(
-          pattern,
-          new VariableDefinition(pattern, decl, node, index, node.kind),
-        );
-
-        this.referencingDefaultValue(pattern, info.assignments, null, true);
-        if (init) {
-          this.currentScope().__referencingValue(
-            pattern,
-            Reference.WRITE,
-            init,
-            null,
-            true,
-          );
-        }
-      },
-    );
-  }
-
-  AssignmentExpression(node) {
-    if (PatternVisitor.isPattern(node.left)) {
-      if (node.operator === '=') {
-        this.visitPattern(
-          node.left,
-          {processRightHandNodes: true},
-          (pattern, info) => {
-            let maybeImplicitGlobal = null;
-
-            if (!this.currentScope().isStrict) {
-              maybeImplicitGlobal = {
-                pattern,
-                node,
-              };
-            }
-            this.referencingDefaultValue(
-              pattern,
-              info.assignments,
-              maybeImplicitGlobal,
-              false,
-            );
-            this.currentScope().__referencingValue(
-              pattern,
-              Reference.WRITE,
-              node.right,
-              maybeImplicitGlobal,
-              false,
-            );
-          },
-        );
+        });
       } else {
         this.currentScope().__referencingValue(
           node.left,
@@ -446,14 +416,10 @@ class Referencer extends esrecurse.Visitor {
   CatchClause(node) {
     this.scopeManager.__nestCatchScope(node);
 
-    this.visitPattern(
-      node.param,
-      {processRightHandNodes: true},
-      (pattern, info) => {
-        this.currentScope().__define(pattern, new CatchClauseDefinition(node));
-        this.referencingDefaultValue(pattern, info.assignments, null, true);
-      },
-    );
+    this.visitPattern(node.param, {visitAllNodes: true}, (pattern, info) => {
+      this.currentScope().__define(pattern, new CatchClauseDefinition(node));
+      this.referencingDefaultValue(pattern, info.assignments, null, true);
+    });
     this.visit(node.body);
 
     this.close(node);
@@ -472,6 +438,7 @@ class Referencer extends esrecurse.Visitor {
 
   Identifier(node) {
     this.currentScope().__referencingValue(node);
+    this.visitChildren(node);
   }
 
   UpdateExpression(node) {
