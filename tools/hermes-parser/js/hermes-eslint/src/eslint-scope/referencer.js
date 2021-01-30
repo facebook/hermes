@@ -689,7 +689,7 @@ class Referencer extends esrecurse.Visitor {
     this.currentScope().__define(node.id, new TypeDefinition(node.id, node));
   }
 
-  TypeAlias(node) {
+  visitTypeAlias(node) {
     this.createTypeDefinition(node);
 
     const hasTypeScope = this.maybeCreateTypeScope(node);
@@ -702,7 +702,7 @@ class Referencer extends esrecurse.Visitor {
     }
   }
 
-  OpaqueType(node) {
+  visitOpaqueType(node) {
     this.createTypeDefinition(node);
 
     const hasTypeScope = this.maybeCreateTypeScope(node);
@@ -716,7 +716,7 @@ class Referencer extends esrecurse.Visitor {
     }
   }
 
-  InterfaceDeclaration(node) {
+  visitInterfaceDeclaration(node) {
     this.createTypeDefinition(node);
 
     const hasTypeScope = this.maybeCreateTypeScope(node);
@@ -728,6 +728,18 @@ class Referencer extends esrecurse.Visitor {
     if (hasTypeScope) {
       this.close(node);
     }
+  }
+
+  TypeAlias(node) {
+    this.visitTypeAlias(node);
+  }
+
+  OpaqueType(node) {
+    this.visitOpaqueType(node);
+  }
+
+  InterfaceDeclaration(node) {
+    this.visitInterfaceDeclaration(node);
   }
 
   EnumDeclaration(node) {
@@ -756,6 +768,50 @@ class Referencer extends esrecurse.Visitor {
     this.visit(node.bound);
     this.visit(node.variance);
     this.visit(node.default);
+  }
+
+  DeclareTypeAlias(node) {
+    this.visitTypeAlias(node);
+  }
+
+  DeclareOpaqueType(node) {
+    this.visitOpaqueType(node);
+  }
+
+  DeclareInterface(node) {
+    this.visitInterfaceDeclaration(node);
+  }
+
+  DeclareVariable(node) {
+    this.currentScope().__define(
+      node.id,
+      new VariableDefinition(node.id, node, node, 0, 'declare'),
+    );
+
+    this.visit(node.id.typeAnnotation);
+  }
+
+  DeclareFunction(node) {
+    this.currentScope().__define(node.id, new FunctionNameDefinition(node));
+
+    this.visit(node.id.typeAnnotation);
+    this.visit(node.predicate);
+  }
+
+  DeclareClass(node) {
+    this.currentScope().__define(node.id, new ClassNameDefinition(node));
+
+    const hasTypeScope = this.maybeCreateTypeScope(node);
+
+    this.visit(node.typeParameters);
+    this.visitArray(node.extends);
+    this.visitArray(node.implements);
+    this.visitArray(node.mixins);
+    this.visit(node.body);
+
+    if (hasTypeScope) {
+      this.close(node);
+    }
   }
 }
 

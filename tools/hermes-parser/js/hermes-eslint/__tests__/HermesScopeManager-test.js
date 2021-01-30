@@ -23,8 +23,10 @@ const {ScopeType} = require('../dist/eslint-scope/scope');
 function verifyHasScopes(code, expectedScopes) {
   const {scopeManager} = parseForESLint(code);
 
+  // Global scope (at index 0 of actual scopes) is not passed as an expected scope
+  expect(scopeManager.scopes).toHaveLength(expectedScopes.length + 1);
+
   for (let i = 0; i < expectedScopes.length; i++) {
-    // Skip global scope at index 0 and start at module scope at index 1
     const actualScope = scopeManager.scopes[i + 1];
     const expectedScope = expectedScopes[i];
 
@@ -462,6 +464,31 @@ describe('Type parameters', () => {
     ]);
   });
 
+  test('DeclareClass', () => {
+    // DeclareClass contains type parameter in Type scope
+    verifyHasScopes(`declare class C<T> { prop: T }`, [
+      {
+        type: ScopeType.Module,
+        variables: [
+          {
+            name: 'C',
+            type: DefinitionType.Class,
+          },
+        ],
+      },
+      {
+        type: ScopeType.Type,
+        variables: [
+          {
+            name: 'T',
+            type: DefinitionType.TypeParameter,
+            referenceCount: 1,
+          },
+        ],
+      },
+    ]);
+  });
+
   test('Function', () => {
     // Function contains type parameter in Function scope alongside value parameter
     verifyHasScopes(
@@ -670,6 +697,128 @@ describe('Flow type nodes in Patterns', () => {
             {name: 'A'},
             {name: 'B'},
             {name: 'C'},
+          ],
+        },
+      ],
+    );
+  });
+});
+
+describe('Declare statements', () => {
+  test('DeclareTypeAlias', () => {
+    verifyHasScopes(
+      `
+        declare type T = number;
+        (1: T);
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'T',
+              type: DefinitionType.Type,
+              referenceCount: 1,
+            },
+          ],
+        },
+      ],
+    );
+  });
+
+  test('DeclareOpaqueType', () => {
+    verifyHasScopes(
+      `
+        declare opaque type T: number;
+        (1: T);
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'T',
+              type: DefinitionType.Type,
+              referenceCount: 1,
+            },
+          ],
+        },
+      ],
+    );
+  });
+
+  test('DeclareInterface', () => {
+    verifyHasScopes(
+      `
+        declare interface I {};
+        (1: I);
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'I',
+              type: DefinitionType.Type,
+              referenceCount: 1,
+            },
+          ],
+        },
+      ],
+    );
+  });
+
+  test('DeclareVariable', () => {
+    verifyHasScopes(`declare var Foo: typeof Foo;`, [
+      {
+        type: ScopeType.Module,
+        variables: [
+          {
+            name: 'Foo',
+            type: DefinitionType.Variable,
+            referenceCount: 1,
+          },
+        ],
+      },
+    ]);
+  });
+
+  test('DeclareFunction', () => {
+    verifyHasScopes(
+      `
+        declare function Foo(): void;
+        Foo();
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'Foo',
+              type: DefinitionType.Function,
+              referenceCount: 1,
+            },
+          ],
+        },
+      ],
+    );
+  });
+
+  test('DeclareClass', () => {
+    verifyHasScopes(
+      `
+        declare class C {}
+        new C();
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'C',
+              type: DefinitionType.Class,
+              referenceCount: 1,
+            },
           ],
         },
       ],
