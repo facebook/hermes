@@ -279,9 +279,10 @@ uint32_t SamplingProfiler::walkRuntimeStack(
 
 /*static*/ SamplingProfiler::GlobalProfiler *
 SamplingProfiler::GlobalProfiler::get() {
-  static std::unique_ptr<GlobalProfiler> instance =
-      make_unique<GlobalProfiler>();
-  return instance.get();
+  // We intentionally leak this memory to avoid a case where instance is
+  // accessed after it is destroyed during shutdown.
+  static GlobalProfiler *instance = new GlobalProfiler{};
+  return instance;
 }
 
 SamplingProfiler::GlobalProfiler::GlobalProfiler() {

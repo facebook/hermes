@@ -199,9 +199,11 @@ class SamplingProfiler {
     /// \p profiler.
     void unregisterRuntime(SamplingProfiler *profiler);
 
-    GlobalProfiler();
     /// \return the singleton profiler instance.
     static GlobalProfiler *get();
+
+   private:
+    GlobalProfiler();
   };
 
   /// Protect data specific to a runtime, such as the sampled stacks and
