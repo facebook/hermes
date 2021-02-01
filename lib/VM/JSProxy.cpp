@@ -40,15 +40,7 @@ findTrap(Handle<JSObject> selfHandle, Runtime *runtime, Predefined::Str name) {
   if (!handlerPtr) {
     return runtime->raiseTypeError("Proxy handler is null");
   }
-  // Calls to look up the trap are effectively recursion, and so
-  // require their own scope.  They also need a
-  // ScopedNativeDepthTracker, as it's possible to use up arbitrary
-  // native stack depth with nested proxies.
   GCScope gcScope(runtime);
-  ScopedNativeDepthTracker depthTracker(runtime);
-  if (LLVM_UNLIKELY(depthTracker.overflowed())) {
-    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
-  }
   // 4. Assert: Type(handler) is Object.
   // 5. Let target be O.[[ProxyTarget]].
   // 6. Let trap be ? GetMethod(handler, « name »).
@@ -267,7 +259,16 @@ ExecutionStatus isCompatiblePropertyDescriptor(
 CallResult<PseudoHandle<JSObject>> JSProxy::getPrototypeOf(
     Handle<JSObject> selfHandle,
     Runtime *runtime) {
-  GCScope gcScope{runtime};
+  // Proxies are complex, and various parts of the logic (finding
+  // traps, undefined traps handling, calling traps, etc) are all
+  // potentially recursive.  Therefore, every entry point creates a
+  // scope and a ScopedNativeDepthTracker, as it's possible to use up
+  // arbitrary native stack depth with nested proxies.
+  GCScope gcScope(runtime);
+  ScopedNativeDepthTracker depthTracker(runtime);
+  if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
   Handle<JSObject> target =
       runtime->makeHandle(detail::slots(*selfHandle).target);
   CallResult<Handle<Callable>> trapRes =
@@ -278,16 +279,6 @@ CallResult<PseudoHandle<JSObject>> JSProxy::getPrototypeOf(
   // 6. If trap is undefined, then
   if (!*trapRes) {
     //   a. Return ? target.[[GetPrototypeOf]](P).
-    // All calls to the target in the no-trap case are effectively
-    // recursion, and so require their own scope.  They also need a
-    // ScopedNativeDepthTracker, as it's possible to use up arbitrary
-    // native stack depth with nested proxies.
-    GCScope gcScope(runtime);
-    ScopedNativeDepthTracker depthTracker(runtime);
-    if (LLVM_UNLIKELY(depthTracker.overflowed())) {
-      return runtime->raiseStackOverflow(
-          Runtime::StackOverflowKind::NativeStack);
-    }
     return JSObject::getPrototypeOf(target, runtime);
   }
   // 7. Let handlerProto be ? Call(trap, handler, « target »).
@@ -338,6 +329,10 @@ CallResult<bool> JSProxy::setPrototypeOf(
     Runtime *runtime,
     Handle<JSObject> parent) {
   GCScope gcScope{runtime};
+  ScopedNativeDepthTracker depthTracker(runtime);
+  if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
   Handle<JSObject> target =
       runtime->makeHandle(detail::slots(*selfHandle).target);
   CallResult<Handle<Callable>> trapRes =
@@ -347,12 +342,6 @@ CallResult<bool> JSProxy::setPrototypeOf(
   }
   // 7. If trap is undefined, then
   if (!*trapRes) {
-    GCScope gcScope(runtime);
-    ScopedNativeDepthTracker depthTracker(runtime);
-    if (LLVM_UNLIKELY(depthTracker.overflowed())) {
-      return runtime->raiseStackOverflow(
-          Runtime::StackOverflowKind::NativeStack);
-    }
     //   a. Return ? target.[[SetPrototypeOf]](V).
     return JSObject::setParent(*target, runtime, *parent);
   }
@@ -399,6 +388,10 @@ CallResult<bool> JSProxy::isExtensible(
     Handle<JSObject> selfHandle,
     Runtime *runtime) {
   GCScope gcScope{runtime};
+  ScopedNativeDepthTracker depthTracker(runtime);
+  if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
   Handle<JSObject> target =
       runtime->makeHandle(detail::slots(*selfHandle).target);
   CallResult<Handle<Callable>> trapRes =
@@ -408,12 +401,6 @@ CallResult<bool> JSProxy::isExtensible(
   }
   // 6. If trap is undefined, then
   if (!*trapRes) {
-    GCScope gcScope(runtime);
-    ScopedNativeDepthTracker depthTracker(runtime);
-    if (LLVM_UNLIKELY(depthTracker.overflowed())) {
-      return runtime->raiseStackOverflow(
-          Runtime::StackOverflowKind::NativeStack);
-    }
     //   a. Return ? target.[[IsExtensible]]().
     return JSObject::isExtensible(target, runtime);
   }
@@ -447,6 +434,10 @@ CallResult<bool> JSProxy::preventExtensions(
     Runtime *runtime,
     PropOpFlags opFlags) {
   GCScope gcScope{runtime};
+  ScopedNativeDepthTracker depthTracker(runtime);
+  if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
   Handle<JSObject> target =
       runtime->makeHandle(detail::slots(*selfHandle).target);
   CallResult<Handle<Callable>> trapRes =
@@ -456,12 +447,6 @@ CallResult<bool> JSProxy::preventExtensions(
   }
   // 6. If trap is undefined, then
   if (!*trapRes) {
-    GCScope gcScope(runtime);
-    ScopedNativeDepthTracker depthTracker(runtime);
-    if (LLVM_UNLIKELY(depthTracker.overflowed())) {
-      return runtime->raiseStackOverflow(
-          Runtime::StackOverflowKind::NativeStack);
-    }
     //   a. Return ? target.[[PreventExtensions]]().
     // We pass in opFlags here.  If getThrowOnError, then this will cause
     // the underlying exception to bubble up.  If !getThrowOnError, then
@@ -505,6 +490,10 @@ CallResult<bool> JSProxy::getOwnProperty(
     ComputedPropertyDescriptor &desc,
     MutableHandle<> *valueOrAccessor) {
   GCScope gcScope{runtime};
+  ScopedNativeDepthTracker depthTracker(runtime);
+  if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
   Handle<JSObject> target =
       runtime->makeHandle(detail::slots(*selfHandle).target);
   CallResult<Handle<Callable>> trapRes = detail::findTrap(
@@ -514,12 +503,6 @@ CallResult<bool> JSProxy::getOwnProperty(
   }
   // 7. If trap is undefined, then
   if (!*trapRes) {
-    GCScope gcScope(runtime);
-    ScopedNativeDepthTracker depthTracker(runtime);
-    if (LLVM_UNLIKELY(depthTracker.overflowed())) {
-      return runtime->raiseStackOverflow(
-          Runtime::StackOverflowKind::NativeStack);
-    }
     //   a. Return ? target.[[GetOwnProperty]](P).
     return valueOrAccessor
         ? JSObject::getOwnComputedDescriptor(
@@ -657,6 +640,10 @@ CallResult<bool> JSProxy::defineOwnProperty(
     Handle<> valueOrAccessor,
     PropOpFlags opFlags) {
   GCScope gcScope{runtime};
+  ScopedNativeDepthTracker depthTracker(runtime);
+  if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
   Handle<JSObject> target =
       runtime->makeHandle(detail::slots(*selfHandle).target);
   CallResult<Handle<Callable>> trapRes =
@@ -666,12 +653,6 @@ CallResult<bool> JSProxy::defineOwnProperty(
   }
   // 7. If trap is undefined, then
   if (!*trapRes) {
-    GCScope gcScope(runtime);
-    ScopedNativeDepthTracker depthTracker(runtime);
-    if (LLVM_UNLIKELY(depthTracker.overflowed())) {
-      return runtime->raiseStackOverflow(
-          Runtime::StackOverflowKind::NativeStack);
-    }
     //   a. Return ? target.[[GetOwnProperty]](P).
     return JSObject::defineOwnComputedPrimitive(
         target, runtime, nameValHandle, dpFlags, valueOrAccessor, opFlags);
@@ -826,6 +807,10 @@ CallResult<bool> JSProxy::hasNamed(
     Runtime *runtime,
     SymbolID name) {
   GCScope gcScope{runtime};
+  ScopedNativeDepthTracker depthTracker(runtime);
+  if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
   Handle<JSObject> target =
       runtime->makeHandle(detail::slots(*selfHandle).target);
   CallResult<Handle<Callable>> trapRes =
@@ -835,12 +820,6 @@ CallResult<bool> JSProxy::hasNamed(
   }
   // 7. If trap is undefined, then
   if (!*trapRes) {
-    GCScope gcScope(runtime);
-    ScopedNativeDepthTracker depthTracker(runtime);
-    if (LLVM_UNLIKELY(depthTracker.overflowed())) {
-      return runtime->raiseStackOverflow(
-          Runtime::StackOverflowKind::NativeStack);
-    }
     //   a. Return ? target.[[HasProperty]](P, Receiver).
     return JSObject::hasNamed(target, runtime, name);
   }
@@ -858,6 +837,10 @@ CallResult<bool> JSProxy::hasComputed(
     Runtime *runtime,
     Handle<> nameValHandle) {
   GCScope gcScope{runtime};
+  ScopedNativeDepthTracker depthTracker(runtime);
+  if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
   Handle<JSObject> target =
       runtime->makeHandle(detail::slots(*selfHandle).target);
   CallResult<Handle<Callable>> trapRes =
@@ -865,14 +848,8 @@ CallResult<bool> JSProxy::hasComputed(
   if (trapRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  // 7. If trap is undefined, then
   if (!*trapRes) {
-    GCScope gcScope(runtime);
-    ScopedNativeDepthTracker depthTracker(runtime);
-    if (LLVM_UNLIKELY(depthTracker.overflowed())) {
-      return runtime->raiseStackOverflow(
-          Runtime::StackOverflowKind::NativeStack);
-    }
+    // 7. If trap is undefined, then
     //   a. Return ? target.[[HasProperty]](P, Receiver).
     return JSObject::hasComputed(target, runtime, nameValHandle);
   }
@@ -952,6 +929,10 @@ CallResult<PseudoHandle<>> JSProxy::getNamed(
     SymbolID name,
     Handle<> receiver) {
   GCScope gcScope{runtime};
+  ScopedNativeDepthTracker depthTracker(runtime);
+  if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
   Handle<JSObject> target =
       runtime->makeHandle(detail::slots(*selfHandle).target);
   CallResult<Handle<Callable>> trapRes =
@@ -961,12 +942,6 @@ CallResult<PseudoHandle<>> JSProxy::getNamed(
   }
   // 7. If trap is undefined, then
   if (!*trapRes) {
-    GCScope gcScope(runtime);
-    ScopedNativeDepthTracker depthTracker(runtime);
-    if (LLVM_UNLIKELY(depthTracker.overflowed())) {
-      return runtime->raiseStackOverflow(
-          Runtime::StackOverflowKind::NativeStack);
-    }
     //   a. Return ? target.[[Get]](P, Receiver).
     return JSObject::getNamedWithReceiver_RJS(target, runtime, name, receiver);
   }
@@ -987,6 +962,10 @@ CallResult<PseudoHandle<>> JSProxy::getComputed(
     Handle<> nameValHandle,
     Handle<> receiver) {
   GCScope gcScope{runtime};
+  ScopedNativeDepthTracker depthTracker(runtime);
+  if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
   Handle<JSObject> target =
       runtime->makeHandle(detail::slots(*selfHandle).target);
   CallResult<Handle<Callable>> trapRes =
@@ -996,12 +975,6 @@ CallResult<PseudoHandle<>> JSProxy::getComputed(
   }
   // 7. If trap is undefined, then
   if (!*trapRes) {
-    GCScope gcScope(runtime);
-    ScopedNativeDepthTracker depthTracker(runtime);
-    if (LLVM_UNLIKELY(depthTracker.overflowed())) {
-      return runtime->raiseStackOverflow(
-          Runtime::StackOverflowKind::NativeStack);
-    }
     //   a. Return ? target.[[Get]](P, Receiver).
     return JSObject::getComputedWithReceiver_RJS(
         target, runtime, nameValHandle, receiver);
@@ -1091,6 +1064,10 @@ CallResult<bool> JSProxy::setNamed(
     // TODO could be HermesValue
     Handle<> receiver) {
   GCScope gcScope{runtime};
+  ScopedNativeDepthTracker depthTracker(runtime);
+  if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
   Handle<JSObject> target =
       runtime->makeHandle(detail::slots(*selfHandle).target);
   CallResult<Handle<Callable>> trapRes =
@@ -1100,12 +1077,6 @@ CallResult<bool> JSProxy::setNamed(
   }
   // 7. If trap is undefined, then
   if (!*trapRes) {
-    GCScope gcScope(runtime);
-    ScopedNativeDepthTracker depthTracker(runtime);
-    if (LLVM_UNLIKELY(depthTracker.overflowed())) {
-      return runtime->raiseStackOverflow(
-          Runtime::StackOverflowKind::NativeStack);
-    }
     //   a. Return ? target.[[Set]](P, V, Receiver).
     return JSObject::putNamedWithReceiver_RJS(
         target, runtime, name, valueHandle, receiver);
@@ -1130,6 +1101,10 @@ CallResult<bool> JSProxy::setComputed(
     // TODO could be HermesValue
     Handle<> receiver) {
   GCScope gcScope{runtime};
+  ScopedNativeDepthTracker depthTracker(runtime);
+  if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
   Handle<JSObject> target =
       runtime->makeHandle(detail::slots(*selfHandle).target);
   CallResult<Handle<Callable>> trapRes =
@@ -1139,12 +1114,6 @@ CallResult<bool> JSProxy::setComputed(
   }
   // 7. If trap is undefined, then
   if (!*trapRes) {
-    GCScope gcScope(runtime);
-    ScopedNativeDepthTracker depthTracker(runtime);
-    if (LLVM_UNLIKELY(depthTracker.overflowed())) {
-      return runtime->raiseStackOverflow(
-          Runtime::StackOverflowKind::NativeStack);
-    }
     //   a. Return ? target.[[Set]](P, V, Receiver).
     return JSObject::putComputedWithReceiver_RJS(
         target, runtime, nameValHandle, valueHandle, receiver);
@@ -1214,6 +1183,10 @@ CallResult<bool> JSProxy::deleteNamed(
     Runtime *runtime,
     SymbolID name) {
   GCScope gcScope{runtime};
+  ScopedNativeDepthTracker depthTracker(runtime);
+  if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
   Handle<JSObject> target =
       runtime->makeHandle(detail::slots(*selfHandle).target);
   CallResult<Handle<Callable>> trapRes =
@@ -1223,12 +1196,6 @@ CallResult<bool> JSProxy::deleteNamed(
   }
   // 7. If trap is undefined, then
   if (!*trapRes) {
-    GCScope gcScope(runtime);
-    ScopedNativeDepthTracker depthTracker(runtime);
-    if (LLVM_UNLIKELY(depthTracker.overflowed())) {
-      return runtime->raiseStackOverflow(
-          Runtime::StackOverflowKind::NativeStack);
-    }
     //   a. Return ? target.[[Delete]](P, Receiver).
     return JSObject::deleteNamed(target, runtime, name);
   }
@@ -1246,6 +1213,10 @@ CallResult<bool> JSProxy::deleteComputed(
     Runtime *runtime,
     Handle<> nameValHandle) {
   GCScope gcScope{runtime};
+  ScopedNativeDepthTracker depthTracker(runtime);
+  if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
   Handle<JSObject> target =
       runtime->makeHandle(detail::slots(*selfHandle).target);
   CallResult<Handle<Callable>> trapRes =
@@ -1255,12 +1226,6 @@ CallResult<bool> JSProxy::deleteComputed(
   }
   // 7. If trap is undefined, then
   if (!*trapRes) {
-    GCScope gcScope(runtime);
-    ScopedNativeDepthTracker depthTracker(runtime);
-    if (LLVM_UNLIKELY(depthTracker.overflowed())) {
-      return runtime->raiseStackOverflow(
-          Runtime::StackOverflowKind::NativeStack);
-    }
     //   a. Return ? target.[[Delete]](P, Receiver).
     return JSObject::deleteComputed(target, runtime, nameValHandle);
   }
@@ -1357,6 +1322,10 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
     Runtime *runtime,
     OwnKeysFlags okFlags) {
   GCScope gcScope{runtime};
+  ScopedNativeDepthTracker depthTracker(runtime);
+  if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
   Handle<JSObject> target =
       runtime->makeHandle(detail::slots(*selfHandle).target);
   CallResult<Handle<Callable>> trapRes =
@@ -1367,12 +1336,6 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
   // 6. If trap is undefined, then
   if (!*trapRes) {
     //   a. Return ? target.[[OwnPropertyKeys]]().
-    GCScope gcScope(runtime);
-    ScopedNativeDepthTracker depthTracker(runtime);
-    if (LLVM_UNLIKELY(depthTracker.overflowed())) {
-      return runtime->raiseStackOverflow(
-          Runtime::StackOverflowKind::NativeStack);
-    }
     CallResult<Handle<JSArray>> targetRes =
         // Include everything here, so that filterKeys has a chance to
         // make observable trap calls.
