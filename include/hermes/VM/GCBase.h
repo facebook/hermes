@@ -1125,26 +1125,20 @@ class GCBase {
   virtual void debitExternalMemory(GCCell *alloc, uint32_t size) {}
 
   /// Default implementations for read and write barriers: do nothing.
-  virtual void writeBarrier(const GCHermesValue *loc, HermesValue value) {}
-  virtual void writeBarrier(const GCPointerBase *loc, const GCCell *value) {}
-  virtual void writeBarrier(SymbolID symbol) {}
-  virtual void constructorWriteBarrier(
-      const GCHermesValue *loc,
-      HermesValue value) {}
-  virtual void constructorWriteBarrier(
-      const GCPointerBase *loc,
-      const GCCell *value) {}
-  virtual void writeBarrierRange(const GCHermesValue *start, uint32_t numHVs) {}
-  virtual void constructorWriteBarrierRange(
+  void writeBarrier(const GCHermesValue *loc, HermesValue value);
+  void writeBarrier(const GCPointerBase *loc, const GCCell *value);
+  void writeBarrier(SymbolID symbol);
+  void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value);
+  void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value);
+  void writeBarrierRange(const GCHermesValue *start, uint32_t numHVs);
+  void constructorWriteBarrierRange(
       const GCHermesValue *start,
-      uint32_t numHVs) {}
-  virtual void snapshotWriteBarrier(const GCHermesValue *loc) {}
-  virtual void snapshotWriteBarrier(const GCPointerBase *loc) {}
-  virtual void snapshotWriteBarrierRange(
-      const GCHermesValue *start,
-      uint32_t numHVs) {}
-  virtual void weakRefReadBarrier(GCCell *value) {}
-  virtual void weakRefReadBarrier(HermesValue value) {}
+      uint32_t numHVs);
+  void snapshotWriteBarrier(const GCHermesValue *loc);
+  void snapshotWriteBarrier(const GCPointerBase *loc);
+  void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs);
+  void weakRefReadBarrier(GCCell *value);
+  void weakRefReadBarrier(HermesValue value);
 
 #ifndef NDEBUG
   virtual bool needsWriteBarrier(void *loc, GCCell *value) {

@@ -885,6 +885,220 @@ bool GCBase::shouldSanitizeHandles() {
 }
 #endif
 
+#ifdef HERMESVM_GC_RUNTIME
+
+void GCBase::writeBarrier(const GCHermesValue *loc, HermesValue value) {
+  switch (getKind()) {
+    case GCBase::HeapKind::HADES:
+      llvh::cast<HadesGC>(this)->writeBarrier(loc, value);
+      break;
+    case GCBase::HeapKind::NCGEN:
+      llvh::cast<GenGC>(this)->writeBarrier(loc, value);
+      break;
+    case GCBase::HeapKind::MALLOC:
+      llvm_unreachable(
+          "MallocGC should not be used with the RuntimeGC build config");
+      break;
+  }
+}
+
+void GCBase::writeBarrier(const GCPointerBase *loc, const GCCell *value) {
+  switch (getKind()) {
+    case GCBase::HeapKind::HADES:
+      llvh::cast<HadesGC>(this)->writeBarrier(loc, value);
+      break;
+    case GCBase::HeapKind::NCGEN:
+      llvh::cast<GenGC>(this)->writeBarrier(loc, value);
+      break;
+    case GCBase::HeapKind::MALLOC:
+      llvm_unreachable(
+          "MallocGC should not be used with the RuntimeGC build config");
+      break;
+  }
+}
+
+void GCBase::writeBarrier(SymbolID symbol) {
+  switch (getKind()) {
+    case GCBase::HeapKind::HADES:
+      llvh::cast<HadesGC>(this)->writeBarrier(symbol);
+      break;
+    case GCBase::HeapKind::NCGEN:
+      llvh::cast<GenGC>(this)->writeBarrier(symbol);
+      break;
+    case GCBase::HeapKind::MALLOC:
+      llvm_unreachable(
+          "MallocGC should not be used with the RuntimeGC build config");
+      break;
+  }
+}
+
+void GCBase::constructorWriteBarrier(
+    const GCHermesValue *loc,
+    HermesValue value) {
+  switch (getKind()) {
+    case GCBase::HeapKind::HADES:
+      llvh::cast<HadesGC>(this)->constructorWriteBarrier(loc, value);
+      break;
+    case GCBase::HeapKind::NCGEN:
+      llvh::cast<GenGC>(this)->constructorWriteBarrier(loc, value);
+      break;
+    case GCBase::HeapKind::MALLOC:
+      llvm_unreachable(
+          "MallocGC should not be used with the RuntimeGC build config");
+      break;
+  }
+}
+
+void GCBase::constructorWriteBarrier(
+    const GCPointerBase *loc,
+    const GCCell *value) {
+  switch (getKind()) {
+    case GCBase::HeapKind::HADES:
+      llvh::cast<HadesGC>(this)->constructorWriteBarrier(loc, value);
+      break;
+    case GCBase::HeapKind::NCGEN:
+      llvh::cast<GenGC>(this)->constructorWriteBarrier(loc, value);
+      break;
+    case GCBase::HeapKind::MALLOC:
+      llvm_unreachable(
+          "MallocGC should not be used with the RuntimeGC build config");
+      break;
+  }
+}
+
+void GCBase::writeBarrierRange(const GCHermesValue *start, uint32_t numHVs) {
+  switch (getKind()) {
+    case GCBase::HeapKind::HADES:
+      llvh::cast<HadesGC>(this)->writeBarrierRange(start, numHVs);
+      break;
+    case GCBase::HeapKind::NCGEN:
+      llvh::cast<GenGC>(this)->writeBarrierRange(start, numHVs);
+      break;
+    case GCBase::HeapKind::MALLOC:
+      llvm_unreachable(
+          "MallocGC should not be used with the RuntimeGC build config");
+      break;
+  }
+}
+
+void GCBase::constructorWriteBarrierRange(
+    const GCHermesValue *start,
+    uint32_t numHVs) {
+  switch (getKind()) {
+    case GCBase::HeapKind::HADES:
+      llvh::cast<HadesGC>(this)->constructorWriteBarrierRange(start, numHVs);
+      break;
+    case GCBase::HeapKind::NCGEN:
+      llvh::cast<GenGC>(this)->constructorWriteBarrierRange(start, numHVs);
+      break;
+    case GCBase::HeapKind::MALLOC:
+      llvm_unreachable(
+          "MallocGC should not be used with the RuntimeGC build config");
+      break;
+  }
+}
+
+void GCBase::snapshotWriteBarrier(const GCHermesValue *loc) {
+  switch (getKind()) {
+    case GCBase::HeapKind::HADES:
+      llvh::cast<HadesGC>(this)->snapshotWriteBarrier(loc);
+      break;
+    case GCBase::HeapKind::NCGEN:
+      llvh::cast<GenGC>(this)->snapshotWriteBarrier(loc);
+      break;
+    case GCBase::HeapKind::MALLOC:
+      llvm_unreachable(
+          "MallocGC should not be used with the RuntimeGC build config");
+      break;
+  }
+}
+
+void GCBase::snapshotWriteBarrier(const GCPointerBase *loc) {
+  switch (getKind()) {
+    case GCBase::HeapKind::HADES:
+      llvh::cast<HadesGC>(this)->snapshotWriteBarrier(loc);
+      break;
+    case GCBase::HeapKind::NCGEN:
+      llvh::cast<GenGC>(this)->snapshotWriteBarrier(loc);
+      break;
+    case GCBase::HeapKind::MALLOC:
+      llvm_unreachable(
+          "MallocGC should not be used with the RuntimeGC build config");
+      break;
+  }
+}
+
+void GCBase::snapshotWriteBarrierRange(
+    const GCHermesValue *start,
+    uint32_t numHVs) {
+  switch (getKind()) {
+    case GCBase::HeapKind::HADES:
+      llvh::cast<HadesGC>(this)->snapshotWriteBarrierRange(start, numHVs);
+      break;
+    case GCBase::HeapKind::NCGEN:
+      llvh::cast<GenGC>(this)->snapshotWriteBarrierRange(start, numHVs);
+      break;
+    case GCBase::HeapKind::MALLOC:
+      llvm_unreachable(
+          "MallocGC should not be used with the RuntimeGC build config");
+      break;
+  }
+}
+
+void GCBase::weakRefReadBarrier(GCCell *value) {
+  switch (getKind()) {
+    case GCBase::HeapKind::HADES:
+      llvh::cast<HadesGC>(this)->weakRefReadBarrier(value);
+      break;
+    case GCBase::HeapKind::NCGEN:
+      llvh::cast<GenGC>(this)->weakRefReadBarrier(value);
+      break;
+    case GCBase::HeapKind::MALLOC:
+      llvm_unreachable(
+          "MallocGC should not be used with the RuntimeGC build config");
+      break;
+  }
+}
+
+void GCBase::weakRefReadBarrier(HermesValue value) {
+  switch (getKind()) {
+    case GCBase::HeapKind::HADES:
+      llvh::cast<HadesGC>(this)->weakRefReadBarrier(value);
+      break;
+    case GCBase::HeapKind::NCGEN:
+      llvh::cast<GenGC>(this)->weakRefReadBarrier(value);
+      break;
+    case GCBase::HeapKind::MALLOC:
+      llvm_unreachable(
+          "MallocGC should not be used with the RuntimeGC build config");
+      break;
+  }
+}
+
+#else
+
+void GCBase::writeBarrier(const GCHermesValue *loc, HermesValue value) {}
+void GCBase::writeBarrier(const GCPointerBase *loc, const GCCell *value) {}
+void GCBase::writeBarrier(SymbolID symbol) {}
+void GCBase::constructorWriteBarrier(
+    const GCHermesValue *loc,
+    HermesValue value) {}
+void GCBase::constructorWriteBarrier(
+    const GCPointerBase *loc,
+    const GCCell *value) {}
+void GCBase::writeBarrierRange(const GCHermesValue *start, uint32_t numHVs) {}
+void GCBase::constructorWriteBarrierRange(
+    const GCHermesValue *start,
+    uint32_t numHVs) {}
+void GCBase::snapshotWriteBarrier(const GCHermesValue *loc) {}
+void GCBase::snapshotWriteBarrier(const GCPointerBase *loc) {}
+void GCBase::snapshotWriteBarrierRange(
+    const GCHermesValue *start,
+    uint32_t numHVs) {}
+void GCBase::weakRefReadBarrier(GCCell *value) {}
+void GCBase::weakRefReadBarrier(HermesValue value) {}
+#endif
+
 /*static*/
 std::vector<detail::WeakRefKey *> GCBase::buildKeyList(
     GC *gc,

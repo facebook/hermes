@@ -145,32 +145,29 @@ class HadesGC final : public GCBase {
   /// be in the heap). If value is a pointer, execute a write barrier.
   /// NOTE: The write barrier call must be placed *before* the write to the
   /// pointer, so that the current value can be fetched.
-  void writeBarrier(const GCHermesValue *loc, HermesValue value) override;
+  void writeBarrier(const GCHermesValue *loc, HermesValue value);
 
   /// The given pointer value is being written at the given loc (required to
   /// be in the heap). The value may be null. Execute a write barrier.
   /// NOTE: The write barrier call must be placed *before* the write to the
   /// pointer, so that the current value can be fetched.
-  void writeBarrier(const GCPointerBase *loc, const GCCell *value) override;
+  void writeBarrier(const GCPointerBase *loc, const GCCell *value);
 
   /// The given symbol is being written at the given loc (required to be in the
   /// heap).
-  void writeBarrier(SymbolID symbol) override;
+  void writeBarrier(SymbolID symbol);
 
   /// Special versions of \p writeBarrier for when there was no previous value
   /// initialized into the space.
-  void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value)
-      override;
-  void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value)
-      override;
+  void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value);
+  void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value);
 
-  void snapshotWriteBarrier(const GCHermesValue *loc) override;
-  void snapshotWriteBarrier(const GCPointerBase *loc) override;
-  void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs)
-      override;
+  void snapshotWriteBarrier(const GCHermesValue *loc);
+  void snapshotWriteBarrier(const GCPointerBase *loc);
+  void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs);
 
-  void weakRefReadBarrier(GCCell *value) override;
-  void weakRefReadBarrier(HermesValue value) override;
+  void weakRefReadBarrier(GCCell *value);
+  void weakRefReadBarrier(HermesValue value);
 
   /// \}
 

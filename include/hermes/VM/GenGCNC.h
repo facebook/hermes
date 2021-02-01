@@ -171,26 +171,32 @@ class GenGC final : public GCBase {
 
   /// The given value is being written at the given loc (required to
   /// be in the heap).  If value is a pointer, execute a write barrier.
-  void writeBarrier(const GCHermesValue *loc, HermesValue value) override;
+  void writeBarrier(const GCHermesValue *loc, HermesValue value);
 
   /// The given pointer value is being written at the given loc (required to
   /// be in the heap).  The value is may be null.  Execute a write barrier.
-  void writeBarrier(const GCPointerBase *loc, const GCCell *value) override;
+  void writeBarrier(const GCPointerBase *loc, const GCCell *value);
 
   /// Write barriers for symbols are no-ops in GenGC.
-  void writeBarrier(SymbolID) override {}
+  void writeBarrier(SymbolID) {}
 
   /// The given value is being written at the given loc (required to
   /// be in the heap).  If value is a pointer, execute a write barrier.
   /// The memory pointed to by \p loc is guaranteed to not have a valid pointer.
-  void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value)
-      override;
+  void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value) {
+    // There's no difference for GenGC between the constructor and an
+    // assignment.
+    writeBarrier(loc, value);
+  }
 
   /// The given pointer value is being written at the given loc (required to
   /// be in the heap).  The value is may be null.  Execute a write barrier.
   /// The memory pointed to by \p loc is guaranteed to not have a valid pointer.
-  void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value)
-      override;
+  void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value) {
+    // There's no difference for GenGC between the constructor and an
+    // assignment.
+    writeBarrier(loc, value);
+  }
 
 #ifndef NDEBUG
   /// Count the number of barriers executed.
@@ -239,15 +245,22 @@ class GenGC final : public GCBase {
   ///
   /// \pre The range described must be wholly contained within one segment of
   ///     the heap.
-  void writeBarrierRange(const GCHermesValue *start, uint32_t numHVs) override;
+  void writeBarrierRange(const GCHermesValue *start, uint32_t numHVs);
 
   /// Same as \p writeBarrierRange, except this is for previously uninitialized
   /// memory.
-  void constructorWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs)
-      override {
+  void constructorWriteBarrierRange(
+      const GCHermesValue *start,
+      uint32_t numHVs) {
     // GenGC doesn't do anything special for uninitialized memory.
     writeBarrierRange(start, numHVs);
   }
+
+  void snapshotWriteBarrier(const GCHermesValue *loc) {}
+  void snapshotWriteBarrier(const GCPointerBase *loc) {}
+  void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs) {}
+  void weakRefReadBarrier(GCCell *value) {}
+  void weakRefReadBarrier(HermesValue value) {}
 
   /// Inform the GC that TTI has been reached.
   void ttiReached() override;

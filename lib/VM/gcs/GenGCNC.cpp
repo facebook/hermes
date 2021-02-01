@@ -1122,22 +1122,6 @@ void GenGC::writeBarrier(const GCPointerBase *loc, const GCCell *value) {
   writeBarrierImpl(loc, value, /*hv*/ false);
 }
 
-LLVM_ATTRIBUTE_NOINLINE
-void GenGC::constructorWriteBarrier(
-    const GCHermesValue *loc,
-    HermesValue value) {
-  // There's no difference for GenGC between the constructor and an assignment.
-  writeBarrier(loc, value);
-}
-
-LLVM_ATTRIBUTE_NOINLINE
-void GenGC::constructorWriteBarrier(
-    const GCPointerBase *loc,
-    const GCCell *value) {
-  // There's no difference for GenGC between the constructor and an assignment.
-  writeBarrier(loc, value);
-}
-
 void GenGC::writeBarrierRange(const GCHermesValue *start, uint32_t numHVs) {
   countRangeWriteBarrier();
 
