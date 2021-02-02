@@ -674,8 +674,8 @@ class HadesGC::MarkAcceptor final : public HeapMarkingAcceptor,
     if (!cell) {
       return;
     }
-    if (gc.compactee_.contains(cell) && !gc.compactee_.contains(heapLoc) &&
-        !gc.inYoungGen(heapLoc)) {
+    assert(!gc.inYoungGen(heapLoc) && "YG slot found in OG marking");
+    if (gc.compactee_.contains(cell) && !gc.compactee_.contains(heapLoc)) {
       // This is a pointer in the heap pointing into the compactee, dirty the
       // corresponding card.
       HeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(heapLoc);
