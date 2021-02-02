@@ -756,7 +756,7 @@ class Referencer extends esrecurse.Visitor {
   }
 
   EnumDeclaration(node) {
-    this.currentScope().__define(node.id, new EnumDefinition(node.id, node));
+    this.currentScope().__define(node.id, new EnumDefinition(node));
 
     // Enum body cannot contain identifier references, so no need to visit body.
   }

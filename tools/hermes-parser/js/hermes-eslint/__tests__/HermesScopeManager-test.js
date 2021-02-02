@@ -207,6 +207,11 @@ describe('Enums', () => {
     // Verify there is one Enum definition
     expect(variable.defs).toHaveLength(1);
     expect(variable.defs[0].type).toEqual(DefinitionType.Enum);
+    expect(variable.defs[0].node.type).toEqual('EnumDeclaration');
+    expect(variable.defs[0].name).toMatchObject({
+      type: 'Identifier',
+      name: 'E',
+    });
   });
 });
 
