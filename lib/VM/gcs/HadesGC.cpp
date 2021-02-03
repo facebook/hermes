@@ -1478,7 +1478,7 @@ void HadesGC::oldGenCollection(std::string cause) {
   concurrentPhase_ = Phase::Mark;
   // Before the thread starts up, make sure that any write barriers are aware
   // that concurrent marking is happening.
-  isOldGenMarking_ = true;
+  ogMarkingBarriers_ = true;
   // prepareCompactee must be called before the new thread is spawned, in order
   // to ensure that write barriers start operating immediately, and that any
   // objects promoted during an intervening YG collection are correctly scanned.
@@ -1675,8 +1675,7 @@ void HadesGC::completeMarking() {
   // examines them, regardless of whether the object they use is live or not. We
   // don't want to execute any read barriers during that time which would affect
   // the liveness of the object read out of the weak reference.
-  // NOTE: We can access this here since the world is stopped.
-  isOldGenMarking_ = false;
+  ogMarkingBarriers_ = false;
   completeWeakMapMarking(*oldGenMarker_);
   // Update the compactee tracking pointers so that the next YG collection will
   // do a compaction.
@@ -1767,7 +1766,7 @@ void HadesGC::writeBarrier(const GCHermesValue *loc, HermesValue value) {
     // A pointer that lives in YG never needs any write barriers.
     return;
   }
-  if (isOldGenMarking_) {
+  if (ogMarkingBarriers_) {
     snapshotWriteBarrierInternal(*loc);
   }
   if (!value.isPointer()) {
@@ -1784,7 +1783,7 @@ void HadesGC::writeBarrier(const GCPointerBase *loc, const GCCell *value) {
     // A pointer that lives in YG never needs any write barriers.
     return;
   }
-  if (isOldGenMarking_)
+  if (ogMarkingBarriers_)
     snapshotWriteBarrierInternal(loc->get(getPointerBase()));
   // Always do the non-snapshot write barrier in order for YG to be able to
   // scan cards.
@@ -1795,7 +1794,7 @@ void HadesGC::writeBarrier(SymbolID symbol) {
   assert(
       !calledByBackgroundThread() &&
       "Write barrier invoked by background thread.");
-  if (isOldGenMarking_) {
+  if (ogMarkingBarriers_) {
     snapshotWriteBarrierInternal(symbol);
   }
   // No need for a generational write barrier for symbols, they always point
@@ -1834,7 +1833,7 @@ void HadesGC::snapshotWriteBarrier(const GCHermesValue *loc) {
     // A pointer that lives in YG never needs any write barriers.
     return;
   }
-  if (isOldGenMarking_) {
+  if (ogMarkingBarriers_) {
     snapshotWriteBarrierInternal(*loc);
   }
 }
@@ -1844,7 +1843,7 @@ void HadesGC::snapshotWriteBarrier(const GCPointerBase *loc) {
     // A pointer that lives in YG never needs any write barriers.
     return;
   }
-  if (isOldGenMarking_) {
+  if (ogMarkingBarriers_) {
     snapshotWriteBarrierInternal(GCPointerBase::storageTypeToPointer(
         loc->getStorageType(), getPointerBase()));
   }
@@ -1857,7 +1856,7 @@ void HadesGC::snapshotWriteBarrierRange(
     // A pointer that lives in YG never needs any write barriers.
     return;
   }
-  if (!isOldGenMarking_) {
+  if (!ogMarkingBarriers_) {
     return;
   }
   for (uint32_t i = 0; i < numHVs; ++i) {
@@ -1888,7 +1887,7 @@ void HadesGC::snapshotWriteBarrierInternal(HermesValue oldValue) {
 
 void HadesGC::snapshotWriteBarrierInternal(SymbolID symbol) {
   HERMES_SLOW_ASSERT(
-      isOldGenMarking_ &&
+      ogMarkingBarriers_ &&
       "snapshotWriteBarrier should only be called while the OG is marking");
   oldGenMarker_->markSymbol(symbol);
 }
@@ -1916,7 +1915,7 @@ void HadesGC::weakRefReadBarrier(GCCell *value) {
       !calledByBackgroundThread() &&
       "Read barrier invoked by background thread.");
   // If the GC is marking, conservatively mark the value as live.
-  if (isOldGenMarking_)
+  if (ogMarkingBarriers_)
     snapshotWriteBarrierInternal(value);
 
   // Otherwise, if no GC is active at all, the weak ref must be alive.
@@ -1952,7 +1951,7 @@ WeakRefSlot *HadesGC::allocWeakSlot(HermesValue init) {
     weakSlots_.push_back({init});
     slot = &weakSlots_.back();
   }
-  if (isOldGenMarking_) {
+  if (ogMarkingBarriers_) {
     // During the mark phase, if a WeakRef is created, it might not be marked
     // if the object holding this new WeakRef has already been visited.
     // This doesn't need the WeakRefMutex because nothing is using this slot
@@ -1988,7 +1987,7 @@ void HadesGC::forAllObjs(const std::function<void(GCCell *)> &callback) {
       seg.forAllObjs(skipGarbageCallback);
   }
   if (compactee_.segment) {
-    if (isOldGenMarking_)
+    if (!compactee_.evacActive())
       compactee_.segment->forAllObjs(callback);
     else
       compactee_.segment->forAllObjs(skipGarbageCallback);
@@ -2635,7 +2634,7 @@ void HadesGC::updateWeakReferencesForYoungGen() {
         // WeakRefSlots may only be marked while an OG collection is in the mark
         // phase or in the STW pause. The OG collection should unmark any slots
         // after it is complete.
-        assert(isOldGenMarking_);
+        assert(ogMarkingBarriers_);
         LLVM_FALLTHROUGH;
       case WeakSlotState::Unmarked: {
         // Both marked and unmarked weak ref slots need to be updated.
