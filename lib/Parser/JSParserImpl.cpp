@@ -4500,6 +4500,8 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     error(startRange, "Invalid 'declare' in class method");
   }
 
+  SMLoc funcExprStartLoc = tok_->getStartLoc();
+
   ESTree::Node *typeParams = nullptr;
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow() && check(TokenKind::less)) {
@@ -4555,7 +4557,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     return None;
 
   auto *funcExpr = setLocation(
-      startLoc,
+      funcExprStartLoc,
       optBody.getValue(),
       new (context_) ESTree::FunctionExpressionNode(
           nullptr,
@@ -4574,14 +4576,14 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
 
   if (special == SpecialKind::Get && funcExpr->_params.size() != 0) {
     error(
-        funcExpr->getSourceRange(),
+        {startLoc, funcExpr->getEndLoc()},
         Twine("getter method must no one formal arguments, found ") +
             Twine(funcExpr->_params.size()));
   }
 
   if (special == SpecialKind::Set && funcExpr->_params.size() != 1) {
     error(
-        funcExpr->getSourceRange(),
+        {startLoc, funcExpr->getEndLoc()},
         Twine("setter method must have exactly one formal argument, found ") +
             Twine(funcExpr->_params.size()));
   }
@@ -4590,7 +4592,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
   if ((special == SpecialKind::Get || special == SpecialKind::Set) &&
       typeParams != nullptr) {
     error(
-        funcExpr->getSourceRange(),
+        {startLoc, funcExpr->getEndLoc()},
         "accessor method may not have type parameters");
   }
 #endif
@@ -4598,7 +4600,9 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
   if (isStatic && propName && propName->str() == "prototype") {
     // ClassElement : static MethodDefinition
     // It is a Syntax Error if PropName of MethodDefinition is "prototype".
-    error(funcExpr->getSourceRange(), "prototype method must not be static");
+    error(
+        {startLoc, funcExpr->getEndLoc()},
+        "prototype method must not be static");
     return None;
   }
 
@@ -4609,7 +4613,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
       // and SpecialMethod of MethodDefinition is true.
       // TODO: Account for generator methods in SpecialMethod here.
       error(
-          funcExpr->getSourceRange(),
+          {startLoc, funcExpr->getEndLoc()},
           "constructor method must not be a getter or setter");
       return None;
     }

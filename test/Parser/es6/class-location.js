@@ -14,6 +14,7 @@
 class C {
   static a = 1;
   static b() {}
+  c() {}
 }
 
 // CHECK-NEXT:     {
@@ -122,7 +123,7 @@ class C {
 // CHECK-NEXT:               "loc": {
 // CHECK-NEXT:                 "start": {
 // CHECK-NEXT:                   "line": 16,
-// CHECK-NEXT:                   "column": 10
+// CHECK-NEXT:                   "column": 11
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
 // CHECK-NEXT:                   "line": 16,
@@ -143,6 +144,68 @@ class C {
 // CHECK-NEXT:                 "column": 16
 // CHECK-NEXT:               }
 // CHECK-NEXT:             }
+// CHECK-NEXT:           },
+
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "MethodDefinition",
+// CHECK-NEXT:             "key": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "c",
+// CHECK-NEXT:               "loc": {
+// CHECK-NEXT:                 "start": {
+// CHECK-NEXT:                   "line": 17,
+// CHECK-NEXT:                   "column": 3
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "end": {
+// CHECK-NEXT:                   "line": 17,
+// CHECK-NEXT:                   "column": 4
+// CHECK-NEXT:                 }
+// CHECK-NEXT:               }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "value": {
+// CHECK-NEXT:               "type": "FunctionExpression",
+// CHECK-NEXT:               "id": null,
+// CHECK-NEXT:               "params": [],
+// CHECK-NEXT:               "body": {
+// CHECK-NEXT:                 "type": "BlockStatement",
+// CHECK-NEXT:                 "body": [],
+// CHECK-NEXT:                 "loc": {
+// CHECK-NEXT:                   "start": {
+// CHECK-NEXT:                     "line": 17,
+// CHECK-NEXT:                     "column": 7
+// CHECK-NEXT:                   },
+// CHECK-NEXT:                   "end": {
+// CHECK-NEXT:                     "line": 17,
+// CHECK-NEXT:                     "column": 9
+// CHECK-NEXT:                   }
+// CHECK-NEXT:                 }
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false,
+// CHECK-NEXT:               "loc": {
+// CHECK-NEXT:                 "start": {
+// CHECK-NEXT:                   "line": 17,
+// CHECK-NEXT:                   "column": 4
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "end": {
+// CHECK-NEXT:                   "line": 17,
+// CHECK-NEXT:                   "column": 9
+// CHECK-NEXT:                 }
+// CHECK-NEXT:               }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "kind": "method",
+// CHECK-NEXT:             "computed": false,
+// CHECK-NEXT:             "static": false,
+// CHECK-NEXT:             "loc": {
+// CHECK-NEXT:               "start": {
+// CHECK-NEXT:                 "line": 17,
+// CHECK-NEXT:                 "column": 3
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "end": {
+// CHECK-NEXT:                 "line": 17,
+// CHECK-NEXT:                 "column": 9
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
 // CHECK-NEXT:           }
 
 // CHECK-NEXT:         ],
@@ -152,7 +215,7 @@ class C {
 // CHECK-NEXT:             "column": 9
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
-// CHECK-NEXT:             "line": 17,
+// CHECK-NEXT:             "line": 18,
 // CHECK-NEXT:             "column": 2
 // CHECK-NEXT:           }
 // CHECK-NEXT:         }
@@ -163,7 +226,7 @@ class C {
 // CHECK-NEXT:           "column": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
-// CHECK-NEXT:           "line": 17,
+// CHECK-NEXT:           "line": 18,
 // CHECK-NEXT:           "column": 2
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }
@@ -175,7 +238,7 @@ class C {
 // CHECK-NEXT:       "column": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:       "line": 17,
+// CHECK-NEXT:       "line": 18,
 // CHECK-NEXT:       "column": 2
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
