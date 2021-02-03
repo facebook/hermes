@@ -25,6 +25,7 @@ enum {
   IgnoreMemoryWarnings = 1 << 9,
   HadesCompaction = 1 << 10,
   Hades = 1 << 11,
+  HadesTimedIncremental = 1 << 12,
 };
 
 /// Set of flags for active VM experiments.

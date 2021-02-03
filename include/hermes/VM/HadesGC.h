@@ -644,6 +644,9 @@ class HadesGC final : public GCBase {
   /// If true, Hades will occasionally compact OG segments.
   bool compactionEnabled_{false};
 
+  /// If true, incremental collections will do extra work until they cross 25ms.
+  bool timedIncremental_{false};
+
   struct CompacteeState {
     /// \return true if the pointer lives in the segment that is being marked or
     /// evacuated for compaction.

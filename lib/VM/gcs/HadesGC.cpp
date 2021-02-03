@@ -297,6 +297,11 @@ class HadesGC::CollectionStats final {
     endTime_ = Clock::now();
   }
 
+  std::chrono::milliseconds getElapsedTime() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        Clock::now() - beginTime_);
+  }
+
   /// Record this amount of CPU time was taken.
   /// Call begin/end in each thread that does work to correctly count CPU time.
   /// NOTE: Can only be used by one thread at a time.
@@ -347,7 +352,8 @@ class HadesGC::CollectionStats final {
 HadesGC::CollectionStats::~CollectionStats() {
   gc_->recordGCStats(GCAnalyticsEvent{
       gc_->getName(),
-      std::string(kGCName) + (gc_->compactionEnabled_ ? "(compacting)" : ""),
+      std::string(kGCName) + (gc_->compactionEnabled_ ? "(compacting)" : "") +
+          (gc_->timedIncremental_ ? "(timed)" : ""),
       collectionType_,
       std::move(cause_),
       std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -1201,7 +1207,10 @@ HadesGC::HadesGC(
       ygAverageSurvivalRatio_{
           /*weight*/ 0.5,
           /*init*/ kYGInitialSurvivalRatio},
-      compactionEnabled_{!!(vmExperimentFlags & experiments::HadesCompaction)} {
+      compactionEnabled_{!!(vmExperimentFlags & experiments::HadesCompaction)},
+      timedIncremental_{
+          !kConcurrentGC &&
+          (vmExperimentFlags & experiments::HadesTimedIncremental)} {
   (void)vmExperimentFlags;
   std::lock_guard<Mutex> lk(gcMutex_);
   crashMgr_->setCustomData("HermesGC", kGCName);
@@ -2930,13 +2939,23 @@ bool HadesGC::inOldGen(const void *p) const {
 
 void HadesGC::yieldToOldGen() {
   assert(inGC() && "Must be in GC when yielding to old gen");
-  if (!kConcurrentGC) {
+  if (!kConcurrentGC && concurrentPhase_ != Phase::None) {
     // If there is an ongoing collection, update the drain rate before
     // collecting.
     if (concurrentPhase_ == Phase::Mark)
       oldGenMarker_->setDrainRate(getDrainRate());
 
-    incrementalCollect(false);
+    constexpr uint32_t kYGIncrementalCollectBudget = 25;
+    const auto initialPhase = concurrentPhase_;
+    // If the phase hasn't changed and we are still under 25ms after the first
+    // iteration, then we can be reasonably sure that the next iteration will
+    // also be <25ms, keeping us within 50ms even in the worst case.
+    do {
+      incrementalCollect(false);
+    } while (timedIncremental_ && concurrentPhase_ == initialPhase &&
+             ygCollectionStats_->getElapsedTime().count() <
+                 kYGIncrementalCollectBudget);
+
   } else if (concurrentPhase_ == Phase::CompleteMarking) {
     incrementalCollect(false);
   }
