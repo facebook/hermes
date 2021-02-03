@@ -180,6 +180,7 @@ class TypeParameterDefinition extends Definition {
       loc: typeParamNode.loc,
       name: typeParamNode.name,
       parent: typeParamNode,
+      range: typeParamNode.range,
     };
     super({
       type: DefinitionType.TypeParameter,

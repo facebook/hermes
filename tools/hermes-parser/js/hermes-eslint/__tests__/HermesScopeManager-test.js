@@ -388,6 +388,7 @@ describe('Type parameters', () => {
         column: 10,
       },
     });
+    expect(id.range).toEqual([9, 10]);
     expect(id.parent.type).toEqual('TypeParameter');
   });
 
