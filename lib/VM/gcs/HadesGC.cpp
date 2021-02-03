@@ -1398,8 +1398,6 @@ void HadesGC::waitForCollectionToFinish() {
   assert(gcMutex_.depth() == 1 && "Depth must be 1 to release the lock.");
   std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
   lk.unlock();
-  // If the OG collection is waiting, notify it that it can complete.
-  stopTheWorldCondVar_.notify_one();
   // Wait for the collection to finish.
   oldGenCollectionThread_.join();
   lk.lock();
@@ -1539,6 +1537,7 @@ void HadesGC::oldGenCollectionWorker() {
 }
 
 void HadesGC::incrementalCollect(bool backgroundThread) {
+  assert(gcMutex_ && "Must hold the GC mutex when calling incrementalCollect");
   switch (concurrentPhase_) {
     case Phase::None:
       break;
@@ -1549,10 +1548,15 @@ void HadesGC::incrementalCollect(bool backgroundThread) {
         concurrentPhase_ = Phase::CompleteMarking;
       break;
     case Phase::CompleteMarking:
-      if (!backgroundThread)
+      if (!backgroundThread) {
         completeMarking();
-      else
+        concurrentPhase_ = Phase::Sweep;
+        // If the OG collection is waiting, notify it that it can complete.
+        if (kConcurrentGC)
+          stopTheWorldCondVar_.notify_one();
+      } else {
         waitForCompleteMarking();
+      }
       assert(
           concurrentPhase_ != Phase::CompleteMarking &&
           "completeMarking should advance concurrentPhase_");
@@ -1671,7 +1675,6 @@ void HadesGC::completeMarking() {
   // examines them, regardless of whether the object they use is live or not. We
   // don't want to execute any read barriers during that time which would affect
   // the liveness of the object read out of the weak reference.
-  concurrentPhase_ = Phase::WeakMapScan;
   // NOTE: We can access this here since the world is stopped.
   isOldGenMarking_ = false;
   completeWeakMapMarking(*oldGenMarker_);
@@ -1693,9 +1696,6 @@ void HadesGC::completeMarking() {
   // barrier will need to be updated to handle the case where a WeakRef points
   // to an now-empty cell.
   updateWeakReferencesForOldGen();
-  // Change the phase to sweep here, before the STW lock is released. This
-  // ensures that no mutator read barriers observe the WeakMapScan phase.
-  concurrentPhase_ = Phase::Sweep;
 
   // Nothing needs oldGenMarker_ from this point onward.
   oldGenMarker_.reset();
@@ -2938,17 +2938,9 @@ void HadesGC::yieldToOldGen() {
       oldGenMarker_->setDrainRate(getDrainRate());
 
     incrementalCollect(false);
-    return;
+  } else if (concurrentPhase_ == Phase::CompleteMarking) {
+    incrementalCollect(false);
   }
-  assert(gcMutex_ && "Must hold the GC mutex when calling yieldToOldGen");
-
-  if (concurrentPhase_ != Phase::CompleteMarking) {
-    // If the OG isn't waiting for a STW pause yet, exit immediately.
-    return;
-  }
-  completeMarking();
-  // Notify the waiting OG collection that it can complete.
-  stopTheWorldCondVar_.notify_one();
 }
 
 size_t HadesGC::getDrainRate() {

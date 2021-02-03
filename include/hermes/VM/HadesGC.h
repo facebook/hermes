@@ -580,7 +580,6 @@ class HadesGC final : public GCBase {
     None,
     Mark,
     CompleteMarking,
-    WeakMapScan,
     Sweep,
     Cleanup,
   };
@@ -592,10 +591,9 @@ class HadesGC final : public GCBase {
 
   /// Represents whether the background thread is currently marking. Should only
   /// be accessed by the mutator thread or during a STW pause. isOldGenMarking_
-  /// is true if and only if (concurrentPhase_ == Mark || concurrentPhase ==
-  /// CompleteMarking) but is kept separate in order to reduce synchronisation
-  /// requirements for write barriers. Prefer using concurrentPhase_ when
-  /// acquiring gcMutex_ is not a concern.
+  /// is true from the start of marking the OG heap until the start of WeakMap
+  /// marking but is kept separate from concurrentPhase_ in order to reduce
+  /// synchronisation requirements for write barriers.
   bool isOldGenMarking_{false};
 
   /// Used by the write barrier to add items to the worklist.
