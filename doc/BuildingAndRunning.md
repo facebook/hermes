@@ -51,7 +51,7 @@ The above instructions create an unoptimized debug build. The `--distribute` fla
 The Windows build depends on which particular combination of GitBash/Cygwin/WSL and Visual Studio is used.
 
     git -c core.autocrlf=false clone https://github.com/facebook/hermes.git
-    hermes/utils/build/configure.py --build-system='Visual Studio 16 2019' --cmake-flags='-A x64' --distribute
+    hermes/utils/build/configure.py --build-system='Visual Studio 16 2019' --distribute
     cd build_release && MSBuild.exe ALL_BUILD.vcxproj /p:Configuration=Release
 
 ## Running Hermes
