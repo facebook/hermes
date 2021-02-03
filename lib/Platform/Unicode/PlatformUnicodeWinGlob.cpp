@@ -395,10 +395,11 @@ void convertToCase(
     return;
   DWORD dwFlags =
       targetCase == CaseConversion::ToUpper ? LCMAP_UPPERCASE : LCMAP_LOWERCASE;
+  dwFlags |= LCMAP_LINGUISTIC_CASING;
   static_assert(
       sizeof(wchar_t) == sizeof(char16_t), "sizeof(wchar_t) == sizeof(UChar)");
   int sizeEstimate = LCMapStringEx(
-      LOCALE_NAME_USER_DEFAULT,
+      useCurrentLocale ? LOCALE_NAME_USER_DEFAULT : LOCALE_NAME_INVARIANT,
       dwFlags,
       reinterpret_cast<LPCWSTR>(buf.data()),
       buf.size(),
@@ -420,20 +421,20 @@ void convertToCase(
         nullptr /* lpVersionInformation */,
         nullptr /* lpReserved */,
         0 /* sortHandle */);
-    assert (charsWritten == 0);
+    assert (charsWritten > 0 && "LCMapStringEx failed !");
     buf = output;
   }
 }
 
 void normalize(llvh::SmallVectorImpl<char16_t> &buf, NormalizationForm form) {
-  if (!isNormalizedString(buf.data(), buf.size(), NormalizationForm::C)) {
+  if (!isNormalizedString(buf.data(), buf.size(), form)) {
     uint32_t sizeOfNormalizedStringWithoutNullTerminator;
 
     llvh::SmallVector<char16_t, 32> normalized;
     bool success = getNormalizedString(
         buf.data(),
         buf.size(),
-        NormalizationForm::C,
+        form,
         normalized,
         sizeOfNormalizedStringWithoutNullTerminator);
     assert(success && "getNormalizedString failed !");
