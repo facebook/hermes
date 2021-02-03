@@ -53,3 +53,18 @@ test('Parser produces ESTree AST', () => {
     ],
   });
 });
+
+test('Parser allows return outside function', () => {
+  expect(parseForESLint('return 1').ast).toMatchObject({
+    type: 'Program',
+    body: [
+      {
+        type: 'ReturnStatement',
+        argument: {
+          type: 'Literal',
+          value: 1,
+        },
+      },
+    ],
+  });
+});

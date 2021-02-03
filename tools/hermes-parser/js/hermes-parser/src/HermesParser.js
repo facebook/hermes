@@ -73,6 +73,7 @@ function parse(source, options) {
       sourceBuffer.length + 1,
       options.flow === 'detect',
       options.tokens,
+      options.allowReturnOutsideFunction,
     );
 
     try {

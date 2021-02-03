@@ -1489,3 +1489,26 @@ test('Tokens', () => {
     ],
   });
 });
+
+test('Allow return outside function', () => {
+  expect(() => parse('return 1')).toThrow(
+    new SyntaxError(
+      `'return' not in a function (1:0)
+return 1
+^~~~~~~~`,
+    ),
+  );
+
+  expect(parse('return 1', {allowReturnOutsideFunction: true})).toMatchObject({
+    type: 'Program',
+    body: [
+      {
+        type: 'ReturnStatement',
+        argument: {
+          type: 'Literal',
+          value: 1,
+        },
+      },
+    ],
+  });
+});

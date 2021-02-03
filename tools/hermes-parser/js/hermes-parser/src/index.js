@@ -36,6 +36,8 @@ function getOptions(options) {
   }
 
   options.tokens = options.tokens === true;
+  options.allowReturnOutsideFunction =
+    options.allowReturnOutsideFunction === true;
 
   return options;
 }

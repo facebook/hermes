@@ -426,7 +426,8 @@ void SemanticValidator::visit(ContinueStatementNode *continueStmt) {
 }
 
 void SemanticValidator::visit(ReturnStatementNode *returnStmt) {
-  if (curFunction()->isGlobalScope())
+  if (curFunction()->isGlobalScope() &&
+      !astContext_.allowReturnOutsideFunction())
     sm_.error(returnStmt->getSourceRange(), "'return' not in a function");
   visitESTreeChildren(*this, returnStmt);
 }
