@@ -49,4 +49,22 @@ TEST(Base64Test, DecodeInvalid) {
   EXPECT_EQ(base64Decode("YQ==="), llvh::None);
 }
 
+TEST(DataURLTst, ParseDataURL) {
+  EXPECT_EQ(
+      parseJSONBase64DataURL("data:application/json;base64,YQ==").getValue(),
+      "a");
+
+  // Invalid data
+  EXPECT_EQ(
+      parseJSONBase64DataURL("data:application/json;base64,Y"), llvh::None);
+
+  // Missing [;base64]
+  EXPECT_EQ(parseJSONBase64DataURL("data:,YQ=="), llvh::None);
+  EXPECT_EQ(parseJSONBase64DataURL("data:text/plain,YQ=="), llvh::None);
+
+  // Invalid mediatype
+  EXPECT_EQ(parseJSONBase64DataURL("data:html,YQ"), llvh::None);
+  EXPECT_EQ(parseJSONBase64DataURL("data:text/plain,YQ=="), llvh::None);
+}
+
 } // end anonymous namespace

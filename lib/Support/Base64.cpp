@@ -88,4 +88,23 @@ llvh::Optional<std::string> base64Decode(llvh::StringRef input) {
   return output;
 }
 
+llvh::Optional<std::string> parseJSONBase64DataURL(llvh::StringRef url) {
+  // data:
+  if (!url.consume_front("data:"))
+    return llvh::None;
+
+  // [<mediatype>]
+  // This is limited to JSON at this moment.
+  if (!url.consume_front("application/json"))
+    return llvh::None;
+
+  // [;base64],
+  // This is required to be presented in our case.
+  if (!url.consume_front(";base64,"))
+    return llvh::None;
+
+  // <data>
+  return base64Decode(url);
+}
+
 } // namespace hermes
