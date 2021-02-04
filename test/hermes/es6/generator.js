@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O0 %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -lazy %s | %FileCheck --match-full-lines %s
 
@@ -50,6 +50,25 @@ show(it.next());
 // CHECK-NEXT: 111 | false
 show(it.next());
 // CHECK-NEXT: undefined | true
+
+(function() {
+function *useArgsLocal(x, y) {
+  yield x;
+  yield x + 1;
+  ++x;
+  yield x + y;
+}
+
+var it = useArgsLocal(100, 10);
+show(it.next());
+// CHECK-NEXT: 100 | false
+show(it.next());
+// CHECK-NEXT: 101 | false
+show(it.next());
+// CHECK-NEXT: 111 | false
+show(it.next());
+// CHECK-NEXT: undefined | true
+})();
 
 function *locals(x,y) {
   var a,b,c;
