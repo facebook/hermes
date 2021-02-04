@@ -491,7 +491,8 @@ int main(int argc, char **argv) {
                    << sourceMapBufOrErr.getError().message() << "\n";
       return -1;
     }
-    sourceMap = SourceMapParser::parse(*sourceMapBufOrErr.get().get());
+    SourceErrorManager sm;
+    sourceMap = SourceMapParser::parse(*sourceMapBufOrErr.get().get(), sm);
     if (!sourceMap) {
       llvh::errs() << "Error loading source map: " << SourceMapFilename << "\n";
       return -1;

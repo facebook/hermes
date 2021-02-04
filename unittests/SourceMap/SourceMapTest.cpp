@@ -9,6 +9,7 @@
 #include "hermes/SourceMap/SourceMapGenerator.h"
 #include "hermes/SourceMap/SourceMapParser.h"
 #include "hermes/Support/Base64vlq.h"
+#include "hermes/Support/SimpleDiagHandler.h"
 
 #include "llvh/Support/MemoryBuffer.h"
 #include "llvh/Support/raw_ostream.h"
@@ -151,7 +152,9 @@ TEST(SourceMap, Basic) {
       OS.str(),
       R"#({"version":3,"sources":["file1","file2"],"mappings":"AAAC,EACA,CACA,C,CAAC;ACGI,CACJ,EAAC,EACF;","x_hermes_function_offsets":{"0":[20,23,50,789],"1":[1,255,300,500]}})#");
 
-  std::unique_ptr<SourceMap> sourceMap = SourceMapParser::parse(storage);
+  SourceErrorManager sm;
+  SimpleDiagHandlerRAII diagHandler(sm);
+  std::unique_ptr<SourceMap> sourceMap = SourceMapParser::parse(storage, sm);
   for (uint32_t line = 0; line < sizeof(segmentsList) / sizeof(segmentsList[0]);
        ++line) {
     const auto &segments = segmentsList[line];
@@ -163,7 +166,10 @@ TEST(SourceMap, Basic) {
 }
 
 TEST(SourceMap, InvalidJsonMapTest) {
-  std::unique_ptr<SourceMap> sourceMap = SourceMapParser::parse(InvalidJsonMap);
+  SourceErrorManager sm;
+  SimpleDiagHandlerRAII diagHandler(sm);
+  std::unique_ptr<SourceMap> sourceMap =
+      SourceMapParser::parse(InvalidJsonMap, sm);
   EXPECT_TRUE(sourceMap == nullptr);
 };
 
@@ -172,8 +178,10 @@ TEST(SourceMap, InvalidJsonMapTest) {
 TEST(SourceMap, SourcesField) {
   auto verifySources = [](const char *sourceMapContent,
                           const std::vector<std::string> &expected) {
+    SourceErrorManager sm;
+    SimpleDiagHandlerRAII diagHandler(sm);
     std::unique_ptr<SourceMap> sourceMap =
-        SourceMapParser::parse(sourceMapContent);
+        SourceMapParser::parse(sourceMapContent, sm);
     std::vector<std::string> sources = sourceMap->getAllFullPathSources();
     EXPECT_EQ(sources.size(), expected.size());
     for (uint32_t i = 0; i < expected.size(); ++i) {
@@ -188,7 +196,9 @@ TEST(SourceMap, SourcesField) {
 /// "test that the source root is reflected in a mapping's source field" from
 /// https://github.com/mozilla/source-map/blob/master/test/test-source-map-consumer.js
 TEST(SourceMap, SourceRoot) {
-  std::unique_ptr<SourceMap> sourceMap = SourceMapParser::parse(TestMap);
+  SourceErrorManager sm;
+  SimpleDiagHandlerRAII diagHandler(sm);
+  std::unique_ptr<SourceMap> sourceMap = SourceMapParser::parse(TestMap, sm);
 
   llvh::Optional<SourceMapTextLocation> locOpt =
       sourceMap->getLocationForAddress(2, 2);
@@ -200,7 +210,7 @@ TEST(SourceMap, SourceRoot) {
   EXPECT_EQ(locOpt.getValue().fileName, "/the/root/one.js");
 
   std::unique_ptr<SourceMap> sourceMap2 =
-      SourceMapParser::parse(TestMapNoSourceRoot);
+      SourceMapParser::parse(TestMapNoSourceRoot, sm);
 
   locOpt = sourceMap2->getLocationForAddress(2, 2);
   EXPECT_TRUE(locOpt.hasValue());
@@ -211,7 +221,7 @@ TEST(SourceMap, SourceRoot) {
   EXPECT_EQ(locOpt.getValue().fileName, "one.js");
 
   std::unique_ptr<SourceMap> sourceMap3 =
-      SourceMapParser::parse(TestMapEmptySourceRoot);
+      SourceMapParser::parse(TestMapEmptySourceRoot, sm);
 
   locOpt = sourceMap3->getLocationForAddress(2, 2);
   EXPECT_TRUE(locOpt.hasValue());
@@ -225,7 +235,9 @@ TEST(SourceMap, SourceRoot) {
 /// "test mapping tokens back exactly" from
 /// https://github.com/mozilla/source-map/blob/master/test/test-source-map-consumer.js
 TEST(SourceMap, ExactMappings) {
-  std::unique_ptr<SourceMap> sourceMap = SourceMapParser::parse(TestMap);
+  SourceErrorManager sm;
+  SimpleDiagHandlerRAII diagHandler(sm);
+  std::unique_ptr<SourceMap> sourceMap = SourceMapParser::parse(TestMap, sm);
 
   std::vector<std::string> sources = {"/the/root/one.js", "/the/root/two.js"};
 
@@ -257,7 +269,9 @@ TEST(SourceMap, ExactMappings) {
 /// "test mapping tokens fuzzy" from
 /// https://github.com/mozilla/source-map/blob/master/test/test-source-map-consumer.js
 TEST(SourceMap, FuzzyMappings) {
-  std::unique_ptr<SourceMap> sourceMap = SourceMapParser::parse(TestMap);
+  SourceErrorManager sm;
+  SimpleDiagHandlerRAII diagHandler(sm);
+  std::unique_ptr<SourceMap> sourceMap = SourceMapParser::parse(TestMap, sm);
 
   std::vector<std::string> sources = {"/the/root/one.js", "/the/root/two.js"};
 
@@ -268,12 +282,15 @@ TEST(SourceMap, FuzzyMappings) {
 
 /// Test to make sure we can parse mappings with no represented location
 TEST(SourceMap, NoRepresentedLocation) {
+  SourceErrorManager sm;
+  SimpleDiagHandlerRAII diagHandler(sm);
   std::unique_ptr<SourceMap> sourceMap = SourceMapParser::parse(
       R"#({
         "version": 3,
         "sources": ["a.js", "b.js"],
         "mappings": "CACC,E,G;A,A,CCCC"
-      })#");
+      })#",
+      sm);
 
   std::vector<std::string> sources = {"a.js", "b.js"};
 
@@ -329,8 +346,10 @@ TEST(SourceMap, MergedWithInputSourceMaps) {
           })#";
 
   std::vector<std::unique_ptr<SourceMap>> inputSourceMaps{};
-  inputSourceMaps.push_back(SourceMapParser::parse(file1MapJson));
-  inputSourceMaps.push_back(SourceMapParser::parse(file2MapJson));
+  SourceErrorManager sm;
+  SimpleDiagHandlerRAII diagHandler(sm);
+  inputSourceMaps.push_back(SourceMapParser::parse(file1MapJson, sm));
+  inputSourceMaps.push_back(SourceMapParser::parse(file2MapJson, sm));
 
   std::vector<std::string> sources = {"file1", "file2"};
   SourceMap::SegmentList segments = {
@@ -374,7 +393,7 @@ TEST(SourceMap, MergedWithInputSourceMaps) {
       R"#({"version":3,"sources":["file1orig","\/foo\/file2orig"],)#"
       R"#("mappings":"A,EAAA,CAAA,C,C,C,CCCA,CAAA,CACC;"})#");
 
-  std::unique_ptr<SourceMap> sourceMap = SourceMapParser::parse(storage);
+  std::unique_ptr<SourceMap> sourceMap = SourceMapParser::parse(storage, sm);
   for (uint32_t i = 0; i < expectedSegments.size(); ++i) {
     verifySegment(
         *sourceMap, /*generatedLine*/ 1, expectedSources, expectedSegments[i]);
@@ -438,8 +457,10 @@ TEST(SourceMap, PropagateFbMetadataFromInputs) {
            }, 42])#");
 
   std::vector<std::unique_ptr<SourceMap>> inputSourceMaps{};
-  inputSourceMaps.push_back(SourceMapParser::parse(file1MapJson));
-  inputSourceMaps.push_back(SourceMapParser::parse(file2MapJson));
+  SourceErrorManager sm;
+  SimpleDiagHandlerRAII diagHandler(sm);
+  inputSourceMaps.push_back(SourceMapParser::parse(file1MapJson, sm));
+  inputSourceMaps.push_back(SourceMapParser::parse(file2MapJson, sm));
 
   SourceMap::SegmentList segments = {
       loc(0, 0, 1, 0), // addr 1:0 -> file1:1:0   (unmapped in file1orig)
@@ -500,8 +521,10 @@ TEST(SourceMap, GenerateWithFbMetadata) {
 
 /// Test to make sure we can properly parse empty lines.
 TEST(SourceMap, EmptyLines) {
+  SourceErrorManager sm;
+  SimpleDiagHandlerRAII diagHandler(sm);
   std::unique_ptr<SourceMap> sourceMap =
-      SourceMapParser::parse(TestMapEmptyLines);
+      SourceMapParser::parse(TestMapEmptyLines, sm);
 
   std::vector<std::string> sources = {"one.js", "two.js"};
 
