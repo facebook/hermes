@@ -20,7 +20,9 @@
 #include "hermes/DebuggerAPI.h"
 #include "hermes/Platform/Logging.h"
 #include "hermes/Public/RuntimeConfig.h"
+#include "hermes/SourceMap/SourceMapParser.h"
 #include "hermes/Support/Algorithms.h"
+#include "hermes/Support/SimpleDiagHandler.h"
 #include "hermes/Support/UTF16Stream.h"
 #include "hermes/Support/UTF8.h"
 #include "hermes/VM/CallResult.h"
@@ -709,6 +711,12 @@ class HermesRuntimeImpl final : public HermesRuntime,
     }
   }
 
+  /// Same as \c prepareJavaScript but with a source map.
+  std::shared_ptr<const jsi::PreparedJavaScript> prepareJavaScriptWithSourceMap(
+      const std::shared_ptr<const jsi::Buffer> &buffer,
+      const std::shared_ptr<const jsi::Buffer> &sourceMapBuf,
+      std::string sourceURL);
+
   // Concrete declarations of jsi::Runtime pure virtual methods
 
   std::shared_ptr<const jsi::PreparedJavaScript> prepareJavaScript(
@@ -1289,6 +1297,15 @@ void HermesRuntime::unwatchTimeLimit() {
       &(impl(this)->runtime_));
 }
 
+jsi::Value HermesRuntime::evaluateJavaScriptWithSourceMap(
+    const std::shared_ptr<const jsi::Buffer> &buffer,
+    const std::shared_ptr<const jsi::Buffer> &sourceMapBuf,
+    const std::string &sourceURL) {
+  return impl(this)->evaluatePreparedJavaScript(
+      impl(this)->prepareJavaScriptWithSourceMap(
+          buffer, sourceMapBuf, sourceURL));
+}
+
 size_t HermesRuntime::rootsListLength() const {
   return impl(this)->hermesValues_->size();
 }
@@ -1326,8 +1343,9 @@ class HermesPreparedJavaScript final : public jsi::PreparedJavaScript {
 } // namespace
 
 std::shared_ptr<const jsi::PreparedJavaScript>
-HermesRuntimeImpl::prepareJavaScript(
+HermesRuntimeImpl::prepareJavaScriptWithSourceMap(
     const std::shared_ptr<const jsi::Buffer> &jsiBuffer,
+    const std::shared_ptr<const jsi::Buffer> &sourceMapBuf,
     std::string sourceURL) {
   std::pair<std::unique_ptr<hbc::BCProvider>, std::string> bcErr{};
   auto buffer = std::make_unique<BufferAdapter>(std::move(jsiBuffer));
@@ -1347,14 +1365,34 @@ HermesRuntimeImpl::prepareJavaScript(
 
   // Construct the BC provider either from buffer or source.
   if (isBytecode) {
+    if (sourceMapBuf) {
+      throw std::logic_error("Source map cannot be specified with bytecode");
+    }
     bcErr = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
         std::move(buffer));
   } else {
 #if defined(HERMESVM_LEAN)
     bcErr.second = "prepareJavaScript source compilation not supported";
 #else
+    std::unique_ptr<::hermes::SourceMap> sourceMap{};
+    if (sourceMapBuf) {
+      // Convert the buffer into a form the parser needs.
+      llvh::MemoryBufferRef mbref(
+          llvh::StringRef(
+              (const char *)sourceMapBuf->data(), sourceMapBuf->size()),
+          "");
+      ::hermes::SimpleDiagHandler diag;
+      ::hermes::SourceErrorManager sm;
+      diag.installInto(sm);
+      sourceMap = ::hermes::SourceMapParser::parse(mbref, sm);
+      if (!sourceMap) {
+        auto errorStr = diag.getErrorString();
+        LOG_EXCEPTION_CAUSE("Error parsing source map: %s", errorStr.c_str());
+        throw std::runtime_error("Error parsing source map:" + errorStr);
+      }
+    }
     bcErr = hbc::BCProviderFromSrc::createBCProviderFromSrc(
-        std::move(buffer), sourceURL, compileFlags_);
+        std::move(buffer), sourceURL, std::move(sourceMap), compileFlags_);
 #endif
   }
   if (!bcErr.first) {
@@ -1370,6 +1408,13 @@ HermesRuntimeImpl::prepareJavaScript(
   }
   return std::make_shared<const HermesPreparedJavaScript>(
       std::move(bcErr.first), runtimeFlags, std::move(sourceURL));
+}
+
+std::shared_ptr<const jsi::PreparedJavaScript>
+HermesRuntimeImpl::prepareJavaScript(
+    const std::shared_ptr<const jsi::Buffer> &jsiBuffer,
+    std::string sourceURL) {
+  return prepareJavaScriptWithSourceMap(jsiBuffer, nullptr, sourceURL);
 }
 
 jsi::Value HermesRuntimeImpl::evaluatePreparedJavaScript(
@@ -1397,7 +1442,7 @@ jsi::Value HermesRuntimeImpl::evaluatePreparedJavaScript(
 jsi::Value HermesRuntimeImpl::evaluateJavaScript(
     const std::shared_ptr<const jsi::Buffer> &buffer,
     const std::string &sourceURL) {
-  return evaluatePreparedJavaScript(prepareJavaScript(buffer, sourceURL));
+  return evaluateJavaScriptWithSourceMap(buffer, nullptr, sourceURL);
 }
 
 jsi::Object HermesRuntimeImpl::global() {
