@@ -9,12 +9,8 @@
 
 #include "llvh/Support/Compiler.h"
 
-#ifndef LLVM_PTR_SIZE
-#error "LLVM_PTR_SIZE needs to be defined"
-#endif
-
-#if LLVM_PTR_SIZE != 8
-// Only have JSI be on the stack for builds that are not 64-bit.
+#ifdef HERMES_FACEBOOK_BUILD
+// TODO (T84179835): Disable this once it is no longer useful for debugging.
 #define HERMESJSI_ON_STACK
 #endif
 
@@ -229,15 +225,7 @@ class StackRuntime {
 
  private:
   static void runtimeMemoryThread(StackRuntime *stack) {
-#if defined(__APPLE__)
-    // Capture the thread name in case if something was already set, so that we
-    // can restore it later when we're potentially returning the thread back
-    // to some pool.
-    char buf[256];
-    int getNameSuccess = pthread_getname_np(pthread_self(), buf, sizeof(buf));
-
-    pthread_setname_np("hermes-runtime-memorythread");
-#endif
+    ::hermes::oscompat::set_thread_name("hermes-runtime-memorythread");
 
     llvh::Optional<::hermes::vm::StackRuntime> rt;
 
@@ -245,12 +233,6 @@ class StackRuntime {
     stack->startup_.set_value();
     stack->shutdown_.get_future().wait();
     assert(!rt.hasValue() && "Runtime was not torn down before thread");
-
-#if defined(__APPLE__)
-    if (!getNameSuccess) {
-      pthread_setname_np(buf);
-    }
-#endif
   }
 
   // The order here matters.
