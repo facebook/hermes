@@ -68,3 +68,21 @@ test('Parser allows return outside function', () => {
     ],
   });
 });
+
+test('Visitor key order for control flow nodes', () => {
+  // Visitor keys for control flow nodes must have a particular order for
+  // ESLint's code path analysis to work correctly.
+  const {visitorKeys} = parseForESLint('null');
+  expect(visitorKeys).toMatchObject({
+    IfStatement: ['test', 'consequent', 'alternate'],
+    ConditionalExpression: ['test', 'consequent', 'alternate'],
+    WhileStatement: ['test', 'body'],
+    DoWhileStatement: ['body', 'test'],
+    ForStatement: ['init', 'test', 'update', 'body'],
+    ForInStatement: ['left', 'right', 'body'],
+    ForOfStatement: ['left', 'right', 'body'],
+    SwitchStatement: ['discriminant', 'cases'],
+    TryStatement: ['block', 'handler', 'finalizer'],
+    CatchClause: ['param', 'body'],
+  });
+});

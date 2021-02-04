@@ -48,6 +48,11 @@ VISITOR_KEYS['ThisTypeAnnotation'] = [];
 // Visitor keys generated from Hermes AST definitions
 ${visitorKeys}
 
+// Override select visitor keys to set correct traversal order
+VISITOR_KEYS['IfStatement'] = ['test', 'consequent', 'alternate'];
+VISITOR_KEYS['ConditionalExpression'] = ['test', 'consequent', 'alternate'];
+VISITOR_KEYS['WhileStatement'] = ['test', 'body'];
+
 module.exports = VISITOR_KEYS;
 `;
 
