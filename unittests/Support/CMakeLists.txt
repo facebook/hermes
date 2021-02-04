@@ -9,6 +9,7 @@ set(SupportSources
   CheckedMalloc.cpp
   ConversionsTest.cpp
   CtorConfigTest.cpp
+  Base64Test.cpp
   HashStringTest.cpp
   JSONEmitterTest.cpp
   LEB128Test.cpp
