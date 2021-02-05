@@ -365,6 +365,23 @@ describe('Identifiers not mistakenly treated as references', () => {
       ],
     );
   });
+
+  test('ClassProperty', () => {
+    verifyHasReferences(
+      `
+        import Foo from 'Foo';
+        import Bar from 'Bar';
+        class C {
+          Foo: Bar;
+        }
+      `,
+      [
+        {name: 'Foo', count: 0},
+        {name: 'Bar', count: 1},
+        {name: 'C', count: 0},
+      ],
+    );
+  });
 });
 
 describe('Type parameters', () => {
@@ -1119,4 +1136,48 @@ describe('Flow specific properties visited on non-Flow nodes', () => {
       ],
     );
   });
+});
+
+describe('ClassProperty', () => {
+  verifyHasScopes(
+    `
+      import Foo from 'Foo';
+      import Bar from 'Bar';
+      import Baz from 'Baz';
+      class C {
+        [Foo]: Bar = Baz;
+      }
+    `,
+    [
+      {
+        type: ScopeType.Module,
+        variables: [
+          {
+            name: 'Foo',
+            type: DefinitionType.ImportBinding,
+            referenceCount: 1,
+          },
+          {
+            name: 'Bar',
+            type: DefinitionType.ImportBinding,
+            referenceCount: 1,
+          },
+          {
+            name: 'Baz',
+            type: DefinitionType.ImportBinding,
+            referenceCount: 1,
+          },
+          {
+            name: 'C',
+            type: DefinitionType.ClassName,
+            referenceCount: 0,
+          },
+        ],
+      },
+      {
+        type: ScopeType.Class,
+        variables: [{name: 'C'}],
+      },
+    ],
+  );
 });

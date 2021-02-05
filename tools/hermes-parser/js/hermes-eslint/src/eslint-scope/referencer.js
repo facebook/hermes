@@ -306,6 +306,16 @@ class Referencer extends esrecurse.Visitor {
     }
   }
 
+  visitClassProperty(node) {
+    if (node.computed) {
+      this.visit(node.key);
+    }
+
+    this.visit(node.value);
+    this.visit(node.variance);
+    this.visit(node.typeAnnotation);
+  }
+
   visitForIn(node) {
     if (
       node.left.type === Syntax.VariableDeclaration &&
@@ -509,6 +519,14 @@ class Referencer extends esrecurse.Visitor {
 
   ClassDeclaration(node) {
     this.visitClass(node);
+  }
+
+  ClassProperty(node) {
+    this.visitClassProperty(node);
+  }
+
+  ClassPrivateProperty(node) {
+    this.visitClassProperty(node);
   }
 
   BlockStatement(node) {
