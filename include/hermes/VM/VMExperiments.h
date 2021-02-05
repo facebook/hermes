@@ -8,6 +8,8 @@
 #ifndef HERMES_VM_VMEXPERIMENTS_H
 #define HERMES_VM_VMEXPERIMENTS_H
 
+#include <cstdint>
+
 namespace hermes {
 namespace vm {
 namespace experiments {
