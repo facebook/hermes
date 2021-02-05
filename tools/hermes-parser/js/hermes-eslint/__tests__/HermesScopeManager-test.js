@@ -148,6 +148,7 @@ describe('Type definitions', () => {
     expect(variable.references[0]).toBe(reference);
     expect(reference.resolved).toBe(variable);
     expect(reference.isTypeReference()).toBe(true);
+    expect(reference.isReadOnly());
 
     // Verify there is one TypeDefinition
     expect(variable.defs).toHaveLength(1);

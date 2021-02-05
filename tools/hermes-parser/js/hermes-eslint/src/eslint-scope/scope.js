@@ -455,7 +455,7 @@ class Scope {
     const ref = new Reference(
       node /* identifier */,
       this /* scope */,
-      Reference.Read /* read-write flag */,
+      Reference.READ /* read-write flag */,
       null /* writeExpr */,
       null /* maybeImplicitGlobal */,
       false /* init */,
