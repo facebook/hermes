@@ -47,13 +47,11 @@ class ReplProxy : public facebook::jni::HybridClass<ReplProxy> {
         vm::Handle <vm::JSObject> global = runtime->getGlobal();
 
         // evaluate-line.js will color the output appropriately based on the available of this property in the global object.
-        vm::HermesValue terminalTypePropName = vm::HermesValue::encodeStringValue(vm::StringPrimitive::createNoThrow(runtime.get(), "_replterminaltype").get());
-        vm::HermesValue terminalTypePropVal = vm::HermesValue::encodeStringValue(vm::StringPrimitive::createNoThrow(runtime.get(), "android").get());
         if(vm::ExecutionStatus::EXCEPTION ==
            global->putComputed_RJS(global,
                                    runtime.get(),
-                                   mRuntime->makeHandle(terminalTypePropName),
-                                   mRuntime->makeHandle(terminalTypePropVal),
+                                   vm::StringPrimitive::createNoThrow(runtime.get(), "_replterminaltype"),
+                                   vm::StringPrimitive::createNoThrow(runtime.get(), "android"),
                                    vm::PropOpFlags().plusThrowOnError())) {
             throw "Unable to set the terminal type !";
         }
