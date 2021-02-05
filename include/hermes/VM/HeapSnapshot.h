@@ -86,7 +86,7 @@ class HeapSnapshot {
 #include "hermes/VM/HeapSnapshot.def"
       ;
 
-  using NodeID = uint64_t;
+  using NodeID = uint32_t;
   using NodeIndex = uint32_t;
   using EdgeIndex = uint32_t;
 

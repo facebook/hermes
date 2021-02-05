@@ -316,10 +316,14 @@ class LabeledStatementDecoration : public LabelDecorationBase {};
 
 class BlockStatementDecoration {
  public:
-  /// True if this is a function body that was pruned while pre-parsing.
-  bool isLazyFunctionBody{false};
   /// The source buffer id in which this block was found (see \p SourceMgr ).
   uint32_t bufferId;
+  /// True if this is a function body that was pruned while pre-parsing.
+  bool isLazyFunctionBody{false};
+  /// If this is a lazy block, the Yield param to restore when eagerly parsing.
+  bool paramYield{false};
+  /// If this is a lazy block, the Await param to restore when eagerly parsing.
+  bool paramAwait{false};
 };
 
 class PatternDecoration {};
@@ -897,6 +901,30 @@ NodeList &getArguments(CallExpressionLikeNode *node);
 /// \return true when \p node has simple params, i.e. no destructuring and no
 /// initializers.
 bool hasSimpleParams(FunctionLikeNode *node);
+
+/// \return true when \p node is a generator function.
+bool isGenerator(FunctionLikeNode *node);
+
+/// \return true when \p node is an async function.
+bool isAsync(FunctionLikeNode *node);
+
+/// Allow using \p NodeKind in \p llvh::DenseMaps.
+struct NodeKindInfo : llvh::DenseMapInfo<NodeKind> {
+  static inline NodeKind getEmptyKey() {
+    return (NodeKind)(-1);
+  }
+  static inline NodeKind getTombstoneKey() {
+    return (NodeKind)(-2);
+  }
+  static inline bool isEqual(const NodeKind &a, const NodeKind &b) {
+    return a == b;
+  }
+  static unsigned getHashValue(const NodeKind &Val) {
+    return (unsigned)Val;
+  }
+};
+
+using NodeKindSet = llvh::DenseSet<ESTree::NodeKind, NodeKindInfo>;
 
 } // namespace ESTree
 } // namespace hermes

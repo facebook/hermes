@@ -444,17 +444,24 @@ void Verifier::visitHBCCallNInst(const HBCCallNInst &Inst) {
 }
 
 void Verifier::visitCallBuiltinInst(CallBuiltinInst const &Inst) {
-  Assert(
-      Inst.getNumArguments() <= CallBuiltinInst::MAX_ARGUMENTS,
-      "CallBuiltin too many arguments");
+  assert(
+      isNativeBuiltin(Inst.getBuiltinIndex()) &&
+      "CallBuiltin must take a native builtin.");
   visitCallInst(Inst);
 }
+
+void Verifier::visitGetBuiltinClosureInst(GetBuiltinClosureInst const &Inst) {
+  assert(
+      Inst.getBuiltinIndex() < BuiltinMethod::_count &&
+      "Out of bound BuiltinMethod index.");
+}
+
 void Verifier::visitHBCCallDirectInst(HBCCallDirectInst const &Inst) {
   Assert(
       llvh::isa<Function>(Inst.getCallee()),
       "HBCCallDirect callee must be a Function");
   Assert(
-      Inst.getNumArguments() <= CallBuiltinInst::MAX_ARGUMENTS,
+      Inst.getNumArguments() <= HBCCallDirectInst::MAX_ARGUMENTS,
       "CallBuiltin too many arguments");
   visitCallInst(Inst);
 }
@@ -828,7 +835,7 @@ void Verifier::visitGetNewTargetInst(GetNewTargetInst const &Inst) {
       "GetNewTargetInst can only be used in ES6 constructors and ES5 functions");
 }
 
-void Verifier::visitThrowIfUndefinedInst(ThrowIfUndefinedInst const &Inst) {}
+void Verifier::visitThrowIfEmptyInst(const ThrowIfEmptyInst &Inst) {}
 
 } // namespace
 

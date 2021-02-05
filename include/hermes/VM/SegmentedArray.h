@@ -43,13 +43,9 @@ namespace vm {
 class SegmentedArray final
     : public VariableSizeRuntimeCell,
       private llvh::TrailingObjects<SegmentedArray, GCHermesValue> {
-  friend GC;
-
  public:
   /// A segment is just a blob of raw memory with a fixed size.
   class Segment final : public GCCell {
-    friend GC;
-
    public:
     /// The max number of elements that can be held in a segment.
     static constexpr uint32_t kMaxLength = 1024;
@@ -97,7 +93,6 @@ class SegmentedArray final
       length_.store(newLength, std::memory_order_release);
     }
 
-   private:
 #ifdef HERMESVM_SERIALIZE
     explicit Segment(Deserializer &d);
 
@@ -106,11 +101,14 @@ class SegmentedArray final
 #endif
 
     friend void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+
+   private:
     static const VTable vt;
 
     AtomicIfConcurrentGC<uint32_t> length_;
     GCHermesValue data_[kMaxLength];
 
+   public:
     explicit Segment(Runtime *runtime)
         : GCCell(&runtime->getHeap(), &vt), length_(0) {}
   };
@@ -365,6 +363,7 @@ class SegmentedArray final
       const GCCell *cell,
       Metadata::Builder &mb);
 
+ public:
   SegmentedArray(Runtime *runtime, size_type capacity)
       : VariableSizeRuntimeCell(
             &runtime->getHeap(),
@@ -389,7 +388,7 @@ class SegmentedArray final
         slotCapacity_(slotCapacity),
         numSlotsUsed_(numSlotsUsed) {}
 #endif
-
+ private:
   /// Throws a RangeError with a descriptive message describing the attempted
   /// capacity allocated, and the max that is allowed.
   /// \returns ExecutionStatus::EXCEPTION always.

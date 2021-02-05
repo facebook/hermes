@@ -30,18 +30,24 @@ class ESTreeJSONDumper {
   /// Mapping from node name to a set of ignored field names for that node.
   llvh::StringMap<llvh::StringSet<>> ignoredEmptyFields_{};
 
+  /// If null, this is ignored.
+  /// If non-null, only print the source locations for kinds in this set.
+  const NodeKindSet *includeSourceLocs_;
+
  public:
   explicit ESTreeJSONDumper(
       JSONEmitter &json,
       SourceErrorManager *sm,
       ESTreeDumpMode mode,
       LocationDumpMode locMode,
-      ESTreeRawProp rawProp = ESTreeRawProp::Include)
+      ESTreeRawProp rawProp = ESTreeRawProp::Include,
+      const NodeKindSet *includeSourceLocs = nullptr)
       : json_(json),
         sm_(sm),
         mode_(mode),
         locMode_(locMode),
-        rawProp_(rawProp) {
+        rawProp_(rawProp),
+        includeSourceLocs_(includeSourceLocs) {
     if (locMode != LocationDumpMode::None) {
       assert(sm && "SourceErrorManager required for dumping");
     }
@@ -71,6 +77,9 @@ class ESTreeJSONDumper {
   void printSourceLocation(Node *node) {
     if (locMode_ == LocationDumpMode::None)
       return;
+    if (includeSourceLocs_ && !includeSourceLocs_->count(node->getKind()))
+      return;
+
     SourceErrorManager::SourceCoords start, end;
     SMRange rng = node->getSourceRange();
     if (!sm_->findBufferLineAndLoc(rng.Start, start) ||
@@ -97,7 +106,9 @@ class ESTreeJSONDumper {
     if (locMode_ == LocationDumpMode::Range ||
         locMode_ == LocationDumpMode::LocAndRange) {
       json_.emitKey("range");
+      json_.openArray();
       dumpSMRangeJSON(json_, rng, sm_->findBufferForLoc(rng.Start));
+      json_.closeArray();
     }
   }
 
@@ -117,8 +128,9 @@ class ESTreeJSONDumper {
     if (sr.isValid() && rawProp_ == ESTreeRawProp::Include) {
       json_.emitKeyValue(
           "raw",
-          StringRef{sr.Start.getPointer(),
-                    (size_t)(sr.End.getPointer() - sr.Start.getPointer())});
+          StringRef{
+              sr.Start.getPointer(),
+              (size_t)(sr.End.getPointer() - sr.Start.getPointer())});
     }
     printSourceLocation(node);
     json_.closeDict();
@@ -228,18 +240,23 @@ class ESTreeJSONDumper {
     }
   }
 
-#define DUMP_KEY_VALUE_PAIR(PARENT, KEY, NODE)                 \
-  do {                                                         \
-    if (mode_ == ESTreeDumpMode::HideEmpty && isEmpty(NODE)) { \
-      auto it = ignoredEmptyFields_.find(#PARENT);             \
-      if (it != ignoredEmptyFields_.end()) {                   \
-        if (it->second.count(KEY)) {                           \
-          break;                                               \
-        }                                                      \
-      }                                                        \
-    }                                                          \
-    json_.emitKey(KEY);                                        \
-    dumpNode(NODE);                                            \
+#define DUMP_KEY_VALUE_PAIR(PARENT, KEY, NODE)       \
+  do {                                               \
+    if (isEmpty(NODE)) {                             \
+      if (mode_ == ESTreeDumpMode::Compact) {        \
+        break;                                       \
+      }                                              \
+      if (mode_ == ESTreeDumpMode::HideEmpty) {      \
+        auto it = ignoredEmptyFields_.find(#PARENT); \
+        if (it != ignoredEmptyFields_.end()) {       \
+          if (it->second.count(KEY)) {               \
+            break;                                   \
+          }                                          \
+        }                                            \
+      }                                              \
+    }                                                \
+    json_.emitKey(KEY);                              \
+    dumpNode(NODE);                                  \
   } while (0);
 
 /// Declare helper functions to recursively visit the children of a node.
@@ -443,10 +460,8 @@ void dumpSMRangeJSON(
       rng.Start.getPointer() >= bufStart &&
       rng.End.getPointer() <= buffer->getBufferEnd() &&
       "The range must be within the buffer");
-  json.openArray();
   json.emitValues(
       {rng.Start.getPointer() - bufStart, rng.End.getPointer() - bufStart});
-  json.closeArray();
 }
 
 void dumpESTreeJSON(
@@ -477,8 +492,11 @@ void dumpESTreeJSON(
     NodePtr rootNode,
     ESTreeDumpMode mode,
     SourceErrorManager &sm,
-    LocationDumpMode locMode) {
-  ESTreeJSONDumper(json, &sm, mode, locMode).doIt(rootNode);
+    LocationDumpMode locMode,
+    const NodeKindSet *includeSourceLocs,
+    ESTreeRawProp rawProp) {
+  ESTreeJSONDumper(json, &sm, mode, locMode, rawProp, includeSourceLocs)
+      .doIt(rootNode);
 }
 
 } // namespace hermes

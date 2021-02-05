@@ -41,8 +41,6 @@ using StackTracePtr = std::unique_ptr<StackTrace>;
 
 /// Error Object.
 class JSError final : public JSObject {
-  friend GC;
-
  public:
 #ifdef HERMESVM_SERIALIZE
   JSError(Deserializer &d);
@@ -117,7 +115,6 @@ class JSError final : public JSObject {
   friend CallResult<HermesValue>
   errorStackSetter(void *, Runtime *runtime, NativeArgs args);
 
- protected:
   JSError(
       Runtime *runtime,
       Handle<JSObject> parent,

@@ -19,7 +19,7 @@ Handle<JSObject> createGeneratorFunctionConstructor(Runtime *runtime) {
 
   auto cons = runtime->makeHandle(NativeConstructor::create(
       runtime,
-      Handle<JSObject>::vmcast(&runtime->functionPrototype),
+      Handle<JSObject>::vmcast(&runtime->functionConstructor),
       nullptr,
       generatorFunctionConstructor,
       1,
@@ -72,7 +72,7 @@ Handle<JSObject> createGeneratorFunctionConstructor(Runtime *runtime) {
 
 CallResult<HermesValue>
 generatorFunctionConstructor(void *, Runtime *runtime, NativeArgs args) {
-  return createDynamicFunction(runtime, args, true);
+  return createDynamicFunction(runtime, args, DynamicFunctionKind::Generator);
 }
 
 } // namespace vm

@@ -20,9 +20,7 @@ const VTable FillerCell::vt{CellKind::FillerCellKind, 0};
 // Empty to prevent linker errors, doesn't need to do anything.
 void UninitializedBuildMeta(const GCCell *, Metadata::Builder &) {}
 void FillerCellBuildMeta(const GCCell *, Metadata::Builder &) {}
-#ifndef HERMESVM_GC_HADES
 void FreelistBuildMeta(const GCCell *, Metadata::Builder &) {}
-#endif
 
 #ifdef HERMESVM_SERIALIZE
 void UninitializedSerialize(Serializer &s, const GCCell *cell) {
@@ -30,16 +28,16 @@ void UninitializedSerialize(Serializer &s, const GCCell *cell) {
       llvh::dbgs() << "Serialize function not implemented for Uinitialized\n");
 }
 
-void FillerCellSerialize(Serializer &s, const GCCell *cell) {
-  auto *self = vmcast<const FillerCell>(cell);
-  s.writeInt<uint32_t>(self->getSize());
-  s.endObject(self);
-}
-
 void UninitializedDeserialize(Deserializer &d, CellKind kind) {
   LLVM_DEBUG(
       llvh::dbgs()
       << "Deserialize function not implemented for Uninitialized\n");
+}
+
+void FillerCellSerialize(Serializer &s, const GCCell *cell) {
+  auto *self = vmcast<const FillerCell>(cell);
+  s.writeInt<uint32_t>(self->getSize());
+  s.endObject(self);
 }
 
 void FillerCellDeserialize(Deserializer &d, CellKind kind) {
@@ -49,7 +47,6 @@ void FillerCellDeserialize(Deserializer &d, CellKind kind) {
   d.endObject((void *)cell);
 }
 
-#ifndef HERMESVM_GC_HADES
 void FreelistSerialize(Serializer &, const GCCell *) {
   LLVM_DEBUG(
       llvh::dbgs() << "Serialize function not implemented for FreelistCell\n");
@@ -60,7 +57,6 @@ void FreelistDeserialize(Deserializer &, CellKind) {
       llvh::dbgs()
       << "Deserialize function not implemented for FreelistCell\n");
 }
-#endif
 #endif
 
 } // namespace vm

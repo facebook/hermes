@@ -20,6 +20,7 @@
 #include "hermes/VM/Debugger/Debugger.h"
 #include "hermes/VM/Deserializer.h"
 #include "hermes/VM/GC.h"
+#include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/Handle-inline.h"
 #include "hermes/VM/HandleRootOwner-inline.h"
 #include "hermes/VM/IdentifierTable.h"
@@ -39,6 +40,7 @@
 #include "hermes/VM/StackTracesTree.h"
 #include "hermes/VM/SymbolRegistry.h"
 #include "hermes/VM/TwineChar16.h"
+#include "hermes/VM/VMExperiments.h"
 
 #ifdef HERMESVM_PROFILER_BB
 #include "hermes/VM/Profiler/InlineCacheProfiler.h"
@@ -94,22 +96,6 @@ class JSArray;
 /// number of arguments without checking.
 static const unsigned STACK_RESERVE = 32;
 
-/// List of active experiments, corresponding to getVMExperimentFlags().
-namespace experiments {
-enum {
-  Default = 0,
-  MAdviseSequential = 1 << 2,
-  MAdviseRandom = 1 << 3,
-  MAdviseStringsSequential = 1 << 4,
-  MAdviseStringsRandom = 1 << 5,
-  MAdviseStringsWillNeed = 1 << 6,
-  VerifyBytecodeChecksum = 1 << 7,
-  IgnoreMemoryWarnings = 1 << 9,
-};
-/// Set of flags for active VM experiments.
-using VMExperimentFlags = uint32_t;
-} // namespace experiments
-
 /// Type used to assign object unique integer identifiers.
 using ObjectID = uint32_t;
 
@@ -139,13 +125,23 @@ class Runtime : public HandleRootOwner,
   /// collection to mark additional GC roots that may not be known to the
   /// Runtime.
   void addCustomRootsFunction(
-      std::function<void(GC *, RootAndSlotAcceptor &)> markRootsFn);
+      std::function<void(GC *, RootAcceptor &)> markRootsFn);
 
   /// Add a custom function that will be executed sometime during garbage
   /// collection to mark additional weak GC roots that may not be known to the
   /// Runtime.
   void addCustomWeakRootsFunction(
       std::function<void(GC *, WeakRefAcceptor &)> markRootsFn);
+
+  /// Add a custom function that will be executed when a heap snapshot is taken,
+  /// to add any extra nodes.
+  /// \param nodes Use snap.beginNode() and snap.endNode() to create nodes in
+  ///   snapshot graph.
+  /// \param edges Use snap.addNamedEdge() or snap.addIndexedEdge() to create
+  ///   edges to the nodes defined in \p nodes.
+  void addCustomSnapshotFunction(
+      std::function<void(HeapSnapshot &)> nodes,
+      std::function<void(HeapSnapshot &)> edges);
 
   /// Make the runtime read from \p env to replay its environment-dependent
   /// behavior.
@@ -194,7 +190,7 @@ class Runtime : public HandleRootOwner,
       RuntimeModuleFlags runtimeModuleFlags,
       llvh::StringRef sourceURL,
       Handle<Environment> environment) {
-    heap_.runtimeWillExecute();
+    getHeap().runtimeWillExecute();
     return runBytecode(
         std::move(bytecode),
         runtimeModuleFlags,
@@ -209,23 +205,14 @@ class Runtime : public HandleRootOwner,
       RuntimeModuleFlags flags = {});
 
   /// Runs the internal bytecode. This is called once during initialization.
-  void runInternalBytecode();
+  /// \return the completion value of internal bytecode IIFE.
+  Handle<JSObject> runInternalBytecode();
 
   /// A convenience function to print an exception to a stream.
   void printException(llvh::raw_ostream &os, Handle<> valueHandle);
 
   /// @name Heap management
   /// @{
-
-  /// Allocate a new cell of the specified size \p size.
-  /// If necessary perform a GC cycle, which may potentially move allocated
-  /// objects.
-  /// The \p fixedSize template argument indicates whether the allocation is for
-  /// a fixed-size cell, which can assumed to be small if true.  The
-  /// \p hasFinalizer template argument indicates whether the object
-  /// being allocated will have a finalizer.
-  template <bool fixedSize = true, HasFinalizer hasFinalizer = HasFinalizer::No>
-  void *alloc(uint32_t size);
 
   /// Create a fixed size object of type T.
   /// If necessary perform a GC cycle, which may potentially move
@@ -236,7 +223,7 @@ class Runtime : public HandleRootOwner,
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
       class... Args>
-  T *makeAFixed(Args &&... args);
+  T *makeAFixed(Args &&...args);
 
   /// Create a variable size object of type T and size \p size.
   /// If necessary perform a GC cycle, which may potentially move
@@ -247,7 +234,7 @@ class Runtime : public HandleRootOwner,
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
       class... Args>
-  T *makeAVariable(uint32_t size, Args &&... args);
+  T *makeAVariable(uint32_t size, Args &&...args);
 
   /// Used as a placeholder for places where we should be checking for OOM
   /// but aren't yet.
@@ -266,7 +253,7 @@ class Runtime : public HandleRootOwner,
 
   /// Force a garbage collection cycle.
   void collect(std::string cause) {
-    heap_.collect(std::move(cause));
+    getHeap().collect(std::move(cause));
   }
 
   /// Potentially move the heap if handle sanitization is on.
@@ -312,15 +299,19 @@ class Runtime : public HandleRootOwner,
   FormatSymbolID formatSymbolID(SymbolID id);
 
   GC &getHeap() {
+#ifdef HERMESVM_GC_RUNTIME
+    return *heap_;
+#else
     return heap_;
+#endif
   }
 
   /// @}
 
-  /// Return a pointer to a builtin native function builtin identified by id.
+  /// Return a pointer to a callable builtin identified by id.
   /// Unfortunately we can't use the enum here, since we don't want to include
   /// the builtins header header.
-  inline NativeFunction *getBuiltinNativeFunction(unsigned builtinMethodID);
+  inline Callable *getBuiltinCallable(unsigned builtinMethodID);
 
   IdentifierTable &getIdentifierTable() {
     return identifierTable_;
@@ -677,12 +668,14 @@ class Runtime : public HandleRootOwner,
   RegExpMatch regExpLastMatch{};
 
   /// Whether to allow eval and Function ctor.
-  const bool enableEval;
+  const bool enableEval : 1;
   /// Whether to verify the IR being generated by eval and the Function ctor.
-  const bool verifyEvalIR;
+  const bool verifyEvalIR : 1;
   /// Whether to optimize the code in the string passed to eval and the Function
   /// ctor.
-  const bool optimizedEval;
+  const bool optimizedEval : 1;
+  /// Whether to emit async break check instructions in eval().
+  const bool asyncBreakCheckInEval : 1;
 
 #ifdef HERMESVM_PROFILER_OPCODE
   /// Track the frequency of each opcode in the interpreter.
@@ -859,6 +852,16 @@ class Runtime : public HandleRootOwner,
   CallResult<HermesValue> interpretFunctionImpl(CodeBlock *newCodeBlock);
 
  private:
+#ifdef HERMESVM_GC_RUNTIME
+  /// Create a pointer to a heap instance for this runtime. Used during
+  /// construction.
+  static std::unique_ptr<GC> makeHeap(
+      Runtime *runtime,
+      GCBase::HeapKind heapKind,
+      std::shared_ptr<StorageProvider> provider,
+      const RuntimeConfig &runtimeConfig);
+#endif
+
   /// Called by the GC at the beginning of a collection. This method informs the
   /// GC of all runtime roots.  The \p markLongLived argument
   /// indicates whether root data structures that contain only
@@ -938,19 +941,27 @@ class Runtime : public HandleRootOwner,
   /// \param object is the object where the builtin method is defined as a
   ///   property.
   /// \param methodID is the SymbolID for the name of the method.
-  using ForEachBuiltinCallback = ExecutionStatus(
+  using ForEachPublicNativeBuiltinCallback = ExecutionStatus(
       unsigned methodIndex,
       Predefined::Str objectName,
       Handle<JSObject> &object,
       SymbolID methodID);
 
-  /// Enumerate the builtin methods, and invoke the callback on each method.
-  ExecutionStatus forEachBuiltin(
-      const std::function<ForEachBuiltinCallback> &callback);
+  /// Enumerate all public native builtin methods, and invoke the callback on
+  /// each method.
+  ExecutionStatus forEachPublicNativeBuiltin(
+      const std::function<ForEachPublicNativeBuiltinCallback> &callback);
 
-  /// Populate the builtins table by extracting the values from the global
-  /// object.
-  void initBuiltinTable();
+  /// Populate native builtins into the builtins table.
+  /// Public native builtins are added by extracting the values from the global
+  /// object. Private native builtins are added by \c createHermesBuiltins().
+  void initNativeBuiltins();
+
+  /// Populate JS builtins into the builtins table, after verifying they do
+  /// exist from the result of running internal bytecode.
+  void initJSBuiltins(
+      llvh::MutableArrayRef<Callable *> builtins,
+      Handle<JSObject> jsBuiltins);
 
   /// Walk all the builtin methods, assert that they are not overridden. If they
   /// are, throw an exception. This will be called at most once, before freezing
@@ -1000,11 +1011,16 @@ class Runtime : public HandleRootOwner,
 #endif
 
  private:
+#ifdef HERMESVM_GC_RUNTIME
+  std::unique_ptr<GC> heap_;
+#else
   GC heap_;
-  std::vector<std::function<void(GC *, RootAndSlotAcceptor &)>>
-      customMarkRootFuncs_;
+#endif
+  std::vector<std::function<void(GC *, RootAcceptor &)>> customMarkRootFuncs_;
   std::vector<std::function<void(GC *, WeakRefAcceptor &)>>
       customMarkWeakRootFuncs_;
+  std::vector<std::function<void(HeapSnapshot &)>> customSnapshotNodeFuncs_;
+  std::vector<std::function<void(HeapSnapshot &)>> customSnapshotEdgeFuncs_;
 
   /// All state related to JIT compilation.
   JITContext jitContext_;
@@ -1151,8 +1167,8 @@ class Runtime : public HandleRootOwner,
   /// to be scanned as roots in young-gen collections.
   std::vector<PinnedHermesValue> charStrings_{};
 
-  /// Pointers to native implementations of builtins.
-  std::vector<NativeFunction *> builtins_{};
+  /// Pointers to callable implementations of builtins.
+  std::vector<Callable *> builtins_{};
 
   /// True if the builtins are all frozen (non-writable, non-configurable).
   bool builtinsFrozen_{false};
@@ -1171,9 +1187,9 @@ class Runtime : public HandleRootOwner,
   /// This key will be unregistered in the destructor.
   const CrashManager::CallbackKey crashCallbackKey_;
 
-  /// Keep a strong reference to the SamplingProfiler so that
-  /// we are sure it's safe to unregisterRuntime in destructor.
-  std::shared_ptr<SamplingProfiler> samplingProfiler_;
+  /// Sampling profiler data for this runtime. The ctor/dtor of SamplingProfiler
+  /// will automatically register/unregister this runtime from profiling.
+  std::unique_ptr<SamplingProfiler> samplingProfiler_;
 
   /// Pointer to the code coverage profiler.
   const std::unique_ptr<CodeCoverageProfiler> codeCoverageProfiler_;
@@ -1629,7 +1645,7 @@ class NoAllocScope {
 // Runtime inline methods.
 
 inline void Runtime::addCustomRootsFunction(
-    std::function<void(GC *, RootAndSlotAcceptor &)> markRootsFn) {
+    std::function<void(GC *, RootAcceptor &)> markRootsFn) {
   customMarkRootFuncs_.emplace_back(std::move(markRootsFn));
 }
 
@@ -1638,28 +1654,11 @@ inline void Runtime::addCustomWeakRootsFunction(
   customMarkWeakRootFuncs_.emplace_back(std::move(markRootsFn));
 }
 
-template <
-    typename T,
-    HasFinalizer hasFinalizer,
-    LongLived longLived,
-    class... Args>
-T *Runtime::makeAFixed(Args &&... args) {
-#if !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && !defined(NDEBUG)
-  // If allocation location tracking is enabled we implicitly call
-  // getCurrentIP() via newAlloc() below. Even if this isn't enabled, we
-  // always call getCurrentIP() in a debug build as this has the effect of
-  // asserting the IP is correctly set (not invalidated) at this point. This
-  // allows us to leverage our whole test-suite to find missing cases of
-  // CAPTURE_IP* macros in the interpreter loop.
-  (void)getCurrentIP();
-#endif
-  const uint32_t sz = cellSize<T>();
-  T *ptr = heap_.makeA<T, true /* fixedSize */, hasFinalizer, longLived>(
-      sz, std::forward<Args>(args)...);
-#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-  heap_.getAllocationLocationTracker().newAlloc(ptr, heapAlignSize(sz));
-#endif
-  return ptr;
+inline void Runtime::addCustomSnapshotFunction(
+    std::function<void(HeapSnapshot &)> nodes,
+    std::function<void(HeapSnapshot &)> edges) {
+  customSnapshotNodeFuncs_.emplace_back(std::move(nodes));
+  customSnapshotEdgeFuncs_.emplace_back(std::move(edges));
 }
 
 template <
@@ -1667,22 +1666,33 @@ template <
     HasFinalizer hasFinalizer,
     LongLived longLived,
     class... Args>
-T *Runtime::makeAVariable(uint32_t size, Args &&... args) {
-#if !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && !defined(NDEBUG)
-  // If allocation location tracking is enabled we implicitly call
-  // getCurrentIP() via newAlloc() below. Even if this isn't enabled, we
-  // always call getCurrentIP() in a debug build as this has the effect of
+T *Runtime::makeAFixed(Args &&...args) {
+#ifndef NDEBUG
+  // We always call getCurrentIP() in a debug build as this has the effect of
   // asserting the IP is correctly set (not invalidated) at this point. This
   // allows us to leverage our whole test-suite to find missing cases of
   // CAPTURE_IP* macros in the interpreter loop.
   (void)getCurrentIP();
 #endif
-  T *ptr = heap_.makeA<T, false /* fixedSize */, hasFinalizer, longLived>(
-      size, std::forward<Args>(args)...);
-#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-  heap_.getAllocationLocationTracker().newAlloc(ptr, heapAlignSize(size));
+  return getHeap().makeAFixed<T, hasFinalizer, longLived>(
+      std::forward<Args>(args)...);
+}
+
+template <
+    typename T,
+    HasFinalizer hasFinalizer,
+    LongLived longLived,
+    class... Args>
+T *Runtime::makeAVariable(uint32_t size, Args &&...args) {
+#ifndef NDEBUG
+  // We always call getCurrentIP() in a debug build as this has the effect of
+  // asserting the IP is correctly set (not invalidated) at this point. This
+  // allows us to leverage our whole test-suite to find missing cases of
+  // CAPTURE_IP* macros in the interpreter loop.
+  (void)getCurrentIP();
 #endif
-  return ptr;
+  return getHeap().makeAVariable<T, hasFinalizer, longLived>(
+      size, std::forward<Args>(args)...);
 }
 
 template <typename T>
@@ -1702,7 +1712,7 @@ inline void Runtime::ignoreAllocationFailure(ExecutionStatus status) {
 
 inline void Runtime::ttiReached() {
   // Currently, only the heap_ behavior can change at TTI.
-  heap_.ttiReached();
+  getHeap().ttiReached();
 }
 
 template <class T>
@@ -1819,14 +1829,15 @@ inline StackFramePtr Runtime::restoreStackAndPreviousFrame() {
 }
 
 inline llvh::iterator_range<StackFrameIterator> Runtime::getStackFrames() {
-  return {StackFrameIterator{currentFrame_},
-          StackFrameIterator{registerStackEnd_}};
+  return {
+      StackFrameIterator{currentFrame_}, StackFrameIterator{registerStackEnd_}};
 };
 
 inline llvh::iterator_range<ConstStackFrameIterator> Runtime::getStackFrames()
     const {
-  return {ConstStackFrameIterator{currentFrame_},
-          ConstStackFrameIterator{registerStackEnd_}};
+  return {
+      ConstStackFrameIterator{currentFrame_},
+      ConstStackFrameIterator{registerStackEnd_}};
 };
 
 inline ExecutionStatus Runtime::setThrownValue(HermesValue value) {

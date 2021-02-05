@@ -100,11 +100,12 @@ const VTable HiddenClass::vt{
     nullptr,
     nullptr,
     nullptr,
-    VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
-                                 HiddenClass::_snapshotNameImpl,
-                                 HiddenClass::_snapshotAddEdgesImpl,
-                                 HiddenClass::_snapshotAddNodesImpl,
-                                 nullptr}};
+    VTable::HeapSnapshotMetadata{
+        HeapSnapshot::NodeType::Object,
+        HiddenClass::_snapshotNameImpl,
+        HiddenClass::_snapshotAddEdgesImpl,
+        HiddenClass::_snapshotAddNodesImpl,
+        nullptr}};
 
 void HiddenClassBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const HiddenClass *>(cell);
@@ -310,8 +311,8 @@ void HiddenClass::forEachPropertyNoAlloc(
     if (curr->symbolID_.isValid()) {
       properties.emplace_back(
           curr->symbolID_,
-          NamedPropertyDescriptor{curr->propertyFlags_,
-                                  curr->numProperties_ - 1});
+          NamedPropertyDescriptor{
+              curr->propertyFlags_, curr->numProperties_ - 1});
     }
     curr = curr->parent_.get(base);
   }
@@ -400,8 +401,8 @@ llvh::Optional<NamedPropertyDescriptor> HiddenClass::findPropertyNoAlloc(
     // Else, no property map exists. Check the current hidden class before
     // moving up.
     if (curr->symbolID_ == name) {
-      return NamedPropertyDescriptor{curr->propertyFlags_,
-                                     curr->numProperties_ - 1};
+      return NamedPropertyDescriptor{
+          curr->propertyFlags_, curr->numProperties_ - 1};
     }
   }
   // Reached the root hidden class without finding a property map or the
@@ -1023,8 +1024,8 @@ void HiddenClass::stealPropertyMapFromParent(
         "new prop transition");
 
     // Create a descriptor for our property.
-    NamedPropertyDescriptor desc{self->propertyFlags_,
-                                 self->numProperties_ - 1};
+    NamedPropertyDescriptor desc{
+        self->propertyFlags_, self->numProperties_ - 1};
     // Return to handle mode to add the property.
     noAlloc.release();
     addToPropertyMap(selfHandle, runtime, selfHandle->symbolID_, desc);

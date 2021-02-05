@@ -610,9 +610,10 @@ bool bracketMatchesChar(
   // affect which character class a character is in (i.e. a character doesn't
   // become a digit after uppercasing).
   if (insn->positiveCharClasses || insn->negativeCharClasses) {
-    for (auto charClass : {CharacterClass::Digits,
-                           CharacterClass::Spaces,
-                           CharacterClass::Words}) {
+    for (auto charClass :
+         {CharacterClass::Digits,
+          CharacterClass::Spaces,
+          CharacterClass::Words}) {
       if ((insn->positiveCharClasses & charClass) &&
           traits.characterHasType(ch, charClass))
         return true ^ insn->negate;
@@ -869,8 +870,9 @@ bool Context<Traits>::matchWidth1Loop(
   // If min == max (e.g. /a{3}/) then no backtracking is possible. If min < max,
   // backtracking is possible and we need to add a backtracking instruction.
   if (minMatch < matched) {
-    BacktrackInsn backtrack{insn->greedy ? BacktrackOp::GreedyWidth1Loop
-                                         : BacktrackOp::NongreedyWidth1Loop};
+    BacktrackInsn backtrack{
+        insn->greedy ? BacktrackOp::GreedyWidth1Loop
+                     : BacktrackOp::NongreedyWidth1Loop};
     backtrack.width1Loop.continuation = insn->notTakenTarget;
     backtrack.width1Loop.min = minPos;
     backtrack.width1Loop.max = maxPos;
@@ -1157,12 +1159,12 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           if (!pushBacktrack(
                   backtrackStack,
                   BacktrackInsn::makeSetCaptureGroup(
-                      insn->mexp - 1, {kNotMatched, kNotMatched}))) {
+                      insn->mexp, {kNotMatched, kNotMatched}))) {
             return nullptr;
           }
           // When tracking backwards (in a lookbehind assertion) we traverse our
           // input backwards, so set the end before the start.
-          auto &range = s->getCapturedRange(insn->mexp - 1);
+          auto &range = s->getCapturedRange(insn->mexp);
           if (c.forwards()) {
             range.start = c.offsetFromLeft();
           } else {
@@ -1174,7 +1176,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
 
         case Opcode::EndMarkedSubexpression: {
           const auto *insn = llvh::cast<EndMarkedSubexpressionInsn>(base);
-          auto &range = s->getCapturedRange(insn->mexp - 1);
+          auto &range = s->getCapturedRange(insn->mexp);
           if (c.forwards()) {
             assert(
                 range.start != kNotMatched && "Capture group was not entered");
@@ -1193,7 +1195,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           const auto insn = llvh::cast<BackRefInsn>(base);
           // a. Let cap be x's captures List.
           // b. Let s be cap[n].
-          CapturedRange cr = s->getCapturedRange(insn->mexp - 1);
+          CapturedRange cr = s->getCapturedRange(insn->mexp);
 
           // c. If s is undefined, return c(x).
           // Note we have to check both cr.start and cr.end here. If we are

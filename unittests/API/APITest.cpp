@@ -534,6 +534,14 @@ TEST_F(HermesRuntimeTestWithDisableGenerator, WithDisableGenerator) {
     FAIL() << "Expected JSIException";
   } catch (const facebook::jsi::JSIException &err) {
   }
+
+  // async function depends on generator.
+  try {
+    rt->evaluateJavaScript(
+        std::make_unique<StringBuffer>("async function foo() {}"), "");
+    FAIL() << "Expected JSIException";
+  } catch (const facebook::jsi::JSIException &err) {
+  }
 }
 
 } // namespace

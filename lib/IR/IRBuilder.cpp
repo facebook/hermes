@@ -127,6 +127,27 @@ Function *IRBuilder::createFunction(
       insertBefore);
 }
 
+AsyncFunction *IRBuilder::createAsyncFunction(
+    Identifier OriginalName,
+    Function::DefinitionKind definitionKind,
+    bool strictMode,
+    SMRange sourceRange,
+    Function *insertBefore) {
+  if (!OriginalName.isValid()) {
+    // Function must have a name, even it's empty.
+    // Eventually we will give it a properly inferred name.
+    OriginalName = createIdentifier("");
+  }
+  return new AsyncFunction(
+      M,
+      OriginalName,
+      definitionKind,
+      strictMode,
+      /* isGlobal */ false,
+      sourceRange,
+      insertBefore);
+}
+
 GlobalObjectProperty *IRBuilder::createGlobalObjectProperty(
     Identifier name,
     bool declared) {
@@ -189,6 +210,10 @@ LiteralString *IRBuilder::getLiteralString(Identifier value) {
 
 LiteralBool *IRBuilder::getLiteralBool(bool value) {
   return M->getLiteralBool(value);
+}
+
+LiteralEmpty *IRBuilder::getLiteralEmpty() {
+  return M->getLiteralEmpty();
 }
 
 LiteralUndefined *IRBuilder::getLiteralUndefined() {
@@ -550,9 +575,8 @@ GetNewTargetInst *IRBuilder::createGetNewTargetInst() {
   return inst;
 }
 
-ThrowIfUndefinedInst *IRBuilder::createThrowIfUndefinedInst(
-    Value *checkedValue) {
-  auto *inst = new ThrowIfUndefinedInst(checkedValue);
+ThrowIfEmptyInst *IRBuilder::createThrowIfEmptyInst(Value *checkedValue) {
+  auto *inst = new ThrowIfEmptyInst(checkedValue);
   insert(inst);
   return inst;
 }
@@ -824,6 +848,13 @@ CallBuiltinInst *IRBuilder::createCallBuiltinInst(
     ArrayRef<Value *> arguments) {
   auto *inst = new CallBuiltinInst(
       getLiteralNumber(builtinIndex), getLiteralUndefined(), arguments);
+  insert(inst);
+  return inst;
+}
+
+GetBuiltinClosureInst *IRBuilder::createGetBuiltinClosureInst(
+    BuiltinMethod::Enum builtinIndex) {
+  auto *inst = new GetBuiltinClosureInst(getLiteralNumber(builtinIndex));
   insert(inst);
   return inst;
 }

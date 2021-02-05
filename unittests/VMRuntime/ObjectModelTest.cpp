@@ -9,6 +9,7 @@
 
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
 #include "hermes/VM/JSDate.h"
+#include "hermes/VM/PropertyAccessor.h"
 
 using namespace hermes::hbc;
 using namespace hermes::vm;

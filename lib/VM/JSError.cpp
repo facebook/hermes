@@ -11,6 +11,7 @@
 #include "hermes/Support/OptValue.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/Callable.h"
+#include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringView.h"

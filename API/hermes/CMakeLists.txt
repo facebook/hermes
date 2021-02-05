@@ -129,6 +129,16 @@ if(APPLE AND HERMES_BUILD_APPLE_FRAMEWORK)
     target_compile_options(libhermes PUBLIC "-fembed-bitcode")
     target_link_libraries(libhermes PUBLIC "-fembed-bitcode")
   endif()
+  # Define the deployment target in the frameworks metadata
+  if(HERMES_APPLE_TARGET_PLATFORM MATCHES "iphone")
+    add_custom_command(TARGET libhermes POST_BUILD
+      COMMAND /usr/libexec/PlistBuddy -c "Add :MinimumOSVersion string ${CMAKE_OSX_DEPLOYMENT_TARGET}" $<TARGET_FILE_DIR:libhermes>/Info.plist
+    )
+  elseif(HERMES_APPLE_TARGET_PLATFORM MATCHES "macos")
+    add_custom_command(TARGET libhermes POST_BUILD
+      COMMAND /usr/libexec/PlistBuddy -c "Add :LSMinimumSystemVersion string ${CMAKE_OSX_DEPLOYMENT_TARGET}" $<TARGET_FILE_DIR:libhermes>/Resources/Info.plist
+    )
+  endif()
 endif()
 
 install(TARGETS libhermes

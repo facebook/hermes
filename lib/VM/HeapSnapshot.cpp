@@ -344,24 +344,11 @@ void HeapSnapshot::emitAllocationTraceInfo() {
     return;
   }
 
-  struct FuncHashMapInfo {
-    static StackTracesTreeNode::SourceLoc getEmptyKey() {
-      return {SIZE_MAX, 0, -1, -1};
-    }
-    static inline StackTracesTreeNode::SourceLoc getTombstoneKey() {
-      return {SIZE_MAX - 1, 0, -1, -1};
-    }
-    static unsigned getHashValue(const StackTracesTreeNode::SourceLoc &v) {
-      return v.hash();
-    }
-    static bool isEqual(
-        const StackTracesTreeNode::SourceLoc &l,
-        const StackTracesTreeNode::SourceLoc &r) {
-      return l == r;
-    }
-  };
-  llvh::DenseMap<StackTracesTreeNode::SourceLoc, size_t, FuncHashMapInfo>
-      funcHashToFuncIdxMap;
+  llvh::DenseMap<
+      StackTracesTreeNode::SourceLoc,
+      size_t,
+      StackTracesTreeNode::SourceLocMapInfo>
+      sourceLocToFuncIdxMap;
   size_t nextFunctionIdx = 0;
 
   std::stack<
@@ -374,21 +361,20 @@ void HeapSnapshot::emitAllocationTraceInfo() {
   while (!nodeStack.empty()) {
     auto curNode = nodeStack.top();
     nodeStack.pop();
-    auto funcHashToFuncIdxMapEntry =
-        funcHashToFuncIdxMap.find(curNode->sourceLoc);
-    auto functionId = nextFunctionIdx;
-    if (funcHashToFuncIdxMapEntry == funcHashToFuncIdxMap.end()) {
-      funcHashToFuncIdxMap.try_emplace(curNode->sourceLoc, nextFunctionIdx++);
-    } else {
-      functionId = funcHashToFuncIdxMapEntry->second;
+    auto entry = sourceLocToFuncIdxMap.find(curNode->sourceLoc);
+    if (entry == sourceLocToFuncIdxMap.end()) {
+      const auto functionIdx = nextFunctionIdx++;
+      sourceLocToFuncIdxMap.try_emplace(curNode->sourceLoc, functionIdx);
+      // function_id needs to match the zero-based index of this function in the
+      // list.
+      json_.emitValue(functionIdx); // "function_id"
+      json_.emitValue(curNode->name); // "name"
+      json_.emitValue(curNode->sourceLoc.scriptName); // "script_name"
+      json_.emitValue(curNode->sourceLoc.scriptID); // "script_id"
+      // These should be emitted as 1-based, not 0-based like locations.
+      json_.emitValue(curNode->sourceLoc.lineNo); // "line"
+      json_.emitValue(curNode->sourceLoc.columnNo); // "column"
     }
-    json_.emitValue(functionId); // "function_id"
-    json_.emitValue(curNode->name); // "name"
-    json_.emitValue(curNode->sourceLoc.scriptName); // "script_name"
-    json_.emitValue(curNode->sourceLoc.scriptID); // "script_id"
-    // These should be emitted as 1-based, not 0-based like locations.
-    json_.emitValue(curNode->sourceLoc.lineNo); // "line"
-    json_.emitValue(curNode->sourceLoc.columnNo); // "column"
     for (auto child : curNode->getChildren()) {
       nodeStack.push(child);
     }
@@ -405,10 +391,12 @@ void HeapSnapshot::emitAllocationTraceInfo() {
       continue;
     }
     json_.emitValue(curNode->id);
-    auto sourceLocIdxIt = funcHashToFuncIdxMap.find(curNode->sourceLoc);
+    auto sourceLocIdxIt = sourceLocToFuncIdxMap.find(curNode->sourceLoc);
     assert(
-        sourceLocIdxIt != funcHashToFuncIdxMap.end() &&
+        sourceLocIdxIt != sourceLocToFuncIdxMap.end() &&
         "Could not find trace function info ID for sourceLoc");
+    // This index must correspond to the "function_id" emitted in the
+    // "trace_function_infos" section.
     json_.emitValue(sourceLocIdxIt->second); // "function_info_index"
     json_.emitValue(traceNodeStats_[curNode->id].count); // "count"
     json_.emitValue(traceNodeStats_[curNode->id].size); // "size"

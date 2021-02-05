@@ -42,12 +42,12 @@ struct GCLazySegmentNCTest : public ::testing::Test {
 using GCLazySegmentNCDeathTest = GCLazySegmentNCTest;
 
 constexpr size_t kHeapSizeHint =
-    GenGCHeapSegment::maxSize() * GC::kYoungGenFractionDenom;
+    GenGCHeapSegment::maxSize() * GenGC::kYoungGenFractionDenom;
 
 const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSizeHint);
 
 constexpr size_t kHeapVA =
-    AlignedStorage::size() * (GC::kYoungGenFractionDenom);
+    AlignedStorage::size() * (GenGC::kYoungGenFractionDenom);
 
 constexpr size_t kHeapVALimited = kHeapVA / 2 + AlignedStorage::size() - 1;
 
@@ -94,6 +94,7 @@ TEST_F(GCLazySegmentNCTest, YoungGenNoMaterialize) {
   auto runtime =
       DummyRuntime::create(getMetadataTable(), kGCConfig, std::move(provider));
   DummyRuntime &rt = *runtime;
+  GenGC &gc = rt.getHeap();
 
   std::deque<GCCell *> roots;
 
@@ -107,16 +108,16 @@ TEST_F(GCLazySegmentNCTest, YoungGenNoMaterialize) {
   // up space.
   rt.pointerRoots.erase(rt.pointerRoots.begin());
 
-  auto fullGCBefore = rt.gc.numFullGCs();
-  auto youngGCBefore = rt.gc.numYoungGCs();
+  auto fullGCBefore = gc.numFullGCs();
+  auto youngGCBefore = gc.numYoungGCs();
 
   // Attempt to allocate a new cell in the young gen.  There is no space, and
   // the old gen has all its materialized segments filled, so we should attempt
   // a full collection.
   SegmentCell::create(rt);
 
-  auto fullGCAfter = rt.gc.numFullGCs();
-  auto youngGCAfter = rt.gc.numYoungGCs();
+  auto fullGCAfter = gc.numFullGCs();
+  auto youngGCAfter = gc.numYoungGCs();
 
   EXPECT_EQ(youngGCBefore, youngGCAfter);
   EXPECT_EQ(fullGCBefore + 1, fullGCAfter);
@@ -136,6 +137,7 @@ TEST_F(GCLazySegmentNCTest, OldGenAllocMaterialize) {
   auto runtime =
       DummyRuntime::create(getMetadataTable(), config, std::move(provider));
   DummyRuntime &rt = *runtime;
+  GenGC &gc = rt.getHeap();
 
   std::deque<GCCell *> roots;
 
@@ -148,13 +150,13 @@ TEST_F(GCLazySegmentNCTest, OldGenAllocMaterialize) {
   }
 
   ASSERT_EQ(N + 1, counter.numSucceededAllocs());
-  ASSERT_EQ(0, rt.gc.numFullGCs());
+  ASSERT_EQ(0, gc.numFullGCs());
 
   // Trigger a full collection, resize and one new segment to be materialised.
   roots.push_back(SegmentCell::createLongLived(rt));
   rt.pointerRoots.push_back(&roots.back());
 
-  EXPECT_EQ(1, rt.gc.numFullGCs());
+  EXPECT_EQ(1, gc.numFullGCs());
   EXPECT_EQ(N + 2, counter.numSucceededAllocs());
 }
 
@@ -183,6 +185,7 @@ TEST_F(GCLazySegmentNCDeathTest, FailToMaterializeContinue) {
   auto runtime =
       DummyRuntime::create(getMetadataTable(), kGCConfig, std::move(provider));
   DummyRuntime &rt = *runtime;
+  GenGC &gc = rt.getHeap();
 
   std::deque<GCCell *> roots;
 
@@ -196,16 +199,16 @@ TEST_F(GCLazySegmentNCDeathTest, FailToMaterializeContinue) {
   rt.pointerRoots.pop_back();
   roots.pop_back();
 
-  ASSERT_EQ(0, rt.gc.numFailedSegmentMaterializations());
-  ASSERT_EQ(0, rt.gc.numFullGCs());
+  ASSERT_EQ(0, gc.numFailedSegmentMaterializations());
+  ASSERT_EQ(0, gc.numFullGCs());
 
   SegmentCell::create(rt);
 
   // Allocating a cell caused us to attempt to materialize a segment which
   // should fail.  We should however still be able to continue by making room
   // through a full collection.
-  EXPECT_EQ(1, rt.gc.numFailedSegmentMaterializations());
-  EXPECT_EQ(1, rt.gc.numFullGCs());
+  EXPECT_EQ(1, gc.numFailedSegmentMaterializations());
+  EXPECT_EQ(1, gc.numFullGCs());
 }
 
 } // namespace

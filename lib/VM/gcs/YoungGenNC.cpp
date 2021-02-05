@@ -110,13 +110,13 @@ YoungGen::YoungGen(
 }
 
 void YoungGen::sweepAndInstallForwardingPointers(
-    GC *gc,
+    GenGC *gc,
     SweepResult *sweepResult) {
   activeSegment().sweepAndInstallForwardingPointers(gc, sweepResult);
 }
 
 void YoungGen::updateReferences(
-    GC *gc,
+    GenGC *gc,
     SweepResult::VTablesRemaining &vTables) {
   auto acceptor = getFullMSCUpdateAcceptor(*gc);
 
@@ -176,7 +176,7 @@ void YoungGen::recordLevelAfterCompaction(
 }
 
 #ifdef HERMES_SLOW_DEBUG
-void YoungGen::checkWellFormed(const GC *gc) const {
+void YoungGen::checkWellFormed(const GenGC *gc) const {
   uint64_t extSize = 0;
   activeSegment().checkWellFormed(gc, &extSize);
   assert(extSize == externalMemory());
@@ -604,13 +604,12 @@ void YoungGen::updateTrackers() {
     GCCell *cell = reinterpret_cast<GCCell *>(ptr);
     if (cell->hasMarkedForwardingPointer()) {
       auto *fptr = cell->getMarkedForwardingPointer();
-      if (allocationLocationTracker) {
-        gc_->getAllocationLocationTracker().moveAlloc(cell, fptr);
-      }
+      const auto sz = reinterpret_cast<GCCell *>(fptr)->getAllocatedSize();
       if (idTracker) {
-        gc_->getIDTracker().moveObject(cell, fptr);
+        // YG promotions never change size.
+        gc_->moveObject(cell, sz, fptr, sz);
       }
-      ptr += reinterpret_cast<GCCell *>(fptr)->getAllocatedSize();
+      ptr += sz;
     } else {
       const auto sz = cell->getAllocatedSize();
       ptr += sz;
@@ -620,7 +619,7 @@ void YoungGen::updateTrackers() {
         gc_->getAllocationLocationTracker().freeAlloc(cell, sz);
       }
       if (idTracker) {
-        gc_->getIDTracker().untrackObject(cell);
+        gc_->untrackObject(cell);
       }
     }
   }
@@ -690,7 +689,7 @@ void YoungGen::forObjsAllocatedSinceGC(
 }
 #endif
 
-void YoungGen::moveHeap(GC *gc, ptrdiff_t moveHeapDelta) {
+void YoungGen::moveHeap(GenGC *gc, ptrdiff_t moveHeapDelta) {
 #if 0 // TODO (T25686322) Non-contiguous heap does not support moving the heap.
   ContigAllocGCSpace::moveHeap(gc, moveHeapDelta);
 #endif

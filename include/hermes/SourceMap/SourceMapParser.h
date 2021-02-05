@@ -21,13 +21,17 @@ class SourceMapParser {
  public:
   /// Parse input \p sourceMap and return parsed SourceMap.
   /// On failure if malformed, prints an error message and returns nullptr.
-  static std::unique_ptr<SourceMap> parse(llvh::MemoryBufferRef sourceMap);
+  static std::unique_ptr<SourceMap> parse(
+      llvh::MemoryBufferRef sourceMap,
+      SourceErrorManager &sm);
 
   /// Parse input \p sourceMapContent and return parsed SourceMap.
   /// Set the filename of the map file to "<source map>".
   /// On failure if malformed, prints an error message and returns nullptr.
-  static std::unique_ptr<SourceMap> parse(llvh::StringRef sourceMapContent) {
-    return parse(llvh::MemoryBufferRef(sourceMapContent, "<source map>"));
+  static std::unique_ptr<SourceMap> parse(
+      llvh::StringRef sourceMapContent,
+      SourceErrorManager &sm) {
+    return parse(llvh::MemoryBufferRef(sourceMapContent, "<source map>"), sm);
   }
 
  private:

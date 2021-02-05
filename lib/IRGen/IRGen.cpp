@@ -64,7 +64,10 @@ std::pair<Function *, Function *> generateLazyFunctionIR(
   parser.setStrictMode(lazyData->strictMode);
 
   auto parsed = parser.parseLazyFunction(
-      (ESTree::NodeKind)lazyData->nodeKind, sourceRange.Start);
+      (ESTree::NodeKind)lazyData->nodeKind,
+      lazyData->paramYield,
+      lazyData->paramAwait,
+      sourceRange.Start);
 
   // In case of error, generate a function that just throws a SyntaxError.
   if (!parsed ||

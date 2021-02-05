@@ -108,8 +108,9 @@ class SourceMapGenerator {
   SourceMapGenerator mergedWithInputSourceMaps() const;
 
   /// \return the input source map segment for \p seg if the input source map
-  /// exists and has a valid location for \p seg, else return llvh::None.
-  llvh::Optional<std::pair<SourceMap::Segment, const SourceMap *>>
+  /// exists and has a valid location for \p seg. The input segment may be
+  /// llvh::None, in which case the input source map may be nullptr.
+  std::pair<llvh::Optional<SourceMap::Segment>, const SourceMap *>
   getInputSegmentForSegment(const SourceMap::Segment &seg) const;
 
   bool hasSourcesMetadata() const;

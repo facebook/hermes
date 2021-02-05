@@ -11,6 +11,7 @@
 #include "hermes/Public/GCConfig.h"
 #include "hermes/VM/GCBase.h"
 #include "hermes/VM/GCCell.h"
+#include "hermes/VM/VMExperiments.h"
 
 #include "llvh/ADT/DenseMap.h"
 #include "llvh/ADT/DenseSet.h"
@@ -150,7 +151,8 @@ class MallocGC final : public GCBase {
       PointerBase *pointerBase,
       const GCConfig &gcConfig,
       std::shared_ptr<CrashManager> crashMgr,
-      std::shared_ptr<StorageProvider> provider);
+      std::shared_ptr<StorageProvider> provider,
+      experiments::VMExperimentFlags vmExperimentFlags);
 
   ~MallocGC();
 
@@ -169,18 +171,18 @@ class MallocGC final : public GCBase {
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::Yes,
       class... Args>
-  inline T *makeA(uint32_t size, Args &&... args);
+  inline T *makeA(uint32_t size, Args &&...args);
 
   /// Returns whether an external allocation of the given \p size fits
   /// within the maximum heap size.  (Note that this does not guarantee that the
   /// allocation will "succeed" -- the size plus the used() of the heap may
   /// still exceed the max heap size.  But if it fails, the allocation can never
   /// succeed.)
-  bool canAllocExternalMemory(uint32_t size);
+  bool canAllocExternalMemory(uint32_t size) override;
 
   /// Collect all of the dead objects and symbols in the heap. Also invalidate
   /// weak pointers that point to dead objects.
-  void collect(std::string cause);
+  void collect(std::string cause, bool canEffectiveOOM = false) override;
 
   static constexpr uint32_t minAllocationSize() {
     // MallocGC imposes no limit on individual allocations.
@@ -204,15 +206,16 @@ class MallocGC final : public GCBase {
 
 #ifndef NDEBUG
   /// See comment in GCBase.
-  bool calledByGC() const {
-    return inGC_.load(std::memory_order_seq_cst);
+  bool calledByGC() const override {
+    return inGC();
   }
 
   /// \return true iff the pointer \p p is controlled by this GC.
-  bool validPointer(const void *p) const;
+  bool validPointer(const void *p) const override;
+  bool dbgContains(const void *p) const override;
 
   /// Returns true if \p cell is the most-recently allocated finalizable object.
-  bool isMostRecentFinalizableObj(const GCCell *cell) const;
+  bool isMostRecentFinalizableObj(const GCCell *cell) const override;
 #endif
 
   /// Same as in superclass GCBase.
@@ -247,7 +250,7 @@ class MallocGC final : public GCBase {
 
   /// Allocate a weak pointer slot for the value given.
   /// \pre \p init should not be empty or a native value.
-  WeakRefSlot *allocWeakSlot(HermesValue init);
+  WeakRefSlot *allocWeakSlot(HermesValue init) override;
 
   /// The largest the size of this heap could ever grow to.
   size_t maxSize() const {
@@ -256,7 +259,11 @@ class MallocGC final : public GCBase {
 
   /// Iterate over all objects in the heap, and call \p callback on them.
   /// \param callback A function to call on each found object.
-  void forAllObjs(const std::function<void(GCCell *)> &callback);
+  void forAllObjs(const std::function<void(GCCell *)> &callback) override;
+
+  static bool classof(const GCBase *gc) {
+    return gc->getKind() == HeapKind::MALLOC;
+  }
 
   /// @}
 
@@ -320,7 +327,9 @@ class MallocGC final : public GCBase {
 template <bool fixedSizeIgnored, HasFinalizer hasFinalizer>
 inline void *MallocGC::alloc(uint32_t size) {
   assert(noAllocLevel_ == 0 && "no alloc allowed right now");
-  size = heapAlignSize(size);
+  assert(
+      isSizeHeapAligned(size) &&
+      "Call to alloc must use a size aligned to HeapAlign");
   if (shouldSanitizeHandles()) {
     collectBeforeAlloc(kHandleSanCauseForAnalytics, size);
   }
@@ -352,7 +361,10 @@ template <
     HasFinalizer hasFinalizer,
     LongLived longLived,
     class... Args>
-inline T *MallocGC::makeA(uint32_t size, Args &&... args) {
+inline T *MallocGC::makeA(uint32_t size, Args &&...args) {
+  assert(
+      isSizeHeapAligned(size) &&
+      "Call to makeA must use a size aligned to HeapAlign");
   // Since there is no old generation in this collector, always forward to the
   // normal allocation.
   void *mem = alloc<fixedSize, hasFinalizer>(size);

@@ -29,11 +29,9 @@ using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
 
 struct Dummy final : public GCCell {
   static const VTable vt;
-#ifdef HERMESVM_GC_HADES
   // Some padding to meet the minimum cell size.
   uint64_t padding1_{0};
   uint64_t padding2_{0};
-#endif
 
   static Dummy *create(DummyRuntime &runtime) {
     return runtime.makeAFixed<Dummy, HasFinalizer::Yes>(&runtime.getHeap());
@@ -57,11 +55,12 @@ void finalize(GCCell *, GC *) {}
 
 /// A virtual table with extra storage space, hence also a (dummy) finalizer,
 /// but no weak ref marker.
-const VTable Dummy::vt{CellKind::UninitializedKind,
-                       sizeof(Dummy),
-                       finalize,
-                       nullptr,
-                       getExtraSize};
+const VTable Dummy::vt{
+    CellKind::UninitializedKind,
+    sizeof(Dummy),
+    finalize,
+    nullptr,
+    getExtraSize};
 
 const MetadataTableForTests getMetadataTable() {
   // It would seem that the full namespace qualification below would not be
@@ -100,9 +99,10 @@ struct GCBasicsTest : public ::testing::Test {
 };
 
 // Hades doesn't report its stats the same way as other GCs.
-#if !defined(NDEBUG) && !defined(HERMESVM_GC_HADES)
+#if !defined(NDEBUG) && !defined(HERMESVM_GC_HADES) && \
+    !defined(HERMESVM_GC_RUNTIME)
 TEST_F(GCBasicsTest, SmokeTest) {
-  auto &gc = rt.gc;
+  auto &gc = rt.getHeap();
   GCBase::HeapInfo info;
   GCBase::DebugHeapInfo debugInfo;
 
@@ -175,7 +175,7 @@ TEST_F(GCBasicsTest, SmokeTest) {
 }
 
 TEST_F(GCBasicsTest, MovedObjectTest) {
-  auto &gc = rt.gc;
+  auto &gc = rt.getHeap();
   GCBase::HeapInfo info;
   GCBase::DebugHeapInfo debugInfo;
 
@@ -269,7 +269,7 @@ TEST_F(GCBasicsTest, WeakRefSlotTest) {
 }
 
 TEST_F(GCBasicsTest, WeakRefTest) {
-  auto &gc = rt.gc;
+  auto &gc = rt.getHeap();
   GCBase::DebugHeapInfo debugInfo;
 
   gc.getDebugHeapInfo(debugInfo);
@@ -342,7 +342,7 @@ TEST_F(GCBasicsTest, WeakRefYoungGenCollectionTest) {
     Marked,
     Free,
   };
-  auto &gc = rt.gc;
+  GenGC &gc = rt.getHeap();
   GCBase::DebugHeapInfo debugInfo;
 
   gc.getDebugHeapInfo(debugInfo);
@@ -393,7 +393,7 @@ TEST_F(GCBasicsTest, WeakRefYoungGenCollectionTest) {
 }
 
 TEST_F(GCBasicsTest, TestYoungGenStats) {
-  auto &gc = rt.gc;
+  GenGC &gc = rt.getHeap();
 
   GCBase::DebugHeapInfo debugInfo;
 
@@ -422,7 +422,7 @@ TEST_F(GCBasicsTest, TestYoungGenStats) {
 }
 
 #endif // HERMES_GC_GENERATIONAL || HERMES_GC_NONCONTIG_GENERATIONAL
-#endif // !NDEBUG && !HERMESVM_GC_HADES
+#endif // !NDEBUG && !HERMESVM_GC_HADES && !HERMESVM_GC_RUNTIME
 
 TEST_F(GCBasicsTest, VariableSizeRuntimeCellOffsetTest) {
   auto *cell = Array::create(rt, 1);
@@ -436,7 +436,7 @@ TEST_F(GCBasicsTest, TestFixedRuntimeCell) {
 
 /// Test that the extra bytes in the heap are reported correctly.
 TEST_F(GCBasicsTest, ExtraBytes) {
-  auto &gc = rt.gc;
+  auto &gc = rt.getHeap();
 
   {
     GCBase::HeapInfo info;
@@ -489,11 +489,13 @@ TEST(GCCallbackTest, TestCallbackInvoked) {
   auto rt =
       Runtime::create(RuntimeConfig::Builder().withGCConfig(config).build());
   rt->collect("test");
+#ifndef HERMESVM_GC_RUNTIME
+#ifdef HERMESVM_GC_HADES
   // Hades will record the YG and OG collections as separate events.
-#ifndef HERMESVM_GC_HADES
-  EXPECT_EQ(2, ev.size());
-#else
   EXPECT_EQ(4, ev.size());
+#else
+  EXPECT_EQ(2, ev.size());
+#endif
 #endif
   for (size_t i = 0; i < ev.size(); i++) {
     if (i % 2 == 0) {
@@ -507,7 +509,7 @@ TEST(GCCallbackTest, TestCallbackInvoked) {
 #ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
   constexpr size_t kHeapSizeHint =
-      AlignedHeapSegment::maxSize() * GC::kYoungGenFractionDenom;
+      AlignedHeapSegment::maxSize() * GenGC::kYoungGenFractionDenom;
 
   const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSizeHint);
   auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);

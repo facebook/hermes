@@ -25,17 +25,50 @@ namespace vm {
   return ::testing::AssertionFailure();
 }
 
+std::unique_ptr<GC> DummyRuntime::makeHeap(
+    DummyRuntime *runtime,
+    MetadataTableForTests metaTable,
+    const GCConfig &gcConfig,
+    std::shared_ptr<CrashManager> crashMgr,
+    std::shared_ptr<StorageProvider> provider,
+    experiments::VMExperimentFlags experiments) {
+  return llvh::make_unique<
+#ifdef HERMESVM_GC_RUNTIME
+      // For RuntimeGC tests, just always use GenGC.
+      GenGC
+#else
+      GC
+#endif
+      >(
+      metaTable,
+      static_cast<GC::GCCallbacks *>(runtime),
+      runtime,
+      gcConfig,
+      crashMgr,
+      std::move(provider),
+      experiments);
+}
+
 DummyRuntime::DummyRuntime(
     MetadataTableForTests metaTable,
     const GCConfig &gcConfig,
     std::shared_ptr<StorageProvider> storageProvider,
     std::shared_ptr<CrashManager> crashMgr)
-    : gc{metaTable,
-         this,
-         this,
-         gcConfig,
-         crashMgr,
-         std::move(storageProvider)} {}
+    : gc_{makeHeap(
+          this,
+          metaTable,
+          gcConfig,
+          crashMgr,
+          std::move(storageProvider),
+          // Enable compaction in Hades for the unused memory test.
+          experiments::HadesCompaction)} {}
+
+DummyRuntime::~DummyRuntime() {
+  EXPECT_FALSE(getHeap().getIDTracker().hasNativeIDs())
+      << "A pointer is left in the ID tracker that is from non-JS memory. "
+         "Was untrackNative called?";
+  getHeap().finalizeAll();
+}
 
 std::shared_ptr<DummyRuntime> DummyRuntime::create(
     MetadataTableForTests metaTable,
@@ -54,6 +87,10 @@ std::shared_ptr<DummyRuntime> DummyRuntime::create(
 
 std::unique_ptr<StorageProvider> DummyRuntime::defaultProvider() {
   return StorageProvider::mmapProvider();
+}
+
+void DummyRuntime::collect() {
+  getHeap().collect("test");
 }
 
 void DummyRuntime::markRoots(RootAndSlotAcceptorWithNames &acceptor, bool) {

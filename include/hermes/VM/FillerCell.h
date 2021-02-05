@@ -34,6 +34,9 @@ class FillerCell final : public VariableSizeRuntimeCell {
     assert(
         size >= sizeof(FillerCell) &&
         "Cannot make a FillerCell smaller than the baseline for a FillerCell");
+    assert(
+        isSizeHeapAligned(size) &&
+        "A FillerCell must have a heap aligned size");
     return runtime->makeAVariable<FillerCell>(size, &runtime->getHeap(), size);
   }
 

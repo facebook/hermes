@@ -465,6 +465,21 @@ ASSERT_MONOTONE_INCREASING(
 /// thisArg is set to "undefined".
 DEFINE_OPCODE_3(CallBuiltin, Reg8, UInt8, UInt8)
 
+/// Call a builtin function.
+/// Note this is NOT marked as a Ret target, because the callee is native
+/// and therefore never JS.
+/// Arg1 is the destination of the return value.
+/// Arg2 is the builtin number.
+/// Arg3 is the number of arguments, assumed to be found in reverse order
+///      from the end of the current frame.
+/// thisArg is set to "undefined".
+DEFINE_OPCODE_3(CallBuiltinLong, Reg8, UInt8, UInt32)
+
+/// Get a closure from a builtin function.
+/// Arg1 is the destination of the return value.
+/// Arg2 is the builtin number.
+DEFINE_OPCODE_2(GetBuiltinClosure, Reg8, UInt8)
+
 ///
 ///!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -485,8 +500,10 @@ DEFINE_OPCODE_2(DirectEval, Reg8, Reg8)
 /// throw Arg1;
 DEFINE_OPCODE_1(Throw, Reg8)
 
-/// Throw ReferenceError if the operand is HermesValue::undefined
-DEFINE_OPCODE_1(ThrowIfUndefinedInst, Reg8)
+/// If Arg2 is Empty, throw ReferenceError, otherwise move it into Arg1.
+/// Arg1 is the destination of the return value
+/// Arg2 is the value to check
+DEFINE_OPCODE_2(ThrowIfEmpty, Reg8, Reg8)
 
 /// Implementation dependent debugger action.
 DEFINE_OPCODE_0(Debugger)
@@ -516,6 +533,13 @@ DEFINE_OPCODE_3(CreateClosureLongIndex, Reg8, Reg8, UInt32)
 /// Arg3 is index in the function table.
 DEFINE_OPCODE_3(CreateGeneratorClosure, Reg8, Reg8, UInt16)
 DEFINE_OPCODE_3(CreateGeneratorClosureLongIndex, Reg8, Reg8, UInt32)
+
+/// Create a closure for an AsyncFunction.
+/// Arg1 is the register in which to store the closure.
+/// Arg2 is the current environment as loaded by GetEnvironment 0.
+/// Arg3 is index in the function table.
+DEFINE_OPCODE_3(CreateAsyncClosure, Reg8, Reg8, UInt16)
+DEFINE_OPCODE_3(CreateAsyncClosureLongIndex, Reg8, Reg8, UInt32)
 
 /// Allocate an empty, uninitialized object (immediately before a constructor).
 /// Arg1 is the destination register.
@@ -552,6 +576,7 @@ OPERAND_STRING_ID(LoadConstString, 2)
 OPERAND_STRING_ID(LoadConstStringLongIndex, 2)
 
 /// Load common constants.
+DEFINE_OPCODE_1(LoadConstEmpty, Reg8)
 DEFINE_OPCODE_1(LoadConstUndefined, Reg8)
 DEFINE_OPCODE_1(LoadConstNull, Reg8)
 DEFINE_OPCODE_1(LoadConstTrue, Reg8)

@@ -27,11 +27,12 @@ const VTable Domain::vt{
     nullptr,
     nullptr,
     nullptr,
-    VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Code,
-                                 nullptr,
-                                 Domain::_snapshotAddEdgesImpl,
-                                 Domain::_snapshotAddNodesImpl,
-                                 nullptr}};
+    VTable::HeapSnapshotMetadata{
+        HeapSnapshot::NodeType::Code,
+        nullptr,
+        Domain::_snapshotAddEdgesImpl,
+        Domain::_snapshotAddNodesImpl,
+        nullptr}};
 
 void DomainBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const Domain *>(cell);
@@ -103,8 +104,6 @@ void DomainSerialize(Serializer &s, const GCCell *cell) {
 void DomainDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::DomainKind && "Expected Domain");
   auto *cell = d.getRuntime()->makeAFixed<Domain, HasFinalizer::Yes>(d);
-  auto &samplingProfiler = SamplingProfiler::getInstance();
-  samplingProfiler->increaseDomainCount();
   d.endObject(cell);
 }
 
@@ -147,8 +146,6 @@ ArrayStorage *Domain::deserializeArrayStorage(Deserializer &d) {
 PseudoHandle<Domain> Domain::create(Runtime *runtime) {
   auto *cell = runtime->makeAFixed<Domain, HasFinalizer::Yes>(runtime);
   auto self = createPseudoHandle(cell);
-  auto &samplingProfiler = SamplingProfiler::getInstance();
-  samplingProfiler->increaseDomainCount();
   return self;
 }
 
@@ -158,8 +155,6 @@ void Domain::_finalizeImpl(GCCell *cell, GC *gc) {
     gc->getIDTracker().untrackNative(rm);
   }
   self->~Domain();
-  auto &samplingProfiler = SamplingProfiler::getInstance();
-  samplingProfiler->decreaseDomainCount();
 }
 
 Domain::~Domain() {
@@ -356,11 +351,18 @@ ExecutionStatus Domain::importCJSModuleTable(
   /// \return The index into cjsModules where this module's record begins.
   /// \pre Space has been allocated for this module's record in cjsModules.
   /// \pre There is no module already registered under moduleID.
+  auto &cjsEntryModuleID = self->cjsEntryModuleID_;
   const auto registerModule =
-      [runtime, &cjsModules, runtimeModule, &isModuleRegistered](
-          uint32_t moduleID, uint32_t functionID) -> uint32_t {
+      [runtime,
+       &cjsModules,
+       runtimeModule,
+       &isModuleRegistered,
+       &cjsEntryModuleID](uint32_t moduleID, uint32_t functionID) -> uint32_t {
     assert(!isModuleRegistered(moduleID) && "CJS module ID collision occurred");
     (void)isModuleRegistered;
+    if (LLVM_UNLIKELY(!cjsEntryModuleID.hasValue())) {
+      cjsEntryModuleID = moduleID;
+    }
     uint32_t index = moduleID * CJSModuleSize;
     cjsModules->at(index + CachedExportsOffset)
         .set(HermesValue::encodeEmptyValue(), &runtime->getHeap());

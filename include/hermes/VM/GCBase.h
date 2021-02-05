@@ -83,7 +83,7 @@ class WeakRefSlot {
     reset(v);
   }
 
-#ifndef HERMESVM_GC_HADES
+#if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
   /// Tagged pointer implementation. Only supports HermesValues with object tag.
 
   bool hasValue() const {
@@ -287,6 +287,7 @@ using WeakSlotState = WeakRefSlot::State;
 /// for a fixed-size, small object; some GCs may allow optimizations on this
 /// basis. \p hasFinalizer must be \p HasFinalizer::Yes if cells of the given
 /// type require a finalizer to be called.
+/// \pre size must be heap-aligned.
 ///
 ///   template <
 ///     typename T,
@@ -580,14 +581,16 @@ class GCBase {
     inline bool isEnabled() const;
     /// Must be called by GC implementations whenever a new allocation is made.
     void newAlloc(const void *ptr, uint32_t sz);
-    /// Must be called by GC implementations whenever an allocation is moved.
-    void moveAlloc(const void *oldPtr, const void *newPtr);
+
+    /// If an object's size changes, update the entry here.
+    void updateSize(const void *ptr, uint32_t oldSize, uint32_t newSize);
+
     /// Must be called by GC implementations whenever an allocation is freed.
     void freeAlloc(const void *ptr, uint32_t sz);
     /// Returns data needed to reconstruct the JS stack used to create the
     /// specified allocation.
     inline StackTracesTreeNode *getStackTracesTreeNodeForAlloc(
-        const void *ptr) const;
+        HeapSnapshot::NodeID id) const;
 
     /// A Fragment is a time bound for when objects are allocated. Any
     /// allocations that occur before the lastSeenObjectID_ are in this
@@ -632,14 +635,13 @@ class GCBase {
     /// Flush out heap profiler data to the callback after a new kFlushThreshold
     /// bytes are allocated.
     static constexpr uint64_t kFlushThreshold = 128 * (1 << 10);
-    /// This mutex protects stackMap_. Specifically does not protect enabled_,
-    /// because enabled_ should only be changed while the GC isn't running
-    /// anyway. Also doesn't protect fragments_ because only the allocator
-    /// modifies fragments_.
+    /// This mutex protects stackMap_ and fragments_. Specifically does not
+    /// protect enabled_, because enabled_ should only be changed while the GC
+    /// isn't running anyway.
     Mutex mtx_;
     /// Associates allocations at their current location with their stack trace
     /// data.
-    llvh::DenseMap<const void *, StackTracesTreeNode *> stackMap_;
+    llvh::DenseMap<HeapSnapshot::NodeID, StackTracesTreeNode *> stackMap_;
     /// We need access to the GCBase to collect the current stack when nodes are
     /// allocated.
     GCBase *gc_;
@@ -680,6 +682,9 @@ class GCBase {
       IdentifierTableLookupVector,
       IdentifierTableHashTable,
       IdentifierTableMarkedSymbols,
+      JSIHermesValueList,
+      JSIWeakHermesValueList,
+      WeakRefSlotStorage,
       Undefined,
       Null,
       True,
@@ -732,11 +737,11 @@ class GCBase {
 
     /// Get the unique object id of the given object.
     /// If one does not yet exist, start tracking it.
-    inline HeapSnapshot::NodeID getObjectID(const void *cell);
+    inline HeapSnapshot::NodeID getObjectID(BasedPointer cell);
 
     /// Same as \c getObjectID, except it asserts if the cell doesn't have an
     /// ID.
-    inline HeapSnapshot::NodeID getObjectIDMustExist(const void *cell);
+    inline HeapSnapshot::NodeID getObjectIDMustExist(BasedPointer cell);
 
     /// Get the unique object id of the symbol with the given symbol \p sym. If
     /// one does not yet exist, start tracking it.
@@ -746,6 +751,14 @@ class GCBase {
     /// If one does not yet exist, start tracking it.
     inline HeapSnapshot::NodeID getNativeID(const void *mem);
 
+    /// Get a list of IDs for native memory attached to the given node.
+    /// List will be empty if nothing is attached yet. Then push onto the end
+    /// with nextNativeID().
+    /// When the NodeID that these are attached to is untracked, so are the
+    /// attached native NodeIDs.
+    llvh::SmallVector<HeapSnapshot::NodeID, 1> &getExtraNativeIDs(
+        HeapSnapshot::NodeID node);
+
     /// Assign a unique ID to a literal number value that occurs in the heap.
     /// Can be used to make fake nodes that will display their numeric value.
     HeapSnapshot::NodeID getNumberID(double num);
@@ -753,11 +766,11 @@ class GCBase {
     /// Tell the tracker that an object has moved locations.
     /// This must be called in a safe order, if A moves to B, and C moves to A,
     /// the first move must be recorded before the second.
-    inline void moveObject(const void *oldLocation, const void *newLocation);
+    void moveObject(BasedPointer oldLocation, BasedPointer newLocation);
 
     /// Remove the object from being tracked. This should be done to keep the
     /// tracking working set small.
-    inline void untrackObject(const void *cell);
+    inline void untrackObject(BasedPointer cell);
 
     /// Remove the symbol from being tracked. This needs to be done to allow
     /// symbols to be re-used.
@@ -769,11 +782,9 @@ class GCBase {
     /// allocations.
     inline void untrackNative(const void *mem);
 
-    /// Execute a callback on each pair of pointer and ID.
-    /// \param callback A function whose signature should be
-    ///   void(const void *, HeapSnapshot::NodeID).
-    template <typename F>
-    inline void forEachID(F callback);
+    /// \return True if this is tracking any native IDs, false if there are no
+    ///   native IDs being tracked.
+    bool hasNativeIDs();
 
     /// Get the current last ID. All other existing IDs are less than or equal
     /// to this one.
@@ -787,11 +798,14 @@ class GCBase {
     void deserialize(Deserializer &d);
 #endif
 
+    /// Get the next unique native ID for a chunk of native memory.
+    /// NOTE: public to get assigned native ids without needing to reserve in
+    /// advance.
+    inline HeapSnapshot::NodeID nextNativeID();
+
    private:
     /// Get the next unique object ID for a newly created object.
     inline HeapSnapshot::NodeID nextObjectID();
-    /// Get the next unique native ID for a chunk of native memory.
-    inline HeapSnapshot::NodeID nextNativeID();
     /// Get the next unique number ID for a number.
     inline HeapSnapshot::NodeID nextNumberID();
 
@@ -814,8 +828,23 @@ class GCBase {
     /// Map of object pointers to IDs. Only populated once the first heap
     /// snapshot is requested, or the first time the memory profiler is turned
     /// on, or if JSI tracing is in effect.
-    /// NOTE: The same map is used for both JS heap and native heap IDs.
-    llvh::DenseMap<const void *, HeapSnapshot::NodeID> objectIDMap_;
+    /// This map's size is O(number of cells in the heap), which can grow quite
+    /// large. Using compressed pointers keeps the size small.
+    llvh::DenseMap<BasedPointer::StorageType, HeapSnapshot::NodeID>
+        objectIDMap_;
+
+    /// Map of native pointers to IDs. Populated according to
+    /// the same rules as the objectIDMap_.
+    llvh::DenseMap<const void *, HeapSnapshot::NodeID> nativeIDMap_;
+
+    /// Map from a JS heap object ID to additional lazily created IDs for
+    /// objects. Most useful for native IDs that are attached to a heap object
+    /// but don't have a stable pointer to use (such as std::vector and
+    /// llvh::DenseMap).
+    llvh::DenseMap<
+        HeapSnapshot::NodeID,
+        llvh::SmallVector<HeapSnapshot::NodeID, 1>>
+        extraNativeIDs_;
 
     /// Map from symbol indices to unique IDs.  Populated according to
     /// the same rules as the objectIDMap_.
@@ -833,14 +862,43 @@ class GCBase {
   enum class FixedSizeValue { Yes, No, Unknown };
 #endif
 
+  enum class HeapKind { NCGEN, HADES, MALLOC };
+
   GCBase(
       MetadataTable metaTable,
       GCCallbacks *gcCallbacks,
       PointerBase *pointerBase,
       const GCConfig &gcConfig,
-      std::shared_ptr<CrashManager> crashMgr);
+      std::shared_ptr<CrashManager> crashMgr,
+      HeapKind kind);
 
   virtual ~GCBase() {}
+
+  /// Create a fixed size object of type T.
+  /// \return a pointer to the newly created object in the GC heap.
+  template <
+      typename T,
+      HasFinalizer hasFinalizer = HasFinalizer::No,
+      LongLived longLived = LongLived::No,
+      class... Args>
+  T *makeAFixed(Args &&...args);
+
+  /// Create a variable size object of type T and size \p size.
+  /// \return a pointer to the newly created object in the GC heap.
+  template <
+      typename T,
+      HasFinalizer hasFinalizer = HasFinalizer::No,
+      LongLived longLived = LongLived::No,
+      class... Args>
+  T *makeAVariable(uint32_t size, Args &&...args);
+
+  template <
+      typename T,
+      bool fixedSize = true,
+      HasFinalizer hasFinalizer = HasFinalizer::No,
+      LongLived longLived = LongLived::No,
+      class... Args>
+  T *makeA(uint32_t size, Args &&...args);
 
   /// \return true if the "target space" for allocations should be randomized
   /// (for GCs where that concept makes sense).
@@ -859,7 +917,7 @@ class GCBase {
   }
 #endif
 
-  /// Name to indentify this heap in logs.
+  /// Name to identify this heap in logs.
   const std::string &getName() const {
     return name_;
   }
@@ -889,7 +947,7 @@ class GCBase {
   /// Inform the GC that TTI has been reached.  (In case, for example,
   /// behavior should change at that point.  Default behavior is to do
   /// nothing.)
-  void ttiReached() {}
+  virtual void ttiReached() {}
 
   /// Do anything necessary to record the current number of allocated
   /// objects in numAllocatedObjects_.  Default is to do nothing.
@@ -945,6 +1003,16 @@ class GCBase {
   /// \return Number of weak ref slots currently in use.
   /// Inefficient. For testing/debugging.
   size_t countUsedWeakRefs() const;
+
+  /// Return true if \p ptr is currently pointing at valid accessable memory,
+  /// allocated to an object.
+  virtual bool validPointer(const void *ptr) const = 0;
+#endif
+
+#ifdef HERMESVM_GC_RUNTIME
+  static uint32_t minAllocationSize();
+
+  static constexpr uint32_t maxAllocationSize();
 #endif
 
   /// Dump detailed heap contents to the given output stream, \p os.
@@ -952,6 +1020,45 @@ class GCBase {
 
   /// Run the finalizers for all heap objects.
   virtual void finalizeAll() = 0;
+
+  /// Force a garbage collection cycle. The provided cause will be used in
+  /// logging.
+  virtual void collect(std::string cause, bool canEffectiveOOM = false) = 0;
+
+  /// Iterate over all objects in the heap, and call \p callback on them.
+  /// \param callback A function to call on each found object.
+  virtual void forAllObjs(const std::function<void(GCCell *)> &callback) = 0;
+
+  /// \return true if the pointer lives in the young generation.
+  virtual bool inYoungGen(const void *p) const {
+    return false;
+  }
+
+  /// Returns whether an external allocation of the given \p size fits
+  /// within the maximum heap size. (Note that this does not guarantee that the
+  /// allocation will "succeed" -- the size plus the used() of the heap may
+  /// still exceed the max heap size. But if it fails, the allocation can never
+  /// succeed.)
+  virtual bool canAllocExternalMemory(uint32_t size) {
+    return true;
+  }
+
+  virtual WeakRefSlot *allocWeakSlot(HermesValue init) = 0;
+
+#ifndef NDEBUG
+  /// \name Debug APIs
+  /// \{
+  virtual bool calledByBackgroundThread() const {
+    return false;
+  }
+  virtual bool calledByGC() const {
+    return true;
+  }
+  virtual bool dbgContains(const void *ptr) const = 0;
+  virtual void trackReachable(CellKind kind, unsigned sz) {}
+  virtual bool isMostRecentFinalizableObj(const GCCell *cell) const = 0;
+  /// \}
+#endif
 
   /// Do any logging of info about the heap that is useful, then dies with a
   /// fatal out-of-memory error.
@@ -965,6 +1072,12 @@ class GCBase {
   /// objects exist, their sizes, and what they point to.
   virtual void createSnapshot(llvh::raw_ostream &os) = 0;
   void createSnapshot(GC *gc, llvh::raw_ostream &os);
+
+  /// Subclasses can override and add more specific native memory usage.
+  virtual void snapshotAddGCNativeNodes(HeapSnapshot &snap);
+
+  /// Subclasses can override and add more specific edges.
+  virtual void snapshotAddGCNativeEdges(HeapSnapshot &snap);
 
   /// Turn on the heap profiler, which will track when allocations are made and
   /// the stack trace of when they were created.
@@ -1008,24 +1121,27 @@ class GCBase {
 
   /// Default implementations for the external memory credit/debit APIs: do
   /// nothing.
-  void creditExternalMemory(GCCell *alloc, uint32_t size) {}
-  void debitExternalMemory(GCCell *alloc, uint32_t size) {}
+  virtual void creditExternalMemory(GCCell *alloc, uint32_t size) {}
+  virtual void debitExternalMemory(GCCell *alloc, uint32_t size) {}
 
   /// Default implementations for read and write barriers: do nothing.
-  inline void writeBarrier(void *loc, HermesValue value) {}
-  inline void writeBarrier(void *loc, void *value) {}
-  inline void writeBarrier(SymbolID symbol) {}
-  inline void constructorWriteBarrier(void *loc, HermesValue value) {}
-  inline void constructorWriteBarrier(void *loc, void *value) {}
-  inline void writeBarrierRange(GCHermesValue *start, uint32_t numHVs) {}
-  inline void constructorWriteBarrierRange(
-      GCHermesValue *start,
-      uint32_t numHVs) {}
-  inline void weakRefReadBarrier(void *value) {}
-  inline void weakRefReadBarrier(HermesValue value) {}
+  void writeBarrier(const GCHermesValue *loc, HermesValue value);
+  void writeBarrier(const GCPointerBase *loc, const GCCell *value);
+  void writeBarrier(SymbolID symbol);
+  void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value);
+  void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value);
+  void writeBarrierRange(const GCHermesValue *start, uint32_t numHVs);
+  void constructorWriteBarrierRange(
+      const GCHermesValue *start,
+      uint32_t numHVs);
+  void snapshotWriteBarrier(const GCHermesValue *loc);
+  void snapshotWriteBarrier(const GCPointerBase *loc);
+  void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs);
+  void weakRefReadBarrier(GCCell *value);
+  void weakRefReadBarrier(HermesValue value);
 
 #ifndef NDEBUG
-  bool needsWriteBarrier(void *loc, void *value) {
+  virtual bool needsWriteBarrier(void *loc, GCCell *value) {
     return false;
   }
 #endif
@@ -1035,43 +1151,36 @@ class GCBase {
 
   /// Marks a cell by its metadata.
   /// \p cell The heap object to mark.
-  /// \p gc The GC that owns the cell.
   /// \p acceptor The action to perform on each slot in the cell.
   template <typename Acceptor>
-  static inline void markCell(GCCell *cell, GC *gc, Acceptor &acceptor);
+  inline void markCell(GCCell *cell, Acceptor &acceptor);
 
   /// Same as the normal \c markCell, but for cells that don't have a valid
   /// vtable pointer.
   template <typename Acceptor>
-  static inline void
-  markCell(GCCell *cell, const VTable *vt, GC *gc, Acceptor &acceptor);
+  inline void markCell(GCCell *cell, const VTable *vt, Acceptor &acceptor);
 
   /// Same as the normal \c markCell, but takes a visitor instead.
   template <typename Acceptor>
-  static inline void markCell(
-      SlotVisitor<Acceptor> &visitor,
-      GCCell *cell,
-      const VTable *vt,
-      GC *gc);
+  inline void
+  markCell(SlotVisitor<Acceptor> &visitor, GCCell *cell, const VTable *vt);
 
   /// Marks a cell by its metadata, but only for the slots that point between
   /// [begin, end).
   template <typename Acceptor>
-  static inline void markCellWithinRange(
+  inline void markCellWithinRange(
       SlotVisitor<Acceptor> &visitor,
       GCCell *cell,
       const VTable *vt,
-      GC *gc,
       const char *begin,
       const char *end);
 
   /// Marks a cell by its metadata, and outputs the names of the slots.
   /// Meant to be used by heap snapshots.
   template <typename Acceptor>
-  static inline void markCellWithNames(
+  inline void markCellWithNames(
       SlotVisitorWithNames<Acceptor> &visitor,
-      GCCell *cell,
-      GC *gc);
+      GCCell *cell);
 
   /// Utilities for WeakMap marking.
 
@@ -1191,9 +1300,11 @@ class GCBase {
   /// objects and unreachable objects may not have dereference-able VTable
   /// pointers, and any reads from JS heap memory may give strange results.
   bool inGC() const {
-    // This is only used in asserts and debugging purposes, make it as strict
-    // as possible.
-    return inGC_.load(std::memory_order_seq_cst);
+    return inGC_;
+  }
+
+  HeapKind getKind() const {
+    return heapKind_;
   }
 
   bool isTrackingIDs() {
@@ -1209,13 +1320,26 @@ class GCBase {
     return allocationLocationTracker_;
   }
 
+  /// \name Snapshot ID methods
+  /// \{
+  // This set of methods are all mirrors of IDTracker, except with pointer
+  // compression done automatically.
   inline HeapSnapshot::NodeID getObjectID(const void *cell);
+  inline HeapSnapshot::NodeID getObjectIDMustExist(const void *cell);
+  inline HeapSnapshot::NodeID getObjectID(BasedPointer cell);
   inline HeapSnapshot::NodeID getObjectID(const GCPointerBase &cell);
   inline HeapSnapshot::NodeID getObjectID(SymbolID sym);
   inline HeapSnapshot::NodeID getNativeID(const void *mem);
   /// \return The ID for the given value. If the value cannot be represented
   ///   with an ID, returns None.
   llvh::Optional<HeapSnapshot::NodeID> getSnapshotID(HermesValue val);
+  inline void moveObject(
+      const void *oldPtr,
+      uint32_t oldSize,
+      const void *newPtr,
+      uint32_t newSize);
+  inline void untrackObject(const void *cell);
+  /// \}
 
 #ifndef NDEBUG
   /// \return The next debug allocation ID for embedding directly into a GCCell.
@@ -1402,6 +1526,8 @@ class GCBase {
   /// A place to log crash data if a crash is about to occur.
   std::shared_ptr<CrashManager> crashMgr_;
 
+  HeapKind heapKind_;
+
   /// Callback called once for each GC event that wants to be logged. Can be
   /// null if no analytics are requested.
   std::function<void(const GCAnalyticsEvent &)> analyticsCallback_;
@@ -1413,7 +1539,7 @@ class GCBase {
   bool recordGcStats_{false};
 
   /// Whether or not a GC cycle is currently occurring.
-  AtomicIfConcurrentGC<bool> inGC_;
+  bool inGC_{false};
 
   /// The block of fields below records values of various metrics at
   /// the start of execution, so that we can get the values at the end
@@ -1572,12 +1698,22 @@ class WeakRefBase {
 
 inline HeapSnapshot::NodeID GCBase::getObjectID(const void *cell) {
   assert(cell && "Called getObjectID on a null pointer");
+  return idTracker_.getObjectID(pointerBase_->pointerToBasedNonNull(cell));
+}
+
+inline HeapSnapshot::NodeID GCBase::getObjectIDMustExist(const void *cell) {
+  assert(cell && "Called getObjectID on a null pointer");
+  return idTracker_.getObjectIDMustExist(
+      pointerBase_->pointerToBasedNonNull(cell));
+}
+
+inline HeapSnapshot::NodeID GCBase::getObjectID(BasedPointer cell) {
+  assert(cell && "Called getObjectID on a null pointer");
   return idTracker_.getObjectID(cell);
 }
 
 inline HeapSnapshot::NodeID GCBase::getObjectID(const GCPointerBase &cell) {
-  assert(cell && "Called getObjectID on a null pointer");
-  return getObjectID(cell.get(pointerBase_));
+  return getObjectID(cell.getStorageType());
 }
 
 inline HeapSnapshot::NodeID GCBase::getObjectID(SymbolID sym) {
@@ -1587,6 +1723,23 @@ inline HeapSnapshot::NodeID GCBase::getObjectID(SymbolID sym) {
 inline HeapSnapshot::NodeID GCBase::getNativeID(const void *mem) {
   assert(mem && "Called getNativeID on a null pointer");
   return idTracker_.getNativeID(mem);
+}
+
+inline void GCBase::moveObject(
+    const void *oldPtr,
+    uint32_t oldSize,
+    const void *newPtr,
+    uint32_t newSize) {
+  idTracker_.moveObject(
+      pointerBase_->pointerToBasedNonNull(oldPtr),
+      pointerBase_->pointerToBasedNonNull(newPtr));
+  // Use newPtr here because the idTracker_ just moved it.
+  allocationLocationTracker_.updateSize(newPtr, oldSize, newSize);
+}
+
+inline void GCBase::untrackObject(const void *cell) {
+  assert(cell && "Called getObjectID on a null pointer");
+  return idTracker_.untrackObject(pointerBase_->pointerToBasedNonNull(cell));
 }
 
 #ifndef NDEBUG
@@ -1599,22 +1752,22 @@ inline bool GCBase::IDTracker::isTrackingIDs() const {
   return !objectIDMap_.empty();
 }
 
-inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(const void *cell) {
+inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(BasedPointer cell) {
   std::lock_guard<Mutex> lk{mtx_};
-  auto iter = objectIDMap_.find(cell);
+  auto iter = objectIDMap_.find(cell.getRawValue());
   if (iter != objectIDMap_.end()) {
     return iter->second;
   }
   // Else, assume it is an object that needs to be tracked and give it a new ID.
   const auto objID = nextObjectID();
-  objectIDMap_[cell] = objID;
+  objectIDMap_[cell.getRawValue()] = objID;
   return objID;
 }
 
 inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectIDMustExist(
-    const void *cell) {
+    BasedPointer cell) {
   std::lock_guard<Mutex> lk{mtx_};
-  auto iter = objectIDMap_.find(cell);
+  auto iter = objectIDMap_.find(cell.getRawValue());
   assert(iter != objectIDMap_.end() && "cell must already have an ID");
   return iter->second;
 }
@@ -1633,49 +1786,29 @@ inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(SymbolID sym) {
 
 inline HeapSnapshot::NodeID GCBase::IDTracker::getNativeID(const void *mem) {
   std::lock_guard<Mutex> lk{mtx_};
-  auto iter = objectIDMap_.find(mem);
-  if (iter != objectIDMap_.end()) {
+  auto iter = nativeIDMap_.find(mem);
+  if (iter != nativeIDMap_.end()) {
     return iter->second;
   }
   // Else, assume it is a piece of native memory that needs to be tracked and
   // give it a new ID.
   const auto objID = nextNativeID();
-  objectIDMap_[mem] = objID;
+  nativeIDMap_[mem] = objID;
   return objID;
 }
 
-inline void GCBase::IDTracker::moveObject(
-    const void *oldLocation,
-    const void *newLocation) {
-  if (oldLocation == newLocation) {
-    // Don't need to do anything if the object isn't moving anywhere. This can
-    // happen in old generations where it is compacted to the same location.
-    return;
-  }
+inline void GCBase::IDTracker::untrackObject(BasedPointer cell) {
   std::lock_guard<Mutex> lk{mtx_};
-  auto old = objectIDMap_.find(oldLocation);
-  if (old == objectIDMap_.end()) {
-    // Avoid making new keys for objects that don't need to be tracked.
-    return;
-  }
-  const auto oldID = old->second;
-  assert(
-      objectIDMap_.count(newLocation) == 0 &&
-      "Moving to a location that is already tracked");
-  // Have to erase first, because any other access can invalidate the iterator.
-  objectIDMap_.erase(old);
-  objectIDMap_[newLocation] = oldID;
-}
-
-inline void GCBase::IDTracker::untrackObject(const void *cell) {
-  std::lock_guard<Mutex> lk{mtx_};
-  objectIDMap_.erase(cell);
+  // It's ok if this didn't exist before, since erase will remove it anyway, and
+  // the default constructed zero ID won't be present in extraNativeIDs_.
+  const auto id = objectIDMap_[cell.getRawValue()];
+  objectIDMap_.erase(cell.getRawValue());
+  extraNativeIDs_.erase(id);
 }
 
 inline void GCBase::IDTracker::untrackNative(const void *mem) {
-  // Since native memory and heap memory share the same map, this is the same
-  // as untracking an object.
-  untrackObject(mem);
+  std::lock_guard<Mutex> lk{mtx_};
+  nativeIDMap_.erase(mem);
 }
 
 inline void GCBase::IDTracker::untrackSymbol(uint32_t symIdx) {
@@ -1685,14 +1818,6 @@ inline void GCBase::IDTracker::untrackSymbol(uint32_t symIdx) {
 
 inline const GCExecTrace &GCBase::getGCExecTrace() const {
   return execTrace_;
-}
-
-template <typename F>
-inline void GCBase::IDTracker::forEachID(F callback) {
-  std::lock_guard<Mutex> lk{mtx_};
-  for (auto &p : objectIDMap_) {
-    callback(p.first, p.second);
-  }
 }
 
 inline HeapSnapshot::NodeID GCBase::IDTracker::lastID() const {
@@ -1731,8 +1856,8 @@ inline bool GCBase::AllocationLocationTracker::isEnabled() const {
 
 inline StackTracesTreeNode *
 GCBase::AllocationLocationTracker::getStackTracesTreeNodeForAlloc(
-    const void *ptr) const {
-  auto mapIt = stackMap_.find(ptr);
+    HeapSnapshot::NodeID id) const {
+  auto mapIt = stackMap_.find(id);
   return mapIt == stackMap_.end() ? nullptr : mapIt->second;
 }
 

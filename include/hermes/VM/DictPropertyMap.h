@@ -8,10 +8,10 @@
 #ifndef HERMES_VM_DICTPROPERTYMAP_H
 #define HERMES_VM_DICTPROPERTYMAP_H
 
-#include "hermes/VM/GCSymbolID.h"
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/PropertyDescriptor.h"
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/SymbolID.h"
 
 #include "llvh/Support/TrailingObjects.h"
 
@@ -150,7 +150,6 @@ class DictPropertyMap final
           DictPropertyMap,
           std::pair<GCSymbolID, NamedPropertyDescriptor>,
           detail::DPMHashPair> {
-  friend GC;
   friend TrailingObjects;
   friend void DictPropertyMapBuildMeta(
       const GCCell *cell,
@@ -342,6 +341,7 @@ class DictPropertyMap final
     return symbolID.unsafeGetRaw();
   }
 
+ public:
   DictPropertyMap(
       Runtime *runtime,
       size_type descriptorCapacity,
@@ -356,6 +356,7 @@ class DictPropertyMap final
     std::fill_n(getHashPairs(), hashCapacity_, HashPair{});
   }
 
+ private:
   DescriptorPair *getDescriptorPairs() {
     return getTrailingObjects<DescriptorPair>();
   }

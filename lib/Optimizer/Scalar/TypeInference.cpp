@@ -585,6 +585,14 @@ bool TypeInferenceImpl::inferLoadPropertyInst(LoadPropertyInst *LPI) {
   return changed;
 }
 
+/// Infer type information for "ThrowIfEmpty", which simply removes the
+/// possibility for "empty" from its operand.
+static bool inferThrowIfEmptyInst(ThrowIfEmptyInst *TIE) {
+  TIE->setType(
+      Type::subtractTy(TIE->getCheckedValue()->getType(), Type::createEmpty()));
+  return true;
+}
+
 /// Attempts to infer the type of instruction \p I based on the environment.
 /// \returns true if the type of the instruction was deduced.
 /// This method contains a bunch of rules that conform to the JavaScript
@@ -627,6 +635,10 @@ bool TypeInferenceImpl::inferType(Instruction *I) {
 
     case ValueKind::LoadPropertyInstKind:
       NumTI += inferLoadPropertyInst(cast<LoadPropertyInst>(I));
+      return I->getType() != originalTy;
+
+    case ValueKind::ThrowIfEmptyInstKind:
+      NumTI += inferThrowIfEmptyInst(cast<ThrowIfEmptyInst>(I));
       return I->getType() != originalTy;
 
     default:

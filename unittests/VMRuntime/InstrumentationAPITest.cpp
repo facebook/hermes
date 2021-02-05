@@ -93,8 +93,8 @@ TEST(InstrumentationAPITest, RunCallbackOnlyOnce_UnderCooldownTime) {
           .build());
   DummyRuntime &runtime = *rt;
 
-  runtime.gc.checkTripwire(100);
-  runtime.gc.checkTripwire(100);
+  runtime.getHeap().checkTripwire(100);
+  runtime.getHeap().checkTripwire(100);
   EXPECT_EQ(timesTriggeredTripwire, 1);
 }
 

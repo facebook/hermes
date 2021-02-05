@@ -25,12 +25,11 @@
 namespace hermes {
 
 ConsoleHostContext::ConsoleHostContext(vm::Runtime *runtime) {
-  runtime->addCustomRootsFunction(
-      [this](vm::GC *, vm::RootAndSlotAcceptor &acceptor) {
-        for (auto &entry : queuedJobs_) {
-          acceptor.acceptPtr(entry.second);
-        }
-      });
+  runtime->addCustomRootsFunction([this](vm::GC *, vm::RootAcceptor &acceptor) {
+    for (auto &entry : queuedJobs_) {
+      acceptor.acceptPtr(entry.second);
+    }
+  });
 }
 
 /// Raises an uncatchable quit exception.
@@ -455,8 +454,8 @@ bool executeHBCBytecodeImpl(
     return true;
   }
 
-  if (options.runtimeConfig.getEnableSampleProfiling()) {
-    vm::SamplingProfiler::getInstance()->enable();
+  if (options.sampleProfiling) {
+    vm::SamplingProfiler::enable();
   }
 
   llvh::StringRef sourceURL{};
@@ -466,10 +465,9 @@ bool executeHBCBytecodeImpl(
       sourceURL,
       vm::Runtime::makeNullHandle<vm::Environment>());
 
-  if (options.runtimeConfig.getEnableSampleProfiling()) {
-    auto profiler = vm::SamplingProfiler::getInstance();
-    profiler->dumpChromeTrace(llvh::errs());
-    profiler->disable();
+  if (options.sampleProfiling) {
+    vm::SamplingProfiler::disable();
+    vm::SamplingProfiler::dumpChromeTraceGlobal(llvh::errs());
   }
 
   bool threwException = status == vm::ExecutionStatus::EXCEPTION;

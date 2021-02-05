@@ -5,14 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "GCBase-WeakMap.h"
 #include "hermes/Support/CheckedMalloc.h"
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/SlowAssert.h"
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCBase-inline.h"
-#include "hermes/VM/GCPointer-inline.h"
-#include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/HiddenClass.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/RootAndSlotAcceptorDefault.h"
@@ -30,6 +29,7 @@ static const char *kGCName = "malloc";
 
 struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
                                          public WeakRootAcceptorDefault {
+  MallocGC &gc;
   std::vector<CellHeader *> worklist_;
 
   /// The WeakMap objects that have been discovered to be reachable.
@@ -41,18 +41,18 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
   /// the falses are garbage.
   llvh::BitVector markedSymbols_;
 
-  MarkingAcceptor(GC &gc)
-      : RootAndSlotAcceptorDefault(gc),
-        WeakRootAcceptorDefault(gc),
+  MarkingAcceptor(MallocGC &gc)
+      : RootAndSlotAcceptorDefault(gc.getPointerBase()),
+        WeakRootAcceptorDefault(gc.getPointerBase()),
+        gc(gc),
         markedSymbols_(gc.gcCallbacks_->getSymbolsEnd()) {}
 
   using RootAndSlotAcceptorDefault::accept;
 
-  void accept(void *&ptr) override {
-    if (!ptr) {
+  void accept(GCCell *&cell) override {
+    if (!cell) {
       return;
     }
-    GCCell *&cell = reinterpret_cast<GCCell *&>(ptr);
     HERMES_SLOW_ASSERT(
         gc.validPointer(cell) &&
         "Marked a pointer that the GC didn't allocate");
@@ -70,14 +70,14 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
     } else {
       // It hasn't been seen before, move it.
       // At this point, also trim the object.
-      const bool canBeTrimmed = cell->getVT()->canBeTrimmed();
+      const gcheapsize_t origSize = cell->getAllocatedSize();
       const gcheapsize_t trimmedSize =
-          cell->getVT()->getTrimmedSize(cell, cell->getAllocatedSize());
+          cell->getVT()->getTrimmedSize(cell, origSize);
       auto *newLocation =
           new (checkedMalloc(trimmedSize + sizeof(CellHeader))) CellHeader();
       newLocation->mark();
       memcpy(newLocation->data(), cell, trimmedSize);
-      if (canBeTrimmed) {
+      if (origSize != trimmedSize) {
         auto *newVarCell =
             reinterpret_cast<VariableSizeRuntimeCell *>(newLocation->data());
         newVarCell->setSizeFromGC(trimmedSize);
@@ -94,8 +94,8 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
       }
       gc.newPointers_.insert(newLocation);
       if (gc.isTrackingIDs()) {
-        gc.idTracker_.moveObject(cell, newLocation->data());
-        gc.allocationLocationTracker_.moveAlloc(cell, newLocation->data());
+        gc.moveObject(
+            cell, cell->getAllocatedSize(), newLocation->data(), trimmedSize);
       }
       cell = newLocation->data();
     }
@@ -105,7 +105,8 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
       header->mark();
       // Trim the cell. This is fine to do with malloc'ed memory because the
       // original size is retained by malloc.
-      if (cell->getVT()->canBeTrimmed()) {
+      gcheapsize_t origSize = cell->getAllocatedSize();
+      if (cell->getVT()->getTrimmedSize(cell, origSize) != origSize) {
         cell->getVT()->trim(cell);
       }
       if (cell->getKind() == CellKind::WeakMapKind) {
@@ -122,12 +123,11 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
 #endif
   }
 
-  void acceptWeak(void *&ptr) override {
+  void acceptWeak(GCCell *&ptr) override {
     if (ptr == nullptr) {
       return;
     }
-    auto *cell = reinterpret_cast<GCCell *>(ptr);
-    CellHeader *header = CellHeader::from(cell);
+    CellHeader *header = CellHeader::from(ptr);
 
     // Reset weak root if target GCCell is dead.
 #ifdef HERMESVM_SANITIZE_HANDLES
@@ -139,15 +139,15 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
 
   void acceptHV(HermesValue &hv) override {
     if (hv.isPointer()) {
-      void *ptr = hv.getPointer();
+      GCCell *ptr = static_cast<GCCell *>(hv.getPointer());
       accept(ptr);
       hv.setInGC(hv.updatePointer(ptr), &gc);
     } else if (hv.isSymbol()) {
-      accept(hv.getSymbol());
+      acceptSym(hv.getSymbol());
     }
   }
 
-  void accept(SymbolID sym) override {
+  void acceptSym(SymbolID sym) override {
     if (sym.isInvalid()) {
       return;
     }
@@ -178,16 +178,19 @@ MallocGC::MallocGC(
     PointerBase *pointerBase,
     const GCConfig &gcConfig,
     std::shared_ptr<CrashManager> crashMgr,
-    std::shared_ptr<StorageProvider> provider)
+    std::shared_ptr<StorageProvider> provider,
+    experiments::VMExperimentFlags vmExperimentFlags)
     : GCBase(
           metaTable,
           gcCallbacks,
           pointerBase,
           gcConfig,
-          std::move(crashMgr)),
+          std::move(crashMgr),
+          HeapKind::MALLOC),
       pointers_(),
       maxSize_(Size(gcConfig).max()),
       sizeLimit_(gcConfig.getInitHeapSize()) {
+  (void)vmExperimentFlags;
   crashMgr_->setCustomData("HermesGC", kGCName);
 }
 
@@ -243,7 +246,7 @@ void MallocGC::checkWellFormed() {
   for (CellHeader *header : pointers_) {
     GCCell *cell = header->data();
     assert(cell->isValid() && "Invalid cell encountered in heap");
-    GCBase::markCell(cell, this, acceptor);
+    markCell(cell, acceptor);
   }
 }
 
@@ -255,7 +258,7 @@ void MallocGC::clearUnmarkedPropertyMaps() {
 }
 #endif
 
-void MallocGC::collect(std::string cause) {
+void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
   assert(noAllocLevel_ == 0 && "no GC allowed right now");
   using std::chrono::steady_clock;
   LLVM_DEBUG(llvh::dbgs() << "Beginning collection");
@@ -312,7 +315,7 @@ void MallocGC::collect(std::string cause) {
         // Pointers that aren't marked now weren't moved, and are dead instead.
         if (isTrackingIDs()) {
           allocationLocationTracker_.freeAlloc(cell, freedSize);
-          idTracker_.untrackObject(cell);
+          untrackObject(cell);
         }
       }
 #ifndef NDEBUG
@@ -390,7 +393,7 @@ void MallocGC::drainMarkStack(MarkingAcceptor &acceptor) {
     acceptor.worklist_.pop_back();
     assert(header->isMarked() && "Pointer on the worklist isn't marked");
     GCCell *cell = header->data();
-    GCBase::markCell(cell, this, acceptor);
+    markCell(cell, acceptor);
     allocatedBytes_ += cell->getAllocatedSize();
   }
 }
@@ -544,6 +547,10 @@ void MallocGC::freeWeakSlot(WeakRefSlot *slot) {
 
 #ifndef NDEBUG
 bool MallocGC::validPointer(const void *p) const {
+  return dbgContains(p) && static_cast<const GCCell *>(p)->isValid();
+}
+
+bool MallocGC::dbgContains(const void *p) const {
   auto *ptr = reinterpret_cast<GCCell *>(const_cast<void *>(p));
   CellHeader *header = CellHeader::from(ptr);
   bool isValid = pointers_.find(header) != pointers_.end();

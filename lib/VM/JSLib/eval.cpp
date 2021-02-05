@@ -46,6 +46,8 @@ CallResult<HermesValue> evalInEnvironment(
   compileFlags.strict = false;
   compileFlags.includeLibHermes = false;
   compileFlags.optimize = runtime->optimizedEval;
+  compileFlags.verifyIR = runtime->verifyEvalIR;
+  compileFlags.emitAsyncBreakCheck = runtime->asyncBreakCheckInEval;
   compileFlags.lazy =
       utf8code.size() >= compileFlags.preemptiveFileCompilationThreshold;
   compileFlags.allowFunctionToStringWithRuntimeSource =

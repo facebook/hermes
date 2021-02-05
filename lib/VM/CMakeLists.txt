@@ -45,13 +45,13 @@ set(source_files
   PredefinedStringIDs.cpp
   PrimitiveBox.cpp
   Profiler.cpp
+  PropertyAccessor.cpp
   Runtime.cpp Runtime-profilers.cpp
   RuntimeModule.cpp
   RuntimeStats.cpp
   Profiler/ChromeTraceSerializerPosix.cpp
   Profiler/CodeCoverageProfiler.cpp
   Profiler/InlineCacheProfiler.cpp
-  Profiler/SamplingProfilerStub.cpp
   Profiler/SamplingProfilerPosix.cpp
   Serializer.cpp
   SegmentedArray.cpp
@@ -74,6 +74,7 @@ set(source_files
   JSLib/Array.cpp
   JSLib/ArrayBuffer.cpp
   JSLib/ArrayIterator.cpp
+  JSLib/AsyncFunction.cpp
   JSLib/DataView.cpp
   JSLib/TypedArray.cpp
   JSLib/Error.cpp
@@ -159,7 +160,6 @@ elseif (${HERMESVM_GCKIND} STREQUAL "HADES")
             gcs/AlignedHeapSegment.cpp
             gcs/AlignedStorage.cpp
             gcs/CardTableNC.cpp
-            gcs/CompleteMarkState.cpp
             gcs/FillerCell.cpp
             gcs/HadesGC.cpp
   )

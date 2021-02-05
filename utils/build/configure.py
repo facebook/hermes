@@ -69,6 +69,9 @@ def parse_args():
     parser.add_argument("--enable-asan", dest="enable_asan", action="store_true")
     parser.add_argument("--enable-ubsan", dest="enable_ubsan", action="store_true")
     parser.add_argument("--enable-tsan", dest="enable_tsan", action="store_true")
+    parser.add_argument(
+        "--enable-trace-pc-guard", dest="enable_trace_pc_guard", action="store_true"
+    )
     parser.add_argument("--icu", type=str, dest="icu_root", default="")
     parser.add_argument("--fbsource", type=str, dest="fbsource_dir", default="")
     parser.add_argument("--opcode-stats", dest="opcode_stats", action="store_true")
@@ -232,6 +235,8 @@ def main():
         cmake_flags += ["-DHERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER=ON"]
     if args.enable_tsan:
         cmake_flags += ["-DHERMES_ENABLE_THREAD_SANITIZER=ON"]
+    if args.enable_trace_pc_guard:
+        cmake_flags += ["-DHERMES_ENABLE_TRACE_PC_GUARD=ON"]
     if args.fbsource_dir:
         cmake_flags += ["-DFBSOURCE_DIR=" + args.fbsource_dir]
     if args.wasm:

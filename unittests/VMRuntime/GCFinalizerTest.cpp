@@ -25,11 +25,9 @@ namespace {
 struct FinalizerCell final : public GCCell {
   static const VTable vt;
   int *numFinalized;
-#ifdef HERMESVM_GC_HADES
   // Some padding to meet the minimum cell size.
   uint64_t padding1_{0};
   uint64_t padding2_{0};
-#endif
 
   static void finalize(GCCell *cell, GC *) {
     auto *self = static_cast<FinalizerCell *>(cell);
@@ -52,11 +50,9 @@ struct FinalizerCell final : public GCCell {
 
 struct DummyCell final : public GCCell {
   static const VTable vt;
-#ifdef HERMESVM_GC_HADES
   // Some padding to meet the minimum cell size.
   uint64_t padding1_{0};
   uint64_t padding2_{0};
-#endif
 
   static DummyCell *create(DummyRuntime &runtime) {
     return runtime.makeAFixed<DummyCell>(&runtime.getHeap());
@@ -65,9 +61,10 @@ struct DummyCell final : public GCCell {
   DummyCell(GC *gc) : GCCell(gc, &vt) {}
 };
 
-const VTable FinalizerCell::vt{CellKind::FillerCellKind,
-                               sizeof(FinalizerCell),
-                               FinalizerCell::finalize};
+const VTable FinalizerCell::vt{
+    CellKind::FillerCellKind,
+    sizeof(FinalizerCell),
+    FinalizerCell::finalize};
 
 const VTable DummyCell::vt{CellKind::UninitializedKind, sizeof(DummyCell)};
 

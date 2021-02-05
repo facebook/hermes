@@ -13,6 +13,20 @@
 
 namespace hermes {
 
+/// General category for token, based off esprima's token types.
+enum class TokenType {
+  Boolean,
+  Identifier,
+  Keyword,
+  Null,
+  Numeric,
+  Punctuator,
+  String,
+  RegularExpression,
+  Template,
+  JSXText
+};
+
 /// A reference to the start or end position of a source location.
 struct PositionInfo {
   enum class Kind { Start, End };
@@ -75,7 +89,8 @@ class ParseResult {
 void serialize(
     ESTree::ProgramNode *programNode,
     SourceErrorManager *sm,
-    ParseResult &result);
+    ParseResult &result,
+    bool tokens);
 
 } // namespace hermes
 

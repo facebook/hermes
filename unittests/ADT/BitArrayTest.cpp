@@ -22,17 +22,18 @@ struct BitArrayTest : public ::testing::Test {
     std::vector<std::deque<size_t>> testIndices;
     // Use a mix of word-aligned and non-word-aligned values. Set the first and
     // last bits to check that those edge cases are handled correctly.
-    testIndices.push_back({0,
-                           1,
-                           2,
-                           128,
-                           234,
-                           436,
-                           789,
-                           1099,
-                           SIZE::value - 65,
-                           SIZE::value - 2,
-                           SIZE::value - 1});
+    testIndices.push_back(
+        {0,
+         1,
+         2,
+         128,
+         234,
+         436,
+         789,
+         1099,
+         SIZE::value - 65,
+         SIZE::value - 2,
+         SIZE::value - 1});
 
     // Test the case where there are no set bits at the start/end.
     testIndices.push_back({128, 234, 436, 789, 1099, SIZE::value - 100});

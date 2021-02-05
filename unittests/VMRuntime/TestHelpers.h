@@ -261,10 +261,13 @@ class MetadataTableForTests final : public MetadataTable {
 };
 
 /// A Runtime that can take a custom VTableMap and Metadata table.
-struct DummyRuntime final : public HandleRootOwner,
-                            public PointerBase,
-                            private GCBase::GCCallbacks {
-  GC gc;
+class DummyRuntime final : public HandleRootOwner,
+                           public PointerBase,
+                           private GCBase::GCCallbacks {
+ private:
+  std::unique_ptr<GC> gc_;
+
+ public:
   std::vector<GCCell **> pointerRoots{};
   std::vector<PinnedHermesValue *> valueRoots{};
   std::vector<WeakRoot<void> *> weakRoots{};
@@ -291,14 +294,16 @@ struct DummyRuntime final : public HandleRootOwner,
   /// function.
   static std::unique_ptr<StorageProvider> defaultProvider();
 
-  ~DummyRuntime() override {
-#ifndef NDEBUG
-    gc.getIDTracker().forEachID(
-        [this](const void *mem, HeapSnapshot::NodeID id) {
-          EXPECT_TRUE(gc.validPointer(mem));
-        });
-#endif
-    gc.finalizeAll();
+  ~DummyRuntime();
+
+  template <
+      typename T,
+      HasFinalizer hasFinalizer = HasFinalizer::No,
+      LongLived longLived = LongLived::No,
+      class... Args>
+  T *makeAFixed(Args &&...args) {
+    return getHeap().makeAFixed<T, hasFinalizer, longLived>(
+        std::forward<Args>(args)...);
   }
 
   template <
@@ -306,28 +311,16 @@ struct DummyRuntime final : public HandleRootOwner,
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
       class... Args>
-  T *makeAFixed(Args &&... args) {
-    return gc.makeA<T, true /* fixedSize */, hasFinalizer, longLived>(
-        cellSize<T>(), std::forward<Args>(args)...);
-  }
-
-  template <
-      typename T,
-      HasFinalizer hasFinalizer = HasFinalizer::No,
-      LongLived longLived = LongLived::No,
-      class... Args>
-  T *makeAVariable(uint32_t size, Args &&... args) {
-    return gc.makeA<T, false /* fixedSize */, hasFinalizer, longLived>(
+  T *makeAVariable(uint32_t size, Args &&...args) {
+    return getHeap().makeAVariable<T, hasFinalizer, longLived>(
         size, std::forward<Args>(args)...);
   }
 
   GC &getHeap() {
-    return gc;
+    return *gc_;
   }
 
-  void collect() {
-    gc.collect("test");
-  }
+  void collect();
 
   void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool) override;
 
@@ -384,6 +377,14 @@ struct DummyRuntime final : public HandleRootOwner,
   }
 
  private:
+  static std::unique_ptr<GC> makeHeap(
+      DummyRuntime *runtime,
+      MetadataTableForTests metaTable,
+      const GCConfig &gcConfig,
+      std::shared_ptr<CrashManager> crashMgr,
+      std::shared_ptr<StorageProvider> provider,
+      experiments::VMExperimentFlags experiments);
+
   DummyRuntime(
       MetadataTableForTests metaTable,
       const GCConfig &gcConfig,

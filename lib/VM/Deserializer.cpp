@@ -229,7 +229,8 @@ void Deserializer::updateAddress(
       *(void **)address = ptrVal;
       return;
     case RelocationKind::GCPointer:
-      ((GCPointerBase *)address)->set(runtime_, ptrVal, &runtime_->getHeap());
+      ((GCPointerBase *)address)
+          ->set(runtime_, static_cast<GCCell *>(ptrVal), &runtime_->getHeap());
       return;
     case RelocationKind::HermesValue:
       ((HermesValue *)address)->unsafeUpdatePointer(ptrVal);

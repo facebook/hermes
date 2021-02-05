@@ -14,10 +14,10 @@
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSCallableProxy.h"
 #include "hermes/VM/JSError.h"
-#include "hermes/VM/JSGenerator.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/JSRegExp.h"
 #include "hermes/VM/PrimitiveBox.h"
+#include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringPrimitive.h"
@@ -222,8 +222,7 @@ toPrimitive_RJS(Runtime *runtime, Handle<> valueHandle, PreferredType hint) {
         runtime,
         valueHandle,
         HermesValue::encodeStringValue(runtime->getPredefinedString(
-            hint == PreferredType::NONE
-                ? Predefined::defaultStr
+            hint == PreferredType::NONE         ? Predefined::defaultStr
                 : hint == PreferredType::STRING ? Predefined::string
                                                 : Predefined::number)));
     if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {

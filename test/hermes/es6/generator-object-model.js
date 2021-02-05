@@ -31,6 +31,8 @@ print(3, f instanceof GeneratorFunction);
 // CHECK-NEXT: 3 true
 print(4, Object.getPrototypeOf(Generator) === Function.prototype);
 // CHECK-NEXT: 4 true
+print(5, GeneratorFunction.__proto__ === Function);
+// CHECK-NEXT: 5 true
 
 var instance = GeneratorFunction();
 print(5, typeof instance.prototype);

@@ -6,8 +6,10 @@
  */
 
 exports.throwError = function mod2fun() {
-  require('cjs-subdir-shared.js').immediatelyInvoke(function mod2Inner() {
-    throw new Error('ERROR_FOR_TESTING');
+  require('cjs-subdir-shared.min.js').immediatelyInvoke(() => {
+    require('cjs-subdir-partially-mapped.js').mappedFunction(function mod2Inner() {
+      throw new Error('ERROR_FOR_TESTING');
+    });
   });
   return;
 }

@@ -12,7 +12,10 @@
 const fs = require('fs');
 const path = require('path');
 
-const OUTPUT_FILE = path.resolve(__dirname, '../build/HermesParserWASM.js');
+const OUTPUT_FILE = path.resolve(
+  __dirname,
+  '../hermes-parser/dist/HermesParserWASM.js',
+);
 
 const HEADER = `/**
  * Copyright (c) Facebook, Inc. and its affiliates.
@@ -21,6 +24,7 @@ const HEADER = `/**
  * LICENSE file in the root directory of this source tree.
  */
 
+'use strict';
 `;
 
 // Add header and sign file before writing back to disk

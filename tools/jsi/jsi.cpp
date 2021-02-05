@@ -88,9 +88,9 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
-  auto srcPath = !EvalScript.empty()
-      ? "<eval>"
-      : InputFilename == "-" ? "<stdin>" : std::string(InputFilename);
+  auto srcPath = !EvalScript.empty() ? "<eval>"
+      : InputFilename == "-"         ? "<stdin>"
+                                     : std::string(InputFilename);
 
   auto runtime = facebook::hermes::makeHermesRuntime();
 

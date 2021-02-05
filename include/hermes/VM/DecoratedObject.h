@@ -21,8 +21,6 @@ namespace vm {
 /// include additional internal slots, as in OrdinaryObjectCreate's
 /// additionalInternalSlotsList).
 class DecoratedObject : public JSObject {
-  friend GC;
-
  public:
   struct Decoration {
     /// The destructor is called when the decorated object is finalized.
@@ -99,7 +97,7 @@ class DecoratedObject : public JSObject {
         CellKind::DecoratedObjectKind_last);
   }
 
- protected:
+ public:
   ~DecoratedObject() = default;
 
   DecoratedObject(
@@ -111,10 +109,11 @@ class DecoratedObject : public JSObject {
       : JSObject(runtime, &vt->base, *parent, *clazz),
         decoration_(std::move(decoration)) {}
 
+ protected:
   static void _finalizeImpl(GCCell *cell, GC *);
   static size_t _mallocSizeImpl(GCCell *cell);
 
- private:
+ public:
 #ifdef HERMESVM_SERIALIZE
   explicit DecoratedObject(Deserializer &d);
 
@@ -122,6 +121,7 @@ class DecoratedObject : public JSObject {
   friend void DecoratedObjectDeserialize(Deserializer &d, CellKind kind);
 #endif
 
+ private:
   std::unique_ptr<Decoration> decoration_;
 };
 

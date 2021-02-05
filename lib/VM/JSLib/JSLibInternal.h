@@ -395,6 +395,9 @@ Handle<JSObject> createSymbolConstructor(Runtime *runtime);
 /// Create the GeneratorFunction constructor and populate methods.
 Handle<JSObject> createGeneratorFunctionConstructor(Runtime *runtime);
 
+/// Create the AsyncFunction constructor and populate methods.
+Handle<JSObject> createAsyncFunctionConstructor(Runtime *runtime);
+
 /// Create the IteratorPrototype.
 void populateIteratorPrototype(Runtime *runtime);
 
@@ -410,12 +413,15 @@ void populateRegExpStringIteratorPrototype(Runtime *runtime);
 /// Create the %GeneratorPrototype%.
 void populateGeneratorPrototype(Runtime *runtime);
 
-/// ES19.2.1.1.1. Create a new function given arguments and a body.
+/// ES19.2.1.1.1. CreateDynamicFunction ( constructor, newTarget, kind, args )
+enum class DynamicFunctionKind { Normal, Generator, Async };
+
+/// Create a new function given arguments and a body.
 /// \param isGeneratorFunction when true, make a generator with "function*".
 CallResult<HermesValue> createDynamicFunction(
     Runtime *runtime,
     NativeArgs args,
-    bool isGeneratorFunction);
+    DynamicFunctionKind kind);
 
 /// A direct passthrough to call eval() on \p str.
 CallResult<HermesValue> directEval(

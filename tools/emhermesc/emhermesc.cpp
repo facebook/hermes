@@ -19,6 +19,7 @@
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/SourceMap/SourceMapParser.h"
 #include "hermes/Support/Algorithms.h"
+#include "hermes/Support/SimpleDiagHandler.h"
 
 #include "llvh/Support/SHA1.h"
 
@@ -127,9 +128,12 @@ extern "C" CompileResult *hermesCompileToBytecode(
       return compileRes.release();
     }
 
-    sourceMap = SourceMapParser::parse({sourceMapData, sourceMapSize - 1});
+    SourceErrorManager sm;
+    SimpleDiagHandlerRAII diagHandler(sm);
+    sourceMap = SourceMapParser::parse({sourceMapData, sourceMapSize - 1}, sm);
     if (!sourceMap) {
-      compileRes->error_ = "Failed to parse source map";
+      compileRes->error_ =
+          "Failed to parse source map:" + diagHandler.getErrorString();
       return compileRes.release();
     }
   }

@@ -185,7 +185,7 @@ RuntimeModule *RuntimeModule::createLazyModule(
   // The module doesn't have a string table until we've compiled the block,
   // so just add the string name as 0 in the mean time for f.name to work via
   // getLazyName(). Since it's in the stringIDMap_, it'll be correctly GC'd.
-  RM->stringIDMap_.push_back(parent->getSymbolIDFromStringIDMayAllocate(
+  RM->stringIDMap_.emplace_back(parent->getSymbolIDFromStringIDMayAllocate(
       bcFunction->getHeader().functionName));
 
   return RM;
@@ -235,7 +235,7 @@ void RuntimeModule::importStringIDMapMayAllocate() {
   stringIDMap_.clear();
 
   // Populate the string ID map with empty identifiers.
-  stringIDMap_.resize(strTableSize, SymbolID::empty());
+  stringIDMap_.resize(strTableSize, RootSymbolID(SymbolID::empty()));
 
   if (runtime_->getVMExperimentFlags() &
       experiments::MAdviseStringsSequential) {
@@ -366,13 +366,11 @@ SymbolID RuntimeModule::mapStringMayAllocate(
     id = *runtime_->ignoreAllocationFailure(
         runtime_->getIdentifierTable().getSymbolHandle(runtime_, str, hash));
   }
-  stringIDMap_[stringID] = id;
+  stringIDMap_[stringID] = RootSymbolID(id);
   return id;
 }
 
-void RuntimeModule::markRoots(
-    RootAndSlotAcceptor &acceptor,
-    bool markLongLived) {
+void RuntimeModule::markRoots(RootAcceptor &acceptor, bool markLongLived) {
   for (auto &it : templateMap_) {
     acceptor.acceptPtr(it.second);
   }

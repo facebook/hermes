@@ -38,7 +38,7 @@ TEST(GCReturnUnusedMemoryTest, CollectReturnsFreeMemory) {
   auto runtime =
       DummyRuntime::create(getMetadataTable(), kGCConfig, std::move(provider));
   DummyRuntime &rt = *runtime;
-  auto &gc = rt.gc;
+  auto &gc = rt.getHeap();
 
   using SemiCell = EmptyCell<AlignedHeapSegment::maxSize() * 8 / 10>;
 

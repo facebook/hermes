@@ -10,9 +10,13 @@
 #include "EmptyCell.h"
 #include "ExtStringForTest.h"
 #include "TestHelpers.h"
+#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCCell.h"
+
+#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 #include "hermes/VM/GenGCHeapSegment.h"
+#endif
 
 #include <deque>
 
@@ -73,7 +77,7 @@ TEST(GCFragmentationTest, TestCoalescing) {
 
   // Hades needs a manually triggered full collection, since full collections
   // are started at the end of a YG GC.
-#ifdef HERMESVM_GC_HADES
+#if defined(HERMESVM_GC_HADES) || defined(HERMESVM_GC_RUNTIME)
   rt.collect();
 #endif
 
@@ -85,7 +89,7 @@ TEST(GCFragmentationTest, TestCoalescing) {
 
   rt.pointerRoots.clear();
 
-#ifdef HERMESVM_GC_HADES
+#if defined(HERMESVM_GC_HADES) || defined(HERMESVM_GC_RUNTIME)
   rt.collect();
 #endif
 
@@ -103,14 +107,14 @@ TEST(GCFragmentationTest, Test) {
   // last segment occupy less than a full segment, if the heap was exactly the
   // size given in the hint.
   static constexpr gcheapsize_t kHeapSizeHint =
-      GenGCHeapSegment::maxSize() * GC::kYoungGenFractionDenom +
+      GenGCHeapSegment::maxSize() * GenGC::kYoungGenFractionDenom +
       GenGCHeapSegment::maxSize() / 2;
 
   static const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSizeHint);
 
   auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);
   DummyRuntime &rt = *runtime;
-  auto &gc = rt.gc;
+  GenGC &gc = rt.getHeap();
 
   // Number of bytes allocatable in the old generation, assuming the heap
   // contains \c kHeapSizeHint bytes in total.
@@ -178,7 +182,7 @@ TEST(GCFragmentationTest, ExternalMemoryTest) {
   // Allocate a heap whose young-gen is a full segment, and whose old gen size
   // is rounded up to a multiple of the segment size.
   static constexpr size_t kHeapSize =
-      GenGCHeapSegment::maxSize() * GC::kYoungGenFractionDenom;
+      GenGCHeapSegment::maxSize() * GenGC::kYoungGenFractionDenom;
   static const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSize);
 
   // Number of bytes allocatable in each generation, assuming the heap contains
@@ -187,7 +191,7 @@ TEST(GCFragmentationTest, ExternalMemoryTest) {
 
   auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);
   DummyRuntime &rt = *runtime;
-  auto &gc = rt.gc;
+  GenGC &gc = rt.getHeap();
 
   // A cell the size of a segment's allocation region.
   using SegmentCell = EmptyCell<GenGCHeapSegment::maxSize()>;

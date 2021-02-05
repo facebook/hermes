@@ -420,17 +420,22 @@ jobs:
 
   npm:
     docker:
-      - image: ubuntu:rolling
+      - image: cimg/node:lts
     environment:
       - YARN: yarnpkg
       - TERM: dumb
       - DEBIAN_FRONTEND: noninteractive
     steps:
       - run:
+          name: Print versions
+          command: |
+            node --version
+            yarn --version
+      - run:
           name: Install certificates required to attach workspace
           command: |
-            apt-get update
-            apt-get install -y ca-certificates
+            sudo apt-get update
+            sudo apt-get install -y ca-certificates
 
       - attach_workspace:
           at: /tmp/hermes/input
@@ -439,7 +444,6 @@ jobs:
           name: Install dependencies and set up
           command: |
             mkdir -p /tmp/hermes/output
-            apt-get install -y git npm yarnpkg
 
       - checkout
 
@@ -508,8 +512,10 @@ jobs:
             . "$NVM_DIR/nvm.sh"
             echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
             echo '. "$NVM_DIR/nvm.sh"' >> $BASH_ENV
-            nvm install 12
-            nvm use 12
+            nvm install 14
+            nvm use 14
+            # Reinstall the latest version of Yarn.
+            npm install --global yarn
             brew install gnu-sed
             brew install md5sha1sum
             brew tap homebrew/cask
@@ -518,6 +524,11 @@ jobs:
             echo 'export PATH="/usr/local/share/android-sdk/platform-tools:/usr/local/share/android-sdk/tools/bin:$PATH"' >> $BASH_ENV
             # At some point, adb ended up in platform-tools/platform-tools. Work around that.
             echo 'export PATH="/usr/local/share/android-sdk/platform-tools/platform-tools:$PATH"' >> $BASH_ENV
+      - run:
+          name: Print versions
+          command: |
+            node --version
+            yarn --version
       - run:
           name: Install emulator dependencies
           command: (yes | sdkmanager "platform-tools" "platforms;android-26" "extras;intel;Hardware_Accelerated_Execution_Manager" "build-tools;26.0.0" "system-images;android-26;google_apis;x86" "emulator" --verbose) || true

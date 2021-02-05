@@ -13,7 +13,8 @@ function doSymbolication() {
         });
         // SourceMapConsumer: 1-based lines, 0-based columns
         // Hermes: 1-based lines, 1-based columns
-        return '(' + original.source + ':' + original.line + ':' + (original.column + 1) + ')';
+        var column = original.column != null ? original.column + 1 : original.column;
+        return '(' + original.source + ':' + original.line + ':' + column + ')';
       }
   );
   symbolicated = symbolicated.replace(/address at /g, '')

@@ -14,7 +14,7 @@
 namespace hermes {
 namespace vm {
 
-struct DummyRuntime;
+class DummyRuntime;
 
 /// This is a testing version of ExternalStringPrimitive<char>.
 /// The GC will test whether these cells have this type, so this must have the

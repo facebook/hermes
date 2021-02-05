@@ -173,8 +173,13 @@ StackTracesTreeNode::SourceLoc StackTracesTree::computeSourceLoc(
   } else {
     auto sourceURL = runtimeModule->getSourceURL();
     scriptName = sourceURL.empty() ? "unknown" : sourceURL;
-    lineNo = -1;
-    columnNo = -1;
+    // Lines and columns in SourceLoc are 1-based.
+    lineNo = runtimeModule->getBytecode()->getSegmentID() + 1;
+    // Note the +1 for columnNo! This is *unlike* Error.prototype.stack (etc)
+    // where, for legacy reasons, we print columns as 1-based but virtual
+    // offsets as 0-based. Here we prefer to expose a simpler API at the cost
+    // of consistency with other places we surface this information.
+    columnNo = codeBlock->getVirtualOffset() + bytecodeOffset + 1;
   }
   return {strings_->insert(scriptName), scriptID, lineNo, columnNo};
 }

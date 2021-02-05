@@ -11,10 +11,10 @@
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/JSNativeFunctions.h"
 #include "hermes/VM/JSProxy.h"
+#include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/SmallXString.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringPrimitive.h"
-#include "hermes/VM/StringView.h"
 
 #include "llvh/ADT/ArrayRef.h"
 
@@ -108,8 +108,12 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime *runtime) {
     auto prototypeParent = vmisa<JSGeneratorFunction>(*jsFun)
         ? Handle<JSObject>::vmcast(&runtime->generatorPrototype)
         : Handle<JSObject>::vmcast(&runtime->objectPrototype);
-    auto prototypeObjectHandle =
-        runtime->makeHandle(JSObject::create(runtime, prototypeParent));
+
+    // According to ES12 26.7.4, AsyncFunction instances do not have a
+    // 'prototype' property, hence we need to set an null handle here.
+    auto prototypeObjectHandle = vmisa<JSAsyncFunction>(*jsFun)
+        ? Runtime::makeNullHandle<JSObject>()
+        : runtime->makeHandle(JSObject::create(runtime, prototypeParent));
 
     auto cr = Callable::defineNameLengthAndPrototype(
         fn,
@@ -229,13 +233,13 @@ CallResult<PseudoHandle<>> Callable::executeCall0(
     Runtime *runtime,
     Handle<> thisArgHandle,
     bool construct) {
-  ScopedNativeCallFrame newFrame{runtime,
-                                 0,
-                                 selfHandle.getHermesValue(),
-                                 construct
-                                     ? selfHandle.getHermesValue()
-                                     : HermesValue::encodeUndefinedValue(),
-                                 *thisArgHandle};
+  ScopedNativeCallFrame newFrame{
+      runtime,
+      0,
+      selfHandle.getHermesValue(),
+      construct ? selfHandle.getHermesValue()
+                : HermesValue::encodeUndefinedValue(),
+      *thisArgHandle};
   if (LLVM_UNLIKELY(newFrame.overflowed()))
     return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   return call(selfHandle, runtime);
@@ -249,13 +253,13 @@ CallResult<PseudoHandle<>> Callable::executeCall1(
     Handle<> thisArgHandle,
     HermesValue param1,
     bool construct) {
-  ScopedNativeCallFrame newFrame{runtime,
-                                 1,
-                                 selfHandle.getHermesValue(),
-                                 construct
-                                     ? selfHandle.getHermesValue()
-                                     : HermesValue::encodeUndefinedValue(),
-                                 *thisArgHandle};
+  ScopedNativeCallFrame newFrame{
+      runtime,
+      1,
+      selfHandle.getHermesValue(),
+      construct ? selfHandle.getHermesValue()
+                : HermesValue::encodeUndefinedValue(),
+      *thisArgHandle};
   if (LLVM_UNLIKELY(newFrame.overflowed()))
     return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   newFrame->getArgRef(0) = param1;
@@ -271,13 +275,13 @@ CallResult<PseudoHandle<>> Callable::executeCall2(
     HermesValue param1,
     HermesValue param2,
     bool construct) {
-  ScopedNativeCallFrame newFrame{runtime,
-                                 2,
-                                 selfHandle.getHermesValue(),
-                                 construct
-                                     ? selfHandle.getHermesValue()
-                                     : HermesValue::encodeUndefinedValue(),
-                                 *thisArgHandle};
+  ScopedNativeCallFrame newFrame{
+      runtime,
+      2,
+      selfHandle.getHermesValue(),
+      construct ? selfHandle.getHermesValue()
+                : HermesValue::encodeUndefinedValue(),
+      *thisArgHandle};
   if (LLVM_UNLIKELY(newFrame.overflowed()))
     return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   newFrame->getArgRef(0) = param1;
@@ -295,13 +299,13 @@ CallResult<PseudoHandle<>> Callable::executeCall3(
     HermesValue param2,
     HermesValue param3,
     bool construct) {
-  ScopedNativeCallFrame newFrame{runtime,
-                                 3,
-                                 selfHandle.getHermesValue(),
-                                 construct
-                                     ? selfHandle.getHermesValue()
-                                     : HermesValue::encodeUndefinedValue(),
-                                 *thisArgHandle};
+  ScopedNativeCallFrame newFrame{
+      runtime,
+      3,
+      selfHandle.getHermesValue(),
+      construct ? selfHandle.getHermesValue()
+                : HermesValue::encodeUndefinedValue(),
+      *thisArgHandle};
   if (LLVM_UNLIKELY(newFrame.overflowed()))
     return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   newFrame->getArgRef(0) = param1;
@@ -321,13 +325,13 @@ CallResult<PseudoHandle<>> Callable::executeCall4(
     HermesValue param3,
     HermesValue param4,
     bool construct) {
-  ScopedNativeCallFrame newFrame{runtime,
-                                 4,
-                                 selfHandle.getHermesValue(),
-                                 construct
-                                     ? selfHandle.getHermesValue()
-                                     : HermesValue::encodeUndefinedValue(),
-                                 *thisArgHandle};
+  ScopedNativeCallFrame newFrame{
+      runtime,
+      4,
+      selfHandle.getHermesValue(),
+      construct ? selfHandle.getHermesValue()
+                : HermesValue::encodeUndefinedValue(),
+      *thisArgHandle};
   if (LLVM_UNLIKELY(newFrame.overflowed()))
     return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   newFrame->getArgRef(0) = param1;
@@ -493,11 +497,12 @@ const CallableVTable BoundFunction::vt{
             nullptr,
             nullptr,
             nullptr, // externalMemorySize
-            VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Closure,
-                                         BoundFunction::_snapshotNameImpl,
-                                         BoundFunction::_snapshotAddEdgesImpl,
-                                         nullptr,
-                                         nullptr}),
+            VTable::HeapSnapshotMetadata{
+                HeapSnapshot::NodeType::Closure,
+                BoundFunction::_snapshotNameImpl,
+                BoundFunction::_snapshotAddEdgesImpl,
+                nullptr,
+                nullptr}),
         BoundFunction::_getOwnIndexedRangeImpl,
         BoundFunction::_haveOwnIndexedImpl,
         BoundFunction::_getOwnIndexedPropertyFlagsImpl,
@@ -897,11 +902,12 @@ const CallableVTable NativeFunction::vt{
             nullptr,
             nullptr,
             nullptr, // externalMemorySize
-            VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Closure,
-                                         NativeFunction::_snapshotNameImpl,
-                                         NativeFunction::_snapshotAddEdgesImpl,
-                                         nullptr,
-                                         nullptr}),
+            VTable::HeapSnapshotMetadata{
+                HeapSnapshot::NodeType::Closure,
+                NativeFunction::_snapshotNameImpl,
+                NativeFunction::_snapshotAddEdgesImpl,
+                nullptr,
+                nullptr}),
         NativeFunction::_getOwnIndexedRangeImpl,
         NativeFunction::_haveOwnIndexedImpl,
         NativeFunction::_getOwnIndexedPropertyFlagsImpl,
@@ -1312,6 +1318,80 @@ void JSFunction::_snapshotAddLocationsImpl(
 }
 
 //===----------------------------------------------------------------------===//
+// class JSAsyncFunction
+
+const CallableVTable JSAsyncFunction::vt{
+    {
+        VTable(
+            CellKind::AsyncFunctionKind,
+            cellSize<JSAsyncFunction>(),
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr, // externalMemorySize
+            VTable::HeapSnapshotMetadata{
+                HeapSnapshot::NodeType::Closure,
+                JSAsyncFunction::_snapshotNameImpl,
+                JSAsyncFunction::_snapshotAddEdgesImpl,
+                nullptr,
+                nullptr}),
+        JSAsyncFunction::_getOwnIndexedRangeImpl,
+        JSAsyncFunction::_haveOwnIndexedImpl,
+        JSAsyncFunction::_getOwnIndexedPropertyFlagsImpl,
+        JSAsyncFunction::_getOwnIndexedImpl,
+        JSAsyncFunction::_setOwnIndexedImpl,
+        JSAsyncFunction::_deleteOwnIndexedImpl,
+        JSAsyncFunction::_checkAllOwnIndexedImpl,
+    },
+    JSAsyncFunction::_newObjectImpl,
+    JSAsyncFunction::_callImpl};
+
+void AsyncFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSAsyncFunction>());
+  FunctionBuildMeta(cell, mb);
+}
+
+#ifdef HERMESVM_SERIALIZE
+JSAsyncFunction::JSAsyncFunction(Deserializer &d)
+    : JSFunction(d, &vt.base.base) {}
+
+void AsyncFunctionSerialize(Serializer &s, const GCCell *cell) {
+  // No additional fields compared to JSFunction.
+  serializeFunctionImpl(s, cell, JSObject::numOverlapSlots<JSAsyncFunction>());
+  s.endObject(cell);
+}
+
+void AsyncFunctionDeserialize(Deserializer &d, CellKind kind) {
+  assert(kind == CellKind::AsyncFunctionKind && "Expected AsyncFunction");
+
+  auto *cell = d.getRuntime()->makeAFixed<JSAsyncFunction>(d);
+  d.endObject(cell);
+}
+#endif
+
+PseudoHandle<JSAsyncFunction> JSAsyncFunction::create(
+    Runtime *runtime,
+    Handle<Domain> domain,
+    Handle<JSObject> parentHandle,
+    Handle<Environment> envHandle,
+    CodeBlock *codeBlock) {
+  auto *cell = runtime->makeAFixed<JSAsyncFunction, kHasFinalizer>(
+      runtime,
+      domain,
+      parentHandle,
+      runtime->getHiddenClassForPrototype(
+          *parentHandle,
+          numOverlapSlots<JSAsyncFunction>() + ANONYMOUS_PROPERTY_SLOTS),
+      envHandle,
+      codeBlock);
+  auto self = JSObjectInit::initToPseudoHandle(runtime, cell);
+  self->flags_.lazyObject = 1;
+  return self;
+}
+
+//===----------------------------------------------------------------------===//
 // class JSGeneratorFunction
 
 const CallableVTable JSGeneratorFunction::vt{
@@ -1530,11 +1610,12 @@ CallResult<PseudoHandle<>> GeneratorInnerFunction::callInnerFunction(
   // Generators cannot be used as constructors, so newTarget is always
   // undefined.
   HermesValue newTarget = HermesValue::encodeUndefinedValue();
-  ScopedNativeCallFrame frame{runtime,
-                              argCount, // Account for `this`.
-                              selfHandle.getHermesValue(),
-                              newTarget,
-                              ctx->at(0)};
+  ScopedNativeCallFrame frame{
+      runtime,
+      argCount, // Account for `this`.
+      selfHandle.getHermesValue(),
+      newTarget,
+      ctx->at(0)};
   if (LLVM_UNLIKELY(frame.overflowed()))
     return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   for (ArrayStorage::size_type i = 0, e = argCount; i < e; ++i) {

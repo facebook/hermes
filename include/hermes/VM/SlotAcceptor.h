@@ -18,6 +18,7 @@ namespace vm {
 class GCPointerBase;
 class WeakRefBase;
 class WeakRootBase;
+class GCCell;
 
 /// SlotAcceptor is an interface to be implemented by acceptors of objects in
 /// the heap.
@@ -29,16 +30,16 @@ class WeakRootBase;
 /// pointer.  For example, if the pointer is in compressed form.)
 /// This is used by a visitor, see \c SlotVisitor.
 struct SlotAcceptor {
-  virtual ~SlotAcceptor(){};
+  virtual ~SlotAcceptor() = default;
   virtual void accept(GCPointerBase &ptr) = 0;
   virtual void accept(GCHermesValue &hv) = 0;
-  virtual void accept(SymbolID sym) = 0;
+  virtual void accept(GCSymbolID sym) = 0;
 };
 
 /// Weak references are typically slower to find, and need to be done separately
 /// from normal references.
 struct WeakRefAcceptor {
-  virtual ~WeakRefAcceptor() {}
+  virtual ~WeakRefAcceptor() = default;
   virtual void accept(WeakRefBase &wr) = 0;
 };
 
@@ -58,16 +59,17 @@ struct RootSectionAcceptor {
 };
 
 struct RootAcceptor : public RootSectionAcceptor {
-  virtual void accept(void *&ptr) = 0;
+  virtual void accept(GCCell *&ptr) = 0;
   virtual void accept(PinnedHermesValue &hv) = 0;
+  virtual void accept(RootSymbolID sym) = 0;
 
   /// When we want to call an acceptor on "raw" root pointers of
   /// some JSObject subtype T, this method does the necessary
-  /// reinterpret_cast to allow us to call the "void *&" accept
+  /// reinterpret_cast to allow us to call the "GCCell *&" accept
   /// method above.
   template <typename T>
   void acceptPtr(T *&ptr) {
-    accept(reinterpret_cast<void *&>(ptr));
+    accept(reinterpret_cast<GCCell *&>(ptr));
   }
 };
 
@@ -77,36 +79,41 @@ struct RootAndSlotAcceptor : public RootAcceptor, public SlotAcceptor {
 };
 
 struct RootAndSlotAcceptorWithNames : public RootAndSlotAcceptor {
-  void accept(void *&ptr) override final {
+  void accept(GCCell *&ptr) final {
     accept(ptr, nullptr);
   }
-  virtual void accept(void *&ptr, const char *name) = 0;
+  virtual void accept(GCCell *&ptr, const char *name) = 0;
 
-  void accept(PinnedHermesValue &hv) override final {
+  void accept(PinnedHermesValue &hv) final {
     accept(hv, nullptr);
   }
   virtual void accept(PinnedHermesValue &hv, const char *name) = 0;
 
+  void accept(RootSymbolID sym) final {
+    accept(sym, nullptr);
+  }
+  virtual void accept(RootSymbolID sym, const char *name) = 0;
+
   using RootAndSlotAcceptor::acceptPtr;
   template <typename T>
   void acceptPtr(T *&ptr, const char *name) {
-    accept(reinterpret_cast<void *&>(ptr), name);
+    accept(reinterpret_cast<GCCell *&>(ptr), name);
   }
 
-  void accept(GCPointerBase &ptr) override final {
+  void accept(GCPointerBase &ptr) final {
     accept(ptr, nullptr);
   }
   virtual void accept(GCPointerBase &ptr, const char *name) = 0;
 
-  void accept(GCHermesValue &hv) override final {
+  void accept(GCHermesValue &hv) final {
     accept(hv, nullptr);
   }
   virtual void accept(GCHermesValue &hv, const char *name) = 0;
 
-  void accept(SymbolID sym) override final {
+  void accept(GCSymbolID sym) final {
     accept(sym, nullptr);
   }
-  virtual void accept(SymbolID sym, const char *name) = 0;
+  virtual void accept(GCSymbolID sym, const char *name) = 0;
 
   /// Initiate the callback if this acceptor is part of heap snapshots.
   virtual void provideSnapshot(
@@ -114,7 +121,7 @@ struct RootAndSlotAcceptorWithNames : public RootAndSlotAcceptor {
 };
 
 struct WeakRootAcceptor : public WeakRefAcceptor, RootSectionAcceptor {
-  virtual ~WeakRootAcceptor() = default;
+  ~WeakRootAcceptor() override = default;
 
   /// NOTE: This is called acceptWeak in order to avoid clashing with accept
   /// from SlotAcceptor, for classes that inherit from both.
@@ -128,11 +135,11 @@ struct DroppingAcceptor final : public RootAndSlotAcceptorWithNames {
       "Can only use this with a subclass of RootAndSlotAcceptor");
   Acceptor &acceptor;
 
-  DroppingAcceptor(Acceptor &acceptor) : acceptor(acceptor) {}
+  explicit DroppingAcceptor(Acceptor &acceptor) : acceptor(acceptor) {}
 
   using RootAndSlotAcceptorWithNames::accept;
 
-  void accept(void *&ptr, const char *) override {
+  void accept(GCCell *&ptr, const char *) override {
     acceptor.accept(ptr);
   }
 
@@ -148,7 +155,11 @@ struct DroppingAcceptor final : public RootAndSlotAcceptorWithNames {
     acceptor.accept(hv);
   }
 
-  void accept(SymbolID sym, const char *) override {
+  void accept(RootSymbolID sym, const char *) override {
+    acceptor.accept(sym);
+  }
+
+  void accept(GCSymbolID sym, const char *) override {
     acceptor.accept(sym);
   }
 };

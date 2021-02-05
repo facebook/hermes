@@ -18,43 +18,30 @@ namespace vm {
 
 template <typename T>
 template <typename NeedsBarriers>
-GCPointer<T>::GCPointer(
-    PointerBase *base,
-    T *ptr,
-    GC *gc,
-    NeedsBarriers needsBarrierUnused)
+GCPointer<T>::GCPointer(PointerBase *base, T *ptr, GC *gc, NeedsBarriers)
     : GCPointerBase(base, ptr) {
   assert(
       (!ptr || gc->validPointer(ptr)) &&
       "Cannot construct a GCPointer from an invalid pointer");
   if (NeedsBarriers::value) {
-    gc->constructorWriteBarrier(&ptr_, ptr);
+    gc->constructorWriteBarrier(this, ptr);
   } else {
     assert(!gc->needsWriteBarrier(&ptr_, ptr));
   }
 }
 
-inline void GCPointerBase::set(PointerBase *base, void *ptr, GC *gc) {
+inline void GCPointerBase::set(PointerBase *base, GCCell *ptr, GC *gc) {
   assert(
       (!ptr || gc->validPointer(ptr)) &&
       "Cannot set a GCPointer to an invalid pointer");
   // Write barrier must happen before the write.
-  gc->writeBarrier(&ptr_, ptr);
+  gc->writeBarrier(this, ptr);
   ptr_ = pointerToStorageType(ptr, base);
 }
 
 inline void GCPointerBase::setNull(GC *gc) {
-#ifdef HERMESVM_GC_HADES
-  // Hades requires a write barrier here in case the previous value of ptr_ was
-  // a pointer.
-  gc->writeBarrier(&ptr_, nullptr);
-#endif
+  gc->snapshotWriteBarrier(this);
   ptr_ = StorageType{};
-}
-
-inline GCPointerBase::StorageType &GCPointerBase::getLoc(GC *gc) {
-  assert(gc->calledByGC() && "Can only use GCPointer::getLoc within GC.");
-  return ptr_;
 }
 
 } // namespace vm

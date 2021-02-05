@@ -49,10 +49,11 @@ class TestCell final : public GCCell {
       : GCCell(gc, &vt), numMarkWeakCalls(numMarkWeakCalls), weak(gc, this) {}
 };
 
-const VTable TestCell::vt{CellKind::FillerCellKind,
-                          sizeof(TestCell),
-                          nullptr,
-                          TestCell::_markWeakImpl};
+const VTable TestCell::vt{
+    CellKind::FillerCellKind,
+    sizeof(TestCell),
+    nullptr,
+    TestCell::_markWeakImpl};
 
 } // namespace vm
 } // namespace hermes
@@ -60,7 +61,7 @@ const VTable TestCell::vt{CellKind::FillerCellKind,
 namespace {
 
 // Hades doesn't call markWeak the same number of times as other GCs.
-#ifndef HERMESVM_GC_HADES
+#if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
 MetadataTableForTests getMetadataTable() {
   // Nothing to mark for either of them, leave a blank metadata.
   static const Metadata storage[] = {Metadata(), Metadata()};
@@ -80,7 +81,7 @@ TEST(GCMarkWeakTest, MarkWeak) {
   int numMarkWeakCalls = 0;
   auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfigSmall);
   DummyRuntime &rt = *runtime;
-  auto &gc = rt.gc;
+  auto &gc = rt.getHeap();
   // Probably zero, but we only care about the increase/decrease.
   const int initUsedWeak = gc.countUsedWeakRefs();
 

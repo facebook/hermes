@@ -15,8 +15,6 @@ namespace vm {
 
 /// A container object for primitive HermesValues.
 class PrimitiveBox : public JSObject {
-  friend GC;
-
  public:
   using Super = JSObject;
 
@@ -63,8 +61,6 @@ class PrimitiveBox : public JSObject {
 
 /// String object.
 class JSString final : public PrimitiveBox {
-  friend GC;
-
  public:
   using Super = PrimitiveBox;
 
@@ -108,13 +104,13 @@ class JSString final : public PrimitiveBox {
     return getPrimitiveValue(self, runtime).getString();
   }
 
- protected:
   JSString(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
       : PrimitiveBox(runtime, &vt.base, *parent, *clazz) {
     flags_.indexedStorage = true;
     flags_.fastIndexProperties = true;
   }
 
+ protected:
   /// Check whether property with index \p index exists in indexed storage and
   /// \return true if it does.
   static bool
@@ -165,7 +161,6 @@ class JSString final : public PrimitiveBox {
 /// See ES6 21.1.5.3 for Properties of String Iterator Instances.
 class JSStringIterator : public JSObject {
   using Super = JSObject;
-  friend GC;
 
   friend void StringIteratorBuildMeta(
       const GCCell *cell,
@@ -187,7 +182,6 @@ class JSStringIterator : public JSObject {
       Handle<JSStringIterator> self,
       Runtime *runtime);
 
- private:
 #ifdef HERMESVM_SERIALIZE
   explicit JSStringIterator(Deserializer &d);
 
@@ -214,8 +208,6 @@ class JSStringIterator : public JSObject {
 
 /// Number object.
 class JSNumber final : public PrimitiveBox {
-  friend GC;
-
  public:
   static const ObjectVTable vt;
 
@@ -236,15 +228,12 @@ class JSNumber final : public PrimitiveBox {
     return create(runtime, 0.0, prototype);
   }
 
- protected:
   JSNumber(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
       : PrimitiveBox(runtime, &vt.base, *parent, *clazz) {}
 };
 
 /// Boolean object.
 class JSBoolean final : public PrimitiveBox {
-  friend GC;
-
  public:
   static const ObjectVTable vt;
 
@@ -265,7 +254,6 @@ class JSBoolean final : public PrimitiveBox {
     return create(runtime, false, prototype);
   }
 
- protected:
   JSBoolean(
       Runtime *runtime,
       Handle<JSObject> parent,
@@ -275,8 +263,6 @@ class JSBoolean final : public PrimitiveBox {
 
 /// Symbol object.
 class JSSymbol final : public PrimitiveBox {
-  friend GC;
-
  public:
   static const ObjectVTable vt;
 
@@ -301,7 +287,6 @@ class JSSymbol final : public PrimitiveBox {
         HermesValueTraits<SymbolID>::decode(getPrimitiveValue(self, runtime)));
   }
 
- protected:
 #ifdef HERMESVM_SERIALIZE
   explicit JSSymbol(Deserializer &d);
 

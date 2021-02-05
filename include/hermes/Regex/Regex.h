@@ -69,7 +69,7 @@ class Regex {
   /// list. The node should be constructible from \p args.
   /// \return an observer pointer to the new node.
   template <typename NodeType, typename... Args>
-  NodeType *appendNode(Args &&... args) {
+  NodeType *appendNode(Args &&...args) {
     std::unique_ptr<NodeType> node =
         hermes::make_unique<NodeType>(std::forward<Args>(args)...);
     NodeType *nodePtr = node.get();
@@ -88,12 +88,13 @@ class Regex {
     return markedCount_;
   }
 
-  /// \increment the number of marked subexpressions and return the value.
+  /// Increment the number of marked subexpressions.
+  /// \return the previous value of markedCount_.
   uint16_t incrementMarkedCount() {
     assert(
         markedCount_ < std::numeric_limits<uint16_t>::max() &&
         "markedCount_ will overflow");
-    return ++markedCount_;
+    return markedCount_++;
   }
 
   /// Given that the node \p splicePoint is in our node list, remove all nodes
@@ -126,10 +127,11 @@ class Regex {
         markedCount_ <= constants::kMaxCaptureGroupCount &&
         "Too many capture groups");
     assert(loopCount_ <= constants::kMaxLoopCount && "Too many loops");
-    RegexBytecodeHeader header = {markedCount_,
-                                  static_cast<uint16_t>(loopCount_),
-                                  flags_.toByte(),
-                                  matchConstraints_};
+    RegexBytecodeHeader header = {
+        markedCount_,
+        static_cast<uint16_t>(loopCount_),
+        flags_.toByte(),
+        matchConstraints_};
     RegexBytecodeStream bcs(header);
     Node::compile(nodes_, bcs);
     return bcs.acquireBytecode();

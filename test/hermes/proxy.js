@@ -2207,5 +2207,24 @@ proxy();
 
 assert.ok(targetRan);
 
+// This returns the proxy below as a descriptor.
+var p1 = new Proxy({}, {
+    getOwnPropertyDescriptor(t, p) { return p2; },
+});
+
+// Calling get on the Proxy p2 requires calling
+// getOwnPropertyDescriptor on the target, p1 above, to check
+// invariants.  This constructs a descriptor by getting
+// properties of the trap return (p2 below).  Calling get
+// on the proxy p2 is how we started, resulting in an infinite
+// recursion.
+
+var p2 = new Proxy(p1, {
+    has(t, p) { return true; },
+    get(t, p, r) { return {}; },
+});
+
+assert.throws(() => p2.foo, RangeError, "Maximum call stack size exceeded");
+
 print('done');
 // CHECK-LABEL: done

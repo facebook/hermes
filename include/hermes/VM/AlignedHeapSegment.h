@@ -14,7 +14,6 @@
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/AllocSource.h"
 #include "hermes/VM/CardTableNC.h"
-#include "hermes/VM/CompleteMarkState.h"
 #include "hermes/VM/GCBase.h"
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/HeapAlign.h"
@@ -55,11 +54,11 @@ namespace vm {
 /// into which GCCells are bump allocated.
 class AlignedHeapSegment {
  public:
+  explicit AlignedHeapSegment(AlignedStorage storage)
+      : storage_(std::move(storage)) {}
+
   /// Construct a null AlignedHeapSegment (one that does not own memory).
   AlignedHeapSegment() = default;
-
-  AlignedHeapSegment(AlignedStorage &&storage) : storage_(std::move(storage)) {}
-
   AlignedHeapSegment(AlignedHeapSegment &&) = default;
   AlignedHeapSegment &operator=(AlignedHeapSegment &&) = default;
 
@@ -337,7 +336,7 @@ class AlignedHeapSegment {
 AllocResult AlignedHeapSegment::alloc(uint32_t size) {
   assert(lowLim() != nullptr && "Cannot allocate in a null segment");
   assert(size >= sizeof(GCCell) && "cell must be larger than GCCell");
-  size = heapAlignSize(size);
+  assert(isSizeHeapAligned(size) && "size must be heap aligned");
 
   char *cellPtr; // Initialized in the if below.
 
@@ -445,8 +444,9 @@ char *AlignedHeapSegment::level() const {
 
 llvh::iterator_range<AlignedHeapSegment::HeapCellIterator>
 AlignedHeapSegment::cells() {
-  return {HeapCellIterator(reinterpret_cast<GCCell *>(start())),
-          HeapCellIterator(reinterpret_cast<GCCell *>(level()))};
+  return {
+      HeapCellIterator(reinterpret_cast<GCCell *>(start())),
+      HeapCellIterator(reinterpret_cast<GCCell *>(level()))};
 }
 
 /* static */

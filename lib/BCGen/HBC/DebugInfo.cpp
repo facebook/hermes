@@ -387,9 +387,10 @@ uint32_t DebugInfoGenerator::appendSourceLocations(
 
   for (auto &next : offsets) {
     if (next.filenameId != previous->filenameId) {
-      files_.push_back(DebugFileRegion{(unsigned)sourcesData_.size(),
-                                       next.filenameId,
-                                       start.sourceMappingUrlId});
+      files_.push_back(DebugFileRegion{
+          (unsigned)sourcesData_.size(),
+          next.filenameId,
+          start.sourceMappingUrlId});
     }
 
     int32_t adelta = delta(next.address, previous->address);

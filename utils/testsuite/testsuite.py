@@ -22,6 +22,8 @@ try:
     import testsuite.esprima_test_runner as esprima
     from testsuite.testsuite_skiplist import (
         SKIP_LIST,
+        HANDLESAN_SKIP_LIST,
+        LAZY_SKIP_LIST,
         PERMANENT_SKIP_LIST,
         UNSUPPORTED_FEATURES,
         PERMANENT_UNSUPPORTED_FEATURES,
@@ -32,6 +34,8 @@ except ImportError:
     # Hacky way to handle non-buck builds that call the file immediately.
     from testsuite_skiplist import (
         SKIP_LIST,
+        HANDLESAN_SKIP_LIST,
+        LAZY_SKIP_LIST,
         PERMANENT_SKIP_LIST,
         UNSUPPORTED_FEATURES,
         PERMANENT_UNSUPPORTED_FEATURES,
@@ -360,8 +364,8 @@ extra_run_args = ["-Xhermes-internal-test-methods"]
 extra_compile_flags = ["-fno-static-builtins"]
 
 
-def fileInSkiplist(filename):
-    for blName in SKIP_LIST + PERMANENT_SKIP_LIST:
+def fileInSkiplist(filename, skiplist):
+    for blName in skiplist:
         if isinstance(blName, str):
             if blName in filename:
                 return True
@@ -369,13 +373,6 @@ def fileInSkiplist(filename):
             # Assume it's a regex if it's not a string.
             if blName.search(filename):
                 return True
-    return False
-
-
-def fileInPermanentSkiplist(filename):
-    for blName in PERMANENT_SKIP_LIST:
-        if blName in filename:
-            return True
     return False
 
 
@@ -500,10 +497,14 @@ def runTest(filename, test_skiplist, keep_tmp, binary_path, hvm, esprima_runner,
     """
     baseFileName = basename(filename)
     suite = getSuite(filename)
-    skiplisted = fileInSkiplist(filename)
+    skiplisted = fileInSkiplist(filename, SKIP_LIST + PERMANENT_SKIP_LIST)
+
+    if lazy:
+        skiplisted = skiplisted or fileInSkiplist(filename, LAZY_SKIP_LIST)
+
     skippedType = (
         TestFlag.TEST_PERMANENTLY_SKIPPED
-        if fileInPermanentSkiplist(filename)
+        if fileInSkiplist(filename, PERMANENT_SKIP_LIST)
         else TestFlag.TEST_SKIPPED
     )
 
@@ -674,7 +675,17 @@ def runTest(filename, test_skiplist, keep_tmp, binary_path, hvm, esprima_runner,
                     binary = os.path.join(binary_path, "hermes")
                 else:
                     binary = os.path.join(binary_path, hvm)
-                args = [binary, fileToRun] + es6_args + extra_run_args
+                disableHandleSanFlag = (
+                    ["-gc-sanitize-handles=0"]
+                    if fileInSkiplist(filename, HANDLESAN_SKIP_LIST)
+                    else []
+                )
+                args = (
+                    [binary, fileToRun]
+                    + es6_args
+                    + extra_run_args
+                    + disableHandleSanFlag
+                )
                 if lazy:
                     args.append("-lazy")
                     if strictEnabled:

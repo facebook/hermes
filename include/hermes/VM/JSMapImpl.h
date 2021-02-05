@@ -22,7 +22,6 @@ namespace vm {
 /// different CellKind.
 template <CellKind C>
 class JSMapImpl final : public JSObject {
-  friend GC;
   using Super = JSObject;
 
  public:
@@ -150,7 +149,6 @@ class JSMapImpl final : public JSObject {
   /// Build the metadata for this map implementation, and store it into \p mb.
   static void MapOrSetBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
- protected:
   JSMapImpl(
       Runtime *runtime,
       Handle<JSObject> parent,
@@ -180,7 +178,6 @@ struct JSMapTypeTraits<CellKind::MapIteratorKind> {
 
 template <CellKind C>
 class JSMapIteratorImpl final : public JSObject {
-  friend GC;
   using Super = JSObject;
 
  public:
@@ -271,7 +268,6 @@ class JSMapIteratorImpl final : public JSObject {
       const GCCell *cell,
       Metadata::Builder &mb);
 
- protected:
 #ifdef HERMESVM_SERIALIZE
   explicit JSMapIteratorImpl(Deserializer &d);
 

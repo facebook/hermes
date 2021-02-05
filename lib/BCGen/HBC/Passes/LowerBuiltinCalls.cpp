@@ -137,9 +137,6 @@ static bool run(Function *F) {
           builtins.findBuiltinMethod(objLit->getValue(), propLit->getValue());
       if (!builtinIndex)
         continue;
-      // Too many arguments?
-      if (callInst->getNumArguments() > CallBuiltinInst::MAX_ARGUMENTS)
-        continue;
 
       LLVM_DEBUG(
           llvh::dbgs() << "Found builtin [" << (int)*builtinIndex << "] "

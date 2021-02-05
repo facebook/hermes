@@ -142,6 +142,38 @@ ExecutionStatus Runtime::putNamedThrowOnError(
       .getStatus();
 }
 
+#ifdef HERMESVM_GC_RUNTIME
+std::unique_ptr<GC> Runtime::makeHeap(
+    Runtime *runtime,
+    GCBase::HeapKind heapKind,
+    std::shared_ptr<StorageProvider> provider,
+    const RuntimeConfig &runtimeConfig) {
+  switch (heapKind) {
+    case GCBase::HeapKind::HADES:
+      return llvh::make_unique<HadesGC>(
+          getMetadataTable(),
+          static_cast<GC::GCCallbacks *>(runtime),
+          runtime,
+          runtimeConfig.getGCConfig(),
+          runtimeConfig.getCrashMgr(),
+          std::move(provider),
+          runtimeConfig.getVMExperimentFlags());
+    case GCBase::HeapKind::NCGEN:
+      return llvh::make_unique<GenGC>(
+          getMetadataTable(),
+          static_cast<GC::GCCallbacks *>(runtime),
+          runtime,
+          runtimeConfig.getGCConfig(),
+          runtimeConfig.getCrashMgr(),
+          std::move(provider),
+          runtimeConfig.getVMExperimentFlags());
+    case GCBase::HeapKind::MALLOC:
+      llvm_unreachable(
+          "MallocGC should not be used with the RuntimeGC build config");
+  }
+}
+#endif
+
 Runtime::Runtime(
     std::shared_ptr<StorageProvider> provider,
     const RuntimeConfig &runtimeConfig)
@@ -149,13 +181,25 @@ Runtime::Runtime(
     : enableEval(runtimeConfig.getEnableEval()),
       verifyEvalIR(runtimeConfig.getVerifyEvalIR()),
       optimizedEval(runtimeConfig.getOptimizedEval()),
+      asyncBreakCheckInEval(runtimeConfig.getAsyncBreakCheckInEval()),
+#ifdef HERMESVM_GC_RUNTIME
+      heap_(makeHeap(
+          this,
+          (runtimeConfig.getVMExperimentFlags() & experiments::Hades)
+              ? GCBase::HeapKind::HADES
+              : GCBase::HeapKind::NCGEN,
+          std::move(provider),
+          runtimeConfig)),
+#else
       heap_(
           getMetadataTable(),
           this,
           this,
           runtimeConfig.getGCConfig(),
           runtimeConfig.getCrashMgr(),
-          std::move(provider)),
+          std::move(provider),
+          runtimeConfig.getVMExperimentFlags()),
+#endif
       jitContext_(runtimeConfig.getEnableJIT(), (1 << 20) * 16, (1 << 20) * 32),
       hasES6Promise_(runtimeConfig.getES6Promise()),
       hasES6Proxy_(runtimeConfig.getES6Proxy()),
@@ -235,8 +279,8 @@ Runtime::Runtime(
 
     LLVM_DEBUG(llvh::dbgs() << "Runtime initialized\n");
 
-    samplingProfiler_ = SamplingProfiler::getInstance();
-    samplingProfiler_->registerRuntime(this);
+    if (runtimeConfig.getEnableSampleProfiling())
+      samplingProfiler_ = make_unique<SamplingProfiler>(this);
 
     return;
   }
@@ -299,8 +343,9 @@ Runtime::Runtime(
       runtimeConfig.getEnableHermesInternalTestMethods();
   initGlobalObject(this, jsLibFlags);
 
-  // Once the global object has been initialized, populate the builtins table.
-  initBuiltinTable();
+  // Once the global object has been initialized, populate native builtins to
+  // the builtins table.
+  initNativeBuiltins();
 
   stringCycleCheckVisited_ =
       ignoreAllocationFailure(ArrayStorage::create(this, 8));
@@ -336,31 +381,28 @@ Runtime::Runtime(
 
   codeCoverageProfiler_->disable();
   // Execute our internal bytecode.
-  runInternalBytecode();
+  auto jsBuiltinsObj = runInternalBytecode();
   codeCoverageProfiler_->restore();
 
-  LLVM_DEBUG(llvh::dbgs() << "Runtime initialized\n");
+  // Populate JS builtins returned from internal bytecode to the builtins table.
+  initJSBuiltins(builtins_, jsBuiltinsObj);
 
-  samplingProfiler_ = SamplingProfiler::getInstance();
-  samplingProfiler_->registerRuntime(this);
+  if (runtimeConfig.getEnableSampleProfiling())
+    samplingProfiler_ = make_unique<SamplingProfiler>(this);
+
+  LLVM_DEBUG(llvh::dbgs() << "Runtime initialized\n");
 }
 
 Runtime::~Runtime() {
-  if (samplingProfiler_) {
-    samplingProfiler_->unregisterRuntime(this);
-  }
-  heap_.finalizeAll();
-#ifndef NDEBUG
+  samplingProfiler_.reset();
+  getHeap().finalizeAll();
   // Now that all objects are finalized, there shouldn't be any native memory
   // keys left in the ID tracker for memory profiling. Assert that the only IDs
   // left are JS heap pointers.
-  heap_.getIDTracker().forEachID([this](
-                                     const void *mem, HeapSnapshot::NodeID id) {
-    assert(
-        heap_.validPointer(mem) &&
-        "A pointer is left in the ID tracker that is from non-JS memory. Was untrackNative called?");
-  });
-#endif
+  assert(
+      !getHeap().getIDTracker().hasNativeIDs() &&
+      "A pointer is left in the ID tracker that is from non-JS memory. "
+      "Was untrackNative called?");
   crashMgr_->unregisterCallback(crashCallbackKey_);
   if (registerStackBytesToUnmap_ > 0) {
     crashMgr_->unregisterMemory(registerStack_);
@@ -461,8 +503,8 @@ void Runtime::markRoots(
   {
     MarkRootsPhaseTimer timer(this, RootAcceptor::Section::Builtins);
     acceptor.beginRootSection(RootAcceptor::Section::Builtins);
-    for (NativeFunction *&nf : builtins_)
-      acceptor.accept((void *&)nf);
+    for (Callable *&f : builtins_)
+      acceptor.acceptPtr(f);
     acceptor.endRootSection();
   }
 
@@ -541,9 +583,17 @@ void Runtime::markRoots(
 
   {
     MarkRootsPhaseTimer timer(this, RootAcceptor::Section::Custom);
+    // Define nodes before the root section starts.
+    for (auto &fn : customSnapshotNodeFuncs_) {
+      acceptor.provideSnapshot(fn);
+    }
     acceptor.beginRootSection(RootAcceptor::Section::Custom);
     for (auto &fn : customMarkRootFuncs_)
       fn(&getHeap(), acceptor);
+    // Define edges while inside the root section.
+    for (auto &fn : customSnapshotEdgeFuncs_) {
+      acceptor.provideSnapshot(fn);
+    }
     acceptor.endRootSection();
   }
 }
@@ -762,7 +812,7 @@ void Runtime::unmarkSymbols() {
 }
 
 void Runtime::freeSymbols(const llvh::BitVector &markedSymbols) {
-  identifierTable_.freeUnmarkedSymbols(markedSymbols, heap_.getIDTracker());
+  identifierTable_.freeUnmarkedSymbols(markedSymbols, getHeap().getIDTracker());
 }
 
 #ifdef HERMES_SLOW_DEBUG
@@ -879,11 +929,12 @@ CallResult<HermesValue> Runtime::runBytecode(
   // If we are constructed from serialize data with a ClosureFunction, execute
   // the function.
   if (!serializeClosure.isUndefined()) {
-    ScopedNativeCallFrame newFrame{this,
-                                   0,
-                                   serializeClosure,
-                                   HermesValue::encodeUndefinedValue(),
-                                   *thisArg};
+    ScopedNativeCallFrame newFrame{
+        this,
+        0,
+        serializeClosure,
+        HermesValue::encodeUndefinedValue(),
+        *thisArg};
     if (LLVM_UNLIKELY(newFrame.overflowed()))
       return raiseStackOverflow(StackOverflowKind::NativeStack);
     return shouldRandomizeMemoryLayout_
@@ -902,6 +953,11 @@ CallResult<HermesValue> Runtime::runBytecode(
     }
     freezeBuiltins();
     assert(builtinsFrozen_ && "Builtins must be frozen by now.");
+  }
+
+  if (bytecode->getBytecodeOptions().hasAsync && !hasES6Promise_) {
+    return raiseTypeError(
+        "Cannot execute a bytecode having async functions when Promise is disabled.");
   }
 
   if (flags.persistent) {
@@ -961,13 +1017,16 @@ CallResult<HermesValue> Runtime::runBytecode(
     auto requireContext = RequireContext::create(
         this, domain, getPredefinedStringHandle(Predefined::dotSlash));
     return runRequireCall(
-        this, requireContext, domain, *domain->getCJSModuleOffset(this, 0));
+        this,
+        requireContext,
+        domain,
+        *domain->getCJSModuleOffset(this, domain->getCJSEntryModuleID()));
   } else if (runtimeModule->hasCJSModulesStatic()) {
     return runRequireCall(
         this,
         makeNullHandle<RequireContext>(),
         domain,
-        *domain->getCJSModuleOffset(this, 0));
+        *domain->getCJSModuleOffset(this, domain->getCJSEntryModuleID()));
   } else {
     // Create a JSFunction which will reference count the runtime module.
     // Note that its handle gets registered in the scope, so we don't need to
@@ -980,11 +1039,12 @@ CallResult<HermesValue> Runtime::runBytecode(
         environment,
         globalCode);
 
-    ScopedNativeCallFrame newFrame{this,
-                                   0,
-                                   func.getHermesValue(),
-                                   HermesValue::encodeUndefinedValue(),
-                                   *thisArg};
+    ScopedNativeCallFrame newFrame{
+        this,
+        0,
+        func.getHermesValue(),
+        HermesValue::encodeUndefinedValue(),
+        *thisArg};
     if (LLVM_UNLIKELY(newFrame.overflowed()))
       return raiseStackOverflow(StackOverflowKind::NativeStack);
     return shouldRandomizeMemoryLayout_
@@ -1010,7 +1070,7 @@ ExecutionStatus Runtime::loadSegment(
   return ExecutionStatus::RETURNED;
 }
 
-void Runtime::runInternalBytecode() {
+Handle<JSObject> Runtime::runInternalBytecode() {
   auto module = getInternalBytecode();
   std::pair<std::unique_ptr<hbc::BCProvider>, std::string> bcResult =
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
@@ -1032,7 +1092,11 @@ void Runtime::runInternalBytecode() {
   // It is a fatal error for the internal bytecode to throw an exception.
   assert(
       res != ExecutionStatus::EXCEPTION && "Internal bytecode threw exception");
-  (void)res;
+  assert(
+      res->isObject() &&
+      "Completion value of internal bytecode must be an object");
+
+  return makeHandle<JSObject>(*res);
 }
 
 void Runtime::printException(llvh::raw_ostream &os, Handle<> valueHandle) {
@@ -1445,29 +1509,31 @@ static const struct {
   {(uint16_t)Predefined::object, (uint16_t)Predefined::method},
 #endif
 #define PRIVATE_BUILTIN(name)
-} builtinMethods[] = {
+#define JS_BUILTIN(name)
+} publicNativeBuiltins[] = {
 #include "hermes/FrontEndDefs/Builtins.def"
 };
 
 static_assert(
-    sizeof(builtinMethods) / sizeof(builtinMethods[0]) ==
+    sizeof(publicNativeBuiltins) / sizeof(publicNativeBuiltins[0]) ==
         BuiltinMethod::_firstPrivate,
     "builtin method table mismatch");
 
-ExecutionStatus Runtime::forEachBuiltin(const std::function<ExecutionStatus(
-                                            unsigned methodIndex,
-                                            Predefined::Str objectName,
-                                            Handle<JSObject> &object,
-                                            SymbolID methodID)> &callback) {
+ExecutionStatus Runtime::forEachPublicNativeBuiltin(
+    const std::function<ExecutionStatus(
+        unsigned methodIndex,
+        Predefined::Str objectName,
+        Handle<JSObject> &object,
+        SymbolID methodID)> &callback) {
   MutableHandle<JSObject> lastObject{this};
   Predefined::Str lastObjectName = Predefined::_STRING_AFTER_LAST;
 
   for (unsigned methodIndex = 0; methodIndex < BuiltinMethod::_firstPrivate;
        ++methodIndex) {
     GCScopeMarkerRAII marker{this};
-    LLVM_DEBUG(llvh::dbgs() << builtinMethods[methodIndex].name << "\n");
+    LLVM_DEBUG(llvh::dbgs() << publicNativeBuiltins[methodIndex].name << "\n");
     // Find the object first, if it changed.
-    auto objectName = (Predefined::Str)builtinMethods[methodIndex].object;
+    auto objectName = (Predefined::Str)publicNativeBuiltins[methodIndex].object;
     if (objectName != lastObjectName) {
       auto objectID = Predefined::getSymbolID(objectName);
       auto cr = JSObject::getNamed_RJS(getGlobal(), this, objectID);
@@ -1483,7 +1549,7 @@ ExecutionStatus Runtime::forEachBuiltin(const std::function<ExecutionStatus(
     }
 
     // Find the method.
-    auto methodName = (Predefined::Str)builtinMethods[methodIndex].method;
+    auto methodName = (Predefined::Str)publicNativeBuiltins[methodIndex].method;
     auto methodID = Predefined::getSymbolID(methodName);
 
     ExecutionStatus status =
@@ -1495,16 +1561,16 @@ ExecutionStatus Runtime::forEachBuiltin(const std::function<ExecutionStatus(
   return ExecutionStatus::RETURNED;
 }
 
-void Runtime::initBuiltinTable() {
+void Runtime::initNativeBuiltins() {
   GCScopeMarkerRAII gcScope{this};
 
   builtins_.resize(BuiltinMethod::_count);
 
-  (void)forEachBuiltin([this](
-                           unsigned methodIndex,
-                           Predefined::Str /* objectName */,
-                           Handle<JSObject> &currentObject,
-                           SymbolID methodID) {
+  (void)forEachPublicNativeBuiltin([this](
+                                       unsigned methodIndex,
+                                       Predefined::Str /* objectName */,
+                                       Handle<JSObject> &currentObject,
+                                       SymbolID methodID) {
     auto cr = JSObject::getNamed_RJS(currentObject, this, methodID);
     assert(
         cr.getStatus() != ExecutionStatus::EXCEPTION &&
@@ -1516,25 +1582,55 @@ void Runtime::initBuiltinTable() {
     return ExecutionStatus::RETURNED;
   });
 
-  // Now add the private builtins.
+  // Now add the private native builtins.
   createHermesBuiltins(this, builtins_);
 #ifndef NDEBUG
-  // Make sure they are all defined.
-  for (unsigned i = 0; i < BuiltinMethod::_count; ++i) {
-    assert(builtins_[i] && "builtin not initialized");
+  // Make sure native builtins are all defined.
+  for (unsigned i = 0; i < BuiltinMethod::_firstJS; ++i) {
+    assert(builtins_[i] && "native builtin not initialized");
   }
 #endif
+}
+
+static const struct JSBuiltin {
+  uint16_t symID, builtinIndex;
+} jsBuiltins[] = {
+#define BUILTIN_METHOD(object, method)
+#define PRIVATE_BUILTIN(name)
+#define JS_BUILTIN(name)                                \
+  {                                                     \
+    (uint16_t) Predefined::name,                        \
+        (uint16_t)BuiltinMethod::HermesBuiltin##_##name \
+  }
+#include "hermes/FrontEndDefs/Builtins.def"
+};
+
+void Runtime::initJSBuiltins(
+    llvh::MutableArrayRef<Callable *> builtins,
+    Handle<JSObject> jsBuiltinsObj) {
+  for (const JSBuiltin &jsBuiltin : jsBuiltins) {
+    auto symID = jsBuiltin.symID;
+    auto builtinIndex = jsBuiltin.builtinIndex;
+
+    // Try to get the JS function from jsBuiltinsObj.
+    auto getRes = JSObject::getNamed_RJS(
+        jsBuiltinsObj, this, Predefined::getSymbolID((Predefined::Str)symID));
+    assert(getRes == ExecutionStatus::RETURNED && "Failed to get JS builtin.");
+    JSFunction *jsFunc = vmcast<JSFunction>(getRes->getHermesValue());
+
+    builtins[builtinIndex] = jsFunc;
+  }
 }
 
 ExecutionStatus Runtime::assertBuiltinsUnmodified() {
   assert(!builtinsFrozen_ && "Builtins are already frozen.");
   GCScope gcScope(this);
 
-  return forEachBuiltin([this](
-                            unsigned methodIndex,
-                            Predefined::Str /* objectName */,
-                            Handle<JSObject> &currentObject,
-                            SymbolID methodID) {
+  return forEachPublicNativeBuiltin([this](
+                                        unsigned methodIndex,
+                                        Predefined::Str /* objectName */,
+                                        Handle<JSObject> &currentObject,
+                                        SymbolID methodID) {
     auto cr = JSObject::getNamed_RJS(currentObject, this, methodID);
     assert(
         cr.getStatus() != ExecutionStatus::EXCEPTION &&
@@ -1567,30 +1663,31 @@ void Runtime::freezeBuiltins() {
   PropertyFlags setFlags;
   setFlags.staticBuiltin = 1;
 
-  (void)forEachBuiltin([this, &objectList, &methodList, &clearFlags, &setFlags](
-                           unsigned methodIndex,
-                           Predefined::Str objectName,
-                           Handle<JSObject> &currentObject,
-                           SymbolID methodID) {
-    methodList.push_back(methodID);
-    // This is the last method on current object.
-    if (methodIndex + 1 == BuiltinMethod::_publicCount ||
-        objectName != builtinMethods[methodIndex + 1].object) {
-      // Store the object id in the object set.
-      SymbolID objectID = Predefined::getSymbolID(objectName);
-      objectList.push_back(objectID);
-      // Freeze all methods and mark them as static builtins on the current
-      // object.
-      JSObject::updatePropertyFlagsWithoutTransitions(
-          currentObject,
-          this,
-          clearFlags,
-          setFlags,
-          llvh::ArrayRef<SymbolID>(methodList));
-      methodList.clear();
-    }
-    return ExecutionStatus::RETURNED;
-  });
+  (void)forEachPublicNativeBuiltin(
+      [this, &objectList, &methodList, &clearFlags, &setFlags](
+          unsigned methodIndex,
+          Predefined::Str objectName,
+          Handle<JSObject> &currentObject,
+          SymbolID methodID) {
+        methodList.push_back(methodID);
+        // This is the last method on current object.
+        if (methodIndex + 1 == BuiltinMethod::_publicCount ||
+            objectName != publicNativeBuiltins[methodIndex + 1].object) {
+          // Store the object id in the object set.
+          SymbolID objectID = Predefined::getSymbolID(objectName);
+          objectList.push_back(objectID);
+          // Freeze all methods and mark them as static builtins on the current
+          // object.
+          JSObject::updatePropertyFlagsWithoutTransitions(
+              currentObject,
+              this,
+              clearFlags,
+              setFlags,
+              llvh::ArrayRef<SymbolID>(methodList));
+          methodList.clear();
+        }
+        return ExecutionStatus::RETURNED;
+      });
 
   // Freeze all builtin objects and mark them as static builtins on the global
   // object.
@@ -1815,7 +1912,7 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
 
 void Runtime::onGCEvent(GCEventKind kind, const std::string &extraInfo) {
   if (samplingProfiler_ != nullptr) {
-    samplingProfiler_->onGCEvent(this, kind, extraInfo);
+    samplingProfiler_->onGCEvent(kind, extraInfo);
   }
   if (gcEventCallback_) {
     gcEventCallback_(kind, extraInfo.c_str());
@@ -1848,7 +1945,7 @@ void Runtime::preventHCGC(HiddenClass *hc) {
   auto &classIdToIdxMap = inlineCacheProfiler_.getClassIdtoIndexMap();
   auto &hcIdx = inlineCacheProfiler_.getHiddenClassArrayIndex();
   auto ret = classIdToIdxMap.insert(
-      std::pair<ClassId, uint32_t>(heap_.getObjectID(hc), hcIdx));
+      std::pair<ClassId, uint32_t>(getHeap().getObjectID(hc), hcIdx));
   if (ret.second) {
     auto *hiddenClassArray = inlineCacheProfiler_.getHiddenClassArray();
     JSArray::setElementAt(
@@ -1874,13 +1971,13 @@ void Runtime::recordHiddenClass(
   assert(objectHiddenClass != nullptr && "object hidden class should exist");
   // prevent object hidden class from being GC-ed
   preventHCGC(objectHiddenClass);
-  ClassId objectHiddenClassId = heap_.getObjectID(objectHiddenClass);
+  ClassId objectHiddenClassId = getHeap().getObjectID(objectHiddenClass);
   // prevent cached hidden class from being GC-ed
   ClassId cachedHiddenClassId =
       static_cast<ClassId>(GCBase::IDTracker::kInvalidNode);
   if (cachedHiddenClass != nullptr) {
     preventHCGC(cachedHiddenClass);
-    cachedHiddenClassId = heap_.getObjectID(cachedHiddenClass);
+    cachedHiddenClassId = getHeap().getObjectID(cachedHiddenClass);
   }
   // add the record to inline caching profiler
   inlineCacheProfiler_.insertICMiss(
@@ -1906,10 +2003,10 @@ HiddenClass *Runtime::resolveHiddenClassId(ClassId classId) {
 #ifdef HERMESVM_SERIALIZE
 void Runtime::serialize(Serializer &s) {
   // Full GC here.
-  heap_.collect("serialize");
+  getHeap().collect("serialize");
 
   s.writeCurrentOffset();
-  heap_.serializeWeakRefs(s);
+  getHeap().serializeWeakRefs(s);
 
   s.writeCurrentOffset();
   serializeIdentifierTable(s);
@@ -1921,13 +2018,13 @@ void Runtime::serialize(Serializer &s) {
   serializeRuntimeFields(s);
 
   s.writeCurrentOffset();
-  heap_.serializeHeap(s);
+  getHeap().serializeHeap(s);
 
   s.writeCurrentOffset();
-  heap_.getIDTracker().serialize(s);
+  getHeap().getIDTracker().serialize(s);
 
   s.writeCurrentOffset();
-  heap_.getAllocationLocationTracker().serialize(s);
+  getHeap().getAllocationLocationTracker().serialize(s);
 
   // In the end record the size of the object table and flush the string
   // buffers, so the deserializer can read it. TODO: perhaps seek to the
@@ -2113,13 +2210,13 @@ void Runtime::deserializeRuntimeFields(Deserializer &d) {
 
 void Runtime::deserializeImpl(Deserializer &d, bool currentlyInYoung) {
   if (currentlyInYoung) {
-    heap_.deserializeStart();
+    getHeap().deserializeStart();
   }
 
   GCScope scope(this);
 
   d.readAndCheckOffset();
-  heap_.deserializeWeakRefs(d);
+  getHeap().deserializeWeakRefs(d);
 
   d.readAndCheckOffset();
   identifierTable_.deserialize(d);
@@ -2131,13 +2228,13 @@ void Runtime::deserializeImpl(Deserializer &d, bool currentlyInYoung) {
   deserializeRuntimeFields(d);
 
   d.readAndCheckOffset();
-  heap_.deserializeHeap(d);
+  getHeap().deserializeHeap(d);
 
   d.readAndCheckOffset();
-  heap_.getIDTracker().deserialize(d);
+  getHeap().getIDTracker().deserialize(d);
 
   d.readAndCheckOffset();
-  heap_.getAllocationLocationTracker().deserialize(d);
+  getHeap().getAllocationLocationTracker().deserialize(d);
 
   d.readAndCheckOffset();
   d.flushRelocationQueue();
@@ -2153,7 +2250,7 @@ void Runtime::deserializeImpl(Deserializer &d, bool currentlyInYoung) {
   if (currentlyInYoung) {
     // Only switch back now if the config says allocInYoung. Otherwise
     // wait until tti.
-    heap_.deserializeEnd();
+    getHeap().deserializeEnd();
   }
 }
 
@@ -2227,7 +2324,7 @@ StackTracesTreeNode *Runtime::getCurrentStackTracesTreeNode(
     const inst::Inst *ip) {
   assert(stackTracesTree_ && "Runtime not configured to track alloc stacks");
   assert(
-      heap_.getAllocationLocationTracker().isEnabled() &&
+      getHeap().getAllocationLocationTracker().isEnabled() &&
       "AllocationLocationTracker not enabled");
   if (!ip) {
     return nullptr;
@@ -2247,11 +2344,11 @@ void Runtime::enableAllocationLocationTracker(
     stackTracesTree_ = make_unique<StackTracesTree>();
   }
   stackTracesTree_->syncWithRuntimeStack(this);
-  heap_.enableHeapProfiler(std::move(fragmentCallback));
+  getHeap().enableHeapProfiler(std::move(fragmentCallback));
 }
 
 void Runtime::disableAllocationLocationTracker(bool clearExistingTree) {
-  heap_.disableHeapProfiler();
+  getHeap().disableHeapProfiler();
   if (clearExistingTree) {
     stackTracesTree_.reset();
   }

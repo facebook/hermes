@@ -54,7 +54,9 @@ void GenGCHeapSegment::debitExternalMemory(uint32_t size) {
   }
 }
 
-void GenGCHeapSegment::completeMarking(GC *gc, CompleteMarkState *markState) {
+void GenGCHeapSegment::completeMarking(
+    GenGC *gc,
+    CompleteMarkState *markState) {
   assert(!markState->markStackOverflow_);
 
   // Return early if nothing was allocated.
@@ -94,64 +96,28 @@ void GenGCHeapSegment::completeMarking(GC *gc, CompleteMarkState *markState) {
   assert(markState->varSizeMarkStack_.empty());
 }
 
-void GenGCHeapSegment::deleteDeadObjectIDs(GC *gc) {
-  GCBase::IDTracker &idTracker = gc->getIDTracker();
+void GenGCHeapSegment::deleteDeadObjectIDs(GenGC *gc) {
   GCBase::AllocationLocationTracker &allocationLocationTracker =
       gc->getAllocationLocationTracker();
   if (gc->isTrackingIDs()) {
     MarkBitArrayNC &markBits = markBitArray();
     // Separate out the delete tracking into a different loop in order to keep
     // the normal case fast.
-    forAllObjs([&markBits, &idTracker, &allocationLocationTracker](
-                   const GCCell *cell) {
+    forAllObjs([&markBits, &allocationLocationTracker, gc](const GCCell *cell) {
       if (!markBits.at(markBits.addressToIndex(cell))) {
         // The allocation tracker needs to use the ID, so this needs to come
         // before untrackObject.
         allocationLocationTracker.freeAlloc(cell, cell->getAllocatedSize());
-        idTracker.untrackObject(cell);
+        gc->untrackObject(cell);
       }
     });
   }
 }
 
-void GenGCHeapSegment::updateObjectIDs(
-    GC *gc,
-    SweepResult::VTablesRemaining &vTables) {
-  GCBase::IDTracker &idTracker = gc->getIDTracker();
-  GCBase::AllocationLocationTracker &allocationLocationTracker =
-      gc->getAllocationLocationTracker();
-  if (!gc->isTrackingIDs()) {
-    // If ID tracking isn't on, there's nothing to do here.
-    return;
-  }
-
-  SweepResult::VTablesRemaining vTablesCopy{vTables};
-  MarkBitArrayNC &markBits = markBitArray();
-  char *ptr = start();
-  size_t ind = markBits.addressToIndex(ptr);
-  while (ptr < level()) {
-    if (markBits.at(ind)) {
-      auto *cell = reinterpret_cast<GCCell *>(ptr);
-      idTracker.moveObject(cell, cell->getForwardingPointer());
-      allocationLocationTracker.moveAlloc(cell, cell->getForwardingPointer());
-      const VTable *vtp = vTablesCopy.next();
-      auto cellSize = cell->getAllocatedSize(vtp);
-      ptr += cellSize;
-      ind += (cellSize >> LogHeapAlign);
-    } else {
-      auto *deadRegion = reinterpret_cast<DeadRegion *>(ptr);
-      ptr += deadRegion->size();
-      ind += (deadRegion->size() >> LogHeapAlign);
-    }
-  }
-}
-
 void GenGCHeapSegment::updateReferences(
-    GC *gc,
+    GenGC *gc,
     FullMSCUpdateAcceptor *acceptor,
     SweepResult::VTablesRemaining &vTables) {
-  updateObjectIDs(gc, vTables);
-
   MarkBitArrayNC &markBits = markBitArray();
   char *ptr = start();
   size_t ind = markBits.addressToIndex(ptr);
@@ -162,7 +128,7 @@ void GenGCHeapSegment::updateReferences(
       assert(vTables.hasNext() && "Need a displaced vtable pointer");
       const VTable *vtp = vTables.next();
       // Scan the pointer fields, updating via forwarding pointers.
-      GCBase::markCell(cell, vtp, gc, *acceptor);
+      gc->markCell(cell, vtp, *acceptor);
       uint32_t cellSize = cell->getAllocatedSize(vtp);
       ptr += cellSize;
       ind += (cellSize >> LogHeapAlign);
@@ -195,12 +161,11 @@ void GenGCHeapSegment::compact(SweepResult::VTablesRemaining &vTables) {
           "Cell was invalid after placing the vtable back in");
       // Must read this now, since the memmove below might overwrite it.
       auto cellSize = cell->getAllocatedSize();
-      const bool canBeCompacted = cell->getVT()->canBeTrimmed();
       const auto trimmedSize = cell->getVT()->getTrimmedSize(cell, cellSize);
       if (newAddr != ptr) {
         std::memmove(newAddr, ptr, trimmedSize);
       }
-      if (canBeCompacted) {
+      if (trimmedSize != cellSize) {
         // Set the new cell size.
         auto *newCell = reinterpret_cast<VariableSizeRuntimeCell *>(newAddr);
         newCell->setSizeFromGC(trimmedSize);
@@ -232,7 +197,7 @@ void GenGCHeapSegment::forObjsInRange(
 }
 
 void GenGCHeapSegment::sweepAndInstallForwardingPointers(
-    GC *gc,
+    GenGC *gc,
     SweepResult *sweepResult) {
   deleteDeadObjectIDs(gc);
   MarkBitArrayNC &markBits = markBitArray();
@@ -280,6 +245,10 @@ void GenGCHeapSegment::sweepAndInstallForwardingPointers(
 
       sweepResult->displacedVtablePtrs.push_back(cell->getVT());
       cell->setForwardingPointer(reinterpret_cast<GCCell *>(res.ptr));
+      if (gc->isTrackingIDs()) {
+        gc->moveObject(
+            cell, cellSize, cell->getForwardingPointer(), trimmedSize);
+      }
       adjacentPtr = ptr += cellSize;
     }
 
@@ -349,9 +318,10 @@ bool GenGCHeapSegment::checkSummarizedVTables() const {
 #endif
 
 #ifdef HERMES_SLOW_DEBUG
-void GenGCHeapSegment::checkWellFormed(const GC *gc, uint64_t *externalMemory)
-    const {
-  CheckHeapWellFormedAcceptor acceptor(*const_cast<GC *>(gc));
+void GenGCHeapSegment::checkWellFormed(
+    const GenGC *gc,
+    uint64_t *externalMemory) const {
+  CheckHeapWellFormedAcceptor acceptor(*const_cast<GenGC *>(gc));
   char *ptr = start();
   uint64_t extSize = 0;
   while (ptr < level()) {
@@ -359,7 +329,7 @@ void GenGCHeapSegment::checkWellFormed(const GC *gc, uint64_t *externalMemory)
     assert(cell->isValid() && "cell is invalid");
     // We assume that CheckHeapWellFormedAcceptor does not mutate the GC.  Thus
     // it's OK to cast away the const on \p gc.
-    GCBase::markCell(cell, const_cast<GC *>(gc), acceptor);
+    const_cast<GenGC *>(gc)->markCell(cell, acceptor);
     ptr += cell->getAllocatedSize();
     extSize += cell->externalMemorySize();
   }

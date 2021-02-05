@@ -426,7 +426,8 @@ void SemanticValidator::visit(ContinueStatementNode *continueStmt) {
 }
 
 void SemanticValidator::visit(ReturnStatementNode *returnStmt) {
-  if (curFunction()->isGlobalScope())
+  if (curFunction()->isGlobalScope() &&
+      !astContext_.allowReturnOutsideFunction())
     sm_.error(returnStmt->getSourceRange(), "'return' not in a function");
   visitESTreeChildren(*this, returnStmt);
 }
@@ -628,9 +629,15 @@ void SemanticValidator::visitFunction(
 
   // Note that body might me empty (for lazy functions) or an expression (for
   // arrow functions).
-  if (isa<ESTree::BlockStatementNode>(body)) {
-    useStrictNode =
-        scanDirectivePrologue(cast<ESTree::BlockStatementNode>(body)->_body);
+  if (auto *bodyNode = dyn_cast<ESTree::BlockStatementNode>(body)) {
+    if (bodyNode->isLazyFunctionBody) {
+      // If it is a lazy function body, then scanning the directive prologue
+      // won't accomplish anything. Set the strictness directly via the
+      // stored strictness (which was populated based on preparsing data).
+      curFunction()->strictMode = ESTree::isStrict(node->strictness);
+    } else {
+      useStrictNode = scanDirectivePrologue(bodyNode->_body);
+    }
     updateNodeStrictness(node);
   }
 

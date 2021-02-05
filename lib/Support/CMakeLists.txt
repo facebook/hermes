@@ -14,6 +14,7 @@ endif()
 
 add_hermes_library(hermesSupport
         Allocator.cpp
+        Base64.cpp
         Base64vlq.cpp
         CheckedMalloc.cpp
         Conversions.cpp

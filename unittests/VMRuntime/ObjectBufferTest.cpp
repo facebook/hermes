@@ -77,15 +77,17 @@ TEST_F(ObjectBufferTest, TestNewObjectWithBuffer) {
   // which means the runtime must be initialized with a BytecodeModule.
   // First module just inserts the proper string indices into the runtime,
   // the second module actually generates instructions.
-  std::vector<hermes::Literal *> objKeys{Builder.getLiteralString("a"),
-                                         Builder.getLiteralString("b"),
-                                         Builder.getLiteralString("c"),
-                                         Builder.getLiteralString("d")};
+  std::vector<hermes::Literal *> objKeys{
+      Builder.getLiteralString("a"),
+      Builder.getLiteralString("b"),
+      Builder.getLiteralString("c"),
+      Builder.getLiteralString("d")};
 
-  std::vector<hermes::Literal *> objVals{Builder.getLiteralBool(false),
-                                         Builder.getLiteralBool(true),
-                                         Builder.getLiteralNull(),
-                                         Builder.getLiteralString("foo")};
+  std::vector<hermes::Literal *> objVals{
+      Builder.getLiteralBool(false),
+      Builder.getLiteralBool(true),
+      Builder.getLiteralNull(),
+      Builder.getLiteralString("foo")};
 
   std::vector<hermes::Literal *> innerObjKeys{Builder.getLiteralString("bar")};
   std::vector<hermes::Literal *> innerObjVals{Builder.getLiteralNull()};

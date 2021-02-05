@@ -43,15 +43,17 @@ struct WeakRefInfo {
  public:
   /// \return Empty key which is simply null.
   static inline WeakRefKey getEmptyKey() {
-    return WeakRefKey{WeakRef<JSObject>(reinterpret_cast<WeakRefSlot *>(
-                          static_cast<uintptr_t>(kEmptyKey))),
-                      kEmptyKey};
+    return WeakRefKey{
+        WeakRef<JSObject>(
+            reinterpret_cast<WeakRefSlot *>(static_cast<uintptr_t>(kEmptyKey))),
+        kEmptyKey};
   }
   /// \return Empty key which is simply a pointer to 0x1 - don't dereference.
   static inline WeakRefKey getTombstoneKey() {
-    return WeakRefKey{WeakRef<JSObject>(reinterpret_cast<WeakRefSlot *>(
-                          static_cast<uintptr_t>(kTombstoneKey))),
-                      kTombstoneKey};
+    return WeakRefKey{
+        WeakRef<JSObject>(reinterpret_cast<WeakRefSlot *>(
+            static_cast<uintptr_t>(kTombstoneKey))),
+        kTombstoneKey};
   }
   /// \return the hash in \p key.
   static inline unsigned getHashValue(const WeakRefKey &key) {
@@ -231,10 +233,8 @@ class JSWeakMapImplBase : public JSObject {
     return self->getMallocSize();
   }
 
-  /// \return the number of bytes allocated by this object on the heap.
-  size_t getMallocSize() const {
-    return map_.getMemorySize();
-  }
+  static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
+  static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
 
   /// Iterate the slots in map_ and call deleteInternal on any invalid
   /// references, adding all available slots to the free list.
@@ -252,6 +252,18 @@ class JSWeakMapImplBase : public JSObject {
   static CallResult<uint32_t> getFreeValueStorageIndex(
       Handle<JSWeakMapImplBase> self,
       Runtime *runtime);
+
+ public:
+  // Public for tests.
+
+  /// Lazily fetches the ID for the DenseMap used in this class. After it has
+  /// been assigned once it'll stay constant.
+  HeapSnapshot::NodeID getMapID(GC *gc);
+
+  /// \return the number of bytes allocated by this object on the heap.
+  size_t getMallocSize() const {
+    return map_.getMemorySize();
+  }
 
  private:
   /// The underlying weak value map.
@@ -302,7 +314,6 @@ class JSWeakMapImplBase : public JSObject {
 /// Currently, we never shrink it.
 template <CellKind C>
 class JSWeakMapImpl final : public JSWeakMapImplBase {
-  friend GC;
   using Super = JSWeakMapImplBase;
 
  public:
@@ -319,7 +330,6 @@ class JSWeakMapImpl final : public JSWeakMapImplBase {
 
   static void WeakMapOrSetBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
- protected:
 #ifdef HERMESVM_SERIALIZE
   explicit JSWeakMapImpl(Deserializer &d);
 

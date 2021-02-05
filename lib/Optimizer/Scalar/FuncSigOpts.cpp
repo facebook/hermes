@@ -52,6 +52,13 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
   if (capturesArgumentVector(F))
     return false;
 
+  // Generators and async functions should be treated as using all their
+  // parameters. CreateGenerator is considered a user of all the
+  // arguments because it stores them. The function that is called and the
+  // function that actually uses the parameters are different.
+  if (llvh::isa<GeneratorFunction>(F) || llvh::isa<AsyncFunction>(F))
+    return false;
+
   IRBuilder builder(F);
 
   llvh::SmallVector<CallInst *, 8> callsites;

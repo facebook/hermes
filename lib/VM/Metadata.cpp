@@ -7,7 +7,7 @@
 
 #include "hermes/VM/Metadata.h"
 
-#include "hermes/VM/GCSymbolID.h"
+#include "hermes/VM/SymbolID.h"
 
 namespace hermes {
 namespace vm {

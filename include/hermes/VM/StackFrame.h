@@ -221,6 +221,7 @@ class StackFramePtrT {
   ///   the wrong type of callee though.
   /// \param newTarget `undefined` or the callable of the constructor being
   ///   invoked directly by `new`.
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
   static StackFramePtrT<false> initFrame(
       PinnedHermesValue *stackPointer,
       StackFramePtrT previousFrame,

@@ -85,14 +85,15 @@ TEST_F(CopyableVectorTest, ArrayRefNonTrivial) {
   using llvh::ArrayRef;
   CopyableVector<std::string> v;
   std::string strings1[] = {"12", "345678", "91011", "121314151617181920"};
-  std::string strings2[] = {"abc",
-                            "defhi",
-                            "jklmonpqrst",
-                            "uvwxyzABCDEF",
-                            "HIGHJKLMNOP",
-                            "Q",
-                            "",
-                            "RSTU"};
+  std::string strings2[] = {
+      "abc",
+      "defhi",
+      "jklmonpqrst",
+      "uvwxyzABCDEF",
+      "HIGHJKLMNOP",
+      "Q",
+      "",
+      "RSTU"};
   auto arr1 = llvh::makeArrayRef(strings1);
   auto arr2 = llvh::makeArrayRef(strings2);
   EXPECT_EQ(0, v.size());

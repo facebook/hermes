@@ -282,8 +282,8 @@ CallResult<HermesValue> RuntimeJSONParser::parse() {
 }
 
 CallResult<HermesValue> RuntimeJSONParser::parseValue() {
-  llvh::SaveAndRestore<decltype(remainingDepth_)> oldDepth{remainingDepth_,
-                                                           remainingDepth_ - 1};
+  llvh::SaveAndRestore<decltype(remainingDepth_)> oldDepth{
+      remainingDepth_, remainingDepth_ - 1};
   if (remainingDepth_ <= 0) {
     return runtime_->raiseStackOverflow(Runtime::StackOverflowKind::JSONParser);
   }
@@ -478,8 +478,8 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
   // The operation is recursive so it needs a GCScope.
   GCScope gcScope(runtime_);
 
-  llvh::SaveAndRestore<decltype(remainingDepth_)> oldDepth{remainingDepth_,
-                                                           remainingDepth_ - 1};
+  llvh::SaveAndRestore<decltype(remainingDepth_)> oldDepth{
+      remainingDepth_, remainingDepth_ - 1};
   if (remainingDepth_ <= 0) {
     return runtime_->raiseStackOverflow(Runtime::StackOverflowKind::JSONParser);
   }

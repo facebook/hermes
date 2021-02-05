@@ -175,7 +175,6 @@ SKIP_LIST = [
     "test262/test/language/statements/labeled/let-identifier-with-newline.js",
     "test262/test/language/statements/while/let-identifier-with-newline.js",
     "test262/test/language/statements/with/let-identifier-with-newline.js",
-    "test262/test/built-ins/AsyncFunction/",
     "test262/test/built-ins/Function/prototype/toString/",
     "test262/test/built-ins/Promise/",
     "test262/test/language/block-scope/",
@@ -184,7 +183,6 @@ SKIP_LIST = [
     "test262/test/language/expressions/arrow-function/",
     "test262/test/language/expressions/assignment/destructuring/",
     "test262/test/language/expressions/async-arrow-function/",
-    "test262/test/language/expressions/async-function/",
     "test262/test/language/expressions/async-generator/",
     "test262/test/language/expressions/await/",
     "test262/test/language/expressions/class/",
@@ -195,7 +193,6 @@ SKIP_LIST = [
     "test262/test/language/expressions/super/",
     "test262/test/language/module-code/",
     "test262/test/language/rest-parameters/",
-    "test262/test/language/statements/async-function/",
     "test262/test/language/statements/async-generator/",
     "test262/test/language/statements/class/",
     "test262/test/language/statements/let/",
@@ -298,6 +295,11 @@ SKIP_LIST = [
     "mjsunit/harmony/async-debug-caught-exception-cases1.js",
     "mjsunit/harmony/async-debug-caught-exception-cases2.js",
     "mjsunit/harmony/async-debug-caught-exception-cases3.js",
+    # async function missing errors: TODO(T80014951)
+    "test262/test/language/statements/async-function/escaped-async.js",
+    "test262/test/language/statements/async-function/early-errors-declaration-formals-body-duplicate.js",
+    "test262/test/language/expressions/async-function/escaped-async.js",
+    "test262/test/language/expressions/async-function/early-errors-expression-formals-body-duplicate.js",
     # let/const (block scope)
     "esprima/test_fixtures/declaration/let/",
     "esprima/test_fixtures/declaration/const/",
@@ -557,12 +559,6 @@ SKIP_LIST = [
     "test262/test/built-ins/Array/prototype/reverse/length-exceeding-integer-limit-with-proxy.js",
     "test262/test/built-ins/Array/prototype/slice/length-exceeding-integer-limit-proxied-array.js",
     "test262/test/built-ins/Array/prototype/unshift/length-near-integer-limit.js",
-    # Very slow tests on some builds of Hermes. Handle-SAN, ASAN, and MallocGC
-    # make these very slow.
-    # TODO(T60938585): Make these conditional on the choice of build.
-    "test262/test/built-ins/decodeURI/S15.1.3.1_A2.5_T1.js",
-    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A2.5_T1.js",
-    "test262/test/built-ins/RegExp/character-class-escape-non-whitespace.js",
     # default arguments
     "esprima/test_fixtures/expression/primary/object/migrated_0038.js",
     "mjsunit/es6/default-parameters-debug.js",
@@ -1623,6 +1619,14 @@ SKIP_LIST = [
     ### Failing Flow tests end ###
 ]
 
+
+# Tests that we want to skip only when testing lazy compilation.
+LAZY_SKIP_LIST = [
+    # Variable resolution in catch handlers.
+    "test262/test/language/statements/try/scope-catch-param-lex-close.js",
+]
+
+
 # This skiplist is specifically for tests that Hermes never intends to support,
 # and so should not be counted in totals for targeting 100% coverage.
 PERMANENT_SKIP_LIST = [
@@ -1746,6 +1750,38 @@ PERMANENT_SKIP_LIST = [
     "flow/JSX_invalid/migrated_0000.js",
 ]
 
+HANDLESAN_SKIP_LIST = [
+    # Very slow tests on some builds of Hermes. Handle-SAN, ASAN, and MallocGC
+    # make these very slow.
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A2.5_T1.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A2.5_T1.js",
+    "test262/test/built-ins/RegExp/character-class-escape-non-whitespace.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A1.11_T2.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A1.11_T1.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A1.12_T1.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A1.12_T3.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A1.12_T2.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A1.2_T1.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A1.2_T2.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A2.1_T1.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A2.4_T1.js",
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A1.10_T1.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A1.10_T1.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A1.12_T3.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A1.12_T2.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A1.11_T2.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A1.11_T1.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A1.12_T1.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A1.2_T1.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A1.2_T2.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A2.1_T1.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A2.4_T1.js",
+    "test262/test/built-ins/encodeURI/S15.1.3.3_A2.3_T1.js",
+    "test262/test/built-ins/encodeURIComponent/S15.1.3.4_A2.3_T1.js",
+    "test262/test/built-ins/parseInt/S15.1.2.2_A8.js",
+    "test262/test/built-ins/parseFloat/S15.1.2.3_A6.js",
+]
+
 UNSUPPORTED_FEATURES = [
     "AggregateError",
     "Promise.prototype.finally",
@@ -1753,8 +1789,6 @@ UNSUPPORTED_FEATURES = [
     "Symbol.species",
     "Symbol.prototype.description",
     "Symbol.unscopables",
-    "async",
-    "async-functions",
     "async-iteration",
     "caller",
     "class",

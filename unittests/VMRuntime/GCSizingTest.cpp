@@ -65,7 +65,7 @@ TEST_F(GCSizingTest, TestOccupancyTarget) {
   // should grow -- but by less than a factor of two.  (There were
   // some bugs with overly-aggressive heap sizing.)
 
-  auto &gc = rt.gc;
+  GenGC &gc = rt.getHeap();
 
   GCScope topScope(&rt);
 
@@ -161,7 +161,7 @@ TEST_F(GCSizingTest, TestHeapShrinks) {
   // If we do a collection with high live data, the heap grows; but then if we
   // do several with a low occupancy, the heap size shrinks again.
 
-  auto &gc = rt.gc;
+  GenGC &gc = rt.getHeap();
 
   GCScope topScope(&rt);
 
@@ -228,7 +228,7 @@ TEST(GCSizingMinHeapTest, TestHeapDoesNotShrinkPastMinSize) {
           .build());
   DummyRuntime &rt = *runtime;
 
-  auto &gc = rt.gc;
+  GenGC &gc = rt.getHeap();
 
   GCScope topScope(&rt);
 

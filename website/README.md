@@ -18,14 +18,14 @@ We deploy the website to the [gh-pages](https://github.com/facebook/hermes/tree/
 
 The full steps are:
 - `git checkout master`
-- `cd website && yarn build`
-- Copy the `website/build` directory
-- `git checkout gh-pages`
-- Delete everything except `hermes.js` and `hermes.mem`*
-- Copy the `website/build` directory built above
-- Run `npx simplehttpserver .` and open http://localhost:8000
+- `cd website && USE_SIMPLE_CSS_MINIFIER=true yarn build`
+- Run `npm run serve`
 - Verify the site is correct
 - Verify all file changes are correct
+- Copy the `website/build` directory to somewhere temporary
+- `git checkout gh-pages`
+- Delete everything except `hermes.js` and `hermes.mem`*
+- Paste the `website/build` directory built above
 - `git commit -m "Deploy website version based on <commit>"`
 - `git push`
 

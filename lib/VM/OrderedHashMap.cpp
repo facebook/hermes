@@ -20,8 +20,9 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 // class HashMapEntry
 
-const VTable HashMapEntry::vt{CellKind::HashMapEntryKind,
-                              cellSize<HashMapEntry>()};
+const VTable HashMapEntry::vt{
+    CellKind::HashMapEntryKind,
+    cellSize<HashMapEntry>()};
 
 void HashMapEntryBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const HashMapEntry *>(cell);
@@ -66,8 +67,9 @@ CallResult<PseudoHandle<HashMapEntry>> HashMapEntry::create(Runtime *runtime) {
 //===----------------------------------------------------------------------===//
 // class OrderedHashMap
 
-const VTable OrderedHashMap::vt{CellKind::OrderedHashMapKind,
-                                cellSize<OrderedHashMap>()};
+const VTable OrderedHashMap::vt{
+    CellKind::OrderedHashMapKind,
+    cellSize<OrderedHashMap>()};
 
 void OrderedHashMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const OrderedHashMap *>(cell);

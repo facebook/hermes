@@ -48,8 +48,6 @@ findTrap(Handle<JSObject> selfHandle, Runtime *runtime, Predefined::Str name);
 /// JSCallableProxy.  The caller uses a flag which is set on both,
 /// instead of calling isa twice.
 class JSProxy : public JSObject {
-  friend GC;
-
  public:
   friend void ProxyBuildMeta(const GCCell *cell, Metadata::Builder &mb);
   friend detail::ProxySlots &detail::slots(JSObject *selfHandle);
@@ -173,7 +171,7 @@ class JSProxy : public JSObject {
       Runtime *runtime,
       OwnKeysFlags okFlags);
 
- private:
+ public:
 #ifdef HERMESVM_SERIALIZE
   explicit JSProxy(Deserializer &d);
 
@@ -184,6 +182,7 @@ class JSProxy : public JSObject {
   JSProxy(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
       : JSObject(runtime, &vt.base, *parent, *clazz) {}
 
+ private:
   detail::ProxySlots slots_;
 };
 

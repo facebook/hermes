@@ -32,10 +32,20 @@ struct SMLocInfo : llvh::DenseMapInfo<SMLoc> {
   }
 };
 
+/// Holds information about a preparsed function that can be used during the
+/// lazy parse phase.
+struct PreParsedFunctionInfo {
+  /// The end location of the function.
+  SMLoc end;
+
+  /// Whether or not the function is strict.
+  bool strictMode;
+};
+
 /// Per buffer information from preparsing.
 struct PreParsedBufferInfo {
-  /// Map from function body start to end.
-  llvh::DenseMap<SMLoc, SMLoc, SMLocInfo> bodyStartToEnd{};
+  /// Map from function body start to function info.
+  llvh::DenseMap<SMLoc, PreParsedFunctionInfo, SMLocInfo> functionInfo{};
 };
 
 /// Per \p Context information from preparsing.

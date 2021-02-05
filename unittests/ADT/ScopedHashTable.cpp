@@ -82,4 +82,21 @@ TEST(ScopedHashTable, GetKeysByScope) {
   }
 }
 
+TEST(ScopedHashTable, SetInCurrentScope) {
+  Table table;
+  Scope outer(table);
+  table.insert("foo", "true");
+  {
+    Scope inner(table);
+    EXPECT_EQ("true", table.lookup("foo"));
+    table.setInCurrentScope("foo", "false");
+    EXPECT_EQ("false", table.lookup("foo"));
+    table.setInCurrentScope("foo", "true");
+    EXPECT_EQ("true", table.lookup("foo"));
+    table.setInCurrentScope("foo", "false");
+    EXPECT_EQ("false", table.lookup("foo"));
+  }
+  EXPECT_EQ("true", table.lookup("foo"));
+}
+
 } // anonymous namespace

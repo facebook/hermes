@@ -622,15 +622,23 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
     bool parseDirectives) {
   if (pass_ == LazyParse && !eagerly) {
     auto startLoc = tok_->getStartLoc();
-    assert(preParsed_->bodyStartToEnd.count(startLoc) == 1);
-    auto endLoc = preParsed_->bodyStartToEnd[startLoc];
+    assert(
+        preParsed_->functionInfo.count(startLoc) == 1 &&
+        "no function info stored during preparse");
+    PreParsedFunctionInfo functionInfo = preParsed_->functionInfo[startLoc];
+    SMLoc endLoc = functionInfo.end;
     if ((unsigned)(endLoc.getPointer() - startLoc.getPointer()) >=
         context_.getPreemptiveFunctionCompilationThreshold()) {
       lexer_.seek(endLoc);
-      advance();
+      advance(grammarContext);
+
+      // Emulate parsing the "use strict" directive in parseBlock.
+      setStrictMode(functionInfo.strictMode);
 
       auto *body = new (context_) ESTree::BlockStatementNode({});
       body->isLazyFunctionBody = true;
+      body->paramYield = paramYield_;
+      body->paramAwait = paramAwait_;
       body->bufferId = lexer_.getBufferId();
       return setLocation(startLoc, endLoc, body);
     }
@@ -641,7 +649,8 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
     return None;
 
   if (pass_ == PreParse) {
-    preParsed_->bodyStartToEnd[(*body)->getStartLoc()] = (*body)->getEndLoc();
+    preParsed_->functionInfo[(*body)->getStartLoc()] =
+        PreParsedFunctionInfo{(*body)->getEndLoc(), isStrictMode()};
   }
 
   return body;
@@ -3060,8 +3069,8 @@ Optional<ESTree::Node *> JSParserImpl::parseOptionalExpressionExceptNew_tail(
     ESTree::Node *expr) {
   SMLoc objectLoc = startLoc;
   bool seenOptionalChain = false;
-  llvh::SaveAndRestore<unsigned> savedRecursionDepth{recursionDepth_,
-                                                     recursionDepth_};
+  llvh::SaveAndRestore<unsigned> savedRecursionDepth{
+      recursionDepth_, recursionDepth_};
   while (
       checkN(TokenKind::l_square, TokenKind::period, TokenKind::questiondot) ||
       checkTemplateLiteral()) {
@@ -3317,8 +3326,8 @@ Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
       // Each call in a chain may have type arguments.
       // As such, we must attempt to parse them upon encountering '<',
       // but roll back if it just ended up being a comparison operator.
-      SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
-                                                           Subsystem::Parser};
+      SourceErrorManager::SaveAndSuppressMessages suppress{
+          &sm_, Subsystem::Parser};
       auto optTypeArgs = parseTypeArgs();
       if (optTypeArgs && check(TokenKind::l_paren)) {
         // Call expression with type arguments.
@@ -3462,8 +3471,8 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrOptionalExpression(
     JSLexer::SavePoint savePoint{&lexer_};
     // Attempt to parse type args upon encountering '<',
     // but roll back if it just ended up being a comparison operator.
-    SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
-                                                         Subsystem::Parser};
+    SourceErrorManager::SaveAndSuppressMessages suppress{
+        &sm_, Subsystem::Parser};
     auto optTypeArgs = parseTypeArgs();
     if (optTypeArgs) {
       // New expression with type arguments.
@@ -3535,8 +3544,8 @@ Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpression() {
       check(TokenKind::less)) {
     JSLexer::SavePoint savePoint{&lexer_};
     // Suppress messages from the parser while still displaying lexer messages.
-    SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
-                                                         Subsystem::Parser};
+    SourceErrorManager::SaveAndSuppressMessages suppress{
+        &sm_, Subsystem::Parser};
     auto optTypeArgs = parseTypeArgs();
     if (optTypeArgs && check(TokenKind::l_paren)) {
       // Call expression with type arguments.
@@ -3902,8 +3911,8 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(
     // see if there is a ':' afterwards. If there isn't, failure is assured,
     // so we restore to the '?' and try again below, with
     // AllowTypedArrowFunction::No.
-    SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
-                                                         Subsystem::Parser};
+    SourceErrorManager::SaveAndSuppressMessages suppress{
+        &sm_, Subsystem::Parser};
     CHECK_RECURSION;
     auto optConsequent = parseAssignmentExpression(
         ParamIn, AllowTypedArrowFunction::Yes, CoverTypedParameters::No);
@@ -4491,6 +4500,8 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     error(startRange, "Invalid 'declare' in class method");
   }
 
+  SMLoc funcExprStartLoc = tok_->getStartLoc();
+
   ESTree::Node *typeParams = nullptr;
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow() && check(TokenKind::less)) {
@@ -4546,7 +4557,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     return None;
 
   auto *funcExpr = setLocation(
-      startLoc,
+      funcExprStartLoc,
       optBody.getValue(),
       new (context_) ESTree::FunctionExpressionNode(
           nullptr,
@@ -4565,14 +4576,14 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
 
   if (special == SpecialKind::Get && funcExpr->_params.size() != 0) {
     error(
-        funcExpr->getSourceRange(),
+        {startLoc, funcExpr->getEndLoc()},
         Twine("getter method must no one formal arguments, found ") +
             Twine(funcExpr->_params.size()));
   }
 
   if (special == SpecialKind::Set && funcExpr->_params.size() != 1) {
     error(
-        funcExpr->getSourceRange(),
+        {startLoc, funcExpr->getEndLoc()},
         Twine("setter method must have exactly one formal argument, found ") +
             Twine(funcExpr->_params.size()));
   }
@@ -4581,7 +4592,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
   if ((special == SpecialKind::Get || special == SpecialKind::Set) &&
       typeParams != nullptr) {
     error(
-        funcExpr->getSourceRange(),
+        {startLoc, funcExpr->getEndLoc()},
         "accessor method may not have type parameters");
   }
 #endif
@@ -4589,7 +4600,9 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
   if (isStatic && propName && propName->str() == "prototype") {
     // ClassElement : static MethodDefinition
     // It is a Syntax Error if PropName of MethodDefinition is "prototype".
-    error(funcExpr->getSourceRange(), "prototype method must not be static");
+    error(
+        {startLoc, funcExpr->getEndLoc()},
+        "prototype method must not be static");
     return None;
   }
 
@@ -4600,7 +4613,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
       // and SpecialMethod of MethodDefinition is true.
       // TODO: Account for generator methods in SpecialMethod here.
       error(
-          funcExpr->getSourceRange(),
+          {startLoc, funcExpr->getEndLoc()},
           "constructor method must not be a getter or setter");
       return None;
     }
@@ -5069,8 +5082,8 @@ Optional<ESTree::Node *> JSParserImpl::tryParseTypedAsyncArrowFunction(
   ESTree::Node *returnType = nullptr;
   ESTree::Node *predicate = nullptr;
   {
-    SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
-                                                         Subsystem::Parser};
+    SourceErrorManager::SaveAndSuppressMessages suppress{
+        &sm_, Subsystem::Parser};
     if (check(TokenKind::less)) {
       auto optTypeParams = parseTypeParams();
       if (!optTypeParams) {
@@ -5177,8 +5190,8 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
     JSLexer::SavePoint savePoint{&lexer_};
     // Suppress messages from the parser while still displaying lexer
     // messages.
-    SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
-                                                         Subsystem::Parser};
+    SourceErrorManager::SaveAndSuppressMessages suppress{
+        &sm_, Subsystem::Parser};
     // Do as the flow parser does due to JSX ambiguities.
     // First we try and parse as an assignment expression disallowing
     // typed arrow functions. If that fails, then try again while allowing
@@ -5234,8 +5247,8 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
       JSLexer::SavePoint savePoint{&lexer_};
       // Suppress messages from the parser while still displaying lexer
       // messages.
-      SourceErrorManager::SaveAndSuppressMessages suppress{&sm_,
-                                                           Subsystem::Parser};
+      SourceErrorManager::SaveAndSuppressMessages suppress{
+          &sm_, Subsystem::Parser};
       SMLoc annotStart = advance(JSLexer::GrammarContext::Flow).Start;
       bool startsWithPredicate = check(checksIdent_);
       auto optType = startsWithPredicate
@@ -6129,8 +6142,13 @@ bool JSParserImpl::preParseBuffer(
 
 Optional<ESTree::NodePtr> JSParserImpl::parseLazyFunction(
     ESTree::NodeKind kind,
+    bool paramYield,
+    bool paramAwait,
     SMLoc start) {
   seek(start);
+
+  paramYield_ = paramYield;
+  paramAwait_ = paramAwait;
 
   switch (kind) {
     case ESTree::NodeKind::FunctionExpression:

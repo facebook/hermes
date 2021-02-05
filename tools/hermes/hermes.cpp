@@ -118,6 +118,7 @@ static int executeHBCBytecodeFromCL(
           .withEnableEval(cl::EnableEval)
           .withVerifyEvalIR(cl::VerifyIR)
           .withOptimizedEval(cl::OptimizedEval)
+          .withAsyncBreakCheckInEval(cl::EmitAsyncBreakCheck)
           .withVMExperimentFlags(cl::VMExperimentFlags)
           .withES6Promise(cl::ES6Promise)
           .withES6Proxy(cl::ES6Proxy)
@@ -145,6 +146,7 @@ static int executeHBCBytecodeFromCL(
   options.stopAfterInit = cl::StopAfterInit;
   options.forceGCBeforeStats = cl::GCBeforeStats;
   options.stabilizeInstructionCount = cl::StableInstructionCount;
+  options.sampleProfiling = cl::SampleProfiling;
 #ifdef HERMESVM_SERIALIZE
   options.SerializeAfterInitFile = cl::SerializeAfterInitFile;
   options.DeserializeFile = cl::DeserializeFile;

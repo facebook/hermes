@@ -22,7 +22,7 @@ namespace vm {
 struct YoungGen::EvacAcceptor final : public RootAndSlotAcceptorDefault {
   YoungGen &gen;
   EvacAcceptor(GC &gc, YoungGen &gen)
-      : RootAndSlotAcceptorDefault(gc), gen(gen) {}
+      : RootAndSlotAcceptorDefault(gc.getPointerBase()), gen(gen) {}
 
   using RootAndSlotAcceptorDefault::accept;
 
@@ -30,8 +30,8 @@ struct YoungGen::EvacAcceptor final : public RootAndSlotAcceptorDefault {
     gen.ensureReferentCopied(&basedPtr);
   }
 
-  void accept(void *&ptr) override {
-    gen.ensureReferentCopied(reinterpret_cast<GCCell **>(&ptr));
+  void accept(GCCell *&ptr) override {
+    gen.ensureReferentCopied(&ptr);
   }
 
   void acceptHV(HermesValue &hv) override {

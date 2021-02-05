@@ -122,7 +122,7 @@ GCHermesValue *JSWeakMapImplBase::getValueDirect(
 
 GCPointerBase::StorageType &JSWeakMapImplBase::getValueStorageRef(GC *gc) {
   assert(gc->calledByGC() && "Should only be used by the GC implementation.");
-  return valueStorage_.getLoc(gc);
+  return valueStorage_.getLoc();
 }
 
 /// \return true if the \p key exists in the map.
@@ -194,6 +194,45 @@ void JSWeakMapImplBase::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
       // cleaned up the next time we add an element to this map.
       self->hasFreeableSlots_ = true;
     }
+  }
+}
+
+HeapSnapshot::NodeID JSWeakMapImplBase::getMapID(GC *gc) {
+  assert(map_.size() && "Shouldn't call getMapID on an empty map");
+  GCBase::IDTracker &tracker = gc->getIDTracker();
+  const auto id = gc->getObjectID(this);
+  auto &nativeIDList = tracker.getExtraNativeIDs(id);
+  if (nativeIDList.empty()) {
+    nativeIDList.push_back(tracker.nextNativeID());
+  }
+  return nativeIDList[0];
+}
+
+void JSWeakMapImplBase::_snapshotAddEdgesImpl(
+    GCCell *cell,
+    GC *gc,
+    HeapSnapshot &snap) {
+  auto *const self = vmcast<JSWeakMapImplBase>(cell);
+  JSObject::_snapshotAddEdgesImpl(self, gc, snap);
+  if (self->map_.size()) {
+    snap.addNamedEdge(
+        HeapSnapshot::EdgeType::Internal, "map", self->getMapID(gc));
+  }
+}
+
+void JSWeakMapImplBase::_snapshotAddNodesImpl(
+    GCCell *cell,
+    GC *gc,
+    HeapSnapshot &snap) {
+  auto *const self = vmcast<JSWeakMapImplBase>(cell);
+  if (self->map_.size()) {
+    snap.beginNode();
+    snap.endNode(
+        HeapSnapshot::NodeType::Native,
+        "DenseMap",
+        self->getMapID(gc),
+        self->map_.getMemorySize(),
+        0);
   }
 }
 
@@ -377,7 +416,16 @@ const ObjectVTable JSWeakMapImpl<C>::vt{
         cellSize<JSWeakMapImpl>(),
         JSWeakMapImpl::_finalizeImpl,
         JSWeakMapImpl::_markWeakImpl,
-        JSWeakMapImpl::_mallocSizeImpl),
+        JSWeakMapImpl::_mallocSizeImpl,
+        nullptr,
+        nullptr,
+        nullptr,
+        VTable::HeapSnapshotMetadata{
+            HeapSnapshot::NodeType::Object,
+            nullptr,
+            _snapshotAddEdgesImpl,
+            _snapshotAddNodesImpl,
+            nullptr}),
     JSWeakMapImpl::_getOwnIndexedRangeImpl,
     JSWeakMapImpl::_haveOwnIndexedImpl,
     JSWeakMapImpl::_getOwnIndexedPropertyFlagsImpl,

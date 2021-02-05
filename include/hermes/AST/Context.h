@@ -19,9 +19,6 @@ namespace hbc {
 class BackendContext;
 }
 
-/// Choices for bundling format, applicable to cross module opts
-enum class BundlerKind { none, metromin };
-
 struct CodeGenerationSettings {
   /// Whether we should emit TDZ checks.
   bool enableTDZ{true};
@@ -155,6 +152,9 @@ class Context {
   /// compilation this requires source buffers, and hence this Context instance
   /// to be retained after compilation.
   bool allowFunctionToStringWithRuntimeSource_{false};
+
+  /// If true, do not error on return statements that are not within functions.
+  bool allowReturnOutsideFunction_{false};
 
   /// Allows generator functions to be compiled.
   bool generatorEnabled_{true};
@@ -340,6 +340,14 @@ class Context {
 
   void setAllowFunctionToStringWithRuntimeSource(bool v) {
     allowFunctionToStringWithRuntimeSource_ = v;
+  }
+
+  bool allowReturnOutsideFunction() const {
+    return allowReturnOutsideFunction_;
+  }
+
+  void setAllowReturnOutsideFunction(bool allowReturnOutsideFunction) {
+    allowReturnOutsideFunction_ = allowReturnOutsideFunction;
   }
 
   bool isGeneratorEnabled() const {

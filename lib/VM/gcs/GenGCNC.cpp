@@ -9,12 +9,11 @@
 // it is included only by GC.h.  (For example, it assumes GCBase is declared.)
 #include "hermes/VM/GC.h"
 
+#include "GCBase-WeakMap.h"
 #include "hermes/Platform/Logging.h"
-#include "hermes/Support/DebugHelpers.h"
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PerfSection.h"
-#include "hermes/VM/AllocSource.h"
 #include "hermes/VM/Casting.h"
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
 #include "hermes/VM/CompactionResult-inline.h"
@@ -22,9 +21,7 @@
 #include "hermes/VM/Deserializer.h"
 #include "hermes/VM/ExpectedPageSize.h"
 #include "hermes/VM/GCBase-inline.h"
-#include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HeapSnapshot.h"
-#include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/Serializer.h"
 #include "hermes/VM/StringPrimitive.h"
@@ -44,7 +41,6 @@
 #include <cinttypes>
 #include <clocale>
 #include <cstdint>
-#include <tuple>
 #include <utility>
 
 #define DEBUG_TYPE "gc"
@@ -98,13 +94,15 @@ GenGC::GenGC(
     PointerBase *pointerBase,
     const GCConfig &gcConfig,
     std::shared_ptr<CrashManager> crashMgr,
-    std::shared_ptr<StorageProvider> provider)
+    std::shared_ptr<StorageProvider> provider,
+    experiments::VMExperimentFlags vmExperimentFlags)
     : GCBase(
           metaTable,
           gcCallbacks,
           pointerBase,
           gcConfig,
-          std::move(crashMgr)),
+          std::move(crashMgr),
+          HeapKind::NCGEN),
       storageProvider_(std::move(provider)),
       generationSizes_(Size(gcConfig)),
       // ExpectedPageSize.h defines a static value for the expected page size,
@@ -127,6 +125,7 @@ GenGC::GenGC(
       occupancyTarget_(gcConfig.getOccupancyTarget()),
       oomThreshold_(gcConfig.getEffectiveOOMThreshold()),
       weightedUsed_(static_cast<double>(gcConfig.getInitHeapSize())) {
+  (void)vmExperimentFlags;
   crashMgr_->setCustomData("HermesGC", kGCName);
   growTo(gcConfig.getInitHeapSize());
   claimAllocContext();
@@ -536,12 +535,15 @@ size_t GenGC::usedDirect() const {
 /// the acceptor on the same root location more than once, which is illegal.
 struct FullMSCDuplicateRootsDetectorAcceptor final
     : public RootAndSlotAcceptorDefault {
+  GenGC &gc;
   llvh::DenseSet<void *> markedLocs_;
 
-  using RootAndSlotAcceptorDefault::accept;
-  using RootAndSlotAcceptorDefault::RootAndSlotAcceptorDefault;
+  FullMSCDuplicateRootsDetectorAcceptor(GenGC &gc)
+      : RootAndSlotAcceptorDefault(gc.getPointerBase()), gc(gc) {}
 
-  void accept(void *&ptr) override {
+  using RootAndSlotAcceptorDefault::accept;
+
+  void accept(GCCell *&ptr) override {
     assert(markedLocs_.count(&ptr) == 0);
     markedLocs_.insert(&ptr);
   }
@@ -554,18 +556,21 @@ struct FullMSCDuplicateRootsDetectorAcceptor final
 
 void GenGC::markPhase() {
   struct FullMSCMarkInitialAcceptor final : public RootAndSlotAcceptorDefault {
+    GenGC &gc;
+    FullMSCMarkInitialAcceptor(GenGC &gc)
+        : RootAndSlotAcceptorDefault(gc.getPointerBase()), gc(gc) {}
+
     using RootAndSlotAcceptorDefault::accept;
-    using RootAndSlotAcceptorDefault::RootAndSlotAcceptorDefault;
-    void accept(void *&ptr) override {
+
+    void accept(GCCell *&ptr) override {
       if (ptr) {
         assert(gc.dbgContains(ptr));
-        GCCell *cell = reinterpret_cast<GCCell *>(ptr);
 #ifdef HERMES_EXTRA_DEBUG
-        if (!cell->isValid()) {
+        if (!ptr->isValid()) {
           hermes_fatal("HermesGC: marking pointer to invalid object.");
         }
 #endif
-        GenGCHeapSegment::setCellMarkBit(cell);
+        GenGCHeapSegment::setCellMarkBit(ptr);
       }
     }
     void acceptHV(HermesValue &hv) override {
@@ -585,7 +590,7 @@ void GenGC::markPhase() {
         gc.markSymbol(hv.getSymbol());
       }
     }
-    void accept(SymbolID sym) override {
+    void acceptSym(SymbolID sym) override {
       gc.markSymbol(sym);
     }
   };
@@ -1096,13 +1101,13 @@ void GenGC::trackReachable(CellKind kind, unsigned sz) {
 #endif
 
 #ifndef NDEBUG
-bool GenGC::needsWriteBarrier(void *loc, void *value) {
+bool GenGC::needsWriteBarrier(void *loc, GCCell *value) {
   return !youngGen_.contains(loc) && youngGen_.contains(value);
 }
 #endif
 
 LLVM_ATTRIBUTE_NOINLINE
-void GenGC::writeBarrier(void *loc, HermesValue value) {
+void GenGC::writeBarrier(const GCHermesValue *loc, HermesValue value) {
   countWriteBarrier(/*hv*/ true, kNumWriteBarrierTotalCountIdx);
   if (!value.isPointer()) {
     return;
@@ -1112,24 +1117,12 @@ void GenGC::writeBarrier(void *loc, HermesValue value) {
 }
 
 LLVM_ATTRIBUTE_NOINLINE
-void GenGC::writeBarrier(void *loc, void *value) {
+void GenGC::writeBarrier(const GCPointerBase *loc, const GCCell *value) {
   countWriteBarrier(/*hv*/ false, kNumWriteBarrierTotalCountIdx);
   writeBarrierImpl(loc, value, /*hv*/ false);
 }
 
-LLVM_ATTRIBUTE_NOINLINE
-void GenGC::constructorWriteBarrier(void *loc, HermesValue value) {
-  // There's no difference for GenGC between the constructor and an assignment.
-  writeBarrier(loc, value);
-}
-
-LLVM_ATTRIBUTE_NOINLINE
-void GenGC::constructorWriteBarrier(void *loc, void *value) {
-  // There's no difference for GenGC between the constructor and an assignment.
-  writeBarrier(loc, value);
-}
-
-void GenGC::writeBarrierRange(GCHermesValue *start, uint32_t numHVs) {
+void GenGC::writeBarrierRange(const GCHermesValue *start, uint32_t numHVs) {
   countRangeWriteBarrier();
 
   // For now, in this case, we'll just dirty the cards in the range.  We could
@@ -1139,8 +1132,8 @@ void GenGC::writeBarrierRange(GCHermesValue *start, uint32_t numHVs) {
   // that the range to dirty is not in the young generation, but expect that in
   // most cases the cost of the check will be similar to the cost of dirtying
   // those addresses.
-  char *firstPtr = reinterpret_cast<char *>(start);
-  char *lastPtr = reinterpret_cast<char *>(start + numHVs) - 1;
+  const char *firstPtr = reinterpret_cast<const char *>(start);
+  const char *lastPtr = reinterpret_cast<const char *>(start + numHVs) - 1;
 
   assert(
       AlignedStorage::start(firstPtr) == AlignedStorage::start(lastPtr) &&
@@ -1576,7 +1569,7 @@ void GenGC::doAllocCensus() {
   if (!recordGcStats_) {
     return;
   }
-  GC *gc = this;
+  GenGC *gc = this;
   auto callback = [gc](GCCell *cell) {
     gc->trackAlloc(cell->getKind(), cell->getAllocatedSize());
   };
@@ -1965,7 +1958,7 @@ void GenGC::sizeDiagnosticCensus() {
 
     using SlotAcceptor::accept;
 
-    void accept(void *&ptr) override {
+    void accept(GCCell *&ptr) override {
       diagnostic.numPointer++;
     }
 
@@ -2024,7 +2017,14 @@ void GenGC::sizeDiagnosticCensus() {
         assert(false && "Should be no other hermes values");
       }
     }
-    void accept(SymbolID sym) override {
+
+    void accept(RootSymbolID sym) override {
+      acceptSym(sym);
+    }
+    void accept(GCSymbolID sym) override {
+      acceptSym(sym);
+    }
+    void acceptSym(SymbolID sym) {
       diagnostic.numSymbol++;
     }
   };
@@ -2037,9 +2037,8 @@ void GenGC::sizeDiagnosticCensus() {
 
   hermesLog("HermesGC", "%s:", "Heap contents");
   HeapSizeDiagnosticAcceptor acceptor;
-  GC *gc = this;
-  forAllObjs([gc, &acceptor](GCCell *cell) {
-    GCBase::markCell(cell, gc, acceptor);
+  forAllObjs([&acceptor, this](GCCell *cell) {
+    markCell(cell, acceptor);
     acceptor.diagnostic.numCell++;
     acceptor.diagnostic.numVariableSizedObject +=
         static_cast<int>(cell->isVariableSize());

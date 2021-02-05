@@ -23,7 +23,6 @@ namespace vm {
 /// in large amounts of code duplication in terms of calling convention and
 /// field storage.
 class JSGenerator final : public JSObject {
-  friend GC;
   using Super = JSObject;
   friend void GeneratorBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
@@ -46,7 +45,7 @@ class JSGenerator final : public JSObject {
     return createPseudoHandle(self->innerFunction_.get(runtime));
   }
 
- protected:
+ public:
 #ifdef HERMESVM_SERIALIZE
   explicit JSGenerator(Deserializer &d);
 

@@ -8,6 +8,7 @@
 #define DEBUG_TYPE "vm"
 #include "hermes/VM/DictPropertyMap.h"
 #include "hermes/Support/Statistic.h"
+#include "hermes/VM/SymbolID-inline.h"
 
 HERMES_SLOW_STATISTIC(NumDictLookups, "Number of dictionary lookups");
 HERMES_SLOW_STATISTIC(NumExtraHashProbes, "Number of extra hash probes");

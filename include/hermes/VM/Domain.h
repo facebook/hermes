@@ -40,7 +40,6 @@ namespace vm {
 /// and can be retrieved quickly using an index, while the string -> index table
 /// used for dynamic requires provides an index into the cjsModules_ storage.
 class Domain final : public GCCell {
-  friend GC;
   using Super = GCCell;
   friend void DomainBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
@@ -73,6 +72,7 @@ class Domain final : public GCCell {
     CJSModuleSize,
   };
 
+  // TODO(T83098051): Consider optimising cjsModules_ for non-contiguous IDs.
   /// CJS Modules used when modules have been resolved ahead of time.
   /// Used during requireFast modules by index.
   /// Stores information on module i at entries (i * CJSModuleSize) through
@@ -98,6 +98,11 @@ class Domain final : public GCCell {
   /// to load new segments.
   /// Lazily allocated upon loading the first CJS modules into this domain.
   GCPointer<NativeFunction> throwingRequire_{};
+
+  /// The ID of the CJS module that should be evaluated immediately after the
+  /// first RuntimeModule has been loaded. This is set to the first CJS module
+  /// of the first RuntimeModule.
+  OptValue<uint32_t> cjsEntryModuleID_;
 
  public:
 #ifdef HERMESVM_SERIALIZE
@@ -134,6 +139,13 @@ class Domain final : public GCCell {
       Handle<Domain> self,
       Runtime *runtime,
       RuntimeModule *runtimeModule);
+
+  /// \return the ID of the entry CJS module.
+  /// \pre at least one RuntimeModule has been imported with
+  /// importCJSModuleTable().
+  uint32_t getCJSEntryModuleID() const {
+    return *cjsEntryModuleID_;
+  }
 
   /// \return the offset of the CJS module corresponding to \p filename, None on
   /// failure.
@@ -215,10 +227,10 @@ class Domain final : public GCCell {
   /// context for this domain.
   PseudoHandle<NativeFunction> getThrowingRequire(Runtime *runtime) const;
 
- private:
   /// Create a domain with no associated RuntimeModules.
   Domain(Runtime *runtime) : GCCell(&runtime->getHeap(), &vt) {}
 
+ private:
   /// Destroy associated RuntimeModules.
   ~Domain();
 
@@ -246,7 +258,6 @@ class Domain final : public GCCell {
 /// pointless, it is exposed to JS, and we assume that HermesValues which are
 /// objects are JSObjects.
 class RequireContext final : public JSObject {
-  friend GC;
   using Super = JSObject;
 
   static const ObjectVTable vt;
@@ -289,7 +300,6 @@ class RequireContext final : public JSObject {
         JSObject::getInternalProperty(self, runtime, dirnamePropIndex()));
   }
 
- private:
 #ifdef HERMESVM_SERIALIZE
   explicit RequireContext(Deserializer &d);
 
