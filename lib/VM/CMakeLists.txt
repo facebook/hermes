@@ -163,6 +163,16 @@ elseif (${HERMESVM_GCKIND} STREQUAL "HADES")
             gcs/FillerCell.cpp
             gcs/HadesGC.cpp
   )
+elseif (${HERMESVM_GCKIND} STREQUAL "RUNTIME")
+  list(APPEND source_files
+          gcs/AlignedHeapSegment.cpp gcs/AlignedStorage.cpp
+          gcs/CardTableNC.cpp gcs/FillerCell.cpp
+          gcs/HadesGC.cpp
+          gcs/CompleteMarkState.cpp gcs/GCGeneration.cpp
+          gcs/GCSegmentAddressIndex.cpp gcs/GenGCNC.cpp
+          gcs/OldGenNC.cpp gcs/OldGenSegmentRanges.cpp
+          gcs/YoungGenNC.cpp gcs/GenGCHeapSegment.cpp
+  )
 else()
   message(WARNING "Not linking garbage collector")
 endif()
