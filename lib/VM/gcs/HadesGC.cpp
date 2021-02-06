@@ -1614,26 +1614,18 @@ void HadesGC::prepareCompactee() {
 #ifndef HERMESVM_SANITIZE_HANDLES
   if (!compactionEnabled_)
     return;
-  // There are two possible criteria for compacting a segment:
-  // 1. If any segment was at least 75% occupied at some point
-  // and is now at most at 1/3 of its peak.
-  // 2. If the target size of the heap has fallen below its actual size.
-  constexpr size_t kMinPeakBytesForCompaction =
-      (HeapSegment::maxSize() * 3) / 4;
-  constexpr size_t kMinPeakRatioForCompaction = 3;
-  uint64_t minBytes = HeapSegment::maxSize();
-  const bool resizeCheck = oldGen_.targetSizeBytes() < oldGen_.size();
-  for (size_t i = 0; i < oldGen_.numSegments(); ++i) {
-    const size_t curBytes = oldGen_.allocatedBytes(i);
-    const size_t peakBytes = oldGen_.peakAllocatedBytes(i);
-    const bool ratioCheck = peakBytes > kMinPeakBytesForCompaction &&
-        curBytes < peakBytes / kMinPeakRatioForCompaction;
-
+  // We should compact if the target size of the heap has fallen below its
+  // actual size.
+  if (oldGen_.targetSizeBytes() < oldGen_.size()) {
     // Select the one with the fewest allocated bytes, to
     // minimise scanning and copying.
-    if ((ratioCheck || resizeCheck) && curBytes < minBytes) {
-      compacteeIdx = i;
-      minBytes = curBytes;
+    uint64_t minBytes = HeapSegment::maxSize();
+    for (size_t i = 0; i < oldGen_.numSegments(); ++i) {
+      const size_t curBytes = oldGen_.allocatedBytes(i);
+      if (curBytes < minBytes) {
+        compacteeIdx = i;
+        minBytes = curBytes;
+      }
     }
   }
 #else
