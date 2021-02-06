@@ -1227,6 +1227,50 @@ test('Import expression', () => {
   });
 });
 
+describe('Import declaration', () => {
+  test('Value importKind converted to null', () => {
+    const source = `import {Foo, type Bar, typeof Baz} from 'Foo'`;
+    const program = {
+      type: 'Program',
+      body: [
+        {
+          type: 'ImportDeclaration',
+          importKind: 'value',
+          specifiers: [
+            {
+              type: 'ImportSpecifier',
+              local: {
+                type: 'Identifier',
+                name: 'Foo',
+              },
+              importKind: null,
+            },
+            {
+              type: 'ImportSpecifier',
+              local: {
+                type: 'Identifier',
+                name: 'Bar',
+              },
+              importKind: 'type',
+            },
+            {
+              type: 'ImportSpecifier',
+              local: {
+                type: 'Identifier',
+                name: 'Baz',
+              },
+              importKind: 'typeof',
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(parse(source)).toMatchObject(program);
+    expect(parse(source, {babel: true})).toMatchObject({type: 'File', program});
+  });
+});
+
 test('Unicode strings and identifiers', () => {
   const source = `
     // Null byte in middle of string

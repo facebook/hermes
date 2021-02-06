@@ -123,6 +123,14 @@ class HermesASTAdapter {
     return this.mapNodeDefault(node);
   }
 
+  mapImportSpecifier(node) {
+    if (node.importKind === 'value') {
+      node.importKind = null;
+    }
+
+    return this.mapNodeDefault(node);
+  }
+
   mapExportDefaultDeclaration(node) {
     this.setModuleSourceType();
     return this.mapNodeDefault(node);

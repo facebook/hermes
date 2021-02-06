@@ -49,6 +49,8 @@ class HermesToBabelAdapter extends HermesASTAdapter {
         return this.mapMethodDefinition(node);
       case 'ImportDeclaration':
         return this.mapImportDeclaration(node);
+      case 'ImportSpecifier':
+        return this.mapImportSpecifier(node);
       case 'ExportDefaultDeclaration':
         return this.mapExportDefaultDeclaration(node);
       case 'ExportNamedDeclaration':
