@@ -334,6 +334,8 @@ void GenGC::collect(std::string cause, bool canEffectiveOOM) {
 
   const size_t usedBefore = used();
   const size_t sizeBefore = size();
+  const size_t externalBefore =
+      youngGen_.externalMemory() + oldGen_.externalMemory();
   cumPreBytes_ += used();
   const size_t ygUsedBefore = youngGen_.used();
   const size_t ogUsedBefore = oldGen_.used();
@@ -415,8 +417,12 @@ void GenGC::collect(std::string cause, bool canEffectiveOOM) {
         sizeAfter,
         usedBefore,
         sizeBefore,
+        // Can't use ygExtMem or ogExtMem because those are taken after
+        // finalizers run.
+        externalBefore,
         usedAfter,
         sizeAfter,
+        youngGen_.externalMemory() + oldGen_.externalMemory(),
         &fullCollectionCumStats_);
 
     fullCollection.addArg("fullGCUsedAfter", usedAfter);
@@ -1527,8 +1533,10 @@ void GenGC::CollectionSection::recordGCStats(
     size_t regionSize,
     size_t usedBefore,
     size_t sizeBefore,
+    size_t externalBefore,
     size_t usedAfter,
     size_t sizeAfter,
+    size_t externalAfter,
     CumulativeHeapStats *regionStats) {
   const TimePoint wallEnd = steady_clock::now();
   wallElapsedSecs_ = GCBase::clockDiffSeconds(wallStart_, wallEnd);
@@ -1551,6 +1559,8 @@ void GenGC::CollectionSection::recordGCStats(
       /*preSize*/ sizeBefore,
       /*postAllocated*/ usedAfter,
       /*postSize*/ sizeAfter,
+      /*preExternal*/ externalBefore,
+      /*postExternal*/ externalAfter,
       /*survivalRatio*/ usedBefore ? (usedAfter * 1.0) / usedBefore : 0};
 
   gc_->recordGCStats(event);

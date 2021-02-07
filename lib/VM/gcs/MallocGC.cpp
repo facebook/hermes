@@ -380,6 +380,10 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
       /*preSize*/ allocatedBefore,
       /*postAllocated*/ allocatedBytes_,
       /*postSize*/ allocatedBytes_,
+      // TODO: MallocGC doesn't yet support credit/debit external memory, so
+      // it has no data for these numbers.
+      /*preExternal*/ 0,
+      /*postExternal*/ 0,
       /*survivalRatio*/
       allocatedBefore ? (allocatedBytes_ * 1.0) / allocatedBefore : 0};
 

@@ -792,6 +792,8 @@ void GCBase::printStats(JSONEmitter &json) {
     json.emitKeyValue("preSize", event.preSize);
     json.emitKeyValue("postAllocated", event.postAllocated);
     json.emitKeyValue("postSize", event.postSize);
+    json.emitKeyValue("preExternal", event.preExternal);
+    json.emitKeyValue("postExternal", event.postExternal);
     json.emitKeyValue("survivalRatio", event.survivalRatio);
     json.closeDict();
   }

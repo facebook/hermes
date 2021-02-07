@@ -32,6 +32,10 @@ using gcheapsize_t = uint32_t;
 struct GCAnalyticsEvent {
   std::string runtimeDescription;
   std::string gcKind;
+  /// The type of collection that ran, typically differentiating a "young"
+  /// generation GC and an "old" generation GC. When other values say they're
+  /// "scoped to the collectionType", it means that for a generation GC
+  /// they're only reporting the numbers for that generation.
   std::string collectionType;
   std::string cause;
   std::chrono::milliseconds duration;
@@ -40,6 +44,12 @@ struct GCAnalyticsEvent {
   uint64_t preSize;
   uint64_t postAllocated;
   uint64_t postSize;
+  /// The number of bytes external to the JS heap before the collection.
+  /// The value is scoped to the \p collectionType.
+  uint64_t preExternal;
+  /// The number of bytes external to the JS heap after the collection.
+  /// The value is scoped to the \p collectionType.
+  uint64_t postExternal;
   double survivalRatio;
 };
 

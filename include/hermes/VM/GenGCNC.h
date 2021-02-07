@@ -623,17 +623,25 @@ class GenGC final : public GCBase {
     /// held for the region being collected at the moment (the young generation
     /// for young gen collections, and the entire heap for full collections).
     ///
-    /// \p regionSize The size of the region after the last GC.
-    /// \p usedBefore The number of bytes allocated just before the GC.
-    /// \p usedAfter The number of bytes live after the GC.
-    /// \p regionStats A pointer to the cumulative statistics struct for the
+    /// \param regionSize The size of the region after the last GC.
+    /// \param usedBefore The number of bytes allocated just before the GC.
+    /// \param sizeBefore The size of all segments in bytes just before the GC.
+    /// \param externalBefore The number of bytes external to the JS heap just
+    ///   before the GC.
+    /// \param usedAfter The number of bytes live after the GC.
+    /// \param sizeAfter The size of all segments in bytes after the GC.
+    /// \param externalAfter The number of bytes external to the JS heap after
+    ///   the GC.
+    /// \param regionStats A pointer to the cumulative statistics struct for the
     ///     region.
     void recordGCStats(
         size_t regionSize,
         size_t usedBefore,
         size_t sizeBefore,
+        size_t externalBefore,
         size_t usedAfter,
         size_t sizeAfter,
+        size_t externalAfter,
         CumulativeHeapStats *regionStats);
 
    private:

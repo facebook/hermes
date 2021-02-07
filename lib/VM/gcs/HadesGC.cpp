@@ -363,6 +363,8 @@ HadesGC::CollectionStats::~CollectionStats() {
       /*preSize*/ sizeBefore_,
       /*postAllocated*/ afterAllocatedBytes(),
       /*postSize*/ sizeAfter_,
+      /*preExternal*/ externalBefore_,
+      /*postExternal*/ afterExternalBytes(),
       /*survivalRatio*/ survivalRatio()});
 }
 

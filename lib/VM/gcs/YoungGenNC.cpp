@@ -339,6 +339,8 @@ void YoungGen::collect() {
   // Track the sum of the total pre-collection sizes of the young gens.
   const size_t youngGenUsedBefore = usedDirect();
   const size_t heapSizeBefore = gc_->size();
+  const size_t youngGenExternalBefore = externalMemory();
+  const size_t oldGenExternalBefore = nextGen_->externalMemory();
   ygCollection.addArg("ygUsedBefore", youngGenUsedBefore);
   ygCollection.addArg("ogUsedBefore", nextGen_->used());
   ygCollection.addArg("ogSize", nextGen_->size());
@@ -458,12 +460,14 @@ void YoungGen::collect() {
       sizeDirect(),
       youngGenUsedBefore,
       heapSizeBefore,
+      youngGenExternalBefore,
       // Post-allocated has an ambiguous meaning for a young-gen GC, since the
       // young gen must be completely evacuated. Since zeros aren't really
       // useful here, instead put the number of bytes that were promoted into
       // old gen, which is the amount that survived the collection.
       promotedBytes,
       gc_->size(),
+      nextGen_->externalMemory() - oldGenExternalBefore,
       &gc_->youngGenCollectionCumStats_);
 
   markOldToYoungSecs_ +=
