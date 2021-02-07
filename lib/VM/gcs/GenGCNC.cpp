@@ -1561,7 +1561,8 @@ void GenGC::CollectionSection::recordGCStats(
       /*postSize*/ sizeAfter,
       /*preExternal*/ externalBefore,
       /*postExternal*/ externalAfter,
-      /*survivalRatio*/ usedBefore ? (usedAfter * 1.0) / usedBefore : 0};
+      /*survivalRatio*/ usedBefore ? (usedAfter * 1.0) / usedBefore : 0,
+      /*tags*/ {}};
 
   gc_->recordGCStats(event);
   // Also record as a region-specific collection.

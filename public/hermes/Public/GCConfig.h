@@ -19,6 +19,7 @@
 #include <limits>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace hermes {
 namespace vm {
@@ -51,6 +52,9 @@ struct GCAnalyticsEvent {
   /// The value is scoped to the \p collectionType.
   uint64_t postExternal;
   double survivalRatio;
+
+  /// A list of metadata tags to annotate this event with.
+  std::vector<std::string> tags;
 };
 
 /// Parameters to control a tripwire function called when the live set size

@@ -260,8 +260,8 @@ class HadesGC::CollectionStats final {
         collectionType_{std::move(collectionType)} {}
   ~CollectionStats();
 
-  void addCollectionType(const std::string &collectionType) {
-    collectionType_ += " " + collectionType;
+  void addCollectionType(std::string collectionType) {
+    tags_.emplace_back(std::move(collectionType));
   }
 
   /// Record the allocated bytes in the heap and its size before a collection
@@ -337,6 +337,7 @@ class HadesGC::CollectionStats final {
   HadesGC *gc_;
   std::string cause_;
   std::string collectionType_;
+  std::vector<std::string> tags_;
   TimePoint beginTime_{};
   TimePoint endTime_{};
   Duration cpuTimeSectionStart_{};
@@ -365,7 +366,8 @@ HadesGC::CollectionStats::~CollectionStats() {
       /*postSize*/ sizeAfter_,
       /*preExternal*/ externalBefore_,
       /*postExternal*/ afterExternalBytes(),
-      /*survivalRatio*/ survivalRatio()});
+      /*survivalRatio*/ survivalRatio(),
+      /*tags*/ std::move(tags_)});
 }
 
 /// This struct is used for acceptors that need to know whether they are marking
@@ -1397,7 +1399,7 @@ void HadesGC::waitForCollectionToFinish() {
   GCCycle cycle{this, gcCallbacks_, "Old Gen (Direct)"};
   if (ygCollectionStats_) {
     // If this wait happened during a YG collection, add a "(waiting)" suffix.
-    ygCollectionStats_->addCollectionType("(waiting)");
+    ygCollectionStats_->addCollectionType("waiting");
   }
 
   while (concurrentPhase_ != Phase::None && concurrentPhase_ != Phase::Cleanup)
@@ -1440,7 +1442,7 @@ void HadesGC::oldGenCollection(std::string cause) {
   }
   // We know ygCollectionStats_ exists because oldGenCollection is only called
   // by youngGenCollection.
-  ygCollectionStats_->addCollectionType("(old gen start)");
+  ygCollectionStats_->addCollectionType("old gen start");
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormed();
 #endif
@@ -1664,7 +1666,7 @@ void HadesGC::waitForCompleteMarking() {
 void HadesGC::completeMarking() {
   assert(inGC() && "inGC_ must be set during the STW pause");
   if (ygCollectionStats_) {
-    ygCollectionStats_->addCollectionType("(complete marking)");
+    ygCollectionStats_->addCollectionType("complete marking");
   }
   // No locks are needed here because the world is stopped and there is only 1
   // active thread.
@@ -2307,7 +2309,7 @@ void HadesGC::youngGenCollection(
     // calculated for the promotion case.
     ygCollectionStats_->setBeforeSizes(
         heapBytes.before, externalBytes.before, heapFootprint());
-    ygCollectionStats_->addCollectionType("(promotion)");
+    ygCollectionStats_->addCollectionType("promotion");
     assert(!doCompaction && "Cannot do compactions during YG promotions.");
   } else {
     auto &yg = youngGen();
@@ -2355,7 +2357,7 @@ void HadesGC::youngGenCollection(
         "Young gen segment must have all mark bits set");
 
     if (doCompaction) {
-      ygCollectionStats_->addCollectionType("(compact)");
+      ygCollectionStats_->addCollectionType("compact");
       heapBytes.before += compactee_.allocatedBytes;
       uint64_t ogExternalBefore = oldGen_.externalBytes();
       scannedSize += compactee_.segment->size();
