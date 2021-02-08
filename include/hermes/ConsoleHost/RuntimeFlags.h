@@ -205,6 +205,13 @@ static opt<bool> EnableHermesInternalTestMethods(
     llvh::cl::init(RuntimeConfig::getDefaultEnableHermesInternalTestMethods()),
     llvh::cl::Hidden);
 
+static opt<bool> HeapTimeline(
+    "Xheap-timeline",
+    llvh::cl::desc(
+        "Track heap allocation stacks and add them to the output of createHeapSnapshot()"),
+    llvh::cl::init(false),
+    cat(RuntimeCategory));
+
 } // namespace cl
 
 #endif // HERMES_VM_RUNTIMEFLAGS_H

@@ -65,8 +65,11 @@ createHeapSnapshot(void *, vm::Runtime *runtime, vm::NativeArgs args) {
   if (fileName.empty()) {
     // "-" is recognized as stdout.
     fileName = "-";
-  } else if (!llvh::StringRef{fileName}.endswith(".heapsnapshot")) {
-    return runtime->raiseTypeError("Filename must end in .heapsnapshot");
+  } else if (
+      !llvh::StringRef{fileName}.endswith(".heapsnapshot") &&
+      !llvh::StringRef{fileName}.endswith(".heaptimeline")) {
+    return runtime->raiseTypeError(
+        "Filename must end in .heapsnapshot or .heaptimeline");
   }
   if (auto err = runtime->getHeap().createSnapshotToFile(fileName)) {
     // This isn't a TypeError, but no other built-in can express file errors,
@@ -420,6 +423,10 @@ bool executeHBCBytecodeImpl(
   if (shouldRecordGCStats) {
     statSampler = llvh::make_unique<vm::StatSamplingThread>(
         std::chrono::milliseconds(100));
+  }
+
+  if (options.heapTimeline) {
+    runtime->enableAllocationLocationTracker();
   }
 
   vm::GCScope scope(runtime.get());

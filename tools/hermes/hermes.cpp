@@ -152,6 +152,7 @@ static int executeHBCBytecodeFromCL(
   options.DeserializeFile = cl::DeserializeFile;
   options.SerializeVMPath = cl::SerializeVMPath;
 #endif
+  options.heapTimeline = cl::HeapTimeline;
 
   bool success;
   if (cl::Repeat <= 1) {

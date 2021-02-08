@@ -137,6 +137,9 @@ struct ExecuteOptions {
   /// File to serialize VM state to when serializeVM is called.
   std::string SerializeVMPath;
 #endif // HERMESVM_SERIALIZE
+
+  /// Start tracking heap objects before executing bytecode.
+  bool heapTimeline{false};
 };
 
 /// Executes the HBC bytecode provided in HermesVM.
