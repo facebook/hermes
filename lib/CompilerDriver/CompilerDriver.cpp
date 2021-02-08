@@ -347,11 +347,21 @@ static opt<std::string> BytecodeManifestFilename(
         "Name of the manifest file generated when compiling multiple segments to bytecode"),
     cat(CompilerCategory));
 
-/// Emit debug info for every instruction instead of just the throwing ones.
-static opt<bool> EmitDebugInfo(
-    "g",
-    desc("Emit debug info for all instructions"),
-    cat(CompilerCategory));
+enum class DebugLevel { g0, g1, g2, g3 };
+
+static cl::opt<DebugLevel> DebugInfoLevel(
+    cl::desc("Choose debug info level:"),
+    cl::init(DebugLevel::g1),
+    cl::values(
+        clEnumValN(DebugLevel::g3, "g", "Equivalent to -g3"),
+        clEnumValN(DebugLevel::g0, "g0", "Do not emit debug info"),
+        clEnumValN(DebugLevel::g1, "g1", "Emit location info for backtraces"),
+        clEnumValN(
+            DebugLevel::g2,
+            "g2",
+            "Emit location info for all instructions"),
+        clEnumValN(DebugLevel::g3, "g3", "Emit full info for debugging")),
+    cl::cat(CompilerCategory));
 
 static opt<std::string> InputSourceMap(
     "source-map",
@@ -870,6 +880,10 @@ void setFlagDefaults() {
   if (cl::LazyCompilation && cl::OptimizationLevel > cl::OptLevel::Og) {
     cl::OptimizationLevel = cl::OptLevel::Og;
   }
+
+  if (cl::OutputSourceMap && cl::DebugInfoLevel < cl::DebugLevel::g2) {
+    cl::DebugInfoLevel = cl::DebugLevel::g2;
+  }
 }
 
 /// Validate command line flags.
@@ -1098,11 +1112,12 @@ std::shared_ptr<Context> createContext(
   }
 #endif
 
-  if (cl::EmitDebugInfo) {
+  if (cl::DebugInfoLevel >= cl::DebugLevel::g3) {
     context->setDebugInfoSetting(DebugInfoSetting::ALL);
-  } else if (cl::OutputSourceMap) {
+  } else if (cl::DebugInfoLevel == cl::DebugLevel::g2) {
     context->setDebugInfoSetting(DebugInfoSetting::SOURCE_MAP);
   } else {
+    // -g1 or -g0. If -g0, we'll strip debug info later.
     context->setDebugInfoSetting(DebugInfoSetting::THROWING);
   }
   context->setEmitAsyncBreakCheck(cl::EmitAsyncBreakCheck);
@@ -1921,7 +1936,8 @@ CompileResult processSourceFiles(
 
   // If the user requests to output a source map, then do not also emit debug
   // info into the bytecode.
-  genOptions.stripDebugInfoSection = cl::OutputSourceMap;
+  genOptions.stripDebugInfoSection =
+      cl::OutputSourceMap || cl::DebugInfoLevel == cl::DebugLevel::g0;
 
   genOptions.stripFunctionNames = cl::StripFunctionNames;
 
