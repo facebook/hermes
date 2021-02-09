@@ -193,6 +193,22 @@ class Referencer extends esrecurse.Visitor {
       this.currentScope().__define(node.id, new FunctionNameDefinition(node));
     }
 
+    // If type parameters exist, add them to type scope before function expression name.
+    if (node.typeParameters != null && node.typeParameters.length !== 0) {
+      const parentScope = this.scopeManager.__currentScope;
+
+      const typeScope = this.scopeManager.__nestTypeScope(node);
+      this.visit(node.typeParameters);
+
+      // Forward future defines in type scope to parent scope
+      typeScope.__define = function() {
+        return parentScope.__define.apply(parentScope, arguments);
+      };
+    }
+
+    // Return type may reference type parameters but not parameters or function expression name.
+    this.visit(node.returnType);
+
     // FunctionExpression with name creates its special scope;
     // FunctionExpressionNameScope.
     if (node.type === Syntax.FunctionExpression && node.id) {
@@ -221,10 +237,6 @@ class Referencer extends esrecurse.Visitor {
       that.referencingDefaultValue(pattern, info.assignments, null, true);
     }
 
-    // Add type parameter declarations before parameter declarations, as type
-    // parameters may be used in parameter declarations.
-    this.visit(node.typeParameters);
-
     // Process parameter declarations.
     for (i = 0, iz = node.params.length; i < iz; ++i) {
       this.visitPattern(
@@ -250,7 +262,6 @@ class Referencer extends esrecurse.Visitor {
       );
     }
 
-    this.visit(node.returnType);
     this.visit(node.predicate);
 
     // In TypeScript there are a number of function-like constructs which have no body,
