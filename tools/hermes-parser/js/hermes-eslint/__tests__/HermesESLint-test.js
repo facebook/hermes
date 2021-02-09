@@ -54,6 +54,20 @@ test('Parser produces ESTree AST', () => {
   });
 });
 
+test('Parses ambiguous Flow syntax', () => {
+  expect(parseForESLint(`foo<T>(x)`).ast).toMatchObject({
+    type: 'Program',
+    body: [
+      {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'CallExpression',
+        },
+      },
+    ],
+  });
+});
+
 test('Parser allows return outside function', () => {
   expect(parseForESLint('return 1').ast).toMatchObject({
     type: 'Program',

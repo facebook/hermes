@@ -16,6 +16,7 @@ const VisitorKeys = require('./HermesESLintVisitorKeys');
 function parse(code, options = {}) {
   const parserOptions = {
     allowReturnOutsideFunction: true,
+    flow: 'all',
     sourceType: options.sourceType ?? 'module',
     tokens: true,
   };
