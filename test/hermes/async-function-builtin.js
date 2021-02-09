@@ -13,7 +13,7 @@ print('AsyncFunction instance');
 
 async function af(){};
 print(Reflect.ownKeys(af));
-// CHECK-NEXT: name,length
+// CHECK-NEXT: length,name
 print(af.prototype);
 // CHECK-NEXT: undefined
 try {
@@ -36,7 +36,7 @@ print('AsyncFunction constructor');
 
 var AF = af.__proto__.constructor;
 print(Reflect.ownKeys(AF));
-// CHECK-NEXT: name,length,prototype
+// CHECK-NEXT: length,name,prototype
 print(AF.name);
 // CHECK-NEXT: AsyncFunction
 print(AF.length);
