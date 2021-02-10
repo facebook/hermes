@@ -84,6 +84,11 @@ hermes_link_icu(libhermes)
 target_include_directories(libhermes PUBLIC ..)
 target_include_directories(libhermes PUBLIC ../../public/)
 
+target_compile_definitions(libhermes
+  PRIVATE
+  CREATE_SHARED_LIBRARY=1
+)
+
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR
     "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
   # Export all API symbols
