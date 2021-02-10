@@ -6,10 +6,15 @@
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_library(jsi
-        jsi.cpp)
+add_library(jsi STATIC jsi.cpp)
 
 target_include_directories(jsi PUBLIC ..)
+
+set_target_properties(
+  jsi
+  PROPERTIES
+  POSITION_INDEPENDENT_CODE ON
+)
 
 
 set(jsi_compile_flags "")
