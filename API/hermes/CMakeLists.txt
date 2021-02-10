@@ -82,6 +82,7 @@ hermes_link_icu(libhermes)
 
 # Export the required header directory
 target_include_directories(libhermes PUBLIC ..)
+target_include_directories(libhermes PUBLIC ../../public/)
 
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR
     "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
