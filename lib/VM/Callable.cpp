@@ -175,15 +175,17 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
 
   assert(name.isValid() && "A name must always be provided");
 
-  // Define the name.
-  auto nameHandle =
-      runtime->makeHandle(runtime->getStringPrimFromSymbolID(name));
-  DEFINE_PROP(selfHandle, P::name, nameHandle);
-
   // Length is the number of formal arguments.
+  // 10.2.9 SetFunctionLength is performed during 10.2.3 OrdinaryFunctionCreate.
   auto lengthHandle =
       runtime->makeHandle(HermesValue::encodeDoubleValue(paramCount));
   DEFINE_PROP(selfHandle, P::length, lengthHandle);
+
+  // Define the name.
+  // 10.2.8 SetFunctionName is performed after 10.2.3 OrdinaryFunctionCreate.
+  auto nameHandle =
+      runtime->makeHandle(runtime->getStringPrimFromSymbolID(name));
+  DEFINE_PROP(selfHandle, P::name, nameHandle);
 
   if (strictMode) {
     // Define .callee and .arguments properties: throw always in strict mode.
