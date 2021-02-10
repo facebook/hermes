@@ -9,7 +9,7 @@
 
 #include "llvh/Support/Compiler.h"
 
-#ifdef HERMES_FACEBOOK_BUILD
+#if defined(HERMES_FACEBOOK_BUILD) && !defined(HERMES_FBCODE_BUILD)
 // TODO (T84179835): Disable this once it is no longer useful for debugging.
 #define HERMESJSI_ON_STACK
 #endif
