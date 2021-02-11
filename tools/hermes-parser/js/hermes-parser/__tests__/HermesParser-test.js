@@ -57,38 +57,56 @@ test('Can parse simple file', () => {
   });
 });
 
-test('Parse errors', () => {
-  expect(() => parse('const = 1')).toThrow(
-    new SyntaxError(
-      `'identifier' expected in declaration (1:6)
+describe('Parse errors', () => {
+  test('Basic', () => {
+    expect(() => parse('const = 1')).toThrow(
+      new SyntaxError(
+        `'identifier' expected in declaration (1:6)
 const = 1
 ~~~~~~^`,
-    ),
-  );
+      ),
+    );
+  });
 
-  // Parse error does not include caret line for non-ASCII characters
-  expect(() => parse('/*\u0176*/ const = 1')).toThrow(
-    new SyntaxError(
-      `'identifier' expected in declaration (1:13)
+  test('Has error location', () => {
+    try {
+      parse('const = 1');
+      fail('Expected parse error to be thrown');
+    } catch (e) {
+      expect(e.loc).toMatchObject({
+        line: 1,
+        column: 6,
+      });
+    }
+  });
+
+  test('Source line with non-ASCII characters', () => {
+    // Parse error does not include caret line for non-ASCII characters
+    expect(() => parse('/*\u0176*/ const = 1')).toThrow(
+      new SyntaxError(
+        `'identifier' expected in declaration (1:13)
 /*\u0176*/ const = 1`,
-    ),
-  );
+      ),
+    );
+  });
 
-  // Parse error with additional notes
-  const source = `class C {
+  test('Error with notes', () => {
+    // Parse error with additional notes
+    const source = `class C {
   constructor() { 1 }
   constructor() { 2 }
 }`;
-  expect(() => parse(source)).toThrow(
-    new SyntaxError(
-      `duplicate constructors in class (3:2)
+    expect(() => parse(source)).toThrow(
+      new SyntaxError(
+        `duplicate constructors in class (3:2)
   constructor() { 2 }
   ^~~~~~~~~~~~~~~~~~~
 note: first constructor definition (2:2)
   constructor() { 1 }
   ^~~~~~~~~~~~~~~~~~~`,
-    ),
-  );
+      ),
+    );
+  });
 });
 
 test('Parsing comments', () => {

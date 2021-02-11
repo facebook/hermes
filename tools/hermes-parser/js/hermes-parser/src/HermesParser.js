@@ -32,6 +32,18 @@ const hermesParseResult_getError = HermesParserWASM.cwrap(
   ['number'],
 );
 
+const hermesParseResult_getErrorLine = HermesParserWASM.cwrap(
+  'hermesParseResult_getErrorLine',
+  'number',
+  ['number'],
+);
+
+const hermesParseResult_getErrorColumn = HermesParserWASM.cwrap(
+  'hermesParseResult_getErrorColumn',
+  'number',
+  ['number'],
+);
+
 const hermesParseResult_getProgramBuffer = HermesParserWASM.cwrap(
   'hermesParseResult_getProgramBuffer',
   'number',
@@ -80,7 +92,13 @@ function parse(source, options) {
       // Extract and throw error from parse result if parsing failed
       const err = hermesParseResult_getError(parseResult);
       if (err) {
-        throw new SyntaxError(err);
+        const syntaxError = new SyntaxError(err);
+        syntaxError.loc = {
+          line: hermesParseResult_getErrorLine(parseResult),
+          column: hermesParseResult_getErrorColumn(parseResult),
+        };
+
+        throw syntaxError;
       }
 
       const deserializer = new HermesParserDeserializer(

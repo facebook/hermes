@@ -28,6 +28,16 @@ class HermesParserDiagHandler {
   /// \return the error string formatted for display.
   std::string getErrorString() const;
 
+  /// \return the line number of the error, if one exists.
+  uint32_t getErrorLine() const {
+    return firstError_.getLineNo();
+  }
+
+  /// \return the column number of the error, if one exists.
+  uint32_t getErrorColumn() const {
+    return firstError_.getColumnNo();
+  }
+
  private:
   /// The SourceErrorManager where this handler is installed.
   SourceErrorManager &sm_;

@@ -70,6 +70,9 @@ extern "C" ParseResult *hermesParse(
   // Return first error if there are any errors detected during parsing
   if (diagHandler.hasError()) {
     result->error_ = diagHandler.getErrorString();
+    result->errorLine_ = diagHandler.getErrorLine();
+    result->errorColumn_ = diagHandler.getErrorColumn();
+
     return result.release();
   }
 
@@ -91,6 +94,9 @@ extern "C" ParseResult *hermesParse(
   // Return first error if errors are detected during semantic validation
   if (diagHandler.hasError()) {
     result->error_ = diagHandler.getErrorString();
+    result->errorLine_ = diagHandler.getErrorLine();
+    result->errorColumn_ = diagHandler.getErrorColumn();
+
     return result.release();
   }
 
@@ -109,6 +115,17 @@ extern "C" const char *hermesParseResult_getError(const ParseResult *result) {
   }
 
   return result->error_.c_str();
+}
+
+EMSCRIPTEN_KEEPALIVE
+extern "C" uint32_t hermesParseResult_getErrorLine(const ParseResult *result) {
+  return result->errorLine_;
+}
+
+EMSCRIPTEN_KEEPALIVE
+extern "C" uint32_t hermesParseResult_getErrorColumn(
+    const ParseResult *result) {
+  return result->errorColumn_;
 }
 
 EMSCRIPTEN_KEEPALIVE

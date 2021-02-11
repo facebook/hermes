@@ -20,7 +20,19 @@ function parse(code, options = {}) {
     sourceType: options.sourceType ?? 'module',
     tokens: true,
   };
-  return HermesParser.parse(code, parserOptions);
+
+  try {
+    const ast = HermesParser.parse(code, parserOptions);
+    return ast;
+  } catch (e) {
+    // Format error location for ESLint
+    if (e instanceof SyntaxError) {
+      e.lineNumber = e.loc.line;
+      e.column = e.loc.column;
+    }
+
+    throw e;
+  }
 }
 
 function parseForESLint(code, options = {}) {

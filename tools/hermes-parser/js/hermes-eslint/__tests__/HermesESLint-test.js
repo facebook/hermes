@@ -100,3 +100,13 @@ test('Visitor key order for control flow nodes', () => {
     CatchClause: ['param', 'body'],
   });
 });
+
+test('Parse error messages formatted for ESLint', () => {
+  try {
+    parseForESLint('const = 1');
+    fail('Expected parse error to be thrown');
+  } catch (e) {
+    expect(e.lineNumber).toEqual(1);
+    expect(e.column).toEqual(6);
+  }
+});
