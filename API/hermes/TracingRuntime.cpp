@@ -404,8 +404,7 @@ jsi::Function TracingRuntime::createFunctionFromHostFunction(
       trt.trace_.emplace_back<SynthTrace::CallToNativeRecord>(
           trt.getTimeSinceStart(),
           functionID_,
-          // A host function does not have a this.
-          SynthTrace::encodeUndefined(),
+          trt.toTraceValue(thisVal),
           trt.argStringifyer(args, count));
 
       try {
